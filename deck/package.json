@@ -1,6 +1,6 @@
 {
   "name": "deck",
-  "author": "Ixartz (https://github.com/ixartz)",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "next dev",

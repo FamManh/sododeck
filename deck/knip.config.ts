@@ -5,7 +5,7 @@ const config: KnipConfig = {
   ignore: ['src/libs/I18n.ts', 'src/types/I18n.ts', 'src/libs/Logger.ts'],
   // Dependencies to ignore during analysis
   ignoreDependencies: [
-    // Kept from the boilerplate for upcoming forms and logging
+    // Kept for upcoming forms and logging
     '@hookform/resolvers',
     '@logtape/logtape',
     'react-hook-form',

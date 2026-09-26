@@ -14,7 +14,7 @@ test.describe('Sanity', () => {
 
       await expect(
         page.getByRole('heading', {
-          name: 'Boilerplate Code for Your Next.js Project with Tailwind CSS',
+          name: 'The architecture map you can click, trace, edit and annotate',
         }),
       ).toBeVisible();
     });

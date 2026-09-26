@@ -6,9 +6,9 @@ const localePrefix: LocalePrefixMode = 'as-needed';
 // FIXME: Customize this configuration for your product
 /** Centralized application configuration */
 export const AppConfig = {
-  name: 'Nextjs Starter',
+  name: 'Sododeck',
   i18n: {
-    locales: ['en', 'fr'],
+    locales: ['en'],
     defaultLocale: 'en',
     localePrefix,
   },

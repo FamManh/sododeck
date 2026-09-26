@@ -7,7 +7,7 @@ test.describe('Visual testing', () => {
 
       await expect(
         page.getByRole('heading', {
-          name: 'Boilerplate Code for Your Next.js Project with Tailwind CSS',
+          name: 'The architecture map you can click, trace, edit and annotate',
         }),
       ).toBeVisible();
 
@@ -34,18 +34,6 @@ test.describe('Visual testing', () => {
       await page.goto('/portfolio/2');
 
       await expect(page.getByText('Created a set of promotional')).toBeVisible();
-
-      await takeSnapshot(page, testInfo);
-    });
-
-    test('should take screenshot of the French homepage', async ({ page }, testInfo) => {
-      await page.goto('/fr');
-
-      await expect(
-        page.getByRole('heading', {
-          name: 'Code de démarrage pour Next.js avec Tailwind CSS',
-        }),
-      ).toBeVisible();
 
       await takeSnapshot(page, testInfo);
     });
