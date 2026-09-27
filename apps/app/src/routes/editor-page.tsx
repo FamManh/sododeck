@@ -1,7 +1,6 @@
-import { serializeDeck } from '@sododeck/model';
 import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { ReactFlowProvider } from '@xyflow/react';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router';
 
 import { Announcer } from '../editor/announcer';
@@ -22,9 +21,6 @@ function EditorLayout() {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   useEditorShortcuts();
-  // The JSON text may lag a frame behind a drag; the canvas never does.
-  const deferred = useDeferredValue(deck);
-  const json = useMemo(() => serializeDeck(deferred), [deferred]);
 
   return (
     <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)] bg-app">
@@ -35,7 +31,7 @@ function EditorLayout() {
           <div className="min-h-0 flex-1">
             <Canvas />
           </div>
-          <JsonPanel json={json} />
+          <JsonPanel />
         </main>
         <Inspector deck={deck} />
       </div>
