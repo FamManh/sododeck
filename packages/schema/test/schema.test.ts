@@ -17,7 +17,7 @@ function expectBothValidators(input: unknown, valid: boolean) {
   expect(parseSododeckFile(input).success).toBe(valid);
 }
 
-describe('schema v1 skeleton', () => {
+describe('schema v1', () => {
   it('accepts the bundled example', () => {
     expectBothValidators(example, true);
   });
