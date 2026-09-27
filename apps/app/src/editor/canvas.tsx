@@ -62,6 +62,9 @@ export function Canvas({
       fitViewOptions={{ padding: 0.2 }}
       minZoom={0.1}
       maxZoom={2}
+      proOptions={{
+        hideAttribution: true,
+      }}
     >
       <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
       <Controls showInteractive={false} />
