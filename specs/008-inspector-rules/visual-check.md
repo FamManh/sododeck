@@ -1,8 +1,22 @@
 # Visual check (T061)
 
 Screenshots at 1440×900, light and dark, of frames 02, 04, 10, 18, 23, 28, 29, 49, 50, 51 and 58,
-taken with headless Chromium (Playwright) on `pnpm dev` with an imported "Logistics Delivery" deck
-shaped like the design's. They are attached to the PR, not committed.
+taken with headless Chromium (Playwright) on `pnpm dev` on 2026-09-27, with the deck
+[`screens/logistics.sododeck.json`](screens/logistics.sododeck.json) imported through the library.
+
+| Design frame               | Implementation (`screens/`, `-light` / `-dark`) |
+| -------------------------- | ----------------------------------------------- |
+| 02 component               | `02-node-*.png`                                 |
+| 18 markdown preview        | `18-markdown-preview-*.png`                     |
+| 23 inspector scrolled      | `23-inspector-scrolled-*.png`                   |
+| 49 connection              | `49-edge-*.png`                                 |
+| 50 flow                    | `50-flow-*.png`                                 |
+| 51 step (no meter)         | `51-step-*.png`                                 |
+| 10 deck                    | `10-deck-*.png`                                 |
+| 58 bulk                    | `58-bulk-*.png`                                 |
+| 04 rule editor, match      | `04-rule-editor-*.png`                          |
+| 28 rule editor, no match   | `28-rule-no-match-*.png`                        |
+| 29 rule editor, other rule | `29-rule-other-*.png`                           |
 
 Differences from `docs/design/screens/` (allowed ones first):
 
