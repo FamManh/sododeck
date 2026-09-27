@@ -6,6 +6,8 @@ import { isApplePlatform } from '../lib/features';
 import { useEditor, useHistory } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { useThemeStore } from '../theme/theme-store';
+import { SaveStatus } from './save-status';
+import { useExportDeck } from './use-export-deck';
 import { Wordmark } from './wordmark';
 
 function HistoryButtons() {
@@ -55,6 +57,7 @@ export function TopBar({ deckName }: { deckName: string }) {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  const exportDeck = useExportDeck();
 
   return (
     <header className="flex items-center gap-4 border-b border-hairline bg-surface px-4">
@@ -69,8 +72,7 @@ export function TopBar({ deckName }: { deckName: string }) {
       </nav>
       <HistoryButtons />
       <div className="flex-1" />
-      {/* TODO(M1): real autosave status ("Saving…" → "Saved in this browser"), feature 005. */}
-      <span className="text-caption text-ink-muted">Demo · not saved</span>
+      <SaveStatus />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -86,7 +88,7 @@ export function TopBar({ deckName }: { deckName: string }) {
         </TooltipTrigger>
         <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
       </Tooltip>
-      <Button variant="primary" disabled>
+      <Button variant="primary" onClick={exportDeck}>
         <Download />
         Export
       </Button>
