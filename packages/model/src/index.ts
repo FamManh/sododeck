@@ -40,3 +40,12 @@ export { matchCell, parseCell, type Cell, type CompareOp } from './rules/cells';
 export { evaluateRule, ruleChecks, type Evaluation, type RuleChecks } from './rules/evaluate';
 export { ruleUsage, type RuleUsage } from './rules/usage';
 export type { RuleHost } from './ops/rule-links';
+export {
+  NODE_GRID,
+  STICKY_DEFAULT_OFFSET,
+  nodeCanvasPosition,
+  stickyCanvasPosition,
+  stickyLabel,
+  type Point,
+  type StickyPlacement,
+} from './geometry';

@@ -1,14 +1,12 @@
 /**
  * Pure canvas geometry (no React). Positions are flow coordinates of a node's top-left corner.
  */
+import { NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 type Node = SododeckFile['nodes'][number];
 
-export interface Point {
-  x: number;
-  y: number;
-}
+export type { Point };
 
 export interface Rect extends Point {
   width: number;
@@ -24,17 +22,16 @@ export const GROUP_PADDING = 24;
 /** Offset for a new node that would land exactly on another one. */
 export const FREE_SPOT_STEP = 24;
 
-const GRID = { columns: 10, dx: 220, dy: 110 } as const;
-
 /**
  * Where a node is drawn: its document position, or a display-only grid slot when it has none
- * (never written back until the user moves it, so opening a deck is not an edit).
+ * (never written back until the user moves it, so opening a deck is not an edit). The grid rule
+ * lives in `@sododeck/model` (`nodeCanvasPosition`, ADR 0010) so the cascade agrees with the canvas.
  */
 export function displayPosition(node: Pick<Node, 'position'>, index: number): Point {
   return (
     node.position ?? {
-      x: (index % GRID.columns) * GRID.dx,
-      y: Math.floor(index / GRID.columns) * GRID.dy,
+      x: (index % NODE_GRID.columns) * NODE_GRID.dx,
+      y: Math.floor(index / NODE_GRID.columns) * NODE_GRID.dy,
     }
   );
 }
