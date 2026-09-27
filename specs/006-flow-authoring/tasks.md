@@ -296,7 +296,7 @@ panel (spec US1 scenarios 1–7).
   - `apps/app/src/editor/json-panel-view.ts` makes the Selection tab show
     `serializeEntry('flows', flow)`, labelled "Flow" (or "Step" when a step is active).
   - Tests in `json-panel-view.test.ts` and `flow-list.test.tsx`.
-- [ ] T031 [US1] Bench: add a flows mode to `apps/app/src/bench/generate-deck.ts`
+- [x] T031 [US1] Bench: add a flows mode to `apps/app/src/bench/generate-deck.ts`
       (`BENCH_FLOWS=1`: 5 features × 4 flows × 10 contiguous steps, plus one flow with a
       2-branch fork written directly as JSON, since the schema supports it after T004). Add the scenarios "select flow → marks painted" and
       "record click → badge" to `apps/app/bench/perf.bench.ts`. The target is < 100 ms each.
@@ -556,20 +556,20 @@ marker, then Undo (spec US5 scenarios 1–5).
 
 ## Phase 8: Polish and cross-cutting concerns
 
-- [ ] T060 [P] Accessibility pass over `apps/app/src/editor/flows/*` with tests in
+- [x] T060 [P] Accessibility pass over `apps/app/src/editor/flows/*` with tests in
       `apps/app/src/editor/flows/a11y.test.tsx`:
   - Every button, menu, dialog, popover, switch and list has an accessible name.
   - Every announcement from contracts/flow-authoring-ui.md fires.
   - No state is color-only: a snapshot of the role and text for error path, invalid, broken,
     chain break and match.
-- [ ] T061 [P] Performance: run `pnpm bench` with and without `BENCH_FLOWS=1`. Save the results in
+- [x] T061 [P] Performance: run `pnpm bench` with and without `BENCH_FLOWS=1`. Save the results in
       `specs/006-flow-authoring/bench-after.md` next to `bench-before.md`:
   - pan, zoom and drag within 5 % of `main`
   - both flow scenarios under 100 ms
 
   If a target is missed, fix it before merge (constitution V).
 
-- [ ] T062 [P] Update the docs: `apps/app/CLAUDE.md` (the `editor/flows/` boundary, session rules,
+- [x] T062 [P] Update the docs: `apps/app/CLAUDE.md` (the `editor/flows/` boundary, session rules,
       overlay argument), `packages/model/CLAUDE.md`, `packages/schema/CLAUDE.md`, the `DeckEdge`
       and `toFlowEdges` notes in `.agents/skills/react-flow/SKILL.md`, and a status line for 006
       in `docs/backlog.md`.

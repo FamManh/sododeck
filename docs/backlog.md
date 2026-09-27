@@ -524,6 +524,8 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
 
 ## 006-flow-authoring
 
+- **Status:** implemented (2026-09-27) — see [`tasks.md`](../specs/006-flow-authoring/tasks.md) and [ADR 0008](decisions/0008-flow-branches.md).
+
 - **Milestone:** M2 · **Depends on:** 003 · **Estimate:** 5 d
 - **Goal:** Architects capture each business flow as an ordered path over existing connections,
   with conditions and branches, grouped by feature.

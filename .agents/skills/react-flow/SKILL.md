@@ -21,12 +21,13 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 | Need                       | Where                                                                                                 |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `<ReactFlow>` props, types | `editor/canvas.tsx` (`nodeTypes`/`edgeTypes` at module scope)                                          |
-| Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `toFlowNodes`/`toFlowEdges`        |
+| Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `toFlowNodes`/`toFlowEdges` (optional `overlay` last) |
+| Flow marks (006)           | `editor/flows/flow-overlay.ts` — `flowOverlay()` → `EdgeFlowMark` (`data.flow`: badges, style) and node `data.flowStart`; drawn in `deck-edge.tsx` / `deck-node.tsx` |
 | Sizes, positions, bounds   | `editor/canvas-geometry.ts` — `NODE_SIZE`, `displayPosition`, `groupBounds`, `freeSpot`                |
 | RF events → writes         | `editor/use-canvas-handlers.ts` (drag gesture, marquee, connect, reconnect, drop)                     |
 | Shared actions             | `editor/canvas-actions.ts` — `addComponent`, `connectComponents`, `centredOn`                         |
 | Keys                       | `editor/use-canvas-shortcuts.ts` (canvas keys + document-wide undo/redo/Delete/Esc)                   |
-| Delete                     | `ui.requestDelete(selection)` → `confirm-delete-dialog.tsx` (`previewRemoval`, one batch, Undo toast) |
+| Delete                     | `ui.requestDelete(selection)` or `ui.requestRemoval(targets)` → `confirm-delete-dialog.tsx` (`previewRemoval`, one batch, Undo toast) |
 | Read / write the deck      | `model/use-deck-snapshot.ts` (`useDeckSnapshot`, `readDeck` in handlers), `model/use-editor.ts`       |
 | UI state                   | `state/ui-store.ts` (Zustand; never document data)                                                    |
 | Layout                     | `layout/` — ELK in a worker (`createLayoutClient().layout(...)`)                                       |
@@ -52,7 +53,9 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 
 **New visual mode** (flow dimming, focus mode, highlight): mode lives in the UI store. Mark only the few members and dim the rest with one attribute on the canvas wrapper + CSS (`[data-flow-mode] .react-flow__edge:not(.in-flow)`); a flag on all 1,500 objects breaks the < 100 ms target. Watch for:
 - Edge labels render in `EdgeLabelRenderer`'s HTML layer, outside `.react-flow__edge`: give them their own class for the CSS.
-- `DeckEdge` sets `stroke` inline, which beats CSS: member colours go through `data`.
+- `DeckEdge` sets `stroke` inline, which beats CSS: member colours go through `data`. Flow marks already do: `data.flow.style` (`path`, `error`, `candidate`, `preview`, `invalid`) picks stroke, width and dash in `FLOW_STROKES`.
+- The overlay is part of the edge/node cache check (`sameMark`), so equal marks keep the cached RF object; a new visual input must be added there too.
+- Label pills that carry a flow mark are `pointer-events-none`, so a click on the label reaches the edge (recording).
 - `.in-flow` comes from the RF object's `className`. Group boundaries are `.react-flow__node` too, so they dim as well.
 - Caches in `deck-to-flow.ts` are keyed by the snapshot object, so edits to the object's own fields invalidate them. Any input from outside the object (selection, focus, mode, other nodes) must be in the cache check, or cached objects never update.
 

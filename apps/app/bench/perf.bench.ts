@@ -4,6 +4,7 @@
  *
  *   pnpm bench                          # from repo root (builds first)
  *   BENCH_CPU_THROTTLE=4 pnpm bench     # simulate a slower machine
+ *   BENCH_FLOWS=1 pnpm bench            # the deck also has 21 flows (006); flow scenarios always do
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -16,6 +17,18 @@ const NODES = Number(process.env.BENCH_NODES ?? 500);
 const EDGES = Number(process.env.BENCH_EDGES ?? 1000);
 const CPU_THROTTLE = Number(process.env.BENCH_CPU_THROTTLE ?? 1);
 const TARGET_FPS = 60;
+/** Adds 5 features × 4 flows × 10 steps and a fork to the deck of every scenario (006). */
+const FLOWS = process.env.BENCH_FLOWS === '1' ? '&flows=1' : '';
+/** 006 SC-002: a step or a flow's marks are painted within this. */
+const FLOW_TARGET_MS = 100;
+
+interface FlowResult {
+  scenario: string;
+  ms: number;
+  meetsTarget: boolean;
+}
+
+const flowResults: FlowResult[] = [];
 
 interface ScenarioResult {
   scenario: string;
@@ -156,7 +169,7 @@ async function openBench(page: Page, query: string) {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE });
   }
   const start = Date.now();
-  await page.goto(`/bench?nodes=${NODES}&edges=${EDGES}${query}`);
+  await page.goto(`/bench?nodes=${NODES}&edges=${EDGES}${query}${FLOWS}`);
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
   });
@@ -263,8 +276,48 @@ for (const scenario of [
   });
 }
 
+/**
+ * 006 research R15: from the action to the first painted frame with the step badge, on the
+ * 500 / 1,000 deck with 21 flows. Median of 5 runs.
+ */
+for (const scenario of [
+  {
+    name: 'select flow → marks painted',
+    run: (page: Page, i: number) =>
+      page.evaluate(
+        (id) => window.__sododeckFlowBench?.showFlow(id) ?? Promise.resolve(NaN),
+        `flow${String(i % 5)}-0`,
+      ),
+  },
+  {
+    name: 'record click → badge',
+    run: (page: Page, i: number) =>
+      page.evaluate(
+        (id) => window.__sododeckFlowBench?.recordClick(id) ?? Promise.resolve(NaN),
+        `e${String(i)}`,
+      ),
+  },
+]) {
+  test(`${scenario.name}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+    await openBench(page, FLOWS === '' ? '&flows=1' : '');
+    await page.waitForFunction(() => window.__sododeckFlowBench !== undefined);
+    const runs: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      // A fresh state each run: nothing shown, no session.
+      await page.evaluate(() => {
+        window.__sododeckFlowBench?.reset();
+      });
+      await page.waitForTimeout(100);
+      runs.push(await scenario.run(page, i));
+    }
+    const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+    expect(Number.isFinite(ms)).toBe(true);
+    flowResults.push({ scenario: scenario.name, ms, meetsTarget: ms < FLOW_TARGET_MS });
+  });
+}
+
 test.afterAll(async () => {
-  if (results.length === 0) return;
+  if (results.length === 0 && flowResults.length === 0) return;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dir = new URL('./results/', import.meta.url);
   await mkdir(dir, { recursive: true });
@@ -282,11 +335,17 @@ test.afterAll(async () => {
         `| ${r.scenario} | ${r.renderedNodes} / ${r.renderedNodesZoomedIn} of ${r.nodes} | ${r.maxZoom.toFixed(2)} | ${r.renderMs} | ${r.inPageReadyMs} | ${fmt(r.avgFps)} | ${fmt(r.p95FrameMs)} | ${fmt(r.maxFrameMs)} | ${fmt(r.longFramesPct)}% | ${r.meetsTarget ? 'yes' : 'no'} |`,
     ),
     '',
+    `Flow scenarios (006): median of 5, target < ${String(FLOW_TARGET_MS)} ms. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
+    '',
+    '| Scenario | Action → painted (ms) | Meets target |',
+    '| --- | --- | --- |',
+    ...flowResults.map((r) => `| ${r.scenario} | ${fmt(r.ms)} | ${r.meetsTarget ? 'yes' : 'no'} |`),
+    '',
   ].join('\n');
 
   await writeFile(
     new URL(`report-${stamp}.json`, dir),
-    JSON.stringify({ cpuThrottle: CPU_THROTTLE, results }, null, 2),
+    JSON.stringify({ cpuThrottle: CPU_THROTTLE, flows: FLOWS !== '', results, flowResults }, null, 2),
   );
   await writeFile(new URL(`report-${stamp}.md`, dir), md);
   console.log(`\n${md}\nReport written to bench/results/report-${stamp}.{json,md}`);
