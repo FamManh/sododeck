@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.turbo/
+.astro/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Benchmark output
+apps/app/bench/results/
+
+# Cloudflare
+.wrangler/
