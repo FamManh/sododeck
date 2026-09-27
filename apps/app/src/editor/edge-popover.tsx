@@ -16,18 +16,9 @@ import { useId, useRef, useState } from 'react';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { anchorRect, focusCanvas } from './canvas-actions';
+import { PROTOCOLS } from './protocols';
 
 type Edge = SododeckFile['edges'][number];
-
-/** Schema enum `Protocol`, with display names. */
-export const PROTOCOLS: readonly { value: NonNullable<Edge['protocol']>; label: string }[] = [
-  { value: 'http', label: 'HTTP' },
-  { value: 'grpc', label: 'gRPC' },
-  { value: 'event', label: 'Event' },
-  { value: 'sql', label: 'SQL' },
-  { value: 'websocket', label: 'WebSocket' },
-  { value: 'other', label: 'Other' },
-];
 
 const DIRECTIONS = [
   { value: 'forward', label: 'Forward', Icon: ArrowRight },

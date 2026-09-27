@@ -84,3 +84,12 @@
 [data-flow-mode] .react-flow__handle.sd-handle {
   display: none;
 }
+
+/* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */
+.sd-segment-error {
+  background-image: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);
+}
+
+.sd-segment-broken {
+  background-image: repeating-linear-gradient(135deg, currentColor 0 2px, transparent 2px 5px);
+}

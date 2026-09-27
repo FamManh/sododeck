@@ -8,7 +8,7 @@ import { Announcer } from '../editor/announcer';
 import { Canvas } from '../editor/canvas';
 import { ConfirmDeleteDialog } from '../editor/confirm-delete-dialog';
 import { DeckDeletedDialog } from '../editor/deck-deleted-dialog';
-import { useFlowShortcuts } from '../editor/flows/use-flow-shortcuts';
+import { useFlowShortcuts, usePlaybackShortcuts } from '../editor/flows/use-flow-shortcuts';
 import { useFlowSync } from '../editor/flows/use-flow-sync';
 import { Inspector } from '../editor/inspector';
 import { JsonPanel } from '../editor/json-panel';
@@ -34,6 +34,7 @@ function EditorLayout() {
   const deck = useDeckSnapshot(editor.doc);
   useEditorShortcuts();
   useFlowShortcuts();
+  usePlaybackShortcuts();
   useFlowSync();
 
   return (

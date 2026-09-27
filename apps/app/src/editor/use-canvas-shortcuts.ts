@@ -12,10 +12,11 @@ import { useCallback, useEffect } from 'react';
 import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
-import { useUiStore } from '../state/ui-store';
+import { isFlowMode, useUiStore } from '../state/ui-store';
 import { displayPosition, nearestInDirection, NODE_SIZE, type Direction } from './canvas-geometry';
 import { edgeName } from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
+import { exitFlow } from './flows/flow-mode';
 import { analysisOf, recordClick, requestCancel, undoLastStep } from './flows/flow-session';
 import { useSaveControls } from './save-context';
 
@@ -104,6 +105,10 @@ export function useCanvasKeyDown() {
         // Structure editing is paused while recording (FR-017).
         if (['c', 'e', 'enter'].includes(key.toLowerCase())) return;
       }
+
+      // Flow mode is view-only (007 FR-009): only zoom keys; ← / → belong to the player.
+      const flowMode = isFlowMode(ui);
+      if (flowMode && !(isMod(event) && ['=', '+', '-', '0'].includes(key))) return;
 
       if (isMod(event)) {
         const handled = (() => {
@@ -234,6 +239,18 @@ export function useEditorShortcuts(): void {
         return;
       }
       if (isMod(event) || event.altKey) return;
+
+      if (isFlowMode(ui)) {
+        // View-only: no deletes; Esc leaves flow mode unless a popover or dialog owns it.
+        if (key === 'escape' && ui.popover === null && ui.pendingDelete === null) {
+          if (event.target instanceof Element && event.target.closest('[role="menu"]') !== null) {
+            return;
+          }
+          event.preventDefault();
+          exitFlow();
+        }
+        return;
+      }
 
       if (ui.flowSession !== null) {
         // Sessions pause canvas deletes; ⌫ on a step row is the step list's (FR-017, FR-020).
