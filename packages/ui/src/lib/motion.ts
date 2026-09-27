@@ -14,6 +14,8 @@ export interface Motion {
   stepMs: number;
   /** Toast display time. */
   toastMs: number;
+  /** Display time of a toast that offers Undo (after a delete). */
+  toastUndoMs: number;
 }
 
 export const MOTION = {
@@ -22,6 +24,7 @@ export const MOTION = {
   tokenLoopMs: 1400,
   stepMs: 1700,
   toastMs: 2600,
+  toastUndoMs: 6000,
 } as const satisfies Motion;
 
 /**
