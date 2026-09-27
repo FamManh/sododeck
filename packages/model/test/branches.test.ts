@@ -299,6 +299,7 @@ describe('updateBranch and removeBranch (FR-028)', () => {
     expect(previewRemoval(toJSON(doc), [{ scope: 'branches', flowId: 'f', id: 'gone' }])).toEqual({
       removed: [],
       updated: [],
+      freed: [],
       broken: [],
     });
   });

@@ -102,7 +102,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - The draft uses the gesture machinery. On discard, remove the note, end the gesture, then pop the draft's stack item from the `Y.UndoManager` undo stack, only if its origin is this editor **and it is still the top item**. If another local step was recorded after the draft started, remove the note as a normal step instead of popping. Notify `onHistoryChange` listeners.
   - Add this case to T010's test file: another edit recorded during the draft, then discard, leaves the other edit undoable and the note removed.
   - Export the ops from `packages/model/src/index.ts`. Make T010 pass.
-- [ ] T012 [P] [US1] Update the cascade tests in `packages/model/test/cascade.test.ts`, `packages/model/test/undo.test.ts` and `packages/model/test/preview.test.ts`. They must fail at first (research R2):
+- [x] T012 [P] [US1] Update the cascade tests in `packages/model/test/cascade.test.ts`, `packages/model/test/undo.test.ts` and `packages/model/test/preview.test.ts`. They must fail at first (research R2):
   - Deleting a node with two pinned notes (one with an offset, one without a position) frees both at their previous canvas points. The anchor is removed; text, color and flags are untouched.
   - Same for a grid-placed node.
   - A multi-node delete frees the notes of every deleted node.
@@ -111,7 +111,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - One `undo()` restores the node and each note's `anchor` and original `position`.
   - `previewRemoval` reports `freed`.
   - Update any existing assertion that expected a node-anchored sticky to be `broken`.
-- [ ] T013 [US1] Implement the freeing in `removeNode` in `packages/model/src/ops/cascade.ts`, and add `freed` to `RemovalResult` and to `previewRemoval` in `packages/model/src/preview.ts`. Make T012 pass. Update `packages/model/CLAUDE.md` with the sticky ops, the geometry, the cascade change and ADR 0010.
+- [x] T013 [US1] Implement the freeing in `removeNode` in `packages/model/src/ops/cascade.ts`, and add `freed` to `RemovalResult` and to `previewRemoval` in `packages/model/src/preview.ts`. Make T012 pass. Update `packages/model/CLAUDE.md` with the sticky ops, the geometry, the cascade change and ADR 0010.
 
 ### UI kit
 
