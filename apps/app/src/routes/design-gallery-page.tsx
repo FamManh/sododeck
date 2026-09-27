@@ -3,6 +3,7 @@ import { Moon, Sun } from 'lucide-react';
 
 import { ButtonsSection } from '../design-gallery/buttons-section';
 import { FieldsSection } from '../design-gallery/fields-section';
+import { KeyboardSection } from '../design-gallery/keyboard-section';
 import { useThemeStore } from '../theme/theme-store';
 
 /**
@@ -16,6 +17,12 @@ export function DesignGalleryPage() {
 
   return (
     <div className="min-h-dvh">
+      <a
+        href="#main"
+        className="sr-only rounded-button bg-surface px-3 py-2 focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-20 focus:outline-2 focus:outline-solid focus:outline-primary"
+      >
+        Skip to content
+      </a>
       <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b border-hairline bg-surface px-6">
         <h1 className="text-title-md">Design gallery</h1>
         <span className="text-caption text-ink-muted">Dev only · @sododeck/ui</span>
@@ -32,6 +39,7 @@ export function DesignGalleryPage() {
       <main id="main" className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
         <ButtonsSection />
         <FieldsSection />
+        <KeyboardSection />
       </main>
     </div>
   );
