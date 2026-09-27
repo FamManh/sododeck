@@ -2,17 +2,20 @@
 name: Sododeck
 description: A precise, calm workspace for architecture and flow diagrams.
 colors:
-  primary: "#1d7351"
-  primary-hover: "#17603f"
-  primary-soft: "#e6f1ec"
-  primary-ink: "#17603f"
-  on-primary: "#ffffff"
+  primary: "#f2661c"
+  primary-hover: "#e85d12"
+  primary-soft: "#fdeee4"
+  primary-ink: "#b3480c"
+  on-primary: "#1c1c1a"
+  success: "#1d7351"
+  success-soft: "#e6f1ec"
+  success-ink: "#17603f"
   amber-soft: "#f6eddb"
   amber-ink: "#8a6112"
   blue-soft: "#e3ecf5"
   blue-ink: "#2d5b86"
-  clay-soft: "#f7e5df"
-  clay-ink: "#9a3b25"
+  clay-soft: "#f9e3e6"
+  clay-ink: "#a3303f"
   inverse: "#1c1c1a"
   on-inverse: "#ffffff"
   app: "#e9e9e6"
@@ -70,19 +73,19 @@ spacing:
 
 ## Overview
 
-Sododeck is a precise, calm workspace for architecture and flow diagrams. The chrome sits on a **warm off-white canvas** (`{colors.canvas}` — #fafaf8) framed by **white panels** (`{colors.surface}` — #ffffff) and warm grey hairlines. Text is a **warm near-black** (`{colors.ink}` — #1c1c1a). One accent, **Deck Green** (`{colors.primary}` — #1d7351), carries every primary CTA (Export, New deck, Download), the selection ring, the active flow path, the animated token and the "matched row" state in decision tables.
+Sododeck is a precise, calm workspace for architecture and flow diagrams. The chrome sits on a **warm off-white canvas** (`{colors.canvas}` — #fafaf8) framed by **white panels** (`{colors.surface}` — #ffffff) and warm grey hairlines. Text is a **warm near-black** (`{colors.ink}` — #1c1c1a). One accent, **Deck Orange** (`{colors.primary}` — #f2661c), carries every primary CTA (Export, New deck, Download), the selection ring, the active flow path, the animated token and the "matched row" state in decision tables.
 
-Colour is used to mean something, not to decorate. Beyond green there are four **semantic tints** tied to node kinds and states: amber for logic and rules, blue for data, clay for external systems, and neutral grey for clients. Each tint has a soft fill and a readable ink pair, and they are used only in icon tiles, rule headers and status chips.
+Colour is used to mean something, not to decorate. Beyond orange there are **semantic tints** tied to node kinds and states: amber for logic and rules, blue for data, clay (rose-red) for external systems and errors, green for success, and neutral grey for clients. Each tint has a soft fill and a readable ink pair, and they are used only in icon tiles, rule headers and status chips.
 
 Type is **Geist** for all UI and **Geist Mono** for anything machine-readable: ids, JSON, edge labels, conditions, SLA values and rule cells. Weights stay at 400–500, with 600 used only for the wordmark and small status headings. Display sizes are small (22px max). The diagram carries the visual weight, not the typography.
 
-The shape language is **soft-technical**: 9px buttons, 10px inputs, 12px nodes and cards, 16px group boundaries and deck cards, 20px modals, and full pills for chips and status. Icons are **Material Symbols Outlined** at weight 300, 15–21px.
+The shape language is **soft-technical**: 9px buttons, 10px inputs, 12px nodes and cards, 16px group boundaries and deck cards, 20px modals, and full pills for chips and status. Icons are **Lucide** (`lucide-react`) outline icons at 1.5px stroke, 15–21px.
 
 Sododeck ships **light and dark** themes built from the same token names. Every surface reads from CSS variables, so a theme switch is a single swap of the variable set.
 
 **Key characteristics:**
 
-- Single accent: `{colors.primary}` (#1d7351). About 90% of any screen is neutral surface and ink, with one or two green moments.
+- Single accent: `{colors.primary}` (#f2661c). About 90% of any screen is neutral surface and ink, with one or two orange moments.
 - Kind-coded icon tiles: every node shows a 30px rounded tile whose fill and ink come from its kind (service, data, queue, gateway, client, external).
 - Mono for machine truth: ids, protocols, conditions, JSON and rule cells always render in Geist Mono.
 - Three-panel editor: left panel (Outline / Palette + Features), centre canvas + JSON panel, right inspector. Panel widths are fixed and the canvas absorbs the rest.
@@ -94,10 +97,11 @@ Sododeck ships **light and dark** themes built from the same token names. Every 
 
 ### Brand & Accent
 
-- **Deck Green** (`{colors.primary}` — #1d7351 · dark #2f8f63): Primary CTAs, selection border, active flow edges, flow token, active step dot, progress segments, toggle-on.
-- **Deck Green Hover** (`{colors.primary-hover}` — #17603f · dark #37a472): Hover and press state of primary buttons.
-- **Green Soft** (`{colors.primary-soft}` — #e6f1ec · dark #163024): Selected rows in outlines and lists, the selection halo (3px ring), matched decision-table rows, the "THEN" column header, and success banners.
-- **Green Ink** (`{colors.primary-ink}` — #17603f · dark #74d4a5): Text and icons placed on Green Soft.
+- **Deck Orange** (`{colors.primary}` — #f2661c · dark #f07a32): Primary CTAs, selection border, active flow edges, flow token, active step dot, progress segments, toggle-on.
+- **Deck Orange Hover** (`{colors.primary-hover}` — #e85d12 · dark #ff8a45): Hover and press state of primary buttons.
+- **Orange Soft** (`{colors.primary-soft}` — #fdeee4 · dark #3a2214): Selected rows in outlines and lists, the selection halo (3px ring), matched decision-table rows, and the "THEN" column header.
+- **Orange Ink** (`{colors.primary-ink}` — #b3480c · dark #ffb285): Text and icons placed on Orange Soft.
+- **On Primary** (`{colors.on-primary}` — #1c1c1a · dark #171716): Labels and icons on Deck Orange fills. White fails contrast on this orange (3.1:1 light, 2.8:1 dark), so the label is dark in both themes (5.4:1 light, 6.4:1 dark).
 
 ### Kind & Semantic Tints
 
@@ -107,7 +111,8 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 |---|---|---|---|
 | `{colors.amber}` | #f6eddb / #8a6112 | #352a14 / #e2b659 | Rules, conditions, "WHEN" headers, queue nodes, backup banner, warnings |
 | `{colors.blue}` | #e3ecf5 / #2d5b86 | #172636 / #8fbbe3 | Data nodes (databases, stores, caches) |
-| `{colors.clay}` | #f7e5df / #9a3b25 | #3a1f19 / #ef9f8a | External systems, destructive hover (delete), SLA breach, errors |
+| `{colors.clay}` | #f9e3e6 / #a3303f | #3a1a20 / #f2a0aa | External systems, destructive hover (delete), SLA breach, errors. Kept rose-red (hue ≈352°) so it never reads as Deck Orange (≈21°). |
+| `{colors.success}` | #e6f1ec / #17603f (solid #1d7351) | #163024 / #74d4a5 (solid #2f8f63) | Success banners, "rule matched" test result, SLA within target. The only green in the system. |
 | `{colors.service}` | = primary-soft / primary-ink | = primary-soft / primary-ink | Service nodes |
 | `{colors.client}` | = surface-2 / text-secondary | = surface-2 / text-secondary | Client nodes |
 | `{colors.inverse}` | #1c1c1a / #ffffff | #ededea / #171716 | Gateway nodes, wordmark tile, onboarding tooltip, toast |
@@ -134,7 +139,6 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 - **Ink** (`{colors.ink}` — #1c1c1a · dark #ededea): Titles, body and input values.
 - **Secondary** (`{colors.text-secondary}` — #55554f · dark #b8b8b1): Supporting copy, inactive tabs, icon buttons.
 - **Muted** (`{colors.muted}` — #72726b · dark #909089): Micro-labels, metadata, counts, placeholders. It passes 4.5:1 on Surface in both themes.
-- **On Primary** (`{colors.on-primary}` — #ffffff): Text on Deck Green.
 
 ### Scrim & Shadow
 
@@ -147,7 +151,7 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 
 - **Geist** (400 / 500 / 600) for all interface text.
 - **Geist Mono** (400 / 500) for ids, JSON, edge labels, protocols, conditions, SLA numbers, rule cells, zoom %, keyboard hints.
-- **Material Symbols Outlined** (weight 300, FILL 0; weight 400 for small status glyphs) for icons.
+- **Lucide** (`lucide-react`, tree-shaken SVG components) for icons: 1.5px stroke by default, 2px for small status glyphs (≤ 14px). Icons inherit `currentColor`.
 - Fallback: `system-ui, sans-serif` and `ui-monospace, monospace`.
 
 ### Hierarchy
@@ -217,52 +221,52 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 
 ### Buttons
 
-- **`button-primary`**: Deck Green fill, white 13px/500 label, 9px radius, 34px height, 11–14px horizontal padding, optional leading 19px icon. Hover uses Green Hover.
+- **`button-primary`**: Deck Orange fill, On Primary (dark) 13px/500 label, 9px radius, 34px height, 11–14px horizontal padding, optional leading 19px icon. Hover uses Orange Hover.
 - **`button-secondary`**: Surface fill, 1px Border outline, ink label. Hover uses Surface 2.
 - **`button-icon`**: 28–34px square with a 7–9px radius. Either transparent or outlined. Icon is Secondary colour and darkens to ink on hover.
 - **`button-chip`**: 24–26px pill on Surface 2 with an 11.5–12px label and a small leading icon ("Attach", "Edit rule", "New").
-- **`button-toggle-active`**: Green Soft fill, 1px primary border, Green Ink label (Labels, Focus on).
+- **`button-toggle-active`**: Orange Soft fill, 1px primary border, Orange Ink label (Labels, Focus on).
 
 ### Inputs
 
-- **`text-input`**: 36px tall, 10px radius, 1px Border, 11px padding. Focus turns the border Deck Green, with no glow.
+- **`text-input`**: 36px tall, 10px radius, 1px Border, 11px padding. Focus turns the border Deck Orange, with no glow.
 - **`textarea-md`**: Mono 12.5px/1.55 with vertical resize. Paired with a Write / Preview segmented control.
-- **`inline-edit`**: transparent input with a transparent border. The border appears on hover and turns green on focus (deck name, rule name, table cells).
+- **`inline-edit`**: transparent input with a transparent border. The border appears on hover and turns orange on focus (deck name, rule name, table cells).
 - **`search-field`**: 34–36px, Surface 2 fill, leading search icon, borderless.
 - **`segmented`**: Surface 2 track with 2–3px padding. The active item is Surface with a Rest shadow and a 500 label; inactive items use Secondary.
-- **`toggle`**: 32×18px track (Surface 3 → Deck Green) with a 14px white knob.
+- **`toggle`**: 32×18px track (Surface 3 → Deck Orange) with a 14px white knob.
 - **`tag-chip`**: 26px pill on Surface 2 with a trailing × icon. The add field is a dashed pill.
 
 ### Canvas
 
 - **`node`**: Surface fill, 1px Border, 12px radius, Rest shadow, kind tile plus title (12.5/500) and subtitle (11, muted). A rule glyph appears when rules are attached. States: selected (primary border + halo), dimmed (opacity .2–.22 in focus and flow modes), dragging (grab cursor).
 - **`group-boundary`**: dashed 1px Border with a 16px radius and Group Fill. Clicking the label drills into that level.
-- **`edge`**: 1.5px Edge stroke. Connected to selection: 1.75px Secondary. Selected or in flow: 2–3px Deck Green. Dimmed: opacity .15–.18. It has a 12px invisible hit area.
-- **`edge-label`**: Mono 10.5px pill, Surface fill, 1px Border. It turns solid green with a white label on the current step.
-- **`flow-token`**: 5px green dot with a 2px Surface stroke and a 10px halo at 20% opacity. It animates along the current edge path (1.4s per loop at 1×).
-- **`minimap`**: 182×112 Surface card. Nodes and groups are drawn as rects, and the viewport is an 8-unit green outline. Clicking pans the canvas.
+- **`edge`**: 1.5px Edge stroke. Connected to selection: 1.75px Secondary. Selected or in flow: 2–3px Deck Orange. Dimmed: opacity .15–.18. It has a 12px invisible hit area.
+- **`edge-label`**: Mono 10.5px pill, Surface fill, 1px Border. It turns solid orange with an On Primary label on the current step.
+- **`flow-token`**: 5px orange dot with a 2px Surface stroke and a 10px halo at 20% opacity. It animates along the current edge path (1.4s per loop at 1×).
+- **`minimap`**: 182×112 Surface card. Nodes and groups are drawn as rects, and the viewport is an 8-unit orange outline. Clicking pans the canvas.
 - **`breadcrumb-pill`**: Deck → View / Flow → Group level. 32px pill with chevrons.
 - **`zoom-control`**: −, Mono %, +, divider, fit.
 
 ### Flow Mode
 
-- **`flow-chip`** (top bar): Green Soft pill showing "Flow mode · {name}" with a round close button.
-- **`step-player`**: floating card with prev / play-pause (green) / next, the step title, a 1×/2× speed pill, and a segmented progress bar (4px segments, filled green up to the current step).
-- **`step-row`**: 22px numbered dot (current = green, done = Green Soft, upcoming = Surface 2), a truncated "From → To" title, and a Mono edge label.
+- **`flow-chip`** (top bar): Orange Soft pill showing "Flow mode · {name}" with a round close button.
+- **`step-player`**: floating card with prev / play-pause (orange) / next, the step title, a 1×/2× speed pill, and a segmented progress bar (4px segments, filled orange up to the current step).
+- **`step-row`**: 22px numbered dot (current = orange, done = Orange Soft, upcoming = Surface 2), a truncated "From → To" title, and a Mono edge label.
 - **`condition-block`**: Code surface, 1px Hairline, Mono. The keyword `when` is set in amber ink.
-- **`sla-meter`**: 8px track with a fill coloured green (≤85%), amber (85–100%) or clay (>100%), and a 2px ink target tick. A status line appears below it.
+- **`sla-meter`**: 8px track with a fill coloured success green (≤85%), amber (85–100%) or clay (>100%), and a 2px ink target tick. A status line appears below it.
 
 ### Rules
 
-- **`decision-table`**: a two-row header. The first row is a WHEN band (amber soft/ink) over the condition columns and a THEN band (green soft/ink) over the action columns. The second row holds editable column names. Body rows are 46px with editable Mono condition cells and Geist action cells. The matched row gets a Green Soft background with Green Ink 500 text. Row numbers sit in a 40px column and a delete action in a 40px trailing column.
+- **`decision-table`**: a two-row header. The first row is a WHEN band (amber soft/ink) over the condition columns and a THEN band (orange soft/ink) over the action columns. The second row holds editable column names. Body rows are 46px with editable Mono condition cells and Geist action cells. The matched row gets an Orange Soft background with Orange Ink 500 text. Row numbers sit in a 40px column and a delete action in a 40px trailing column.
 - **`decision-table-compact`**: read-only version in the step inspector. Headers are 10.5px, cells are 11.5px, and the matched row is highlighted.
 - **`rule-card`**: amber soft row with a table icon, name and forward arrow. Used in the node inspector.
-- **`test-result`**: Green Soft banner for a match, or clay soft for "no row matches".
+- **`test-result`**: Success soft banner for a match, or clay soft for "no row matches".
 
 ### Library
 
 - **`deck-card`**: 16px radius, 1px Hairline, Surface. It has a 148px dotted-canvas thumbnail, then the title, a "Sample" pill if applicable, and meta (nodes · flows · edited · folder). Hover adds a float shadow.
-- **`new-deck-card`**: 1.5px dashed Border with a centred icon tile. Hover turns the border green.
+- **`new-deck-card`**: 1.5px dashed Border with a centred icon tile. Hover turns the border orange.
 - **`backup-banner`**: amber soft, 14px radius, with a backup icon, a message and an amber-ink "Export backup" button. It can be dismissed.
 - **`storage-meter`**: Surface 2 card with a 5px progress bar.
 
@@ -275,7 +279,7 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 
 ## Theming
 
-Both themes share token names. Dark mode does **not** invert tints. Soft fills become deep, low-chroma versions of the same hue, and the ink partners get lighter so contrast holds. Deck Green shifts slightly brighter in dark (#2f8f63) so it still reads as the single accent. Shadows get a stronger tint (.45) because dark surfaces cannot show a light shadow.
+Both themes share token names. Dark mode does **not** invert tints. Soft fills become deep, low-chroma versions of the same hue, and the ink partners get lighter so contrast holds. Deck Orange shifts slightly lighter in dark (#f07a32) so it still reads as the single accent. Status colours (success, clay) keep their own hues in both themes, so orange stays reserved for action and selection. Shadows get a stronger tint (.45) because dark surfaces cannot show a light shadow.
 
 ## Interaction & Motion
 
