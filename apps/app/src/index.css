@@ -31,3 +31,17 @@
   font-family: var(--font-mono);
   font-size: var(--text-edge-label);
 }
+
+/* Dev-only design gallery: flow token demo, timed by the --sd-flow-token-loop token. */
+@keyframes gallery-flow-token {
+  from {
+    left: 0;
+  }
+  to {
+    left: calc(100% - 12px);
+  }
+}
+
+.gallery-flow-token {
+  animation: gallery-flow-token var(--sd-flow-token-loop) linear infinite;
+}

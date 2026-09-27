@@ -7,6 +7,7 @@ import { FeedbackSection } from '../design-gallery/feedback-section';
 import { FieldsSection } from '../design-gallery/fields-section';
 import { KeyboardSection } from '../design-gallery/keyboard-section';
 import { KindsSection } from '../design-gallery/kinds-section';
+import { MotionSection } from '../design-gallery/motion-section';
 import { OverlaysSection } from '../design-gallery/overlays-section';
 import { useThemeStore } from '../theme/theme-store';
 
@@ -47,6 +48,7 @@ export function DesignGalleryPage() {
           <KindsSection />
           <FeedbackSection />
           <OverlaysSection />
+          <MotionSection />
           <KeyboardSection />
         </main>
       </div>
