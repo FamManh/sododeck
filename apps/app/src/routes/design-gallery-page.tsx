@@ -4,6 +4,7 @@ import { Moon, Sun } from 'lucide-react';
 import { ButtonsSection } from '../design-gallery/buttons-section';
 import { FieldsSection } from '../design-gallery/fields-section';
 import { KeyboardSection } from '../design-gallery/keyboard-section';
+import { KindsSection } from '../design-gallery/kinds-section';
 import { useThemeStore } from '../theme/theme-store';
 
 /**
@@ -39,6 +40,7 @@ export function DesignGalleryPage() {
       <main id="main" className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
         <ButtonsSection />
         <FieldsSection />
+        <KindsSection />
         <KeyboardSection />
       </main>
     </div>
