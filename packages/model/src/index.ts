@@ -16,3 +16,9 @@ export type { RemovalResult } from './ops/cascade';
 export type { NewObject, NewRule, NewStep, Patch } from './ops/types';
 export { createDeckSnapshot, type DeckSnapshot } from './snapshot';
 export { previewRemoval, type RemovalTarget } from './preview';
+export {
+  serializeEntries,
+  serializeEntry,
+  type Entry,
+  type EntryCollection,
+} from './serialize-entry';
