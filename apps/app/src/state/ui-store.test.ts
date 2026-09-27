@@ -339,6 +339,7 @@ describe('ui store', () => {
       state().select({ nodes: ['a'] });
       state().focus('a');
       state().openEdgePopover('e');
+      state().drillInto({ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } });
       state().openFlow('f', 's2', 'alt');
       expect(state().activeFlow).toEqual({
         flowId: 'f',
@@ -349,6 +350,7 @@ describe('ui store', () => {
         speed: 1,
       });
       expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+      expect(state().drill).toEqual([]);
       expect(state().focusedEdgeId).toBeNull();
       expect(state().popover).toBeNull();
       expect(isFlowMode(state())).toBe(true);

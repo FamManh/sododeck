@@ -29,6 +29,25 @@ describe('CanvasToolbar', () => {
     expect(useUiStore.getState().labelsOn).toBe(true);
   });
 
+  it('shows a Focus toggle and disables it while a flow is shown', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<CanvasToolbar />);
+    const focus = screen.getByRole('button', { name: 'Focus' });
+    expect(focus).toHaveAttribute('aria-pressed', 'false');
+    expect(focus).toHaveAttribute('title', 'Focus · F');
+    await user.click(focus);
+    expect(useUiStore.getState().focusMode).toBe(true);
+
+    act(() => {
+      useUiStore.getState().openFlow('order', 'o1');
+    });
+    expect(screen.getByRole('button', { name: 'Focus' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Focus' })).toHaveAttribute(
+      'title',
+      'Not available while a flow is shown',
+    );
+  });
+
   it('shows the Notes switch only in flow mode and updates notesDisplay from its menu', async () => {
     const user = userEvent.setup();
     renderWithEditor(<CanvasToolbar />);

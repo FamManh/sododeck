@@ -1,18 +1,29 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CollapsedGroupNode } from './collapsed-group-node';
 
+let reduced = false;
+vi.mock('@sododeck/ui/hooks/use-reduced-motion', () => ({ useReducedMotion: () => reduced }));
+
 describe('CollapsedGroupNode', () => {
-  function props() {
+  function props(patch: Partial<NonNullable<NodeProps<CollapsedFlowNode>['data']>> = {}) {
     return {
       id: 'collapsed:core',
-      data: { groupId: 'core', title: 'Core services', nodeCount: 8, edgeCount: 12, focused: true },
+      data: {
+        groupId: 'core',
+        title: 'Core services',
+        nodeCount: 8,
+        edgeCount: 12,
+        focused: true,
+        dimmed: false,
+        ...patch,
+      },
       selected: false,
       width: 180,
       height: 64,
@@ -39,5 +50,23 @@ describe('CollapsedGroupNode', () => {
     );
     expect(useUiStore.getState().selection.groups).toEqual(['core']);
     expect(useUiStore.getState().focusedId).toBe('collapsed:core');
+  });
+
+  it('shows the flow-inside ring and dot, naming the hidden step', () => {
+    reduced = false;
+    renderWithEditor(<CollapsedGroupNode {...props({ flowInside: 'current' })} />, deckOf({}));
+    expect(
+      screen.getByRole('button', {
+        name: 'Core services, collapsed group, 8 nodes, 12 edges, flow step inside',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('collapsed-flow-ring')).toBeInTheDocument();
+    expect(screen.getByTestId('collapsed-flow-dot')).toHaveClass('sd-flow-inside-dot');
+  });
+
+  it('keeps the dot static under reduced motion', () => {
+    reduced = true;
+    renderWithEditor(<CollapsedGroupNode {...props({ flowInside: 'current' })} />, deckOf({}));
+    expect(screen.getByTestId('collapsed-flow-dot')).not.toHaveClass('sd-flow-inside-dot');
   });
 });

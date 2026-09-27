@@ -63,6 +63,14 @@ const mergedDeck = deckOf({
   ],
 });
 
+const groupedPlaybackDeck = deckOf({
+  ...playbackDeck,
+  nodes: playbackDeck.nodes.map((node) =>
+    node.id === 'b' || node.id === 'c' ? { ...node, group: 'core' } : node,
+  ),
+  groups: [{ id: 'core', title: 'Core services' }],
+});
+
 const ui = () => useUiStore.getState();
 
 function Editor() {
@@ -192,6 +200,21 @@ describe('canvas keyboard', () => {
     await user.keyboard('c');
     expect(ui().popover).toEqual({ kind: 'connect', fromId: 'n00' });
     expect(screen.getByRole('dialog', { name: 'Connect N00 to…' })).toBeInTheDocument();
+  });
+
+  it('toggles focus mode with F and announces when nothing is selected', async () => {
+    const { user } = setup();
+    focusNode('n11');
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(true);
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(false);
+    act(() => {
+      ui().clearSelection();
+    });
+    await user.keyboard('f');
+    expect(ui().announcement.text).toBe('Select a component to focus');
+    expect(ui().focusMode).toBe(false);
   });
 
   it('cycles through the focused component’s connections with E; Enter opens the popover', async () => {
@@ -531,20 +554,31 @@ describe('keyboard recording (006 FR-015, FR-017)', () => {
 });
 
 describe('keyboard in flow mode (007)', () => {
-  it('ignores arrows, C, E, Enter and Delete on the canvas; Esc exits flow mode', async () => {
-    const { user, editor, doc } = setup(playbackDeck);
-    focusNode('b');
+  it('allows Space collapse, but ignores arrows, C, E, Enter, F and Backspace; Esc exits flow mode', async () => {
+    const { user, editor, doc } = setup(groupedPlaybackDeck);
+    act(() => {
+      ui().select({ groups: ['core'] });
+      ui().focus('group:core');
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+      ui().drillUp();
+    });
+    document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
     act(() => {
       openFlow(editor(), 'order');
     });
     const before = toJSON(doc);
-    await user.keyboard('{Shift>}{ArrowRight}{/Shift}cE{Enter}{Delete}');
-    expect(ui().focusedId).toBe('b');
+    const stepId = ui().activeFlow?.stepId;
+    await user.keyboard(' ');
+    expect(ui().collapsed.has('core')).toBe(true);
+    expect(ui().activeFlow?.stepId).toBe(stepId);
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}cE{Enter}f{Backspace}');
+    expect(ui().focusedId).toBe('collapsed:core');
     expect(ui().popover).toBeNull();
     expect(ui().pendingDelete).toBeNull();
-    expect(document.activeElement).toHaveAttribute('data-node-id', 'b');
+    expect(ui().focusMode).toBe(false);
     expect(toJSON(doc)).toEqual(before);
     expect(ui().activeFlow?.flowId).toBe('order');
+    expect(ui().drill).toEqual([]);
     await user.keyboard('{Escape}');
     expect(ui().activeFlow).toBeNull();
   });

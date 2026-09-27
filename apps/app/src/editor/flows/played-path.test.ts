@@ -165,4 +165,11 @@ describe('stepAnnouncement', () => {
       'Step 2 of 3: connection deleted',
     );
   });
+
+  it('adds the collapsed-group title when the current step is hidden inside it', () => {
+    const played = playedPath(order, null);
+    expect(stepAnnouncement(playbackDeck, played, at(played.steps, 4), 'Core services')).toBe(
+      'Step 5 of 8: Order Service → Payment Service, inside Core services',
+    );
+  });
 });

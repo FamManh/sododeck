@@ -36,4 +36,19 @@ describe('GroupBoundaryNode', () => {
     expect(useUiStore.getState().selection.groups).toEqual(['core']);
     expect(useUiStore.getState().focusedId).toBe('group:core');
   });
+
+  it('renders a solid landscape region with a large label', () => {
+    const props = {
+      id: 'group:core',
+      data: { title: 'Core services', count: 8, focused: false, level: 'landscape' },
+      width: 300,
+      height: 200,
+    } as unknown as NodeProps<GroupFlowNode>;
+    render(<GroupBoundaryNode {...props} />);
+    expect(screen.getByTestId('group-boundary')).toHaveAttribute('data-level', 'landscape');
+    expect(screen.getByTestId('group-boundary')).toHaveClass('border-solid');
+    expect(screen.getByRole('button', { name: 'Core services group, 8 nodes' })).toHaveClass(
+      'text-body',
+    );
+  });
 });

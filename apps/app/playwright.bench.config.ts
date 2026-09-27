@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-/** Performance benchmark (not part of CI gating). `pnpm bench` from the repo root. */
+/** Performance benchmark (not part of CI gating). Builds first so preview is never stale. */
 export default defineConfig({
   testDir: './bench',
   testMatch: '*.bench.ts',
@@ -15,8 +15,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'pnpm preview',
+    command: 'pnpm build && pnpm preview',
     url: 'http://localhost:4173',
-    reuseExistingServer: true,
+    reuseExistingServer: false,
   },
 });

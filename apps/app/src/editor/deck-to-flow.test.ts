@@ -283,6 +283,13 @@ describe('toFlowEdges', () => {
   it('shows label pills only with Labels on and a non-empty label', () => {
     const edges = toFlowEdges(deck, topLevelGraph(deck), view({ labelsOn: true }));
     expect(edges.map((e) => e.data?.showLabel)).toEqual([true, false]);
+
+    const focused = toFlowEdges(
+      deck,
+      topLevelGraph(deck),
+      view({ focus: { focusId: 'a', members: new Set(['a', 'b']), edges: new Set(['e1']) } }),
+    );
+    expect(focused.find((edge) => edge.id === 'e1')?.data?.showLabel).toBe(true);
   });
 
   it('connects the facing sides of the two nodes', () => {

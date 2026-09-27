@@ -49,6 +49,14 @@ const collapsedGroupsDeck = deckOf({
   })),
 });
 
+const groupedPlaybackDeck = deckOf({
+  ...playbackDeck,
+  nodes: playbackDeck.nodes.map((node) =>
+    node.id === 'b' || node.id === 'c' ? { ...node, group: 'core' } : node,
+  ),
+  groups: [{ id: 'core', title: 'Core services' }],
+});
+
 const ui = () => useUiStore.getState();
 const click = (patch: Partial<ReactMouseEvent> = {}) =>
   ({ shiftKey: false, metaKey: false, ctrlKey: false, ...patch }) as ReactMouseEvent;
@@ -384,6 +392,74 @@ describe('Canvas', () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it('replaces hidden selections with the collapsed group and clears them when drill hides them', () => {
+    renderWithEditor(<Canvas />, collapsedGroupsDeck);
+
+    act(() => {
+      ui().select({ nodes: ['a1'], edges: ['m0'] });
+      ui().setCollapsed('left', true);
+    });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: ['left'], stickies: [] });
+
+    act(() => {
+      ui().setCollapsed('left', false);
+      ui().select({ nodes: ['a1'] });
+    });
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Left group, 2 nodes' }));
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+  });
+
+  it('dims non-neighbours in focus mode, follows the selection, and leaves the deck unchanged', async () => {
+    const user = userEvent.setup();
+    const before = structuredClone(deck);
+    const { container, doc } = renderWithEditor(<Canvas />, deck);
+
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().setFocusMode(true);
+    });
+    const canvas = container.querySelector('[data-canvas]');
+    expect(canvas).toHaveAttribute('data-focus-mode');
+    expect(screen.getByRole('group', { name: 'Service: A' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Database: B' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Queue: C' })).not.toHaveAttribute('aria-hidden');
+    const hiddenD = container.querySelector('[data-testid="deck-node"][data-node-id="d"]');
+    expect(hiddenD).toHaveAttribute('aria-hidden', 'true');
+    expect(hiddenD).toHaveAttribute('inert');
+    act(() => {
+      ui().select({ nodes: ['c'] });
+    });
+    const hiddenA = container.querySelector('[data-testid="deck-node"][data-node-id="a"]');
+    expect(hiddenA).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('group', { name: 'Database: B' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Queue: C' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Client: D' })).not.toHaveAttribute('aria-hidden');
+
+    act(() => {
+      (canvas as HTMLElement).focus();
+    });
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(false);
+
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().setFocusMode(true);
+    });
+    expect(canvas).toHaveAttribute('data-focus-mode');
+
+    act(() => {
+      ui().startRecording('Order flow', null);
+    });
+    expect(ui().focusMode).toBe(false);
+    expect(canvas).not.toHaveAttribute('data-focus-mode');
+
+    act(() => {
+      ui().clearSelection();
+    });
+    expect(canvas).not.toHaveAttribute('data-focus-mode');
+    expect(toJSON(doc)).toEqual(before);
+  });
 });
 
 describe('canvas handlers', () => {
@@ -601,6 +677,16 @@ describe('canvas during a flow session (006 FR-017)', () => {
     expect(toJSON(doc).nodes).toEqual(before.nodes);
     expect(ui().popover).toBeNull();
   });
+
+  it('asks to expand a merged edge before recording it', () => {
+    const { h } = handlers(collapsedGroupsDeck);
+    act(() => {
+      ui().startRecording('Place order', null);
+      h().onEdgeClick(click(), flowEdge('merged:collapsed:left|collapsed:right'));
+    });
+    expect(ui().announcement.text).toBe('Expand the group to record this step');
+    expect(ui().focusedEdgeId).toBeNull();
+  });
 });
 
 describe('canvas in flow mode (007)', () => {
@@ -710,5 +796,50 @@ describe('canvas in flow mode (007)', () => {
     });
     expect(ui().activeFlow).toMatchObject({ stepId: 'o5', playing: false });
     expect(ui().announcement.seq).toBe(seq + 1);
+  });
+
+  it('jumps to the first hidden step from a collapsed card and cycles a merged edge', () => {
+    const { h, editor } = handlers(groupedPlaybackDeck);
+    act(() => {
+      ui().toggleCollapsed('core');
+    });
+    open(editor, 'o1');
+
+    act(() => {
+      h().onNodeClick(click(), flowNode('collapsed:core'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o2');
+
+    act(() => {
+      h().onEdgeClick(click(), flowEdge('merged:a|collapsed:core'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o1');
+  });
+
+  it('keeps collapsed cards bright on the played path', () => {
+    const { editor } = renderWithEditor(<Canvas />, groupedPlaybackDeck);
+    act(() => {
+      ui().toggleCollapsed('core');
+      openFlow(editor(), 'order', 'o2');
+    });
+
+    expect(
+      screen
+        .getByRole('button', {
+          name: 'Core services, collapsed group, 2 nodes, 2 edges, flow step inside',
+        })
+        .closest('.react-flow__node'),
+    ).toHaveClass('in-flow');
+  });
+
+  it('goes up to the whole deck before opening a flow and announces it', () => {
+    const { editor } = renderWithEditor(<Canvas />, groupedPlaybackDeck);
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+      openFlow(editor(), 'order');
+    });
+
+    expect(ui().drill).toEqual([]);
+    expect(ui().announcement.text).toBe('Showing the whole deck for this flow');
   });
 });

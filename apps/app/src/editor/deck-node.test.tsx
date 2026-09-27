@@ -32,6 +32,8 @@ function props(patch: Partial<DeckFlowNode['data']> = {}, selected = false, id =
       title: 'Order Service',
       kind: 'service',
       subtitle: undefined,
+      owner: undefined,
+      tags: [],
       hasRules: false,
       childCount: 0,
       dimmed: false,
@@ -60,19 +62,38 @@ describe('DeckNode', () => {
     expect(node).toHaveAttribute('tabindex', '-1');
   });
 
-  it('shows the subtitle only when tech is set', () => {
-    renderNode(props({ subtitle: 'Go' }));
+  it('renders only the kind tile at Landscape level', () => {
+    renderNode(props({ level: 'landscape' }));
+    expect(screen.queryByText('Order Service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go')).not.toBeInTheDocument();
+  });
+
+  it('renders only the title at System level', () => {
+    renderNode(props({ level: 'system' }));
+    expect(screen.getByText('Order Service')).toBeInTheDocument();
+    expect(screen.queryByText('Go')).not.toBeInTheDocument();
+  });
+
+  it('renders title and tech at Container level', () => {
+    renderNode(props({ level: 'container', subtitle: 'Go' }));
+    expect(screen.getByText('Order Service')).toBeInTheDocument();
     expect(screen.getByText('Go')).toBeInTheDocument();
   });
 
-  it('has no subtitle line without tech', () => {
-    renderNode();
-    const node = screen.getByTestId('deck-node');
-    expect(node.textContent).toBe('Order Service');
-  });
-
-  it('marks nodes with rules', () => {
-    renderNode(props({ hasRules: true }));
+  it('renders title, tech, owner, tags and the rule glyph at Component level', () => {
+    renderNode(
+      props({
+        level: 'component',
+        subtitle: 'Go',
+        owner: 'Team Apollo',
+        tags: ['critical'],
+        hasRules: true,
+      }),
+    );
+    expect(screen.getByText('Order Service')).toBeInTheDocument();
+    expect(screen.getByText('Go')).toBeInTheDocument();
+    expect(screen.getByText('Team Apollo')).toBeInTheDocument();
+    expect(screen.getByText('critical')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
   });
 
@@ -112,6 +133,14 @@ describe('DeckNode', () => {
     renderNode(props({ title }));
     const node = screen.getByRole('group', { name: `Service: ${title}` });
     expect(node).toHaveAttribute('title', title);
+  });
+
+  it('keeps the same accessible name at every level', () => {
+    for (const level of ['landscape', 'system', 'container', 'component'] as const) {
+      const { unmount } = renderNode(props({ level, subtitle: 'Go', owner: 'Team', tags: ['t'] }));
+      expect(screen.getByRole('group', { name: 'Service: Order Service' })).toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('shows a valid drop target with a + mark', () => {

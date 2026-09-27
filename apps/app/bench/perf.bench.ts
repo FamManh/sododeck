@@ -254,9 +254,58 @@ for (const scenario of [
   });
 }
 
-test(`groups-collapsed: ${NODES} nodes / ${EDGES} edges`, () => {
+test(`groups-collapsed: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   if (!GROUPS) return;
-  console.log('TODO(010): groups-collapsed benchmark activates once collapsible groups land.');
+  const opened = await openBench(page, '');
+  await page.waitForFunction(() => window.__sododeckBench?.collapseAll !== undefined);
+  await page.evaluate(() => window.__sododeckBench?.collapseAll?.() ?? Promise.resolve());
+  await page.waitForTimeout(100);
+  const renderedNodes = await page.getByTestId('collapsed-group-node').count();
+  expect(renderedNodes).toBeGreaterThan(0);
+  await startRecording(page);
+  const { maxZoom, renderedNodesZoomedIn } = await (async () => {
+    const box = await page.getByLabel('Diagram canvas').boundingBox();
+    if (!box) throw new Error('canvas not found');
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx, cy);
+    for (let i = 0; i < 25; i++) {
+      await page.mouse.wheel(0, -120);
+      await page.waitForTimeout(16);
+    }
+    const zoom = await viewportZoom(page);
+    const zoomed = await page.getByTestId('collapsed-group-node').count();
+    for (const [dx, dy] of [
+      [-500, 0],
+      [0, -300],
+      [500, 0],
+      [0, 300],
+    ] as const) {
+      const start = await emptyCanvasPoint(page, box);
+      await page.mouse.move(start.x, start.y);
+      await page.mouse.down();
+      await page.mouse.move(start.x + dx, start.y + dy, { steps: 40 });
+      await page.mouse.up();
+      await page.mouse.move(cx, cy);
+    }
+    for (let i = 0; i < 25; i++) {
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(16);
+    }
+    return { maxZoom: zoom, renderedNodesZoomedIn: zoomed };
+  })();
+  const stats = summarize(await stopRecording(page));
+  results.push({
+    scenario: 'groups-collapsed',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodes,
+    renderedNodesZoomedIn,
+    maxZoom,
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
 });
 
 /**
@@ -271,11 +320,11 @@ for (const scenario of [
   test(`${scenario.name}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     const opened = await openBench(page, scenario.query);
     // The node nearest the middle of the screen (fit view is limited to 30%, so not all are shown).
-    const title = await page.evaluate(() => {
+    const nodeId = await page.evaluate(() => {
       const canvas = document.querySelector<HTMLElement>('[data-canvas]')?.getBoundingClientRect();
       const cx = canvas === undefined ? window.innerWidth / 2 : canvas.left + canvas.width / 2;
       const cy = canvas === undefined ? window.innerHeight / 2 : canvas.top + canvas.height * 0.35;
-      let best: { title: string; d: number } | null = null;
+      let best: { id: string; d: number } | null = null;
       for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
         const r = el.getBoundingClientRect();
         if (
@@ -290,17 +339,19 @@ for (const scenario of [
         const atPoint = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2);
         if (!atPoint.includes(el)) continue;
         const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
-        if (!best || d < best.d) best = { title: el.title, d };
+        const id = el.getAttribute('data-node-id');
+        if (id !== null && (!best || d < best.d)) best = { id, d };
       }
-      if (best) return best.title;
+      if (best) return best.id;
       for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
         const r = el.getBoundingClientRect();
         const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
-        if (!best || d < best.d) best = { title: el.title, d };
+        const id = el.getAttribute('data-node-id');
+        if (id !== null && (!best || d < best.d)) best = { id, d };
       }
-      return best?.title ?? '';
+      return best?.id ?? '';
     });
-    const node = page.getByTestId('deck-node').filter({ hasText: new RegExp(`^${title}$`) });
+    const node = page.locator(`[data-testid="deck-node"][data-node-id="${nodeId}"]`);
     const box = await node.boundingBox();
     if (!box) throw new Error('node not found');
     const transform = () =>
@@ -459,9 +510,47 @@ test(`inspector title edit → canvas: ${NODES} nodes / ${EDGES} edges`, async (
 });
 
 for (const scenario of ['collapse-toggle', 'focus'] as const) {
-  test(`${scenario}: ${NODES} nodes / ${EDGES} edges`, () => {
+  test(`${scenario}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     if (!GROUPS) return;
-    console.log(`TODO(010): ${scenario} benchmark activates once zoom-groups-focus lands.`);
+    await openBench(page, '');
+    await page.waitForFunction(
+      () =>
+        window.__sododeckBench !== undefined &&
+        window.__sododeckBench.prepareFocus !== undefined &&
+        window.__sododeckBench.toggleCollapse !== undefined &&
+        window.__sododeckBench.focus !== undefined,
+    );
+    const runs: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(() => {
+        window.__sododeckBench?.resetViewModes?.();
+      });
+      await page.waitForTimeout(100);
+      if (scenario === 'focus') {
+        await page.evaluate(() => {
+          const bench = window.__sododeckBench;
+          if (bench === undefined || bench.prepareFocus === undefined) return Promise.resolve();
+          return bench.prepareFocus('n0');
+        });
+      }
+      runs.push(
+        await page.evaluate(
+          scenario === 'collapse-toggle'
+            ? () => window.__sododeckBench?.toggleCollapse?.('g0') ?? Promise.resolve(NaN)
+            : () => window.__sododeckBench?.focus?.('n0') ?? Promise.resolve(NaN),
+        ),
+      );
+    }
+    const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+    expect(Number.isFinite(ms)).toBe(true);
+    actionResults.push({
+      scenario,
+      nodes: NODES,
+      edges: EDGES,
+      ms,
+      targetMs: FLOW_TARGET_MS,
+      meetsTarget: ms < FLOW_TARGET_MS,
+    });
   });
 }
 
