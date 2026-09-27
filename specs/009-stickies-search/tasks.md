@@ -313,15 +313,15 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ## Phase 7: Polish and cross-cutting concerns
 
-- [ ] T048 [P] Accessibility pass on every new surface: keyboard only (quickstart step 10), visible focus on notes and palette rows, a grayscale check (pinned vs free, collapsed, matched text), and every announcement from the UI contract. Fix gaps with tests.
-- [ ] T049 [P] Update the docs:
+- [x] T048 [P] Accessibility pass on every new surface: keyboard only (quickstart step 10), visible focus on notes and palette rows, a grayscale check (pinned vs free, collapsed, matched text), and every announcement from the UI contract. Fix gaps with tests.
+- [x] T049 [P] Update the docs:
   - `apps/app/CLAUDE.md`: the `editor/stickies/` and `editor/command-palette/` folders, `Selection.stickies`, the N, ⌥C and ⌘K keys
   - `packages/schema/CLAUDE.md`: the new sticky fields
   - check `packages/model/CLAUDE.md` (T013) and `packages/ui/CLAUDE.md` (T034)
   - the root README, only if commands changed
-- [ ] T050 Add a "⌘K type → results painted" scenario to `apps/app/bench/perf.bench.ts` (2,000 nodes, median of 5, 50 ms target), run `BENCH_STICKIES=100 pnpm bench`, and write `specs/009-stickies-search/bench-after.md` with the before and after numbers. Pan and zoom must stay ≥ 60 fps at 500 nodes / 1,000 edges (SC-009), and palette open must be < 100 ms (SC-008). Also check that 007's flow scenarios ("select flow → marks painted", step changes) stay within their 100 ms targets with 100 notes on the canvas.
-- [ ] T051 Visual check: take screenshots at 1440×900, light and dark, of frames 14, 30, 31, 32, 62 and 63, next to `docs/design/screens/`, and write `specs/009-stickies-search/visual-check.md`. List the differences for the PR. Allowed differences: no note title field (the first line is used), the command labels from research R10, DESIGN.md tokens, lucide icons.
-- [ ] T052 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, walk through quickstart.md steps 1–11, and export and re-import a deck with notes to check the round-trip (SC-005).
+- [x] T050 Add a "⌘K type → results painted" scenario to `apps/app/bench/perf.bench.ts` (2,000 nodes, median of 5, 50 ms target), run `BENCH_STICKIES=100 pnpm bench`, and write `specs/009-stickies-search/bench-after.md` with the before and after numbers. Pan and zoom must stay ≥ 60 fps at 500 nodes / 1,000 edges (SC-009), and palette open must be < 100 ms (SC-008). Also check that 007's flow scenarios ("select flow → marks painted", step changes) stay within their 100 ms targets with 100 notes on the canvas.
+- [x] T051 Visual check: take screenshots at 1440×900, light and dark, of frames 14, 30, 31, 32, 62 and 63, next to `docs/design/screens/`, and write `specs/009-stickies-search/visual-check.md`. List the differences for the PR. Allowed differences: no note title field (the first line is used), the command labels from research R10, DESIGN.md tokens, lucide icons.
+- [x] T052 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, walk through quickstart.md steps 1–11, and export and re-import a deck with notes to check the round-trip (SC-005).
 
 ---
 

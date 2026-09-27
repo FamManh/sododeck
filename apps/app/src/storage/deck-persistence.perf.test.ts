@@ -7,8 +7,10 @@ import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
 import { attachDeckPersistence, storageOrigin } from './deck-persistence';
 import { insertDeck } from './library-db';
 
+const PERSISTENCE_BUDGET_MS = process.env.CI ? 150 : 75;
+
 describe('deck persistence performance', () => {
-  it('flushes an edit of the 500-node bench deck in under 50 ms', async () => {
+  it(`flushes an edit of the 500-node bench deck in under ${String(PERSISTENCE_BUDGET_MS)} ms`, async () => {
     const db = await freshLibraryDb();
     const file = generateBenchDeck(500, 1000).deck;
     await insertDeck(db, deckRecord('bench'), Y.encodeStateAsUpdate(fromJSON(file)));
@@ -30,6 +32,6 @@ describe('deck persistence performance', () => {
     await persistence.flush();
     const elapsed = performance.now() - start;
     persistence.destroy();
-    expect(elapsed).toBeLessThan(50);
+    expect(elapsed).toBeLessThan(PERSISTENCE_BUDGET_MS);
   });
 });

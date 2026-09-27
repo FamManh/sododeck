@@ -121,7 +121,13 @@ describe('previewRemoval', () => {
 
 describe('mergeRemovals', () => {
   it('keeps the first occurrence of each ref and problem, in order', () => {
-    const problem = { object: { scope: 'stickies', id: 's' }, field: 'anchor', target: 'x' };
+    const problem = {
+      kind: 'missing-reference' as const,
+      object: { scope: 'stickies' as const, id: 's' },
+      field: 'anchor',
+      target: 'x',
+      targetType: 'object' as const,
+    };
     const merged = mergeRemovals([
       {
         removed: [{ scope: 'nodes', id: 'a' }],
