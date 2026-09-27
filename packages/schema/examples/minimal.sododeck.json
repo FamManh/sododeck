@@ -1,0 +1,31 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "nodes": [
+    { "id": "web-app", "type": "client", "title": "Web App" },
+    { "id": "order-svc", "type": "service", "title": "Order Service" },
+    { "id": "orders-db", "type": "database", "title": "Orders DB" }
+  ],
+  "groups": [],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "web-app",
+      "to": "order-svc",
+      "protocol": "http",
+      "label": "POST /orders"
+    },
+    {
+      "id": "e2",
+      "from": "order-svc",
+      "to": "orders-db",
+      "protocol": "sql",
+      "label": "insert order"
+    }
+  ],
+  "views": [],
+  "features": [],
+  "flows": [],
+  "rules": {},
+  "stickies": []
+}
