@@ -11,6 +11,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - **Added by 003** (contract: `specs/003-canvas-basic/contracts/model-additions.md`):
   - `createDeckSnapshot(doc)` → `DeckSnapshot` (`get`, `subscribe`, `destroy`): an incremental, structurally shared plain deck. Equals `toJSON(doc)` (key order included) after every transaction; untouched objects and collections keep their identity. The app reads the deck through it.
   - `previewRemoval(file, targets: RemovalTarget[])` → `RemovalResult`: what removing the targets in one batch would do, computed by running the real cascade on a throwaway copy. Objects hit by several targets appear once.
+- **Added by 004** (contract: `specs/004-json-panel-sync/contracts/model-additions.md`):
+  - `serializeEntry(collection, value)`: one object (collection item or `rules` value) exactly as in the file, without the file's nesting indent. `serializeEntries(entries: Entry[])`: a JSON array of such objects. Both use the canonical key order; tested to equal slices of `serializeDeck`.
 
 ## Rules
 
@@ -26,7 +28,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `deck.ts` load/save + layout doc · `layout.ts` root types and lookups · `convert.ts` JSON ↔ Y
 - `key-order.ts` canonical order from the schema · `load-checks.ts` duplicate ids · `ids.ts` id generator
 - `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
-- `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003)
+- `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004)
 - `ops/`: `collections`, `steps`, `rules`, `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 
 ## Boundaries
