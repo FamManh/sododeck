@@ -1,23 +1,35 @@
 # @sododeck/model
 
-**Responsibility:** the deck document. Owns the Yjs structure and is the **only** place that converts Yjs ↔ `.sododeck.json`.
+**Responsibility:** the deck document. Owns the Yjs structure and is the **only** place that converts Yjs ↔ `.sododeck.json`. Every surface edits the deck through this package.
 
-- `createDeck()` → empty `Y.Doc`.
-- `fromJSON(input)` → validates with `@sododeck/schema`, returns a new `Y.Doc`. Throws `DeckValidationError`.
-- `toJSON(doc)` → plain `SododeckFile` with canonical top-level key order. Optional deck `name`, `description`, `tags` live in the `meta` map and are emitted only when present.
-- `serializeDeck(file)` → string for save/export.
+API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
+
+- **Load / save:** `createDeck()`, `fromJSON(input)` (validates format + duplicate ids, throws `DeckValidationError`; not undoable), `toJSON(doc)` (canonical key order at every level), `serializeDeck(file)`.
+- **Read:** `getObject(doc, collection, id)`, `getRule(doc, id)`, `observeDeck(doc, listener)` → one `DeckChange` per transaction (`origin`: `local` / `undo` / `redo` / `remote`; changes name scope, id, child step/column/row and changed keys).
+- **Edit:** `createEditor(doc, { captureTimeout?, newId? })` → `DeckEditor`: `add` / `update` / `remove` / `reorder` for `nodes`, `groups`, `edges`, `views`, `features`, `flows`, `stickies`; step ops; rule, column, row and cell ops; `updateMeta`; `batch`; `beginGesture` / `endGesture`; `undo` / `redo` / `canUndo` / `canRedo` / `onHistoryChange`; `destroy`. Every op validates first and throws `DeckEditError` (`invalid`, `not-found`, `missing-reference`, `duplicate-id`) without writing. `remove*` returns a `RemovalResult` (`removed`, `updated`, `broken`).
+- **Integrity:** `checkIntegrity(file)`: pure, worker-safe list of broken references and parent cycles.
 
 ## Rules
 
-- Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case.
+- Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case (`test/round-trip.test.ts`).
 - Ids are stable. Never derive ids from titles; never rewrite ids on rename.
-- The Yjs layout is documented at the top of `src/deck.ts`. Changing it is a breaking change for persisted IndexedDB data; write an ADR and a migration.
+- The Yjs layout is documented at the top of `src/deck.ts` and in ADR 0005. It is persisted from 005 on: changing it needs an ADR and a migration.
+- Validate before writing (Yjs cannot roll back). Validity comes from the generated Zod in `@sododeck/schema`; never redefine it here.
+- Delete policy (ADR 0005): edges and owned steps are removed; steps and stickies are kept and reported broken; groups re-parent their contents.
+- Undo covers only the editor's own origin. Field edits pass an object key to `ctx.transact` so a typing burst on one object is one step.
+
+## Layout of `src/`
+
+- `deck.ts` load/save + layout doc · `layout.ts` root types and lookups · `convert.ts` JSON ↔ Y
+- `key-order.ts` canonical order from the schema · `load-checks.ts` duplicate ids · `ids.ts` id generator
+- `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
+- `ops/`: `collections`, `steps`, `rules`, `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 
 ## Boundaries
 
-- No React, no DOM, no storage providers (y-indexeddb lives in `apps/app`). Must run in Node and in Web Workers.
-- Does not define the file format (that is `@sododeck/schema`).
+- No React, no DOM, no storage providers (y-indexeddb lives in `apps/app`). Must run in Node and in Web Workers. ESLint enforces this for `src/` (no `node:*`, React or y-indexeddb imports; no `window`, `document`, `localStorage`, `indexedDB`, `navigator`).
+- Does not define the file format (that is `@sododeck/schema`). No direct `zod` dependency: schemas come from `sododeckFileSchema`.
 
 ## Status
 
-Skeleton. TODO(M1): typed accessors/mutations (addNode, renameNode, …), referential validation (edge → node, step → edge, anchor → object), undo manager scopes, per-object key order in `serializeDeck`.
+Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges).

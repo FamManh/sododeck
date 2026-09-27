@@ -38,13 +38,13 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 **Purpose**: Guard rails and test helpers; no behavior change.
 
-- [ ] T001 Add browser-free guards to `packages/model/eslint.config.js` for files in `src/**`:
+- [x] T001 Add browser-free guards to `packages/model/eslint.config.js` for files in `src/**`:
   - `no-restricted-imports` forbidding `node:*`, `react`, `react-dom`, `y-indexeddb`;
   - `no-restricted-globals` for `window`, `document`, `localStorage`, `indexedDB`, `navigator`.
 
   Run `pnpm --filter @sododeck/model lint` and confirm it is clean (research R9).
 
-- [ ] T002 [P] Create `packages/model/test/helpers.ts` with:
+- [x] T002 [P] Create `packages/model/test/helpers.ts` with:
   - `readExample(name)`, moved from `test/deck.test.ts`;
   - `seqIds()`, a deterministic id generator: `(prefix) => \`${prefix}-${n++}\``;
   - `largeDeck({ nodes: 500, edges: 1000, flows: 20, stepsPerFlow: 10, rules: 10 })`, returning a valid `SododeckFile` with fixed ids;
@@ -56,29 +56,29 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 **Purpose**: The core every story builds on. **⚠️ No user story work starts before this phase is done.**
 
-- [ ] T003 Refactor, with no behavior change:
+- [x] T003 Refactor, with no behavior change:
   - Move `toY`/`fromY`/`YValue` from `packages/model/src/deck.ts` into `packages/model/src/convert.ts`.
   - Move `DeckValidationError` into `packages/model/src/errors.ts`, and add `DeckEditError` with `code: 'invalid' | 'not-found' | 'missing-reference' | 'duplicate-id'` and `issues: Issue[]` (contract).
   - Re-export both from `packages/model/src/index.ts`.
 
   The existing `test/deck.test.ts` must stay green.
 
-- [ ] T004 [P] Create `packages/model/src/ids.ts` (research R3):
+- [x] T004 [P] Create `packages/model/src/ids.ts` (research R3):
   - `defaultNewId(prefix)` returns `<prefix>-<10 base-36 chars>` from `globalThis.crypto.getRandomValues`.
   - `makeIdAllocator(doc, newId)` collects every existing id in the deck and retries on collision. Ids must be unique across all collections, steps, rule columns and rows.
   - The prefixes are `node`, `group`, `edge`, `view`, `feature`, `flow`, `step`, `rule`, `col`, `row`, `sticky`.
-- [ ] T005 [P] Create `packages/model/src/validate.ts` (research R4). It validates **before any write** and never writes.
+- [x] T005 [P] Create `packages/model/src/validate.ts` (research R4). It validates **before any write** and never writes.
   - Element validators come from the generated Zod, e.g. `sododeckFileSchema.shape.nodes.element` (same for groups, edges, views, features, flows and stickies). Steps use `flows.element.shape.steps.element`, and rules use the `rules` record value schema.
   - `validateObject(kind, candidate): Issue[]`.
   - `validateRule(id, rule)`, which also runs `checkSemanticRules` on a one-rule file built from `emptySododeckFile()`.
   - `assertRefsExist(doc, refs)`, which throws `DeckEditError('missing-reference')`.
-- [ ] T006 Create `packages/model/src/editor.ts` with `createEditor(doc, options)` (contract):
+- [x] T006 Create `packages/model/src/editor.ts` with `createEditor(doc, options)` (contract):
   - Create a unique `origin` object and a `transact(fn)` helper that runs `doc.transact(fn, origin)`.
   - `batch(fn)` flattens nesting into one transaction and returns `fn`'s result.
   - Create a `Y.UndoManager` over `meta`, `nodes`, `groups`, `edges`, `views`, `features`, `flows`, `rules` and `stickies`, with `trackedOrigins: new Set([origin])` and `captureTimeout` from the options (default 500).
   - Provide `undo()`/`redo()` returning booleans, `canUndo()`/`canRedo()` and `destroy()`.
   - Provide internal lookup helpers `findIndexById(array, id)` and `getMapById`, which throw `DeckEditError('not-found')`.
-- [ ] T007 Export `createEditor`, `DeckEditor` and `EditorOptions` from `packages/model/src/index.ts`. Add `packages/model/test/editor-core.test.ts`, checking that:
+- [x] T007 Export `createEditor`, `DeckEditor` and `EditorOptions` from `packages/model/src/index.ts`. Add `packages/model/test/editor-core.test.ts`, checking that:
   - `batch` gives one undo step;
   - an edit made in the doc outside the editor (`doc.transact(fn)` with no origin, or another origin) is not undone;
   - a freshly loaded deck has `canUndo() === false`.
@@ -95,7 +95,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 1 ⚠️ (write first, must fail)
 
-- [ ] T008 [P] [US1] Write `packages/model/test/edit.test.ts`.
+- [x] T008 [P] [US1] Write `packages/model/test/edit.test.ts`.
   - **Every collection**: `add` / `update` / `reorder` for nodes, groups, edges, views, features, flows and stickies.
   - **Patches**: `null` clears an optional field. Moving a node is `update(position)` and regrouping is `update(group)`.
   - **Metadata**: `updateMeta` sets and clears `name`, `description` and `tags`.
@@ -110,7 +110,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
     - an update that tries to change `id`, as a type test via `// @ts-expect-error`.
   - **Batch**: a `batch` moving 5 nodes gives one change event.
   - **Valid export** (SC-007): `expectValid(doc)` after every operation.
-- [ ] T009 [P] [US1] Write `packages/model/test/observe.test.ts`:
+- [x] T009 [P] [US1] Write `packages/model/test/observe.test.ts`:
   - one `DeckChange` per transaction;
   - `added` / `updated` (with `keys`) / `removed` entries for top-level objects;
   - `child` entries for steps, rule columns and rule rows;
@@ -119,7 +119,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement `packages/model/src/ops/collections.ts` (data-model "Edit input and patch"):
+- [x] T010 [US1] Implement `packages/model/src/ops/collections.ts` (data-model "Edit input and patch"):
   - `add(c, data)` validates the candidate with the id and checks references, then pushes `toY(object)` in canonical key order.
   - `update(c, id, patch)`: the candidate is the current value plus the patch, with `null` deleting the key. Validate it, then set only the changed keys. For `position`, set `x`/`y` on the existing nested map.
   - `reorder(c, id, toIndex)` deletes and re-inserts inside one transaction.
@@ -131,22 +131,22 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
     - views: `feature` and `includes`/`positions` keys;
     - flows: `feature`;
     - stickies: `anchor`, which may be any object id.
-- [ ] T011 [P] [US1] Implement `packages/model/src/ops/meta.ts`: `updateMeta(patch)` validates `name`/`description`/`tags` against the file schema and writes them to the `meta` map. `null` removes the key.
-- [ ] T012 [US1] Implement `packages/model/src/ops/steps.ts`:
+- [x] T011 [P] [US1] Implement `packages/model/src/ops/meta.ts`: `updateMeta(patch)` validates `name`/`description`/`tags` against the file schema and writes them to the `meta` map. `null` removes the key.
+- [x] T012 [US1] Implement `packages/model/src/ops/steps.ts`:
   - `addStep(flowId, data, index?)` checks that `edge` and `rules` exist, and that `ruleInputs` keys are among its rules and their input columns.
   - `updateStep`, `moveStep` and `removeStep`.
 
   Every operation is validated with the step element schema.
 
-- [ ] T013 [US1] Wire `add`, `update`, `reorder`, `updateMeta` and the step ops into the `DeckEditor` object in `packages/model/src/editor.ts`. Every op runs inside the editor transaction. Export the `NewObject`, `NewStep`, `Patch` and `Collection` types from `packages/model/src/index.ts`.
-- [ ] T014 [US1] Implement `packages/model/src/observe.ts`: `observeDeck(doc, listener)`.
+- [x] T013 [US1] Wire `add`, `update`, `reorder`, `updateMeta` and the step ops into the `DeckEditor` object in `packages/model/src/editor.ts`. Every op runs inside the editor transaction. Export the `NewObject`, `NewStep`, `Patch` and `Collection` types from `packages/model/src/index.ts`.
+- [x] T014 [US1] Implement `packages/model/src/observe.ts`: `observeDeck(doc, listener)`.
   - Register `observeDeep` on every root type and map each event path to an `ObjectChange` (research R6).
   - Buffer the changes per transaction and flush once on `doc.on('afterTransaction')`.
   - Classify the origin: the editor origin gives `local`; `transaction.origin instanceof Y.UndoManager` gives `undo` or `redo`, using its `undoing`/`redoing` flags; anything else gives `remote`.
 
   Also add `getObject(doc, c, id)` and `getRule(doc, id)` in `packages/model/src/deck.ts`, and export all of them.
 
-- [ ] T015 [US1] Make T008 and T009 pass. Commit: `feat(model): typed edit operations and change events`.
+- [x] T015 [US1] Make T008 and T009 pass. Commit: `feat(model): typed edit operations and change events`.
 
 **Checkpoint**: US1 is independently demonstrable (quickstart §1 `edit`/`observe`).
 
@@ -160,13 +160,13 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T016 [P] [US2] Write `packages/model/test/round-trip.test.ts`:
+- [x] T016 [P] [US2] Write `packages/model/test/round-trip.test.ts`:
   - Move the cases from `test/deck.test.ts` here, then delete `deck.test.ts`.
   - Add one case per object type with **every optional field**: node, group, edge, view (with `positions` and `includes`), feature, flow, step (with `ruleInputs`), rule (columns/rows), sticky (anchor only / position only / both), and deck metadata.
   - Assert that `serializeDeck(toJSON(fromJSON(x))) === serializeDeck(x)`, and the same for an encoded-update replica.
   - Assert that the output keys of every nested object follow schema `properties` order even when the input has shuffled key order, and that deep-equality still holds.
   - Rename a node in the flow-and-rule example and check that only that node's `title` differs (US2 AS2).
-- [ ] T017 [P] [US2] Write `packages/model/test/load.test.ts`:
+- [x] T017 [P] [US2] Write `packages/model/test/load.test.ts`:
   - An invalid file throws `DeckValidationError` with paths (US2 AS3).
   - Duplicate ids throw with an issue naming the id and **both** paths (e.g. `nodes.0.id` and `nodes.3.id`) for each of these cases: nodes, groups, edges, views, features, flows, stickies, steps within one flow, rule columns across inputs+outputs, rule rows. No auto-rename (FR-020).
   - The same id used in two _different_ collections loads.
@@ -175,17 +175,17 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Implement `packages/model/src/key-order.ts` (research R2):
+- [x] T018 [P] [US2] Implement `packages/model/src/key-order.ts` (research R2):
   - Walk `jsonSchema` from `@sododeck/schema`, resolving `$ref` into `$defs`, and use `properties` declaration order, `items` and `additionalProperties`.
   - Build a cached `canonicalize(value)` that rebuilds objects in schema order.
   - Map-like objects (`rules`, `positions`, `ruleInputs` and its inner maps) keep their own key order.
-- [ ] T019 [P] [US2] Implement `packages/model/src/load-checks.ts`: `checkDuplicateIds(file): Issue[]` (research R7). The message format is `Id "x" is used more than once (nodes.0.id, nodes.3.id).`, with one issue per duplicated id per scope.
-- [ ] T020 [US2] Update `packages/model/src/deck.ts`:
+- [x] T019 [P] [US2] Implement `packages/model/src/load-checks.ts`: `checkDuplicateIds(file): Issue[]` (research R7). The message format is `Id "x" is used more than once (nodes.0.id, nodes.3.id).`, with one issue per duplicated id per scope.
+- [x] T020 [US2] Update `packages/model/src/deck.ts`:
   - `fromJSON` runs `parseSododeckFile`, then `checkDuplicateIds`; any issues throw `DeckValidationError`.
   - `toJSON` returns `canonicalize(...)`.
   - `serializeDeck` canonicalizes before stringifying. Remove its `TODO(M1)`.
   - Rewrite the header comment as the full documented layout from data-model.md, including that text is plain strings and last write wins (ADR 0005).
-- [ ] T021 [US2] Make T016 and T017 pass. Run `pnpm --filter @sododeck/app test` to confirm the app's decks still load. Commit: `feat(model): canonical key order and duplicate-id checks on load`.
+- [x] T021 [US2] Make T016 and T017 pass. Run `pnpm --filter @sododeck/app test` to confirm the app's decks still load. Commit: `feat(model): canonical key order and duplicate-id checks on load`.
 
 **Checkpoint**: US1 and US2 both work independently.
 
@@ -199,7 +199,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T022 [P] [US3] Write `packages/model/test/cascade.test.ts`, with one test per data-model cascade row. Each asserts the `RemovalResult`, `checkIntegrity` output, `expectValid(doc)`, and that **one `undo()` restores `toJSON` exactly** (SC-002).
+- [x] T022 [P] [US3] Write `packages/model/test/cascade.test.ts`, with one test per data-model cascade row. Each asserts the `RemovalResult`, `checkIntegrity` output, `expectValid(doc)`, and that **one `undo()` restores `toJSON` exactly** (SC-002).
   - **Node**: edges removed; steps kept with full content and reported `missing-reference` on `edge`; removed from `includes`/`positions`; `parent` cleared on children; anchored sticky kept and reported.
   - **Edge**: steps kept and reported.
   - **Group**: members' `group` and child groups' `parent` set to the deleted group's parent, or cleared; nothing else deleted.
@@ -207,7 +207,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
   - **Flow**: steps deleted; stickies anchored to the flow or a step kept and reported.
   - **Rule**: removed from node and step `rules` (an empty list is removed), `ruleInputs[ruleId]` removed; no problems reported.
   - **Sticky**: removed.
-- [ ] T023 [P] [US3] Write `packages/model/test/rules.test.ts`:
+- [x] T023 [P] [US3] Write `packages/model/test/rules.test.ts`:
   - `addRule` gets defaults (`hitPolicy: 'first'`, empty columns and rows).
   - `addRuleColumn` inserts `''` at the index in every row's `when`/`then`.
   - `moveRuleColumn` moves the cells.
@@ -216,7 +216,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
   - `setRuleCell`, `moveRuleRow`, `removeRuleRow`.
   - `updateRule` rejects `inputs`/`outputs`/`rows`.
   - Every op leaves `checkSemanticRules` clean.
-- [ ] T024 [P] [US3] Write `packages/model/test/integrity.test.ts`, with one fixture per check in the data-model table (SC-008). Each asserts `kind`, `object`, `field`, `target` and `targetType`. Include:
+- [x] T024 [P] [US3] Write `packages/model/test/integrity.test.ts`, with one fixture per check in the data-model table (SC-008). Each asserts `kind`, `object`, `field`, `target` and `targetType`. Include:
   - `detached-rule-input`;
   - `ambiguous-anchor` (a sticky anchor id that matches a node and an edge);
   - a group `parent` cycle and a node `parent` cycle, each reported once;
@@ -224,17 +224,17 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 3
 
-- [ ] T025 [P] [US3] Implement `packages/model/src/integrity.ts`: `checkIntegrity(file)` is pure and builds its id sets once (research R8). Export `IntegrityProblem` and `ObjectRef`.
-- [ ] T026 [US3] Implement `packages/model/src/ops/cascade.ts`, with one function per collection following the data-model cascade table. Each returns `RemovalResult { removed, updated, broken }`, where `broken` comes from `checkIntegrity` limited to the affected objects.
+- [x] T025 [P] [US3] Implement `packages/model/src/integrity.ts`: `checkIntegrity(file)` is pure and builds its id sets once (research R8). Export `IntegrityProblem` and `ObjectRef`.
+- [x] T026 [US3] Implement `packages/model/src/ops/cascade.ts`, with one function per collection following the data-model cascade table. Each returns `RemovalResult { removed, updated, broken }`, where `broken` comes from `checkIntegrity` limited to the affected objects.
   - Steps and stickies are **never** deleted by a cascade (clarification Q1).
   - Groups re-parent their contents (clarification Q3).
   - The whole cascade runs inside one `batch`.
-- [ ] T027 [US3] Implement `packages/model/src/ops/rules.ts`:
+- [x] T027 [US3] Implement `packages/model/src/ops/rules.ts`:
   - `addRule`, `updateRule`, `removeRule` (with the cascade);
   - column add/rename/move/remove, which keep row cell counts, and column removal also cleans `ruleInputs`;
   - row add/move/remove and `setRuleCell`.
-- [ ] T028 [US3] Wire `remove(c, id)`, `removeStep` (now returning `RemovalResult`), and all rule ops into `DeckEditor` in `packages/model/src/editor.ts`. Export `checkIntegrity`, `RemovalResult` and `NewRule` from `packages/model/src/index.ts`.
-- [ ] T029 [US3] Make T022–T024 pass. Commit: `feat(model): delete cascade, rule table ops and integrity report`.
+- [x] T028 [US3] Wire `remove(c, id)`, `removeStep` (now returning `RemovalResult`), and all rule ops into `DeckEditor` in `packages/model/src/editor.ts`. Export `checkIntegrity`, `RemovalResult` and `NewRule` from `packages/model/src/index.ts`.
+- [x] T029 [US3] Make T022–T024 pass. Commit: `feat(model): delete cascade, rule table ops and integrity report`.
 
 **Checkpoint**: US1–US3 (all P1) work. This is the minimum 003 and 005 need.
 
@@ -248,7 +248,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T030 [P] [US4] Write `packages/model/test/undo.test.ts`. `lib0` reads `Date.now` at import, so do not use fake timers (research R5).
+- [x] T030 [P] [US4] Write `packages/model/test/undo.test.ts`. `lib0` reads `Date.now` at import, so do not use fake timers (research R5).
   - **Bursts**: 10 title updates in a row with `captureTimeout: 10_000` undo in one step (US4 AS1). Updates to two different nodes within the window are **two** steps. A real boundary: `captureTimeout: 20`, two edits separated by `await sleep(40)`, give two steps.
   - **Gestures**: `beginGesture` + 50 position updates + `sleep(40)` in the middle (with `captureTimeout: 20`) + `endGesture` is one step (AS2). Nested begin/end are counted.
   - **Batch**: a multi-node batch and a cascade delete are each one step (AS3).
@@ -259,12 +259,12 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 4
 
-- [ ] T031 [US4] Extend `packages/model/src/editor.ts`:
+- [x] T031 [US4] Extend `packages/model/src/editor.ts`:
   - Track the last edited object key (scope + id + child id). When a field update targets a different object, call `undoManager.stopCapturing()` first.
   - `beginGesture()` increments a depth counter. At depth 0 → 1 it calls `stopCapturing()`, saves `captureTimeout` and sets it to `Infinity`.
   - `endGesture()` decrements, and at 0 restores the timeout and calls `stopCapturing()`. It throws on underflow.
   - `onHistoryChange(listener)` subscribes to `stack-item-added`, `stack-item-popped` and `stack-cleared`, and returns an unsubscribe function.
-- [ ] T032 [US4] Make T030 pass. Commit: `feat(model): undo grouping, gestures and history events`.
+- [x] T032 [US4] Make T030 pass. Commit: `feat(model): undo grouping, gestures and history events`.
 
 ---
 
@@ -274,31 +274,31 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 **Independent Test**: Ids are format-valid, not derived from titles, stable across edits, and 10,000 of them are unique.
 
-- [ ] T033 [P] [US5] Write `packages/model/test/ids.test.ts`:
+- [x] T033 [P] [US5] Write `packages/model/test/ids.test.ts`:
   - Default ids match `ID_PATTERN` (from `@sododeck/schema`) and the `<prefix>-` form.
   - A node titled "Orders API" has an id that does not contain `orders`/`api` (case-insensitive).
   - The id is unchanged after rename, move, regroup and reorder.
   - 10,000 `add` calls produce unique ids.
   - An injected generator that returns an existing id on its first call is retried.
   - `add` with an explicit id that exists anywhere in the deck throws `duplicate-id`.
-- [ ] T034 [US5] Fix whatever T033 exposes in `packages/model/src/ids.ts` or `packages/model/src/ops/collections.ts`. Commit: `test(model): id generation guarantees`.
+- [x] T034 [US5] Fix whatever T033 exposes in `packages/model/src/ids.ts` or `packages/model/src/ops/collections.ts`. Commit: `test(model): id generation guarantees`.
 
 ---
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T035 [P] Write `packages/model/test/perf.test.ts` (SC-003/004). Using `largeDeck()`, assert each of these is under 200 ms: `fromJSON`, `toJSON`, `serializeDeck(toJSON)`, and `checkIntegrity`. A single `update` (rename, then move) plus the `observeDeck` callback must be under 16 ms. Take the median of 5 runs after 1 warm-up, and multiply the budget by `process.env.CI ? 3 : 1`, documented in a comment. If a budget fails, profile first and do not raise the numbers without reporting it.
-- [ ] T036 [P] Write ADR `docs/decisions/0005-yjs-document-layout.md`, covering:
+- [x] T035 [P] Write `packages/model/test/perf.test.ts` (SC-003/004). Using `largeDeck()`, assert each of these is under 200 ms: `fromJSON`, `toJSON`, `serializeDeck(toJSON)`, and `checkIntegrity`. A single `update` (rename, then move) plus the `observeDeck` callback must be under 16 ms. Take the median of 5 runs after 1 warm-up, and multiply the budget by `process.env.CI ? 3 : 1`, documented in a comment. If a budget fails, profile first and do not raise the numbers without reporting it.
+- [x] T036 [P] Write ADR `docs/decisions/0005-yjs-document-layout.md`, covering:
   - the persisted layout (data-model table);
   - plain strings with last write wins per field, and why `Y.Text` is deferred, with its upgrade path (ADR + migration, clarification Q2);
   - the id format;
   - the cascade policy: keep and report knowledge objects, re-parent groups, refuse duplicate ids on load (clarifications Q1, Q3, Q4);
   - canonical key order from the schema;
   - undo scope, which covers only the editor's own origin.
-- [ ] T037 [P] Update `packages/model/CLAUDE.md`: API summary (per the contract), a pointer to the layout comment in `src/deck.ts` and ADR 0005, the browser-free lint guard, and Status (remove the M1 TODO list, list what exists).
-- [ ] T038 Run the quickstart §2 manual smoke from `specs/002-yjs-model/quickstart.md` and check the expected output.
-- [ ] T039 Run the full definition of done at the repo root: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix any failures inside `packages/model`. Confirm there are no `.only`/`.skip` and no `any`/`!`.
-- [ ] T040 Final report, per the AGENTS.md "How to work" step 5: what changed, perf numbers from T035, what was skipped, and what is uncertain. Uncertain points include the Y.Map key order on replicas and the concurrent-move limitation of `Y.Array`. End with the proposed next step (003-canvas-basic or 005).
+- [x] T037 [P] Update `packages/model/CLAUDE.md`: API summary (per the contract), a pointer to the layout comment in `src/deck.ts` and ADR 0005, the browser-free lint guard, and Status (remove the M1 TODO list, list what exists).
+- [x] T038 Run the quickstart §2 manual smoke from `specs/002-yjs-model/quickstart.md` and check the expected output.
+- [x] T039 Run the full definition of done at the repo root: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix any failures inside `packages/model`. Confirm there are no `.only`/`.skip` and no `any`/`!`.
+- [x] T040 Final report, per the AGENTS.md "How to work" step 5: what changed, perf numbers from T035, what was skipped, and what is uncertain. Uncertain points include the Y.Map key order on replicas and the concurrent-move limitation of `Y.Array`. End with the proposed next step (003-canvas-basic or 005).
 
 ---
 
