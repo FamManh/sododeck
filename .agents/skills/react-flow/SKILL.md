@@ -21,7 +21,9 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 | Need                       | Where                                                                                                 |
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `<ReactFlow>` props, types | `editor/canvas.tsx` (`nodeTypes`/`edgeTypes` at module scope)                                          |
-| Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `toFlowNodes`/`toFlowEdges` (optional `overlay` last) |
+| Visible scope / collapse   | `editor/visible-graph.ts` — `scopeOf`, `visibleGraph`, merged edges, collapsed cards, port pills, scope bounds |
+| Zoom levels / focus / flow folding | `editor/levels.ts`, `editor/focus-set.ts`, `editor/collapse-flow-marks.ts` |
+| Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `COLLAPSED_NODE_PREFIX`, `PORT_NODE_PREFIX`, `MERGED_EDGE_PREFIX`, `toFlowNodes`/`toFlowEdges` |
 | Flow marks (006)           | `editor/flows/flow-overlay.ts` — `flowOverlay()` → `EdgeFlowMark` (`data.flow`: badges, style) and node `data.flowStart`; drawn in `deck-edge.tsx` / `deck-node.tsx` |
 | Playback marks (007)       | `flowOverlay(…, playback)` (`PlaybackMarks`: played step ids, current step, speed) → `inPath` / `current` on edges, `inPath` / `currentStep` on nodes; `deck-to-flow.ts` turns `inPath` into `className: 'in-flow'`; `[data-flow-mode]` on the canvas wrapper dims the rest (`index.css`); `editor/flow-token.tsx` on the current edge; `flows/use-flow-viewport.ts` fits the flow / follows the step |
 | Sizes, positions, bounds   | `editor/canvas-geometry.ts` — `NODE_SIZE`, `displayPosition`, `groupBounds`, `freeSpot`                |
@@ -30,7 +32,7 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 | Keys                       | `editor/use-canvas-shortcuts.ts` (canvas keys + document-wide undo/redo/Delete/Esc)                   |
 | Delete                     | `ui.requestDelete(selection)` or `ui.requestRemoval(targets)` → `confirm-delete-dialog.tsx` (`previewRemoval`, one batch, Undo toast) |
 | Read / write the deck      | `model/use-deck-snapshot.ts` (`useDeckSnapshot`, `readDeck` in handlers), `model/use-editor.ts`       |
-| UI state                   | `state/ui-store.ts` (Zustand; never document data)                                                    |
+| UI state                   | `state/ui-store.ts` (Zustand; never document data: drill, collapse, focus and level/menu state live here) |
 | Layout                     | `layout/` — ELK in a worker (`createLayoutClient().layout(...)`)                                       |
 | Canvas CSS, tokens         | `index.css` (canvas rules), `@sododeck/ui` `tokens.css` (`--sd-dur-*`); SMIL `dur` needs ms from `resolveMotion`, not CSS vars |
 | Motion / reduced motion    | `@sododeck/ui/lib/motion` (`resolveMotion`), `@sododeck/ui/hooks/use-reduced-motion`                  |
@@ -40,7 +42,7 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 
 **New node or edge type** (sticky, collapsed group, merged edge, leader line)
 1. Component in its own file, `memo(function X(props: NodeProps<XFlowNode>))`; register in the module-scope map in `canvas.tsx`.
-2. Derive it in `deck-to-flow.ts` with its own cache and **an id prefix** (like `group:`) so ids never clash with deck ids.
+2. Derive it in `deck-to-flow.ts` with its own cache and **an id prefix** (like `group:` / `collapsed:` / `port:` / `merged:`) so ids never clash with deck ids.
 3. Size: fixed-size shapes set explicit `width`/`height` from `canvas-geometry.ts`; a card whose height follows its text sets `width` only and lets RF measure the height.
 4. Teach `use-canvas-handlers.ts` the prefix: skip or route it in `onNodeClick`, `onNodeDragStart`, `onNodesChange`, marquee. `Selection` in the UI store holds nodes/edges only; a new selectable kind extends it (and `pruneSelection`).
 5. Inputs inside a node: `className="nodrag nowheel"`. Keep a draft in local state while typing and commit once on blur, like `field-edit.tsx`; `isTextTarget` already keeps canvas keys and ⌘Z out of text fields.
@@ -59,6 +61,7 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 - Label pills that carry a flow mark are `pointer-events-none`, so a click on the label reaches the edge (recording).
 - `.in-flow` comes from the RF object's `className`. Group boundaries are `.react-flow__node` too, so they dim as well.
 - Caches in `deck-to-flow.ts` are keyed by the snapshot object, so edits to the object's own fields invalidate them. Any input from outside the object (selection, focus, mode, other nodes) must be in the cache check, or cached objects never update.
+- Focus mode also needs interaction/accessibility state: non-members get `dimmed` data plus `domAttributes` (`aria-hidden`, `inert` for nodes) from `deck-to-flow.ts`; do not try to bolt that on in the rendered node component.
 
 **Zoom-dependent rendering**: one selector in `Canvas` that returns a discrete value (e.g. `useStore(levelSelector)` where the module-scope `levelSelector = (s: ReactFlowState) => levelForZoom(s.transform[2])`), passed down through `data`. Never read the raw zoom inside each node. Rebuilding every object when the level changes is fine (rare); per-frame is not. If a level changes a node's size, keep the box centred on the stored position and convert drags back before writing.
 
