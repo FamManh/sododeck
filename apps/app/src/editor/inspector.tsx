@@ -9,6 +9,7 @@ import { FlowInspector } from './flows/flow-inspector';
 import { BulkInspector } from './inspector/bulk-inspector';
 import { DeckInspector } from './inspector/deck-inspector';
 import { EdgeInspector } from './inspector/edge-inspector';
+import { GroupInspector } from './inspector/group-inspector';
 import { InspectorFrame } from './inspector/inspector-frame';
 import { NodeInspector } from './inspector/node-inspector';
 import { StickyInspector } from './inspector/sticky-inspector';
@@ -46,19 +47,7 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
     return <DeckInspector deck={deck} onOpenRules={onOpenRules} />;
   }
   if (group !== undefined && groups.length === 1 && nodes.length === 0 && edges.length === 0) {
-    return (
-      <InspectorFrame
-        icon={<Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
-        heading={group.title}
-        subtitle="Group"
-      >
-        <PanelSection>
-          <p className="text-body-sm text-ink-secondary">
-            Group details are coming in this feature.
-          </p>
-        </PanelSection>
-      </InspectorFrame>
-    );
+    return <GroupInspector deck={deck} group={group} />;
   }
   if (node !== undefined && nodes.length === 1 && edges.length === 0) {
     return <NodeInspector deck={deck} node={node} />;

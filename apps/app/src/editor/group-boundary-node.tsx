@@ -3,6 +3,7 @@ import { memo } from 'react';
 
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
+import { ChevronDown } from 'lucide-react';
 
 import { useUiStore } from '../state/ui-store';
 import type { GroupFlowNode } from './deck-to-flow';
@@ -19,13 +20,15 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
 }: NodeProps<GroupFlowNode>) {
   const focus = useUiStore((state) => state.focus);
   const select = useUiStore((state) => state.select);
+  const toggleCollapsed = useUiStore((state) => state.toggleCollapsed);
+  const announce = useUiStore((state) => state.announce);
   const groupId = id.startsWith('group:') ? id.slice('group:'.length) : id;
 
   return (
     <div
       data-testid="group-boundary"
       style={{ width, height }}
-      className="pointer-events-none rounded-group border border-dashed border-border bg-group"
+      className="group pointer-events-none rounded-group border border-dashed border-border bg-group"
     >
       <button
         type="button"
@@ -51,6 +54,26 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
       >
         <span>{data.title}</span>
         <span>{data.count}</span>
+      </button>
+      <button
+        type="button"
+        aria-label={`Collapse ${data.title}`}
+        onMouseDownCapture={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+          toggleCollapsed(groupId);
+          select({ groups: [groupId] });
+          focus(`collapsed:${groupId}`);
+          announce(`${data.title} collapsed`);
+        }}
+        className={cn(
+          'pointer-events-auto absolute top-2 right-3 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100',
+          focusRing,
+        )}
+      >
+        <ChevronDown className="size-4" />
       </button>
     </div>
   );

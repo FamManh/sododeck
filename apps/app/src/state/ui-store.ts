@@ -198,6 +198,7 @@ export interface UiState {
   setLabelsOn: (on: boolean) => void;
   setNotesDisplay: (display: NotesDisplay) => void;
   openEdgePopover: (edgeId: string) => void;
+  openMergedPopover: (edgeId: string) => void;
   openConnectPopover: (fromId: string) => void;
   closePopover: () => void;
   /** Opens the confirmation for a canvas selection (components first, then connections). */
@@ -499,6 +500,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     openEdgePopover: (edgeId) => {
       set({ popover: { kind: 'edge', edgeId } });
+    },
+    openMergedPopover: (edgeId) => {
+      set({ popover: { kind: 'merged', edgeId } });
     },
     openConnectPopover: (fromId) => {
       set({ popover: { kind: 'connect', fromId } });

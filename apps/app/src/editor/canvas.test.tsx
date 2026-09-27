@@ -31,6 +31,24 @@ const deck = deckOf({
   ],
 });
 
+const collapsedGroupsDeck = deckOf({
+  nodes: [
+    { id: 'a1', type: 'service', title: 'A1', group: 'left', position: { x: 0, y: 0 } },
+    { id: 'a2', type: 'service', title: 'A2', group: 'left', position: { x: 0, y: 120 } },
+    { id: 'b1', type: 'service', title: 'B1', group: 'right', position: { x: 420, y: 0 } },
+    { id: 'b2', type: 'service', title: 'B2', group: 'right', position: { x: 420, y: 120 } },
+  ],
+  groups: [
+    { id: 'left', title: 'Left' },
+    { id: 'right', title: 'Right' },
+  ],
+  edges: Array.from({ length: 12 }, (_, index) => ({
+    id: `m${String(index)}`,
+    from: index % 2 === 0 ? 'a1' : 'a2',
+    to: index % 3 === 0 ? 'b1' : 'b2',
+  })),
+});
+
 const ui = () => useUiStore.getState();
 const click = (patch: Partial<ReactMouseEvent> = {}) =>
   ({ shiftKey: false, metaKey: false, ctrlKey: false, ...patch }) as ReactMouseEvent;
@@ -324,6 +342,47 @@ describe('Canvas', () => {
     expect(screen.getByRole('group', { name: 'Service: Dispatch' })).toBeInTheDocument();
     expect(toJSON(doc)).toEqual(before);
     expect(editor().canUndo()).toBe(false);
+  });
+
+  it('collapses a group from the keyboard, renders merged edges, and updates counts live', async () => {
+    const user = userEvent.setup();
+    const before = structuredClone(collapsedGroupsDeck);
+    const { doc, unmount } = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+
+    act(() => {
+      ui().focus('group:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
+    });
+    await user.keyboard(' ');
+    expect(ui().collapsed.has('left')).toBe(true);
+    expect(ui().focusedId).toBe('collapsed:left');
+    expect(screen.getByTestId('collapsed-group-node')).toHaveTextContent('2 nodes · 0 edges');
+
+    expect(toJSON(doc)).toEqual(before);
+
+    unmount();
+    const merged = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+    act(() => {
+      ui().setCollapsed('left', true);
+      ui().setCollapsed('right', true);
+    });
+    expect(ui().collapsed.has('right')).toBe(true);
+
+    act(() => {
+      ui().setCollapsed('right', false);
+    });
+    expect(ui().collapsed.has('right')).toBe(false);
+
+    act(() => {
+      ui().setCollapsed('right', true);
+      merged.editor().add('nodes', { type: 'service', title: 'A3', group: 'left' });
+    });
+    expect(
+      screen.getByRole('button', {
+        name: 'Left, collapsed group, 3 nodes, 0 edges',
+      }),
+    ).toBeInTheDocument();
   });
 });
 

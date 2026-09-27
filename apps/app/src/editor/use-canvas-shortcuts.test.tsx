@@ -48,6 +48,21 @@ const groupedDeck = deckOf({
   edges: [{ id: 'edge', from: 'inside', to: 'outside' }],
 });
 
+const mergedDeck = deckOf({
+  nodes: [
+    { id: 'a', type: 'service', title: 'A', group: 'left', position: { x: 40, y: 40 } },
+    { id: 'b', type: 'service', title: 'B', group: 'right', position: { x: 420, y: 40 } },
+  ],
+  groups: [
+    { id: 'left', title: 'Left' },
+    { id: 'right', title: 'Right' },
+  ],
+  edges: [
+    { id: 'e1', from: 'a', to: 'b' },
+    { id: 'e2', from: 'a', to: 'b' },
+  ],
+});
+
 const ui = () => useUiStore.getState();
 
 function Editor() {
@@ -124,6 +139,32 @@ describe('canvas keyboard', () => {
     await user.keyboard('{ArrowLeft}');
     expect(ui().focusedId).toBe('collapsed:core');
     expect(ui().selection.groups).toEqual(['core']);
+  });
+
+  it('collapses a focused group with Space and opens merged popovers from a focused card', async () => {
+    const { user } = setup(mergedDeck);
+    act(() => {
+      ui().focus('group:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
+    });
+    await user.keyboard(' ');
+    expect(ui().collapsed.has('left')).toBe(true);
+    expect(ui().focusedId).toBe('collapsed:left');
+
+    act(() => {
+      ui().toggleCollapsed('right');
+      ui().focus('collapsed:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="collapsed:left"]')?.focus();
+    });
+    await user.keyboard('e');
+    expect(ui().focusedEdgeId).toBe('merged:collapsed:left|collapsed:right');
+    await user.keyboard('{Enter}');
+    expect(ui().popover).toEqual({
+      kind: 'merged',
+      edgeId: 'merged:collapsed:left|collapsed:right',
+    });
   });
 
   it('extends the selection with shift + arrows', async () => {

@@ -24,7 +24,12 @@ import {
   NODE_SIZE,
   type Direction,
 } from './canvas-geometry';
-import { COLLAPSED_NODE_PREFIX, edgeName, GROUP_NODE_PREFIX } from './deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  edgeName,
+  GROUP_NODE_PREFIX,
+  MERGED_EDGE_PREFIX,
+} from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
 import { analysisOf, recordClick, requestCancel, undoLastStep } from './flows/flow-session';
@@ -302,6 +307,20 @@ export function useCanvasKeyDown() {
       }
 
       switch (key.toLowerCase()) {
+        case ' ': {
+          const groupId = current === null ? null : groupIdOf(current);
+          if (groupId === null) return;
+          event.preventDefault();
+          const nextCollapsed = !ui.collapsed.has(groupId);
+          ui.toggleCollapsed(groupId);
+          ui.select({ groups: [groupId] });
+          ui.focus(
+            nextCollapsed ? `${COLLAPSED_NODE_PREFIX}${groupId}` : `${GROUP_NODE_PREFIX}${groupId}`,
+          );
+          const title = deck.groups.find((group) => group.id === groupId)?.title ?? groupId;
+          ui.announce(`${title} ${nextCollapsed ? 'collapsed' : 'expanded'}`);
+          return;
+        }
         case 'c':
           if (current !== null && deck.nodes.some((n) => n.id === current)) {
             event.preventDefault();
@@ -310,6 +329,30 @@ export function useCanvasKeyDown() {
           return;
         case 'e': {
           if (current === null) return;
+          const groupId = groupIdOf(current);
+          if (groupId !== null) {
+            const ownMerged = graph.merged.filter(
+              (edge) =>
+                edge.a === `${COLLAPSED_NODE_PREFIX}${groupId}` ||
+                edge.b === `${COLLAPSED_NODE_PREFIX}${groupId}`,
+            );
+            if (ownMerged.length === 0) return;
+            event.preventDefault();
+            const index = ownMerged.findIndex((edge) => edge.id === ui.focusedEdgeId);
+            const edge = ownMerged[(index + 1) % ownMerged.length];
+            if (edge === undefined) return;
+            ui.focus(selectionForFocusedGroup(ui.collapsed, groupId));
+            ui.focusEdge(edge.id);
+            const titles = new Map(deck.groups.map((group) => [group.id, group.title]));
+            const nameOf = (id: string) =>
+              id.startsWith(COLLAPSED_NODE_PREFIX)
+                ? (titles.get(id.slice(COLLAPSED_NODE_PREFIX.length)) ?? id)
+                : (deck.nodes.find((node) => node.id === id)?.title ?? id);
+            ui.announce(
+              `${String(edge.edgeIds.length)} connections between ${nameOf(edge.a)} and ${nameOf(edge.b)}`,
+            );
+            return;
+          }
           const titles = new Map(deck.nodes.map((n) => [n.id, n.title]));
           const own = deck.edges.filter(
             (e) =>
@@ -330,6 +373,9 @@ export function useCanvasKeyDown() {
           if (selectedSticky !== null) {
             event.preventDefault();
             ui.setStickyEditing(selectedSticky);
+          } else if (ui.focusedEdgeId?.startsWith(MERGED_EDGE_PREFIX) === true) {
+            event.preventDefault();
+            ui.openMergedPopover(ui.focusedEdgeId);
           } else if (current !== null && groupIdOf(current) !== null) {
             const groupId = groupIdOf(current);
             if (groupId === null) return;

@@ -26,6 +26,7 @@ import { displayPosition, groupBounds, nodeSize } from './canvas-geometry';
 import { CanvasToolbar } from './canvas-toolbar';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
+import { CollapsedGroupNode } from './collapsed-group-node';
 import { DeckEdge } from './deck-edge';
 import { DeckNode } from './deck-node';
 import {
@@ -58,12 +59,17 @@ import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-g
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
+  'collapsed-group': CollapsedGroupNode,
   deck: DeckNode,
   'group-boundary': GroupBoundaryNode,
   port: PortPillNode,
   sticky: StickyNode,
 };
-const edgeTypes: EdgeTypes = { deck: DeckEdge, 'sticky-leader': StickyLeaderEdge };
+const edgeTypes: EdgeTypes = {
+  deck: DeckEdge,
+  merged: MergedEdge,
+  'sticky-leader': StickyLeaderEdge,
+};
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -499,8 +505,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         />
       )}
       <EdgePopover deck={deck} />
+      <MergedEdgePopover deck={deck} />
       <ConnectPopover deck={deck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
     </div>
   );
 }
+import { MergedEdge } from './merged-edge';
+import { MergedEdgePopover } from './merged-edge-popover';

@@ -25,6 +25,7 @@ import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
   COLLAPSED_NODE_PREFIX,
   GROUP_NODE_PREFIX,
+  MERGED_EDGE_PREFIX,
   PORT_NODE_PREFIX,
   STICKY_NODE_PREFIX,
 } from './deck-to-flow';
@@ -41,6 +42,7 @@ export const NOTE_MIME = 'application/x-sododeck-note';
 const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
 const isCollapsedNode = (id: string) => id.startsWith(COLLAPSED_NODE_PREFIX);
 const isPortNode = (id: string) => id.startsWith(PORT_NODE_PREFIX);
+const isMergedEdge = (id: string) => id.startsWith(MERGED_EDGE_PREFIX);
 const stickyIdOf = (id: string) =>
   id.startsWith(STICKY_NODE_PREFIX) ? id.slice(STICKY_NODE_PREFIX.length) : null;
 const groupIdOf = (id: string) =>
@@ -114,7 +116,14 @@ export function useCanvasHandlers() {
 
     return {
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
-        if (isGroupNode(node.id)) return;
+        const groupId = groupIdOf(node.id);
+        if (groupId !== null) {
+          if (!isCollapsedNode(node.id) && !isGroupNode(node.id)) return;
+          if (!isMultiSelect(event)) ui().select({ groups: [groupId] });
+          ui().focus(node.id);
+          ui().focusEdge(null);
+          return;
+        }
         const stickyId = stickyIdOf(node.id);
         if (flowMode()) {
           if (stickyId === null) jumpTo((p) => stepForNode(p.played, node.id));
@@ -151,6 +160,10 @@ export function useCanvasHandlers() {
         if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+        if (isMergedEdge(edge.id)) {
+          ui().focusEdge(edge.id);
+          return;
+        }
         if (flowMode()) {
           jumpTo((p) => stepForEdge(p.played, edge.id, p.currentStepId));
           return;
@@ -164,6 +177,11 @@ export function useCanvasHandlers() {
       },
       onEdgeDoubleClick: (_: ReactMouseEvent, edge: Edge) => {
         if (viewOnly()) return;
+        if (isMergedEdge(edge.id)) {
+          ui().focusEdge(edge.id);
+          ui().openMergedPopover(edge.id);
+          return;
+        }
         ui().select({ edges: [edge.id] });
         ui().openEdgePopover(edge.id);
       },
