@@ -161,22 +161,22 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: with one recorded flow, edit every flow, step and deck field, then check the step list, the flow list and the JSON panel, and undo (spec story 2).
 
-- [ ] T030 [P] [US2] Extend 006's flow inspector tests (`apps/app/src/editor/flows/inspector-flow.test.tsx`) for scenario 1: Description with Write/Preview, the `OwnerField` combobox (replacing 006's `<datalist>` and `owners()` helper), Tags, Links, and the summary line "<n> steps · <b> branches · <c> components", plus " · <k> broken steps" when k > 0.
-- [ ] T031 [US2] Implement those additions in `apps/app/src/editor/flows/inspector-flow.tsx` using the shared fields and `flowSummary`. Remove `FieldEdit`'s `list` prop if nothing else uses it.
-- [ ] T032 [P] [US2] Extend 006's step inspector tests (`apps/app/src/editor/flows/inspector-step.test.tsx`) for scenarios 2–4:
+- [x] T030 [P] [US2] Extend 006's flow inspector tests (`apps/app/src/editor/flows/inspector-flow.test.tsx`) for scenario 1: Description with Write/Preview, the `OwnerField` combobox (replacing 006's `<datalist>` and `owners()` helper), Tags, Links, and the summary line "<n> steps · <b> branches · <c> components", plus " · <k> broken steps" when k > 0.
+- [x] T031 [US2] Implement those additions in `apps/app/src/editor/flows/inspector-flow.tsx` using the shared fields and `flowSummary`. Remove `FieldEdit`'s `list` prop if nothing else uses it.
+- [x] T032 [P] [US2] Extend 006's step inspector tests (`apps/app/src/editor/flows/inspector-step.test.tsx`) for scenarios 2–4:
   - 006's header "Step n · <from> → <to>" and subtitle are unchanged
   - Owner, Edge "<label> · <protocol>", Tags, Links, Description with Write/Preview
   - SLA target as text only, with no meter
   - a broken step shows "Connection deleted" with an icon, and its other fields stay editable
   - an empty Attached rules slot (filled in US5)
-- [ ] T033 [US2] Implement those additions in `apps/app/src/editor/flows/inspector-step.tsx`.
-- [ ] T034 [P] [US2] Write `apps/app/src/editor/inspector/deck-inspector.test.tsx` (it must fail at first), covering scenarios 5–6:
+- [x] T033 [US2] Implement those additions in `apps/app/src/editor/flows/inspector-step.tsx`.
+- [x] T034 [P] [US2] Write `apps/app/src/editor/inspector/deck-inspector.test.tsx` (it must fail at first), covering scenarios 5–6:
   - Name is required, and renaming it updates the top bar
   - Description and Tags
   - the stats list shows Components, Connections and Flows, plus a `button` "Rules n"
   - 005's Storage section is still there
   - every control is reachable by Tab
-- [ ] T035 [US2] Implement `apps/app/src/editor/inspector/deck-inspector.tsx`, reusing `DeckInspectorStorage`. The "Rules n" button navigates to `rules` (the route is added in T041; until then it is disabled). Make T034 pass.
+- [x] T035 [US2] Implement `apps/app/src/editor/inspector/deck-inspector.tsx`, reusing `DeckInspectorStorage`. The "Rules n" button navigates to `rules` (the route is added in T041; until then it is disabled). Make T034 pass.
 
 **Checkpoint**: K-1 covers every object type.
 
@@ -188,7 +188,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: select three components with different owners and partly shared tags, check the Mixed and partial display, change each bulk field, and undo once per change (spec story 3).
 
-- [ ] T036 [P] [US3] Write `apps/app/src/editor/inspector/bulk-inspector.test.tsx` (it must fail at first), covering spec story 3 scenarios 1–7:
+- [x] T036 [P] [US3] Write `apps/app/src/editor/inspector/bulk-inspector.test.tsx` (it must fail at first), covering spec story 3 scenarios 1–7:
   - Mixed shows with the accessible description "Mixed values"
   - "Same on all n"
   - leaving a Mixed field without typing changes nothing
@@ -196,7 +196,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - a partial tag is dashed with "k/n"; "Add to all" and "Remove from all" are each one undo step
   - with connections also selected, the header shows both counts and the note "Changes apply to components only."
   - "Delete n components" opens 003's dialog
-- [ ] T037 [US3] Implement `apps/app/src/editor/inspector/bulk-inspector.tsx` with `bulkView` and `editor.batch`. Text fields showing Mixed write only after the user types (a gesture wraps each batch). Kind and Group use a pick-mode Combobox (Group includes "No group"). Make T036 pass.
+- [x] T037 [US3] Implement `apps/app/src/editor/inspector/bulk-inspector.tsx` with `bulkView` and `editor.batch`. Text fields showing Mixed write only after the user types (a gesture wraps each batch). Kind and Group use a pick-mode Combobox (Group includes "No group"). Make T036 pass.
 
 **Checkpoint**: C-6 bulk edit works.
 
@@ -208,25 +208,25 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: starting with no rules, create a rule, add and rename columns, fill rows using every cell syntax, reorder and delete rows, change the hit policy, reload, and check the deck JSON (spec story 4).
 
-- [ ] T038 [US4] Add `canvasViewport` and `ruleTest` to `apps/app/src/state/ui-store.ts` (data-model §3), with store tests. Save and restore the viewport in `apps/app/src/editor/canvas.tsx` on unmount and mount.
-- [ ] T039 [US4] Refactor the shell in `apps/app/src/routes/editor-page.tsx` (research R8):
+- [x] T038 [US4] Add `canvasViewport` and `ruleTest` to `apps/app/src/state/ui-store.ts` (data-model §3), with store tests. Save and restore the viewport in `apps/app/src/editor/canvas.tsx` on unmount and mount.
+- [x] T039 [US4] Refactor the shell in `apps/app/src/routes/editor-page.tsx` (research R8):
   - `EditorShell` keeps the doc, the providers, `ConfirmDeleteDialog`, `Announcer`, `Toaster`, `useEditorShortcuts` and 006's `useFlowSync`, and renders an `<Outlet/>`.
   - The canvas layout becomes the index child and keeps 006's `useFlowShortcuts`.
   - Existing editor tests stay green.
-- [ ] T040 [US4] Scope the keys in `apps/app/src/editor/use-canvas-shortcuts.ts`: ⌘Z, ⇧⌘Z and ⌘S apply on both screens; Delete, Esc (clear selection) and the canvas keys (and 006's flow keys) apply only on the canvas screen. Add a test that Delete on the rules screen does not open the canvas delete dialog.
-- [ ] T041 [US4] Add the child route `rules/:ruleId?` under `/deck/:deckId` in `apps/app/src/app/router.tsx`, lazy-loading `editor/rules/rules-page.tsx`. Update the top bar in `apps/app/src/editor/top-bar.tsx`:
+- [x] T040 [US4] Scope the keys in `apps/app/src/editor/use-canvas-shortcuts.ts`: ⌘Z, ⇧⌘Z and ⌘S apply on both screens; Delete, Esc (clear selection) and the canvas keys (and 006's flow keys) apply only on the canvas screen. Add a test that Delete on the rules screen does not open the canvas delete dialog.
+- [x] T041 [US4] Add the child route `rules/:ruleId?` under `/deck/:deckId` in `apps/app/src/app/router.tsx`, lazy-loading `editor/rules/rules-page.tsx`. Update the top bar in `apps/app/src/editor/top-bar.tsx`:
   - on the canvas screen, a `link` "Rules" with the count, before the save status
   - on the rules screen, the breadcrumb segment "Rules" and a `link` "Back to canvas" in place of Export
     Add a test that the route and back navigation restore the selection and viewport. Enable the deck inspector's "Rules n" button from T035.
-- [ ] T042 [P] [US4] Write `apps/app/src/editor/rules/rule-list.test.tsx` and `rule-header.test.tsx` (they must fail at first), covering scenarios 1, 2 and 8:
+- [x] T042 [P] [US4] Write `apps/app/src/editor/rules/rule-list.test.tsx` and `rule-header.test.tsx` (they must fail at first), covering scenarios 1, 2 and 8:
   - the list shows "<rows> rows · used in <n> steps" with `aria-current`
   - the empty state
   - New creates "Untitled rule" with First match and focuses the name field
   - an empty name is refused
   - the Description has Write/Preview
   - the Hit policy combobox
-- [ ] T043 [US4] Implement `apps/app/src/editor/rules/rules-page.tsx` (the three-column layout from design 04), `rule-list.tsx` (usage counts from `ruleUsage`) and `rule-header.tsx`. Make T042 pass.
-- [ ] T044 [P] [US4] Write `apps/app/src/editor/rules/decision-table.test.tsx` (it must fail at first), covering scenarios 3–7:
+- [x] T043 [US4] Implement `apps/app/src/editor/rules/rules-page.tsx` (the three-column layout from design 04), `rule-list.tsx` (usage counts from `ruleUsage`) and `rule-header.tsx`. Make T042 pass.
+- [x] T044 [P] [US4] Write `apps/app/src/editor/rules/decision-table.test.tsx` (it must fail at first), covering scenarios 3–7:
   - adding a condition gives existing rows "Any"; adding an action gives them empty cells
   - columns rename inline, and an empty label is refused
   - removing a column needs no dialog, shows an Undo toast, and one ⌘Z restores the column and the step sample inputs
@@ -234,19 +234,19 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - Add row appends a row
   - ⌥↑ / ⌥↓ moves a row, ⌫ on a row header deletes it with an Undo toast
   - grid navigation: arrows, Enter/F2, Esc, and typing to start editing
-- [ ] T045 [US4] Implement `apps/app/src/editor/rules/use-grid-keys.ts`, `cell-editor.tsx` and `column-menu.tsx`.
-- [ ] T046 [US4] Implement `apps/app/src/editor/rules/decision-table.tsx`:
+- [x] T045 [US4] Implement `apps/app/src/editor/rules/use-grid-keys.ts`, `cell-editor.tsx` and `column-menu.tsx`.
+- [x] T046 [US4] Implement `apps/app/src/editor/rules/decision-table.tsx`:
   - WHEN/THEN column groups and a numbered row header with a grip (006's `use-sortable-list`)
   - the Add row button and the syntax hint
   - invalid cell display from `ruleChecks`
   - `showUndoToast` for row and column removal
     Make T044 pass.
-- [ ] T047 [US4] Add delete-rule support:
+- [x] T047 [US4] Add delete-rule support:
   - "Delete rule…" in the rule header calls `requestRemoval([{ scope: 'rules', id }])`.
   - `apps/app/src/editor/describe-removal.ts` says "Used in n steps and m components. It will be detached from them." (or "It isn't used anywhere.") and uses the toast text "Rule “<title>” deleted · ⌘Z to undo".
   - After deleting, the page falls back to the rule list.
     Extend the dialog tests for spec story 6 scenario 7 (one ⌘Z restores the rule and every attachment).
-- [ ] T048 [US4] Implement `apps/app/src/editor/rules/use-rule-sync.ts`: when the open rule is removed (from any origin, including another tab), navigate to `rules` and clear `ruleTest`. Add a test with a remote-origin removal.
+- [x] T048 [US4] Implement `apps/app/src/editor/rules/use-rule-sync.ts`: when the open rule is removed (from any origin, including another tab), navigate to `rules` and clear `ruleTest`. Add a test with a remote-origin removal.
 
 **Checkpoint**: rules can be authored, reordered, deleted and undone, and they survive a reload and sync between tabs.
 
@@ -258,25 +258,25 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: with a rule and two flows, attach the rule to two steps and one component, set sample inputs, check the matched row, edit the rule, check both steps, then detach and undo (spec story 5).
 
-- [ ] T049 [P] [US5] Write `apps/app/src/editor/fields/attach-rule-popover.test.tsx` (it must fail at first), covering scenario 1:
+- [x] T049 [P] [US5] Write `apps/app/src/editor/fields/attach-rule-popover.test.tsx` (it must fail at first), covering scenario 1:
   - the `dialog` "Attach rule" and its filter
   - an already attached rule is `aria-disabled` and marked "Attached"
   - Enter attaches the rule
   - "New rule" creates a rule, attaches it and navigates to it
-- [ ] T050 [US5] Implement `apps/app/src/editor/fields/attach-rule-popover.tsx` using `editor.attachRule`. Make T049 pass.
-- [ ] T051 [P] [US5] Write `apps/app/src/editor/fields/rule-card.test.tsx` (it must fail at first), covering scenarios 3–6 and 8:
+- [x] T050 [US5] Implement `apps/app/src/editor/fields/attach-rule-popover.tsx` using `editor.attachRule`. Make T049 pass.
+- [x] T051 [P] [US5] Write `apps/app/src/editor/fields/rule-card.test.tsx` (it must fail at first), covering scenarios 3–6 and 8:
   - the compact `table`
   - "Evaluated with" inputs per condition, saved through `setRuleInputs`, with the result updating as the user types
   - "Row 1 matches → Bike · 45 min · €4.00" with a check icon and `aria-selected`
   - "No row matches these inputs", and the Unique ambiguous text
   - Detach needs no dialog, shows an Undo toast, and ⌘Z restores the rule and its inputs
   - "Edit rule" sets `ruleTest` with `from` and navigates
-- [ ] T052 [US5] Implement `apps/app/src/editor/fields/rule-card.tsx` (evaluation memoized per rule object and inputs) and `apps/app/src/editor/fields/attached-rules.tsx`:
+- [x] T052 [US5] Implement `apps/app/src/editor/fields/rule-card.tsx` (evaluation memoized per rule object and inputs) and `apps/app/src/editor/fields/attached-rules.tsx`:
   - step variant: rule cards, "No decision table on this step.", Attach
   - node variant: rows that open the editor, Detach, Attach
   - a missing rule shows "Missing rule <id>" with Detach (FR-032)
     Make T051 pass.
-- [ ] T053 [US5] Fill the Rules slots: in `node-inspector.tsx` (T026) and in 006's `inspector-step.tsx` (T033), render `AttachedRules`. Add a test for scenarios 2 and 7: one rule is shared by two steps, and editing a cell updates both, including when the edit arrives as a remote-origin change (SC-004); attaching and detaching on a component works.
+- [x] T053 [US5] Fill the Rules slots: in `node-inspector.tsx` (T026) and in 006's `inspector-step.tsx` (T033), render `AttachedRules`. Add a test for scenarios 2 and 7: one rule is shared by two steps, and editing a cell updates both, including when the edit arrives as a remote-origin change (SC-004); attaching and detaching on a component works.
 
 **Checkpoint**: a rule lives on the steps and components it governs.
 
@@ -288,7 +288,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: with a five-row rule, try inputs under each hit policy, clear an input, add and remove a catch-all row, follow a USED IN entry, delete a used rule and undo (spec story 6).
 
-- [ ] T054 [P] [US6] Write `apps/app/src/editor/rules/test-panel.test.tsx` (it must fail at first), covering scenarios 1–3 and 8, and story 5 scenario 9:
+- [x] T054 [P] [US6] Write `apps/app/src/editor/rules/test-panel.test.tsx` (it must fail at first), covering scenarios 1–3 and 8, and story 5 scenario 9:
   - one field per condition
   - "Matched Row 1" with the list of actions
   - Collect shows "Matched 2 rows"
@@ -297,14 +297,14 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - the result is announced in a polite `status`
   - when opened from a step, the fields are pre-filled and "Save as step inputs (<flow> · Step n)" writes one undo step; leaving without saving changes nothing
   - test values never appear in the deck JSON
-- [ ] T055 [US6] Implement `apps/app/src/editor/rules/test-panel.tsx`, using `ruleTest` from the UI store and `evaluateRule`. Make T054 pass.
-- [ ] T056 [P] [US6] Write `apps/app/src/editor/rules/used-in.test.tsx` and `rule-checks.test.tsx` (they must fail at first), covering scenarios 4–6:
+- [x] T055 [US6] Implement `apps/app/src/editor/rules/test-panel.tsx`, using `ruleTest` from the UI store and `evaluateRule`. Make T054 pass.
+- [x] T056 [P] [US6] Write `apps/app/src/editor/rules/used-in.test.tsx` and `rule-checks.test.tsx` (they must fail at first), covering scenarios 4–6:
   - used-in entries read "<flow> · Step n · <from> → <to>", or "Connection deleted"
   - choosing a step entry goes to the canvas with `setActiveFlow` then `setActiveStep`; choosing a component selects it
   - "Not used yet" when empty
   - the catch-all warning and "Has a catch-all row"
   - the one-line explanation for each policy
-- [ ] T057 [US6] Implement `apps/app/src/editor/rules/used-in.tsx` and `apps/app/src/editor/rules/rule-checks.tsx`. Make T056 pass.
+- [x] T057 [US6] Implement `apps/app/src/editor/rules/used-in.tsx` and `apps/app/src/editor/rules/rule-checks.tsx`. Make T056 pass.
 
 **Checkpoint**: every story in the spec is complete.
 
@@ -312,14 +312,14 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ## Phase 9: Polish and cross-cutting concerns
 
-- [ ] T058 [P] Accessibility pass on every new surface: keyboard only (quickstart step 8), visible focus rings, a grayscale check of matched row, no-match, Mixed, partial tags and invalid cells, and every announcement from the UI contract. Fix gaps with tests.
-- [ ] T059 [P] Update the docs:
+- [x] T058 [P] Accessibility pass on every new surface: keyboard only (quickstart step 8), visible focus rings, a grayscale check of matched row, no-match, Mixed, partial tags and invalid cells, and every announcement from the UI contract. Fix gaps with tests.
+- [x] T059 [P] Update the docs:
   - `apps/app/CLAUDE.md`: the fields, inspector and rules folders, the nested route, and the key scoping
   - `packages/model/CLAUDE.md` and `packages/ui/CLAUDE.md`, if not already done in T011 and T016
   - the root README, only if commands changed
-- [ ] T060 Run `pnpm bench` again and finalize `specs/008-inspector-rules/bench-after.md`, with the before and after numbers.
-- [ ] T061 Visual check: take screenshots at 1440×900, light and dark, of frames 02, 18, 23, 49, 50, 51 (no meter), 10, 58, 04, 28 and 29, next to `docs/design/screens/`. List the differences for the PR (allowed: DESIGN.md tokens, lucide icons, SLA target only, owner combobox).
-- [ ] T062 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, and walk through quickstart.md steps 1–9.
+- [x] T060 Run `pnpm bench` again and finalize `specs/008-inspector-rules/bench-after.md`, with the before and after numbers.
+- [x] T061 Visual check: take screenshots at 1440×900, light and dark, of frames 02, 18, 23, 49, 50, 51 (no meter), 10, 58, 04, 28 and 29, next to `docs/design/screens/`. List the differences for the PR (allowed: DESIGN.md tokens, lucide icons, SLA target only, owner combobox).
+- [x] T062 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, and walk through quickstart.md steps 1–9.
 
 ---
 
