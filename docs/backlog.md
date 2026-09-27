@@ -863,7 +863,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Milestone:** M5 · **Depends on:** 005 · **Estimate:** 2 d
 - **Goal:** The founder learns whether the product works (north star: flows played) without ever
   seeing user content, and users can send feedback easily.
-- **Spec IDs:** §14 metrics, §12 privacy; CLAUDE.md M5 "analytics, feedback button".
+- **Spec IDs:** §14 metrics, §12 privacy; AGENTS.md M5 "analytics, feedback button".
 - **Design references:** **not designed** (no feedback entry point in the prototype). Default: "Send
   feedback" in ⌘K and a small help menu in the top bar; opt-in toggle in a settings popover.
 - **In scope:** opt-in analytics (off by default) with a documented event list (deck created, node

@@ -445,7 +445,7 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
 | -------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | Rule test input + checks (catch-all warning) | A-1 rule simulator (P1), Q-4 linter (P2)                         | Small and already designed; proposed as **optional** in 008 — decision §g-5 |
 | SLA "measured" value + meter                 | R-1 runtime overlay (P2), A-4 (P1)                               | Mock data. Keep target only; decision §g-5                                  |
-| Onboarding 3-step coach marks                | K-8 guided tours (P2) — but CLAUDE.md M5 lists "onboarding tour" | Treat as M5 013 (lightweight first-run hints), not K-8 system tours         |
+| Onboarding 3-step coach marks                | K-8 guided tours (P2) — but AGENTS.md M5 lists "onboarding tour" | Treat as M5 013 (lightweight first-run hints), not K-8 system tours         |
 | Step "Evaluated with" sample inputs          | A-1 (P1)                                                         | tied to the test input                                                      |
 | Views dimming clients in Infra               | V-5 role-based views (P1)                                        | M4 011 can include the simple version                                       |
 
@@ -478,7 +478,7 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
 1. **Tokens: prototype vs DESIGN.md.** The prototype uses white text on orange, a brick-red clay,
    no success green and a darker hover. Our DESIGN.md changed these for contrast. _Proposal:
    DESIGN.md wins; the prototype's look is matched "pixel-close" except these four tokens._
-2. **Icons: Material Symbols (prototype) vs `lucide-react` (CLAUDE.md, constitution).** ~70
+2. **Icons: Material Symbols (prototype) vs `lucide-react` (AGENTS.md, constitution).** ~70
    Material glyphs are used, including per-node icons (`receipt_long`, `local_shipping`, …).
    _Proposal: lucide with a mapping table in 000; node `icon` stores a lucide key. Stroke weight
    1.5 to match Material weight 300._
