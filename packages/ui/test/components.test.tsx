@@ -46,6 +46,61 @@ describe('Button', () => {
     expect(clicks).toBe(1);
   });
 
+  it('renders the chip variant', () => {
+    render(<Button variant="chip">REST</Button>);
+    expect(screen.getByRole('button', { name: 'REST' })).toHaveAttribute('data-variant', 'chip');
+  });
+
+  it('exposes the toggle pressed state and shows a check icon only when pressed', () => {
+    const { rerender } = render(
+      <Button variant="toggle" pressed>
+        Labels
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: 'Labels' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button.querySelector('svg')).not.toBeNull();
+
+    rerender(
+      <Button variant="toggle" pressed={false}>
+        Labels
+      </Button>,
+    );
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    expect(button.querySelector('svg')).toBeNull();
+  });
+
+  it('has no pressed state outside the toggle variant', () => {
+    render(<Button variant="secondary">Share</Button>);
+    expect(screen.getByRole('button', { name: 'Share' })).not.toHaveAttribute('aria-pressed');
+  });
+
+  it('activates with Space and Enter', async () => {
+    const user = userEvent.setup();
+    let clicks = 0;
+    render(<Button onClick={() => (clicks += 1)}>Fit</Button>);
+    await user.tab();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect(clicks).toBe(2);
+  });
+
+  it('ignores clicks and keys when disabled', async () => {
+    const user = userEvent.setup();
+    let clicks = 0;
+    render(
+      <Button disabled onClick={() => (clicks += 1)}>
+        Delete
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: 'Delete' });
+    expect(button).toBeDisabled();
+    await user.click(button);
+    button.focus();
+    await user.keyboard('{Enter}');
+    expect(clicks).toBe(0);
+  });
+
   it('renders as its child with asChild', () => {
     render(
       <Button asChild>
