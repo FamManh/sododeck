@@ -1,5 +1,4 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
-import type { XYPosition } from '@xyflow/react';
 
 const KINDS = ['service', 'service', 'database', 'client', 'external'] as const;
 
@@ -21,12 +20,14 @@ function mulberry32(seed: number) {
 export function generateBenchDeck(nodeCount: number, edgeCount: number, seed = 42) {
   const random = mulberry32(seed);
   const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount * 1.25)));
-  const positions: Record<string, XYPosition> = {};
 
   const nodes = Array.from({ length: nodeCount }, (_, i) => {
-    const id = `n${i}`;
-    positions[id] = { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 };
-    return { id, type: KINDS[i % KINDS.length] ?? 'service', title: `Node ${i}` };
+    return {
+      id: `n${i}`,
+      type: KINDS[i % KINDS.length] ?? 'service',
+      title: `Node ${i}`,
+      position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
+    };
   });
 
   const maxEdges = (nodeCount * (nodeCount - 1)) / 2;
@@ -44,5 +45,5 @@ export function generateBenchDeck(nodeCount: number, edgeCount: number, seed = 4
   }
 
   const deck: SododeckFile = { ...emptySododeckFile(), nodes, edges };
-  return { deck, positions };
+  return { deck };
 }

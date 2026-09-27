@@ -10,6 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@sododeck/ui/components/dialog';
+import { Input } from '@sododeck/ui/components/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@sododeck/ui/components/popover';
 import {
   Select,
   SelectContent,
@@ -39,7 +41,7 @@ export function OverlaysSection() {
   return (
     <GallerySection
       id="overlays"
-      title="Dialog and coach mark"
+      title="Dialog, popover and coach mark"
       description="Reference: 06-export-json (dialog, switch), 05-empty-deck-tour-1 (coach mark)."
     >
       <SampleRow label="dialog">
@@ -87,6 +89,20 @@ export function OverlaysSection() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </SampleRow>
+      <SampleRow label="popover">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button>Edit connection…</Button>
+          </PopoverTrigger>
+          <PopoverContent aria-label="Connection">
+            <span className="text-micro text-ink-muted uppercase">Connection</span>
+            <label className="flex flex-col gap-1.5 text-caption text-ink-secondary">
+              Label
+              <Input defaultValue="POST /orders" />
+            </label>
+          </PopoverContent>
+        </Popover>
       </SampleRow>
       <SampleRow label="coach mark">
         <Button

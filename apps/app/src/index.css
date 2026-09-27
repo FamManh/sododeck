@@ -31,3 +31,22 @@
   font-family: var(--font-mono);
   font-size: var(--text-edge-label);
 }
+
+/* Connection handles (DESIGN.md node, designs 52–55): shown on node hover/focus (deck-node.tsx). */
+.react-flow__handle.sd-handle {
+  width: 10px;
+  height: 10px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary);
+}
+
+/* While a connection is drawn, the whole node accepts the drop. */
+.react-flow__handle.sd-body-handle {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  border: none;
+  border-radius: var(--radius-node);
+  background: transparent;
+}

@@ -1,0 +1,90 @@
+/**
+ * Canvas edits shared by the palette, drag-and-drop, `onConnect` and keyboard connect. Each one
+ * writes through the editor (one undo step) and then updates UI-only state.
+ */
+import type { DeckEditor } from '@sododeck/model';
+import type { SododeckFile } from '@sododeck/schema';
+import type { ComponentKind } from '@sododeck/ui/lib/icons';
+
+import { readDeck } from '../model/use-deck-snapshot';
+import { useUiStore } from '../state/ui-store';
+import { freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
+import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
+
+/** Marks the canvas wrapper, so focus helpers and the palette can find it. */
+export const CANVAS_ATTR = 'data-canvas';
+
+/** Whole pixels (positions are integers); a non-finite coordinate (no layout yet) becomes 0. */
+const round = ({ x, y }: Point): Point => ({
+  x: Number.isFinite(x) ? Math.round(x) : 0,
+  y: Number.isFinite(y) ? Math.round(y) : 0,
+});
+
+/** Top-left position for a node centred on a flow point. */
+export function centredOn(point: Point): Point {
+  return round({ x: point.x - NODE_SIZE.width / 2, y: point.y - NODE_SIZE.height / 2 });
+}
+
+/** Adds "New <kind>" at `position` (moved to a free spot), selects it and announces it. */
+export function addComponent(editor: DeckEditor, kind: ComponentKind, position: Point): string {
+  const title = `New ${kind}`;
+  const id = editor.add('nodes', {
+    type: kind,
+    title,
+    position: freeSpot(readDeck(editor.doc), round(position)),
+  });
+  const ui = useUiStore.getState();
+  ui.select({ nodes: [id] });
+  ui.focus(id);
+  ui.announce(`Added ${title}`);
+  return id;
+}
+
+function titleOf(deck: SododeckFile, id: string): string {
+  return deck.nodes.find((n) => n.id === id)?.title ?? id;
+}
+
+/**
+ * Draws a connection if the canvas rules allow it, then selects it and opens its popover.
+ * Returns the new edge id, or null (and announces why) when refused.
+ */
+export function connectComponents(editor: DeckEditor, from: string, to: string): string | null {
+  const deck = readDeck(editor.doc);
+  const ui = useUiStore.getState();
+  const check = connectionCheck(deck, from, to);
+  if (check !== 'ok') {
+    ui.announce(REFUSAL_TEXT[check]);
+    return null;
+  }
+  const id = editor.add('edges', { from, to });
+  ui.select({ edges: [id] });
+  ui.openEdgePopover(id);
+  ui.announce(`Connected ${titleOf(deck, from)} to ${titleOf(deck, to)}`);
+  return id;
+}
+
+/** The canvas wrapper element, if the canvas is mounted. */
+export function canvasElement(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[${CANVAS_ATTR}]`);
+}
+
+/** The focusable element of a component on the canvas, if it is rendered. */
+export function nodeElement(id: string): HTMLElement | null {
+  return canvasElement()?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(id)}"]`) ?? null;
+}
+
+/** Puts keyboard focus back on the canvas: the focused component, else the canvas itself. */
+export function focusCanvas(): void {
+  const { focusedId } = useUiStore.getState();
+  const target = (focusedId === null ? null : nodeElement(focusedId)) ?? canvasElement();
+  target?.focus({ preventScroll: true });
+}
+
+export const PALETTE_ID = 'palette-panel';
+
+/** Focuses the first palette card once the Palette tab is shown. */
+export function focusPalette(): void {
+  setTimeout(() => {
+    document.querySelector<HTMLElement>(`#${PALETTE_ID} button`)?.focus();
+  }, 0);
+}

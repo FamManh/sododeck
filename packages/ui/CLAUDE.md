@@ -30,7 +30,8 @@
 | `kind-tile.tsx`                 | `KindTile`                                                                                                                    | six kinds at 22/28/30/40px, neutral fallback, `decorative` hides it from AT                                                                                                                    |
 | `banner.tsx`                    | `Banner`                                                                                                                      | `tone` warning · success · error (icon per tone), `action`, `onDismiss`                                                                                                                        |
 | `dialog.tsx`                    | `Dialog`, `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose` | Radix Dialog; width via className                                                                                                                                                              |
-| `toast.tsx`                     | `ToastProvider`, `Toaster`, `useToast`                                                                                        | `toast({ message, action?, duration? })`; 2.6s, polite, not shortened by reduced motion                                                                                                        |
+| `toast.tsx`                     | `ToastProvider`, `Toaster`, `useToast`                                                                                        | `toast({ message, action?, duration? })` → id, `dismiss(id)`; 2.6s, polite, not shortened by reduced motion                                                                                    |
+| `popover.tsx`                   | `Popover`, `PopoverTrigger`, `PopoverAnchor`, `PopoverContent`                                                                | Radix Popover; content is a named `dialog` (pass `aria-label`), 12px radius, hover shadow; anchor to a non-trigger with `PopoverAnchor`                                                        |
 | `coach-mark.tsx`                | `CoachMark`, `CoachMarkAnchor`                                                                                                | controlled tour step card; Esc skips; centred when there is no anchor                                                                                                                          |
 | `panel.tsx`, `tooltip.tsx`      | `Panel*`, `Tooltip*`                                                                                                          | unchanged                                                                                                                                                                                      |
 
@@ -60,6 +61,10 @@ DESIGN.md `text-secondary` → `ink-secondary`, `muted` → `ink-muted` (to avoi
 
 - Motion: `--sd-dur-hover` 150ms (Tailwind's default transition duration), `--sd-dur-dim` 250ms, `--sd-dur-ring` 200ms, `--sd-flow-token-loop` 1400ms, `--sd-flow-step` 1700ms, `--sd-toast` 2600ms. Under `prefers-reduced-motion: reduce` the first four become 0ms; step and toast stay (reading time). Use `duration-(--sd-dur-*)`, never fixed ms.
 - Radius: `rounded-segment` 7px, `rounded-row` 8px, `rounded-banner` 14px. Shadow: `shadow-hover`, `shadow-tour`. Text: `text-code-md`.
+
+## Tokens added by 003
+
+- Motion: `--sd-toast-undo` 6000ms (`MOTION.toastUndoMs`), the display time of a toast with an Undo action (delete, §g-19). Reading time, so not shortened under reduced motion.
 
 ## Enforced by tests (`test/`)
 

@@ -1,10 +1,12 @@
-import { fromJSON, toJSON } from '@sododeck/model';
+import { fromJSON } from '@sododeck/model';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { generateBenchDeck } from '../bench/generate-deck';
 import { Canvas } from '../editor/canvas';
+import { EditorProvider } from '../model/editor-context';
+import { readDeck } from '../model/use-deck-snapshot';
 
 declare global {
   interface Window {
@@ -14,7 +16,8 @@ declare global {
 
 /**
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1
- * Goes through the real model (fromJSON → toJSON) and the real Canvas.
+ * Goes through the real read and write path: model document, editor, incremental snapshot and
+ * the real Canvas (so dragging is measured too).
  */
 export function BenchPage() {
   const [params] = useSearchParams();
@@ -22,32 +25,30 @@ export function BenchPage() {
   const edgeCount = Number(params.get('edges') ?? 1000);
   const visibleOnly = params.get('visibleOnly') === '1';
 
-  const [{ deck, positions }] = useState(() => {
-    const generated = generateBenchDeck(nodeCount, edgeCount);
-    return { deck: toJSON(fromJSON(generated.deck)), positions: generated.positions };
-  });
+  const [doc] = useState(() => fromJSON(generateBenchDeck(nodeCount, edgeCount).deck));
 
   return (
     <div className="h-dvh bg-canvas">
-      <ReactFlowProvider>
-        <Canvas
-          deck={deck}
-          positions={positions}
-          onlyRenderVisibleElements={visibleOnly}
-          onReady={() => {
-            // Two frames after init ≈ first painted frame with nodes.
-            requestAnimationFrame(() =>
-              requestAnimationFrame(() => {
-                window.__sododeckBench = {
-                  readyAt: performance.now(),
-                  nodes: deck.nodes.length,
-                  edges: deck.edges.length,
-                };
-              }),
-            );
-          }}
-        />
-      </ReactFlowProvider>
+      <EditorProvider doc={doc}>
+        <ReactFlowProvider>
+          <Canvas
+            onlyRenderVisibleElements={visibleOnly}
+            onReady={() => {
+              // Two frames after init ≈ first painted frame with nodes.
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() => {
+                  const deck = readDeck(doc);
+                  window.__sododeckBench = {
+                    readyAt: performance.now(),
+                    nodes: deck.nodes.length,
+                    edges: deck.edges.length,
+                  };
+                }),
+              );
+            }}
+          />
+        </ReactFlowProvider>
+      </EditorProvider>
     </div>
   );
 }

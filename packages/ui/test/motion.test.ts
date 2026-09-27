@@ -25,6 +25,7 @@ describe('MOTION', () => {
       tokenLoopMs: 1400,
       stepMs: 1700,
       toastMs: 2600,
+      toastUndoMs: 6000,
     });
   });
 });
@@ -41,6 +42,7 @@ describe('resolveMotion', () => {
       tokenLoopMs: 0,
       stepMs: 1700,
       toastMs: 2600,
+      toastUndoMs: 6000,
     });
   });
 });
@@ -52,6 +54,7 @@ describe('tokens.css agrees with motion.ts', () => {
     expect(ms(rootBlock, 'sd-flow-token-loop')).toBe(MOTION.tokenLoopMs);
     expect(ms(rootBlock, 'sd-flow-step')).toBe(MOTION.stepMs);
     expect(ms(rootBlock, 'sd-toast')).toBe(MOTION.toastMs);
+    expect(ms(rootBlock, 'sd-toast-undo')).toBe(MOTION.toastUndoMs);
   });
 
   it('reduced-motion values', () => {
@@ -65,5 +68,6 @@ describe('tokens.css agrees with motion.ts', () => {
     // Reading time is never overridden.
     expect(ms(reducedBlock, 'sd-flow-step')).toBeUndefined();
     expect(ms(reducedBlock, 'sd-toast')).toBeUndefined();
+    expect(ms(reducedBlock, 'sd-toast-undo')).toBeUndefined();
   });
 });

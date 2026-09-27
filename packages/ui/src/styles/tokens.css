@@ -58,6 +58,8 @@
   --sd-flow-token-loop: 1400ms;
   --sd-flow-step: 1700ms;
   --sd-toast: 2600ms;
+  /* Toast that offers Undo (delete): long enough to reach the button (§g-19). */
+  --sd-toast-undo: 6000ms;
   --sd-ease: ease;
 }
 
@@ -106,7 +108,7 @@
 
 /*
  * Reduced motion: transitions finish instantly and the flow token stops looping.
- * --sd-flow-step and --sd-toast stay: they are reading time, not animation.
+ * --sd-flow-step, --sd-toast and --sd-toast-undo stay: they are reading time, not animation.
  */
 @media (prefers-reduced-motion: reduce) {
   :root {

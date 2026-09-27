@@ -82,3 +82,22 @@ function reorder(value: unknown, shape: Shape): unknown {
 export function canonicalize<T>(file: T): T {
   return reorder(file, rootShape()) as T;
 }
+
+/** Top-level keys of a `.sododeck.json` file, in canonical order. */
+export function fileKeyOrder(): string[] {
+  const shape = rootShape();
+  return shape.kind === 'object' ? shape.properties.map(([key]) => key) : [];
+}
+
+/**
+ * Canonical key order for one entry of a top-level field: an item of a collection array, or a
+ * value of the `rules` map. Lets incremental readers rebuild one object like `canonicalize` would.
+ */
+export function canonicalizeEntry<T>(field: string, value: T): T {
+  const shape = rootShape();
+  const fieldShape =
+    shape.kind === 'object' ? shape.properties.find(([key]) => key === field)?.[1] : undefined;
+  if (fieldShape?.kind === 'array') return reorder(value, fieldShape.items) as T;
+  if (fieldShape?.kind === 'map') return reorder(value, fieldShape.value) as T;
+  return value;
+}
