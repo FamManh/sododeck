@@ -89,7 +89,7 @@ story uses. No story work starts before this phase is done.
 
 ### Model: derivation and appending (used by every story)
 
-- [ ] T006 [P] Write the failing `packages/model/test/flow-paths.test.ts` for
+- [x] T006 [P] Write the failing `packages/model/test/flow-paths.test.ts` for
       `analyzeFlow(flow, edges)`, per data-model §2:
   - main numbering `1..n`
   - branch numbers `4a`, `5a`, `4b`
@@ -103,11 +103,11 @@ story uses. No story work starts before this phase is done.
     condition; true with only broken steps
   - `problems` listing
   - imported steps out of normal order still analyzed by relative order
-- [ ] T007 Implement `analyzeFlow` and the types `FlowAnalysis`, `BranchPath`, `PathStep` and
+- [x] T007 Implement `analyzeFlow` and the types `FlowAnalysis`, `BranchPath`, `PathStep` and
       `FlowProblem` in `packages/model/src/flow-paths.ts`. Make it pure (no Yjs), accepting
       `ReadonlyMap<Id, Edge> | readonly Edge[]`, and export it from
       `packages/model/src/index.ts`. T006 must pass.
-- [ ] T008 [P] Write failing cases in `packages/model/test/edit.test.ts` and
+- [x] T008 [P] Write failing cases in `packages/model/test/edit.test.ts` and
       `packages/model/test/undo.test.ts` for `appendStep(flowId, branchId | null, data)`:
   - It appends at the end of the main path, before any branch steps, keeping normal order.
   - It appends at the end of a given branch.
@@ -116,7 +116,7 @@ story uses. No story work starts before this phase is done.
 
   Also cover `addStep` / `updateStep` validating `step.branch` against the flow's branches.
 
-- [ ] T009 Implement:
+- [x] T009 Implement:
   - `appendStep` in the new `packages/model/src/ops/branches.ts`, wired into `DeckEditor` in
     `packages/model/src/editor.ts`
   - `step.branch` reference checks in `packages/model/src/ops/refs.ts` and
@@ -126,11 +126,11 @@ story uses. No story work starts before this phase is done.
 
   T008 must pass.
 
-- [ ] T010 [P] Add round-trip cases to `packages/model/test/round-trip.test.ts`: a flow with two
+- [x] T010 [P] Add round-trip cases to `packages/model/test/round-trip.test.ts`: a flow with two
       branches (one error path, one empty label), steps with `branch`, and a broken step
       (missing edge). JSON → Yjs → JSON must be byte-identical. Add rename-safety cases: changing
       a branch label or a flow or feature title keeps every id and `step.branch`.
-- [ ] T011 Add `child.kind: 'branch'` to `packages/model/src/observe.ts` (the `branches` array of a
+- [x] T011 Add `child.kind: 'branch'` to `packages/model/src/observe.ts` (the `branches` array of a
       flow reports add, update and remove like `steps`), with cases in
       `packages/model/test/observe.test.ts` (or the existing observe suite). Update
       `packages/model/CLAUDE.md` (new reads, ops and child kind) and
@@ -363,7 +363,7 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
 
 ### Tests for User Story 3 (write first, must fail)
 
-- [ ] T037 [P] [US3] Model: failing cases in `packages/model/test/edit.test.ts`,
+- [x] T037 [P] [US3] Model: failing cases in `packages/model/test/edit.test.ts`,
       `undo.test.ts` and `cascade.test.ts` for:
   - `captureFlowStructure(file, flowId)` and `restoreFlowStructure(flowId, checkpoint)`:
     - added steps are removed and removed steps come back
@@ -409,7 +409,7 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
 
 ### Implementation for User Story 3
 
-- [ ] T043 [US3] Implement `captureFlowStructure` / `restoreFlowStructure` and `FlowCheckpoint` in
+- [x] T043 [US3] Implement `captureFlowStructure` / `restoreFlowStructure` and `FlowCheckpoint` in
       `packages/model/src/ops/branches.ts`, and the `moveStep` refusals in
       `packages/model/src/ops/steps.ts`. Export them from `packages/model/src/index.ts` (T037
       green).
@@ -458,7 +458,7 @@ validation (spec US4 scenarios 1–10, SC-006).
 
 ### Tests for User Story 4 (write first, must fail)
 
-- [ ] T049 [P] [US4] Model: failing cases in `packages/model/test/edit.test.ts`,
+- [x] T049 [P] [US4] Model: failing cases in `packages/model/test/edit.test.ts`,
       `undo.test.ts`, `cascade.test.ts` and the preview tests:
   - `addBranch`:
     - it splits the following main steps into "a" (empty label and condition) and appends "b" with

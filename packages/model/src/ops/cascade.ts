@@ -20,7 +20,8 @@ import { findIndexById, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { checkIntegrity, type IntegrityProblem } from '../integrity';
 import { LABELS } from './collections';
-import { stepsOf } from './steps';
+import { branchListOf } from './branches';
+import { flowMapOf, stepsOf } from './steps';
 
 export interface RemovalResult {
   /** The deleted object first, then everything deleted with it. */
@@ -177,11 +178,15 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
       removeFeature(cascade, doc, id);
       break;
     case 'flows': {
-      const steps = map.get('steps');
-      if (steps instanceof Y.Array) {
-        for (const step of steps as Y.Array<YObject>) {
-          // Owned: deleted with the flow's map, listed so surfaces know.
-          cascade.remove(stepRef(id, idOf(step)), () => undefined);
+      // Owned steps and branches: deleted with the flow's map, listed so surfaces know.
+      for (const [field, kind] of [
+        ['steps', 'step'],
+        ['branches', 'branch'],
+      ] as const) {
+        const children = map.get(field);
+        if (!(children instanceof Y.Array)) continue;
+        for (const child of children as Y.Array<YObject>) {
+          cascade.remove({ scope: 'flows', id, child: { kind, id: idOf(child) } }, () => undefined);
         }
       }
       break;
@@ -200,6 +205,27 @@ export function removeStep(ctx: EditContext, flowId: Id, stepId: Id): RemovalRes
   findIndexById(steps, stepId, 'Step');
   const cascade = new Cascade(ctx);
   cascade.remove(stepRef(flowId, stepId), deleteById(steps, stepId));
+  return cascade.commit();
+}
+
+/**
+ * Removes a branch and its steps (FR-028, ADR 0008). The other branches stay; the `branches` field
+ * goes when the last one does. One transaction, one undo step.
+ */
+export function removeBranch(ctx: EditContext, flowId: Id, branchId: Id): RemovalResult {
+  const flow = flowMapOf(ctx, flowId);
+  const branches = branchListOf(ctx, flowId, branchId);
+  const steps = stepsOf(ctx, flowId);
+  const cascade = new Cascade(ctx);
+  cascade.remove({ scope: 'flows', id: flowId, child: { kind: 'branch', id: branchId } }, () => {
+    branches.delete(findIndexById(branches, branchId, 'Branch'), 1);
+    if (branches.length === 0) flow.delete('branches');
+  });
+  for (const step of steps) {
+    if (step.get('branch') === branchId) {
+      cascade.remove(stepRef(flowId, idOf(step)), deleteById(steps, idOf(step)));
+    }
+  }
   return cascade.commit();
 }
 

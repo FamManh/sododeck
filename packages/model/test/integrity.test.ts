@@ -215,6 +215,35 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
     ]);
   });
 
+  it('step → branch that is not a branch of its flow (006)', () => {
+    expect(
+      problems({
+        edges: [{ id: 'e', from: 'a', to: 'a' }],
+        nodes: [node('a')],
+        flows: [
+          {
+            id: 'f',
+            title: 'F',
+            branches: [{ id: 'b1', label: 'ok', condition: 'ok' }],
+            steps: [
+              { id: 's1', edge: 'e' },
+              { id: 's2', edge: 'e', branch: 'b1' },
+              { id: 's3', edge: 'e', branch: 'gone' },
+            ],
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        kind: 'missing-reference',
+        object: { scope: 'flows', id: 'f', child: { kind: 'step', id: 's3' } },
+        field: 'branch',
+        target: 'gone',
+        targetType: 'branch',
+      },
+    ]);
+  });
+
   it('flow → missing feature', () => {
     expect(problems({ flows: [{ id: 'f', title: 'F', feature: 'x', steps: [] }] })).toEqual([
       {

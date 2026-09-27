@@ -17,9 +17,10 @@ function actualRemoval(targets: RemovalTarget[]): RemovalResult {
   const doc = fromJSON(cascadeDeck);
   const editor = createEditor(doc);
   const results = editor.batch(() =>
-    targets.flatMap((t) =>
-      getObject(doc, t.scope, t.id) === undefined ? [] : [editor.remove(t.scope, t.id)],
-    ),
+    targets.flatMap((t) => {
+      if (t.scope === 'branches') return [editor.removeBranch(t.flowId, t.id)];
+      return getObject(doc, t.scope, t.id) === undefined ? [] : [editor.remove(t.scope, t.id)];
+    }),
   );
   editor.destroy();
   return mergeRemovals(results);

@@ -11,7 +11,8 @@
  *   doc.getArray('edges')      Y.Array<Y.Map>  one map per edge
  *   doc.getArray('views')      Y.Array<Y.Map>  includes → Y.Array; positions → Y.Map(node id → Y.Map x,y)
  *   doc.getArray('features')   Y.Array<Y.Map>  one map per feature
- *   doc.getArray('flows')      Y.Array<Y.Map>  steps → Y.Array<Y.Map>; step ruleInputs → nested Y.Map
+ *   doc.getArray('flows')      Y.Array<Y.Map>  steps → Y.Array<Y.Map>; step ruleInputs → nested Y.Map;
+ *                                              branches (006, optional) → Y.Array<Y.Map>
  *   doc.getMap('rules')        Y.Map<Y.Map>    rule id → rule; inputs/outputs/rows → Y.Array<Y.Map>;
  *                                              row when/then → Y.Array<string>
  *   doc.getArray('stickies')   Y.Array<Y.Map>  one map per sticky

@@ -117,6 +117,43 @@ describe('observeDeck (US1 AS3, FR-002)', () => {
     ]);
   });
 
+  it('reports branches as child changes, including the first and the last one (006)', () => {
+    const { editor, events } = setup();
+    const { branchId, stepId } = editor.addBranch('fl', 's1', { label: 'ok', firstEdge: 'e1' });
+    editor.updateBranch('fl', branchId, { condition: 'c' });
+    editor.removeBranch('fl', branchId);
+    const ref = (kind: string, id: string) => ({ scope: 'flows', id: 'fl', child: { kind, id } });
+    expect(events.map((e) => e.changes)).toEqual([
+      [
+        { ...ref('branch', branchId), kind: 'added', keys: [] },
+        { ...ref('step', stepId ?? ''), kind: 'added', keys: [] },
+      ],
+      [{ ...ref('branch', branchId), kind: 'updated', keys: ['condition'] }],
+      [
+        { ...ref('branch', branchId), kind: 'removed', keys: [] },
+        { ...ref('step', stepId ?? ''), kind: 'removed', keys: [] },
+      ],
+    ]);
+  });
+
+  it('reports a second branch as an added child of the existing list', () => {
+    const { editor, events } = setup();
+    editor.addBranch('fl', 's1', { label: 'a' });
+    events.length = 0;
+    const { branchId } = editor.addBranch('fl', 's1', { label: 'b' });
+    expect(events.map((e) => e.changes)).toEqual([
+      [
+        {
+          scope: 'flows',
+          id: 'fl',
+          child: { kind: 'branch', id: branchId },
+          kind: 'added',
+          keys: [],
+        },
+      ],
+    ]);
+  });
+
   it('classifies undo, redo and remote changes', () => {
     const { doc, editor, events } = setup();
     editor.update('nodes', 'a', { title: 'Web app' });

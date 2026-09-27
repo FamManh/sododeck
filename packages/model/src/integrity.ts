@@ -15,7 +15,7 @@ export interface IntegrityProblem {
   field: string;
   /** The missing, ambiguous or cyclic id. */
   target: Id;
-  targetType: 'node' | 'group' | 'edge' | 'feature' | 'rule' | 'rule-column' | 'object';
+  targetType: 'node' | 'group' | 'edge' | 'feature' | 'branch' | 'rule' | 'rule-column' | 'object';
 }
 
 type TargetType = IntegrityProblem['targetType'];
@@ -104,6 +104,7 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
   }
   for (const flow of file.flows) {
     check({ scope: 'flows', id: flow.id }, 'feature', flow.feature, features, 'feature');
+    const branches = ids(flow.branches ?? []);
     for (const step of flow.steps) {
       const object: ObjectRef = {
         scope: 'flows',
@@ -111,6 +112,8 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
         child: { kind: 'step', id: step.id },
       };
       check(object, 'edge', step.edge, edges, 'edge');
+      // Only hand-edited files can hold this: the editor refuses it (006, ADR 0008).
+      check(object, 'branch', step.branch, branches, 'branch');
       checkRules(object, step.rules);
       for (const [ruleId, inputs] of Object.entries(step.ruleInputs ?? {})) {
         if (!(step.rules ?? []).includes(ruleId)) {

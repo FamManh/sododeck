@@ -167,6 +167,42 @@ const perType: [string, SododeckFile][] = [
     },
   ],
   [
+    'flow with branches (006)',
+    {
+      ...empty,
+      nodes: [
+        { id: 'a', type: 'client', title: 'A' },
+        { id: 'b', type: 'service', title: 'B' },
+      ],
+      edges: [
+        { id: 'ab', from: 'a', to: 'b' },
+        { id: 'ba', from: 'b', to: 'a' },
+      ],
+      flows: [
+        {
+          id: 'f',
+          title: 'Pay',
+          branches: [
+            { id: 'ok', label: '', condition: '' },
+            {
+              id: 'fail',
+              label: 'payment failed',
+              condition: 'declined',
+              errorPath: true,
+              description: 'Ask **again**.',
+            },
+          ],
+          steps: [
+            { id: 's1', edge: 'ab' },
+            { id: 's2a', edge: 'ba', branch: 'ok', title: 'Back' },
+            { id: 's2b', edge: 'gone', branch: 'fail' },
+          ],
+        },
+        { id: 'g', title: 'Empty branches list', branches: [], steps: [] },
+      ],
+    },
+  ],
+  [
     'rule',
     {
       ...empty,
@@ -269,6 +305,44 @@ describe('canonical key order (FR-022, research R2)', () => {
     const [sticky] = toJSON(doc).stickies;
     expect(Object.keys(sticky ?? {})).toEqual(['id', 'text', 'color', 'position']);
     expect(Object.keys(sticky?.position ?? {})).toEqual(['x', 'y']);
+  });
+});
+
+describe('rename safety for flows, features and branches (006, constitution III)', () => {
+  const file: SododeckFile = {
+    ...empty,
+    nodes: [{ id: 'a', type: 'client', title: 'A' }],
+    edges: [{ id: 'aa', from: 'a', to: 'a' }],
+    features: [{ id: 'feat', title: 'Delivery' }],
+    flows: [
+      {
+        id: 'f',
+        title: 'Pay',
+        feature: 'feat',
+        branches: [{ id: 'ok', label: 'ok', condition: 'c' }],
+        steps: [
+          { id: 's1', edge: 'aa' },
+          { id: 's2', edge: 'aa', branch: 'ok' },
+        ],
+      },
+    ],
+  };
+
+  it('keeps every id and step.branch when a branch, flow or feature is renamed', () => {
+    const doc = fromJSON(file);
+    const editor = createEditor(doc);
+    editor.updateBranch('f', 'ok', { label: 'payment ok' });
+    editor.update('flows', 'f', { title: 'Pay for order' });
+    editor.update('features', 'feat', { title: 'Delivery & tracking' });
+
+    const expected = structuredClone(file);
+    const [flow] = expected.flows;
+    const [feature] = expected.features;
+    if (flow?.branches?.[0] === undefined || feature === undefined) throw new Error('fixture');
+    flow.branches[0].label = 'payment ok';
+    flow.title = 'Pay for order';
+    feature.title = 'Delivery & tracking';
+    expect(toJSON(doc)).toEqual(expected);
   });
 });
 
