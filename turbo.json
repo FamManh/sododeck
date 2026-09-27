@@ -22,7 +22,8 @@
     },
     "bench": {
       "dependsOn": ["build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["BENCH_*"]
     }
   }
 }
