@@ -8,7 +8,12 @@ import type { Edge, Node } from '@xyflow/react';
 
 import { displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
 import type { Selection } from '../state/ui-store';
-import { EMPTY_OVERLAY, type EdgeFlowMark, type FlowOverlay } from './flows/flow-overlay';
+import {
+  EMPTY_OVERLAY,
+  type EdgeFlowMark,
+  type FlowOverlay,
+  type NodeFlowMark,
+} from './flows/flow-overlay';
 
 type DeckNodeObject = SododeckFile['nodes'][number];
 type DeckEdgeObject = SododeckFile['edges'][number];
@@ -22,6 +27,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   focused: boolean;
   /** "Step n starts here" while recording a flow (006): a ring and a tag. */
   flowStart?: string;
+  /** Flow mode (007): from/to of the current step, a ring and `aria-current="step"`. */
+  currentStep?: boolean;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -66,6 +73,8 @@ function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boo
   return (
     a.style === b.style &&
     a.errorIcon === b.errorIcon &&
+    a.inPath === b.inPath &&
+    a.current?.speed === b.current?.speed &&
     a.badges.length === b.badges.length &&
     a.badges.every((x, i) => {
       const y = b.badges[i];
@@ -85,13 +94,18 @@ function toFlowNode(
   position: Point,
   selected: boolean,
   focused: boolean,
-  flowStart: string | undefined,
+  mark: NodeFlowMark | undefined,
 ): DeckFlowNode {
   const cached = nodeCache.get(node);
+  const flowStart = mark?.startsHere;
+  const currentStep = mark?.currentStep === true;
+  const inFlow = mark?.inPath === true;
   if (
     cached?.selected === selected &&
     cached.data.focused === focused &&
     cached.data.flowStart === flowStart &&
+    (cached.data.currentStep === true) === currentStep &&
+    (cached.className === 'in-flow') === inFlow &&
     cached.position.x === position.x &&
     cached.position.y === position.y
   ) {
@@ -103,6 +117,7 @@ function toFlowNode(
     ...NODE_SIZE,
     position,
     selected,
+    ...(inFlow ? { className: 'in-flow' } : {}),
     data: {
       title: node.title,
       kind: node.type,
@@ -110,6 +125,7 @@ function toFlowNode(
       hasRules: (node.rules?.length ?? 0) > 0,
       focused,
       ...(flowStart === undefined ? {} : { flowStart }),
+      ...(currentStep ? { currentStep } : {}),
     },
   };
   nodeCache.set(node, flowNode);
@@ -184,7 +200,7 @@ export function toFlowNodes(
       displayPosition(node, index),
       selected.has(node.id),
       node.id === focusedId,
-      overlay.nodes.get(node.id)?.startsHere,
+      overlay.nodes.get(node.id),
     ),
   );
   return [...groupNodes(deck), ...components];
@@ -246,6 +262,7 @@ export function toFlowEdges(
       sourceHandle,
       targetHandle,
       selected: isSelected,
+      ...(mark?.inPath === true ? { className: 'in-flow' } : {}),
       interactionWidth: 12,
       ariaLabel: edgeName(from.node.title, to.node.title, edge.label),
       data: {
