@@ -9,7 +9,19 @@ import { KeyboardSection } from '../design-gallery/keyboard-section';
 import { KindsSection } from '../design-gallery/kinds-section';
 import { MotionSection } from '../design-gallery/motion-section';
 import { OverlaysSection } from '../design-gallery/overlays-section';
+import { PanelGallerySection } from '../design-gallery/panel-section';
 import { useThemeStore } from '../theme/theme-store';
+
+const SECTIONS: [id: string, label: string][] = [
+  ['buttons', 'Buttons'],
+  ['fields', 'Fields'],
+  ['kinds', 'Kinds & icons'],
+  ['feedback', 'Tags, banners, toasts'],
+  ['overlays', 'Dialog & coach mark'],
+  ['motion', 'Motion'],
+  ['panel', 'Panel & tooltip'],
+  ['keyboard', 'Keyboard'],
+];
 
 /**
  * Dev-only review gallery (/design): every @sododeck/ui building block in every variant and
@@ -43,12 +55,24 @@ export function DesignGalleryPage() {
           </Button>
         </header>
         <main id="main" className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
+          <nav aria-label="Gallery sections">
+            <ul className="flex flex-wrap gap-1.5">
+              {SECTIONS.map(([id, label]) => (
+                <li key={id}>
+                  <Button asChild variant="chip" size="chip">
+                    <a href={`#${id}`}>{label}</a>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </nav>
           <ButtonsSection />
           <FieldsSection />
           <KindsSection />
           <FeedbackSection />
           <OverlaysSection />
           <MotionSection />
+          <PanelGallerySection />
           <KeyboardSection />
         </main>
       </div>

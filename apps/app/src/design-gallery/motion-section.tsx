@@ -6,6 +6,15 @@ import { useState } from 'react';
 import { GallerySection } from './gallery-section';
 import { SampleRow } from './sample-row';
 
+/**
+ * Keyframes live here, not in index.css, so they ship only in the dev-only gallery chunk.
+ * Timed by the --sd-flow-token-loop token.
+ */
+const TOKEN_KEYFRAMES = `
+@keyframes gallery-flow-token { from { left: 0; } to { left: calc(100% - 12px); } }
+.gallery-flow-token { animation: gallery-flow-token var(--sd-flow-token-loop) linear infinite; }
+`;
+
 /** Shows the live motion values and demos that must stop under reduced motion (US5). */
 export function MotionSection() {
   const reduced = useReducedMotion();
@@ -18,6 +27,7 @@ export function MotionSection() {
       title="Motion"
       description="Short and calm, no bounce. Turn on the OS “Reduce motion” setting: values drop to 0 ms and the token stops, without a reload."
     >
+      <style>{TOKEN_KEYFRAMES}</style>
       <SampleRow label="preference">
         <p className="text-body" aria-live="polite">
           Reduced motion: <strong>{reduced ? 'on' : 'off'}</strong>
