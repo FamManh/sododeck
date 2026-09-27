@@ -1,0 +1,82 @@
+---
+name: react-flow
+description: Use when changing the Sododeck canvas in apps/app/src/editor — React Flow (@xyflow/react) nodes, edges, handles, drag, selection, keyboard, viewport, fitView, or any feature that draws deck objects on the canvas (stickies, flow highlight, semantic zoom, groups, drill-in, auto-layout, export preview), or when reviewing such code.
+---
+
+# React Flow in Sododeck
+
+React Flow is a **view**. The Yjs deck is the only document state (AGENTS.md rule 1, ADR 0006). Every canvas change follows one loop:
+
+```
+deck snapshot + UI store ──derive (pure, cached)──▶ nodes/edges props ──▶ <ReactFlow>
+        ▲                                                                    │ gesture
+        └──── editor.add/update/remove (useEditor) ◀── handler ◀─────────────┘
+              UI-only state (selection, modes) ─▶ useUiStore
+```
+
+Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill is the map and the recipes.
+
+## Map (`apps/app/src`)
+
+| Need                       | Where                                                                                                 |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `<ReactFlow>` props, types | `editor/canvas.tsx` (`nodeTypes`/`edgeTypes` at module scope)                                          |
+| Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `toFlowNodes`/`toFlowEdges`        |
+| Sizes, positions, bounds   | `editor/canvas-geometry.ts` — `NODE_SIZE`, `displayPosition`, `groupBounds`, `freeSpot`                |
+| RF events → writes         | `editor/use-canvas-handlers.ts` (drag gesture, marquee, connect, reconnect, drop)                     |
+| Shared actions             | `editor/canvas-actions.ts` — `addComponent`, `connectComponents`, `centredOn`                         |
+| Keys                       | `editor/use-canvas-shortcuts.ts` (canvas keys + document-wide undo/redo/Delete/Esc)                   |
+| Delete                     | `ui.requestDelete(selection)` → `confirm-delete-dialog.tsx` (`previewRemoval`, one batch, Undo toast) |
+| Read / write the deck      | `model/use-deck-snapshot.ts` (`useDeckSnapshot`, `readDeck` in handlers), `model/use-editor.ts`       |
+| UI state                   | `state/ui-store.ts` (Zustand; never document data)                                                    |
+| Layout                     | `layout/` — ELK in a worker (`createLayoutClient().layout(...)`)                                       |
+| Canvas CSS, tokens         | `index.css` (canvas rules), `@sododeck/ui` `tokens.css` (`--sd-dur-*`); SMIL `dur` needs ms from `resolveMotion`, not CSS vars |
+| Motion / reduced motion    | `@sododeck/ui/lib/motion` (`resolveMotion`), `@sododeck/ui/hooks/use-reduced-motion`                  |
+| Test harness               | `test/render-canvas.tsx` (`editorWrapper`, `deckOf`) — providers incl. `ReactFlowProvider`            |
+
+## Recipes
+
+**New node or edge type** (sticky, collapsed group, merged edge, leader line)
+1. Component in its own file, `memo(function X(props: NodeProps<XFlowNode>))`; register in the module-scope map in `canvas.tsx`.
+2. Derive it in `deck-to-flow.ts` with its own cache and **an id prefix** (like `group:`) so ids never clash with deck ids.
+3. Size: fixed-size shapes set explicit `width`/`height` from `canvas-geometry.ts`; a card whose height follows its text sets `width` only and lets RF measure the height.
+4. Teach `use-canvas-handlers.ts` the prefix: skip or route it in `onNodeClick`, `onNodeDragStart`, `onNodesChange`, marquee. `Selection` in the UI store holds nodes/edges only; a new selectable kind extends it (and `pruneSelection`).
+5. Inputs inside a node: `className="nodrag nowheel"`. Keep a draft in local state while typing and commit once on blur, like `field-edit.tsx`; `isTextTarget` already keeps canvas keys and ⌘Z out of text fields.
+6. Adding a double-click handler: set `zoomOnDoubleClick={false}` (RF zooms on double-click by default).
+
+**Positions that follow something** (anchored sticky, members of a group): compute the absolute position while deriving. Do not use RF `parentId`/`extent` — group bounds are derived (ADR 0004 §3) and drags already write every frame, so followers move in the same render. When the follower itself is dragged, convert back to what the document stores (e.g. an offset from its anchor) before writing.
+
+**New gesture or command**: handler reads with `readDeck(editor.doc)`, writes with `editor.*`. Several writes → `editor.batch` (one undo step). A multi-frame gesture → `editor.beginGesture()` / `endGesture()`. Keys go in `use-canvas-shortcuts.ts` (they fire only while focus is in the canvas); "at the pointer" = a ref updated on `pointermove` + `screenToFlowPosition`. Deletes always go through `requestDelete`.
+
+**Async results** (ELK worker, imports): re-read the deck when the result arrives and skip objects deleted meanwhile, then write in one `batch`. jsdom has no `Worker`: feature-detect via `lib/features.ts`.
+
+**New visual mode** (flow dimming, focus mode, highlight): mode lives in the UI store. Mark only the few members and dim the rest with one attribute on the canvas wrapper + CSS (`[data-flow-mode] .react-flow__edge:not(.in-flow)`); a flag on all 1,500 objects breaks the < 100 ms target. Watch for:
+- Edge labels render in `EdgeLabelRenderer`'s HTML layer, outside `.react-flow__edge`: give them their own class for the CSS.
+- `DeckEdge` sets `stroke` inline, which beats CSS: member colours go through `data`.
+- `.in-flow` comes from the RF object's `className`. Group boundaries are `.react-flow__node` too, so they dim as well.
+- Caches in `deck-to-flow.ts` are keyed by the snapshot object, so edits to the object's own fields invalidate them. Any input from outside the object (selection, focus, mode, other nodes) must be in the cache check, or cached objects never update.
+
+**Zoom-dependent rendering**: one selector in `Canvas` that returns a discrete value (e.g. `useStore(levelSelector)` where the module-scope `levelSelector = (s: ReactFlowState) => levelForZoom(s.transform[2])`), passed down through `data`. Never read the raw zoom inside each node. Rebuilding every object when the level changes is fine (rare); per-frame is not. If a level changes a node's size, keep the box centred on the stored position and convert drags back before writing.
+
+**Animation along an edge** (flow token): render it inside the custom edge with `<animateMotion path={path}>`, so it follows re-routing; static under reduced motion. Put it in its own child component rendered only on the current edge, so hooks like `useReducedMotion` do not run in all 1,000 edges.
+
+**Viewport after a document change**: the new nodes reach RF only after the next render. Use `fitBounds(rectYouComputed)`, or `fitView` in `requestAnimationFrame`; animation duration 0 under reduced motion. Never call `fitView` on every render.
+
+## React Flow APIs
+
+| Use freely                                                                                      | Never (they own document state)                                                                      |
+| ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `Handle`, `Position`, `BaseEdge`, `EdgeLabelRenderer`, `get*Path`, `NodeProps`/`EdgeProps`       | `useNodesState`, `useEdgesState`, `applyNodeChanges`, `addEdge`                                      |
+| `screenToFlowPosition`, `fitView`, `fitBounds`, `setCenter`, `getViewport`, `useStore` selectors | `setNodes`, `setEdges`, `addNodes`, `addEdges`, `updateNode(Data)`, `deleteElements`, `toObject`     |
+| `onlyRenderVisibleElements`, `useUpdateNodeInternals` after adding/removing handles              | RF delete key / keyboard a11y (off: `deleteKeyCode={null}`, `disableKeyboardA11y`), `parentId` groups |
+
+Also never: an undo stack outside `Y.UndoManager`, ids from `Date.now()` (the editor makes ids), saving via `localStorage`/`fetch`.
+
+## Review checklist
+
+- [ ] Nothing document-shaped in React state, Zustand or RF state; writes only via `useEditor()`.
+- [ ] New types memoized, typed, registered at module scope; synthetic ids prefixed and handled in the handlers.
+- [ ] Derivation cached per source object; an edit to one object returns the same RF objects for the others (add a `deck-to-flow.test.ts` case).
+- [ ] Multi-write actions are one `batch` / gesture = one ⌘Z (test it).
+- [ ] Keyboard path exists and is in `use-canvas-shortcuts.ts`; state is not colour-only; reduced motion respected.
+- [ ] `pnpm bench` before/after, numbers in the report (AGENTS.md).
