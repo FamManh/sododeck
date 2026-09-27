@@ -73,11 +73,11 @@ pnpm monorepo, repo-relative paths: `apps/app/src/…` (tests next to code) and
 
 **Purpose**: Gate on 003, re-check its names, record the baseline. No behavior change.
 
-- [ ] T001 Gate and branch:
+- [x] T001 Gate and branch:
   - Confirm 003 is merged on `main` (`git log --oneline main`).
   - Create the branch `004-json-panel-sync` from `main`.
   - Run `pnpm lint && pnpm typecheck && pnpm test` and confirm they are green.
-- [ ] T002 Confirm the 003 names in research R10 still hold. They were checked against `main`
+- [x] T002 Confirm the 003 names in research R10 still hold. They were checked against `main`
       at `7b845bc` on 2026-09-27; see the table in R10. If `main` has moved since, re-run the
       check (`rg` for each name) and update R10 and the affected tasks. The names in use:
   - `useEditor()` in `apps/app/src/model/use-editor.ts`, returning the `DeckEditor`, which
@@ -89,7 +89,7 @@ pnpm monorepo, repo-relative paths: `apps/app/src/…` (tests next to code) and
   - `useToast()` → `{ toast }` from `@sododeck/ui/components/toast`, with the provider mounted in
     `apps/app/src/routes/editor-page.tsx`.
   - `isApplePlatform()` in `apps/app/src/lib/features.ts`.
-- [ ] T003 [P] Record the performance baseline:
+- [x] T003 [P] Record the performance baseline:
   - Run `pnpm bench` and `BENCH_CPU_THROTTLE=4 pnpm bench`.
   - Note both report paths in `apps/app/bench/results/`. They are the "before" numbers for the
     final report (constitution V).
@@ -103,7 +103,7 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
 
 ### Model helpers ([contracts/model-additions.md](contracts/model-additions.md))
 
-- [ ] T004 [P] Write `packages/model/test/serialize-entry.test.ts` (failing first):
+- [x] T004 [P] Write `packages/model/test/serialize-entry.test.ts` (failing first):
   - **File slices.** For every collection that has entries in the round-trip fixtures
     (`test/fixtures` or whatever `test/round-trip.test.ts` uses), and for every rule in `rules`:
     `serializeEntry(c, o)` equals that object's lines inside `serializeDeck(file)`, with the file's
@@ -113,12 +113,12 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
   - **Key order.** For a node whose keys are shuffled, the result equals the canonical form.
   - **Array form.** `serializeEntries([])` is `"[]"`; for two nodes and one edge it equals
     `JSON.stringify([...canonical], null, 2)`; there is no trailing newline.
-- [ ] T005 Implement `packages/model/src/serialize-entry.ts`:
+- [x] T005 Implement `packages/model/src/serialize-entry.ts`:
   - `serializeEntry(collection, value)` = `JSON.stringify(canonicalizeEntry(collection, value), null, 2)`.
   - `serializeEntries(entries)` = the same over `entries.map(e => canonicalizeEntry(e.collection, e.value))`.
   - Types: `EntryCollection = Collection | 'rules'` and `Entry`.
   - Export both functions and both types from `packages/model/src/index.ts`. T004 must be green.
-- [ ] T006 [P] Write `packages/model/test/serialize-perf.test.ts`:
+- [x] T006 [P] Write `packages/model/test/serialize-perf.test.ts`:
   - Build a rich deck in the test: 500 nodes with `description` (~200 characters), `tech`, 3
     `tags` and 2 `links`, and 1,000 edges with `label` and `protocol`.
   - Load it with `fromJSON` and take `toJSON`.
@@ -127,14 +127,14 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
 
 ### App foundations
 
-- [ ] T007 [P] Add two feature detects to `apps/app/src/lib/features.ts` (constitution IV,
+- [x] T007 [P] Add two feature detects to `apps/app/src/lib/features.ts` (constitution IV,
       architecture rule 6), with cases in `apps/app/src/lib/features.test.ts`:
   - `supportsClipboardWrite()`: true only when `navigator.clipboard?.writeText` is a function.
     Test: API present, absent, no `navigator`.
   - `supportsResizeObserver()`: true when `typeof ResizeObserver !== 'undefined'`. Test: present
     and absent.
   - `isApplePlatform()` already exists; do not add it again.
-- [ ] T008 [P] Create `apps/app/src/state/json-panel-prefs.ts` with a test
+- [x] T008 [P] Create `apps/app/src/state/json-panel-prefs.ts` with a test
       `json-panel-prefs.test.ts`:
   - `JSON_PANEL_KEY = 'sododeck.jsonPanel'`, `DEFAULT_JSON_PANEL = { open: true, height: 212, tab: 'deck' }`.
   - `readJsonPanelPrefs(raw: string | null)` validates **field by field**. Invalid JSON, wrong
@@ -143,7 +143,7 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
   - `loadJsonPanelPrefs()` and `saveJsonPanelPrefs(prefs)` wrap `localStorage` in try/catch
     (blocked storage → defaults, and writes are ignored).
   - Tests: every invalid shape, partial objects, and a `localStorage` that throws.
-- [ ] T009 Replace `jsonPanelOpen` with the `jsonPanel` slice in `apps/app/src/state/ui-store.ts`
+- [x] T009 Replace `jsonPanelOpen` with the `jsonPanel` slice in `apps/app/src/state/ui-store.ts`
       (depends on T008; data-model.md):
   - State: `jsonPanel: JsonPanelPrefs`, initialised from `loadJsonPanelPrefs()`.
   - Setters `setJsonPanelOpen`, `setJsonPanelHeight` and `setJsonTab`. Each one saves.
@@ -156,7 +156,7 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
 
 ### Pure view models (data-model.md "Derived view models")
 
-- [ ] T010 [P] Create `apps/app/src/editor/line-diff.ts` with a test `line-diff.test.ts`:
+- [x] T010 [P] Create `apps/app/src/editor/line-diff.ts` with a test `line-diff.test.ts`:
   - `lineDiff(oldText, newText)` returns `null` when the texts are equal. Otherwise it returns
     `{ startLine, endLine, text }` (1-based, `endLine` inclusive in the old text) after removing the
     common leading and trailing lines.
@@ -164,16 +164,16 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
     Handle pure insertions, pure deletions and edits at the start or end of the file.
   - Test with a seeded random property check: 200 random line edits on a 50-line text; applying
     the edit to the old text (string helper in the test) gives the new text.
-- [ ] T011 [P] Create `apps/app/src/editor/panel-height.ts` with a test `panel-height.test.ts`:
+- [x] T011 [P] Create `apps/app/src/editor/panel-height.ts` with a test `panel-height.test.ts`:
   - `PANEL_MIN = 96`, `CANVAS_MIN = 200`, `PANEL_COLLAPSED = 36`.
   - `clampPanelHeight(requested, available)` keeps the height between `PANEL_MIN` and
     `available − CANVAS_MIN`. If that maximum is below the minimum, it returns the minimum.
   - Tests: below the minimum, above the maximum, a tiny window, `NaN` (→ minimum).
-- [ ] T012 [P] Create `apps/app/src/editor/cooldown.ts` with a test `cooldown.test.ts`:
+- [x] T012 [P] Create `apps/app/src/editor/cooldown.ts` with a test `cooldown.test.ts`:
   - `createCooldown(ms, now = Date.now)` returns `() => boolean`: true on the first call, false
     until `ms` has passed, then true again.
   - Tests use an injected clock.
-- [ ] T013 Create `apps/app/src/editor/json-panel-view.ts` with a test `json-panel-view.test.ts`
+- [x] T013 Create `apps/app/src/editor/json-panel-view.ts` with a test `json-panel-view.test.ts`
       (depends on T005):
   - `countLines(text)`: `''` → 0; a trailing `\n` is not counted. `lineCountLabel(n)` gives
     "1 line" or "`n` lines".
@@ -191,7 +191,7 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
 
 ### Viewer (research R3, R6)
 
-- [ ] T014 [P] Create `apps/app/src/editor/monaco-theme.ts` with a test `monaco-theme.test.ts`:
+- [x] T014 [P] Create `apps/app/src/editor/monaco-theme.ts` with a test `monaco-theme.test.ts`:
   - `THEME_TOKENS`: the list of CSS variables used, following the R6 table (`--sd-code`,
     `--sd-ink`, `--sd-blue-ink`, `--sd-primary-ink`, `--sd-amber-ink`, `--sd-muted`,
     `--sd-primary-soft`, `--sd-surface-2`).
@@ -206,13 +206,13 @@ Monaco viewer wrapper. **⚠️ No user story work starts before this phase is d
     `packages/ui/test/contrast.test.ts` does. Build both themes. Assert that every syntax foreground has ≥ 4.5:1 contrast
     on `--sd-code`, using `@sododeck/ui/lib/contrast`. If a pair fails, report it and pick the
     next ink token. **Do not add a new token without asking.**
-- [ ] T015 Update `apps/app/src/editor/monaco-setup.ts`:
+- [x] T015 Update `apps/app/src/editor/monaco-setup.ts`:
   - Add the deep import `monaco-editor/editor/contrib/readOnlyMessage/browser/contribution`,
     next to the other contrib imports.
   - Export `SELECTION_MODEL_PATH = 'sododeck://selection/current.json'`. It must not match the
     schema's `*.sododeck.json` fileMatch.
   - Export a `defineSododeckThemes(monaco)` that calls `monaco.editor.defineTheme('sododeck-light'|'sododeck-dark', buildMonacoTheme(readThemeTokens(), …))`.
-- [ ] T016 Rename `apps/app/src/editor/json-editor.tsx` to `apps/app/src/editor/json-viewer.tsx`
+- [x] T016 Rename `apps/app/src/editor/json-editor.tsx` to `apps/app/src/editor/json-viewer.tsx`
       (`git mv`) and rewrite it as the Monaco wrapper (depends on T010, T014, T015). It stays a
       default export for `React.lazy`.
   - **Props**: `{ tab: 'deck' | 'selection'; text: string; ariaLabel: string; onReadOnlyAttempt(): void; onUndo(): void; onRedo(): void }`.
@@ -275,7 +275,7 @@ After each step the text equals `serializeDeck(toJSON(doc))`.
 
 ### Tests for User Story 2 ⚠️ (write first, see them fail)
 
-- [ ] T017 [P] [US2] Write `apps/app/src/editor/use-throttled-deck-text.test.ts`, using
+- [x] T017 [P] [US2] Write `apps/app/src/editor/use-throttled-deck-text.test.ts`, using
       `renderHook` and fake timers, against a real `fromJSON` doc:
   - The first render returns `serializeDeck` of the deck immediately (leading).
   - Five edits within 100 ms produce one more update (trailing) at ≤ 250 ms, and the text equals
@@ -283,7 +283,7 @@ After each step the text equals `serializeDeck(toJSON(doc))`.
   - With `enabled = false`, `serializeDeck` is never called (spy via `vi.mock('@sododeck/model', …)`
     partial).
   - Switching to `enabled = true` computes once, immediately.
-- [ ] T018 [P] [US2] Write `apps/app/src/editor/json-panel.test.tsx` (Deck cases).
+- [x] T018 [P] [US2] Write `apps/app/src/editor/json-panel.test.tsx` (Deck cases).
   - **Setup**: render `JsonPanel` inside 003's `EditorProvider` with a demo doc and
     `ToastProvider`; `vi.mock('./json-viewer')` with the double; fresh `localStorage`.
   - **Cases**:
@@ -298,13 +298,13 @@ After each step the text equals `serializeDeck(toJSON(doc))`.
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Create `apps/app/src/editor/use-throttled-deck-text.ts`
+- [x] T019 [US2] Create `apps/app/src/editor/use-throttled-deck-text.ts`
       (`useThrottledDeckText(deck, enabled): string`):
   - Serializes with `serializeDeck` only while enabled.
   - Updates at most once every 250 ms, with a leading and a trailing update (`setTimeout`,
     cleaned up on unmount).
   - Returns the last text. T017 must be green.
-- [ ] T020 [US2] Create `apps/app/src/editor/json-panel-header.tsx`, the 40 px header
+- [x] T020 [US2] Create `apps/app/src/editor/json-panel-header.tsx`, the 40 px header
       (contracts/json-panel-ui.md):
   - lucide `Braces` + "JSON".
   - `SegmentedControl` (`aria-label="JSON view"`) with a Selection item and a "Deck" item, bound
@@ -316,7 +316,7 @@ After each step the text equals `serializeDeck(toJSON(doc))`.
   - The collapse button "Collapse JSON panel" with `aria-expanded`.
   - Match screens 16 and 02 in spacing and typography (tokens `text-code`, `bg-code`,
     `border-hairline`).
-- [ ] T021 [US2] Rewrite `apps/app/src/editor/json-panel.tsx` (no props):
+- [x] T021 [US2] Rewrite `apps/app/src/editor/json-panel.tsx` (no props):
   - Get `editor` from `useEditor()`, `deck` from `useDeckSnapshot(editor.doc)`, and `jsonPanel`
     from the UI store.
   - Render `<section aria-label="JSON">` with the header and a lazy `JsonViewer` in `Suspense`
@@ -325,7 +325,7 @@ After each step the text equals `serializeDeck(toJSON(doc))`.
   - Pass `ariaLabel="Deck JSON, read-only"`, `onUndo={() => editor.undo()}` and
     `onRedo={() => editor.redo()}`. For now `onReadOnlyAttempt` is a no-op (filled in US3).
   - Keep the existing collapsed behavior (36 px) until US5. T018 must be green.
-- [ ] T022 [US2] Update `apps/app/src/routes/editor-page.tsx`:
+- [x] T022 [US2] Update `apps/app/src/routes/editor-page.tsx`:
   - Remove what 003 added in `EditorLayout`: the `serializeDeck` import, the
     `useDeferredValue(deck)` and the `json` `useMemo`. Keep `useDeckSnapshot`, which the top bar,
     left sidebar, inspector and dialog still use. Remove the `useDeferredValue` import if nothing
@@ -349,7 +349,7 @@ deselect and delete. Check the label and text after each step.
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T023 [US1] Add Selection cases to `apps/app/src/editor/json-panel.test.tsx`:
+- [x] T023 [US1] Add Selection cases to `apps/app/src/editor/json-panel.test.tsx`:
   - Click the "Selection" radio. With nothing selected, the text "Select a component or
     connection to see its JSON." and the button "Show Deck JSON" are shown; there is no `pre` and
     no line count.
@@ -368,14 +368,14 @@ deselect and delete. Check the label and text after each step.
 
 ### Implementation for User Story 1
 
-- [ ] T024 [US1] Wire the Selection tab in `apps/app/src/editor/json-panel.tsx`:
+- [x] T024 [US1] Wire the Selection tab in `apps/app/src/editor/json-panel.tsx`:
   - `view = useMemo(() => selectionView(deck, selection), [deck, selection])` and
     `text = selectionText(view.entries)`. Both are recomputed only while the Selection tab is
     visible and the panel is open.
   - `ariaLabel="Selection JSON, read-only"`.
   - When there are no entries, render the empty state (message + `Button` "Show Deck JSON" →
     `setJsonTab('deck')`) instead of the viewer.
-- [ ] T025 [US1] Update the Selection item in `apps/app/src/editor/json-panel-header.tsx`:
+- [x] T025 [US1] Update the Selection item in `apps/app/src/editor/json-panel-header.tsx`:
   - Visible text is `view.label`, truncated with CSS (`truncate`, a max width), with
     `title={view.fullLabel}` and `aria-label={view.fullLabel}`.
   - Pass the line count for the current tab. T023 must be green.
@@ -394,7 +394,7 @@ unchanged, and the hint is announced at most once every 3 s.
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T026 [US3] Add read-only cases to `apps/app/src/editor/json-panel.test.tsx`, using fake
+- [x] T026 [US3] Add read-only cases to `apps/app/src/editor/json-panel.test.tsx`, using fake
       timers and a spy on `useUiStore.getState().announce`:
   - Trigger the double's "read-only attempt" 3 times within 1 s → `announce` is called once with
     "Read-only. Edit on the canvas or in the inspector.". After 3 s, one more attempt → it is
@@ -407,11 +407,11 @@ unchanged, and the hint is announced at most once every 3 s.
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] In `apps/app/src/editor/json-panel.tsx`:
+- [x] T027 [US3] In `apps/app/src/editor/json-panel.tsx`:
   - Create a cooldown with `useMemo(() => createCooldown(3000), [])`.
   - Pass `onReadOnlyAttempt={() => { if (cooldown()) announce('Read-only. Edit on the canvas or in the inspector.'); }}`.
   - Confirm that the undo/redo wiring from T021 matches research R5. T026 must be green.
-- [ ] T028 [US3] Manual check with `pnpm dev`:
+- [x] T028 [US3] Manual check with `pnpm dev`:
   - Type, paste, cut, Backspace, and drop a text file into the Monaco viewer.
   - Confirm that Monaco's read-only message appears at the caret, that nothing changes, and that
     ⌘Z inside the panel undoes the last canvas edit.
@@ -431,7 +431,7 @@ Compare the clipboard with the text shown.
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T029 [US4] Add Copy cases to `apps/app/src/editor/json-panel.test.tsx`, stubbing
+- [x] T029 [US4] Add Copy cases to `apps/app/src/editor/json-panel.test.tsx`, stubbing
       `navigator.clipboard.writeText` with `vi.fn().mockResolvedValue(undefined)`:
   - On Deck, clicking "Copy JSON" → called with the exact Deck text, and the toast "Copied Deck
     JSON" is shown.
@@ -444,7 +444,7 @@ Compare the clipboard with the text shown.
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Add the Copy button to `apps/app/src/editor/json-panel-header.tsx`:
+- [x] T030 [US4] Add the Copy button to `apps/app/src/editor/json-panel-header.tsx`:
   - `Button` `variant="ghost"` `size="icon-sm"` `aria-label="Copy JSON"` with lucide `Copy`,
     `disabled` when the current text is `''`.
   - On click:
@@ -469,7 +469,7 @@ height each time.
 
 ### Tests for User Story 5 ⚠️
 
-- [ ] T031 [P] [US5] Write `apps/app/src/editor/json-resize-handle.test.tsx`:
+- [x] T031 [P] [US5] Write `apps/app/src/editor/json-resize-handle.test.tsx`:
   - `separator` "Resize JSON panel" with `aria-orientation="horizontal"`, and
     `aria-valuenow/min/max` set from the props.
   - ↑ → `onChange(h + 16)`; ↓ → `onChange(h − 16)`; Home → minimum; End → maximum. The values
@@ -478,7 +478,7 @@ height each time.
     `onCommit(h + 50)` on release, and no store writes during the move.
   - It is focusable (`tabIndex=0`) and shows a focus ring (the `focusRing` classes are applied;
     assert it is focusable, not the classes).
-- [ ] T032 [US5] Add collapse and persistence cases to `apps/app/src/editor/json-panel.test.tsx`:
+- [x] T032 [US5] Add collapse and persistence cases to `apps/app/src/editor/json-panel.test.tsx`:
   - "Collapse JSON panel" → the viewer and header tabs are gone, the bar shows "JSON" and
     "Expand JSON panel" (`aria-expanded=false`), and `localStorage['sododeck.jsonPanel']` has
     `open: false`.
@@ -489,14 +489,14 @@ height each time.
 
 ### Implementation for User Story 5
 
-- [ ] T033 [P] [US5] Create `apps/app/src/editor/json-resize-handle.tsx`:
+- [x] T033 [P] [US5] Create `apps/app/src/editor/json-resize-handle.tsx`:
   - Props `{ height, available, onChange, onCommit }`.
   - A 6 px strip on the top edge, `role="separator"`, `cursor-row-resize`, `focusRing`.
   - Pointer capture: during a drag, update a local height (passed up with `onChange`, which only
     sets a CSS variable) and call `onCommit` on `pointerup`.
   - Keys as in the contract; each key press commits.
   - T031 must be green.
-- [ ] T034 [US5] In `apps/app/src/editor/json-panel.tsx`:
+- [x] T034 [US5] In `apps/app/src/editor/json-panel.tsx`:
   - **Collapsed**: render the 36 px bar (`Braces` + "JSON" + "Expand JSON panel" with
     `ChevronUp`) to match screen 17.
   - **Expanded**:
@@ -514,7 +514,7 @@ height each time.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T035 Add the bench scenario (research R2, SC-003):
+- [x] T035 Add the bench scenario (research R2, SC-003):
   - In `apps/app/src/routes/bench-page.tsx`, render `JsonPanel` under the canvas when the
     `json=deck` query parameter is set (Deck tab open), inside the same providers the editor
     uses.
@@ -525,21 +525,21 @@ height each time.
       over the two queries; do not copy the test body.
   - Run `pnpm bench` and `BENCH_CPU_THROTTLE=4 pnpm bench`. `jsonDeckOpen` must be within 10% of
     `default` fps, and `drag+jsonDeck` within 10% of `drag`.
-- [ ] T036 [P] Accessibility pass (constitution VII, contracts/json-panel-ui.md):
+- [x] T036 [P] Accessibility pass (constitution VII, contracts/json-panel-ui.md):
   - Keyboard only: tab switch (←/→), code area (select, fold ⌥⌘[ / ⌥⌘], ⌘C, Esc then Tab to
     leave), Copy, resize handle (↑/↓/Home/End), collapse and expand.
   - Visible focus everywhere.
   - Screen reader (VoiceOver): the region "JSON", the radio names, "Deck JSON, read-only", the
     refused-edit announcement and the copy toast.
   - Fix gaps; add component tests for any bug found (write the failing test first).
-- [ ] T037 [P] Visual check (SC-008):
+- [x] T037 [P] Visual check (SC-008):
   - Screenshot the expanded Deck tab, the Selection tab with a component selected, the empty
     selection and the collapsed bar, in light and dark.
   - Place them next to `docs/design/screens/02`, `16` and `17` in the PR description.
   - Fix differences, or list them. Allowed: the status text and lock icon, DESIGN.md tokens,
     lucide icons.
   - **Ask the founder to confirm the syntax colors (research R6).**
-- [ ] T038 [P] Update the docs:
+- [x] T038 [P] Update the docs:
   - `apps/app/CLAUDE.md`:
     - The JSON panel reads the snapshot and gets its text from `@sododeck/model` only.
     - The `sododeck.jsonPanel` key.
@@ -547,7 +547,7 @@ height each time.
       commands.
   - `packages/model/CLAUDE.md`: add `serializeEntry`/`serializeEntries` to the API list.
   - No ADR is needed (plan.md, constitution VIII).
-- [ ] T039 Run the full definition of done:
+- [x] T039 Run the full definition of done:
   - `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. The smoke suite passes
     unchanged and in under 30 s.
   - Run the quickstart manual scenarios 1–15 in light and dark.
