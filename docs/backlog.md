@@ -30,6 +30,9 @@ Recorded in design-analysis §g and applied to the features below.
 | 11  | Deleting asks for **confirmation**; undo (⌘Z) still works after a confirmed delete.                                                                                                             | 003, 005, 006, 008, 009 |
 | 12  | Library "Recent" = the **8 most recently opened** decks (opened-at kept in library metadata, not in the deck).                                                                                  | 005                     |
 | 19  | After a confirmed delete, show the design's **Undo toast** (6 s, Undo button + ⌘Z hint); ⌘Z still works after it disappears.                                                                    | 003, 005, 006, 008, 009 |
+| 33  | Import and export handle **one `.sododeck.json` file at a time**: no all-decks backup, no folder export/import, no multi-file or zip import.                                                    | 005, 012                |
+| 34  | **G-5 deferred**: no backup reminder banner and no Safari 7-day warning for now.                                                                                                                | 005                     |
+| 35  | **Multi-tab = live sync**: every tab stays editable, edits sync between tabs and merge (Yjs); no read-only tab, lock banner or "Use here instead" (frame 82 not used). Undo is per tab.         | 005                     |
 
 ## Dependency graph
 
@@ -87,7 +90,7 @@ scope (see report).
 | 002 | yjs-model              | M1        | 001        | 4 d  | —                                              |
 | 003 | canvas-basic           | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28           |
 | 004 | json-panel-sync        | M1        | 003        | 2 d  | decided (§g-3): read-only                      |
-| 005 | local-library-autosave | M1        | 000, 002   | 5 d  | designed (72–85); ⚠ §g-19, §g-25, §g-29        |
+| 005 | local-library-autosave | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35          |
 | 006 | flow-authoring         | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                      |
 | 007 | flow-playback          | M2        | 006        | 4 d  | — (branch picker in 46)                        |
 | 008 | inspector-rules        | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26           |
@@ -290,7 +293,7 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
 
 ## 003-canvas-basic
 
-- **Milestone:** M1 · **Depends on:** 000, 002 · **Estimate:** 5 d
+- **Milestone:** M1 · **Depends on:** 000, 002 · **Estimate:** 4 d
 - **Goal:** Architects can draw a system on a blank canvas: add, connect, move, select and delete
   components, and navigate large diagrams.
 - **Spec IDs:** C-1, C-2, C-6 (undo/redo, multi-select), NFR performance, a11y.
@@ -428,10 +431,11 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
 
 ## 005-local-library-autosave
 
-- **Milestone:** M1 · **Depends on:** 000, 002 · **Estimate:** 5 d
+- **Milestone:** M1 · **Depends on:** 000, 002 · **Estimate:** 4 d
 - **Goal:** Guests keep many decks in the browser with no account, never lose work, and are nudged to
   back up.
-- **Spec IDs:** G-1, G-2, G-3, G-4, G-5, G-6.
+- **Spec IDs:** G-1, G-2, G-3 (single file only, §g-33), G-4, G-6 (live sync, §g-35). G-5 deferred (§g-34).
+- **Spec:** [`specs/005-local-library-autosave/spec.md`](../specs/005-local-library-autosave/spec.md) (clarified 2026-09-27).
 - **Design references:** [01-library](design/screens/01-library-light.png) ·
   [dark](design/screens/01-library-dark.png), [07-library-list-view](design/screens/07-library-list-view-light.png),
   [08-library-search-no-results](design/screens/08-library-search-no-results-light.png),
@@ -441,33 +445,34 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   [72](design/screens/72-new-folder-empty-light.png) / [73](design/screens/73-new-folder-duplicate-light.png) new-folder dialog errors,
   [74](design/screens/74-folder-menu-light.png) folder menu, [75](design/screens/75-folder-rename-light.png) folder delete + inline rename,
   [76](design/screens/76-deck-menu-card-light.png) / [77](design/screens/77-deck-menu-row-light.png) deck menus, [78](design/screens/78-recent-light.png) Recent,
-  [79](design/screens/79-recent-empty-light.png) Recent empty, [80](design/screens/80-storage-off-light.png) storage off + Safari banner,
-  [81](design/screens/81-storage-on-light.png) storage on, [82](design/screens/82-second-tab-light.png) deck open in another tab,
+  [79](design/screens/79-recent-empty-light.png) Recent empty, [80](design/screens/80-storage-off-light.png) storage off (storage card only; the Safari banner is dropped, §g-34),
+  [81](design/screens/81-storage-on-light.png) storage on, [82](design/screens/82-second-tab-light.png) deck open in another tab (**not used**, §g-35),
   [83](design/screens/83-autosave-saving-light.png) / [84](design/screens/84-autosave-saved-light.png) / [85](design/screens/85-autosave-error-light.png) autosave states (each with a
-  `-dark` twin). Components: deck card, new-deck card, list row, backup banner, storage card,
-  search field, segmented grid/list, small dialog, context menu + submenu, recent list, read-only
-  banner, autosave status + error popover.
+  `-dark` twin). Components: deck card, new-deck card, list row, storage card,
+  search field, segmented grid/list, small dialog, context menu + submenu, recent list, autosave status + error popover.
 - **In scope:** IndexedDB persistence per deck (Yjs provider) + library metadata (name, folder,
-  counts, updatedAt, openedAt, lastBackupAt); library grid/list, All/Recent (8 most recently opened, §g-12)/Samples/folders, search; new deck;
+  counts, updatedAt, openedAt, lastExportedAt); library grid/list, All/Recent (8 most recently opened, §g-12)/Samples/folders, search; new deck;
   open deck; rename via breadcrumb; folders (designed 72–75: New folder dialog with inline errors for empty and case-insensitive
-  duplicate names, context menu Rename / Export folder / Delete folder, F2 inline rename; delete
+  duplicate names, context menu Rename / Delete folder (no Export folder, §g-33), F2 inline rename; delete
   asks for confirmation per §g-11 — the design's delete-at-once becomes confirm first, then the 6 s Undo toast, §g-19; decks
   of a deleted folder move to Unfiled); deck menu on cards and rows (76–77: Open, Rename F2,
   Duplicate ⌘D, Move to folder submenu with the current folder checked, Export .sododeck.json,
-  Delete) via ⋯, right-click or Shift+F10; delete deck (confirm); import .sododeck.json (validate, error toast); export one deck
-  and "Export backup" of all decks; storage card (80–81: usage bar, Persistent storage On/Off
+  Delete) via ⋯, right-click or Shift+F10; delete deck (confirm); import one .sododeck.json at a time (validate, error toast; several files → toast, nothing added); export one deck
+  (no all-decks backup, §g-33); storage card (80–81: usage bar, Persistent storage On/Off
   status with icon + text, "Request persistent storage", "Browser declined…" text) and
-  `storage.persist()` request; backup reminder after N days + Safari 7-day banner (80); multi-tab
-  (82): BroadcastChannel so two tabs never overwrite — the second tab is read-only with an amber
-  banner and "Use here instead" to take over; fields greyed with a lock, handles and palette
-  disabled, select and export still work; autosave status in the top bar (§g-7: "Saving…"
+  `storage.persist()` request; multi-tab live sync (§g-35): every tab showing a deck stays editable,
+  edits appear in the other tabs within 1 s and merge without loss, undo is per tab, the library
+  updates across tabs; autosave status in the top bar (§g-7: "Saving…"
   held ≤ 300 ms → "Saved in this browser"; error state "Couldn't save — export a backup" as a clay
   pill with Export and a popover with Export .sododeck.json and Retry ⌘S (85); the design's
   "~650 ms" in 83 is overridden, §g-25); thumbnails
   (simplified, generated from positions).
-- **⚠ decision (§g-29):** Duplicate deck and "Use here instead" are proposed in scope (small);
-  Export folder is deferred to 012.
-- **Out of scope:** sample decks content (013), full export dialog (012), Export folder (012), File
+- **Decisions:** Duplicate deck is in scope (§g-29); "Use here instead" is gone with the read-only
+  tab (§g-35); Export folder is deferred to 012; single-file import/export (§g-33); G-5 deferred
+  (§g-34).
+- **Out of scope:** backup reminder and Safari 7-day warning (G-5, §g-34), all-decks backup and
+  multi-file/zip/folder import or export (§g-33), read-only second tab (§g-35), sample decks content
+  (013), full export dialog (012), Export folder (012), File
   System Access (P1), cloud sync.
 - **Acceptance criteria:**
   - Given the user edits a deck, When 500 ms pass and the tab is closed, Then reopening shows the
@@ -475,12 +480,11 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   - Given three decks in two folders, When the user selects a folder or types in search, Then only
     matching decks show, and "No decks match "x"." appears when none match.
   - Given a valid .sododeck.json file, When imported, Then it appears in the library with its node
-    and flow counts; Given an invalid file, Then a toast says it is not valid and nothing is added.
-  - Given the last backup is older than the reminder threshold, When the library opens, Then the
-    amber banner shows with "Export backup"; When dismissed, Then it stays hidden for this session.
-  - Given the same deck open in two tabs, When the second tab opens it, Then that tab shows the
-    read-only banner, "Read-only" status and disabled editing; When the user picks "Use here
-    instead", Then this tab becomes editable and the other tab shows the banner.
+    and flow counts; Given an invalid file, Then a toast says it is not valid and nothing is added;
+    Given several files at once, Then a toast says only one file can be imported and nothing is added.
+  - Given the same deck open in two tabs, When one tab makes an edit, Then the other shows it within
+    1 s; When both tabs edit at the same time, Then both edits are kept in both tabs and after
+    reopening; ⌘Z in one tab undoes only that tab's edits.
   - Given the New folder dialog, When Create is pressed with an empty name or a name that matches an
     existing folder ignoring case and surrounding spaces, Then an inline error with an icon shows
     under the field and no folder is created.
@@ -493,25 +497,28 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
     only after a later save succeeds.
   - Given no deck was ever opened, When the library shows, Then Recent shows the dashed empty
     placeholder.
-- **Risks:** Safari eviction; lock hand-over between tabs ("Use here instead") must be race-free;
+- **Risks:** Safari eviction with no warning in this version (G-5 deferred, §g-34); cross-tab
+  update relay must not echo or double-apply updates and must converge after a tab reloads;
   thumbnail generation cost for large decks (worker).
 - **`/speckit.specify` prompt:**
   > Let guests keep a library of decks in their browser without an account. Every change is saved
   > automatically within half a second and the editor shows "Saving…" then "Saved in this browser".
   > The library shows decks as cards or a list, with folders, recent decks, samples and search; users
   > can create, open, rename, move and delete decks and manage folders. Users can import a deck
-  > file, export one deck, and export a backup of all decks. The app shows how much browser storage
-  > is used, asks the browser to keep the data persistently, and reminds users to back up because
-  > data lives only on this device. Opening the same deck in two tabs must never lose edits. Why:
+  > file and export one deck, one file at a time. The app shows how much browser storage is used and
+  > asks the browser to keep the data persistently. Opening the same deck in two tabs keeps both
+  > editable and in sync, and must never lose edits. Why:
   > local-first with no lock-in is a core promise, and guest data loss is a top product risk.
 - **`/speckit.plan` hint:**
   > apps/app/src/storage (Dexie for library metadata), y-indexeddb provider attached to the Yjs doc,
-  > src/routes/library-page.tsx, top-bar autosave status; BroadcastChannel and storage.persist via
+  > src/routes/library-page.tsx, top-bar autosave status; BroadcastChannel relay of Yjs updates
+  > between tabs (live sync, §g-35) and storage.persist via
   > src/lib/features.ts with fallbacks. Serialization only through @sododeck/model. Library route
   > stays light (no React Flow/Monaco imports). Thumbnails from positions, rendered as simple SVG.
   > Match docs/design/screens/01-library-light.png, 01-library-dark.png, 07-library-list-view-light.png,
   > 08-library-search-no-results-light.png and 72-… to 85-… (light and dark) pixel-close, except
-  > the overrides in design-analysis §g-19 (confirm before delete) and §g-25 (≤ 300 ms).
+  > the overrides in design-analysis §g-19 (confirm before delete), §g-25 (≤ 300 ms), §g-34 (no
+  > backup or Safari banners) and §g-35 (frame 82 not used).
 
 ## 006-flow-authoring
 

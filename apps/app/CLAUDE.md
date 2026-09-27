@@ -33,6 +33,7 @@ Vite + React SPA. No backend, no login: everything runs and is stored in the bro
 
 - Document data lives only in the Yjs doc. Components read a `SododeckFile` snapshot from `useDeckSnapshot(doc)` and write only through `useEditor()` (the `DeckEditor`). Never copy document data into Zustand, React state or React Flow state.
 - The canvas is controlled and derived (ADR 0006): `nodes`/`edges` come from the snapshot every render; React Flow never owns document state. Drags write positions to the document inside an editor gesture (one undo step).
+- Canvas recipes (new node/edge types, visual modes, zoom levels, viewport) are in the project skill `.agents/skills/react-flow/SKILL.md`. Update it when a file, helper or pattern it names changes.
 - No React Flow built-in delete or keyboard handling (`deleteKeyCode={null}`, `disableKeyboardA11y`, nodes/edges not focusable). Keys live in `src/editor/use-canvas-shortcuts.ts`; deletes go through the confirmation dialog, whose counts come from `previewRemoval`.
 - Zustand is for UI state only. If it would be saved in the `.sododeck.json` file, it doesn't belong in Zustand.
 - The JSON panel (004) only reads: `useDeckSnapshot` → text from `@sododeck/model` (`serializeDeck` for Deck, `serializeEntry`/`serializeEntries` for Selection) → Monaco. Never `JSON.stringify` deck data in the app. Its only writes are `editor.undo()`/`redo()` (⌘Z / ⇧⌘Z / Ctrl+Y inside the viewer). Deck text is throttled to 250 ms and computed only while its tab is visible (`use-throttled-deck-text.ts`).
