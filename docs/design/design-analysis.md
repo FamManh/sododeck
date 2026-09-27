@@ -153,22 +153,22 @@ Rendered one frame per state from `sododeck-states.js`; the board `Sododeck Exte
 
 #### D · Library and status (005)
 
-| #   | State                            | Screenshots                                                                                           | Notes                                                                                                                                                                                                                            |
-| --- | -------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 72  | New folder · empty name          | [light](screens/72-new-folder-empty-light.png) · [dark](screens/72-new-folder-empty-dark.png)         | New folder dialog; Create with empty name → 1.5 px clay border + icon + inline message; focus stays in the field.                                                                                                                |
-| 73  | New folder · duplicate name      | [light](screens/73-new-folder-duplicate-light.png) · [dark](screens/73-new-folder-duplicate-dark.png) | Same inline error, specific message; case-insensitive, trimmed.                                                                                                                                                                  |
-| 74  | Folder menu · delete             | [light](screens/74-folder-menu-light.png) · [dark](screens/74-folder-menu-dark.png)                   | Right-click / Shift+F10 on a folder: Rename, Export folder, Delete folder.                                                                                                                                                       |
-| 75  | Folder deleted + rename          | [light](screens/75-folder-rename-light.png) · [dark](screens/75-folder-rename-dark.png)               | Deleted folder's decks move to Unfiled, toast with Undo (**no confirmation**); F2 turns a folder row into an inline field.                                                                                                       |
-| 76  | Deck menu on a card              | [light](screens/76-deck-menu-card-light.png) · [dark](screens/76-deck-menu-card-dark.png)             | ⋯ on a card: Open, Rename (F2), Duplicate (⌘D), Move to folder › (submenu, current folder checked), Export .sododeck.json (⌘E), Delete.                                                                                          |
-| 77  | Deck menu on a list row + delete | [light](screens/77-deck-menu-row-light.png) · [dark](screens/77-deck-menu-row-dark.png)               | Same menu on a list row. Delete: **no confirm dialog**, row disappears, toast with Undo for 6 s (conflicts with §g-11). Render glitch: the row's ⋯ button draws over the top-bar "New deck" button.                              |
-| 78  | Recent decks                     | [light](screens/78-recent-light.png) · [dark](screens/78-recent-dark.png)                             | Sidebar RECENT list: 8 most recently opened decks with relative times (matches §g-12).                                                                                                                                           |
-| 79  | Recent · empty                   | [light](screens/79-recent-empty-light.png) · [dark](screens/79-recent-empty-dark.png)                 | Dashed placeholder explaining what will appear.                                                                                                                                                                                  |
-| 80  | Storage · off + Safari warning   | [light](screens/80-storage-off-light.png) · [dark](screens/80-storage-off-dark.png)                   | Storage card "Persistent storage · Off" + "Request persistent storage"; amber Safari 7-day banner with Export backup. Declined: "Browser declined. Try again after installing the app."                                          |
-| 81  | Storage · on                     | [light](screens/81-storage-on-light.png) · [dark](screens/81-storage-on-dark.png)                     | Card switches to On with a shield icon; green used only here; toast.                                                                                                                                                             |
-| 82  | Deck open in another tab         | [light](screens/82-second-tab-light.png) · [dark](screens/82-second-tab-dark.png)                     | 44 px amber banner "This deck is open in another tab — this tab is read-only" + "Use here instead"; status becomes "Read-only"; inspector fields greyed with a lock; handles and palette disabled; select and export still work. |
-| 83  | Autosave · saving                | [light](screens/83-autosave-saving-light.png) · [dark](screens/83-autosave-saving-dark.png)           | Loader + "Saving…" ~650 ms after the last edit (conflicts with §g-7 ≤ 300 ms); ⌘S forces a save; reduced motion: loader doesn't spin.                                                                                            |
-| 84  | Autosave · saved                 | [light](screens/84-autosave-saved-light.png) · [dark](screens/84-autosave-saved-dark.png)             | "Saved in this browser" with a check.                                                                                                                                                                                            |
-| 85  | Autosave · error                 | [light](screens/85-autosave-error-light.png) · [dark](screens/85-autosave-error-dark.png)             | Clay pill "Couldn't save — export a backup" + Export button; popover "Couldn't save your last change" (unsaved since, error name, Export .sododeck.json, Retry ⌘S). Clears only after a successful save (matches §g-7).          |
+| #   | State                            | Screenshots                                                                                           | Notes                                                                                                                                                                                                                                                                               |
+| --- | -------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 72  | New folder · empty name          | [light](screens/72-new-folder-empty-light.png) · [dark](screens/72-new-folder-empty-dark.png)         | New folder dialog; Create with empty name → 1.5 px clay border + icon + inline message; focus stays in the field.                                                                                                                                                                   |
+| 73  | New folder · duplicate name      | [light](screens/73-new-folder-duplicate-light.png) · [dark](screens/73-new-folder-duplicate-dark.png) | Same inline error, specific message; case-insensitive, trimmed.                                                                                                                                                                                                                     |
+| 74  | Folder menu · delete             | [light](screens/74-folder-menu-light.png) · [dark](screens/74-folder-menu-dark.png)                   | Right-click / Shift+F10 on a folder: Rename, Export folder, Delete folder.                                                                                                                                                                                                          |
+| 75  | Folder deleted + rename          | [light](screens/75-folder-rename-light.png) · [dark](screens/75-folder-rename-dark.png)               | Deleted folder's decks move to Unfiled, toast with Undo (**no confirmation**); F2 turns a folder row into an inline field.                                                                                                                                                          |
+| 76  | Deck menu on a card              | [light](screens/76-deck-menu-card-light.png) · [dark](screens/76-deck-menu-card-dark.png)             | ⋯ on a card: Open, Rename (F2), Duplicate (⌘D), Move to folder › (submenu, current folder checked), Export .sododeck.json (⌘E), Delete.                                                                                                                                             |
+| 77  | Deck menu on a list row + delete | [light](screens/77-deck-menu-row-light.png) · [dark](screens/77-deck-menu-row-dark.png)               | Same menu on a list row. Delete: **no confirm dialog**, row disappears, toast with Undo for 6 s (conflicts with §g-11). Render glitch: the row's ⋯ button draws over the top-bar "New deck" button.                                                                                 |
+| 78  | Recent decks                     | [light](screens/78-recent-light.png) · [dark](screens/78-recent-dark.png)                             | Sidebar RECENT list: 8 most recently opened decks with relative times (matches §g-12).                                                                                                                                                                                              |
+| 79  | Recent · empty                   | [light](screens/79-recent-empty-light.png) · [dark](screens/79-recent-empty-dark.png)                 | Dashed placeholder explaining what will appear.                                                                                                                                                                                                                                     |
+| 80  | Storage · off + Safari warning   | [light](screens/80-storage-off-light.png) · [dark](screens/80-storage-off-dark.png)                   | Storage card "Persistent storage · Off" + "Request persistent storage"; amber Safari 7-day banner with Export backup (**banner not built**, §g-34). Declined: "Browser declined. Try again after installing the app."                                                               |
+| 81  | Storage · on                     | [light](screens/81-storage-on-light.png) · [dark](screens/81-storage-on-dark.png)                     | Card switches to On with a shield icon; green used only here; toast.                                                                                                                                                                                                                |
+| 82  | Deck open in another tab         | [light](screens/82-second-tab-light.png) · [dark](screens/82-second-tab-dark.png)                     | 44 px amber banner "This deck is open in another tab — this tab is read-only" + "Use here instead"; status becomes "Read-only"; inspector fields greyed with a lock; handles and palette disabled; select and export still work. **Not used** (§g-35: live sync, no read-only tab). |
+| 83  | Autosave · saving                | [light](screens/83-autosave-saving-light.png) · [dark](screens/83-autosave-saving-dark.png)           | Loader + "Saving…" ~650 ms after the last edit (conflicts with §g-7 ≤ 300 ms); ⌘S forces a save; reduced motion: loader doesn't spin.                                                                                                                                               |
+| 84  | Autosave · saved                 | [light](screens/84-autosave-saved-light.png) · [dark](screens/84-autosave-saved-dark.png)             | "Saved in this browser" with a check.                                                                                                                                                                                                                                               |
+| 85  | Autosave · error                 | [light](screens/85-autosave-error-light.png) · [dark](screens/85-autosave-error-dark.png)             | Clay pill "Couldn't save — export a backup" + Export button; popover "Couldn't save your last change" (unsaved since, error name, Export .sododeck.json, Retry ⌘S). Clears only after a successful save (matches §g-7).                                                             |
 
 ### Not designed at all
 
@@ -176,7 +176,7 @@ Error boundary / crash screen, 404 deck, loading skeletons, **confirm dialogs** 
 deck/node/edge/rule/folder: the new frames use an Undo toast instead, see §g-11 and §g-19),
 settings, narrow (<1280px) layout, rule-editor column delete/reorder, custom view configuration,
 "Tidy layout" (auto-layout) button and pin glyph, feedback entry point. Storage-quota-exceeded and
-"deck open in another tab" are now covered by 85 and 82.
+"deck open in another tab" are now covered by 85 and 82 (82 is not used, §g-35).
 
 ---
 
@@ -201,7 +201,7 @@ settings, narrow (<1280px) layout, rule-editor column delete/reorder, custom vie
 | Micro-label section                     | uppercase 11px heading + hairline separator                                                                                |                                         | ui ✅ (Panel sections)                                                       |
 | Kind tile                               | size 22/28/30/40, radius ≈ 0.3×size, kind soft/ink colors                                                                  |                                         | ui ➕ `KindTile`                                                             |
 | Stat tile                               | value + label on surface-2                                                                                                 |                                         | ui ➕ small, or app                                                          |
-| Banner                                  | amber (backup), primary-soft/success (match), clay (error)                                                                 | dismiss                                 | ui ➕ `Banner`                                                               |
+| Banner                                  | amber (backup — deferred, §g-34), primary-soft/success (match), clay (error)                                               | dismiss                                 | ui ➕ `Banner`                                                               |
 | Storage meter                           | surface-2 card, 5px bar                                                                                                    |                                         | app                                                                          |
 | Deck card, New-deck card, deck list row | thumbnail, Sample pill, meta; hover float shadow                                                                           | open                                    | app (library)                                                                |
 | Dialog (export)                         | 820px, radius 20, modal shadow over scrim                                                                                  | Esc, click outside                      | ui ➕ `Dialog` (Radix)                                                       |
@@ -209,7 +209,7 @@ settings, narrow (<1280px) layout, rule-editor column delete/reorder, custom vie
 | Toast                                   | inverse pill, 2.6 s                                                                                                        | auto-dismiss                            | ui ➕ `Toast` (sonner? new dep, ask — or tiny own)                           |
 | Coach mark (tour tooltip)               | 300px inverse card, arrow, "n of 3", dots, Skip/Back/Next                                                                  |                                         | ui ➕ `CoachMark` (Radix Popover)                                            |
 | Breadcrumb (top bar)                    | wordmark / folder / editable deck name                                                                                     |                                         | app                                                                          |
-| Autosave status                         | Saving… / Saved in this browser (+ saving / read-only / error in 82–85)                                                    |                                         | app                                                                          |
+| Autosave status                         | Saving… / Saved in this browser (+ saving / error in 83–85; read-only from 82 not used, §g-35)                             |                                         | app                                                                          |
 | Tooltip                                 |                                                                                                                            |                                         | ui ✅                                                                        |
 
 ### Canvas components (target: `apps/app/src/editor`, React Flow)
@@ -279,9 +279,9 @@ feature that owns each is in brackets.
 | Folder inline rename row           | row turns into an input                                                                                                                                       | F2, ↵ save, Esc cancel                                     | 75               | app (005)                                  |
 | Recent list                        | clock icon, name, relative time; dashed empty placeholder                                                                                                     | ↵ opens                                                    | 78, 79           | app (005)                                  |
 | Storage card                       | usage bar, On (shield + green pill) / Off (dashed pill) status, "Request persistent storage", declined text                                                   | request                                                    | 80, 81           | app (005)                                  |
-| Safari banner                      | reuses the amber backup banner with Safari copy                                                                                                               | Export backup, dismiss                                     | 80               | ui ➕ `Banner`                             |
-| Read-only banner + read-only field | 44px amber banner with "Use here instead"; greyed fields with lock icon; "Read-only" status pill                                                              | take the lock                                              | 82               | app (005) on ui ➕ `Banner`                |
-| Autosave status                    | saving (loader) / saved (check) / read-only (lock) / error (clay pill + Export) + error popover                                                               | ⌘S save / retry                                            | 82–85            | app (005)                                  |
+| Safari banner                      | reuses the amber backup banner with Safari copy                                                                                                               | Export backup, dismiss                                     | 80               | deferred (§g-34)                           |
+| Read-only banner + read-only field | 44px amber banner with "Use here instead"; greyed fields with lock icon; "Read-only" status pill                                                              | take the lock                                              | 82               | not built (§g-35)                          |
+| Autosave status                    | saving (loader) / saved (check) / error (clay pill + Export) + error popover (read-only state not built, §g-35)                                               | ⌘S save / retry                                            | 82–85            | app (005)                                  |
 
 ---
 
@@ -491,8 +491,8 @@ fields, no version bump, per 001/002 rules).
 | Merged edges ×N (69, 70)                                                                          | derived                             | —                                | from the visible-graph derivation (010)                                                                                                                    |
 | Semantic zoom level + thresholds (64–67)                                                          | UI (zoom) + document (`node.level`) | `Level` enum exists              | thresholds are UI constants                                                                                                                                |
 | "Notes: dimmed / shown / hidden" during flows (63)                                                | UI preference                       | —                                | Zustand / localStorage                                                                                                                                     |
-| Recent = `openedAt` (78), folders (72–75), last backup, persistent-storage status (80, 81)        | library metadata                    | —                                | Dexie (`apps/app/src/storage`), **not** in the deck file                                                                                                   |
-| Multi-tab lock owner (82)                                                                         | runtime                             | —                                | BroadcastChannel / Web Locks, never stored in the deck                                                                                                     |
+| Recent = `openedAt` (78), folders (72–75), last export, persistent-storage status (80, 81)        | library metadata                    | —                                | Dexie (`apps/app/src/storage`), **not** in the deck file                                                                                                   |
+| Multi-tab sync (82 not used, §g-35)                                                               | runtime                             | —                                | BroadcastChannel relay of Yjs updates between tabs, never stored in the deck                                                                               |
 
 ---
 
@@ -520,6 +520,7 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
   toast "That file is not valid .sododeck.json".
 - New deck → empty editor with the palette open and the 3-step tour started.
 - Backup banner: "Export backup" downloads all decks as one JSON file; × dismisses the banner.
+  (Not built: G-5 deferred and no all-decks backup, §g-33, §g-34.)
 - Clicking a card opens that deck.
 
 **Canvas**
@@ -595,24 +596,24 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
 
 ### In the design AND P0 → build
 
-| Req                                       | Design coverage                                            | Feature   |
-| ----------------------------------------- | ---------------------------------------------------------- | --------- |
-| C-1 blank canvas + palette                | palette with 6 kinds, drag/click to add, empty-canvas card | 003       |
-| C-3 command palette                       | ⌘K over commands, flows, nodes (not edges/rules)           | 009       |
-| C-5 JSON panel two-way sync               | selection + deck tabs, inline error, copy, collapse        | 004       |
-| V-3 focus mode                            | Focus toggle                                               | 010       |
-| V-4 saved views                           | System / Feature / Infra tabs + custom                     | 011       |
-| F-2 flow highlight + token                | full                                                       | 007       |
-| F-3 step player + step panel              | full (condition, rules, SLA; no payload)                   | 007       |
-| F-5 flow list per feature                 | list, no search/filter                                     | 006 / 007 |
-| K-1 title, markdown, owner, tags, links   | on nodes (edge: label only)                                | 008       |
-| K-2 decision tables reusable across steps | full rule editor + compact table on steps                  | 008       |
-| G-1 autosave                              | Saving… / Saved                                            | 005       |
-| G-2 local library, folders, search        | full (except New folder dialog)                            | 005       |
-| G-3 export/import                         | Import button + Export dialog                              | 005 / 012 |
-| G-4 storage usage                         | storage meter                                              | 005       |
-| G-5 backup reminder                       | backup banner + Export backup                              | 005       |
-| I-1 export JSON/PNG/SVG/PDF/Mermaid       | full dialog                                                | 012       |
+| Req                                       | Design coverage                                            | Feature          |
+| ----------------------------------------- | ---------------------------------------------------------- | ---------------- |
+| C-1 blank canvas + palette                | palette with 6 kinds, drag/click to add, empty-canvas card | 003              |
+| C-3 command palette                       | ⌘K over commands, flows, nodes (not edges/rules)           | 009              |
+| C-5 JSON panel two-way sync               | selection + deck tabs, inline error, copy, collapse        | 004              |
+| V-3 focus mode                            | Focus toggle                                               | 010              |
+| V-4 saved views                           | System / Feature / Infra tabs + custom                     | 011              |
+| F-2 flow highlight + token                | full                                                       | 007              |
+| F-3 step player + step panel              | full (condition, rules, SLA; no payload)                   | 007              |
+| F-5 flow list per feature                 | list, no search/filter                                     | 006 / 007        |
+| K-1 title, markdown, owner, tags, links   | on nodes (edge: label only)                                | 008              |
+| K-2 decision tables reusable across steps | full rule editor + compact table on steps                  | 008              |
+| G-1 autosave                              | Saving… / Saved                                            | 005              |
+| G-2 local library, folders, search        | full (except New folder dialog)                            | 005              |
+| G-3 export/import                         | Import button + Export dialog                              | 005 / 012        |
+| G-4 storage usage                         | storage meter                                              | 005              |
+| G-5 backup reminder                       | backup banner + Export backup                              | deferred (§g-34) |
+| I-1 export JSON/PNG/SVG/PDF/Mermaid       | full dialog                                                | 012              |
 
 ### In the design but not P0 → backlog "later"
 
@@ -642,8 +643,8 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
 | K-3 sticky notes (free or anchored)                       | "Note" in palette only; no visual                                                | **needs design**; default: amber-soft card, 180px, markdown, anchor badge                                                                   | ✅ covered: [62](screens/62-stickies-light.png), [63](screens/63-stickies-flow-light.png)                                                                                                                                 |
 | K-4 global search across titles, notes, rules             | ⌘K searches titles only                                                          | default: extend ⌘K results with rules, edges, stickies and description matches (snippet line)                                               | ❌ still missing (⌘K unchanged; default ok)                                                                                                                                                                               |
 | G-4 `storage.persist()` request                           | meter only                                                                       | default: request on first save; show "Persistent storage: on/off" in the meter card                                                         | ✅ covered: [80](screens/80-storage-off-light.png), [81](screens/81-storage-on-light.png)                                                                                                                                 |
-| G-5 Safari 7-day warning                                  | generic banner                                                                   | default: add Safari-specific copy when detected                                                                                             | ✅ covered: [80](screens/80-storage-off-light.png)                                                                                                                                                                        |
-| G-6 multi-tab via BroadcastChannel                        | none                                                                             | default: "Open in another tab — read-only here" banner (needs a quick design pass)                                                          | ✅ covered: [82](screens/82-second-tab-light.png)                                                                                                                                                                         |
+| G-5 Safari 7-day warning                                  | generic banner                                                                   | default: add Safari-specific copy when detected                                                                                             | ✅ covered: [80](screens/80-storage-off-light.png); deferred (§g-34)                                                                                                                                                      |
+| G-6 multi-tab via BroadcastChannel                        | none                                                                             | default: "Open in another tab — read-only here" banner (needs a quick design pass)                                                          | ✅ covered: [82](screens/82-second-tab-light.png); replaced by live sync (§g-35)                                                                                                                                          |
 | NFR a11y: keyboard canvas navigation, non-color cues      | not addressed                                                                    | default: arrow-key node traversal, focus ring = selection ring, dimmed items keep labels; error path dashed                                 | ◐ partly: focus-ring token, keyboard paths on every new frame, dash + icon for error/invalid, live region for invalid clicks. Arrow-key canvas traversal not shown.                                                       |
 
 ---
@@ -775,6 +776,8 @@ decision already covers it, that rule wins and the proposal only says how to app
     deck (⌘D), Export folder, "Use here instead" (take the edit lock), ⌘E export, ⌘S. Not in the
     005 scope. _Proposal: include Duplicate and "Use here instead" in 005 (small, and 82 needs a
     way out of read-only); defer Export folder to 012._
+    **Decision (founder, 2026-09-27):** Duplicate is in 005; Export folder deferred; "Use here
+    instead" is dropped together with the read-only tab (§g-35).
 30. **Accessibility (constitution VII)**: the new frames are mostly good — error paths and invalid
     edges use dash + icon, invalid clicks go to a live region, filter matches are bold + underlined,
     storage On has a shield icon and text, read-only fields have a lock, problems have a triangle
@@ -795,3 +798,20 @@ decision already covers it, that rule wins and the proposal only says how to app
     button draws over the top-bar "New deck" button; the JSON panel says "1 lines"; in
     [69](screens/69-group-collapsed-light.png) JSON `members: 9` vs "8 nodes"; flow JSON uses
     `name` instead of `title`.
+
+### Decisions from the 005 clarification (2026-09-27)
+
+33. **Import/export granularity** ([01](screens/01-library-light.png) backup banner,
+    [74](screens/74-folder-menu-light.png) Export folder): the design exports "all decks as one
+    JSON file" and whole folders; neither fits the one-deck `.sododeck.json` format.
+    **Decision (founder, 2026-09-27):** import and export handle **one deck file at a time**; no
+    all-decks backup, no folder export or import, no multi-file or zip import.
+34. **Backup reminder and Safari warning** ([01](screens/01-library-light.png),
+    [09](screens/09-library-folder-banner-dismissed-light.png), [80](screens/80-storage-off-light.png)):
+    **Decision (founder, 2026-09-27):** **G-5 deferred**: no backup reminder banner and no Safari
+    7-day warning for now (Excalidraw ships neither). The storage card from 80–81 stays.
+35. **Multi-tab** ([82](screens/82-second-tab-light.png)): the design locks the second tab
+    (read-only banner, greyed fields, "Use here instead").
+    **Decision (founder, 2026-09-27):** **live sync** instead: every tab showing a deck stays
+    editable, edits sync between tabs within 1 s and merge without loss (Yjs), undo is per tab. No
+    read-only tab, lock or take-over; frame 82 is not used.
