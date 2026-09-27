@@ -15,5 +15,17 @@ export const router = createBrowserRouter([
     path: '/bench',
     lazy: async () => ({ Component: (await import('../routes/bench-page')).BenchPage }),
   },
+  // Dev only (FR-026): Vite replaces import.meta.env.DEV with false in production builds,
+  // so this route and its lazy chunk are removed; /design then falls through to NotFoundPage.
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/design',
+          lazy: async () => ({
+            Component: (await import('../routes/design-gallery-page')).DesignGalleryPage,
+          }),
+        },
+      ]
+    : []),
   { path: '*', Component: NotFoundPage },
 ]);
