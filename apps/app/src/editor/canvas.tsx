@@ -48,6 +48,8 @@ import { useFlowViewport } from './flows/use-flow-viewport';
 import { focusSet } from './focus-set';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelWithHysteresis, type Level } from './levels';
+import { MergedEdge } from './merged-edge';
+import { MergedEdgePopover } from './merged-edge-popover';
 import { PortPillNode } from './port-pill-node';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
@@ -243,6 +245,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const { dimMs } = resolveMotion(useReducedMotion());
   const wrapper = useRef<HTMLDivElement>(null);
   const previousDrill = useRef(drill);
+  const announcedZoomLevel = useRef<Level | null>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
   const [restored] = useState(() => useUiStore.getState().canvasViewport);
   const zoomLevel = useStore(levelSelector);
@@ -312,9 +315,22 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const scope = useMemo(() => scopeOf(drill), [drill]);
   const graph = useMemo(() => visibleGraph(deck, scope, collapsed), [deck, scope, collapsed]);
   const level = useMemo(() => effectiveLevel(zoomLevel, scope), [zoomLevel, scope]);
+  const focusId = useMemo(() => {
+    if (!focusMode) return null;
+    if (selection.nodes.length === 1) return selection.nodes[0] ?? null;
+    if (selection.groups.length === 1) {
+      const groupId = selection.groups[0];
+      return groupId === undefined
+        ? null
+        : collapsed.has(groupId)
+          ? `${COLLAPSED_NODE_PREFIX}${groupId}`
+          : `${GROUP_NODE_PREFIX}${groupId}`;
+    }
+    return null;
+  }, [focusMode, selection, collapsed]);
   const focus = useMemo(
-    () => (focusMode && focusedId !== null ? focusSet(deck, graph, focusedId) : null),
-    [focusMode, focusedId, deck, graph],
+    () => (focusId !== null ? focusSet(deck, graph, focusId) : null),
+    [focusId, deck, graph],
   );
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const view = useMemo(
@@ -353,6 +369,77 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     graph.nodes.length === 0 &&
     graph.groups.length === 0 &&
     graph.cards.length === 0;
+
+  useEffect(() => {
+    const visibleNodes = new Set(graph.nodes);
+    const visibleEdges = new Set(graph.edges);
+    const visibleGroups = new Set([...graph.groups, ...graph.cards.map((card) => card.groupId)]);
+    const replacementGroups = new Set<string>();
+
+    const nextNodes = selection.nodes.filter((nodeId) => {
+      if (visibleNodes.has(nodeId)) return true;
+      const representative = graph.representative.get(nodeId);
+      if (representative?.startsWith(COLLAPSED_NODE_PREFIX) === true) {
+        replacementGroups.add(representative.slice(COLLAPSED_NODE_PREFIX.length));
+      }
+      return false;
+    });
+
+    const nextEdges = selection.edges.filter((edgeId) => {
+      if (visibleEdges.has(edgeId)) return true;
+      const edge = deck.edges.find((entry) => entry.id === edgeId);
+      if (edge === undefined) return false;
+      for (const nodeId of [edge.from, edge.to]) {
+        const representative = graph.representative.get(nodeId);
+        if (representative?.startsWith(COLLAPSED_NODE_PREFIX) === true) {
+          replacementGroups.add(representative.slice(COLLAPSED_NODE_PREFIX.length));
+        }
+      }
+      return false;
+    });
+
+    const nextGroups = [...new Set([...selection.groups, ...replacementGroups])].filter((groupId) =>
+      visibleGroups.has(groupId),
+    );
+
+    if (
+      nextNodes.length === selection.nodes.length &&
+      nextEdges.length === selection.edges.length &&
+      nextGroups.length === selection.groups.length &&
+      nextNodes.every((id, index) => id === selection.nodes[index]) &&
+      nextEdges.every((id, index) => id === selection.edges[index]) &&
+      nextGroups.every((id, index) => id === selection.groups[index])
+    ) {
+      return;
+    }
+
+    useUiStore.getState().select({
+      nodes: nextNodes,
+      edges: nextEdges,
+      groups: nextGroups,
+      stickies: selection.stickies,
+    });
+  }, [deck.edges, graph, selection]);
+
+  useEffect(() => {
+    if (
+      focusMode &&
+      selection.nodes.length === 0 &&
+      selection.edges.length === 0 &&
+      selection.groups.length === 0 &&
+      selection.stickies.length === 0
+    ) {
+      useUiStore.getState().setFocusMode(false);
+    }
+  }, [focusMode, selection]);
+
+  useEffect(() => {
+    if (announcedZoomLevel.current === zoomLevel) return;
+    if (announcedZoomLevel.current !== null) {
+      useUiStore.getState().announce(`${level.charAt(0).toUpperCase()}${level.slice(1)} level`);
+    }
+    announcedZoomLevel.current = zoomLevel;
+  }, [level, zoomLevel]);
 
   useEffect(() => {
     const before = previousDrill.current;
@@ -401,6 +488,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       ref={wrapper}
       {...{ [CANVAS_ATTR]: '' }}
       {...(flowMode ? { 'data-flow-mode': '' } : {})}
+      {...(focus !== null ? { 'data-focus-mode': '' } : {})}
+      data-level={level}
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
@@ -475,7 +564,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           <CanvasToolbar />
         </Panel>
         <Panel position="bottom-left">
-          <ZoomControl />
+          <ZoomControl level={level} scope={scope} />
         </Panel>
         <MiniMap
           ariaLabel="Minimap"
@@ -511,5 +600,3 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     </div>
   );
 }
-import { MergedEdge } from './merged-edge';
-import { MergedEdgePopover } from './merged-edge-popover';

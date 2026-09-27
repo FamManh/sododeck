@@ -18,6 +18,7 @@ import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
 import { TagsField } from '../fields/tags-field';
 import { kindLabel } from '../kind-label';
+import { LEVEL_NAMES, nodeLevel } from '../levels';
 import { groupName, groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { nodeConnections } from './derive';
 import { InspectorFrame } from './inspector-frame';
@@ -42,6 +43,11 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   const text = (value: string) => (value === '' ? null : value);
   const connections = nodeConnections(deck, node.id);
   const titleOf = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+  const level = nodeLevel(deck, node.id);
+  const levelText =
+    level === undefined
+      ? 'Unknown'
+      : `${LEVEL_NAMES[level]}${node.level === undefined ? ' (derived)' : ''}`;
 
   return (
     <InspectorFrame
@@ -91,6 +97,12 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
               writeOnce({ group: group === NO_GROUP ? null : group });
             }}
           />
+        </PanelSection>
+        <PanelSection>
+          <div className="flex items-center justify-between gap-3 text-body">
+            <span className="text-ink-secondary">Level</span>
+            <span>{levelText}</span>
+          </div>
         </PanelSection>
         <PanelSection>
           <MarkdownField

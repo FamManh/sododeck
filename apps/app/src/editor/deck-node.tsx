@@ -1,4 +1,5 @@
 import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { TagChip } from '@sododeck/ui/components/tag-chip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -22,7 +23,13 @@ const SIDES = [
 ] as const;
 
 /** Canvas node, 164×50 (DESIGN.md "node", design 02 and 53–55). */
-export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps<DeckFlowNode>) {
+export const DeckNode = memo(function DeckNode({
+  id,
+  data,
+  selected,
+  width,
+  height,
+}: NodeProps<DeckFlowNode>) {
   const editor = useEditor();
   const openConnectPopover = useUiStore((s) => s.openConnectPopover);
   const announce = useUiStore((s) => s.announce);
@@ -41,6 +48,10 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
 
   const name = `${kindLabel(data.kind)}: ${data.title}`;
   const tabIndex = data.focused ? 0 : -1;
+  const isLandscape = data.level === 'landscape';
+  const isSystem = data.level === 'system';
+  const isContainer = data.level === 'container';
+  const isComponent = data.level === 'component';
 
   return (
     <div
@@ -52,11 +63,17 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
       aria-selected={selected}
       aria-description={selected ? 'Selected' : undefined}
       aria-current={data.currentStep === true ? 'step' : undefined}
+      {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
       tabIndex={tabIndex}
       title={data.title}
-      style={NODE_SIZE}
+      style={{ width: width ?? NODE_SIZE.width, height: height ?? NODE_SIZE.height }}
       className={cn(
-        'group/node relative flex items-center gap-[9px] rounded-node border border-border bg-surface px-2.5 shadow-rest',
+        'group/node relative rounded-node border border-border bg-surface shadow-rest',
+        isLandscape
+          ? 'flex items-center justify-center'
+          : isComponent
+            ? 'flex flex-col items-start gap-2 px-3 py-2'
+            : 'flex items-center gap-[9px] px-2.5',
         focusRing,
         // Selected: border + halo + ring (DESIGN.md), so it is never color-only.
         selected && 'border-primary shadow-selection ring-1 ring-primary',
@@ -68,20 +85,62 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
         data.flowStart !== undefined && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
       )}
     >
-      <KindTile kind={data.kind} size={30} decorative />
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-body-sm font-medium text-ink">{data.title}</span>
-        {data.subtitle && (
-          <span className="truncate font-mono text-node-sub text-ink-muted">{data.subtitle}</span>
-        )}
-      </span>
-      {data.hasRules && (
-        <Table
-          role="img"
-          aria-label="Has rules"
-          strokeWidth={ICON_STROKE_WIDTH}
-          className="size-3.5 shrink-0 text-primary-ink"
-        />
+      {isLandscape ? (
+        <KindTile kind={data.kind} size={40} decorative />
+      ) : isComponent ? (
+        <>
+          <div className="flex w-full items-start gap-2">
+            <KindTile kind={data.kind} size={30} decorative />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-body-sm font-medium text-ink">{data.title}</span>
+              {data.subtitle && (
+                <span className="block truncate font-mono text-node-sub text-ink-muted">
+                  {data.subtitle}
+                </span>
+              )}
+            </span>
+            {data.hasRules && (
+              <Table
+                role="img"
+                aria-label="Has rules"
+                strokeWidth={ICON_STROKE_WIDTH}
+                className="size-3.5 shrink-0 text-primary-ink"
+              />
+            )}
+          </div>
+          <div className="flex w-full items-center justify-between gap-2">
+            <span className="truncate text-caption text-ink-secondary">
+              {data.owner ?? 'No owner'}
+            </span>
+          </div>
+          {data.tags.length > 0 && (
+            <div className="flex w-full flex-wrap gap-1">
+              {data.tags.slice(0, 2).map((tag) => (
+                <TagChip key={tag} label={tag} />
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-body-sm font-medium text-ink">{data.title}</span>
+            {isContainer && data.subtitle && (
+              <span className="truncate font-mono text-node-sub text-ink-muted">
+                {data.subtitle}
+              </span>
+            )}
+          </span>
+          {data.hasRules && isContainer && (
+            <Table
+              role="img"
+              aria-label="Has rules"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="size-3.5 shrink-0 text-primary-ink"
+            />
+          )}
+        </>
       )}
       {data.childCount > 0 && (
         <span

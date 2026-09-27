@@ -34,6 +34,7 @@ import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
+import { stepForEdges, stepForGroup } from './collapse-flow-marks';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
 export const KIND_MIME = 'application/x-sododeck-kind';
@@ -118,6 +119,16 @@ export function useCanvasHandlers() {
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
         const groupId = groupIdOf(node.id);
         if (groupId !== null) {
+          if (flowMode()) {
+            if (isCollapsedNode(node.id)) {
+              jumpTo((playback) => {
+                const deck = readDeck(editor.doc);
+                const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+                return stepForGroup(playback.played, graph, groupId);
+              });
+            }
+            return;
+          }
           if (!isCollapsedNode(node.id) && !isGroupNode(node.id)) return;
           if (!isMultiSelect(event)) ui().select({ groups: [groupId] });
           ui().focus(node.id);
@@ -161,6 +172,21 @@ export function useCanvasHandlers() {
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
         if (isMergedEdge(edge.id)) {
+          if (flowMode()) {
+            jumpTo((playback) => {
+              const deck = readDeck(editor.doc);
+              const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+              const merged = graph.merged.find((entry) => entry.id === edge.id);
+              return merged === undefined
+                ? null
+                : stepForEdges(playback.played, merged.edgeIds, playback.currentStepId);
+            });
+            return;
+          }
+          if (inSession()) {
+            ui().announce('Expand the group to record this step');
+            return;
+          }
           ui().focusEdge(edge.id);
           return;
         }

@@ -9,6 +9,7 @@ import type { Flow, SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { groupAtStep } from '../collapse-flow-marks';
 import {
   currentOf,
   playedPath,
@@ -19,6 +20,7 @@ import {
   type PlayerView,
 } from './played-path';
 import { findFlow } from './session-path';
+import { scopeOf, visibleGraph } from '../visible-graph';
 
 const ui = () => useUiStore.getState();
 
@@ -56,7 +58,18 @@ export function playbackOf(
 
 function announceStep(deck: SododeckFile, playback: Playback, stepId: string | null): void {
   const step = currentOf(playback.played, stepId);
-  if (step !== null) ui().announce(stepAnnouncement(deck, playback.played, step));
+  if (step !== null) {
+    const state = useUiStore.getState();
+    const graph = visibleGraph(deck, scopeOf(state.drill), state.collapsed);
+    ui().announce(
+      stepAnnouncement(
+        deck,
+        playback.played,
+        step,
+        groupAtStep(deck, graph, step.step.edge) ?? undefined,
+      ),
+    );
+  }
 }
 
 /**
@@ -72,11 +85,17 @@ export function openFlow(
   const deck = readDeck(editor.doc);
   const flow = findFlow(deck, flowId);
   if (flow === undefined) return;
+  const drilled = useUiStore.getState().drill.length > 0;
   const analysis = analyzeFlow(flow, deck.edges);
   const alternativeId = (stepId === null ? null : analysis.byStepId.get(stepId)?.branchId) ?? null;
   const playback = playbackOf(deck, flow, alternativeId, stepId);
   ui().openFlow(flowId, playback.currentStepId, alternativeId);
-  if (options.announce !== false) announceStep(deck, playback, playback.currentStepId);
+  if (options.announce === false) return;
+  if (drilled) {
+    ui().announce('Showing the whole deck for this flow');
+    return;
+  }
+  announceStep(deck, playback, playback.currentStepId);
 }
 
 export function exitFlow(): void {

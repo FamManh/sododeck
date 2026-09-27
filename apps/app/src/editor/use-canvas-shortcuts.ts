@@ -157,9 +157,11 @@ export function useCanvasKeyDown() {
         if (['c', 'e', 'enter'].includes(key.toLowerCase())) return;
       }
 
-      // Flow mode is view-only (007 FR-009): only zoom keys; ← / → belong to the player.
+      // Flow mode is view-only (007 FR-009): only zoom keys and Space on groups / cards.
       const flowMode = isFlowMode(ui);
-      if (flowMode && !(isMod(event) && ['=', '+', '-', '0'].includes(key))) return;
+      if (flowMode && key !== ' ' && !(isMod(event) && ['=', '+', '-', '0'].includes(key))) {
+        return;
+      }
 
       if (isMod(event)) {
         const handled = (() => {
@@ -313,7 +315,7 @@ export function useCanvasKeyDown() {
           event.preventDefault();
           const nextCollapsed = !ui.collapsed.has(groupId);
           ui.toggleCollapsed(groupId);
-          ui.select({ groups: [groupId] });
+          if (!flowMode) ui.select({ groups: [groupId] });
           ui.focus(
             nextCollapsed ? `${COLLAPSED_NODE_PREFIX}${groupId}` : `${GROUP_NODE_PREFIX}${groupId}`,
           );
@@ -326,6 +328,26 @@ export function useCanvasKeyDown() {
             event.preventDefault();
             ui.openConnectPopover(current);
           }
+          return;
+        case 'f':
+          if (session !== null || flowMode) return;
+          event.preventDefault();
+          if (ui.focusMode) {
+            ui.setFocusMode(false);
+            return;
+          }
+          if (ui.selection.nodes.length + ui.selection.groups.length !== 1) {
+            ui.announce('Select a component to focus');
+            return;
+          }
+          if (ui.selection.nodes.length === 1) {
+            const nodeId = ui.selection.nodes[0];
+            if (nodeId !== undefined) ui.focus(nodeId);
+          } else {
+            const groupId = ui.selection.groups[0];
+            if (groupId !== undefined) ui.focus(selectionForFocusedGroup(ui.collapsed, groupId));
+          }
+          ui.setFocusMode(true);
           return;
         case 'e': {
           if (current === null) return;

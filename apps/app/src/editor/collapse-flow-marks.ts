@@ -9,7 +9,17 @@ export interface CollapsedFlowMarks {
   cards: ReadonlyMap<string, 'current' | 'path'>;
 }
 
+const EMPTY_COLLAPSED_FLOW_MARKS: CollapsedFlowMarks = {
+  merged: new Map(),
+  cards: new Map(),
+};
+
 export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): CollapsedFlowMarks {
+  if (graph.merged.length === 0 && graph.cards.length === 0) {
+    return EMPTY_COLLAPSED_FLOW_MARKS;
+  }
+  if (overlay.edges.size === 0) return EMPTY_COLLAPSED_FLOW_MARKS;
+
   const merged = new Map<string, EdgeFlowMark>();
   const cards = new Map<string, 'current' | 'path'>();
 

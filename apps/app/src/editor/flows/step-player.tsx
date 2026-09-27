@@ -8,6 +8,8 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { groupAtStep } from '../collapse-flow-marks';
+import { scopeOf, visibleGraph } from '../visible-graph';
 import { BranchPicker } from './branch-picker';
 import { usePlayback } from './use-playback';
 import { goToStep, nextStep, play, playbackOf, previousStep } from './flow-mode';
@@ -30,9 +32,15 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
   const flow = flowMode ? findFlow(deck, active?.flowId ?? null) : undefined;
   const alternativeId = active?.alternativeId ?? null;
   const stepId = active?.stepId ?? null;
+  const drill = useUiStore((s) => s.drill);
+  const collapsed = useUiStore((s) => s.collapsed);
   const playback = useMemo(
     () => (flow === undefined ? null : playbackOf(deck, flow, alternativeId, stepId)),
     [deck, flow, alternativeId, stepId],
+  );
+  const graph = useMemo(
+    () => visibleGraph(deck, scopeOf(drill), collapsed),
+    [deck, drill, collapsed],
   );
   const progress = useRef<HTMLOListElement>(null);
   usePlayback();
@@ -56,6 +64,7 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
   const { view } = playback;
   const current = currentId === null ? undefined : playback.analysis.byStepId.get(currentId);
   const title = current === undefined ? '' : (current.step.title ?? stepRoute(deck, current));
+  const insideGroup = current === undefined ? null : groupAtStep(deck, graph, current.step.edge);
   const empty = view === null;
   const playing = active.playing;
 
@@ -111,6 +120,9 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
           {title !== '' && (
             <span className="truncate text-body font-medium text-ink" title={title}>
               {title}
+              {insideGroup !== null && (
+                <span className="text-ink-secondary">{` · inside ${insideGroup}`}</span>
+              )}
             </span>
           )}
         </div>

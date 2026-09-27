@@ -268,16 +268,18 @@ export function visibleGraph(
     { nodeCount: number; edgeCount: number; hiddenEdges: string[]; rect: Rect }
   >();
 
-  const bounds = groupBounds(deck);
-  for (const groupId of collapsedVisible) {
-    const rect = bounds.get(groupId);
-    if (rect !== undefined)
-      cardsByGroup.set(groupId, {
-        nodeCount: 0,
-        edgeCount: 0,
-        hiddenEdges: [],
-        rect: centered(rect),
-      });
+  if (collapsedVisible.size > 0) {
+    const bounds = groupBounds(deck);
+    for (const groupId of collapsedVisible) {
+      const rect = bounds.get(groupId);
+      if (rect !== undefined)
+        cardsByGroup.set(groupId, {
+          nodeCount: 0,
+          edgeCount: 0,
+          hiddenEdges: [],
+          rect: centered(rect),
+        });
+    }
   }
 
   for (const node of members) {

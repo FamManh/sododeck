@@ -5,7 +5,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ChevronDown } from 'lucide-react';
 
-import { useUiStore } from '../state/ui-store';
+import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { GroupFlowNode } from './deck-to-flow';
 
 /**
@@ -22,13 +22,18 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   const select = useUiStore((state) => state.select);
   const toggleCollapsed = useUiStore((state) => state.toggleCollapsed);
   const announce = useUiStore((state) => state.announce);
+  const flowMode = useUiStore((state) => isFlowMode(state));
   const groupId = id.startsWith('group:') ? id.slice('group:'.length) : id;
 
   return (
     <div
       data-testid="group-boundary"
+      data-level={data.level}
       style={{ width, height }}
-      className="group pointer-events-none rounded-group border border-dashed border-border bg-group"
+      className={cn(
+        'group pointer-events-none rounded-group border border-dashed border-border bg-group',
+        data.level === 'landscape' && 'border-solid bg-surface-2/80',
+      )}
     >
       <button
         type="button"
@@ -43,12 +48,16 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         onMouseDown={(event) => {
           event.stopPropagation();
         }}
-        onClick={() => {
+        onClick={(event) => {
+          if (flowMode) return;
+          event.stopPropagation();
           select({ groups: [groupId] });
           focus(id);
         }}
         className={cn(
           'pointer-events-auto absolute top-2 left-3 flex gap-1.5 rounded-full px-1 text-micro text-ink-muted uppercase',
+          data.level === 'landscape' &&
+            'top-4 left-4 bg-surface px-2 py-1 text-body font-medium normal-case text-ink',
           focusRing,
         )}
       >
@@ -64,7 +73,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         onClick={(event) => {
           event.stopPropagation();
           toggleCollapsed(groupId);
-          select({ groups: [groupId] });
+          if (!flowMode) select({ groups: [groupId] });
           focus(`collapsed:${groupId}`);
           announce(`${data.title} collapsed`);
         }}

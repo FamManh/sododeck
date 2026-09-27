@@ -125,8 +125,13 @@ export function rehome(
   return step?.step.id ?? analysis.branchStepId;
 }
 
-/** "Step 5 of 8: Order Service → Payment Service[, branch payment failed]" (FR-023). */
-export function stepAnnouncement(deck: SododeckFile, played: PlayedPath, step: PathStep): string {
+/** "Step 5 of 8: Order Service → Payment Service[, branch …][, inside Core services]" (FR-023). */
+export function stepAnnouncement(
+  deck: SododeckFile,
+  played: PlayedPath,
+  step: PathStep,
+  insideGroup?: string,
+): string {
   const head = `Step ${step.number} of ${String(played.steps.length)}: `;
   const route = step.broken
     ? 'connection deleted'
@@ -135,5 +140,6 @@ export function stepAnnouncement(deck: SododeckFile, played: PlayedPath, step: P
     step.branchId !== null && played.alternative !== null
       ? `, branch ${played.alternative.branch.label}`
       : '';
-  return head + route + branch;
+  const inside = insideGroup === undefined ? '' : `, inside ${insideGroup}`;
+  return head + route + branch + inside;
 }

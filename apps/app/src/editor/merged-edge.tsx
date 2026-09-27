@@ -1,11 +1,14 @@
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ArrowRight, ArrowRightLeft } from 'lucide-react';
+import { ArrowRight, ArrowRightLeft, Ban, CircleAlert } from 'lucide-react';
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
 import { memo, useEffect, useRef } from 'react';
 
 import { useUiStore } from '../state/ui-store';
 import type { MergedFlowEdge } from './deck-to-flow';
+import { StepBadge } from './flow-badges';
+import { FlowToken } from './flow-token';
+import { FLOW_STROKES } from './flow-strokes';
 
 function directionIcon(direction: NonNullable<MergedFlowEdge['data']>['direction']) {
   return direction === 'both' ? ArrowRightLeft : ArrowRight;
@@ -28,7 +31,13 @@ export const MergedEdge = memo(function MergedEdge({
   const open = useUiStore((state) => state.openMergedPopover);
   const close = useUiStore((state) => state.closePopover);
   const timer = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
-  const merged = data ?? { count: 0, direction: 'both', edgeIds: [], focused: false };
+  const merged = data ?? {
+    count: 0,
+    direction: 'both',
+    edgeIds: [],
+    focused: false,
+    inFocus: false,
+  };
   const [path, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
@@ -39,6 +48,7 @@ export const MergedEdge = memo(function MergedEdge({
     borderRadius: 8,
   });
   const Icon = directionIcon(merged.direction);
+  const flowStroke = merged.flow === undefined ? undefined : FLOW_STROKES[merged.flow.style];
 
   useEffect(
     () => () => {
@@ -53,15 +63,31 @@ export const MergedEdge = memo(function MergedEdge({
         id={id}
         path={path}
         interactionWidth={12}
-        style={{ stroke: 'var(--color-text-secondary)', strokeWidth: 2.25 }}
+        style={{
+          stroke: flowStroke?.stroke ?? 'var(--color-text-secondary)',
+          strokeWidth: merged.flow?.current != null ? 3 : (flowStroke?.width ?? 2.25),
+          ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
+        }}
       />
+      {merged.flow?.current != null && (
+        <FlowToken path={path} x={labelX} y={labelY} speed={merged.flow.current.speed} />
+      )}
       <EdgeLabelRenderer>
         <button
           type="button"
           data-edge-anchor={id}
           data-testid="merged-edge-label"
+          data-in-flow={merged.flow?.inPath === true ? '' : undefined}
+          data-in-focus={merged.inFocus ? '' : undefined}
           className={cn(
-            'merged-edge-label nodrag nopan absolute flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-edge-label text-ink-secondary shadow-rest',
+            'merged-edge-label nodrag nopan absolute flex items-center gap-1 rounded-full border bg-surface py-0.5 pr-2 text-edge-label shadow-rest',
+            merged.flow?.current != null
+              ? merged.flow.style === 'error'
+                ? 'border-dashed border-clay-ink bg-clay-ink text-on-primary'
+                : 'border-primary bg-primary text-on-primary'
+              : merged.flow?.style === 'error' || merged.flow?.style === 'invalid'
+                ? 'border-dashed border-clay-ink text-clay-ink'
+                : 'border-border text-ink-secondary',
             merged.focused && 'ring-1 ring-primary',
           )}
           style={{
@@ -82,6 +108,25 @@ export const MergedEdge = memo(function MergedEdge({
             open(id);
           }}
         >
+          {merged.flow?.badges.map((badge) => (
+            <StepBadge key={badge.label} badge={badge} />
+          ))}
+          {merged.flow?.style === 'invalid' && (
+            <Ban
+              role="img"
+              aria-label="Can't add this edge"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="size-3.5"
+            />
+          )}
+          {merged.flow?.errorIcon === true && merged.flow.badges.length === 0 && (
+            <CircleAlert
+              role="img"
+              aria-label="Error path"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="size-3.5"
+            />
+          )}
           <Icon
             role="img"
             aria-label={directionLabel(merged.direction)}

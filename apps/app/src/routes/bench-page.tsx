@@ -18,7 +18,16 @@ import { useUiStore } from '../state/ui-store';
 
 declare global {
   interface Window {
-    __sododeckBench?: { readyAt: number; nodes: number; edges: number };
+    __sododeckBench?: {
+      readyAt: number;
+      nodes: number;
+      edges: number;
+      collapseAll?: () => Promise<void>;
+      toggleCollapse?: (groupId: string) => Promise<number>;
+      prepareFocus?: (nodeId: string) => Promise<void>;
+      focus?: (nodeId: string) => Promise<number>;
+      resetViewModes?: () => void;
+    };
     /** 006 flow scenarios: each resolves with ms from the action to the painted step badge. */
     __sododeckFlowBench?: {
       showFlow: (flowId: string) => Promise<number>;
@@ -37,6 +46,13 @@ declare global {
     /** 009 SC-008: ms from opening ⌘K and typing to painted results. */
     __sododeckPaletteBench?: {
       search: (query: string, matchText: string) => Promise<number>;
+    };
+    __sododeckGroupsBench?: {
+      collapseAll: () => Promise<void>;
+      toggleCollapse: (groupId: string) => Promise<number>;
+      prepareFocus: (nodeId: string) => Promise<void>;
+      focus: (nodeId: string) => Promise<number>;
+      reset: () => void;
     };
   }
 }
@@ -175,6 +191,90 @@ function FlowBenchHooks() {
   return null;
 }
 
+/** Exposes the zoom-groups-focus benchmarks (010). */
+function GroupsBenchHooks() {
+  const editor = useEditor();
+  const deck = useDeckSnapshot(editor.doc);
+
+  useEffect(() => {
+    const collapseAll = async () => {
+      useUiStore.setState({ collapsed: new Set(deck.groups.map((group) => group.id)) });
+      await paintedAfter(performance.now(), '[data-testid="collapsed-group-node"]');
+    };
+    const toggleCollapse = (groupId: string) => {
+      const nextCollapsed = !useUiStore.getState().collapsed.has(groupId);
+      const start = performance.now();
+      useUiStore.getState().toggleCollapsed(groupId);
+      return paintedAfter(
+        start,
+        nextCollapsed
+          ? `[data-node-id="collapsed:${groupId}"]`
+          : `[data-node-id="group:${groupId}"]`,
+      );
+    };
+    const prepareFocus = async (nodeId: string) => {
+      const ui = useUiStore.getState();
+      ui.clearSelection();
+      ui.setFocusMode(false);
+      ui.select({ nodes: [nodeId] });
+      ui.focus(nodeId);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        }),
+      );
+    };
+    const focus = async (nodeId: string) => {
+      const ui = useUiStore.getState();
+      if (!ui.selection.nodes.includes(nodeId)) {
+        await prepareFocus(nodeId);
+      }
+      const start = performance.now();
+      ui.setFocusMode(true);
+      return paintedAfter(
+        start,
+        () =>
+          document.querySelector('[data-canvas][data-focus-mode]') !== null &&
+          document.querySelector('.react-flow__node.in-focus') !== null,
+      );
+    };
+    const reset = () => {
+      const ui = useUiStore.getState();
+      ui.clearSelection();
+      ui.setFocusMode(false);
+      ui.expandAll(deck.groups.map((group) => group.id));
+    };
+    window.__sododeckGroupsBench = {
+      collapseAll,
+      toggleCollapse,
+      prepareFocus,
+      focus,
+      reset,
+    };
+    window.__sododeckBench = {
+      ...(window.__sododeckBench ?? { readyAt: 0, nodes: 0, edges: 0 }),
+      collapseAll,
+      toggleCollapse,
+      prepareFocus,
+      focus,
+      resetViewModes: reset,
+    };
+    return () => {
+      window.__sododeckGroupsBench = undefined;
+      if (window.__sododeckBench !== undefined) {
+        delete window.__sododeckBench.collapseAll;
+        delete window.__sododeckBench.toggleCollapse;
+        delete window.__sododeckBench.prepareFocus;
+        delete window.__sododeckBench.focus;
+        delete window.__sododeckBench.resetViewModes;
+      }
+    };
+  }, [deck, editor.doc]);
+  return null;
+}
+
 function BenchInspector() {
   return <Inspector deck={useDeckSnapshot(useEditor().doc)} />;
 }
@@ -210,6 +310,7 @@ export function BenchPage() {
       <EditorProvider doc={doc}>
         <ToastProvider>
           <FlowBenchHooks />
+          {groups && <GroupsBenchHooks />}
           {inspector && <InspectorBenchHooks />}
           <PaletteBenchHooks />
           <ReactFlowProvider>
@@ -223,6 +324,7 @@ export function BenchPage() {
                       requestAnimationFrame(() => {
                         const deck = readDeck(doc);
                         window.__sododeckBench = {
+                          ...(window.__sododeckBench ?? {}),
                           readyAt: performance.now(),
                           nodes: deck.nodes.length,
                           edges: deck.edges.length,

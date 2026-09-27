@@ -20,6 +20,7 @@ export const NODE_SIZE = { width: 164, height: 50 } as const;
 export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
 export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
 type NodeSize = { width: number; height: number };
+type SizeKey = `${number}x${number}`;
 
 /** Space between a group's members and its dashed boundary. */
 export const GROUP_PADDING = 24;
@@ -66,11 +67,30 @@ export function nodeSize(level: Level): NodeSize {
   return level === 'component' ? COMPONENT_CARD_SIZE : NODE_SIZE;
 }
 
+const groupBoundsCache = new WeakMap<
+  ReadonlyArray<SododeckFile['nodes'][number]>,
+  WeakMap<ReadonlyArray<SododeckFile['groups'][number]>, Map<SizeKey, Map<string, Rect>>>
+>();
+
 /**
  * Bounds of every non-empty group: its members' boxes and its child groups' bounds, plus
  * padding. Groups in a parent cycle, and groups with nothing inside, get none.
  */
 export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map<string, Rect> {
+  let byGroups = groupBoundsCache.get(deck.nodes);
+  if (byGroups === undefined) {
+    byGroups = new WeakMap();
+    groupBoundsCache.set(deck.nodes, byGroups);
+  }
+  let bySize = byGroups.get(deck.groups);
+  if (bySize === undefined) {
+    bySize = new Map();
+    byGroups.set(deck.groups, bySize);
+  }
+  const sizeKey: SizeKey = `${size.width}x${size.height}`;
+  const cached = bySize.get(sizeKey);
+  if (cached !== undefined) return cached;
+
   const content = new Map<string, Rect>();
   deck.nodes.forEach((node, index) => {
     if (node.group === undefined) return;
@@ -104,6 +124,7 @@ export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map
     return bounds;
   };
   for (const group of deck.groups) resolve(group.id);
+  bySize.set(sizeKey, out);
   return out;
 }
 

@@ -7,7 +7,13 @@ import { stickyCanvasPosition, stickyLabel, type StickyPlacement } from '@sodode
 import type { SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
-import { displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
+import {
+  displayPosition,
+  groupBounds,
+  NODE_SIZE,
+  nodeSize as sizeForLevel,
+  type Point,
+} from './canvas-geometry';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
 import type { CollapsedFlowMarks } from './collapse-flow-marks';
@@ -29,6 +35,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   title: string;
   kind: string;
   subtitle: string | undefined;
+  owner: string | undefined;
+  tags: readonly string[];
   hasRules: boolean;
   level: Level;
   childCount: number;
@@ -56,6 +64,7 @@ export interface DeckEdgeData extends Record<string, unknown> {
   fromTitle: string;
   toTitle: string;
   focused: boolean;
+  inFocus: boolean;
   dimmed: boolean;
   /** Marks of the shown or recorded flow (006): step badges and the flow style. */
   flow?: EdgeFlowMark;
@@ -67,6 +76,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   nodeCount: number;
   edgeCount: number;
   focused: boolean;
+  dimmed: boolean;
+  flowInside?: 'current' | 'path';
 }
 
 export interface PortNodeData extends Record<string, unknown> {
@@ -79,6 +90,8 @@ export interface MergedEdgeData extends Record<string, unknown> {
   direction: 'a-to-b' | 'b-to-a' | 'both';
   edgeIds: readonly string[];
   focused: boolean;
+  inFocus: boolean;
+  flow?: EdgeFlowMark;
 }
 
 export interface StickyNodeData extends Record<string, unknown> {
@@ -125,8 +138,69 @@ const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
 const mergedCache = new Map<string, MergedFlowEdge>();
 const stickyNodeCache = new WeakMap<StickyObject, StickyFlowNode>();
 const stickyLeaderCache = new WeakMap<StickyObject, StickyLeaderFlowEdge>();
+let lastNodes: CanvasFlowNode[] = [];
 /** Last edge list: returned again when every element is the same, so React Flow skips a re-sync. */
 let lastEdges: (DeckFlowEdge | MergedFlowEdge)[] = [];
+const groupCountCache = new WeakMap<
+  ReadonlyArray<DeckNodeObject>,
+  WeakMap<ReadonlyArray<SododeckFile['groups'][number]>, Map<string, number>>
+>();
+
+interface DeckLookups {
+  nodesById: ReadonlyMap<string, DeckNodeObject>;
+  nodeIndexById: ReadonlyMap<string, number>;
+  nodePositionById: ReadonlyMap<string, Point>;
+  nodeTitleById: ReadonlyMap<string, string>;
+  edgeNodeViews: ReadonlyMap<string, { position: Point; title: string }>;
+  edgesById: ReadonlyMap<string, DeckEdgeObject>;
+  groupsById: ReadonlyMap<string, SododeckFile['groups'][number]>;
+}
+
+const deckLookupCache = new WeakMap<
+  ReadonlyArray<DeckNodeObject>,
+  WeakMap<ReadonlyArray<DeckEdgeObject>, DeckLookups>
+>();
+
+function deckLookups(deck: SododeckFile): DeckLookups {
+  let byEdges = deckLookupCache.get(deck.nodes);
+  if (byEdges === undefined) {
+    byEdges = new WeakMap();
+    deckLookupCache.set(deck.nodes, byEdges);
+  }
+  const cached = byEdges.get(deck.edges);
+  if (cached !== undefined) return cached;
+
+  const nodesById = new Map<string, DeckNodeObject>();
+  const nodeIndexById = new Map<string, number>();
+  const nodePositionById = new Map<string, Point>();
+  const nodeTitleById = new Map<string, string>();
+  const edgeNodeViews = new Map<string, { position: Point; title: string }>();
+  deck.nodes.forEach((node, index) => {
+    const position = displayPosition(node, index);
+    nodesById.set(node.id, node);
+    nodeIndexById.set(node.id, index);
+    nodePositionById.set(node.id, position);
+    nodeTitleById.set(node.id, node.title);
+    edgeNodeViews.set(node.id, { position, title: node.title });
+  });
+  const edgesById = new Map(deck.edges.map((edge) => [edge.id, edge]));
+  const groupsById = new Map(deck.groups.map((group) => [group.id, group]));
+  const lookups = {
+    nodesById,
+    nodeIndexById,
+    nodePositionById,
+    nodeTitleById,
+    edgeNodeViews,
+    edgesById,
+    groupsById,
+  };
+  byEdges.set(deck.edges, lookups);
+  return lookups;
+}
+
+function sameClassName(actual: string | undefined, expected: string): boolean {
+  return (actual ?? '') === expected;
+}
 
 export interface CanvasView {
   selection: Selection;
@@ -172,9 +246,14 @@ function toFlowNode(
   const flowStart = mark?.startsHere;
   const currentStep = mark?.currentStep === true;
   const inFlow = mark?.inPath === true;
+  const inFocus = view.focus?.members.has(node.id) === true;
   const selected = view.selection.nodes.includes(node.id);
   const focused = node.id === view.focusedId;
   const dimmed = view.focus !== null && !view.focus.members.has(node.id);
+  const className = [inFlow ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+    .filter(Boolean)
+    .join(' ');
+  const size = sizeForLevel(view.level);
   if (
     cached?.selected === selected &&
     cached.data.focused === focused &&
@@ -183,7 +262,7 @@ function toFlowNode(
     cached.data.dimmed === dimmed &&
     cached.data.flowStart === flowStart &&
     (cached.data.currentStep === true) === currentStep &&
-    (cached.className === 'in-flow') === inFlow &&
+    sameClassName(cached.className, className) &&
     cached.position.x === position.x &&
     cached.position.y === position.y
   ) {
@@ -192,14 +271,17 @@ function toFlowNode(
   const flowNode: DeckFlowNode = {
     id: node.id,
     type: 'deck',
-    ...NODE_SIZE,
+    ...size,
     position,
     selected,
-    ...(inFlow ? { className: 'in-flow' } : {}),
+    ...(className === '' ? {} : { className }),
+    ...(dimmed ? { domAttributes: { 'aria-hidden': true, inert: true } } : {}),
     data: {
       title: node.title,
       kind: node.type,
       subtitle: node.tech,
+      owner: node.owner,
+      tags: node.tags ?? [],
       hasRules: (node.rules?.length ?? 0) > 0,
       level: view.level,
       childCount,
@@ -215,6 +297,13 @@ function toFlowNode(
 
 /** Number of nodes in each group, nested groups included. */
 function groupCounts(deck: SododeckFile): Map<string, number> {
+  let byGroups = groupCountCache.get(deck.nodes);
+  if (byGroups === undefined) {
+    byGroups = new WeakMap();
+    groupCountCache.set(deck.nodes, byGroups);
+  }
+  const cached = byGroups.get(deck.groups);
+  if (cached !== undefined) return cached;
   const parentOf = new Map(deck.groups.map((g) => [g.id, g.parent]));
   const counts = new Map<string, number>();
   for (const node of deck.nodes) {
@@ -226,6 +315,7 @@ function groupCounts(deck: SododeckFile): Map<string, number> {
       group = parentOf.get(group);
     }
   }
+  byGroups.set(deck.groups, counts);
   return counts;
 }
 
@@ -236,22 +326,25 @@ function groupNodes(
   view: CanvasView,
 ): GroupFlowNode[] {
   if (deck.groups.length === 0) return [];
-  const bounds = groupBounds(deck);
+  const { groupsById } = deckLookups(deck);
+  const bounds = groupBounds(deck, sizeForLevel(level));
   const counts = groupCounts(deck);
   return graph.groups.flatMap((groupId) => {
-    const group = deck.groups.find((entry) => entry.id === groupId);
+    const group = groupsById.get(groupId);
     const rect = bounds.get(groupId);
     if (group === undefined) return [];
     if (!rect) return [];
     const id = GROUP_NODE_PREFIX + groupId;
     const count = counts.get(groupId) ?? 0;
     const focused = view.focusedId === id;
+    const inFocus = view.focus?.members.has(id) === true;
     const cached = groupCache.get(id);
     if (
       cached?.data.title === group.title &&
       cached.data.count === count &&
       cached.data.level === level &&
       cached.data.focused === focused &&
+      sameClassName(cached.className, inFocus ? 'in-focus' : '') &&
       cached.position.x === rect.x &&
       cached.position.y === rect.y &&
       cached.width === rect.width &&
@@ -269,6 +362,10 @@ function groupNodes(
       draggable: false,
       focusable: false,
       connectable: false,
+      ...(inFocus ? { className: 'in-focus' } : {}),
+      ...(view.focus !== null && !inFocus
+        ? { domAttributes: { 'aria-hidden': true, inert: true } }
+        : {}),
       zIndex: -1,
       data: { title: group.title, count, level, focused },
     };
@@ -282,10 +379,20 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
     const id = `${COLLAPSED_NODE_PREFIX}${card.groupId}`;
     const focused = view.focusedId === id;
     const selected = view.selection.groups.includes(card.groupId);
+    const inFocus = view.focus?.members.has(id) === true;
+    const dimmed = view.focus !== null && !inFocus;
+    const flowInside = view.marks.cards.get(card.groupId);
+    const className = [flowInside !== undefined ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+      .filter(Boolean)
+      .join(' ');
     const cached = collapsedCache.get(id);
     if (
       cached?.selected === selected &&
       cached.data.focused === focused &&
+      cached.data.dimmed === dimmed &&
+      cached.data.flowInside === flowInside &&
+      sameClassName(cached.className, className) &&
+      Boolean(cached.domAttributes?.['aria-hidden']) === dimmed &&
       cached.position.x === card.rect.x &&
       cached.position.y === card.rect.y &&
       cached.width === card.rect.width &&
@@ -303,12 +410,16 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
       width: card.rect.width,
       height: card.rect.height,
       selected,
+      ...(className === '' ? {} : { className }),
+      ...(dimmed ? { domAttributes: { 'aria-hidden': true, inert: true } } : {}),
       data: {
         groupId: card.groupId,
         title: card.title,
         nodeCount: card.nodeCount,
         edgeCount: card.edgeCount,
         focused,
+        dimmed,
+        ...(flowInside === undefined ? {} : { flowInside }),
       },
     };
     collapsedCache.set(id, flowNode);
@@ -317,9 +428,7 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
 }
 
 function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
-  const positions = new Map(
-    deck.nodes.map((node, index) => [node.id, displayPosition(node, index)]),
-  );
+  const { nodePositionById: positions } = deckLookups(deck);
   return graph.ports.flatMap((port) => {
     const anchors = port.insideNodeIds
       .map((nodeId) => positions.get(nodeId))
@@ -354,6 +463,22 @@ function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
   });
 }
 
+function portNodesWithView(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+  view: CanvasView,
+): PortFlowNode[] {
+  return portNodes(deck, graph).map((port) => {
+    const inFocus = view.focus?.members.has(port.id) === true;
+    const dimmed = view.focus !== null && !inFocus;
+    return {
+      ...port,
+      ...(inFocus ? { className: 'in-focus' } : {}),
+      ...(dimmed ? { domAttributes: { 'aria-hidden': true, inert: true } } : {}),
+    };
+  });
+}
+
 /** Group boundaries first (drawn below), then components. */
 export function toFlowNodes(
   deck: SododeckFile,
@@ -361,26 +486,34 @@ export function toFlowNodes(
   view: CanvasView,
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): CanvasFlowNode[] {
+  const lookups = deckLookups(deck);
+  const ports = portNodesWithView(deck, graph, view);
   const components = graph.nodes.flatMap((nodeId) => {
-    const index = deck.nodes.findIndex((node) => node.id === nodeId);
-    const node = index < 0 ? undefined : deck.nodes[index];
-    if (node === undefined) return [];
+    const node = lookups.nodesById.get(nodeId);
+    const index = lookups.nodeIndexById.get(nodeId);
+    const position = lookups.nodePositionById.get(nodeId);
+    if (node === undefined || index === undefined || position === undefined) return [];
     return [
       toFlowNode(
         node,
-        displayPosition(node, index),
+        position,
         view,
         graph.childCount.get(node.id) ?? 0,
         overlay.nodes.get(node.id),
       ),
     ];
   });
-  return [
+  const next: CanvasFlowNode[] = [
     ...groupNodes(deck, graph, view.level, view),
     ...collapsedNodes(view, graph),
-    ...portNodes(deck, graph),
+    ...ports,
     ...components,
   ];
+  if (next.length === lastNodes.length && next.every((node, index) => node === lastNodes[index])) {
+    return lastNodes;
+  }
+  lastNodes = next;
+  return next;
 }
 
 export function toStickyNodes(
@@ -486,8 +619,13 @@ export function edgeName(fromTitle: string, toTitle: string, label?: string): st
 }
 
 /** Maps deck edges to React Flow edges, skipping edges whose endpoints are missing. */
-function representativeTitles(deck: SododeckFile, graph: VisibleGraph): Map<string, string> {
-  const titles = new Map(deck.nodes.map((node) => [node.id, node.title]));
+function representativeTitles(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+): ReadonlyMap<string, string> {
+  const { nodeTitleById } = deckLookups(deck);
+  if (graph.cards.length === 0 && graph.ports.length === 0) return nodeTitleById;
+  const titles = new Map(nodeTitleById);
   for (const card of graph.cards) titles.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, card.title);
   for (const port of graph.ports) titles.set(port.id, port.outsideTitle);
   return titles;
@@ -499,26 +637,27 @@ export function toFlowEdges(
   view: CanvasView,
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): (DeckFlowEdge | MergedFlowEdge)[] {
+  const lookups = deckLookups(deck);
   const ports = portNodes(deck, graph);
-  const nodes = new Map<string, { position: Point; title: string }>(
-    deck.nodes.map((node, index) => [
-      node.id,
-      { position: displayPosition(node, index), title: node.title },
-    ]),
-  );
-  for (const card of graph.cards) {
-    nodes.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, {
-      position: { x: card.rect.x, y: card.rect.y },
-      title: card.title,
-    });
-  }
-  for (const port of ports) {
-    nodes.set(port.id, { position: port.position, title: port.data.outsideTitle });
+  const nodes =
+    graph.cards.length === 0 && ports.length === 0
+      ? lookups.edgeNodeViews
+      : new Map(lookups.edgeNodeViews);
+  if (nodes instanceof Map) {
+    for (const card of graph.cards) {
+      nodes.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, {
+        position: { x: card.rect.x, y: card.rect.y },
+        title: card.title,
+      });
+    }
+    for (const port of ports) {
+      nodes.set(port.id, { position: port.position, title: port.data.outsideTitle });
+    }
   }
   const titles = representativeTitles(deck, graph);
   const selected = new Set(view.selection.edges);
   const plainEdges = graph.edges.flatMap((edgeId) => {
-    const edge = deck.edges.find((entry) => entry.id === edgeId);
+    const edge = lookups.edgesById.get(edgeId);
     if (edge === undefined) return [];
     const from = nodes.get(edge.from);
     const to = nodes.get(edge.to);
@@ -528,6 +667,7 @@ export function toFlowEdges(
     const isSelected = selected.has(edge.id);
     const focused = edge.id === view.focusedEdgeId;
     const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
+    const inFocus = view.focus?.edges.has(edge.id) === true;
     const showLabel =
       (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
       view.focus?.edges.has(edge.id) === true;
@@ -540,6 +680,7 @@ export function toFlowEdges(
       cached.targetHandle === targetHandle &&
       cached.data?.showLabel === showLabel &&
       cached.data.focused === focused &&
+      cached.data.inFocus === inFocus &&
       cached.data.dimmed === dimmed &&
       cached.data.fromTitle === from.title &&
       cached.data.toTitle === to.title
@@ -554,7 +695,14 @@ export function toFlowEdges(
       sourceHandle,
       targetHandle,
       selected: isSelected,
-      ...(mark?.inPath === true ? { className: 'in-flow' } : {}),
+      ...(mark?.inPath === true || inFocus
+        ? {
+            className: [mark?.inPath === true ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+              .filter(Boolean)
+              .join(' '),
+          }
+        : {}),
+      ...(dimmed ? { domAttributes: { 'aria-hidden': true } } : {}),
       interactionWidth: 12,
       ariaLabel: edgeName(from.title, to.title, edge.label),
       data: {
@@ -565,6 +713,7 @@ export function toFlowEdges(
         fromTitle: from.title,
         toTitle: to.title,
         focused,
+        inFocus,
         dimmed,
         ...(mark === undefined ? {} : { flow: mark }),
       },
@@ -574,7 +723,7 @@ export function toFlowEdges(
   });
   const portEdges = graph.ports.flatMap((port) =>
     port.edgeIds.flatMap((edgeId) => {
-      const edge = deck.edges.find((entry) => entry.id === edgeId);
+      const edge = lookups.edgesById.get(edgeId);
       if (edge === undefined) return [];
       const insideNodeId = port.insideNodeIds.find(
         (nodeId) => edge.from === nodeId || edge.to === nodeId,
@@ -590,6 +739,7 @@ export function toFlowEdges(
       const isSelected = selected.has(edge.id);
       const focused = edge.id === view.focusedEdgeId;
       const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
+      const inFocus = view.focus?.edges.has(edge.id) === true;
       const showLabel =
         (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
         view.focus?.edges.has(edge.id) === true;
@@ -604,7 +754,14 @@ export function toFlowEdges(
         cached.targetHandle === targetHandle &&
         cached.data?.showLabel === showLabel &&
         cached.data.focused === focused &&
+        cached.data.inFocus === inFocus &&
         cached.data.dimmed === dimmed &&
+        sameClassName(
+          cached.className,
+          [mark?.inPath === true ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+            .filter(Boolean)
+            .join(' '),
+        ) &&
         cached.data.fromTitle === from.title &&
         cached.data.toTitle === to.title
       ) {
@@ -618,7 +775,14 @@ export function toFlowEdges(
         sourceHandle,
         targetHandle,
         selected: isSelected,
-        ...(mark?.inPath === true ? { className: 'in-flow' } : {}),
+        ...(mark?.inPath === true || inFocus
+          ? {
+              className: [mark?.inPath === true ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+                .filter(Boolean)
+                .join(' '),
+            }
+          : {}),
+        ...(dimmed ? { domAttributes: { 'aria-hidden': true } } : {}),
         interactionWidth: 12,
         ariaLabel: edgeName(from.title, to.title, edge.label),
         data: {
@@ -629,6 +793,7 @@ export function toFlowEdges(
           fromTitle: from.title,
           toTitle: to.title,
           focused,
+          inFocus,
           dimmed,
           ...(mark === undefined ? {} : { flow: mark }),
         },
@@ -643,6 +808,11 @@ export function toFlowEdges(
     if (from === undefined || to === undefined) return [];
     const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
     const focused = edge.id === view.focusedEdgeId;
+    const inFocus = view.focus?.edges.has(edge.id) === true;
+    const flow = view.marks.merged.get(edge.id);
+    const className = [flow?.inPath === true ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+      .filter(Boolean)
+      .join(' ');
     const cached = mergedCache.get(edge.id);
     if (
       cached !== undefined &&
@@ -650,6 +820,10 @@ export function toFlowEdges(
       cached.data.count === edge.edgeIds.length &&
       cached.data.direction === edge.direction &&
       cached.data.focused === focused &&
+      cached.data.inFocus === inFocus &&
+      sameMark(cached.data.flow, flow) &&
+      sameClassName(cached.className, className) &&
+      Boolean(cached.domAttributes?.['aria-hidden']) === (view.focus !== null && !inFocus) &&
       cached.source === edge.a &&
       cached.target === edge.b &&
       cached.sourceHandle === sourceHandle &&
@@ -667,12 +841,16 @@ export function toFlowEdges(
       sourceHandle,
       targetHandle,
       interactionWidth: 12,
+      ...(className === '' ? {} : { className }),
+      ...(view.focus !== null && !inFocus ? { domAttributes: { 'aria-hidden': true } } : {}),
       ariaLabel: `${String(edge.edgeIds.length)} connections between ${titles.get(edge.a) ?? edge.a} and ${titles.get(edge.b) ?? edge.b}`,
       data: {
         count: edge.edgeIds.length,
         direction: edge.direction,
         edgeIds: edge.edgeIds,
         focused,
+        inFocus,
+        ...(flow === undefined ? {} : { flow }),
       },
     };
     mergedCache.set(edge.id, flowEdge);
