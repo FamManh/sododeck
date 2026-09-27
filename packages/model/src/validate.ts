@@ -34,11 +34,12 @@ const ELEMENT_SCHEMAS = {
   flows: shape.flows.element,
   stickies: shape.stickies.element,
   step: shape.flows.element.shape.steps.element,
+  branch: shape.flows.element.shape.branches.unwrap().element,
   rule: shape.rules.valueType,
   column: shape.rules.valueType.shape.inputs.element,
   row: shape.rules.valueType.shape.rows.element,
   meta: sododeckFileSchema.pick({ name: true, description: true, tags: true }).strict(),
-} satisfies Record<Collection | 'step' | 'rule' | 'column' | 'row' | 'meta', Schema>;
+} satisfies Record<Collection | 'step' | 'branch' | 'rule' | 'column' | 'row' | 'meta', Schema>;
 
 export type ValidationKind = keyof typeof ELEMENT_SCHEMAS;
 

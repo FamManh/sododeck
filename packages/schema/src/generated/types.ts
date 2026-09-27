@@ -317,9 +317,38 @@ export interface Flow {
   tags?: Tags;
   links?: Links;
   /**
-   * Steps in order. The same edge may appear in several steps.
+   * Alternative paths after the branch step, in order (index 0 is alternative "a"). The branch step is derived: the last main-path step. One level only.
+   */
+  branches?: Branch[];
+  /**
+   * Steps in order: main-path steps first, then each branch's steps grouped in `branches` order. The same edge may appear in several steps.
    */
   steps: Step[];
+}
+/**
+ * An alternative path of a flow, forking after its last main-path step.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Branch".
+ */
+export interface Branch {
+  id: Id;
+  /**
+   * Short name, e.g. "payment failed". May be empty while the branch is being authored.
+   */
+  label: string;
+  /**
+   * When this branch is taken, e.g. "payment.status == 'declined'". May be empty while the branch is being authored.
+   */
+  condition: string;
+  /**
+   * True when this branch is an error path (drawn dashed with an error icon). Absent means false.
+   */
+  errorPath?: boolean;
+  /**
+   * What happens on this branch (markdown).
+   */
+  description?: string;
 }
 /**
  * One hop of a flow over an existing edge.
@@ -330,6 +359,7 @@ export interface Flow {
 export interface Step {
   id: Id;
   edge: Id;
+  branch?: Id;
   /**
    * Step name. When absent, the edge label is shown.
    */

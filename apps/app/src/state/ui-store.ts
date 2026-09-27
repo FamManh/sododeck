@@ -1,3 +1,4 @@
+import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
 import { create } from 'zustand';
 
 import {
@@ -21,6 +22,56 @@ export type Popover = { kind: 'edge'; edgeId: string } | { kind: 'connect'; from
 
 export type LeftTab = 'outline' | 'palette';
 
+/** The flow shown in the left panel and marked on the canvas (006), with its active step or branch. */
+export type ActiveFlow = { flowId: string; stepId: string | null; branchId: string | null } | null;
+
+/** The path new clicks extend: the main path, or one branch. */
+export type SessionTarget = { kind: 'main' } | { kind: 'branch'; branchId: string };
+
+/** A refused click (FR-010): drives the flash, the popover and the step-list message. */
+export interface InvalidClick {
+  edgeId: string;
+  /** Number the step would have had, e.g. "5" or "4b". */
+  stepNumber: string;
+  /** Main-path step the edge could branch from ("Add as branch from step k"), if allowed. */
+  branchFromStep: string | null;
+}
+
+/**
+ * A recording (new flow) or edit session (existing flow), per tab (data-model §3). Steps are
+ * written to the deck as they are clicked; this only holds ids, mode and notices, plus the
+ * edit-mode checkpoint (plan, Complexity Tracking).
+ */
+export interface FlowSession {
+  mode: 'record' | 'edit';
+  /** `null` until the first step of a new flow is recorded (research R3). */
+  flowId: string | null;
+  /** Name typed at "+ New flow" (record mode, before the first step). */
+  pendingTitle: string;
+  featureId: string | null;
+  target: SessionTarget;
+  /** "adding branch after step n": the NEW BRANCH inspector is shown. */
+  addingBranch: boolean;
+  /** Step ids added in this session, for ⌘Z "Undo last step" (FR-014). */
+  recorded: readonly string[];
+  checkpoint: FlowCheckpoint | null;
+  invalid: InvalidClick | null;
+  /** Keyboard focus among candidate edges (FR-015). */
+  candidateEdgeId: string | null;
+  /** The "discard changes?" confirmation of Cancel / Esc is open (FR-013). */
+  confirmingCancel: boolean;
+  /**
+   * Counts Done presses refused because the new branch has an empty label or condition: above 0
+   * the inspector shows the inline errors, and each press moves focus to the first (FR-023).
+   */
+  branchCheck: number;
+}
+
+/** What the delete confirmation is open for. */
+export interface PendingDelete {
+  readonly targets: readonly RemovalTarget[];
+}
+
 export interface UiState {
   selection: Selection;
   /** Roving-tabindex target on the canvas (US6). */
@@ -31,8 +82,14 @@ export interface UiState {
   outlineCollapsed: ReadonlySet<string>;
   labelsOn: boolean;
   popover: Popover;
-  /** The selection the delete confirmation is open for. */
-  pendingDelete: Selection | null;
+  /** What the delete confirmation is open for. */
+  pendingDelete: PendingDelete | null;
+  activeFlow: ActiveFlow;
+  flowSession: FlowSession | null;
+  /** Edge under the pointer during a session (the dotted preview). */
+  hoverEdgeId: string | null;
+  /** Flow list filter text (FR-034). */
+  flowFilter: string;
   /** Live-region text; `seq` changes on every call so repeats are announced again. */
   announcement: { text: string; seq: number };
   /** JSON panel open/height/tab; persisted per browser (004). The app never switches the tab. */
@@ -51,8 +108,29 @@ export interface UiState {
   openEdgePopover: (edgeId: string) => void;
   openConnectPopover: (fromId: string) => void;
   closePopover: () => void;
+  /** Opens the confirmation for a canvas selection (components first, then connections). */
   requestDelete: (selection: Selection) => void;
+  /** Opens the confirmation for any removal targets (features, flows, branches…). */
+  requestRemoval: (targets: readonly RemovalTarget[]) => void;
   cancelDelete: () => void;
+  /** Shows a flow (clears the canvas selection); `null` hides it. */
+  setActiveFlow: (flowId: string | null) => void;
+  setActiveStep: (stepId: string | null) => void;
+  setActiveBranch: (branchId: string | null) => void;
+  startRecording: (title: string, featureId: string | null) => void;
+  startEditing: (flowId: string, checkpoint: FlowCheckpoint) => void;
+  setSessionFlow: (flowId: string) => void;
+  pushRecorded: (stepId: string) => void;
+  popRecorded: () => void;
+  setTarget: (target: SessionTarget) => void;
+  setAddingBranch: (adding: boolean) => void;
+  setInvalid: (invalid: InvalidClick | null) => void;
+  setCandidate: (edgeId: string | null) => void;
+  setConfirmingCancel: (open: boolean) => void;
+  checkBranch: () => void;
+  endSession: () => void;
+  setHoverEdge: (edgeId: string | null) => void;
+  setFlowFilter: (text: string) => void;
   announce: (text: string) => void;
   setJsonPanelOpen: (open: boolean) => void;
   setJsonPanelHeight: (height: number) => void;
@@ -84,7 +162,19 @@ function writeLabelsOn(on: boolean): void {
 
 const without = (ids: readonly string[], id: string) => ids.filter((x) => x !== id);
 
+/** Components first, then connections: the order the confirmation and the delete both use. */
+export function selectionTargets(selection: Selection): RemovalTarget[] {
+  return [
+    ...selection.nodes.map((id): RemovalTarget => ({ scope: 'nodes', id })),
+    ...selection.edges.map((id): RemovalTarget => ({ scope: 'edges', id })),
+  ];
+}
+
 export const useUiStore = create<UiState>()((set, get) => {
+  const patchSession = (patch: Partial<FlowSession>) => {
+    const session = get().flowSession;
+    if (session !== null) set({ flowSession: { ...session, ...patch } });
+  };
   const setJsonPanel = (patch: Partial<JsonPanelPrefs>) => {
     const jsonPanel = { ...get().jsonPanel, ...patch };
     saveJsonPanelPrefs(jsonPanel);
@@ -99,12 +189,19 @@ export const useUiStore = create<UiState>()((set, get) => {
     labelsOn: readLabelsOn(),
     popover: null,
     pendingDelete: null,
+    activeFlow: null,
+    flowSession: null,
+    hoverEdgeId: null,
+    flowFilter: '',
     announcement: { text: '', seq: 0 },
     jsonPanel: loadJsonPanelPrefs(),
 
     select: ({ nodes = [], edges = [] }) => {
+      const empty = nodes.length === 0 && edges.length === 0;
       set({
-        selection: nodes.length === 0 && edges.length === 0 ? EMPTY_SELECTION : { nodes, edges },
+        selection: empty ? EMPTY_SELECTION : { nodes, edges },
+        // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
+        ...(empty || get().flowSession !== null ? {} : { activeFlow: null }),
       });
     },
     toggle: (id, type) => {
@@ -172,7 +269,108 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({ popover: null });
     },
     requestDelete: (selection) => {
-      set({ pendingDelete: selection });
+      set({ pendingDelete: { targets: selectionTargets(selection) } });
+    },
+    requestRemoval: (targets) => {
+      set({ pendingDelete: { targets } });
+    },
+    setActiveFlow: (flowId) => {
+      set({
+        activeFlow: flowId === null ? null : { flowId, stepId: null, branchId: null },
+        ...(flowId === null ? {} : { selection: EMPTY_SELECTION, focusedEdgeId: null }),
+      });
+    },
+    setActiveStep: (stepId) => {
+      const active = get().activeFlow;
+      if (active !== null) set({ activeFlow: { ...active, stepId, branchId: null } });
+    },
+    setActiveBranch: (branchId) => {
+      const active = get().activeFlow;
+      if (active !== null) set({ activeFlow: { ...active, branchId, stepId: null } });
+    },
+    startRecording: (title, featureId) => {
+      set({
+        flowSession: {
+          mode: 'record',
+          flowId: null,
+          pendingTitle: title,
+          featureId,
+          target: { kind: 'main' },
+          addingBranch: false,
+          recorded: [],
+          checkpoint: null,
+          invalid: null,
+          candidateEdgeId: null,
+          confirmingCancel: false,
+          branchCheck: 0,
+        },
+        activeFlow: null,
+        selection: EMPTY_SELECTION,
+        popover: null,
+        hoverEdgeId: null,
+      });
+    },
+    startEditing: (flowId, checkpoint) => {
+      set({
+        flowSession: {
+          mode: 'edit',
+          flowId,
+          pendingTitle: '',
+          featureId: null,
+          target: { kind: 'main' },
+          addingBranch: false,
+          recorded: [],
+          checkpoint,
+          invalid: null,
+          candidateEdgeId: null,
+          confirmingCancel: false,
+          branchCheck: 0,
+        },
+        activeFlow: { flowId, stepId: null, branchId: null },
+        selection: EMPTY_SELECTION,
+        popover: null,
+        hoverEdgeId: null,
+      });
+    },
+    setSessionFlow: (flowId) => {
+      patchSession({ flowId });
+      set({ activeFlow: { flowId, stepId: null, branchId: null } });
+    },
+    pushRecorded: (stepId) => {
+      const session = get().flowSession;
+      if (session) patchSession({ recorded: [...session.recorded, stepId], invalid: null });
+    },
+    popRecorded: () => {
+      const session = get().flowSession;
+      if (session) patchSession({ recorded: session.recorded.slice(0, -1) });
+    },
+    setTarget: (target) => {
+      patchSession({ target, candidateEdgeId: null });
+    },
+    setAddingBranch: (addingBranch) => {
+      patchSession({ addingBranch, branchCheck: 0 });
+    },
+    setInvalid: (invalid) => {
+      patchSession({ invalid });
+    },
+    setCandidate: (candidateEdgeId) => {
+      patchSession({ candidateEdgeId });
+    },
+    setConfirmingCancel: (confirmingCancel) => {
+      patchSession({ confirmingCancel });
+    },
+    checkBranch: () => {
+      const session = get().flowSession;
+      if (session) patchSession({ branchCheck: session.branchCheck + 1 });
+    },
+    endSession: () => {
+      set({ flowSession: null, hoverEdgeId: null, focusedEdgeId: null });
+    },
+    setHoverEdge: (hoverEdgeId) => {
+      set({ hoverEdgeId });
+    },
+    setFlowFilter: (flowFilter) => {
+      set({ flowFilter });
     },
     cancelDelete: () => {
       set({ pendingDelete: null });
@@ -200,6 +398,10 @@ export const useUiStore = create<UiState>()((set, get) => {
         outlineCollapsed: new Set(),
         popover: null,
         pendingDelete: null,
+        activeFlow: null,
+        flowSession: null,
+        hoverEdgeId: null,
+        flowFilter: '',
       });
     },
   };

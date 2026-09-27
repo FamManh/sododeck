@@ -90,7 +90,13 @@ describe('Inspector', () => {
     const { user } = setup({ nodes: ['svc', 'db'], edges: ['e1'] });
     expect(screen.getByRole('heading', { name: '3 items selected' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(useUiStore.getState().pendingDelete).toEqual({ nodes: ['svc', 'db'], edges: ['e1'] });
+    expect(useUiStore.getState().pendingDelete).toEqual({
+      targets: [
+        { scope: 'nodes', id: 'svc' },
+        { scope: 'nodes', id: 'db' },
+        { scope: 'edges', id: 'e1' },
+      ],
+    });
   });
 
   it('shows where the deck is stored and exports it when nothing is selected', async () => {

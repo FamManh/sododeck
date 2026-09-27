@@ -2,7 +2,7 @@ import { toJSON } from '@sododeck/model';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Edge, Node, NodeChange } from '@xyflow/react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
@@ -333,5 +333,45 @@ describe('canvas handlers', () => {
     // b–c is already connected by e2: refused, unchanged.
     expect(toJSON(doc).edges[0]).toMatchObject({ from: 'a', to: 'c' });
     expect(ui().announcement.text).toBe('Already connected');
+  });
+});
+
+describe('canvas during a flow session (006 FR-017)', () => {
+  it('records edge clicks, previews hovered edges, ignores node clicks and drops', () => {
+    const { h, doc } = handlers();
+    act(() => {
+      ui().startRecording('Place order', null);
+    });
+    act(() => {
+      h().onNodeClick(click(), flowNode('a'));
+      h().onEdgeMouseEnter(click(), flowEdge('e1'));
+    });
+    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().hoverEdgeId).toBe('e1');
+    act(() => {
+      h().onEdgeClick(click(), flowEdge('e1'));
+      h().onEdgeMouseLeave();
+    });
+    expect(ui().hoverEdgeId).toBeNull();
+    expect(ui().selection.edges).toEqual([]);
+    expect(
+      toJSON(doc)
+        .flows.at(-1)
+        ?.steps.map((s) => s.edge),
+    ).toEqual(['e1']);
+
+    const before = toJSON(doc);
+    const drop = {
+      clientX: 0,
+      clientY: 0,
+      preventDefault: () => undefined,
+      dataTransfer: { types: [KIND_MIME], getData: () => 'service', dropEffect: '' },
+    } as unknown as DragEvent;
+    act(() => {
+      h().onDrop(drop);
+      h().onEdgeDoubleClick(click(), flowEdge('e1'));
+    });
+    expect(toJSON(doc).nodes).toEqual(before.nodes);
+    expect(ui().popover).toBeNull();
   });
 });

@@ -8,7 +8,7 @@ import { DeckEditError } from '../errors';
 import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import { applyPatch, writePatch } from './patch';
-import { allRefsOf, refsOf, stepRefs } from './refs';
+import { allRefsOf, refsOf, stepBranchIssues, stepRefs } from './refs';
 import type { NewObject, Patch } from './types';
 
 export const PREFIXES = {
@@ -68,15 +68,20 @@ export function addObject<C extends Collection>(ctx: EditContext, c: C, data: Ne
 
   assertValid(validateObject(c, object));
   const steps = c === 'flows' && Array.isArray(object.steps) ? object.steps.filter(isRecord) : [];
+  const branches =
+    c === 'flows' && Array.isArray(object.branches) ? object.branches.filter(isRecord) : [];
   const explicitIds = [
     ...(explicitId === undefined ? [] : [{ path: 'id', id }]),
     ...steps.map((step, i) => ({ path: `steps.${String(i)}.id`, id: step.id as Id })),
+    ...branches.map((b, i) => ({ path: `branches.${String(i)}.id`, id: b.id as Id })),
   ];
+  const branchIds = new Set(branches.map((b) => b.id as Id));
   assertFreeIds(doc, explicitIds);
   const refs = allRefsOf(c, object);
   const inputColumns = inputColumnsOf(doc);
   for (const [i, step] of steps.entries()) {
     const checked = stepRefs(step, `steps.${String(i)}.`, inputColumns);
+    checked.issues.push(...stepBranchIssues(step, `steps.${String(i)}.`, branchIds));
     if (checked.issues.length > 0) throw new DeckEditError('missing-reference', checked.issues);
     refs.push(...checked.refs);
   }
@@ -100,6 +105,7 @@ export function updateObject<C extends Collection>(
   const map = array.get(findIndexById(array, id, LABELS[c]));
   const { candidate, changed } = applyPatch(fromY(map) as Record<string, unknown>, patch, [
     'steps',
+    'branches',
   ]);
   if (changed.length === 0) return;
 

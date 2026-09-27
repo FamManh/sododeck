@@ -14,7 +14,7 @@ import type { ReactNode } from 'react';
 
 import type { FolderRecord } from '../storage/library-db';
 import { useLibraryStore } from './library-store';
-import { contextKit, dropdownKit, type MenuKit } from './menu-kit';
+import { contextKit, dropdownKit, type MenuKit } from '../lib/menu-kit';
 
 export interface FolderMenuProps {
   folder: FolderRecord;

@@ -1,4 +1,4 @@
-import { getObject, previewRemoval } from '@sododeck/model';
+import { previewRemoval, removeTarget, type RemovalTarget } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import {
@@ -16,9 +16,9 @@ import { useMemo, useRef } from 'react';
 
 import { isApplePlatform } from '../lib/features';
 import { useEditor } from '../model/use-editor';
-import { useUiStore, type Selection } from '../state/ui-store';
+import { useUiStore, type PendingDelete } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
-import { describeRemoval, removalTargets, removalToast } from './describe-removal';
+import { describeRemoval, removalToast } from './describe-removal';
 
 /** The Undo toast on screen, replaced by the next delete's (spec edge case). */
 let undoToastId: number | null = null;
@@ -34,14 +34,15 @@ export function ConfirmDeleteDialog({ deck }: { deck: SododeckFile }) {
   return <ConfirmDeleteContent deck={deck} pending={pending} />;
 }
 
-function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: Selection }) {
+function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
   const editor = useEditor();
   const { toast, dismiss } = useToast();
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const targets = useMemo(() => removalTargets(pending), [pending]);
+  const targets = pending.targets as RemovalTarget[];
   // Computed once when the dialog opens; the deck cannot change underneath a modal dialog.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const preview = useMemo(() => previewRemoval(deck, targets), [targets]);
+  const canvasDelete = targets.every((t) => t.scope === 'nodes' || t.scope === 'edges');
   const { title, body } = describeRemoval(deck, targets, preview);
 
   const cancel = () => {
@@ -51,14 +52,12 @@ function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: 
   const confirm = () => {
     const message = removalToast(deck, targets, preview, isApplePlatform());
     editor.batch(() => {
-      for (const { scope, id } of targets) {
-        // A connection may already be gone with its component (cascade).
-        if (getObject(editor.doc, scope, id) !== undefined) editor.remove(scope, id);
-      }
+      // A connection may already be gone with its component (cascade): removeTarget skips it.
+      for (const target of targets) removeTarget(editor, editor.doc, target);
     });
     const ui = useUiStore.getState();
     ui.cancelDelete();
-    ui.clearSelection();
+    if (canvasDelete) ui.clearSelection();
     ui.announce(message);
     if (undoToastId !== null) dismiss(undoToastId);
     undoToastId = toast({
@@ -88,6 +87,8 @@ function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: 
           cancelRef.current?.focus();
         }}
         onCloseAutoFocus={(event) => {
+          // Deletes from the flow list return focus to where they came from (Radix default).
+          if (!canvasDelete) return;
           event.preventDefault();
           focusCanvas();
         }}

@@ -50,3 +50,19 @@
   border-radius: var(--radius-node);
   background: transparent;
 }
+
+/* A refused click while recording (006 FR-010): the edge flashes three times (1.2 s). Static under
+   reduced motion (deck-edge.tsx drops the class). */
+@keyframes sd-edge-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.sd-edge-flash {
+  animation: sd-edge-flash 400ms ease-in-out 3;
+}

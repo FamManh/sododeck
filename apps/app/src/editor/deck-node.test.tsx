@@ -115,3 +115,10 @@ describe('DeckNode', () => {
     expect(screen.getByRole('note')).toHaveTextContent("Can't connect to itself");
   });
 });
+
+describe('DeckNode flow start (006 FR-009)', () => {
+  it('shows "Step n starts here" as text, not only a ring', () => {
+    renderNode(props({ flowStart: 'Step 4 starts here' }));
+    expect(screen.getByText('Step 4 starts here')).toBeInTheDocument();
+  });
+});

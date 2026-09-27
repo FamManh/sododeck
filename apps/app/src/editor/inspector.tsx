@@ -16,9 +16,16 @@ import { useUiStore } from '../state/ui-store';
 import { DeckInspectorStorage } from './deck-inspector-storage';
 import { kindLabel } from './kind-label';
 import { FieldEdit } from './field-edit';
+import { FlowInspector } from './flows/flow-inspector';
 
 /** Minimal inspector (FR-026, design 02/10/11/58). Full fields arrive with 008. */
 export function Inspector({ deck }: { deck: SododeckFile }) {
+  const inFlow = useUiStore((s) => s.flowSession !== null || s.activeFlow !== null);
+  // A shown or recorded flow has its own inspectors (006).
+  return inFlow ? <FlowInspector deck={deck} /> : <CanvasInspector deck={deck} />;
+}
+
+function CanvasInspector({ deck }: { deck: SododeckFile }) {
   const editor = useEditor();
   const selection = useUiStore((s) => s.selection);
   const requestDelete = useUiStore((s) => s.requestDelete);

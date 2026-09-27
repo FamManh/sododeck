@@ -6,11 +6,25 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { Rule, SododeckFile, Step } from '@sododeck/schema';
+import type { Branch, Rule, SododeckFile, Step } from '@sododeck/schema';
 
 import { defaultNewId, makeIdAllocator } from './ids';
 import { rootTypes, type Collection, type DeckDoc, type ObjectOf } from './layout';
-import { removeObject, removeRule, removeStep, type RemovalResult } from './ops/cascade';
+import {
+  addBranch,
+  appendStep,
+  restoreFlowStructure,
+  updateBranch,
+  type FlowCheckpoint,
+  type NewBranch,
+} from './ops/branches';
+import {
+  removeBranch,
+  removeObject,
+  removeRule,
+  removeStep,
+  type RemovalResult,
+} from './ops/cascade';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
@@ -60,7 +74,28 @@ export interface DeckEditor {
   updateStep(flowId: Id, stepId: Id, patch: Patch<Step>): void;
   /** Deletes one step; stickies anchored to it are kept and reported. */
   removeStep(flowId: Id, stepId: Id): RemovalResult;
+  /**
+   * Moves a step to `toIndex` in `flow.steps`. Refused (`invalid`) when it would leave the step's
+   * path or put a main-path step after the branch step.
+   */
   moveStep(flowId: Id, stepId: Id, toIndex: number): void;
+  /** Appends a step at the end of a path (main when `branchId` is null), keeping normal order. */
+  appendStep(flowId: Id, branchId: Id | null, data: NewStep): Id;
+
+  /**
+   * Adds a branch after main-path step `afterStepId`, optionally with its first step (ADR 0008).
+   * Following main-path steps first become alternative "a" when the flow has no branches yet.
+   * One undo step. Returns the new branch id and its first step id (or null).
+   */
+  addBranch(flowId: Id, afterStepId: Id, data: NewBranch): { branchId: Id; stepId: Id | null };
+  updateBranch(flowId: Id, branchId: Id, patch: Patch<Branch>): void;
+  /** Deletes a branch and its steps. */
+  removeBranch(flowId: Id, branchId: Id): RemovalResult;
+  /**
+   * Restores a flow's steps and branches to a checkpoint from `captureFlowStructure`; objects that
+   * still exist keep their current text fields. One undo step.
+   */
+  restoreFlowStructure(flowId: Id, checkpoint: FlowCheckpoint): void;
 
   /** Adds a decision table; `hitPolicy` defaults to `first`, columns and rows to none. */
   addRule(data: NewRule): Id;
@@ -160,6 +195,15 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     removeStep: (flowId, stepId) => removeStep(ctx, flowId, stepId),
     moveStep: (flowId, stepId, toIndex) => {
       moveStep(ctx, flowId, stepId, toIndex);
+    },
+    appendStep: (flowId, branchId, data) => appendStep(ctx, flowId, branchId, data),
+    addBranch: (flowId, afterStepId, data) => addBranch(ctx, flowId, afterStepId, data),
+    updateBranch: (flowId, branchId, patch) => {
+      updateBranch(ctx, flowId, branchId, patch);
+    },
+    removeBranch: (flowId, branchId) => removeBranch(ctx, flowId, branchId),
+    restoreFlowStructure: (flowId, checkpoint) => {
+      restoreFlowStructure(ctx, flowId, checkpoint);
     },
     addRule: (data) => addRule(ctx, data),
     updateRule: (id, patch) => {

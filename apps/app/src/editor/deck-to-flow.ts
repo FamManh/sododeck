@@ -8,6 +8,7 @@ import type { Edge, Node } from '@xyflow/react';
 
 import { displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
 import type { Selection } from '../state/ui-store';
+import { EMPTY_OVERLAY, type EdgeFlowMark, type FlowOverlay } from './flows/flow-overlay';
 
 type DeckNodeObject = SododeckFile['nodes'][number];
 type DeckEdgeObject = SododeckFile['edges'][number];
@@ -19,6 +20,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   hasRules: boolean;
   /** Carries the canvas's single Tab stop (roving tabindex). */
   focused: boolean;
+  /** "Step n starts here" while recording a flow (006): a ring and a tag. */
+  flowStart?: string;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -34,6 +37,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   fromTitle: string;
   toTitle: string;
   focused: boolean;
+  /** Marks of the shown or recorded flow (006): step badges and the flow style. */
+  flow?: EdgeFlowMark;
 }
 
 export type DeckFlowNode = Node<DeckNodeData, 'deck'>;
@@ -54,16 +59,39 @@ const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
 /** Last edge list: returned again when every element is the same, so React Flow skips a re-sync. */
 let lastEdges: DeckFlowEdge[] = [];
 
+/** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
+function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  return (
+    a.style === b.style &&
+    a.errorIcon === b.errorIcon &&
+    a.badges.length === b.badges.length &&
+    a.badges.every((x, i) => {
+      const y = b.badges[i];
+      return (
+        y !== undefined &&
+        x.label === y.label &&
+        x.errorPath === y.errorPath &&
+        x.current === y.current &&
+        x.chainBreak === y.chainBreak
+      );
+    })
+  );
+}
+
 function toFlowNode(
   node: DeckNodeObject,
   position: Point,
   selected: boolean,
   focused: boolean,
+  flowStart: string | undefined,
 ): DeckFlowNode {
   const cached = nodeCache.get(node);
   if (
     cached?.selected === selected &&
     cached.data.focused === focused &&
+    cached.data.flowStart === flowStart &&
     cached.position.x === position.x &&
     cached.position.y === position.y
   ) {
@@ -81,6 +109,7 @@ function toFlowNode(
       subtitle: node.tech,
       hasRules: (node.rules?.length ?? 0) > 0,
       focused,
+      ...(flowStart === undefined ? {} : { flowStart }),
     },
   };
   nodeCache.set(node, flowNode);
@@ -146,10 +175,17 @@ export function toFlowNodes(
   deck: SododeckFile,
   selection: Selection,
   focusedId: string | null,
+  overlay: FlowOverlay = EMPTY_OVERLAY,
 ): CanvasFlowNode[] {
   const selected = new Set(selection.nodes);
   const components = deck.nodes.map((node, index) =>
-    toFlowNode(node, displayPosition(node, index), selected.has(node.id), node.id === focusedId),
+    toFlowNode(
+      node,
+      displayPosition(node, index),
+      selected.has(node.id),
+      node.id === focusedId,
+      overlay.nodes.get(node.id)?.startsHere,
+    ),
   );
   return [...groupNodes(deck), ...components];
 }
@@ -173,6 +209,7 @@ export function toFlowEdges(
   selection: Selection,
   labelsOn: boolean,
   focusedEdgeId: string | null = null,
+  overlay: FlowOverlay = EMPTY_OVERLAY,
 ): DeckFlowEdge[] {
   const nodes = new Map(
     deck.nodes.map((node, index) => [node.id, { node, position: displayPosition(node, index) }]),
@@ -187,9 +224,11 @@ export function toFlowEdges(
     const isSelected = selected.has(edge.id);
     const showLabel = labelsOn && edge.label !== undefined && edge.label !== '';
     const focused = edge.id === focusedEdgeId;
+    const mark = overlay.edges.get(edge.id);
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
+      sameMark(cached.data?.flow, mark) &&
       cached.sourceHandle === sourceHandle &&
       cached.targetHandle === targetHandle &&
       cached.data?.showLabel === showLabel &&
@@ -217,6 +256,7 @@ export function toFlowEdges(
         fromTitle: from.node.title,
         toTitle: to.node.title,
         focused,
+        ...(mark === undefined ? {} : { flow: mark }),
       },
     };
     edgeCache.set(edge, flowEdge);

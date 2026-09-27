@@ -6,14 +6,33 @@
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { fromJSON, getObject } from './deck';
-import { createEditor } from './editor';
+import { createEditor, type DeckEditor } from './editor';
 import type { IntegrityProblem } from './integrity';
-import type { ObjectRef } from './layout';
+import type { DeckDoc, ObjectRef } from './layout';
 import type { RemovalResult } from './ops/cascade';
 
-export interface RemovalTarget {
-  scope: 'nodes' | 'edges' | 'groups' | 'stickies' | 'flows' | 'views' | 'features';
-  id: Id;
+/** Something a delete removes: a collection object, or a branch of a flow (006). */
+export type RemovalTarget =
+  | {
+      scope: 'nodes' | 'edges' | 'groups' | 'stickies' | 'flows' | 'views' | 'features';
+      id: Id;
+    }
+  | { scope: 'branches'; flowId: Id; id: Id };
+
+/** Removes one target with `editor`, or returns undefined when it does not exist. */
+export function removeTarget(
+  editor: DeckEditor,
+  doc: DeckDoc,
+  target: RemovalTarget,
+): RemovalResult | undefined {
+  if (target.scope === 'branches') {
+    const flow = getObject(doc, 'flows', target.flowId);
+    if (flow?.branches?.some((b) => b.id === target.id) !== true) return undefined;
+    return editor.removeBranch(target.flowId, target.id);
+  }
+  return getObject(doc, target.scope, target.id) === undefined
+    ? undefined
+    : editor.remove(target.scope, target.id);
 }
 
 const refKey = (ref: ObjectRef) =>
@@ -60,11 +79,7 @@ export function previewRemoval(file: SododeckFile, targets: RemovalTarget[]): Re
   const doc = fromJSON(file);
   const editor = createEditor(doc);
   try {
-    const results = editor.batch(() =>
-      targets.flatMap((t) =>
-        getObject(doc, t.scope, t.id) === undefined ? [] : [editor.remove(t.scope, t.id)],
-      ),
-    );
+    const results = editor.batch(() => targets.flatMap((t) => removeTarget(editor, doc, t) ?? []));
     return mergeRemovals(results);
   } finally {
     editor.destroy();

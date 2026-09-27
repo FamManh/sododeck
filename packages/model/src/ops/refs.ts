@@ -48,6 +48,20 @@ export function allRefsOf(c: Collection, object: Record<string, unknown>): Ref[]
 }
 
 /**
+ * `step.branch` must name a branch of the step's own flow (ADR 0008). `branchIds` are the ids of
+ * that flow's branches.
+ */
+export function stepBranchIssues(
+  step: Record<string, unknown>,
+  prefix: string,
+  branchIds: ReadonlySet<Id>,
+): { path: string; message: string }[] {
+  return typeof step.branch === 'string' && !branchIds.has(step.branch)
+    ? [{ path: `${prefix}branch`, message: `"${step.branch}" is not a branch of this flow.` }]
+    : [];
+}
+
+/**
  * References of a step: its edge, its rules, and its sample inputs, which must belong to one of
  * the step's rules and name an input column of that rule.
  */

@@ -1,4 +1,4 @@
-import { observeDeck } from '@sododeck/model';
+import { analyzeFlow, observeDeck } from '@sododeck/model';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import {
@@ -26,6 +26,9 @@ import { DeckNode } from './deck-node';
 import { toFlowEdges, toFlowNodes } from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
 import { EmptyCanvasCard } from './empty-canvas-card';
+import { EMPTY_OVERLAY, flowOverlay } from './flows/flow-overlay';
+import { InvalidEdgePopover } from './flows/invalid-edge-popover';
+import { findFlow } from './flows/session-path';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { SelectionFrame } from './selection-frame';
 import { useCanvasHandlers } from './use-canvas-handlers';
@@ -121,6 +124,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const focusedId = useUiStore((s) => s.focusedId);
   const focusedEdgeId = useUiStore((s) => s.focusedEdgeId);
   const labelsOn = useUiStore((s) => s.labelsOn);
+  const activeFlow = useUiStore((s) => s.activeFlow);
+  const session = useUiStore((s) => s.flowSession);
+  const hoverEdgeId = useUiStore((s) => s.hoverEdgeId);
   const { setCenter, getZoom } = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
   const handlers = useCanvasHandlers();
@@ -129,14 +135,30 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useSelectionSync();
   useRovingFocus(wrapper);
 
+  // The shown or recorded flow's marks (006): badges, candidates, preview, invalid, start ring.
+  const flow = findFlow(deck, session?.flowId ?? activeFlow?.flowId ?? null);
+  const analysis = useMemo(
+    () => (flow === undefined ? null : analyzeFlow(flow, deck.edges)),
+    [flow, deck.edges],
+  );
+  const activeStepId = activeFlow?.stepId ?? null;
+  const overlay = useMemo(
+    () =>
+      analysis === null && session === null
+        ? EMPTY_OVERLAY
+        : flowOverlay(deck, analysis, session, session === null ? null : hoverEdgeId, activeStepId),
+    [deck, analysis, session, hoverEdgeId, activeStepId],
+  );
+
   const nodes = useMemo(
-    () => toFlowNodes(deck, selection, focusedId),
-    [deck, selection, focusedId],
+    () => toFlowNodes(deck, selection, focusedId, overlay),
+    [deck, selection, focusedId, overlay],
   );
   const edges = useMemo(
-    () => toFlowEdges(deck, selection, labelsOn, focusedEdgeId),
-    [deck, selection, labelsOn, focusedEdgeId],
+    () => toFlowEdges(deck, selection, labelsOn, focusedEdgeId, overlay),
+    [deck, selection, labelsOn, focusedEdgeId, overlay],
   );
+  const recording = session !== null;
   const hasFocusedNode = focusedId !== null && deck.nodes.some((n) => n.id === focusedId);
 
   return (
@@ -149,6 +171,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       onFocus={(event) => {
         if (event.target !== event.currentTarget) return;
         const ui = useUiStore.getState();
+        // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
+        if (ui.flowSession !== null) return;
         const first = ui.selection.nodes[0] ?? deck.nodes[0]?.id;
         if (first === undefined) return;
         ui.focus(first);
@@ -189,10 +213,13 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         selectionOnDrag={false}
         selectNodesOnDrag={false}
         panOnDrag
+        // Recording pauses structure editing (FR-017): no drags, connections or reconnects.
+        nodesDraggable={!recording}
+        nodesConnectable={!recording}
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
         connectionMode={ConnectionMode.Loose}
         connectionLineStyle={connectionLineStyle}
-        edgesReconnectable
+        edgesReconnectable={!recording}
         {...handlers}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
@@ -219,6 +246,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       {deck.nodes.length === 0 && <EmptyCanvasCard />}
       <EdgePopover deck={deck} />
       <ConnectPopover deck={deck} />
+      <InvalidEdgePopover deck={deck} analysis={analysis} />
     </div>
   );
 }

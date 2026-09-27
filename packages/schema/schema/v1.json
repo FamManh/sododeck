@@ -325,8 +325,13 @@
         "owner": { "description": "Owning team or person (free text).", "type": "string" },
         "tags": { "$ref": "#/$defs/Tags" },
         "links": { "$ref": "#/$defs/Links" },
+        "branches": {
+          "description": "Alternative paths after the branch step, in order (index 0 is alternative \"a\"). The branch step is derived: the last main-path step. One level only.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Branch" }
+        },
         "steps": {
-          "description": "Steps in order. The same edge may appear in several steps.",
+          "description": "Steps in order: main-path steps first, then each branch's steps grouped in `branches` order. The same edge may appear in several steps.",
           "type": "array",
           "items": { "$ref": "#/$defs/Step" }
         }
@@ -341,6 +346,10 @@
       "properties": {
         "id": { "$ref": "#/$defs/Id" },
         "edge": { "$ref": "#/$defs/Id", "description": "Id of the edge this step travels." },
+        "branch": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the branch of this flow the step belongs to. Absent: main path."
+        },
         "title": {
           "description": "Step name. When absent, the edge label is shown.",
           "type": "string"
@@ -367,6 +376,32 @@
             "propertyNames": { "$ref": "#/$defs/Id" },
             "additionalProperties": { "type": "string" }
           }
+        }
+      }
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "An alternative path of a flow, forking after its last main-path step.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "condition"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "label": {
+          "description": "Short name, e.g. \"payment failed\". May be empty while the branch is being authored.",
+          "type": "string"
+        },
+        "condition": {
+          "description": "When this branch is taken, e.g. \"payment.status == 'declined'\". May be empty while the branch is being authored.",
+          "type": "string"
+        },
+        "errorPath": {
+          "description": "True when this branch is an error path (drawn dashed with an error icon). Absent means false.",
+          "type": "boolean"
+        },
+        "description": {
+          "description": "What happens on this branch (markdown).",
+          "type": "string"
         }
       }
     },

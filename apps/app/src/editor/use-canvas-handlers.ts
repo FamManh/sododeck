@@ -23,6 +23,7 @@ import { useUiStore } from '../state/ui-store';
 import { addComponent, centredOn, connectComponents } from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import { GROUP_NODE_PREFIX } from './deck-to-flow';
+import { recordClick } from './flows/flow-session';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
 export const KIND_MIME = 'application/x-sododeck-kind';
@@ -68,20 +69,38 @@ export function useCanvasHandlers() {
       ui().select({ nodes: [...nodes], edges: [...edges] });
     };
 
+    /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
+    const inSession = () => ui().flowSession !== null;
+
     return {
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
         if (isGroupNode(node.id)) return;
+        if (inSession()) {
+          ui().focus(node.id);
+          return;
+        }
         if (isMultiSelect(event)) ui().toggle(node.id, 'node');
         else ui().select({ nodes: [node.id] });
         ui().focus(node.id);
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+        if (inSession()) {
+          recordClick(editor, edge.id);
+          return;
+        }
         if (isMultiSelect(event)) ui().toggle(edge.id, 'edge');
         else ui().select({ edges: [edge.id] });
       },
       onEdgeDoubleClick: (_: ReactMouseEvent, edge: Edge) => {
+        if (inSession()) return;
         ui().select({ edges: [edge.id] });
         ui().openEdgePopover(edge.id);
+      },
+      onEdgeMouseEnter: (_: ReactMouseEvent, edge: Edge) => {
+        if (inSession()) ui().setHoverEdge(edge.id);
+      },
+      onEdgeMouseLeave: () => {
+        if (ui().hoverEdgeId !== null) ui().setHoverEdge(null);
       },
       onPaneClick: () => {
         ui().clearSelection();
@@ -132,6 +151,7 @@ export function useCanvasHandlers() {
         connectionCheck(readDeck(editor.doc), c.source, c.target) ===
         'ok') satisfies IsValidConnection,
       onConnect: (c: Connection) => {
+        if (inSession()) return;
         connectComponents(editor, c.source, c.target);
       },
       /** Moves one end of an edge; the edge keeps its id and fields (FR-013). */
@@ -146,13 +166,13 @@ export function useCanvasHandlers() {
       }) satisfies OnReconnect,
 
       onDragOver: (event: DragEvent) => {
-        if (!event.dataTransfer.types.includes(KIND_MIME)) return;
+        if (inSession() || !event.dataTransfer.types.includes(KIND_MIME)) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
       },
       onDrop: (event: DragEvent) => {
         const kind = toComponentKind(event.dataTransfer.getData(KIND_MIME));
-        if (kind === null) return;
+        if (kind === null || inSession()) return;
         event.preventDefault();
         const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         addComponent(editor, kind, centredOn(point));

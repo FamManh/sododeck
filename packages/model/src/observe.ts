@@ -25,8 +25,9 @@ type DeckEvent = Parameters<Parameters<Root['observeDeep']>[0]>[0][number];
 
 const SCOPE_ORDER: readonly Scope[] = ['meta', ...COLLECTIONS, 'rules'];
 
-const CHILD_KINDS: Readonly<Record<string, 'step' | 'column' | 'row'>> = {
+const CHILD_KINDS: Readonly<Record<string, 'step' | 'branch' | 'column' | 'row'>> = {
   steps: 'step',
+  branches: 'branch',
   inputs: 'column',
   outputs: 'column',
   rows: 'row',
@@ -111,6 +112,40 @@ function recordArrayDelta(
   }
 }
 
+/** Items of a Y.Array, including those deleted in this transaction. */
+function itemsOf(array: unknown): Y.Item[] {
+  const items: Y.Item[] = [];
+  if (!(array instanceof Y.Array)) return items;
+  for (let item = array._start; item !== null; item = item.right) items.push(item);
+  return items;
+}
+
+/**
+ * A flow's `branches` field is optional, so the first branch sets it and removing the last one
+ * deletes it (ADR 0008). Reports that as branch children added or removed, like steps.
+ */
+function recordBranchesField(
+  event: Y.YMapEvent<unknown>,
+  buffer: ChangeBuffer,
+  ref: ObjectRef,
+): void {
+  const change = event.changes.keys.get('branches');
+  if (change === undefined) return;
+  const childRef = (id: string): ObjectRef => ({ ...ref, child: { kind: 'branch', id } });
+  if (change.action !== 'add') {
+    for (const item of itemsOf(change.oldValue)) {
+      const id = idOfItem(item);
+      if (id !== undefined) buffer.record(childRef(id), 'removed');
+    }
+  }
+  if (change.action !== 'delete') {
+    for (const item of itemsOf(event.target.get('branches'))) {
+      const id = item.deleted ? undefined : idOfItem(item);
+      if (id !== undefined) buffer.record(childRef(id), 'added');
+    }
+  }
+}
+
 function keysOf(event: DeckEvent, rest: readonly (string | number)[]): string[] {
   const first = rest[0];
   if (first === undefined)
@@ -130,8 +165,15 @@ function recordObjectEvent(
   path: readonly (string | number)[],
 ): void {
   const [field, index, ...rest] = path;
+  if (field === undefined && ref.scope === 'flows' && event instanceof Y.YMapEvent) {
+    recordBranchesField(event, buffer, ref);
+    const keys = keysOf(event, path).filter((k) => k !== 'branches');
+    if (keys.length > 0 || !event.keysChanged.has('branches')) buffer.record(ref, 'updated', keys);
+    return;
+  }
   const childKind = typeof field === 'string' ? CHILD_KINDS[field] : undefined;
-  if (childKind === undefined || (ref.scope !== 'rules' && field !== 'steps')) {
+  const flowChild = field === 'steps' || field === 'branches';
+  if (childKind === undefined || (ref.scope === 'rules') === flowChild) {
     buffer.record(ref, 'updated', keysOf(event, path));
     return;
   }

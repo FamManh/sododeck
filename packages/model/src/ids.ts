@@ -16,6 +16,7 @@ export type IdPrefix =
   | 'feature'
   | 'flow'
   | 'step'
+  | 'branch'
   | 'rule'
   | 'col'
   | 'row'
@@ -47,8 +48,8 @@ function arrayIds(value: unknown, visit: (id: string) => boolean): boolean {
 }
 
 /**
- * Calls `visit` with every id in the deck: collection objects, steps, rules, rule columns and
- * rows. Stops early when `visit` returns true, and then returns true.
+ * Calls `visit` with every id in the deck: collection objects, steps, branches, rules, rule
+ * columns and rows. Stops early when `visit` returns true, and then returns true.
  */
 export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boolean {
   for (const c of COLLECTIONS) {
@@ -56,6 +57,7 @@ export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boo
       const id = map.get('id');
       if (typeof id === 'string' && visit(id)) return true;
       if (c === 'flows' && arrayIds(map.get('steps'), visit)) return true;
+      if (c === 'flows' && arrayIds(map.get('branches'), visit)) return true;
     }
   }
   for (const [id, rule] of rulesMap(doc).entries()) {

@@ -1,3 +1,4 @@
+import { analyzeFlow } from '@sododeck/model';
 import { parseSododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -24,5 +25,19 @@ describe('generateBenchDeck', () => {
 
   it('is deterministic', () => {
     expect(generateBenchDeck(20, 30)).toEqual(generateBenchDeck(20, 30));
+  });
+
+  it('adds valid, contiguous flows and one fork in flows mode (006)', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { flows: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.features).toHaveLength(5);
+    expect(deck.flows).toHaveLength(21);
+    const tenSteps = deck.flows.filter((f) => f.steps.length === 10).length;
+    expect(tenSteps).toBeGreaterThanOrEqual(18);
+    for (const flow of deck.flows) {
+      const analysis = analyzeFlow(flow, deck.edges);
+      expect(analysis.problems.filter((p) => p.kind === 'chain-break')).toEqual([]);
+    }
+    expect(deck.flows.at(-1)?.branches).toHaveLength(2);
   });
 });

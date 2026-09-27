@@ -25,12 +25,12 @@ export type ObjectOf<C extends Collection> = SododeckFile[C][number];
 /** Where an object lives: deck metadata, a collection, or the rules map. */
 export type Scope = 'meta' | Collection | 'rules';
 
-/** Identifies an object; `child` names a step of a flow, or a column or row of a rule. */
+/** Identifies an object; `child` names a step or branch of a flow, or a column or row of a rule. */
 export interface ObjectRef {
   scope: Scope;
   /** Object id (`''` for meta). */
   id: Id;
-  child?: { kind: 'step' | 'column' | 'row'; id: Id };
+  child?: { kind: 'step' | 'branch' | 'column' | 'row'; id: Id };
 }
 
 /** Root types, i.e. everything an editor's undo history covers. */

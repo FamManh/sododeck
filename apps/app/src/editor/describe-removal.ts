@@ -2,7 +2,7 @@
 import type { RemovalResult, RemovalTarget } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
-import type { Selection } from '../state/ui-store';
+import { selectionTargets, type Selection } from '../state/ui-store';
 
 const plural = (n: number, one: string, many = `${one}s`) => `${String(n)} ${n === 1 ? one : many}`;
 
@@ -11,11 +11,30 @@ function listPhrase(parts: string[]): string {
   return `${parts.slice(0, -1).join(', ')} and ${parts.at(-1) ?? ''}`;
 }
 
+/** Name of a feature, flow or branch target, quoted: 'Delivery'. */
+function knowledgeName(deck: SododeckFile, target: RemovalTarget): string | undefined {
+  switch (target.scope) {
+    case 'features':
+      return deck.features.find((f) => f.id === target.id)?.title;
+    case 'flows':
+      return deck.flows.find((f) => f.id === target.id)?.title;
+    case 'branches': {
+      const flow = deck.flows.find((f) => f.id === target.flowId);
+      const label = flow?.branches?.find((b) => b.id === target.id)?.label;
+      return label === undefined ? undefined : label === '' ? 'branch' : `branch ${label}`;
+    }
+    default:
+      return undefined;
+  }
+}
+
 /** What the user asked to delete, e.g. "Order Service", "3 components", "4 items". */
 function subject(deck: SododeckFile, targets: readonly RemovalTarget[]): string {
   const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
   const [only] = targets;
   if (targets.length === 1 && only) {
+    const name = knowledgeName(deck, only);
+    if (name !== undefined) return `‘${name}’`;
     if (only.scope === 'nodes') return title(only.id);
     const edge = deck.edges.find((e) => e.id === only.id);
     if (only.scope === 'edges' && edge) return `${title(edge.from)} → ${title(edge.to)}`;
@@ -49,6 +68,14 @@ export function describeRemoval(
   const edges = cascadedEdges(targets, result);
   const { steps, notes } = brokenCounts(result);
   const sentences: string[] = [];
+  const flowsMoved = result.updated.filter(
+    (r) => r.scope === 'flows' && targets.some((t) => t.scope === 'features'),
+  ).length;
+  if (flowsMoved > 0) {
+    sentences.push(`Its ${plural(flowsMoved, 'flow')} will move to No feature.`);
+  }
+  const stepsRemoved = result.removed.filter((r) => r.child?.kind === 'step').length;
+  if (stepsRemoved > 0) sentences.push(`Its ${plural(stepsRemoved, 'step')} will be deleted.`);
   if (edges > 0) sentences.push(`Also removes ${plural(edges, 'connection')}.`);
   const broken = [
     ...(steps > 0 ? [plural(steps, 'flow step')] : []),
@@ -78,8 +105,5 @@ export function removalToast(
 
 /** Components first, then connections: the order the confirmation and the delete both use. */
 export function removalTargets(selection: Selection): RemovalTarget[] {
-  return [
-    ...selection.nodes.map((id): RemovalTarget => ({ scope: 'nodes', id })),
-    ...selection.edges.map((id): RemovalTarget => ({ scope: 'edges', id })),
-  ];
+  return selectionTargets(selection);
 }

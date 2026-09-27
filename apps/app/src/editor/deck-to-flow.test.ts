@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EMPTY_SELECTION } from '../state/ui-store';
 import { facingSides, toFlowEdges, toFlowNodes } from './deck-to-flow';
+import type { EdgeFlowMark } from './flows/flow-overlay';
 
 const deck: SododeckFile = {
   ...emptySododeckFile(),
@@ -123,5 +124,40 @@ describe('toFlowEdges', () => {
     // The list itself too, so React Flow does not re-sync its edges during a drag.
     expect(second).toBe(first);
     expect(toFlowEdges(deck, EMPTY_SELECTION, true)[0]).not.toBe(first[0]);
+  });
+});
+
+describe('flow overlay (006)', () => {
+  const mark = (label: string): EdgeFlowMark => ({
+    badges: [{ label, errorPath: false, current: false, chainBreak: false }],
+    style: 'path',
+    errorIcon: false,
+  });
+  const overlay = (edges: [string, EdgeFlowMark][], nodes: [string, string][] = []) => ({
+    edges: new Map(edges),
+    nodes: new Map(nodes.map(([id, startsHere]) => [id, { startsHere }])),
+  });
+
+  it('puts the mark on the edge and the start tag on the node', () => {
+    const [e1] = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('1')]]));
+    expect(e1?.data?.flow).toEqual(mark('1'));
+    const nodes = toFlowNodes(
+      deck,
+      EMPTY_SELECTION,
+      null,
+      overlay([], [['b', 'Step 2 starts here']]),
+    );
+    expect(nodes.find((n) => n.id === 'b')?.data).toMatchObject({
+      flowStart: 'Step 2 starts here',
+    });
+  });
+
+  it('keeps edge identity for untouched edges and for equal marks', () => {
+    const first = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('1')]]));
+    const same = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('1')]]));
+    expect(same).toBe(first);
+    const other = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('2')]]));
+    expect(other[0]).not.toBe(first[0]);
+    expect(other[1]).toBe(first[1]);
   });
 });

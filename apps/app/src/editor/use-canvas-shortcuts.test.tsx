@@ -154,12 +154,12 @@ describe('editor shortcuts', () => {
     const { user } = setup();
     focusNode('n00');
     await user.keyboard('{Delete}');
-    expect(ui().pendingDelete).toEqual({ nodes: ['n00'], edges: [] });
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'n00' }] });
     act(() => {
       ui().cancelDelete();
     });
     await user.keyboard('{Backspace}');
-    expect(ui().pendingDelete).toEqual({ nodes: ['n00'], edges: [] });
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'n00' }] });
   });
 
   it('does nothing on Delete with an empty selection', async () => {
@@ -246,5 +246,56 @@ describe('isTextTarget', () => {
     // Plain "s" is typing, not a save.
     expect(fireEvent.keyDown(document.body, { key: 's' })).toBe(true);
     expect(flush).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('keyboard recording (006 FR-015, FR-017)', () => {
+  function record(flowFile = grid) {
+    const env = setup(flowFile);
+    act(() => {
+      ui().startRecording('Flow', null);
+    });
+    const canvas = document.querySelector<HTMLElement>('[data-canvas]');
+    act(() => {
+      canvas?.focus();
+    });
+    return env;
+  }
+
+  it('Tab / Shift+Tab cycle candidates with the focus ring and name; Enter records', async () => {
+    const { user, doc } = record();
+    await user.keyboard('{Tab}');
+    // Step 1: every edge in reading order (source n01 is above n11).
+    expect(ui().flowSession?.candidateEdgeId).toBe('e2');
+    expect(ui().focusedEdgeId).toBe('e2');
+    expect(ui().announcement.text).toBe('N01 to N11');
+    await user.keyboard('{Tab}');
+    expect(ui().flowSession?.candidateEdgeId).toBe('e1');
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(ui().flowSession?.candidateEdgeId).toBe('e2');
+    await user.keyboard('{Enter}');
+    expect(toJSON(doc).flows[0]?.steps.map((s) => s.edge)).toEqual(['e2']);
+    // Next: the edges leaving n11 only.
+    await user.keyboard('{Tab}');
+    expect(ui().flowSession?.candidateEdgeId).toBe('e1');
+  });
+
+  it('lets Tab leave the canvas when there are no candidates', () => {
+    record(deckOf({ nodes: grid.nodes }));
+    const canvas = document.querySelector<HTMLElement>('[data-canvas]');
+    // Not prevented: the browser moves focus on, so Done stays reachable.
+    expect(fireEvent.keyDown(canvas ?? document.body, { key: 'Tab' })).toBe(true);
+    expect(ui().flowSession?.candidateEdgeId).toBeNull();
+  });
+
+  it('pauses C and Delete, and Esc cancels an empty recording', async () => {
+    const { user } = record();
+    focusNode('n00');
+    await user.keyboard('c');
+    expect(ui().popover).toBeNull();
+    await user.keyboard('{Delete}');
+    expect(ui().pendingDelete).toBeNull();
+    await user.keyboard('{Escape}');
+    expect(ui().flowSession).toBeNull();
   });
 });

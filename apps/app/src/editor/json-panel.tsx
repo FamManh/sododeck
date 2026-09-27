@@ -57,6 +57,7 @@ export function JsonPanel() {
   const deck = useDeckSnapshot(editor.doc);
   const { open, height, tab } = useUiStore((state) => state.jsonPanel);
   const selection = useUiStore((state) => state.selection);
+  const activeFlow = useUiStore((state) => state.activeFlow);
   const setJsonTab = useUiStore((state) => state.setJsonTab);
   const setJsonPanelOpen = useUiStore((state) => state.setJsonPanelOpen);
   const setJsonPanelHeight = useUiStore((state) => state.setJsonPanelHeight);
@@ -65,7 +66,10 @@ export function JsonPanel() {
 
   const deckText = useThrottledDeckText(deck, open && tab === 'deck');
   // The label follows the selection even on the Deck tab; the text is built only when shown.
-  const view = useMemo(() => selectionView(deck, selection), [deck, selection]);
+  const view = useMemo(
+    () => selectionView(deck, selection, activeFlow),
+    [deck, selection, activeFlow],
+  );
   const showSelection = open && tab === 'selection';
   const text = showSelection ? selectionText(view.entries) : tab === 'deck' ? deckText : '';
   const empty = tab === 'selection' && view.entries.length === 0;

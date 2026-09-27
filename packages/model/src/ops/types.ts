@@ -7,7 +7,7 @@ type OptionalKeys<T> = {
 }[keyof T];
 
 /** Fields a patch may touch: never the id, never owned children (edited with their own ops). */
-type Patchable<T> = Omit<T, 'id' | 'steps'>;
+type Patchable<T> = Omit<T, 'id' | 'steps' | 'branches'>;
 
 /**
  * A partial update. Required fields take a value; optional fields take a value or `null`, which

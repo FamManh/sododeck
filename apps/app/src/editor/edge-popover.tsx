@@ -15,7 +15,7 @@ import { useId, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
-import { canvasElement, focusCanvas } from './canvas-actions';
+import { anchorRect, focusCanvas } from './canvas-actions';
 
 type Edge = SododeckFile['edges'][number];
 
@@ -36,19 +36,6 @@ const DIRECTIONS = [
 ] as const;
 
 const NO_PROTOCOL = 'none';
-
-/** Measures the edge's label point (deck-edge.tsx), else the canvas centre. */
-function anchorRect(edgeId: string): DOMRect {
-  const anchor = document.querySelector(`[data-edge-anchor="${CSS.escape(edgeId)}"]`);
-  if (anchor) return anchor.getBoundingClientRect();
-  const canvas = canvasElement()?.getBoundingClientRect();
-  return new DOMRect(
-    (canvas?.left ?? 0) + (canvas?.width ?? 0) / 2,
-    (canvas?.top ?? 0) + (canvas?.height ?? 0) / 2,
-    0,
-    0,
-  );
-}
 
 /** Inline editor for a connection: label, protocol, direction (FR-011, design 57). */
 export function EdgePopover({ deck }: { deck: SododeckFile }) {

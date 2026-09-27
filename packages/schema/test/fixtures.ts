@@ -55,6 +55,7 @@ function renameKey(path: string, from: string, to: string): unknown {
 
 const RULE = 'rules.delivery-tier';
 const STEP = 'flows.0.steps.0';
+const BRANCH = 'flows.2.branches.1';
 
 export const invalidFixtures: InvalidFixture[] = [
   // Envelope
@@ -80,6 +81,12 @@ export const invalidFixtures: InvalidFixture[] = [
   { name: 'flow without steps', input: remove('flows.0.steps'), path: 'flows.0.steps' },
   { name: 'step without id', input: remove(`${STEP}.id`), path: `${STEP}.id` },
   { name: 'step without edge', input: remove(`${STEP}.edge`), path: `${STEP}.edge` },
+  {
+    name: 'branch without condition',
+    input: remove(`${BRANCH}.condition`),
+    path: `${BRANCH}.condition`,
+  },
+  { name: 'branch without label', input: remove(`${BRANCH}.label`), path: `${BRANCH}.label` },
   { name: 'rule without hitPolicy', input: remove(`${RULE}.hitPolicy`), path: `${RULE}.hitPolicy` },
   {
     name: 'rule column without label',
@@ -103,11 +110,7 @@ export const invalidFixtures: InvalidFixture[] = [
   { name: 'unknown key on view', input: set('views.0.level', 'system'), path: 'views.0' },
   { name: 'unknown key on feature', input: set('features.0.flows', []), path: 'features.0' },
   { name: 'unknown key on flow', input: set('flows.0.name', 'x'), path: 'flows.0' },
-  {
-    name: 'step with branch (not in v1)',
-    input: set(`${STEP}.branch`, { kind: 'error' }),
-    path: STEP,
-  },
+  { name: 'unknown key on branch', input: set(`${BRANCH}.from`, 's3'), path: BRANCH },
   { name: 'unknown key on rule', input: set(`${RULE}.policy`, 'first'), path: RULE },
   {
     name: 'unknown key on rule column',
@@ -169,6 +172,21 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'nodes.0.position.x',
   },
   { name: 'tags is a string', input: set('nodes.0.tags', 'pci'), path: 'nodes.0.tags' },
+  {
+    name: 'errorPath is a string',
+    input: set(`${BRANCH}.errorPath`, 'yes'),
+    path: `${BRANCH}.errorPath`,
+  },
+  {
+    name: 'step branch that is not an id',
+    input: set(`${STEP}.branch`, 'payment failed'),
+    path: `${STEP}.branch`,
+  },
+  {
+    name: 'step branch that is an object',
+    input: set(`${STEP}.branch`, { kind: 'error' }),
+    path: `${STEP}.branch`,
+  },
 
   // Semantic rules
   {

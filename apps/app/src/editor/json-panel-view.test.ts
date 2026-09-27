@@ -9,6 +9,7 @@ import {
   selectionText,
   selectionView,
 } from './json-panel-view';
+import { deckOf } from '../test/render-canvas';
 
 const deck: SododeckFile = {
   ...emptySododeckFile(),
@@ -100,5 +101,33 @@ describe('copyToastText', () => {
     expect(
       copyToastText('selection', selectionView(deck, { nodes: ['a', 'b'], edges: ['e1', 'e2'] })),
     ).toBe('Copied 4 items as JSON');
+  });
+});
+
+describe('selectionView for flows (006)', () => {
+  const flowDeck = deckOf({
+    nodes: [{ id: 'a', type: 'service', title: 'A' }],
+    edges: [{ id: 'aa', from: 'a', to: 'a' }],
+    flows: [{ id: 'f', title: 'Place order', steps: [{ id: 's1', edge: 'aa' }] }],
+  });
+  const none = { nodes: [], edges: [] };
+
+  it('shows the whole flow, labelled Flow, or Step while a step is selected', () => {
+    const view = selectionView(flowDeck, none, { flowId: 'f', stepId: null, branchId: null });
+    expect(view.label).toBe('Flow');
+    expect(view.fullLabel).toBe('Flow: Place order');
+    expect(view.entries).toEqual([{ collection: 'flows', value: flowDeck.flows[0] }]);
+    expect(selectionText(view.entries)).toBe(
+      serializeEntry('flows', flowDeck.flows[0] as SododeckFile['flows'][number]),
+    );
+    expect(selectionView(flowDeck, none, { flowId: 'f', stepId: 's1', branchId: null }).label).toBe(
+      'Step',
+    );
+  });
+
+  it('falls back to the canvas selection when the flow is gone', () => {
+    expect(selectionView(flowDeck, none, { flowId: 'x', stepId: null, branchId: null }).label).toBe(
+      'Selection',
+    );
   });
 });

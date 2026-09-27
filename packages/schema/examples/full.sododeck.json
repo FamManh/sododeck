@@ -241,7 +241,33 @@
         { "id": "s6", "edge": "e5" }
       ]
     },
-    { "id": "track-order", "title": "Live tracking", "feature": "delivery", "steps": [] }
+    { "id": "track-order", "title": "Live tracking", "feature": "delivery", "steps": [] },
+    {
+      "id": "pay-order",
+      "title": "Pay for order",
+      "feature": "delivery",
+      "branches": [
+        {
+          "id": "payment-ok",
+          "label": "payment ok",
+          "condition": "payment.status == \"authorized\""
+        },
+        {
+          "id": "payment-failed",
+          "label": "payment failed",
+          "condition": "payment.status == \"declined\"",
+          "errorPath": true,
+          "description": "The order is kept as **unpaid** and the customer is asked again."
+        }
+      ],
+      "steps": [
+        { "id": "p1", "edge": "e1" },
+        { "id": "p2", "edge": "e2", "title": "Create order" },
+        { "id": "p3a", "edge": "e7", "branch": "payment-ok", "title": "Capture payment" },
+        { "id": "p3b", "edge": "e4", "branch": "payment-failed" },
+        { "id": "p4b", "edge": "e5", "branch": "payment-failed" }
+      ]
+    }
   ],
   "rules": {
     "delivery-tier": {
