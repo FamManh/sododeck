@@ -120,6 +120,8 @@ describe('toFlowEdges', () => {
     const first = toFlowEdges(deck, EMPTY_SELECTION, false);
     const second = toFlowEdges(deck, EMPTY_SELECTION, false);
     expect(second[0]).toBe(first[0]);
+    // The list itself too, so React Flow does not re-sync its edges during a drag.
+    expect(second).toBe(first);
     expect(toFlowEdges(deck, EMPTY_SELECTION, true)[0]).not.toBe(first[0]);
   });
 });

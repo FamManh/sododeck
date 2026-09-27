@@ -49,25 +49,28 @@ export interface CanvasProps {
 /** Keeps UI state pointing at objects that still exist; selects what undo/redo brings back. */
 function useSelectionSync(): void {
   const editor = useEditor();
-  const deck = useDeckSnapshot(editor.doc);
 
-  useEffect(() => {
-    useUiStore.getState().pruneSelection({
-      nodes: new Set(deck.nodes.map((n) => n.id)),
-      edges: new Set(deck.edges.map((e) => e.id)),
-    });
-  }, [deck.nodes, deck.edges]);
-
-  // Restored objects may be off-screen: select them so the user can find them (spec edge case).
   useEffect(
     () =>
       observeDeck(editor.doc, ({ origin, changes }) => {
+        const ui = useUiStore.getState();
+        // Only removals can leave dangling ids (not the moves of a drag, which are most changes).
+        if (
+          changes.some((c) => c.kind === 'removed' && (c.scope === 'nodes' || c.scope === 'edges'))
+        ) {
+          const deck = readDeck(editor.doc);
+          ui.pruneSelection({
+            nodes: new Set(deck.nodes.map((n) => n.id)),
+            edges: new Set(deck.edges.map((e) => e.id)),
+          });
+        }
+        // Restored objects may be off-screen: select them so the user can find them.
         if (origin !== 'undo' && origin !== 'redo') return;
         const added = (scope: 'nodes' | 'edges') =>
           changes.filter((c) => c.scope === scope && c.kind === 'added').map((c) => c.id);
         const nodes = added('nodes');
         const edges = added('edges');
-        if (nodes.length > 0 || edges.length > 0) useUiStore.getState().select({ nodes, edges });
+        if (nodes.length > 0 || edges.length > 0) ui.select({ nodes, edges });
       }),
     [editor.doc],
   );

@@ -51,6 +51,8 @@ export type HandleSide = 'top' | 'right' | 'bottom' | 'left';
 const nodeCache = new WeakMap<DeckNodeObject, DeckFlowNode>();
 const groupCache = new Map<string, GroupFlowNode>();
 const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
+/** Last edge list: returned again when every element is the same, so React Flow skips a re-sync. */
+let lastEdges: DeckFlowEdge[] = [];
 
 function toFlowNode(
   node: DeckNodeObject,
@@ -176,7 +178,7 @@ export function toFlowEdges(
     deck.nodes.map((node, index) => [node.id, { node, position: displayPosition(node, index) }]),
   );
   const selected = new Set(selection.edges);
-  return deck.edges.flatMap((edge) => {
+  const next = deck.edges.flatMap((edge) => {
     const from = nodes.get(edge.from);
     const to = nodes.get(edge.to);
     // The schema does not check references; a file may still point at missing nodes.
@@ -220,4 +222,9 @@ export function toFlowEdges(
     edgeCache.set(edge, flowEdge);
     return [flowEdge];
   });
+  // A drag moves nodes, rarely edges: keep the array identity when nothing in it changed.
+  if (next.length === lastEdges.length && next.every((e, i) => e === lastEdges[i]))
+    return lastEdges;
+  lastEdges = next;
+  return next;
 }
