@@ -21,3 +21,12 @@ export function supportsBroadcastChannel(): boolean {
 export function supportsIndexedDB(): boolean {
   return typeof indexedDB !== 'undefined';
 }
+
+/** Apple platforms use ⌘ for shortcuts; everything else uses Ctrl. */
+export function isApplePlatform(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const platform =
+    (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
+    navigator.platform;
+  return /mac|iphone|ipad|ipod/i.test(platform);
+}

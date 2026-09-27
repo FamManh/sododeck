@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { supportsFileSystemAccess, supportsPersistentStorage } from './features';
+import { isApplePlatform, supportsFileSystemAccess, supportsPersistentStorage } from './features';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -18,5 +18,16 @@ describe('feature detection', () => {
     expect(supportsPersistentStorage()).toBe(false);
     vi.stubGlobal('navigator', { storage: { persist: () => Promise.resolve(true) } });
     expect(supportsPersistentStorage()).toBe(true);
+  });
+});
+
+describe('isApplePlatform', () => {
+  it('detects Apple platforms from navigator.platform', () => {
+    const spy = vi.spyOn(navigator, 'platform', 'get');
+    spy.mockReturnValue('MacIntel');
+    expect(isApplePlatform()).toBe(true);
+    spy.mockReturnValue('Win32');
+    expect(isApplePlatform()).toBe(false);
+    spy.mockRestore();
   });
 });
