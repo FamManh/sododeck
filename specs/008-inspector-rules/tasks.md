@@ -35,9 +35,9 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `008-inspector-rules` from the latest `main` (with 006 merged). Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 [P] Record the baseline with `pnpm bench` on `main` and save the numbers (pan, zoom and drag at 500 nodes / 1,000 edges) in `specs/008-inspector-rules/bench-before.md`.
-- [ ] T003 [P] Write the ADR `docs/decisions/0009-decision-table-evaluation.md` in the 0006 header format. It covers:
+- [x] T001 Create branch `008-inspector-rules` from the latest `main` (with 006 merged). Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T002 [P] Record the baseline with `pnpm bench` on `main` and save the numbers (pan, zoom and drag at 500 nodes / 1,000 edges) in `specs/008-inspector-rules/bench-before.md`.
+- [x] T003 [P] Write the ADR `docs/decisions/0009-decision-table-evaluation.md` in the 0006 header format. It covers:
   - the cell grammar (Any/empty, comparisons with `<` `<=` `≤` `>` `>=` `≥` and a number, comma lists, exact values, invalid cells)
   - matching (numeric vs case-folded text, empty input)
   - hit policies, where Unique with several matches is ambiguous and has no winner (spec clarification)
@@ -50,7 +50,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Model (`packages/model`)
 
-- [ ] T004 [P] Write `packages/model/test/rules-evaluate.test.ts`. It must fail at first, and it covers:
+- [x] T004 [P] Write `packages/model/test/rules-evaluate.test.ts`. It must fail at first, and it covers:
   - every grammar row in research R2: `''`, `Any`, `any`, `≤ 5`, `<=5`, `> 20`, `>= -3.5`, `≤` alone, `> abc`, `Bike, Van`, `a,,b`, `Express`
   - `5` equals `5.0`, and `express` equals `Express`
   - empty input, and non-numeric input against a comparison
@@ -58,8 +58,8 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - a generated 50-row, 5-condition rule evaluates in under 100 ms (SC-003)
   - rules with no columns or no rows
   - `ruleChecks`: catch-all detection and `invalidCells`
-- [ ] T005 [P] Implement `parseCell` and `matchCell` in `packages/model/src/rules/cells.ts`, and `evaluateRule` and `ruleChecks` in `packages/model/src/rules/evaluate.ts`, following contracts/model-additions.md. Make T004 pass.
-- [ ] T006 [P] Write `packages/model/test/rule-links.test.ts`. It must fail at first, and it covers:
+- [x] T005 [P] Implement `parseCell` and `matchCell` in `packages/model/src/rules/cells.ts`, and `evaluateRule` and `ruleChecks` in `packages/model/src/rules/evaluate.ts`, following contracts/model-additions.md. Make T004 pass.
+- [x] T006 [P] Write `packages/model/test/rule-links.test.ts`. It must fail at first, and it covers:
   - `attachRule` / `detachRule` on a node and on a step
   - a double attach throws `invalid`, and a missing rule throws `missing-reference`
   - a step detach removes `ruleInputs[ruleId]` in the same transaction
@@ -67,62 +67,62 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - keyed typing merges into one undo step
   - each op is one undo step
   - `observeDeck` reports the changes with origin `local`
-- [ ] T007 Implement `attachRule`, `detachRule` and `setRuleInputs` with `RuleHost` in `packages/model/src/ops/rule-links.ts`, and wire them into `DeckEditor` in `packages/model/src/editor.ts`. Make T006 pass.
-- [ ] T008 Write `packages/model/test/rule-usage.test.ts` (it must fail at first), then implement `ruleUsage(file, ruleId)` in `packages/model/src/rules/usage.ts` using `analyzeFlow`. Cover:
+- [x] T007 Implement `attachRule`, `detachRule` and `setRuleInputs` with `RuleHost` in `packages/model/src/ops/rule-links.ts`, and wire them into `DeckEditor` in `packages/model/src/editor.ts`. Make T006 pass.
+- [x] T008 Write `packages/model/test/rule-usage.test.ts` (it must fail at first), then implement `ruleUsage(file, ruleId)` in `packages/model/src/rules/usage.ts` using `analyzeFlow`. Cover:
   - main-path and branch step numbers (`4a`)
   - broken steps (`from`/`to` null, `broken: true`)
   - nodes that use the rule
   - renaming the rule or a column leaves the usage unchanged
-- [ ] T009 Add `{ scope: 'rules'; id }` to `RemovalTarget`, with support in `previewRemoval` and `removeTarget` in `packages/model/src/preview.ts`. Add cases to `packages/model/test/preview.test.ts`: the removed rule, and the updated nodes and steps.
-- [ ] T010 [P] Add a case to `packages/model/test/round-trip.test.ts`: a deck with rules attached to nodes and steps, `ruleInputs`, and tags and links on the deck, nodes, edges, flows and steps. Add a case to `packages/model/test/undo.test.ts`: `removeRule` then one undo restores every attachment and every sample input.
-- [ ] T011 Export the new functions and types (`parseCell`, `matchCell`, `evaluateRule`, `ruleChecks`, `ruleUsage`, `Cell`, `Evaluation`, `RuleChecks`, `RuleUsage`, `RuleHost`) from `packages/model/src/index.ts`, and update `packages/model/CLAUDE.md` with the rules module and the rule-links invariant.
+- [x] T009 Add `{ scope: 'rules'; id }` to `RemovalTarget`, with support in `previewRemoval` and `removeTarget` in `packages/model/src/preview.ts`. Add cases to `packages/model/test/preview.test.ts`: the removed rule, and the updated nodes and steps.
+- [x] T010 [P] Add a case to `packages/model/test/round-trip.test.ts`: a deck with rules attached to nodes and steps, `ruleInputs`, and tags and links on the deck, nodes, edges, flows and steps. Add a case to `packages/model/test/undo.test.ts`: `removeRule` then one undo restores every attachment and every sample input.
+- [x] T011 Export the new functions and types (`parseCell`, `matchCell`, `evaluateRule`, `ruleChecks`, `ruleUsage`, `Cell`, `Evaluation`, `RuleChecks`, `RuleUsage`, `RuleHost`) from `packages/model/src/index.ts`, and update `packages/model/CLAUDE.md` with the rules module and the rule-links invariant.
 
 ### UI kit (`packages/ui`)
 
-- [ ] T012 [P] Write the test `packages/ui/test/markdown.test.ts`, then implement `parseMarkdown(text): Block[]` in `packages/ui/src/lib/markdown.ts`. It handles:
+- [x] T012 [P] Write the test `packages/ui/test/markdown.test.ts`, then implement `parseMarkdown(text): Block[]` in `packages/ui/src/lib/markdown.ts`. It handles:
   - blank-line paragraphs
   - `-` / `*` / `+` bullets at one level
   - `` `code` ``
   - everything else as literal text
-- [ ] T013 [P] Write the test `packages/ui/test/markdown-view.test.tsx`, then implement `MarkdownView` in `packages/ui/src/components/markdown-view.tsx`. The test asserts:
+- [x] T013 [P] Write the test `packages/ui/test/markdown-view.test.tsx`, then implement `MarkdownView` in `packages/ui/src/components/markdown-view.tsx`. The test asserts:
   - bullets render as `list`/`listitem`
   - inline `code` renders as code
   - `<b>x</b>` and `<script>` render as literal text, with no element created
   - empty text renders "Nothing to preview."
-- [ ] T014 [P] Write the test `packages/ui/test/combobox.test.tsx`, then implement `Combobox` (`mode: 'free' | 'pick'`) in `packages/ui/src/components/combobox.tsx` on Radix Popover. It follows the WAI-ARIA combobox and listbox pattern:
+- [x] T014 [P] Write the test `packages/ui/test/combobox.test.tsx`, then implement `Combobox` (`mode: 'free' | 'pick'`) in `packages/ui/src/components/combobox.tsx` on Radix Popover. It follows the WAI-ARIA combobox and listbox pattern:
   - contains-match filtering, ignoring case, showing at most 8 options
   - ↑/↓ move, Enter chooses, Esc closes
   - pick mode rejects free text
   - `focusRing` and tokens only
   - `placeholder` and `aria-describedby` pass through (used for "Mixed")
-- [ ] T015 [P] Add a `suggestions` prop to `TagInput` in `packages/ui/src/components/tag-input.tsx`, reusing the Combobox listbox. Make Backspace in the empty add field remove the last tag (FR-005; not supported today). Add a `partial` variant to `TagChip` in `packages/ui/src/components/tag-chip.tsx`: a dashed border, a "k/n" count, and the actions "Add <tag> to all" and "Remove <tag> from all". Extend the existing tests in `packages/ui/test/`.
-- [ ] T016 Add the new components to the contrast and keyboard a11y suites in `packages/ui/test/`, and to the `/design` gallery (`apps/app/src/design-gallery/`). Update `packages/ui/CLAUDE.md`.
+- [x] T015 [P] Add a `suggestions` prop to `TagInput` in `packages/ui/src/components/tag-input.tsx`, reusing the Combobox listbox. Make Backspace in the empty add field remove the last tag (FR-005; not supported today). Add a `partial` variant to `TagChip` in `packages/ui/src/components/tag-chip.tsx`: a dashed border, a "k/n" count, and the actions "Add <tag> to all" and "Remove <tag> from all". Extend the existing tests in `packages/ui/test/`.
+- [x] T016 Add the new components to the contrast and keyboard a11y suites in `packages/ui/test/`, and to the `/design` gallery (`apps/app/src/design-gallery/`). Update `packages/ui/CLAUDE.md`.
 
 ### App foundation (`apps/app`)
 
-- [ ] T017 [P] Write the test `apps/app/src/editor/fields/use-live-field.test.tsx` (it must fail at first), then implement `useLiveField` in `apps/app/src/editor/fields/use-live-field.ts` (research R4). It must:
+- [x] T017 [P] Write the test `apps/app/src/editor/fields/use-live-field.test.tsx` (it must fail at first), then implement `useLiveField` in `apps/app/src/editor/fields/use-live-field.ts` (research R4). It must:
   - call `beginGesture` on the first change after focus
   - write at most once per animation frame
   - call `endGesture` on blur, Enter or unmount
   - on Esc, write the value from before focus and end the gesture
   - never write an empty required value, and revert it on blur with an error
     The test asserts that one ⌘Z after blur restores the value from before focus, and that the gesture ends when the selection changes mid-typing.
-- [ ] T018 Switch `FieldEdit` in `apps/app/src/editor/field-edit.tsx` to `useLiveField`, keeping its props (`error`, `mono`, `id`; `list` stays until T031 removes its last use) and its "<Label> can’t be empty." error. Move 006's `TextareaEdit` from `editor/flows/textarea-edit.tsx` to `apps/app/src/editor/fields/textarea-edit.tsx`, switch it to `useLiveField` too, and update its imports. Run the existing inspector, top-bar and flow tests and fix any regressions without changing their assertions.
-- [ ] T019 [P] Write the test `apps/app/src/lib/links.test.ts`, then implement `parseLinkInput` in `apps/app/src/lib/links.ts` (research R6). It covers:
+- [x] T018 Switch `FieldEdit` in `apps/app/src/editor/field-edit.tsx` to `useLiveField`, keeping its props (`error`, `mono`, `id`; `list` stays until T031 removes its last use) and its "<Label> can’t be empty." error. Move 006's `TextareaEdit` from `editor/flows/textarea-edit.tsx` to `apps/app/src/editor/fields/textarea-edit.tsx`, switch it to `useLiveField` too, and update its imports. Run the existing inspector, top-bar and flow tests and fix any regressions without changing their assertions.
+- [x] T019 [P] Write the test `apps/app/src/lib/links.test.ts`, then implement `parseLinkInput` in `apps/app/src/lib/links.ts` (research R6). It covers:
   - http and https URLs, labelled with the host minus `www.`
   - relative paths, labelled with their last segment
   - refusal of `javascript:`, `data:`, `file:` and `//host`, with the message "Only http, https or relative links"
   - trimming
-- [ ] T020 [P] Write the test `apps/app/src/editor/inspector/derive.test.ts`, then implement `ownerSuggestions`, `tagSuggestions`, `nodeConnections`, `edgeUsage`, `flowSummary`, `deckStats` and `bulkView` in `apps/app/src/editor/inspector/derive.ts` (data-model §2). `ownerSuggestions` replaces 006's private `owners(deck)` in `editor/flows/inspector-flow.tsx` and adds edge and step owners. `edgeUsage` and `flowSummary` use `analyzeFlow`.
-- [ ] T021 [P] Extract `showUndoToast(message)` from `apps/app/src/editor/confirm-delete-dialog.tsx` into `apps/app/src/editor/undo-toast.ts`, keeping the single-toast rule, `MOTION.toastUndoMs`, the Undo button that calls `editor.undo()`, and the "Undone" announcement. Add a test in `undo-toast.test.tsx`. Keep the existing dialog tests green.
-- [ ] T022 [P] Move `PROTOCOLS` and `DIRECTIONS` from `apps/app/src/editor/edge-popover.tsx` into `apps/app/src/editor/fields/edge-choices.ts`, and import them back into the popover.
-- [ ] T023 Build the shared fields in `apps/app/src/editor/fields/`, each with a component test by role and label from the UI contract:
+- [x] T020 [P] Write the test `apps/app/src/editor/inspector/derive.test.ts`, then implement `ownerSuggestions`, `tagSuggestions`, `nodeConnections`, `edgeUsage`, `flowSummary`, `deckStats` and `bulkView` in `apps/app/src/editor/inspector/derive.ts` (data-model §2). `ownerSuggestions` replaces 006's private `owners(deck)` in `editor/flows/inspector-flow.tsx` and adds edge and step owners. `edgeUsage` and `flowSummary` use `analyzeFlow`.
+- [x] T021 [P] Extract `showUndoToast(message)` from `apps/app/src/editor/confirm-delete-dialog.tsx` into `apps/app/src/editor/undo-toast.ts`, keeping the single-toast rule, `MOTION.toastUndoMs`, the Undo button that calls `editor.undo()`, and the "Undone" announcement. Add a test in `undo-toast.test.tsx`. Keep the existing dialog tests green.
+- [x] T022 [P] Move `PROTOCOLS` and `DIRECTIONS` from `apps/app/src/editor/edge-popover.tsx` into `apps/app/src/editor/fields/edge-choices.ts`, and import them back into the popover.
+- [x] T023 Build the shared fields in `apps/app/src/editor/fields/`, each with a component test by role and label from the UI contract:
   - `markdown-field.tsx`: `TextareaEdit` (T018) plus a Write/Preview `radiogroup` and `MarkdownView`, with the mode kept in `descriptionMode` in the UI store
   - `owner-field.tsx`: a free Combobox fed by `ownerSuggestions`
   - `tags-field.tsx`: `TagInput` with `tagSuggestions` and the announcement "<tag> added"
   - `links-field.tsx`: link rows, edit label, remove, the add field with the `parseLinkInput` error, and opening with `window.open(…, 'noopener,noreferrer')`
     All of them write through `useEditor()`.
-- [ ] T024 Add `descriptionMode` to `apps/app/src/state/ui-store.ts` (reset on selection change) and cover it in the store test. Move 006's `InspectorFrame` from `editor/flows/inspector-frame.tsx` to `apps/app/src/editor/inspector/inspector-frame.tsx` and update its imports. In `apps/app/src/editor/inspector.tsx`, keep 006's `FlowInspector` branch and make `CanvasInspector` route to node, edge, bulk (two or more nodes) and deck inspectors. Add a test: when the selected component, connection or flow is removed by a remote-origin change, the inspector falls back to the deck inspector (spec edge case). Keep the existing inspector tests green.
+- [x] T024 Add `descriptionMode` to `apps/app/src/state/ui-store.ts` (reset on selection change) and cover it in the store test. Move 006's `InspectorFrame` from `editor/flows/inspector-frame.tsx` to `apps/app/src/editor/inspector/inspector-frame.tsx` and update its imports. In `apps/app/src/editor/inspector.tsx`, keep 006's `FlowInspector` branch and make `CanvasInspector` route to node, edge, bulk (two or more nodes) and deck inspectors. Add a test: when the selected component, connection or flow is removed by a remote-origin change, the inspector falls back to the deck inspector (spec edge case). Keep the existing inspector tests green.
 
 **Checkpoint**: the model rules module, the UI kit pieces and the shared fields are ready, and every package's tests pass.
 
@@ -134,22 +134,22 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: on a deck without flows or rules, edit every component and connection field, check the canvas, outline and JSON panel after each edit, and undo the last edit with one ⌘Z (spec story 1).
 
-- [ ] T025 [P] [US1] Write `apps/app/src/editor/inspector/node-inspector.test.tsx` (it must fail at first), covering spec story 1 scenarios 1–6 and 10:
+- [x] T025 [P] [US1] Write `apps/app/src/editor/inspector/node-inspector.test.tsx` (it must fail at first), covering spec story 1 scenarios 1–6 and 10:
   - the header "<Kind> · <Group> · <id>"
   - Kind and Group pick-mode comboboxes ("No group" clears the group), each one ⌘Z
   - Delete opens 003's confirmation dialog (FR-007)
   - Title, Description with a Preview of bullets and code and HTML shown as text, Owner suggestions, Tech, Host, Tags normalization, Links (including the refusal)
   - the Connections · n rows selecting the connection
   - one ⌘Z undoing the last field
-- [ ] T026 [US1] Implement `apps/app/src/editor/inspector/node-inspector.tsx` in `InspectorFrame`. Show the Rules section as an empty placeholder slot; it is filled in US5. Make T025 pass.
-- [ ] T027 [P] [US1] Write `apps/app/src/editor/inspector/edge-inspector.test.tsx` (it must fail at first), covering scenarios 7–9:
+- [x] T026 [US1] Implement `apps/app/src/editor/inspector/node-inspector.tsx` in `InspectorFrame`. Show the Rules section as an empty placeholder slot; it is filled in US5. Make T025 pass.
+- [x] T027 [P] [US1] Write `apps/app/src/editor/inspector/edge-inspector.test.tsx` (it must fail at first), covering scenarios 7–9:
   - Title (the label), Protocol and Direction match the popover
   - From/To reattach keeps the id, and self or duplicate connections are refused with the `REFUSAL_TEXT` announcement
   - Description, Owner, Tags and Links
   - Delete opens 003's confirmation dialog (FR-007)
   - USED IN FLOWS shows "<flow> · Step n", and choosing it calls `setActiveFlow` then `setActiveStep`; with no uses it shows "Not used in any flow"
-- [ ] T028 [US1] Implement `apps/app/src/editor/inspector/edge-inspector.tsx`. From/To use a pick-mode Combobox, and the reattach checks `connectionCheck(deck, from, to, edgeId)` before `editor.update('edges', id, { from, to })`. Make T027 pass.
-- [ ] T029 [US1] Run `pnpm bench`, compare with `bench-before.md`, and record the result in `specs/008-inspector-rules/bench-after.md`. Reattach and field edits must not regress pan, zoom or drag. Also time a component field edit to its canvas update on the bench deck (target < 100 ms, SC-001) and record it.
+- [x] T028 [US1] Implement `apps/app/src/editor/inspector/edge-inspector.tsx`. From/To use a pick-mode Combobox, and the reattach checks `connectionCheck(deck, from, to, edgeId)` before `editor.update('edges', id, { from, to })`. Make T027 pass.
+- [x] T029 [US1] Run `pnpm bench`, compare with `bench-before.md`, and record the result in `specs/008-inspector-rules/bench-after.md`. Reattach and field edits must not regress pan, zoom or drag. Also time a component field edit to its canvas update on the bench deck (target < 100 ms, SC-001) and record it.
 
 **Checkpoint**: the component and connection inspectors are complete. This is the MVP.
 
