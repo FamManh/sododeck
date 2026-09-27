@@ -367,7 +367,7 @@ failed" at step 4a, play it end to end.
       `specs/007-flow-playback/screens/` and list differences against `docs/design/screens/03-*`,
       `24-*`, `26-*`, `27-*`, `44-*`, `46-*` (allowed: target-only SLA, rule titles instead of the
       008 table, DESIGN.md tokens, lucide icons).
-- [ ] T057 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build
+- [x] T057 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build
 && pnpm e2e` (smoke suite unchanged, incl. no third-party requests); no `.only` / `.skip`.
 - [ ] T058 Run the quickstart manual scenarios 1–7 and record results in the PR description; update
       the 007 status line in `docs/backlog.md` after merge.
