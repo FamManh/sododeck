@@ -209,8 +209,10 @@ describe('EditorPage', () => {
     expect(titles()).toEqual(['New service', 'New database']);
 
     // 2. Into the canvas (the newest component holds the Tab stop), then the arrows.
-    // Past the four other palette cards.
-    for (let i = 0; i < 5; i++) await user.tab();
+    // Past the other palette cards and the Features section (filter, New flow, New feature).
+    for (let i = 0; i < 12 && document.activeElement !== nodeEl('Database: New database'); i++) {
+      await user.tab();
+    }
     expect(nodeEl('Database: New database')).toHaveFocus();
     await user.keyboard('{ArrowLeft}');
     await waitFor(() => {

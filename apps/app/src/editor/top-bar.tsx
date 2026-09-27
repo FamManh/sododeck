@@ -8,6 +8,7 @@ import { isApplePlatform } from '../lib/features';
 import { useEditor, useHistory } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { useThemeStore } from '../theme/theme-store';
+import { SessionChip } from './flows/session-chip';
 import { SaveStatus } from './save-status';
 import { useExportDeck } from './use-export-deck';
 import { Wordmark } from './wordmark';
@@ -120,7 +121,10 @@ export function TopBar({ deckName }: { deckName: string }) {
         <DeckNameCrumb name={deckName} />
       </nav>
       <HistoryButtons />
-      <div className="flex-1" />
+      {/* The flow session chip sits where the view switcher of 010/011 will go (FR-007). */}
+      <div className="flex min-w-0 flex-1 justify-center">
+        <SessionChip />
+      </div>
       <SaveStatus />
       <Tooltip>
         <TooltipTrigger asChild>

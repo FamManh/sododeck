@@ -71,6 +71,8 @@ export function session(patch: Partial<FlowSession> = {}): FlowSession {
     checkpoint: null,
     invalid: null,
     candidateEdgeId: null,
+    confirmingCancel: false,
+    branchCheck: 0,
     ...patch,
   };
 }

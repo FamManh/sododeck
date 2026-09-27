@@ -59,3 +59,11 @@ export function stepRoute(deck: SododeckFile, step: PathStep): string {
 export function findFlow(deck: SododeckFile, flowId: string | null): Flow | undefined {
   return flowId === null ? undefined : deck.flows.find((f) => f.id === flowId);
 }
+
+/** "3" or "3 + 2 branches" (FR-025). */
+export function stepCount(analysis: FlowAnalysis | null): string {
+  if (analysis === null) return '0';
+  const n = analysis.branches.length;
+  if (n === 0) return String(analysis.main.length);
+  return `${String(analysis.main.length)} + ${String(n)} ${n === 1 ? 'branch' : 'branches'}`;
+}

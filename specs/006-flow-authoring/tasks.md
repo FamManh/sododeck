@@ -163,7 +163,7 @@ story uses. No story work starts before this phase is done.
       Add wording for `features` ("Its n flows will move to No feature.") and `flows` ("Its n
       steps will be deleted."). No behavior change for canvas deletes; the existing tests stay
       green.
-- [ ] T015 [P] Create `apps/app/src/editor/flows/use-flow-sync.ts` (+ test):
+- [x] T015 [P] Create `apps/app/src/editor/flows/use-flow-sync.ts` (+ test):
   - Subscribe with `observeDeck`.
   - On a `removed` change for the active flow, step or branch, or the session's flow (any origin,
     including `remote`), clear `activeFlow` or end the session and announce "Flow '<title>' was
@@ -186,7 +186,7 @@ story uses. No story work starts before this phase is done.
     - an error branch
     - an edge used twice (two badges)
     - broken steps produce no mark
-- [ ] T017 Extend `apps/app/src/editor/deck-to-flow.ts`:
+- [x] T017 Extend `apps/app/src/editor/deck-to-flow.ts`:
   - `toFlowEdges(…, overlay?)` and `toFlowNodes(…, overlay?)`.
   - Add `DeckEdgeData.flow?: EdgeFlowMark` and node data `flowStart?: string`.
   - Include the object's overlay entry in the per-object cache check, so unchanged edges keep
@@ -198,7 +198,7 @@ story uses. No story work starts before this phase is done.
   `activeFlow` or `flowSession.flowId`, and memoize `flowOverlay`. Update
   `.agents/skills/react-flow/SKILL.md` for the new argument.
 
-- [ ] T018 Draw the marks in `apps/app/src/editor/deck-edge.tsx` and
+- [x] T018 Draw the marks in `apps/app/src/editor/deck-edge.tsx` and
       `apps/app/src/editor/deck-node.tsx` (+ tests by role, label and text, not class names):
   - Edges:
     - numbered badges (`aria-label` "Step 4b"), plus `CircleAlert` for error-path steps
@@ -267,20 +267,20 @@ panel (spec US1 scenarios 1–7).
 
   T020 must pass.
 
-- [ ] T026 [US1] Implement `apps/app/src/editor/flows/new-flow-dialog.tsx` (the `Dialog` "New flow
+- [x] T026 [US1] Implement `apps/app/src/editor/flows/new-flow-dialog.tsx` (the `Dialog` "New flow
       in <feature>" with Name and "Start recording") and `apps/app/src/editor/flows/flow-list.tsx`
       (features and flows, read-only rows, "+ New flow", "No feature" group). Replace the
       placeholder in `apps/app/src/editor/left-sidebar.tsx` with `<FlowList/>` (T021 green).
-- [ ] T027 [US1] Implement `apps/app/src/editor/flows/step-list.tsx`,
+- [x] T027 [US1] Implement `apps/app/src/editor/flows/step-list.tsx`,
       `apps/app/src/editor/flows/step-row.tsx` and
       `apps/app/src/editor/flows/recording-hint.tsx`. While a session is active, the left sidebar
       shows "NEW FLOW · <feature>", the name and the step list instead of the flow list (T023
       green).
-- [ ] T028 [US1] Implement `apps/app/src/editor/flows/session-chip.tsx` and render it in
+- [x] T028 [US1] Implement `apps/app/src/editor/flows/session-chip.tsx` and render it in
       `apps/app/src/editor/top-bar.tsx` (in the spacer between the breadcrumb and `SaveStatus`) when
       `flowSession` is set: Undo last step, Done with its
       reason, Cancel. Use the existing `Dialog` for the discard confirmation (T022 green).
-- [ ] T029 [US1] Route canvas input in session mode:
+- [x] T029 [US1] Route canvas input in session mode:
   - In `apps/app/src/editor/use-canvas-handlers.ts`:
     - `onEdgeClick` → `recordClick`
     - `onEdgeMouseEnter` / `onEdgeMouseLeave` → `setHoverEdge`
@@ -336,11 +336,11 @@ and Enter only (spec US2 scenarios 1, 3, 4; scenario 2's "Add as branch" is wire
 
 ### Implementation for User Story 2
 
-- [ ] T035 [US2] Implement `apps/app/src/editor/flows/candidate-edges.ts` (T032 green) and the
+- [x] T035 [US2] Implement `apps/app/src/editor/flows/candidate-edges.ts` (T032 green) and the
       Tab / Shift+Tab / Enter handling in `apps/app/src/editor/use-canvas-shortcuts.ts`,
       panning the focused edge into view with the React Flow `setCenter` on the edge midpoint
       (T034 green). Add the dead-end hint to `recording-hint.tsx`.
-- [ ] T036 [US2] Implement `apps/app/src/editor/flows/invalid-edge-popover.tsx`:
+- [x] T036 [US2] Implement `apps/app/src/editor/flows/invalid-edge-popover.tsx`:
   - `Popover` anchored on the edge's `data-edge-anchor`, with "Got it" clearing `invalid`.
   - Wire the invalid result of `recordClick` to `setInvalid`, the flash (T018) and `announce`.
   - Add the step-list message in `step-list.tsx`.
@@ -414,10 +414,10 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
       `packages/model/src/ops/steps.ts`. Export them from `packages/model/src/index.ts` (T037
       green).
 - [ ] T044 [P] [US3] Implement `apps/app/src/editor/flows/flow-order.ts` (T038 green).
-- [ ] T045 [P] [US3] Implement `apps/app/src/editor/flows/use-sortable-list.ts`: pointer events on
+- [x] T045 [P] [US3] Implement `apps/app/src/editor/flows/use-sortable-list.ts`: pointer events on
       the grip, a placeholder, panel auto-scroll, Esc to cancel, ⌥↑ / ⌥↓, and `group` and
       `locked` options. No dependency (T039 green).
-- [ ] T046 [US3] Complete `apps/app/src/editor/flows/flow-list.tsx`:
+- [x] T046 [US3] Complete `apps/app/src/editor/flows/flow-list.tsx`:
   - "New feature"
   - inline rename via `InlineEdit` + F2
   - `DropdownMenu` feature and flow menus
@@ -426,7 +426,7 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
 
   T040 must pass.
 
-- [ ] T047 [US3] Implement `apps/app/src/editor/flows/inspector-flow.tsx` and
+- [x] T047 [US3] Implement `apps/app/src/editor/flows/inspector-flow.tsx` and
       `apps/app/src/editor/flows/inspector-step.tsx` using `FieldEdit`, `Textarea`, `Select` and
       an `Input` with a `datalist`. Route `activeFlow` in `apps/app/src/editor/inspector.tsx`
       (T041 green).

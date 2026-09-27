@@ -15,6 +15,8 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { displayPosition, nearestInDirection, NODE_SIZE, type Direction } from './canvas-geometry';
 import { edgeName } from './deck-to-flow';
+import { candidateEdges } from './flows/candidate-edges';
+import { analysisOf, recordClick, requestCancel, undoLastStep } from './flows/flow-session';
 import { useSaveControls } from './save-context';
 
 export { isTextTarget };
@@ -45,7 +47,7 @@ function focusInspectorTitle(): void {
 
 export function useCanvasKeyDown() {
   const editor = useEditor();
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const { zoomIn, zoomOut, fitView, setCenter, getZoom } = useReactFlow();
 
   return useCallback(
     (event: ReactKeyboardEvent) => {
@@ -53,6 +55,55 @@ export function useCanvasKeyDown() {
       const ui = useUiStore.getState();
       const deck = readDeck(editor.doc);
       const key = event.key;
+      const session = ui.flowSession;
+
+      // Recording by keyboard (006 FR-015): Tab / Shift+Tab move between candidate edges, Enter
+      // records the focused one. With no candidates Tab leaves the canvas, so Done stays reachable.
+      if (session !== null && !isMod(event) && !event.altKey) {
+        if (key === 'Tab') {
+          const candidates = candidateEdges(deck, analysisOf(deck, session.flowId), session.target);
+          if (candidates.length === 0) return;
+          const index = candidates.indexOf(session.candidateEdgeId ?? '');
+          const next = event.shiftKey
+            ? index <= 0
+              ? undefined
+              : candidates[index - 1]
+            : index === candidates.length - 1
+              ? undefined
+              : candidates[index + 1];
+          // Past either end, Tab moves on to the rest of the page.
+          if (next === undefined) {
+            ui.setCandidate(null);
+            ui.focusEdge(null);
+            return;
+          }
+          event.preventDefault();
+          ui.setCandidate(next);
+          ui.focusEdge(next);
+          const edge = deck.edges.find((e) => e.id === next);
+          const index2 = (id: string | undefined) => deck.nodes.findIndex((n) => n.id === id);
+          const from = deck.nodes[index2(edge?.from)];
+          const to = deck.nodes[index2(edge?.to)];
+          if (edge && from && to) {
+            const a = displayPosition(from, index2(edge.from));
+            const b = displayPosition(to, index2(edge.to));
+            void setCenter((a.x + b.x + NODE_SIZE.width) / 2, (a.y + b.y + NODE_SIZE.height) / 2, {
+              zoom: getZoom(),
+            });
+            ui.announce(edgeName(from.title, to.title, edge.label));
+          }
+          return;
+        }
+        if (key === 'Enter' && session.candidateEdgeId !== null) {
+          event.preventDefault();
+          recordClick(editor, session.candidateEdgeId);
+          ui.setCandidate(null);
+          ui.focusEdge(null);
+          return;
+        }
+        // Structure editing is paused while recording (FR-017).
+        if (['c', 'e', 'enter'].includes(key.toLowerCase())) return;
+      }
 
       if (isMod(event)) {
         const handled = (() => {
@@ -148,7 +199,7 @@ export function useCanvasKeyDown() {
           return;
       }
     },
-    [editor, zoomIn, zoomOut, fitView],
+    [editor, zoomIn, zoomOut, fitView, setCenter, getZoom],
   );
 }
 
@@ -174,11 +225,25 @@ export function useEditorShortcuts(): void {
       if (isMod(event) && (key === 'z' || (key === 'y' && event.ctrlKey && !event.metaKey))) {
         event.preventDefault();
         const redo = key === 'y' || event.shiftKey;
+        // While recording, ⌘Z takes back the last recorded step (006 FR-014).
+        if (!redo && ui.flowSession?.mode === 'record') {
+          undoLastStep(editor);
+          return;
+        }
         if (redo ? editor.redo() : editor.undo()) ui.announce(redo ? 'Redone' : 'Undone');
         return;
       }
       if (isMod(event) || event.altKey) return;
 
+      if (ui.flowSession !== null) {
+        // Sessions pause canvas deletes; ⌫ on a step row is the step list's (FR-017, FR-020).
+        if (key === 'escape' && ui.pendingDelete === null) {
+          event.preventDefault();
+          if (ui.flowSession.invalid !== null) ui.setInvalid(null);
+          else if (!ui.flowSession.confirmingCancel) requestCancel(editor);
+        }
+        return;
+      }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
         const { nodes, edges } = ui.selection;

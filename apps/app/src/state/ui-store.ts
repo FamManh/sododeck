@@ -58,6 +58,13 @@ export interface FlowSession {
   invalid: InvalidClick | null;
   /** Keyboard focus among candidate edges (FR-015). */
   candidateEdgeId: string | null;
+  /** The "discard changes?" confirmation of Cancel / Esc is open (FR-013). */
+  confirmingCancel: boolean;
+  /**
+   * Counts Done presses refused because the new branch has an empty label or condition: above 0
+   * the inspector shows the inline errors, and each press moves focus to the first (FR-023).
+   */
+  branchCheck: number;
 }
 
 /** What the delete confirmation is open for. */
@@ -119,6 +126,8 @@ export interface UiState {
   setAddingBranch: (adding: boolean) => void;
   setInvalid: (invalid: InvalidClick | null) => void;
   setCandidate: (edgeId: string | null) => void;
+  setConfirmingCancel: (open: boolean) => void;
+  checkBranch: () => void;
   endSession: () => void;
   setHoverEdge: (edgeId: string | null) => void;
   setFlowFilter: (text: string) => void;
@@ -292,6 +301,8 @@ export const useUiStore = create<UiState>()((set, get) => {
           checkpoint: null,
           invalid: null,
           candidateEdgeId: null,
+          confirmingCancel: false,
+          branchCheck: 0,
         },
         activeFlow: null,
         selection: EMPTY_SELECTION,
@@ -312,6 +323,8 @@ export const useUiStore = create<UiState>()((set, get) => {
           checkpoint,
           invalid: null,
           candidateEdgeId: null,
+          confirmingCancel: false,
+          branchCheck: 0,
         },
         activeFlow: { flowId, stepId: null, branchId: null },
         selection: EMPTY_SELECTION,
@@ -335,13 +348,20 @@ export const useUiStore = create<UiState>()((set, get) => {
       patchSession({ target, candidateEdgeId: null });
     },
     setAddingBranch: (addingBranch) => {
-      patchSession({ addingBranch });
+      patchSession({ addingBranch, branchCheck: 0 });
     },
     setInvalid: (invalid) => {
       patchSession({ invalid });
     },
     setCandidate: (candidateEdgeId) => {
       patchSession({ candidateEdgeId });
+    },
+    setConfirmingCancel: (confirmingCancel) => {
+      patchSession({ confirmingCancel });
+    },
+    checkBranch: () => {
+      const session = get().flowSession;
+      if (session) patchSession({ branchCheck: session.branchCheck + 1 });
     },
     endSession: () => {
       set({ flowSession: null, hoverEdgeId: null, focusedEdgeId: null });

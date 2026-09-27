@@ -5,6 +5,8 @@ import type { SododeckFile } from '@sododeck/schema';
 import { useId, useRef } from 'react';
 
 import { useUiStore, type LeftTab } from '../state/ui-store';
+import { FlowList } from './flows/flow-list';
+import { FlowPanel } from './flows/flow-panel';
 import { OutlineTree } from './outline-tree';
 import { Palette } from './palette';
 
@@ -13,8 +15,25 @@ const TABS: readonly { id: LeftTab; label: string }[] = [
   { id: 'palette', label: 'Palette' },
 ];
 
-/** Left panel: Outline and Palette tabs (design 02/14). */
+/**
+ * Left panel: Outline and Palette tabs and the features with their flows (designs 02, 03, 47);
+ * a shown or recorded flow replaces it with its steps (designs 41–46).
+ */
 export function LeftSidebar({ deck }: { deck: SododeckFile }) {
+  const inFlow = useUiStore((s) => s.flowSession !== null || s.activeFlow !== null);
+  if (inFlow) {
+    return (
+      <Panel aria-label="Flow">
+        <PanelContent className="px-1">
+          <FlowPanel deck={deck} />
+        </PanelContent>
+      </Panel>
+    );
+  }
+  return <DiagramSidebar deck={deck} />;
+}
+
+function DiagramSidebar({ deck }: { deck: SododeckFile }) {
   const leftTab = useUiStore((s) => s.leftTab);
   const setLeftTab = useUiStore((s) => s.setLeftTab);
   const baseId = useId();
@@ -78,8 +97,8 @@ export function LeftSidebar({ deck }: { deck: SododeckFile }) {
             <Palette />
           </PanelSection>
         )}
-        <PanelSection label="Features">
-          <p className="text-caption text-ink-muted">Flows and features arrive in Milestone 2.</p>
+        <PanelSection label="Features" aria-label="Features">
+          <FlowList deck={deck} />
         </PanelSection>
       </PanelContent>
     </Panel>

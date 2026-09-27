@@ -68,6 +68,19 @@ export function canvasElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${CANVAS_ATTR}]`);
 }
 
+/** Measures the edge's label point (deck-edge.tsx), else the canvas centre. */
+export function anchorRect(edgeId: string): DOMRect {
+  const anchor = document.querySelector(`[data-edge-anchor="${CSS.escape(edgeId)}"]`);
+  if (anchor) return anchor.getBoundingClientRect();
+  const canvas = canvasElement()?.getBoundingClientRect();
+  return new DOMRect(
+    (canvas?.left ?? 0) + (canvas?.width ?? 0) / 2,
+    (canvas?.top ?? 0) + (canvas?.height ?? 0) / 2,
+    0,
+    0,
+  );
+}
+
 /** The focusable element of a component on the canvas, if it is rendered. */
 export function nodeElement(id: string): HTMLElement | null {
   return canvasElement()?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(id)}"]`) ?? null;

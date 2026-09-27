@@ -3,7 +3,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Ban, Plus, Table } from 'lucide-react';
+import { Ban, CornerDownRight, Plus, Table } from 'lucide-react';
 import { memo, useEffect } from 'react';
 
 import { useEditor } from '../model/use-editor';
@@ -61,6 +61,8 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
         selected && 'border-primary shadow-selection ring-1 ring-primary',
         target === 'ok' && 'outline-2 outline-offset-4 outline-primary outline-dashed',
         refusal && 'outline-2 outline-offset-4 outline-clay-ink outline-dashed',
+        // Where the next flow step must start (006 FR-009): a ring plus the tag text.
+        data.flowStart !== undefined && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
       )}
     >
       <KindTile kind={data.kind} size={30} decorative />
@@ -120,6 +122,15 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
           className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full bg-primary text-on-primary shadow-rest"
         >
           <Plus strokeWidth={2} className="size-3.5" />
+        </span>
+      )}
+      {data.flowStart !== undefined && (
+        <span
+          role="note"
+          className="pointer-events-none absolute top-full left-1/2 z-10 mt-2 flex w-max -translate-x-1/2 items-center gap-1 rounded-full bg-inverse px-2 py-0.5 text-caption text-on-inverse shadow-rest"
+        >
+          <CornerDownRight aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+          {data.flowStart}
         </span>
       )}
       {refusal && (

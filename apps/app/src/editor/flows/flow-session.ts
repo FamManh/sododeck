@@ -181,6 +181,14 @@ export function cancel(editor: DeckEditor): void {
   ui().announce('Editing cancelled');
 }
 
+/** Cancel / Esc: asks first when something would be lost, else cancels at once (FR-013). */
+export function requestCancel(editor: DeckEditor): void {
+  const session = ui().flowSession;
+  if (session === null) return;
+  if (cancelNeedsConfirm(readDeck(editor.doc), session)) ui().setConfirmingCancel(true);
+  else cancel(editor);
+}
+
 /** Why a branch cannot start after `stepId` (FR-029, edge case "A second branch point"). */
 export function branchRefusal(analysis: FlowAnalysis, stepId: string): string | null {
   const step = analysis.byStepId.get(stepId);
