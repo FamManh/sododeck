@@ -19,22 +19,34 @@ describe('ui store', () => {
 
   it('selects, toggles and clears nodes and edges', () => {
     state().select({ nodes: ['a'] });
-    expect(state().selection).toEqual({ nodes: ['a'], edges: [] });
+    expect(state().selection).toEqual({ nodes: ['a'], edges: [], stickies: [] });
     state().toggle('b', 'node');
     state().toggle('e1', 'edge');
-    expect(state().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'] });
+    expect(state().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'], stickies: [] });
     state().toggle('a', 'node');
-    expect(state().selection).toEqual({ nodes: ['b'], edges: ['e1'] });
+    expect(state().selection).toEqual({ nodes: ['b'], edges: ['e1'], stickies: [] });
     state().clearSelection();
-    expect(state().selection).toEqual({ nodes: [], edges: [] });
+    expect(state().selection).toEqual({ nodes: [], edges: [], stickies: [] });
   });
 
   it('prunes ids that no longer exist, and keeps the same object when nothing is pruned', () => {
-    state().select({ nodes: ['a', 'gone'], edges: ['e1'] });
-    state().pruneSelection({ nodes: new Set(['a']), edges: new Set(['e1']) });
-    expect(state().selection).toEqual({ nodes: ['a'], edges: ['e1'] });
+    state().select({ nodes: ['a', 'gone'], edges: ['e1'], stickies: ['st1', 'gone-sticky'] });
+    state().setStickyEditing('gone-sticky');
+    state().setStickyDraft('gone-sticky');
+    state().pruneSelection({
+      nodes: new Set(['a']),
+      edges: new Set(['e1']),
+      stickies: new Set(['st1']),
+    });
+    expect(state().selection).toEqual({ nodes: ['a'], edges: ['e1'], stickies: ['st1'] });
+    expect(state().stickyEditing).toBeNull();
+    expect(state().stickyDraft).toBeNull();
     const kept = state().selection;
-    state().pruneSelection({ nodes: new Set(['a']), edges: new Set(['e1']) });
+    state().pruneSelection({
+      nodes: new Set(['a']),
+      edges: new Set(['e1']),
+      stickies: new Set(['st1']),
+    });
     expect(state().selection).toBe(kept);
   });
 
@@ -42,13 +54,30 @@ describe('ui store', () => {
     state().focus('a');
     state().focusEdge('e1');
     state().openEdgePopover('e1');
-    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    state().pruneSelection({ nodes: new Set(), edges: new Set(), stickies: new Set() });
     expect(state().focusedId).toBeNull();
     expect(state().focusedEdgeId).toBeNull();
     expect(state().popover).toBeNull();
     state().openConnectPopover('a');
-    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    state().pruneSelection({ nodes: new Set(), edges: new Set(), stickies: new Set() });
     expect(state().popover).toBeNull();
+  });
+
+  it('tracks sticky editing, drafts and the last canvas pointer', () => {
+    state().setStickyEditing('st1');
+    state().setStickyDraft('st2');
+    state().setCanvasPointer({ x: 10, y: 20 });
+    expect(state().stickyEditing).toBe('st1');
+    expect(state().stickyDraft).toBe('st2');
+    expect(state().canvasPointer).toEqual({ x: 10, y: 20 });
+  });
+
+  it('opens and closes the palette with its return focus element', () => {
+    const button = document.createElement('button');
+    state().openPalette(button);
+    expect(state().palette).toEqual({ open: true, returnFocus: button });
+    state().closePalette();
+    expect(state().palette).toEqual({ open: false, returnFocus: null });
   });
 
   it('tracks focus', () => {
@@ -141,7 +170,7 @@ describe('ui store', () => {
     state().setJsonTab('selection');
     state().clearSelection();
     state().toggle('b', 'node');
-    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    state().pruneSelection({ nodes: new Set(), edges: new Set(), stickies: new Set() });
     expect(state().jsonPanel.tab).toBe('selection');
   });
 
@@ -154,7 +183,7 @@ describe('ui store', () => {
     it('shows a flow, a step or a branch, and clears the canvas selection', () => {
       state().select({ nodes: ['a'], edges: ['e'] });
       state().setActiveFlow('f');
-      expect(state().selection).toEqual({ nodes: [], edges: [] });
+      expect(state().selection).toEqual({ nodes: [], edges: [], stickies: [] });
       expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: null });
       state().setActiveStep('s1');
       expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: 's1', branchId: null });
@@ -236,7 +265,7 @@ describe('ui store', () => {
         playing: false,
         speed: 1,
       });
-      expect(state().selection).toEqual({ nodes: [], edges: [] });
+      expect(state().selection).toEqual({ nodes: [], edges: [], stickies: [] });
       expect(state().focusedEdgeId).toBeNull();
       expect(state().popover).toBeNull();
       expect(isFlowMode(state())).toBe(true);
@@ -344,7 +373,7 @@ describe('ui store', () => {
     state().setLabelsOn(true);
     state().resetForDeck();
     expect(state()).toMatchObject({
-      selection: { nodes: [], edges: [] },
+      selection: { nodes: [], edges: [], stickies: [] },
       focusedId: null,
       popover: null,
       pendingDelete: null,
@@ -353,6 +382,10 @@ describe('ui store', () => {
       hoverEdgeId: null,
       flowFilter: '',
       labelsOn: true,
+      stickyEditing: null,
+      stickyDraft: null,
+      canvasPointer: null,
+      palette: { open: false, returnFocus: null },
     });
   });
 });

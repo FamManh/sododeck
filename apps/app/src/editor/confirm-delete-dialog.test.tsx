@@ -61,7 +61,7 @@ describe('ConfirmDeleteDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(toJSON(doc).nodes.map((n) => n.id)).toEqual(['db', 'web']);
     expect(toJSON(doc).edges).toEqual([]);
-    expect(useUiStore.getState().selection).toEqual({ nodes: [], edges: [] });
+    expect(useUiStore.getState().selection).toEqual({ nodes: [], edges: [], stickies: [] });
     expect(screen.getByText(/Deleted Order Service and 2 connections/)).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toMatch(/^Deleted Order Service/);
 

@@ -29,7 +29,7 @@ describe('Palette', () => {
     expect(node).toMatchObject({ type: 'service', title: 'New service' });
     expect(Number.isInteger(node?.position?.x)).toBe(true);
     const ui = useUiStore.getState();
-    expect(ui.selection).toEqual({ nodes: [node?.id], edges: [] });
+    expect(ui.selection).toEqual({ nodes: [node?.id], edges: [], stickies: [] });
     expect(ui.focusedId).toBe(node?.id);
     expect(ui.announcement.text).toBe('Added New service');
 

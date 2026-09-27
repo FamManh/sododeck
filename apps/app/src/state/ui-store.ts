@@ -1,4 +1,5 @@
 import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
+import type { Id } from '@sododeck/schema';
 import { create } from 'zustand';
 
 import {
@@ -14,8 +15,9 @@ import {
  * are pruned when the objects disappear.
  */
 export interface Selection {
-  readonly nodes: readonly string[];
-  readonly edges: readonly string[];
+  readonly nodes: readonly Id[];
+  readonly edges: readonly Id[];
+  readonly stickies: readonly Id[];
 }
 
 export type Popover = { kind: 'edge'; edgeId: string } | { kind: 'connect'; fromId: string } | null;
@@ -120,6 +122,10 @@ export interface PendingDelete {
 
 export interface UiState {
   selection: Selection;
+  stickyEditing: Id | null;
+  stickyDraft: Id | null;
+  canvasPointer: { x: number; y: number } | null;
+  palette: { open: boolean; returnFocus: HTMLElement | null };
   /** Roving-tabindex target on the canvas (US6). */
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
@@ -148,10 +154,19 @@ export interface UiState {
   ruleTest: RuleTest | null;
 
   select: (selection: Partial<Selection>) => void;
-  toggle: (id: string, type: 'node' | 'edge') => void;
+  toggle: (id: Id, type: 'node' | 'edge' | 'sticky') => void;
   clearSelection: () => void;
   /** Drops every id that is not in the deck any more (after any document change). */
-  pruneSelection: (existing: { nodes: ReadonlySet<string>; edges: ReadonlySet<string> }) => void;
+  pruneSelection: (existing: {
+    nodes: ReadonlySet<Id>;
+    edges: ReadonlySet<Id>;
+    stickies: ReadonlySet<Id>;
+  }) => void;
+  setStickyEditing: (id: Id | null) => void;
+  setStickyDraft: (id: Id | null) => void;
+  setCanvasPointer: (point: { x: number; y: number } | null) => void;
+  openPalette: (returnFocus?: HTMLElement | null) => void;
+  closePalette: () => void;
   focus: (id: string | null) => void;
   focusEdge: (id: string | null) => void;
   setLeftTab: (tab: LeftTab) => void;
@@ -161,7 +176,7 @@ export interface UiState {
   openConnectPopover: (fromId: string) => void;
   closePopover: () => void;
   /** Opens the confirmation for a canvas selection (components first, then connections). */
-  requestDelete: (selection: Selection) => void;
+  requestDelete: (selection: Partial<Selection>) => void;
   /** Opens the confirmation for any removal targets (features, flows, branches…). */
   requestRemoval: (targets: readonly RemovalTarget[]) => void;
   cancelDelete: () => void;
@@ -219,7 +234,7 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
   return state.activeFlow !== null && state.flowSession === null;
 }
 
-export const EMPTY_SELECTION: Selection = { nodes: [], edges: [] };
+export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], stickies: [] };
 
 const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
 
@@ -241,13 +256,14 @@ function writeLabelsOn(on: boolean): void {
   }
 }
 
-const without = (ids: readonly string[], id: string) => ids.filter((x) => x !== id);
+const without = <T extends string>(ids: readonly T[], id: T) => ids.filter((x) => x !== id);
 
 /** Components first, then connections: the order the confirmation and the delete both use. */
-export function selectionTargets(selection: Selection): RemovalTarget[] {
+export function selectionTargets(selection: Partial<Selection>): RemovalTarget[] {
   return [
-    ...selection.nodes.map((id): RemovalTarget => ({ scope: 'nodes', id })),
-    ...selection.edges.map((id): RemovalTarget => ({ scope: 'edges', id })),
+    ...(selection.nodes ?? []).map((id): RemovalTarget => ({ scope: 'nodes', id })),
+    ...(selection.edges ?? []).map((id): RemovalTarget => ({ scope: 'edges', id })),
+    ...(selection.stickies ?? []).map((id): RemovalTarget => ({ scope: 'stickies', id })),
   ];
 }
 
@@ -270,6 +286,10 @@ export const useUiStore = create<UiState>()((set, get) => {
   };
   return {
     selection: EMPTY_SELECTION,
+    stickyEditing: null,
+    stickyDraft: null,
+    canvasPointer: null,
+    palette: { open: false, returnFocus: null },
     focusedId: null,
     focusedEdgeId: null,
     leftTab: 'outline',
@@ -288,10 +308,10 @@ export const useUiStore = create<UiState>()((set, get) => {
     canvasViewport: null,
     ruleTest: null,
 
-    select: ({ nodes = [], edges = [] }) => {
-      const empty = nodes.length === 0 && edges.length === 0;
+    select: ({ nodes = [], edges = [], stickies = [] }) => {
+      const empty = nodes.length === 0 && edges.length === 0 && stickies.length === 0;
       set({
-        selection: empty ? EMPTY_SELECTION : { nodes, edges },
+        selection: empty ? EMPTY_SELECTION : { nodes, edges, stickies },
         descriptionMode: NO_MODES,
         // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
         ...(empty || get().flowSession !== null ? {} : { activeFlow: null }),
@@ -299,7 +319,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     toggle: (id, type) => {
       set(({ selection }) => {
-        const key = type === 'node' ? 'nodes' : 'edges';
+        const key = type === 'node' ? 'nodes' : type === 'edge' ? 'edges' : 'stickies';
         const list = selection[key];
         return {
           selection: {
@@ -317,21 +337,42 @@ export const useUiStore = create<UiState>()((set, get) => {
       set((state) => {
         const nodes = state.selection.nodes.filter((id) => existing.nodes.has(id));
         const edges = state.selection.edges.filter((id) => existing.edges.has(id));
+        const stickies = state.selection.stickies.filter((id) => existing.stickies.has(id));
         const selectionChanged =
           nodes.length !== state.selection.nodes.length ||
-          edges.length !== state.selection.edges.length;
+          edges.length !== state.selection.edges.length ||
+          stickies.length !== state.selection.stickies.length;
         const popoverGone =
           (state.popover?.kind === 'edge' && !existing.edges.has(state.popover.edgeId)) ||
           (state.popover?.kind === 'connect' && !existing.nodes.has(state.popover.fromId));
         const patch: Partial<UiState> = {};
-        if (selectionChanged) patch.selection = { nodes, edges };
+        if (selectionChanged) patch.selection = { nodes, edges, stickies };
         if (state.focusedId !== null && !existing.nodes.has(state.focusedId))
           patch.focusedId = null;
         if (state.focusedEdgeId !== null && !existing.edges.has(state.focusedEdgeId))
           patch.focusedEdgeId = null;
         if (popoverGone) patch.popover = null;
+        if (state.stickyEditing !== null && !existing.stickies.has(state.stickyEditing))
+          patch.stickyEditing = null;
+        if (state.stickyDraft !== null && !existing.stickies.has(state.stickyDraft))
+          patch.stickyDraft = null;
         return patch;
       });
+    },
+    setStickyEditing: (stickyEditing) => {
+      set({ stickyEditing });
+    },
+    setStickyDraft: (stickyDraft) => {
+      set({ stickyDraft });
+    },
+    setCanvasPointer: (canvasPointer) => {
+      set({ canvasPointer });
+    },
+    openPalette: (returnFocus = null) => {
+      set({ palette: { open: true, returnFocus } });
+    },
+    closePalette: () => {
+      set({ palette: { open: false, returnFocus: null } });
     },
     focus: (id) => {
       set({ focusedId: id, focusedEdgeId: null });
@@ -377,6 +418,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         activeFlow: openedFlow(flowId, stepId, alternativeId),
         lastPlayedFlowId: null,
         selection: EMPTY_SELECTION,
+        stickyEditing: null,
+        stickyDraft: null,
         focusedEdgeId: null,
         popover: null,
         descriptionMode: NO_MODES,
@@ -433,6 +476,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         activeFlow: null,
         selection: EMPTY_SELECTION,
+        stickyEditing: null,
+        stickyDraft: null,
         popover: null,
         hoverEdgeId: null,
       });
@@ -455,6 +500,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         activeFlow: openedFlow(flowId),
         selection: EMPTY_SELECTION,
+        stickyEditing: null,
+        stickyDraft: null,
         popover: null,
         hoverEdgeId: null,
       });
@@ -534,6 +581,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     resetForDeck: () => {
       set({
         selection: EMPTY_SELECTION,
+        stickyEditing: null,
+        stickyDraft: null,
         focusedId: null,
         focusedEdgeId: null,
         outlineCollapsed: new Set(),
@@ -547,6 +596,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         descriptionMode: NO_MODES,
         canvasViewport: null,
         ruleTest: null,
+        canvasPointer: null,
+        palette: { open: false, returnFocus: null },
       });
     },
   };

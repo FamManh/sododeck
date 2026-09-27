@@ -68,6 +68,7 @@ function useSelectionSync(): void {
           ui.pruneSelection({
             nodes: new Set(deck.nodes.map((n) => n.id)),
             edges: new Set(deck.edges.map((e) => e.id)),
+            stickies: new Set(deck.stickies.map((s) => s.id)),
           });
         }
         // Restored objects may be off-screen: select them so the user can find them.

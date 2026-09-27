@@ -120,7 +120,7 @@ describe('Canvas', () => {
     act(() => {
       editor().remove('nodes', 'a');
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: ['e3'] });
+    expect(ui().selection).toEqual({ nodes: [], edges: ['e3'], stickies: [] });
     expect(ui().popover).toBeNull();
   });
 
@@ -132,7 +132,7 @@ describe('Canvas', () => {
     act(() => {
       editor().undo();
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1', 'e2'] });
+    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1', 'e2'], stickies: [] });
 
     let id = '';
     act(() => {
@@ -187,21 +187,21 @@ describe('canvas handlers', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a'], edges: [] });
+    expect(ui().selection).toEqual({ nodes: ['a'], edges: [], stickies: [] });
     expect(ui().focusedId).toBe('a');
     act(() => {
       h().onNodeClick(click({ shiftKey: true }), flowNode('b'));
       h().onEdgeClick(click({ metaKey: true }), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'] });
+    expect(ui().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'], stickies: [] });
     act(() => {
       h().onNodeClick(click({ ctrlKey: true }), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'] });
+    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'], stickies: [] });
     act(() => {
       h().onPaneClick();
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [] });
   });
 
   it('takes the marquee selection from React Flow, ignoring group boundaries', () => {
@@ -216,7 +216,7 @@ describe('canvas handlers', () => {
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
       h().onSelectionEnd();
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'c'], edges: ['e1'] });
+    expect(ui().selection).toEqual({ nodes: ['a', 'c'], edges: ['e1'], stickies: [] });
     // Outside a marquee, React Flow's own selection changes are ignored.
     act(() => {
       h().onNodesChange([{ type: 'select', id: 'b', selected: true }]);
@@ -348,7 +348,7 @@ describe('canvas during a flow session (006 FR-017)', () => {
       h().onNodeClick(click(), flowNode('a'));
       h().onEdgeMouseEnter(click(), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [] });
     expect(ui().hoverEdgeId).toBe('e1');
     act(() => {
       h().onEdgeClick(click(), flowEdge('e1'));
@@ -443,7 +443,7 @@ describe('canvas in flow mode (007)', () => {
       h().onNodeClick(click(), flowNode('c'));
     });
     expect(ui().activeFlow?.stepId).toBe('o2');
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [] });
   });
 
   it('cycles through the steps of an edge used twice, wrapping around', () => {
@@ -469,7 +469,7 @@ describe('canvas in flow mode (007)', () => {
       h().onPaneClick();
     });
     expect(ui().activeFlow).toMatchObject({ flowId: 'order', stepId: 'o3' });
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [] });
     expect(ui().announcement.seq).toBe(seq);
   });
 

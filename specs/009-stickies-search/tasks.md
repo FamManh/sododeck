@@ -38,9 +38,9 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `009-stickies-search` from the latest `main` (008 merged, `324d1bd` or later). Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T001 Create branch `009-stickies-search` from the latest `main` (008 merged, `324d1bd` or later). Run `pnpm install && pnpm test` to confirm a green start.
 - [ ] T002 [P] Record the baseline with `BENCH_STICKIES=0 pnpm bench` on `main` and save the pan, zoom and drag numbers at 500 nodes / 1,000 edges in `specs/009-stickies-search/bench-before.md`. `BENCH_STICKIES` is ignored until T020 lands; the numbers are the baseline.
-- [ ] T003 [P] Write the ADR `docs/decisions/0010-sticky-notes.md` in the 0008 header format. It covers:
+- [x] T003 [P] Write the ADR `docs/decisions/0010-sticky-notes.md` in the 0008 header format. It covers:
   - the optional `collapsed` and `showInFlows` fields, and why they are document data (§g-21, research R1)
   - writing `true` or removing the key
   - `position` as the offset when pinned, and `STICKY_DEFAULT_OFFSET`
@@ -55,7 +55,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Schema (`packages/schema`)
 
-- [ ] T004 Add `collapsed` and `showInFlows` to `Sticky` in `packages/schema/schema/v1.json`, following `packages/schema/CLAUDE.md` "Editing v1.json" (contracts/model-additions.md "Schema"):
+- [x] T004 Add `collapsed` and `showInFlows` to `Sticky` in `packages/schema/schema/v1.json`, following `packages/schema/CLAUDE.md` "Editing v1.json" (contracts/model-additions.md "Schema"):
   - booleans with descriptions, no `default`, appended after `position`
   - run `pnpm schema:generate` to update `src/generated/types.ts` and `src/generated/zod.ts`
   - extend `examples/full.sododeck.json` with one sticky that has `"collapsed": true` and one that has `"showInFlows": true`
@@ -64,17 +64,17 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Model (`packages/model`)
 
-- [ ] T005 [P] Write `packages/model/test/geometry.test.ts`. It must fail at first, and it covers (research R2, R3):
+- [x] T005 [P] Write `packages/model/test/geometry.test.ts`. It must fail at first, and it covers (research R2, R3):
   - `nodeCanvasPosition` for a positioned node, an unpositioned node (the grid slot by index, matching today's app `displayPosition`), and an unknown id (`null`)
   - `stickyCanvasPosition` for each status: free; pinned with an offset; pinned without a position (`STICKY_DEFAULT_OFFSET`); foreign (anchor = an edge id, then a step id); missing (anchor names nothing)
   - `stickyLabel`: the first non-empty line, markdown markers removed, case kept, and `null` for blank text
-- [ ] T006 Implement `packages/model/src/geometry.ts` (`Point`, `NODE_GRID`, `STICKY_DEFAULT_OFFSET = { x: 24, y: -96 }`, `nodeCanvasPosition`, `stickyCanvasPosition`, `stickyLabel`) and export it from `packages/model/src/index.ts`. `NODE_GRID` must equal the values of the `GRID` constant in `apps/app/src/editor/canvas-geometry.ts`. Make T005 pass.
-- [ ] T007 Add round-trip cases to `packages/model/test/round-trip.test.ts`: stickies with every combination of free and pinned, with and without position, `collapsed` true, false and absent, and `showInFlows` true, false and absent. Include a key-order check for the new fields. Confirm they pass once T004 is in.
+- [x] T006 Implement `packages/model/src/geometry.ts` (`Point`, `NODE_GRID`, `STICKY_DEFAULT_OFFSET = { x: 24, y: -96 }`, `nodeCanvasPosition`, `stickyCanvasPosition`, `stickyLabel`) and export it from `packages/model/src/index.ts`. `NODE_GRID` must equal the values of the `GRID` constant in `apps/app/src/editor/canvas-geometry.ts`. Make T005 pass.
+- [x] T007 Add round-trip cases to `packages/model/test/round-trip.test.ts`: stickies with every combination of free and pinned, with and without position, `collapsed` true, false and absent, and `showInFlows` true, false and absent. Include a key-order check for the new fields. Confirm they pass once T004 is in.
 
 ### App foundation (`apps/app`)
 
-- [ ] T008 Switch `displayPosition` in `apps/app/src/editor/canvas-geometry.ts` to call `nodeCanvasPosition`, or to share `NODE_GRID` from `@sododeck/model`, so the grid rule lives only in the model. The existing `canvas-geometry.test.ts` and `deck-to-flow.test.ts` must stay green unchanged.
-- [ ] T009 Extend `Selection` in `apps/app/src/state/ui-store.ts` with `stickies: Id[]`, and add the UI state from data-model.md: `stickyEditing`, `stickyDraft`, `canvasPointer`, `palette { open, returnFocus }`.
+- [x] T008 Switch `displayPosition` in `apps/app/src/editor/canvas-geometry.ts` to call `nodeCanvasPosition`, or to share `NODE_GRID` from `@sododeck/model`, so the grid rule lives only in the model. The existing `canvas-geometry.test.ts` and `deck-to-flow.test.ts` must stay green unchanged.
+- [x] T009 Extend `Selection` in `apps/app/src/state/ui-store.ts` with `stickies: Id[]`, and add the UI state from data-model.md: `stickyEditing`, `stickyDraft`, `canvasPointer`, `palette { open, returnFocus }`.
   - Update `select`, `pruneSelection` (drop sticky ids that are gone), `resetForDeck` and every `Selection` literal in the app. `setActiveFlow` still clears the selection.
   - Add store tests in `apps/app/src/state/ui-store.test.ts`: pruning of removed stickies, reset, and the palette open/close state.
 
@@ -90,7 +90,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Model
 
-- [ ] T010 [P] [US1] Write `packages/model/test/stickies.test.ts`. It must fail at first, and it covers (contracts "Editor ops", research R3, R5):
+- [x] T010 [P] [US1] Write `packages/model/test/stickies.test.ts`. It must fail at first, and it covers (contracts "Editor ops", research R3, R5):
   - `beginStickyDraft` adds the note, and text updates during the draft merge into one step. `endStickyDraft` returns `'kept'` and leaves one undo step, which removes the note on undo.
   - Blank text: `endStickyDraft` returns `'discarded'`, the note is gone, and `canUndo()`/`canRedo()` are the same as before the draft. History listeners are notified.
   - A second `beginStickyDraft` while one is open throws. `endStickyDraft` on a note removed by a remote tab returns `'discarded'`.
@@ -98,7 +98,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - `moveSticky` writes an offset when pinned and an absolute point otherwise.
   - The flags: `update('stickies', id, { collapsed: true })`, then `{ collapsed: null }`, removes the key.
   - Each op is one undo step. A remote-origin edit is observed as remote.
-- [ ] T011 [US1] Implement `packages/model/src/ops/stickies.ts` (`beginStickyDraft`, `endStickyDraft`, `pinSticky`, `unpinSticky`, `moveSticky`) and wire them into `DeckEditor` in `packages/model/src/editor.ts`.
+- [x] T011 [US1] Implement `packages/model/src/ops/stickies.ts` (`beginStickyDraft`, `endStickyDraft`, `pinSticky`, `unpinSticky`, `moveSticky`) and wire them into `DeckEditor` in `packages/model/src/editor.ts`.
   - The draft uses the gesture machinery. On discard, remove the note, end the gesture, then pop the draft's stack item from the `Y.UndoManager` undo stack, only if its origin is this editor **and it is still the top item**. If another local step was recorded after the draft started, remove the note as a normal step instead of popping. Notify `onHistoryChange` listeners.
   - Add this case to T010's test file: another edit recorded during the draft, then discard, leaves the other edit undoable and the note removed.
   - Export the ops from `packages/model/src/index.ts`. Make T010 pass.
