@@ -117,3 +117,55 @@ describe('describeRemoval', () => {
     expect(d.body).toBe('Also removes 1 connection. You can undo this.');
   });
 });
+
+describe('describeRemoval for a rule (008 FR-024)', () => {
+  const ruleDeck = deckOf({
+    nodes: [
+      { id: 'p', type: 'service', title: 'Pricing', rules: ['R'] },
+      { id: 'q', type: 'service', title: 'Quote' },
+    ],
+    edges: [{ id: 'pq', from: 'p', to: 'q' }],
+    flows: [
+      {
+        id: 'f',
+        title: 'Place order',
+        steps: [
+          { id: 's1', edge: 'pq', rules: ['R'], ruleInputs: { R: { c: '5' } } },
+          { id: 's2', edge: 'pq', rules: ['R'] },
+        ],
+      },
+    ],
+    rules: {
+      R: {
+        title: 'Delivery tier',
+        hitPolicy: 'first',
+        inputs: [{ id: 'c', label: 'C' }],
+        outputs: [],
+        rows: [],
+      },
+      U: { title: 'Unused', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
+    },
+  });
+  const run = (id: string) => {
+    const targets: RemovalTarget[] = [{ scope: 'rules', id }];
+    const result = previewRemoval(ruleDeck, targets);
+    return {
+      ...describeRemoval(ruleDeck, targets, result),
+      toast: removalToast(ruleDeck, targets, result, true),
+      toastPc: removalToast(ruleDeck, targets, result, false),
+    };
+  };
+
+  it('names the rule and its usage', () => {
+    expect(run('R')).toEqual({
+      title: 'Delete rule “Delivery tier”?',
+      body: 'Used in 2 steps and 1 component. It will be detached from them.',
+      toast: 'Rule “Delivery tier” deleted · ⌘Z to undo',
+      toastPc: 'Rule “Delivery tier” deleted · Ctrl+Z to undo',
+    });
+  });
+
+  it('says when the rule is not used', () => {
+    expect(run('U').body).toBe('It isn’t used anywhere.');
+  });
+});

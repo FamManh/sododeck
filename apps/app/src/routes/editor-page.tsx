@@ -2,7 +2,7 @@ import type { DeckDoc } from '@sododeck/model';
 import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLoaderData } from 'react-router';
+import { useLoaderData, useNavigate, useOutlet } from 'react-router';
 
 import { Announcer } from '../editor/announcer';
 import { Canvas } from '../editor/canvas';
@@ -29,26 +29,56 @@ import { useSaveStatusStore } from '../storage/save-status';
 import type { DeckLoaderData } from './deck-loader';
 import { DeckNotFoundPage } from './deck-not-found-page';
 
-function EditorLayout() {
+/**
+ * The canvas screen (the deck route's default): left panel, canvas + JSON panel, inspector.
+ * Flow keys (006) belong to this screen only.
+ */
+export function CanvasScreen() {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
-  useEditorShortcuts();
+  const navigate = useNavigate();
   useFlowShortcuts();
+
+  return (
+    <div className="grid min-h-0 grid-cols-[264px_minmax(0,1fr)_336px] gap-px bg-hairline">
+      <LeftSidebar deck={deck} />
+      <main className="flex min-h-0 flex-col bg-canvas">
+        <div className="min-h-0 flex-1">
+          <Canvas />
+        </div>
+        <JsonPanel />
+      </main>
+      <Inspector
+        deck={deck}
+        onOpenRules={() => {
+          void navigate('rules');
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * What both screens share (research R8): the top bar, the delete confirmation, the live region,
+ * document-wide keys and flow sync. The child route (the rule editor) renders below the top bar;
+ * without one, the canvas screen does.
+ */
+function EditorChrome() {
+  const editor = useEditor();
+  const deck = useDeckSnapshot(editor.doc);
+  const outlet = useOutlet();
+  const screen = outlet === null ? 'canvas' : 'rules';
+  useEditorShortcuts({ canvas: screen === 'canvas' });
   useFlowSync();
 
   return (
     <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)] bg-app">
-      <TopBar deckName={deck.name ?? 'Untitled deck'} />
-      <div className="grid min-h-0 grid-cols-[264px_minmax(0,1fr)_336px] gap-px bg-hairline">
-        <LeftSidebar deck={deck} />
-        <main className="flex min-h-0 flex-col bg-canvas">
-          <div className="min-h-0 flex-1">
-            <Canvas />
-          </div>
-          <JsonPanel />
-        </main>
-        <Inspector deck={deck} />
-      </div>
+      <TopBar
+        deckName={deck.name ?? 'Untitled deck'}
+        screen={screen}
+        rulesCount={Object.keys(deck.rules).length}
+      />
+      {outlet ?? <CanvasScreen />}
       <ConfirmDeleteDialog deck={deck} />
       <Announcer />
     </div>
@@ -118,7 +148,7 @@ function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-foun
       <EditorProvider doc={doc}>
         <ToastProvider>
           <ReactFlowProvider>
-            <EditorLayout />
+            <EditorChrome />
           </ReactFlowProvider>
           {data.kind === 'stored' && (
             <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
