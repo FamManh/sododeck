@@ -41,6 +41,13 @@ Dependency direction (never the reverse): `app → model → schema`, `app → u
 
 Single package: `pnpm --filter @sododeck/<name> <script>`.
 
+## Design
+
+- `DESIGN.md` defines tokens and components; `packages/ui` implements them.
+- `docs/design/` holds the Claude Design prototype: `claude-design/` (read-only originals, never copy its code), `screens/` (screenshot of every screen and state; match them pixel-close), `design-analysis.md` (inventory, token and schema mapping, gaps vs spec).
+- Where the prototype and `DESIGN.md` disagree (on-primary text, clay, success green, icons), `DESIGN.md` and `lucide-react` win.
+- `docs/backlog.md` lists the Spec Kit features (000–015) with dependencies, acceptance criteria and ready-to-paste `/speckit.specify` prompts.
+
 ## Architecture rules
 
 1. **The Yjs document is the single source of truth.** Canvas, JSON panel and inspector are views that read from it and write to it. No duplicated document state: not in Zustand, React state, React Flow state or Monaco models.
