@@ -1,12 +1,13 @@
 import { toJSON } from '@sododeck/model';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { Inspector } from './inspector';
+import { SaveContext } from './save-context';
 import { isTextTarget, useEditorShortcuts } from './use-canvas-shortcuts';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
@@ -223,5 +224,27 @@ describe('isTextTarget', () => {
     expect(isTextTarget(editable)).toBe(true);
     expect(isTextTarget(document.createElement('button'))).toBe(false);
     expect(isTextTarget(null)).toBe(false);
+  });
+
+  it('saves now on ⌘S / Ctrl+S, even in a text field, and blocks the browser dialog', () => {
+    const flush = vi.fn(() => Promise.resolve());
+    const env = editorWrapper(grid);
+    render(
+      <SaveContext value={{ mode: 'stored', flush, markExported: () => undefined }}>
+        <Editor />
+      </SaveContext>,
+      { wrapper: env.wrapper },
+    );
+    expect(fireEvent.keyDown(document.body, { key: 's', metaKey: true })).toBe(false);
+    expect(
+      fireEvent.keyDown(screen.getByRole('textbox', { name: 'Notes' }), {
+        key: 's',
+        ctrlKey: true,
+      }),
+    ).toBe(false);
+    expect(flush).toHaveBeenCalledTimes(2);
+    // Plain "s" is typing, not a save.
+    expect(fireEvent.keyDown(document.body, { key: 's' })).toBe(true);
+    expect(flush).toHaveBeenCalledTimes(2);
   });
 });

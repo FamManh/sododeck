@@ -1,23 +1,34 @@
-import { fromJSON, toJSON, type DeckDoc, type DeckEditor } from '@sododeck/model';
+import { fromJSON, serializeDeck, toJSON, type DeckEditor } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { TooltipProvider } from '@sododeck/ui/components/tooltip';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMemoryRouter, RouterProvider } from 'react-router';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as Y from 'yjs';
 
 import type * as EditorContextModule from '../model/editor-context';
 import { useUiStore } from '../state/ui-store';
+import * as download from '../storage/download';
+import {
+  createFolder,
+  insertDeck,
+  loadDeckLog,
+  softDeleteDeck,
+  type LibraryDb,
+} from '../storage/library-db';
+import { renameDeck } from '../library/library-actions';
+import { inProcessLibraryClient } from '../test/in-process-library-client';
+import { setLibraryDbForTests } from '../storage/library-db-instance';
 import { EditorProbe } from '../test/editor-probe';
+import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
+import { deckLoader } from './deck-loader';
 import { EditorPage } from './editor-page';
 
 // Monaco does not run in jsdom; the JSON panel has its own coverage.
 vi.mock('../editor/json-panel', () => ({ JsonPanel: () => null }));
 
-const opened = vi.hoisted(() => ({
-  doc: undefined as DeckDoc | undefined,
-  editor: undefined as DeckEditor | undefined,
-}));
+const opened = vi.hoisted(() => ({ editor: undefined as DeckEditor | undefined }));
 
 // The page's own editor (the one that owns the undo history), for the drag gesture.
 vi.mock('../model/editor-context', async (importOriginal) => {
@@ -35,27 +46,49 @@ vi.mock('../model/editor-context', async (importOriginal) => {
     ),
   };
 });
-vi.mock('../editor/open-deck', () => ({
-  openDeck: () => {
-    if (!opened.doc) throw new Error('no test doc');
-    return opened.doc;
-  },
-}));
 
-function openEditor(file: SododeckFile = { ...emptySododeckFile(), name: 'Untitled deck' }) {
-  opened.doc = fromJSON(file);
-  const doc = opened.doc;
+let db: LibraryDb;
+
+function renderAt(path: string) {
+  const router = createMemoryRouter(
+    [
+      { path: '/', element: <p>Library home</p> },
+      { path: '/deck/:deckId', loader: deckLoader, Component: EditorPage },
+    ],
+    { initialEntries: [path] },
+  );
   render(
     <TooltipProvider>
-      <MemoryRouter initialEntries={['/deck/new']}>
-        <Routes>
-          <Route path="/deck/:deckId" element={<EditorPage />} />
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </TooltipProvider>,
   );
-  return { doc, user: userEvent.setup() };
+  return router;
 }
+
+/** Stores `file` as deck `d1` and opens it in the editor. */
+async function openEditor(file: SododeckFile = { ...emptySododeckFile(), name: 'Untitled deck' }) {
+  await insertDeck(
+    db,
+    deckRecord('d1', { name: file.name ?? 'Untitled deck', updatedAt: 5 }),
+    Y.encodeStateAsUpdate(fromJSON(file)),
+  );
+  const router = renderAt('/deck/d1');
+  await screen.findByRole('navigation', { name: 'Breadcrumb' });
+  const doc = opened.editor?.doc;
+  if (!doc) throw new Error('editor not mounted');
+  return { doc, router, user: userEvent.setup() };
+}
+
+beforeEach(async () => {
+  db = await freshLibraryDb();
+  setLibraryDbForTests(db);
+  opened.editor = undefined;
+});
+
+afterEach(() => {
+  setLibraryDbForTests(undefined);
+  vi.restoreAllMocks();
+});
 
 const ui = () => useUiStore.getState();
 const announced = () => ui().announcement.text;
@@ -65,20 +98,22 @@ beforeEach(() => {
   useUiStore.getState().setLabelsOn(false);
 });
 
+const record = async () => db.decks.get('d1');
+
 describe('EditorPage', () => {
-  it('opens an empty deck with the empty-canvas card and the shell', () => {
-    openEditor();
+  it('opens an empty deck with the empty-canvas card and the shell', async () => {
+    await openEditor();
     expect(screen.getByRole('complementary', { name: 'Outline' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
       'Untitled deck',
     );
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('Saved in this browser')).toBeInTheDocument();
   });
 
   it('undoes and redoes every canvas edit one user action at a time (SC-004)', async () => {
-    const { doc, user } = openEditor();
+    const { doc, user } = await openEditor();
     const states = [toJSON(doc)];
     const record = () => states.push(toJSON(doc));
 
@@ -156,7 +191,7 @@ describe('EditorPage', () => {
   });
 
   it('completes add, connect, label, delete and undo with the keyboard only (SC-002)', async () => {
-    const { doc, user } = openEditor();
+    const { doc, user } = await openEditor();
     const titles = () => toJSON(doc).nodes.map((n) => n.title);
 
     // 1. To the palette, add Service and Database.
@@ -207,5 +242,123 @@ describe('EditorPage', () => {
     await user.keyboard('{Meta>}z{/Meta}');
     expect(toJSON(doc).edges).toMatchObject([{ label: 'reads' }]);
     expect(announced()).toBe('Undone');
+  });
+
+  it('creates "Untitled deck" on /deck/new in the given folder and replaces the URL', async () => {
+    const folder = await createFolder(db, 'Payments');
+    const router = renderAt(`/deck/new?folder=${folder.id}`);
+    await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    const decks = await db.decks.toArray();
+    expect(decks).toHaveLength(1);
+    expect(decks[0]).toMatchObject({ name: 'Untitled deck', folderId: folder.id });
+    expect(router.state.location.pathname).toBe(`/deck/${decks[0]?.id ?? ''}`);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Untitled deck',
+    );
+  });
+
+  it('renders "Deck not found" for an unknown id', async () => {
+    renderAt('/deck/nope');
+    expect(await screen.findByRole('heading', { name: 'Deck not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/');
+  });
+
+  it('keeps the demo deck in memory', async () => {
+    renderAt('/deck/demo');
+    expect(await screen.findByText('Demo · not saved')).toBeInTheDocument();
+    act(() => {
+      opened.editor?.add('nodes', { type: 'service', title: 'X' });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(await db.decks.count()).toBe(0);
+    expect(await db.updates.count()).toBe(0);
+  });
+
+  it('renders a stored deck, records the open and leaves the edit time alone', async () => {
+    const { doc } = await openEditor({
+      ...emptySododeckFile(),
+      name: 'Shop',
+      nodes: [{ id: 'a', type: 'service', title: 'Orders', position: { x: 0, y: 0 } }],
+    });
+    expect(toJSON(doc).nodes.map((n) => n.title)).toEqual(['Orders']);
+    expect(opened.editor?.canUndo()).toBe(false);
+    expect(screen.getByText('Stored in this browser')).toBeInTheDocument();
+    await waitFor(async () => {
+      expect((await record())?.openedAt).not.toBeNull();
+    });
+    expect((await record())?.updatedAt).toBe(5);
+  });
+
+  it('autosaves an edit and shows the status', async () => {
+    await openEditor();
+    act(() => {
+      opened.editor?.add('nodes', { type: 'service', title: 'Saved node' });
+    });
+    expect(screen.getByText('Saving…')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Saved in this browser', {}, { timeout: 2000 }),
+    ).toBeInTheDocument();
+    expect((await record())?.nodeCount).toBe(1);
+  });
+
+  it('saves at once on ⌘S without the browser dialog', async () => {
+    await openEditor();
+    act(() => {
+      opened.editor?.add('nodes', { type: 'service', title: 'Now' });
+    });
+    expect(fireEvent.keyDown(document.body, { key: 's', metaKey: true })).toBe(false);
+    await waitFor(async () => {
+      expect((await record())?.nodeCount).toBe(1);
+    });
+  });
+
+  it('exports <name>.sododeck.json from the top bar', async () => {
+    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const file = { ...emptySododeckFile(), name: 'Shop' };
+    const { user } = await openEditor(file);
+    await user.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Export' }));
+    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(file));
+    await waitFor(async () => {
+      expect((await record())?.exportedAt).not.toBeNull();
+    });
+  });
+
+  it('offers to keep a copy when another tab deletes the open deck', async () => {
+    const { user, router } = await openEditor({
+      ...emptySododeckFile(),
+      name: 'Shop',
+      nodes: [{ id: 'a', type: 'service', title: 'Orders' }],
+    });
+    act(() => {
+      opened.editor?.add('nodes', { id: 'b', type: 'database', title: 'Unsaved here' });
+    });
+    await act(async () => {
+      await softDeleteDeck(db, 'd1');
+    });
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'This deck was deleted in another tab',
+    });
+    expect(within(dialog).getByRole('button', { name: 'Back to library' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Keep a copy' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).not.toBe('/deck/d1');
+    });
+    const copyId = router.state.location.pathname.replace('/deck/', '');
+    const log = await loadDeckLog(db, copyId);
+    const copy = new Y.Doc();
+    for (const bytes of log?.bytes ?? []) Y.applyUpdate(copy, bytes);
+    expect(toJSON(copy).nodes.map((n) => n.title)).toEqual(['Orders', 'Unsaved here']);
+    expect(toJSON(copy).name).toBe('Shop');
+  });
+
+  it('shows a rename made in a library tab at once', async () => {
+    await openEditor({ ...emptySododeckFile(), name: 'Shop' });
+    await act(async () => {
+      await renameDeck({ db, client: inProcessLibraryClient() }, 'd1', 'Store');
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Store');
+    });
   });
 });

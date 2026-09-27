@@ -9,23 +9,15 @@ import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect } from 'react';
 
+import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { displayPosition, nearestInDirection, NODE_SIZE, type Direction } from './canvas-geometry';
 import { edgeName } from './deck-to-flow';
+import { useSaveControls } from './save-context';
 
-/** True when the key belongs to a text field (typing, native text undo). */
-export function isTextTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement ||
-    target.isContentEditable ||
-    target.closest('[contenteditable=""], [contenteditable="true"]') !== null
-  );
-}
+export { isTextTarget };
 
 function inDialog(target: EventTarget | null): boolean {
   return (
@@ -163,10 +155,19 @@ export function useCanvasKeyDown() {
 /** Document-wide editor keys. Install once per editor page. */
 export function useEditorShortcuts(): void {
   const editor = useEditor();
+  const { flush } = useSaveControls();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || isTextTarget(event.target) || inDialog(event.target)) return;
+      if (event.defaultPrevented) return;
+      // ⌘S / Ctrl+S saves now (a no-op when saved) and never opens the browser's save dialog,
+      // wherever focus is (FR-006).
+      if (isMod(event) && !event.altKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void flush();
+        return;
+      }
+      if (isTextTarget(event.target) || inDialog(event.target)) return;
       const ui = useUiStore.getState();
       const key = event.key.toLowerCase();
 
@@ -196,5 +197,5 @@ export function useEditorShortcuts(): void {
     return () => {
       document.removeEventListener('keydown', onKeyDown, { capture: true });
     };
-  }, [editor]);
+  }, [editor, flush]);
 }

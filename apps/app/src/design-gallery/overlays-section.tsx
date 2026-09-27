@@ -10,6 +10,25 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@sododeck/ui/components/dialog';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@sododeck/ui/components/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from '@sododeck/ui/components/dropdown-menu';
 import { Input } from '@sododeck/ui/components/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@sododeck/ui/components/popover';
 import {
@@ -20,7 +39,16 @@ import {
   SelectValue,
 } from '@sododeck/ui/components/select';
 import { Switch } from '@sododeck/ui/components/switch';
-import { Download, Shapes } from 'lucide-react';
+import {
+  Copy,
+  Download,
+  Ellipsis,
+  FolderInput,
+  Pencil,
+  Shapes,
+  SquareArrowOutUpRight,
+  Trash2,
+} from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { GallerySection } from './gallery-section';
@@ -35,6 +63,7 @@ const TOUR = [
 export function OverlaysSection() {
   const [step, setStep] = useState(0);
   const [touring, setTouring] = useState(false);
+  const [folder, setFolder] = useState('logistics');
   const notesId = useId();
   const current = TOUR[step] ?? TOUR[0];
 
@@ -103,6 +132,69 @@ export function OverlaysSection() {
             </label>
           </PopoverContent>
         </Popover>
+      </SampleRow>
+      <SampleRow label="dropdown menu">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="More actions for Logistics Delivery">
+              <Ellipsis />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem shortcut="↵">
+              <SquareArrowOutUpRight />
+              Open
+            </DropdownMenuItem>
+            <DropdownMenuItem shortcut="F2">
+              <Pencil />
+              Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem shortcut="⌘D">
+              <Copy />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <FolderInput />
+                Move to folder
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup value={folder} onValueChange={setFolder}>
+                  <DropdownMenuRadioItem value="unfiled">Unfiled</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="logistics">Logistics</DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="payments">Payments</DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuItem>
+              <Download />
+              Export .sododeck.json
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem destructive>
+              <Trash2 />
+              Delete…
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SampleRow>
+      <SampleRow label="context menu">
+        <ContextMenu>
+          <ContextMenuTrigger className="rounded-card border border-dashed border-border px-4 py-3 text-body text-ink-secondary">
+            Right-click here
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            <ContextMenuItem shortcut="F2">
+              <Pencil />
+              Rename
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem destructive>
+              <Trash2 />
+              Delete folder…
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
       </SampleRow>
       <SampleRow label="coach mark">
         <Button

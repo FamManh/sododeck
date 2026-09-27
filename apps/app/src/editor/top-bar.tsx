@@ -1,11 +1,15 @@
 import { Button } from '@sododeck/ui/components/button';
+import { InlineEdit } from '@sododeck/ui/components/inline-edit';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { Download, Moon, Redo2, Sun, Undo2 } from 'lucide-react';
+import { useState } from 'react';
 
 import { isApplePlatform } from '../lib/features';
 import { useEditor, useHistory } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { useThemeStore } from '../theme/theme-store';
+import { SaveStatus } from './save-status';
+import { useExportDeck } from './use-export-deck';
 import { Wordmark } from './wordmark';
 
 function HistoryButtons() {
@@ -51,10 +55,58 @@ function HistoryButtons() {
   );
 }
 
+/**
+ * The deck name in the breadcrumb: a button "Rename deck" that turns into a field (FR-017).
+ * Enter saves through the editor (one undo step), Esc cancels, an empty name keeps the old one.
+ */
+function DeckNameCrumb({ name }: { name: string }) {
+  const editor = useEditor();
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return (
+      <InlineEdit
+        label="Deck name"
+        value={name}
+        autoFocus
+        className="w-56 text-ink"
+        onFocus={(event) => {
+          event.currentTarget.select();
+        }}
+        onCommit={(next) => {
+          const trimmed = next.trim();
+          if (trimmed !== '' && trimmed !== name) editor.updateMeta({ name: trimmed });
+        }}
+        onKeyDown={(event) => {
+          // InlineEdit commits on Enter itself; leaving edit mode is ours.
+          if (event.key === 'Enter') setEditing(false);
+        }}
+        onBlur={() => {
+          setEditing(false);
+        }}
+      />
+    );
+  }
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-label="Rename deck"
+      title={name}
+      className="max-w-72 min-w-0 px-1.5 font-normal text-ink"
+      onClick={() => {
+        setEditing(true);
+      }}
+    >
+      <span className="truncate">{name}</span>
+    </Button>
+  );
+}
+
 export function TopBar({ deckName }: { deckName: string }) {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
+  const exportDeck = useExportDeck();
 
   return (
     <header className="flex items-center gap-4 border-b border-hairline bg-surface px-4">
@@ -65,12 +117,11 @@ export function TopBar({ deckName }: { deckName: string }) {
       >
         <span>Local</span>
         <span aria-hidden>/</span>
-        <span className="truncate text-ink">{deckName}</span>
+        <DeckNameCrumb name={deckName} />
       </nav>
       <HistoryButtons />
       <div className="flex-1" />
-      {/* TODO(M1): real autosave status ("Saving…" → "Saved in this browser"), feature 005. */}
-      <span className="text-caption text-ink-muted">Demo · not saved</span>
+      <SaveStatus />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -86,7 +137,7 @@ export function TopBar({ deckName }: { deckName: string }) {
         </TooltipTrigger>
         <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
       </Tooltip>
-      <Button variant="primary" disabled>
+      <Button variant="primary" onClick={exportDeck}>
         <Download />
         Export
       </Button>
