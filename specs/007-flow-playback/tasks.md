@@ -261,16 +261,16 @@ works in `pnpm dev`.
 **Independent test**: open a flow, play with fake timers, check step changes at 1700 / 850 ms, stop
 on the last step, restart, pause on speed change and hidden tab.
 
-- [ ] T041 [P] [US2] Write failing tests `apps/app/src/editor/flows/use-playback.test.tsx` (Vitest
+- [x] T041 [P] [US2] Write failing tests `apps/app/src/editor/flows/use-playback.test.tsx` (Vitest
       fake timers): advances every 1700 ms at 1×, 850 ms at 2×; stops on the last step with
       `playing: false`; Play on the last step restarts at step 1; `document.hidden` +
       `visibilitychange` pauses; unmount / exit leaves `vi.getTimerCount() === 0` (SC-007, loop 100
       times); only one pending timeout at any moment.
-- [ ] T042 [P] [US2] Extend `apps/app/src/editor/flows/step-player.test.tsx`: button "Play" ↔
+- [x] T042 [P] [US2] Extend `apps/app/src/editor/flows/step-player.test.tsx`: button "Play" ↔
       "Pause" with `aria-pressed`; "Speed 1×" ↔ "Speed 2×" pauses; ←/→, segment and row clicks
       pause; all controls reachable by Tab with visible focus class and activated by Enter/Space
       (US2-6).
-- [ ] T043 [US2] Implement `apps/app/src/editor/flows/use-playback.ts` (one `setTimeout(stepMs /
+- [x] T043 [US2] Implement `apps/app/src/editor/flows/use-playback.ts` (one `setTimeout(stepMs /
 speed)` keyed on flow id, step id, speed, playing; `advance` or stop; visibility listener
       guarded by `typeof document !== 'undefined'`), mount it in `step-player.tsx`, and enable the
       Play / Pause (`Play` / `Pause` icons) and speed buttons (`setPlaying`, `setSpeed`; play on

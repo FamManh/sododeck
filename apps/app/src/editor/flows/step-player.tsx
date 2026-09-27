@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { BranchPicker } from './branch-picker';
+import { usePlayback } from './use-playback';
 import { goToStep, nextStep, play, playbackOf, previousStep } from './flow-mode';
 import type { Segment } from './played-path';
 import { findFlow, stepRoute } from './session-path';
@@ -34,6 +35,7 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
     [deck, flow, alternativeId, stepId],
   );
   const progress = useRef<HTMLOListElement>(null);
+  usePlayback();
   const currentId = playback?.currentStepId ?? null;
 
   // Long flows scroll horizontally; keep the current segment in view.

@@ -61,4 +61,57 @@ describe('StepPlayer', () => {
     renderFlows(playbackDeck);
     expect(screen.queryByRole('region', { name: 'Step player' })).toBeNull();
   });
+
+  it('toggles Play and Pause with aria-pressed; Speed switches 1× ↔ 2× and pauses', async () => {
+    const { player, user, ui } = setup();
+    await user.click(within(player).getByRole('button', { name: 'Play' }));
+    const pause = within(player).getByRole('button', { name: 'Pause' });
+    expect(pause).toHaveAttribute('aria-pressed', 'true');
+    await user.click(pause);
+    expect(within(player).getByRole('button', { name: 'Play' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await user.click(within(player).getByRole('button', { name: 'Play' }));
+    await user.click(within(player).getByRole('button', { name: 'Speed 1×' }));
+    expect(ui().activeFlow).toMatchObject({ speed: 2, playing: false });
+    await user.click(within(player).getByRole('button', { name: 'Speed 2×' }));
+    expect(ui().activeFlow?.speed).toBe(1);
+  });
+
+  it('pauses on ← / → and on a step-row click', async () => {
+    const { user, ui } = setup();
+    const playing = () => {
+      act(() => {
+        ui().setPlaying(true);
+      });
+    };
+    playing();
+    await user.keyboard('{ArrowRight}');
+    expect(ui().activeFlow).toMatchObject({ stepId: 'o2', playing: false });
+    playing();
+    await user.keyboard('{ArrowLeft}');
+    expect(ui().activeFlow).toMatchObject({ stepId: 'o1', playing: false });
+    playing();
+    await user.click(screen.getByRole('button', { name: /^Step 5\b/ }));
+    expect(ui().activeFlow).toMatchObject({ stepId: 'o5', playing: false });
+  });
+
+  it('reaches every control by Tab with a focus ring; Enter and Space activate them', async () => {
+    const { player, user, ui } = setup('order', 'o2');
+    within(player).getByRole('button', { name: 'Previous step' }).focus();
+    const order = ['Previous step', 'Play', 'Next step', 'Speed 1×'];
+    for (const name of order) {
+      const button = within(player).getByRole('button', { name });
+      expect(button).toHaveFocus();
+      expect(button.className).toContain('focus-visible:outline');
+      await user.tab();
+    }
+    within(player).getByRole('button', { name: 'Next step' }).focus();
+    await user.keyboard('{Enter}');
+    expect(ui().activeFlow?.stepId).toBe('o3');
+    within(player).getByRole('button', { name: 'Previous step' }).focus();
+    await user.keyboard(' ');
+    expect(ui().activeFlow?.stepId).toBe('o2');
+  });
 });
