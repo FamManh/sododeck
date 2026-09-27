@@ -15,7 +15,8 @@ import { useId } from 'react';
 import { isApplePlatform } from '../../lib/features';
 import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
-import { useUiStore } from '../../state/ui-store';
+import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { FlowModeChip } from './flow-mode-chip';
 import { findFlow } from './session-path';
 import {
   addingBranchInfo,
@@ -31,7 +32,7 @@ import { confirmBranch } from './confirm-branch';
 /**
  * The session chip in the top bar (FR-007, designs 41–45): what is being recorded or edited, and
  * Undo last step (⌘Z), Done (disabled with its reason) and Cancel (Esc). Cancel asks first when
- * something would be lost.
+ * something would be lost. Outside a session, in flow mode (007), the flow-mode chip.
  */
 export function SessionChip() {
   const editor = useEditor();
@@ -39,7 +40,8 @@ export function SessionChip() {
   const session = useUiStore((s) => s.flowSession);
   const { toast } = useToast();
   const reasonId = useId();
-  if (session === null) return null;
+  const flowMode = useUiStore(isFlowMode);
+  if (session === null) return flowMode ? <FlowModeChip deck={deck} /> : null;
 
   const title = sessionTitle(deck, session);
   const flow = findFlow(deck, session.flowId);

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { flowDeck } from '../../test/flow-fixtures';
 import { announced, renderFlows } from '../../test/render-flows';
+import { openFlow } from './flow-mode';
 import { recordClick, startEditing, startNewFlow } from './flow-session';
 
 const done = () => screen.getByRole('button', { name: 'Done' });
@@ -101,5 +102,29 @@ describe('SessionChip: edit mode (US3)', () => {
     await user.click(screen.getByRole('button', { name: /Cancel/ }));
     expect(ui().flowSession).toBeNull();
     expect(ui().activeFlow?.flowId).toBe('place');
+  });
+});
+
+describe('SessionChip: flow mode (007)', () => {
+  it('reads "Flow mode · <flow>" and exits with its button', async () => {
+    const { user, ui, editor } = renderFlows(flowDeck);
+    act(() => {
+      openFlow(editor(), 'place');
+    });
+    expect(screen.getByText('Flow mode · Place order')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Exit flow mode' }));
+    expect(ui().activeFlow).toBeNull();
+    expect(screen.queryByText('Flow mode · Place order')).toBeNull();
+  });
+
+  it('shows the session chip instead while editing', () => {
+    const { editor } = renderFlows(flowDeck);
+    act(() => {
+      openFlow(editor(), 'place');
+      startEditing(editor(), 'place');
+    });
+    expect(screen.queryByText('Flow mode · Place order')).toBeNull();
+    expect(screen.getByTitle('Editing ‘Place order’')).toBeInTheDocument();
   });
 });

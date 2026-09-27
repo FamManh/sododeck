@@ -3,7 +3,7 @@ import type { Flow, SododeckFile } from '@sododeck/schema';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { CircleAlert, GripVertical, Route } from 'lucide-react';
+import { CircleAlert, GripVertical, History, Route } from 'lucide-react';
 import { useId, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
@@ -43,6 +43,7 @@ export function FlowRow({
 }) {
   const editor = useEditor();
   const active = useUiStore((s) => s.activeFlow?.flowId === flow.id);
+  const lastPlayed = useUiStore((s) => s.lastPlayedFlowId === flow.id);
   const countId = useId();
   const problems = analyzeFlow(flow, deck.edges).problems.some(
     (p) => p.kind === 'broken-step' || p.kind === 'chain-break',
@@ -102,6 +103,13 @@ export function FlowRow({
             <Highlight text={flow.title} ranges={match?.title ?? []} />
           </span>
         </button>
+      )}
+      {lastPlayed && (
+        // Where the user left flow mode (007 clarification Q5); gone once another flow opens.
+        <span className="flex shrink-0 items-center text-ink-muted" title="Last played">
+          <History aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+          <span className="sr-only">Last played</span>
+        </span>
       )}
       {problems && (
         <span className="flex shrink-0 items-center text-clay-ink" title="Has problems">
