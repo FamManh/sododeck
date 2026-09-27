@@ -434,25 +434,25 @@ Run one package with `pnpm --filter @sododeck/<name> <script>`.
   - Nodes without a position appear on the grid and nothing is written on open (`canvas.test.tsx`: `canUndo()` is false after mount).
   - A second delete while a toast is visible replaces the toast, and ⌘Z undoes in reverse order (`confirm-delete-dialog.test.tsx`).
   - A drop outside the canvas creates nothing (`canvas.test.tsx`).
-- [ ] T069 Add a drag scenario to `apps/app/bench/perf.bench.ts` (research R13):
+- [x] T069 Add a drag scenario to `apps/app/bench/perf.bench.ts` (research R13):
   - Drag one node on the 500 / 1,000 deck for ~1 s with `page.mouse` in small steps.
   - Record avg fps, p95 and max frame like the pan/zoom scenario, and add it to the JSON/MD report.
   - If drag misses 60 fps, apply the rAF-coalescing fallback from research R2 in `canvas.tsx` and re-measure.
-- [ ] T070 Run `pnpm bench` and `BENCH_CPU_THROTTLE=4 pnpm bench` after the change. Compare with T002 and put both reports in the PR description; any regression below 60 fps blocks merge (constitution V).
-- [ ] T071 [P] Write ADR `docs/decisions/0006-derived-canvas.md`:
+- [x] T070 Run `pnpm bench` and `BENCH_CPU_THROTTLE=4 pnpm bench` after the change. Compare with T002 and put both reports in the PR description; any regression below 60 fps blocks merge (constitution V).
+- [x] T071 [P] Write ADR `docs/decisions/0006-derived-canvas.md`:
   - The controlled canvas derived from an incremental snapshot.
   - Drag writes to the document every frame inside a gesture.
   - React Flow built-in keyboard and delete turned off in favour of roving focus and a confirmation.
   - `previewRemoval` via a throwaway copy.
   - Alternatives: uncontrolled React Flow with sync on drop, full `toJSON` per frame.
-- [ ] T072 [P] Update `apps/app/CLAUDE.md`:
+- [x] T072 [P] Update `apps/app/CLAUDE.md`:
   - The map gets `model/editor-context.tsx`, the editor files, and the `/deck/new` route.
   - Rules: the canvas reads only through `useDeckSnapshot` and writes only through `useEditor()`; no React Flow built-in delete or keyboard handling; the shortcuts live in `use-canvas-shortcuts.ts`.
-- [ ] T073 Visual check at 1440×900, light and dark (`pnpm dev`):
+- [x] T073 Visual check at 1440×900, light and dark (`pnpm dev`):
   - Screenshots of 02, 10, 11, 12, 14, 37, 38, 52, 53, 54, 55, 56, 57, 58, 59 states, next to `docs/design/screens/*`.
   - Fix differences or list them (allowed: DESIGN.md tokens, lucide icons, the confirmation dialog before delete).
-- [ ] T074 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm the smoke suite passes unchanged and `grep -r design-gallery apps/app/dist` finds nothing.
-- [ ] T075 Walk through the manual scenarios 1–12 in [quickstart.md](quickstart.md). Write the final report: what changed, bench before/after, what was skipped (cloud/partner kinds, §g-28 → B) and what is uncertain.
+- [x] T074 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm the smoke suite passes unchanged and `grep -r design-gallery apps/app/dist` finds nothing.
+- [x] T075 Walk through the manual scenarios 1–12 in [quickstart.md](quickstart.md). Write the final report: what changed, bench before/after, what was skipped (cloud/partner kinds, §g-28 → B) and what is uncertain.
 
 ---
 
