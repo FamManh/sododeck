@@ -71,20 +71,62 @@ export function deckHasId(doc: DeckDoc, id: Id): boolean {
   return forEachDeckId(doc, (existing) => existing === id);
 }
 
-/** Returns a function that generates ids that are not yet used anywhere in `doc`. */
+export interface IdAllocator {
+  /**
+   * Returns a new id not used anywhere in the deck. `reserved` holds ids chosen for objects that
+   * are not written yet (e.g. a rule's columns).
+   */
+  allocate(prefix: IdPrefix, reserved?: ReadonlySet<Id>): Id;
+  /** Records ids this editor writes itself (explicit ids on paste or import). */
+  reserve(ids: Iterable<Id>): void;
+  /** Stops listening to the document. */
+  destroy(): void;
+}
+
+/**
+ * Generates ids unused in `doc`. Known ids are cached so bulk adds stay linear: the cache is
+ * dropped after any transaction that is not `origin`'s (loads, other tabs, undo), and ids this
+ * editor adds are recorded. Stale entries for deleted objects only make it more conservative.
+ */
 export function makeIdAllocator(
   doc: DeckDoc,
   newId: (prefix: string) => Id,
-): (prefix: IdPrefix, reserved?: ReadonlySet<Id>) => Id {
-  // `reserved` holds ids allocated for objects that are not written yet (e.g. a rule's columns).
-  return (prefix, reserved) => {
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      const id = newId(prefix);
-      if (reserved?.has(id) !== true && !deckHasId(doc, id)) return id;
+  origin: object,
+): IdAllocator {
+  let known: Set<Id> | undefined;
+  const knownIds = () => {
+    if (known === undefined) {
+      const ids = new Set<Id>();
+      forEachDeckId(doc, (id) => (ids.add(id), false));
+      known = ids;
     }
-    throw new Error(
-      `Could not generate a unique "${prefix}" id: the id generator keeps colliding.`,
-    );
+    return known;
+  };
+  const invalidate = (transaction: Y.Transaction) => {
+    if (transaction.origin !== origin) known = undefined;
+  };
+  doc.on('afterTransaction', invalidate);
+
+  return {
+    allocate: (prefix, reserved) => {
+      const ids = knownIds();
+      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const id = newId(prefix);
+        if (reserved?.has(id) !== true && !ids.has(id)) {
+          ids.add(id);
+          return id;
+        }
+      }
+      throw new Error(
+        `Could not generate a unique "${prefix}" id: the id generator keeps colliding.`,
+      );
+    },
+    reserve: (ids) => {
+      if (known !== undefined) for (const id of ids) known.add(id);
+    },
+    destroy: () => {
+      doc.off('afterTransaction', invalidate);
+    },
   };
 }
 

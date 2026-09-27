@@ -46,6 +46,7 @@ export function addStep(ctx: EditContext, flowId: Id, data: NewStep, index?: num
   ctx.transact(() => {
     steps.insert(at, [toY(step) as YObject]);
   });
+  ctx.reserve([id]);
   return id;
 }
 

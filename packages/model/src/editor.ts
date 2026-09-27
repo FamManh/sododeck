@@ -109,6 +109,8 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     captureTimeout: options.captureTimeout ?? 500,
   });
 
+  const ids = makeIdAllocator(doc, options.newId ?? defaultNewId, origin);
+
   // Undo grouping (research R5). Yjs merges tracked transactions closer than `captureTimeout`;
   // `stopCapturing()` forces the next one into a new step.
   let lastKey: string | undefined;
@@ -128,7 +130,10 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       }, origin);
       return result as ReturnType<typeof fn>;
     },
-    allocate: makeIdAllocator(doc, options.newId ?? defaultNewId),
+    allocate: (prefix, reserved) => ids.allocate(prefix, reserved),
+    reserve: (list) => {
+      ids.reserve(list);
+    },
   };
 
   return {
@@ -213,6 +218,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     destroy: () => {
       undoManager.destroy();
+      ids.destroy();
       editorOrigins.delete(origin);
     },
   };

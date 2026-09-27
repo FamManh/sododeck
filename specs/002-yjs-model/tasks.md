@@ -274,14 +274,14 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 **Independent Test**: Ids are format-valid, not derived from titles, stable across edits, and 10,000 of them are unique.
 
-- [ ] T033 [P] [US5] Write `packages/model/test/ids.test.ts`:
+- [x] T033 [P] [US5] Write `packages/model/test/ids.test.ts`:
   - Default ids match `ID_PATTERN` (from `@sododeck/schema`) and the `<prefix>-` form.
   - A node titled "Orders API" has an id that does not contain `orders`/`api` (case-insensitive).
   - The id is unchanged after rename, move, regroup and reorder.
   - 10,000 `add` calls produce unique ids.
   - An injected generator that returns an existing id on its first call is retried.
   - `add` with an explicit id that exists anywhere in the deck throws `duplicate-id`.
-- [ ] T034 [US5] Fix whatever T033 exposes in `packages/model/src/ids.ts` or `packages/model/src/ops/collections.ts`. Commit: `test(model): id generation guarantees`.
+- [x] T034 [US5] Fix whatever T033 exposes in `packages/model/src/ids.ts` or `packages/model/src/ops/collections.ts`. Commit: `test(model): id generation guarantees`.
 
 ---
 

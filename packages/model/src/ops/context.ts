@@ -17,6 +17,8 @@ export interface EditContext {
    */
   transact<T>(fn: () => T, key?: string): T;
   allocate(prefix: IdPrefix, reserved?: ReadonlySet<Id>): Id;
+  /** Records explicit ids an operation writes, so later generated ids avoid them. */
+  reserve(ids: Iterable<Id>): void;
 }
 
 /** Origins of every live editor, so `observeDeck` can tell local edits from remote ones. */

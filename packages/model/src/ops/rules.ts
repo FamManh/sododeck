@@ -72,6 +72,7 @@ export function addRule(ctx: EditContext, data: NewRule): Id {
   ctx.transact(() => {
     rulesMap(ctx.doc).set(id, toY(rule) as YObject);
   });
+  ctx.reserve([id, ...[...rule.inputs, ...rule.outputs, ...rule.rows].map((x) => x.id)]);
   return id;
 }
 

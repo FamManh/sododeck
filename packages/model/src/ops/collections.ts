@@ -68,12 +68,11 @@ export function addObject<C extends Collection>(ctx: EditContext, c: C, data: Ne
 
   assertValid(validateObject(c, object));
   const steps = c === 'flows' && Array.isArray(object.steps) ? object.steps.filter(isRecord) : [];
-  if (explicitId !== undefined || steps.length > 0) {
-    assertFreeIds(doc, [
-      ...(explicitId === undefined ? [] : [{ path: 'id', id }]),
-      ...steps.map((step, i) => ({ path: `steps.${String(i)}.id`, id: step.id as Id })),
-    ]);
-  }
+  const explicitIds = [
+    ...(explicitId === undefined ? [] : [{ path: 'id', id }]),
+    ...steps.map((step, i) => ({ path: `steps.${String(i)}.id`, id: step.id as Id })),
+  ];
+  assertFreeIds(doc, explicitIds);
   const refs = allRefsOf(c, object);
   const inputColumns = inputColumnsOf(doc);
   for (const [i, step] of steps.entries()) {
@@ -86,6 +85,7 @@ export function addObject<C extends Collection>(ctx: EditContext, c: C, data: Ne
   ctx.transact(() => {
     collectionArray(doc, c).push([toY(object) as never]);
   });
+  ctx.reserve(explicitIds.map((e) => e.id));
   return id;
 }
 
