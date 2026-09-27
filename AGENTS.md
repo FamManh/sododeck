@@ -2,7 +2,7 @@
 
 Rules for every AI agent working in this repo (Claude Code, Codex, others). `CLAUDE.md` only points here. Each app/package still has its own `CLAUDE.md` with its boundaries.
 
-Interactive, editable architecture & flow diagram workspace. One model (nodes, edges, flows, steps, rules, notes, stickies, views) rendered as a **canvas + a JSON code panel in two-way sync**.
+Interactive, editable architecture & flow diagram workspace. One model (nodes, edges, flows, steps, rules, notes, stickies, views) rendered as a **canvas + a JSON code panel kept in sync** (the panel is read-only for now; editing from JSON comes later, see `docs/backlog.md` 004).
 
 - **MVP:** no login, no backend. Open the app and use it. Local-first: decks live in the browser (IndexedDB); export/import `.sododeck.json`.
 - Global audience, English UI. Closed source (private repo).
@@ -97,14 +97,14 @@ A task is done when all of these hold:
 
 Do not implement a milestone unless asked.
 
-|           | Scope                                                                                                  |
-| --------- | ------------------------------------------------------------------------------------------------------ |
-| **M0** ✅ | Monorepo scaffold, tooling, CI, app shell, placeholder site, docs                                      |
-| **M1**    | Canvas + Yjs model + JSON panel two-way sync + autosave (IndexedDB) + local deck library               |
-| **M2**    | Flows: create by clicking edges, highlight + animated token, step player, branches                     |
-| **M3**    | Knowledge: inspector, rules (decision tables), stickies, global search                                 |
-| **M4**    | Scale: semantic zoom levels, collapsible groups, focus mode, saved views, ELK auto-layout with pinning |
-| **M5**    | Export (JSON/PNG/SVG/PDF/Mermaid), sample decks, onboarding tour, analytics, feedback button           |
+|           | Scope                                                                                                      |
+| --------- | ---------------------------------------------------------------------------------------------------------- |
+| **M0** ✅ | Monorepo scaffold, tooling, CI, app shell, placeholder site, docs                                          |
+| **M1**    | Canvas + Yjs model + read-only JSON panel (synced with canvas) + autosave (IndexedDB) + local deck library |
+| **M2**    | Flows: create by clicking edges, highlight + animated token, step player, branches                         |
+| **M3**    | Knowledge: inspector, rules (decision tables), stickies, global search                                     |
+| **M4**    | Scale: semantic zoom levels, collapsible groups, focus mode, saved views, ELK auto-layout with pinning     |
+| **M5**    | Export (JSON/PNG/SVG/PDF/Mermaid), sample decks, onboarding tour, analytics, feedback button               |
 
 ## How to work
 
