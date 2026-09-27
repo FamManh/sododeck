@@ -133,76 +133,76 @@ with "Last played" on the row.
 
 ### Tests for US1 (write first, must fail)
 
-- [ ] T012 [P] [US1] `apps/app/src/editor/flows/flow-overlay.test.ts`: with a `playback` input,
+- [x] T012 [P] [US1] `apps/app/src/editor/flows/flow-overlay.test.ts`: with a `playback` input,
       played edges get `inPath: true`, the current edge `current: { speed }`, its from/to nodes
       `currentStep: true`, other-alternative edges keep badges with `inPath: false`, broken steps
       mark nothing; `playback: null` gives exactly the 006 marks.
-- [ ] T013 [P] [US1] `apps/app/src/editor/deck-to-flow.test.ts`: `className: 'in-flow'` on member
+- [x] T013 [P] [US1] `apps/app/src/editor/deck-to-flow.test.ts`: `className: 'in-flow'` on member
       nodes and edges only; changing the current step returns new objects only for the old and new
       current edges and their nodes (cache identity for all others); `NodeFlowMark.inPath` /
       `currentStep` are part of the node cache check.
-- [ ] T014 [P] [US1] `apps/app/src/editor/canvas-geometry.test.ts`: `boundsOf(deck, nodeIds)`
+- [x] T014 [P] [US1] `apps/app/src/editor/canvas-geometry.test.ts`: `boundsOf(deck, nodeIds)`
       (display positions + `NODE_SIZE`, empty → null) and `rectInView(rect, viewport, size)`.
-- [ ] T015 [P] [US1] `apps/app/src/editor/deck-edge.test.tsx`: current mark → stroke width 3 and a
+- [x] T015 [P] [US1] `apps/app/src/editor/deck-edge.test.tsx`: current mark → stroke width 3 and a
       filled label pill; `data-testid="flow-token"` with an `animateMotion` whose `dur` is
       `1400ms` at 1× and `700ms` at 2×; no token on a non-current edge.
-- [ ] T016 [P] [US1] `apps/app/src/editor/deck-node.test.tsx`: `currentStep` → ring class and
+- [x] T016 [P] [US1] `apps/app/src/editor/deck-node.test.tsx`: `currentStep` → ring class and
       `aria-current="step"`; not otherwise.
-- [ ] T017 [P] [US1] `apps/app/src/editor/flows/step-player.test.tsx` (render with
+- [x] T017 [P] [US1] `apps/app/src/editor/flows/step-player.test.tsx` (render with
       `render-flows.tsx`): region "Step player"; "Previous step" disabled on step 1, "Next step"
       disabled on the last; position text "Place order · Step 1 of 8" and the step title (or
       "<from> → <to>"); list "Progress" with buttons "Go to step n of 8", current
       `aria-current="step"`, clicking segment 6 makes step 6 current; empty flow → "No steps" and
       disabled controls; broken segment name ends with ", connection deleted".
-- [ ] T018 [P] [US1] `apps/app/src/editor/flows/use-playback-shortcuts.test.tsx`: in flow mode →
+- [x] T018 [P] [US1] `apps/app/src/editor/flows/use-playback-shortcuts.test.tsx`: in flow mode →
       / ← move the current step and announce; ignored in a text field (US1-6), in a dialog, in a
       `radiogroup` and outside flow mode; Esc calls exit; Delete/Backspace do nothing in flow mode.
-- [ ] T019 [P] [US1] `apps/app/src/editor/flows/inspector-step.test.tsx`: in flow mode the
+- [x] T019 [P] [US1] `apps/app/src/editor/flows/inspector-step.test.tsx`: in flow mode the
       heading reads "Step 4 of 8 · Place order", from/to tiles named "From: Order Service" / "To:
       Pricing Service", protocol text; broken step → "Connection deleted"; section "Rules" lists
       rule titles, "Missing rule r9" for an unknown id, "No rules attached" when empty; SLA field
       placeholder "No SLA target", no meter; Title/Condition still editable (one `updateStep`).
-- [ ] T020 [P] [US1] `apps/app/src/editor/json-panel-view.test.ts`: flow mode with current step 4
+- [x] T020 [P] [US1] `apps/app/src/editor/json-panel-view.test.ts`: flow mode with current step 4
       → label "Step 4", full label "Step 4: Place order", one `steps` entry equal to the step;
       edit session or open branch → 006 flow entry unchanged.
-- [ ] T021 [P] [US1] `apps/app/src/editor/flows/flow-panel.test.tsx` (new or extend
+- [x] T021 [P] [US1] `apps/app/src/editor/flows/flow-panel.test.tsx` (new or extend
       `step-list.test.tsx`): current step row `aria-current="step"`; "Back to canvas" exits; after
       exit the Features row shows "Last played" (sr text) until another flow opens.
-- [ ] T022 [P] [US1] `apps/app/src/editor/canvas.test.tsx`: in flow mode the wrapper has
+- [x] T022 [P] [US1] `apps/app/src/editor/canvas.test.tsx`: in flow mode the wrapper has
       `data-flow-mode`; drag, drop, connect and double-click popovers are refused (handlers via
       `useCanvasHandlers`); canvas arrow / C / E / Enter keys do nothing; exiting removes the
       attribute.
-- [ ] T023 [P] [US1] `apps/app/src/editor/flows/use-flow-sync.test.tsx`: in flow mode, removing
+- [x] T023 [P] [US1] `apps/app/src/editor/flows/use-flow-sync.test.tsx`: in flow mode, removing
       the current step makes the step at the same index current (or the last), removing the flow
       exits with toast/announcement "This flow was deleted" and no last-played mark, emptying the
       flow sets `stepId: null`; origins `local` and `remote`.
-- [ ] T024 [P] [US1] `apps/app/src/editor/flows/session-chip.test.tsx`: flow mode shows "Flow mode
+- [x] T024 [P] [US1] `apps/app/src/editor/flows/session-chip.test.tsx`: flow mode shows "Flow mode
       · Place order" with button "Exit flow mode"; recording/editing chips unchanged.
 
 ### Implementation for US1
 
-- [ ] T025 [US1] Extend `apps/app/src/editor/flows/flow-overlay.ts` with the `playback` input and
+- [x] T025 [US1] Extend `apps/app/src/editor/flows/flow-overlay.ts` with the `playback` input and
       the `inPath` / `current` / `currentStep` fields (make `NodeFlowMark.startsHere` optional).
       T012 passes.
-- [ ] T026 [US1] In `apps/app/src/editor/deck-to-flow.ts` set `className: 'in-flow'` from
+- [x] T026 [US1] In `apps/app/src/editor/deck-to-flow.ts` set `className: 'in-flow'` from
       `inPath`, carry `currentStep` / `inPath` into `DeckNodeData`, and add all new fields to
       `sameMark` and the node cache check. T013 passes.
-- [ ] T027 [P] [US1] Add `boundsOf` and `rectInView` to `apps/app/src/editor/canvas-geometry.ts`.
+- [x] T027 [P] [US1] Add `boundsOf` and `rectInView` to `apps/app/src/editor/canvas-geometry.ts`.
       T014 passes.
-- [ ] T028 [US1] Create `apps/app/src/editor/flow-token.tsx` (5 px primary circle, 2 px surface
+- [x] T028 [US1] Create `apps/app/src/editor/flow-token.tsx` (5 px primary circle, 2 px surface
       stroke, 10 px halo at 20 %, `<animateMotion path dur={tokenLoopMs / speed} repeatCount=
 "indefinite">`; `useReducedMotion` + `resolveMotion`; static at `labelX, labelY` when
       `tokenLoopMs === 0`) and render it from `apps/app/src/editor/deck-edge.tsx` only when
       `data.flow.current` is set; current edge width 3 and filled label pill (keep the dash for
       error paths). T015 passes.
-- [ ] T029 [P] [US1] In `apps/app/src/editor/deck-node.tsx` draw the in-current-step ring (same as
+- [x] T029 [P] [US1] In `apps/app/src/editor/deck-node.tsx` draw the in-current-step ring (same as
       selection ring + halo) and `aria-current="step"` from `data.currentStep`. T016 passes.
-- [ ] T030 [US1] Add the dimming rules to `apps/app/src/index.css`: under `[data-flow-mode]`,
+- [x] T030 [US1] Add the dimming rules to `apps/app/src/index.css`: under `[data-flow-mode]`,
       `.react-flow__node:not(.in-flow)`, `.react-flow__edge:not(.in-flow)` and
       `[data-testid="edge-label"]:not([data-in-flow])` at opacity 0.2 with `transition: opacity
 var(--sd-dur-dim)`; set `data-in-flow` on the label span in `deck-edge.tsx` when
       `flow.inPath`.
-- [ ] T031 [US1] Wire flow mode into `apps/app/src/editor/canvas.tsx`: `isFlowMode` →
+- [x] T031 [US1] Wire flow mode into `apps/app/src/editor/canvas.tsx`: `isFlowMode` →
       `data-flow-mode` on the wrapper, pass `playback` (played step ids, current step, speed from
       `currentPlayback`) to `flowOverlay`, set `nodesDraggable` / `nodesConnectable` /
       `edgesReconnectable` false in flow mode, and render `<StepPlayer />` in a bottom-centre
@@ -210,41 +210,41 @@ var(--sd-dur-dim)`; set `data-in-flow` on the label span in `deck-edge.tsx` when
       `fitBounds(boundsOf(played nodes), { padding: 0.2, duration: dimMs })` when the open flow id
       changes; on current-step change `setCenter(midpoint, { zoom: getZoom(), duration: dimMs })`
       only if `!rectInView`; run in `requestAnimationFrame`. T022 (wrapper part) passes.
-- [ ] T032 [US1] In `apps/app/src/editor/use-canvas-handlers.ts` treat flow mode as view-only:
+- [x] T032 [US1] In `apps/app/src/editor/use-canvas-handlers.ts` treat flow mode as view-only:
       block `onDrop`, `onDragOver`, `onConnect`, `onReconnect`, `onEdgeDoubleClick` and drags;
       `onNodeClick` / `onEdgeClick` / `onPaneClick` do nothing yet in flow mode (US3 adds jumps).
       T022 (handlers part) passes.
-- [ ] T033 [US1] In `apps/app/src/editor/use-canvas-shortcuts.ts`: `useCanvasKeyDown` returns early
+- [x] T033 [US1] In `apps/app/src/editor/use-canvas-shortcuts.ts`: `useCanvasKeyDown` returns early
       for arrows, C, E, Enter in flow mode; `useEditorShortcuts` in flow mode maps Esc (no popover,
       dialog or pending delete) to `exitFlow()` and ignores Delete/Backspace.
-- [ ] T034 [US1] Add `usePlaybackShortcuts()` to `apps/app/src/editor/flows/use-flow-shortcuts.ts`
+- [x] T034 [US1] Add `usePlaybackShortcuts()` to `apps/app/src/editor/flows/use-flow-shortcuts.ts`
       (document listener; ← / → → `previousStep` / `nextStep`; skip text fields via `isTextTarget`,
       dialogs, `[role="radiogroup"]`, `[role="menu"]`, `defaultPrevented`) and install it next to
       `useFlowShortcuts` in `apps/app/src/routes/editor-page.tsx` and in the test harness `apps/app/src/test/flow-harness.tsx`. T018 passes.
-- [ ] T035 [US1] Create `apps/app/src/editor/flows/step-player.tsx`: region "Step player",
+- [x] T035 [US1] Create `apps/app/src/editor/flows/step-player.tsx`: region "Step player",
       Previous / Next buttons (lucide `SkipBack` / `SkipForward`), position text, title, progress
       list of segment buttons (dashed pattern for error, hatched + icon for broken; min width and
       horizontal scroll keeping the current in view for 50+ steps), "No steps" state; a Play button
       and speed button rendered disabled until US2. Sizes from design-analysis §b (420–560 px,
       18 px radius, `shadow-float`). T017 passes.
-- [ ] T036 [US1] Update `apps/app/src/editor/flows/inspector-step.tsx` and `flow-inspector.tsx`: in
+- [x] T036 [US1] Update `apps/app/src/editor/flows/inspector-step.tsx` and `flow-inspector.tsx`: in
       flow mode render the playback header (heading "Step n of m · <flow>", `KindTile` from/to with
       names, protocol text, branch label + error icon on alternatives, "Connection deleted" when
       broken), the read-only "Rules" list (titles from `deck.rules`, "Missing rule <id>" with
       `CircleAlert`, "No rules attached"), SLA placeholder "No SLA target"; keep 006 fields
       editable. T019 passes.
-- [ ] T037 [P] [US1] Update `apps/app/src/editor/json-panel-view.ts` (`selectionView` gets a
+- [x] T037 [P] [US1] Update `apps/app/src/editor/json-panel-view.ts` (`selectionView` gets a
       `flowMode` flag; step entry via `collection: 'steps'`) and its caller in
       `apps/app/src/editor/json-panel.tsx`. T020 passes.
-- [ ] T038 [US1] Update the left panel: `apps/app/src/editor/flows/flow-panel.tsx` ("Back to
+- [x] T038 [US1] Update the left panel: `apps/app/src/editor/flows/flow-panel.tsx` ("Back to
       canvas" → `exitFlow`; "Edit steps" keeps calling `startEditing`, whose session turns flow
       mode off), `step-row.tsx` (current row `aria-current="step"`, filled number badge; click →
       `goToStep`), `flow-row.tsx` ("Last played" icon `History` + sr text + tooltip when
       `lastPlayedFlowId` matches). T021 passes.
-- [ ] T039 [P] [US1] Flow-mode chip in `apps/app/src/editor/flows/session-chip.tsx` ("Flow mode ·
+- [x] T039 [P] [US1] Flow-mode chip in `apps/app/src/editor/flows/session-chip.tsx` ("Flow mode ·
       <title>", button "Exit flow mode" with `X`), shown by `top-bar.tsx`'s existing slot. T024
       passes.
-- [ ] T040 [US1] Extend `apps/app/src/editor/flows/use-flow-sync.ts` for flow mode (current step
+- [x] T040 [US1] Extend `apps/app/src/editor/flows/use-flow-sync.ts` for flow mode (current step
       re-homed by index, flow removed → reset without last-played mark + toast "This flow was
       deleted", empty flow → `stepId: null`, removed alternative → `alternativeId: null` + re-home).
       T023 passes.
@@ -287,11 +287,11 @@ speed)` keyed on flow id, step id, speed, playing; `advance` or stop; visibility
 **Independent test**: open a flow, click a member node, a member edge used twice, a dimmed node,
 the pane, a segment and a row; check the current step each time.
 
-- [ ] T044 [P] [US3] Write failing tests in `apps/app/src/editor/canvas.test.tsx` (handlers via
+- [x] T044 [P] [US3] Write failing tests in `apps/app/src/editor/canvas.test.tsx` (handlers via
       `render-canvas.tsx`): member node → first step touching it; member edge used by steps 2 and
       6 → 6 when current is 3, then 2 (wrap); dimmed node / edge / pane → no change, nothing
       selected, still in flow mode; every jump pauses playback and announces once.
-- [ ] T045 [US3] Implement jumps in `apps/app/src/editor/use-canvas-handlers.ts`: in flow mode
+- [x] T045 [US3] Implement jumps in `apps/app/src/editor/use-canvas-handlers.ts`: in flow mode
       `onNodeClick` → `stepForNode`, `onEdgeClick` → `stepForEdge` over the current played path
       (from `currentPlayback`), then `goToStep`; `onPaneClick` keeps flow mode. T044 passes.
 
