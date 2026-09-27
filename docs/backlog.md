@@ -183,12 +183,13 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   group, level, owner, tags, description, tech, host, icon, links, rules, position), Group (title,
   parent), Edge (from, to, protocol enum, label, direction, description, links), View (type, title,
   subtitle field, includes, position overrides), Feature, Flow (feature, title, description, steps,
-  trigger, outcome), Step (own id, edge, condition, sla, rules[], branch, payload, notes, sample
+  trigger, outcome), Step (own id, edge, condition, sla, rules[], payload, notes, sample
   inputs), Rule (title, description, hit policy, inputs, outputs, rows with ids), Sticky (text,
   anchor, position, color); per-object key order; examples incl. a minimal deck and a deck with a
   flow + rule; Ajv/Zod parity; fix `sododeck.dev` vs `.com` in spec §6.
-- **Out of scope:** YAML import, comments/ADRs/state machines (P1), migrations (none yet), the
-  Delivery sample (013).
+- **Out of scope:** step branches (moved to 006, added there as an optional field — no version
+  bump), YAML import, comments/ADRs/state machines (P1), migrations (none yet), the Delivery
+  sample (013).
 - **Acceptance criteria:**
   - Given each example file, When validated with Ajv and with the generated Zod schema, Then both
     accept it, and both reject the same set of invalid fixtures (parity test).
@@ -199,15 +200,18 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   - Given a flow step, When it has no `id`, Then validation fails (every object has a stable id).
   - Given the schema file changed, When `pnpm test` runs without `pnpm schema:generate`, Then the
     staleness test fails.
-- **Risks:** ⚠ decision needed on enums (kind, protocol), positions-in-node vs per-view, structured
-  rule tables (design-analysis §g-4); Zod generator limits (no recursive refs) for nested groups.
+- **Decisions (2026-09-27):** node kinds closed list `client, gateway, service, queue, database,
+external`; protocol families `http, grpc, event, sql, websocket, other` (specifics in the label);
+  positions on nodes with per-view overrides; structured rule tables; `rules[]` arrays; branches
+  deferred to 006. See `specs/001-json-schema-v1/spec.md`.
+- **Risks:** Zod generator limits (no recursive refs) for nested groups.
 - **`/speckit.specify` prompt:**
   > Define version 1 of the Sododeck deck file (.sododeck.json) so that a deck can hold everything
   > an architect models: deck name and description; components with a kind, title, owner, tags,
   > markdown description, technology, hosting, links, attached rules and position; groups;
   > connections with protocol, label and direction; views; features; flows made of ordered steps
-  > over existing connections, each step with a condition, SLA, attached rules, an optional branch
-  > and sample rule inputs; business rules as decision tables with a hit policy, input and output
+  > over existing connections, each step with a condition, SLA, attached rules and sample rule
+  > inputs; business rules as decision tables with a hit policy, input and output
   > columns and rows; and sticky notes that are free or attached to an object. Every object has a
   > stable id that never changes when it is renamed, and all references are by id. The format must
   > be strict, documented and validated, so the app, a future CLI and AI agents can trust it, and
@@ -217,7 +221,7 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   > packages/schema only. Edit schema/v1.json (draft 2020-12, local non-recursive $refs), run
   > `pnpm schema:generate`, extend examples/ and test/ (Ajv/Zod parity, invalid fixtures). Use
   > design-analysis §d as the field list; record the enum and table-shape decisions in an ADR
-  > (0003). Keep `rules` as an object keyed by id (ADR 0002). Every step and rule row gets an id.
+  > (0004; 0003 is the UI foundation ADR). Keep `rules` as an object keyed by id (ADR 0002). Every step and rule row gets an id.
   > No Yjs, no React. Update packages/schema/CLAUDE.md "Status".
 
 ## 002-yjs-model
@@ -446,6 +450,9 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   condition, SLA, description; reorder/delete steps; branches: a step can start an alternative path
   from a previous step with a label; error paths marked as such and styled dashed + icon; broken
   steps (edge deleted) flagged.
+  Adds the step `branch` field to the file format (deferred from 001): an additive optional field
+  in `packages/schema` (fixtures + Ajv/Zod parity) and `packages/model` (round-trip case), no
+  version bump; shape recorded in an ADR.
 - **Out of scope:** playback, token animation and step inspector visuals (007), rules on steps (008),
   flow comparison (P1), sequence/swimlane (P1).
 - **Acceptance criteria:**
@@ -475,9 +482,11 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   > flows must be first-class objects, and creating them must be fast.
 - **`/speckit.plan` hint:**
   > apps/app/src/editor (left panel flow list, recording mode in the Zustand UI store as UI state
-  > only; steps written via @sododeck/model mutations from 002). Step/branch shape per the 001
-  > schema. Reuse step-row and condition-block visuals from the design. Run `pnpm bench` (flow
-  > highlight < 100 ms). Default recording UI must be approved or replaced by a Claude Design screen
+  > only; steps written via @sododeck/model mutations from 002). Step shape per the 001 schema;
+  > add the optional step `branch` field to packages/schema/schema/v1.json (run
+  > `pnpm schema:generate`, fixtures, parity) and a round-trip case in packages/model, with an ADR
+  > for the branch shape. Reuse step-row and condition-block visuals from the design. Run
+  > `pnpm bench` (flow highlight < 100 ms). Default recording UI must be approved or replaced by a Claude Design screen
   > before implementation; match the left-panel list styling of
   > docs/design/screens/03-flow-mode-light.png pixel-close.
 
