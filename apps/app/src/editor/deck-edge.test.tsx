@@ -139,6 +139,7 @@ describe('DeckEdge in flow mode (007)', () => {
     const label = screen.getByTestId('edge-label');
     expect(label).toHaveClass('bg-primary');
     expect(label).toHaveAttribute('data-in-flow');
+    expect(label).toHaveAttribute('aria-current', 'step');
     const token = screen.getByTestId('flow-token');
     expect(token.querySelector('animateMotion')).toHaveAttribute('dur', '1400ms');
   });
@@ -155,6 +156,7 @@ describe('DeckEdge in flow mode (007)', () => {
     renderEdge({ flow: mark(null, false) });
     expect(screen.queryByTestId('flow-token')).toBeNull();
     expect(screen.getByTestId('edge-label')).not.toHaveAttribute('data-in-flow');
+    expect(screen.getByTestId('edge-label')).not.toHaveAttribute('aria-current');
   });
 
   it('keeps the token static at the midpoint under reduced motion', () => {

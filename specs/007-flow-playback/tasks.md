@@ -333,16 +333,16 @@ failed" at step 4a, play it end to end.
 
 **Independent test**: reduced motion on (matchMedia stub) and a review of cues without color.
 
-- [ ] T050 [P] [US5] Tests with `prefers-reduced-motion: reduce` stubbed (`test-setup.ts` matchMedia):
+- [x] T050 [P] [US5] Tests with `prefers-reduced-motion: reduce` stubbed (`test-setup.ts` matchMedia):
       `deck-edge.test.tsx` → token rendered at the label point with no `animateMotion`;
       `use-flow-viewport` → `fitBounds` / `setCenter` called with `duration: 0`; dimming CSS relies
       on `--sd-dur-dim` being 0 (assert the rule uses the variable, not a literal).
-- [ ] T051 [P] [US5] Extend `apps/app/src/editor/flows/a11y.test.tsx`: every current-step change
+- [x] T051 [P] [US5] Extend `apps/app/src/editor/flows/a11y.test.tsx`: every current-step change
       (key, click, segment, autoplay tick, branch switch) produces exactly one live-region update;
       current step identifiable without color (row `aria-current="step"`, filled badge text, edge
       `aria-current` or badge name, node `aria-current="step"`); error segments and badges carry
       "error path" text.
-- [ ] T052 [US5] Fix whatever T050–T051 reveal in `flow-token.tsx`, `use-flow-viewport.ts`,
+- [x] T052 [US5] Fix whatever T050–T051 reveal in `flow-token.tsx`, `use-flow-viewport.ts`,
       `step-player.tsx`, `step-row.tsx` or `index.css`.
 
 **Checkpoint**: quickstart manual scenario 5.

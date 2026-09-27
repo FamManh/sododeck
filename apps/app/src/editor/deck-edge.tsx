@@ -138,6 +138,8 @@ export const DeckEdge = memo(function DeckEdge({
               data-flow-style={flow?.style}
               data-in-flow={flow?.inPath === true ? '' : undefined}
               data-current={current !== null ? '' : undefined}
+              // The current step without color: filled label, token, and this for AT (007 FR-024).
+              aria-current={current !== null ? 'step' : undefined}
               className={cn(
                 'nodrag nopan absolute flex items-center gap-1 rounded-full border bg-surface py-0.5 font-mono text-edge-label whitespace-nowrap',
                 // A flow mark lets clicks through to the edge, so recording works on the label.
