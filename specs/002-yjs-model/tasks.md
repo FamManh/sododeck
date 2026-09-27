@@ -287,18 +287,18 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T035 [P] Write `packages/model/test/perf.test.ts` (SC-003/004). Using `largeDeck()`, assert each of these is under 200 ms: `fromJSON`, `toJSON`, `serializeDeck(toJSON)`, and `checkIntegrity`. A single `update` (rename, then move) plus the `observeDeck` callback must be under 16 ms. Take the median of 5 runs after 1 warm-up, and multiply the budget by `process.env.CI ? 3 : 1`, documented in a comment. If a budget fails, profile first and do not raise the numbers without reporting it.
-- [ ] T036 [P] Write ADR `docs/decisions/0005-yjs-document-layout.md`, covering:
+- [x] T035 [P] Write `packages/model/test/perf.test.ts` (SC-003/004). Using `largeDeck()`, assert each of these is under 200 ms: `fromJSON`, `toJSON`, `serializeDeck(toJSON)`, and `checkIntegrity`. A single `update` (rename, then move) plus the `observeDeck` callback must be under 16 ms. Take the median of 5 runs after 1 warm-up, and multiply the budget by `process.env.CI ? 3 : 1`, documented in a comment. If a budget fails, profile first and do not raise the numbers without reporting it.
+- [x] T036 [P] Write ADR `docs/decisions/0005-yjs-document-layout.md`, covering:
   - the persisted layout (data-model table);
   - plain strings with last write wins per field, and why `Y.Text` is deferred, with its upgrade path (ADR + migration, clarification Q2);
   - the id format;
   - the cascade policy: keep and report knowledge objects, re-parent groups, refuse duplicate ids on load (clarifications Q1, Q3, Q4);
   - canonical key order from the schema;
   - undo scope, which covers only the editor's own origin.
-- [ ] T037 [P] Update `packages/model/CLAUDE.md`: API summary (per the contract), a pointer to the layout comment in `src/deck.ts` and ADR 0005, the browser-free lint guard, and Status (remove the M1 TODO list, list what exists).
-- [ ] T038 Run the quickstart §2 manual smoke from `specs/002-yjs-model/quickstart.md` and check the expected output.
-- [ ] T039 Run the full definition of done at the repo root: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix any failures inside `packages/model`. Confirm there are no `.only`/`.skip` and no `any`/`!`.
-- [ ] T040 Final report, per the AGENTS.md "How to work" step 5: what changed, perf numbers from T035, what was skipped, and what is uncertain. Uncertain points include the Y.Map key order on replicas and the concurrent-move limitation of `Y.Array`. End with the proposed next step (003-canvas-basic or 005).
+- [x] T037 [P] Update `packages/model/CLAUDE.md`: API summary (per the contract), a pointer to the layout comment in `src/deck.ts` and ADR 0005, the browser-free lint guard, and Status (remove the M1 TODO list, list what exists).
+- [x] T038 Run the quickstart §2 manual smoke from `specs/002-yjs-model/quickstart.md` and check the expected output.
+- [x] T039 Run the full definition of done at the repo root: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix any failures inside `packages/model`. Confirm there are no `.only`/`.skip` and no `any`/`!`.
+- [x] T040 Final report, per the AGENTS.md "How to work" step 5: what changed, perf numbers from T035, what was skipped, and what is uncertain. Uncertain points include the Y.Map key order on replicas and the concurrent-move limitation of `Y.Array`. End with the proposed next step (003-canvas-basic or 005).
 
 ---
 

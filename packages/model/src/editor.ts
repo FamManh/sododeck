@@ -80,7 +80,11 @@ export interface DeckEditor {
   moveRuleRow(ruleId: Id, rowId: Id, toIndex: number): void;
   removeRuleRow(ruleId: Id, rowId: Id): void;
 
-  /** Runs `fn` as one transaction: one change event, one undo step. Nested batches flatten. */
+  /**
+   * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
+   * Nested batches flatten. Each operation inside still validates before it writes, but Yjs cannot
+   * roll back: if `fn` throws halfway, the edits made before the throw stay applied.
+   */
   batch<T>(fn: () => T): T;
   /**
    * Marks the start of a gesture (a drag, a multi-step form change): every edit until the
