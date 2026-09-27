@@ -17,6 +17,7 @@ import { FieldLabel } from '../fields/field-label';
 import { LinksField } from '../fields/links-field';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
+import { openFlow } from '../flows/flow-mode';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
 import { TagsField } from '../fields/tags-field';
@@ -200,9 +201,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
                   <button
                     type="button"
                     onClick={() => {
-                      const ui = useUiStore.getState();
-                      ui.setActiveFlow(u.flowId);
-                      ui.setActiveStep(u.stepId);
+                      openFlow(editor, u.flowId, u.stepId);
                     }}
                     className={cn(
                       'flex w-full cursor-pointer items-center gap-2 rounded-card bg-surface-2 px-3 py-2 text-left hover:bg-surface-3',

@@ -47,10 +47,11 @@ describe('FlowList: features and flows (US1, US3)', () => {
   it('shows a flow when its row is clicked', async () => {
     const { user, ui } = renderFlows(flowDeck);
     await user.click(screen.getByRole('button', { name: 'Place order' }));
-    expect(ui().activeFlow?.flowId).toBe('place');
+    expect(ui().activeFlow).toMatchObject({ flowId: 'place', stepId: 's1', playing: false });
     expect(screen.getByRole('list', { name: 'Steps' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back to canvas' }));
     expect(ui().activeFlow).toBeNull();
+    expect(ui().lastPlayedFlowId).toBe('place');
   });
 
   it('adds a feature and renames it inline; an empty name keeps the old one', async () => {

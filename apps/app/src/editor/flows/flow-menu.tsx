@@ -10,6 +10,7 @@ import { Ellipsis, FolderInput, ListOrdered, Pencil, Route, Trash2 } from 'lucid
 import { dropdownKit } from '../../lib/menu-kit';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
+import { openFlow } from './flow-mode';
 import { featureOf, moveToFeature } from './flow-order';
 import { startEditing } from './flow-session';
 
@@ -48,7 +49,7 @@ export function FlowMenu({
       <DropdownMenuContent align="start">
         <Item
           onSelect={() => {
-            ui().setActiveFlow(flowId);
+            openFlow(editor, flowId);
           }}
         >
           <Route />

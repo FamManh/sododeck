@@ -162,3 +162,26 @@ export function selectionFrame(deck: SododeckFile, selected: readonly string[]):
   });
   return box ? pad(box, FRAME_PADDING) : null;
 }
+
+/** Union box of the given nodes at their display positions, or null when none exists (007). */
+export function boundsOf(deck: SododeckFile, nodeIds: Iterable<string>): Rect | null {
+  const ids = new Set(nodeIds);
+  let box: Rect | undefined;
+  deck.nodes.forEach((node, index) => {
+    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...NODE_SIZE });
+  });
+  return box ?? null;
+}
+
+/** Whether a flow-space rect is fully visible in a viewport of `size` screen pixels. */
+export function rectInView(
+  rect: Rect,
+  viewport: { x: number; y: number; zoom: number },
+  size: { width: number; height: number },
+): boolean {
+  const left = rect.x * viewport.zoom + viewport.x;
+  const top = rect.y * viewport.zoom + viewport.y;
+  const right = left + rect.width * viewport.zoom;
+  const bottom = top + rect.height * viewport.zoom;
+  return left >= 0 && top >= 0 && right <= size.width && bottom <= size.height;
+}

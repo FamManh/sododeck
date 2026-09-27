@@ -4,11 +4,13 @@
  * icon with a name or visible text.
  */
 import { act, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
+import { branchedDeck, flowDeck, playbackDeck } from '../../test/flow-fixtures';
 import { announced, renderFlows } from '../../test/render-flows';
+import { openFlow, play } from './flow-mode';
 import { recordClick, startEditing, startNewFlow } from './flow-session';
+import { useUiStore } from '../../state/ui-store';
 
 const unnamed = (root: HTMLElement) =>
   within(root)
@@ -88,5 +90,84 @@ describe('flow authoring accessibility', () => {
       'Recording ‘Place’. Click a connection to add step 1.',
       'Step 1 added: Customer App → API Gateway',
     ]);
+  });
+});
+
+describe('flow playback accessibility (007 FR-023, FR-024)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Counts live-region updates while `run` executes. */
+  async function announcements(run: () => unknown): Promise<string[]> {
+    const texts: string[] = [];
+    const stop = useUiStore.subscribe((s, prev) => {
+      if (s.announcement.seq !== prev.announcement.seq) texts.push(s.announcement.text);
+    });
+    await run();
+    stop();
+    return texts;
+  }
+
+  it('announces every current-step change exactly once', async () => {
+    const { editor, user } = renderFlows(playbackDeck);
+    act(() => {
+      openFlow(editor(), 'fork', 'f1');
+    });
+    const player = screen.getByRole('region', { name: 'Step player' });
+    // Key.
+    expect(await announcements(() => user.keyboard('{ArrowRight}'))).toEqual([
+      'Step 2 of 5: API Gateway → Order Service',
+    ]);
+    // Step row.
+    expect(
+      await announcements(() => user.click(screen.getByRole('button', { name: /^Step 3\b/ }))),
+    ).toHaveLength(1);
+    // Segment.
+    expect(
+      await announcements(() =>
+        user.click(within(player).getByRole('button', { name: 'Go to step 1 of 5' })),
+      ),
+    ).toHaveLength(1);
+    // Branch switch.
+    act(() => {
+      openFlow(editor(), 'fork', 'f4a');
+    });
+    const picker = within(player).getByRole('radiogroup', { name: 'At step 3' });
+    expect(
+      await announcements(() =>
+        user.click(within(picker).getByRole('radio', { name: 'payment failed, error path' })),
+      ),
+    ).toEqual(['Step 4b of 5: Payment Service → Notification Service, branch payment failed']);
+    // Autoplay tick.
+    vi.useFakeTimers();
+    act(() => {
+      openFlow(editor(), 'order', 'o1');
+      play(editor());
+    });
+    expect(
+      await announcements(() => {
+        act(() => {
+          vi.advanceTimersByTime(1700);
+        });
+      }),
+    ).toEqual(['Step 2 of 8: API Gateway → Order Service']);
+  });
+
+  it('shows the current step and error path with text, not only color', () => {
+    const { editor } = renderFlows(playbackDeck);
+    act(() => {
+      openFlow(editor(), 'fork', 'f4b');
+    });
+    const current = screen
+      .getAllByRole('button', { name: /^Step / })
+      .filter((b) => b.getAttribute('aria-current') === 'step');
+    expect(current).toHaveLength(1);
+    const player = screen.getByRole('region', { name: 'Step player' });
+    expect(within(player).getByText('Checkout · Step 4b of 5')).toBeInTheDocument();
+    const segment = within(player).getByRole('button', { name: 'Go to step 4b of 5, error path' });
+    expect(segment).toHaveAttribute('aria-current', 'step');
+    expect(within(player).getByRole('radio', { name: 'payment failed, error path' })).toBeChecked();
+    expect(unnamed(document.body)).toEqual([]);
   });
 });

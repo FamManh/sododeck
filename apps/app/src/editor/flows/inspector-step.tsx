@@ -1,6 +1,13 @@
 import type { FlowAnalysis, PathStep } from '@sododeck/model';
 import type { Flow, SododeckFile } from '@sododeck/schema';
-import { PanelSection } from '@sododeck/ui/components/panel';
+import { KindTile } from '@sododeck/ui/components/kind-tile';
+import {
+  Panel,
+  PanelContent,
+  PanelHeader,
+  PanelSection,
+  PanelTitle,
+} from '@sododeck/ui/components/panel';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -10,7 +17,7 @@ import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
 import { InspectorFrame } from '../inspector/inspector-frame';
-import { stepRoute } from './session-path';
+import { nodeTitle, stepRoute } from './session-path';
 import { AttachedRules } from '../fields/attached-rules';
 import { protocolLabel } from '../fields/edge-choices';
 import { FieldLabel } from '../fields/field-label';
@@ -20,22 +27,31 @@ import { oneStep } from '../fields/one-step';
 import { OwnerField } from '../fields/owner-field';
 import { TagsField } from '../fields/tags-field';
 
+/** Flow mode (007): the current step's place on the played path. */
+export interface StepPlayback {
+  /** "Step 4 of 8", "Step 4b of 5". */
+  label: string;
+}
+
 /**
  * Step inspector (006 FR-019, FR-027, 008 FR-011, designs 45, 46, 51): "Step n · <from> → <to>",
  * then title, markdown description, owner, the edge, tags, links, condition, SLA target (the target
  * only, no meter) and attached rules, editable in or out of a session. The branch step also lists
- * its branches.
+ * its branches. In flow mode (007 FR-019–021, designs 03, 24) the header shows the position, the
+ * from/to tiles, protocol and branch instead.
  */
 export function InspectorStep({
   deck,
   flow,
   analysis,
   step,
+  playback,
 }: {
   deck: SododeckFile;
   flow: Flow;
   analysis: FlowAnalysis;
   step: PathStep;
+  playback?: StepPlayback;
 }) {
   const editor = useEditor();
   const s = step.step;
@@ -54,12 +70,8 @@ export function InspectorStep({
           .filter((part) => part !== undefined && part !== '')
           .join(' · ') || stepRoute(deck, step);
 
-  return (
-    <InspectorFrame
-      icon={<Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
-      heading={`Step ${step.number} · ${stepRoute(deck, step)}`}
-      subtitle={`${flow.title} · ${where}${step.broken ? ' · connection deleted' : ''}`}
-    >
+  const body = (
+    <>
       {isFork && (
         <PanelSection label="Branches after this step" aria-label="Branches after this step">
           <ul className="flex flex-col gap-1.5">
@@ -196,7 +208,7 @@ export function InspectorStep({
           value={s.sla ?? ''}
           allowEmpty
           mono
-          placeholder="e.g. < 300 ms"
+          placeholder={playback === undefined ? 'e.g. < 300 ms' : 'No SLA target'}
           onCommit={(sla) => {
             update({ sla: sla === '' ? null : sla });
           }}
@@ -208,6 +220,104 @@ export function InspectorStep({
         ruleIds={s.rules}
         inputs={s.ruleInputs}
       />
-    </InspectorFrame>
+    </>
+  );
+
+  if (playback === undefined) {
+    return (
+      <InspectorFrame
+        icon={<Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
+        heading={`Step ${step.number} · ${stepRoute(deck, step)}`}
+        subtitle={`${flow.title} · ${where}${step.broken ? ' · connection deleted' : ''}`}
+      >
+        {body}
+      </InspectorFrame>
+    );
+  }
+  return (
+    <Panel aria-label="Inspector">
+      <PlaybackHeader deck={deck} flow={flow} analysis={analysis} step={step} playback={playback} />
+      <PanelContent>{body}</PanelContent>
+    </Panel>
+  );
+}
+
+function PlaybackHeader({
+  deck,
+  flow,
+  analysis,
+  step,
+  playback,
+}: {
+  deck: SododeckFile;
+  flow: Flow;
+  analysis: FlowAnalysis;
+  step: PathStep;
+  playback: StepPlayback;
+}) {
+  const heading = `${playback.label} · ${flow.title}`;
+  const branch = analysis.branches.find((b) => b.branch.id === step.branchId)?.branch;
+  const edge = deck.edges.find((e) => e.id === step.step.edge);
+  const protocol = protocolLabel(edge?.protocol);
+  const kindOf = (id: string | null) => deck.nodes.find((n) => n.id === id)?.type ?? null;
+  return (
+    <PanelHeader className="h-auto flex-col items-stretch gap-2.5 py-3.5">
+      <PanelTitle
+        title={heading}
+        className="text-caption font-semibold tracking-wide text-primary-ink uppercase"
+      >
+        {heading}
+      </PanelTitle>
+      {step.broken ? (
+        <p className="flex items-center gap-1.5 text-body text-clay-ink">
+          <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4" />
+          Connection deleted
+        </p>
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <KindTile
+              kind={kindOf(step.from)}
+              size={30}
+              aria-label={`From: ${nodeTitle(deck, step.from)}`}
+            />
+            <ArrowRight
+              aria-hidden
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="size-4 text-ink-muted"
+            />
+            <KindTile
+              kind={kindOf(step.to)}
+              size={30}
+              aria-label={`To: ${nodeTitle(deck, step.to)}`}
+            />
+            {protocol !== undefined && (
+              <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 font-mono text-caption text-ink-secondary">
+                {protocol}
+              </span>
+            )}
+          </div>
+          <p className="text-title-sm text-ink">{stepRoute(deck, step)}</p>
+          {edge?.label !== undefined && edge.label !== '' && (
+            <p className="font-mono text-body-sm text-ink-secondary">{edge.label}</p>
+          )}
+        </>
+      )}
+      {branch !== undefined && (
+        <p className="flex items-center gap-1.5 text-body-sm text-ink-secondary">
+          {branch.errorPath === true ? (
+            <CircleAlert
+              aria-hidden
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="size-3.5 text-clay-ink"
+            />
+          ) : (
+            <GitBranch aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+          )}
+          <span>Branch {branch.label}</span>
+          {branch.errorPath === true && <span className="text-clay-ink">· Error path</span>}
+        </p>
+      )}
+    </PanelHeader>
   );
 }

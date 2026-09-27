@@ -7,7 +7,9 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowRight, Route } from 'lucide-react';
 import { useNavigate } from 'react-router';
 
+import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
+import { openFlow } from '../flows/flow-mode';
 import { canvasPath } from './rules-path';
 
 const rowClass = cn(
@@ -29,6 +31,7 @@ export function UsedIn({
   ruleId: Id;
 }) {
   const navigate = useNavigate();
+  const editor = useEditor();
   const usage = ruleUsage(deck, ruleId);
   const title = (id: Id | null) => deck.nodes.find((n) => n.id === id)?.title ?? id ?? '';
   const empty = usage.steps.length === 0 && usage.nodes.length === 0;
@@ -50,9 +53,7 @@ export function UsedIn({
                   className={rowClass}
                   onClick={() => {
                     void navigate(canvasPath(deckId));
-                    const ui = useUiStore.getState();
-                    ui.setActiveFlow(s.flowId);
-                    ui.setActiveStep(s.stepId);
+                    openFlow(editor, s.flowId, s.stepId);
                   }}
                 >
                   <Route

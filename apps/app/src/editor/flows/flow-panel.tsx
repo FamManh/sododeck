@@ -9,6 +9,7 @@ import { ArrowLeft, ListOrdered, Route } from 'lucide-react';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
+import { exitFlow, openFlow } from './flow-mode';
 import { featureOf, flowsIn } from './flow-order';
 import { analysisOf, sessionTitle, startEditing } from './flow-session';
 import { findFlow } from './session-path';
@@ -63,7 +64,7 @@ export function FlowPanel({ deck }: { deck: SododeckFile }) {
           size="sm"
           className="self-start"
           onClick={() => {
-            ui().setActiveFlow(null);
+            exitFlow();
           }}
         >
           <ArrowLeft />
@@ -83,7 +84,7 @@ export function FlowPanel({ deck }: { deck: SododeckFile }) {
                   focusRing,
                 )}
                 onClick={() => {
-                  ui().setActiveFlow(f.id);
+                  openFlow(editor, f.id);
                 }}
               >
                 <Route aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4 shrink-0" />

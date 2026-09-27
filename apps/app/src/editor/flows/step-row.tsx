@@ -10,6 +10,7 @@ import { useId } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import type { SortableRowProps } from './flow-row';
+import { goToStep } from './flow-mode';
 import { startBranch } from './flow-session';
 import { stepRoute } from './session-path';
 import { removeSessionStep, stepRowKeyDown } from './use-flow-shortcuts';
@@ -77,7 +78,9 @@ export function StepRow({
           focusRing,
         )}
         onClick={() => {
-          useUiStore.getState().setActiveStep(step.step.id);
+          // Flow mode (007): the step becomes current; in a session it is selected (006).
+          if (editing) useUiStore.getState().setActiveStep(step.step.id);
+          else goToStep(editor, step.step.id);
         }}
         onKeyDown={(event) => {
           if (editing) stepRowKeyDown(event, editor, flowId, step.step.id);

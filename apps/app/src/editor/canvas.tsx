@@ -16,7 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
-import { useUiStore } from '../state/ui-store';
+import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
 import { displayPosition, NODE_SIZE } from './canvas-geometry';
 import { CanvasToolbar } from './canvas-toolbar';
@@ -26,9 +26,12 @@ import { DeckNode } from './deck-node';
 import { toFlowEdges, toFlowNodes } from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
 import { EmptyCanvasCard } from './empty-canvas-card';
-import { EMPTY_OVERLAY, flowOverlay } from './flows/flow-overlay';
+import { playbackOf } from './flows/flow-mode';
+import { EMPTY_OVERLAY, flowOverlay, type PlaybackMarks } from './flows/flow-overlay';
 import { InvalidEdgePopover } from './flows/invalid-edge-popover';
 import { findFlow } from './flows/session-path';
+import { StepPlayer } from './flows/step-player';
+import { useFlowViewport } from './flows/use-flow-viewport';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { SelectionFrame } from './selection-frame';
 import { useCanvasHandlers } from './use-canvas-handlers';
@@ -149,14 +152,43 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     () => (flow === undefined ? null : analyzeFlow(flow, deck.edges)),
     [flow, deck.edges],
   );
-  const activeStepId = activeFlow?.stepId ?? null;
+  // Flow mode (007): a flow is open without a session; the canvas becomes view-only.
+  const flowMode = isFlowMode({ activeFlow, flowSession: session });
+  const playback = useMemo(
+    () =>
+      flowMode && flow !== undefined && activeFlow !== null
+        ? playbackOf(deck, flow, activeFlow.alternativeId, activeFlow.stepId)
+        : null,
+    [flowMode, deck, flow, activeFlow],
+  );
+  const speed = activeFlow?.speed ?? 1;
+  const marks = useMemo<PlaybackMarks | null>(
+    () =>
+      playback === null
+        ? null
+        : {
+            played: new Set(playback.played.steps.map((s) => s.step.id)),
+            currentStepId: playback.currentStepId,
+            speed,
+          },
+    [playback, speed],
+  );
+  const activeStepId = playback === null ? (activeFlow?.stepId ?? null) : playback.currentStepId;
   const overlay = useMemo(
     () =>
       analysis === null && session === null
         ? EMPTY_OVERLAY
-        : flowOverlay(deck, analysis, session, session === null ? null : hoverEdgeId, activeStepId),
-    [deck, analysis, session, hoverEdgeId, activeStepId],
+        : flowOverlay(
+            deck,
+            analysis,
+            session,
+            session === null ? null : hoverEdgeId,
+            activeStepId,
+            marks,
+          ),
+    [deck, analysis, session, hoverEdgeId, activeStepId, marks],
   );
+  useFlowViewport(deck, playback, wrapper);
 
   const nodes = useMemo(
     () => toFlowNodes(deck, selection, focusedId, overlay),
@@ -173,6 +205,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     <div
       ref={wrapper}
       {...{ [CANVAS_ATTR]: '' }}
+      {...(flowMode ? { 'data-flow-mode': '' } : {})}
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
@@ -222,7 +255,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         selectionOnDrag={false}
         selectNodesOnDrag={false}
         panOnDrag
-        // Recording pauses structure editing (FR-017): no drags, connections or reconnects.
+        // Recording pauses structure editing (006 FR-017). Flow mode is view-only too, but through
+        // the handlers and CSS: toggling these props re-renders every node and edge, which costs
+        // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
         nodesDraggable={!recording}
         nodesConnectable={!recording}
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
@@ -250,6 +285,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           }}
           className="rounded-card border border-hairline shadow-rest"
         />
+        {flowMode && (
+          <Panel position="bottom-center">
+            <StepPlayer deck={deck} />
+          </Panel>
+        )}
         <SelectionFrame deck={deck} />
       </ReactFlow>
       {deck.nodes.length === 0 && <EmptyCanvasCard />}

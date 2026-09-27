@@ -2,12 +2,14 @@ import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import {
+  boundsOf,
   displayPosition,
   freeSpot,
   GROUP_PADDING,
   groupBounds,
   nearestInDirection,
   NODE_SIZE,
+  rectInView,
 } from './canvas-geometry';
 
 const deck = (patch: Partial<SododeckFile>): SododeckFile => ({ ...emptySododeckFile(), ...patch });
@@ -101,5 +103,35 @@ describe('freeSpot', () => {
     });
     expect(freeSpot(d, { x: 0, y: 0 })).toEqual({ x: 0, y: 0 });
     expect(freeSpot(d, { x: 100, y: 100 })).toEqual({ x: 148, y: 148 });
+  });
+});
+
+describe('boundsOf / rectInView (007)', () => {
+  const d = deck({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 200, y: 100 } },
+      { id: 'c', type: 'service', title: 'C', position: { x: 900, y: 900 } },
+    ],
+  });
+
+  it('boxes the given nodes, null when none exists', () => {
+    expect(boundsOf(d, ['a', 'b'])).toEqual({
+      x: 0,
+      y: 0,
+      width: 200 + NODE_SIZE.width,
+      height: 100 + NODE_SIZE.height,
+    });
+    expect(boundsOf(d, [])).toBeNull();
+    expect(boundsOf(d, ['gone'])).toBeNull();
+  });
+
+  it('checks a rect against the viewport in screen pixels', () => {
+    const rect = { x: 100, y: 100, width: 100, height: 50 };
+    const size = { width: 400, height: 300 };
+    expect(rectInView(rect, { x: 0, y: 0, zoom: 1 }, size)).toBe(true);
+    expect(rectInView(rect, { x: 0, y: 0, zoom: 2 }, size)).toBe(true);
+    expect(rectInView(rect, { x: 0, y: 0, zoom: 3 }, size)).toBe(false);
+    expect(rectInView(rect, { x: -150, y: 0, zoom: 1 }, size)).toBe(false);
   });
 });

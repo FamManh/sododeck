@@ -9,6 +9,8 @@ import {
   selectionText,
   selectionView,
 } from './json-panel-view';
+import { openedFlow } from '../state/ui-store';
+import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf } from '../test/render-canvas';
 
 const deck: SododeckFile = {
@@ -113,21 +115,47 @@ describe('selectionView for flows (006)', () => {
   const none = { nodes: [], edges: [] };
 
   it('shows the whole flow, labelled Flow, or Step while a step is selected', () => {
-    const view = selectionView(flowDeck, none, { flowId: 'f', stepId: null, branchId: null });
+    const view = selectionView(flowDeck, none, openedFlow('f'));
     expect(view.label).toBe('Flow');
     expect(view.fullLabel).toBe('Flow: Place order');
     expect(view.entries).toEqual([{ collection: 'flows', value: flowDeck.flows[0] }]);
     expect(selectionText(view.entries)).toBe(
       serializeEntry('flows', flowDeck.flows[0] as SododeckFile['flows'][number]),
     );
-    expect(selectionView(flowDeck, none, { flowId: 'f', stepId: 's1', branchId: null }).label).toBe(
-      'Step',
-    );
+    expect(selectionView(flowDeck, none, openedFlow('f', 's1')).label).toBe('Step');
   });
 
   it('falls back to the canvas selection when the flow is gone', () => {
-    expect(selectionView(flowDeck, none, { flowId: 'x', stepId: null, branchId: null }).label).toBe(
-      'Selection',
-    );
+    expect(selectionView(flowDeck, none, openedFlow('x')).label).toBe('Selection');
+  });
+});
+
+describe('selectionView in flow mode (007 FR-022)', () => {
+  const none = { nodes: [], edges: [] };
+  const order = playbackDeck.flows[0] as SododeckFile['flows'][number];
+
+  it('shows the current step entry, labelled with its number', () => {
+    const view = selectionView(playbackDeck, none, openedFlow('order', 'o4'), true);
+    expect(view.label).toBe('Step 4');
+    expect(view.fullLabel).toBe('Step 4: Place order');
+    expect(view.entries).toEqual([{ collection: 'steps', value: order.steps[3] }]);
+    expect(selectionText(view.entries)).toBe(serializeEntry('steps', order.steps[3]));
+  });
+
+  it('numbers an alternative step', () => {
+    const view = selectionView(playbackDeck, none, openedFlow('fork', 'f4b', 'failed'), true);
+    expect(view.label).toBe('Step 4b');
+  });
+
+  it('keeps the 006 flow entry in a session or with a branch open', () => {
+    expect(selectionView(playbackDeck, none, openedFlow('order', 'o4'), false).entries).toEqual([
+      { collection: 'flows', value: order },
+    ]);
+    const branch = { ...openedFlow('fork'), branchId: 'ok' };
+    expect(selectionView(playbackDeck, none, branch, true).entries[0]?.collection).toBe('flows');
+  });
+
+  it('shows the flow for a flow without steps', () => {
+    expect(selectionView(playbackDeck, none, openedFlow('empty'), true).label).toBe('Flow');
   });
 });

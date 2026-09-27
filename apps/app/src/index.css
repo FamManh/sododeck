@@ -66,3 +66,42 @@
 .sd-edge-flash {
   animation: sd-edge-flash 400ms ease-in-out 3;
 }
+
+/* Flow mode (007 FR-004, research R4): everything off the played path is dimmed; handles are gone
+   (view-only). The transition collapses to 0 under reduced motion (--sd-dur-dim). */
+[data-flow-mode] .react-flow__node,
+[data-flow-mode] .react-flow__edge,
+[data-flow-mode] [data-testid='edge-label'] {
+  transition: opacity var(--sd-dur-dim);
+}
+
+[data-flow-mode] .react-flow__node:not(.in-flow),
+[data-flow-mode] .react-flow__edge:not(.in-flow),
+[data-flow-mode] [data-testid='edge-label']:not([data-in-flow]) {
+  opacity: 0.2;
+}
+
+/* View-only (007): no connection handles or reconnect grips, no grab cursor. Hidden, not
+   `display: none`: React Flow measures handle bounds to draw edges. */
+[data-flow-mode] .react-flow__handle.sd-handle,
+[data-flow-mode] .react-flow__edgeupdater {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-flow-mode] .react-flow__node {
+  cursor: default;
+}
+
+[data-flow-mode] .react-flow__node.in-flow {
+  cursor: pointer;
+}
+
+/* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */
+.sd-segment-error {
+  background-image: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);
+}
+
+.sd-segment-broken {
+  background-image: repeating-linear-gradient(135deg, currentColor 0 2px, transparent 2px 5px);
+}

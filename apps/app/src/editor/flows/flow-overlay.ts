@@ -1,7 +1,7 @@
 /**
  * Canvas marks of the shown or recorded flow (006 research R6): numbered badges, path, error-path,
  * candidate, preview and invalid styles on edges, and the "Step n starts here" ring on the next
- * start node. Pure; `toFlowEdges` / `toFlowNodes` read it through their per-object cache.
+ * start node; in flow mode (007) the played path, the current edge and its nodes. Pure; `toFlowEdges` / `toFlowNodes` read it through their per-object cache.
  */
 import type { FlowAnalysis } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
@@ -27,11 +27,27 @@ export interface EdgeFlowMark {
   style: EdgeFlowStyle;
   /** An error-path step travels the edge: the label gets an alert icon (FR-026). */
   errorIcon: boolean;
+  /** Flow mode: a played step travels the edge (not dimmed). Absent outside flow mode. */
+  inPath?: boolean;
+  /** Flow mode: the current step's edge (thicker, filled label, token). */
+  current?: { speed: 1 | 2 } | null;
 }
 
 export interface NodeFlowMark {
-  /** "Step 4 starts here". */
-  startsHere: string;
+  /** "Step 4 starts here" (recording only). */
+  startsHere?: string;
+  /** Flow mode: from/to of a played step. */
+  inPath?: boolean;
+  /** Flow mode: from/to of the current step (ring + `aria-current="step"`). */
+  currentStep?: boolean;
+}
+
+/** Flow mode input (007 data-model §3). */
+export interface PlaybackMarks {
+  /** Ids of the played steps. */
+  played: ReadonlySet<string>;
+  currentStepId: string | null;
+  speed: 1 | 2;
 }
 
 export interface FlowOverlay {
@@ -48,6 +64,7 @@ export function flowOverlay(
   session: FlowSession | null,
   hoverEdgeId: string | null,
   activeStepId: string | null = null,
+  playback: PlaybackMarks | null = null,
 ): FlowOverlay {
   const badges = new Map<string, EdgeBadge[]>();
   if (analysis !== null) {
@@ -81,6 +98,7 @@ export function flowOverlay(
   }
 
   const nodes = new Map<string, NodeFlowMark>();
+  if (playback !== null && analysis !== null) markPlayback(analysis, playback, edges, nodes);
   if (session === null) return { edges, nodes };
 
   const path = sessionPath(analysis, session.target);
@@ -105,4 +123,31 @@ export function flowOverlay(
   }
   if (session.invalid !== null) mark(session.invalid.edgeId, 'invalid');
   return { edges, nodes };
+}
+
+function markPlayback(
+  analysis: FlowAnalysis,
+  playback: PlaybackMarks,
+  edges: Map<string, EdgeFlowMark>,
+  nodes: Map<string, NodeFlowMark>,
+): void {
+  for (const [edgeId, mark] of edges) edges.set(edgeId, { ...mark, inPath: false, current: null });
+  for (const stepId of playback.played) {
+    const s = analysis.byStepId.get(stepId);
+    if (s === undefined || s.broken) continue;
+    const isCurrent = stepId === playback.currentStepId;
+    const mark = edges.get(s.step.edge);
+    if (mark !== undefined) {
+      edges.set(s.step.edge, {
+        ...mark,
+        inPath: true,
+        current: isCurrent ? { speed: playback.speed } : (mark.current ?? null),
+      });
+    }
+    for (const nodeId of [s.from, s.to]) {
+      if (nodeId === null) continue;
+      const node = nodes.get(nodeId);
+      nodes.set(nodeId, { inPath: true, currentStep: isCurrent || node?.currentStep === true });
+    }
+  }
 }

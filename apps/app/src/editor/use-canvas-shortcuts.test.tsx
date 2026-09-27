@@ -4,8 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
+import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { Canvas } from './canvas';
+import { openFlow } from './flows/flow-mode';
 import { Inspector } from './inspector';
 import { SaveContext } from './save-context';
 import { isTextTarget, useEditorShortcuts } from './use-canvas-shortcuts';
@@ -297,5 +299,25 @@ describe('keyboard recording (006 FR-015, FR-017)', () => {
     expect(ui().pendingDelete).toBeNull();
     await user.keyboard('{Escape}');
     expect(ui().flowSession).toBeNull();
+  });
+});
+
+describe('keyboard in flow mode (007)', () => {
+  it('ignores arrows, C, E, Enter and Delete on the canvas; Esc exits flow mode', async () => {
+    const { user, editor, doc } = setup(playbackDeck);
+    focusNode('b');
+    act(() => {
+      openFlow(editor(), 'order');
+    });
+    const before = toJSON(doc);
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}cE{Enter}{Delete}');
+    expect(ui().focusedId).toBe('b');
+    expect(ui().popover).toBeNull();
+    expect(ui().pendingDelete).toBeNull();
+    expect(document.activeElement).toHaveAttribute('data-node-id', 'b');
+    expect(toJSON(doc)).toEqual(before);
+    expect(ui().activeFlow?.flowId).toBe('order');
+    await user.keyboard('{Escape}');
+    expect(ui().activeFlow).toBeNull();
   });
 });

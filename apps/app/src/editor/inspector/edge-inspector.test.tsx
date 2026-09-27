@@ -84,7 +84,7 @@ describe('EdgeInspector (story 1, FR-009)', () => {
         .map((b) => b.textContent),
     ).toEqual(['Place order · Step 1', 'Assign driver · Step 2']);
     await user.click(within(uses).getByRole('button', { name: 'Assign driver · Step 2' }));
-    expect(ui().activeFlow).toEqual({ flowId: 'assign', stepId: 't2', branchId: null });
+    expect(ui().activeFlow).toMatchObject({ flowId: 'assign', stepId: 't2', branchId: null });
   });
 
   it('says when no flow uses it, and deletes through the dialog', async () => {

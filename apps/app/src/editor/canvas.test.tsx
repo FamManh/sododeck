@@ -1,4 +1,4 @@
-import { toJSON } from '@sododeck/model';
+import { toJSON, type DeckEditor } from '@sododeck/model';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Edge, Node, NodeChange } from '@xyflow/react';
@@ -6,8 +6,10 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
+import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
 import { Canvas } from './canvas';
+import { exitFlow, openFlow } from './flows/flow-mode';
 import { KIND_MIME, useCanvasHandlers } from './use-canvas-handlers';
 
 const deck = deckOf({
@@ -373,5 +375,115 @@ describe('canvas during a flow session (006 FR-017)', () => {
     });
     expect(toJSON(doc).nodes).toEqual(before.nodes);
     expect(ui().popover).toBeNull();
+  });
+});
+
+describe('canvas in flow mode (007)', () => {
+  const open = (editor: () => DeckEditor, stepId?: string) => {
+    act(() => {
+      openFlow(editor(), 'order', stepId);
+    });
+  };
+
+  it('marks the wrapper while a flow is open and draws the step player', () => {
+    const { editor, container } = renderWithEditor(<Canvas />, playbackDeck);
+    const wrapper = () => container.querySelector('[data-canvas]');
+    expect(wrapper()).not.toHaveAttribute('data-flow-mode');
+    open(editor);
+    expect(wrapper()).toHaveAttribute('data-flow-mode');
+    expect(screen.getByRole('region', { name: 'Step player' })).toBeInTheDocument();
+    // jsdom has no layout, so React Flow draws nodes but not edges: check the step's nodes.
+    expect(
+      container.querySelectorAll('[data-testid="deck-node"][aria-current="step"]'),
+    ).toHaveLength(2);
+    act(() => {
+      exitFlow();
+    });
+    expect(wrapper()).not.toHaveAttribute('data-flow-mode');
+    expect(screen.queryByRole('region', { name: 'Step player' })).not.toBeInTheDocument();
+  });
+
+  it('refuses drags, drops, connections, reconnects and edge popovers', () => {
+    const { h, doc, editor } = handlers(playbackDeck);
+    open(editor);
+    const before = toJSON(doc);
+    const drop = {
+      clientX: 0,
+      clientY: 0,
+      preventDefault: () => undefined,
+      dataTransfer: { types: [KIND_MIME], getData: () => 'service', dropEffect: '' },
+    } as unknown as DragEvent;
+    act(() => {
+      h().onDragOver(drop);
+      h().onDrop(drop);
+      h().onNodeDragStart(undefined, flowNode('a'));
+      h().onNodesChange([
+        { id: 'a', type: 'position', position: { x: 999, y: 999 } },
+      ] as NodeChange[]);
+      h().onNodeDragStop();
+      h().onConnect({ source: 'a', target: 'z', sourceHandle: null, targetHandle: null });
+      h().onReconnect(flowEdge('ab'), {
+        source: 'a',
+        target: 'z',
+        sourceHandle: null,
+        targetHandle: null,
+      });
+      h().onEdgeDoubleClick(click(), flowEdge('ab'));
+    });
+    expect(toJSON(doc)).toEqual(before);
+    expect(editor().canUndo()).toBe(false);
+    expect(ui().popover).toBeNull();
+    expect(ui().activeFlow?.flowId).toBe('order');
+  });
+
+  it('jumps to the first step touching a clicked member node', () => {
+    const { h, editor } = handlers(playbackDeck);
+    open(editor, 'o6');
+    act(() => {
+      h().onNodeClick(click(), flowNode('c'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o2');
+    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+  });
+
+  it('cycles through the steps of an edge used twice, wrapping around', () => {
+    const { h, editor } = handlers(playbackDeck);
+    open(editor, 'o3');
+    act(() => {
+      h().onEdgeClick(click(), flowEdge('bc'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o4');
+    act(() => {
+      h().onEdgeClick(click(), flowEdge('bc'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o2');
+  });
+
+  it('ignores dimmed nodes and edges and the pane, staying in flow mode', () => {
+    const { h, editor } = handlers(playbackDeck);
+    open(editor, 'o3');
+    const seq = ui().announcement.seq;
+    act(() => {
+      h().onNodeClick(click(), flowNode('z'));
+      h().onEdgeClick(click(), flowEdge('az'));
+      h().onPaneClick();
+    });
+    expect(ui().activeFlow).toMatchObject({ flowId: 'order', stepId: 'o3' });
+    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().announcement.seq).toBe(seq);
+  });
+
+  it('pauses playback and announces once on a jump', () => {
+    const { h, editor } = handlers(playbackDeck);
+    open(editor, 'o1');
+    act(() => {
+      ui().setPlaying(true);
+    });
+    const seq = ui().announcement.seq;
+    act(() => {
+      h().onNodeClick(click(), flowNode('x'));
+    });
+    expect(ui().activeFlow).toMatchObject({ stepId: 'o5', playing: false });
+    expect(ui().announcement.seq).toBe(seq + 1);
   });
 });

@@ -76,3 +76,90 @@ export function session(patch: Partial<FlowSession> = {}): FlowSession {
     ...patch,
   };
 }
+
+/**
+ * Flow mode fixtures (007): an 8-step "Place order" (steps 2 and 4 share API Gateway → Order
+ * Service; step 5 is Order Service → Payment Service), a flow forking after step 3 into
+ * "payment ok" and "payment failed" (error path), a one-step flow, an empty flow and a flow with a
+ * broken step.
+ */
+export const playbackDeck: SododeckFile = deckOf({
+  nodes: [
+    { id: 'a', type: 'client', title: 'Customer App', position: { x: 0, y: 0 } },
+    { id: 'b', type: 'service', title: 'API Gateway', position: { x: 200, y: 0 } },
+    { id: 'c', type: 'service', title: 'Order Service', position: { x: 400, y: 0 } },
+    { id: 'd', type: 'queue', title: 'Event Bus', position: { x: 600, y: 0 } },
+    { id: 'x', type: 'service', title: 'Payment Service', position: { x: 400, y: 200 } },
+    { id: 'n', type: 'service', title: 'Notification Service', position: { x: 600, y: 200 } },
+    { id: 'z', type: 'database', title: 'Audit DB', position: { x: 0, y: 400 } },
+  ],
+  edges: [
+    { id: 'ab', from: 'a', to: 'b', label: 'HTTPS', protocol: 'http' },
+    { id: 'bc', from: 'b', to: 'c', label: 'POST /orders' },
+    { id: 'cb', from: 'c', to: 'b', label: 'quote' },
+    { id: 'cx', from: 'c', to: 'x', label: 'authorize', protocol: 'grpc' },
+    { id: 'xc', from: 'x', to: 'c', label: 'authorized' },
+    { id: 'cd', from: 'c', to: 'd', label: 'order.created', protocol: 'event' },
+    { id: 'dn', from: 'd', to: 'n', label: 'notify' },
+    { id: 'xn', from: 'x', to: 'n', label: 'declined' },
+    { id: 'na', from: 'n', to: 'a', label: 'push' },
+    { id: 'az', from: 'a', to: 'z', label: 'log' },
+  ],
+  features: [{ id: 'checkout', title: 'Checkout' }],
+  flows: [
+    {
+      id: 'order',
+      title: 'Place order',
+      feature: 'checkout',
+      steps: [
+        { id: 'o1', edge: 'ab', title: 'Submit order' },
+        { id: 'o2', edge: 'bc' },
+        { id: 'o3', edge: 'cb', title: 'Quote price' },
+        { id: 'o4', edge: 'bc', condition: 'quote.ok', description: 'Create the order.' },
+        { id: 'o5', edge: 'cx', sla: '< 300 ms', rules: ['limits', 'r9'] },
+        { id: 'o6', edge: 'xc' },
+        { id: 'o7', edge: 'cd' },
+        { id: 'o8', edge: 'dn' },
+      ],
+    },
+    {
+      id: 'fork',
+      title: 'Checkout',
+      feature: 'checkout',
+      branches: [
+        { id: 'ok', label: 'payment ok', condition: 'authorized' },
+        { id: 'failed', label: 'payment failed', condition: 'declined', errorPath: true },
+      ],
+      steps: [
+        { id: 'f1', edge: 'ab' },
+        { id: 'f2', edge: 'bc' },
+        { id: 'f3', edge: 'cx' },
+        { id: 'f4a', edge: 'xc', branch: 'ok' },
+        { id: 'f5a', edge: 'cd', branch: 'ok' },
+        { id: 'f4b', edge: 'xn', branch: 'failed' },
+        { id: 'f5b', edge: 'na', branch: 'failed' },
+      ],
+    },
+    { id: 'one', title: 'Log', feature: 'checkout', steps: [{ id: 'l1', edge: 'az' }] },
+    { id: 'empty', title: 'Refund', feature: 'checkout', steps: [] },
+    {
+      id: 'broken',
+      title: 'Track',
+      feature: 'checkout',
+      steps: [
+        { id: 'k1', edge: 'ab' },
+        { id: 'k2', edge: 'gone' },
+        { id: 'k3', edge: 'bc' },
+      ],
+    },
+  ],
+  rules: {
+    limits: {
+      title: 'Payment limits',
+      hitPolicy: 'first',
+      inputs: [{ id: 'amount', label: 'Amount' }],
+      outputs: [{ id: 'ok', label: 'OK' }],
+      rows: [],
+    },
+  },
+});

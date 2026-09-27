@@ -3,7 +3,7 @@ import { emptySododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JSON_PANEL_KEY } from './json-panel-prefs';
-import { LABELS_KEY, readLabelsOn, useUiStore } from './ui-store';
+import { isFlowMode, LABELS_KEY, readLabelsOn, useUiStore } from './ui-store';
 
 const initial = useUiStore.getState();
 const state = () => useUiStore.getState();
@@ -155,11 +155,11 @@ describe('ui store', () => {
       state().select({ nodes: ['a'], edges: ['e'] });
       state().setActiveFlow('f');
       expect(state().selection).toEqual({ nodes: [], edges: [] });
-      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: null });
+      expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: null });
       state().setActiveStep('s1');
-      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: 's1', branchId: null });
+      expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: 's1', branchId: null });
       state().setActiveBranch('b1');
-      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: 'b1' });
+      expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: 'b1' });
       state().select({ nodes: ['a'] });
       expect(state().activeFlow).toBeNull();
     });
@@ -183,7 +183,7 @@ describe('ui store', () => {
         recorded: [],
       });
       state().setSessionFlow('f');
-      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: null });
+      expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: null });
       state().setInvalid({ edgeId: 'e', stepNumber: '2', branchFromStep: null });
       state().pushRecorded('s1');
       state().pushRecorded('s2');
@@ -202,7 +202,7 @@ describe('ui store', () => {
       state().endSession();
       expect(state().flowSession).toBeNull();
       expect(state().hoverEdgeId).toBeNull();
-      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: null });
+      expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: null });
     });
 
     it('starts an edit session with its checkpoint and keeps the flow on canvas selection', () => {
@@ -221,6 +221,74 @@ describe('ui store', () => {
     it('opens the confirmation for any removal targets', () => {
       state().requestRemoval([{ scope: 'features', id: 'feat' }]);
       expect(state().pendingDelete).toEqual({ targets: [{ scope: 'features', id: 'feat' }] });
+    });
+
+    it('enters flow mode paused at 1x and leaves it marking the flow last played (007)', () => {
+      state().select({ nodes: ['a'] });
+      state().focus('a');
+      state().openEdgePopover('e');
+      state().openFlow('f', 's2', 'alt');
+      expect(state().activeFlow).toEqual({
+        flowId: 'f',
+        stepId: 's2',
+        branchId: null,
+        alternativeId: 'alt',
+        playing: false,
+        speed: 1,
+      });
+      expect(state().selection).toEqual({ nodes: [], edges: [] });
+      expect(state().focusedEdgeId).toBeNull();
+      expect(state().popover).toBeNull();
+      expect(isFlowMode(state())).toBe(true);
+      state().exitFlow();
+      expect(state().activeFlow).toBeNull();
+      expect(state().lastPlayedFlowId).toBe('f');
+      expect(isFlowMode(state())).toBe(false);
+      state().openFlow('g');
+      expect(state().lastPlayedFlowId).toBeNull();
+    });
+
+    it('pauses on step changes, speed changes and alternative switches; autoplay keeps playing', () => {
+      state().openFlow('f', 's1');
+      state().setPlaying(true);
+      state().advance('s2');
+      expect(state().activeFlow).toMatchObject({ stepId: 's2', playing: true });
+      state().setCurrentStep('s3');
+      expect(state().activeFlow).toMatchObject({ stepId: 's3', playing: false });
+      state().setPlaying(true);
+      state().setSpeed(2);
+      expect(state().activeFlow).toMatchObject({ speed: 2, playing: false });
+      state().setPlaying(true);
+      state().setAlternative('b', 's4b');
+      expect(state().activeFlow).toMatchObject({
+        alternativeId: 'b',
+        stepId: 's4b',
+        playing: false,
+      });
+    });
+
+    it('is not flow mode during a session, which stops playback', () => {
+      state().openFlow('f', 's1');
+      state().setPlaying(true);
+      state().startEditing('f', checkpoint);
+      expect(isFlowMode(state())).toBe(false);
+      expect(state().activeFlow).toMatchObject({ flowId: 'f', playing: false });
+    });
+
+    it('forgets the last played flow when another deck opens', () => {
+      state().openFlow('f');
+      state().exitFlow();
+      state().resetForDeck();
+      expect(state().lastPlayedFlowId).toBeNull();
+    });
+
+    it('ignores playback actions without an open flow', () => {
+      state().setPlaying(true);
+      state().setSpeed(2);
+      state().advance('s');
+      state().exitFlow();
+      expect(state().activeFlow).toBeNull();
+      expect(state().lastPlayedFlowId).toBeNull();
     });
 
     it('keeps the filter text', () => {
