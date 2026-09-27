@@ -21,11 +21,11 @@ import { observeDeck, type ObjectChange } from './observe';
 
 export interface DeckSnapshot {
   /** Current plain deck. A new top-level object after every change; untouched objects keep identity. */
-  get(): SododeckFile;
+  get: () => SododeckFile;
   /** Called once per transaction, after `get()` is up to date. Returns unsubscribe. */
-  subscribe(listener: () => void): () => void;
+  subscribe: (listener: () => void) => () => void;
   /** Stops following the document; `get()` keeps returning the last deck. */
-  destroy(): void;
+  destroy: () => void;
 }
 
 type Item = { id: string };
