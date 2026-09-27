@@ -4,9 +4,11 @@ import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
 
+import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { StickyFlowNode } from '../deck-to-flow';
 import { toStickyNodes } from '../deck-to-flow';
+import type { FlowOverlay } from '../flows/flow-overlay';
 import { StickyNode } from './sticky-node';
 
 const deck = deckOf({
@@ -26,8 +28,15 @@ const deck = deckOf({
 function stickyProps(
   file: ReturnType<typeof readDeck>,
   stickyId: string,
+  overlay?: FlowOverlay,
+  flow?: {
+    flowMode: boolean;
+    notesDisplay: 'dimmed' | 'shown' | 'hidden';
+    emptyFlow: boolean;
+    brokenCurrentStep: boolean;
+  },
 ): NodeProps<StickyFlowNode> {
-  const sticky = toStickyNodes(file, { nodes: [], edges: [], stickies: [] }).find(
+  const sticky = toStickyNodes(file, { nodes: [], edges: [], stickies: [] }, overlay, flow).find(
     (node) => node.data.stickyId === stickyId,
   );
   if (sticky === undefined) throw new Error(`Missing sticky ${stickyId}`);
@@ -42,6 +51,25 @@ function renderSticky(stickyId: string) {
       rendered.rerender(<StickyNode {...stickyProps(readDeck(rendered.doc), id)} />);
     },
   };
+}
+
+function renderFlowSticky(stickyId: string) {
+  const overlay: FlowOverlay = { edges: new Map(), nodes: new Map() };
+  const rendered = renderWithEditor(
+    <StickyNode
+      {...stickyProps(deck, stickyId, overlay, {
+        flowMode: true,
+        notesDisplay: 'dimmed',
+        emptyFlow: false,
+        brokenCurrentStep: false,
+      })}
+    />,
+    deck,
+  );
+  act(() => {
+    useUiStore.getState().openFlow('flow-1', 'step-1');
+  });
+  return rendered;
 }
 
 describe('StickyNode', () => {
@@ -121,5 +149,23 @@ describe('StickyNode', () => {
 
     fireEvent.keyDown(card, { key: 'F2' });
     expect(await screen.findByRole('textbox', { name: 'Note text' })).toBeInTheDocument();
+  });
+
+  it('is view-only in flow mode: dimmed naming, no collapse button, and no edit shortcuts', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderFlowSticky('st1');
+    const card = screen.getByRole('group', {
+      name: 'Note: Owner, pinned to Order Service, dimmed',
+    });
+
+    expect(screen.queryByRole('button', { name: 'Collapse note' })).not.toBeInTheDocument();
+    fireEvent.doubleClick(card);
+    fireEvent.keyDown(card, { key: 'Enter' });
+    fireEvent.keyDown(card, { key: 'F2' });
+    fireEvent.keyDown(card, { key: 'c', code: 'KeyC', altKey: true });
+    await user.keyboard('{ArrowRight}');
+
+    expect(screen.queryByRole('textbox', { name: 'Note text' })).not.toBeInTheDocument();
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.collapsed).toBeUndefined();
   });
 });

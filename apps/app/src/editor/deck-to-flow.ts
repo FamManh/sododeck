@@ -8,6 +8,7 @@ import type { SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
 import { displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
+import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
 import {
   EMPTY_OVERLAY,
@@ -60,6 +61,7 @@ export interface StickyNodeData extends Record<string, unknown> {
   pinnedToTitle: string | null;
   collapsed: boolean;
   showInFlows: boolean;
+  flowState: StickyFlowState;
 }
 
 export type DeckFlowNode = Node<DeckNodeData, 'deck'>;
@@ -226,7 +228,22 @@ export function toFlowNodes(
   return [...groupNodes(deck), ...components];
 }
 
-export function toStickyNodes(deck: SododeckFile, selection: Selection): StickyFlowNode[] {
+export function toStickyNodes(
+  deck: SododeckFile,
+  selection: Selection,
+  overlay: FlowOverlay = EMPTY_OVERLAY,
+  flow: {
+    flowMode: boolean;
+    notesDisplay: NotesDisplay;
+    emptyFlow: boolean;
+    brokenCurrentStep: boolean;
+  } = {
+    flowMode: false,
+    notesDisplay: 'dimmed',
+    emptyFlow: false,
+    brokenCurrentStep: false,
+  },
+): StickyFlowNode[] {
   const selected = new Set(selection.stickies);
   const titles = new Map(deck.nodes.map((node) => [node.id, node.title]));
   return deck.stickies.map((sticky) => {
@@ -236,6 +253,22 @@ export function toStickyNodes(deck: SododeckFile, selection: Selection): StickyF
     const label = stickyLabel(sticky.text) ?? 'Empty note';
     const collapsed = sticky.collapsed === true;
     const showInFlows = sticky.showInFlows === true;
+    const flowState = stickyFlowState(sticky, placement, {
+      flowMode: flow.flowMode,
+      display: flow.notesDisplay,
+      currentStepNodes: overlay.nodes,
+      emptyFlow: flow.emptyFlow,
+      brokenCurrentStep: flow.brokenCurrentStep,
+    });
+    const hidden = flowState === 'hidden';
+    const draggable = !flow.flowMode;
+    const className = hidden
+      ? undefined
+      : flowState === 'dimmed'
+        ? 'sd-note-dimmed'
+        : flow.flowMode
+          ? 'in-flow sd-note-shown'
+          : undefined;
     const cached = stickyNodeCache.get(sticky);
     if (
       cached?.selected === selected.has(sticky.id) &&
@@ -248,7 +281,11 @@ export function toStickyNodes(deck: SododeckFile, selection: Selection): StickyF
       cached.data.pinnedTo === pinnedTo &&
       cached.data.pinnedToTitle === pinnedToTitle &&
       cached.data.collapsed === collapsed &&
-      cached.data.showInFlows === showInFlows
+      cached.data.showInFlows === showInFlows &&
+      cached.data.flowState === flowState &&
+      cached.className === className &&
+      Boolean(cached.hidden) === hidden &&
+      cached.draggable === draggable
     ) {
       return cached;
     }
@@ -258,6 +295,9 @@ export function toStickyNodes(deck: SododeckFile, selection: Selection): StickyF
       position: placement.point,
       width: 180,
       zIndex: 1,
+      ...(className === undefined ? {} : { className }),
+      ...(hidden ? { hidden: true } : {}),
+      draggable,
       selected: selected.has(sticky.id),
       data: {
         stickyId: sticky.id,
@@ -269,6 +309,7 @@ export function toStickyNodes(deck: SododeckFile, selection: Selection): StickyF
         pinnedToTitle,
         collapsed,
         showInFlows,
+        flowState,
       },
     };
     stickyNodeCache.set(sticky, flowNode);

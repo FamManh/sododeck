@@ -187,6 +187,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     [playback, speed],
   );
   const activeStepId = playback === null ? (activeFlow?.stepId ?? null) : playback.currentStepId;
+  const emptyFlow = flowMode && playback?.view === null;
+  const brokenCurrentStep =
+    flowMode && activeStepId !== null
+      ? (playback?.played.steps.find((step) => step.step.id === activeStepId)?.broken ?? false)
+      : false;
+  const notesDisplay = useUiStore((s) => s.notesDisplay);
   const overlay = useMemo(
     () =>
       analysis === null && session === null
@@ -204,8 +210,16 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useFlowViewport(deck, playback, wrapper);
 
   const nodes = useMemo(
-    () => [...toFlowNodes(deck, selection, focusedId, overlay), ...toStickyNodes(deck, selection)],
-    [deck, selection, focusedId, overlay],
+    () => [
+      ...toFlowNodes(deck, selection, focusedId, overlay),
+      ...toStickyNodes(deck, selection, overlay, {
+        flowMode,
+        notesDisplay,
+        emptyFlow,
+        brokenCurrentStep,
+      }),
+    ],
+    [deck, selection, focusedId, overlay, flowMode, notesDisplay, emptyFlow, brokenCurrentStep],
   );
   const edges = useMemo(
     () => [

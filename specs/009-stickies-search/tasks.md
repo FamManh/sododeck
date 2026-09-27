@@ -289,23 +289,23 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - `stickyFlowState`: `normal` outside flow mode; `hidden` / `normal` for the hidden / shown display; `normal` for `showInFlows`; `normal` when pinned to the current step's from or to node (`NodeFlowMark.currentStep`); `dimmed` for a free note, a note pinned to another node, and foreign or missing anchors; `normal` for every note in an empty flow; `dimmed` (unless `showInFlows`) with a broken current step
   - `notesOnStep(deck, fromId, toId)`: notes pinned to either node, in file order; foreign and missing anchors are excluded
 - [x] T043 [US4] Implement `apps/app/src/editor/stickies/sticky-flow.ts` (`stickyFlowState`, `notesOnStep`). Make T042 pass.
-- [ ] T044 [P] [US4] Write the flow-mode sticky cases in `apps/app/src/editor/deck-to-flow.test.ts`, `apps/app/src/editor/stickies/sticky-node.test.tsx`, `apps/app/src/flow-mode-css.test.ts` and `apps/app/src/state/ui-store.test.ts`. They must fail at first:
+- [x] T044 [P] [US4] Write the flow-mode sticky cases in `apps/app/src/editor/deck-to-flow.test.ts`, `apps/app/src/editor/stickies/sticky-node.test.tsx`, `apps/app/src/flow-mode-css.test.ts` and `apps/app/src/state/ui-store.test.ts`. They must fail at first:
   - `toStickyNodes` with a playback overlay: dimmed notes get `sd-note-dimmed`, the others `in-flow sd-note-shown`, hidden notes `hidden: true`, and every sticky node is `draggable: false` in flow mode; the cache is reused when the state is unchanged
   - the card in flow mode: the accessible name ends with ", dimmed" when dimmed; there is no collapse button; double-click, Enter, F2 and ⌥C do nothing
   - `index.css`: a `[data-flow-mode] .react-flow__node.sd-note-dimmed` rule at opacity 0.35 with `transition: opacity var(--sd-dur-dim)`, full opacity on `:hover` / `:focus-within`, and a dashed border from a token
   - `notesDisplay` defaults to `dimmed`, persists under `sododeck.notes`, and works when localStorage throws
   - `addNoteAt` returns early in flow mode (N, drop, palette click)
-- [ ] T045 [US4] Implement:
+- [x] T045 [US4] Implement:
   - `notesDisplay` + `setNotesDisplay` in `apps/app/src/state/ui-store.ts` (the `LABELS_KEY` pattern)
   - pass the overlay and `notesDisplay` to `toStickyNodes` in `apps/app/src/editor/deck-to-flow.ts` and `apps/app/src/editor/canvas.tsx`
   - the view-only card in `apps/app/src/editor/stickies/sticky-node.tsx`
   - the early return in `apps/app/src/editor/stickies/sticky-actions.ts`
   - the CSS rule in `apps/app/src/index.css`
   - Make T044 pass.
-- [ ] T046 [P] [US4] Write the tests for the Notes switch in `apps/app/src/editor/canvas-toolbar.test.tsx` and for NOTES ON THIS STEP in `apps/app/src/editor/flows/inspector-step.test.tsx`. They must fail at first (UI contract "Notes in flow mode"):
+- [x] T046 [P] [US4] Write the tests for the Notes switch in `apps/app/src/editor/canvas-toolbar.test.tsx` and for NOTES ON THIS STEP in `apps/app/src/editor/flows/inspector-step.test.tsx`. They must fail at first (UI contract "Notes in flow mode"):
   - the button "Notes: dimmed" shows only in flow mode; its `menu` "Notes during flows" has `menuitemradio` Dimmed, Shown and Hidden, and choosing one updates the label and `notesDisplay`
   - the step inspector lists notes pinned to the current step's components as buttons "<label>, pinned to <component>"; activating one centres the note (`setCenter`) without leaving flow mode or changing the selection; the section is hidden when empty; the list follows step changes
-- [ ] T047 [US4] Implement the Notes switch in `apps/app/src/editor/canvas-toolbar.tsx` (`DropdownMenu`, `StickyNote` icon) and the NOTES ON THIS STEP section in `apps/app/src/editor/flows/inspector-step.tsx` (`PanelSection`, `notesOnStep`). Make T046 pass. The "Stay visible during flows" switch itself is covered by T023.
+- [x] T047 [US4] Implement the Notes switch in `apps/app/src/editor/canvas-toolbar.tsx` (`DropdownMenu`, `StickyNote` icon) and the NOTES ON THIS STEP section in `apps/app/src/editor/flows/inspector-step.tsx` (`PanelSection`, `notesOnStep`). Make T046 pass. The "Stay visible during flows" switch itself is covered by T023.
 
 **Checkpoint**: every story in the spec is complete.
 

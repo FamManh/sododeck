@@ -1,13 +1,23 @@
 import { Button } from '@sododeck/ui/components/button';
-import { Tag } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@sododeck/ui/components/dropdown-menu';
+import { StickyNote, Tag } from 'lucide-react';
 
-import { useUiStore } from '../state/ui-store';
+import { isFlowMode, useUiStore } from '../state/ui-store';
 
 /** Canvas header, top right (design 02/58): selection count and the Labels toggle. */
 export function CanvasToolbar() {
   const count = useUiStore((s) => s.selection.nodes.length + s.selection.edges.length);
   const labelsOn = useUiStore((s) => s.labelsOn);
+  const notesDisplay = useUiStore((s) => s.notesDisplay);
   const setLabelsOn = useUiStore((s) => s.setLabelsOn);
+  const setNotesDisplay = useUiStore((s) => s.setNotesDisplay);
+  const flowMode = useUiStore((s) => isFlowMode(s));
 
   return (
     <div className="flex items-center gap-2">
@@ -27,6 +37,27 @@ export function CanvasToolbar() {
         <Tag />
         Labels
       </Button>
+      {flowMode && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="toggle" className="shadow-rest" aria-haspopup="menu">
+              <StickyNote />
+              {`Notes: ${notesDisplay}`}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            aria-label="Notes during flows"
+            aria-labelledby={undefined}
+            align="end"
+          >
+            <DropdownMenuRadioGroup value={notesDisplay} onValueChange={setNotesDisplay}>
+              <DropdownMenuRadioItem value="dimmed">Dimmed</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="shown">Shown</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="hidden">Hidden</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </div>
   );
 }

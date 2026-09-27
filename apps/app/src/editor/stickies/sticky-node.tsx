@@ -21,6 +21,7 @@ function stickyName(data: StickyFlowNode['data']): string {
   const parts = [`Note: ${label}`];
   if (data.pinnedToTitle !== null) parts.push(`pinned to ${data.pinnedToTitle}`);
   if (data.collapsed) parts.push('collapsed');
+  if (data.flowState === 'dimmed') parts.push('dimmed');
   return parts.join(', ');
 }
 

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { readDeck } from '../../model/use-deck-snapshot';
-import { useUiStore } from '../../state/ui-store';
+import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { NODE_SIZE } from '../canvas-geometry';
 
 const normalizePoint = ({ x, y }: Point): Point => ({
@@ -31,7 +31,7 @@ export function notesAreReadOnly(): boolean {
 }
 
 export function addNoteAt(editor: DeckEditor, point: Point): Id | null {
-  if (notesAreReadOnly()) return null;
+  if (notesAreReadOnly() || isFlowMode(useUiStore.getState())) return null;
   const deck = readDeck(editor.doc);
   const at = normalizePoint(point);
   const anchor = nodeAtPoint(deck, at);

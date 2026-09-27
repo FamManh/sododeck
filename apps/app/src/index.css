@@ -97,6 +97,17 @@
   cursor: pointer;
 }
 
+[data-flow-mode] .react-flow__node.sd-note-dimmed {
+  opacity: 0.35;
+  transition: opacity var(--sd-dur-dim);
+  border-style: dashed;
+}
+
+[data-flow-mode] .react-flow__node.sd-note-dimmed:hover,
+[data-flow-mode] .react-flow__node.sd-note-dimmed:focus-within {
+  opacity: 1;
+}
+
 /* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */
 .sd-segment-error {
   background-image: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);

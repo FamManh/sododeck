@@ -2,6 +2,7 @@ import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 import { create } from 'zustand';
 
+import type { NotesDisplay } from '../editor/stickies/sticky-flow';
 import {
   loadJsonPanelPrefs,
   saveJsonPanelPrefs,
@@ -133,6 +134,7 @@ export interface UiState {
   leftTab: LeftTab;
   outlineCollapsed: ReadonlySet<string>;
   labelsOn: boolean;
+  notesDisplay: NotesDisplay;
   popover: Popover;
   /** What the delete confirmation is open for. */
   pendingDelete: PendingDelete | null;
@@ -172,6 +174,7 @@ export interface UiState {
   setLeftTab: (tab: LeftTab) => void;
   toggleOutlineGroup: (groupId: string) => void;
   setLabelsOn: (on: boolean) => void;
+  setNotesDisplay: (display: NotesDisplay) => void;
   openEdgePopover: (edgeId: string) => void;
   openConnectPopover: (fromId: string) => void;
   closePopover: () => void;
@@ -239,6 +242,7 @@ export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], stickies: [] }
 const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
 
 export const LABELS_KEY = 'sododeck.labels';
+export const NOTES_KEY = 'sododeck.notes';
 
 export function readLabelsOn(): boolean {
   try {
@@ -251,6 +255,23 @@ export function readLabelsOn(): boolean {
 function writeLabelsOn(on: boolean): void {
   try {
     localStorage.setItem(LABELS_KEY, on ? 'on' : 'off');
+  } catch {
+    // non-critical preference
+  }
+}
+
+export function readNotesDisplay(): NotesDisplay {
+  try {
+    const stored = localStorage.getItem(NOTES_KEY);
+    return stored === 'shown' || stored === 'hidden' ? stored : 'dimmed';
+  } catch {
+    return 'dimmed';
+  }
+}
+
+function writeNotesDisplay(display: NotesDisplay): void {
+  try {
+    localStorage.setItem(NOTES_KEY, display);
   } catch {
     // non-critical preference
   }
@@ -295,6 +316,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     leftTab: 'outline',
     outlineCollapsed: new Set(),
     labelsOn: readLabelsOn(),
+    notesDisplay: readNotesDisplay(),
     popover: null,
     pendingDelete: null,
     activeFlow: null,
@@ -393,6 +415,10 @@ export const useUiStore = create<UiState>()((set, get) => {
     setLabelsOn: (on) => {
       writeLabelsOn(on);
       set({ labelsOn: on });
+    },
+    setNotesDisplay: (notesDisplay) => {
+      writeNotesDisplay(notesDisplay);
+      set({ notesDisplay });
     },
     openEdgePopover: (edgeId) => {
       set({ popover: { kind: 'edge', edgeId } });

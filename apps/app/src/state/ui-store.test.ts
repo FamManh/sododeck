@@ -3,7 +3,14 @@ import { emptySododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JSON_PANEL_KEY } from './json-panel-prefs';
-import { isFlowMode, LABELS_KEY, readLabelsOn, useUiStore } from './ui-store';
+import {
+  isFlowMode,
+  LABELS_KEY,
+  NOTES_KEY,
+  readLabelsOn,
+  readNotesDisplay,
+  useUiStore,
+} from './ui-store';
 
 const initial = useUiStore.getState();
 const state = () => useUiStore.getState();
@@ -118,6 +125,24 @@ describe('ui store', () => {
     expect(readLabelsOn()).toBe(false);
     state().setLabelsOn(true);
     expect(state().labelsOn).toBe(true);
+  });
+
+  it('defaults notesDisplay to dimmed, persists it, and survives localStorage failures', () => {
+    expect(state().notesDisplay).toBe('dimmed');
+    state().setNotesDisplay('shown');
+    expect(state().notesDisplay).toBe('shown');
+    expect(localStorage.getItem(NOTES_KEY)).toBe('shown');
+    expect(readNotesDisplay()).toBe('shown');
+
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(readNotesDisplay()).toBe('dimmed');
+    state().setNotesDisplay('hidden');
+    expect(state().notesDisplay).toBe('hidden');
   });
 
   it('opens and closes popovers', () => {

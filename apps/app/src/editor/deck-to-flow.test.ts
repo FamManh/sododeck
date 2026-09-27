@@ -116,6 +116,43 @@ describe('toFlowNodes', () => {
         first.find((n) => n.id === 'sticky:st-pinned'),
       );
     });
+
+    it('dims or shows notes in flow mode, hides them when requested, and makes them non-draggable', () => {
+      const playbackOverlay: FlowOverlay = {
+        edges: new Map(),
+        nodes: new Map<string, NodeFlowMark>([['b', { currentStep: true }]]),
+      };
+      const shown = toStickyNodes(deck, EMPTY_SELECTION, playbackOverlay, {
+        flowMode: true,
+        notesDisplay: 'dimmed',
+        emptyFlow: false,
+        brokenCurrentStep: false,
+      });
+      expect(shown.find((node) => node.id === 'sticky:st-free')).toMatchObject({
+        className: 'sd-note-dimmed',
+        draggable: false,
+      });
+      expect(shown.find((node) => node.id === 'sticky:st-pinned')).toMatchObject({
+        className: 'in-flow sd-note-shown',
+        draggable: false,
+      });
+      const repeated = toStickyNodes(deck, EMPTY_SELECTION, playbackOverlay, {
+        flowMode: true,
+        notesDisplay: 'dimmed',
+        emptyFlow: false,
+        brokenCurrentStep: false,
+      });
+      expect(repeated.find((node) => node.id === 'sticky:st-free')).toBe(
+        shown.find((node) => node.id === 'sticky:st-free'),
+      );
+      const hidden = toStickyNodes(deck, EMPTY_SELECTION, playbackOverlay, {
+        flowMode: true,
+        notesDisplay: 'hidden',
+        emptyFlow: false,
+        brokenCurrentStep: false,
+      });
+      expect(hidden.every((node) => node.hidden === true)).toBe(true);
+    });
   });
 
   it('adds non-interactive group boundaries below the components', () => {

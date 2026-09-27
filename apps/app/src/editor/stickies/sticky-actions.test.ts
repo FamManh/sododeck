@@ -107,4 +107,20 @@ describe('sticky actions', () => {
     });
     expect(readDeck(env.doc).stickies).toEqual([]);
   });
+
+  it('returns early in flow mode', () => {
+    const env = editorWrapper(deckOf({}));
+    renderHook(() => null, { wrapper: env.wrapper });
+    act(() => {
+      ui().openFlow('order', 'o1');
+    });
+
+    let id: string | null = null;
+    act(() => {
+      id = addNoteAt(env.editor(), { x: 24, y: 32 });
+    });
+
+    expect(id).toBeNull();
+    expect(readDeck(env.doc).stickies).toEqual([]);
+  });
 });
