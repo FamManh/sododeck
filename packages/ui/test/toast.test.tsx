@@ -107,3 +107,33 @@ describe('Toast', () => {
     ).not.toBeNull();
   });
 });
+
+describe('dismissing a toast early', () => {
+  function Replacer() {
+    const { toast, dismiss } = useToast();
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          const first = toast({ message: 'First' });
+          dismiss(first);
+          toast({ message: 'Second' });
+        }}
+      >
+        Replace
+      </button>
+    );
+  }
+
+  it('closes the toast with the id toast() returned', () => {
+    render(
+      <ToastProvider>
+        <Replacer />
+        <Toaster />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    expect(screen.queryByText('First')).not.toBeInTheDocument();
+    expect(screen.getByText('Second')).toBeInTheDocument();
+  });
+});

@@ -22,7 +22,7 @@ interface ToastItem extends ToastOptions {
 
 interface ToastContextValue {
   toasts: readonly ToastItem[];
-  toast: (options: ToastOptions) => void;
+  toast: (options: ToastOptions) => number;
   dismiss: (id: number) => void;
   remove: (id: number) => void;
 }
@@ -37,6 +37,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
   const toast = useCallback((options: ToastOptions) => {
     const id = nextId.current++;
     setToasts((current) => [...current, { ...options, id, open: true }]);
+    return id;
   }, []);
 
   const dismiss = useCallback((id: number) => {
@@ -71,10 +72,13 @@ function useToastContext(): ToastContextValue {
   return context;
 }
 
-/** `const { toast } = useToast(); toast({ message: 'View saved' })`. */
-function useToast(): { toast: (options: ToastOptions) => void } {
-  const { toast } = useToastContext();
-  return { toast };
+/**
+ * `const { toast } = useToast(); toast({ message: 'View saved' })`. `toast` returns an id;
+ * `dismiss(id)` closes that toast early (e.g. to replace it with a newer one).
+ */
+function useToast(): { toast: (options: ToastOptions) => number; dismiss: (id: number) => void } {
+  const { toast, dismiss } = useToastContext();
+  return { toast, dismiss };
 }
 
 /** Renders the queue as inverse pills, bottom centre (DESIGN.md toast). F8 focuses the region. */
