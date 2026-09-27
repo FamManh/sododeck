@@ -9,8 +9,12 @@
  * Nested JSON objects become Y.Map and nested arrays become Y.Array, so every
  * field is individually editable and mergeable.
  */
-import { parseSododeckFile, type SododeckFile } from '@sododeck/schema';
+import type { Id, Rule, SododeckFile } from '@sododeck/schema';
+import { parseSododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
+
+import { fromY, toY, type YObject, type YValue } from './convert';
+import { DeckValidationError } from './errors';
 
 export type DeckDoc = Y.Doc;
 
@@ -24,15 +28,31 @@ export const ARRAY_COLLECTIONS = [
   'flows',
 ] as const satisfies readonly (keyof SododeckFile)[];
 
-type ArrayCollection = (typeof ARRAY_COLLECTIONS)[number];
+/** Every id-keyed array collection of the file, stickies included. */
+export const COLLECTIONS = [...ARRAY_COLLECTIONS, 'stickies'] as const;
 
-type YValue = null | boolean | number | string | Y.Map<YValue> | Y.Array<YValue>;
+export type Collection = (typeof COLLECTIONS)[number];
+export type ObjectOf<C extends Collection> = SododeckFile[C][number];
 
-export class DeckValidationError extends Error {
-  constructor(readonly issues: { path: string; message: string }[]) {
-    super(`Invalid .sododeck.json: ${issues.map((i) => `${i.path}: ${i.message}`).join('; ')}`);
-    this.name = 'DeckValidationError';
-  }
+/** Root types, i.e. everything an editor's undo history covers. */
+export function rootTypes(doc: DeckDoc): Y.AbstractType<unknown>[] {
+  return [
+    doc.getMap('meta'),
+    ...COLLECTIONS.map((c) => doc.getArray(c)),
+    doc.getMap('rules'),
+  ] as Y.AbstractType<unknown>[];
+}
+
+export function metaMap(doc: DeckDoc): YObject {
+  return doc.getMap<YValue>('meta');
+}
+
+export function collectionArray(doc: DeckDoc, c: Collection): Y.Array<YObject> {
+  return doc.getArray<YObject>(c);
+}
+
+export function rulesMap(doc: DeckDoc): Y.Map<YObject> {
+  return doc.getMap<YObject>('rules');
 }
 
 /** Creates a new, empty deck document. */
@@ -62,14 +82,14 @@ export function fromJSON(input: unknown): DeckDoc {
 
   const doc = new Y.Doc();
   doc.transact(() => {
-    const meta = doc.getMap<YValue>('meta');
+    const meta = metaMap(doc);
     meta.set('$schema', file.$schema);
     meta.set('version', file.version);
     if (file.name !== undefined) meta.set('name', file.name);
     if (file.description !== undefined) meta.set('description', file.description);
     if (file.tags !== undefined) meta.set('tags', toY(file.tags));
 
-    for (const name of [...ARRAY_COLLECTIONS, 'stickies'] as const) {
+    for (const name of COLLECTIONS) {
       doc.getArray<YValue>(name).push(file[name].map((item) => toY(item)));
     }
 
@@ -81,9 +101,9 @@ export function fromJSON(input: unknown): DeckDoc {
 
 /** Reads the document back into a plain `.sododeck.json` object with canonical top-level key order. */
 export function toJSON(doc: DeckDoc): SododeckFile {
-  const meta = doc.getMap<YValue>('meta');
-  const collection = <K extends ArrayCollection | 'stickies'>(name: K) =>
-    doc.getArray<YValue>(name).toArray().map(fromY) as SododeckFile[K];
+  const meta = metaMap(doc);
+  const collection = <K extends Collection>(name: K) =>
+    collectionArray(doc, name).toArray().map(fromY) as SododeckFile[K];
 
   const name = meta.get('name');
   const description = meta.get('description');
@@ -102,7 +122,7 @@ export function toJSON(doc: DeckDoc): SododeckFile {
     views: collection('views'),
     features: collection('features'),
     flows: collection('flows'),
-    rules: fromY(doc.getMap<YValue>('rules')) as SododeckFile['rules'],
+    rules: fromY(rulesMap(doc)) as SododeckFile['rules'],
     stickies: collection('stickies'),
   };
 }
@@ -112,36 +132,33 @@ export function serializeDeck(file: SododeckFile): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-/** Converts validated JSON data (see `fromJSON`) into nested Y types. */
-function toY(value: unknown): YValue {
-  if (Array.isArray(value)) {
-    const array = new Y.Array<YValue>();
-    array.push(value.map(toY));
-    return array;
+/** Index of the object with `id` in a collection, or -1. Linear: collections stay ≤ a few thousand. */
+export function indexOfId(array: Y.Array<YObject>, id: Id): number {
+  let found = -1;
+  let index = 0;
+  for (const map of array) {
+    if (map.get('id') === id) {
+      found = index;
+      break;
+    }
+    index++;
   }
-  if (value !== null && typeof value === 'object') {
-    const map = new Y.Map<YValue>();
-    for (const [key, child] of Object.entries(value)) map.set(key, toY(child));
-    return map;
-  }
-  if (
-    value === null ||
-    typeof value === 'string' ||
-    typeof value === 'number' ||
-    typeof value === 'boolean'
-  ) {
-    return value;
-  }
-  throw new TypeError(`Not a JSON value: ${typeof value}`);
+  return found;
 }
 
-/** Returns plain JSON data; callers cast it to the schema type the document was built from. */
-function fromY(value: YValue): unknown {
-  if (value instanceof Y.Array) return value.toArray().map(fromY);
-  if (value instanceof Y.Map) {
-    const out: Record<string, unknown> = {};
-    for (const [key, child] of value.entries()) out[key] = fromY(child);
-    return out;
-  }
-  return value;
+/** Reads one object of a collection as plain data. */
+export function getObject<C extends Collection>(
+  doc: DeckDoc,
+  c: C,
+  id: Id,
+): ObjectOf<C> | undefined {
+  const array = collectionArray(doc, c);
+  const index = indexOfId(array, id);
+  return index === -1 ? undefined : (fromY(array.get(index)) as ObjectOf<C>);
+}
+
+/** Reads one rule (decision table) as plain data. */
+export function getRule(doc: DeckDoc, id: Id): Rule | undefined {
+  const rule = rulesMap(doc).get(id);
+  return rule === undefined ? undefined : (fromY(rule) as Rule);
 }

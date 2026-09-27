@@ -38,13 +38,13 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 **Purpose**: Guard rails and test helpers; no behavior change.
 
-- [ ] T001 Add browser-free guards to `packages/model/eslint.config.js` for files in `src/**`:
+- [x] T001 Add browser-free guards to `packages/model/eslint.config.js` for files in `src/**`:
   - `no-restricted-imports` forbidding `node:*`, `react`, `react-dom`, `y-indexeddb`;
   - `no-restricted-globals` for `window`, `document`, `localStorage`, `indexedDB`, `navigator`.
 
   Run `pnpm --filter @sododeck/model lint` and confirm it is clean (research R9).
 
-- [ ] T002 [P] Create `packages/model/test/helpers.ts` with:
+- [x] T002 [P] Create `packages/model/test/helpers.ts` with:
   - `readExample(name)`, moved from `test/deck.test.ts`;
   - `seqIds()`, a deterministic id generator: `(prefix) => \`${prefix}-${n++}\``;
   - `largeDeck({ nodes: 500, edges: 1000, flows: 20, stepsPerFlow: 10, rules: 10 })`, returning a valid `SododeckFile` with fixed ids;
@@ -56,29 +56,29 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 **Purpose**: The core every story builds on. **⚠️ No user story work starts before this phase is done.**
 
-- [ ] T003 Refactor, with no behavior change:
+- [x] T003 Refactor, with no behavior change:
   - Move `toY`/`fromY`/`YValue` from `packages/model/src/deck.ts` into `packages/model/src/convert.ts`.
   - Move `DeckValidationError` into `packages/model/src/errors.ts`, and add `DeckEditError` with `code: 'invalid' | 'not-found' | 'missing-reference' | 'duplicate-id'` and `issues: Issue[]` (contract).
   - Re-export both from `packages/model/src/index.ts`.
 
   The existing `test/deck.test.ts` must stay green.
 
-- [ ] T004 [P] Create `packages/model/src/ids.ts` (research R3):
+- [x] T004 [P] Create `packages/model/src/ids.ts` (research R3):
   - `defaultNewId(prefix)` returns `<prefix>-<10 base-36 chars>` from `globalThis.crypto.getRandomValues`.
   - `makeIdAllocator(doc, newId)` collects every existing id in the deck and retries on collision. Ids must be unique across all collections, steps, rule columns and rows.
   - The prefixes are `node`, `group`, `edge`, `view`, `feature`, `flow`, `step`, `rule`, `col`, `row`, `sticky`.
-- [ ] T005 [P] Create `packages/model/src/validate.ts` (research R4). It validates **before any write** and never writes.
+- [x] T005 [P] Create `packages/model/src/validate.ts` (research R4). It validates **before any write** and never writes.
   - Element validators come from the generated Zod, e.g. `sododeckFileSchema.shape.nodes.element` (same for groups, edges, views, features, flows and stickies). Steps use `flows.element.shape.steps.element`, and rules use the `rules` record value schema.
   - `validateObject(kind, candidate): Issue[]`.
   - `validateRule(id, rule)`, which also runs `checkSemanticRules` on a one-rule file built from `emptySododeckFile()`.
   - `assertRefsExist(doc, refs)`, which throws `DeckEditError('missing-reference')`.
-- [ ] T006 Create `packages/model/src/editor.ts` with `createEditor(doc, options)` (contract):
+- [x] T006 Create `packages/model/src/editor.ts` with `createEditor(doc, options)` (contract):
   - Create a unique `origin` object and a `transact(fn)` helper that runs `doc.transact(fn, origin)`.
   - `batch(fn)` flattens nesting into one transaction and returns `fn`'s result.
   - Create a `Y.UndoManager` over `meta`, `nodes`, `groups`, `edges`, `views`, `features`, `flows`, `rules` and `stickies`, with `trackedOrigins: new Set([origin])` and `captureTimeout` from the options (default 500).
   - Provide `undo()`/`redo()` returning booleans, `canUndo()`/`canRedo()` and `destroy()`.
   - Provide internal lookup helpers `findIndexById(array, id)` and `getMapById`, which throw `DeckEditError('not-found')`.
-- [ ] T007 Export `createEditor`, `DeckEditor` and `EditorOptions` from `packages/model/src/index.ts`. Add `packages/model/test/editor-core.test.ts`, checking that:
+- [x] T007 Export `createEditor`, `DeckEditor` and `EditorOptions` from `packages/model/src/index.ts`. Add `packages/model/test/editor-core.test.ts`, checking that:
   - `batch` gives one undo step;
   - an edit made in the doc outside the editor (`doc.transact(fn)` with no origin, or another origin) is not undone;
   - a freshly loaded deck has `canUndo() === false`.
