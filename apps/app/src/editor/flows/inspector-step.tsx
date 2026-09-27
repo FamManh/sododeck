@@ -5,13 +5,13 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowRight, CircleAlert, GitBranch, Spline, Unlink } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
 import { InspectorFrame } from '../inspector/inspector-frame';
 import { stepRoute } from './session-path';
+import { AttachedRules } from '../fields/attached-rules';
 import { protocolLabel } from '../fields/edge-choices';
 import { FieldLabel } from '../fields/field-label';
 import { LinksField } from '../fields/links-field';
@@ -31,14 +31,11 @@ export function InspectorStep({
   flow,
   analysis,
   step,
-  rules,
 }: {
   deck: SododeckFile;
   flow: Flow;
   analysis: FlowAnalysis;
   step: PathStep;
-  /** The ATTACHED RULES section (008 US5). */
-  rules?: ReactNode;
 }) {
   const editor = useEditor();
   const s = step.step;
@@ -205,7 +202,12 @@ export function InspectorStep({
           }}
         />
       </PanelSection>
-      {rules}
+      <AttachedRules
+        deck={deck}
+        host={{ kind: 'step', flowId: flow.id, stepId: s.id }}
+        ruleIds={s.rules}
+        inputs={s.ruleInputs}
+      />
     </InspectorFrame>
   );
 }

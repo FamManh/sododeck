@@ -16,6 +16,7 @@ import { LeftSidebar } from '../editor/left-sidebar';
 import { openDeck, type DeckSource } from '../editor/open-deck';
 import { SaveContext, type SaveControls } from '../editor/save-context';
 import { TopBar } from '../editor/top-bar';
+import { RuleNavContext, type RuleNav } from '../editor/rules/rule-nav';
 import { useEditorShortcuts } from '../editor/use-canvas-shortcuts';
 import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
@@ -38,23 +39,35 @@ export function CanvasScreen() {
   const deck = useDeckSnapshot(editor.doc);
   const navigate = useNavigate();
   useFlowShortcuts();
+  const ruleNav = useMemo<RuleNav>(
+    () => ({
+      openRules: (ruleId, options) => {
+        void navigate(ruleId === undefined ? 'rules' : `rules/${encodeURIComponent(ruleId)}`, {
+          state: options?.newRule === true ? { newRule: true } : undefined,
+        });
+      },
+    }),
+    [navigate],
+  );
 
   return (
-    <div className="grid min-h-0 grid-cols-[264px_minmax(0,1fr)_336px] gap-px bg-hairline">
-      <LeftSidebar deck={deck} />
-      <main className="flex min-h-0 flex-col bg-canvas">
-        <div className="min-h-0 flex-1">
-          <Canvas />
-        </div>
-        <JsonPanel />
-      </main>
-      <Inspector
-        deck={deck}
-        onOpenRules={() => {
-          void navigate('rules');
-        }}
-      />
-    </div>
+    <RuleNavContext value={ruleNav}>
+      <div className="grid min-h-0 grid-cols-[264px_minmax(0,1fr)_336px] gap-px bg-hairline">
+        <LeftSidebar deck={deck} />
+        <main className="flex min-h-0 flex-col bg-canvas">
+          <div className="min-h-0 flex-1">
+            <Canvas />
+          </div>
+          <JsonPanel />
+        </main>
+        <Inspector
+          deck={deck}
+          onOpenRules={() => {
+            ruleNav.openRules();
+          }}
+        />
+      </div>
+    </RuleNavContext>
   );
 }
 

@@ -6,11 +6,11 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
+import { AttachedRules } from '../fields/attached-rules';
 import { LinksField } from '../fields/links-field';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
@@ -29,16 +29,7 @@ type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
  * owner and tech, host, tags, links, attached rules and connections. Text fields save while
  * typing; choices and list edits are one undo step each.
  */
-export function NodeInspector({
-  deck,
-  node,
-  rules,
-}: {
-  deck: SododeckFile;
-  node: Node;
-  /** The RULES section (008 US5). */
-  rules?: ReactNode;
-}) {
+export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }) {
   const editor = useEditor();
   const write = (patch: NodePatch) => {
     editor.update('nodes', node.id, patch);
@@ -157,7 +148,7 @@ export function NodeInspector({
             }}
           />
         </PanelSection>
-        {rules}
+        <AttachedRules deck={deck} host={{ kind: 'node', id: node.id }} ruleIds={node.rules} />
         <PanelSection label={`Connections · ${String(connections.length)}`}>
           {connections.length === 0 ? (
             <p className="text-body-sm text-ink-secondary">No connections yet.</p>
