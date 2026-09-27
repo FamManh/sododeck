@@ -10,7 +10,12 @@ import { indexOfId, type DeckDoc } from '../layout';
 /** What operation modules need from the editor. */
 export interface EditContext {
   readonly doc: DeckDoc;
-  transact<T>(fn: () => T): T;
+  /**
+   * Runs `fn` in one transaction with the editor's origin. `key` names the object a field edit
+   * targets (a typing burst on one key is one undo step); omit it for structural edits (add,
+   * remove, move), which are always a step of their own.
+   */
+  transact<T>(fn: () => T, key?: string): T;
   allocate(prefix: IdPrefix, reserved?: ReadonlySet<Id>): Id;
 }
 

@@ -82,11 +82,20 @@ export interface DeckEditor {
 
   /** Runs `fn` as one transaction: one change event, one undo step. Nested batches flatten. */
   batch<T>(fn: () => T): T;
+  /**
+   * Marks the start of a gesture (a drag, a multi-step form change): every edit until the
+   * matching `endGesture` is one undo step, however long it takes. Calls nest and are counted.
+   */
+  beginGesture(): void;
+  /** @throws Error when there is no open gesture. */
+  endGesture(): void;
   /** Undoes this editor's last step. Returns false when there is nothing to undo. */
   undo(): boolean;
   redo(): boolean;
   canUndo(): boolean;
   canRedo(): boolean;
+  /** Calls `listener` when undo or redo availability changes. Returns an unsubscribe function. */
+  onHistoryChange(listener: () => void): () => void;
   /** Detaches the undo history from the document. */
   destroy(): void;
 }
@@ -100,10 +109,19 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     captureTimeout: options.captureTimeout ?? 500,
   });
 
+  // Undo grouping (research R5). Yjs merges tracked transactions closer than `captureTimeout`;
+  // `stopCapturing()` forces the next one into a new step.
+  let lastKey: string | undefined;
+  let gestureDepth = 0;
+  let savedTimeout = undoManager.captureTimeout;
+
   const ctx: EditContext = {
     doc,
-    // Yjs flattens nested transactions into the outermost one, which gives batches for free.
-    transact: (fn) => {
+    transact: (fn, key) => {
+      // Inside a gesture everything merges; outside, a new object or a structural edit starts a
+      // new step. Yjs flattens nested transactions into the outermost one (batches).
+      if (gestureDepth === 0 && (key === undefined || key !== lastKey)) undoManager.stopCapturing();
+      lastKey = key;
       let result: ReturnType<typeof fn> | undefined;
       doc.transact(() => {
         result = fn();
@@ -157,14 +175,42 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     removeRuleRow: (ruleId, rowId) => {
       removeRuleRow(ctx, ruleId, rowId);
     },
-    batch: (fn) => {
-      undoManager.stopCapturing();
-      return ctx.transact(fn);
+    batch: (fn) => ctx.transact(fn),
+    beginGesture: () => {
+      if (gestureDepth++ === 0) {
+        undoManager.stopCapturing();
+        savedTimeout = undoManager.captureTimeout;
+        undoManager.captureTimeout = Infinity;
+      }
+    },
+    endGesture: () => {
+      if (gestureDepth === 0) throw new Error('endGesture() called without beginGesture().');
+      if (--gestureDepth === 0) {
+        undoManager.captureTimeout = savedTimeout;
+        undoManager.stopCapturing();
+        lastKey = undefined;
+      }
     },
     undo: () => undoManager.undo() !== null,
     redo: () => undoManager.redo() !== null,
     canUndo: () => undoManager.canUndo(),
     canRedo: () => undoManager.canRedo(),
+    onHistoryChange: (listener) => {
+      // Yjs emits a pop and a push per undo/redo; notify once per change of availability.
+      let last = [undoManager.canUndo(), undoManager.canRedo()].join();
+      const handler = () => {
+        const now = [undoManager.canUndo(), undoManager.canRedo()].join();
+        if (now !== last) {
+          last = now;
+          listener();
+        }
+      };
+      const events = ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const;
+      for (const event of events) undoManager.on(event, handler);
+      return () => {
+        for (const event of events) undoManager.off(event, handler);
+      };
+    },
     destroy: () => {
       undoManager.destroy();
       editorOrigins.delete(origin);

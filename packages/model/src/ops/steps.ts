@@ -65,7 +65,7 @@ export function updateStep(ctx: EditContext, flowId: Id, stepId: Id, patch: Patc
   );
   ctx.transact(() => {
     writePatch(map, candidate, changed);
-  });
+  }, `flows:${flowId}:${stepId}`);
 }
 
 export function moveStep(ctx: EditContext, flowId: Id, stepId: Id, toIndex: number): void {

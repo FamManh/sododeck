@@ -90,7 +90,7 @@ export function updateRule(
   assertValid(validateObject('rule', candidate));
   ctx.transact(() => {
     writePatch(map, candidate, changed);
-  });
+  }, `rules:${id}`);
 }
 
 export function addRuleColumn(
@@ -120,7 +120,7 @@ export function renameRuleColumn(ctx: EditContext, ruleId: Id, columnId: Id, lab
   if (column.get('label') === label) return;
   ctx.transact(() => {
     column.set('label', label);
-  });
+  }, `rules:${ruleId}:${columnId}`);
 }
 
 export function moveRuleColumn(ctx: EditContext, ruleId: Id, columnId: Id, toIndex: number): void {
@@ -199,7 +199,7 @@ export function setRuleCell(
   ctx.transact(() => {
     rowCells.delete(index, 1);
     rowCells.insert(index, [value]);
-  });
+  }, `rules:${ruleId}:${rowId}:${columnId}`);
 }
 
 export function moveRuleRow(ctx: EditContext, ruleId: Id, rowId: Id, toIndex: number): void {

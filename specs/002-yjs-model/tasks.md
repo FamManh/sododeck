@@ -248,7 +248,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T030 [P] [US4] Write `packages/model/test/undo.test.ts`. `lib0` reads `Date.now` at import, so do not use fake timers (research R5).
+- [x] T030 [P] [US4] Write `packages/model/test/undo.test.ts`. `lib0` reads `Date.now` at import, so do not use fake timers (research R5).
   - **Bursts**: 10 title updates in a row with `captureTimeout: 10_000` undo in one step (US4 AS1). Updates to two different nodes within the window are **two** steps. A real boundary: `captureTimeout: 20`, two edits separated by `await sleep(40)`, give two steps.
   - **Gestures**: `beginGesture` + 50 position updates + `sleep(40)` in the middle (with `captureTimeout: 20`) + `endGesture` is one step (AS2). Nested begin/end are counted.
   - **Batch**: a multi-node batch and a cascade delete are each one step (AS3).
@@ -259,12 +259,12 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 4
 
-- [ ] T031 [US4] Extend `packages/model/src/editor.ts`:
+- [x] T031 [US4] Extend `packages/model/src/editor.ts`:
   - Track the last edited object key (scope + id + child id). When a field update targets a different object, call `undoManager.stopCapturing()` first.
   - `beginGesture()` increments a depth counter. At depth 0 → 1 it calls `stopCapturing()`, saves `captureTimeout` and sets it to `Infinity`.
   - `endGesture()` decrements, and at 0 restores the timeout and calls `stopCapturing()`. It throws on underflow.
   - `onHistoryChange(listener)` subscribes to `stack-item-added`, `stack-item-popped` and `stack-cleared`, and returns an unsubscribe function.
-- [ ] T032 [US4] Make T030 pass. Commit: `feat(model): undo grouping, gestures and history events`.
+- [x] T032 [US4] Make T030 pass. Commit: `feat(model): undo grouping, gestures and history events`.
 
 ---
 

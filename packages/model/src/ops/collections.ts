@@ -113,7 +113,7 @@ export function updateObject<C extends Collection>(
 
   ctx.transact(() => {
     writePatch(map, candidate, changed);
-  });
+  }, `${c}:${id}`);
 }
 
 /** Moves an item of a Y.Array to `toIndex` (clamped), by re-inserting a copy. */

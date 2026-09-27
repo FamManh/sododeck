@@ -24,5 +24,5 @@ export function updateMeta(ctx: EditContext, patch: MetaPatch): void {
   assertValid(validateObject('meta', candidate));
   ctx.transact(() => {
     writePatch(meta, candidate, changed);
-  });
+  }, 'meta');
 }
