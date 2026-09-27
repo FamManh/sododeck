@@ -1,0 +1,8 @@
+{
+  "extends": "@sododeck/config/tsconfig/react.json",
+  "compilerOptions": {
+    "types": ["vite/client", "@testing-library/jest-dom/vitest"],
+    "paths": { "@sododeck/ui/*": ["./src/*"] }
+  },
+  "include": ["src", "test", "*.ts"]
+}
