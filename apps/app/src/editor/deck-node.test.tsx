@@ -1,5 +1,4 @@
 import { screen } from '@testing-library/react';
-import type * as XYFlow from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,22 +7,12 @@ import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { DeckNode } from './deck-node';
 import type { DeckFlowNode } from './deck-to-flow';
 
-interface FakeConnection {
-  inProgress: boolean;
-  fromNode?: { id: string };
-  toNode?: { id: string } | null;
-}
+const connection = vi.hoisted(() => ({ role: null as string | null, connecting: false }));
 
-const connection = vi.hoisted((): { state: FakeConnection } => ({ state: { inProgress: false } }));
-
-vi.mock('@xyflow/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof XYFlow>();
-  return {
-    ...actual,
-    useConnection: (selector?: (c: unknown) => unknown) =>
-      selector ? selector(connection.state) : connection.state,
-  };
-});
+vi.mock('./use-connection-role', () => ({
+  useConnectionRole: () => connection.role,
+  useConnecting: () => connection.connecting,
+}));
 
 const deck = deckOf({
   nodes: [
@@ -56,7 +45,8 @@ function renderNode(p = props()) {
 
 describe('DeckNode', () => {
   beforeEach(() => {
-    connection.state = { inProgress: false };
+    connection.role = null;
+    connection.connecting = false;
   });
 
   it('is named by kind and title', () => {
@@ -103,21 +93,24 @@ describe('DeckNode', () => {
   });
 
   it('shows a valid drop target with a + mark', () => {
-    connection.state = { inProgress: true, fromNode: { id: 'q' }, toNode: { id: 'svc' } };
+    connection.connecting = true;
+    connection.role = 'target:q';
     renderNode();
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
     expect(screen.getByTestId('deck-node').querySelector('.lucide-plus')).not.toBeNull();
   });
 
   it('explains an invalid drop target: already connected', () => {
-    connection.state = { inProgress: true, fromNode: { id: 'db' }, toNode: { id: 'svc' } };
+    connection.connecting = true;
+    connection.role = 'target:db';
     renderNode();
     expect(screen.getByRole('note')).toHaveTextContent('Already connected');
     expect(useUiStore.getState().announcement.text).toBe('Already connected');
   });
 
   it("explains an invalid drop target: can't connect to itself", () => {
-    connection.state = { inProgress: true, fromNode: { id: 'svc' }, toNode: { id: 'svc' } };
+    connection.connecting = true;
+    connection.role = 'target:svc';
     renderNode();
     expect(screen.getByRole('note')).toHaveTextContent("Can't connect to itself");
   });

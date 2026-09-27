@@ -2,7 +2,7 @@ import { KindTile } from '@sododeck/ui/components/kind-tile';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { Handle, Position, useConnection, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Ban, Plus, Table } from 'lucide-react';
 import { memo, useEffect } from 'react';
 
@@ -12,6 +12,7 @@ import { useUiStore } from '../state/ui-store';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
 import { NODE_SIZE, type DeckFlowNode } from './deck-to-flow';
 import { kindLabel } from './kind-label';
+import { useConnecting, useConnectionRole } from './use-connection-role';
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -20,25 +21,12 @@ const SIDES = [
   { id: 'left', position: Position.Left },
 ] as const;
 
-/**
- * This node's role in a connection being drawn: `source`, `target:<fromId>` while hovered as a
- * drop target, or null. One primitive per node, so a moving pointer re-renders at most two nodes.
- */
-function useConnectionRole(id: string): string | null {
-  return useConnection((c) => {
-    if (!c.inProgress) return null;
-    // Hovering the source's own handle is the self case, shown on the source itself.
-    if (c.toNode?.id === id) return `target:${c.fromNode.id}`;
-    return c.fromNode.id === id ? 'source' : null;
-  });
-}
-
 /** Canvas node, 164×50 (DESIGN.md "node", design 02 and 53–55). */
 export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps<DeckFlowNode>) {
   const editor = useEditor();
   const openConnectPopover = useUiStore((s) => s.openConnectPopover);
   const announce = useUiStore((s) => s.announce);
-  const connecting = useConnection((c) => c.inProgress);
+  const connecting = useConnecting();
   const role = useConnectionRole(id);
 
   let target: ConnectionCheck | null = null;
