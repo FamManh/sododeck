@@ -306,19 +306,19 @@ the pane, a segment and a row; check the current step each time.
 **Independent test**: with the fork fixture, play alternative "a" end to end, switch to "payment
 failed" at step 4a, play it end to end.
 
-- [ ] T046 [P] [US4] Write failing tests `apps/app/src/editor/flows/branch-picker.test.tsx`:
+- [x] T046 [P] [US4] Write failing tests `apps/app/src/editor/flows/branch-picker.test.tsx`:
       radiogroup "At step 3" appears only when the current step is 3 or on an alternative; radios
       "payment ok" / "payment failed" (the latter with sr "error path"); choosing "payment failed"
       at 4a makes 4b current, player "Step 4b of 5", segments rebuilt, announcement "Step 4b of 5:
       Payment Service → Notification Service, branch payment failed"; before the fork no picker.
-- [ ] T047 [P] [US4] Extend `apps/app/src/editor/flows/use-playback-shortcuts.test.tsx`: ↓ / ↑
+- [x] T047 [P] [US4] Extend `apps/app/src/editor/flows/use-playback-shortcuts.test.tsx`: ↓ / ↑
       switch alternative only while the picker shows; nothing before the fork; autoplay from the
       fork continues into the chosen alternative (fake timers, in `use-playback.test.tsx`).
-- [ ] T048 [US4] Create `apps/app/src/editor/flows/branch-picker.tsx` (`SegmentedControl` +
+- [x] T048 [US4] Create `apps/app/src/editor/flows/branch-picker.tsx` (`SegmentedControl` +
       `SegmentedControlItem`, label "AT STEP n", `GitBranch` / `CircleAlert` icons) rendered by
       `step-player.tsx` when `playerView.showPicker`; wire ↑ / ↓ in `usePlaybackShortcuts` to
       `switchAlternative`. T046, T047 pass.
-- [ ] T049 [US4] Check `flowOverlay` / canvas marks for the unplayed alternative (dimmed but
+- [x] T049 [US4] Check `flowOverlay` / canvas marks for the unplayed alternative (dimmed but
       numbered, error style kept) against the fork fixture in `flow-overlay.test.ts` and fix any
       gap; add a `step-list` assertion that rows of the unplayed alternative are not marked
       current or in-path.

@@ -1,7 +1,7 @@
 import type { FlowAnalysis } from '@sododeck/model';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, GitBranch } from 'lucide-react';
 import { useId } from 'react';
 
 import { useEditor } from '../../model/use-editor';
@@ -47,8 +47,10 @@ export function BranchPicker({ analysis, played, forkNumber }: BranchPickerProps
                 : undefined
             }
           >
-            {branch.errorPath === true && (
+            {branch.errorPath === true ? (
               <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
+            ) : (
+              <GitBranch aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
             )}
             {branch.label}
             {branch.errorPath === true && <span className="sr-only">, error path</span>}
