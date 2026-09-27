@@ -9,6 +9,7 @@ import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect } from 'react';
 
+import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
@@ -16,17 +17,7 @@ import { displayPosition, nearestInDirection, NODE_SIZE, type Direction } from '
 import { edgeName } from './deck-to-flow';
 import { useSaveControls } from './save-context';
 
-/** True when the key belongs to a text field (typing, native text undo). */
-export function isTextTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement ||
-    target.isContentEditable ||
-    target.closest('[contenteditable=""], [contenteditable="true"]') !== null
-  );
-}
+export { isTextTarget };
 
 function inDialog(target: EventTarget | null): boolean {
   return (

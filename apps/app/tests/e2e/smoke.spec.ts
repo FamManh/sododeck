@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test';
 
 test('library loads and opens the demo deck with 3 nodes', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Your decks' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'All decks' })).toBeVisible();
 
+  await page.getByRole('button', { name: /^Samples/ }).click();
   await page.getByRole('link', { name: 'Open demo deck' }).click();
   await expect(page).toHaveURL(/\/deck\/demo$/);
 

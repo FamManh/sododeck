@@ -90,3 +90,10 @@ export function relativeTime(ms: number, now: number): string {
   const date = new Date(ms);
   return (date.getFullYear() === new Date(now).getFullYear() ? sameYear : otherYear).format(date);
 }
+
+const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
+
+/** Card meta: "3 components · 1 flow · edited 2 minutes ago". */
+export function deckMeta(deck: DeckRecord, now: number): string {
+  return `${plural(deck.nodeCount, 'component')} · ${plural(deck.flowCount, 'flow')} · edited ${relativeTime(deck.updatedAt, now)}`;
+}

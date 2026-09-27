@@ -274,6 +274,7 @@ describe('EditorPage', () => {
     });
     expect(toJSON(doc).nodes.map((n) => n.title)).toEqual(['Orders']);
     expect(opened.editor?.canUndo()).toBe(false);
+    expect(screen.getByText('Stored in this browser')).toBeInTheDocument();
     await waitFor(async () => {
       expect((await record())?.openedAt).not.toBeNull();
     });

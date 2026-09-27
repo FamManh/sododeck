@@ -1,21 +1,12 @@
 import type { DeckSummary } from './deck-summary';
-import type { LibraryOpErrorCode } from './library-ops';
+import { LibraryClientError } from './library-client-error';
 import type {
   LibraryRequest,
   LibraryResult,
   LibraryWorkerResponse,
 } from './library-worker-protocol';
 
-/** A failed library operation, with the reason the UI turns into a message. */
-export class LibraryClientError extends Error {
-  constructor(
-    readonly code: LibraryOpErrorCode | 'failed',
-    message: string,
-  ) {
-    super(message);
-    this.name = 'LibraryClientError';
-  }
-}
+export { LibraryClientError };
 
 export interface LibraryClient {
   create(name: string): Promise<{ bytes: Uint8Array; summary: DeckSummary }>;
