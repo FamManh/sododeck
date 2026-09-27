@@ -10,7 +10,7 @@ Sododeck is an interactive, editable architecture workspace where diagrams are a
 
 **Sododeck is:**
 
-- A canvas plus a text model (JSON) that stay in two-way sync.
+- A canvas plus a text model (JSON) that stay in sync (read-only JSON view in the MVP; two-way editing later).
 - A place where business flows are first-class: select a flow and watch it light up end to end.
 - A knowledge base attached to the diagram: rules, notes, comments, sticky notes.
 - Local-first: usable in the browser without an account, with cloud sync for signed-in users.
@@ -167,7 +167,7 @@ Priority: **P0** = MVP, **P1** = V2, **P2** = V3.
 | C-2 | Drag an edge endpoint to reconnect it; edit edge label, protocol and direction inline | P0 |
 | C-3 | Command palette (Ctrl/Cmd+K) to find and jump to any node, edge, flow or rule | P0 |
 | C-4 | Auto-layout (ELK) that respects pinned positions | P0 |
-| C-5 | JSON code panel with JSON Schema autocomplete, in two-way sync with the canvas | P0 |
+| C-5 | JSON code panel in sync with the canvas: read-only view of the selection and the whole deck (P0). Editing from JSON with JSON Schema autocomplete and two-way sync is deferred (P1, founder decision 2026-09-27) | P0 |
 | C-6 | Undo/redo, multi-select, bulk edit (type, tags, owner) | P0 |
 | C-7 | Validation: orphan nodes, broken flows, duplicate edges | P0 |
 | C-8 | Template library (logistics: last-mile, cross-dock, returns, COD reconciliation; patterns: saga, outbox, CQRS) | P1 |
@@ -331,7 +331,7 @@ A Yjs CRDT document is the single source of truth in the client; storage provide
 ```mermaid
 flowchart TB
   UI["Canvas UI (React + React Flow)"] --> Model["Deck model (Yjs CRDT)"]
-  YAML["JSON code panel (Monaco)"] <--> Model
+  YAML["JSON code panel (Monaco, read-only in MVP)"] <--> Model
   Model --> IDB["IndexedDB provider (always on)"]
   Model --> FS["File provider (local folder / git, optional)"]
   Model --> Sync["Cloud sync provider (signed-in only)"]
@@ -346,7 +346,7 @@ flowchart TB
 | --- | --- | --- |
 | Frontend | React, TypeScript, React Flow (xyflow) | Canvas, custom nodes, edge animation |
 | Layout | ELK.js in a Web Worker | Respects pinned positions; off the main thread |
-| Text editor | Monaco + JSON Schema | Two-way sync with the model |
+| Text editor | Monaco + JSON Schema | Read-only view of the model in the MVP; two-way sync later |
 | Model | Yjs | Offline edits, merge, realtime collaboration |
 | Local storage | y-indexeddb, Dexie.js for library metadata | Persistent storage request |
 | Local files | File System Access API | Chromium only; fallback to download/upload |
