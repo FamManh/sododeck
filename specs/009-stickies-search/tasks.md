@@ -263,7 +263,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: with the palette open, run each listed command by name and compare its effect with its button (quickstart step 9).
 
-- [ ] T040 [P] [US3] Write `apps/app/src/editor/command-palette/commands.test.ts`. It must fail at first (research R10):
+- [x] T040 [P] [US3] Write `apps/app/src/editor/command-palette/commands.test.ts`. It must fail at first (research R10):
   - the list order and labels
   - Export deck… calls the export action
   - Toggle dark mode flips the _resolved_ theme (light ↔ dark, also from "system")
@@ -273,7 +273,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - "Toggle focus mode" is absent while `focusModeAvailable` is false
   - aliases: "theme" and "dark" find Toggle dark mode, and "rules" finds Open rule editor
   - a command's shortcut is shown when it has one
-- [ ] T041 [US3] Implement `apps/app/src/editor/command-palette/commands.ts` (a command list built from `{ navigate, openRules, exportDeck, theme, focusModeAvailable }`) and wire it into `command-palette.tsx` and `palette-results.ts`. `focusModeAvailable` stays `false` until 010 wires it; leave a `TODO(M4): wire focus mode when 010 lands` comment. Make T040 pass, and add one end-to-end component case to `command-palette.test.tsx`: type "theme", press Enter, and the theme changes.
+- [x] T041 [US3] Implement `apps/app/src/editor/command-palette/commands.ts` (a command list built from `{ navigate, openRules, exportDeck, theme, focusModeAvailable }`) and wire it into `command-palette.tsx` and `palette-results.ts`. `focusModeAvailable` stays `false` until 010 wires it; leave a `TODO(M4): wire focus mode when 010 lands` comment. Make T040 pass, and add one end-to-end component case to `command-palette.test.tsx`: type "theme", press Enter, and the theme changes.
 
 **Checkpoint**: US3 works.
 

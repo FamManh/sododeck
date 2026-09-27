@@ -2,12 +2,16 @@ import { buildSearchIndex } from '@sododeck/model';
 import { CommandDialog } from '@sododeck/ui/components/command-dialog';
 import { useReactFlow } from '@xyflow/react';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 import { useEditor } from '../../model/use-editor';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useUiStore } from '../../state/ui-store';
+import { useThemeStore } from '../../theme/theme-store';
 import { openFlow } from '../flows/flow-mode';
+import { useExportDeck } from '../use-export-deck';
 
+import { buildCommands } from './commands';
 import { openResult } from './open-result';
 import { buildPaletteResults, type PaletteCommand } from './palette-results';
 
@@ -23,23 +27,40 @@ function CommandPaletteSession({
   openRules,
   navigateToCanvas,
   returnFocus,
-  commands,
 }: {
   screen: 'canvas' | 'rules';
   openRules: (ruleId?: string) => void;
   navigateToCanvas: () => void;
   returnFocus: HTMLElement | null;
-  commands: readonly PaletteCommand[];
 }) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
+  const navigate = useNavigate();
+  const exportDeck = useExportDeck();
   const closePalette = useUiStore((state) => state.closePalette);
   const announce = useUiStore((state) => state.announce);
   const select = useUiStore((state) => state.select);
   const focus = useUiStore((state) => state.focus);
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
   const [query, setQuery] = useState('');
   const { fitView, getZoom, setCenter } = useReactFlow();
   const searchIndex = useMemo(() => buildSearchIndex(deck), [deck]);
+  const commands = useMemo<readonly PaletteCommand[]>(
+    () =>
+      buildCommands({
+        navigate: (to) => {
+          void navigate(to);
+        },
+        openRules: () => {
+          openRules();
+        },
+        exportDeck,
+        theme: { value: theme, resolved: theme, setTheme },
+        focusModeAvailable: false,
+      }),
+    [exportDeck, navigate, openRules, setTheme, theme],
+  );
   const results = useMemo(
     () => buildPaletteResults({ deck, searchIndex, query, commands }),
     [commands, deck, query, searchIndex],
@@ -94,12 +115,10 @@ export function CommandPalette({
   screen,
   openRules,
   navigateToCanvas,
-  commands = [],
 }: {
   screen: 'canvas' | 'rules';
   openRules: (ruleId?: string) => void;
   navigateToCanvas: () => void;
-  commands?: readonly PaletteCommand[];
 }) {
   const palette = useUiStore((state) => state.palette);
   if (!palette.open) return null;
@@ -109,7 +128,6 @@ export function CommandPalette({
       openRules={openRules}
       navigateToCanvas={navigateToCanvas}
       returnFocus={palette.returnFocus}
-      commands={commands}
     />
   );
 }

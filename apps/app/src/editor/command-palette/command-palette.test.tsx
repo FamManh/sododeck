@@ -10,6 +10,7 @@ import { useEditor } from '../../model/use-editor';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useUiStore } from '../../state/ui-store';
 import { renderWithEditor } from '../../test/render-canvas';
+import { useThemeStore } from '../../theme/theme-store';
 import { TopBar } from '../top-bar';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
 import { CommandPalette } from './command-palette';
@@ -188,5 +189,17 @@ describe('CommandPalette', () => {
 
     await user.click(screen.getByRole('button', { name: `Jump to… (${shortcutLabel()})` }));
     expect(screen.getByRole('dialog', { name: 'Jump to' })).toBeInTheDocument();
+  });
+
+  it('runs the theme command from the palette', async () => {
+    const user = userEvent.setup();
+    useThemeStore.setState({ theme: 'light' });
+    renderWithEditor(<Harness />, paletteDeck());
+
+    await user.keyboard(shortcutKeys());
+    await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'theme');
+    await user.keyboard('{Enter}');
+
+    expect(useThemeStore.getState().theme).toBe('dark');
   });
 });
