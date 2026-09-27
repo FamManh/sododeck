@@ -125,7 +125,7 @@ there with the names used below). Monaco facts were checked in the installed
 
 - **Rationale**: FR-014 requires highlighting with tokens only. The design frames show near-mono
   code, so the palette uses the muted "ink" family and not the saturated brand colors.
-  **Founder visual check requested** in the PR (open point, not blocking).
+  **Founder confirmed the mapping on 2026-09-27** (after the visual check).
 - **Alternatives considered**: Monaco's built-in `light`/`vs-dark` themes, which is what M0 does
   today (these hard-code colors, against the tokens-only rule); new `--sd-syntax-*` tokens (more
   surface for no gain).
