@@ -17,7 +17,7 @@ import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
 import { featureOf, moveToFeature } from './flow-order';
 import { startEditing } from './flow-session';
-import { InspectorFrame } from './inspector-frame';
+import { InspectorFrame } from '../inspector/inspector-frame';
 import { TextareaEdit } from '../fields/textarea-edit';
 
 const NO_FEATURE = 'none';

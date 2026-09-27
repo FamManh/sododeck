@@ -9,7 +9,7 @@ import { ArrowRight, CircleAlert, GitBranch, Spline } from 'lucide-react';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
-import { InspectorFrame } from './inspector-frame';
+import { InspectorFrame } from '../inspector/inspector-frame';
 import { stepRoute } from './session-path';
 import { TextareaEdit } from '../fields/textarea-edit';
 

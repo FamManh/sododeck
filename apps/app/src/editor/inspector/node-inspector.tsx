@@ -1,0 +1,205 @@
+import type { Node, SododeckFile } from '@sododeck/schema';
+import { Button } from '@sododeck/ui/components/button';
+import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { PanelSection } from '@sododeck/ui/components/panel';
+import { focusRing } from '@sododeck/ui/lib/focus';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
+import { cn } from '@sododeck/ui/lib/utils';
+import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
+
+import { useEditor } from '../../model/use-editor';
+import { useUiStore } from '../../state/ui-store';
+import { FieldEdit } from '../field-edit';
+import { LinksField } from '../fields/links-field';
+import { MarkdownField } from '../fields/markdown-field';
+import { oneStep } from '../fields/one-step';
+import { OwnerField } from '../fields/owner-field';
+import { PickField } from '../fields/pick-field';
+import { TagsField } from '../fields/tags-field';
+import { kindLabel } from '../kind-label';
+import { groupName, groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
+import { nodeConnections } from './derive';
+import { InspectorFrame } from './inspector-frame';
+
+type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
+
+/**
+ * Component inspector (FR-008, designs 02, 18, 23): title, kind, group, markdown description,
+ * owner and tech, host, tags, links, attached rules and connections. Text fields save while
+ * typing; choices and list edits are one undo step each.
+ */
+export function NodeInspector({
+  deck,
+  node,
+  rules,
+}: {
+  deck: SododeckFile;
+  node: Node;
+  /** The RULES section (008 US5). */
+  rules?: ReactNode;
+}) {
+  const editor = useEditor();
+  const write = (patch: NodePatch) => {
+    editor.update('nodes', node.id, patch);
+  };
+  const writeOnce = (patch: NodePatch) => {
+    oneStep(editor, () => {
+      write(patch);
+    });
+  };
+  const text = (value: string) => (value === '' ? null : value);
+  const connections = nodeConnections(deck, node.id);
+  const titleOf = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+
+  return (
+    <InspectorFrame
+      plainIcon
+      icon={<KindTile kind={node.type} size={40} decorative />}
+      heading={node.title}
+      subtitle={`${kindLabel(node.type)} · ${groupName(deck, node.group)} · ${node.id}`}
+      actions={
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Delete component"
+          onClick={() => {
+            useUiStore.getState().requestDelete({ nodes: [node.id], edges: [] });
+          }}
+        >
+          <Trash2 />
+        </Button>
+      }
+    >
+      <div key={node.id} className="contents">
+        <PanelSection>
+          <FieldEdit
+            label="Title"
+            value={node.title}
+            onCommit={(title) => {
+              write({ title });
+            }}
+          />
+        </PanelSection>
+        <PanelSection className="grid grid-cols-2 gap-3">
+          <PickField
+            label="Kind"
+            listLabel="Kinds"
+            value={node.type}
+            options={KIND_OPTIONS}
+            onPick={(type) => {
+              writeOnce({ type: type as Node['type'] });
+            }}
+          />
+          <PickField
+            label="Group"
+            listLabel="Groups"
+            value={node.group ?? NO_GROUP}
+            options={groupOptions(deck)}
+            onPick={(group) => {
+              writeOnce({ group: group === NO_GROUP ? null : group });
+            }}
+          />
+        </PanelSection>
+        <PanelSection>
+          <MarkdownField
+            modeKey={`nodes:${node.id}`}
+            value={node.description ?? ''}
+            placeholder="What does this component do? Markdown supported."
+            onCommit={(description) => {
+              write({ description: text(description) });
+            }}
+          />
+        </PanelSection>
+        <PanelSection className="grid grid-cols-2 gap-3">
+          <OwnerField
+            deck={deck}
+            value={node.owner ?? ''}
+            onCommit={(owner) => {
+              write({ owner: text(owner) });
+            }}
+          />
+          <FieldEdit
+            label="Tech"
+            value={node.tech ?? ''}
+            allowEmpty
+            placeholder="e.g. Go"
+            onCommit={(tech) => {
+              write({ tech: text(tech) });
+            }}
+          />
+        </PanelSection>
+        <PanelSection>
+          <FieldEdit
+            label="Host"
+            value={node.host ?? ''}
+            allowEmpty
+            placeholder="e.g. eu-west k8s"
+            onCommit={(host) => {
+              write({ host: text(host) });
+            }}
+          />
+        </PanelSection>
+        <PanelSection>
+          <TagsField
+            deck={deck}
+            value={node.tags}
+            onCommit={(tags) => {
+              writeOnce({ tags });
+            }}
+          />
+        </PanelSection>
+        <PanelSection>
+          <LinksField
+            value={node.links}
+            onCommit={(links) => {
+              writeOnce({ links });
+            }}
+          />
+        </PanelSection>
+        {rules}
+        <PanelSection label={`Connections · ${String(connections.length)}`}>
+          {connections.length === 0 ? (
+            <p className="text-body-sm text-ink-secondary">No connections yet.</p>
+          ) : (
+            <ul aria-label="Connections" className="flex flex-col">
+              {connections.map((c) => {
+                const Icon = c.direction === 'out' ? ArrowUpRight : ArrowDownLeft;
+                const name = `${c.direction === 'out' ? '→' : '←'} ${titleOf(c.otherId)}`;
+                return (
+                  <li key={c.edgeId}>
+                    <button
+                      type="button"
+                      aria-label={name}
+                      onClick={() => {
+                        useUiStore.getState().select({ edges: [c.edgeId] });
+                      }}
+                      className={cn(
+                        'flex w-full cursor-pointer items-center gap-2 rounded-row px-2 py-1.5 text-left hover:bg-surface-2',
+                        focusRing,
+                      )}
+                    >
+                      <Icon
+                        aria-hidden
+                        strokeWidth={ICON_STROKE_WIDTH}
+                        className="size-4 shrink-0 text-ink-secondary"
+                      />
+                      <span className="min-w-0 flex-1 truncate text-body">
+                        {titleOf(c.otherId)}
+                      </span>
+                      {c.label !== undefined && (
+                        <span className="max-w-32 truncate font-mono text-caption text-ink-secondary">
+                          {c.label}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </PanelSection>
+      </div>
+    </InspectorFrame>
+  );
+}

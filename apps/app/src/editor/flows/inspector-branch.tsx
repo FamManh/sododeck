@@ -10,7 +10,7 @@ import { useEffect, useId } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
-import { InspectorFrame } from './inspector-frame';
+import { InspectorFrame } from '../inspector/inspector-frame';
 
 /**
  * Branch inspector (FR-022, FR-023, FR-028, designs 45–46): label, condition and the Error path

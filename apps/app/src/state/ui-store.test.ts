@@ -229,6 +229,24 @@ describe('ui store', () => {
     });
   });
 
+  it('keeps Write / Preview per description and forgets it when the selection changes (008)', () => {
+    const ui = useUiStore.getState;
+    ui().setDescriptionMode('nodes:a', 'preview');
+    ui().setDescriptionMode('nodes:b', 'write');
+    expect(ui().descriptionMode).toEqual({ 'nodes:a': 'preview', 'nodes:b': 'write' });
+    ui().select({ nodes: ['a'] });
+    expect(ui().descriptionMode).toEqual({});
+    ui().setDescriptionMode('flows:f', 'preview');
+    ui().setActiveFlow('f');
+    expect(ui().descriptionMode).toEqual({});
+    ui().setDescriptionMode('step:s', 'preview');
+    ui().setActiveStep('s');
+    expect(ui().descriptionMode).toEqual({});
+    ui().setDescriptionMode('deck', 'preview');
+    ui().clearSelection();
+    expect(ui().descriptionMode).toEqual({});
+  });
+
   it('forgets deck references when another deck opens', () => {
     state().setActiveFlow('f');
     state().startRecording('x', null);

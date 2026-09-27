@@ -22,6 +22,10 @@ interface FieldEditProps {
   mono?: boolean;
   /** Id of the input, so callers can focus it. */
   id?: string;
+  /** Bulk edit: the values differ; shows an italic "Mixed" and writes nothing until typing. */
+  mixed?: boolean;
+  /** Secondary line under the field, e.g. "Same on all 3". */
+  hint?: string;
 }
 
 /**
@@ -39,11 +43,20 @@ export function FieldEdit({
   list,
   mono = false,
   id: inputId,
+  mixed = false,
+  hint,
 }: FieldEditProps) {
   const ownId = useId();
   const id = inputId ?? ownId;
   const field = useLiveField({ label, value, onWrite: onCommit, required: !allowEmpty });
   const message = field.error ?? error;
+  const describedBy = [
+    mixed ? `${id}-mixed` : null,
+    hint === undefined ? null : `${id}-hint`,
+    message === undefined ? null : `${id}-error`,
+  ]
+    .filter((x) => x !== null)
+    .join(' ');
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -54,15 +67,16 @@ export function FieldEdit({
         id={id}
         aria-label={label}
         value={field.value}
-        placeholder={placeholder}
+        placeholder={mixed ? 'Mixed' : placeholder}
         list={list}
         // Not Input's `invalid` prop: it changes the DOM shape, which would drop focus mid-edit.
         aria-invalid={message !== undefined || undefined}
         className={cn(
           message !== undefined && 'border-clay-ink focus:border-clay-ink',
           mono && 'font-mono',
+          mixed && 'placeholder:italic',
         )}
-        aria-describedby={message === undefined ? undefined : `${id}-error`}
+        aria-describedby={describedBy === '' ? undefined : describedBy}
         onChange={(event) => {
           field.onChange(event.target.value);
         }}
@@ -70,6 +84,16 @@ export function FieldEdit({
         onBlur={field.onBlur}
         onKeyDown={field.onKeyDown}
       />
+      {mixed && (
+        <span id={`${id}-mixed`} className="sr-only">
+          Mixed values
+        </span>
+      )}
+      {hint !== undefined && (
+        <span id={`${id}-hint`} className="text-caption text-ink-secondary">
+          {hint}
+        </span>
+      )}
       {message !== undefined && <FieldError id={`${id}-error`}>{message}</FieldError>}
     </div>
   );
