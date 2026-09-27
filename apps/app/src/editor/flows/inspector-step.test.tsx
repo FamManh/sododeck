@@ -2,14 +2,16 @@ import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
+import { branchedDeck, flowDeck, playbackDeck } from '../../test/flow-fixtures';
 import { renderFlows } from '../../test/render-flows';
+import { openFlow } from './flow-mode';
+import { startEditing } from './flow-session';
 
 describe('InspectorStep (US3, FR-019, FR-027)', () => {
   it('heads "Step n · from → to" and saves title, condition and SLA, in or out of a session', async () => {
-    const { user, ui, doc } = renderFlows(flowDeck);
+    const { user, ui, doc, editor } = renderFlows(flowDeck);
     act(() => {
-      ui().setActiveFlow('place');
+      startEditing(editor(), 'place');
       ui().setActiveStep('s2');
     });
     expect(
@@ -45,5 +47,65 @@ describe('InspectorStep (US3, FR-019, FR-027)', () => {
     ]);
     await user.click(buttons[1] as HTMLElement);
     expect(ui().activeFlow?.branchId).toBe('fail');
+  });
+});
+
+describe('InspectorStep in flow mode (007 FR-019–021)', () => {
+  const inspector = () => screen.getByRole('complementary', { name: 'Inspector' });
+  function setup(flowId: string, stepId: string) {
+    const view = renderFlows(playbackDeck);
+    act(() => {
+      openFlow(view.editor(), flowId, stepId);
+    });
+    return view;
+  }
+
+  it('heads with the position, from/to tiles and protocol, and lists attached rules', () => {
+    setup('order', 'o5');
+    expect(
+      within(inspector()).getByRole('heading', { name: 'Step 5 of 8 · Place order' }),
+    ).toBeInTheDocument();
+    expect(
+      within(inspector()).getByRole('img', { name: 'From: Order Service' }),
+    ).toBeInTheDocument();
+    expect(
+      within(inspector()).getByRole('img', { name: 'To: Payment Service' }),
+    ).toBeInTheDocument();
+    expect(within(inspector()).getByText('gRPC')).toBeInTheDocument();
+    const rules = within(inspector()).getByRole('region', { name: 'Rules' });
+    expect(
+      within(rules)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Payment limits', 'Missing rule r9']);
+    expect(within(inspector()).queryByRole('meter')).toBeNull();
+  });
+
+  it('says "No rules attached" and "No SLA target" when empty, and keeps fields editable', async () => {
+    const { user, doc } = setup('order', 'o4');
+    expect(
+      within(inspector()).getByRole('heading', { name: 'Step 4 of 8 · Place order' }),
+    ).toBeInTheDocument();
+    expect(within(inspector()).getByText('No rules attached')).toBeInTheDocument();
+    expect(within(inspector()).getByRole('textbox', { name: 'SLA target' })).toHaveAttribute(
+      'placeholder',
+      'No SLA target',
+    );
+    await user.type(within(inspector()).getByRole('textbox', { name: 'Title' }), 'Create{Enter}');
+    expect(toJSON(doc).flows[0]?.steps[3]).toMatchObject({ title: 'Create' });
+  });
+
+  it('shows "Connection deleted" for a broken step', () => {
+    setup('broken', 'k2');
+    expect(within(inspector()).getByText('Connection deleted')).toBeInTheDocument();
+  });
+
+  it('names the branch and marks an error path', () => {
+    setup('fork', 'f4b');
+    expect(
+      within(inspector()).getByRole('heading', { name: 'Step 4b of 5 · Checkout' }),
+    ).toBeInTheDocument();
+    expect(within(inspector()).getByText('Branch payment failed')).toBeInTheDocument();
+    expect(within(inspector()).getByText('· Error path')).toBeInTheDocument();
   });
 });

@@ -3,7 +3,8 @@ import { PanelSection } from '@sododeck/ui/components/panel';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { Route } from 'lucide-react';
 
-import { useUiStore } from '../../state/ui-store';
+import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { playbackOf } from './flow-mode';
 import { analysisOf } from './flow-session';
 import { InspectorBranch } from './inspector-branch';
 import { InspectorFlow } from './inspector-flow';
@@ -13,11 +14,13 @@ import { findFlow } from './session-path';
 
 /**
  * The inspector while a flow is shown or recorded: the branch being added or selected, else the
- * selected step, else the flow. Returns null when no flow is involved.
+ * selected step, else the flow. In flow mode (007) the current step, with its playback header; the
+ * flow itself only when it has no steps. Returns null when no flow is involved.
  */
 export function FlowInspector({ deck }: { deck: SododeckFile }) {
   const session = useUiStore((s) => s.flowSession);
   const active = useUiStore((s) => s.activeFlow);
+  const flowMode = useUiStore(isFlowMode);
   const flowId = session?.flowId ?? active?.flowId ?? null;
   if (session === null && active === null) return null;
 
@@ -61,6 +64,23 @@ export function FlowInspector({ deck }: { deck: SododeckFile }) {
         adding={adding === path.branch.id}
       />
     );
+  }
+  if (flowMode && active !== null) {
+    const playback = playbackOf(deck, flow, active.alternativeId, active.stepId);
+    const current =
+      playback.currentStepId === null ? undefined : analysis.byStepId.get(playback.currentStepId);
+    if (current !== undefined && playback.view !== null) {
+      return (
+        <InspectorStep
+          deck={deck}
+          flow={flow}
+          analysis={analysis}
+          step={current}
+          playback={{ label: playback.view.label }}
+        />
+      );
+    }
+    return <InspectorFlow deck={deck} flow={flow} />;
   }
   const step = active?.stepId == null ? undefined : analysis.byStepId.get(active.stepId);
   if (step !== undefined) {
