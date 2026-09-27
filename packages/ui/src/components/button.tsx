@@ -18,7 +18,7 @@ const buttonVariants = cva(
         default: 'h-8.5 px-3.5 has-[>svg]:px-3',
         sm: 'h-7 px-2.5 text-body-sm',
         icon: 'size-8.5',
-        'icon-sm': 'size-7 rounded-[7px]',
+        'icon-sm': 'size-7 rounded-segment',
       },
     },
     defaultVariants: { variant: 'secondary', size: 'default' },

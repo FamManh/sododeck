@@ -21,6 +21,14 @@ describe('cn', () => {
     expect(cn('text-body', 'text-caption')).toBe('text-caption');
     expect(cn('shadow-rest', 'shadow-float')).toBe('shadow-float');
   });
+
+  it('knows the radius and shadow keys added in 000', () => {
+    expect(cn('rounded-row', 'rounded-banner')).toBe('rounded-banner');
+    expect(cn('rounded-segment', 'rounded-input')).toBe('rounded-input');
+    expect(cn('shadow-rest', 'shadow-tour')).toBe('shadow-tour');
+    expect(cn('shadow-hover', 'shadow-float')).toBe('shadow-float');
+    expect(cn('text-code-md', 'text-body')).toBe('text-body');
+  });
 });
 
 describe('Button', () => {
