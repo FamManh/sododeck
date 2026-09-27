@@ -2,7 +2,13 @@
  * Pure view models of the JSON panel (004 data-model.md). All text comes from `@sododeck/model`;
  * the app never serializes deck data itself (constitution II).
  */
-import { analyzeFlow, serializeEntries, serializeEntry, type Entry } from '@sododeck/model';
+import {
+  analyzeFlow,
+  serializeEntries,
+  serializeEntry,
+  stickyLabel,
+  type Entry,
+} from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { JsonTab } from '../state/json-panel-prefs';
@@ -14,7 +20,7 @@ export interface SelectionView {
   label: string;
   /** Accessible name and tooltip. */
   fullLabel: string;
-  /** Selected nodes, then selected edges, each in deck order. */
+  /** Selected nodes, then selected edges, then selected notes, each in deck order. */
   entries: Entry[];
 }
 
@@ -65,22 +71,26 @@ export function selectionView(
   }
   const nodeIds = new Set(selection.nodes);
   const edgeIds = new Set(selection.edges);
+  const stickyIds = new Set(selection.stickies);
   const nodes = deck.nodes.filter((node) => nodeIds.has(node.id));
   const edges = deck.edges.filter((edge) => edgeIds.has(edge.id));
+  const stickies = deck.stickies.filter((sticky) => stickyIds.has(sticky.id));
   const entries: Entry[] = [
     ...nodes.map((value) => ({ collection: 'nodes' as const, value })),
     ...edges.map((value) => ({ collection: 'edges' as const, value })),
+    ...stickies.map((value) => ({ collection: 'stickies' as const, value })),
   ];
 
   let label = 'Selection';
   const [node] = nodes;
   const [edge] = edges;
+  const [sticky] = stickies;
   if (entries.length > 1) label = `${String(entries.length)} selected`;
   else if (node) label = node.title;
   else if (edge) {
     const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
     label = edge.label ?? `${title(edge.from)} → ${title(edge.to)}`;
-  }
+  } else if (sticky) label = stickyLabel(sticky.text) ?? 'Empty note';
   return { label, fullLabel: label, entries };
 }
 

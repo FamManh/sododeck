@@ -17,6 +17,8 @@ export function MarkdownField({
   value,
   onCommit,
   placeholder,
+  disabled = false,
+  emptyPreviewText,
 }: {
   modeKey: string;
   label?: string;
@@ -24,9 +26,12 @@ export function MarkdownField({
   /** Receives the trimmed text; `''` means clear. */
   onCommit: (value: string) => void;
   placeholder?: string;
+  disabled?: boolean;
+  emptyPreviewText?: string;
 }) {
   const id = useId();
   const mode = useUiStore((s) => s.descriptionMode[modeKey] ?? 'write');
+  const empty = value.trim() === '';
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -34,6 +39,7 @@ export function MarkdownField({
         <SegmentedControl
           aria-label={`${label} view`}
           value={mode}
+          disabled={disabled}
           onValueChange={(next) => {
             useUiStore.getState().setDescriptionMode(modeKey, next as DescriptionMode);
           }}
@@ -54,8 +60,17 @@ export function MarkdownField({
           label={label}
           value={value}
           placeholder={placeholder}
+          disabled={disabled}
           onCommit={onCommit}
         />
+      ) : empty && emptyPreviewText !== undefined ? (
+        <div
+          role="region"
+          aria-label={`${label} preview`}
+          className="max-h-72 min-h-16 rounded-input border border-border px-[11px] py-2 text-body-sm text-ink-secondary"
+        >
+          {emptyPreviewText}
+        </div>
       ) : (
         <MarkdownView
           role="region"

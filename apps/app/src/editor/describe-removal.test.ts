@@ -15,7 +15,11 @@ const deck = deckOf({
     { id: 'e2', from: 'svc', to: 'db' },
   ],
   flows: [{ id: 'f', title: 'Checkout', steps: [{ id: 's1', edge: 'e1' }] }],
-  stickies: [{ id: 'n1', text: 'Note', anchor: 'svc' }],
+  stickies: [
+    { id: 'n1', text: 'Note', anchor: 'svc' },
+    { id: 'n2', text: 'Second note', position: { x: 20, y: 24 } },
+    { id: 'n3', text: 'Third note', position: { x: 32, y: 36 } },
+  ],
 });
 
 function describe_(targets: RemovalTarget[]) {
@@ -79,9 +83,9 @@ describe('describeRemoval', () => {
   it('names one component with its connections and what breaks', () => {
     expect(describe_([{ scope: 'nodes', id: 'svc' }])).toEqual({
       title: 'Delete Order Service?',
-      body: 'Also removes 2 connections. 1 flow step will be flagged broken. You can undo this.',
-      toast: 'Deleted Order Service and 2 connections · ⌘Z to undo',
-      toastPc: 'Deleted Order Service and 2 connections · Ctrl+Z to undo',
+      body: 'Also removes 2 connections. 1 pinned note will stay on the canvas, unpinned. 1 flow step will be flagged broken. You can undo this.',
+      toast: 'Deleted Order Service and 2 connections · 1 note unpinned · ⌘Z to undo',
+      toastPc: 'Deleted Order Service and 2 connections · 1 note unpinned · Ctrl+Z to undo',
     });
   });
 
@@ -115,6 +119,24 @@ describe('describeRemoval', () => {
   it('uses singular words for one', () => {
     const d = describe_([{ scope: 'nodes', id: 'db' }]);
     expect(d.body).toBe('Also removes 1 connection. You can undo this.');
+  });
+
+  it('uses note-specific wording for one or many selected notes', () => {
+    expect(describe_([{ scope: 'stickies', id: 'n1' }])).toEqual({
+      title: 'Delete this note?',
+      body: 'You can undo this.',
+      toast: 'Note deleted · ⌘Z to undo',
+      toastPc: 'Note deleted · Ctrl+Z to undo',
+    });
+    expect(
+      describe_([
+        { scope: 'stickies', id: 'n1' },
+        { scope: 'stickies', id: 'n2' },
+        { scope: 'stickies', id: 'n3' },
+      ]),
+    ).toMatchObject({
+      title: 'Delete 3 notes?',
+    });
   });
 });
 

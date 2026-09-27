@@ -1,5 +1,6 @@
 /** Outline tree view model (FR-024): groups nested by `parent`, components under their `group`. */
 import type { SododeckFile } from '@sododeck/schema';
+import { stickyLabel } from '@sododeck/model';
 
 export type OutlineItem =
   | { type: 'group'; id: string; title: string; count: number; children: OutlineItem[] }
@@ -72,6 +73,11 @@ export interface VisibleItem {
   parentId: string | null;
 }
 
+export interface NoteOutlineItem {
+  id: string;
+  label: string;
+}
+
 /** Depth-first list of the items that are shown (children of collapsed groups are not). */
 export function visibleItems(
   tree: readonly OutlineItem[],
@@ -86,4 +92,12 @@ export function visibleItems(
   };
   walk(tree, 1, null);
   return out;
+}
+
+/** Notes outline rows, in file order, using the first non-empty line as the label. */
+export function buildNotesOutline(deck: SododeckFile): NoteOutlineItem[] {
+  return deck.stickies.map((sticky) => ({
+    id: sticky.id,
+    label: stickyLabel(sticky.text) ?? 'Empty note',
+  }));
 }

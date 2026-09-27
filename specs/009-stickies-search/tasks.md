@@ -160,7 +160,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Inspector, outline, delete, JSON
 
-- [ ] T023 [P] [US1] Write `apps/app/src/editor/inspector/sticky-inspector.test.tsx`. It must fail at first, following the UI contract "Sticky inspector":
+- [x] T023 [P] [US1] Write `apps/app/src/editor/inspector/sticky-inspector.test.tsx`. It must fail at first, following the UI contract "Sticky inspector":
   - header and subtitle
   - the TEXT · MARKDOWN Write/Preview ("Nothing to preview.")
   - ANCHOR Free ⇄ Pinned: choosing Pinned opens "Pinned to", and picking a component pins it without moving the note (the canvas point is unchanged in the store snapshot)
@@ -170,19 +170,19 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - the "Stay visible during flows" switch writes `showInFlows: true` and removes it when off
   - "Delete note" opens the confirmation
   - in a read-only deck, every field is disabled (spec edge case)
-- [ ] T024 [US1] Implement `apps/app/src/editor/inspector/sticky-inspector.tsx` (`InspectorFrame`, `MarkdownField`, `SegmentedControl`, `Combobox` in pick mode, `Switch`). Route a selection of exactly one sticky to it in `apps/app/src/editor/inspector.tsx`, and count notes in the "several selected" frame. Make T023 pass.
-- [ ] T025 [P] [US1] Write the tests for the Notes section in `apps/app/src/editor/outline.test.ts` and `apps/app/src/editor/outline-tree.test.tsx` (or a new `apps/app/src/editor/notes-outline.test.tsx`). They must fail at first:
+- [x] T024 [US1] Implement `apps/app/src/editor/inspector/sticky-inspector.tsx` (`InspectorFrame`, `MarkdownField`, `SegmentedControl`, `Combobox` in pick mode, `Switch`). Route a selection of exactly one sticky to it in `apps/app/src/editor/inspector.tsx`, and count notes in the "several selected" frame. Make T023 pass.
+- [x] T025 [P] [US1] Write the tests for the Notes section in `apps/app/src/editor/outline.test.ts` and `apps/app/src/editor/outline-tree.test.tsx` (or a new `apps/app/src/editor/notes-outline.test.tsx`). They must fail at first:
   - `buildNotesOutline` uses labels in file order, with "Empty note" for a blank one
   - "Notes · n" heading, collapsible, hidden at 0
   - choosing a row selects and centres the note
-- [ ] T026 [US1] Implement `buildNotesOutline` in `apps/app/src/editor/outline.ts` and the Notes section in `apps/app/src/editor/left-sidebar.tsx`, reusing the outline row styles. Make T025 pass.
-- [ ] T027 [P] [US1] Write the tests for the delete text in `apps/app/src/editor/describe-removal.test.ts` and `apps/app/src/editor/confirm-delete-dialog.test.tsx`. They must fail at first:
+- [x] T026 [US1] Implement `buildNotesOutline` in `apps/app/src/editor/outline.ts` and the Notes section in `apps/app/src/editor/left-sidebar.tsx`, reusing the outline row styles. Make T025 pass.
+- [x] T027 [P] [US1] Write the tests for the delete text in `apps/app/src/editor/describe-removal.test.ts` and `apps/app/src/editor/confirm-delete-dialog.test.tsx`. They must fail at first:
   - "Delete this note?" / "Delete 3 notes?"
   - the toast "Note deleted · ⌘Z to undo" (Ctrl+Z off Apple), where Undo restores the same id
   - deleting a component with a pinned note: the dialog line "1 pinned note will stay on the canvas, unpinned." and the toast suffix " · 1 note unpinned"
   - Delete/Backspace with notes selected requests `{ scope: 'stickies' }` targets
-- [ ] T028 [US1] Implement the note text and freed-note text in `apps/app/src/editor/describe-removal.ts`, include selected stickies in `requestDelete`, and read `freed` in `apps/app/src/editor/confirm-delete-dialog.tsx`. Make T027 pass.
-- [ ] T029 [US1] Show a selected sticky in the JSON panel's Selection tab (`apps/app/src/editor/json-panel-view.ts`), with a case added to `apps/app/src/editor/json-panel-view.test.ts`.
+- [x] T028 [US1] Implement the note text and freed-note text in `apps/app/src/editor/describe-removal.ts`, include selected stickies in `requestDelete`, and read `freed` in `apps/app/src/editor/confirm-delete-dialog.tsx`. Make T027 pass.
+- [x] T029 [US1] Show a selected sticky in the JSON panel's Selection tab (`apps/app/src/editor/json-panel-view.ts`), with a case added to `apps/app/src/editor/json-panel-view.test.ts`.
 
 **Checkpoint**: US1 works on its own (quickstart steps 1–6). Commit, then run `BENCH_STICKIES=100 pnpm bench` as an early check against SC-009.
 
