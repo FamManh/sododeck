@@ -38,11 +38,18 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
   usePlayback();
   const currentId = playback?.currentStepId ?? null;
 
-  // Long flows scroll horizontally; keep the current segment in view.
+  // Long flows scroll horizontally; keep the current segment in view. Only the list scrolls:
+  // scrollIntoView would also scroll the canvas's ancestors.
   useEffect(() => {
-    if (currentId === null) return;
-    const el = progress.current?.querySelector<HTMLElement>(`[data-step-id="${currentId}"]`);
-    el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const list = progress.current;
+    if (currentId === null || list === null || list.scrollWidth <= list.clientWidth) return;
+    const el = list.querySelector<HTMLElement>(`[data-step-id="${currentId}"]`);
+    if (el === null) return;
+    const left = el.offsetLeft - list.offsetLeft;
+    if (left < list.scrollLeft) list.scrollLeft = left;
+    else if (left + el.offsetWidth > list.scrollLeft + list.clientWidth) {
+      list.scrollLeft = left + el.offsetWidth - list.clientWidth;
+    }
   }, [currentId]);
 
   if (active === null || playback === null) return null;

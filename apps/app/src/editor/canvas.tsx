@@ -191,7 +191,6 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     [deck, selection, labelsOn, focusedEdgeId, overlay],
   );
   const recording = session !== null;
-  const viewOnly = recording || flowMode;
   const hasFocusedNode = focusedId !== null && deck.nodes.some((n) => n.id === focusedId);
 
   return (
@@ -247,13 +246,15 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         selectionOnDrag={false}
         selectNodesOnDrag={false}
         panOnDrag
-        // Recording (006 FR-017) and flow mode (007) pause structure editing.
-        nodesDraggable={!viewOnly}
-        nodesConnectable={!viewOnly}
+        // Recording pauses structure editing (006 FR-017). Flow mode is view-only too, but through
+        // the handlers and CSS: toggling these props re-renders every node and edge, which costs
+        // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
+        nodesDraggable={!recording}
+        nodesConnectable={!recording}
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
         connectionMode={ConnectionMode.Loose}
         connectionLineStyle={connectionLineStyle}
-        edgesReconnectable={!viewOnly}
+        edgesReconnectable={!recording}
         {...handlers}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />

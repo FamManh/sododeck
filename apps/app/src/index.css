@@ -81,8 +81,20 @@
   opacity: 0.2;
 }
 
-[data-flow-mode] .react-flow__handle.sd-handle {
-  display: none;
+/* View-only (007): no connection handles or reconnect grips, no grab cursor. Hidden, not
+   `display: none`: React Flow measures handle bounds to draw edges. */
+[data-flow-mode] .react-flow__handle.sd-handle,
+[data-flow-mode] .react-flow__edgeupdater {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-flow-mode] .react-flow__node {
+  cursor: default;
+}
+
+[data-flow-mode] .react-flow__node.in-flow {
+  cursor: pointer;
 }
 
 /* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */

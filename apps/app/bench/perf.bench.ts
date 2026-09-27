@@ -289,6 +289,27 @@ for (const scenario of [
         `flow${String(i % 5)}-0`,
       ),
   },
+  // 007 SC-002: flow mode and the next current step are painted within the same target.
+  {
+    name: 'open flow → flow mode painted',
+    run: (page: Page, i: number) =>
+      page.evaluate(
+        (id) => window.__sododeckFlowBench?.openFlow(id) ?? Promise.resolve(NaN),
+        `flow${String(i % 5)}-1`,
+      ),
+  },
+  {
+    name: 'next step → current painted',
+    run: async (page: Page, i: number) => {
+      await page.evaluate(
+        (id) => window.__sododeckFlowBench?.openFlow(id) ?? Promise.resolve(NaN),
+        `flow${String(i % 5)}-2`,
+      );
+      // Let the fit-to-flow viewport animation finish, as a user would.
+      await page.waitForTimeout(400);
+      return page.evaluate(() => window.__sododeckFlowBench?.nextStep() ?? Promise.resolve(NaN));
+    },
+  },
   {
     name: 'record click → badge',
     run: (page: Page, i: number) =>
@@ -316,6 +337,33 @@ for (const scenario of [
   });
 }
 
+/** 007 SC-003: 5 s of autoplay at 2× (dimmed deck, looping token, a step every 850 ms). */
+test(`playing at 2×: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  const opened = await openBench(page, FLOWS === '' ? '&flows=1' : '');
+  await page.waitForFunction(() => window.__sododeckFlowBench !== undefined);
+  await page.evaluate(() => window.__sododeckFlowBench?.openFlow('flow0-0') ?? Promise.resolve(NaN));
+  await page.waitForTimeout(400);
+  await startRecording(page);
+  await page.evaluate(() => {
+    window.__sododeckFlowBench?.play(2);
+  });
+  await page.waitForTimeout(5000);
+  const stats = summarize(await stopRecording(page));
+  // Guard against a silent no-op: autoplay must have moved past step 1.
+  const progress = await page.getByRole('region', { name: 'Step player' }).textContent();
+  expect(progress).not.toContain('Step 1 of');
+  results.push({
+    scenario: 'playing at 2×',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodesZoomedIn: opened.renderedNodes,
+    maxZoom: await viewportZoom(page),
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
+
 test.afterAll(async () => {
   if (results.length === 0 && flowResults.length === 0) return;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -335,7 +383,7 @@ test.afterAll(async () => {
         `| ${r.scenario} | ${r.renderedNodes} / ${r.renderedNodesZoomedIn} of ${r.nodes} | ${r.maxZoom.toFixed(2)} | ${r.renderMs} | ${r.inPageReadyMs} | ${fmt(r.avgFps)} | ${fmt(r.p95FrameMs)} | ${fmt(r.maxFrameMs)} | ${fmt(r.longFramesPct)}% | ${r.meetsTarget ? 'yes' : 'no'} |`,
     ),
     '',
-    `Flow scenarios (006): median of 5, target < ${String(FLOW_TARGET_MS)} ms. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
+    `Flow scenarios (006, 007): median of 5, target < ${String(FLOW_TARGET_MS)} ms. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
     '',
     '| Scenario | Action → painted (ms) | Meets target |',
     '| --- | --- | --- |',

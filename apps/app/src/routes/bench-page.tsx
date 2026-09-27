@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router';
 import { generateBenchDeck } from '../bench/generate-deck';
 import { Canvas } from '../editor/canvas';
 import { JsonPanel } from '../editor/json-panel';
+import { exitFlow, nextStep, openFlow, play } from '../editor/flows/flow-mode';
 import { recordClick, startNewFlow } from '../editor/flows/flow-session';
 import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
@@ -20,17 +21,26 @@ declare global {
     __sododeckFlowBench?: {
       showFlow: (flowId: string) => Promise<number>;
       recordClick: (edgeId: string) => Promise<number>;
+      /** 007: opens flow mode; resolves when the current step's edge label is painted. */
+      openFlow: (flowId: string) => Promise<number>;
+      /** 007: next step; resolves when the new current step is painted. */
+      nextStep: () => Promise<number>;
+      /** 007: starts autoplay at the given speed. */
+      play: (speed: 1 | 2) => void;
       /** Ends any session and hides the flow, removing a flow the last run recorded. */
       reset: () => void;
     };
   }
 }
 
-/** Ms from `start` until `selector` is in the DOM and the frame after it is painted. */
-function paintedAfter(start: number, selector: string): Promise<number> {
+const CURRENT_LABEL = '[data-flow-mode] [data-testid="edge-label"][aria-current="step"]';
+
+/** Ms from `start` until `ready` holds (or `selector` is in the DOM) and that frame is painted. */
+function paintedAfter(start: number, ready: string | (() => boolean)): Promise<number> {
+  const isReady = typeof ready === 'string' ? () => document.querySelector(ready) !== null : ready;
   return new Promise((resolve) => {
     const check = () => {
-      if (document.querySelector(selector) === null) {
+      if (!isReady()) {
         requestAnimationFrame(check);
         return;
       }
@@ -58,7 +68,26 @@ function FlowBenchHooks() {
         recordClick(editor, edgeId);
         return paintedAfter(start, '[role="img"][aria-label^="Step 1"]');
       },
+      openFlow: (flowId) => {
+        const start = performance.now();
+        openFlow(editor, flowId);
+        return paintedAfter(start, CURRENT_LABEL);
+      },
+      nextStep: () => {
+        const before = document.querySelector(CURRENT_LABEL);
+        const start = performance.now();
+        nextStep(editor);
+        return paintedAfter(start, () => {
+          const now = document.querySelector(CURRENT_LABEL);
+          return now !== null && now !== before;
+        });
+      },
+      play: (speed) => {
+        useUiStore.getState().setSpeed(speed);
+        play(editor);
+      },
       reset: () => {
+        exitFlow();
         const ui = useUiStore.getState();
         const recorded = ui.flowSession?.flowId;
         if (recorded != null) editor.remove('flows', recorded);

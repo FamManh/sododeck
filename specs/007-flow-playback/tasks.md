@@ -351,12 +351,12 @@ failed" at step 4a, play it end to end.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T053 [P] Bench hooks: add `openFlow(id)` and `nextStep()` (resolve on the first painted frame
+- [x] T053 [P] Bench hooks: add `openFlow(id)` and `nextStep()` (resolve on the first painted frame
       with the current mark) to `window.__sododeckFlowBench` in
       `apps/app/src/routes/bench-page.tsx`; add scenarios "open flow → flow mode painted", "next
       step → current painted" (median of 5, < 100 ms) and a 5 s "playing at 2×" fps sample to
       `apps/app/bench/perf.bench.ts`.
-- [ ] T054 Run `pnpm bench`; write `specs/007-flow-playback/bench-after.md` with before/after
+- [x] T054 Run `pnpm bench`; write `specs/007-flow-playback/bench-after.md` with before/after
       tables; any regression below targets blocks merge (constitution V).
 - [ ] T055 [P] Docs: flow-mode rules in `apps/app/CLAUDE.md` (derived flow mode, `openFlow` /
       `exitFlow`, view-only canvas, playback keys, `played-path.ts`, `FlowToken`);
