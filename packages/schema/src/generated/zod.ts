@@ -536,6 +536,16 @@ export const sododeckFileSchema = z
                 'Absolute position for a free note; offset from the anchor for an anchored note.',
               )
               .optional(),
+            collapsed: z
+              .boolean()
+              .describe('True when the note is shown as one line. Absent means expanded.')
+              .optional(),
+            showInFlows: z
+              .boolean()
+              .describe(
+                'True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step.',
+              )
+              .optional(),
           })
           .strict()
           .describe('A sticky note. It needs an `anchor`, a `position`, or both.'),

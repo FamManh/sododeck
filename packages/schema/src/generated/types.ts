@@ -471,4 +471,12 @@ export interface Sticky {
   color?: StickyColor;
   anchor?: Id;
   position?: Position;
+  /**
+   * True when the note is shown as one line. Absent means expanded.
+   */
+  collapsed?: boolean;
+  /**
+   * True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step.
+   */
+  showInFlows?: boolean;
 }

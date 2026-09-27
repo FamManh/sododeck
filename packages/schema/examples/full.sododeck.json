@@ -326,7 +326,8 @@
       "id": "note-1",
       "text": "Confirm warehouse SLA with **ops**.",
       "color": "amber",
-      "position": { "x": 40, "y": 400 }
+      "position": { "x": 40, "y": 400 },
+      "showInFlows": true
     },
     { "id": "note-2", "text": "Owns PII.", "color": "clay", "anchor": "orders-db" },
     {
@@ -334,7 +335,8 @@
       "text": "Kafka topic retention is 7 days.",
       "color": "blue",
       "anchor": "e4",
-      "position": { "x": 12, "y": -24 }
+      "position": { "x": 12, "y": -24 },
+      "collapsed": true
     },
     {
       "id": "note-4",

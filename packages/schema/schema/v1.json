@@ -480,6 +480,14 @@
         "position": {
           "$ref": "#/$defs/Position",
           "description": "Absolute position for a free note; offset from the anchor for an anchored note."
+        },
+        "collapsed": {
+          "type": "boolean",
+          "description": "True when the note is shown as one line. Absent means expanded."
+        },
+        "showInFlows": {
+          "type": "boolean",
+          "description": "True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step."
         }
       },
       "anyOf": [
