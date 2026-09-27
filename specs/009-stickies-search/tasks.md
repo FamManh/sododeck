@@ -130,13 +130,13 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - a pinned note moves when its node's position changes
   - `toLeaderEdges` gives one `sticky-leader` edge per pinned note only (none for foreign or missing), not selectable or focusable
 - [x] T017 [US1] Implement `toStickyNodes` and `toLeaderEdges` in `apps/app/src/editor/deck-to-flow.ts` (WeakMap cache per sticky), plus `apps/app/src/editor/stickies/sticky-tint.ts`: color → token classes, where amber, blue and clay use tints, green uses `success`, and grey uses neutral surface and muted ink. Add a contrast case for the sticky tints in the existing `packages/ui` contrast suite. Make T016 pass.
-- [ ] T018 [P] [US1] Write `apps/app/src/editor/stickies/sticky-node.test.tsx`. It must fail at first, following the UI contract "Sticky note on the canvas":
+- [x] T018 [P] [US1] Write `apps/app/src/editor/stickies/sticky-node.test.tsx`. It must fail at first, following the UI contract "Sticky note on the canvas":
   - the accessible name ("Note: <label>", ", pinned to <node>", ", collapsed", "Note: empty")
   - markdown body elements; `<script>` shown as text
   - the collapsed line and the `aria-expanded` toggle ("Collapse note" / "Expand note")
   - the "Pinned to <node title>" footer, which updates after the node is renamed
   - double-click, Enter or F2 opens the `textbox` "Note text"; typing writes to the model live; Esc and blur leave edit mode
-- [ ] T019 [US1] Implement `apps/app/src/editor/stickies/sticky-node.tsx` (the 180 px card, a header strip with a note icon and chevron, the body capped at 240 px with scroll, the footer, and the in-card editor through `useLiveField` bound to `stickies:<id>`) and `apps/app/src/editor/stickies/sticky-leader-edge.tsx` (dotted, pin glyph at the node's top edge, `aria-hidden`). Register both in `nodeTypes` and `edgeTypes` in `apps/app/src/editor/canvas.tsx`, above components (`zIndex` 1). Make T018 pass.
+- [x] T019 [US1] Implement `apps/app/src/editor/stickies/sticky-node.tsx` (the 180 px card, a header strip with a note icon and chevron, the body capped at 240 px with scroll, the footer, and the in-card editor through `useLiveField` bound to `stickies:<id>`) and `apps/app/src/editor/stickies/sticky-leader-edge.tsx` (dotted, pin glyph at the node's top edge, `aria-hidden`). Register both in `nodeTypes` and `edgeTypes` in `apps/app/src/editor/canvas.tsx`, above components (`zIndex` 1). Make T018 pass.
 - [ ] T020 [P] [US1] Add a `stickies` option to `apps/app/src/bench/generate-deck.ts` (seeded; half pinned to random nodes, half free) and read `BENCH_STICKIES` / `?stickies=` in `apps/app/src/routes/bench-page.tsx` and `apps/app/bench/perf.bench.ts`.
 
 ### Adding, moving and keys

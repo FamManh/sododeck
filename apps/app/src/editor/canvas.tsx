@@ -23,7 +23,7 @@ import { CanvasToolbar } from './canvas-toolbar';
 import { ConnectPopover } from './connect-popover';
 import { DeckEdge } from './deck-edge';
 import { DeckNode } from './deck-node';
-import { toFlowEdges, toFlowNodes } from './deck-to-flow';
+import { toFlowEdges, toFlowNodes, toLeaderEdges, toStickyNodes } from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
 import { EmptyCanvasCard } from './empty-canvas-card';
 import { playbackOf } from './flows/flow-mode';
@@ -34,12 +34,18 @@ import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { SelectionFrame } from './selection-frame';
+import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
+import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
-const nodeTypes: NodeTypes = { deck: DeckNode, 'group-boundary': GroupBoundaryNode };
-const edgeTypes: EdgeTypes = { deck: DeckEdge };
+const nodeTypes: NodeTypes = {
+  deck: DeckNode,
+  'group-boundary': GroupBoundaryNode,
+  sticky: StickyNode,
+};
+const edgeTypes: EdgeTypes = { deck: DeckEdge, 'sticky-leader': StickyLeaderEdge };
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -62,7 +68,11 @@ function useSelectionSync(): void {
         const ui = useUiStore.getState();
         // Only removals can leave dangling ids (not the moves of a drag, which are most changes).
         if (
-          changes.some((c) => c.kind === 'removed' && (c.scope === 'nodes' || c.scope === 'edges'))
+          changes.some(
+            (c) =>
+              c.kind === 'removed' &&
+              (c.scope === 'nodes' || c.scope === 'edges' || c.scope === 'stickies'),
+          )
         ) {
           const deck = readDeck(editor.doc);
           ui.pruneSelection({
@@ -192,11 +202,14 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useFlowViewport(deck, playback, wrapper);
 
   const nodes = useMemo(
-    () => toFlowNodes(deck, selection, focusedId, overlay),
+    () => [...toFlowNodes(deck, selection, focusedId, overlay), ...toStickyNodes(deck, selection)],
     [deck, selection, focusedId, overlay],
   );
   const edges = useMemo(
-    () => toFlowEdges(deck, selection, labelsOn, focusedEdgeId, overlay),
+    () => [
+      ...toFlowEdges(deck, selection, labelsOn, focusedEdgeId, overlay),
+      ...toLeaderEdges(deck),
+    ],
     [deck, selection, labelsOn, focusedEdgeId, overlay],
   );
   const recording = session !== null;
