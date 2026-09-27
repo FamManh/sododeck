@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkIntegrity, createEditor, fromJSON, observeDeck, serializeDeck, toJSON } from '../src';
+import {
+  checkIntegrity,
+  createDeckSnapshot,
+  createEditor,
+  fromJSON,
+  observeDeck,
+  serializeDeck,
+  toJSON,
+} from '../src';
 import { largeDeck } from './helpers';
 
 // SC-003/004 on 500 nodes / 1,000 edges / 20 flows × 10 steps / 10 rules. Shared CI runners are
@@ -9,6 +17,8 @@ import { largeDeck } from './helpers';
 const SLACK = process.env.CI ? 3 : 1;
 const LOAD_BUDGET_MS = 200 * SLACK;
 const EDIT_BUDGET_MS = 16 * SLACK;
+// 003 research R1: a drag writes one position per frame and the canvas re-reads the snapshot.
+const SNAPSHOT_BUDGET_MS = 2 * SLACK;
 
 /** Median of 5 timed runs after 1 warm-up. */
 function median(run: () => void): number {
@@ -64,6 +74,20 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
     expect(timings.rename).toBeLessThan(EDIT_BUDGET_MS);
     expect(timings.move).toBeLessThan(EDIT_BUDGET_MS);
     expect(timings['rename last edge']).toBeLessThan(EDIT_BUDGET_MS);
+  });
+
+  it(`moves a node and updates the incremental snapshot in < ${String(SNAPSHOT_BUDGET_MS)} ms`, () => {
+    const editor = createEditor(doc);
+    const snapshot = createDeckSnapshot(doc);
+    let i = 0;
+    timings['move + snapshot'] = median(() => {
+      editor.update('nodes', 'n250', { position: { x: i, y: i++ } });
+      snapshot.get();
+    });
+    expect(snapshot.get()).toEqual(toJSON(doc));
+    snapshot.destroy();
+    editor.destroy();
+    expect(timings['move + snapshot']).toBeLessThan(SNAPSHOT_BUDGET_MS);
     console.info(
       'perf (median ms):',
       Object.fromEntries(Object.entries(timings).map(([k, v]) => [k, Number(v.toFixed(2))])),

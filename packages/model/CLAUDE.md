@@ -8,6 +8,9 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - **Read:** `getObject(doc, collection, id)`, `getRule(doc, id)`, `observeDeck(doc, listener)` → one `DeckChange` per transaction (`origin`: `local` / `undo` / `redo` / `remote`; changes name scope, id, child step/column/row and changed keys).
 - **Edit:** `createEditor(doc, { captureTimeout?, newId? })` → `DeckEditor`: `add` / `update` / `remove` / `reorder` for `nodes`, `groups`, `edges`, `views`, `features`, `flows`, `stickies`; step ops; rule, column, row and cell ops; `updateMeta`; `batch`; `beginGesture` / `endGesture`; `undo` / `redo` / `canUndo` / `canRedo` / `onHistoryChange`; `destroy`. Every op validates first and throws `DeckEditError` (`invalid`, `not-found`, `missing-reference`, `duplicate-id`) without writing. `remove*` returns a `RemovalResult` (`removed`, `updated`, `broken`).
 - **Integrity:** `checkIntegrity(file)`: pure, worker-safe list of broken references and parent cycles.
+- **Added by 003** (contract: `specs/003-canvas-basic/contracts/model-additions.md`):
+  - `createDeckSnapshot(doc)` → `DeckSnapshot` (`get`, `subscribe`, `destroy`): an incremental, structurally shared plain deck. Equals `toJSON(doc)` (key order included) after every transaction; untouched objects and collections keep their identity. The app reads the deck through it.
+  - `previewRemoval(file, targets: RemovalTarget[])` → `RemovalResult`: what removing the targets in one batch would do, computed by running the real cascade on a throwaway copy. Objects hit by several targets appear once.
 
 ## Rules
 
@@ -23,6 +26,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `deck.ts` load/save + layout doc · `layout.ts` root types and lookups · `convert.ts` JSON ↔ Y
 - `key-order.ts` canonical order from the schema · `load-checks.ts` duplicate ids · `ids.ts` id generator
 - `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
+- `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003)
 - `ops/`: `collections`, `steps`, `rules`, `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 
 ## Boundaries
@@ -32,4 +36,4 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 
 ## Status
 
-Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges).
+Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges). 003 added the snapshot and the removal preview.
