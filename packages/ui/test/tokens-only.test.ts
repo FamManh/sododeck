@@ -19,7 +19,9 @@ const FORBIDDEN: { name: string; pattern: RegExp }[] = [
   {
     name: 'Tailwind palette color',
     pattern: new RegExp(
-      `\\b(bg|text|border|ring|fill|stroke|outline|from|to|via|shadow)-(${PALETTE})(-\\d{2,3})?\\b`,
+      // A palette hue needs a shade (bg-amber-500); white/black stand alone. Our own tokens such
+      // as bg-amber-soft share a hue name but are not palette colors.
+      `\\b(bg|text|border|ring|fill|stroke|outline|from|to|via|shadow)-((${PALETTE})-\\d{2,3}|white|black)(?![-\\w])`,
     ),
   },
   { name: 'arbitrary color value', pattern: /-\[(#|rgb|hsl)/ },
