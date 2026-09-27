@@ -6,24 +6,65 @@ import * as Y from 'yjs';
 
 import { createDeck, DeckValidationError, fromJSON, serializeDeck, toJSON } from '../src';
 
-const example = JSON.parse(
-  await readFile(
-    new URL(import.meta.resolve('@sododeck/schema/examples/minimal.sododeck.json')),
-    'utf8',
-  ),
-) as SododeckFile;
+async function readExample(file: string): Promise<SododeckFile> {
+  const url = new URL(import.meta.resolve(`@sododeck/schema/examples/${file}`));
+  return JSON.parse(await readFile(url, 'utf8')) as SododeckFile;
+}
 
-/** Exercises nested objects, nested arrays, all primitive types and every collection. */
+const example = await readExample('minimal.sododeck.json');
+const flowAndRule = await readExample('flow-and-rule.sododeck.json');
+/** Uses every object type and every field of format v1. */
+const full = await readExample('full.sododeck.json');
+
+/** Exercises nested objects, nested arrays, maps, numbers (negative, fractional) and every collection. */
 const rich: SododeckFile = {
   ...emptySododeckFile(),
-  nodes: [{ id: 'a', title: 'A', tags: ['x', 'y'], meta: { n: 1.5, ok: true, none: null } }],
-  groups: [{ id: 'g', children: ['a'] }],
-  edges: [{ id: 'e', from: 'a', to: 'a' }],
-  views: [{ id: 'v', positions: { a: { x: 0, y: -10 } } }],
-  features: [{ id: 'f' }],
-  flows: [{ id: 'fl', steps: [{ edge: 'e', rules: ['R-1'] }, { edge: 'e' }] }],
-  rules: { 'R-1': { title: 'Rule', table: [{ when: 'a > 1', then: 'b' }] } },
+  nodes: [
+    {
+      id: 'a',
+      type: 'service',
+      title: 'A',
+      tags: ['x', 'y'],
+      links: [{ label: 'Repo', url: 'https://example.com/a' }],
+      rules: ['R-1'],
+      position: { x: 1.5, y: -10 },
+    },
+  ],
+  groups: [{ id: 'g', title: 'Group' }],
+  edges: [{ id: 'e', from: 'a', to: 'a', protocol: 'http' }],
+  views: [{ id: 'v', type: 'custom', title: 'View', positions: { a: { x: 0, y: -10 } } }],
+  features: [{ id: 'f', title: 'Feature' }],
+  flows: [
+    {
+      id: 'fl',
+      title: 'Flow',
+      steps: [
+        { id: 's1', edge: 'e', rules: ['R-1'], ruleInputs: { 'R-1': { in1: '3' } } },
+        { id: 's2', edge: 'e' },
+      ],
+    },
+  ],
+  rules: {
+    'R-1': {
+      title: 'Rule',
+      hitPolicy: 'first',
+      inputs: [{ id: 'in1', label: 'Attempt' }],
+      outputs: [{ id: 'out1', label: 'Action' }],
+      rows: [{ id: 'r1', when: ['> 1'], then: ['Return'] }],
+    },
+  },
   stickies: [{ id: 's', text: 'Note', anchor: 'a' }],
+};
+
+/** Optional deck metadata must survive the round-trip too. */
+const { $schema, version, ...collections } = emptySododeckFile();
+const withMeta: SododeckFile = {
+  $schema,
+  version,
+  name: 'Delivery',
+  description: 'Last-mile **delivery**.',
+  tags: ['logistics', 'v1'],
+  ...collections,
 };
 
 describe('deck model', () => {
@@ -34,15 +75,21 @@ describe('deck model', () => {
   it.each([
     ['example', example],
     ['rich', rich],
+    ['with metadata', withMeta],
+    ['flow-and-rule example', flowAndRule],
+    ['full example', full],
   ])('round-trips the %s deck losslessly', (_name, file) => {
     expect(toJSON(fromJSON(file))).toEqual(file);
     expect(serializeDeck(toJSON(fromJSON(file)))).toBe(serializeDeck(file));
   });
 
-  it('survives Yjs update encoding (persistence / sync path)', () => {
+  it.each([
+    ['rich', rich],
+    ['full example', full],
+  ])('survives Yjs update encoding of the %s deck (persistence / sync path)', (_name, file) => {
     const replica = new Y.Doc();
-    Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(rich)));
-    expect(toJSON(replica)).toEqual(rich);
+    Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(file)));
+    expect(toJSON(replica)).toEqual(file);
   });
 
   it('keeps ids stable when an object is renamed', () => {

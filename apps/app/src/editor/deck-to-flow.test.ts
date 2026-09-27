@@ -1,15 +1,18 @@
-import { emptySododeckFile } from '@sododeck/schema';
+import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { toFlowEdges, toFlowNodes } from './deck-to-flow';
 
-const deck = {
+const deck: SododeckFile = {
   ...emptySododeckFile(),
-  nodes: [{ id: 'a', title: 'A', type: 'service' }, { id: 'b' }],
+  nodes: [
+    { id: 'a', type: 'service', title: 'A' },
+    { id: 'b', type: 'database', title: 'B' },
+  ],
   edges: [
     { id: 'e1', from: 'a', to: 'b', label: 'calls' },
+    // References are not checked by the schema, so a dangling edge can still reach the canvas.
     { id: 'e2', from: 'a', to: 'missing' },
-    { id: 'e3' },
   ],
 };
 
@@ -28,7 +31,7 @@ describe('toFlowNodes', () => {
       id: 'b',
       position: { x: 220, y: 0 },
       selected: true,
-      data: { title: 'b', kind: 'default' },
+      data: { title: 'B', kind: 'database' },
     });
   });
 });

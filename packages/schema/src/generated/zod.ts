@@ -7,61 +7,494 @@ export const sododeckFileSchema = z
       .literal('https://sododeck.com/schema/v1.json')
       .describe('URL of the JSON Schema this file conforms to.'),
     version: z.literal(1).describe('File format version.'),
-    nodes: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): type, title, level, group, owner, tags, description.'),
-    ),
-    groups: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): title, children.'),
-    ),
-    edges: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): from, to, protocol, label, contract.'),
-    ),
-    views: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): type, includes, pinned positions.'),
-    ),
-    features: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): title, description, owner.'),
-    ),
-    flows: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): feature, title, steps, trigger, outcome.'),
-    ),
+    name: z
+      .string()
+      .min(1)
+      .describe('Deck name. When absent, the app shows a name from its library.')
+      .optional(),
+    description: z.string().describe('What this deck models (markdown).').optional(),
+    tags: z
+      .array(z.string().min(1).describe('Non-empty text.'))
+      .describe('Free-form tags for the deck.')
+      .optional(),
+    nodes: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            type: z
+              .enum(['client', 'gateway', 'service', 'queue', 'database', 'external'])
+              .describe(
+                'Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).',
+              ),
+            title: z.string().min(1).describe('Display name.'),
+            level: z
+              .enum(['landscape', 'system', 'container', 'component'])
+              .describe(
+                'Semantic zoom level, from widest to narrowest: `landscape`, `system`, `container`, `component`.',
+              )
+              .optional(),
+            description: z.string().describe('What the component does (markdown).').optional(),
+            owner: z.string().describe('Owning team or person (free text).').optional(),
+            tags: z
+              .array(z.string().min(1).describe('Non-empty text.'))
+              .describe('Free-form tags.')
+              .optional(),
+            tech: z
+              .string()
+              .describe('Technology, e.g. "Go · Postgres". Shown as the subtitle in system views.')
+              .optional(),
+            host: z
+              .string()
+              .describe(
+                'Where it runs, e.g. "EKS eu-west-1". Shown as the subtitle in infra views.',
+              )
+              .optional(),
+            icon: z
+              .string()
+              .min(1)
+              .describe(
+                "Icon key from the app's icon set. When absent, the icon of the node kind is used.",
+              )
+              .optional(),
+            links: z
+              .array(
+                z
+                  .object({
+                    label: z.string().describe('Text shown for the link.').optional(),
+                    url: z.string().min(1).describe('Absolute URL or relative path.'),
+                  })
+                  .strict()
+                  .describe('A link to external documentation, a dashboard, a repository…'),
+              )
+              .describe('Links to related resources.')
+              .optional(),
+            group: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the group this node belongs to.')
+              .optional(),
+            parent: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the parent node one level up (for drilling down across levels).')
+              .optional(),
+            rules: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .describe('Ids of rules attached to this node.')
+              .optional(),
+            position: z
+              .object({
+                x: z.number().describe('Horizontal coordinate.'),
+                y: z.number().describe('Vertical coordinate.'),
+              })
+              .strict()
+              .describe('Canvas position. Views may override it.')
+              .optional(),
+          })
+          .strict()
+          .describe(
+            'A component of the system: client, gateway, service, queue, database or external system.',
+          ),
+      )
+      .describe('Components of the system.'),
+    groups: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            title: z.string().min(1).describe('Display name.'),
+            description: z.string().describe('What the group represents (markdown).').optional(),
+            parent: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the enclosing group, for nested groups.')
+              .optional(),
+          })
+          .strict()
+          .describe(
+            'A named set of nodes (domain, bounded context, VPC). Its bounds are derived from its nodes; no geometry is stored.',
+          ),
+      )
+      .describe(
+        'Named sets of nodes (domain, bounded context, VPC). Nodes join a group via `node.group`.',
+      ),
+    edges: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            from: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the source node.'),
+            to: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the target node.'),
+            protocol: z
+              .enum(['http', 'grpc', 'event', 'sql', 'websocket', 'other'])
+              .describe(
+                'Protocol family: `http` (incl. HTTPS, REST, GraphQL), `grpc`, `event` (message brokers such as Kafka), `sql`, `websocket`, `other`. Put specifics ("Kafka", "HTTPS") in the edge label.',
+              )
+              .optional(),
+            label: z
+              .string()
+              .describe('Short label, e.g. "POST /orders" or "OrderPlaced · Kafka".')
+              .optional(),
+            direction: z
+              .enum(['forward', 'both', 'none'])
+              .describe('`forward` (from → to), `both` or `none`. Absent means `forward`.')
+              .optional(),
+            description: z.string().describe('Details of the connection (markdown).').optional(),
+            owner: z.string().describe('Owning team or person (free text).').optional(),
+            tags: z
+              .array(z.string().min(1).describe('Non-empty text.'))
+              .describe('Free-form tags.')
+              .optional(),
+            links: z
+              .array(
+                z
+                  .object({
+                    label: z.string().describe('Text shown for the link.').optional(),
+                    url: z.string().min(1).describe('Absolute URL or relative path.'),
+                  })
+                  .strict()
+                  .describe('A link to external documentation, a dashboard, a repository…'),
+              )
+              .describe('Links to related resources.')
+              .optional(),
+          })
+          .strict()
+          .describe('A connection between two nodes.'),
+      )
+      .describe('Connections between nodes.'),
+    views: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            type: z
+              .enum(['system', 'feature', 'infra', 'custom'])
+              .describe('Kind of view: `system`, `feature`, `infra` or `custom`.'),
+            title: z.string().min(1).describe('Display name.'),
+            subtitleField: z
+              .enum(['tech', 'host', 'owner', 'none'])
+              .describe(
+                'Node field shown under node titles in a view: `tech`, `host`, `owner` or `none`.',
+              )
+              .optional(),
+            feature: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the feature this view focuses on (feature views).')
+              .optional(),
+            includes: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .describe('Ids of the nodes shown in this view. Absent means all nodes.')
+              .optional(),
+            positions: z
+              .record(
+                z.string(),
+                z
+                  .object({
+                    x: z.number().describe('Horizontal coordinate.'),
+                    y: z.number().describe('Vertical coordinate.'),
+                  })
+                  .strict()
+                  .describe('Canvas coordinates in pixels. May be negative or fractional.'),
+              )
+              .describe(
+                'Per-node position overrides for this view, keyed by node id. Keys must be valid ids.',
+              )
+              .optional(),
+          })
+          .strict()
+          .describe('A saved lens over the same model. Edits in any view change the one model.'),
+      )
+      .describe('Saved lenses over the same model (system, feature, infra, custom).'),
+    features: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            title: z.string().min(1).describe('Display name.'),
+            description: z.string().describe('What the feature covers (markdown).').optional(),
+            owner: z.string().describe('Owning team or person (free text).').optional(),
+          })
+          .strict()
+          .describe('A business capability that groups flows.'),
+      )
+      .describe('Business capabilities that group flows.'),
+    flows: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            title: z.string().min(1).describe('Display name.'),
+            feature: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the feature this flow belongs to.')
+              .optional(),
+            description: z.string().describe('What the flow does (markdown).').optional(),
+            trigger: z.string().describe('What starts the flow.').optional(),
+            outcome: z.string().describe('The result when the flow completes.').optional(),
+            owner: z.string().describe('Owning team or person (free text).').optional(),
+            tags: z
+              .array(z.string().min(1).describe('Non-empty text.'))
+              .describe('Free-form tags.')
+              .optional(),
+            links: z
+              .array(
+                z
+                  .object({
+                    label: z.string().describe('Text shown for the link.').optional(),
+                    url: z.string().min(1).describe('Absolute URL or relative path.'),
+                  })
+                  .strict()
+                  .describe('A link to external documentation, a dashboard, a repository…'),
+              )
+              .describe('Links to related resources.')
+              .optional(),
+            steps: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                      ),
+                    edge: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe('Id of the edge this step travels.'),
+                    title: z
+                      .string()
+                      .describe('Step name. When absent, the edge label is shown.')
+                      .optional(),
+                    condition: z
+                      .string()
+                      .describe('When this step happens, e.g. "payment authorized".')
+                      .optional(),
+                    sla: z.string().describe('Target time, e.g. "< 300 ms" or "24h".').optional(),
+                    description: z
+                      .string()
+                      .describe('What happens in this step (markdown).')
+                      .optional(),
+                    payload: z.string().describe('The data carried by this step.').optional(),
+                    notes: z.string().describe('Extra notes (markdown).').optional(),
+                    owner: z.string().describe('Owning team or person (free text).').optional(),
+                    tags: z
+                      .array(z.string().min(1).describe('Non-empty text.'))
+                      .describe('Free-form tags.')
+                      .optional(),
+                    links: z
+                      .array(
+                        z
+                          .object({
+                            label: z.string().describe('Text shown for the link.').optional(),
+                            url: z.string().min(1).describe('Absolute URL or relative path.'),
+                          })
+                          .strict()
+                          .describe('A link to external documentation, a dashboard, a repository…'),
+                      )
+                      .describe('Links to related resources.')
+                      .optional(),
+                    rules: z
+                      .array(
+                        z
+                          .string()
+                          .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                          .describe(
+                            'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                          ),
+                      )
+                      .describe('Ids of rules applied at this step.')
+                      .optional(),
+                    ruleInputs: z
+                      .record(
+                        z.string(),
+                        z
+                          .record(z.string(), z.string())
+                          .describe('Sample values keyed by input column id.'),
+                      )
+                      .describe(
+                        'Sample inputs per attached rule: rule id → input column id → value. Keys must be valid ids.',
+                      )
+                      .optional(),
+                  })
+                  .strict()
+                  .describe('One hop of a flow over an existing edge.'),
+              )
+              .describe('Steps in order. The same edge may appear in several steps.'),
+          })
+          .strict()
+          .describe('An ordered path of steps over existing edges.'),
+      )
+      .describe('Ordered paths over existing edges.'),
     rules: z
       .record(
         z.string(),
         z
-          .record(z.string(), z.any())
-          .describe(
-            'TODO(schema-v1): title, table (conditions -> actions), notes. The id is the key in `rules`.',
-          ),
+          .object({
+            title: z.string().min(1).describe('Display name.'),
+            description: z.string().describe('What the rule decides (markdown).').optional(),
+            hitPolicy: z
+              .enum(['first', 'unique', 'collect'])
+              .describe(
+                'Which matching rows apply: `first` (the first match), `unique` (exactly one row may match), `collect` (all matches).',
+              ),
+            inputs: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                      ),
+                    label: z.string().min(1).describe('Column header, e.g. "Weight (kg)".'),
+                  })
+                  .strict()
+                  .describe('An input or output column of a decision table.'),
+              )
+              .describe('Input (condition) columns, in order.'),
+            outputs: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                      ),
+                    label: z.string().min(1).describe('Column header, e.g. "Weight (kg)".'),
+                  })
+                  .strict()
+                  .describe('An input or output column of a decision table.'),
+              )
+              .describe('Output (result) columns, in order.'),
+            rows: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                      ),
+                    when: z
+                      .array(z.string())
+                      .describe(
+                        'Condition cells, one per input column, in column order. Text such as "≤ 5", "= express" or "Any"; empty means any value.',
+                      ),
+                    then: z
+                      .array(z.string())
+                      .describe('Result cells, one per output column, in column order.'),
+                  })
+                  .strict()
+                  .describe(
+                    'A decision-table row. `when` has exactly one cell per input column and `then` exactly one cell per output column (checked by the app).',
+                  ),
+              )
+              .describe('Rows, in evaluation order.'),
+          })
+          .strict()
+          .describe('A business rule as a decision table. Its id is its key in `rules`.'),
       )
-      .describe('Rules keyed by stable rule id.'),
-    stickies: z.array(
-      z
-        .object({ id: z.string().min(1).describe('Stable identifier. Never changes on rename.') })
-        .catchall(z.any())
-        .describe('TODO(schema-v1): text, anchor.'),
-    ),
+      .describe(
+        'Business rules as decision tables, keyed by stable rule id. Keys must be valid ids.',
+      ),
+    stickies: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            text: z.string().describe('Note text (markdown).'),
+            color: z
+              .enum(['amber', 'blue', 'green', 'clay', 'grey'])
+              .describe('Absent means `amber`.')
+              .optional(),
+            anchor: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Id of the object the note is attached to (node, edge, group, flow, step…). The note moves with it.',
+              )
+              .optional(),
+            position: z
+              .object({
+                x: z.number().describe('Horizontal coordinate.'),
+                y: z.number().describe('Vertical coordinate.'),
+              })
+              .strict()
+              .describe(
+                'Absolute position for a free note; offset from the anchor for an anchored note.',
+              )
+              .optional(),
+          })
+          .strict()
+          .describe('A sticky note. It needs an `anchor`, a `position`, or both.'),
+      )
+      .describe('Sticky notes, free on the canvas or anchored to an object.'),
   })
   .strict()
   .describe(
-    'A Sododeck deck file (.sododeck.json), format version 1. TODO(schema-v1): this is a skeleton; the full schema is written in a separate task.',
+    'A Sododeck deck file (.sododeck.json), format version 1. Every object has a stable `id` that never changes on rename, and every reference between objects is by id. Ids are unique within their collection and references must resolve to existing objects; the app checks both when it loads a file (they cannot be expressed here). Keys are written in the order declared in this schema.',
   );
 export type SododeckFileSchema = z.infer<typeof sododeckFileSchema>;

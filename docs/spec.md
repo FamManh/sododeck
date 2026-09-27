@@ -113,39 +113,43 @@ A workspace holds decks; each deck is one model with many views over it.
 
 ```json
 {
-  "$schema": "https://sododeck.dev/schema/v1.json",
+  "$schema": "https://sododeck.com/schema/v1.json",
   "version": 1,
+  "name": "Delivery",
   "nodes": [
-    { "id": "order-svc", "type": "service", "title": "Order Service", "level": "container", "group": "oms", "description": "Owns order status" }
+    { "id": "routing-svc", "type": "service", "title": "Routing Service", "level": "container", "group": "oms" },
+    { "id": "return-svc", "type": "service", "title": "Return Service", "level": "container", "group": "oms", "description": "Owns returns" }
   ],
+  "groups": [{ "id": "oms", "title": "Order management" }],
   "edges": [
     { "id": "e7", "from": "routing-svc", "to": "return-svc", "protocol": "event", "label": "DeliveryFailed (Kafka)" }
   ],
+  "views": [{ "id": "system", "type": "system", "title": "System", "subtitleField": "tech" }],
+  "features": [{ "id": "delivery", "title": "Delivery" }],
   "flows": [
     {
       "id": "delivery-fail-return",
-      "feature": "delivery",
       "title": "Failed delivery -> Return",
+      "feature": "delivery",
       "steps": [
-        { "edge": "e7", "condition": "fail_count >= 3", "sla": "24h", "rules": ["R-12"] }
+        { "id": "s1", "edge": "e7", "condition": "fail_count >= 3", "sla": "24h", "rules": ["R-12"] }
       ]
     }
   ],
   "rules": {
     "R-12": {
       "title": "Return to sender",
-      "table": [
-        { "when": "fail_count >= 3 and cod = true", "then": "Return, cancel COD, notify shipper" }
-      ]
+      "hitPolicy": "first",
+      "inputs": [{ "id": "fails", "label": "Failed attempts" }, { "id": "cod", "label": "Cash on delivery" }],
+      "outputs": [{ "id": "action", "label": "Action" }],
+      "rows": [{ "id": "r1", "when": [">= 3", "true"], "then": ["Return, cancel COD, notify shipper"] }]
     }
   },
-  "stickies": [
-    { "text": "Confirm warehouse SLA with ops", "anchor": "routing-svc" }
-  ]
+  "stickies": [{ "id": "n1", "text": "Confirm warehouse SLA with ops", "anchor": "routing-svc" }]
 }
 ```
 
-Ids are stable across renames so views, flows and comments never break when a node is edited.
+Ids are stable across renames so views, flows and comments never break when a node is edited. The full field list is `packages/schema/schema/v1.json`; the decisions behind its shape are in ADR 0004.
 
 **File format decision: JSON, not YAML.** The file is written and read mostly by machines (app, CLI, MCP server, AI agents), JSON is native to the whole stack, validates with JSON Schema, and avoids YAML pitfalls such as indentation errors and `no`/`NO` or `010` being silently re-typed. Conventions:
 

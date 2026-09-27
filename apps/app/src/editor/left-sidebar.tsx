@@ -34,9 +34,7 @@ export function LeftSidebar({ deck }: { deck: SododeckFile }) {
                     node.id === selectedId && 'bg-primary-soft text-primary-ink',
                   )}
                 >
-                  <span className="truncate">
-                    {typeof node.title === 'string' ? node.title : node.id}
-                  </span>
+                  <span className="truncate">{node.title}</span>
                 </button>
               </li>
             ))}

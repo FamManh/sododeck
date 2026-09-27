@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://sododeck.com/schema/v1.json",
   "title": "SododeckFile",
-  "description": "A Sododeck deck file (.sododeck.json), format version 1. TODO(schema-v1): this is a skeleton; the full schema is written in a separate task.",
+  "description": "A Sododeck deck file (.sododeck.json), format version 1. Every object has a stable `id` that never changes on rename, and every reference between objects is by id. Ids are unique within their collection and references must resolve to existing objects; the app checks both when it loads a file (they cannot be expressed here). Keys are written in the order declared in this schema.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -28,79 +28,429 @@
       "type": "integer",
       "const": 1
     },
-    "nodes": { "type": "array", "items": { "$ref": "#/$defs/Node" } },
-    "groups": { "type": "array", "items": { "$ref": "#/$defs/Group" } },
-    "edges": { "type": "array", "items": { "$ref": "#/$defs/Edge" } },
-    "views": { "type": "array", "items": { "$ref": "#/$defs/View" } },
-    "features": { "type": "array", "items": { "$ref": "#/$defs/Feature" } },
-    "flows": { "type": "array", "items": { "$ref": "#/$defs/Flow" } },
+    "name": {
+      "$ref": "#/$defs/Text",
+      "description": "Deck name. When absent, the app shows a name from its library."
+    },
+    "description": {
+      "description": "What this deck models (markdown).",
+      "type": "string"
+    },
+    "tags": {
+      "$ref": "#/$defs/Tags",
+      "description": "Free-form tags for the deck."
+    },
+    "nodes": {
+      "description": "Components of the system.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Node" }
+    },
+    "groups": {
+      "description": "Named sets of nodes (domain, bounded context, VPC). Nodes join a group via `node.group`.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Group" }
+    },
+    "edges": {
+      "description": "Connections between nodes.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Edge" }
+    },
+    "views": {
+      "description": "Saved lenses over the same model (system, feature, infra, custom).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/View" }
+    },
+    "features": {
+      "description": "Business capabilities that group flows.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Feature" }
+    },
+    "flows": {
+      "description": "Ordered paths over existing edges.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Flow" }
+    },
     "rules": {
-      "description": "Rules keyed by stable rule id.",
+      "description": "Business rules as decision tables, keyed by stable rule id. Keys must be valid ids.",
       "type": "object",
       "propertyNames": { "$ref": "#/$defs/Id" },
       "additionalProperties": { "$ref": "#/$defs/Rule" }
     },
-    "stickies": { "type": "array", "items": { "$ref": "#/$defs/Sticky" } }
+    "stickies": {
+      "description": "Sticky notes, free on the canvas or anchored to an object.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Sticky" }
+    }
   },
   "$defs": {
     "Id": {
-      "description": "Stable identifier. Never changes on rename.",
+      "title": "Id",
+      "description": "Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.:-]{1,64}$"
+    },
+    "Text": {
+      "title": "Text",
+      "description": "Non-empty text.",
       "type": "string",
       "minLength": 1
     },
-    "Node": {
-      "description": "TODO(schema-v1): type, title, level, group, owner, tags, description.",
+    "Tags": {
+      "title": "Tags",
+      "description": "Free-form tags.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Text" }
+    },
+    "Position": {
+      "title": "Position",
+      "description": "Canvas coordinates in pixels. May be negative or fractional.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "description": "Horizontal coordinate.", "type": "number" },
+        "y": { "description": "Vertical coordinate.", "type": "number" }
+      }
+    },
+    "Link": {
+      "title": "Link",
+      "description": "A link to external documentation, a dashboard, a repository…",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "label": { "description": "Text shown for the link.", "type": "string" },
+        "url": {
+          "$ref": "#/$defs/Text",
+          "description": "Absolute URL or relative path."
+        }
+      }
+    },
+    "Links": {
+      "title": "Links",
+      "description": "Links to related resources.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Link" }
+    },
+    "IdList": {
+      "title": "IdList",
+      "description": "A list of object ids.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Id" }
+    },
+    "NodeKind": {
+      "title": "NodeKind",
+      "description": "Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).",
+      "type": "string",
+      "enum": ["client", "gateway", "service", "queue", "database", "external"]
+    },
+    "Level": {
+      "title": "Level",
+      "description": "Semantic zoom level, from widest to narrowest: `landscape`, `system`, `container`, `component`.",
+      "type": "string",
+      "enum": ["landscape", "system", "container", "component"]
+    },
+    "Protocol": {
+      "title": "Protocol",
+      "description": "Protocol family: `http` (incl. HTTPS, REST, GraphQL), `grpc`, `event` (message brokers such as Kafka), `sql`, `websocket`, `other`. Put specifics (\"Kafka\", \"HTTPS\") in the edge label.",
+      "type": "string",
+      "enum": ["http", "grpc", "event", "sql", "websocket", "other"]
+    },
+    "Direction": {
+      "title": "Direction",
+      "description": "`forward` (from → to), `both` (two-way) or `none` (undirected).",
+      "type": "string",
+      "enum": ["forward", "both", "none"]
+    },
+    "ViewType": {
+      "title": "ViewType",
+      "description": "Kind of view: `system`, `feature`, `infra` or `custom`.",
+      "type": "string",
+      "enum": ["system", "feature", "infra", "custom"]
+    },
+    "SubtitleField": {
+      "title": "SubtitleField",
+      "description": "Node field shown under node titles in a view: `tech`, `host`, `owner` or `none`.",
+      "type": "string",
+      "enum": ["tech", "host", "owner", "none"]
+    },
+    "HitPolicy": {
+      "title": "HitPolicy",
+      "description": "Which matching rows apply: `first` (the first match), `unique` (exactly one row may match), `collect` (all matches).",
+      "type": "string",
+      "enum": ["first", "unique", "collect"]
+    },
+    "StickyColor": {
+      "title": "StickyColor",
+      "description": "Sticky color, as a design-system tint name that follows the theme.",
+      "type": "string",
+      "enum": ["amber", "blue", "green", "clay", "grey"]
+    },
+    "Node": {
+      "title": "Node",
+      "description": "A component of the system: client, gateway, service, queue, database or external system.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "type": { "$ref": "#/$defs/NodeKind" },
+        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "level": { "$ref": "#/$defs/Level" },
+        "description": { "description": "What the component does (markdown).", "type": "string" },
+        "owner": { "description": "Owning team or person (free text).", "type": "string" },
+        "tags": { "$ref": "#/$defs/Tags" },
+        "tech": {
+          "description": "Technology, e.g. \"Go · Postgres\". Shown as the subtitle in system views.",
+          "type": "string"
+        },
+        "host": {
+          "description": "Where it runs, e.g. \"EKS eu-west-1\". Shown as the subtitle in infra views.",
+          "type": "string"
+        },
+        "icon": {
+          "$ref": "#/$defs/Text",
+          "description": "Icon key from the app's icon set. When absent, the icon of the node kind is used."
+        },
+        "links": { "$ref": "#/$defs/Links" },
+        "group": { "$ref": "#/$defs/Id", "description": "Id of the group this node belongs to." },
+        "parent": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the parent node one level up (for drilling down across levels)."
+        },
+        "rules": { "$ref": "#/$defs/IdList", "description": "Ids of rules attached to this node." },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "Canvas position. Views may override it."
+        }
+      }
     },
     "Group": {
-      "description": "TODO(schema-v1): title, children.",
+      "title": "Group",
+      "description": "A named set of nodes (domain, bounded context, VPC). Its bounds are derived from its nodes; no geometry is stored.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "description": { "description": "What the group represents (markdown).", "type": "string" },
+        "parent": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the enclosing group, for nested groups."
+        }
+      }
     },
     "Edge": {
-      "description": "TODO(schema-v1): from, to, protocol, label, contract.",
+      "title": "Edge",
+      "description": "A connection between two nodes.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["id", "from", "to"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "from": { "$ref": "#/$defs/Id", "description": "Id of the source node." },
+        "to": { "$ref": "#/$defs/Id", "description": "Id of the target node." },
+        "protocol": { "$ref": "#/$defs/Protocol" },
+        "label": {
+          "description": "Short label, e.g. \"POST /orders\" or \"OrderPlaced · Kafka\".",
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/$defs/Direction",
+          "description": "`forward` (from → to), `both` or `none`. Absent means `forward`."
+        },
+        "description": { "description": "Details of the connection (markdown).", "type": "string" },
+        "owner": { "description": "Owning team or person (free text).", "type": "string" },
+        "tags": { "$ref": "#/$defs/Tags" },
+        "links": { "$ref": "#/$defs/Links" }
+      }
     },
     "View": {
-      "description": "TODO(schema-v1): type, includes, pinned positions.",
+      "title": "View",
+      "description": "A saved lens over the same model. Edits in any view change the one model.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["id", "type", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "type": { "$ref": "#/$defs/ViewType" },
+        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "subtitleField": { "$ref": "#/$defs/SubtitleField" },
+        "feature": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the feature this view focuses on (feature views)."
+        },
+        "includes": {
+          "$ref": "#/$defs/IdList",
+          "description": "Ids of the nodes shown in this view. Absent means all nodes."
+        },
+        "positions": {
+          "description": "Per-node position overrides for this view, keyed by node id. Keys must be valid ids.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/Id" },
+          "additionalProperties": { "$ref": "#/$defs/Position" }
+        }
+      }
     },
     "Feature": {
-      "description": "TODO(schema-v1): title, description, owner.",
+      "title": "Feature",
+      "description": "A business capability that groups flows.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "description": { "description": "What the feature covers (markdown).", "type": "string" },
+        "owner": { "description": "Owning team or person (free text).", "type": "string" }
+      }
     },
     "Flow": {
-      "description": "TODO(schema-v1): feature, title, steps, trigger, outcome.",
+      "title": "Flow",
+      "description": "An ordered path of steps over existing edges.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["id", "title", "steps"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "feature": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the feature this flow belongs to."
+        },
+        "description": { "description": "What the flow does (markdown).", "type": "string" },
+        "trigger": { "description": "What starts the flow.", "type": "string" },
+        "outcome": { "description": "The result when the flow completes.", "type": "string" },
+        "owner": { "description": "Owning team or person (free text).", "type": "string" },
+        "tags": { "$ref": "#/$defs/Tags" },
+        "links": { "$ref": "#/$defs/Links" },
+        "steps": {
+          "description": "Steps in order. The same edge may appear in several steps.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Step" }
+        }
+      }
+    },
+    "Step": {
+      "title": "Step",
+      "description": "One hop of a flow over an existing edge.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "edge"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "edge": { "$ref": "#/$defs/Id", "description": "Id of the edge this step travels." },
+        "title": {
+          "description": "Step name. When absent, the edge label is shown.",
+          "type": "string"
+        },
+        "condition": {
+          "description": "When this step happens, e.g. \"payment authorized\".",
+          "type": "string"
+        },
+        "sla": { "description": "Target time, e.g. \"< 300 ms\" or \"24h\".", "type": "string" },
+        "description": { "description": "What happens in this step (markdown).", "type": "string" },
+        "payload": { "description": "The data carried by this step.", "type": "string" },
+        "notes": { "description": "Extra notes (markdown).", "type": "string" },
+        "owner": { "description": "Owning team or person (free text).", "type": "string" },
+        "tags": { "$ref": "#/$defs/Tags" },
+        "links": { "$ref": "#/$defs/Links" },
+        "rules": { "$ref": "#/$defs/IdList", "description": "Ids of rules applied at this step." },
+        "ruleInputs": {
+          "description": "Sample inputs per attached rule: rule id → input column id → value. Keys must be valid ids.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/Id" },
+          "additionalProperties": {
+            "description": "Sample values keyed by input column id.",
+            "type": "object",
+            "propertyNames": { "$ref": "#/$defs/Id" },
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    },
+    "RuleColumn": {
+      "title": "RuleColumn",
+      "description": "An input or output column of a decision table.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "label": { "$ref": "#/$defs/Text", "description": "Column header, e.g. \"Weight (kg)\"." }
+      }
+    },
+    "RuleRow": {
+      "title": "RuleRow",
+      "description": "A decision-table row. `when` has exactly one cell per input column and `then` exactly one cell per output column (checked by the app).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "when", "then"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "when": {
+          "description": "Condition cells, one per input column, in column order. Text such as \"≤ 5\", \"= express\" or \"Any\"; empty means any value.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "then": {
+          "description": "Result cells, one per output column, in column order.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
     },
     "Rule": {
-      "description": "TODO(schema-v1): title, table (conditions -> actions), notes. The id is the key in `rules`.",
+      "title": "Rule",
+      "description": "A business rule as a decision table. Its id is its key in `rules`.",
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["title", "hitPolicy", "inputs", "outputs", "rows"],
+      "properties": {
+        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "description": { "description": "What the rule decides (markdown).", "type": "string" },
+        "hitPolicy": { "$ref": "#/$defs/HitPolicy" },
+        "inputs": {
+          "description": "Input (condition) columns, in order.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/RuleColumn" }
+        },
+        "outputs": {
+          "description": "Output (result) columns, in order.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/RuleColumn" }
+        },
+        "rows": {
+          "description": "Rows, in evaluation order.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/RuleRow" }
+        }
+      }
     },
     "Sticky": {
-      "description": "TODO(schema-v1): text, anchor.",
+      "title": "Sticky",
+      "description": "A sticky note. It needs an `anchor`, a `position`, or both.",
       "type": "object",
-      "required": ["id"],
-      "properties": { "id": { "$ref": "#/$defs/Id" } },
-      "additionalProperties": true
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "text": { "description": "Note text (markdown).", "type": "string" },
+        "color": { "$ref": "#/$defs/StickyColor", "description": "Absent means `amber`." },
+        "anchor": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the object the note is attached to (node, edge, group, flow, step…). The note moves with it."
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "Absolute position for a free note; offset from the anchor for an anchored note."
+        }
+      },
+      "anyOf": [
+        { "properties": { "anchor": true }, "required": ["anchor"] },
+        { "properties": { "position": true }, "required": ["position"] }
+      ]
     }
   }
 }
