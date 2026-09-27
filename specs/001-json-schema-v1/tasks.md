@@ -113,9 +113,9 @@ pnpm monorepo. Paths are repo-relative: `packages/schema/â€¦`, `packages/model/â
 
 **Independent Test**: Every example's keys follow the schema's `properties` order; renaming a node title in the serialized full example changes exactly one line.
 
-- [ ] T031 [P] [US3] Create `packages/schema/test/key-order.test.ts`: recursively walk each example together with `jsonSchema` (resolve local `$ref`, follow `items`, `additionalProperties` maps and `rules`), and assert each object's keys appear in the same relative order as the matching `properties` declaration (FR-023, research R5)
-- [ ] T032 [P] [US3] In `packages/schema/test/key-order.test.ts`, add the rename check: `JSON.stringify(full, null, 2)` before and after changing one node's `title` differ in exactly one line and ids/references are untouched (SC-005, US3 scenario 2)
-- [ ] T033 [US3] Fix key order in `packages/schema/examples/*.json` (and `v1.json` property order if data-model.md was not followed) until T031 passes. Commit `test(schema): enforce canonical key order`
+- [x] T031 [P] [US3] Create `packages/schema/test/key-order.test.ts`: recursively walk each example together with `jsonSchema` (resolve local `$ref`, follow `items`, `additionalProperties` maps and `rules`), and assert each object's keys appear in the same relative order as the matching `properties` declaration (FR-023, research R5)
+- [x] T032 [P] [US3] In `packages/schema/test/key-order.test.ts`, add the rename check: `JSON.stringify(full, null, 2)` before and after changing one node's `title` differ in exactly one line and ids/references are untouched (SC-005, US3 scenario 2)
+- [x] T033 [US3] Fix key order in `packages/schema/examples/*.json` (and `v1.json` property order if data-model.md was not followed) until T031 passes. Commit `test(schema): enforce canonical key order`
 
 **Checkpoint**: US3 green.
 
