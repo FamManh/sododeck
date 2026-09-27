@@ -11,6 +11,7 @@ import 'monaco-editor/editor/contrib/clipboard/browser/clipboard';
 import 'monaco-editor/editor/contrib/contextmenu/browser/contextmenu';
 import 'monaco-editor/editor/contrib/folding/browser/folding';
 import 'monaco-editor/editor/contrib/hover/browser/hoverContribution';
+import 'monaco-editor/editor/contrib/readOnlyMessage/browser/contribution';
 import 'monaco-editor/editor/contrib/wordHighlighter/browser/wordHighlighter';
 import 'monaco-editor/features/find/register';
 
@@ -21,7 +22,21 @@ import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import JsonWorker from 'monaco-editor/language/json/json.worker?worker';
 import { jsonDefaults } from 'monaco-editor/languages/features/json/register';
 
+import { buildMonacoTheme, readThemeTokens } from './monaco-theme';
+
 export const DECK_MODEL_PATH = 'sododeck://deck/current.sododeck.json';
+/** Does not match the schema's `*.sododeck.json` fileMatch: partial objects are not a deck file. */
+export const SELECTION_MODEL_PATH = 'sododeck://selection/current.json';
+
+/**
+ * Defines `sododeck-light` and `sododeck-dark` from the current CSS tokens. The tokens follow the
+ * `.dark` class, so call it again after the app theme changes.
+ */
+export function defineSododeckThemes(api: Pick<typeof monaco, 'editor'>): void {
+  const tokens = readThemeTokens();
+  api.editor.defineTheme('sododeck-light', buildMonacoTheme(tokens, 'vs'));
+  api.editor.defineTheme('sododeck-dark', buildMonacoTheme(tokens, 'vs-dark'));
+}
 
 self.MonacoEnvironment = {
   getWorker: (_workerId, label) => (label === 'json' ? new JsonWorker() : new EditorWorker()),

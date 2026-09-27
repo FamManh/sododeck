@@ -4,11 +4,11 @@ import { lazy, Suspense } from 'react';
 
 import { useUiStore } from '../state/ui-store';
 
-const JsonEditor = lazy(() => import('./json-editor'));
+const JsonEditor = lazy(() => import('./json-viewer'));
 
 /** Bottom JSON panel (DESIGN.md: 212px, collapsible to a 36px bar). */
 export function JsonPanel({ json }: { json: string }) {
-  const open = useUiStore((state) => state.jsonPanelOpen);
+  const open = useUiStore((state) => state.jsonPanel.open);
   const toggle = useUiStore((state) => state.toggleJsonPanel);
 
   return (
@@ -34,7 +34,14 @@ export function JsonPanel({ json }: { json: string }) {
       {open && (
         <div className="min-h-0 flex-1 bg-code">
           <Suspense fallback={<p className="p-3 text-caption text-ink-muted">Loading editor…</p>}>
-            <JsonEditor value={json} />
+            <JsonEditor
+              tab="deck"
+              text={json}
+              ariaLabel="Deck JSON, read-only"
+              onReadOnlyAttempt={() => undefined}
+              onUndo={() => undefined}
+              onRedo={() => undefined}
+            />
           </Suspense>
         </div>
       )}
