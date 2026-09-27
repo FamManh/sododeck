@@ -116,6 +116,10 @@
   --radius-row: 8px;
   --radius-banner: 14px;
 
+  /* ── Motion: every plain `transition-*` utility uses the hover token (0 under reduced motion) ── */
+  --default-transition-duration: var(--sd-dur-hover);
+  --default-transition-timing-function: var(--sd-ease);
+
   /* ── Elevation ── */
   --shadow-rest: 0 1px 2px var(--sd-shadow);
   --shadow-float: 0 8px 28px var(--sd-shadow);

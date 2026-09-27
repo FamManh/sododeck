@@ -59,6 +59,9 @@ describe('tokens.css agrees with motion.ts', () => {
     expect(ms(reducedBlock, 'sd-dur-dim')).toBe(reduced.dimMs);
     expect(ms(reducedBlock, 'sd-dur-ring')).toBe(reduced.ringMs);
     expect(ms(reducedBlock, 'sd-flow-token-loop')).toBe(reduced.tokenLoopMs);
+    // Hover color transitions (Tailwind's default duration) also stop.
+    expect(ms(rootBlock, 'sd-dur-hover')).toBe(150);
+    expect(ms(reducedBlock, 'sd-dur-hover')).toBe(0);
     // Reading time is never overridden.
     expect(ms(reducedBlock, 'sd-flow-step')).toBeUndefined();
     expect(ms(reducedBlock, 'sd-toast')).toBeUndefined();
