@@ -358,11 +358,11 @@ failed" at step 4a, play it end to end.
       `apps/app/bench/perf.bench.ts`.
 - [x] T054 Run `pnpm bench`; write `specs/007-flow-playback/bench-after.md` with before/after
       tables; any regression below targets blocks merge (constitution V).
-- [ ] T055 [P] Docs: flow-mode rules in `apps/app/CLAUDE.md` (derived flow mode, `openFlow` /
+- [x] T055 [P] Docs: flow-mode rules in `apps/app/CLAUDE.md` (derived flow mode, `openFlow` /
       `exitFlow`, view-only canvas, playback keys, `played-path.ts`, `FlowToken`);
       `serializeEntry('steps')` in `packages/model/CLAUDE.md` ("Added by 007"); playback marks,
       `in-flow`, `data-flow-mode` and `flow-token.tsx` in `.agents/skills/react-flow/SKILL.md`.
-- [ ] T056 [P] Visual check: 1440×900 screenshots, light and dark, of flow mode on step 1, step 4
+- [x] T056 [P] Visual check: 1440×900 screenshots, light and dark, of flow mode on step 1, step 4
       playing at 2×, the fork with "payment failed" chosen, and a step with no rule; save under
       `specs/007-flow-playback/screens/` and list differences against `docs/design/screens/03-*`,
       `24-*`, `26-*`, `27-*`, `44-*`, `46-*` (allowed: target-only SLA, rule titles instead of the
