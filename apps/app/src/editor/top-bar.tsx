@@ -1,7 +1,8 @@
 import { Button } from '@sododeck/ui/components/button';
 import { InlineEdit } from '@sododeck/ui/components/inline-edit';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
-import { Download, Moon, Redo2, Sun, Undo2 } from 'lucide-react';
+import { ArrowLeft, Download, Moon, Redo2, Sun, Table2, Undo2 } from 'lucide-react';
+import { Link } from 'react-router';
 import { useState } from 'react';
 
 import { isApplePlatform } from '../lib/features';
@@ -103,7 +104,16 @@ function DeckNameCrumb({ name }: { name: string }) {
   );
 }
 
-export function TopBar({ deckName }: { deckName: string }) {
+export function TopBar({
+  deckName,
+  screen = 'canvas',
+  rulesCount = 0,
+}: {
+  deckName: string;
+  /** The rule editor adds "Rules" to the breadcrumb and "Back to canvas" replaces Export (008). */
+  screen?: 'canvas' | 'rules';
+  rulesCount?: number;
+}) {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -119,12 +129,31 @@ export function TopBar({ deckName }: { deckName: string }) {
         <span>Local</span>
         <span aria-hidden>/</span>
         <DeckNameCrumb name={deckName} />
+        {screen === 'rules' && (
+          <>
+            <span aria-hidden>/</span>
+            <span aria-current="page" className="text-ink">
+              Rules
+            </span>
+          </>
+        )}
       </nav>
       <HistoryButtons />
       {/* The flow session chip sits where the view switcher of 010/011 will go (FR-007). */}
       <div className="flex min-w-0 flex-1 justify-center">
         <SessionChip />
       </div>
+      {screen === 'canvas' && (
+        <Button asChild variant="ghost">
+          <Link to="rules">
+            <Table2 />
+            Rules
+            <span className="rounded-full bg-surface-2 px-1.5 text-caption text-ink-secondary">
+              {rulesCount}
+            </span>
+          </Link>
+        </Button>
+      )}
       <SaveStatus />
       <Tooltip>
         <TooltipTrigger asChild>
@@ -141,10 +170,19 @@ export function TopBar({ deckName }: { deckName: string }) {
         </TooltipTrigger>
         <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
       </Tooltip>
-      <Button variant="primary" onClick={exportDeck}>
-        <Download />
-        Export
-      </Button>
+      {screen === 'rules' ? (
+        <Button asChild variant="primary">
+          <Link to=".">
+            <ArrowLeft />
+            Back to canvas
+          </Link>
+        </Button>
+      ) : (
+        <Button variant="primary" onClick={exportDeck}>
+          <Download />
+          Export
+        </Button>
+      )}
     </header>
   );
 }

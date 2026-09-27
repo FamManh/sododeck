@@ -60,11 +60,37 @@ function brokenCounts(result: RemovalResult): { steps: number; notes: number } {
   return { steps: steps.size, notes: notes.size };
 }
 
+/** The single rule a removal is for, if it is one (008). */
+function ruleTarget(deck: SododeckFile, targets: readonly RemovalTarget[]) {
+  const [only] = targets;
+  if (targets.length !== 1 || only?.scope !== 'rules') return undefined;
+  return { id: only.id, title: deck.rules[only.id]?.title ?? only.id };
+}
+
+/** "Used in 2 steps and 1 component. It will be detached from them." (008 FR-024). */
+function ruleUsageSentence(result: RemovalResult): string {
+  const steps = result.updated.filter((r) => r.child?.kind === 'step').length;
+  const nodes = result.updated.filter((r) => r.scope === 'nodes').length;
+  if (steps === 0 && nodes === 0) return 'It isn’t used anywhere.';
+  const parts = [
+    ...(steps > 0 ? [plural(steps, 'step')] : []),
+    ...(nodes > 0 ? [plural(nodes, 'component')] : []),
+  ];
+  return `Used in ${listPhrase(parts)}. It will be detached from them.`;
+}
+
 export function describeRemoval(
   deck: SododeckFile,
   targets: readonly RemovalTarget[],
   result: RemovalResult,
 ): { title: string; body: string } {
+  const rule = ruleTarget(deck, targets);
+  if (rule !== undefined) {
+    return {
+      title: `Delete rule “${rule.title}”?`,
+      body: ruleUsageSentence(result),
+    };
+  }
   const edges = cascadedEdges(targets, result);
   const { steps, notes } = brokenCounts(result);
   const sentences: string[] = [];
@@ -95,6 +121,9 @@ export function removalToast(
   result: RemovalResult,
   apple: boolean,
 ): string {
+  const rule = ruleTarget(deck, targets);
+  if (rule !== undefined)
+    return `Rule “${rule.title}” deleted · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
   const edges = cascadedEdges(targets, result);
   const what =
     edges > 0

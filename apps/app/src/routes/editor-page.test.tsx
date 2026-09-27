@@ -22,6 +22,7 @@ import { inProcessLibraryClient } from '../test/in-process-library-client';
 import { setLibraryDbForTests } from '../storage/library-db-instance';
 import { EditorProbe } from '../test/editor-probe';
 import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
+import { RulesPage } from '../editor/rules/rules-page';
 import { deckLoader } from './deck-loader';
 import { EditorPage } from './editor-page';
 
@@ -53,7 +54,12 @@ function renderAt(path: string) {
   const router = createMemoryRouter(
     [
       { path: '/', element: <p>Library home</p> },
-      { path: '/deck/:deckId', loader: deckLoader, Component: EditorPage },
+      {
+        path: '/deck/:deckId',
+        loader: deckLoader,
+        Component: EditorPage,
+        children: [{ path: 'rules/:ruleId?', Component: RulesPage }],
+      },
     ],
     { initialEntries: [path] },
   );
@@ -361,6 +367,75 @@ describe('EditorPage', () => {
     });
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Store');
+    });
+  });
+
+  describe('rule editor route (008 FR-018)', () => {
+    const withRule: SododeckFile = {
+      ...emptySododeckFile(),
+      name: 'Logistics',
+      nodes: [
+        { id: 'a', type: 'service', title: 'Pricing', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'database', title: 'Prices', position: { x: 300, y: 0 } },
+      ],
+      rules: {
+        R: { title: 'Delivery tier', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
+      },
+    };
+
+    it('opens Rules from the top bar and comes back with the selection and viewport', async () => {
+      const { router, user } = await openEditor(withRule);
+      act(() => {
+        ui().select({ nodes: ['a'] });
+      });
+      await user.click(screen.getByRole('link', { name: /^Rules/ }));
+      expect(router.state.location.pathname).toBe('/deck/d1/rules');
+      expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Rules');
+      expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+      const saved = ui().canvasViewport;
+      expect(saved).not.toBeNull();
+      await user.click(screen.getByRole('link', { name: /Delivery tier/ }));
+      expect(router.state.location.pathname).toBe('/deck/d1/rules/R');
+      expect(screen.getByRole('textbox', { name: 'Rule name' })).toHaveValue('Delivery tier');
+
+      await user.click(screen.getByRole('link', { name: 'Back to canvas' }));
+      expect(router.state.location.pathname).toBe('/deck/d1');
+      expect(screen.getByRole('heading', { name: 'Pricing' })).toBeInTheDocument();
+      expect(ui().selection).toEqual({ nodes: ['a'], edges: [] });
+      await user.click(screen.getByRole('link', { name: /^Rules/ }));
+      expect(ui().canvasViewport).toEqual(saved);
+    });
+
+    it('opens a rule directly from its address (a reload returns to it)', async () => {
+      await insertDeck(
+        db,
+        deckRecord('d1', { name: 'Logistics', updatedAt: 5 }),
+        Y.encodeStateAsUpdate(fromJSON(withRule)),
+      );
+      renderAt('/deck/d1/rules/R');
+      expect(await screen.findByRole('textbox', { name: 'Rule name' })).toHaveValue(
+        'Delivery tier',
+      );
+    });
+
+    it('keeps Delete away from the canvas selection on the rules screen', async () => {
+      const { user } = await openEditor(withRule);
+      act(() => {
+        ui().select({ nodes: ['a'] });
+      });
+      await user.click(screen.getByRole('link', { name: /^Rules/ }));
+      (document.activeElement as HTMLElement | null)?.blur();
+      await user.keyboard('{Delete}');
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+      expect(ui().pendingDelete).toBeNull();
+      await user.keyboard('{Escape}');
+      expect(ui().selection).toEqual({ nodes: ['a'], edges: [] });
+    });
+
+    it("opens the rule editor from the deck inspector's Rules count", async () => {
+      const { router, user } = await openEditor(withRule);
+      await user.click(screen.getByRole('button', { name: 'Rules 1' }));
+      expect(router.state.location.pathname).toBe('/deck/d1/rules');
     });
   });
 });

@@ -12,7 +12,7 @@ import {
   type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
@@ -127,8 +127,16 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const activeFlow = useUiStore((s) => s.activeFlow);
   const session = useUiStore((s) => s.flowSession);
   const hoverEdgeId = useUiStore((s) => s.hoverEdgeId);
-  const { setCenter, getZoom } = useReactFlow();
+  const { setCenter, getZoom, getViewport } = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
+  // Coming back from the rule editor restores where the canvas was (008 FR-018).
+  const [restored] = useState(() => useUiStore.getState().canvasViewport);
+  useEffect(
+    () => () => {
+      useUiStore.getState().setCanvasViewport(getViewport());
+    },
+    [getViewport],
+  );
   const handlers = useCanvasHandlers();
   const onKeyDown = useCanvasKeyDown();
 
@@ -197,8 +205,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         edgeTypes={edgeTypes}
         onlyRenderVisibleElements={onlyRenderVisibleElements}
         onInit={onReady}
-        fitView
+        fitView={restored === null}
         fitViewOptions={{ padding: 0.2 }}
+        defaultViewport={restored ?? undefined}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}

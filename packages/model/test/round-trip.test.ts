@@ -225,6 +225,149 @@ const perType: [string, SododeckFile][] = [
     },
   ],
   [
+    'knowledge layer (008): rules on nodes and steps, sample inputs, tags and links everywhere',
+    {
+      $schema,
+      version,
+      name: 'Delivery',
+      description: 'Picks **tiers**.',
+      tags: ['logistics'],
+      nodes: [
+        {
+          id: 'a',
+          type: 'client',
+          title: 'App',
+          owner: 'Mobile',
+          tags: ['edge'],
+          links: [
+            {
+              label: 'example.com',
+              url: 'https://example.com/app',
+            },
+            {
+              url: 'docs/app.md',
+            },
+          ],
+        },
+        {
+          id: 'p',
+          type: 'service',
+          title: 'Pricing',
+          tags: ['pricing', 'pci'],
+          tech: 'Python',
+          host: 'eu-west k8s',
+          links: [
+            {
+              label: 'Runbook',
+              url: 'https://runbooks.example.com/pricing',
+            },
+          ],
+          rules: ['T', 'U'],
+        },
+      ],
+      groups: [],
+      edges: [
+        {
+          id: 'ap',
+          from: 'a',
+          to: 'p',
+          protocol: 'grpc',
+          label: 'quote',
+          direction: 'both',
+          description: 'Asks for a `quote`.',
+          owner: 'Orders',
+          tags: ['sync'],
+          links: [
+            {
+              url: '/specs/quote',
+            },
+          ],
+        },
+      ],
+      views: [],
+      features: [],
+      flows: [
+        {
+          id: 'f',
+          title: 'Place order',
+          owner: 'Orders',
+          tags: ['checkout'],
+          links: [
+            {
+              label: 'Brief',
+              url: 'https://example.com/brief',
+            },
+          ],
+          steps: [
+            {
+              id: 's',
+              edge: 'ap',
+              owner: 'Orders',
+              tags: ['quote'],
+              links: [
+                {
+                  url: 'https://example.com/step',
+                },
+              ],
+              rules: ['T', 'U'],
+              ruleInputs: {
+                T: {
+                  dist: '5',
+                  prio: 'Express',
+                },
+                U: {
+                  x: '1',
+                },
+              },
+            },
+          ],
+        },
+      ],
+      rules: {
+        T: {
+          title: 'Delivery tier',
+          hitPolicy: 'first',
+          inputs: [
+            {
+              id: 'dist',
+              label: 'Distance (km)',
+            },
+            {
+              id: 'prio',
+              label: 'Priority',
+            },
+          ],
+          outputs: [
+            {
+              id: 'veh',
+              label: 'Vehicle',
+            },
+          ],
+          rows: [
+            {
+              id: 'r1',
+              when: ['≤ 5', 'Express'],
+              then: ['Bike'],
+            },
+          ],
+        },
+        U: {
+          title: 'Other',
+          hitPolicy: 'collect',
+          inputs: [
+            {
+              id: 'x',
+              label: 'X',
+            },
+          ],
+          outputs: [],
+          rows: [],
+        },
+      },
+      stickies: [],
+    },
+  ],
+  [
     'sticky',
     {
       ...empty,
@@ -286,6 +429,40 @@ function shuffleKeys(value: unknown, path = ''): unknown {
   const isMap = MAP_PATHS.some((re) => re.test(path));
   return Object.fromEntries(isMap ? entries : entries.reverse());
 }
+
+describe('rule links made through the editor (008)', () => {
+  it('round-trips attachments and sample inputs written by attachRule and setRuleInputs', () => {
+    const doc = fromJSON({
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+      edges: [{ id: 'e', from: 'a', to: 'a' }],
+      flows: [{ id: 'f', title: 'F', steps: [{ id: 's', edge: 'e' }] }],
+      rules: {
+        R: {
+          title: 'R',
+          hitPolicy: 'first',
+          inputs: [{ id: 'c', label: 'C' }],
+          outputs: [],
+          rows: [],
+        },
+      },
+    });
+    const editor = createEditor(doc);
+    editor.attachRule({ kind: 'node', id: 'a' }, 'R');
+    editor.attachRule({ kind: 'step', flowId: 'f', stepId: 's' }, 'R');
+    editor.setRuleInputs('f', 's', 'R', { c: '5' });
+    const file = toJSON(doc);
+    expect(file.nodes[0]?.rules).toEqual(['R']);
+    expect(file.flows[0]?.steps[0]).toEqual({
+      id: 's',
+      edge: 'e',
+      rules: ['R'],
+      ruleInputs: { R: { c: '5' } },
+    });
+    expect(toJSON(fromJSON(file))).toEqual(file);
+    expect(serializeDeck(toJSON(fromJSON(file)))).toBe(serializeDeck(file));
+  });
+});
 
 describe('canonical key order (FR-022, research R2)', () => {
   it('writes every object in schema order whatever the input order', () => {

@@ -19,6 +19,7 @@ function actualRemoval(targets: RemovalTarget[]): RemovalResult {
   const results = editor.batch(() =>
     targets.flatMap((t) => {
       if (t.scope === 'branches') return [editor.removeBranch(t.flowId, t.id)];
+      if (t.scope === 'rules') return [editor.removeRule(t.id)];
       return getObject(doc, t.scope, t.id) === undefined ? [] : [editor.remove(t.scope, t.id)];
     }),
   );
@@ -35,6 +36,7 @@ const CASES: [string, RemovalTarget[]][] = [
   ['feature', [{ scope: 'features', id: 'feat' }]],
   ['view', [{ scope: 'views', id: 'v' }]],
   ['sticky', [{ scope: 'stickies', id: 'st-n' }]],
+  ['rule', [{ scope: 'rules', id: 'R' }]],
   [
     'two nodes sharing edges',
     [
@@ -84,6 +86,20 @@ describe('previewRemoval', () => {
     const result = previewRemoval(cascadeDeck, [{ scope: 'nodes', id: 'n' }]);
     const brokenObjects = result.broken.map((p) => p.object);
     expect(brokenObjects).toContainEqual({ scope: 'stickies', id: 'st-n' });
+  });
+
+  it('lists a removed rule and the nodes and steps it is detached from (008)', () => {
+    expect(previewRemoval(cascadeDeck, [{ scope: 'rules', id: 'R' }])).toEqual({
+      removed: [{ scope: 'rules', id: 'R' }],
+      updated: [
+        { scope: 'nodes', id: 'n' },
+        { scope: 'nodes', id: 'child' },
+        { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's1' } },
+        { scope: 'flows', id: 'fl', child: { kind: 'step', id: 's2' } },
+      ],
+      broken: [],
+    });
+    expect(previewRemoval(cascadeDeck, [{ scope: 'rules', id: 'nope' }]).removed).toEqual([]);
   });
 
   it('skips a target that does not exist', () => {

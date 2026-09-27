@@ -10,30 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sododeck/ui/components/select';
-import { ArrowLeftRight, ArrowRight, Minus, Spline, Trash2 } from 'lucide-react';
+import { Spline, Trash2 } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { anchorRect, focusCanvas } from './canvas-actions';
+import { DIRECTIONS, PROTOCOLS, type Direction } from './fields/edge-choices';
 
 type Edge = SododeckFile['edges'][number];
-
-/** Schema enum `Protocol`, with display names. */
-const PROTOCOLS: readonly { value: NonNullable<Edge['protocol']>; label: string }[] = [
-  { value: 'http', label: 'HTTP' },
-  { value: 'grpc', label: 'gRPC' },
-  { value: 'event', label: 'Event' },
-  { value: 'sql', label: 'SQL' },
-  { value: 'websocket', label: 'WebSocket' },
-  { value: 'other', label: 'Other' },
-];
-
-const DIRECTIONS = [
-  { value: 'forward', label: 'Forward', Icon: ArrowRight },
-  { value: 'both', label: 'Both', Icon: ArrowLeftRight },
-  { value: 'none', label: 'None', Icon: Minus },
-] as const;
 
 const NO_PROTOCOL = 'none';
 
@@ -159,7 +144,7 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
             value={edge.direction ?? 'forward'}
             onValueChange={(value) => {
               editor.update('edges', edge.id, {
-                direction: value as (typeof DIRECTIONS)[number]['value'],
+                direction: value as Direction,
               });
             }}
           >
