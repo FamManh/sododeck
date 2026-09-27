@@ -7,10 +7,13 @@ import { RouterProvider } from 'react-router';
 
 import { router } from './app/router';
 import { readEnv } from './lib/env';
+import { getLibraryDb } from './storage/library-db-instance';
 import { initTelemetry } from './telemetry';
 import { initTheme } from './theme/theme-store';
 
 initTheme();
+// Start opening the library now; nothing waits for it except the pages that need it.
+void getLibraryDb();
 void initTelemetry(readEnv());
 
 const root = document.getElementById('root');

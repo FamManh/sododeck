@@ -431,6 +431,8 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
 
 ## 005-local-library-autosave
 
+- **Status:** implemented (2026-09-27) — see [`tasks.md`](../specs/005-local-library-autosave/tasks.md) and [ADR 0007](decisions/0007-local-deck-storage.md).
+
 - **Milestone:** M1 · **Depends on:** 000, 002 · **Estimate:** 4 d
 - **Goal:** Guests keep many decks in the browser with no account, never lose work, and are nudged to
   back up.

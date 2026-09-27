@@ -33,7 +33,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 
 ## Boundaries
 
-- No React, no DOM, no storage providers (y-indexeddb lives in `apps/app`). Must run in Node and in Web Workers. ESLint enforces this for `src/` (no `node:*`, React or y-indexeddb imports; no `window`, `document`, `localStorage`, `indexedDB`, `navigator`).
+- No React, no DOM, no storage providers (the IndexedDB and tab-sync providers live in `apps/app/src/storage`, ADR 0007). Must run in Node and in Web Workers. ESLint enforces this for `src/` (no `node:*`, React or y-indexeddb imports; no `window`, `document`, `localStorage`, `indexedDB`, `navigator`).
 - Does not define the file format (that is `@sododeck/schema`). No direct `zod` dependency: schemas come from `sododeckFileSchema`.
 
 ## Status

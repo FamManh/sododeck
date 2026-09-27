@@ -1,0 +1,84 @@
+import { serializeDeck } from '@sododeck/model';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import * as download from '../storage/download';
+import { useSaveStatusStore } from '../storage/save-status';
+import { deckOf, editorWrapper } from '../test/render-canvas';
+import { SaveContext, type SaveControls } from './save-context';
+import { SaveStatus } from './save-status';
+
+const deck = deckOf({ name: 'Shop', nodes: [{ id: 'a', type: 'service', title: 'A' }] });
+
+function setup(controls: Partial<SaveControls> = {}) {
+  const save: SaveControls = {
+    mode: 'stored',
+    flush: vi.fn(() => Promise.resolve()),
+    markExported: vi.fn(),
+    ...controls,
+  };
+  const env = editorWrapper(deck);
+  render(
+    <SaveContext value={save}>
+      <SaveStatus />
+    </SaveContext>,
+    { wrapper: env.wrapper },
+  );
+  return { save, user: userEvent.setup() };
+}
+
+const status = () =>
+  screen.getAllByRole('status').find((el) => el.getAttribute('aria-live') === 'polite');
+
+beforeEach(() => {
+  useSaveStatusStore.getState().reset();
+  vi.restoreAllMocks();
+});
+
+describe('SaveStatus', () => {
+  it('shows "Saving…" then "Saved in this browser" in a polite status', () => {
+    setup();
+    expect(status()).toHaveTextContent('Saved in this browser');
+    expect(status()?.querySelector('svg')).not.toBeNull();
+    act(() => {
+      useSaveStatusStore.getState().dispatch({ type: 'pending' });
+    });
+    expect(status()).toHaveTextContent('Saving…');
+    expect(status()?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('shows the error with Export, and details with Export and Retry', async () => {
+    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+    const { save, user } = setup();
+    act(() => {
+      useSaveStatusStore.getState().dispatch({
+        type: 'failed',
+        firstUnsavedAt: new Date(2026, 8, 27, 14, 32).getTime(),
+        errorName: 'QuotaExceededError',
+      });
+    });
+    const region = status();
+    if (!region) throw new Error('no status');
+    await user.click(within(region).getByRole('button', { name: 'Export' }));
+    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(deck));
+    expect(save.markExported).toHaveBeenCalledOnce();
+
+    await user.click(
+      within(region).getByRole('button', { name: "Couldn't save — export a backup" }),
+    );
+    const details = screen.getByRole('dialog', { name: "Couldn't save your last change" });
+    expect(details).toHaveTextContent('Unsaved since');
+    expect(details).toHaveTextContent('02:32 PM');
+    expect(details).toHaveTextContent('QuotaExceededError');
+    await user.click(within(details).getByRole('button', { name: 'Retry' }));
+    expect(save.flush).toHaveBeenCalledOnce();
+    await user.click(within(details).getByRole('button', { name: 'Export .sododeck.json' }));
+    expect(downloadText).toHaveBeenCalledTimes(2);
+  });
+
+  it('says "Demo · not saved" for the demo deck', () => {
+    setup({ mode: 'demo' });
+    expect(screen.getByText('Demo · not saved')).toBeInTheDocument();
+  });
+});

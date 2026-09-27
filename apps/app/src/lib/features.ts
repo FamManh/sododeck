@@ -40,3 +40,21 @@ export function supportsClipboardWrite(): boolean {
 export function supportsResizeObserver(): boolean {
   return typeof ResizeObserver !== 'undefined';
 }
+
+export function supportsStorageEstimate(): boolean {
+  return (
+    typeof navigator !== 'undefined' &&
+    'storage' in navigator &&
+    typeof navigator.storage.estimate === 'function'
+  );
+}
+
+/**
+ * True for a "storage is full" failure: the DOM `QuotaExceededError`, or Dexie's wrapper of it
+ * (`name` is the same; the original sits in `inner`).
+ */
+export function isQuotaError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  if ('name' in error && error.name === 'QuotaExceededError') return true;
+  return 'inner' in error && isQuotaError(error.inner);
+}

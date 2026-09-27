@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   isApplePlatform,
+  isQuotaError,
   supportsClipboardWrite,
   supportsFileSystemAccess,
   supportsPersistentStorage,
   supportsResizeObserver,
+  supportsStorageEstimate,
 } from './features';
 
 afterEach(() => {
@@ -51,5 +53,21 @@ describe('isApplePlatform', () => {
     spy.mockReturnValue('Win32');
     expect(isApplePlatform()).toBe(false);
     spy.mockRestore();
+  });
+
+  it('detects navigator.storage.estimate', () => {
+    vi.stubGlobal('navigator', {});
+    expect(supportsStorageEstimate()).toBe(false);
+    vi.stubGlobal('navigator', { storage: { estimate: () => Promise.resolve({}) } });
+    expect(supportsStorageEstimate()).toBe(true);
+  });
+
+  it('recognizes quota errors, also wrapped by Dexie', () => {
+    expect(isQuotaError(new DOMException('full', 'QuotaExceededError'))).toBe(true);
+    expect(isQuotaError({ name: 'QuotaExceededError', inner: null })).toBe(true);
+    expect(isQuotaError({ name: 'AbortError', inner: { name: 'QuotaExceededError' } })).toBe(true);
+    expect(isQuotaError(new DOMException('gone', 'NotFoundError'))).toBe(false);
+    expect(isQuotaError('QuotaExceededError')).toBe(false);
+    expect(isQuotaError(null)).toBe(false);
   });
 });

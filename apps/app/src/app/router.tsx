@@ -3,12 +3,23 @@ import { createBrowserRouter } from 'react-router';
 import { LibraryPage } from '../routes/library-page';
 import { NotFoundPage } from '../routes/not-found-page';
 
-/** Heavy routes (canvas, Monaco) are code-split so the library loads fast. */
+/**
+ * Heavy routes (canvas, Monaco, Yjs, the model) are code-split so the library loads fast. The
+ * editor route's loader creates (`/deck/new`) or reads a stored deck (editor-page.tsx).
+ */
 export const router = createBrowserRouter([
   { path: '/', Component: LibraryPage },
   {
     path: '/deck/:deckId',
-    lazy: async () => ({ Component: (await import('../routes/editor-page')).EditorPage }),
+    // Shown while the editor's code and loader run on a direct page load (a few ms).
+    HydrateFallback: () => null,
+    lazy: async () => {
+      const [{ deckLoader }, { EditorPage }] = await Promise.all([
+        import('../routes/deck-loader'),
+        import('../routes/editor-page'),
+      ]);
+      return { loader: deckLoader, Component: EditorPage };
+    },
   },
   {
     // Unlinked. Used by the performance benchmark (apps/app/bench).

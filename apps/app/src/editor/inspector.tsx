@@ -13,6 +13,7 @@ import type { ReactNode } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
+import { DeckInspectorStorage } from './deck-inspector-storage';
 import { kindLabel } from './kind-label';
 import { FieldEdit } from './field-edit';
 
@@ -98,6 +99,7 @@ export function Inspector({ deck }: { deck: SododeckFile }) {
           </dl>
           <p className="text-caption text-ink-muted">Select a component to inspect it.</p>
         </PanelSection>
+        <DeckInspectorStorage />
       </>
     );
   }

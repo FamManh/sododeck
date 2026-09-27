@@ -1,3 +1,5 @@
+// In-memory IndexedDB for the storage tests (research R13); a no-op where tests don't use it.
+import 'fake-indexeddb/auto';
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
