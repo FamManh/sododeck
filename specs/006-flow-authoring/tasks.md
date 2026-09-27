@@ -239,17 +239,17 @@ panel (spec US1 scenarios 1–7).
     returns the toast text.
   - `cancel` on a new flow removes the created flow (nothing left); with nothing recorded it ends
     without a confirmation flag.
-- [ ] T021 [P] [US1] `apps/app/src/editor/flows/flow-list.test.tsx` (read-only listing):
+- [x] T021 [P] [US1] `apps/app/src/editor/flows/flow-list.test.tsx` (read-only listing):
   - features as groups with flows and "n steps"
   - the "No feature" group only when needed
   - "+ New flow" opens the dialog; an empty name shows "Enter a flow name" and does not start
     recording
-- [ ] T022 [P] [US1] `apps/app/src/editor/flows/session-chip.test.tsx`:
+- [x] T022 [P] [US1] `apps/app/src/editor/flows/session-chip.test.tsx`:
   - the chip reads "Recording 'Place order' · 0 steps"
   - Done is disabled with a described reason
   - "Undo last step" and ⌘Z remove the last step
   - Esc with steps opens a confirmation, and without steps ends at once
-- [ ] T023 [P] [US1] `apps/app/src/editor/flows/step-list.test.tsx` (US1 part):
+- [x] T023 [P] [US1] `apps/app/src/editor/flows/step-list.test.tsx` (US1 part):
   - "No steps yet"
   - rows "<from> → <to>" with the connection label as the second line
   - number badges
@@ -290,7 +290,7 @@ panel (spec US1 scenarios 1–7).
   - In `apps/app/src/editor/use-canvas-shortcuts.ts`: in session mode ⌘Z → `undoLastStep`,
     Esc → cancel, and Delete, C and connect are ignored (FR-017).
   - Add cases to `use-canvas-shortcuts.test.tsx` and `canvas.test.tsx`.
-- [ ] T030 [US1] Show the active flow:
+- [x] T030 [US1] Show the active flow:
   - Clicking a flow row sets `activeFlow`, the left panel shows its step list, and the canvas
     shows its marks (through T017).
   - `apps/app/src/editor/json-panel-view.ts` makes the Selection tab show
@@ -321,13 +321,13 @@ and Enter only (spec US2 scenarios 1, 3, 4; scenario 2's "Add as branch" is wire
   - all edges in reading order (source node y, then x) for step 1
   - the next start node's outgoing edges afterwards
   - an empty list when the node has no outgoing edges
-- [ ] T033 [P] [US2] `apps/app/src/editor/flows/invalid-edge-popover.test.tsx`:
+- [x] T033 [P] [US2] `apps/app/src/editor/flows/invalid-edge-popover.test.tsx`:
   - An invalid click sets `invalid`, and the popover (role `dialog`, non-modal) titled "Can't add
     this edge as step n" shows the text "It doesn't start at <node>." and "Got it".
   - The step list shows the same message.
   - `announce` gets the text.
   - The step count does not change.
-- [ ] T034 [P] [US2] Keyboard cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx`:
+- [x] T034 [P] [US2] Keyboard cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx`:
   - In session mode, Tab / Shift+Tab cycle `candidateEdgeId` (the focus ring via `focusEdge`), and
     the name is announced through `edgeName`.
   - Enter records the focused candidate.
@@ -378,12 +378,12 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
     `flows` index
   - `moveToFeature` patches `feature` and moves the flow to the end (FR-001a)
   - `stepIndexForMoveWithinPath(flow, stepId, position)` gives the index in `flow.steps`
-- [ ] T039 [P] [US3] `apps/app/src/editor/flows/use-sortable-list.test.tsx`:
+- [x] T039 [P] [US3] `apps/app/src/editor/flows/use-sortable-list.test.tsx`:
   - ⌥↑ / ⌥↓ call `onMove(id, newPosition)`, stop at the group bounds, and announce "Moved to
     position n of m".
   - A pointer drag on the grip reorders within the group, is refused outside it, and Esc cancels.
   - Locked items (the branch step) can't move and nothing moves after them.
-- [ ] T040 [P] [US3] Component tests in `apps/app/src/editor/flows/flow-list.test.tsx`:
+- [x] T040 [P] [US3] Component tests in `apps/app/src/editor/flows/flow-list.test.tsx`:
   - New feature.
   - Rename a feature or flow inline (F2, the menu): an empty name keeps the old one.
   - The menus "Feature actions: …" and "Flow actions: …" (Open, Edit steps, Rename, Move to
@@ -392,14 +392,14 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
     Undo toast appears and ⌘Z restores.
   - Reorder with ⌥↑ keeps the new order after an export round trip (`serializeDeck` →
     `fromJSON`).
-- [ ] T041 [P] [US3] `apps/app/src/editor/flows/inspector-flow.test.tsx` and
+- [x] T041 [P] [US3] `apps/app/src/editor/flows/inspector-flow.test.tsx` and
       `inspector-step.test.tsx`:
   - Flow: Title, Description, Owner (suggestions from the owners in the deck, via `datalist`),
     Feature select incl. "No feature", and "Edit steps".
   - Step: the header "Step n · <from> → <to>"; Title, Description, Condition and SLA commit on
     Enter or blur, each one undo step, and are editable outside a session.
   - The row main line switches to the title (FR-019a).
-- [ ] T042 [P] [US3] Edit-mode cases in `apps/app/src/editor/flows/session-chip.test.tsx` and
+- [x] T042 [P] [US3] Edit-mode cases in `apps/app/src/editor/flows/session-chip.test.tsx` and
       `step-list.test.tsx`:
   - "Editing '<flow>'" appears.
   - ⌥↓ breaking the chain shows the dashed dot, the alert icon and "Doesn't start where step n
@@ -413,7 +413,7 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
       `packages/model/src/ops/branches.ts`, and the `moveStep` refusals in
       `packages/model/src/ops/steps.ts`. Export them from `packages/model/src/index.ts` (T037
       green).
-- [ ] T044 [P] [US3] Implement `apps/app/src/editor/flows/flow-order.ts` (T038 green).
+- [x] T044 [P] [US3] Implement `apps/app/src/editor/flows/flow-order.ts` (T038 green).
 - [x] T045 [P] [US3] Implement `apps/app/src/editor/flows/use-sortable-list.ts`: pointer events on
       the grip, a placeholder, panel auto-scroll, Esc to cancel, ⌥↑ / ⌥↓, and `group` and
       `locked` options. No dependency (T039 green).
@@ -430,7 +430,7 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
       `apps/app/src/editor/flows/inspector-step.tsx` using `FieldEdit`, `Textarea`, `Select` and
       an `Input` with a `datalist`. Route `activeFlow` in `apps/app/src/editor/inspector.tsx`
       (T041 green).
-- [ ] T048 [US3] Implement edit mode:
+- [x] T048 [US3] Implement edit mode:
   - `startEditing` in `flow-session.ts` captures a checkpoint; `cancel` in edit mode confirms when
     the structure changed, then calls `restoreFlowStructure`; `finish` requires `canFinish`.
   - Recording in edit mode appends to the session's target path.
@@ -470,13 +470,13 @@ validation (spec US4 scenarios 1–10, SC-006).
   - `removeBranch`: removes the branch and its steps; the others stay.
   - `removeStep` on the branch step: the branch point moves to the new last main step.
   - `previewRemoval` with `{ scope: 'branches', flowId, id }` counts the branch's steps.
-- [ ] T050 [P] [US4] `apps/app/src/editor/flows/inspector-branch.test.tsx`:
+- [x] T050 [P] [US4] `apps/app/src/editor/flows/inspector-branch.test.tsx`:
   - NEW BRANCH label, condition and the `switch` "Error path".
   - Done with empty fields shows an inline error with an icon under each, focus moves to the
     first, and nothing is saved.
   - Editing label, condition or error path updates the step list and JSON.
   - "Delete branch…" opens the confirm dialog, then the Undo toast.
-- [ ] T051 [P] [US4] Branch cases in `apps/app/src/editor/flows/step-list.test.tsx` and
+- [x] T051 [P] [US4] Branch cases in `apps/app/src/editor/flows/step-list.test.tsx` and
       `record-edge.test.ts`:
   - "◇ <label>" headers.
   - An error-path header has the alert icon plus the text "error path".
@@ -495,12 +495,12 @@ validation (spec US4 scenarios 1–10, SC-006).
       `packages/model/src/ops/cascade.ts`; and `RemovalTarget` `'branches'` in
       `packages/model/src/preview.ts`. Export them (T049 green). Add a `branches` wording to
       `apps/app/src/editor/describe-removal.ts` ("Its n steps will be deleted.").
-- [ ] T053 [US4] Implement `apps/app/src/editor/flows/branch-header.tsx`, the branch rendering in
+- [x] T053 [US4] Implement `apps/app/src/editor/flows/branch-header.tsx`, the branch rendering in
       `step-list.tsx` and `step-row.tsx`, B in `use-flow-shortcuts.ts` (plus an "Add branch"
       button on the focused step row), the session `addingBranch` chip text, and
       `apps/app/src/editor/flows/inspector-branch.tsx`, including the branch step's "BRANCHES
       AFTER THIS STEP" in `inspector-step.tsx` (T050, T051 green).
-- [ ] T054 [US4] Wire "Add as branch from step k" in `invalid-edge-popover.tsx` (calls `addBranch`
+- [x] T054 [US4] Wire "Add as branch from step k" in `invalid-edge-popover.tsx` (calls `addBranch`
       with `firstEdge`, sets the target to the new branch and `addingBranch`), and the
       `branchFromStep` rule in `record-edge.ts`. Check that error-path marks come through
       `flow-overlay.ts` and `deck-edge.tsx` (T018).
@@ -525,14 +525,14 @@ marker, then Undo (spec US5 scenarios 1–5).
     conditions
   - returns match ranges per field, and `count` / `total`
   - an empty query matches all
-- [ ] T056 [P] [US5] `apps/app/src/editor/flows/flow-filter.test.tsx`:
+- [x] T056 [P] [US5] `apps/app/src/editor/flows/flow-filter.test.tsx`:
   - / focuses the `searchbox` "Filter flows" (not when typing in a field); Esc clears it.
   - The "n of m" status shows.
   - Matches render bold and underlined (`mark`), and feature headers stay.
   - The empty state shows `No flows match "zzz"` with "Clear filter" and "New flow 'zzz'" (opens
     recording with that name).
   - The filter is hidden during a session.
-- [ ] T057 [P] [US5] Broken-step cases in `apps/app/src/editor/flows/step-list.test.tsx` and
+- [x] T057 [P] [US5] Broken-step cases in `apps/app/src/editor/flows/step-list.test.tsx` and
       `flow-list.test.tsx`:
   - After `remove('edges', …)`, the row shows its title or "Unknown connection" plus the alert
     icon and "Connection deleted".
@@ -544,10 +544,10 @@ marker, then Undo (spec US5 scenarios 1–5).
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] Implement `apps/app/src/editor/flows/filter-flows.ts` and
+- [x] T058 [US5] Implement `apps/app/src/editor/flows/filter-flows.ts` and
       `apps/app/src/editor/flows/flow-filter.tsx` (`SearchField`, the status, the empty state), and
       register / in `use-flow-shortcuts.ts` guarded by `isTextTarget` (T055, T056 green).
-- [ ] T059 [US5] Implement broken rendering in `step-row.tsx` and the "Has problems" marker in
+- [x] T059 [US5] Implement broken rendering in `step-row.tsx` and the "Has problems" marker in
       `flow-list.tsx` from `analyzeFlow(...).problems` (T057 green).
 
 **Checkpoint**: all stories are done (quickstart §2 steps 9–10).

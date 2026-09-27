@@ -5,6 +5,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { CircleAlert, GitBranch, GripVertical, X } from 'lucide-react';
+import { useId } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
@@ -41,6 +42,7 @@ export function StepRow({
   sortable: SortableRowProps | null;
 }) {
   const editor = useEditor();
+  const detailsId = useId();
   const active = useUiStore((s) => s.activeFlow?.stepId === step.step.id);
   const edge = deck.edges.find((e) => e.id === step.step.edge);
   const main = step.step.title ?? stepRoute(deck, step);
@@ -67,6 +69,8 @@ export function StepRow({
       )}
       <button
         type="button"
+        aria-label={`Step ${step.number}${errorPath ? ' (error path)' : ''}: ${main}`}
+        aria-describedby={detailsId}
         aria-current={active ? 'step' : undefined}
         className={cn(
           'flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-row text-left',
@@ -94,10 +98,9 @@ export function StepRow({
           {errorPath && (
             <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
           )}
-          <span className="sr-only">Step </span>
           {step.number}
         </span>
-        <span className="flex min-w-0 flex-col">
+        <span id={detailsId} className="flex min-w-0 flex-col">
           <span className="truncate text-body text-ink" title={main}>
             {main}
           </span>

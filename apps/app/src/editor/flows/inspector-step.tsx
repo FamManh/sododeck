@@ -46,7 +46,7 @@ export function InspectorStep({
       subtitle={`${flow.title} · ${where}${step.broken ? ' · connection deleted' : ''}`}
     >
       {isFork && (
-        <PanelSection label="Branches after this step">
+        <PanelSection label="Branches after this step" aria-label="Branches after this step">
           <ul className="flex flex-col gap-1.5">
             {analysis.branches.map((b) => (
               <li key={b.branch.id}>

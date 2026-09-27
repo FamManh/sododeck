@@ -78,3 +78,48 @@ describe('DeckEdge', () => {
     expect(container.querySelector('[data-edge-anchor="e1"]')).not.toBeNull();
   });
 });
+
+describe('DeckEdge flow marks (006 research R6)', () => {
+  const badge = (label: string, errorPath = false) => ({
+    label,
+    errorPath,
+    current: false,
+    chainBreak: false,
+  });
+
+  it('draws numbered badges on a solid path with the connection label', () => {
+    renderEdge({ flow: { badges: [badge('2'), badge('5')], style: 'path', errorIcon: false } });
+    expect(screen.getByRole('img', { name: 'Step 2' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Step 5' })).toBeInTheDocument();
+    expect(screen.getByTestId('edge-label')).toHaveTextContent('POST /orders');
+    expect(screen.getByTestId('edge-label')).toHaveAttribute('data-flow-style', 'path');
+  });
+
+  it('marks an error path with an icon and its name, not by color alone', () => {
+    const { container } = renderEdge({
+      flow: { badges: [badge('4b', true)], style: 'error', errorIcon: true },
+    });
+    expect(screen.getByRole('img', { name: 'Step 4b, error path' })).toBeInTheDocument();
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
+      strokeDasharray: '6 4',
+    });
+  });
+
+  it('marks a refused edge with the ban icon and a dashed line', () => {
+    const { container } = renderEdge({ flow: { badges: [], style: 'invalid', errorIcon: false } });
+    expect(screen.getByRole('img', { name: "Can't add this edge" })).toBeInTheDocument();
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
+      strokeDasharray: '6 4',
+    });
+  });
+
+  it('draws candidates dotted and keeps an anchor for the popover', () => {
+    const { container } = renderEdge({
+      flow: { badges: [], style: 'candidate', errorIcon: false },
+    });
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
+      strokeDasharray: '2 4',
+    });
+    expect(container.querySelector('[data-edge-anchor="e1"]')).not.toBeNull();
+  });
+});

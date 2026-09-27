@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@sododeck/ui/components/dialog';
 import { Input } from '@sododeck/ui/components/input';
-import { Circle } from 'lucide-react';
+import { Circle, CircleAlert } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { startNewFlow } from './flow-session';
@@ -60,7 +60,9 @@ function NewFlowForm({ target, onClose }: { target: NewFlowTarget; onClose: () =
           value={name}
           autoComplete="off"
           placeholder="e.g. Place order"
-          invalid={error}
+          // Not Input's `invalid` prop: it changes the DOM shape, which drops focus mid-typing.
+          aria-invalid={error || undefined}
+          className={error ? 'border-clay-ink focus:border-clay-ink' : undefined}
           aria-describedby={error ? errorId : undefined}
           onChange={(event) => {
             setName(event.target.value);
@@ -68,7 +70,8 @@ function NewFlowForm({ target, onClose }: { target: NewFlowTarget; onClose: () =
           }}
         />
         {error && (
-          <p id={errorId} className="text-body-sm text-clay-ink">
+          <p id={errorId} className="flex items-center gap-1 text-body-sm text-clay-ink">
+            <CircleAlert aria-hidden className="size-3.5 shrink-0" />
             Enter a flow name
           </p>
         )}

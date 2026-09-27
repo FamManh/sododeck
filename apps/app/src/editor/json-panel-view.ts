@@ -6,7 +6,7 @@ import { serializeEntries, serializeEntry, type Entry } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { JsonTab } from '../state/json-panel-prefs';
-import type { Selection } from '../state/ui-store';
+import type { ActiveFlow, Selection } from '../state/ui-store';
 
 export interface SelectionView {
   /** Visible tab label (truncated with CSS). */
@@ -27,8 +27,24 @@ export function lineCountLabel(count: number): string {
   return count === 1 ? '1 line' : `${String(count)} lines`;
 }
 
-/** What the Selection tab shows and how it is labelled (research R9, clarification Q1). */
-export function selectionView(deck: SododeckFile, selection: Selection): SelectionView {
+/**
+ * What the Selection tab shows and how it is labelled (research R9, clarification Q1). A shown flow
+ * (006) shows its whole entry, labelled "Flow", or "Step" while a step or branch is selected.
+ */
+export function selectionView(
+  deck: SododeckFile,
+  selection: Selection,
+  activeFlow: ActiveFlow = null,
+): SelectionView {
+  const flow = activeFlow === null ? undefined : deck.flows.find((f) => f.id === activeFlow.flowId);
+  if (flow !== undefined) {
+    const label = activeFlow?.stepId != null || activeFlow?.branchId != null ? 'Step' : 'Flow';
+    return {
+      label,
+      fullLabel: `${label}: ${flow.title}`,
+      entries: [{ collection: 'flows', value: flow }],
+    };
+  }
   const nodeIds = new Set(selection.nodes);
   const edgeIds = new Set(selection.edges);
   const nodes = deck.nodes.filter((node) => nodeIds.has(node.id));

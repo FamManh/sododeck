@@ -38,7 +38,7 @@ export function FlowFilter({ count, total }: { count: number; total: number }) {
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="Clear filter"
+            aria-label="Clear filter text"
             onClick={() => {
               setText('');
               document.getElementById(FLOW_FILTER_ID)?.focus();
