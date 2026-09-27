@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router';
 
 import { generateBenchDeck } from '../bench/generate-deck';
 import { Canvas } from '../editor/canvas';
+import { CommandPalette } from '../editor/command-palette/command-palette';
 import { Inspector } from '../editor/inspector';
 import { JsonPanel } from '../editor/json-panel';
 import { exitFlow, nextStep, openFlow, play } from '../editor/flows/flow-mode';
@@ -33,6 +34,10 @@ declare global {
     };
     /** 008 SC-001: ms from typing in the inspector's Title field to the painted canvas node. */
     __sododeckInspectorBench?: { editTitle: (nodeId: string, title: string) => Promise<number> };
+    /** 009 SC-008: ms from opening ⌘K and typing to painted results. */
+    __sododeckPaletteBench?: {
+      search: (query: string, matchText: string) => Promise<number>;
+    };
   }
 }
 
@@ -64,6 +69,38 @@ function InspectorBenchHooks() {
     };
     return () => {
       window.__sododeckInspectorBench = undefined;
+    };
+  }, []);
+  return null;
+}
+
+/** Exposes the command-palette benchmark (009 SC-008). */
+function PaletteBenchHooks() {
+  useEffect(() => {
+    window.__sododeckPaletteBench = {
+      search: async (query, matchText) => {
+        useUiStore.getState().openPalette();
+        await new Promise((resolve) =>
+          requestAnimationFrame(() => {
+            resolve(undefined);
+          }),
+        );
+        const input = document.querySelector<HTMLInputElement>('[aria-label="Search the deck"]');
+        if (input === null) return NaN;
+        input.focus();
+        const start = performance.now();
+        typeInto(input, query);
+        const ms = await paintedAfter(start, () =>
+          Array.from(document.querySelectorAll('[role="option"]')).some((option) =>
+            option.textContent.includes(matchText),
+          ),
+        );
+        useUiStore.getState().closePalette();
+        return ms;
+      },
+    };
+    return () => {
+      window.__sododeckPaletteBench = undefined;
     };
   }, []);
   return null;
@@ -172,6 +209,7 @@ export function BenchPage() {
         <ToastProvider>
           <FlowBenchHooks />
           {inspector && <InspectorBenchHooks />}
+          <PaletteBenchHooks />
           <ReactFlowProvider>
             <div className="flex min-h-0 flex-1">
               <div className="min-w-0 flex-1">
@@ -199,6 +237,11 @@ export function BenchPage() {
               )}
             </div>
             {jsonDeck && <JsonPanel />}
+            <CommandPalette
+              screen="canvas"
+              openRules={() => undefined}
+              navigateToCanvas={() => undefined}
+            />
           </ReactFlowProvider>
         </ToastProvider>
       </EditorProvider>

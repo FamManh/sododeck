@@ -68,6 +68,7 @@ function stickySubtitle(deck: SododeckFile, sticky: Sticky): string {
 export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: Sticky }) {
   const editor = useEditor();
   const readOnly = notesAreReadOnly();
+  const announce = useUiStore((state) => state.announce);
   const placement = stickyCanvasPosition(deck, sticky);
   const heading = stickyLabel(sticky.text) ?? 'Note';
   const pinnedOptions = deck.nodes.map((node) => ({ value: node.id, label: node.title }));
@@ -124,6 +125,7 @@ export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: 
                 disabled={readOnly}
                 onClick={() => {
                   editor.unpinSticky(sticky.id);
+                  announce('Note unpinned');
                 }}
               >
                 <PinOff />
@@ -145,6 +147,7 @@ export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: 
                 disabled={readOnly}
                 onClick={() => {
                   editor.unpinSticky(sticky.id);
+                  announce('Note unpinned');
                 }}
               >
                 <PinOff />
@@ -162,6 +165,7 @@ export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: 
                   setAnchorMode(next);
                   if (next === 'free' && placement.status === 'pinned') {
                     editor.unpinSticky(sticky.id);
+                    announce('Note unpinned');
                   }
                 }}
                 className="self-start"
@@ -184,6 +188,8 @@ export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: 
                     onValueChange={(nodeId) => {
                       if (nodeId === '') return;
                       editor.pinSticky(sticky.id, nodeId);
+                      const title = deck.nodes.find((node) => node.id === nodeId)?.title ?? nodeId;
+                      announce(`Note pinned to ${title}`);
                     }}
                   />
                   <span className="text-caption text-ink-secondary">
@@ -204,6 +210,7 @@ export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: 
               editor.update('stickies', sticky.id, {
                 collapsed: value === 'collapsed' ? true : null,
               });
+              announce(value === 'collapsed' ? 'Note collapsed' : 'Note expanded');
             }}
             className="self-start"
           >

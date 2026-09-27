@@ -23,14 +23,19 @@ const FLOWS = process.env.BENCH_FLOWS === '1' ? '&flows=1' : '';
 const STICKIES_QUERY = STICKIES > 0 ? `&stickies=${String(STICKIES)}` : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
+/** 009 SC-008: command palette search should paint results within this. */
+const PALETTE_TARGET_MS = 50;
 
-interface FlowResult {
+interface ActionResult {
   scenario: string;
+  nodes: number;
+  edges: number;
   ms: number;
+  targetMs: number;
   meetsTarget: boolean;
 }
 
-const flowResults: FlowResult[] = [];
+const actionResults: ActionResult[] = [];
 
 interface ScenarioResult {
   scenario: string;
@@ -165,13 +170,19 @@ function stopRecording(page: Page) {
   });
 }
 
-async function openBench(page: Page, query: string) {
+async function openBench(
+  page: Page,
+  query: string,
+  counts: { nodes: number; edges: number } = { nodes: NODES, edges: EDGES },
+) {
   if (CPU_THROTTLE > 1) {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE });
   }
   const start = Date.now();
-  await page.goto(`/bench?nodes=${NODES}&edges=${EDGES}${query}${FLOWS}${STICKIES_QUERY}`);
+  await page.goto(
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${STICKIES_QUERY}`,
+  );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
   });
@@ -353,7 +364,14 @@ for (const scenario of [
     }
     const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
     expect(Number.isFinite(ms)).toBe(true);
-    flowResults.push({ scenario: scenario.name, ms, meetsTarget: ms < FLOW_TARGET_MS });
+    actionResults.push({
+      scenario: scenario.name,
+      nodes: NODES,
+      edges: EDGES,
+      ms,
+      targetMs: FLOW_TARGET_MS,
+      meetsTarget: ms < FLOW_TARGET_MS,
+    });
   });
 }
 
@@ -400,15 +418,44 @@ test(`inspector title edit → canvas: ${NODES} nodes / ${EDGES} edges`, async (
   }
   const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
   expect(Number.isFinite(ms)).toBe(true);
-  flowResults.push({
+  actionResults.push({
     scenario: 'inspector title edit → canvas',
+    nodes: NODES,
+    edges: EDGES,
     ms,
+    targetMs: FLOW_TARGET_MS,
     meetsTarget: ms < FLOW_TARGET_MS,
   });
 });
 
+test(`⌘K type → results: 2000 nodes / 4000 edges`, async ({ page }) => {
+  const counts = { nodes: 2000, edges: 4000 };
+  await openBench(page, '', counts);
+  await page.waitForFunction(() => window.__sododeckPaletteBench !== undefined);
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    runs.push(
+      await page.evaluate(
+        ([query, matchText]) =>
+          window.__sododeckPaletteBench?.search(query, matchText) ?? Promise.resolve(NaN),
+        ['Node 1999', 'Node 1999'] as const,
+      ),
+    );
+  }
+  const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+  expect(Number.isFinite(ms)).toBe(true);
+  actionResults.push({
+    scenario: '⌘K type → results',
+    nodes: counts.nodes,
+    edges: counts.edges,
+    ms,
+    targetMs: PALETTE_TARGET_MS,
+    meetsTarget: ms < PALETTE_TARGET_MS,
+  });
+});
+
 test.afterAll(async () => {
-  if (results.length === 0 && flowResults.length === 0) return;
+  if (results.length === 0 && actionResults.length === 0) return;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dir = new URL('./results/', import.meta.url);
   await mkdir(dir, { recursive: true });
@@ -426,18 +473,21 @@ test.afterAll(async () => {
         `| ${r.scenario} | ${r.renderedNodes} / ${r.renderedNodesZoomedIn} of ${r.nodes} | ${r.maxZoom.toFixed(2)} | ${r.renderMs} | ${r.inPageReadyMs} | ${fmt(r.avgFps)} | ${fmt(r.p95FrameMs)} | ${fmt(r.maxFrameMs)} | ${fmt(r.longFramesPct)}% | ${r.meetsTarget ? 'yes' : 'no'} |`,
     ),
     '',
-    `Flow and inspector scenarios (006, 007, 008): median of 5, target < ${String(FLOW_TARGET_MS)} ms. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
+    `Action scenarios (006, 007, 008, 009): median of 5. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
     '',
-    '| Scenario | Action → painted (ms) | Meets target |',
-    '| --- | --- | --- |',
-    ...flowResults.map((r) => `| ${r.scenario} | ${fmt(r.ms)} | ${r.meetsTarget ? 'yes' : 'no'} |`),
+    '| Scenario | Nodes / edges | Action → painted (ms) | Target (ms) | Meets target |',
+    '| --- | --- | --- | --- | --- |',
+    ...actionResults.map(
+      (r) =>
+        `| ${r.scenario} | ${r.nodes} / ${r.edges} | ${fmt(r.ms)} | ${String(r.targetMs)} | ${r.meetsTarget ? 'yes' : 'no'} |`,
+    ),
     '',
   ].join('\n');
 
   await writeFile(
     new URL(`report-${stamp}.json`, dir),
     JSON.stringify(
-      { cpuThrottle: CPU_THROTTLE, flows: FLOWS !== '', stickies: STICKIES, results, flowResults },
+      { cpuThrottle: CPU_THROTTLE, flows: FLOWS !== '', stickies: STICKIES, results, actionResults },
       null,
       2,
     ),

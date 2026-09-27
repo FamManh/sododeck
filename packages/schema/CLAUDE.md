@@ -27,3 +27,10 @@
 ## Status
 
 v1 complete (feature 001). 006 added flow branches as optional, additive fields with no version bump: `Flow.branches[]` (`Branch { id, label, condition, errorPath?, description? }`) and `Step.branch` (ADR 0008). Empty branch labels and conditions are valid in the file; the editor's Done enforces them.
+
+009 adds two optional sticky booleans with no version bump:
+
+- `Sticky.collapsed?: boolean` — `true` means the note is shown as one line; the editor writes `true` or removes the key.
+- `Sticky.showInFlows?: boolean` — `true` keeps the note at full strength during flow playback; the editor writes `true` or removes the key.
+
+Keep the sticky property order `id, text, color, anchor, position, collapsed, showInFlows`, extend `examples/full.sododeck.json`, and cover invalid non-boolean values in fixtures when these fields change.

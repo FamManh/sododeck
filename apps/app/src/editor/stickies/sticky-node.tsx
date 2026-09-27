@@ -154,6 +154,7 @@ export const StickyNode = memo(function StickyNode({
             onClick={() => {
               if (readOnly) return;
               editor.update('stickies', data.stickyId, { collapsed: collapsed ? null : true });
+              useUiStore.getState().announce(collapsed ? 'Note expanded' : 'Note collapsed');
             }}
           >
             {collapsed ? (

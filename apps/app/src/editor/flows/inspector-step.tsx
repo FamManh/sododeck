@@ -65,7 +65,7 @@ export function InspectorStep({
   const { getZoom, setCenter } = useReactFlow();
   const s = step.step;
   const stepNotes = useMemo(
-    () => notesOnStep(deck, step.from, step.to),
+    () => (step.from === null || step.to === null ? [] : notesOnStep(deck, step.from, step.to)),
     [deck, step.from, step.to],
   );
   const update = (patch: Parameters<typeof editor.updateStep>[2]) => {

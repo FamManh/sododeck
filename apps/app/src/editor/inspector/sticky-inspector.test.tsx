@@ -69,11 +69,13 @@ describe('StickyInspector', () => {
     expect(pinned.anchor).toBe('svc');
     expect(stickyCanvasPosition(toJSON(doc), pinned).point).toEqual(before);
     expect(screen.getByText('Note · pinned to Order Service')).toBeInTheDocument();
+    expect(useUiStore.getState().announcement.text).toBe('Note pinned to Order Service');
 
     await user.click(screen.getByRole('radio', { name: 'Free' }));
     const freed = sticky('free', doc);
     expect(freed.anchor).toBeUndefined();
     expect(stickyCanvasPosition(toJSON(doc), freed).point).toEqual(before);
+    expect(useUiStore.getState().announcement.text).toBe('Note unpinned');
   });
 
   it('shows foreign and missing anchors as read-only, with Unpin', async () => {
@@ -83,12 +85,14 @@ describe('StickyInspector', () => {
     ).toBeInTheDocument();
     await foreign.user.click(screen.getByRole('button', { name: 'Unpin' }));
     expect(sticky('foreign', foreign.doc).anchor).toBeUndefined();
+    expect(useUiStore.getState().announcement.text).toBe('Note unpinned');
     foreign.unmount();
 
     const missing = setup('missing');
     expect(screen.getByText('Pinned object is missing')).toBeInTheDocument();
     await missing.user.click(screen.getByRole('button', { name: 'Unpin' }));
     expect(sticky('missing', missing.doc).anchor).toBeUndefined();
+    expect(useUiStore.getState().announcement.text).toBe('Note unpinned');
   });
 
   it('updates display and flow visibility, and requests note deletion', async () => {
@@ -96,8 +100,10 @@ describe('StickyInspector', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Collapsed' }));
     expect(sticky('pinned', doc).collapsed).toBe(true);
+    expect(useUiStore.getState().announcement.text).toBe('Note collapsed');
     await user.click(screen.getByRole('radio', { name: 'Expanded' }));
     expect(sticky('pinned', doc).collapsed).toBeUndefined();
+    expect(useUiStore.getState().announcement.text).toBe('Note expanded');
 
     const visible = screen.getByRole('switch', { name: 'Stay visible during flows' });
     await user.click(visible);

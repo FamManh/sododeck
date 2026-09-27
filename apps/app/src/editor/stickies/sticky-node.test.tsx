@@ -97,12 +97,16 @@ describe('StickyNode', () => {
     expect(screen.getByText('<script>').tagName).toBe('CODE');
 
     await user.click(screen.getByRole('button', { name: 'Collapse note' }));
+    expect(useUiStore.getState().announcement.text).toBe('Note collapsed');
     rerenderSticky();
     expect(screen.getByRole('button', { name: 'Expand note' })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
     expect(screen.getByText('Owner')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Expand note' }));
+    expect(useUiStore.getState().announcement.text).toBe('Note expanded');
   });
 
   it('shows the pinned footer and updates it when the node title changes', () => {

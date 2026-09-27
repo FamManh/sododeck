@@ -50,7 +50,14 @@ export function CanvasToolbar() {
             aria-labelledby={undefined}
             align="end"
           >
-            <DropdownMenuRadioGroup value={notesDisplay} onValueChange={setNotesDisplay}>
+            <DropdownMenuRadioGroup
+              value={notesDisplay}
+              onValueChange={(value) => {
+                if (value === 'dimmed' || value === 'shown' || value === 'hidden') {
+                  setNotesDisplay(value);
+                }
+              }}
+            >
               <DropdownMenuRadioItem value="dimmed">Dimmed</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="shown">Shown</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="hidden">Hidden</DropdownMenuRadioItem>
