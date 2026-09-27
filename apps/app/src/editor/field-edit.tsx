@@ -55,7 +55,9 @@ export function FieldEdit({
         aria-label={label}
         value={shown}
         placeholder={placeholder}
-        invalid={invalid}
+        // Not Input's `invalid` prop: it changes the DOM shape, which would drop focus mid-edit.
+        aria-invalid={invalid || undefined}
+        className={invalid ? 'border-clay-ink focus:border-clay-ink' : undefined}
         aria-describedby={invalid ? `${id}-error` : undefined}
         onChange={(event) => {
           setDraft(event.target.value);

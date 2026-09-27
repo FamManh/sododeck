@@ -14,7 +14,11 @@ import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 /** Marks the canvas wrapper, so focus helpers and the palette can find it. */
 export const CANVAS_ATTR = 'data-canvas';
 
-const round = ({ x, y }: Point): Point => ({ x: Math.round(x), y: Math.round(y) });
+/** Whole pixels (positions are integers); a non-finite coordinate (no layout yet) becomes 0. */
+const round = ({ x, y }: Point): Point => ({
+  x: Number.isFinite(x) ? Math.round(x) : 0,
+  y: Number.isFinite(y) ? Math.round(y) : 0,
+});
 
 /** Top-left position for a node centred on a flow point. */
 export function centredOn(point: Point): Point {

@@ -147,7 +147,17 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         if (event.target !== event.currentTarget) return;
         const ui = useUiStore.getState();
         const first = ui.selection.nodes[0] ?? deck.nodes[0]?.id;
-        if (first !== undefined) ui.focus(first);
+        if (first === undefined) return;
+        ui.focus(first);
+        // Moving focus inside a focus event is fragile; hand it over once this event is done.
+        setTimeout(() => {
+          if (
+            document.activeElement === event.currentTarget ||
+            document.activeElement === document.body
+          ) {
+            nodeElement(first)?.focus({ preventScroll: true });
+          }
+        }, 0);
       }}
       onKeyDown={onKeyDown}
       className={cn('relative h-full', focusRing)}
