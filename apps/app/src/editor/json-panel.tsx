@@ -1,12 +1,12 @@
 import { Button } from '@sododeck/ui/components/button';
 import { Braces, ChevronUp } from 'lucide-react';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { JsonPanelHeader } from './json-panel-header';
-import { countLines } from './json-panel-view';
+import { countLines, selectionText, selectionView } from './json-panel-view';
 import { PANEL_COLLAPSED } from './panel-height';
 import { useThrottledDeckText } from './use-throttled-deck-text';
 
@@ -20,11 +20,16 @@ export function JsonPanel() {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const { open, height, tab } = useUiStore((state) => state.jsonPanel);
+  const selection = useUiStore((state) => state.selection);
   const setJsonTab = useUiStore((state) => state.setJsonTab);
   const setJsonPanelOpen = useUiStore((state) => state.setJsonPanelOpen);
 
   const deckText = useThrottledDeckText(deck, open && tab === 'deck');
-  const text = deckText;
+  // The label follows the selection even on the Deck tab; the text is built only when shown.
+  const view = useMemo(() => selectionView(deck, selection), [deck, selection]);
+  const showSelection = open && tab === 'selection';
+  const text = showSelection ? selectionText(view.entries) : tab === 'deck' ? deckText : '';
+  const empty = tab === 'selection' && view.entries.length === 0;
 
   if (!open) {
     return (
@@ -62,28 +67,45 @@ export function JsonPanel() {
       <JsonPanelHeader
         tab={tab}
         onTabChange={setJsonTab}
-        selectionLabel="Selection"
-        selectionFullLabel="Selection"
+        selectionLabel={view.label}
+        selectionFullLabel={view.fullLabel}
         lineCount={countLines(text)}
         onCollapse={() => {
           setJsonPanelOpen(false);
         }}
       />
       <div className="min-h-0 flex-1 bg-code">
-        <Suspense fallback={<p className="p-3 text-caption text-ink-muted">Loading editor…</p>}>
-          <JsonViewer
-            tab={tab}
-            text={text}
-            ariaLabel="Deck JSON, read-only"
-            onReadOnlyAttempt={() => undefined}
-            onUndo={() => {
-              editor.undo();
-            }}
-            onRedo={() => {
-              editor.redo();
-            }}
-          />
-        </Suspense>
+        {empty ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
+            <p className="text-body-sm text-ink-secondary">
+              Select a component or connection to see its JSON.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setJsonTab('deck');
+              }}
+            >
+              Show Deck JSON
+            </Button>
+          </div>
+        ) : (
+          <Suspense fallback={<p className="p-3 text-caption text-ink-muted">Loading editor…</p>}>
+            <JsonViewer
+              tab={tab}
+              text={text}
+              ariaLabel={tab === 'deck' ? 'Deck JSON, read-only' : 'Selection JSON, read-only'}
+              onReadOnlyAttempt={() => undefined}
+              onUndo={() => {
+                editor.undo();
+              }}
+              onRedo={() => {
+                editor.redo();
+              }}
+            />
+          </Suspense>
+        )}
       </div>
     </section>
   );
