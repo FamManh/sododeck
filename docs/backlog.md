@@ -29,6 +29,7 @@ Recorded in design-analysis §g and applied to the features below.
 | 10  | Owner is **free text with suggestions** from owners already used in the deck (no team list).                                                                                                    | 001, 008                |
 | 11  | Deleting asks for **confirmation**; undo (⌘Z) still works after a confirmed delete.                                                                                                             | 003, 005, 006, 008, 009 |
 | 12  | Library "Recent" = the **8 most recently opened** decks (opened-at kept in library metadata, not in the deck).                                                                                  | 005                     |
+| 19  | After a confirmed delete, show the design's **Undo toast** (6 s, Undo button + ⌘Z hint); ⌘Z still works after it disappears.                                                                    | 003, 005, 006, 008, 009 |
 
 ## Dependency graph
 
@@ -314,7 +315,8 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   boundaries (bounds from members), edges (smoothstep, 8px radius, end dot, 12px hit area) with
   label pills; select node/edge, click empty to deselect; drag to move; palette drag/click to add;
   delete (Del key + inspector trash) with a confirmation dialog (§g-11; the design's delete-at-once +
-  6 s Undo toast in 57/59 is overridden, §g-19), then undo via ⌘Z; draw an edge (designed, 52–57):
+  6 s Undo toast in 57/59 becomes confirm first, then the same Undo toast, §g-19), then undo via
+  the toast or ⌘Z; draw an edge (designed, 52–57):
   four side handles on hover or Tab focus, dashed ghost line while dragging, valid target = dashed
   orange ring + "+", invalid (already connected or self) = dashed clay ring + ban icon + tooltip,
   release on empty canvas cancels, keyboard connect with C (type-ahead "Connect X to…" listbox,
@@ -342,8 +344,9 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
     Enter, Then an edge to that node is created; nodes that would duplicate an edge are listed as
     disabled "already connected".
   - Given a selected node, When the user presses Delete, Then a confirmation dialog names what will
-    be removed (the node and its n edges); When confirmed, Then they disappear; When ⌘Z is pressed,
-    Then both come back with the same ids. When cancelled (or Esc), Then nothing changes.
+    be removed (the node and its n edges); When confirmed, Then they disappear and a 6 s toast with
+    Undo shows; When Undo (or ⌘Z, also after the toast is gone) is used, Then both come back with
+    the same ids. When cancelled (or Esc), Then nothing changes.
   - Given a node is dragged, When the pointer is released and ⌘Z pressed once, Then the node returns
     to its previous position.
   - Given Labels is off, When the user turns it on, Then every edge shows its Mono label pill.
@@ -448,7 +451,7 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   counts, updatedAt, openedAt, lastBackupAt); library grid/list, All/Recent (8 most recently opened, §g-12)/Samples/folders, search; new deck;
   open deck; rename via breadcrumb; folders (designed 72–75: New folder dialog with inline errors for empty and case-insensitive
   duplicate names, context menu Rename / Export folder / Delete folder, F2 inline rename; delete
-  asks for confirmation per §g-11 — the design's delete-at-once + Undo is overridden, §g-19; decks
+  asks for confirmation per §g-11 — the design's delete-at-once becomes confirm first, then the 6 s Undo toast, §g-19; decks
   of a deleted folder move to Unfiled); deck menu on cards and rows (76–77: Open, Rename F2,
   Duplicate ⌘D, Move to folder submenu with the current folder checked, Export .sododeck.json,
   Delete) via ⋯, right-click or Shift+F10; delete deck (confirm); import .sododeck.json (validate, error toast); export one deck

@@ -732,9 +732,10 @@ decision already covers it, that rule wins and the proposal only says how to app
     [77](screens/77-deck-menu-row-light.png) says "No confirm dialog"): nodes, edges, bulk
     selections, folders and decks are deleted at once with a 6 s Undo toast. **Conflicts with §g-11.**
     _Founder decision stands: a confirmation dialog first (not designed; use the small dialog from
-    72 with a clay destructive button), then ⌘Z still works. Open: keep the 6 s Undo toast after a
-    confirmed delete too? Proposal: yes, it is cheap and helps. Recording-mode Esc already
+    72 with a clay destructive button), then ⌘Z still works. Recording-mode Esc already
     "asks only if steps exist" (41), which matches §g-11._
+    **Decision (founder, 2026-09-27):** confirm first, **and** keep the design's Undo toast (6 s,
+    Undo button + ⌘Z hint) after every confirmed delete; ⌘Z keeps working after the toast is gone.
 20. **Success green** ([81](screens/81-storage-on-light.png)): the design adds its own green
     (#e3efe1 / #2f6a38) and uses it **only** for "Persistent storage: On". DESIGN.md defines
     `success` (#e6f1ec / #17603f) and also uses it for "rule matched" and SLA within target. _Use
