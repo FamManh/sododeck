@@ -5,12 +5,17 @@ import { lazy, Suspense, useMemo } from 'react';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
+import { createCooldown } from './cooldown';
 import { JsonPanelHeader } from './json-panel-header';
 import { countLines, selectionText, selectionView } from './json-panel-view';
 import { PANEL_COLLAPSED } from './panel-height';
 import { useThrottledDeckText } from './use-throttled-deck-text';
 
 const JsonViewer = lazy(() => import('./json-viewer'));
+
+const READ_ONLY_MESSAGE = 'Read-only. Edit on the canvas or in the inspector.';
+/** Refused edits are announced at most this often, so screen readers are not flooded. */
+const READ_ONLY_COOLDOWN_MS = 3000;
 
 /**
  * Bottom JSON panel (004): a read-only view of the deck that is always in sync. It reads the
@@ -23,6 +28,8 @@ export function JsonPanel() {
   const selection = useUiStore((state) => state.selection);
   const setJsonTab = useUiStore((state) => state.setJsonTab);
   const setJsonPanelOpen = useUiStore((state) => state.setJsonPanelOpen);
+  const announce = useUiStore((state) => state.announce);
+  const readOnlyCooldown = useMemo(() => createCooldown(READ_ONLY_COOLDOWN_MS), []);
 
   const deckText = useThrottledDeckText(deck, open && tab === 'deck');
   // The label follows the selection even on the Deck tab; the text is built only when shown.
@@ -96,7 +103,9 @@ export function JsonPanel() {
               tab={tab}
               text={text}
               ariaLabel={tab === 'deck' ? 'Deck JSON, read-only' : 'Selection JSON, read-only'}
-              onReadOnlyAttempt={() => undefined}
+              onReadOnlyAttempt={() => {
+                if (readOnlyCooldown()) announce(READ_ONLY_MESSAGE);
+              }}
               onUndo={() => {
                 editor.undo();
               }}

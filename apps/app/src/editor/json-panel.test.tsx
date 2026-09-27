@@ -239,3 +239,46 @@ describe('JsonPanel — Selection tab (US1)', () => {
     expect(screen.getByRole('radio', { name: 'Web App' })).not.toBeChecked();
   });
 });
+
+describe('JsonPanel — read-only (US3)', () => {
+  const MESSAGE = 'Read-only. Edit on the canvas or in the inspector.';
+
+  it('announces a refused edit at most once every 3 s, and the deck does not change', async () => {
+    const { doc, user } = setup();
+    await deckPre();
+    const before = toJSON(doc);
+    const announce = vi.spyOn(useUiStore.getState(), 'announce');
+    useUiStore.setState({ announce });
+    const attempt = screen.getByRole('button', { name: 'Attempt edit' });
+    await user.click(attempt);
+    await user.click(attempt);
+    await user.click(attempt);
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith(MESSAGE);
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    await user.click(attempt);
+    expect(announce).toHaveBeenCalledTimes(2);
+    expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('shows the read-only state with an icon and text, not color alone', () => {
+    setup();
+    const status = screen.getByText('Read-only · synced with canvas');
+    const icon = status.querySelector('svg');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('undoes and redoes deck edits from inside the viewer', async () => {
+    const { editor, doc, user } = setup();
+    await deckPre();
+    act(() => {
+      editor().add('nodes', { id: 'billing', type: 'service', title: 'Billing' });
+    });
+    await user.click(screen.getByRole('button', { name: 'Viewer undo' }));
+    expect(toJSON(doc).nodes.some((n) => n.id === 'billing')).toBe(false);
+    await user.click(screen.getByRole('button', { name: 'Viewer redo' }));
+    expect(toJSON(doc).nodes.some((n) => n.id === 'billing')).toBe(true);
+  });
+});
