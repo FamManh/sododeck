@@ -1,0 +1,208 @@
+import type { SododeckFile } from '@sododeck/schema';
+import { Button } from '@sododeck/ui/components/button';
+import { Input } from '@sododeck/ui/components/input';
+import { Popover, PopoverAnchor, PopoverContent } from '@sododeck/ui/components/popover';
+import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sododeck/ui/components/select';
+import { ArrowLeftRight, ArrowRight, Minus, Spline, Trash2 } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
+
+import { useEditor } from '../model/use-editor';
+import { useUiStore } from '../state/ui-store';
+import { canvasElement, focusCanvas } from './canvas-actions';
+
+type Edge = SododeckFile['edges'][number];
+
+/** Schema enum `Protocol`, with display names. */
+const PROTOCOLS: readonly { value: NonNullable<Edge['protocol']>; label: string }[] = [
+  { value: 'http', label: 'HTTP' },
+  { value: 'grpc', label: 'gRPC' },
+  { value: 'event', label: 'Event' },
+  { value: 'sql', label: 'SQL' },
+  { value: 'websocket', label: 'WebSocket' },
+  { value: 'other', label: 'Other' },
+];
+
+const DIRECTIONS = [
+  { value: 'forward', label: 'Forward', Icon: ArrowRight },
+  { value: 'both', label: 'Both', Icon: ArrowLeftRight },
+  { value: 'none', label: 'None', Icon: Minus },
+] as const;
+
+const NO_PROTOCOL = 'none';
+
+/** Measures the edge's label point (deck-edge.tsx), else the canvas centre. */
+function anchorRect(edgeId: string): DOMRect {
+  const anchor = document.querySelector(`[data-edge-anchor="${CSS.escape(edgeId)}"]`);
+  if (anchor) return anchor.getBoundingClientRect();
+  const canvas = canvasElement()?.getBoundingClientRect();
+  return new DOMRect(
+    (canvas?.left ?? 0) + (canvas?.width ?? 0) / 2,
+    (canvas?.top ?? 0) + (canvas?.height ?? 0) / 2,
+    0,
+    0,
+  );
+}
+
+/** Inline editor for a connection: label, protocol, direction (FR-011, design 57). */
+export function EdgePopover({ deck }: { deck: SododeckFile }) {
+  const popover = useUiStore((s) => s.popover);
+  const edgeId = popover?.kind === 'edge' ? popover.edgeId : null;
+  const edge = edgeId === null ? undefined : deck.edges.find((e) => e.id === edgeId);
+  if (!edge) return null;
+  // Keyed by id: a different edge starts with a fresh label draft.
+  return <EdgePopoverContent key={edge.id} deck={deck} edge={edge} />;
+}
+
+function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) {
+  const editor = useEditor();
+  const closePopover = useUiStore((s) => s.closePopover);
+  const requestDelete = useUiStore((s) => s.requestDelete);
+  const [draft, setDraft] = useState(edge.label ?? '');
+  const labelId = useId();
+  const protocolId = useId();
+  const directionId = useId();
+  const virtualRef = useRef({ getBoundingClientRect: () => anchorRect(edge.id) });
+
+  const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+
+  /** One update, only when the label really changed; an empty label clears the field. */
+  const commitLabel = () => {
+    const next = draft.trim();
+    if (next === (edge.label ?? '')) return;
+    editor.update('edges', edge.id, { label: next === '' ? null : next });
+  };
+
+  const close = () => {
+    commitLabel();
+    closePopover();
+  };
+
+  return (
+    <Popover
+      open
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+    >
+      <PopoverAnchor virtualRef={virtualRef} />
+      <PopoverContent
+        aria-label="Connection"
+        side="bottom"
+        align="center"
+        className="w-80"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          document.getElementById(labelId)?.focus();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          focusCanvas();
+        }}
+      >
+        <div className="flex items-start gap-2.5">
+          <Spline aria-hidden className="mt-0.5 size-4 text-ink-secondary" strokeWidth={1.5} />
+          <div className="flex min-w-0 flex-col">
+            <span className="text-title-sm">Connection</span>
+            <span className="truncate text-caption text-ink-secondary">
+              {title(edge.from)} → {title(edge.to)}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor={labelId} className="text-micro text-ink-muted uppercase">
+            Label
+          </label>
+          <Input
+            id={labelId}
+            value={draft}
+            placeholder="e.g. POST /orders"
+            onChange={(event) => {
+              setDraft(event.target.value);
+            }}
+            onBlur={commitLabel}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                close();
+              }
+            }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span id={protocolId} className="text-micro text-ink-muted uppercase">
+            Protocol
+          </span>
+          <Select
+            value={edge.protocol ?? NO_PROTOCOL}
+            onValueChange={(value) => {
+              editor.update('edges', edge.id, {
+                protocol: value === NO_PROTOCOL ? null : (value as NonNullable<Edge['protocol']>),
+              });
+            }}
+          >
+            <SelectTrigger aria-labelledby={protocolId}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PROTOCOL}>Not set</SelectItem>
+              {PROTOCOLS.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span id={directionId} className="text-micro text-ink-muted uppercase">
+            Direction
+          </span>
+          <SegmentedControl
+            aria-labelledby={directionId}
+            value={edge.direction ?? 'forward'}
+            onValueChange={(value) => {
+              editor.update('edges', edge.id, {
+                direction: value as (typeof DIRECTIONS)[number]['value'],
+              });
+            }}
+          >
+            {DIRECTIONS.map(({ value, label, Icon }) => (
+              <SegmentedControlItem key={value} value={value}>
+                <Icon aria-hidden strokeWidth={1.5} />
+                {label}
+              </SegmentedControlItem>
+            ))}
+          </SegmentedControl>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-clay-ink hover:text-clay-ink"
+            onClick={() => {
+              closePopover();
+              requestDelete({ nodes: [], edges: [edge.id] });
+            }}
+          >
+            <Trash2 />
+            Delete
+          </Button>
+          <Button variant="primary" size="sm" onClick={close}>
+            Done
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

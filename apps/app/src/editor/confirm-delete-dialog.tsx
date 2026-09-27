@@ -1,0 +1,111 @@
+import { getObject, previewRemoval } from '@sododeck/model';
+import type { SododeckFile } from '@sododeck/schema';
+import { Button } from '@sododeck/ui/components/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@sododeck/ui/components/dialog';
+import { useToast } from '@sododeck/ui/components/toast';
+import { MOTION } from '@sododeck/ui/lib/motion';
+import { Trash2 } from 'lucide-react';
+import { useMemo, useRef } from 'react';
+
+import { isApplePlatform } from '../lib/features';
+import { useEditor } from '../model/use-editor';
+import { useUiStore, type Selection } from '../state/ui-store';
+import { focusCanvas } from './canvas-actions';
+import { describeRemoval, removalTargets, removalToast } from './describe-removal';
+
+/** The Undo toast on screen, replaced by the next delete's (spec edge case). */
+let undoToastId: number | null = null;
+
+/**
+ * Delete confirmation (§g-11/§g-19, FR-017–019). The counts come from `previewRemoval`, which
+ * runs the model's real cascade, so they match what the delete does. Confirm = one batch = one
+ * undo step, then a 6 s toast with Undo (⌘Z keeps working after it is gone).
+ */
+export function ConfirmDeleteDialog({ deck }: { deck: SododeckFile }) {
+  const pending = useUiStore((s) => s.pendingDelete);
+  if (pending === null) return null;
+  return <ConfirmDeleteContent deck={deck} pending={pending} />;
+}
+
+function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: Selection }) {
+  const editor = useEditor();
+  const { toast, dismiss } = useToast();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const targets = useMemo(() => removalTargets(pending), [pending]);
+  // Computed once when the dialog opens; the deck cannot change underneath a modal dialog.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const preview = useMemo(() => previewRemoval(deck, targets), [targets]);
+  const { title, body } = describeRemoval(deck, targets, preview);
+
+  const cancel = () => {
+    useUiStore.getState().cancelDelete();
+  };
+
+  const confirm = () => {
+    const message = removalToast(deck, targets, preview, isApplePlatform());
+    editor.batch(() => {
+      for (const { scope, id } of targets) {
+        // A connection may already be gone with its component (cascade).
+        if (getObject(editor.doc, scope, id) !== undefined) editor.remove(scope, id);
+      }
+    });
+    const ui = useUiStore.getState();
+    ui.cancelDelete();
+    ui.clearSelection();
+    ui.announce(message);
+    if (undoToastId !== null) dismiss(undoToastId);
+    undoToastId = toast({
+      message,
+      action: {
+        label: 'Undo',
+        onAction: () => {
+          if (editor.undo()) useUiStore.getState().announce('Undone');
+        },
+      },
+      duration: MOTION.toastUndoMs,
+    });
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) cancel();
+      }}
+    >
+      <DialogContent
+        role="alertdialog"
+        className="max-w-md"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          cancelRef.current?.focus();
+        }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          focusCanvas();
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button ref={cancelRef} onClick={cancel}>
+            Cancel
+          </Button>
+          <Button className="border-clay-ink text-clay-ink hover:bg-clay-soft" onClick={confirm}>
+            <Trash2 />
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

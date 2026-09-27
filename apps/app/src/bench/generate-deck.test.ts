@@ -5,11 +5,14 @@ import { generateBenchDeck } from './generate-deck';
 
 describe('generateBenchDeck', () => {
   it('generates a valid deck of the requested size', () => {
-    const { deck, positions } = generateBenchDeck(500, 1000);
+    const { deck } = generateBenchDeck(500, 1000);
     expect(parseSododeckFile(deck).success).toBe(true);
     expect(deck.nodes).toHaveLength(500);
     expect(deck.edges).toHaveLength(1000);
-    expect(Object.keys(positions)).toHaveLength(500);
+    for (const node of deck.nodes) {
+      expect(Number.isInteger(node.position?.x)).toBe(true);
+      expect(Number.isInteger(node.position?.y)).toBe(true);
+    }
   });
 
   it('has no self-loops or duplicate edges', () => {
