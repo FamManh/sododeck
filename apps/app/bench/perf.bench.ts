@@ -231,9 +231,27 @@ for (const scenario of [
     const opened = await openBench(page, scenario.query);
     // The node nearest the middle of the screen (fit view is limited to 30%, so not all are shown).
     const title = await page.evaluate(() => {
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
+      const canvas = document.querySelector<HTMLElement>('[data-canvas]')?.getBoundingClientRect();
+      const cx = canvas === undefined ? window.innerWidth / 2 : canvas.left + canvas.width / 2;
+      const cy = canvas === undefined ? window.innerHeight / 2 : canvas.top + canvas.height * 0.35;
       let best: { title: string; d: number } | null = null;
+      for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
+        const r = el.getBoundingClientRect();
+        if (
+          canvas !== undefined &&
+          (r.left < canvas.left + 20 ||
+            r.right > canvas.right - 20 ||
+            r.top < canvas.top + 20 ||
+            r.bottom > canvas.bottom - 20)
+        ) {
+          continue;
+        }
+        const atPoint = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        if (!atPoint.includes(el)) continue;
+        const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
+        if (!best || d < best.d) best = { title: el.title, d };
+      }
+      if (best) return best.title;
       for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
         const r = el.getBoundingClientRect();
         const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
