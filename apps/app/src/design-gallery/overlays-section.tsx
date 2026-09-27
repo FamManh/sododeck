@@ -1,0 +1,131 @@
+import { Button } from '@sododeck/ui/components/button';
+import { CoachMark, CoachMarkAnchor } from '@sododeck/ui/components/coach-mark';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@sododeck/ui/components/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sododeck/ui/components/select';
+import { Switch } from '@sododeck/ui/components/switch';
+import { Download, Shapes } from 'lucide-react';
+import { useId, useState } from 'react';
+
+import { GallerySection } from './gallery-section';
+import { SampleRow } from './sample-row';
+
+const TOUR = [
+  { title: 'Add your first component', body: 'Drag a kind from the palette onto the canvas.' },
+  { title: 'Connect it', body: 'Drag from a node edge to another node to draw a call.' },
+  { title: 'Trace a flow', body: 'Click edges in order to record a flow, then press Play.' },
+];
+
+export function OverlaysSection() {
+  const [step, setStep] = useState(0);
+  const [touring, setTouring] = useState(false);
+  const notesId = useId();
+  const current = TOUR[step] ?? TOUR[0];
+
+  return (
+    <GallerySection
+      id="overlays"
+      title="Dialog and coach mark"
+      description="Reference: 06-export-json (dialog, switch), 05-empty-deck-tour-1 (coach mark)."
+    >
+      <SampleRow label="dialog">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="primary">
+              <Download />
+              Export…
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-[820px]">
+            <DialogHeader>
+              <DialogTitle>Export deck</DialogTitle>
+              <DialogDescription>
+                Choose a format. Everything stays in this browser.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-caption text-ink-secondary">Format</span>
+                <Select defaultValue="json">
+                  <SelectTrigger aria-label="Format">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="json">JSON · .sododeck.json</SelectItem>
+                    <SelectItem value="png">PNG</SelectItem>
+                    <SelectItem value="svg">SVG</SelectItem>
+                    <SelectItem value="mermaid">Mermaid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 self-end pb-2">
+                <Switch id={notesId} defaultChecked />
+                <label htmlFor={notesId} className="text-body">
+                  Include notes and rules
+                </label>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button>Cancel</Button>
+              </DialogClose>
+              <Button variant="primary">Download</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </SampleRow>
+      <SampleRow label="coach mark">
+        <Button
+          onClick={() => {
+            setStep(0);
+            setTouring(true);
+          }}
+        >
+          Start 3-step tour
+        </Button>
+        <CoachMark
+          open={touring}
+          step={step + 1}
+          total={TOUR.length}
+          title={current?.title}
+          onNext={() => {
+            setStep((value) => Math.min(value + 1, TOUR.length - 1));
+          }}
+          onBack={() => {
+            setStep((value) => Math.max(value - 1, 0));
+          }}
+          onSkip={() => {
+            setTouring(false);
+          }}
+          onFinish={() => {
+            setTouring(false);
+          }}
+          anchor={
+            <CoachMarkAnchor asChild>
+              <span className="inline-flex items-center gap-2 rounded-card border border-dashed border-border px-3 py-2 text-body text-ink-secondary">
+                <Shapes className="size-4" strokeWidth={1.5} aria-hidden />
+                Palette (tour anchor)
+              </span>
+            </CoachMarkAnchor>
+          }
+        >
+          {current?.body}
+        </CoachMark>
+      </SampleRow>
+    </GallerySection>
+  );
+}

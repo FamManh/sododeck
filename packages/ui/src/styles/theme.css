@@ -97,6 +97,8 @@
   --text-group-label--font-weight: 500;
   --text-code: 12px;
   --text-code--line-height: 1.6;
+  --text-code-md: 12.5px;
+  --text-code-md--line-height: 1.55;
   --text-code-sm: 11.5px;
   --text-code-sm--line-height: 1.5;
   --text-edge-label: 10.5px;
@@ -110,10 +112,19 @@
   --radius-group: 16px;
   --radius-deck-card: 16px;
   --radius-modal: 20px;
+  --radius-segment: 7px;
+  --radius-row: 8px;
+  --radius-banner: 14px;
+
+  /* ── Motion: every plain `transition-*` utility uses the hover token (0 under reduced motion) ── */
+  --default-transition-duration: var(--sd-dur-hover);
+  --default-transition-timing-function: var(--sd-ease);
 
   /* ── Elevation ── */
   --shadow-rest: 0 1px 2px var(--sd-shadow);
   --shadow-float: 0 8px 28px var(--sd-shadow);
   --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.25);
   --shadow-selection: 0 0 0 3px var(--sd-primary-soft);
+  --shadow-hover: 0 4px 16px var(--sd-shadow);
+  --shadow-tour: 0 12px 32px var(--sd-shadow-tour);
 }

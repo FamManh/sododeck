@@ -7,7 +7,8 @@
     "./styles.css": "./src/styles/styles.css",
     "./tokens.css": "./src/styles/tokens.css",
     "./components/*": "./src/components/*.tsx",
-    "./lib/*": "./src/lib/*.ts"
+    "./lib/*": "./src/lib/*.ts",
+    "./hooks/*": "./src/hooks/*.ts"
   },
   "scripts": {
     "lint": "eslint .",
