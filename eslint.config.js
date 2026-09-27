@@ -11,6 +11,8 @@ export default [
       '.claude/**',
       '.agents/**',
       '.github/skills/**',
+      // Read-only copy of the Claude Design prototype; never linted or reformatted.
+      'docs/design/claude-design/**',
     ],
   },
   js.configs.recommended,
