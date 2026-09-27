@@ -11,7 +11,7 @@ import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
 import { InspectorFrame } from './inspector-frame';
 import { stepRoute } from './session-path';
-import { TextareaEdit } from './textarea-edit';
+import { TextareaEdit } from '../fields/textarea-edit';
 
 /**
  * Step inspector (FR-019, FR-027, designs 45–46): "Step n · <from> → <to>", then title,

@@ -18,7 +18,7 @@ import { FieldEdit } from '../field-edit';
 import { featureOf, moveToFeature } from './flow-order';
 import { startEditing } from './flow-session';
 import { InspectorFrame } from './inspector-frame';
-import { TextareaEdit } from './textarea-edit';
+import { TextareaEdit } from '../fields/textarea-edit';
 
 const NO_FEATURE = 'none';
 
