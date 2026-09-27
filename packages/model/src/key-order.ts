@@ -89,14 +89,22 @@ export function fileKeyOrder(): string[] {
   return shape.kind === 'object' ? shape.properties.map(([key]) => key) : [];
 }
 
+function propertyShape(shape: Shape | undefined, key: string): Shape | undefined {
+  return shape?.kind === 'object' ? shape.properties.find(([k]) => k === key)?.[1] : undefined;
+}
+
+/** `flows[].steps`, so a single step can be ordered like inside its flow (007). */
+function stepShape(): Shape | undefined {
+  const flows = propertyShape(rootShape(), 'flows');
+  return propertyShape(flows?.kind === 'array' ? flows.items : undefined, 'steps');
+}
+
 /**
  * Canonical key order for one entry of a top-level field: an item of a collection array, or a
- * value of the `rules` map. Lets incremental readers rebuild one object like `canonicalize` would.
+ * value of the `rules` map, or one flow step (`steps`). Lets incremental readers rebuild one object like `canonicalize` would.
  */
 export function canonicalizeEntry<T>(field: string, value: T): T {
-  const shape = rootShape();
-  const fieldShape =
-    shape.kind === 'object' ? shape.properties.find(([key]) => key === field)?.[1] : undefined;
+  const fieldShape = field === 'steps' ? stepShape() : propertyShape(rootShape(), field);
   if (fieldShape?.kind === 'array') return reorder(value, fieldShape.items) as T;
   if (fieldShape?.kind === 'map') return reorder(value, fieldShape.value) as T;
   return value;

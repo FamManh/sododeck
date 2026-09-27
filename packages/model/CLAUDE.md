@@ -22,6 +22,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - `src/rules/`: pure decision-table semantics. `parseCell(text)` → `Cell` (`any`, `compare`, `exact`, `list`, `invalid`), `matchCell(cell, input)`, `evaluateRule(rule, inputs)` → `Evaluation` (`match` / `ambiguous` (Unique with several matches: no winner) / `none`), `ruleChecks(rule)` → `{ catchAll, invalidCells }`, `ruleUsage(file, ruleId)` → steps (numbered by `analyzeFlow`, broken flagged) and nodes using a rule.
   - Editor ops (`src/ops/rule-links.ts`): `attachRule(host, ruleId)`, `detachRule(host, ruleId)` with `RuleHost = { kind: 'node', id } | { kind: 'step', flowId, stepId }`, and `setRuleInputs(flowId, stepId, ruleId, values)` (drops empty values; keyed, so typing merges into one undo step).
   - `RemovalTarget` gains `{ scope: 'rules', id }`.
+- **Added by 007** (flow playback):
+  - `serializeEntry('steps', step)`: one flow step in the canonical key order of `flows[].steps` (the JSON panel shows the current step in flow mode). `canonicalizeEntry('steps', value)` likewise.
 
 ## Rules
 

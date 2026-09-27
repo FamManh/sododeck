@@ -6,6 +6,7 @@ import { Ban, CircleAlert } from 'lucide-react';
 import { memo } from 'react';
 
 import type { DeckFlowEdge } from './deck-to-flow';
+import { FlowToken } from './flow-token';
 import type { EdgeBadge, EdgeFlowStyle } from './flows/flow-overlay';
 
 const DOT_RADIUS = 3;
@@ -47,7 +48,8 @@ function StepBadge({ badge }: { badge: EdgeBadge }) {
 /**
  * Connection (DESIGN.md: orthogonal routing, 8px corners, 3px end dot; designs 11, 12, 57).
  * Direction is shown by the dots: at the target (forward), at both ends (both), none (none).
- * A flow mark (006) draws step badges and the path, error, candidate, preview or invalid style.
+ * A flow mark (006) draws step badges and the path, error, candidate, preview or invalid style;
+ * in flow mode (007) the current step's edge is thicker, with a filled label and the token.
  */
 export const DeckEdge = memo(function DeckEdge({
   id,
@@ -84,6 +86,8 @@ export const DeckEdge = memo(function DeckEdge({
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
   const showFlowLabel = hasBadges || flowIcon !== null;
+  const current = flow?.current ?? null;
+  const width = selected ? 2.5 : current !== null ? 3 : (flowStroke?.width ?? 1.5);
 
   return (
     <>
@@ -105,7 +109,7 @@ export const DeckEdge = memo(function DeckEdge({
         className={cn(flow?.style === 'invalid' && !reducedMotion && 'sd-edge-flash')}
         style={{
           stroke,
-          strokeWidth: selected ? 2.5 : (flowStroke?.width ?? 1.5),
+          strokeWidth: width,
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
         }}
       />
@@ -119,6 +123,7 @@ export const DeckEdge = memo(function DeckEdge({
           fill={stroke}
         />
       ))}
+      {current !== null && <FlowToken path={path} x={labelX} y={labelY} speed={current.speed} />}
       {(showLabel || selected || flow !== undefined) && (
         <EdgeLabelRenderer>
           {/* Anchor for the edge and invalid-click popovers, at the label point. */}
@@ -131,17 +136,28 @@ export const DeckEdge = memo(function DeckEdge({
             <span
               data-testid="edge-label"
               data-flow-style={flow?.style}
+              data-in-flow={flow?.inPath === true ? '' : undefined}
+              data-current={current !== null ? '' : undefined}
+              // The current step without color: filled label, token, and this for AT (007 FR-024).
+              aria-current={current !== null ? 'step' : undefined}
               className={cn(
                 'nodrag nopan absolute flex items-center gap-1 rounded-full border bg-surface py-0.5 font-mono text-edge-label whitespace-nowrap',
                 // A flow mark lets clicks through to the edge, so recording works on the label.
                 flow === undefined ? 'pointer-events-auto' : 'pointer-events-none',
                 showLabel ? 'pr-2' : 'pr-0.5',
                 hasBadges || flowIcon !== null ? 'pl-0.5' : 'pl-2',
-                selected || flow?.style === 'path' || flow?.style === 'preview'
-                  ? 'border-primary text-primary-ink'
-                  : flow?.style === 'error' || flow?.style === 'invalid'
-                    ? 'border-dashed border-clay-ink text-clay-ink'
-                    : 'border-border text-ink-secondary',
+                current !== null
+                  ? cn(
+                      'text-on-primary',
+                      flow?.style === 'error'
+                        ? 'border-dashed border-clay-ink bg-clay-ink'
+                        : 'border-primary bg-primary',
+                    )
+                  : selected || flow?.style === 'path' || flow?.style === 'preview'
+                    ? 'border-primary text-primary-ink'
+                    : flow?.style === 'error' || flow?.style === 'invalid'
+                      ? 'border-dashed border-clay-ink text-clay-ink'
+                      : 'border-border text-ink-secondary',
               )}
               style={{
                 transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,

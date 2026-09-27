@@ -15,6 +15,7 @@ import type { SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useUiStore, type FlowSession } from '../../state/ui-store';
+import { openFlow } from './flow-mode';
 import { recordEdge, type RecordResult } from './record-edge';
 import { findFlow, nodeTitle, sessionPath } from './session-path';
 
@@ -146,7 +147,7 @@ export function finish(editor: DeckEditor): string | null {
   const count = flow?.steps.length ?? 0;
   const title = flow?.title ?? session.pendingTitle;
   ui().endSession();
-  ui().setActiveFlow(session.flowId);
+  openFlow(editor, session.flowId, null, { announce: false });
   ui().announce(`Saved flow ‘${title}’`);
   return `Saved flow ‘${title}’ · ${String(count)} ${count === 1 ? 'step' : 'steps'}`;
 }
@@ -168,8 +169,8 @@ export function cancel(editor: DeckEditor): void {
   const flow = findFlow(deck, session.flowId);
   if (session.mode === 'record') {
     if (flow !== undefined) editor.remove('flows', flow.id);
-    ui().endSession();
     ui().setActiveFlow(null);
+    ui().endSession();
     ui().announce('Recording cancelled');
     return;
   }
@@ -177,7 +178,8 @@ export function cancel(editor: DeckEditor): void {
     editor.restoreFlowStructure(flow.id, session.checkpoint);
   }
   ui().endSession();
-  ui().setActiveFlow(flow?.id ?? null);
+  if (flow === undefined) ui().setActiveFlow(null);
+  else openFlow(editor, flow.id, null, { announce: false });
   ui().announce('Editing cancelled');
 }
 

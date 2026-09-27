@@ -2,7 +2,13 @@ import { analyzeFlow } from '@sododeck/model';
 import type { Flow } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { branchedDeck, branchedFlow, flowDeck, session } from '../../test/flow-fixtures';
+import {
+  branchedDeck,
+  branchedFlow,
+  flowDeck,
+  playbackDeck,
+  session,
+} from '../../test/flow-fixtures';
 import { flowOverlay } from './flow-overlay';
 
 const place = flowDeck.flows[0] as Flow;
@@ -86,5 +92,59 @@ describe('flowOverlay', () => {
     const s = session({ flowId: 'pay', target: { kind: 'branch', branchId: 'fail' } });
     const overlay = flowOverlay(branchedDeck, analysisOf(branchedFlow), s, null);
     expect(overlay.nodes.get('x')).toEqual({ startsHere: 'Step 4b starts here' });
+  });
+});
+
+describe('flowOverlay in flow mode (007)', () => {
+  const fork = playbackDeck.flows.find((f) => f.id === 'fork') as Flow;
+  const forkAnalysis = analyzeFlow(fork, playbackDeck.edges);
+  const playback = (stepId: string, speed: 1 | 2 = 1) => ({
+    played: new Set(['f1', 'f2', 'f3', 'f4a', 'f5a']),
+    currentStepId: stepId,
+    speed,
+  });
+
+  it('marks played edges and nodes, the current edge and its nodes', () => {
+    const overlay = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f2', playback('f2', 2));
+    expect(overlay.edges.get('bc')).toMatchObject({ inPath: true, current: { speed: 2 } });
+    expect(overlay.edges.get('ab')).toMatchObject({ inPath: true, current: null });
+    expect(overlay.nodes.get('b')).toEqual({ inPath: true, currentStep: true });
+    expect(overlay.nodes.get('c')).toEqual({ inPath: true, currentStep: true });
+    expect(overlay.nodes.get('a')).toEqual({ inPath: true, currentStep: false });
+  });
+
+  it('keeps badges on the other alternative, outside the path', () => {
+    const overlay = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f2', playback('f2'));
+    expect(overlay.edges.get('xn')).toMatchObject({
+      inPath: false,
+      current: null,
+      badges: [{ label: '4b', errorPath: true }],
+    });
+    expect(overlay.nodes.has('n')).toBe(false);
+  });
+
+  it('marks nothing for a broken step', () => {
+    const broken = playbackDeck.flows.find((f) => f.id === 'broken') as Flow;
+    const overlay = flowOverlay(
+      playbackDeck,
+      analyzeFlow(broken, playbackDeck.edges),
+      null,
+      null,
+      'k2',
+      { played: new Set(['k1', 'k2', 'k3']), currentStepId: 'k2', speed: 1 },
+    );
+    expect(overlay.edges.has('gone')).toBe(false);
+    expect([...overlay.edges.values()].some((m) => m.current !== null)).toBe(false);
+    expect([...overlay.nodes.values()].some((m) => m.currentStep === true)).toBe(false);
+  });
+
+  it('gives exactly the 006 marks without playback', () => {
+    const overlay = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f2', null);
+    expect(overlay.edges.get('bc')).toEqual({
+      badges: [{ label: '2', errorPath: false, current: true, chainBreak: false }],
+      style: 'path',
+      errorIcon: false,
+    });
+    expect(overlay.nodes.size).toBe(0);
   });
 });

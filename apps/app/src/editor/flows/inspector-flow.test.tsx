@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { renderFlows } from '../../test/render-flows';
+import { startEditing } from './flow-session';
 
 const inspector = () => screen.getByRole('complementary', { name: 'Inspector' });
 
@@ -16,9 +17,10 @@ describe('InspectorFlow (US3, FR-003)', () => {
         ...flowDeck.features.slice(1),
       ],
     };
-    const { user, ui, doc, editor } = renderFlows(withOwners);
+    const { user, doc, editor } = renderFlows(withOwners);
+    // Flow mode shows the current step (007); the flow's fields show while editing its steps.
     act(() => {
-      ui().setActiveFlow('place');
+      startEditing(editor(), 'place');
     });
     expect(screen.getByRole('heading', { name: 'Place order' })).toBeInTheDocument();
     const title = screen.getByRole('textbox', { name: 'Title' });
@@ -52,9 +54,9 @@ describe('InspectorFlow (US3, FR-003)', () => {
       ...branchedDeck,
       edges: branchedDeck.edges.filter((e) => e.id !== 'cx'),
     };
-    const { user, ui, doc } = renderFlows(broken);
+    const { user, doc, editor } = renderFlows(broken);
     act(() => {
-      ui().setActiveFlow('pay');
+      startEditing(editor(), 'pay');
     });
     expect(screen.getByText('4 steps · 2 branches · 4 components')).toBeInTheDocument();
     expect(screen.getByText(/1 broken step/)).toBeInTheDocument();
@@ -75,13 +77,13 @@ describe('InspectorFlow (US3, FR-003)', () => {
     });
   });
 
-  it('shows the feature select and "Edit steps"', async () => {
+  it('shows the feature select and "Edit steps" for a flow without steps in flow mode', async () => {
     const { user, ui } = renderFlows(flowDeck);
     act(() => {
-      ui().setActiveFlow('loose');
+      ui().setActiveFlow('assign');
     });
-    expect(screen.getByRole('combobox', { name: 'Feature' })).toHaveTextContent('No feature');
+    expect(screen.getByRole('combobox', { name: 'Feature' })).toHaveTextContent('Delivery');
     await user.click(screen.getAllByRole('button', { name: 'Edit steps' })[0] as HTMLElement);
-    expect(ui().flowSession).toMatchObject({ mode: 'edit', flowId: 'loose' });
+    expect(ui().flowSession).toMatchObject({ mode: 'edit', flowId: 'assign' });
   });
 });

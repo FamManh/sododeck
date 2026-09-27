@@ -6,7 +6,8 @@
 import { canonicalizeEntry } from './key-order';
 import type { Collection } from './layout';
 
-export type EntryCollection = Collection | 'rules';
+/** A top-level collection, the `rules` map, or `steps` (an item of `flows[].steps`, 007). */
+export type EntryCollection = Collection | 'rules' | 'steps';
 
 export interface Entry {
   collection: EntryCollection;

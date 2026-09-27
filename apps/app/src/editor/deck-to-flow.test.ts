@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EMPTY_SELECTION } from '../state/ui-store';
 import { facingSides, toFlowEdges, toFlowNodes } from './deck-to-flow';
-import type { EdgeFlowMark } from './flows/flow-overlay';
+import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
 
 const deck: SododeckFile = {
   ...emptySododeckFile(),
@@ -159,5 +159,57 @@ describe('flow overlay (006)', () => {
     const other = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('2')]]));
     expect(other[0]).not.toBe(first[0]);
     expect(other[1]).toBe(first[1]);
+  });
+});
+
+describe('flow mode marks (007)', () => {
+  const chain: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: ['a', 'b', 'c', 'd'].map((id) => ({ id, type: 'service', title: id.toUpperCase() })),
+    edges: [
+      { id: 'ab', from: 'a', to: 'b' },
+      { id: 'bc', from: 'b', to: 'c' },
+      { id: 'cd', from: 'c', to: 'd' },
+    ],
+  };
+  const edge = (inPath: boolean, current: boolean): EdgeFlowMark => ({
+    badges: [{ label: '1', errorPath: false, current, chainBreak: false }],
+    style: 'path',
+    errorIcon: false,
+    inPath,
+    current: current ? { speed: 1 } : null,
+  });
+  /** Steps ab, bc played (cd off path), `current` the current edge. */
+  const overlay = (current: 'ab' | 'bc'): FlowOverlay => {
+    const node = (id: string): NodeFlowMark => ({
+      inPath: true,
+      currentStep: current === 'ab' ? id !== 'c' : id !== 'a',
+    });
+    return {
+      edges: new Map([
+        ['ab', edge(true, current === 'ab')],
+        ['bc', edge(true, current === 'bc')],
+        ['cd', edge(false, false)],
+      ]),
+      nodes: new Map(['a', 'b', 'c'].map((id) => [id, node(id)])),
+    };
+  };
+
+  it('sets in-flow on members only and carries the current step to nodes', () => {
+    const nodes = toFlowNodes(chain, EMPTY_SELECTION, null, overlay('ab'));
+    expect(nodes.map((n) => n.className)).toEqual(['in-flow', 'in-flow', 'in-flow', undefined]);
+    expect(nodes.map((n) => n.data.currentStep === true)).toEqual([true, true, false, false]);
+    const edges = toFlowEdges(chain, EMPTY_SELECTION, false, null, overlay('ab'));
+    expect(edges.map((e) => e.className)).toEqual(['in-flow', 'in-flow', undefined]);
+  });
+
+  it('rebuilds only the old and new current edges and their nodes', () => {
+    const nodes = toFlowNodes(chain, EMPTY_SELECTION, null, overlay('ab'));
+    const edges = toFlowEdges(chain, EMPTY_SELECTION, false, null, overlay('ab'));
+    const nextNodes = toFlowNodes(chain, EMPTY_SELECTION, null, overlay('bc'));
+    const nextEdges = toFlowEdges(chain, EMPTY_SELECTION, false, null, overlay('bc'));
+    expect(nextEdges.map((e, i) => e === edges[i])).toEqual([false, false, true]);
+    // a leaves the step, c joins it, b stays in it, d is untouched.
+    expect(nextNodes.map((n, i) => n === nodes[i])).toEqual([false, true, false, true]);
   });
 });

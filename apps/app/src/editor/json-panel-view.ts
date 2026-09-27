@@ -2,11 +2,12 @@
  * Pure view models of the JSON panel (004 data-model.md). All text comes from `@sododeck/model`;
  * the app never serializes deck data itself (constitution II).
  */
-import { serializeEntries, serializeEntry, type Entry } from '@sododeck/model';
+import { analyzeFlow, serializeEntries, serializeEntry, type Entry } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { JsonTab } from '../state/json-panel-prefs';
 import type { ActiveFlow, Selection } from '../state/ui-store';
+import { currentOf, playedPath } from './flows/played-path';
 
 export interface SelectionView {
   /** Visible tab label (truncated with CSS). */
@@ -29,14 +30,31 @@ export function lineCountLabel(count: number): string {
 
 /**
  * What the Selection tab shows and how it is labelled (research R9, clarification Q1). A shown flow
- * (006) shows its whole entry, labelled "Flow", or "Step" while a step or branch is selected.
+ * (006) shows its whole entry, labelled "Flow", or "Step" while a step or branch is selected. In
+ * flow mode (007 FR-022) it shows the current step's own entry, labelled "Step <number>".
  */
 export function selectionView(
   deck: SododeckFile,
   selection: Selection,
   activeFlow: ActiveFlow = null,
+  flowMode = false,
 ): SelectionView {
   const flow = activeFlow === null ? undefined : deck.flows.find((f) => f.id === activeFlow.flowId);
+  if (flow !== undefined && flowMode && activeFlow?.branchId == null) {
+    const analysis = analyzeFlow(flow, deck.edges);
+    const current = currentOf(
+      playedPath(analysis, activeFlow?.alternativeId ?? null),
+      activeFlow?.stepId ?? null,
+    );
+    if (current !== null) {
+      const label = `Step ${current.number}`;
+      return {
+        label,
+        fullLabel: `${label}: ${flow.title}`,
+        entries: [{ collection: 'steps', value: current.step }],
+      };
+    }
+  }
   if (flow !== undefined) {
     const label = activeFlow?.stepId != null || activeFlow?.branchId != null ? 'Step' : 'Flow';
     return {

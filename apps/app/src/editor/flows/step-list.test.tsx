@@ -2,9 +2,10 @@ import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
+import { branchedDeck, flowDeck, playbackDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
 import { announced, renderFlows } from '../../test/render-flows';
+import { openFlow } from './flow-mode';
 import { recordClick, startEditing, startNewFlow } from './flow-session';
 
 const steps = () => screen.getByRole('list', { name: 'Steps' });
@@ -227,5 +228,23 @@ describe('broken steps (US5, clarification Q2)', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Remove step 1' }));
     expect(toJSON(doc).flows[0]?.steps.map((s) => s.id)).toEqual(['s2']);
+  });
+});
+
+describe('StepList in flow mode (007)', () => {
+  it('marks only the current row; rows of the unplayed alternative stay unmarked', () => {
+    const { editor } = renderFlows(playbackDeck);
+    act(() => {
+      openFlow(editor(), 'fork', 'f5a');
+    });
+    const current = within(steps())
+      .getAllByRole('button', { name: /^Step / })
+      .filter((b) => b.getAttribute('aria-current') === 'step');
+    expect(current).toHaveLength(1);
+    expect(current[0]?.textContent).toContain('5a');
+    for (const number of ['4b', '5b']) {
+      const row = within(steps()).getByRole('button', { name: new RegExp(`^Step ${number}\\b`) });
+      expect(row).not.toHaveAttribute('aria-current');
+    }
   });
 });

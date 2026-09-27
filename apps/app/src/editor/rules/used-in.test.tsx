@@ -33,9 +33,9 @@ describe('UsedIn (story 6, FR-028)', () => {
     const { user, path, ui } = renderRules(ruleDeck, '/deck/d/rules/T');
     await user.click(within(usedIn()).getByRole('button', { name: /^Assign driver · Step 2/ }));
     expect(path()).toBe('/deck/d');
-    expect(ui().activeFlow).toEqual({ flowId: 'assign', stepId: 'a2', branchId: null });
+    expect(ui().activeFlow).toMatchObject({ flowId: 'assign', stepId: 'a2', branchId: null });
     expect(
-      screen.getByRole('heading', { name: /^Step 2 · Dispatch Service → Route Optimizer/ }),
+      screen.getByRole('heading', { name: 'Step 2 of 2 · Assign driver' }),
     ).toBeInTheDocument();
 
     const again = renderRules(ruleDeck, '/deck/d/rules/T');

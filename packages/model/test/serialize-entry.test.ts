@@ -45,6 +45,7 @@ function fileSlices(text: string, field: EntryCollection): string[] {
 }
 
 function entriesOf(file: SododeckFile, field: EntryCollection): unknown[] {
+  if (field === 'steps') return file.flows.flatMap((flow) => flow.steps);
   return field === 'rules' ? Object.values(file.rules) : file[field];
 }
 
@@ -106,5 +107,65 @@ describe('serializeEntries', () => {
     const canonical = canonicalize({ nodes: [a, b], edges: [e] });
     expect(text).toBe(JSON.stringify([...canonical.nodes, ...canonical.edges], null, 2));
     expect(text.endsWith('\n')).toBe(false);
+  });
+});
+
+/** Text of every flow step in the file: the items of each `"steps": [` at 8-space nesting. */
+function stepSlices(text: string): string[] {
+  const slices: string[] = [];
+  let inSteps = false;
+  let current: string[] | null = null;
+  for (const line of text.split('\n')) {
+    if (!inSteps) {
+      if (line === '      "steps": [') inSteps = true;
+      continue;
+    }
+    if (current === null) {
+      if (/^ {6}\],?$/.test(line)) {
+        inSteps = false;
+        continue;
+      }
+      current = [line.slice(8)];
+    } else if (/^ {8}\},?$/.test(line)) {
+      current.push('}');
+      slices.push(current.join('\n'));
+      current = null;
+    } else {
+      current.push(line.slice(8));
+    }
+  }
+  return slices;
+}
+
+describe("serializeEntry('steps')", () => {
+  for (const [name, file] of fixtures) {
+    const steps = file.flows.flatMap((flow) => flow.steps);
+    if (steps.length === 0) continue;
+    it(`equals each step's slice of the ${name} file`, () => {
+      expect(steps.map((step) => serializeEntry('steps', step))).toEqual(
+        stepSlices(serializeDeck(file)),
+      );
+    });
+  }
+
+  it('covers branch steps, rules and rule inputs', () => {
+    const full = fixtures.find(([name]) => name === 'full')?.[1];
+    const steps = full?.flows.flatMap((flow) => flow.steps) ?? [];
+    expect(steps.some((s) => s.branch !== undefined)).toBe(true);
+    expect(steps.some((s) => s.rules !== undefined)).toBe(true);
+    expect(steps.some((s) => s.ruleInputs !== undefined)).toBe(true);
+  });
+
+  it('writes a minimal step as id then edge', () => {
+    expect(serializeEntry('steps', { edge: 'e1', id: 's1' })).toBe(
+      JSON.stringify({ id: 's1', edge: 'e1' }, null, 2),
+    );
+  });
+
+  it('works inside serializeEntries', () => {
+    const step = { title: 'Pay', edge: 'e1', id: 's1' };
+    expect(serializeEntries([{ collection: 'steps', value: step }])).toBe(
+      JSON.stringify([{ id: 's1', edge: 'e1', title: 'Pay' }], null, 2),
+    );
   });
 });

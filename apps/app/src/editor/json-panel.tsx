@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } 
 import { supportsResizeObserver } from '../lib/features';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
-import { useUiStore } from '../state/ui-store';
+import { isFlowMode, useUiStore } from '../state/ui-store';
 import { createCooldown } from './cooldown';
 import { JsonPanelHeader } from './json-panel-header';
 import { selectionText, selectionView } from './json-panel-view';
@@ -58,6 +58,7 @@ export function JsonPanel() {
   const { open, height, tab } = useUiStore((state) => state.jsonPanel);
   const selection = useUiStore((state) => state.selection);
   const activeFlow = useUiStore((state) => state.activeFlow);
+  const flowMode = useUiStore(isFlowMode);
   const setJsonTab = useUiStore((state) => state.setJsonTab);
   const setJsonPanelOpen = useUiStore((state) => state.setJsonPanelOpen);
   const setJsonPanelHeight = useUiStore((state) => state.setJsonPanelHeight);
@@ -67,8 +68,8 @@ export function JsonPanel() {
   const deckText = useThrottledDeckText(deck, open && tab === 'deck');
   // The label follows the selection even on the Deck tab; the text is built only when shown.
   const view = useMemo(
-    () => selectionView(deck, selection, activeFlow),
-    [deck, selection, activeFlow],
+    () => selectionView(deck, selection, activeFlow, flowMode),
+    [deck, selection, activeFlow, flowMode],
   );
   const showSelection = open && tab === 'selection';
   const text = showSelection ? selectionText(view.entries) : tab === 'deck' ? deckText : '';

@@ -51,6 +51,7 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
       aria-label={name}
       aria-selected={selected}
       aria-description={selected ? 'Selected' : undefined}
+      aria-current={data.currentStep === true ? 'step' : undefined}
       tabIndex={tabIndex}
       title={data.title}
       style={NODE_SIZE}
@@ -59,6 +60,8 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
         focusRing,
         // Selected: border + halo + ring (DESIGN.md), so it is never color-only.
         selected && 'border-primary shadow-selection ring-1 ring-primary',
+        // From or to of the current flow step (007 FR-005): the selection ring and halo.
+        data.currentStep === true && 'border-primary shadow-selection ring-1 ring-primary',
         target === 'ok' && 'outline-2 outline-offset-4 outline-primary outline-dashed',
         refusal && 'outline-2 outline-offset-4 outline-clay-ink outline-dashed',
         // Where the next flow step must start (006 FR-009): a ring plus the tag text.
