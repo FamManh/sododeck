@@ -153,8 +153,8 @@ story uses. No story work starts before this phase is done.
       `apps/app/src/state/ui-store.ts` per data-model §3:
   - `activeFlow`: `setActiveFlow`, `setActiveStep`, `setActiveBranch`. Selecting one clears the
     node and edge selection, and `select` clears `activeFlow`.
-  - `flowSession` and its actions: `startRecording(title, featureId)`, `startEditing(flowId,
-checkpoint)`, `setSessionFlow`, `pushRecorded`, `popRecorded`, `setTarget`,
+  - `flowSession` and its actions: `startRecording(title, featureId)`,
+    `startEditing(flowId, checkpoint)`, `setSessionFlow`, `pushRecorded`, `popRecorded`, `setTarget`,
     `setAddingBranch`, `setInvalid`, `setCandidate`, `endSession`.
   - `hoverEdgeId` / `setHoverEdge`, and `flowFilter` / `setFlowFilter`.
   - Widen `pendingDelete` to `{ targets: RemovalTarget[] } | null`, and keep
@@ -173,8 +173,9 @@ checkpoint)`, `setSessionFlow`, `pushRecorded`, `popRecorded`, `setTarget`,
     deleted".
   - Mount it in `EditorLayout` in `apps/app/src/routes/editor-page.tsx`.
 - [ ] T016 [P] Create `apps/app/src/editor/flows/flow-overlay.ts` (+ `flow-overlay.test.ts`),
-      pure: `flowOverlay(deck, analysis, session, hoverEdgeId) → { edges: Map<Id, EdgeFlowMark>,
-  nodes: Map<Id, NodeFlowMark> }`.
+      pure:
+      `flowOverlay(deck, analysis, session, hoverEdgeId)`, returning
+      `{ edges: Map<Id, EdgeFlowMark>, nodes: Map<Id, NodeFlowMark> }`.
   - `EdgeFlowMark`:
     - `badges: {label, errorPath, current}[]` (one per step using the edge)
     - `style: 'path' | 'error' | 'candidate' | 'preview' | 'invalid'`
@@ -227,8 +228,8 @@ panel (spec US1 scenarios 1–7).
 
 ### Tests for User Story 1 (write first, must fail)
 
-- [ ] T019 [P] [US1] `apps/app/src/editor/flows/record-edge.test.ts`: `recordEdge(deck, session,
-  edgeId)` returns one of:
+- [ ] T019 [P] [US1] `apps/app/src/editor/flows/record-edge.test.ts`: `recordEdge(deck, session, edgeId)`
+      returns one of:
   - `{ kind: 'create', title, featureId, edge }` for the first click of a new flow
   - `{ kind: 'append', branchId | null, edge }` when `edge.from` equals the next start (self-loops
     allowed; an edge already used earlier is allowed)
@@ -317,8 +318,8 @@ and Enter only (spec US2 scenarios 1, 3, 4; scenario 2's "Add as branch" is wire
 
 ### Tests for User Story 2 (write first, must fail)
 
-- [ ] T032 [P] [US2] `apps/app/src/editor/flows/candidate-edges.test.ts`: `candidateEdges(deck,
-  analysis, target)` returns:
+- [ ] T032 [P] [US2] `apps/app/src/editor/flows/candidate-edges.test.ts`: `candidateEdges(deck, analysis, target)`
+      returns:
   - all edges in reading order (source node y, then x) for step 1
   - the next start node's outgoing edges afterwards
   - an empty list when the node has no outgoing edges
