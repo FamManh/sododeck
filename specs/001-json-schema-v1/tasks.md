@@ -127,7 +127,7 @@ pnpm monorepo. Paths are repo-relative: `packages/schema/…`, `packages/model/�
 
 **Independent Test**: quickstart.md §1 staleness demo.
 
-- [ ] T034 [US4] Verify the existing staleness check (research R8): make a temporary description edit in `packages/schema/schema/v1.json`, run `pnpm --filter @sododeck/schema test`, confirm it fails with "Out of date … Run `pnpm schema:generate`", then revert and confirm green. Also confirm root `pnpm test` (turbo) runs the schema package `test` script. No code change unless the check does not trigger; record the result in the final report
+- [x] T034 [US4] Verify the existing staleness check (research R8): make a temporary description edit in `packages/schema/schema/v1.json`, run `pnpm --filter @sododeck/schema test`, confirm it fails with "Out of date … Run `pnpm schema:generate`", then revert and confirm green. Also confirm root `pnpm test` (turbo) runs the schema package `test` script. No code change unless the check does not trigger; record the result in the final report
 
 **Checkpoint**: All stories green.
 
@@ -135,13 +135,13 @@ pnpm monorepo. Paths are repo-relative: `packages/schema/…`, `packages/model/�
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T035 [P] Write `docs/decisions/0004-schema-v1-shape.md` (ADR format like 0002): node kinds (closed 6, spec names), protocol families (specifics in label), positions on node + per-view overrides, group geometry derived, structured decision tables with column/row ids, `rules[]` lists, step `ruleInputs`, id pattern, branches deferred to 006, semantic rules S1–S3 and why (generator gaps, no custom keywords), no `default`, enum-widening trade-off (older builds reject newer values)
-- [ ] T036 [P] Update `docs/spec.md` §6: schema URL → `https://sododeck.com/schema/v1.json`; rewrite the JSON example to valid v1 (node with `type`+`title`, edge `protocol: "event"`, step with `id`, rule as structured table with `hitPolicy`/`inputs`/`outputs`/`rows`, sticky with `id`); validate it with quickstart.md §3 by pasting into a temp file under the scratchpad (not committed)
-- [ ] T037 [P] Update `packages/schema/CLAUDE.md`: remove the skeleton TODO in "Status" (v1 complete; branches come in 006), document `checkSemanticRules`/`Issue` in the public API line, and add the generator notes (no `default`/`format`, `anyOf` presence rules stripped for generators, `propertyNames` not enforced by Zod → S3)
-- [ ] T038 [P] Update `packages/model/CLAUDE.md` only where text changed (envelope `name`/`description`/`tags` stored in `meta`); leave its M1 TODOs for 002
-- [ ] T039 Run quickstart.md §2–§4 (incl. Monaco hover/autocomplete check in `pnpm dev`: hovering `hitPolicy` shows its description; `"protocol": "` suggests the six values). Screenshot the hover for the report
-- [ ] T040 Run the full gates `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` (smoke suite incl. no third-party requests must pass; no new e2e). Run `pnpm format` first. Commit `docs: add ADR 0004 and align spec §6 with schema v1`
-- [ ] T041 Final report (AGENTS.md "How to work" §5): what changed, decisions, baseline vs final gate results, SC-007 review outcome, what was skipped (branches → 006; referential integrity → 002/015), what is uncertain; propose next step `002-yjs-model`. Stop — do not start 002
+- [x] T035 [P] Write `docs/decisions/0004-schema-v1-shape.md` (ADR format like 0002): node kinds (closed 6, spec names), protocol families (specifics in label), positions on node + per-view overrides, group geometry derived, structured decision tables with column/row ids, `rules[]` lists, step `ruleInputs`, id pattern, branches deferred to 006, semantic rules S1–S3 and why (generator gaps, no custom keywords), no `default`, enum-widening trade-off (older builds reject newer values)
+- [x] T036 [P] Update `docs/spec.md` §6: schema URL → `https://sododeck.com/schema/v1.json`; rewrite the JSON example to valid v1 (node with `type`+`title`, edge `protocol: "event"`, step with `id`, rule as structured table with `hitPolicy`/`inputs`/`outputs`/`rows`, sticky with `id`); validate it with quickstart.md §3 by pasting into a temp file under the scratchpad (not committed)
+- [x] T037 [P] Update `packages/schema/CLAUDE.md`: remove the skeleton TODO in "Status" (v1 complete; branches come in 006), document `checkSemanticRules`/`Issue` in the public API line, and add the generator notes (no `default`/`format`, `anyOf` presence rules stripped for generators, `propertyNames` not enforced by Zod → S3)
+- [x] T038 [P] Update `packages/model/CLAUDE.md` only where text changed (envelope `name`/`description`/`tags` stored in `meta`); leave its M1 TODOs for 002
+- [x] T039 Run quickstart.md §2–§4 (incl. Monaco hover/autocomplete check in `pnpm dev`: hovering `hitPolicy` shows its description; `"protocol": "` suggests the six values). Screenshot the hover for the report
+- [x] T040 Run the full gates `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` (smoke suite incl. no third-party requests must pass; no new e2e). Run `pnpm format` first. Commit `docs: add ADR 0004 and align spec §6 with schema v1`
+- [x] T041 Final report (AGENTS.md "How to work" §5): what changed, decisions, baseline vs final gate results, SC-007 review outcome, what was skipped (branches → 006; referential integrity → 002/015), what is uncertain; propose next step `002-yjs-model`. Stop — do not start 002
 
 ---
 

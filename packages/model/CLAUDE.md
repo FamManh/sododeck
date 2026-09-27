@@ -4,7 +4,7 @@
 
 - `createDeck()` → empty `Y.Doc`.
 - `fromJSON(input)` → validates with `@sododeck/schema`, returns a new `Y.Doc`. Throws `DeckValidationError`.
-- `toJSON(doc)` → plain `SododeckFile` with canonical top-level key order.
+- `toJSON(doc)` → plain `SododeckFile` with canonical top-level key order. Optional deck `name`, `description`, `tags` live in the `meta` map and are emitted only when present.
 - `serializeDeck(file)` → string for save/export.
 
 ## Rules

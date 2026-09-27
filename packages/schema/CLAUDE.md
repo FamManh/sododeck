@@ -4,15 +4,26 @@
 
 - `schema/v1.json` — JSON Schema (draft 2020-12). **The source of truth.** Edit this file, never the generated code.
 - `src/generated/` — TS types (`json-schema-to-typescript`) and Zod validators (`json-schema-to-zod`), produced by `pnpm schema:generate`. Committed. `pnpm test` fails if they are stale.
-- `src/index.ts` — public API: types, `sododeckFileSchema`, `parseSododeckFile()`, `emptySododeckFile()`, `jsonSchema`, `SCHEMA_URL`.
-- `examples/` — valid example files. Every example is validated by both Ajv (against the JSON Schema) and Zod in tests.
+- `src/index.ts` — public API: types, `sododeckFileSchema`, `parseSododeckFile()`, `checkSemanticRules()`, `Issue`, `emptySododeckFile()`, `jsonSchema`, `SCHEMA_URL`.
+- `src/semantic-rules.ts` — rules the generated Zod cannot check: S1 decision-table rows have one cell per column, S2 a sticky has an anchor or a position, S3 map keys are ids. `parseSododeckFile()` runs them after Zod; Ajv users call `checkSemanticRules()` themselves.
+- `examples/` — `minimal`, `flow-and-rule`, `full` (uses every field and enum value; a coverage test enforces it).
+- `test/` — Ajv/Zod parity over examples and 60 invalid fixtures (`fixtures.ts`), lossless parse, key order, generator guards.
 
 ## Boundaries
 
 - No Yjs, no React, no browser APIs. Pure data definitions + validation.
 - Does not know about referential integrity (edge → node ids); that is `@sododeck/model`.
 - Local `$ref`s only (`#/$defs/...`), and no recursive refs: the Zod generator needs them inlined.
+- Field decisions (enums, positions, decision tables, ids): ADR 0004.
+
+## Editing `v1.json`
+
+- Declaration order of `properties` = the key order files are written in. Tests check examples against it.
+- Every property gets a `description` (Monaco hover help).
+- No `default` (Zod would inject values and break the lossless round-trip) and no `format` keyword. State defaults in the description.
+- The generator strips `anyOf` presence rules (both generators mishandle them) and keys next to `$ref` (they make json-schema-to-typescript emit `Id1`, `Text2`… aliases). `propertyNames` is ignored by the Zod generator. Anything the generators drop must be re-checked in `semantic-rules.ts` and covered by an invalid fixture.
+- New field or type → extend `examples/full.sododeck.json` (coverage test), add invalid fixtures, run `pnpm schema:generate`, and add a round-trip case in `packages/model/test`.
 
 ## Status
 
-TODO(schema-v1): the schema is a skeleton (every object is `{ id, ...anything }`). The full schema is a separate task; when it lands, add fixtures for each object type and keep the Ajv/Zod parity test.
+v1 complete (feature 001). Step branches are deferred to 006 (an optional field, no version bump).

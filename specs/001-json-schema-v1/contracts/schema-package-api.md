@@ -28,8 +28,8 @@ Package `exports` stay as they are (`.`, `./v1.json`, `./examples/*`).
 - **Parity**: for every input, `parseSododeckFile(x).success === (ajv(jsonSchema)(x) && checkSemanticRules(x).length === 0)`.
   Tested over all examples and invalid fixtures.
 - **Lossless**: on success, `data` deep-equals the input (no defaults, no coercion, no stripping).
-- **Messages**: every issue has a non-empty `path` pointing at the offending value (or its parent
-  object for unknown keys, with the key named in the message) and a readable `message`. Enum issues
+- **Messages**: every issue has a `path` pointing at the offending value (or its parent
+  object for unknown keys, with the key named in the message; `''` for the file root) and a readable `message`. Enum issues
   list the allowed values; semantic issues name the rule and row ids.
 - **Not guaranteed here**: unique ids and resolving references (002 / 015).
 
