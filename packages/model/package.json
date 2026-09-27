@@ -1,0 +1,25 @@
+{
+  "name": "@sododeck/model",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@sododeck/schema": "workspace:*",
+    "yjs": "^13.6.33"
+  },
+  "devDependencies": {
+    "@sododeck/config": "workspace:*",
+    "@types/node": "^24.19.0",
+    "eslint": "^10.11.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
+  }
+}

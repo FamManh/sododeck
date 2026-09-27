@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+interface PostModule {
+  frontmatter: { title: string; description?: string; date: string };
+  url: string;
+}
+
+const posts = Object.values(import.meta.glob<PostModule>('./*.mdx', { eager: true })).sort((a, b) =>
+  b.frontmatter.date.localeCompare(a.frontmatter.date),
+);
+---
+
+<BaseLayout title="Blog">
+  <h1 class="mb-6 text-display">Blog</h1>
+  <ul class="flex flex-col gap-4">
+    {posts.map((post) => (
+      <li>
+        <a
+          href={post.url}
+          class="flex flex-col gap-0.5 rounded-card border border-hairline bg-surface p-4 hover:bg-surface-2"
+        >
+          <span class="text-title-sm text-ink">{post.frontmatter.title}</span>
+          <span class="font-mono text-caption text-ink-muted">{post.frontmatter.date}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

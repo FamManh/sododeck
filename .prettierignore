@@ -1,0 +1,18 @@
+pnpm-lock.yaml
+dist/
+.astro/
+.turbo/
+coverage/
+test-results/
+playwright-report/
+apps/app/bench/results/
+packages/schema/src/generated/
+# Pre-existing, owned outside this repo's tooling
+.specify/
+.claude/
+.agents/
+.github/skills/
+docs/spec.md
+docs/sododeck-idea.md
+docs/video/
+DESIGN.md

@@ -1,0 +1,32 @@
+@import 'tailwindcss';
+@import '@sododeck/ui/styles.css';
+
+@source '../../../../packages/ui/src';
+
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+  }
+}
+
+/* Minimal prose styles for MDX docs/blog. TODO: replace with the real docs design. */
+@layer components {
+  .prose {
+    @apply flex max-w-2xl flex-col gap-4 text-[15px] leading-7 text-ink-secondary;
+  }
+  .prose h1 {
+    @apply text-display text-ink;
+  }
+  .prose h2 {
+    @apply mt-4 text-title-lg text-ink;
+  }
+  .prose a {
+    @apply text-primary-ink underline underline-offset-2;
+  }
+  .prose code {
+    @apply rounded bg-code px-1 font-mono text-code-sm;
+  }
+  .prose ul {
+    @apply list-disc pl-5;
+  }
+}

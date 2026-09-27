@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sododeck.com/schema/v1.json",
+  "title": "SododeckFile",
+  "description": "A Sododeck deck file (.sododeck.json), format version 1. TODO(schema-v1): this is a skeleton; the full schema is written in a separate task.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "version",
+    "nodes",
+    "groups",
+    "edges",
+    "views",
+    "features",
+    "flows",
+    "rules",
+    "stickies"
+  ],
+  "properties": {
+    "$schema": {
+      "description": "URL of the JSON Schema this file conforms to.",
+      "type": "string",
+      "const": "https://sododeck.com/schema/v1.json"
+    },
+    "version": {
+      "description": "File format version.",
+      "type": "integer",
+      "const": 1
+    },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/Node" } },
+    "groups": { "type": "array", "items": { "$ref": "#/$defs/Group" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/Edge" } },
+    "views": { "type": "array", "items": { "$ref": "#/$defs/View" } },
+    "features": { "type": "array", "items": { "$ref": "#/$defs/Feature" } },
+    "flows": { "type": "array", "items": { "$ref": "#/$defs/Flow" } },
+    "rules": {
+      "description": "Rules keyed by stable rule id.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/Id" },
+      "additionalProperties": { "$ref": "#/$defs/Rule" }
+    },
+    "stickies": { "type": "array", "items": { "$ref": "#/$defs/Sticky" } }
+  },
+  "$defs": {
+    "Id": {
+      "description": "Stable identifier. Never changes on rename.",
+      "type": "string",
+      "minLength": 1
+    },
+    "Node": {
+      "description": "TODO(schema-v1): type, title, level, group, owner, tags, description.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    },
+    "Group": {
+      "description": "TODO(schema-v1): title, children.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    },
+    "Edge": {
+      "description": "TODO(schema-v1): from, to, protocol, label, contract.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    },
+    "View": {
+      "description": "TODO(schema-v1): type, includes, pinned positions.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    },
+    "Feature": {
+      "description": "TODO(schema-v1): title, description, owner.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    },
+    "Flow": {
+      "description": "TODO(schema-v1): feature, title, steps, trigger, outcome.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    },
+    "Rule": {
+      "description": "TODO(schema-v1): title, table (conditions -> actions), notes. The id is the key in `rules`.",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "Sticky": {
+      "description": "TODO(schema-v1): text, anchor.",
+      "type": "object",
+      "required": ["id"],
+      "properties": { "id": { "$ref": "#/$defs/Id" } },
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,26 @@
+/*
+ * Entry point for apps: `@import 'tailwindcss'; @import '@sododeck/ui/styles.css';`
+ * plus an `@source` pointing at packages/ui/src so component classes are generated.
+ * Fonts are self-hosted (no network requests to font CDNs).
+ */
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+@import './tokens.css';
+@import './theme.css';
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-app);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+  }
+}

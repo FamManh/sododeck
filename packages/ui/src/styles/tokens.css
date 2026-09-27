@@ -1,0 +1,94 @@
+/*
+ * Sododeck design tokens — source: /DESIGN.md.
+ * Raw values only. Tailwind utilities are mapped in theme.css.
+ * Light is the default; `.dark` on <html> switches the whole set.
+ */
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --sd-primary: #f2661c;
+  --sd-primary-hover: #e85d12;
+  --sd-primary-soft: #fdeee4;
+  --sd-primary-ink: #b3480c;
+  --sd-on-primary: #1c1c1a;
+
+  /* Semantic tints (soft fill / ink) */
+  --sd-success: #1d7351;
+  --sd-success-soft: #e6f1ec;
+  --sd-success-ink: #17603f;
+  --sd-amber-soft: #f6eddb;
+  --sd-amber-ink: #8a6112;
+  --sd-blue-soft: #e3ecf5;
+  --sd-blue-ink: #2d5b86;
+  --sd-clay-soft: #f9e3e6;
+  --sd-clay-ink: #a3303f;
+  --sd-inverse: #1c1c1a;
+  --sd-on-inverse: #ffffff;
+
+  /* Surfaces */
+  --sd-app: #e9e9e6;
+  --sd-surface: #ffffff;
+  --sd-surface-2: #f4f4f1;
+  --sd-surface-3: #ecece8;
+  --sd-canvas: #fafaf8;
+  --sd-dot: #d9d9d3;
+  --sd-group: rgba(255, 255, 255, 0.7);
+  --sd-code: #f7f7f4;
+
+  /* Lines */
+  --sd-hairline: #ecece8;
+  --sd-border: #deded8;
+  --sd-edge: #c9c9c2;
+
+  /* Text */
+  --sd-ink: #1c1c1a;
+  --sd-text-secondary: #55554f;
+  --sd-muted: #72726b;
+
+  /* Scrim & shadow */
+  --sd-scrim: rgba(28, 28, 26, 0.3);
+  --sd-shadow: rgba(0, 0, 0, 0.06);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --sd-primary: #f07a32;
+  --sd-primary-hover: #ff8a45;
+  --sd-primary-soft: #3a2214;
+  --sd-primary-ink: #ffb285;
+  --sd-on-primary: #171716;
+
+  --sd-success: #2f8f63;
+  --sd-success-soft: #163024;
+  --sd-success-ink: #74d4a5;
+  --sd-amber-soft: #352a14;
+  --sd-amber-ink: #e2b659;
+  --sd-blue-soft: #172636;
+  --sd-blue-ink: #8fbbe3;
+  --sd-clay-soft: #3a1a20;
+  --sd-clay-ink: #f2a0aa;
+  --sd-inverse: #ededea;
+  --sd-on-inverse: #171716;
+
+  --sd-app: #0b0b0a;
+  --sd-surface: #171716;
+  --sd-surface-2: #212120;
+  --sd-surface-3: #2b2b29;
+  --sd-canvas: #121211;
+  --sd-dot: #2a2a27;
+  --sd-group: rgba(255, 255, 255, 0.025);
+  --sd-code: #1c1c1b;
+
+  --sd-hairline: #262624;
+  --sd-border: #35352f;
+  --sd-edge: #3d3d38;
+
+  --sd-ink: #ededea;
+  --sd-text-secondary: #b8b8b1;
+  --sd-muted: #909089;
+
+  --sd-scrim: rgba(0, 0, 0, 0.6);
+  --sd-shadow: rgba(0, 0, 0, 0.45);
+}

@@ -1,0 +1,76 @@
+---
+import '../styles/global.css';
+
+import { ThemeToggle } from '../components/ThemeToggle';
+import { APP_URL, NAV } from '../site';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Interactive, editable architecture and flow diagrams.' } =
+  Astro.props;
+const pageTitle = title === 'Sododeck' ? title : `${title} · Sododeck`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <title>{pageTitle}</title>
+    <script is:inline>
+      // Apply the theme before paint to avoid a flash.
+      try {
+        const stored = localStorage.getItem('sododeck:theme');
+        const dark = stored
+          ? stored === 'dark'
+          : matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', dark);
+      } catch {}
+    </script>
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <header class="border-b border-hairline bg-surface">
+      <div class="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
+        <a href="/" class="flex items-center gap-2 text-title-sm font-semibold text-ink">
+          <img src="/favicon.svg" alt="" class="size-6" />
+          Sododeck
+        </a>
+        <nav class="flex gap-4 text-body text-ink-secondary">
+          {NAV.map((item) => (
+            <a href={item.href} class="hover:text-ink">
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div class="flex-1"></div>
+        <ThemeToggle client:load />
+        <a
+          href={APP_URL}
+          class="inline-flex h-8.5 items-center rounded-button bg-primary px-3.5 text-body font-medium text-on-primary hover:bg-primary-hover"
+        >
+          Open the app
+        </a>
+      </div>
+    </header>
+    <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
+      <slot />
+    </main>
+    <footer class="border-t border-hairline bg-surface">
+      <div class="mx-auto flex max-w-5xl gap-4 px-6 py-6 text-caption text-ink-muted">
+        <span>© {new Date().getFullYear()} Sododeck</span>
+        <a href="/privacy" class="hover:text-ink">
+          Privacy
+        </a>
+        <a href="/terms" class="hover:text-ink">
+          Terms
+        </a>
+      </div>
+    </footer>
+  </body>
+</html>

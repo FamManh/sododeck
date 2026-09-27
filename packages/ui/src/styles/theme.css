@@ -1,0 +1,119 @@
+/*
+ * Tailwind v4 theme (the shared "preset"). Maps tokens.css → utilities.
+ * Must be imported after `@import 'tailwindcss'` in the consuming app's CSS.
+ *
+ * Two naming layers:
+ *   1. DESIGN.md names: bg-primary-soft, text-ink, text-ink-muted, border-hairline, rounded-node, text-body, shadow-rest…
+ *   2. shadcn/ui aliases (background, foreground, muted, accent, ring…) so components added
+ *      with `shadcn add` work unmodified. Prefer layer 1 in hand-written code.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /* ── Colors: DESIGN.md ── */
+  --color-primary: var(--sd-primary);
+  --color-primary-hover: var(--sd-primary-hover);
+  --color-primary-soft: var(--sd-primary-soft);
+  --color-primary-ink: var(--sd-primary-ink);
+  --color-on-primary: var(--sd-on-primary);
+  --color-success: var(--sd-success);
+  --color-success-soft: var(--sd-success-soft);
+  --color-success-ink: var(--sd-success-ink);
+  --color-amber-soft: var(--sd-amber-soft);
+  --color-amber-ink: var(--sd-amber-ink);
+  --color-blue-soft: var(--sd-blue-soft);
+  --color-blue-ink: var(--sd-blue-ink);
+  --color-clay-soft: var(--sd-clay-soft);
+  --color-clay-ink: var(--sd-clay-ink);
+  --color-inverse: var(--sd-inverse);
+  --color-on-inverse: var(--sd-on-inverse);
+  --color-app: var(--sd-app);
+  --color-surface: var(--sd-surface);
+  --color-surface-2: var(--sd-surface-2);
+  --color-surface-3: var(--sd-surface-3);
+  --color-canvas: var(--sd-canvas);
+  --color-dot: var(--sd-dot);
+  --color-group: var(--sd-group);
+  --color-code: var(--sd-code);
+  --color-hairline: var(--sd-hairline);
+  --color-border: var(--sd-border);
+  --color-edge: var(--sd-edge);
+  --color-ink: var(--sd-ink);
+  --color-ink-secondary: var(--sd-text-secondary);
+  --color-ink-muted: var(--sd-muted);
+  --color-scrim: var(--sd-scrim);
+
+  /* ── Colors: shadcn/ui aliases ── */
+  --color-background: var(--sd-surface);
+  --color-foreground: var(--sd-ink);
+  --color-primary-foreground: var(--sd-on-primary);
+  --color-secondary: var(--sd-surface-2);
+  --color-secondary-foreground: var(--sd-ink);
+  --color-muted: var(--sd-surface-2);
+  --color-muted-foreground: var(--sd-muted);
+  --color-accent: var(--sd-surface-2);
+  --color-accent-foreground: var(--sd-ink);
+  --color-popover: var(--sd-surface);
+  --color-popover-foreground: var(--sd-ink);
+  --color-card: var(--sd-surface);
+  --color-card-foreground: var(--sd-ink);
+  --color-destructive: var(--sd-clay-ink);
+  --color-input: var(--sd-border);
+  --color-ring: var(--sd-primary);
+
+  /* ── Typography ── */
+  --font-sans: 'Geist Variable', system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+  --text-display: 22px;
+  --text-display--line-height: 1.2;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 500;
+  --text-title-lg: 16px;
+  --text-title-lg--line-height: 1.3;
+  --text-title-lg--font-weight: 500;
+  --text-title-md: 15px;
+  --text-title-md--line-height: 1.35;
+  --text-title-md--font-weight: 500;
+  --text-title-sm: 14px;
+  --text-title-sm--line-height: 1.3;
+  --text-title-sm--letter-spacing: -0.01em;
+  --text-title-sm--font-weight: 500;
+  --text-body: 13px;
+  --text-body--line-height: 1.5;
+  --text-body-sm: 12.5px;
+  --text-body-sm--line-height: 1.45;
+  --text-caption: 11.5px;
+  --text-caption--line-height: 1.4;
+  --text-node-sub: 11px;
+  --text-node-sub--line-height: 1.3;
+  --text-micro: 11px;
+  --text-micro--line-height: 1.2;
+  --text-micro--letter-spacing: 0.07em;
+  --text-micro--font-weight: 500;
+  --text-group-label: 10.5px;
+  --text-group-label--line-height: 1.2;
+  --text-group-label--letter-spacing: 0.08em;
+  --text-group-label--font-weight: 500;
+  --text-code: 12px;
+  --text-code--line-height: 1.6;
+  --text-code-sm: 11.5px;
+  --text-code-sm--line-height: 1.5;
+  --text-edge-label: 10.5px;
+  --text-edge-label--line-height: 1;
+
+  /* ── Radii ── */
+  --radius-button: 9px;
+  --radius-input: 10px;
+  --radius-node: 12px;
+  --radius-card: 12px;
+  --radius-group: 16px;
+  --radius-deck-card: 16px;
+  --radius-modal: 20px;
+
+  /* ── Elevation ── */
+  --shadow-rest: 0 1px 2px var(--sd-shadow);
+  --shadow-float: 0 8px 28px var(--sd-shadow);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.25);
+  --shadow-selection: 0 0 0 3px var(--sd-primary-soft);
+}
