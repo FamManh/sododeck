@@ -26,7 +26,7 @@ export function generateBenchDeck(nodeCount: number, edgeCount: number, seed = 4
   const nodes = Array.from({ length: nodeCount }, (_, i) => {
     const id = `n${i}`;
     positions[id] = { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 };
-    return { id, type: KINDS[i % KINDS.length], title: `Node ${i}` };
+    return { id, type: KINDS[i % KINDS.length] ?? 'service', title: `Node ${i}` };
   });
 
   const maxEdges = (nodeCount * (nodeCount - 1)) / 2;

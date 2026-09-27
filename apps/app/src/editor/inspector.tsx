@@ -16,9 +16,7 @@ export function Inspector({ deck }: { deck: SododeckFile }) {
   return (
     <Panel aria-label="Inspector">
       <PanelHeader>
-        <PanelTitle>
-          {node ? (typeof node.title === 'string' ? node.title : node.id) : 'Deck'}
-        </PanelTitle>
+        <PanelTitle>{node ? node.title : 'Deck'}</PanelTitle>
       </PanelHeader>
       <PanelContent>
         {node ? (

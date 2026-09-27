@@ -8,7 +8,10 @@ import { useDeckSnapshot } from './use-deck-snapshot';
 
 describe('useDeckSnapshot', () => {
   it('re-renders with fresh JSON when the Yjs document changes', () => {
-    const doc = fromJSON({ ...emptySododeckFile(), nodes: [{ id: 'a', title: 'A' }] });
+    const doc = fromJSON({
+      ...emptySododeckFile(),
+      nodes: [{ id: 'a', type: 'service', title: 'A' }],
+    });
     const { result } = renderHook(() => useDeckSnapshot(doc));
     const first = result.current;
     expect(first.nodes[0]?.title).toBe('A');

@@ -29,8 +29,8 @@ export function toFlowNodes(
     },
     selected: node.id === selectedId,
     data: {
-      title: typeof node.title === 'string' ? node.title : node.id,
-      kind: typeof node.type === 'string' ? node.type : 'default',
+      title: node.title,
+      kind: node.type,
     },
   }));
 }
@@ -40,7 +40,7 @@ export function toFlowEdges(deck: SododeckFile): Edge[] {
   const ids = new Set(deck.nodes.map((node) => node.id));
   return deck.edges.flatMap((edge) => {
     const { from, to, label } = edge;
-    if (typeof from !== 'string' || typeof to !== 'string') return [];
+    // The schema does not check references; a file may still point at missing nodes.
     if (!ids.has(from) || !ids.has(to)) return [];
     return [
       {
@@ -48,7 +48,7 @@ export function toFlowEdges(deck: SododeckFile): Edge[] {
         source: from,
         target: to,
         type: 'smoothstep',
-        ...(typeof label === 'string' ? { label } : {}),
+        ...(label === undefined ? {} : { label }),
       },
     ];
   });
