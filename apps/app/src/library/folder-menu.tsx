@@ -66,7 +66,7 @@ export function FolderMenuButton({
           variant="ghost"
           size="icon-sm"
           aria-label={`More actions for folder ${props.folder.name}`}
-          className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          className="opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
         >
           <Ellipsis />
         </Button>

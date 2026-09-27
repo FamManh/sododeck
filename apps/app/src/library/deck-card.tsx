@@ -36,8 +36,8 @@ export function DeckCard({
           <DeckThumbnail name={deck.name} thumb={deck.thumb} />
           <div className="flex min-w-0 flex-col gap-1 border-t border-hairline px-4 pt-3 pb-3.5">
             <DeckName deck={deck} commands={commands} stretched />
-            <p className="flex min-w-0 items-center gap-3 text-caption text-ink-secondary">
-              <span className="min-w-0 flex-1 truncate">{deckMeta(deck, now)}</span>
+            <p className="flex min-w-0 items-end gap-3 text-caption text-ink-secondary">
+              <span className="min-w-0 flex-1">{deckMeta(deck, now)}</span>
               {folder && (
                 <span className="flex max-w-[40%] shrink-0 items-center gap-1">
                   <Folder aria-hidden strokeWidth={1.5} className="size-3.5 shrink-0" />

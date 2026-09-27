@@ -37,7 +37,7 @@ function NavItem({
     <li
       {...props}
       className={cn(
-        'group flex h-9 items-center gap-1 rounded-row pr-1',
+        'group/row relative flex h-9 items-center rounded-row',
         current ? 'bg-primary-soft text-primary-ink' : 'text-ink hover:bg-surface-2',
         className,
       )}
@@ -48,7 +48,7 @@ function NavItem({
         onClick={onSelect}
         onKeyDown={onKeyDown}
         className={cn(
-          'flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-row pl-2 text-left text-body',
+          'flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-row pr-1 pl-2 text-left text-body',
           current && 'font-medium',
           focusRing,
         )}
@@ -58,13 +58,16 @@ function NavItem({
         <span
           className={cn(
             'shrink-0 pr-1 text-caption tabular-nums',
+            // The row's ⋯ button takes the count's place on hover and focus.
+            action !== undefined &&
+              'group-focus-within/row:invisible group-hover/row:invisible group-has-[[aria-expanded=true]]/row:invisible',
             current ? 'text-primary-ink' : 'text-ink-secondary',
           )}
         >
           {count}
         </span>
       </button>
-      {action}
+      {action !== undefined && <span className="absolute right-0.5">{action}</span>}
     </li>
   );
 }

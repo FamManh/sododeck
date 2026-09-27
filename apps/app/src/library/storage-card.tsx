@@ -50,15 +50,15 @@ export function StorageCard({ refreshKey }: { refreshKey: number }) {
   return (
     <section
       aria-label="Browser storage"
-      className="flex flex-col gap-2.5 rounded-card bg-surface-2 p-3.5 text-body-sm"
+      className="flex flex-col gap-2.5 rounded-card bg-surface-2 p-3 text-body-sm"
     >
-      <p className="flex items-center gap-2 text-body font-medium">
+      <p className="flex items-center gap-1.5 text-body font-medium">
         <HardDrive aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">Persistent storage</span>
         <span className="sr-only"> · </span>
         <span
           className={cn(
-            'flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-medium',
+            'flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-caption font-medium',
             on ? 'bg-success-soft text-success-ink' : 'bg-surface text-ink-secondary',
           )}
         >
