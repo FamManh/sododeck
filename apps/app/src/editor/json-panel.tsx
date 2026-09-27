@@ -1,14 +1,16 @@
 import { Button } from '@sododeck/ui/components/button';
 import { Braces, ChevronUp } from 'lucide-react';
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
+import { supportsResizeObserver } from '../lib/features';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { createCooldown } from './cooldown';
 import { JsonPanelHeader } from './json-panel-header';
 import { selectionText, selectionView } from './json-panel-view';
-import { PANEL_COLLAPSED } from './panel-height';
+import { JsonResizeHandle } from './json-resize-handle';
+import { clampPanelHeight, PANEL_COLLAPSED } from './panel-height';
 import { useThrottledDeckText } from './use-throttled-deck-text';
 
 const JsonViewer = lazy(() => import('./json-viewer'));
@@ -16,6 +18,35 @@ const JsonViewer = lazy(() => import('./json-viewer'));
 const READ_ONLY_MESSAGE = 'Read-only. Edit on the canvas or in the inspector.';
 /** Refused edits are announced at most this often, so screen readers are not flooded. */
 const READ_ONLY_COOLDOWN_MS = 3000;
+
+/**
+ * Height of the element the panel shares with the canvas, kept current on resize. `null` until
+ * measured (and in environments without layout), when only the minimum height applies.
+ */
+function useAvailableHeight(ref: RefObject<HTMLElement | null>, enabled: boolean) {
+  const [available, setAvailable] = useState<number | null>(null);
+  useEffect(() => {
+    const parent = ref.current?.parentElement;
+    if (!enabled || !parent) return;
+    const measure = () => {
+      const height = parent.clientHeight;
+      setAvailable(height > 0 ? height : null);
+    };
+    measure();
+    if (supportsResizeObserver()) {
+      const observer = new ResizeObserver(measure);
+      observer.observe(parent);
+      return () => {
+        observer.disconnect();
+      };
+    }
+    window.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+    };
+  }, [ref, enabled]);
+  return available;
+}
 
 /**
  * Bottom JSON panel (004): a read-only view of the deck that is always in sync. It reads the
@@ -28,6 +59,7 @@ export function JsonPanel() {
   const selection = useUiStore((state) => state.selection);
   const setJsonTab = useUiStore((state) => state.setJsonTab);
   const setJsonPanelOpen = useUiStore((state) => state.setJsonPanelOpen);
+  const setJsonPanelHeight = useUiStore((state) => state.setJsonPanelHeight);
   const announce = useUiStore((state) => state.announce);
   const readOnlyCooldown = useMemo(() => createCooldown(READ_ONLY_COOLDOWN_MS), []);
 
@@ -37,6 +69,12 @@ export function JsonPanel() {
   const showSelection = open && tab === 'selection';
   const text = showSelection ? selectionText(view.entries) : tab === 'deck' ? deckText : '';
   const empty = tab === 'selection' && view.entries.length === 0;
+
+  const sectionRef = useRef<HTMLElement>(null);
+  const available = useAvailableHeight(sectionRef, open);
+  // Follows the pointer during a drag; the store is written once, on release.
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const shownHeight = clampPanelHeight(dragHeight ?? height, available ?? Infinity);
 
   if (!open) {
     return (
@@ -67,10 +105,20 @@ export function JsonPanel() {
 
   return (
     <section
+      ref={sectionRef}
       aria-label="JSON"
-      className="flex shrink-0 flex-col border-t border-hairline bg-surface"
-      style={{ height }}
+      className="relative flex shrink-0 flex-col border-t border-hairline bg-surface"
+      style={{ height: shownHeight }}
     >
+      <JsonResizeHandle
+        height={shownHeight}
+        available={available ?? Infinity}
+        onChange={setDragHeight}
+        onCommit={(next) => {
+          setDragHeight(null);
+          setJsonPanelHeight(next);
+        }}
+      />
       <JsonPanelHeader
         tab={tab}
         onTabChange={setJsonTab}

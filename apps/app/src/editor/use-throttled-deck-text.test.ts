@@ -80,4 +80,15 @@ describe('useThrottledDeckText', () => {
     expect(serializeDeck).toHaveBeenCalledTimes(1);
     expect(hook.result.current).toBe(exported());
   });
+
+  it('computes at once when enabled again, even inside the throttle window', () => {
+    const { editor, hook, exported } = setup(true);
+    hook.rerender({ on: false });
+    act(() => {
+      editor.update('nodes', 'web-app', { title: 'While hidden' });
+    });
+    hook.rerender({ on: true });
+    expect(hook.result.current).toBe(exported());
+    expect(hook.result.current).toContain('"While hidden"');
+  });
 });

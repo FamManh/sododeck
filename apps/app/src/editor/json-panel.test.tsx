@@ -10,6 +10,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { editorWrapper } from '../test/render-canvas';
+import { JSON_PANEL_KEY, loadJsonPanelPrefs } from '../state/json-panel-prefs';
 import { useUiStore } from '../state/ui-store';
 import { demoDeck } from './demo-deck';
 import { JsonPanel } from './json-panel';
@@ -344,5 +345,83 @@ describe('JsonPanel — Copy (US4)', () => {
     expect(
       await screen.findByText("Couldn't copy — select the text and press Ctrl+C"),
     ).toBeInTheDocument();
+  });
+});
+
+describe('JsonPanel — collapse and resize (US5)', () => {
+  it('collapses to a bar and remembers it', async () => {
+    const { user } = setup();
+    await deckPre();
+    const collapse = screen.getByRole('button', { name: 'Collapse JSON panel' });
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    await user.click(collapse);
+    const region = screen.getByRole('region', { name: 'JSON' });
+    expect(within(region).getByText('JSON')).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'JSON view' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Deck JSON, read-only')).not.toBeInTheDocument();
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand JSON panel' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(JSON.parse(localStorage.getItem(JSON_PANEL_KEY) ?? '{}')).toMatchObject({
+      open: false,
+    });
+  });
+
+  it('starts collapsed after a reload, and shows edits made meanwhile when expanded', async () => {
+    localStorage.setItem(JSON_PANEL_KEY, JSON.stringify({ open: false, height: 212, tab: 'deck' }));
+    const { editor, user, deckText } = setup();
+    act(() => {
+      useUiStore.setState({ jsonPanel: loadJsonPanelPrefs() }); // what a reload reads
+    });
+    expect(screen.getByRole('button', { name: 'Expand JSON panel' })).toBeInTheDocument();
+    act(() => {
+      editor().add('nodes', { type: 'service', title: 'Added while collapsed' });
+    });
+    await user.click(screen.getByRole('button', { name: 'Expand JSON panel' }));
+    const pre = await deckPre();
+    expect(pre.textContent).toBe(deckText());
+    expect(pre.textContent).toContain('Added while collapsed');
+  });
+
+  it('uses the saved height, clamped to the main area', () => {
+    const heightOfMain = vi
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.tagName === 'MAIN' ? 900 : 0;
+      });
+    const { wrapper } = editorWrapper(demoDeck);
+    act(() => {
+      useUiStore.getState().setJsonPanelHeight(300);
+    });
+    const view = render(
+      <main>
+        <JsonPanel />
+      </main>,
+      { wrapper },
+    );
+    expect(screen.getByRole('region', { name: 'JSON' })).toHaveStyle({ height: '300px' });
+    act(() => {
+      useUiStore.getState().setJsonPanelHeight(5000);
+    });
+    expect(screen.getByRole('region', { name: 'JSON' })).toHaveStyle({ height: '700px' });
+    expect(screen.getByRole('separator', { name: 'Resize JSON panel' })).toHaveAttribute(
+      'aria-valuenow',
+      '700',
+    );
+    view.unmount();
+    heightOfMain.mockRestore();
+  });
+
+  it('saves the height after a keyboard resize', async () => {
+    const { user } = setup();
+    await deckPre();
+    screen.getByRole('separator', { name: 'Resize JSON panel' }).focus();
+    await user.keyboard('{ArrowUp}');
+    expect(useUiStore.getState().jsonPanel.height).toBe(228);
+    expect(JSON.parse(localStorage.getItem(JSON_PANEL_KEY) ?? '{}')).toMatchObject({
+      height: 228,
+    });
   });
 });

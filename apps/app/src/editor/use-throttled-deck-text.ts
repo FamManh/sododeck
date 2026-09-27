@@ -15,15 +15,23 @@ export function useThrottledDeckText(deck: SododeckFile, enabled: boolean): stri
   const [text, setText] = useState('');
   const shown = useRef<SododeckFile | null>(null);
   const lastRun = useRef(-Infinity);
+  const wasEnabled = useRef(false);
 
   useEffect(() => {
-    if (!enabled || shown.current === deck) return;
+    if (!enabled) {
+      wasEnabled.current = false;
+      return;
+    }
+    // Showing the tab (or expanding the panel) must not wait for the previous throttle window.
+    const justEnabled = !wasEnabled.current;
+    wasEnabled.current = true;
+    if (shown.current === deck) return;
     const run = () => {
       shown.current = deck;
       lastRun.current = Date.now();
       setText(serializeDeck(deck));
     };
-    const wait = lastRun.current + DECK_TEXT_THROTTLE_MS - Date.now();
+    const wait = justEnabled ? 0 : lastRun.current + DECK_TEXT_THROTTLE_MS - Date.now();
     if (wait <= 0) {
       run();
       return;
