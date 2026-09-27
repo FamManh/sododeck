@@ -27,6 +27,19 @@ describe('generateBenchDeck', () => {
     expect(generateBenchDeck(20, 30)).toEqual(generateBenchDeck(20, 30));
   });
 
+  it('adds seeded stickies, half pinned and half free', () => {
+    const { deck } = generateBenchDeck(40, 80, 42, { stickies: 10 });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.stickies).toHaveLength(10);
+    expect(deck.stickies.filter((sticky) => sticky.anchor != null)).toHaveLength(5);
+    expect(deck.stickies.filter((sticky) => sticky.anchor == null)).toHaveLength(5);
+    expect(deck.stickies.every((sticky) => sticky.text.length > 0)).toBe(true);
+    expect(deck.stickies.every((sticky) => sticky.anchor != null || sticky.position != null)).toBe(true);
+    expect(generateBenchDeck(40, 80, 42, { stickies: 10 })).toEqual(
+      generateBenchDeck(40, 80, 42, { stickies: 10 }),
+    );
+  });
+
   it('adds valid, contiguous flows and one fork in flows mode (006)', () => {
     const { deck } = generateBenchDeck(500, 1000, 42, { flows: true });
     expect(parseSododeckFile(deck).success).toBe(true);

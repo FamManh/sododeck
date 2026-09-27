@@ -17,8 +17,10 @@ const NODES = Number(process.env.BENCH_NODES ?? 500);
 const EDGES = Number(process.env.BENCH_EDGES ?? 1000);
 const CPU_THROTTLE = Number(process.env.BENCH_CPU_THROTTLE ?? 1);
 const TARGET_FPS = 60;
+const STICKIES = Math.max(0, Number(process.env.BENCH_STICKIES ?? 0) || 0);
 /** Adds 5 features × 4 flows × 10 steps and a fork to the deck of every scenario (006). */
 const FLOWS = process.env.BENCH_FLOWS === '1' ? '&flows=1' : '';
+const STICKIES_QUERY = STICKIES > 0 ? `&stickies=${String(STICKIES)}` : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 
@@ -169,7 +171,7 @@ async function openBench(page: Page, query: string) {
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE });
   }
   const start = Date.now();
-  await page.goto(`/bench?nodes=${NODES}&edges=${EDGES}${query}${FLOWS}`);
+  await page.goto(`/bench?nodes=${NODES}&edges=${EDGES}${query}${FLOWS}${STICKIES_QUERY}`);
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
   });
@@ -397,7 +399,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Stickies: ${String(STICKIES)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -417,7 +419,7 @@ test.afterAll(async () => {
   await writeFile(
     new URL(`report-${stamp}.json`, dir),
     JSON.stringify(
-      { cpuThrottle: CPU_THROTTLE, flows: FLOWS !== '', results, flowResults },
+      { cpuThrottle: CPU_THROTTLE, flows: FLOWS !== '', stickies: STICKIES, results, flowResults },
       null,
       2,
     ),

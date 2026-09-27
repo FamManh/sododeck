@@ -1,5 +1,5 @@
 import { readDeck } from '../../model/use-deck-snapshot';
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
@@ -96,7 +96,11 @@ describe('StickyNode', () => {
     const firstBox = await screen.findByRole('textbox', { name: 'Note text' });
     await user.clear(firstBox);
     await user.type(firstBox, 'Updated text');
-    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.text).toBe('Updated text');
+    await waitFor(() => {
+      expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.text).toBe(
+        'Updated text',
+      );
+    });
     fireEvent.blur(firstBox);
     rerenderSticky();
     expect(screen.queryByRole('textbox', { name: 'Note text' })).not.toBeInTheDocument();
@@ -109,7 +113,11 @@ describe('StickyNode', () => {
     await user.keyboard('{Escape}');
     rerenderSticky();
     expect(screen.queryByRole('textbox', { name: 'Note text' })).not.toBeInTheDocument();
-    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.text).toBe('Updated text');
+    await waitFor(() => {
+      expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.text).toBe(
+        'Updated text',
+      );
+    });
 
     fireEvent.keyDown(card, { key: 'F2' });
     expect(await screen.findByRole('textbox', { name: 'Note text' })).toBeInTheDocument();
