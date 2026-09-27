@@ -61,6 +61,15 @@ export default function JsonViewer({
       stickyScroll: { enabled: false },
       minimap: { enabled: false },
       renderValidationDecorations: 'on' as const,
+      // Screens 02/16: no line-number gutter, guides or overview ruler; the current line shows
+      // only while the viewer has focus.
+      guides: { indentation: false },
+      renderLineHighlightOnlyWhenFocus: true,
+      lineNumbers: 'off' as const,
+      lineDecorationsWidth: 16,
+      overviewRulerLanes: 0,
+      overviewRulerBorder: false,
+      hideCursorInOverviewRuler: true,
       wordWrap: 'off' as const,
       fontFamily: "'Geist Mono Variable', ui-monospace, monospace",
       fontSize: 12,

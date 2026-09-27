@@ -26,6 +26,8 @@ export function readThemeTokens(el: Element = document.documentElement): ThemeTo
   ) as ThemeTokens;
 }
 
+const BRACKET_LEVELS = [1, 2, 3, 4, 5, 6] as const;
+
 /** Token rules take colors without the leading `#`. */
 const bare = (hex: string) => hex.replace(/^#/, '');
 
@@ -54,6 +56,13 @@ export function buildMonacoTheme(
       'editor.inactiveSelectionBackground': tokens['--sd-primary-soft'],
       'editor.lineHighlightBackground': tokens['--sd-surface-2'],
       'editor.lineHighlightBorder': tokens['--sd-surface-2'],
+      // Bracket pair colorization (on by default) would otherwise paint Monaco's own palette.
+      ...Object.fromEntries(
+        BRACKET_LEVELS.map((level) => [
+          `editorBracketHighlight.foreground${String(level)}`,
+          tokens['--sd-muted'],
+        ]),
+      ),
     },
   };
 }

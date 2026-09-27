@@ -69,6 +69,9 @@ describe.each([
       ...built.rules.flatMap((rule) => (rule.foreground ? [`#${rule.foreground}`] : [])),
       built.colors['editor.foreground'],
       built.colors['editorLineNumber.foreground'],
+      ...[1, 2, 3, 4, 5, 6].map(
+        (level) => built.colors[`editorBracketHighlight.foreground${String(level)}`],
+      ),
     ];
     for (const fg of foregrounds) {
       expect(fg).toBeDefined();
