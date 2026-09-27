@@ -27,6 +27,54 @@ function describe_(targets: RemovalTarget[]) {
   };
 }
 
+const flowDeck = deckOf({
+  nodes: [{ id: 'a', type: 'service', title: 'A' }],
+  edges: [{ id: 'aa', from: 'a', to: 'a' }],
+  features: [{ id: 'feat', title: 'Delivery' }],
+  flows: [
+    {
+      id: 'f',
+      title: 'Checkout',
+      feature: 'feat',
+      branches: [{ id: 'b1', label: 'payment failed', condition: 'declined' }],
+      steps: [
+        { id: 's1', edge: 'aa' },
+        { id: 's2', edge: 'aa', branch: 'b1' },
+      ],
+    },
+    { id: 'g', title: 'Refund', feature: 'feat', steps: [] },
+  ],
+});
+
+function describeFlowDeck(targets: RemovalTarget[]) {
+  const result = previewRemoval(flowDeck, targets);
+  return {
+    ...describeRemoval(flowDeck, targets, result),
+    toast: removalToast(flowDeck, targets, result, true),
+  };
+}
+
+describe('describeRemoval for features, flows and branches (006)', () => {
+  it('says a feature keeps its flows', () => {
+    expect(describeFlowDeck([{ scope: 'features', id: 'feat' }])).toEqual({
+      title: 'Delete ‘Delivery’?',
+      body: 'Its 2 flows will move to No feature. You can undo this.',
+      toast: 'Deleted ‘Delivery’ · ⌘Z to undo',
+    });
+  });
+
+  it('counts the steps deleted with a flow or a branch', () => {
+    expect(describeFlowDeck([{ scope: 'flows', id: 'f' }])).toMatchObject({
+      title: 'Delete ‘Checkout’?',
+      body: 'Its 2 steps will be deleted. You can undo this.',
+    });
+    expect(describeFlowDeck([{ scope: 'branches', flowId: 'f', id: 'b1' }])).toMatchObject({
+      title: 'Delete ‘branch payment failed’?',
+      body: 'Its 1 step will be deleted. You can undo this.',
+    });
+  });
+});
+
 describe('describeRemoval', () => {
   it('names one component with its connections and what breaks', () => {
     expect(describe_([{ scope: 'nodes', id: 'svc' }])).toEqual({

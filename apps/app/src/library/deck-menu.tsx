@@ -26,7 +26,7 @@ import type { ReactNode } from 'react';
 import { isApplePlatform } from '../lib/features';
 import type { DeckRecord, FolderRecord } from '../storage/library-db';
 import { useLibraryStore } from './library-store';
-import { contextKit, dropdownKit, type MenuKit } from './menu-kit';
+import { contextKit, dropdownKit, type MenuKit } from '../lib/menu-kit';
 import type { LibraryCommands } from './use-library-commands';
 
 const UNFILED = 'unfiled';

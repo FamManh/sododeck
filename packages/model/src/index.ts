@@ -21,7 +21,7 @@ export {
   type NewBranch,
 } from './ops/branches';
 export { createDeckSnapshot, type DeckSnapshot } from './snapshot';
-export { previewRemoval, type RemovalTarget } from './preview';
+export { previewRemoval, removeTarget, type RemovalTarget } from './preview';
 export {
   serializeEntries,
   serializeEntry,

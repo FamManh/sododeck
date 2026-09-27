@@ -154,12 +154,12 @@ describe('editor shortcuts', () => {
     const { user } = setup();
     focusNode('n00');
     await user.keyboard('{Delete}');
-    expect(ui().pendingDelete).toEqual({ nodes: ['n00'], edges: [] });
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'n00' }] });
     act(() => {
       ui().cancelDelete();
     });
     await user.keyboard('{Backspace}');
-    expect(ui().pendingDelete).toEqual({ nodes: ['n00'], edges: [] });
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'n00' }] });
   });
 
   it('does nothing on Delete with an empty selection', async () => {

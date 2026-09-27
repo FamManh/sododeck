@@ -1,3 +1,5 @@
+import { captureFlowStructure } from '@sododeck/model';
+import { emptySododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JSON_PANEL_KEY } from './json-panel-prefs';
@@ -100,7 +102,7 @@ describe('ui store', () => {
 
   it('requests and cancels a delete', () => {
     state().requestDelete({ nodes: ['a'], edges: [] });
-    expect(state().pendingDelete).toEqual({ nodes: ['a'], edges: [] });
+    expect(state().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'a' }] });
     state().cancelDelete();
     expect(state().pendingDelete).toBeNull();
   });
@@ -143,7 +145,94 @@ describe('ui store', () => {
     expect(state().jsonPanel.tab).toBe('selection');
   });
 
+  describe('flows (006)', () => {
+    const checkpoint = captureFlowStructure(
+      { ...emptySododeckFile(), flows: [{ id: 'f', title: 'F', steps: [] }] },
+      'f',
+    );
+
+    it('shows a flow, a step or a branch, and clears the canvas selection', () => {
+      state().select({ nodes: ['a'], edges: ['e'] });
+      state().setActiveFlow('f');
+      expect(state().selection).toEqual({ nodes: [], edges: [] });
+      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: null });
+      state().setActiveStep('s1');
+      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: 's1', branchId: null });
+      state().setActiveBranch('b1');
+      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: 'b1' });
+      state().select({ nodes: ['a'] });
+      expect(state().activeFlow).toBeNull();
+    });
+
+    it('does not start a step or branch without an active flow', () => {
+      state().setActiveStep('s1');
+      state().setActiveBranch('b1');
+      expect(state().activeFlow).toBeNull();
+    });
+
+    it('runs a recording session: pending name, first step, recorded ids, notices', () => {
+      state().setActiveFlow('other');
+      state().startRecording('Place order', 'feat');
+      expect(state().activeFlow).toBeNull();
+      expect(state().flowSession).toMatchObject({
+        mode: 'record',
+        flowId: null,
+        pendingTitle: 'Place order',
+        featureId: 'feat',
+        target: { kind: 'main' },
+        recorded: [],
+      });
+      state().setSessionFlow('f');
+      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: null });
+      state().setInvalid({ edgeId: 'e', stepNumber: '2', branchFromStep: null });
+      state().pushRecorded('s1');
+      state().pushRecorded('s2');
+      expect(state().flowSession?.invalid).toBeNull();
+      state().popRecorded();
+      expect(state().flowSession?.recorded).toEqual(['s1']);
+      state().setCandidate('e2');
+      state().setTarget({ kind: 'branch', branchId: 'b' });
+      expect(state().flowSession).toMatchObject({
+        target: { kind: 'branch', branchId: 'b' },
+        candidateEdgeId: null,
+      });
+      state().setAddingBranch(true);
+      expect(state().flowSession?.addingBranch).toBe(true);
+      state().setHoverEdge('e3');
+      state().endSession();
+      expect(state().flowSession).toBeNull();
+      expect(state().hoverEdgeId).toBeNull();
+      expect(state().activeFlow).toEqual({ flowId: 'f', stepId: null, branchId: null });
+    });
+
+    it('starts an edit session with its checkpoint and keeps the flow on canvas selection', () => {
+      state().startEditing('f', checkpoint);
+      expect(state().flowSession).toMatchObject({ mode: 'edit', flowId: 'f', checkpoint });
+      state().select({ nodes: ['a'] });
+      expect(state().activeFlow?.flowId).toBe('f');
+    });
+
+    it('ignores session actions without a session', () => {
+      state().pushRecorded('s1');
+      state().setInvalid(null);
+      expect(state().flowSession).toBeNull();
+    });
+
+    it('opens the confirmation for any removal targets', () => {
+      state().requestRemoval([{ scope: 'features', id: 'feat' }]);
+      expect(state().pendingDelete).toEqual({ targets: [{ scope: 'features', id: 'feat' }] });
+    });
+
+    it('keeps the filter text', () => {
+      state().setFlowFilter('fail');
+      expect(state().flowFilter).toBe('fail');
+    });
+  });
+
   it('forgets deck references when another deck opens', () => {
+    state().setActiveFlow('f');
+    state().startRecording('x', null);
+    state().setFlowFilter('x');
     state().select({ nodes: ['a'] });
     state().focus('a');
     state().openEdgePopover('e');
@@ -155,6 +244,10 @@ describe('ui store', () => {
       focusedId: null,
       popover: null,
       pendingDelete: null,
+      activeFlow: null,
+      flowSession: null,
+      hoverEdgeId: null,
+      flowFilter: '',
       labelsOn: true,
     });
   });

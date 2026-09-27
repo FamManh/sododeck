@@ -138,7 +138,7 @@ story uses. No story work starts before this phase is done.
 
 ### UI package
 
-- [ ] T012 [P] Check the menu building blocks 005 added and note how flow menus use them:
+- [x] T012 [P] Check the menu building blocks 005 added and note how flow menus use them:
       `DropdownMenu` (`packages/ui/src/components/dropdown-menu.tsx`) and the `MenuKit` pattern in
       `apps/app/src/library/menu-kit.ts`. If `MenuKit` is needed by both the library and the flow
       list, move it to `apps/app/src/lib/menu-kit.ts` (update its imports and tests). No new
@@ -146,7 +146,7 @@ story uses. No story work starts before this phase is done.
 
 ### App: UI state and plumbing
 
-- [ ] T013 Write failing tests in `apps/app/src/state/ui-store.test.ts`, then extend
+- [x] T013 Write failing tests in `apps/app/src/state/ui-store.test.ts`, then extend
       `apps/app/src/state/ui-store.ts` per data-model §3:
   - `activeFlow`: `setActiveFlow`, `setActiveStep`, `setActiveBranch`. Selecting one clears the
     node and edge selection, and `select` clears `activeFlow`.
@@ -157,7 +157,7 @@ story uses. No story work starts before this phase is done.
   - Widen `pendingDelete` to `{ targets: RemovalTarget[] } | null`, and keep
     `requestDelete(selection)` working by mapping it through `removalTargets`.
   - `resetForDeck` clears all of the above.
-- [ ] T014 Update `apps/app/src/editor/confirm-delete-dialog.tsx` and
+- [x] T014 Update `apps/app/src/editor/confirm-delete-dialog.tsx` and
       `apps/app/src/editor/describe-removal.ts` (with their tests) to take
       `pendingDelete.targets` (`RemovalTarget[]`), keeping the existing node and edge wording.
       Add wording for `features` ("Its n flows will move to No feature.") and `flows` ("Its n
@@ -169,7 +169,7 @@ story uses. No story work starts before this phase is done.
     including `remote`), clear `activeFlow` or end the session and announce "Flow '<title>' was
     deleted".
   - Mount it in `EditorLayout` in `apps/app/src/routes/editor-page.tsx`.
-- [ ] T016 [P] Create `apps/app/src/editor/flows/flow-overlay.ts` (+ `flow-overlay.test.ts`),
+- [x] T016 [P] Create `apps/app/src/editor/flows/flow-overlay.ts` (+ `flow-overlay.test.ts`),
       pure:
       `flowOverlay(deck, analysis, session, hoverEdgeId)`, returning
       `{ edges: Map<Id, EdgeFlowMark>, nodes: Map<Id, NodeFlowMark> }`.
@@ -225,13 +225,13 @@ panel (spec US1 scenarios 1–7).
 
 ### Tests for User Story 1 (write first, must fail)
 
-- [ ] T019 [P] [US1] `apps/app/src/editor/flows/record-edge.test.ts`: `recordEdge(deck, session, edgeId)`
+- [x] T019 [P] [US1] `apps/app/src/editor/flows/record-edge.test.ts`: `recordEdge(deck, session, edgeId)`
       returns one of:
   - `{ kind: 'create', title, featureId, edge }` for the first click of a new flow
   - `{ kind: 'append', branchId | null, edge }` when `edge.from` equals the next start (self-loops
     allowed; an edge already used earlier is allowed)
   - `{ kind: 'invalid', stepNumber, branchFromStep: null }` otherwise
-- [ ] T020 [P] [US1] `apps/app/src/editor/flows/flow-session.test.ts`, with `flow-session.ts`
+- [x] T020 [P] [US1] `apps/app/src/editor/flows/flow-session.test.ts`, with `flow-session.ts`
       actions run against a real `createEditor` on a test deck:
   - `recordClick` creates the flow and step 1 in one batch (one undo step), then appends steps.
   - `undoLastStep` removes the last recorded step.
@@ -258,9 +258,9 @@ panel (spec US1 scenarios 1–7).
 
 ### Implementation for User Story 1
 
-- [ ] T024 [US1] Implement `apps/app/src/editor/flows/record-edge.ts` using `analyzeFlow` (T019
+- [x] T024 [US1] Implement `apps/app/src/editor/flows/record-edge.ts` using `analyzeFlow` (T019
       green).
-- [ ] T025 [US1] Implement `apps/app/src/editor/flows/flow-session.ts`:
+- [x] T025 [US1] Implement `apps/app/src/editor/flows/flow-session.ts`:
   - `startNewFlow`, `recordClick` (create uses `editor.batch` with `add('flows', …)` plus
     `appendStep`), `undoLastStep`, `finish`, `cancel`
   - announcements: "Step n added: …", "Recording cancelled", "Saved flow '…'"
@@ -316,7 +316,7 @@ and Enter only (spec US2 scenarios 1, 3, 4; scenario 2's "Add as branch" is wire
 
 ### Tests for User Story 2 (write first, must fail)
 
-- [ ] T032 [P] [US2] `apps/app/src/editor/flows/candidate-edges.test.ts`: `candidateEdges(deck, analysis, target)`
+- [x] T032 [P] [US2] `apps/app/src/editor/flows/candidate-edges.test.ts`: `candidateEdges(deck, analysis, target)`
       returns:
   - all edges in reading order (source node y, then x) for step 1
   - the next start node's outgoing edges afterwards
@@ -373,7 +373,7 @@ and check the list, canvas and JSON after each one, including Undo (spec US3 sce
     - it is one undo step
   - `moveStep` refusing (`invalid`) a move that changes the step's path, or that places a main
     step after the branch step while branches exist
-- [ ] T038 [P] [US3] `apps/app/src/editor/flows/flow-order.test.ts`:
+- [x] T038 [P] [US3] `apps/app/src/editor/flows/flow-order.test.ts`:
   - `indexForMoveWithinFeature(deck, flowId, featureId | null, position)` gives the global
     `flows` index
   - `moveToFeature` patches `feature` and moves the flow to the end (FR-001a)
@@ -520,7 +520,7 @@ marker, then Undo (spec US5 scenarios 1–5).
 
 ### Tests for User Story 5 (write first, must fail)
 
-- [ ] T055 [P] [US5] `apps/app/src/editor/flows/filter-flows.test.ts`: `filterFlows(deck, query)`
+- [x] T055 [P] [US5] `apps/app/src/editor/flows/filter-flows.test.ts`: `filterFlows(deck, query)`
   - is case-insensitive over flow title, step titles, connection labels, and step and branch
     conditions
   - returns match ranges per field, and `count` / `total`
