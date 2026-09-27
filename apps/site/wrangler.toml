@@ -1,0 +1,4 @@
+# Cloudflare Pages project for sododeck.com. See docs/deploy.md.
+name = "sododeck-site"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-09-01"
