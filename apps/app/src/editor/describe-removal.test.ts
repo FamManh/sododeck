@@ -79,7 +79,7 @@ describe('describeRemoval', () => {
   it('names one component with its connections and what breaks', () => {
     expect(describe_([{ scope: 'nodes', id: 'svc' }])).toEqual({
       title: 'Delete Order Service?',
-      body: 'Also removes 2 connections. 1 flow step and 1 note will be flagged broken. You can undo this.',
+      body: 'Also removes 2 connections. 1 flow step will be flagged broken. You can undo this.',
       toast: 'Deleted Order Service and 2 connections · ⌘Z to undo',
       toastPc: 'Deleted Order Service and 2 connections · Ctrl+Z to undo',
     });

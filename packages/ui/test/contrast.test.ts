@@ -62,6 +62,15 @@ const TEXT_PAIRS: Pair[] = [
   ['success-ink', 'success-soft'],
 ];
 
+/** Sticky-note tints (009): each note body and its icon/label text stay AA in both themes. */
+const STICKY_TINT_TEXT_PAIRS: Pair[] = [
+  ['amber-ink', 'amber-soft'],
+  ['blue-ink', 'blue-soft'],
+  ['clay-ink', 'clay-soft'],
+  ['success-ink', 'success-soft'],
+  ['text-secondary', 'surface-2'],
+];
+
 /** Focus indicator and other non-text cues: WCAG 1.4.11 3:1. */
 const NON_TEXT_PAIRS: Pair[] = [
   ['primary', 'surface'], // focus outline (2px gap sits on surface)
@@ -96,6 +105,10 @@ describe.each([
   ['dark', dark],
 ] as const)('token contrast (%s)', (_name, theme) => {
   it.each(TEXT_PAIRS)('%s on %s is at least 4.5:1', (fg, bg) => {
+    expect(ratio(theme, [fg, bg])).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(STICKY_TINT_TEXT_PAIRS)('sticky tint %s on %s is at least 4.5:1', (fg, bg) => {
     expect(ratio(theme, [fg, bg])).toBeGreaterThanOrEqual(4.5);
   });
 

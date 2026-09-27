@@ -125,11 +125,11 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Canvas
 
-- [ ] T016 [P] [US1] Write the sticky cases in `apps/app/src/editor/deck-to-flow.test.ts`. They must fail at first (research R4):
+- [x] T016 [P] [US1] Write the sticky cases in `apps/app/src/editor/deck-to-flow.test.ts`. They must fail at first (research R4):
   - `toStickyNodes` gives one `sticky` node per note, id `sticky:<id>`, at `stickyCanvasPosition`, selected when in `selection.stickies`, with object identity reused when the note and its anchor node are unchanged
   - a pinned note moves when its node's position changes
   - `toLeaderEdges` gives one `sticky-leader` edge per pinned note only (none for foreign or missing), not selectable or focusable
-- [ ] T017 [US1] Implement `toStickyNodes` and `toLeaderEdges` in `apps/app/src/editor/deck-to-flow.ts` (WeakMap cache per sticky), plus `apps/app/src/editor/stickies/sticky-tint.ts`: color → token classes, where amber, blue and clay use tints, green uses `success`, and grey uses neutral surface and muted ink. Add a contrast case for the sticky tints in the existing `packages/ui` contrast suite. Make T016 pass.
+- [x] T017 [US1] Implement `toStickyNodes` and `toLeaderEdges` in `apps/app/src/editor/deck-to-flow.ts` (WeakMap cache per sticky), plus `apps/app/src/editor/stickies/sticky-tint.ts`: color → token classes, where amber, blue and clay use tints, green uses `success`, and grey uses neutral surface and muted ink. Add a contrast case for the sticky tints in the existing `packages/ui` contrast suite. Make T016 pass.
 - [ ] T018 [P] [US1] Write `apps/app/src/editor/stickies/sticky-node.test.tsx`. It must fail at first, following the UI contract "Sticky note on the canvas":
   - the accessible name ("Note: <label>", ", pinned to <node>", ", collapsed", "Note: empty")
   - markdown body elements; `<script>` shown as text

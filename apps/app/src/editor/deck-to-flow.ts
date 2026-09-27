@@ -3,6 +3,7 @@
  * snapshot; React Flow never owns document state. Results are cached per source object, so an
  * edit to one node returns the same React Flow objects for all the others and `memo` skips them.
  */
+import { stickyCanvasPosition, stickyLabel, type StickyPlacement } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
@@ -17,6 +18,7 @@ import {
 
 type DeckNodeObject = SododeckFile['nodes'][number];
 type DeckEdgeObject = SododeckFile['edges'][number];
+type StickyObject = SododeckFile['stickies'][number];
 
 export interface DeckNodeData extends Record<string, unknown> {
   title: string;
@@ -48,21 +50,39 @@ export interface DeckEdgeData extends Record<string, unknown> {
   flow?: EdgeFlowMark;
 }
 
+export interface StickyNodeData extends Record<string, unknown> {
+  stickyId: string;
+  text: string;
+  label: string;
+  color: StickyObject['color'];
+  status: StickyPlacement['status'];
+  pinnedTo: string | null;
+  pinnedToTitle: string | null;
+  collapsed: boolean;
+  showInFlows: boolean;
+}
+
 export type DeckFlowNode = Node<DeckNodeData, 'deck'>;
 export type GroupFlowNode = Node<GroupBoundaryData, 'group-boundary'>;
-export type CanvasFlowNode = DeckFlowNode | GroupFlowNode;
+export type StickyFlowNode = Node<StickyNodeData, 'sticky'>;
+export type CanvasFlowNode = DeckFlowNode | GroupFlowNode | StickyFlowNode;
 export type DeckFlowEdge = Edge<DeckEdgeData, 'deck'>;
+export type StickyLeaderFlowEdge = Edge<Record<string, never>, 'sticky-leader'>;
 
 export { NODE_SIZE };
 
 /** Group boundaries are React Flow nodes too; their ids are prefixed so they never clash. */
 export const GROUP_NODE_PREFIX = 'group:';
+export const STICKY_NODE_PREFIX = 'sticky:';
+export const STICKY_LEADER_PREFIX = 'sticky-leader:';
 
 export type HandleSide = 'top' | 'right' | 'bottom' | 'left';
 
 const nodeCache = new WeakMap<DeckNodeObject, DeckFlowNode>();
 const groupCache = new Map<string, GroupFlowNode>();
 const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
+const stickyNodeCache = new WeakMap<StickyObject, StickyFlowNode>();
+const stickyLeaderCache = new WeakMap<StickyObject, StickyLeaderFlowEdge>();
 /** Last edge list: returned again when every element is the same, so React Flow skips a re-sync. */
 let lastEdges: DeckFlowEdge[] = [];
 
@@ -206,6 +226,56 @@ export function toFlowNodes(
   return [...groupNodes(deck), ...components];
 }
 
+export function toStickyNodes(deck: SododeckFile, selection: Selection): StickyFlowNode[] {
+  const selected = new Set(selection.stickies);
+  const titles = new Map(deck.nodes.map((node) => [node.id, node.title]));
+  return deck.stickies.map((sticky) => {
+    const placement = stickyCanvasPosition(deck, sticky);
+    const pinnedTo = placement.status === 'pinned' ? placement.pinnedTo : null;
+    const pinnedToTitle = pinnedTo === null ? null : (titles.get(pinnedTo) ?? null);
+    const label = stickyLabel(sticky.text) ?? 'Empty note';
+    const collapsed = sticky.collapsed === true;
+    const showInFlows = sticky.showInFlows === true;
+    const cached = stickyNodeCache.get(sticky);
+    if (
+      cached?.selected === selected.has(sticky.id) &&
+      cached.position.x === placement.point.x &&
+      cached.position.y === placement.point.y &&
+      cached.data.label === label &&
+      cached.data.text === sticky.text &&
+      cached.data.color === sticky.color &&
+      cached.data.status === placement.status &&
+      cached.data.pinnedTo === pinnedTo &&
+      cached.data.pinnedToTitle === pinnedToTitle &&
+      cached.data.collapsed === collapsed &&
+      cached.data.showInFlows === showInFlows
+    ) {
+      return cached;
+    }
+    const flowNode: StickyFlowNode = {
+      id: `${STICKY_NODE_PREFIX}${sticky.id}`,
+      type: 'sticky',
+      position: placement.point,
+      width: 180,
+      zIndex: 1,
+      selected: selected.has(sticky.id),
+      data: {
+        stickyId: sticky.id,
+        text: sticky.text,
+        label,
+        color: sticky.color,
+        status: placement.status,
+        pinnedTo,
+        pinnedToTitle,
+        collapsed,
+        showInFlows,
+      },
+    };
+    stickyNodeCache.set(sticky, flowNode);
+    return flowNode;
+  });
+}
+
 /** Picks the facing sides of two boxes, so edges leave and enter where it looks natural. */
 export function facingSides(from: Point, to: Point): [HandleSide, HandleSide] {
   const dx = to.x - from.x;
@@ -284,4 +354,28 @@ export function toFlowEdges(
     return lastEdges;
   lastEdges = next;
   return next;
+}
+
+export function toLeaderEdges(deck: SododeckFile): StickyLeaderFlowEdge[] {
+  return deck.stickies.flatMap((sticky) => {
+    const placement = stickyCanvasPosition(deck, sticky);
+    if (placement.status !== 'pinned') return [];
+    const cached = stickyLeaderCache.get(sticky);
+    if (
+      cached?.source === placement.pinnedTo &&
+      cached.target === `${STICKY_NODE_PREFIX}${sticky.id}`
+    ) {
+      return [cached];
+    }
+    const leader: StickyLeaderFlowEdge = {
+      id: `${STICKY_LEADER_PREFIX}${sticky.id}`,
+      type: 'sticky-leader',
+      source: placement.pinnedTo,
+      target: `${STICKY_NODE_PREFIX}${sticky.id}`,
+      selectable: false,
+      focusable: false,
+    };
+    stickyLeaderCache.set(sticky, leader);
+    return [leader];
+  });
 }
