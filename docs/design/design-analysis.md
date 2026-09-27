@@ -486,6 +486,9 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
    Deck/edge/step JSON read-only. Spec C-5 + constitution: Monaco with JSON Schema autocomplete,
    full two-way sync. _Proposal: Monaco for both tabs; Deck tab editable too (it is the core promise
    of C-5), keeping the design's header, error line and selection tab._
+   **Decision (founder, 2026-09-27):** read-only for now. The panel shows the canvas as
+   JSON (Selection + Deck tabs), live, with Copy and collapse; editing from JSON is deferred
+   (backlog 004).
 4. **Schema shape.** (a) node kind enum names (`gateway`/`database` vs `edge`/`data`), (b) protocol
    enum, (c) positions in nodes vs per view (V-4 "pinned positions"), (d) structured decision table
    (design) vs free-text `when/then` (spec §6 example), (e) step `rule` single vs `rules[]`, (f) new
@@ -499,9 +502,13 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
    SLA (R-1), onboarding tour (K-8 is P2, but M5 lists it). _Proposal: include the rule test panel
    (cheap, already designed), drop "measured" SLA (show target only, no fake data), keep the 3-step
    first-run tour in M5._
+   **Decision (founder, 2026-09-27):** as proposed: rule test panel + catch-all check in 008,
+   SLA target only, 3-step tour in M5 (013).
 7. **Autosave timing**: design debounce 650 ms vs spec/constitution "persist within 500 ms".
    _Proposal: Yjs + y-indexeddb persists each update immediately; the "Saving…" label is purely
    cosmetic with a ≤ 300 ms hold._
+   **Decision (founder, 2026-09-27):** as proposed, plus an error state "Couldn't save — export a
+   backup" (not designed yet).
 8. **Group geometry**: design stores fixed group rectangles; resizing/creating groups isn't
    designed. _Proposal: group bounds computed from member nodes + padding (no stored geometry)._
 9. **Edge routing**: the mock uses custom orthogonal routing with a shared queue lane. _Proposal:
@@ -509,9 +516,14 @@ script in `Sododeck.dc.html`. Described as user-facing behavior:
    011)._
 10. **Owner field**: design uses a fixed team list (`TEAMS`). _Proposal: free text with a datalist of
     owners already used in the deck._
+    **Decision (founder, 2026-09-27):** as proposed.
 11. **Delete without confirm/undo** in design. Constitution-friendly default: no confirm, but undo
     (C-6) and a toast with "Undo".
+    **Decision (founder, 2026-09-27):** deleting **asks for confirmation**; undo (⌘Z) still works
+    after a confirmed delete.
 12. **Library "Recent"** = first 4 in the mock. _Proposal: last 7 days by `updatedAt`._
+    **Decision (founder, 2026-09-27):** the 8 most recently **opened** decks (`openedAt` in library
+    metadata, not in the deck).
 13. **Theme in document**: the mock saves the theme inside the deck. It is a UI preference
     (localStorage), never document data (constitution I).
 14. **Third-party requests**: the mock loads React (unpkg) and fonts/icons (Google). The app must
