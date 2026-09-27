@@ -395,27 +395,27 @@ then a manual two-tab check (quickstart scenario 7).
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T055 [P] Accessibility pass (constitution VII): keyboard-only run of quickstart scenarios 3–7;
+- [x] T055 [P] Accessibility pass (constitution VII): keyboard-only run of quickstart scenarios 3–7;
       focus rings on cards/rows/menus; live-region announcements for saved/error/deleted/undone;
       no state by color alone (save error, storage On/Off, folder errors). Fix and add missing
       role/label assertions to the relevant tests.
-- [ ] T056 [P] Performance: `pnpm bench` on the branch, write `bench-after.md` next to
+- [x] T056 [P] Performance: `pnpm bench` on the branch, write `bench-after.md` next to
       `bench-before.md`, compare the drag scenario (≤ 5 % regression allowed); add a unit timing test
       that a 500-node deck flush (merge + summary + transaction) completes < 50 ms in fake-indexeddb.
-- [ ] T057 [P] Verify the library chunk stays light: after `pnpm build`, check the library route
+- [x] T057 [P] Verify the library chunk stays light: after `pnpm build`, check the library route
       chunk does not include `yjs`, `@sododeck/model`, `@xyflow/react` or `monaco-editor` (inspect
       `apps/app/dist` or the Vite manifest); fix imports if it does.
-- [ ] T058 [P] Visual check: screenshots at 1440×900 light and dark of library (01, 07, 08, 09 without
+- [x] T058 [P] Visual check: screenshots at 1440×900 light and dark of library (01, 07, 08, 09 without
       banner), folder dialogs/menus (72–77), Recent (78, 79), storage card (80 card, 81), autosave
       states (83–85); list differences vs `docs/design/screens/` in the PR description.
-- [ ] T059 [P] Docs: update `apps/app/CLAUDE.md` map (`src/storage/*`, `src/library/*`, routes, "deck
+- [x] T059 [P] Docs: update `apps/app/CLAUDE.md` map (`src/storage/*`, `src/library/*`, routes, "deck
       content only as Yjs updates in `updates`; library record fields are caches"), `packages/ui`
       `CLAUDE.md` (new menu components), `packages/model/CLAUDE.md` Boundaries line about y-indexeddb
       (now our own provider in `apps/app/src/storage`), and mark 005 status in `docs/backlog.md`.
-- [ ] T060 Privacy check: run the smoke suite (no third-party requests) and search the new code for
+- [x] T060 Privacy check: run the smoke suite (no third-party requests) and search the new code for
       `fetch(`, `navigator.sendBeacon`, telemetry calls carrying names or content — none allowed.
-- [ ] T061 Run quickstart.md manual scenarios 1–8 in Chrome and one of Safari/Firefox; note results.
-- [ ] T062 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`
+- [x] T061 Run quickstart.md manual scenarios 1–8 in Chrome and one of Safari/Firefox; note results.
+- [x] T062 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`
       all green; no `.only`/skipped tests; final report (what changed, skipped, uncertain; bench
       numbers; screenshots).
 
