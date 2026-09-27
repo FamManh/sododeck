@@ -1,21 +1,19 @@
 import { Button } from '@sododeck/ui/components/button';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
-import { Braces, ChevronDown, Lock } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useToast } from '@sododeck/ui/components/toast';
+import { Braces, ChevronDown, Copy, Lock } from 'lucide-react';
 
+import { isApplePlatform, supportsClipboardWrite } from '../lib/features';
 import type { JsonTab } from '../state/json-panel-prefs';
-import { lineCountLabel } from './json-panel-view';
+import { copyToastText, countLines, lineCountLabel, type SelectionView } from './json-panel-view';
 
 export interface JsonPanelHeaderProps {
   tab: JsonTab;
   onTabChange: (tab: JsonTab) => void;
-  /** Visible Selection tab text (truncated) and its full accessible name. */
-  selectionLabel: string;
-  selectionFullLabel: string;
-  /** Lines of the current tab's text; hidden when 0. */
-  lineCount: number;
-  /** Copy button (US4). */
-  actions?: ReactNode;
+  /** Labels the Selection tab and names what Copy copied. */
+  view: SelectionView;
+  /** Text of the current tab; `''` when it shows no code. */
+  text: string;
   onCollapse: () => void;
 }
 
@@ -25,12 +23,24 @@ const isTab = (value: string): value is JsonTab => value === 'deck' || value ===
 export function JsonPanelHeader({
   tab,
   onTabChange,
-  selectionLabel,
-  selectionFullLabel,
-  lineCount,
-  actions,
+  view,
+  text,
   onCollapse,
 }: JsonPanelHeaderProps) {
+  const { toast } = useToast();
+  const lineCount = countLines(text);
+
+  const copy = async () => {
+    try {
+      if (!supportsClipboardWrite()) throw new Error('no clipboard');
+      await navigator.clipboard.writeText(text);
+      toast({ message: copyToastText(tab, view) });
+    } catch {
+      const keys = isApplePlatform() ? '⌘C' : 'Ctrl+C';
+      toast({ message: `Couldn't copy — select the text and press ${keys}` });
+    }
+  };
+
   return (
     <div className="flex h-10 shrink-0 items-center gap-3 border-b border-hairline bg-surface pr-2 pl-4">
       <h2 className="flex items-center gap-2 text-body-sm font-medium text-ink">
@@ -44,12 +54,8 @@ export function JsonPanelHeader({
           if (isTab(value)) onTabChange(value);
         }}
       >
-        <SegmentedControlItem
-          value="selection"
-          aria-label={selectionFullLabel}
-          title={selectionFullLabel}
-        >
-          <span className="max-w-40 truncate">{selectionLabel}</span>
+        <SegmentedControlItem value="selection" aria-label={view.fullLabel} title={view.fullLabel}>
+          <span className="max-w-40 truncate">{view.label}</span>
         </SegmentedControlItem>
         <SegmentedControlItem value="deck">Deck</SegmentedControlItem>
       </SegmentedControl>
@@ -63,7 +69,17 @@ export function JsonPanelHeader({
           {lineCountLabel(lineCount)}
         </span>
       )}
-      {actions}
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Copy JSON"
+        disabled={text === ''}
+        onClick={() => {
+          void copy();
+        }}
+      >
+        <Copy />
+      </Button>
       <Button
         variant="ghost"
         size="icon-sm"

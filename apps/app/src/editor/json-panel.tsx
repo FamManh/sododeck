@@ -7,7 +7,7 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { createCooldown } from './cooldown';
 import { JsonPanelHeader } from './json-panel-header';
-import { countLines, selectionText, selectionView } from './json-panel-view';
+import { selectionText, selectionView } from './json-panel-view';
 import { PANEL_COLLAPSED } from './panel-height';
 import { useThrottledDeckText } from './use-throttled-deck-text';
 
@@ -74,9 +74,8 @@ export function JsonPanel() {
       <JsonPanelHeader
         tab={tab}
         onTabChange={setJsonTab}
-        selectionLabel={view.label}
-        selectionFullLabel={view.fullLabel}
-        lineCount={countLines(text)}
+        view={view}
+        text={text}
         onCollapse={() => {
           setJsonPanelOpen(false);
         }}

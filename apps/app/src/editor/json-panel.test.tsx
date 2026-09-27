@@ -282,3 +282,67 @@ describe('JsonPanel — read-only (US3)', () => {
     expect(toJSON(doc).nodes.some((n) => n.id === 'billing')).toBe(true);
   });
 });
+
+describe('JsonPanel — Copy (US4)', () => {
+  function stubClipboard(writeText: ((text: string) => Promise<void>) | undefined) {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: writeText ? { writeText } : undefined,
+    });
+  }
+
+  it('copies the exact Deck text', async () => {
+    const { user, deckText } = setup();
+    await deckPre();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+    await user.click(screen.getByRole('button', { name: 'Copy JSON' }));
+    expect(writeText).toHaveBeenCalledWith(deckText());
+    expect(await screen.findByText('Copied Deck JSON')).toBeInTheDocument();
+  });
+
+  it('copies the selection text and names it', async () => {
+    const { user, doc } = setup();
+    await deckPre();
+    await user.click(screen.getByRole('radio', { name: 'Selection' }));
+    act(() => {
+      useUiStore.getState().select({ nodes: ['order-svc'] });
+    });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+    await user.click(screen.getByRole('button', { name: 'Copy JSON' }));
+    expect(writeText).toHaveBeenCalledWith(serializeEntry('nodes', nodeOf('order-svc', doc)));
+    expect(await screen.findByText('Copied Order Service JSON')).toBeInTheDocument();
+
+    act(() => {
+      useUiStore.getState().select({ nodes: ['web-app', 'order-svc', 'orders-db'], edges: ['e1'] });
+    });
+    await user.click(screen.getByRole('button', { name: 'Copy JSON' }));
+    expect(await screen.findByText('Copied 4 items as JSON')).toBeInTheDocument();
+  });
+
+  it('is disabled when the selection is empty', async () => {
+    const { user } = setup();
+    await deckPre();
+    await user.click(screen.getByRole('radio', { name: 'Selection' }));
+    expect(screen.getByRole('button', { name: 'Copy JSON' })).toBeDisabled();
+  });
+
+  it('tells the user when copying fails', async () => {
+    const { user } = setup();
+    await deckPre();
+    stubClipboard(vi.fn().mockRejectedValue(new Error('denied')));
+    await user.click(screen.getByRole('button', { name: 'Copy JSON' }));
+    expect(await screen.findByText(/^Couldn't copy/)).toBeInTheDocument();
+  });
+
+  it('tells the user when there is no clipboard API', async () => {
+    const { user } = setup();
+    await deckPre();
+    stubClipboard(undefined);
+    await user.click(screen.getByRole('button', { name: 'Copy JSON' }));
+    expect(
+      await screen.findByText("Couldn't copy — select the text and press Ctrl+C"),
+    ).toBeInTheDocument();
+  });
+});
