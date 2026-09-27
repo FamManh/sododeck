@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../test/render-canvas';
@@ -27,6 +28,14 @@ const grid = deckOf({
   edges: [
     { id: 'e1', from: 'n11', to: 'n12', label: 'right' },
     { id: 'e2', from: 'n01', to: 'n11' },
+  ],
+});
+
+const stickyDeck = deckOf({
+  nodes: [{ id: 'svc', type: 'service', title: 'Order Service', position: { x: 240, y: 120 } }],
+  stickies: [
+    { id: 'st1', text: 'Remember retries', position: { x: 40, y: 60 } },
+    { id: 'st2', text: 'Pinned note', anchor: 'svc', position: { x: 12, y: -24 } },
   ],
 });
 
@@ -59,6 +68,15 @@ function focusNode(id: string) {
   const el = document.querySelector<HTMLElement>(`[data-node-id="${id}"]`);
   act(() => {
     el?.focus();
+  });
+}
+
+function focusSticky() {
+  const [el] = screen.getAllByTestId('sticky-node');
+  if (el === undefined) throw new Error('sticky note not rendered');
+  act(() => {
+    ui().select({ stickies: ['st1'] });
+    el.focus();
   });
 }
 
@@ -148,6 +166,90 @@ describe('canvas keyboard', () => {
     focusNode('n00');
     await user.keyboard('{Meta>}={/Meta}{Meta>}-{/Meta}{Meta>}0{/Meta}');
     expect(ui().focusedId).toBe('n00');
+  });
+
+  it('adds a note with N at the tracked pointer', async () => {
+    const { user, doc } = setup(deckOf({}));
+    const canvas = screen.getByLabelText('Diagram');
+
+    act(() => {
+      ui().setCanvasPointer({ x: 240, y: 130 });
+      canvas.focus();
+    });
+    await user.keyboard('n');
+    expect(readDeck(doc).stickies[0]).toMatchObject({ text: '', position: { x: 240, y: 130 } });
+    expect(ui().stickyDraft).toBe(readDeck(doc).stickies[0]?.id);
+    expect(ui().stickyEditing).toBe(readDeck(doc).stickies[0]?.id);
+    expect(ui().announcement.text).toBe('Note added');
+  });
+
+  it('falls back to the view centre when N has no tracked pointer', async () => {
+    const { user, doc } = setup(deckOf({}));
+    const canvas = screen.getByLabelText('Diagram');
+    Object.defineProperty(canvas, 'getBoundingClientRect', {
+      value: () => new DOMRect(100, 50, 300, 200),
+    });
+    act(() => {
+      ui().setCanvasPointer(null);
+      canvas.focus();
+    });
+    await user.keyboard('n');
+    expect(readDeck(doc).stickies[0]).toMatchObject({ text: '', position: { x: 250, y: 150 } });
+  });
+
+  it('does not add a note while typing', async () => {
+    const { user, doc } = setup(deckOf({}));
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('n');
+    expect(readDeck(doc).stickies).toEqual([]);
+  });
+
+  it('does not add a note during a flow session or in flow mode', async () => {
+    const session = setup(playbackDeck);
+    const sessionCanvas = screen.getByLabelText('Diagram');
+    act(() => {
+      ui().startRecording('Flow', null);
+      sessionCanvas.focus();
+    });
+    await session.user.keyboard('n');
+    expect(readDeck(session.doc).stickies).toEqual([]);
+
+    act(() => {
+      ui().endSession();
+      openFlow(session.editor(), 'order');
+      sessionCanvas.focus();
+    });
+    await session.user.keyboard('n');
+    expect(readDeck(session.doc).stickies).toEqual([]);
+  });
+
+  it('collapses, expands, nudges and edits the selected note with the keyboard', async () => {
+    const { user, doc } = setup(stickyDeck);
+    focusSticky();
+    const [sticky] = screen.getAllByTestId('sticky-node');
+
+    fireEvent.keyDown(sticky, { key: 'c', code: 'KeyC', altKey: true });
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.collapsed).toBe(true);
+    expect(ui().announcement.text).toBe('Note collapsed');
+    fireEvent.keyDown(sticky, { key: 'c', code: 'KeyC', altKey: true });
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.collapsed).toBeUndefined();
+    expect(ui().announcement.text).toBe('Note expanded');
+
+    await user.keyboard('{ArrowRight}{Shift>}{ArrowDown}{/Shift}');
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.position).toEqual({
+      x: 48,
+      y: 92,
+    });
+
+    const [editedSticky] = screen.getAllByTestId('sticky-node');
+    fireEvent.keyDown(editedSticky, { key: 'Enter' });
+    expect(ui().stickyEditing).toBe('st1');
+    act(() => {
+      ui().setStickyEditing(null);
+    });
+    const [renamedSticky] = screen.getAllByTestId('sticky-node');
+    fireEvent.keyDown(renamedSticky, { key: 'F2' });
+    expect(ui().stickyEditing).toBe('st1');
   });
 });
 

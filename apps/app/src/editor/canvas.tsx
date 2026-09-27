@@ -34,6 +34,7 @@ import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { SelectionFrame } from './selection-frame';
+import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
@@ -141,7 +142,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const activeFlow = useUiStore((s) => s.activeFlow);
   const session = useUiStore((s) => s.flowSession);
   const hoverEdgeId = useUiStore((s) => s.hoverEdgeId);
-  const { setCenter, getZoom, getViewport } = useReactFlow();
+  const { setCenter, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
   const [restored] = useState(() => useUiStore.getState().canvasViewport);
@@ -156,6 +157,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
 
   useSelectionSync();
   useRovingFocus(wrapper);
+  useStickyDraftLifecycle();
 
   // The shown or recorded flow's marks (006): badges, candidates, preview, invalid, start ring.
   const flow = findFlow(deck, session?.flowId ?? activeFlow?.flowId ?? null);
@@ -243,6 +245,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       }}
       onKeyDown={onKeyDown}
       className={cn('relative h-full', focusRing)}
+      onMouseLeave={() => {
+        useUiStore.getState().setCanvasPointer(null);
+      }}
     >
       <ReactFlow
         aria-label="Diagram canvas"
@@ -251,6 +256,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onlyRenderVisibleElements={onlyRenderVisibleElements}
+        onPaneMouseMove={(event) => {
+          useUiStore
+            .getState()
+            .setCanvasPointer(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+        }}
         onInit={onReady}
         fitView={restored === null}
         fitViewOptions={{ padding: 0.2 }}

@@ -6,6 +6,7 @@
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
  *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
+import { stickyCanvasPosition } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect } from 'react';
@@ -14,12 +15,14 @@ import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { canvasElement } from './canvas-actions';
 import { displayPosition, nearestInDirection, NODE_SIZE, type Direction } from './canvas-geometry';
 import { edgeName } from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
 import { analysisOf, recordClick, requestCancel, undoLastStep } from './flows/flow-session';
 import { useSaveControls } from './save-context';
+import { addNoteAt } from './stickies/sticky-actions';
 
 export { isTextTarget };
 
@@ -49,7 +52,7 @@ function focusInspectorTitle(): void {
 
 export function useCanvasKeyDown() {
   const editor = useEditor();
-  const { zoomIn, zoomOut, fitView, setCenter, getZoom } = useReactFlow();
+  const { zoomIn, zoomOut, fitView, setCenter, getZoom, screenToFlowPosition } = useReactFlow();
 
   return useCallback(
     (event: ReactKeyboardEvent) => {
@@ -141,8 +144,54 @@ export function useCanvasKeyDown() {
         ui.focusedId ??
         (ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : undefined) ??
         null;
+      const selectedSticky =
+        ui.selection.stickies.length === 1 ? (ui.selection.stickies[0] ?? null) : null;
+      const altKey = event.getModifierState('Alt');
+
+      if (key.toLowerCase() === 'n') {
+        if (session !== null || flowMode) return;
+        event.preventDefault();
+        const pointer = ui.canvasPointer;
+        const rect = canvasElement()?.getBoundingClientRect();
+        const point =
+          pointer ??
+          screenToFlowPosition({
+            x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+            y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+          });
+        addNoteAt(editor, point);
+        return;
+      }
+
+      if (altKey && event.code === 'KeyC' && selectedSticky !== null) {
+        event.preventDefault();
+        const sticky = deck.stickies.find((entry) => entry.id === selectedSticky);
+        if (sticky === undefined) return;
+        const collapsed = sticky.collapsed === true;
+        editor.update('stickies', selectedSticky, { collapsed: collapsed ? null : true });
+        ui.announce(collapsed ? 'Note expanded' : 'Note collapsed');
+        return;
+      }
+      if (altKey) return;
 
       const direction = ARROWS[key];
+      if (selectedSticky !== null && direction !== undefined) {
+        event.preventDefault();
+        const sticky = deck.stickies.find((entry) => entry.id === selectedSticky);
+        if (sticky === undefined) return;
+        const point = stickyCanvasPosition(deck, sticky).point;
+        const step = event.shiftKey ? 32 : 8;
+        const delta =
+          direction === 'up'
+            ? { x: 0, y: -step }
+            : direction === 'down'
+              ? { x: 0, y: step }
+              : direction === 'left'
+                ? { x: -step, y: 0 }
+                : { x: step, y: 0 };
+        editor.moveSticky(selectedSticky, { x: point.x + delta.x, y: point.y + delta.y });
+        return;
+      }
       if (direction) {
         event.preventDefault();
         const points = deck.nodes.map((n, i) => {
@@ -192,7 +241,10 @@ export function useCanvasKeyDown() {
           return;
         }
         case 'enter':
-          if (ui.focusedEdgeId !== null) {
+          if (selectedSticky !== null) {
+            event.preventDefault();
+            ui.setStickyEditing(selectedSticky);
+          } else if (ui.focusedEdgeId !== null) {
             event.preventDefault();
             ui.openEdgePopover(ui.focusedEdgeId);
           } else if (current !== null) {
@@ -201,11 +253,17 @@ export function useCanvasKeyDown() {
             focusInspectorTitle();
           }
           return;
+        case 'f2':
+          if (selectedSticky !== null) {
+            event.preventDefault();
+            ui.setStickyEditing(selectedSticky);
+          }
+          return;
         default:
           return;
       }
     },
-    [editor, zoomIn, zoomOut, fitView, setCenter, getZoom],
+    [editor, zoomIn, zoomOut, fitView, setCenter, getZoom, screenToFlowPosition],
   );
 }
 

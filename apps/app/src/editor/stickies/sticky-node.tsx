@@ -1,3 +1,4 @@
+import { stickyCanvasPosition } from '@sododeck/model';
 import { MarkdownView } from '@sododeck/ui/components/markdown-view';
 import { Textarea } from '@sododeck/ui/components/textarea';
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -8,9 +9,11 @@ import { ChevronDown, ChevronRight, Pin, StickyNote } from 'lucide-react';
 import { memo } from 'react';
 
 import { useEditor } from '../../model/use-editor';
+import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { useLiveField } from '../fields/use-live-field';
 import type { StickyFlowNode } from '../deck-to-flow';
+import { finishDraft, notesAreReadOnly } from './sticky-actions';
 import { stickyTintClass } from './sticky-tint';
 
 function stickyName(data: StickyFlowNode['data']): string {
@@ -30,6 +33,7 @@ export const StickyNode = memo(function StickyNode({
   const editing = useUiStore((state) => state.stickyEditing === data.stickyId);
   const setStickyEditing = useUiStore((state) => state.setStickyEditing);
   const flowMode = useUiStore((state) => isFlowMode(state));
+  const readOnly = notesAreReadOnly();
   const field = useLiveField({
     label: 'Note text',
     value: data.text,
@@ -40,11 +44,12 @@ export const StickyNode = memo(function StickyNode({
   });
 
   const finishEditing = () => {
+    finishDraft(editor, data.stickyId);
     setStickyEditing(null);
   };
 
   const openEditing = () => {
-    if (flowMode) return;
+    if (flowMode || readOnly) return;
     setStickyEditing(data.stickyId);
   };
 
@@ -62,7 +67,31 @@ export const StickyNode = memo(function StickyNode({
       tabIndex={0}
       onDoubleClick={openEditing}
       onKeyDown={(event) => {
-        if (flowMode) return;
+        if (flowMode || readOnly) return;
+        if (event.altKey && event.code === 'KeyC') {
+          event.preventDefault();
+          editor.update('stickies', data.stickyId, { collapsed: collapsed ? null : true });
+          useUiStore.getState().announce(collapsed ? 'Note expanded' : 'Note collapsed');
+          return;
+        }
+        const move =
+          event.key === 'ArrowUp'
+            ? { x: 0, y: -(event.shiftKey ? 32 : 8) }
+            : event.key === 'ArrowDown'
+              ? { x: 0, y: event.shiftKey ? 32 : 8 }
+              : event.key === 'ArrowLeft'
+                ? { x: -(event.shiftKey ? 32 : 8), y: 0 }
+                : event.key === 'ArrowRight'
+                  ? { x: event.shiftKey ? 32 : 8, y: 0 }
+                  : null;
+        if (move !== null) {
+          event.preventDefault();
+          const sticky = readDeck(editor.doc).stickies.find((entry) => entry.id === data.stickyId);
+          if (sticky === undefined) return;
+          const point = stickyCanvasPosition(readDeck(editor.doc), sticky).point;
+          editor.moveSticky(data.stickyId, { x: point.x + move.x, y: point.y + move.y });
+          return;
+        }
         if (event.key === 'Enter' || event.key === 'F2') {
           event.preventDefault();
           openEditing();
@@ -122,6 +151,7 @@ export const StickyNode = memo(function StickyNode({
               focusRing,
             )}
             onClick={() => {
+              if (readOnly) return;
               editor.update('stickies', data.stickyId, { collapsed: collapsed ? null : true });
             }}
           >

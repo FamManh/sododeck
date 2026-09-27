@@ -6,10 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { Palette } from './palette';
-import { KIND_MIME } from './use-canvas-handlers';
+import { KIND_MIME, NOTE_MIME } from './use-canvas-handlers';
 
 describe('Palette', () => {
-  it('offers the six kinds', () => {
+  it('offers the six kinds, the Note card, and the Note help text', () => {
     renderWithEditor(<Palette />);
     expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
       'Add Service',
@@ -18,7 +18,13 @@ describe('Palette', () => {
       'Add Gateway',
       'Add Client',
       'Add External',
+      'Note',
     ]);
+    expect(
+      screen.getByText(
+        'Drag Note onto a node to pin it, or onto empty canvas for a free note. N adds one at the pointer.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('adds "New <kind>" on click and on Enter, selects and announces it', async () => {
@@ -56,5 +62,31 @@ describe('Palette', () => {
       dataTransfer: { setData: (k: string, v: string) => data.set(k, v), effectAllowed: '' },
     });
     expect(data.get(KIND_MIME)).toBe('queue');
+  });
+
+  it('adds and drags a Note card', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />);
+
+    await user.click(screen.getByRole('button', { name: 'Note' }));
+    const [sticky] = toJSON(doc).stickies;
+    expect(sticky).toMatchObject({ text: '' });
+    expect(Number.isInteger(sticky?.position?.x)).toBe(true);
+    expect(Number.isInteger(sticky?.position?.y)).toBe(true);
+    expect(useUiStore.getState().selection).toEqual({
+      nodes: [],
+      edges: [],
+      stickies: [sticky?.id],
+    });
+    expect(useUiStore.getState().stickyDraft).toBe(sticky?.id);
+    expect(useUiStore.getState().stickyEditing).toBe(sticky?.id);
+
+    const card = screen.getByRole('button', { name: 'Note' });
+    expect(card).toHaveAttribute('draggable', 'true');
+    const data = new Map<string, string>();
+    fireEvent.dragStart(card, {
+      dataTransfer: { setData: (k: string, v: string) => data.set(k, v), effectAllowed: '' },
+    });
+    expect(data.get(NOTE_MIME)).toBe('note');
   });
 });

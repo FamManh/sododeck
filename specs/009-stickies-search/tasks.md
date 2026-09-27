@@ -141,7 +141,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Adding, moving and keys
 
-- [ ] T021 [P] [US1] Write `apps/app/src/editor/stickies/sticky-actions.test.ts` and the sticky cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx` and `apps/app/src/editor/palette.test.tsx`. They must fail at first (research R5, R12):
+- [x] T021 [P] [US1] Write `apps/app/src/editor/stickies/sticky-actions.test.ts` and the sticky cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx` and `apps/app/src/editor/palette.test.tsx`. They must fail at first (research R5, R12):
   - `addNoteAt(point)` starts a draft that is free on empty canvas and pinned when the point is inside a component's rectangle. It selects the note, enters edit mode and announces "Note added" / "Note added, pinned to <node>".
   - `finishDraft` on blur discards a blank note ("Empty note removed", no undo entry) and keeps a note with text.
   - N at the tracked pointer adds a note, falls back to the view centre, and does nothing in a text field, during a flow session or in flow mode (`isFlowMode`).
@@ -150,7 +150,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - Enter or F2 edits the note.
   - The palette "Note" card is draggable with the note MIME, a click adds a free note at the view centre, and the STRUCTURE help text is present.
   - In a read-only deck (deleted in another tab, 005), N, a Note drop, a palette click and in-card editing do nothing (spec edge case).
-- [ ] T022 [US1] Implement:
+- [x] T022 [US1] Implement:
   - `apps/app/src/editor/stickies/sticky-actions.ts`: `addNoteAt` and `finishDraft`. A deck switch and unmount also end an open draft.
   - pane pointer tracking into `canvasPointer` in `apps/app/src/editor/canvas.tsx`
   - the note drop (a new MIME value) and sticky drag in `apps/app/src/editor/use-canvas-handlers.ts`: a gesture on drag start, `moveSticky` on change, and `sticky:` ids routed separately from nodes. Drops are refused during a flow session, like component drops.

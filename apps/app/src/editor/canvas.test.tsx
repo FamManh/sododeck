@@ -10,7 +10,7 @@ import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { exitFlow, openFlow } from './flows/flow-mode';
-import { KIND_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
 
 const deck = deckOf({
   nodes: [
@@ -88,6 +88,26 @@ describe('Canvas', () => {
     expect(node).toMatchObject({ type: 'database', title: 'New database' });
     expect(ui().selection.nodes).toEqual([node?.id]);
     expect(ui().announcement.text).toBe('Added New database');
+  });
+
+  it('adds a dropped note at the drop point', () => {
+    const { doc } = renderWithEditor(<Canvas />, deckOf({}));
+    const canvas = screen.getByLabelText('Diagram canvas');
+    fireEvent.dragOver(canvas, {
+      dataTransfer: { types: [NOTE_MIME], getData: () => 'note', dropEffect: '' },
+      clientX: 180,
+      clientY: 140,
+    });
+    fireEvent.drop(canvas, {
+      dataTransfer: { types: [NOTE_MIME], getData: () => 'note', dropEffect: '' },
+      clientX: 180,
+      clientY: 140,
+    });
+    const [sticky] = toJSON(doc).stickies;
+    expect(sticky).toMatchObject({ text: '' });
+    expect(Number.isInteger(sticky?.position?.x)).toBe(true);
+    expect(Number.isInteger(sticky?.position?.y)).toBe(true);
+    expect(ui().selection.stickies).toEqual([sticky?.id]);
   });
 
   it('creates nothing when a palette card is dropped outside the canvas', () => {
@@ -202,6 +222,26 @@ describe('canvas handlers', () => {
       h().onPaneClick();
     });
     expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [] });
+  });
+
+  it('routes sticky selection and drag updates separately from components', () => {
+    const { h, doc } = handlers(
+      deckOf({
+        nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+        stickies: [{ id: 'st1', text: 'Note', position: { x: 40, y: 60 } }],
+      }),
+    );
+    act(() => {
+      h().onNodeClick(click(), flowNode('sticky:st1'));
+    });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: ['st1'] });
+
+    act(() => {
+      h().onNodeDragStart({}, flowNode('sticky:st1'));
+      h().onNodesChange([{ type: 'position', id: 'sticky:st1', position: { x: 72, y: 96 } }]);
+      h().onNodeDragStop();
+    });
+    expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 72, y: 96 });
   });
 
   it('takes the marquee selection from React Flow, ignoring group boundaries', () => {

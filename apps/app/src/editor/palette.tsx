@@ -6,7 +6,8 @@ import { useReactFlow } from '@xyflow/react';
 
 import { useEditor } from '../model/use-editor';
 import { addComponent, canvasElement, centredOn, PALETTE_ID } from './canvas-actions';
-import { KIND_MIME } from './use-canvas-handlers';
+import { KIND_MIME, NOTE_MIME } from './use-canvas-handlers';
+import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
 
 /** Palette order and hints (design 14). Cloud and partner kinds are deferred (§g-28 → B). */
 const HINTS: Readonly<Record<ComponentKind, string>> = {
@@ -31,6 +32,7 @@ const ORDER: readonly ComponentKind[] = [
 export function Palette() {
   const editor = useEditor();
   const { screenToFlowPosition } = useReactFlow();
+  const readOnly = notesAreReadOnly();
 
   const addAtCentre = (kind: ComponentKind) => {
     const rect = canvasElement()?.getBoundingClientRect();
@@ -39,6 +41,14 @@ export function Palette() {
       y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
     });
     addComponent(editor, kind, centredOn(centre));
+  };
+
+  const centrePoint = () => {
+    const rect = canvasElement()?.getBoundingClientRect();
+    return screenToFlowPosition({
+      x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+      y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+    });
   };
 
   return (
@@ -74,6 +84,33 @@ export function Palette() {
           </li>
         ))}
       </ul>
+      <button
+        type="button"
+        draggable
+        aria-label="Note"
+        onClick={() => {
+          if (readOnly) return;
+          addNoteAt(editor, centrePoint());
+        }}
+        onDragStart={(event) => {
+          if (readOnly) return;
+          event.dataTransfer.setData(NOTE_MIME, 'note');
+          event.dataTransfer.effectAllowed = 'copy';
+        }}
+        className={cn(
+          'flex w-full cursor-grab items-start justify-between rounded-card border border-hairline bg-surface p-3 text-left transition-colors hover:border-border hover:shadow-rest active:cursor-grabbing',
+          focusRing,
+        )}
+      >
+        <span className="flex flex-col">
+          <span className="text-body font-medium text-ink">Note</span>
+          <span className="text-caption text-ink-secondary">Markdown, 180 px</span>
+        </span>
+      </button>
+      <p className="text-caption text-ink-secondary">
+        Drag Note onto a node to pin it, or onto empty canvas for a free note. N adds one at the
+        pointer.
+      </p>
     </section>
   );
 }
