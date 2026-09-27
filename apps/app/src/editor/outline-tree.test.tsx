@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
@@ -68,5 +68,18 @@ describe('OutlineTree', () => {
     const { user } = setup();
     await user.click(screen.getByRole('treeitem', { name: 'Web' }));
     expect(useUiStore.getState().selection.nodes).toEqual(['web']);
+  });
+
+  it('prepends an up row while drilled and clicking it goes up one level', async () => {
+    const { user } = setup();
+    act(() => {
+      useUiStore.setState({
+        drill: [{ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } }],
+      });
+    });
+    const up = screen.getByRole('treeitem', { name: 'Up to System view' });
+    expect(names()).toEqual(['Up to System view', 'Order Service', 'Orders DB']);
+    await user.click(up);
+    expect(useUiStore.getState().drill).toEqual([]);
   });
 });

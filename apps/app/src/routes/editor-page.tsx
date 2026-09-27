@@ -101,6 +101,7 @@ function EditorChrome() {
     <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)] bg-app">
       <TopBar
         deckName={deck.name ?? 'Untitled deck'}
+        deck={deck}
         screen={screen}
         rulesCount={Object.keys(deck.rules).length}
       />

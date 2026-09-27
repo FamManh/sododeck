@@ -10,6 +10,7 @@ import { useEditor, useHistory } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { useThemeStore } from '../theme/theme-store';
 import { SessionChip } from './flows/session-chip';
+import { DrillCrumbs, type DrillDeck } from './drill-crumbs';
 import { SaveStatus } from './save-status';
 import { useExportDeck } from './use-export-deck';
 import { Wordmark } from './wordmark';
@@ -106,10 +107,12 @@ function DeckNameCrumb({ name }: { name: string }) {
 
 export function TopBar({
   deckName,
+  deck,
   screen = 'canvas',
   rulesCount = 0,
 }: {
   deckName: string;
+  deck?: DrillDeck;
   /** The rule editor adds "Rules" to the breadcrumb and "Back to canvas" replaces Export (008). */
   screen?: 'canvas' | 'rules';
   rulesCount?: number;
@@ -132,6 +135,7 @@ export function TopBar({
         <span>Local</span>
         <span aria-hidden>/</span>
         <DeckNameCrumb name={deckName} />
+        {screen === 'canvas' && deck !== undefined && <DrillCrumbs deck={deck} />}
         {screen === 'rules' && (
           <>
             <span aria-hidden>/</span>

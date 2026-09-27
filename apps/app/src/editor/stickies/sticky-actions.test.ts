@@ -27,7 +27,12 @@ describe('sticky actions', () => {
       text: '',
       position: { x: 240, y: 140 },
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [actualFreeId] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: [actualFreeId],
+    });
     expect(ui().stickyDraft).toBe(actualFreeId);
     expect(ui().stickyEditing).toBe(actualFreeId);
     expect(ui().announcement.text).toBe('Note added');
@@ -52,7 +57,12 @@ describe('sticky actions', () => {
       anchor: 'svc',
       position: { x: NODE_SIZE.width / 2, y: NODE_SIZE.height / 2 },
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [actualPinnedId] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: [actualPinnedId],
+    });
     expect(ui().stickyDraft).toBe(actualPinnedId);
     expect(ui().stickyEditing).toBe(actualPinnedId);
     expect(ui().announcement.text).toBe('Note added, pinned to Order Service');
@@ -73,7 +83,7 @@ describe('sticky actions', () => {
     });
 
     expect(readDeck(env.doc).stickies).toEqual([]);
-    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
     expect(ui().stickyDraft).toBeNull();
     expect(ui().stickyEditing).toBeNull();
     expect(ui().announcement.text).toBe('Empty note removed');

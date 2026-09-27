@@ -22,7 +22,7 @@ export function generateBenchDeck(
   nodeCount: number,
   edgeCount: number,
   seed = 42,
-  options: { flows?: boolean; stickies?: number } = {},
+  options: { flows?: boolean; groups?: boolean; stickies?: number } = {},
 ) {
   const random = mulberry32(seed);
   const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount * 1.25)));
@@ -51,9 +51,35 @@ export function generateBenchDeck(
   }
 
   const deck: SododeckFile = { ...emptySododeckFile(), nodes, edges };
+  if (options.groups === true) addBenchGroups(deck);
   if ((options.stickies ?? 0) > 0) addBenchStickies(deck, options.stickies ?? 0, random);
   if (options.flows === true) addBenchFlows(deck, random);
   return { deck };
+}
+
+function addBenchGroups(deck: SododeckFile): void {
+  const groupCount = Math.min(25, Math.floor(deck.nodes.length / 20));
+  const parentCount = Math.ceil(groupCount / 5);
+
+  for (let index = 0; index < parentCount; index++) {
+    deck.groups.push({
+      id: `p${String(index)}`,
+      title: `Parent group ${String(index)}`,
+    });
+  }
+
+  for (let index = 0; index < groupCount; index++) {
+    const groupId = `g${String(index)}`;
+    deck.groups.push({
+      id: groupId,
+      title: `Group ${String(index)}`,
+      parent: `p${String(Math.floor(index / 5))}`,
+    });
+    const start = index * 20;
+    for (const node of deck.nodes.slice(start, start + 20)) {
+      node.group = groupId;
+    }
+  }
 }
 
 /** Flows scale of 006 research R15: 5 features × 4 flows × 10 contiguous steps, plus one fork. */

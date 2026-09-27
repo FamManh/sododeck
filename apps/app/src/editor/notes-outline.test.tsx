@@ -63,6 +63,7 @@ describe('NotesOutline', () => {
     expect(useUiStore.getState().selection).toEqual({
       nodes: [],
       edges: [],
+      groups: [],
       stickies: ['note-2'],
     });
     expect(setCenter).toHaveBeenCalledWith(180, 220, { zoom: 1 });

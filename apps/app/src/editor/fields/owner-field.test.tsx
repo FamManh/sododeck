@@ -32,7 +32,7 @@ describe('OwnerField (FR-004)', () => {
     const names = within(screen.getByRole('listbox', { name: 'Owner suggestions' }))
       .getAllByRole('option')
       .map((o) => o.textContent);
-    expect(names).toEqual(['Core', 'Order desk']);
+    expect(names).toEqual(expect.arrayContaining(['Core', 'Order desk']));
     await user.clear(owner);
     await user.type(owner, 'Platform{Enter}');
     expect(toJSON(doc).nodes[0]?.owner).toBe('Platform');

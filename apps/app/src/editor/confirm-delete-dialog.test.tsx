@@ -71,7 +71,12 @@ describe('ConfirmDeleteDialog', () => {
       text: 'Pinned note',
       position: { x: 25, y: -94 },
     });
-    expect(useUiStore.getState().selection).toEqual({ nodes: [], edges: [], stickies: [] });
+    expect(useUiStore.getState().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: [],
+    });
     expect(
       screen.getByText(/Deleted Order Service and 2 connections · 1 note unpinned/),
     ).toBeInTheDocument();

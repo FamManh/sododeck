@@ -4,6 +4,8 @@
 import { NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
+import type { Level } from './levels';
+
 type Node = SododeckFile['nodes'][number];
 
 export type { Point };
@@ -15,6 +17,9 @@ export interface Rect extends Point {
 
 /** DESIGN.md: nodes are a fixed 164×50. */
 export const NODE_SIZE = { width: 164, height: 50 } as const;
+export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
+export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
+type NodeSize = { width: number; height: number };
 
 /** Space between a group's members and its dashed boundary. */
 export const GROUP_PADDING = 24;
@@ -57,16 +62,20 @@ function pad(rect: Rect, by: number): Rect {
   };
 }
 
+export function nodeSize(level: Level): NodeSize {
+  return level === 'component' ? COMPONENT_CARD_SIZE : NODE_SIZE;
+}
+
 /**
  * Bounds of every non-empty group: its members' boxes and its child groups' bounds, plus
  * padding. Groups in a parent cycle, and groups with nothing inside, get none.
  */
-export function groupBounds(deck: SododeckFile): Map<string, Rect> {
+export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map<string, Rect> {
   const content = new Map<string, Rect>();
   deck.nodes.forEach((node, index) => {
     if (node.group === undefined) return;
     const { x, y } = displayPosition(node, index);
-    content.set(node.group, union(content.get(node.group), { x, y, ...NODE_SIZE }));
+    content.set(node.group, union(content.get(node.group), { x, y, ...size }));
   });
 
   const children = new Map<string, string[]>();
@@ -150,12 +159,16 @@ export function freeSpot(deck: SododeckFile, spot: Point): Point {
 const FRAME_PADDING = 8;
 
 /** Union box of the selected nodes (+8px) for the multi-selection frame, or null below two. */
-export function selectionFrame(deck: SododeckFile, selected: readonly string[]): Rect | null {
+export function selectionFrame(
+  deck: SododeckFile,
+  selected: readonly string[],
+  size: NodeSize = NODE_SIZE,
+): Rect | null {
   if (selected.length < 2) return null;
   const ids = new Set(selected);
   let box: Rect | undefined;
   deck.nodes.forEach((node, index) => {
-    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...NODE_SIZE });
+    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...size });
   });
   return box ? pad(box, FRAME_PADDING) : null;
 }

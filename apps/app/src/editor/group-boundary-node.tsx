@@ -1,6 +1,9 @@
 import type { NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
+import { focusRing } from '@sododeck/ui/lib/focus';
+import { cn } from '@sododeck/ui/lib/utils';
+
 import type { GroupFlowNode } from './deck-to-flow';
 
 /**
@@ -8,6 +11,7 @@ import type { GroupFlowNode } from './deck-to-flow';
  * Derived from its members' positions, never stored; it lets pointer events through to the canvas.
  */
 export const GroupBoundaryNode = memo(function GroupBoundaryNode({
+  id,
   data,
   width,
   height,
@@ -18,7 +22,14 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
       style={{ width, height }}
       className="pointer-events-none rounded-group border border-dashed border-border bg-group"
     >
-      <span className="pointer-events-auto absolute top-2 left-3 flex gap-1.5 text-micro text-ink-muted uppercase">
+      <span
+        data-node-id={id}
+        tabIndex={data.focused ? 0 : -1}
+        className={cn(
+          'pointer-events-auto absolute top-2 left-3 flex gap-1.5 text-micro text-ink-muted uppercase',
+          focusRing,
+        )}
+      >
         <span>{data.title}</span>
         <span>{data.count}</span>
       </span>

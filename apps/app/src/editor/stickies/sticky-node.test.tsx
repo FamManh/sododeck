@@ -36,9 +36,12 @@ function stickyProps(
     brokenCurrentStep: boolean;
   },
 ): NodeProps<StickyFlowNode> {
-  const sticky = toStickyNodes(file, { nodes: [], edges: [], stickies: [] }, overlay, flow).find(
-    (node) => node.data.stickyId === stickyId,
-  );
+  const sticky = toStickyNodes(
+    file,
+    { nodes: [], edges: [], groups: [], stickies: [] },
+    overlay,
+    flow,
+  ).find((node) => node.data.stickyId === stickyId);
   if (sticky === undefined) throw new Error(`Missing sticky ${stickyId}`);
   return sticky as unknown as NodeProps<StickyFlowNode>;
 }

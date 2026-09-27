@@ -37,20 +37,20 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `010-zoom-groups-focus` from the latest `main`. Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 Add `options.groups` to `generateBenchDeck` in `apps/app/src/bench/generate-deck.ts`:
+- [x] T001 Create branch `010-zoom-groups-focus` from the latest `main`. Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T002 Add `options.groups` to `generateBenchDeck` in `apps/app/src/bench/generate-deck.ts`:
   - 25 groups (`g0`…`g24`) of 20 consecutive nodes each;
   - 5 parent groups (`p0`…`p4`), each holding 5 of those groups through `Group.parent`;
   - nodes keep their grid positions.
 
   Add cases to `apps/app/src/bench/generate-deck.test.ts`: group count, members per group, parents, and determinism for a given seed.
 
-- [ ] T003 Extend `apps/app/bench/perf.bench.ts` (R12):
+- [x] T003 Extend `apps/app/bench/perf.bench.ts` (R12):
   - `BENCH_GROUPS=1` passes `groups: true` to every scenario.
   - Add a `groups-collapsed` scenario (all groups collapsed through the UI store before measuring pan/zoom fps). Until T027 lands, this scenario may be registered but skipped with a clear `TODO(010)` log line, not a skipped test.
   - Add `collapse-toggle` (ms from Space on a group label to the next painted frame, and ms to cross 90% → 91%) and `focus` (ms from F to the next painted frame).
-- [ ] T004 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` on the branch before any canvas change. Save both tables in `specs/010-zoom-groups-focus/bench-before.md`.
-- [ ] T005 [P] Write the ADR `docs/decisions/0010-visible-graph.md` in the 0006 header format. It covers:
+- [x] T004 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` on the branch before any canvas change. Save both tables in `specs/010-zoom-groups-focus/bench-before.md`.
+- [x] T005 [P] Write the ADR `docs/decisions/0010-visible-graph.md` in the 0006 header format. It covers:
   - one pure `visibleGraph` derivation (scope, representatives, merged edges, ports) memoized in `Canvas`
   - drill, collapse and focus as per-tab UI state (§g-22), with no document writes
   - children hidden until their parent is drilled into (clarification Q1)
@@ -106,7 +106,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### UI store (`apps/app/src/state/ui-store.ts`)
 
-- [ ] T012 Write the new cases in `apps/app/src/state/ui-store.test.ts` first, then add to `apps/app/src/state/ui-store.ts` per [data-model.md](data-model.md) §2:
+- [x] T012 Write the new cases in `apps/app/src/state/ui-store.test.ts` first, then add to `apps/app/src/state/ui-store.ts` per [data-model.md](data-model.md) §2:
   - `Selection.groups` (default `[]` in `select`, `toggle`, `clearSelection` and `pruneSelection`, which gains a `groups` set);
   - `drill`, `drillInto` (clears selection and focus mode), `drillUp(depth)` (returns the popped frames);
   - `collapsed`, `setCollapsed`, `toggleCollapsed`, `expandAll`;
@@ -115,7 +115,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - `pruneView(existing)`;
   - `resetForDeck()` resets all of them;
   - `startRecording`, `startEditing` and `openFlow` also set `focusMode = false` (research R8); `openFlow` also sets `drill = []` (T055 wires the viewport and announcement).
-- [ ] T013 Update every `Selection` consumer to compile and behave with `groups`. Existing tests must stay green:
+- [x] T013 Update every `Selection` consumer to compile and behave with `groups`. Existing tests must stay green:
   - `apps/app/src/editor/canvas.tsx` (`useSelectionSync` passes existing group ids to `pruneSelection`);
   - `apps/app/src/editor/json-panel-view.ts` (the Selection tab lists selected groups through `serializeEntry('groups', …)`);
   - `apps/app/src/editor/inspector.tsx` (a group-only selection routes to a placeholder until T033);
@@ -125,14 +125,14 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Canvas wiring with no visible change
 
-- [ ] T014 Change `toFlowNodes` / `toFlowEdges` in `apps/app/src/editor/deck-to-flow.ts` to take `(deck, graph, view, overlay)` per [contracts/visible-graph.md](contracts/visible-graph.md) §Changes:
+- [x] T014 Change `toFlowNodes` / `toFlowEdges` in `apps/app/src/editor/deck-to-flow.ts` to take `(deck, graph, view, overlay)` per [contracts/visible-graph.md](contracts/visible-graph.md) §Changes:
   - render only `graph.nodes`, `graph.groups` and `graph.edges`;
   - add `level`, `childCount` and `dimmed` to `DeckNodeData`, and `level` to `GroupBoundaryData`, and include them in the cache checks;
   - declare the types `CollapsedFlowNode` (`collapsed-group`), `PortFlowNode` (`port`) and `MergedFlowEdge` (`merged`), and export `COLLAPSED_NODE_PREFIX`, `PORT_NODE_PREFIX` and `MERGED_EDGE_PREFIX`.
 
   Update `apps/app/src/editor/deck-to-flow.test.ts`: existing cases pass through a deck-scope graph, and new cases cover the cache identity when the level is unchanged and a rebuild when the level or `dimmed` changes.
 
-- [ ] T015 Wire `Canvas` in `apps/app/src/editor/canvas.tsx`:
+- [x] T015 Wire `Canvas` in `apps/app/src/editor/canvas.tsx`:
   - read `drill`, `collapsed` and `focusMode`, and memoize `scopeOf` → `visibleGraph`;
   - add a module-scope `levelSelector` via `useStore`, using `levelWithHysteresis` with a ref to the last level, then apply `effectiveLevel`;
   - pass `view` to `toFlowNodes` / `toFlowEdges`;
@@ -141,8 +141,8 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
   Canvas tests in `apps/app/src/editor/canvas.test.tsx` stay green, with the default state rendering exactly as before.
 
-- [ ] T016 Add `useViewSync` in `apps/app/src/editor/canvas.tsx`, next to `useSelectionSync`. After removals it calls `pruneView`, then, if `validDrillDepth` is below `drill.length`, `drillUp(depth)` and announces "Went up to <title>". Test in `apps/app/src/editor/canvas.test.tsx`: removing the drilled group (and undoing a group creation from another origin) goes up and announces it.
-- [ ] T017 Extend the roving focus (R6) in `apps/app/src/editor/canvas.tsx` and `apps/app/src/editor/use-canvas-shortcuts.ts`:
+- [x] T016 Add `useViewSync` in `apps/app/src/editor/canvas.tsx`, next to `useSelectionSync`. After removals it calls `pruneView`, then, if `validDrillDepth` is below `drill.length`, `drillUp(depth)` and announces "Went up to <title>". Test in `apps/app/src/editor/canvas.test.tsx`: removing the drilled group (and undoing a group creation from another origin) goes up and announces it.
+- [x] T017 Extend the roving focus (R6) in `apps/app/src/editor/canvas.tsx` and `apps/app/src/editor/use-canvas-shortcuts.ts`:
   - `focusedId` may be `group:<id>` (label), `collapsed:<id>` (card) or a node id;
   - arrow navigation includes label and card positions (label at the boundary's top-left, card at its rect);
   - `nodeElement` resolves the prefixed ids.
@@ -161,7 +161,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Tests first
 
-- [ ] T018 [P] [US1] Write `apps/app/src/editor/drill-crumbs.test.tsx`:
+- [x] T018 [P] [US1] Write `apps/app/src/editor/drill-crumbs.test.tsx`:
   - with `drill = []` the nav "Breadcrumb" shows `Local / <deck> / System view`, with "System view" as `aria-current="page"`;
   - with two frames the last crumb is current;
   - clicking "System view" calls `drillUp(0)`;
@@ -178,7 +178,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - Esc with a selection clears it and keeps the level;
   - Esc with a popover open closes the popover only;
   - at the top level, Esc and Backspace with nothing selected do nothing.
-- [ ] T021 [P] [US1] Write the scoped cases in `apps/app/src/editor/outline.test.ts`: `buildOutline(deck, scope)` lists only the scope members and prepends `{ type: 'up', title }` when drilled.
+- [x] T021 [P] [US1] Write the scoped cases in `apps/app/src/editor/outline.test.ts`: `buildOutline(deck, scope)` lists only the scope members and prepends `{ type: 'up', title }` when drilled.
 
 ### Implementation
 
@@ -202,8 +202,8 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - click or Enter → `drillUp(length - 1)`, then select and focus `outsideNodeId` (or its representative);
   - register it as `port` in the `nodeTypes` of `apps/app/src/editor/canvas.tsx`;
   - derive port nodes and their edges (plain edges ending at the pill) in `apps/app/src/editor/deck-to-flow.ts`.
-- [ ] T026 [P] [US1] Create `apps/app/src/editor/drill-crumbs.tsx` (T018) and render it in `apps/app/src/editor/top-bar.tsx` on the canvas screen after `DeckNameCrumb`: "System view" (a constant with a `TODO(M4): view name from 011`) plus one button per frame. Extend `apps/app/src/editor/top-bar.test.tsx`.
-- [ ] T027 [US1] Scope the outline: `buildOutline(deck, scope)` in `apps/app/src/editor/outline.ts` (T021), and the "Up to <crumb>" `treeitem` in `apps/app/src/editor/outline-tree.tsx`, which calls `drillUp`. Extend `apps/app/src/editor/outline-tree.test.tsx`.
+- [x] T026 [P] [US1] Create `apps/app/src/editor/drill-crumbs.tsx` (T018) and render it in `apps/app/src/editor/top-bar.tsx` on the canvas screen after `DeckNameCrumb`: "System view" (a constant with a `TODO(M4): view name from 011`) plus one button per frame. Extend `apps/app/src/editor/top-bar.test.tsx`.
+- [x] T027 [US1] Scope the outline: `buildOutline(deck, scope)` in `apps/app/src/editor/outline.ts` (T021), and the "Up to <crumb>" `treeitem` in `apps/app/src/editor/outline-tree.tsx`, which calls `drillUp`. Extend `apps/app/src/editor/outline-tree.test.tsx`.
 - [ ] T028 [US1] Show the child-count marker on components with children in `apps/app/src/editor/deck-node.tsx`: a `Layers` icon + n, named "<n> components inside, press Enter to open". Add the "No components in this group" empty state for an empty drilled scope in `apps/app/src/editor/canvas.tsx`, reusing the `EmptyCanvasCard` layout. Extend `apps/app/src/editor/deck-node.test.tsx`.
 
 **Checkpoint**: US1 acceptance scenarios 1–6 pass. The deck is unchanged.

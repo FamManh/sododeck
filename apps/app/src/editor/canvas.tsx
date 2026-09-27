@@ -8,7 +8,9 @@ import {
   MiniMap,
   Panel,
   ReactFlow,
+  useStore,
   useReactFlow,
+  type ReactFlowState,
   type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
@@ -18,12 +20,20 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { displayPosition, NODE_SIZE } from './canvas-geometry';
+import { displayPosition, groupBounds, nodeSize } from './canvas-geometry';
 import { CanvasToolbar } from './canvas-toolbar';
+import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { DeckEdge } from './deck-edge';
 import { DeckNode } from './deck-node';
-import { toFlowEdges, toFlowNodes, toLeaderEdges, toStickyNodes } from './deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  GROUP_NODE_PREFIX,
+  toFlowEdges,
+  toFlowNodes,
+  toLeaderEdges,
+  toStickyNodes,
+} from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
 import { EmptyCanvasCard } from './empty-canvas-card';
 import { playbackOf } from './flows/flow-mode';
@@ -32,13 +42,17 @@ import { InvalidEdgePopover } from './flows/invalid-edge-popover';
 import { findFlow } from './flows/session-path';
 import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
+import { focusSet } from './focus-set';
 import { GroupBoundaryNode } from './group-boundary-node';
+import { effectiveLevel, levelForZoom, levelWithHysteresis, type Level } from './levels';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
+import { scopeOf, visibleGraph } from './visible-graph';
+import { validDrillDepth } from './visible-graph';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
@@ -54,9 +68,60 @@ const connectionLineStyle = {
   strokeDasharray: '5 4',
 };
 
+let lastZoomLevel: Level = 'system';
+const levelSelector = (state: ReactFlowState) => {
+  lastZoomLevel = levelWithHysteresis(state.transform[2], lastZoomLevel);
+  return lastZoomLevel;
+};
+
 export interface CanvasProps {
   onlyRenderVisibleElements?: boolean;
   onReady?: () => void;
+}
+
+function scopeTitle(
+  deck: ReturnType<typeof readDeck>,
+  drill: readonly { kind: 'group' | 'node'; id: string }[],
+): string {
+  const current = drill.at(-1);
+  if (current === undefined) return 'System view';
+  if (current.kind === 'group')
+    return deck.groups.find((group) => group.id === current.id)?.title ?? 'System view';
+  return deck.nodes.find((node) => node.id === current.id)?.title ?? 'System view';
+}
+
+/** Keeps drill/collapse state pointing at existing, non-empty scopes after document removals. */
+function useViewSync(): void {
+  const editor = useEditor();
+
+  useEffect(
+    () =>
+      observeDeck(editor.doc, ({ changes }) => {
+        if (
+          !changes.some(
+            (c) => c.kind === 'removed' && (c.scope === 'nodes' || c.scope === 'groups'),
+          )
+        ) {
+          return;
+        }
+        const deck = readDeck(editor.doc);
+        const ui = useUiStore.getState();
+        const before = ui.drill;
+        ui.pruneView({
+          nodes: new Set(deck.nodes.map((node) => node.id)),
+          groups: new Set(deck.groups.map((group) => group.id)),
+        });
+        let changed = useUiStore.getState().drill.length < before.length;
+        const drill = useUiStore.getState().drill;
+        const depth = validDrillDepth(deck, drill);
+        if (depth < drill.length) {
+          ui.drillUp(depth);
+          changed = true;
+        }
+        if (changed) ui.announce(`Went up to ${scopeTitle(deck, useUiStore.getState().drill)}`);
+      }),
+    [editor.doc],
+  );
 }
 
 /** Keeps UI state pointing at objects that still exist; selects what undo/redo brings back. */
@@ -79,6 +144,7 @@ function useSelectionSync(): void {
           ui.pruneSelection({
             nodes: new Set(deck.nodes.map((n) => n.id)),
             edges: new Set(deck.edges.map((e) => e.id)),
+            groups: new Set(deck.groups.map((group) => group.id)),
             stickies: new Set(deck.stickies.map((s) => s.id)),
           });
         }
@@ -107,20 +173,39 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
     const root = wrapper.current;
     if (focusedId === null || !root?.contains(document.activeElement)) return;
     const deck = readDeck(editor.doc);
-    const index = deck.nodes.findIndex((n) => n.id === focusedId);
-    const node = deck.nodes[index];
-    if (!node) return;
-    const { x, y } = displayPosition(node, index);
+    const ui = useUiStore.getState();
+    const { zoom: currentZoom } = getViewport();
+    const scope = scopeOf(ui.drill);
+    const level = effectiveLevel(levelForZoom(currentZoom), scope);
+    const graph = visibleGraph(deck, scope, ui.collapsed);
+    const point = (() => {
+      if (focusedId.startsWith(GROUP_NODE_PREFIX)) {
+        const groupId = focusedId.slice(GROUP_NODE_PREFIX.length);
+        const rect = groupBounds(deck, nodeSize(level)).get(groupId);
+        return rect === undefined ? null : { x: rect.x, y: rect.y, width: 1, height: 1 };
+      }
+      if (focusedId.startsWith(COLLAPSED_NODE_PREFIX)) {
+        const groupId = focusedId.slice(COLLAPSED_NODE_PREFIX.length);
+        const card = graph.cards.find((entry) => entry.groupId === groupId);
+        return card?.rect ?? null;
+      }
+      const index = deck.nodes.findIndex((n) => n.id === focusedId);
+      const node = index < 0 ? undefined : deck.nodes[index];
+      if (node === undefined) return null;
+      const size = nodeSize(level);
+      return { ...displayPosition(node, index), ...size };
+    })();
+    if (point === null) return;
     const { x: vx, y: vy, zoom } = getViewport();
-    const left = x * zoom + vx;
-    const top = y * zoom + vy;
+    const left = point.x * zoom + vx;
+    const top = point.y * zoom + vy;
     const outside =
       left < 0 ||
       top < 0 ||
-      left + NODE_SIZE.width * zoom > root.clientWidth ||
-      top + NODE_SIZE.height * zoom > root.clientHeight;
+      left + point.width * zoom > root.clientWidth ||
+      top + point.height * zoom > root.clientHeight;
     if (outside && root.clientWidth > 0) {
-      void setCenter(x + NODE_SIZE.width / 2, y + NODE_SIZE.height / 2, { zoom });
+      void setCenter(point.x + point.width / 2, point.y + point.height / 2, { zoom });
     }
     const element = nodeElement(focusedId);
     if (element && element !== document.activeElement) element.focus({ preventScroll: true });
@@ -136,6 +221,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const selection = useUiStore((s) => s.selection);
+  const drill = useUiStore((s) => s.drill);
+  const collapsed = useUiStore((s) => s.collapsed);
+  const focusMode = useUiStore((s) => s.focusMode);
   const focusedId = useUiStore((s) => s.focusedId);
   const focusedEdgeId = useUiStore((s) => s.focusedEdgeId);
   const labelsOn = useUiStore((s) => s.labelsOn);
@@ -146,6 +234,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const wrapper = useRef<HTMLDivElement>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
   const [restored] = useState(() => useUiStore.getState().canvasViewport);
+  const zoomLevel = useStore(levelSelector);
   useEffect(
     () => () => {
       useUiStore.getState().setCanvasViewport(getViewport());
@@ -156,6 +245,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const onKeyDown = useCanvasKeyDown();
 
   useSelectionSync();
+  useViewSync();
   useRovingFocus(wrapper);
   useStickyDraftLifecycle();
 
@@ -208,10 +298,30 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     [deck, analysis, session, hoverEdgeId, activeStepId, marks],
   );
   useFlowViewport(deck, playback, wrapper);
+  const scope = useMemo(() => scopeOf(drill), [drill]);
+  const graph = useMemo(() => visibleGraph(deck, scope, collapsed), [deck, scope, collapsed]);
+  const level = useMemo(() => effectiveLevel(zoomLevel, scope), [zoomLevel, scope]);
+  const focus = useMemo(
+    () => (focusMode && focusedId !== null ? focusSet(deck, graph, focusedId) : null),
+    [focusMode, focusedId, deck, graph],
+  );
+  const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
+  const view = useMemo(
+    () => ({
+      selection,
+      focusedId,
+      focusedEdgeId,
+      labelsOn,
+      level,
+      focus,
+      marks: collapsedMarks,
+    }),
+    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks],
+  );
 
   const nodes = useMemo(
     () => [
-      ...toFlowNodes(deck, selection, focusedId, overlay),
+      ...toFlowNodes(deck, graph, view, overlay),
       ...toStickyNodes(deck, selection, overlay, {
         flowMode,
         notesDisplay,
@@ -219,14 +329,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         brokenCurrentStep,
       }),
     ],
-    [deck, selection, focusedId, overlay, flowMode, notesDisplay, emptyFlow, brokenCurrentStep],
+    [deck, graph, view, selection, overlay, flowMode, notesDisplay, emptyFlow, brokenCurrentStep],
   );
   const edges = useMemo(
-    () => [
-      ...toFlowEdges(deck, selection, labelsOn, focusedEdgeId, overlay),
-      ...toLeaderEdges(deck),
-    ],
-    [deck, selection, labelsOn, focusedEdgeId, overlay],
+    () => [...toFlowEdges(deck, graph, view, overlay), ...toLeaderEdges(deck)],
+    [deck, graph, view, overlay],
   );
   const recording = session !== null;
   const hasFocusedNode = focusedId !== null && deck.nodes.some((n) => n.id === focusedId);
@@ -293,6 +400,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         selectionOnDrag={false}
         selectNodesOnDrag={false}
         panOnDrag
+        zoomOnDoubleClick={false}
         // Recording pauses structure editing (006 FR-017). Flow mode is view-only too, but through
         // the handlers and CSS: toggling these props re-renders every node and edge, which costs
         // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
@@ -328,7 +436,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
             <StepPlayer deck={deck} />
           </Panel>
         )}
-        <SelectionFrame deck={deck} />
+        <SelectionFrame deck={deck} level={level} />
       </ReactFlow>
       {deck.nodes.length === 0 && <EmptyCanvasCard />}
       <EdgePopover deck={deck} />

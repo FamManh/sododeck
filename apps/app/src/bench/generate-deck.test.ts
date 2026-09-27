@@ -53,4 +53,41 @@ describe('generateBenchDeck', () => {
     }
     expect(deck.flows.at(-1)?.branches).toHaveLength(2);
   });
+
+  it('adds deterministic benchmark groups', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { groups: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.groups).toHaveLength(30);
+
+    const groups = deck.groups.filter((group) => group.id.startsWith('g'));
+    const parents = deck.groups.filter((group) => group.id.startsWith('p'));
+    expect(groups).toHaveLength(25);
+    expect(parents).toHaveLength(5);
+
+    for (let index = 0; index < groups.length; index++) {
+      const group = groups[index];
+      if (group === undefined) throw new Error('missing group fixture');
+      expect(group).toMatchObject({
+        id: `g${String(index)}`,
+        title: `Group ${String(index)}`,
+        parent: `p${String(Math.floor(index / 5))}`,
+      });
+
+      const members = deck.nodes.filter((node) => node.group === group.id);
+      expect(members).toHaveLength(20);
+      expect(members.map((node) => node.id)).toEqual(
+        Array.from({ length: 20 }, (_, offset) => `n${String(index * 20 + offset)}`),
+      );
+    }
+
+    expect(parents).toEqual(
+      Array.from({ length: 5 }, (_, index) => ({
+        id: `p${String(index)}`,
+        title: `Parent group ${String(index)}`,
+      })),
+    );
+    expect(generateBenchDeck(500, 1000, 42, { groups: true })).toEqual(
+      generateBenchDeck(500, 1000, 42, { groups: true }),
+    );
+  });
 });

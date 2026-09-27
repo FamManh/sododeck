@@ -10,12 +10,16 @@ import type { Edge, Node } from '@xyflow/react';
 import { displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
+import type { CollapsedFlowMarks } from './collapse-flow-marks';
+import type { FocusSet } from './focus-set';
 import {
   EMPTY_OVERLAY,
   type EdgeFlowMark,
   type FlowOverlay,
   type NodeFlowMark,
 } from './flows/flow-overlay';
+import type { Level } from './levels';
+import type { VisibleGraph } from './visible-graph';
 
 type DeckNodeObject = SododeckFile['nodes'][number];
 type DeckEdgeObject = SododeckFile['edges'][number];
@@ -26,6 +30,9 @@ export interface DeckNodeData extends Record<string, unknown> {
   kind: string;
   subtitle: string | undefined;
   hasRules: boolean;
+  level: Level;
+  childCount: number;
+  dimmed: boolean;
   /** Carries the canvas's single Tab stop (roving tabindex). */
   focused: boolean;
   /** "Step n starts here" while recording a flow (006): a ring and a tag. */
@@ -37,6 +44,8 @@ export interface DeckNodeData extends Record<string, unknown> {
 export interface GroupBoundaryData extends Record<string, unknown> {
   title: string;
   count: number;
+  level: Level;
+  focused: boolean;
 }
 
 export interface DeckEdgeData extends Record<string, unknown> {
@@ -47,8 +56,29 @@ export interface DeckEdgeData extends Record<string, unknown> {
   fromTitle: string;
   toTitle: string;
   focused: boolean;
+  dimmed: boolean;
   /** Marks of the shown or recorded flow (006): step badges and the flow style. */
   flow?: EdgeFlowMark;
+}
+
+export interface CollapsedGroupData extends Record<string, unknown> {
+  groupId: string;
+  title: string;
+  nodeCount: number;
+  edgeCount: number;
+  focused: boolean;
+}
+
+export interface PortNodeData extends Record<string, unknown> {
+  outsideNodeId: string;
+  outsideTitle: string;
+}
+
+export interface MergedEdgeData extends Record<string, unknown> {
+  count: number;
+  direction: 'a-to-b' | 'b-to-a' | 'both';
+  edgeIds: readonly string[];
+  focused: boolean;
 }
 
 export interface StickyNodeData extends Record<string, unknown> {
@@ -66,15 +96,22 @@ export interface StickyNodeData extends Record<string, unknown> {
 
 export type DeckFlowNode = Node<DeckNodeData, 'deck'>;
 export type GroupFlowNode = Node<GroupBoundaryData, 'group-boundary'>;
+export type CollapsedFlowNode = Node<CollapsedGroupData, 'collapsed-group'>;
+export type PortFlowNode = Node<PortNodeData, 'port'>;
 export type StickyFlowNode = Node<StickyNodeData, 'sticky'>;
-export type CanvasFlowNode = DeckFlowNode | GroupFlowNode | StickyFlowNode;
+export type CanvasFlowNode =
+  DeckFlowNode | GroupFlowNode | CollapsedFlowNode | PortFlowNode | StickyFlowNode;
 export type DeckFlowEdge = Edge<DeckEdgeData, 'deck'>;
+export type MergedFlowEdge = Edge<MergedEdgeData, 'merged'>;
 export type StickyLeaderFlowEdge = Edge<Record<string, never>, 'sticky-leader'>;
 
 export { NODE_SIZE };
 
 /** Group boundaries are React Flow nodes too; their ids are prefixed so they never clash. */
 export const GROUP_NODE_PREFIX = 'group:';
+export const COLLAPSED_NODE_PREFIX = 'collapsed:';
+export const PORT_NODE_PREFIX = 'port:';
+export const MERGED_EDGE_PREFIX = 'merged:';
 export const STICKY_NODE_PREFIX = 'sticky:';
 export const STICKY_LEADER_PREFIX = 'sticky-leader:';
 
@@ -82,11 +119,24 @@ export type HandleSide = 'top' | 'right' | 'bottom' | 'left';
 
 const nodeCache = new WeakMap<DeckNodeObject, DeckFlowNode>();
 const groupCache = new Map<string, GroupFlowNode>();
+const collapsedCache = new Map<string, CollapsedFlowNode>();
+const portCache = new Map<string, PortFlowNode>();
 const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
+const mergedCache = new Map<string, MergedFlowEdge>();
 const stickyNodeCache = new WeakMap<StickyObject, StickyFlowNode>();
 const stickyLeaderCache = new WeakMap<StickyObject, StickyLeaderFlowEdge>();
 /** Last edge list: returned again when every element is the same, so React Flow skips a re-sync. */
-let lastEdges: DeckFlowEdge[] = [];
+let lastEdges: (DeckFlowEdge | MergedFlowEdge)[] = [];
+
+export interface CanvasView {
+  selection: Selection;
+  focusedId: string | null;
+  focusedEdgeId: string | null;
+  labelsOn: boolean;
+  level: Level;
+  focus: FocusSet | null;
+  marks: CollapsedFlowMarks;
+}
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
 function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boolean {
@@ -114,17 +164,23 @@ function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boo
 function toFlowNode(
   node: DeckNodeObject,
   position: Point,
-  selected: boolean,
-  focused: boolean,
+  view: CanvasView,
+  childCount: number,
   mark: NodeFlowMark | undefined,
 ): DeckFlowNode {
   const cached = nodeCache.get(node);
   const flowStart = mark?.startsHere;
   const currentStep = mark?.currentStep === true;
   const inFlow = mark?.inPath === true;
+  const selected = view.selection.nodes.includes(node.id);
+  const focused = node.id === view.focusedId;
+  const dimmed = view.focus !== null && !view.focus.members.has(node.id);
   if (
     cached?.selected === selected &&
     cached.data.focused === focused &&
+    cached.data.level === view.level &&
+    cached.data.childCount === childCount &&
+    cached.data.dimmed === dimmed &&
     cached.data.flowStart === flowStart &&
     (cached.data.currentStep === true) === currentStep &&
     (cached.className === 'in-flow') === inFlow &&
@@ -145,6 +201,9 @@ function toFlowNode(
       kind: node.type,
       subtitle: node.tech,
       hasRules: (node.rules?.length ?? 0) > 0,
+      level: view.level,
+      childCount,
+      dimmed,
       focused,
       ...(flowStart === undefined ? {} : { flowStart }),
       ...(currentStep ? { currentStep } : {}),
@@ -170,19 +229,29 @@ function groupCounts(deck: SododeckFile): Map<string, number> {
   return counts;
 }
 
-function groupNodes(deck: SododeckFile): GroupFlowNode[] {
+function groupNodes(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+  level: Level,
+  view: CanvasView,
+): GroupFlowNode[] {
   if (deck.groups.length === 0) return [];
   const bounds = groupBounds(deck);
   const counts = groupCounts(deck);
-  return deck.groups.flatMap((group) => {
-    const rect = bounds.get(group.id);
+  return graph.groups.flatMap((groupId) => {
+    const group = deck.groups.find((entry) => entry.id === groupId);
+    const rect = bounds.get(groupId);
+    if (group === undefined) return [];
     if (!rect) return [];
-    const id = GROUP_NODE_PREFIX + group.id;
-    const count = counts.get(group.id) ?? 0;
+    const id = GROUP_NODE_PREFIX + groupId;
+    const count = counts.get(groupId) ?? 0;
+    const focused = view.focusedId === id;
     const cached = groupCache.get(id);
     if (
       cached?.data.title === group.title &&
       cached.data.count === count &&
+      cached.data.level === level &&
+      cached.data.focused === focused &&
       cached.position.x === rect.x &&
       cached.position.y === rect.y &&
       cached.width === rect.width &&
@@ -201,9 +270,86 @@ function groupNodes(deck: SododeckFile): GroupFlowNode[] {
       focusable: false,
       connectable: false,
       zIndex: -1,
-      data: { title: group.title, count },
+      data: { title: group.title, count, level, focused },
     };
     groupCache.set(id, flowNode);
+    return [flowNode];
+  });
+}
+
+function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNode[] {
+  return graph.cards.map((card) => {
+    const id = `${COLLAPSED_NODE_PREFIX}${card.groupId}`;
+    const focused = view.focusedId === id;
+    const selected = view.selection.groups.includes(card.groupId);
+    const cached = collapsedCache.get(id);
+    if (
+      cached?.selected === selected &&
+      cached.data.focused === focused &&
+      cached.position.x === card.rect.x &&
+      cached.position.y === card.rect.y &&
+      cached.width === card.rect.width &&
+      cached.height === card.rect.height &&
+      cached.data.title === card.title &&
+      cached.data.nodeCount === card.nodeCount &&
+      cached.data.edgeCount === card.edgeCount
+    ) {
+      return cached;
+    }
+    const flowNode: CollapsedFlowNode = {
+      id,
+      type: 'collapsed-group',
+      position: { x: card.rect.x, y: card.rect.y },
+      width: card.rect.width,
+      height: card.rect.height,
+      selected,
+      data: {
+        groupId: card.groupId,
+        title: card.title,
+        nodeCount: card.nodeCount,
+        edgeCount: card.edgeCount,
+        focused,
+      },
+    };
+    collapsedCache.set(id, flowNode);
+    return flowNode;
+  });
+}
+
+function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
+  const positions = new Map(
+    deck.nodes.map((node, index) => [node.id, displayPosition(node, index)]),
+  );
+  return graph.ports.flatMap((port) => {
+    const anchors = port.insideNodeIds
+      .map((nodeId) => positions.get(nodeId))
+      .filter((point): point is Point => point !== undefined);
+    if (anchors.length === 0) return [];
+    const x =
+      anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length + NODE_SIZE.width + 32;
+    const y = anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length;
+    const cached = portCache.get(port.id);
+    if (
+      cached?.position.x === x &&
+      cached.position.y === y &&
+      cached.data.outsideNodeId === port.outsideNodeId &&
+      cached.data.outsideTitle === port.outsideTitle
+    ) {
+      return [cached];
+    }
+    const flowNode: PortFlowNode = {
+      id: port.id,
+      type: 'port',
+      position: { x, y },
+      width: 120,
+      height: 36,
+      selectable: false,
+      data: {
+        outsideNodeId: port.outsideNodeId,
+        outsideTitle: port.outsideTitle,
+      },
+    };
+    portCache.set(port.id, flowNode);
     return [flowNode];
   });
 }
@@ -211,21 +357,30 @@ function groupNodes(deck: SododeckFile): GroupFlowNode[] {
 /** Group boundaries first (drawn below), then components. */
 export function toFlowNodes(
   deck: SododeckFile,
-  selection: Selection,
-  focusedId: string | null,
+  graph: VisibleGraph,
+  view: CanvasView,
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): CanvasFlowNode[] {
-  const selected = new Set(selection.nodes);
-  const components = deck.nodes.map((node, index) =>
-    toFlowNode(
-      node,
-      displayPosition(node, index),
-      selected.has(node.id),
-      node.id === focusedId,
-      overlay.nodes.get(node.id),
-    ),
-  );
-  return [...groupNodes(deck), ...components];
+  const components = graph.nodes.flatMap((nodeId) => {
+    const index = deck.nodes.findIndex((node) => node.id === nodeId);
+    const node = index < 0 ? undefined : deck.nodes[index];
+    if (node === undefined) return [];
+    return [
+      toFlowNode(
+        node,
+        displayPosition(node, index),
+        view,
+        graph.childCount.get(node.id) ?? 0,
+        overlay.nodes.get(node.id),
+      ),
+    ];
+  });
+  return [
+    ...groupNodes(deck, graph, view.level, view),
+    ...collapsedNodes(view, graph),
+    ...portNodes(deck, graph),
+    ...components,
+  ];
 }
 
 export function toStickyNodes(
@@ -331,26 +486,50 @@ export function edgeName(fromTitle: string, toTitle: string, label?: string): st
 }
 
 /** Maps deck edges to React Flow edges, skipping edges whose endpoints are missing. */
+function representativeTitles(deck: SododeckFile, graph: VisibleGraph): Map<string, string> {
+  const titles = new Map(deck.nodes.map((node) => [node.id, node.title]));
+  for (const card of graph.cards) titles.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, card.title);
+  for (const port of graph.ports) titles.set(port.id, port.outsideTitle);
+  return titles;
+}
+
 export function toFlowEdges(
   deck: SododeckFile,
-  selection: Selection,
-  labelsOn: boolean,
-  focusedEdgeId: string | null = null,
+  graph: VisibleGraph,
+  view: CanvasView,
   overlay: FlowOverlay = EMPTY_OVERLAY,
-): DeckFlowEdge[] {
-  const nodes = new Map(
-    deck.nodes.map((node, index) => [node.id, { node, position: displayPosition(node, index) }]),
+): (DeckFlowEdge | MergedFlowEdge)[] {
+  const nodes = new Map<string, { position: Point; title: string }>(
+    deck.nodes.map((node, index) => [
+      node.id,
+      { position: displayPosition(node, index), title: node.title },
+    ]),
   );
-  const selected = new Set(selection.edges);
-  const next = deck.edges.flatMap((edge) => {
+  for (const card of graph.cards) {
+    nodes.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, {
+      position: { x: card.rect.x, y: card.rect.y },
+      title: card.title,
+    });
+  }
+  for (const port of portNodes(deck, graph)) {
+    nodes.set(port.id, { position: port.position, title: port.data.outsideTitle });
+  }
+  const titles = representativeTitles(deck, graph);
+  const selected = new Set(view.selection.edges);
+  const plainEdges = graph.edges.flatMap((edgeId) => {
+    const edge = deck.edges.find((entry) => entry.id === edgeId);
+    if (edge === undefined) return [];
     const from = nodes.get(edge.from);
     const to = nodes.get(edge.to);
     // The schema does not check references; a file may still point at missing nodes.
     if (!from || !to) return [];
     const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
     const isSelected = selected.has(edge.id);
-    const showLabel = labelsOn && edge.label !== undefined && edge.label !== '';
-    const focused = edge.id === focusedEdgeId;
+    const focused = edge.id === view.focusedEdgeId;
+    const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
+    const showLabel =
+      (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
+      view.focus?.edges.has(edge.id) === true;
     const mark = overlay.edges.get(edge.id);
     const cached = edgeCache.get(edge);
     if (
@@ -360,8 +539,9 @@ export function toFlowEdges(
       cached.targetHandle === targetHandle &&
       cached.data?.showLabel === showLabel &&
       cached.data.focused === focused &&
-      cached.data.fromTitle === from.node.title &&
-      cached.data.toTitle === to.node.title
+      cached.data.dimmed === dimmed &&
+      cached.data.fromTitle === from.title &&
+      cached.data.toTitle === to.title
     ) {
       return [cached];
     }
@@ -375,21 +555,64 @@ export function toFlowEdges(
       selected: isSelected,
       ...(mark?.inPath === true ? { className: 'in-flow' } : {}),
       interactionWidth: 12,
-      ariaLabel: edgeName(from.node.title, to.node.title, edge.label),
+      ariaLabel: edgeName(from.title, to.title, edge.label),
       data: {
         label: edge.label,
         protocol: edge.protocol,
         direction: edge.direction ?? 'forward',
         showLabel,
-        fromTitle: from.node.title,
-        toTitle: to.node.title,
+        fromTitle: from.title,
+        toTitle: to.title,
         focused,
+        dimmed,
         ...(mark === undefined ? {} : { flow: mark }),
       },
     };
     edgeCache.set(edge, flowEdge);
     return [flowEdge];
   });
+  const mergedEdges = graph.merged.flatMap((edge) => {
+    const from = nodes.get(edge.a);
+    const to = nodes.get(edge.b);
+    if (from === undefined || to === undefined) return [];
+    const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+    const focused = edge.id === view.focusedEdgeId;
+    const cached = mergedCache.get(edge.id);
+    if (
+      cached !== undefined &&
+      cached.data !== undefined &&
+      cached.data.count === edge.edgeIds.length &&
+      cached.data.direction === edge.direction &&
+      cached.data.focused === focused &&
+      cached.source === edge.a &&
+      cached.target === edge.b &&
+      cached.sourceHandle === sourceHandle &&
+      cached.targetHandle === targetHandle &&
+      cached.data.edgeIds.length === edge.edgeIds.length &&
+      cached.data.edgeIds.every((edgeId, index) => edgeId === edge.edgeIds[index])
+    ) {
+      return [cached];
+    }
+    const flowEdge: MergedFlowEdge = {
+      id: edge.id,
+      type: 'merged',
+      source: edge.a,
+      target: edge.b,
+      sourceHandle,
+      targetHandle,
+      interactionWidth: 12,
+      ariaLabel: `${String(edge.edgeIds.length)} connections between ${titles.get(edge.a) ?? edge.a} and ${titles.get(edge.b) ?? edge.b}`,
+      data: {
+        count: edge.edgeIds.length,
+        direction: edge.direction,
+        edgeIds: edge.edgeIds,
+        focused,
+      },
+    };
+    mergedCache.set(edge.id, flowEdge);
+    return [flowEdge];
+  });
+  const next = [...plainEdges, ...mergedEdges];
   // A drag moves nodes, rarely edges: keep the array identity when nothing in it changed.
   if (next.length === lastEdges.length && next.every((e, i) => e === lastEdges[i]))
     return lastEdges;

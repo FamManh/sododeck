@@ -3,13 +3,17 @@ import { describe, expect, it } from 'vitest';
 
 import {
   boundsOf,
+  COLLAPSED_CARD_SIZE,
+  COMPONENT_CARD_SIZE,
   displayPosition,
   freeSpot,
   GROUP_PADDING,
   groupBounds,
   nearestInDirection,
   NODE_SIZE,
+  nodeSize,
   rectInView,
+  selectionFrame,
 } from './canvas-geometry';
 
 const deck = (patch: Partial<SododeckFile>): SododeckFile => ({ ...emptySododeckFile(), ...patch });
@@ -59,6 +63,26 @@ describe('groupBounds', () => {
   it('gives no bounds to an empty group and survives parent cycles', () => {
     expect(bounds.has('empty')).toBe(false);
     expect(bounds.has('loop1')).toBe(false);
+  });
+
+  it('accepts a taller component-level node size', () => {
+    const bounds = groupBounds(d, COMPONENT_CARD_SIZE);
+    expect(bounds.get('inner')).toEqual({
+      x: -GROUP_PADDING,
+      y: -GROUP_PADDING,
+      width: 200 + COMPONENT_CARD_SIZE.width + 2 * GROUP_PADDING,
+      height: 100 + COMPONENT_CARD_SIZE.height + 2 * GROUP_PADDING,
+    });
+  });
+});
+
+describe('nodeSize', () => {
+  it('returns the box size for each zoom level', () => {
+    expect(nodeSize('landscape')).toEqual(NODE_SIZE);
+    expect(nodeSize('system')).toEqual(NODE_SIZE);
+    expect(nodeSize('container')).toEqual(NODE_SIZE);
+    expect(nodeSize('component')).toEqual(COMPONENT_CARD_SIZE);
+    expect(COLLAPSED_CARD_SIZE).toEqual({ width: 180, height: 64 });
   });
 });
 
@@ -133,5 +157,22 @@ describe('boundsOf / rectInView (007)', () => {
     expect(rectInView(rect, { x: 0, y: 0, zoom: 2 }, size)).toBe(true);
     expect(rectInView(rect, { x: 0, y: 0, zoom: 3 }, size)).toBe(false);
     expect(rectInView(rect, { x: -150, y: 0, zoom: 1 }, size)).toBe(false);
+  });
+});
+
+describe('selectionFrame', () => {
+  it('uses the provided node size when boxing the selection', () => {
+    const d = deck({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'service', title: 'B', position: { x: 200, y: 100 } },
+      ],
+    });
+    expect(selectionFrame(d, ['a', 'b'], COMPONENT_CARD_SIZE)).toEqual({
+      x: -8,
+      y: -8,
+      width: 200 + COMPONENT_CARD_SIZE.width + 16,
+      height: 100 + COMPONENT_CARD_SIZE.height + 16,
+    });
   });
 });

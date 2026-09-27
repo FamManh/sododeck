@@ -35,13 +35,30 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
   const selection = useUiStore((s) => s.selection);
   const nodes = deck.nodes.filter((n) => selection.nodes.includes(n.id));
   const edges = deck.edges.filter((e) => selection.edges.includes(e.id));
+  const groups = deck.groups.filter((group) => selection.groups.includes(group.id));
   const stickies = deck.stickies.filter((sticky) => selection.stickies.includes(sticky.id));
   const [node] = nodes;
   const [edge] = edges;
+  const [group] = groups;
   const [sticky] = stickies;
 
-  if (nodes.length + edges.length + stickies.length === 0) {
+  if (nodes.length + edges.length + groups.length + stickies.length === 0) {
     return <DeckInspector deck={deck} onOpenRules={onOpenRules} />;
+  }
+  if (group !== undefined && groups.length === 1 && nodes.length === 0 && edges.length === 0) {
+    return (
+      <InspectorFrame
+        icon={<Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
+        heading={group.title}
+        subtitle="Group"
+      >
+        <PanelSection>
+          <p className="text-body-sm text-ink-secondary">
+            Group details are coming in this feature.
+          </p>
+        </PanelSection>
+      </InspectorFrame>
+    );
   }
   if (node !== undefined && nodes.length === 1 && edges.length === 0) {
     return <NodeInspector deck={deck} node={node} />;

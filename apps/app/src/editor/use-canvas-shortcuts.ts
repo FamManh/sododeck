@@ -16,13 +16,22 @@ import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { canvasElement } from './canvas-actions';
-import { displayPosition, nearestInDirection, NODE_SIZE, type Direction } from './canvas-geometry';
-import { edgeName } from './deck-to-flow';
+import {
+  displayPosition,
+  groupBounds,
+  nearestInDirection,
+  nodeSize,
+  NODE_SIZE,
+  type Direction,
+} from './canvas-geometry';
+import { COLLAPSED_NODE_PREFIX, edgeName, GROUP_NODE_PREFIX } from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
 import { analysisOf, recordClick, requestCancel, undoLastStep } from './flows/flow-session';
+import { effectiveLevel, levelForZoom } from './levels';
 import { useSaveControls } from './save-context';
 import { addNoteAt } from './stickies/sticky-actions';
+import { scopeOf, visibleGraph } from './visible-graph';
 
 export { isTextTarget };
 
@@ -47,6 +56,19 @@ const ARROWS: Readonly<Record<string, Direction>> = {
 };
 
 const isMod = (e: { metaKey: boolean; ctrlKey: boolean }) => e.metaKey || e.ctrlKey;
+
+const groupIdOf = (id: string) =>
+  id.startsWith(GROUP_NODE_PREFIX)
+    ? id.slice(GROUP_NODE_PREFIX.length)
+    : id.startsWith(COLLAPSED_NODE_PREFIX)
+      ? id.slice(COLLAPSED_NODE_PREFIX.length)
+      : null;
+
+function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: string) {
+  return collapsed.has(groupId)
+    ? `${COLLAPSED_NODE_PREFIX}${groupId}`
+    : `${GROUP_NODE_PREFIX}${groupId}`;
+}
 
 /** Focuses the inspector's title field once the inspector shows the selected node. */
 function focusInspectorTitle(): void {
@@ -150,6 +172,9 @@ export function useCanvasKeyDown() {
       const current =
         ui.focusedId ??
         (ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : undefined) ??
+        (ui.selection.groups.length === 1
+          ? selectionForFocusedGroup(ui.collapsed, ui.selection.groups[0] ?? '')
+          : undefined) ??
         null;
       const selectedSticky =
         ui.selection.stickies.length === 1 ? (ui.selection.stickies[0] ?? null) : null;
@@ -201,24 +226,66 @@ export function useCanvasKeyDown() {
       }
       if (direction) {
         event.preventDefault();
-        const points = deck.nodes.map((n, i) => {
-          const p = displayPosition(n, i);
-          return { id: n.id, x: p.x + NODE_SIZE.width / 2, y: p.y + NODE_SIZE.height / 2 };
-        });
+        const scope = scopeOf(ui.drill);
+        const level = effectiveLevel(levelForZoom(getZoom()), scope);
+        const graph = visibleGraph(deck, scope, ui.collapsed);
+        const bounds = groupBounds(deck, nodeSize(level));
+        const points = [
+          ...graph.groups.flatMap((groupId) => {
+            const boundsForGroup = bounds.get(groupId);
+            if (boundsForGroup === undefined) return [];
+            return [
+              { id: `${GROUP_NODE_PREFIX}${groupId}`, x: boundsForGroup.x, y: boundsForGroup.y },
+            ];
+          }),
+          ...graph.cards.map((card) => ({
+            id: `${COLLAPSED_NODE_PREFIX}${card.groupId}`,
+            x: card.rect.x + card.rect.width / 2,
+            y: card.rect.y + card.rect.height / 2,
+          })),
+          ...graph.nodes.flatMap((nodeId) => {
+            const index = deck.nodes.findIndex((node) => node.id === nodeId);
+            const node = index < 0 ? undefined : deck.nodes[index];
+            if (node === undefined) return [];
+            const p = displayPosition(node, index);
+            const size = nodeSize(level);
+            return [{ id: node.id, x: p.x + size.width / 2, y: p.y + size.height / 2 }];
+          }),
+        ];
         const next =
           current === null
-            ? (deck.nodes[0]?.id ?? null)
+            ? (points[0]?.id ?? null)
             : nearestInDirection(points, current, direction);
         if (next === null) return;
+        const groupId = groupIdOf(next);
         if (event.shiftKey) {
-          ui.select({
-            nodes: [...new Set([...ui.selection.nodes, ...(current ? [current] : []), next])],
-            edges: ui.selection.edges,
-          });
+          if (groupId !== null) {
+            const currentGroupId = current === null ? null : groupIdOf(current);
+            ui.select({
+              nodes: ui.selection.nodes,
+              edges: ui.selection.edges,
+              groups: [
+                ...new Set([
+                  ...ui.selection.groups,
+                  ...(currentGroupId === null ? [] : [currentGroupId]),
+                  groupId,
+                ]),
+              ],
+              stickies: ui.selection.stickies,
+            });
+          } else {
+            ui.select({
+              nodes: [...new Set([...ui.selection.nodes, ...(current ? [current] : []), next])],
+              edges: ui.selection.edges,
+              groups: ui.selection.groups,
+              stickies: ui.selection.stickies,
+            });
+          }
         } else {
-          ui.select({ nodes: [next] });
+          if (groupId !== null) ui.select({ groups: [groupId] });
+          else ui.select({ nodes: [next] });
         }
-        ui.focus(next);
+        ui.focus(groupId === null ? next : selectionForFocusedGroup(ui.collapsed, groupId));
         return;
       }
 
@@ -346,8 +413,14 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
       }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
-        const { nodes, edges } = ui.selection;
-        if (nodes.length === 0 && edges.length === 0) return;
+        const { nodes, edges, groups } = ui.selection;
+        if (nodes.length === 0 && edges.length === 0) {
+          if (groups.length > 0) {
+            event.preventDefault();
+            ui.announce("Groups can't be deleted from the canvas yet");
+          }
+          return;
+        }
         event.preventDefault();
         ui.requestDelete({ nodes, edges });
         return;

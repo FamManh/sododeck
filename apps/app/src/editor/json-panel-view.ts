@@ -71,26 +71,31 @@ export function selectionView(
   }
   const nodeIds = new Set(selection.nodes);
   const edgeIds = new Set(selection.edges);
+  const groupIds = new Set(selection.groups);
   const stickyIds = new Set(selection.stickies);
   const nodes = deck.nodes.filter((node) => nodeIds.has(node.id));
   const edges = deck.edges.filter((edge) => edgeIds.has(edge.id));
+  const groups = deck.groups.filter((group) => groupIds.has(group.id));
   const stickies = deck.stickies.filter((sticky) => stickyIds.has(sticky.id));
   const entries: Entry[] = [
     ...nodes.map((value) => ({ collection: 'nodes' as const, value })),
     ...edges.map((value) => ({ collection: 'edges' as const, value })),
+    ...groups.map((value) => ({ collection: 'groups' as const, value })),
     ...stickies.map((value) => ({ collection: 'stickies' as const, value })),
   ];
 
   let label = 'Selection';
   const [node] = nodes;
   const [edge] = edges;
+  const [group] = groups;
   const [sticky] = stickies;
   if (entries.length > 1) label = `${String(entries.length)} selected`;
   else if (node) label = node.title;
   else if (edge) {
     const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
     label = edge.label ?? `${title(edge.from)} → ${title(edge.to)}`;
-  } else if (sticky) label = stickyLabel(sticky.text) ?? 'Empty note';
+  } else if (group) label = group.title;
+  else if (sticky) label = stickyLabel(sticky.text) ?? 'Empty note';
   return { label, fullLabel: label, entries };
 }
 

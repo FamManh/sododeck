@@ -39,6 +39,15 @@ const stickyDeck = deckOf({
   ],
 });
 
+const groupedDeck = deckOf({
+  nodes: [
+    { id: 'inside', type: 'service', title: 'Inside', group: 'core', position: { x: 100, y: 100 } },
+    { id: 'outside', type: 'service', title: 'Outside', position: { x: 340, y: 100 } },
+  ],
+  groups: [{ id: 'core', title: 'Core' }],
+  edges: [{ id: 'edge', from: 'inside', to: 'outside' }],
+});
+
 const ui = () => useUiStore.getState();
 
 function Editor() {
@@ -95,6 +104,26 @@ describe('canvas keyboard', () => {
     // Nothing further left: focus stays.
     await user.keyboard('{ArrowLeft}');
     expect(ui().focusedId).toBe('n00');
+  });
+
+  it('lets arrows reach a group label and a collapsed card', async () => {
+    const { user } = setup(groupedDeck);
+    focusNode('inside');
+    await user.keyboard('{ArrowLeft}');
+    expect(ui().focusedId).toBe('group:core');
+    expect(ui().selection.groups).toEqual(['core']);
+    await waitFor(() => {
+      expect(document.querySelector('[data-node-id="group:core"]')).toHaveFocus();
+    });
+
+    act(() => {
+      ui().toggleCollapsed('core');
+      ui().focus('outside');
+      ui().select({ nodes: ['outside'] });
+    });
+    await user.keyboard('{ArrowLeft}');
+    expect(ui().focusedId).toBe('collapsed:core');
+    expect(ui().selection.groups).toEqual(['core']);
   });
 
   it('extends the selection with shift + arrows', async () => {

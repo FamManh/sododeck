@@ -18,10 +18,15 @@ import {
 export interface Selection {
   readonly nodes: readonly Id[];
   readonly edges: readonly Id[];
+  readonly groups: readonly Id[];
   readonly stickies: readonly Id[];
 }
 
-export type Popover = { kind: 'edge'; edgeId: string } | { kind: 'connect'; fromId: string } | null;
+export type Popover =
+  | { kind: 'edge'; edgeId: string }
+  | { kind: 'connect'; fromId: string }
+  | { kind: 'merged'; edgeId: string }
+  | null;
 
 export type LeftTab = 'outline' | 'palette';
 
@@ -105,6 +110,12 @@ export interface CanvasViewport {
   zoom: number;
 }
 
+export interface DrillFrame {
+  kind: 'group' | 'node';
+  id: string;
+  viewport: CanvasViewport;
+}
+
 /**
  * The rule editor's TEST INPUT (008 FR-026): UI-only, never in the deck. `from` is the step the
  * editor was opened from ("Edit rule"), for "Save as step inputs".
@@ -123,6 +134,9 @@ export interface PendingDelete {
 
 export interface UiState {
   selection: Selection;
+  drill: readonly DrillFrame[];
+  collapsed: ReadonlySet<string>;
+  focusMode: boolean;
   stickyEditing: Id | null;
   stickyDraft: Id | null;
   canvasPointer: { x: number; y: number } | null;
@@ -162,8 +176,16 @@ export interface UiState {
   pruneSelection: (existing: {
     nodes: ReadonlySet<Id>;
     edges: ReadonlySet<Id>;
+    groups: ReadonlySet<Id>;
     stickies: ReadonlySet<Id>;
   }) => void;
+  drillInto: (frame: DrillFrame) => void;
+  drillUp: (depth?: number) => readonly DrillFrame[];
+  setCollapsed: (id: string, on: boolean) => void;
+  toggleCollapsed: (id: string) => void;
+  expandAll: (ids: readonly string[]) => void;
+  setFocusMode: (on: boolean) => void;
+  pruneView: (existing: { nodes: ReadonlySet<Id>; groups: ReadonlySet<Id> }) => void;
   setStickyEditing: (id: Id | null) => void;
   setStickyDraft: (id: Id | null) => void;
   setCanvasPointer: (point: { x: number; y: number } | null) => void;
@@ -237,7 +259,7 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
   return state.activeFlow !== null && state.flowSession === null;
 }
 
-export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], stickies: [] };
+export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], groups: [], stickies: [] };
 
 const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
 
@@ -307,6 +329,9 @@ export const useUiStore = create<UiState>()((set, get) => {
   };
   return {
     selection: EMPTY_SELECTION,
+    drill: [],
+    collapsed: new Set(),
+    focusMode: false,
     stickyEditing: null,
     stickyDraft: null,
     canvasPointer: null,
@@ -330,10 +355,11 @@ export const useUiStore = create<UiState>()((set, get) => {
     canvasViewport: null,
     ruleTest: null,
 
-    select: ({ nodes = [], edges = [], stickies = [] }) => {
-      const empty = nodes.length === 0 && edges.length === 0 && stickies.length === 0;
+    select: ({ nodes = [], edges = [], groups = [], stickies = [] }) => {
+      const empty =
+        nodes.length === 0 && edges.length === 0 && groups.length === 0 && stickies.length === 0;
       set({
-        selection: empty ? EMPTY_SELECTION : { nodes, edges, stickies },
+        selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
         descriptionMode: NO_MODES,
         // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
         ...(empty || get().flowSession !== null ? {} : { activeFlow: null }),
@@ -359,16 +385,19 @@ export const useUiStore = create<UiState>()((set, get) => {
       set((state) => {
         const nodes = state.selection.nodes.filter((id) => existing.nodes.has(id));
         const edges = state.selection.edges.filter((id) => existing.edges.has(id));
+        const groups = state.selection.groups.filter((id) => existing.groups.has(id));
         const stickies = state.selection.stickies.filter((id) => existing.stickies.has(id));
         const selectionChanged =
           nodes.length !== state.selection.nodes.length ||
           edges.length !== state.selection.edges.length ||
+          groups.length !== state.selection.groups.length ||
           stickies.length !== state.selection.stickies.length;
         const popoverGone =
           (state.popover?.kind === 'edge' && !existing.edges.has(state.popover.edgeId)) ||
+          (state.popover?.kind === 'merged' && !existing.edges.has(state.popover.edgeId)) ||
           (state.popover?.kind === 'connect' && !existing.nodes.has(state.popover.fromId));
         const patch: Partial<UiState> = {};
-        if (selectionChanged) patch.selection = { nodes, edges, stickies };
+        if (selectionChanged) patch.selection = { nodes, edges, groups, stickies };
         if (state.focusedId !== null && !existing.nodes.has(state.focusedId))
           patch.focusedId = null;
         if (state.focusedEdgeId !== null && !existing.edges.has(state.focusedEdgeId))
@@ -380,6 +409,54 @@ export const useUiStore = create<UiState>()((set, get) => {
           patch.stickyDraft = null;
         return patch;
       });
+    },
+    drillInto: (frame) => {
+      set((state) => ({
+        drill: [...state.drill, frame],
+        selection: EMPTY_SELECTION,
+        focusMode: false,
+        descriptionMode: NO_MODES,
+      }));
+    },
+    drillUp: (depth) => {
+      const drill = get().drill;
+      const nextDepth = depth ?? Math.max(0, drill.length - 1);
+      const popped = drill.slice(nextDepth);
+      set({ drill: drill.slice(0, nextDepth) });
+      return popped;
+    },
+    setCollapsed: (id, on) => {
+      set((state) => {
+        const next = new Set(state.collapsed);
+        if (on) next.add(id);
+        else next.delete(id);
+        return { collapsed: next };
+      });
+    },
+    toggleCollapsed: (id) => {
+      set((state) => {
+        const next = new Set(state.collapsed);
+        if (!next.delete(id)) next.add(id);
+        return { collapsed: next };
+      });
+    },
+    expandAll: (ids) => {
+      set((state) => {
+        const next = new Set(state.collapsed);
+        for (const id of ids) next.delete(id);
+        return { collapsed: next };
+      });
+    },
+    setFocusMode: (focusMode) => {
+      set({ focusMode });
+    },
+    pruneView: (existing) => {
+      set((state) => ({
+        collapsed: new Set([...state.collapsed].filter((id) => existing.groups.has(id))),
+        drill: state.drill.filter((frame) =>
+          frame.kind === 'group' ? existing.groups.has(frame.id) : existing.nodes.has(frame.id),
+        ),
+      }));
     },
     setStickyEditing: (stickyEditing) => {
       set({ stickyEditing });
@@ -444,6 +521,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         activeFlow: openedFlow(flowId, stepId, alternativeId),
         lastPlayedFlowId: null,
         selection: EMPTY_SELECTION,
+        drill: [],
+        focusMode: false,
         stickyEditing: null,
         stickyDraft: null,
         focusedEdgeId: null,
@@ -502,6 +581,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         activeFlow: null,
         selection: EMPTY_SELECTION,
+        focusMode: false,
         stickyEditing: null,
         stickyDraft: null,
         popover: null,
@@ -525,6 +605,7 @@ export const useUiStore = create<UiState>()((set, get) => {
           branchCheck: 0,
         },
         activeFlow: openedFlow(flowId),
+        focusMode: false,
         selection: EMPTY_SELECTION,
         stickyEditing: null,
         stickyDraft: null,
@@ -612,6 +693,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         focusedId: null,
         focusedEdgeId: null,
         outlineCollapsed: new Set(),
+        drill: [],
+        collapsed: new Set(),
+        focusMode: false,
         popover: null,
         pendingDelete: null,
         activeFlow: null,

@@ -181,6 +181,7 @@ function BenchInspector() {
 
 /**
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1&json=deck&flows=1&inspector=1
+ * &groups=1
  * Goes through the real read and write path: model document, editor, incremental snapshot and
  * the real Canvas (so dragging is measured too). `json=deck` adds the JSON panel under the
  * canvas with the Deck tab open (004 SC-003), as in the editor.
@@ -192,6 +193,7 @@ export function BenchPage() {
   const visibleOnly = params.get('visibleOnly') === '1';
   const jsonDeck = params.get('json') === 'deck';
   const flows = params.get('flows') === '1';
+  const groups = params.get('groups') === '1';
   const inspector = params.get('inspector') === '1';
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
 
@@ -200,7 +202,7 @@ export function BenchPage() {
       const { jsonPanel } = useUiStore.getState();
       useUiStore.setState({ jsonPanel: { ...jsonPanel, open: true, tab: 'deck' } });
     }
-    return fromJSON(generateBenchDeck(nodeCount, edgeCount, 42, { flows, stickies }).deck);
+    return fromJSON(generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies }).deck);
   });
 
   return (

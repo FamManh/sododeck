@@ -35,7 +35,7 @@ describe('Palette', () => {
     expect(node).toMatchObject({ type: 'service', title: 'New service' });
     expect(Number.isInteger(node?.position?.x)).toBe(true);
     const ui = useUiStore.getState();
-    expect(ui.selection).toEqual({ nodes: [node?.id], edges: [], stickies: [] });
+    expect(ui.selection).toEqual({ nodes: [node?.id], edges: [], groups: [], stickies: [] });
     expect(ui.focusedId).toBe(node?.id);
     expect(ui.announcement.text).toBe('Added New service');
 
@@ -76,6 +76,7 @@ describe('Palette', () => {
     expect(useUiStore.getState().selection).toEqual({
       nodes: [],
       edges: [],
+      groups: [],
       stickies: [sticky?.id],
     });
     expect(useUiStore.getState().stickyDraft).toBe(sticky?.id);

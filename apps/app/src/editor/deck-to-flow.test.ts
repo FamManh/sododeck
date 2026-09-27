@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EMPTY_SELECTION } from '../state/ui-store';
 import {
+  type CanvasView,
   facingSides,
   toFlowEdges,
   toFlowNodes,
@@ -11,6 +12,24 @@ import {
   toStickyNodes,
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
+import { visibleGraph } from './visible-graph';
+
+function topLevelGraph(file: SododeckFile) {
+  return visibleGraph(file, { node: null, group: null }, new Set());
+}
+
+function view(partial: Partial<CanvasView> = {}): CanvasView {
+  return {
+    selection: EMPTY_SELECTION,
+    focusedId: null,
+    focusedEdgeId: null,
+    labelsOn: false,
+    level: 'system',
+    focus: null,
+    marks: { merged: new Map(), cards: new Map() },
+    ...partial,
+  };
+}
 
 const deck: SododeckFile = {
   ...emptySododeckFile(),
@@ -44,7 +63,11 @@ const deck: SododeckFile = {
 
 describe('toFlowNodes', () => {
   it('maps components with position, selection, focus and data', () => {
-    const nodes = toFlowNodes(deck, { nodes: ['b'], edges: [], stickies: [] }, 'a');
+    const nodes = toFlowNodes(
+      deck,
+      topLevelGraph(deck),
+      view({ selection: { nodes: ['b'], edges: [], groups: [], stickies: [] }, focusedId: 'a' }),
+    );
     const [a, b] = nodes.filter((n) => n.type === 'deck');
     expect(a).toMatchObject({
       id: 'a',
@@ -52,19 +75,42 @@ describe('toFlowNodes', () => {
       height: 50,
       position: { x: 5, y: 6 },
       selected: false,
-      data: { title: 'A', kind: 'service', subtitle: 'Go', hasRules: true, focused: true },
+      data: {
+        title: 'A',
+        kind: 'service',
+        subtitle: 'Go',
+        hasRules: true,
+        level: 'system',
+        childCount: 0,
+        dimmed: false,
+        focused: true,
+      },
     });
     expect(b).toMatchObject({
       id: 'b',
       position: { x: 220, y: 0 },
       selected: true,
-      data: { title: 'B', kind: 'database', subtitle: undefined, hasRules: false, focused: false },
+      data: {
+        title: 'B',
+        kind: 'database',
+        subtitle: undefined,
+        hasRules: false,
+        level: 'system',
+        childCount: 0,
+        dimmed: false,
+        focused: false,
+      },
     });
   });
 
   describe('toStickyNodes', () => {
     it('maps notes with position, selection and data', () => {
-      const stickyNodes = toStickyNodes(deck, { nodes: [], edges: [], stickies: ['st-free'] });
+      const stickyNodes = toStickyNodes(deck, {
+        nodes: [],
+        edges: [],
+        groups: [],
+        stickies: ['st-free'],
+      });
       const freeSticky = deck.stickies[0];
       if (freeSticky === undefined) throw new Error('Missing free sticky fixture');
       expect(stickyNodes.map((node) => node.id)).toEqual([
@@ -156,7 +202,7 @@ describe('toFlowNodes', () => {
   });
 
   it('adds non-interactive group boundaries below the components', () => {
-    const [group] = toFlowNodes(deck, EMPTY_SELECTION, null);
+    const [group] = toFlowNodes(deck, topLevelGraph(deck), view());
     expect(group).toMatchObject({
       id: 'group:g',
       type: 'group-boundary',
@@ -167,12 +213,31 @@ describe('toFlowNodes', () => {
       draggable: false,
       focusable: false,
       zIndex: -1,
-      data: { title: 'Core', count: 1 },
+      data: { title: 'Core', count: 1, level: 'system' },
     });
   });
 
+  it('returns the same object when level is unchanged and rebuilds when level or dimming changes', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const same = toFlowNodes(deck, graph, view());
+    expect(same.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
+
+    const nextLevel = toFlowNodes(deck, graph, view({ level: 'container' }));
+    expect(nextLevel.find((n) => n.id === 'a')).not.toBe(first.find((n) => n.id === 'a'));
+
+    const dimmed = toFlowNodes(
+      deck,
+      graph,
+      view({ focus: { focusId: 'a', members: new Set(['a']), edges: new Set() } }),
+    );
+    expect(dimmed.find((n) => n.id === 'b')).not.toBe(first.find((n) => n.id === 'b'));
+    expect(dimmed.find((n) => n.id === 'b')?.data).toMatchObject({ dimmed: true });
+  });
+
   it('returns the same object for a node whose source did not change', () => {
-    const first = toFlowNodes(deck, EMPTY_SELECTION, null);
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
     const moved: SododeckFile = {
       ...deck,
       nodes: [
@@ -180,10 +245,10 @@ describe('toFlowNodes', () => {
         deck.nodes[1] as SododeckFile['nodes'][number],
       ],
     };
-    const second = toFlowNodes(moved, EMPTY_SELECTION, null);
+    const second = toFlowNodes(moved, topLevelGraph(moved), view());
     expect(second.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
     expect(second.find((n) => n.id === 'a')).not.toBe(first.find((n) => n.id === 'a'));
-    expect(toFlowNodes(deck, EMPTY_SELECTION, null).find((n) => n.id === 'a')).toBe(
+    expect(toFlowNodes(deck, graph, view()).find((n) => n.id === 'a')).toBe(
       first.find((n) => n.id === 'a'),
     );
   });
@@ -191,7 +256,11 @@ describe('toFlowNodes', () => {
 
 describe('toFlowEdges', () => {
   it('keeps only edges with existing endpoints, with data for the edge view', () => {
-    const edges = toFlowEdges(deck, { nodes: [], edges: ['e1'], stickies: [] }, false);
+    const edges = toFlowEdges(
+      deck,
+      topLevelGraph(deck),
+      view({ selection: { nodes: [], edges: ['e1'], groups: [], stickies: [] } }),
+    );
     expect(edges.map((e) => e.id)).toEqual(['e1', 'e3']);
     expect(edges[0]).toMatchObject({
       type: 'deck',
@@ -212,7 +281,7 @@ describe('toFlowEdges', () => {
   });
 
   it('shows label pills only with Labels on and a non-empty label', () => {
-    const edges = toFlowEdges(deck, EMPTY_SELECTION, true);
+    const edges = toFlowEdges(deck, topLevelGraph(deck), view({ labelsOn: true }));
     expect(edges.map((e) => e.data?.showLabel)).toEqual([true, false]);
   });
 
@@ -224,12 +293,25 @@ describe('toFlowEdges', () => {
   });
 
   it('reuses edge objects when nothing about them changed', () => {
-    const first = toFlowEdges(deck, EMPTY_SELECTION, false);
-    const second = toFlowEdges(deck, EMPTY_SELECTION, false);
+    const graph = topLevelGraph(deck);
+    const first = toFlowEdges(deck, graph, view());
+    const second = toFlowEdges(deck, graph, view());
     expect(second[0]).toBe(first[0]);
     // The list itself too, so React Flow does not re-sync its edges during a drag.
     expect(second).toBe(first);
-    expect(toFlowEdges(deck, EMPTY_SELECTION, true)[0]).not.toBe(first[0]);
+    expect(toFlowEdges(deck, graph, view({ labelsOn: true }))[0]).not.toBe(first[0]);
+  });
+
+  it('rebuilds edges when dimming changes', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowEdges(deck, graph, view());
+    const next = toFlowEdges(
+      deck,
+      graph,
+      view({ focus: { focusId: 'a', members: new Set(['a']), edges: new Set() } }),
+    );
+    expect(next[0]).not.toBe(first[0]);
+    expect(next[0]?.data).toMatchObject({ dimmed: true });
   });
 });
 
@@ -261,12 +343,12 @@ describe('flow overlay (006)', () => {
   });
 
   it('puts the mark on the edge and the start tag on the node', () => {
-    const [e1] = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('1')]]));
+    const [e1] = toFlowEdges(deck, topLevelGraph(deck), view(), overlay([['e1', mark('1')]]));
     expect(e1?.data?.flow).toEqual(mark('1'));
     const nodes = toFlowNodes(
       deck,
-      EMPTY_SELECTION,
-      null,
+      topLevelGraph(deck),
+      view(),
       overlay([], [['b', 'Step 2 starts here']]),
     );
     expect(nodes.find((n) => n.id === 'b')?.data).toMatchObject({
@@ -275,10 +357,11 @@ describe('flow overlay (006)', () => {
   });
 
   it('keeps edge identity for untouched edges and for equal marks', () => {
-    const first = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('1')]]));
-    const same = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('1')]]));
+    const graph = topLevelGraph(deck);
+    const first = toFlowEdges(deck, graph, view(), overlay([['e1', mark('1')]]));
+    const same = toFlowEdges(deck, graph, view(), overlay([['e1', mark('1')]]));
     expect(same).toBe(first);
-    const other = toFlowEdges(deck, EMPTY_SELECTION, false, null, overlay([['e1', mark('2')]]));
+    const other = toFlowEdges(deck, graph, view(), overlay([['e1', mark('2')]]));
     expect(other[0]).not.toBe(first[0]);
     expect(other[1]).toBe(first[1]);
   });
@@ -318,18 +401,20 @@ describe('flow mode marks (007)', () => {
   };
 
   it('sets in-flow on members only and carries the current step to nodes', () => {
-    const nodes = toFlowNodes(chain, EMPTY_SELECTION, null, overlay('ab'));
+    const graph = topLevelGraph(chain);
+    const nodes = toFlowNodes(chain, graph, view(), overlay('ab'));
     expect(nodes.map((n) => n.className)).toEqual(['in-flow', 'in-flow', 'in-flow', undefined]);
     expect(nodes.map((n) => n.data.currentStep === true)).toEqual([true, true, false, false]);
-    const edges = toFlowEdges(chain, EMPTY_SELECTION, false, null, overlay('ab'));
+    const edges = toFlowEdges(chain, graph, view(), overlay('ab'));
     expect(edges.map((e) => e.className)).toEqual(['in-flow', 'in-flow', undefined]);
   });
 
   it('rebuilds only the old and new current edges and their nodes', () => {
-    const nodes = toFlowNodes(chain, EMPTY_SELECTION, null, overlay('ab'));
-    const edges = toFlowEdges(chain, EMPTY_SELECTION, false, null, overlay('ab'));
-    const nextNodes = toFlowNodes(chain, EMPTY_SELECTION, null, overlay('bc'));
-    const nextEdges = toFlowEdges(chain, EMPTY_SELECTION, false, null, overlay('bc'));
+    const graph = topLevelGraph(chain);
+    const nodes = toFlowNodes(chain, graph, view(), overlay('ab'));
+    const edges = toFlowEdges(chain, graph, view(), overlay('ab'));
+    const nextNodes = toFlowNodes(chain, graph, view(), overlay('bc'));
+    const nextEdges = toFlowEdges(chain, graph, view(), overlay('bc'));
     expect(nextEdges.map((e, i) => e === edges[i])).toEqual([false, false, true]);
     // a leaves the step, c joins it, b stays in it, d is untouched.
     expect(nextNodes.map((n, i) => n === nodes[i])).toEqual([false, true, false, true]);
