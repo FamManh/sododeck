@@ -13,7 +13,7 @@ export function FlowFilter({ count, total }: { count: number; total: number }) {
   const filtering = text.trim() !== '';
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
       <SearchField
         id={FLOW_FILTER_ID}
         label="Filter flows"

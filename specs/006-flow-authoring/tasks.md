@@ -490,7 +490,7 @@ validation (spec US4 scenarios 1–10, SC-006).
 
 ### Implementation for User Story 4
 
-- [ ] T052 [US4] Implement `addBranch`, `updateBranch` and `removeBranch` in
+- [x] T052 [US4] Implement `addBranch`, `updateBranch` and `removeBranch` in
       `packages/model/src/ops/branches.ts`; the branch cascade in
       `packages/model/src/ops/cascade.ts`; and `RemovalTarget` `'branches'` in
       `packages/model/src/preview.ts`. Export them (T049 green). Add a `branches` wording to
@@ -573,11 +573,11 @@ marker, then Undo (spec US5 scenarios 1–5).
       overlay argument), `packages/model/CLAUDE.md`, `packages/schema/CLAUDE.md`, the `DeckEdge`
       and `toFlowEdges` notes in `.agents/skills/react-flow/SKILL.md`, and a status line for 006
       in `docs/backlog.md`.
-- [ ] T063 Visual check: take screenshots at 1440×900, light and dark, of states 41–48 and the left
+- [x] T063 Visual check: take screenshots at 1440×900, light and dark, of states 41–48 and the left
       panel of 02 and 03. Put them next to `docs/design/screens/*` in the PR description, and
       list the remaining differences (allowed: DESIGN.md tokens, lucide icons, confirm before
       delete, no player or dimming).
-- [ ] T064 Definition of done:
+- [x] T064 Definition of done:
   - `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass.
   - No `.only` or skipped tests.
   - `pnpm schema:generate` leaves no diff.

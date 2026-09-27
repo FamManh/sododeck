@@ -263,10 +263,9 @@
       "steps": [
         { "id": "p1", "edge": "e1" },
         { "id": "p2", "edge": "e2", "title": "Create order" },
-        { "id": "p3", "edge": "e7", "title": "Authorize payment" },
-        { "id": "p4a", "edge": "e7", "branch": "payment-ok", "title": "Capture payment" },
-        { "id": "p4b", "edge": "e4", "branch": "payment-failed" },
-        { "id": "p5b", "edge": "e5", "branch": "payment-failed" }
+        { "id": "p3a", "edge": "e7", "branch": "payment-ok", "title": "Capture payment" },
+        { "id": "p3b", "edge": "e4", "branch": "payment-failed" },
+        { "id": "p4b", "edge": "e5", "branch": "payment-failed" }
       ]
     }
   ],

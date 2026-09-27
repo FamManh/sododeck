@@ -54,7 +54,7 @@ export function StepRow({
     <li
       {...(sortable?.row ?? {})}
       className={cn(
-        'group/row flex items-start gap-1 rounded-row py-1 pr-1',
+        'group/row relative flex items-start gap-1 rounded-row py-1 pr-1',
         active ? 'bg-primary-soft' : 'hover:bg-surface-2',
         sortable?.dragging === true && 'opacity-60 outline-1 outline-primary outline-dashed',
       )}
@@ -126,31 +126,32 @@ export function StepRow({
           )}
         </span>
       </button>
-      {editing && canBranch && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Add branch after step ${step.number}`}
-          className="opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100"
-          onClick={() => {
-            startBranch(editor, step.step.id);
-          }}
-        >
-          <GitBranch />
-        </Button>
-      )}
       {editing && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Remove step ${step.number}`}
-          className="opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100"
-          onClick={() => {
-            removeSessionStep(editor, flowId, step.step.id);
-          }}
-        >
-          <X />
-        </Button>
+        // Overlaid on the row's end so they take no width from the text until shown.
+        <span className="absolute top-1 right-1 flex gap-0.5 rounded-row bg-surface opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100">
+          {canBranch && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Add branch after step ${step.number}`}
+              onClick={() => {
+                startBranch(editor, step.step.id);
+              }}
+            >
+              <GitBranch />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Remove step ${step.number}`}
+            onClick={() => {
+              removeSessionStep(editor, flowId, step.step.id);
+            }}
+          >
+            <X />
+          </Button>
+        </span>
       )}
     </li>
   );
