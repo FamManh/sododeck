@@ -8,8 +8,9 @@ Sources: `DESIGN.md`, `docs/design/design-analysis.md` (§b, §c, §g), `docs/de
 ## R1. Primitives: which library for each overlay/control?
 
 - **Decision:** Use the Radix primitives already shipped by the existing `radix-ui` dependency for
-  every stateful control: `Dialog` (Dialog), `Select` (Select), `ToggleGroup` type `single`
-  (SegmentedControl), `Switch` (Switch), `Toast` (Toast), `Popover` with `Popover.Anchor`
+  every stateful control: `Dialog` (Dialog), `Select` (Select), `RadioGroup`
+  (SegmentedControl; implemented instead of the first-planned ToggleGroup because RadioGroup
+  moves the selection with the arrow keys and can never be cleared, as the spec requires), `Switch` (Switch), `Toast` (Toast), `Popover` with `Popover.Anchor`
   (CoachMark). Plain elements for Input, InlineEdit, Textarea, SearchField, TagChip/TagInput,
   KindTile, Banner.
 - **Rationale:** `radix-ui@^1.6.7` is already a runtime dependency of `@sododeck/ui`; all six

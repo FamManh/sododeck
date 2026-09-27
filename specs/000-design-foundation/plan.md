@@ -20,7 +20,7 @@ per component. See [research.md](research.md).
 
 **Language/Version**: TypeScript ~6.0 (strict, `noUncheckedIndexedAccess`), React 19
 
-**Primary Dependencies**: existing only — `radix-ui` ^1.6.7 (Dialog, Select, ToggleGroup, Switch,
+**Primary Dependencies**: existing only — `radix-ui` ^1.6.7 (Dialog, Select, RadioGroup, Switch,
 Toast, Popover), `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`, Tailwind v4
 (app), `@fontsource-variable/geist*`
 

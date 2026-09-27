@@ -14,13 +14,13 @@ today (`apps/app/src/theme/theme-store.ts`, localStorage, UI-only).
 
 New tokens in this feature:
 
-| Group  | Tokens                                                                                                                                                          |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Motion | `--sd-dur-dim` 250ms · `--sd-dur-ring` 200ms · `--sd-flow-token-loop` 1400ms · `--sd-flow-step` 1700ms · `--sd-toast` 2600ms · `--sd-ease` ease                 |
-| Radius | `--radius-segment` 7px · `--radius-row` 8px · `--radius-banner` 14px                                                                                            |
-| Shadow | `--shadow-hover` `0 4px 16px var(--sd-shadow)` · `--shadow-tour` `0 12px 32px var(--sd-shadow-tour)` · `--sd-shadow-tour` rgba(0,0,0,.25) / dark rgba(0,0,0,.6) |
+| Group  | Tokens                                                                                                                                                                                                          |
+| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Motion | `--sd-dur-hover` 150ms (Tailwind default transition duration) · `--sd-dur-dim` 250ms · `--sd-dur-ring` 200ms · `--sd-flow-token-loop` 1400ms · `--sd-flow-step` 1700ms · `--sd-toast` 2600ms · `--sd-ease` ease |
+| Radius | `--radius-segment` 7px · `--radius-row` 8px · `--radius-banner` 14px                                                                                                                                            |
+| Shadow | `--shadow-hover` `0 4px 16px var(--sd-shadow)` · `--shadow-tour` `0 12px 32px var(--sd-shadow-tour)` · `--sd-shadow-tour` rgba(0,0,0,.25) / dark rgba(0,0,0,.6)                                                 |
 
-**State rule (reduced motion):** under `prefers-reduced-motion: reduce`, `--sd-dur-dim`,
+**State rule (reduced motion):** under `prefers-reduced-motion: reduce`, `--sd-dur-hover`, `--sd-dur-dim`,
 `--sd-dur-ring`, `--sd-flow-token-loop` → `0ms`; `--sd-flow-step` and `--sd-toast` unchanged
 (they are reading time, not animation). The TS mirror `resolveMotion(reduced)` returns the same
 values; a test asserts CSS and TS agree.
@@ -46,7 +46,7 @@ interface Motion {
 | icon  | `LucideIcon`                                                                | see research R4                                                                                                                   |
 | tone  | `{ bg: soft token class; fg: ink token class }`                             | from DESIGN.md "Kind & Semantic Tints"                                                                                            |
 
-Fallback (unknown/`null` kind): icon `Shapes`, tone surface-2 / ink-muted (never an error or empty).
+Fallback (unknown/`null` kind): icon `Shapes`, tone surface-2 / ink-secondary (muted fails AA on surface-2) (never an error or empty).
 
 ## Kind tile size
 
