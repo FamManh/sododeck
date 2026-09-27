@@ -40,17 +40,17 @@ checkpoint). No new runtime dependency.
 
 ## Phase 1: Setup
 
-- [ ] T001 Gate check:
+- [x] T001 Gate check:
   - Confirm the branch `006-flow-authoring` is based on the latest `main`.
   - Re-check the names listed in the research.md header (`toFlowEdges`, `useCanvasHandlers`,
     `useEditorShortcuts`, `isTextTarget` (now in `lib/is-text-target.ts`), `SaveStatus`,
     `DropdownMenu`, `ConfirmDeleteDialog`, `describeRemoval`,
     `previewRemoval`, `FieldEdit`, `InlineEdit`, `useUiStore`).
   - If any moved, update research.md before continuing.
-- [ ] T002 [P] Record the performance baseline on `main`: run `pnpm bench` and save the numbers
+- [x] T002 [P] Record the performance baseline on `main`: run `pnpm bench` and save the numbers
       (pan, zoom and drag at 500 nodes / 1,000 edges) in
       `specs/006-flow-authoring/bench-before.md`.
-- [ ] T003 [P] Write the ADR `docs/decisions/0008-flow-branches.md` in the 0006 header format:
+- [x] T003 [P] Write the ADR `docs/decisions/0008-flow-branches.md` in the 0006 header format:
   - Branch shape: `Flow.branches` plus `Step.branch`.
   - The derived branch point: the last main-path step, so one branch point per flow and one
     level.
