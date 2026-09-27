@@ -16,6 +16,17 @@ describe('MarkdownView', () => {
     expect(container.querySelectorAll('code')).toHaveLength(1);
   });
 
+  it('renders bold and italic with nested emphasis', () => {
+    render(
+      <MarkdownView text={'**Owner** reviews *priority* notes and **bold *nested*** text.'} />,
+    );
+    expect(screen.getByText('Owner').tagName).toBe('STRONG');
+    expect(screen.getByText('priority').tagName).toBe('EM');
+    const nestedItalic = screen.getByText('nested');
+    expect(nestedItalic.tagName).toBe('EM');
+    expect(nestedItalic.parentElement?.tagName).toBe('STRONG');
+  });
+
   it('shows HTML and scripts as literal text and creates no element for them', () => {
     const { container } = render(
       <MarkdownView

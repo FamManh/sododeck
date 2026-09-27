@@ -14,6 +14,14 @@ function InlineContent({ content }: { content: readonly Inline[] }) {
       <code key={i} className="rounded-segment bg-surface-2 px-1 font-mono text-code text-ink">
         {part.text}
       </code>
+    ) : part.kind === 'strong' ? (
+      <strong key={i}>
+        <InlineContent content={part.content} />
+      </strong>
+    ) : part.kind === 'em' ? (
+      <em key={i}>
+        <InlineContent content={part.content} />
+      </em>
     ) : (
       <Fragment key={i}>{part.text}</Fragment>
     ),

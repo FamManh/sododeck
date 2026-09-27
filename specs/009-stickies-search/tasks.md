@@ -115,13 +115,13 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### UI kit
 
-- [ ] T014 [P] [US1] Add bold and italic cases to `packages/ui/test/markdown.test.ts`. They must fail at first (research R7):
+- [x] T014 [P] [US1] Add bold and italic cases to `packages/ui/test/markdown.test.ts`. They must fail at first (research R7):
   - `**b**`, `__b__`, `*i*`, `_i_`, and bold wrapping italic
   - unmatched markers and markers next to spaces stay literal
   - `snake_case_name` stays literal
   - existing cases stay green
   - `markdown-view.test.tsx` renders `strong` and `em` and still never injects HTML
-- [ ] T015 [US1] Extend inline parsing in `packages/ui/src/lib/markdown.ts` and rendering in `packages/ui/src/components/markdown-view.tsx`. Make T014 pass.
+- [x] T015 [US1] Extend inline parsing in `packages/ui/src/lib/markdown.ts` and rendering in `packages/ui/src/components/markdown-view.tsx`. Make T014 pass.
 
 ### Canvas
 
