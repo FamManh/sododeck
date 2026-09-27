@@ -2,12 +2,28 @@
  * The deck document model. This module is the ONLY place that converts
  * between the Yjs document and the `.sododeck.json` format.
  *
- * Yjs layout (skeleton, revisit with the full schema in M1):
- *   doc.getMap('meta')           → { $schema, version, name?, description?, tags? (Y.Array) }
- *   doc.getArray(<collection>)   → Y.Map per object (nodes, groups, edges, ...)
- *   doc.getMap('rules')          → rule id → Y.Map
- * Nested JSON objects become Y.Map and nested arrays become Y.Array, so every
- * field is individually editable and mergeable.
+ * Yjs layout: persisted from feature 005 on, so changing it needs an ADR and a migration
+ * (ADR 0005, specs/002-yjs-model/data-model.md).
+ *
+ *   doc.getMap('meta')         Y.Map        $schema, version, name?, description?, tags? (Y.Array)
+ *   doc.getArray('nodes')      Y.Array<Y.Map>  one map per node, in file order
+ *   doc.getArray('groups')     Y.Array<Y.Map>  one map per group
+ *   doc.getArray('edges')      Y.Array<Y.Map>  one map per edge
+ *   doc.getArray('views')      Y.Array<Y.Map>  includes → Y.Array; positions → Y.Map(node id → Y.Map x,y)
+ *   doc.getArray('features')   Y.Array<Y.Map>  one map per feature
+ *   doc.getArray('flows')      Y.Array<Y.Map>  steps → Y.Array<Y.Map>; step ruleInputs → nested Y.Map
+ *   doc.getMap('rules')        Y.Map<Y.Map>    rule id → rule; inputs/outputs/rows → Y.Array<Y.Map>;
+ *                                              row when/then → Y.Array<string>
+ *   doc.getArray('stickies')   Y.Array<Y.Map>  one map per sticky
+ *
+ * Inside objects, nested objects (position, positions, ruleInputs, links) become Y.Map and arrays
+ * become Y.Array, so every field is individually editable and mergeable (FR-004). Scalars,
+ * including all text, are plain values: two concurrent writes to one text field resolve as last
+ * write wins for that field (no Y.Text; letter-by-letter merge is a later layout change).
+ * Optional fields are absent when unset, never stored as null or undefined.
+ *
+ * Output key order is not taken from Y.Map; `toJSON` rebuilds every object in schema order
+ * (key-order.ts).
  */
 import type { Id, Rule, SododeckFile } from '@sododeck/schema';
 import { parseSododeckFile } from '@sododeck/schema';
@@ -15,6 +31,8 @@ import * as Y from 'yjs';
 
 import { fromY, toY, type YObject, type YValue } from './convert';
 import { DeckValidationError } from './errors';
+import { canonicalize } from './key-order';
+import { checkDuplicateIds } from './load-checks';
 
 export type DeckDoc = Y.Doc;
 
@@ -90,6 +108,8 @@ export function fromJSON(input: unknown): DeckDoc {
   const parsed = parseSododeckFile(input);
   if (!parsed.success) throw new DeckValidationError(parsed.issues);
   const file = parsed.data;
+  const duplicates = checkDuplicateIds(file);
+  if (duplicates.length > 0) throw new DeckValidationError(duplicates);
 
   const doc = new Y.Doc();
   doc.transact(() => {
@@ -110,7 +130,7 @@ export function fromJSON(input: unknown): DeckDoc {
   return doc;
 }
 
-/** Reads the document back into a plain `.sododeck.json` object with canonical top-level key order. */
+/** Reads the document back into a plain `.sododeck.json` object in canonical key order. */
 export function toJSON(doc: DeckDoc): SododeckFile {
   const meta = metaMap(doc);
   const collection = <K extends Collection>(name: K) =>
@@ -120,7 +140,7 @@ export function toJSON(doc: DeckDoc): SododeckFile {
   const description = meta.get('description');
   const tags = meta.get('tags');
 
-  return {
+  return canonicalize({
     $schema: meta.get('$schema') as SododeckFile['$schema'],
     version: meta.get('version') as SododeckFile['version'],
     // Optional metadata is emitted only when present, so files without it round-trip unchanged.
@@ -135,12 +155,12 @@ export function toJSON(doc: DeckDoc): SododeckFile {
     flows: collection('flows'),
     rules: fromY(rulesMap(doc)) as SododeckFile['rules'],
     stickies: collection('stickies'),
-  };
+  });
 }
 
-/** Serializes a file for saving/export. TODO(M1): fixed per-object key order for readable git diffs. */
+/** Serializes a file for saving/export, in canonical key order so git diffs show only edits. */
 export function serializeDeck(file: SododeckFile): string {
-  return `${JSON.stringify(file, null, 2)}\n`;
+  return `${JSON.stringify(canonicalize(file), null, 2)}\n`;
 }
 
 /** Index of the object with `id` in a collection, or -1. Linear: collections stay ≤ a few thousand. */

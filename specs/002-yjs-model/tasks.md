@@ -160,13 +160,13 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T016 [P] [US2] Write `packages/model/test/round-trip.test.ts`:
+- [x] T016 [P] [US2] Write `packages/model/test/round-trip.test.ts`:
   - Move the cases from `test/deck.test.ts` here, then delete `deck.test.ts`.
   - Add one case per object type with **every optional field**: node, group, edge, view (with `positions` and `includes`), feature, flow, step (with `ruleInputs`), rule (columns/rows), sticky (anchor only / position only / both), and deck metadata.
   - Assert that `serializeDeck(toJSON(fromJSON(x))) === serializeDeck(x)`, and the same for an encoded-update replica.
   - Assert that the output keys of every nested object follow schema `properties` order even when the input has shuffled key order, and that deep-equality still holds.
   - Rename a node in the flow-and-rule example and check that only that node's `title` differs (US2 AS2).
-- [ ] T017 [P] [US2] Write `packages/model/test/load.test.ts`:
+- [x] T017 [P] [US2] Write `packages/model/test/load.test.ts`:
   - An invalid file throws `DeckValidationError` with paths (US2 AS3).
   - Duplicate ids throw with an issue naming the id and **both** paths (e.g. `nodes.0.id` and `nodes.3.id`) for each of these cases: nodes, groups, edges, views, features, flows, stickies, steps within one flow, rule columns across inputs+outputs, rule rows. No auto-rename (FR-020).
   - The same id used in two _different_ collections loads.
@@ -175,17 +175,17 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Implement `packages/model/src/key-order.ts` (research R2):
+- [x] T018 [P] [US2] Implement `packages/model/src/key-order.ts` (research R2):
   - Walk `jsonSchema` from `@sododeck/schema`, resolving `$ref` into `$defs`, and use `properties` declaration order, `items` and `additionalProperties`.
   - Build a cached `canonicalize(value)` that rebuilds objects in schema order.
   - Map-like objects (`rules`, `positions`, `ruleInputs` and its inner maps) keep their own key order.
-- [ ] T019 [P] [US2] Implement `packages/model/src/load-checks.ts`: `checkDuplicateIds(file): Issue[]` (research R7). The message format is `Id "x" is used more than once (nodes.0.id, nodes.3.id).`, with one issue per duplicated id per scope.
-- [ ] T020 [US2] Update `packages/model/src/deck.ts`:
+- [x] T019 [P] [US2] Implement `packages/model/src/load-checks.ts`: `checkDuplicateIds(file): Issue[]` (research R7). The message format is `Id "x" is used more than once (nodes.0.id, nodes.3.id).`, with one issue per duplicated id per scope.
+- [x] T020 [US2] Update `packages/model/src/deck.ts`:
   - `fromJSON` runs `parseSododeckFile`, then `checkDuplicateIds`; any issues throw `DeckValidationError`.
   - `toJSON` returns `canonicalize(...)`.
   - `serializeDeck` canonicalizes before stringifying. Remove its `TODO(M1)`.
   - Rewrite the header comment as the full documented layout from data-model.md, including that text is plain strings and last write wins (ADR 0005).
-- [ ] T021 [US2] Make T016 and T017 pass. Run `pnpm --filter @sododeck/app test` to confirm the app's decks still load. Commit: `feat(model): canonical key order and duplicate-id checks on load`.
+- [x] T021 [US2] Make T016 and T017 pass. Run `pnpm --filter @sododeck/app test` to confirm the app's decks still load. Commit: `feat(model): canonical key order and duplicate-id checks on load`.
 
 **Checkpoint**: US1 and US2 both work independently.
 

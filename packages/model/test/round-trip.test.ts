@@ -1,0 +1,287 @@
+import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
+import { describe, expect, it } from 'vitest';
+import * as Y from 'yjs';
+
+import { createDeck, createEditor, fromJSON, serializeDeck, toJSON } from '../src';
+import { readExample } from './helpers';
+
+const minimal = await readExample('minimal.sododeck.json');
+const flowAndRule = await readExample('flow-and-rule.sododeck.json');
+/** Uses every object type and every field of format v1. */
+const full = await readExample('full.sododeck.json');
+
+const empty = emptySododeckFile();
+const { $schema, version, ...collections } = empty;
+
+/** One case per object type, each with every optional field (US2 AS1, FR-023). */
+const perType: [string, SododeckFile][] = [
+  [
+    'deck metadata',
+    {
+      $schema,
+      version,
+      name: 'Delivery',
+      description: 'Last-mile **delivery**.',
+      tags: ['a', 'b'],
+      ...collections,
+    },
+  ],
+  [
+    'node',
+    {
+      ...empty,
+      nodes: [
+        { id: 'p', type: 'external', title: 'Parent' },
+        {
+          id: 'n',
+          type: 'service',
+          title: 'Orders',
+          level: 'container',
+          description: 'Takes **orders**.',
+          owner: 'Team A',
+          tags: ['core'],
+          tech: 'Go',
+          host: 'EKS',
+          icon: 'server',
+          links: [{ label: 'Repo', url: 'https://example.com' }, { url: '/docs' }],
+          group: 'g',
+          parent: 'p',
+          rules: ['R-1'],
+          position: { x: -1.5, y: 20 },
+        },
+      ],
+      groups: [{ id: 'g', title: 'G' }],
+      rules: { 'R-1': { title: 'R', hitPolicy: 'first', inputs: [], outputs: [], rows: [] } },
+    },
+  ],
+  [
+    'group',
+    {
+      ...empty,
+      groups: [
+        { id: 'outer', title: 'Outer' },
+        { id: 'g', title: 'Inner', description: 'Nested', parent: 'outer' },
+      ],
+    },
+  ],
+  [
+    'edge',
+    {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+      edges: [
+        {
+          id: 'e',
+          from: 'a',
+          to: 'a',
+          protocol: 'grpc',
+          label: 'Call',
+          direction: 'both',
+          description: 'Loop',
+          owner: 'Team',
+          tags: ['t'],
+          links: [{ url: 'https://example.com' }],
+        },
+      ],
+    },
+  ],
+  [
+    'view',
+    {
+      ...empty,
+      nodes: [
+        { id: 'a', type: 'client', title: 'A' },
+        { id: 'b', type: 'client', title: 'B' },
+      ],
+      features: [{ id: 'f', title: 'F' }],
+      views: [
+        {
+          id: 'v',
+          type: 'feature',
+          title: 'V',
+          subtitleField: 'owner',
+          feature: 'f',
+          includes: ['b', 'a'],
+          positions: { b: { x: 1, y: 2 }, a: { x: -3, y: 0.25 } },
+        },
+      ],
+    },
+  ],
+  ['feature', { ...empty, features: [{ id: 'f', title: 'F', description: 'D', owner: 'O' }] }],
+  [
+    'flow and step',
+    {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+      edges: [{ id: 'e', from: 'a', to: 'a' }],
+      features: [{ id: 'f', title: 'F' }],
+      flows: [
+        {
+          id: 'fl',
+          title: 'Flow',
+          feature: 'f',
+          description: 'D',
+          trigger: 'T',
+          outcome: 'O',
+          owner: 'Team',
+          tags: ['x'],
+          links: [{ label: 'L', url: 'u' }],
+          steps: [
+            {
+              id: 's',
+              edge: 'e',
+              title: 'Step',
+              condition: 'C',
+              sla: '< 1 s',
+              description: 'D',
+              payload: 'P',
+              notes: 'N',
+              owner: 'O',
+              tags: ['y'],
+              links: [{ url: 'u' }],
+              rules: ['R-2', 'R-1'],
+              ruleInputs: { 'R-2': { i2: 'b', i1: 'a' }, 'R-1': { i1: '' } },
+            },
+          ],
+        },
+      ],
+      rules: {
+        'R-2': {
+          title: 'Two',
+          hitPolicy: 'collect',
+          inputs: [
+            { id: 'i1', label: 'One' },
+            { id: 'i2', label: 'Two' },
+          ],
+          outputs: [],
+          rows: [],
+        },
+        'R-1': {
+          title: 'One',
+          hitPolicy: 'first',
+          inputs: [{ id: 'i1', label: 'One' }],
+          outputs: [],
+          rows: [],
+        },
+      },
+    },
+  ],
+  [
+    'rule',
+    {
+      ...empty,
+      rules: {
+        'R-1': {
+          title: 'Carrier',
+          description: 'Picks one.',
+          hitPolicy: 'unique',
+          inputs: [
+            { id: 'in1', label: 'Weight' },
+            { id: 'in2', label: 'Zone' },
+          ],
+          outputs: [{ id: 'out1', label: 'Carrier' }],
+          rows: [
+            { id: 'r1', when: ['< 5', ''], then: ['Post'] },
+            { id: 'r2', when: ['', 'EU'], then: [''] },
+          ],
+        },
+      },
+    },
+  ],
+  [
+    'sticky',
+    {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+      stickies: [
+        { id: 's1', text: 'Anchored', color: 'blue', anchor: 'a' },
+        { id: 's2', text: 'Free', color: 'grey', position: { x: 1, y: 1 } },
+        { id: 's3', text: '', anchor: 'a', position: { x: 0, y: -8 } },
+      ],
+    },
+  ],
+];
+
+const cases: [string, SododeckFile][] = [
+  ['empty deck', empty],
+  ['minimal example', minimal],
+  ['flow-and-rule example', flowAndRule],
+  ['full example', full],
+  ...perType,
+];
+
+describe('round-trip (US2 AS1, FR-022/023)', () => {
+  it('createDeck() produces an empty valid file', () => {
+    expect(toJSON(createDeck())).toEqual(emptySododeckFile());
+  });
+
+  it.each(cases)('round-trips the %s losslessly', (_name, file) => {
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(serializeDeck(out)).toBe(serializeDeck(file));
+    expect(serializeDeck(out)).toBe(`${JSON.stringify(file, null, 2)}\n`);
+  });
+
+  it.each(cases)(
+    'serializes a replica of the %s identically (persistence / sync)',
+    (_name, file) => {
+      const replica = new Y.Doc();
+      Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(file)));
+      expect(toJSON(replica)).toEqual(file);
+      expect(serializeDeck(toJSON(replica))).toBe(serializeDeck(file));
+    },
+  );
+});
+
+/** Map-like objects keep their own key order; every other object is reversed. */
+const MAP_PATHS = [
+  /^rules$/,
+  /^views\.\d+\.positions$/,
+  /^flows\.\d+\.steps\.\d+\.ruleInputs(\.[^.]+)?$/,
+];
+
+function shuffleKeys(value: unknown, path = ''): unknown {
+  if (Array.isArray(value))
+    return value.map((v, i) => shuffleKeys(v, path === '' ? String(i) : `${path}.${String(i)}`));
+  if (value === null || typeof value !== 'object') return value;
+  const entries = Object.entries(value).map(
+    ([k, v]) => [k, shuffleKeys(v, path === '' ? k : `${path}.${k}`)] as const,
+  );
+  const isMap = MAP_PATHS.some((re) => re.test(path));
+  return Object.fromEntries(isMap ? entries : entries.reverse());
+}
+
+describe('canonical key order (FR-022, research R2)', () => {
+  it('writes every object in schema order whatever the input order', () => {
+    const shuffled = shuffleKeys(full) as SododeckFile;
+    expect(JSON.stringify(shuffled)).not.toBe(JSON.stringify(full));
+
+    const out = toJSON(fromJSON(shuffled));
+    expect(out).toEqual(full);
+    expect(JSON.stringify(out)).toBe(JSON.stringify(full));
+    expect(serializeDeck(shuffled)).toBe(serializeDeck(full));
+  });
+
+  it('writes objects added through the editor in schema order', () => {
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    editor.add('stickies', { position: { y: 2, x: 1 }, color: 'green', text: 'Hi' });
+    const [sticky] = toJSON(doc).stickies;
+    expect(Object.keys(sticky ?? {})).toEqual(['id', 'text', 'color', 'position']);
+    expect(Object.keys(sticky?.position ?? {})).toEqual(['x', 'y']);
+  });
+});
+
+describe('edits change only what they touch (US2 AS2)', () => {
+  it('renaming one node changes only its title', () => {
+    const doc = fromJSON(flowAndRule);
+    const [first] = flowAndRule.nodes;
+    if (first === undefined) throw new Error('example has nodes');
+    createEditor(doc).update('nodes', first.id, { title: 'Renamed' });
+
+    const expected = structuredClone(flowAndRule);
+    const node = expected.nodes[0];
+    if (node !== undefined) node.title = 'Renamed';
+    expect(serializeDeck(toJSON(doc))).toBe(serializeDeck(expected));
+  });
+});
