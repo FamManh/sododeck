@@ -4,30 +4,41 @@ import { PanelSection } from '@sododeck/ui/components/panel';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ArrowRight, CircleAlert, GitBranch, Spline } from 'lucide-react';
+import { ArrowRight, CircleAlert, GitBranch, Spline, Unlink } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
 import { InspectorFrame } from '../inspector/inspector-frame';
 import { stepRoute } from './session-path';
-import { TextareaEdit } from '../fields/textarea-edit';
+import { protocolLabel } from '../fields/edge-choices';
+import { FieldLabel } from '../fields/field-label';
+import { LinksField } from '../fields/links-field';
+import { MarkdownField } from '../fields/markdown-field';
+import { oneStep } from '../fields/one-step';
+import { OwnerField } from '../fields/owner-field';
+import { TagsField } from '../fields/tags-field';
 
 /**
- * Step inspector (FR-019, FR-027, designs 45–46): "Step n · <from> → <to>", then title,
- * description, condition and SLA target, editable in or out of a session. The branch step also
- * lists its branches.
+ * Step inspector (006 FR-019, FR-027, 008 FR-011, designs 45, 46, 51): "Step n · <from> → <to>",
+ * then title, markdown description, owner, the edge, tags, links, condition, SLA target (the target
+ * only, no meter) and attached rules, editable in or out of a session. The branch step also lists
+ * its branches.
  */
 export function InspectorStep({
   deck,
   flow,
   analysis,
   step,
+  rules,
 }: {
   deck: SododeckFile;
   flow: Flow;
   analysis: FlowAnalysis;
   step: PathStep;
+  /** The ATTACHED RULES section (008 US5). */
+  rules?: ReactNode;
 }) {
   const editor = useEditor();
   const s = step.step;
@@ -38,6 +49,13 @@ export function InspectorStep({
   const where = branch === undefined ? `step ${step.number}` : `branch “${branch.branch.label}”`;
   const isFork = analysis.branchStepId === s.id;
   const Icon = isFork ? GitBranch : branch?.branch.errorPath === true ? CircleAlert : Spline;
+  const edge = step.broken ? undefined : deck.edges.find((e) => e.id === s.edge);
+  const edgeText =
+    edge === undefined
+      ? ''
+      : [edge.label, protocolLabel(edge.protocol)]
+          .filter((part) => part !== undefined && part !== '')
+          .join(' · ') || stepRoute(deck, step);
 
   return (
     <InspectorFrame
@@ -106,13 +124,58 @@ export function InspectorStep({
         />
       </PanelSection>
       <PanelSection>
-        <TextareaEdit
+        <MarkdownField
           key={`${s.id}-description`}
-          label="Description"
+          modeKey={`steps:${s.id}`}
           value={s.description ?? ''}
           placeholder="What happens in this step? Markdown supported."
           onCommit={(description) => {
             update({ description: description === '' ? null : description });
+          }}
+        />
+      </PanelSection>
+      <PanelSection className="grid grid-cols-2 gap-3">
+        <OwnerField
+          key={`${s.id}-owner`}
+          deck={deck}
+          value={s.owner ?? ''}
+          onCommit={(owner) => {
+            update({ owner: owner === '' ? null : owner });
+          }}
+        />
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <FieldLabel>Edge</FieldLabel>
+          {edge === undefined ? (
+            <p className="flex h-9 items-center gap-1.5 text-body-sm text-clay-ink">
+              <Unlink aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4 shrink-0" />
+              Connection deleted
+            </p>
+          ) : (
+            <p className="flex h-9 items-center truncate font-mono text-body-sm" title={edgeText}>
+              {edgeText}
+            </p>
+          )}
+        </div>
+      </PanelSection>
+      <PanelSection>
+        <TagsField
+          deck={deck}
+          value={s.tags}
+          onCommit={(tags) => {
+            oneStep(editor, () => {
+              update({ tags });
+            });
+          }}
+        />
+      </PanelSection>
+      <PanelSection>
+        <LinksField
+          key={`${s.id}-links`}
+          value={s.links}
+          onCommit={(links) => {
+            oneStep(editor, () => {
+              update({ links });
+            });
           }}
         />
       </PanelSection>
@@ -142,6 +205,7 @@ export function InspectorStep({
           }}
         />
       </PanelSection>
+      {rules}
     </InspectorFrame>
   );
 }

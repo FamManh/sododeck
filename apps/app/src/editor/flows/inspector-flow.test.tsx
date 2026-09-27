@@ -1,8 +1,8 @@
 import { toJSON } from '@sododeck/model';
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { flowDeck } from '../../test/flow-fixtures';
+import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { renderFlows } from '../../test/render-flows';
 
 const inspector = () => screen.getByRole('complementary', { name: 'Inspector' });
@@ -27,9 +27,13 @@ describe('InspectorFlow (US3, FR-003)', () => {
     await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Pays **now**');
     await user.tab();
     const owner = screen.getByRole('combobox', { name: 'Owner' });
-    expect(document.getElementById(owner.getAttribute('list') ?? '')).toContainHTML(
-      '<option value="Ordering">',
-    );
+    await user.type(owner, 'ord');
+    expect(
+      within(screen.getByRole('listbox', { name: 'Owner suggestions' })).getByRole('option', {
+        name: 'Ordering',
+      }),
+    ).toBeInTheDocument();
+    await user.clear(owner);
     await user.type(owner, 'Mobile{Enter}');
     expect(toJSON(doc).flows[0]).toMatchObject({
       title: 'Checkout',
@@ -41,6 +45,34 @@ describe('InspectorFlow (US3, FR-003)', () => {
     });
     expect(toJSON(doc).flows[0]?.owner).toBeUndefined();
     expect(inspector()).toBeInTheDocument();
+  });
+
+  it('adds Write / Preview, tags, links and the summary line (008 story 2)', async () => {
+    const broken = {
+      ...branchedDeck,
+      edges: branchedDeck.edges.filter((e) => e.id !== 'cx'),
+    };
+    const { user, ui, doc } = renderFlows(broken);
+    act(() => {
+      ui().setActiveFlow('pay');
+    });
+    expect(screen.getByText('4 steps · 2 branches · 4 components')).toBeInTheDocument();
+    expect(screen.getByText(/1 broken step/)).toBeInTheDocument();
+    await user.type(screen.getByRole('textbox', { name: 'Description' }), '- charge `card`');
+    await user.click(screen.getByRole('radio', { name: 'Preview' }));
+    expect(
+      within(screen.getByRole('region', { name: 'Description preview' })).getByRole('listitem'),
+    ).toHaveTextContent('charge card');
+    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'Checkout{Enter}');
+    await user.type(
+      screen.getByRole('textbox', { name: 'Add link' }),
+      'https://example.com/brief{Enter}',
+    );
+    expect(toJSON(doc).flows.find((f) => f.id === 'pay')).toMatchObject({
+      description: '- charge `card`',
+      tags: ['checkout'],
+      links: [{ url: 'https://example.com/brief', label: 'example.com' }],
+    });
   });
 
   it('shows the feature select and "Edit steps"', async () => {

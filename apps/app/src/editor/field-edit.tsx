@@ -16,8 +16,6 @@ interface FieldEditProps {
   placeholder?: string;
   /** An error from outside (e.g. Done with an empty branch field), shown with an icon. */
   error?: string;
-  /** Id of a `<datalist>` of suggestions. */
-  list?: string;
   /** Monospace value (conditions, SLA). */
   mono?: boolean;
   /** Id of the input, so callers can focus it. */
@@ -40,7 +38,6 @@ export function FieldEdit({
   allowEmpty = false,
   placeholder,
   error,
-  list,
   mono = false,
   id: inputId,
   mixed = false,
@@ -68,7 +65,6 @@ export function FieldEdit({
         aria-label={label}
         value={field.value}
         placeholder={mixed ? 'Mixed' : placeholder}
-        list={list}
         // Not Input's `invalid` prop: it changes the DOM shape, which would drop focus mid-edit.
         aria-invalid={message !== undefined || undefined}
         className={cn(

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@sododeck/ui/components/select';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
-import { ListOrdered, Route, Trash2 } from 'lucide-react';
+import { CircleAlert, ListOrdered, Route, Trash2 } from 'lucide-react';
 import { useId } from 'react';
 
 import { useEditor } from '../../model/use-editor';
@@ -18,28 +18,28 @@ import { FieldEdit } from '../field-edit';
 import { featureOf, moveToFeature } from './flow-order';
 import { startEditing } from './flow-session';
 import { InspectorFrame } from '../inspector/inspector-frame';
-import { TextareaEdit } from '../fields/textarea-edit';
+import { LinksField } from '../fields/links-field';
+import { MarkdownField } from '../fields/markdown-field';
+import { oneStep } from '../fields/one-step';
+import { OwnerField } from '../fields/owner-field';
+import { TagsField } from '../fields/tags-field';
+import { flowSummary } from '../inspector/derive';
 
 const NO_FEATURE = 'none';
 
-/** Owners already used in the deck, for suggestions (§g-10: no team list). */
-function owners(deck: SododeckFile): string[] {
-  const all = [...deck.nodes, ...deck.features, ...deck.flows].flatMap((o) =>
-    o.owner === undefined || o.owner === '' ? [] : [o.owner],
-  );
-  return [...new Set(all)].sort((a, b) => a.localeCompare(b));
-}
+const plural = (n: number, one: string, many = `${one}s`) => `${String(n)} ${n === 1 ? one : many}`;
 
 /**
- * Flow inspector (FR-003, FR-018a, design 42): title, description, owner with suggestions,
- * feature (including "No feature") and Edit steps. Every field saves on Enter or blur.
+ * Flow inspector (006 FR-003, 008 FR-010, designs 42, 50): title, a summary line, markdown
+ * description, owner with suggestions, feature (including "No feature"), tags, links and Edit
+ * steps. Text fields save while typing.
  */
 export function InspectorFlow({ deck, flow }: { deck: SododeckFile; flow: Flow }) {
   const editor = useEditor();
   const session = useUiStore((s) => s.flowSession);
-  const ownersId = useId();
   const featureLabelId = useId();
   const featureId = featureOf(deck, flow);
+  const summary = flowSummary(deck, flow.id);
   const featureName = deck.features.find((f) => f.id === featureId)?.title ?? 'No feature';
   const mode =
     session?.flowId === flow.id ? (session.mode === 'record' ? ' · recording' : ' · editing') : '';
@@ -74,10 +74,24 @@ export function InspectorFlow({ deck, flow }: { deck: SododeckFile; flow: Flow }
           }}
         />
       </PanelSection>
+      {summary !== null && (
+        <PanelSection>
+          <p className="flex items-center gap-1.5 text-body-sm text-ink-secondary">
+            {`${plural(summary.steps, 'step')} · ${plural(summary.branches, 'branch', 'branches')} · ${plural(summary.components, 'component')}`}
+            {summary.broken > 0 && (
+              <span className="flex items-center gap-1 text-clay-ink">
+                {' · '}
+                <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                {plural(summary.broken, 'broken step')}
+              </span>
+            )}
+          </p>
+        </PanelSection>
+      )}
       <PanelSection>
-        <TextareaEdit
+        <MarkdownField
           key={`${flow.id}-description`}
-          label="Description"
+          modeKey={`flows:${flow.id}`}
           value={flow.description ?? ''}
           placeholder="What does this flow do? Markdown supported."
           onCommit={(description) => {
@@ -88,22 +102,14 @@ export function InspectorFlow({ deck, flow }: { deck: SododeckFile; flow: Flow }
         />
       </PanelSection>
       <PanelSection className="grid grid-cols-2 gap-3">
-        <FieldEdit
+        <OwnerField
           key={`${flow.id}-owner`}
-          label="Owner"
+          deck={deck}
           value={flow.owner ?? ''}
-          allowEmpty
-          list={ownersId}
-          placeholder="Team or person"
           onCommit={(owner) => {
             editor.update('flows', flow.id, { owner: owner === '' ? null : owner });
           }}
         />
-        <datalist id={ownersId}>
-          {owners(deck).map((owner) => (
-            <option key={owner} value={owner} />
-          ))}
-        </datalist>
         <div className="flex flex-col gap-1.5">
           <span id={featureLabelId} className="text-micro text-ink-muted uppercase">
             Feature
@@ -127,6 +133,28 @@ export function InspectorFlow({ deck, flow }: { deck: SododeckFile; flow: Flow }
             </SelectContent>
           </Select>
         </div>
+      </PanelSection>
+      <PanelSection>
+        <TagsField
+          deck={deck}
+          value={flow.tags}
+          onCommit={(tags) => {
+            oneStep(editor, () => {
+              editor.update('flows', flow.id, { tags });
+            });
+          }}
+        />
+      </PanelSection>
+      <PanelSection>
+        <LinksField
+          key={`${flow.id}-links`}
+          value={flow.links}
+          onCommit={(links) => {
+            oneStep(editor, () => {
+              editor.update('flows', flow.id, { links });
+            });
+          }}
+        />
       </PanelSection>
       {session === null && (
         <PanelSection>
