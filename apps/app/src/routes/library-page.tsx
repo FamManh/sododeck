@@ -5,7 +5,7 @@ import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/
 import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { LayoutGrid, List, Moon, Plus, Sun } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 
 import { Wordmark } from '../editor/wordmark';
@@ -27,6 +27,7 @@ import { NewFolderDialog } from '../library/new-folder-dialog';
 import { StorageCard } from '../library/storage-card';
 import { useLibraryCommands } from '../library/use-library-commands';
 import { liveDecks, liveFolders } from '../storage/library-db';
+import { LibraryDbProvider } from '../storage/library-db-context';
 import { useLibraryDb } from '../storage/library-db-instance';
 import { useLiveQuery } from '../storage/use-live-query';
 import { useThemeStore } from '../theme/theme-store';
@@ -220,7 +221,12 @@ function Library() {
 export function LibraryPage() {
   return (
     <ToastProvider>
-      <Library />
+      {/* The database opens in a few ms, usually before this route renders. */}
+      <Suspense fallback={null}>
+        <LibraryDbProvider>
+          <Library />
+        </LibraryDbProvider>
+      </Suspense>
       <Toaster />
     </ToastProvider>
   );

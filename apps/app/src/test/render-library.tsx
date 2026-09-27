@@ -3,14 +3,12 @@ import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { TooltipProvider } from '@sododeck/ui/components/tooltip';
 import { act, render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Suspense } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach } from 'vitest';
 
 import { resetLibraryStore } from '../library/library-store';
 import { LibraryPage } from '../routes/library-page';
 import { insertDeck, type DeckRecord, type LibraryDb } from '../storage/library-db';
-import { LibraryDbProvider } from '../storage/library-db-context';
 import { getLibraryDb, setLibraryDbForTests } from '../storage/library-db-instance';
 import { importFile } from '../storage/library-ops';
 import { DeckStub } from './deck-stub';
@@ -56,11 +54,7 @@ export async function renderLibrary({
   );
   const tree = (
     <TooltipProvider>
-      <Suspense fallback={null}>
-        <LibraryDbProvider>
-          <RouterProvider router={router} />
-        </LibraryDbProvider>
-      </Suspense>
+      <RouterProvider router={router} />
     </TooltipProvider>
   );
   let view: ReturnType<typeof render> | undefined;
