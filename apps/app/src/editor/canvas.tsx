@@ -1,4 +1,6 @@
 import { analyzeFlow, observeDeck } from '@sododeck/model';
+import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
+import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import {
@@ -45,19 +47,20 @@ import { useFlowViewport } from './flows/use-flow-viewport';
 import { focusSet } from './focus-set';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelWithHysteresis, type Level } from './levels';
+import { PortPillNode } from './port-pill-node';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
-import { scopeOf, visibleGraph } from './visible-graph';
-import { validDrillDepth } from './visible-graph';
+import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
   deck: DeckNode,
   'group-boundary': GroupBoundaryNode,
+  port: PortPillNode,
   sticky: StickyNode,
 };
 const edgeTypes: EdgeTypes = { deck: DeckEdge, 'sticky-leader': StickyLeaderEdge };
@@ -230,8 +233,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const activeFlow = useUiStore((s) => s.activeFlow);
   const session = useUiStore((s) => s.flowSession);
   const hoverEdgeId = useUiStore((s) => s.hoverEdgeId);
-  const { setCenter, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
+  const { setCenter, setViewport, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
+  const { dimMs } = resolveMotion(useReducedMotion());
   const wrapper = useRef<HTMLDivElement>(null);
+  const previousDrill = useRef(drill);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
   const [restored] = useState(() => useUiStore.getState().canvasViewport);
   const zoomLevel = useStore(levelSelector);
@@ -337,6 +342,53 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const recording = session !== null;
   const hasFocusedNode = focusedId !== null && deck.nodes.some((n) => n.id === focusedId);
+  const drilledEmpty =
+    drill.length > 0 &&
+    graph.nodes.length === 0 &&
+    graph.groups.length === 0 &&
+    graph.cards.length === 0;
+
+  useEffect(() => {
+    const before = previousDrill.current;
+    previousDrill.current = drill;
+    if (drill.length > before.length) {
+      const box = scopeBounds(deck, graph, level);
+      const root = wrapper.current;
+      if (box === null || root === null || root.clientWidth === 0 || root.clientHeight === 0)
+        return;
+      const frame = requestAnimationFrame(() => {
+        const padding = 0.2;
+        const width = root.clientWidth;
+        const height = root.clientHeight;
+        const zoom = Math.max(
+          0.4,
+          Math.min(
+            1.3,
+            Math.min(
+              (width * (1 - padding * 2)) / Math.max(box.width, 1),
+              (height * (1 - padding * 2)) / Math.max(box.height, 1),
+            ),
+          ),
+        );
+        void setViewport(
+          {
+            zoom,
+            x: width / 2 - (box.x + box.width / 2) * zoom,
+            y: height / 2 - (box.y + box.height / 2) * zoom,
+          },
+          { duration: dimMs },
+        );
+      });
+      return () => {
+        cancelAnimationFrame(frame);
+      };
+    }
+    if (drill.length < before.length) {
+      const restore = before[drill.length]?.viewport;
+      if (restore === undefined) return;
+      void setViewport(restore, { duration: dimMs });
+    }
+  }, [deck, dimMs, drill, graph, level, setViewport]);
 
   return (
     <div
@@ -439,6 +491,13 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <SelectionFrame deck={deck} level={level} />
       </ReactFlow>
       {deck.nodes.length === 0 && <EmptyCanvasCard />}
+      {drilledEmpty && (
+        <EmptyCanvasCard
+          title="No components in this group"
+          description="This group is empty right now. Go up to add components elsewhere or move some into this group."
+          action={null}
+        />
+      )}
       <EdgePopover deck={deck} />
       <ConnectPopover deck={deck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />

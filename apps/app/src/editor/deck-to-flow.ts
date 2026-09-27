@@ -499,6 +499,7 @@ export function toFlowEdges(
   view: CanvasView,
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): (DeckFlowEdge | MergedFlowEdge)[] {
+  const ports = portNodes(deck, graph);
   const nodes = new Map<string, { position: Point; title: string }>(
     deck.nodes.map((node, index) => [
       node.id,
@@ -511,7 +512,7 @@ export function toFlowEdges(
       title: card.title,
     });
   }
-  for (const port of portNodes(deck, graph)) {
+  for (const port of ports) {
     nodes.set(port.id, { position: port.position, title: port.data.outsideTitle });
   }
   const titles = representativeTitles(deck, graph);
@@ -571,6 +572,71 @@ export function toFlowEdges(
     edgeCache.set(edge, flowEdge);
     return [flowEdge];
   });
+  const portEdges = graph.ports.flatMap((port) =>
+    port.edgeIds.flatMap((edgeId) => {
+      const edge = deck.edges.find((entry) => entry.id === edgeId);
+      if (edge === undefined) return [];
+      const insideNodeId = port.insideNodeIds.find(
+        (nodeId) => edge.from === nodeId || edge.to === nodeId,
+      );
+      if (insideNodeId === undefined) return [];
+      const representative = graph.representative.get(insideNodeId) ?? insideNodeId;
+      const fromId = edge.from === insideNodeId ? representative : port.id;
+      const toId = edge.to === insideNodeId ? representative : port.id;
+      const from = nodes.get(fromId);
+      const to = nodes.get(toId);
+      if (from === undefined || to === undefined) return [];
+      const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+      const isSelected = selected.has(edge.id);
+      const focused = edge.id === view.focusedEdgeId;
+      const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
+      const showLabel =
+        (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
+        view.focus?.edges.has(edge.id) === true;
+      const mark = overlay.edges.get(edge.id);
+      const cached = edgeCache.get(edge);
+      if (
+        cached?.selected === isSelected &&
+        sameMark(cached.data?.flow, mark) &&
+        cached.source === fromId &&
+        cached.target === toId &&
+        cached.sourceHandle === sourceHandle &&
+        cached.targetHandle === targetHandle &&
+        cached.data?.showLabel === showLabel &&
+        cached.data.focused === focused &&
+        cached.data.dimmed === dimmed &&
+        cached.data.fromTitle === from.title &&
+        cached.data.toTitle === to.title
+      ) {
+        return [cached];
+      }
+      const flowEdge: DeckFlowEdge = {
+        id: edge.id,
+        type: 'deck',
+        source: fromId,
+        target: toId,
+        sourceHandle,
+        targetHandle,
+        selected: isSelected,
+        ...(mark?.inPath === true ? { className: 'in-flow' } : {}),
+        interactionWidth: 12,
+        ariaLabel: edgeName(from.title, to.title, edge.label),
+        data: {
+          label: edge.label,
+          protocol: edge.protocol,
+          direction: edge.direction ?? 'forward',
+          showLabel,
+          fromTitle: from.title,
+          toTitle: to.title,
+          focused,
+          dimmed,
+          ...(mark === undefined ? {} : { flow: mark }),
+        },
+      };
+      edgeCache.set(edge, flowEdge);
+      return [flowEdge];
+    }),
+  );
   const mergedEdges = graph.merged.flatMap((edge) => {
     const from = nodes.get(edge.a);
     const to = nodes.get(edge.b);
@@ -612,7 +678,7 @@ export function toFlowEdges(
     mergedCache.set(edge.id, flowEdge);
     return [flowEdge];
   });
-  const next = [...plainEdges, ...mergedEdges];
+  const next = [...plainEdges, ...portEdges, ...mergedEdges];
   // A drag moves nodes, rarely edges: keep the array identity when nothing in it changed.
   if (next.length === lastEdges.length && next.every((e, i) => e === lastEdges[i]))
     return lastEdges;

@@ -286,6 +286,59 @@ describe('canvas keyboard', () => {
 });
 
 describe('editor shortcuts', () => {
+  it('goes up with Escape or Backspace when nothing is selected in a drilled scope', async () => {
+    const { user } = setup(groupedDeck);
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+    });
+    await user.keyboard('{Escape}');
+    expect(ui().drill).toEqual([]);
+
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+    });
+    await user.keyboard('{Backspace}');
+    expect(ui().drill).toEqual([]);
+    expect(ui().pendingDelete).toBeNull();
+  });
+
+  it('keeps the level when Backspace deletes, Escape clears, or Escape only closes a popover', async () => {
+    const { user } = setup(groupedDeck);
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+    });
+
+    focusNode('inside');
+    await user.keyboard('{Backspace}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'inside' }] });
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+
+    act(() => {
+      ui().cancelDelete();
+      ui().clearSelection();
+      ui().select({ nodes: ['inside'] });
+    });
+    await user.keyboard('{Escape}');
+    expect(ui().selection.nodes).toEqual([]);
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+
+    focusNode('inside');
+    await user.keyboard('c');
+    expect(ui().popover).toEqual({ kind: 'connect', fromId: 'inside' });
+    await user.keyboard('{Escape}');
+    expect(ui().popover).toBeNull();
+    expect(ui().selection.nodes).toEqual(['inside']);
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+  });
+
+  it('does nothing with Escape or Backspace at the top level when nothing is selected', async () => {
+    const { user } = setup();
+    await user.keyboard('{Escape}{Backspace}');
+    expect(ui().drill).toEqual([]);
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().pendingDelete).toBeNull();
+  });
+
   it('opens the delete confirmation for the selection with Delete or Backspace', async () => {
     const { user } = setup();
     focusNode('n00');

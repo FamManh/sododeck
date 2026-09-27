@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 
+import { useUiStore } from '../state/ui-store';
 import type { GroupFlowNode } from './deck-to-flow';
 
 /**
@@ -16,23 +17,41 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   width,
   height,
 }: NodeProps<GroupFlowNode>) {
+  const focus = useUiStore((state) => state.focus);
+  const select = useUiStore((state) => state.select);
+  const groupId = id.startsWith('group:') ? id.slice('group:'.length) : id;
+
   return (
     <div
       data-testid="group-boundary"
       style={{ width, height }}
       className="pointer-events-none rounded-group border border-dashed border-border bg-group"
     >
-      <span
+      <button
+        type="button"
         data-node-id={id}
+        aria-label={`${data.title} group, ${String(data.count)} nodes`}
+        aria-expanded="true"
         tabIndex={data.focused ? 0 : -1}
+        title="Double-click or ↵ to open"
+        onMouseDownCapture={(event) => {
+          event.stopPropagation();
+        }}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={() => {
+          select({ groups: [groupId] });
+          focus(id);
+        }}
         className={cn(
-          'pointer-events-auto absolute top-2 left-3 flex gap-1.5 text-micro text-ink-muted uppercase',
+          'pointer-events-auto absolute top-2 left-3 flex gap-1.5 rounded-full px-1 text-micro text-ink-muted uppercase',
           focusRing,
         )}
       >
         <span>{data.title}</span>
         <span>{data.count}</span>
-      </span>
+      </button>
     </div>
   );
 });

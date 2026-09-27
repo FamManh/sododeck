@@ -3,14 +3,19 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import type { Edge, Node, NodeChange } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
+import { useDeckSnapshot } from '../model/use-deck-snapshot';
+import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { exitFlow, openFlow } from './flows/flow-mode';
+import { TopBar } from './top-bar';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { useEditorShortcuts } from './use-canvas-shortcuts';
 
 const deck = deckOf({
   nodes: [
@@ -36,6 +41,18 @@ function handlers(file = deck) {
   const env = editorWrapper(file);
   const { result } = renderHook(() => useCanvasHandlers(), { wrapper: env.wrapper });
   return { ...env, h: () => result.current };
+}
+
+function DrillHarness() {
+  useEditorShortcuts();
+  const editor = useEditor();
+  const deck = useDeckSnapshot(editor.doc);
+  return (
+    <MemoryRouter>
+      <TopBar deckName={deck.name ?? 'Untitled deck'} deck={deck} />
+      <Canvas />
+    </MemoryRouter>
+  );
 }
 
 describe('Canvas', () => {
@@ -237,6 +254,76 @@ describe('Canvas', () => {
     });
     expect(ui().drill).toEqual([]);
     expect(ui().announcement.text).toBe('Went up to System view');
+  });
+
+  it('drills into groups and child nodes, shows the breadcrumb, and keeps the deck unchanged', async () => {
+    const user = userEvent.setup();
+    const drillDeck = deckOf({
+      name: 'Shop',
+      nodes: [
+        { id: 'gateway', type: 'service', title: 'Gateway', position: { x: 0, y: 0 } },
+        {
+          id: 'a',
+          type: 'service',
+          title: 'Order Service',
+          group: 'core',
+          position: { x: 260, y: 0 },
+        },
+        {
+          id: 'b',
+          type: 'database',
+          title: 'Orders DB',
+          group: 'core',
+          position: { x: 520, y: 0 },
+        },
+        { id: 'parent', type: 'service', title: 'Delivery platform', position: { x: 0, y: 220 } },
+        {
+          id: 'child',
+          type: 'service',
+          title: 'Dispatch',
+          parent: 'parent',
+          position: { x: 260, y: 220 },
+        },
+      ],
+      groups: [{ id: 'core', title: 'Core services' }],
+      edges: [
+        { id: 'ga', from: 'gateway', to: 'a' },
+        { id: 'ab', from: 'a', to: 'b' },
+      ],
+    });
+    const before = structuredClone(drillDeck);
+    const { doc, editor } = renderWithEditor(<DrillHarness />, drillDeck);
+
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Core services group, 2 nodes' }));
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Local/Shop/System view/Core services',
+    );
+    expect(screen.getAllByTestId('deck-node')).toHaveLength(2);
+    expect(screen.queryByRole('group', { name: 'Service: Gateway' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Gateway' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Go to Gateway' }));
+    expect(ui().drill).toEqual([]);
+    expect(ui().selection.nodes).toEqual(['gateway']);
+
+    act(() => {
+      ui().focus('group:core');
+      document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
+    });
+    await user.keyboard('{Enter}');
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+
+    await user.keyboard('{Escape}');
+    fireEvent.doubleClick(screen.getByRole('group', { name: 'Service: Gateway' }));
+    expect(ui().drill).toEqual([]);
+
+    fireEvent.doubleClick(await screen.findByRole('group', { name: 'Service: Delivery platform' }));
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['parent']);
+    expect(screen.getAllByTestId('deck-node')).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'Service: Dispatch' })).toBeInTheDocument();
+    expect(toJSON(doc)).toEqual(before);
+    expect(editor().canUndo()).toBe(false);
   });
 });
 

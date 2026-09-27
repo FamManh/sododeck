@@ -70,6 +70,17 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
     : `${GROUP_NODE_PREFIX}${groupId}`;
 }
 
+function scopeTitle(
+  deck: ReturnType<typeof readDeck>,
+  drill: readonly { kind: 'group' | 'node'; id: string }[],
+): string {
+  const current = drill.at(-1);
+  if (current === undefined) return 'System view';
+  if (current.kind === 'group')
+    return deck.groups.find((group) => group.id === current.id)?.title ?? 'System view';
+  return deck.nodes.find((node) => node.id === current.id)?.title ?? 'System view';
+}
+
 /** Focuses the inspector's title field once the inspector shows the selected node. */
 function focusInspectorTitle(): void {
   setTimeout(() => {
@@ -81,13 +92,15 @@ function focusInspectorTitle(): void {
 
 export function useCanvasKeyDown() {
   const editor = useEditor();
-  const { zoomIn, zoomOut, fitView, setCenter, getZoom, screenToFlowPosition } = useReactFlow();
+  const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
+    useReactFlow();
 
   return useCallback(
     (event: ReactKeyboardEvent) => {
       if (event.defaultPrevented || isTextTarget(event.target)) return;
       const ui = useUiStore.getState();
       const deck = readDeck(editor.doc);
+      const graph = visibleGraph(deck, scopeOf(ui.drill), ui.collapsed);
       const key = event.key;
       const session = ui.flowSession;
 
@@ -228,7 +241,6 @@ export function useCanvasKeyDown() {
         event.preventDefault();
         const scope = scopeOf(ui.drill);
         const level = effectiveLevel(levelForZoom(getZoom()), scope);
-        const graph = visibleGraph(deck, scope, ui.collapsed);
         const bounds = groupBounds(deck, nodeSize(level));
         const points = [
           ...graph.groups.flatMap((groupId) => {
@@ -318,6 +330,20 @@ export function useCanvasKeyDown() {
           if (selectedSticky !== null) {
             event.preventDefault();
             ui.setStickyEditing(selectedSticky);
+          } else if (current !== null && groupIdOf(current) !== null) {
+            const groupId = groupIdOf(current);
+            if (groupId === null) return;
+            const title = deck.groups.find((group) => group.id === groupId)?.title;
+            if (title === undefined) return;
+            event.preventDefault();
+            ui.drillInto({ kind: 'group', id: groupId, viewport: getViewport() });
+            ui.announce(`Opened ${title}`);
+          } else if (current !== null && (graph.childCount.get(current) ?? 0) > 0) {
+            const title = deck.nodes.find((node) => node.id === current)?.title;
+            if (title === undefined) return;
+            event.preventDefault();
+            ui.drillInto({ kind: 'node', id: current, viewport: getViewport() });
+            ui.announce(`Opened ${title}`);
           } else if (ui.focusedEdgeId !== null) {
             event.preventDefault();
             ui.openEdgePopover(ui.focusedEdgeId);
@@ -337,7 +363,7 @@ export function useCanvasKeyDown() {
           return;
       }
     },
-    [editor, zoomIn, zoomOut, fitView, setCenter, getZoom, screenToFlowPosition],
+    [editor, zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition],
   );
 }
 
@@ -415,6 +441,12 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
         if (ui.pendingDelete !== null) return;
         const { nodes, edges, groups } = ui.selection;
         if (nodes.length === 0 && edges.length === 0) {
+          if (groups.length === 0 && ui.drill.length > 0) {
+            event.preventDefault();
+            ui.drillUp();
+            ui.announce(`Back to ${scopeTitle(readDeck(editor.doc), useUiStore.getState().drill)}`);
+            return;
+          }
           if (groups.length > 0) {
             event.preventDefault();
             ui.announce("Groups can't be deleted from the canvas yet");
@@ -426,6 +458,18 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
         return;
       }
       if (key === 'escape' && ui.popover === null && ui.pendingDelete === null) {
+        if (
+          ui.selection.nodes.length === 0 &&
+          ui.selection.edges.length === 0 &&
+          ui.selection.groups.length === 0 &&
+          ui.selection.stickies.length === 0
+        ) {
+          if (ui.drill.length === 0) return;
+          event.preventDefault();
+          ui.drillUp();
+          ui.announce(`Back to ${scopeTitle(readDeck(editor.doc), useUiStore.getState().drill)}`);
+          return;
+        }
         ui.clearSelection();
         ui.focusEdge(null);
       }

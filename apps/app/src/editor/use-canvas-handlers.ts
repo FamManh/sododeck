@@ -22,26 +22,40 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { addComponent, centredOn, connectComponents } from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
-import { GROUP_NODE_PREFIX, STICKY_NODE_PREFIX } from './deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  GROUP_NODE_PREFIX,
+  PORT_NODE_PREFIX,
+  STICKY_NODE_PREFIX,
+} from './deck-to-flow';
 import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
+import { scopeOf, visibleGraph } from './visible-graph';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
 export const KIND_MIME = 'application/x-sododeck-kind';
 export const NOTE_MIME = 'application/x-sododeck-note';
 
 const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
+const isCollapsedNode = (id: string) => id.startsWith(COLLAPSED_NODE_PREFIX);
+const isPortNode = (id: string) => id.startsWith(PORT_NODE_PREFIX);
 const stickyIdOf = (id: string) =>
   id.startsWith(STICKY_NODE_PREFIX) ? id.slice(STICKY_NODE_PREFIX.length) : null;
+const groupIdOf = (id: string) =>
+  id.startsWith(GROUP_NODE_PREFIX)
+    ? id.slice(GROUP_NODE_PREFIX.length)
+    : id.startsWith(COLLAPSED_NODE_PREFIX)
+      ? id.slice(COLLAPSED_NODE_PREFIX.length)
+      : null;
 
 /** Shift, ⌘ or Ctrl held: add to / remove from the selection instead of replacing it. */
 const isMultiSelect = (event: ReactMouseEvent) => event.shiftKey || event.metaKey || event.ctrlKey;
 
 export function useCanvasHandlers() {
   const editor = useEditor();
-  const { screenToFlowPosition } = useReactFlow();
+  const { getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
@@ -54,6 +68,11 @@ export function useCanvasHandlers() {
         gestureOpen.current = false;
         editor.endGesture();
       }
+    };
+
+    const openScope = (frame: { kind: 'group' | 'node'; id: string }, title: string) => {
+      ui().drillInto({ ...frame, viewport: getViewport() });
+      ui().announce(`Opened ${title}`);
     };
 
     /** Applies React Flow's selection deltas; only the marquee is taken from React Flow. */
@@ -116,6 +135,21 @@ export function useCanvasHandlers() {
         else ui().select({ nodes: [node.id] });
         ui().focus(node.id);
       },
+      onNodeDoubleClick: (_event: ReactMouseEvent, node: Node) => {
+        if (viewOnly()) return;
+        const deck = readDeck(editor.doc);
+        const groupId = groupIdOf(node.id);
+        if (groupId !== null) {
+          const title = deck.groups.find((group) => group.id === groupId)?.title;
+          if (title !== undefined) openScope({ kind: 'group', id: groupId }, title);
+          return;
+        }
+        if (stickyIdOf(node.id) !== null || isPortNode(node.id)) return;
+        const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+        if ((graph.childCount.get(node.id) ?? 0) === 0) return;
+        const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
+        if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
+      },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
         if (flowMode()) {
           jumpTo((p) => stepForEdge(p.played, edge.id, p.currentStepId));
@@ -154,6 +188,7 @@ export function useCanvasHandlers() {
 
       onNodeDragStart: (_: unknown, node: Node) => {
         if (viewOnly()) return;
+        if (isGroupNode(node.id) || isCollapsedNode(node.id) || isPortNode(node.id)) return;
         const stickyId = stickyIdOf(node.id);
         if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
@@ -173,7 +208,11 @@ export function useCanvasHandlers() {
       onNodesChange: (changes: NodeChange[]) => {
         if (flowMode()) return;
         const moves = changes.flatMap((c) =>
-          c.type === 'position' && c.position !== undefined && !isGroupNode(c.id)
+          c.type === 'position' &&
+          c.position !== undefined &&
+          !isGroupNode(c.id) &&
+          !isCollapsedNode(c.id) &&
+          !isPortNode(c.id)
             ? [
                 {
                   id: c.id,
@@ -245,5 +284,5 @@ export function useCanvasHandlers() {
         addComponent(editor, kind, centredOn(point));
       },
     };
-  }, [editor, screenToFlowPosition]);
+  }, [editor, getViewport, screenToFlowPosition]);
 }

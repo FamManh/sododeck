@@ -3,7 +3,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Ban, CornerDownRight, Plus, Table } from 'lucide-react';
+import { Ban, CornerDownRight, Layers, Plus, Table } from 'lucide-react';
 import { memo, useEffect } from 'react';
 
 import { useEditor } from '../model/use-editor';
@@ -82,6 +82,16 @@ export const DeckNode = memo(function DeckNode({ id, data, selected }: NodeProps
           strokeWidth={ICON_STROKE_WIDTH}
           className="size-3.5 shrink-0 text-primary-ink"
         />
+      )}
+      {data.childCount > 0 && (
+        <span
+          role="img"
+          aria-label={`${String(data.childCount)} components inside, press Enter to open`}
+          className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-caption text-ink-secondary"
+        >
+          <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+          <span>{data.childCount}</span>
+        </span>
       )}
 
       {SIDES.map(({ id: side, position }) => (

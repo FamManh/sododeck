@@ -166,13 +166,13 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - with two frames the last crumb is current;
   - clicking "System view" calls `drillUp(0)`;
   - the deck-name crumb still opens rename.
-- [ ] T019 [P] [US1] Write the drill cases in `apps/app/src/editor/canvas.test.tsx`:
+- [x] T019 [P] [US1] Write the drill cases in `apps/app/src/editor/canvas.test.tsx`:
   - double-click on a group label, and Enter on the focused label, show only the members, and the breadcrumb reads "… / System view / Core services" (fixture without `parent`);
   - double-click on a node with children shows the children at Component level;
   - double-click on a node without children changes nothing;
   - port pills are named "Go to <title>", and activating one goes up and selects that node;
   - `serializeDeck` is unchanged and `canUndo` is false after drilling in and out (SC-005).
-- [ ] T020 [P] [US1] Write the key-priority cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx` (FR-014):
+- [x] T020 [P] [US1] Write the key-priority cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx` (FR-014):
   - Esc and Backspace with nothing selected go up one level;
   - Backspace with a selected node opens the delete confirmation and keeps the level;
   - Esc with a selection clears it and keeps the level;
@@ -182,29 +182,29 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Implementation
 
-- [ ] T022 [US1] Implement drill-in in `apps/app/src/editor/use-canvas-handlers.ts`:
+- [x] T022 [US1] Implement drill-in in `apps/app/src/editor/use-canvas-handlers.ts`:
   - `onNodeDoubleClick`: a `group:` node or `collapsed:` card → `drillInto({ kind: 'group', … })`; a node with `childCount > 0` → `drillInto({ kind: 'node', … })`; otherwise nothing;
   - the current viewport is captured via `getViewport()` into the frame;
   - announce "Opened <title>".
 
   Then in `apps/app/src/editor/canvas.tsx`, after `drill` grows, call `fitBounds(scopeBounds(...))` in `requestAnimationFrame`, with zoom clamped 0.4–1.3 and duration 0 under reduced motion. After it shrinks, `setViewport(popped.viewport)`.
 
-- [ ] T023 [US1] Make the group label a button in `apps/app/src/editor/group-boundary-node.tsx`:
+- [x] T023 [US1] Make the group label a button in `apps/app/src/editor/group-boundary-node.tsx`:
   - `button` "<Title> group, <n> nodes", with `aria-expanded` and the tooltip "Double-click or ↵ to open";
   - a click selects the group (`select({ groups: [id] })`);
   - the boundary stays `pointer-events-none` except for the label.
 
   Extend `apps/app/src/editor/group-boundary-node.test.tsx`.
 
-- [ ] T024 [US1] Add Enter drill-in to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts`: a focused `group:` / `collapsed:` id or a node with children drills in; other nodes and edges keep 003's behavior. Add Esc / Backspace "up" to `useEditorShortcuts` after the existing delete and clear branches: nothing selected, `drill.length > 0`, not in a text field or dialog, no popover open → `drillUp`, and announce "Back to <title>".
-- [ ] T025 [P] [US1] Create `apps/app/src/editor/port-pill-node.tsx` (with `port-pill-node.test.tsx`):
+- [x] T024 [US1] Add Enter drill-in to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts`: a focused `group:` / `collapsed:` id or a node with children drills in; other nodes and edges keep 003's behavior. Add Esc / Backspace "up" to `useEditorShortcuts` after the existing delete and clear branches: nothing selected, `drill.length > 0`, not in a text field or dialog, no popover open → `drillUp`, and announce "Back to <title>".
+- [x] T025 [P] [US1] Create `apps/app/src/editor/port-pill-node.tsx` (with `port-pill-node.test.tsx`):
   - a dashed pill `button` "Go to <outside title>", placed at the scope edge on the side facing the inside node(s);
   - click or Enter → `drillUp(length - 1)`, then select and focus `outsideNodeId` (or its representative);
   - register it as `port` in the `nodeTypes` of `apps/app/src/editor/canvas.tsx`;
   - derive port nodes and their edges (plain edges ending at the pill) in `apps/app/src/editor/deck-to-flow.ts`.
 - [x] T026 [P] [US1] Create `apps/app/src/editor/drill-crumbs.tsx` (T018) and render it in `apps/app/src/editor/top-bar.tsx` on the canvas screen after `DeckNameCrumb`: "System view" (a constant with a `TODO(M4): view name from 011`) plus one button per frame. Extend `apps/app/src/editor/top-bar.test.tsx`.
 - [x] T027 [US1] Scope the outline: `buildOutline(deck, scope)` in `apps/app/src/editor/outline.ts` (T021), and the "Up to <crumb>" `treeitem` in `apps/app/src/editor/outline-tree.tsx`, which calls `drillUp`. Extend `apps/app/src/editor/outline-tree.test.tsx`.
-- [ ] T028 [US1] Show the child-count marker on components with children in `apps/app/src/editor/deck-node.tsx`: a `Layers` icon + n, named "<n> components inside, press Enter to open". Add the "No components in this group" empty state for an empty drilled scope in `apps/app/src/editor/canvas.tsx`, reusing the `EmptyCanvasCard` layout. Extend `apps/app/src/editor/deck-node.test.tsx`.
+- [x] T028 [US1] Show the child-count marker on components with children in `apps/app/src/editor/deck-node.tsx`: a `Layers` icon + n, named "<n> components inside, press Enter to open". Add the "No components in this group" empty state for an empty drilled scope in `apps/app/src/editor/canvas.tsx`, reusing the `EmptyCanvasCard` layout. Extend `apps/app/src/editor/deck-node.test.tsx`.
 
 **Checkpoint**: US1 acceptance scenarios 1–6 pass. The deck is unchanged.
 

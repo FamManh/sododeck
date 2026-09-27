@@ -33,6 +33,9 @@ function props(patch: Partial<DeckFlowNode['data']> = {}, selected = false, id =
       kind: 'service',
       subtitle: undefined,
       hasRules: false,
+      childCount: 0,
+      dimmed: false,
+      level: 'component',
       focused: false,
       ...patch,
     },
@@ -71,6 +74,13 @@ describe('DeckNode', () => {
   it('marks nodes with rules', () => {
     renderNode(props({ hasRules: true }));
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
+  });
+
+  it('shows a child-count marker for components with children', () => {
+    renderNode(props({ childCount: 3 }));
+    expect(
+      screen.getByRole('img', { name: '3 components inside, press Enter to open' }),
+    ).toHaveTextContent('3');
   });
 
   it('has four named connection handles', () => {
