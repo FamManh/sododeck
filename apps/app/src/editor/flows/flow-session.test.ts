@@ -82,7 +82,9 @@ describe('recording a new flow (US1)', () => {
     const id = session().flowId;
     expect(finish(editor)).toBe('Saved flow ‘Checkout’ · 2 steps');
     expect(ui().flowSession).toBeNull();
-    expect(ui().activeFlow?.flowId).toBe(id);
+    expect(ui().activeFlow).toMatchObject({ flowId: id, playing: false });
+    expect(ui().activeFlow?.stepId).toBe(toJSON(editor.doc).flows.at(-1)?.steps[0]?.id);
+    expect(ui().announcement.text).toBe('Saved flow ‘Checkout’');
   });
 
   it('cancels without asking when nothing was recorded', () => {
@@ -98,6 +100,7 @@ describe('recording a new flow (US1)', () => {
     cancel(editor);
     expect(toJSON(editor.doc)).toEqual(flowDeck);
     expect(ui().announcement.text).toBe('Recording cancelled');
+    expect(ui().lastPlayedFlowId).toBeNull();
   });
 });
 
@@ -113,7 +116,8 @@ describe('edit mode (US3, clarification Q1)', () => {
     const flow = toJSON(editor.doc).flows[0];
     expect(flow?.steps.map((s) => s.id)).toEqual(['s1', 's2']);
     expect(flow?.steps[0]?.title).toBe('Open app');
-    expect(ui().activeFlow?.flowId).toBe('place');
+    expect(ui().activeFlow).toMatchObject({ flowId: 'place', stepId: 's1' });
+    expect(ui().lastPlayedFlowId).toBeNull();
   });
 
   it('targets the last branch of a forked flow', () => {

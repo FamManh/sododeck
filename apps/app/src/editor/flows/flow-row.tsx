@@ -10,6 +10,7 @@ import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import type { FlowMatch } from './filter-flows';
 import { FlowMenu } from './flow-menu';
+import { openFlow } from './flow-mode';
 import { Highlight } from './highlight';
 import { RenameField } from './rename-field';
 
@@ -83,7 +84,7 @@ export function FlowRow({
             focusRing,
           )}
           onClick={() => {
-            useUiStore.getState().setActiveFlow(flow.id);
+            openFlow(editor, flow.id);
           }}
           onKeyDown={(event) => {
             if (event.key === 'F2') {

@@ -90,7 +90,7 @@ flowSession === null`). `openFlow` without `stepId` stores `stepId: null`; the f
 
 ### Pure derivation: played path (data-model §2, research R2)
 
-- [ ] T008 [P] Write failing tests in `apps/app/src/editor/flows/played-path.test.ts` using the T003
+- [x] T008 [P] Write failing tests in `apps/app/src/editor/flows/played-path.test.ts` using the T003
       fixtures: `playedPath` (main + alternative "a" by default, chosen alternative, unknown id →
       "a", no branches → main only), `playerView` (label "Step 4 of 8" and "Step 4b of 5",
       previous/next null at ends, `showPicker` only from the fork step on, `forkNumber` "3",
@@ -99,19 +99,19 @@ flowSession === null`). `openFlow` without `stepId` stores `stepId: null`; the f
       `rehome` (main unchanged, same position in new alternative, shorter alternative → its last
       step), `stepAnnouncement` ("Step 5 of 8: Order Service → Payment Service", ", branch payment
       failed", "Step 3 of 8: connection deleted"), and unknown step ids never throw.
-- [ ] T009 Implement `apps/app/src/editor/flows/played-path.ts` (pure, over `FlowAnalysis`; titles
+- [x] T009 Implement `apps/app/src/editor/flows/played-path.ts` (pure, over `FlowAnalysis`; titles
       via `nodeTitle` from `session-path.ts`). T008 passes.
 
 ### Action layer (research R1, R2, R12)
 
-- [ ] T010 Write failing tests then implement `apps/app/src/editor/flows/flow-mode.ts` (+
+- [x] T010 Write failing tests then implement `apps/app/src/editor/flows/flow-mode.ts` (+
       `flow-mode.test.ts`) with actions over the store and the deck (read with `readDeck`):
       `openFlow(editor, flowId, stepId?)` (resolves step 1 of the played path, announces it),
       `exitFlow()`, `goToStep(editor, stepId)` (pauses, announces), `nextStep` / `previousStep`
       (no-op at ends), `switchAlternative(editor, direction | branchId)` (re-home + announce),
       `currentPlayback(deck)` (flow, analysis, played path, player view or `null`). Every action
       announces exactly once via `ui.announce(stepAnnouncement(...))`.
-- [ ] T011 Route every 006 opener through `openFlow`: flow row click in
+- [x] T011 Route every 006 opener through `openFlow`: flow row click in
       `apps/app/src/editor/flows/flow-row.tsx`, sibling list in `flow-panel.tsx`, Done / Cancel of
       edit mode and Done of recording in `flow-session.ts` (open on step 1, design 44), and the
       flow menu's "Open" in `flow-menu.tsx`; update their existing tests (`flow-list.test.tsx`,

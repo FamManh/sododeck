@@ -341,10 +341,12 @@ export const useUiStore = create<UiState>()((set, get) => {
       });
     },
     exitFlow: () => {
-      const active = get().activeFlow;
+      const state = get();
       set({
         activeFlow: null,
-        ...(active === null ? {} : { lastPlayedFlowId: active.flowId }),
+        ...(state.activeFlow !== null && isFlowMode(state)
+          ? { lastPlayedFlowId: state.activeFlow.flowId }
+          : {}),
         selection: EMPTY_SELECTION,
         focusedEdgeId: null,
       });
