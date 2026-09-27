@@ -6,10 +6,16 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
+import type { SododeckFile, Step } from '@sododeck/schema';
+
 import type { YObject } from './convert';
-import { indexOfId, rootTypes, type DeckDoc } from './deck';
+import { indexOfId, rootTypes, type Collection, type DeckDoc, type ObjectOf } from './deck';
 import { DeckEditError } from './errors';
 import { defaultNewId, makeIdAllocator, type IdPrefix } from './ids';
+import { addObject, reorderObject, updateObject } from './ops/collections';
+import { updateMeta } from './ops/meta';
+import { addStep, moveStep, updateStep } from './ops/steps';
+import type { NewObject, NewStep, Patch } from './ops/types';
 
 export interface EditorOptions {
   /** Typing-burst window in ms: edits to one object closer than this are one undo step. */
@@ -18,8 +24,28 @@ export interface EditorOptions {
   newId?: (prefix: string) => Id;
 }
 
+/**
+ * Typed, validated edit operations. Every method validates first and throws `DeckEditError`
+ * without writing anything; after any successful call the deck exports a valid file.
+ */
 export interface DeckEditor {
   readonly doc: DeckDoc;
+
+  /** Sets or clears (`null`) the deck's name, description and tags. */
+  updateMeta(patch: Patch<Pick<SododeckFile, 'name' | 'description' | 'tags'>>): void;
+
+  /** Adds an object and returns its id (generated unless `data.id` is given). */
+  add<C extends Collection>(c: C, data: NewObject<C>): Id;
+  /** Changes fields; `null` clears an optional field. Move = `position`, regroup = `group`. */
+  update<C extends Collection>(c: C, id: Id, patch: Patch<ObjectOf<C>>): void;
+  /** Moves an object to `toIndex` in its collection (clamped). */
+  reorder(c: Collection, id: Id, toIndex: number): void;
+
+  /** Adds a step at `index` (default: last). */
+  addStep(flowId: Id, data: NewStep, index?: number): Id;
+  updateStep(flowId: Id, stepId: Id, patch: Patch<Step>): void;
+  moveStep(flowId: Id, stepId: Id, toIndex: number): void;
+
   /** Runs `fn` as one transaction: one change event, one undo step. Nested batches flatten. */
   batch<T>(fn: () => T): T;
   /** Undoes this editor's last step. Returns false when there is nothing to undo. */
@@ -79,6 +105,23 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
 
   return {
     doc,
+    updateMeta: (patch) => {
+      updateMeta(ctx, patch);
+    },
+    add: (c, data) => addObject(ctx, c, data),
+    update: (c, id, patch) => {
+      updateObject(ctx, c, id, patch);
+    },
+    reorder: (c, id, toIndex) => {
+      reorderObject(ctx, c, id, toIndex);
+    },
+    addStep: (flowId, data, index) => addStep(ctx, flowId, data, index),
+    updateStep: (flowId, stepId, patch) => {
+      updateStep(ctx, flowId, stepId, patch);
+    },
+    moveStep: (flowId, stepId, toIndex) => {
+      moveStep(ctx, flowId, stepId, toIndex);
+    },
     batch: (fn) => {
       undoManager.stopCapturing();
       return ctx.transact(fn);

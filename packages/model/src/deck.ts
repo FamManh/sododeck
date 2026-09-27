@@ -34,6 +34,17 @@ export const COLLECTIONS = [...ARRAY_COLLECTIONS, 'stickies'] as const;
 export type Collection = (typeof COLLECTIONS)[number];
 export type ObjectOf<C extends Collection> = SododeckFile[C][number];
 
+/** Where an object lives: deck metadata, a collection, or the rules map. */
+export type Scope = 'meta' | Collection | 'rules';
+
+/** Identifies an object; `child` names a step of a flow, or a column or row of a rule. */
+export interface ObjectRef {
+  scope: Scope;
+  /** Object id (`''` for meta). */
+  id: Id;
+  child?: { kind: 'step' | 'column' | 'row'; id: Id };
+}
+
 /** Root types, i.e. everything an editor's undo history covers. */
 export function rootTypes(doc: DeckDoc): Y.AbstractType<unknown>[] {
   return [

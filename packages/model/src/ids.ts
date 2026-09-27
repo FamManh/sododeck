@@ -87,3 +87,17 @@ export function makeIdAllocator(
     );
   };
 }
+
+/** Ids a sticky may anchor to: collection objects, steps and rules (not rule columns or rows). */
+export function anchorableIds(doc: DeckDoc): Set<Id> {
+  const ids = new Set<Id>();
+  for (const c of COLLECTIONS) {
+    for (const map of collectionArray(doc, c)) {
+      const id = map.get('id');
+      if (typeof id === 'string') ids.add(id);
+      if (c === 'flows') arrayIds(map.get('steps'), (stepId) => (ids.add(stepId), false));
+    }
+  }
+  for (const id of rulesMap(doc).keys()) ids.add(id);
+  return ids;
+}

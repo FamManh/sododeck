@@ -95,7 +95,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 1 ⚠️ (write first, must fail)
 
-- [ ] T008 [P] [US1] Write `packages/model/test/edit.test.ts`.
+- [x] T008 [P] [US1] Write `packages/model/test/edit.test.ts`.
   - **Every collection**: `add` / `update` / `reorder` for nodes, groups, edges, views, features, flows and stickies.
   - **Patches**: `null` clears an optional field. Moving a node is `update(position)` and regrouping is `update(group)`.
   - **Metadata**: `updateMeta` sets and clears `name`, `description` and `tags`.
@@ -110,7 +110,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
     - an update that tries to change `id`, as a type test via `// @ts-expect-error`.
   - **Batch**: a `batch` moving 5 nodes gives one change event.
   - **Valid export** (SC-007): `expectValid(doc)` after every operation.
-- [ ] T009 [P] [US1] Write `packages/model/test/observe.test.ts`:
+- [x] T009 [P] [US1] Write `packages/model/test/observe.test.ts`:
   - one `DeckChange` per transaction;
   - `added` / `updated` (with `keys`) / `removed` entries for top-level objects;
   - `child` entries for steps, rule columns and rule rows;
@@ -119,7 +119,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement `packages/model/src/ops/collections.ts` (data-model "Edit input and patch"):
+- [x] T010 [US1] Implement `packages/model/src/ops/collections.ts` (data-model "Edit input and patch"):
   - `add(c, data)` validates the candidate with the id and checks references, then pushes `toY(object)` in canonical key order.
   - `update(c, id, patch)`: the candidate is the current value plus the patch, with `null` deleting the key. Validate it, then set only the changed keys. For `position`, set `x`/`y` on the existing nested map.
   - `reorder(c, id, toIndex)` deletes and re-inserts inside one transaction.
@@ -131,22 +131,22 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
     - views: `feature` and `includes`/`positions` keys;
     - flows: `feature`;
     - stickies: `anchor`, which may be any object id.
-- [ ] T011 [P] [US1] Implement `packages/model/src/ops/meta.ts`: `updateMeta(patch)` validates `name`/`description`/`tags` against the file schema and writes them to the `meta` map. `null` removes the key.
-- [ ] T012 [US1] Implement `packages/model/src/ops/steps.ts`:
+- [x] T011 [P] [US1] Implement `packages/model/src/ops/meta.ts`: `updateMeta(patch)` validates `name`/`description`/`tags` against the file schema and writes them to the `meta` map. `null` removes the key.
+- [x] T012 [US1] Implement `packages/model/src/ops/steps.ts`:
   - `addStep(flowId, data, index?)` checks that `edge` and `rules` exist, and that `ruleInputs` keys are among its rules and their input columns.
   - `updateStep`, `moveStep` and `removeStep`.
 
   Every operation is validated with the step element schema.
 
-- [ ] T013 [US1] Wire `add`, `update`, `reorder`, `updateMeta` and the step ops into the `DeckEditor` object in `packages/model/src/editor.ts`. Every op runs inside the editor transaction. Export the `NewObject`, `NewStep`, `Patch` and `Collection` types from `packages/model/src/index.ts`.
-- [ ] T014 [US1] Implement `packages/model/src/observe.ts`: `observeDeck(doc, listener)`.
+- [x] T013 [US1] Wire `add`, `update`, `reorder`, `updateMeta` and the step ops into the `DeckEditor` object in `packages/model/src/editor.ts`. Every op runs inside the editor transaction. Export the `NewObject`, `NewStep`, `Patch` and `Collection` types from `packages/model/src/index.ts`.
+- [x] T014 [US1] Implement `packages/model/src/observe.ts`: `observeDeck(doc, listener)`.
   - Register `observeDeep` on every root type and map each event path to an `ObjectChange` (research R6).
   - Buffer the changes per transaction and flush once on `doc.on('afterTransaction')`.
   - Classify the origin: the editor origin gives `local`; `transaction.origin instanceof Y.UndoManager` gives `undo` or `redo`, using its `undoing`/`redoing` flags; anything else gives `remote`.
 
   Also add `getObject(doc, c, id)` and `getRule(doc, id)` in `packages/model/src/deck.ts`, and export all of them.
 
-- [ ] T015 [US1] Make T008 and T009 pass. Commit: `feat(model): typed edit operations and change events`.
+- [x] T015 [US1] Make T008 and T009 pass. Commit: `feat(model): typed edit operations and change events`.
 
 **Checkpoint**: US1 is independently demonstrable (quickstart §1 `edit`/`observe`).
 
