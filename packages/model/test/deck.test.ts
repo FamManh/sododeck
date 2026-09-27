@@ -1,15 +1,9 @@
-import { readFile } from 'node:fs/promises';
-
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { createDeck, DeckValidationError, fromJSON, serializeDeck, toJSON } from '../src';
-
-async function readExample(file: string): Promise<SododeckFile> {
-  const url = new URL(import.meta.resolve(`@sododeck/schema/examples/${file}`));
-  return JSON.parse(await readFile(url, 'utf8')) as SododeckFile;
-}
+import { readExample } from './helpers';
 
 const example = await readExample('minimal.sododeck.json');
 const flowAndRule = await readExample('flow-and-rule.sododeck.json');
