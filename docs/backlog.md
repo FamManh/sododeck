@@ -9,6 +9,19 @@ Each feature is 1–5 days and goes through `/speckit.specify → /speckit.plan 
 Status: draft for founder review (2026-09-27). Items marked **⚠ decision** depend on the open
 questions in design-analysis §g.
 
+## Founder decisions (2026-09-27)
+
+Recorded in design-analysis §g and applied to the features below.
+
+| §g  | Decision                                                                                                                                                                                        | Affects                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 3   | JSON panel is **read-only** for now: it shows the canvas as JSON (selection tab + whole-deck tab), updates live, can be copied and collapsed. Editing from JSON (C-5 two-way sync) is deferred. | 004                     |
+| 6   | Build the **rule test panel** + catch-all check in 008; SLA shows the **target only** (no "measured" value); the 3-step tour stays in M5 (013).                                                 | 007, 008, 013           |
+| 7   | Autosave: every change is persisted immediately; the top bar shows "Saving…" (cosmetic, held ≤ 300 ms) then "Saved in this browser", plus an error state "Couldn't save — export a backup".     | 005                     |
+| 10  | Owner is **free text with suggestions** from owners already used in the deck (no team list).                                                                                                    | 001, 008                |
+| 11  | Deleting asks for **confirmation**; undo (⌘Z) still works after a confirmed delete.                                                                                                             | 003, 005, 006, 008, 009 |
+| 12  | Library "Recent" = the **8 most recently opened** decks (opened-at kept in library metadata, not in the deck).                                                                                  | 005                     |
+
 ## Dependency graph
 
 ```mermaid
@@ -52,7 +65,7 @@ flowchart LR
 000 (4 d) runs in parallel with 001–002. The M4 branch 003 → 010 → 011 → 012 (≈ 19 d after 003)
 can run in parallel with M2/M3 if a second agent is available.
 
-Total estimate: **64 working days** for one agent sequentially (≈ 13 weeks), vs 6–8 weeks in spec
+Total estimate: **62 working days** for one agent sequentially (≈ 12–13 weeks), vs 6–8 weeks in spec
 §13. Getting to 8 weeks needs two parallel streams (flows/knowledge vs scale/export) or cutting
 scope (see report).
 
@@ -64,7 +77,7 @@ scope (see report).
 | 001 | json-schema-v1         | M1        | —          | 3 d  | ⚠ decision (§g-4)                              |
 | 002 | yjs-model              | M1        | 001        | 4 d  | —                                              |
 | 003 | canvas-basic           | M1        | 000, 002   | 5 d  | edge drawing (default ok)                      |
-| 004 | json-panel-sync        | M1        | 003        | 4 d  | ⚠ decision (§g-3)                              |
+| 004 | json-panel-sync        | M1        | 003        | 2 d  | decided (§g-3): read-only                      |
 | 005 | local-library-autosave | M1        | 000, 002   | 5 d  | New-folder, multi-tab (small)                  |
 | 006 | flow-authoring         | M2        | 003        | 5 d  | **yes** (F-1, F-4)                             |
 | 007 | flow-playback          | M2        | 006        | 4 d  | —                                              |
@@ -283,7 +296,7 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   column, JSON panel slot); React Flow nodes (164×50, kind tile, subtitle, rule glyph), group
   boundaries (bounds from members), edges (smoothstep, 8px radius, end dot, 12px hit area) with
   label pills; select node/edge, click empty to deselect; drag to move; palette drag/click to add;
-  delete (Del key + inspector trash) with undo toast; draw an edge by dragging from a node handle and
+  delete (Del key + inspector trash) with a confirmation dialog (§g-11), then undo via ⌘Z; draw an edge by dragging from a node handle and
   reconnect an endpoint (default design); undo/redo (⌘Z/⇧⌘Z); shift-click / marquee multi-select;
   zoom −/+/fit 30–200%, fit on open; minimap with click-to-pan; Labels toggle; outline tree with
   collapse and select; empty-canvas card; minimal inspector: title for node/edge, name for deck;
@@ -295,8 +308,9 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
     "New service" node appears at the drop point, is selected, and the outline lists it.
   - Given two nodes, When the user drags from one node's handle to the other, Then a new edge
     exists in the model and is selected.
-  - Given a selected node, When the user presses Delete, Then the node and its edges disappear and a
-    toast offers Undo; When ⌘Z is pressed, Then both come back with the same ids.
+  - Given a selected node, When the user presses Delete, Then a confirmation dialog names what will
+    be removed (the node and its n edges); When confirmed, Then they disappear; When ⌘Z is pressed,
+    Then both come back with the same ids. When cancelled (or Esc), Then nothing changes.
   - Given a node is dragged, When the pointer is released and ⌘Z pressed once, Then the node returns
     to its previous position.
   - Given Labels is off, When the user turns it on, Then every edge shows its Mono label pill.
@@ -326,53 +340,53 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
 
 ## 004-json-panel-sync
 
-- **Milestone:** M1 · **Depends on:** 003 · **Estimate:** 4 d
-- **Goal:** Developers can read and edit the deck as JSON next to the canvas, and both stay in sync
-  both ways, with errors that never lose their draft.
-- **Spec IDs:** C-5.
+- **Milestone:** M1 · **Depends on:** 003 · **Estimate:** 2 d
+- **Decision (§g-3, 2026-09-27):** the panel is **read-only** for now. It shows the canvas as
+  JSON; editing from JSON (C-5 two-way sync) is deferred. `TODO(C-5)`: editable Deck/Selection
+  tabs, schema autocomplete, inline parse errors, paste-a-deck.
+- **Goal:** Developers see the deck as JSON next to the canvas, always in sync with what they draw,
+  so "the diagram is data" is visible from day one.
+- **Spec IDs:** C-5 (read-only part).
 - **Design references:** [02-editor-node-selected](design/screens/02-editor-node-selected-light.png)
-  (selection tab), [15-editor-json-error](design/screens/15-editor-json-error-light.png),
-  [16-editor-json-deck-tab](design/screens/16-editor-json-deck-tab-light.png),
-  [17-editor-json-collapsed](design/screens/17-editor-json-collapsed-light.png),
-  [39-empty-deck-paste-json](design/screens/39-empty-deck-paste-json-light.png). Tokens: code
-  surface, text-code, clay for errors.
-- **In scope:** panel header (JSON label, Selection/Deck segmented tabs, status "Editable · synced
-  with canvas" / error line, line count, Copy, collapse); selection tab for node/edge (step in 007);
-  Deck tab editable (⚠ decision §g-3); schema validation + autocomplete; invalid JSON or schema
-  errors shown inline, draft kept, model untouched; id changes rejected with a message; paste a full
-  deck into an empty deck; resizable/collapsible panel.
-- **Out of scope:** YAML view (P1), diff view, multi-file features.
+  (selection tab), [16-editor-json-deck-tab](design/screens/16-editor-json-deck-tab-light.png),
+  [17-editor-json-collapsed](design/screens/17-editor-json-collapsed-light.png). Tokens: code
+  surface, text-code. Not used now: 15-editor-json-error, 39-empty-deck-paste-json (editing).
+- **In scope:** panel header (JSON label, Selection/Deck segmented tabs, status "Read-only · synced
+  with canvas", line count, Copy, collapse); Selection tab for node/edge (step in 007), empty
+  selection message; Deck tab = the whole `.sododeck.json` produced by `@sododeck/model`; live
+  update when the canvas changes (throttled for large decks); syntax highlighting, folding, keyboard
+  scroll and select; resizable/collapsible panel.
+- **Out of scope:** editing JSON, schema autocomplete, parse/schema errors, paste a deck (all
+  deferred with C-5); YAML view (P1); diff view.
 - **Acceptance criteria:**
-  - Given a selected node, When the user changes `"title"` in the JSON panel to valid JSON, Then the
-    canvas node title updates without leaving the editor.
-  - Given the user types invalid JSON, When they pause, Then the header shows the parse error in
-    clay with an icon (not color only), the draft stays, and the canvas is unchanged.
-  - Given the user changes a node `id` in JSON, When applied, Then the change is refused with "id
-    cannot be changed" and the model keeps the old id.
-  - Given the user drags a node on the canvas, When the JSON panel shows that node, Then its position
-    updates without moving the text cursor of an unrelated edit.
-  - Given an empty deck, When a valid .sododeck.json is pasted into the Deck tab, Then all nodes,
-    edges and flows appear on the canvas.
-  - Given the JSON panel, When no network is available, Then autocomplete still works (bundled
-    schema; no requests).
-- **Risks:** cursor/selection jumps when remote-like updates rewrite Monaco content; large decks
-  make full-deck JSON slow (throttle, apply diffs); ⚠ Deck tab editable vs read-only.
+  - Given a selected node, When the user renames it on the canvas or in the inspector, Then the
+    Selection tab shows the new `"title"` without reload.
+  - Given the Deck tab, When the user adds or deletes a node on the canvas, Then the JSON updates
+    and equals the model's export of the deck (same text as the exported file).
+  - Given the panel, When the user tries to type in it, Then nothing changes and the status says
+    "Read-only" (with an icon, not color only).
+  - Given the Copy button, When pressed, Then the shown JSON is on the clipboard and a toast
+    confirms it.
+  - Given the panel is collapsed, When the page reloads, Then it stays collapsed (UI preference).
+  - Given the JSON panel, When no network is available, Then it still renders (bundled Monaco, no
+    requests).
+- **Risks:** large decks make full-deck JSON slow (throttle; serialize in a worker if over 16 ms);
+  keeping Monaco for a read-only view is heavier than a highlighted `<pre>`, but it makes the later
+  switch to editing cheap and keeps folding/virtual scrolling for big files.
 - **`/speckit.specify` prompt:**
-  > Show the deck as JSON in a panel under the canvas that stays in sync with the diagram in both
-  > directions. Users can view the JSON of the current selection or of the whole deck, edit it with
-  > suggestions from the file format, and see their change on the canvas immediately. If the JSON is
-  > invalid or breaks the format, the panel explains the problem inline and keeps the user's draft
-  > without changing the diagram. Ids cannot be changed from the text. The panel can be collapsed
-  > and the text copied. Pasting a whole deck into an empty deck creates it. Why: developers think in
-  > text and the product promise is "the diagram is data"; losing a half-typed edit would break
-  > trust.
+  > Show the deck as JSON in a panel under the canvas, always in sync with the diagram. Users can
+  > view the JSON of the current selection or of the whole deck, fold and scroll it, copy it, and
+  > collapse or resize the panel. The panel is read-only in this version: it explains that edits
+  > happen on the canvas and in the inspector. Why: developers think in text and the product
+  > promise is "the diagram is data"; seeing the exact file content next to the picture builds
+  > trust before two-way editing arrives.
 - **`/speckit.plan` hint:**
   > apps/app/src/editor/json-panel.tsx + json-editor.tsx + monaco-setup.ts (bundled, deep imports,
-  > no CDN). Monaco models are views: derive text from the Yjs snapshot, apply parsed edits through
-  > @sododeck/model; never keep document data in Monaco. Validation via @sododeck/schema; JSON
-  > Schema bundled with `enableSchemaRequest: false`. Heavy parse/diff for large decks in a worker if it
-  > takes over 16 ms. Match docs/design/screens/15-editor-json-error-light.png,
-  > 16-editor-json-deck-tab-light.png, 17-editor-json-collapsed-light.png pixel-close.
+  > no CDN), Monaco with `readOnly: true`. Monaco models are views: derive text from the Yjs
+  > snapshot via @sododeck/model's JSON export; never keep document data in Monaco. Throttle
+  > updates; move serialization to a worker if it exceeds 16 ms. Match
+  > docs/design/screens/16-editor-json-deck-tab-light.png and 17-editor-json-collapsed-light.png
+  > pixel-close (status text differs: "Read-only · synced with canvas").
 
 ## 005-local-library-autosave
 
@@ -388,12 +402,13 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   inspector STORAGE section in [10](design/screens/10-editor-deck-inspector-light.png). Components:
   deck card, new-deck card, list row, backup banner, storage meter, search field, segmented grid/list.
 - **In scope:** IndexedDB persistence per deck (Yjs provider) + library metadata (name, folder,
-  counts, updatedAt, lastBackupAt); library grid/list, All/Recent/Samples/folders, search; new deck;
-  open deck; rename via breadcrumb; folders (create/rename/delete — default small dialog); move deck
+  counts, updatedAt, openedAt, lastBackupAt); library grid/list, All/Recent (8 most recently opened, §g-12)/Samples/folders, search; new deck;
+  open deck; rename via breadcrumb; folders (create/rename/delete — default small dialog; delete asks for confirmation); move deck
   to folder; delete deck (confirm); import .sododeck.json (validate, error toast); export one deck
   and "Export backup" of all decks; storage usage meter and `storage.persist()` request; backup
   reminder after N days (+ Safari eviction copy); multi-tab: BroadcastChannel so two tabs never
-  overwrite (second tab read-only or live-merged); autosave status in the top bar; thumbnails
+  overwrite (second tab read-only or live-merged); autosave status in the top bar (§g-7: "Saving…"
+  held ≤ 300 ms → "Saved in this browser"; error state "Couldn't save — export a backup"); thumbnails
   (simplified, generated from positions).
 - **Out of scope:** sample decks content (013), full export dialog (012), File System Access (P1),
   cloud sync.
@@ -410,7 +425,11 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
     (it updates or shows a read-only notice).
   - Given `storage.persist` is unavailable, When the app starts, Then it falls back silently and
     the meter shows "not persistent" (feature-detected via lib/features.ts).
-- **Risks:** Safari eviction; quota errors mid-save need a visible error state (not designed);
+  - Given nine decks opened at different times, When the user selects Recent, Then the 8 most
+    recently opened show, newest first.
+  - Given a save fails (e.g. quota exceeded), When the user edits, Then the top bar shows "Couldn't
+    save — export a backup" with an icon (not color only).
+- **Risks:** Safari eviction; the save-error state is not designed yet (requested from Claude Design);
   thumbnail generation cost for large decks (worker).
 - **`/speckit.specify` prompt:**
   > Let guests keep a library of decks in their browser without an account. Every change is saved
@@ -440,7 +459,7 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   [03-flow-mode](design/screens/03-flow-mode-light.png); step row and condition block components.
   **Recording a flow, editing steps and branches are not designed** — request designs or accept the
   default below.
-- **In scope:** features (create/rename/delete) and flows per feature in the left panel with a
+- **In scope:** features (create/rename/delete; deletes ask for confirmation, §g-11) and flows per feature in the left panel with a
   filter field; "Record flow" mode (default design): top-bar chip "Recording · name", click edges in
   order to append steps, step list builds on the left, undo last step, Done/Cancel; edit step
   condition, SLA, description; reorder/delete steps; branches: a step can start an alternative path
@@ -503,7 +522,7 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
   protocol, condition, description, SLA target, rules section showing attached rule names —
   table view comes with 008); step JSON read-only in the JSON panel; exit via chip × / Back / Esc;
   reduced-motion: static token; `aria-live` announcement of the current step.
-- **Out of scope:** "measured" SLA and meter fill from fake data (⚠ §g-6: show target only),
+- **Out of scope:** "measured" SLA and meter fill from fake data (decided §g-6: show target only),
   compact decision table (008), export of a flow (012).
 - **Acceptance criteria:**
   - Given a flow with 8 steps, When the user opens it, Then flow edges are highlighted, other
@@ -559,8 +578,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   multi-select bulk edit (type, tags, owner); rule editor route: list, create, rename, describe, hit
   policy, add/rename/remove condition and action columns, edit cells (syntax `≤ 5`, `> 20`, lists,
   `Any`), add/delete/reorder rows, delete rule; attach/detach rules on steps and nodes; "Used in"
-  list; compact table on the step inspector with the matched row; ⚠ optional: test input panel +
-  catch-all check (§g-6).
+  list; compact table on the step inspector with the matched row; rule test input panel +
+  catch-all check (decided §g-6); deleting a rule asks for confirmation (§g-11).
 - **Out of scope:** comments (P1), ADRs (P1), glossary (P1), full rule simulator across flows (A-1).
 - **Acceptance criteria:**
   - Given a selected node, When the user edits title, description, owner, tags and links, Then the
@@ -574,8 +593,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     inputs" shows in clay with an error icon.
   - Given three selected nodes, When the user sets owner "Dispatch" in the bulk inspector, Then all
     three change in one undo step.
-  - Given a rule used by steps, When it is deleted, Then the user is warned with the usage count and
-    the steps are detached (undo restores).
+  - Given a rule used by steps, When the user deletes it, Then a confirmation dialog shows the usage
+    count; When confirmed, Then the steps are detached (undo restores).
 - **Risks:** scope is large (inspectors + rule editor) — split into 008a inspectors / 008b rules if
   it exceeds 5 days; cell-syntax parsing edge cases; markdown rendering must be safe (no raw HTML).
 - **`/speckit.specify` prompt:**
@@ -648,7 +667,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   field; palette STRUCTURE › Note in [14](design/screens/14-editor-palette-tab-light.png).
   **Sticky notes are not designed** (default: amber-soft card, markdown text, anchor badge).
 - **In scope:** stickies: add from palette or context, free or anchored to a node (moves with it),
-  edit markdown text, resize, delete, show in outline; ⌘K palette: commands (export, theme, focus,
+  edit markdown text, resize, delete (with confirmation, §g-11), show in outline; ⌘K palette: commands (export, theme, focus,
   rules, library, new deck), flows, nodes, edges, rules, stickies, with matches in titles,
   descriptions, notes and rule cells (snippet line); Enter opens the first result, arrows move,
   Esc closes; results show kind; "No results".
