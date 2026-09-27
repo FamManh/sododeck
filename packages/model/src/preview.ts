@@ -5,19 +5,20 @@
  */
 import type { Id, SododeckFile } from '@sododeck/schema';
 
-import { fromJSON, getObject } from './deck';
+import { fromJSON, getObject, getRule } from './deck';
 import { createEditor, type DeckEditor } from './editor';
 import type { IntegrityProblem } from './integrity';
 import type { DeckDoc, ObjectRef } from './layout';
 import type { RemovalResult } from './ops/cascade';
 
-/** Something a delete removes: a collection object, or a branch of a flow (006). */
+/** Something a delete removes: a collection object, a branch of a flow (006) or a rule (008). */
 export type RemovalTarget =
   | {
       scope: 'nodes' | 'edges' | 'groups' | 'stickies' | 'flows' | 'views' | 'features';
       id: Id;
     }
-  | { scope: 'branches'; flowId: Id; id: Id };
+  | { scope: 'branches'; flowId: Id; id: Id }
+  | { scope: 'rules'; id: Id };
 
 /** Removes one target with `editor`, or returns undefined when it does not exist. */
 export function removeTarget(
@@ -29,6 +30,9 @@ export function removeTarget(
     const flow = getObject(doc, 'flows', target.flowId);
     if (flow?.branches?.some((b) => b.id === target.id) !== true) return undefined;
     return editor.removeBranch(target.flowId, target.id);
+  }
+  if (target.scope === 'rules') {
+    return getRule(doc, target.id) === undefined ? undefined : editor.removeRule(target.id);
   }
   return getObject(doc, target.scope, target.id) === undefined
     ? undefined

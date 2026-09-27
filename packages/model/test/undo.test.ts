@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { createEditor, fromJSON, getObject, toJSON, type EditorOptions } from '../src';
+import { cascadeDeck } from './cascade-deck';
 import { seqIds } from './helpers';
 
 // lib0 reads Date.now at import time, so fake timers cannot drive the capture window
@@ -183,5 +184,18 @@ describe('undo grouping (US4, FR-024–029)', () => {
       [false, true],
       [true, false],
     ]);
+  });
+
+  it('restores every attachment and sample input with one undo after removeRule (008 SC-006)', () => {
+    const doc = fromJSON(cascadeDeck);
+    const editor = createEditor(doc, { newId: seqIds() });
+    const before = toJSON(doc);
+    editor.removeRule('R');
+    const after = toJSON(doc);
+    expect(after.rules.R).toBeUndefined();
+    expect(after.nodes.map((n) => n.rules)).toEqual([undefined, undefined, ['Q']]);
+    expect(after.flows[0]?.steps.map((s) => s.ruleInputs)).toEqual([undefined, { Q: {} }]);
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc)).toEqual(before);
   });
 });

@@ -40,6 +40,7 @@ import {
   setRuleCell,
   updateRule,
 } from './ops/rules';
+import { attachRule, detachRule, setRuleInputs, type RuleHost } from './ops/rule-links';
 import { addStep, moveStep, updateStep } from './ops/steps';
 import type { NewObject, NewRule, NewStep, Patch } from './ops/types';
 
@@ -114,6 +115,23 @@ export interface DeckEditor {
   setRuleCell(ruleId: Id, rowId: Id, columnId: Id, value: string): void;
   moveRuleRow(ruleId: Id, rowId: Id, toIndex: number): void;
   removeRuleRow(ruleId: Id, rowId: Id): void;
+
+  /**
+   * Appends `ruleId` to a node's or step's rules (008). Throws `missing-reference` (no such rule
+   * or host) or `invalid` (already attached). One undo step.
+   */
+  attachRule(host: RuleHost, ruleId: Id): void;
+  /**
+   * Removes `ruleId` from the host's rules (the field goes when empty); on a step its sample
+   * inputs for that rule go in the same transaction. No-op when not attached.
+   */
+  detachRule(host: RuleHost, ruleId: Id): void;
+  /**
+   * Replaces a step's sample inputs for one attached rule: empty values are dropped, the rule's
+   * key goes when nothing is left. A typing burst is one undo step. Throws `missing-reference`
+   * when the rule is not attached or a key is not one of its input columns.
+   */
+  setRuleInputs(flowId: Id, stepId: Id, ruleId: Id, values: Readonly<Record<Id, string>>): void;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -227,6 +245,15 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     removeRuleRow: (ruleId, rowId) => {
       removeRuleRow(ctx, ruleId, rowId);
+    },
+    attachRule: (host, ruleId) => {
+      attachRule(ctx, host, ruleId);
+    },
+    detachRule: (host, ruleId) => {
+      detachRule(ctx, host, ruleId);
+    },
+    setRuleInputs: (flowId, stepId, ruleId, values) => {
+      setRuleInputs(ctx, flowId, stepId, ruleId, values);
     },
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
