@@ -223,12 +223,12 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### App palette
 
-- [ ] T035 [P] [US2] Write `apps/app/src/editor/command-palette/palette-results.test.ts`. It must fail at first:
+- [x] T035 [P] [US2] Write `apps/app/src/editor/command-palette/palette-results.test.ts`. It must fail at first:
   - an empty query lists commands then flows (design 30)
   - a query merges matched commands (ranked first among title matches) with `searchDeck` results
   - rows are limited to 50, with "Showing 50 of n"
   - meta text per kind follows the UI contract ("Service · Core services", "Flow · 8 steps", "Step 4 · Place order", "Rule · First match", "Note", "Connection · A → B")
-- [ ] T036 [P] [US2] Write `apps/app/src/editor/command-palette/open-result.test.ts`. It must fail at first (research R11):
+- [x] T036 [P] [US2] Write `apps/app/src/editor/command-palette/open-result.test.ts`. It must fail at first (research R11):
   - node: selected, focused, `fitView` called with its id
   - edge: selected and centred on its midpoint
   - note: `selection.stickies`, centred
@@ -238,7 +238,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - rule: `openRules(ruleId)`
   - from the rules screen, canvas targets navigate to the canvas first
   - a vanished target announces "This item no longer exists" and returns false
-- [ ] T037 [US2] Implement `apps/app/src/editor/command-palette/palette-results.ts` and `apps/app/src/editor/command-palette/open-result.ts`. Make T035 and T036 pass.
+- [x] T037 [US2] Implement `apps/app/src/editor/command-palette/palette-results.ts` and `apps/app/src/editor/command-palette/open-result.ts`. Make T035 and T036 pass.
 - [ ] T038 [P] [US2] Write `apps/app/src/editor/command-palette/command-palette.test.tsx`. It must fail at first:
   - ⌘K (Ctrl+K off Apple) opens with the input focused, even from a text field (the field's edit is committed first, no character typed); ⌘K again or Esc closes and returns focus
   - typing "reattempt" shows the rule and the step with snippets, and Enter opens the first
