@@ -30,3 +30,13 @@ export function isApplePlatform(): boolean {
     navigator.platform;
   return /mac|iphone|ipad|ipod/i.test(platform);
 }
+
+export function supportsClipboardWrite(): boolean {
+  // `clipboard` is missing outside secure contexts, whatever the DOM types say.
+  const clipboard = (navigator as Partial<Navigator> | undefined)?.clipboard;
+  return typeof clipboard?.writeText === 'function';
+}
+
+export function supportsResizeObserver(): boolean {
+  return typeof ResizeObserver !== 'undefined';
+}

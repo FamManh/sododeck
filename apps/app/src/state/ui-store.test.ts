@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { JSON_PANEL_KEY } from './json-panel-prefs';
 import { LABELS_KEY, readLabelsOn, useUiStore } from './ui-store';
 
 const initial = useUiStore.getState();
@@ -112,10 +113,34 @@ describe('ui store', () => {
     expect(state().announcement.seq).toBe(first.seq + 1);
   });
 
-  it('toggles the JSON panel', () => {
-    expect(state().jsonPanelOpen).toBe(true);
+  it('starts the JSON panel open on the Deck tab (clarification Q3)', () => {
+    expect(state().jsonPanel).toEqual({ open: true, height: 212, tab: 'deck' });
+  });
+
+  it('updates and saves each JSON panel preference', () => {
+    const saved = () => JSON.parse(localStorage.getItem(JSON_PANEL_KEY) ?? 'null') as unknown;
+    state().setJsonPanelOpen(false);
+    expect(state().jsonPanel.open).toBe(false);
+    expect(saved()).toEqual({ open: false, height: 212, tab: 'deck' });
+    state().setJsonPanelHeight(320);
+    expect(state().jsonPanel.height).toBe(320);
+    expect(saved()).toEqual({ open: false, height: 320, tab: 'deck' });
+    state().setJsonTab('selection');
+    expect(state().jsonPanel.tab).toBe('selection');
+    expect(saved()).toEqual({ open: false, height: 320, tab: 'selection' });
     state().toggleJsonPanel();
-    expect(state().jsonPanelOpen).toBe(false);
+    expect(state().jsonPanel.open).toBe(true);
+    expect(saved()).toEqual({ open: true, height: 320, tab: 'selection' });
+  });
+
+  it('never switches the JSON tab when the selection changes (clarification Q2)', () => {
+    state().select({ nodes: ['a'], edges: ['e1'] });
+    expect(state().jsonPanel.tab).toBe('deck');
+    state().setJsonTab('selection');
+    state().clearSelection();
+    state().toggle('b', 'node');
+    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    expect(state().jsonPanel.tab).toBe('selection');
   });
 
   it('forgets deck references when another deck opens', () => {

@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { isApplePlatform, supportsFileSystemAccess, supportsPersistentStorage } from './features';
+import {
+  isApplePlatform,
+  supportsClipboardWrite,
+  supportsFileSystemAccess,
+  supportsPersistentStorage,
+  supportsResizeObserver,
+} from './features';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -18,6 +24,22 @@ describe('feature detection', () => {
     expect(supportsPersistentStorage()).toBe(false);
     vi.stubGlobal('navigator', { storage: { persist: () => Promise.resolve(true) } });
     expect(supportsPersistentStorage()).toBe(true);
+  });
+
+  it('detects navigator.clipboard.writeText', () => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: () => Promise.resolve() } });
+    expect(supportsClipboardWrite()).toBe(true);
+    vi.stubGlobal('navigator', {});
+    expect(supportsClipboardWrite()).toBe(false);
+    vi.stubGlobal('navigator', undefined);
+    expect(supportsClipboardWrite()).toBe(false);
+  });
+
+  it('detects ResizeObserver', () => {
+    vi.stubGlobal('ResizeObserver', function ResizeObserver() {});
+    expect(supportsResizeObserver()).toBe(true);
+    vi.stubGlobal('ResizeObserver', undefined);
+    expect(supportsResizeObserver()).toBe(false);
   });
 });
 
