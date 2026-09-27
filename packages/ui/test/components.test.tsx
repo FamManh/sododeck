@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../src/components/button';
 import { Panel, PanelSection, PanelTitle } from '../src/components/panel';
@@ -99,6 +99,33 @@ describe('Button', () => {
     button.focus();
     await user.keyboard('{Enter}');
     expect(clicks).toBe(0);
+  });
+
+  describe('icon-only buttons', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('warn in development when they have no accessible name', () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      render(
+        <Button size="icon">
+          <svg />
+        </Button>,
+      );
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('aria-label'));
+    });
+
+    it('are found by their aria-label and do not warn', () => {
+      const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      render(
+        <Button size="icon" aria-label="Settings">
+          <svg />
+        </Button>,
+      );
+      expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
+      expect(error).not.toHaveBeenCalled();
+    });
   });
 
   it('renders as its child with asChild', () => {
