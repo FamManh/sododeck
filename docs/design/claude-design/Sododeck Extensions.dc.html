@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="./sododeck-data.js"></script>
+<script src="./sododeck-states.js"></script>
+<style>html,body{margin:0;background:#dcdcd8;font-family:'Geist',system-ui,sans-serif;color:#1c1c1a}*{box-sizing:border-box}a{color:#d9560f}a:hover{color:#b3480c}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:56px;width:3080px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:1100px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em">Sododeck · missing screens and states (41–85)</div>
+    <div style="font-size:15px;color:#55554f;line-height:1.5">Every frame is 1440×900, light on the left and dark on the right. Pick a section below; one section renders at a time to keep the board responsive. Notes under each pair list what the user did, what changed, keyboard shortcuts, and empty or error states. The component and token list is at the end.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ toc }}" as="t"><div onClick="{{ t.pick }}" style="{{ t.st }}">{{ t.t }}</div></sc-for><a href="#components" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">Components &amp; tokens ↓</a></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="4">
+    <div id="{{ sec.anchor }}" style="display:flex;flex-direction:column;gap:40px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-top:1px solid #c9c9c2;padding-top:24px"><span style="font:500 13px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:4px 9px">{{ sec.id }}</span><span style="font-size:26px;font-weight:500;letter-spacing:-.02em">{{ sec.title }}</span></div>
+      <sc-for list="{{ sec.rows }}" as="r">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:48px">
+            <sc-if value="{{ r.showL }}"><div id="{{ r.idL }}" style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500"><span style="font:500 12.5px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:3px 8px">{{ r.idL }}</span>{{ r.title }}</div>
+              <div style="width:1440px;height:900px;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)"><dc-import name="Sododeck State" state="{{ r.id }}" theme="light" style="width:1440px;height:900px" hint-size="1440px,900px"></dc-import></div>
+            </div></sc-if>
+            <sc-if value="{{ r.showD }}"><div id="{{ r.idD }}" style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500"><span style="font:500 12.5px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:3px 8px">{{ r.idD }}</span>{{ r.title }}</div>
+              <div style="width:1440px;height:900px;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)"><dc-import name="Sododeck State" state="{{ r.id }}" theme="dark" style="width:1440px;height:900px" hint-size="1440px,900px"></dc-import></div>
+            </div></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;background:#fff;border-radius:14px;padding:18px 22px;font-size:15px;line-height:1.5;max-width:2928px">
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">USER DID</div><div style="text-wrap:pretty">{{ r.did }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">WHAT CHANGED</div><div style="text-wrap:pretty">{{ r.changed }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">KEYBOARD</div><div style="text-wrap:pretty">{{ r.keys }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">EMPTY · ERROR · MOTION</div><div style="text-wrap:pretty">{{ r.edge }}</div></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+  <div id="components" style="display:flex;flex-direction:column;gap:24px;border-top:1px solid #c9c9c2;padding-top:24px;max-width:2928px">
+    <div style="font-size:26px;font-weight:500;letter-spacing:-.02em">New components and tokens</div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px">
+      <div style="background:#fff;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.5">
+        <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500">TOKENS</div>
+        <div><span style="font-family:'Geist Mono',monospace">--on-primary</span> #1c1c1a · dark #171716. Replaces white for every label on Deck Orange (buttons, current step badge, current edge label).</div>
+        <div><span style="font-family:'Geist Mono',monospace">--green-soft / --green-ink</span> #e3efe1 / #2f6a38 · dark #16281a / #8fd09a. Success only: “Persistent storage: On”.</div>
+        <div><span style="font-family:'Geist Mono',monospace">--focus-ring</span> 2px solid Deck Orange, 2px offset (−2px inside menus).</div>
+        <div><span style="font-family:'Geist Mono',monospace">--edge-error</span> = clay ink, 2px, dash 7 4. <span style="font-family:'Geist Mono',monospace">--edge-candidate</span> = orange, 1.75px, dash 2 4 round. <span style="font-family:'Geist Mono',monospace">--edge-invalid</span> = clay ink, 2.5px, dash 3 3.</div>
+        <div><span style="font-family:'Geist Mono',monospace">--dim-note</span> .35 (stickies during a flow). <span style="font-family:'Geist Mono',monospace">--toast-undo-ms</span> 6000.</div>
+        <div>Icons: Lucide line set at stroke 1.5, 12–20px, replacing Material Symbols.</div>
+        <div>Motion: dim 250 ms ease-out; popovers 120 ms fade + 4px rise; no bounce. With reduced motion everything is instant and the flow token and loaders stop moving.</div>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.5">
+        <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500">FLOWS AND CANVAS</div>
+        <div><b style="font-weight:600">recording-chip</b> · top-bar pill with Undo / Done / Cancel; also used for “Editing … · adding branch”.</div>
+        <div><b style="font-weight:600">step-row (editable)</b> · grip, remove, broken-link dot (dashed clay).</div>
+        <div><b style="font-weight:600">branch-header</b> · ◇ condition label in mono, with an error variant.</div>
+        <div><b style="font-weight:600">edge-step-badge</b> · numbered dot inside the edge label (1, 4a, 4b).</div>
+        <div><b style="font-weight:600">edge states</b> · candidate, invalid, error-path, merged (×N pill).</div>
+        <div><b style="font-weight:600">connection-handle</b> · 10px ring, 14px filled when hot.</div>
+        <div><b style="font-weight:600">node badges</b> · warning, valid-target (+), invalid-target (ban), provider text badge.</div>
+        <div><b style="font-weight:600">edge-popover</b>, <b style="font-weight:600">connect-listbox</b>, <b style="font-weight:600">keyboard-hint-bar</b>, <b style="font-weight:600">inverse-tooltip</b>.</div>
+        <div><b style="font-weight:600">sticky-note</b> · free / pinned / collapsed + pin leader line.</div>
+        <div><b style="font-weight:600">collapsed-group-card</b> · stacked card with member count.</div>
+        <div><b style="font-weight:600">level-indicator</b> · 4 bars + level name in the zoom control. <b style="font-weight:600">component-card</b> (full node) and <b style="font-weight:600">port-pill</b>.</div>
+        <div><b style="font-weight:600">branch picker</b> in the step player.</div>
+      </div>
+      <div style="background:#fff;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.5">
+        <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500">INSPECTOR, LIBRARY, STATUS</div>
+        <div><b style="font-weight:600">mixed-value field</b> · italic muted “Mixed”; partial tag chip (dashed + n/3).</div>
+        <div><b style="font-weight:600">problems-list</b> rows and the “n problems” canvas button (amber).</div>
+        <div><b style="font-weight:600">flow-filter</b> field with match count; match highlight = bold + underline.</div>
+        <div><b style="font-weight:600">field-error</b> · 1.5px clay border + icon + message.</div>
+        <div><b style="font-weight:600">context-menu</b> and <b style="font-weight:600">submenu</b> with shortcuts and a checked item.</div>
+        <div><b style="font-weight:600">folder inline-rename</b> row.</div>
+        <div><b style="font-weight:600">recent-list</b> in the library sidebar, with dashed empty state.</div>
+        <div><b style="font-weight:600">storage-card</b> with On/Off status pill and request button; <b style="font-weight:600">Safari banner</b> reuses backup-banner.</div>
+        <div><b style="font-weight:600">read-only banner</b> (44px, amber) and read-only field style.</div>
+        <div><b style="font-weight:600">autosave-status</b> · saving / saved / error pill with Export, plus error popover.</div>
+        <div><b style="font-weight:600">undo-toast</b> · inverse pill with outlined Undo and shortcut.</div>
+      </div>
+    </div>
+    <div style="font-size:14px;color:#55554f;line-height:1.5;max-width:1400px">Assumptions: B2 in the brief was cut off; it’s read here as multi-select with mixed values and delete-with-Undo (58–59). Branch frames add two edges to the sample deck (Payment → Event Bus “payment.authorized”, Payment → Notification “payment.failed”) so the branches have something to follow.</div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;section&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;],&quot;default&quot;:&quot;A&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;themes&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { ok: !!window.SODO_ST };
+  componentDidMount() { if (!this.state.ok) this.t = setInterval(() => { if (window.SODO_ST) { clearInterval(this.t); this.setState({ ok: true }); } }, 80); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const L = window.SODO_ST ? window.SODO_ST.LIST : [];
+    const T = { A: 'Flows', B: 'Canvas editing', C: 'Scale', D: 'Library and status' };
+    const cur = this.state.sec || this.props.section || 'A';
+    const th = this.props.themes || 'both';
+    const sections = ['A', 'B', 'C', 'D'].filter(id => id === cur).map(id => ({ id, anchor: 'sec-' + id, title: T[id], rows: L.filter(r => r.sec === id).map(r => ({ ...r, idL: r.id + '-' + r.slug + '-light', idD: r.id + '-' + r.slug + '-dark', showL: th !== 'dark', showD: th !== 'light' })) }));
+    const toc = ['A', 'B', 'C', 'D'].map(id => ({ t: id + ' · ' + T[id] + ' (' + L.filter(r => r.sec === id).map(r => r.id).filter((x, i, a) => i === 0 || i === a.length - 1).join('–') + ')', pick: () => this.setState({ sec: id }), st: { fontSize: 13, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', background: id === cur ? '#1c1c1a' : '#fff', color: id === cur ? '#fff' : '#1c1c1a', fontWeight: id === cur ? 500 : 400 } }));
+    return { sections, toc };
+  }
+}
+</script>
+</body>
+</html>

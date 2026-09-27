@@ -21,6 +21,52 @@ list different glyphs. Where the prototype and `DESIGN.md` disagree, `DESIGN.md`
 | external | external       | `cloud`         | `Cloud`             | `clay-soft` / `clay-ink`       |
 | unknown  | —              | —               | `Shapes`            | `surface-2` / `ink-secondary`  |
 
+## lucide glyphs in states 41–85
+
+`Sododeck State.dc.html` (states 41–85) already draws lucide icons (lucide 0.469 from unpkg,
+stroke 1.5), so there is no Material name to map. These are the glyphs it uses that the Material
+table below does not already produce; each name was checked against the installed `lucide-react`
+(1.48.0). This list is for reference and is **not** read by `packages/ui/test/icons.test.ts`.
+Where the design picked a different glyph for something already mapped below (`Receipt`, `Wallet`,
+`MessageSquare`, `Activity`, `Network`, `Scan`, `Workflow`), the table below and
+`packages/ui/src/lib/icons.ts` win (design-analysis §g-31).
+
+| lucide              | Used for                                            | States         |
+| ------------------- | --------------------------------------------------- | -------------- |
+| `Ban`               | invalid edge click, invalid drop target             | 43, 55         |
+| `Boxes`             | multi-selection / group header tile                 | 58, 69–71      |
+| `ChevronsDownUp`    | collapse group                                      | 68             |
+| `ChevronsUpDown`    | expand group, merged edges                          | 69–71          |
+| `CircleDashed`      | persistent storage "Off" status                     | 72–80          |
+| `CircleDot`         | recording chip                                      | 41–43          |
+| `Clock`             | Recent decks rows                                   | 72–81          |
+| `Component`         | component-level nodes                               | 67             |
+| `CornerDownRight`   | "Next: click an edge leaving …" hint                | 42, 43         |
+| `Ellipsis`          | deck / flow ⋯ menu                                  | 50, 51, 76, 77 |
+| `FolderInput`       | Move to folder                                      | 76, 77         |
+| `FolderOutput`      | Export folder                                       | 74             |
+| `FolderX`           | Delete folder                                       | 75             |
+| `GitBranch`         | add branch, branch rows                             | 43, 45, 46     |
+| `Globe`             | free sticky note / external anchor                  | 62             |
+| `GripVertical`      | step row drag handle                                | 42, 43         |
+| `Handshake`         | partner kind tile                                   | 61             |
+| `ListFilter`        | flow list filter                                    | 47, 48         |
+| `LoaderCircle`      | autosave "Saving…"                                  | 83             |
+| `Lock`              | JSON panel "Read-only", read-only fields and status | 41–85          |
+| `MousePointer2`     | pointer while dragging an edge                      | 53–55          |
+| `MousePointerClick` | "click an edge" / drill hints                       | 41, 45, 65, 66 |
+| `Pencil`            | Rename                                              | 74, 76, 77     |
+| `Pin`               | pinned sticky note                                  | 62, 63         |
+| `RotateCw`          | Retry save                                          | 85             |
+| `SearchX`           | flow filter with no results                         | 48             |
+| `ShieldCheck`       | persistent storage "On", Request persistent storage | 72–81          |
+| `Undo2`             | Undo last step                                      | 41–43          |
+| `Unlink`            | Problems: orphan node                               | 60             |
+| `Unplug`            | Problems: step without edge                         | 60             |
+| `Upload`            | Import .sododeck.json                               | 72–81          |
+| `Users`             | owner on component cards                            | 67             |
+| `ZoomIn`            | semantic zoom hint                                  | 64             |
+
 ## Glyphs
 
 | Material              | lucide              | Note                                                                 |

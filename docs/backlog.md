@@ -9,6 +9,14 @@ Each feature is 1–5 days and goes through `/speckit.specify → /speckit.plan 
 Status: draft for founder review (2026-09-27). Items marked **⚠ decision** depend on the open
 questions in design-analysis §g.
 
+**Design update (2026-09-27):** Claude Design added states 41–85 (flow recording and branches,
+edge drawing, multi-select, problems, cloud/partner kinds, stickies, semantic zoom, collapsible
+groups, folder and deck menus, storage, multi-tab, autosave). Screens are in
+`docs/design/screens/41-…` to `85-…` (light and dark); the analysis and every conflict with
+DESIGN.md or the founder decisions are in design-analysis §a and §g-18–§g-32. Founder decisions
+below still win over the new frames (notably: deletes ask for confirmation, SLA target only,
+autosave ≤ 300 ms, owner is free text).
+
 ## Founder decisions (2026-09-27)
 
 Recorded in design-analysis §g and applied to the features below.
@@ -21,6 +29,7 @@ Recorded in design-analysis §g and applied to the features below.
 | 10  | Owner is **free text with suggestions** from owners already used in the deck (no team list).                                                                                                    | 001, 008                |
 | 11  | Deleting asks for **confirmation**; undo (⌘Z) still works after a confirmed delete.                                                                                                             | 003, 005, 006, 008, 009 |
 | 12  | Library "Recent" = the **8 most recently opened** decks (opened-at kept in library metadata, not in the deck).                                                                                  | 005                     |
+| 19  | After a confirmed delete, show the design's **Undo toast** (6 s, Undo button + ⌘Z hint); ⌘Z still works after it disappears.                                                                    | 003, 005, 006, 008, 009 |
 
 ## Dependency graph
 
@@ -76,15 +85,15 @@ scope (see report).
 | 000 | design-foundation      | M1        | —          | 4 d  | —                                              |
 | 001 | json-schema-v1         | M1        | —          | 3 d  | ⚠ decision (§g-4)                              |
 | 002 | yjs-model              | M1        | 001        | 4 d  | —                                              |
-| 003 | canvas-basic           | M1        | 000, 002   | 5 d  | edge drawing (default ok)                      |
+| 003 | canvas-basic           | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28           |
 | 004 | json-panel-sync        | M1        | 003        | 2 d  | decided (§g-3): read-only                      |
-| 005 | local-library-autosave | M1        | 000, 002   | 5 d  | New-folder, multi-tab (small)                  |
-| 006 | flow-authoring         | M2        | 003        | 5 d  | **yes** (F-1, F-4)                             |
-| 007 | flow-playback          | M2        | 006        | 4 d  | —                                              |
-| 008 | inspector-rules        | M3        | 006        | 5 d  | edge/flow/step inspector (default ok)          |
-| 015 | model-validation       | M3        | 006        | 2 d  | small (default ok)                             |
-| 009 | stickies-search        | M3        | 008        | 4 d  | **yes** (stickies)                             |
-| 010 | zoom-groups-focus      | M4        | 003        | 5 d  | **yes** (V-1 levels, V-2 collapse)             |
+| 005 | local-library-autosave | M1        | 000, 002   | 5 d  | designed (72–85); ⚠ §g-19, §g-25, §g-29        |
+| 006 | flow-authoring         | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                      |
+| 007 | flow-playback          | M2        | 006        | 4 d  | — (branch picker in 46)                        |
+| 008 | inspector-rules        | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26           |
+| 015 | model-validation       | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                         |
+| 009 | stickies-search        | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                     |
+| 010 | zoom-groups-focus      | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                      |
 | 011 | views-autolayout       | M4        | 010        | 5 d  | custom view config, layout button (default ok) |
 | 012 | export                 | M5        | 007, 011   | 4 d  | —                                              |
 | 013 | samples-onboarding     | M5        | 005, 009   | 3 d  | —                                              |
@@ -292,7 +301,12 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   [12-editor-labels-on](design/screens/12-editor-labels-on-light.png),
   [14-editor-palette-tab](design/screens/14-editor-palette-tab-light.png),
   [37-empty-deck-no-tour](design/screens/37-empty-deck-no-tour-light.png),
-  [38-empty-deck-node-added](design/screens/38-empty-deck-node-added-light.png). Components: node,
+  [38-empty-deck-node-added](design/screens/38-empty-deck-node-added-light.png); edge drawing
+  [52](design/screens/52-edge-hover-light.png) hover handles, [53](design/screens/53-edge-dragging-light.png) dragging, [54](design/screens/54-edge-valid-target-light.png) valid
+  target, [55](design/screens/55-edge-invalid-drop-light.png) invalid drop, [56](design/screens/56-edge-keyboard-light.png) keyboard connect,
+  [57](design/screens/57-edge-popover-light.png) inline edge popover; [58](design/screens/58-multi-select-light.png) multi-select,
+  [59](design/screens/59-bulk-delete-light.png) bulk delete; [61](design/screens/61-cloud-partner-light.png) cloud/partner kinds (⚠ §g-28). Each has a
+  `-dark` twin. Components: node,
   group boundary, edge + label pill, minimap, zoom control, canvas breadcrumb, Labels toggle,
   outline, palette, empty-canvas card, top bar. Tokens: canvas, dot, edge, kind tints,
   shadow-rest/selection, dim 250 ms.
@@ -300,29 +314,48 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   column, JSON panel slot); React Flow nodes (164×50, kind tile, subtitle, rule glyph), group
   boundaries (bounds from members), edges (smoothstep, 8px radius, end dot, 12px hit area) with
   label pills; select node/edge, click empty to deselect; drag to move; palette drag/click to add;
-  delete (Del key + inspector trash) with a confirmation dialog (§g-11), then undo via ⌘Z; draw an edge by dragging from a node handle and
-  reconnect an endpoint (default design); undo/redo (⌘Z/⇧⌘Z); shift-click / marquee multi-select;
+  delete (Del key + inspector trash) with a confirmation dialog (§g-11; the design's delete-at-once +
+  6 s Undo toast in 57/59 becomes confirm first, then the same Undo toast, §g-19), then undo via
+  the toast or ⌘Z; draw an edge (designed, 52–57):
+  four side handles on hover or Tab focus, dashed ghost line while dragging, valid target = dashed
+  orange ring + "+", invalid (already connected or self) = dashed clay ring + ban icon + tooltip,
+  release on empty canvas cancels, keyboard connect with C (type-ahead "Connect X to…" listbox,
+  duplicates disabled), inline popover for label / protocol / direction after creating or on
+  double-click; reconnect an endpoint (still default design); undo/redo (⌘Z/⇧⌘Z); shift-click / marquee / ⌘A multi-select with a
+  selection frame and "n selected" pill (58);
   zoom −/+/fit 30–200%, fit on open; minimap with click-to-pan; Labels toggle; outline tree with
   collapse and select; empty-canvas card; minimal inspector: title for node/edge, name for deck;
   keyboard: Tab into canvas, arrow keys move selection between nodes.
+- **⚠ decision (§g-28):** cloud and partner kinds (61: neutral cloud tile + AWS / GCP / AZURE
+  text badge, partner handshake tile, cloud fields provider / service / region / resource id) need
+  an additive schema change. Proposal: in scope here if the founder agrees (adds about half a day:
+  enum values, optional fields, fixtures, parity and round-trip tests); otherwise a follow-up.
 - **Out of scope:** full inspector fields (008), JSON panel (004), flows (006/007), focus mode,
   drill-down and views (010/011), stickies (009), ⌘K (009), auto-layout (011), queue-lane routing.
 - **Acceptance criteria:**
   - Given an empty deck, When the user drags "Service" from the palette onto the canvas, Then a
     "New service" node appears at the drop point, is selected, and the outline lists it.
   - Given two nodes, When the user drags from one node's handle to the other, Then a new edge
-    exists in the model and is selected.
+    exists in the model, is selected, and the inline popover opens with focus on its label.
+  - Given two nodes that are already connected, When the user drags from one onto the other, Then
+    the target shows the invalid state (ban icon + text, not colour only) and releasing creates
+    nothing; releasing on empty canvas also creates nothing.
+  - Given a focused node, When the user presses C, types part of another node's title and presses
+    Enter, Then an edge to that node is created; nodes that would duplicate an edge are listed as
+    disabled "already connected".
   - Given a selected node, When the user presses Delete, Then a confirmation dialog names what will
-    be removed (the node and its n edges); When confirmed, Then they disappear; When ⌘Z is pressed,
-    Then both come back with the same ids. When cancelled (or Esc), Then nothing changes.
+    be removed (the node and its n edges); When confirmed, Then they disappear and a 6 s toast with
+    Undo shows; When Undo (or ⌘Z, also after the toast is gone) is used, Then both come back with
+    the same ids. When cancelled (or Esc), Then nothing changes.
   - Given a node is dragged, When the pointer is released and ⌘Z pressed once, Then the node returns
     to its previous position.
   - Given Labels is off, When the user turns it on, Then every edge shows its Mono label pill.
   - Given keyboard focus on the canvas, When the user presses arrow keys, Then selection moves to the
     nearest node in that direction and the focus ring is visible.
   - Given the 500-node / 1,000-edge bench deck, When `pnpm bench` runs, Then pan/zoom stays ≥ 60 fps.
-- **Risks:** React Flow performance with custom nodes at 500+ nodes; edge-drawing UX is undesigned
-  (default used); keeping React Flow state derived (never authoritative) under drag.
+- **Risks:** React Flow performance with custom nodes at 500+ nodes; keyboard connect (C) and the
+  edge popover add focus-management work; keeping React Flow state derived (never authoritative)
+  under drag.
 - **`/speckit.specify` prompt:**
   > Let an architect draw a system from a blank canvas. They pick component kinds (client, gateway,
   > service, queue, database, external) from a palette by dragging or clicking, connect components
@@ -339,8 +372,9 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   > useDeckSnapshot and never authoritative; writes via @sododeck/model mutations; selection/zoom/
   > labels in the Zustand UI store. Edges: smoothstep, 8px radius (no custom queue lane). Run
   > `pnpm bench` before/after. Match docs/design/screens/02-editor-node-selected-light.png,
-  > 14-editor-palette-tab-light.png, 37-empty-deck-no-tour-light.png and 12-editor-labels-on-light.png
-  > pixel-close (lucide icons instead of Material Symbols).
+  > 14-editor-palette-tab-light.png, 37-empty-deck-no-tour-light.png, 12-editor-labels-on-light.png
+  > and 52-edge-hover … 58-multi-select (light and dark) pixel-close (lucide icons instead of
+  > Material Symbols; DESIGN.md clay; confirmation dialog before delete per §g-11).
 
 ## 004-json-panel-sync
 
@@ -403,19 +437,38 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   [08-library-search-no-results](design/screens/08-library-search-no-results-light.png),
   [09-library-folder-banner-dismissed](design/screens/09-library-folder-banner-dismissed-light.png);
   editor top bar autosave status in [02](design/screens/02-editor-node-selected-light.png); deck
-  inspector STORAGE section in [10](design/screens/10-editor-deck-inspector-light.png). Components:
-  deck card, new-deck card, list row, backup banner, storage meter, search field, segmented grid/list.
+  inspector STORAGE section in [10](design/screens/10-editor-deck-inspector-light.png);
+  [72](design/screens/72-new-folder-empty-light.png) / [73](design/screens/73-new-folder-duplicate-light.png) new-folder dialog errors,
+  [74](design/screens/74-folder-menu-light.png) folder menu, [75](design/screens/75-folder-rename-light.png) folder delete + inline rename,
+  [76](design/screens/76-deck-menu-card-light.png) / [77](design/screens/77-deck-menu-row-light.png) deck menus, [78](design/screens/78-recent-light.png) Recent,
+  [79](design/screens/79-recent-empty-light.png) Recent empty, [80](design/screens/80-storage-off-light.png) storage off + Safari banner,
+  [81](design/screens/81-storage-on-light.png) storage on, [82](design/screens/82-second-tab-light.png) deck open in another tab,
+  [83](design/screens/83-autosave-saving-light.png) / [84](design/screens/84-autosave-saved-light.png) / [85](design/screens/85-autosave-error-light.png) autosave states (each with a
+  `-dark` twin). Components: deck card, new-deck card, list row, backup banner, storage card,
+  search field, segmented grid/list, small dialog, context menu + submenu, recent list, read-only
+  banner, autosave status + error popover.
 - **In scope:** IndexedDB persistence per deck (Yjs provider) + library metadata (name, folder,
   counts, updatedAt, openedAt, lastBackupAt); library grid/list, All/Recent (8 most recently opened, §g-12)/Samples/folders, search; new deck;
-  open deck; rename via breadcrumb; folders (create/rename/delete — default small dialog; delete asks for confirmation); move deck
-  to folder; delete deck (confirm); import .sododeck.json (validate, error toast); export one deck
-  and "Export backup" of all decks; storage usage meter and `storage.persist()` request; backup
-  reminder after N days (+ Safari eviction copy); multi-tab: BroadcastChannel so two tabs never
-  overwrite (second tab read-only or live-merged); autosave status in the top bar (§g-7: "Saving…"
-  held ≤ 300 ms → "Saved in this browser"; error state "Couldn't save — export a backup"); thumbnails
+  open deck; rename via breadcrumb; folders (designed 72–75: New folder dialog with inline errors for empty and case-insensitive
+  duplicate names, context menu Rename / Export folder / Delete folder, F2 inline rename; delete
+  asks for confirmation per §g-11 — the design's delete-at-once becomes confirm first, then the 6 s Undo toast, §g-19; decks
+  of a deleted folder move to Unfiled); deck menu on cards and rows (76–77: Open, Rename F2,
+  Duplicate ⌘D, Move to folder submenu with the current folder checked, Export .sododeck.json,
+  Delete) via ⋯, right-click or Shift+F10; delete deck (confirm); import .sododeck.json (validate, error toast); export one deck
+  and "Export backup" of all decks; storage card (80–81: usage bar, Persistent storage On/Off
+  status with icon + text, "Request persistent storage", "Browser declined…" text) and
+  `storage.persist()` request; backup reminder after N days + Safari 7-day banner (80); multi-tab
+  (82): BroadcastChannel so two tabs never overwrite — the second tab is read-only with an amber
+  banner and "Use here instead" to take over; fields greyed with a lock, handles and palette
+  disabled, select and export still work; autosave status in the top bar (§g-7: "Saving…"
+  held ≤ 300 ms → "Saved in this browser"; error state "Couldn't save — export a backup" as a clay
+  pill with Export and a popover with Export .sododeck.json and Retry ⌘S (85); the design's
+  "~650 ms" in 83 is overridden, §g-25); thumbnails
   (simplified, generated from positions).
-- **Out of scope:** sample decks content (013), full export dialog (012), File System Access (P1),
-  cloud sync.
+- **⚠ decision (§g-29):** Duplicate deck and "Use here instead" are proposed in scope (small);
+  Export folder is deferred to 012.
+- **Out of scope:** sample decks content (013), full export dialog (012), Export folder (012), File
+  System Access (P1), cloud sync.
 - **Acceptance criteria:**
   - Given the user edits a deck, When 500 ms pass and the tab is closed, Then reopening shows the
     edit.
@@ -425,15 +478,22 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
     and flow counts; Given an invalid file, Then a toast says it is not valid and nothing is added.
   - Given the last backup is older than the reminder threshold, When the library opens, Then the
     amber banner shows with "Export backup"; When dismissed, Then it stays hidden for this session.
-  - Given the same deck open in two tabs, When one tab edits, Then the other tab never overwrites it
-    (it updates or shows a read-only notice).
+  - Given the same deck open in two tabs, When the second tab opens it, Then that tab shows the
+    read-only banner, "Read-only" status and disabled editing; When the user picks "Use here
+    instead", Then this tab becomes editable and the other tab shows the banner.
+  - Given the New folder dialog, When Create is pressed with an empty name or a name that matches an
+    existing folder ignoring case and surrounding spaces, Then an inline error with an icon shows
+    under the field and no folder is created.
   - Given `storage.persist` is unavailable, When the app starts, Then it falls back silently and
     the meter shows "not persistent" (feature-detected via lib/features.ts).
   - Given nine decks opened at different times, When the user selects Recent, Then the 8 most
     recently opened show, newest first.
   - Given a save fails (e.g. quota exceeded), When the user edits, Then the top bar shows "Couldn't
-    save — export a backup" with an icon (not color only).
-- **Risks:** Safari eviction; the save-error state is not designed yet (requested from Claude Design);
+    save — export a backup" with an icon (not color only) and an Export button; the state clears
+    only after a later save succeeds.
+  - Given no deck was ever opened, When the library shows, Then Recent shows the dashed empty
+    placeholder.
+- **Risks:** Safari eviction; lock hand-over between tabs ("Use here instead") must be race-free;
   thumbnail generation cost for large decks (worker).
 - **`/speckit.specify` prompt:**
   > Let guests keep a library of decks in their browser without an account. Every change is saved
@@ -450,7 +510,8 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   > src/lib/features.ts with fallbacks. Serialization only through @sododeck/model. Library route
   > stays light (no React Flow/Monaco imports). Thumbnails from positions, rendered as simple SVG.
   > Match docs/design/screens/01-library-light.png, 01-library-dark.png, 07-library-list-view-light.png,
-  > 08-library-search-no-results-light.png pixel-close.
+  > 08-library-search-no-results-light.png and 72-… to 85-… (light and dark) pixel-close, except
+  > the overrides in design-analysis §g-19 (confirm before delete) and §g-25 (≤ 300 ms).
 
 ## 006-flow-authoring
 
@@ -460,15 +521,27 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
 - **Spec IDs:** F-1, F-4, F-5, K-1 (flow/step title + description).
 - **Design references:** left panel FEATURES list in
   [02-editor-node-selected](design/screens/02-editor-node-selected-light.png) and flow list/steps in
-  [03-flow-mode](design/screens/03-flow-mode-light.png); step row and condition block components.
-  **Recording a flow, editing steps and branches are not designed** — request designs or accept the
-  default below.
+  [03-flow-mode](design/screens/03-flow-mode-light.png); recording [41](design/screens/41-rec-empty-light.png) empty,
+  [42](design/screens/42-rec-mid-light.png) mid recording, [43](design/screens/43-rec-invalid-light.png) invalid click, [44](design/screens/44-rec-finished-light.png) finished;
+  branches [45](design/screens/45-branch-create-light.png) creating, [46](design/screens/46-branch-tree-light.png) tree + error path; flow filter
+  [47](design/screens/47-flow-filter-light.png), [48](design/screens/48-flow-filter-empty-light.png) no results (each with a `-dark` twin).
+  Components: recording chip, editable step row, recording hint / error card, branch header, edge
+  step badge, candidate / invalid / error-path edge styles, invalid-edge popover, flow filter.
 - **In scope:** features (create/rename/delete; deletes ask for confirmation, §g-11) and flows per feature in the left panel with a
-  filter field; "Record flow" mode (default design): top-bar chip "Recording · name", click edges in
-  order to append steps, step list builds on the left, undo last step, Done/Cancel; edit step
-  condition, SLA, description; reorder/delete steps; branches: a step can start an alternative path
-  from a previous step with a label; error paths marked as such and styled dashed + icon; broken
-  steps (edge deleted) flagged.
+  filter field (47–48: / to focus, "n of m" count, matches bold + underlined, searches names, step
+  labels and conditions; empty state with "Clear filter" and "New flow '…'"); recording mode
+  (designed 41–44): "+ New flow" names the flow, top-bar chip "Recording 'name' · n steps" with
+  Undo ⌘Z / Done / Cancel Esc replaces the view switcher, canvas stays at full opacity, hovering an
+  edge previews it, recorded edges get numbered badges, the next start node gets a ring and its
+  outgoing edges show as dotted candidates, a click on an edge that does not start where the last
+  step ended is **not added** and a popover offers "Add as branch from step n" (§g-18), Tab /
+  Shift+Tab + Enter pick edges by keyboard, Done disabled until one step exists, Esc asks only if
+  steps exist; edit step
+  condition, SLA, description; reorder (grip drag, ⌥↑/⌥↓) / delete (⌫) steps, where a reorder that breaks the chain marks
+  rows with a dashed clay dot + alert icon and blocks Done; branches (45–46): B on a focused step
+  adds a branch with a required label and condition and an Error path toggle, the step list indents
+  branches under "◇ condition" headers with 4a/4b numbering, error paths are dashed clay + icon on
+  the edge label and step badge; broken steps (edge deleted) flagged.
   Adds the step `branch` field to the file format (deferred from 001): an additive optional field
   in `packages/schema` (fixtures + Ajv/Zod parity) and `packages/model` (round-trip case), no
   version bump; shape recorded in an ADR.
@@ -477,8 +550,14 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
 - **Acceptance criteria:**
   - Given a deck with edges, When the user starts recording "Place order" and clicks three edges in
     order, Then the flow has three steps referencing those edges in that order.
-  - Given recording, When the user clicks an edge whose source is not connected to the previous
-    step's target, Then it is still added but marked "not contiguous" (warning, not blocked).
+  - Given recording, When the user clicks an edge whose source is not the previous step's target,
+    Then no step is added, the edge shows the invalid state (dashed + ban icon), a popover and a
+    polite live region explain why, and "Add as branch from step n" is offered when that edge
+    leaves an earlier step's node. (Changed from "added but marked" to follow design 43, §g-18.)
+  - Given recording with no steps, When the user looks at Done, Then it is disabled; Given steps,
+    When the user presses Esc, Then a confirmation asks before discarding them.
+  - Given a new branch, When the user presses Done with an empty label or condition, Then an inline
+    error shows on the empty field and the branch is not saved.
   - Given a flow, When the user adds a branch at step 2 labelled "payment declined" and marks it as
     an error path, Then the branch steps render dashed with an error icon on the canvas.
   - Given ten flows in a feature, When the user types "fail" in the flow filter, Then only matching
@@ -487,8 +566,8 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
     indicator with text, and undo restores it.
   - Given only the keyboard, When recording, Then edges can be chosen via Tab/arrow navigation and
     Enter.
-- **Risks:** **undesigned UX** (biggest design gap); branch model complexity (keep to one level of
-  branching in MVP); edges reused by several steps.
+- **Risks:** branch model complexity (keep to one level of branching in MVP, as in 46); edges reused
+  by several steps; keyboard edge picking during recording.
 - **`/speckit.specify` prompt:**
   > Let architects record business flows on top of the existing diagram. A feature (for example
   > "Delivery") groups many flows. To create a flow, the user starts recording and clicks existing
@@ -504,10 +583,11 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   > only; steps written via @sododeck/model mutations from 002). Step shape per the 001 schema;
   > add the optional step `branch` field to packages/schema/schema/v1.json (run
   > `pnpm schema:generate`, fixtures, parity) and a round-trip case in packages/model, with an ADR
-  > for the branch shape. Reuse step-row and condition-block visuals from the design. Run
-  > `pnpm bench` (flow highlight < 100 ms). Default recording UI must be approved or replaced by a Claude Design screen
-  > before implementation; match the left-panel list styling of
-  > docs/design/screens/03-flow-mode-light.png pixel-close.
+  > for the branch shape. The ADR records the branch
+  > shape the design settles: fork step, label, condition, `errorPath` flag. Run `pnpm bench`
+  > (flow highlight < 100 ms). Match docs/design/screens/41-rec-empty … 48-flow-filter-empty
+  > (light and dark) and the left-panel list of 03-flow-mode-light.png pixel-close (DESIGN.md clay
+  > for error paths).
 
 ## 007-flow-playback
 
@@ -520,7 +600,9 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   [24-flow-step-no-rule](design/screens/24-flow-step-no-rule-light.png),
   [25-flow-step-sla-over](design/screens/25-flow-step-sla-over-light.png),
   [26-flow-playing-2x](design/screens/26-flow-playing-2x-light.png),
-  [27-flow-mode-labels-dark](design/screens/27-flow-mode-labels-dark.png). Components: flow chip,
+  [27-flow-mode-labels-dark](design/screens/27-flow-mode-labels-dark.png); [44](design/screens/44-rec-finished-light.png) flow
+  mode right after recording, [46](design/screens/46-branch-tree-light.png) player with the branch picker at a fork,
+  [50](design/screens/50-insp-flow-light.png) flow with numbered step badges. Components: flow chip,
   step player, step rows, flow token, highlighted edges/labels, step inspector (condition, rules
   placeholder, SLA target), step JSON. Motion: token loop 1.4 s ÷ speed, step 1.7 s ÷ speed, dim
   250 ms.
@@ -530,7 +612,9 @@ external`; protocol families `http, grpc, event, sql, websocket, other` (specifi
   ← / → keys; click step row / segment / flow edge / flow node to jump; step inspector (from → to,
   protocol, condition, description, SLA target, rules section showing attached rule names —
   table view comes with 008); step JSON read-only in the JSON panel; exit via chip × / Back / Esc;
-  reduced-motion: static token; `aria-live` announcement of the current step.
+  reduced-motion: static token; `aria-live` announcement of the current step; flows with branches
+  (46): step badges 4a/4b, a branch picker ("AT STEP n" segmented control) in the player at a
+  fork, ↑/↓ switch branch.
 - **Out of scope:** "measured" SLA and meter fill from fake data (decided §g-6: show target only),
   compact decision table (008), export of a flow (012).
 - **Acceptance criteria:**
@@ -578,13 +662,19 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   [04](design/screens/04-rule-editor-light.png) · [dark](design/screens/04-rule-editor-dark.png),
   [28-rule-editor-no-match](design/screens/28-rule-editor-no-match-light.png),
   [29-rule-editor-other-rule](design/screens/29-rule-editor-other-rule-light.png); compact table on a
-  step in [03](design/screens/03-flow-mode-light.png). Components: micro-label sections, markdown
+  step in [03](design/screens/03-flow-mode-light.png); [49](design/screens/49-insp-edge-light.png) edge inspector,
+  [50](design/screens/50-insp-flow-light.png) flow inspector, [51](design/screens/51-insp-step-light.png) step inspector (SLA shows target only,
+  §g-24), [58](design/screens/58-multi-select-light.png) bulk inspector with "Mixed" (each with a `-dark` twin). Components: micro-label sections, markdown
   Write/Preview, tag input, link rows, rule card, decision table (full + compact), test result
   banner.
 - **In scope:** inspectors for node, edge, flow, step and deck with title, markdown description
-  (write/preview), owner (free text + suggestions), tags, links; node tech/host; edge label,
-  protocol, direction, "Used in flows"; step condition, SLA, attached rules; connections list;
-  multi-select bulk edit (type, tags, owner); rule editor route: list, create, rename, describe, hit
+  (write/preview), owner (free text + suggestions), tags, links; node tech/host; edge (49):
+  title (= label), from / to, protocol segmented control, description, owner, direction, tags,
+  links, "Used in flows"; flow (50): title, description, owner, feature, tags, links, summary;
+  step (51): title, description, owner, edge, tags, condition, SLA target (no measured value or
+  meter, §g-24), attached rules; connections list; multi-select bulk edit (58: kind, owner, tech,
+  group, tags; differing values show "Mixed", tags on some nodes show dashed with "n/3", typing sets
+  the value on all); rule editor route: list, create, rename, describe, hit
   policy, add/rename/remove condition and action columns, edit cells (syntax `≤ 5`, `> 20`, lists,
   `Any`), add/delete/reorder rows, delete rule; attach/detach rules on steps and nodes; "Used in"
   list; compact table on the step inspector with the matched row; rule test input panel +
@@ -602,6 +692,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     inputs" shows in clay with an error icon.
   - Given three selected nodes, When the user sets owner "Dispatch" in the bulk inspector, Then all
     three change in one undo step.
+  - Given three selected nodes with different owners, When the bulk inspector shows, Then Owner shows
+    "Mixed" and a tag present on two of them shows as partial "2/3".
   - Given a rule used by steps, When the user deletes it, Then a confirmation dialog shows the usage
     count; When confirmed, Then the steps are detached (undo restores).
 - **Risks:** scope is large (inspectors + rule editor) — split into 008a inspectors / 008b rules if
@@ -623,9 +715,10 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > rule evaluation (cell matching, hit policy) as a pure, unit-tested module in packages/model
   > (no UI); markdown rendering without raw HTML (ask before adding a markdown dependency; the
   > design only needs paragraphs, bullets, inline code). Owner suggestions derived from the deck.
-  > Match docs/design/screens/02-editor-node-selected-light.png, 11-editor-edge-selected-light.png,
-  > 04-rule-editor-light.png, 28-rule-editor-no-match-light.png pixel-close (success green per
-  > DESIGN.md for matches).
+  > Match docs/design/screens/02-editor-node-selected-light.png, 49-insp-edge, 50-insp-flow,
+  > 51-insp-step, 58-multi-select, 04-rule-editor-light.png, 28-rule-editor-no-match-light.png
+  > pixel-close (success green per DESIGN.md for matches; owner is a free-text combobox styled
+  > like the design's select, §g-26; SLA target only).
 
 ## 015-model-validation
 
@@ -633,13 +726,16 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Goal:** Users see what is wrong in their model — orphan components, broken flows, duplicate
   connections — before it misleads a reader.
 - **Spec IDs:** C-7.
-- **Design references:** not designed; closest patterns: rule CHECKS list in
-  [04-rule-editor](design/screens/04-rule-editor-light.png), clay error line in
-  [15](design/screens/15-editor-json-error-light.png). Default: "Problems" section in the deck
-  inspector + warning glyph on affected nodes and flows.
+- **Design references:** [60](design/screens/60-problems-light.png) · [dark](design/screens/60-problems-dark.png): PROBLEMS
+  section in the deck inspector (orphan node, broken flow, duplicate edge, step without edge),
+  amber triangle glyph on affected nodes and edges, amber "n problems" button on the canvas,
+  "No problems" collapsed row. Broken-chain rows in the step list: [42](design/screens/42-rec-mid-light.png); bulk delete
+  flags new problems: [59](design/screens/59-bulk-delete-light.png); overlapping branch conditions → amber warning (46).
 - **In scope:** checks for orphan nodes, duplicate edges (same from/to/label), steps whose edge is
   missing, non-contiguous flows, rules referenced but missing, rules with no catch-all row; problem
-  list with click-to-select; badge count in the top bar or deck inspector; computed off the main
+  list with click / ↵ to select, ↑↓ to move, ⌘. to jump to the next problem from anywhere;
+  "n problems" button on the canvas and triangle glyphs on affected objects; problems are derived
+  and never written into the document or shown in the JSON panel (§g-23); computed off the main
   thread for large decks.
 - **Out of scope:** custom lint rules (Q-4, P2), auto-fix.
 - **Acceptance criteria:**
@@ -660,9 +756,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > the source of truth.
 - **`/speckit.plan` hint:**
   > Pure checks in packages/model (reuse referential validation from 002), run in a Web Worker for
-  > large decks; UI in the deck inspector and outline/flow list glyphs. No design exists — use the
-  > rule CHECKS row style from docs/design/screens/04-rule-editor-light.png; get founder sign-off on
-  > the default before implementing.
+  > large decks; UI in the deck inspector and outline/flow list glyphs. Match
+  > docs/design/screens/60-problems-light.png and 60-problems-dark.png pixel-close.
 
 ## 009-stickies-search
 
@@ -673,10 +768,17 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Design references:** ⌘K palette [30](design/screens/30-command-palette-light.png),
   [31 filtered](design/screens/31-command-palette-filtered-light.png),
   [32 no results](design/screens/32-command-palette-no-results-dark.png); top-bar "Jump to… ⌘K"
-  field; palette STRUCTURE › Note in [14](design/screens/14-editor-palette-tab-light.png).
-  **Sticky notes are not designed** (default: amber-soft card, markdown text, anchor badge).
-- **In scope:** stickies: add from palette or context, free or anchored to a node (moves with it),
-  edit markdown text, resize, delete (with confirmation, §g-11), show in outline; ⌘K palette: commands (export, theme, focus,
+  field; palette STRUCTURE › Note in [14](design/screens/14-editor-palette-tab-light.png); sticky
+  notes [62](design/screens/62-stickies-light.png) (free, pinned with a dotted leader, collapsed; sticky inspector) and
+  [63](design/screens/63-stickies-flow-light.png) during a flow (each with a `-dark` twin).
+- **In scope:** stickies (62–63): amber-soft 180 px markdown card, add from the palette (drop on a node pins it,
+  on empty canvas it is free) or with N at the pointer, free or pinned to a node (dotted leader +
+  pin, moves with it), expanded / collapsed (one line + chevron, ⌥C), "Stay visible during flows"
+  (otherwise dimmed to 35% during playback unless its node is on the current step), deck-wide
+  "Notes: dimmed / shown / hidden" switch in flow mode, empty note deleted on blur, delete (with
+  confirmation, §g-11), show in outline; width is fixed at 180 px in the design, so resize is
+  deferred; ⚠ §g-21: `collapsed` and show-in-flows as optional `Sticky` fields (additive schema
+  change with fixtures, parity and round-trip tests); ⌘K palette: commands (export, theme, focus,
   rules, library, new deck), flows, nodes, edges, rules, stickies, with matches in titles,
   descriptions, notes and rule cells (snippet line); Enter opens the first result, arrows move,
   Esc closes; results show kind; "No results".
@@ -685,12 +787,16 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Acceptance criteria:**
   - Given a sticky anchored to "Order Service", When the node is moved, Then the sticky moves with
     it; When the node is deleted, Then the sticky becomes free (not lost).
+  - Given flow mode is playing, When a step is current, Then notes are dimmed except those pinned to
+    a node of the current step or marked "Stay visible during flows".
+  - Given a new empty note, When it loses focus, Then it is removed.
   - Given ⌘K, When the user types "reattempt", Then the rule "Reattempt policy" and the flow step
     whose condition mentions it appear, and Enter opens the first.
   - Given the palette, When the user presses ↓ twice and Enter, Then the third result opens.
   - Given a query with no matches, When typed, Then "No results" shows and Enter does nothing.
   - Given a 2,000-node deck, When typing in ⌘K, Then results update in < 50 ms per keystroke.
-- **Risks:** undesigned sticky visuals; search index size (build incrementally from Yjs updates).
+- **Risks:** search index size (build incrementally from Yjs updates); dimmed notes at 35% must
+  stay accessible (design-analysis §g-30).
 - **`/speckit.specify` prompt:**
   > Let users put sticky notes on the diagram for reminders and open questions, either free on the
   > canvas or attached to a component so the note moves with it; notes support simple markdown and
@@ -704,8 +810,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > relative to anchor). Command palette component from 000 (cmdk only if approved); search index
   > as a pure module (packages/model or app lib) updated from snapshots, off the main thread if
   > large. Match docs/design/screens/30-command-palette-light.png and
-  > 31-command-palette-filtered-light.png pixel-close; sticky visuals need a design or founder
-  > approval of the default.
+  > 31-command-palette-filtered-light.png, 62-stickies and 63-stickies-flow (light and dark)
+  > pixel-close.
 
 ## 010-zoom-groups-focus
 
@@ -715,12 +821,22 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Spec IDs:** V-1, V-2, V-3.
 - **Design references:** [13-editor-focus-mode](design/screens/13-editor-focus-mode-light.png),
   [19-editor-group-drilldown](design/screens/19-editor-group-drilldown-light.png) (breadcrumb pill);
-  group boundary with label + count. **Semantic zoom levels and collapsed groups with ×N edges are
-  not designed.**
+  group boundary with label + count; semantic zoom [64](design/screens/64-zoom-landscape-light.png) landscape,
+  [65](design/screens/65-zoom-system-light.png) system, [66](design/screens/66-zoom-container-light.png) container, [67](design/screens/67-zoom-component-light.png) component;
+  collapsible groups [68](design/screens/68-group-expanded-light.png) expanded, [69](design/screens/69-group-collapsed-light.png) collapsed,
+  [70](design/screens/70-merged-edge-hover-light.png) merged-edge hover, [71](design/screens/71-flow-collapsed-light.png) flow through a collapsed
+  group (each with a `-dark` twin). Components: level indicator in the zoom control, component
+  card, port pill, group label chevron, collapsed group card, merged-edge ×N pill + popover.
 - **In scope:** four levels (landscape → system → container → component) from `node.level` and
-  group nesting; double-click a group (or its label) to drill in; breadcrumb to go up; collapse/
-  expand a group on the canvas: collapsed group renders as one card, edges crossing it merge into
-  one edge with a "×N" pill; focus mode toggle (selected node + neighbours, others dimmed; connected
+  group nesting, switched by zoom (Landscape ≤ 45% · System 46–90% · Container 91–150% ·
+  Component > 150% or drilled into a node) and shown in a level indicator (4 bars + name) in the
+  zoom control; landscape shows groups as regions with kind tiles only, system titles only,
+  container title + tech, component full cards with dashed port pills for outside connections
+  (click → that node one level up); double-click a group (or its label) to drill in; breadcrumb to go up; collapse/
+  expand a group (chevron in the label, Space/↵): collapsed group renders as a stacked card with
+  name and counts, edges to each neighbour merge into one edge with a "×N" pill and a direction
+  icon, hovering it lists the underlying edges, a flow passing through lights the card and the
+  player says "inside <group>" (71); focus mode toggle (selected node + neighbours, others dimmed; connected
   edges highlighted with labels); keyboard: Enter drills in, Backspace goes up, F toggles focus.
 - **Out of scope:** role-based layers (V-5), saved per-view collapse state (011).
 - **Acceptance criteria:**
@@ -730,9 +846,13 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     connects them; When expanded, Then the 12 edges return.
   - Given a selected node and Focus on, When rendered, Then only it and its direct neighbours are at
     full opacity, and dimmed elements are also marked non-interactive for screen readers.
+  - Given the zoom goes from 100% to 42%, When rendered, Then the level indicator reads
+    "Landscape" and nodes show only their kind tile, each with an accessible name.
+  - Given a flow step inside a collapsed group, When it is current, Then the group card shows the
+    ring and the player names the group.
   - Given the bench deck with all groups collapsed, When panning, Then ≥ 60 fps.
-- **Risks:** undesigned V-1/V-2 visuals; edge aggregation cost; interaction between drill-down and
-  flow mode.
+- **Risks:** edge aggregation cost; interaction between drill-down, collapse and flow mode (71);
+  where collapse state lives (§g-22: UI state now, per view in 011).
 - **`/speckit.specify` prompt:**
   > Keep large diagrams readable. Users see one level of detail at a time (landscape, system,
   > container, component) and double-click a group to go inside it, with a breadcrumb to go back up.
@@ -743,9 +863,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **`/speckit.plan` hint:**
   > apps/app/src/editor + a pure "visible graph" derivation (level, collapsed groups, aggregation)
   > unit-tested and memoized; collapse/drill state is UI state (Zustand) until 011 saves it in views.
-  > Run `pnpm bench` before/after. Match docs/design/screens/13-editor-focus-mode-light.png and
-  > 19-editor-group-drilldown-light.png pixel-close; collapsed-group visuals need a design or
-  > founder approval of the default.
+  > Run `pnpm bench` before/after. Match docs/design/screens/13-editor-focus-mode-light.png,
+  > 19-editor-group-drilldown-light.png and 64-zoom-landscape … 71-flow-collapsed (light and dark)
+  > pixel-close.
 
 ## 011-views-autolayout
 
@@ -757,8 +877,10 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   [02](design/screens/02-editor-node-selected-light.png),
   [20-editor-view-infra](design/screens/20-editor-view-infra-light.png),
   [21-editor-view-feature](design/screens/21-editor-view-feature-light.png),
-  [22-editor-custom-view-toast](design/screens/22-editor-custom-view-toast-light.png). **Custom view
-  configuration and the layout button are not designed.**
+  [22-editor-custom-view-toast](design/screens/22-editor-custom-view-toast-light.png); per-view
+  collapse state as noted on [69](design/screens/69-group-collapsed-light.png) ("Collapse state is saved per view", §g-22).
+  **Custom view configuration and the layout button are still not designed** (not in states
+  41–85).
 - **In scope:** views stored in the deck (System, Feature, Infra + custom): which nodes/kinds/groups
   are included, subtitle field (tech / "n flows · owner" / host), dimmed kinds, per-view position
   overrides and collapse state; create, rename, delete views; edits to objects propagate to all
