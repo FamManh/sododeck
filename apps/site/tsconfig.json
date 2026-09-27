@@ -1,0 +1,9 @@
+{
+  "extends": "@sododeck/config/tsconfig/react.json",
+  "compilerOptions": {
+    "types": ["astro/client"],
+    "paths": { "@sododeck/ui/*": ["../../packages/ui/src/*"] }
+  },
+  "include": [".astro/types.d.ts", "src", "*.mjs"],
+  "exclude": ["dist"]
+}
