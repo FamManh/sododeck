@@ -20,6 +20,7 @@ export function nodeCanvasPosition(file: SododeckFile, nodeId: Id): Point | null
   const index = file.nodes.findIndex((n) => n.id === nodeId);
   if (index === -1) return null;
   const node = file.nodes[index];
+  if (node === undefined) return null;
   return (
     node.position ?? {
       x: (index % NODE_GRID.columns) * NODE_GRID.dx,
