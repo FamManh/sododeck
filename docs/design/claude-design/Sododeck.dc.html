@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block" rel="stylesheet">
+<script src="./sododeck-data.js"></script>
+<style>
+:root{--app:#e9e9e6;--s:#fff;--s2:#f4f4f1;--s3:#ecece8;--bd:#ecece8;--bd2:#deded8;--cv:#fafaf8;--grp:rgba(255,255,255,.7);--dot:#d9d9d3;--tx:#1c1c1a;--tx2:#55554f;--mu:#72726b;--ac:#f2661c;--ach:#d9560f;--acs:#fdeee4;--act:#b3480c;--ams:#f6eddb;--amt:#8a6112;--rds:#f7e5df;--rdt:#9a3b25;--bls:#e3ecf5;--blt:#2d5b86;--ink:#1c1c1a;--inkt:#fff;--edge:#c9c9c2;--sh:rgba(0,0,0,.06);--code:#f7f7f4;--ov:rgba(28,28,26,.3)}
+html,body{margin:0;height:100%;background:#e9e9e6;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#d9560f}a:hover{color:#b3480c}
+textarea,input,select,button{font-family:inherit;color:inherit}
+input::placeholder,textarea::placeholder{color:var(--mu)}
+</style>
+</helmet>
+<div style="{{ rootStyle }}">
+<sc-if value="{{ isLibrary }}">
+<div style="height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px 0 12px;border-bottom:1px solid var(--bd);background:var(--s)">
+  <div style="display:flex;align-items:center;gap:9px;padding:4px 8px 4px 4px;width:220px">
+    <div style="width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--inkt);display:flex;align-items:center;justify-content:center"><span style="font:400 19px/1 'Material Symbols Outlined'">polyline</span></div>
+    <span style="font-weight:600;font-size:14px;letter-spacing:-.01em">Sododeck</span>
+  </div>
+  <div style="flex:1;display:flex;justify-content:center">
+    <div style="width:min(440px,100%);height:36px;border-radius:10px;background:var(--s2);display:flex;align-items:center;gap:9px;padding:0 12px">
+      <span style="font:300 19px/1 'Material Symbols Outlined';color:var(--mu)">search</span>
+      <input value="{{ libQ }}" onChange="{{ onLibQ }}" placeholder="Search decks" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13px">
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onClick="{{ toggleTheme }}" title="Toggle theme" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">{{ themeIcon }}</span></button>
+    <input type="file" accept=".json,application/json" ref="{{ fileRef }}" onChange="{{ onFile }}" style="display:none">
+    <button onClick="{{ pickFile }}" style="height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">upload_file</span>Import .sododeck.json</button>
+    <button onClick="{{ newDeck }}" style="height:34px;padding:0 14px 0 11px;border-radius:9px;border:none;background:var(--ac);color:#fff;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--ach)"><span style="font:300 20px/1 'Material Symbols Outlined'">add</span>New deck</button>
+  </div>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+  <div style="width:236px;flex:none;border-right:1px solid var(--bd);background:var(--s);padding:14px 12px;display:flex;flex-direction:column;gap:2px">
+    <sc-for list="{{ libNav }}" as="f" hint-placeholder-count="3">
+      <div onClick="{{ f.pick }}" style="{{ f.st }}" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined';color:var(--tx2)">{{ f.i }}</span><span style="flex:1">{{ f.l }}</span><span style="font-size:11.5px;color:var(--mu)">{{ f.c }}</span></div>
+    </sc-for>
+    <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;padding:18px 10px 6px">FOLDERS</div>
+    <sc-for list="{{ libFolders }}" as="f" hint-placeholder-count="4">
+      <div onClick="{{ f.pick }}" style="{{ f.st }}" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined';color:var(--tx2)">folder</span><span style="flex:1">{{ f.l }}</span><span style="font-size:11.5px;color:var(--mu)">{{ f.c }}</span></div>
+    </sc-for>
+    <div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--tx2)" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">create_new_folder</span>New folder</div>
+    <div style="flex:1"></div>
+    <div style="border-radius:12px;background:var(--s2);padding:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500"><span style="font:300 18px/1 'Material Symbols Outlined'">storage</span>Browser storage</div>
+      <div style="height:5px;border-radius:5px;background:var(--s3);overflow:hidden"><div style="width:12%;height:100%;background:var(--ac)"></div></div>
+      <div style="font-size:11.5px;color:var(--mu)">1.2 MB of ~10 MB · no account needed</div>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;overflow:auto;padding:22px 28px 32px">
+    <sc-if value="{{ banner }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:14px;background:var(--ams);color:var(--amt);border-radius:14px;padding:12px 14px 12px 16px;margin-bottom:22px">
+        <span style="font:400 22px/1 'Material Symbols Outlined'">backup</span>
+        <div style="flex:1;min-width:0;font-size:13px;line-height:1.45"><span style="font-weight:600">Your decks live only in this browser.</span> Clearing site data or switching devices removes them. Last backup: 6 days ago.</div>
+        <button onClick="{{ exportAll }}" style="height:32px;padding:0 12px;border-radius:9px;border:none;background:var(--amt);color:var(--ams);font-size:12.5px;font-weight:500;cursor:pointer;white-space:nowrap">Export backup</button>
+        <button onClick="{{ closeBanner }}" style="width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:var(--amt);cursor:pointer;display:flex;align-items:center;justify-content:center"><span style="font:300 19px/1 'Material Symbols Outlined'">close</span></button>
+      </div>
+    </sc-if>
+    <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><div style="font-size:22px;font-weight:500;letter-spacing:-.02em">{{ libTitle }}</div><div style="font-size:12.5px;color:var(--mu);margin-top:4px">{{ libCount }}</div></div>
+      <button onClick="{{ openSample }}" style="height:34px;padding:0 13px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">local_shipping</span>Open sample: Logistics Delivery</button>
+      <div style="display:flex;gap:2px;background:var(--s2);border-radius:9px;padding:2px">
+        <button onClick="{{ setGrid }}" style="{{ gridBtn }}"><span style="font:300 19px/1 'Material Symbols Outlined'">grid_view</span></button>
+        <button onClick="{{ setList }}" style="{{ listBtn }}"><span style="font:300 19px/1 'Material Symbols Outlined'">view_list</span></button>
+      </div>
+    </div>
+    <sc-if value="{{ isGrid }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px">
+        <div onClick="{{ newDeck }}" style="border:1.5px dashed var(--bd2);border-radius:16px;min-height:236px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;color:var(--tx2)" style-hover="border-color:var(--ac);color:var(--act);background:var(--s)">
+          <div style="width:42px;height:42px;border-radius:12px;background:var(--s2);display:flex;align-items:center;justify-content:center"><span style="font:300 24px/1 'Material Symbols Outlined'">add</span></div>
+          <div style="font-size:13.5px;font-weight:500">New deck</div><div style="font-size:12px;color:var(--mu)">Blank canvas, saved locally</div>
+        </div>
+        <sc-for list="{{ libDecks }}" as="d" hint-placeholder-count="5">
+          <div onClick="{{ d.open }}" style="border:1px solid var(--bd);border-radius:16px;background:var(--s);overflow:hidden;cursor:pointer;display:flex;flex-direction:column" style-hover="box-shadow:0 4px 16px var(--sh);border-color:var(--bd2)">
+            <div style="height:148px;background:var(--cv);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:16px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:center">
+              <svg width="260" height="140" viewBox="0 0 260 140">
+                <sc-for list="{{ d.lines }}" as="l"><path d="{{ l.d }}" fill="none" style="stroke:var(--edge);stroke-width:1.2"></path></sc-for>
+                <sc-for list="{{ d.rects }}" as="r"><rect x="{{ r.x }}" y="{{ r.y }}" width="44" height="18" rx="5" style="{{ r.st }}"></rect></sc-for>
+              </svg>
+            </div>
+            <div style="padding:13px 14px 14px;display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</div><sc-if value="{{ d.sampleB }}"><span style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:999px;background:var(--acs);color:var(--act)">Sample</span></sc-if></div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)"><span>{{ d.meta }}</span><span>·</span><span>{{ d.edited }}</span><div style="flex:1"></div><span style="display:flex;align-items:center;gap:4px"><span style="font:300 15px/1 'Material Symbols Outlined'">folder</span>{{ d.folder }}</span></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isList }}">
+      <div style="border:1px solid var(--bd);border-radius:14px;background:var(--s);overflow:hidden">
+        <div style="display:grid;grid-template-columns:minmax(0,2fr) 1fr 1fr 1fr;gap:12px;padding:10px 16px;font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;border-bottom:1px solid var(--bd)"><span>NAME</span><span>FOLDER</span><span>SIZE</span><span>EDITED</span></div>
+        <sc-for list="{{ libDecks }}" as="d">
+          <div onClick="{{ d.open }}" style="display:grid;grid-template-columns:minmax(0,2fr) 1fr 1fr 1fr;gap:12px;align-items:center;padding:0 16px;height:52px;font-size:13px;border-bottom:1px solid var(--bd);cursor:pointer" style-hover="background:var(--s2)">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="font:300 20px/1 'Material Symbols Outlined';color:var(--tx2)">polyline</span><span style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</span><sc-if value="{{ d.sampleB }}"><span style="font-size:11px;font-weight:500;padding:3px 8px;border-radius:999px;background:var(--acs);color:var(--act)">Sample</span></sc-if></div>
+            <span style="color:var(--tx2)">{{ d.folder }}</span><span style="color:var(--tx2)">{{ d.meta }}</span><span style="color:var(--mu)">{{ d.edited }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ noDecks }}"><div style="padding:60px 0;text-align:center;color:var(--mu);font-size:13px">No decks match “{{ libQ }}”.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{ isRules }}">
+<div style="height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px 0 12px;border-bottom:1px solid var(--bd);background:var(--s)">
+  <div onClick="{{ goLibrary }}" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 8px 4px 4px;border-radius:10px" style-hover="background:var(--s2)">
+    <div style="width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--inkt);display:flex;align-items:center;justify-content:center"><span style="font:400 19px/1 'Material Symbols Outlined'">polyline</span></div>
+    <span style="font-weight:600;font-size:14px">Sododeck</span>
+  </div>
+  <span style="color:var(--mu)">/</span>
+  <span onClick="{{ goDeck }}" style="font-size:13px;color:var(--tx2);cursor:pointer" style-hover="color:var(--tx)">{{ deckName }}</span>
+  <span style="color:var(--mu)">/</span>
+  <span style="font-size:13px;font-weight:500">Rules</span>
+  <div style="flex:1"></div>
+  <sc-if value="{{ saving }}"><span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px"><span style="font:300 16px/1 'Material Symbols Outlined'">sync</span>Saving…</span></sc-if>
+  <sc-if value="{{ saved }}"><span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px"><span style="font:300 16px/1 'Material Symbols Outlined'">cloud_done</span>Saved in this browser</span></sc-if>
+  <button onClick="{{ toggleTheme }}" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">{{ themeIcon }}</span></button>
+  <button onClick="{{ goDeck }}" style="height:34px;padding:0 13px;border-radius:9px;border:none;background:var(--ac);color:#fff;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--ach)"><span style="font:300 19px/1 'Material Symbols Outlined'">arrow_back</span>Back to canvas</button>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+  <div style="width:264px;flex:none;border-right:1px solid var(--bd);background:var(--s);padding:14px 12px;display:flex;flex-direction:column;gap:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">DECISION TABLES</span><button onClick="{{ newRule }}" style="height:26px;padding:0 9px;border-radius:999px;border:none;background:var(--s2);display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer"><span style="font:300 16px/1 'Material Symbols Outlined'">add</span>New</button></div>
+    <sc-for list="{{ ruleList }}" as="r" hint-placeholder-count="3">
+      <div onClick="{{ r.pick }}" style="{{ r.st }}" style-hover="background:var(--s2)">
+        <div style="width:30px;height:30px;border-radius:9px;background:var(--ams);color:var(--amt);display:flex;align-items:center;justify-content:center;flex:none"><span style="font:300 18px/1 'Material Symbols Outlined'">table_chart</span></div>
+        <div style="min-width:0"><div style="{{ r.tst }}">{{ r.name }}</div><div style="font-size:11.5px;color:var(--mu);margin-top:2px">{{ r.sub }}</div></div>
+      </div>
+    </sc-for>
+    <div style="flex:1"></div>
+    <div style="font-size:12px;color:var(--mu);line-height:1.5;padding:10px 6px">Rules are shared across the deck. Attach one to any flow step; edits apply everywhere it is used.</div>
+  </div>
+  <div style="flex:1;min-width:0;overflow:auto;padding:24px 28px;background:var(--cv)">
+    <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:4px">
+        <input value="{{ rule.name }}" onChange="{{ onRuleName }}" style="font-size:22px;font-weight:500;letter-spacing:-.02em;border:none;outline:none;background:transparent;padding:0">
+        <input value="{{ rule.desc }}" onChange="{{ onRuleDesc }}" placeholder="Describe what this table decides" style="font-size:13px;color:var(--tx2);border:none;outline:none;background:transparent;padding:0">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:var(--mu)">Hit policy</span>
+        <select value="{{ rule.policy }}" onChange="{{ onPolicy }}" style="height:34px;border:1px solid var(--bd2);border-radius:9px;padding:0 8px;font-size:13px;background:var(--s);outline:none">
+          <sc-for list="{{ policies }}" as="p"><option value="{{ p.p }}">{{ p.p }}</option></sc-for>
+        </select>
+        <button onClick="{{ addCond }}" style="height:34px;padding:0 11px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12.5px" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--amt)">add</span>Condition</button>
+        <button onClick="{{ addAct }}" style="height:34px;padding:0 11px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12.5px" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--act)">add</span>Action</button>
+      </div>
+    </div>
+    <div style="border:1px solid var(--bd);border-radius:14px;background:var(--s);overflow:hidden;min-width:640px">
+      <div style="{{ gridHead }}">
+        <div style="background:var(--s2)"></div>
+        <div style="{{ whenSpan }}">WHEN</div>
+        <div style="{{ thenSpan }}">THEN</div>
+        <div style="background:var(--acs)"></div>
+      </div>
+      <div style="{{ gridHead }}">
+        <div style="padding:10px 0 10px 14px;font-size:11px;color:var(--mu)">#</div>
+        <sc-for list="{{ condCols }}" as="c"><div style="padding:6px 4px;border-bottom:1px solid var(--bd)"><input value="{{ c.c }}" onChange="{{ c.set }}" style="width:100%;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;padding:0 8px;font-size:12.5px;font-weight:500;outline:none" style-focus="border-color:var(--bd2);background:var(--s2)"></div></sc-for>
+        <sc-for list="{{ actCols }}" as="c"><div style="padding:6px 4px;border-bottom:1px solid var(--bd)"><input value="{{ c.c }}" onChange="{{ c.set }}" style="width:100%;height:30px;border:1px solid transparent;border-radius:8px;background:transparent;padding:0 8px;font-size:12.5px;font-weight:500;outline:none" style-focus="border-color:var(--bd2);background:var(--s2)"></div></sc-for>
+        <div></div>
+      </div>
+      <sc-for list="{{ ruleRows }}" as="r" hint-placeholder-count="4">
+        <div style="{{ r.rowStyle }}">
+          <div style="{{ r.nStyle }}">{{ r.n }}</div>
+          <sc-for list="{{ r.cells }}" as="c"><div style="padding:0 4px"><input value="{{ c.v }}" onChange="{{ c.set }}" style="{{ c.st }}" style-focus="border-color:var(--ac);background:var(--s)"></div></sc-for>
+          <div style="display:flex;justify-content:center"><button onClick="{{ r.del }}" title="Delete row" style="width:28px;height:28px;border-radius:8px;border:none;background:transparent;cursor:pointer;color:var(--mu);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2);color:var(--rdt)"><span style="font:300 18px/1 'Material Symbols Outlined'">delete</span></button></div>
+        </div>
+      </sc-for>
+      <div onClick="{{ addRow }}" style="display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-top:1px solid var(--bd);font-size:13px;color:var(--tx2);cursor:pointer" style-hover="background:var(--s2);color:var(--tx)"><span style="font:300 19px/1 'Material Symbols Outlined'">add</span>Add row</div>
+    </div>
+    <div style="font-size:12px;color:var(--mu);margin-top:12px;line-height:1.5">Cells accept <span style="font-family:'Geist Mono',monospace;color:var(--tx2)">≤ 5</span>, <span style="font-family:'Geist Mono',monospace;color:var(--tx2)">&gt; 20</span>, exact values, comma-separated lists, or <span style="font-family:'Geist Mono',monospace;color:var(--tx2)">Any</span>.</div>
+  </div>
+  <div style="width:320px;flex:none;border-left:1px solid var(--bd);background:var(--s);overflow:auto;padding:0 16px">
+    <div style="padding:16px 0;border-bottom:1px solid var(--bd)">
+      <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;margin-bottom:10px">TEST INPUT</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ testInputs }}" as="t"><label style="display:flex;align-items:center;gap:10px;font-size:12.5px"><span style="flex:1;color:var(--tx2)">{{ t.c }}</span><input value="{{ t.v }}" onChange="{{ t.set }}" style="width:130px;height:34px;border:1px solid var(--bd2);border-radius:9px;padding:0 10px;font-size:13px;font-family:'Geist Mono',monospace;outline:none;background:var(--s)" style-focus="border-color:var(--ac)"></label></sc-for>
+      </div>
+      <sc-if value="{{ testHit }}">
+        <div style="margin-top:12px;background:var(--acs);color:var(--act);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:12.5px">
+          <div style="display:flex;align-items:center;gap:7px;font-weight:600"><span style="font:400 18px/1 'Material Symbols Outlined'">check_circle</span>Matched {{ testRowTxt }}</div>
+          <sc-for list="{{ testOut }}" as="o"><div style="display:flex;justify-content:space-between;gap:10px"><span>{{ o.a }}</span><span style="font-weight:500">{{ o.v }}</span></div></sc-for>
+        </div>
+      </sc-if>
+      <sc-if value="{{ testMiss }}"><div style="margin-top:12px;background:var(--rds);color:var(--rdt);border-radius:12px;padding:12px;font-size:12.5px;display:flex;gap:7px;align-items:center"><span style="font:400 18px/1 'Material Symbols Outlined'">error</span>No row matches these inputs</div></sc-if>
+    </div>
+    <div style="padding:16px 0;border-bottom:1px solid var(--bd)">
+      <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;margin-bottom:10px">USED IN</div>
+      <sc-if value="{{ hasUsages }}"><div style="display:flex;flex-direction:column;gap:6px">
+        <sc-for list="{{ usages }}" as="u"><div onClick="{{ u.go }}" style="background:var(--s2);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px" style-hover="background:var(--s3)"><span style="font:300 18px/1 'Material Symbols Outlined';color:var(--act)">conversion_path</span><div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500">{{ u.flow }}</div><div style="font-size:11.5px;color:var(--mu);margin-top:2px">{{ u.text }}</div></div><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--mu)">arrow_forward</span></div></sc-for>
+      </div></sc-if>
+      <sc-if value="{{ noUsages }}"><div style="font-size:12.5px;color:var(--mu)">Not attached to any step yet.</div></sc-if>
+    </div>
+    <div style="padding:16px 0">
+      <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;margin-bottom:10px">CHECKS</div>
+      <sc-for list="{{ checks }}" as="c"><div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:4px 0;color:var(--tx2)"><sc-if value="{{ c.ok }}"><span style="font:400 17px/1 'Material Symbols Outlined';color:var(--ac)">check</span></sc-if><sc-if value="{{ c.bad }}"><span style="font:400 17px/1 'Material Symbols Outlined';color:var(--amt)">warning</span></sc-if><span>{{ c.t }}</span></div></sc-for>
+    </div>
+  </div>
+</div>
+</sc-if>
+<sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+<div style="height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px 0 12px;border-bottom:1px solid var(--bd);background:var(--s)">
+  <div onClick="{{ goLibrary }}" title="Library" style="display:flex;align-items:center;gap:9px;cursor:pointer;padding:4px 8px 4px 4px;border-radius:10px" style-hover="background:var(--s2)">
+    <div style="width:30px;height:30px;border-radius:9px;background:var(--ink);color:var(--inkt);display:flex;align-items:center;justify-content:center"><span style="font:400 19px/1 'Material Symbols Outlined'">polyline</span></div>
+    <span style="font-weight:600;font-size:14px">Sododeck</span>
+  </div>
+  <span style="color:var(--mu)">/</span>
+  <span style="font-size:13px;color:var(--tx2)">{{ deckFolder }}</span>
+  <span style="color:var(--mu)">/</span>
+  <input value="{{ deckName }}" onChange="{{ onDeckName }}" style="font-size:13.5px;font-weight:500;border:1px solid transparent;border-radius:8px;padding:5px 7px;outline:none;background:transparent;width:170px" style-hover="border-color:var(--bd2)" style-focus="border-color:var(--ac);background:var(--s)">
+  <sc-if value="{{ notFlow }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:2px;background:var(--s2);border-radius:10px;padding:3px;margin-left:8px">
+      <sc-for list="{{ views }}" as="v" hint-placeholder-count="3">
+        <sc-if value="{{ v.on }}"><div style="height:28px;padding:0 12px;border-radius:8px;background:var(--s);box-shadow:0 1px 2px var(--sh);display:flex;align-items:center;font-size:12.5px;font-weight:500">{{ v.v }}</div></sc-if>
+        <sc-if value="{{ v.off }}"><div onClick="{{ v.pick }}" style="height:28px;padding:0 12px;border-radius:8px;display:flex;align-items:center;font-size:12.5px;color:var(--tx2);cursor:pointer" style-hover="color:var(--tx)">{{ v.v }}</div></sc-if>
+      </sc-for>
+      <div onClick="{{ addView }}" title="New view" style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--tx2);cursor:pointer" style-hover="background:var(--s);color:var(--tx)"><span style="font:300 18px/1 'Material Symbols Outlined'">add</span></div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isFlow }}">
+    <div style="display:flex;align-items:center;gap:8px;height:32px;padding:0 6px 0 12px;border-radius:999px;background:var(--acs);color:var(--act);margin-left:8px;font-size:12.5px;font-weight:500;white-space:nowrap">
+      <span style="font:400 17px/1 'Material Symbols Outlined'">conversion_path</span>Flow mode · {{ flowName }}
+      <button onClick="{{ exitFlow }}" title="Exit flow mode" style="width:22px;height:22px;border-radius:999px;border:none;background:var(--s);color:var(--act);display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="font:400 15px/1 'Material Symbols Outlined'">close</span></button>
+    </div>
+  </sc-if>
+  <div style="flex:1"></div>
+  <sc-if value="{{ saving }}"><span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="font:300 16px/1 'Material Symbols Outlined'">sync</span>Saving…</span></sc-if>
+  <sc-if value="{{ saved }}" hint-placeholder-val="{{ true }}"><span style="font-size:12px;color:var(--mu);display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="font:300 16px/1 'Material Symbols Outlined'">cloud_done</span>Saved in this browser</span></sc-if>
+  <div onClick="{{ openCmd }}" style="height:34px;width:200px;border-radius:9px;background:var(--s2);display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;cursor:pointer;color:var(--mu);font-size:12.5px" style-hover="background:var(--s3)">
+    <span style="font:300 18px/1 'Material Symbols Outlined'">search</span><span style="flex:1;white-space:nowrap">Jump to…</span><span style="font:500 11px/1 'Geist Mono',monospace;padding:4px 6px;border-radius:6px;background:var(--s);border:1px solid var(--bd2);color:var(--tx2)">⌘K</span>
+  </div>
+  <button onClick="{{ toggleTheme }}" title="Toggle theme" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">{{ themeIcon }}</span></button>
+  <button onClick="{{ openExport }}" style="height:34px;padding:0 14px 0 11px;border-radius:9px;border:none;background:var(--ac);color:#fff;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--ach)"><span style="font:300 19px/1 'Material Symbols Outlined'">ios_share</span>Export</button>
+</div>
+<div style="flex:1;display:flex;min-height:0">
+  <div style="width:264px;flex:none;border-right:1px solid var(--bd);background:var(--s);display:flex;flex-direction:column;min-height:0">
+  <sc-if value="{{ notFlow }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:12px 12px 8px"><div style="display:flex;gap:2px;background:var(--s2);border-radius:9px;padding:2px">
+      <div onClick="{{ tabOutline }}" style="{{ tabOst }}">Outline</div><div onClick="{{ tabPalette }}" style="{{ tabPst }}">Palette</div>
+    </div></div>
+    <div style="flex:1;overflow:auto;padding:0 10px 10px;min-height:0">
+      <sc-if value="{{ leftOutline }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ outline }}" as="g" hint-placeholder-count="6">
+          <div onClick="{{ g.toggle }}" style="display:flex;align-items:center;gap:6px;height:30px;padding:0 6px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:500" style-hover="background:var(--s2)">
+            <span style="font:300 18px/1 'Material Symbols Outlined';color:var(--mu)">{{ g.chev }}</span><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--tx2)">select</span><span style="flex:1">{{ g.label }}</span><span style="font-size:11.5px;color:var(--mu);font-weight:400">{{ g.count }}</span>
+          </div>
+          <sc-if value="{{ g.open }}"><div style="display:flex;flex-direction:column;gap:1px;padding:0 0 4px 22px">
+            <sc-for list="{{ g.items }}" as="n"><div onClick="{{ n.select }}" style="{{ n.rowStyle }}" style-hover="background:var(--s2)"><div style="{{ n.tile }}"><span style="font:300 14px/1 'Material Symbols Outlined'">{{ n.icon }}</span></div><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.title }}</span></div></sc-for>
+          </div></sc-if>
+        </sc-for>
+        <sc-if value="{{ noOutline }}"><div style="padding:24px 10px;font-size:12.5px;color:var(--mu);line-height:1.5;text-align:center">No nodes yet. Switch to Palette to add one.</div></sc-if>
+      </sc-if>
+      <sc-if value="{{ leftPalette }}">
+        <div style="height:34px;border-radius:9px;border:1px solid var(--bd2);display:flex;align-items:center;gap:7px;padding:0 10px;margin:2px 2px 12px"><span style="font:300 18px/1 'Material Symbols Outlined';color:var(--mu)">search</span><input value="{{ palQ }}" onChange="{{ onPalQ }}" placeholder="Filter components" style="border:none;outline:none;background:transparent;flex:1;min-width:0;font-size:12.5px"></div>
+        <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;padding:0 4px 8px">COMPONENTS · DRAG OR CLICK</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 2px">
+          <sc-for list="{{ palette }}" as="p" hint-placeholder-count="6">
+            <div draggable="true" onDragStart="{{ p.drag }}" onClick="{{ p.add }}" style="border:1px solid var(--bd);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab;background:var(--s)" style-hover="border-color:var(--bd2);box-shadow:0 2px 6px var(--sh)">
+              <div style="{{ p.tile }}"><span style="font:300 18px/1 'Material Symbols Outlined'">{{ p.icon }}</span></div>
+              <div><div style="font-size:12.5px;font-weight:500">{{ p.label }}</div><div style="font-size:11px;color:var(--mu);margin-top:2px">{{ p.hint }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;padding:16px 4px 8px">STRUCTURE</div>
+        <div style="display:flex;flex-direction:column;gap:6px;padding:0 2px">
+          <div style="border:1px dashed var(--bd2);border-radius:12px;padding:10px;display:flex;align-items:center;gap:10px;font-size:12.5px"><span style="font:300 19px/1 'Material Symbols Outlined';color:var(--tx2)">select</span><div><div style="font-weight:500">Group</div><div style="font-size:11px;color:var(--mu);margin-top:2px">Boundary, zone or team</div></div></div>
+          <div style="border:1px solid var(--bd);border-radius:12px;padding:10px;display:flex;align-items:center;gap:10px;font-size:12.5px"><span style="font:300 19px/1 'Material Symbols Outlined';color:var(--tx2)">sticky_note_2</span><div><div style="font-weight:500">Note</div><div style="font-size:11px;color:var(--mu);margin-top:2px">Markdown annotation</div></div></div>
+        </div>
+      </sc-if>
+    </div>
+    <div style="border-top:1px solid var(--bd);flex:none;padding:10px 10px 12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 6px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">FEATURES</span><span style="font:300 18px/1 'Material Symbols Outlined';color:var(--mu);cursor:pointer">add</span></div>
+      <sc-if value="{{ hasFlows }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;align-items:center;gap:8px;height:30px;padding:0 6px;font-size:12.5px;font-weight:500"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--tx2)">deployed_code</span><span style="flex:1">Delivery</span><span style="font-size:11.5px;color:var(--mu);font-weight:400">5 flows</span></div>
+        <div style="display:flex;flex-direction:column;gap:1px;padding-left:14px">
+          <sc-for list="{{ flowsList }}" as="f" hint-placeholder-count="5"><div onClick="{{ f.open }}" style="{{ f.rowStyle }}" style-hover="background:var(--s2)"><span style="font:300 16px/1 'Material Symbols Outlined';color:var(--act)">conversion_path</span><span style="flex:1">{{ f.name }}</span><span style="font-size:11px;color:var(--mu)">{{ f.n }}</span></div></sc-for>
+        </div>
+        <div onClick="{{ openRules }}" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 6px;margin-top:4px;border-radius:8px;font-size:12.5px;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--amt)">table_chart</span><span style="flex:1">Rules</span><span style="font-size:11.5px;color:var(--mu)">{{ ruleCount }}</span></div>
+      </sc-if>
+      <sc-if value="{{ noFlows }}"><div style="border:1px dashed var(--bd2);border-radius:10px;padding:12px;font-size:12px;color:var(--mu);line-height:1.5">No features yet. Add nodes, then record a flow across them.</div></sc-if>
+    </div>
+  </sc-if>
+  <sc-if value="{{ isFlow }}">
+    <div style="padding:14px 14px 12px;border-bottom:1px solid var(--bd)">
+      <div onClick="{{ exitFlow }}" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--tx2);cursor:pointer;margin-bottom:10px" style-hover="color:var(--tx)"><span style="font:300 16px/1 'Material Symbols Outlined'">arrow_back</span>Back to canvas</div>
+      <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;margin-bottom:6px">DELIVERY · FLOWS</div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <sc-for list="{{ flowsList }}" as="f"><div onClick="{{ f.open }}" style="{{ f.rowStyle }}" style-hover="background:var(--s2)"><span style="font:300 16px/1 'Material Symbols Outlined'">conversion_path</span><span style="flex:1">{{ f.name }}</span><span style="font-size:11px;color:var(--mu)">{{ f.n }}</span></div></sc-for>
+      </div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:12px 10px">
+      <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;padding:0 6px 8px">STEPS</div>
+      <sc-for list="{{ stepList }}" as="st">
+        <div onClick="{{ st.go }}" style="{{ st.rowStyle }}" style-hover="background:var(--s2)">
+          <div style="{{ st.dot }}">{{ st.n }}</div>
+          <div style="min-width:0;padding-top:2px;flex:1"><div style="font-size:12.5px;font-weight:500;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ st.text }}</div><div style="font:400 11px 'Geist Mono',monospace;color:var(--mu);margin-top:3px">{{ st.label }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+</div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0">
+  <div style="flex:1;min-height:0;position:relative;background:var(--cv);overflow:hidden">
+    <div style="position:absolute;inset:0;background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:22px 22px"></div>
+    <div ref="{{ scrollRef }}" onScroll="{{ onScroll }}" onMouseDown="{{ bgDown }}" onDragOver="{{ onDragOver }}" onDrop="{{ onDrop }}" style="position:absolute;inset:0;overflow:auto">
+      <div style="{{ outerStyle }}">
+        <div style="{{ worldStyle }}">
+          <sc-for list="{{ cGroups }}" as="g">
+            <div style="{{ g.style }}"><div onClick="{{ g.drill }}" title="Open this level" style="position:absolute;left:12px;top:10px;display:flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.08em;color:var(--mu);font-weight:500;cursor:zoom-in;padding:2px 4px;border-radius:6px" style-hover="color:var(--tx);background:var(--s2)">{{ g.label }}<span style="font-weight:400">{{ g.count }}</span></div></div>
+          </sc-for>
+          <svg width="{{ wW }}" height="{{ wH }}" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:1">
+            <sc-for list="{{ cEdges }}" as="e">
+              <path d="{{ e.d }}" style="{{ e.pstyle }}"></path>
+              <circle cx="{{ e.ex }}" cy="{{ e.ey }}" r="3" style="{{ e.dstyle }}"></circle>
+              <path d="{{ e.d }}" style="{{ e.hstyle }}" onClick="{{ e.select }}"></path>
+            </sc-for>
+          </svg>
+          <sc-for list="{{ edgeLabels }}" as="e"><div style="{{ e.lstyle }}">{{ e.label }}</div></sc-for>
+          <sc-for list="{{ cNodes }}" as="n">
+            <div onMouseDown="{{ n.down }}" style="{{ n.style }}">
+              <div style="{{ n.tile }}"><span style="font:300 18px/1 'Material Symbols Outlined'">{{ n.icon }}</span></div>
+              <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.title }}</div><div style="font-size:11px;color:var(--mu);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.sub }}</div></div>
+              <sc-if value="{{ n.hasRules }}"><span title="Has rules" style="font:300 15px/1 'Material Symbols Outlined';color:var(--amt)">table_chart</span></sc-if>
+            </div>
+          </sc-for>
+          {{ token }}
+        </div>
+      </div>
+    </div>
+    <div style="position:absolute;left:14px;top:14px;height:32px;padding:0 12px;border-radius:999px;background:var(--s);border:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:12px;box-shadow:0 1px 2px var(--sh);z-index:5">
+      <span style="font:300 17px/1 'Material Symbols Outlined';color:var(--tx2)">layers</span>
+      <sc-for list="{{ crumbs }}" as="c"><span onClick="{{ c.go }}" style="cursor:pointer;color:var(--tx2)" style-hover="color:var(--tx)">{{ c.t }}</span><sc-if value="{{ c.notLast }}"><span style="font:300 15px/1 'Material Symbols Outlined';color:var(--mu)">chevron_right</span></sc-if></sc-for>
+    </div>
+    <div style="position:absolute;right:14px;top:14px;display:flex;gap:6px;z-index:5">
+      <sc-if value="{{ labelsOn }}"><button onClick="{{ toggleLabels }}" style="height:32px;padding:0 11px;border-radius:9px;border:1px solid var(--ac);background:var(--acs);color:var(--act);display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;font-weight:500"><span style="font:300 17px/1 'Material Symbols Outlined'">label</span>Labels</button></sc-if>
+      <sc-if value="{{ labelsOff }}" hint-placeholder-val="{{ true }}"><button onClick="{{ toggleLabels }}" style="height:32px;padding:0 11px;border-radius:9px;border:1px solid var(--bd);background:var(--s);display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined'">label</span>Labels</button></sc-if>
+      <sc-if value="{{ notFlow }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ focusOn }}"><button onClick="{{ toggleFocus }}" style="height:32px;padding:0 11px;border-radius:9px;border:1px solid var(--ac);background:var(--acs);color:var(--act);display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;font-weight:500"><span style="font:300 17px/1 'Material Symbols Outlined'">center_focus_strong</span>Focus on</button></sc-if>
+        <sc-if value="{{ focusOff }}" hint-placeholder-val="{{ true }}"><button onClick="{{ toggleFocus }}" style="height:32px;padding:0 11px;border-radius:9px;border:1px solid var(--bd);background:var(--s);display:flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined'">center_focus_weak</span>Focus</button></sc-if>
+      </sc-if>
+    </div>
+    <div style="position:absolute;left:14px;bottom:14px;height:36px;padding:0 4px;border-radius:10px;background:var(--s);border:1px solid var(--bd);display:flex;align-items:center;gap:2px;box-shadow:0 1px 2px var(--sh);z-index:5">
+      <button onClick="{{ zoomOut }}" style="width:28px;height:28px;border:none;background:none;border-radius:7px;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2)"><span style="font:300 18px/1 'Material Symbols Outlined'">remove</span></button>
+      <span style="font:400 11.5px 'Geist Mono',monospace;color:var(--tx2);width:42px;text-align:center">{{ zoomLabel }}</span>
+      <button onClick="{{ zoomIn }}" style="width:28px;height:28px;border:none;background:none;border-radius:7px;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2)"><span style="font:300 18px/1 'Material Symbols Outlined'">add</span></button>
+      <span style="width:1px;height:16px;background:var(--bd2);margin:0 2px"></span>
+      <button onClick="{{ zoomFit }}" title="Fit" style="width:28px;height:28px;border:none;background:none;border-radius:7px;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined'">fit_screen</span></button>
+    </div>
+    <sc-if value="{{ notEmpty }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ mmClick }}" style="position:absolute;right:14px;bottom:14px;width:182px;height:112px;border-radius:12px;background:var(--s);border:1px solid var(--bd);box-shadow:0 1px 3px var(--sh);padding:5px;cursor:crosshair;z-index:5">
+        <svg width="100%" height="100%" viewBox="{{ mmVB }}" preserveAspectRatio="xMidYMid meet">
+          <sc-for list="{{ mm.groups }}" as="g"><rect x="{{ g.x }}" y="{{ g.y }}" width="{{ g.w }}" height="{{ g.h }}" rx="18" style="fill:var(--s2);stroke:none"></rect></sc-for>
+          <sc-for list="{{ mm.nodes }}" as="n"><rect x="{{ n.x }}" y="{{ n.y }}" width="164" height="50" rx="10" style="{{ n.st }}"></rect></sc-for>
+          <rect x="{{ mmVp.x }}" y="{{ mmVp.y }}" width="{{ mmVp.w }}" height="{{ mmVp.h }}" rx="10" style="fill:none;stroke:var(--ac);stroke-width:8"></rect>
+        </svg>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showEmptyCanvas }}">
+      <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;background:var(--s);border:1px solid var(--bd);border-radius:18px;padding:24px;box-shadow:0 8px 28px var(--sh);display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;z-index:4">
+        <div style="width:48px;height:48px;border-radius:14px;background:var(--acs);color:var(--act);display:flex;align-items:center;justify-content:center"><span style="font:300 26px/1 'Material Symbols Outlined'">polyline</span></div>
+        <div style="font-size:16px;font-weight:500;margin-top:4px">This deck is empty</div>
+        <div style="font-size:13px;color:var(--tx2);line-height:1.5;text-wrap:pretty">Drag a component from the palette, paste a .sododeck.json into the code panel, or start from the sample.</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center">
+          <button onClick="{{ addService }}" style="height:34px;padding:0 13px 0 10px;border-radius:9px;border:none;background:var(--ac);color:#fff;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--ach)"><span style="font:300 19px/1 'Material Symbols Outlined'">add</span>Add a service</button>
+          <button onClick="{{ pasteJson }}" style="height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px" style-hover="background:var(--s2)"><span style="font:300 18px/1 'Material Symbols Outlined'">data_object</span>Paste JSON</button>
+          <button onClick="{{ openSample }}" style="height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px" style-hover="background:var(--s2)">Open sample</button>
+        </div>
+        <div onClick="{{ restartTour }}" style="font-size:12px;color:var(--mu);cursor:pointer;margin-top:6px;display:flex;align-items:center;gap:4px" style-hover="color:var(--tx)"><span style="font:300 16px/1 'Material Symbols Outlined'">school</span>Replay the 3-step tour</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isFlow }}">
+      <div style="position:absolute;left:50%;bottom:14px;transform:translateX(-50%);width:min(560px,calc(100% - 440px));min-width:420px;background:var(--s);border:1px solid var(--bd);border-radius:16px;box-shadow:0 8px 28px var(--sh);padding:12px 14px;display:flex;flex-direction:column;gap:10px;z-index:6">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="display:flex;gap:4px">
+            <button onClick="{{ prevStep }}" style="width:32px;height:32px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 20px/1 'Material Symbols Outlined'">skip_previous</span></button>
+            <button onClick="{{ togglePlay }}" style="width:32px;height:32px;border-radius:9px;border:none;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:var(--ach)"><span style="font:400 21px/1 'Material Symbols Outlined'">{{ playIcon }}</span></button>
+            <button onClick="{{ nextStep }}" style="width:32px;height:32px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 20px/1 'Material Symbols Outlined'">skip_next</span></button>
+          </div>
+          <div style="flex:1;min-width:0"><div style="font-size:11.5px;color:var(--mu)">{{ flowName }} · Step {{ stepN }} of {{ stepTotal }}</div><div style="font-size:13px;font-weight:500;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ step.title }}</div></div>
+          <button onClick="{{ toggleSpeed }}" style="height:28px;padding:0 9px;border-radius:8px;border:1px solid var(--bd2);background:var(--s);font:500 11.5px 'Geist Mono',monospace;cursor:pointer">{{ speedLabel }}</button>
+        </div>
+        <div style="display:flex;gap:4px"><sc-for list="{{ stepList }}" as="st"><div onClick="{{ st.go }}" style="{{ st.seg }}"></div></sc-for></div>
+      </div>
+    </sc-if>
+  </div>
+  <sc-if value="{{ jsonOpen }}" hint-placeholder-val="{{ true }}">
+    <div style="height:212px;flex:none;border-top:1px solid var(--bd);background:var(--s);display:flex;flex-direction:column;min-height:0">
+      <div style="height:40px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px 0 14px;border-bottom:1px solid var(--bd)">
+        <span style="font:300 18px/1 'Material Symbols Outlined';color:var(--tx2)">data_object</span><span style="font-size:12.5px;font-weight:500">JSON</span>
+        <div style="display:flex;gap:2px;background:var(--s2);border-radius:8px;padding:2px">
+          <button onClick="{{ jsonSelTab }}" style="{{ jtSel }}">{{ selLabel }}</button><button onClick="{{ jsonDeckTab }}" style="{{ jtDeck }}">Deck</button>
+        </div>
+        <sc-if value="{{ jsonOk }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--act)"><span style="width:6px;height:6px;border-radius:50%;background:var(--ac)"></span>{{ jsonMode }}</span></sc-if>
+        <sc-if value="{{ jsonBad }}"><span style="display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--rdt)"><span style="font:400 15px/1 'Material Symbols Outlined'">error</span>{{ jsonErr }}</span></sc-if>
+        <div style="flex:1"></div>
+        <span style="font:400 11px 'Geist Mono',monospace;color:var(--mu)">{{ jsonLines }}</span>
+        <button onClick="{{ copyJson }}" title="Copy" style="width:28px;height:28px;border-radius:7px;border:none;background:none;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined'">content_copy</span></button>
+        <button onClick="{{ toggleJson }}" title="Collapse" style="width:28px;height:28px;border-radius:7px;border:none;background:none;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined'">expand_more</span></button>
+      </div>
+      <textarea value="{{ jsonText }}" onChange="{{ onJson }}" readOnly="{{ jsonReadOnly }}" spellcheck="false" style="flex:1;min-height:0;border:none;outline:none;resize:none;background:var(--code);padding:10px 14px;font:400 12px/1.6 'Geist Mono',monospace;color:var(--tx);tab-size:2"></textarea>
+    </div>
+  </sc-if>
+  <sc-if value="{{ jsonClosed }}">
+    <div onClick="{{ toggleJson }}" style="height:36px;flex:none;border-top:1px solid var(--bd);background:var(--s);display:flex;align-items:center;gap:8px;padding:0 14px;cursor:pointer;font-size:12.5px;color:var(--tx2)" style-hover="color:var(--tx)"><span style="font:300 18px/1 'Material Symbols Outlined'">data_object</span>JSON<div style="flex:1"></div><span style="font:300 19px/1 'Material Symbols Outlined'">expand_less</span></div>
+  </sc-if>
+</div>
+  <div style="width:336px;flex:none;border-left:1px solid var(--bd);background:var(--s);display:flex;flex-direction:column;min-height:0">
+  <sc-if value="{{ inspNode }}">
+    <div style="padding:16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px">
+      <div style="{{ n.tileLg }}"><span style="font:300 21px/1 'Material Symbols Outlined'">{{ n.icon }}</span></div>
+      <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.title }}</div><div style="font-size:11.5px;color:var(--mu);margin-top:3px">{{ n.kindLabel }} · {{ n.groupLabel }} · <span style="font-family:'Geist Mono',monospace">{{ n.id }}</span></div></div>
+      <button onClick="{{ deleteNode }}" title="Delete node" style="width:30px;height:30px;border-radius:8px;border:none;background:none;cursor:pointer;color:var(--mu);display:flex;align-items:center;justify-content:center" style-hover="background:var(--rds);color:var(--rdt)"><span style="font:300 19px/1 'Material Symbols Outlined'">delete</span></button>
+    </div>
+    <div style="flex:1;overflow:auto;padding:0 16px">
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--bd)">
+        <span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">TITLE</span>
+        <input value="{{ n.title }}" onChange="{{ onTitle }}" style="height:36px;border:1px solid var(--bd2);border-radius:10px;padding:0 11px;font-size:13px;outline:none;background:var(--s)" style-focus="border-color:var(--ac)">
+      </div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">DESCRIPTION · MARKDOWN</span>
+          <div style="display:flex;gap:2px;background:var(--s2);border-radius:8px;padding:2px"><button onClick="{{ setWrite }}" style="{{ mwSt }}">Write</button><button onClick="{{ setPreview }}" style="{{ mpSt }}">Preview</button></div></div>
+        <sc-if value="{{ mdWrite }}"><textarea value="{{ n.desc }}" onChange="{{ onDesc }}" rows="5" style="border:1px solid var(--bd2);border-radius:10px;padding:10px 11px;font:400 12.5px/1.55 'Geist Mono',monospace;outline:none;resize:vertical;background:var(--s)" style-focus="border-color:var(--ac)"></textarea></sc-if>
+        <sc-if value="{{ mdPreview }}"><div style="border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;display:flex;flex-direction:column;gap:4px;background:var(--code)">
+          <sc-for list="{{ mdBlocks }}" as="b"><div style="display:flex;gap:8px"><sc-if value="{{ b.li }}"><span style="color:var(--mu)">•</span></sc-if><span><sc-for list="{{ b.parts }}" as="p"><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if><sc-if value="{{ p.code }}"><span style="font:400 12px 'Geist Mono',monospace;background:var(--s2);border-radius:5px;padding:1px 5px">{{ p.t }}</span></sc-if></sc-for></span></div></sc-for>
+          <sc-if value="{{ mdEmpty }}"><span style="color:var(--mu)">Nothing to preview.</span></sc-if>
+        </div></sc-if>
+      </div>
+      <div style="padding:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid var(--bd)">
+        <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">OWNER</span>
+          <select value="{{ n.owner }}" onChange="{{ onOwner }}" style="height:36px;border:1px solid var(--bd2);border-radius:10px;padding:0 8px;font-size:13px;outline:none;background:var(--s)"><sc-for list="{{ teams }}" as="t"><option value="{{ t.t }}">{{ t.t }}</option></sc-for></select></label>
+        <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">TECH</span>
+          <input value="{{ n.tech }}" onChange="{{ onTech }}" style="height:36px;border:1px solid var(--bd2);border-radius:10px;padding:0 10px;font-size:13px;outline:none;background:var(--s);min-width:0" style-focus="border-color:var(--ac)"></label>
+      </div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--bd)">
+        <span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">TAGS</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+          <sc-for list="{{ n.tags }}" as="t"><span style="display:flex;align-items:center;gap:4px;height:26px;padding:0 5px 0 10px;border-radius:999px;background:var(--s2);font-size:12px">{{ t.t }}<span onClick="{{ t.rm }}" style="font:300 15px/1 'Material Symbols Outlined';color:var(--mu);cursor:pointer">close</span></span></sc-for>
+          <input value="{{ tagDraft }}" onChange="{{ onTagDraft }}" onKeyDown="{{ onTagKey }}" placeholder="+ tag" style="width:80px;height:26px;border:1px dashed var(--bd2);border-radius:999px;padding:0 10px;font-size:12px;outline:none;background:transparent">
+        </div>
+      </div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--bd)">
+        <span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">LINKS</span>
+        <sc-for list="{{ n.links }}" as="l"><div style="display:flex;align-items:center;gap:9px;background:var(--s2);border-radius:10px;padding:8px 10px;font-size:12.5px"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--tx2)">link</span><div style="flex:1;min-width:0"><div style="font-weight:500">{{ l.label }}</div><div style="font-size:11px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.url }}</div></div><span onClick="{{ l.rm }}" style="font:300 16px/1 'Material Symbols Outlined';color:var(--mu);cursor:pointer">close</span></div></sc-for>
+        <input value="{{ linkDraft }}" onChange="{{ onLinkDraft }}" onKeyDown="{{ onLinkKey }}" placeholder="Paste a URL and press Enter" style="height:34px;border:1px dashed var(--bd2);border-radius:10px;padding:0 10px;font-size:12.5px;outline:none;background:transparent">
+      </div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">RULES</span><button onClick="{{ attachRule }}" style="height:24px;padding:0 8px;border-radius:999px;border:none;background:var(--s2);font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:3px"><span style="font:300 15px/1 'Material Symbols Outlined'">add</span>Attach</button></div>
+        <sc-for list="{{ n.rules }}" as="r"><div onClick="{{ r.go }}" style="display:flex;align-items:center;gap:9px;background:var(--ams);color:var(--amt);border-radius:10px;padding:9px 10px;font-size:12.5px;font-weight:500;cursor:pointer"><span style="font:300 17px/1 'Material Symbols Outlined'">table_chart</span><span style="flex:1">{{ r.name }}</span><span style="font:300 16px/1 'Material Symbols Outlined'">arrow_forward</span></div></sc-for>
+        <sc-if value="{{ n.noRules }}"><span style="font-size:12.5px;color:var(--mu)">No rules attached.</span></sc-if>
+      </div>
+      <div style="padding:14px 0">
+        <span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">CONNECTIONS · {{ n.connCount }}</span>
+        <div style="display:flex;flex-direction:column;gap:2px;margin-top:8px">
+          <sc-for list="{{ n.conns }}" as="c"><div onClick="{{ c.go }}" style="display:flex;align-items:center;gap:8px;height:30px;padding:0 6px;border-radius:8px;font-size:12.5px;cursor:pointer" style-hover="background:var(--s2)"><span style="font:300 16px/1 'Material Symbols Outlined';color:var(--mu)">{{ c.dir }}</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.title }}</span><span style="font:400 11px 'Geist Mono',monospace;color:var(--mu)">{{ c.label }}</span></div></sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ inspEdge }}">
+    <div style="padding:16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:12px;background:var(--s2);color:var(--tx2);display:flex;align-items:center;justify-content:center"><span style="font:300 21px/1 'Material Symbols Outlined'">arrow_right_alt</span></div>
+      <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:500">Connection</div><div style="font-size:11.5px;color:var(--mu);margin-top:3px">Edge · <span style="font-family:'Geist Mono',monospace">{{ e.id }}</span></div></div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:0 16px">
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:6px;border-bottom:1px solid var(--bd)">
+        <div onClick="{{ e.goFrom }}" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--bd);border-radius:11px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--s2)"><div style="{{ e.fromTile }}"><span style="font:300 16px/1 'Material Symbols Outlined'">{{ e.fromIcon }}</span></div>{{ e.fromT }}</div>
+        <div style="display:flex;align-items:center;gap:8px;padding-left:20px;color:var(--mu);font-size:11.5px"><span style="font:300 18px/1 'Material Symbols Outlined'">south</span><span style="font-family:'Geist Mono',monospace">{{ e.label }}</span></div>
+        <div onClick="{{ e.goTo }}" style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--bd);border-radius:11px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--s2)"><div style="{{ e.toTile }}"><span style="font:300 16px/1 'Material Symbols Outlined'">{{ e.toIcon }}</span></div>{{ e.toT }}</div>
+      </div>
+      <div style="padding:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px;border-bottom:1px solid var(--bd)">
+        <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">LABEL</span><input value="{{ e.label }}" onChange="{{ onELabel }}" style="height:36px;border:1px solid var(--bd2);border-radius:10px;padding:0 10px;font-size:13px;outline:none;background:var(--s);min-width:0" style-focus="border-color:var(--ac)"></label>
+        <label style="display:flex;flex-direction:column;gap:7px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">PROTOCOL</span><select value="{{ e.proto }}" onChange="{{ onEProto }}" style="height:36px;border:1px solid var(--bd2);border-radius:10px;padding:0 8px;font-size:13px;outline:none;background:var(--s)"><sc-for list="{{ protos }}" as="p"><option value="{{ p.p }}">{{ p.p }}</option></sc-for></select></label>
+      </div>
+      <div style="padding:14px 0">
+        <span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">USED IN FLOWS</span>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+          <sc-for list="{{ e.flows }}" as="f"><div onClick="{{ f.go }}" style="display:flex;align-items:center;gap:9px;background:var(--s2);border-radius:10px;padding:9px 10px;font-size:12.5px;cursor:pointer" style-hover="background:var(--s3)"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--act)">conversion_path</span><span style="flex:1;font-weight:500">{{ f.name }}</span><span style="color:var(--mu)">{{ f.stepTxt }}</span></div></sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ inspDeck }}">
+    <div style="padding:16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:12px;background:var(--ink);color:var(--inkt);display:flex;align-items:center;justify-content:center"><span style="font:300 21px/1 'Material Symbols Outlined'">polyline</span></div>
+      <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:500">Deck</div><div style="font-size:11.5px;color:var(--mu);margin-top:3px">Nothing selected</div></div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:0 16px">
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--bd)"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">NAME</span><input value="{{ deckName }}" onChange="{{ onDeckName }}" style="height:36px;border:1px solid var(--bd2);border-radius:10px;padding:0 11px;font-size:13px;outline:none;background:var(--s)" style-focus="border-color:var(--ac)"></div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--bd)"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">DESCRIPTION</span><textarea value="{{ deckDesc }}" onChange="{{ onDeckDesc }}" rows="3" style="border:1px solid var(--bd2);border-radius:10px;padding:10px 11px;font-size:13px;line-height:1.5;outline:none;resize:vertical;background:var(--s)" style-focus="border-color:var(--ac)"></textarea></div>
+      <div style="padding:14px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px;border-bottom:1px solid var(--bd)">
+        <sc-for list="{{ stats }}" as="x"><div style="background:var(--s2);border-radius:10px;padding:10px 12px"><div style="font-size:18px;font-weight:500">{{ x.v }}</div><div style="font-size:11.5px;color:var(--mu);margin-top:2px">{{ x.k }}</div></div></sc-for>
+      </div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:7px;border-bottom:1px solid var(--bd)"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">VIEWS</span><span style="font-size:13px;color:var(--tx2)">{{ viewsTxt }}</span></div>
+      <div style="padding:14px 0;display:flex;flex-direction:column;gap:10px">
+        <span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">STORAGE</span>
+        <div style="font-size:12.5px;color:var(--tx2);line-height:1.5">Saved automatically in this browser. Export a backup before clearing site data or switching machines.</div>
+        <button onClick="{{ exportBackup }}" style="height:34px;border-radius:9px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--s2)"><span style="font:300 18px/1 'Material Symbols Outlined'">download</span>Export .sododeck.json</button>
+      </div>
+    </div>
+  </sc-if>
+  <sc-if value="{{ inspStep }}">
+    <div style="padding:16px;border-bottom:1px solid var(--bd)">
+      <div style="font-size:11px;letter-spacing:.07em;color:var(--act);font-weight:600">STEP {{ stepN }} OF {{ stepTotal }} · {{ flowName }}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+        <div style="{{ step.fromTile }}"><span style="font:300 16px/1 'Material Symbols Outlined'">{{ step.fromIcon }}</span></div>
+        <span style="font:300 18px/1 'Material Symbols Outlined';color:var(--mu)">arrow_forward</span>
+        <div style="{{ step.toTile }}"><span style="font:300 16px/1 'Material Symbols Outlined'">{{ step.toIcon }}</span></div>
+        <span style="margin-left:auto;font:400 11px 'Geist Mono',monospace;padding:3px 8px;border-radius:999px;background:var(--s2);color:var(--tx2)">{{ step.proto }}</span>
+      </div>
+      <div style="font-size:15px;font-weight:500;margin-top:10px;line-height:1.35">{{ step.title }}</div>
+      <div style="font:400 12px 'Geist Mono',monospace;color:var(--mu);margin-top:4px">{{ step.label }}</div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:0 16px">
+      <div style="padding:14px 0;border-bottom:1px solid var(--bd)">
+        <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;margin-bottom:8px">CONDITION</div>
+        <div style="background:var(--code);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font:400 12.5px/1.5 'Geist Mono',monospace"><span style="color:var(--amt)">when </span>{{ step.cond }}</div>
+      </div>
+      <div style="padding:14px 0;border-bottom:1px solid var(--bd)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">RULES</span>
+          <sc-if value="{{ step.hasRule }}"><button onClick="{{ step.openRule }}" style="height:24px;padding:0 9px;border-radius:999px;border:none;background:var(--s2);font-size:11.5px;cursor:pointer;display:flex;align-items:center;gap:4px">Edit rule<span style="font:300 14px/1 'Material Symbols Outlined'">open_in_new</span></button></sc-if></div>
+        <sc-if value="{{ step.hasRule }}">
+          <div style="font-size:13px;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="font:300 17px/1 'Material Symbols Outlined';color:var(--amt)">table_chart</span>{{ step.ruleName }}<span style="font-size:11.5px;color:var(--mu);font-weight:400">· {{ step.policy }}</span></div>
+          <div style="border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+            <div style="{{ step.cols }}"><div style="background:var(--s2)"></div><sc-for list="{{ step.head }}" as="h"><div style="{{ h.st }}">{{ h.t }}</div></sc-for></div>
+            <sc-for list="{{ step.rows }}" as="r"><div style="{{ step.cols }}"><div style="{{ r.nst }}">{{ r.n }}</div><sc-for list="{{ r.cells }}" as="c"><div style="{{ c.st }}">{{ c.v }}</div></sc-for></div></sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;align-items:center"><span style="font-size:11.5px;color:var(--mu)">Evaluated with</span><sc-for list="{{ step.ctx }}" as="c"><span style="font:400 11px 'Geist Mono',monospace;padding:3px 7px;border-radius:6px;background:var(--s2)">{{ c.k }} = {{ c.v }}</span></sc-for></div>
+        </sc-if>
+        <sc-if value="{{ step.noRule }}"><div style="font-size:12.5px;color:var(--mu)">No decision table on this step.</div></sc-if>
+      </div>
+      <div style="padding:14px 0">
+        <div style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500;margin-bottom:10px">SLA</div>
+        <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px"><span style="color:var(--tx2)">Target p95 <span style="font-family:'Geist Mono',monospace;color:var(--tx)">{{ step.sla }}</span></span><span style="color:var(--tx2)">Measured <span style="font-family:'Geist Mono',monospace;color:var(--tx);font-weight:500">{{ step.meas }}</span></span></div>
+        <div style="position:relative;height:8px;border-radius:6px;background:var(--s2)"><div style="{{ step.bar }}"></div><div style="position:absolute;left:76.9%;top:-3px;width:2px;height:14px;background:var(--tx);border-radius:2px"></div></div>
+        <sc-if value="{{ step.ok }}"><div style="font-size:12px;color:var(--act);margin-top:8px;display:flex;align-items:center;gap:5px"><span style="font:400 15px/1 'Material Symbols Outlined'">check_circle</span>Within SLA · {{ step.slaText }}</div></sc-if>
+        <sc-if value="{{ step.over }}"><div style="font-size:12px;color:var(--rdt);margin-top:8px;display:flex;align-items:center;gap:5px"><span style="font:400 15px/1 'Material Symbols Outlined'">error</span>{{ step.slaText }}</div></sc-if>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ exportOpen }}">
+  <div onClick="{{ closeExport }}" style="position:absolute;inset:0;background:var(--ov);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div onClick="{{ stop }}" style="width:min(820px,100%);max-height:100%;background:var(--s);border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--bd)">
+        <div style="flex:1"><div style="font-size:16px;font-weight:500">Export deck</div><div style="font-size:12.5px;color:var(--mu);margin-top:3px">Exports are generated in your browser. Nothing is uploaded.</div></div>
+        <button onClick="{{ closeExport }}" style="width:32px;height:32px;border-radius:9px;border:none;background:none;cursor:pointer;color:var(--tx2);display:flex;align-items:center;justify-content:center" style-hover="background:var(--s2)"><span style="font:300 20px/1 'Material Symbols Outlined'">close</span></button>
+      </div>
+      <div style="display:grid;grid-template-columns:280px minmax(0,1fr);min-height:0;flex:1">
+        <div style="padding:16px;display:flex;flex-direction:column;gap:6px;border-right:1px solid var(--bd);overflow:auto">
+          <sc-for list="{{ exFormats }}" as="f" hint-placeholder-count="5">
+            <div onClick="{{ f.pick }}" style="{{ f.st }}"><div style="{{ f.tl }}"><span style="font:300 19px/1 'Material Symbols Outlined'">{{ f.icon }}</span></div><div style="min-width:0"><div style="font-size:13px;font-weight:500">{{ f.name }}</div><div style="font-size:11.5px;color:var(--mu);margin-top:2px">{{ f.hint }}</div></div></div>
+          </sc-for>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;min-width:0;overflow:auto">
+          <div style="display:flex;flex-direction:column;gap:7px"><span style="font-size:11px;letter-spacing:.07em;color:var(--mu);font-weight:500">SCOPE</span>
+            <div style="display:flex;gap:2px;background:var(--s2);border-radius:10px;padding:3px"><sc-for list="{{ scopes }}" as="o"><div onClick="{{ o.pick }}" style="{{ o.st }}">{{ o.l }}</div></sc-for></div></div>
+          <div style="position:relative;height:250px;border:1px solid var(--bd);border-radius:12px;overflow:hidden">
+            <sc-if value="{{ exIsText }}"><pre style="margin:0;position:absolute;inset:0;overflow:auto;background:var(--code);padding:12px 14px;font:400 11.5px/1.55 'Geist Mono',monospace;color:var(--tx);white-space:pre">{{ exText }}</pre></sc-if>
+            <sc-if value="{{ exIsImage }}">
+              <div style="{{ pvBg }}"></div>
+              <svg viewBox="0 0 1090 660" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:12px;width:calc(100% - 24px);height:calc(100% - 24px)">
+                <sc-for list="{{ pvEdges }}" as="e"><path d="{{ e.d }}" style="fill:none;stroke:var(--edge);stroke-width:2"></path></sc-for>
+                <sc-for list="{{ pvNodes }}" as="n"><rect x="{{ n.x }}" y="{{ n.y }}" width="164" height="50" rx="12" style="fill:var(--s);stroke:var(--bd2);stroke-width:1.5"></rect><text x="{{ n.tx }}" y="{{ n.ty }}" style="font-size:14px;font-weight:500;fill:var(--tx)">{{ n.t }}</text></sc-for>
+              </svg>
+            </sc-if>
+          </div>
+          <sc-if value="{{ exIsPng }}"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:12.5px;color:var(--tx2);flex:1">Scale</span><sc-for list="{{ exScale }}" as="k"><button onClick="{{ k.pick }}" style="{{ k.st }}">{{ k.k }}</button></sc-for></div></sc-if>
+          <sc-if value="{{ hasExOpts }}"><div style="display:flex;flex-direction:column;gap:4px">
+            <sc-for list="{{ exOpts }}" as="o"><div onClick="{{ o.toggle }}" style="display:flex;align-items:center;gap:10px;height:32px;cursor:pointer;font-size:12.5px">
+              <sc-if value="{{ o.on }}"><div style="width:32px;height:18px;border-radius:999px;background:var(--ac);position:relative"><div style="position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#fff"></div></div></sc-if>
+              <sc-if value="{{ o.off }}"><div style="width:32px;height:18px;border-radius:999px;background:var(--s3);position:relative"><div style="position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--s)"></div></div></sc-if>
+              <span>{{ o.label }}</span></div></sc-for>
+          </div></sc-if>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--bd)">
+        <span style="font:300 18px/1 'Material Symbols Outlined';color:var(--mu)">description</span>
+        <span style="font:400 12.5px 'Geist Mono',monospace;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ exFile }}</span>
+        <span style="font-size:12px;color:var(--mu)">{{ exSize }}</span>
+        <sc-if value="{{ exIsText }}"><button onClick="{{ copyEx }}" style="height:36px;padding:0 13px;border-radius:10px;border:1px solid var(--bd2);background:var(--s);display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px" style-hover="background:var(--s2)"><span style="font:300 17px/1 'Material Symbols Outlined'">content_copy</span>Copy</button></sc-if>
+        <button onClick="{{ doExport }}" style="height:36px;padding:0 16px 0 12px;border-radius:10px;border:none;background:var(--ac);color:#fff;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500" style-hover="background:var(--ach)"><span style="font:300 19px/1 'Material Symbols Outlined'">download</span>Download</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+<sc-if value="{{ cmdOpen }}">
+  <div onClick="{{ closeCmd }}" style="position:absolute;inset:0;background:var(--ov);z-index:60;display:flex;justify-content:center;padding-top:12vh">
+    <div onClick="{{ stop }}" style="width:min(580px,92%);align-self:flex-start;background:var(--s);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.28);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:10px;padding:0 16px;height:54px;border-bottom:1px solid var(--bd)"><span style="font:300 21px/1 'Material Symbols Outlined';color:var(--mu)">search</span><input autoFocus="{{ true }}" value="{{ cmdQ }}" onChange="{{ onCmdQ }}" onKeyDown="{{ onCmdKey }}" placeholder="Jump to a node, flow or command" style="flex:1;border:none;outline:none;background:transparent;font-size:15px"><span style="font:500 11px 'Geist Mono',monospace;padding:4px 6px;border-radius:6px;border:1px solid var(--bd2);color:var(--mu)">esc</span></div>
+      <div style="padding:8px;display:flex;flex-direction:column;gap:1px;max-height:420px;overflow:auto">
+        <sc-for list="{{ cmds }}" as="c"><div onClick="{{ c.run }}" style="{{ c.st }}" style-hover="background:var(--s2)"><span style="font:300 19px/1 'Material Symbols Outlined';color:var(--tx2)">{{ c.i }}</span><span style="flex:1;font-size:13.5px">{{ c.t }}</span><span style="font-size:11.5px;color:var(--mu)">{{ c.kind }}</span></div></sc-for>
+        <sc-if value="{{ noCmds }}"><div style="padding:24px;text-align:center;color:var(--mu);font-size:13px">No results</div></sc-if>
+      </div>
+      <div style="display:flex;gap:14px;padding:10px 16px;border-top:1px solid var(--bd);font-size:11.5px;color:var(--mu)"><span>↵ open</span><span>esc close</span><span>←/→ step through a flow</span></div>
+    </div>
+  </div>
+</sc-if>
+<sc-if value="{{ tourOn }}">
+  <div style="{{ tour.st }}">
+    <div style="{{ tour.arrow }}"></div>
+    <div style="font-size:11px;opacity:.7;margin-bottom:6px">{{ tourNum }}</div>
+    <div style="font-size:14px;font-weight:500">{{ tour.t }}</div>
+    <div style="font-size:12.5px;line-height:1.5;opacity:.85;margin-top:6px;text-wrap:pretty">{{ tour.b }}</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+      <div style="display:flex;gap:4px;flex:1"><sc-for list="{{ tourDots }}" as="d"><div style="{{ d.st }}"></div></sc-for></div>
+      <button onClick="{{ tourSkip }}" style="height:28px;padding:0 8px;border:none;background:none;color:var(--inkt);opacity:.7;font-size:12px;cursor:pointer">Skip</button>
+      <sc-if value="{{ tourHasBack }}"><button onClick="{{ tourBack }}" style="height:28px;padding:0 10px;border-radius:8px;border:1px solid rgba(128,128,128,.4);background:none;color:var(--inkt);font-size:12px;cursor:pointer">Back</button></sc-if>
+      <button onClick="{{ tourNext }}" style="height:28px;padding:0 12px;border-radius:8px;border:none;background:var(--ac);color:#fff;font-size:12px;font-weight:500;cursor:pointer">{{ tourNextLabel }}</button>
+    </div>
+  </div>
+</sc-if>
+<sc-if value="{{ hasToast }}">
+  <div style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);z-index:70;background:var(--ink);color:var(--inkt);border-radius:999px;padding:9px 16px;font-size:12.5px;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(0,0,0,.2)"><span style="font:400 17px/1 'Material Symbols Outlined'">check_circle</span>{{ toast }}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;library&quot;,&quot;editor&quot;,&quot;flow&quot;,&quot;rules&quot;,&quot;empty&quot;,&quot;export&quot;],&quot;default&quot;:&quot;library&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;embedded&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const S0 = () => window.SODO;
+const clone = o => JSON.parse(JSON.stringify(o));
+const IC = "font:300 20px/1 'Material Symbols Outlined'";
+class Component extends DCLogic {
+  state = this.init(this.props || {});
+  init(p) {
+    const sc = p.screen || 'library';
+    const base = { screen: 'library', theme: p.theme || 'light', sel: null, flowId: null, step: 0, exportOpen: false, tour: -1, leftTab: 'outline', deckName: 'Logistics Delivery' };
+    if (sc === 'editor') Object.assign(base, { screen: 'editor', sel: { t: 'node', id: 'order' } });
+    if (sc === 'flow') Object.assign(base, { screen: 'editor', flowId: 'f1', step: 3 });
+    if (sc === 'rules') Object.assign(base, { screen: 'rules' });
+    if (sc === 'empty') Object.assign(base, { screen: 'empty', tour: 0, leftTab: 'palette', deckName: 'Untitled deck' });
+    if (sc === 'export') Object.assign(base, { screen: 'editor', exportOpen: true, sel: { t: 'node', id: 'order' } });
+    return Object.assign({
+      nodes: null, edges: null, rules: null, newNodes: [], view: 'System', views: ['System', 'Feature', 'Infra'],
+      collapsed: {}, playing: false, speed: 1, zoom: 0.85, level: null, focus: false, labels: false,
+      jsonOpen: true, jsonTab: 'sel', jsonDraft: null, jsonErr: null, md: 'write', tagDraft: '', linkDraft: '',
+      saveState: 'saved', exportFmt: 'json', exportScope: 'deck', exOpts: { desc: true, pretty: true, transparent: false, scale: 2, groups: true, steps: true },
+      cmdOpen: false, cmdQ: '', libView: 'grid', libFolder: 'All decks', libQ: '', banner: true, decks: null, ruleId: 'r1', testVals: {},
+      toast: null, vp: { x: 0, y: 0, w: 900, h: 600 }, deckDesc: 'Order-to-doorstep delivery for the Berlin and Amsterdam regions.', palQ: ''
+    }, base);
+  }
+  componentDidMount() {
+    if (!S0()) { this.poll = setInterval(() => { if (S0()) { clearInterval(this.poll); this.forceUpdate(); this.fitSoon(); } }, 50); }
+    if (!this.props.embedded) {
+      try { const d = JSON.parse(localStorage.getItem('sododeck:v1') || 'null'); if (d) this.setState({ nodes: d.nodes || null, edges: d.edges || null, rules: d.rules || null, deckName: d.deckName || this.state.deckName, theme: d.theme || this.state.theme }); } catch (e) {}
+      this.onKey = e => {
+        const s = this.state, typing = /INPUT|TEXTAREA|SELECT/.test((e.target || {}).tagName || '');
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState({ cmdOpen: !s.cmdOpen, cmdQ: '' }); }
+        else if (e.key === 'Escape') this.setState({ cmdOpen: false, exportOpen: false });
+        else if (s.flowId && !typing && e.key === 'ArrowRight') this.go(1);
+        else if (s.flowId && !typing && e.key === 'ArrowLeft') this.go(-1);
+      };
+      window.addEventListener('keydown', this.onKey);
+    }
+    this.fitSoon();
+  }
+  componentDidUpdate(pp, ps) {
+    const p = this.props;
+    if (pp.screen !== p.screen || pp.theme !== p.theme) { this.setState(this.init(p)); }
+    if (ps.screen !== this.state.screen || ps.level !== this.state.level) this.fitSoon();
+  }
+  componentWillUnmount() { clearInterval(this.poll); clearInterval(this.playT); clearTimeout(this.saveT); clearTimeout(this.toastT); if (this.onKey) window.removeEventListener('keydown', this.onKey); }
+  fitSoon() { clearTimeout(this.fitT); this.fitT = setTimeout(() => this.fit(), 60); }
+  fit() {
+    const el = this.scroller, S = S0(); if (!el || !S) return;
+    const g = this.state.level && S.GROUPS.find(x => x.id === this.state.level);
+    const w = g ? g.w : S.WW, h = g ? g.h : S.WH;
+    const z = Math.max(0.4, Math.min(1.3, (el.clientWidth - 72) / w, (el.clientHeight - 72) / h));
+    this.setState({ zoom: Math.round(z * 100) / 100 }, () => this.measure());
+  }
+  measure() { const el = this.scroller; if (!el) return; const z = this.state.zoom; this.setState({ vp: { x: (el.scrollLeft - 36) / z, y: (el.scrollTop - 36) / z, w: el.clientWidth / z, h: el.clientHeight / z } }); }
+  nodesArr() { return this.state.screen === 'empty' ? this.state.newNodes : (this.state.nodes || S0().NODES); }
+  edgesArr() { return this.state.screen === 'empty' ? [] : (this.state.edges || S0().EDGES); }
+  rulesArr() { return this.state.rules || S0().RULES; }
+  flash(msg) { clearTimeout(this.toastT); this.setState({ toast: msg }); this.toastT = setTimeout(() => this.setState({ toast: null }), 2600); }
+  touch() {
+    this.setState({ saveState: 'saving' }); clearTimeout(this.saveT);
+    this.saveT = setTimeout(() => {
+      this.setState({ saveState: 'saved' });
+      if (!this.props.embedded) try { const s = this.state; localStorage.setItem('sododeck:v1', JSON.stringify({ nodes: s.nodes, edges: s.edges, rules: s.rules, deckName: s.deckName, theme: s.theme })); } catch (e) {}
+    }, 650);
+  }
+  patchNode(id, patch, silent, keepDraft) {
+    const key = this.state.screen === 'empty' ? 'newNodes' : 'nodes';
+    this.setState(s => ({ [key]: (s[key] || S0().NODES).map(n => n.id === id ? { ...n, ...patch } : n), ...(keepDraft ? {} : { jsonDraft: null, jsonErr: null }) }));
+    if (!silent) this.touch();
+  }
+  patchEdge(id, patch) { this.setState(s => ({ edges: (s.edges || S0().EDGES).map(e => e.id === id ? { ...e, ...patch } : e) })); this.touch(); }
+  setRules(fn) { this.setState(s => ({ rules: fn(clone(s.rules || S0().RULES)) })); this.touch(); }
+  select(sel) { this.setState({ sel, jsonDraft: null, jsonErr: null, tagDraft: '', linkDraft: '' }); }
+  addNode(kind, x, y) {
+    const S = S0(), arr = this.nodesArr(), n = arr.length;
+    const titles = { client: 'New client', edge: 'New gateway', service: 'New service', queue: 'New queue', data: 'New database', external: 'New external system' };
+    const node = { id: kind + '_' + (Date.now() % 100000), group: null, kind, x: Math.round(x != null ? x : 300 + (n % 3) * 190), y: Math.round(y != null ? y : 190 + Math.floor(n / 3) * 85), title: titles[kind], icon: S.KICON[kind], tech: '', host: '', owner: 'Platform', tags: [], desc: '', rules: [], links: [] };
+    const key = this.state.screen === 'empty' ? 'newNodes' : 'nodes';
+    this.setState(s => ({ [key]: [...(s[key] || S.NODES), node], sel: { t: 'node', id: node.id }, tour: s.tour === 0 ? 1 : s.tour }));
+    this.touch();
+  }
+  enterFlow(id, step) { clearInterval(this.playT); this.setState({ screen: 'editor', flowId: id, step: step || 0, playing: false, sel: null, level: null, focus: false, cmdOpen: false }); }
+  exitFlow() { clearInterval(this.playT); this.setState({ flowId: null, playing: false }); }
+  go(d) { const f = S0().FLOWS.find(x => x.id === this.state.flowId); if (!f) return; this.setState(s => ({ step: Math.max(0, Math.min(f.steps.length - 1, s.step + d)) })); }
+  togglePlay() {
+    if (this.state.playing) { clearInterval(this.playT); this.setState({ playing: false }); return; }
+    const f = S0().FLOWS.find(x => x.id === this.state.flowId); if (!f) return;
+    if (this.state.step >= f.steps.length - 1) this.setState({ step: 0 });
+    this.setState({ playing: true });
+    this.playT = setInterval(() => this.setState(s => {
+      if (s.step >= f.steps.length - 1) { clearInterval(this.playT); return { playing: false }; }
+      return { step: s.step + 1 };
+    }), 1700 / this.state.speed);
+  }
+  download(name, data, type) { const b = data instanceof Blob ? data : new Blob([data], { type }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+  deckJson(full) {
+    const s = this.state, S = S0(), inc = this.state.exOpts.desc || full;
+    const nodes = this.nodesArr().map(n => { const o = { id: n.id, type: n.kind, title: n.title, group: n.group, tech: n.tech, owner: n.owner, tags: n.tags, position: { x: n.x, y: n.y } }; if (inc) { o.description = n.desc; o.links = n.links; o.rules = n.rules; } return o; });
+    if (s.screen === 'empty') return { sododeck: 1, name: s.deckName, nodes };
+    return { sododeck: 1, name: s.deckName, views: s.views, groups: S.GROUPS.map(g => ({ id: g.id, label: g.label })), nodes, edges: this.edgesArr().map(e => ({ id: e.id, from: e.from, to: e.to, label: e.label, protocol: e.proto })), flows: S.FLOWS.map(f => ({ id: f.id, name: f.name, steps: f.steps.map(st => ({ edge: st.e, condition: st.cond, sla: st.sla, rule: st.rule })) })), ...(inc ? { rules: this.rulesArr() } : {}) };
+  }
+  scopeData() {
+    const s = this.state, S = S0(); let nodes = this.nodesArr(), edges = this.edgesArr();
+    if (s.exportScope === 'flow' && s.flowId) { const f = S.FLOWS.find(x => x.id === s.flowId), ids = new Set(f.steps.map(x => x.e)); edges = edges.filter(e => ids.has(e.id)); const ns = new Set(edges.flatMap(e => [e.from, e.to])); nodes = nodes.filter(n => ns.has(n.id)); }
+    if (s.exportScope === 'view' && s.view === 'Infra') { nodes = nodes.filter(n => n.kind !== 'client'); }
+    return { nodes, edges };
+  }
+  doExport() {
+    const s = this.state, S = S0(), fmt = s.exportFmt, base = s.deckName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'deck', { nodes, edges } = this.scopeData();
+    if (fmt === 'json') this.download(base + '.sododeck.json', JSON.stringify(this.deckJson(), null, s.exOpts.pretty ? 2 : 0), 'application/json');
+    if (fmt === 'mermaid') this.download(base + '.mmd', S.mermaid(nodes, edges, s.exOpts.groups), 'text/plain');
+    if (fmt === 'svg') this.download(base + '.svg', S.svgString(nodes, edges, s.theme, s.exOpts.transparent), 'image/svg+xml');
+    if (fmt === 'png') {
+      const svg = S.svgString(nodes, edges, s.theme, s.exOpts.transparent), img = new Image(), sc = s.exOpts.scale;
+      img.onload = () => { const c = document.createElement('canvas'); c.width = S.WW * sc; c.height = S.WH * sc; const x = c.getContext('2d'); x.scale(sc, sc); x.drawImage(img, 0, 0); c.toBlob(b => this.download(base + '.png', b)); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+    if (fmt === 'pdf') { const w = window.open('', '_blank'); if (w) { w.document.write('<title>' + s.deckName + '</title><style>@page{size:landscape;margin:12mm}body{margin:0}svg{width:100%;height:auto}</style>' + S.svgString(nodes, edges, 'light', false)); w.document.close(); setTimeout(() => w.print(), 300); } }
+    this.setState({ exportOpen: false }); this.flash('Exported ' + base + { json: '.sododeck.json', mermaid: '.mmd', svg: '.svg', png: '.png', pdf: '.pdf' }[fmt]);
+  }
+  onJson(e) {
+    const v = e.target.value, s = this.state; this.setState({ jsonDraft: v });
+    try {
+      const o = JSON.parse(v);
+      if (s.screen === 'empty' && s.jsonTab === 'deck') {
+        if (!Array.isArray(o.nodes)) throw new Error('Expected a "nodes" array');
+        const S = S0();
+        this.setState({ newNodes: o.nodes.map((n, i) => ({ id: n.id || 'n' + i, group: null, kind: S.KIND[n.type] ? n.type : 'service', x: (n.position || {}).x != null ? n.position.x : 300 + (i % 3) * 190, y: (n.position || {}).y != null ? n.position.y : 190 + Math.floor(i / 3) * 85, title: n.title || 'Untitled', icon: S.KICON[n.type] || 'deployed_code', tech: n.tech || '', host: '', owner: n.owner || 'Platform', tags: n.tags || [], desc: n.description || '', rules: [], links: [] })), deckName: o.name || s.deckName, jsonErr: null });
+        this.touch(); return;
+      }
+      if (!s.sel || s.sel.t !== 'node') throw new Error('Select a node to edit');
+      if (o.id !== s.sel.id) throw new Error('id cannot be changed');
+      const patch = {}; ['title', 'tech', 'owner', 'group'].forEach(k => { if (typeof o[k] === 'string') patch[k] = o[k]; });
+      if (Array.isArray(o.tags)) patch.tags = o.tags; if (typeof o.description === 'string') patch.desc = o.description; if (Array.isArray(o.links)) patch.links = o.links;
+      if (o.position && typeof o.position.x === 'number') { patch.x = o.position.x; patch.y = o.position.y; }
+      this.patchNode(s.sel.id, patch, false, true); this.setState({ jsonErr: null });
+    } catch (err) { this.setState({ jsonErr: err.message.replace(/^JSON\.parse: /, '').slice(0, 60) }); }
+  }
+  dropNode(e) {
+    e.preventDefault(); const kind = e.dataTransfer.getData('text/sodo'); if (!kind || this.state.flowId) return;
+    const el = this.scroller, r = el.getBoundingClientRect(), z = this.state.zoom, S = S0();
+    const outerW = (this.state.level ? S.GROUPS.find(g => g.id === this.state.level).w : S.WW) * z + 72, off = Math.max(0, (el.clientWidth - outerW) / 2);
+    const g = this.state.level && S.GROUPS.find(x => x.id === this.state.level);
+    this.addNode(kind, (e.clientX - r.left + el.scrollLeft - off - 36) / z + (g ? g.x : 0) - S.W / 2, (e.clientY - r.top + el.scrollTop - 36) / z + (g ? g.y : 0) - S.H / 2);
+  }
+  renderVals() {
+    const S = S0(), s = this.state;
+    const T = S ? S.THEMES[s.theme] : {};
+    const rootStyle = { ...T, height: '100%', minHeight: this.props.embedded ? 0 : '100vh', minWidth: this.props.embedded ? 0 : 1280, display: 'flex', flexDirection: 'column', background: 'var(--app)', color: 'var(--tx)', fontFamily: "'Geist',system-ui,sans-serif", fontSize: 13, position: 'relative', overflow: 'hidden' };
+    if (!S) return { rootStyle };
+    const nodes = this.nodesArr(), edges = this.edgesArr(), rules = this.rulesArr(), by = {}; nodes.forEach(n => by[n.id] = n);
+    const isEmpty = s.screen === 'empty', isEditor = s.screen === 'editor' || isEmpty, isFlow = isEditor && !!s.flowId;
+    const flow = isFlow ? S.FLOWS.find(f => f.id === s.flowId) : null, cur = flow ? flow.steps[s.step] : null;
+    const flowEdges = flow ? new Set(flow.steps.map(x => x.e)) : null;
+    const flowNodes = flow ? new Set(flow.steps.flatMap(x => { const e = edges.find(y => y.id === x.e); return [e.from, e.to]; })) : null;
+    const curEdge = cur ? edges.find(e => e.id === cur.e) : null;
+    const selNode = s.sel && s.sel.t === 'node' ? by[s.sel.id] : null, selEdge = s.sel && s.sel.t === 'edge' ? edges.find(e => e.id === s.sel.id) : null;
+    const nbrs = new Set(); if (s.focus && selNode) { nbrs.add(selNode.id); edges.forEach(e => { if (e.from === selNode.id) nbrs.add(e.to); if (e.to === selNode.id) nbrs.add(e.from); }); }
+    const lvl = s.level ? S.GROUPS.find(g => g.id === s.level) : null;
+    const visible = n => !lvl || n.group === lvl.id;
+    const flowsOf = id => S.FLOWS.filter(f => f.steps.some(st => { const e = edges.find(y => y.id === st.e); return e && (e.from === id || e.to === id); })).length;
+    const sub = n => s.view === 'Infra' ? (n.host || n.tech) : s.view === 'Feature' ? `${flowsOf(n.id)} flows · ${n.owner}` : (n.tech || S.KIND[n.kind]);
+    const z = s.zoom, CW = lvl ? lvl.w : S.WW, CH = lvl ? lvl.h : S.WH;
+    const measure = () => this.measure();
+    // canvas nodes
+    const cNodes = nodes.filter(visible).map(n => {
+      let op = 1, ring = false;
+      if (isFlow) { op = flowNodes.has(n.id) ? 1 : 0.22; ring = curEdge && (curEdge.from === n.id || curEdge.to === n.id); }
+      else if (s.focus && selNode) op = nbrs.has(n.id) ? 1 : 0.2;
+      else if (s.view === 'Infra' && n.kind === 'client') op = 0.4;
+      const sel = !isFlow && selNode && selNode.id === n.id;
+      return {
+        id: n.id, title: n.title, sub: sub(n), icon: n.icon, tile: S.tile(n.kind, 30), hasRules: n.rules.length > 0,
+        style: { position: 'absolute', left: n.x, top: n.y, width: S.W, height: S.H, display: 'flex', alignItems: 'center', gap: 9, padding: '0 10px 0 9px', background: 'var(--s)', border: '1px solid ' + (sel || ring ? 'var(--ac)' : 'var(--bd2)'), borderRadius: 12, boxShadow: sel || ring ? '0 0 0 3px var(--acs), 0 2px 6px var(--sh)' : '0 1px 2px var(--sh)', opacity: op, cursor: isFlow ? 'pointer' : 'grab', transition: 'opacity .25s, box-shadow .2s', zIndex: 2, userSelect: 'none' },
+        down: e => {
+          if (e.button !== 0) return; e.stopPropagation();
+          if (isFlow) { const i = flow.steps.findIndex(st => { const ed = edges.find(y => y.id === st.e); return ed.from === n.id || ed.to === n.id; }); if (i >= 0) this.setState({ step: i }); return; }
+          this.select({ t: 'node', id: n.id });
+          const sx = e.clientX, sy = e.clientY, ox = n.x, oy = n.y; let moved = false;
+          const mv = ev => { const dx = (ev.clientX - sx) / z, dy = (ev.clientY - sy) / z; if (!moved && Math.abs(dx) + Math.abs(dy) < 3) return; moved = true; this.patchNode(n.id, { x: Math.round(ox + dx), y: Math.round(oy + dy) }, true); };
+          const up = () => { window.removeEventListener('mousemove', mv); window.removeEventListener('mouseup', up); if (moved) this.touch(); };
+          window.addEventListener('mousemove', mv); window.addEventListener('mouseup', up);
+        }
+      };
+    });
+    const cEdges = edges.filter(e => by[e.from] && by[e.to] && visible(by[e.from]) && visible(by[e.to])).map(e => {
+      const r = S.route(by[e.from], by[e.to]);
+      let stroke = 'var(--edge)', sw = 1.5, op = 1, lab = s.labels, hot = false;
+      if (isFlow) { if (flowEdges.has(e.id)) { stroke = 'var(--ac)'; sw = e.id === cur.e ? 3 : 2; lab = true; hot = e.id === cur.e; op = e.id === cur.e ? 1 : 0.55; } else op = 0.18; }
+      else if (selEdge && selEdge.id === e.id) { stroke = 'var(--ac)'; sw = 2.5; lab = true; hot = true; }
+      else if (s.focus && selNode) { if (e.from === selNode.id || e.to === selNode.id) { stroke = 'var(--ac)'; sw = 2; lab = true; } else op = 0.15; }
+      else if (selNode && (e.from === selNode.id || e.to === selNode.id)) { stroke = 'var(--tx2)'; sw = 1.75; }
+      return { ...r, id: e.id, label: e.label, lab, rank: sw + (hot ? 5 : 0),
+        pstyle: { fill: 'none', stroke, strokeWidth: sw, opacity: op, transition: 'opacity .25s' }, dstyle: { fill: stroke, opacity: op },
+        hstyle: { fill: 'none', stroke: 'transparent', strokeWidth: 12, pointerEvents: 'stroke', cursor: 'pointer' },
+        lstyle: { position: 'absolute', left: r.lx, top: r.ly, transform: 'translate(-50%,-50%)', zIndex: 1, background: hot ? 'var(--ac)' : 'var(--s)', color: hot ? '#fff' : 'var(--tx2)', border: '1px solid ' + (hot ? 'var(--ac)' : 'var(--bd2)'), borderRadius: 999, padding: '2px 7px', fontSize: 10.5, whiteSpace: 'nowrap', fontFamily: "'Geist Mono',monospace", opacity: op < .5 ? op : 1 },
+        select: ev => { ev.stopPropagation(); if (isFlow) { const i = flow.steps.findIndex(st => st.e === e.id); if (i >= 0) this.setState({ step: i }); } else this.select({ t: 'edge', id: e.id }); } };
+    }).sort((a, b) => a.rank - b.rank);
+    const cGroups = S.GROUPS.filter(g => (!lvl || g.id === lvl.id) && nodes.some(n => n.group === g.id)).map(g => ({
+      label: g.label.toUpperCase(), count: nodes.filter(n => n.group === g.id).length,
+      style: { position: 'absolute', left: g.x, top: g.y, width: g.w, height: g.h, border: '1px dashed var(--bd2)', borderRadius: 16, background: 'var(--grp)', opacity: isFlow ? 0.5 : 1 },
+      drill: () => this.setState({ level: g.id, sel: null })
+    }));
+    let token = null;
+    if (curEdge && by[curEdge.from] && by[curEdge.to]) {
+      const d = S.route(by[curEdge.from], by[curEdge.to]).d, dur = (1.4 / s.speed) + 's', k = s.flowId + s.step + s.theme + s.speed;
+      token = React.createElement('svg', { key: k, width: S.WW, height: S.WH, style: { position: 'absolute', left: 0, top: 0, pointerEvents: 'none', overflow: 'visible', zIndex: 3 } },
+        React.createElement('circle', { r: 10, style: { fill: 'var(--ac)', opacity: 0.2 } }, React.createElement('animateMotion', { dur, repeatCount: 'indefinite', path: d })),
+        React.createElement('circle', { r: 5, style: { fill: 'var(--ac)', stroke: 'var(--s)', strokeWidth: 2 } }, React.createElement('animateMotion', { dur, repeatCount: 'indefinite', path: d })));
+    }
+    // minimap
+    const mm = { groups: S.GROUPS.filter(g => nodes.some(n => n.group === g.id)).map(g => ({ x: g.x, y: g.y, w: g.w, h: g.h })), nodes: nodes.map(n => ({ x: n.x, y: n.y, st: { fill: isFlow && flowNodes.has(n.id) ? 'var(--ac)' : (selNode && selNode.id === n.id ? 'var(--ac)' : 'var(--tx2)'), opacity: isFlow && !flowNodes.has(n.id) ? .25 : .55 } })) };
+    const vpx = s.vp.x + (lvl ? lvl.x : 0), vpy = s.vp.y + (lvl ? lvl.y : 0);
+    // outline
+    const groupsForOutline = [...S.GROUPS.map(g => ({ id: g.id, label: g.label })), { id: null, label: 'Ungrouped' }];
+    const outline = groupsForOutline.map(g => {
+      const items = nodes.filter(n => (n.group || null) === g.id).map(n => ({ title: n.title, icon: n.icon, tile: S.tile(n.kind, 22),
+        rowStyle: { display: 'flex', alignItems: 'center', gap: 8, height: 30, padding: '0 8px', borderRadius: 8, cursor: 'pointer', fontSize: 12.5, background: selNode && selNode.id === n.id ? 'var(--acs)' : 'transparent', color: selNode && selNode.id === n.id ? 'var(--act)' : 'var(--tx)', fontWeight: selNode && selNode.id === n.id ? 500 : 400 },
+        select: () => this.select({ t: 'node', id: n.id }) }));
+      const open = !s.collapsed[g.id || '_'];
+      return { label: g.label, count: items.length, items, open, chev: open ? 'expand_more' : 'chevron_right', show: items.length > 0, toggle: () => this.setState(st => ({ collapsed: { ...st.collapsed, [g.id || '_']: open } })) };
+    }).filter(g => g.show);
+    const PAL = [['service', 'Service', 'API or worker'], ['data', 'Database', 'SQL, KV, TSDB'], ['queue', 'Queue', 'Topic or stream'], ['edge', 'Gateway', 'Ingress, auth'], ['client', 'Client', 'App or UI'], ['external', 'External', 'Third party']];
+    const pq = s.palQ.trim().toLowerCase();
+    const palette = PAL.filter(p => !pq || (p[1] + p[2]).toLowerCase().includes(pq)).map(([k, label, hint]) => ({ label, hint, icon: S.KICON[k], tile: S.tile(k, 30), drag: e => { e.dataTransfer.setData('text/sodo', k); e.dataTransfer.effectAllowed = 'copy'; }, add: () => this.addNode(k) }));
+    const flowsList = isEmpty ? [] : S.FLOWS.map(f => ({ name: f.name, desc: f.desc, n: f.steps.length + ' steps', open: () => this.enterFlow(f.id),
+      rowStyle: { display: 'flex', alignItems: 'center', gap: 9, height: 34, padding: '0 8px', borderRadius: 9, cursor: 'pointer', fontSize: 12.5, background: s.flowId === f.id ? 'var(--acs)' : 'transparent', color: s.flowId === f.id ? 'var(--act)' : 'var(--tx)', fontWeight: s.flowId === f.id ? 500 : 400 } }));
+    // flow steps & step panel
+    const factors = [0.62, 0.78, 0.7, 0.88, 0.55, 1.14, 0.66, 0.74, 0.93, 0.58, 0.81, 0.97, 0.69];
+    const fIdx = flow ? S.FLOWS.indexOf(flow) : 0;
+    const stepList = flow ? flow.steps.map((st, i) => { const e = edges.find(y => y.id === st.e); const done = i < s.step, now = i === s.step;
+      return { n: i + 1, text: by[e.from].title + ' → ' + by[e.to].title, label: e.label, now, notNow: !now, go: () => this.setState({ step: i }),
+        dot: { width: 22, height: 22, flex: 'none', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, background: now ? 'var(--ac)' : done ? 'var(--acs)' : 'var(--s2)', color: now ? '#fff' : done ? 'var(--act)' : 'var(--mu)' },
+        seg: { flex: 1, height: 4, borderRadius: 4, cursor: 'pointer', background: i <= s.step ? 'var(--ac)' : 'var(--s3)' },
+        rowStyle: { display: 'flex', gap: 10, padding: '7px 8px', borderRadius: 10, cursor: 'pointer', background: now ? 'var(--acs)' : 'transparent' } }; }) : [];
+    let stepV = {};
+    if (cur) {
+      const e = curEdge, m = String(cur.sla).match(/([\d.]+)\s*(\w+)/), f = factors[(fIdx * 3 + s.step) % factors.length];
+      const val = m ? +m[1] : 0, unit = m ? m[2] : '', meas = val * f, measTxt = (meas < 10 ? meas.toFixed(1).replace(/\.0$/, '') : Math.round(meas)) + ' ' + unit;
+      const rule = cur.rule ? rules.find(r => r.id === cur.rule) : null, hits = rule ? S.matchRows(rule, cur.ctx || {}) : [];
+      stepV = { title: by[e.from].title + ' → ' + by[e.to].title, fromT: by[e.from].title, toT: by[e.to].title, fromTile: S.tile(by[e.from].kind, 28), toTile: S.tile(by[e.to].kind, 28), fromIcon: by[e.from].icon, toIcon: by[e.to].icon,
+        label: e.label, proto: e.proto, cond: cur.cond, sla: cur.sla, meas: measTxt, over: f > 1, ok: f <= 1,
+        slaText: f > 1 ? `Over target by ${Math.round((f - 1) * 100)}%` : `${Math.round((1 - f) * 100)}% headroom`,
+        bar: { width: Math.min(100, f / 1.3 * 100) + '%', height: '100%', borderRadius: 6, background: f > 1 ? 'var(--rdt)' : f > .85 ? 'var(--amt)' : 'var(--ac)' },
+        hasRule: !!rule, noRule: !rule, ruleName: rule ? rule.name : '', policy: rule ? rule.policy : '',
+        cols: rule ? { display: 'grid', gridTemplateColumns: `22px repeat(${rule.conds.length + rule.acts.length}, minmax(0,1fr))`, gap: 0 } : {},
+        head: rule ? [...rule.conds.map(c => ({ t: c, st: { padding: '6px', fontSize: 10.5, color: 'var(--amt)', background: 'var(--ams)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } })), ...rule.acts.map(c => ({ t: c, st: { padding: '6px', fontSize: 10.5, color: 'var(--act)', background: 'var(--acs)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }))] : [],
+        rows: rule ? rule.rows.map((r, i) => { const hit = hits.includes(i); return { n: i + 1, cells: [...r.c, ...r.a].map((v, j) => ({ v, st: { padding: '7px 6px', fontSize: 11.5, borderTop: '1px solid var(--bd)', background: hit ? 'var(--acs)' : 'transparent', color: hit ? 'var(--act)' : 'var(--tx)', fontWeight: hit ? 500 : 400, fontFamily: j < r.c.length ? "'Geist Mono',monospace" : 'inherit', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } })), nst: { padding: '7px 0 7px 6px', fontSize: 11, color: hit ? 'var(--act)' : 'var(--mu)', borderTop: '1px solid var(--bd)', background: hit ? 'var(--acs)' : 'transparent' } }; }) : [],
+        ctx: cur.ctx ? Object.entries(cur.ctx).map(([k, v]) => ({ k, v })) : [],
+        openRule: () => this.setState({ screen: 'rules', ruleId: cur.rule, testVals: { ...s.testVals, [cur.rule]: { ...(cur.ctx || {}) } } }) };
+    }
+    // node inspector
+    const conns = selNode ? edges.filter(e => e.from === selNode.id || e.to === selNode.id).map(e => { const out = e.from === selNode.id, o = by[out ? e.to : e.from]; return { dir: out ? 'arrow_outward' : 'call_received', title: o ? o.title : '?', label: e.label, go: () => this.select({ t: 'edge', id: e.id }) }; }) : [];
+    const mdBlocks = selNode ? selNode.desc.split('\n').filter(l => l.trim()).map(l => { const li = /^\s*[-*]\s+/.test(l); const t = l.replace(/^\s*[-*]\s+/, '').replace(/^#+\s*/, '').replace(/\*\*/g, ''); return { li, p: !li, parts: t.split('`').map((x, i) => ({ t: x, code: i % 2 === 1, txt: i % 2 === 0 })) }; }) : [];
+    const nodeJson = selNode ? JSON.stringify({ id: selNode.id, type: selNode.kind, title: selNode.title, group: selNode.group, tech: selNode.tech, owner: selNode.owner, tags: selNode.tags, description: selNode.desc, links: selNode.links, rules: selNode.rules, position: { x: selNode.x, y: selNode.y } }, null, 2) : '';
+    const edgeJson = selEdge ? JSON.stringify(selEdge, null, 2) : '';
+    const stepJson = cur ? JSON.stringify({ flow: flow.id, step: s.step + 1, edge: cur.e, from: curEdge.from, to: curEdge.to, condition: cur.cond, sla: cur.sla, rule: cur.rule, context: cur.ctx }, null, 2) : '';
+    const deckJsonTxt = JSON.stringify(this.deckJson(true), null, 2);
+    const jsonComputed = s.jsonTab === 'deck' ? deckJsonTxt : (isFlow ? stepJson : selNode ? nodeJson : selEdge ? edgeJson : '// Select a node, edge or flow step');
+    const jsonEditable = (s.jsonTab === 'sel' && !!selNode && !isFlow) || (isEmpty && s.jsonTab === 'deck');
+    // library
+    const decks = s.decks || S.DECKS, lq = s.libQ.trim().toLowerCase();
+    const folders = ['Logistics', 'Payments', 'Platform', 'Archive'];
+    const libDecks = decks.filter(d => (s.libFolder === 'All decks' || (s.libFolder === 'Samples' ? d.sample : s.libFolder === 'Recent' ? decks.indexOf(d) < 4 : d.folder === s.libFolder)) && (!lq || d.name.toLowerCase().includes(lq))).map(d => {
+      const rnd = i => { const x = Math.sin(d.seed * 97 + i * 13.7) * 10000; return x - Math.floor(x); };
+      const cols = 3 + Math.floor(rnd(1) * 2), kinds = ['acs', 'bls', 'ams', 's2', 'rds'];
+      const rects = []; for (let c = 0; c < cols; c++) { const rows = 1 + Math.floor(rnd(c + 3) * 3); for (let r = 0; r < rows; r++) rects.push({ x: 18 + c * (220 / cols), y: 22 + r * 34 + (c % 2) * 14, k: kinds[Math.floor(rnd(c * 5 + r) * kinds.length)] }); }
+      const lines = rects.slice(1).map((r, i) => { const a = rects[i]; return { d: `M${a.x + 44} ${a.y + 9} C${(a.x + r.x + 44) / 2} ${a.y + 9} ${(a.x + r.x + 44) / 2} ${r.y + 9} ${r.x} ${r.y + 9}` }; });
+      return { ...d, meta: `${d.nodes} nodes · ${d.flows} flows`, sampleB: !!d.sample, rects: rects.map(r => ({ x: r.x, y: r.y, st: { fill: `var(--${r.k})`, stroke: 'var(--bd2)' } })), lines, open: () => { if (d.id === 'delivery' || d.imported) this.setState({ screen: 'editor', deckName: d.name, sel: null, flowId: null }); else this.flash(d.name + ' is a placeholder in this prototype — opening the sample'), this.setState({ screen: 'editor', sel: null, flowId: null }); } };
+    });
+    const libNav = [['All decks', 'grid_view', decks.length], ['Recent', 'schedule', 4], ['Samples', 'auto_awesome', decks.filter(d => d.sample).length]].map(([l, i, c]) => ({ l, i, c, st: { display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 10px', borderRadius: 9, cursor: 'pointer', fontSize: 13, background: s.libFolder === l ? 'var(--s2)' : 'transparent', fontWeight: s.libFolder === l ? 500 : 400 }, pick: () => this.setState({ libFolder: l }) }));
+    const libFolders = folders.map(l => ({ l, c: decks.filter(d => d.folder === l).length, st: { display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 10px', borderRadius: 9, cursor: 'pointer', fontSize: 13, background: s.libFolder === l ? 'var(--s2)' : 'transparent', fontWeight: s.libFolder === l ? 500 : 400 }, pick: () => this.setState({ libFolder: l }) }));
+    // rules screen
+    const rule = rules.find(r => r.id === s.ruleId) || rules[0];
+    const tv = { ...(s.testVals[rule.id] || {}) }; rule.conds.forEach((c, j) => { if (tv[c] == null) tv[c] = (rule.rows[0] && rule.rows[0].c[j] || '').replace(/^[^\w€]*\s*/, '') || ''; });
+    const hitsR = S.matchRows(rule, tv);
+    const usages = []; S.FLOWS.forEach(f => f.steps.forEach((st, i) => { if (st.rule === rule.id) { const e = edges.find(y => y.id === st.e); if (!e || !by[e.from] || !by[e.to]) return; usages.push({ flow: f.name, text: `Step ${i + 1} · ${by[e.from].title} → ${by[e.to].title}`, go: () => this.enterFlow(f.id, i) }); } }));
+    const nc = rule.conds.length, na = rule.acts.length, gridCols = `40px repeat(${nc}, minmax(120px,1fr)) repeat(${na}, minmax(130px,1fr)) 40px`;
+    const ruleRows = rule.rows.map((r, i) => { const hit = hitsR.includes(i); return { n: i + 1, hit,
+      rowStyle: { display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', borderTop: '1px solid var(--bd)', background: hit ? 'var(--acs)' : 'transparent', minHeight: 46 },
+      nStyle: { fontSize: 12, color: hit ? 'var(--act)' : 'var(--mu)', paddingLeft: 14, fontWeight: hit ? 600 : 400 },
+      cells: [...r.c.map((v, j) => ({ v, cond: true, set: e => { const val = e.target.value; this.setRules(rs => { rs.find(x => x.id === rule.id).rows[i].c[j] = val; return rs; }); } })), ...r.a.map((v, j) => ({ v, cond: false, set: e => { const val = e.target.value; this.setRules(rs => { rs.find(x => x.id === rule.id).rows[i].a[j] = val; return rs; }); } }))].map(c => ({ ...c, st: { width: '100%', height: 32, border: '1px solid transparent', borderRadius: 8, background: 'transparent', padding: '0 9px', fontSize: 13, outline: 'none', color: hit ? 'var(--act)' : 'var(--tx)', fontFamily: c.cond ? "'Geist Mono',monospace" : 'inherit', fontWeight: hit ? 500 : 400 } })),
+      del: () => this.setRules(rs => { rs.find(x => x.id === rule.id).rows.splice(i, 1); return rs; }),
+      up: () => { if (i) this.setRules(rs => { const R = rs.find(x => x.id === rule.id).rows; [R[i - 1], R[i]] = [R[i], R[i - 1]]; return rs; }); } }; });
+    const catchAll = rule.rows.some(r => r.c.every(c => S.cellMatch(c, '__any__') && /^(any|—|)$/i.test(String(c).trim())));
+    const ruleList = rules.map(r => { const n = S.FLOWS.reduce((a, f) => a + f.steps.filter(st => st.rule === r.id).length, 0); const on = r.id === rule.id;
+      return { name: r.name, sub: `${r.rows.length} rows · used in ${n} step${n === 1 ? '' : 's'}`, st: { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10, cursor: 'pointer', background: on ? 'var(--acs)' : 'transparent' }, tst: { fontSize: 13, fontWeight: 500, color: on ? 'var(--act)' : 'var(--tx)' }, pick: () => this.setState({ ruleId: r.id }) }; });
+    // export
+    const FM = [['json', 'JSON', '.sododeck.json · re-importable', 'data_object'], ['png', 'PNG', 'Raster image for docs and slides', 'image'], ['svg', 'SVG', 'Vector, editable in Figma', 'shape_line'], ['pdf', 'PDF', 'Print-ready, landscape', 'picture_as_pdf'], ['mermaid', 'Mermaid', 'flowchart for Markdown and wikis', 'account_tree']];
+    const exFormats = FM.map(([id, name, hint, icon]) => { const on = s.exportFmt === id; return { name, hint, icon, on, pick: () => this.setState({ exportFmt: id }),
+      st: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 12, cursor: 'pointer', border: '1px solid ' + (on ? 'var(--ac)' : 'var(--bd)'), background: on ? 'var(--acs)' : 'var(--s)', boxShadow: on ? '0 0 0 3px var(--acs)' : 'none' },
+      tl: { width: 34, height: 34, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? 'var(--ac)' : 'var(--s2)', color: on ? '#fff' : 'var(--tx2)', flex: 'none' } }; });
+    const OPT = { json: [['desc', 'Include descriptions, links and rules'], ['pretty', 'Pretty-print']], png: [['transparent', 'Transparent background']], svg: [['transparent', 'Transparent background']], pdf: [['steps', 'Append flow step details']], mermaid: [['groups', 'Keep groups as subgraphs']] };
+    const exOpts = (OPT[s.exportFmt] || []).map(([k, label]) => { const on = !!s.exOpts[k]; return { label, on, off: !on, toggle: () => this.setState(st => ({ exOpts: { ...st.exOpts, [k]: !st.exOpts[k] } })) }; });
+    const scopes = [['deck', 'Whole deck'], ['view', 'Current view'], ['flow', 'Selected flow']].map(([id, l]) => { const dis = id === 'flow' && !s.flowId, on = s.exportScope === id; return { l, st: { flex: 1, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, cursor: dis ? 'not-allowed' : 'pointer', background: on ? 'var(--s)' : 'transparent', boxShadow: on ? '0 1px 2px var(--sh)' : 'none', color: dis ? 'var(--mu)' : 'var(--tx)', opacity: dis ? .5 : 1, fontWeight: on ? 500 : 400 }, pick: () => { if (!dis) this.setState({ exportScope: id }); } }; });
+    const sd = this.scopeData();
+    const exText = s.exportFmt === 'json' ? JSON.stringify(this.deckJson(), null, 2).split('\n').slice(0, 60).join('\n') : s.exportFmt === 'mermaid' ? S.mermaid(sd.nodes, sd.edges, s.exOpts.groups) : '';
+    const pvBy = {}; sd.nodes.forEach(n => pvBy[n.id] = n);
+    const base = s.deckName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'deck';
+    // cmd k
+    const cq = s.cmdQ.trim().toLowerCase();
+    const cmds = [
+      ...[['Export deck…', 'ios_share', () => this.setState({ exportOpen: true, cmdOpen: false })], ['Toggle dark mode', 'contrast', () => this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark', cmdOpen: false }))], ['Toggle focus mode', 'center_focus_strong', () => this.setState(st => ({ focus: !st.focus, cmdOpen: false }))], ['Open rule editor', 'table_chart', () => this.setState({ screen: 'rules', cmdOpen: false })], ['Go to library', 'folder_open', () => this.setState({ screen: 'library', cmdOpen: false })], ['New deck', 'add', () => this.setState({ screen: 'empty', newNodes: [], deckName: 'Untitled deck', tour: -1, sel: null, flowId: null, cmdOpen: false })]].map(([t, i, run]) => ({ t, i, kind: 'Command', run })),
+      ...S.FLOWS.map(f => ({ t: f.name, i: 'conversion_path', kind: `Flow · ${f.steps.length} steps`, run: () => this.enterFlow(f.id) })),
+      ...nodes.map(n => ({ t: n.title, i: n.icon, kind: S.KIND[n.kind] + (n.group ? ' · ' + S.GROUPS.find(g => g.id === n.group).label : ''), run: () => this.setState({ screen: 'editor', flowId: null, sel: { t: 'node', id: n.id }, cmdOpen: false }) }))
+    ].filter(c => !cq || (c.t + ' ' + c.kind).toLowerCase().includes(cq)).slice(0, 9).map((c, i) => ({ ...c, st: { display: 'flex', alignItems: 'center', gap: 12, height: 42, padding: '0 12px', borderRadius: 10, cursor: 'pointer', background: i === 0 ? 'var(--s2)' : 'transparent' } }));
+    // tour
+    const TOUR = [
+      { t: 'Add components', b: 'Drag a service, database or queue from the palette onto the canvas, or click one to add it.', st: { left: 276, top: 128 }, ar: { left: -6, top: 26 } },
+      { t: 'Connect and describe', b: 'Select anything on the canvas to edit its title, owner, tags, links and rules in the inspector on the right.', st: { right: 348, top: 72 }, ar: { right: -6, top: 26 } },
+      { t: 'Everything is JSON', b: 'The code panel mirrors the canvas both ways. Press ⌘K to jump to any node, flow or command.', st: { left: 300, bottom: 236 }, ar: { left: 28, bottom: -6 } }];
+    const tr = s.tour >= 0 && s.tour < 3 ? TOUR[s.tour] : null;
+    const selTitle = isFlow ? flow.name : selNode ? selNode.title : selEdge ? 'Edge ' + selEdge.id : '';
+    return {
+      rootStyle, isLibrary: s.screen === 'library', isRules: s.screen === 'rules', isEditor, isEmpty, notEmpty: !isEmpty, isFlow, notFlow: !isFlow,
+      goLibrary: () => { clearInterval(this.playT); this.setState({ screen: 'library', flowId: null, playing: false, tour: -1 }); },
+      goDeck: () => this.setState({ screen: 'editor' }),
+      themeIcon: s.theme === 'dark' ? 'light_mode' : 'dark_mode', toggleTheme: () => { this.setState(st => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })); this.touch(); },
+      deckName: s.deckName, onDeckName: e => { this.setState({ deckName: e.target.value }); this.touch(); }, deckFolder: isEmpty ? 'Unsorted' : 'Logistics',
+      saving: s.saveState === 'saving', saved: s.saveState !== 'saving',
+      openCmd: () => this.setState({ cmdOpen: true, cmdQ: '' }), openExport: () => this.setState({ exportOpen: true, cmdOpen: false, exportScope: s.flowId ? 'flow' : 'deck' }),
+      views: s.views.map(v => ({ v, on: s.view === v, off: s.view !== v, pick: () => this.setState({ view: v }) })),
+      addView: () => { const v = 'Custom ' + (s.views.length - 2); this.setState({ views: [...s.views, v], view: v }); this.flash(`View “${v}” created`); },
+      flowName: flow ? flow.name : '', flowDesc: flow ? flow.desc : '', exitFlow: () => this.exitFlow(),
+      leftOutline: s.leftTab === 'outline', leftPalette: s.leftTab === 'palette',
+      tabOutline: () => this.setState({ leftTab: 'outline' }), tabPalette: () => this.setState({ leftTab: 'palette' }),
+      tabOst: { flex: 1, height: 28, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, cursor: 'pointer', background: s.leftTab === 'outline' ? 'var(--s)' : 'transparent', boxShadow: s.leftTab === 'outline' ? '0 1px 2px var(--sh)' : 'none', fontWeight: s.leftTab === 'outline' ? 500 : 400, color: s.leftTab === 'outline' ? 'var(--tx)' : 'var(--tx2)' },
+      tabPst: { flex: 1, height: 28, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, cursor: 'pointer', background: s.leftTab === 'palette' ? 'var(--s)' : 'transparent', boxShadow: s.leftTab === 'palette' ? '0 1px 2px var(--sh)' : 'none', fontWeight: s.leftTab === 'palette' ? 500 : 400, color: s.leftTab === 'palette' ? 'var(--tx)' : 'var(--tx2)' },
+      outline, hasOutline: outline.length > 0, noOutline: outline.length === 0, palette, palQ: s.palQ, onPalQ: e => this.setState({ palQ: e.target.value }),
+      flowsList, hasFlows: flowsList.length > 0, noFlows: flowsList.length === 0, ruleCount: rules.length, openRules: () => this.setState({ screen: 'rules' }),
+      stepList, stepN: s.step + 1, stepTotal: flow ? flow.steps.length : 0, prevStep: () => this.go(-1), nextStep: () => this.go(1),
+      playIcon: s.playing ? 'pause' : 'play_arrow', togglePlay: () => this.togglePlay(), speedLabel: s.speed + '×', toggleSpeed: () => { clearInterval(this.playT); this.setState(st => ({ speed: st.speed === 1 ? 2 : 1, playing: false })); },
+      step: stepV,
+      scrollRef: el => { this.scroller = el; }, onScroll: measure,
+      bgDown: e => { if (!isFlow) this.select(null); }, onDragOver: e => e.preventDefault(), onDrop: e => this.dropNode(e),
+      outerStyle: { position: 'relative', width: CW * z + 72, height: CH * z + 72, margin: '0 auto', overflow: 'hidden' },
+      worldStyle: { position: 'absolute', left: 36, top: 36, width: S.WW, height: S.WH, transform: `scale(${z}) translate(${lvl ? -lvl.x : 0}px, ${lvl ? -lvl.y : 0}px)`, transformOrigin: '0 0' },
+      cNodes, cEdges, cGroups, token, wW: S.WW, wH: S.WH, edgeLabels: cEdges.filter(e => e.lab),
+      crumbs: [{ t: s.deckName, go: () => this.setState({ level: null }) }, { t: isFlow ? 'Flow: ' + flow.name : s.view + ' view', go: () => this.setState({ level: null }) }, ...(lvl ? [{ t: lvl.label, go: () => {} }] : [])].map((c, i, a) => ({ ...c, last: i === a.length - 1, notLast: i < a.length - 1 })),
+      focusOn: s.focus, focusOff: !s.focus, toggleFocus: () => this.setState(st => ({ focus: !st.focus })),
+      labelsOn: s.labels, labelsOff: !s.labels, toggleLabels: () => this.setState(st => ({ labels: !st.labels })),
+      zoomLabel: Math.round(z * 100) + '%', zoomIn: () => this.setState(st => ({ zoom: Math.min(2, +(st.zoom + .1).toFixed(2)) }), measure), zoomOut: () => this.setState(st => ({ zoom: Math.max(.3, +(st.zoom - .1).toFixed(2)) }), measure), zoomFit: () => this.fit(),
+      mm, mmVp: { x: vpx, y: vpy, w: s.vp.w, h: s.vp.h }, mmVB: `0 0 ${S.WW} ${S.WH}`,
+      mmClick: e => { const r = e.currentTarget.getBoundingClientRect(), el = this.scroller; if (!el) return; const wx = (e.clientX - r.left) / r.width * S.WW - (lvl ? lvl.x : 0), wy = (e.clientY - r.top) / r.height * S.WH - (lvl ? lvl.y : 0); el.scrollTo({ left: wx * z + 36 - el.clientWidth / 2, top: wy * z + 36 - el.clientHeight / 2, behavior: 'smooth' }); },
+      showEmptyCanvas: isEmpty && nodes.length === 0,
+      addService: () => this.addNode('service'), pasteJson: () => this.setState({ jsonOpen: true, jsonTab: 'deck' }), openSample: () => this.setState({ screen: 'editor', deckName: 'Logistics Delivery', sel: null, flowId: null, tour: -1 }),
+      // json panel
+      jsonOpen: s.jsonOpen, jsonClosed: !s.jsonOpen, toggleJson: () => this.setState(st => ({ jsonOpen: !st.jsonOpen })),
+      jsonChev: s.jsonOpen ? 'expand_more' : 'expand_less', jsonText: s.jsonDraft != null ? s.jsonDraft : jsonComputed, onJson: e => jsonEditable && this.onJson(e), jsonReadOnly: !jsonEditable,
+      jsonSelTab: () => this.setState({ jsonTab: 'sel', jsonDraft: null, jsonErr: null }), jsonDeckTab: () => this.setState({ jsonTab: 'deck', jsonDraft: null, jsonErr: null }),
+      jtSel: { height: 26, padding: '0 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 12, background: s.jsonTab === 'sel' ? 'var(--s)' : 'transparent', boxShadow: s.jsonTab === 'sel' ? '0 1px 2px var(--sh)' : 'none', color: s.jsonTab === 'sel' ? 'var(--tx)' : 'var(--tx2)' },
+      jtDeck: { height: 26, padding: '0 10px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 12, background: s.jsonTab === 'deck' ? 'var(--s)' : 'transparent', boxShadow: s.jsonTab === 'deck' ? '0 1px 2px var(--sh)' : 'none', color: s.jsonTab === 'deck' ? 'var(--tx)' : 'var(--tx2)' },
+      jsonOk: !s.jsonErr, jsonBad: !!s.jsonErr, jsonErr: s.jsonErr || '', jsonMode: jsonEditable ? 'Editable · synced with canvas' : 'Read-only', jsonLines: (s.jsonDraft != null ? s.jsonDraft : jsonComputed).split('\n').length + ' lines',
+      copyJson: () => { try { navigator.clipboard.writeText(s.jsonDraft != null ? s.jsonDraft : jsonComputed); } catch (e) {} this.flash('JSON copied'); },
+      selLabel: selTitle || 'Selection',
+      // inspector
+      inspNode: !isFlow && !!selNode, inspEdge: !isFlow && !!selEdge, inspDeck: !isFlow && !selNode && !selEdge, inspStep: isFlow,
+      n: selNode ? { ...selNode, kindLabel: S.KIND[selNode.kind], tileLg: S.tile(selNode.kind, 40), groupLabel: selNode.group ? S.GROUPS.find(g => g.id === selNode.group).label : 'Ungrouped',
+        tags: selNode.tags.map(t => ({ t, rm: () => this.patchNode(selNode.id, { tags: selNode.tags.filter(x => x !== t) }) })),
+        links: selNode.links.map(l => ({ ...l, rm: () => this.patchNode(selNode.id, { links: selNode.links.filter(x => x !== l) }) })), hasLinks: selNode.links.length > 0,
+        rules: selNode.rules.map(id => { const r = rules.find(x => x.id === id); return { name: r ? r.name : id, go: () => this.setState({ screen: 'rules', ruleId: id }) }; }), hasRules: selNode.rules.length > 0, noRules: selNode.rules.length === 0,
+        conns, hasConns: conns.length > 0, connCount: conns.length } : { tags: [], links: [], rules: [], conns: [] },
+      teams: S.TEAMS.map(t => ({ t })),
+      onTitle: e => this.patchNode(selNode.id, { title: e.target.value }), onTech: e => this.patchNode(selNode.id, { tech: e.target.value }), onOwner: e => this.patchNode(selNode.id, { owner: e.target.value }), onDesc: e => this.patchNode(selNode.id, { desc: e.target.value }),
+      mdWrite: s.md === 'write', mdPreview: s.md === 'preview', setWrite: () => this.setState({ md: 'write' }), setPreview: () => this.setState({ md: 'preview' }), mdBlocks, mdEmpty: mdBlocks.length === 0,
+      mwSt: { height: 24, padding: '0 9px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11.5, background: s.md === 'write' ? 'var(--s)' : 'transparent', boxShadow: s.md === 'write' ? '0 1px 2px var(--sh)' : 'none', color: 'var(--tx)' },
+      mpSt: { height: 24, padding: '0 9px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11.5, background: s.md === 'preview' ? 'var(--s)' : 'transparent', boxShadow: s.md === 'preview' ? '0 1px 2px var(--sh)' : 'none', color: 'var(--tx)' },
+      tagDraft: s.tagDraft, onTagDraft: e => this.setState({ tagDraft: e.target.value }), onTagKey: e => { if (e.key === 'Enter' && s.tagDraft.trim() && selNode) { this.patchNode(selNode.id, { tags: [...new Set([...selNode.tags, s.tagDraft.trim().toLowerCase()])] }); this.setState({ tagDraft: '' }); } },
+      linkDraft: s.linkDraft, onLinkDraft: e => this.setState({ linkDraft: e.target.value }), onLinkKey: e => { if (e.key === 'Enter' && s.linkDraft.trim() && selNode) { const u = s.linkDraft.trim().replace(/^https?:\/\//, ''); this.patchNode(selNode.id, { links: [...selNode.links, { label: u.split('/')[0], url: u }] }); this.setState({ linkDraft: '' }); } },
+      attachRule: () => { if (!selNode) return; const r = rules.find(x => !selNode.rules.includes(x.id)); if (r) this.patchNode(selNode.id, { rules: [...selNode.rules, r.id] }); },
+      deleteNode: () => { if (!selNode) return; const key = isEmpty ? 'newNodes' : 'nodes'; this.setState(st => ({ [key]: (st[key] || S.NODES).filter(x => x.id !== selNode.id), sel: null, ...(isEmpty ? {} : { edges: (st.edges || S.EDGES).filter(e => e.from !== selNode.id && e.to !== selNode.id) }) })); this.touch(); this.flash(selNode.title + ' deleted'); },
+      e: selEdge ? { ...selEdge, fromT: by[selEdge.from].title, toT: by[selEdge.to].title, fromTile: S.tile(by[selEdge.from].kind, 28), toTile: S.tile(by[selEdge.to].kind, 28), fromIcon: by[selEdge.from].icon, toIcon: by[selEdge.to].icon,
+        flows: S.FLOWS.map(f => ({ f, i: f.steps.findIndex(st => st.e === selEdge.id) })).filter(x => x.i >= 0).map(({ f, i }) => ({ name: f.name, stepTxt: 'Step ' + (i + 1), go: () => this.enterFlow(f.id, i) })),
+        goFrom: () => this.select({ t: 'node', id: selEdge.from }), goTo: () => this.select({ t: 'node', id: selEdge.to }) } : { flows: [] },
+      eHasFlows: !!selEdge && S.FLOWS.some(f => f.steps.some(st => st.e === selEdge.id)),
+      onELabel: e => this.patchEdge(selEdge.id, { label: e.target.value }), onEProto: e => this.patchEdge(selEdge.id, { proto: e.target.value }),
+      protos: ['HTTPS', 'gRPC', 'Kafka', 'SQL', 'WebSocket'].map(p => ({ p })),
+      deckDesc: s.deckDesc, onDeckDesc: e => { this.setState({ deckDesc: e.target.value }); this.touch(); },
+      stats: [['Nodes', nodes.length], ['Edges', edges.length], ['Flows', isEmpty ? 0 : S.FLOWS.length], ['Rules', isEmpty ? 0 : rules.length]].map(([k, v]) => ({ k, v })),
+      viewsTxt: s.views.join(' · '), exportBackup: () => { this.download(base + '.sododeck.json', JSON.stringify(this.deckJson(true), null, 2), 'application/json'); this.flash('Backup exported'); },
+      // library
+      libQ: s.libQ, onLibQ: e => this.setState({ libQ: e.target.value }), libNav, libFolders, libDecks, libTitle: s.libFolder, libCount: `${libDecks.length} deck${libDecks.length === 1 ? '' : 's'} · stored in this browser`,
+      noDecks: libDecks.length === 0, isGrid: s.libView === 'grid', isList: s.libView === 'list',
+      gridBtn: { width: 32, height: 30, borderRadius: 7, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: s.libView === 'grid' ? 'var(--s)' : 'transparent', boxShadow: s.libView === 'grid' ? '0 1px 2px var(--sh)' : 'none', color: 'var(--tx)' },
+      listBtn: { width: 32, height: 30, borderRadius: 7, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: s.libView === 'list' ? 'var(--s)' : 'transparent', boxShadow: s.libView === 'list' ? '0 1px 2px var(--sh)' : 'none', color: 'var(--tx)' },
+      setGrid: () => this.setState({ libView: 'grid' }), setList: () => this.setState({ libView: 'list' }),
+      banner: s.banner, closeBanner: () => this.setState({ banner: false }),
+      exportAll: () => { this.download('sododeck-backup.json', JSON.stringify({ sododeckBackup: 1, decks: [this.deckJson(true)] }, null, 2), 'application/json'); this.flash('Backup of all decks exported'); },
+      newDeck: () => this.setState({ screen: 'empty', newNodes: [], deckName: 'Untitled deck', tour: 0, sel: null, flowId: null, leftTab: 'palette', jsonDraft: null }),
+      fileRef: el => { this.fileEl = el; }, pickFile: () => this.fileEl && this.fileEl.click(),
+      onFile: e => { const f = e.target.files && e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { try { const o = JSON.parse(rd.result); const name = o.name || f.name.replace(/\.sododeck\.json$|\.json$/, ''); this.setState(st => ({ decks: [{ id: 'imp' + Date.now(), name, folder: 'Unsorted', nodes: (o.nodes || []).length, flows: (o.flows || []).length, edited: 'Just now', seed: 23, imported: true }, ...(st.decks || S.DECKS)] })); this.flash('Imported ' + name); } catch (err) { this.flash('That file is not valid .sododeck.json'); } }; rd.readAsText(f); e.target.value = ''; },
+      // rules
+      ruleList, rule: { ...rule, count: rule.rows.length }, onRuleName: e => { const v = e.target.value; this.setRules(rs => { rs.find(x => x.id === rule.id).name = v; return rs; }); },
+      onRuleDesc: e => { const v = e.target.value; this.setRules(rs => { rs.find(x => x.id === rule.id).desc = v; return rs; }); },
+      onPolicy: e => { const v = e.target.value; this.setRules(rs => { rs.find(x => x.id === rule.id).policy = v; return rs; }); },
+      policies: ['First match', 'Unique', 'Collect'].map(p => ({ p })),
+      gridHead: { display: 'grid', gridTemplateColumns: gridCols, alignItems: 'stretch' },
+      whenSpan: { gridColumn: `span ${nc}`, background: 'var(--ams)', color: 'var(--amt)', padding: '8px 12px', fontSize: 11, letterSpacing: '.07em', fontWeight: 600, borderRight: '2px solid var(--s)' },
+      thenSpan: { gridColumn: `span ${na}`, background: 'var(--acs)', color: 'var(--act)', padding: '8px 12px', fontSize: 11, letterSpacing: '.07em', fontWeight: 600 },
+      condCols: rule.conds.map((c, j) => ({ c, set: e => { const v = e.target.value; this.setRules(rs => { const R = rs.find(x => x.id === rule.id); const old = R.conds[j]; R.conds[j] = v; return rs; }); } })),
+      actCols: rule.acts.map((c, j) => ({ c, set: e => { const v = e.target.value; this.setRules(rs => { rs.find(x => x.id === rule.id).acts[j] = v; return rs; }); } })),
+      ruleRows,
+      addRow: () => this.setRules(rs => { const R = rs.find(x => x.id === rule.id); R.rows.push({ c: R.conds.map(() => 'Any'), a: R.acts.map(() => '') }); return rs; }),
+      addCond: () => this.setRules(rs => { const R = rs.find(x => x.id === rule.id); R.conds.push('Condition ' + (R.conds.length + 1)); R.rows.forEach(r => r.c.push('Any')); return rs; }),
+      addAct: () => this.setRules(rs => { const R = rs.find(x => x.id === rule.id); R.acts.push('Action ' + (R.acts.length + 1)); R.rows.forEach(r => r.a.push('')); return rs; }),
+      newRule: () => { const id = 'r' + Date.now() % 100000; this.setRules(rs => [...rs, { id, name: 'New rule', desc: '', policy: 'First match', conds: ['Condition 1'], acts: ['Action 1'], rows: [{ c: ['Any'], a: [''] }] }]); this.setState({ ruleId: id }); },
+      testInputs: rule.conds.map(c => ({ c, v: tv[c], set: e => { const v = e.target.value; this.setState(st => ({ testVals: { ...st.testVals, [rule.id]: { ...tv, [c]: v } } })); } })),
+      testHit: hitsR.length > 0, testMiss: hitsR.length === 0, testRowTxt: hitsR.map(i => 'Row ' + (i + 1)).join(', '),
+      testOut: hitsR.length ? rule.acts.map((a, j) => ({ a, v: rule.rows[hitsR[0]].a[j] || '—' })) : [],
+      usages, hasUsages: usages.length > 0, noUsages: usages.length === 0,
+      checks: [
+        { ok: catchAll, bad: !catchAll, t: catchAll ? 'Has a catch-all row' : 'No catch-all row — some inputs match nothing' },
+        { ok: rule.policy !== 'Unique' || true, bad: false, t: rule.policy === 'First match' ? 'Row order decides the winner' : rule.policy === 'Unique' ? 'Exactly one row must match' : 'All matching rows are returned' }],
+      // export
+      exportOpen: isEditor && s.exportOpen, closeExport: () => this.setState({ exportOpen: false }), stop: e => e.stopPropagation(),
+      exFormats, exOpts, hasExOpts: exOpts.length > 0, scopes, exIsText: !!exText, exIsImage: !exText, exText,
+      exScale: [1, 2, 3].map(k => ({ k: k + '×', st: { width: 44, height: 30, borderRadius: 8, border: '1px solid ' + (s.exOpts.scale === k ? 'var(--ac)' : 'var(--bd2)'), background: s.exOpts.scale === k ? 'var(--acs)' : 'var(--s)', color: s.exOpts.scale === k ? 'var(--act)' : 'var(--tx)', fontSize: 12.5, cursor: 'pointer', fontWeight: 500 }, pick: () => this.setState(st => ({ exOpts: { ...st.exOpts, scale: k } })) })),
+      exIsPng: s.exportFmt === 'png', pvBg: { position: 'absolute', inset: 0, background: s.exOpts.transparent && /png|svg/.test(s.exportFmt) ? 'repeating-conic-gradient(var(--s2) 0 25%, var(--s) 0 50%) 0 0/16px 16px' : 'var(--cv)' },
+      pvEdges: sd.edges.filter(e => pvBy[e.from] && pvBy[e.to]).map(e => ({ d: S.route(pvBy[e.from], pvBy[e.to]).d })), pvNodes: sd.nodes.map(n => ({ x: n.x, y: n.y, t: n.title, tx: n.x + 12, ty: n.y + 30 })),
+      exFile: base + { json: '.sododeck.json', png: '.png', svg: '.svg', pdf: '.pdf', mermaid: '.mmd' }[s.exportFmt],
+      exSize: s.exportFmt === 'png' ? `${S.WW * s.exOpts.scale} × ${S.WH * s.exOpts.scale} px` : s.exportFmt === 'json' ? Math.round(JSON.stringify(this.deckJson()).length / 102.4) / 10 + ' KB' : s.exportFmt === 'mermaid' ? sd.edges.length + ' edges' : s.exportFmt === 'svg' ? 'Vector' : 'A4 landscape',
+      doExport: () => this.doExport(), copyEx: () => { try { navigator.clipboard.writeText(exText); } catch (e) {} this.flash('Copied to clipboard'); },
+      // cmd
+      cmdOpen: s.cmdOpen, closeCmd: () => this.setState({ cmdOpen: false }), cmdQ: s.cmdQ, onCmdQ: e => this.setState({ cmdQ: e.target.value }),
+      onCmdKey: e => { if (e.key === 'Enter' && cmds[0]) cmds[0].run(); if (e.key === 'Escape') this.setState({ cmdOpen: false }); }, cmds, noCmds: cmds.length === 0,
+      // tour
+      tourOn: isEmpty && !!tr, tour: tr ? { ...tr, st: { position: 'absolute', zIndex: 40, width: 300, background: 'var(--ink)', color: 'var(--inkt)', borderRadius: 14, padding: '16px 16px 14px', boxShadow: '0 12px 32px rgba(0,0,0,.25)', ...tr.st }, arrow: { position: 'absolute', width: 12, height: 12, background: 'var(--ink)', transform: 'rotate(45deg)', ...tr.ar } } : { st: {}, arrow: {} },
+      tourDots: [0, 1, 2].map(i => ({ st: { width: i === s.tour ? 16 : 6, height: 6, borderRadius: 6, background: 'var(--inkt)', opacity: i === s.tour ? 1 : .35, transition: 'width .2s' } })),
+      tourNum: (s.tour + 1) + ' of 3', tourNext: () => this.setState(st => ({ tour: st.tour >= 2 ? -1 : st.tour + 1 })), tourBack: () => this.setState(st => ({ tour: Math.max(0, st.tour - 1) })), tourSkip: () => this.setState({ tour: -1 }),
+      tourHasBack: s.tour > 0, tourNextLabel: s.tour >= 2 ? 'Done' : 'Next', restartTour: () => this.setState({ tour: 0 }),
+      toast: s.toast || '', hasToast: !!s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>
