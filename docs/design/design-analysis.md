@@ -815,3 +815,24 @@ decision already covers it, that rule wins and the proposal only says how to app
     **Decision (founder, 2026-09-27):** **live sync** instead: every tab showing a deck stays
     editable, edits sync between tabs within 1 s and merge without loss (Yjs), undo is per tab. No
     read-only tab, lock or take-over; frame 82 is not used.
+36. **Drag on empty canvas** (003): design tools like Figma select with a plain drag; the canvas
+    pans with a plain drag and draws the selection box with Shift+drag.
+    **Decision (founder, 2026-09-27):** keep it: plain drag pans, **Shift+drag** selects. Revisit
+    later if users ask. Copy/paste, group from selection, group drag, align and snap go in backlog 016.
+37. **Card size and connector routing** (not in the design): every card is 164 × 50 and connectors
+    are always routed automatically, so users cannot fix a line that runs through the wrong place.
+    **Decision (founder, 2026-09-27):** schema v1 may add **optional** `node.size` and
+    `edge.route` (sides + middle-segment offset); additive only, older files stay valid. Backlog
+    017; needs an ADR.
+38. **Editor layout** (02 and every editor frame): three fixed columns (sidebar 264 px, inspector
+    336 px) plus the JSON panel leave about half the screen for the canvas.
+    **Decision (founder, 2026-09-27):** **canvas-first** like Miro: full-bleed canvas, floating
+    islands, a left icon rail with flyouts, the inspector as an on-demand drawer, the JSON panel
+    hidden by default. Existing frames stay the reference for panel **content**, not placement.
+    Backlog 018; needs a design pass, an ADR and a DESIGN.md update.
+39. **Card colours** (not in the design): cards are coloured by kind only.
+    **Decision (founder, 2026-09-27):** fill and stroke from a fixed named palette, plus a "+"
+    that adds custom hex colours to the deck's swatches. Backlog 020 (schema change).
+40. **Card attributes** (founder's Miro cards show year, status, date range): **deferred**. Cards
+    keep the existing fields; user-defined typed fields come later.
+41. **Scheduling:** 016–020 run **after M4**.
