@@ -76,7 +76,7 @@ Single package: `pnpm --filter @sododeck/<name> <script>`.
 
 - **Unit (Vitest):** every pure function and store; every model change gets a round-trip case (`packages/model/test`). Schema changes keep the Ajv/Zod parity test green.
 - **Component (Testing Library):** test behavior via roles and labels, not class names or internals.
-- **E2E (Playwright, Chromium):** user-visible flows against the production build. Keep the smoke suite fast (< 30 s).
+- **E2E (Playwright, Chromium):** do not add new e2e tests for now (constitution Principle VI, `TODO(e2e)`). The existing smoke suite (`apps/app/tests/e2e/smoke.spec.ts`, incl. the no-third-party-requests check) must keep passing against the production build and stay fast (< 30 s); update it only when a change breaks it.
 - Tests live next to code (`*.test.ts`) in apps, and in `test/` in packages.
 - A bug fix starts with a failing test.
 - Performance-sensitive changes to the canvas: run `pnpm bench` before and after and include the numbers in the report.
