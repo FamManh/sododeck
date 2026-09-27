@@ -26,4 +26,4 @@
 
 ## Status
 
-v1 complete (feature 001). Step branches are deferred to 006 (an optional field, no version bump).
+v1 complete (feature 001). 006 added flow branches as optional, additive fields with no version bump: `Flow.branches[]` (`Branch { id, label, condition, errorPath?, description? }`) and `Step.branch` (ADR 0008). Empty branch labels and conditions are valid in the file; the editor's Done enforces them.

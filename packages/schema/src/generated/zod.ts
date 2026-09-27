@@ -301,6 +301,46 @@ export const sododeckFileSchema = z
               )
               .describe('Links to related resources.')
               .optional(),
+            branches: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                      ),
+                    label: z
+                      .string()
+                      .describe(
+                        'Short name, e.g. "payment failed". May be empty while the branch is being authored.',
+                      ),
+                    condition: z
+                      .string()
+                      .describe(
+                        'When this branch is taken, e.g. "payment.status == \'declined\'". May be empty while the branch is being authored.',
+                      ),
+                    errorPath: z
+                      .boolean()
+                      .describe(
+                        'True when this branch is an error path (drawn dashed with an error icon). Absent means false.',
+                      )
+                      .optional(),
+                    description: z
+                      .string()
+                      .describe('What happens on this branch (markdown).')
+                      .optional(),
+                  })
+                  .strict()
+                  .describe(
+                    'An alternative path of a flow, forking after its last main-path step.',
+                  ),
+              )
+              .describe(
+                'Alternative paths after the branch step, in order (index 0 is alternative "a"). The branch step is derived: the last main-path step. One level only.',
+              )
+              .optional(),
             steps: z
               .array(
                 z
@@ -315,6 +355,13 @@ export const sododeckFileSchema = z
                       .string()
                       .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
                       .describe('Id of the edge this step travels.'),
+                    branch: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Id of the branch of this flow the step belongs to. Absent: main path.',
+                      )
+                      .optional(),
                     title: z
                       .string()
                       .describe('Step name. When absent, the edge label is shown.')
@@ -373,7 +420,9 @@ export const sododeckFileSchema = z
                   .strict()
                   .describe('One hop of a flow over an existing edge.'),
               )
-              .describe('Steps in order. The same edge may appear in several steps.'),
+              .describe(
+                "Steps in order: main-path steps first, then each branch's steps grouped in `branches` order. The same edge may appear in several steps.",
+              ),
           })
           .strict()
           .describe('An ordered path of steps over existing edges.'),

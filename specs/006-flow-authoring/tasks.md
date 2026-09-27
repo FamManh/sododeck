@@ -69,7 +69,7 @@ story uses. No story work starts before this phase is done.
 
 ### Schema
 
-- [ ] T004 Add to `packages/schema/schema/v1.json`:
+- [x] T004 Add to `packages/schema/schema/v1.json`:
   - `$defs.Branch`:
     - Required: `id` (`Id`), `label` (`string`, may be empty), `condition` (`string`, may be
       empty).
@@ -81,7 +81,7 @@ story uses. No story work starts before this phase is done.
 
   Then run `pnpm schema:generate` and commit `src/generated/`.
 
-- [ ] T005 Extend `packages/schema/examples/full.sododeck.json` with one flow that has two branches
+- [x] T005 Extend `packages/schema/examples/full.sododeck.json` with one flow that has two branches
       (one with `errorPath: true`) and branch steps. Add invalid cases to
       `packages/schema/test/fixtures.ts`: a branch without `condition`, `errorPath: "yes"`, an
       unknown key in a branch, and a non-Id `step.branch`. Run
