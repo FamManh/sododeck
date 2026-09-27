@@ -53,11 +53,25 @@ A node with children shows a marker `Layers` + n, named "<n> components inside, 
 | Focused element | full opacity + focus ring; connecting edges highlighted, labels shown                      | —                                                                                         |
 | No selection    | announce "Select a component to focus"                                                     | nothing dims                                                                              |
 
-## Flow through a collapsed group (design 71, clarification Q2)
+## Flow through a collapsed group (design 71, clarifications Q2 and Q3)
 
 - The card gets a ring when any shown-flow step is hidden inside it, and ring + pulsing dot (static under `prefers-reduced-motion`) when the active step is. Its name gains ", flow step inside".
-- Merged edges carry the step badges of their underlying edges, in step order.
-- The step player's "inside <group>" text is **not** rendered in 010; 007 uses `groupAtStep` (see [visible-graph.md](visible-graph.md)).
+- Merged edges carry the step badges of their underlying edges, in step order. When the current step is one of them, the merged edge gets 007's current look and the token.
+- Cards and merged edges on the played path are not dimmed by flow mode (`.in-flow` / `data-in-flow`).
+- Step player: `Step 3 of 7 · Charge card` becomes `Step 3 of 7 · Charge card · inside Core services` (muted text) when the current step's connection is hidden in a collapsed group. The live announcement ends with ", inside Core services".
+
+### Flow mode rules (FR-038, FR-039)
+
+| Input                                | In flow mode                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------ |
+| Chevron click, Space on label / card | collapse / expand; current step unchanged                                |
+| Click collapsed card                 | current step → first played step inside it                               |
+| Click merged connection              | current step → next played step among its connections (wraps)            |
+| Double-click, Enter (drill)          | nothing                                                                  |
+| F, Focus toggle                      | nothing / disabled ("Not available while a flow is shown")               |
+| Backspace                            | nothing                                                                  |
+| Esc                                  | exit flow mode (007); never goes up a level                              |
+| Opening a flow while drilled         | go up to the whole deck, announce "Showing the whole deck for this flow" |
 
 ## Keyboard summary
 

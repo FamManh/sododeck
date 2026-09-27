@@ -2,7 +2,7 @@
 
 **Input**: design documents in `specs/009-stickies-search/`:
 
-- [plan.md](plan.md) and [spec.md](spec.md), including the Clarifications of 2026-09-27 (Q1: notes become free when their component is deleted; Q2: flow-mode dimming is deferred until 007 merges).
+- [plan.md](plan.md) and [spec.md](spec.md), including the Clarifications of 2026-09-27 (Q1: notes become free when their component is deleted; Q2: flow-mode behavior waits for 007), and the review against 007 as implemented (2026-09-28), which brought User Story 4 fully into scope.
 - [research.md](research.md) (R1–R17) and [data-model.md](data-model.md).
 - [contracts/model-additions.md](contracts/model-additions.md) and [contracts/stickies-palette-ui.md](contracts/stickies-palette-ui.md).
 - [quickstart.md](quickstart.md).
@@ -15,9 +15,9 @@
 
 Write each test first and watch it fail. Do not add Playwright tests; the smoke suite must stay green unchanged.
 
-**Out of these tasks (spec "Deferred")**: note dimming during flow playback, its non-color cue, and the "Notes: dimmed / shown / hidden" switch (US4 scenarios 1–4, FR-016–FR-018). They are built after 007 merges, following a review. This file covers only US4's 009 part: the `showInFlows` switch, and refusing new notes during a flow session.
+**007 is merged** (`b519550`). User Story 4 builds on its flow mode: `isFlowMode`, `openFlow`, the flow overlay's `NodeFlowMark.currentStep`, the `data-flow-mode` CSS and `--sd-dur-dim`, `canvas-toolbar.tsx` and `flows/inspector-step.tsx` (research header, R15).
 
-**Parallel sessions**: 007 is being implemented and 010 specified in other sessions. `.specify/feature.json` points at 010, so do not rely on it; use `specs/009-stickies-search/` explicitly. Merge hot spots and ADR renumbering are covered in plan.md and research R17.
+**Parallel sessions**: 010 is being specified in another session. `.specify/feature.json` points at 010, so do not rely on it; use `specs/009-stickies-search/` explicitly. Merge hot spots and ADR renumbering are covered in plan.md and research R17.
 
 **Approvals**: no new runtime dependency and no Complexity Tracking exception. The PR description should mention two behavior changes to the founder: node deletes now free pinned notes (ADR 0010), and markdown bold and italic also apply to 008 descriptions.
 
@@ -144,7 +144,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 - [ ] T021 [P] [US1] Write `apps/app/src/editor/stickies/sticky-actions.test.ts` and the sticky cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx` and `apps/app/src/editor/palette.test.tsx`. They must fail at first (research R5, R12):
   - `addNoteAt(point)` starts a draft that is free on empty canvas and pinned when the point is inside a component's rectangle. It selects the note, enters edit mode and announces "Note added" / "Note added, pinned to <node>".
   - `finishDraft` on blur discards a blank note ("Empty note removed", no undo entry) and keeps a note with text.
-  - N at the tracked pointer adds a note, falls back to the view centre, and does nothing in a text field or during a flow session.
+  - N at the tracked pointer adds a note, falls back to the view centre, and does nothing in a text field, during a flow session or in flow mode (`isFlowMode`).
   - ⌥C (`code === 'KeyC'`, `altKey`) toggles `collapsed` on the selected note and announces it.
   - Arrows nudge the selected note by 8 px (Shift 32 px).
   - Enter or F2 edits the note.
@@ -232,8 +232,9 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - node: selected, focused, `fitView` called with its id
   - edge: selected and centred on its midpoint
   - note: `selection.stickies`, centred
-  - flow: `setActiveFlow`
-  - step: `setActiveFlow` + `setActiveStep`
+  - flow: `openFlow(editor, flowId)` enters flow mode at step 1
+  - step: `openFlow(editor, flowId, stepId)` enters flow mode at that step
+  - a component, connection or note result while in flow mode calls `exitFlow()` first, then selects
   - rule: `openRules(ruleId)`
   - from the rules screen, canvas targets navigate to the canvas first
   - a vanished target announces "This item no longer exists" and returns false
@@ -278,29 +279,49 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ---
 
-## Phase 6: User Story 4: Notes during flow playback (P3), 009 part only
+## Phase 6: User Story 4: Notes during flow playback (P3)
 
-**Goal**: authors can mark a note "Stay visible during flows" (FR-009). New notes cannot be added during a flow session. The dimming itself is deferred until 007 merges (spec "Deferred").
+**Goal**: in 007's flow mode, notes dim to 35% except those pinned to the current step's components or marked "Stay visible during flows"; notes are view-only; a Notes switch in the canvas toolbar; NOTES ON THIS STEP in the step inspector (spec US4, FR-009, FR-016–FR-018b).
 
-**Independent test**: turn the switch on and off. `"showInFlows": true` appears in the JSON panel, and one ⌘Z undoes it. With a flow shown or being recorded (006), N and a Note drop do nothing (quickstart step 7).
+**Independent test**: play a flow on a deck with three notes (free, pinned to a component of step 2, marked "Stay visible"). Step through and check each note's state, the Notes switch (dimmed, shown, hidden, remembered after reload), the step inspector's notes list, and that notes can't be moved or edited until flow mode ends (quickstart step 7).
 
-- [ ] T042 [US4] Confirm the switch behavior is covered by T023, and the flow-session refusal by T021. Add any missing case: a note drop during `flowSession` is refused, in `apps/app/src/editor/use-canvas-handlers.test.ts` or `canvas.test.tsx`. Add a comment `TODO(M2): dim notes during playback (009 US4, FR-016–FR-018) after 007 merges` at the spot in `apps/app/src/editor/deck-to-flow.ts` where `toStickyNodes` will read the flow overlay.
+- [ ] T042 [P] [US4] Write `apps/app/src/editor/stickies/sticky-flow.test.ts`. It must fail at first (research R15):
+  - `stickyFlowState`: `normal` outside flow mode; `hidden` / `normal` for the hidden / shown display; `normal` for `showInFlows`; `normal` when pinned to the current step's from or to node (`NodeFlowMark.currentStep`); `dimmed` for a free note, a note pinned to another node, and foreign or missing anchors; `normal` for every note in an empty flow; `dimmed` (unless `showInFlows`) with a broken current step
+  - `notesOnStep(deck, fromId, toId)`: notes pinned to either node, in file order; foreign and missing anchors are excluded
+- [ ] T043 [US4] Implement `apps/app/src/editor/stickies/sticky-flow.ts` (`stickyFlowState`, `notesOnStep`). Make T042 pass.
+- [ ] T044 [P] [US4] Write the flow-mode sticky cases in `apps/app/src/editor/deck-to-flow.test.ts`, `apps/app/src/editor/stickies/sticky-node.test.tsx`, `apps/app/src/flow-mode-css.test.ts` and `apps/app/src/state/ui-store.test.ts`. They must fail at first:
+  - `toStickyNodes` with a playback overlay: dimmed notes get `sd-note-dimmed`, the others `in-flow sd-note-shown`, hidden notes `hidden: true`, and every sticky node is `draggable: false` in flow mode; the cache is reused when the state is unchanged
+  - the card in flow mode: the accessible name ends with ", dimmed" when dimmed; there is no collapse button; double-click, Enter, F2 and ⌥C do nothing
+  - `index.css`: a `[data-flow-mode] .react-flow__node.sd-note-dimmed` rule at opacity 0.35 with `transition: opacity var(--sd-dur-dim)`, full opacity on `:hover` / `:focus-within`, and a dashed border from a token
+  - `notesDisplay` defaults to `dimmed`, persists under `sododeck.notes`, and works when localStorage throws
+  - `addNoteAt` returns early in flow mode (N, drop, palette click)
+- [ ] T045 [US4] Implement:
+  - `notesDisplay` + `setNotesDisplay` in `apps/app/src/state/ui-store.ts` (the `LABELS_KEY` pattern)
+  - pass the overlay and `notesDisplay` to `toStickyNodes` in `apps/app/src/editor/deck-to-flow.ts` and `apps/app/src/editor/canvas.tsx`
+  - the view-only card in `apps/app/src/editor/stickies/sticky-node.tsx`
+  - the early return in `apps/app/src/editor/stickies/sticky-actions.ts`
+  - the CSS rule in `apps/app/src/index.css`
+  - Make T044 pass.
+- [ ] T046 [P] [US4] Write the tests for the Notes switch in `apps/app/src/editor/canvas-toolbar.test.tsx` and for NOTES ON THIS STEP in `apps/app/src/editor/flows/inspector-step.test.tsx`. They must fail at first (UI contract "Notes in flow mode"):
+  - the button "Notes: dimmed" shows only in flow mode; its `menu` "Notes during flows" has `menuitemradio` Dimmed, Shown and Hidden, and choosing one updates the label and `notesDisplay`
+  - the step inspector lists notes pinned to the current step's components as buttons "<label>, pinned to <component>"; activating one centres the note (`setCenter`) without leaving flow mode or changing the selection; the section is hidden when empty; the list follows step changes
+- [ ] T047 [US4] Implement the Notes switch in `apps/app/src/editor/canvas-toolbar.tsx` (`DropdownMenu`, `StickyNote` icon) and the NOTES ON THIS STEP section in `apps/app/src/editor/flows/inspector-step.tsx` (`PanelSection`, `notesOnStep`). Make T046 pass. The "Stay visible during flows" switch itself is covered by T023.
 
-**Checkpoint**: every in-scope story in the spec is complete.
+**Checkpoint**: every story in the spec is complete.
 
 ---
 
 ## Phase 7: Polish and cross-cutting concerns
 
-- [ ] T043 [P] Accessibility pass on every new surface: keyboard only (quickstart step 10), visible focus on notes and palette rows, a grayscale check (pinned vs free, collapsed, matched text), and every announcement from the UI contract. Fix gaps with tests.
-- [ ] T044 [P] Update the docs:
+- [ ] T048 [P] Accessibility pass on every new surface: keyboard only (quickstart step 10), visible focus on notes and palette rows, a grayscale check (pinned vs free, collapsed, matched text), and every announcement from the UI contract. Fix gaps with tests.
+- [ ] T049 [P] Update the docs:
   - `apps/app/CLAUDE.md`: the `editor/stickies/` and `editor/command-palette/` folders, `Selection.stickies`, the N, ⌥C and ⌘K keys
   - `packages/schema/CLAUDE.md`: the new sticky fields
   - check `packages/model/CLAUDE.md` (T013) and `packages/ui/CLAUDE.md` (T034)
   - the root README, only if commands changed
-- [ ] T045 Add a "⌘K type → results painted" scenario to `apps/app/bench/perf.bench.ts` (2,000 nodes, median of 5, 50 ms target), run `BENCH_STICKIES=100 pnpm bench`, and write `specs/009-stickies-search/bench-after.md` with the before and after numbers. Pan and zoom must stay ≥ 60 fps at 500 nodes / 1,000 edges (SC-009), and palette open must be < 100 ms (SC-008).
-- [ ] T046 Visual check: take screenshots at 1440×900, light and dark, of frames 14, 30, 31, 32 and 62, next to `docs/design/screens/`, and write `specs/009-stickies-search/visual-check.md`. List the differences for the PR. Allowed differences: no note title field (the first line is used), the command labels from research R10, DESIGN.md tokens, lucide icons.
-- [ ] T047 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, walk through quickstart.md steps 1–11, and export and re-import a deck with notes to check the round-trip (SC-005).
+- [ ] T050 Add a "⌘K type → results painted" scenario to `apps/app/bench/perf.bench.ts` (2,000 nodes, median of 5, 50 ms target), run `BENCH_STICKIES=100 pnpm bench`, and write `specs/009-stickies-search/bench-after.md` with the before and after numbers. Pan and zoom must stay ≥ 60 fps at 500 nodes / 1,000 edges (SC-009), and palette open must be < 100 ms (SC-008). Also check that 007's flow scenarios ("select flow → marks painted", step changes) stay within their 100 ms targets with 100 notes on the canvas.
+- [ ] T051 Visual check: take screenshots at 1440×900, light and dark, of frames 14, 30, 31, 32, 62 and 63, next to `docs/design/screens/`, and write `specs/009-stickies-search/visual-check.md`. List the differences for the PR. Allowed differences: no note title field (the first line is used), the command labels from research R10, DESIGN.md tokens, lucide icons.
+- [ ] T052 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, walk through quickstart.md steps 1–11, and export and re-import a deck with notes to check the round-trip (SC-005).
 
 ---
 
@@ -318,12 +339,12 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - **US2** (T030–T039) needs Phase 2 (sticky selection, for opening note results). It does not need US1, but note results are only visible on the canvas once T019 exists.
     - T030 → T031 → T032; T033 → T034; T035 and T036 → T037; T038 → T039, which needs T031, T034 and T037.
   - **US3** (T040–T041) needs US2's palette (T039).
-  - **US4 part** (T042) needs T021–T024.
-- **Polish** (T043–T047) comes after all stories.
+  - **US4** (T042–T047) needs US1 (T017, T019, T022, T024). T042 → T043 → T044 → T045; T046 → T047, which needs T043.
+- **Polish** (T048–T052) comes after all stories.
 
 ```text
-T001 → Phase 2 ─┬─ US1 (MVP) ───────────┐
-                └─ US2 → US3 ────────────┼─ US4 part → Polish
+T001 → Phase 2 ─┬─ US1 (MVP) → US4 ─────┐
+                └─ US2 → US3 ────────────┴─ Polish
 ```
 
 ## Parallel examples
@@ -332,12 +353,12 @@ T001 → Phase 2 ─┬─ US1 (MVP) ───────────┐
 - **US1**: T010, T012, T014, T016, T018 and T020 (tests and bench) touch different files, so they can run together. Then T011, T013, T015 and T017. T023, T025 and T027 (tests) together once T019 is in.
 - **US1 and US2** can go to separate agents after Phase 2. They share only `use-canvas-shortcuts.ts` (N/⌥C in `useCanvasKeyDown` vs ⌘K in `useEditorShortcuts`) and `ui-store.ts` (done in T009).
 - **US2**: T030, T033, T035, T036 and T038 (tests) together.
+- **US4**: T042, T044 and T046 (tests) together; US4 can run alongside US2 and US3 once US1 is in.
 
 ## Implementation strategy
 
 1. **MVP**: T001–T029, which delivers sticky notes (US1, K-3). Demo it and check against frames 14 and 62.
 2. **Search**: add US2 (K-4, C-3). Demo it against frames 30–32.
 3. **Commands**: add US3.
-4. **US4 part**: T042.
-5. Finish with Polish (T043–T047). The feature ships in one PR. The final report lists what changed, what was skipped (US4 dimming, deferred to after 007), what is uncertain, and the bench numbers.
-6. **After 007 merges**: review the spec's User Story 4, FR-016–FR-018, and flow results in the palette against 007 as implemented, then generate follow-up tasks.
+4. **Flow mode**: add US4 (T042–T047). Demo it against frame 63.
+5. Finish with Polish (T048–T052). The feature ships in one PR. The final report lists what changed, what was skipped, what is uncertain, and the bench numbers.

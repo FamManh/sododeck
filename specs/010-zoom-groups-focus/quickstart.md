@@ -46,7 +46,7 @@ pnpm dev   # http://localhost:5173
 5. With nothing selected, press Backspace twice to return to the top. Clicking the **System view** crumb works too.
 6. Focus the Platform label (Tab to the canvas, arrow keys), press Space: it collapses into a card with "n nodes · m edges", and connections to Clients / External merge into ×N pills. Hover a pill to see the list, then press Enter on a row to expand the group and select that connection.
 7. Select API Gateway and press F: only it and its neighbours stay bright. Select Order Service to move the focus. Press F to turn focus off.
-8. Select a flow in the Flows tab with Core services collapsed (inside Delivery platform): the card shows the ring, and the merged edges carry the step badges.
+8. Drill into Delivery platform, then open a flow from the Flows tab: the canvas goes back to the whole deck and announces it. Collapse Core services with Space (flow mode allows it): the card shows the ring, merged edges carry the step badges, and stepping with → onto a hidden step shows the dot and "inside Core services" in the player. A step on a merged connection moves the token onto it. Click the card: the first step inside it becomes current. Double-click, Enter-drill and F do nothing; Esc exits flow mode.
 9. Repeat 2–8 in the dark theme, and under macOS "Reduce motion" (the card's dot is static).
 10. Compare against `docs/design/screens/13`, `19` and `64`–`71` (light and dark). Save screenshots to `specs/010-zoom-groups-focus/screens/` and notes to `visual-check.md`.
 

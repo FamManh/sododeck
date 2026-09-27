@@ -33,6 +33,6 @@
 
 - Iteration 1: two open questions (Q1: pinned notes when their component is deleted — backlog §009 vs 002 FR-017; Q2: flow-mode note dimming while 007 is not implemented).
 - Iteration 2: founder answered Q1 = A (notes become free, amends 002 FR-017 for component anchors), Q2 = A (store `showInFlows` now; dimming and Notes switch specified against 007's spec and delivered after 007 merges, with a review). All items pass.
-- Follow-up after 007 merges: review User Story 4, FR-016–FR-018 and palette flow results against 007 as implemented.
+- Iteration 3 (2026-09-28): 007 merged (`b519550`); the spec was reviewed against it (spec "Review against 007 as implemented"). User Story 4 is in scope (FR-016–FR-018b), and palette flow and step results open flow mode. All items still pass.
 - Field names `collapsed` / `showInFlows` appear because they are part of the public file format (constitution II), not an implementation choice.
 - Items marked incomplete require spec updates before `$speckit-clarify` or `$speckit-plan`

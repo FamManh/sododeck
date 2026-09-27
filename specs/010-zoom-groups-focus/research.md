@@ -97,7 +97,7 @@ Decisions taken while planning. Spec: [spec.md](spec.md) (clarified 2026-09-27, 
   - Connecting edges get their labels forced on.
 - **Rationale**: the skill says to mark few objects and dim the rest with CSS. That handles the visuals, but accessibility (FR-032) needs a per-object `aria-hidden` / `inert`, so focus mode rebuilds objects once per toggle or selection change. That is acceptable under SC-002 and measured in the bench (`focus` scenario).
 - **Alternatives**: `pointer-events: none` via CSS only was rejected because screen readers would still reach dimmed nodes.
-- **Interplay**: entering 007 flow mode (or 006 recording) sets `focusMode = false`, and the toggle is disabled while a session or flow mode is active.
+- **Interplay**: entering 007 flow mode (`ui.openFlow`) or a 006 recording (`startRecording` / `startEditing`) sets `focusMode = false`, and the toggle is disabled while `isFlowMode(state)` or a flow session is active.
 
 ## R9 — Keyboard map
 
@@ -112,6 +112,7 @@ Decisions taken while planning. Spec: [spec.md](spec.md) (clarified 2026-09-27, 
 | Esc                              | nothing selected, no popover / dialog, drilled       | up one level                                      |
 | Backspace / Esc with a selection | anywhere on the canvas screen                        | unchanged (delete confirmation / clear selection) |
 
+- **Flow mode (007, FR-038)**: `useCanvasKeyDown` today returns early in flow mode except for ⌘ zoom. 010 adds one exception before that return: Space on a focused group label or collapsed card toggles collapse. Enter-drill, F and Backspace-up do nothing in flow mode; Esc keeps calling `exitFlow()` and never goes up a level. ← → ↑ ↓ stay with `usePlaybackShortcuts`.
 - **Where**: canvas-scoped keys (Enter, Space, F) go in `useCanvasKeyDown`. Backspace and Esc "up" go in `useEditorShortcuts` after the existing delete and clear branches, so the selection rules keep priority (FR-014).
 - **React Flow**: `zoomOnDoubleClick={false}` and `onNodeDoubleClick` for drill-in (skill recipe step 6).
 
@@ -121,13 +122,18 @@ Decisions taken while planning. Spec: [spec.md](spec.md) (clarified 2026-09-27, 
 - **Menu**: the items are the four levels. Choosing one calls `zoomTo(mid)`, which zooms around the viewport centre. The band middles are Landscape 0.375, System 0.68, Container 1.2 and Component 1.75. While drilled into a node, the menu shows Component checked and the other items disabled.
 - **Announcements**: level changes are announced through `ui.announce`, at most one per band change.
 
-## R11 — Flows through collapsed groups (clarification Q2)
+## R11 — Flows through collapsed groups (clarifications Q2 and Q3, 007 on `main`)
 
 - **Decision**: `flowOverlay` is unchanged. A new pure `collapseFlowMarks(overlay, graph)` folds the existing edge marks into the derived graph:
   - A merged edge gets the union of its underlying edges' badges, in step order, with `current` kept.
   - A card gets `flowInside: 'current' | 'path' | undefined` from marks on its hidden internal edges.
 - **Rendering**: the card shows a ring for `path` and ring + pulsing dot for `current`. Under reduced motion the dot is static, using `useReducedMotion` in a child component rendered only when `current`.
-- **Player text**: `groupAtStep(graph, edgeId)` returns the collapsed group title for a step's edge, so 007's step player can add "inside <group>" when it lands. 010 exports and tests this helper but does not render player text.
+- **Current step on a merged edge**: when the folded marks include a `current` mark, the merged edge keeps it, so `MergedEdge` renders 007's current look and `FlowToken` exactly like `DeckEdge` does. On the path, merged edges get `data-in-flow` and cards get `className: 'in-flow'`, so the existing `[data-flow-mode]` CSS in `index.css` does not dim them.
+- **Player text**: `groupAtStep(deck, graph, edgeId)` returns the outermost collapsed group title hiding a step's edge. `step-player.tsx` renders "inside <title>" after the step title, and `stepAnnouncement` in `played-path.ts` gains an optional `insideGroup` argument that appends ", inside <title>". Both read the same memoized `VisibleGraph` as the canvas.
+- **Clicks in flow mode**: `use-canvas-handlers.ts` maps a `collapsed:<id>` click to the first played step whose edge is hidden in that group (`stepForGroup(played, hiddenEdges)`), and a `merged:<a>|<b>` click to `stepForEdges(played, underlyingEdgeIds, current)`, a multi-edge form of 007's `stepForEdge` (next after the current step, wrapping). Both are pure and live in `collapse-flow-marks.ts` so `played-path.ts` stays 007's.
+- **Collapse during playback**: collapse / expand only changes `ui.collapsed`; `activeFlow.stepId` is untouched, so the derivation moves the highlight between the edge and the card.
+- **Drilled when a flow opens**: `openFlow` in the UI store also sets `drill = []` and restores the top frame's viewport, then announces "Showing the whole deck for this flow". Port pills therefore never appear in flow mode.
+- **Alternatives**: extending `flowOverlay` to know about groups was rejected: it would couple 006/007 code to the collapse state and bust its per-object cache on every toggle.
 
 ## R12 — Benchmark
 

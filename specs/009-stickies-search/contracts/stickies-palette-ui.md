@@ -7,12 +7,14 @@ Visual targets are in `docs/design/screens/`:
 - 14 (palette STRUCTURE › Note)
 - 30, 31, 32 (command palette)
 - 62, light and dark (stickies)
+- 63, light and dark (stickies during a flow)
 
-63 is deferred until after 007. Exceptions to the design:
+Exceptions to the design:
 
 - Notes have no title field; the first line is the heading (research R4).
 - The command labels follow research R10.
 - The theme command toggles the resolved theme.
+- The JSON panel's Step tab does not list shown and dimmed notes (design 63): it shows document data only.
 
 ## Palette card (left panel, STRUCTURE)
 
@@ -46,6 +48,13 @@ Visual targets are in `docs/design/screens/`:
 - "Empty note removed"
 - "Note pinned to <node>" / "Note unpinned"
 - "Note collapsed" / "Note expanded"
+
+## Notes in flow mode (design 63)
+
+- **Dimmed note**: opacity 35% with a dashed border; the accessible name ends with ", dimmed". Full strength while hovered or focused. Never at 007's 20%.
+- **View-only**: no drag, no collapse button, no edit (double-click, Enter, F2 and ⌥C do nothing); N, Note drops and the palette card do nothing.
+- **Notes switch** (canvas toolbar, next to Labels, flow mode only): `button` "Notes: dimmed" / "Notes: shown" / "Notes: hidden" (`aria-haspopup="menu"`) opening a `menu` "Notes during flows" with `menuitemradio` "Dimmed", "Shown", "Hidden".
+- **Step inspector**: a `PanelSection` heading "NOTES ON THIS STEP" with a `list`; each item is a `button` named "<label>, pinned to <component>" that centres the note on the canvas. Hidden when empty.
 
 ## Sticky inspector (`aria-label="Inspector"`)
 

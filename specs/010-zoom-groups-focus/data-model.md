@@ -76,7 +76,7 @@ Focus:     off ─F / toggle (selection of 1)─▶ on(id) ─select other─▶
 Defined in [contracts/visible-graph.md](contracts/visible-graph.md):
 
 - **`VisibleGraph`**: the scope, the effective level, and the visible nodes, groups, cards, edges, merged edges and ports.
-- **`CollapsedCard`**: `{ groupId, title, nodeCount, edgeCount, rect }`.
+- **`CollapsedCard`**: `{ groupId, title, nodeCount, edgeCount, hiddenEdges, rect }`.
 - **`MergedEdge`**: `{ id, a, b, edgeIds, count, direction: 'a-to-b' | 'b-to-a' | 'both' }`.
 - **`PortPill`**: `{ id, insideNodeId, outsideNodeId, outsideTitle, edgeIds, side }`.
 - **`FocusSet`**: `{ focusId, members: Set<string>, edges: Set<string> }`.

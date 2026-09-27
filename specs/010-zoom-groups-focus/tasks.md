@@ -18,7 +18,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 - No change to `packages/schema`, `packages/model` or `packages/ui`.
 - Nothing in this feature writes to the deck or adds an undo step (FR-041).
-- 007's player text is not rendered (clarification Q2); only `groupAtStep` is exported for it.
+- 007 (on `main`) is extended, not changed: `flowOverlay`, `playedPath` and the flow-mode CSS keep their contracts; 010 adds the "inside <group>" text and the flow-mode rules (FR-035–FR-039, clarification Q3).
 
 **Approvals**: no new runtime dependency and no Complexity Tracking exception.
 
@@ -94,10 +94,13 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - a collapsed card focuses with its merged neighbours;
   - a node not visible in the graph returns null;
   - `edges` holds both plain and merged edge ids between them.
-- [ ] T010 [P] Write `apps/app/src/editor/collapse-flow-marks.test.ts` first, then implement `apps/app/src/editor/collapse-flow-marks.ts` (`collapseFlowMarks`, `groupAtStep`), research R11:
+- [ ] T010 [P] Write `apps/app/src/editor/collapse-flow-marks.test.ts` first, then implement `apps/app/src/editor/collapse-flow-marks.ts` (`collapseFlowMarks`, `groupAtStep`, `stepForGroup`, `stepForEdges`), research R11:
   - a merged edge's badges are the union of its underlying edges' `EdgeFlowMark.badges`, in step order, with `current` kept;
   - a card is `current` when the active step's edge is hidden inside it, `path` when any other shown-flow edge is, and absent otherwise;
+  - a merged edge with any `inPath` underlying mark is `inPath`, and keeps a `current` mark (speed included) when one underlying edge is current;
   - `groupAtStep` returns the outermost collapsed group title, or null;
+  - `stepForGroup` returns the first played step whose edge is in the card's `hiddenEdges`, or null;
+  - `stepForEdges` returns the next played step on any of the edges after the current one, wrapping, and null off the path;
   - `EMPTY_OVERLAY` gives empty maps.
 - [ ] T011 [P] Add `COMPONENT_CARD_SIZE` (164 × 104), `COLLAPSED_CARD_SIZE` (180 × 64) and `nodeSize(level)` to `apps/app/src/editor/canvas-geometry.ts`, with an optional `size` parameter on `groupBounds` and `selectionFrame`. Extend `apps/app/src/editor/canvas-geometry.test.ts`: component-level bounds are taller, and the default stays `NODE_SIZE`.
 
@@ -111,7 +114,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - the `{ kind: 'merged'; edgeId }` popover kind;
   - `pruneView(existing)`;
   - `resetForDeck()` resets all of them;
-  - `startRecording`, `startEditing` and `setActiveFlow` also set `focusMode = false` (research R8).
+  - `startRecording`, `startEditing` and `openFlow` also set `focusMode = false` (research R8); `openFlow` also sets `drill = []` (T055 wires the viewport and announcement).
 - [ ] T013 Update every `Selection` consumer to compile and behave with `groups`. Existing tests must stay green:
   - `apps/app/src/editor/canvas.tsx` (`useSelectionSync` passes existing group ids to `pruneSelection`);
   - `apps/app/src/editor/json-panel-view.ts` (the Selection tab lists selected groups through `serializeEntry('groups', …)`);
@@ -262,7 +265,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 - [ ] T040 [P] [US3] Write the Focus toggle cases in `apps/app/src/editor/canvas-toolbar.test.tsx`:
   - a `button` "Focus" with `aria-pressed` and the tooltip "Focus · F";
-  - disabled with the tooltip "Not available while a flow is shown" while `flowSession` or `activeFlow` is set.
+  - disabled with the tooltip "Not available while a flow is shown" while `flowSession` is set or `isFlowMode(state)` is true.
 - [ ] T041 [P] [US3] Write the focus cases in `apps/app/src/editor/canvas.test.tsx`:
   - with a node selected and focus on, the non-neighbour node wrappers have `aria-hidden="true"` and `inert`, the neighbours don't, and the connecting edges show labels even with Labels off;
   - selecting a neighbour moves the focus;
@@ -329,30 +332,45 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ## Phase 7: User Story 5: Play a flow through a collapsed group (P3)
 
-**Goal**: with a collapsed group, a shown flow lights the card (ring, plus a pulsing dot for the active step) and puts step badges on merged connections. The player text waits for 007 (clarification Q2).
+**Goal**: in 007 flow mode, a collapsed group lights up (ring, plus a pulsing dot for the current step), merged connections carry step badges and the token, the step player and announcement say "inside <group>", and only collapse / expand works among 010's controls (FR-035–FR-039, clarification Q3).
 
-**Independent Test**: collapse a group that contains steps of a flow, select the flow in the flow list and select steps inside and across the group (spec US5, AS 1–3, with the player part deferred).
+**Independent Test**: collapse a group that contains steps of a flow, open the flow, step with → through the steps inside and across the group, collapse / expand during playback, click the card and a merged connection (spec US5, AS 1–6).
 
 ### Tests first
 
-- [ ] T052 [P] [US5] Write the flow cases in `apps/app/src/editor/collapsed-group-node.test.tsx` and `apps/app/src/editor/merged-edge.test.tsx`:
+- [ ] T052 [P] [US5] Write the flow render cases in `apps/app/src/editor/collapsed-group-node.test.tsx` and `apps/app/src/editor/merged-edge.test.tsx`:
   - a card with `flowInside: 'path'` shows a ring, and its name gains ", flow step inside";
   - `'current'` adds the dot, which has an animation class unless reduced motion is on (mock `useReducedMotion`);
-  - a merged edge renders the folded step badges in order, with the current badge marked.
+  - a merged edge renders the folded step badges in order, with the current badge marked;
+  - a merged edge with a `current` mark renders the thicker line and `FlowToken`; with `inPath` it has `data-in-flow`.
+- [ ] T053 [P] [US5] Write the player text cases in `apps/app/src/editor/flows/step-player.test.tsx` and `apps/app/src/editor/flows/played-path.test.ts`:
+  - with the current step's edge hidden in a collapsed "Core services", the player shows "inside Core services" after the title; expanding removes it;
+  - `stepAnnouncement(deck, played, step, 'Core services')` ends with ", inside Core services"; without the argument the text is unchanged (existing cases stay green).
+- [ ] T054 [P] [US5] Write the flow-mode interaction cases in `apps/app/src/editor/use-canvas-shortcuts.test.tsx` and `apps/app/src/editor/canvas.test.tsx`:
+  - in flow mode, Space on a focused group label or card toggles collapse and `activeFlow.stepId` is unchanged;
+  - in flow mode, Enter, double-click, F and Backspace do nothing; Esc exits flow mode and `drill` is unchanged;
+  - clicking a collapsed card sets the current step to the first played step inside it; clicking a merged connection sets the next played step among its edges;
+  - cards and merged edges on the path are not dimmed (`in-flow` / `data-in-flow`);
+  - opening a flow while drilled empties `drill`, restores the top viewport and announces "Showing the whole deck for this flow" (`apps/app/src/editor/ui-store.test.ts` covers the store half).
 
 ### Implementation
 
-- [ ] T053 [US5] Fold the flow marks in `apps/app/src/editor/canvas.tsx`: memoize `collapseFlowMarks(overlay, graph)`, pass `marks` in `view`, set `data.flowInside` on cards and `data.flow` on merged edges in `apps/app/src/editor/deck-to-flow.ts`, and include both in the cache checks.
-- [ ] T054 [US5] Render the ring and the dot in `apps/app/src/editor/collapsed-group-node.tsx`: the dot is a child component that is only mounted for `current` and uses `useReducedMotion` (static when reduced). Render the badges in `apps/app/src/editor/merged-edge.tsx`, reusing the badge component and styles from `apps/app/src/editor/deck-edge.tsx` (extract a shared `flow-badges.tsx` if needed).
-- [ ] T055 [US5] Export `groupAtStep` for 007 and note in `specs/007-flow-playback/spec.md` Assumptions: "010 provides `groupAtStep(deck, graph, edgeId)`; the step player adds 'inside <group>' with it (010 FR-035)". Do not render player text.
+- [ ] T055 [US5] In `apps/app/src/editor/ui-store.ts` and `apps/app/src/editor/flows/flow-mode.ts`, make `openFlow` go up to the whole deck when drilled: set `drill = []`, restore the bottom frame's viewport through the existing `canvasViewport` handle, and announce "Showing the whole deck for this flow". Collapse state is kept.
+- [ ] T056 [US5] Fold the flow marks in `apps/app/src/editor/canvas.tsx`: memoize `collapseFlowMarks(overlay, graph)`, pass `marks` in `view`, and in `apps/app/src/editor/deck-to-flow.ts` set `data.flowInside` and `className: 'in-flow'` on cards and `data.flow` (with `inPath` / `current`) on merged edges; include both in the cache checks.
+- [ ] T057 [US5] Render the ring and the dot in `apps/app/src/editor/collapsed-group-node.tsx`: the dot is a child component that is only mounted for `current` and uses `useReducedMotion` (static when reduced). Render the badges, current look and `FlowToken` in `apps/app/src/editor/merged-edge.tsx`, reusing the badge component, styles and `data-in-flow` from `apps/app/src/editor/deck-edge.tsx` (extract a shared `flow-badges.tsx` if needed).
+- [ ] T058 [US5] Add the player text: `stepAnnouncement` in `apps/app/src/editor/flows/played-path.ts` gains an optional `insideGroup?: string` argument; `apps/app/src/editor/flows/step-player.tsx` reads `groupAtStep(deck, graph, step.step.edge)` from the canvas's memoized `VisibleGraph` (expose it through a small `useVisibleGraph` hook in `apps/app/src/editor/use-visible-graph.ts` if the player can't get it from props) and renders "inside <title>" as muted text; its announcement passes the title.
+- [ ] T059 [US5] Flow-mode keys in `apps/app/src/editor/use-canvas-shortcuts.ts`: before the flow-mode early return, handle Space on a focused group label or card (toggle collapse). Guard Enter-drill and F with `!isFlowMode(state)`, and in `useEditorShortcuts` skip Backspace-up in flow mode; Esc keeps calling `exitFlow()` first.
+- [ ] T060 [US5] Flow-mode clicks in `apps/app/src/editor/use-canvas-handlers.ts`: next to `stepForNode` / `stepForEdge`, map `collapsed:<id>` clicks to `stepForGroup` and `merged:` clicks to `stepForEdges`; `onNodeDoubleClick` does nothing in flow mode. Port pills can't appear (T055).
+- [ ] T061 [US5] Make `LevelIndicator` in `apps/app/src/editor/level-indicator.tsx` keep working in flow mode (zoom only), and check that the Focus toggle from US3 is disabled via `isFlowMode(state)` (T040); add a `level-indicator.test.tsx` case for the menu in flow mode.
+- [ ] T062 [US5] Update `specs/007-flow-playback/spec.md` Assumptions: collapsed groups are handled by 010 (FR-035–FR-039), replacing the "deferred to 010" notes.
 
-**Checkpoint**: US5 acceptance scenarios pass for the card ring and the badges.
+**Checkpoint**: US5 acceptance scenarios 1–6 pass; 007's existing tests stay green.
 
 ---
 
 ## Phase 8: Polish and cross-cutting concerns
 
-- [ ] T056 [P] Accessibility pass on every new surface:
+- [ ] T063 [P] Accessibility pass on every new surface:
   - keyboard only, following quickstart §3 steps 2–8;
   - visible focus on labels, chevrons, cards, pills, the level trigger, the popover rows and the Focus toggle;
   - a grayscale check: collapsed vs expanded, focused vs dimmed, current vs path ring;
@@ -361,18 +379,18 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
   Fix gaps with tests.
 
-- [ ] T057 [P] Update the docs:
+- [ ] T064 [P] Update the docs:
   - `apps/app/CLAUDE.md`: the map rows for `visible-graph.ts`, `levels.ts`, `focus-set.ts`, `collapse-flow-marks.ts` and the new node, edge and popover files; a rule that drill, collapse and focus are UI state and never written, and that canvas objects come from `visibleGraph`;
   - `.agents/skills/react-flow/SKILL.md`: the map (visible graph, levels), the new prefixes `collapsed:`, `port:`, `merged:`, and the focus-mode `inert` / `aria-hidden` pattern.
-- [ ] T058 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` again, and write `specs/010-zoom-groups-focus/bench-after.md` with the before and after numbers. The targets are:
+- [ ] T065 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` again, and write `specs/010-zoom-groups-focus/bench-after.md` with the before and after numbers. The targets are:
   - `groups-collapsed` ≥ 60 fps average and p95 ≤ 16.7 ms (SC-001);
   - `collapse-toggle` and `focus` ≤ 100 ms (SC-002);
   - the default scenario regresses no more than 5%.
 
   A miss blocks the merge (constitution V).
 
-- [ ] T059 Visual check: take screenshots at 1440×900, light and dark, of frames 13, 19 and 64–71 next to `docs/design/screens/`. Save them in `specs/010-zoom-groups-focus/screens/`, and list the differences in `specs/010-zoom-groups-focus/visual-check.md` (allowed: DESIGN.md tokens, lucide icons, the "System view" crumb constant, no player text).
-- [ ] T060 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, and walk through quickstart.md §2–§4.
+- [ ] T066 Visual check: take screenshots at 1440×900, light and dark, of frames 13, 19 and 64–71 next to `docs/design/screens/`. Save them in `specs/010-zoom-groups-focus/screens/`, and list the differences in `specs/010-zoom-groups-focus/visual-check.md` (allowed: DESIGN.md tokens, lucide icons, the "System view" crumb constant).
+- [ ] T067 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Confirm there are no skipped or `.only` tests, and walk through quickstart.md §2–§4.
 
 ---
 
@@ -388,8 +406,8 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - **US2** (T029–T039) needs Phase 2. T034 builds on T023's label button, so do US1's T023 first, or pair them.
   - **US3** (T040–T044) needs only Phase 2. T044's ring in `collapsed-group-node.tsx` needs T035.
   - **US4** (T045–T051) needs only Phase 2.
-  - **US5** (T052–T055) needs US2 (cards and merged edges).
-- **Polish** (T056–T060) comes after the stories that ship. T058 needs T003's scenarios to be active, and `groups-collapsed` needs T035.
+  - **US5** (T052–T062) needs US2 (cards and merged edges) and T010's flow helpers; T061 also needs US3's toggle and US4's indicator. T058 and T059 touch 007 files (`flows/`, `use-canvas-shortcuts.ts`), so run 007's tests with them.
+- **Polish** (T063–T067) comes after the stories that ship. T065 needs T003's scenarios to be active, and `groups-collapsed` needs T035.
 
 ```text
 Setup ─ Phase 2 ─┬─ US1 (MVP) ─┐
@@ -411,5 +429,5 @@ Setup ─ Phase 2 ─┬─ US1 (MVP) ─┐
 2. **V-2**: add US2 (collapse and merged edges), then re-run the bench (`groups-collapsed`).
 3. **V-3**: add US3 (focus mode).
 4. **V-1 complete**: add US4 (semantic levels and the indicator).
-5. **Flows**: add US5 (card ring and merged badges; player text with 007).
-6. Finish with Polish (T056–T060). The feature ships in one PR with small commits per task group. The final report lists what changed, what was skipped (player text), what is uncertain, and the bench numbers.
+5. **Flows**: add US5 (card ring, merged badges and token, player text, flow-mode rules).
+6. Finish with Polish (T063–T067). The feature ships in one PR with small commits per task group. The final report lists what changed, what was skipped, what is uncertain, and the bench numbers.

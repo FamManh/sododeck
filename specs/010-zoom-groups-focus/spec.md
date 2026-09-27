@@ -10,7 +10,7 @@
 
 **Sources**: `docs/backlog.md` §010 (scope, acceptance criteria, risks), `docs/spec.md` §7 (V-1 semantic zoom, V-2 collapsible groups, V-3 focus mode; V-5 role-based layers is P1), `docs/design/design-analysis.md` §a (states 13, 19, 64–71), §g-22 (collapse state is UI state in 010, saved per view in 011, never on the group object), §g-23 (derived data such as members and merged edges never appears in the JSON panel or the file), `docs/design/screens/` (light and dark), `specs/003-canvas-basic/spec.md` (zoom 30–200%, fit, group boundary, outline, Delete/Backspace opens the delete confirmation, 60 fps on the benchmark deck), `specs/006-flow-authoring/spec.md` (flow path marks), `specs/007-flow-playback/spec.md` (flow mode, step player; lists flows through collapsed groups as 010), constitution v1.0.0 (principles I–VIII).
 
-**Dependency note**: 010 depends on 003, merged on `main`. The file format already has everything this feature reads: `node.level` (landscape / system / container / component), `node.group`, `node.parent` (parent node one level up) and `group.parent` (nested groups). **No schema change.** Collapse, drill-in, focus and the current level are UI state (§g-22). 007 (flow playback, step player) is specified but **not implemented** on `main`; the flow-through-a-collapsed-group behavior (User Story 5) depends on it only for the player text, see FR-035.
+**Dependency note**: 010 depends on 003, merged on `main`. The file format already has everything this feature reads: `node.level` (landscape / system / container / component), `node.group`, `node.parent` (parent node one level up) and `group.parent` (nested groups). **No schema change.** Collapse, drill-in, focus and the current level are UI state (§g-22). 007 (flow playback: flow mode, dimming, token, step player) is merged on `main` (`b519550`); User Story 5 builds on it (FR-035–FR-039).
 
 ## Scope
 
@@ -20,7 +20,7 @@
 - **Drill-in** (design 19, 66, 67): double-click a group or its label (or Enter on a selected / focused group) to show only its members, fitted into view; drill into a component that has child components (`parent`) to see its children at Component level, with outside connections shown as dashed port pills at the edge (click → go up and select that component). The top-bar breadcrumb adds one crumb per level ("Deck › System view › Core services"); clicking a crumb, Esc or Backspace (nothing selected) goes up one level. The outline shows the drilled scope with an "Up" row.
 - **Collapsible groups** (design 68–70): a chevron in the group label (on hover and keyboard focus) and Space collapse / expand a group; a collapsed group renders as a node-sized stacked card with its name and "n nodes · m edges"; connections between the group and each outside neighbour merge into one connection with a "×N" pill and a direction icon; hovering or focusing a merged connection opens a popover listing the underlying connections (label + direction); choosing a row expands the group and selects that connection. The group inspector shows a Collapsed toggle, the merged-connections list and "Expand group".
 - **Focus mode** (design 13): a Focus toggle and F key; the selected component and its direct neighbours stay at full opacity, everything else is dimmed and non-interactive; connections between them are highlighted with their labels.
-- **Flow through a collapsed group** (design 71): a flow step inside a collapsed group lights the group card (ring + pulsing dot, static under reduced motion) and merged connections on the path carry step badges; the step player names the group ("inside Core services") once 007 is on `main` (FR-035).
+- **Flow through a collapsed group** (design 71): in 007 flow mode, a step inside a collapsed group lights the group card (ring + pulsing dot, static under reduced motion), merged connections on the path carry step badges (and the token when current), and the step player and its announcement say "inside Core services". Collapse / expand stays available in flow mode; drill-in and focus do not.
 - Keyboard and screen-reader support for all of the above; light and dark themes.
 
 **Out of scope**
@@ -36,7 +36,8 @@
 ### Session 2026-09-27
 
 - Q: Should components with a `parent` stay hidden until their parent is drilled into, or always show in their group? → A: Hidden until the parent is drilled into; each level shows only its own components (FR-004).
-- Q: 007 is not on `main`; should 010 include the flow-through-a-collapsed-group behavior? → A: 010 lights the group card and badges merged connections using 006 flow marks; the player's "inside <group>" text is added when 007 lands (FR-035).
+- Q: 007 is not on `main`; should 010 include the flow-through-a-collapsed-group behavior? → A: 010 lights the group card and badges merged connections using 006 flow marks; the player's "inside <group>" text is added when 007 lands (FR-035). _Superseded by the next answer: 007 is now on `main`._
+- Q: With 007 on `main`, what does 010 do in flow mode? → A: 010 also renders the player's "inside <group>" text; in flow mode users can collapse / expand groups, but not drill in or turn on focus (FR-035–FR-039).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -116,15 +117,18 @@ Zooming out from 100% to 42%, the architect sees the canvas switch from titles a
 
 While playing "Place order" with "Core services" collapsed, step 4 happens between two components inside the group: the group card shows a ring and a pulsing dot, and the player says "inside Core services".
 
-**Why this priority**: combines collapse with flows; valuable for presentations. The card ring and merged badges work with 006's flow marks; the player text needs 007.
+**Why this priority**: combines collapse with 007 flow playback; valuable for presentations, but only once stories 1–2 exist.
 
-**Independent Test**: collapse a group that contains steps of a flow, play the flow, step through the steps inside and across the group.
+**Independent Test**: collapse a group that contains steps of a flow, open the flow (flow mode), step with → through the steps inside and across the group, collapse / expand during playback.
 
 **Acceptance Scenarios**:
 
-1. **Given** a flow step inside a collapsed group, **When** it is current (or the flow is selected, before 007), **Then** the group card shows the ring; once 007 is on `main`, the player also names the group.
-2. **Given** a flow step on a connection that is merged, **When** rendered, **Then** the merged connection carries that step's badge.
+1. **Given** a flow step inside a collapsed group, **When** it is current, **Then** the group card shows the ring and pulsing dot, and the player and its announcement add "inside <group>".
+2. **Given** a flow step on a connection that is merged, **When** it is current, **Then** the merged connection is highlighted, carries that step's badge and shows the token.
 3. **Given** reduced motion, **When** a step inside a collapsed group is current, **Then** the dot is static and the ring remains.
+4. **Given** flow mode, **When** the user presses Space on a focused group label or clicks its chevron, **Then** the group collapses or expands, playback keeps its current step, and the highlight follows.
+5. **Given** flow mode, **When** the user clicks a collapsed card, **Then** the first played step inside it becomes current; **When** they click a merged connection, **Then** the next played step among its connections (after the current one, else the first) becomes current.
+6. **Given** a drilled-in scope, **When** the user opens a flow, **Then** the canvas goes up to the whole deck first, and double-click / Enter drill-in and F do nothing until flow mode ends.
 
 ### Edge Cases
 
@@ -141,6 +145,8 @@ While playing "Place order" with "Core services" collapsed, step 4 happens betwe
 - **Component with a `parent` that no longer exists** or a `parent` cycle: the component is shown at the top level of its group as if it had no parent; nothing is written to the file.
 - **Component without `level`**: its level is derived from group nesting and `parent` (see FR-004).
 - **Focus mode + flow mode**: entering flow mode turns focus mode off; focus cannot be turned on during flow mode (the toggle is disabled with a tooltip).
+- **Esc in flow mode**: exits flow mode (007) and never goes up a level; Backspace does nothing in flow mode.
+- **Collapsing during playback hides the current step's connection**: the card takes over the current-step ring and the player text updates at once; expanding gives the highlight and token back to the connection.
 - **Focus on a collapsed group**: the card and the groups/components it connects to stay bright.
 - **Zoom at a band boundary** (e.g. 45% / 46%): the level follows the listed thresholds exactly; zooming by trackpad does not flicker between levels (a level changes only once the new zoom settles in a band).
 - **Deck reload or switching decks**: collapse, drill-in and focus are reset (UI state only, §g-22).
@@ -182,12 +188,16 @@ While playing "Place order" with "Core services" collapsed, step 4 happens betwe
 
 - **FR-031**: A Focus toggle in the canvas toolbar and the F key (outside text fields) MUST turn focus mode on and off.
 - **FR-032**: In focus mode, the selected component (or collapsed group) and its direct neighbours MUST be at full opacity; all other components, groups, connections and notes MUST be dimmed (the design's 0.2 opacity) and MUST also be marked hidden from assistive technology and not clickable or focusable; connections between the focused element and its neighbours MUST be highlighted with their labels visible.
-- **FR-033**: Changing the selection in focus mode MUST move the focus; clearing the selection or entering flow mode MUST end focus mode; with no selection, F MUST announce "Select a component to focus" and change nothing.
+- **FR-033**: Changing the selection in focus mode MUST move the focus; clearing the selection, entering flow mode or starting a flow recording MUST end focus mode; with no selection, F MUST announce "Select a component to focus" and change nothing.
 - **FR-034**: Dimming MUST not rely on opacity alone for meaning: the focused element MUST also carry a visible ring or outline.
 
 **Flow through a collapsed group**
 
-- **FR-035**: A flow step whose connection is inside a collapsed group MUST light the group card (ring + pulsing dot; static dot under reduced motion), and a merged connection on a flow path MUST carry the step badges of its underlying connections, using 006's flow path marks. The step player's "inside <group title>" text MUST be added when 007 flow mode is on `main`; until then that part of User Story 5 is deferred.
+- **FR-035**: In flow mode, a collapsed group MUST show a ring when any played step's connection is hidden inside it, and a ring plus a pulsing dot (static under reduced motion) when the current step's is; it MUST be marked as on the path so flow-mode dimming does not dim it.
+- **FR-036**: A merged connection with played steps MUST carry their step badges in step order and be marked as on the path; when the current step is one of them, it MUST get 007's current-step look (thicker line, filled label, token).
+- **FR-037**: When the current step's connection is hidden in a collapsed group, the step player MUST add "inside <group title>" after the step title, and the step announcement MUST end with ", inside <group title>".
+- **FR-038**: In flow mode, collapse / expand MUST stay available (chevron, Space, merged-row Enter) and MUST NOT change the current step; drill-in (double-click, Enter), going up (Backspace) and focus mode (F, toggle) MUST do nothing; Esc keeps 007's meaning (exit flow mode). Clicking a collapsed card MUST make the first played step inside it current; clicking a merged connection MUST make the next played step among its connections current (after the current step, else the first).
+- **FR-039**: Opening a flow while drilled in MUST first go up to the whole deck (restoring its viewport) so every step is reachable; collapse state is kept.
 
 **General**
 

@@ -2,7 +2,7 @@
 
 Decisions for [plan.md](plan.md), resolving the technical unknowns in the [spec](spec.md).
 
-**Names checked on 2026-09-27** on `main` (`324d1bd`, 008 merged):
+**Names checked on 2026-09-27** on `main` (`324d1bd`, 008 merged), and **re-checked on 2026-09-28** after 007 merged (`b519550`); the 007 names are listed at the end of this header:
 
 - **Schema**:
   - `Sticky` is at `schema/v1.json:466-491`: `id`, `text`, `color`, `anchor`, `position`, plus an `anyOf` that needs an anchor or a position.
@@ -27,7 +27,7 @@ Decisions for [plan.md](plan.md), resolving the technical unknowns in the [spec]
   - `Inspector` routes to the node, edge, bulk, deck and flow inspectors.
   - `MarkdownField` renders with `MarkdownView` / `parseMarkdown` from `@sododeck/ui`: paragraphs, bullets and inline code, but **no bold or italic**.
   - `RuleNavContext.openRules(ruleId?)`.
-  - "Show flow F at step S" is `navigate(canvasPath)` + `setActiveFlow` + `setActiveStep` (`rules/used-in.tsx:51-55`).
+  - Opening a flow at a step is now 007's `openFlow(editor, flowId, stepId?)` (`editor/flows/flow-mode.ts`), used by `rules/used-in.tsx`, `inspector/edge-inspector.tsx` and `flows/flow-row.tsx`. It enters flow mode.
   - The theme is `useThemeStore`, export is `useExportDeck`, the library is `/` and a new deck is `/deck/new`.
   - `features.isApplePlatform` exists.
   - `filter-flows.ts` has `findRanges` (006, flow titles only).
@@ -36,6 +36,16 @@ Decisions for [plan.md](plan.md), resolving the technical unknowns in the [spec]
   - There is no command palette component. No cmdk or fuzzy-search library is installed.
   - Tints: amber, blue and clay soft/ink, plus success. There are no `green` / `grey` tints.
 - **Bench**: the bench deck (`src/bench/generate-deck.ts`) has no stickies or rules.
+
+- **007, merged on `main` (`b519550`)**:
+  - `isFlowMode(state)` in `state/ui-store.ts`: `activeFlow !== null && flowSession === null`. `ActiveFlow` gained `alternativeId`, `playing` and `speed`. The store has `openFlow`, `exitFlow`, `setCurrentStep` and `setAlternative`; `setActiveFlow` / `setActiveStep` remain for 006 recording.
+  - `editor/flows/flow-mode.ts`: `openFlow`, `exitFlow`, `goToStep`, `currentPlayback(deck)`, `playbackOf(deck, flow, alternativeId, stepId)` → `{ flow, analysis, played, view, currentStepId }`.
+  - `editor/flows/flow-overlay.ts`: `PlaybackMarks { played, currentStepId, speed }`; `NodeFlowMark.inPath` and `currentStep` (the current step's from and to components); `EdgeFlowMark.inPath` / `current`.
+  - `canvas.tsx` sets `data-flow-mode` on the wrapper; `index.css` dims every `.react-flow__node:not(.in-flow)` and edge to `opacity: 0.2`, with `transition: opacity var(--sd-dur-dim)` (0 under reduced motion, guarded by `flow-mode-css.test.ts`). Handles are hidden; the canvas is view-only.
+  - `use-canvas-handlers.ts` and `use-canvas-shortcuts.ts` already gate drags, marquee, deletes and Esc on `isFlowMode`.
+  - `canvas-toolbar.tsx` holds the Labels toggle (`labelsOn`, persisted with `LABELS_KEY` in localStorage, with a try/catch fallback).
+  - `flows/inspector-step.tsx` is the step inspector in flow mode; `flows/step-player.tsx` is the player (bottom centre).
+  - The left sidebar shows `FlowPanel` instead of the outline while a flow is open.
 
 ## R1. Two optional sticky fields (additive schema change)
 
@@ -193,8 +203,9 @@ Decisions for [plan.md](plan.md), resolving the technical unknowns in the [spec]
   - **Component**: `select({ nodes: [id] })`, focus it, then `fitView({ nodes: [{ id }], maxZoom: current, duration: 0 })`. This is the same as the outline (`outline-tree.tsx:46-48`).
   - **Connection**: select it, and `setCenter` on the midpoint of its endpoints at the current zoom.
   - **Note**: `select({ stickies: [id] })`, then `setCenter` on its canvas point.
-  - **Flow**: `setActiveFlow({ flowId })`, the 006 "show a flow". Whether this starts flow mode is part of the post-007 review.
-  - **Step**: `setActiveFlow` + `setActiveStep(stepId)`, as in `used-in.tsx`.
+  - **Flow**: `openFlow(editor, flowId)`, which enters flow mode at step 1 (007; spec review 2026-09-28).
+  - **Step**: `openFlow(editor, flowId, stepId)`, which enters flow mode at that step (its alternative chosen), as `used-in.tsx` does.
+  - **Canvas targets while in flow mode** (component, connection, note): `exitFlow()` first, then select. The palette never selects inside the view-only canvas.
   - **Rule**: `openRules(ruleId)`.
   - **Command**: run it.
   - Then close the palette. Focus returns to the target (canvas item, inspector or rule editor), or to the previous focus for commands that do not move focus.
@@ -208,7 +219,7 @@ Decisions for [plan.md](plan.md), resolving the technical unknowns in the [spec]
     - If a text field is focused, blur it first so `useLiveField` commits.
     - Pressing it again while open closes the palette. The shortcut label uses `features.isApplePlatform`.
     - Palette state (`open`, `returnFocus`) lives in `useUiStore.palette`.
-  - **N**: in `useCanvasKeyDown` (canvas wrapper only, not in text fields, not during a flow session).
+  - **N**: in `useCanvasKeyDown` (canvas wrapper only, not in text fields, not during a flow session, not in flow mode).
     - It uses the last pointer position over the canvas pane (tracked by `onPointerMove` on the pane, in flow coordinates via `screenToFlowPosition`). With no pointer position, it falls back to the view centre.
     - If the point is inside a component's rectangle, the note is pinned to it.
   - **⌥C**: in `useCanvasKeyDown` on a selected sticky. It matches `event.code === 'KeyC' && event.altKey`, because on macOS ⌥C produces `ç` in `event.key`.
@@ -239,20 +250,33 @@ Decisions for [plan.md](plan.md), resolving the technical unknowns in the [spec]
   - JSON panel (004): the Selection tab shows the selected sticky object (as in design 62). The Deck tab already includes stickies.
 - **Rationale**: this is the existing confirm-then-toast path (§g-11, §g-19). There is no new dialog.
 
-## R15. Flow mode (deferred) and what 009 does during 006's shown flow
+## R15. Notes in flow mode (built on 007)
 
 - **Decision**:
-  - In 009, a shown or recorded flow (006) does **not** dim notes. Adding notes (drop, N) is refused during a flow session, like component drops today.
-  - The `showInFlows` switch is stored and shown in the JSON panel.
-  - User Story 4 and FR-016–FR-018 are built after 007 merges, reviewed against 007 as implemented. The expected hook is 007's flow overlay: a `dimmedStickies(overlay, deck, preference)` derivation plus a `notesDisplay: 'dimmed' | 'shown' | 'hidden'` preference persisted in localStorage.
-  - Nothing in 009 blocks that.
-- **Rationale**: founder decision (spec Q2).
+  - **Which notes dim**: a pure `stickyFlowState(sticky, placement, marks, display): 'normal' | 'dimmed' | 'hidden'` in `editor/stickies/sticky-flow.ts`:
+    - outside flow mode → `normal`
+    - `display === 'hidden'` → `hidden`; `display === 'shown'` → `normal`
+    - `showInFlows` → `normal`
+    - pinned (placement status `pinned`) to a node whose `NodeFlowMark.currentStep` is true → `normal`
+    - an empty flow (no steps) → `normal`, matching 007, which dims nothing then
+    - otherwise → `dimmed`
+  - `toStickyNodes` takes the overlay and `notesDisplay` and puts the state on each node: `className: 'sd-note-dimmed'` or `'in-flow sd-note-shown'`, and `hidden: true` for hidden. The per-object cache compares the state too.
+  - **CSS**: every sticky node carries `in-flow` in flow mode so 007's `:not(.in-flow)` 20% rule never applies. A new rule `[data-flow-mode] .react-flow__node.sd-note-dimmed { opacity: 0.35 }` uses the same `transition: opacity var(--sd-dur-dim)`, and `:focus-within` / `:hover` restore opacity 1 (FR-017). `flow-mode-css.test.ts` gets a case for the 35% rule and the token.
+  - **Non-color cue**: a dimmed note gets a dashed border (token) and its accessible name ends with ", dimmed".
+  - **View-only**: sticky nodes are `draggable: false`, `connectable: false`, and the card hides the chevron button and ignores double-click, Enter/F2 and ⌥C in flow mode. Delete is already off in flow mode. `addNoteAt` returns early in flow mode (N, drop, palette click).
+  - **Notes switch**: `notesDisplay: 'dimmed' | 'shown' | 'hidden'` in `useUiStore`, persisted with `NOTES_KEY = 'sododeck.notes'` in localStorage using the `LABELS_KEY` pattern (try/catch, default `dimmed`). `canvas-toolbar.tsx` shows it only in flow mode as a `DropdownMenu` button "Notes: <value>" with a `StickyNote` icon and three `menuitemradio` items (design 63).
+  - **NOTES ON THIS STEP**: `flows/inspector-step.tsx` gets a section listing notes whose placement is `pinned` to the current step's from or to node (`notesOnStep(deck, fromId, toId)` in `editor/stickies/sticky-flow.ts`). Each row is a `button` with the note label and "Pinned to <node>". Activating it calls `setCenter` on the note's point, without changing the selection or leaving flow mode. The section is hidden when the list is empty, and it also shows when the display is "hidden" (it is a list, not the canvas).
+- **Rationale**: this reuses 007's overlay (`NodeFlowMark.currentStep`), dim token and view-only gating. It adds no document state, and dimming is decided in one tested pure function.
+- **Alternatives considered**:
+  - Letting notes inherit 007's 20% dimming was rejected: design 63 asks for 35%, and exceptions would then need a second rule anyway.
+  - Putting the Notes switch in the step player was rejected, because design 63 puts it in the canvas toolbar next to Labels.
 
 ## R16. Bench and performance checks
 
 - **Decision**:
   - `generateBenchDeck` gains `stickies` (default 0). With `stickies=100`, half are pinned to random nodes and half are free, all seeded.
   - `pnpm bench` runs before (on `main`) and after, with `BENCH_STICKIES=100`. The pan/zoom FPS must stay at ≥ 60 fps at 500 nodes / 1,000 edges (SC-009).
+  - 007's flow scenarios stay within their targets with 100 notes on the canvas; the note-dimming derivation adds no measurable time to "step change → marks painted".
   - A new scenario, "⌘K type → results painted", is a median of 5 runs on 2,000 nodes against a 50 ms target (SC-001, SC-008).
 - **Rationale**: constitution V (bench before and after for canvas changes).
 

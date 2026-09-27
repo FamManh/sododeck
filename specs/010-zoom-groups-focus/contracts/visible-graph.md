@@ -41,6 +41,7 @@ export interface CollapsedCard {
   title: string;
   nodeCount: number; // members incl. nested groups
   edgeCount: number; // edges with both ends inside
+  hiddenEdges: readonly string[]; // those edge ids, deck order (flow marks, stepForGroup)
   rect: Rect; // COLLAPSED_CARD_SIZE centred on the expanded bounds
 }
 
@@ -121,10 +122,31 @@ export interface CollapsedFlowMarks {
   merged: ReadonlyMap<string, EdgeFlowMark>; // merged edge id → folded badges
   cards: ReadonlyMap<string, 'current' | 'path'>; // group id → ring state
 }
+/** Merged marks keep `inPath` and a `current` mark (token) when any underlying edge has one. */
 export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): CollapsedFlowMarks;
 
-/** Title of the collapsed group hiding this deck edge, for 007's "inside <group>". */
+/** Title of the outermost collapsed group hiding this deck edge, for the step player's "inside <group>". */
 export function groupAtStep(deck: SododeckFile, graph: VisibleGraph, edgeId: string): string | null;
+
+/** Flow-mode card click: first played step whose edge is hidden in `groupId`; null if none. */
+export function stepForGroup(
+  played: PlayedPath,
+  graph: VisibleGraph,
+  groupId: string,
+): string | null;
+
+/** Flow-mode merged-edge click: next played step on any of `edgeIds` after `currentStepId`, wrapping. */
+export function stepForEdges(
+  played: PlayedPath,
+  edgeIds: readonly string[],
+  currentStepId: string | null,
+): string | null;
+```
+
+`VisibleGraph` must expose, per collapsed group, the deck edge ids it hides (`CollapsedCard.hiddenEdges`) and, per merged edge, its underlying ids (`MergedEdge.edgeIds`), so these helpers stay linear.
+
+```ts
+
 ```
 
 ## Changes to existing pure modules

@@ -10,7 +10,7 @@
 
 **Sources**: `docs/backlog.md` §009 (scope, acceptance criteria, risks), `docs/spec.md` §7 (K-3 sticky notes, K-4 global search, C-3 command palette), `docs/design/design-analysis.md` §a (states 14, 30, 31, 32, 62, 63), §g-11 and §g-19 (confirm deletes, then Undo toast), §g-21 (sticky `collapsed` and show-in-flows are document data; the deck-wide "Notes" switch is a UI preference), §g-30 (dimmed notes must not rely on opacity alone), `docs/design/screens/` (light and dark), `specs/002-yjs-model/spec.md` (FR-005, FR-006, FR-017: sticky operations and deleted anchors), `specs/003-canvas-basic/spec.md` (palette, canvas selection, confirm-delete dialog, undo units), `specs/006-flow-authoring/spec.md` ("show flow F with step S selected"), `specs/007-flow-playback/spec.md` (flow mode, current step; lists sticky dimming as 009), `specs/008-inspector-rules/spec.md` (inspector shell, markdown Write / Preview, rule editor), constitution v1.0.0 (principles I–VIII).
 
-**Dependency note**: 009 depends on 008, merged on `main` (`324d1bd`). It reuses 008's inspector shell and markdown Write / Preview field, the rule editor (opened from palette results) and 006's "show flow F with step S selected". 007 (flow playback) is specified (`bcc8f88`) but **not implemented** on `main`; the flow-mode behavior of notes (User Story 4) depends on it. Founder decision (Q2): User Story 4 is specified here against 007's spec, which is being implemented in another session; 009 ships only the "Stay visible during flows" field and inspector toggle, and the dimming and "Notes" switch are built once 007 lands, after reviewing this spec against 007 as implemented. The file format already has `stickies` (id, text, color, anchor, position); this feature adds two optional fields to a sticky, `collapsed` and `showInFlows` (§g-21), as an additive, non-breaking change.
+**Dependency note**: 009 depends on 008, merged on `main` (`324d1bd`). It reuses 008's inspector shell and markdown Write / Preview field, the rule editor (opened from palette results) and 006's "show flow F with step S selected". 007 (flow playback) is merged on `main` (`b519550`); User Story 4 builds on its flow mode (open flow outside a recording session, view-only canvas, current step with its from/to components, dim timing token). The founder's Q2 decision deferred User Story 4 until 007 merged; the review against 007 as implemented was done on 2026-09-28 (see Clarifications), and User Story 4 is now in scope. The file format already has `stickies` (id, text, color, anchor, position); this feature adds two optional fields to a sticky, `collapsed` and `showInFlows` (§g-21), as an additive, non-breaking change.
 
 ## Scope
 
@@ -27,7 +27,7 @@
   - Delete with confirmation (§g-11), then an Undo toast (§g-19); ⌘Z also restores it.
   - Notes appear in the outline and are selectable from it.
   - Two new optional note fields in the file: `collapsed` and `showInFlows` (additive schema change with fixtures, validator parity and round-trip tests).
-- **Notes in flow mode** (design 63): the "Stay visible during flows" flag is stored and editable in 009. The dimming itself and the "Notes: dimmed / shown / hidden" switch are specified here (User Story 4, FR-016–FR-018) but **delivered after 007** (see Deferred).
+- **Notes in flow mode** (design 63): the "Stay visible during flows" flag; while a flow is open in flow mode, notes are dimmed to 35% except those pinned to a component of the current step or marked "Stay visible during flows"; dimmed notes also get a non-color cue; notes are view-only in flow mode like the rest of the canvas; a "Notes: dimmed / shown / hidden" switch next to Labels in the canvas toolbar (flow mode only); a "NOTES ON THIS STEP" section in the step inspector listing the notes pinned to the current step's components.
 - **Command palette** (design 30, 31, 32): opened with ⌘K / Ctrl+K or the top-bar "Jump to… ⌘K" field; searches the open deck's components, connections, flows, flow steps, rules and notes by title and by text in descriptions, step conditions and notes, sticky text and rule cells, with a snippet line for body matches; lists commands (export, switch theme, focus mode, open rules, go to the library, new deck); results show their kind; ↑ / ↓ move, Enter opens the highlighted result (the first one by default), Esc closes; "No results" for no matches.
 
 **Out of scope**
@@ -39,7 +39,7 @@
 - Searching across decks: the library's own search (005) stays name-only; the palette searches the open deck only.
 - Fuzzy / typo-tolerant search, search syntax (filters such as `kind:rule`), recent-searches history.
 - Focus mode itself (010): the palette only lists commands whose feature exists.
-- Building User Story 4 (note dimming and the Notes switch) before 007 is merged. Until then, a flow result in the palette shows the flow as 006 does.
+- Showing which notes are shown or dimmed in the JSON panel's Step tab (design 63 JSON): the panel shows document data only (004).
 - Playing flows (007); editing the JSON panel (still read-only); new end-to-end browser tests (constitution VI).
 
 ## Clarifications
@@ -49,11 +49,17 @@
 - Q: When a component with pinned notes is deleted, do the notes become free (backlog §009) or keep a broken anchor (002 FR-017)? → A: They become free notes at their last on-screen position (anchor removed, position converted to canvas coordinates), in the same undo step as the delete. This amends 002 FR-017 for notes pinned to components; notes anchored to other object types keep 002's behavior.
 - Q: 007 is not on `main`; should 009 include the flow-mode behavior of notes? → A: Store "Stay visible during flows" (`showInFlows`) now; specify the dimming and the "Notes" switch against 007's spec, and build them once 007 (implemented in another session) is done, after reviewing this spec against it.
 
-### Deferred until 007 is merged
+### Review against 007 as implemented (2026-09-28)
 
-- User Story 4 scenarios 1–4 and FR-016–FR-018 (dimming during playback, non-color dimmed cue, "Notes: dimmed / shown / hidden" switch).
-- Whether opening a flow from the palette starts flow mode (007 lists "Opening flows from ⌘K (009)" as out of its scope).
-- Review both items, and this spec's use of 007 terms (flow mode, current step, played path), against 007 as implemented.
+007 merged on `main` (`b519550`). Findings and the resulting spec changes:
+
+- **Flow mode** is "a flow is open and no recording or edit session is running". Opening a flow anywhere (flow list, "Used in", connection inspector) enters flow mode at step 1 or at a given step. → Palette results follow the same rule: a flow result opens it in flow mode at step 1; a step result opens its flow in flow mode at that step (US2-6, FR-026). This resolves the open item "Opening flows from ⌘K (009)" in 007's scope.
+- **The canvas is view-only in flow mode** (no drag, no handles, no deletes; clicking a dimmed object does nothing). → Notes are view-only in flow mode too: no drag, no in-card editing, no collapse toggle, N and Note drops are refused; they stay focusable and readable by keyboard (US4-2, US4-5, FR-017, FR-018b).
+- **007 dims everything off the played path to 20% opacity.** Without a rule for notes, they would fall under the same dimming. → Notes follow their own rule: 35% (design 63), with the exceptions of FR-016, and never inherit the 20% path dimming.
+- **The current step** has a from and to component (the current connection's ends). → "Pinned to a component of the current step" means pinned to either of them. With no current step (empty flow) or a broken current step, no note gets the exception; an empty flow dims nothing (as 007 does for components).
+- **Dim timing** uses 007's dim token, which is instant under reduced motion. → Notes use the same token.
+- **The canvas toolbar** holds the Labels toggle; design 63 puts "Notes: dimmed" next to it. → The Notes switch lives there, only in flow mode (FR-018).
+- **Design 63's step inspector** has a "NOTES ON THIS STEP" section that 007 did not build. → Added here (US4-6, FR-018a).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -95,7 +101,7 @@ A developer opens a large deck they don't know, presses ⌘K and types "reattemp
 3. **Given** the query "reattempt", **When** it is typed, **Then** the rule "Reattempt policy" and the flow step whose condition mentions it are listed, each with a kind label; matches in a body (description, condition, note, rule cell) show a one-line snippet with the matched text emphasized by weight and underline, not by color alone; Enter opens the first result.
 4. **Given** results, **When** the user presses ↓ twice and Enter, **Then** the third result opens; ↑ on the first result and ↓ on the last do not leave the list.
 5. **Given** a query with no matches, **When** it is typed, **Then** "No results" is shown (design 32) and Enter does nothing.
-6. **Given** a result, **When** it is opened, **Then**: a component, connection or note is selected and brought into view on the canvas; a flow is shown (006); a step is shown selected in its flow (006); a rule opens in the rule editor (008); and the palette closes.
+6. **Given** a result, **When** it is opened, **Then**: a component, connection or note is selected and brought into view on the canvas; a flow opens in flow mode at its first step (007); a step opens its flow in flow mode at that step (007); a rule opens in the rule editor (008); and the palette closes.
 7. **Given** results of several kinds, **Then** title matches are listed before body matches, and within each, results are ordered by kind (commands, components, connections, flows, steps, rules, notes) and then by title.
 8. **Given** a query, **Then** matching ignores case, accents and surrounding spaces, and every word of the query must appear (in any order) for an object to match.
 
@@ -124,17 +130,19 @@ A user presses ⌘K, types "theme" and presses Enter; the app switches between l
 
 While playing the checkout flow, notes stop competing with the flow: they fade, except the note pinned to "Payment Service" when the current step touches Payment Service, and a note the author marked "Stay visible during flows". From the flow toolbar the user can switch notes to shown or hidden.
 
-**Why this priority**: design 63 and backlog §009 include it, but it only matters once flow playback (007) exists. **Scenarios 1–4 are delivered after 007 is merged** (founder decision Q2); they are written against `specs/007-flow-playback/spec.md` and will be reviewed against 007 as implemented.
+**Why this priority**: design 63 and backlog §009 include it; it polishes flow playback (007, merged) rather than adding a new capability.
 
 **Independent Test**: With flow mode available, play a flow on a deck with three notes (free, pinned to a node on step 2, marked "Stay visible"), step through and check each note's state and the Notes switch.
 
 **Acceptance Scenarios**:
 
-0. _(Delivered in 009)_ **Given** a selected note, **When** the user turns on "Stay visible during flows" in the inspector, **Then** the choice is saved with the deck and shown in the JSON panel; one ⌘Z turns it off.
-1. **Given** flow mode (007), **When** a step is current, **Then** notes are dimmed except those pinned to either component of the current step's connection or marked "Stay visible during flows"; dimming follows 007's dim timing and is instant under reduced motion.
-2. **Given** a dimmed note, **Then** it is also marked in a non-color way (e.g. its accessible name says "dimmed" and its border style changes), stays readable, and can still be selected and read by keyboard (§g-30).
+0. **Given** a selected note, **When** the user turns on "Stay visible during flows" in the inspector, **Then** the choice is saved with the deck and shown in the JSON panel; one ⌘Z turns it off.
+1. **Given** flow mode (007), **When** a step is current, **Then** notes are dimmed to 35% except those pinned to either component of the current step's connection or marked "Stay visible during flows"; when the current step changes, the notes update; dimming follows 007's dim timing and is instant under reduced motion. Notes are never dimmed by 007's path dimming (20%).
+2. **Given** a dimmed note, **Then** it is also marked in a non-color way (a dashed border and ", dimmed" in its accessible name), and it can still be reached and read by keyboard (§g-30).
 3. **Given** flow mode, **When** the user sets "Notes" to shown, **Then** no note is dimmed; **When** set to hidden, **Then** notes are not drawn; **When** set to dimmed (the default), **Then** scenario 1 applies. The choice is remembered on this device and is not saved in the deck.
-4. **Given** flow mode ends, **Then** all notes return to normal.
+4. **Given** flow mode ends, **Then** all notes return to normal and are editable again.
+5. **Given** flow mode, **Then** notes are view-only: they cannot be dragged, edited, collapsed or deleted, and N or a Note drop does nothing.
+6. **Given** flow mode with a current step whose components have pinned notes, **When** the user looks at the step inspector, **Then** a "NOTES ON THIS STEP" section lists each of those notes (label and "Pinned to <component>"); activating one brings the note into view without leaving flow mode; the section is hidden when there are none.
 
 ---
 
@@ -181,11 +189,13 @@ While playing the checkout flow, notes stop competing with the flow: they fade, 
 - **FR-014**: Each note edit (text burst, move, pin, collapse, flag) MUST be one undo step, consistent with the existing undo units (003).
 - **FR-015**: The deck file format MUST gain two optional sticky fields, `collapsed` (boolean, absent means expanded) and `showInFlows` (boolean, absent means not), as an additive change: existing files stay valid, the format version does not change, and saving and reopening MUST keep both fields unchanged.
 
-**Notes in flow mode** (FR-016–FR-018 delivered after 007 is merged; see Deferred)
+**Notes in flow mode**
 
-- **FR-016**: While a flow is played, every note MUST be dimmed except notes pinned to either component of the current step's connection and notes with `showInFlows` set.
-- **FR-017**: A dimmed note MUST differ from a normal note by more than opacity (border style and an accessible-name suffix), stay readable at WCAG AA contrast for its text when focused or hovered, and remain selectable.
-- **FR-018**: Flow mode MUST offer a "Notes: dimmed / shown / hidden" switch (default dimmed), remembered per device and never saved in the deck.
+- **FR-016**: In flow mode, every note MUST be dimmed to 35% opacity except notes pinned to either component of the current step's connection and notes with `showInFlows` set. With no current step or a broken current step, only `showInFlows` notes are exempt; in an empty flow no note is dimmed. Notes MUST NOT receive 007's path dimming.
+- **FR-017**: A dimmed note MUST differ from a normal note by more than opacity (border style and an accessible-name suffix), return to full strength while focused or hovered so its text meets WCAG AA contrast, and remain reachable by keyboard.
+- **FR-018**: Flow mode MUST offer a "Notes: dimmed / shown / hidden" switch in the canvas toolbar next to Labels (default dimmed), remembered per device and never saved in the deck; "shown" dims no note and "hidden" draws no notes.
+- **FR-018a**: In flow mode, the step inspector MUST show a "NOTES ON THIS STEP" section listing the notes pinned to the current step's from and to components; activating one MUST bring it into view without leaving flow mode.
+- **FR-018b**: In flow mode, notes MUST be view-only (no drag, edit, collapse, pin or delete), and adding notes (N, drop, palette click) MUST be refused, consistent with 007's view-only canvas.
 
 **Command palette and search**
 
@@ -196,7 +206,7 @@ While playing the checkout flow, notes stop competing with the flow: they fade, 
 - **FR-023**: Results MUST be ordered: title matches before body-only matches; then by kind (commands, components, connections, flows, steps, rules, notes); then alphabetically by title. At most 50 results MUST be shown, with a "Showing 50 of n" line when there are more.
 - **FR-024**: The first result MUST be highlighted by default; ↑ / ↓ MUST move the highlight without wrapping; Enter MUST open the highlighted result; the mouse MUST also be able to hover and click results.
 - **FR-025**: When nothing matches, the palette MUST show "No results" and Enter MUST do nothing.
-- **FR-026**: Opening a result MUST: select a component, connection or note and bring it into view; show a flow; show a step selected in its flow; open a rule in the rule editor; run a command. Then the palette MUST close.
+- **FR-026**: Opening a result MUST: select a component, connection or note and bring it into view; open a flow in flow mode at its first step; open a step's flow in flow mode at that step; open a rule in the rule editor; run a command. Then the palette MUST close.
 - **FR-027**: With an empty query, the palette MUST list the commands, then the deck's flows (design 30); commands MUST also be matched by name when a query is typed.
 - **FR-028**: The palette MUST offer at least these commands when their feature exists: Export deck…, Toggle dark mode, Open rule editor, Go to library, New deck, and Toggle focus mode (only once 010 exists), using the design's labels (design 30); "theme" and "rules" MUST also find the theme and rule-editor commands. Each command MUST behave exactly like its existing UI action and show its shortcut if it has one.
 - **FR-029**: Search results MUST reflect the current deck content, including changes made in another tab or by undo, without reopening the palette.
@@ -228,7 +238,7 @@ While playing the checkout flow, notes stop competing with the flow: they fade, 
 
 - The palette searches only the open deck; the library keeps its name-only search (005).
 - Search is substring-based per word (no fuzzy matching or typo tolerance) — enough for the backlog's criteria and predictable for users.
-- Terms used in User Story 4 (flow mode, current step, played path, dim timing) mean what `specs/007-flow-playback/spec.md` defines; they will be re-checked against 007 once it is merged.
+- Terms used in User Story 4 (flow mode, current step, played path, dim timing) mean what 007 implements on `main` (`b519550`); see "Review against 007 as implemented".
 - Step "notes" (a step field kept in the file since 006) are included in body search, as the input asks for "text in … notes".
 - Rule cells and rule column names are searchable; a match in a rule cell opens the rule editor on that rule (the cell itself is not focused).
 - Note markdown reuses exactly 008's description subset and sanitizing rules; no links or images are rendered in notes.

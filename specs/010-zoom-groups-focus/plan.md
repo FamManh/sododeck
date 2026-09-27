@@ -4,7 +4,7 @@
 
 **Input**: Feature specification from `specs/010-zoom-groups-focus/spec.md` (clarified 2026-09-27, 2 answers)
 
-**Dependency**: 003 (canvas-basic) is merged on `main` (`7b845bc`), and so are 006 (`96bd929`) and 008 (`324d1bd`). Names were checked on `main`: `toFlowNodes` / `toFlowEdges`, `GROUP_NODE_PREFIX`, `groupBounds`, `displayPosition`, `NODE_SIZE`, `flowOverlay`, `EdgeFlowMark`, `ZoomControl`, `CanvasToolbar`, `TopBar`, `useCanvasKeyDown`, `useEditorShortcuts`, `buildOutline`, `Selection`, `pruneSelection`, `resetForDeck`, `canvasViewport`. 007 (the step player) is not on `main`; per clarification Q2, 010 exports `groupAtStep` for it and does not render player text. 009 (stickies) is not on `main`; nothing here depends on it.
+**Dependency**: 003 (canvas-basic) is merged on `main` (`7b845bc`), and so are 006 (`96bd929`) and 008 (`324d1bd`). Names were checked on `main`: `toFlowNodes` / `toFlowEdges`, `GROUP_NODE_PREFIX`, `groupBounds`, `displayPosition`, `NODE_SIZE`, `flowOverlay`, `EdgeFlowMark`, `ZoomControl`, `CanvasToolbar`, `TopBar`, `useCanvasKeyDown`, `useEditorShortcuts`, `buildOutline`, `Selection`, `pruneSelection`, `resetForDeck`, `canvasViewport`. 007 (flow playback) is merged on `main` (`b519550`); names checked: `isFlowMode`, `openFlow` / `exitFlow` (`flows/flow-mode.ts`), `ActiveFlow`, `usePlaybackShortcuts`, `StepPlayer`, `playedPath`, `stepForNode` / `stepForEdge`, `stepAnnouncement`, `FlowToken`, the `[data-flow-mode]` / `.in-flow` CSS. Per clarification Q3, 010 renders the player's "inside <group>" text and adds flow-mode rules (FR-035–FR-039). 009 (stickies) is not on `main`; nothing here depends on it.
 
 ## Summary
 
@@ -28,7 +28,7 @@ Keep large decks readable with no document change. Everything is UI state plus o
   - Collapsed-group card node, `merged` edge type with a ×N pill and direction icon, and a keyboard-operable popover.
   - `Selection` gains `groups`.
 - **Focus** (R8): `focusMode` in the UI store. A pure `focusSet` marks members. CSS dims the rest, and dimmed objects also get `aria-hidden` + `inert`. There is a toolbar toggle and the F key.
-- **Flows** (R11): `collapseFlowMarks` folds 006's overlay into merged badges and card rings.
+- **Flows** (R11): `collapseFlowMarks` folds the 006/007 overlay into merged badges (with the current-step token) and card rings; the step player and announcement add "inside <group>"; in flow mode only collapse / expand works, and opening a flow goes up to the whole deck.
 - **Bench** (R12): the bench deck gains groups, and the bench gains `groups-collapsed`, `collapse-toggle` and `focus` scenarios.
 
 ## Technical Context
@@ -144,6 +144,9 @@ apps/app/src/
 │   ├── top-bar.tsx (+test)               # renders DrillCrumbs on the canvas screen
 │   ├── outline.ts / outline-tree.tsx     # scoped tree + "Up" row
 │   ├── use-canvas-handlers.ts            # double-click drill, clicks on collapsed:/port:/merged:, group selection
+│   ├── flows/step-player.tsx (+test)     # "inside <group>" text (FR-037)
+│   ├── flows/played-path.ts (+test)      # stepAnnouncement(…, insideGroup?)
+│   ├── flows/flow-mode.ts                # openFlow goes up to the whole deck (FR-039)
 │   ├── use-canvas-shortcuts.ts (+test)   # Enter/Space/F in canvas; Esc/Backspace "up" in editor shortcuts
 │   ├── inspector.tsx                     # routes a group selection to GroupInspector
 │   └── inspector/group-inspector.tsx (+test)  # NEW Collapsed switch, merged list, Expand group

@@ -2,9 +2,9 @@
 
 **Branch**: `009-stickies-search` | **Date**: 2026-09-27 | **Spec**: [spec.md](spec.md)
 
-**Input**: Feature specification from `specs/009-stickies-search/spec.md` (clarified 2026-09-27, 2 answers)
+**Input**: Feature specification from `specs/009-stickies-search/spec.md` (clarified 2026-09-27, 2 answers; reviewed against 007 on 2026-09-28)
 
-**Dependency**: 008 is merged on `main` (`324d1bd`). Names were checked against `main` (research header). 007 (flow playback) is being implemented in another session. User Story 4's dimming and the Notes switch (FR-016–FR-018) are **not** in this plan: they are built after 007 merges, following a review (spec "Deferred"). 010 is being specified in parallel; see merge hot spots below.
+**Dependency**: 008 is merged on `main` (`324d1bd`). Names were checked against `main` (research header). 007 (flow playback) is merged (`b519550`); its names were re-checked on 2026-09-28 (research header), and User Story 4 (dimming, Notes switch, notes on the step, view-only notes) is in this plan (research R15). 010 is being specified in parallel; see merge hot spots below.
 
 ## Summary
 
@@ -24,6 +24,7 @@ Add sticky notes (K-3) as a derived canvas layer over the existing `stickies` co
   - `Selection.stickies`, a sticky inspector and a Notes section in the outline (R13).
   - Delete text in the existing dialog and toast (R14).
   - The ⌘K palette with commands and result opening (R10, R11), and a "Jump to…" button in the top bar.
+  - Notes in 007's flow mode (R15): 35% dimming with exceptions, view-only notes, a Notes switch in the canvas toolbar, and NOTES ON THIS STEP in the step inspector. Palette flow and step results open flow mode through `openFlow`.
 
 ## Technical Context
 
@@ -160,6 +161,10 @@ apps/app/src/
 │   ├── sticky-actions.ts              # addNoteAt(point) (draft + pin-on-node), finishDraft
 │   └── sticky-tint.ts                 # color → token classes
 ├── editor/inspector/sticky-inspector.tsx   # NEW
+├── editor/stickies/sticky-flow.ts     # NEW stickyFlowState, notesOnStep (007 overlay)
+├── editor/canvas-toolbar.tsx          # Notes: dimmed/shown/hidden (flow mode only)
+├── editor/flows/inspector-step.tsx    # NOTES ON THIS STEP (007 file)
+├── index.css, flow-mode-css.test.ts   # note dimming at 35%, exempt from the 20% path dimming
 ├── editor/inspector.tsx               # route single sticky → StickyInspector
 ├── editor/outline.ts, left-sidebar.tsx     # Notes section
 ├── editor/describe-removal.ts         # note text + freed notes
@@ -192,9 +197,7 @@ apps/app/CLAUDE.md, packages/model/CLAUDE.md, packages/ui/CLAUDE.md, packages/sc
   - `use-canvas-shortcuts.ts`, `outline.ts`, `left-sidebar.tsx`, `top-bar.tsx`
   - the ADR number
   - The Focus mode command is wired to 010 when it lands (`focusModeAvailable`).
-- **With 007** (in progress):
-  - `ui-store.ts`, `use-canvas-shortcuts.ts`, `editor-page.tsx`, `top-bar.tsx`
-  - After 007 merges, the deferred dimming hooks into its overlay (R15).
+- **With 007** (merged): build on its files rather than around them: `flows/flow-overlay.ts` (read-only), `flows/inspector-step.tsx`, `canvas-toolbar.tsx`, `index.css` and `flow-mode-css.test.ts`, `ui-store.ts`.
 - Branch from the latest `main`, and rebase before the PR.
 
 ## Implementation order (for /speckit-tasks)
@@ -232,7 +235,7 @@ apps/app/CLAUDE.md, packages/model/CLAUDE.md, packages/ui/CLAUDE.md, packages/sc
    - Keyboard behavior and no results.
    - `open-result` for every kind, including from the rules screen.
 6. **Story 3 (P2)**: `commands.ts` (export, theme, rules, library, new deck; focus hidden), the empty-query list, and aliases.
-7. **Story 4 (009 part only)**: the `showInFlows` switch; note drop and N refused during a flow session.
+7. **Story 4**: `stickyFlowState` and `notesOnStep` (pure), overlay-aware `toStickyNodes`, the 35% CSS rule and its test, view-only notes in flow mode, `notesDisplay` in the store and the Notes switch in the canvas toolbar, NOTES ON THIS STEP in the step inspector.
 8. **Wrap-up**:
    - Update the docs (the four `CLAUDE.md` files).
    - Visual check against frames 14, 30, 31, 32 and 62 (light and dark).

@@ -4,15 +4,15 @@ What is stored in the deck (document), what is derived, and what is UI-only stat
 
 ## Document: `Sticky` (schema v1, additive change)
 
-| Field         | Type                                             | Stored when         | Meaning                                                                                                                         |
-| ------------- | ------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `id`          | Id                                               | always              | Stable. Prefix `sticky`. Never changes.                                                                                         |
-| `text`        | string (markdown)                                | always              | Note text. A committed note is never empty or whitespace-only (the app removes empty drafts, R5); a file may still contain one. |
-| `color`       | `amber` \| `blue` \| `green` \| `clay` \| `grey` | optional (existing) | Absent means `amber`. Shown as a tint (R4). There is no picker in 009.                                                          |
-| `anchor`      | Id                                               | optional (existing) | The object the note is pinned to. In the UI, only nodes can be picked.                                                          |
-| `position`    | `{ x, y }`                                       | optional (existing) | Absolute canvas point when free. Offset from the anchor's canvas position when anchored.                                        |
-| `collapsed`   | boolean                                          | **new**, optional   | `true` means shown as one line. The app writes `true` or removes the key (R1).                                                  |
-| `showInFlows` | boolean                                          | **new**, optional   | `true` means not dimmed during flow playback. The app writes `true` or removes the key. It is used by the post-007 dimming.     |
+| Field         | Type                                             | Stored when         | Meaning                                                                                                                               |
+| ------------- | ------------------------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | Id                                               | always              | Stable. Prefix `sticky`. Never changes.                                                                                               |
+| `text`        | string (markdown)                                | always              | Note text. A committed note is never empty or whitespace-only (the app removes empty drafts, R5); a file may still contain one.       |
+| `color`       | `amber` \| `blue` \| `green` \| `clay` \| `grey` | optional (existing) | Absent means `amber`. Shown as a tint (R4). There is no picker in 009.                                                                |
+| `anchor`      | Id                                               | optional (existing) | The object the note is pinned to. In the UI, only nodes can be picked.                                                                |
+| `position`    | `{ x, y }`                                       | optional (existing) | Absolute canvas point when free. Offset from the anchor's canvas position when anchored.                                              |
+| `collapsed`   | boolean                                          | **new**, optional   | `true` means shown as one line. The app writes `true` or removes the key (R1).                                                        |
+| `showInFlows` | boolean                                          | **new**, optional   | `true` means not dimmed during flow playback. The app writes `true` or removes the key. Read by the flow-mode dimming (research R15). |
 
 **Validation** (JSON Schema plus semantic rules; unchanged except for the two new fields):
 
@@ -52,6 +52,8 @@ Both happen in the same transaction. `RemovalResult.freed` lists those sticky id
 
 ## Derived (never stored)
 
+- **Sticky flow state** (`stickyFlowState`, research R15): `normal | dimmed | hidden`, from the placement, `showInFlows`, 007's `NodeFlowMark.currentStep` and `notesDisplay`. Normal outside flow mode and in an empty flow.
+- **Notes on this step** (`notesOnStep`): notes pinned to the current step's from or to node, in file order.
 - **Sticky placement** (`stickyCanvasPosition`): `{ point, pinnedTo, status: free | pinned | foreign | missing }` (research R3). `STICKY_DEFAULT_OFFSET = { x: 24, y: -96 }`.
 - **Node canvas position** (`nodeCanvasPosition`): the node's `position`, or grid slot `index` (`NODE_GRID`), moved from `canvas-geometry.ts` so the model and the canvas agree.
 - **Sticky label**: the first non-empty line of `text`, with markdown markers removed, or "Empty note". Used for the outline, the inspector heading, the collapsed line, the accessible name and palette titles.
@@ -83,4 +85,4 @@ Both happen in the same transaction. `RemovalResult.freed` lists those sticky id
 | `canvasPointer`      | `{ x, y } \| null` (flow coordinates)                 | Last pointer point over the pane, for N.                                                           |
 | `palette`            | `{ open: boolean; returnFocus: HTMLElement \| null }` | ⌘K state. The query and highlighted row are component state inside the dialog (reset on open).     |
 
-**Deferred (post-007)**: `notesDisplay: 'dimmed' | 'shown' | 'hidden'`, a device preference (localStorage), default `dimmed`.
+| `notesDisplay` | `'dimmed' \| 'shown' \| 'hidden'` | Flow mode only. Device preference persisted with `NOTES_KEY = 'sododeck.notes'` in localStorage (try/catch, default `dimmed`), like `labelsOn`. |
