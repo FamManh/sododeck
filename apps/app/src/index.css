@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+@import '@sododeck/ui/styles.css';
+@import '@xyflow/react/dist/style.css';
+
+@source '../../../packages/ui/src';
+
+/* React Flow → Sododeck tokens (DESIGN.md "Canvas"). */
+.react-flow {
+  --xy-background-color: var(--color-canvas);
+  --xy-background-pattern-color: var(--color-dot);
+  --xy-edge-stroke: var(--color-edge);
+  --xy-edge-stroke-width: 1.5;
+  --xy-edge-stroke-selected: var(--color-primary);
+  --xy-edge-label-background-color: var(--color-surface);
+  --xy-edge-label-color: var(--color-ink-secondary);
+  --xy-controls-button-background-color: var(--color-surface);
+  --xy-controls-button-background-color-hover: var(--color-surface-2);
+  --xy-controls-button-color: var(--color-ink-secondary);
+  --xy-controls-button-border-color: var(--color-hairline);
+  --xy-minimap-background-color: var(--color-surface);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--color-surface-3) 60%, transparent);
+  --xy-minimap-node-background-color: var(--color-surface-3);
+  --xy-attribution-background-color: transparent;
+}
+
+.react-flow__edge-textbg {
+  stroke: var(--color-border);
+}
+
+.react-flow__edge-text {
+  font-family: var(--font-mono);
+  font-size: var(--text-edge-label);
+}
