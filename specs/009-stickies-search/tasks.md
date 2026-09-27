@@ -211,7 +211,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### UI kit
 
-- [ ] T033 [P] [US2] Write `packages/ui/test/command-dialog.test.tsx`. It must fail at first (research R9, UI contract "Command palette"):
+- [x] T033 [P] [US2] Write `packages/ui/test/command-dialog.test.tsx`. It must fail at first (research R9, UI contract "Command palette"):
   - `dialog` "Jump to"
   - the input is a `combobox` "Search the deck" with `aria-controls` and `aria-activedescendant`
   - `listbox` "Results" with `option` rows, where the first is highlighted
@@ -219,7 +219,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - hover moves the highlight
   - highlight ranges rendered bold and underlined (`mark` or `strong` with an underline class, asserted via the accessible name)
   - the empty state slot, the footer hint, and the debounced `status` announcing "n results" / "No results"
-- [ ] T034 [US2] Implement `packages/ui/src/components/command-dialog.tsx` on Radix Dialog, reusing the keyboard logic of `combobox.tsx`, and export it from the `packages/ui` index. Add a demo to the design gallery (`apps/app/src/design-gallery/`). Update `packages/ui/CLAUDE.md`. Make T033 pass.
+- [x] T034 [US2] Implement `packages/ui/src/components/command-dialog.tsx` on Radix Dialog, reusing the keyboard logic of `combobox.tsx`, and export it from the `packages/ui` index. Add a demo to the design gallery (`apps/app/src/design-gallery/`). Update `packages/ui/CLAUDE.md`. Make T033 pass.
 
 ### App palette
 

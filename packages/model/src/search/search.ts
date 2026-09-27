@@ -1,5 +1,4 @@
 import { rawRanges, rawSnippet } from './normalize';
-import type { SearchEntry, SearchField, SearchIndex, SearchKind } from './search';
 
 export interface Range {
   start: number;

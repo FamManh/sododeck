@@ -241,6 +241,7 @@ export function useCanvasHandlers() {
           addNoteAt(editor, point);
           return;
         }
+        if (kind === null) return;
         addComponent(editor, kind, centredOn(point));
       },
     };

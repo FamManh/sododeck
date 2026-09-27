@@ -227,6 +227,7 @@ describe('canvas keyboard', () => {
     const { user, doc } = setup(stickyDeck);
     focusSticky();
     const [sticky] = screen.getAllByTestId('sticky-node');
+    if (sticky === undefined) throw new Error('Expected sticky node');
 
     fireEvent.keyDown(sticky, { key: 'c', code: 'KeyC', altKey: true });
     expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.collapsed).toBe(true);
@@ -242,12 +243,14 @@ describe('canvas keyboard', () => {
     });
 
     const [editedSticky] = screen.getAllByTestId('sticky-node');
+    if (editedSticky === undefined) throw new Error('Expected sticky node after move');
     fireEvent.keyDown(editedSticky, { key: 'Enter' });
     expect(ui().stickyEditing).toBe('st1');
     act(() => {
       ui().setStickyEditing(null);
     });
     const [renamedSticky] = screen.getAllByTestId('sticky-node');
+    if (renamedSticky === undefined) throw new Error('Expected sticky node for rename');
     fireEvent.keyDown(renamedSticky, { key: 'F2' });
     expect(ui().stickyEditing).toBe('st1');
   });

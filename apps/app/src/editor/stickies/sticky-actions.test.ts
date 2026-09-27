@@ -8,22 +8,28 @@ import { describe, expect, it } from 'vitest';
 
 const ui = () => useUiStore.getState();
 
+function expectNoteId(id: string | null): string {
+  if (id === null) throw new Error('Expected a sticky draft');
+  return id;
+}
+
 describe('sticky actions', () => {
   it('starts a free or pinned draft, selects it, edits it and announces it', () => {
     const free = editorWrapper(deckOf({}));
     renderHook(() => null, { wrapper: free.wrapper });
-    let freeId = '';
+    let freeId: string | null = null;
     act(() => {
       freeId = addNoteAt(free.editor(), { x: 240, y: 140 });
     });
+    const actualFreeId = expectNoteId(freeId);
     expect(readDeck(free.doc).stickies).toContainEqual({
-      id: freeId,
+      id: actualFreeId,
       text: '',
       position: { x: 240, y: 140 },
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [freeId] });
-    expect(ui().stickyDraft).toBe(freeId);
-    expect(ui().stickyEditing).toBe(freeId);
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [actualFreeId] });
+    expect(ui().stickyDraft).toBe(actualFreeId);
+    expect(ui().stickyEditing).toBe(actualFreeId);
     expect(ui().announcement.text).toBe('Note added');
 
     const pinned = editorWrapper(
@@ -32,22 +38,23 @@ describe('sticky actions', () => {
       }),
     );
     renderHook(() => null, { wrapper: pinned.wrapper });
-    let pinnedId = '';
+    let pinnedId: string | null = null;
     act(() => {
       pinnedId = addNoteAt(pinned.editor(), {
         x: 80 + NODE_SIZE.width / 2,
         y: 60 + NODE_SIZE.height / 2,
       });
     });
+    const actualPinnedId = expectNoteId(pinnedId);
     expect(readDeck(pinned.doc).stickies).toContainEqual({
-      id: pinnedId,
+      id: actualPinnedId,
       text: '',
       anchor: 'svc',
       position: { x: NODE_SIZE.width / 2, y: NODE_SIZE.height / 2 },
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [pinnedId] });
-    expect(ui().stickyDraft).toBe(pinnedId);
-    expect(ui().stickyEditing).toBe(pinnedId);
+    expect(ui().selection).toEqual({ nodes: [], edges: [], stickies: [actualPinnedId] });
+    expect(ui().stickyDraft).toBe(actualPinnedId);
+    expect(ui().stickyEditing).toBe(actualPinnedId);
     expect(ui().announcement.text).toBe('Note added, pinned to Order Service');
   });
 
@@ -55,13 +62,14 @@ describe('sticky actions', () => {
     const env = editorWrapper(deckOf({}));
     renderHook(() => null, { wrapper: env.wrapper });
     const before = { canUndo: env.editor().canUndo(), canRedo: env.editor().canRedo() };
-    let id = '';
+    let id: string | null = null;
     act(() => {
       id = addNoteAt(env.editor(), { x: 24, y: 32 });
     });
+    const actualId = expectNoteId(id);
 
     act(() => {
-      finishDraft(env.editor(), id);
+      finishDraft(env.editor(), actualId);
     });
 
     expect(readDeck(env.doc).stickies).toEqual([]);
@@ -76,15 +84,17 @@ describe('sticky actions', () => {
   it('keeps a draft with text as one undoable note', () => {
     const env = editorWrapper(deckOf({}));
     renderHook(() => null, { wrapper: env.wrapper });
-    let id = '';
+    let id: string | null = null;
     act(() => {
       id = addNoteAt(env.editor(), { x: 24, y: 32 });
-      env.editor().update('stickies', id, { text: 'Remember retries' });
-      finishDraft(env.editor(), id);
+      const actualId = expectNoteId(id);
+      env.editor().update('stickies', actualId, { text: 'Remember retries' });
+      finishDraft(env.editor(), actualId);
     });
+    const actualId = expectNoteId(id);
 
     expect(readDeck(env.doc).stickies).toContainEqual({
-      id,
+      id: actualId,
       text: 'Remember retries',
       position: { x: 24, y: 32 },
     });
