@@ -2,7 +2,7 @@
 import type { Id } from '@sododeck/schema';
 
 import { isRecord } from '../convert';
-import type { Collection } from '../deck';
+import type { Collection } from '../layout';
 import type { Ref } from '../validate';
 
 function idList(value: unknown): string[] {

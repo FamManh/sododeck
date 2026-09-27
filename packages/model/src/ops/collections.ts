@@ -2,8 +2,8 @@
 import type { Id } from '@sododeck/schema';
 
 import { fromY, isRecord, toY } from '../convert';
-import { collectionArray, rulesMap, type Collection, type DeckDoc, type ObjectOf } from '../deck';
-import { findIndexById, type EditContext } from '../editor';
+import { collectionArray, rulesMap, type Collection, type DeckDoc, type ObjectOf } from '../layout';
+import { findIndexById, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';

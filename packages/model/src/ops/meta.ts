@@ -1,8 +1,8 @@
 import type { SododeckFile } from '@sododeck/schema';
 
 import { fromY } from '../convert';
-import { metaMap } from '../deck';
-import type { EditContext } from '../editor';
+import { metaMap } from '../layout';
+import type { EditContext } from './context';
 import { assertValid, validateObject } from '../validate';
 import { applyPatch, writePatch } from './patch';
 import type { Patch } from './types';

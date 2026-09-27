@@ -6,7 +6,7 @@
  */
 import type { Issue, SododeckFile } from '@sododeck/schema';
 
-import { COLLECTIONS } from './deck';
+import { COLLECTIONS } from './layout';
 
 function checkScope(items: readonly { id: string; path: string }[], issues: Issue[]): void {
   const paths = new Map<string, string[]>();

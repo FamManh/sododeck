@@ -73,6 +73,26 @@ function expectRefused(doc: DeckDoc, code: DeckEditError['code'], fn: () => unkn
   expect(toJSON(doc)).toEqual(before);
 }
 
+describe('building a deck through the editor (US1 AS1)', () => {
+  it('adds nodes, an edge, a flow with a step and an attached rule', () => {
+    const { doc, editor } = setup();
+    const a = editor.add('nodes', { type: 'client', title: 'Web' });
+    const b = editor.add('nodes', { type: 'service', title: 'Orders' });
+    const e = editor.add('edges', { from: a, to: b, protocol: 'http' });
+    const rule = editor.addRule({ title: 'Retry' });
+    const flow = editor.add('flows', { title: 'Place order' });
+    const step = editor.addStep(flow, { edge: e, rules: [rule] });
+
+    const out = toJSON(doc);
+    expect(out.nodes.map((n) => n.id)).toEqual([a, b]);
+    expect(out.edges).toEqual([{ id: e, from: a, to: b, protocol: 'http' }]);
+    expect(out.flows).toEqual([
+      { id: flow, title: 'Place order', steps: [{ id: step, edge: e, rules: [rule] }] },
+    ]);
+    expect(Object.keys(out.rules)).toEqual([rule]);
+  });
+});
+
 describe('collections', () => {
   it.each([
     ['nodes', { type: 'service', title: 'New' }, { title: 'Renamed' }],
@@ -174,7 +194,7 @@ describe('deck metadata', () => {
 });
 
 describe('flow steps', () => {
-  it('adds, updates and moves steps', () => {
+  it('adds, updates, moves and removes steps', () => {
     const { doc, editor } = setup(base);
     const s2 = editor.addStep('fl', { edge: 'e2', title: 'Reply' });
     const s0 = editor.addStep('fl', { edge: 'e1', title: 'Start' }, 0);
@@ -195,6 +215,9 @@ describe('flow steps', () => {
 
     editor.moveStep('fl', s2, 0);
     expect(toJSON(doc).flows[0]?.steps.map((s) => s.id)).toEqual([s2, s0, 's1']);
+
+    editor.removeStep('fl', s0);
+    expect(toJSON(doc).flows[0]?.steps.map((s) => s.id)).toEqual([s2, 's1']);
   });
 
   it('refuses steps on a missing edge or a missing rule, and sample inputs for unknown columns', () => {

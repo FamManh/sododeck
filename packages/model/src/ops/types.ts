@@ -1,6 +1,6 @@
 import type { Id, Rule, RuleColumn, RuleRow, Step } from '@sododeck/schema';
 
-import type { Collection, ObjectOf } from '../deck';
+import type { Collection, ObjectOf } from '../layout';
 
 type OptionalKeys<T> = {
   [K in keyof T]-?: Partial<Pick<T, K>> extends Pick<T, K> ? K : never;

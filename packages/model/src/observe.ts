@@ -4,8 +4,8 @@
  */
 import * as Y from 'yjs';
 
-import { COLLECTIONS, type DeckDoc, type ObjectRef, type Scope } from './deck';
-import { editorOrigins } from './editor';
+import { COLLECTIONS, type DeckDoc, type ObjectRef, type Scope } from './layout';
+import { editorOrigins } from './ops/context';
 
 export interface ObjectChange extends ObjectRef {
   kind: 'added' | 'updated' | 'removed';

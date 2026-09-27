@@ -29,60 +29,20 @@ import type { Id, Rule, SododeckFile } from '@sododeck/schema';
 import { parseSododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { fromY, toY, type YObject, type YValue } from './convert';
+import { fromY, toY, type YValue } from './convert';
 import { DeckValidationError } from './errors';
 import { canonicalize } from './key-order';
+import {
+  collectionArray,
+  COLLECTIONS,
+  indexOfId,
+  metaMap,
+  rulesMap,
+  type Collection,
+  type DeckDoc,
+  type ObjectOf,
+} from './layout';
 import { checkDuplicateIds } from './load-checks';
-
-export type DeckDoc = Y.Doc;
-
-/** Array collections, in canonical file order. */
-export const ARRAY_COLLECTIONS = [
-  'nodes',
-  'groups',
-  'edges',
-  'views',
-  'features',
-  'flows',
-] as const satisfies readonly (keyof SododeckFile)[];
-
-/** Every id-keyed array collection of the file, stickies included. */
-export const COLLECTIONS = [...ARRAY_COLLECTIONS, 'stickies'] as const;
-
-export type Collection = (typeof COLLECTIONS)[number];
-export type ObjectOf<C extends Collection> = SododeckFile[C][number];
-
-/** Where an object lives: deck metadata, a collection, or the rules map. */
-export type Scope = 'meta' | Collection | 'rules';
-
-/** Identifies an object; `child` names a step of a flow, or a column or row of a rule. */
-export interface ObjectRef {
-  scope: Scope;
-  /** Object id (`''` for meta). */
-  id: Id;
-  child?: { kind: 'step' | 'column' | 'row'; id: Id };
-}
-
-/** Root types, i.e. everything an editor's undo history covers. */
-export function rootTypes(doc: DeckDoc): Y.AbstractType<unknown>[] {
-  return [
-    doc.getMap('meta'),
-    ...COLLECTIONS.map((c) => doc.getArray(c)),
-    doc.getMap('rules'),
-  ] as Y.AbstractType<unknown>[];
-}
-
-export function metaMap(doc: DeckDoc): YObject {
-  return doc.getMap<YValue>('meta');
-}
-
-export function collectionArray(doc: DeckDoc, c: Collection): Y.Array<YObject> {
-  return doc.getArray<YObject>(c);
-}
-
-export function rulesMap(doc: DeckDoc): Y.Map<YObject> {
-  return doc.getMap<YObject>('rules');
-}
 
 /** Creates a new, empty deck document. */
 export function createDeck(): DeckDoc {
@@ -161,20 +121,6 @@ export function toJSON(doc: DeckDoc): SododeckFile {
 /** Serializes a file for saving/export, in canonical key order so git diffs show only edits. */
 export function serializeDeck(file: SododeckFile): string {
   return `${JSON.stringify(canonicalize(file), null, 2)}\n`;
-}
-
-/** Index of the object with `id` in a collection, or -1. Linear: collections stay ≤ a few thousand. */
-export function indexOfId(array: Y.Array<YObject>, id: Id): number {
-  let found = -1;
-  let index = 0;
-  for (const map of array) {
-    if (map.get('id') === id) {
-      found = index;
-      break;
-    }
-    index++;
-  }
-  return found;
 }
 
 /** Reads one object of a collection as plain data. */

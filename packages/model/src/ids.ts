@@ -6,7 +6,7 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { collectionArray, COLLECTIONS, rulesMap, type DeckDoc } from './deck';
+import { collectionArray, COLLECTIONS, rulesMap, type DeckDoc } from './layout';
 
 export type IdPrefix =
   | 'node'

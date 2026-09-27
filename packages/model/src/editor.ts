@@ -6,16 +6,28 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { SododeckFile, Step } from '@sododeck/schema';
+import type { Rule, SododeckFile, Step } from '@sododeck/schema';
 
-import type { YObject } from './convert';
-import { indexOfId, rootTypes, type Collection, type DeckDoc, type ObjectOf } from './deck';
-import { DeckEditError } from './errors';
-import { defaultNewId, makeIdAllocator, type IdPrefix } from './ids';
+import { defaultNewId, makeIdAllocator } from './ids';
+import { rootTypes, type Collection, type DeckDoc, type ObjectOf } from './layout';
+import { removeObject, removeRule, removeStep, type RemovalResult } from './ops/cascade';
 import { addObject, reorderObject, updateObject } from './ops/collections';
+import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
+import {
+  addRule,
+  addRuleColumn,
+  addRuleRow,
+  moveRuleColumn,
+  moveRuleRow,
+  removeRuleColumn,
+  removeRuleRow,
+  renameRuleColumn,
+  setRuleCell,
+  updateRule,
+} from './ops/rules';
 import { addStep, moveStep, updateStep } from './ops/steps';
-import type { NewObject, NewStep, Patch } from './ops/types';
+import type { NewObject, NewRule, NewStep, Patch } from './ops/types';
 
 export interface EditorOptions {
   /** Typing-burst window in ms: edits to one object closer than this are one undo step. */
@@ -38,13 +50,35 @@ export interface DeckEditor {
   add<C extends Collection>(c: C, data: NewObject<C>): Id;
   /** Changes fields; `null` clears an optional field. Move = `position`, regroup = `group`. */
   update<C extends Collection>(c: C, id: Id, patch: Patch<ObjectOf<C>>): void;
+  /** Deletes an object with the cascade in data-model.md, as one change and one undo step. */
+  remove(c: Collection, id: Id): RemovalResult;
   /** Moves an object to `toIndex` in its collection (clamped). */
   reorder(c: Collection, id: Id, toIndex: number): void;
 
   /** Adds a step at `index` (default: last). */
   addStep(flowId: Id, data: NewStep, index?: number): Id;
   updateStep(flowId: Id, stepId: Id, patch: Patch<Step>): void;
+  /** Deletes one step; stickies anchored to it are kept and reported. */
+  removeStep(flowId: Id, stepId: Id): RemovalResult;
   moveStep(flowId: Id, stepId: Id, toIndex: number): void;
+
+  /** Adds a decision table; `hitPolicy` defaults to `first`, columns and rows to none. */
+  addRule(data: NewRule): Id;
+  updateRule(id: Id, patch: Patch<Omit<Rule, 'inputs' | 'outputs' | 'rows'>>): void;
+  /** Deletes a rule, detaching it from every node and step and dropping its sample inputs. */
+  removeRule(id: Id): RemovalResult;
+  /** Adds a column at `index` (default: last), with an empty cell in every row. */
+  addRuleColumn(ruleId: Id, side: 'inputs' | 'outputs', label: string, index?: number): Id;
+  renameRuleColumn(ruleId: Id, columnId: Id, label: string): void;
+  /** Moves a column within its side, moving its cell in every row. */
+  moveRuleColumn(ruleId: Id, columnId: Id, toIndex: number): void;
+  /** Removes a column, its cells, and (for inputs) the matching sample inputs on steps. */
+  removeRuleColumn(ruleId: Id, columnId: Id): RemovalResult;
+  /** Adds a row at `index` (default: last); missing cells are `''`. */
+  addRuleRow(ruleId: Id, cells?: { when?: string[]; then?: string[] }, index?: number): Id;
+  setRuleCell(ruleId: Id, rowId: Id, columnId: Id, value: string): void;
+  moveRuleRow(ruleId: Id, rowId: Id, toIndex: number): void;
+  removeRuleRow(ruleId: Id, rowId: Id): void;
 
   /** Runs `fn` as one transaction: one change event, one undo step. Nested batches flatten. */
   batch<T>(fn: () => T): T;
@@ -55,30 +89,6 @@ export interface DeckEditor {
   canRedo(): boolean;
   /** Detaches the undo history from the document. */
   destroy(): void;
-}
-
-/** What operation modules need from the editor. */
-export interface EditContext {
-  readonly doc: DeckDoc;
-  transact<T>(fn: () => T): T;
-  allocate(prefix: IdPrefix, reserved?: ReadonlySet<Id>): Id;
-}
-
-/** Origins of every live editor, so `observeDeck` can tell local edits from remote ones. */
-export const editorOrigins = new WeakSet<object>();
-
-export function findIndexById(array: Y.Array<YObject>, id: Id, what: string): number {
-  const index = indexOfId(array, id);
-  if (index === -1) {
-    throw new DeckEditError('not-found', [
-      { path: '', message: `${what} "${id}" does not exist.` },
-    ]);
-  }
-  return index;
-}
-
-export function getMapById(array: Y.Array<YObject>, id: Id, what: string): YObject {
-  return array.get(findIndexById(array, id, what));
 }
 
 export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEditor {
@@ -112,6 +122,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     update: (c, id, patch) => {
       updateObject(ctx, c, id, patch);
     },
+    remove: (c, id) => removeObject(ctx, c, id),
     reorder: (c, id, toIndex) => {
       reorderObject(ctx, c, id, toIndex);
     },
@@ -119,8 +130,32 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     updateStep: (flowId, stepId, patch) => {
       updateStep(ctx, flowId, stepId, patch);
     },
+    removeStep: (flowId, stepId) => removeStep(ctx, flowId, stepId),
     moveStep: (flowId, stepId, toIndex) => {
       moveStep(ctx, flowId, stepId, toIndex);
+    },
+    addRule: (data) => addRule(ctx, data),
+    updateRule: (id, patch) => {
+      updateRule(ctx, id, patch);
+    },
+    removeRule: (id) => removeRule(ctx, id),
+    addRuleColumn: (ruleId, side, label, index) => addRuleColumn(ctx, ruleId, side, label, index),
+    renameRuleColumn: (ruleId, columnId, label) => {
+      renameRuleColumn(ctx, ruleId, columnId, label);
+    },
+    moveRuleColumn: (ruleId, columnId, toIndex) => {
+      moveRuleColumn(ctx, ruleId, columnId, toIndex);
+    },
+    removeRuleColumn: (ruleId, columnId) => removeRuleColumn(ctx, ruleId, columnId),
+    addRuleRow: (ruleId, cells, index) => addRuleRow(ctx, ruleId, cells, index),
+    setRuleCell: (ruleId, rowId, columnId, value) => {
+      setRuleCell(ctx, ruleId, rowId, columnId, value);
+    },
+    moveRuleRow: (ruleId, rowId, toIndex) => {
+      moveRuleRow(ctx, ruleId, rowId, toIndex);
+    },
+    removeRuleRow: (ruleId, rowId) => {
+      removeRuleRow(ctx, ruleId, rowId);
     },
     batch: (fn) => {
       undoManager.stopCapturing();

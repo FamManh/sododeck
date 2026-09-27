@@ -3,8 +3,8 @@ import type { Id, Step } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { fromY, toY, type YObject } from '../convert';
-import { collectionArray } from '../deck';
-import { findIndexById, getMapById, type EditContext } from '../editor';
+import { collectionArray } from '../layout';
+import { findIndexById, getMapById, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { anchorableIds } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';

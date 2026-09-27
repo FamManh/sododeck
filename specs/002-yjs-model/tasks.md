@@ -199,7 +199,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T022 [P] [US3] Write `packages/model/test/cascade.test.ts`, with one test per data-model cascade row. Each asserts the `RemovalResult`, `checkIntegrity` output, `expectValid(doc)`, and that **one `undo()` restores `toJSON` exactly** (SC-002).
+- [x] T022 [P] [US3] Write `packages/model/test/cascade.test.ts`, with one test per data-model cascade row. Each asserts the `RemovalResult`, `checkIntegrity` output, `expectValid(doc)`, and that **one `undo()` restores `toJSON` exactly** (SC-002).
   - **Node**: edges removed; steps kept with full content and reported `missing-reference` on `edge`; removed from `includes`/`positions`; `parent` cleared on children; anchored sticky kept and reported.
   - **Edge**: steps kept and reported.
   - **Group**: members' `group` and child groups' `parent` set to the deleted group's parent, or cleared; nothing else deleted.
@@ -207,7 +207,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
   - **Flow**: steps deleted; stickies anchored to the flow or a step kept and reported.
   - **Rule**: removed from node and step `rules` (an empty list is removed), `ruleInputs[ruleId]` removed; no problems reported.
   - **Sticky**: removed.
-- [ ] T023 [P] [US3] Write `packages/model/test/rules.test.ts`:
+- [x] T023 [P] [US3] Write `packages/model/test/rules.test.ts`:
   - `addRule` gets defaults (`hitPolicy: 'first'`, empty columns and rows).
   - `addRuleColumn` inserts `''` at the index in every row's `when`/`then`.
   - `moveRuleColumn` moves the cells.
@@ -216,7 +216,7 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
   - `setRuleCell`, `moveRuleRow`, `removeRuleRow`.
   - `updateRule` rejects `inputs`/`outputs`/`rows`.
   - Every op leaves `checkSemanticRules` clean.
-- [ ] T024 [P] [US3] Write `packages/model/test/integrity.test.ts`, with one fixture per check in the data-model table (SC-008). Each asserts `kind`, `object`, `field`, `target` and `targetType`. Include:
+- [x] T024 [P] [US3] Write `packages/model/test/integrity.test.ts`, with one fixture per check in the data-model table (SC-008). Each asserts `kind`, `object`, `field`, `target` and `targetType`. Include:
   - `detached-rule-input`;
   - `ambiguous-anchor` (a sticky anchor id that matches a node and an edge);
   - a group `parent` cycle and a node `parent` cycle, each reported once;
@@ -224,17 +224,17 @@ pnpm monorepo, repo-relative paths. Source in `packages/model/src/`, tests in `p
 
 ### Implementation for User Story 3
 
-- [ ] T025 [P] [US3] Implement `packages/model/src/integrity.ts`: `checkIntegrity(file)` is pure and builds its id sets once (research R8). Export `IntegrityProblem` and `ObjectRef`.
-- [ ] T026 [US3] Implement `packages/model/src/ops/cascade.ts`, with one function per collection following the data-model cascade table. Each returns `RemovalResult { removed, updated, broken }`, where `broken` comes from `checkIntegrity` limited to the affected objects.
+- [x] T025 [P] [US3] Implement `packages/model/src/integrity.ts`: `checkIntegrity(file)` is pure and builds its id sets once (research R8). Export `IntegrityProblem` and `ObjectRef`.
+- [x] T026 [US3] Implement `packages/model/src/ops/cascade.ts`, with one function per collection following the data-model cascade table. Each returns `RemovalResult { removed, updated, broken }`, where `broken` comes from `checkIntegrity` limited to the affected objects.
   - Steps and stickies are **never** deleted by a cascade (clarification Q1).
   - Groups re-parent their contents (clarification Q3).
   - The whole cascade runs inside one `batch`.
-- [ ] T027 [US3] Implement `packages/model/src/ops/rules.ts`:
+- [x] T027 [US3] Implement `packages/model/src/ops/rules.ts`:
   - `addRule`, `updateRule`, `removeRule` (with the cascade);
   - column add/rename/move/remove, which keep row cell counts, and column removal also cleans `ruleInputs`;
   - row add/move/remove and `setRuleCell`.
-- [ ] T028 [US3] Wire `remove(c, id)`, `removeStep` (now returning `RemovalResult`), and all rule ops into `DeckEditor` in `packages/model/src/editor.ts`. Export `checkIntegrity`, `RemovalResult` and `NewRule` from `packages/model/src/index.ts`.
-- [ ] T029 [US3] Make T022–T024 pass. Commit: `feat(model): delete cascade, rule table ops and integrity report`.
+- [x] T028 [US3] Wire `remove(c, id)`, `removeStep` (now returning `RemovalResult`), and all rule ops into `DeckEditor` in `packages/model/src/editor.ts`. Export `checkIntegrity`, `RemovalResult` and `NewRule` from `packages/model/src/index.ts`.
+- [x] T029 [US3] Make T022–T024 pass. Commit: `feat(model): delete cascade, rule table ops and integrity report`.
 
 **Checkpoint**: US1–US3 (all P1) work. This is the minimum 003 and 005 need.
 

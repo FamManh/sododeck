@@ -11,7 +11,7 @@ import {
   type Issue,
   type SododeckFile,
 } from '@sododeck/schema';
-import { collectionArray, indexOfId, rulesMap, type Collection, type DeckDoc } from './deck';
+import { collectionArray, indexOfId, rulesMap, type Collection, type DeckDoc } from './layout';
 import { DeckEditError } from './errors';
 
 /** The part of a Zod schema used here, so this package needs no direct zod dependency. */
@@ -36,8 +36,9 @@ const ELEMENT_SCHEMAS = {
   step: shape.flows.element.shape.steps.element,
   rule: shape.rules.valueType,
   column: shape.rules.valueType.shape.inputs.element,
+  row: shape.rules.valueType.shape.rows.element,
   meta: sododeckFileSchema.pick({ name: true, description: true, tags: true }).strict(),
-} satisfies Record<Collection | 'step' | 'rule' | 'column' | 'meta', Schema>;
+} satisfies Record<Collection | 'step' | 'rule' | 'column' | 'row' | 'meta', Schema>;
 
 export type ValidationKind = keyof typeof ELEMENT_SCHEMAS;
 

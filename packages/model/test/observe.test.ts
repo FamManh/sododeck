@@ -44,11 +44,24 @@ describe('observeDeck (US1 AS3, FR-002)', () => {
     ]);
   });
 
-  it('reports added top-level objects', () => {
+  it('reports added and removed top-level objects', () => {
     const { editor, events } = setup();
     const id = editor.add('nodes', { type: 'queue', title: 'Q' });
+    editor.remove('nodes', id);
     expect(events.map((e) => e.changes)).toEqual([
       [{ scope: 'nodes', id, kind: 'added', keys: [] }],
+      [{ scope: 'nodes', id, kind: 'removed', keys: [] }],
+    ]);
+  });
+
+  it('reports a cascade as one change listing every object', () => {
+    const { editor, events } = setup();
+    editor.remove('nodes', 'a');
+    expect(events.map((e) => e.changes)).toEqual([
+      [
+        { scope: 'nodes', id: 'a', kind: 'removed', keys: [] },
+        { scope: 'edges', id: 'e1', kind: 'removed', keys: [] },
+      ],
     ]);
   });
 
@@ -60,29 +73,47 @@ describe('observeDeck (US1 AS3, FR-002)', () => {
     ]);
   });
 
-  it('reports metadata changes', () => {
+  it('reports metadata and rule changes', () => {
     const { editor, events } = setup();
     editor.updateMeta({ name: 'Deck' });
+    editor.updateRule('R-1', { title: 'Carrier choice' });
+    const rule = editor.addRule({ title: 'New' });
+    editor.removeRule(rule);
     expect(events.map((e) => e.changes)).toEqual([
       [{ scope: 'meta', id: '', kind: 'updated', keys: ['name'] }],
+      [{ scope: 'rules', id: 'R-1', kind: 'updated', keys: ['title'] }],
+      [{ scope: 'rules', id: rule, kind: 'added', keys: [] }],
+      [{ scope: 'rules', id: rule, kind: 'removed', keys: [] }],
     ]);
   });
 
-  it('reports steps as child changes', () => {
+  it('reports steps, rule columns and rule rows as child changes', () => {
     const { editor, events } = setup();
     const step = editor.addStep('fl', { edge: 'e1' });
     editor.updateStep('fl', 's1', { title: 'Go' });
+    editor.removeStep('fl', step);
+    const row = editor.addRuleRow('R-1');
+    editor.setRuleCell('R-1', row, 'out1', 'Truck');
+    const col = editor.addRuleColumn('R-1', 'inputs', 'Zone');
+    editor.renameRuleColumn('R-1', col, 'Region');
+    const stepRef = (id: string) => ({ scope: 'flows', id: 'fl', child: { kind: 'step', id } });
+    const ruleRef = (kind: string, id: string) => ({
+      scope: 'rules',
+      id: 'R-1',
+      child: { kind, id },
+    });
     expect(events.map((e) => e.changes)).toEqual([
-      [{ scope: 'flows', id: 'fl', child: { kind: 'step', id: step }, kind: 'added', keys: [] }],
+      [{ ...stepRef(step), kind: 'added', keys: [] }],
+      [{ ...stepRef('s1'), kind: 'updated', keys: ['title'] }],
+      [{ ...stepRef(step), kind: 'removed', keys: [] }],
+      [{ ...ruleRef('row', row), kind: 'added', keys: [] }],
+      [{ ...ruleRef('row', row), kind: 'updated', keys: ['then'] }],
       [
-        {
-          scope: 'flows',
-          id: 'fl',
-          child: { kind: 'step', id: 's1' },
-          kind: 'updated',
-          keys: ['title'],
-        },
+        { ...ruleRef('column', col), kind: 'added', keys: [] },
+        { ...ruleRef('row', 'r1'), kind: 'updated', keys: ['when'] },
+        { ...ruleRef('row', row), kind: 'updated', keys: ['when'] },
       ],
+      [{ ...ruleRef('column', col), kind: 'updated', keys: ['label'] }],
     ]);
   });
 
