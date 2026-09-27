@@ -1,6 +1,8 @@
 import { Button } from '@sododeck/ui/components/button';
 import { Moon, Sun } from 'lucide-react';
 
+import { ButtonsSection } from '../design-gallery/buttons-section';
+import { FieldsSection } from '../design-gallery/fields-section';
 import { useThemeStore } from '../theme/theme-store';
 
 /**
@@ -27,7 +29,10 @@ export function DesignGalleryPage() {
           Switch to {nextTheme}
         </Button>
       </header>
-      <main id="main" className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8" />
+      <main id="main" className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-8">
+        <ButtonsSection />
+        <FieldsSection />
+      </main>
     </div>
   );
 }
