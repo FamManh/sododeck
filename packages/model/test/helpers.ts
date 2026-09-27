@@ -28,11 +28,19 @@ export interface LargeDeckSize {
   flows: number;
   stepsPerFlow: number;
   rules: number;
+  stickies?: number;
 }
 
 /** A valid deck with fixed ids, for performance tests (research R10). */
 export function largeDeck(
-  size: LargeDeckSize = { nodes: 500, edges: 1000, flows: 20, stepsPerFlow: 10, rules: 10 },
+  size: LargeDeckSize = {
+    nodes: 500,
+    edges: 1000,
+    flows: 20,
+    stepsPerFlow: 10,
+    rules: 10,
+    stickies: 0,
+  },
 ): SododeckFile {
   const file = emptySododeckFile();
   for (let i = 0; i < size.nodes; i++) {
@@ -86,6 +94,23 @@ export function largeDeck(
           : {}),
       })),
     });
+  }
+  for (let i = 0; i < (size.stickies ?? 0); i++) {
+    const nodeId = `n${String(i % size.nodes)}`;
+    file.stickies.push(
+      i % 2 === 0
+        ? {
+            id: `sticky${String(i)}`,
+            text: `Bench note ${String(i)} for service ${String(i % size.nodes)}`,
+            position: { x: (i % 20) * 120, y: Math.floor(i / 20) * 96 },
+          }
+        : {
+            id: `sticky${String(i)}`,
+            text: `Pinned note ${String(i)} for service ${String(i % size.nodes)}`,
+            anchor: nodeId,
+            position: { x: 24 + (i % 3) * 8, y: -96 + (i % 5) * 12 },
+          },
+    );
   }
   return file;
 }

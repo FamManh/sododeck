@@ -196,7 +196,7 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 ### Model search
 
-- [ ] T030 [P] [US2] Write `packages/model/test/search.test.ts`. It must fail at first (contracts "Search", research R8):
+- [x] T030 [P] [US2] Write `packages/model/test/search.test.ts`. It must fail at first (contracts "Search", research R8):
   - `normalizeText`: accents, case, markdown markers, whitespace
   - matches in every field: node title and description, edge label and "<from> → <to>" fallback, flow description, step title, condition and notes, rule title, column name and input/output cell, sticky text
   - multi-word AND in any order
@@ -206,8 +206,8 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - the backlog case: "reattempt" returns the rule "Reattempt policy" and the step whose condition mentions it
   - renaming a node updates the index
   - entry reuse: an unchanged snapshot object yields the same entry object
-- [ ] T031 [US2] Implement `packages/model/src/search/normalize.ts`, `packages/model/src/search/index.ts` (`buildSearchIndex`, WeakMap cache per snapshot object) and `packages/model/src/search/search.ts` (`searchDeck`), and export them from `packages/model/src/index.ts`. Make T030 pass.
-- [ ] T032 [US2] Extend `largeDeck` in `packages/model/test/helpers.ts` with node, rule and sticky counts (defaults unchanged, so existing perf tests keep their deck). Then add to `packages/model/test/perf.test.ts`: on a generated 2,000-node deck (edges, flows, rules and stickies in proportion), `searchDeck` takes < 50 ms (median of 5) and a cold `buildSearchIndex` < 100 ms (SC-001). Record the measured values in the test name or a comment. If `searchDeck` exceeds 25 ms, stop and raise it (research R8: move to a worker).
+- [x] T031 [US2] Implement `packages/model/src/search/normalize.ts`, `packages/model/src/search/index.ts` (`buildSearchIndex`, WeakMap cache per snapshot object) and `packages/model/src/search/search.ts` (`searchDeck`), and export them from `packages/model/src/index.ts`. Make T030 pass.
+- [x] T032 [US2] Extend `largeDeck` in `packages/model/test/helpers.ts` with node, rule and sticky counts (defaults unchanged, so existing perf tests keep their deck). Then add to `packages/model/test/perf.test.ts`: on a generated 2,000-node deck (edges, flows, rules and stickies in proportion), `searchDeck` takes < 50 ms (median of 5) and a cold `buildSearchIndex` < 100 ms (SC-001). Record the measured values in the test name or a comment. If `searchDeck` exceeds 25 ms, stop and raise it (research R8: move to a worker).
 
 ### UI kit
 

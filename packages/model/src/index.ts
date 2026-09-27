@@ -49,3 +49,15 @@ export {
   type Point,
   type StickyPlacement,
 } from './geometry';
+export { buildSearchIndex } from './search/index';
+export {
+  searchDeck,
+  type Range,
+  type SearchEntry,
+  type SearchField,
+  type SearchFieldValue,
+  type SearchIndex,
+  type SearchKind,
+  type SearchResult,
+} from './search/search';
+export { normalizeText } from './search/normalize';
