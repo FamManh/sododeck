@@ -19,9 +19,9 @@ Expected results:
 - The smoke suite, including the no-third-party-requests check, passes unchanged.
 - `git status` shows no stale files under `packages/schema/src/generated/`.
 
-## 2. Manual walkthrough (`pnpm dev` → http://localhost:5173/deck/demo)
+## 2. Manual walkthrough (`pnpm dev` → http://localhost:5173)
 
-The demo deck has connections but no flows. Each check below names its spec scenario. The
+Create a deck in the library and add a few components and connections (or open any deck with connections; none has flows yet). Each check below names its spec scenario. The
 contracts are [flow-authoring-ui.md](contracts/flow-authoring-ui.md) and
 [model-additions.md](contracts/model-additions.md).
 
@@ -72,8 +72,12 @@ contracts are [flow-authoring-ui.md](contracts/flow-authoring-ui.md) and
     flagged. Check the row shows "Connection deleted", the flow row shows "Has problems", and Done
     in edit mode is not blocked. ⌘Z clears it (story 5, #4; clarification Q2).
 11. **Round trip.** Copy the JSON panel's Deck tab and check that `branches` and `branch` appear as
-    in [data-model.md](data-model.md). Once 005 lands, export → import the deck and check it is
-    identical (SC-007).
+    in [data-model.md](data-model.md). Export the deck from the top bar, import the file in the
+    library, open it and check that its flows, branches and broken steps are identical (SC-007).
+12. **Autosave and tabs (from 005).** Record two steps, reload the page: the flow is kept with its
+    steps (edge case "reloading while recording"). Open the same deck in a second tab, record a
+    flow in the first tab and check it appears in the second within a second; recording mode stays
+    in the first tab only (FR-039).
 
 ## 3. Performance (constitution V, SC-002)
 

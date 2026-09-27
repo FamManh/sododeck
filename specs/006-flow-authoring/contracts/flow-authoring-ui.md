@@ -32,7 +32,7 @@ Design frames: 02 and 03 (left panel), 41–48, light and dark. The spec's FR nu
 
 - **"+ New flow"** opens a small dialog, "New flow in <feature>", with a Name field and "Start
   recording". Empty name → the inline error "Enter a flow name".
-- **Top-bar chip** (`status` region) sits in the centre of the top bar, where the view switcher from 010 and 011 will go (the top bar has no switcher yet):
+- **Top-bar chip** (`status` region) sits in the top bar between the breadcrumb and the save status, where the view switcher from 010 and 011 will go (the top bar has no switcher yet); the save status and Export stay visible:
   - "Recording '<name>' · n steps", or "Editing '<name>'", or "Editing '<name>' · adding branch
     after step n"
   - Buttons: "Undo last step" (⌘Z), "Done" (disabled with `aria-describedby` naming the reason),

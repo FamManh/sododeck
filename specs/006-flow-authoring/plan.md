@@ -4,13 +4,16 @@
 
 **Input**: Feature specification from `specs/006-flow-authoring/spec.md` (clarified 2026-09-27, 6 answers)
 
-**Dependency**: 003 and 004 are merged on `main` (`91d2ef3`). 005 is specified but **not
-implemented**, and 006 does not need it: every change goes through the model, so autosave, reload
-and multi-tab sync apply once 005 attaches its providers.
+**Dependency**: 003, 004 and 005 are merged on `main` (`81d2d3a`). 006 needs nothing
+flow-specific from 005: every change goes through the model, so the deck persistence provider
+autosaves it and the deck channel syncs it to other tabs (remote changes arrive as
+`observeDeck` origin `remote`).
 
-Names used here were checked against `main` on 2026-09-27 (research header). `Step` has no
-`branch` field yet. No step from/to helper exists. The top bar has no view switcher. There is no
-`DropdownMenu` in `packages/ui` and no drag-to-reorder code or dependency.
+Names used here were re-checked against `main` after 005 merged (research header). `Step` has no
+`branch` field yet. No step from/to helper exists. The top bar has no view switcher; it now shows
+the breadcrumb, a spacer, `SaveStatus` and Export. `packages/ui` now has `DropdownMenu` and
+`ContextMenu` (added by 005), and the library builds its menus with `MenuKit`
+(`apps/app/src/library/menu-kit.ts`). There is no drag-to-reorder code or dependency.
 
 ## Summary
 
@@ -41,8 +44,8 @@ features and flows.
     the cached `toFlowEdges` / `toFlowNodes`.
   - Flow, step and branch inspectors. The JSON panel's Selection tab shows the flow.
   - Deletes go through the existing confirm dialog, widened to `RemovalTarget[]`.
-- **No new runtime dependency.** `DropdownMenu` is added to `packages/ui` from shadcn over the
-  existing `radix-ui`.
+- **No new runtime dependency and no new `packages/ui` component.** Feature and flow menus reuse
+  the `DropdownMenu` that 005 added.
 
 ## Technical Context
 
@@ -53,14 +56,14 @@ features and flows.
 - `yjs` 13.6
 - `@xyflow/react` 12.12
 - `zustand` 5
-- `radix-ui` (for the new `DropdownMenu` wrapper)
 - `lucide-react` (`Route`, `GitBranch`, `CircleAlert`, `Ban`, `GripVertical`, `Plus`, `X`, `Check`,
   `Undo2`)
 - `@sododeck/ui`: `Dialog`, `Popover`, `Switch`, `Input`, `InlineEdit`, `Textarea`, `Select`,
-  `SearchField`, `Tooltip`, toast, `PanelSection`
+  `SearchField`, `Tooltip`, toast, `PanelSection`, `DropdownMenu` (added by 005)
 
 **Storage**: none new. Document data goes in the Yjs deck through `@sododeck/model`. UI-only state
-goes in `useUiStore`. Persistence arrives with 005.
+goes in `useUiStore`. Persistence and tab sync come from 005 (`storage/deck-persistence.ts`,
+`storage/deck-channel.ts`) with no change.
 
 **Testing**:
 
@@ -108,7 +111,7 @@ reference; offline.
 
 - Up to ~20 features, ~20 flows per feature and ~30 steps per flow (a few branches) in normal use.
 - The bench deck adds 20 flows of 10 steps.
-- About 20 new app files, 3 new model files and 1 new UI component.
+- About 20 new app files and 3 new model files; no new UI component.
 
 ## Constitution Check
 
@@ -124,7 +127,7 @@ item._
 | V. Performance                   | ✅     | The overlay goes through the cached derivation, so only changed edges get new objects. `analyzeFlow` is O(steps). The filter is O(flows × steps) on tiny inputs, so no worker is needed (not heavy work). Bench before and after, with new flow scenarios.                                                |
 | VI. Strict types, tested         | ✅     | Pure functions plus store unit tests, component tests by role and label, and model round-trip, cascade and undo tests. No new e2e.                                                                                                                                                                        |
 | VII. Accessible                  | ✅     | Tab/Enter recording, ⌥↑↓ reorder, B branch, / filter, F2 rename. Every notice is in the polite live region. Error path uses dash plus icon plus text, invalid uses dash plus ban icon plus text, broken and chain break use icon plus text, matches use bold plus underline. Focus rings via `focusRing`. |
-| VIII. Simplicity, justified deps | ✅     | No new runtime dependency. Drag reorder is an in-house hook (R10). `DropdownMenu` comes from shadcn over the installed `radix-ui`. No playback, rules or Problems panel (007, 008, 015). ADR 0008 records the branch shape.                                                                               |
+| VIII. Simplicity, justified deps | ✅     | No new runtime dependency. Drag reorder is an in-house hook (R10). Menus reuse the existing `DropdownMenu`. No playback, rules or Problems panel (007, 008, 015). ADR 0008 records the branch shape.                                                                                                      |
 
 ## Project Structure
 
@@ -165,9 +168,6 @@ packages/model/
 ├── test/flow-paths.test.ts            # NEW
 └── test/{round-trip,edit,undo,cascade,integrity}.test.ts  # + branch cases
 
-packages/ui/
-└── src/components/dropdown-menu.tsx (+ test)   # NEW (shadcn over radix-ui)
-
 apps/app/src/
 ├── state/ui-store.ts                  # + activeFlow, flowSession, hoverEdgeId, flowFilter;
 │                                      #   pendingDelete → { targets: RemovalTarget[] }
@@ -201,7 +201,7 @@ apps/app/src/
 └── bench/generate-deck.ts (+ apps/app/bench/perf.bench.ts)  # flows mode + 2 scenarios
 
 docs/decisions/0008-flow-branches.md   # NEW ADR
-apps/app/CLAUDE.md, packages/model/CLAUDE.md, packages/schema/CLAUDE.md, packages/ui/CLAUDE.md
+apps/app/CLAUDE.md, packages/model/CLAUDE.md, packages/schema/CLAUDE.md
 .agents/skills/react-flow/SKILL.md     # overlay arg on toFlowEdges/toFlowNodes
 ```
 
@@ -216,7 +216,7 @@ apps/app/CLAUDE.md, packages/model/CLAUDE.md, packages/schema/CLAUDE.md, package
 ## Implementation order (for /speckit-tasks)
 
 1. Schema + ADR 0008 → model (`analyzeFlow`, branch ops, restore, tracking, removal) with tests.
-2. UI store additions + `use-flow-sync` + `DropdownMenu`.
+2. UI store additions + `use-flow-sync`.
 3. **P1 slice (stories 1–2)**:
    - flow list (read-only)
    - "+ New flow"

@@ -1,12 +1,14 @@
 # Research: Flow Authoring (006)
 
-Decisions for [plan.md](plan.md), resolving the technical unknowns in the spec. Names were checked
-against `main` on 2026-09-27: `useDeckSnapshot`, `useEditor`, `useUiStore` (`state/ui-store.ts`),
+Decisions for [plan.md](plan.md), resolving the technical unknowns in the spec. Names were re-checked
+against `main` after 005 merged (`81d2d3a`): `useDeckSnapshot`, `useEditor`, `useUiStore` (`state/ui-store.ts`),
 `toFlowEdges` / `toFlowNodes` (`editor/deck-to-flow.ts`, per-object `WeakMap` caches), `DeckEdge`,
-`useCanvasHandlers`, `useEditorShortcuts` / `useCanvasKeyDown` / `isTextTarget`
-(`editor/use-canvas-shortcuts.ts`), `ConfirmDeleteDialog`, `describeRemoval`, `previewRemoval`,
+`useCanvasHandlers`, `useEditorShortcuts` / `useCanvasKeyDown` (`editor/use-canvas-shortcuts.ts`),
+`isTextTarget` (`lib/is-text-target.ts`, re-exported by `use-canvas-shortcuts.ts`), `ConfirmDeleteDialog`, `describeRemoval`, `previewRemoval`,
 `FieldEdit`, `InlineEdit`, `Announcer`, `DeckEditor.addStep/updateStep/moveStep/removeStep/reorder`,
-`checkIntegrity`, `observeDeck` (`child.kind: 'step' | 'column' | 'row'`).
+`checkIntegrity`, `observeDeck` (`child.kind: 'step' | 'column' | 'row'`), and from 005:
+`SaveStatus` in the top bar, ⌘S in `useEditorShortcuts`, `DeckDeletedDialog`, `DropdownMenu` /
+`ContextMenu` in `packages/ui`, `MenuKit` (`library/menu-kit.ts`).
 
 ## R1. Branch shape in the file format
 
@@ -37,7 +39,7 @@ against `main` on 2026-09-27: `useDeckSnapshot`, `useEditor`, `useUiStore` (`sta
   - `step.branch = {label, condition, errorPath}` on the first step of each branch: membership
     would depend on array position, so a reorder silently changes which path a step is on.
   - Adding `Branch.from`: redundant under the "fork ends the main path" rule and can dangle.
-- Recorded in **ADR 0008** (0007 is reserved by 005's plan for deck persistence).
+- Recorded in **ADR 0008** (0007 is 005's local deck storage).
 
 ## R2. Deriving paths, numbers, chain breaks and broken steps
 
@@ -72,7 +74,8 @@ against `main` on 2026-09-27: `useDeckSnapshot`, `useEditor`, `useUiStore` (`sta
   - Cancel (confirmed) on a new flow removes the flow.
 - **Rationale**:
   - Constitution I: an in-progress flow is document data (the JSON panel shows it, design 42).
-  - Once 005 ships, it is autosaved and synced with no extra code.
+  - 005's deck persistence autosaves it and its deck channel syncs it to other tabs, with no
+    extra code.
   - Creating the flow only on the first step means Esc with nothing recorded leaves no empty
     flow behind, and needs no confirmation (FR-013).
 - **Alternatives considered**: keeping the draft in Zustand and writing it on Done. That
@@ -158,6 +161,8 @@ EdgeFlowMark>, nodes: Map<nodeId, NodeFlowMark> }` in `apps/app/src/editor/flows
   - `hoverEdgeId`, `flowFilter`, and `pendingDelete` widened to a `RemovalTarget[]`-based request.
   - `useFlowSync` prunes `activeFlow` and `flowSession` on `removed` changes (for example another
     tab deleting the flow), in the same way `useSelectionSync` does for nodes.
+- **Top bar**: the session chip goes in the spacer between the breadcrumb and `SaveStatus`
+  (design 42), so the save status and Export stay visible while recording.
 - **JSON panel**: the Selection tab shows the active flow, step or branch through
   `serializeEntry('flows', …)` (the tab label reads Flow or Step, as in design 42 and 45). No new
   `JsonTab` value, so saved panel preferences keep working.
@@ -214,9 +219,8 @@ EdgeFlowMark>, nodes: Map<nodeId, NodeFlowMark> }` in `apps/app/src/editor/flows
 ## R11. Menus, rename, owner suggestions, markdown
 
 - **Decision**:
-  - Feature and flow menus use a `DropdownMenu` wrapper added to `packages/ui` via shadcn over the
-    existing `radix-ui` package (no new dependency). 005 plans the same wrapper, and whichever
-    feature lands first adds it.
+  - Feature and flow menus reuse the `DropdownMenu` that 005 added to `packages/ui` (no new
+    component or dependency), following the library's deck and folder menus.
   - Inline rename uses the existing `InlineEdit` with F2.
   - The owner field uses `Input` plus a native `<datalist>` of the owners already in the deck.
   - Descriptions use the existing `Textarea` (markdown text; no rendering in 006).
@@ -272,8 +276,9 @@ total }` in `apps/app/src/editor/flows/`.
 
 ## R16. Scope guard
 
-- 005 isn't implemented. 006 needs nothing from it. Autosave, reload and multi-tab behavior come
-  for free once 005 attaches its providers, because every change goes through the model.
+- 005 is merged. 006 needs nothing flow-specific from it: autosave, reload and multi-tab behavior
+  come from 005's providers because every change goes through the model. Test them manually
+  (quickstart §2 step 12).
 - Playback (dimming, token, player, branch picker) belongs to 007. Rules, step owner, tags and
   links belong to 008. The Problems panel belongs to 015.
 - No new e2e tests (constitution VI). The smoke suite may need a selector update only if the left

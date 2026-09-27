@@ -43,7 +43,8 @@ checkpoint). No new runtime dependency.
 - [ ] T001 Gate check:
   - Confirm the branch `006-flow-authoring` is based on the latest `main`.
   - Re-check the names listed in the research.md header (`toFlowEdges`, `useCanvasHandlers`,
-    `useEditorShortcuts`, `isTextTarget`, `ConfirmDeleteDialog`, `describeRemoval`,
+    `useEditorShortcuts`, `isTextTarget` (now in `lib/is-text-target.ts`), `SaveStatus`,
+    `DropdownMenu`, `ConfirmDeleteDialog`, `describeRemoval`,
     `previewRemoval`, `FieldEdit`, `InlineEdit`, `useUiStore`).
   - If any moved, update research.md before continuing.
 - [ ] T002 [P] Record the performance baseline on `main`: run `pnpm bench` and save the numbers
@@ -137,15 +138,11 @@ story uses. No story work starts before this phase is done.
 
 ### UI package
 
-- [ ] T012 [P] Add a `DropdownMenu` wrapper to `packages/ui/src/components/dropdown-menu.tsx`:
-  - Use `pnpm dlx shadcn@latest add dropdown-menu`, adapted to tokens and `focusRing`, over the
-    installed `radix-ui`.
-  - Exports: `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`,
-    `DropdownMenuSub`, `DropdownMenuSubTrigger`, `DropdownMenuSubContent`,
-    `DropdownMenuRadioGroup`, `DropdownMenuRadioItem`, `DropdownMenuSeparator`,
-    `DropdownMenuShortcut`.
-  - Test keyboard use and roles in `packages/ui/test/dropdown-menu.test.tsx`.
-  - Update `packages/ui/CLAUDE.md`. If 005 already added it, reuse it and skip this task.
+- [ ] T012 [P] Check the menu building blocks 005 added and note how flow menus use them:
+      `DropdownMenu` (`packages/ui/src/components/dropdown-menu.tsx`) and the `MenuKit` pattern in
+      `apps/app/src/library/menu-kit.ts`. If `MenuKit` is needed by both the library and the flow
+      list, move it to `apps/app/src/lib/menu-kit.ts` (update its imports and tests). No new
+      `packages/ui` component.
 
 ### App: UI state and plumbing
 
@@ -280,7 +277,8 @@ panel (spec US1 scenarios 1–7).
       shows "NEW FLOW · <feature>", the name and the step list instead of the flow list (T023
       green).
 - [ ] T028 [US1] Implement `apps/app/src/editor/flows/session-chip.tsx` and render it in
-      `apps/app/src/editor/top-bar.tsx` when `flowSession` is set: Undo last step, Done with its
+      `apps/app/src/editor/top-bar.tsx` (in the spacer between the breadcrumb and `SaveStatus`) when
+      `flowSession` is set: Undo last step, Done with its
       reason, Cancel. Use the existing `Dialog` for the discard confirmation (T022 green).
 - [ ] T029 [US1] Route canvas input in session mode:
   - In `apps/app/src/editor/use-canvas-handlers.ts`:
@@ -583,7 +581,7 @@ marker, then Undo (spec US5 scenarios 1–5).
   - `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass.
   - No `.only` or skipped tests.
   - `pnpm schema:generate` leaves no diff.
-  - Run the whole quickstart §2 walkthrough.
+  - Run the whole quickstart §2 walkthrough, including step 12 (autosave, reload, two tabs).
   - Write the final report: what changed, what was skipped, what is uncertain.
 
 ---
