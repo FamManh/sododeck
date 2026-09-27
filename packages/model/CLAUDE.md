@@ -18,6 +18,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - Editor ops: `appendStep(flowId, branchId | null, data)`, `addBranch(flowId, afterStepId, { label?, condition?, errorPath?, firstEdge? })` (splits the following main steps into alternative "a" the first time), `updateBranch`, `removeBranch` (with its steps), `restoreFlowStructure(flowId, checkpoint)`. `moveStep` refuses moves out of the step's path and past the branch step. `addStep` / `updateStep` / `add('flows')` refuse a `step.branch` that names no branch of the flow; `update('flows')` cannot patch `branches`.
   - `captureFlowStructure(file, flowId)` → opaque frozen `FlowCheckpoint` (edit-mode Cancel); `flowStructureChanged(file, checkpoint)`.
   - `observeDeck` reports branches as `child.kind: 'branch'` (also when the first branch creates the `branches` field or the last one deletes it). `RemovalTarget` gains `{ scope: 'branches', flowId, id }`. `checkIntegrity` reports a `step.branch` naming no branch of its flow (`targetType: 'branch'`). Branch ids are deck-unique and checked for duplicates per flow on load.
+- **Added by 007** (flow playback):
+  - `serializeEntry('steps', step)`: one flow step in the canonical key order of `flows[].steps` (the JSON panel shows the current step in flow mode). `canonicalizeEntry('steps', value)` likewise.
 
 ## Rules
 

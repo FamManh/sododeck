@@ -23,6 +23,7 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 | `<ReactFlow>` props, types | `editor/canvas.tsx` (`nodeTypes`/`edgeTypes` at module scope)                                          |
 | Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `toFlowNodes`/`toFlowEdges` (optional `overlay` last) |
 | Flow marks (006)           | `editor/flows/flow-overlay.ts` — `flowOverlay()` → `EdgeFlowMark` (`data.flow`: badges, style) and node `data.flowStart`; drawn in `deck-edge.tsx` / `deck-node.tsx` |
+| Playback marks (007)       | `flowOverlay(…, playback)` (`PlaybackMarks`: played step ids, current step, speed) → `inPath` / `current` on edges, `inPath` / `currentStep` on nodes; `deck-to-flow.ts` turns `inPath` into `className: 'in-flow'`; `[data-flow-mode]` on the canvas wrapper dims the rest (`index.css`); `editor/flow-token.tsx` on the current edge; `flows/use-flow-viewport.ts` fits the flow / follows the step |
 | Sizes, positions, bounds   | `editor/canvas-geometry.ts` — `NODE_SIZE`, `displayPosition`, `groupBounds`, `freeSpot`                |
 | RF events → writes         | `editor/use-canvas-handlers.ts` (drag gesture, marquee, connect, reconnect, drop)                     |
 | Shared actions             | `editor/canvas-actions.ts` — `addComponent`, `connectComponents`, `centredOn`                         |
@@ -61,7 +62,9 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 
 **Zoom-dependent rendering**: one selector in `Canvas` that returns a discrete value (e.g. `useStore(levelSelector)` where the module-scope `levelSelector = (s: ReactFlowState) => levelForZoom(s.transform[2])`), passed down through `data`. Never read the raw zoom inside each node. Rebuilding every object when the level changes is fine (rare); per-frame is not. If a level changes a node's size, keep the box centred on the stored position and convert drags back before writing.
 
-**Animation along an edge** (flow token): render it inside the custom edge with `<animateMotion path={path}>`, so it follows re-routing; static under reduced motion. Put it in its own child component rendered only on the current edge, so hooks like `useReducedMotion` do not run in all 1,000 edges.
+**Animation along an edge** (flow token, `editor/flow-token.tsx`): render it inside the custom edge with `<animateMotion path={path}>`, so it follows re-routing; static at the label point under reduced motion. Put it in its own child component rendered only on the current edge, so hooks like `useReducedMotion` do not run in all 1,000 edges.
+
+**View-only modes** (flow mode): refuse edits in the handlers and hide handles / edge updaters with CSS (`visibility: hidden`; `display: none` zeroes the measured handle bounds and edges jump to the origin). Do not toggle `nodesDraggable` / `nodesConnectable` / `edgesReconnectable` for a mode entered often: every node and edge re-renders (~40 ms at 500 / 1,000).
 
 **Viewport after a document change**: the new nodes reach RF only after the next render. Use `fitBounds(rectYouComputed)`, or `fitView` in `requestAnimationFrame`; animation duration 0 under reduced motion. Never call `fitView` on every render.
 
