@@ -1,0 +1,76 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "Failed delivery",
+  "nodes": [
+    { "id": "driver-app", "type": "client", "title": "Driver App" },
+    { "id": "delivery-svc", "type": "service", "title": "Delivery Service" },
+    { "id": "notify-svc", "type": "service", "title": "Notification Service" },
+    { "id": "deliveries-db", "type": "database", "title": "Deliveries DB" }
+  ],
+  "groups": [],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "driver-app",
+      "to": "delivery-svc",
+      "protocol": "http",
+      "label": "POST /attempts"
+    },
+    {
+      "id": "e2",
+      "from": "delivery-svc",
+      "to": "deliveries-db",
+      "protocol": "sql",
+      "label": "update attempt"
+    },
+    {
+      "id": "e3",
+      "from": "delivery-svc",
+      "to": "notify-svc",
+      "protocol": "event",
+      "label": "AttemptFailed · Kafka"
+    }
+  ],
+  "views": [],
+  "features": [{ "id": "delivery", "title": "Delivery" }],
+  "flows": [
+    {
+      "id": "failed-delivery",
+      "title": "Failed delivery",
+      "feature": "delivery",
+      "steps": [
+        { "id": "s1", "edge": "e1", "condition": "driver marks attempt failed", "sla": "< 1 s" },
+        {
+          "id": "s2",
+          "edge": "e2",
+          "condition": "reason != null",
+          "rules": ["reattempt-policy"],
+          "ruleInputs": { "reattempt-policy": { "attempt": "2", "reachable": "No" } }
+        },
+        { "id": "s3", "edge": "e3", "sla": "< 2 s" }
+      ]
+    }
+  ],
+  "rules": {
+    "reattempt-policy": {
+      "title": "Reattempt policy",
+      "description": "What happens after a failed delivery attempt.",
+      "hitPolicy": "first",
+      "inputs": [
+        { "id": "attempt", "label": "Attempt" },
+        { "id": "reachable", "label": "Customer reachable" }
+      ],
+      "outputs": [
+        { "id": "action", "label": "Action" },
+        { "id": "notify", "label": "Notify" }
+      ],
+      "rows": [
+        { "id": "r1", "when": ["≤ 1", "No"], "then": ["Reschedule same day", "SMS + push"] },
+        { "id": "r2", "when": ["≤ 2", "Any"], "then": ["Reschedule next day", "SMS"] },
+        { "id": "r3", "when": ["> 2", "Any"], "then": ["Return to depot", "Ops alert"] }
+      ]
+    }
+  },
+  "stickies": []
+}

@@ -1,0 +1,321 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "Logistics Delivery (excerpt)",
+  "description": "Last-mile delivery: ordering, dispatch and payment. Uses every object type and field of format v1.",
+  "tags": ["logistics", "example"],
+  "nodes": [
+    {
+      "id": "payments-provider",
+      "type": "external",
+      "title": "Payments Provider",
+      "level": "landscape",
+      "description": "Card authorization and capture.",
+      "owner": "Finance",
+      "tags": ["pci"],
+      "tech": "REST",
+      "host": "SaaS",
+      "icon": "credit-card",
+      "links": [{ "label": "Status page", "url": "https://status.example.com" }],
+      "group": "external",
+      "position": { "x": 900, "y": 360 }
+    },
+    {
+      "id": "delivery-platform",
+      "type": "service",
+      "title": "Delivery Platform",
+      "level": "system",
+      "description": "Everything the delivery team runs.",
+      "owner": "Delivery",
+      "position": { "x": 460, "y": -120 }
+    },
+    {
+      "id": "customer-app",
+      "type": "client",
+      "title": "Customer App",
+      "level": "container",
+      "description": "Mobile app where customers **order and track** deliveries.",
+      "owner": "Mobile",
+      "tags": ["ios", "android"],
+      "tech": "React Native",
+      "host": "App stores",
+      "icon": "smartphone",
+      "links": [{ "url": "docs/customer-app.md" }],
+      "group": "clients",
+      "position": { "x": 40, "y": 80 }
+    },
+    {
+      "id": "api-gateway",
+      "type": "gateway",
+      "title": "API Gateway",
+      "level": "container",
+      "tech": "Envoy",
+      "host": "EKS eu-west-1",
+      "group": "edge",
+      "position": { "x": 250, "y": 140 }
+    },
+    {
+      "id": "order-svc",
+      "type": "service",
+      "title": "Order Service",
+      "level": "container",
+      "description": "Owns the order lifecycle.",
+      "owner": "Ordering",
+      "tags": ["core"],
+      "tech": "Go",
+      "host": "EKS eu-west-1",
+      "icon": "receipt-text",
+      "links": [{ "label": "Repository", "url": "https://git.example.com/order-svc" }],
+      "group": "core",
+      "parent": "delivery-platform",
+      "rules": ["delivery-tier"],
+      "position": { "x": 460, "y": 80.5 }
+    },
+    {
+      "id": "order-validator",
+      "type": "service",
+      "title": "Order Validator",
+      "level": "component",
+      "parent": "order-svc",
+      "position": { "x": 460, "y": 200 }
+    },
+    {
+      "id": "dispatch-svc",
+      "type": "service",
+      "title": "Dispatch Service",
+      "level": "container",
+      "tech": "Kotlin",
+      "host": "EKS eu-west-1",
+      "group": "core",
+      "parent": "delivery-platform",
+      "position": { "x": 660, "y": 80 }
+    },
+    {
+      "id": "order-events",
+      "type": "queue",
+      "title": "Order Events",
+      "tech": "Kafka",
+      "host": "MSK",
+      "group": "messaging",
+      "position": { "x": 560, "y": 480 }
+    },
+    {
+      "id": "orders-db",
+      "type": "database",
+      "title": "Orders DB",
+      "tech": "Postgres 16",
+      "host": "RDS",
+      "group": "data",
+      "position": { "x": 900, "y": 80 }
+    }
+  ],
+  "groups": [
+    { "id": "platform", "title": "Platform", "description": "Everything we run." },
+    { "id": "clients", "title": "Clients" },
+    { "id": "edge", "title": "Edge", "parent": "platform" },
+    { "id": "core", "title": "Core services", "parent": "platform" },
+    { "id": "messaging", "title": "Messaging", "parent": "platform" },
+    { "id": "data", "title": "Data", "parent": "platform" },
+    { "id": "external", "title": "External" }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "customer-app",
+      "to": "api-gateway",
+      "protocol": "http",
+      "label": "POST /orders · HTTPS",
+      "direction": "forward",
+      "description": "Checkout request with the cart and the delivery address.",
+      "owner": "Mobile",
+      "tags": ["public"],
+      "links": [{ "label": "OpenAPI", "url": "https://api.example.com/openapi.json" }]
+    },
+    {
+      "id": "e2",
+      "from": "api-gateway",
+      "to": "order-svc",
+      "protocol": "grpc",
+      "label": "CreateOrder"
+    },
+    {
+      "id": "e3",
+      "from": "order-svc",
+      "to": "orders-db",
+      "protocol": "sql",
+      "label": "insert order"
+    },
+    {
+      "id": "e4",
+      "from": "order-svc",
+      "to": "order-events",
+      "protocol": "event",
+      "label": "OrderPlaced · Kafka"
+    },
+    {
+      "id": "e5",
+      "from": "order-events",
+      "to": "dispatch-svc",
+      "protocol": "event",
+      "label": "OrderPlaced"
+    },
+    {
+      "id": "e6",
+      "from": "dispatch-svc",
+      "to": "customer-app",
+      "protocol": "websocket",
+      "label": "driver location",
+      "direction": "both"
+    },
+    {
+      "id": "e7",
+      "from": "order-svc",
+      "to": "payments-provider",
+      "protocol": "other",
+      "label": "nightly settlement file (SFTP)",
+      "direction": "none"
+    }
+  ],
+  "views": [
+    { "id": "system", "type": "system", "title": "System", "subtitleField": "tech" },
+    { "id": "infra", "type": "infra", "title": "Infra", "subtitleField": "host" },
+    {
+      "id": "delivery-view",
+      "type": "feature",
+      "title": "Delivery",
+      "subtitleField": "owner",
+      "feature": "delivery",
+      "includes": ["customer-app", "api-gateway", "order-svc", "orders-db", "order-events"],
+      "positions": { "order-svc": { "x": 420, "y": -40 }, "orders-db": { "x": 700, "y": 0 } }
+    },
+    { "id": "custom-1", "type": "custom", "title": "Custom 1", "subtitleField": "none" }
+  ],
+  "features": [
+    {
+      "id": "delivery",
+      "title": "Delivery",
+      "description": "From checkout to a delivered, paid order.",
+      "owner": "Delivery"
+    }
+  ],
+  "flows": [
+    {
+      "id": "place-order",
+      "title": "Place order",
+      "feature": "delivery",
+      "description": "Checkout to a confirmed, paid order.",
+      "trigger": "Customer taps Place order",
+      "outcome": "Order is stored and dispatch is notified",
+      "owner": "Ordering",
+      "tags": ["happy-path"],
+      "links": [{ "label": "Runbook", "url": "https://wiki.example.com/place-order" }],
+      "steps": [
+        {
+          "id": "s1",
+          "edge": "e1",
+          "title": "Submit checkout",
+          "condition": "customer taps Place order",
+          "sla": "< 150 ms",
+          "description": "The app sends the cart.",
+          "payload": "{ cartId, addressId, paymentToken }",
+          "notes": "Retries are **idempotent** by `cartId`.",
+          "owner": "Mobile",
+          "tags": ["entry"],
+          "links": [{ "label": "Trace", "url": "https://traces.example.com/place-order" }],
+          "rules": ["delivery-tier", "notify-channels"],
+          "ruleInputs": {
+            "delivery-tier": { "distance": "4", "weight": "8", "priority": "Express" },
+            "notify-channels": { "priority": "Express" }
+          }
+        },
+        { "id": "s2", "edge": "e2", "condition": "token.valid", "sla": "< 40 ms" },
+        { "id": "s3", "edge": "e3", "sla": "< 120 ms" },
+        {
+          "id": "s4",
+          "edge": "e2",
+          "title": "Confirm to gateway",
+          "condition": "order stored",
+          "rules": ["payment-capture"]
+        },
+        { "id": "s5", "edge": "e4", "sla": "< 2 s" },
+        { "id": "s6", "edge": "e5" }
+      ]
+    },
+    { "id": "track-order", "title": "Live tracking", "feature": "delivery", "steps": [] }
+  ],
+  "rules": {
+    "delivery-tier": {
+      "title": "Delivery tier",
+      "description": "Picks vehicle, SLA and surcharge from distance, weight and priority.",
+      "hitPolicy": "first",
+      "inputs": [
+        { "id": "distance", "label": "Distance (km)" },
+        { "id": "weight", "label": "Weight (kg)" },
+        { "id": "priority", "label": "Priority" }
+      ],
+      "outputs": [
+        { "id": "vehicle", "label": "Vehicle" },
+        { "id": "sla", "label": "SLA" },
+        { "id": "surcharge", "label": "Surcharge" }
+      ],
+      "rows": [
+        { "id": "r1", "when": ["≤ 5", "≤ 10", "Express"], "then": ["Bike", "45 min", "€4.00"] },
+        { "id": "r2", "when": ["≤ 5", "≤ 10", "Standard"], "then": ["Bike", "2 h", "€0.00"] },
+        { "id": "r3", "when": ["≤ 20", "≤ 30", "Any"], "then": ["Van", "4 h", "€2.50"] },
+        { "id": "r4", "when": ["> 20", "≤ 30", ""], "then": ["Van", "Next day", "€6.00"] },
+        { "id": "r5", "when": ["Any", "> 30", "—"], "then": ["Truck", "Next day", "€12.00"] }
+      ]
+    },
+    "payment-capture": {
+      "title": "Payment capture",
+      "hitPolicy": "unique",
+      "inputs": [
+        { "id": "status", "label": "Order status" },
+        { "id": "amount", "label": "Amount (€)" }
+      ],
+      "outputs": [
+        { "id": "capture", "label": "Capture" },
+        { "id": "review", "label": "Review" }
+      ],
+      "rows": [
+        { "id": "r1", "when": ["Delivered", "Any"], "then": ["Full amount", "No"] },
+        { "id": "r2", "when": ["Partial", "≤ 200"], "then": ["Pro rata", "No"] },
+        { "id": "r3", "when": ["Partial", "> 200"], "then": ["Pro rata", "Finance"] },
+        { "id": "r4", "when": ["Failed", "Any"], "then": ["Void", "No"] }
+      ]
+    },
+    "notify-channels": {
+      "title": "Notification channels",
+      "hitPolicy": "collect",
+      "inputs": [{ "id": "priority", "label": "Priority" }],
+      "outputs": [{ "id": "channel", "label": "Channel" }],
+      "rows": [
+        { "id": "push", "when": ["Any"], "then": ["Push"] },
+        { "id": "sms", "when": ["Express"], "then": ["SMS"] }
+      ]
+    }
+  },
+  "stickies": [
+    {
+      "id": "note-1",
+      "text": "Confirm warehouse SLA with **ops**.",
+      "color": "amber",
+      "position": { "x": 40, "y": 400 }
+    },
+    { "id": "note-2", "text": "Owns PII.", "color": "clay", "anchor": "orders-db" },
+    {
+      "id": "note-3",
+      "text": "Kafka topic retention is 7 days.",
+      "color": "blue",
+      "anchor": "e4",
+      "position": { "x": 12, "y": -24 }
+    },
+    {
+      "id": "note-4",
+      "text": "Happy path only for now.",
+      "color": "green",
+      "anchor": "place-order"
+    },
+    { "id": "note-5", "text": "Idempotency key?", "color": "grey", "anchor": "s1" }
+  ]
+}

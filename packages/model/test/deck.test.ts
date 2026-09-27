@@ -6,12 +6,15 @@ import * as Y from 'yjs';
 
 import { createDeck, DeckValidationError, fromJSON, serializeDeck, toJSON } from '../src';
 
-const example = JSON.parse(
-  await readFile(
-    new URL(import.meta.resolve('@sododeck/schema/examples/minimal.sododeck.json')),
-    'utf8',
-  ),
-) as SododeckFile;
+async function readExample(file: string): Promise<SododeckFile> {
+  const url = new URL(import.meta.resolve(`@sododeck/schema/examples/${file}`));
+  return JSON.parse(await readFile(url, 'utf8')) as SododeckFile;
+}
+
+const example = await readExample('minimal.sododeck.json');
+const flowAndRule = await readExample('flow-and-rule.sododeck.json');
+/** Uses every object type and every field of format v1. */
+const full = await readExample('full.sododeck.json');
 
 /** Exercises nested objects, nested arrays, maps, numbers (negative, fractional) and every collection. */
 const rich: SododeckFile = {
@@ -73,15 +76,20 @@ describe('deck model', () => {
     ['example', example],
     ['rich', rich],
     ['with metadata', withMeta],
+    ['flow-and-rule example', flowAndRule],
+    ['full example', full],
   ])('round-trips the %s deck losslessly', (_name, file) => {
     expect(toJSON(fromJSON(file))).toEqual(file);
     expect(serializeDeck(toJSON(fromJSON(file)))).toBe(serializeDeck(file));
   });
 
-  it('survives Yjs update encoding (persistence / sync path)', () => {
+  it.each([
+    ['rich', rich],
+    ['full example', full],
+  ])('survives Yjs update encoding of the %s deck (persistence / sync path)', (_name, file) => {
     const replica = new Y.Doc();
-    Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(rich)));
-    expect(toJSON(replica)).toEqual(rich);
+    Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(file)));
+    expect(toJSON(replica)).toEqual(file);
   });
 
   it('keeps ids stable when an object is renamed', () => {
