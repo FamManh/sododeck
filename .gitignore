@@ -19,3 +19,11 @@ apps/app/bench/results/
 
 # Cloudflare
 .wrangler/
+
+
+
+# Frontend
+.turbo/
+bench/
+dist/
+test-results/
