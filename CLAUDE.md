@@ -6,6 +6,9 @@ Interactive, editable architecture & flow diagram workspace. One model (nodes, e
 - Global audience, English UI. Closed source (private repo).
 - Team: one founder + AI agents. Code must be **simple, typed, well-tested, well-documented**.
 - Product spec: `docs/spec.md`. Design system: `DESIGN.md`. Decisions: `docs/decisions/`. Deploy: `docs/deploy.md`.
+- **Agent rules: [`AGENTS.md`](AGENTS.md)** (e.g. no `Co-Authored-By` in commits). Read and follow it.
+
+@AGENTS.md
 
 ## Repo map
 
@@ -68,7 +71,7 @@ Single package: `pnpm --filter @sododeck/<name> <script>`.
 - State: document data → Yjs via `@sododeck/model`. UI-only state → Zustand. Server state → none (no backend).
 - Comments explain _why_, not what. Mark deferred work as `TODO(M<n>): …` or `TODO(schema-v1): …`.
 - Dependencies: ask before adding a new runtime dependency. Prefer the platform.
-- Commits: Conventional Commits (`feat(app): …`, `fix(model): …`, `chore: …`), small and focused. Enforced by commitlint + husky/lint-staged.
+- Commits: Conventional Commits (`feat(app): …`, `fix(model): …`, `chore: …`), small and focused. Enforced by commitlint + husky/lint-staged. No `Co-Authored-By` trailers (see `AGENTS.md`).
 
 ## Testing rules
 
