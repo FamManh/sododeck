@@ -1,0 +1,51 @@
+# Contract: `@sododeck/ui` public API added by 000
+
+Import path per file: `@sododeck/ui/components/<file>`, `@sododeck/ui/lib/<file>`,
+`@sododeck/ui/hooks/<file>`. No barrel. Every component: function component, named export,
+`data-slot="<name>"`, accepts `className` (merged with `cn`) and the underlying element's or Radix
+primitive's props. Colors only via tokens. All interactive parts get the shared focus style
+(research R5). Accessible name: from visible label, `aria-label`, or a required `label` prop where
+there is no visible text.
+
+## Components
+
+| File                    | Exports                                                                                                                       | Key props (beyond native/Radix)                                                                                                                                                      | A11y / keyboard contract                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `button.tsx` (extended) | `Button`, `buttonVariants`                                                                                                    | `variant: 'primary' \| 'secondary' \| 'ghost' \| 'chip' \| 'toggle'`; `size: 'default' \| 'sm' \| 'icon' \| 'icon-sm' \| 'chip'`; `pressed?: boolean` (toggle only → `aria-pressed`) | Space/Enter activate; icon-only requires `aria-label` (dev warning + test)                                          |
+| `input.tsx`             | `Input`                                                                                                                       | `invalid?: boolean` → `aria-invalid` + clay border + icon slot                                                                                                                       | native; focus → primary border + outline                                                                            |
+| `inline-edit.tsx`       | `InlineEdit`                                                                                                                  | `value`, `onCommit(value)`, `label` (required, used as `aria-label`)                                                                                                                 | Enter / blur commit, Esc reverts and blurs                                                                          |
+| `textarea.tsx`          | `Textarea`                                                                                                                    | — (mono 12.5/1.55, `resize-y`)                                                                                                                                                       | native                                                                                                              |
+| `select.tsx`            | `Select`, `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`                                                       | Radix Select API                                                                                                                                                                     | Radix: arrows, type-ahead, Enter, Esc                                                                               |
+| `search-field.tsx`      | `SearchField`                                                                                                                 | `shortcut?: string` (e.g. "⌘K", rendered in `<kbd>`, `aria-hidden`), `label` (required)                                                                                              | `type="search"`, `role` searchbox via native; Esc clears (optional `onClear`)                                       |
+| `segmented-control.tsx` | `SegmentedControl`, `SegmentedControlItem`                                                                                    | `value`, `onValueChange`, 2–3 items                                                                                                                                                  | Radix RadioGroup (`radiogroup`/`radio`): one tab stop, arrows move the selection, never empty                       |
+| `switch.tsx`            | `Switch`                                                                                                                      | Radix Switch API                                                                                                                                                                     | `role="switch"`, `aria-checked`, Space toggles; thumb position = non-color cue                                      |
+| `tag-chip.tsx`          | `TagChip`                                                                                                                     | `label`, `onRemove?`                                                                                                                                                                 | remove button `aria-label="Remove tag {label}"`; Backspace/Delete on chip removes                                   |
+| `tag-input.tsx`         | `TagInput`                                                                                                                    | `value: string[]`, `onValueChange(tags)`, `label` (required), `placeholder` default "+ tag"                                                                                          | Enter adds via `addTag`; focus moves to next chip or add field after removal                                        |
+| `kind-tile.tsx`         | `KindTile`                                                                                                                    | `kind: ComponentKind \| string \| null`, `size?: 22 \| 28 \| 30 \| 40` (default 30), `decorative?: boolean`                                                                          | `role="img"` + `aria-label="{Kind}"` unless `decorative` (`aria-hidden`)                                            |
+| `banner.tsx`            | `Banner`                                                                                                                      | `tone: 'warning' \| 'success' \| 'error'`, `action?: ReactNode`, `onDismiss?()`                                                                                                      | `role="status"` (warning/success) or `role="alert"` (error); tone icon always shown; dismiss `aria-label="Dismiss"` |
+| `dialog.tsx`            | `Dialog`, `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose` | `DialogContent` `width?` via className (export uses 820px)                                                                                                                           | Radix: focus trap, Esc, backdrop click, focus return; title required                                                |
+| `toast.tsx`             | `ToastProvider`, `Toaster`, `useToast()` → `toast({ message, action?, duration? })`                                           | duration default 2600                                                                                                                                                                | Radix Toast: polite live region, F8 hotkey to viewport, swipe/Esc dismiss                                           |
+| `coach-mark.tsx`        | `CoachMark`, `CoachMarkAnchor`                                                                                                | `open`, `step`, `total`, `title`, `children`, `onNext`, `onBack`, `onSkip`, `onFinish`, `side?`                                                                                      | Radix Popover: focus moves into card, Esc = skip, Back disabled on step 1, dots `aria-hidden` with text "n of N"    |
+
+Existing `Panel*` and `Tooltip*` are unchanged except replacing any non-token radius/focus style.
+
+## Lib / hooks
+
+| File                          | Exports                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/motion.ts`               | `MOTION` (default values), `resolveMotion(reduced: boolean): Motion`, `type Motion`                                                               |
+| `hooks/use-reduced-motion.ts` | `useReducedMotion(): boolean` (live, SSR/jsdom-safe)                                                                                              |
+| `lib/icons.ts`                | `type ComponentKind`, `COMPONENT_KINDS`, `KIND_STYLE`, `toComponentKind()`, `type MaterialGlyph`, `MATERIAL_TO_LUCIDE`, `ICON_STROKE_WIDTH` (1.5) |
+| `lib/tags.ts`                 | `normalizeTag()`, `addTag()`, `removeTag()`                                                                                                       |
+| `lib/contrast.ts`             | `contrastRatio(a: string, b: string): number` (hex in, ratio out)                                                                                 |
+
+## CSS contract
+
+- `tokens.css`: new motion + `--sd-shadow-tour` tokens, reduced-motion media block (see data-model).
+- `theme.css`: `--radius-segment|row|banner`, `--shadow-hover|tour`, duration keys `dim`, `ring`.
+- `utils.ts`: tailwind-merge knows `segment`, `row`, `banner`, `hover`, `tour`.
+- `package.json` exports gain `"./hooks/*": "./src/hooks/*.ts"`.
+
+## App contract (dev only)
+
+- Route `/design` exists only when `import.meta.env.DEV`; production → NotFoundPage, no chunk.

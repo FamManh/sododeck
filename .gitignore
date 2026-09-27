@@ -27,3 +27,5 @@ apps/app/bench/results/
 bench/
 dist/
 test-results/
+# Python caches (Spec Kit scripts)
+__pycache__/

@@ -49,6 +49,16 @@
   /* Scrim & shadow */
   --sd-scrim: rgba(28, 28, 26, 0.3);
   --sd-shadow: rgba(0, 0, 0, 0.06);
+  --sd-shadow-tour: rgba(0, 0, 0, 0.25);
+
+  /* Motion (short and calm: no bounce, no overshoot). Mirrored in src/lib/motion.ts. */
+  --sd-dur-hover: 150ms;
+  --sd-dur-dim: 250ms;
+  --sd-dur-ring: 200ms;
+  --sd-flow-token-loop: 1400ms;
+  --sd-flow-step: 1700ms;
+  --sd-toast: 2600ms;
+  --sd-ease: ease;
 }
 
 .dark {
@@ -91,4 +101,18 @@
 
   --sd-scrim: rgba(0, 0, 0, 0.6);
   --sd-shadow: rgba(0, 0, 0, 0.45);
+  --sd-shadow-tour: rgba(0, 0, 0, 0.6);
+}
+
+/*
+ * Reduced motion: transitions finish instantly and the flow token stops looping.
+ * --sd-flow-step and --sd-toast stay: they are reading time, not animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sd-dur-hover: 0ms;
+    --sd-dur-dim: 0ms;
+    --sd-dur-ring: 0ms;
+    --sd-flow-token-loop: 0ms;
+  }
 }
