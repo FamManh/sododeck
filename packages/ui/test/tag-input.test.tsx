@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -9,14 +9,17 @@ import { TagInput } from '../src/components/tag-input';
 function Harness({
   initial = [],
   spy,
+  suggestions,
 }: {
   initial?: readonly string[];
   spy?: (tags: readonly string[]) => void;
+  suggestions?: readonly string[];
 }) {
   const [tags, setTags] = useState(initial);
   return (
     <TagInput
       label="Add tag"
+      suggestions={suggestions}
       value={tags}
       onValueChange={(next) => {
         spy?.(next);
@@ -30,7 +33,7 @@ describe('TagInput', () => {
   it('adds "PII" once when Enter is pressed twice', async () => {
     const spy = vi.fn();
     render(<Harness spy={spy} />);
-    await userEvent.type(screen.getByRole('textbox', { name: 'Add tag' }), 'PII{Enter}{Enter}');
+    await userEvent.type(screen.getByRole('combobox', { name: 'Add tag' }), 'PII{Enter}{Enter}');
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
     expect(screen.getByText('pii')).toBeInTheDocument();
     expect(spy).toHaveBeenCalledOnce();
@@ -39,7 +42,7 @@ describe('TagInput', () => {
 
   it('clears the field after adding', async () => {
     render(<Harness />);
-    const field = screen.getByRole('textbox', { name: 'Add tag' });
+    const field = screen.getByRole('combobox', { name: 'Add tag' });
     await userEvent.type(field, 'critical{Enter}');
     expect(field).toHaveValue('');
   });
@@ -54,7 +57,7 @@ describe('TagInput', () => {
   it('moves focus to the add field after removing the last chip', async () => {
     render(<Harness initial={['pii']} />);
     await userEvent.click(screen.getByRole('button', { name: 'Remove tag pii' }));
-    expect(screen.getByRole('textbox', { name: 'Add tag' })).toHaveFocus();
+    expect(screen.getByRole('combobox', { name: 'Add tag' })).toHaveFocus();
   });
 
   it('removes a focused chip with Backspace', async () => {
@@ -66,7 +69,74 @@ describe('TagInput', () => {
   });
 });
 
+describe('TagInput suggestions and keys (008 FR-005)', () => {
+  it('lists the tags in a list named "Tags"', () => {
+    render(<Harness initial={['pii', 'core']} />);
+    expect(
+      within(screen.getByRole('list', { name: 'Tags' })).getAllByRole('listitem'),
+    ).toHaveLength(2);
+  });
+
+  it('suggests deck tags containing the typed text, without the ones already present', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={['pci']} suggestions={['pci', 'pricing', 'public', 'core']} />);
+    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'p');
+    const options = within(screen.getByRole('listbox', { name: 'Tag suggestions' }))
+      .getAllByRole('option')
+      .map((o) => o.textContent);
+    expect(options).toEqual(['pricing', 'public']);
+  });
+
+  it('adds a chosen suggestion at once and clears the field', async () => {
+    const user = userEvent.setup();
+    const spy = vi.fn();
+    render(<Harness spy={spy} suggestions={['pricing', 'public']} />);
+    const field = screen.getByRole('combobox', { name: 'Add tag' });
+    await user.type(field, 'pri');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(spy).toHaveBeenCalledExactlyOnceWith(['pricing']);
+    expect(field).toHaveValue('');
+  });
+
+  it('removes the last tag with Backspace in the empty field', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={['critical', 'pii']} />);
+    const field = screen.getByRole('combobox', { name: 'Add tag' });
+    field.focus();
+    await user.keyboard('{Backspace}');
+    expect(screen.queryByText('pii')).not.toBeInTheDocument();
+    expect(screen.getByText('critical')).toBeInTheDocument();
+    expect(field).toHaveFocus();
+    await user.type(field, 'ab{Backspace}');
+    expect(screen.getByText('critical')).toBeInTheDocument();
+  });
+});
+
 describe('TagChip', () => {
+  it('shows a partial tag dashed with its count and "add to all" / "remove from all" actions', async () => {
+    const user = userEvent.setup();
+    const onActivate = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <TagChip
+        label="critical"
+        partial
+        count="2/3"
+        onActivate={onActivate}
+        activateLabel="Add critical to all"
+        onRemove={onRemove}
+        removeLabel="Remove critical from all"
+      />,
+    );
+    const chip = screen.getByText('critical').closest('[data-slot="tag-chip"]');
+    expect(chip).toHaveClass('border-dashed');
+    expect(chip).toHaveTextContent('critical2/3');
+    await user.click(screen.getByRole('button', { name: 'Add critical to all' }));
+    expect(onActivate).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Remove critical from all' }));
+    expect(onRemove).toHaveBeenCalledOnce();
+  });
+
   it('shows the full label as a title for long tags', () => {
     const label = 'a-very-long-tag-name-that-will-truncate';
     render(<TagChip label={label} />);

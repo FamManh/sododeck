@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { Button } from '../src/components/button';
+import { Combobox } from '../src/components/combobox';
 import { InlineEdit } from '../src/components/inline-edit';
 import { Input } from '../src/components/input';
 import { SearchField } from '../src/components/search-field';
@@ -15,6 +16,8 @@ import {
   SelectValue,
 } from '../src/components/select';
 import { Switch } from '../src/components/switch';
+import { TagChip } from '../src/components/tag-chip';
+import { TagInput } from '../src/components/tag-input';
 import { Textarea } from '../src/components/textarea';
 import { focusRing } from '../src/lib/focus';
 
@@ -40,6 +43,24 @@ function AllControls() {
           <SelectItem value="http">HTTP</SelectItem>
         </SelectContent>
       </Select>
+      <Combobox
+        mode="free"
+        label="Team"
+        listLabel="Team suggestions"
+        value=""
+        onValueChange={() => undefined}
+        options={['Orders']}
+      />
+      <TagInput label="Add tag" value={['pii']} onValueChange={() => undefined} />
+      <TagChip
+        label="critical"
+        partial
+        count="2/3"
+        onActivate={() => undefined}
+        activateLabel="Add critical to all"
+        onRemove={() => undefined}
+        removeLabel="Remove critical from all"
+      />
       <SearchField label="Search" />
       <SegmentedControl aria-label="Layout" defaultValue="grid">
         <SegmentedControlItem value="grid">Grid</SegmentedControlItem>
@@ -58,6 +79,11 @@ const TAB_ORDER: [role: string, name: string][] = [
   ['textbox', 'Deck name'],
   ['textbox', 'Description'],
   ['combobox', 'Protocol'],
+  ['combobox', 'Team'],
+  ['button', 'Remove tag pii'],
+  ['combobox', 'Add tag'],
+  ['button', 'Add critical to all'],
+  ['button', 'Remove critical from all'],
   ['searchbox', 'Search'],
   ['radio', 'Grid'], // roving focus: only the checked item is a tab stop
   ['switch', 'Include notes'],

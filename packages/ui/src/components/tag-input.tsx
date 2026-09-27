@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type * as React from 'react';
 
+import { Combobox } from '@sododeck/ui/components/combobox';
 import { TagChip } from '@sododeck/ui/components/tag-chip';
-import { focusRing } from '@sododeck/ui/lib/focus';
 import { addTag, removeTag } from '@sododeck/ui/lib/tags';
 import { cn } from '@sododeck/ui/lib/utils';
 
@@ -12,25 +12,38 @@ type TagInputProps = Omit<React.ComponentProps<'div'>, 'onChange'> & {
   onValueChange: (tags: readonly string[]) => void;
   /** Accessible name of the add field. */
   label: string;
+  /** Accessible name of the chip list. Default "Tags". */
+  listLabel?: string;
   placeholder?: string;
+  /** Tags to suggest while typing (e.g. every tag in the deck); present ones are left out. */
+  suggestions?: readonly string[];
 };
 
 /**
- * Tag chips plus a dashed "+ tag" field. Enter adds (trimmed, lower-cased, de-duplicated).
- * After a removal, focus moves to the next chip, or to the add field if none is left.
+ * Tag chips plus a dashed "+ tag" field. Enter adds (trimmed, lower-cased, de-duplicated);
+ * choosing a suggestion adds it; Backspace in the empty field removes the last tag. After a
+ * removal, focus moves to the next chip, or to the add field if none is left.
  */
 function TagInput({
   value,
   onValueChange,
   label,
+  listLabel = 'Tags',
   placeholder = '+ tag',
+  suggestions = [],
   className,
   ...props
 }: TagInputProps) {
   const [draft, setDraft] = useState('');
-  const field = useRef<HTMLInputElement>(null);
+  const field = useRef<HTMLDivElement>(null);
   const removeButtons = useRef(new Map<string, HTMLButtonElement>());
   const focusAfterRemove = useRef<string | null>(null);
+  const options = useMemo(
+    () => suggestions.filter((s) => !value.includes(s)),
+    [suggestions, value],
+  );
+
+  const focusField = () => field.current?.querySelector('input')?.focus();
 
   function remove(tag: string) {
     const index = value.indexOf(tag);
@@ -40,8 +53,15 @@ function TagInput({
     queueMicrotask(() => {
       const next = focusAfterRemove.current;
       const target = next === null ? undefined : removeButtons.current.get(next);
-      (target ?? field.current)?.focus();
+      if (target) target.focus();
+      else focusField();
     });
+  }
+
+  function add(raw: string) {
+    const next = addTag(value, raw);
+    if (next !== value) onValueChange(next);
+    setDraft('');
   }
 
   return (
@@ -50,7 +70,7 @@ function TagInput({
       className={cn('flex flex-wrap items-center gap-1.5', className)}
       {...props}
     >
-      <ul className="contents">
+      <ul aria-label={listLabel} className="contents">
         {value.map((tag) => (
           <li key={tag} className="contents">
             <TagChip
@@ -66,26 +86,33 @@ function TagInput({
           </li>
         ))}
       </ul>
-      <input
-        ref={field}
-        aria-label={label}
-        value={draft}
-        placeholder={placeholder}
-        onChange={(event) => {
-          setDraft(event.target.value);
-        }}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter') return;
-          event.preventDefault();
-          const next = addTag(value, draft);
-          if (next !== value) onValueChange(next);
-          setDraft('');
-        }}
-        className={cn(
-          'h-6.5 w-24 rounded-full border border-dashed border-border bg-transparent px-2.5 text-body-sm text-ink placeholder:text-ink-muted focus:border-primary',
-          focusRing,
-        )}
-      />
+      <div ref={field} className="contents">
+        <Combobox
+          mode="free"
+          label={label}
+          listLabel="Tag suggestions"
+          value={draft}
+          onValueChange={setDraft}
+          onOptionSelect={add}
+          options={options}
+          chevron={false}
+          placeholder={placeholder}
+          wrapperClassName="w-24"
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              add(draft);
+            } else if (event.key === 'Backspace' && draft === '') {
+              const last = value.at(-1);
+              if (last !== undefined) {
+                event.preventDefault();
+                onValueChange(removeTag(value, last));
+              }
+            }
+          }}
+          className="h-6.5 rounded-full border-dashed bg-transparent px-2.5 text-body-sm"
+        />
+      </div>
     </div>
   );
 }

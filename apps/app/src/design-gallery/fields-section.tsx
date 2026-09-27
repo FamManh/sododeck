@@ -1,4 +1,6 @@
+import { Combobox } from '@sododeck/ui/components/combobox';
 import { InlineEdit } from '@sododeck/ui/components/inline-edit';
+import { MarkdownView } from '@sododeck/ui/components/markdown-view';
 import { Input } from '@sododeck/ui/components/input';
 import { SearchField } from '@sododeck/ui/components/search-field';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
@@ -36,13 +38,15 @@ export function FieldsSection() {
   const [layout, setLayout] = useState('grid');
   const [scope, setScope] = useState('deck');
   const [notes, setNotes] = useState(true);
+  const [owner, setOwner] = useState('Orders');
+  const [kind, setKind] = useState('service');
   const switchId = useId();
 
   return (
     <GallerySection
       id="fields"
       title="Fields and choices"
-      description="Input, inline edit, textarea, select, search field, segmented control, switch. Reference: 02-editor-node-selected, 14-editor-palette-tab, 06-export-json."
+      description="Input, inline edit, textarea, markdown preview, combobox, select, search field, segmented control, switch. Reference: 02-editor-node-selected, 14-editor-palette-tab, 06-export-json, 18, 58."
     >
       <SampleRow label="input">
         <Field label="Owner">{(id) => <Input id={id} placeholder="team-payments" />}</Field>
@@ -85,6 +89,58 @@ export function FieldsSection() {
             <Textarea
               id={id}
               defaultValue={'## Order Service\nOwns **orders** and emits `order.created`.'}
+            />
+          )}
+        </Field>
+      </SampleRow>
+      <SampleRow label="markdown preview">
+        <MarkdownView
+          className="w-72"
+          text={'Returns a fee and tier.\n\n- Uses `Delivery tier`\n- <b>HTML</b> stays text'}
+        />
+        <MarkdownView className="w-40" text="" />
+      </SampleRow>
+      <SampleRow label="combobox">
+        <Field label="Owner (free text)">
+          {(id) => (
+            <Combobox
+              id={id}
+              mode="free"
+              listLabel="Owner suggestions"
+              placeholder="Add owner"
+              value={owner}
+              onValueChange={setOwner}
+              options={['Orders', 'Payments', 'Dispatch', 'Platform']}
+            />
+          )}
+        </Field>
+        <Field label="Kind (pick)">
+          {(id) => (
+            <Combobox
+              id={id}
+              mode="pick"
+              listLabel="Kinds"
+              value={kind}
+              onValueChange={setKind}
+              options={[
+                { value: 'client', label: 'Client' },
+                { value: 'service', label: 'Service' },
+                { value: 'database', label: 'Database' },
+              ]}
+            />
+          )}
+        </Field>
+        <Field label="Owner (mixed)">
+          {(id) => (
+            <Combobox
+              id={id}
+              mode="free"
+              listLabel="Owner suggestions"
+              placeholder="Mixed"
+              value=""
+              onValueChange={() => undefined}
+              options={[]}
+              className="placeholder:italic"
             />
           )}
         </Field>
