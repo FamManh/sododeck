@@ -552,7 +552,7 @@ height each time.
     unchanged and in under 30 s.
   - Run the quickstart manual scenarios 1–15 in light and dark.
   - Check that there are no skipped or `.only` tests.
-- [ ] T040 Write the final report in the PR description (AGENTS.md "Report"):
+- [x] T040 Write the final report in the PR description (AGENTS.md "Report"):
   - What changed.
   - Bench before and after (T003 vs T035), including CPU×4.
   - The syntax-color question for the founder.
