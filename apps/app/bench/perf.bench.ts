@@ -161,6 +161,12 @@ async function openBench(page: Page, query: string) {
     timeout: 60_000,
   });
   const renderMs = Date.now() - start;
+  // The JSON panel loads Monaco lazily; measure once it shows the deck, not while it loads.
+  if (query.includes('json=')) {
+    await expect(page.getByRole('region', { name: 'JSON' }).locator('.monaco-editor')).toBeVisible({
+      timeout: 60_000,
+    });
+  }
   const inPageReadyMs = await page.evaluate(() => window.__sododeckBench?.readyAt ?? 0);
   const renderedNodes = await page.getByTestId('deck-node').count();
   expect(renderedNodes).toBeGreaterThan(0);
@@ -173,6 +179,8 @@ const meetsTarget = (stats: ReturnType<typeof summarize>) =>
 for (const scenario of [
   { name: 'default', query: '' },
   { name: 'onlyRenderVisibleElements', query: '&visibleOnly=1' },
+  // 004 SC-003: the JSON panel's Deck tab open under the canvas (within 10% of default).
+  { name: 'jsonDeckOpen', query: '&json=deck' },
 ]) {
   test(`${scenario.name}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     const opened = await openBench(page, scenario.query);
@@ -197,57 +205,63 @@ for (const scenario of [
 
 /**
  * 003 research R13: dragging writes the node position to the document every frame (through the
- * editor and the incremental snapshot), so it is measured like pan/zoom.
+ * editor and the incremental snapshot), so it is measured like pan/zoom. 004 SC-003: the same
+ * drag with the JSON panel's Deck tab open must stay within 10% of it.
  */
-test(`drag: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
-  const opened = await openBench(page, '');
-  // The node nearest the middle of the screen (fit view is limited to 30%, so not all are shown).
-  const title = await page.evaluate(() => {
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    let best: { title: string; d: number } | null = null;
-    for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
-      const r = el.getBoundingClientRect();
-      const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
-      if (!best || d < best.d) best = { title: el.title, d };
+for (const scenario of [
+  { name: 'drag', query: '' },
+  { name: 'drag+jsonDeck', query: '&json=deck' },
+]) {
+  test(`${scenario.name}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+    const opened = await openBench(page, scenario.query);
+    // The node nearest the middle of the screen (fit view is limited to 30%, so not all are shown).
+    const title = await page.evaluate(() => {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      let best: { title: string; d: number } | null = null;
+      for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
+        const r = el.getBoundingClientRect();
+        const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
+        if (!best || d < best.d) best = { title: el.title, d };
+      }
+      return best?.title ?? '';
+    });
+    const node = page.getByTestId('deck-node').filter({ hasText: new RegExp(`^${title}$`) });
+    const box = await node.boundingBox();
+    if (!box) throw new Error('node not found');
+    const transform = () =>
+      node.evaluate((el) => el.closest<HTMLElement>('.react-flow__node')?.style.transform);
+    const before = await transform();
+
+    await startRecording(page);
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    // ~1 s of small pointer moves, like a hand drag.
+    for (let i = 1; i <= 60; i++) {
+      await page.mouse.move(x + i * 4, y + i * 2);
+      await page.waitForTimeout(16);
     }
-    return best?.title ?? '';
+    await page.mouse.up();
+    const stats = summarize(await stopRecording(page));
+
+    const after = await transform();
+    // Guard against a silent no-op: the node must have moved (through the document).
+    expect(after).not.toBe(before);
+
+    results.push({
+      scenario: scenario.name,
+      nodes: NODES,
+      edges: EDGES,
+      ...opened,
+      renderedNodesZoomedIn: opened.renderedNodes,
+      maxZoom: await viewportZoom(page),
+      ...stats,
+      meetsTarget: meetsTarget(stats),
+    });
   });
-  const node = page.getByTestId('deck-node').filter({ hasText: new RegExp(`^${title}$`) });
-  const box = await node.boundingBox();
-  if (!box) throw new Error('node not found');
-  const transform = () =>
-    node.evaluate((el) => el.closest<HTMLElement>('.react-flow__node')?.style.transform);
-  const before = await transform();
-
-  await startRecording(page);
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-  await page.mouse.move(x, y);
-  await page.mouse.down();
-  // ~1 s of small pointer moves, like a hand drag.
-  for (let i = 1; i <= 60; i++) {
-    await page.mouse.move(x + i * 4, y + i * 2);
-    await page.waitForTimeout(16);
-  }
-  await page.mouse.up();
-  const stats = summarize(await stopRecording(page));
-
-  const after = await transform();
-  // Guard against a silent no-op: the node must have moved (through the document).
-  expect(after).not.toBe(before);
-
-  results.push({
-    scenario: 'drag',
-    nodes: NODES,
-    edges: EDGES,
-    ...opened,
-    renderedNodesZoomedIn: opened.renderedNodes,
-    maxZoom: await viewportZoom(page),
-    ...stats,
-    meetsTarget: meetsTarget(stats),
-  });
-});
+}
 
 test.afterAll(async () => {
   if (results.length === 0) return;

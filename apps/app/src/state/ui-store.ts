@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 
+import {
+  loadJsonPanelPrefs,
+  saveJsonPanelPrefs,
+  type JsonPanelPrefs,
+  type JsonTab,
+} from './json-panel-prefs';
+
 /**
  * UI-only state: selection, focus, panels, popovers, preferences. NEVER document data —
  * that lives in the Yjs document (@sododeck/model). Ids here are references into the deck; they
@@ -28,7 +35,8 @@ export interface UiState {
   pendingDelete: Selection | null;
   /** Live-region text; `seq` changes on every call so repeats are announced again. */
   announcement: { text: string; seq: number };
-  jsonPanelOpen: boolean;
+  /** JSON panel open/height/tab; persisted per browser (004). The app never switches the tab. */
+  jsonPanel: JsonPanelPrefs;
 
   select: (selection: Partial<Selection>) => void;
   toggle: (id: string, type: 'node' | 'edge') => void;
@@ -46,6 +54,9 @@ export interface UiState {
   requestDelete: (selection: Selection) => void;
   cancelDelete: () => void;
   announce: (text: string) => void;
+  setJsonPanelOpen: (open: boolean) => void;
+  setJsonPanelHeight: (height: number) => void;
+  setJsonTab: (tab: JsonTab) => void;
   toggleJsonPanel: () => void;
   /** Forgets everything that pointed into the previous deck (opening another one). */
   resetForDeck: () => void;
@@ -73,106 +84,123 @@ function writeLabelsOn(on: boolean): void {
 
 const without = (ids: readonly string[], id: string) => ids.filter((x) => x !== id);
 
-export const useUiStore = create<UiState>()((set) => ({
-  selection: EMPTY_SELECTION,
-  focusedId: null,
-  focusedEdgeId: null,
-  leftTab: 'outline',
-  outlineCollapsed: new Set(),
-  labelsOn: readLabelsOn(),
-  popover: null,
-  pendingDelete: null,
-  announcement: { text: '', seq: 0 },
-  jsonPanelOpen: true,
+export const useUiStore = create<UiState>()((set, get) => {
+  const setJsonPanel = (patch: Partial<JsonPanelPrefs>) => {
+    const jsonPanel = { ...get().jsonPanel, ...patch };
+    saveJsonPanelPrefs(jsonPanel);
+    set({ jsonPanel });
+  };
+  return {
+    selection: EMPTY_SELECTION,
+    focusedId: null,
+    focusedEdgeId: null,
+    leftTab: 'outline',
+    outlineCollapsed: new Set(),
+    labelsOn: readLabelsOn(),
+    popover: null,
+    pendingDelete: null,
+    announcement: { text: '', seq: 0 },
+    jsonPanel: loadJsonPanelPrefs(),
 
-  select: ({ nodes = [], edges = [] }) => {
-    set({
-      selection: nodes.length === 0 && edges.length === 0 ? EMPTY_SELECTION : { nodes, edges },
-    });
-  },
-  toggle: (id, type) => {
-    set(({ selection }) => {
-      const key = type === 'node' ? 'nodes' : 'edges';
-      const list = selection[key];
-      return {
-        selection: {
-          ...selection,
-          [key]: list.includes(id) ? without(list, id) : [...list, id],
-        },
-      };
-    });
-  },
-  clearSelection: () => {
-    set({ selection: EMPTY_SELECTION });
-  },
-  pruneSelection: (existing) => {
-    set((state) => {
-      const nodes = state.selection.nodes.filter((id) => existing.nodes.has(id));
-      const edges = state.selection.edges.filter((id) => existing.edges.has(id));
-      const selectionChanged =
-        nodes.length !== state.selection.nodes.length ||
-        edges.length !== state.selection.edges.length;
-      const popoverGone =
-        (state.popover?.kind === 'edge' && !existing.edges.has(state.popover.edgeId)) ||
-        (state.popover?.kind === 'connect' && !existing.nodes.has(state.popover.fromId));
-      const patch: Partial<UiState> = {};
-      if (selectionChanged) patch.selection = { nodes, edges };
-      if (state.focusedId !== null && !existing.nodes.has(state.focusedId)) patch.focusedId = null;
-      if (state.focusedEdgeId !== null && !existing.edges.has(state.focusedEdgeId))
-        patch.focusedEdgeId = null;
-      if (popoverGone) patch.popover = null;
-      return patch;
-    });
-  },
-  focus: (id) => {
-    set({ focusedId: id, focusedEdgeId: null });
-  },
-  focusEdge: (id) => {
-    set({ focusedEdgeId: id });
-  },
-  setLeftTab: (tab) => {
-    set({ leftTab: tab });
-  },
-  toggleOutlineGroup: (groupId) => {
-    set(({ outlineCollapsed }) => {
-      const next = new Set(outlineCollapsed);
-      if (!next.delete(groupId)) next.add(groupId);
-      return { outlineCollapsed: next };
-    });
-  },
-  setLabelsOn: (on) => {
-    writeLabelsOn(on);
-    set({ labelsOn: on });
-  },
-  openEdgePopover: (edgeId) => {
-    set({ popover: { kind: 'edge', edgeId } });
-  },
-  openConnectPopover: (fromId) => {
-    set({ popover: { kind: 'connect', fromId } });
-  },
-  closePopover: () => {
-    set({ popover: null });
-  },
-  requestDelete: (selection) => {
-    set({ pendingDelete: selection });
-  },
-  cancelDelete: () => {
-    set({ pendingDelete: null });
-  },
-  announce: (text) => {
-    set(({ announcement }) => ({ announcement: { text, seq: announcement.seq + 1 } }));
-  },
-  toggleJsonPanel: () => {
-    set((state) => ({ jsonPanelOpen: !state.jsonPanelOpen }));
-  },
-  resetForDeck: () => {
-    set({
-      selection: EMPTY_SELECTION,
-      focusedId: null,
-      focusedEdgeId: null,
-      outlineCollapsed: new Set(),
-      popover: null,
-      pendingDelete: null,
-    });
-  },
-}));
+    select: ({ nodes = [], edges = [] }) => {
+      set({
+        selection: nodes.length === 0 && edges.length === 0 ? EMPTY_SELECTION : { nodes, edges },
+      });
+    },
+    toggle: (id, type) => {
+      set(({ selection }) => {
+        const key = type === 'node' ? 'nodes' : 'edges';
+        const list = selection[key];
+        return {
+          selection: {
+            ...selection,
+            [key]: list.includes(id) ? without(list, id) : [...list, id],
+          },
+        };
+      });
+    },
+    clearSelection: () => {
+      set({ selection: EMPTY_SELECTION });
+    },
+    pruneSelection: (existing) => {
+      set((state) => {
+        const nodes = state.selection.nodes.filter((id) => existing.nodes.has(id));
+        const edges = state.selection.edges.filter((id) => existing.edges.has(id));
+        const selectionChanged =
+          nodes.length !== state.selection.nodes.length ||
+          edges.length !== state.selection.edges.length;
+        const popoverGone =
+          (state.popover?.kind === 'edge' && !existing.edges.has(state.popover.edgeId)) ||
+          (state.popover?.kind === 'connect' && !existing.nodes.has(state.popover.fromId));
+        const patch: Partial<UiState> = {};
+        if (selectionChanged) patch.selection = { nodes, edges };
+        if (state.focusedId !== null && !existing.nodes.has(state.focusedId))
+          patch.focusedId = null;
+        if (state.focusedEdgeId !== null && !existing.edges.has(state.focusedEdgeId))
+          patch.focusedEdgeId = null;
+        if (popoverGone) patch.popover = null;
+        return patch;
+      });
+    },
+    focus: (id) => {
+      set({ focusedId: id, focusedEdgeId: null });
+    },
+    focusEdge: (id) => {
+      set({ focusedEdgeId: id });
+    },
+    setLeftTab: (tab) => {
+      set({ leftTab: tab });
+    },
+    toggleOutlineGroup: (groupId) => {
+      set(({ outlineCollapsed }) => {
+        const next = new Set(outlineCollapsed);
+        if (!next.delete(groupId)) next.add(groupId);
+        return { outlineCollapsed: next };
+      });
+    },
+    setLabelsOn: (on) => {
+      writeLabelsOn(on);
+      set({ labelsOn: on });
+    },
+    openEdgePopover: (edgeId) => {
+      set({ popover: { kind: 'edge', edgeId } });
+    },
+    openConnectPopover: (fromId) => {
+      set({ popover: { kind: 'connect', fromId } });
+    },
+    closePopover: () => {
+      set({ popover: null });
+    },
+    requestDelete: (selection) => {
+      set({ pendingDelete: selection });
+    },
+    cancelDelete: () => {
+      set({ pendingDelete: null });
+    },
+    announce: (text) => {
+      set(({ announcement }) => ({ announcement: { text, seq: announcement.seq + 1 } }));
+    },
+    setJsonPanelOpen: (open) => {
+      setJsonPanel({ open });
+    },
+    setJsonPanelHeight: (height) => {
+      setJsonPanel({ height });
+    },
+    setJsonTab: (tab) => {
+      setJsonPanel({ tab });
+    },
+    toggleJsonPanel: () => {
+      setJsonPanel({ open: !get().jsonPanel.open });
+    },
+    resetForDeck: () => {
+      set({
+        selection: EMPTY_SELECTION,
+        focusedId: null,
+        focusedEdgeId: null,
+        outlineCollapsed: new Set(),
+        popover: null,
+        pendingDelete: null,
+      });
+    },
+  };
+});
