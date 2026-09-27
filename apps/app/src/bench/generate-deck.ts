@@ -81,7 +81,8 @@ function walk(
 
 function addBenchFlows(deck: SododeckFile, random: () => number): void {
   const outgoing = new Map<string, SododeckFile['edges']>();
-  for (const edge of deck.edges) outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), edge]);
+  for (const edge of deck.edges)
+    outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), edge]);
   const starts = [...outgoing.keys()];
   /** The longest of a few random walks, so almost every flow has its 10 steps. */
   const longWalk = () => {

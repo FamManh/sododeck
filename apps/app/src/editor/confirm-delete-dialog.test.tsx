@@ -106,4 +106,44 @@ describe('ConfirmDeleteDialog', () => {
     });
     expect(toJSON(doc)).toEqual(deck);
   });
+
+  it('deletes a used rule after confirming, and one ⌘Z restores every attachment (008)', async () => {
+    const ruleDeck = deckOf({
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.id === 'svc' ? { ...n, rules: ['R'] } : n)),
+      flows: [
+        {
+          id: 'f',
+          title: 'Checkout',
+          steps: [{ id: 's1', edge: 'e1', rules: ['R'], ruleInputs: { R: { c: '5' } } }],
+        },
+      ],
+      rules: {
+        R: {
+          title: 'Delivery tier',
+          hitPolicy: 'first',
+          inputs: [{ id: 'c', label: 'C' }],
+          outputs: [],
+          rows: [],
+        },
+      },
+    });
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(<Harness />, ruleDeck);
+    act(() => {
+      useUiStore.getState().requestRemoval([{ scope: 'rules', id: 'R' }]);
+    });
+    const dialog = screen.getByRole('alertdialog', { name: 'Delete rule “Delivery tier”?' });
+    expect(dialog).toHaveTextContent(
+      'Used in 1 step and 1 component. It will be detached from them.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(toJSON(doc).rules).toEqual({});
+    expect(toJSON(doc).flows[0]?.steps[0]).toEqual({ id: 's1', edge: 'e1' });
+    expect(screen.getByText(/Rule “Delivery tier” deleted/)).toBeInTheDocument();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(ruleDeck);
+  });
 });

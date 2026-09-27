@@ -28,14 +28,30 @@ export function FeedbackSection() {
       description="Reference: 02-editor-node-selected (tags), 01-library (banner), 22-editor-custom-view-toast (toast)."
     >
       <SampleRow label="tag input">
-        <TagInput label="Add tag" value={tags} onValueChange={setTags} />
-        <span className="text-caption text-ink-muted">Try: PII, Enter, Enter → one “pii”</span>
+        <TagInput
+          label="Add tag"
+          value={tags}
+          onValueChange={setTags}
+          suggestions={['pci', 'pricing', 'public', 'critical']}
+        />
+        <span className="text-caption text-ink-muted">
+          Try: PII, Enter, Enter → one “pii”; type “p” for suggestions; Backspace removes the last
+        </span>
       </SampleRow>
       <SampleRow label="tag chip">
         <TagChip label="read-only" />
         <TagChip
           label="a-very-long-tag-name-that-truncates-with-a-title"
           onRemove={() => undefined}
+        />
+        <TagChip
+          label="critical"
+          partial
+          count="2/3"
+          onActivate={() => undefined}
+          activateLabel="Add critical to all"
+          onRemove={() => undefined}
+          removeLabel="Remove critical from all"
         />
       </SampleRow>
       <SampleRow label="banner">

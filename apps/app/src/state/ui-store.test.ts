@@ -297,6 +297,42 @@ describe('ui store', () => {
     });
   });
 
+  it('keeps Write / Preview per description and forgets it when the selection changes (008)', () => {
+    const ui = useUiStore.getState;
+    ui().setDescriptionMode('nodes:a', 'preview');
+    ui().setDescriptionMode('nodes:b', 'write');
+    expect(ui().descriptionMode).toEqual({ 'nodes:a': 'preview', 'nodes:b': 'write' });
+    ui().select({ nodes: ['a'] });
+    expect(ui().descriptionMode).toEqual({});
+    ui().setDescriptionMode('flows:f', 'preview');
+    ui().setActiveFlow('f');
+    expect(ui().descriptionMode).toEqual({});
+    ui().setDescriptionMode('step:s', 'preview');
+    ui().setActiveStep('s');
+    expect(ui().descriptionMode).toEqual({});
+    ui().setDescriptionMode('deck', 'preview');
+    ui().clearSelection();
+    expect(ui().descriptionMode).toEqual({});
+  });
+
+  it('keeps the canvas viewport and the rule test, and forgets both for another deck (008)', () => {
+    const ui = useUiStore.getState;
+    ui().setCanvasViewport({ x: 10, y: -5, zoom: 1.5 });
+    expect(ui().canvasViewport).toEqual({ x: 10, y: -5, zoom: 1.5 });
+    ui().setRuleTestValue('c1', 'ignored');
+    expect(ui().ruleTest).toBeNull();
+    ui().setRuleTest({ ruleId: 'R', values: { c1: '5' }, from: { flowId: 'f', stepId: 's' } });
+    ui().setRuleTestValue('c2', 'Express');
+    expect(ui().ruleTest).toEqual({
+      ruleId: 'R',
+      values: { c1: '5', c2: 'Express' },
+      from: { flowId: 'f', stepId: 's' },
+    });
+    ui().resetForDeck();
+    expect(ui().canvasViewport).toBeNull();
+    expect(ui().ruleTest).toBeNull();
+  });
+
   it('forgets deck references when another deck opens', () => {
     state().setActiveFlow('f');
     state().startRecording('x', null);

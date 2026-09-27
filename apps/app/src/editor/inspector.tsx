@@ -1,144 +1,77 @@
-import { Button } from '@sododeck/ui/components/button';
-import { KindTile } from '@sododeck/ui/components/kind-tile';
-import {
-  Panel,
-  PanelContent,
-  PanelHeader,
-  PanelSection,
-  PanelTitle,
-} from '@sododeck/ui/components/panel';
 import type { SododeckFile } from '@sododeck/schema';
-import { Layers, Spline, Trash2 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Button } from '@sododeck/ui/components/button';
+import { PanelSection } from '@sododeck/ui/components/panel';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
+import { Layers, Trash2 } from 'lucide-react';
 
-import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
-import { DeckInspectorStorage } from './deck-inspector-storage';
-import { kindLabel } from './kind-label';
-import { FieldEdit } from './field-edit';
 import { FlowInspector } from './flows/flow-inspector';
+import { BulkInspector } from './inspector/bulk-inspector';
+import { DeckInspector } from './inspector/deck-inspector';
+import { EdgeInspector } from './inspector/edge-inspector';
+import { InspectorFrame } from './inspector/inspector-frame';
+import { NodeInspector } from './inspector/node-inspector';
 
-/** Minimal inspector (FR-026, design 02/10/11/58). Full fields arrive with 008. */
-export function Inspector({ deck }: { deck: SododeckFile }) {
-  const inFlow = useUiStore((s) => s.flowSession !== null || s.activeFlow !== null);
-  // A shown or recorded flow has its own inspectors (006).
-  return inFlow ? <FlowInspector deck={deck} /> : <CanvasInspector deck={deck} />;
+/**
+ * The inspector (FR-001): the shown or recorded flow's inspectors (006), else one per canvas
+ * selection: component, connection, several components (bulk), or the deck when nothing is
+ * selected. Ids that no longer exist (removed here or in another tab) are ignored, so the
+ * inspector falls back to the deck without an error.
+ */
+export function Inspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRules?: () => void }) {
+  const session = useUiStore((s) => s.flowSession !== null);
+  const flowId = useUiStore((s) => s.activeFlow?.flowId ?? null);
+  // A flow removed in another tab falls back at once (006's flow sync then clears it).
+  const inFlow = session || (flowId !== null && deck.flows.some((f) => f.id === flowId));
+  return inFlow ? (
+    <FlowInspector deck={deck} />
+  ) : (
+    <CanvasInspector deck={deck} onOpenRules={onOpenRules} />
+  );
 }
 
-function CanvasInspector({ deck }: { deck: SododeckFile }) {
-  const editor = useEditor();
+function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRules?: () => void }) {
   const selection = useUiStore((s) => s.selection);
-  const requestDelete = useUiStore((s) => s.requestDelete);
-  const count = selection.nodes.length + selection.edges.length;
-  const node = count === 1 ? deck.nodes.find((n) => n.id === selection.nodes[0]) : undefined;
-  const edge = count === 1 ? deck.edges.find((e) => e.id === selection.edges[0]) : undefined;
-  const titleOf = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+  const nodes = deck.nodes.filter((n) => selection.nodes.includes(n.id));
+  const edges = deck.edges.filter((e) => selection.edges.includes(e.id));
+  const [node] = nodes;
+  const [edge] = edges;
 
-  let icon: ReactNode;
-  let heading: string;
-  let subtitle: string | undefined;
-  let body: ReactNode;
-
-  if (node) {
-    icon = <KindTile kind={node.type} size={40} decorative />;
-    heading = node.title;
-    subtitle = kindLabel(node.type);
-    body = (
-      <PanelSection>
-        <FieldEdit
-          key={node.id}
-          label="Title"
-          value={node.title}
-          onCommit={(title) => {
-            editor.update('nodes', node.id, { title });
-          }}
-        />
-      </PanelSection>
-    );
-  } else if (edge) {
-    icon = <Spline aria-hidden className="size-5 text-ink-secondary" strokeWidth={1.5} />;
-    heading = `${titleOf(edge.from)} → ${titleOf(edge.to)}`;
-    subtitle = 'Connection';
-    body = (
-      <PanelSection>
-        <FieldEdit
-          key={edge.id}
-          label="Label"
-          value={edge.label ?? ''}
-          allowEmpty
-          placeholder="e.g. POST /orders"
-          onCommit={(label) => {
-            editor.update('edges', edge.id, { label: label === '' ? null : label });
-          }}
-        />
-      </PanelSection>
-    );
-  } else if (count > 1) {
-    icon = <Layers aria-hidden className="size-5 text-ink-secondary" strokeWidth={1.5} />;
-    heading = `${String(count)} items selected`;
-    body = null;
-  } else {
-    heading = deck.name ?? 'Untitled deck';
-    subtitle = 'Deck';
-    body = (
-      <>
-        <PanelSection>
-          <FieldEdit
-            label="Deck name"
-            value={deck.name ?? ''}
-            allowEmpty
-            placeholder="Untitled deck"
-            onCommit={(name) => {
-              editor.updateMeta({ name: name === '' ? null : name });
-            }}
-          />
-        </PanelSection>
-        <PanelSection label="Summary">
-          <dl className="grid grid-cols-2 gap-y-1 text-body-sm">
-            <dt className="text-ink-muted">Components</dt>
-            <dd>{deck.nodes.length}</dd>
-            <dt className="text-ink-muted">Connections</dt>
-            <dd>{deck.edges.length}</dd>
-            <dt className="text-ink-muted">Groups</dt>
-            <dd>{deck.groups.length}</dd>
-            <dt className="text-ink-muted">Flows</dt>
-            <dd>{deck.flows.length}</dd>
-          </dl>
-          <p className="text-caption text-ink-muted">Select a component to inspect it.</p>
-        </PanelSection>
-        <DeckInspectorStorage />
-      </>
-    );
+  if (nodes.length + edges.length === 0) {
+    return <DeckInspector deck={deck} onOpenRules={onOpenRules} />;
   }
-
+  if (node !== undefined && nodes.length === 1 && edges.length === 0) {
+    return <NodeInspector deck={deck} node={node} />;
+  }
+  if (edge !== undefined && edges.length === 1 && nodes.length === 0) {
+    return <EdgeInspector deck={deck} edge={edge} />;
+  }
+  if (nodes.length > 0) {
+    return <BulkInspector deck={deck} nodes={nodes} edgeIds={edges.map((e) => e.id)} />;
+  }
   return (
-    <Panel aria-label="Inspector">
-      <PanelHeader className="h-auto min-h-16 gap-3 py-3">
-        {node
-          ? icon
-          : icon && (
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-card bg-surface-2">
-                {icon}
-              </span>
-            )}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <PanelTitle>{heading}</PanelTitle>
-          {subtitle && <span className="truncate text-caption text-ink-secondary">{subtitle}</span>}
-        </div>
-        {count > 0 && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Delete"
-            onClick={() => {
-              requestDelete(selection);
-            }}
-          >
-            <Trash2 />
-          </Button>
-        )}
-      </PanelHeader>
-      <PanelContent>{body}</PanelContent>
-    </Panel>
+    <InspectorFrame
+      icon={<Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
+      heading={`${String(edges.length)} connections selected`}
+      subtitle="Connections"
+      actions={
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Delete ${String(edges.length)} connections`}
+          onClick={() => {
+            useUiStore.getState().requestDelete({ nodes: [], edges: edges.map((e) => e.id) });
+          }}
+        >
+          <Trash2 />
+        </Button>
+      }
+    >
+      <PanelSection>
+        <p className="text-body-sm text-ink-secondary">
+          Select one connection to edit it, or a set of components to edit them together.
+        </p>
+      </PanelSection>
+    </InspectorFrame>
   );
 }

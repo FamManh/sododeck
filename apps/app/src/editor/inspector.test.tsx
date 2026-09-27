@@ -1,7 +1,8 @@
-import { serializeDeck, toJSON } from '@sododeck/model';
+import { createEditor, serializeDeck, toJSON } from '@sododeck/model';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import * as Y from 'yjs';
 
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
@@ -70,7 +71,7 @@ describe('Inspector', () => {
   it('edits the label of one connection, clearing it when empty', async () => {
     const { doc, user } = setup({ edges: ['e1'] });
     expect(screen.getByRole('heading', { name: 'Order Service → Orders DB' })).toBeInTheDocument();
-    const label = screen.getByRole('textbox', { name: 'Label' });
+    const label = screen.getByRole('textbox', { name: 'Title' });
     await user.clear(label);
     await user.keyboard('{Enter}');
     expect(toJSON(doc).edges[0]?.label).toBeUndefined();
@@ -79,24 +80,61 @@ describe('Inspector', () => {
   it('edits the deck name when nothing is selected', async () => {
     const { doc, user } = setup();
     expect(screen.getByRole('heading', { name: 'Shop' })).toBeInTheDocument();
-    const name = screen.getByRole('textbox', { name: 'Deck name' });
+    const name = screen.getByRole('textbox', { name: 'Name' });
     await user.clear(name);
     await user.type(name, 'Webshop{Enter}');
     expect(toJSON(doc).name).toBe('Webshop');
-    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Delete/ })).not.toBeInTheDocument();
   });
 
-  it('shows the count for several items and offers Delete', async () => {
+  it('shows both counts for components and connections, and deletes the components', async () => {
     const { user } = setup({ nodes: ['svc', 'db'], edges: ['e1'] });
-    expect(screen.getByRole('heading', { name: '3 items selected' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(
+      screen.getByRole('heading', { name: '2 components, 1 connection selected' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete 2 components' }));
     expect(useUiStore.getState().pendingDelete).toEqual({
       targets: [
         { scope: 'nodes', id: 'svc' },
         { scope: 'nodes', id: 'db' },
-        { scope: 'edges', id: 'e1' },
       ],
     });
+  });
+
+  it.each([
+    ['component', { nodes: ['svc'] }, 'Order Service'],
+    ['connection', { edges: ['e1'] }, 'Order Service → Orders DB'],
+  ])(
+    'falls back to the deck inspector when the selected %s is removed in another tab',
+    (_what, selection, heading) => {
+      const { doc } = setup(selection);
+      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+      const other = new Y.Doc();
+      Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
+      const remote = createEditor(other);
+      remote.remove('nodes', 'svc');
+      act(() => {
+        Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
+      });
+      expect(screen.getByRole('heading', { name: 'Shop' })).toBeInTheDocument();
+      expect(screen.getByText('Deck')).toBeInTheDocument();
+    },
+  );
+
+  it('falls back to the deck inspector when the shown flow is removed in another tab', () => {
+    const withFlow = { ...deck, flows: [{ id: 'f', title: 'Checkout', steps: [] }] };
+    const view = renderWithEditor(<Harness />, withFlow);
+    act(() => {
+      useUiStore.getState().setActiveFlow('f');
+    });
+    expect(screen.getByRole('heading', { name: 'Checkout' })).toBeInTheDocument();
+    const other = new Y.Doc();
+    Y.applyUpdate(other, Y.encodeStateAsUpdate(view.doc));
+    createEditor(other).remove('flows', 'f');
+    act(() => {
+      Y.applyUpdate(view.doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(view.doc)));
+    });
+    expect(screen.getByRole('heading', { name: 'Shop' })).toBeInTheDocument();
   });
 
   it('shows where the deck is stored and exports it when nothing is selected', async () => {

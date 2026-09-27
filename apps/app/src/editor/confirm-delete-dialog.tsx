@@ -9,8 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@sododeck/ui/components/dialog';
-import { useToast } from '@sododeck/ui/components/toast';
-import { MOTION } from '@sododeck/ui/lib/motion';
 import { Trash2 } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 
@@ -19,9 +17,7 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore, type PendingDelete } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
 import { describeRemoval, removalToast } from './describe-removal';
-
-/** The Undo toast on screen, replaced by the next delete's (spec edge case). */
-let undoToastId: number | null = null;
+import { useUndoToast } from './undo-toast';
 
 /**
  * Delete confirmation (§g-11/§g-19, FR-017–019). The counts come from `previewRemoval`, which
@@ -36,7 +32,7 @@ export function ConfirmDeleteDialog({ deck }: { deck: SododeckFile }) {
 
 function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
   const editor = useEditor();
-  const { toast, dismiss } = useToast();
+  const showUndoToast = useUndoToast();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const targets = pending.targets as RemovalTarget[];
   // Computed once when the dialog opens; the deck cannot change underneath a modal dialog.
@@ -59,17 +55,7 @@ function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: 
     ui.cancelDelete();
     if (canvasDelete) ui.clearSelection();
     ui.announce(message);
-    if (undoToastId !== null) dismiss(undoToastId);
-    undoToastId = toast({
-      message,
-      action: {
-        label: 'Undo',
-        onAction: () => {
-          if (editor.undo()) useUiStore.getState().announce('Undone');
-        },
-      },
-      duration: MOTION.toastUndoMs,
-    });
+    showUndoToast(message);
   };
 
   return (

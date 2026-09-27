@@ -11,15 +11,21 @@ import {
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ArrowRight, CircleAlert, GitBranch, Spline } from 'lucide-react';
+import { ArrowRight, CircleAlert, GitBranch, Spline, Unlink } from 'lucide-react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
-import { protocolLabel } from '../protocols';
-import { InspectorFrame } from './inspector-frame';
+import { InspectorFrame } from '../inspector/inspector-frame';
 import { nodeTitle, stepRoute } from './session-path';
-import { TextareaEdit } from './textarea-edit';
+import { AttachedRules } from '../fields/attached-rules';
+import { protocolLabel } from '../fields/edge-choices';
+import { FieldLabel } from '../fields/field-label';
+import { LinksField } from '../fields/links-field';
+import { MarkdownField } from '../fields/markdown-field';
+import { oneStep } from '../fields/one-step';
+import { OwnerField } from '../fields/owner-field';
+import { TagsField } from '../fields/tags-field';
 
 /** Flow mode (007): the current step's place on the played path. */
 export interface StepPlayback {
@@ -28,10 +34,11 @@ export interface StepPlayback {
 }
 
 /**
- * Step inspector (FR-019, FR-027, designs 45–46): "Step n · <from> → <to>", then title,
- * description, condition and SLA target, editable in or out of a session. The branch step also
- * lists its branches. In flow mode (007 FR-019–021, designs 03, 24) the header shows the position,
- * the from/to tiles, protocol and branch, and a read-only "Rules" list follows the fields.
+ * Step inspector (006 FR-019, FR-027, 008 FR-011, designs 45, 46, 51): "Step n · <from> → <to>",
+ * then title, markdown description, owner, the edge, tags, links, condition, SLA target (the target
+ * only, no meter) and attached rules, editable in or out of a session. The branch step also lists
+ * its branches. In flow mode (007 FR-019–021, designs 03, 24) the header shows the position, the
+ * from/to tiles, protocol and branch instead.
  */
 export function InspectorStep({
   deck,
@@ -55,6 +62,13 @@ export function InspectorStep({
   const where = branch === undefined ? `step ${step.number}` : `branch “${branch.branch.label}”`;
   const isFork = analysis.branchStepId === s.id;
   const Icon = isFork ? GitBranch : branch?.branch.errorPath === true ? CircleAlert : Spline;
+  const edge = step.broken ? undefined : deck.edges.find((e) => e.id === s.edge);
+  const edgeText =
+    edge === undefined
+      ? ''
+      : [edge.label, protocolLabel(edge.protocol)]
+          .filter((part) => part !== undefined && part !== '')
+          .join(' · ') || stepRoute(deck, step);
 
   const body = (
     <>
@@ -119,13 +133,58 @@ export function InspectorStep({
         />
       </PanelSection>
       <PanelSection>
-        <TextareaEdit
+        <MarkdownField
           key={`${s.id}-description`}
-          label="Description"
+          modeKey={`steps:${s.id}`}
           value={s.description ?? ''}
           placeholder="What happens in this step? Markdown supported."
           onCommit={(description) => {
             update({ description: description === '' ? null : description });
+          }}
+        />
+      </PanelSection>
+      <PanelSection className="grid grid-cols-2 gap-3">
+        <OwnerField
+          key={`${s.id}-owner`}
+          deck={deck}
+          value={s.owner ?? ''}
+          onCommit={(owner) => {
+            update({ owner: owner === '' ? null : owner });
+          }}
+        />
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <FieldLabel>Edge</FieldLabel>
+          {edge === undefined ? (
+            <p className="flex h-9 items-center gap-1.5 text-body-sm text-clay-ink">
+              <Unlink aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4 shrink-0" />
+              Connection deleted
+            </p>
+          ) : (
+            <p className="flex h-9 items-center truncate font-mono text-body-sm" title={edgeText}>
+              {edgeText}
+            </p>
+          )}
+        </div>
+      </PanelSection>
+      <PanelSection>
+        <TagsField
+          deck={deck}
+          value={s.tags}
+          onCommit={(tags) => {
+            oneStep(editor, () => {
+              update({ tags });
+            });
+          }}
+        />
+      </PanelSection>
+      <PanelSection>
+        <LinksField
+          key={`${s.id}-links`}
+          value={s.links}
+          onCommit={(links) => {
+            oneStep(editor, () => {
+              update({ links });
+            });
           }}
         />
       </PanelSection>
@@ -155,7 +214,12 @@ export function InspectorStep({
           }}
         />
       </PanelSection>
-      {playback !== undefined && <StepRules deck={deck} ruleIds={s.rules ?? []} />}
+      <AttachedRules
+        deck={deck}
+        host={{ kind: 'step', flowId: flow.id, stepId: s.id }}
+        ruleIds={s.rules}
+        inputs={s.ruleInputs}
+      />
     </>
   );
 
@@ -255,38 +319,5 @@ function PlaybackHeader({
         </p>
       )}
     </PanelHeader>
-  );
-}
-
-/** Attached rules, read-only (007 FR-021); the decision table and "Edit rule" come with 008. */
-function StepRules({ deck, ruleIds }: { deck: SododeckFile; ruleIds: readonly string[] }) {
-  return (
-    <PanelSection label="Rules" aria-label="Rules">
-      {ruleIds.length === 0 ? (
-        <p className="text-body-sm text-ink-secondary">No rules attached</p>
-      ) : (
-        <ul className="flex flex-col gap-1.5">
-          {ruleIds.map((id) => {
-            const rule = deck.rules[id];
-            return (
-              <li key={id} className="flex items-center gap-2 text-body-sm">
-                {rule === undefined ? (
-                  <>
-                    <CircleAlert
-                      aria-hidden
-                      strokeWidth={ICON_STROKE_WIDTH}
-                      className="size-4 shrink-0 text-clay-ink"
-                    />
-                    <span className="text-clay-ink">Missing rule {id}</span>
-                  </>
-                ) : (
-                  <span className="truncate text-ink">{rule.title}</span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </PanelSection>
   );
 }

@@ -20,6 +20,13 @@ export const router = createBrowserRouter([
       ]);
       return { loader: deckLoader, Component: EditorPage };
     },
+    // The rule editor (008 FR-018): its own address, same doc, undo history and UI state.
+    children: [
+      {
+        path: 'rules/:ruleId?',
+        lazy: async () => ({ Component: (await import('../editor/rules/rules-page')).RulesPage }),
+      },
+    ],
   },
   {
     // Unlinked. Used by the performance benchmark (apps/app/bench).

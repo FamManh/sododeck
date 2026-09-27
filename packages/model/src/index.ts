@@ -36,3 +36,7 @@ export {
   type FlowProblem,
   type PathStep,
 } from './flow-paths';
+export { matchCell, parseCell, type Cell, type CompareOp } from './rules/cells';
+export { evaluateRule, ruleChecks, type Evaluation, type RuleChecks } from './rules/evaluate';
+export { ruleUsage, type RuleUsage } from './rules/usage';
+export type { RuleHost } from './ops/rule-links';

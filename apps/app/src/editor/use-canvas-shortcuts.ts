@@ -2,8 +2,9 @@
  * The editor keyboard map (contracts/canvas-ui.md). React Flow's own keyboard handling is off
  * (research R3); everything lives here:
  *  - `useCanvasKeyDown`: keys that act on the focused canvas (arrows, C, E, Enter, ⌘A, zoom).
- *  - `useEditorShortcuts`: document-wide keys (undo/redo, Delete, Esc), so they work wherever
+ *  - `useEditorShortcuts`: document-wide keys (undo/redo, ⌘S, Delete, Esc), so they work wherever
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
+ *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -209,7 +210,7 @@ export function useCanvasKeyDown() {
 }
 
 /** Document-wide editor keys. Install once per editor page. */
-export function useEditorShortcuts(): void {
+export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {}): void {
   const editor = useEditor();
   const { flush } = useSaveControls();
 
@@ -239,6 +240,8 @@ export function useEditorShortcuts(): void {
         return;
       }
       if (isMod(event) || event.altKey) return;
+      // Delete and Esc act on the canvas selection: only on the canvas screen (008 research R8).
+      if (!canvas) return;
 
       if (isFlowMode(ui)) {
         // View-only: no deletes; Esc leaves flow mode unless a popover or dialog owns it.
@@ -279,5 +282,5 @@ export function useEditorShortcuts(): void {
     return () => {
       document.removeEventListener('keydown', onKeyDown, { capture: true });
     };
-  }, [editor, flush]);
+  }, [editor, flush, canvas]);
 }

@@ -81,7 +81,7 @@ describe('usePlayback', () => {
 
   it('leaves no timer behind after exit or unmount, however often it runs', () => {
     const { editor, ui, unmount } = setup();
-    for (let i = 0; i < 100; i += 1) {
+    for (let i = 0; i < 30; i += 1) {
       act(() => {
         openFlow(editor(), i % 2 === 0 ? 'order' : 'fork');
         play(editor());

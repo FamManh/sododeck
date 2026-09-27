@@ -8,7 +8,7 @@ import { playbackOf } from './flow-mode';
 import { analysisOf } from './flow-session';
 import { InspectorBranch } from './inspector-branch';
 import { InspectorFlow } from './inspector-flow';
-import { InspectorFrame } from './inspector-frame';
+import { InspectorFrame } from '../inspector/inspector-frame';
 import { InspectorStep } from './inspector-step';
 import { findFlow } from './session-path';
 

@@ -92,6 +92,27 @@ export interface FlowSession {
   branchCheck: number;
 }
 
+/** Write or Preview for one description field, keyed `${scope}:${id}` (008). */
+export type DescriptionMode = 'write' | 'preview';
+
+/** The canvas viewport, kept while the rule editor is shown (008). */
+export interface CanvasViewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
+
+/**
+ * The rule editor's TEST INPUT (008 FR-026): UI-only, never in the deck. `from` is the step the
+ * editor was opened from ("Edit rule"), for "Save as step inputs".
+ */
+export interface RuleTest {
+  ruleId: string;
+  /** Input column id → typed value. */
+  values: Readonly<Record<string, string>>;
+  from: { flowId: string; stepId: string } | null;
+}
+
 /** What the delete confirmation is open for. */
 export interface PendingDelete {
   readonly targets: readonly RemovalTarget[];
@@ -121,6 +142,10 @@ export interface UiState {
   announcement: { text: string; seq: number };
   /** JSON panel open/height/tab; persisted per browser (004). The app never switches the tab. */
   jsonPanel: JsonPanelPrefs;
+  /** Write / Preview per description field; forgotten when the selection changes (008). */
+  descriptionMode: Readonly<Record<string, DescriptionMode>>;
+  canvasViewport: CanvasViewport | null;
+  ruleTest: RuleTest | null;
 
   select: (selection: Partial<Selection>) => void;
   toggle: (id: string, type: 'node' | 'edge') => void;
@@ -175,6 +200,12 @@ export interface UiState {
   setHoverEdge: (edgeId: string | null) => void;
   setFlowFilter: (text: string) => void;
   announce: (text: string) => void;
+  setDescriptionMode: (key: string, mode: DescriptionMode) => void;
+  setCanvasViewport: (viewport: CanvasViewport | null) => void;
+  /** Starts testing a rule (values empty unless given), or clears the test with `null`. */
+  setRuleTest: (test: RuleTest | null) => void;
+  /** Sets one TEST INPUT value of the rule being tested. */
+  setRuleTestValue: (columnId: string, value: string) => void;
   setJsonPanelOpen: (open: boolean) => void;
   setJsonPanelHeight: (height: number) => void;
   setJsonTab: (tab: JsonTab) => void;
@@ -189,6 +220,8 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
 }
 
 export const EMPTY_SELECTION: Selection = { nodes: [], edges: [] };
+
+const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
 
 export const LABELS_KEY = 'sododeck.labels';
 
@@ -225,7 +258,10 @@ export const useUiStore = create<UiState>()((set, get) => {
   };
   const patchFlow = (patch: Partial<NonNullable<ActiveFlow>>) => {
     const active = get().activeFlow;
-    if (active !== null) set({ activeFlow: { ...active, ...patch } });
+    if (active === null) return;
+    // A new step or branch is a new inspector target: forget its Write / Preview modes (008).
+    const moved = 'stepId' in patch || 'branchId' in patch;
+    set({ activeFlow: { ...active, ...patch }, ...(moved ? { descriptionMode: NO_MODES } : {}) });
   };
   const setJsonPanel = (patch: Partial<JsonPanelPrefs>) => {
     const jsonPanel = { ...get().jsonPanel, ...patch };
@@ -248,11 +284,15 @@ export const useUiStore = create<UiState>()((set, get) => {
     flowFilter: '',
     announcement: { text: '', seq: 0 },
     jsonPanel: loadJsonPanelPrefs(),
+    descriptionMode: NO_MODES,
+    canvasViewport: null,
+    ruleTest: null,
 
     select: ({ nodes = [], edges = [] }) => {
       const empty = nodes.length === 0 && edges.length === 0;
       set({
         selection: empty ? EMPTY_SELECTION : { nodes, edges },
+        descriptionMode: NO_MODES,
         // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
         ...(empty || get().flowSession !== null ? {} : { activeFlow: null }),
       });
@@ -266,11 +306,12 @@ export const useUiStore = create<UiState>()((set, get) => {
             ...selection,
             [key]: list.includes(id) ? without(list, id) : [...list, id],
           },
+          descriptionMode: NO_MODES,
         };
       });
     },
     clearSelection: () => {
-      set({ selection: EMPTY_SELECTION });
+      set({ selection: EMPTY_SELECTION, descriptionMode: NO_MODES });
     },
     pruneSelection: (existing) => {
       set((state) => {
@@ -338,6 +379,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         selection: EMPTY_SELECTION,
         focusedEdgeId: null,
         popover: null,
+        descriptionMode: NO_MODES,
       });
     },
     exitFlow: () => {
@@ -349,6 +391,7 @@ export const useUiStore = create<UiState>()((set, get) => {
           : {}),
         selection: EMPTY_SELECTION,
         focusedEdgeId: null,
+        descriptionMode: NO_MODES,
       });
     },
     setCurrentStep: (stepId) => {
@@ -462,6 +505,20 @@ export const useUiStore = create<UiState>()((set, get) => {
     announce: (text) => {
       set(({ announcement }) => ({ announcement: { text, seq: announcement.seq + 1 } }));
     },
+    setDescriptionMode: (key, mode) => {
+      set(({ descriptionMode }) => ({ descriptionMode: { ...descriptionMode, [key]: mode } }));
+    },
+    setCanvasViewport: (canvasViewport) => {
+      set({ canvasViewport });
+    },
+    setRuleTest: (ruleTest) => {
+      set({ ruleTest });
+    },
+    setRuleTestValue: (columnId, value) => {
+      const test = get().ruleTest;
+      if (test !== null)
+        set({ ruleTest: { ...test, values: { ...test.values, [columnId]: value } } });
+    },
     setJsonPanelOpen: (open) => {
       setJsonPanel({ open });
     },
@@ -487,6 +544,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         flowSession: null,
         hoverEdgeId: null,
         flowFilter: '',
+        descriptionMode: NO_MODES,
+        canvasViewport: null,
+        ruleTest: null,
       });
     },
   };

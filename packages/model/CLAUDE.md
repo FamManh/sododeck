@@ -18,6 +18,10 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - Editor ops: `appendStep(flowId, branchId | null, data)`, `addBranch(flowId, afterStepId, { label?, condition?, errorPath?, firstEdge? })` (splits the following main steps into alternative "a" the first time), `updateBranch`, `removeBranch` (with its steps), `restoreFlowStructure(flowId, checkpoint)`. `moveStep` refuses moves out of the step's path and past the branch step. `addStep` / `updateStep` / `add('flows')` refuse a `step.branch` that names no branch of the flow; `update('flows')` cannot patch `branches`.
   - `captureFlowStructure(file, flowId)` → opaque frozen `FlowCheckpoint` (edit-mode Cancel); `flowStructureChanged(file, checkpoint)`.
   - `observeDeck` reports branches as `child.kind: 'branch'` (also when the first branch creates the `branches` field or the last one deletes it). `RemovalTarget` gains `{ scope: 'branches', flowId, id }`. `checkIntegrity` reports a `step.branch` naming no branch of its flow (`targetType: 'branch'`). Branch ids are deck-unique and checked for duplicates per flow on load.
+- **Added by 008** (contract: `specs/008-inspector-rules/contracts/model-additions.md`, ADR 0009):
+  - `src/rules/`: pure decision-table semantics. `parseCell(text)` → `Cell` (`any`, `compare`, `exact`, `list`, `invalid`), `matchCell(cell, input)`, `evaluateRule(rule, inputs)` → `Evaluation` (`match` / `ambiguous` (Unique with several matches: no winner) / `none`), `ruleChecks(rule)` → `{ catchAll, invalidCells }`, `ruleUsage(file, ruleId)` → steps (numbered by `analyzeFlow`, broken flagged) and nodes using a rule.
+  - Editor ops (`src/ops/rule-links.ts`): `attachRule(host, ruleId)`, `detachRule(host, ruleId)` with `RuleHost = { kind: 'node', id } | { kind: 'step', flowId, stepId }`, and `setRuleInputs(flowId, stepId, ruleId, values)` (drops empty values; keyed, so typing merges into one undo step).
+  - `RemovalTarget` gains `{ scope: 'rules', id }`.
 - **Added by 007** (flow playback):
   - `serializeEntry('steps', step)`: one flow step in the canonical key order of `flows[].steps` (the JSON panel shows the current step in flow mode). `canonicalizeEntry('steps', value)` likewise.
 
@@ -29,6 +33,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - Validate before writing (Yjs cannot roll back). Validity comes from the generated Zod in `@sododeck/schema`; never redefine it here.
 - Delete policy (ADR 0005): edges and owned steps are removed; steps and stickies are kept and reported broken; groups re-parent their contents. A branch owns its steps (ADR 0008).
 - Flow steps stay in normal order (main path first, then each branch's steps in `branches` order); branch ops keep it.
+- Rule links (008): attach, detach and sample inputs go through `attachRule` / `detachRule` / `setRuleInputs`, never raw `rules` / `ruleInputs` patches. `step.ruleInputs` keys stay a subset of the step's rules and their input columns; detaching from a step drops its sample inputs in the same transaction.
 - Undo covers only the editor's own origin. Field edits pass an object key to `ctx.transact` so a typing burst on one object is one step.
 
 ## Layout of `src/`
@@ -37,7 +42,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `key-order.ts` canonical order from the schema · `load-checks.ts` duplicate ids · `ids.ts` id generator
 - `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
 - `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006)
-- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
+- `rules/`: `cells.ts`, `evaluate.ts`, `usage.ts` (008, pure)
+- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 
 ## Boundaries
 
@@ -46,4 +52,4 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 
 ## Status
 
-Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges). 003 added the snapshot and the removal preview. 006 added flow branches, `analyzeFlow` and the edit-mode checkpoint.
+Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges). 003 added the snapshot and the removal preview. 006 added flow branches, `analyzeFlow` and the edit-mode checkpoint. 008 added rule evaluation, rule usage and the rule-link ops.
