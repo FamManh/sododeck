@@ -7,6 +7,7 @@ import { useLoaderData } from 'react-router';
 import { Announcer } from '../editor/announcer';
 import { Canvas } from '../editor/canvas';
 import { ConfirmDeleteDialog } from '../editor/confirm-delete-dialog';
+import { DeckDeletedDialog } from '../editor/deck-deleted-dialog';
 import { Inspector } from '../editor/inspector';
 import { JsonPanel } from '../editor/json-panel';
 import { LeftSidebar } from '../editor/left-sidebar';
@@ -18,6 +19,7 @@ import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
+import { attachDeckChannel } from '../storage/deck-channel';
 import { attachDeckPersistence, type DeckPersistence } from '../storage/deck-persistence';
 import { markExported, markOpened } from '../storage/library-db';
 import { isOwnUpdate } from '../storage/origins';
@@ -76,9 +78,11 @@ function useSaveControlsFor(data: Exclude<DeckLoaderData, { kind: 'not-found' }>
       },
     });
     persistenceRef.current = persistence;
+    const channel = attachDeckChannel(data.deckId, doc, { persistence });
     void markOpened(data.db, data.deckId).catch(() => undefined);
     return () => {
       persistenceRef.current = null;
+      channel.destroy();
       persistence.destroy();
     };
   }, [data, doc]);
@@ -112,6 +116,9 @@ function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-foun
           <ReactFlowProvider>
             <EditorLayout />
           </ReactFlowProvider>
+          {data.kind === 'stored' && (
+            <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
+          )}
           <Toaster />
         </ToastProvider>
       </EditorProvider>

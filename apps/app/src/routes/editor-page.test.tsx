@@ -10,7 +10,15 @@ import * as Y from 'yjs';
 import type * as EditorContextModule from '../model/editor-context';
 import { useUiStore } from '../state/ui-store';
 import * as download from '../storage/download';
-import { createFolder, insertDeck, type LibraryDb } from '../storage/library-db';
+import {
+  createFolder,
+  insertDeck,
+  loadDeckLog,
+  softDeleteDeck,
+  type LibraryDb,
+} from '../storage/library-db';
+import { renameDeck } from '../library/library-actions';
+import { inProcessLibraryClient } from '../test/in-process-library-client';
 import { setLibraryDbForTests } from '../storage/library-db-instance';
 import { EditorProbe } from '../test/editor-probe';
 import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
@@ -312,6 +320,45 @@ describe('EditorPage', () => {
     expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(file));
     await waitFor(async () => {
       expect((await record())?.exportedAt).not.toBeNull();
+    });
+  });
+
+  it('offers to keep a copy when another tab deletes the open deck', async () => {
+    const { user, router } = await openEditor({
+      ...emptySododeckFile(),
+      name: 'Shop',
+      nodes: [{ id: 'a', type: 'service', title: 'Orders' }],
+    });
+    act(() => {
+      opened.editor?.add('nodes', { id: 'b', type: 'database', title: 'Unsaved here' });
+    });
+    await act(async () => {
+      await softDeleteDeck(db, 'd1');
+    });
+    const dialog = await screen.findByRole('alertdialog', {
+      name: 'This deck was deleted in another tab',
+    });
+    expect(within(dialog).getByRole('button', { name: 'Back to library' })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Keep a copy' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).not.toBe('/deck/d1');
+    });
+    const copyId = router.state.location.pathname.replace('/deck/', '');
+    const log = await loadDeckLog(db, copyId);
+    const copy = new Y.Doc();
+    for (const bytes of log?.bytes ?? []) Y.applyUpdate(copy, bytes);
+    expect(toJSON(copy).nodes.map((n) => n.title)).toEqual(['Orders', 'Unsaved here']);
+    expect(toJSON(copy).name).toBe('Shop');
+  });
+
+  it('shows a rename made in a library tab at once', async () => {
+    await openEditor({ ...emptySododeckFile(), name: 'Shop' });
+    await act(async () => {
+      await renameDeck({ db, client: inProcessLibraryClient() }, 'd1', 'Store');
+    });
+    await waitFor(() => {
+      expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Store');
     });
   });
 });
