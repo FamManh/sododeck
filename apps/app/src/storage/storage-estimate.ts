@@ -54,6 +54,8 @@ export function formatBytes(bytes: number): string {
     value /= 1000;
     unit++;
   }
+  // Intl's short form of "byte" is "byte"; the usual abbreviation reads better.
+  if (unit === 0) return `${String(Math.round(value))} B`;
   return new Intl.NumberFormat('en', {
     style: 'unit',
     unit: UNITS[unit] ?? 'byte',
