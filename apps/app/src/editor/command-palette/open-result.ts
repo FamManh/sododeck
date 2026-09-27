@@ -20,8 +20,8 @@ export interface OpenResultContext {
   announce: (text: string) => void;
   openRules: (ruleId?: string) => void;
   navigateToCanvas: () => void;
-  fitView: (options: { nodes: { id: string }[]; duration: number; maxZoom: number }) => void;
-  setCenter: (x: number, y: number, options: { zoom: number }) => void;
+  fitView: (options: { nodes: { id: string }[]; duration: number; maxZoom: number }) => unknown;
+  setCenter: (x: number, y: number, options: { zoom: number }) => unknown;
   getZoom: () => number;
   select: (selection: Partial<Selection>) => void;
   focus: UiState['focus'];

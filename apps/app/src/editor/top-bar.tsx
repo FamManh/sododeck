@@ -1,9 +1,9 @@
 import { Button } from '@sododeck/ui/components/button';
 import { InlineEdit } from '@sododeck/ui/components/inline-edit';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
-import { ArrowLeft, Download, Moon, Redo2, Sun, Table2, Undo2 } from 'lucide-react';
+import { ArrowLeft, Download, Moon, Redo2, Search, Sun, Table2, Undo2 } from 'lucide-react';
 import { Link } from 'react-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { isApplePlatform } from '../lib/features';
 import { useEditor, useHistory } from '../model/use-editor';
@@ -118,6 +118,9 @@ export function TopBar({
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
   const exportDeck = useExportDeck();
+  const openPalette = useUiStore((state) => state.openPalette);
+  const jumpRef = useRef<HTMLButtonElement>(null);
+  const jumpShortcut = isApplePlatform() ? '⌘K' : 'Ctrl+K';
 
   return (
     <header className="flex items-center gap-4 border-b border-hairline bg-surface px-4">
@@ -155,6 +158,22 @@ export function TopBar({
         </Button>
       )}
       <SaveStatus />
+      <Button
+        ref={jumpRef}
+        variant="ghost"
+        aria-label={`Jump to… (${jumpShortcut})`}
+        aria-haspopup="dialog"
+        className="gap-2 rounded-input bg-surface-2 px-2.5 text-ink-secondary hover:bg-surface-2"
+        onClick={() => {
+          openPalette(jumpRef.current);
+        }}
+      >
+        <Search />
+        <span className="text-body">Jump to…</span>
+        <kbd aria-hidden className="font-sans text-caption text-ink-secondary">
+          {jumpShortcut}
+        </kbd>
+      </Button>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

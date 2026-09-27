@@ -26,6 +26,13 @@ import { addNoteAt } from './stickies/sticky-actions';
 
 export { isTextTarget };
 
+function restoreFocus(target: HTMLElement | null): void {
+  if (target?.isConnected !== true) return;
+  globalThis.setTimeout(() => {
+    if (target.isConnected) target.focus();
+  }, 0);
+}
+
 function inDialog(target: EventTarget | null): boolean {
   return (
     target instanceof Element && target.closest('[role="dialog"], [role="alertdialog"]') !== null
@@ -275,16 +282,31 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
+      const key = event.key.toLowerCase();
+      if (isMod(event) && !event.altKey && key === 'k') {
+        event.preventDefault();
+        const ui = useUiStore.getState();
+        if (isTextTarget(event.target) && event.target instanceof HTMLElement) {
+          event.target.blur();
+        }
+        if (ui.palette.open) {
+          const returnFocus = ui.palette.returnFocus;
+          ui.closePalette();
+          restoreFocus(returnFocus);
+        } else {
+          ui.openPalette(event.target instanceof HTMLElement ? event.target : null);
+        }
+        return;
+      }
       // ⌘S / Ctrl+S saves now (a no-op when saved) and never opens the browser's save dialog,
       // wherever focus is (FR-006).
-      if (isMod(event) && !event.altKey && event.key.toLowerCase() === 's') {
+      if (isMod(event) && !event.altKey && key === 's') {
         event.preventDefault();
         void flush();
         return;
       }
       if (isTextTarget(event.target) || inDialog(event.target)) return;
       const ui = useUiStore.getState();
-      const key = event.key.toLowerCase();
 
       if (isMod(event) && (key === 'z' || (key === 'y' && event.ctrlKey && !event.metaKey))) {
         event.preventDefault();

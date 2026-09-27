@@ -239,14 +239,14 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
   - from the rules screen, canvas targets navigate to the canvas first
   - a vanished target announces "This item no longer exists" and returns false
 - [x] T037 [US2] Implement `apps/app/src/editor/command-palette/palette-results.ts` and `apps/app/src/editor/command-palette/open-result.ts`. Make T035 and T036 pass.
-- [ ] T038 [P] [US2] Write `apps/app/src/editor/command-palette/command-palette.test.tsx`. It must fail at first:
+- [x] T038 [P] [US2] Write `apps/app/src/editor/command-palette/command-palette.test.tsx`. It must fail at first:
   - ⌘K (Ctrl+K off Apple) opens with the input focused, even from a text field (the field's edit is committed first, no character typed); ⌘K again or Esc closes and returns focus
   - typing "reattempt" shows the rule and the step with snippets, and Enter opens the first
   - ↓↓ Enter opens the third result
   - "zzqx" shows "No results" and Enter does nothing
   - results refresh when the deck changes while open (FR-029)
   - the top-bar "Jump to… (⌘K)" button opens it
-- [ ] T039 [US2] Implement:
+- [x] T039 [US2] Implement:
   - `apps/app/src/editor/command-palette/command-palette.tsx`: `CommandDialog`, `buildSearchIndex` memoized on the snapshot while open, the results and the open handling
   - mount it in `EditorChrome` in `apps/app/src/routes/editor-page.tsx`
   - handle ⌘K/Ctrl+K in `useEditorShortcuts` in `apps/app/src/editor/use-canvas-shortcuts.ts`: capture phase, `preventDefault`, blur a focused text field first, toggle `palette.open`
