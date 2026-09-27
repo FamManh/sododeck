@@ -20,7 +20,7 @@ import { anchorRect, focusCanvas } from './canvas-actions';
 type Edge = SododeckFile['edges'][number];
 
 /** Schema enum `Protocol`, with display names. */
-const PROTOCOLS: readonly { value: NonNullable<Edge['protocol']>; label: string }[] = [
+export const PROTOCOLS: readonly { value: NonNullable<Edge['protocol']>; label: string }[] = [
   { value: 'http', label: 'HTTP' },
   { value: 'grpc', label: 'gRPC' },
   { value: 'event', label: 'Event' },

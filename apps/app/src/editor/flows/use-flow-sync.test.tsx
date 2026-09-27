@@ -58,7 +58,7 @@ describe('useFlowSync', () => {
     act(() => {
       editor().removeStep('place', 's2');
     });
-    expect(ui().activeFlow).toEqual({ flowId: 'place', stepId: null, branchId: null });
+    expect(ui().activeFlow).toMatchObject({ flowId: 'place', stepId: null, branchId: null });
   });
 
   it('keeps a recording session when its own steps change', () => {

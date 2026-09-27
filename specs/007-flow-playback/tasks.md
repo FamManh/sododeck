@@ -38,16 +38,16 @@ green unchanged.
 
 ## Phase 1: Setup
 
-- [ ] T001 Gate check: create branch `007-flow-playback` from the latest `main`; re-check the names
+- [x] T001 Gate check: create branch `007-flow-playback` from the latest `main`; re-check the names
       in the research.md header (`activeFlow`, `setActiveFlow`, `flowOverlay`, `sameMark`,
       `toFlowNodes`/`toFlowEdges`, `DeckEdge`, `DeckNode`, `useCanvasHandlers`,
       `useCanvasKeyDown`, `useEditorShortcuts`, `useFlowSync`, `InspectorStep`, `FlowInspector`,
       `SessionChip`, `selectionView`, `serializeEntry`, `canonicalizeEntry`, `resolveMotion`,
       `useReducedMotion`, `SegmentedControl`, `__sododeckFlowBench`); if 008 merged meanwhile,
       note its `inspector-step.tsx` changes in research.md R10 before continuing.
-- [ ] T002 [P] Record the performance baseline on `main`: `pnpm bench` (pan, zoom, drag and the 006
+- [x] T002 [P] Record the performance baseline on `main`: `pnpm bench` (pan, zoom, drag and the 006
       flow scenarios at 500 nodes / 1,000 edges) into `specs/007-flow-playback/bench-before.md`.
-- [ ] T003 [P] Add flow-mode fixtures to `apps/app/src/test/flow-fixtures.ts`: an 8-step linear
+- [x] T003 [P] Add flow-mode fixtures to `apps/app/src/test/flow-fixtures.ts`: an 8-step linear
       flow ("Place order": Customer App → API Gateway → … with titles matching the spec
       announcement "Order Service → Payment Service" at step 5), a flow forking after step 3 into
       "payment ok" (2 steps) and "payment failed" (error path, 2 steps), a one-step flow, an empty
@@ -62,25 +62,25 @@ story uses.
 
 ### Model: step JSON entry (contracts/model-additions.md)
 
-- [ ] T004 [P] Write failing tests in `packages/model/test/serialize-entry.test.ts`: for every step
+- [x] T004 [P] Write failing tests in `packages/model/test/serialize-entry.test.ts`: for every step
       of every flow in `packages/schema/examples/full.sododeck.json`, `serializeEntry('steps', step)`
       re-indented equals the slice of `serializeDeck(file)`; a step with only `id` and `edge`
       yields those two keys in order; `serializeEntries` with a `steps` entry.
-- [ ] T005 Implement: add `'steps'` to `EntryCollection` in `packages/model/src/serialize-entry.ts`
+- [x] T005 Implement: add `'steps'` to `EntryCollection` in `packages/model/src/serialize-entry.ts`
       and make `canonicalizeEntry` in `packages/model/src/key-order.ts` resolve `steps` to the
       item shape of `flows[].steps` (from the schema shape, no hand-kept keys). Export unchanged
       from `packages/model/src/index.ts`. T004 passes.
 
 ### UI store: flow mode (data-model §1, research R1)
 
-- [ ] T006 [P] Write failing tests in `apps/app/src/state/ui-store.test.ts` for: `openFlow(flowId)`
+- [x] T006 [P] Write failing tests in `apps/app/src/state/ui-store.test.ts` for: `openFlow(flowId)`
       (paused, speed 1, `alternativeId: null`, clears selection/focused edge/popover and
       `lastPlayedFlowId`), `openFlow(flowId, stepId)` keeps the given step, `exitFlow()` (sets
       `lastPlayedFlowId`, `activeFlow: null`, empty selection), `setCurrentStep` pauses and clears
       `branchId`, `setSpeed` pauses, `setAlternative(id, stepId)` pauses, `advance` keeps
       `playing`, `setActiveFlow(id|null)` aliases open/exit, `resetForDeck` clears
       `lastPlayedFlowId`, and `startEditing` keeps `activeFlow` with `playing: false`.
-- [ ] T007 Implement the `ActiveFlow` fields (`alternativeId`, `playing`, `speed`),
+- [x] T007 Implement the `ActiveFlow` fields (`alternativeId`, `playing`, `speed`),
       `lastPlayedFlowId` and the actions `openFlow`, `exitFlow`, `setCurrentStep`, `setPlaying`,
       `setSpeed`, `setAlternative`, `advance` in `apps/app/src/state/ui-store.ts`; keep
       `setActiveFlow` / `setActiveStep` / `setActiveBranch` working for 006 callers (`setActiveFlow`
