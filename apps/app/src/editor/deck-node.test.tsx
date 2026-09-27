@@ -85,6 +85,18 @@ describe('DeckNode', () => {
     expect(node).toHaveAttribute('tabindex', '0');
   });
 
+  it('marks the from/to of the current flow step with the ring and aria-current (007)', () => {
+    renderNode(props({ currentStep: true }));
+    const node = screen.getByTestId('deck-node');
+    expect(node).toHaveAttribute('aria-current', 'step');
+    expect(node).toHaveClass('ring-primary');
+  });
+
+  it('has no aria-current outside the current step', () => {
+    renderNode();
+    expect(screen.getByTestId('deck-node')).not.toHaveAttribute('aria-current');
+  });
+
   it('truncates a long title but keeps it in the name and tooltip', () => {
     const title = 'A very long component title that does not fit into 164 pixels at all';
     renderNode(props({ title }));

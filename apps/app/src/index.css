@@ -66,3 +66,21 @@
 .sd-edge-flash {
   animation: sd-edge-flash 400ms ease-in-out 3;
 }
+
+/* Flow mode (007 FR-004, research R4): everything off the played path is dimmed; handles are gone
+   (view-only). The transition collapses to 0 under reduced motion (--sd-dur-dim). */
+[data-flow-mode] .react-flow__node,
+[data-flow-mode] .react-flow__edge,
+[data-flow-mode] [data-testid='edge-label'] {
+  transition: opacity var(--sd-dur-dim);
+}
+
+[data-flow-mode] .react-flow__node:not(.in-flow),
+[data-flow-mode] .react-flow__edge:not(.in-flow),
+[data-flow-mode] [data-testid='edge-label']:not([data-in-flow]) {
+  opacity: 0.2;
+}
+
+[data-flow-mode] .react-flow__handle.sd-handle {
+  display: none;
+}

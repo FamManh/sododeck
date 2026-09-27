@@ -123,3 +123,54 @@ describe('DeckEdge flow marks (006 research R6)', () => {
     expect(container.querySelector('[data-edge-anchor="e1"]')).not.toBeNull();
   });
 });
+
+describe('DeckEdge in flow mode (007)', () => {
+  const mark = (current: { speed: 1 | 2 } | null, inPath = true) => ({
+    badges: [{ label: '2', errorPath: false, current: current !== null, chainBreak: false }],
+    style: 'path' as const,
+    errorIcon: false,
+    inPath,
+    current,
+  });
+
+  it('draws the current edge thicker with a filled label and a looping token', () => {
+    const { container } = renderEdge({ flow: mark({ speed: 1 }) });
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '3' });
+    const label = screen.getByTestId('edge-label');
+    expect(label).toHaveClass('bg-primary');
+    expect(label).toHaveAttribute('data-in-flow');
+    const token = screen.getByTestId('flow-token');
+    expect(token.querySelector('animateMotion')).toHaveAttribute('dur', '1400ms');
+  });
+
+  it('loops twice as fast at 2×', () => {
+    renderEdge({ flow: mark({ speed: 2 }) });
+    expect(screen.getByTestId('flow-token').querySelector('animateMotion')).toHaveAttribute(
+      'dur',
+      '700ms',
+    );
+  });
+
+  it('draws no token on other edges, and dims labels off the path', () => {
+    renderEdge({ flow: mark(null, false) });
+    expect(screen.queryByTestId('flow-token')).toBeNull();
+    expect(screen.getByTestId('edge-label')).not.toHaveAttribute('data-in-flow');
+  });
+
+  it('keeps the token static at the midpoint under reduced motion', () => {
+    const spy = vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes('reduce'),
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    renderEdge({ flow: mark({ speed: 1 }) });
+    const token = screen.getByTestId('flow-token');
+    expect(token.querySelector('animateMotion')).toBeNull();
+    expect(token.getAttribute('transform')).toMatch(/^translate\(/);
+    spy.mockRestore();
+  });
+});
