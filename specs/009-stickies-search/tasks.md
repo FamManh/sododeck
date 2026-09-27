@@ -285,10 +285,10 @@ Write each test first and watch it fail. Do not add Playwright tests; the smoke 
 
 **Independent test**: play a flow on a deck with three notes (free, pinned to a component of step 2, marked "Stay visible"). Step through and check each note's state, the Notes switch (dimmed, shown, hidden, remembered after reload), the step inspector's notes list, and that notes can't be moved or edited until flow mode ends (quickstart step 7).
 
-- [ ] T042 [P] [US4] Write `apps/app/src/editor/stickies/sticky-flow.test.ts`. It must fail at first (research R15):
+- [x] T042 [P] [US4] Write `apps/app/src/editor/stickies/sticky-flow.test.ts`. It must fail at first (research R15):
   - `stickyFlowState`: `normal` outside flow mode; `hidden` / `normal` for the hidden / shown display; `normal` for `showInFlows`; `normal` when pinned to the current step's from or to node (`NodeFlowMark.currentStep`); `dimmed` for a free note, a note pinned to another node, and foreign or missing anchors; `normal` for every note in an empty flow; `dimmed` (unless `showInFlows`) with a broken current step
   - `notesOnStep(deck, fromId, toId)`: notes pinned to either node, in file order; foreign and missing anchors are excluded
-- [ ] T043 [US4] Implement `apps/app/src/editor/stickies/sticky-flow.ts` (`stickyFlowState`, `notesOnStep`). Make T042 pass.
+- [x] T043 [US4] Implement `apps/app/src/editor/stickies/sticky-flow.ts` (`stickyFlowState`, `notesOnStep`). Make T042 pass.
 - [ ] T044 [P] [US4] Write the flow-mode sticky cases in `apps/app/src/editor/deck-to-flow.test.ts`, `apps/app/src/editor/stickies/sticky-node.test.tsx`, `apps/app/src/flow-mode-css.test.ts` and `apps/app/src/state/ui-store.test.ts`. They must fail at first:
   - `toStickyNodes` with a playback overlay: dimmed notes get `sd-note-dimmed`, the others `in-flow sd-note-shown`, hidden notes `hidden: true`, and every sticky node is `draggable: false` in flow mode; the cache is reused when the state is unchanged
   - the card in flow mode: the accessible name ends with ", dimmed" when dimmed; there is no collapse button; double-click, Enter, F2 and ⌥C do nothing
