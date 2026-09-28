@@ -10,13 +10,15 @@ import { DeckInspectorStorage } from '../deck-inspector-storage';
 import { FieldEdit } from '../field-edit';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
+import { ProblemsPanel } from '../problems/problems-panel';
 import { TagsField } from '../fields/tags-field';
 import { deckStats } from './derive';
 import { InspectorFrame } from './inspector-frame';
 
 /**
- * Deck inspector, shown when nothing is selected (FR-012, design 10): name (required),
- * markdown description, tags, counts with a way into the rule editor, and 005's storage.
+ * Deck inspector, shown when nothing is selected (FR-012, design 10): the deck's problems first
+ * (015, design 60), name (required), markdown description, tags, counts with a way into the rule
+ * editor, and 005's storage.
  */
 export function DeckInspector({
   deck,
@@ -35,6 +37,7 @@ export function DeckInspector({
       heading={name}
       subtitle="Deck"
     >
+      <ProblemsPanel />
       <PanelSection>
         <FieldEdit
           label="Name"

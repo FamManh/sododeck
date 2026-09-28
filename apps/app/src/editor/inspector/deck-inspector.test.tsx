@@ -39,6 +39,20 @@ function setup(onOpenRules?: () => void) {
 }
 
 describe('DeckInspector (story 2, FR-012)', () => {
+  it('lists the deck problems first and never writes them into the deck (015 FR-010, FR-012)', async () => {
+    const { doc, editor } = setup();
+    const before = toJSON(doc);
+    act(() => {
+      editor().add('nodes', { id: 'lonely', type: 'service', title: 'Legacy Invoicer' });
+    });
+    expect(
+      await screen.findByRole('button', { name: /Legacy Invoicer has no connections/ }),
+    ).toBeInTheDocument();
+    const after = toJSON(doc);
+    expect(JSON.stringify(after)).not.toContain('problems');
+    expect({ ...after, nodes: before.nodes }).toEqual(before);
+  });
+
   it('renames the deck (the top bar follows) and refuses an empty name', async () => {
     const { user, doc } = setup();
     const name = screen.getByRole('textbox', { name: 'Name' });

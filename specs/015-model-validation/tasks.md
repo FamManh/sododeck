@@ -67,10 +67,10 @@
 
 **Independent test**: plant one problem of each kind; read the list; fix each; see "No problems".
 
-- [ ] T014 [P] [US1] Write `apps/app/src/editor/problems/problems-panel.test.tsx`: section named "Problems" with the count; one row per problem with its title and detail as accessible name; order per R3; help line; "No problems" row with a check when empty; nothing rendered while `useProblems()` is `null`; 201 problems → 200 rows + "Show all 201", which then shows all; fixing a problem removes its row.
-- [ ] T015 [P] [US1] Implement `apps/app/src/editor/problems/problem-glyph.tsx` (`ProblemGlyph`: amber `TriangleAlert`, `role="img"`, accessible name "n problem(s)", optional tooltip text) and per-kind row icons.
-- [ ] T016 [US1] Implement `apps/app/src/editor/problems/problems-panel.tsx` (self-contained, no inspector imports; accepts `onActivate(problem)` and an optional `autoFocus`) per [contracts/problems-ui.md](contracts/problems-ui.md), tokens only, design 60. Make T014 pass (activation is wired in US2).
-- [ ] T017 [US1] Render `ProblemsPanel` after the Summary section in `apps/app/src/editor/inspector/deck-inspector.tsx`; extend `apps/app/src/editor/inspector/deck-inspector.test.tsx` (list shows with no selection; JSON panel shows no `problems` field for a selected orphan, FR-010).
+- [x] T014 [P] [US1] Write `apps/app/src/editor/problems/problems-panel.test.tsx`: section named "Problems" with the count; one row per problem with its title and detail as accessible name; order per R3; help line; "No problems" row with a check when empty; nothing rendered while `useProblems()` is `null`; 201 problems → 200 rows + "Show all 201", which then shows all; fixing a problem removes its row.
+- [x] T015 [P] [US1] Implement `apps/app/src/editor/problems/problem-glyph.tsx` (`ProblemGlyph`: amber `TriangleAlert`, `role="img"`, accessible name "n problem(s)", optional tooltip text) and per-kind row icons.
+- [x] T016 [US1] Implement `apps/app/src/editor/problems/problems-panel.tsx` (self-contained, no inspector imports; accepts `onActivate(problem)` and an optional `autoFocus`) per [contracts/problems-ui.md](contracts/problems-ui.md), tokens only, design 60. Make T014 pass (activation is wired in US2).
+- [x] T017 [US1] Render `ProblemsPanel` after the Summary section in `apps/app/src/editor/inspector/deck-inspector.tsx`; extend `apps/app/src/editor/inspector/deck-inspector.test.tsx` (list shows with no selection; JSON panel shows no `problems` field for a selected orphan, FR-010).
 
 **Checkpoint**: US1 acceptance scenarios 1–7 pass in component tests.
 
