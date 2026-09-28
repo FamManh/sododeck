@@ -330,8 +330,11 @@ function toFlowNode(
   return flowNode;
 }
 
-/** Number of nodes in each group, nested groups included. */
-function groupCounts(deck: SododeckFile): Map<string, number> {
+/**
+ * Number of nodes in each group, nested groups included. Its cache is keyed weakly by the deck's
+ * arrays (not a single slot), so export may call it without disturbing the canvas.
+ */
+export function groupCounts(deck: SododeckFile): Map<string, number> {
   let byGroups = groupCountCache.get(deck.nodes);
   if (byGroups === undefined) {
     byGroups = new WeakMap();
@@ -385,7 +388,7 @@ function groupNodes(
       cached.width === rect.width &&
       cached.height === rect.height
     ) {
-      return [cached];
+      return cached;
     }
     const flowNode: GroupFlowNode = {
       id,
@@ -405,7 +408,7 @@ function groupNodes(
       data: { title: group.title, count, level, focused },
     };
     groupCache.set(id, flowNode);
-    return [flowNode];
+    return flowNode;
   });
 }
 
@@ -462,7 +465,11 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
   });
 }
 
-function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
+/** Cache-free port geometry for export; React Flow's identity caches stay untouched. */
+export function exportPortRects(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+): { id: string; rect: { x: number; y: number; width: number; height: number }; label: string }[] {
   const { nodePositionById: positions } = deckLookups(deck);
   return graph.ports.flatMap((port) => {
     const anchors = port.insideNodeIds
@@ -472,14 +479,22 @@ function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
     const x =
       anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length + NODE_SIZE.width + 32;
     const y = anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length;
+    return [{ id: port.id, rect: { x, y, width: 120, height: 36 }, label: port.outsideTitle }];
+  });
+}
+
+function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
+  return exportPortRects(deck, graph).map((port) => {
+    const { x, y } = port.rect;
+    const outsideNodeId = port.id.slice(PORT_NODE_PREFIX.length);
     const cached = portCache.get(port.id);
     if (
       cached?.position.x === x &&
       cached.position.y === y &&
-      cached.data.outsideNodeId === port.outsideNodeId &&
-      cached.data.outsideTitle === port.outsideTitle
+      cached.data.outsideNodeId === outsideNodeId &&
+      cached.data.outsideTitle === port.label
     ) {
-      return [cached];
+      return cached;
     }
     const flowNode: PortFlowNode = {
       id: port.id,
@@ -489,12 +504,12 @@ function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
       height: 36,
       selectable: false,
       data: {
-        outsideNodeId: port.outsideNodeId,
-        outsideTitle: port.outsideTitle,
+        outsideNodeId,
+        outsideTitle: port.label,
       },
     };
     portCache.set(port.id, flowNode);
-    return [flowNode];
+    return flowNode;
   });
 }
 

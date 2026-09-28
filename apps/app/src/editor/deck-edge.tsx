@@ -6,11 +6,10 @@ import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 
 import type { DeckFlowEdge } from './deck-to-flow';
+import { DOT_RADIUS } from './edge-constants';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES } from './flow-strokes';
-
-const DOT_RADIUS = 3;
 
 /**
  * Connection (DESIGN.md: orthogonal routing, 8px corners, 3px end dot; designs 11, 12, 57).
