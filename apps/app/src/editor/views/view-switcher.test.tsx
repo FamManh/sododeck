@@ -1,7 +1,7 @@
 import { serializeDeck, toJSON } from '@sododeck/model';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
@@ -89,5 +89,98 @@ describe('ViewSwitcher (FR-002, FR-003)', () => {
     expect(tabs()[0]).toHaveFocus();
     await user.keyboard('{ArrowLeft}');
     expect(tabs()[2]).toHaveFocus();
+  });
+});
+
+describe('adding views and overflow (FR-040, edge case "Many views")', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('adds "Custom 1", selects it and toasts; the first add stores the presets too', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<ViewSwitcher />, deck);
+    await user.click(screen.getByRole('button', { name: 'Add view' }));
+    expect(toJSON(doc).views.map((v) => v.title)).toEqual([
+      'System',
+      'Feature',
+      'Infra',
+      'Custom 1',
+    ]);
+    expect(screen.getByRole('tab', { name: 'Custom 1, custom view' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText('View "Custom 1" created')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add view' }));
+    expect(toJSON(doc).views.at(-1)?.title).toBe('Custom 2');
+  });
+
+  it('puts tabs that do not fit in "More views", keeping the current tab visible', async () => {
+    const user = userEvent.setup();
+    const callbacks: ((entries: unknown[]) => void)[] = [];
+    const notify = () => {
+      for (const callback of callbacks) callback([]);
+    };
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: (entries: unknown[]) => void) {
+          callbacks.push(callback);
+        }
+        observe() {
+          return undefined;
+        }
+        unobserve() {
+          return undefined;
+        }
+        disconnect() {
+          return undefined;
+        }
+      },
+    );
+    const many = deckOf({
+      ...deck,
+      views: Array.from({ length: 8 }, (_, i) => ({
+        id: `v${String(i)}`,
+        type: 'custom' as const,
+        title: `View ${String(i)}`,
+      })),
+    });
+    const { container } = renderWithEditor(
+      <div style={{ width: '300px' }}>
+        <ViewSwitcher />
+      </div>,
+      many,
+    );
+    // jsdom has no layout: give the slot a width of 300 px.
+    const slot = container.firstElementChild as HTMLElement;
+    Object.defineProperty(slot, 'clientWidth', { value: 300 });
+    act(() => {
+      notify();
+    });
+    expect(screen.getAllByRole('tab').length).toBeLessThan(8);
+    await user.click(screen.getByRole('button', { name: 'More views' }));
+    await user.click(screen.getByRole('menuitem', { name: 'View 7' }));
+    expect(useUiStore.getState().currentViewId).toBe('v7');
+    expect(screen.getByRole('tab', { name: 'View 7, custom view' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  it('shows every tab without ResizeObserver', () => {
+    vi.stubGlobal('ResizeObserver', undefined);
+    const many = deckOf({
+      ...deck,
+      views: Array.from({ length: 8 }, (_, i) => ({
+        id: `v${String(i)}`,
+        type: 'custom' as const,
+        title: `View ${String(i)}`,
+      })),
+    });
+    renderWithEditor(<ViewSwitcher />, many);
+    expect(screen.getAllByRole('tab')).toHaveLength(8);
+    expect(screen.queryByRole('button', { name: 'More views' })).not.toBeInTheDocument();
   });
 });
