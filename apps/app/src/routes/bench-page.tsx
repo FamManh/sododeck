@@ -27,6 +27,8 @@ declare global {
       readyAt: number;
       nodes: number;
       edges: number;
+      /** 018: the canvas-first shell (drawer + JSON overlay) is rendered (`drawer=1`). */
+      shell?: boolean;
       collapseAll?: () => Promise<void>;
       toggleCollapse?: (groupId: string) => Promise<number>;
       prepareFocus?: (nodeId: string) => Promise<void>;
