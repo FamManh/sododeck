@@ -22,6 +22,7 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 | -------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `<ReactFlow>` props, types | `editor/canvas.tsx` (`nodeTypes`/`edgeTypes` at module scope)                                          |
 | Visible scope / collapse   | `editor/visible-graph.ts` — `scopeOf`, `visibleGraph`, merged edges, collapsed cards, port pills, scope bounds |
+| Current view (011)         | `editor/views/view-state.ts` — `viewStateOf` / `useViewState()` / `readViewState(doc)`: `deck` (view-projected: view positions, hidden components left out, so every geometry helper just works), `collapsed`, `render` (`ViewRender`: subtitle field, flow counts, dimmed, pinned, revealed) → `CanvasView.render` in `deck-to-flow.ts`; `editor/view-filter.ts` decides hidden / dimmed |
 | Zoom levels / focus / flow folding | `editor/levels.ts`, `editor/focus-set.ts`, `editor/collapse-flow-marks.ts` |
 | Deck → RF objects          | `editor/deck-to-flow.ts` — per-object caches, `GROUP_NODE_PREFIX`, `COLLAPSED_NODE_PREFIX`, `PORT_NODE_PREFIX`, `MERGED_EDGE_PREFIX`, `toFlowNodes`/`toFlowEdges` |
 | Flow marks (006)           | `editor/flows/flow-overlay.ts` — `flowOverlay()` → `EdgeFlowMark` (`data.flow`: badges, style) and node `data.flowStart`; drawn in `deck-edge.tsx` / `deck-node.tsx` |
@@ -31,9 +32,9 @@ Read ADR 0006 and `apps/app/CLAUDE.md` before a non-trivial change. This skill i
 | Shared actions             | `editor/canvas-actions.ts` — `addComponent`, `connectComponents`, `centredOn`                         |
 | Keys                       | `editor/use-canvas-shortcuts.ts` (canvas keys + document-wide undo/redo/Delete/Esc)                   |
 | Delete                     | `ui.requestDelete(selection)` or `ui.requestRemoval(targets)` → `confirm-delete-dialog.tsx` (`previewRemoval`, one batch, Undo toast) |
-| Read / write the deck      | `model/use-deck-snapshot.ts` (`useDeckSnapshot`, `readDeck` in handlers), `model/use-editor.ts`       |
-| UI state                   | `state/ui-store.ts` (Zustand; never document data: drill, collapse, focus and level/menu state live here) |
-| Layout                     | `layout/` — ELK in a worker (`createLayoutClient().layout(...)`)                                       |
+| Read / write the deck      | `model/use-deck-snapshot.ts` (`useDeckSnapshot`, `readDeck` in handlers), `model/use-editor.ts`; canvas geometry reads `readViewState(doc).deck` instead; drags → `editor.moveInView`, note drags → `moveStickyInView` |
+| UI state                   | `state/ui-store.ts` (Zustand; never document data: drill, focus, current view and level/menu state live here; collapse is per-view document data since 011: `useCollapsed`, `setGroupCollapsed`) |
+| Layout                     | `layout/` — ELK in a worker (`createLayoutClient().layout(...)`, `cancel()`); `editor/tidy-layout.ts` builds the request from the visible graph and applies the result in one `moveInView` batch |
 | Canvas CSS, tokens         | `index.css` (canvas rules), `@sododeck/ui` `tokens.css` (`--sd-dur-*`); SMIL `dur` needs ms from `resolveMotion`, not CSS vars |
 | Motion / reduced motion    | `@sododeck/ui/lib/motion` (`resolveMotion`), `@sododeck/ui/hooks/use-reduced-motion`                  |
 | Test harness               | `test/render-canvas.tsx` (`editorWrapper`, `deckOf`) — providers incl. `ReactFlowProvider`            |

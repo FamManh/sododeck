@@ -27,6 +27,11 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - **Added by 009** (stickies and palette foundation, ADR 0010):
   - `src/geometry.ts`: `Point`, `NODE_GRID`, `STICKY_DEFAULT_OFFSET`, `nodeCanvasPosition`, `stickyCanvasPosition`, `stickyLabel`.
   - `removeNode(id)` frees notes pinned to that node at the same canvas point in the same transaction; `RemovalResult.freed` reports those note ids, and `undo()` restores the pin and offset.
+- **Added by 011** (saved views and auto-layout, contract: `specs/011-views-autolayout/contracts/model-views.md`, ADR 0012):
+  - `src/views.ts` (pure): `VIEW_PRESETS` (System / Feature / Infra with fixed ids `system`, `feature`, `infra`), `PRESET_VIEW_IDS`, `CUSTOM_VIEW_DEFAULTS`, `resolveViews(file)` (stored views, else the presets, identity kept), `baseViewId`, `nextCustomTitle`. `geometry.ts` adds `viewPosition(file, view, nodeId)` and `viewNodePosition(view, node)`: a view's own position wins in any view, else the base position.
+  - Editor ops (`src/ops/views.ts`): `moveInView` (base view → `node.position` and drops its own entry; other views → `view.positions`; unknown nodes skipped), `setPinned`, `updateView` (`ViewSettingsPatch`; `undefined` or `[]` removes a field; title typing burst is one step), `addView` ("Custom <n>"), `removeView` (refuses the last view), `setCollapsed`.
+  - A deck without stored views gets the three presets written on its first view change, in a transaction of their own with the editor's second, **untracked** origin (in `editorOrigins`, not in the `UndoManager`), so undo never removes them. `setCollapsed` uses the same untracked origin: saved and synced, never an undo step.
+  - Cascade: removing a node drops it from `pinned`; removing a group drops it from `excludeGroups` and `collapsed` (same transaction). `checkIntegrity` reports dangling ids in `pinned`, `excludeGroups` and `collapsed`.
 
 ## Rules
 
@@ -38,7 +43,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - ADR 0010 amends node deletes only: stickies pinned to a removed node become free at the same screen point, reported in `RemovalResult.freed`, and restored by one undo.
 - Flow steps stay in normal order (main path first, then each branch's steps in `branches` order); branch ops keep it.
 - Rule links (008): attach, detach and sample inputs go through `attachRule` / `detachRule` / `setRuleInputs`, never raw `rules` / `ruleInputs` patches. `step.ruleInputs` keys stay a subset of the step's rules and their input columns; detaching from a step drops its sample inputs in the same transaction.
-- Undo covers only the editor's own origin. Field edits pass an object key to `ctx.transact` so a typing burst on one object is one step.
+- View internals (`positions`, `pinned`, `collapsed`, filters, `subtitleField`, `title` from the switcher) are written only through the view ops, never through `update('views', …)` from the app (011).
+- Undo covers only the editor's own tracked origin; the untracked view-state origin (011) is never undone. Field edits pass an object key to `ctx.transact` so a typing burst on one object is one step.
 
 ## Layout of `src/`
 
@@ -47,7 +53,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
 - `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006)
 - `rules/`: `cells.ts`, `evaluate.ts`, `usage.ts` (008, pure)
-- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
+- `views.ts` presets and view resolution (011)
+- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 
 ## Boundaries
 
@@ -56,4 +63,4 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 
 ## Status
 
-Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges). 003 added the snapshot and the removal preview. 006 added flow branches, `analyzeFlow` and the edit-mode checkpoint. 008 added rule evaluation, rule usage and the rule-link ops.
+Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges). 003 added the snapshot and the removal preview. 006 added flow branches, `analyzeFlow` and the edit-mode checkpoint. 008 added rule evaluation, rule usage and the rule-link ops. 011 added saved views: presets, view ops, the untracked collapse origin and the view cascade.
