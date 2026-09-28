@@ -37,17 +37,17 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `011-views-autolayout` from the latest `main`. Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 Add `options.views` to `generateBenchDeck` in `apps/app/src/bench/generate-deck.ts` (R14): three views (`system`, `feature`, `infra`), with `infra` holding `positions` overrides for 50% of the nodes (seeded offsets), `pinned` for 20 nodes, and `excludeKinds: ['external']` on a fourth `custom` view. This option writes only fields the current schema already accepts (`positions`), plus the new fields once T006 lands; gate the new fields behind the same option so the baseline still runs. Add cases to `apps/app/src/bench/generate-deck.test.ts` for view count, override count and determinism for a seed.
-- [ ] T003 Extend `apps/app/bench/perf.bench.ts` with three scenarios (R14):
+- [x] T001 Create branch `011-views-autolayout` from the latest `main`. Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T002 Add `options.views` to `generateBenchDeck` in `apps/app/src/bench/generate-deck.ts` (R14): three views (`system`, `feature`, `infra`), with `infra` holding `positions` overrides for 50% of the nodes (seeded offsets), `pinned` for 20 nodes, and `excludeKinds: ['external']` on a fourth `custom` view. This option writes only fields the current schema already accepts (`positions`), plus the new fields once T006 lands; gate the new fields behind the same option so the baseline still runs. Add cases to `apps/app/src/bench/generate-deck.test.ts` for view count, override count and determinism for a seed.
+- [x] T003 Extend `apps/app/bench/perf.bench.ts` with three scenarios (R14):
   - `view-switch`: ms from a click on a view tab to the next painted frame (SC-003, target ≤ 200 ms);
   - `tidy-layout-200`: a 200-node deck with 5 pins, ms from the "Tidy layout" click to positions applied (SC-001, < 2 s);
   - `pan-during-layout`: pan fps on the 500-node deck while a layout runs (SC-002, ≥ 60).
 
   Until the UI exists (T031, T045), each scenario logs `TODO(011): not available yet` and records no number. It is not a skipped test.
 
-- [ ] T004 Run `pnpm bench` before any change and save the table in `specs/011-views-autolayout/bench-before.md`.
-- [ ] T005 [P] Write the ADR `docs/decisions/0012-saved-views-and-layout.md` in the header format of 0011. It covers:
+- [x] T004 Run `pnpm bench` before any change and save the table in `specs/011-views-autolayout/bench-before.md`.
+- [x] T005 [P] Write the ADR `docs/decisions/0012-saved-views-and-layout.md` in the header format of 0011. It covers:
   - the new optional view fields and `flows` (R1);
   - presets as data with fixed ids, materialized on the first view change outside undo history (R3, R4);
   - an override wins in any view, the base view included; a base-view move writes `node.position` and drops the override (R4);
@@ -65,19 +65,19 @@
 
 ### Schema
 
-- [ ] T006 Add the optional `View` fields `excludeGroups` (`IdList`), `excludeKinds` (array of `NodeKind`), `excludeTags` (`Tags`), `dimKinds` (array of `NodeKind`), `pinned` (`IdList`) and `collapsed` (`IdList`) to `packages/schema/schema/v1.json`, all with `uniqueItems: true` and a one-line `description` each. Add `flows` to `SubtitleField` and update its description ("`flows` shows "<n> flows · <owner>"").
-- [ ] T007 Run `pnpm schema:generate` and commit `packages/schema/src/generated/types.ts` and `zod.ts`.
-- [ ] T008 [P] Add every new field (and `subtitleField: "flows"`) to the existing views in `packages/schema/examples/full.sododeck.json`. Add invalid cases to `packages/schema/test/fixtures.ts`: an unknown kind in `excludeKinds`, a duplicate id in `pinned`, a bad id pattern in `collapsed`, and `subtitleField: "flow"`. Run `pnpm --filter @sododeck/schema test` (Ajv/Zod parity green).
+- [x] T006 Add the optional `View` fields `excludeGroups` (`IdList`), `excludeKinds` (array of `NodeKind`), `excludeTags` (`Tags`), `dimKinds` (array of `NodeKind`), `pinned` (`IdList`) and `collapsed` (`IdList`) to `packages/schema/schema/v1.json`, all with `uniqueItems: true` and a one-line `description` each. Add `flows` to `SubtitleField` and update its description ("`flows` shows "<n> flows · <owner>"").
+- [x] T007 Run `pnpm schema:generate` and commit `packages/schema/src/generated/types.ts` and `zod.ts`.
+- [x] T008 [P] Add every new field (and `subtitleField: "flows"`) to the existing views in `packages/schema/examples/full.sododeck.json`. Add invalid cases to `packages/schema/test/fixtures.ts`: an unknown kind in `excludeKinds`, a duplicate id in `pinned`, a bad id pattern in `collapsed`, and `subtitleField: "flow"`. Run `pnpm --filter @sododeck/schema test` (Ajv/Zod parity green).
 
 ### Model (contract: [model-views.md](contracts/model-views.md))
 
-- [ ] T009 Write `packages/model/test/views.test.ts` (failing first) covering:
+- [x] T009 Write `packages/model/test/views.test.ts` (failing first) covering:
   - `resolveViews` (stored views vs presets, and array identity);
   - `baseViewId`;
   - `nextCustomTitle` (lowest unused n);
   - `viewPosition` (override in a non-base view, override in the base view, base position, undefined).
-- [ ] T010 Implement `packages/model/src/views.ts`: `VIEW_PRESETS` (ids `system` / `feature` / `infra`; titles "System" / "Feature" / "Infra"; subtitles `tech` / `flows` / `host`; Infra `dimKinds: ['client']`), `PRESET_VIEW_IDS`, `resolveViews`, `baseViewId`, `nextCustomTitle`. Add `viewPosition` to `packages/model/src/geometry.ts`. Export everything from `packages/model/src/index.ts`.
-- [ ] T011 Extend `packages/model/test/views.test.ts` with the editor-op cases:
+- [x] T010 Implement `packages/model/src/views.ts`: `VIEW_PRESETS` (ids `system` / `feature` / `infra`; titles "System" / "Feature" / "Infra"; subtitles `tech` / `flows` / `host`; Infra `dimKinds: ['client']`), `PRESET_VIEW_IDS`, `resolveViews`, `baseViewId`, `nextCustomTitle`. Add `viewPosition` to `packages/model/src/geometry.ts`. Export everything from `packages/model/src/index.ts`.
+- [x] T011 Extend `packages/model/test/views.test.ts` with the editor-op cases:
   - materialization: the first `moveInView('infra', …)` on a deck with no views writes the 3 presets, then the change; one `undo()` undoes only the change and the 3 views stay;
   - move in Infra (materializes), `setCollapsed`, `undo()`: the move is undone, the views and the collapse stay (FR-050);
   - base-view rule: `moveInView('system', …)` writes `node.position`, `moveInView('infra', …)` writes `view.positions`, and unknown node ids are skipped;
@@ -87,16 +87,16 @@
   - `addView` returns an id, uses the title "Custom <n>", and appends at the end;
   - `removeView` of the last view → `invalid`;
   - after `removeView`, undo restores every field.
-- [ ] T012 Implement `packages/model/src/ops/views.ts` (`materializePresets`, run in its own transaction with a second, untracked origin `{ editor: 'sododeck', untracked: true }` created here, registered in `editorOrigins` but not in the `UndoManager`'s `trackedOrigins`, before the tracked change; `moveInView`, `setPinned`, `updateView`, `addView`, `removeView`). Validate before writing using the generated Zod. Store lists as `Y.Array` and remove empty lists. Wire the ops into `DeckEditor` in `packages/model/src/editor.ts` and add them to the `DeckEditor` interface with doc comments.
-- [ ] T013 Extend `packages/model/test/views.test.ts` with the collapse-origin cases (R5):
+- [x] T012 Implement `packages/model/src/ops/views.ts` (`materializePresets`, run in its own transaction with a second, untracked origin `{ editor: 'sododeck', untracked: true }` created here, registered in `editorOrigins` but not in the `UndoManager`'s `trackedOrigins`, before the tracked change; `moveInView`, `setPinned`, `updateView`, `addView`, `removeView`). Validate before writing using the generated Zod. Store lists as `Y.Array` and remove empty lists. Wire the ops into `DeckEditor` in `packages/model/src/editor.ts` and add them to the `DeckEditor` interface with doc comments.
+- [x] T013 Extend `packages/model/test/views.test.ts` with the collapse-origin cases (R5):
   - `setCollapsed` alone leaves `canUndo()` false;
   - rename a node, collapse, then `undo()`: the rename is undone and the group stays collapsed;
   - a collapse as the first view change materializes presets; nothing is undoable afterwards;
   - `removeView`, then undo, restores `collapsed`;
   - a second `Y.Doc` synced with `Y.applyUpdate` sees the collapse;
   - `observeDeck` reports origin `local` in the writing doc and `remote` in the other.
-- [ ] T014 Implement `setCollapsed` with the untracked origin from T012 (`packages/model/src/editor.ts`, `packages/model/src/ops/views.ts`). Materialization inside it uses the same origin.
-- [ ] T015 [P] Cascade and references (failing tests first in `packages/model/test/cascade.test.ts` and `integrity.test.ts`):
+- [x] T014 Implement `setCollapsed` with the untracked origin from T012 (`packages/model/src/editor.ts`, `packages/model/src/ops/views.ts`). Materialization inside it uses the same origin.
+- [x] T015 [P] Cascade and references (failing tests first in `packages/model/test/cascade.test.ts` and `integrity.test.ts`):
   - removing a node also drops it from `pinned`;
   - removing a group drops it from `excludeGroups` and `collapsed` in every view, and those views are listed in `RemovalResult.updated`;
   - `checkIntegrity` reports dangling ids in `pinned`, `excludeGroups` and `collapsed`;
@@ -104,29 +104,29 @@
 
   Implement this in `packages/model/src/ops/cascade.ts`, `packages/model/src/ops/refs.ts` and `packages/model/src/integrity.ts`.
 
-- [ ] T016 [P] Add a round-trip case to `packages/model/test/round-trip.test.ts`: a deck whose views use every new field and `subtitleField: 'flows'`. Update the Yjs layout comment at the top of `packages/model/src/deck.ts`.
+- [x] T016 [P] Add a round-trip case to `packages/model/test/round-trip.test.ts`: a deck whose views use every new field and `subtitleField: 'flows'`. Update the Yjs layout comment at the top of `packages/model/src/deck.ts`.
 
 ### UI primitives
 
-- [ ] T017 [P] Add `packages/ui/src/components/checkbox.tsx` and `radio-group.tsx`: thin wrappers of `radix-ui` `Checkbox` / `RadioGroup` with token-only styles, a visible focus ring and label association. Add tests (by role: `checkbox`, `radiogroup` / `radio`; keyboard toggling) and export them from the package index. Add them to the design gallery `apps/app/src/design-gallery/fields-section.tsx`.
+- [x] T017 [P] Add `packages/ui/src/components/checkbox.tsx` and `radio-group.tsx`: thin wrappers of `radix-ui` `Checkbox` / `RadioGroup` with token-only styles, a visible focus ring and label association. Add tests (by role: `checkbox`, `radiogroup` / `radio`; keyboard toggling) and export them from the package index. Add them to the design gallery `apps/app/src/design-gallery/fields-section.tsx`.
 
 ### App plumbing (no visible change)
 
-- [ ] T018 Write failing tests in `apps/app/src/state/ui-store.test.ts`, then add `currentViewId: Id | null`, `revealed: ReadonlySet<Id>`, `layoutRun: { status: 'idle' | 'running' | 'slow'; viewId?: Id }`, `switchView(id)` (clears `selection`, `drill`, `focusMode` and `revealed`), `reveal(id)` and `setLayoutRun`. Reset all of them in `resetForDeck`. File: `apps/app/src/state/ui-store.ts`.
-- [ ] T019 Create `apps/app/src/editor/views/use-current-view.ts` (+ test):
+- [x] T018 Write failing tests in `apps/app/src/state/ui-store.test.ts`, then add `currentViewId: Id | null`, `revealed: ReadonlySet<Id>`, `layoutRun: { status: 'idle' | 'running' | 'slow'; viewId?: Id }`, `switchView(id)` (clears `selection`, `drill`, `focusMode` and `revealed`), `reveal(id)` and `setLayoutRun`. Reset all of them in `resetForDeck`. File: `apps/app/src/state/ui-store.ts`.
+- [x] T019 Create `apps/app/src/editor/views/use-current-view.ts` (+ test):
   - `useViews()` → `resolveViews(deck)`;
   - `useCurrentView()` → the view for `currentViewId`, falling back to the first view;
   - `useIsBaseView()`;
   - `useViewActions()`, which wraps the editor view ops with the current view id: `move`, `pin`, `update`, `add`, `remove` and `setCollapsed`.
-- [ ] T020 Write `apps/app/src/editor/view-filter.test.ts` (failing first), then implement `apps/app/src/editor/view-filter.ts` (R7):
+- [x] T020 Write `apps/app/src/editor/view-filter.test.ts` (failing first), then implement `apps/app/src/editor/view-filter.ts` (R7):
   - `viewFilter(deck, view, revealed)` → `{ hidden, dimmed }`, handling `includes` whitelist, `excludeGroups` with nested groups, `excludeKinds`, `excludeTags` (any tag matches), `feature` (nodes at either end of an edge used by a step of a flow with that feature), `dimKinds`, and `revealed` (never hidden);
   - `flowCountByNode(deck)`, memoized per deck identity;
   - `firstViewShowing(deck, views, nodeId)`.
 
   Cover each rule and a 500-node timing assertion (< 2 ms, loose).
 
-- [ ] T021 Add a `hidden: ReadonlySet<string>` argument to `visibleGraph` in `apps/app/src/editor/visible-graph.ts`. Hidden nodes are treated as absent: their edges are dropped, not merged into cards and not turned into port pills. Add `hidden` to the cache key. Extend `visible-graph.test.ts` (hidden node, hidden inside a collapsed group, hidden edge end at a scope border). Update every call site (listed in research R6/R7: `canvas.tsx`, `use-canvas-handlers.ts`, `use-canvas-shortcuts.ts`, `flows/flow-mode.ts`, `flows/step-player.tsx`, `merged-edge-popover.tsx`, `inspector/group-inspector.tsx`, `port-pill-node.tsx`, `outline.ts`) to pass the current view's `hidden`, through a `useViewFilter()` hook in `apps/app/src/editor/views/use-current-view.ts`.
-- [ ] T022 Add a `ViewRender` input to `toFlowNodes` in `apps/app/src/editor/deck-to-flow.ts`:
+- [x] T021 Add a `hidden: ReadonlySet<string>` argument to `visibleGraph` in `apps/app/src/editor/visible-graph.ts`. Hidden nodes are treated as absent: their edges are dropped, not merged into cards and not turned into port pills. Add `hidden` to the cache key. Extend `visible-graph.test.ts` (hidden node, hidden inside a collapsed group, hidden edge end at a scope border). Update every call site (listed in research R6/R7: `canvas.tsx`, `use-canvas-handlers.ts`, `use-canvas-shortcuts.ts`, `flows/flow-mode.ts`, `flows/step-player.tsx`, `merged-edge-popover.tsx`, `inspector/group-inspector.tsx`, `port-pill-node.tsx`, `outline.ts`) to pass the current view's `hidden`, through a `useViewFilter()` hook in `apps/app/src/editor/views/use-current-view.ts`.
+- [x] T022 Add a `ViewRender` input to `toFlowNodes` in `apps/app/src/editor/deck-to-flow.ts`:
   - `position(node, index)`: `viewPosition` from the model, else `displayPosition`;
   - `subtitle(node)`: tech / host / owner / "<n> flows · <owner>" ("1 flow", "0 flows", owner omitted when empty) / none;
   - `dimmed`;
@@ -134,8 +134,8 @@
 
   Put `subtitle`, `viewDimmed` and `pinned` into node `data` and the node cache key. Extend `deck-to-flow.test.ts` for every subtitle field, override vs base position, and the cache key.
 
-- [ ] T023 Route drags through the view: in `onNodesChange` in `apps/app/src/editor/use-canvas-handlers.ts`, replace `editor.update('nodes', id, { position })` with `editor.moveInView(currentViewId, positions)`, still inside `batch` and the drag gesture. Sticky moves are unchanged. Extend the canvas drag test in `apps/app/src/editor/canvas.test.tsx`: in the base view the drag writes `node.position`; in another view it writes `view.positions`; and a drag is one undo step.
-- [ ] T024 Add a document-identity test in `apps/app/src/editor/views/view-switcher.test.tsx` (the file is created here with just this test): opening a deck with no views and switching the current view through the store three times leaves `serializeDeck` byte-identical (FR-001, FR-005).
+- [x] T023 Route drags through the view: in `onNodesChange` in `apps/app/src/editor/use-canvas-handlers.ts`, replace `editor.update('nodes', id, { position })` with `editor.moveInView(currentViewId, positions)`, still inside `batch` and the drag gesture. Sticky moves are unchanged. Extend the canvas drag test in `apps/app/src/editor/canvas.test.tsx`: in the base view the drag writes `node.position`; in another view it writes `view.positions`; and a drag is one undo step.
+- [x] T024 Add a document-identity test in `apps/app/src/editor/views/view-switcher.test.tsx` (the file is created here with just this test): opening a deck with no views and switching the current view through the store three times leaves `serializeDeck` byte-identical (FR-001, FR-005).
 
 **Checkpoint**: `pnpm lint && pnpm typecheck && pnpm test` are green, and the canvas is visually unchanged on the demo deck.
 
@@ -147,16 +147,16 @@
 
 **Independent Test**: on the demo deck, switch between System, Feature and Infra. Check subtitles, Infra dimming, the crumb and the announcement, and that a rename in Infra shows in System (spec US1 scenarios 1–5).
 
-- [ ] T025 [P] [US1] Tests in `apps/app/src/editor/deck-node.test.tsx`: the subtitle text follows `data.subtitle`; a view-dimmed node's accessible name ends with ", dimmed in this view" and it stays focusable and clickable; the subtitle is hidden at the System and Landscape levels as in 010.
-- [ ] T026 [US1] Implement in `apps/app/src/editor/deck-node.tsx`: render `data.subtitle` where `tech` was shown, add the `view-dimmed` class and the accessible-name suffix. Add `.view-dimmed` (opacity from a token, 0.4 per design 20) to `apps/app/src/index.css`, with a DESIGN.md token added in `packages/ui` if none exists.
-- [ ] T027 [P] [US1] Create `apps/app/src/editor/views/view-title.ts` (+ test) with `viewCrumbTitle(view)` → "<title> view". Replace the "System view" literals in `apps/app/src/editor/drill-crumbs.tsx`, `outline.ts` (`parentScopeTitle` gains a `view` argument) and `canvas.tsx`. Replace the duplicated `scopeTitle` in `use-canvas-shortcuts.ts` with the one from `outline.ts`. Existing tests that assert "System view" must still pass.
-- [ ] T028 [P] [US1] Write tests in `apps/app/src/editor/views/view-switcher.test.tsx` following [views-ui.md](contracts/views-ui.md):
+- [x] T025 [P] [US1] Tests in `apps/app/src/editor/deck-node.test.tsx`: the subtitle text follows `data.subtitle`; a view-dimmed node's accessible name ends with ", dimmed in this view" and it stays focusable and clickable; the subtitle is hidden at the System and Landscape levels as in 010.
+- [x] T026 [US1] Implement in `apps/app/src/editor/deck-node.tsx`: render `data.subtitle` where `tech` was shown, add the `view-dimmed` class and the accessible-name suffix. Add `.view-dimmed` (opacity from a token, 0.4 per design 20) to `apps/app/src/index.css`, with a DESIGN.md token added in `packages/ui` if none exists.
+- [x] T027 [P] [US1] Create `apps/app/src/editor/views/view-title.ts` (+ test) with `viewCrumbTitle(view)` → "<title> view". Replace the "System view" literals in `apps/app/src/editor/drill-crumbs.tsx`, `outline.ts` (`parentScopeTitle` gains a `view` argument) and `canvas.tsx`. Replace the duplicated `scopeTitle` in `use-canvas-shortcuts.ts` with the one from `outline.ts`. Existing tests that assert "System view" must still pass.
+- [x] T028 [P] [US1] Write tests in `apps/app/src/editor/views/view-switcher.test.tsx` following [views-ui.md](contracts/views-ui.md):
   - `tablist` "Views" with tabs "System, system view", "Feature, feature view" and "Infra, infra view", with `aria-selected`;
   - ←/→, Home/End and Enter/Space;
   - a click switches views, announces "Infra view", and clears selection, drill-in and focus.
-- [ ] T029 [US1] Implement the tab list in `apps/app/src/editor/views/view-switcher.tsx`: a segmented tab list per design 02/20 using tokens, with a roving tabindex. On select it calls `switchView`, then `fitView` over the visible nodes with zoom clamped to 40–130% (the 010 drill-in fit), then `announce`.
-- [ ] T030 [US1] Mount `ViewSwitcher` in the top bar's centre slot in `apps/app/src/editor/top-bar.tsx`. `SessionChip` replaces it while a flow is being recorded or edited (design 41). Update `top-bar.test.tsx`: the switcher is shown on the canvas screen, hidden while recording, and the crumb reads "Infra view" after switching.
-- [ ] T031 [US1] Wire the canvas in `apps/app/src/editor/canvas.tsx`: the current view gives `viewFilter`, then `visibleGraph`, then `ViewRender`, all memoized on `[deck, view, revealed, scope, collapsed]`. Add `useViewSync`: if the current view disappears (remote delete or undo), switch to its left neighbour and announce "<title> view". Add canvas tests: Infra subtitles show host and clients are dimmed; a title edit made while in Infra shows in System (FR-015); switching doesn't write. Enable the `view-switch` bench scenario from T003.
+- [x] T029 [US1] Implement the tab list in `apps/app/src/editor/views/view-switcher.tsx`: a segmented tab list per design 02/20 using tokens, with a roving tabindex. On select it calls `switchView`, then `fitView` over the visible nodes with zoom clamped to 40–130% (the 010 drill-in fit), then `announce`.
+- [x] T030 [US1] Mount `ViewSwitcher` in the top bar's centre slot in `apps/app/src/editor/top-bar.tsx`. `SessionChip` replaces it while a flow is being recorded or edited (design 41). Update `top-bar.test.tsx`: the switcher is shown on the canvas screen, hidden while recording, and the crumb reads "Infra view" after switching.
+- [x] T031 [US1] Wire the canvas in `apps/app/src/editor/canvas.tsx`: the current view gives `viewFilter`, then `visibleGraph`, then `ViewRender`, all memoized on `[deck, view, revealed, scope, collapsed]`. Add `useViewSync`: if the current view disappears (remote delete or undo), switch to its left neighbour and announce "<title> view". Add canvas tests: Infra subtitles show host and clients are dimmed; a title edit made while in Infra shows in System (FR-015); switching doesn't write. Enable the `view-switch` bench scenario from T003.
 
 **Checkpoint**: US1 works end to end. Quickstart scenarios 1, 2 and 4 pass.
 
@@ -168,13 +168,13 @@
 
 **Independent Test**: move components in System and Infra, switch between them, reload, and undo from another view (spec US2 scenarios 1–4, FR-045).
 
-- [ ] T032 [P] [US2] Canvas tests in `apps/app/src/editor/canvas.test.tsx`:
+- [x] T032 [P] [US2] Canvas tests in `apps/app/src/editor/canvas.test.tsx`:
   - a move in Infra doesn't change System;
   - a node never moved in Infra shows at its base position;
   - a move in System moves the node in Feature when Feature has no override;
   - after a reload (re-create the deck from `toJSON`), both views keep their positions.
-- [ ] T033 [P] [US2] Tests in `apps/app/src/editor/views/undo-context.test.ts` for `describeUndo(changes, currentViewId)`: only `views` changes for one other view → `{ viewId, action }`, with action `move` / `pin` / `rename` / `view settings` / `change` from the changed keys; changes that include `nodes` or touch the current view → null.
-- [ ] T034 [US2] Implement `apps/app/src/editor/views/undo-context.ts`: `describeUndo` plus `useUndoAcrossViews()`, which subscribes to `observeDeck` for origin `undo` / `redo` and shows the toast "Undid <action> in <title>" (or "Redid …") with the action "Go to <title>" (calls `switchView`), and announces the same text. Mount it in the editor shell next to `useSelectionSync` in `apps/app/src/editor/canvas.tsx`. Add a component test: a move in Infra, switch to System, ⌘Z → the toast appears, and "Go to Infra" switches.
+- [x] T033 [P] [US2] Tests in `apps/app/src/editor/views/undo-context.test.ts` for `describeUndo(changes, currentViewId)`: only `views` changes for one other view → `{ viewId, action }`, with action `move` / `pin` / `rename` / `view settings` / `change` from the changed keys; changes that include `nodes` or touch the current view → null.
+- [x] T034 [US2] Implement `apps/app/src/editor/views/undo-context.ts`: `describeUndo` plus `useUndoAcrossViews()`, which subscribes to `observeDeck` for origin `undo` / `redo` and shows the toast "Undid <action> in <title>" (or "Redid …") with the action "Go to <title>" (calls `switchView`), and announces the same text. Mount it in the editor shell next to `useSelectionSync` in `apps/app/src/editor/canvas.tsx`. Add a component test: a move in Infra, switch to System, ⌘Z → the toast appears, and "Go to Infra" switches.
 
 **Checkpoint**: quickstart scenarios 3, 5 and 13 pass.
 
@@ -188,45 +188,45 @@
 
 ### Pins
 
-- [ ] T035 [P] [US3] Tests in `apps/app/src/editor/deck-node.test.tsx`: a pinned node shows an `img` "Pinned" at every level except Landscape, and its name contains ", pinned".
-- [ ] T036 [US3] Implement the pin glyph in `apps/app/src/editor/deck-node.tsx` using lucide `Pin`, positioned per the tokens.
-- [ ] T037 [P] [US3] Tests in `apps/app/src/editor/inspector/node-inspector.test.tsx` and `apps/app/src/editor/canvas-toolbar.test.tsx`:
+- [x] T035 [P] [US3] Tests in `apps/app/src/editor/deck-node.test.tsx`: a pinned node shows an `img` "Pinned" at every level except Landscape, and its name contains ", pinned".
+- [x] T036 [US3] Implement the pin glyph in `apps/app/src/editor/deck-node.tsx` using lucide `Pin`, positioned per the tokens.
+- [x] T037 [P] [US3] Tests in `apps/app/src/editor/inspector/node-inspector.test.tsx` and `apps/app/src/editor/canvas-toolbar.test.tsx`:
   - `switch` "Pin position" pins and unpins in one undo step;
   - a mixed multi-selection shows the mixed state and toggling pins all;
   - the toolbar `button` "Pin" / "Unpin" (`aria-pressed`) appears when the selection has nodes;
   - dragging a pinned node keeps it pinned.
-- [ ] T038 [US3] Implement the "Pin position" switch in `apps/app/src/editor/inspector/node-inspector.tsx` and the Pin/Unpin toggle in `apps/app/src/editor/canvas-toolbar.tsx`, both through `useViewActions().pin`.
+- [x] T038 [US3] Implement the "Pin position" switch in `apps/app/src/editor/inspector/node-inspector.tsx` and the Pin/Unpin toggle in `apps/app/src/editor/canvas-toolbar.tsx`, both through `useViewActions().pin`.
 
 ### Layout engine (worker)
 
-- [ ] T039 [P] [US3] Tests in `apps/app/src/layout/elk-layout.test.ts` (Node environment):
+- [x] T039 [P] [US3] Tests in `apps/app/src/layout/elk-layout.test.ts` (Node environment):
   - `applyPins`: pinned ids end exactly at their positions; no unpinned box overlaps a pinned box or another unpinned box; the result is deterministic;
   - `computeLayout` with groups: every group's members form one contiguous bounding box that overlaps no other group's box;
   - a collapsed card is laid out as one node;
   - 200 nodes, 400 edges and 5 pins finish in < 2 s (loose CI bound).
-- [ ] T040 [US3] Extend `apps/app/src/layout/elk-layout.ts` (R9):
+- [x] T040 [US3] Extend `apps/app/src/layout/elk-layout.ts` (R9):
   - `LayoutRequest` gains `groups: { id; parent? }[]`, `parent?` on nodes and `pinned: Record<string, { x; y }>`;
   - groups become ELK compound nodes with `elk.hierarchyHandling: INCLUDE_CHILDREN` and padding matching `groupBounds`;
   - add a pure `applyPins(result, request)`: translate by the median pin offset, restore pins exactly, then run a deterministic overlap sweep that pushes unpinned boxes right, then down;
   - remove the `TODO(M4)`.
-- [ ] T041 [US3] Add cancellation to `apps/app/src/layout/layout-client.ts`: `cancel()` terminates the worker and rejects pending calls with a `LayoutCancelled` error. The next `layout()` recreates the worker lazily.
+- [x] T041 [US3] Add cancellation to `apps/app/src/layout/layout-client.ts`: `cancel()` terminates the worker and rejects pending calls with a `LayoutCancelled` error. The next `layout()` recreates the worker lazily.
 
 ### Orchestration and UI
 
-- [ ] T042 [P] [US3] Tests in `apps/app/src/editor/tidy-layout.test.ts` for `buildLayoutRequest(deck, graph, view)`: it includes only visible nodes of the current scope; hidden nodes aren't sent; a collapsed group is one node of `COLLAPSED_CARD_SIZE` and its members receive the card's delta in `expandResult`; pinned positions come from the view's pins at their displayed positions; node sizes follow `canvas-geometry`.
-- [ ] T043 [US3] Implement `apps/app/src/editor/tidy-layout.ts`: `buildLayoutRequest`, `expandResult`, and `useTidyLayout()`:
+- [x] T042 [P] [US3] Tests in `apps/app/src/editor/tidy-layout.test.ts` for `buildLayoutRequest(deck, graph, view)`: it includes only visible nodes of the current scope; hidden nodes aren't sent; a collapsed group is one node of `COLLAPSED_CARD_SIZE` and its members receive the card's delta in `expandResult`; pinned positions come from the view's pins at their displayed positions; node sizes follow `canvas-geometry`.
+- [x] T043 [US3] Implement `apps/app/src/editor/tidy-layout.ts`: `buildLayoutRequest`, `expandResult`, and `useTidyLayout()`:
   - create the client on first use;
   - set `layoutRun` to `running`, then `slow` after 500 ms;
   - on the result, apply with one `editor.batch(() => moveInView(viewId, positions))`, skipping ids that were deleted or pinned in the meantime;
   - `fitView`, then announce "Layout tidied, <n> components moved";
   - Cancel → `client.cancel()` and announce "Layout cancelled".
-- [ ] T044 [P] [US3] Tests in `apps/app/src/editor/canvas-toolbar.test.tsx`:
+- [x] T044 [P] [US3] Tests in `apps/app/src/editor/canvas-toolbar.test.tsx`:
   - `button` "Tidy layout" is present;
   - it's disabled with the tooltips "Not available while a flow is open", "Nothing to arrange" and "All components are pinned";
   - the `progressbar` "Tidying layout" and `button` "Cancel layout" appear after 500 ms (fake timers, mocked client);
   - after the result, one ⌘Z restores every previous position;
   - while drilled in, only the scope's members move.
-- [ ] T045 [US3] Implement the Tidy layout button, progress bar and Cancel in `apps/app/src/editor/canvas-toolbar.tsx` using lucide `LayoutGrid`. Enable the `tidy-layout-200` and `pan-during-layout` bench scenarios from T003.
+- [x] T045 [US3] Implement the Tidy layout button, progress bar and Cancel in `apps/app/src/editor/canvas-toolbar.tsx` using lucide `LayoutGrid`. Enable the `tidy-layout-200` and `pan-during-layout` bench scenarios from T003.
 
 **Checkpoint**: quickstart scenarios 9 and 10 pass. Record the bench numbers for SC-001 and SC-002.
 
@@ -238,33 +238,33 @@
 
 **Independent Test**: create "Custom 1", rename it, hide a group, a kind and a tag, use ⌘K on a hidden component, then delete the view and undo from the toast (spec US4 scenarios 1–6, FR-016).
 
-- [ ] T046 [P] [US4] Tests in `apps/app/src/editor/views/view-switcher.test.tsx`:
+- [x] T046 [P] [US4] Tests in `apps/app/src/editor/views/view-switcher.test.tsx`:
   - `button` "Add view" adds "Custom 1", selects it and shows the toast `View "Custom 1" created`; a second click adds "Custom 2";
   - on the first add to a deck with no views, `views` holds 4 entries;
   - the overflow menu "More views" appears when tabs don't fit (mock `ResizeObserver`), and the current tab stays visible;
   - without `ResizeObserver`, every tab is shown.
-- [ ] T047 [US4] Implement "Add view" and the overflow handling in `apps/app/src/editor/views/view-switcher.tsx` (`supportsResizeObserver` from `apps/app/src/lib/features.ts`).
-- [ ] T048 [P] [US4] Tests in `apps/app/src/editor/views/view-tab-menu.test.tsx`:
+- [x] T047 [US4] Implement "Add view" and the overflow handling in `apps/app/src/editor/views/view-switcher.tsx` (`supportsResizeObserver` from `apps/app/src/lib/features.ts`).
+- [x] T048 [P] [US4] Tests in `apps/app/src/editor/views/view-tab-menu.test.tsx`:
   - the menu opens by right-click, `button` "View options for <title>" and Shift+F10;
   - Rename, by double-click or menu, is a `textbox` "View name": Enter commits, Esc cancels, and blank input shows "A view needs a name" and keeps the title;
   - Delete view opens `alertdialog` 'Delete view "<title>"?'; after confirming, the Undo toast `View "<title>" deleted` restores the view with its settings;
   - Delete view is disabled on the last view, with the tooltip "A deck needs at least one view";
   - deleting the current view selects the view on its left.
-- [ ] T049 [US4] Implement `apps/app/src/editor/views/view-tab-menu.tsx` (`DropdownMenu` + `ContextMenu` from `@sododeck/ui`, `InlineEdit` for the rename, `ConfirmDeleteDialog` pattern, `useUndoToast`) and wire it into `view-switcher.tsx`.
-- [ ] T050 [P] [US4] Tests in `apps/app/src/editor/views/view-settings-popover.test.tsx`:
+- [x] T049 [US4] Implement `apps/app/src/editor/views/view-tab-menu.tsx` (`DropdownMenu` + `ContextMenu` from `@sododeck/ui`, `InlineEdit` for the rename, `ConfirmDeleteDialog` pattern, `useUndoToast`) and wire it into `view-switcher.tsx`.
+- [x] T050 [P] [US4] Tests in `apps/app/src/editor/views/view-settings-popover.test.tsx`:
   - `dialog` "View settings: <title>";
   - `radiogroup` "Subtitle" with 5 options;
   - the groups "Hide groups", "Hide kinds", "Hide tags" and "Dim kinds" list only kinds and tags used in the deck (plus any already chosen);
   - `combobox` "Feature" offers "All features" or a feature, and shows "(deleted)" for a deleted feature;
   - each change is one undo step and updates the canvas (a hidden group's nodes and their edges disappear only in this view);
   - Esc returns focus to the tab.
-- [ ] T051 [US4] Implement `apps/app/src/editor/views/view-settings-popover.tsx` (`Popover`, `RadioGroup`, `Checkbox`, `Select`) through `useViewActions().update`. Open it from "View settings…" in the tab menu.
-- [ ] T052 [P] [US4] Revealed-node rule: a test in `apps/app/src/editor/canvas.test.tsx` where a node is created (palette drop) while its kind is hidden in the current view. It stays visible with the note "Hidden in this view" until the view is switched, and then it's hidden. Implement it by calling `reveal(id)` from the node-creation path in `apps/app/src/editor/canvas-actions.ts`, and render the note in `deck-node.tsx`.
-- [ ] T053 [P] [US4] Tests in `apps/app/src/editor/command-palette/palette-results.test.ts` and `open-result.test.ts`:
+- [x] T051 [US4] Implement `apps/app/src/editor/views/view-settings-popover.tsx` (`Popover`, `RadioGroup`, `Checkbox`, `Select`) through `useViewActions().update`. Open it from "View settings…" in the tab menu.
+- [x] T052 [P] [US4] Revealed-node rule: a test in `apps/app/src/editor/canvas.test.tsx` where a node is created (palette drop) while its kind is hidden in the current view. It stays visible with the note "Hidden in this view" until the view is switched, and then it's hidden. Implement it by calling `reveal(id)` from the node-creation path in `apps/app/src/editor/canvas-actions.ts`, and render the note in `deck-node.tsx`.
+- [x] T053 [P] [US4] Tests in `apps/app/src/editor/command-palette/palette-results.test.ts` and `open-result.test.ts`:
   - a hidden node's result meta ends with " · Hidden in this view";
   - choosing it keeps the view, selects nothing, and shows the toast "<title> is hidden in this view" with `button` "Show in System" (focused; Enter switches views and selects the node);
   - when no view shows the node, the toast reads "<title> is hidden in every view" with no action.
-- [ ] T054 [US4] Implement FR-016: `buildPaletteResults` takes `hidden`, `openResult` gets `isHidden` / `firstViewShowing` in its context, and the toast is added in `apps/app/src/editor/command-palette/open-result.ts`. Pass the values from `apps/app/src/editor/command-palette/command-palette.tsx`.
+- [x] T054 [US4] Implement FR-016: `buildPaletteResults` takes `hidden`, `openResult` gets `isHidden` / `firstViewShowing` in its context, and the toast is added in `apps/app/src/editor/command-palette/open-result.ts`. Pass the values from `apps/app/src/editor/command-palette/command-palette.tsx`.
 
 **Checkpoint**: quickstart scenarios 6, 7 and 8 pass.
 
@@ -276,7 +276,7 @@
 
 **Independent Test**: collapse different groups in two views, switch, reload, undo and use two tabs (spec US5 scenarios 1–5).
 
-- [ ] T055 [P] [US5] Tests (failing first) in `apps/app/src/editor/views/use-current-view.test.ts`:
+- [x] T055 [P] [US5] Tests (failing first) in `apps/app/src/editor/views/use-current-view.test.ts`:
   - `useCollapsed()` returns the current view's `collapsed` as a `ReadonlySet`, with the same identity while the array is unchanged;
   - `useViewActions().setCollapsed` writes to the current view.
 
@@ -286,8 +286,8 @@
   - rename then collapse, then ⌘Z: the rename is undone and the group stays collapsed;
   - the JSON panel's Deck tab shows the group id in `views[0].collapsed` and nothing on the group.
 
-- [ ] T056 [US5] Remove `collapsed`, `setCollapsed`, `toggleCollapsed` and `expandAll` from `apps/app/src/state/ui-store.ts` (and their tests). Add `useCollapsed()` to `apps/app/src/editor/views/use-current-view.ts`. Replace every reader and writer with `useCollapsed()` / `useViewActions().setCollapsed`: `canvas.tsx`, `use-canvas-handlers.ts`, `use-canvas-shortcuts.ts`, `group-boundary-node.tsx`, `collapsed-group-node.tsx`, `merged-edge-popover.tsx`, `inspector/group-inspector.tsx`, `port-pill-node.tsx`, `flows/flow-mode.ts`, `flows/step-player.tsx` and `outline.ts`. Keep `pruneView` for `drill` only. All 010 tests must stay green.
-- [ ] T057 [US5] Multi-tab test in `apps/app/src/editor/canvas.test.tsx` (two docs linked by update exchange, as in the existing tab-sync tests in `apps/app/src/storage`): a collapse in one shows in the other on the same view. Update the `groups-collapsed` and `collapse-toggle` bench scenarios in `apps/app/bench/perf.bench.ts` to collapse through the view.
+- [x] T056 [US5] Remove `collapsed`, `setCollapsed`, `toggleCollapsed` and `expandAll` from `apps/app/src/state/ui-store.ts` (and their tests). Add `useCollapsed()` to `apps/app/src/editor/views/use-current-view.ts`. Replace every reader and writer with `useCollapsed()` / `useViewActions().setCollapsed`: `canvas.tsx`, `use-canvas-handlers.ts`, `use-canvas-shortcuts.ts`, `group-boundary-node.tsx`, `collapsed-group-node.tsx`, `merged-edge-popover.tsx`, `inspector/group-inspector.tsx`, `port-pill-node.tsx`, `flows/flow-mode.ts`, `flows/step-player.tsx` and `outline.ts`. Keep `pruneView` for `drill` only. All 010 tests must stay green.
+- [x] T057 [US5] Multi-tab test in `apps/app/src/editor/canvas.test.tsx` (two docs linked by update exchange, as in the existing tab-sync tests in `apps/app/src/storage`): a collapse in one shows in the other on the same view. Update the `groups-collapsed` and `collapse-toggle` bench scenarios in `apps/app/bench/perf.bench.ts` to collapse through the view.
 
 **Checkpoint**: quickstart scenarios 11 and 12 pass. The 010 bench scenarios show no regression.
 
@@ -296,10 +296,10 @@
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 - [ ] T058 [P] Accessibility pass: an axe check in the component tests for the switcher, tab menu, settings popover and toolbar (Tidy and Pin), in light and dark themes (SC-007); keyboard-only run of quickstart scenario 14.
-- [ ] T059 Run `pnpm bench` and save `specs/011-views-autolayout/bench-after.md` with before/after numbers for every scenario, including the new ones (SC-001–SC-003) and the 010 ones (no regression below 60 fps).
-- [ ] T060 Bundle check: `pnpm --filter @sododeck/app build`, then confirm that `elkjs` appears only in the layout worker chunk (list the chunks in the report).
+- [x] T059 Run `pnpm bench` and save `specs/011-views-autolayout/bench-after.md` with before/after numbers for every scenario, including the new ones (SC-001–SC-003) and the 010 ones (no regression below 60 fps).
+- [x] T060 Bundle check: `pnpm --filter @sododeck/app build`, then confirm that `elkjs` appears only in the layout worker chunk (list the chunks in the report).
 - [ ] T061 Visual check: screenshots at 1440×900, light and dark, next to `docs/design/screens/02-*`, `20-*`, `21-*` and `22-*`, in `specs/011-views-autolayout/visual-check.md`. Add separate screenshots of the undesigned parts (settings popover, Tidy button with its progress bar, pin glyph) for founder approval.
-- [ ] T062 [P] Docs:
+- [x] T062 [P] Docs:
   - `packages/model/CLAUDE.md` ("Added by 011": views API, untracked collapse origin, cascade);
   - `apps/app/CLAUDE.md` (map: `editor/views/`, `tidy-layout.ts`, `view-filter.ts`; rules: the current view is UI state, collapse is document data, drags go through `moveInView`);
   - `packages/ui/CLAUDE.md` (`Checkbox`, `RadioGroup`);
