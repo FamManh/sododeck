@@ -460,7 +460,9 @@ for (const scenario of [
 test(`playing at 2×: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   const opened = await openBench(page, FLOWS === '' ? '&flows=1' : '');
   await page.waitForFunction(() => window.__sododeckFlowBench !== undefined);
-  await page.evaluate(() => window.__sododeckFlowBench?.openFlow('flow0-0') ?? Promise.resolve(NaN));
+  await page.evaluate(
+    () => window.__sododeckFlowBench?.openFlow('flow0-0') ?? Promise.resolve(NaN),
+  );
   await page.waitForTimeout(400);
   await startRecording(page);
   await page.evaluate(() => {
@@ -576,6 +578,66 @@ test(`view-switch: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     ms,
     targetMs: VIEW_SWITCH_TARGET_MS,
     meetsTarget: ms <= VIEW_SWITCH_TARGET_MS,
+  });
+});
+
+/** 011 SC-001: Tidy layout of 200 components with 5 pinned finishes in under 2 s. */
+const TIDY_TARGET_MS = 2000;
+
+test(`tidy-layout-200: 200 nodes / 400 edges, 5 pinned`, async ({ page }) => {
+  const counts = { nodes: 200, edges: 400 };
+  await openBench(page, '&groups=1', counts);
+  await page.waitForFunction(() => window.__sododeckViewsBench !== undefined);
+  const runs: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    runs.push(
+      await page.evaluate(
+        () => window.__sododeckViewsBench?.tidy(['n0', 'n40', 'n80', 'n120', 'n160']) ?? NaN,
+      ),
+    );
+  }
+  const ms = [...runs].sort((a, b) => a - b)[1] ?? NaN;
+  expect(Number.isFinite(ms)).toBe(true);
+  actionResults.push({
+    scenario: 'tidy-layout-200 (click → applied, median of 3)',
+    nodes: counts.nodes,
+    edges: counts.edges,
+    ms,
+    targetMs: TIDY_TARGET_MS,
+    meetsTarget: ms < TIDY_TARGET_MS,
+  });
+});
+
+/** 011 SC-002: panning stays at 60 fps while the 500-component layout runs in the worker. */
+test(`pan-during-layout: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  const opened = await openBench(page, '&groups=1');
+  await page.waitForFunction(() => window.__sododeckViewsBench !== undefined);
+  const box = await page.getByLabel('Diagram canvas').boundingBox();
+  if (!box) throw new Error('canvas not found');
+  await page.evaluate(() => {
+    window.__sododeckViewsBench?.startTidy();
+  });
+  await startRecording(page);
+  let pans = 0;
+  while (pans < 20 && (await page.evaluate(() => window.__sododeckViewsBench?.layoutRunning()))) {
+    const start = await emptyCanvasPoint(page, box);
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + (pans % 2 === 0 ? 120 : -120), start.y, { steps: 10 });
+    await page.mouse.up();
+    pans++;
+  }
+  const stats = summarize(await stopRecording(page));
+  expect(pans).toBeGreaterThan(0);
+  results.push({
+    scenario: `pan-during-layout (${String(pans)} pans)`,
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodesZoomedIn: opened.renderedNodes,
+    maxZoom: await viewportZoom(page),
+    ...stats,
+    meetsTarget: meetsTarget(stats),
   });
 });
 

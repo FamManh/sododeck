@@ -172,3 +172,24 @@
 .sd-flow-inside-dot {
   animation: sd-flow-inside-dot var(--sd-dur-dim) ease-in-out infinite;
 }
+
+/* Tidy layout progress (011 FR-032): indeterminate; static under reduced motion. */
+@keyframes sd-progress-indeterminate {
+  0% {
+    left: -33%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.sd-progress-indeterminate {
+  animation: sd-progress-indeterminate 1.2s var(--sd-ease) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-progress-indeterminate {
+    animation: none;
+    left: 33%;
+  }
+}
