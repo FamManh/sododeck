@@ -16,7 +16,6 @@ import { importMessage } from '../../library/use-import-files';
 import { useUiStore } from '../../state/ui-store';
 import { getLibraryClient } from '../../storage/library-client';
 import { getLibraryDb } from '../../storage/library-db-instance';
-import { useExportDeck } from '../use-export-deck';
 import { shortcutLabel } from './shortcuts';
 
 /**
@@ -26,7 +25,8 @@ import { shortcutLabel } from './shortcuts';
  */
 export function DeckMenu() {
   const navigate = useNavigate();
-  const exportDeck = useExportDeck();
+  const openExport = useUiStore((s) => s.openExport);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   const jsonShown = useUiStore((s) => s.jsonShown);
   const { toast } = useToast();
   const input = useRef<HTMLInputElement>(null);
@@ -78,7 +78,13 @@ export function DeckMenu() {
       />
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Deck menu" aria-haspopup="menu">
+          <Button
+            ref={menuTrigger}
+            variant="ghost"
+            size="icon"
+            aria-label="Deck menu"
+            aria-haspopup="menu"
+          >
             <Menu />
           </Button>
         </DropdownMenuTrigger>
@@ -100,7 +106,11 @@ export function DeckMenu() {
             <FileUp />
             Import…
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={exportDeck}>
+          <DropdownMenuItem
+            onSelect={() => {
+              openExport(menuTrigger.current);
+            }}
+          >
             <Download />
             Export…
           </DropdownMenuItem>

@@ -82,6 +82,17 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
   });
 
+  it('opens the Export dialog from "Export…" and returns focus to the menu button (012)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Island />, shop);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Export…' }));
+    expect(useUiStore.getState().exportDialog).toEqual({
+      open: true,
+      returnFocus: screen.getByRole('button', { name: 'Deck menu' }),
+    });
+  });
+
   it('switches views and replaces them with the session chip while recording (011)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);
