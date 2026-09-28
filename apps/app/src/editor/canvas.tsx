@@ -59,7 +59,7 @@ import { useCanvasHandlers } from './use-canvas-handlers';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
-import { readViewState, useViewState } from './views/use-current-view';
+import { collapsedOf, readViewState, useViewState } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { useCurrentViewSync } from './views/use-view-sync';
 import { useUndoAcrossViews } from './views/undo-context';
@@ -185,7 +185,7 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
     const { zoom: currentZoom } = getViewport();
     const scope = scopeOf(ui.drill);
     const level = effectiveLevel(levelForZoom(currentZoom), scope);
-    const graph = visibleGraph(deck, scope, ui.collapsed);
+    const graph = visibleGraph(deck, scope, collapsedOf(editor.doc));
     const point = (() => {
       if (focusedId.startsWith(GROUP_NODE_PREFIX)) {
         const groupId = focusedId.slice(GROUP_NODE_PREFIX.length);
@@ -232,9 +232,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const viewState = useViewState();
   const deck = viewState.deck;
   const render = viewState.render;
+  // Collapsed groups are saved per view (011 FR-050).
+  const collapsed = viewState.collapsed;
   const selection = useUiStore((s) => s.selection);
   const drill = useUiStore((s) => s.drill);
-  const collapsed = useUiStore((s) => s.collapsed);
   const focusMode = useUiStore((s) => s.focusMode);
   const focusedId = useUiStore((s) => s.focusedId);
   const focusedEdgeId = useUiStore((s) => s.focusedEdgeId);

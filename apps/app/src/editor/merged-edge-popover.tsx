@@ -6,6 +6,8 @@ import { useUiStore } from '../state/ui-store';
 import { anchorRect, focusCanvas } from './canvas-actions';
 import { COLLAPSED_NODE_PREFIX } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
+import { useEditor } from '../model/use-editor';
+import { setGroupCollapsed, useCollapsed } from './views/use-current-view';
 
 const directionLabel = (direction: SododeckFile['edges'][number]['direction']) =>
   direction === 'both' ? 'both' : direction === 'none' ? 'none' : 'forward';
@@ -13,7 +15,7 @@ const directionLabel = (direction: SododeckFile['edges'][number]['direction']) =
 export function MergedEdgePopover({ deck }: { deck: SododeckFile }) {
   const popover = useUiStore((state) => state.popover);
   const drill = useUiStore((state) => state.drill);
-  const collapsed = useUiStore((state) => state.collapsed);
+  const collapsed = useCollapsed();
   const mergedId = popover?.kind === 'merged' ? popover.edgeId : null;
   const graph = useMemo(
     () => visibleGraph(deck, scopeOf(drill), collapsed),
@@ -33,7 +35,7 @@ function MergedEdgePopoverContent({
 }) {
   const listId = useId();
   const closePopover = useUiStore((state) => state.closePopover);
-  const expandAll = useUiStore((state) => state.expandAll);
+  const editor = useEditor();
   const select = useUiStore((state) => state.select);
   const focusEdge = useUiStore((state) => state.focusEdge);
   const virtualRef = useRef({ getBoundingClientRect: () => anchorRect(merged.id) });
@@ -52,7 +54,7 @@ function MergedEdgePopoverContent({
     .map((id) => id.slice(COLLAPSED_NODE_PREFIX.length));
 
   const activate = (edgeId: string) => {
-    expandAll(ends);
+    for (const groupId of ends) setGroupCollapsed(editor, groupId, false);
     select({ edges: [edgeId] });
     focusEdge(edgeId);
     closePopover();

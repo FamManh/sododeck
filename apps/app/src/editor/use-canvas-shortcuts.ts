@@ -37,7 +37,12 @@ import { effectiveLevel, levelForZoom } from './levels';
 import { useSaveControls } from './save-context';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
-import { moveStickyInView, readViewState } from './views/use-current-view';
+import {
+  collapsedOf,
+  moveStickyInView,
+  readViewState,
+  toggleGroupCollapsed,
+} from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
 
@@ -98,7 +103,8 @@ export function useCanvasKeyDown() {
       const ui = useUiStore.getState();
       // Geometry and targets as the current view draws them (011).
       const deck = readViewState(editor.doc).deck;
-      const graph = visibleGraph(deck, scopeOf(ui.drill), ui.collapsed);
+      const collapsed = collapsedOf(editor.doc);
+      const graph = visibleGraph(deck, scopeOf(ui.drill), collapsed);
       const key = event.key;
       const session = ui.flowSession;
 
@@ -186,7 +192,7 @@ export function useCanvasKeyDown() {
         ui.focusedId ??
         (ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : undefined) ??
         (ui.selection.groups.length === 1
-          ? selectionForFocusedGroup(ui.collapsed, ui.selection.groups[0] ?? '')
+          ? selectionForFocusedGroup(collapsed, ui.selection.groups[0] ?? '')
           : undefined) ??
         null;
       const selectedSticky =
@@ -297,7 +303,7 @@ export function useCanvasKeyDown() {
           if (groupId !== null) ui.select({ groups: [groupId] });
           else ui.select({ nodes: [next] });
         }
-        ui.focus(groupId === null ? next : selectionForFocusedGroup(ui.collapsed, groupId));
+        ui.focus(groupId === null ? next : selectionForFocusedGroup(collapsed, groupId));
         return;
       }
 
@@ -306,8 +312,7 @@ export function useCanvasKeyDown() {
           const groupId = current === null ? null : groupIdOf(current);
           if (groupId === null) return;
           event.preventDefault();
-          const nextCollapsed = !ui.collapsed.has(groupId);
-          ui.toggleCollapsed(groupId);
+          const nextCollapsed = toggleGroupCollapsed(editor, groupId);
           if (!flowMode) ui.select({ groups: [groupId] });
           ui.focus(
             nextCollapsed ? `${COLLAPSED_NODE_PREFIX}${groupId}` : `${GROUP_NODE_PREFIX}${groupId}`,
@@ -338,7 +343,7 @@ export function useCanvasKeyDown() {
             if (nodeId !== undefined) ui.focus(nodeId);
           } else {
             const groupId = ui.selection.groups[0];
-            if (groupId !== undefined) ui.focus(selectionForFocusedGroup(ui.collapsed, groupId));
+            if (groupId !== undefined) ui.focus(selectionForFocusedGroup(collapsed, groupId));
           }
           ui.setFocusMode(true);
           return;
@@ -356,7 +361,7 @@ export function useCanvasKeyDown() {
             const index = ownMerged.findIndex((edge) => edge.id === ui.focusedEdgeId);
             const edge = ownMerged[(index + 1) % ownMerged.length];
             if (edge === undefined) return;
-            ui.focus(selectionForFocusedGroup(ui.collapsed, groupId));
+            ui.focus(selectionForFocusedGroup(collapsed, groupId));
             ui.focusEdge(edge.id);
             const titles = new Map(deck.groups.map((group) => [group.id, group.title]));
             const nameOf = (id: string) =>

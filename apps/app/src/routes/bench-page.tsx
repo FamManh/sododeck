@@ -15,7 +15,11 @@ import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
-import { readViewState } from '../editor/views/use-current-view';
+import {
+  readViewState,
+  setGroupCollapsed,
+  toggleGroupCollapsed,
+} from '../editor/views/use-current-view';
 
 declare global {
   interface Window {
@@ -210,13 +214,13 @@ function GroupsBenchHooks() {
 
   useEffect(() => {
     const collapseAll = async () => {
-      useUiStore.setState({ collapsed: new Set(deck.groups.map((group) => group.id)) });
+      // Collapse is saved per view (011): one untracked write per group, as a user would.
+      for (const group of deck.groups) setGroupCollapsed(editor, group.id, true);
       await paintedAfter(performance.now(), '[data-testid="collapsed-group-node"]');
     };
     const toggleCollapse = (groupId: string) => {
-      const nextCollapsed = !useUiStore.getState().collapsed.has(groupId);
       const start = performance.now();
-      useUiStore.getState().toggleCollapsed(groupId);
+      const nextCollapsed = toggleGroupCollapsed(editor, groupId);
       return paintedAfter(
         start,
         nextCollapsed
@@ -256,7 +260,7 @@ function GroupsBenchHooks() {
       const ui = useUiStore.getState();
       ui.clearSelection();
       ui.setFocusMode(false);
-      ui.expandAll(deck.groups.map((group) => group.id));
+      for (const group of deck.groups) setGroupCollapsed(editor, group.id, false);
     };
     window.__sododeckGroupsBench = {
       collapseAll,
@@ -283,7 +287,7 @@ function GroupsBenchHooks() {
         delete window.__sododeckBench.resetViewModes;
       }
     };
-  }, [deck, editor.doc]);
+  }, [deck, editor]);
   return null;
 }
 

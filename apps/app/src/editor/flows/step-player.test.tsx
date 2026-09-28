@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { playbackDeck } from '../../test/flow-fixtures';
 import { announced, renderFlows } from '../../test/render-flows';
-import { useUiStore } from '../../state/ui-store';
 import { openFlow } from './flow-mode';
+import { setGroupCollapsed, toggleGroupCollapsed } from '../views/use-current-view';
 
 const groupedPlaybackDeck = {
   ...playbackDeck,
@@ -127,14 +127,14 @@ describe('StepPlayer', () => {
   it('shows and removes the collapsed-group hint after the step title', () => {
     const { player, editor } = setup('order', 'o2', groupedPlaybackDeck);
     act(() => {
-      useUiStore.getState().toggleCollapsed('core');
+      toggleGroupCollapsed(editor(), 'core');
       openFlow(editor(), 'order', 'o2');
     });
     expect(within(player).getByText(/inside Core services/)).toBeInTheDocument();
     expect(announced()).toBe('Step 2 of 8: API Gateway → Order Service, inside Core services');
 
     act(() => {
-      useUiStore.getState().expandAll(['core']);
+      setGroupCollapsed(editor(), 'core', false);
     });
     expect(within(player).queryByText('inside Core services')).toBeNull();
   });

@@ -34,7 +34,7 @@ import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
-import { moveStickyInView, readViewState } from './views/use-current-view';
+import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
@@ -124,7 +124,7 @@ export function useCanvasHandlers() {
             if (isCollapsedNode(node.id)) {
               jumpTo((playback) => {
                 const deck = readViewState(editor.doc).deck;
-                const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+                const graph = visibleGraph(deck, scopeOf(ui().drill), collapsedOf(editor.doc));
                 return stepForGroup(playback.played, graph, groupId);
               });
             }
@@ -169,7 +169,7 @@ export function useCanvasHandlers() {
         const graph = visibleGraph(
           readViewState(editor.doc).deck,
           scopeOf(ui().drill),
-          ui().collapsed,
+          collapsedOf(editor.doc),
         );
         if ((graph.childCount.get(node.id) ?? 0) === 0) return;
         const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
@@ -180,7 +180,7 @@ export function useCanvasHandlers() {
           if (flowMode()) {
             jumpTo((playback) => {
               const deck = readViewState(editor.doc).deck;
-              const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+              const graph = visibleGraph(deck, scopeOf(ui().drill), collapsedOf(editor.doc));
               const merged = graph.merged.find((entry) => entry.id === edge.id);
               return merged === undefined
                 ? null

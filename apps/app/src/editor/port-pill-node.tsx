@@ -9,7 +9,7 @@ import { useUiStore } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
 import { COLLAPSED_NODE_PREFIX, type PortFlowNode } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
-import { readViewState } from './views/use-current-view';
+import { collapsedOf, readViewState } from './views/use-current-view';
 
 export const PortPillNode = memo(function PortPillNode({
   id,
@@ -28,8 +28,9 @@ export const PortPillNode = memo(function PortPillNode({
     const ui = useUiStore.getState();
     const deck = readViewState(editor.doc).deck;
     const representative =
-      visibleGraph(deck, scopeOf(ui.drill), ui.collapsed).representative.get(data.outsideNodeId) ??
-      data.outsideNodeId;
+      visibleGraph(deck, scopeOf(ui.drill), collapsedOf(editor.doc)).representative.get(
+        data.outsideNodeId,
+      ) ?? data.outsideNodeId;
     if (representative.startsWith(COLLAPSED_NODE_PREFIX)) {
       const groupId = representative.slice(COLLAPSED_NODE_PREFIX.length);
       select({ groups: [groupId] });

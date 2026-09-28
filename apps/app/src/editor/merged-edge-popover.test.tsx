@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { MergedEdgePopover } from './merged-edge-popover';
+import { collapsedOf } from './views/use-current-view';
 
 describe('MergedEdgePopover', () => {
   it('lists the merged connections and expands their groups when a row is chosen', async () => {
@@ -18,6 +19,7 @@ describe('MergedEdgePopover', () => {
         { id: 'left', title: 'Left' },
         { id: 'right', title: 'Right' },
       ],
+      views: [{ id: 'v', type: 'system', title: 'V', collapsed: ['left', 'right'] }],
       edges: Array.from({ length: 12 }, (_, index) => ({
         id: `e${String(index)}`,
         from: 'a',
@@ -28,7 +30,6 @@ describe('MergedEdgePopover', () => {
     const env = editorWrapper(deck);
     act(() => {
       useUiStore.setState({
-        collapsed: new Set(['left', 'right']),
         popover: { kind: 'merged', edgeId: 'merged:collapsed:left|collapsed:right' },
       });
     });
@@ -43,7 +44,7 @@ describe('MergedEdgePopover', () => {
     expect(options).toHaveLength(12);
     expect(first).toHaveTextContent('Connection 1');
     await user.click(first);
-    expect(useUiStore.getState().collapsed.size).toBe(0);
+    expect(collapsedOf(env.doc).size).toBe(0);
     expect(useUiStore.getState().selection.edges).toEqual(['e0']);
   });
 });

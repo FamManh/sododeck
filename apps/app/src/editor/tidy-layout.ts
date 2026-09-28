@@ -140,10 +140,9 @@ export type TidyBlock =
 export function useTidyBlock(): TidyBlock | null {
   const state = useViewState();
   const drill = useUiStore((s) => s.drill);
-  const collapsed = useUiStore((s) => s.collapsed);
   const flow = useUiStore((s) => s.flowSession !== null || isFlowMode(s));
   if (flow) return 'Not available while a flow is open';
-  const graph = visibleGraph(state.deck, scopeOf(drill), collapsed);
+  const graph = visibleGraph(state.deck, scopeOf(drill), state.collapsed);
   if (graph.nodes.length + graph.cards.length === 0) return 'Nothing to arrange';
   if (graph.cards.length === 0 && graph.nodes.every((id) => state.render.pinned.has(id))) {
     return 'All components are pinned';
@@ -179,7 +178,7 @@ export function useTidyLayout(): { run: () => Promise<void>; cancel: () => void 
     if (ui.layoutRun.status !== 'idle') return;
     const start = readViewState(editor.doc);
     const scope = scopeOf(ui.drill);
-    const graph = visibleGraph(start.deck, scope, ui.collapsed);
+    const graph = visibleGraph(start.deck, scope, start.collapsed);
     const level = effectiveLevel(levelForZoom(getZoom()), scope);
     const request = buildLayoutRequest(start.deck, graph, start.render.pinned, level);
     const viewId = start.view.id;

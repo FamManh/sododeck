@@ -14,6 +14,7 @@ import { SaveContext } from './save-context';
 import { isTextTarget, useEditorShortcuts } from './use-canvas-shortcuts';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
+import { collapsedOf, toggleGroupCollapsed } from './views/use-current-view';
 
 /** 3×3 grid: n00 … n22 (row, column), 300 px apart. */
 const grid = deckOf({
@@ -130,7 +131,7 @@ describe('canvas keyboard', () => {
   });
 
   it('lets arrows reach a group label and a collapsed card', async () => {
-    const { user } = setup(groupedDeck);
+    const { user, editor } = setup(groupedDeck);
     focusNode('inside');
     await user.keyboard('{ArrowLeft}');
     expect(ui().focusedId).toBe('group:core');
@@ -140,7 +141,7 @@ describe('canvas keyboard', () => {
     });
 
     act(() => {
-      ui().toggleCollapsed('core');
+      toggleGroupCollapsed(editor(), 'core');
       ui().focus('outside');
       ui().select({ nodes: ['outside'] });
     });
@@ -150,18 +151,18 @@ describe('canvas keyboard', () => {
   });
 
   it('collapses a focused group with Space and opens merged popovers from a focused card', async () => {
-    const { user } = setup(mergedDeck);
+    const { user, editor, doc } = setup(mergedDeck);
     act(() => {
       ui().focus('group:left');
       ui().select({ groups: ['left'] });
       document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
     });
     await user.keyboard(' ');
-    expect(ui().collapsed.has('left')).toBe(true);
+    expect(collapsedOf(doc).has('left')).toBe(true);
     expect(ui().focusedId).toBe('collapsed:left');
 
     act(() => {
-      ui().toggleCollapsed('right');
+      toggleGroupCollapsed(editor(), 'right');
       ui().focus('collapsed:left');
       ui().select({ groups: ['left'] });
       document.querySelector<HTMLElement>('[data-node-id="collapsed:left"]')?.focus();
@@ -566,10 +567,11 @@ describe('keyboard in flow mode (007)', () => {
     act(() => {
       openFlow(editor(), 'order');
     });
-    const before = toJSON(doc);
     const stepId = ui().activeFlow?.stepId;
     await user.keyboard(' ');
-    expect(ui().collapsed.has('core')).toBe(true);
+    expect(collapsedOf(doc).has('core')).toBe(true);
+    // Collapsing writes only the view's collapsed list (011); nothing else changes below.
+    const before = toJSON(doc);
     expect(ui().activeFlow?.stepId).toBe(stepId);
     await user.keyboard('{Shift>}{ArrowRight}{/Shift}cE{Enter}f{Backspace}');
     expect(ui().focusedId).toBe('collapsed:core');

@@ -97,7 +97,7 @@ describe('ui store', () => {
     expect(state().popover).toBeNull();
   });
 
-  it('tracks drill, collapsed groups, focus mode, and view pruning', () => {
+  it('tracks drill, focus mode, and view pruning (collapse lives in the view, 011)', () => {
     expect(state().drill).toEqual([]);
     state().setFocusMode(true);
     state().select({ nodes: ['a'] });
@@ -106,21 +106,15 @@ describe('ui store', () => {
     expect(state().focusMode).toBe(false);
     expect(state().drill).toHaveLength(1);
 
-    state().toggleCollapsed('g');
-    state().setCollapsed('h', true);
-    expect([...state().collapsed]).toEqual(['g', 'h']);
-    state().expandAll(['h']);
-    expect([...state().collapsed]).toEqual(['g']);
+    expect(state()).not.toHaveProperty('collapsed');
 
     const popped = state().drillUp();
     expect(popped).toEqual([{ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } }]);
     expect(state().drill).toEqual([]);
 
     state().drillInto({ kind: 'node', id: 'a', viewport: { x: 0, y: 0, zoom: 1 } });
-    state().toggleCollapsed('gone');
     state().pruneView({ nodes: new Set(), groups: new Set() });
     expect(state().drill).toEqual([]);
-    expect([...state().collapsed]).toEqual([]);
   });
 
   describe('views (011)', () => {

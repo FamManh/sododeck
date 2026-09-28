@@ -10,6 +10,8 @@ import { useUiStore } from '../../state/ui-store';
 import { COLLAPSED_NODE_PREFIX } from '../deck-to-flow';
 import { scopeOf, visibleGraph } from '../visible-graph';
 import { viewStateOf } from '../views/view-state';
+import { setGroupCollapsed, toggleGroupCollapsed } from '../views/use-current-view';
+import { useEditor } from '../../model/use-editor';
 import { InspectorFrame } from './inspector-frame';
 
 export function GroupInspector({
@@ -20,13 +22,13 @@ export function GroupInspector({
   group: SododeckFile['groups'][number];
 }) {
   const drill = useUiStore((state) => state.drill);
-  const collapsed = useUiStore((state) => state.collapsed);
-  const toggleCollapsed = useUiStore((state) => state.toggleCollapsed);
-  const setCollapsed = useUiStore((state) => state.setCollapsed);
+  const editor = useEditor();
   const switchId = useId();
   const currentViewId = useUiStore((state) => state.currentViewId);
   const revealed = useUiStore((state) => state.revealed);
-  const canvasDeck = viewStateOf(deck, currentViewId, revealed).deck;
+  const viewState = viewStateOf(deck, currentViewId, revealed);
+  const canvasDeck = viewState.deck;
+  const collapsed = viewState.collapsed;
   const graph = useMemo(
     () => visibleGraph(canvasDeck, scopeOf(drill), collapsed),
     [canvasDeck, drill, collapsed],
@@ -59,7 +61,7 @@ export function GroupInspector({
             aria-label="Collapsed"
             aria-describedby={`${switchId}-description`}
             onCheckedChange={() => {
-              toggleCollapsed(group.id);
+              toggleGroupCollapsed(editor, group.id);
             }}
           />
         </div>
@@ -88,7 +90,7 @@ export function GroupInspector({
           variant="secondary"
           disabled={!collapsed.has(group.id)}
           onClick={() => {
-            setCollapsed(group.id, false);
+            setGroupCollapsed(editor, group.id, false);
           }}
         >
           <ChevronUp />

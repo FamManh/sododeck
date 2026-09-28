@@ -149,7 +149,6 @@ export interface UiState {
   revealed: ReadonlySet<Id>;
   layoutRun: LayoutRun;
   drill: readonly DrillFrame[];
-  collapsed: ReadonlySet<string>;
   focusMode: boolean;
   stickyEditing: Id | null;
   stickyDraft: Id | null;
@@ -203,9 +202,6 @@ export interface UiState {
   setLayoutRun: (run: LayoutRun) => void;
   drillInto: (frame: DrillFrame) => void;
   drillUp: (depth?: number) => readonly DrillFrame[];
-  setCollapsed: (id: string, on: boolean) => void;
-  toggleCollapsed: (id: string) => void;
-  expandAll: (ids: readonly string[]) => void;
   setFocusMode: (on: boolean) => void;
   pruneView: (existing: { nodes: ReadonlySet<Id>; groups: ReadonlySet<Id> }) => void;
   setStickyEditing: (id: Id | null) => void;
@@ -358,7 +354,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     revealed: NO_IDS,
     layoutRun: IDLE_LAYOUT,
     drill: [],
-    collapsed: new Set(),
     focusMode: false,
     stickyEditing: null,
     stickyDraft: null,
@@ -472,34 +467,11 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({ drill: drill.slice(0, nextDepth) });
       return popped;
     },
-    setCollapsed: (id, on) => {
-      set((state) => {
-        const next = new Set(state.collapsed);
-        if (on) next.add(id);
-        else next.delete(id);
-        return { collapsed: next };
-      });
-    },
-    toggleCollapsed: (id) => {
-      set((state) => {
-        const next = new Set(state.collapsed);
-        if (!next.delete(id)) next.add(id);
-        return { collapsed: next };
-      });
-    },
-    expandAll: (ids) => {
-      set((state) => {
-        const next = new Set(state.collapsed);
-        for (const id of ids) next.delete(id);
-        return { collapsed: next };
-      });
-    },
     setFocusMode: (focusMode) => {
       set({ focusMode });
     },
     pruneView: (existing) => {
       set((state) => ({
-        collapsed: new Set([...state.collapsed].filter((id) => existing.groups.has(id))),
         drill: state.drill.filter((frame) =>
           frame.kind === 'group' ? existing.groups.has(frame.id) : existing.nodes.has(frame.id),
         ),
@@ -747,7 +719,6 @@ export const useUiStore = create<UiState>()((set, get) => {
         focusedEdgeId: null,
         outlineCollapsed: new Set(),
         drill: [],
-        collapsed: new Set(),
         focusMode: false,
         popover: null,
         pendingDelete: null,

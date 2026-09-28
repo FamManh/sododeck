@@ -123,3 +123,22 @@ export function selectView(view: Pick<View, 'id' | 'title'>): void {
   ui.switchView(view.id);
   ui.announce(viewCrumbTitle(view));
 }
+
+/** Collapsed groups of the current view, without subscribing (handlers). */
+export function collapsedOf(doc: DeckDoc): ReadonlySet<Id> {
+  return readViewState(doc).collapsed;
+}
+
+/**
+ * Collapses or expands a group in the current view (010 → 011 FR-050): saved and synced, never
+ * an undo step. Returns whether the group is collapsed afterwards.
+ */
+export function setGroupCollapsed(editor: DeckEditor, groupId: Id, collapsed: boolean): boolean {
+  editor.setCollapsed(currentViewIdOf(editor.doc), groupId, collapsed);
+  return collapsed;
+}
+
+/** Flips a group's collapse state in the current view; returns the new state. */
+export function toggleGroupCollapsed(editor: DeckEditor, groupId: Id): boolean {
+  return setGroupCollapsed(editor, groupId, !collapsedOf(editor.doc).has(groupId));
+}

@@ -159,3 +159,14 @@ describe('viewStateOf', () => {
     expect(viewStateOf(file, 'v').hidden).toEqual(new Set(['c']));
   });
 });
+
+describe('collapsed groups of a view keep their identity', () => {
+  it('returns the same set while the view’s list is unchanged', () => {
+    const file = { ...deck, views: [view({ collapsed: ['g'] })] };
+    const a = viewStateOf(file, 'v').collapsed;
+    const b = viewStateOf({ ...file, nodes: [...file.nodes] }, 'v').collapsed;
+    expect(b).toBe(a);
+    expect([...a]).toEqual(['g']);
+    expect(viewStateOf(deck, null).collapsed.size).toBe(0);
+  });
+});
