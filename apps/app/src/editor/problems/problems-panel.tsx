@@ -5,20 +5,9 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { ChevronRight, CircleCheck } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
-import { PROBLEM_ICONS } from './problem-glyph';
+import { PROBLEM_ICONS } from './problem-kinds';
+import { PROBLEM_ROW_CAP } from './problems-dom';
 import { useProblems } from './use-problems';
-
-/** Rows shown before "Show all" (015 FR-016). */
-export const PROBLEM_ROW_CAP = 200;
-
-const ROW = '[data-problem-row]';
-
-/** Moves keyboard focus to the first problem row, if the list is on screen. */
-export function focusFirstProblem(): boolean {
-  const row = document.querySelector<HTMLElement>(ROW);
-  row?.focus();
-  return row !== null;
-}
 
 /**
  * The deck's problems (015 US1, design 60). Self-contained: it reads problems itself, so the

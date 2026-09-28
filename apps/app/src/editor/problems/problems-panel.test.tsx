@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { deckOf, editorWrapper } from '../../test/render-canvas';
-import { PROBLEM_ROW_CAP, ProblemsPanel } from './problems-panel';
+import { PROBLEM_ROW_CAP } from './problems-dom';
+import { ProblemsPanel } from './problems-panel';
 
 const planted = deckOf({
   nodes: [
