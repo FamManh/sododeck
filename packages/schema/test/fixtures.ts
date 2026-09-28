@@ -143,6 +143,41 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'views.0.subtitleField',
   },
   {
+    name: 'view subtitleField "flow"',
+    input: set('views.0.subtitleField', 'flow'),
+    path: 'views.0.subtitleField',
+  },
+  {
+    name: 'unknown kind in view excludeKinds',
+    input: set('views.4.excludeKinds', ['external', 'lambda']),
+    path: 'views.4.excludeKinds.1',
+  },
+  {
+    name: 'unknown kind in view dimKinds',
+    input: set('views.2.dimKinds', ['browser']),
+    path: 'views.2.dimKinds.0',
+  },
+  {
+    name: 'duplicate id in view pinned',
+    input: set('views.2.pinned', ['orders-db', 'orders-db']),
+    path: 'views.2.pinned',
+  },
+  {
+    name: 'duplicate tag in view excludeTags',
+    input: set('views.4.excludeTags', ['pci', 'pci']),
+    path: 'views.4.excludeTags',
+  },
+  {
+    name: 'bad id in view collapsed',
+    input: set('views.0.collapsed', ['core services']),
+    path: 'views.0.collapsed.0',
+  },
+  {
+    name: 'bad id in view excludeGroups',
+    input: set('views.4.excludeGroups', ['']),
+    path: 'views.4.excludeGroups.0',
+  },
+  {
     name: 'bad rule hitPolicy',
     input: set(`${RULE}.hitPolicy`, 'First match'),
     path: `${RULE}.hitPolicy`,

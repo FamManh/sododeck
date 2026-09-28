@@ -177,8 +177,23 @@
     }
   ],
   "views": [
-    { "id": "system", "type": "system", "title": "System", "subtitleField": "tech" },
-    { "id": "infra", "type": "infra", "title": "Infra", "subtitleField": "host" },
+    {
+      "id": "system",
+      "type": "system",
+      "title": "System",
+      "subtitleField": "tech",
+      "collapsed": ["messaging"]
+    },
+    { "id": "feature", "type": "feature", "title": "Feature", "subtitleField": "flows" },
+    {
+      "id": "infra",
+      "type": "infra",
+      "title": "Infra",
+      "subtitleField": "host",
+      "dimKinds": ["client"],
+      "positions": { "orders-db": { "x": 900, "y": 120 } },
+      "pinned": ["orders-db", "api-gateway"]
+    },
     {
       "id": "delivery-view",
       "type": "feature",
@@ -188,7 +203,15 @@
       "includes": ["customer-app", "api-gateway", "order-svc", "orders-db", "order-events"],
       "positions": { "order-svc": { "x": 420, "y": -40 }, "orders-db": { "x": 700, "y": 0 } }
     },
-    { "id": "custom-1", "type": "custom", "title": "Custom 1", "subtitleField": "none" }
+    {
+      "id": "custom-1",
+      "type": "custom",
+      "title": "Custom 1",
+      "subtitleField": "none",
+      "excludeGroups": ["clients"],
+      "excludeKinds": ["external"],
+      "excludeTags": ["pci"]
+    }
   ],
   "features": [
     {

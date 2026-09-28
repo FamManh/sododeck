@@ -70,12 +70,12 @@ export type Direction = 'forward' | 'both' | 'none';
  */
 export type ViewType = 'system' | 'feature' | 'infra' | 'custom';
 /**
- * Node field shown under node titles in a view: `tech`, `host`, `owner` or `none`.
+ * Node field shown under node titles in a view: `tech`, `host`, `owner`, `flows` or `none`. `flows` shows "<n> flows · <owner>". Absent means `tech`.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "SubtitleField".
  */
-export type SubtitleField = 'tech' | 'host' | 'owner' | 'none';
+export type SubtitleField = 'tech' | 'host' | 'owner' | 'flows' | 'none';
 /**
  * Which matching rows apply: `first` (the first match), `unique` (exactly one row may match), `collect` (all matches).
  *
@@ -264,11 +264,35 @@ export interface View {
   feature?: Id;
   includes?: IdList;
   /**
+   * Ids of groups whose members (nested groups included) are hidden in this view. Absent means none.
+   */
+  excludeGroups?: Id[];
+  /**
+   * Node kinds hidden in this view. Absent means none.
+   */
+  excludeKinds?: NodeKind[];
+  /**
+   * Tags that hide a node carrying any of them in this view. Absent means none.
+   */
+  excludeTags?: Text[];
+  /**
+   * Node kinds drawn dimmed in this view. Absent means none.
+   */
+  dimKinds?: NodeKind[];
+  /**
    * Per-node position overrides for this view, keyed by node id. Keys must be valid ids.
    */
   positions?: {
     [k: string]: Position;
   };
+  /**
+   * Ids of the nodes that automatic layout must not move in this view. Absent means none.
+   */
+  pinned?: Id[];
+  /**
+   * Ids of the groups shown collapsed in this view. Absent means none.
+   */
+  collapsed?: Id[];
 }
 /**
  * A business capability that groups flows.

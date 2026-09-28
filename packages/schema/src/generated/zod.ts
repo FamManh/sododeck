@@ -206,9 +206,9 @@ export const sododeckFileSchema = z
               .describe('Kind of view: `system`, `feature`, `infra` or `custom`.'),
             title: z.string().min(1).describe('Display name.'),
             subtitleField: z
-              .enum(['tech', 'host', 'owner', 'none'])
+              .enum(['tech', 'host', 'owner', 'flows', 'none'])
               .describe(
-                'Node field shown under node titles in a view: `tech`, `host`, `owner` or `none`.',
+                'Node field shown under node titles in a view: `tech`, `host`, `owner`, `flows` or `none`. `flows` shows "<n> flows · <owner>". Absent means `tech`.',
               )
               .optional(),
             feature: z
@@ -227,6 +227,61 @@ export const sododeckFileSchema = z
               )
               .describe('Ids of the nodes shown in this view. Absent means all nodes.')
               .optional(),
+            excludeGroups: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe(
+                'Ids of groups whose members (nested groups included) are hidden in this view. Absent means none.',
+              )
+              .optional(),
+            excludeKinds: z
+              .array(
+                z
+                  .enum(['client', 'gateway', 'service', 'queue', 'database', 'external'])
+                  .describe(
+                    'Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).',
+                  ),
+              )
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe('Node kinds hidden in this view. Absent means none.')
+              .optional(),
+            excludeTags: z
+              .array(z.string().min(1).describe('Non-empty text.'))
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe(
+                'Tags that hide a node carrying any of them in this view. Absent means none.',
+              )
+              .optional(),
+            dimKinds: z
+              .array(
+                z
+                  .enum(['client', 'gateway', 'service', 'queue', 'database', 'external'])
+                  .describe(
+                    'Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).',
+                  ),
+              )
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe('Node kinds drawn dimmed in this view. Absent means none.')
+              .optional(),
             positions: z
               .record(
                 z.string(),
@@ -241,6 +296,38 @@ export const sododeckFileSchema = z
               .describe(
                 'Per-node position overrides for this view, keyed by node id. Keys must be valid ids.',
               )
+              .optional(),
+            pinned: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe(
+                'Ids of the nodes that automatic layout must not move in this view. Absent means none.',
+              )
+              .optional(),
+            collapsed: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe('Ids of the groups shown collapsed in this view. Absent means none.')
               .optional(),
           })
           .strict()

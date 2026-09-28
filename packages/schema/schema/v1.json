@@ -170,9 +170,9 @@
     },
     "SubtitleField": {
       "title": "SubtitleField",
-      "description": "Node field shown under node titles in a view: `tech`, `host`, `owner` or `none`.",
+      "description": "Node field shown under node titles in a view: `tech`, `host`, `owner`, `flows` or `none`. `flows` shows \"<n> flows · <owner>\". Absent means `tech`.",
       "type": "string",
-      "enum": ["tech", "host", "owner", "none"]
+      "enum": ["tech", "host", "owner", "flows", "none"]
     },
     "HitPolicy": {
       "title": "HitPolicy",
@@ -285,11 +285,47 @@
           "$ref": "#/$defs/IdList",
           "description": "Ids of the nodes shown in this view. Absent means all nodes."
         },
+        "excludeGroups": {
+          "description": "Ids of groups whose members (nested groups included) are hidden in this view. Absent means none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Id" },
+          "uniqueItems": true
+        },
+        "excludeKinds": {
+          "description": "Node kinds hidden in this view. Absent means none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/NodeKind" },
+          "uniqueItems": true
+        },
+        "excludeTags": {
+          "description": "Tags that hide a node carrying any of them in this view. Absent means none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Text" },
+          "uniqueItems": true
+        },
+        "dimKinds": {
+          "description": "Node kinds drawn dimmed in this view. Absent means none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/NodeKind" },
+          "uniqueItems": true
+        },
         "positions": {
           "description": "Per-node position overrides for this view, keyed by node id. Keys must be valid ids.",
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/Id" },
           "additionalProperties": { "$ref": "#/$defs/Position" }
+        },
+        "pinned": {
+          "description": "Ids of the nodes that automatic layout must not move in this view. Absent means none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Id" },
+          "uniqueItems": true
+        },
+        "collapsed": {
+          "description": "Ids of the groups shown collapsed in this view. Absent means none.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Id" },
+          "uniqueItems": true
         }
       }
     },
