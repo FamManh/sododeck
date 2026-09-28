@@ -4,7 +4,7 @@
  * the highlight, so it is visible without a pointer.
  */
 export const menuContentClass =
-  'z-50 min-w-52 overflow-hidden rounded-card border border-border bg-surface p-1 text-ink shadow-float outline-none';
+  'z-50 min-w-52 overflow-hidden rounded-card border border-border bg-surface p-1 text-ink shadow-menu outline-none';
 
 export const menuItemClass =
   'relative flex h-8 cursor-pointer items-center gap-2.5 rounded-row px-2.5 text-body outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-surface-2 data-[state=open]:bg-surface-2 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ink-secondary';

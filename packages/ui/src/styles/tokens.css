@@ -51,6 +51,9 @@
   --sd-shadow: rgba(0, 0, 0, 0.06);
   --sd-shadow-tour: rgba(0, 0, 0, 0.25);
 
+  /* Selected text in an inline title edit (019): primary at 26 %. */
+  --sd-selection-text: rgba(242, 102, 28, 0.26);
+
   /* Components a saved view dims, e.g. clients in Infra (design 20, 011 FR-013). */
   --sd-opacity-view-dim: 0.4;
 
@@ -109,6 +112,8 @@
   --sd-scrim: rgba(0, 0, 0, 0.6);
   --sd-shadow: rgba(0, 0, 0, 0.45);
   --sd-shadow-tour: rgba(0, 0, 0, 0.6);
+
+  --sd-selection-text: rgba(240, 122, 50, 0.36);
 }
 
 /*

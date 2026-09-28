@@ -24,3 +24,8 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* Selected text while a title is edited in place (019, design 96). */
+[data-slot='inline-edit']::selection {
+  background-color: var(--sd-selection-text);
+}
