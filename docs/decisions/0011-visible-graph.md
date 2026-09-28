@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-28
 - **Feature:** `specs/010-zoom-groups-focus` (spec, research R1, R2, R8, contracts)
+- **Amended by:** ADR 0012 (collapsed groups are now saved per view in the deck, never an undo step; drill, focus and zoom stay UI state)
 
 ## Context
 
