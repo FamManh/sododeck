@@ -296,6 +296,7 @@
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 - [ ] T058 [P] Accessibility pass: an axe check in the component tests for the switcher, tab menu, settings popover and toolbar (Tidy and Pin), in light and dark themes (SC-007); keyboard-only run of quickstart scenario 14.
+  - _Open (2026-09-28):_ keyboard paths are covered by component tests (tab list arrows/Home/End/Enter/Space, Shift+F10 menu, rename, settings popover with Esc focus return, pin switch, Tidy button). The axe check is not done: `axe-core` is not a dependency yet and adding one needs approval (AGENTS.md).
 - [x] T059 Run `pnpm bench` and save `specs/011-views-autolayout/bench-after.md` with before/after numbers for every scenario, including the new ones (SC-001–SC-003) and the 010 ones (no regression below 60 fps).
 - [x] T060 Bundle check: `pnpm --filter @sododeck/app build`, then confirm that `elkjs` appears only in the layout worker chunk (list the chunks in the report).
 - [x] T061 Visual check: screenshots at 1440×900, light and dark, next to `docs/design/screens/02-*`, `20-*`, `21-*` and `22-*`, in `specs/011-views-autolayout/visual-check.md`. Add separate screenshots of the undesigned parts (settings popover, Tidy button with its progress bar, pin glyph) for founder approval.
@@ -304,8 +305,8 @@
   - `apps/app/CLAUDE.md` (map: `editor/views/`, `tidy-layout.ts`, `view-filter.ts`; rules: the current view is UI state, collapse is document data, drags go through `moveInView`);
   - `packages/ui/CLAUDE.md` (`Checkbox`, `RadioGroup`);
   - `.agents/skills/react-flow/SKILL.md` (the view filter feeding the visible graph, and `ViewRender`).
-- [ ] T063 Run the definition-of-done commands: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix anything they report. Then run quickstart scenario 15 (export and re-import).
-- [ ] T064 Final report: what changed, what was skipped, what is uncertain (approval of the undesigned parts, layout quality on unusual decks), bench numbers, and a proposal for the next step (012 export or 018).
+- [x] T063 Run the definition-of-done commands: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix anything they report. Then run quickstart scenario 15 (export and re-import).
+- [x] T064 Final report: what changed, what was skipped, what is uncertain (approval of the undesigned parts, layout quality on unusual decks), bench numbers, and a proposal for the next step (012 export or 018).
 
 ---
 
