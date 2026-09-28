@@ -836,3 +836,28 @@ decision already covers it, that rule wins and the proposal only says how to app
 40. **Card attributes** (founder's Miro cards show year, status, date range): **deferred**. Cards
     keep the existing fields; user-defined typed fields come later.
 41. **Scheduling:** 016–020 run **after M4**.
+42. **JSON overlay editing** (93): the canvas-first frame shows the JSON panel with "⌘⏎ apply
+    edits" and invalid-JSON markers, but §g-3 keeps the panel **read-only**.
+    **Decision (founder, 2026-09-28):** default accepted: 018 moves the panel as-is, read-only; JSON editing stays a separate later
+    feature.
+43. **Group colours** (87): the dense deck shows a group with a teal fill and a group with a dashed
+    red stroke; 020 colours components only.
+    **Decision (founder, 2026-09-28):** default accepted: add optional `group.style` (same `ColorRef`) to 020, since the schema change
+    and picker are shared; otherwise groups stay out of scope.
+44. **Free connector end** (114 "⌥ leaves a free end"): an edge must have `from` and `to` in schema
+    v1.
+    **Decision (founder, 2026-09-28):** default accepted: drop it; ⌥ does nothing on endpoint drags.
+45. **Nudge keys** (109 lists arrows 1 px / ⇧ arrows 10 px): plain arrows move focus between cards
+    (003).
+    **Decision (founder, 2026-09-28):** default accepted: arrows nudge only while a drag is in progress; otherwise ⌥+arrows (1 px) and
+    ⌥⇧+arrows (10 px) nudge the selection.
+46. **Controls without a place in 86–116:** Tidy layout and pins (011), view settings popover
+    (011), drill-in breadcrumb (010), problems / validation (015, not built yet), sticky
+    visibility (009).
+    **Decision (founder, 2026-09-28):** default accepted: view settings and Tidy layout in the views control's menu in the deck
+    island; pin / unpin in the selection toolbar "More" and the context menu; the drill breadcrumb
+    as a chip in the deck island (like the Flow chip in 90); problems as a count badge on a rail
+    button that opens a flyout; sticky visibility in the tools island next to Labels.
+47. **Order after M4:** canvas-first before M5.
+    **Decision (founder, 2026-09-28):** 015 (left over from M3) first, then 021 → 018 → 019 → 016
+    → 017 → 020, then 012 → 013; 014 can go anywhere.
