@@ -14,8 +14,14 @@ import { useCallback, useEffect, useRef } from 'react';
 import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
-import { isFlowMode, useUiStore } from '../state/ui-store';
-import { canvasElement } from './canvas-actions';
+import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
+import { targetOf, useRunAction } from './actions/use-action-context';
+import {
+  consumeLeftToolbar,
+  focusSelectionToolbar,
+  toolbarShown,
+} from './quick-edit/toolbar-focus';
+import { canvasElement, nodeElement, selectAllComponents } from './canvas-actions';
 import {
   displayPosition,
   groupBounds,
@@ -97,6 +103,38 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
     : `${GROUP_NODE_PREFIX}${groupId}`;
 }
 
+/**
+ * ⇧F10 / ContextMenu (019 R7): the menu of the selection (or the focused card), anchored at the
+ * bottom-left of its element, or the canvas menu at the view centre.
+ */
+function openMenuFromKeyboard(opener: HTMLElement | null): void {
+  const ui = useUiStore.getState();
+  const selection = hasSelection(ui.selection)
+    ? ui.selection
+    : ui.focusedId !== null && groupIdOf(ui.focusedId) === null
+      ? { ...EMPTY_SELECTION, nodes: [ui.focusedId] }
+      : ui.focusedId !== null
+        ? { ...EMPTY_SELECTION, groups: [groupIdOf(ui.focusedId) ?? ''] }
+        : EMPTY_SELECTION;
+  const target = targetOf(selection);
+  const anchor =
+    (ui.focusedId === null ? null : nodeElement(ui.focusedId)) ??
+    (selection.nodes[0] === undefined ? null : nodeElement(selection.nodes[0]));
+  const rect = anchor?.getBoundingClientRect();
+  const canvas = canvasElement()?.getBoundingClientRect();
+  const point =
+    target.kind !== 'canvas' && rect !== undefined && rect.width > 0
+      ? { x: rect.left, y: rect.bottom }
+      : {
+          x: (canvas?.left ?? 0) + (canvas?.width ?? 0) / 2,
+          y: (canvas?.top ?? 0) + (canvas?.height ?? 0) / 2,
+        };
+  ui.openContextMenu({ target, point, via: 'keyboard', returnFocus: opener });
+}
+
+const hasSelection = (s: Selection) =>
+  s.nodes.length + s.edges.length + s.groups.length + s.stickies.length > 0;
+
 export function useCanvasKeyDown() {
   const editor = useEditor();
   const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
@@ -161,6 +199,13 @@ export function useCanvasKeyDown() {
         if (['c', 'e', 'enter'].includes(key.toLowerCase())) return;
       }
 
+      // The canvas menu from the keyboard (019 FR-028), in every mode.
+      if ((key === 'F10' && event.shiftKey && !isMod(event)) || key === 'ContextMenu') {
+        event.preventDefault();
+        openMenuFromKeyboard(event.target instanceof HTMLElement ? event.target : null);
+        return;
+      }
+
       // Flow mode is view-only (007 FR-009): only zoom keys and Space on groups / cards.
       const flowMode = isFlowMode(ui);
       if (flowMode && key !== ' ' && !(isMod(event) && ['=', '+', '-', '0'].includes(key))) {
@@ -171,8 +216,7 @@ export function useCanvasKeyDown() {
         const handled = (() => {
           switch (key.toLowerCase()) {
             case 'a':
-              ui.select({ nodes: deck.nodes.map((n) => n.id) });
-              ui.announce(`${String(deck.nodes.length)} selected`);
+              selectAllComponents(editor);
               return true;
             case '=':
             case '+':
@@ -312,7 +356,21 @@ export function useCanvasKeyDown() {
         return;
       }
 
+      // Tab from a selected object enters its toolbar (019 FR-041), unless it just came back.
+      if (key === 'Tab' && !event.shiftKey && !consumeLeftToolbar() && toolbarShown()) {
+        event.preventDefault();
+        focusSelectionToolbar();
+        return;
+      }
+
       switch (key.toLowerCase()) {
+        case 'p':
+          // The protocol picker of the selected connection (019 FR-042), from its toolbar.
+          if (ui.selection.edges.length === 1 && toolbarShown()) {
+            event.preventDefault();
+            ui.openToolbarField('protocol');
+          }
+          return;
         case ' ': {
           const groupId = current === null ? null : groupIdOf(current);
           if (groupId === null) return;
@@ -463,6 +521,11 @@ export function useEditorShortcuts({
 }: { canvas?: boolean; onProblem?: (direction: 1 | -1) => void } = {}): void {
   const editor = useEditor();
   const { flush } = useSaveControls();
+  const runAction = useRunAction();
+  const runRef = useRef(runAction);
+  useEffect(() => {
+    runRef.current = runAction;
+  });
   // The latest handler, without re-installing the listener on every render.
   const problemRef = useRef(onProblem);
   useEffect(() => {
@@ -504,6 +567,17 @@ export function useEditorShortcuts({
         event.preventDefault();
         walkProblems(event.shiftKey ? -1 : 1);
         return;
+      }
+
+      // ⇧⌘C copies the selection's JSON, ⇧⌘G ungroups the selected group (019 FR-036, FR-042):
+      // the same actions as the menu and the toolbar, so they work exactly when those offer them.
+      if (isMod(event) && event.shiftKey && !event.altKey && canvas) {
+        const id =
+          event.code === 'KeyC' ? 'json.copy' : event.code === 'KeyG' ? 'group.ungroup' : null;
+        if (id !== null && runRef.current(id)) {
+          event.preventDefault();
+          return;
+        }
       }
 
       if (isMod(event) && (key === 'z' || (key === 'y' && event.ctrlKey && !event.metaKey))) {

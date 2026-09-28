@@ -20,6 +20,7 @@ function ctx(target: MenuTarget, mode: Mode = 'edit'): ActionContext {
     point: null,
     childCount: new Map(),
     canvas: null,
+    toast: vi.fn(),
   };
 }
 

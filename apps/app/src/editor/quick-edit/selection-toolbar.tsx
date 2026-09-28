@@ -24,7 +24,7 @@ import { targetOf, useActionContext } from '../actions/use-action-context';
 import { shortcutLabel } from '../shell/shortcuts';
 import { FieldPopover } from './field-popover';
 import { selectionScreenRect } from './selection-rect';
-import { focusSelectedObject, QUICK_TOOLBAR_ATTR } from './toolbar-focus';
+import { focusSelectedObject, markLeftToolbar, QUICK_TOOLBAR_ATTR } from './toolbar-focus';
 import { toolbarPlacement } from './toolbar-placement';
 import { toolbarVariant, type ToolbarVariant } from './toolbar-variant';
 
@@ -186,6 +186,7 @@ function ToolbarBody() {
     if (event.key === 'Escape' || (event.key === 'Tab' && !event.shiftKey)) {
       event.preventDefault();
       event.stopPropagation();
+      if (event.key === 'Tab') markLeftToolbar();
       focusSelectedObject();
     }
   };

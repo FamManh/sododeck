@@ -176,6 +176,10 @@ describe('SelectionToolbar (019 US3)', () => {
     const { user, doc, editor } = setup();
     select(['a', 'b']);
     await user.click(screen.getByRole('button', { name: 'Owner: Mixed' }));
+    expect(screen.getByRole('button', { name: 'Owner: Mixed' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     const dialog = screen.getByRole('dialog', { name: 'Owner' });
     expect(within(dialog).getByText('Mixed')).toBeInTheDocument();
     expect(within(dialog).getByRole('searchbox', { name: 'Filter owner' })).toHaveFocus();

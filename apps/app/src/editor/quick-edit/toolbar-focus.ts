@@ -30,3 +30,24 @@ export function focusSelectedObject(): void {
   if (element !== null) element.focus({ preventScroll: true });
   else focusCanvas();
 }
+
+/**
+ * Tab from the toolbar's last button returns to the card; the next Tab from the card then leaves
+ * the canvas as usual instead of re-entering the toolbar (no keyboard trap).
+ */
+let leftToolbar = false;
+
+export function markLeftToolbar(): void {
+  leftToolbar = true;
+}
+
+/** Whether Tab just came back from the toolbar (and forgets it). */
+export function consumeLeftToolbar(): boolean {
+  const left = leftToolbar;
+  leftToolbar = false;
+  return left;
+}
+
+export function toolbarShown(): boolean {
+  return document.querySelector(`[${QUICK_TOOLBAR_ATTR}]`) !== null;
+}

@@ -19,8 +19,9 @@ import { useMemo, useRef } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
-import { isFlowMode, useUiStore } from '../state/ui-store';
-import { addComponent, centredOn, connectComponents } from './canvas-actions';
+import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
+import { targetOf } from './actions/use-action-context';
+import { addComponent, centredOn, connectComponents, nodeElement } from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
   COLLAPSED_NODE_PREFIX,
@@ -136,7 +137,75 @@ export function useCanvasHandlers() {
       return true;
     };
 
+    /**
+     * Opens the canvas menu for a right-clicked object (019 FR-034): an unselected object becomes
+     * the selection first; inside the selection the whole selection is kept. In flow mode and
+     * sessions the selection is left alone (selecting would leave the flow).
+     */
+    const openMenu = (
+      event: ReactMouseEvent,
+      clicked: Partial<Selection> | null,
+      returnFocus: HTMLElement | null,
+    ) => {
+      event.preventDefault();
+      const { selection } = ui();
+      const own = clicked === null ? EMPTY_SELECTION : { ...EMPTY_SELECTION, ...clicked };
+      const inside =
+        own.nodes.every((id) => selection.nodes.includes(id)) &&
+        own.edges.every((id) => selection.edges.includes(id)) &&
+        own.groups.every((id) => selection.groups.includes(id)) &&
+        own.stickies.every((id) => selection.stickies.includes(id));
+      let target = own;
+      if (clicked !== null && inside) target = selection;
+      else if (clicked !== null && !viewOnly()) ui().select(own);
+      ui().openContextMenu({
+        target: targetOf(target),
+        point: { x: event.clientX, y: event.clientY },
+        via: 'pointer',
+        returnFocus,
+      });
+    };
+
     return {
+      onNodeContextMenu: (event: ReactMouseEvent, node: Node) => {
+        if (isPortNode(node.id)) {
+          event.preventDefault();
+          return;
+        }
+        const groupId = groupIdOf(node.id);
+        const stickyId = stickyIdOf(node.id);
+        const clicked =
+          groupId !== null
+            ? { groups: [groupId] }
+            : stickyId !== null
+              ? { stickies: [stickyId] }
+              : { nodes: [node.id] };
+        if (groupId === null && stickyId === null) ui().focus(node.id);
+        openMenu(event, clicked, nodeElement(node.id));
+      },
+      onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => {
+        if (isMergedEdge(edge.id)) {
+          event.preventDefault();
+          return;
+        }
+        openMenu(event, { edges: [edge.id] }, null);
+      },
+      onSelectionContextMenu: (event: ReactMouseEvent) => {
+        event.preventDefault();
+        ui().openContextMenu({
+          target: targetOf(ui().selection),
+          point: { x: event.clientX, y: event.clientY },
+          via: 'pointer',
+        });
+      },
+      onPaneContextMenu: (event: ReactMouseEvent | MouseEvent) => {
+        event.preventDefault();
+        ui().openContextMenu({
+          target: { kind: 'canvas' },
+          point: { x: event.clientX, y: event.clientY },
+          via: 'pointer',
+        });
+      },
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
         if (applyTool(event, node.id)) return;
         const groupId = groupIdOf(node.id);

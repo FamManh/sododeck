@@ -6,6 +6,7 @@
  */
 import type { DeckEditor } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
+import { useToast } from '@sododeck/ui/components/toast';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useMemo } from 'react';
 
@@ -58,6 +59,7 @@ function contextOf(
   view: ViewState,
   ui: Pick<UiState, 'activeFlow' | 'flowSession' | 'selection' | 'drill'>,
   canvas: CanvasApi | null,
+  toast: (message: string) => void,
   target: MenuTarget = targetOf(ui.selection),
   point: { x: number; y: number } | null = null,
 ): ActionContext {
@@ -72,6 +74,7 @@ function contextOf(
     point,
     childCount: graph.childCount,
     canvas,
+    toast,
   };
 }
 
@@ -79,6 +82,7 @@ function contextOf(
 export function readActionContext(
   editor: DeckEditor,
   canvas: CanvasApi | null,
+  toast: (message: string) => void,
   target?: MenuTarget,
   point?: { x: number; y: number } | null,
 ): ActionContext {
@@ -88,6 +92,7 @@ export function readActionContext(
     readViewState(editor.doc),
     useUiStore.getState(),
     canvas,
+    toast,
     target,
     point ?? null,
   );
@@ -106,6 +111,7 @@ export function useActionContext(
   const activeFlow = useUiStore((s) => s.activeFlow);
   const flowSession = useUiStore((s) => s.flowSession);
   const { fitView, screenToFlowPosition, getViewport } = useReactFlow();
+  const toast = useToastMessage();
   return useMemo(
     () =>
       contextOf(
@@ -114,6 +120,7 @@ export function useActionContext(
         view,
         { activeFlow, flowSession, selection, drill },
         { fitView, screenToFlowPosition, getViewport },
+        toast,
         target,
         point ?? null,
       ),
@@ -128,9 +135,21 @@ export function useActionContext(
       fitView,
       screenToFlowPosition,
       getViewport,
+      toast,
       target,
       point,
     ],
+  );
+}
+
+/** A stable `toast(message)` for action contexts. */
+function useToastMessage(): (message: string) => void {
+  const { toast } = useToast();
+  return useCallback(
+    (message: string) => {
+      toast({ message });
+    },
+    [toast],
   );
 }
 
@@ -138,13 +157,14 @@ export function useActionContext(
 export function useRunAction(): (id: string, target?: MenuTarget) => boolean {
   const editor = useEditor();
   const { fitView, screenToFlowPosition, getViewport } = useReactFlow();
+  const toast = useToastMessage();
   return useCallback(
     (id, target) =>
       runAction(
         ACTIONS,
         id,
-        readActionContext(editor, { fitView, screenToFlowPosition, getViewport }, target),
+        readActionContext(editor, { fitView, screenToFlowPosition, getViewport }, toast, target),
       ),
-    [editor, fitView, screenToFlowPosition, getViewport],
+    [editor, fitView, screenToFlowPosition, getViewport, toast],
   );
 }

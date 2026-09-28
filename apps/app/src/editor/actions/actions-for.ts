@@ -9,8 +9,10 @@ import {
 
 const DEFAULT_MODES = ['edit'] as const;
 
-const labelOf = (action: Action, ctx: ActionContext) =>
-  typeof action.label === 'function' ? action.label(ctx) : action.label;
+const labelOf = (action: Action, ctx: ActionContext, surface: Surface) => {
+  const label = surface === 'toolbar' ? (action.toolbarLabel ?? action.label) : action.label;
+  return typeof label === 'function' ? label(ctx) : label;
+};
 
 /** Whether `action` is offered for this target and mode on `surface` (any surface when omitted). */
 function offered(action: Action, ctx: ActionContext, surface?: Surface): boolean {
@@ -25,13 +27,14 @@ function offered(action: Action, ctx: ActionContext, surface?: Surface): boolean
   );
 }
 
-function resolve(action: Action, ctx: ActionContext): ResolvedAction {
-  const children = action.children?.(ctx).map((child) => resolve(child, ctx));
+function resolve(action: Action, ctx: ActionContext, surface: Surface): ResolvedAction {
+  const children = action.children?.(ctx).map((child) => resolve(child, ctx, surface));
   return {
     id: action.id,
-    label: labelOf(action, ctx),
+    label: labelOf(action, ctx, surface),
     ...(action.icon === undefined ? {} : { icon: action.icon }),
     ...(action.shortcut === undefined ? {} : { shortcut: action.shortcut }),
+    ...(action.hint === undefined ? {} : { hint: action.hint }),
     ...(action.description === undefined ? {} : { description: action.description }),
     ...(action.field === undefined ? {} : { field: action.field }),
     ...(children === undefined ? {} : { children }),
@@ -56,7 +59,7 @@ export function actionsFor(
 ): ResolvedSection[] {
   const applicable = list.filter((action) => offered(action, ctx, surface));
   return SECTIONS.flatMap((id) => {
-    const actions = applicable.filter((a) => a.section === id).map((a) => resolve(a, ctx));
+    const actions = applicable.filter((a) => a.section === id).map((a) => resolve(a, ctx, surface));
     return actions.length === 0 ? [] : [{ id, actions }];
   });
 }

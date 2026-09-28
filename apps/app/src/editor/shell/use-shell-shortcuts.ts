@@ -6,6 +6,7 @@ import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { addComponent, canvasElement, centredOn, nodeElement } from '../canvas-actions';
 import { PALETTE_ORDER } from '../palette-order';
+import { focusSelectionToolbar, toolbarShown } from '../quick-edit/toolbar-focus';
 import { useFitSelection } from './fit-selection';
 import { isRegionId, nextRegion, visibleRegions, type RegionId } from './regions';
 import { focusJsonOverlay } from './shell-focus';
@@ -43,7 +44,8 @@ export function focusRegion(region: RegionId): void {
 /**
  * Keys of the canvas-first shell (018 R7, contract "Regions" and "Single-key guard"), installed
  * once by the canvas screen. Modified keys work everywhere, including text fields: F6 / ⇧F6
- * regions, ⌘\ Hide UI, ⌘J JSON, ⌘⇧D details, ⌥1 / ⌥2 Outline / Flows. Single keys work outside
+ * regions, ⌘\ Hide UI, ⌘J JSON, ⌘⇧D details, ⌥1 / ⌥2 Outline / Flows, ⌘E the selection toolbar
+ * (019; not from a text field). Single keys work outside
  * text fields: ⇧1 / ⇧2 fit, M minimap, ? shortcuts, and outside flows V / S / L tools, C the
  * palette (with no card focused; the canvas keeps C for connecting a focused card, §g-49) and
  * 1–6 while the palette is open. Layout-dependent keys read `event.code`.
@@ -90,6 +92,21 @@ export function useShellShortcuts(): void {
         handle(() => {
           ui.toggleDrawer();
         });
+        return;
+      }
+      // ⌘E: into the selection toolbar, when one is shown (019 FR-041); not from a text field.
+      if (
+        isMod(event) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.code === 'KeyE' &&
+        !isTextTarget(event.target)
+      ) {
+        if (toolbarShown()) {
+          handle(() => {
+            focusSelectionToolbar();
+          });
+        }
         return;
       }
       if (event.altKey && !isMod(event) && !event.shiftKey) {

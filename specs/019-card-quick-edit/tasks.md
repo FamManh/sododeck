@@ -246,7 +246,7 @@
 
 **Independent test**: right-click each target and compare with the contract table. Open the same menus with ⇧F10 and from "More" (spec US5).
 
-- [ ] T039 [US5] Create `apps/app/src/editor/quick-edit/canvas-menu.tsx` (+ test), a controlled `DropdownMenu` (R7):
+- [x] T039 [US5] Create `apps/app/src/editor/quick-edit/canvas-menu.tsx` (+ test), a controlled `DropdownMenu` (R7):
   - It is open while `contextMenu !== null`, and its trigger is an invisible 0×0 anchor fixed at `contextMenu.point`.
   - Its content is a `menu` named "Actions for <target>", built from `actionsFor(ACTIONS, ctx, 'menu')` and rendered with `dropdownKit` from `lib/menu-kit.ts`:
     - separators between sections
@@ -257,30 +257,30 @@
   - With `via: 'keyboard' | 'toolbar'`, `onOpenAutoFocus` focuses the first enabled item. `onCloseAutoFocus` restores `returnFocus`.
   - Mount it in `editor/shell/canvas-shell.tsx`. Unlike the toolbar, it stays available under Hide UI, so mount it outside the part that Hide UI removes.
   - Tests: first item focused (keyboard), Esc restores focus, and a disabled item has a description.
-- [ ] T040 [US5] Wire right-click in `apps/app/src/editor/canvas.tsx` / `use-canvas-handlers.ts` (+ tests):
+- [x] T040 [US5] Wire right-click in `apps/app/src/editor/canvas.tsx` / `use-canvas-handlers.ts` (+ tests):
   - `onNodeContextMenu`, `onEdgeContextMenu`, `onSelectionContextMenu` and `onPaneContextMenu` each call `preventDefault`. An unselected target is selected first, and right-clicking inside the selection keeps it (FR-034). Then `openContextMenu({ target: targetOf(...), point: { x: clientX, y: clientY }, via: 'pointer' })`.
   - Group labels and collapsed groups get `onContextMenu` in `group-boundary-node.tsx` / `collapsed-group-node.tsx`.
   - Sticky nodes go through `onNodeContextMenu` as well: the target is `sticky` (FR-033a).
   - Add a "More actions" toolbar action (`more`: component, components, connection, group and mixed variants; toolbar only) in `apps/app/src/editor/actions/common-actions.ts`. It opens the menu below its button with `via: 'toolbar'`.
-- [ ] T041 [US5] Add ⇧F10 and the ContextMenu key to `useCanvasKeyDown` (+ test). The target is the current focused object or selection, and the canvas when there is none. The point is the bottom-left of the object's `getBoundingClientRect()`, or the canvas centre. `via: 'keyboard'`.
-- [ ] T042 [P] [US5] Complete `apps/app/src/editor/actions/common-actions.ts` (+ cases in `actions-for.test.ts`):
+- [x] T041 [US5] Add ⇧F10 and the ContextMenu key to `useCanvasKeyDown` (+ test). The target is the current focused object or selection, and the canvas when there is none. The point is the bottom-left of the object's `getBoundingClientRect()`, or the canvas centre. `via: 'keyboard'`.
+- [x] T042 [P] [US5] Complete `apps/app/src/editor/actions/common-actions.ts` (+ cases in `actions-for.test.ts`):
   - **`json.copy`** (component, components, connection, group, sticky, mixed; all modes; shortcut `copyJson`): `copyText(selectionText(selectionView(...).entries))`, then the toast "Copied JSON for <label>", or the existing "Couldn't copy …" toast (FR-036).
   - **`view.pin`** (component and components, edit mode, only while a view is active): label "Pin" / "Unpin" / "Pin all" / "Unpin all" from `usePinState` logic, run `useViewActions().pin(ids, !allPinned)`. Export `usePinState` / `useTogglePins` (or a pure `pinState(ids, pinned)`) from `apps/app/src/editor/views/pin-controls.tsx`.
   - **Sticky target:** add `sticky` to the targets of `details.open` (T023), `json.copy` and `delete`. The sticky's Delete uses the existing removal path (`requestRemoval` / `describeRemoval` handle `stickies`).
   - **`delete`** (component, components, connection, sticky, mixed; edit mode; section `danger`): `requestDelete(selection)`, the existing dialog and toast (FR-038).
-- [ ] T043 [P] [US5] Create `apps/app/src/editor/actions/arrange-order.ts` (+ test) and `arrange-actions.ts`.
+- [x] T043 [P] [US5] Create `apps/app/src/editor/actions/arrange-order.ts` (+ test) and `arrange-actions.ts`.
   - `arrangeOrder(nodeIds, moved, 'front' | 'back')` → the new order, keeping the relative order of the moved ids.
   - The action `arrange` (component and components, edit mode) has the children `arrange.front` / `arrange.back`. Each runs one `editor.batch` of `editor.reorder('nodes', id, index)` calls.
   - Test: the draw order changes (the node DOM order in `render-canvas`), and it survives `toJSON` → load.
   - First confirm that `visibleGraph` / `toFlowNodes` keep the `deck.nodes` order for components. If they don't, fix the ordering in `apps/app/src/editor/deck-to-flow.ts`, with a test (research R8).
-- [ ] T044 [P] [US5] Create `apps/app/src/editor/actions/canvas-actions.ts` for the canvas target:
+- [x] T044 [P] [US5] Create `apps/app/src/editor/actions/canvas-actions.ts` for the canvas target:
   - `canvas.add`, with six children `canvas.add.<kind>` (labels with 1–6), running `addComponent(editor, kind, screenToFlowPosition(point), { edit: true })` (FR-012 click point).
   - `canvas.addSticky`: `addNoteAt(editor, flowPoint)`.
   - `canvas.selectAll`: extract the ⌘A body in `use-canvas-shortcuts.ts` into an exported function and call it from both places.
   - `canvas.fit`: `fitView({ padding: 0.2 })`, all modes.
   - Register them, with tests.
-- [ ] T045 [US5] In `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`, check the menu for each contract target (component, components, connection, group, sticky, canvas, mixed) against the contract table, both in edit mode and in flow mode (only Open details, Copy JSON and Fit). There must be no item without a runnable action (SC-006). Also check that Delete asks for confirmation as the Delete key does.
-- [ ] T046 [US5] Add ⇧⌘C to `useEditorShortcuts` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test). It uses `event.code === 'KeyC'` and runs `json.copy` through `useRunAction`, skipping text targets.
+- [x] T045 [US5] In `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`, check the menu for each contract target (component, components, connection, group, sticky, canvas, mixed) against the contract table, both in edit mode and in flow mode (only Open details, Copy JSON and Fit). There must be no item without a runnable action (SC-006). Also check that Delete asks for confirmation as the Delete key does.
+- [x] T046 [US5] Add ⇧⌘C to `useEditorShortcuts` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test). It uses `event.code === 'KeyC'` and runs `json.copy` through `useRunAction`, skipping text targets.
 
 **Checkpoint**: quickstart 7.
 
@@ -292,13 +292,13 @@
 
 **Independent test**: with the keyboard only, run the acceptance scenarios of US1, US3, US5 and US6 (spec US7).
 
-- [ ] T047 [US7] Add ⌘E to `apps/app/src/editor/shell/use-shell-shortcuts.ts` (+ test). When the toolbar is shown, it calls `preventDefault` and focuses its first button (by `data-quick-toolbar`, or an exported `focusSelectionToolbar()` in `selection-toolbar.tsx`). Otherwise it does nothing. It is skipped in text targets and dialogs.
-- [ ] T048 [US7] Toolbar keyboard in `selection-toolbar.tsx` (+ test). Esc on the toolbar (with no popover open) focuses `focusedId` / `focusedEdgeId`, or the group element. Tab after the last button returns focus to the selected card. In `useCanvasKeyDown`, Tab on a selected object with a visible toolbar moves focus to the toolbar (FR-041).
-- [ ] T049 [US7] Accessibility pass (+ tests in the respective files), per contract R10:
+- [x] T047 [US7] Add ⌘E to `apps/app/src/editor/shell/use-shell-shortcuts.ts` (+ test). When the toolbar is shown, it calls `preventDefault` and focuses its first button (by `data-quick-toolbar`, or an exported `focusSelectionToolbar()` in `selection-toolbar.tsx`). Otherwise it does nothing. It is skipped in text targets and dialogs.
+- [x] T048 [US7] Toolbar keyboard in `selection-toolbar.tsx` (+ test). Esc on the toolbar (with no popover open) focuses `focusedId` / `focusedEdgeId`, or the group element. Tab after the last button returns focus to the selected card. In `useCanvasKeyDown`, Tab on a selected object with a visible toolbar moves focus to the toolbar (FR-041).
+- [x] T049 [US7] Accessibility pass (+ tests in the respective files), per contract R10:
   - Check the names and roles for the toolbar, field buttons (`aria-expanded`), popover `dialog`, `listbox` (`aria-multiselectable` for tags), menu, submenus and title textbox.
   - Check that announcements use the existing `announce()`.
   - Check that the mixed and partial states appear in text.
-- [ ] T050 [US7] Check that `editor/shell/shortcut-help-dialog.tsx` shows the "Quick edit" section from T012 (+ test).
+- [x] T050 [US7] Check that `editor/shell/shortcut-help-dialog.tsx` shows the "Quick edit" section from T012 (+ test).
 
 **Checkpoint**: quickstart 8.
 
@@ -310,14 +310,14 @@
 
 **Independent test**: select a connection and change its label, protocol and direction. Select a group and use each toolbar action (spec US6).
 
-- [ ] T051 [US6] Create `apps/app/src/editor/actions/connection-actions.ts` (+ cases):
+- [x] T051 [US6] Create `apps/app/src/editor/actions/connection-actions.ts` (+ cases):
   - **`edge.label`** (connection; toolbar and menu; shortcut ⏎): runs `openEdgePopover(id)`.
   - **`edge.protocol`**: in the toolbar it opens the `protocol` field. In the menu it has radio children from `PROTOCOLS` (`protocolLabel`).
   - **`edge.direction`**: the same, from `DIRECTIONS`.
   - **Writes:** `oneStep(editor, () => editor.update('edges', id, { protocol | direction }))`, then announce.
   - In `field-popover.tsx`, add the `protocol` and `direction` fields as single-choice `ChoiceList`s.
-- [ ] T052 [US6] Add P to `useCanvasKeyDown` (+ test). With one selected connection it calls `openToolbarField('protocol')`, only when the toolbar is visible. It is ignored in text targets.
-- [ ] T053 [US6] Create `apps/app/src/editor/actions/group-actions.ts` (+ cases), all for the group target in edit mode. Register them.
+- [x] T052 [US6] Add P to `useCanvasKeyDown` (+ test). With one selected connection it calls `openToolbarField('protocol')`, only when the toolbar is visible. It is ignored in text targets.
+- [x] T053 [US6] Create `apps/app/src/editor/actions/group-actions.ts` (+ cases), all for the group target in edit mode. Register them.
   - **`group.collapse`**: label "Collapse" / "Expand", shortcut `collapseGroup`, runs `toggleGroupCollapsed(editor, id)`.
   - **`group.selectMembers`**: `select({ nodes: directMembers })`, where the direct members are `deck.nodes` whose `group === id`. The toolbar then switches to the components variant.
   - **`group.ungroup`**: toolbar only, label "Ungroup", shortcut `ungroup` (⇧⌘G). Runs `oneStep(editor, () => editor.remove('groups', id))`.
@@ -325,7 +325,7 @@
   - **`group.delete`**: menu only, section `danger`, label "Delete group", with the tooltip "Members move to the parent level". It runs the same operation.
   - `title.rename` already covers groups (T023).
   - Tests: ungroup is one undo step, members move to the parent (read back with `readDeck`), and select members.
-- [ ] T054 [US6] In `selection-toolbar.test.tsx`, check the connection and group variants: button names per the contract; Enter on a selected connection still opens the edge popover (the existing behaviour); Space still collapses.
+- [x] T054 [US6] In `selection-toolbar.test.tsx`, check the connection and group variants: button names per the contract; Enter on a selected connection still opens the edge popover (the existing behaviour); Space still collapses.
 
 **Checkpoint**: every story is done (quickstart 6).
 

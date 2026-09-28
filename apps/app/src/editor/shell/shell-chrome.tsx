@@ -9,6 +9,7 @@ import { HistoryIsland } from './history-island';
 import { JsonOverlay } from './json-overlay';
 import { Rail } from './rail';
 import { clampDrawerWidth, EDGE, zoomIslandBottom } from './shell-geometry';
+import { CanvasMenu } from '../quick-edit/canvas-menu';
 import { SelectionToolbar } from '../quick-edit/selection-toolbar';
 import { ShortcutHelpDialog } from './shortcut-help-dialog';
 import { ShowUiPill } from './show-ui-pill';
@@ -73,6 +74,8 @@ export function ShellChrome({
           />
         </>
       )}
+      {/* Not part of the chrome Hide UI removes: right-click menus keep working (019). */}
+      <CanvasMenu />
       <ShortcutHelpDialog />
     </>
   );

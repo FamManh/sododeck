@@ -54,6 +54,14 @@ export function addComponent(
   return id;
 }
 
+/** Selects every component the current view shows (⌘A and the canvas menu's Select all). */
+export function selectAllComponents(editor: DeckEditor): void {
+  const deck = readViewState(editor.doc).deck;
+  const ui = useUiStore.getState();
+  ui.select({ nodes: deck.nodes.map((n) => n.id) });
+  ui.announce(`${String(deck.nodes.length)} selected`);
+}
+
 function titleOf(deck: SododeckFile, id: string): string {
   return deck.nodes.find((n) => n.id === id)?.title ?? id;
 }

@@ -1,5 +1,9 @@
+import { ARRANGE_ACTIONS } from './arrange-actions';
+import { CANVAS_ACTIONS } from './canvas-actions';
 import { COMMON_ACTIONS } from './common-actions';
+import { CONNECTION_ACTIONS } from './connection-actions';
 import { FIELD_ACTIONS } from './field-actions';
+import { GROUP_ACTIONS } from './group-actions';
 import { TITLE_ACTIONS } from './title-actions';
 import type { Action } from './types';
 
@@ -8,4 +12,12 @@ import type { Action } from './types';
  * section. A later feature adds its module here (016 clipboard / group / align, 017 reset route,
  * 020 fill / stroke); the menu, the toolbar and the keys pick it up unchanged (FR-040).
  */
-export const ACTIONS: readonly Action[] = [...TITLE_ACTIONS, ...FIELD_ACTIONS, ...COMMON_ACTIONS];
+export const ACTIONS: readonly Action[] = [
+  ...TITLE_ACTIONS,
+  ...CONNECTION_ACTIONS,
+  ...GROUP_ACTIONS,
+  ...FIELD_ACTIONS,
+  ...CANVAS_ACTIONS,
+  ...COMMON_ACTIONS,
+  ...ARRANGE_ACTIONS,
+];

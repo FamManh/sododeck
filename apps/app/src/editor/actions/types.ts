@@ -44,6 +44,8 @@ export interface ActionContext {
   /** Direct children count of each visible component in the current scope (drill-in). */
   childCount: ReadonlyMap<Id, number>;
   canvas: CanvasApi | null;
+  /** Shows a toast (Copy JSON). */
+  toast: (message: string) => void;
 }
 
 type Dynamic<T> = T | ((ctx: ActionContext) => T);
@@ -52,9 +54,13 @@ export interface Action {
   /** Unique, e.g. `title.rename`. */
   id: string;
   label: Dynamic<string>;
+  /** The toolbar's name when it differs, e.g. "Protocol: HTTP" for the menu's "Protocol". */
+  toolbarLabel?: Dynamic<string>;
   icon?: LucideIcon;
   /** A key from `SHORTCUTS` shown as the hint (menu) or in the tooltip (toolbar). */
   shortcut?: ShortcutId;
+  /** A literal key hint when no `SHORTCUTS` entry fits one item (e.g. "2" in Add component ▸). */
+  hint?: string;
   section: Section;
   /** Where the action is offered, and for which targets. */
   where: Partial<Record<Surface, readonly TargetKind[]>>;
@@ -82,6 +88,7 @@ export interface ResolvedAction {
   label: string;
   icon?: LucideIcon;
   shortcut?: ShortcutId;
+  hint?: string;
   description?: string;
   destructive: boolean;
   /** Why it can't run now, or `null` when it can. */
