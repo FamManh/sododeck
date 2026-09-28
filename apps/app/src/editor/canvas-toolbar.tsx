@@ -9,6 +9,7 @@ import {
 import { Focus, StickyNote, Tag } from 'lucide-react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { PinToggle } from './views/pin-controls';
 
 /** Canvas header, top right (design 02/58): selection count and the Labels toggle. */
 export function CanvasToolbar() {
@@ -29,6 +30,7 @@ export function CanvasToolbar() {
           {count} selected
         </span>
       )}
+      <PinToggle />
       <Button
         variant="toggle"
         pressed={labelsOn}

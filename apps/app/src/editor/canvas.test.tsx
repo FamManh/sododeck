@@ -600,6 +600,15 @@ describe('canvas handlers', () => {
       expect(editor().canUndo()).toBe(false);
     });
 
+    it('moves a pinned component and keeps it pinned (FR-024)', () => {
+      const { h, doc } = handlers(
+        deckOf({ ...deck, views: [{ id: 'v', type: 'system', title: 'V', pinned: ['a'] }] }),
+      );
+      drag(h, 'a', { x: 40, y: 50 });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 40, y: 50 });
+      expect(toJSON(doc).views[0]?.pinned).toEqual(['a']);
+    });
+
     it('keeps a pinned note where it is dropped in a view that moved its component', () => {
       const { h, doc } = handlers(
         deckOf({

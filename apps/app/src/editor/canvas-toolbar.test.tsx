@@ -1,9 +1,10 @@
+import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
-import { renderWithEditor } from '../test/render-canvas';
+import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { CanvasToolbar } from './canvas-toolbar';
 
 describe('CanvasToolbar', () => {
@@ -74,5 +75,42 @@ describe('CanvasToolbar', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Hidden' }));
     expect(useUiStore.getState().notesDisplay).toBe('hidden');
     expect(screen.getByRole('button', { name: 'Notes: hidden' })).toBeInTheDocument();
+  });
+
+  describe('Pin / Unpin (011 FR-023)', () => {
+    const file = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A' },
+        { id: 'b', type: 'service', title: 'B' },
+      ],
+      views: [{ id: 'v', type: 'system', title: 'V', pinned: ['a'] }],
+    });
+    const pinned = (doc: Parameters<typeof toJSON>[0]) => toJSON(doc).views[0]?.pinned;
+
+    it('appears only when components are selected', () => {
+      renderWithEditor(<CanvasToolbar />, file);
+      expect(screen.queryByRole('button', { name: 'Pin' })).not.toBeInTheDocument();
+      act(() => {
+        useUiStore.getState().select({ nodes: ['a'] });
+      });
+      expect(screen.getByRole('button', { name: 'Unpin' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('pins a mixed selection in one step, then unpins them all', async () => {
+      const user = userEvent.setup();
+      const { doc, editor } = renderWithEditor(<CanvasToolbar />, file);
+      act(() => {
+        useUiStore.getState().select({ nodes: ['a', 'b'] });
+      });
+      await user.click(screen.getByRole('button', { name: 'Pin' }));
+      expect(pinned(doc)).toEqual(['a', 'b']);
+      expect(useUiStore.getState().announcement.text).toBe('Pinned 2 components');
+      await user.click(screen.getByRole('button', { name: 'Unpin' }));
+      expect(pinned(doc)).toBeUndefined();
+      act(() => {
+        editor().undo();
+      });
+      expect(pinned(doc)).toEqual(['a', 'b']);
+    });
   });
 });
