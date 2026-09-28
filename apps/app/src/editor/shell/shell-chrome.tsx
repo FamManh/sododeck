@@ -9,6 +9,7 @@ import { HistoryIsland } from './history-island';
 import { JsonOverlay } from './json-overlay';
 import { Rail } from './rail';
 import { clampDrawerWidth, EDGE, zoomIslandBottom } from './shell-geometry';
+import { SelectionToolbar } from '../quick-edit/selection-toolbar';
 import { ShortcutHelpDialog } from './shortcut-help-dialog';
 import { ShowUiPill } from './show-ui-pill';
 import { ToolsIsland } from './tools-island';
@@ -65,6 +66,7 @@ export function ShellChrome({
             compact={compact}
             {...(onOpenRules === undefined ? {} : { onOpenRules })}
           />
+          <SelectionToolbar />
           <ZoomIsland
             bottom={zoomIslandBottom(jsonShown, jsonHeight)}
             right={drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE}

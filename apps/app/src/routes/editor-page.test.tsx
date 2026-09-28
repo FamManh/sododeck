@@ -112,7 +112,10 @@ const record = async () => db.decks.get('d1');
 
 /** The rule editor from the canvas (018): the rail's Rules flyout, then "Open rule editor". */
 async function openRulesFromRail(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Rules' }));
+  // The rail's button: a selected component's toolbar has a "Rules" button too (019).
+  const rail = document.querySelector<HTMLElement>('[data-region="rail"]');
+  if (rail === null) throw new Error('no rail');
+  await user.click(within(rail).getByRole('button', { name: 'Rules' }));
   await user.click(screen.getByRole('button', { name: 'Open rule editor' }));
 }
 

@@ -9,6 +9,7 @@ import { Canvas } from '../editor/canvas';
 import { CommandPalette } from '../editor/command-palette/command-palette';
 import { DetailDrawer } from '../editor/shell/detail-drawer';
 import { JsonOverlay } from '../editor/shell/json-overlay';
+import { SelectionToolbar } from '../editor/quick-edit/selection-toolbar';
 import { useTidyLayout } from '../editor/tidy-layout';
 import { JsonPanel } from '../editor/json-panel';
 import { exitFlow, nextStep, openFlow, play } from '../editor/flows/flow-mode';
@@ -164,6 +165,28 @@ function paintedAfter(start: number, ready: string | (() => boolean)): Promise<n
     };
     requestAnimationFrame(check);
   });
+}
+
+/** 019 SC-004: selecting components → the selection toolbar painted, visible. */
+function ToolbarBenchHooks() {
+  useEffect(() => {
+    window.__sododeckBench = {
+      ...(window.__sododeckBench ?? { readyAt: 0, nodes: 0, edges: 0 }),
+      toolbar: true,
+      clearSelection: () => {
+        useUiStore.getState().clearSelection();
+      },
+      selectAndWaitForToolbar: (nodeIds) => {
+        const start = performance.now();
+        useUiStore.getState().select({ nodes: nodeIds });
+        return paintedAfter(start, () => {
+          const toolbar = document.querySelector<HTMLElement>('[data-quick-toolbar]');
+          return toolbar !== null && toolbar.style.visibility === 'visible';
+        });
+      },
+    };
+  }, []);
+  return null;
 }
 
 /** Exposes the flow actions the benchmark measures (006 research R15). */
@@ -369,7 +392,8 @@ function BenchShell() {
 
 /**
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1&json=deck&flows=1&inspector=1
- * &groups=1&drawer=1 (`drawer=1`: the canvas-first details drawer and JSON overlay, 018)
+ * &groups=1&drawer=1&toolbar=1 (`drawer=1`: the canvas-first details drawer and JSON overlay, 018;
+ * `toolbar=1`: the selection toolbar, 019)
  * Goes through the real read and write path: model document, editor, incremental snapshot and
  * the real Canvas (so dragging is measured too). `json=deck` adds the JSON panel under the
  * canvas with the Deck tab open (004 SC-003), as in the editor.
@@ -386,6 +410,7 @@ export function BenchPage() {
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
   const views = params.get('views') === '1';
   const drawer = params.get('drawer') === '1';
+  const toolbar = params.get('toolbar') === '1';
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -430,6 +455,7 @@ export function BenchPage() {
                           nodes: deck.nodes.length,
                           edges: deck.edges.length,
                           shell: drawer,
+                          toolbar,
                         };
                       }),
                     );
@@ -439,6 +465,12 @@ export function BenchPage() {
               {(drawer || inspector) && (
                 <div className="pointer-events-none absolute inset-0">
                   <BenchShell />
+                </div>
+              )}
+              {toolbar && (
+                <div className="pointer-events-none absolute inset-0">
+                  <ToolbarBenchHooks />
+                  <SelectionToolbar />
                 </div>
               )}
             </div>

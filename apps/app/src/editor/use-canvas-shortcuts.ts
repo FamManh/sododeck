@@ -62,13 +62,16 @@ function inDialog(target: EventTarget | null): boolean {
 }
 
 /**
- * The details drawer and the JSON overlay (018) float over the canvas but are not dialogs: Delete
- * and Esc there belong to their fields and buttons, never to the canvas selection.
+ * The details drawer and the JSON overlay (018), the selection toolbar and the canvas menu (019)
+ * float over the canvas but are not dialogs: Delete and Esc there belong to their fields and
+ * buttons, never to the canvas selection.
  */
 function inOverlay(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
-    target.closest('[data-region="drawer"], [data-json-overlay], [data-flyout]') !== null
+    target.closest(
+      '[data-region="drawer"], [data-json-overlay], [data-flyout], [data-quick-toolbar], [role="menu"]',
+    ) !== null
   );
 }
 

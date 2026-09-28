@@ -240,6 +240,13 @@ export function useCanvasHandlers() {
       onEdgeMouseLeave: () => {
         if (ui().hoverEdgeId !== null) ui().setHoverEdge(null);
       },
+      /** A pan or zoom by the user hides the selection toolbar until it ends (019 R5). */
+      onMoveStart: (event: MouseEvent | TouchEvent | null) => {
+        if (event !== null) ui().setCanvasGesture('pan');
+      },
+      onMoveEnd: () => {
+        if (ui().canvasGesture === 'pan') ui().setCanvasGesture(null);
+      },
       onPaneClick: (event: ReactMouseEvent) => {
         // Flow mode keeps going on an empty-canvas click (007); Esc or Back exits.
         if (flowMode()) return;
@@ -256,6 +263,8 @@ export function useCanvasHandlers() {
 
       onNodeDragStart: (_: unknown, node: Node) => {
         if (viewOnly()) return;
+        // The selection toolbar hides while a card moves (019 FR-026).
+        ui().setCanvasGesture('drag');
         if (isGroupNode(node.id) || isCollapsedNode(node.id) || isPortNode(node.id)) return;
         const stickyId = stickyIdOf(node.id);
         if (stickyId !== null) {
@@ -315,6 +324,7 @@ export function useCanvasHandlers() {
         );
       },
       onNodeDragStop: () => {
+        if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();
       },
 
