@@ -137,7 +137,7 @@ UI and card rendering.
 | 009 | stickies-search          | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                     |
 | 010 | zoom-groups-focus        | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                      |
 | 011 | views-autolayout         | M4        | 010        | 5 d  | custom view config, layout button (default ok) |
-| 012 | export                   | M5        | 007, 011   | 4 d  | —                                              |
+| 012 | export                   | M5        | 007, 011   | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later        |
 | 013 | samples-onboarding       | M5        | 005, 009   | 3 d  | —                                              |
 | 014 | analytics-feedback       | M5        | 005        | 2 d  | feedback button (small)                        |
 | 021 | design-sync-canvas-first | after M4  | 011        | 1 d  | docs only; designed (86–116)                   |
@@ -986,29 +986,32 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Goal:** Users take their diagrams anywhere — docs, slides, wikis, git — in open formats, generated
   entirely in the browser.
 - **Spec IDs:** I-1, principle 6 (no lock-in).
+- **Founder decision (2026-09-28, spec clarifications):** ship **JSON, PNG and SVG only**; PDF and
+  Mermaid are deferred (see "Later: PDF and Mermaid export" below). JSON always exports the
+  **whole deck**; the scope switch applies to images only and is disabled for JSON. In flow mode the
+  dialog opens on PNG + "Selected flow". Spec: `specs/012-export/spec.md`.
 - **Design references:** [06-export-json](design/screens/06-export-json-light.png) ·
   [dark](design/screens/06-export-json-dark.png), [33-export-png](design/screens/33-export-png-light.png),
   [33-export-svg](design/screens/33-export-svg-light.png), [33-export-pdf](design/screens/33-export-pdf-light.png),
   [33-export-mermaid](design/screens/33-export-mermaid-light.png),
   [34-export-flow-scope](design/screens/34-export-flow-scope-light.png). Components: dialog, format
   list, segmented scope, switches, scale pills, preview, footer.
-- **In scope:** export dialog from the top bar and ⌘K; formats JSON (.sododeck.json, pretty toggle,
-  include descriptions/links/rules), PNG (1×/2×/3×, transparent), SVG (transparent), PDF (landscape,
-  optional flow step details), Mermaid (flowchart with subgraphs); scopes whole deck / current view /
-  selected flow; live preview; filename from deck name; Copy for text formats; "Nothing is uploaded"
-  note; generation in a worker for large decks.
-- **Out of scope:** import of Mermaid/draw.io (P1), embeds (P2), per-page PDF of every flow.
+- **In scope:** export dialog from the tools island, the deck menu and ⌘K; formats JSON
+  (.sododeck.json, whole deck only, pretty toggle, include descriptions/links/rules), PNG
+  (1×/2×/3×, transparent), SVG (transparent); image scopes whole deck / current view / selected
+  flow; live preview; filename from deck name; Copy for JSON and SVG; "Nothing is uploaded" note;
+  generation off the main thread for large decks.
+- **Out of scope:** PDF and Mermaid export (deferred, below); partial JSON (current view / one
+  flow); import of Mermaid/draw.io (P1), embeds (P2), per-page PDF of every flow.
 - **Acceptance criteria:**
   - Given the JSON format, When downloaded and re-imported, Then the deck is identical (round-trip).
-  - Given flow mode on "Place order", When the dialog opens, Then scope is "Selected flow" and the
-    PNG contains only the flow's nodes and edges.
-  - Given Mermaid with "Keep groups as subgraphs", When copied, Then the text is a valid
-    `flowchart LR` with one subgraph per group and kind-specific shapes.
+  - Given flow mode on "Place order", When the dialog opens, Then PNG is selected, scope is
+    "Selected flow" and the PNG contains only the flow's nodes and edges.
+  - Given JSON, When selected, Then the scope switch shows "Whole deck" and is disabled.
   - Given PNG at 3×, When exported, Then the image dimensions are 3× the diagram bounds and the
     footer showed that size beforehand.
   - Given any export, When it runs, Then no network request is made (smoke test still green).
-- **Risks:** PDF without a dependency (print dialog vs generated PDF — decision); fonts embedded in
-  SVG/PNG; large decks (worker/OffscreenCanvas).
+- **Risks:** fonts embedded in SVG/PNG; large decks (worker/OffscreenCanvas).
 - **`/speckit.specify` prompt:**
   > Let users export a deck as a re-importable deck file, a PNG image, an SVG vector, a print-ready
   > PDF, or a Mermaid diagram for markdown and wikis. They can export the whole deck, the current
@@ -1018,11 +1021,17 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > is generated on the user's device and nothing is uploaded. Why: users must never be locked in
   > and need diagrams in their docs, slides and repositories.
 - **`/speckit.plan` hint:**
-  > apps/app/src/export (pure generators: mermaid, svg; JSON only via @sododeck/model
-  > serializeDeck); dialog from packages/ui (000). PNG via canvas from SVG (fonts inlined from
-  > bundled files); PDF: browser print of the SVG unless a dependency is approved. Workers for large
-  > decks. Match docs/design/screens/06-export-json-light.png, 33-export-png-light.png,
-  > 33-export-mermaid-light.png, 34-export-flow-scope-light.png pixel-close.
+
+  > apps/app/src/export (pure generator: svg; JSON only via @sododeck/model serializeDeck);
+  > dialog from packages/ui (000). PNG via canvas from SVG (fonts inlined from bundled files).
+  > Workers for large decks. Match docs/design/screens/06-export-json-light.png,
+  > 33-export-png-light.png, 33-export-svg-light.png, 34-export-flow-scope-light.png pixel-close
+  > (without the PDF and Mermaid entries).
+
+- **Later: PDF and Mermaid export** (not scheduled, founder decision 2026-09-28). Add them to the
+  012 dialog's format list: PDF (A4 landscape, optional flow step details; open decision: print
+  dialog vs generated PDF, which needs a dependency or a custom writer) and Mermaid (`flowchart LR`,
+  one subgraph per group, kind-specific shapes, Copy). Designs: frames 33-pdf and 33-mermaid.
 
 ## 013-samples-onboarding
 
