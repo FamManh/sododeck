@@ -50,12 +50,12 @@
 
 ### Computation in the app
 
-- [ ] T008 [P] Write `apps/app/src/editor/problems/problems-client.test.ts` (FakeWorker injected as in `apps/app/src/layout/layout-client.test.ts`): lazy start, request/response pairing, `onerror` rejects pending calls, `terminate`.
-- [ ] T009 Implement `apps/app/src/editor/problems/problems-client.ts` (`createProblemsClient(makeWorker?)`, `createInlineProblemsClient()` for tests) and `apps/app/src/editor/problems/problems.worker.ts` calling `checkDeck`. Make T008 pass.
-- [ ] T010 [P] Write `apps/app/src/editor/problems/problems-store.test.ts` with the inline client and fake timers: first result published; edits within 150 ms coalesce into one check; a result for a superseded snapshot is dropped; undo/redo and remote updates trigger a check; `dispose` stops listening.
-- [ ] T011 Implement `apps/app/src/editor/problems/problems-store.ts` (`createProblemsStore(doc, client)`) and `apps/app/src/editor/problems/problems-provider.tsx` (`ProblemsProvider`, `useProblems()` via `useSyncExternalStore`). Make T010 pass.
-- [ ] T012 Mount `ProblemsProvider` in `EditorChrome` in `apps/app/src/routes/editor-page.tsx` (worker client, one per deck), and in the test wrappers in `apps/app/src/test/render-canvas.tsx` (and other wrappers under `apps/app/src/test/` that render editor chrome) with the inline client.
-- [ ] T013 [P] Add `problemCursor: string | null` and `setProblemCursor` to `apps/app/src/state/ui-store.ts`, reset in `resetForDeck`; cover in `apps/app/src/state/ui-store.test.ts`.
+- [x] T008 [P] Write `apps/app/src/editor/problems/problems-client.test.ts` (FakeWorker injected as in `apps/app/src/layout/layout-client.test.ts`): lazy start, request/response pairing, `onerror` rejects pending calls, `terminate`.
+- [x] T009 Implement `apps/app/src/editor/problems/problems-client.ts` (`createProblemsClient(makeWorker?)`, `createInlineProblemsClient()` for tests) and `apps/app/src/editor/problems/problems.worker.ts` calling `checkDeck`. Make T008 pass.
+- [x] T010 [P] Write `apps/app/src/editor/problems/problems-store.test.ts` with the inline client and fake timers: first result published; edits within 150 ms coalesce into one check; a result for a superseded snapshot is dropped; undo/redo and remote updates trigger a check; `dispose` stops listening.
+- [x] T011 Implement `apps/app/src/editor/problems/problems-store.ts` (`createProblemsStore(doc, client)`) and `apps/app/src/editor/problems/problems-provider.tsx` (`ProblemsProvider`, `useProblems()` via `useSyncExternalStore`). Make T010 pass.
+- [x] T012 Mount `ProblemsProvider` in `EditorChrome` in `apps/app/src/routes/editor-page.tsx` (worker client, one per deck), and in the test wrappers in `apps/app/src/test/render-canvas.tsx` (and other wrappers under `apps/app/src/test/` that render editor chrome) with the inline client.
+- [x] T013 [P] Add `problemCursor: string | null` and `setProblemCursor` to `apps/app/src/state/ui-store.ts`, reset in `resetForDeck`; cover in `apps/app/src/state/ui-store.test.ts`.
 
 **Checkpoint**: `useProblems()` returns the deck's problems in any editor test; nothing is visible yet.
 

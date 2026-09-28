@@ -24,6 +24,15 @@ describe('ui store', () => {
     localStorage.clear();
   });
 
+  it('keeps the last visited problem until the deck changes (015 FR-021)', () => {
+    const ui = useUiStore.getState;
+    expect(ui().problemCursor).toBeNull();
+    ui().setProblemCursor('orphan:n1');
+    expect(ui().problemCursor).toBe('orphan:n1');
+    ui().resetForDeck();
+    expect(ui().problemCursor).toBeNull();
+  });
+
   it('selects, toggles and clears nodes and edges', () => {
     state().select({ nodes: ['a'], groups: ['g'] });
     expect(state().selection).toEqual({ nodes: ['a'], edges: [], groups: ['g'], stickies: [] });

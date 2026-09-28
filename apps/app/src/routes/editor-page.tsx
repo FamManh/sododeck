@@ -16,6 +16,7 @@ import { JsonPanel } from '../editor/json-panel';
 import { LeftSidebar } from '../editor/left-sidebar';
 import { openDeck, type DeckSource } from '../editor/open-deck';
 import { SaveContext, type SaveControls } from '../editor/save-context';
+import { ProblemsProvider } from '../editor/problems/problems-provider';
 import { TopBar } from '../editor/top-bar';
 import { RuleNavContext, type RuleNav } from '../editor/rules/rule-nav';
 import { useEditorShortcuts } from '../editor/use-canvas-shortcuts';
@@ -180,15 +181,17 @@ function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-foun
   return (
     <SaveContext value={save}>
       <EditorProvider doc={doc}>
-        <ToastProvider>
-          <ReactFlowProvider>
-            <EditorChrome />
-          </ReactFlowProvider>
-          {data.kind === 'stored' && (
-            <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
-          )}
-          <Toaster />
-        </ToastProvider>
+        <ProblemsProvider doc={doc}>
+          <ToastProvider>
+            <ReactFlowProvider>
+              <EditorChrome />
+            </ReactFlowProvider>
+            {data.kind === 'stored' && (
+              <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
+            )}
+            <Toaster />
+          </ToastProvider>
+        </ProblemsProvider>
       </EditorProvider>
     </SaveContext>
   );

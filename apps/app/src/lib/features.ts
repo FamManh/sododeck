@@ -58,3 +58,8 @@ export function isQuotaError(error: unknown): boolean {
   if ('name' in error && error.name === 'QuotaExceededError') return true;
   return 'inner' in error && isQuotaError(error.inner);
 }
+
+/** Module workers (problems check, layout). Missing in jsdom; the app then checks in-process. */
+export function supportsWorkers(): boolean {
+  return typeof Worker !== 'undefined';
+}
