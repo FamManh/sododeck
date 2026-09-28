@@ -22,7 +22,7 @@ import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { exitFlow, openFlow } from './flows/flow-mode';
-import { TopBar } from './top-bar';
+import { DeckIsland } from './shell/deck-island';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
 import { addComponent } from './canvas-actions';
 import { collapsedOf, setGroupCollapsed, toggleGroupCollapsed } from './views/use-current-view';
@@ -86,7 +86,7 @@ function DrillHarness() {
   const deck = useDeckSnapshot(editor.doc);
   return (
     <MemoryRouter>
-      <TopBar deckName={deck.name ?? 'Untitled deck'} deck={deck} />
+      <DeckIsland deck={deck} />
       <Canvas />
     </MemoryRouter>
   );
@@ -97,9 +97,12 @@ describe('Canvas', () => {
     renderWithEditor(<Canvas />, deck);
     expect(screen.getByLabelText('Diagram canvas')).toBeInTheDocument();
     expect(screen.getAllByTestId('deck-node')).toHaveLength(4);
+    // The minimap is off until toggled (018 FR-033).
+    expect(screen.queryByLabelText('Minimap')).not.toBeInTheDocument();
+    act(() => {
+      useUiStore.getState().setMinimap(true);
+    });
     expect(screen.getByLabelText('Minimap')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Labels' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Fit diagram' })).toBeInTheDocument();
   });
 
   it('writes nothing on open, even for components without positions', () => {
@@ -114,8 +117,8 @@ describe('Canvas', () => {
     const user = userEvent.setup();
     const { editor } = renderWithEditor(<Canvas />, deckOf({}));
     expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Open palette' }));
-    expect(ui().leftTab).toBe('palette');
+    await user.click(screen.getByRole('button', { name: 'Add component' }));
+    expect(ui().flyout).toBe('palette');
     act(() => {
       editor().add('nodes', { type: 'service', title: 'S' });
     });
@@ -182,7 +185,6 @@ describe('Canvas', () => {
       ui().select({ nodes: ['a', 'b'] });
     });
     expect(screen.getByTestId('selection-frame')).toBeInTheDocument();
-    expect(screen.getByText('2 selected')).toBeInTheDocument();
   });
 
   it('drops selection, focus and popovers that point at removed objects', () => {
@@ -334,7 +336,7 @@ describe('Canvas', () => {
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Core services group, 2 nodes' }));
     expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'Local/Shop/System view/Core services',
+      'System view/Core services',
     );
     expect(screen.getAllByTestId('deck-node')).toHaveLength(2);
     expect(screen.queryByRole('group', { name: 'Service: Gateway' })).not.toBeInTheDocument();
@@ -495,7 +497,7 @@ describe('canvas handlers', () => {
     });
     expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'], groups: [], stickies: [] });
     act(() => {
-      h().onPaneClick();
+      h().onPaneClick(click());
     });
     expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
@@ -865,7 +867,7 @@ describe('canvas in flow mode (007)', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('z'));
       h().onEdgeClick(click(), flowEdge('az'));
-      h().onPaneClick();
+      h().onPaneClick(click());
     });
     expect(ui().activeFlow).toMatchObject({ flowId: 'order', stepId: 'o3' });
     expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });

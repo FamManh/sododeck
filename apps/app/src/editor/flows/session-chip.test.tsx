@@ -106,16 +106,16 @@ describe('SessionChip: edit mode (US3)', () => {
 });
 
 describe('SessionChip: flow mode (007)', () => {
-  it('reads "Flow mode · <flow>" and exits with its button', async () => {
+  it('reads "Flow · <flow>" and exits with its button', async () => {
     const { user, ui, editor } = renderFlows(flowDeck);
     act(() => {
       openFlow(editor(), 'place');
     });
-    expect(screen.getByText('Flow mode · Place order')).toBeInTheDocument();
+    expect(screen.getByText('Flow · Place order')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Exit flow mode' }));
+    await user.click(screen.getByRole('button', { name: 'Exit flow Place order' }));
     expect(ui().activeFlow).toBeNull();
-    expect(screen.queryByText('Flow mode · Place order')).toBeNull();
+    expect(screen.queryByText('Flow · Place order')).toBeNull();
   });
 
   it('shows the session chip instead while editing', () => {
@@ -124,7 +124,7 @@ describe('SessionChip: flow mode (007)', () => {
       openFlow(editor(), 'place');
       startEditing(editor(), 'place');
     });
-    expect(screen.queryByText('Flow mode · Place order')).toBeNull();
+    expect(screen.queryByText('Flow · Place order')).toBeNull();
     expect(screen.getByTitle('Editing ‘Place order’')).toBeInTheDocument();
   });
 });

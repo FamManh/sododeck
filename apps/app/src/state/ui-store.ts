@@ -36,8 +36,6 @@ export type Popover =
   | { kind: 'merged'; edgeId: string }
   | null;
 
-export type LeftTab = 'outline' | 'palette';
-
 /** Autoplay speed of flow mode (007). */
 export type PlaybackSpeed = 1 | 2;
 
@@ -182,7 +180,6 @@ export interface UiState {
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
   focusedEdgeId: string | null;
-  leftTab: LeftTab;
   outlineCollapsed: ReadonlySet<string>;
   labelsOn: boolean;
   notesDisplay: NotesDisplay;
@@ -257,7 +254,6 @@ export interface UiState {
   closePalette: () => void;
   focus: (id: string | null) => void;
   focusEdge: (id: string | null) => void;
-  setLeftTab: (tab: LeftTab) => void;
   toggleOutlineGroup: (groupId: string) => void;
   setLabelsOn: (on: boolean) => void;
   setNotesDisplay: (display: NotesDisplay) => void;
@@ -468,7 +464,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     palette: { open: false, returnFocus: null },
     focusedId: null,
     focusedEdgeId: null,
-    leftTab: 'outline',
     outlineCollapsed: new Set(),
     labelsOn: readLabelsOn(),
     notesDisplay: readNotesDisplay(),
@@ -618,9 +613,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     focusEdge: (id) => {
       set({ focusedEdgeId: id });
-    },
-    setLeftTab: (tab) => {
-      set({ leftTab: tab });
     },
     toggleOutlineGroup: (groupId) => {
       set(({ outlineCollapsed }) => {

@@ -4,20 +4,19 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
-import { useUiStore } from '../state/ui-store';
 import { renderWithEditor } from '../test/render-canvas';
 import { TopBar } from './top-bar';
 
-describe('TopBar', () => {
+describe('TopBar (rule editor, 008; the canvas uses islands since 018)', () => {
   it('shows the deck name and enables Undo / Redo from the history', async () => {
     const user = userEvent.setup();
     const { editor } = renderWithEditor(
       <MemoryRouter>
-        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} />
+        <TopBar deckName="Shop" />
       </MemoryRouter>,
     );
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'Local/Shop/System view',
+      'Local/Shop/Rules',
     );
     expect(screen.getByText('Demo · not saved')).toBeInTheDocument();
     const undo = screen.getByRole('button', { name: 'Undo' });
@@ -44,7 +43,7 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const { editor, doc } = renderWithEditor(
       <MemoryRouter>
-        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} />
+        <TopBar deckName="Shop" />
       </MemoryRouter>,
     );
     await user.click(screen.getByRole('button', { name: 'Rename deck' }));
@@ -62,7 +61,7 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const { doc } = renderWithEditor(
       <MemoryRouter>
-        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} />
+        <TopBar deckName="Shop" />
       </MemoryRouter>,
     );
     const before = toJSON(doc);
@@ -75,32 +74,5 @@ describe('TopBar', () => {
     await user.clear(screen.getByRole('textbox', { name: 'Deck name' }));
     await user.keyboard('{Enter}');
     expect(toJSON(doc)).toEqual(before);
-  });
-
-  it('shows the view switcher on the canvas, the session chip while recording (011)', async () => {
-    const user = userEvent.setup();
-    renderWithEditor(
-      <MemoryRouter>
-        <TopBar deckName="Shop" deck={{ groups: [], nodes: [], views: [] }} />
-      </MemoryRouter>,
-    );
-    expect(screen.getByRole('tablist', { name: 'Views' })).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Infra, infra view' }));
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'Local/Shop/Infra view',
-    );
-    act(() => {
-      useUiStore.getState().startRecording('New flow', null);
-    });
-    expect(screen.queryByRole('tablist', { name: 'Views' })).not.toBeInTheDocument();
-  });
-
-  it('has no view switcher on the rules screen', () => {
-    renderWithEditor(
-      <MemoryRouter>
-        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} screen="rules" />
-      </MemoryRouter>,
-    );
-    expect(screen.queryByRole('tablist', { name: 'Views' })).not.toBeInTheDocument();
   });
 });

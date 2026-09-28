@@ -11,15 +11,14 @@ import { ConfirmDeleteDialog } from '../editor/confirm-delete-dialog';
 import { DeckDeletedDialog } from '../editor/deck-deleted-dialog';
 import { useFlowShortcuts, usePlaybackShortcuts } from '../editor/flows/use-flow-shortcuts';
 import { useFlowSync } from '../editor/flows/use-flow-sync';
-import { Inspector } from '../editor/inspector';
-import { JsonPanel } from '../editor/json-panel';
-import { LeftSidebar } from '../editor/left-sidebar';
 import { openDeck, type DeckSource } from '../editor/open-deck';
 import { SaveContext, type SaveControls } from '../editor/save-context';
 import { nextProblem } from '../editor/problems/next-problem';
 import { ProblemsProvider } from '../editor/problems/problems-provider';
 import { useGoToProblem } from '../editor/problems/use-go-to-problem';
 import { useProblems } from '../editor/problems/use-problems';
+import { CanvasShell } from '../editor/shell/canvas-shell';
+import { ShellChrome } from '../editor/shell/shell-chrome';
 import { TopBar } from '../editor/top-bar';
 import { RuleNavContext, type RuleNav } from '../editor/rules/rule-nav';
 import { useEditorShortcuts } from '../editor/use-canvas-shortcuts';
@@ -36,8 +35,8 @@ import type { DeckLoaderData } from './deck-loader';
 import { DeckNotFoundPage } from './deck-not-found-page';
 
 /**
- * The canvas screen (the deck route's default): left panel, canvas + JSON panel, inspector.
- * Flow keys (006) belong to this screen only.
+ * The canvas screen (the deck route's default), canvas-first (018, ADR 0014): the canvas fills
+ * the window and every control floats over it. Flow keys (006) belong to this screen only.
  */
 export function CanvasScreen() {
   const editor = useEditor();
@@ -58,21 +57,14 @@ export function CanvasScreen() {
 
   return (
     <RuleNavContext value={ruleNav}>
-      <div className="grid min-h-0 grid-cols-[264px_minmax(0,1fr)_336px] gap-px bg-hairline">
-        <LeftSidebar deck={deck} />
-        <main className="flex min-h-0 flex-col bg-canvas">
-          <div className="min-h-0 flex-1">
-            <Canvas />
-          </div>
-          <JsonPanel />
-        </main>
-        <Inspector
+      <CanvasShell canvas={<Canvas />}>
+        <ShellChrome
           deck={deck}
           onOpenRules={() => {
             ruleNav.openRules();
           }}
         />
-      </div>
+      </CanvasShell>
     </RuleNavContext>
   );
 }
@@ -115,14 +107,15 @@ function EditorChrome() {
   useFlowSync();
 
   return (
-    <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)] bg-app">
-      <TopBar
-        deckName={deck.name ?? 'Untitled deck'}
-        deck={deck}
-        screen={screen}
-        rulesCount={Object.keys(deck.rules).length}
-      />
-      {outlet ?? <CanvasScreen />}
+    <div className="h-dvh bg-app">
+      {screen === 'rules' ? (
+        <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)]">
+          <TopBar deckName={deck.name ?? 'Untitled deck'} />
+          {outlet}
+        </div>
+      ) : (
+        <CanvasScreen />
+      )}
       <CommandPalette screen={screen} openRules={openRules} navigateToCanvas={navigateToCanvas} />
       <ConfirmDeleteDialog deck={deck} />
       <Announcer />

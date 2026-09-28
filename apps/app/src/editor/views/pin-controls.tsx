@@ -1,7 +1,5 @@
 import type { Id } from '@sododeck/schema';
-import { Button } from '@sododeck/ui/components/button';
 import { Switch } from '@sododeck/ui/components/switch';
-import { Pin } from 'lucide-react';
 import { useId } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -58,26 +56,5 @@ export function PinSwitch({ nodeIds }: { nodeIds: readonly Id[] }) {
         onCheckedChange={toggle}
       />
     </div>
-  );
-}
-
-/** Canvas toolbar Pin / Unpin toggle for the selected components (011 FR-023). */
-export function PinToggle() {
-  const nodeIds = useUiStore((s) => s.selection.nodes);
-  const state = usePinState(nodeIds);
-  const toggle = useTogglePins(nodeIds, state);
-  if (nodeIds.length === 0) return null;
-  const pressed = state === 'all';
-  return (
-    <Button
-      variant="toggle"
-      pressed={pressed}
-      className="shadow-rest"
-      title={pressed ? 'Unpin the selected components' : 'Pin the selected components'}
-      onClick={toggle}
-    >
-      <Pin />
-      {pressed ? 'Unpin' : 'Pin'}
-    </Button>
   );
 }

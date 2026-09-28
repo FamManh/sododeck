@@ -1,3 +1,4 @@
+import type { ReactFlowState } from '@xyflow/react';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Scope } from './visible-graph';
@@ -81,3 +82,10 @@ export function nodeLevel(deck: SododeckFile, nodeId: string): Level | undefined
   if (cyclic) return 'container';
   return depth === 0 ? 'container' : 'component';
 }
+
+let lastZoomLevel: Level = 'system';
+/** The semantic level for the current zoom, with hysteresis (010); shared with the zoom island. */
+export const levelSelector = (state: ReactFlowState) => {
+  lastZoomLevel = levelWithHysteresis(state.transform[2], lastZoomLevel);
+  return lastZoomLevel;
+};

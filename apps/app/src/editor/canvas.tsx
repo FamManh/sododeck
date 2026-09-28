@@ -12,7 +12,6 @@ import {
   ReactFlow,
   useStore,
   useReactFlow,
-  type ReactFlowState,
   type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
@@ -23,7 +22,6 @@ import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
 import { displayPosition, groupBounds, nodeSize } from './canvas-geometry';
-import { CanvasToolbar } from './canvas-toolbar';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -47,7 +45,7 @@ import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
 import { focusSet } from './focus-set';
 import { GroupBoundaryNode } from './group-boundary-node';
-import { effectiveLevel, levelForZoom, levelWithHysteresis, type Level } from './levels';
+import { effectiveLevel, levelForZoom, levelSelector, type Level } from './levels';
 import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
 import { PortPillNode } from './port-pill-node';
@@ -63,7 +61,9 @@ import { collapsedOf, readViewState, useViewState } from './views/use-current-vi
 import { viewCrumbTitle } from './views/view-title';
 import { useCurrentViewSync } from './views/use-view-sync';
 import { useUndoAcrossViews } from './views/undo-context';
-import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
+import { PANEL_COLLAPSED as JSON_COLLAPSED } from './panel-height';
+import { MAX_ZOOM, MIN_ZOOM } from './zoom-limits';
+import { EDGE, ISLAND_HEIGHT, STACK_GAP, zoomIslandBottom } from './shell/shell-geometry';
 import { problemMarks } from './problems/problem-marks';
 import { useProblems } from './problems/use-problems';
 
@@ -84,12 +84,6 @@ const connectionLineStyle = {
   stroke: 'var(--color-primary)',
   strokeWidth: 1.5,
   strokeDasharray: '5 4',
-};
-
-let lastZoomLevel: Level = 'system';
-const levelSelector = (state: ReactFlowState) => {
-  lastZoomLevel = levelWithHysteresis(state.transform[2], lastZoomLevel);
-  return lastZoomLevel;
 };
 
 export interface CanvasProps {
@@ -239,6 +233,17 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const selection = useUiStore((s) => s.selection);
   const drill = useUiStore((s) => s.drill);
   const focusMode = useUiStore((s) => s.focusMode);
+  const minimap = useUiStore((s) => s.minimap);
+  const jsonShown = useUiStore((s) => s.jsonShown);
+  const jsonHeight = useUiStore((s) => (s.jsonPanel.open ? s.jsonPanel.height : JSON_COLLAPSED));
+  const minimapBottom = zoomIslandBottom(jsonShown, jsonHeight) + ISLAND_HEIGHT + STACK_GAP;
+  const hideUi = useUiStore((s) => s.hideUi);
+  const drawerWidth = useUiStore((s) => (s.drawer.open ? s.drawer.width : null));
+  const minimapRight = drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE;
+  const playerStyle = {
+    ...(drawerWidth === null ? {} : { left: `calc(50% - ${String((drawerWidth + EDGE) / 2)}px)` }),
+    ...(jsonShown ? { bottom: zoomIslandBottom(true, jsonHeight) - EDGE } : {}),
+  };
   const focusedId = useUiStore((s) => s.focusedId);
   const focusedEdgeId = useUiStore((s) => s.focusedEdgeId);
   const labelsOn = useUiStore((s) => s.labelsOn);
@@ -513,6 +518,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     <div
       ref={wrapper}
       {...{ [CANVAS_ATTR]: '' }}
+      data-region="canvas"
       {...(flowMode ? { 'data-flow-mode': '' } : {})}
       {...(focus !== null ? { 'data-focus-mode': '' } : {})}
       data-level={level}
@@ -586,26 +592,25 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         {...handlers}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
-        <Panel position="top-right">
-          <CanvasToolbar />
-        </Panel>
-        <Panel position="bottom-left">
-          <ZoomControl level={level} scope={scope} />
-        </Panel>
-        <MiniMap
-          ariaLabel="Minimap"
-          position="bottom-right"
-          pannable
-          nodeColor="var(--color-surface-3)"
-          nodeStrokeColor="var(--color-border)"
-          maskColor="var(--xy-minimap-mask-background-color)"
-          onClick={(_, position) => {
-            void setCenter(position.x, position.y, { zoom: getZoom() });
-          }}
-          className="rounded-card border border-hairline shadow-rest"
-        />
-        {flowMode && (
-          <Panel position="bottom-center">
+        {/* The minimap (018 FR-033): off by default, above the zoom island (M). */}
+        {minimap && !hideUi && (
+          <MiniMap
+            ariaLabel="Minimap"
+            position="bottom-right"
+            pannable
+            nodeColor="var(--color-surface-3)"
+            nodeStrokeColor="var(--color-border)"
+            maskColor="var(--xy-minimap-mask-background-color)"
+            onClick={(_, position) => {
+              void setCenter(position.x, position.y, { zoom: getZoom() });
+            }}
+            style={{ margin: 0, right: minimapRight, bottom: minimapBottom }}
+            className="rounded-card border border-hairline shadow-float"
+          />
+        )}
+        {flowMode && !hideUi && (
+          // Centred on the canvas left free by the drawer, above the JSON overlay (018).
+          <Panel position="bottom-center" style={playerStyle}>
             <StepPlayer deck={deck} />
           </Panel>
         )}

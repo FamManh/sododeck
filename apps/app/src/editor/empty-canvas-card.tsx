@@ -8,16 +8,17 @@ import { focusPalette } from './canvas-actions';
 /** Shown on an empty deck (design 37): how to start, and a way to the palette. */
 export function EmptyCanvasCard({
   title = 'Start your diagram',
-  description = 'Drag a component from the palette onto the canvas, or press Enter on one to add it here. Then drag from a component’s edge to another to connect them.',
+  description = 'Open the palette (C) and drag a component onto the canvas, or press Enter on one to add it here. Then drag from a component’s edge to another to connect them.',
   action = (
     <Button
       variant="primary"
       onClick={() => {
-        useUiStore.getState().setLeftTab('palette');
-        focusPalette();
+        // The palette flyout beside the rail (018); it takes focus when it opens.
+        useUiStore.getState().openFlyout('palette');
+        requestAnimationFrame(focusPalette);
       }}
     >
-      Open palette
+      Add component
     </Button>
   ),
 }: {

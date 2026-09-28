@@ -1,7 +1,7 @@
 import { Button } from '@sododeck/ui/components/button';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { useToast } from '@sododeck/ui/components/toast';
-import { Braces, ChevronDown, Copy, Lock } from 'lucide-react';
+import { Braces, ChevronDown, Copy, Lock, X } from 'lucide-react';
 
 import { isApplePlatform, supportsClipboardWrite } from '../lib/features';
 import type { JsonTab } from '../state/json-panel-prefs';
@@ -15,6 +15,8 @@ export interface JsonPanelHeaderProps {
   /** Text of the current tab; `''` when it shows no code. */
   text: string;
   onCollapse: () => void;
+  /** Hides the whole overlay (018, ⌘J); absent outside the canvas-first shell. */
+  onClose?: () => void;
 }
 
 const isTab = (value: string): value is JsonTab => value === 'deck' || value === 'selection';
@@ -26,6 +28,7 @@ export function JsonPanelHeader({
   view,
   text,
   onCollapse,
+  onClose,
 }: JsonPanelHeaderProps) {
   const { toast } = useToast();
   const lineCount = countLines(text);
@@ -89,6 +92,17 @@ export function JsonPanelHeader({
       >
         <ChevronDown />
       </Button>
+      {onClose !== undefined && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Close JSON"
+          title={`Close JSON · ${isApplePlatform() ? '⌘J' : 'Ctrl+J'}`}
+          onClick={onClose}
+        >
+          <X />
+        </Button>
+      )}
     </div>
   );
 }

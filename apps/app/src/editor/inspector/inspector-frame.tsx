@@ -1,6 +1,8 @@
 import { Panel, PanelContent, PanelHeader, PanelTitle } from '@sododeck/ui/components/panel';
 import type { ReactNode } from 'react';
 
+import { DrawerCloseButton } from '../shell/drawer-close';
+
 /**
  * The inspector's panel: an icon tile, the heading and subtitle, header actions (delete), and the
  * sections (designs 02, 10, 42, 45, 46, 49–51, 58). `plainIcon` shows the icon as is (a kind tile).
@@ -37,6 +39,7 @@ export function InspectorFrame({
           </span>
         </div>
         {actions}
+        <DrawerCloseButton />
       </PanelHeader>
       <PanelContent>{children}</PanelContent>
     </Panel>

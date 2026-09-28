@@ -15,22 +15,25 @@ test('library loads and opens the demo deck with 3 nodes', async ({ page }) => {
 
 test('editor shell renders all panels', async ({ page }) => {
   await page.goto('/deck/demo'); // deep link → SPA fallback
-  await expect(page.getByRole('complementary', { name: 'Outline' })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: 'Inspector' })).toBeVisible();
   await expect(page.getByLabel('Diagram canvas')).toBeVisible();
+  await expect(page.getByRole('toolbar', { name: 'Deck' })).toBeVisible();
+  await expect(page.getByRole('toolbar', { name: 'Canvas tools' })).toBeVisible();
 
-  // Monaco JSON panel (bundled locally, read-only) shows the deck.
+  // Monaco JSON panel (bundled locally, read-only) shows the deck; hidden until ⌘J (018).
+  await page.getByLabel('Diagram canvas').click();
+  await page.keyboard.press('ControlOrMeta+j');
   const json = page.getByRole('region', { name: 'JSON' });
   await expect(json.locator('.monaco-editor')).toBeVisible();
   await expect(json).toContainText('https://sododeck.com/schema/v1.json');
   await expect(json).toContainText('"web-app"'); // Monaco virtualizes: only visible lines are in the DOM
 });
 
-test('selecting a node updates the inspector', async ({ page }) => {
+test('selecting a node and pressing Enter opens its details', async ({ page }) => {
   await page.goto('/deck/demo');
   await page.getByTestId('deck-node').filter({ hasText: 'Order Service' }).click();
-  const inspector = page.getByRole('complementary', { name: 'Inspector' });
-  await expect(inspector.getByRole('heading', { name: 'Order Service' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  const details = page.getByRole('complementary', { name: 'Details' });
+  await expect(details.getByRole('heading', { name: 'Order Service' })).toBeVisible();
 });
 
 test('makes no third-party network requests', async ({ page, baseURL }) => {
@@ -41,6 +44,8 @@ test('makes no third-party network requests', async ({ page, baseURL }) => {
       external.push(url.href);
   });
   await page.goto('/deck/demo');
+  await page.getByLabel('Diagram canvas').click();
+  await page.keyboard.press('ControlOrMeta+j');
   await expect(page.getByRole('region', { name: 'JSON' }).locator('.monaco-editor')).toBeVisible();
   expect(external).toEqual([]);
 });

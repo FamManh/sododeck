@@ -1,12 +1,26 @@
 import { toJSON } from '@sododeck/model';
 import { act, fireEvent, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LayoutRequest, LayoutResult } from '../layout/elk-layout';
-import type * as LayoutClientModule from '../layout/layout-client';
-import { useUiStore } from '../state/ui-store';
-import { deckOf, renderWithEditor } from '../test/render-canvas';
-import { CanvasToolbar } from './canvas-toolbar';
+import type { LayoutRequest, LayoutResult } from '../../layout/elk-layout';
+import type * as LayoutClientModule from '../../layout/layout-client';
+import { useUiStore } from '../../state/ui-store';
+import { useDeckSnapshot } from '../../model/use-deck-snapshot';
+import { useEditor } from '../../model/use-editor';
+import { deckOf, renderWithEditor } from '../../test/render-canvas';
+import { DeckIsland } from '../shell/deck-island';
+
+/** Tidy layout lives in the current view's menu in the deck island since 018 (§g-46). */
+function Island() {
+  const deck = useDeckSnapshot(useEditor().doc);
+  return (
+    <MemoryRouter>
+      <DeckIsland deck={deck} />
+    </MemoryRouter>
+  );
+}
 
 const fake = vi.hoisted(() => ({
   requests: [] as LayoutRequest[],
@@ -15,7 +29,7 @@ const fake = vi.hoisted(() => ({
   cancels: 0,
 }));
 
-vi.mock('../layout/layout-client', async (importOriginal) => {
+vi.mock('../../layout/layout-client', async (importOriginal) => {
   const original = await importOriginal<typeof LayoutClientModule>();
   return {
     ...original,
@@ -48,7 +62,16 @@ const deck = deckOf({
   ],
 });
 const ui = () => useUiStore.getState();
-const tidy = () => screen.getByRole('button', { name: 'Tidy layout' });
+/** Opens the current view's menu and returns its "Tidy layout" item. */
+async function tidy(user = userEvent.setup()) {
+  if (screen.queryByRole('menu') === null) {
+    const [options] = screen.getAllByRole('button', { name: /^View options for / });
+    if (options === undefined) throw new Error('no view menu');
+    await user.click(options);
+  }
+  return screen.getByRole('menuitem', { name: /Tidy layout/ });
+}
+const disabled = (item: HTMLElement) => item.getAttribute('aria-disabled') === 'true';
 
 async function settle() {
   await act(async () => {
@@ -67,34 +90,39 @@ describe('Tidy layout (011 FR-030–FR-036)', () => {
     vi.useRealTimers();
   });
 
-  it('is disabled with a reason: flow open, nothing to arrange, all pinned', () => {
-    const { unmount } = renderWithEditor(<CanvasToolbar />, deckOf({}));
-    expect(tidy()).toBeDisabled();
-    expect(tidy()).toHaveAttribute('title', 'Nothing to arrange');
+  it('is disabled with a reason: flow open, nothing to arrange, all pinned', async () => {
+    const { unmount } = renderWithEditor(<Island />, deckOf({}));
+    let item = await tidy();
+    expect(disabled(item)).toBe(true);
+    expect(item).toHaveAccessibleDescription('Nothing to arrange');
     unmount();
 
     const pinned = renderWithEditor(
-      <CanvasToolbar />,
+      <Island />,
       deckOf({
         ...deck,
         views: [{ id: 'v', type: 'system', title: 'V', pinned: ['a', 'b', 'c'] }],
       }),
     );
-    expect(tidy()).toHaveAttribute('title', 'All components are pinned');
+    expect(await tidy()).toHaveAccessibleDescription('All components are pinned');
     pinned.unmount();
 
-    renderWithEditor(<CanvasToolbar />, deck);
-    expect(tidy()).toBeEnabled();
+    renderWithEditor(<Island />, deck);
+    item = await tidy();
+    expect(disabled(item)).toBe(false);
     act(() => {
-      ui().startRecording('New flow', null);
+      // Flow mode (a session hides the views menu behind its chip).
+      ui().openFlow('f');
     });
-    expect(tidy()).toBeDisabled();
-    expect(tidy()).toHaveAttribute('title', 'Not available while a flow is open');
+    item = await tidy();
+    expect(disabled(item)).toBe(true);
+    expect(item).toHaveAccessibleDescription('Not available while a flow is open');
   });
 
   it('applies the result as one undo step and announces it', async () => {
-    const { doc, editor } = renderWithEditor(<CanvasToolbar />, deck);
-    fireEvent.click(tidy());
+    const { doc, editor } = renderWithEditor(<Island />, deck);
+    const user = userEvent.setup();
+    await user.click(await tidy(user));
     expect(fake.requests[0]?.nodes.map((n) => n.id)).toEqual(['a', 'b', 'c']);
     await act(async () => {
       fake.resolve?.({ a: { x: 0, y: 0 }, b: { x: 250, y: 0 }, c: { x: 500, y: 0 } });
@@ -120,10 +148,11 @@ describe('Tidy layout (011 FR-030–FR-036)', () => {
   });
 
   it('shows progress and Cancel after 500 ms; Cancel changes nothing', async () => {
-    vi.useFakeTimers();
-    const { doc } = renderWithEditor(<CanvasToolbar />, deck);
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime.bind(vi) });
+    const { doc } = renderWithEditor(<Island />, deck);
     const before = toJSON(doc);
-    fireEvent.click(tidy());
+    await user.click(await tidy(user));
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     act(() => {
       vi.advanceTimersByTime(500);
@@ -135,15 +164,16 @@ describe('Tidy layout (011 FR-030–FR-036)', () => {
     expect(fake.cancels).toBe(1);
     expect(toJSON(doc)).toEqual(before);
     expect(ui().announcement.text).toBe('Layout cancelled');
-    expect(tidy()).toBeEnabled();
+    expect(disabled(await tidy(user))).toBe(false);
   });
 
   it('moves only the drilled scope, and skips components deleted meanwhile', async () => {
-    const { doc, editor } = renderWithEditor(<CanvasToolbar />, deck);
+    const { doc, editor } = renderWithEditor(<Island />, deck);
     act(() => {
       ui().drillInto({ kind: 'group', id: 'g', viewport: { x: 0, y: 0, zoom: 1 } });
     });
-    fireEvent.click(tidy());
+    const user = userEvent.setup();
+    await user.click(await tidy(user));
     expect(fake.requests[0]?.nodes.map((n) => n.id)).toEqual(['a', 'b']);
     act(() => {
       editor().remove('nodes', 'b');

@@ -1,19 +1,15 @@
 import { Button } from '@sododeck/ui/components/button';
-import { InlineEdit } from '@sododeck/ui/components/inline-edit';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
-import { ArrowLeft, Download, Moon, Redo2, Search, Sun, Table2, Undo2 } from 'lucide-react';
+import { ArrowLeft, Moon, Redo2, Search, Sun, Undo2 } from 'lucide-react';
 import { Link } from 'react-router';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 
 import { isApplePlatform } from '../lib/features';
 import { useEditor, useHistory } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { useThemeStore } from '../theme/theme-store';
-import { SessionChip } from './flows/session-chip';
-import { DrillCrumbs, type DrillDeck } from './drill-crumbs';
+import { DeckName } from './deck-name';
 import { SaveStatus } from './save-status';
-import { useExportDeck } from './use-export-deck';
-import { ViewSwitcher } from './views/view-switcher';
 import { Wordmark } from './wordmark';
 
 function HistoryButtons() {
@@ -60,70 +56,14 @@ function HistoryButtons() {
 }
 
 /**
- * The deck name in the breadcrumb: a button "Rename deck" that turns into a field (FR-017).
- * Enter saves through the editor (one undo step), Esc cancels, an empty name keeps the old one.
+ * The rule editor's top bar (008). The canvas screen has no top bar since 018: its controls float
+ * in islands (`editor/shell/`).
  */
-function DeckNameCrumb({ name }: { name: string }) {
-  const editor = useEditor();
-  const [editing, setEditing] = useState(false);
-  if (editing) {
-    return (
-      <InlineEdit
-        label="Deck name"
-        value={name}
-        autoFocus
-        className="w-56 text-ink"
-        onFocus={(event) => {
-          event.currentTarget.select();
-        }}
-        onCommit={(next) => {
-          const trimmed = next.trim();
-          if (trimmed !== '' && trimmed !== name) editor.updateMeta({ name: trimmed });
-        }}
-        onKeyDown={(event) => {
-          // InlineEdit commits on Enter itself; leaving edit mode is ours.
-          if (event.key === 'Enter') setEditing(false);
-        }}
-        onBlur={() => {
-          setEditing(false);
-        }}
-      />
-    );
-  }
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      aria-label="Rename deck"
-      title={name}
-      className="max-w-72 min-w-0 px-1.5 font-normal text-ink"
-      onClick={() => {
-        setEditing(true);
-      }}
-    >
-      <span className="truncate">{name}</span>
-    </Button>
-  );
-}
-
-export function TopBar({
-  deckName,
-  deck,
-  screen = 'canvas',
-  rulesCount = 0,
-}: {
-  deckName: string;
-  deck?: DrillDeck;
-  /** The rule editor adds "Rules" to the breadcrumb and "Back to canvas" replaces Export (008). */
-  screen?: 'canvas' | 'rules';
-  rulesCount?: number;
-}) {
+export function TopBar({ deckName }: { deckName: string }) {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
-  const exportDeck = useExportDeck();
   const openPalette = useUiStore((state) => state.openPalette);
-  const inSession = useUiStore((state) => state.flowSession !== null);
   const jumpRef = useRef<HTMLButtonElement>(null);
   const jumpShortcut = isApplePlatform() ? '⌘K' : 'Ctrl+K';
 
@@ -136,33 +76,14 @@ export function TopBar({
       >
         <span>Local</span>
         <span aria-hidden>/</span>
-        <DeckNameCrumb name={deckName} />
-        {screen === 'canvas' && deck !== undefined && <DrillCrumbs deck={deck} />}
-        {screen === 'rules' && (
-          <>
-            <span aria-hidden>/</span>
-            <span aria-current="page" className="text-ink">
-              Rules
-            </span>
-          </>
-        )}
+        <DeckName name={deckName} />
+        <span aria-hidden>/</span>
+        <span aria-current="page" className="text-ink">
+          Rules
+        </span>
       </nav>
       <HistoryButtons />
-      {/* The view switcher (011); a flow recording or edit session replaces it (design 41). */}
-      <div className="flex min-w-0 flex-1 justify-center">
-        {inSession ? <SessionChip /> : screen === 'canvas' && <ViewSwitcher />}
-      </div>
-      {screen === 'canvas' && (
-        <Button asChild variant="ghost">
-          <Link to="rules">
-            <Table2 />
-            Rules
-            <span className="rounded-full bg-surface-2 px-1.5 text-caption text-ink-secondary">
-              {rulesCount}
-            </span>
-          </Link>
-        </Button>
-      )}
+      <div className="flex-1" />
       <SaveStatus />
       <Button
         ref={jumpRef}
@@ -195,19 +116,12 @@ export function TopBar({
         </TooltipTrigger>
         <TooltipContent>Switch to {nextTheme} theme</TooltipContent>
       </Tooltip>
-      {screen === 'rules' ? (
-        <Button asChild variant="primary">
-          <Link to=".">
-            <ArrowLeft />
-            Back to canvas
-          </Link>
-        </Button>
-      ) : (
-        <Button variant="primary" onClick={exportDeck}>
-          <Download />
-          Export
-        </Button>
-      )}
+      <Button asChild variant="primary">
+        <Link to=".">
+          <ArrowLeft />
+          Back to canvas
+        </Link>
+      </Button>
     </header>
   );
 }

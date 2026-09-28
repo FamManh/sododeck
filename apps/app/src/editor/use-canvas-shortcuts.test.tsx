@@ -9,7 +9,7 @@ import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { openFlow } from './flows/flow-mode';
-import { Inspector } from './inspector';
+import { DetailDrawer } from './shell/detail-drawer';
 import { SaveContext } from './save-context';
 import { isTextTarget, useEditorShortcuts } from './use-canvas-shortcuts';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
@@ -81,7 +81,7 @@ function Editor() {
     <>
       <input aria-label="Notes" />
       <Canvas />
-      <Inspector deck={deck} />
+      <DetailDrawer deck={deck} />
     </>
   );
 }
@@ -233,10 +233,12 @@ describe('canvas keyboard', () => {
     expect(ui().popover).toEqual({ kind: 'edge', edgeId: 'e1' });
   });
 
-  it('puts the cursor in the inspector title with Enter on a component', async () => {
+  it('opens the details drawer with Enter on a component, cursor in its title (018)', async () => {
     const { user } = setup();
     focusNode('n22');
+    expect(screen.queryByRole('complementary', { name: 'Details' })).not.toBeInTheDocument();
     await user.keyboard('{Enter}');
+    expect(screen.getByRole('complementary', { name: 'Details' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: 'Title' })).toHaveFocus();
     });
@@ -429,6 +431,9 @@ describe('editor shortcuts', () => {
   it('never deletes while typing in a text field', async () => {
     const { user } = setup();
     focusNode('n00');
+    act(() => {
+      ui().openDrawer();
+    });
     await user.click(screen.getByRole('textbox', { name: 'Title' }));
     await user.keyboard('{Backspace}{Delete}');
     expect(ui().pendingDelete).toBeNull();
