@@ -151,6 +151,20 @@ export function removalToast(
   return `Deleted ${what}${freed} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
 }
 
+/**
+ * Adds "n new problems" before the undo hint when a delete created problems (015 FR-026), so the
+ * toast and the announcement say what broke.
+ */
+export function withNewProblems(message: string, before: number, after: number): string {
+  const added = after - before;
+  if (added <= 0) return message;
+  const note = ` · ${plural(added, 'new problem')}`;
+  const hint = message.lastIndexOf(' · ');
+  return hint === -1
+    ? `${message}${note}`
+    : `${message.slice(0, hint)}${note}${message.slice(hint)}`;
+}
+
 /** Components first, then connections: the order the confirmation and the delete both use. */
 export function removalTargets(selection: Selection): RemovalTarget[] {
   return selectionTargets(selection);

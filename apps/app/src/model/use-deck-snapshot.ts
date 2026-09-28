@@ -31,3 +31,8 @@ export function useDeckSnapshot(doc: DeckDoc): SododeckFile {
 export function readDeck(doc: DeckDoc): SododeckFile {
   return storeFor(doc).get();
 }
+
+/** Calls `listener` after every change to the deck (for derived stores such as 015 problems). */
+export function subscribeDeck(doc: DeckDoc, listener: () => void): () => void {
+  return storeFor(doc).subscribe(listener);
+}

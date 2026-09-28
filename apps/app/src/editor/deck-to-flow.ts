@@ -25,6 +25,7 @@ import {
   type NodeFlowMark,
 } from './flows/flow-overlay';
 import type { Level } from './levels';
+import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems/problem-marks';
 import type { VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
 
@@ -54,6 +55,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   pinned?: boolean;
   /** Created here while the view hides it (011): shown until the view is left, with a note. */
   hiddenInView?: boolean;
+  /** The component's problems (015): an amber glyph and a count in its accessible name. */
+  problems?: ProblemMark;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -75,6 +78,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   dimmed: boolean;
   /** Marks of the shown or recorded flow (006): step badges and the flow style. */
   flow?: EdgeFlowMark;
+  /** The connection's problems (015): an amber glyph on its label pill. */
+  problems?: ProblemMark;
 }
 
 export interface CollapsedGroupData extends Record<string, unknown> {
@@ -219,6 +224,8 @@ export interface CanvasView {
   marks: CollapsedFlowMarks;
   /** The current view's subtitles, dimming, pins and notes (011); none = System defaults. */
   render?: ViewRender;
+  /** Problems by component / connection id (015); none = no glyphs. */
+  problems?: ProblemMarks;
 }
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
@@ -264,6 +271,7 @@ function toFlowNode(
   const viewDimmed = render?.dimmed.has(node.id) === true;
   const pinned = render?.pinned.has(node.id) === true;
   const hiddenInView = render?.revealedHidden.has(node.id) === true;
+  const problems = view.problems?.get(node.id);
   const className = [
     inFlow ? 'in-flow' : null,
     inFocus ? 'in-focus' : null,
@@ -278,6 +286,7 @@ function toFlowNode(
     (cached.data.viewDimmed === true) === viewDimmed &&
     (cached.data.pinned === true) === pinned &&
     (cached.data.hiddenInView === true) === hiddenInView &&
+    sameProblemMark(cached.data.problems, problems) &&
     cached.data.focused === focused &&
     cached.data.level === view.level &&
     cached.data.childCount === childCount &&
@@ -314,6 +323,7 @@ function toFlowNode(
       ...(viewDimmed ? { viewDimmed } : {}),
       ...(pinned ? { pinned } : {}),
       ...(hiddenInView ? { hiddenInView } : {}),
+      ...(problems === undefined ? {} : { problems }),
     },
   };
   nodeCache.set(node, flowNode);
@@ -697,10 +707,12 @@ export function toFlowEdges(
       (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
       view.focus?.edges.has(edge.id) === true;
     const mark = overlay.edges.get(edge.id);
+    const problems = view.problems?.get(edge.id);
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
       sameMark(cached.data?.flow, mark) &&
+      sameProblemMark(cached.data?.problems, problems) &&
       cached.sourceHandle === sourceHandle &&
       cached.targetHandle === targetHandle &&
       cached.data?.showLabel === showLabel &&
@@ -729,7 +741,10 @@ export function toFlowEdges(
         : {}),
       ...(dimmed ? { domAttributes: { 'aria-hidden': true } } : {}),
       interactionWidth: 12,
-      ariaLabel: edgeName(from.title, to.title, edge.label),
+      ariaLabel:
+        problems === undefined
+          ? edgeName(from.title, to.title, edge.label)
+          : `${edgeName(from.title, to.title, edge.label)}, ${problems.label}`,
       data: {
         label: edge.label,
         protocol: edge.protocol,
@@ -741,6 +756,7 @@ export function toFlowEdges(
         inFocus,
         dimmed,
         ...(mark === undefined ? {} : { flow: mark }),
+        ...(problems === undefined ? {} : { problems }),
       },
     };
     edgeCache.set(edge, flowEdge);

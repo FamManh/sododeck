@@ -4,7 +4,16 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Ban, CornerDownRight, EyeOff, Layers, Pin, Plus, Table } from 'lucide-react';
+import {
+  Ban,
+  CornerDownRight,
+  EyeOff,
+  Layers,
+  Pin,
+  Plus,
+  Table,
+  TriangleAlert,
+} from 'lucide-react';
 import { memo, useEffect } from 'react';
 
 import { useEditor } from '../model/use-editor';
@@ -51,6 +60,7 @@ export const DeckNode = memo(function DeckNode({
     `${kindLabel(data.kind)}: ${data.title}`,
     data.viewDimmed === true ? 'dimmed in this view' : null,
     data.pinned === true ? 'pinned' : null,
+    data.problems?.label ?? null,
   ]
     .filter(Boolean)
     .join(', ');
@@ -207,6 +217,17 @@ export const DeckNode = memo(function DeckNode({
         >
           <EyeOff aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
           Hidden in this view
+        </span>
+      )}
+      {/* Problems (015 FR-022): top-right, unless the connect "+" uses that corner. */}
+      {data.problems !== undefined && target !== 'ok' && (
+        <span
+          aria-hidden
+          title={data.problems.titles}
+          data-testid="problem-glyph"
+          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full border border-amber-ink bg-amber-soft text-amber-ink shadow-rest"
+        >
+          <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
         </span>
       )}
       {target === 'ok' && (

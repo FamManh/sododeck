@@ -1,4 +1,4 @@
-import { previewRemoval, removeTarget, type RemovalTarget } from '@sododeck/model';
+import { checkDeck, previewRemoval, removeTarget, type RemovalTarget } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import {
@@ -13,10 +13,11 @@ import { Trash2 } from 'lucide-react';
 import { useMemo, useRef } from 'react';
 
 import { isApplePlatform } from '../lib/features';
+import { readDeck } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { useUiStore, type PendingDelete } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
-import { describeRemoval, removalToast } from './describe-removal';
+import { describeRemoval, removalToast, withNewProblems } from './describe-removal';
 import { useUndoToast } from './undo-toast';
 
 /**
@@ -46,11 +47,17 @@ function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: 
   };
 
   const confirm = () => {
-    const message = removalToast(deck, targets, preview, isApplePlatform());
+    // The one synchronous problems check (015 FR-026, ADR 0013): before and after this delete.
+    const before = checkDeck(readDeck(editor.doc)).total;
     editor.batch(() => {
       // A connection may already be gone with its component (cascade): removeTarget skips it.
       for (const target of targets) removeTarget(editor, editor.doc, target);
     });
+    const message = withNewProblems(
+      removalToast(deck, targets, preview, isApplePlatform()),
+      before,
+      checkDeck(readDeck(editor.doc)).total,
+    );
     const ui = useUiStore.getState();
     ui.cancelDelete();
     if (canvasDelete) ui.clearSelection();

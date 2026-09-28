@@ -44,6 +44,28 @@ function renderEdge(data: Partial<DeckEdgeData>, selected = false) {
 }
 
 describe('DeckEdge', () => {
+  it('shows a problem glyph on its pill, even with labels off (015 FR-022)', () => {
+    renderEdge({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } });
+    expect(screen.getByTestId('edge-label')).not.toHaveTextContent('POST /orders');
+    expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Duplicate connection');
+  });
+
+  it('keeps step badges first when a flow step and a problem share the pill (015 T030)', () => {
+    renderEdge({
+      flow: {
+        badges: [{ label: '2', errorPath: false, current: false, chainBreak: false }],
+        style: 'path',
+        errorIcon: false,
+      },
+      problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' },
+    });
+    const pill = screen.getByTestId('edge-label');
+    const children = [...pill.children];
+    expect(children.indexOf(screen.getByRole('img', { name: /Step 2/ }))).toBeLessThan(
+      children.indexOf(screen.getByTestId('problem-glyph')),
+    );
+  });
+
   it('shows the label pill only when Labels is on', () => {
     renderEdge({ showLabel: true });
     expect(screen.getByTestId('edge-label')).toHaveTextContent('POST /orders');

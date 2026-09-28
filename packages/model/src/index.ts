@@ -12,6 +12,14 @@ export { DeckEditError, DeckValidationError, type DeckEditErrorCode } from './er
 export { createEditor, type DeckEditor, type EditorOptions } from './editor';
 export { observeDeck, type DeckChange, type ObjectChange } from './observe';
 export { checkIntegrity, type IntegrityProblem } from './integrity';
+export {
+  checkDeck,
+  PROBLEM_KINDS,
+  type DeckProblems,
+  type Problem,
+  type ProblemKind,
+  type ProblemTarget,
+} from './problems';
 export type { RemovalResult } from './ops/cascade';
 export type { ViewSettingsPatch } from './ops/views';
 export {

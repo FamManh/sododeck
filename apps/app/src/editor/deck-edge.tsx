@@ -2,7 +2,7 @@ import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
-import { Ban, CircleAlert } from 'lucide-react';
+import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 
 import type { DeckFlowEdge } from './deck-to-flow';
@@ -53,6 +53,8 @@ export const DeckEdge = memo(function DeckEdge({
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
   const showFlowLabel = hasBadges || flowIcon !== null;
+  // Problems (015 FR-022) show on the label pill, even with labels off.
+  const problems = data?.problems;
   const current = flow?.current ?? null;
   const width = selected ? 2.5 : current !== null ? 3 : (flowStroke?.width ?? 1.5);
 
@@ -91,7 +93,7 @@ export const DeckEdge = memo(function DeckEdge({
         />
       ))}
       {current !== null && <FlowToken path={path} x={labelX} y={labelY} speed={current.speed} />}
-      {(showLabel || selected || flow !== undefined) && (
+      {(showLabel || selected || flow !== undefined || problems !== undefined) && (
         <EdgeLabelRenderer>
           {/* Anchor for the edge and invalid-click popovers, at the label point. */}
           <div
@@ -99,7 +101,7 @@ export const DeckEdge = memo(function DeckEdge({
             className="pointer-events-none absolute size-px"
             style={{ transform: `translate(${String(labelX)}px, ${String(labelY)}px)` }}
           />
-          {(showLabel || showFlowLabel) && (
+          {(showLabel || showFlowLabel || problems !== undefined) && (
             <span
               data-testid="edge-label"
               data-flow-style={flow?.style}
@@ -149,6 +151,15 @@ export const DeckEdge = memo(function DeckEdge({
                   strokeWidth={ICON_STROKE_WIDTH}
                   className="size-3.5"
                 />
+              )}
+              {problems !== undefined && (
+                <span
+                  data-testid="problem-glyph"
+                  title={problems.titles}
+                  className={cn('inline-flex text-amber-ink', !showLabel && !hasBadges && 'pl-1')}
+                >
+                  <TriangleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                </span>
               )}
               {showLabel && data?.label}
             </span>

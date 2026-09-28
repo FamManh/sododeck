@@ -2,7 +2,7 @@ import { previewRemoval, type RemovalTarget } from '@sododeck/model';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import { describeRemoval, removalToast } from './describe-removal';
+import { describeRemoval, removalToast, withNewProblems } from './describe-removal';
 
 const deck = deckOf({
   nodes: [
@@ -189,5 +189,19 @@ describe('describeRemoval for a rule (008 FR-024)', () => {
 
   it('says when the rule is not used', () => {
     expect(run('U').body).toBe('It isn’t used anywhere.');
+  });
+});
+
+describe('withNewProblems (015 FR-026)', () => {
+  it('adds the count before the undo hint, and only when problems grew', () => {
+    expect(withNewProblems('Deleted A · ⌘Z to undo', 1, 2)).toBe(
+      'Deleted A · 1 new problem · ⌘Z to undo',
+    );
+    expect(withNewProblems('Deleted A · ⌘Z to undo', 0, 3)).toBe(
+      'Deleted A · 3 new problems · ⌘Z to undo',
+    );
+    expect(withNewProblems('Deleted A · ⌘Z to undo', 2, 2)).toBe('Deleted A · ⌘Z to undo');
+    expect(withNewProblems('Deleted A · ⌘Z to undo', 3, 1)).toBe('Deleted A · ⌘Z to undo');
+    expect(withNewProblems('Deleted A', 0, 1)).toBe('Deleted A · 1 new problem');
   });
 });

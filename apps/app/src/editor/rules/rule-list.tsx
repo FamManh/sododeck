@@ -7,6 +7,8 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { Plus, Table2 } from 'lucide-react';
 import { Link } from 'react-router';
 
+import { ProblemGlyph } from '../problems/problem-glyph';
+import { useProblems } from '../problems/use-problems';
 import { rulesPath } from './rules-path';
 
 const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 's'}`;
@@ -24,6 +26,7 @@ export function RuleList({
   onNew: () => void;
 }) {
   const rules = Object.entries(deck.rules);
+  const problems = useProblems();
   return (
     <nav aria-label="Decision tables" className="flex min-h-0 flex-col bg-surface">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
@@ -55,7 +58,7 @@ export function RuleList({
                     <span className="flex size-8 shrink-0 items-center justify-center rounded-row bg-amber-soft text-amber-ink">
                       <Table2 aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4" />
                     </span>
-                    <span className="flex min-w-0 flex-col">
+                    <span className="flex min-w-0 flex-1 flex-col">
                       <span
                         className={cn('truncate text-body', current && 'text-primary-ink')}
                         title={rule.title}
@@ -66,6 +69,7 @@ export function RuleList({
                         {plural(rule.rows.length, 'row')} · used in {plural(steps, 'step')}
                       </span>
                     </span>
+                    <ProblemGlyph problems={problems?.byObject.get(id) ?? []} />
                   </Link>
                 </li>
               );

@@ -1,6 +1,6 @@
 import { fromJSON, serializeDeck, toJSON } from '@sododeck/model';
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { flowDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
@@ -153,18 +153,23 @@ describe('FlowList: features and flows (US1, US3)', () => {
     expect(toJSON(doc).features.map((f) => f.id)).toEqual(['payments', 'delivery']);
   });
 
-  it('marks a flow with a broken step as "Has problems"; undo clears it', () => {
+  it('marks a flow with a broken step with the problems glyph; undo clears it (015 FR-023)', async () => {
     const { editor } = renderFlows(flowDeck);
-    const row = () => screen.getByRole('button', { name: 'Place order' }).closest('li');
-    expect(row()).not.toHaveTextContent('Has problems');
+    const row = () =>
+      within(screen.getByRole('button', { name: 'Place order' }).closest('li') as HTMLElement);
+    await vi.waitFor(() => {
+      expect(row().queryByRole('img', { name: /problems?$/ })).not.toBeInTheDocument();
+    });
     act(() => {
       editor().remove('edges', 'bc');
     });
-    expect(row()).toHaveTextContent('Has problems');
+    expect(await row().findByRole('img', { name: '1 problem' })).toBeInTheDocument();
     act(() => {
       editor().undo();
     });
-    expect(row()).not.toHaveTextContent('Has problems');
+    await vi.waitFor(() => {
+      expect(row().queryByRole('img', { name: /problems?$/ })).not.toBeInTheDocument();
+    });
   });
 });
 
