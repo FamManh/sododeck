@@ -31,6 +31,11 @@ declare global {
       edges: number;
       /** 018: the canvas-first shell (drawer + JSON overlay) is rendered (`drawer=1`). */
       shell?: boolean;
+      /** 019: the selection toolbar is rendered (`toolbar=1`). */
+      toolbar?: boolean;
+      clearSelection?: () => void;
+      /** 019 SC-004: selects the components, resolves with ms until the toolbar is painted. */
+      selectAndWaitForToolbar?: (nodeIds: string[]) => Promise<number>;
       collapseAll?: () => Promise<void>;
       toggleCollapse?: (groupId: string) => Promise<number>;
       prepareFocus?: (nodeId: string) => Promise<void>;

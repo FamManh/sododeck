@@ -45,10 +45,10 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `019-card-quick-edit` from the latest `main`. Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/019-card-quick-edit/bench-before.md`.
-- [ ] T003 Add the `selection-toolbar-pan` scenario to `apps/app/bench/perf.bench.ts` (R13, SC-007). On the 500 / 1,000 deck it selects three nodes and waits for `role=toolbar` named `/^Selection:/`. It records the time from the selection click to the toolbar being visible (SC-004, target ≤ 100 ms), then measures pan and zoom fps the same way as the `default` scenario. Until the toolbar exists (T030), it logs `TODO(019): not available yet` and records no number. This is not a skipped test.
-- [ ] T004 [P] Write ADR `docs/decisions/0015-canvas-actions-and-quick-edit.md` in the header format of 0014. It covers:
+- [x] T001 Create branch `019-card-quick-edit` from the latest `main`. Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/019-card-quick-edit/bench-before.md`.
+- [x] T003 Add the `selection-toolbar-pan` scenario to `apps/app/bench/perf.bench.ts` (R13, SC-007). On the 500 / 1,000 deck it selects three nodes and waits for `role=toolbar` named `/^Selection:/`. It records the time from the selection click to the toolbar being visible (SC-004, target ≤ 100 ms), then measures pan and zoom fps the same way as the `default` scenario. Until the toolbar exists (T030), it logs `TODO(019): not available yet` and records no number. This is not a skipped test.
+- [x] T004 [P] Write ADR `docs/decisions/0015-canvas-actions-and-quick-edit.md` in the header format of 0014. It covers:
   - R1: the shared action list, and how 016, 017 and 020 add modules.
   - R2 / FR-001: double-click and F2 rename, and Enter keeps its behaviour. This supersedes 018's "double-click opens the drawer".
   - R3: the stored fallback "Untitled <kind>", because `Text` has `minLength: 1`.

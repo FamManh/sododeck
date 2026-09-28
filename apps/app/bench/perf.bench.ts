@@ -282,6 +282,62 @@ test(`drawer-open-pan: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   });
 });
 
+/**
+ * 019 SC-004 / SC-007: selecting three components shows the selection toolbar within 100 ms, and
+ * pan / zoom stays at 60 fps with the selection and its toolbar on screen (the toolbar hides
+ * while the viewport moves and is measured again when it stops).
+ */
+test(`selection-toolbar-pan: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  const opened = await openBench(page, '&toolbar=1');
+  if (!(await page.evaluate(() => window.__sododeckBench?.toolbar === true))) {
+    console.log('selection-toolbar-pan: TODO(019): not available yet');
+    return;
+  }
+  const toolbar = page.getByRole('toolbar', { name: /^Selection:/ });
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(() => {
+      window.__sododeckBench?.clearSelection?.();
+    });
+    await expect(toolbar).toBeHidden();
+    runs.push(
+      await page.evaluate(
+        (ids) => window.__sododeckBench?.selectAndWaitForToolbar?.(ids) ?? Promise.resolve(NaN),
+        ['n1', 'n2', 'n3'],
+      ),
+    );
+  }
+  const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+  expect(Number.isFinite(ms)).toBe(true);
+  actionResults.push({
+    scenario: 'select 3 → toolbar painted',
+    nodes: NODES,
+    edges: EDGES,
+    ms,
+    targetMs: FLOW_TARGET_MS,
+    meetsTarget: ms <= FLOW_TARGET_MS,
+  });
+
+  await expect(toolbar).toBeVisible();
+  await startRecording(page);
+  const startZoom = await viewportZoom(page);
+  const { maxZoom, renderedNodesZoomedIn } = await panAndZoom(page);
+  expect(maxZoom).toBeGreaterThan(startZoom * 2);
+  const stats = summarize(await stopRecording(page));
+  // The selection survives the gesture, and the toolbar comes back when it ends.
+  await expect(toolbar).toBeVisible();
+  results.push({
+    scenario: 'selection-toolbar-pan',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodesZoomedIn,
+    maxZoom,
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
+
 test(`groups-collapsed: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   if (!GROUPS) return;
   const opened = await openBench(page, '');
