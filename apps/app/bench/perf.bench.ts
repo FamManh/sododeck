@@ -254,6 +254,34 @@ for (const scenario of [
   });
 }
 
+/**
+ * 018 SC-006: pan / zoom stays at 60 fps with the canvas-first chrome open over the canvas: the
+ * details drawer on a selected component and the JSON overlay (Deck tab).
+ */
+test(`drawer-open-pan: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  const opened = await openBench(page, '&drawer=1&json=deck');
+  if (!(await page.evaluate(() => window.__sododeckBench?.shell === true))) {
+    console.log('drawer-open-pan: TODO(018): not available yet');
+    return;
+  }
+  await expect(page.getByRole('complementary', { name: 'Details' })).toBeVisible();
+  await startRecording(page);
+  const startZoom = await viewportZoom(page);
+  const { maxZoom, renderedNodesZoomedIn } = await panAndZoom(page);
+  expect(maxZoom).toBeGreaterThan(startZoom * 2);
+  const stats = summarize(await stopRecording(page));
+  results.push({
+    scenario: 'drawer-open-pan',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodesZoomedIn,
+    maxZoom,
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
+
 test(`groups-collapsed: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   if (!GROUPS) return;
   const opened = await openBench(page, '');

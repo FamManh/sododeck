@@ -1,0 +1,129 @@
+import { Button } from '@sododeck/ui/components/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@sododeck/ui/components/dropdown-menu';
+import { useToast } from '@sododeck/ui/components/toast';
+import { Braces, Download, FileUp, LibraryBig, Menu, Settings2 } from 'lucide-react';
+import { useRef } from 'react';
+import { useNavigate } from 'react-router';
+
+import { importDeckFile } from '../../library/library-actions';
+import { importMessage } from '../../library/use-import-files';
+import { useUiStore } from '../../state/ui-store';
+import { getLibraryClient } from '../../storage/library-client';
+import { getLibraryDb } from '../../storage/library-db-instance';
+import { useExportDeck } from '../use-export-deck';
+import { shortcutLabel } from './shortcuts';
+
+/**
+ * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, export,
+ * deck settings (the drawer on the deck) and the JSON overlay. Import adds the file to the
+ * library as a new deck, as the library's own Import does; the open deck is not replaced.
+ */
+export function DeckMenu() {
+  const navigate = useNavigate();
+  const exportDeck = useExportDeck();
+  const jsonShown = useUiStore((s) => s.jsonShown);
+  const { toast } = useToast();
+  const input = useRef<HTMLInputElement>(null);
+
+  const importFile = async (files: FileList | null) => {
+    const [file] = files ?? [];
+    if (files === null || files.length === 0 || file === undefined) return;
+    if (files.length > 1) {
+      toast({ message: 'Import one file at a time.' });
+      return;
+    }
+    const db = await getLibraryDb();
+    if (db === null) {
+      toast({ message: 'This browser cannot keep decks, so nothing was imported.' });
+      return;
+    }
+    try {
+      const name = await importDeckFile(
+        { db, client: getLibraryClient() },
+        await file.text(),
+        null,
+      );
+      toast({
+        message: `Imported "${name}" into the library`,
+        action: {
+          label: 'Open library',
+          onAction: () => {
+            void navigate('/');
+          },
+        },
+      });
+    } catch (error) {
+      toast({ message: importMessage(error) });
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={input}
+        type="file"
+        accept=".json,.sododeck.json,application/json"
+        hidden
+        data-testid="deck-menu-import"
+        onChange={(event) => {
+          void importFile(event.target.files);
+          event.target.value = '';
+        }}
+      />
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" aria-label="Deck menu" aria-haspopup="menu">
+            <Menu />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent aria-label="Deck menu" aria-labelledby={undefined} align="start">
+          <DropdownMenuItem
+            onSelect={() => {
+              void navigate('/');
+            }}
+          >
+            <LibraryBig />
+            All decks
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => {
+              input.current?.click();
+            }}
+          >
+            <FileUp />
+            Import…
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={exportDeck}>
+            <Download />
+            Export…
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => {
+              useUiStore.getState().openDrawer('deck');
+            }}
+          >
+            <Settings2 />
+            Deck settings
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            shortcut={shortcutLabel('json')}
+            onSelect={() => {
+              useUiStore.getState().toggleJsonShown();
+            }}
+          >
+            <Braces />
+            {jsonShown ? 'Hide JSON' : 'Show JSON'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+}

@@ -5,7 +5,7 @@ import { LibraryClientError } from '../storage/library-client';
 import { importDeckFile } from './library-actions';
 import type { LibraryCommands } from './use-library-commands';
 
-function importMessage(error: unknown): string {
+export function importMessage(error: unknown): string {
   if (error instanceof LibraryClientError && error.code === 'unsupported-version') {
     return 'That file was made with a newer version of Sododeck.';
   }

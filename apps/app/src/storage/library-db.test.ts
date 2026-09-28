@@ -20,6 +20,7 @@ import {
   softDeleteFolder,
   storeDeckUpdate,
 } from './library-db';
+import { DEFAULT_SHELL_PREFS, saveShellPrefs, shellPrefsKey } from '../editor/shell/shell-prefs';
 import { deckRecord, freshLibraryDb as freshDb } from '../test/library-fixtures';
 
 let counter = 0;
@@ -200,5 +201,19 @@ describe('purgeDeleted', () => {
     expect(await db.updates.where('deckId').equals('gone').count()).toBe(0);
     expect(await db.updates.where('deckId').equals('kept').count()).toBe(1);
     expect(await db.folders.count()).toBe(0);
+  });
+
+  it('forgets the purged decks’ shell preferences (018)', async () => {
+    const db = await freshDb();
+    await insertDeck(db, deckRecord('gone'), bytes(1));
+    await insertDeck(db, deckRecord('kept'), bytes(1));
+    await softDeleteDeck(db, 'gone');
+    saveShellPrefs('gone', { ...DEFAULT_SHELL_PREFS, jsonOpen: true });
+    saveShellPrefs('kept', { ...DEFAULT_SHELL_PREFS, jsonOpen: true });
+
+    await purgeDeleted(db);
+    expect(localStorage.getItem(shellPrefsKey('gone'))).toBeNull();
+    expect(localStorage.getItem(shellPrefsKey('kept'))).not.toBeNull();
+    localStorage.clear();
   });
 });

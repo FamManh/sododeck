@@ -1,5 +1,6 @@
 import { Button } from '@sododeck/ui/components/button';
-import { Braces, ChevronUp } from 'lucide-react';
+import { cn } from '@sododeck/ui/lib/utils';
+import { Braces, ChevronUp, X } from 'lucide-react';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 
 import { supportsResizeObserver } from '../lib/features';
@@ -52,7 +53,14 @@ function useAvailableHeight(ref: RefObject<HTMLElement | null>, enabled: boolean
  * Bottom JSON panel (004): a read-only view of the deck that is always in sync. It reads the
  * snapshot and gets every text from `@sododeck/model`; its only writes are deck undo/redo.
  */
-export function JsonPanel() {
+export function JsonPanel({
+  onClose,
+  className,
+}: {
+  /** Canvas-first overlay (018): × hides the overlay. */
+  onClose?: () => void;
+  className?: string;
+} = {}) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const { open, height, tab } = useUiStore((state) => state.jsonPanel);
@@ -85,7 +93,10 @@ export function JsonPanel() {
     return (
       <section
         aria-label="JSON"
-        className="flex shrink-0 items-center gap-2 border-t border-hairline bg-surface pr-2 pl-4"
+        className={cn(
+          'flex shrink-0 items-center gap-2 border-t border-hairline bg-surface pr-2 pl-4',
+          className,
+        )}
         style={{ height: PANEL_COLLAPSED }}
       >
         <h2 className="flex items-center gap-2 text-body-sm text-ink-secondary">
@@ -104,6 +115,11 @@ export function JsonPanel() {
         >
           <ChevronUp />
         </Button>
+        {onClose !== undefined && (
+          <Button variant="ghost" size="icon-sm" aria-label="Close JSON" onClick={onClose}>
+            <X />
+          </Button>
+        )}
       </section>
     );
   }
@@ -112,7 +128,10 @@ export function JsonPanel() {
     <section
       ref={sectionRef}
       aria-label="JSON"
-      className="relative flex shrink-0 flex-col border-t border-hairline bg-surface"
+      className={cn(
+        'relative flex shrink-0 flex-col border-t border-hairline bg-surface',
+        className,
+      )}
       style={{ height: shownHeight }}
     >
       <JsonResizeHandle
@@ -132,6 +151,7 @@ export function JsonPanel() {
         onCollapse={() => {
           setJsonPanelOpen(false);
         }}
+        {...(onClose === undefined ? {} : { onClose })}
       />
       <div className="min-h-0 flex-1 bg-code">
         {empty ? (

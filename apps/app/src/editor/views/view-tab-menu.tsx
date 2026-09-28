@@ -8,11 +8,14 @@ import {
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { MoreHorizontal } from 'lucide-react';
+import { LayoutGrid, MoreHorizontal } from 'lucide-react';
 import { useId } from 'react';
 
+import type { TidyAction } from './tidy-layout-item';
+
 /**
- * A view tab's menu (011 FR-041–FR-043): Rename, View settings…, Delete view. Opened by the ⋯
+ * A view tab's menu (011 FR-041–FR-043): Rename, View settings…, Delete view, and on the current
+ * view Tidy layout (moved from the canvas toolbar by 018, §g-46). Opened by the ⋯
  * button (shown on hover and focus), a right-click on the tab, or Shift+F10 / the context-menu
  * key on it; the switcher owns `open`. The last view cannot be deleted, and says why.
  */
@@ -25,6 +28,7 @@ export function ViewTabMenu({
   onSettings,
   onDelete,
   onCloseFocus,
+  tidy,
 }: {
   title: string;
   canDelete: boolean;
@@ -35,8 +39,11 @@ export function ViewTabMenu({
   onDelete: () => void;
   /** Where focus goes when the menu closes (the switcher: the tab, or the surface it opened). */
   onCloseFocus: () => void;
+  /** Only on the current view's tab. */
+  tidy?: TidyAction;
 }) {
   const reasonId = useId();
+  const tidyReasonId = useId();
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange} modal={false}>
       <DropdownMenuTrigger asChild>
@@ -63,6 +70,22 @@ export function ViewTabMenu({
       >
         <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
         <DropdownMenuItem onSelect={onSettings}>View settings…</DropdownMenuItem>
+        {tidy !== undefined && (
+          <DropdownMenuItem
+            disabled={tidy.block !== null || tidy.running}
+            {...(tidy.block === null ? {} : { 'aria-describedby': tidyReasonId })}
+            onSelect={tidy.run}
+            className="flex-col items-start gap-0"
+          >
+            <span className="flex items-center gap-2">
+              <LayoutGrid aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4" />
+              Tidy layout
+            </span>
+            <span id={tidyReasonId} className="text-caption text-ink-muted">
+              {tidy.block ?? 'Arrange this view; pinned components stay'}
+            </span>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           destructive

@@ -116,8 +116,29 @@ export function useCanvasHandlers() {
       if (stepId !== null) goToStep(editor, stepId);
     };
 
+    /**
+     * Rail tools (018 R8) act on the next click, then fall back to Select: Sticky adds a note
+     * where the click lands (pinned to a card under it), Connector opens a card's connect popover.
+     */
+    const applyTool = (event: ReactMouseEvent, nodeId: string | null): boolean => {
+      const tool = ui().tool;
+      if (tool === 'select' || viewOnly()) return false;
+      if (tool === 'sticky') {
+        addNoteAt(editor, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
+      } else if (nodeId !== null && readDeck(editor.doc).nodes.some((n) => n.id === nodeId)) {
+        ui().select({ nodes: [nodeId] });
+        ui().focus(nodeId);
+        ui().openConnectPopover(nodeId);
+      } else {
+        return false;
+      }
+      ui().setTool('select');
+      return true;
+    };
+
     return {
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
+        if (applyTool(event, node.id)) return;
         const groupId = groupIdOf(node.id);
         if (groupId !== null) {
           if (flowMode()) {
@@ -171,7 +192,13 @@ export function useCanvasHandlers() {
           scopeOf(ui().drill),
           collapsedOf(editor.doc),
         );
-        if ((graph.childCount.get(node.id) ?? 0) === 0) return;
+        if ((graph.childCount.get(node.id) ?? 0) === 0) {
+          // A plain component: its details (018 FR-022).
+          ui().select({ nodes: [node.id] });
+          ui().focus(node.id);
+          ui().openDrawer();
+          return;
+        }
         const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
         if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
       },
@@ -222,9 +249,10 @@ export function useCanvasHandlers() {
       onEdgeMouseLeave: () => {
         if (ui().hoverEdgeId !== null) ui().setHoverEdge(null);
       },
-      onPaneClick: () => {
+      onPaneClick: (event: ReactMouseEvent) => {
         // Flow mode keeps going on an empty-canvas click (007); Esc or Back exits.
         if (flowMode()) return;
+        if (applyTool(event, null)) return;
         ui().clearSelection();
         ui().closePopover();
       },

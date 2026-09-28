@@ -92,8 +92,9 @@ export const DeckNode = memo(function DeckNode({
             ? 'flex flex-col items-start gap-2 px-3 py-2'
             : 'flex items-center gap-[9px] px-2.5',
         focusRing,
-        // Selected: border + halo + ring (DESIGN.md), so it is never color-only.
-        selected && 'border-primary shadow-selection ring-1 ring-primary',
+        // Selected (018, designs 86–116): a 2 px frame 2 px outside the card, which reads on any
+        // fill; a shape cue, so it is never color-only (plus aria-selected).
+        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
         // From or to of the current flow step (007 FR-005): the selection ring and halo.
         data.currentStep === true && 'border-primary shadow-selection ring-1 ring-primary',
         target === 'ok' && 'outline-2 outline-offset-4 outline-primary outline-dashed',

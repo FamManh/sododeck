@@ -11,7 +11,7 @@ import { SaveStatus } from './save-status';
 
 const deck = deckOf({ name: 'Shop', nodes: [{ id: 'a', type: 'service', title: 'A' }] });
 
-function setup(controls: Partial<SaveControls> = {}) {
+function setup(controls: Partial<SaveControls> = {}, variant: 'text' | 'icon' = 'text') {
   const save: SaveControls = {
     mode: 'stored',
     flush: vi.fn(() => Promise.resolve()),
@@ -21,7 +21,7 @@ function setup(controls: Partial<SaveControls> = {}) {
   const env = editorWrapper(deck);
   render(
     <SaveContext value={save}>
-      <SaveStatus />
+      <SaveStatus variant={variant} />
     </SaveContext>,
     { wrapper: env.wrapper },
   );
@@ -80,5 +80,41 @@ describe('SaveStatus', () => {
   it('says "Demo · not saved" for the demo deck', () => {
     setup({ mode: 'demo' });
     expect(screen.getByText('Demo · not saved')).toBeInTheDocument();
+  });
+
+  describe('icon variant (018, §g-51)', () => {
+    const icon = () => status()?.querySelector('svg');
+
+    it('shows a different icon shape per state with the same words as its name', () => {
+      setup({}, 'icon');
+      expect(status()).toHaveTextContent('Saved in this browser');
+      expect(icon()).toHaveClass('lucide-check');
+      act(() => {
+        useSaveStatusStore.getState().dispatch({ type: 'pending' });
+      });
+      expect(status()).toHaveTextContent('Saving…');
+      // The loader only spins when motion is allowed.
+      expect(icon()).toHaveClass('lucide-loader-circle', 'motion-safe:animate-spin');
+    });
+
+    it('opens the error details from the alert icon', async () => {
+      const { save, user } = setup({}, 'icon');
+      act(() => {
+        useSaveStatusStore.getState().dispatch({
+          type: 'failed',
+          firstUnsavedAt: Date.now(),
+          errorName: 'QuotaExceededError',
+        });
+      });
+      const region = status();
+      if (!region) throw new Error('no status');
+      expect(icon()).toHaveClass('lucide-circle-alert');
+      await user.click(
+        within(region).getByRole('button', { name: "Couldn't save — export a backup" }),
+      );
+      const details = screen.getByRole('dialog', { name: "Couldn't save your last change" });
+      await user.click(within(details).getByRole('button', { name: 'Retry' }));
+      expect(save.flush).toHaveBeenCalledOnce();
+    });
   });
 });

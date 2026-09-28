@@ -47,6 +47,31 @@ describe('buildCommands', () => {
     expect(ctx.navigate).toHaveBeenCalledWith('/deck/new');
   });
 
+  it('adds the canvas-first shell commands on the canvas (018)', () => {
+    const shell = {
+      canOpenDetails: true,
+      openDetails: vi.fn(),
+      jsonShown: false,
+      toggleJson: vi.fn(),
+      hideUi: vi.fn(),
+    };
+    const commands = buildCommands({ ...context(), shell });
+    const byTitle = (title: string) => commands.find((command) => command.title === title);
+    byTitle('Open details')?.run();
+    byTitle('Show JSON')?.run();
+    byTitle('Hide UI')?.run();
+    expect(shell.openDetails).toHaveBeenCalledOnce();
+    expect(shell.toggleJson).toHaveBeenCalledOnce();
+    expect(shell.hideUi).toHaveBeenCalledOnce();
+
+    const idle = buildCommands({
+      ...context(),
+      shell: { ...shell, canOpenDetails: false, jsonShown: true },
+    });
+    expect(idle.map((command) => command.title)).not.toContain('Open details');
+    expect(idle.map((command) => command.title)).toContain('Hide JSON');
+  });
+
   it('toggles the resolved theme, including from system mode', () => {
     const ctx = context();
     buildCommands(ctx)[1]?.run();

@@ -1,6 +1,7 @@
 import type { NodeKind } from '@sododeck/schema';
 import { Dexie, type EntityTable } from 'dexie';
 
+import { removeShellPrefs } from '../editor/shell/shell-prefs';
 import { supportsIndexedDB } from '../lib/features';
 import { folderNameKey, validateFolderName, type FolderNameError as Code } from './folder-names';
 
@@ -282,12 +283,15 @@ export async function restoreFolder(db: LibraryDb, id: string, deckIds: string[]
 
 /** Makes deletes final (called once per app start): records, their updates, folders. */
 export async function purgeDeleted(db: LibraryDb): Promise<void> {
-  await db.transaction('rw', db.decks, db.updates, db.folders, async () => {
+  const purged = await db.transaction('rw', db.decks, db.updates, db.folders, async () => {
     const decks = await db.decks.filter((d) => d.deletedAt !== null).primaryKeys();
     if (decks.length > 0) {
       await db.updates.where('deckId').anyOf(decks).delete();
       await db.decks.bulkDelete(decks);
     }
     await db.folders.filter((f) => f.deletedAt !== null).delete();
+    return decks;
   });
+  // UI preferences of a deck (018) must not outlive it.
+  for (const id of purged) removeShellPrefs(id);
 }

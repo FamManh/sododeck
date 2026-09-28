@@ -2,6 +2,14 @@ import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 import { create } from 'zustand';
 
+import { clampDrawerWidth } from '../editor/shell/shell-geometry';
+import {
+  DEFAULT_SHELL_PREFS,
+  loadShellPrefs,
+  saveShellPrefs,
+  type FlyoutId,
+  type ShellPrefs,
+} from '../editor/shell/shell-prefs';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
 import {
   loadJsonPanelPrefs,
@@ -27,8 +35,6 @@ export type Popover =
   | { kind: 'connect'; fromId: string }
   | { kind: 'merged'; edgeId: string }
   | null;
-
-export type LeftTab = 'outline' | 'palette';
 
 /** Autoplay speed of flow mode (007). */
 export type PlaybackSpeed = 1 | 2;
@@ -138,6 +144,20 @@ export interface LayoutRun {
   viewId?: Id;
 }
 
+/**
+ * The details drawer (018): `selection` shows the inspector of the current selection and closes
+ * when there is nothing left to show; `deck` shows the deck (Deck settings) whatever is selected.
+ */
+export interface DrawerState {
+  open: boolean;
+  /** px, 320–560 (`clampDrawerWidth`). */
+  width: number;
+  mode: 'selection' | 'deck';
+}
+
+/** Rail tools (018 R8). Sticky and Connector act on the next click, then fall back to Select. */
+export type Tool = 'select' | 'sticky' | 'connector';
+
 export interface UiState {
   selection: Selection;
   /** The view this tab shows (011, FR-005); `null` = the first view. Never written to the deck. */
@@ -160,7 +180,6 @@ export interface UiState {
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
   focusedEdgeId: string | null;
-  leftTab: LeftTab;
   outlineCollapsed: ReadonlySet<string>;
   labelsOn: boolean;
   notesDisplay: NotesDisplay;
@@ -183,6 +202,27 @@ export interface UiState {
   descriptionMode: Readonly<Record<string, DescriptionMode>>;
   canvasViewport: CanvasViewport | null;
   ruleTest: RuleTest | null;
+  /** The deck whose shell preferences are read and saved (018); `null` = demo / memory deck. */
+  shellDeckId: string | null;
+  /** The flyout shown beside the rail (018 R4). */
+  flyout: FlyoutId | null;
+  /** The pinned flyout: stays open on canvas clicks and returns when a temporary one closes. */
+  pinnedFlyout: FlyoutId | null;
+  /** The pin to restore when a recording session ends (the session pins Flows). */
+  sessionPinReturn: { pinned: FlyoutId | null; shown: FlyoutId | null } | null;
+  drawer: DrawerState;
+  /** Canvas object that gets focus back when the drawer closes. */
+  drawerReturn: string | null;
+  /**
+   * Whether the JSON overlay is shown at all (⌘J, 018); `jsonPanel.open` is still 004's
+   * expanded / collapsed state inside it. Remembered per deck (shell prefs).
+   */
+  jsonShown: boolean;
+  /** Hide UI (⌘\): every island, flyout, drawer and overlay hidden; the rest is kept. */
+  hideUi: boolean;
+  minimap: boolean;
+  tool: Tool;
+  helpOpen: boolean;
 
   select: (selection: Partial<Selection>) => void;
   toggle: (id: Id, type: 'node' | 'edge' | 'sticky') => void;
@@ -214,7 +254,6 @@ export interface UiState {
   closePalette: () => void;
   focus: (id: string | null) => void;
   focusEdge: (id: string | null) => void;
-  setLeftTab: (tab: LeftTab) => void;
   toggleOutlineGroup: (groupId: string) => void;
   setLabelsOn: (on: boolean) => void;
   setNotesDisplay: (display: NotesDisplay) => void;
@@ -272,8 +311,50 @@ export interface UiState {
   setJsonPanelHeight: (height: number) => void;
   setJsonTab: (tab: JsonTab) => void;
   toggleJsonPanel: () => void;
-  /** Forgets everything that pointed into the previous deck (opening another one). */
-  resetForDeck: () => void;
+  /** Shows or hides the JSON overlay (⌘J), saved for this deck. */
+  setJsonShown: (shown: boolean) => void;
+  toggleJsonShown: () => void;
+  /** Shows a flyout; the one already shown closes (and unpins) instead. */
+  openFlyout: (id: FlyoutId) => void;
+  /** Closes the shown flyout: the pinned one returns, or closing the pinned one unpins it. */
+  closeFlyout: () => void;
+  /** Esc or a click outside: closes an unpinned flyout only. */
+  dismissFlyout: () => void;
+  /** Pins or unpins the shown flyout (saved for this deck). */
+  togglePin: () => void;
+  /** A recording session starts: Flows is shown and pinned until it ends (never saved). */
+  pinForSession: () => void;
+  restoreAfterSession: () => void;
+  /** Opens the drawer; without a selection it shows the deck. */
+  openDrawer: (mode?: DrawerState['mode']) => void;
+  closeDrawer: () => void;
+  toggleDrawer: () => void;
+  /** Resizes the drawer; `commit` (end of a drag, a key) also saves the width for this deck. */
+  setDrawerWidth: (px: number, options?: { commit?: boolean }) => void;
+  setHideUi: (on: boolean) => void;
+  setMinimap: (on: boolean) => void;
+  setTool: (tool: Tool) => void;
+  setHelpOpen: (open: boolean) => void;
+  /**
+   * Forgets everything that pointed into the previous deck (opening another one) and reads the
+   * shell preferences of `deckId` (`null`: the demo or an in-memory deck, defaults only).
+   */
+  resetForDeck: (deckId?: string | null) => void;
+}
+
+/**
+ * Whether the drawer has something to show in selection mode: a canvas selection, or the shown
+ * or recorded flow (its inspector needs no canvas selection).
+ */
+export function hasDetailsTarget(
+  state: Pick<UiState, 'selection' | 'activeFlow' | 'flowSession'>,
+): boolean {
+  const { nodes, edges, groups, stickies } = state.selection;
+  return (
+    nodes.length + edges.length + groups.length + stickies.length > 0 ||
+    state.activeFlow !== null ||
+    state.flowSession !== null
+  );
 }
 
 /** Flow mode (007): a flow is open outside a recording or edit session. */
@@ -346,10 +427,28 @@ export const useUiStore = create<UiState>()((set, get) => {
     const moved = 'stepId' in patch || 'branchId' in patch;
     set({ activeFlow: { ...active, ...patch }, ...(moved ? { descriptionMode: NO_MODES } : {}) });
   };
+  const shellPrefs = (): ShellPrefs => {
+    const state = get();
+    return {
+      drawerWidth: state.drawer.width,
+      pinnedFlyout: state.sessionPinReturn?.pinned ?? state.pinnedFlyout,
+      jsonOpen: state.jsonShown,
+    };
+  };
+  const saveShell = () => {
+    saveShellPrefs(get().shellDeckId, shellPrefs());
+  };
   const setJsonPanel = (patch: Partial<JsonPanelPrefs>) => {
     const jsonPanel = { ...get().jsonPanel, ...patch };
     saveJsonPanelPrefs(jsonPanel);
     set({ jsonPanel });
+  };
+  const setPinned = (pinnedFlyout: FlyoutId | null) => {
+    set({ pinnedFlyout });
+    // A session pin is temporary: the saved pin is the one the session will restore.
+    const pinReturn = get().sessionPinReturn;
+    if (pinReturn !== null) set({ sessionPinReturn: { ...pinReturn, pinned: pinnedFlyout } });
+    saveShell();
   };
   return {
     selection: EMPTY_SELECTION,
@@ -365,7 +464,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     palette: { open: false, returnFocus: null },
     focusedId: null,
     focusedEdgeId: null,
-    leftTab: 'outline',
     outlineCollapsed: new Set(),
     labelsOn: readLabelsOn(),
     notesDisplay: readNotesDisplay(),
@@ -381,6 +479,17 @@ export const useUiStore = create<UiState>()((set, get) => {
     descriptionMode: NO_MODES,
     canvasViewport: null,
     ruleTest: null,
+    shellDeckId: null,
+    flyout: null,
+    pinnedFlyout: null,
+    sessionPinReturn: null,
+    drawer: { open: false, width: DEFAULT_SHELL_PREFS.drawerWidth, mode: 'selection' },
+    drawerReturn: null,
+    jsonShown: false,
+    hideUi: false,
+    minimap: false,
+    tool: 'select',
+    helpOpen: false,
 
     select: ({ nodes = [], edges = [], groups = [], stickies = [] }) => {
       const empty =
@@ -504,9 +613,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     focusEdge: (id) => {
       set({ focusedEdgeId: id });
-    },
-    setLeftTab: (tab) => {
-      set({ leftTab: tab });
     },
     toggleOutlineGroup: (groupId) => {
       set(({ outlineCollapsed }) => {
@@ -714,8 +820,107 @@ export const useUiStore = create<UiState>()((set, get) => {
     toggleJsonPanel: () => {
       setJsonPanel({ open: !get().jsonPanel.open });
     },
-    resetForDeck: () => {
+    setJsonShown: (jsonShown) => {
+      set({ jsonShown });
+      saveShell();
+    },
+    toggleJsonShown: () => {
+      get().setJsonShown(!get().jsonShown);
+    },
+    openFlyout: (id) => {
+      const { flyout, pinnedFlyout } = get();
+      if (flyout !== id) {
+        set({ flyout: id });
+        return;
+      }
+      if (pinnedFlyout === id) setPinned(null);
+      set({ flyout: null });
+    },
+    closeFlyout: () => {
+      const { flyout, pinnedFlyout } = get();
+      if (flyout !== null && flyout === pinnedFlyout) {
+        setPinned(null);
+        set({ flyout: null });
+        return;
+      }
+      set({ flyout: pinnedFlyout });
+    },
+    dismissFlyout: () => {
+      const { flyout, pinnedFlyout } = get();
+      if (flyout !== pinnedFlyout) set({ flyout: pinnedFlyout });
+    },
+    togglePin: () => {
+      const { flyout, pinnedFlyout } = get();
+      if (flyout === null) return;
+      setPinned(pinnedFlyout === flyout ? null : flyout);
+    },
+    pinForSession: () => {
+      const { pinnedFlyout, flyout, sessionPinReturn } = get();
+      if (sessionPinReturn !== null) return;
       set({
+        sessionPinReturn: { pinned: pinnedFlyout, shown: flyout },
+        pinnedFlyout: 'flows',
+        flyout: 'flows',
+      });
+    },
+    restoreAfterSession: () => {
+      const pinReturn = get().sessionPinReturn;
+      if (pinReturn === null) return;
+      set({
+        sessionPinReturn: null,
+        pinnedFlyout: pinReturn.pinned,
+        flyout: pinReturn.pinned ?? (pinReturn.shown === 'flows' ? null : pinReturn.shown),
+      });
+    },
+    openDrawer: (mode) => {
+      const state = get();
+      set({
+        drawer: {
+          ...state.drawer,
+          open: true,
+          mode: mode ?? (hasDetailsTarget(state) ? 'selection' : 'deck'),
+        },
+        drawerReturn: state.focusedId,
+      });
+    },
+    closeDrawer: () => {
+      set(({ drawer }) => ({ drawer: { ...drawer, open: false, mode: 'selection' } }));
+    },
+    toggleDrawer: () => {
+      if (get().drawer.open) get().closeDrawer();
+      else get().openDrawer();
+    },
+    setDrawerWidth: (px, options) => {
+      const width = clampDrawerWidth(px, Number.POSITIVE_INFINITY);
+      set(({ drawer }) => ({ drawer: { ...drawer, width } }));
+      if (options?.commit === true) saveShell();
+    },
+    setHideUi: (hideUi) => {
+      set({ hideUi });
+    },
+    setMinimap: (minimap) => {
+      set({ minimap });
+    },
+    setTool: (tool) => {
+      set({ tool });
+    },
+    setHelpOpen: (helpOpen) => {
+      set({ helpOpen });
+    },
+    resetForDeck: (deckId = null) => {
+      const prefs = loadShellPrefs(deckId);
+      set({
+        shellDeckId: deckId,
+        flyout: prefs.pinnedFlyout,
+        pinnedFlyout: prefs.pinnedFlyout,
+        sessionPinReturn: null,
+        drawer: { open: false, width: prefs.drawerWidth, mode: 'selection' },
+        drawerReturn: null,
+        hideUi: false,
+        minimap: false,
+        tool: 'select',
+        helpOpen: false,
+        jsonShown: prefs.jsonOpen,
         selection: EMPTY_SELECTION,
         currentViewId: null,
         revealed: NO_IDS,
@@ -743,4 +948,14 @@ export const useUiStore = create<UiState>()((set, get) => {
       });
     },
   };
+});
+
+/**
+ * The drawer in selection mode closes once there is nothing left to show (018 FR-027): the
+ * selection was cleared, pruned by a removal or undo, or the flow was left.
+ */
+useUiStore.subscribe((state) => {
+  if (state.drawer.open && state.drawer.mode === 'selection' && !hasDetailsTarget(state)) {
+    state.closeDrawer();
+  }
 });

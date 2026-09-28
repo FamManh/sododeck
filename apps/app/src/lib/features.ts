@@ -41,6 +41,11 @@ export function supportsResizeObserver(): boolean {
   return typeof ResizeObserver !== 'undefined';
 }
 
+/** `matchMedia` (compact islands in narrow windows, 018). Missing in some test environments. */
+export function supportsMatchMedia(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function';
+}
+
 export function supportsStorageEstimate(): boolean {
   return (
     typeof navigator !== 'undefined' &&

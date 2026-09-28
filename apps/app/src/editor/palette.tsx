@@ -6,6 +6,7 @@ import { useReactFlow } from '@xyflow/react';
 
 import { useEditor } from '../model/use-editor';
 import { addComponent, canvasElement, centredOn, PALETTE_ID } from './canvas-actions';
+import { PALETTE_ORDER } from './palette-order';
 import { KIND_MIME, NOTE_MIME } from './use-canvas-handlers';
 import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
 
@@ -18,15 +19,6 @@ const HINTS: Readonly<Record<ComponentKind, string>> = {
   client: 'App or UI',
   external: 'Third party',
 };
-
-const ORDER: readonly ComponentKind[] = [
-  'service',
-  'database',
-  'queue',
-  'gateway',
-  'client',
-  'external',
-];
 
 /** Component kinds to add by click / Enter (centre of the view) or by dragging onto the canvas. */
 export function Palette() {
@@ -57,7 +49,7 @@ export function Palette() {
         Components · drag or click
       </h3>
       <ul className="grid grid-cols-2 gap-2">
-        {ORDER.filter((kind) => COMPONENT_KINDS.includes(kind)).map((kind) => (
+        {PALETTE_ORDER.filter((kind) => COMPONENT_KINDS.includes(kind)).map((kind, index) => (
           <li key={kind}>
             <button
               type="button"
@@ -75,7 +67,16 @@ export function Palette() {
                 focusRing,
               )}
             >
-              <KindTile kind={kind} size={28} decorative />
+              <span className="flex w-full items-start justify-between">
+                <KindTile kind={kind} size={28} decorative />
+                {/* 1–6 add this kind while the palette is open (018, design 88). */}
+                <kbd
+                  aria-hidden
+                  className="rounded-segment bg-surface-2 px-1.5 font-mono text-code-sm text-ink-secondary"
+                >
+                  {index + 1}
+                </kbd>
+              </span>
               <span className="flex flex-col">
                 <span className="text-body font-medium text-ink">{KIND_STYLE[kind].label}</span>
                 <span className="text-caption text-ink-secondary">{HINTS[kind]}</span>

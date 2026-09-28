@@ -61,6 +61,17 @@ function inDialog(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * The details drawer and the JSON overlay (018) float over the canvas but are not dialogs: Delete
+ * and Esc there belong to their fields and buttons, never to the canvas selection.
+ */
+function inOverlay(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('[data-region="drawer"], [data-json-overlay], [data-flyout]') !== null
+  );
+}
+
 const ARROWS: Readonly<Record<string, Direction>> = {
   ArrowUp: 'up',
   ArrowDown: 'down',
@@ -81,15 +92,6 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
   return collapsed.has(groupId)
     ? `${COLLAPSED_NODE_PREFIX}${groupId}`
     : `${GROUP_NODE_PREFIX}${groupId}`;
-}
-
-/** Focuses the inspector's title field once the inspector shows the selected node. */
-function focusInspectorTitle(): void {
-  setTimeout(() => {
-    document
-      .querySelector<HTMLInputElement>('[aria-label="Inspector"] input[aria-label="Title"]')
-      ?.focus();
-  }, 0);
 }
 
 export function useCanvasKeyDown() {
@@ -414,9 +416,11 @@ export function useCanvasKeyDown() {
             event.preventDefault();
             ui.openEdgePopover(ui.focusedEdgeId);
           } else if (current !== null) {
+            // A plain component: its details drawer (018 FR-022), which focuses the title.
             event.preventDefault();
             ui.select({ nodes: [current] });
-            focusInspectorTitle();
+            ui.focus(current);
+            ui.openDrawer();
           }
           return;
         case 'f2':
@@ -499,7 +503,13 @@ export function useEditorShortcuts({
       }
       if (isMod(event) || event.altKey) return;
       // Delete and Esc act on the canvas selection: only on the canvas screen (008 research R8).
-      if (!canvas) return;
+      if (!canvas || inOverlay(event.target)) return;
+      // An armed rail tool (018) is the first thing Esc undoes.
+      if (key === 'escape' && ui.tool !== 'select') {
+        event.preventDefault();
+        ui.setTool('select');
+        return;
+      }
 
       if (isFlowMode(ui)) {
         // View-only: no deletes; Esc leaves flow mode unless a popover or dialog owns it.

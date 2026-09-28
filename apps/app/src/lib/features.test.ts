@@ -5,6 +5,7 @@ import {
   isQuotaError,
   supportsClipboardWrite,
   supportsFileSystemAccess,
+  supportsMatchMedia,
   supportsPersistentStorage,
   supportsResizeObserver,
   supportsStorageEstimate,
@@ -35,6 +36,13 @@ describe('feature detection', () => {
     expect(supportsClipboardWrite()).toBe(false);
     vi.stubGlobal('navigator', undefined);
     expect(supportsClipboardWrite()).toBe(false);
+  });
+
+  it('detects matchMedia', () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    expect(supportsMatchMedia()).toBe(true);
+    vi.stubGlobal('matchMedia', undefined);
+    expect(supportsMatchMedia()).toBe(false);
   });
 
   it('detects ResizeObserver', () => {

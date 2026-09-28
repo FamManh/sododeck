@@ -194,16 +194,6 @@ describe('ui store', () => {
     expect(state().focusedEdgeId).toBeNull();
   });
 
-  it('switches the left tab and collapses outline groups', () => {
-    expect(state().leftTab).toBe('outline');
-    state().setLeftTab('palette');
-    expect(state().leftTab).toBe('palette');
-    state().toggleOutlineGroup('g');
-    expect(state().outlineCollapsed.has('g')).toBe(true);
-    state().toggleOutlineGroup('g');
-    expect(state().outlineCollapsed.has('g')).toBe(false);
-  });
-
   it('remembers Labels in localStorage', () => {
     state().setLabelsOn(true);
     expect(state().labelsOn).toBe(true);
@@ -257,6 +247,13 @@ describe('ui store', () => {
     expect(state().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'a' }] });
     state().cancelDelete();
     expect(state().pendingDelete).toBeNull();
+  });
+
+  it('collapses outline groups', () => {
+    state().toggleOutlineGroup('g');
+    expect(state().outlineCollapsed.has('g')).toBe(true);
+    state().toggleOutlineGroup('g');
+    expect(state().outlineCollapsed.has('g')).toBe(false);
   });
 
   it('announces, counting repeats', () => {

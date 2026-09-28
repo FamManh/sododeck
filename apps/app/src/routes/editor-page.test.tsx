@@ -79,7 +79,7 @@ async function openEditor(file: SododeckFile = { ...emptySododeckFile(), name: '
     Y.encodeStateAsUpdate(fromJSON(file)),
   );
   const router = renderAt('/deck/d1');
-  await screen.findByRole('navigation', { name: 'Breadcrumb' });
+  await screen.findByRole('toolbar', { name: 'Deck' });
   const doc = opened.editor?.doc;
   if (!doc) throw new Error('editor not mounted');
   return { doc, router, user: userEvent.setup() };
@@ -110,15 +110,24 @@ beforeEach(() => {
 
 const record = async () => db.decks.get('d1');
 
+/** The rule editor from the canvas (018): the rail's Rules flyout, then "Open rule editor". */
+async function openRulesFromRail(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: 'Rules' }));
+  await user.click(screen.getByRole('button', { name: 'Open rule editor' }));
+}
+
 describe('EditorPage', () => {
-  it('opens an empty deck with the empty-canvas card and the shell', async () => {
+  it('opens an empty deck with the empty-canvas card and the canvas-first shell (018)', async () => {
     await openEditor();
-    expect(screen.getByRole('complementary', { name: 'Outline' })).toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeInTheDocument();
+    for (const name of ['Deck', 'Tools', 'Canvas tools', 'History', 'Zoom']) {
+      expect(screen.getByRole('toolbar', { name })).toBeInTheDocument();
+    }
+    // No fixed columns: panels open on request.
+    expect(screen.queryByRole('complementary', { name: 'Inspector' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'JSON' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'Untitled deck',
-    );
+    expect(screen.getByRole('button', { name: 'Rename deck' })).toHaveTextContent('Untitled deck');
     expect(screen.getByText('Saved in this browser')).toBeInTheDocument();
   });
 
@@ -127,8 +136,12 @@ describe('EditorPage', () => {
     const states = [toJSON(doc)];
     const record = () => states.push(toJSON(doc));
 
-    // add ×2 from the palette
-    await user.click(screen.getByRole('tab', { name: 'Palette' }));
+    // add ×2 from the palette flyout
+    await user.click(
+      within(screen.getByRole('toolbar', { name: 'Canvas tools' })).getByRole('button', {
+        name: 'Add component',
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'Add Service' }));
     expect(announced()).toBe('Added New service');
     record();
@@ -151,10 +164,11 @@ describe('EditorPage', () => {
     await user.keyboard('reads{Enter}');
     record();
 
-    // rename in the inspector
-    await user.click(screen.getByRole('tab', { name: 'Outline' }));
+    // rename in the details drawer, after picking it in the outline
+    await user.click(screen.getByRole('button', { name: 'Outline' }));
     await user.click(screen.getByRole('treeitem', { name: 'New service' }));
-    const title = screen.getByRole('textbox', { name: 'Title' });
+    await user.keyboard('{Meta>}{Shift>}d{/Shift}{/Meta}');
+    const title = await screen.findByRole('textbox', { name: 'Title' });
     await user.clear(title);
     await user.type(title, 'Orders{Enter}');
     record();
@@ -185,9 +199,9 @@ describe('EditorPage', () => {
     expect(announced()).toMatch(/^Deleted Orders and 1 connection/);
     record();
 
-    const header = screen.getByRole('banner');
-    const undo = within(header).getByRole('button', { name: 'Undo' });
-    const redo = within(header).getByRole('button', { name: 'Redo' });
+    const history = screen.getByRole('toolbar', { name: 'History' });
+    const undo = within(history).getByRole('button', { name: 'Undo' });
+    const redo = within(history).getByRole('button', { name: 'Redo' });
     for (let i = states.length - 2; i >= 0; i--) {
       await user.click(undo);
       expect(toJSON(doc)).toEqual(states[i]);
@@ -204,9 +218,11 @@ describe('EditorPage', () => {
     const { doc, user } = await openEditor();
     const titles = () => toJSON(doc).nodes.map((n) => n.title);
 
-    // 1. To the palette, add Service and Database.
+    // 1. To the palette flyout, add Service and Database.
     act(() => {
-      screen.getByRole('button', { name: 'Open palette' }).focus();
+      within(screen.getByRole('region', { name: 'Start your diagram' }))
+        .getByRole('button', { name: 'Add component' })
+        .focus();
     });
     await user.keyboard('{Enter}');
     await waitFor(() => {
@@ -218,12 +234,11 @@ describe('EditorPage', () => {
     await user.keyboard('{Enter}');
     expect(titles()).toEqual(['New service', 'New database']);
 
-    // 2. Into the canvas (the newest component holds the Tab stop), then the arrows.
-    // Past the other palette cards and the Features section (filter, New flow, New feature).
-    for (let i = 0; i < 12 && document.activeElement !== nodeEl('Database: New database'); i++) {
-      await user.tab();
-    }
-    expect(nodeEl('Database: New database')).toHaveFocus();
+    // 2. F6 to the canvas (018): the newest component holds its Tab stop; then the arrows.
+    await user.keyboard('{F6}');
+    await waitFor(() => {
+      expect(nodeEl('Database: New database')).toHaveFocus();
+    });
     await user.keyboard('{ArrowLeft}');
     await waitFor(() => {
       expect(nodeEl('Service: New service')).toHaveFocus();
@@ -259,14 +274,12 @@ describe('EditorPage', () => {
   it('creates "Untitled deck" on /deck/new in the given folder and replaces the URL', async () => {
     const folder = await createFolder(db, 'Payments');
     const router = renderAt(`/deck/new?folder=${folder.id}`);
-    await screen.findByRole('navigation', { name: 'Breadcrumb' });
+    await screen.findByRole('toolbar', { name: 'Deck' });
     const decks = await db.decks.toArray();
     expect(decks).toHaveLength(1);
     expect(decks[0]).toMatchObject({ name: 'Untitled deck', folderId: folder.id });
     expect(router.state.location.pathname).toBe(`/deck/${decks[0]?.id ?? ''}`);
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'Untitled deck',
-    );
+    expect(screen.getByRole('button', { name: 'Rename deck' })).toHaveTextContent('Untitled deck');
   });
 
   it('renders "Deck not found" for an unknown id', async () => {
@@ -294,6 +307,10 @@ describe('EditorPage', () => {
     });
     expect(toJSON(doc).nodes.map((n) => n.title)).toEqual(['Orders']);
     expect(opened.editor?.canUndo()).toBe(false);
+    // The deck's STORAGE section lives in Deck settings (the drawer on the deck, 018).
+    act(() => {
+      ui().openDrawer('deck');
+    });
     expect(screen.getByText('Stored in this browser')).toBeInTheDocument();
     await waitFor(async () => {
       expect((await record())?.openedAt).not.toBeNull();
@@ -324,11 +341,15 @@ describe('EditorPage', () => {
     });
   });
 
-  it('exports <name>.sododeck.json from the top bar', async () => {
+  it('exports <name>.sododeck.json from the tools island', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     const file = { ...emptySododeckFile(), name: 'Shop' };
     const { user } = await openEditor(file);
-    await user.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Export' }));
+    await user.click(
+      within(screen.getByRole('toolbar', { name: 'Tools' })).getByRole('button', {
+        name: 'Export',
+      }),
+    );
     expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(file));
     await waitFor(async () => {
       expect((await record())?.exportedAt).not.toBeNull();
@@ -370,7 +391,7 @@ describe('EditorPage', () => {
       await renameDeck({ db, client: inProcessLibraryClient() }, 'd1', 'Store');
     });
     await waitFor(() => {
-      expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Store');
+      expect(screen.getByRole('button', { name: 'Rename deck' })).toHaveTextContent('Store');
     });
   });
 
@@ -387,12 +408,13 @@ describe('EditorPage', () => {
       },
     };
 
-    it('opens Rules from the top bar and comes back with the selection and viewport', async () => {
+    it('opens Rules from the rail and comes back with the selection, drawer and viewport', async () => {
       const { router, user } = await openEditor(withRule);
       act(() => {
         ui().select({ nodes: ['a'] });
+        ui().openDrawer();
       });
-      await user.click(screen.getByRole('link', { name: /^Rules/ }));
+      await openRulesFromRail(user);
       expect(router.state.location.pathname).toBe('/deck/d1/rules');
       expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Rules');
       expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
@@ -406,7 +428,7 @@ describe('EditorPage', () => {
       expect(router.state.location.pathname).toBe('/deck/d1');
       expect(screen.getByRole('heading', { name: 'Pricing' })).toBeInTheDocument();
       expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
-      await user.click(screen.getByRole('link', { name: /^Rules/ }));
+      await openRulesFromRail(user);
       expect(ui().canvasViewport).toEqual(saved);
     });
 
@@ -427,7 +449,7 @@ describe('EditorPage', () => {
       act(() => {
         ui().select({ nodes: ['a'] });
       });
-      await user.click(screen.getByRole('link', { name: /^Rules/ }));
+      await openRulesFromRail(user);
       (document.activeElement as HTMLElement | null)?.blur();
       await user.keyboard('{Delete}');
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
@@ -436,8 +458,10 @@ describe('EditorPage', () => {
       expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
     });
 
-    it("opens the rule editor from the deck inspector's Rules count", async () => {
+    it("opens the rule editor from Deck settings' Rules count", async () => {
       const { router, user } = await openEditor(withRule);
+      await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+      await user.click(screen.getByRole('menuitem', { name: 'Deck settings' }));
       await user.click(screen.getByRole('button', { name: 'Rules 1' }));
       expect(router.state.location.pathname).toBe('/deck/d1/rules');
     });

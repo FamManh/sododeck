@@ -21,6 +21,7 @@ import { useUiStore } from '../../state/ui-store';
 import { DeleteViewDialog } from './delete-view-dialog';
 import { selectView, useViewState } from './use-current-view';
 import { ViewSettingsPopover } from './view-settings-popover';
+import type { TidyAction } from './tidy-layout-item';
 import { ViewTabMenu } from './view-tab-menu';
 import { viewTabName } from './view-title';
 import { TAB_ESTIMATE, visibleTabs } from './visible-tabs';
@@ -81,7 +82,15 @@ function RenameField({ view, onDone }: { view: View; onDone: () => void }) {
  * Home/End jump, Enter/Space select. Each tab has a menu (⋯, right-click, Shift+F10): Rename,
  * View settings…, Delete view. The canvas fits the new view itself (it watches the current view).
  */
-export function ViewSwitcher() {
+export function ViewSwitcher({
+  tidy,
+  compact = false,
+}: {
+  /** Tidy layout in the current view's menu (018 §g-46). */
+  tidy?: TidyAction;
+  /** Narrow windows (018 FR-041): the views become one dropdown. */
+  compact?: boolean;
+} = {}) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const { views, view: current } = useViewState();
@@ -179,6 +188,44 @@ export function ViewSwitcher() {
     focusTab(id);
   };
 
+  if (compact) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`View: ${current.title}`}
+            aria-haspopup="menu"
+            className="max-w-40 min-w-0 bg-surface-2 px-2.5"
+          >
+            <span className="truncate">{current.title}</span>
+            <ChevronDown />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent aria-label="Views" aria-labelledby={undefined} align="start">
+          {views.map((view) => (
+            <DropdownMenuItem
+              key={view.id}
+              aria-current={view.id === current.id ? 'true' : undefined}
+              onSelect={() => {
+                if (view.id !== current.id) selectView(view);
+              }}
+            >
+              {view.title}
+            </DropdownMenuItem>
+          ))}
+          {tidy !== undefined && (
+            <DropdownMenuItem disabled={tidy.block !== null || tidy.running} onSelect={tidy.run}>
+              Tidy layout
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onSelect={addView}>Add view</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   return (
     <div
       ref={rootRef}
@@ -260,6 +307,7 @@ export function ViewSwitcher() {
                   <ViewTabMenu
                     title={view.title}
                     canDelete={views.length > 1}
+                    {...(selected && tidy !== undefined ? { tidy } : {})}
                     open={menuFor === view.id}
                     onOpenChange={(open) => {
                       setMenuFor(open ? view.id : null);

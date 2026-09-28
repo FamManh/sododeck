@@ -193,3 +193,40 @@
     left: 33%;
   }
 }
+
+/*
+ * Canvas-first overlays (018): flyouts, detail drawer and JSON overlay fade in with a 4px slide.
+ * --sd-dur-overlay is 0ms under reduced motion, so they appear at once.
+ */
+@keyframes sd-overlay-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@keyframes sd-overlay-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+}
+
+@keyframes sd-overlay-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.sd-overlay-in-left {
+  animation: sd-overlay-in-left var(--sd-dur-overlay) var(--sd-ease);
+}
+
+.sd-overlay-in-right {
+  animation: sd-overlay-in-right var(--sd-dur-overlay) var(--sd-ease);
+}
+
+.sd-overlay-in-up {
+  animation: sd-overlay-in-up var(--sd-dur-overlay) var(--sd-ease);
+}

@@ -49,6 +49,11 @@ function CommandPaletteSession({
   const [query, setQuery] = useState('');
   const { fitView, getZoom, setCenter } = useReactFlow();
   const searchIndex = useMemo(() => buildSearchIndex(deck), [deck]);
+  const hasSelection = useUiStore((s) => {
+    const { nodes, edges, groups, stickies } = s.selection;
+    return nodes.length + edges.length + groups.length + stickies.length > 0;
+  });
+  const jsonShown = useUiStore((s) => s.jsonShown);
   const commands = useMemo<readonly PaletteCommand[]>(
     () =>
       buildCommands({
@@ -61,8 +66,25 @@ function CommandPaletteSession({
         exportDeck,
         theme: { value: theme, resolved: theme, setTheme },
         focusModeAvailable: false,
+        ...(screen === 'canvas'
+          ? {
+              shell: {
+                canOpenDetails: hasSelection,
+                openDetails: () => {
+                  useUiStore.getState().openDrawer();
+                },
+                jsonShown,
+                toggleJson: () => {
+                  useUiStore.getState().toggleJsonShown();
+                },
+                hideUi: () => {
+                  useUiStore.getState().setHideUi(true);
+                },
+              },
+            }
+          : {}),
       }),
-    [exportDeck, navigate, openRules, setTheme, theme],
+    [exportDeck, navigate, openRules, setTheme, theme, screen, hasSelection, jsonShown],
   );
   const currentViewId = useUiStore((state) => state.currentViewId);
   const revealed = useUiStore((state) => state.revealed);

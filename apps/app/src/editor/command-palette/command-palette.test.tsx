@@ -67,11 +67,7 @@ function Harness({
 
   return (
     <MemoryRouter>
-      <TopBar
-        deckName={deck.name ?? 'Untitled deck'}
-        screen={screenMode}
-        rulesCount={Object.keys(deck.rules).length}
-      />
+      <TopBar deckName={deck.name ?? 'Untitled deck'} />
       <CommandPalette
         screen={screenMode}
         openRules={openRules}
