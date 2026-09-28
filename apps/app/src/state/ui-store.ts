@@ -176,6 +176,7 @@ export interface UiState {
   stickyDraft: Id | null;
   canvasPointer: { x: number; y: number } | null;
   palette: { open: boolean; returnFocus: HTMLElement | null };
+  exportDialog: { open: boolean; returnFocus: HTMLElement | null };
   /** Roving-tabindex target on the canvas (US6). */
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
@@ -252,6 +253,8 @@ export interface UiState {
   setCanvasPointer: (point: { x: number; y: number } | null) => void;
   openPalette: (returnFocus?: HTMLElement | null) => void;
   closePalette: () => void;
+  openExport: (returnFocus?: HTMLElement | null) => void;
+  closeExport: () => void;
   focus: (id: string | null) => void;
   focusEdge: (id: string | null) => void;
   toggleOutlineGroup: (groupId: string) => void;
@@ -462,6 +465,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     stickyDraft: null,
     canvasPointer: null,
     palette: { open: false, returnFocus: null },
+    exportDialog: { open: false, returnFocus: null },
     focusedId: null,
     focusedEdgeId: null,
     outlineCollapsed: new Set(),
@@ -607,6 +611,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     closePalette: () => {
       set({ palette: { open: false, returnFocus: null } });
+    },
+    openExport: (returnFocus = null) => {
+      set({ exportDialog: { open: true, returnFocus } });
+    },
+    closeExport: () => {
+      set({ exportDialog: { open: false, returnFocus: null } });
     },
     focus: (id) => {
       set({ focusedId: id, focusedEdgeId: null });
@@ -945,6 +955,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         ruleTest: null,
         canvasPointer: null,
         palette: { open: false, returnFocus: null },
+        exportDialog: { open: false, returnFocus: null },
       });
     },
   };

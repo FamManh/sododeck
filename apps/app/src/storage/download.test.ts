@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { downloadText, safeFileName } from './download';
+import { downloadBlob, downloadText, safeFileName } from './download';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -24,6 +24,17 @@ describe('safeFileName', () => {
 });
 
 describe('downloadText', () => {
+  it('downloads a supplied blob with its MIME type', async () => {
+    const create = vi.fn(() => 'blob:svg');
+    const revoke = vi.fn();
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke }));
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const blob = new Blob(['<svg/>'], { type: 'image/svg+xml' });
+    downloadBlob('diagram.svg', blob);
+    expect(create).toHaveBeenCalledWith(blob);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(revoke).toHaveBeenCalledWith('blob:svg');
+  });
   it('clicks a temporary anchor with the file name and revokes the URL', async () => {
     const create = vi.fn(() => 'blob:test');
     const revoke = vi.fn();

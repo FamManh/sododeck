@@ -68,3 +68,8 @@ export function isQuotaError(error: unknown): boolean {
 export function supportsWorkers(): boolean {
   return typeof Worker !== 'undefined';
 }
+
+/** `requestIdleCallback` (prefetching the export chunk, 012). Missing in older Safari. */
+export function supportsIdleCallback(): boolean {
+  return typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
+}
