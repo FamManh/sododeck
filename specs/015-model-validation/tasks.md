@@ -98,14 +98,14 @@
 
 **Independent test**: planted deck → glyphs where expected, button count, button opens list; fix → glyph gone.
 
-- [ ] T023 [P] [US3] Write `apps/app/src/editor/problems/problem-marks.test.ts` and implement `apps/app/src/editor/problems/problem-marks.ts` (`problemMarks(problems) → Map<Id, { count; titles }>` for node and edge ids, stable identity when unchanged via a per-result WeakMap).
-- [ ] T024 [US3] Extend the canvas overlay in `apps/app/src/editor/deck-to-flow.ts` with `problems?: ProblemMarks`: add `problemCount` / `problemTitles` to `DeckNodeData` and `DeckEdgeData`, include them in the node and edge cache comparisons; extend `apps/app/src/editor/deck-to-flow.test.ts` (marks change → new object, unchanged → cached object). Pass the marks from `useProblems()` in `apps/app/src/editor/canvas.tsx`.
-- [ ] T025 [P] [US3] `apps/app/src/editor/deck-node.tsx`: amber glyph at the top-right corner with a tooltip of titles, hidden while the connect-target "+" is shown; accessible name gets ", n problem(s)". Extend `apps/app/src/editor/deck-node.test.tsx`.
-- [ ] T026 [P] [US3] `apps/app/src/editor/deck-edge.tsx`: glyph inside the label pill; render the pill for edges with problems even when labels are off; keep step badges first. Extend `apps/app/src/editor/deck-edge.test.tsx` (name includes the count; glyph with labels off).
-- [ ] T027 [P] [US3] `apps/app/src/editor/flows/flow-row.tsx`: remove the local `analyzeFlow` call and clay "Has problems" marker, show `ProblemGlyph` from `useProblems().byObject`; update its tests (flow-list / feature-group tests).
-- [ ] T028 [P] [US3] `apps/app/src/editor/rules/rule-list.tsx`: `ProblemGlyph` on rules with problems; extend its test.
-- [ ] T029 [US3] Implement `apps/app/src/editor/problems/problems-button.tsx` and add it to `apps/app/src/editor/canvas-toolbar.tsx` next to Labels: amber "n problems" / "1 problem", absent at 0; click → `exitFlow()` when a flow is active, clear selection, focus the panel's first row. Extend `apps/app/src/editor/canvas-toolbar.test.tsx` (count, absent at 0, opens the list from flow mode).
-- [ ] T030 [US3] Check glyph placement during flow playback and recording (step badges visible, glyph not covering them) in `deck-node.test.tsx` / `deck-edge.test.tsx`.
+- [x] T023 [P] [US3] Write `apps/app/src/editor/problems/problem-marks.test.ts` and implement `apps/app/src/editor/problems/problem-marks.ts` (`problemMarks(problems) → Map<Id, { count; titles }>` for node and edge ids, stable identity when unchanged via a per-result WeakMap).
+- [x] T024 [US3] Extend the canvas overlay in `apps/app/src/editor/deck-to-flow.ts` with `problems?: ProblemMarks`: add `problemCount` / `problemTitles` to `DeckNodeData` and `DeckEdgeData`, include them in the node and edge cache comparisons; extend `apps/app/src/editor/deck-to-flow.test.ts` (marks change → new object, unchanged → cached object). Pass the marks from `useProblems()` in `apps/app/src/editor/canvas.tsx`.
+- [x] T025 [P] [US3] `apps/app/src/editor/deck-node.tsx`: amber glyph at the top-right corner with a tooltip of titles, hidden while the connect-target "+" is shown; accessible name gets ", n problem(s)". Extend `apps/app/src/editor/deck-node.test.tsx`.
+- [x] T026 [P] [US3] `apps/app/src/editor/deck-edge.tsx`: glyph inside the label pill; render the pill for edges with problems even when labels are off; keep step badges first. Extend `apps/app/src/editor/deck-edge.test.tsx` (name includes the count; glyph with labels off).
+- [x] T027 [P] [US3] `apps/app/src/editor/flows/flow-row.tsx`: remove the local `analyzeFlow` call and clay "Has problems" marker, show `ProblemGlyph` from `useProblems().byObject`; update its tests (flow-list / feature-group tests).
+- [x] T028 [P] [US3] `apps/app/src/editor/rules/rule-list.tsx`: `ProblemGlyph` on rules with problems; extend its test.
+- [x] T029 [US3] Implement `apps/app/src/editor/problems/problems-button.tsx` and add it to `apps/app/src/editor/canvas-toolbar.tsx` next to Labels: amber "n problems" / "1 problem", absent at 0; click → `exitFlow()` when a flow is active, clear selection, focus the panel's first row. Extend `apps/app/src/editor/canvas-toolbar.test.tsx` (count, absent at 0, opens the list from flow mode).
+- [x] T030 [US3] Check glyph placement during flow playback and recording (step badges visible, glyph not covering them) in `deck-node.test.tsx` / `deck-edge.test.tsx`.
 
 **Checkpoint**: US3 acceptance scenarios 1–6 pass.
 

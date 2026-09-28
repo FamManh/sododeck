@@ -9,10 +9,11 @@ import {
 import { Focus, LayoutGrid, StickyNote, Tag, X } from 'lucide-react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { ProblemsButton } from './problems/problems-button';
 import { PinToggle } from './views/pin-controls';
 import { useTidyBlock, useTidyLayout } from './tidy-layout';
 
-/** Canvas header, top right (design 02/58): selection count and the Labels toggle. */
+/** Canvas header, top right (design 02/58/60): selection count, problems and the Labels toggle. */
 export function CanvasToolbar() {
   const count = useUiStore((s) => s.selection.nodes.length + s.selection.edges.length);
   const labelsOn = useUiStore((s) => s.labelsOn);
@@ -33,6 +34,7 @@ export function CanvasToolbar() {
       )}
       <TidyLayoutControl />
       <PinToggle />
+      <ProblemsButton />
       <Button
         variant="toggle"
         pressed={labelsOn}

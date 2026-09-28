@@ -98,7 +98,11 @@ afterEach(() => {
 
 const ui = () => useUiStore.getState();
 const announced = () => ui().announcement.text;
-const nodeEl = (name: string) => screen.getByRole('group', { name });
+/** A component by name, whether or not it currently has problems (", 1 problem", 015). */
+const nodeEl = (name: string) =>
+  screen.getByRole('group', {
+    name: (actual) => actual === name || new RegExp(`^${name}, \\d+ problems?$`).test(actual),
+  });
 
 beforeEach(() => {
   useUiStore.getState().setLabelsOn(false);
