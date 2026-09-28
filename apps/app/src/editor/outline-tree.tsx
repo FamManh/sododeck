@@ -10,6 +10,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useUiStore } from '../state/ui-store';
 import { buildOutline, visibleItems, type VisibleItem } from './outline';
 import { scopeOf } from './visible-graph';
+import { currentViewCrumb } from './views/view-title';
 
 /**
  * Outline tab (design 02/58, FR-024): a `tree` of groups and components. Arrow keys move and
@@ -22,7 +23,9 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
   const selectedNodes = useUiStore((s) => s.selection.nodes);
   const { fitView, getZoom } = useReactFlow();
   const scope = useMemo(() => scopeOf(drill), [drill]);
-  const tree = useMemo(() => buildOutline(deck, scope), [deck, scope]);
+  const currentViewId = useUiStore((s) => s.currentViewId);
+  const rootTitle = currentViewCrumb(deck.views, currentViewId);
+  const tree = useMemo(() => buildOutline(deck, scope, rootTitle), [deck, scope, rootTitle]);
   const items = useMemo(() => visibleItems(tree, collapsed), [tree, collapsed]);
   const selected = useMemo(() => new Set(selectedNodes), [selectedNodes]);
   // Which row holds the tree's single Tab stop (UI-only).

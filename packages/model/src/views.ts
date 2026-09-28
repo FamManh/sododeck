@@ -3,7 +3,7 @@
  * shown while a deck has no stored views and written on its first view change. Their type only
  * picks these defaults and the tab tooltip (FR-002a): no code branches on `view.type`.
  */
-import type { Id, SododeckFile, View } from '@sododeck/schema';
+import type { Id, View } from '@sododeck/schema';
 
 /** System, Feature and Infra, in switcher order. The first one is the base view. */
 export const VIEW_PRESETS: readonly View[] = Object.freeze([
@@ -27,7 +27,7 @@ export const CUSTOM_VIEW_DEFAULTS = {
 } as const satisfies Partial<View>;
 
 /** The deck's stored views, else the presets. Keeps the array identity of either. */
-export function resolveViews(file: Pick<SododeckFile, 'views'>): readonly View[] {
+export function resolveViews(file: { readonly views: readonly View[] }): readonly View[] {
   return file.views.length > 0 ? file.views : VIEW_PRESETS;
 }
 

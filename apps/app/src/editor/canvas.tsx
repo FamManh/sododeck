@@ -56,9 +56,11 @@ import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
+import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
 import { readViewState, useViewState } from './views/use-current-view';
+import { viewCrumbTitle } from './views/view-title';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
@@ -91,17 +93,6 @@ export interface CanvasProps {
   onReady?: () => void;
 }
 
-function scopeTitle(
-  deck: ReturnType<typeof readDeck>,
-  drill: readonly { kind: 'group' | 'node'; id: string }[],
-): string {
-  const current = drill.at(-1);
-  if (current === undefined) return 'System view';
-  if (current.kind === 'group')
-    return deck.groups.find((group) => group.id === current.id)?.title ?? 'System view';
-  return deck.nodes.find((node) => node.id === current.id)?.title ?? 'System view';
-}
-
 /** Keeps drill/collapse state pointing at existing, non-empty scopes after document removals. */
 function useViewSync(): void {
   const editor = useEditor();
@@ -130,7 +121,10 @@ function useViewSync(): void {
           ui.drillUp(depth);
           changed = true;
         }
-        if (changed) ui.announce(`Went up to ${scopeTitle(deck, useUiStore.getState().drill)}`);
+        if (changed)
+          ui.announce(
+            `Went up to ${drillScopeTitle(deck, useUiStore.getState().drill, viewCrumbTitle(readViewState(editor.doc).view))}`,
+          );
       }),
     [editor.doc],
   );

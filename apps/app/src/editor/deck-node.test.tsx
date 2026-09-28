@@ -143,6 +143,52 @@ describe('DeckNode', () => {
     }
   });
 
+  describe('views (011)', () => {
+    it('shows the subtitle the view chose, from Container level up', () => {
+      renderNode(props({ level: 'container', subtitle: '3 flows · Orders' }));
+      expect(screen.getByText('3 flows · Orders')).toBeInTheDocument();
+    });
+
+    it.each(['system', 'landscape'] as const)('hides the subtitle at %s level', (level) => {
+      renderNode(props({ level, subtitle: 'k8s' }));
+      expect(screen.queryByText('k8s')).not.toBeInTheDocument();
+    });
+
+    it('names a dimmed component, which stays focusable', () => {
+      renderNode(props({ viewDimmed: true, focused: true }));
+      const node = screen.getByRole('group', {
+        name: 'Service: Order Service, dimmed in this view',
+      });
+      expect(node).toHaveAttribute('tabindex', '0');
+      expect(node).not.toHaveAttribute('aria-hidden');
+      expect(node).not.toHaveAttribute('inert');
+    });
+
+    it.each(['system', 'container', 'component'] as const)(
+      'shows a pin glyph at %s level and says "pinned"',
+      (level) => {
+        renderNode(props({ level, pinned: true }));
+        expect(screen.getByRole('img', { name: 'Pinned' })).toBeInTheDocument();
+        expect(
+          screen.getByRole('group', { name: 'Service: Order Service, pinned' }),
+        ).toBeInTheDocument();
+      },
+    );
+
+    it('has no pin glyph at Landscape level, but keeps "pinned" in the name', () => {
+      renderNode(props({ level: 'landscape', pinned: true }));
+      expect(screen.queryByRole('img', { name: 'Pinned' })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('group', { name: 'Service: Order Service, pinned' }),
+      ).toBeInTheDocument();
+    });
+
+    it('notes a component that the view hides but was created here', () => {
+      renderNode(props({ hiddenInView: true }));
+      expect(screen.getByRole('note')).toHaveTextContent('Hidden in this view');
+    });
+  });
+
   it('shows a valid drop target with a + mark', () => {
     connection.connecting = true;
     connection.role = 'target:q';

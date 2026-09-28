@@ -37,21 +37,46 @@ function effectiveParents(deck: SododeckFile): Map<string, string | undefined> {
   return out;
 }
 
-function parentScopeTitle(deck: SododeckFile, scope: Scope): string | null {
+/**
+ * Title of the scope above `scope` in the drill-in trail; `rootTitle` is the view crumb ("System
+ * view", 011 FR-004). Null at the top level.
+ */
+export function parentScopeTitle(
+  deck: SododeckFile,
+  scope: Scope,
+  rootTitle: string,
+): string | null {
   if (scope.group !== null) {
     const group = deck.groups.find((entry) => entry.id === scope.group);
     if (group?.parent !== undefined) {
-      return deck.groups.find((entry) => entry.id === group.parent)?.title ?? 'System view';
+      return deck.groups.find((entry) => entry.id === group.parent)?.title ?? rootTitle;
     }
     if (scope.node !== null)
-      return deck.nodes.find((node) => node.id === scope.node)?.title ?? 'System view';
-    return 'System view';
+      return deck.nodes.find((node) => node.id === scope.node)?.title ?? rootTitle;
+    return rootTitle;
   }
-  if (scope.node !== null) return 'System view';
+  if (scope.node !== null) return rootTitle;
   return null;
 }
 
-export function buildOutline(deck: SododeckFile, scope?: Scope): OutlineItem[] {
+/** Title of the innermost drill-in frame, or `rootTitle` (the view crumb) at the top level. */
+export function drillScopeTitle(
+  deck: Pick<SododeckFile, 'groups' | 'nodes'>,
+  drill: readonly { kind: 'group' | 'node'; id: string }[],
+  rootTitle: string,
+): string {
+  const current = drill.at(-1);
+  if (current === undefined) return rootTitle;
+  if (current.kind === 'group')
+    return deck.groups.find((group) => group.id === current.id)?.title ?? rootTitle;
+  return deck.nodes.find((node) => node.id === current.id)?.title ?? rootTitle;
+}
+
+export function buildOutline(
+  deck: SododeckFile,
+  scope?: Scope,
+  rootTitle = 'System view',
+): OutlineItem[] {
   const graph = scope === undefined ? null : visibleGraph(deck, scope, new Set());
   const scopedDeck =
     graph === null
@@ -96,7 +121,7 @@ export function buildOutline(deck: SododeckFile, scope?: Scope): OutlineItem[] {
       : (item.count = item.children.reduce((sum, child) => sum + count(child), 0));
   for (const item of root) count(item);
   const items = [...root, ...loose];
-  const upTitle = scope === undefined ? null : parentScopeTitle(deck, scope);
+  const upTitle = scope === undefined ? null : parentScopeTitle(deck, scope, rootTitle);
   return upTitle === null
     ? items
     : [{ type: 'up', id: 'up', title: upTitle, children: [] }, ...items];

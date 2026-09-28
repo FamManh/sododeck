@@ -4,7 +4,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Ban, CornerDownRight, Layers, Plus, Table } from 'lucide-react';
+import { Ban, CornerDownRight, EyeOff, Layers, Pin, Plus, Table } from 'lucide-react';
 import { memo, useEffect } from 'react';
 
 import { useEditor } from '../model/use-editor';
@@ -46,7 +46,14 @@ export const DeckNode = memo(function DeckNode({
     if (refusal) announce(refusal);
   }, [refusal, announce]);
 
-  const name = `${kindLabel(data.kind)}: ${data.title}`;
+  // Dimmed and pinned are said in the name too, never shown by opacity or a glyph alone (011).
+  const name = [
+    `${kindLabel(data.kind)}: ${data.title}`,
+    data.viewDimmed === true ? 'dimmed in this view' : null,
+    data.pinned === true ? 'pinned' : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
   const tabIndex = data.focused ? 0 : -1;
   const isLandscape = data.level === 'landscape';
   const isSystem = data.level === 'system';
@@ -188,6 +195,25 @@ export const DeckNode = memo(function DeckNode({
         />
       )}
 
+      {data.pinned === true && !isLandscape && (
+        <span className="pointer-events-none absolute -top-2 -left-2 flex size-4.5 items-center justify-center rounded-full border border-hairline bg-surface text-ink-secondary shadow-rest">
+          <Pin
+            role="img"
+            aria-label="Pinned"
+            strokeWidth={ICON_STROKE_WIDTH}
+            className="size-2.5"
+          />
+        </span>
+      )}
+      {data.hiddenInView === true && (
+        <span
+          role="note"
+          className="pointer-events-none absolute bottom-full left-0 z-10 mb-1.5 flex w-max items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-secondary shadow-rest"
+        >
+          <EyeOff aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+          Hidden in this view
+        </span>
+      )}
       {target === 'ok' && (
         <span
           aria-hidden

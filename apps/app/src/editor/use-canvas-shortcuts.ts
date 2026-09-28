@@ -38,6 +38,8 @@ import { useSaveControls } from './save-context';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { moveStickyInView, readViewState } from './views/use-current-view';
+import { viewCrumbTitle } from './views/view-title';
+import { drillScopeTitle } from './outline';
 
 export { isTextTarget };
 
@@ -74,17 +76,6 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
   return collapsed.has(groupId)
     ? `${COLLAPSED_NODE_PREFIX}${groupId}`
     : `${GROUP_NODE_PREFIX}${groupId}`;
-}
-
-function scopeTitle(
-  deck: ReturnType<typeof readDeck>,
-  drill: readonly { kind: 'group' | 'node'; id: string }[],
-): string {
-  const current = drill.at(-1);
-  if (current === undefined) return 'System view';
-  if (current.kind === 'group')
-    return deck.groups.find((group) => group.id === current.id)?.title ?? 'System view';
-  return deck.nodes.find((node) => node.id === current.id)?.title ?? 'System view';
 }
 
 /** Focuses the inspector's title field once the inspector shows the selected node. */
@@ -514,7 +505,13 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
           if (groups.length === 0 && ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
-            ui.announce(`Back to ${scopeTitle(readDeck(editor.doc), useUiStore.getState().drill)}`);
+            ui.announce(
+              `Back to ${drillScopeTitle(
+                readDeck(editor.doc),
+                useUiStore.getState().drill,
+                viewCrumbTitle(readViewState(editor.doc).view),
+              )}`,
+            );
             return;
           }
           if (groups.length > 0) {
@@ -537,7 +534,13 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
           if (ui.drill.length === 0) return;
           event.preventDefault();
           ui.drillUp();
-          ui.announce(`Back to ${scopeTitle(readDeck(editor.doc), useUiStore.getState().drill)}`);
+          ui.announce(
+            `Back to ${drillScopeTitle(
+              readDeck(editor.doc),
+              useUiStore.getState().drill,
+              viewCrumbTitle(readViewState(editor.doc).view),
+            )}`,
+          );
           return;
         }
         ui.clearSelection();
