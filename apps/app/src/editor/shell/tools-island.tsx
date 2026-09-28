@@ -17,8 +17,6 @@ import { useExportDeck } from '../use-export-deck';
 import { Island, IslandDivider } from './island';
 import { shortcutLabel } from './shortcuts';
 
-const NOTES_LABEL = { dimmed: 'Dimmed', shown: 'Shown', hidden: 'Hidden' } as const;
-
 /** A tooltip only in the compact islands, where the button has no visible label. */
 function Tip({ show, text, children }: { show: boolean; text: string; children: ReactNode }) {
   if (!show) return children;
@@ -137,7 +135,7 @@ export function ToolsIsland({ compact = false }: { compact?: boolean }) {
             className={cn(compact && 'size-8.5 px-0')}
           >
             <StickyNote />
-            {!compact && NOTES_LABEL[notesDisplay]}
+            {!compact && 'Notes'}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent

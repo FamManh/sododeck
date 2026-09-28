@@ -68,7 +68,7 @@ export function JsonPanelHeader({
       </p>
       <div className="flex-1" />
       {lineCount > 0 && (
-        <span className="font-mono text-caption text-ink-secondary">
+        <span className="font-mono text-caption whitespace-nowrap text-ink-secondary">
           {lineCountLabel(lineCount)}
         </span>
       )}

@@ -88,14 +88,10 @@ export function DetailDrawer({
   if (!drawer.open) return null;
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== 'Escape' || event.defaultPrevented) return;
+    if (event.key !== 'Escape' || isTextTarget(event.target)) return;
+    if (event.defaultPrevented) return;
     event.preventDefault();
     event.stopPropagation();
-    // In a field, Esc is the field's (revert); it then leaves the field, and the next Esc closes.
-    if (isTextTarget(event.target)) {
-      ref.current?.focus();
-      return;
-    }
     close();
   };
 
@@ -106,6 +102,14 @@ export function DetailDrawer({
       data-region="drawer"
       tabIndex={-1}
       onKeyDown={onKeyDown}
+      onKeyDownCapture={(event) => {
+        // In a field, Esc is the field's (it reverts and stops the event); once it is done,
+        // focus leaves the field, and the next Esc closes the drawer.
+        if (event.key !== 'Escape' || !isTextTarget(event.target)) return;
+        queueMicrotask(() => {
+          ref.current?.focus();
+        });
+      }}
       style={{ width, right: EDGE }}
       className="sd-overlay-in-right pointer-events-auto absolute top-17 bottom-3 flex flex-col rounded-card border border-hairline bg-surface shadow-float outline-none"
     >
