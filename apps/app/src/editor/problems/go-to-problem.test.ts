@@ -19,7 +19,8 @@ const deck = () =>
     nodes: [
       { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
       { id: 'b', type: 'service', title: 'B', position: { x: 200, y: 0 } },
-      { id: 'lonely', type: 'service', title: 'Lonely', group: 'inner' },
+      // A broken reference on a component: the component is the problem's target.
+      { id: 'lonely', type: 'service', title: 'Lonely', group: 'inner', rules: ['gone'] },
     ],
     edges: [
       { id: 'e1', from: 'a', to: 'b' },
@@ -74,7 +75,15 @@ function setup(file: SododeckFile = deck()) {
     if (found === undefined) throw new Error(`no ${kind}`);
     return found;
   };
-  return { doc, editor, ctx, problem };
+  /** The problem on the component "Lonely" (a broken reference). */
+  const onLonely = (): Problem => {
+    const found = checkDeck(readDeck(doc)).list.find(
+      (p) => p.target.type === 'node' && p.target.id === 'lonely',
+    );
+    if (found === undefined) throw new Error('no problem on Lonely');
+    return found;
+  };
+  return { doc, editor, ctx, problem, onLonely };
 }
 
 describe('goToProblem (015 US2, FR-017–019)', () => {
@@ -83,27 +92,27 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
   });
 
   it('selects, focuses and fits a component, and records the cursor', () => {
-    const { ctx, problem } = setup();
-    const orphan = problem('orphan');
-    expect(goToProblem(orphan, ctx)).toBe(true);
+    const { ctx, onLonely } = setup();
+    const onComponent = onLonely();
+    expect(goToProblem(onComponent, ctx)).toBe(true);
     expect(ctx.select).toHaveBeenCalledWith({ nodes: ['lonely'] });
     expect(ctx.focus).toHaveBeenCalledWith('lonely');
     expect(ctx.fitView).toHaveBeenCalled();
-    expect(useUiStore.getState().problemCursor).toBe(orphan.key);
+    expect(useUiStore.getState().problemCursor).toBe(onComponent.key);
   });
 
   it('expands collapsed groups around the component, without an undo step', () => {
-    const { editor, doc, ctx, problem } = setup();
+    const { editor, doc, ctx, onLonely } = setup();
     editor.setCollapsed(readViewState(doc).view.id, 'outer', true);
     editor.setCollapsed(readViewState(doc).view.id, 'inner', true);
     const canUndo = editor.canUndo();
-    goToProblem(problem('orphan'), ctx);
+    goToProblem(onLonely(), ctx);
     expect(collapsedOf(doc).size).toBe(0);
     expect(editor.canUndo()).toBe(canUndo);
   });
 
   it('goes up the drill-in until the component is in scope', () => {
-    const { ctx, problem } = setup();
+    const { ctx, problem, onLonely } = setup();
     const viewport = { x: 0, y: 0, zoom: 1 };
     useUiStore.setState({
       drill: [
@@ -114,7 +123,7 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
     goToProblem(problem('duplicate-connection'), ctx);
     expect(useUiStore.getState().drill).toHaveLength(2); // edges: no reveal needed
     useUiStore.setState({ drill: [{ kind: 'node', id: 'a', viewport }] });
-    goToProblem(problem('orphan'), ctx);
+    goToProblem(onLonely(), ctx);
     expect(useUiStore.getState().drill).toHaveLength(0);
   });
 
@@ -146,7 +155,7 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
   });
 
   it('offers another view when the current one hides the component', () => {
-    const { ctx, problem } = setup({
+    const { ctx, onLonely } = setup({
       ...deck(),
       views: [
         { id: 'v1', type: 'custom', title: 'No inner', excludeGroups: ['inner'] },
@@ -154,7 +163,7 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
       ],
     });
     ctx.firstViewShowing.mockReturnValue({ id: 'v2', title: 'System' });
-    goToProblem(problem('orphan'), ctx);
+    goToProblem(onLonely(), ctx);
     expect(ctx.select).not.toHaveBeenCalled();
     expect(ctx.showToast).toHaveBeenCalledWith(
       'Lonely is hidden in this view',
@@ -163,10 +172,10 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
   });
 
   it('announces a target that no longer exists', () => {
-    const { editor, ctx, problem } = setup();
-    const orphan = problem('orphan');
+    const { editor, ctx, onLonely } = setup();
+    const onComponent = onLonely();
     editor.remove('nodes', 'lonely');
-    expect(goToProblem(orphan, ctx)).toBe(false);
+    expect(goToProblem(onComponent, ctx)).toBe(false);
     expect(ctx.announce).toHaveBeenCalledWith('This item no longer exists');
   });
 });

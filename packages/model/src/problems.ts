@@ -1,5 +1,5 @@
 /**
- * Deck-wide problems (feature 015, ADR 0013): orphan components, duplicate connections, flow and
+ * Deck-wide problems (feature 015, ADR 0013): duplicate connections, flow and
  * rule problems and broken references, gathered from the existing checks (`analyzeFlow`,
  * `ruleChecks`, `checkIntegrity`) plus three new ones. Pure and JSON-based so it runs in a worker.
  * Problems are derived for display and never stored in the deck (§g-23).
@@ -13,7 +13,6 @@ import type { ObjectRef } from './layout';
 import { ruleChecks } from './rules/evaluate';
 
 export type ProblemKind =
-  | 'orphan'
   | 'duplicate-connection'
   | 'step-without-connection'
   | 'broken-chain'
@@ -26,7 +25,6 @@ export type ProblemKind =
 
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
-  'orphan',
   'duplicate-connection',
   'step-without-connection',
   'broken-chain',
@@ -52,9 +50,9 @@ export interface Problem {
   key: string;
   kind: ProblemKind;
   target: ProblemTarget;
-  /** "Orphan component" */
+  /** "Duplicate connection" */
   title: string;
-  /** "Legacy Invoicer has no connections" */
+  /** "Checkout → Orders appears twice" */
   detail: string;
   /** Sort key: the title of the main object. */
   objectTitle: string;
@@ -90,7 +88,6 @@ interface Draft {
 }
 
 const TITLES: Record<ProblemKind, string> = {
-  orphan: 'Orphan component',
   'duplicate-connection': 'Duplicate connection',
   'step-without-connection': 'Step without connection',
   'broken-chain': 'Broken flow',
@@ -110,7 +107,6 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   const nodeById = new Map<Id, Node>(file.nodes.map((n) => [n.id, n]));
   const nodeTitle = (id: Id) => nodeById.get(id)?.title ?? id;
 
-  checkOrphans(file, add);
   checkDuplicates(file.edges, nodeTitle, add);
 
   const analyses = new Map<Id, FlowAnalysis>();
@@ -152,27 +148,6 @@ export function checkDeck(file: SododeckFile): DeckProblems {
 }
 
 type Add = (d: Omit<Draft, 'title'>) => void;
-
-function checkOrphans(file: SododeckFile, add: Add): void {
-  if (file.nodes.length < 2) return;
-  const connected = new Set<Id>();
-  for (const e of file.edges) {
-    connected.add(e.from);
-    connected.add(e.to);
-  }
-  for (const n of file.nodes) if (n.parent !== undefined) connected.add(n.parent);
-  for (const node of file.nodes) {
-    if (connected.has(node.id)) continue;
-    add({
-      kind: 'orphan',
-      ids: [node.id],
-      target: { type: 'node', id: node.id },
-      on: [node.id],
-      detail: `${node.title} has no connections`,
-      objectTitle: node.title,
-    });
-  }
-}
 
 function checkDuplicates(edges: readonly Edge[], nodeTitle: (id: Id) => string, add: Add): void {
   const groups = new Map<string, Edge[]>();

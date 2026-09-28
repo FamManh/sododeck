@@ -812,7 +812,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   - Given a flow whose edge was deleted, When validation runs, Then "Broken flow: <flow> step n" is
     listed and the flow row shows a warning icon.
   - Given a 2,000-node deck, When validation runs, Then the UI stays responsive (runs in a worker).
-- **Risks:** noise (orphans may be intentional) — allow dismissing per object later.
+- **Risks:** noise (orphans may be intentional) — allow dismissing per object later. _Resolved 2026-09-28: the orphan check was removed (founder decision, ADR 0013 amendment)._
 - **`/speckit.specify` prompt:**
   > Show users the problems in their model: components with no connections, duplicate connections,
   > flow steps whose connection was deleted, flows that jump between unconnected components, and

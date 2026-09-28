@@ -17,6 +17,9 @@ const planted = deckOf({
     { id: 'e2', from: 'gw', to: 'tr', label: 'GPS stream' },
   ],
   flows: [{ id: 'f', title: 'Proof of delivery', steps: [{ id: 's1', edge: 'gone' }] }],
+  rules: {
+    R: { title: 'Delivery tier', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
+  },
 });
 
 function setup(file = planted, onActivate = vi.fn()) {
@@ -36,9 +39,9 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     const heading = await screen.findByRole('heading', { name: /Problems/ });
     expect(heading).toHaveTextContent('3');
     expect(rowNames()).toEqual([
-      'Orphan componentLegacy Invoicer has no connections',
       'Duplicate connectionAPI Gateway → Tracking Service appears twice',
       'Step without connectionProof of delivery · step 1 used a deleted connection',
+      'Rule without catch-allDelivery tier · some inputs match no row',
     ]);
     expect(screen.getByText(/Click a problem, or press ↵ on it/)).toBeInTheDocument();
   });
@@ -53,10 +56,12 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     const { editor } = setup();
     await screen.findByRole('list', { name: 'Problems' });
     act(() => {
-      editor().add('edges', { id: 'e3', from: 'tr', to: 'lg' });
+      editor().remove('edges', 'e2');
     });
     await vi.waitFor(() => {
-      expect(rowNames()).not.toContain('Orphan componentLegacy Invoicer has no connections');
+      expect(rowNames()).not.toContain(
+        'Duplicate connectionAPI Gateway → Tracking Service appears twice',
+      );
     });
   });
 
@@ -76,23 +81,31 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     expect(onActivate).not.toHaveBeenCalled();
     await user.keyboard('{ArrowDown}{Enter}');
     expect(onActivate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: 'duplicate-connection' }),
+      expect.objectContaining({ kind: 'step-without-connection' }),
     );
     await user.keyboard(' ');
     expect(onActivate).toHaveBeenCalledTimes(2);
     await user.click(rows[2] as HTMLElement);
     expect(onActivate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: 'step-without-connection' }),
+      expect.objectContaining({ kind: 'rule-without-catch-all' }),
     );
   });
 
   it(`shows ${String(PROBLEM_ROW_CAP)} rows, then all of them on request`, async () => {
-    const nodes = Array.from({ length: PROBLEM_ROW_CAP + 1 }, (_, i) => ({
-      id: `n${String(i)}`,
-      type: 'service' as const,
-      title: `Lonely ${String(i).padStart(3, '0')}`,
-    }));
-    const { user } = setup(deckOf({ nodes }));
+    // One rule without a catch-all row each.
+    const rules = Object.fromEntries(
+      Array.from({ length: PROBLEM_ROW_CAP + 1 }, (_, i) => [
+        `r${String(i)}`,
+        {
+          title: `Rule ${String(i).padStart(3, '0')}`,
+          hitPolicy: 'first' as const,
+          inputs: [],
+          outputs: [],
+          rows: [],
+        },
+      ]),
+    );
+    const { user } = setup(deckOf({ rules }));
     await screen.findByRole('list', { name: 'Problems' });
     expect(rowNames()).toHaveLength(PROBLEM_ROW_CAP);
     await user.click(

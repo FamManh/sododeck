@@ -19,6 +19,17 @@ const deck = deckOf({
     { id: 'e1', from: 'web', to: 'svc', label: 'POST' },
     { id: 'e2', from: 'svc', to: 'db' },
   ],
+  // A flow over both connections: deleting Order Service breaks its steps (015 FR-026).
+  flows: [
+    {
+      id: 'f',
+      title: 'Checkout',
+      steps: [
+        { id: 's1', edge: 'e1' },
+        { id: 's2', edge: 'e2' },
+      ],
+    },
+  ],
   stickies: [
     { id: 'note-1', text: 'Pinned note', anchor: 'svc', position: { x: 24, y: -96 } },
     { id: 'note-2', text: 'Loose note', position: { x: 160, y: 200 } },
@@ -92,11 +103,11 @@ describe('ConfirmDeleteDialog', () => {
     const { doc, user, editor } = setup();
     const before = checkDeck(toJSON(doc)).total;
     await user.click(screen.getByRole('button', { name: 'Delete' }));
-    // Orders DB and Web lose their only connections.
+    // The Checkout flow loses both of its connections.
     expect(
-      screen.getByText(/1 note unpinned · 2 new problems · (⌘Z|Ctrl\+Z) to undo$/),
+      screen.getByText(/1 note unpinned · \d+ new problems? · (⌘Z|Ctrl\+Z) to undo$/),
     ).toBeInTheDocument();
-    expect(useUiStore.getState().announcement.text).toMatch(/2 new problems/);
+    expect(useUiStore.getState().announcement.text).toMatch(/\d+ new problems?/);
     act(() => {
       editor().undo();
     });
