@@ -1,6 +1,8 @@
+import { Checkbox } from '@sododeck/ui/components/checkbox';
 import { Combobox } from '@sododeck/ui/components/combobox';
 import { InlineEdit } from '@sododeck/ui/components/inline-edit';
 import { MarkdownView } from '@sododeck/ui/components/markdown-view';
+import { RadioGroup, RadioGroupItem } from '@sododeck/ui/components/radio-group';
 import { Input } from '@sododeck/ui/components/input';
 import { SearchField } from '@sododeck/ui/components/search-field';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
@@ -216,6 +218,19 @@ export function FieldsSection() {
             Disabled
           </span>
         </div>
+      </SampleRow>
+      <SampleRow label="checkbox">
+        <Checkbox label="Clients" defaultChecked />
+        <Checkbox label="Edge" />
+        <Checkbox label="Some groups" checked="indeterminate" />
+        <Checkbox label="Disabled" disabled />
+      </SampleRow>
+      <SampleRow label="radio group">
+        <RadioGroup aria-label="Subtitle example" defaultValue="tech">
+          <RadioGroupItem value="tech" label="Technology" />
+          <RadioGroupItem value="host" label="Hosting" />
+          <RadioGroupItem value="none" label="None" disabled />
+        </RadioGroup>
       </SampleRow>
     </GallerySection>
   );
