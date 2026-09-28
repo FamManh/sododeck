@@ -17,28 +17,42 @@ DESIGN.md or the founder decisions are in design-analysis §a and §g-18–§g-3
 below still win over the new frames (notably: deletes ask for confirmation, SLA target only,
 autosave ≤ 300 ms, owner is free text).
 
+**Design update (2026-09-28):** Claude Design added the **canvas-first editor, states 86–116**
+(project "Sododeck", files `Sododeck Canvas-first.dc.html` + `Sododeck Canvas State.dc.html` +
+`sododeck-canvas.js`), covering 016–020: shell (86–94), card quick-edit (95–104), card colours
+(105–107), editing affordances (108–115) and a narrow window (116), plus a component inventory and
+card-colour tokens. 021 imports them into the repo before 018 starts. Deltas vs the first draft of
+016–020 are written into each feature below; conflicts with founder decisions were settled in
+§g-42–§g-46 (defaults accepted, 2026-09-28).
+
 ## Founder decisions (2026-09-27)
 
 Recorded in design-analysis §g and applied to the features below.
 
-| §g  | Decision                                                                                                                                                                                                      | Affects                 |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 3   | JSON panel is **read-only** for now: it shows the canvas as JSON (selection tab + whole-deck tab), updates live, can be copied and collapsed. Editing from JSON (C-5 two-way sync) is deferred.               | 004                     |
-| 6   | Build the **rule test panel** + catch-all check in 008; SLA shows the **target only** (no "measured" value); the 3-step tour stays in M5 (013).                                                               | 007, 008, 013           |
-| 7   | Autosave: every change is persisted immediately; the top bar shows "Saving…" (cosmetic, held ≤ 300 ms) then "Saved in this browser", plus an error state "Couldn't save — export a backup".                   | 005                     |
-| 10  | Owner is **free text with suggestions** from owners already used in the deck (no team list).                                                                                                                  | 001, 008                |
-| 11  | Deleting asks for **confirmation**; undo (⌘Z) still works after a confirmed delete.                                                                                                                           | 003, 005, 006, 008, 009 |
-| 12  | Library "Recent" = the **8 most recently opened** decks (opened-at kept in library metadata, not in the deck).                                                                                                | 005                     |
-| 19  | After a confirmed delete, show the design's **Undo toast** (6 s, Undo button + ⌘Z hint); ⌘Z still works after it disappears.                                                                                  | 003, 005, 006, 008, 009 |
-| 33  | Import and export handle **one `.sododeck.json` file at a time**: no all-decks backup, no folder export/import, no multi-file or zip import.                                                                  | 005, 012                |
-| 34  | **G-5 deferred**: no backup reminder banner and no Safari 7-day warning for now.                                                                                                                              | 005                     |
-| 35  | **Multi-tab = live sync**: every tab stays editable, edits sync between tabs and merge (Yjs); no read-only tab, lock banner or "Use here instead" (frame 82 not used). Undo is per tab.                       | 005                     |
-| 36  | Canvas drag keeps **panning**; marquee select stays **Shift+drag** (003). No switch to drag-to-select for now.                                                                                                | 003, 016                |
-| 37  | Schema v1 may add **optional** `node.size` (resize) and `edge.route` (connector sides + segment offset). Additive only; older files stay valid.                                                               | 001, 002, 017           |
-| 38  | **Canvas-first editor** (Miro-like): full-bleed canvas, floating chrome, left icon rail with flyouts, inspector as an on-demand drawer, JSON panel hidden by default. Replaces the 3-column prototype layout. | 018, 019, DESIGN.md     |
-| 39  | Card **fill and stroke** colours from a fixed named palette, plus a **"+"** that adds a custom hex colour to the deck's own swatches.                                                                         | 020                     |
-| 40  | **Dynamic card attributes deferred**: cards keep today's fields (tech, host, owner, tags, level, rules); user-defined fields come later.                                                                      | 020, later              |
-| 41  | 016–020 are scheduled **after M4** (after 011), not before.                                                                                                                                                   | 016–020                 |
+| §g  | Decision                                                                                                                                                                                                                            | Affects                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 3   | JSON panel is **read-only** for now: it shows the canvas as JSON (selection tab + whole-deck tab), updates live, can be copied and collapsed. Editing from JSON (C-5 two-way sync) is deferred.                                     | 004                     |
+| 6   | Build the **rule test panel** + catch-all check in 008; SLA shows the **target only** (no "measured" value); the 3-step tour stays in M5 (013).                                                                                     | 007, 008, 013           |
+| 7   | Autosave: every change is persisted immediately; the top bar shows "Saving…" (cosmetic, held ≤ 300 ms) then "Saved in this browser", plus an error state "Couldn't save — export a backup".                                         | 005                     |
+| 10  | Owner is **free text with suggestions** from owners already used in the deck (no team list).                                                                                                                                        | 001, 008                |
+| 11  | Deleting asks for **confirmation**; undo (⌘Z) still works after a confirmed delete.                                                                                                                                                 | 003, 005, 006, 008, 009 |
+| 12  | Library "Recent" = the **8 most recently opened** decks (opened-at kept in library metadata, not in the deck).                                                                                                                      | 005                     |
+| 19  | After a confirmed delete, show the design's **Undo toast** (6 s, Undo button + ⌘Z hint); ⌘Z still works after it disappears.                                                                                                        | 003, 005, 006, 008, 009 |
+| 33  | Import and export handle **one `.sododeck.json` file at a time**: no all-decks backup, no folder export/import, no multi-file or zip import.                                                                                        | 005, 012                |
+| 34  | **G-5 deferred**: no backup reminder banner and no Safari 7-day warning for now.                                                                                                                                                    | 005                     |
+| 35  | **Multi-tab = live sync**: every tab stays editable, edits sync between tabs and merge (Yjs); no read-only tab, lock banner or "Use here instead" (frame 82 not used). Undo is per tab.                                             | 005                     |
+| 36  | Canvas drag keeps **panning**; marquee select stays **Shift+drag** (003). No switch to drag-to-select for now.                                                                                                                      | 003, 016                |
+| 37  | Schema v1 may add **optional** `node.size` (resize) and `edge.route` (connector sides + segment offset). Additive only; older files stay valid.                                                                                     | 001, 002, 017           |
+| 38  | **Canvas-first editor** (Miro-like): full-bleed canvas, floating chrome, left icon rail with flyouts, inspector as an on-demand drawer, JSON panel hidden by default. Replaces the 3-column prototype layout.                       | 018, 019, DESIGN.md     |
+| 39  | Card **fill and stroke** colours from a fixed named palette, plus a **"+"** that adds a custom hex colour to the deck's own swatches.                                                                                               | 020                     |
+| 40  | **Dynamic card attributes deferred**: cards keep today's fields (tech, host, owner, tags, level, rules); user-defined fields come later.                                                                                            | 020, later              |
+| 41  | 016–020 are scheduled **after M4** (after 011), not before.                                                                                                                                                                         | 016–020                 |
+| 42  | JSON panel stays **read-only** in the canvas-first overlay (93); JSON editing is a later feature.                                                                                                                                   | 018                     |
+| 43  | 020 also colours **groups**: optional `group.style` with the same `ColorRef`.                                                                                                                                                       | 020                     |
+| 44  | No free connector ends (114 "⌥ free end" dropped); edges always have `from` and `to`.                                                                                                                                               | 017                     |
+| 45  | Arrows nudge only during a drag; otherwise ⌥+arrows (1 px) / ⌥⇧+arrows (10 px). Plain arrows keep moving focus.                                                                                                                     | 016                     |
+| 46  | Placement of controls missing in 86–116: view settings + Tidy in the views menu, pin in toolbar "More" / context menu, drill breadcrumb as a deck-island chip, problems as a rail badge + flyout, sticky visibility next to Labels. | 018, 015                |
+| 47  | Order: **015**, then canvas-first **021 → 018 → 019 → 016 → 017 → 020**, then **012 → 013**; 014 anywhere.                                                                                                                          | all remaining           |
 
 ## Dependency graph
 
@@ -65,6 +79,7 @@ flowchart LR
   F018[018 canvas-first-layout]
   F019[019 card-quick-edit]
   F020[020 card-style]
+  F021[021 design-sync-canvas-first]
 
   F001 --> F002 --> F003
   F000 --> F003
@@ -80,7 +95,7 @@ flowchart LR
   F009 --> F013
   F005 --> F013
   F005 --> F014
-  F011 --> F018 --> F019
+  F011 --> F021 --> F018 --> F019
   F019 --> F016
   F016 -.-> F017
   F019 --> F020
@@ -96,31 +111,41 @@ Total estimate: **62 working days** for one agent sequentially (≈ 12–13 week
 §13. Getting to 8 weeks needs two parallel streams (flows/knowledge vs scale/export) or cutting
 scope (see report).
 
+## Remaining order (2026-09-28, §g-47)
+
+000–011 are merged. Next: **015** model-validation (M3 leftover; its problems count gets a rail
+badge in 018) → **021** design sync → **018** canvas-first layout → **019** card quick-edit →
+**016** canvas editing → **017** resize and edge routing → **020** card style → **012** export →
+**013** samples and onboarding. **014** analytics-feedback is independent and can run in
+parallel. Canvas-first goes before M5 so export and the onboarding tour are built once, on the new
+UI and card rendering.
+
 ## Feature list
 
-| ID  | Name                   | Milestone | Depends on | Est. | Needs design?                                  |
-| --- | ---------------------- | --------- | ---------- | ---- | ---------------------------------------------- |
-| 000 | design-foundation      | M1        | —          | 4 d  | —                                              |
-| 001 | json-schema-v1         | M1        | —          | 3 d  | ⚠ decision (§g-4)                              |
-| 002 | yjs-model              | M1        | 001        | 4 d  | —                                              |
-| 003 | canvas-basic           | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28           |
-| 004 | json-panel-sync        | M1        | 003        | 2 d  | decided (§g-3): read-only                      |
-| 005 | local-library-autosave | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35          |
-| 006 | flow-authoring         | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                      |
-| 007 | flow-playback          | M2        | 006        | 4 d  | — (branch picker in 46)                        |
-| 008 | inspector-rules        | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26           |
-| 015 | model-validation       | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                         |
-| 009 | stickies-search        | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                     |
-| 010 | zoom-groups-focus      | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                      |
-| 011 | views-autolayout       | M4        | 010        | 5 d  | custom view config, layout button (default ok) |
-| 012 | export                 | M5        | 007, 011   | 4 d  | —                                              |
-| 013 | samples-onboarding     | M5        | 005, 009   | 3 d  | —                                              |
-| 014 | analytics-feedback     | M5        | 005        | 2 d  | feedback button (small)                        |
-| 018 | canvas-first-layout    | after M4  | 011        | 5 d  | ⚠ not designed; decided §g-38                  |
-| 019 | card-quick-edit        | after M4  | 018        | 3 d  | ⚠ not designed; decided §g-38                  |
-| 016 | canvas-editing         | after M4  | 019        | 4 d  | ⚠ not designed; decided §g-36                  |
-| 017 | resize-edge-routing    | after M4  | 003 (016)  | 4 d  | ⚠ not designed; decided §g-37 (schema change)  |
-| 020 | card-style             | after M4  | 019        | 3 d  | ⚠ not designed; decided §g-39 (schema change)  |
+| ID  | Name                     | Milestone | Depends on | Est. | Needs design?                                  |
+| --- | ------------------------ | --------- | ---------- | ---- | ---------------------------------------------- |
+| 000 | design-foundation        | M1        | —          | 4 d  | —                                              |
+| 001 | json-schema-v1           | M1        | —          | 3 d  | ⚠ decision (§g-4)                              |
+| 002 | yjs-model                | M1        | 001        | 4 d  | —                                              |
+| 003 | canvas-basic             | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28           |
+| 004 | json-panel-sync          | M1        | 003        | 2 d  | decided (§g-3): read-only                      |
+| 005 | local-library-autosave   | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35          |
+| 006 | flow-authoring           | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                      |
+| 007 | flow-playback            | M2        | 006        | 4 d  | — (branch picker in 46)                        |
+| 008 | inspector-rules          | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26           |
+| 015 | model-validation         | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                         |
+| 009 | stickies-search          | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                     |
+| 010 | zoom-groups-focus        | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                      |
+| 011 | views-autolayout         | M4        | 010        | 5 d  | custom view config, layout button (default ok) |
+| 012 | export                   | M5        | 007, 011   | 4 d  | —                                              |
+| 013 | samples-onboarding       | M5        | 005, 009   | 3 d  | —                                              |
+| 014 | analytics-feedback       | M5        | 005        | 2 d  | feedback button (small)                        |
+| 021 | design-sync-canvas-first | after M4  | 011        | 1 d  | docs only; designed (86–116)                   |
+| 018 | canvas-first-layout      | after M4  | 021        | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46     |
+| 019 | card-quick-edit          | after M4  | 018        | 3 d  | designed (95–104)                              |
+| 016 | canvas-editing           | after M4  | 019        | 4 d  | designed (92, 99, 102–104, 108–111); ⚠ §g-45   |
+| 017 | resize-edge-routing      | after M4  | 003 (016)  | 4 d  | designed (112–114); ⚠ §g-44; schema change     |
+| 020 | card-style               | after M4  | 019        | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -134,6 +159,8 @@ title, selection toolbar, context menu, detail drawer from the card), **016-canv
 (resizable cards, adjustable connectors) and **020-card-style** (fill and stroke colours). 017 and
 020 change the file format (optional fields only). The dashed arrow is a soft dependency (017
 reuses 016's snapping). User-defined card attributes are deferred (§g-40, "Later" below 020).
+**021-design-sync-canvas-first** (added 2026-09-28) brings the 86–116 design into the repo and
+updates DESIGN.md / AGENTS.md so 018–020 are built against it.
 
 ## Shared definition of done (every feature)
 
@@ -1086,10 +1113,28 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Goal:** Everyday diagram editing feels like a design tool: copy, paste, duplicate, group what is
   selected, move a group as one piece, and line things up without fiddling.
 - **Spec IDs:** C-6 (editing ergonomics); no new file-format fields.
-- **Design references:** none yet. Reuse the multi-select frame and bulk inspector
-  ([58](design/screens/58-editor-multi-select-light.png)), group boundary + label
-  ([02](design/screens/02-editor-node-selected-light.png)), toasts and keyboard hints from 003.
-  Align/distribute controls and the context menu need design or founder approval.
+- **Design references:** 92 bulk drawer (Align, distribute), 99 toolbar multi-selection, 102–104
+  context menus (actions from here), 108 marquee, 109 dragging a group, 110 drop-into-group,
+  111 alignment guides; inventory: snap guide, marquee, drop target, hint bar.
+- **Design deltas (86–116):**
+  - Marquee (108): count chip at the cursor; **⌥ also selects cards the box only touches**;
+    releasing on empty space with nothing inside clears the selection.
+  - Group drag (109): lifted group + dashed ghost of the start + offset readout (`+96, +20`);
+    **Esc cancels, ⌥ duplicates, ⇧ locks the axis**; dropping a group over another group nests
+    it (sets `group.parent`) with an Undo toast.
+  - Drop into group (110): the group only highlights when the **pointer** is inside it; dashed
+    orange boundary, "Drop into …" chip, dashed landing slot; **⌥ drops without grouping** (replaces
+    "drag out with Alt").
+  - Guides (111): within 6 screen px, distance labels to neighbours, equal-gap labels, **hold ⌘ to
+    disable snapping**, ⇧ locks the axis. No grid toggle in the design (⇧ snaps to grid only for
+    connector segments, 113).
+  - Align shortcuts (99): ⌥A / ⌥D / ⌥W / ⌥S = left / right / top / bottom; ⌘G group. Copy JSON is
+    ⇧⌘C (102).
+  - Paste enables only when the clipboard holds Sododeck JSON (103); on an empty deck ⌘V pastes
+    JSON too (86).
+  - **Hint bar** (inverse pill, bottom centre, key caps) during every gesture (108–114); shared
+    with 017.
+  - Nudge keys: see §g-45.
 - **In scope:**
   - **Copy / cut / paste / duplicate** (⌘C / ⌘X / ⌘V / ⌘D) of the selected components, the
     connections between them, and groups whose members are all selected. Paste creates new ids,
@@ -1103,14 +1148,15 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   - **Select and move a group:** the group boundary/label becomes selectable (click the label or
     the boundary edge); dragging it moves every member and nested group together as one undo
     step; Delete on a selected group asks for confirmation and ungroups (members are kept).
+    Selecting a group is done by its **label** (101); clicks inside a group still select cards.
   - **Drop into / out of a group:** dragging components onto a group boundary and releasing
     (with a highlight while hovering) sets their group; dragging them out with Alt held removes it.
   - **Align & distribute** for ≥ 2 selected components: left / centre / right / top / middle /
     bottom, distribute horizontally / vertically; in the selection toolbar and the context menu.
   - **Nudge:** Alt+Arrow moves the selection by 1 px, Alt+Shift+Arrow by 10 px (plain arrows keep
     moving focus, 003 R3); a burst of nudges = one undo step.
-  - **Snapping while dragging:** alignment guides to other components' edges and centres, plus an
-    optional snap-to-grid toggle (22 px, matching the dot grid) remembered per browser.
+  - **Snapping while dragging:** alignment guides to other components' edges and centres with
+    distance labels; hold ⌘ to disable snapping (111). No grid toggle.
   - Every action above is also offered in 019's context menu and selection toolbar (Copy,
     Paste, Duplicate, Group, Ungroup, Align, Delete — only the actions that apply).
 - **Out of scope:** drag-to-select without Shift (§g-36); resizing cards and routing connectors
@@ -1164,8 +1210,20 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Goal:** Users control the look of the diagram: make important cards bigger and route
   connectors where they want them, so busy diagrams stay tidy.
 - **Spec IDs:** C-6; **schema change** decided in §g-37.
-- **Design references:** none yet. Resize handles on the selected card and a draggable segment
-  handle on the selected connector need design or founder approval; keep to DESIGN.md tokens.
+- **Design references:** 112 resizing a card, 113 dragging a connector segment, 114 endpoint side
+  targets, 100 toolbar on a connection (Reset route); inventory: selection frame + resize handle,
+  segment + endpoint handles, hint bar (016).
+- **Design deltas (86–116):**
+  - Resize (112): 8×8 handles, active one filled orange; `W × H` readout pill next to the dragged
+    corner; connections re-attach live; **sizes snap to 4 px**; ⇧ keep ratio, ⌥ from centre, Esc
+    cancels. Minimum 120 × 44 (as planned).
+  - Segment (113): 10×24 handle; dashed ghost of the automatic route; offset readout (`−18`);
+    **⇧ snaps to grid, R resets the route**; a segment **stops 12 px from any card edge** (cannot
+    cross a card).
+  - Endpoint (114): four side targets on the hovered card, nearest one "hot"; dashed orange live
+    path + ghost of the old route; dropping on the same card only changes the side; Esc keeps the
+    old target. The design's "⌥ leaves a free end" is an open question (§g-44).
+  - Reset route is disabled while the route is automatic (100).
 - **Schema (v1, additive, all optional):**
   - `node.size`: `{ "width": number, "height": number }` in px; absent = default card size
     (164 × 50). Minimum 120 × 44, maximum 800 × 600.
@@ -1225,16 +1283,78 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > path builder on top of `getSmoothStepPath` that applies `offset`; replace `NODE_SIZE` reads
   > with a `nodeSize(node)` helper. Run `pnpm bench` before/after.
 
+## 021-design-sync-canvas-first
+
+- **Milestone:** after M4 · **Depends on:** 011 · **Estimate:** 1 d (docs only, no app code)
+- **Goal:** The canvas-first design (86–116) lives in the repo and the design rules point to it,
+  so 018–020 are specified and built against it rather than the 3-column prototype.
+- **Design references:** Claude Design project "Sododeck": `Sododeck Canvas-first.dc.html`,
+  `Sododeck Canvas State.dc.html`, `sododeck-canvas.js` (+ `sododeck-data.js`,
+  `sododeck-states.js`, `support.js`).
+- **In scope:**
+  - Copy the new design files, read-only, into `docs/design/claude-design/`.
+  - Export every state 86–116 in light and dark (1440×900; 116 at 1024×768) to
+    `docs/design/screens/<id>-<slug>-{light,dark}.png` (slugs from the design list, e.g.
+    `86-shell-empty`, `105-fill-popover`).
+  - `docs/design/design-analysis.md`: inventory rows for 86–116, mapping to 016–020, the new
+    components (island, rail button, flyout, drawer, selection toolbar, toolbar popover, context
+    menu, colour popover, resize / segment / endpoint handles, snap guide, marquee, drop target,
+    hint bar) and the answers to §g-42–§g-46.
+  - `DESIGN.md`: "Three-panel editor" → "Canvas-first editor" (island, rail, flyout 280, drawer
+    360 / 320–560, JSON overlay 268 values); selection = 2 px outside frame; narrow 1024–1279
+    designed; card-colour tokens as light/dark pairs; overlay motion (120 ms fade + 4 px slide,
+    none with reduced motion).
+  - `AGENTS.md` Design section: frames 02–85 are the reference for panel **content**; 86–116 for
+    editor **placement** and the new controls.
+- **Out of scope:** any app or package code; tokens in `packages/ui` (added by 018 / 020).
+- **Acceptance criteria:**
+  - Given `docs/design/screens/`, When listed, Then states 86–116 exist in light and dark.
+  - Given DESIGN.md, When read, Then it describes the canvas-first shell and no longer the
+    264 / 336 px columns, and lists the 13 card-colour token pairs.
+  - Given design-analysis §g-42–§g-46, When read, Then each has a founder decision or a default.
+  - `pnpm lint` (prettier) passes.
+- **Risks:** exporting 62 screenshots needs the Claude Design preview in a browser; frames 02–85
+  keep old placement and must not be "fixed" to match.
+- **`/speckit.specify` prompt:** not needed (docs task); do it directly.
+
 ## 018-canvas-first-layout
 
-- **Milestone:** after M4 · **Depends on:** 011 · **Estimate:** 5 d
+- **Milestone:** after M4 · **Depends on:** 021 · **Estimate:** 5 d
 - **Goal:** The drawing surface gets the whole screen. Chrome floats over the canvas in small
   islands, like Miro, so a 100-component diagram has room to breathe (§g-38).
 - **Spec IDs:** editor shell (spec §7); replaces the 3-column layout of the prototype (02).
-- **Design references:** founder's Miro references (empty board and a dense board at 51%). The
-  prototype frames (02 and later) stay valid for **content** (outline tree, flow list, inspector
-  fields, JSON viewer, step player) but no longer for **placement**. Needs a design pass for the
-  rail, flyouts and drawer, then a DESIGN.md update.
+- **Design references:** 86 shell (empty deck), 87 dense deck at 50 %, 88 palette flyout, 89
+  outline pinned, 90 flows flyout + flow mode, 91 drawer (component), 92 drawer (bulk), 93 JSON
+  overlay, 94 Hide UI, 115 keyboard regions, 116 narrow 1024×768; inventory: island, rail button,
+  flyout, detail drawer. Frames 02–85 stay valid for panel **content**, not placement.
+- **Design deltas (86–116):**
+  - Islands: 44 tall, 12 from the edges. Deck island = ≡ · name · **save status as an icon**
+    (check / spinner / clay alert that opens the 84 error popover) · views segmented control; in
+    flow mode a **"Flow · <name>" chip with ×** (90). Tools island = Jump to (176 field, ⌘K) ·
+    Labels · Focus · theme · Export.
+  - Rail (48 wide, 38 buttons): Select **V** · Add component **C** · Sticky **S** · Group **G** ·
+    Connector **L** · Outline **⌥1** · Flows **⌥2** · Rules · Search; Undo/Redo in their own island
+    8 px below. Tooltips: inverse, shortcut in mono, 400 ms delay.
+  - Flyouts 280 wide at left 68 / top 68; pin keeps one open; opening another flyout **swaps** and
+    the pinned one returns when it closes (89); first Esc clears a filter.
+  - Palette flyout (88): search, six kinds with **number keys 1–6** (add at view centre), sticky and
+    group; dragging a tile shows a ghost that snaps to the grid.
+  - Drawer (91): 360, **320–560** via a left grip, width remembered **per deck** (UI metadata, not
+    the file); toggle **⌘⇧D** (replaces ⌘I); opening it pans the canvas so the selection stays
+    clear; adds an **Appearance** section (fill and stroke, 020). Bulk drawer (92): count header,
+    "Mixed" values, dashed partial tags `n/N`, Align/distribute at the end; changing Kind on mixed
+    kinds asks for confirmation.
+  - JSON (93): bottom island from the rail to the right edge (or the drawer's left edge); the zoom
+    island moves above it. Editing shown in 93 is §g-42.
+  - Zoom island: fit **⇧1**, fit selection **⇧2**, ⌘+ / ⌘−, minimap **M** (pops above the island,
+    orange viewport outline), help (?).
+  - Hide UI (94): selection and context menu still work; selection toolbar stays hidden.
+  - Keyboard (115): **F6 / ⇧F6** order = deck island → tools → rail → undo → canvas → zoom (drawer
+    when open); hidden regions are skipped.
+  - Narrow 1024–1279 (116): rail stays; views become a dropdown; Jump to, Labels, Focus become
+    icons; Export icon-only; drawer covers ~35 %. Below 1024 stays view-only.
+  - Existing controls without a place in the design (tidy layout, pins, view settings, drill
+    breadcrumb, problems): §g-46.
 - **In scope:**
   - **Full-bleed canvas** under everything (no fixed sidebars, no top bar row).
   - **Top-left island:** menu (library, import, export, deck settings), deck name (rename in
@@ -1246,8 +1366,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     Each flyout opens beside the rail, overlays the canvas, closes on Esc or outside click, and
     can be pinned open; one open at a time.
   - **Detail drawer** (right, ≈ 360 px, overlays the canvas): today's inspector content. Opens
-    from the card's corner icon (019), Enter / ⌘I on a selection, or the toolbar; closes with Esc
-    or its close button; open/closed and width remembered per browser. The canvas never resizes
+    from the card's corner icon (019), Enter / ⌘⇧D on a selection, or the toolbar; closes with Esc
+    or its close button; width remembered per deck (UI metadata). The canvas never resizes
     when it opens (no layout shift).
   - **JSON panel** hidden by default; toggled from the menu, the rail or ⌘J; opens as a bottom
     overlay with the current height/collapse behaviour (004).
@@ -1297,8 +1417,28 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Goal:** Most diagram edits need only the title; everything else is one click away on the card
   itself, without opening a panel.
 - **Spec IDs:** C-6.
-- **Design references:** founder's Miro references (selection toolbar above a card, "More" menu,
-  right-click menu, drawer icon in the card corner). Needs a design pass.
+- **Design references:** 95 card hover + details icon, 96 inline title edit, 97 new card with an
+  empty title, 98 toolbar (one component + Owner popover), 99 toolbar (multi, Tags popover with
+  partial chips), 100 toolbar on a connection, 101 toolbar on a group, 102 / 103 / 104 context menu
+  on a component / empty canvas / group; inventory: selection toolbar, toolbar popover, context
+  menu.
+- **Design deltas (86–116):**
+  - Details icon (95): 22 px inverse circle on the card's top-right corner; hidden while dragging,
+    in flow mode and when the card is < 80 px wide on screen; the card lifts on hover.
+  - Inline edit (96): F2 or ⏎ on a selection also starts editing; **Tab saves and edits the next
+    card**; saving an empty title restores the previous one; the card keeps its size.
+  - New card (97): lands at the view centre (offset 24 px until free) with an empty title and the
+    placeholder "Name this component"; **⌘⏎ saves and adds another of the same kind**; Esc keeps it
+    as "Untitled <kind>"; the palette stays open.
+  - Toolbar (98–101): 44 tall, 12 px above the frame, flips below when it would reach y < 68;
+    **⌘E focuses the toolbar**; popovers 236–272 wide with a filter; group toolbar = Rename (F2),
+    Ungroup (⇧⌘G), Collapse (⌘.), Select members; connection toolbar: ⏎ edit label, P protocol.
+  - Menus (102–104): component menu = Open details ⏎ · Rename F2 · Copy · Paste · Duplicate ·
+    Copy JSON ⇧⌘C · Group selection ⌘G · Align ▸ · Arrange ▸ · Delete; canvas menu = Paste (disabled
+    with a tooltip when the clipboard has no Sododeck JSON) · Add component ▸ (1–6, lands at the
+    click point) · Add sticky · Select all · Fit; group menu = Rename · Ungroup · Collapse/Expand ·
+    Select members · Delete group (tooltip: members move to the parent level). Menus flip near
+    edges; submenus open right with −6 overlap.
 - **In scope:**
   - **Inline title edit:** double-click a card (or press Enter on a focused card, F2) edits the
     title in place; Enter / click outside commits, Esc cancels; one undo step. A new component
@@ -1351,13 +1491,32 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Goal:** Users colour cards to show meaning at a glance (team, status, phase), with colours
   that look right in light and dark themes.
 - **Spec IDs:** C-6; **schema change** decided in §g-39.
-- **Design references:** founder's Miro reference (colour popover with fixed swatches). Needs a
-  design pass for the swatch set and the "+" flow; tokens go in DESIGN.md and packages/ui.
+- **Design references:** 105 fill popover, 106 add a custom colour, 107 coloured cards gallery, 91
+  drawer Appearance section; inventory: colour popover + swatch, card on colour, card-colour
+  tokens (light/dark pairs).
+- **Design deltas (86–116):**
+  - **13 named colours**: red, orange, amber, yellow, lime, green, teal, cyan, blue, indigo,
+    violet, pink, slate → tokens `--card-<name>-fill` / `--card-<name>-stroke` (oklch values in
+    the design, light and dark).
+  - Popover (105): Fill / Stroke tabs, No colour, COLOURS grid (28 px swatches, 7 per row), DECK
+    COLOURS row ending in "+"; selected = 2 px gap + orange ring + check; custom swatch shows a ×
+    badge on hover/focus, ⌫ removes it; mixed selection shows no check.
+  - Add colour (106): saturation box + hue bar + hex field + Add, live preview on the card,
+    "saved to this deck as n of 12"; invalid hex disables Add.
+  - **Custom colours: max 12 per deck** (not 24); "+" hides when full.
+  - Text: Ink on named fills; subtitle switches Muted → Secondary on any fill; custom fills below
+    **0.18 relative luminance flip text to white**.
+  - **Selection style changes for all cards**: a 2 px orange outline 2 px **outside** the card
+    (reads on any fill); flow keeps the 1.5 px orange border + halo; error = dashed clay ring 3 px
+    outside + alert badge (107). DESIGN.md changes with this.
+  - Groups get the same fill / stroke (§g-43), as in the dense deck (87): a group fill and a
+    dashed coloured group stroke.
 - **Schema (v1, additive, all optional):**
-  - `node.style`: `{ "fill"?: ColorRef, "stroke"?: ColorRef }`; absent = today's look.
+  - `node.style` and `group.style`: `{ "fill"?: ColorRef, "stroke"?: ColorRef }`; absent =
+    today's look (§g-43).
   - `ColorRef`: a named palette key (e.g. `red`, `amber`, `green`, `teal`, `blue`, `violet`,
-    `pink`, `slate` …, ~12) **or** a `#rrggbb` hex string.
-  - `swatches` (deck level): up to 24 `#rrggbb` custom colours the user added with "+", shown
+    `pink`, `slate` …, 13 keys) **or** a `#rrggbb` hex string.
+  - `swatches` (deck level): up to 12 `#rrggbb` custom colours the user added with "+", shown
     after the fixed palette in every colour picker of this deck.
   - ADR + parity and round-trip tests (absent fields stay absent).
 - **In scope:**
@@ -1370,7 +1529,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   - Works on multi-selection in one undo step; the outline and minimap reflect the fill.
   - Colour is never the only cue (constitution VII): selection, flow and error states keep their
     non-colour marks on coloured cards.
-- **Out of scope:** colouring groups, connectors and stickies (later); opacity; gradients;
+- **Out of scope:** colouring connectors and stickies (later); opacity; gradients;
   user-defined attributes (§g-40).
 - **Acceptance criteria:**
   - Given a selected card, When the user picks "Green" fill, Then the card is green in both themes,
