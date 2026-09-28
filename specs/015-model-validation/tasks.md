@@ -117,7 +117,7 @@
 
 **Independent test**: delete objects that break a flow step and orphan a component; toast count; Undo restores.
 
-- [ ] T031 [US4] In `apps/app/src/editor/confirm-delete-dialog.tsx`, compute `checkDeck(readDeck(doc)).total` before and after the batch and append " · n new problem(s)" to the toast message and the announcement when it grew (helper in `apps/app/src/editor/describe-removal.ts`). Extend `apps/app/src/editor/confirm-delete-dialog.test.tsx` (count shown; unchanged toast when nothing new; Undo restores the count in `useProblems()`).
+- [x] T031 [US4] In `apps/app/src/editor/confirm-delete-dialog.tsx`, compute `checkDeck(readDeck(doc)).total` before and after the batch and append " · n new problem(s)" to the toast message and the announcement when it grew (helper in `apps/app/src/editor/describe-removal.ts`). Extend `apps/app/src/editor/confirm-delete-dialog.test.tsx` (count shown; unchanged toast when nothing new; Undo restores the count in `useProblems()`).
 
 **Checkpoint**: US4 acceptance scenarios 1–3 pass.
 

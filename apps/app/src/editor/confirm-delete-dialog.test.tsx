@@ -1,4 +1,4 @@
-import { toJSON } from '@sododeck/model';
+import { checkDeck, toJSON } from '@sododeck/model';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -86,6 +86,27 @@ describe('ConfirmDeleteDialog', () => {
       editor().undo();
     });
     expect(toJSON(doc)).toEqual(deck);
+  });
+
+  it('says how many new problems a delete created, and undo removes them (015 FR-026)', async () => {
+    const { doc, user, editor } = setup();
+    const before = checkDeck(toJSON(doc)).total;
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    // Orders DB and Web lose their only connections.
+    expect(
+      screen.getByText(/1 note unpinned · 2 new problems · (⌘Z|Ctrl\+Z) to undo$/),
+    ).toBeInTheDocument();
+    expect(useUiStore.getState().announcement.text).toMatch(/2 new problems/);
+    act(() => {
+      editor().undo();
+    });
+    expect(checkDeck(toJSON(doc)).total).toBe(before);
+  });
+
+  it('leaves the toast unchanged when nothing new breaks', async () => {
+    const { user } = setup([], [], ['note-2']);
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(useUiStore.getState().announcement.text).not.toMatch(/problem/);
   });
 
   it('undoes through the toast button', async () => {
