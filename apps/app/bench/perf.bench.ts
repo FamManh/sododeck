@@ -617,7 +617,6 @@ test(`pan-during-layout: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   await page.evaluate(() => {
     window.__sododeckViewsBench?.startTidy();
   });
-  await startRecording(page);
   let pans = 0;
   while (pans < 20 && (await page.evaluate(() => window.__sododeckViewsBench?.layoutRunning()))) {
     const start = await emptyCanvasPoint(page, box);
@@ -627,7 +626,9 @@ test(`pan-during-layout: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     await page.mouse.up();
     pans++;
   }
-  const stats = summarize(await stopRecording(page));
+  const stats = summarize(
+    await page.evaluate(() => window.__sododeckViewsBench?.layoutFrames() ?? []),
+  );
   expect(pans).toBeGreaterThan(0);
   results.push({
     scenario: `pan-during-layout (${String(pans)} pans)`,

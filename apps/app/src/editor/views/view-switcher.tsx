@@ -94,6 +94,7 @@ export function ViewSwitcher() {
   const [available, setAvailable] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef(new Map<Id, HTMLButtonElement>());
+  const openedFromMenu = useRef(false);
   const wrappers = useRef(new Map<Id, HTMLDivElement>());
   const [widths, setWidths] = useState<ReadonlyMap<Id, number>>(() => new Map());
 
@@ -262,18 +263,24 @@ export function ViewSwitcher() {
                     open={menuFor === view.id}
                     onOpenChange={(open) => {
                       setMenuFor(open ? view.id : null);
-                      if (!open && renaming === null && settingsFor === null && deleting === null)
-                        focusTab(view.id);
+                    }}
+                    onCloseFocus={() => {
+                      // Rename, settings and delete take focus themselves.
+                      if (openedFromMenu.current) openedFromMenu.current = false;
+                      else tabRefs.current.get(view.id)?.focus();
                     }}
                     onRename={() => {
+                      openedFromMenu.current = true;
                       setMenuFor(null);
                       setRenaming(view.id);
                     }}
                     onSettings={() => {
+                      openedFromMenu.current = true;
                       setMenuFor(null);
                       setSettingsFor(view.id);
                     }}
                     onDelete={() => {
+                      openedFromMenu.current = true;
                       setMenuFor(null);
                       setDeleting(view);
                     }}

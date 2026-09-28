@@ -38,7 +38,8 @@ describe('view tab menu (FR-041, FR-042)', () => {
     expect(await screen.findByRole('menuitem', { name: 'View settings…' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
 
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+    // Closing the menu hands focus back to its tab.
+    expect(tab('Mine, custom view')).toHaveFocus();
     act(() => {
       tab('System, system view').focus();
     });

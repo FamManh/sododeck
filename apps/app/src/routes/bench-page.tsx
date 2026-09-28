@@ -56,6 +56,8 @@ declare global {
       /** 011 SC-002: starts Tidy layout without waiting; `layoutRunning` tells when it ends. */
       startTidy: () => void;
       layoutRunning: () => boolean;
+      /** Frame times recorded while the last started layout ran. */
+      layoutFrames: () => number[];
     };
     __sododeckGroupsBench?: {
       collapseAll: () => Promise<void>;
@@ -285,6 +287,8 @@ function GroupsBenchHooks() {
   return null;
 }
 
+let layoutFrames: number[] = [];
+
 /** Exposes the view switch (011 SC-003); needs `views=1` (dims clients in Infra). */
 function ViewsBenchHooks() {
   const editor = useEditor();
@@ -318,8 +322,17 @@ function ViewsBenchHooks() {
         return ms;
       },
       startTidy: () => {
+        layoutFrames = [];
         document.querySelector<HTMLButtonElement>('button[title^="Tidy layout"]')?.click();
+        // Frames count only while the layout runs (SC-002), not the frame that applies it.
+        const tick = (t: number) => {
+          if (useUiStore.getState().layoutRun.status === 'idle') return;
+          layoutFrames.push(t);
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
       },
+      layoutFrames: () => layoutFrames,
       layoutRunning: () => useUiStore.getState().layoutRun.status !== 'idle',
     };
     return () => {

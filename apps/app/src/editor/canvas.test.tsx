@@ -1,5 +1,13 @@
 import { toJSON, type DeckEditor } from '@sododeck/model';
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Edge, Node, NodeChange } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
@@ -15,6 +23,7 @@ import { Canvas } from './canvas';
 import { exitFlow, openFlow } from './flows/flow-mode';
 import { TopBar } from './top-bar';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { addComponent } from './canvas-actions';
 import { useEditorShortcuts } from './use-canvas-shortcuts';
 
 const deck = deckOf({
@@ -1050,5 +1059,29 @@ describe('canvas in flow mode (007)', () => {
       });
       expect(screen.queryByText(/Undid move/)).not.toBeInTheDocument();
     });
+  });
+
+  it('keeps a component created in a view that hides it until the view is left (011)', () => {
+    const { editor } = renderWithEditor(
+      <Canvas />,
+      deckOf({
+        ...deck,
+        views: [
+          { id: 'v', type: 'custom', title: 'No services', excludeKinds: ['service'] },
+          { id: 'w', type: 'custom', title: 'All' },
+        ],
+      }),
+    );
+    expect(screen.queryByRole('group', { name: 'Service: A' })).not.toBeInTheDocument();
+    act(() => {
+      addComponent(editor(), 'service', { x: 600, y: 600 });
+    });
+    const created = screen.getByRole('group', { name: 'Service: New service' });
+    expect(within(created).getByRole('note')).toHaveTextContent('Hidden in this view');
+    act(() => {
+      ui().switchView('w');
+      ui().switchView('v');
+    });
+    expect(screen.queryByRole('group', { name: 'Service: New service' })).not.toBeInTheDocument();
   });
 });

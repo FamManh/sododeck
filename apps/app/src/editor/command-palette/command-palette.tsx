@@ -1,5 +1,6 @@
 import { buildSearchIndex } from '@sododeck/model';
 import { CommandDialog } from '@sododeck/ui/components/command-dialog';
+import { useToast } from '@sododeck/ui/components/toast';
 import { useReactFlow } from '@xyflow/react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -14,6 +15,8 @@ import { useExportDeck } from '../use-export-deck';
 import { buildCommands } from './commands';
 import { openResult } from './open-result';
 import { buildPaletteResults, type PaletteCommand } from './palette-results';
+import { firstViewShowing } from '../view-filter';
+import { viewStateOf } from '../views/view-state';
 
 function focusReturnTarget(target: HTMLElement | null): void {
   if (target?.isConnected !== true) return;
@@ -61,9 +64,14 @@ function CommandPaletteSession({
       }),
     [exportDeck, navigate, openRules, setTheme, theme],
   );
+  const currentViewId = useUiStore((state) => state.currentViewId);
+  const revealed = useUiStore((state) => state.revealed);
+  const viewState = viewStateOf(deck, currentViewId, revealed);
+  const hidden = viewState.hidden;
+  const { toast } = useToast();
   const results = useMemo(
-    () => buildPaletteResults({ deck, searchIndex, query, commands }),
-    [commands, deck, query, searchIndex],
+    () => buildPaletteResults({ deck, searchIndex, query, commands, hidden }),
+    [commands, deck, query, searchIndex, hidden],
   );
 
   const close = (restoreFocus: boolean) => {
@@ -97,6 +105,19 @@ function CommandPaletteSession({
           focus,
           exitFlow: useUiStore.getState().exitFlow,
           openFlow,
+          isHidden: (id) => hidden.has(id),
+          firstViewShowing: (id) => firstViewShowing(deck, viewState.views, id),
+          showToast: (message, action) => {
+            toast(action === undefined ? { message } : { message, action });
+            announce(message);
+            if (action === undefined) return;
+            // Enter again runs the action: it takes focus once the palette has closed.
+            requestAnimationFrame(() => {
+              [...document.querySelectorAll<HTMLButtonElement>('button')]
+                .find((button) => button.textContent === action.label)
+                ?.focus();
+            });
+          },
         });
         if (!opened) return;
         close(selected.kind === 'command');

@@ -10,6 +10,7 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
+import { readViewState } from './views/use-current-view';
 
 /** Marks the canvas wrapper, so focus helpers and the palette can find it. */
 export const CANVAS_ATTR = 'data-canvas';
@@ -31,9 +32,11 @@ export function addComponent(editor: DeckEditor, kind: ComponentKind, position: 
   const id = editor.add('nodes', {
     type: kind,
     title,
-    position: freeSpot(readDeck(editor.doc), round(position)),
+    position: freeSpot(readViewState(editor.doc).deck, round(position)),
   });
   const ui = useUiStore.getState();
+  // A new component the current view hides stays visible here until the view is left (011).
+  if (readViewState(editor.doc).hidden.has(id)) ui.reveal(id);
   ui.select({ nodes: [id] });
   ui.focus(id);
   ui.announce(`Added ${title}`);

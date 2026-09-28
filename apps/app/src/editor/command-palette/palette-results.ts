@@ -110,12 +110,15 @@ export function buildPaletteResults({
   query,
   commands,
   limit = 50,
+  hidden,
 }: {
   deck: SododeckFile;
   searchIndex: SearchIndex;
   query: string;
   commands: readonly PaletteCommand[];
   limit?: number;
+  /** Components the current view hides: still listed, marked in text (011 FR-016). */
+  hidden?: ReadonlySet<string>;
 }): { items: readonly PaletteResult[]; total: number; overflowText?: string } {
   const words = queryWords(query);
   const items =
@@ -150,7 +153,10 @@ export function buildPaletteResults({
               id: result.id,
               ...(result.flowId === undefined ? {} : { flowId: result.flowId }),
               title: result.title,
-              meta: metaFor(deck, result.kind, result.id, result.flowId),
+              meta:
+                result.kind === 'node' && hidden?.has(result.id) === true
+                  ? `${metaFor(deck, result.kind, result.id, result.flowId)} · Hidden in this view`
+                  : metaFor(deck, result.kind, result.id, result.flowId),
               titleRanges: result.titleRanges,
               ...(result.snippet === undefined
                 ? {}

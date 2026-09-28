@@ -24,6 +24,7 @@ export function ViewTabMenu({
   onRename,
   onSettings,
   onDelete,
+  onCloseFocus,
 }: {
   title: string;
   canDelete: boolean;
@@ -32,6 +33,8 @@ export function ViewTabMenu({
   onRename: () => void;
   onSettings: () => void;
   onDelete: () => void;
+  /** Where focus goes when the menu closes (the switcher: the tab, or the surface it opened). */
+  onCloseFocus: () => void;
 }) {
   const reasonId = useId();
   return (
@@ -54,8 +57,8 @@ export function ViewTabMenu({
         aria-labelledby={undefined}
         align="start"
         onCloseAutoFocus={(event) => {
-          // The switcher moves focus itself (rename field, settings, dialog or the tab).
           event.preventDefault();
+          onCloseFocus();
         }}
       >
         <DropdownMenuItem onSelect={onRename}>Rename</DropdownMenuItem>
