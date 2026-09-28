@@ -1,8 +1,10 @@
 import { nodeCanvasPosition, stickyCanvasPosition, type DeckEditor } from '@sododeck/model';
+import type { View } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, type Selection, type UiState, useUiStore } from '../../state/ui-store';
 import { NODE_SIZE } from '../canvas-geometry';
+import { selectView } from '../views/use-current-view';
 
 import type { PaletteResult } from './palette-results';
 
@@ -27,6 +29,12 @@ export interface OpenResultContext {
   focus: UiState['focus'];
   exitFlow: () => void;
   openFlow: (editor: DeckEditor, flowId: string, stepId?: string | null) => void;
+  /** The current view hides this component (011 FR-016). */
+  isHidden?: (nodeId: string) => boolean;
+  /** The first view that shows this component, if any. */
+  firstViewShowing?: (nodeId: string) => Pick<View, 'id' | 'title'> | null;
+  /** Shows a toast, with an optional action that takes focus. */
+  showToast?: (message: string, action?: { label: string; onAction: () => void }) => void;
 }
 
 function selectionFor(result: PaletteResult): Partial<Selection> {
@@ -59,6 +67,23 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
       const node = deck.nodes.find((entry) => entry.id === result.id);
       if (node === undefined) break;
       ensureCanvasReady(result, context);
+      if (context.isHidden?.(node.id) === true) {
+        // Stay in the view (clarification Q7): offer the first view that shows it instead.
+        const view = context.firstViewShowing?.(node.id) ?? null;
+        if (view === null) {
+          context.showToast?.(`${node.title} is hidden in every view`);
+        } else {
+          context.showToast?.(`${node.title} is hidden in this view`, {
+            label: `Show in ${view.title}`,
+            onAction: () => {
+              selectView(view);
+              context.select({ nodes: [node.id] });
+              context.focus(node.id);
+            },
+          });
+        }
+        return true;
+      }
       context.select(selectionFor(result));
       context.focus(result.id);
       context.fitView({

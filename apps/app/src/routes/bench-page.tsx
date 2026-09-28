@@ -15,6 +15,11 @@ import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
+import {
+  readViewState,
+  setGroupCollapsed,
+  toggleGroupCollapsed,
+} from '../editor/views/use-current-view';
 
 declare global {
   interface Window {
@@ -46,6 +51,17 @@ declare global {
     /** 009 SC-008: ms from opening ⌘K and typing to painted results. */
     __sododeckPaletteBench?: {
       search: (query: string, matchText: string) => Promise<number>;
+    };
+    /** 011 SC-003: ms from a view switch to the painted canvas of that view. */
+    __sododeckViewsBench?: {
+      switchTo: (viewId: string, dimmed: boolean) => Promise<number>;
+      /** 011 SC-001: pins these nodes in the current view, then ms from "Tidy layout" to applied. */
+      tidy: (pinned: string[]) => Promise<number>;
+      /** 011 SC-002: starts Tidy layout without waiting; `layoutRunning` tells when it ends. */
+      startTidy: () => void;
+      layoutRunning: () => boolean;
+      /** Frame times recorded while the last started layout ran. */
+      layoutFrames: () => number[];
     };
     __sododeckGroupsBench?: {
       collapseAll: () => Promise<void>;
@@ -198,13 +214,13 @@ function GroupsBenchHooks() {
 
   useEffect(() => {
     const collapseAll = async () => {
-      useUiStore.setState({ collapsed: new Set(deck.groups.map((group) => group.id)) });
+      // Collapse is saved per view (011): one untracked write per group, as a user would.
+      for (const group of deck.groups) setGroupCollapsed(editor, group.id, true);
       await paintedAfter(performance.now(), '[data-testid="collapsed-group-node"]');
     };
     const toggleCollapse = (groupId: string) => {
-      const nextCollapsed = !useUiStore.getState().collapsed.has(groupId);
       const start = performance.now();
-      useUiStore.getState().toggleCollapsed(groupId);
+      const nextCollapsed = toggleGroupCollapsed(editor, groupId);
       return paintedAfter(
         start,
         nextCollapsed
@@ -244,7 +260,7 @@ function GroupsBenchHooks() {
       const ui = useUiStore.getState();
       ui.clearSelection();
       ui.setFocusMode(false);
-      ui.expandAll(deck.groups.map((group) => group.id));
+      for (const group of deck.groups) setGroupCollapsed(editor, group.id, false);
     };
     window.__sododeckGroupsBench = {
       collapseAll,
@@ -271,7 +287,62 @@ function GroupsBenchHooks() {
         delete window.__sododeckBench.resetViewModes;
       }
     };
-  }, [deck, editor.doc]);
+  }, [deck, editor]);
+  return null;
+}
+
+let layoutFrames: number[] = [];
+
+/** Exposes the view switch (011 SC-003); needs `views=1` (dims clients in Infra). */
+function ViewsBenchHooks() {
+  const editor = useEditor();
+  useEffect(() => {
+    window.__sododeckViewsBench = {
+      switchTo: (viewId, dimmed) => {
+        const start = performance.now();
+        useUiStore.getState().switchView(viewId);
+        const selector = '[data-testid="deck-node"][aria-label*="dimmed in this view"]';
+        return paintedAfter(start, () => (document.querySelector(selector) !== null) === dimmed);
+      },
+      tidy: async (pinned) => {
+        const viewId = readViewState(editor.doc).view.id;
+        if (pinned.length > 0) editor.setPinned(viewId, pinned, true);
+        await new Promise((r) => requestAnimationFrame(r));
+        const button = document.querySelector<HTMLButtonElement>('button[title^="Tidy layout"]');
+        if (button === null || button.disabled) return NaN;
+        const start = performance.now();
+        button.click();
+        await new Promise<void>((resolve) => {
+          const stop = useUiStore.subscribe((state) => {
+            if (state.layoutRun.status === 'idle') {
+              stop();
+              resolve();
+            }
+          });
+        });
+        const ms = await paintedAfter(start, () => true);
+        editor.undo();
+        if (pinned.length > 0) editor.setPinned(viewId, pinned, false);
+        return ms;
+      },
+      startTidy: () => {
+        layoutFrames = [];
+        document.querySelector<HTMLButtonElement>('button[title^="Tidy layout"]')?.click();
+        // Frames count only while the layout runs (SC-002), not the frame that applies it.
+        const tick = (t: number) => {
+          if (useUiStore.getState().layoutRun.status === 'idle') return;
+          layoutFrames.push(t);
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      },
+      layoutFrames: () => layoutFrames,
+      layoutRunning: () => useUiStore.getState().layoutRun.status !== 'idle',
+    };
+    return () => {
+      window.__sododeckViewsBench = undefined;
+    };
+  }, [editor]);
   return null;
 }
 
@@ -296,13 +367,16 @@ export function BenchPage() {
   const groups = params.get('groups') === '1';
   const inspector = params.get('inspector') === '1';
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
+  const views = params.get('views') === '1';
 
   const [doc] = useState(() => {
     if (jsonDeck) {
       const { jsonPanel } = useUiStore.getState();
       useUiStore.setState({ jsonPanel: { ...jsonPanel, open: true, tab: 'deck' } });
     }
-    return fromJSON(generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies }).deck);
+    return fromJSON(
+      generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views }).deck,
+    );
   });
 
   return (
@@ -312,6 +386,7 @@ export function BenchPage() {
           <FlowBenchHooks />
           {groups && <GroupsBenchHooks />}
           {inspector && <InspectorBenchHooks />}
+          <ViewsBenchHooks />
           <PaletteBenchHooks />
           <ReactFlowProvider>
             <div className="flex min-h-0 flex-1">

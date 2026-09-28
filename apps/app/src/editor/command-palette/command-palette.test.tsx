@@ -202,4 +202,49 @@ describe('CommandPalette', () => {
 
     expect(useThemeStore.getState().theme).toBe('dark');
   });
+
+  describe('components hidden in the current view (011 FR-016)', () => {
+    function viewsDeck() {
+      const deck = paletteDeck();
+      deck.views = [
+        { id: 'no-core', type: 'custom', title: 'Edge only', excludeGroups: ['core'] },
+        { id: 'all', type: 'system', title: 'Everything' },
+      ];
+      return deck;
+    }
+
+    it('keeps the view, says so in a toast, and "Show in" switches and selects', async () => {
+      const user = userEvent.setup();
+      renderWithEditor(<Harness />, viewsDeck());
+      await user.keyboard(shortcutKeys());
+      await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'Order Service');
+      expect(screen.getAllByRole('option')[0]).toHaveTextContent(
+        'Service · Core services · Hidden in this view',
+      );
+      await user.keyboard('{Enter}');
+      expect(useUiStore.getState().currentViewId).toBeNull();
+      expect(useUiStore.getState().selection.nodes).toEqual([]);
+      expect(screen.getByText('Order Service is hidden in this view')).toBeInTheDocument();
+      const action = screen.getByRole('button', { name: 'Show in Everything' });
+      await act(async () => {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      });
+      expect(action).toHaveFocus();
+      await user.keyboard('{Enter}');
+      expect(useUiStore.getState().currentViewId).toBe('all');
+      expect(useUiStore.getState().selection.nodes).toEqual(['svc']);
+    });
+
+    it('says when no view shows the component, with no action', async () => {
+      const user = userEvent.setup();
+      const deck = viewsDeck();
+      deck.views = [deck.views[0] as (typeof deck.views)[number]];
+      renderWithEditor(<Harness />, deck);
+      await user.keyboard(shortcutKeys());
+      await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'Order Service');
+      await user.keyboard('{Enter}');
+      expect(screen.getByText('Order Service is hidden in every view')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Show in/ })).not.toBeInTheDocument();
+    });
+  });
 });

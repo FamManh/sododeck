@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
@@ -16,7 +16,7 @@ describe('GroupBoundaryNode', () => {
       width: 300,
       height: 200,
     } as unknown as NodeProps<GroupFlowNode>;
-    render(<GroupBoundaryNode {...props} />);
+    renderWithEditor(<GroupBoundaryNode {...props} />);
     const boundary = screen.getByRole('button', { name: 'Core services group, 8 nodes' });
     expect(boundary).toHaveAttribute('aria-expanded', 'true');
     expect(boundary).toHaveAttribute('title', 'Double-click or ↵ to open');
@@ -44,7 +44,7 @@ describe('GroupBoundaryNode', () => {
       width: 300,
       height: 200,
     } as unknown as NodeProps<GroupFlowNode>;
-    render(<GroupBoundaryNode {...props} />);
+    renderWithEditor(<GroupBoundaryNode {...props} />);
     expect(screen.getByTestId('group-boundary')).toHaveAttribute('data-level', 'landscape');
     expect(screen.getByTestId('group-boundary')).toHaveClass('border-solid');
     expect(screen.getByRole('button', { name: 'Core services group, 8 nodes' })).toHaveClass(

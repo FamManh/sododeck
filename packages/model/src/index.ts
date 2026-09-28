@@ -13,6 +13,15 @@ export { createEditor, type DeckEditor, type EditorOptions } from './editor';
 export { observeDeck, type DeckChange, type ObjectChange } from './observe';
 export { checkIntegrity, type IntegrityProblem } from './integrity';
 export type { RemovalResult } from './ops/cascade';
+export type { ViewSettingsPatch } from './ops/views';
+export {
+  baseViewId,
+  CUSTOM_VIEW_DEFAULTS,
+  nextCustomTitle,
+  PRESET_VIEW_IDS,
+  resolveViews,
+  VIEW_PRESETS,
+} from './views';
 export type { NewObject, NewRule, NewStep, Patch } from './ops/types';
 export {
   captureFlowStructure,
@@ -46,6 +55,8 @@ export {
   nodeCanvasPosition,
   stickyCanvasPosition,
   stickyLabel,
+  viewNodePosition,
+  viewPosition,
   type Point,
   type StickyPlacement,
 } from './geometry';

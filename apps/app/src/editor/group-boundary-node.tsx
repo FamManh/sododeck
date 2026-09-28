@@ -5,7 +5,9 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ChevronDown } from 'lucide-react';
 
+import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { setGroupCollapsed } from './views/use-current-view';
 import type { GroupFlowNode } from './deck-to-flow';
 
 /**
@@ -20,7 +22,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
 }: NodeProps<GroupFlowNode>) {
   const focus = useUiStore((state) => state.focus);
   const select = useUiStore((state) => state.select);
-  const toggleCollapsed = useUiStore((state) => state.toggleCollapsed);
+  const editor = useEditor();
   const announce = useUiStore((state) => state.announce);
   const flowMode = useUiStore((state) => isFlowMode(state));
   const groupId = id.startsWith('group:') ? id.slice('group:'.length) : id;
@@ -72,7 +74,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         }}
         onClick={(event) => {
           event.stopPropagation();
-          toggleCollapsed(groupId);
+          setGroupCollapsed(editor, groupId, true);
           if (!flowMode) select({ groups: [groupId] });
           focus(`collapsed:${groupId}`);
           announce(`${data.title} collapsed`);

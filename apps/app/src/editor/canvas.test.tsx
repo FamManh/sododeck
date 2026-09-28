@@ -1,5 +1,14 @@
 import { toJSON, type DeckEditor } from '@sododeck/model';
-import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import * as Y from 'yjs';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Edge, Node, NodeChange } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
@@ -15,6 +24,8 @@ import { Canvas } from './canvas';
 import { exitFlow, openFlow } from './flows/flow-mode';
 import { TopBar } from './top-bar';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { addComponent } from './canvas-actions';
+import { collapsedOf, setGroupCollapsed, toggleGroupCollapsed } from './views/use-current-view';
 import { useEditorShortcuts } from './use-canvas-shortcuts';
 
 const deck = deckOf({
@@ -355,7 +366,7 @@ describe('Canvas', () => {
   it('collapses a group from the keyboard, renders merged edges, and updates counts live', async () => {
     const user = userEvent.setup();
     const before = structuredClone(collapsedGroupsDeck);
-    const { doc, unmount } = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+    const { doc, unmount, editor } = renderWithEditor(<Canvas />, collapsedGroupsDeck);
 
     act(() => {
       ui().focus('group:left');
@@ -363,27 +374,31 @@ describe('Canvas', () => {
       document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
     });
     await user.keyboard(' ');
-    expect(ui().collapsed.has('left')).toBe(true);
+    expect(collapsedOf(doc).has('left')).toBe(true);
     expect(ui().focusedId).toBe('collapsed:left');
     expect(screen.getByTestId('collapsed-group-node')).toHaveTextContent('2 nodes · 0 edges');
 
-    expect(toJSON(doc)).toEqual(before);
+    // 011: collapse is saved in the current view, never on the group, and never an undo step.
+    expect(toJSON(doc).groups).toEqual(before.groups);
+    expect(toJSON(doc).views[0]?.collapsed).toEqual(['left']);
+    expect(editor().canUndo()).toBe(false);
 
     unmount();
     const merged = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+    const collapse = (id: string, on: boolean) => setGroupCollapsed(merged.editor(), id, on);
     act(() => {
-      ui().setCollapsed('left', true);
-      ui().setCollapsed('right', true);
+      collapse('left', true);
+      collapse('right', true);
     });
-    expect(ui().collapsed.has('right')).toBe(true);
+    expect(collapsedOf(merged.doc).has('right')).toBe(true);
 
     act(() => {
-      ui().setCollapsed('right', false);
+      collapse('right', false);
     });
-    expect(ui().collapsed.has('right')).toBe(false);
+    expect(collapsedOf(merged.doc).has('right')).toBe(false);
 
     act(() => {
-      ui().setCollapsed('right', true);
+      collapse('right', true);
       merged.editor().add('nodes', { type: 'service', title: 'A3', group: 'left' });
     });
     expect(
@@ -394,16 +409,16 @@ describe('Canvas', () => {
   });
 
   it('replaces hidden selections with the collapsed group and clears them when drill hides them', () => {
-    renderWithEditor(<Canvas />, collapsedGroupsDeck);
+    const { editor } = renderWithEditor(<Canvas />, collapsedGroupsDeck);
 
     act(() => {
       ui().select({ nodes: ['a1'], edges: ['m0'] });
-      ui().setCollapsed('left', true);
+      setGroupCollapsed(editor(), 'left', true);
     });
     expect(ui().selection).toEqual({ nodes: [], edges: [], groups: ['left'], stickies: [] });
 
     act(() => {
-      ui().setCollapsed('left', false);
+      setGroupCollapsed(editor(), 'left', false);
       ui().select({ nodes: ['a1'] });
     });
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Left group, 2 nodes' }));
@@ -554,6 +569,79 @@ describe('canvas handlers', () => {
       { x: 300, y: 0 },
     ]);
     expect(editor().canUndo()).toBe(false);
+  });
+
+  describe('drags go through the current view (011 FR-020, FR-021)', () => {
+    const drag = (
+      h: ReturnType<typeof handlers>['h'],
+      id: string,
+      to: { x: number; y: number },
+    ) => {
+      act(() => {
+        h().onNodeDragStart({}, flowNode(id));
+        h().onNodesChange([
+          { type: 'position', id, position: { x: to.x - 5, y: to.y }, dragging: true },
+        ]);
+        h().onNodesChange([{ type: 'position', id, position: to, dragging: true }]);
+        h().onNodeDragStop();
+      });
+    };
+
+    it('writes the base position in the base view, one undo step', () => {
+      const { h, doc, editor } = handlers();
+      drag(h, 'a', { x: 40, y: 50 });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 40, y: 50 });
+      expect(toJSON(doc).views).toEqual([]);
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 0, y: 0 });
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('writes a view position in another view, and one undo removes it', () => {
+      const { h, doc, editor } = handlers();
+      act(() => {
+        ui().switchView('infra');
+      });
+      drag(h, 'a', { x: 40, y: 50 });
+      const file = toJSON(doc);
+      expect(file.nodes[0]?.position).toEqual({ x: 0, y: 0 });
+      expect(file.views.find((v) => v.id === 'infra')?.positions).toEqual({ a: { x: 40, y: 50 } });
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).views.find((v) => v.id === 'infra')?.positions).toBeUndefined();
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('moves a pinned component and keeps it pinned (FR-024)', () => {
+      const { h, doc } = handlers(
+        deckOf({ ...deck, views: [{ id: 'v', type: 'system', title: 'V', pinned: ['a'] }] }),
+      );
+      drag(h, 'a', { x: 40, y: 50 });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 40, y: 50 });
+      expect(toJSON(doc).views[0]?.pinned).toEqual(['a']);
+    });
+
+    it('keeps a pinned note where it is dropped in a view that moved its component', () => {
+      const { h, doc } = handlers(
+        deckOf({
+          nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+          stickies: [{ id: 'st', text: 'Note', anchor: 'a', position: { x: 10, y: -20 } }],
+          views: [
+            { id: 'base', type: 'system', title: 'Base' },
+            { id: 'moved', type: 'custom', title: 'Moved', positions: { a: { x: 500, y: 0 } } },
+          ],
+        }),
+      );
+      act(() => {
+        ui().switchView('moved');
+        h().onNodesChange([{ type: 'position', id: 'sticky:st', position: { x: 530, y: -40 } }]);
+      });
+      // Offset from where A is drawn in this view (500, 0).
+      expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 30, y: -40 });
+    });
   });
 
   it('selects an unselected component when its drag starts', () => {
@@ -801,7 +889,7 @@ describe('canvas in flow mode (007)', () => {
   it('jumps to the first hidden step from a collapsed card and cycles a merged edge', () => {
     const { h, editor } = handlers(groupedPlaybackDeck);
     act(() => {
-      ui().toggleCollapsed('core');
+      toggleGroupCollapsed(editor(), 'core');
     });
     open(editor, 'o1');
 
@@ -819,7 +907,7 @@ describe('canvas in flow mode (007)', () => {
   it('keeps collapsed cards bright on the played path', () => {
     const { editor } = renderWithEditor(<Canvas />, groupedPlaybackDeck);
     act(() => {
-      ui().toggleCollapsed('core');
+      toggleGroupCollapsed(editor(), 'core');
       openFlow(editor(), 'order', 'o2');
     });
 
@@ -841,5 +929,221 @@ describe('canvas in flow mode (007)', () => {
 
     expect(ui().drill).toEqual([]);
     expect(ui().announcement.text).toBe('Showing the whole deck for this flow');
+  });
+
+  describe('views on the canvas (011 US1)', () => {
+    it('dims clients in Infra with a non-colour cue, and not in System', () => {
+      renderWithEditor(<Canvas />, deck);
+      expect(screen.getByRole('group', { name: 'Client: D' })).toBeInTheDocument();
+      act(() => {
+        ui().switchView('infra');
+      });
+      expect(
+        screen.getByRole('group', { name: 'Client: D, dimmed in this view' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Service: A' })).toBeInTheDocument();
+    });
+
+    it('shows an edit made in Infra in System too (FR-015)', () => {
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().update('nodes', 'a', { title: 'Orders API' });
+        ui().switchView('system');
+      });
+      expect(screen.getByRole('group', { name: 'Service: Orders API' })).toBeInTheDocument();
+    });
+
+    it('hides a component excluded by the view, with its connections', () => {
+      renderWithEditor(
+        <Canvas />,
+        deckOf({
+          ...deck,
+          views: [{ id: 'v', type: 'custom', title: 'V', excludeKinds: ['queue'] }],
+        }),
+      );
+      expect(screen.queryByRole('group', { name: 'Queue: C' })).not.toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Service: A' })).toBeInTheDocument();
+    });
+
+    it('switches to the view on the left when the current one disappears', () => {
+      const { editor } = renderWithEditor(
+        <Canvas />,
+        deckOf({
+          ...deck,
+          views: [
+            { id: 'one', type: 'system', title: 'One' },
+            { id: 'two', type: 'custom', title: 'Two' },
+            { id: 'three', type: 'custom', title: 'Three' },
+          ],
+        }),
+      );
+      act(() => {
+        ui().switchView('three');
+      });
+      act(() => {
+        editor().removeView('three');
+      });
+      expect(ui().currentViewId).toBe('two');
+      expect(ui().announcement.text).toBe('Two view');
+    });
+  });
+
+  describe('each view keeps its own layout (011 US2)', () => {
+    const nodeIn = (doc: Parameters<typeof toJSON>[0], id: string) =>
+      toJSON(doc).nodes.find((n) => n.id === id);
+    const flowNodeAt = (id: string) =>
+      document.querySelector<HTMLElement>(`.react-flow__node[data-id="${id}"]`)?.style.transform;
+
+    it('a move in Infra leaves System alone; a node never moved in Infra sits at its base', () => {
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+      });
+      expect(flowNodeAt('a')).toContain('900px');
+      expect(flowNodeAt('b')).toContain('300px');
+      act(() => {
+        ui().switchView('system');
+      });
+      expect(flowNodeAt('a')).toBe('translate(0px,0px)');
+    });
+
+    it('a move in System moves the node in Feature, which has no own position', () => {
+      const { editor, doc } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        editor().moveInView('system', { b: { x: 350, y: 60 } });
+        ui().switchView('feature');
+      });
+      expect(nodeIn(doc, 'b')?.position).toEqual({ x: 350, y: 60 });
+      expect(flowNodeAt('b')).toContain('350px');
+    });
+
+    it('keeps every view position after a reload from the saved file', () => {
+      const first = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        first.editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        first.editor().moveInView('system', { c: { x: 10, y: 400 } });
+      });
+      const saved = toJSON(first.doc);
+      first.unmount();
+      renderWithEditor(<Canvas />, saved);
+      expect(flowNodeAt('c')).toContain('400px');
+      act(() => {
+        ui().switchView('infra');
+      });
+      expect(flowNodeAt('a')).toContain('900px');
+      expect(flowNodeAt('c')).toContain('400px');
+    });
+
+    it('explains an undo of a move made in another view, with "Go to" (FR-045)', async () => {
+      const user = userEvent.setup();
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        ui().switchView('system');
+      });
+      act(() => {
+        editor().undo();
+      });
+      expect(ui().currentViewId).toBe('system');
+      expect(ui().announcement.text).toBe('Undid move in Infra');
+      expect(screen.getByText('Undid move in Infra')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Go to Infra' }));
+      expect(ui().currentViewId).toBe('infra');
+    });
+
+    it('says nothing extra for an undo in the current view', () => {
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+      });
+      act(() => {
+        editor().undo();
+      });
+      expect(screen.queryByText(/Undid move/)).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps a component created in a view that hides it until the view is left (011)', () => {
+    const { editor } = renderWithEditor(
+      <Canvas />,
+      deckOf({
+        ...deck,
+        views: [
+          { id: 'v', type: 'custom', title: 'No services', excludeKinds: ['service'] },
+          { id: 'w', type: 'custom', title: 'All' },
+        ],
+      }),
+    );
+    expect(screen.queryByRole('group', { name: 'Service: A' })).not.toBeInTheDocument();
+    act(() => {
+      addComponent(editor(), 'service', { x: 600, y: 600 });
+    });
+    const created = screen.getByRole('group', { name: 'Service: New service' });
+    expect(within(created).getByRole('note')).toHaveTextContent('Hidden in this view');
+    act(() => {
+      ui().switchView('w');
+      ui().switchView('v');
+    });
+    expect(screen.queryByRole('group', { name: 'Service: New service' })).not.toBeInTheDocument();
+  });
+
+  describe('collapse is remembered per view (011 US5, FR-050)', () => {
+    const card = (name: RegExp) => screen.queryByRole('button', { name });
+
+    it('keeps each view’s own collapse state, and survives a reload', () => {
+      const first = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+      act(() => {
+        setGroupCollapsed(first.editor(), 'left', true);
+      });
+      expect(card(/^Left, collapsed group/)).toBeInTheDocument();
+      act(() => {
+        ui().switchView('infra');
+      });
+      expect(card(/^Left, collapsed group/)).not.toBeInTheDocument();
+      act(() => {
+        ui().switchView('system');
+      });
+      expect(card(/^Left, collapsed group/)).toBeInTheDocument();
+
+      const saved = toJSON(first.doc);
+      expect(saved.views.find((v) => v.id === 'system')?.collapsed).toEqual(['left']);
+      expect(saved.groups).toEqual(collapsedGroupsDeck.groups);
+      first.unmount();
+      renderWithEditor(<Canvas />, saved);
+      expect(card(/^Left, collapsed group/)).toBeInTheDocument();
+    });
+
+    it('rename, collapse, ⌘Z: the rename is undone and the group stays collapsed', () => {
+      const { editor, doc } = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+      act(() => {
+        editor().update('nodes', 'a1', { title: 'Renamed' });
+        setGroupCollapsed(editor(), 'left', true);
+      });
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).nodes[0]?.title).toBe('A1');
+      expect(card(/^Left, collapsed group/)).toBeInTheDocument();
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('syncs a collapse to another tab showing the same view', () => {
+      const one = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+      const other = new Y.Doc();
+      Y.applyUpdate(other, Y.encodeStateAsUpdate(one.doc));
+      one.doc.on('update', (update: Uint8Array) => {
+        Y.applyUpdate(other, update);
+      });
+      act(() => {
+        setGroupCollapsed(one.editor(), 'right', true);
+      });
+      one.unmount();
+      renderWithEditor(<Canvas />, other);
+      expect(card(/^Right, collapsed group/)).toBeInTheDocument();
+    });
   });
 });

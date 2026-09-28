@@ -34,3 +34,5 @@ v1 complete (feature 001). 006 added flow branches as optional, additive fields 
 - `Sticky.showInFlows?: boolean` — `true` keeps the note at full strength during flow playback; the editor writes `true` or removes the key.
 
 Keep the sticky property order `id, text, color, anchor, position, collapsed, showInFlows`, extend `examples/full.sododeck.json`, and cover invalid non-boolean values in fixtures when these fields change.
+
+011 adds optional view fields with no version bump (ADR 0012): `View.excludeGroups`, `excludeKinds`, `excludeTags`, `dimKinds`, `pinned`, `collapsed` (unique lists; absent when empty), and `SubtitleField` gains `flows` ("<n> flows · <owner>"). The example `full.sododeck.json` uses all of them; invalid fixtures cover unknown kinds, duplicates and bad ids.

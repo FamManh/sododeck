@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { Inspector } from '../inspector';
+import { collapsedOf } from '../views/use-current-view';
 
 describe('GroupInspector', () => {
   it('shows the heading, collapsed switch, merged connections and expand button', async () => {
@@ -15,14 +16,15 @@ describe('GroupInspector', () => {
         { id: 'b', type: 'service', title: 'B' },
       ],
       groups: [{ id: 'core', title: 'Core services' }],
+      // Collapse is saved in the view (011 FR-050).
+      views: [{ id: 'v', type: 'system', title: 'V', collapsed: ['core'] }],
       edges: [
         { id: 'e1', from: 'a', to: 'b' },
         { id: 'e2', from: 'a', to: 'b' },
       ],
     });
-    renderWithEditor(<Inspector deck={deck} />, deck);
+    const { doc } = renderWithEditor(<Inspector deck={deck} />, deck);
     act(() => {
-      useUiStore.getState().setCollapsed('core', true);
       useUiStore.getState().select({ groups: ['core'] });
     });
 
@@ -32,6 +34,6 @@ describe('GroupInspector', () => {
     expect(screen.getByText('Merged connections')).toBeInTheDocument();
     expect(screen.getByText(/collapsed:core|b/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand group' }));
-    expect(useUiStore.getState().collapsed.has('core')).toBe(false);
+    expect(collapsedOf(doc).has('core')).toBe(false);
   });
 });

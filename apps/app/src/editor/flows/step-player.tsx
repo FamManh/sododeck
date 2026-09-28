@@ -10,6 +10,7 @@ import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { groupAtStep } from '../collapse-flow-marks';
 import { scopeOf, visibleGraph } from '../visible-graph';
+import { useCollapsed } from '../views/use-current-view';
 import { BranchPicker } from './branch-picker';
 import { usePlayback } from './use-playback';
 import { goToStep, nextStep, play, playbackOf, previousStep } from './flow-mode';
@@ -33,7 +34,7 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
   const alternativeId = active?.alternativeId ?? null;
   const stepId = active?.stepId ?? null;
   const drill = useUiStore((s) => s.drill);
-  const collapsed = useUiStore((s) => s.collapsed);
+  const collapsed = useCollapsed();
   const playback = useMemo(
     () => (flow === undefined ? null : playbackOf(deck, flow, alternativeId, stepId)),
     [deck, flow, alternativeId, stepId],

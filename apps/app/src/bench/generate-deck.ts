@@ -22,7 +22,7 @@ export function generateBenchDeck(
   nodeCount: number,
   edgeCount: number,
   seed = 42,
-  options: { flows?: boolean; groups?: boolean; stickies?: number } = {},
+  options: { flows?: boolean; groups?: boolean; stickies?: number; views?: boolean } = {},
 ) {
   const random = mulberry32(seed);
   const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount * 1.25)));
@@ -54,6 +54,7 @@ export function generateBenchDeck(
   if (options.groups === true) addBenchGroups(deck);
   if ((options.stickies ?? 0) > 0) addBenchStickies(deck, options.stickies ?? 0, random);
   if (options.flows === true) addBenchFlows(deck, random);
+  if (options.views === true) addBenchViews(deck, random);
   return { deck };
 }
 
@@ -186,4 +187,38 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
       },
     });
   }
+}
+
+/**
+ * Saved views (011 research R14): System, Feature and Infra, where Infra moves half the nodes
+ * (seeded offsets) and pins 20, plus a custom view hiding external components.
+ */
+function addBenchViews(deck: SododeckFile, random: () => number): void {
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const [index, node] of deck.nodes.entries()) {
+    if (index % 2 !== 0 || node.position === undefined) continue;
+    positions[node.id] = {
+      x: node.position.x + Math.round(random() * 120) - 60,
+      y: node.position.y + Math.round(random() * 80) - 40,
+    };
+  }
+  const step = Math.max(1, Math.floor(deck.nodes.length / 20));
+  const pinned = deck.nodes
+    .filter((_, index) => index % step === 0)
+    .slice(0, 20)
+    .map((node) => node.id);
+  deck.views.push(
+    { id: 'system', type: 'system', title: 'System', subtitleField: 'tech' },
+    { id: 'feature', type: 'feature', title: 'Feature', subtitleField: 'flows' },
+    {
+      id: 'infra',
+      type: 'infra',
+      title: 'Infra',
+      subtitleField: 'host',
+      dimKinds: ['client'],
+      positions,
+      pinned,
+    },
+    { id: 'custom', type: 'custom', title: 'Custom 1', excludeKinds: ['external'] },
+  );
 }

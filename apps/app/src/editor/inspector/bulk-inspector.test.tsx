@@ -123,4 +123,21 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
       { scope: 'nodes', id: 'd' },
     ]);
   });
+
+  it('says when only some are pinned, and pins them all in one undo step (011)', async () => {
+    const { user, doc, editor } = setup();
+    act(() => {
+      editor().setPinned('system', ['p'], true);
+    });
+    const pin = screen.getByRole('switch', { name: 'Pin position' });
+    expect(pin).toHaveAccessibleDescription(
+      'Some of the selected components are pinned in this view',
+    );
+    await user.click(pin);
+    expect(toJSON(doc).views[0]?.pinned).toEqual(['p', 'y', 'd']);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).views[0]?.pinned).toEqual(['p']);
+  });
 });

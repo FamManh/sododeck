@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-27
 - **Feature:** `specs/002-yjs-model` (spec incl. clarifications, research R1–R10, data model)
+- **Amended by:** ADR 0012 (views gain `Y.Array` fields `excludeGroups`, `excludeKinds`, `excludeTags`, `dimKinds`, `pinned` and `collapsed`; `collapsed` is written with an untracked origin)
 
 ## Context
 

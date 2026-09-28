@@ -3,7 +3,7 @@ import type { Id, SododeckFile } from '@sododeck/schema';
 import { useEffect } from 'react';
 
 import { useEditor } from '../../model/use-editor';
-import { readDeck } from '../../model/use-deck-snapshot';
+import { readViewState } from '../views/use-current-view';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { NODE_SIZE } from '../canvas-geometry';
 
@@ -32,7 +32,8 @@ export function notesAreReadOnly(): boolean {
 
 export function addNoteAt(editor: DeckEditor, point: Point): Id | null {
   if (notesAreReadOnly() || isFlowMode(useUiStore.getState())) return null;
-  const deck = readDeck(editor.doc);
+  // Offsets are measured where the component is drawn in the current view (011).
+  const deck = readViewState(editor.doc).deck;
   const at = normalizePoint(point);
   const anchor = nodeAtPoint(deck, at);
   const id = editor.beginStickyDraft(

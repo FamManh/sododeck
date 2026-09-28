@@ -16,7 +16,7 @@ import {
   type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
@@ -56,8 +56,13 @@ import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
+import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
+import { collapsedOf, readViewState, useViewState } from './views/use-current-view';
+import { viewCrumbTitle } from './views/view-title';
+import { useCurrentViewSync } from './views/use-view-sync';
+import { useUndoAcrossViews } from './views/undo-context';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
@@ -90,17 +95,6 @@ export interface CanvasProps {
   onReady?: () => void;
 }
 
-function scopeTitle(
-  deck: ReturnType<typeof readDeck>,
-  drill: readonly { kind: 'group' | 'node'; id: string }[],
-): string {
-  const current = drill.at(-1);
-  if (current === undefined) return 'System view';
-  if (current.kind === 'group')
-    return deck.groups.find((group) => group.id === current.id)?.title ?? 'System view';
-  return deck.nodes.find((node) => node.id === current.id)?.title ?? 'System view';
-}
-
 /** Keeps drill/collapse state pointing at existing, non-empty scopes after document removals. */
 function useViewSync(): void {
   const editor = useEditor();
@@ -115,7 +109,7 @@ function useViewSync(): void {
         ) {
           return;
         }
-        const deck = readDeck(editor.doc);
+        const deck = readViewState(editor.doc).deck;
         const ui = useUiStore.getState();
         const before = ui.drill;
         ui.pruneView({
@@ -129,7 +123,10 @@ function useViewSync(): void {
           ui.drillUp(depth);
           changed = true;
         }
-        if (changed) ui.announce(`Went up to ${scopeTitle(deck, useUiStore.getState().drill)}`);
+        if (changed)
+          ui.announce(
+            `Went up to ${drillScopeTitle(deck, useUiStore.getState().drill, viewCrumbTitle(readViewState(editor.doc).view))}`,
+          );
       }),
     [editor.doc],
   );
@@ -183,12 +180,12 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     const root = wrapper.current;
     if (focusedId === null || !root?.contains(document.activeElement)) return;
-    const deck = readDeck(editor.doc);
+    const deck = readViewState(editor.doc).deck;
     const ui = useUiStore.getState();
     const { zoom: currentZoom } = getViewport();
     const scope = scopeOf(ui.drill);
     const level = effectiveLevel(levelForZoom(currentZoom), scope);
-    const graph = visibleGraph(deck, scope, ui.collapsed);
+    const graph = visibleGraph(deck, scope, collapsedOf(editor.doc));
     const point = (() => {
       if (focusedId.startsWith(GROUP_NODE_PREFIX)) {
         const groupId = focusedId.slice(GROUP_NODE_PREFIX.length);
@@ -230,10 +227,15 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
  */
 export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasProps) {
   const editor = useEditor();
-  const deck = useDeckSnapshot(editor.doc);
+  const fullDeck = useDeckSnapshot(editor.doc);
+  // The canvas draws the deck as the current view shows it (011, ADR 0012 §6).
+  const viewState = useViewState();
+  const deck = viewState.deck;
+  const render = viewState.render;
+  // Collapsed groups are saved per view (011 FR-050).
+  const collapsed = viewState.collapsed;
   const selection = useUiStore((s) => s.selection);
   const drill = useUiStore((s) => s.drill);
-  const collapsed = useUiStore((s) => s.collapsed);
   const focusMode = useUiStore((s) => s.focusMode);
   const focusedId = useUiStore((s) => s.focusedId);
   const focusedEdgeId = useUiStore((s) => s.focusedEdgeId);
@@ -260,6 +262,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
 
   useSelectionSync();
   useViewSync();
+  useCurrentViewSync();
+  useUndoAcrossViews();
   useRovingFocus(wrapper);
   useStickyDraftLifecycle();
 
@@ -342,8 +346,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       level,
       focus,
       marks: collapsedMarks,
+      render,
     }),
-    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks],
+    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks, render],
   );
 
   const nodes = useMemo(
@@ -441,14 +446,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     announcedZoomLevel.current = zoomLevel;
   }, [level, zoomLevel]);
 
-  useEffect(() => {
-    const before = previousDrill.current;
-    previousDrill.current = drill;
-    if (drill.length > before.length) {
-      const box = scopeBounds(deck, graph, level);
+  // Fits a box in the canvas, zoom clamped to 40–130% (010 drill-in, 011 view switch).
+  const fitBox = useCallback(
+    (box: ReturnType<typeof scopeBounds>) => {
       const root = wrapper.current;
       if (box === null || root === null || root.clientWidth === 0 || root.clientHeight === 0)
-        return;
+        return undefined;
       const frame = requestAnimationFrame(() => {
         const padding = 0.2;
         const width = root.clientWidth;
@@ -475,13 +478,32 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       return () => {
         cancelAnimationFrame(frame);
       };
-    }
+    },
+    [dimMs, setViewport],
+  );
+
+  useEffect(() => {
+    const before = previousDrill.current;
+    previousDrill.current = drill;
+    if (drill.length > before.length) return fitBox(scopeBounds(deck, graph, level));
     if (drill.length < before.length) {
       const restore = before[drill.length]?.viewport;
       if (restore === undefined) return;
       void setViewport(restore, { duration: dimMs });
     }
-  }, [deck, dimMs, drill, graph, level, setViewport]);
+    return undefined;
+  }, [deck, dimMs, drill, fitBox, graph, level, setViewport]);
+
+  // A view switch fits the new view's visible components (011 FR-003).
+  const viewId = viewState.view.id;
+  const previousViewId = useRef(viewId);
+  useEffect(() => {
+    if (previousViewId.current === viewId) return undefined;
+    previousViewId.current = viewId;
+    return fitBox(scopeBounds(deck, graph, level));
+    // Only the switch itself fits; later edits in the view must not move the viewport.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewId]);
 
   return (
     <div
@@ -585,7 +607,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         )}
         <SelectionFrame deck={deck} level={level} />
       </ReactFlow>
-      {deck.nodes.length === 0 && <EmptyCanvasCard />}
+      {fullDeck.nodes.length === 0 && <EmptyCanvasCard />}
       {drilledEmpty && (
         <EmptyCanvasCard
           title="No components in this group"
@@ -593,9 +615,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           action={null}
         />
       )}
-      <EdgePopover deck={deck} />
+      <EdgePopover deck={fullDeck} />
       <MergedEdgePopover deck={deck} />
-      <ConnectPopover deck={deck} />
+      <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
     </div>
   );

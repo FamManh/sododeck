@@ -97,7 +97,7 @@ describe('ui store', () => {
     expect(state().popover).toBeNull();
   });
 
-  it('tracks drill, collapsed groups, focus mode, and view pruning', () => {
+  it('tracks drill, focus mode, and view pruning (collapse lives in the view, 011)', () => {
     expect(state().drill).toEqual([]);
     state().setFocusMode(true);
     state().select({ nodes: ['a'] });
@@ -106,21 +106,57 @@ describe('ui store', () => {
     expect(state().focusMode).toBe(false);
     expect(state().drill).toHaveLength(1);
 
-    state().toggleCollapsed('g');
-    state().setCollapsed('h', true);
-    expect([...state().collapsed]).toEqual(['g', 'h']);
-    state().expandAll(['h']);
-    expect([...state().collapsed]).toEqual(['g']);
+    expect(state()).not.toHaveProperty('collapsed');
 
     const popped = state().drillUp();
     expect(popped).toEqual([{ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } }]);
     expect(state().drill).toEqual([]);
 
     state().drillInto({ kind: 'node', id: 'a', viewport: { x: 0, y: 0, zoom: 1 } });
-    state().toggleCollapsed('gone');
     state().pruneView({ nodes: new Set(), groups: new Set() });
     expect(state().drill).toEqual([]);
-    expect([...state().collapsed]).toEqual([]);
+  });
+
+  describe('views (011)', () => {
+    it('starts on the first view with nothing revealed and no layout running', () => {
+      expect(state().currentViewId).toBeNull();
+      expect(state().revealed.size).toBe(0);
+      expect(state().layoutRun).toEqual({ status: 'idle' });
+    });
+
+    it('switches views, clearing selection, drill, focus mode and revealed components', () => {
+      state().select({ nodes: ['a'], groups: ['g'] });
+      state().drillInto({ kind: 'group', id: 'g', viewport: { x: 0, y: 0, zoom: 1 } });
+      state().select({ nodes: ['a'] });
+      state().setFocusMode(true);
+      state().focus('a');
+      state().reveal('a');
+      expect([...state().revealed]).toEqual(['a']);
+      state().switchView('infra');
+      expect(state().currentViewId).toBe('infra');
+      expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+      expect(state().drill).toEqual([]);
+      expect(state().focusMode).toBe(false);
+      expect(state().focusedId).toBeNull();
+      expect(state().revealed.size).toBe(0);
+    });
+
+    it('keeps a flow open when switching views (flows stay shown)', () => {
+      state().openFlow('f1', 's1');
+      state().switchView('infra');
+      expect(state().activeFlow?.flowId).toBe('f1');
+    });
+
+    it('tracks the layout run and forgets views for another deck', () => {
+      state().setLayoutRun({ status: 'running', viewId: 'infra' });
+      expect(state().layoutRun).toEqual({ status: 'running', viewId: 'infra' });
+      state().switchView('infra');
+      state().reveal('x');
+      state().resetForDeck();
+      expect(state().currentViewId).toBeNull();
+      expect(state().revealed.size).toBe(0);
+      expect(state().layoutRun).toEqual({ status: 'idle' });
+    });
   });
 
   it('tracks sticky editing, drafts and the last canvas pointer', () => {

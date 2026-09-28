@@ -2,7 +2,7 @@
  * Sticky note geometry: pure functions of a plain `SododeckFile`, shared by the model's cascade
  * and the app's canvas so a note's screen point never disagrees between them (ADR 0010).
  */
-import type { Id, SododeckFile, Sticky } from '@sododeck/schema';
+import type { Id, Node, SododeckFile, Sticky, View } from '@sododeck/schema';
 
 export interface Point {
   x: number;
@@ -74,4 +74,27 @@ export function stickyLabel(text: string): string | null {
     return line.replace(MARKDOWN_MARKERS, '');
   }
   return null;
+}
+
+/**
+ * Where a view shows a node (FR-020): the view's own position when it has one (any view, the base
+ * view included, since a view that became the base keeps its layout), else the node's position.
+ * Undefined when neither exists; the caller falls back to the grid slot.
+ */
+export function viewPosition(
+  file: Pick<SododeckFile, 'nodes'>,
+  view: Pick<View, 'positions'>,
+  nodeId: Id,
+): Point | undefined {
+  const own = view.positions?.[nodeId];
+  if (own !== undefined) return own;
+  return file.nodes.find((n) => n.id === nodeId)?.position;
+}
+
+/** `viewPosition` when the caller already holds the node (linear loops over nodes). */
+export function viewNodePosition(
+  view: Pick<View, 'positions'>,
+  node: Pick<Node, 'id' | 'position'>,
+): Point | undefined {
+  return view.positions?.[node.id] ?? node.position;
 }

@@ -16,6 +16,11 @@ export interface EditContext {
    * remove, move), which are always a step of their own.
    */
   transact<T>(fn: () => T, key?: string): T;
+  /**
+   * Runs `fn` in one transaction with the editor's second, untracked origin (011, research R5):
+   * saved and synced like any edit, reported as `local`, but never an undo step.
+   */
+  transactUntracked<T>(fn: () => T): T;
   allocate(prefix: IdPrefix, reserved?: ReadonlySet<Id>): Id;
   /** Records explicit ids an operation writes, so later generated ids avoid them. */
   reserve(ids: Iterable<Id>): void;

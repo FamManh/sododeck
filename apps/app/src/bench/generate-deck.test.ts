@@ -23,6 +23,17 @@ describe('generateBenchDeck', () => {
     expect(deck.edges.every((e) => e.from !== e.to)).toBe(true);
   });
 
+  it('adds four views with Infra overrides for half the nodes and 20 pins (011)', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { views: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.views.map((v) => v.id)).toEqual(['system', 'feature', 'infra', 'custom']);
+    const infra = deck.views[2];
+    expect(Object.keys(infra?.positions ?? {})).toHaveLength(250);
+    expect(infra?.pinned).toHaveLength(20);
+    expect(deck.views[3]?.excludeKinds).toEqual(['external']);
+    expect(generateBenchDeck(500, 1000, 42, { views: true })).toEqual({ deck });
+  });
+
   it('is deterministic', () => {
     expect(generateBenchDeck(20, 30)).toEqual(generateBenchDeck(20, 30));
   });
@@ -34,7 +45,9 @@ describe('generateBenchDeck', () => {
     expect(deck.stickies.filter((sticky) => sticky.anchor != null)).toHaveLength(5);
     expect(deck.stickies.filter((sticky) => sticky.anchor == null)).toHaveLength(5);
     expect(deck.stickies.every((sticky) => sticky.text.length > 0)).toBe(true);
-    expect(deck.stickies.every((sticky) => sticky.anchor != null || sticky.position != null)).toBe(true);
+    expect(deck.stickies.every((sticky) => sticky.anchor != null || sticky.position != null)).toBe(
+      true,
+    );
     expect(generateBenchDeck(40, 80, 42, { stickies: 10 })).toEqual(
       generateBenchDeck(40, 80, 42, { stickies: 10 }),
     );

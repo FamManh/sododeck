@@ -18,6 +18,7 @@ import { PickField } from '../fields/pick-field';
 import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { bulkView, tagSuggestions, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
+import { PinSwitch } from '../views/pin-controls';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
@@ -91,6 +92,9 @@ export function BulkInspector({
             </p>
           </PanelSection>
         )}
+        <PanelSection>
+          <PinSwitch nodeIds={ids} />
+        </PanelSection>
         <PanelSection className="grid grid-cols-2 gap-3">
           <PickField
             label="Kind"

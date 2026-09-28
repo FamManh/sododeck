@@ -9,7 +9,10 @@
  *   doc.getArray('nodes')      Y.Array<Y.Map>  one map per node, in file order
  *   doc.getArray('groups')     Y.Array<Y.Map>  one map per group
  *   doc.getArray('edges')      Y.Array<Y.Map>  one map per edge
- *   doc.getArray('views')      Y.Array<Y.Map>  includes → Y.Array; positions → Y.Map(node id → Y.Map x,y)
+ *   doc.getArray('views')      Y.Array<Y.Map>  includes → Y.Array; positions → Y.Map(node id → Y.Map x,y);
+ *                                              011 (ADR 0012, optional): excludeGroups, excludeKinds,
+ *                                              excludeTags, dimKinds, pinned, collapsed → Y.Array.
+ *                                              `collapsed` is written with an untracked origin.
  *   doc.getArray('features')   Y.Array<Y.Map>  one map per feature
  *   doc.getArray('flows')      Y.Array<Y.Map>  steps → Y.Array<Y.Map>; step ruleInputs → nested Y.Map;
  *                                              branches (006, optional) → Y.Array<Y.Map>

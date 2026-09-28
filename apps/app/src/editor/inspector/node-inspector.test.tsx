@@ -123,4 +123,19 @@ describe('NodeInspector (story 1, FR-008)', () => {
     expect(screen.getByText('System')).toBeInTheDocument();
     unmount();
   });
+
+  it('pins and unpins the component in the current view, one undo step each (011)', async () => {
+    const { user, doc, editor } = setup();
+    const pin = screen.getByRole('switch', { name: 'Pin position' });
+    expect(pin).toHaveAttribute('aria-checked', 'false');
+    await user.click(pin);
+    expect(toJSON(doc).views.find((v) => v.id === 'system')?.pinned).toEqual(['p']);
+    expect(pin).toHaveAttribute('aria-checked', 'true');
+    await user.click(pin);
+    expect(toJSON(doc).views.find((v) => v.id === 'system')?.pinned).toBeUndefined();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).views.find((v) => v.id === 'system')?.pinned).toEqual(['p']);
+  });
 });

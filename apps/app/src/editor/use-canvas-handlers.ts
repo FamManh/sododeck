@@ -34,6 +34,7 @@ import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
+import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
@@ -122,8 +123,8 @@ export function useCanvasHandlers() {
           if (flowMode()) {
             if (isCollapsedNode(node.id)) {
               jumpTo((playback) => {
-                const deck = readDeck(editor.doc);
-                const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+                const deck = readViewState(editor.doc).deck;
+                const graph = visibleGraph(deck, scopeOf(ui().drill), collapsedOf(editor.doc));
                 return stepForGroup(playback.played, graph, groupId);
               });
             }
@@ -165,7 +166,11 @@ export function useCanvasHandlers() {
           return;
         }
         if (stickyIdOf(node.id) !== null || isPortNode(node.id)) return;
-        const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+        const graph = visibleGraph(
+          readViewState(editor.doc).deck,
+          scopeOf(ui().drill),
+          collapsedOf(editor.doc),
+        );
         if ((graph.childCount.get(node.id) ?? 0) === 0) return;
         const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
         if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
@@ -174,8 +179,8 @@ export function useCanvasHandlers() {
         if (isMergedEdge(edge.id)) {
           if (flowMode()) {
             jumpTo((playback) => {
-              const deck = readDeck(editor.doc);
-              const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+              const deck = readViewState(editor.doc).deck;
+              const graph = visibleGraph(deck, scopeOf(ui().drill), collapsedOf(editor.doc));
               const merged = graph.merged.find((entry) => entry.id === edge.id);
               return merged === undefined
                 ? null
@@ -248,7 +253,10 @@ export function useCanvasHandlers() {
           editor.beginGesture();
         }
       },
-      /** Writes dragged positions straight to the document, all moved nodes in one batch. */
+      /**
+       * Writes dragged positions straight to the document, all moved nodes in one batch, through
+       * the current view (011 FR-020/021: base positions in the base view, overrides elsewhere).
+       */
       onNodesChange: (changes: NodeChange[]) => {
         if (flowMode()) return;
         const moves = changes.flatMap((c) =>
@@ -268,11 +276,14 @@ export function useCanvasHandlers() {
             : [],
         );
         if (moves.length > 0) {
+          const viewId = readViewState(editor.doc).view.id;
+          const positions: Record<string, { x: number; y: number }> = {};
           editor.batch(() => {
             for (const { id, stickyId, x, y } of moves) {
-              if (stickyId !== null) editor.moveSticky(stickyId, { x, y });
-              else editor.update('nodes', id, { position: { x, y } });
+              if (stickyId !== null) moveStickyInView(editor, stickyId, { x, y });
+              else positions[id] = { x, y };
             }
+            if (Object.keys(positions).length > 0) editor.moveInView(viewId, positions);
           });
         }
         applySelectChanges(

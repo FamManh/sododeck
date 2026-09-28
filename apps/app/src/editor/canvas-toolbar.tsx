@@ -6,9 +6,11 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@sododeck/ui/components/dropdown-menu';
-import { Focus, StickyNote, Tag } from 'lucide-react';
+import { Focus, LayoutGrid, StickyNote, Tag, X } from 'lucide-react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { PinToggle } from './views/pin-controls';
+import { useTidyBlock, useTidyLayout } from './tidy-layout';
 
 /** Canvas header, top right (design 02/58): selection count and the Labels toggle. */
 export function CanvasToolbar() {
@@ -29,6 +31,8 @@ export function CanvasToolbar() {
           {count} selected
         </span>
       )}
+      <TidyLayoutControl />
+      <PinToggle />
       <Button
         variant="toggle"
         pressed={labelsOn}
@@ -82,5 +86,46 @@ export function CanvasToolbar() {
         </DropdownMenu>
       )}
     </div>
+  );
+}
+
+/**
+ * "Tidy layout" (011 FR-030–FR-036, design-analysis row 634 default): arranges the current view
+ * off the main thread. After 500 ms an indeterminate progress bar and Cancel replace the button.
+ */
+function TidyLayoutControl() {
+  const block = useTidyBlock();
+  const status = useUiStore((s) => s.layoutRun.status);
+  const { run, cancel } = useTidyLayout();
+  if (status === 'slow') {
+    return (
+      <div className="flex items-center gap-2 rounded-button bg-surface px-2.5 py-1 shadow-rest">
+        <div
+          role="progressbar"
+          aria-label="Tidying layout"
+          className="relative h-1 w-20 overflow-hidden rounded-full bg-surface-3"
+        >
+          <span className="sd-progress-indeterminate absolute inset-y-0 w-1/3 rounded-full bg-primary" />
+        </div>
+        <Button variant="ghost" size="sm" onClick={cancel}>
+          <X />
+          Cancel layout
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <Button
+      variant="secondary"
+      className="shadow-rest"
+      disabled={block !== null || status !== 'idle'}
+      title={block ?? 'Tidy layout: arrange this view, pinned components stay'}
+      onClick={() => {
+        void run();
+      }}
+    >
+      <LayoutGrid />
+      Tidy layout
+    </Button>
   );
 }

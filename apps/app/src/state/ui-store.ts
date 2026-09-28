@@ -132,10 +132,23 @@ export interface PendingDelete {
   readonly targets: readonly RemovalTarget[];
 }
 
+/** A Tidy layout run (011): `slow` after 500 ms shows the progress bar and Cancel. */
+export interface LayoutRun {
+  status: 'idle' | 'running' | 'slow';
+  viewId?: Id;
+}
+
 export interface UiState {
   selection: Selection;
+  /** The view this tab shows (011, FR-005); `null` = the first view. Never written to the deck. */
+  currentViewId: Id | null;
+  /**
+   * Components created in this view while its filters hide them: kept visible until the view is
+   * left, so a new component never vanishes under the pointer (011 spec edge case).
+   */
+  revealed: ReadonlySet<Id>;
+  layoutRun: LayoutRun;
   drill: readonly DrillFrame[];
-  collapsed: ReadonlySet<string>;
   focusMode: boolean;
   stickyEditing: Id | null;
   stickyDraft: Id | null;
@@ -179,11 +192,16 @@ export interface UiState {
     groups: ReadonlySet<Id>;
     stickies: ReadonlySet<Id>;
   }) => void;
+  /**
+   * Shows another view (011): clears selection, focus, drill-in, focus mode and revealed
+   * components. An open flow stays open. The caller fits the canvas and announces.
+   */
+  switchView: (id: Id) => void;
+  /** Keeps a just-created component visible in the current view (see `revealed`). */
+  reveal: (id: Id) => void;
+  setLayoutRun: (run: LayoutRun) => void;
   drillInto: (frame: DrillFrame) => void;
   drillUp: (depth?: number) => readonly DrillFrame[];
-  setCollapsed: (id: string, on: boolean) => void;
-  toggleCollapsed: (id: string) => void;
-  expandAll: (ids: readonly string[]) => void;
   setFocusMode: (on: boolean) => void;
   pruneView: (existing: { nodes: ReadonlySet<Id>; groups: ReadonlySet<Id> }) => void;
   setStickyEditing: (id: Id | null) => void;
@@ -263,6 +281,8 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
 export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], groups: [], stickies: [] };
 
 const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
+const NO_IDS: ReadonlySet<Id> = new Set();
+const IDLE_LAYOUT: LayoutRun = { status: 'idle' };
 
 export const LABELS_KEY = 'sododeck.labels';
 export const NOTES_KEY = 'sododeck.notes';
@@ -330,8 +350,10 @@ export const useUiStore = create<UiState>()((set, get) => {
   };
   return {
     selection: EMPTY_SELECTION,
+    currentViewId: null,
+    revealed: NO_IDS,
+    layoutRun: IDLE_LAYOUT,
     drill: [],
-    collapsed: new Set(),
     focusMode: false,
     stickyEditing: null,
     stickyDraft: null,
@@ -411,6 +433,25 @@ export const useUiStore = create<UiState>()((set, get) => {
         return patch;
       });
     },
+    switchView: (id) => {
+      set({
+        currentViewId: id,
+        selection: EMPTY_SELECTION,
+        drill: [],
+        focusMode: false,
+        focusedId: null,
+        focusedEdgeId: null,
+        popover: null,
+        revealed: NO_IDS,
+        descriptionMode: NO_MODES,
+      });
+    },
+    reveal: (id) => {
+      set(({ revealed }) => ({ revealed: new Set([...revealed, id]) }));
+    },
+    setLayoutRun: (layoutRun) => {
+      set({ layoutRun });
+    },
     drillInto: (frame) => {
       set((state) => ({
         drill: [...state.drill, frame],
@@ -426,34 +467,11 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({ drill: drill.slice(0, nextDepth) });
       return popped;
     },
-    setCollapsed: (id, on) => {
-      set((state) => {
-        const next = new Set(state.collapsed);
-        if (on) next.add(id);
-        else next.delete(id);
-        return { collapsed: next };
-      });
-    },
-    toggleCollapsed: (id) => {
-      set((state) => {
-        const next = new Set(state.collapsed);
-        if (!next.delete(id)) next.add(id);
-        return { collapsed: next };
-      });
-    },
-    expandAll: (ids) => {
-      set((state) => {
-        const next = new Set(state.collapsed);
-        for (const id of ids) next.delete(id);
-        return { collapsed: next };
-      });
-    },
     setFocusMode: (focusMode) => {
       set({ focusMode });
     },
     pruneView: (existing) => {
       set((state) => ({
-        collapsed: new Set([...state.collapsed].filter((id) => existing.groups.has(id))),
         drill: state.drill.filter((frame) =>
           frame.kind === 'group' ? existing.groups.has(frame.id) : existing.nodes.has(frame.id),
         ),
@@ -692,13 +710,15 @@ export const useUiStore = create<UiState>()((set, get) => {
     resetForDeck: () => {
       set({
         selection: EMPTY_SELECTION,
+        currentViewId: null,
+        revealed: NO_IDS,
+        layoutRun: IDLE_LAYOUT,
         stickyEditing: null,
         stickyDraft: null,
         focusedId: null,
         focusedEdgeId: null,
         outlineCollapsed: new Set(),
         drill: [],
-        collapsed: new Set(),
         focusMode: false,
         popover: null,
         pendingDelete: null,

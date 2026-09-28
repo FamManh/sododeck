@@ -1,10 +1,15 @@
 import { Button } from '@sododeck/ui/components/button';
 
+import type { SododeckFile } from '@sododeck/schema';
+
 import { useUiStore } from '../state/ui-store';
+import { currentViewCrumb } from './views/view-title';
 
 export interface DrillDeck {
   groups: { id: string; title: string }[];
   nodes: { id: string; title: string }[];
+  /** The deck's views: the first crumb names the current one (011 FR-004). */
+  views?: SododeckFile['views'];
 }
 
 function frameTitle(deck: DrillDeck, frame: { kind: 'group' | 'node'; id: string }): string {
@@ -17,17 +22,19 @@ function frameTitle(deck: DrillDeck, frame: { kind: 'group' | 'node'; id: string
 export function DrillCrumbs({ deck }: { deck: DrillDeck }) {
   const drill = useUiStore((state) => state.drill);
   const drillUp = useUiStore((state) => state.drillUp);
+  const currentViewId = useUiStore((state) => state.currentViewId);
+  const viewCrumb = currentViewCrumb(deck.views, currentViewId);
 
   return (
     <>
       <span aria-hidden>/</span>
       {drill.length === 0 ? (
         <span aria-current="page" className="text-ink">
-          System view
+          {viewCrumb}
         </span>
       ) : (
         <Button variant="ghost" size="sm" className="px-1.5 font-normal" onClick={() => drillUp(0)}>
-          System view
+          {viewCrumb}
         </Button>
       )}
       {drill.map((frame, index) => {

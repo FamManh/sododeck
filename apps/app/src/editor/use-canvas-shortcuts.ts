@@ -37,6 +37,14 @@ import { effectiveLevel, levelForZoom } from './levels';
 import { useSaveControls } from './save-context';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
+import {
+  collapsedOf,
+  moveStickyInView,
+  readViewState,
+  toggleGroupCollapsed,
+} from './views/use-current-view';
+import { viewCrumbTitle } from './views/view-title';
+import { drillScopeTitle } from './outline';
 
 export { isTextTarget };
 
@@ -75,17 +83,6 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
     : `${GROUP_NODE_PREFIX}${groupId}`;
 }
 
-function scopeTitle(
-  deck: ReturnType<typeof readDeck>,
-  drill: readonly { kind: 'group' | 'node'; id: string }[],
-): string {
-  const current = drill.at(-1);
-  if (current === undefined) return 'System view';
-  if (current.kind === 'group')
-    return deck.groups.find((group) => group.id === current.id)?.title ?? 'System view';
-  return deck.nodes.find((node) => node.id === current.id)?.title ?? 'System view';
-}
-
 /** Focuses the inspector's title field once the inspector shows the selected node. */
 function focusInspectorTitle(): void {
   setTimeout(() => {
@@ -104,8 +101,10 @@ export function useCanvasKeyDown() {
     (event: ReactKeyboardEvent) => {
       if (event.defaultPrevented || isTextTarget(event.target)) return;
       const ui = useUiStore.getState();
-      const deck = readDeck(editor.doc);
-      const graph = visibleGraph(deck, scopeOf(ui.drill), ui.collapsed);
+      // Geometry and targets as the current view draws them (011).
+      const deck = readViewState(editor.doc).deck;
+      const collapsed = collapsedOf(editor.doc);
+      const graph = visibleGraph(deck, scopeOf(ui.drill), collapsed);
       const key = event.key;
       const session = ui.flowSession;
 
@@ -193,7 +192,7 @@ export function useCanvasKeyDown() {
         ui.focusedId ??
         (ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : undefined) ??
         (ui.selection.groups.length === 1
-          ? selectionForFocusedGroup(ui.collapsed, ui.selection.groups[0] ?? '')
+          ? selectionForFocusedGroup(collapsed, ui.selection.groups[0] ?? '')
           : undefined) ??
         null;
       const selectedSticky =
@@ -241,7 +240,7 @@ export function useCanvasKeyDown() {
               : direction === 'left'
                 ? { x: -step, y: 0 }
                 : { x: step, y: 0 };
-        editor.moveSticky(selectedSticky, { x: point.x + delta.x, y: point.y + delta.y });
+        moveStickyInView(editor, selectedSticky, { x: point.x + delta.x, y: point.y + delta.y });
         return;
       }
       if (direction) {
@@ -304,7 +303,7 @@ export function useCanvasKeyDown() {
           if (groupId !== null) ui.select({ groups: [groupId] });
           else ui.select({ nodes: [next] });
         }
-        ui.focus(groupId === null ? next : selectionForFocusedGroup(ui.collapsed, groupId));
+        ui.focus(groupId === null ? next : selectionForFocusedGroup(collapsed, groupId));
         return;
       }
 
@@ -313,8 +312,7 @@ export function useCanvasKeyDown() {
           const groupId = current === null ? null : groupIdOf(current);
           if (groupId === null) return;
           event.preventDefault();
-          const nextCollapsed = !ui.collapsed.has(groupId);
-          ui.toggleCollapsed(groupId);
+          const nextCollapsed = toggleGroupCollapsed(editor, groupId);
           if (!flowMode) ui.select({ groups: [groupId] });
           ui.focus(
             nextCollapsed ? `${COLLAPSED_NODE_PREFIX}${groupId}` : `${GROUP_NODE_PREFIX}${groupId}`,
@@ -345,7 +343,7 @@ export function useCanvasKeyDown() {
             if (nodeId !== undefined) ui.focus(nodeId);
           } else {
             const groupId = ui.selection.groups[0];
-            if (groupId !== undefined) ui.focus(selectionForFocusedGroup(ui.collapsed, groupId));
+            if (groupId !== undefined) ui.focus(selectionForFocusedGroup(collapsed, groupId));
           }
           ui.setFocusMode(true);
           return;
@@ -363,7 +361,7 @@ export function useCanvasKeyDown() {
             const index = ownMerged.findIndex((edge) => edge.id === ui.focusedEdgeId);
             const edge = ownMerged[(index + 1) % ownMerged.length];
             if (edge === undefined) return;
-            ui.focus(selectionForFocusedGroup(ui.collapsed, groupId));
+            ui.focus(selectionForFocusedGroup(collapsed, groupId));
             ui.focusEdge(edge.id);
             const titles = new Map(deck.groups.map((group) => [group.id, group.title]));
             const nameOf = (id: string) =>
@@ -512,7 +510,13 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
           if (groups.length === 0 && ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
-            ui.announce(`Back to ${scopeTitle(readDeck(editor.doc), useUiStore.getState().drill)}`);
+            ui.announce(
+              `Back to ${drillScopeTitle(
+                readDeck(editor.doc),
+                useUiStore.getState().drill,
+                viewCrumbTitle(readViewState(editor.doc).view),
+              )}`,
+            );
             return;
           }
           if (groups.length > 0) {
@@ -535,7 +539,13 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
           if (ui.drill.length === 0) return;
           event.preventDefault();
           ui.drillUp();
-          ui.announce(`Back to ${scopeTitle(readDeck(editor.doc), useUiStore.getState().drill)}`);
+          ui.announce(
+            `Back to ${drillScopeTitle(
+              readDeck(editor.doc),
+              useUiStore.getState().drill,
+              viewCrumbTitle(readViewState(editor.doc).view),
+            )}`,
+          );
           return;
         }
         ui.clearSelection();

@@ -99,8 +99,11 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
     const object: ObjectRef = { scope: 'views', id: view.id };
     check(object, 'feature', view.feature, features, 'feature');
     for (const id of view.includes ?? []) check(object, 'includes', id, nodes, 'node');
+    for (const id of view.excludeGroups ?? []) check(object, 'excludeGroups', id, groups, 'group');
     for (const id of Object.keys(view.positions ?? {}))
       check(object, 'positions', id, nodes, 'node');
+    for (const id of view.pinned ?? []) check(object, 'pinned', id, nodes, 'node');
+    for (const id of view.collapsed ?? []) check(object, 'collapsed', id, groups, 'group');
   }
   for (const flow of file.flows) {
     check({ scope: 'flows', id: flow.id }, 'feature', flow.feature, features, 'feature');

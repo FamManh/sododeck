@@ -110,6 +110,18 @@
   opacity: 1;
 }
 
+/* Saved views (011 FR-013, design 20): components the view dims stay interactive and read "dimmed
+   in this view"; hovering or focusing one shows it at full strength. */
+.react-flow__node.view-dimmed {
+  opacity: var(--sd-opacity-view-dim);
+  transition: opacity var(--sd-dur-dim);
+}
+
+.react-flow__node.view-dimmed:hover,
+.react-flow__node.view-dimmed:focus-within {
+  opacity: 1;
+}
+
 /* Focus mode (010 FR-030): only the selected component/group and direct neighbours stay bright.
    Labels render in a separate HTML layer, so they need their own selectors. */
 [data-focus-mode] .react-flow__node,
@@ -159,4 +171,25 @@
 
 .sd-flow-inside-dot {
   animation: sd-flow-inside-dot var(--sd-dur-dim) ease-in-out infinite;
+}
+
+/* Tidy layout progress (011 FR-032): indeterminate; static under reduced motion. */
+@keyframes sd-progress-indeterminate {
+  0% {
+    left: -33%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+.sd-progress-indeterminate {
+  animation: sd-progress-indeterminate 1.2s var(--sd-ease) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-progress-indeterminate {
+    animation: none;
+    left: 33%;
+  }
 }

@@ -51,6 +51,9 @@
   --sd-shadow: rgba(0, 0, 0, 0.06);
   --sd-shadow-tour: rgba(0, 0, 0, 0.25);
 
+  /* Components a saved view dims, e.g. clients in Infra (design 20, 011 FR-013). */
+  --sd-opacity-view-dim: 0.4;
+
   /* Motion (short and calm: no bounce, no overshoot). Mirrored in src/lib/motion.ts. */
   --sd-dur-hover: 150ms;
   --sd-dur-dim: 250ms;

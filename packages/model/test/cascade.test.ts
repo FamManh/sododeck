@@ -387,3 +387,53 @@ describe('delete cascade (US3, FR-011–018)', () => {
     expect(editor.canUndo()).toBe(false);
   });
 });
+
+describe('view references (011, FR-061)', () => {
+  const viewDeck: SododeckFile = {
+    ...deck,
+    views: [
+      { id: 'v', type: 'system', title: 'V', pinned: ['n', 'a'], collapsed: ['inner'] },
+      {
+        id: 'w',
+        type: 'custom',
+        title: 'W',
+        excludeGroups: ['inner', 'loose'],
+        collapsed: ['inner', 'outer'],
+        pinned: ['a'],
+      },
+      { id: 'x', type: 'custom', title: 'X', excludeGroups: ['loose'] },
+    ],
+  };
+
+  it('node: leaves pinned in every view', () => {
+    removeAndUndo(
+      (editor) => editor.remove('nodes', 'n'),
+      (out, result) => {
+        expect(out.views[0]?.pinned).toEqual(['a']);
+        expect(out.views[1]?.pinned).toEqual(['a']);
+        expect(result.updated).toContainEqual({ scope: 'views', id: 'v' });
+        expect(result.updated).not.toContainEqual({ scope: 'views', id: 'w' });
+      },
+      viewDeck,
+    );
+  });
+
+  it('group: leaves excludeGroups and collapsed in every view, dropping empty lists', () => {
+    removeAndUndo(
+      (editor) => editor.remove('groups', 'inner'),
+      (out, result) => {
+        expect(out.views[0]).not.toHaveProperty('collapsed');
+        expect(out.views[1]).toMatchObject({ excludeGroups: ['loose'], collapsed: ['outer'] });
+        expect(result.updated).toEqual(
+          expect.arrayContaining([
+            { scope: 'views', id: 'v' },
+            { scope: 'views', id: 'w' },
+          ]),
+        );
+        expect(result.updated).not.toContainEqual({ scope: 'views', id: 'x' });
+        expect(checkIntegrity(out)).toEqual([]);
+      },
+      viewDeck,
+    );
+  });
+});

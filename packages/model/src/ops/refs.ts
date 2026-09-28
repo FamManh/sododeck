@@ -30,7 +30,11 @@ export function refsOf(c: Collection, field: string, value: unknown): Ref[] {
     case 'flows.feature':
       return one('features');
     case 'views.includes':
+    case 'views.pinned':
       return many('nodes');
+    case 'views.excludeGroups':
+    case 'views.collapsed':
+      return many('groups');
     case 'views.positions':
       return isRecord(value)
         ? Object.keys(value).map((id) => ({ path: `${field}.${id}`, id, target: 'nodes' as const }))

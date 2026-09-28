@@ -73,6 +73,19 @@ describe('buildPaletteResults', () => {
     ]);
   });
 
+  it('marks components hidden in the current view in text (011 FR-016)', () => {
+    const deck = searchDeckFixture();
+    const results = buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query: 'order service',
+      commands: [],
+      hidden: new Set(['svc']),
+    });
+    const node = results.items.find((item) => item.id === 'svc');
+    expect(node?.meta).toMatch(/ · Hidden in this view$/);
+  });
+
   it('limits rows to 50 and reports the overflow text', () => {
     const deck = searchDeckFixture();
     deck.flows = Array.from({ length: 60 }, (_, index) => ({
