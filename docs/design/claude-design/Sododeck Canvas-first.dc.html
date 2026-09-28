@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="./sododeck-data.js"></script>
+<script src="./sododeck-states.js"></script>
+<script src="./sododeck-canvas.js"></script>
+<style>html,body{margin:0;background:#dcdcd8;font-family:'Geist',system-ui,sans-serif;color:#1c1c1a}*{box-sizing:border-box}a{color:#d9560f}a:hover{color:#b3480c}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:56px;width:3080px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:1200px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em">Sododeck · canvas-first editor (86–116)</div>
+    <div style="font-size:15px;color:#55554f;line-height:1.5;text-wrap:pretty">Backlog 016–020. The canvas fills the window and the editor chrome floats over it in small islands. Panel content is the same as in 1–85; only its placement changes, plus new on-canvas controls. Frames are 1440×900 (116 is 1024×768), light on the left and dark on the right. One section renders at a time.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><sc-for list="{{ toc }}" as="t"><div onClick="{{ t.pick }}" style="{{ t.st }}">{{ t.t }}</div></sc-for><a href="#inventory" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">Component inventory ↓</a></div>
+  </div>
+  <sc-for list="{{ sections }}" as="sec" hint-placeholder-count="1">
+    <div id="{{ sec.anchor }}" style="display:flex;flex-direction:column;gap:40px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-top:1px solid #c9c9c2;padding-top:24px"><span style="font:500 13px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:4px 9px">{{ sec.id }}</span><span style="font-size:26px;font-weight:500;letter-spacing:-.02em">{{ sec.title }}</span></div>
+      <sc-for list="{{ sec.rows }}" as="r">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;gap:48px">
+            <sc-if value="{{ r.showL }}"><div id="{{ r.idL }}" style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500"><span style="font:500 12.5px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:3px 8px">{{ r.id }}</span>{{ r.title }} · light</div>
+              <div style="{{ r.fst }}"><dc-import name="Sododeck Canvas State" state="{{ r.id }}" theme="light" style="{{ r.sz }}" hint-size="1440px,900px"></dc-import></div>
+            </div></sc-if>
+            <sc-if value="{{ r.showD }}"><div id="{{ r.idD }}" style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500"><span style="font:500 12.5px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:3px 8px">{{ r.id }}</span>{{ r.title }} · dark</div>
+              <div style="{{ r.fst }}"><dc-import name="Sododeck Canvas State" state="{{ r.id }}" theme="dark" style="{{ r.sz }}" hint-size="1440px,900px"></dc-import></div>
+            </div></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;background:#fff;border-radius:14px;padding:18px 22px;font-size:15px;line-height:1.5;max-width:2928px">
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">USER DID</div><div style="text-wrap:pretty">{{ r.did }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">WHAT CHANGED</div><div style="text-wrap:pretty">{{ r.changed }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">KEYBOARD</div><div style="text-wrap:pretty">{{ r.keys }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:4px">EDGE CASES · CONTRAST</div><div style="text-wrap:pretty">{{ r.edge }}</div></div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+  <div id="inventory" style="display:flex;flex-direction:column;gap:24px;border-top:1px solid #c9c9c2;padding-top:24px;max-width:2928px">
+    <div style="font-size:26px;font-weight:500;letter-spacing:-.02em">Component inventory · canvas-first additions</div>
+    <div style="font-size:15px;color:#55554f;line-height:1.5;max-width:1400px;text-wrap:pretty">All sizes in px at 100% UI scale. Every interactive element uses the shared focus ring (2px Deck Orange, 2px offset; −2px inside menus and popovers). Disabled = 40% opacity for icon buttons, Muted text for menu rows; neither reacts to hover. Motion: flyouts, drawer and popovers 120 ms fade + 4px slide, no bounce; instant with reduced motion.</div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px">
+      <sc-for list="{{ inv }}" as="c">
+        <div style="background:#fff;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:10px;font-size:14.5px;line-height:1.5">
+          <div style="font-size:16px;font-weight:600">{{ c.name }}</div>
+          <sc-for list="{{ c.lines }}" as="l"><div style="display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px"><span style="font-size:11.5px;letter-spacing:.07em;color:#72726b;font-weight:500;padding-top:3px">{{ l.k }}</span><span style="text-wrap:pretty">{{ l.v }}</span></div></sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#fff;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+      <div style="font-size:16px;font-weight:600">Card-colour tokens · light / dark pairs</div>
+      <div style="font-size:14.5px;color:#55554f;line-height:1.5;max-width:1400px;text-wrap:pretty">Fill tokens sit behind Ink text in both themes (≥ 12:1). On a coloured fill the subtitle switches from Muted to Secondary to stay above 4.5:1. Stroke tokens are 1.5px card borders and swatch rings. Custom deck colours are stored as hex; text flips to white below 0.18 relative luminance.</div>
+      <div style="display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:12px">
+        <sc-for list="{{ cards }}" as="k">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:13px;font-weight:500">{{ k.name }}</div>
+            <div style="{{ k.l }}"><span style="font-size:12px;font-weight:500">Aa light</span></div>
+            <div style="{{ k.d }}"><span style="font-size:12px;font-weight:500">Aa dark</span></div>
+            <div style="font:400 10.5px/1.5 'Geist Mono',monospace;color:#55554f;word-break:break-all">{{ k.tok }}</div>
+            <div style="font:400 10.5px/1.5 'Geist Mono',monospace;color:#72726b">{{ k.vals }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="font-size:14px;color:#55554f;line-height:1.5;max-width:1400px;text-wrap:pretty">DESIGN.md changes: “Three-panel editor” becomes “Canvas-first editor”; panel widths (264 / 336 / JSON 212) are replaced by the island, flyout (280), drawer (360, 320–560) and JSON overlay (268) values above. The selection style moves from border + halo to the 2px outside frame so it reads on coloured cards; flow-step cards keep the 1.5px orange border + halo. Narrow (1024–1279) is now designed (116).</div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;section&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;,&quot;D&quot;],&quot;default&quot;:&quot;A&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;themes&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { ok: !!window.SODO_CV };
+  componentDidMount() { if (!this.state.ok) this.t = setInterval(() => { if (window.SODO_CV) { clearInterval(this.t); this.setState({ ok: true }); } }, 80); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const CVX = window.SODO_CV;
+    const L = CVX ? CVX.LIST : [];
+    const T = { A: 'Shell', B: 'Card quick-edit', C: 'Card colours', D: 'Editing affordances' };
+    const cur = this.state.sec || this.props.section || 'A';
+    const th = this.props.themes || 'both';
+    const sections = ['A', 'B', 'C', 'D'].filter(id => id === cur).map(id => ({ id, anchor: 'sec-' + id, title: T[id], rows: L.filter(r => r.sec === id).map(r => ({ ...r, idL: r.id + '-' + r.slug + '-light', idD: r.id + '-' + r.slug + '-dark', showL: th !== 'dark', showD: th !== 'light', sz: { width: r.vw, height: r.vh }, fst: { width: r.vw, height: r.vh, borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,.08)' } })) }));
+    const toc = ['A', 'B', 'C', 'D'].map(id => { const ids = L.filter(r => r.sec === id).map(r => r.id); return { t: id + ' · ' + T[id] + ' (' + (ids.length ? ids[0] + '–' + ids[ids.length - 1] : '') + ')', pick: () => this.setState({ sec: id }), st: { fontSize: 13, padding: '7px 13px', borderRadius: 999, cursor: 'pointer', background: id === cur ? '#1c1c1a' : '#fff', color: id === cur ? '#fff' : '#1c1c1a', fontWeight: id === cur ? 500 : 400 } }; });
+    const I = (name, rows) => ({ name, lines: rows.map(([k, v]) => ({ k, v })) });
+    const inv = [
+      I('Island', [['SIZE', '44 tall, 4 padding, 2 gap between items; 12 from the viewport edges.'], ['TOKENS', 'Surface fill, 1px Hairline, 12 radius, Rest shadow (0 1px 2px Shadow).'], ['CONTENT', 'Deck island: ≡ 34 · name 13.5/500 · save icon 15 · 1px divider · segmented views (28 items). Tools island: Jump to 176 field · Labels · Focus · theme · Export (primary 34).'], ['STATES', 'F6 focus: 2px orange ring on the island, then Tab inside. Compact under 1280: labels drop, views become a dropdown.']]),
+      I('Rail button', [['SIZE', '38×38 in a 48-wide rail, 8 radius, icon 18. Dividers 22×1 with 4 margin. Undo/Redo in a separate island 8 below.'], ['TOKENS', 'Icon Secondary. Hover Surface 2. Active tool / open flyout: Orange Soft fill + Orange Ink icon.'], ['STATES', 'Pressed: Surface 3. Focus ring 2px offset 2. Disabled (Redo with no history) 40% opacity.'], ['TOOLTIP', 'Inverse, 8 radius, 12/500 label + Mono shortcut at 72%, 8 right of the rail, 400 ms delay.']]),
+      I('Flyout', [['SIZE', '280 wide, left 68 (rail + 8), top 68, up to viewport − 80. Header 46: title 13.5/500, pin 28, close 28.'], ['TOKENS', 'Surface, 1px Hairline, 12 radius, Float shadow. Rows 30–32, 8 radius, selected Orange Soft.'], ['STATES', 'One open at a time. Pinned: pin button Orange Soft; stays open on canvas clicks. Esc closes (first Esc clears a filter).'], ['CONTENT', 'Palette (search + 124×78 kind tiles with number keys), Outline tree, Flows & features, Rules list.']]),
+      I('Detail drawer', [['SIZE', '360 default, 320–560 via the left grip (4×48 Border pill, orange on hover/drag). Right 12, top 68, bottom 12.'], ['TOKENS', 'Surface, Float shadow, 12 radius. Header 68: 40 kind tile, 15/500 title, 11.5 muted subline, More, Close.'], ['CONTENT', 'Component, connection, group, bulk and flow-step inspectors from 1–85; sections 13/16 padding with hairlines.'], ['STATES', 'Overlays the canvas; the canvas pans to keep the selection clear, never resizes. Esc closes and returns focus to the card.']]),
+      I('Selection toolbar', [['SIZE', '44 tall, 4 padding, 34 buttons, 1×20 dividers. 12 above the selection frame; flips 12 below when it would reach y < 68.'], ['TOKENS', 'Surface, 1px Hairline, 12 radius, shadow 0 4px 16px Shadow.'], ['STATES', 'Button hover Surface 2; open popover Orange Soft + Orange Ink; focus ring; disabled 40%. Hidden while dragging, resizing, editing text and in Hide UI.'], ['VARIANTS', 'Component · Multi (count, Align, Group) · Connection (Label, Protocol, Direction, Reset route) · Group (Rename, Ungroup, Collapse, Select members).']]),
+      I('Toolbar popover', [['SIZE', '236–272 wide, 6 below the toolbar, aligned to its button’s left edge. 6–8 padding, rows 30.'], ['TOKENS', 'Surface, 1px Hairline, 12 radius, shadow 0 12px 32px Shadow. Filter field 32 on Surface 2.'], ['STATES', 'Row hover Surface 2; selected Orange Soft + check icon; partial tag = dashed 1px Secondary chip with n/N.'], ['KEYS', 'Opens with ⏎/Space, focus on the filter; ↑↓ rows; Esc closes back to its button.']]),
+      I('Context menu', [['SIZE', 'Min 232–252 wide, 6 padding, rows 30 with 7 radius, 13px labels, Mono 10.5 shortcuts right-aligned. Full-bleed 1px dividers with 5 margin.'], ['TOKENS', 'Surface, 1px Hairline, 12 radius, 0 12px 32px Shadow.'], ['STATES', 'Hover / open submenu Surface 2. Keyboard focus Surface 2 + inset 2px ring. Disabled Muted, no hover. Danger Clay + trash icon.'], ['SUBMENU', 'Opens right with −6 overlap, aligned to its row; flips left/up near edges.']]),
+      I('Colour popover · swatch', [['SIZE', '272 wide. Swatch 28 circle, 8 gap, 7 per row. Fill / Stroke tabs 26. No colour 32. Picker: 118 saturation box, 8 hue bar, 32 hex field + Add.'], ['TOKENS', 'Swatch fill = card fill token, 1px ring = card stroke token.'], ['STATES', 'Selected: 2px Surface gap + 2px orange ring + check (never colour alone). Hover: tooltip with the name. Custom swatch hover/focus: 16px inverse × badge, ⌫ removes. + dashed 1px Border; pressed Orange Soft.'], ['LIMITS', '12 custom colours per deck; + hides when full.']]),
+      I('Selection frame · resize handle', [['FRAME', '2px Deck Orange outline, 2px outside the card border (works on any fill, including orange). Multi-selection: 1px orange rounded frame 10 outside the union.'], ['HANDLE', '8×8, 2 radius, Surface fill, 1.5px orange. Active: orange fill. Hit area 16. 8 per single selection.'], ['READOUT', 'Inverse pill, Mono 11, 22 tall, 10 from the dragged corner: “W × H”.'], ['STATES', 'Hover handle: Orange Soft fill + resize cursor. Min card 120×44; 4px size steps.']]),
+      I('Segment · endpoint handles', [['SEGMENT', '10×24 (vertical) or 24×10, 5 radius, orange fill with 2px Surface ring while dragging; at rest Surface fill + 1.5px orange. ew / ns cursor.'], ['ENDPOINT', '12 circle, 2px orange, Surface fill.'], ['SIDE TARGET', '10 circle Surface + 1.5px orange on each side midpoint of the hovered card; nearest grows to 14 orange with 4px Orange Soft halo.'], ['PATHS', 'Live path 2px orange dash 6 4; old route Muted dash 4 4 at 55%.']]),
+      I('Snap guide · marquee', [['GUIDE', '1px Deck Orange hairline across aligned cards, shown within 6 screen px. Distance label: Mono 10.5 on an orange pill (18 tall) with On Primary text; gap ticks 1px dashed orange.'], ['MARQUEE', '1px orange border, 2 radius, fill orange at 7% (9% dark). Count chip inverse 22 at the cursor.'], ['DROP TARGET', 'Group gets 1.5px dashed orange border, 7% orange fill, “Drop into …” chip in orange, and a dashed slot where the card lands.'], ['HINT BAR', 'Inverse pill 30 tall, bottom-centre, Mono key caps on 28% grey.']]),
+      I('Card on colour', [['FILL', 'Background = --card-{name}-fill; border stays Border unless a stroke is set.'], ['STROKE', '1.5px --card-{name}-stroke.'], ['TEXT', 'Title Ink 12.5/500, subtitle Secondary 11 (Muted on plain cards). Rules glyph Amber Ink; white on dark customs.'], ['STATES', 'Selected = outside frame. Flow = 1.5px orange border + 3px Orange Soft halo + step badge. Error = dashed Clay ring 3px outside + Clay alert badge. Dim .22.']])
+    ];
+    const cards = CVX ? CVX.CARDS.map(c => ({ name: c.n[0].toUpperCase() + c.n.slice(1), tok: '--card-' + c.n + '-fill / -stroke', vals: 'L ' + c.lf.replace('oklch', '') + ' · ' + c.ls.replace('oklch', '') + '  D ' + c.df.replace('oklch', '') + ' · ' + c.ds.replace('oklch', ''), l: { height: 44, borderRadius: 10, background: c.lf, border: '1.5px solid ' + c.ls, color: '#1c1c1a', display: 'flex', alignItems: 'center', padding: '0 10px' }, d: { height: 44, borderRadius: 10, background: c.df, border: '1.5px solid ' + c.ds, color: '#ededea', display: 'flex', alignItems: 'center', padding: '0 10px' } })) : [];
+    return { sections, toc, inv, cards };
+  }
+}
+</script>
+</body>
+</html>
