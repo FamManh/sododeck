@@ -6,7 +6,7 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { Branch, Rule, SododeckFile, Step, Sticky } from '@sododeck/schema';
+import type { Branch, Rule, SododeckFile, Step, Sticky, ViewType } from '@sododeck/schema';
 
 import { defaultNewId, makeIdAllocator } from './ids';
 import { getObject } from './deck';
@@ -53,6 +53,15 @@ import {
   unpinSticky,
 } from './ops/stickies';
 import type { NewObject, NewRule, NewStep, Patch } from './ops/types';
+import {
+  addView,
+  moveInView,
+  removeView,
+  setCollapsed,
+  setPinned,
+  updateView,
+  type ViewSettingsPatch,
+} from './ops/views';
 
 export interface EditorOptions {
   /** Typing-burst window in ms: edits to one object closer than this are one undo step. */
@@ -164,6 +173,31 @@ export interface DeckEditor {
   moveSticky(id: Id, point: Point): void;
 
   /**
+   * Moves nodes in a view (011, FR-020/021). In the base view (the first) this writes
+   * `node.position` and drops that view's own entry for the node; in other views it writes
+   * `view.positions`. Unknown node ids are skipped. Merges inside a gesture or batch.
+   * A deck without stored views first stores the presets, outside undo history (FR-001).
+   */
+  moveInView(viewId: Id, positions: Readonly<Record<Id, Point>>): void;
+  /** Pins or unpins nodes in one view (FR-022). One undo step; `missing-reference` for unknown nodes. */
+  setPinned(viewId: Id, nodeIds: readonly Id[], pinned: boolean): void;
+  /**
+   * Changes a view's title and settings; `undefined` or `[]` removes a field. Blank titles and
+   * bad kinds are `invalid`; unknown groups or features are `missing-reference`. A title typing
+   * burst is one undo step.
+   */
+  updateView(viewId: Id, patch: ViewSettingsPatch): void;
+  /** Appends a view ("Custom <n>", type `custom`, by default) and returns its id. */
+  addView(data?: { title?: string; type?: ViewType }): Id;
+  /** Deletes a view; the last one is refused (`invalid`). Undo restores every field. */
+  removeView(viewId: Id): RemovalResult;
+  /**
+   * Collapses or expands a group in a view (FR-050). Saved and synced (reported as `local`),
+   * but never an undo step: `canUndo()` does not change and undo never touches it.
+   */
+  setCollapsed(viewId: Id, groupId: Id, collapsed: boolean): void;
+
+  /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
    * Nested batches flatten. Each operation inside still validates before it writes, but Yjs cannot
    * roll back: if `fn` throws halfway, the edits made before the throw stay applied.
@@ -190,6 +224,10 @@ export interface DeckEditor {
 export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEditor {
   const origin = { editor: 'sododeck' };
   editorOrigins.add(origin);
+  // Second origin for view state that is saved and synced but never undone (collapse, preset
+  // materialization; research R5). Registered as local, deliberately not in `trackedOrigins`.
+  const untrackedOrigin = { editor: 'sododeck', untracked: true };
+  editorOrigins.add(untrackedOrigin);
 
   const undoManager = new Y.UndoManager(rootTypes(doc), {
     trackedOrigins: new Set([origin]),
@@ -239,6 +277,13 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       doc.transact(() => {
         result = fn();
       }, origin);
+      return result as ReturnType<typeof fn>;
+    },
+    transactUntracked: (fn) => {
+      let result: ReturnType<typeof fn> | undefined;
+      doc.transact(() => {
+        result = fn();
+      }, untrackedOrigin);
       return result as ReturnType<typeof fn>;
     },
     allocate: (prefix, reserved) => ids.allocate(prefix, reserved),
@@ -355,6 +400,20 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     moveSticky: (id, point) => {
       moveSticky(ctx, id, point);
     },
+    moveInView: (viewId, positions) => {
+      moveInView(ctx, viewId, positions);
+    },
+    setPinned: (viewId, nodeIds, pinned) => {
+      setPinned(ctx, viewId, nodeIds, pinned);
+    },
+    updateView: (viewId, patch) => {
+      updateView(ctx, viewId, patch);
+    },
+    addView: (data) => addView(ctx, data),
+    removeView: (viewId) => removeView(ctx, viewId),
+    setCollapsed: (viewId, groupId, collapsed) => {
+      setCollapsed(ctx, viewId, groupId, collapsed);
+    },
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {
@@ -388,6 +447,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       undoManager.destroy();
       ids.destroy();
       editorOrigins.delete(origin);
+      editorOrigins.delete(untrackedOrigin);
     },
   };
 }

@@ -132,9 +132,10 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
   for (const view of collectionArray(doc, 'views')) {
     const positions = view.get('positions');
     const inPositions = positions instanceof Y.Map && positions.has(id);
-    if (listHas(view, 'includes', id) || inPositions) {
+    if (listHas(view, 'includes', id) || listHas(view, 'pinned', id) || inPositions) {
       cascade.update({ scope: 'views', id: idOf(view) }, () => {
         removeFromList(view, 'includes', id, false);
+        removeFromList(view, 'pinned', id, true);
         if (inPositions) positions.delete(id);
       });
     }
@@ -174,6 +175,15 @@ function removeGroup(cascade: Cascade, doc: DeckDoc, group: YObject): void {
   for (const child of collectionArray(doc, 'groups')) {
     if (child.get('parent') === id) {
       cascade.update({ scope: 'groups', id: idOf(child) }, repoint(child, 'parent'));
+    }
+  }
+  // Per-view lists (011): undo of the delete restores them with the group (FR-050).
+  for (const view of collectionArray(doc, 'views')) {
+    if (listHas(view, 'excludeGroups', id) || listHas(view, 'collapsed', id)) {
+      cascade.update({ scope: 'views', id: idOf(view) }, () => {
+        removeFromList(view, 'excludeGroups', id, true);
+        removeFromList(view, 'collapsed', id, true);
+      });
     }
   }
 }

@@ -215,6 +215,47 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
     ]);
   });
 
+  it('view → missing pinned node, excluded group or collapsed group (011)', () => {
+    expect(
+      problems({
+        nodes: [node('a')],
+        groups: [{ id: 'g', title: 'G' }],
+        views: [
+          {
+            id: 'v',
+            type: 'custom',
+            title: 'V',
+            pinned: ['a', 'b'],
+            excludeGroups: ['g', 'h'],
+            collapsed: ['g', 'k'],
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        kind: 'missing-reference',
+        object: { scope: 'views', id: 'v' },
+        field: 'excludeGroups',
+        target: 'h',
+        targetType: 'group',
+      },
+      {
+        kind: 'missing-reference',
+        object: { scope: 'views', id: 'v' },
+        field: 'pinned',
+        target: 'b',
+        targetType: 'node',
+      },
+      {
+        kind: 'missing-reference',
+        object: { scope: 'views', id: 'v' },
+        field: 'collapsed',
+        target: 'k',
+        targetType: 'group',
+      },
+    ]);
+  });
+
   it('step → branch that is not a branch of its flow (006)', () => {
     expect(
       problems({

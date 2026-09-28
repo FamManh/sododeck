@@ -107,6 +107,39 @@ const perType: [string, SododeckFile][] = [
       ],
     },
   ],
+  [
+    'view with every 011 field',
+    {
+      ...empty,
+      nodes: [
+        { id: 'a', type: 'client', title: 'A', tags: ['legacy'] },
+        { id: 'b', type: 'service', title: 'B', group: 'g' },
+      ],
+      groups: [
+        { id: 'g', title: 'G' },
+        { id: 'h', title: 'H', parent: 'g' },
+      ],
+      features: [{ id: 'f', title: 'F' }],
+      views: [
+        { id: 'system', type: 'system', title: 'System', collapsed: ['h', 'g'] },
+        {
+          id: 'v',
+          type: 'custom',
+          title: 'V',
+          subtitleField: 'flows',
+          feature: 'f',
+          includes: ['b', 'a'],
+          excludeGroups: ['h'],
+          excludeKinds: ['external', 'client'],
+          excludeTags: ['legacy', 'pci'],
+          dimKinds: ['database'],
+          positions: { b: { x: 1, y: 2 } },
+          pinned: ['b', 'a'],
+          collapsed: ['g'],
+        },
+      ],
+    },
+  ],
   ['feature', { ...empty, features: [{ id: 'f', title: 'F', description: 'D', owner: 'O' }] }],
   [
     'flow and step',
