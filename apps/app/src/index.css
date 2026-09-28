@@ -230,3 +230,16 @@
 .sd-overlay-in-up {
   animation: sd-overlay-in-up var(--sd-dur-overlay) var(--sd-ease);
 }
+
+/* Card details button (019 FR-018): hidden while dragging (the canvas or this card), in flow mode
+   or a session, under Hide UI, in the view-only editor and on cards < 80 px wide on screen. The
+   flags sit on the canvas wrapper, so no card re-renders for them. */
+[data-dragging] .sd-details-button,
+[data-flow-mode] .sd-details-button,
+[data-flow-session] .sd-details-button,
+[data-view-only] .sd-details-button,
+[data-hide-ui] .sd-details-button,
+[data-tiny-cards] .sd-details-button,
+.react-flow__node.dragging .sd-details-button {
+  visibility: hidden;
+}

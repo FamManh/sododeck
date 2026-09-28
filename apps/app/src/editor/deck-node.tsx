@@ -23,6 +23,7 @@ import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connectio
 import { NODE_SIZE, type DeckFlowNode } from './deck-to-flow';
 import { kindLabel } from './kind-label';
 import { CardTitleInput } from './quick-edit/card-title-input';
+import { DetailsButton } from './quick-edit/details-button';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 
 const SIDES = [
@@ -92,7 +93,8 @@ export const DeckNode = memo(function DeckNode({
       title={data.title}
       style={{ width: width ?? NODE_SIZE.width, height: height ?? NODE_SIZE.height }}
       className={cn(
-        'group/node relative rounded-node border border-border bg-surface shadow-rest',
+        // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
+        'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
         isLandscape
           ? 'flex items-center justify-center'
           : isComponent
@@ -219,6 +221,9 @@ export const DeckNode = memo(function DeckNode({
         />
       )}
 
+      {titleEdit === null && !data.dimmed && (
+        <DetailsButton id={id} title={data.title} focused={data.focused} />
+      )}
       {data.pinned === true && !isLandscape && (
         <span className="pointer-events-none absolute -top-2.5 -left-2.5 flex size-5 items-center justify-center rounded-full border border-primary bg-surface text-primary-ink shadow-rest">
           <Pin role="img" aria-label="Pinned" strokeWidth={ICON_STROKE_WIDTH} className="size-3" />

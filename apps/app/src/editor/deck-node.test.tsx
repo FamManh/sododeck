@@ -264,3 +264,15 @@ describe('DeckNode title edit (019 US1)', () => {
     expect(screen.getByText('Order Service')).toBeInTheDocument();
   });
 });
+
+describe('DeckNode details button (019 US4)', () => {
+  it('has a details button named after the card, except while its title is edited', () => {
+    renderNode(props({ focused: true }));
+    const button = screen.getByRole('button', { name: 'Open details for Order Service' });
+    expect(button).toHaveAttribute('tabindex', '0');
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'node', id: 'svc', isNew: false });
+    });
+    expect(screen.queryByRole('button', { name: 'Open details for Order Service' })).toBeNull();
+  });
+});

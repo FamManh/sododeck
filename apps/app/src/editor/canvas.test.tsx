@@ -245,11 +245,13 @@ describe('Canvas', () => {
       expect(nodeA).toHaveFocus();
     });
     expect(ui().focusedId).toBe('a');
-    // Now the node carries the Tab stop (plus its four handles); the canvas itself does not.
+    // Now the node carries the Tab stop (plus its four handles and its details button, 019);
+    // the canvas itself does not.
     expect(canvas).toHaveAttribute('tabindex', '-1');
     expect(tabStops()).toEqual([
       nodeA,
       ...screen.getAllByRole('button', { name: 'Connect from A' }),
+      screen.getByRole('button', { name: 'Open details for A' }),
     ]);
 
     await user.tab({ shift: true });
@@ -433,6 +435,24 @@ describe('Canvas', () => {
     });
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Left group, 2 nodes' }));
     expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+  });
+
+  it('flags the wrapper for the details button: drag, session, Hide UI, tiny cards (019 R4)', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    const canvas = container.querySelector('[data-canvas]');
+    for (const flag of ['data-dragging', 'data-hide-ui', 'data-flow-session']) {
+      expect(canvas).not.toHaveAttribute(flag);
+    }
+    act(() => {
+      ui().setCanvasGesture('drag');
+      ui().setHideUi(true);
+      ui().startRecording('New flow', null);
+    });
+    for (const flag of ['data-dragging', 'data-hide-ui', 'data-flow-session']) {
+      expect(canvas).toHaveAttribute(flag);
+    }
+    // jsdom's React Flow starts at zoom 1: a 164 px card is not tiny.
+    expect(canvas).not.toHaveAttribute('data-tiny-cards');
   });
 
   it('dims non-neighbours in focus mode, follows the selection, and leaves the deck unchanged', async () => {

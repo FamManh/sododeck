@@ -229,12 +229,12 @@
 
 **Independent test**: hover a card, click the icon, and the drawer opens on it. Tab to a card and activate the icon by keyboard. Zoom out and the icon disappears (spec US4).
 
-- [ ] T036 [P] [US4] Create `apps/app/src/editor/quick-edit/details-button.tsx` (+ test). A `button` named "Open details for <title>", with the tooltip "Open details" and the `PanelRight` icon, 22 px, in the inverse style. `tabIndex` follows the card's roving `tabIndex`. `onClick` / `onKeyDown` stop propagation, then `select({ nodes: [id] }); focus(id); openDrawer()` (FR-017).
-- [ ] T037 [US4] Render `DetailsButton` in `apps/app/src/editor/deck-node.tsx` (+ test), positioned top-right.
+- [x] T036 [P] [US4] Create `apps/app/src/editor/quick-edit/details-button.tsx` (+ test). A `button` named "Open details for <title>", with the tooltip "Open details" and the `PanelRight` icon, 22 px, in the inverse style. `tabIndex` follows the card's roving `tabIndex`. `onClick` / `onKeyDown` stop propagation, then `select({ nodes: [id] }); focus(id); openDrawer()` (FR-017).
+- [x] T037 [US4] Render `DetailsButton` in `apps/app/src/editor/deck-node.tsx` (+ test), positioned top-right.
   - Show it with `group-hover/node:opacity-100 group-focus-within/node:opacity-100`, and lift the card with `shadow-hover` on hover (no transition under reduced motion).
   - Hide it with CSS when an ancestor has `[data-dragging]`, `[data-flow]`, `[data-view-only]`, `[data-hide-ui]` or `[data-tiny-cards]`, or when the node itself is being dragged (the React Flow `dragging` prop).
   - Not rendered while `titleEdit` targets this card.
-- [ ] T038 [US4] In `apps/app/src/editor/canvas.tsx` (+ test), set the `data-*` flags on the canvas wrapper. `data-tiny-cards` comes from one `useStore` selector: `zoom * NODE_SIZE.width < 80`, boolean. Test: each flag hides the button (`toBeVisible` false via computed style, or assert the attribute plus a class contract), and the node components do not subscribe to zoom.
+- [x] T038 [US4] In `apps/app/src/editor/canvas.tsx` (+ test), set the `data-*` flags on the canvas wrapper. `data-tiny-cards` comes from one `useStore` selector: `zoom * NODE_SIZE.width < 80`, boolean. Test: each flag hides the button (`toBeVisible` false via computed style, or assert the attribute plus a class contract), and the node components do not subscribe to zoom.
 
 **Checkpoint**: quickstart 4.
 
