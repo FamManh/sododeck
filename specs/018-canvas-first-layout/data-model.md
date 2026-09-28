@@ -4,17 +4,17 @@
 
 ## UI store: `shell` slice (`apps/app/src/state/ui-store.ts`)
 
-| Field          | Type                                                            | Default                                     | Notes                                                                                  |
-| -------------- | --------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `flyout`       | `FlyoutId \| null`                                              | from prefs                                  | The flyout shown. Starts as `pinnedFlyout`.                                            |
-| `pinnedFlyout` | `FlyoutId \| null`                                              | from prefs                                  | Stays open on canvas clicks; returns when a temporary flyout closes.                   |
-| `drawer`       | `{ open: boolean; width: number; mode: 'selection' \| 'deck' }` | `{ false, prefs.drawerWidth, 'selection' }` | `mode: 'deck'` shows deck settings and ignores an empty selection.                     |
-| `drawerReturn` | `string \| null`                                                | `null`                                      | Canvas object id that gets focus back when the drawer closes.                          |
-| `hideUi`       | `boolean`                                                       | `false`                                     | Per tab session; not saved.                                                            |
-| `minimap`      | `boolean`                                                       | `false`                                     | Per tab session.                                                                       |
-| `tool`         | `'select' \| 'sticky' \| 'connector'`                           | `'select'`                                  | Resets to `select` after one use, on Esc and on deck change.                           |
-| `helpOpen`     | `boolean`                                                       | `false`                                     |                                                                                        |
-| `jsonPanel`    | `JsonPanelPrefs` (existing)                                     | —                                           | `open` now comes from per-deck prefs; `height` and `tab` from the global key as today. |
+| Field          | Type                                                            | Default                                     | Notes                                                                                                                                                            |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `flyout`       | `FlyoutId \| null`                                              | from prefs                                  | The flyout shown. Starts as `pinnedFlyout`.                                                                                                                      |
+| `pinnedFlyout` | `FlyoutId \| null`                                              | from prefs                                  | Stays open on canvas clicks; returns when a temporary flyout closes.                                                                                             |
+| `drawer`       | `{ open: boolean; width: number; mode: 'selection' \| 'deck' }` | `{ false, prefs.drawerWidth, 'selection' }` | `mode: 'deck'` shows deck settings and ignores an empty selection.                                                                                               |
+| `drawerReturn` | `string \| null`                                                | `null`                                      | Canvas object id that gets focus back when the drawer closes.                                                                                                    |
+| `hideUi`       | `boolean`                                                       | `false`                                     | Per tab session; not saved.                                                                                                                                      |
+| `minimap`      | `boolean`                                                       | `false`                                     | Per tab session.                                                                                                                                                 |
+| `tool`         | `'select' \| 'sticky' \| 'connector'`                           | `'select'`                                  | Resets to `select` after one use, on Esc and on deck change.                                                                                                     |
+| `helpOpen`     | `boolean`                                                       | `false`                                     |                                                                                                                                                                  |
+| `jsonShown`    | `boolean`                                                       | from prefs                                  | Whether the JSON overlay is shown (⌘J). `jsonPanel` (004) is unchanged: its `open` is still expanded / collapsed inside the overlay, global with height and tab. |
 
 `FlyoutId = 'palette' | 'outline' | 'flows' | 'rules' | 'problems'`.
 
@@ -22,19 +22,19 @@
 
 ### Actions
 
-| Action                                               | Effect                                                                                                                                                                        |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openFlyout(id)`                                     | `flyout = id`. If it is the one shown, closes it (toggle).                                                                                                                    |
-| `closeFlyout()`                                      | `flyout = pinnedFlyout === flyout ? null : pinnedFlyout`; unpins when closing the pinned one itself.                                                                          |
-| `dismissFlyout()`                                    | Outside click / Esc: closes only when `flyout !== pinnedFlyout`, then `flyout = pinnedFlyout`.                                                                                |
-| `togglePin()`                                        | `pinnedFlyout = pinnedFlyout === flyout ? null : flyout`; saved to prefs.                                                                                                     |
-| `openDrawer(mode?)`                                  | `drawer.open = true`, records `drawerReturn` from `focusedId`.                                                                                                                |
-| `closeDrawer()`                                      | `drawer.open = false`, `mode = 'selection'`.                                                                                                                                  |
-| `toggleDrawer()`                                     | Open ↔ closed.                                                                                                                                                                |
-| `setDrawerWidth(px)`                                 | Clamped to 320–560; saved to prefs on release (the grip calls it with `commit: true`).                                                                                        |
-| `setHideUi(on)`                                      | Flag only; other shell state is kept.                                                                                                                                         |
-| `setMinimap(on)`, `setTool(tool)`, `setHelpOpen(on)` | Flags.                                                                                                                                                                        |
-| `resetForDeck(deckId)`                               | Existing reset plus: reads per-deck prefs → `pinnedFlyout`, `flyout`, `drawer.width`, `jsonPanel.open`; `drawer.open = false`; `hideUi`, `minimap`, `tool`, `helpOpen` reset. |
+| Action                                               | Effect                                                                                                                                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `openFlyout(id)`                                     | `flyout = id`. If it is the one shown, closes it (toggle).                                                                                                               |
+| `closeFlyout()`                                      | `flyout = pinnedFlyout === flyout ? null : pinnedFlyout`; unpins when closing the pinned one itself.                                                                     |
+| `dismissFlyout()`                                    | Outside click / Esc: closes only when `flyout !== pinnedFlyout`, then `flyout = pinnedFlyout`.                                                                           |
+| `togglePin()`                                        | `pinnedFlyout = pinnedFlyout === flyout ? null : flyout`; saved to prefs.                                                                                                |
+| `openDrawer(mode?)`                                  | `drawer.open = true`, records `drawerReturn` from `focusedId`.                                                                                                           |
+| `closeDrawer()`                                      | `drawer.open = false`, `mode = 'selection'`.                                                                                                                             |
+| `toggleDrawer()`                                     | Open ↔ closed.                                                                                                                                                           |
+| `setDrawerWidth(px)`                                 | Clamped to 320–560; saved to prefs on release (the grip calls it with `commit: true`).                                                                                   |
+| `setHideUi(on)`                                      | Flag only; other shell state is kept.                                                                                                                                    |
+| `setMinimap(on)`, `setTool(tool)`, `setHelpOpen(on)` | Flags.                                                                                                                                                                   |
+| `resetForDeck(deckId)`                               | Existing reset plus: reads per-deck prefs → `pinnedFlyout`, `flyout`, `drawer.width`, `jsonShown`; `drawer.open = false`; `hideUi`, `minimap`, `tool`, `helpOpen` reset. |
 
 ### Derived (pure, not stored)
 
@@ -50,7 +50,7 @@ Stored at `localStorage["sododeck.shell.<deckId>"]` as JSON:
 interface ShellPrefs {
   drawerWidth: number; // 320–560, default 360
   pinnedFlyout: FlyoutId | null; // default null
-  jsonOpen: boolean; // default false
+  jsonOpen: boolean; // → jsonShown, default false
 }
 ```
 

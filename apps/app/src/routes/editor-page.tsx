@@ -180,7 +180,7 @@ function useSaveControlsFor(data: Exclude<DeckLoaderData, { kind: 'not-found' }>
 
 function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-found' }> }) {
   const [doc] = useState(() => {
-    useUiStore.getState().resetForDeck();
+    useUiStore.getState().resetForDeck(data.kind === 'stored' ? data.deckId : null);
     useSaveStatusStore.getState().reset();
     const source: DeckSource =
       data.kind === 'stored' ? { kind: 'stored', bytes: data.bytes } : { kind: data.kind };

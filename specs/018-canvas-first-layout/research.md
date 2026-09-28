@@ -59,9 +59,9 @@ Code was read on `main` at `fb3994c`:
 
 ## R3 — Shell UI state in the UI store, per-deck prefs in localStorage
 
-- **Decision:** the UI store gains a `shell` slice (see [data-model.md](data-model.md)): `flyout`, `pinnedFlyout`, `drawer { open, width, mode }`, `hideUi`, `hiddenSnapshot`, `minimap`, `tool`, `helpOpen`. `jsonPanel.open` moves under the per-deck prefs.
+- **Decision:** the UI store gains a `shell` slice (see [data-model.md](data-model.md)): `flyout`, `pinnedFlyout`, `drawer { open, width, mode }`, `hideUi`, `hiddenSnapshot`, `minimap`, `tool`, `helpOpen`. The JSON overlay's visibility is a new `jsonShown` field saved in the per-deck prefs; `jsonPanel.open` keeps 004's expanded / collapsed meaning.
   - Per-deck prefs `{ drawerWidth, pinnedFlyout, jsonOpen }` are stored in `localStorage["sododeck.shell.<deckId>"]`, validated field by field like `json-panel-prefs.ts`, read in `resetForDeck(deckId)` and written on change. The demo and memory decks use the key `demo` / no persistence.
-  - Height and tab of the JSON panel stay in the existing global `sododeck.jsonPanel` key; its `open` field is ignored from now on, and the default for a deck without prefs is closed (FR-028).
+  - The JSON panel's height, tab and expanded / collapsed state stay in the existing global `sododeck.jsonPanel` key; a deck without prefs starts with the overlay hidden (FR-028).
   - Keys are deleted when the library purges a deck (`purgeDeleted`), so stale prefs do not accumulate. The number of keys is bounded by the number of decks.
   - No sync between tabs: the store reads storage only on deck open (§g-50).
 - **Rationale:** constitution I puts UI-only state in Zustand and never in Yjs; §g-50 keys it by deck and keeps it local. `localStorage` is already used for JSON prefs and theme, and it is synchronous so the first frame is correct.
