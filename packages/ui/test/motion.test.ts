@@ -22,6 +22,7 @@ describe('MOTION', () => {
     expect(MOTION).toEqual({
       dimMs: 250,
       ringMs: 200,
+      overlayMs: 120,
       tokenLoopMs: 1400,
       stepMs: 1700,
       toastMs: 2600,
@@ -39,6 +40,7 @@ describe('resolveMotion', () => {
     expect(resolveMotion(true)).toEqual({
       dimMs: 0,
       ringMs: 0,
+      overlayMs: 0,
       tokenLoopMs: 0,
       stepMs: 1700,
       toastMs: 2600,
@@ -51,6 +53,7 @@ describe('tokens.css agrees with motion.ts', () => {
   it('default values', () => {
     expect(ms(rootBlock, 'sd-dur-dim')).toBe(MOTION.dimMs);
     expect(ms(rootBlock, 'sd-dur-ring')).toBe(MOTION.ringMs);
+    expect(ms(rootBlock, 'sd-dur-overlay')).toBe(MOTION.overlayMs);
     expect(ms(rootBlock, 'sd-flow-token-loop')).toBe(MOTION.tokenLoopMs);
     expect(ms(rootBlock, 'sd-flow-step')).toBe(MOTION.stepMs);
     expect(ms(rootBlock, 'sd-toast')).toBe(MOTION.toastMs);
@@ -61,6 +64,7 @@ describe('tokens.css agrees with motion.ts', () => {
     const reduced = resolveMotion(true);
     expect(ms(reducedBlock, 'sd-dur-dim')).toBe(reduced.dimMs);
     expect(ms(reducedBlock, 'sd-dur-ring')).toBe(reduced.ringMs);
+    expect(ms(reducedBlock, 'sd-dur-overlay')).toBe(reduced.overlayMs);
     expect(ms(reducedBlock, 'sd-flow-token-loop')).toBe(reduced.tokenLoopMs);
     // Hover color transitions (Tailwind's default duration) also stop.
     expect(ms(rootBlock, 'sd-dur-hover')).toBe(150);

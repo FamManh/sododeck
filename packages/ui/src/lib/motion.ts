@@ -8,6 +8,8 @@ export interface Motion {
   dimMs: number;
   /** Selection ring, tour dot width. */
   ringMs: number;
+  /** Flyouts, detail drawer and JSON overlay entering (fade + 4 px slide, 018). */
+  overlayMs: number;
   /** Token travelling along the current flow edge. 0 means: do not loop, show a static marker. */
   tokenLoopMs: number;
   /** Autoplay step interval at 1×; callers divide by speed. */
@@ -21,6 +23,7 @@ export interface Motion {
 export const MOTION = {
   dimMs: 250,
   ringMs: 200,
+  overlayMs: 120,
   tokenLoopMs: 1400,
   stepMs: 1700,
   toastMs: 2600,
@@ -33,5 +36,5 @@ export const MOTION = {
  */
 export function resolveMotion(reduced: boolean): Motion {
   if (!reduced) return { ...MOTION };
-  return { ...MOTION, dimMs: 0, ringMs: 0, tokenLoopMs: 0 };
+  return { ...MOTION, dimMs: 0, ringMs: 0, overlayMs: 0, tokenLoopMs: 0 };
 }

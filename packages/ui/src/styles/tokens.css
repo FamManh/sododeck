@@ -58,6 +58,8 @@
   --sd-dur-hover: 150ms;
   --sd-dur-dim: 250ms;
   --sd-dur-ring: 200ms;
+  /* Flyouts, detail drawer and JSON overlay enter with a fade + 4px slide (018). */
+  --sd-dur-overlay: 120ms;
   --sd-flow-token-loop: 1400ms;
   --sd-flow-step: 1700ms;
   --sd-toast: 2600ms;
@@ -118,6 +120,7 @@
     --sd-dur-hover: 0ms;
     --sd-dur-dim: 0ms;
     --sd-dur-ring: 0ms;
+    --sd-dur-overlay: 0ms;
     --sd-flow-token-loop: 0ms;
   }
 }
