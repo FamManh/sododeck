@@ -170,17 +170,17 @@
 
 **Independent test**: press C then 2, type "Auth", press ⌘⏎, type "Users" and press Enter. Add another and press Esc: it stays "Untitled service". Two ⌘Z undo the name, then the card (spec US2).
 
-- [ ] T025 [US2] Change `addComponent` in `apps/app/src/editor/canvas-actions.ts` (+ test).
+- [x] T025 [US2] Change `addComponent` in `apps/app/src/editor/canvas-actions.ts` (+ test).
   - The title becomes `Untitled ${kindLabel(kind).toLowerCase()}` (via `editor/kind-label.ts`).
   - There is a new optional `{ edit?: boolean }`. With `edit`, it calls `startTitleEdit({ target: 'node', id, isNew: true, kind })` after select / focus.
   - The announcement stays "Added …".
   - Placement keeps the existing `freeSpot` rule (offset while another card sits at exactly the same spot; FR-012 as clarified). Do not change `freeSpot`.
   - Update the "New service" assertions in `state/ui-store.test.ts`, `routes/editor-page.test.tsx`, `editor/canvas.test.tsx`, `editor/announcer.test.tsx` and `editor/palette.test.tsx`.
-- [ ] T026 [US2] In `CardTitleInput` (+ test), when `isNew` is set it passes `startEmpty` and `placeholder="Name this component"`:
+- [x] T026 [US2] In `CardTitleInput` (+ test), when `isNew` is set it passes `startEmpty` and `placeholder="Name this component"`:
   - **Esc** or an **empty commit** → `endTitleEdit()` with no write, so the title stays "Untitled <kind>" (FR-014).
   - **⌘⏎** → commit when not empty, then `addComponent(editor, kind, freeSpot(deck, position + 24), { edit: true })`.
   - Tests: placeholder shown, Esc keeps "Untitled service", ⌘⏎ creates a second card in edit, and exactly two undo steps (name, then card; FR-015).
-- [ ] T027 [P] [US2] Pass `{ edit: true }` from every add path (FR-011):
+- [x] T027 [P] [US2] Pass `{ edit: true }` from every add path (FR-011):
   - the palette click in `apps/app/src/editor/palette.tsx`
   - digits 1–6 in `apps/app/src/editor/shell/use-shell-shortcuts.ts`
   - drop in `apps/app/src/editor/use-canvas-handlers.ts` (`onDrop`)

@@ -142,9 +142,9 @@ describe('Canvas', () => {
     fireEvent.dragOver(canvas, data([KIND_MIME]));
     fireEvent.drop(canvas, data([KIND_MIME], 'database'));
     const [node] = toJSON(doc).nodes;
-    expect(node).toMatchObject({ type: 'database', title: 'New database' });
+    expect(node).toMatchObject({ type: 'database', title: 'Untitled database' });
     expect(ui().selection.nodes).toEqual([node?.id]);
-    expect(ui().announcement.text).toBe('Added New database');
+    expect(ui().announcement.text).toBe('Added Untitled database');
   });
 
   it('adds a dropped note at the drop point', () => {
@@ -1092,13 +1092,15 @@ describe('canvas in flow mode (007)', () => {
     act(() => {
       addComponent(editor(), 'service', { x: 600, y: 600 });
     });
-    const created = screen.getByRole('group', { name: 'Service: New service' });
+    const created = screen.getByRole('group', { name: 'Service: Untitled service' });
     expect(within(created).getByRole('note')).toHaveTextContent('Hidden in this view');
     act(() => {
       ui().switchView('w');
       ui().switchView('v');
     });
-    expect(screen.queryByRole('group', { name: 'Service: New service' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: 'Service: Untitled service' }),
+    ).not.toBeInTheDocument();
   });
 
   describe('collapse is remembered per view (011 US5, FR-050)', () => {

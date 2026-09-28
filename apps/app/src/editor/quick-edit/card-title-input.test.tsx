@@ -1,4 +1,4 @@
-import { toJSON } from '@sododeck/model';
+import { toJSON, type DeckEditor } from '@sododeck/model';
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { Canvas } from '../canvas';
+import { addComponent } from '../canvas-actions';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
 
 const deck = deckOf({
@@ -147,5 +148,59 @@ describe('CardTitleInput (019 US1)', () => {
     await user.keyboard('X{Meta>}z{/Meta}{Control>}z{/Control}');
     expect(titles()[1]).toBe('Before');
     expect(within(card('Service: Service 3')).getByRole('textbox')).toBeInTheDocument();
+  });
+});
+
+describe('CardTitleInput on a new card (019 US2)', () => {
+  const add = (editor: () => DeckEditor) => {
+    act(() => {
+      addComponent(editor(), 'service', { x: 600, y: 400 }, { edit: true });
+    });
+    return screen.getByRole('textbox', { name: 'Component title' });
+  };
+
+  it('starts empty with the placeholder; Esc keeps "Untitled service" (FR-011, FR-014)', async () => {
+    const user = userEvent.setup();
+    const { editor, titles } = renderCanvas();
+    const field = add(editor);
+    expect(field).toHaveValue('');
+    expect(field).toHaveAttribute('placeholder', 'Name this component');
+    expect(field).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(titles()).toContain('Untitled service');
+    expect(ui().titleEdit).toBeNull();
+    add(editor);
+    await user.keyboard('{Enter}');
+    expect(titles().filter((t) => t === 'Untitled service')).toHaveLength(2);
+  });
+
+  it('⌘⏎ names it and adds another of the same kind in title edit; undo is name, then card', async () => {
+    const user = userEvent.setup();
+    const { editor, titles } = renderCanvas();
+    add(editor);
+    await user.keyboard('Auth{Meta>}{Enter}{/Meta}');
+    expect(titles()).toEqual(['Service 3', 'B', 'C', 'D', 'Auth', 'Untitled service']);
+    expect(ui().titleEdit).toMatchObject({ isNew: true, kind: 'service' });
+    const second = screen.getByRole('textbox', { name: 'Component title' });
+    expect(second).toHaveFocus();
+    await user.keyboard('Users{Enter}');
+    expect(titles().slice(4)).toEqual(['Auth', 'Users']);
+
+    act(() => {
+      editor().undo();
+    });
+    expect(titles().slice(4)).toEqual(['Auth', 'Untitled service']);
+    act(() => {
+      editor().undo();
+    });
+    expect(titles().slice(4)).toEqual(['Auth']);
+    act(() => {
+      editor().undo();
+    });
+    expect(titles().slice(4)).toEqual(['Untitled service']);
+    act(() => {
+      editor().undo();
+    });
+    expect(titles()).toHaveLength(4);
   });
 });

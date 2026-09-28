@@ -10,6 +10,7 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
+import { kindLabel } from './kind-label';
 import { readViewState } from './views/use-current-view';
 
 /** Marks the canvas wrapper, so focus helpers and the palette can find it. */
@@ -27,8 +28,9 @@ export function centredOn(point: Point): Point {
 }
 
 /**
- * Adds "New <kind>" at `position` (moved to a free spot), selects it and announces it. With
- * `edit`, the new card starts in title edit (019 FR-011).
+ * Adds "Untitled <kind>" at `position` (moved to a free spot), selects it and announces it. With
+ * `edit`, the new card starts in title edit with an empty field (019 FR-011); the stored title is
+ * the fallback kept when the user leaves it empty (FR-014, ADR 0015: a title is never empty).
  */
 export function addComponent(
   editor: DeckEditor,
@@ -36,7 +38,7 @@ export function addComponent(
   position: Point,
   { edit = false }: { edit?: boolean } = {},
 ): string {
-  const title = `New ${kind}`;
+  const title = `Untitled ${kindLabel(kind).toLowerCase()}`;
   const id = editor.add('nodes', {
     type: kind,
     title,

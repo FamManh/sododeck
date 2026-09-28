@@ -16,9 +16,9 @@ describe('Announcer', () => {
     const region = screen.getByRole('status');
     expect(region).toHaveAttribute('aria-live', 'polite');
     act(() => {
-      useUiStore.getState().announce('Added New service');
+      useUiStore.getState().announce('Added Untitled service');
     });
-    expect(region.textContent.replace('\u200b', '')).toBe('Added New service');
+    expect(region.textContent.replace('\u200b', '')).toBe('Added Untitled service');
   });
 
   it('changes the text for a repeated message so it is announced again', () => {

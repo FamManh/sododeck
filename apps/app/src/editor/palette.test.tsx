@@ -32,16 +32,19 @@ describe('Palette', () => {
     const { doc } = renderWithEditor(<Palette />);
     await user.click(screen.getByRole('button', { name: 'Add Service' }));
     const [node] = toJSON(doc).nodes;
-    expect(node).toMatchObject({ type: 'service', title: 'New service' });
+    expect(node).toMatchObject({ type: 'service', title: 'Untitled service' });
     expect(Number.isInteger(node?.position?.x)).toBe(true);
     const ui = useUiStore.getState();
     expect(ui.selection).toEqual({ nodes: [node?.id], edges: [], groups: [], stickies: [] });
     expect(ui.focusedId).toBe(node?.id);
-    expect(ui.announcement.text).toBe('Added New service');
+    expect(ui.announcement.text).toBe('Added Untitled service');
 
     screen.getByRole('button', { name: 'Add Database' }).focus();
     await user.keyboard('{Enter}');
-    expect(toJSON(doc).nodes.map((n) => n.title)).toEqual(['New service', 'New database']);
+    expect(toJSON(doc).nodes.map((n) => n.title)).toEqual([
+      'Untitled service',
+      'Untitled database',
+    ]);
   });
 
   it('offsets a second add at the same spot', async () => {
