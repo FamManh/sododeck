@@ -67,11 +67,12 @@ describe('DetailDrawer (018 US3, contract "Detail drawer")', () => {
     });
   });
 
-  it('opens on a double-click on a component', () => {
+  it('does not open on a double-click, which renames in place (019 FR-001)', () => {
     setup();
     fireEvent.doubleClick(screen.getByRole('group', { name: 'Service: Orders' }));
-    expect(drawer()).toBeInTheDocument();
+    expect(drawer()).not.toBeInTheDocument();
     expect(ui().selection.nodes).toEqual(['a']);
+    expect(screen.getByRole('textbox', { name: 'Component title' })).toBeInTheDocument();
   });
 
   it('toggles with ⌘⇧D, and shows the bulk editor for several components', async () => {

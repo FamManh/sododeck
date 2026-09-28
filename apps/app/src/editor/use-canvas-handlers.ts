@@ -187,20 +187,11 @@ export function useCanvasHandlers() {
           return;
         }
         if (stickyIdOf(node.id) !== null || isPortNode(node.id)) return;
-        const graph = visibleGraph(
-          readViewState(editor.doc).deck,
-          scopeOf(ui().drill),
-          collapsedOf(editor.doc),
-        );
-        if ((graph.childCount.get(node.id) ?? 0) === 0) {
-          // A plain component: its details (018 FR-022).
-          ui().select({ nodes: [node.id] });
-          ui().focus(node.id);
-          ui().openDrawer();
-          return;
-        }
-        const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
-        if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
+        // Any component, with or without children, renames in place (019 FR-001); Enter still
+        // opens details or drills in, and "Open inside" drills in by pointer.
+        ui().select({ nodes: [node.id] });
+        ui().focus(node.id);
+        ui().startTitleEdit({ target: 'node', id: node.id, isNew: false });
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
         if (isMergedEdge(edge.id)) {

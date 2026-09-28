@@ -423,12 +423,25 @@ export function useCanvasKeyDown() {
             ui.openDrawer();
           }
           return;
-        case 'f2':
+        case 'f2': {
           if (selectedSticky !== null) {
             event.preventDefault();
             ui.setStickyEditing(selectedSticky);
+            return;
+          }
+          // Rename the current component or group in place (019 FR-002, FR-008).
+          const groupId = current === null ? null : groupIdOf(current);
+          if (groupId !== null) {
+            if (ui.startTitleEdit({ target: 'group', id: groupId, isNew: false }))
+              event.preventDefault();
+          } else if (current !== null && deck.nodes.some((node) => node.id === current)) {
+            if (ui.startTitleEdit({ target: 'node', id: current, isNew: false })) {
+              event.preventDefault();
+              ui.select({ nodes: [current] });
+            }
           }
           return;
+        }
         default:
           return;
       }

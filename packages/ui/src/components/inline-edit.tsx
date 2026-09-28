@@ -21,10 +21,10 @@ type InlineEditProps = Omit<
   /** Called on Escape, after the draft was thrown away. */
   onCancel?: () => void;
   /**
-   * Runs before the built-in keys, with the current draft. `preventDefault()` here skips the
-   * built-in Enter (commit) and Escape (revert).
+   * Runs before the built-in keys, with the current draft. Returning `true` means the key was
+   * handled and skips the built-in Enter (commit) and Escape (revert).
    */
-  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>, draft: string) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>, draft: string) => boolean | undefined;
 };
 
 /**
@@ -74,8 +74,7 @@ function InlineEdit({
         setDraft(event.target.value);
       }}
       onKeyDown={(event) => {
-        onKeyDown?.(event, shown);
-        if (event.defaultPrevented) return;
+        if (onKeyDown?.(event, shown) === true) return;
         if (event.key === 'Enter') {
           commit();
         } else if (event.key === 'Escape') {

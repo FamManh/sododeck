@@ -136,25 +136,25 @@
 
 **Independent test**: double-click a card, type "Billing API" and press Enter. The card, outline, drawer and JSON all show it, and one ⌘Z restores the old title. Repeat with Esc, with an empty title and with Tab (spec US1).
 
-- [ ] T017 [P] [US1] Create `apps/app/src/editor/quick-edit/title-edit.ts` (+ `title-edit.test.ts`), with no React:
+- [x] T017 [P] [US1] Create `apps/app/src/editor/quick-edit/title-edit.ts` (+ `title-edit.test.ts`), with no React:
   - `commitTitle(editor, target, id, draft, previous): 'renamed' | 'unchanged'`. It trims the draft. Empty or equal → `'unchanged'` with no write. Otherwise it runs `oneStep(editor, () => editor.update(target === 'node' ? 'nodes' : 'groups', id, { title }))`.
   - `nextTitleTarget(order: readonly Id[], id, dir: 1 | -1): Id | null`, where the order comes from the same reading order the arrow keys use (`editor/focus-set.ts`).
   - Tests: trimming, empty, unchanged, exactly one undo step (`editor.undo()` restores), and wrap-free next / previous.
-- [ ] T018 [US1] Create `apps/app/src/editor/quick-edit/card-title-input.tsx` (+ test). It wraps `InlineEdit` with `autoFocus`, `aria-label` "Component title" or "Group title", and `className` sized to the title line, so the card keeps its size.
+- [x] T018 [US1] Create `apps/app/src/editor/quick-edit/card-title-input.tsx` (+ test). It wraps `InlineEdit` with `autoFocus`, `aria-label` "Component title" or "Group title", and `className` sized to the title line, so the card keeps its size.
   - **Commit:** `commitTitle`, then `announce("Renamed to …")` when renamed, then `endTitleEdit()`.
   - **Esc:** `endTitleEdit()`, and focus returns to the card (`focus(id)`).
   - **Tab / ⇧Tab:** preventDefault, commit, then `startTitleEdit` on `nextTitleTarget(...)`. The canvas reveals and focuses that card, and `select({ nodes: [next] })`.
   - Test by role with `render-canvas` harness.
-- [ ] T019 [US1] Change `apps/app/src/editor/deck-node.tsx` (+ `deck-node.test.tsx`). When `useUiStore(s => s.titleEdit?.id === id)` is true, it renders `CardTitleInput` in place of the title span, in both the component and container layouts. The selector must return a boolean so other nodes don't re-render. Test: with the store set, the textbox "Component title" is in the card and the title span is gone.
-- [ ] T020 [P] [US1] Change `apps/app/src/editor/group-boundary-node.tsx` and `collapsed-group-node.tsx` (+ tests). While `titleEdit` targets the group, they render the label as `CardTitleInput` with target `group`. Double-click on the label still drills in (010).
-- [ ] T021 [US1] Change `onNodeDoubleClick` in `apps/app/src/editor/use-canvas-handlers.ts` (FR-001). For any component (with or without children) it calls `select({ nodes: [id] }); focus(id); startTitleEdit({ target: 'node', id, isNew: false })`. Groups, stickies and ports are unchanged. It does nothing in view-only, flow or session modes.
+- [x] T019 [US1] Change `apps/app/src/editor/deck-node.tsx` (+ `deck-node.test.tsx`). When `useUiStore(s => s.titleEdit?.id === id)` is true, it renders `CardTitleInput` in place of the title span, in both the component and container layouts. The selector must return a boolean so other nodes don't re-render. Test: with the store set, the textbox "Component title" is in the card and the title span is gone.
+- [x] T020 [P] [US1] Change `apps/app/src/editor/group-boundary-node.tsx` and `collapsed-group-node.tsx` (+ tests). While `titleEdit` targets the group, they render the label as `CardTitleInput` with target `group`. Double-click on the label still drills in (010).
+- [x] T021 [US1] Change `onNodeDoubleClick` in `apps/app/src/editor/use-canvas-handlers.ts` (FR-001). For any component (with or without children) it calls `select({ nodes: [id] }); focus(id); startTitleEdit({ target: 'node', id, isNew: false })`. Groups, stickies and ports are unchanged. It does nothing in view-only, flow or session modes.
   - Update the double-click cases in `apps/app/src/editor/canvas.test.tsx` and `apps/app/src/routes/editor-page.test.tsx`. Double-click now shows the textbox and no longer opens the drawer or drills. Enter still opens the drawer, and still drills into a component with children.
-- [ ] T022 [US1] Add F2 to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test). On the current component → `startTitleEdit({ target: 'node' })`. On a current group → `startTitleEdit({ target: 'group' })`. Stickies keep their existing F2. It is ignored in text targets and non-edit modes. Enter behaviour is untouched (the existing Enter tests must still pass).
-- [ ] T023 [US1] Create `apps/app/src/editor/actions/title-actions.ts`, with ids from contract R8. Register it in `ACTIONS`, and add cases to `index.test.ts` / `actions-for.test.ts` for component, group, flow mode and a component with children.
+- [x] T022 [US1] Add F2 to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test). On the current component → `startTitleEdit({ target: 'node' })`. On a current group → `startTitleEdit({ target: 'group' })`. Stickies keep their existing F2. It is ignored in text targets and non-edit modes. Enter behaviour is untouched (the existing Enter tests must still pass).
+- [x] T023 [US1] Create `apps/app/src/editor/actions/title-actions.ts`, with ids from contract R8. Register it in `ACTIONS`, and add cases to `index.test.ts` / `actions-for.test.ts` for component, group, flow mode and a component with children.
   - `details.open`: all targets except canvas and mixed. Modes: edit, flow, session, viewOnly. Shortcut `openDetails`. Run: select + `openDrawer()`.
   - `node.openInside`: a component with `childCount > 0`. Run: `drillInto`.
   - `title.rename`: component and group, edit mode. Shortcut `rename`. Run: `startTitleEdit`.
-- [ ] T024 [US1] Edge cases (spec) in `card-title-input.test.tsx` / `deck-node.test.tsx`:
+- [x] T024 [US1] Edge cases (spec) in `card-title-input.test.tsx` / `deck-node.test.tsx`:
   - Removing the node (via `editor.remove` in the test) ends the edit without writing.
   - A click on another card commits first.
   - ⌘Z typed inside the input does not undo the document.

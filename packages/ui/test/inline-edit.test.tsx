@@ -73,13 +73,12 @@ describe('InlineEdit', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
-  it('passes the draft to onKeyDown and skips the built-in Enter on preventDefault', async () => {
+  it('passes the draft to onKeyDown and skips the built-in Enter when it handled the key', async () => {
     const onCommit = vi.fn();
     const onKeyDown = vi.fn((event: React.KeyboardEvent<HTMLInputElement>, draft: string) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        expect(draft).toBe('Ab');
-      }
+      if (event.key !== 'Enter') return false;
+      expect(draft).toBe('Ab');
+      return true;
     });
     render(<InlineEdit label="Title" value="A" onCommit={onCommit} onKeyDown={onKeyDown} />);
     const input = screen.getByRole('textbox', { name: 'Title' });

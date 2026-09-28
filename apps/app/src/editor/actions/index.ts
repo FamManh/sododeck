@@ -1,3 +1,4 @@
+import { TITLE_ACTIONS } from './title-actions';
 import type { Action } from './types';
 
 /**
@@ -5,4 +6,4 @@ import type { Action } from './types';
  * section. A later feature adds its module here (016 clipboard / group / align, 017 reset route,
  * 020 fill / stroke); the menu, the toolbar and the keys pick it up unchanged (FR-040).
  */
-export const ACTIONS: readonly Action[] = [];
+export const ACTIONS: readonly Action[] = [...TITLE_ACTIONS];

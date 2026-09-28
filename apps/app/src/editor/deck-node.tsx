@@ -22,6 +22,7 @@ import { useUiStore } from '../state/ui-store';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
 import { NODE_SIZE, type DeckFlowNode } from './deck-to-flow';
 import { kindLabel } from './kind-label';
+import { CardTitleInput } from './quick-edit/card-title-input';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 
 const SIDES = [
@@ -44,6 +45,12 @@ export const DeckNode = memo(function DeckNode({
   const announce = useUiStore((s) => s.announce);
   const connecting = useConnecting();
   const role = useConnectionRole(id);
+  // Only this card re-renders when its title edit starts or ends (the others select `null`).
+  const titleEdit = useUiStore((s) =>
+    s.titleEdit?.target === 'node' && s.titleEdit.id === id ? s.titleEdit : null,
+  );
+  const titleInput =
+    titleEdit === null ? null : <CardTitleInput edit={titleEdit} title={data.title} />;
 
   let target: ConnectionCheck | null = null;
   if (role?.startsWith('target:')) {
@@ -104,13 +111,17 @@ export const DeckNode = memo(function DeckNode({
       )}
     >
       {isLandscape ? (
-        <KindTile kind={data.kind} size={40} decorative />
+        (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
       ) : isComponent ? (
         <>
           <div className="flex w-full items-start gap-2">
             <KindTile kind={data.kind} size={30} decorative />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-body-sm font-medium text-ink">{data.title}</span>
+              {titleInput ?? (
+                <span className="block truncate text-body-sm font-medium text-ink">
+                  {data.title}
+                </span>
+              )}
               {data.subtitle && (
                 <span className="block truncate font-mono text-node-sub text-ink-muted">
                   {data.subtitle}
@@ -143,7 +154,9 @@ export const DeckNode = memo(function DeckNode({
         <>
           {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-body-sm font-medium text-ink">{data.title}</span>
+            {titleInput ?? (
+              <span className="truncate text-body-sm font-medium text-ink">{data.title}</span>
+            )}
             {isContainer && data.subtitle && (
               <span className="truncate font-mono text-node-sub text-ink-muted">
                 {data.subtitle}

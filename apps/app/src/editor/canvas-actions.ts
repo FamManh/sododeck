@@ -26,8 +26,16 @@ export function centredOn(point: Point): Point {
   return round({ x: point.x - NODE_SIZE.width / 2, y: point.y - NODE_SIZE.height / 2 });
 }
 
-/** Adds "New <kind>" at `position` (moved to a free spot), selects it and announces it. */
-export function addComponent(editor: DeckEditor, kind: ComponentKind, position: Point): string {
+/**
+ * Adds "New <kind>" at `position` (moved to a free spot), selects it and announces it. With
+ * `edit`, the new card starts in title edit (019 FR-011).
+ */
+export function addComponent(
+  editor: DeckEditor,
+  kind: ComponentKind,
+  position: Point,
+  { edit = false }: { edit?: boolean } = {},
+): string {
   const title = `New ${kind}`;
   const id = editor.add('nodes', {
     type: kind,
@@ -40,6 +48,7 @@ export function addComponent(editor: DeckEditor, kind: ComponentKind, position: 
   ui.select({ nodes: [id] });
   ui.focus(id);
   ui.announce(`Added ${title}`);
+  if (edit) ui.startTitleEdit({ target: 'node', id, isNew: true, kind });
   return id;
 }
 

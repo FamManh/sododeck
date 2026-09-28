@@ -357,7 +357,15 @@ describe('Canvas', () => {
     fireEvent.doubleClick(screen.getByRole('group', { name: 'Service: Gateway' }));
     expect(ui().drill).toEqual([]);
 
-    fireEvent.doubleClick(await screen.findByRole('group', { name: 'Service: Delivery platform' }));
+    // Double-click renames a component with children (019 FR-001); Enter drills in.
+    const parent = await screen.findByRole('group', { name: 'Service: Delivery platform' });
+    fireEvent.doubleClick(parent);
+    expect(ui().drill).toEqual([]);
+    expect(ui().titleEdit).toEqual({ target: 'node', id: 'parent', isNew: false });
+    await user.keyboard('{Escape}');
+    expect(ui().titleEdit).toBeNull();
+    expect(parent).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(ui().drill.map((frame) => frame.id)).toEqual(['parent']);
     expect(screen.getAllByTestId('deck-node')).toHaveLength(1);
     expect(screen.getByRole('group', { name: 'Service: Dispatch' })).toBeInTheDocument();

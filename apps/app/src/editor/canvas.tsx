@@ -141,7 +141,10 @@ function useSelectionSync(): void {
           changes.some(
             (c) =>
               c.kind === 'removed' &&
-              (c.scope === 'nodes' || c.scope === 'edges' || c.scope === 'stickies'),
+              (c.scope === 'nodes' ||
+                c.scope === 'edges' ||
+                c.scope === 'groups' ||
+                c.scope === 'stickies'),
           )
         ) {
           const deck = readDeck(editor.doc);
@@ -212,7 +215,9 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
       void setCenter(point.x + point.width / 2, point.y + point.height / 2, { zoom });
     }
     const element = nodeElement(focusedId);
-    if (element && element !== document.activeElement) element.focus({ preventScroll: true });
+    // Focus already inside the card (its title field, 019) stays there.
+    if (element && !element.contains(document.activeElement))
+      element.focus({ preventScroll: true });
   }, [focusedId, editor.doc, getViewport, setCenter, wrapper]);
 }
 

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import type { NodeProps } from '@xyflow/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -236,5 +236,31 @@ describe('DeckNode flow start (006 FR-009)', () => {
   it('shows "Step n starts here" as text, not only a ring', () => {
     renderNode(props({ flowStart: 'Step 4 starts here' }));
     expect(screen.getByText('Step 4 starts here')).toBeInTheDocument();
+  });
+});
+
+describe('DeckNode title edit (019 US1)', () => {
+  it('shows the title field in the card while its title is edited, at every level', () => {
+    for (const level of ['component', 'container', 'system', 'landscape'] as const) {
+      const { unmount } = renderNode(props({ level }));
+      act(() => {
+        useUiStore.getState().startTitleEdit({ target: 'node', id: 'svc', isNew: false });
+      });
+      const card = screen.getByTestId('deck-node');
+      const field = within(card).getByRole('textbox', { name: 'Component title' });
+      expect(field).toHaveValue('Order Service');
+      expect(field).toHaveFocus();
+      expect(within(card).queryByText('Order Service', { selector: 'span' })).toBeNull();
+      unmount();
+    }
+  });
+
+  it('keeps the title text in other cards', () => {
+    renderNode();
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'node', id: 'db', isNew: false });
+    });
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByText('Order Service')).toBeInTheDocument();
   });
 });
