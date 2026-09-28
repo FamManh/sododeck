@@ -513,3 +513,17 @@ describe('flow mode marks (007)', () => {
     expect(nextNodes.map((n, i) => n === nodes[i])).toEqual([false, true, false, true]);
   });
 });
+
+describe('draw order (019 FR-037)', () => {
+  it('draws components in deck.nodes order, so later ones sit on top', () => {
+    const file = {
+      ...emptySododeckFile(),
+      nodes: [
+        { id: 'z', type: 'service' as const, title: 'Z', position: { x: 0, y: 0 } },
+        { id: 'a', type: 'service' as const, title: 'A', position: { x: 10, y: 10 } },
+      ],
+    };
+    const ids = toFlowNodes(file, topLevelGraph(file), view()).map((node) => node.id);
+    expect(ids.indexOf('z')).toBeLessThan(ids.indexOf('a'));
+  });
+});

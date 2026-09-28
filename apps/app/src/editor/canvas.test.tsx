@@ -142,9 +142,9 @@ describe('Canvas', () => {
     fireEvent.dragOver(canvas, data([KIND_MIME]));
     fireEvent.drop(canvas, data([KIND_MIME], 'database'));
     const [node] = toJSON(doc).nodes;
-    expect(node).toMatchObject({ type: 'database', title: 'New database' });
+    expect(node).toMatchObject({ type: 'database', title: 'Untitled database' });
     expect(ui().selection.nodes).toEqual([node?.id]);
-    expect(ui().announcement.text).toBe('Added New database');
+    expect(ui().announcement.text).toBe('Added Untitled database');
   });
 
   it('adds a dropped note at the drop point', () => {
@@ -245,11 +245,13 @@ describe('Canvas', () => {
       expect(nodeA).toHaveFocus();
     });
     expect(ui().focusedId).toBe('a');
-    // Now the node carries the Tab stop (plus its four handles); the canvas itself does not.
+    // Now the node carries the Tab stop (plus its four handles and its details button, 019);
+    // the canvas itself does not.
     expect(canvas).toHaveAttribute('tabindex', '-1');
     expect(tabStops()).toEqual([
       nodeA,
       ...screen.getAllByRole('button', { name: 'Connect from A' }),
+      screen.getByRole('button', { name: 'Open details for A' }),
     ]);
 
     await user.tab({ shift: true });
@@ -357,7 +359,15 @@ describe('Canvas', () => {
     fireEvent.doubleClick(screen.getByRole('group', { name: 'Service: Gateway' }));
     expect(ui().drill).toEqual([]);
 
-    fireEvent.doubleClick(await screen.findByRole('group', { name: 'Service: Delivery platform' }));
+    // Double-click renames a component with children (019 FR-001); Enter drills in.
+    const parent = await screen.findByRole('group', { name: 'Service: Delivery platform' });
+    fireEvent.doubleClick(parent);
+    expect(ui().drill).toEqual([]);
+    expect(ui().titleEdit).toEqual({ target: 'node', id: 'parent', isNew: false });
+    await user.keyboard('{Escape}');
+    expect(ui().titleEdit).toBeNull();
+    expect(parent).toHaveFocus();
+    await user.keyboard('{Enter}');
     expect(ui().drill.map((frame) => frame.id)).toEqual(['parent']);
     expect(screen.getAllByTestId('deck-node')).toHaveLength(1);
     expect(screen.getByRole('group', { name: 'Service: Dispatch' })).toBeInTheDocument();
@@ -425,6 +435,24 @@ describe('Canvas', () => {
     });
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Left group, 2 nodes' }));
     expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+  });
+
+  it('flags the wrapper for the details button: drag, session, Hide UI, tiny cards (019 R4)', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    const canvas = container.querySelector('[data-canvas]');
+    for (const flag of ['data-dragging', 'data-hide-ui', 'data-flow-session']) {
+      expect(canvas).not.toHaveAttribute(flag);
+    }
+    act(() => {
+      ui().setCanvasGesture('drag');
+      ui().setHideUi(true);
+      ui().startRecording('New flow', null);
+    });
+    for (const flag of ['data-dragging', 'data-hide-ui', 'data-flow-session']) {
+      expect(canvas).toHaveAttribute(flag);
+    }
+    // jsdom's React Flow starts at zoom 1: a 164 px card is not tiny.
+    expect(canvas).not.toHaveAttribute('data-tiny-cards');
   });
 
   it('dims non-neighbours in focus mode, follows the selection, and leaves the deck unchanged', async () => {
@@ -1084,13 +1112,15 @@ describe('canvas in flow mode (007)', () => {
     act(() => {
       addComponent(editor(), 'service', { x: 600, y: 600 });
     });
-    const created = screen.getByRole('group', { name: 'Service: New service' });
+    const created = screen.getByRole('group', { name: 'Service: Untitled service' });
     expect(within(created).getByRole('note')).toHaveTextContent('Hidden in this view');
     act(() => {
       ui().switchView('w');
       ui().switchView('v');
     });
-    expect(screen.queryByRole('group', { name: 'Service: New service' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('group', { name: 'Service: Untitled service' }),
+    ).not.toBeInTheDocument();
   });
 
   describe('collapse is remembered per view (011 US5, FR-050)', () => {

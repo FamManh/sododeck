@@ -12,15 +12,13 @@ import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
 import { FieldLabel } from '../fields/field-label';
-import { oneStep } from '../fields/one-step';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
+import { writeNodes, writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { bulkView, tagSuggestions, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
-
-type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
 const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 's'}`;
 
@@ -47,17 +45,10 @@ export function BulkInspector({
 
   /** One batch over the selection; inside a text field's gesture, one undo step per edit. */
   const writeAll = (patch: (node: Node) => NodePatch | null) => {
-    editor.batch(() => {
-      for (const node of nodes) {
-        const p = patch(node);
-        if (p !== null) editor.update('nodes', node.id, p);
-      }
-    });
+    writeNodes(editor, nodes, patch);
   };
   const writeAllOnce = (patch: (node: Node) => NodePatch | null) => {
-    oneStep(editor, () => {
-      writeAll(patch);
-    });
+    writeNodesOnce(editor, nodes, patch);
   };
   const text = (value: string) => (value === '' ? null : value);
   const setTags = (next: (tags: readonly string[]) => readonly string[]) => {

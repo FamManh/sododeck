@@ -112,7 +112,10 @@ const record = async () => db.decks.get('d1');
 
 /** The rule editor from the canvas (018): the rail's Rules flyout, then "Open rule editor". */
 async function openRulesFromRail(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Rules' }));
+  // The rail's button: a selected component's toolbar has a "Rules" button too (019).
+  const rail = document.querySelector<HTMLElement>('[data-region="rail"]');
+  if (rail === null) throw new Error('no rail');
+  await user.click(within(rail).getByRole('button', { name: 'Rules' }));
   await user.click(screen.getByRole('button', { name: 'Open rule editor' }));
 }
 
@@ -143,18 +146,18 @@ describe('EditorPage', () => {
       }),
     );
     await user.click(screen.getByRole('button', { name: 'Add Service' }));
-    expect(announced()).toBe('Added New service');
+    expect(announced()).toBe('Added Untitled service');
     record();
     await user.click(screen.getByRole('button', { name: 'Add Database' }));
     record();
 
     // connect with the keyboard, then label it in the popover
     act(() => {
-      nodeEl('Database: New database').focus();
+      nodeEl('Database: Untitled database').focus();
     });
     await user.keyboard('c');
     await user.keyboard('serv{Enter}');
-    expect(announced()).toBe('Connected New database to New service');
+    expect(announced()).toBe('Connected Untitled database to Untitled service');
     record();
     const popover = await screen.findByRole('dialog', { name: 'Connection' });
     const label = within(popover).getByRole('textbox', { name: 'Label' });
@@ -166,7 +169,7 @@ describe('EditorPage', () => {
 
     // rename in the details drawer, after picking it in the outline
     await user.click(screen.getByRole('button', { name: 'Outline' }));
-    await user.click(screen.getByRole('treeitem', { name: 'New service' }));
+    await user.click(screen.getByRole('treeitem', { name: 'Untitled service' }));
     await user.keyboard('{Meta>}{Shift>}d{/Shift}{/Meta}');
     const title = await screen.findByRole('textbox', { name: 'Title' });
     await user.clear(title);
@@ -229,19 +232,26 @@ describe('EditorPage', () => {
       expect(screen.getByRole('button', { name: 'Add Service' })).toHaveFocus();
     });
     await user.keyboard('{Enter}');
-    await user.tab();
-    expect(screen.getByRole('button', { name: 'Add Database' })).toHaveFocus();
+    // The new card starts in title edit (019 US2); Esc keeps "Untitled service".
+    const name = screen.getByRole('textbox', { name: 'Component title' });
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute('placeholder', 'Name this component');
+    await user.keyboard('{Escape}');
+    // The palette flyout is still open (018 rules).
+    act(() => {
+      screen.getByRole('button', { name: 'Add Database' }).focus();
+    });
     await user.keyboard('{Enter}');
-    expect(titles()).toEqual(['New service', 'New database']);
+    await user.keyboard('{Escape}');
+    expect(titles()).toEqual(['Untitled service', 'Untitled database']);
 
-    // 2. F6 to the canvas (018): the newest component holds its Tab stop; then the arrows.
-    await user.keyboard('{F6}');
+    // 2. Esc left focus on the newest card on the canvas; then the arrows.
     await waitFor(() => {
-      expect(nodeEl('Database: New database')).toHaveFocus();
+      expect(nodeEl('Database: Untitled database')).toHaveFocus();
     });
     await user.keyboard('{ArrowLeft}');
     await waitFor(() => {
-      expect(nodeEl('Service: New service')).toHaveFocus();
+      expect(nodeEl('Service: Untitled service')).toHaveFocus();
     });
 
     // 3. Connect with C, type-ahead, Enter; label it; Enter.
@@ -254,7 +264,7 @@ describe('EditorPage', () => {
     await user.keyboard('reads{Enter}');
     expect(toJSON(doc).edges).toMatchObject([{ label: 'reads' }]);
     await waitFor(() => {
-      expect(nodeEl('Service: New service')).toHaveFocus();
+      expect(nodeEl('Service: Untitled service')).toHaveFocus();
     });
 
     // 4. Delete the selected connection, confirm on "Delete".

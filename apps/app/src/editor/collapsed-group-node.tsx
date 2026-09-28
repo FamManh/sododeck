@@ -6,6 +6,7 @@ import { memo, useEffect } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
+import { CardTitleInput } from './quick-edit/card-title-input';
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -27,6 +28,11 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
   const flowMode = useUiStore((state) => isFlowMode(state));
   const hasFlowInside = data.flowInside !== undefined;
   const currentFlowInside = data.flowInside === 'current';
+  const titleEdit = useUiStore((state) =>
+    state.titleEdit?.target === 'group' && state.titleEdit.id === data.groupId
+      ? state.titleEdit
+      : null,
+  );
 
   useEffect(() => {
     updateNodeInternals(id);
@@ -65,11 +71,24 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
       >
         {hasFlowInside && <span data-testid="collapsed-flow-ring" className="sr-only" />}
         {currentFlowInside && <FlowInsideDot />}
-        <span className="truncate text-body font-medium text-ink">{data.title}</span>
+        <span
+          className={cn(
+            'truncate text-body font-medium text-ink',
+            titleEdit !== null && 'invisible',
+          )}
+        >
+          {data.title}
+        </span>
         <span className="text-caption text-ink-secondary">
           {data.nodeCount} nodes · {data.edgeCount} edges
         </span>
       </button>
+      {titleEdit !== null && (
+        // Over the title line; a field can't sit inside the card's button.
+        <div className="absolute inset-x-2 top-1/2 -translate-y-full">
+          <CardTitleInput edit={titleEdit} title={data.title} className="bg-surface text-body" />
+        </div>
+      )}
       {SIDES.map(({ id: side, position }) => (
         <Handle
           key={side}

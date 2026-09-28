@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react';
+import { toJSON } from '@sododeck/model';
+import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
@@ -50,5 +51,34 @@ describe('GroupBoundaryNode', () => {
     expect(screen.getByRole('button', { name: 'Core services group, 8 nodes' })).toHaveClass(
       'text-body',
     );
+  });
+
+  it('edits the group label in place and keeps double-click drilling in (019 FR-008)', async () => {
+    const user = userEvent.setup();
+    const props = {
+      id: 'group:core',
+      data: { title: 'Core services', count: 8, focused: false },
+      width: 300,
+      height: 200,
+    } as unknown as NodeProps<GroupFlowNode>;
+    const { doc, editor } = renderWithEditor(
+      <GroupBoundaryNode {...props} />,
+      deckOf({ groups: [{ id: 'core', title: 'Core services' }] }),
+    );
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'group', id: 'core', isNew: false });
+    });
+    expect(screen.queryByRole('button', { name: 'Core services group, 8 nodes' })).toBeNull();
+    const field = screen.getByRole('textbox', { name: 'Group title' });
+    expect(field).toHaveFocus();
+    await user.keyboard('Billing{Escape}');
+    expect(toJSON(doc).groups[0]?.title).toBe('Core services');
+    expect(editor().canUndo()).toBe(false);
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'group', id: 'core', isNew: false });
+    });
+    fireEvent.doubleClick(screen.getByRole('textbox', { name: 'Group title' }));
+    await user.keyboard('Billing{Enter}');
+    expect(toJSON(doc).groups[0]?.title).toBe('Billing');
   });
 });

@@ -3,27 +3,21 @@ import { Switch } from '@sododeck/ui/components/switch';
 import { useId } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
+import { pinAnnouncement, pinState, type PinState } from './pin-state';
 import { useViewActions, useViewState } from './use-current-view';
 
 /** How many of `nodeIds` are pinned in the current view. */
-function usePinState(nodeIds: readonly Id[]): 'none' | 'some' | 'all' {
-  const pinned = useViewState().render.pinned;
-  const count = nodeIds.filter((id) => pinned.has(id)).length;
-  return count === 0 ? 'none' : count === nodeIds.length ? 'all' : 'some';
+function usePinState(nodeIds: readonly Id[]): PinState {
+  return pinState(nodeIds, useViewState().render.pinned);
 }
 
 /** Pins every one of `nodeIds` unless all are pinned, then unpins them: one undo step. */
-function useTogglePins(nodeIds: readonly Id[], state: 'none' | 'some' | 'all') {
+function useTogglePins(nodeIds: readonly Id[], state: PinState) {
   const actions = useViewActions();
   return () => {
     const pin = state !== 'all';
     actions.pin(nodeIds, pin);
-    const n = nodeIds.length;
-    useUiStore
-      .getState()
-      .announce(
-        `${pin ? 'Pinned' : 'Unpinned'} ${n === 1 ? 'component' : `${String(n)} components`}`,
-      );
+    useUiStore.getState().announce(pinAnnouncement(pin, nodeIds.length));
   };
 }
 

@@ -42,6 +42,14 @@ describe('SHORTCUTS', () => {
     const ids = new Set<string>(SHORTCUTS.map((s) => s.id));
     for (const id of required) expect(ids.has(id), id).toBe(true);
   });
+
+  it('lists every key added by 019 in the Quick edit section (FR-045)', () => {
+    const quick = SHORTCUTS.filter((s) => s.section === 'Quick edit').map((s) => s.keys.apple);
+    expect(quick).toEqual(
+      expect.arrayContaining(['F2', 'Double-click', '⌘⏎', '⌘E', '⇧F10', '⇧⌘C', '⇧⌘G', 'P']),
+    );
+    expect(SHORTCUT_SECTIONS).toContain('Quick edit');
+  });
 });
 
 describe('shortcutLabel', () => {

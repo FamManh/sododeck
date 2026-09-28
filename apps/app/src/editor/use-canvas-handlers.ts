@@ -19,8 +19,9 @@ import { useMemo, useRef } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
-import { isFlowMode, useUiStore } from '../state/ui-store';
-import { addComponent, centredOn, connectComponents } from './canvas-actions';
+import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
+import { targetOf } from './actions/use-action-context';
+import { addComponent, centredOn, connectComponents, nodeElement } from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
   COLLAPSED_NODE_PREFIX,
@@ -136,7 +137,75 @@ export function useCanvasHandlers() {
       return true;
     };
 
+    /**
+     * Opens the canvas menu for a right-clicked object (019 FR-034): an unselected object becomes
+     * the selection first; inside the selection the whole selection is kept. In flow mode and
+     * sessions the selection is left alone (selecting would leave the flow).
+     */
+    const openMenu = (
+      event: ReactMouseEvent,
+      clicked: Partial<Selection> | null,
+      returnFocus: HTMLElement | null,
+    ) => {
+      event.preventDefault();
+      const { selection } = ui();
+      const own = clicked === null ? EMPTY_SELECTION : { ...EMPTY_SELECTION, ...clicked };
+      const inside =
+        own.nodes.every((id) => selection.nodes.includes(id)) &&
+        own.edges.every((id) => selection.edges.includes(id)) &&
+        own.groups.every((id) => selection.groups.includes(id)) &&
+        own.stickies.every((id) => selection.stickies.includes(id));
+      let target = own;
+      if (clicked !== null && inside) target = selection;
+      else if (clicked !== null && !viewOnly()) ui().select(own);
+      ui().openContextMenu({
+        target: targetOf(target),
+        point: { x: event.clientX, y: event.clientY },
+        via: 'pointer',
+        returnFocus,
+      });
+    };
+
     return {
+      onNodeContextMenu: (event: ReactMouseEvent, node: Node) => {
+        if (isPortNode(node.id)) {
+          event.preventDefault();
+          return;
+        }
+        const groupId = groupIdOf(node.id);
+        const stickyId = stickyIdOf(node.id);
+        const clicked =
+          groupId !== null
+            ? { groups: [groupId] }
+            : stickyId !== null
+              ? { stickies: [stickyId] }
+              : { nodes: [node.id] };
+        if (groupId === null && stickyId === null) ui().focus(node.id);
+        openMenu(event, clicked, nodeElement(node.id));
+      },
+      onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => {
+        if (isMergedEdge(edge.id)) {
+          event.preventDefault();
+          return;
+        }
+        openMenu(event, { edges: [edge.id] }, null);
+      },
+      onSelectionContextMenu: (event: ReactMouseEvent) => {
+        event.preventDefault();
+        ui().openContextMenu({
+          target: targetOf(ui().selection),
+          point: { x: event.clientX, y: event.clientY },
+          via: 'pointer',
+        });
+      },
+      onPaneContextMenu: (event: ReactMouseEvent | MouseEvent) => {
+        event.preventDefault();
+        ui().openContextMenu({
+          target: { kind: 'canvas' },
+          point: { x: event.clientX, y: event.clientY },
+          via: 'pointer',
+        });
+      },
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
         if (applyTool(event, node.id)) return;
         const groupId = groupIdOf(node.id);
@@ -187,20 +256,11 @@ export function useCanvasHandlers() {
           return;
         }
         if (stickyIdOf(node.id) !== null || isPortNode(node.id)) return;
-        const graph = visibleGraph(
-          readViewState(editor.doc).deck,
-          scopeOf(ui().drill),
-          collapsedOf(editor.doc),
-        );
-        if ((graph.childCount.get(node.id) ?? 0) === 0) {
-          // A plain component: its details (018 FR-022).
-          ui().select({ nodes: [node.id] });
-          ui().focus(node.id);
-          ui().openDrawer();
-          return;
-        }
-        const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
-        if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
+        // Any component, with or without children, renames in place (019 FR-001); Enter still
+        // opens details or drills in, and "Open inside" drills in by pointer.
+        ui().select({ nodes: [node.id] });
+        ui().focus(node.id);
+        ui().startTitleEdit({ target: 'node', id: node.id, isNew: false });
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
         if (isMergedEdge(edge.id)) {
@@ -249,6 +309,13 @@ export function useCanvasHandlers() {
       onEdgeMouseLeave: () => {
         if (ui().hoverEdgeId !== null) ui().setHoverEdge(null);
       },
+      /** A pan or zoom by the user hides the selection toolbar until it ends (019 R5). */
+      onMoveStart: (event: MouseEvent | TouchEvent | null) => {
+        if (event !== null) ui().setCanvasGesture('pan');
+      },
+      onMoveEnd: () => {
+        if (ui().canvasGesture === 'pan') ui().setCanvasGesture(null);
+      },
       onPaneClick: (event: ReactMouseEvent) => {
         // Flow mode keeps going on an empty-canvas click (007); Esc or Back exits.
         if (flowMode()) return;
@@ -265,6 +332,8 @@ export function useCanvasHandlers() {
 
       onNodeDragStart: (_: unknown, node: Node) => {
         if (viewOnly()) return;
+        // The selection toolbar hides while a card moves (019 FR-026).
+        ui().setCanvasGesture('drag');
         if (isGroupNode(node.id) || isCollapsedNode(node.id) || isPortNode(node.id)) return;
         const stickyId = stickyIdOf(node.id);
         if (stickyId !== null) {
@@ -324,6 +393,7 @@ export function useCanvasHandlers() {
         );
       },
       onNodeDragStop: () => {
+        if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();
       },
 
@@ -364,7 +434,7 @@ export function useCanvasHandlers() {
           return;
         }
         if (kind === null) return;
-        addComponent(editor, kind, centredOn(point));
+        addComponent(editor, kind, centredOn(point), { edit: true });
       },
     };
   }, [editor, getViewport, screenToFlowPosition]);

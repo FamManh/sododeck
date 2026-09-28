@@ -3,7 +3,8 @@ import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/
 import { useToast } from '@sododeck/ui/components/toast';
 import { Braces, ChevronDown, Copy, Lock, X } from 'lucide-react';
 
-import { isApplePlatform, supportsClipboardWrite } from '../lib/features';
+import { copyText, couldNotCopyText } from '../lib/clipboard';
+import { isApplePlatform } from '../lib/features';
 import type { JsonTab } from '../state/json-panel-prefs';
 import { copyToastText, countLines, lineCountLabel, type SelectionView } from './json-panel-view';
 
@@ -34,14 +35,7 @@ export function JsonPanelHeader({
   const lineCount = countLines(text);
 
   const copy = async () => {
-    try {
-      if (!supportsClipboardWrite()) throw new Error('no clipboard');
-      await navigator.clipboard.writeText(text);
-      toast({ message: copyToastText(tab, view) });
-    } catch {
-      const keys = isApplePlatform() ? '⌘C' : 'Ctrl+C';
-      toast({ message: `Couldn't copy — select the text and press ${keys}` });
-    }
+    toast({ message: (await copyText(text)) ? copyToastText(tab, view) : couldNotCopyText() });
   };
 
   return (

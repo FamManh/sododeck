@@ -9,6 +9,7 @@ import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { setGroupCollapsed } from './views/use-current-view';
 import type { GroupFlowNode } from './deck-to-flow';
+import { CardTitleInput } from './quick-edit/card-title-input';
 
 /**
  * Dashed group boundary with a micro label "TITLE n" (DESIGN.md group-boundary, design 02).
@@ -26,6 +27,9 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   const announce = useUiStore((state) => state.announce);
   const flowMode = useUiStore((state) => isFlowMode(state));
   const groupId = id.startsWith('group:') ? id.slice('group:'.length) : id;
+  const titleEdit = useUiStore((state) =>
+    state.titleEdit?.target === 'group' && state.titleEdit.id === groupId ? state.titleEdit : null,
+  );
 
   return (
     <div
@@ -37,35 +41,48 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         data.level === 'landscape' && 'border-solid bg-surface-2/80',
       )}
     >
-      <button
-        type="button"
-        data-node-id={id}
-        aria-label={`${data.title} group, ${String(data.count)} nodes`}
-        aria-expanded="true"
-        tabIndex={data.focused ? 0 : -1}
-        title="Double-click or ↵ to open"
-        onMouseDownCapture={(event) => {
-          event.stopPropagation();
-        }}
-        onMouseDown={(event) => {
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          if (flowMode) return;
-          event.stopPropagation();
-          select({ groups: [groupId] });
-          focus(id);
-        }}
-        className={cn(
-          'pointer-events-auto absolute top-2 left-3 flex gap-1.5 rounded-full px-1 text-micro text-ink-muted uppercase',
-          data.level === 'landscape' &&
-            'top-4 left-4 bg-surface px-2 py-1 text-body font-medium normal-case text-ink',
-          focusRing,
-        )}
-      >
-        <span>{data.title}</span>
-        <span>{data.count}</span>
-      </button>
+      {titleEdit !== null ? (
+        <div
+          data-node-id={id}
+          tabIndex={-1}
+          className={cn(
+            'pointer-events-auto absolute top-1 left-3 w-56',
+            data.level === 'landscape' && 'top-3 left-4 w-72',
+          )}
+        >
+          <CardTitleInput edit={titleEdit} title={data.title} className="bg-surface" />
+        </div>
+      ) : (
+        <button
+          type="button"
+          data-node-id={id}
+          aria-label={`${data.title} group, ${String(data.count)} nodes`}
+          aria-expanded="true"
+          tabIndex={data.focused ? 0 : -1}
+          title="Double-click or ↵ to open"
+          onMouseDownCapture={(event) => {
+            event.stopPropagation();
+          }}
+          onMouseDown={(event) => {
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            if (flowMode) return;
+            event.stopPropagation();
+            select({ groups: [groupId] });
+            focus(id);
+          }}
+          className={cn(
+            'pointer-events-auto absolute top-2 left-3 flex gap-1.5 rounded-full px-1 text-micro text-ink-muted uppercase',
+            data.level === 'landscape' &&
+              'top-4 left-4 bg-surface px-2 py-1 text-body font-medium normal-case text-ink',
+            focusRing,
+          )}
+        >
+          <span>{data.title}</span>
+          <span>{data.count}</span>
+        </button>
+      )}
       <button
         type="button"
         aria-label={`Collapse ${data.title}`}

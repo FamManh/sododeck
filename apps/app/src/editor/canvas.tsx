@@ -21,7 +21,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { displayPosition, groupBounds, nodeSize } from './canvas-geometry';
+import { displayPosition, groupBounds, nodeSize, NODE_SIZE } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -79,6 +79,10 @@ const edgeTypes: EdgeTypes = {
   merged: MergedEdge,
   'sticky-leader': StickyLeaderEdge,
 };
+
+/** Cards narrower than 80 px on screen hide their details button (019 FR-018). */
+const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
+  s.transform[2] * NODE_SIZE.width < 80;
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -141,7 +145,10 @@ function useSelectionSync(): void {
           changes.some(
             (c) =>
               c.kind === 'removed' &&
-              (c.scope === 'nodes' || c.scope === 'edges' || c.scope === 'stickies'),
+              (c.scope === 'nodes' ||
+                c.scope === 'edges' ||
+                c.scope === 'groups' ||
+                c.scope === 'stickies'),
           )
         ) {
           const deck = readDeck(editor.doc);
@@ -212,7 +219,9 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
       void setCenter(point.x + point.width / 2, point.y + point.height / 2, { zoom });
     }
     const element = nodeElement(focusedId);
-    if (element && element !== document.activeElement) element.focus({ preventScroll: true });
+    // Focus already inside the card (its title field, 019) stays there.
+    if (element && !element.contains(document.activeElement))
+      element.focus({ preventScroll: true });
   }, [focusedId, editor.doc, getViewport, setCenter, wrapper]);
 }
 
@@ -258,6 +267,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
   const [restored] = useState(() => useUiStore.getState().canvasViewport);
   const zoomLevel = useStore(levelSelector);
+  // One boolean for the whole canvas: cards never subscribe to the zoom (019 R4).
+  const tinyCards = useStore(tinyCardsSelector);
+  const dragging = useUiStore((s) => s.canvasGesture === 'drag');
   useEffect(
     () => () => {
       useUiStore.getState().setCanvasViewport(getViewport());
@@ -521,6 +533,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       data-region="canvas"
       {...(flowMode ? { 'data-flow-mode': '' } : {})}
       {...(focus !== null ? { 'data-focus-mode': '' } : {})}
+      {...(session !== null ? { 'data-flow-session': '' } : {})}
+      {...(hideUi ? { 'data-hide-ui': '' } : {})}
+      {...(dragging ? { 'data-dragging': '' } : {})}
+      {...(tinyCards ? { 'data-tiny-cards': '' } : {})}
       data-level={level}
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}

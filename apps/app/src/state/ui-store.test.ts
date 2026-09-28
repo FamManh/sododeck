@@ -257,10 +257,10 @@ describe('ui store', () => {
   });
 
   it('announces, counting repeats', () => {
-    state().announce('Added New service');
+    state().announce('Added Untitled service');
     const first = state().announcement;
-    state().announce('Added New service');
-    expect(state().announcement.text).toBe('Added New service');
+    state().announce('Added Untitled service');
+    expect(state().announcement.text).toBe('Added Untitled service');
     expect(state().announcement.seq).toBe(first.seq + 1);
   });
 
