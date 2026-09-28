@@ -44,7 +44,7 @@
 ### Model
 
 - [x] T004 [P] Write `packages/model/test/problems.test.ts` (failing) per [contracts/model-problems.md](contracts/model-problems.md): one positive and one negative case per kind (orphan incl. `parent` exception and one-node deck; duplicates incl. A→B vs B→A, label normalisation, three copies = one problem, self-loop ignored; step without connection; broken chain; incomplete flow: empty flow, empty branch label, empty branch condition, unknown branch; overlapping conditions incl. empty conditions not overlapping; missing rule on a node and on a step; rule without catch-all; invalid rule cells; broken reference on a sticky anchor, a group parent, a parent cycle), dedup (R2), ordering and stable keys (R3), `byObject` indexing, `total === list.length`, and clean fixtures (`packages/schema/examples/*.sododeck.json`, `specs/008-inspector-rules/screens/logistics.sododeck.json`) returning `total === 0`.
-- [x] T005 Implement `packages/model/src/problems.ts` (`checkDeck`, `DeckProblems`, `Problem`, `ProblemKind`, `ProblemTarget`) per [data-model.md](data-model.md) and research R1–R3, reusing `analyzeFlow`, `ruleChecks`, `checkIntegrity` and `normalizeText`; export from `packages/model/src/index.ts`. Make T004 pass.
+- [x] T005 Implement `packages/model/src/problems.ts` (`checkDeck`, `DeckProblems`, `Problem`, `ProblemKind`, `ProblemTarget`) per [data-model.md](data-model.md) and research R1–R3, reusing `analyzeFlow`, `ruleChecks` and `checkIntegrity`; export from `packages/model/src/index.ts`. Make T004 pass.
 - [x] T006 [P] Add a `checkDeck` budget to `packages/model/test/perf.test.ts`: 30 ms (× 3 on CI) for 2,000 nodes / 4,000 edges / 40 flows, extending `largeDeck()` in `packages/model/test/helpers.ts` with a size parameter if needed.
 - [x] T007 [P] Document the API in `packages/model/CLAUDE.md` under "Added by 015".
 
@@ -125,12 +125,12 @@
 
 ## Phase 7: Polish & cross-cutting
 
-- [ ] T032 [P] Accessibility pass: axe check in `problems-panel.test.tsx` and `canvas-toolbar.test.tsx` in light and dark; glyphs never colour-only (FR-025, FR-027, FR-028).
-- [ ] T033 [P] Update `apps/app/CLAUDE.md` (problems folder, `useProblems`, marks through `overlay`, ⌘. key, one sync check per delete).
-- [ ] T034 Run `pnpm bench` after the change, save `specs/015-model-validation/bench-after.md`, compare with T002 (no regression below targets).
-- [ ] T035 Screenshots of the deck inspector with problems, the "No problems" row and canvas glyphs at 1440×900 in light and dark into `specs/015-model-validation/screens/`, compared with `docs/design/screens/60-problems-*` in `specs/015-model-validation/visual-check.md` (allowed differences: no `problems` field in JSON, §g-23).
-- [ ] T036 Run the quickstart scenarios 1–7 and record results in the PR description.
-- [ ] T037 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`.
+- [ ] T032 [P] Accessibility pass: axe check in `problems-panel.test.tsx` and `canvas-toolbar.test.tsx` in light and dark; glyphs never colour-only (FR-025, FR-027, FR-028). **Partly done:** the repo has no axe dependency (adding one needs founder approval), so there is no axe run; roles, names, keyboard paths and non-colour cues are covered by the component tests.
+- [x] T033 [P] Update `apps/app/CLAUDE.md` (problems folder, `useProblems`, marks through `overlay`, ⌘. key, one sync check per delete).
+- [x] T034 Run `pnpm bench` after the change, save `specs/015-model-validation/bench-after.md`, compare with T002 (no regression below targets).
+- [x] T035 Screenshots of the deck inspector with problems, the "No problems" row and canvas glyphs at 1440×900 in light and dark into `specs/015-model-validation/screens/`, compared with `docs/design/screens/60-problems-*` in `specs/015-model-validation/visual-check.md` (allowed differences: no `problems` field in JSON, §g-23).
+- [ ] T036 Run the quickstart scenarios 1–7 and record results in the PR description. **Not done by hand:** scenarios 1–4 are covered by component tests and the screenshots; 5 (JSON/export) by tests; 6 (2,000-node deck in the browser) and a full manual pass are left for the PR review.
+- [x] T037 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`.
 
 ---
 

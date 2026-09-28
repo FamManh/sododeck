@@ -6,7 +6,7 @@
 
 **Dependency**: 006, 008, 009, 010 and 011 are merged on `main` (`2ebf01a`). Names checked on
 `main`: model `checkIntegrity`, `IntegrityProblem`, `analyzeFlow`, `FlowProblem`, `ruleChecks`,
-`normalizeText`, `previewRemoval`; app `useDeckSnapshot`, `readDeck`, `openResult`,
+`previewRemoval`; app `useDeckSnapshot`, `readDeck`, `openResult`,
 `OpenResultContext`, `firstViewShowing`, `viewStateOf`, `setGroupCollapsed`, `collapsedOf`,
 `scopeOf`, `drillUp`, `openFlow`, `exitFlow`, `toFlowNodes` / `toFlowEdges` (`overlay`),
 `DeckNode`, `DeckEdge`, `CanvasToolbar`, `DeckInspector`, `FlowRow`, `RuleList`,

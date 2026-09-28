@@ -38,9 +38,10 @@ become `missing-rule`, not `broken-reference`.
 
 - **Orphan:** a node id that is neither `from` nor `to` of any edge, is not the `parent` of another
   node, and the deck has more than one node. Groups and stickies are never orphans.
-- **Duplicate:** edges grouped by `from`, `to` and `normalizeText(label ?? '')` (the existing
-  search normaliser: trimmed, lower-case, spaces collapsed); groups of 2+ are one problem listing
+- **Duplicate:** edges grouped by `from`, `to` and the normalised label (empty = missing); groups of 2+ are one problem listing
   all edge ids. Direction matters (A→B ≠ B→A); self-loops are not reported.
+- **Normalisation** of labels and conditions: trimmed, lower-case, runs of whitespace collapsed
+  (a local helper; the search normaliser also strips markdown markers, which labels do not need).
 - **Overlapping conditions:** a flow has at most one fork (all `flow.branches` share it, see
   `flow-paths.ts`), so branches of one flow whose normalised non-empty conditions are equal form
   one problem.
@@ -48,9 +49,9 @@ become `missing-rule`, not `broken-reference`.
   `broken-chain`, `incomplete-flow`, `overlapping-conditions`, `missing-rule`,
   `rule-without-catch-all`, `invalid-rule-cells`, `broken-reference`; then object title
   (`localeCompare`, base sensitivity); then step order.
-- **Stable key:** `kind` + the sorted ids involved (for example
-  `broken-chain:flow-7:step-3`). ⌘. remembers the last visited key and continues from its index,
-  or from the next key in sort order if it disappeared.
+- **Stable key:** `kind` + the ids involved (for example `broken-chain:flow-7:step-3`). ⌘.
+  remembers the last visited key and continues from its index; when that problem is gone (fixed),
+  the walk restarts from the first (or, backwards, the last) problem.
 
 ## R4. Where it runs: a problems worker
 
@@ -103,9 +104,9 @@ lacks:
 
 ## R7. Glyphs on the canvas
 
-**Decision:** a per-id `ProblemMarks` (`Map<id, { count, titles }>`) is passed to
-`toFlowNodes` / `toFlowEdges` through the existing `overlay` argument (the documented way marks
-reach the canvas), and added to the node/edge cache comparisons. `DeckNode` shows an amber
+**Decision:** a per-id `ProblemMarks` (`Map<id, { count, titles, label }>`) is passed to
+`toFlowNodes` / `toFlowEdges` as `CanvasView.problems` (next to the view's `render` input; the flow
+`overlay` stays for flow marks only), and added to the node/edge cache comparisons. `DeckNode` shows an amber
 `TriangleAlert` at the top-right corner (hidden while the connect-target "+" uses that corner) and
 appends ", n problem(s)" to its accessible name; `DeckEdge` shows the glyph inside the label pill
 and renders the pill when the edge has problems even if labels are off.

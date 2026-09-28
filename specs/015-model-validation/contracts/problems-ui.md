@@ -6,8 +6,9 @@ All files in `apps/app/src/editor/problems/` unless noted.
 
 - `createProblemsClient(makeWorker?)` → `{ check(file): Promise<DeckProblems>; terminate() }`,
   module worker `problems.worker.ts` calling `checkDeck`. Same message shape as the layout client.
-- `createProblemsStore(doc, client)`: subscribes to the deck snapshot, posts the latest snapshot
-  trailing-throttled at 150 ms, drops results for superseded snapshots.
+- `createProblemsStore(doc, client, { delayMs?, ownsClient? })`: starts with its first subscriber
+  (no side effects on creation), posts the latest snapshot trailing-throttled at 150 ms, drops
+  results for superseded snapshots, stops (and terminates an owned client) with its last one.
 - `<ProblemsProvider doc>` in `EditorChrome` (`routes/editor-page.tsx`); tests use an inline client.
 - `useProblems(): DeckProblems | null`.
 
