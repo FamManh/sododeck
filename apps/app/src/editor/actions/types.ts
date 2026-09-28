@@ -1,0 +1,99 @@
+/**
+ * The shared action list (019 R1, ADR 0015): one plain object per editing command, rendered by the
+ * context menu and the selection toolbar and run by the new keys, so a menu item is enabled
+ * exactly when its shortcut works (FR-039). Later features add modules to `ACTIONS` (FR-040).
+ */
+import type { DeckEditor } from '@sododeck/model';
+import type { Id, SododeckFile } from '@sododeck/schema';
+import type { LucideIcon } from 'lucide-react';
+
+import type { MenuTarget, Selection, ToolbarFieldId } from '../../state/ui-store';
+import type { ShortcutId } from '../shell/shortcuts';
+import type { ViewState } from '../views/view-state';
+
+export type Surface = 'menu' | 'toolbar';
+
+/** `viewOnly`: the narrow-window editor (< 1024 px); see `use-action-context.ts`. */
+export type Mode = 'edit' | 'flow' | 'session' | 'viewOnly';
+
+export type TargetKind = MenuTarget['kind'];
+
+/** Menu sections, in the order they are shown, separated by a rule. */
+export const SECTIONS = ['open', 'edit', 'clipboard', 'arrange', 'view', 'danger'] as const;
+export type Section = (typeof SECTIONS)[number];
+
+/** The React Flow calls some actions need; absent in pure tests. */
+export interface CanvasApi {
+  fitView: (options?: { padding?: number }) => unknown;
+  screenToFlowPosition: (point: { x: number; y: number }) => { x: number; y: number };
+  getViewport: () => { x: number; y: number; zoom: number };
+}
+
+export interface ActionContext {
+  editor: DeckEditor;
+  /** The real snapshot (not view-projected). */
+  deck: SododeckFile;
+  /** The current view as the canvas draws it (pins, collapsed groups, visible graph input). */
+  view: ViewState;
+  target: MenuTarget;
+  /** The ids the action acts on: the target's, or nothing for the canvas. */
+  selection: Selection;
+  mode: Mode;
+  /** Screen point the menu was opened at (canvas actions add there). */
+  point: { x: number; y: number } | null;
+  /** Direct children count of each visible component in the current scope (drill-in). */
+  childCount: ReadonlyMap<Id, number>;
+  canvas: CanvasApi | null;
+}
+
+type Dynamic<T> = T | ((ctx: ActionContext) => T);
+
+export interface Action {
+  /** Unique, e.g. `title.rename`. */
+  id: string;
+  label: Dynamic<string>;
+  icon?: LucideIcon;
+  /** A key from `SHORTCUTS` shown as the hint (menu) or in the tooltip (toolbar). */
+  shortcut?: ShortcutId;
+  section: Section;
+  /** Where the action is offered, and for which targets. */
+  where: Partial<Record<Surface, readonly TargetKind[]>>;
+  /** Default `['edit']`; Open details, Copy JSON and Fit add the others. */
+  modes?: readonly Mode[];
+  /** Extra conditions (e.g. the component has children). */
+  applies?: (ctx: ActionContext) => boolean;
+  /** Shown as a tooltip; the item stays visible but disabled. */
+  disabledReason?: (ctx: ActionContext) => string | null;
+  /** A tooltip for an enabled item (e.g. "Members move to the parent level"). */
+  description?: string;
+  destructive?: boolean;
+  /** Submenu items. With `radio`, the children are one choice each and `checked` marks one. */
+  children?: (ctx: ActionContext) => readonly Action[];
+  radio?: boolean;
+  checked?: (ctx: ActionContext) => boolean;
+  /** The toolbar popover this action opens (toolbar field buttons). */
+  field?: ToolbarFieldId;
+  /** Every document write is exactly one undo step (`oneStep` / `editor.batch`). */
+  run?: (ctx: ActionContext) => void;
+}
+
+export interface ResolvedAction {
+  id: string;
+  label: string;
+  icon?: LucideIcon;
+  shortcut?: ShortcutId;
+  description?: string;
+  destructive: boolean;
+  /** Why it can't run now, or `null` when it can. */
+  disabled: string | null;
+  field?: ToolbarFieldId;
+  radio: boolean;
+  checked: boolean;
+  children?: readonly ResolvedAction[];
+  run: () => void;
+}
+
+export interface ResolvedSection {
+  id: Section;
+  actions: readonly ResolvedAction[];
+}

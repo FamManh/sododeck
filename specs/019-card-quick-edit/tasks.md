@@ -62,12 +62,12 @@
 
 ### Tokens and `packages/ui`
 
-- [ ] T005 [P] Add `--sd-selection-text` (light and dark values from `docs/design/design-analysis.md` "`--seltx`" row, mapped to our palette) and `--shadow-menu: 0 12px 32px var(--sd-shadow)` to `packages/ui/src/styles/tokens.css` and `theme.css`.
+- [x] T005 [P] Add `--sd-selection-text` (light and dark values from `docs/design/design-analysis.md` "`--seltx`" row, mapped to our palette) and `--shadow-menu: 0 12px 32px var(--sd-shadow)` to `packages/ui/src/styles/tokens.css` and `theme.css`.
   - Register `shadow-menu` in the tailwind-merge config in `packages/ui/src/lib/utils.ts`.
   - Switch the menu content class in `packages/ui/src/lib/menu.ts` from `shadow-float` to `shadow-menu`.
   - Add an `::selection` rule scoped to `[data-slot=inline-edit]`.
   - Extend the token parity test in `packages/ui/test/`. `tokens-only.test.ts` must stay green.
-- [ ] T006 [P] Extend `packages/ui/src/components/inline-edit.tsx` (+ its test) with the optional props from R2. Existing callers (`deck-name.tsx`, `view-switcher.tsx`, `flows/rename-field.tsx`) must behave the same. The new props:
+- [x] T006 [P] Extend `packages/ui/src/components/inline-edit.tsx` (+ its test) with the optional props from R2. Existing callers (`deck-name.tsx`, `view-switcher.tsx`, `flows/rename-field.tsx`) must behave the same. The new props:
   - `placeholder`
   - `autoFocus` (focuses and selects all text on mount)
   - `startEmpty` (the draft starts as `''`)
@@ -78,19 +78,19 @@
 
   Tests: select-all on mount, placeholder shown with an empty draft, Esc calls `onCancel`, and a `preventDefault` in `onKeyDown` suppresses the commit.
 
-- [ ] T007 [P] Create `packages/ui/src/components/toolbar.tsx` (+ `toolbar.test.tsx`). It wraps Radix `Toolbar` from `radix-ui` and exports `Toolbar`, `ToolbarButton` and `ToolbarSeparator`, styled to the inventory: 44 tall, 4 padding, 34 px buttons, 1×20 dividers, Surface, 1 px Hairline, 12 radius, `shadow-hover`.
+- [x] T007 [P] Create `packages/ui/src/components/toolbar.tsx` (+ `toolbar.test.tsx`). It wraps Radix `Toolbar` from `radix-ui` and exports `Toolbar`, `ToolbarButton` and `ToolbarSeparator`, styled to the inventory: 44 tall, 4 padding, 34 px buttons, 1×20 dividers, Surface, 1 px Hairline, 12 radius, `shadow-hover`.
   - Button states: hover Surface 2, `data-state=open` → Orange Soft + Orange Ink, disabled 40 %, `focusRing`.
   - Tests by role: `toolbar` with its name; ← / → / Home / End move focus; disabled buttons are skipped.
-- [ ] T008 [P] Create `packages/ui/src/components/choice-list.tsx` (+ `choice-list.test.tsx`) per R6 and the contract's "Field popover".
+- [x] T008 [P] Create `packages/ui/src/components/choice-list.tsx` (+ `choice-list.test.tsx`) per R6 and the contract's "Field popover".
   - Props: `label`, `filterLabel`, `options: { value; label; state?: 'selected' | 'partial'; count?: string }[]`, `mixed?: boolean`, `none?: { label }`, `create?: (typed) => string | null`, `multiple?`, `onPick(value | null)`.
   - It renders a `searchbox` (focused on mount) plus a `listbox`. It shows a "Mixed" note when `mixed`, a check on selected rows, and partial rows as a dashed `TagChip` with the count in the text ("2 of 3").
   - Keys: ↑ / ↓ move the active option (`aria-activedescendant`), and Enter picks. In multiple mode Enter toggles and the list stays open.
   - Tests: filter narrows the list, "none" returns `null`, "Use 'x'" appears only when `create` returns text, and partial text is present.
-- [ ] T009 Add gallery entries for `Toolbar`, `ChoiceList` and the new `InlineEdit` props in `apps/app/src/design-gallery/` (the pattern of `overlays-section.tsx`). Update the components table in `packages/ui/CLAUDE.md`.
+- [x] T009 Add gallery entries for `Toolbar`, `ChoiceList` and the new `InlineEdit` props in `apps/app/src/design-gallery/` (the pattern of `overlays-section.tsx`). Update the components table in `packages/ui/CLAUDE.md`.
 
 ### Store, clipboard, shortcuts
 
-- [ ] T010 Extend `apps/app/src/state/ui-store.ts` (+ `ui-store.test.ts`) with the data-model "UI store additions":
+- [x] T010 Extend `apps/app/src/state/ui-store.ts` (+ `ui-store.test.ts`) with the data-model "UI store additions":
   - Fields: `titleEdit`, `contextMenu`, `toolbarField`, `canvasGesture`.
   - Actions: `startTitleEdit`, `endTitleEdit`, `openContextMenu`, `closeContextMenu`, `openToolbarField`, `closeToolbarField`, `setCanvasGesture`.
   - Export types `TitleEdit`, `MenuTarget`, `ToolbarFieldId`.
@@ -99,8 +99,8 @@
     - `setCanvasGesture` closes `toolbarField`.
     - `pruneSelection` clears `titleEdit` and `contextMenu` whose targets are gone.
     - `resetForDeck` clears all four fields.
-- [ ] T011 [P] Create `apps/app/src/lib/clipboard.ts` (+ test). `copyText(text): Promise<boolean>` uses `supportsClipboardWrite()` and `navigator.clipboard.writeText`, and returns `false` on failure or when unsupported. Refactor `apps/app/src/editor/json-panel-header.tsx` to use it, with the same toasts. Its existing tests must stay green.
-- [ ] T012 [P] Add a "Quick edit" section to `apps/app/src/editor/shell/shortcuts.ts` (+ test) with these ids:
+- [x] T011 [P] Create `apps/app/src/lib/clipboard.ts` (+ test). `copyText(text): Promise<boolean>` uses `supportsClipboardWrite()` and `navigator.clipboard.writeText`, and returns `false` on failure or when unsupported. Refactor `apps/app/src/editor/json-panel-header.tsx` to use it, with the same toasts. Its existing tests must stay green.
+- [x] T012 [P] Add a "Quick edit" section to `apps/app/src/editor/shell/shortcuts.ts` (+ test) with these ids:
   - `rename` (F2; double-click noted in the label)
   - `saveAndAddAnother` (⌘⏎)
   - `focusToolbar` (⌘E)
@@ -117,10 +117,10 @@
 
 ### Action list (R1)
 
-- [ ] T013 Create `apps/app/src/editor/actions/types.ts` with the data-model "Action" and `ActionContext` types: `Action`, `ActionContext`, `Surface = 'menu' | 'toolbar'`, `Mode = 'edit' | 'flow' | 'session' | 'viewOnly'`, `Section` (ordered `open`, `edit`, `clipboard`, `arrange`, `view`, `danger`) and `ResolvedSection { id; actions: ResolvedAction[] }`. A `ResolvedAction` has `label` resolved, plus `disabled: string | null` and `children?`.
-- [ ] T014 Create `apps/app/src/editor/actions/actions-for.ts` (+ `actions-for.test.ts`). The pure `actionsFor(list, ctx, surface): ResolvedSection[]` filters by `surfaces`, `targets` and `modes` and then `applies`. It resolves labels and `disabledReason`, drops empty sections, and keeps section and list order. Tests use a fake list and cover the target × mode matrix and section ordering.
-- [ ] T015 Create `apps/app/src/editor/actions/index.ts` (+ `index.test.ts`), which exports `ACTIONS: readonly Action[]` built from the per-area modules. It starts empty and is filled in by story tasks. Tests: ids are unique, every `shortcut` exists in `SHORTCUTS`, and every action has at least one surface and one target.
-- [ ] T016 Create `apps/app/src/editor/actions/use-action-context.ts`:
+- [x] T013 Create `apps/app/src/editor/actions/types.ts` with the data-model "Action" and `ActionContext` types: `Action`, `ActionContext`, `Surface = 'menu' | 'toolbar'`, `Mode = 'edit' | 'flow' | 'session' | 'viewOnly'`, `Section` (ordered `open`, `edit`, `clipboard`, `arrange`, `view`, `danger`) and `ResolvedSection { id; actions: ResolvedAction[] }`. A `ResolvedAction` has `label` resolved, plus `disabled: string | null` and `children?`.
+- [x] T014 Create `apps/app/src/editor/actions/actions-for.ts` (+ `actions-for.test.ts`). The pure `actionsFor(list, ctx, surface): ResolvedSection[]` filters by `surfaces`, `targets` and `modes` and then `applies`. It resolves labels and `disabledReason`, drops empty sections, and keeps section and list order. Tests use a fake list and cover the target × mode matrix and section ordering.
+- [x] T015 Create `apps/app/src/editor/actions/index.ts` (+ `index.test.ts`), which exports `ACTIONS: readonly Action[]` built from the per-area modules. It starts empty and is filled in by story tasks. Tests: ids are unique, every `shortcut` exists in `SHORTCUTS`, and every action has at least one surface and one target.
+- [x] T016 Create `apps/app/src/editor/actions/use-action-context.ts`:
   - `useActionContext(target?: MenuTarget, point?)` builds `ActionContext` from `useEditor()`, `useDeckSnapshot()`, `useUiStore`, the current view id (`useViewState`) and the mode (flow / session / view-only).
   - `targetOf(selection, deck): MenuTarget` returns `component | components | connection | group | sticky | mixed | canvas` (`sticky` = only stickies selected).
   - `useRunAction()` returns `(id, ctx) => void`, which finds the action and runs it only when it applies and is enabled. Keys use this helper so their availability matches the menus (FR-039).

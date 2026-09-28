@@ -25,7 +25,7 @@ export function ShortcutHelpDialog() {
         </DialogHeader>
         <div className="grid grid-cols-2 gap-x-8 gap-y-5">
           {SHORTCUT_SECTIONS.map((section) => {
-            const headingId = `shortcuts-${section.toLowerCase()}`;
+            const headingId = `shortcuts-${section.toLowerCase().replaceAll(' ', '-')}`;
             return (
               <section key={section} aria-labelledby={headingId}>
                 <h3 id={headingId} className="mb-1.5 text-micro text-ink-muted uppercase">
