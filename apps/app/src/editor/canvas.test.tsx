@@ -964,4 +964,82 @@ describe('canvas in flow mode (007)', () => {
       expect(ui().announcement.text).toBe('Two view');
     });
   });
+
+  describe('each view keeps its own layout (011 US2)', () => {
+    const nodeIn = (doc: Parameters<typeof toJSON>[0], id: string) =>
+      toJSON(doc).nodes.find((n) => n.id === id);
+    const flowNodeAt = (id: string) =>
+      document.querySelector<HTMLElement>(`.react-flow__node[data-id="${id}"]`)?.style.transform;
+
+    it('a move in Infra leaves System alone; a node never moved in Infra sits at its base', () => {
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+      });
+      expect(flowNodeAt('a')).toContain('900px');
+      expect(flowNodeAt('b')).toContain('300px');
+      act(() => {
+        ui().switchView('system');
+      });
+      expect(flowNodeAt('a')).toBe('translate(0px,0px)');
+    });
+
+    it('a move in System moves the node in Feature, which has no own position', () => {
+      const { editor, doc } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        editor().moveInView('system', { b: { x: 350, y: 60 } });
+        ui().switchView('feature');
+      });
+      expect(nodeIn(doc, 'b')?.position).toEqual({ x: 350, y: 60 });
+      expect(flowNodeAt('b')).toContain('350px');
+    });
+
+    it('keeps every view position after a reload from the saved file', () => {
+      const first = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        first.editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        first.editor().moveInView('system', { c: { x: 10, y: 400 } });
+      });
+      const saved = toJSON(first.doc);
+      first.unmount();
+      renderWithEditor(<Canvas />, saved);
+      expect(flowNodeAt('c')).toContain('400px');
+      act(() => {
+        ui().switchView('infra');
+      });
+      expect(flowNodeAt('a')).toContain('900px');
+      expect(flowNodeAt('c')).toContain('400px');
+    });
+
+    it('explains an undo of a move made in another view, with "Go to" (FR-045)', async () => {
+      const user = userEvent.setup();
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        ui().switchView('system');
+      });
+      act(() => {
+        editor().undo();
+      });
+      expect(ui().currentViewId).toBe('system');
+      expect(ui().announcement.text).toBe('Undid move in Infra');
+      expect(screen.getByText('Undid move in Infra')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Go to Infra' }));
+      expect(ui().currentViewId).toBe('infra');
+    });
+
+    it('says nothing extra for an undo in the current view', () => {
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+      });
+      act(() => {
+        editor().undo();
+      });
+      expect(screen.queryByText(/Undid move/)).not.toBeInTheDocument();
+    });
+  });
 });

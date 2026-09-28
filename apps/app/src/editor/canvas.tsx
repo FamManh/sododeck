@@ -62,6 +62,7 @@ import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-g
 import { readViewState, useViewState } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { useCurrentViewSync } from './views/use-view-sync';
+import { useUndoAcrossViews } from './views/undo-context';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
@@ -261,6 +262,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useSelectionSync();
   useViewSync();
   useCurrentViewSync();
+  useUndoAcrossViews();
   useRovingFocus(wrapper);
   useStickyDraftLifecycle();
 
