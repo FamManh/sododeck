@@ -148,6 +148,8 @@ export interface UiState {
    */
   revealed: ReadonlySet<Id>;
   layoutRun: LayoutRun;
+  /** Key of the last problem visited by ⌘. / ⇧⌘. or the list (015 FR-021). */
+  problemCursor: string | null;
   drill: readonly DrillFrame[];
   focusMode: boolean;
   stickyEditing: Id | null;
@@ -200,6 +202,7 @@ export interface UiState {
   /** Keeps a just-created component visible in the current view (see `revealed`). */
   reveal: (id: Id) => void;
   setLayoutRun: (run: LayoutRun) => void;
+  setProblemCursor: (key: string | null) => void;
   drillInto: (frame: DrillFrame) => void;
   drillUp: (depth?: number) => readonly DrillFrame[];
   setFocusMode: (on: boolean) => void;
@@ -353,6 +356,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     currentViewId: null,
     revealed: NO_IDS,
     layoutRun: IDLE_LAYOUT,
+    problemCursor: null,
     drill: [],
     focusMode: false,
     stickyEditing: null,
@@ -448,6 +452,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     reveal: (id) => {
       set(({ revealed }) => ({ revealed: new Set([...revealed, id]) }));
+    },
+    setProblemCursor: (problemCursor) => {
+      set({ problemCursor });
     },
     setLayoutRun: (layoutRun) => {
       set({ layoutRun });
@@ -713,6 +720,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         currentViewId: null,
         revealed: NO_IDS,
         layoutRun: IDLE_LAYOUT,
+        problemCursor: null,
         stickyEditing: null,
         stickyDraft: null,
         focusedId: null,

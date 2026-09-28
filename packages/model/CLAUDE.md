@@ -32,6 +32,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - Editor ops (`src/ops/views.ts`): `moveInView` (base view → `node.position` and drops its own entry; other views → `view.positions`; unknown nodes skipped), `setPinned`, `updateView` (`ViewSettingsPatch`; `undefined` or `[]` removes a field; title typing burst is one step), `addView` ("Custom <n>"), `removeView` (refuses the last view), `setCollapsed`.
   - A deck without stored views gets the three presets written on its first view change, in a transaction of their own with the editor's second, **untracked** origin (in `editorOrigins`, not in the `UndoManager`), so undo never removes them. `setCollapsed` uses the same untracked origin: saved and synced, never an undo step.
   - Cascade: removing a node drops it from `pinned`; removing a group drops it from `excludeGroups` and `collapsed` (same transaction). `checkIntegrity` reports dangling ids in `pinned`, `excludeGroups` and `collapsed`.
+- **Added by 015** (model validation, contract: `specs/015-model-validation/contracts/model-problems.md`, ADR 0013):
+  - `src/problems.ts` (pure): `checkDeck(file)` → `DeckProblems` (`list` sorted by kind, object title, step order; `total`; `byObject` id → problems) and `PROBLEM_KINDS`. Ten kinds: orphan, duplicate connection, step without connection, broken chain, incomplete flow, overlapping branch conditions, missing rule, rule without catch-all, invalid rule cells, broken reference. Built on `analyzeFlow`, `ruleChecks` and `checkIntegrity` (step `edge` / `branch` integrity problems are left to `analyzeFlow`). Problem keys are stable (kind + ids). Derived for display; never stored.
 
 ## Rules
 
@@ -51,7 +53,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `deck.ts` load/save + layout doc · `layout.ts` root types and lookups · `convert.ts` JSON ↔ Y · `geometry.ts` sticky and node canvas geometry (009)
 - `key-order.ts` canonical order from the schema · `load-checks.ts` duplicate ids · `ids.ts` id generator
 - `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
-- `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006)
+- `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006) · `problems.ts` deck-wide problems (015)
 - `rules/`: `cells.ts`, `evaluate.ts`, `usage.ts` (008, pure)
 - `views.ts` presets and view resolution (011)
 - `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`

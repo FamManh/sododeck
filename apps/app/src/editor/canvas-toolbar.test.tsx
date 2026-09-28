@@ -1,11 +1,60 @@
 import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { CanvasToolbar } from './canvas-toolbar';
+import { DeckInspector } from './inspector/deck-inspector';
+import { useDeckSnapshot } from '../model/use-deck-snapshot';
+import { useEditor } from '../model/use-editor';
+
+function ToolbarAndInspector() {
+  const deck = useDeckSnapshot(useEditor().doc);
+  return (
+    <>
+      <CanvasToolbar />
+      {useUiStore((st) => st.selection.nodes.length === 0 && st.activeFlow === null) && (
+        <DeckInspector deck={deck} />
+      )}
+    </>
+  );
+}
+
+const twoOrphans = deckOf({
+  nodes: [
+    { id: 'a', type: 'service', title: 'A' },
+    { id: 'b', type: 'service', title: 'B' },
+  ],
+  flows: [{ id: 'f', title: 'F', steps: [] }],
+});
+
+describe('problems button (015 US3, FR-024)', () => {
+  it('shows the count, is absent without problems, and opens the list from flow mode', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<ToolbarAndInspector />, twoOrphans);
+    const button = await screen.findByRole('button', { name: '3 problems' });
+    act(() => {
+      useUiStore.getState().openFlow('f');
+      useUiStore.getState().select({ nodes: ['a'] });
+    });
+    await user.click(button);
+    expect(useUiStore.getState().activeFlow).toBeNull();
+    expect(useUiStore.getState().selection.nodes).toEqual([]);
+    await vi.waitFor(() => {
+      expect(screen.getByRole('button', { name: /A has no connections/ })).toHaveFocus();
+    });
+  });
+
+  it('is absent for a clean deck', async () => {
+    renderWithEditor(<CanvasToolbar />, deckOf({}));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByRole('button', { name: /problems?$/ })).not.toBeInTheDocument();
+  });
+});
 
 describe('CanvasToolbar', () => {
   it('shows the count only for two or more selected items', () => {

@@ -16,6 +16,10 @@ import { JsonPanel } from '../editor/json-panel';
 import { LeftSidebar } from '../editor/left-sidebar';
 import { openDeck, type DeckSource } from '../editor/open-deck';
 import { SaveContext, type SaveControls } from '../editor/save-context';
+import { nextProblem } from '../editor/problems/next-problem';
+import { ProblemsProvider } from '../editor/problems/problems-provider';
+import { useGoToProblem } from '../editor/problems/use-go-to-problem';
+import { useProblems } from '../editor/problems/use-problems';
 import { TopBar } from '../editor/top-bar';
 import { RuleNavContext, type RuleNav } from '../editor/rules/rule-nav';
 import { useEditorShortcuts } from '../editor/use-canvas-shortcuts';
@@ -85,8 +89,6 @@ function EditorChrome() {
   const navigate = useNavigate();
   const { deckId } = useParams();
   const screen = outlet === null ? 'canvas' : 'rules';
-  useEditorShortcuts({ canvas: screen === 'canvas' });
-  useFlowSync();
   const deckPath = deckId === undefined ? '.' : `/deck/${encodeURIComponent(deckId)}`;
   const openRules = (ruleId?: string) => {
     void navigate(
@@ -96,6 +98,21 @@ function EditorChrome() {
       { state: undefined },
     );
   };
+  const navigateToCanvas = () => {
+    void navigate(deckPath);
+  };
+  const problems = useProblems();
+  const goToProblem = useGoToProblem({ screen, openRules, navigateToCanvas });
+  useEditorShortcuts({
+    canvas: screen === 'canvas',
+    onProblem: (direction) => {
+      const ui = useUiStore.getState();
+      const next = nextProblem(problems?.list ?? [], ui.problemCursor, direction);
+      if (next === null) ui.announce('No problems');
+      else goToProblem(next);
+    },
+  });
+  useFlowSync();
 
   return (
     <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)] bg-app">
@@ -106,13 +123,7 @@ function EditorChrome() {
         rulesCount={Object.keys(deck.rules).length}
       />
       {outlet ?? <CanvasScreen />}
-      <CommandPalette
-        screen={screen}
-        openRules={openRules}
-        navigateToCanvas={() => {
-          void navigate(deckPath);
-        }}
-      />
+      <CommandPalette screen={screen} openRules={openRules} navigateToCanvas={navigateToCanvas} />
       <ConfirmDeleteDialog deck={deck} />
       <Announcer />
     </div>
@@ -180,15 +191,17 @@ function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-foun
   return (
     <SaveContext value={save}>
       <EditorProvider doc={doc}>
-        <ToastProvider>
-          <ReactFlowProvider>
-            <EditorChrome />
-          </ReactFlowProvider>
-          {data.kind === 'stored' && (
-            <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
-          )}
-          <Toaster />
-        </ToastProvider>
+        <ProblemsProvider doc={doc}>
+          <ToastProvider>
+            <ReactFlowProvider>
+              <EditorChrome />
+            </ReactFlowProvider>
+            {data.kind === 'stored' && (
+              <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
+            )}
+            <Toaster />
+          </ToastProvider>
+        </ProblemsProvider>
       </EditorProvider>
     </SaveContext>
   );

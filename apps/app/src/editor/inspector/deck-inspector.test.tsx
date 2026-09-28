@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
+import { useUiStore } from '../../state/ui-store';
 import { inspectorDeck } from '../../test/inspector-fixtures';
 import { editorWrapper } from '../../test/render-canvas';
 import { TopBar } from '../top-bar';
@@ -39,6 +40,31 @@ function setup(onOpenRules?: () => void) {
 }
 
 describe('DeckInspector (story 2, FR-012)', () => {
+  it('lists the deck problems first and never writes them into the deck (015 FR-010, FR-012)', async () => {
+    const { doc, editor } = setup();
+    const before = toJSON(doc);
+    act(() => {
+      editor().add('nodes', { id: 'lonely', type: 'service', title: 'Legacy Invoicer' });
+    });
+    expect(
+      await screen.findByRole('button', { name: /Legacy Invoicer has no connections/ }),
+    ).toBeInTheDocument();
+    const after = toJSON(doc);
+    expect(JSON.stringify(after)).not.toContain('problems');
+    expect({ ...after, nodes: before.nodes }).toEqual(before);
+  });
+
+  it('selects the component behind a problem row (015 US2)', async () => {
+    const { editor, user } = setup();
+    act(() => {
+      editor().add('nodes', { id: 'lonely', type: 'service', title: 'Legacy Invoicer' });
+    });
+    await user.click(
+      await screen.findByRole('button', { name: /Legacy Invoicer has no connections/ }),
+    );
+    expect(useUiStore.getState().selection.nodes).toEqual(['lonely']);
+  });
+
   it('renames the deck (the top bar follows) and refuses an empty name', async () => {
     const { user, doc } = setup();
     const name = screen.getByRole('textbox', { name: 'Name' });

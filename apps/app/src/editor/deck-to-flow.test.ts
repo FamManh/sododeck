@@ -237,6 +237,24 @@ describe('toFlowNodes', () => {
     expect(dimmed.find((n) => n.id === 'b')?.data).toMatchObject({ dimmed: true });
   });
 
+  it('carries problem marks and rebuilds only when they change (015 FR-022)', () => {
+    const graph = topLevelGraph(deck);
+    const mark = { count: 1, titles: 'Orphan component', label: '1 problem' };
+    const plain = toFlowNodes(deck, graph, view());
+    const marked = toFlowNodes(deck, graph, view({ problems: new Map([['b', mark]]) }));
+    const b = marked.find((n) => n.id === 'b') as DeckFlowNode;
+    expect(b.data.problems).toEqual(mark);
+    expect(b).not.toBe(plain.find((n) => n.id === 'b'));
+    expect(marked.find((n) => n.id === 'a')).toBe(plain.find((n) => n.id === 'a'));
+    const again = toFlowNodes(deck, graph, view({ problems: new Map([['b', { ...mark }]]) }));
+    expect(again.find((n) => n.id === 'b')).toBe(b);
+
+    const edges = toFlowEdges(deck, graph, view({ problems: new Map([['e1', mark]]) }));
+    const e1 = edges.find((e) => e.id === 'e1');
+    expect(e1?.data?.problems).toEqual(mark);
+    expect(e1?.ariaLabel).toMatch(/, 1 problem$/);
+  });
+
   it('returns the same object for a node whose source did not change', () => {
     const graph = topLevelGraph(deck);
     const first = toFlowNodes(deck, graph, view());

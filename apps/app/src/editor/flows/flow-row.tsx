@@ -1,18 +1,22 @@
-import { analyzeFlow } from '@sododeck/model';
+import type { Problem } from '@sododeck/model';
 import type { Flow, SododeckFile } from '@sododeck/schema';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { CircleAlert, GripVertical, History, Route } from 'lucide-react';
+import { GripVertical, History, Route } from 'lucide-react';
 import { useId, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
+import { ProblemGlyph } from '../problems/problem-glyph';
+import { useProblems } from '../problems/use-problems';
 import type { FlowMatch } from './filter-flows';
 import { FlowMenu } from './flow-menu';
 import { openFlow } from './flow-mode';
 import { Highlight } from './highlight';
 import { RenameField } from './rename-field';
+
+const NO_PROBLEMS: readonly Problem[] = [];
 
 export interface SortableRowProps {
   row: Record<string, unknown> & { onKeyDown: (event: KeyboardEvent) => void };
@@ -21,8 +25,9 @@ export interface SortableRowProps {
 }
 
 /**
- * A flow in the list (FR-001, FR-032): its name, step count, a "Has problems" marker for broken
- * or chain-break steps, a menu, and a grip. Enter opens it, F2 renames, ⌥↑ / ⌥↓ reorder.
+ * A flow in the list (FR-001, FR-032): its name, step count, the amber problems glyph of the
+ * deck-wide check (015 FR-023: broken or incomplete steps, overlapping branches…), a menu, and a
+ * grip. Enter opens it, F2 renames, ⌥↑ / ⌥↓ reorder.
  */
 export function FlowRow({
   deck,
@@ -45,9 +50,7 @@ export function FlowRow({
   const active = useUiStore((s) => s.activeFlow?.flowId === flow.id);
   const lastPlayed = useUiStore((s) => s.lastPlayedFlowId === flow.id);
   const countId = useId();
-  const problems = analyzeFlow(flow, deck.edges).problems.some(
-    (p) => p.kind === 'broken-step' || p.kind === 'chain-break',
-  );
+  const problems = useProblems()?.byObject.get(flow.id) ?? NO_PROBLEMS;
   const count = flow.steps.length;
 
   return (
@@ -111,12 +114,7 @@ export function FlowRow({
           <span className="sr-only">Last played</span>
         </span>
       )}
-      {problems && (
-        <span className="flex shrink-0 items-center text-clay-ink" title="Has problems">
-          <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
-          <span className="sr-only">Has problems</span>
-        </span>
-      )}
+      <ProblemGlyph problems={problems} />
       <span id={countId} className="shrink-0 text-caption whitespace-nowrap text-ink-muted">
         {count} {count === 1 ? 'step' : 'steps'}
       </span>

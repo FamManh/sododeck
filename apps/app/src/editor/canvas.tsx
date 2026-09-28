@@ -64,6 +64,8 @@ import { viewCrumbTitle } from './views/view-title';
 import { useCurrentViewSync } from './views/use-view-sync';
 import { useUndoAcrossViews } from './views/undo-context';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
+import { problemMarks } from './problems/problem-marks';
+import { useProblems } from './problems/use-problems';
 
 const nodeTypes: NodeTypes = {
   'collapsed-group': CollapsedGroupNode,
@@ -337,6 +339,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     [focusId, deck, graph],
   );
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
+  const problems = problemMarks(useProblems());
   const view = useMemo(
     () => ({
       selection,
@@ -347,8 +350,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       focus,
       marks: collapsedMarks,
       render,
+      problems,
     }),
-    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks, render],
+    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks, render, problems],
   );
 
   const nodes = useMemo(

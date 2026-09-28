@@ -464,6 +464,35 @@ describe('editor shortcuts', () => {
   });
 });
 
+describe('problem walk (015 FR-021)', () => {
+  function Walker({ onProblem, canvas }: { onProblem: (d: 1 | -1) => void; canvas: boolean }) {
+    useEditorShortcuts({ canvas, onProblem });
+    return <input aria-label="Notes" />;
+  }
+
+  it.each([true, false])('⌘. goes forward and ⇧⌘. back (canvas screen: %s)', async (canvas) => {
+    const onProblem = vi.fn();
+    const env = editorWrapper(grid);
+    render(<Walker onProblem={onProblem} canvas={canvas} />, { wrapper: env.wrapper });
+    const user = userEvent.setup();
+    await user.keyboard('{Meta>}[Period]{/Meta}');
+    expect(onProblem).toHaveBeenLastCalledWith(1);
+    await user.keyboard('{Control>}{Shift>}[Period]{/Shift}{/Control}');
+    expect(onProblem).toHaveBeenLastCalledWith(-1);
+    expect(onProblem).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores ⌘. while typing', async () => {
+    const onProblem = vi.fn();
+    const env = editorWrapper(grid);
+    render(<Walker onProblem={onProblem} canvas />, { wrapper: env.wrapper });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('{Meta>}[Period]{/Meta}');
+    expect(onProblem).not.toHaveBeenCalled();
+  });
+});
+
 describe('isTextTarget', () => {
   it('recognises inputs, textareas, selects and contenteditable', () => {
     const editable = document.createElement('div');

@@ -9,7 +9,7 @@
 import { stickyCanvasPosition } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
@@ -433,10 +433,21 @@ export function useCanvasKeyDown() {
   );
 }
 
-/** Document-wide editor keys. Install once per editor page. */
-export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {}): void {
+/**
+ * Document-wide editor keys. Install once per editor page. `onProblem` walks the deck's problems
+ * (015 FR-021: ⌘. / Ctrl+. next, ⇧⌘. / ⇧Ctrl+. previous), on both screens.
+ */
+export function useEditorShortcuts({
+  canvas = true,
+  onProblem,
+}: { canvas?: boolean; onProblem?: (direction: 1 | -1) => void } = {}): void {
   const editor = useEditor();
   const { flush } = useSaveControls();
+  // The latest handler, without re-installing the listener on every render.
+  const problemRef = useRef(onProblem);
+  useEffect(() => {
+    problemRef.current = onProblem;
+  });
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -466,6 +477,14 @@ export function useEditorShortcuts({ canvas = true }: { canvas?: boolean } = {})
       }
       if (isTextTarget(event.target) || inDialog(event.target)) return;
       const ui = useUiStore.getState();
+
+      // `code`, not `key`: Shift turns "." into ">" on many layouts.
+      const walkProblems = problemRef.current;
+      if (isMod(event) && !event.altKey && event.code === 'Period' && walkProblems !== undefined) {
+        event.preventDefault();
+        walkProblems(event.shiftKey ? -1 : 1);
+        return;
+      }
 
       if (isMod(event) && (key === 'z' || (key === 'y' && event.ctrlKey && !event.metaKey))) {
         event.preventDefault();

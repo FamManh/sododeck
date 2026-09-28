@@ -10,13 +10,19 @@ import { DeckInspectorStorage } from '../deck-inspector-storage';
 import { FieldEdit } from '../field-edit';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
+import { ProblemsPanel } from '../problems/problems-panel';
+import { useGoToProblem } from '../problems/use-go-to-problem';
+import { useRuleNav } from '../rules/rule-nav';
 import { TagsField } from '../fields/tags-field';
 import { deckStats } from './derive';
 import { InspectorFrame } from './inspector-frame';
 
+const noop = () => undefined;
+
 /**
- * Deck inspector, shown when nothing is selected (FR-012, design 10): name (required),
- * markdown description, tags, counts with a way into the rule editor, and 005's storage.
+ * Deck inspector, shown when nothing is selected (FR-012, design 10): the deck's problems first
+ * (015, design 60), name (required), markdown description, tags, counts with a way into the rule
+ * editor, and 005's storage.
  */
 export function DeckInspector({
   deck,
@@ -27,6 +33,14 @@ export function DeckInspector({
   onOpenRules?: () => void;
 }) {
   const editor = useEditor();
+  const ruleNav = useRuleNav();
+  const goTo = useGoToProblem({
+    screen: 'canvas',
+    openRules: (ruleId) => {
+      ruleNav?.openRules(ruleId);
+    },
+    navigateToCanvas: noop,
+  });
   const stats = deckStats(deck);
   const name = deck.name ?? 'Untitled deck';
   return (
@@ -35,6 +49,7 @@ export function DeckInspector({
       heading={name}
       subtitle="Deck"
     >
+      <ProblemsPanel onActivate={goTo} />
       <PanelSection>
         <FieldEdit
           label="Name"

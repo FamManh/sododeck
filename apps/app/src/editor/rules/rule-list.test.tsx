@@ -25,6 +25,21 @@ describe('RuleList (story 4, FR-019)', () => {
     expect(screen.getByRole('textbox', { name: 'Rule name' })).toHaveValue('Reattempt policy');
   });
 
+  it('marks rules that have problems with the glyph (015 FR-023)', async () => {
+    renderRules(
+      deckOf({
+        rules: {
+          R: { title: 'No fallback', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
+        },
+      }),
+    );
+    const link = screen.getByRole('link', { name: /No fallback/ });
+    expect(await within(link).findByRole('img', { name: '1 problem' })).toHaveAttribute(
+      'title',
+      'Rule without catch-all',
+    );
+  });
+
   it('shows an empty state without rules, and New creates "Untitled rule" with its name focused', async () => {
     const { user, doc, path } = renderRules(deckOf({}));
     expect(screen.getByText('No decision tables yet', { selector: 'nav p' })).toBeInTheDocument();

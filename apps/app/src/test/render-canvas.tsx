@@ -6,11 +6,14 @@ import { render } from '@testing-library/react';
 import { ReactFlowProvider } from '@xyflow/react';
 import type { ReactNode } from 'react';
 
+import { createInlineProblemsClient } from '../editor/problems/problems-client';
+import { ProblemsProvider } from '../editor/problems/problems-provider';
 import { EditorProvider } from '../model/editor-context';
 import { useUiStore } from '../state/ui-store';
 import { EditorProbe } from './editor-probe';
 
 const initialUi = useUiStore.getState();
+const inlineProblems = createInlineProblemsClient();
 
 /** Test deck from a partial file. */
 export function deckOf(patch: Partial<SododeckFile>): SododeckFile {
@@ -34,7 +37,9 @@ export function editorWrapper(file: SododeckFile | DeckDoc = emptySododeckFile()
               handle.editor = editor;
             }}
           />
-          <ReactFlowProvider>{children}</ReactFlowProvider>
+          <ProblemsProvider doc={doc} client={inlineProblems}>
+            <ReactFlowProvider>{children}</ReactFlowProvider>
+          </ProblemsProvider>
         </EditorProvider>
         <Toaster />
       </ToastProvider>
