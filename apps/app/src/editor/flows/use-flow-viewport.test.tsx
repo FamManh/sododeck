@@ -4,12 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { playbackDeck } from '../../test/flow-fixtures';
 import { playbackOf, type Playback } from './flow-mode';
 import { findFlow } from './session-path';
+import { useUiStore } from '../../state/ui-store';
+import { fitRectInFreeArea } from '../shell/shell-geometry';
+import { currentInsets } from '../shell/shell-insets';
+import { MAX_ZOOM, MIN_ZOOM } from '../zoom-limits';
 import { useFlowViewport } from './use-flow-viewport';
 
 const view = {
   fitBounds: vi.fn(() => Promise.resolve(true)),
   setCenter: vi.fn(() => Promise.resolve(true)),
   getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1.5 })),
+  setViewport: vi.fn(() => Promise.resolve(true)),
 };
 vi.mock('@xyflow/react', () => ({ useReactFlow: () => view }));
 
@@ -50,16 +55,45 @@ afterEach(() => {
 });
 
 describe('useFlowViewport', () => {
-  it('fits the played path when a flow opens, without panning to the step', () => {
+  it('fits the played path into the free area when a flow opens, without panning to the step', () => {
     const { rerender } = mount(null);
-    expect(view.fitBounds).not.toHaveBeenCalled();
+    expect(view.setViewport).not.toHaveBeenCalled();
     rerender({ p: playback('order', null) });
-    expect(view.fitBounds).toHaveBeenCalledTimes(1);
+    expect(view.setViewport).toHaveBeenCalledTimes(1);
+    expect(view.setViewport).toHaveBeenCalledWith(
+      fitRectInFreeArea(
+        { x: 0, y: 0, width: 764, height: 250 },
+        { width: 1600, height: 900 },
+        currentInsets(true),
+        { padding: 0.2, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM },
+      ),
+      { duration: 250 },
+    );
+    expect(view.setCenter).not.toHaveBeenCalled();
+  });
+
+  it('keeps the fitted path clear of an open flyout (018, design 90)', () => {
+    useUiStore.getState().openFlyout('flows');
+    const { rerender } = mount(null);
+    rerender({ p: playback('order', null) });
+    const [fitted] = view.setViewport.mock.calls[0] as unknown as [{ x: number; zoom: number }];
+    expect(fitted.x).toBeGreaterThanOrEqual(348);
+    useUiStore.getState().closeFlyout();
+  });
+
+  it('falls back to fitBounds before the canvas is measured', () => {
+    const empty = { current: { clientWidth: 0, clientHeight: 0 } as HTMLElement };
+    const { rerender } = renderHook(
+      ({ p }) => {
+        useFlowViewport(playbackDeck, p, empty);
+      },
+      { initialProps: { p: null as Playback | null } },
+    );
+    rerender({ p: playback('order', null) });
     expect(view.fitBounds).toHaveBeenCalledWith(
       { x: 0, y: 0, width: 764, height: 250 },
       { padding: 0.2, duration: 250 },
     );
-    expect(view.setCenter).not.toHaveBeenCalled();
   });
 
   it('pans to the current step only when it is out of view, keeping the zoom', () => {
@@ -69,14 +103,14 @@ describe('useFlowViewport', () => {
     view.getViewport.mockReturnValue({ x: 0, y: -600, zoom: 1.5 });
     rerender({ p: playback('order', 'o5') });
     expect(view.setCenter).toHaveBeenCalledWith(482, 125, { zoom: 1.5, duration: 250 });
-    expect(view.fitBounds).toHaveBeenCalledTimes(1);
+    expect(view.setViewport).toHaveBeenCalledTimes(1);
   });
 
   it('moves without animation under reduced motion', () => {
     reduced = true;
     view.getViewport.mockReturnValue({ x: 0, y: -600, zoom: 1 });
     const { rerender } = mount(playback('order', 'o1'));
-    expect(view.fitBounds).toHaveBeenCalledWith(expect.anything(), { padding: 0.2, duration: 0 });
+    expect(view.setViewport).toHaveBeenCalledWith(expect.anything(), { duration: 0 });
     rerender({ p: playback('order', 'o5') });
     expect(view.setCenter).toHaveBeenCalledWith(482, 125, { zoom: 1, duration: 0 });
   });

@@ -1,4 +1,5 @@
 import type { SododeckFile } from '@sododeck/schema';
+import { cn } from '@sododeck/ui/lib/utils';
 
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { DeckName } from '../deck-name';
@@ -34,7 +35,15 @@ export function DeckIsland({ deck, compact = false }: { deck: SododeckFile; comp
   };
 
   return (
-    <Island region="deck" label="Deck" className="top-3 left-3 max-w-[calc(100vw-24px-236px)]">
+    <Island
+      region="deck"
+      label="Deck"
+      // Never under the tools island (≈ 590 px, compact ≈ 230 px): the views collapse into "+n".
+      className={cn(
+        'top-3 left-3',
+        compact ? 'max-w-[calc(100vw-24px-244px)]' : 'max-w-[calc(100vw-24px-604px)]',
+      )}
+    >
       <DeckMenu />
       <DeckName name={deck.name ?? 'Untitled deck'} className="max-w-56" />
       <SaveStatus variant="icon" />

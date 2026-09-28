@@ -32,14 +32,14 @@ Deck menu items (`menuitem`): "All decks" (library), "Import…", "Export…", "
 
 ## Tools island
 
-| Control | Role / name                                                      | Notes                                                 |
-| ------- | ---------------------------------------------------------------- | ----------------------------------------------------- |
-| Jump to | `button` "Jump to… (⌘K)" `aria-haspopup="dialog"`                | Existing command palette                              |
-| Labels  | `button` "Labels" `aria-pressed`                                 | Existing toggle                                       |
-| Notes   | `button` "Notes: <dimmed\|shown\|hidden>" `aria-haspopup="menu"` | Sticky visibility (§g-46); moved from `CanvasToolbar` |
-| Focus   | `button` "Focus" `aria-pressed`                                  | Existing; disabled with reason in flow mode           |
-| Theme   | `button` "Switch to <light\|dark> theme"                         | Existing                                              |
-| Export  | `button` "Export"                                                | Existing export                                       |
+| Control | Role / name                                                                              | Notes                                                 |
+| ------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Jump to | `button` "Jump to… (⌘K)" `aria-haspopup="dialog"`                                        | Existing command palette                              |
+| Labels  | `button` "Labels" `aria-pressed`                                                         | Existing toggle                                       |
+| Notes   | `button` "Notes: <dimmed\|shown\|hidden>" (visible label "Notes") `aria-haspopup="menu"` | Sticky visibility (§g-46); moved from `CanvasToolbar` |
+| Focus   | `button` "Focus" `aria-pressed`                                                          | Existing; disabled with reason in flow mode           |
+| Theme   | `button` "Switch to <light\|dark> theme"                                                 | Existing                                              |
+| Export  | `button` "Export"                                                                        | Existing export                                       |
 
 Pin / unpin (011) moves to the drawer's component inspector (existing switch) and the command palette; Tidy layout to the views menu (§g-46).
 
@@ -47,18 +47,18 @@ Pin / unpin (011) moves to the drawer's component inspector (existing switch) an
 
 `toolbar` "Canvas tools". Each item is a `button` with `aria-label` = name; tool buttons use `aria-pressed`, panel buttons use `aria-expanded` + `aria-controls` of their flyout. Tooltip (400 ms, focus or hover): "<name> <shortcut>".
 
-| Name             | Shortcut | Kind  | Action                                                                           |
-| ---------------- | -------- | ----- | -------------------------------------------------------------------------------- |
-| Select           | V        | tool  | Default tool                                                                     |
-| Add component    | C        | panel | Palette flyout. C opens it only when no card is focused (§g-49)                  |
-| Sticky note      | S        | tool  | Next click adds a note there                                                     |
-| Group            | G        | tool  | `aria-disabled="true"`, tooltip "Group from selection — coming soon" (until 016) |
-| Connector        | L        | tool  | Next click on a card opens its connect popover                                   |
-| Outline          | ⌥1       | panel | Outline flyout                                                                   |
-| Flows & features | ⌥2       | panel | Flows flyout                                                                     |
-| Rules            | —        | panel | Rules flyout                                                                     |
-| Search           | ⌘K       | —     | Command palette                                                                  |
-| Problems         | ⌘.       | panel | Problems flyout; name "Problems, <n>" with a visible count badge; absent at 0    |
+| Name             | Shortcut | Kind  | Action                                                                                                |
+| ---------------- | -------- | ----- | ----------------------------------------------------------------------------------------------------- |
+| Select           | V        | tool  | Default tool                                                                                          |
+| Add component    | C        | panel | Palette flyout. C opens it only when no card is focused (§g-49)                                       |
+| Sticky note      | S        | tool  | Next click adds a note there                                                                          |
+| Group            | G        | tool  | `aria-disabled="true"`, tooltip "Group from selection — coming soon" (until 016)                      |
+| Connector        | L        | tool  | Next click on a card opens its connect popover                                                        |
+| Outline          | ⌥1       | panel | Outline flyout                                                                                        |
+| Flows & features | ⌥2       | panel | Flows flyout                                                                                          |
+| Rules            | —        | panel | Rules flyout                                                                                          |
+| Search           | ⌘K       | —     | Command palette                                                                                       |
+| Problems         | ⌘.       | panel | Problems flyout; always on the rail, named "Problems, <n>" with a count badge when there are problems |
 
 History island: `button` "Undo" / "Redo" (existing names, tooltips with ⌘Z / ⇧⌘Z).
 
@@ -77,7 +77,7 @@ History island: `button` "Undo" / "Redo" (existing names, tooltips with ⌘Z / �
 - Opens on: Enter on a plain focused component; double-click on a plain component; ⌘⇧D / Ctrl+⇧D (toggle); command palette "Open details"; deck menu "Deck settings" (deck mode).
 - Enter on a group or a component with children still drills in (010).
 - Focus on open: the inspector's title field (or the first field). Esc (not consumed by a field popover) or "Close details" closes it; focus returns to the canvas object.
-- Grip: `separator` "Resize details", `aria-orientation="vertical"`, `aria-valuemin="320"`, `aria-valuemax="560"`, `aria-valuenow`; ←/→ ±8, ⇧←/⇧→ ±40, Home / End min / max.
+- Grip: `separator` "Resize details", `aria-orientation="vertical"`, `aria-valuemin="320"`, `aria-valuemax="560"`, `aria-valuenow`; ← widens / → narrows by 8 px (⇧ 40 px), Home / End min / max.
 - The canvas never changes size; if the selection is under the drawer the canvas pans (no zoom change).
 
 ## JSON overlay

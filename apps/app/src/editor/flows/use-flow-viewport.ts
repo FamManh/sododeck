@@ -5,10 +5,14 @@ import { useReactFlow } from '@xyflow/react';
 import { useEffect, useEffectEvent, useRef } from 'react';
 
 import { boundsOf, rectInView } from '../canvas-geometry';
+import { fitRectInFreeArea } from '../shell/shell-geometry';
+import { currentInsets } from '../shell/shell-insets';
+import { MAX_ZOOM, MIN_ZOOM } from '../zoom-limits';
 import type { Playback } from './flow-mode';
 
 /**
- * Keeps the open flow in view (007 FR-004, FR-011): fits the played path when a flow opens, and
+ * Keeps the open flow in view (007 FR-004, FR-011): fits the played path when a flow opens (into
+ * the canvas area the floating chrome leaves free, 018), and
  * pans (keeping the zoom) to the current step only when it is outside the viewport. Waits one
  * frame so React Flow has measured the canvas.
  */
@@ -17,7 +21,7 @@ export function useFlowViewport(
   playback: Playback | null,
   wrapper: React.RefObject<HTMLElement | null>,
 ): void {
-  const { fitBounds, setCenter, getViewport } = useReactFlow();
+  const { fitBounds, setCenter, getViewport, setViewport } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
   const flowId = playback?.flow.id ?? null;
   const current = playback?.played.steps.find((s) => s.step.id === playback.currentStepId);
@@ -32,7 +36,22 @@ export function useFlowViewport(
       deck,
       ids.filter((id): id is string => id !== null),
     );
-    if (box !== null) void fitBounds(box, { padding: 0.2, duration: dimMs });
+    if (box === null) return;
+    const root = wrapper.current;
+    if (root === null || root.clientWidth === 0) {
+      void fitBounds(box, { padding: 0.2, duration: dimMs });
+      return;
+    }
+    // Canvas-first (018): fit into the area the flyout, player and panels leave free (design 90).
+    const size = { width: root.clientWidth, height: root.clientHeight };
+    void setViewport(
+      fitRectInFreeArea(box, size, currentInsets(true), {
+        padding: 0.2,
+        minZoom: MIN_ZOOM,
+        maxZoom: MAX_ZOOM,
+      }),
+      { duration: dimMs },
+    );
   });
   const showStep = useEffectEvent((ids: string[]) => {
     const root = wrapper.current;

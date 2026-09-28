@@ -157,3 +157,84 @@ export function panToClear(
   }
   return 0;
 }
+
+/** Space the floating chrome takes on each side of the canvas, in screen px. */
+export interface Insets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/** Height of the step player (007) plus its gap, when a flow is shown. */
+export const PLAYER_CLEARANCE = 112;
+
+/**
+ * Where the chrome sits over the canvas (018): the rail or an open flyout on the left, the top
+ * islands, the drawer on the right, and at the bottom the zoom island, the step player or the
+ * JSON overlay. Fits aim at the rest, so the diagram is never hidden under a panel.
+ */
+export function chromeInsets({
+  flyoutOpen,
+  drawerWidth,
+  jsonHeight,
+  playerShown,
+}: {
+  flyoutOpen: boolean;
+  drawerWidth: number | null;
+  jsonHeight: number | null;
+  playerShown: boolean;
+}): Insets {
+  const bottomChrome = Math.max(
+    ISLAND_HEIGHT + EDGE,
+    playerShown ? PLAYER_CLEARANCE : 0,
+    jsonHeight === null ? 0 : zoomIslandBottom(true, jsonHeight) + ISLAND_HEIGHT,
+  );
+  return {
+    top: OVERLAY_TOP,
+    right: drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE,
+    bottom: bottomChrome,
+    left: flyoutOpen ? FLYOUT_LEFT + FLYOUT_WIDTH : FLYOUT_LEFT,
+  };
+}
+
+/**
+ * The viewport that fits `box` (flow coordinates) into the canvas area left free by `insets`,
+ * with `padding` as a share of the box, the zoom kept within [minZoom, maxZoom]. Falls back to
+ * the whole canvas when the chrome leaves too little room.
+ */
+export function fitRectInFreeArea(
+  box: Rect,
+  size: Size,
+  insets: Insets,
+  {
+    padding = 0.2,
+    minZoom = 0.3,
+    maxZoom = 2,
+  }: { padding?: number; minZoom?: number; maxZoom?: number } = {},
+): { x: number; y: number; zoom: number } {
+  const roomy =
+    size.width - insets.left - insets.right >= 240 &&
+    size.height - insets.top - insets.bottom >= 160;
+  const area = roomy
+    ? {
+        x: insets.left,
+        y: insets.top,
+        width: size.width - insets.left - insets.right,
+        height: size.height - insets.top - insets.bottom,
+      }
+    : { x: 0, y: 0, ...size };
+  const width = Math.max(box.width, 1) * (1 + padding);
+  const height = Math.max(box.height, 1) * (1 + padding);
+  const zoom = Math.min(
+    maxZoom,
+    Math.max(minZoom, Math.min(area.width / width, area.height / height)),
+  );
+  const centreX = box.x + box.width / 2;
+  const centreY = box.y + box.height / 2;
+  return {
+    x: area.x + area.width / 2 - centreX * zoom,
+    y: area.y + area.height / 2 - centreY * zoom,
+    zoom,
+  };
+}

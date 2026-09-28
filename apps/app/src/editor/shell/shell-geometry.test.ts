@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   chromeCoverage,
+  chromeInsets,
+  fitRectInFreeArea,
+  PLAYER_CLEARANCE,
   clampDrawerWidth,
   DRAWER_DEFAULT,
   drawerRect,
@@ -125,5 +128,48 @@ describe('panToClear', () => {
 
   it('does not pan when the card is already clear', () => {
     expect(panToClear({ ...card, x: 400 }, { left: 348, right: 1068 })).toBe(0);
+  });
+});
+
+describe('chromeInsets', () => {
+  it('reserves the rail, flyout, drawer, player and JSON overlay', () => {
+    expect(
+      chromeInsets({ flyoutOpen: false, drawerWidth: null, jsonHeight: null, playerShown: false }),
+    ).toEqual({ top: 68, right: 12, bottom: 56, left: 68 });
+    expect(
+      chromeInsets({ flyoutOpen: true, drawerWidth: 360, jsonHeight: null, playerShown: true }),
+    ).toEqual({ top: 68, right: 384, bottom: PLAYER_CLEARANCE, left: 348 });
+    expect(
+      chromeInsets({ flyoutOpen: false, drawerWidth: null, jsonHeight: 268, playerShown: true })
+        .bottom,
+    ).toBe(12 + 268 + 8 + 44);
+  });
+});
+
+describe('fitRectInFreeArea', () => {
+  const insets = { top: 68, right: 12, bottom: 112, left: 348 };
+
+  it('centres the box in the free area, clear of the flyout', () => {
+    const view = fitRectInFreeArea({ x: 0, y: 0, width: 1000, height: 400 }, DESKTOP, insets);
+    const left = 0 * view.zoom + view.x;
+    const right = 1000 * view.zoom + view.x;
+    expect(left).toBeGreaterThanOrEqual(348);
+    expect(right).toBeLessThanOrEqual(1440 - 12);
+  });
+
+  it('keeps the zoom within the limits', () => {
+    expect(fitRectInFreeArea({ x: 0, y: 0, width: 10, height: 10 }, DESKTOP, insets).zoom).toBe(2);
+    expect(
+      fitRectInFreeArea({ x: 0, y: 0, width: 100000, height: 100000 }, DESKTOP, insets).zoom,
+    ).toBe(0.3);
+  });
+
+  it('uses the whole canvas when the chrome leaves too little room', () => {
+    const view = fitRectInFreeArea(
+      { x: 0, y: 0, width: 100, height: 100 },
+      { width: 500, height: 300 },
+      insets,
+    );
+    expect(view.x + 50 * view.zoom).toBeCloseTo(250);
   });
 });
