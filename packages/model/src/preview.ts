@@ -68,6 +68,10 @@ export function mergeRemovals(results: readonly RemovalResult[]): RemovalResult 
       results.flatMap((r) => r.updated),
       refKey,
     ),
+    freed: unique(
+      results.flatMap((r) => r.freed),
+      (id) => id,
+    ),
     broken: unique(
       results.flatMap((r) => r.broken),
       problemKey,

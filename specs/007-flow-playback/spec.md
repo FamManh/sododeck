@@ -33,7 +33,7 @@
 
 - Measured SLA values and the SLA meter fill (§g-6).
 - The compact decision table with the matched row and "Evaluated with" inputs, and "Edit rule" (008).
-- Opening flows from ⌘K (009), sticky-note dimming during flows (009, design 63), flows through collapsed groups (010, design 71).
+- Opening flows from ⌘K (009), sticky-note dimming during flows (009, design 63).
 - Exporting a flow (012), counting "flows played" for analytics (014).
 - Flow comparison, sequence / swimlane views, payload display (P1).
 - New Playwright e2e tests (constitution VI, `TODO(e2e)`).
@@ -154,7 +154,7 @@ A user with vestibular sensitivity has reduced motion turned on; a colour-blind 
 - **Components or connections moved or re-routed while a token runs** (other tab): the token follows the new connection path from the next frame.
 - **Very long flows** (50+ steps): progress segments shrink to a minimum width and the bar scrolls with the current segment kept in view; the step list scrolls to the current row.
 - **Viewport**: opening a flow fits its played path in view; later, when the current step's connection is outside the visible canvas, the canvas pans to bring it into view without changing zoom. A played path too large to fit at the minimum zoom is fitted as far as possible, starting from step 1.
-- **Nodes inside a group**: groups stay visible but dimmed in flow mode; collapsed groups are 010.
+- **Nodes inside a group**: groups stay visible but dimmed in flow mode; when 010's collapsed-group view is active, the group card, merged connections and player text carry the flow state instead of expanding the group.
 
 ## Requirements _(mandatory)_
 
@@ -232,3 +232,4 @@ A user with vestibular sensitivity has reduced motion turned on; a colour-blind 
 - The player position and sizes (420–560 px wide, bottom centre) and the motion values come from design-analysis §c; the motion tokens exist or are added in `packages/ui` per 000.
 - Counting "flows played" for the north-star metric is 014; this feature only makes playback possible.
 - The Labels toggle and minimap keep their current behavior in flow mode; the Focus toggle is hidden in flow mode (design-analysis §b).
+- Collapsed-group playback details (card ring, merged-edge badges/token, and "inside <group>" copy) are owned by 010 and extend this feature without changing 007's base flow-overlay or playback contracts.

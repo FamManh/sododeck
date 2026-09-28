@@ -3,7 +3,14 @@ import { emptySododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JSON_PANEL_KEY } from './json-panel-prefs';
-import { isFlowMode, LABELS_KEY, readLabelsOn, useUiStore } from './ui-store';
+import {
+  isFlowMode,
+  LABELS_KEY,
+  NOTES_KEY,
+  readLabelsOn,
+  readNotesDisplay,
+  useUiStore,
+} from './ui-store';
 
 const initial = useUiStore.getState();
 const state = () => useUiStore.getState();
@@ -18,23 +25,52 @@ describe('ui store', () => {
   });
 
   it('selects, toggles and clears nodes and edges', () => {
-    state().select({ nodes: ['a'] });
-    expect(state().selection).toEqual({ nodes: ['a'], edges: [] });
+    state().select({ nodes: ['a'], groups: ['g'] });
+    expect(state().selection).toEqual({ nodes: ['a'], edges: [], groups: ['g'], stickies: [] });
     state().toggle('b', 'node');
     state().toggle('e1', 'edge');
-    expect(state().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'] });
+    expect(state().selection).toEqual({
+      nodes: ['a', 'b'],
+      edges: ['e1'],
+      groups: ['g'],
+      stickies: [],
+    });
     state().toggle('a', 'node');
-    expect(state().selection).toEqual({ nodes: ['b'], edges: ['e1'] });
+    expect(state().selection).toEqual({ nodes: ['b'], edges: ['e1'], groups: ['g'], stickies: [] });
     state().clearSelection();
-    expect(state().selection).toEqual({ nodes: [], edges: [] });
+    expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
 
   it('prunes ids that no longer exist, and keeps the same object when nothing is pruned', () => {
-    state().select({ nodes: ['a', 'gone'], edges: ['e1'] });
-    state().pruneSelection({ nodes: new Set(['a']), edges: new Set(['e1']) });
-    expect(state().selection).toEqual({ nodes: ['a'], edges: ['e1'] });
+    state().select({
+      nodes: ['a', 'gone'],
+      edges: ['e1'],
+      groups: ['g', 'gone-group'],
+      stickies: ['st1', 'gone-sticky'],
+    });
+    state().setStickyEditing('gone-sticky');
+    state().setStickyDraft('gone-sticky');
+    state().pruneSelection({
+      nodes: new Set(['a']),
+      edges: new Set(['e1']),
+      groups: new Set(['g']),
+      stickies: new Set(['st1']),
+    });
+    expect(state().selection).toEqual({
+      nodes: ['a'],
+      edges: ['e1'],
+      groups: ['g'],
+      stickies: ['st1'],
+    });
+    expect(state().stickyEditing).toBeNull();
+    expect(state().stickyDraft).toBeNull();
     const kept = state().selection;
-    state().pruneSelection({ nodes: new Set(['a']), edges: new Set(['e1']) });
+    state().pruneSelection({
+      nodes: new Set(['a']),
+      edges: new Set(['e1']),
+      groups: new Set(['g']),
+      stickies: new Set(['st1']),
+    });
     expect(state().selection).toBe(kept);
   });
 
@@ -42,13 +78,66 @@ describe('ui store', () => {
     state().focus('a');
     state().focusEdge('e1');
     state().openEdgePopover('e1');
-    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    state().pruneSelection({
+      nodes: new Set(),
+      edges: new Set(),
+      groups: new Set(),
+      stickies: new Set(),
+    });
     expect(state().focusedId).toBeNull();
     expect(state().focusedEdgeId).toBeNull();
     expect(state().popover).toBeNull();
     state().openConnectPopover('a');
-    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    state().pruneSelection({
+      nodes: new Set(),
+      edges: new Set(),
+      groups: new Set(),
+      stickies: new Set(),
+    });
     expect(state().popover).toBeNull();
+  });
+
+  it('tracks drill, collapsed groups, focus mode, and view pruning', () => {
+    expect(state().drill).toEqual([]);
+    state().setFocusMode(true);
+    state().select({ nodes: ['a'] });
+    state().drillInto({ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } });
+    expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(state().focusMode).toBe(false);
+    expect(state().drill).toHaveLength(1);
+
+    state().toggleCollapsed('g');
+    state().setCollapsed('h', true);
+    expect([...state().collapsed]).toEqual(['g', 'h']);
+    state().expandAll(['h']);
+    expect([...state().collapsed]).toEqual(['g']);
+
+    const popped = state().drillUp();
+    expect(popped).toEqual([{ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } }]);
+    expect(state().drill).toEqual([]);
+
+    state().drillInto({ kind: 'node', id: 'a', viewport: { x: 0, y: 0, zoom: 1 } });
+    state().toggleCollapsed('gone');
+    state().pruneView({ nodes: new Set(), groups: new Set() });
+    expect(state().drill).toEqual([]);
+    expect([...state().collapsed]).toEqual([]);
+  });
+
+  it('tracks sticky editing, drafts and the last canvas pointer', () => {
+    state().setStickyEditing('st1');
+    state().setStickyDraft('st2');
+    state().setCanvasPointer({ x: 10, y: 20 });
+    expect(state().stickyEditing).toBe('st1');
+    expect(state().stickyDraft).toBe('st2');
+    expect(state().canvasPointer).toEqual({ x: 10, y: 20 });
+  });
+
+  it('opens and closes the palette with its return focus element', () => {
+    const button = document.createElement('button');
+    state().openPalette(button);
+    expect(state().palette).toEqual({ open: true, returnFocus: button });
+    state().closePalette();
+    expect(state().palette).toEqual({ open: false, returnFocus: null });
   });
 
   it('tracks focus', () => {
@@ -89,6 +178,24 @@ describe('ui store', () => {
     expect(readLabelsOn()).toBe(false);
     state().setLabelsOn(true);
     expect(state().labelsOn).toBe(true);
+  });
+
+  it('defaults notesDisplay to dimmed, persists it, and survives localStorage failures', () => {
+    expect(state().notesDisplay).toBe('dimmed');
+    state().setNotesDisplay('shown');
+    expect(state().notesDisplay).toBe('shown');
+    expect(localStorage.getItem(NOTES_KEY)).toBe('shown');
+    expect(readNotesDisplay()).toBe('shown');
+
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(readNotesDisplay()).toBe('dimmed');
+    state().setNotesDisplay('hidden');
+    expect(state().notesDisplay).toBe('hidden');
   });
 
   it('opens and closes popovers', () => {
@@ -141,7 +248,12 @@ describe('ui store', () => {
     state().setJsonTab('selection');
     state().clearSelection();
     state().toggle('b', 'node');
-    state().pruneSelection({ nodes: new Set(), edges: new Set() });
+    state().pruneSelection({
+      nodes: new Set(),
+      edges: new Set(),
+      groups: new Set(),
+      stickies: new Set(),
+    });
     expect(state().jsonPanel.tab).toBe('selection');
   });
 
@@ -154,7 +266,7 @@ describe('ui store', () => {
     it('shows a flow, a step or a branch, and clears the canvas selection', () => {
       state().select({ nodes: ['a'], edges: ['e'] });
       state().setActiveFlow('f');
-      expect(state().selection).toEqual({ nodes: [], edges: [] });
+      expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
       expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: null });
       state().setActiveStep('s1');
       expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: 's1', branchId: null });
@@ -227,6 +339,7 @@ describe('ui store', () => {
       state().select({ nodes: ['a'] });
       state().focus('a');
       state().openEdgePopover('e');
+      state().drillInto({ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } });
       state().openFlow('f', 's2', 'alt');
       expect(state().activeFlow).toEqual({
         flowId: 'f',
@@ -236,7 +349,8 @@ describe('ui store', () => {
         playing: false,
         speed: 1,
       });
-      expect(state().selection).toEqual({ nodes: [], edges: [] });
+      expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+      expect(state().drill).toEqual([]);
       expect(state().focusedEdgeId).toBeNull();
       expect(state().popover).toBeNull();
       expect(isFlowMode(state())).toBe(true);
@@ -344,7 +458,7 @@ describe('ui store', () => {
     state().setLabelsOn(true);
     state().resetForDeck();
     expect(state()).toMatchObject({
-      selection: { nodes: [], edges: [] },
+      selection: { nodes: [], edges: [], groups: [], stickies: [] },
       focusedId: null,
       popover: null,
       pendingDelete: null,
@@ -353,6 +467,10 @@ describe('ui store', () => {
       hoverEdgeId: null,
       flowFilter: '',
       labelsOn: true,
+      stickyEditing: null,
+      stickyDraft: null,
+      canvasPointer: null,
+      palette: { open: false, returnFocus: null },
     });
   });
 });

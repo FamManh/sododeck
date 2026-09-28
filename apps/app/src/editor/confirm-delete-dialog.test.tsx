@@ -19,6 +19,10 @@ const deck = deckOf({
     { id: 'e1', from: 'web', to: 'svc', label: 'POST' },
     { id: 'e2', from: 'svc', to: 'db' },
   ],
+  stickies: [
+    { id: 'note-1', text: 'Pinned note', anchor: 'svc', position: { x: 24, y: -96 } },
+    { id: 'note-2', text: 'Loose note', position: { x: 160, y: 200 } },
+  ],
 });
 
 function Harness() {
@@ -26,11 +30,11 @@ function Harness() {
   return <ConfirmDeleteDialog deck={useDeckSnapshot(editor.doc)} />;
 }
 
-function setup(nodes: string[] = ['svc'], edges: string[] = []) {
+function setup(nodes: string[] = ['svc'], edges: string[] = [], stickies: string[] = []) {
   const view = renderWithEditor(<Harness />, deck);
   act(() => {
-    useUiStore.getState().select({ nodes, edges });
-    useUiStore.getState().requestDelete({ nodes, edges });
+    useUiStore.getState().select({ nodes, edges, stickies });
+    useUiStore.getState().requestDelete({ nodes, edges, stickies });
   });
   return { ...view, user: userEvent.setup() };
 }
@@ -40,6 +44,7 @@ describe('ConfirmDeleteDialog', () => {
     setup();
     const dialog = screen.getByRole('alertdialog', { name: 'Delete Order Service?' });
     expect(dialog).toHaveTextContent('Also removes 2 connections.');
+    expect(dialog).toHaveTextContent('1 pinned note will stay on the canvas, unpinned.');
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
   });
 
@@ -61,8 +66,20 @@ describe('ConfirmDeleteDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(toJSON(doc).nodes.map((n) => n.id)).toEqual(['db', 'web']);
     expect(toJSON(doc).edges).toEqual([]);
-    expect(useUiStore.getState().selection).toEqual({ nodes: [], edges: [] });
-    expect(screen.getByText(/Deleted Order Service and 2 connections/)).toBeInTheDocument();
+    expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-1')).toMatchObject({
+      id: 'note-1',
+      text: 'Pinned note',
+      position: { x: 25, y: -94 },
+    });
+    expect(useUiStore.getState().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: [],
+    });
+    expect(
+      screen.getByText(/Deleted Order Service and 2 connections · 1 note unpinned/),
+    ).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toMatch(/^Deleted Order Service/);
 
     act(() => {
@@ -85,6 +102,18 @@ describe('ConfirmDeleteDialog', () => {
     );
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(toJSON(doc).edges).toEqual([]);
+  });
+
+  it('uses note-specific dialog text and delete targets for selected notes', async () => {
+    const { user, doc, editor } = setup([], [], ['note-2']);
+    expect(screen.getByRole('alertdialog', { name: 'Delete this note?' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(screen.getByText(/Note deleted · (⌘Z|Ctrl\+Z) to undo/)).toBeInTheDocument();
+    expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-2')).toBeUndefined();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-2')).toBeDefined();
   });
 
   it('replaces the toast on a second delete, and undo goes in reverse order', async () => {

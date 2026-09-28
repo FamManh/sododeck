@@ -6,9 +6,12 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { Branch, Rule, SododeckFile, Step } from '@sododeck/schema';
+import type { Branch, Rule, SododeckFile, Step, Sticky } from '@sododeck/schema';
 
 import { defaultNewId, makeIdAllocator } from './ids';
+import { getObject } from './deck';
+import { DeckEditError } from './errors';
+import type { Point } from './geometry';
 import { rootTypes, type Collection, type DeckDoc, type ObjectOf } from './layout';
 import {
   addBranch,
@@ -42,6 +45,13 @@ import {
 } from './ops/rules';
 import { attachRule, detachRule, setRuleInputs, type RuleHost } from './ops/rule-links';
 import { addStep, moveStep, updateStep } from './ops/steps';
+import {
+  addSticky,
+  deleteStickyIfPresent,
+  moveSticky,
+  pinSticky,
+  unpinSticky,
+} from './ops/stickies';
 import type { NewObject, NewRule, NewStep, Patch } from './ops/types';
 
 export interface EditorOptions {
@@ -134,6 +144,26 @@ export interface DeckEditor {
   setRuleInputs(flowId: Id, stepId: Id, ruleId: Id, values: Readonly<Record<Id, string>>): void;
 
   /**
+   * Adds a note and opens a draft: text edits to it (through `update('stickies', id, …)`) merge
+   * into the same undo step regardless of how long typing takes. Throws `invalid` if a draft is
+   * already open. Returns the new id.
+   */
+  beginStickyDraft(sticky: Omit<Sticky, 'id'>): Id;
+  /**
+   * Ends the open draft. Blank text (or a note removed by another tab) removes the note and, when
+   * nothing else was recorded meanwhile, drops the draft's undo step entirely, so it leaves no
+   * undo or redo entry. Otherwise the note is removed as a normal step. Returns `'kept'` or
+   * `'discarded'`. Throws `invalid` when `id` is not the open draft.
+   */
+  endStickyDraft(id: Id): 'kept' | 'discarded';
+  /** Pins a note to a node, keeping its canvas point. Throws `missing-reference` for an unknown node. */
+  pinSticky(id: Id, nodeId: Id): void;
+  /** Unpins a note, keeping its canvas point. */
+  unpinSticky(id: Id): void;
+  /** Moves a note to a canvas point: an offset when pinned, an absolute point otherwise. */
+  moveSticky(id: Id, point: Point): void;
+
+  /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
    * Nested batches flatten. Each operation inside still validates before it writes, but Yjs cannot
    * roll back: if `fn` throws halfway, the edits made before the throw stay applied.
@@ -173,6 +203,30 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
   let lastKey: string | undefined;
   let gestureDepth = 0;
   let savedTimeout = undoManager.captureTimeout;
+
+  // History-change notification (also used by the sticky draft, which can change availability
+  // without a Yjs event: popping a stack item manually fires none).
+  let lastAvailability = [undoManager.canUndo(), undoManager.canRedo()].join();
+  const historyListeners = new Set<() => void>();
+  const checkHistoryChange = () => {
+    const now = [undoManager.canUndo(), undoManager.canRedo()].join();
+    if (now !== lastAvailability) {
+      lastAvailability = now;
+      for (const listener of historyListeners) listener();
+    }
+  };
+  for (const event of ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const) {
+    undoManager.on(event, checkHistoryChange);
+  }
+
+  // Sticky draft (research R5, ADR 0010): a note created by a drop or "N" whose text edits merge
+  // into one undo step "however long it takes", by keying on `stickies:<id>` and lifting the
+  // capture timeout while the draft is open (see ops/stickies.ts). `draftStackLength` is the undo
+  // stack's length just before the draft's own add, so ending the draft can tell whether its item
+  // is still the only thing pushed since (nothing else merged into it or landed on top of it).
+  let draftId: Id | null = null;
+  let draftStackLength = 0;
+  let draftSavedTimeout = undoManager.captureTimeout;
 
   const ctx: EditContext = {
     doc,
@@ -255,6 +309,52 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     setRuleInputs: (flowId, stepId, ruleId, values) => {
       setRuleInputs(ctx, flowId, stepId, ruleId, values);
     },
+    beginStickyDraft: (data) => {
+      if (draftId !== null) {
+        throw new DeckEditError('invalid', [
+          { path: '', message: 'A sticky draft is already open.' },
+        ]);
+      }
+      draftStackLength = undoManager.undoStack.length;
+      const id = addSticky(ctx, data);
+      draftId = id;
+      draftSavedTimeout = undoManager.captureTimeout;
+      undoManager.captureTimeout = Infinity;
+      checkHistoryChange();
+      return id;
+    },
+    endStickyDraft: (id) => {
+      if (draftId !== id) {
+        throw new DeckEditError('invalid', [
+          { path: '', message: 'No sticky draft is open for this note.' },
+        ]);
+      }
+      const current = getObject(doc, 'stickies', id)?.text;
+      const blank = current === undefined || current.trim() === '';
+      if (blank) {
+        if (current !== undefined) deleteStickyIfPresent(ctx, id);
+        // Still exactly our item (nothing else merged in or landed on top): drop it, so the
+        // draft leaves no undo or redo entry at all.
+        if (undoManager.undoStack.length === draftStackLength + 1) {
+          undoManager.undoStack.pop();
+        }
+      }
+      undoManager.captureTimeout = draftSavedTimeout;
+      undoManager.stopCapturing();
+      lastKey = undefined;
+      draftId = null;
+      checkHistoryChange();
+      return blank ? 'discarded' : 'kept';
+    },
+    pinSticky: (id, nodeId) => {
+      pinSticky(ctx, id, nodeId);
+    },
+    unpinSticky: (id) => {
+      unpinSticky(ctx, id);
+    },
+    moveSticky: (id, point) => {
+      moveSticky(ctx, id, point);
+    },
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {
@@ -276,22 +376,15 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     canUndo: () => undoManager.canUndo(),
     canRedo: () => undoManager.canRedo(),
     onHistoryChange: (listener) => {
-      // Yjs emits a pop and a push per undo/redo; notify once per change of availability.
-      let last = [undoManager.canUndo(), undoManager.canRedo()].join();
-      const handler = () => {
-        const now = [undoManager.canUndo(), undoManager.canRedo()].join();
-        if (now !== last) {
-          last = now;
-          listener();
-        }
-      };
-      const events = ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const;
-      for (const event of events) undoManager.on(event, handler);
+      historyListeners.add(listener);
       return () => {
-        for (const event of events) undoManager.off(event, handler);
+        historyListeners.delete(listener);
       };
     },
     destroy: () => {
+      for (const event of ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const) {
+        undoManager.off(event, checkHistoryChange);
+      }
       undoManager.destroy();
       ids.destroy();
       editorOrigins.delete(origin);

@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../test/render-canvas';
@@ -28,6 +29,46 @@ const grid = deckOf({
     { id: 'e1', from: 'n11', to: 'n12', label: 'right' },
     { id: 'e2', from: 'n01', to: 'n11' },
   ],
+});
+
+const stickyDeck = deckOf({
+  nodes: [{ id: 'svc', type: 'service', title: 'Order Service', position: { x: 240, y: 120 } }],
+  stickies: [
+    { id: 'st1', text: 'Remember retries', position: { x: 40, y: 60 } },
+    { id: 'st2', text: 'Pinned note', anchor: 'svc', position: { x: 12, y: -24 } },
+  ],
+});
+
+const groupedDeck = deckOf({
+  nodes: [
+    { id: 'inside', type: 'service', title: 'Inside', group: 'core', position: { x: 100, y: 100 } },
+    { id: 'outside', type: 'service', title: 'Outside', position: { x: 340, y: 100 } },
+  ],
+  groups: [{ id: 'core', title: 'Core' }],
+  edges: [{ id: 'edge', from: 'inside', to: 'outside' }],
+});
+
+const mergedDeck = deckOf({
+  nodes: [
+    { id: 'a', type: 'service', title: 'A', group: 'left', position: { x: 40, y: 40 } },
+    { id: 'b', type: 'service', title: 'B', group: 'right', position: { x: 420, y: 40 } },
+  ],
+  groups: [
+    { id: 'left', title: 'Left' },
+    { id: 'right', title: 'Right' },
+  ],
+  edges: [
+    { id: 'e1', from: 'a', to: 'b' },
+    { id: 'e2', from: 'a', to: 'b' },
+  ],
+});
+
+const groupedPlaybackDeck = deckOf({
+  ...playbackDeck,
+  nodes: playbackDeck.nodes.map((node) =>
+    node.id === 'b' || node.id === 'c' ? { ...node, group: 'core' } : node,
+  ),
+  groups: [{ id: 'core', title: 'Core services' }],
 });
 
 const ui = () => useUiStore.getState();
@@ -62,6 +103,15 @@ function focusNode(id: string) {
   });
 }
 
+function focusSticky() {
+  const [el] = screen.getAllByTestId('sticky-node');
+  if (el === undefined) throw new Error('sticky note not rendered');
+  act(() => {
+    ui().select({ stickies: ['st1'] });
+    el.focus();
+  });
+}
+
 describe('canvas keyboard', () => {
   it('moves focus and selection to the nearest component with the arrows', async () => {
     const { user } = setup();
@@ -77,6 +127,52 @@ describe('canvas keyboard', () => {
     // Nothing further left: focus stays.
     await user.keyboard('{ArrowLeft}');
     expect(ui().focusedId).toBe('n00');
+  });
+
+  it('lets arrows reach a group label and a collapsed card', async () => {
+    const { user } = setup(groupedDeck);
+    focusNode('inside');
+    await user.keyboard('{ArrowLeft}');
+    expect(ui().focusedId).toBe('group:core');
+    expect(ui().selection.groups).toEqual(['core']);
+    await waitFor(() => {
+      expect(document.querySelector('[data-node-id="group:core"]')).toHaveFocus();
+    });
+
+    act(() => {
+      ui().toggleCollapsed('core');
+      ui().focus('outside');
+      ui().select({ nodes: ['outside'] });
+    });
+    await user.keyboard('{ArrowLeft}');
+    expect(ui().focusedId).toBe('collapsed:core');
+    expect(ui().selection.groups).toEqual(['core']);
+  });
+
+  it('collapses a focused group with Space and opens merged popovers from a focused card', async () => {
+    const { user } = setup(mergedDeck);
+    act(() => {
+      ui().focus('group:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
+    });
+    await user.keyboard(' ');
+    expect(ui().collapsed.has('left')).toBe(true);
+    expect(ui().focusedId).toBe('collapsed:left');
+
+    act(() => {
+      ui().toggleCollapsed('right');
+      ui().focus('collapsed:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="collapsed:left"]')?.focus();
+    });
+    await user.keyboard('e');
+    expect(ui().focusedEdgeId).toBe('merged:collapsed:left|collapsed:right');
+    await user.keyboard('{Enter}');
+    expect(ui().popover).toEqual({
+      kind: 'merged',
+      edgeId: 'merged:collapsed:left|collapsed:right',
+    });
   });
 
   it('extends the selection with shift + arrows', async () => {
@@ -104,6 +200,21 @@ describe('canvas keyboard', () => {
     await user.keyboard('c');
     expect(ui().popover).toEqual({ kind: 'connect', fromId: 'n00' });
     expect(screen.getByRole('dialog', { name: 'Connect N00 to…' })).toBeInTheDocument();
+  });
+
+  it('toggles focus mode with F and announces when nothing is selected', async () => {
+    const { user } = setup();
+    focusNode('n11');
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(true);
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(false);
+    act(() => {
+      ui().clearSelection();
+    });
+    await user.keyboard('f');
+    expect(ui().announcement.text).toBe('Select a component to focus');
+    expect(ui().focusMode).toBe(false);
   });
 
   it('cycles through the focused component’s connections with E; Enter opens the popover', async () => {
@@ -149,9 +260,149 @@ describe('canvas keyboard', () => {
     await user.keyboard('{Meta>}={/Meta}{Meta>}-{/Meta}{Meta>}0{/Meta}');
     expect(ui().focusedId).toBe('n00');
   });
+
+  it('adds a note with N at the tracked pointer', async () => {
+    const { user, doc } = setup(deckOf({}));
+    const canvas = screen.getByLabelText('Diagram');
+
+    act(() => {
+      ui().setCanvasPointer({ x: 240, y: 130 });
+      canvas.focus();
+    });
+    await user.keyboard('n');
+    expect(readDeck(doc).stickies[0]).toMatchObject({ text: '', position: { x: 240, y: 130 } });
+    expect(ui().stickyDraft).toBe(readDeck(doc).stickies[0]?.id);
+    expect(ui().stickyEditing).toBe(readDeck(doc).stickies[0]?.id);
+    expect(ui().announcement.text).toBe('Note added');
+  });
+
+  it('falls back to the view centre when N has no tracked pointer', async () => {
+    const { user, doc } = setup(deckOf({}));
+    const canvas = screen.getByLabelText('Diagram');
+    Object.defineProperty(canvas, 'getBoundingClientRect', {
+      value: () => new DOMRect(100, 50, 300, 200),
+    });
+    act(() => {
+      ui().setCanvasPointer(null);
+      canvas.focus();
+    });
+    await user.keyboard('n');
+    expect(readDeck(doc).stickies[0]).toMatchObject({ text: '', position: { x: 250, y: 150 } });
+  });
+
+  it('does not add a note while typing', async () => {
+    const { user, doc } = setup(deckOf({}));
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('n');
+    expect(readDeck(doc).stickies).toEqual([]);
+  });
+
+  it('does not add a note during a flow session or in flow mode', async () => {
+    const session = setup(playbackDeck);
+    const sessionCanvas = screen.getByLabelText('Diagram');
+    act(() => {
+      ui().startRecording('Flow', null);
+      sessionCanvas.focus();
+    });
+    await session.user.keyboard('n');
+    expect(readDeck(session.doc).stickies).toEqual([]);
+
+    act(() => {
+      ui().endSession();
+      openFlow(session.editor(), 'order');
+      sessionCanvas.focus();
+    });
+    await session.user.keyboard('n');
+    expect(readDeck(session.doc).stickies).toEqual([]);
+  });
+
+  it('collapses, expands, nudges and edits the selected note with the keyboard', async () => {
+    const { user, doc } = setup(stickyDeck);
+    focusSticky();
+    const [sticky] = screen.getAllByTestId('sticky-node');
+    if (sticky === undefined) throw new Error('Expected sticky node');
+
+    fireEvent.keyDown(sticky, { key: 'c', code: 'KeyC', altKey: true });
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.collapsed).toBe(true);
+    expect(ui().announcement.text).toBe('Note collapsed');
+    fireEvent.keyDown(sticky, { key: 'c', code: 'KeyC', altKey: true });
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.collapsed).toBeUndefined();
+    expect(ui().announcement.text).toBe('Note expanded');
+
+    await user.keyboard('{ArrowRight}{Shift>}{ArrowDown}{/Shift}');
+    expect(readDeck(doc).stickies.find((sticky) => sticky.id === 'st1')?.position).toEqual({
+      x: 48,
+      y: 92,
+    });
+
+    const [editedSticky] = screen.getAllByTestId('sticky-node');
+    if (editedSticky === undefined) throw new Error('Expected sticky node after move');
+    fireEvent.keyDown(editedSticky, { key: 'Enter' });
+    expect(ui().stickyEditing).toBe('st1');
+    act(() => {
+      ui().setStickyEditing(null);
+    });
+    const [renamedSticky] = screen.getAllByTestId('sticky-node');
+    if (renamedSticky === undefined) throw new Error('Expected sticky node for rename');
+    fireEvent.keyDown(renamedSticky, { key: 'F2' });
+    expect(ui().stickyEditing).toBe('st1');
+  });
 });
 
 describe('editor shortcuts', () => {
+  it('goes up with Escape or Backspace when nothing is selected in a drilled scope', async () => {
+    const { user } = setup(groupedDeck);
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+    });
+    await user.keyboard('{Escape}');
+    expect(ui().drill).toEqual([]);
+
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+    });
+    await user.keyboard('{Backspace}');
+    expect(ui().drill).toEqual([]);
+    expect(ui().pendingDelete).toBeNull();
+  });
+
+  it('keeps the level when Backspace deletes, Escape clears, or Escape only closes a popover', async () => {
+    const { user } = setup(groupedDeck);
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+    });
+
+    focusNode('inside');
+    await user.keyboard('{Backspace}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'inside' }] });
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+
+    act(() => {
+      ui().cancelDelete();
+      ui().clearSelection();
+      ui().select({ nodes: ['inside'] });
+    });
+    await user.keyboard('{Escape}');
+    expect(ui().selection.nodes).toEqual([]);
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+
+    focusNode('inside');
+    await user.keyboard('c');
+    expect(ui().popover).toEqual({ kind: 'connect', fromId: 'inside' });
+    await user.keyboard('{Escape}');
+    expect(ui().popover).toBeNull();
+    expect(ui().selection.nodes).toEqual(['inside']);
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+  });
+
+  it('does nothing with Escape or Backspace at the top level when nothing is selected', async () => {
+    const { user } = setup();
+    await user.keyboard('{Escape}{Backspace}');
+    expect(ui().drill).toEqual([]);
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().pendingDelete).toBeNull();
+  });
+
   it('opens the delete confirmation for the selection with Delete or Backspace', async () => {
     const { user } = setup();
     focusNode('n00');
@@ -303,20 +554,31 @@ describe('keyboard recording (006 FR-015, FR-017)', () => {
 });
 
 describe('keyboard in flow mode (007)', () => {
-  it('ignores arrows, C, E, Enter and Delete on the canvas; Esc exits flow mode', async () => {
-    const { user, editor, doc } = setup(playbackDeck);
-    focusNode('b');
+  it('allows Space collapse, but ignores arrows, C, E, Enter, F and Backspace; Esc exits flow mode', async () => {
+    const { user, editor, doc } = setup(groupedPlaybackDeck);
+    act(() => {
+      ui().select({ groups: ['core'] });
+      ui().focus('group:core');
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+      ui().drillUp();
+    });
+    document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
     act(() => {
       openFlow(editor(), 'order');
     });
     const before = toJSON(doc);
-    await user.keyboard('{Shift>}{ArrowRight}{/Shift}cE{Enter}{Delete}');
-    expect(ui().focusedId).toBe('b');
+    const stepId = ui().activeFlow?.stepId;
+    await user.keyboard(' ');
+    expect(ui().collapsed.has('core')).toBe(true);
+    expect(ui().activeFlow?.stepId).toBe(stepId);
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}cE{Enter}f{Backspace}');
+    expect(ui().focusedId).toBe('collapsed:core');
     expect(ui().popover).toBeNull();
     expect(ui().pendingDelete).toBeNull();
-    expect(document.activeElement).toHaveAttribute('data-node-id', 'b');
+    expect(ui().focusMode).toBe(false);
     expect(toJSON(doc)).toEqual(before);
     expect(ui().activeFlow?.flowId).toBe('order');
+    expect(ui().drill).toEqual([]);
     await user.keyboard('{Escape}');
     expect(ui().activeFlow).toBeNull();
   });

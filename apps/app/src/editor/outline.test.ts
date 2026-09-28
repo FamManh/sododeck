@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import { buildOutline, visibleItems } from './outline';
+import { buildNotesOutline, buildOutline, visibleItems } from './outline';
 
 const deck = deckOf({
   nodes: [
@@ -46,6 +46,30 @@ describe('buildOutline', () => {
     expect(tree[1]?.id).toBe('orphan');
     expect(tree[2]).toMatchObject({ id: 'x1', count: 1 });
   });
+
+  it('limits the tree to the current scope and prepends an up row', () => {
+    expect(
+      buildOutline(deck, { node: null, group: 'outer' }).map((item) => [item.type, item.id]),
+    ).toEqual([
+      ['up', 'up'],
+      ['group', 'inner'],
+      ['node', 'b'],
+    ]);
+    expect(
+      buildOutline(
+        deckOf({
+          nodes: [
+            { id: 'parent', type: 'service', title: 'Parent' },
+            { id: 'child', type: 'service', title: 'Child', parent: 'parent' },
+          ],
+        }),
+        { node: 'parent', group: null },
+      ).map((item) => [item.type, item.id]),
+    ).toEqual([
+      ['up', 'up'],
+      ['node', 'child'],
+    ]);
+  });
 });
 
 describe('visibleItems', () => {
@@ -63,5 +87,23 @@ describe('visibleItems', () => {
         .map((v) => v.item.id)
         .slice(0, 2),
     ).toEqual(['outer', 'orphan']);
+  });
+});
+
+describe('buildNotesOutline', () => {
+  it('uses sticky labels in file order, with "Empty note" for blanks', () => {
+    const deck = deckOf({
+      stickies: [
+        { id: 'a', text: 'First line\n\nMore', position: { x: 12, y: 24 } },
+        { id: 'b', text: '   ', position: { x: 36, y: 48 } },
+        { id: 'c', text: '**Bold** line', position: { x: 60, y: 72 } },
+      ],
+    });
+
+    expect(buildNotesOutline(deck)).toEqual([
+      { id: 'a', label: 'First line' },
+      { id: 'b', label: 'Empty note' },
+      { id: 'c', label: 'Bold line' },
+    ]);
   });
 });

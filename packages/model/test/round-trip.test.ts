@@ -376,6 +376,18 @@ const perType: [string, SododeckFile][] = [
         { id: 's1', text: 'Anchored', color: 'blue', anchor: 'a' },
         { id: 's2', text: 'Free', color: 'grey', position: { x: 1, y: 1 } },
         { id: 's3', text: '', anchor: 'a', position: { x: 0, y: -8 } },
+        { id: 's4', text: 'Collapsed', position: { x: 2, y: 2 }, collapsed: true },
+        { id: 's5', text: 'Not collapsed', position: { x: 3, y: 3 }, collapsed: false },
+        { id: 's6', text: 'Stays visible', position: { x: 4, y: 4 }, showInFlows: true },
+        { id: 's7', text: 'Dims normally', position: { x: 5, y: 5 }, showInFlows: false },
+        {
+          id: 's8',
+          text: 'Anchored, collapsed, stays visible',
+          anchor: 'a',
+          position: { x: 6, y: 6 },
+          collapsed: true,
+          showInFlows: true,
+        },
       ],
     },
   ],
@@ -482,6 +494,26 @@ describe('canonical key order (FR-022, research R2)', () => {
     const [sticky] = toJSON(doc).stickies;
     expect(Object.keys(sticky ?? {})).toEqual(['id', 'text', 'color', 'position']);
     expect(Object.keys(sticky?.position ?? {})).toEqual(['x', 'y']);
+  });
+
+  it('writes collapsed and showInFlows after position (ADR 0010)', () => {
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    const id = editor.add('stickies', {
+      text: 'Hi',
+      position: { x: 1, y: 2 },
+      showInFlows: true,
+      collapsed: true,
+    });
+    const [sticky] = toJSON(doc).stickies;
+    expect(sticky?.id).toBe(id);
+    expect(Object.keys(sticky ?? {})).toEqual([
+      'id',
+      'text',
+      'position',
+      'collapsed',
+      'showInFlows',
+    ]);
   });
 });
 

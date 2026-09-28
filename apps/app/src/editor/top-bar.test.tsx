@@ -12,10 +12,12 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const { editor } = renderWithEditor(
       <MemoryRouter>
-        <TopBar deckName="Shop" />
+        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('Shop');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Local/Shop/System view',
+    );
     expect(screen.getByText('Demo · not saved')).toBeInTheDocument();
     const undo = screen.getByRole('button', { name: 'Undo' });
     const redo = screen.getByRole('button', { name: 'Redo' });
@@ -41,7 +43,7 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const { editor, doc } = renderWithEditor(
       <MemoryRouter>
-        <TopBar deckName="Shop" />
+        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} />
       </MemoryRouter>,
     );
     await user.click(screen.getByRole('button', { name: 'Rename deck' }));
@@ -59,7 +61,7 @@ describe('TopBar', () => {
     const user = userEvent.setup();
     const { doc } = renderWithEditor(
       <MemoryRouter>
-        <TopBar deckName="Shop" />
+        <TopBar deckName="Shop" deck={{ groups: [], nodes: [] }} />
       </MemoryRouter>,
     );
     const before = toJSON(doc);

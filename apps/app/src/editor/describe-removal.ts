@@ -39,6 +39,7 @@ function subject(deck: SododeckFile, targets: readonly RemovalTarget[]): string 
     const edge = deck.edges.find((e) => e.id === only.id);
     if (only.scope === 'edges' && edge) return `${title(edge.from)} → ${title(edge.to)}`;
   }
+  if (targets.every((t) => t.scope === 'stickies')) return plural(targets.length, 'note');
   if (targets.every((t) => t.scope === 'nodes')) return plural(targets.length, 'component');
   if (targets.every((t) => t.scope === 'edges')) return plural(targets.length, 'connection');
   return plural(targets.length, 'item');
@@ -58,6 +59,11 @@ function brokenCounts(result: RemovalResult): { steps: number; notes: number } {
     else if (object.scope === 'stickies') notes.add(object.id);
   }
   return { steps: steps.size, notes: notes.size };
+}
+
+function freedNoteSentence(count: number): string | null {
+  if (count === 0) return null;
+  return `${plural(count, 'pinned note')} will stay on the canvas, unpinned.`;
 }
 
 /** The single rule a removal is for, if it is one (008). */
@@ -103,6 +109,8 @@ export function describeRemoval(
   const stepsRemoved = result.removed.filter((r) => r.child?.kind === 'step').length;
   if (stepsRemoved > 0) sentences.push(`Its ${plural(stepsRemoved, 'step')} will be deleted.`);
   if (edges > 0) sentences.push(`Also removes ${plural(edges, 'connection')}.`);
+  const freed = freedNoteSentence(result.freed.length);
+  if (freed !== null) sentences.push(freed);
   const broken = [
     ...(steps > 0 ? [plural(steps, 'flow step')] : []),
     ...(notes > 0 ? [plural(notes, 'note')] : []),
@@ -111,7 +119,14 @@ export function describeRemoval(
     sentences.push(`${listPhrase(broken)} will be flagged broken.`);
   }
   sentences.push('You can undo this.');
-  return { title: `Delete ${subject(deck, targets)}?`, body: sentences.join(' ') };
+  const stickyOnly = targets.length > 0 && targets.every((t) => t.scope === 'stickies');
+  const title =
+    stickyOnly && targets.length === 1
+      ? 'Delete this note?'
+      : stickyOnly
+        ? `Delete ${String(targets.length)} notes?`
+        : `Delete ${subject(deck, targets)}?`;
+  return { title, body: sentences.join(' ') };
 }
 
 /** Toast text after the delete, with the undo shortcut for this platform. */
@@ -124,12 +139,16 @@ export function removalToast(
   const rule = ruleTarget(deck, targets);
   if (rule !== undefined)
     return `Rule “${rule.title}” deleted · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  if (targets.length > 0 && targets.every((t) => t.scope === 'stickies')) {
+    return `${targets.length === 1 ? 'Note deleted' : `${String(targets.length)} notes deleted`} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  }
   const edges = cascadedEdges(targets, result);
   const what =
     edges > 0
       ? `${subject(deck, targets)} and ${plural(edges, 'connection')}`
       : subject(deck, targets);
-  return `Deleted ${what} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  const freed = result.freed.length > 0 ? ` · ${plural(result.freed.length, 'note')} unpinned` : '';
+  return `Deleted ${what}${freed} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
 }
 
 /** Components first, then connections: the order the confirmation and the delete both use. */

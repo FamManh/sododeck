@@ -4,6 +4,11 @@ import { parseMarkdown } from '../src/lib/markdown';
 
 const text = (t: string) => ({ kind: 'text', text: t }) as const;
 const code = (t: string) => ({ kind: 'code', text: t }) as const;
+const em = (...content: readonly ReturnType<typeof text | typeof code>[]) =>
+  ({ kind: 'em', content }) as const;
+const strong = (
+  ...content: readonly (ReturnType<typeof text> | ReturnType<typeof code> | ReturnType<typeof em>)[]
+) => ({ kind: 'strong', content }) as const;
 
 describe('parseMarkdown (paragraphs, bullets, inline code)', () => {
   it('returns no blocks for empty or blank text', () => {
@@ -39,9 +44,37 @@ describe('parseMarkdown (paragraphs, bullets, inline code)', () => {
     ]);
   });
 
+  it('reads bold and italic, including bold wrapping italic', () => {
+    expect(parseMarkdown('**b** __bb__ *i* _ii_ **bold *italic***')).toEqual([
+      {
+        kind: 'paragraph',
+        content: [
+          strong(text('b')),
+          text(' '),
+          strong(text('bb')),
+          text(' '),
+          em(text('i')),
+          text(' '),
+          em(text('ii')),
+          text(' '),
+          strong(text('bold '), em(text('italic'))),
+        ],
+      },
+    ]);
+  });
+
+  it('keeps unmatched markers, markers next to spaces and snake_case literal', () => {
+    expect(parseMarkdown('**open * open* *close _close snake_case_name')).toEqual([
+      {
+        kind: 'paragraph',
+        content: [text('**open * open* *close _close snake_case_name')],
+      },
+    ]);
+  });
+
   it('keeps everything else as literal text', () => {
-    expect(parseMarkdown('**bold** <b>x</b> `open')).toEqual([
-      { kind: 'paragraph', content: [text('**bold** <b>x</b> `open')] },
+    expect(parseMarkdown('<b>x</b> `open')).toEqual([
+      { kind: 'paragraph', content: [text('<b>x</b> `open')] },
     ]);
     expect(parseMarkdown('-no space\n1. one')).toEqual([
       { kind: 'paragraph', content: [text('-no space 1. one')] },

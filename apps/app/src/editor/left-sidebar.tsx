@@ -6,6 +6,7 @@ import { useId, useRef } from 'react';
 
 import { useUiStore, type LeftTab } from '../state/ui-store';
 import { FlowList } from './flows/flow-list';
+import { NotesOutline } from './notes-outline';
 import { FlowPanel } from './flows/flow-panel';
 import { OutlineTree } from './outline-tree';
 import { Palette } from './palette';
@@ -89,9 +90,12 @@ function DiagramSidebar({ deck }: { deck: SododeckFile }) {
         className="px-1"
       >
         {leftTab === 'outline' ? (
-          <PanelSection label={`Components · ${String(deck.nodes.length)}`}>
-            <OutlineTree deck={deck} />
-          </PanelSection>
+          <>
+            <PanelSection label={`Components · ${String(deck.nodes.length)}`}>
+              <OutlineTree deck={deck} />
+            </PanelSection>
+            <NotesOutline deck={deck} />
+          </>
         ) : (
           <PanelSection>
             <Palette />

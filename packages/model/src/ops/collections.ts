@@ -59,7 +59,12 @@ export function assertFreeIds(doc: DeckDoc, ids: readonly { path: string; id: Id
   if (issues.length > 0) throw new DeckEditError('duplicate-id', issues);
 }
 
-export function addObject<C extends Collection>(ctx: EditContext, c: C, data: NewObject<C>): Id {
+export function addObject<C extends Collection>(
+  ctx: EditContext,
+  c: C,
+  data: NewObject<C>,
+  key?: string,
+): Id {
   const { doc } = ctx;
   const { id: explicitId, ...fields } = data as Record<string, unknown> & { id?: Id };
   const id = explicitId ?? ctx.allocate(PREFIXES[c]);
@@ -89,7 +94,7 @@ export function addObject<C extends Collection>(ctx: EditContext, c: C, data: Ne
 
   ctx.transact(() => {
     collectionArray(doc, c).push([toY(object) as never]);
-  });
+  }, key);
   ctx.reserve(explicitIds.map((e) => e.id));
   return id;
 }

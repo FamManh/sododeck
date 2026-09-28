@@ -45,7 +45,7 @@ describe('UsedIn (story 6, FR-028)', () => {
         { name: 'Pricing Service' },
       ),
     );
-    expect(again.ui().selection).toEqual({ nodes: ['p'], edges: [] });
+    expect(again.ui().selection).toEqual({ nodes: ['p'], edges: [], groups: [], stickies: [] });
   });
 
   it('says "Not used yet" without usage', () => {

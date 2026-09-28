@@ -4,11 +4,12 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
-import { ChevronRight, SquareDashed } from 'lucide-react';
+import { ArrowLeft, ChevronRight, SquareDashed } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useUiStore } from '../state/ui-store';
 import { buildOutline, visibleItems, type VisibleItem } from './outline';
+import { scopeOf } from './visible-graph';
 
 /**
  * Outline tab (design 02/58, FR-024): a `tree` of groups and components. Arrow keys move and
@@ -16,10 +17,12 @@ import { buildOutline, visibleItems, type VisibleItem } from './outline';
  */
 export function OutlineTree({ deck }: { deck: SododeckFile }) {
   const collapsed = useUiStore((s) => s.outlineCollapsed);
+  const drill = useUiStore((s) => s.drill);
   const toggleGroup = useUiStore((s) => s.toggleOutlineGroup);
   const selectedNodes = useUiStore((s) => s.selection.nodes);
   const { fitView, getZoom } = useReactFlow();
-  const tree = useMemo(() => buildOutline(deck), [deck]);
+  const scope = useMemo(() => scopeOf(drill), [drill]);
+  const tree = useMemo(() => buildOutline(deck, scope), [deck, scope]);
   const items = useMemo(() => visibleItems(tree, collapsed), [tree, collapsed]);
   const selected = useMemo(() => new Set(selectedNodes), [selectedNodes]);
   // Which row holds the tree's single Tab stop (UI-only).
@@ -38,6 +41,10 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
 
   const choose = ({ item }: VisibleItem) => {
     setActiveId(item.id);
+    if (item.type === 'up') {
+      useUiStore.getState().drillUp(Math.max(0, useUiStore.getState().drill.length - 1));
+      return;
+    }
     if (item.type === 'group') {
       toggleGroup(item.id);
       return;
@@ -98,7 +105,8 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
       {items.map((visible, index) => {
         const { item, level } = visible;
         const isGroup = item.type === 'group';
-        const isSelected = !isGroup && selected.has(item.id);
+        const isUp = item.type === 'up';
+        const isSelected = item.type === 'node' && selected.has(item.id);
         const expanded = isGroup ? !collapsed.has(item.id) : undefined;
         return (
           <li
@@ -122,7 +130,16 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
               isSelected && 'bg-primary-soft font-semibold text-primary-ink hover:bg-primary-soft',
             )}
           >
-            {isGroup ? (
+            {isUp ? (
+              <>
+                <ArrowLeft
+                  aria-hidden
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  className="size-4 shrink-0 text-ink-secondary"
+                />
+                <span className="min-w-0 flex-1 truncate">Up to {item.title}</span>
+              </>
+            ) : isGroup ? (
               <>
                 <ChevronRight
                   aria-hidden

@@ -148,6 +148,16 @@ export const invalidFixtures: InvalidFixture[] = [
     path: `${RULE}.hitPolicy`,
   },
   { name: 'bad sticky color', input: set('stickies.0.color', 'yellow'), path: 'stickies.0.color' },
+  {
+    name: 'sticky collapsed is a string',
+    input: set('stickies.0.collapsed', 'yes'),
+    path: 'stickies.0.collapsed',
+  },
+  {
+    name: 'sticky showInFlows is a number',
+    input: set('stickies.0.showInFlows', 1),
+    path: 'stickies.0.showInFlows',
+  },
 
   // Ids
   { name: 'id with a space', input: set('nodes.0.id', 'order svc'), path: 'nodes.0.id' },

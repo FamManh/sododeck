@@ -7,8 +7,9 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { YObject } from '../convert';
+import { toY, type YObject } from '../convert';
 import { toJSON } from '../deck';
+import { nodeCanvasPosition, STICKY_DEFAULT_OFFSET } from '../geometry';
 import {
   collectionArray,
   rulesMap,
@@ -28,6 +29,8 @@ export interface RemovalResult {
   removed: ObjectRef[];
   /** Objects whose references were cleared or re-pointed. */
   updated: ObjectRef[];
+  /** Stickies that lost a deleted node anchor and became free at the same canvas point. */
+  freed: readonly Id[];
   /** Kept objects whose reference to a removed object is now broken (steps, stickies). */
   broken: IntegrityProblem[];
 }
@@ -36,6 +39,7 @@ export interface RemovalResult {
 class Cascade {
   readonly removed: ObjectRef[] = [];
   readonly updated: ObjectRef[] = [];
+  readonly freed: Id[] = [];
   private readonly writes: (() => void)[] = [];
 
   constructor(private readonly ctx: EditContext) {}
@@ -50,6 +54,10 @@ class Cascade {
     this.writes.push(write);
   }
 
+  freeSticky(id: Id): void {
+    this.freed.push(id);
+  }
+
   commit(): RemovalResult {
     this.ctx.transact(() => {
       for (const write of this.writes) write();
@@ -58,6 +66,7 @@ class Cascade {
     return {
       removed: this.removed,
       updated: this.updated,
+      freed: [...new Set(this.freed)],
       broken: checkIntegrity(toJSON(this.ctx.doc)).filter((p) => removedIds.has(p.target)),
     };
   }
@@ -105,6 +114,8 @@ const stepRef = (flowId: Id, stepId: Id): ObjectRef => ({
 });
 
 function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
+  const file = toJSON(doc);
+  const base = nodeCanvasPosition(file, id);
   const edges = collectionArray(doc, 'edges');
   for (const edge of edges) {
     if (edge.get('from') === id || edge.get('to') === id) {
@@ -127,6 +138,25 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
         if (inPositions) positions.delete(id);
       });
     }
+  }
+  if (base === null) return;
+  for (const sticky of collectionArray(doc, 'stickies')) {
+    if (sticky.get('anchor') !== id) continue;
+    const stickyId = idOf(sticky);
+    const position = sticky.get('position');
+    const x =
+      position instanceof Y.Map && typeof position.get('x') === 'number'
+        ? (position.get('x') as number)
+        : STICKY_DEFAULT_OFFSET.x;
+    const y =
+      position instanceof Y.Map && typeof position.get('y') === 'number'
+        ? (position.get('y') as number)
+        : STICKY_DEFAULT_OFFSET.y;
+    cascade.update({ scope: 'stickies', id: stickyId }, () => {
+      sticky.set('position', toY({ x: base.x + x, y: base.y + y }));
+      sticky.delete('anchor');
+    });
+    cascade.freeSticky(stickyId);
   }
 }
 

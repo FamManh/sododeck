@@ -17,18 +17,27 @@ const NODES = Number(process.env.BENCH_NODES ?? 500);
 const EDGES = Number(process.env.BENCH_EDGES ?? 1000);
 const CPU_THROTTLE = Number(process.env.BENCH_CPU_THROTTLE ?? 1);
 const TARGET_FPS = 60;
+const GROUPS = process.env.BENCH_GROUPS === '1';
+const STICKIES = Math.max(0, Number(process.env.BENCH_STICKIES ?? 0) || 0);
 /** Adds 5 features × 4 flows × 10 steps and a fork to the deck of every scenario (006). */
 const FLOWS = process.env.BENCH_FLOWS === '1' ? '&flows=1' : '';
+const GROUPS_QUERY = GROUPS ? '&groups=1' : '';
+const STICKIES_QUERY = STICKIES > 0 ? `&stickies=${String(STICKIES)}` : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
+/** 009 SC-008: command palette search should paint results within this. */
+const PALETTE_TARGET_MS = 50;
 
-interface FlowResult {
+interface ActionResult {
   scenario: string;
+  nodes: number;
+  edges: number;
   ms: number;
+  targetMs: number;
   meetsTarget: boolean;
 }
 
-const flowResults: FlowResult[] = [];
+const actionResults: ActionResult[] = [];
 
 interface ScenarioResult {
   scenario: string;
@@ -61,17 +70,40 @@ async function emptyCanvasPoint(
   box: { x: number; y: number; width: number; height: number },
 ) {
   const point = await page.evaluate(({ x, y, width, height }) => {
+    const okAt = (px: number, py: number) => {
+      const stack = document.elementsFromPoint(px, py);
+      if (!stack.some((el) => el.classList.contains('react-flow__pane'))) return false;
+      return !stack.some(
+        (el) =>
+          el.matches('[data-testid="deck-node"], [data-testid="sticky-node"]') ||
+          el.closest('[data-testid="deck-node"], [data-testid="sticky-node"]') !== null ||
+          el.matches('[data-testid="edge-label"], [aria-label^="Go to "]') ||
+          el.closest('[data-testid="edge-label"], [aria-label^="Go to "]') !== null,
+      );
+    };
+
     const cx = x + width / 2;
     const cy = y + height / 2;
     for (let r = 0; r < Math.min(width, height) / 2; r += 8) {
       for (let a = 0; a < 16; a++) {
         const px = cx + r * Math.cos((a * Math.PI) / 8);
         const py = cy + r * Math.sin((a * Math.PI) / 8);
-        if (document.elementFromPoint(px, py)?.classList.contains('react-flow__pane')) {
+        if (okAt(px, py)) {
           return { x: px, y: py };
         }
       }
     }
+
+    const left = x + 16;
+    const right = x + width - 16;
+    const top = y + 16;
+    const bottom = y + height - 16;
+    for (let py = top; py <= bottom; py += 24) {
+      for (let px = left; px <= right; px += 24) {
+        if (okAt(px, py)) return { x: px, y: py };
+      }
+    }
+
     return null;
   }, box);
   await page.evaluate(() => {
@@ -163,13 +195,19 @@ function stopRecording(page: Page) {
   });
 }
 
-async function openBench(page: Page, query: string) {
+async function openBench(
+  page: Page,
+  query: string,
+  counts: { nodes: number; edges: number } = { nodes: NODES, edges: EDGES },
+) {
   if (CPU_THROTTLE > 1) {
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_THROTTLE });
   }
   const start = Date.now();
-  await page.goto(`/bench?nodes=${NODES}&edges=${EDGES}${query}${FLOWS}`);
+  await page.goto(
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}`,
+  );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
   });
@@ -216,6 +254,60 @@ for (const scenario of [
   });
 }
 
+test(`groups-collapsed: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  if (!GROUPS) return;
+  const opened = await openBench(page, '');
+  await page.waitForFunction(() => window.__sododeckBench?.collapseAll !== undefined);
+  await page.evaluate(() => window.__sododeckBench?.collapseAll?.() ?? Promise.resolve());
+  await page.waitForTimeout(100);
+  const renderedNodes = await page.getByTestId('collapsed-group-node').count();
+  expect(renderedNodes).toBeGreaterThan(0);
+  await startRecording(page);
+  const { maxZoom, renderedNodesZoomedIn } = await (async () => {
+    const box = await page.getByLabel('Diagram canvas').boundingBox();
+    if (!box) throw new Error('canvas not found');
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.move(cx, cy);
+    for (let i = 0; i < 25; i++) {
+      await page.mouse.wheel(0, -120);
+      await page.waitForTimeout(16);
+    }
+    const zoom = await viewportZoom(page);
+    const zoomed = await page.getByTestId('collapsed-group-node').count();
+    for (const [dx, dy] of [
+      [-500, 0],
+      [0, -300],
+      [500, 0],
+      [0, 300],
+    ] as const) {
+      const start = await emptyCanvasPoint(page, box);
+      await page.mouse.move(start.x, start.y);
+      await page.mouse.down();
+      await page.mouse.move(start.x + dx, start.y + dy, { steps: 40 });
+      await page.mouse.up();
+      await page.mouse.move(cx, cy);
+    }
+    for (let i = 0; i < 25; i++) {
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(16);
+    }
+    return { maxZoom: zoom, renderedNodesZoomedIn: zoomed };
+  })();
+  const stats = summarize(await stopRecording(page));
+  results.push({
+    scenario: 'groups-collapsed',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodes,
+    renderedNodesZoomedIn,
+    maxZoom,
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
+
 /**
  * 003 research R13: dragging writes the node position to the document every frame (through the
  * editor and the incremental snapshot), so it is measured like pan/zoom. 004 SC-003: the same
@@ -228,18 +320,38 @@ for (const scenario of [
   test(`${scenario.name}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     const opened = await openBench(page, scenario.query);
     // The node nearest the middle of the screen (fit view is limited to 30%, so not all are shown).
-    const title = await page.evaluate(() => {
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
-      let best: { title: string; d: number } | null = null;
+    const nodeId = await page.evaluate(() => {
+      const canvas = document.querySelector<HTMLElement>('[data-canvas]')?.getBoundingClientRect();
+      const cx = canvas === undefined ? window.innerWidth / 2 : canvas.left + canvas.width / 2;
+      const cy = canvas === undefined ? window.innerHeight / 2 : canvas.top + canvas.height * 0.35;
+      let best: { id: string; d: number } | null = null;
+      for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
+        const r = el.getBoundingClientRect();
+        if (
+          canvas !== undefined &&
+          (r.left < canvas.left + 20 ||
+            r.right > canvas.right - 20 ||
+            r.top < canvas.top + 20 ||
+            r.bottom > canvas.bottom - 20)
+        ) {
+          continue;
+        }
+        const atPoint = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        if (!atPoint.includes(el)) continue;
+        const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
+        const id = el.getAttribute('data-node-id');
+        if (id !== null && (!best || d < best.d)) best = { id, d };
+      }
+      if (best) return best.id;
       for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
         const r = el.getBoundingClientRect();
         const d = Math.hypot(r.x + r.width / 2 - cx, r.y + r.height / 2 - cy);
-        if (!best || d < best.d) best = { title: el.title, d };
+        const id = el.getAttribute('data-node-id');
+        if (id !== null && (!best || d < best.d)) best = { id, d };
       }
-      return best?.title ?? '';
+      return best?.id ?? '';
     });
-    const node = page.getByTestId('deck-node').filter({ hasText: new RegExp(`^${title}$`) });
+    const node = page.locator(`[data-testid="deck-node"][data-node-id="${nodeId}"]`);
     const box = await node.boundingBox();
     if (!box) throw new Error('node not found');
     const transform = () =>
@@ -333,7 +445,14 @@ for (const scenario of [
     }
     const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
     expect(Number.isFinite(ms)).toBe(true);
-    flowResults.push({ scenario: scenario.name, ms, meetsTarget: ms < FLOW_TARGET_MS });
+    actionResults.push({
+      scenario: scenario.name,
+      nodes: NODES,
+      edges: EDGES,
+      ms,
+      targetMs: FLOW_TARGET_MS,
+      meetsTarget: ms < FLOW_TARGET_MS,
+    });
   });
 }
 
@@ -380,15 +499,89 @@ test(`inspector title edit → canvas: ${NODES} nodes / ${EDGES} edges`, async (
   }
   const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
   expect(Number.isFinite(ms)).toBe(true);
-  flowResults.push({
+  actionResults.push({
     scenario: 'inspector title edit → canvas',
+    nodes: NODES,
+    edges: EDGES,
     ms,
+    targetMs: FLOW_TARGET_MS,
     meetsTarget: ms < FLOW_TARGET_MS,
   });
 });
 
+for (const scenario of ['collapse-toggle', 'focus'] as const) {
+  test(`${scenario}: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+    if (!GROUPS) return;
+    await openBench(page, '');
+    await page.waitForFunction(
+      () =>
+        window.__sododeckBench !== undefined &&
+        window.__sododeckBench.prepareFocus !== undefined &&
+        window.__sododeckBench.toggleCollapse !== undefined &&
+        window.__sododeckBench.focus !== undefined,
+    );
+    const runs: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      await page.evaluate(() => {
+        window.__sododeckBench?.resetViewModes?.();
+      });
+      await page.waitForTimeout(100);
+      if (scenario === 'focus') {
+        await page.evaluate(() => {
+          const bench = window.__sododeckBench;
+          if (bench === undefined || bench.prepareFocus === undefined) return Promise.resolve();
+          return bench.prepareFocus('n0');
+        });
+      }
+      runs.push(
+        await page.evaluate(
+          scenario === 'collapse-toggle'
+            ? () => window.__sododeckBench?.toggleCollapse?.('g0') ?? Promise.resolve(NaN)
+            : () => window.__sododeckBench?.focus?.('n0') ?? Promise.resolve(NaN),
+        ),
+      );
+    }
+    const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+    expect(Number.isFinite(ms)).toBe(true);
+    actionResults.push({
+      scenario,
+      nodes: NODES,
+      edges: EDGES,
+      ms,
+      targetMs: FLOW_TARGET_MS,
+      meetsTarget: ms < FLOW_TARGET_MS,
+    });
+  });
+}
+
+test(`⌘K type → results: 2000 nodes / 4000 edges`, async ({ page }) => {
+  const counts = { nodes: 2000, edges: 4000 };
+  await openBench(page, '', counts);
+  await page.waitForFunction(() => window.__sododeckPaletteBench !== undefined);
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    runs.push(
+      await page.evaluate(
+        ([query, matchText]) =>
+          window.__sododeckPaletteBench?.search(query, matchText) ?? Promise.resolve(NaN),
+        ['Node 1999', 'Node 1999'] as const,
+      ),
+    );
+  }
+  const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+  expect(Number.isFinite(ms)).toBe(true);
+  actionResults.push({
+    scenario: '⌘K type → results',
+    nodes: counts.nodes,
+    edges: counts.edges,
+    ms,
+    targetMs: PALETTE_TARGET_MS,
+    meetsTarget: ms < PALETTE_TARGET_MS,
+  });
+});
+
 test.afterAll(async () => {
-  if (results.length === 0 && flowResults.length === 0) return;
+  if (results.length === 0 && actionResults.length === 0) return;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
   const dir = new URL('./results/', import.meta.url);
   await mkdir(dir, { recursive: true });
@@ -397,7 +590,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -406,18 +599,28 @@ test.afterAll(async () => {
         `| ${r.scenario} | ${r.renderedNodes} / ${r.renderedNodesZoomedIn} of ${r.nodes} | ${r.maxZoom.toFixed(2)} | ${r.renderMs} | ${r.inPageReadyMs} | ${fmt(r.avgFps)} | ${fmt(r.p95FrameMs)} | ${fmt(r.maxFrameMs)} | ${fmt(r.longFramesPct)}% | ${r.meetsTarget ? 'yes' : 'no'} |`,
     ),
     '',
-    `Flow and inspector scenarios (006, 007, 008): median of 5, target < ${String(FLOW_TARGET_MS)} ms. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
+    `Action scenarios (006, 007, 008, 009): median of 5. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
     '',
-    '| Scenario | Action → painted (ms) | Meets target |',
-    '| --- | --- | --- |',
-    ...flowResults.map((r) => `| ${r.scenario} | ${fmt(r.ms)} | ${r.meetsTarget ? 'yes' : 'no'} |`),
+    '| Scenario | Nodes / edges | Action → painted (ms) | Target (ms) | Meets target |',
+    '| --- | --- | --- | --- | --- |',
+    ...actionResults.map(
+      (r) =>
+        `| ${r.scenario} | ${r.nodes} / ${r.edges} | ${fmt(r.ms)} | ${String(r.targetMs)} | ${r.meetsTarget ? 'yes' : 'no'} |`,
+    ),
     '',
   ].join('\n');
 
   await writeFile(
     new URL(`report-${stamp}.json`, dir),
     JSON.stringify(
-      { cpuThrottle: CPU_THROTTLE, flows: FLOWS !== '', results, flowResults },
+      {
+        cpuThrottle: CPU_THROTTLE,
+        flows: FLOWS !== '',
+        groups: GROUPS,
+        stickies: STICKIES,
+        results,
+        actionResults,
+      },
       null,
       2,
     ),

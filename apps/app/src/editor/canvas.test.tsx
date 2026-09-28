@@ -3,14 +3,19 @@ import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import type { Edge, Node, NodeChange } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
+import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
+import { useDeckSnapshot } from '../model/use-deck-snapshot';
+import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { exitFlow, openFlow } from './flows/flow-mode';
-import { KIND_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { TopBar } from './top-bar';
+import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { useEditorShortcuts } from './use-canvas-shortcuts';
 
 const deck = deckOf({
   nodes: [
@@ -26,6 +31,32 @@ const deck = deckOf({
   ],
 });
 
+const collapsedGroupsDeck = deckOf({
+  nodes: [
+    { id: 'a1', type: 'service', title: 'A1', group: 'left', position: { x: 0, y: 0 } },
+    { id: 'a2', type: 'service', title: 'A2', group: 'left', position: { x: 0, y: 120 } },
+    { id: 'b1', type: 'service', title: 'B1', group: 'right', position: { x: 420, y: 0 } },
+    { id: 'b2', type: 'service', title: 'B2', group: 'right', position: { x: 420, y: 120 } },
+  ],
+  groups: [
+    { id: 'left', title: 'Left' },
+    { id: 'right', title: 'Right' },
+  ],
+  edges: Array.from({ length: 12 }, (_, index) => ({
+    id: `m${String(index)}`,
+    from: index % 2 === 0 ? 'a1' : 'a2',
+    to: index % 3 === 0 ? 'b1' : 'b2',
+  })),
+});
+
+const groupedPlaybackDeck = deckOf({
+  ...playbackDeck,
+  nodes: playbackDeck.nodes.map((node) =>
+    node.id === 'b' || node.id === 'c' ? { ...node, group: 'core' } : node,
+  ),
+  groups: [{ id: 'core', title: 'Core services' }],
+});
+
 const ui = () => useUiStore.getState();
 const click = (patch: Partial<ReactMouseEvent> = {}) =>
   ({ shiftKey: false, metaKey: false, ctrlKey: false, ...patch }) as ReactMouseEvent;
@@ -36,6 +67,18 @@ function handlers(file = deck) {
   const env = editorWrapper(file);
   const { result } = renderHook(() => useCanvasHandlers(), { wrapper: env.wrapper });
   return { ...env, h: () => result.current };
+}
+
+function DrillHarness() {
+  useEditorShortcuts();
+  const editor = useEditor();
+  const deck = useDeckSnapshot(editor.doc);
+  return (
+    <MemoryRouter>
+      <TopBar deckName={deck.name ?? 'Untitled deck'} deck={deck} />
+      <Canvas />
+    </MemoryRouter>
+  );
 }
 
 describe('Canvas', () => {
@@ -90,6 +133,26 @@ describe('Canvas', () => {
     expect(ui().announcement.text).toBe('Added New database');
   });
 
+  it('adds a dropped note at the drop point', () => {
+    const { doc } = renderWithEditor(<Canvas />, deckOf({}));
+    const canvas = screen.getByLabelText('Diagram canvas');
+    fireEvent.dragOver(canvas, {
+      dataTransfer: { types: [NOTE_MIME], getData: () => 'note', dropEffect: '' },
+      clientX: 180,
+      clientY: 140,
+    });
+    fireEvent.drop(canvas, {
+      dataTransfer: { types: [NOTE_MIME], getData: () => 'note', dropEffect: '' },
+      clientX: 180,
+      clientY: 140,
+    });
+    const [sticky] = toJSON(doc).stickies;
+    expect(sticky).toMatchObject({ text: '' });
+    expect(Number.isInteger(sticky?.position?.x)).toBe(true);
+    expect(Number.isInteger(sticky?.position?.y)).toBe(true);
+    expect(ui().selection.stickies).toEqual([sticky?.id]);
+  });
+
   it('creates nothing when a palette card is dropped outside the canvas', () => {
     const { doc } = renderWithEditor(<Canvas />, deckOf({}));
     fireEvent.drop(document.body, {
@@ -120,7 +183,7 @@ describe('Canvas', () => {
     act(() => {
       editor().remove('nodes', 'a');
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: ['e3'] });
+    expect(ui().selection).toEqual({ nodes: [], edges: ['e3'], groups: [], stickies: [] });
     expect(ui().popover).toBeNull();
   });
 
@@ -132,7 +195,7 @@ describe('Canvas', () => {
     act(() => {
       editor().undo();
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1', 'e2'] });
+    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1', 'e2'], groups: [], stickies: [] });
 
     let id = '';
     act(() => {
@@ -179,6 +242,224 @@ describe('Canvas', () => {
     await user.tab({ shift: true });
     expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
   });
+
+  it('goes up when a drilled group disappears, including on undo', () => {
+    const grouped = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core' }],
+      groups: [{ id: 'core', title: 'Core services' }],
+    });
+    const { editor } = renderWithEditor(<Canvas />, grouped);
+
+    act(() => {
+      ui().drillInto({
+        kind: 'group',
+        id: 'core',
+        viewport: { x: 0, y: 0, zoom: 1 },
+      });
+    });
+    act(() => {
+      editor().remove('groups', 'core');
+    });
+    expect(ui().drill).toEqual([]);
+    expect(ui().announcement.text).toBe('Went up to System view');
+
+    let groupId = '';
+    act(() => {
+      editor().batch(() => {
+        groupId = editor().add('groups', { title: 'Restored group' });
+        editor().update('nodes', 'a', { group: groupId });
+      });
+      ui().drillInto({
+        kind: 'group',
+        id: groupId,
+        viewport: { x: 0, y: 0, zoom: 1 },
+      });
+    });
+    act(() => {
+      editor().undo();
+    });
+    expect(ui().drill).toEqual([]);
+    expect(ui().announcement.text).toBe('Went up to System view');
+  });
+
+  it('drills into groups and child nodes, shows the breadcrumb, and keeps the deck unchanged', async () => {
+    const user = userEvent.setup();
+    const drillDeck = deckOf({
+      name: 'Shop',
+      nodes: [
+        { id: 'gateway', type: 'service', title: 'Gateway', position: { x: 0, y: 0 } },
+        {
+          id: 'a',
+          type: 'service',
+          title: 'Order Service',
+          group: 'core',
+          position: { x: 260, y: 0 },
+        },
+        {
+          id: 'b',
+          type: 'database',
+          title: 'Orders DB',
+          group: 'core',
+          position: { x: 520, y: 0 },
+        },
+        { id: 'parent', type: 'service', title: 'Delivery platform', position: { x: 0, y: 220 } },
+        {
+          id: 'child',
+          type: 'service',
+          title: 'Dispatch',
+          parent: 'parent',
+          position: { x: 260, y: 220 },
+        },
+      ],
+      groups: [{ id: 'core', title: 'Core services' }],
+      edges: [
+        { id: 'ga', from: 'gateway', to: 'a' },
+        { id: 'ab', from: 'a', to: 'b' },
+      ],
+    });
+    const before = structuredClone(drillDeck);
+    const { doc, editor } = renderWithEditor(<DrillHarness />, drillDeck);
+
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Core services group, 2 nodes' }));
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
+      'Local/Shop/System view/Core services',
+    );
+    expect(screen.getAllByTestId('deck-node')).toHaveLength(2);
+    expect(screen.queryByRole('group', { name: 'Service: Gateway' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Go to Gateway' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Go to Gateway' }));
+    expect(ui().drill).toEqual([]);
+    expect(ui().selection.nodes).toEqual(['gateway']);
+
+    act(() => {
+      ui().focus('group:core');
+      document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
+    });
+    await user.keyboard('{Enter}');
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
+
+    await user.keyboard('{Escape}');
+    fireEvent.doubleClick(screen.getByRole('group', { name: 'Service: Gateway' }));
+    expect(ui().drill).toEqual([]);
+
+    fireEvent.doubleClick(await screen.findByRole('group', { name: 'Service: Delivery platform' }));
+    expect(ui().drill.map((frame) => frame.id)).toEqual(['parent']);
+    expect(screen.getAllByTestId('deck-node')).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'Service: Dispatch' })).toBeInTheDocument();
+    expect(toJSON(doc)).toEqual(before);
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('collapses a group from the keyboard, renders merged edges, and updates counts live', async () => {
+    const user = userEvent.setup();
+    const before = structuredClone(collapsedGroupsDeck);
+    const { doc, unmount } = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+
+    act(() => {
+      ui().focus('group:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
+    });
+    await user.keyboard(' ');
+    expect(ui().collapsed.has('left')).toBe(true);
+    expect(ui().focusedId).toBe('collapsed:left');
+    expect(screen.getByTestId('collapsed-group-node')).toHaveTextContent('2 nodes · 0 edges');
+
+    expect(toJSON(doc)).toEqual(before);
+
+    unmount();
+    const merged = renderWithEditor(<Canvas />, collapsedGroupsDeck);
+    act(() => {
+      ui().setCollapsed('left', true);
+      ui().setCollapsed('right', true);
+    });
+    expect(ui().collapsed.has('right')).toBe(true);
+
+    act(() => {
+      ui().setCollapsed('right', false);
+    });
+    expect(ui().collapsed.has('right')).toBe(false);
+
+    act(() => {
+      ui().setCollapsed('right', true);
+      merged.editor().add('nodes', { type: 'service', title: 'A3', group: 'left' });
+    });
+    expect(
+      screen.getByRole('button', {
+        name: 'Left, collapsed group, 3 nodes, 0 edges',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('replaces hidden selections with the collapsed group and clears them when drill hides them', () => {
+    renderWithEditor(<Canvas />, collapsedGroupsDeck);
+
+    act(() => {
+      ui().select({ nodes: ['a1'], edges: ['m0'] });
+      ui().setCollapsed('left', true);
+    });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: ['left'], stickies: [] });
+
+    act(() => {
+      ui().setCollapsed('left', false);
+      ui().select({ nodes: ['a1'] });
+    });
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Left group, 2 nodes' }));
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+  });
+
+  it('dims non-neighbours in focus mode, follows the selection, and leaves the deck unchanged', async () => {
+    const user = userEvent.setup();
+    const before = structuredClone(deck);
+    const { container, doc } = renderWithEditor(<Canvas />, deck);
+
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().setFocusMode(true);
+    });
+    const canvas = container.querySelector('[data-canvas]');
+    expect(canvas).toHaveAttribute('data-focus-mode');
+    expect(screen.getByRole('group', { name: 'Service: A' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Database: B' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Queue: C' })).not.toHaveAttribute('aria-hidden');
+    const hiddenD = container.querySelector('[data-testid="deck-node"][data-node-id="d"]');
+    expect(hiddenD).toHaveAttribute('aria-hidden', 'true');
+    expect(hiddenD).toHaveAttribute('inert');
+    act(() => {
+      ui().select({ nodes: ['c'] });
+    });
+    const hiddenA = container.querySelector('[data-testid="deck-node"][data-node-id="a"]');
+    expect(hiddenA).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('group', { name: 'Database: B' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Queue: C' })).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('group', { name: 'Client: D' })).not.toHaveAttribute('aria-hidden');
+
+    act(() => {
+      (canvas as HTMLElement).focus();
+    });
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(false);
+
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().setFocusMode(true);
+    });
+    expect(canvas).toHaveAttribute('data-focus-mode');
+
+    act(() => {
+      ui().startRecording('Order flow', null);
+    });
+    expect(ui().focusMode).toBe(false);
+    expect(canvas).not.toHaveAttribute('data-focus-mode');
+
+    act(() => {
+      ui().clearSelection();
+    });
+    expect(canvas).not.toHaveAttribute('data-focus-mode');
+    expect(toJSON(doc)).toEqual(before);
+  });
 });
 
 describe('canvas handlers', () => {
@@ -187,21 +468,41 @@ describe('canvas handlers', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a'], edges: [] });
+    expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
     expect(ui().focusedId).toBe('a');
     act(() => {
       h().onNodeClick(click({ shiftKey: true }), flowNode('b'));
       h().onEdgeClick(click({ metaKey: true }), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'] });
+    expect(ui().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'], groups: [], stickies: [] });
     act(() => {
       h().onNodeClick(click({ ctrlKey: true }), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'] });
+    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'], groups: [], stickies: [] });
     act(() => {
       h().onPaneClick();
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+  });
+
+  it('routes sticky selection and drag updates separately from components', () => {
+    const { h, doc } = handlers(
+      deckOf({
+        nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+        stickies: [{ id: 'st1', text: 'Note', position: { x: 40, y: 60 } }],
+      }),
+    );
+    act(() => {
+      h().onNodeClick(click(), flowNode('sticky:st1'));
+    });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: ['st1'] });
+
+    act(() => {
+      h().onNodeDragStart({}, flowNode('sticky:st1'));
+      h().onNodesChange([{ type: 'position', id: 'sticky:st1', position: { x: 72, y: 96 } }]);
+      h().onNodeDragStop();
+    });
+    expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 72, y: 96 });
   });
 
   it('takes the marquee selection from React Flow, ignoring group boundaries', () => {
@@ -216,7 +517,7 @@ describe('canvas handlers', () => {
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
       h().onSelectionEnd();
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'c'], edges: ['e1'] });
+    expect(ui().selection).toEqual({ nodes: ['a', 'c'], edges: ['e1'], groups: [], stickies: [] });
     // Outside a marquee, React Flow's own selection changes are ignored.
     act(() => {
       h().onNodesChange([{ type: 'select', id: 'b', selected: true }]);
@@ -348,7 +649,7 @@ describe('canvas during a flow session (006 FR-017)', () => {
       h().onNodeClick(click(), flowNode('a'));
       h().onEdgeMouseEnter(click(), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
     expect(ui().hoverEdgeId).toBe('e1');
     act(() => {
       h().onEdgeClick(click(), flowEdge('e1'));
@@ -375,6 +676,16 @@ describe('canvas during a flow session (006 FR-017)', () => {
     });
     expect(toJSON(doc).nodes).toEqual(before.nodes);
     expect(ui().popover).toBeNull();
+  });
+
+  it('asks to expand a merged edge before recording it', () => {
+    const { h } = handlers(collapsedGroupsDeck);
+    act(() => {
+      ui().startRecording('Place order', null);
+      h().onEdgeClick(click(), flowEdge('merged:collapsed:left|collapsed:right'));
+    });
+    expect(ui().announcement.text).toBe('Expand the group to record this step');
+    expect(ui().focusedEdgeId).toBeNull();
   });
 });
 
@@ -443,7 +754,7 @@ describe('canvas in flow mode (007)', () => {
       h().onNodeClick(click(), flowNode('c'));
     });
     expect(ui().activeFlow?.stepId).toBe('o2');
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
 
   it('cycles through the steps of an edge used twice, wrapping around', () => {
@@ -469,7 +780,7 @@ describe('canvas in flow mode (007)', () => {
       h().onPaneClick();
     });
     expect(ui().activeFlow).toMatchObject({ flowId: 'order', stepId: 'o3' });
-    expect(ui().selection).toEqual({ nodes: [], edges: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
     expect(ui().announcement.seq).toBe(seq);
   });
 
@@ -485,5 +796,50 @@ describe('canvas in flow mode (007)', () => {
     });
     expect(ui().activeFlow).toMatchObject({ stepId: 'o5', playing: false });
     expect(ui().announcement.seq).toBe(seq + 1);
+  });
+
+  it('jumps to the first hidden step from a collapsed card and cycles a merged edge', () => {
+    const { h, editor } = handlers(groupedPlaybackDeck);
+    act(() => {
+      ui().toggleCollapsed('core');
+    });
+    open(editor, 'o1');
+
+    act(() => {
+      h().onNodeClick(click(), flowNode('collapsed:core'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o2');
+
+    act(() => {
+      h().onEdgeClick(click(), flowEdge('merged:a|collapsed:core'));
+    });
+    expect(ui().activeFlow?.stepId).toBe('o1');
+  });
+
+  it('keeps collapsed cards bright on the played path', () => {
+    const { editor } = renderWithEditor(<Canvas />, groupedPlaybackDeck);
+    act(() => {
+      ui().toggleCollapsed('core');
+      openFlow(editor(), 'order', 'o2');
+    });
+
+    expect(
+      screen
+        .getByRole('button', {
+          name: 'Core services, collapsed group, 2 nodes, 2 edges, flow step inside',
+        })
+        .closest('.react-flow__node'),
+    ).toHaveClass('in-flow');
+  });
+
+  it('goes up to the whole deck before opening a flow and announces it', () => {
+    const { editor } = renderWithEditor(<Canvas />, groupedPlaybackDeck);
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 10, y: 20, zoom: 0.8 } });
+      openFlow(editor(), 'order');
+    });
+
+    expect(ui().drill).toEqual([]);
+    expect(ui().announcement.text).toBe('Showing the whole deck for this flow');
   });
 });

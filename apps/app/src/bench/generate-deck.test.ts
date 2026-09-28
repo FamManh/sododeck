@@ -27,6 +27,19 @@ describe('generateBenchDeck', () => {
     expect(generateBenchDeck(20, 30)).toEqual(generateBenchDeck(20, 30));
   });
 
+  it('adds seeded stickies, half pinned and half free', () => {
+    const { deck } = generateBenchDeck(40, 80, 42, { stickies: 10 });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.stickies).toHaveLength(10);
+    expect(deck.stickies.filter((sticky) => sticky.anchor != null)).toHaveLength(5);
+    expect(deck.stickies.filter((sticky) => sticky.anchor == null)).toHaveLength(5);
+    expect(deck.stickies.every((sticky) => sticky.text.length > 0)).toBe(true);
+    expect(deck.stickies.every((sticky) => sticky.anchor != null || sticky.position != null)).toBe(true);
+    expect(generateBenchDeck(40, 80, 42, { stickies: 10 })).toEqual(
+      generateBenchDeck(40, 80, 42, { stickies: 10 }),
+    );
+  });
+
   it('adds valid, contiguous flows and one fork in flows mode (006)', () => {
     const { deck } = generateBenchDeck(500, 1000, 42, { flows: true });
     expect(parseSododeckFile(deck).success).toBe(true);
@@ -39,5 +52,42 @@ describe('generateBenchDeck', () => {
       expect(analysis.problems.filter((p) => p.kind === 'chain-break')).toEqual([]);
     }
     expect(deck.flows.at(-1)?.branches).toHaveLength(2);
+  });
+
+  it('adds deterministic benchmark groups', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { groups: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.groups).toHaveLength(30);
+
+    const groups = deck.groups.filter((group) => group.id.startsWith('g'));
+    const parents = deck.groups.filter((group) => group.id.startsWith('p'));
+    expect(groups).toHaveLength(25);
+    expect(parents).toHaveLength(5);
+
+    for (let index = 0; index < groups.length; index++) {
+      const group = groups[index];
+      if (group === undefined) throw new Error('missing group fixture');
+      expect(group).toMatchObject({
+        id: `g${String(index)}`,
+        title: `Group ${String(index)}`,
+        parent: `p${String(Math.floor(index / 5))}`,
+      });
+
+      const members = deck.nodes.filter((node) => node.group === group.id);
+      expect(members).toHaveLength(20);
+      expect(members.map((node) => node.id)).toEqual(
+        Array.from({ length: 20 }, (_, offset) => `n${String(index * 20 + offset)}`),
+      );
+    }
+
+    expect(parents).toEqual(
+      Array.from({ length: 5 }, (_, index) => ({
+        id: `p${String(index)}`,
+        title: `Parent group ${String(index)}`,
+      })),
+    );
+    expect(generateBenchDeck(500, 1000, 42, { groups: true })).toEqual(
+      generateBenchDeck(500, 1000, 42, { groups: true }),
+    );
   });
 });

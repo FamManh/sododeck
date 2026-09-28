@@ -7,43 +7,10 @@ import { memo } from 'react';
 
 import type { DeckFlowEdge } from './deck-to-flow';
 import { FlowToken } from './flow-token';
-import type { EdgeBadge, EdgeFlowStyle } from './flows/flow-overlay';
+import { StepBadge } from './flow-badges';
+import { FLOW_STROKES } from './flow-strokes';
 
 const DOT_RADIUS = 3;
-
-/**
- * Stroke of a flow mark (006 research R6). Never color alone: error and invalid are dashed and
- * carry an icon, candidates and the preview are dotted.
- */
-const FLOW_STROKES: Readonly<
-  Record<EdgeFlowStyle, { stroke: string; width: number; dash?: string }>
-> = {
-  path: { stroke: 'var(--color-primary)', width: 2 },
-  error: { stroke: 'var(--color-clay-ink)', width: 2, dash: '6 4' },
-  candidate: { stroke: 'var(--color-primary)', width: 1.5, dash: '2 4' },
-  preview: { stroke: 'var(--color-primary)', width: 2.5, dash: '2 4' },
-  invalid: { stroke: 'var(--color-clay-ink)', width: 2, dash: '6 4' },
-};
-
-function StepBadge({ badge }: { badge: EdgeBadge }) {
-  const error = badge.errorPath || badge.chainBreak;
-  return (
-    <span
-      role="img"
-      aria-label={`Step ${badge.label}${badge.errorPath ? ', error path' : ''}${badge.chainBreak ? ', chain break' : ''}`}
-      className={cn(
-        'flex h-4 min-w-4 items-center justify-center gap-0.5 rounded-full px-1 font-mono text-[10px] leading-none font-medium',
-        error ? 'bg-clay-ink text-on-primary' : 'bg-primary text-on-primary',
-        badge.current && 'ring-2 ring-primary ring-offset-1 ring-offset-surface',
-      )}
-    >
-      {badge.errorPath && (
-        <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-2.5" />
-      )}
-      {badge.label}
-    </span>
-  );
-}
 
 /**
  * Connection (DESIGN.md: orthogonal routing, 8px corners, 3px end dot; designs 11, 12, 57).
@@ -137,6 +104,7 @@ export const DeckEdge = memo(function DeckEdge({
               data-testid="edge-label"
               data-flow-style={flow?.style}
               data-in-flow={flow?.inPath === true ? '' : undefined}
+              data-in-focus={data?.inFocus === true ? '' : undefined}
               data-current={current !== null ? '' : undefined}
               // The current step without color: filled label, token, and this for AT (007 FR-024).
               aria-current={current !== null ? 'step' : undefined}

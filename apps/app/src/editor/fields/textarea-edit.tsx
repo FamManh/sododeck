@@ -14,6 +14,7 @@ export function TextareaEdit({
   onCommit,
   placeholder,
   hideLabel = false,
+  disabled = false,
   id: textareaId,
 }: {
   label: string;
@@ -21,6 +22,7 @@ export function TextareaEdit({
   onCommit: (value: string) => void;
   placeholder?: string;
   hideLabel?: boolean;
+  disabled?: boolean;
   id?: string;
 }) {
   const ownId = useId();
@@ -39,6 +41,7 @@ export function TextareaEdit({
         aria-label={label}
         value={field.value}
         placeholder={placeholder}
+        disabled={disabled}
         onChange={(event) => {
           field.onChange(event.target.value);
         }}

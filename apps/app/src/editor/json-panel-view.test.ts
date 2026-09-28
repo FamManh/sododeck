@@ -25,9 +25,13 @@ const deck: SododeckFile = {
     { id: 'e2', from: 'b', to: 'c', label: 'writes' },
     { id: 'e3', from: 'gone', to: 'c' },
   ],
+  stickies: [
+    { id: 's1', text: 'Follow up', position: { x: 24, y: 36 } },
+    { id: 's2', text: '   ', position: { x: 48, y: 60 } },
+  ],
 };
 
-const none = { nodes: [], edges: [] };
+const none = { nodes: [], edges: [], groups: [], stickies: [] };
 
 describe('countLines', () => {
   it('counts lines, ignoring a trailing newline', () => {
@@ -53,32 +57,66 @@ describe('selectionView', () => {
   });
 
   it('labels one node with its title', () => {
-    const view = selectionView(deck, { nodes: ['b'], edges: [] });
+    const view = selectionView(deck, { nodes: ['b'], edges: [], groups: [], stickies: [] });
     expect(view.label).toBe('Orders');
     expect(view.fullLabel).toBe('Orders');
     expect(view.entries).toEqual([{ collection: 'nodes', value: deck.nodes[1] }]);
   });
 
   it('labels an edge with its label, or with its end titles', () => {
-    expect(selectionView(deck, { nodes: [], edges: ['e2'] }).label).toBe('writes');
-    expect(selectionView(deck, { nodes: [], edges: ['e1'] }).label).toBe('Checkout → Orders');
+    expect(selectionView(deck, { nodes: [], edges: ['e2'], groups: [], stickies: [] }).label).toBe(
+      'writes',
+    );
+    expect(selectionView(deck, { nodes: [], edges: ['e1'], groups: [], stickies: [] }).label).toBe(
+      'Checkout → Orders',
+    );
     // A missing end falls back to its id.
-    expect(selectionView(deck, { nodes: [], edges: ['e3'] }).label).toBe('gone → Orders DB');
+    expect(selectionView(deck, { nodes: [], edges: ['e3'], groups: [], stickies: [] }).label).toBe(
+      'gone → Orders DB',
+    );
   });
 
-  it('lists nodes then edges, each in deck order, for a mixed selection (clarification Q1)', () => {
-    const view = selectionView(deck, { nodes: ['c', 'a', 'b'], edges: ['e2'] });
-    expect(view.label).toBe('4 selected');
+  it('labels one sticky with its note label', () => {
+    const view = selectionView(deck, { nodes: [], edges: [], groups: [], stickies: ['s1'] });
+    expect(view.label).toBe('Follow up');
+    expect(view.entries).toEqual([{ collection: 'stickies', value: deck.stickies[0] }]);
+    expect(selectionView(deck, { nodes: [], edges: [], groups: [], stickies: ['s2'] }).label).toBe(
+      'Empty note',
+    );
+  });
+
+  it('labels one group with its title', () => {
+    const groupDeck = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
+    const view = selectionView(groupDeck, { nodes: [], edges: [], groups: ['core'], stickies: [] });
+    expect(view.label).toBe('Core services');
+    expect(view.entries).toEqual([{ collection: 'groups', value: groupDeck.groups[0] }]);
+  });
+
+  it('lists nodes, edges, then stickies, each in deck order, for a mixed selection', () => {
+    const view = selectionView(deck, {
+      nodes: ['c', 'a', 'b'],
+      edges: ['e2'],
+      groups: [],
+      stickies: ['s2', 's1'],
+    });
+    expect(view.label).toBe('6 selected');
     expect(view.entries.map((e) => e.value)).toEqual([
       deck.nodes[0],
       deck.nodes[1],
       deck.nodes[2],
       deck.edges[1],
+      deck.stickies[0],
+      deck.stickies[1],
     ]);
   });
 
   it('skips ids that are not in the deck', () => {
-    const view = selectionView(deck, { nodes: ['a', 'nope'], edges: ['nope'] });
+    const view = selectionView(deck, {
+      nodes: ['a', 'nope'],
+      edges: ['nope'],
+      groups: [],
+      stickies: ['x'],
+    });
     expect(view.label).toBe('Checkout');
     expect(view.entries).toHaveLength(1);
   });
@@ -87,9 +125,14 @@ describe('selectionView', () => {
 describe('selectionText', () => {
   it('is empty, one object, or an array', () => {
     expect(selectionText([])).toBe('');
-    const one = selectionView(deck, { nodes: ['a'], edges: [] }).entries;
+    const one = selectionView(deck, { nodes: ['a'], edges: [], groups: [], stickies: [] }).entries;
     expect(selectionText(one)).toBe(serializeEntry('nodes', deck.nodes[0]));
-    const many = selectionView(deck, { nodes: ['a'], edges: ['e1'] }).entries;
+    const many = selectionView(deck, {
+      nodes: ['a'],
+      edges: ['e1'],
+      groups: [],
+      stickies: ['s1'],
+    }).entries;
     expect(selectionText(many)).toBe(serializeEntries(many));
   });
 });
@@ -97,12 +140,23 @@ describe('selectionText', () => {
 describe('copyToastText', () => {
   it('names what was copied', () => {
     expect(copyToastText('deck', selectionView(deck, none))).toBe('Copied Deck JSON');
-    expect(copyToastText('selection', selectionView(deck, { nodes: ['b'], edges: [] }))).toBe(
-      'Copied Orders JSON',
-    );
     expect(
-      copyToastText('selection', selectionView(deck, { nodes: ['a', 'b'], edges: ['e1', 'e2'] })),
-    ).toBe('Copied 4 items as JSON');
+      copyToastText(
+        'selection',
+        selectionView(deck, { nodes: ['b'], edges: [], groups: [], stickies: [] }),
+      ),
+    ).toBe('Copied Orders JSON');
+    expect(
+      copyToastText(
+        'selection',
+        selectionView(deck, {
+          nodes: ['a', 'b'],
+          edges: ['e1', 'e2'],
+          groups: [],
+          stickies: ['s1'],
+        }),
+      ),
+    ).toBe('Copied 5 items as JSON');
   });
 });
 
@@ -112,7 +166,7 @@ describe('selectionView for flows (006)', () => {
     edges: [{ id: 'aa', from: 'a', to: 'a' }],
     flows: [{ id: 'f', title: 'Place order', steps: [{ id: 's1', edge: 'aa' }] }],
   });
-  const none = { nodes: [], edges: [] };
+  const none = { nodes: [], edges: [], groups: [], stickies: [] };
 
   it('shows the whole flow, labelled Flow, or Step while a step is selected', () => {
     const view = selectionView(flowDeck, none, openedFlow('f'));
@@ -131,7 +185,7 @@ describe('selectionView for flows (006)', () => {
 });
 
 describe('selectionView in flow mode (007 FR-022)', () => {
-  const none = { nodes: [], edges: [] };
+  const none = { nodes: [], edges: [], groups: [], stickies: [] };
   const order = playbackDeck.flows[0] as SododeckFile['flows'][number];
 
   it('shows the current step entry, labelled with its number', () => {

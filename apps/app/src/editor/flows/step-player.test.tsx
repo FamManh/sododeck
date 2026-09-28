@@ -3,10 +3,19 @@ import { describe, expect, it } from 'vitest';
 
 import { playbackDeck } from '../../test/flow-fixtures';
 import { announced, renderFlows } from '../../test/render-flows';
+import { useUiStore } from '../../state/ui-store';
 import { openFlow } from './flow-mode';
 
-function setup(flowId = 'order', stepId: string | null = null) {
-  const view = renderFlows(playbackDeck);
+const groupedPlaybackDeck = {
+  ...playbackDeck,
+  nodes: playbackDeck.nodes.map((node) =>
+    node.id === 'b' || node.id === 'c' ? { ...node, group: 'core' } : node,
+  ),
+  groups: [{ id: 'core', title: 'Core services' }],
+};
+
+function setup(flowId = 'order', stepId: string | null = null, deck = playbackDeck) {
+  const view = renderFlows(deck);
   act(() => {
     openFlow(view.editor(), flowId, stepId);
   });
@@ -113,5 +122,20 @@ describe('StepPlayer', () => {
     within(player).getByRole('button', { name: 'Previous step' }).focus();
     await user.keyboard(' ');
     expect(ui().activeFlow?.stepId).toBe('o2');
+  });
+
+  it('shows and removes the collapsed-group hint after the step title', () => {
+    const { player, editor } = setup('order', 'o2', groupedPlaybackDeck);
+    act(() => {
+      useUiStore.getState().toggleCollapsed('core');
+      openFlow(editor(), 'order', 'o2');
+    });
+    expect(within(player).getByText(/inside Core services/)).toBeInTheDocument();
+    expect(announced()).toBe('Step 2 of 8: API Gateway → Order Service, inside Core services');
+
+    act(() => {
+      useUiStore.getState().expandAll(['core']);
+    });
+    expect(within(player).queryByText('inside Core services')).toBeNull();
   });
 });

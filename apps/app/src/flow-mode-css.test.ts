@@ -28,4 +28,13 @@ describe('flow mode dimming CSS (007 FR-003, FR-024)', () => {
     const reduced = /prefers-reduced-motion:\s*reduce\)\s*\{([\s\S]*?)\n\}/.exec(tokensCss)?.[1];
     expect(reduced).toMatch(/--sd-dur-dim:\s*0m?s/);
   });
+
+  it('dims note nodes to 35%, restores them on hover or focus, and uses a dashed token border', () => {
+    expect(indexCss).toMatch(
+      /\[data-flow-mode\]\s+\.react-flow__node\.sd-note-dimmed\s*\{[^}]*opacity:\s*0\.35[^}]*transition:\s*opacity var\(--sd-dur-dim\)[^}]*border-style:\s*dashed/is,
+    );
+    expect(indexCss).toMatch(
+      /\[data-flow-mode\]\s+\.react-flow__node\.sd-note-dimmed:(hover|focus-within)[^{]*\{[^}]*opacity:\s*1/is,
+    );
+  });
 });

@@ -77,7 +77,7 @@ describe('usePlaybackShortcuts', () => {
   it('exits with Esc, marking the flow last played; Delete does nothing', () => {
     const { ui, editor } = setup();
     act(() => {
-      useUiStore.setState({ selection: { nodes: ['a'], edges: [] } });
+      useUiStore.setState({ selection: { nodes: ['a'], edges: [], groups: [], stickies: [] } });
     });
     fireEvent.keyDown(document.body, { key: 'Delete' });
     fireEvent.keyDown(document.body, { key: 'Backspace' });

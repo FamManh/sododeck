@@ -71,13 +71,15 @@
    (view-only). The transition collapses to 0 under reduced motion (--sd-dur-dim). */
 [data-flow-mode] .react-flow__node,
 [data-flow-mode] .react-flow__edge,
-[data-flow-mode] [data-testid='edge-label'] {
+[data-flow-mode] [data-testid='edge-label'],
+[data-flow-mode] .merged-edge-label {
   transition: opacity var(--sd-dur-dim);
 }
 
 [data-flow-mode] .react-flow__node:not(.in-flow),
 [data-flow-mode] .react-flow__edge:not(.in-flow),
-[data-flow-mode] [data-testid='edge-label']:not([data-in-flow]) {
+[data-flow-mode] [data-testid='edge-label']:not([data-in-flow]),
+[data-flow-mode] .merged-edge-label:not([data-in-flow]) {
   opacity: 0.2;
 }
 
@@ -97,6 +99,43 @@
   cursor: pointer;
 }
 
+[data-flow-mode] .react-flow__node.sd-note-dimmed {
+  opacity: 0.35;
+  transition: opacity var(--sd-dur-dim);
+  border-style: dashed;
+}
+
+[data-flow-mode] .react-flow__node.sd-note-dimmed:hover,
+[data-flow-mode] .react-flow__node.sd-note-dimmed:focus-within {
+  opacity: 1;
+}
+
+/* Focus mode (010 FR-030): only the selected component/group and direct neighbours stay bright.
+   Labels render in a separate HTML layer, so they need their own selectors. */
+[data-focus-mode] .react-flow__node,
+[data-focus-mode] .react-flow__edge,
+[data-focus-mode] [data-testid='edge-label'],
+[data-focus-mode] .merged-edge-label {
+  transition: opacity var(--sd-dur-dim);
+}
+
+[data-focus-mode] .react-flow__node:not(.in-focus),
+[data-focus-mode] .react-flow__edge:not(.in-focus),
+[data-focus-mode] [data-testid='edge-label']:not([data-in-focus]),
+[data-focus-mode] .merged-edge-label:not([data-in-focus]) {
+  opacity: 0.2;
+}
+
+[data-focus-mode] .react-flow__edge:not(.in-focus),
+[data-focus-mode] [data-testid='edge-label']:not([data-in-focus]),
+[data-focus-mode] .merged-edge-label:not([data-in-focus]) {
+  pointer-events: none;
+}
+
+[data-level='landscape'] .react-flow__edge {
+  opacity: 0.35;
+}
+
 /* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */
 .sd-segment-error {
   background-image: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);
@@ -104,4 +143,20 @@
 
 .sd-segment-broken {
   background-image: repeating-linear-gradient(135deg, currentColor 0 2px, transparent 2px 5px);
+}
+
+@keyframes sd-flow-inside-dot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.7;
+  }
+}
+
+.sd-flow-inside-dot {
+  animation: sd-flow-inside-dot var(--sd-dur-dim) ease-in-out infinite;
 }

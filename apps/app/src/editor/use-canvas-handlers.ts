@@ -22,22 +22,43 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { addComponent, centredOn, connectComponents } from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
-import { GROUP_NODE_PREFIX } from './deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  GROUP_NODE_PREFIX,
+  MERGED_EDGE_PREFIX,
+  PORT_NODE_PREFIX,
+  STICKY_NODE_PREFIX,
+} from './deck-to-flow';
 import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
+import { addNoteAt } from './stickies/sticky-actions';
+import { scopeOf, visibleGraph } from './visible-graph';
+import { stepForEdges, stepForGroup } from './collapse-flow-marks';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
 export const KIND_MIME = 'application/x-sododeck-kind';
+export const NOTE_MIME = 'application/x-sododeck-note';
 
 const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
+const isCollapsedNode = (id: string) => id.startsWith(COLLAPSED_NODE_PREFIX);
+const isPortNode = (id: string) => id.startsWith(PORT_NODE_PREFIX);
+const isMergedEdge = (id: string) => id.startsWith(MERGED_EDGE_PREFIX);
+const stickyIdOf = (id: string) =>
+  id.startsWith(STICKY_NODE_PREFIX) ? id.slice(STICKY_NODE_PREFIX.length) : null;
+const groupIdOf = (id: string) =>
+  id.startsWith(GROUP_NODE_PREFIX)
+    ? id.slice(GROUP_NODE_PREFIX.length)
+    : id.startsWith(COLLAPSED_NODE_PREFIX)
+      ? id.slice(COLLAPSED_NODE_PREFIX.length)
+      : null;
 
 /** Shift, ⌘ or Ctrl held: add to / remove from the selection instead of replacing it. */
 const isMultiSelect = (event: ReactMouseEvent) => event.shiftKey || event.metaKey || event.ctrlKey;
 
 export function useCanvasHandlers() {
   const editor = useEditor();
-  const { screenToFlowPosition } = useReactFlow();
+  const { getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
@@ -52,23 +73,31 @@ export function useCanvasHandlers() {
       }
     };
 
+    const openScope = (frame: { kind: 'group' | 'node'; id: string }, title: string) => {
+      ui().drillInto({ ...frame, viewport: getViewport() });
+      ui().announce(`Opened ${title}`);
+    };
+
     /** Applies React Flow's selection deltas; only the marquee is taken from React Flow. */
     const applySelectChanges = (changes: { id: string; selected: boolean }[]) => {
       if (!marquee.current || changes.length === 0 || isFlowMode(ui())) return;
       const { selection } = ui();
       const nodes = new Set(selection.nodes);
       const edges = new Set(selection.edges);
+      const stickies = new Set(selection.stickies);
       for (const { id, selected, type } of changes as {
         id: string;
         selected: boolean;
         type: 'node' | 'edge';
       }[]) {
         if (type === 'node' && isGroupNode(id)) continue;
-        const set = type === 'node' ? nodes : edges;
-        if (selected) set.add(id);
-        else set.delete(id);
+        const stickyId = type === 'node' ? stickyIdOf(id) : null;
+        const set = type === 'edge' ? edges : stickyId === null ? nodes : stickies;
+        const value = stickyId ?? id;
+        if (selected) set.add(value);
+        else set.delete(value);
       }
-      ui().select({ nodes: [...nodes], edges: [...edges] });
+      ui().select({ nodes: [...nodes], edges: [...edges], stickies: [...stickies] });
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -88,20 +117,79 @@ export function useCanvasHandlers() {
 
     return {
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
-        if (isGroupNode(node.id)) return;
+        const groupId = groupIdOf(node.id);
+        if (groupId !== null) {
+          if (flowMode()) {
+            if (isCollapsedNode(node.id)) {
+              jumpTo((playback) => {
+                const deck = readDeck(editor.doc);
+                const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+                return stepForGroup(playback.played, graph, groupId);
+              });
+            }
+            return;
+          }
+          if (!isCollapsedNode(node.id) && !isGroupNode(node.id)) return;
+          if (!isMultiSelect(event)) ui().select({ groups: [groupId] });
+          ui().focus(node.id);
+          ui().focusEdge(null);
+          return;
+        }
+        const stickyId = stickyIdOf(node.id);
         if (flowMode()) {
-          jumpTo((p) => stepForNode(p.played, node.id));
+          if (stickyId === null) jumpTo((p) => stepForNode(p.played, node.id));
           return;
         }
         if (inSession()) {
-          ui().focus(node.id);
+          if (stickyId === null) ui().focus(node.id);
+          return;
+        }
+        if (stickyId !== null) {
+          if (isMultiSelect(event)) ui().toggle(stickyId, 'sticky');
+          else ui().select({ stickies: [stickyId] });
+          ui().focus(null);
+          ui().focusEdge(null);
           return;
         }
         if (isMultiSelect(event)) ui().toggle(node.id, 'node');
         else ui().select({ nodes: [node.id] });
         ui().focus(node.id);
       },
+      onNodeDoubleClick: (_event: ReactMouseEvent, node: Node) => {
+        if (viewOnly()) return;
+        const deck = readDeck(editor.doc);
+        const groupId = groupIdOf(node.id);
+        if (groupId !== null) {
+          const title = deck.groups.find((group) => group.id === groupId)?.title;
+          if (title !== undefined) openScope({ kind: 'group', id: groupId }, title);
+          return;
+        }
+        if (stickyIdOf(node.id) !== null || isPortNode(node.id)) return;
+        const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+        if ((graph.childCount.get(node.id) ?? 0) === 0) return;
+        const title = deck.nodes.find((entry) => entry.id === node.id)?.title;
+        if (title !== undefined) openScope({ kind: 'node', id: node.id }, title);
+      },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+        if (isMergedEdge(edge.id)) {
+          if (flowMode()) {
+            jumpTo((playback) => {
+              const deck = readDeck(editor.doc);
+              const graph = visibleGraph(deck, scopeOf(ui().drill), ui().collapsed);
+              const merged = graph.merged.find((entry) => entry.id === edge.id);
+              return merged === undefined
+                ? null
+                : stepForEdges(playback.played, merged.edgeIds, playback.currentStepId);
+            });
+            return;
+          }
+          if (inSession()) {
+            ui().announce('Expand the group to record this step');
+            return;
+          }
+          ui().focusEdge(edge.id);
+          return;
+        }
         if (flowMode()) {
           jumpTo((p) => stepForEdge(p.played, edge.id, p.currentStepId));
           return;
@@ -115,6 +203,11 @@ export function useCanvasHandlers() {
       },
       onEdgeDoubleClick: (_: ReactMouseEvent, edge: Edge) => {
         if (viewOnly()) return;
+        if (isMergedEdge(edge.id)) {
+          ui().focusEdge(edge.id);
+          ui().openMergedPopover(edge.id);
+          return;
+        }
         ui().select({ edges: [edge.id] });
         ui().openEdgePopover(edge.id);
       },
@@ -139,8 +232,16 @@ export function useCanvasHandlers() {
 
       onNodeDragStart: (_: unknown, node: Node) => {
         if (viewOnly()) return;
-        if (!ui().selection.nodes.includes(node.id)) ui().select({ nodes: [node.id] });
-        ui().focus(node.id);
+        if (isGroupNode(node.id) || isCollapsedNode(node.id) || isPortNode(node.id)) return;
+        const stickyId = stickyIdOf(node.id);
+        if (stickyId !== null) {
+          if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
+          ui().focus(null);
+          ui().focusEdge(null);
+        } else {
+          if (!ui().selection.nodes.includes(node.id)) ui().select({ nodes: [node.id] });
+          ui().focus(node.id);
+        }
         if (!gestureOpen.current) {
           gestureOpen.current = true;
           // One drag, however many frames and nodes, is one undo step (research R2).
@@ -151,13 +252,27 @@ export function useCanvasHandlers() {
       onNodesChange: (changes: NodeChange[]) => {
         if (flowMode()) return;
         const moves = changes.flatMap((c) =>
-          c.type === 'position' && c.position !== undefined && !isGroupNode(c.id)
-            ? [{ id: c.id, x: Math.round(c.position.x), y: Math.round(c.position.y) }]
+          c.type === 'position' &&
+          c.position !== undefined &&
+          !isGroupNode(c.id) &&
+          !isCollapsedNode(c.id) &&
+          !isPortNode(c.id)
+            ? [
+                {
+                  id: c.id,
+                  stickyId: stickyIdOf(c.id),
+                  x: Math.round(c.position.x),
+                  y: Math.round(c.position.y),
+                },
+              ]
             : [],
         );
         if (moves.length > 0) {
           editor.batch(() => {
-            for (const { id, x, y } of moves) editor.update('nodes', id, { position: { x, y } });
+            for (const { id, stickyId, x, y } of moves) {
+              if (stickyId !== null) editor.moveSticky(stickyId, { x, y });
+              else editor.update('nodes', id, { position: { x, y } });
+            }
           });
         }
         applySelectChanges(
@@ -193,17 +308,25 @@ export function useCanvasHandlers() {
       }) satisfies OnReconnect,
 
       onDragOver: (event: DragEvent) => {
-        if (viewOnly() || !event.dataTransfer.types.includes(KIND_MIME)) return;
+        const types = event.dataTransfer.types;
+        if (viewOnly() || (!types.includes(KIND_MIME) && !types.includes(NOTE_MIME))) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
       },
       onDrop: (event: DragEvent) => {
+        if (viewOnly()) return;
+        const note = event.dataTransfer.getData(NOTE_MIME);
         const kind = toComponentKind(event.dataTransfer.getData(KIND_MIME));
-        if (kind === null || viewOnly()) return;
+        if (kind === null && note !== 'note') return;
         event.preventDefault();
         const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        if (note === 'note') {
+          addNoteAt(editor, point);
+          return;
+        }
+        if (kind === null) return;
         addComponent(editor, kind, centredOn(point));
       },
     };
-  }, [editor, screenToFlowPosition]);
+  }, [editor, getViewport, screenToFlowPosition]);
 }

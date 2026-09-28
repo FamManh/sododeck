@@ -2,6 +2,7 @@ import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { deckOf } from '../../test/render-canvas';
 import { inspectorDeck } from '../../test/inspector-fixtures';
 import { renderInspector } from '../../test/render-inspector';
 
@@ -104,9 +105,22 @@ describe('NodeInspector (story 1, FR-008)', () => {
         .map((b) => b.getAttribute('aria-label')),
     ).toEqual(['← Order Service', '→ Payment Service', '← Dispatch Service']);
     await user.click(within(list).getByRole('button', { name: '→ Payment Service' }));
-    expect(ui().selection).toEqual({ nodes: [], edges: ['py'] });
+    expect(ui().selection).toEqual({ nodes: [], edges: ['py'], groups: [], stickies: [] });
     expect(
       screen.getByRole('heading', { name: 'Pricing Service → Payment Service' }),
     ).toBeInTheDocument();
+  });
+
+  it('shows the component level and marks derived levels', () => {
+    renderInspector(inspectorDeck, { nodes: ['p'] });
+    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.getByText('Container (derived)')).toBeInTheDocument();
+
+    const explicitDeck = deckOf({
+      nodes: [{ id: 'svc', type: 'service', title: 'Service', level: 'system' }],
+    });
+    const { unmount } = renderInspector(explicitDeck, { nodes: ['svc'] });
+    expect(screen.getByText('System')).toBeInTheDocument();
+    unmount();
   });
 });

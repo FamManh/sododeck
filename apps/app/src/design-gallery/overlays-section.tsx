@@ -1,5 +1,6 @@
 import { Button } from '@sododeck/ui/components/button';
 import { CoachMark, CoachMarkAnchor } from '@sododeck/ui/components/coach-mark';
+import { CommandDialog } from '@sododeck/ui/components/command-dialog';
 import {
   Dialog,
   DialogClose,
@@ -64,6 +65,8 @@ export function OverlaysSection() {
   const [step, setStep] = useState(0);
   const [touring, setTouring] = useState(false);
   const [folder, setFolder] = useState('logistics');
+  const [jumpOpen, setJumpOpen] = useState(false);
+  const [jumpQuery, setJumpQuery] = useState('');
   const notesId = useId();
   const current = TOUR[step] ?? TOUR[0];
 
@@ -118,6 +121,44 @@ export function OverlaysSection() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </SampleRow>
+      <SampleRow label="command dialog">
+        <Button
+          onClick={() => {
+            setJumpOpen(true);
+          }}
+        >
+          Jump to…
+        </Button>
+        <CommandDialog
+          open={jumpOpen}
+          query={jumpQuery}
+          items={[
+            { id: 'theme', title: 'Switch theme', meta: 'Command', shortcut: '⌘⇧L' },
+            { id: 'flow', title: 'Place order', meta: 'Flow · 8 steps' },
+            {
+              id: 'note',
+              title: 'Retry note',
+              meta: 'Note',
+              snippet: {
+                text: '…follow up on retry behavior…',
+                ranges: [{ start: 15, end: 20 }],
+              },
+            },
+          ]}
+          total={3}
+          onQueryChange={setJumpQuery}
+          onOpenChange={setJumpOpen}
+          onSelect={() => {
+            setJumpOpen(false);
+          }}
+          emptyState={
+            <div>
+              <p>No results</p>
+              <p>Try a different word.</p>
+            </div>
+          }
+        />
       </SampleRow>
       <SampleRow label="popover">
         <Popover>

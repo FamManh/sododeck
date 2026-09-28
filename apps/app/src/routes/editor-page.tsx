@@ -2,10 +2,11 @@ import type { DeckDoc } from '@sododeck/model';
 import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLoaderData, useNavigate, useOutlet } from 'react-router';
+import { useLoaderData, useNavigate, useOutlet, useParams } from 'react-router';
 
 import { Announcer } from '../editor/announcer';
 import { Canvas } from '../editor/canvas';
+import { CommandPalette } from '../editor/command-palette/command-palette';
 import { ConfirmDeleteDialog } from '../editor/confirm-delete-dialog';
 import { DeckDeletedDialog } from '../editor/deck-deleted-dialog';
 import { useFlowShortcuts, usePlaybackShortcuts } from '../editor/flows/use-flow-shortcuts';
@@ -81,18 +82,37 @@ function EditorChrome() {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const outlet = useOutlet();
+  const navigate = useNavigate();
+  const { deckId } = useParams();
   const screen = outlet === null ? 'canvas' : 'rules';
   useEditorShortcuts({ canvas: screen === 'canvas' });
   useFlowSync();
+  const deckPath = deckId === undefined ? '.' : `/deck/${encodeURIComponent(deckId)}`;
+  const openRules = (ruleId?: string) => {
+    void navigate(
+      ruleId === undefined
+        ? `${deckPath}/rules`
+        : `${deckPath}/rules/${encodeURIComponent(ruleId)}`,
+      { state: undefined },
+    );
+  };
 
   return (
     <div className="grid h-dvh grid-rows-[56px_minmax(0,1fr)] bg-app">
       <TopBar
         deckName={deck.name ?? 'Untitled deck'}
+        deck={deck}
         screen={screen}
         rulesCount={Object.keys(deck.rules).length}
       />
       {outlet ?? <CanvasScreen />}
+      <CommandPalette
+        screen={screen}
+        openRules={openRules}
+        navigateToCanvas={() => {
+          void navigate(deckPath);
+        }}
+      />
       <ConfirmDeleteDialog deck={deck} />
       <Announcer />
     </div>

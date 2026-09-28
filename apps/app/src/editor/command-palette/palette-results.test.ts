@@ -1,0 +1,120 @@
+import { buildSearchIndex } from '@sododeck/model';
+import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
+import { describe, expect, it, vi } from 'vitest';
+
+import { buildPaletteResults, type PaletteCommand } from './palette-results';
+
+function command(id: string, title: string, aliases: readonly string[] = []): PaletteCommand {
+  return { id, title, aliases, run: vi.fn() };
+}
+
+function searchDeckFixture(): SododeckFile {
+  const deck = emptySododeckFile();
+  deck.groups.push({ id: 'core', title: 'Core services' });
+  deck.nodes.push(
+    { id: 'svc', type: 'service', title: 'Order Service', group: 'core' },
+    { id: 'a', type: 'service', title: 'A' },
+    { id: 'b', type: 'service', title: 'B' },
+  );
+  deck.edges.push({ id: 'ab', from: 'a', to: 'b' });
+  deck.flows.push({
+    id: 'place',
+    title: 'Place order',
+    description: 'Main checkout path',
+    steps: Array.from({ length: 8 }, (_, index) => ({
+      id: `step-${String(index + 1)}`,
+      edge: 'ab',
+      ...(index === 3 ? { title: 'Authorize order' } : {}),
+    })),
+  });
+  deck.rules['retry'] = {
+    title: 'Reattempt policy',
+    hitPolicy: 'first',
+    inputs: [{ id: 'attempt', label: 'Attempt' }],
+    outputs: [{ id: 'action', label: 'Action' }],
+    rows: [{ id: 'row-1', when: ['2'], then: ['retry'] }],
+  };
+  deck.stickies.push({ id: 'note-1', text: 'Retry note', position: { x: 24, y: 36 } });
+  return deck;
+}
+
+describe('buildPaletteResults', () => {
+  it('lists commands first and flows second when the query is empty', () => {
+    const deck = searchDeckFixture();
+    const results = buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query: '',
+      commands: [command('export', 'Export deck…'), command('rules', 'Open rule editor')],
+    });
+
+    expect(results.total).toBe(3);
+    expect(results.items.map((item) => [item.kind, item.title])).toEqual([
+      ['command', 'Export deck…'],
+      ['command', 'Open rule editor'],
+      ['flow', 'Place order'],
+    ]);
+  });
+
+  it('merges matched commands ahead of deck title matches', () => {
+    const deck = searchDeckFixture();
+    const results = buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query: 'order',
+      commands: [command('order-help', 'Order shortcuts'), command('rules', 'Open rule editor')],
+    });
+
+    expect(results.items.slice(0, 4).map((item) => [item.kind, item.id])).toEqual([
+      ['command', 'order-help'],
+      ['node', 'svc'],
+      ['flow', 'place'],
+      ['step', 'step-4'],
+    ]);
+  });
+
+  it('limits rows to 50 and reports the overflow text', () => {
+    const deck = searchDeckFixture();
+    deck.flows = Array.from({ length: 60 }, (_, index) => ({
+      id: `flow-${String(index + 1)}`,
+      title: `Shared flow ${String(index + 1).padStart(2, '0')}`,
+      steps: [{ id: `step-${String(index + 1)}`, edge: 'ab' }],
+    }));
+
+    const results = buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query: 'shared',
+      commands: [],
+    });
+
+    expect(results.items).toHaveLength(50);
+    expect(results.overflowText).toBe('Showing 50 of 60');
+  });
+
+  it('formats meta text per result kind', () => {
+    const deck = searchDeckFixture();
+    const searchIndex = buildSearchIndex(deck);
+
+    expect(
+      buildPaletteResults({ deck, searchIndex, query: 'order service', commands: [] }).items[0]
+        ?.meta,
+    ).toBe('Service · Core services');
+    expect(
+      buildPaletteResults({ deck, searchIndex, query: 'a b', commands: [] }).items[0]?.meta,
+    ).toBe('Connection · A → B');
+    expect(
+      buildPaletteResults({ deck, searchIndex, query: 'checkout path', commands: [] }).items[0]
+        ?.meta,
+    ).toBe('Flow · 8 steps');
+    expect(
+      buildPaletteResults({ deck, searchIndex, query: 'authorize', commands: [] }).items[0]?.meta,
+    ).toBe('Step 4 · Place order');
+    expect(
+      buildPaletteResults({ deck, searchIndex, query: 'reattempt', commands: [] }).items[0]?.meta,
+    ).toBe('Rule · First match');
+    expect(
+      buildPaletteResults({ deck, searchIndex, query: 'retry note', commands: [] }).items[0]?.meta,
+    ).toBe('Note');
+  });
+});

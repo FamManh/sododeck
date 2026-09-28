@@ -143,6 +143,7 @@ describe('rule operations (FR-018)', () => {
     expect(result).toEqual({
       removed: [{ scope: 'rules', id: 'R', child: { kind: 'column', id: 'in1' } }],
       updated: [{ scope: 'flows', id: 'fl', child: { kind: 'step', id: 's' } }],
+      freed: [],
       broken: [],
     });
     editor.removeRuleColumn('R', 'out1');

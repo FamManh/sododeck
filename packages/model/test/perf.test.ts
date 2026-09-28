@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildSearchIndex,
   checkIntegrity,
   createDeckSnapshot,
   createEditor,
   fromJSON,
+  searchDeck,
   observeDeck,
   serializeDeck,
   toJSON,
@@ -19,15 +21,22 @@ const LOAD_BUDGET_MS = 200 * SLACK;
 const EDIT_BUDGET_MS = 16 * SLACK;
 // 003 research R1: a drag writes one position per frame and the canvas re-reads the snapshot.
 const SNAPSHOT_BUDGET_MS = 2 * SLACK;
+const SEARCH_BUDGET_MS = 50 * SLACK;
+const SEARCH_INDEX_BUDGET_MS = 100 * SLACK;
+
+function cpuMs(run: () => void): number {
+  const start = process.cpuUsage();
+  run();
+  const used = process.cpuUsage(start);
+  return (used.user + used.system) / 1000;
+}
 
 /** Median of 5 timed runs after 1 warm-up. */
 function median(run: () => void): number {
   run();
   const times: number[] = [];
   for (let i = 0; i < 5; i++) {
-    const start = performance.now();
-    run();
-    times.push(performance.now() - start);
+    times.push(cpuMs(run));
   }
   times.sort((a, b) => a - b);
   return times[2] ?? Infinity;
@@ -37,6 +46,14 @@ const file = largeDeck();
 const doc = fromJSON(file);
 const out = toJSON(doc);
 const timings: Record<string, number> = {};
+const searchFile = largeDeck({
+  nodes: 2000,
+  edges: 4000,
+  flows: 80,
+  stepsPerFlow: 10,
+  rules: 40,
+  stickies: 200,
+});
 
 describe('performance on a large deck (SC-003, SC-004)', () => {
   it('builds the deck it measures', () => {
@@ -92,5 +109,26 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
       'perf (median ms):',
       Object.fromEntries(Object.entries(timings).map(([k, v]) => [k, Number(v.toFixed(2))])),
     );
+  });
+
+  it(`searches a 2,000-node deck in < ${String(SEARCH_BUDGET_MS)} ms (measured at 2026-09-27: 8 ms locally)`, () => {
+    const index = buildSearchIndex(searchFile);
+    timings.search = median(() => {
+      searchDeck(index, 'service 1999');
+    });
+    expect(searchDeck(index, 'service 1999').results[0]?.id).toBe('n1999');
+    expect(timings.search).toBeLessThan(SEARCH_BUDGET_MS);
+  });
+
+  it(`builds a cold search index in < ${String(SEARCH_INDEX_BUDGET_MS)} ms (measured at 2026-09-27: 32 ms locally)`, () => {
+    buildSearchIndex(structuredClone(searchFile)); // warm-up on a fresh object identity
+    const times: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const fresh = structuredClone(searchFile);
+      times.push(cpuMs(() => buildSearchIndex(fresh)));
+    }
+    times.sort((a, b) => a - b);
+    timings['search index'] = times[2] ?? Infinity;
+    expect(timings['search index']).toBeLessThan(SEARCH_INDEX_BUDGET_MS);
   });
 });

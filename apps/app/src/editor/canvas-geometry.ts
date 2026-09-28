@@ -1,14 +1,14 @@
 /**
  * Pure canvas geometry (no React). Positions are flow coordinates of a node's top-left corner.
  */
+import { NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
+
+import type { Level } from './levels';
 
 type Node = SododeckFile['nodes'][number];
 
-export interface Point {
-  x: number;
-  y: number;
-}
+export type { Point };
 
 export interface Rect extends Point {
   width: number;
@@ -17,6 +17,10 @@ export interface Rect extends Point {
 
 /** DESIGN.md: nodes are a fixed 164×50. */
 export const NODE_SIZE = { width: 164, height: 50 } as const;
+export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
+export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
+type NodeSize = { width: number; height: number };
+type SizeKey = `${number}x${number}`;
 
 /** Space between a group's members and its dashed boundary. */
 export const GROUP_PADDING = 24;
@@ -24,17 +28,16 @@ export const GROUP_PADDING = 24;
 /** Offset for a new node that would land exactly on another one. */
 export const FREE_SPOT_STEP = 24;
 
-const GRID = { columns: 10, dx: 220, dy: 110 } as const;
-
 /**
  * Where a node is drawn: its document position, or a display-only grid slot when it has none
- * (never written back until the user moves it, so opening a deck is not an edit).
+ * (never written back until the user moves it, so opening a deck is not an edit). The grid rule
+ * lives in `@sododeck/model` (`nodeCanvasPosition`, ADR 0010) so the cascade agrees with the canvas.
  */
 export function displayPosition(node: Pick<Node, 'position'>, index: number): Point {
   return (
     node.position ?? {
-      x: (index % GRID.columns) * GRID.dx,
-      y: Math.floor(index / GRID.columns) * GRID.dy,
+      x: (index % NODE_GRID.columns) * NODE_GRID.dx,
+      y: Math.floor(index / NODE_GRID.columns) * NODE_GRID.dy,
     }
   );
 }
@@ -60,16 +63,39 @@ function pad(rect: Rect, by: number): Rect {
   };
 }
 
+export function nodeSize(level: Level): NodeSize {
+  return level === 'component' ? COMPONENT_CARD_SIZE : NODE_SIZE;
+}
+
+const groupBoundsCache = new WeakMap<
+  ReadonlyArray<SododeckFile['nodes'][number]>,
+  WeakMap<ReadonlyArray<SododeckFile['groups'][number]>, Map<SizeKey, Map<string, Rect>>>
+>();
+
 /**
  * Bounds of every non-empty group: its members' boxes and its child groups' bounds, plus
  * padding. Groups in a parent cycle, and groups with nothing inside, get none.
  */
-export function groupBounds(deck: SododeckFile): Map<string, Rect> {
+export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map<string, Rect> {
+  let byGroups = groupBoundsCache.get(deck.nodes);
+  if (byGroups === undefined) {
+    byGroups = new WeakMap();
+    groupBoundsCache.set(deck.nodes, byGroups);
+  }
+  let bySize = byGroups.get(deck.groups);
+  if (bySize === undefined) {
+    bySize = new Map();
+    byGroups.set(deck.groups, bySize);
+  }
+  const sizeKey: SizeKey = `${size.width}x${size.height}`;
+  const cached = bySize.get(sizeKey);
+  if (cached !== undefined) return cached;
+
   const content = new Map<string, Rect>();
   deck.nodes.forEach((node, index) => {
     if (node.group === undefined) return;
     const { x, y } = displayPosition(node, index);
-    content.set(node.group, union(content.get(node.group), { x, y, ...NODE_SIZE }));
+    content.set(node.group, union(content.get(node.group), { x, y, ...size }));
   });
 
   const children = new Map<string, string[]>();
@@ -98,6 +124,7 @@ export function groupBounds(deck: SododeckFile): Map<string, Rect> {
     return bounds;
   };
   for (const group of deck.groups) resolve(group.id);
+  bySize.set(sizeKey, out);
   return out;
 }
 
@@ -153,12 +180,16 @@ export function freeSpot(deck: SododeckFile, spot: Point): Point {
 const FRAME_PADDING = 8;
 
 /** Union box of the selected nodes (+8px) for the multi-selection frame, or null below two. */
-export function selectionFrame(deck: SododeckFile, selected: readonly string[]): Rect | null {
+export function selectionFrame(
+  deck: SododeckFile,
+  selected: readonly string[],
+  size: NodeSize = NODE_SIZE,
+): Rect | null {
   if (selected.length < 2) return null;
   const ids = new Set(selected);
   let box: Rect | undefined;
   deck.nodes.forEach((node, index) => {
-    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...NODE_SIZE });
+    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...size });
   });
   return box ? pad(box, FRAME_PADDING) : null;
 }

@@ -1,12 +1,30 @@
 import { Button } from '@sododeck/ui/components/button';
 import { Shapes } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { useUiStore } from '../state/ui-store';
 import { focusPalette } from './canvas-actions';
 
 /** Shown on an empty deck (design 37): how to start, and a way to the palette. */
-export function EmptyCanvasCard() {
-  const setLeftTab = useUiStore((s) => s.setLeftTab);
+export function EmptyCanvasCard({
+  title = 'Start your diagram',
+  description = 'Drag a component from the palette onto the canvas, or press Enter on one to add it here. Then drag from a component’s edge to another to connect them.',
+  action = (
+    <Button
+      variant="primary"
+      onClick={() => {
+        useUiStore.getState().setLeftTab('palette');
+        focusPalette();
+      }}
+    >
+      Open palette
+    </Button>
+  ),
+}: {
+  title?: string;
+  description?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <section
@@ -17,21 +35,10 @@ export function EmptyCanvasCard() {
           <Shapes aria-hidden className="size-5" strokeWidth={1.5} />
         </span>
         <h2 id="empty-canvas-title" className="text-title-lg">
-          Start your diagram
+          {title}
         </h2>
-        <p className="text-body-sm text-ink-secondary">
-          Drag a component from the palette onto the canvas, or press Enter on one to add it here.
-          Then drag from a component’s edge to another to connect them.
-        </p>
-        <Button
-          variant="primary"
-          onClick={() => {
-            setLeftTab('palette');
-            focusPalette();
-          }}
-        >
-          Open palette
-        </Button>
+        <p className="text-body-sm text-ink-secondary">{description}</p>
+        {action}
       </section>
     </div>
   );
