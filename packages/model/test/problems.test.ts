@@ -56,7 +56,6 @@ describe('checkDeck (015)', () => {
         checkDeck(await readExample(`${name}.sododeck.json`)).list.map((p) => p.kind);
       expect(await list('flow-and-rule')).toEqual(['broken-chain', 'rule-without-catch-all']);
       expect(await list('full')).toEqual([
-        'orphan',
         'broken-chain',
         'incomplete-flow',
         'rule-without-catch-all',
@@ -80,35 +79,14 @@ describe('checkDeck (015)', () => {
     });
   });
 
-  describe('orphan components', () => {
-    it('reports a component with no connections', () => {
-      const p = only(
-        deck({ ...chain(), nodes: [...chain().nodes, node('x', { title: 'Legacy' })] }),
-      );
-      expect(p).toMatchObject({
-        kind: 'orphan',
-        title: 'Orphan component',
-        detail: 'Legacy has no connections',
-        target: { type: 'node', id: 'x' },
-      });
-    });
-
-    it('does not report a drill-in parent, a one-component deck, groups or stickies', () => {
+  describe('components without connections', () => {
+    // Founder decision (2026-09-28): a diagram may hold components that are not connected yet,
+    // or never will be; that is not a problem to report.
+    it('never reports a component with no connections', () => {
       expect(
-        kinds(
-          deck({ ...chain(), nodes: [...chain().nodes, node('p'), node('k', { parent: 'p' })] }),
-        ),
-      ).toEqual(['orphan']); // only the child k; its parent p is not an orphan
-      expect(kinds(deck({ nodes: [node('solo')] }))).toEqual([]);
-      expect(
-        kinds(
-          deck({
-            ...chain(),
-            groups: [{ id: 'g', title: 'G' }],
-            stickies: [{ id: 's', text: 'Note' }],
-          }),
-        ),
+        kinds(deck({ ...chain(), nodes: [...chain().nodes, node('x', { title: 'Legacy' })] })),
       ).toEqual([]);
+      expect(kinds(deck({ nodes: [node('a'), node('b'), node('c')] }))).toEqual([]);
     });
   });
 
@@ -341,8 +319,6 @@ describe('checkDeck (015)', () => {
 
     it('sorts by kind, then object title', () => {
       expect(checkDeck(messy()).list.map((p) => `${p.kind}/${p.objectTitle}`)).toEqual([
-        'orphan/alpha',
-        'orphan/Zeta',
         'duplicate-connection/A',
         'step-without-connection/F',
         'rule-without-catch-all/R',
@@ -362,7 +338,7 @@ describe('checkDeck (015)', () => {
       expect(result.total).toBe(result.list.length);
       expect(result.byObject.get('e1')?.map((p) => p.kind)).toEqual(['duplicate-connection']);
       expect(result.byObject.get('e2')?.map((p) => p.kind)).toEqual(['duplicate-connection']);
-      expect(result.byObject.get('z')?.map((p) => p.kind)).toEqual(['orphan']);
+      expect(result.byObject.has('z')).toBe(false);
       expect(result.byObject.get('f')?.map((p) => p.kind)).toEqual(['step-without-connection']);
       expect(result.byObject.get('R')?.map((p) => p.kind)).toEqual(['rule-without-catch-all']);
       expect(result.byObject.has('a')).toBe(false);

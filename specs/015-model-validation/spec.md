@@ -142,7 +142,7 @@ The architect deletes three components. The confirmation already lists broken st
 
 **Checks**
 
-- **FR-001**: The system MUST report a component with no incoming or outgoing connections as an **orphan component**, except components that have child components and a deck with only one component.
+- **FR-001** _(removed 2026-09-28, founder decision: components without connections are not problems; see ADR 0013 amendment)_: The system MUST report a component with no incoming or outgoing connections as an **orphan component**, except components that have child components and a deck with only one component.
 - **FR-002**: The system MUST report connections with the same source, target and label (trimmed, case-insensitive, empty = missing) as one **duplicate connection** problem per group, naming how many copies exist.
 - **FR-003**: The system MUST report a flow step whose connection no longer exists as a **step without connection**.
 - **FR-004**: The system MUST report a flow step that does not start where the previous step on its path ended as a **broken chain**, using the same rule as flow authoring (006), and not for a step already reported under FR-003.

@@ -6,7 +6,7 @@ import { problemCountLabel } from './problem-kinds';
 /** What a component or connection shows for its problems (015 FR-022, FR-025). */
 export interface ProblemMark {
   count: number;
-  /** Tooltip: the problem titles, e.g. "Orphan component". */
+  /** Tooltip: the problem titles, e.g. "Duplicate connection". */
   titles: string;
   /** For accessible names: "1 problem". */
   label: string;

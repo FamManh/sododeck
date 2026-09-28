@@ -51,3 +51,9 @@ and the rule catch-all check (008, rule editor only). Three constraints shape th
   breaks the chain under 006's rule) now shows up deck-wide; whether that rule should allow
   "returns" is a product question for later.
 - 018 can move `ProblemsPanel` without touching the checks.
+
+## Amendment (2026-09-28)
+
+The **orphan component** check is removed (founder decision). A diagram may hold components that
+are not connected yet, or never will be, so marking every new card with a warning was noise.
+`checkDeck` now has nine kinds; everything else in this ADR stands.

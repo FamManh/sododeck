@@ -19,7 +19,8 @@ const file = deckOf({
 describe('problemMarks (015 FR-022)', () => {
   it('marks every object a problem names, with a count, titles and a label', () => {
     const marks = problemMarks(checkDeck(file));
-    expect(marks.get('c')).toEqual({ count: 1, titles: 'Orphan component', label: '1 problem' });
+    // A component without connections is not a problem (founder decision, 2026-09-28).
+    expect(marks.has('c')).toBe(false);
     expect(marks.get('e1')).toEqual({
       count: 1,
       titles: 'Duplicate connection',
@@ -36,8 +37,8 @@ describe('problemMarks (015 FR-022)', () => {
   });
 
   it('compares marks by value', () => {
-    const a = problemMarks(checkDeck(file)).get('c');
-    const b = problemMarks(checkDeck(file)).get('c');
+    const a = problemMarks(checkDeck(file)).get('e1');
+    const b = problemMarks(checkDeck(file)).get('e1');
     expect(a).not.toBe(b);
     expect(sameProblemMark(a, b)).toBe(true);
     expect(sameProblemMark(a, undefined)).toBe(false);

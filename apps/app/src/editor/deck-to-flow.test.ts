@@ -239,7 +239,7 @@ describe('toFlowNodes', () => {
 
   it('carries problem marks and rebuilds only when they change (015 FR-022)', () => {
     const graph = topLevelGraph(deck);
-    const mark = { count: 1, titles: 'Orphan component', label: '1 problem' };
+    const mark = { count: 1, titles: 'Duplicate connection', label: '1 problem' };
     const plain = toFlowNodes(deck, graph, view());
     const marked = toFlowNodes(deck, graph, view({ problems: new Map([['b', mark]]) }));
     const b = marked.find((n) => n.id === 'b') as DeckFlowNode;

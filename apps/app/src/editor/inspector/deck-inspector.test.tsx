@@ -44,25 +44,22 @@ describe('DeckInspector (story 2, FR-012)', () => {
     const { doc, editor } = setup();
     const before = toJSON(doc);
     act(() => {
-      editor().add('nodes', { id: 'lonely', type: 'service', title: 'Legacy Invoicer' });
+      // A second Order Service → Pricing connection: a duplicate.
+      editor().add('edges', { id: 'op2', from: 'o', to: 'p', label: 'quote' });
     });
-    expect(
-      await screen.findByRole('button', { name: /Legacy Invoicer has no connections/ }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /appears twice/ })).toBeInTheDocument();
     const after = toJSON(doc);
     expect(JSON.stringify(after)).not.toContain('problems');
-    expect({ ...after, nodes: before.nodes }).toEqual(before);
+    expect({ ...after, edges: before.edges }).toEqual(before);
   });
 
-  it('selects the component behind a problem row (015 US2)', async () => {
+  it('selects the objects behind a problem row (015 US2)', async () => {
     const { editor, user } = setup();
     act(() => {
-      editor().add('nodes', { id: 'lonely', type: 'service', title: 'Legacy Invoicer' });
+      editor().add('edges', { id: 'op2', from: 'o', to: 'p', label: 'quote' });
     });
-    await user.click(
-      await screen.findByRole('button', { name: /Legacy Invoicer has no connections/ }),
-    );
-    expect(useUiStore.getState().selection.nodes).toEqual(['lonely']);
+    await user.click(await screen.findByRole('button', { name: /appears twice/ }));
+    expect(useUiStore.getState().selection.edges).toEqual(['op', 'op2']);
   });
 
   it('renames the deck (the top bar follows) and refuses an empty name', async () => {

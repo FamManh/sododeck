@@ -173,7 +173,7 @@ Priority: **P0** = MVP, **P1** = V2, **P2** = V3.
 | C-4 | Auto-layout (ELK) that respects pinned positions | P0 |
 | C-5 | JSON code panel in sync with the canvas: read-only view of the selection and the whole deck (P0). Editing from JSON with JSON Schema autocomplete and two-way sync is deferred (P1, founder decision 2026-09-27) | P0 |
 | C-6 | Undo/redo, multi-select, bulk edit (type, tags, owner) | P0 |
-| C-7 | Validation: orphan nodes, broken flows, duplicate edges | P0 |
+| C-7 | Validation: broken flows, duplicate edges, broken references (unconnected components are allowed, 2026-09-28) | P0 |
 | C-8 | Template library (logistics: last-mile, cross-dock, returns, COD reconciliation; patterns: saga, outbox, CQRS) | P1 |
 
 ### 7.2 Views and scale

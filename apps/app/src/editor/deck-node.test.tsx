@@ -55,17 +55,21 @@ describe('DeckNode', () => {
   });
 
   it('shows a problem glyph and says the count in its name (015 FR-022, FR-025)', () => {
-    renderNode(props({ problems: { count: 2, titles: 'Orphan component', label: '2 problems' } }));
+    renderNode(
+      props({ problems: { count: 2, titles: 'Duplicate connection', label: '2 problems' } }),
+    );
     expect(
       screen.getByRole('group', { name: 'Service: Order Service, 2 problems' }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Orphan component');
+    expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Duplicate connection');
   });
 
   it('gives the corner to the connect "+" while it is a valid target', () => {
     connection.role = 'target:q';
     connection.connecting = true;
-    renderNode(props({ problems: { count: 1, titles: 'Orphan component', label: '1 problem' } }));
+    renderNode(
+      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }),
+    );
     expect(screen.queryByTestId('problem-glyph')).not.toBeInTheDocument();
   });
 

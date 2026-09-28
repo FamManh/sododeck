@@ -360,7 +360,7 @@ describe('Canvas', () => {
     fireEvent.doubleClick(await screen.findByRole('group', { name: 'Service: Delivery platform' }));
     expect(ui().drill.map((frame) => frame.id)).toEqual(['parent']);
     expect(screen.getAllByTestId('deck-node')).toHaveLength(1);
-    expect(screen.getByRole('group', { name: 'Service: Dispatch, 1 problem' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Service: Dispatch' })).toBeInTheDocument();
     expect(toJSON(doc)).toEqual(before);
     expect(editor().canUndo()).toBe(false);
   });

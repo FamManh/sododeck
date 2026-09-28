@@ -45,13 +45,13 @@ describe('createProblemsStore (015 R4)', () => {
     await flush();
     listener.mockClear();
     const editor = createEditor(doc);
-    editor.add('nodes', { id: 'c', type: 'service', title: 'C' });
-    editor.update('nodes', 'c', { title: 'Lonely' });
+    editor.add('edges', { id: 'dup', from: 'a', to: 'b' });
+    editor.update('nodes', 'b', { title: 'Bee' });
     await vi.advanceTimersByTimeAsync(PROBLEMS_DELAY_MS - 1);
     expect(check).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
     expect(check).toHaveBeenCalledTimes(2);
-    expect(store.get()?.list.map((p) => p.detail)).toEqual(['Lonely has no connections']);
+    expect(store.get()?.list.map((p) => p.detail)).toEqual(['A → Bee appears twice']);
     expect(listener).toHaveBeenCalledTimes(1);
     editor.undo();
     editor.undo();
