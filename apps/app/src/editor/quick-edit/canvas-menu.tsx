@@ -51,7 +51,8 @@ const hintOf = (action: ResolvedAction) =>
 function Item({ action }: { action: ResolvedAction }) {
   const Icon = action.icon;
   const hint = hintOf(action);
-  const icon = Icon === undefined ? null : <Icon aria-hidden />;
+  // Rows are text only, except the destructive one's trash icon (design 102–104).
+  const icon = Icon === undefined || !action.destructive ? null : <Icon aria-hidden />;
   const tooltip = action.disabled ?? action.description;
   if (action.children !== undefined) {
     const checked = action.children.find((child) => child.checked);

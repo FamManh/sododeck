@@ -15,6 +15,7 @@ describe('DetailsButton (019 US4)', () => {
     const button = screen.getByRole('button', { name: 'Open details for Order Service' });
     expect(button).toHaveAttribute('tabindex', '-1');
     expect(button).toHaveClass('sd-details-button');
+    expect(button).toHaveAttribute('title', 'Open details');
     await user.click(button);
     const ui = useUiStore.getState();
     expect(ui.selection.nodes).toEqual(['a']);

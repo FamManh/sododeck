@@ -179,7 +179,12 @@ export function CardTitleInput({
       onDoubleClick={(event) => {
         event.stopPropagation();
       }}
-      className={cn('nodrag nopan h-6 w-full px-1 text-body-sm font-medium', className)}
+      // A quiet field inside the card (design 96–97): the card's own ring marks it, so the
+      // input shows a light fill and the caret instead of a second focus outline.
+      className={cn(
+        'nodrag nopan h-6 w-full rounded-row border-transparent bg-surface-2 px-1 text-body-sm font-medium hover:border-transparent focus:border-transparent focus-visible:outline-none',
+        className,
+      )}
     />
   );
 }

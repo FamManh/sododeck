@@ -335,10 +335,10 @@
 
 - [x] T055 [P] Update `apps/app/CLAUDE.md`. Cover `editor/actions/` (how later features add actions: 016 copy / paste / group / align, 017 reset route, 020 fill / stroke), `editor/quick-edit/`, the new store fields, and the rule "keys that also appear in menus run the action's function". Update `packages/ui/CLAUDE.md` (the components table: Toolbar, ChoiceList, InlineEdit props, tokens).
 - [x] T056 [P] Update `docs/backlog.md` §019 status (link to `specs/019-card-quick-edit/`, note FR-001 option A and that "Paste disabled" moved to 016). Add a note in §016 / §017 / §020 that their menu and toolbar items register in `apps/app/src/editor/actions/`.
-- [ ] T057 Run `pnpm bench` after the change. Write `specs/019-card-quick-edit/bench-after.md` comparing it with `bench-before.md`: no scenario below 60 fps, `selection-toolbar-pan` recorded (SC-007), and selection-to-toolbar time ≤ 100 ms (SC-004).
-- [ ] T058 Visual check per quickstart: screenshots at 1440×900, light and dark, next to `docs/design/screens/` 95–104 and the menu in 115, in `specs/019-card-quick-edit/visual-check.md`. List any difference. Allowed: token overrides, lucide icons, items owned by 016 / 017 / 020, and Space for Collapse.
-- [ ] T059 Run the full definition-of-done set: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. The smoke suite must pass unchanged. Fix anything red, and confirm there are no `.only` or skipped tests.
-- [ ] T060 Walk through quickstart scenarios 1–10 by hand in `pnpm dev`, and note anything uncertain for the final report (what changed, what was skipped, what is uncertain).
+- [x] T057 Run `pnpm bench` after the change. Write `specs/019-card-quick-edit/bench-after.md` comparing it with `bench-before.md`: no scenario below 60 fps, `selection-toolbar-pan` recorded (SC-007), and selection-to-toolbar time ≤ 100 ms (SC-004).
+- [x] T058 Visual check per quickstart: screenshots at 1440×900, light and dark, next to `docs/design/screens/` 95–104 and the menu in 115, in `specs/019-card-quick-edit/visual-check.md`. List any difference. Allowed: token overrides, lucide icons, items owned by 016 / 017 / 020, and Space for Collapse.
+- [x] T059 Run the full definition-of-done set: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. The smoke suite must pass unchanged. Fix anything red, and confirm there are no `.only` or skipped tests.
+- [x] T060 Walk through quickstart scenarios 1–10 by hand in `pnpm dev`, and note anything uncertain for the final report (what changed, what was skipped, what is uncertain).
 
 ---
 

@@ -1,4 +1,3 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -27,36 +26,34 @@ export function DetailsButton({
     ui.focus(id);
     ui.openDrawer();
   };
+  // A native tooltip: one Radix Tooltip per card costs ~50 ms on every full canvas re-render at
+  // 500 cards (bench "select flow → marks painted").
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Open details for ${title}`}
-          tabIndex={focused ? 0 : -1}
-          onMouseDown={(event) => {
-            event.stopPropagation();
-          }}
-          onClick={(event) => {
-            event.stopPropagation();
-            open();
-          }}
-          onDoubleClick={(event) => {
-            event.stopPropagation();
-          }}
-          onKeyDown={(event) => {
-            // Enter / Space activate the button; they must not reach the canvas keys.
-            if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
-          }}
-          className={cn(
-            'sd-details-button nodrag nopan absolute -top-2.5 -right-2.5 z-10 flex size-[22px] cursor-pointer items-center justify-center rounded-full bg-inverse text-on-inverse opacity-0 shadow-rest group-hover/node:opacity-100 group-focus-within/node:opacity-100',
-            focusRing,
-          )}
-        >
-          <PanelRight aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>Open details</TooltipContent>
-    </Tooltip>
+    <button
+      type="button"
+      aria-label={`Open details for ${title}`}
+      title="Open details"
+      tabIndex={focused ? 0 : -1}
+      onMouseDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        open();
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+      }}
+      onKeyDown={(event) => {
+        // Enter / Space activate the button; they must not reach the canvas keys.
+        if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+      }}
+      className={cn(
+        'sd-details-button nodrag nopan absolute -top-2.5 -right-2.5 z-10 flex size-[22px] cursor-pointer items-center justify-center rounded-full bg-inverse text-on-inverse opacity-0 shadow-rest group-hover/node:opacity-100 group-focus-within/node:opacity-100',
+        focusRing,
+      )}
+    >
+      <PanelRight aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+    </button>
   );
 }
