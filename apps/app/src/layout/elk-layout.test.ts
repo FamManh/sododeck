@@ -1,7 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { applyPins, computeLayout, type LayoutRequest, type LayoutResult } from './elk-layout';
+import ELK from 'elkjs/lib/elk.bundled.js';
+
+import {
+  applyPins,
+  computeLayout as layoutWith,
+  type LayoutRequest,
+  type LayoutResult,
+} from './elk-layout';
+
+const elk = new ELK();
+const computeLayout = (request: LayoutRequest) => layoutWith(request, elk);
 
 const size = { width: 164, height: 50 };
 

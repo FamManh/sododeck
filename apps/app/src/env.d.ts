@@ -9,3 +9,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+/** Vite asset URL imports (`?url`), e.g. the ELK worker script. */
+declare module '*?url' {
+  const url: string;
+  export default url;
+}

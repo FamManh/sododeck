@@ -44,16 +44,21 @@ export function createLayoutClient(
       if (response.ok) entry.resolve(response.result);
       else entry.reject(new Error(response.error));
     };
+    // A worker that fails (to load or at run time) must not leave a run waiting forever.
+    created.onerror = (event: ErrorEvent) => {
+      event.preventDefault();
+      stop(() => new Error(`Layout worker failed: ${event.message}`));
+    };
     worker = created;
     return created;
   };
 
-  const stop = (reason: () => Error) => {
+  function stop(reason: () => Error): void {
     worker?.terminate();
     worker = null;
     for (const entry of pending.values()) entry.reject(reason());
     pending.clear();
-  };
+  }
 
   return {
     layout(request) {

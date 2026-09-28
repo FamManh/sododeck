@@ -4,6 +4,7 @@ import { createLayoutClient, LayoutCancelled } from './layout-client';
 
 class FakeWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
   posted: { id: number }[] = [];
   terminated = false;
   postMessage(message: { id: number }) {
@@ -49,5 +50,18 @@ describe('createLayoutClient (011 FR-032)', () => {
     expect(workers).toHaveLength(2);
     workers[1]?.reply(1);
     await expect(again).resolves.toBeDefined();
+  });
+
+  it('rejects the running layout when the worker fails, instead of waiting forever', async () => {
+    const workers: FakeWorker[] = [];
+    const client = createLayoutClient(() => {
+      const worker = new FakeWorker();
+      workers.push(worker);
+      return worker as unknown as Worker;
+    });
+    const running = client.layout(request);
+    workers[0]?.onerror?.({ message: 'boom', preventDefault: () => undefined } as ErrorEvent);
+    await expect(running).rejects.toThrow('Layout worker failed: boom');
+    expect(workers[0]?.terminated).toBe(true);
   });
 });

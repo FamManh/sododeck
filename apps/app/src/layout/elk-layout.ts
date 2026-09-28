@@ -1,4 +1,4 @@
-import ELK, { type ElkNode } from 'elkjs/lib/elk.bundled.js';
+import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 
 type Point = { x: number; y: number };
 
@@ -17,7 +17,8 @@ export interface LayoutRequest {
 /** Top-left positions of every requested component, in canvas coordinates. */
 export type LayoutResult = Record<string, Point>;
 
-const elk = new ELK();
+/** The part of an ELK instance used here: the worker's (`layout.worker.ts`) or, in tests, Node's. */
+export type ElkEngine = Pick<ELK, 'layout'>;
 
 /** Space between boxes; matches the look of hand-made decks (220 × 110 grid, 164 × 50 nodes). */
 const SPACING = 40;
@@ -32,7 +33,7 @@ const GAP = 24;
  * together; pinned components take part (their connections still shape the layers) and are then
  * put back by `applyPins`.
  */
-export async function computeLayout(request: LayoutRequest): Promise<LayoutResult> {
+export async function computeLayout(request: LayoutRequest, elk: ElkEngine): Promise<LayoutResult> {
   const groupIds = new Set(request.groups.map((g) => g.id));
   const parentOf = (parent: string | undefined) =>
     parent !== undefined && groupIds.has(parent) ? parent : undefined;
