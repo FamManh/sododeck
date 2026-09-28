@@ -127,4 +127,21 @@ describe('DeckIsland (018 contract "Deck island")', () => {
       'System view/Core',
     );
   });
+
+  it('shows the views as one dropdown in a narrow window (FR-041)', async () => {
+    const user = userEvent.setup();
+    function Compact() {
+      const deck = useDeckSnapshot(useEditor().doc);
+      return (
+        <MemoryRouter>
+          <DeckIsland deck={deck} compact />
+        </MemoryRouter>
+      );
+    }
+    renderWithEditor(<Compact />, shop);
+    expect(screen.queryByRole('tablist', { name: 'Views' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'View: System' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Infra' }));
+    expect(screen.getByRole('button', { name: 'View: Infra' })).toBeInTheDocument();
+  });
 });

@@ -7,7 +7,9 @@ import { useSearchParams } from 'react-router';
 import { generateBenchDeck } from '../bench/generate-deck';
 import { Canvas } from '../editor/canvas';
 import { CommandPalette } from '../editor/command-palette/command-palette';
-import { Inspector } from '../editor/inspector';
+import { DetailDrawer } from '../editor/shell/detail-drawer';
+import { JsonOverlay } from '../editor/shell/json-overlay';
+import { useTidyLayout } from '../editor/tidy-layout';
 import { JsonPanel } from '../editor/json-panel';
 import { exitFlow, nextStep, openFlow, play } from '../editor/flows/flow-mode';
 import { recordClick, startNewFlow } from '../editor/flows/flow-session';
@@ -298,6 +300,8 @@ let layoutFrames: number[] = [];
 /** Exposes the view switch (011 SC-003); needs `views=1` (dims clients in Infra). */
 function ViewsBenchHooks() {
   const editor = useEditor();
+  // Tidy layout moved into the views menu (018); drive the same hook the menu uses.
+  const { run: runTidy } = useTidyLayout();
   useEffect(() => {
     window.__sododeckViewsBench = {
       switchTo: (viewId, dimmed) => {
@@ -310,10 +314,9 @@ function ViewsBenchHooks() {
         const viewId = readViewState(editor.doc).view.id;
         if (pinned.length > 0) editor.setPinned(viewId, pinned, true);
         await new Promise((r) => requestAnimationFrame(r));
-        const button = document.querySelector<HTMLButtonElement>('button[title^="Tidy layout"]');
-        if (button === null || button.disabled) return NaN;
+        if (useUiStore.getState().layoutRun.status !== 'idle') return NaN;
         const start = performance.now();
-        button.click();
+        void runTidy();
         await new Promise<void>((resolve) => {
           const stop = useUiStore.subscribe((state) => {
             if (state.layoutRun.status === 'idle') {
@@ -329,7 +332,7 @@ function ViewsBenchHooks() {
       },
       startTidy: () => {
         layoutFrames = [];
-        document.querySelector<HTMLButtonElement>('button[title^="Tidy layout"]')?.click();
+        void runTidy();
         // Frames count only while the layout runs (SC-002), not the frame that applies it.
         const tick = (t: number) => {
           if (useUiStore.getState().layoutRun.status === 'idle') return;
@@ -344,17 +347,24 @@ function ViewsBenchHooks() {
     return () => {
       window.__sododeckViewsBench = undefined;
     };
-  }, [editor]);
+  }, [editor, runTidy]);
   return null;
 }
 
-function BenchInspector() {
-  return <Inspector deck={useDeckSnapshot(useEditor().doc)} />;
+/** The details drawer and JSON overlay over the canvas, as in the editor (018 SC-006). */
+function BenchShell() {
+  const deck = useDeckSnapshot(useEditor().doc);
+  return (
+    <>
+      <JsonOverlay drawerWidth={useUiStore((s) => (s.drawer.open ? s.drawer.width : null))} />
+      <DetailDrawer deck={deck} />
+    </>
+  );
 }
 
 /**
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1&json=deck&flows=1&inspector=1
- * &groups=1
+ * &groups=1&drawer=1 (`drawer=1`: the canvas-first details drawer and JSON overlay, 018)
  * Goes through the real read and write path: model document, editor, incremental snapshot and
  * the real Canvas (so dragging is measured too). `json=deck` adds the JSON panel under the
  * canvas with the Deck tab open (004 SC-003), as in the editor.
@@ -370,11 +380,20 @@ export function BenchPage() {
   const inspector = params.get('inspector') === '1';
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
   const views = params.get('views') === '1';
+  const drawer = params.get('drawer') === '1';
 
   const [doc] = useState(() => {
+    useUiStore.getState().resetForDeck(null);
     if (jsonDeck) {
       const { jsonPanel } = useUiStore.getState();
       useUiStore.setState({ jsonPanel: { ...jsonPanel, open: true, tab: 'deck' } });
+      // Canvas-first (018): the JSON panel is an overlay, shown on request.
+      if (drawer) useUiStore.getState().setJsonShown(true);
+    }
+    if (drawer || inspector) {
+      // A selected component with its details drawer open over the canvas.
+      useUiStore.getState().select({ nodes: ['n0'] });
+      useUiStore.getState().openDrawer();
     }
     return fromJSON(
       generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views }).deck,
@@ -388,10 +407,10 @@ export function BenchPage() {
           <FlowBenchHooks />
           {groups && <GroupsBenchHooks />}
           {inspector && <InspectorBenchHooks />}
-          <ViewsBenchHooks />
           <PaletteBenchHooks />
           <ReactFlowProvider>
-            <div className="flex min-h-0 flex-1">
+            <ViewsBenchHooks />
+            <div className="relative flex min-h-0 flex-1">
               <div className="min-w-0 flex-1">
                 <Canvas
                   onlyRenderVisibleElements={visibleOnly}
@@ -405,19 +424,20 @@ export function BenchPage() {
                           readyAt: performance.now(),
                           nodes: deck.nodes.length,
                           edges: deck.edges.length,
+                          shell: drawer,
                         };
                       }),
                     );
                   }}
                 />
               </div>
-              {inspector && (
-                <div className="w-90 shrink-0 border-l border-border">
-                  <BenchInspector />
+              {(drawer || inspector) && (
+                <div className="pointer-events-none absolute inset-0">
+                  <BenchShell />
                 </div>
               )}
             </div>
-            {jsonDeck && <JsonPanel />}
+            {jsonDeck && !drawer && <JsonPanel />}
             <CommandPalette
               screen="canvas"
               openRules={() => undefined}

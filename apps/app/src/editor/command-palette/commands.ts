@@ -13,6 +13,15 @@ export interface CommandContext {
     shortcut?: string;
   };
   focusModeAvailable: boolean;
+  /** Canvas-first shell commands (018), on the canvas screen only. */
+  shell?: {
+    /** Something is selected, so "Open details" has something to show. */
+    canOpenDetails: boolean;
+    openDetails: () => void;
+    jsonShown: boolean;
+    toggleJson: () => void;
+    hideUi: () => void;
+  };
 }
 
 export function buildCommands({
@@ -21,6 +30,7 @@ export function buildCommands({
   exportDeck,
   theme,
   focusModeAvailable,
+  shell,
 }: CommandContext): readonly PaletteCommand[] {
   const commands: PaletteCommand[] = [
     { id: 'export', title: 'Export deck…', run: exportDeck },
@@ -54,6 +64,26 @@ export function buildCommands({
       },
     },
   ];
+
+  if (shell !== undefined) {
+    if (shell.canOpenDetails) {
+      commands.push({
+        id: 'open-details',
+        title: 'Open details',
+        aliases: ['inspector', 'details', 'properties'],
+        run: shell.openDetails,
+      });
+    }
+    commands.push(
+      {
+        id: 'toggle-json',
+        title: shell.jsonShown ? 'Hide JSON' : 'Show JSON',
+        aliases: ['json', 'code'],
+        run: shell.toggleJson,
+      },
+      { id: 'hide-ui', title: 'Hide UI', aliases: ['present', 'hide controls'], run: shell.hideUi },
+    );
+  }
 
   if (focusModeAvailable) {
     // TODO(M4): wire focus mode when 010 lands.

@@ -179,10 +179,16 @@ describe('Keyboard regions (018 US6)', () => {
       ui().select({ nodes: ['a'] });
       ui().openDrawer();
     });
+    // Opening the drawer moves focus into it (its title).
+    await vi.waitFor(() => {
+      expect(activeRegion()).toBe('drawer');
+    });
     await user.keyboard('{Shift>}{F6}{/Shift}');
-    expect(activeRegion()).toBe('history');
-    await user.keyboard('{F6}{F6}{F6}');
+    expect(activeRegion()).toBe('zoom');
+    await user.keyboard('{F6}');
     expect(activeRegion()).toBe('drawer');
+    await user.keyboard('{F6}');
+    expect(activeRegion()).toBe('deck');
   });
 
   it('opens the shortcut list with ? and the zoom island button', async () => {

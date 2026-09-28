@@ -1320,6 +1320,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 018-canvas-first-layout
 
+- **Status:** implemented (2026-09-28) — see [`tasks.md`](../specs/018-canvas-first-layout/tasks.md) and [ADR 0014](decisions/0014-canvas-first-shell.md). §g-49 (C) and §g-50 (per-deck UI memory) defaults confirmed; the Group rail tool stays disabled until 016.
 - **Milestone:** after M4 · **Depends on:** 021 · **Estimate:** 5 d
 - **Goal:** The drawing surface gets the whole screen. Chrome floats over the canvas in small
   islands, like Miro, so a 100-component diagram has room to breathe (§g-38).

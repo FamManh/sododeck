@@ -74,6 +74,10 @@ DESIGN.md `text-secondary` → `ink-secondary`, `muted` → `ink-muted` (to avoi
 
 - Motion: `--sd-toast-undo` 6000ms (`MOTION.toastUndoMs`), the display time of a toast with an Undo action (delete, §g-19). Reading time, so not shortened under reduced motion.
 
+## Tokens added by 018
+
+- Motion: `--sd-dur-overlay` 120ms (`MOTION.overlayMs`), flyouts, the details drawer and the JSON overlay entering (fade + 4 px slide, `sd-overlay-in-*` in the app). 0ms under reduced motion.
+
 ## Enforced by tests (`test/`)
 
 - `tokens-only.test.ts`: no hex/rgb/hsl, Tailwind palette colors, arbitrary colors or radii, or `dark:` in components; no `text-ink-muted` on `bg-surface-2` (4.40:1, use `text-ink-secondary`).
