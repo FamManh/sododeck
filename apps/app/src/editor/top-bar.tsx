@@ -13,6 +13,7 @@ import { SessionChip } from './flows/session-chip';
 import { DrillCrumbs, type DrillDeck } from './drill-crumbs';
 import { SaveStatus } from './save-status';
 import { useExportDeck } from './use-export-deck';
+import { ViewSwitcher } from './views/view-switcher';
 import { Wordmark } from './wordmark';
 
 function HistoryButtons() {
@@ -122,6 +123,7 @@ export function TopBar({
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
   const exportDeck = useExportDeck();
   const openPalette = useUiStore((state) => state.openPalette);
+  const inSession = useUiStore((state) => state.flowSession !== null);
   const jumpRef = useRef<HTMLButtonElement>(null);
   const jumpShortcut = isApplePlatform() ? '⌘K' : 'Ctrl+K';
 
@@ -146,9 +148,9 @@ export function TopBar({
         )}
       </nav>
       <HistoryButtons />
-      {/* The flow session chip sits where the view switcher of 010/011 will go (FR-007). */}
+      {/* The view switcher (011); a flow recording or edit session replaces it (design 41). */}
       <div className="flex min-w-0 flex-1 justify-center">
-        <SessionChip />
+        {inSession ? <SessionChip /> : screen === 'canvas' && <ViewSwitcher />}
       </div>
       {screen === 'canvas' && (
         <Button asChild variant="ghost">

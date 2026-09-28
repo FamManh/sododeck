@@ -16,7 +16,7 @@ import {
   type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
@@ -61,6 +61,7 @@ import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
 import { readViewState, useViewState } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
+import { useCurrentViewSync } from './views/use-view-sync';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
@@ -259,6 +260,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
 
   useSelectionSync();
   useViewSync();
+  useCurrentViewSync();
   useRovingFocus(wrapper);
   useStickyDraftLifecycle();
 
@@ -441,14 +443,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     announcedZoomLevel.current = zoomLevel;
   }, [level, zoomLevel]);
 
-  useEffect(() => {
-    const before = previousDrill.current;
-    previousDrill.current = drill;
-    if (drill.length > before.length) {
-      const box = scopeBounds(deck, graph, level);
+  // Fits a box in the canvas, zoom clamped to 40–130% (010 drill-in, 011 view switch).
+  const fitBox = useCallback(
+    (box: ReturnType<typeof scopeBounds>) => {
       const root = wrapper.current;
       if (box === null || root === null || root.clientWidth === 0 || root.clientHeight === 0)
-        return;
+        return undefined;
       const frame = requestAnimationFrame(() => {
         const padding = 0.2;
         const width = root.clientWidth;
@@ -475,13 +475,32 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       return () => {
         cancelAnimationFrame(frame);
       };
-    }
+    },
+    [dimMs, setViewport],
+  );
+
+  useEffect(() => {
+    const before = previousDrill.current;
+    previousDrill.current = drill;
+    if (drill.length > before.length) return fitBox(scopeBounds(deck, graph, level));
     if (drill.length < before.length) {
       const restore = before[drill.length]?.viewport;
       if (restore === undefined) return;
       void setViewport(restore, { duration: dimMs });
     }
-  }, [deck, dimMs, drill, graph, level, setViewport]);
+    return undefined;
+  }, [deck, dimMs, drill, fitBox, graph, level, setViewport]);
+
+  // A view switch fits the new view's visible components (011 FR-003).
+  const viewId = viewState.view.id;
+  const previousViewId = useRef(viewId);
+  useEffect(() => {
+    if (previousViewId.current === viewId) return undefined;
+    previousViewId.current = viewId;
+    return fitBox(scopeBounds(deck, graph, level));
+    // Only the switch itself fits; later edits in the view must not move the viewport.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewId]);
 
   return (
     <div

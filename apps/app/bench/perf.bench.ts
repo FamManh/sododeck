@@ -554,6 +554,31 @@ for (const scenario of ['collapse-toggle', 'focus'] as const) {
   });
 }
 
+/** 011 SC-003: switching views updates the canvas within 200 ms. */
+const VIEW_SWITCH_TARGET_MS = 200;
+
+test(`view-switch: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  await openBench(page, '&views=1');
+  await page.waitForFunction(() => window.__sododeckViewsBench !== undefined);
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    runs.push(
+      await page.evaluate(() => window.__sododeckViewsBench?.switchTo('infra', true) ?? NaN),
+    );
+    await page.evaluate(() => window.__sododeckViewsBench?.switchTo('system', false) ?? NaN);
+  }
+  const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+  expect(Number.isFinite(ms)).toBe(true);
+  actionResults.push({
+    scenario: 'view-switch (System → Infra)',
+    nodes: NODES,
+    edges: EDGES,
+    ms,
+    targetMs: VIEW_SWITCH_TARGET_MS,
+    meetsTarget: ms <= VIEW_SWITCH_TARGET_MS,
+  });
+});
+
 test(`⌘K type → results: 2000 nodes / 4000 edges`, async ({ page }) => {
   const counts = { nodes: 2000, edges: 4000 };
   await openBench(page, '', counts);
@@ -599,7 +624,7 @@ test.afterAll(async () => {
         `| ${r.scenario} | ${r.renderedNodes} / ${r.renderedNodesZoomedIn} of ${r.nodes} | ${r.maxZoom.toFixed(2)} | ${r.renderMs} | ${r.inPageReadyMs} | ${fmt(r.avgFps)} | ${fmt(r.p95FrameMs)} | ${fmt(r.maxFrameMs)} | ${fmt(r.longFramesPct)}% | ${r.meetsTarget ? 'yes' : 'no'} |`,
     ),
     '',
-    `Action scenarios (006, 007, 008, 009): median of 5. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
+    `Action scenarios (006, 007, 008, 009, 011): median of 5. Deck flows: ${FLOWS === '' ? 'flow scenarios only' : 'every scenario'}.`,
     '',
     '| Scenario | Nodes / edges | Action → painted (ms) | Target (ms) | Meets target |',
     '| --- | --- | --- | --- | --- |',

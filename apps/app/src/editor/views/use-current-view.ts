@@ -17,6 +17,7 @@ import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { viewStateOf, type ViewState } from './view-state';
+import { viewCrumbTitle } from './view-title';
 
 /** The current view state without subscribing (event handlers). */
 export function readViewState(doc: DeckDoc): ViewState {
@@ -114,4 +115,11 @@ export function moveStickyInView(editor: DeckEditor, stickyId: Id, point: Point)
       ? point
       : { x: point.x - shown.x + base.x, y: point.y - shown.y + base.y },
   );
+}
+
+/** Shows `view` in this tab: clears selection, drill-in and focus, then announces it (FR-003). */
+export function selectView(view: Pick<View, 'id' | 'title'>): void {
+  const ui = useUiStore.getState();
+  ui.switchView(view.id);
+  ui.announce(viewCrumbTitle(view));
 }

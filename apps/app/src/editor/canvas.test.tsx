@@ -906,4 +906,62 @@ describe('canvas in flow mode (007)', () => {
     expect(ui().drill).toEqual([]);
     expect(ui().announcement.text).toBe('Showing the whole deck for this flow');
   });
+
+  describe('views on the canvas (011 US1)', () => {
+    it('dims clients in Infra with a non-colour cue, and not in System', () => {
+      renderWithEditor(<Canvas />, deck);
+      expect(screen.getByRole('group', { name: 'Client: D' })).toBeInTheDocument();
+      act(() => {
+        ui().switchView('infra');
+      });
+      expect(
+        screen.getByRole('group', { name: 'Client: D, dimmed in this view' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Service: A' })).toBeInTheDocument();
+    });
+
+    it('shows an edit made in Infra in System too (FR-015)', () => {
+      const { editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().switchView('infra');
+        editor().update('nodes', 'a', { title: 'Orders API' });
+        ui().switchView('system');
+      });
+      expect(screen.getByRole('group', { name: 'Service: Orders API' })).toBeInTheDocument();
+    });
+
+    it('hides a component excluded by the view, with its connections', () => {
+      renderWithEditor(
+        <Canvas />,
+        deckOf({
+          ...deck,
+          views: [{ id: 'v', type: 'custom', title: 'V', excludeKinds: ['queue'] }],
+        }),
+      );
+      expect(screen.queryByRole('group', { name: 'Queue: C' })).not.toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Service: A' })).toBeInTheDocument();
+    });
+
+    it('switches to the view on the left when the current one disappears', () => {
+      const { editor } = renderWithEditor(
+        <Canvas />,
+        deckOf({
+          ...deck,
+          views: [
+            { id: 'one', type: 'system', title: 'One' },
+            { id: 'two', type: 'custom', title: 'Two' },
+            { id: 'three', type: 'custom', title: 'Three' },
+          ],
+        }),
+      );
+      act(() => {
+        ui().switchView('three');
+      });
+      act(() => {
+        editor().removeView('three');
+      });
+      expect(ui().currentViewId).toBe('two');
+      expect(ui().announcement.text).toBe('Two view');
+    });
+  });
 });

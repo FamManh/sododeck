@@ -47,6 +47,10 @@ declare global {
     __sododeckPaletteBench?: {
       search: (query: string, matchText: string) => Promise<number>;
     };
+    /** 011 SC-003: ms from a view switch to the painted canvas of that view. */
+    __sododeckViewsBench?: {
+      switchTo: (viewId: string, dimmed: boolean) => Promise<number>;
+    };
     __sododeckGroupsBench?: {
       collapseAll: () => Promise<void>;
       toggleCollapse: (groupId: string) => Promise<number>;
@@ -275,6 +279,24 @@ function GroupsBenchHooks() {
   return null;
 }
 
+/** Exposes the view switch (011 SC-003); needs `views=1` (dims clients in Infra). */
+function ViewsBenchHooks() {
+  useEffect(() => {
+    window.__sododeckViewsBench = {
+      switchTo: (viewId, dimmed) => {
+        const start = performance.now();
+        useUiStore.getState().switchView(viewId);
+        const selector = '[data-testid="deck-node"][aria-label*="dimmed in this view"]';
+        return paintedAfter(start, () => (document.querySelector(selector) !== null) === dimmed);
+      },
+    };
+    return () => {
+      window.__sododeckViewsBench = undefined;
+    };
+  }, []);
+  return null;
+}
+
 function BenchInspector() {
   return <Inspector deck={useDeckSnapshot(useEditor().doc)} />;
 }
@@ -315,6 +337,7 @@ export function BenchPage() {
           <FlowBenchHooks />
           {groups && <GroupsBenchHooks />}
           {inspector && <InspectorBenchHooks />}
+          {views && <ViewsBenchHooks />}
           <PaletteBenchHooks />
           <ReactFlowProvider>
             <div className="flex min-h-0 flex-1">
