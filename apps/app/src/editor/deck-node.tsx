@@ -196,13 +196,8 @@ export const DeckNode = memo(function DeckNode({
       )}
 
       {data.pinned === true && !isLandscape && (
-        <span className="pointer-events-none absolute -top-2 -left-2 flex size-4.5 items-center justify-center rounded-full border border-hairline bg-surface text-ink-secondary shadow-rest">
-          <Pin
-            role="img"
-            aria-label="Pinned"
-            strokeWidth={ICON_STROKE_WIDTH}
-            className="size-2.5"
-          />
+        <span className="pointer-events-none absolute -top-2.5 -left-2.5 flex size-5 items-center justify-center rounded-full border border-primary bg-surface text-primary-ink shadow-rest">
+          <Pin role="img" aria-label="Pinned" strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
         </span>
       )}
       {data.hiddenInView === true && (

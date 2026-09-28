@@ -298,7 +298,7 @@
 - [ ] T058 [P] Accessibility pass: an axe check in the component tests for the switcher, tab menu, settings popover and toolbar (Tidy and Pin), in light and dark themes (SC-007); keyboard-only run of quickstart scenario 14.
 - [x] T059 Run `pnpm bench` and save `specs/011-views-autolayout/bench-after.md` with before/after numbers for every scenario, including the new ones (SC-001–SC-003) and the 010 ones (no regression below 60 fps).
 - [x] T060 Bundle check: `pnpm --filter @sododeck/app build`, then confirm that `elkjs` appears only in the layout worker chunk (list the chunks in the report).
-- [ ] T061 Visual check: screenshots at 1440×900, light and dark, next to `docs/design/screens/02-*`, `20-*`, `21-*` and `22-*`, in `specs/011-views-autolayout/visual-check.md`. Add separate screenshots of the undesigned parts (settings popover, Tidy button with its progress bar, pin glyph) for founder approval.
+- [x] T061 Visual check: screenshots at 1440×900, light and dark, next to `docs/design/screens/02-*`, `20-*`, `21-*` and `22-*`, in `specs/011-views-autolayout/visual-check.md`. Add separate screenshots of the undesigned parts (settings popover, Tidy button with its progress bar, pin glyph) for founder approval.
 - [x] T062 [P] Docs:
   - `packages/model/CLAUDE.md` ("Added by 011": views API, untracked collapse origin, cascade);
   - `apps/app/CLAUDE.md` (map: `editor/views/`, `tidy-layout.ts`, `view-filter.ts`; rules: the current view is UI state, collapse is document data, drags go through `moveInView`);

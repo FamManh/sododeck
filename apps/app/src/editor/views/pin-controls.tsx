@@ -1,7 +1,7 @@
 import type { Id } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Switch } from '@sododeck/ui/components/switch';
-import { Pin, PinOff } from 'lucide-react';
+import { Pin } from 'lucide-react';
 import { useId } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -76,7 +76,7 @@ export function PinToggle() {
       title={pressed ? 'Unpin the selected components' : 'Pin the selected components'}
       onClick={toggle}
     >
-      {pressed ? <PinOff /> : <Pin />}
+      <Pin />
       {pressed ? 'Unpin' : 'Pin'}
     </Button>
   );
