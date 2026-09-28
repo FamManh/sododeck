@@ -88,10 +88,10 @@ Sododeck ships **light and dark** themes built from the same token names. Every 
 - Single accent: `{colors.primary}` (#f2661c). About 90% of any screen is neutral surface and ink, with one or two orange moments.
 - Kind-coded icon tiles: every node shows a 30px rounded tile whose fill and ink come from its kind (service, data, queue, gateway, client, external).
 - Mono for machine truth: ids, protocols, conditions, JSON and rule cells always render in Geist Mono.
-- Three-panel editor: left panel (Outline / Palette + Features), centre canvas + JSON panel, right inspector. Panel widths are fixed and the canvas absorbs the rest.
+- Canvas-first editor: the canvas fills the window and the chrome floats over it in small islands, a left icon rail with flyouts, an on-demand detail drawer and a JSON overlay hidden by default. Panels overlay the canvas and never resize it.
 - Uppercase micro-labels (11px, 0.07em tracking, muted) head every inspector section. Sections are separated by 1px hairlines, not cards.
-- Flat by default. Floating shadows appear only on floating tools (player, minimap, empty-state card) and modals.
-- Local-first honesty: autosave status ("Saved in this browser") is always visible, and a backup banner reminds users that data lives only in the browser.
+- Flat inside panels. Floating shadows appear only on floating chrome (islands, flyouts, drawer, toolbars, player, minimap, empty-state card) and modals.
+- Local-first honesty: autosave status ("Saved in this browser") is always available, as an icon in the deck island with the words in its tooltip and accessible name.
 
 ## Colors
 
@@ -145,6 +145,28 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 - **Scrim** (`{colors.scrim}` — rgba(28,28,26,.3) · dark rgba(0,0,0,.6)): Behind the Export dialog and the ⌘K palette.
 - **Shadow tint** (`{colors.shadow}` — rgba(0,0,0,.06) · dark rgba(0,0,0,.45)): Used by all elevation tiers so shadows stay visible in dark mode.
 
+### Card Colours
+
+Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, in OKLCH. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill.
+
+| Colour | Light fill | Light stroke | Dark fill | Dark stroke |
+|---|---|---|---|---|
+| red | oklch(0.95 0.045 27) | oklch(0.62 0.15 27) | oklch(0.31 0.055 27) | oklch(0.72 0.13 27) |
+| orange | oklch(0.95 0.045 55) | oklch(0.62 0.15 55) | oklch(0.31 0.055 55) | oklch(0.72 0.13 55) |
+| amber | oklch(0.95 0.045 80) | oklch(0.62 0.15 80) | oklch(0.31 0.055 80) | oklch(0.72 0.13 80) |
+| yellow | oklch(0.95 0.045 102) | oklch(0.62 0.15 102) | oklch(0.31 0.055 102) | oklch(0.72 0.13 102) |
+| lime | oklch(0.95 0.045 130) | oklch(0.62 0.15 130) | oklch(0.31 0.055 130) | oklch(0.72 0.13 130) |
+| green | oklch(0.95 0.045 152) | oklch(0.62 0.15 152) | oklch(0.31 0.055 152) | oklch(0.72 0.13 152) |
+| teal | oklch(0.95 0.045 182) | oklch(0.62 0.15 182) | oklch(0.31 0.055 182) | oklch(0.72 0.13 182) |
+| cyan | oklch(0.95 0.045 215) | oklch(0.62 0.15 215) | oklch(0.31 0.055 215) | oklch(0.72 0.13 215) |
+| blue | oklch(0.95 0.045 255) | oklch(0.62 0.15 255) | oklch(0.31 0.055 255) | oklch(0.72 0.13 255) |
+| indigo | oklch(0.95 0.045 278) | oklch(0.62 0.15 278) | oklch(0.31 0.055 278) | oklch(0.72 0.13 278) |
+| violet | oklch(0.95 0.045 302) | oklch(0.62 0.15 302) | oklch(0.31 0.055 302) | oklch(0.72 0.13 302) |
+| pink | oklch(0.95 0.045 350) | oklch(0.62 0.15 350) | oklch(0.31 0.055 350) | oklch(0.72 0.13 350) |
+| slate | oklch(0.94 0.012 255) | oklch(0.55 0.03 255) | oklch(0.30 0.015 255) | oklch(0.66 0.03 255) |
+
+**Custom colours:** a deck can add up to 12 custom hex colours to its own swatches (106). On a custom fill below 0.18 relative luminance, card text flips to white.
+
 ## Typography
 
 ### Font Family
@@ -183,22 +205,32 @@ Type stays quiet so the diagram can lead. There is no heavy display weight. Hier
 - **Base unit:** 4px, with 2px micro-steps inside segmented controls.
 - **Tokens:** `{spacing.xxs}` 2 · `{spacing.xs}` 4 · `{spacing.sm}` 8 · `{spacing.md}` 12 · `{spacing.base}` 16 · `{spacing.lg}` 24 · `{spacing.xl}` 32.
 - **Panel padding:** 16px horizontal in the inspector and 10–12px in the left panel. Inspector sections use 14px vertical padding.
-- **Row heights:** list rows 30–34px, top bar 56px, JSON panel header 40px, collapsed JSON bar 36px.
+- **Row heights:** list rows 30–34px, editor islands and the selection toolbar 44px, library top bar 56px, JSON overlay header 42px.
 - **Control heights:** buttons 34px (dialogs 36px), inputs 36px, segmented items 28–30px, chips 24–26px, icon buttons 28–34px.
 
-### Editor Grid
+### Canvas-first Editor
 
-- **Top bar:** 56px, full width. From left: wordmark → breadcrumb (folder / editable deck name) → view switcher → spacer → autosave status → ⌘K field (200px) → theme toggle → Export.
-- **Left panel:** 264px. Outline / Palette tabs, a scrolling body, and a Features block pinned at the bottom. In flow mode it becomes a flow list plus a step list.
-- **Centre:** fluid. The canvas sits above the JSON panel (212px tall, collapsible to 36px).
-- **Right inspector:** 336px. Header, a scrolling body of hairline-separated sections, and context-dependent content (node / edge / deck / flow step).
-- **Canvas overlays** (14px inset): breadcrumb pill top-left, Labels/Focus top-right, zoom bottom-left, minimap bottom-right (182×112), step player bottom-centre (420–560px wide).
+Designed in states 86–116 (`docs/design/screens/86-…` to `116-…`). The canvas is full-bleed: it fills the window and never resizes. All chrome floats over it and is reached from small islands. Frames 02–85 still define what the panels **contain**; 86–116 define where they **sit**.
+
+- **Islands:** 44px tall, 4px padding, 2px gap between items, 12px from the viewport edges. Surface, 1px Hairline, 12px radius, Rest shadow.
+  - **Deck island** (top-left): ≡ menu (34) → deck name (13.5/500, editable) → save-status icon (check / spinning loader / clay alert that opens the error popover) → divider → view switcher (segmented, 28px items). Chips join it when active: the **Flow chip** (Orange Soft, "Flow · {name}", ×) and the **drill breadcrumb** chip (010). The views control's menu holds view settings and Tidy layout (011).
+  - **Tools island** (top-right): Jump to field (176px, ⌘K) → Labels → sticky visibility → Focus → divider → theme toggle → Export (primary, 34).
+  - **Undo / Redo island:** 8px below the rail.
+  - **Zoom island** (bottom-right): fit · − · Mono % · + · minimap · help. The minimap (182×112) opens above it.
+- **Left rail:** 48px wide, vertically centred, 38×38 buttons with an 18px icon and 8px radius; 22×1 dividers. Tools: select, add component (palette), sticky, group, connector; then panels: outline, flows & features, rules, search. Problems (015) is a rail button with a count badge. Tooltips: Inverse, 8px radius, label plus Mono shortcut, 400ms delay, 8px right of the rail.
+- **Flyout:** 280px wide, left 68 (rail + 8), top 68, up to viewport height − 80. Header 46 with title (13.5/500), pin (28) and close (28); rows 30–32px. Surface, 1px Hairline, 12px radius, Float shadow. One flyout at a time. A pinned flyout stays open while the user works on the canvas and returns when a temporary one closes. Content: palette, outline, flows & features, rules, problems.
+- **Detail drawer:** the inspector on demand. Right 12, top 68, bottom 12; 360px default, resizable 320–560px from a 4×48 grip on its left edge. Header 68 (40 kind tile, 15/500 title, 11.5 muted subline, More, Close); sections use 13/16px padding with hairlines. It overlays the canvas, and the canvas pans to keep the selection clear. Opened from a card's details button, ⏎ or ⌘⇧D; Esc closes and returns focus to the card.
+- **JSON overlay:** hidden by default, toggled with ⌘J. A bottom island from left 68 to the right edge (or the drawer's left edge), bottom 12, 268px tall, Float shadow. Header 42: JSON · Selection / Deck tabs · "In sync with canvas" · line count · Copy · ×. Body on Code surface, Geist Mono 12/1.6. **Read-only** for now; the zoom island moves above it.
+- **Selection toolbar:** 44px tall, 34px buttons, floats 12px above the selection frame and flips 12px below when it would reach the top islands. Variants for one component, a multi-selection, a connection and a group. Hidden while dragging, resizing or editing text.
+- **Step player:** bottom-centre (420–560px wide). With the drawer open it centres on the remaining canvas.
+- **Hide UI** (⌘\\): every island, flyout, drawer and toolbar hides; a "Show UI" pill stays bottom-right.
+- **Keyboard regions:** F6 / ⇧F6 cycle deck, tools, rail, undo, canvas and zoom; hidden regions are skipped. ⇧F10 or the menu key opens the context menu.
 - **Library:** 56px top bar, 236px folder sidebar, and a content grid of `repeat(auto-fill, minmax(250px, 1fr))` with 16px gaps.
 - **Rule editor:** 264px table list, a fluid table area (minimum 640px), and a 320px test/usage panel.
 
 ### Canvas Geometry
 
-- Nodes are 164×50px with a 30px icon tile and 9px gap.
+- Nodes are 164×50px by default with a 30px icon tile and 9px gap. Users can resize a card (017): minimum 120×44, 4px steps.
 - Groups are dashed 1px boundaries with a 16px radius and an uppercase label at top-left.
 - Edges use orthogonal routing with 8px rounded corners and end in a 3px dot. Queue connections route through a shared vertical lane.
 - The canvas pads the world by 36px and fits it to the viewport on load (zoom range 30–200%).
@@ -212,10 +244,11 @@ The chrome is dense and the canvas is airy. Panels pack 30px rows so large outli
 Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both themes.
 
 - **Flat:** panels, top bar, lists, inspector sections. Separation comes from hairlines.
-- **Rest** (`0 1px 2px {colors.shadow}`): nodes, active segmented items, zoom control, breadcrumb pill.
-- **Float** (`0 8px 28px {colors.shadow}`): step player, empty-state card, hovered deck cards (hover uses `0 4px 16px`).
+- **Rest** (`0 1px 2px {colors.shadow}`): nodes, active segmented items, editor islands and the rail.
+- **Float** (`0 8px 28px {colors.shadow}`): flyouts, detail drawer, JSON overlay, step player, empty-state card, hovered deck cards (hover uses `0 4px 16px`, as does the selection toolbar). Context menus and toolbar popovers use `0 12px 32px`.
 - **Modal** (`0 24px 60px rgba(0,0,0,.25)`): Export dialog and ⌘K palette, over `{colors.scrim}`.
-- **Selection** (`0 0 0 3px {colors.primary-soft}` + 1px primary border): selected node, the node on the current flow step, and the chosen export format.
+- **Selection frame** (2px Deck Orange outline, 2px **outside** the card border): selected node. It sits outside the card so it reads on any card colour. A multi-selection also gets a 1px orange rounded frame 10px outside the union.
+- **Flow halo** (`0 0 0 3px {colors.primary-soft}` + 1.5px primary border): the node on the current flow step, and the chosen export format.
 
 ## Components
 
@@ -239,18 +272,20 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 
 ### Canvas
 
-- **`node`**: Surface fill, 1px Border, 12px radius, Rest shadow, kind tile plus title (12.5/500) and subtitle (11, muted). A rule glyph appears when rules are attached. States: selected (primary border + halo), dimmed (opacity .2–.22 in focus and flow modes; `--sd-opacity-view-dim` .4 when a saved view dims its kind, e.g. clients in Infra), pinned (small pin glyph on the top-left corner, every level except Landscape), dragging (grab cursor).
+- **`node`**: Surface fill, 1px Border, 12px radius, Rest shadow, kind tile plus title (12.5/500) and subtitle (11, muted). A rule glyph appears when rules are attached. Optional fill and stroke from the card colours (020). States: selected (2px outside selection frame), on the current flow step (primary border + halo), dimmed (opacity .2–.22 in focus and flow modes; `--sd-opacity-view-dim` .4 when a saved view dims its kind, e.g. clients in Infra), pinned (small pin glyph on the top-left corner, every level except Landscape), dragging (grab cursor).
 - **`group-boundary`**: dashed 1px Border with a 16px radius and Group Fill. Clicking the label drills into that level.
 - **`edge`**: 1.5px Edge stroke. Connected to selection: 1.75px Secondary. Selected or in flow: 2–3px Deck Orange. Dimmed: opacity .15–.18. It has a 12px invisible hit area.
 - **`edge-label`**: Mono 10.5px pill, Surface fill, 1px Border. It turns solid orange with an On Primary label on the current step.
 - **`flow-token`**: 5px orange dot with a 2px Surface stroke and a 10px halo at 20% opacity. It animates along the current edge path (1.4s per loop at 1×).
 - **`minimap`**: 182×112 Surface card. Nodes and groups are drawn as rects, and the viewport is an 8-unit orange outline. Clicking pans the canvas.
-- **`breadcrumb-pill`**: Deck → View / Flow → Group level. 32px pill with chevrons.
-- **`zoom-control`**: −, Mono %, +, divider, fit.
+- **`breadcrumb-chip`**: the drill-in path (Deck → Group level), shown as a chip in the deck island.
+- **`zoom-control`**: its own island bottom-right: fit, −, Mono %, +, minimap, help.
+- **`card-details-button`**: round button on a card's top-right corner on hover or focus; opens the drawer. Hidden while dragging, in flow mode, or when the card is under 80px wide on screen.
+- **`inline-title-edit`**: double-click, F2 or ⏎ edits the title inside the card without changing its size.
 
 ### Flow Mode
 
-- **`flow-chip`** (top bar): Orange Soft pill showing "Flow mode · {name}" with a round close button.
+- **`flow-chip`** (deck island): Orange Soft pill with a 1px primary border showing "Flow · {name}" and a close button.
 - **`step-player`**: floating card with prev / play-pause (orange) / next, the step title, a 1×/2× speed pill, and a segmented progress bar (4px segments, filled orange up to the current step).
 - **`step-row`**: 22px numbered dot (current = orange, done = Orange Soft, upcoming = Surface 2), a truncated "From → To" title, and a Mono edge label.
 - **`condition-block`**: Code surface, 1px Hairline, Mono. The keyword `when` is set in amber ink.
@@ -276,6 +311,10 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 - **`command-palette`**: 580px wide, 16px radius, 54px input row, 42px result rows (icon · title · kind) and a keyboard-hint footer.
 - **`tour-tooltip`**: 300px Inverse card with a 14px radius, a 12px rotated-square arrow, "n of 3", title, body, step dots, and Skip / Back / Next buttons.
 - **`toast`**: Inverse pill, bottom-centre, auto-dismisses after 2.6s.
+- **`context-menu`**: min 232–252px wide, 6px padding, 30px rows with 7px radius, Mono shortcuts right-aligned, 1px dividers. Submenus open to the right and flip near edges. Disabled rows are Muted; Delete is Clay with an icon.
+- **`toolbar-popover`**: 236–272px wide, 6px below its toolbar button, optional filter field (32px, Surface 2), 30px rows, selected = Orange Soft + check.
+- **`colour-popover`**: 272px. Fill / Stroke tabs, No colour, 13 named swatches (28px circles, 7 per row), the deck's custom colours and a dashed "+" that opens a hue / saturation picker with a hex field. The selected swatch gets a 2px Surface gap, a 2px orange ring and a check.
+- **Editing affordances** (016, 017): 8×8 resize handles with a W × H readout, connector segment and endpoint handles with side targets, 1px orange snap guides with distance labels, a marquee with 7% orange fill (9% dark), a dashed "Drop into …" group target, and an Inverse hint bar listing modifier keys. Full sizes are in `docs/design/design-analysis.md` §b.
 
 ## Theming
 
@@ -284,30 +323,31 @@ Both themes share token names. Dark mode does **not** invert tints. Soft fills b
 ## Interaction & Motion
 
 - Transitions are short and functional: opacity .25s for dimming, width .2s for tour dots, and no bounce.
+- Flyouts, the drawer, popovers and menus enter with a 120ms fade plus a 4px slide. With reduced motion they appear instantly.
 - Autosave runs ~650ms after the last edit and shows a "Saving…" → "Saved in this browser" status.
 - Keyboard: ⌘/Ctrl+K opens the palette, Esc closes overlays, and ←/→ step through a flow.
 - The flow player advances every 1.7s at 1× (0.85s at 2×) and stops at the last step.
-- The JSON panel stays in sync both ways: editing the selected node's JSON updates the canvas live, and invalid JSON shows a clay error inline without losing the draft.
+- The JSON overlay follows the canvas live and is read-only for now. Editing from JSON (with an inline clay error that keeps the draft) is a later feature.
 
 ## Responsive Behavior
 
 | Name | Width | Key changes |
 |---|---|---|
-| Desktop | ≥ 1280px | Full three-panel editor. Minimum supported width. |
-| Wide | ≥ 1600px | Canvas absorbs extra width. Panel widths stay fixed. |
-| Narrow (planned) | 1024–1279px | Left panel collapses to a 56px icon rail. The inspector becomes an overlay sheet. |
+| Desktop | ≥ 1280px | Canvas-first editor with labelled islands. |
+| Wide | ≥ 1600px | The canvas absorbs extra width. Flyout and drawer widths stay the same. |
+| Narrow | 1024–1279px | Designed (116). The rail stays. The top islands drop their labels: the view switcher becomes a dropdown, and Jump to, Labels, Focus and Export become icons. The drawer covers more of the canvas. |
 | Tablet / mobile | < 1024px | Out of MVP scope. The library grid reflows (auto-fill 250px), and the editor is view-only. |
 
 ### Touch & hit targets
 
-- Primary controls are 34–36px tall. Canvas nodes are 164×50. Edges have a 12px hit stroke.
+- Primary controls are 34–36px tall. Canvas nodes are 164×50 by default (at least 120×44). Edges have a 12px hit stroke. Resize handles have a 16px hit area.
 - Icon buttons are at least 28px, and 34px in the top bar.
 
 ## Known Gaps
 
 - **Edge creation UI:** drawing a new connection by dragging from node ports is not yet designed.
-- **Group editing:** creating, resizing and renaming groups on the canvas is not specified.
+- **Group editing:** group from selection, rename, ungroup, drag and drop-into-group are designed (99, 101, 104, 109, 110). Resizing a group boundary is not.
 - **Custom view rules:** a custom view is created with default content. The filter/field configuration UI is not designed.
 - **Validation states:** only JSON and rule-match errors are defined. Field-level validation is not.
-- **Multi-select & bulk actions:** not covered.
+- **Dynamic card attributes:** user-defined card fields are deferred; cards keep the existing fields.
 - **Collaboration / sharing:** out of scope for the local-only MVP.
