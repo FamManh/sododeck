@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildSearchIndex,
+  checkDeck,
   checkIntegrity,
   createDeckSnapshot,
   createEditor,
@@ -23,6 +24,8 @@ const EDIT_BUDGET_MS = 16 * SLACK;
 const SNAPSHOT_BUDGET_MS = 2 * SLACK;
 const SEARCH_BUDGET_MS = 50 * SLACK;
 const SEARCH_INDEX_BUDGET_MS = 100 * SLACK;
+// 015: the problems worker checks a fresh structured clone on every edit, so caches are cold.
+const CHECK_DECK_BUDGET_MS = 30 * SLACK;
 
 function cpuMs(run: () => void): number {
   const start = process.cpuUsage();
@@ -130,5 +133,18 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
     times.sort((a, b) => a - b);
     timings['search index'] = times[2] ?? Infinity;
     expect(timings['search index']).toBeLessThan(SEARCH_INDEX_BUDGET_MS);
+  });
+
+  it(`checks a cold 2,000-node deck for problems in < ${String(CHECK_DECK_BUDGET_MS)} ms (measured at 2026-09-28: 8 ms locally)`, () => {
+    checkDeck(structuredClone(searchFile)); // warm-up (JIT), on a fresh object identity
+    const times: number[] = [];
+    for (let i = 0; i < 5; i++) {
+      const fresh = structuredClone(searchFile);
+      times.push(cpuMs(() => checkDeck(fresh)));
+    }
+    times.sort((a, b) => a - b);
+    timings.checkDeck = times[2] ?? Infinity;
+    expect(checkDeck(searchFile).total).toBeGreaterThan(0);
+    expect(timings.checkDeck).toBeLessThan(CHECK_DECK_BUDGET_MS);
   });
 });

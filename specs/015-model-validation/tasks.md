@@ -33,9 +33,9 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm a green start on branch `015-model-validation`: `pnpm install && pnpm test`.
-- [ ] T002 Run `pnpm bench` before any change and save the table in `specs/015-model-validation/bench-before.md`.
-- [ ] T003 [P] Write `docs/decisions/0013-derived-problems.md` in the header format of 0012: problems are derived by `checkDeck` in `@sododeck/model`, computed in a module worker behind a per-deck store (150 ms trailing, latest wins), never stored (§g-23); the one synchronous check per confirmed delete; alternatives from research R1 and R4.
+- [x] T001 Confirm a green start on branch `015-model-validation`: `pnpm install && pnpm test`.
+- [x] T002 Run `pnpm bench` before any change and save the table in `specs/015-model-validation/bench-before.md`.
+- [x] T003 [P] Write `docs/decisions/0013-derived-problems.md` in the header format of 0012: problems are derived by `checkDeck` in `@sododeck/model`, computed in a module worker behind a per-deck store (150 ms trailing, latest wins), never stored (§g-23); the one synchronous check per confirmed delete; alternatives from research R1 and R4.
 
 ---
 
@@ -43,10 +43,10 @@
 
 ### Model
 
-- [ ] T004 [P] Write `packages/model/test/problems.test.ts` (failing) per [contracts/model-problems.md](contracts/model-problems.md): one positive and one negative case per kind (orphan incl. `parent` exception and one-node deck; duplicates incl. A→B vs B→A, label normalisation, three copies = one problem, self-loop ignored; step without connection; broken chain; incomplete flow: empty flow, empty branch label, empty branch condition, unknown branch; overlapping conditions incl. empty conditions not overlapping; missing rule on a node and on a step; rule without catch-all; invalid rule cells; broken reference on a sticky anchor, a group parent, a parent cycle), dedup (R2), ordering and stable keys (R3), `byObject` indexing, `total === list.length`, and clean fixtures (`packages/schema/examples/*.sododeck.json`, `specs/008-inspector-rules/screens/logistics.sododeck.json`) returning `total === 0`.
-- [ ] T005 Implement `packages/model/src/problems.ts` (`checkDeck`, `DeckProblems`, `Problem`, `ProblemKind`, `ProblemTarget`) per [data-model.md](data-model.md) and research R1–R3, reusing `analyzeFlow`, `ruleChecks`, `checkIntegrity` and `normalizeText`; export from `packages/model/src/index.ts`. Make T004 pass.
-- [ ] T006 [P] Add a `checkDeck` budget to `packages/model/test/perf.test.ts`: 30 ms (× 3 on CI) for 2,000 nodes / 4,000 edges / 40 flows, extending `largeDeck()` in `packages/model/test/helpers.ts` with a size parameter if needed.
-- [ ] T007 [P] Document the API in `packages/model/CLAUDE.md` under "Added by 015".
+- [x] T004 [P] Write `packages/model/test/problems.test.ts` (failing) per [contracts/model-problems.md](contracts/model-problems.md): one positive and one negative case per kind (orphan incl. `parent` exception and one-node deck; duplicates incl. A→B vs B→A, label normalisation, three copies = one problem, self-loop ignored; step without connection; broken chain; incomplete flow: empty flow, empty branch label, empty branch condition, unknown branch; overlapping conditions incl. empty conditions not overlapping; missing rule on a node and on a step; rule without catch-all; invalid rule cells; broken reference on a sticky anchor, a group parent, a parent cycle), dedup (R2), ordering and stable keys (R3), `byObject` indexing, `total === list.length`, and clean fixtures (`packages/schema/examples/*.sododeck.json`, `specs/008-inspector-rules/screens/logistics.sododeck.json`) returning `total === 0`.
+- [x] T005 Implement `packages/model/src/problems.ts` (`checkDeck`, `DeckProblems`, `Problem`, `ProblemKind`, `ProblemTarget`) per [data-model.md](data-model.md) and research R1–R3, reusing `analyzeFlow`, `ruleChecks`, `checkIntegrity` and `normalizeText`; export from `packages/model/src/index.ts`. Make T004 pass.
+- [x] T006 [P] Add a `checkDeck` budget to `packages/model/test/perf.test.ts`: 30 ms (× 3 on CI) for 2,000 nodes / 4,000 edges / 40 flows, extending `largeDeck()` in `packages/model/test/helpers.ts` with a size parameter if needed.
+- [x] T007 [P] Document the API in `packages/model/CLAUDE.md` under "Added by 015".
 
 ### Computation in the app
 

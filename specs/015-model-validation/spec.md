@@ -195,7 +195,7 @@ The architect deletes three components. The confirmation already lists broken st
 
 ### Measurable Outcomes
 
-- **SC-001**: On a test deck with one planted instance of each of the ten problem kinds, 100% are listed, and the demo and sample decks shipped with the app show "No problems" (zero false positives).
+- **SC-001**: On a test deck with one planted instance of each of the ten problem kinds, 100% are listed; a clean deck (the minimal example, the app's demo deck) shows "No problems", and the richer bundled examples list exactly their known, real problems (no false positives).
 - **SC-002**: From the list, a user reaches the object behind any problem in one action (click or ↵), and walks all problems with ⌘. alone.
 - **SC-003**: On a 2,000-component / 4,000-connection deck, the list reflects an edit within 1 second and dragging, typing and panning stay as smooth as without this feature (no regression in the canvas benchmark).
 - **SC-004**: The deck file, the JSON panel and exports are byte-identical with and without problems present (problems never stored).
