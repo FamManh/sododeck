@@ -47,6 +47,8 @@ All of them are shown in the dev-only gallery at `/design` in `apps/app`.
 
 ## Usage in an app
 
+`lib/embedded-fonts.ts` supplies data-URL Geist font faces for standalone SVG exports; import it only from a lazy export chunk.
+
 ```css
 @import 'tailwindcss';
 @import '@sododeck/ui/styles.css';
