@@ -132,8 +132,22 @@ export interface PendingDelete {
   readonly targets: readonly RemovalTarget[];
 }
 
+/** A Tidy layout run (011): `slow` after 500 ms shows the progress bar and Cancel. */
+export interface LayoutRun {
+  status: 'idle' | 'running' | 'slow';
+  viewId?: Id;
+}
+
 export interface UiState {
   selection: Selection;
+  /** The view this tab shows (011, FR-005); `null` = the first view. Never written to the deck. */
+  currentViewId: Id | null;
+  /**
+   * Components created in this view while its filters hide them: kept visible until the view is
+   * left, so a new component never vanishes under the pointer (011 spec edge case).
+   */
+  revealed: ReadonlySet<Id>;
+  layoutRun: LayoutRun;
   drill: readonly DrillFrame[];
   collapsed: ReadonlySet<string>;
   focusMode: boolean;
@@ -179,6 +193,14 @@ export interface UiState {
     groups: ReadonlySet<Id>;
     stickies: ReadonlySet<Id>;
   }) => void;
+  /**
+   * Shows another view (011): clears selection, focus, drill-in, focus mode and revealed
+   * components. An open flow stays open. The caller fits the canvas and announces.
+   */
+  switchView: (id: Id) => void;
+  /** Keeps a just-created component visible in the current view (see `revealed`). */
+  reveal: (id: Id) => void;
+  setLayoutRun: (run: LayoutRun) => void;
   drillInto: (frame: DrillFrame) => void;
   drillUp: (depth?: number) => readonly DrillFrame[];
   setCollapsed: (id: string, on: boolean) => void;
@@ -263,6 +285,8 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
 export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], groups: [], stickies: [] };
 
 const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
+const NO_IDS: ReadonlySet<Id> = new Set();
+const IDLE_LAYOUT: LayoutRun = { status: 'idle' };
 
 export const LABELS_KEY = 'sododeck.labels';
 export const NOTES_KEY = 'sododeck.notes';
@@ -330,6 +354,9 @@ export const useUiStore = create<UiState>()((set, get) => {
   };
   return {
     selection: EMPTY_SELECTION,
+    currentViewId: null,
+    revealed: NO_IDS,
+    layoutRun: IDLE_LAYOUT,
     drill: [],
     collapsed: new Set(),
     focusMode: false,
@@ -410,6 +437,25 @@ export const useUiStore = create<UiState>()((set, get) => {
           patch.stickyDraft = null;
         return patch;
       });
+    },
+    switchView: (id) => {
+      set({
+        currentViewId: id,
+        selection: EMPTY_SELECTION,
+        drill: [],
+        focusMode: false,
+        focusedId: null,
+        focusedEdgeId: null,
+        popover: null,
+        revealed: NO_IDS,
+        descriptionMode: NO_MODES,
+      });
+    },
+    reveal: (id) => {
+      set(({ revealed }) => ({ revealed: new Set([...revealed, id]) }));
+    },
+    setLayoutRun: (layoutRun) => {
+      set({ layoutRun });
     },
     drillInto: (frame) => {
       set((state) => ({
@@ -692,6 +738,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     resetForDeck: () => {
       set({
         selection: EMPTY_SELECTION,
+        currentViewId: null,
+        revealed: NO_IDS,
+        layoutRun: IDLE_LAYOUT,
         stickyEditing: null,
         stickyDraft: null,
         focusedId: null,

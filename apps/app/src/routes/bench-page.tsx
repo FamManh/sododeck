@@ -296,13 +296,16 @@ export function BenchPage() {
   const groups = params.get('groups') === '1';
   const inspector = params.get('inspector') === '1';
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
+  const views = params.get('views') === '1';
 
   const [doc] = useState(() => {
     if (jsonDeck) {
       const { jsonPanel } = useUiStore.getState();
       useUiStore.setState({ jsonPanel: { ...jsonPanel, open: true, tab: 'deck' } });
     }
-    return fromJSON(generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies }).deck);
+    return fromJSON(
+      generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views }).deck,
+    );
   });
 
   return (

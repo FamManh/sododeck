@@ -9,6 +9,7 @@ import { useId, useMemo } from 'react';
 import { useUiStore } from '../../state/ui-store';
 import { COLLAPSED_NODE_PREFIX } from '../deck-to-flow';
 import { scopeOf, visibleGraph } from '../visible-graph';
+import { viewStateOf } from '../views/view-state';
 import { InspectorFrame } from './inspector-frame';
 
 export function GroupInspector({
@@ -23,9 +24,12 @@ export function GroupInspector({
   const toggleCollapsed = useUiStore((state) => state.toggleCollapsed);
   const setCollapsed = useUiStore((state) => state.setCollapsed);
   const switchId = useId();
+  const currentViewId = useUiStore((state) => state.currentViewId);
+  const revealed = useUiStore((state) => state.revealed);
+  const canvasDeck = viewStateOf(deck, currentViewId, revealed).deck;
   const graph = useMemo(
-    () => visibleGraph(deck, scopeOf(drill), collapsed),
-    [deck, drill, collapsed],
+    () => visibleGraph(canvasDeck, scopeOf(drill), collapsed),
+    [canvasDeck, drill, collapsed],
   );
   const rows = graph.merged.filter(
     (edge) =>

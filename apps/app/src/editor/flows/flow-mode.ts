@@ -21,6 +21,7 @@ import {
 } from './played-path';
 import { findFlow } from './session-path';
 import { scopeOf, visibleGraph } from '../visible-graph';
+import { canvasDeckOf } from '../views/use-current-view';
 
 const ui = () => useUiStore.getState();
 
@@ -60,7 +61,7 @@ function announceStep(deck: SododeckFile, playback: Playback, stepId: string | n
   const step = currentOf(playback.played, stepId);
   if (step !== null) {
     const state = useUiStore.getState();
-    const graph = visibleGraph(deck, scopeOf(state.drill), state.collapsed);
+    const graph = visibleGraph(canvasDeckOf(deck), scopeOf(state.drill), state.collapsed);
     ui().announce(
       stepAnnouncement(
         deck,

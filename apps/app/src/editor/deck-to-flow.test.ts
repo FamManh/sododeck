@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { EMPTY_SELECTION } from '../state/ui-store';
 import {
   type CanvasView,
+  type DeckFlowNode,
   facingSides,
   toFlowEdges,
   toFlowNodes,
@@ -13,6 +14,7 @@ import {
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
 import { visibleGraph } from './visible-graph';
+import { viewStateOf } from './views/view-state';
 
 function topLevelGraph(file: SododeckFile) {
   return visibleGraph(file, { node: null, group: null }, new Set());
@@ -251,6 +253,72 @@ describe('toFlowNodes', () => {
     expect(toFlowNodes(deck, graph, view()).find((n) => n.id === 'a')).toBe(
       first.find((n) => n.id === 'a'),
     );
+  });
+});
+
+describe('view render (011)', () => {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'a', type: 'client', title: 'A', tech: 'Swift', host: 'App Store', owner: 'Mobile' },
+      { id: 'b', type: 'service', title: 'B', tech: 'Go', position: { x: 10, y: 20 } },
+    ],
+    edges: [{ id: 'e', from: 'a', to: 'b' }],
+    flows: [{ id: 'f', title: 'F', steps: [{ id: 's', edge: 'e' }] }],
+    views: [
+      { id: 'sys', type: 'system', title: 'System' },
+      {
+        id: 'inf',
+        type: 'infra',
+        title: 'Infra',
+        subtitleField: 'host',
+        dimKinds: ['client'],
+        positions: { b: { x: 400, y: 50 } },
+        pinned: ['b'],
+      },
+    ],
+  };
+  const nodesIn = (viewId: string) => {
+    const state = viewStateOf(file, viewId);
+    return toFlowNodes(
+      state.deck,
+      topLevelGraph(state.deck),
+      view({ render: state.render }),
+    ) as DeckFlowNode[];
+  };
+
+  it.each([
+    ['tech', 'Swift'],
+    ['host', 'App Store'],
+    ['owner', 'Mobile'],
+    ['flows', '1 flow · Mobile'],
+    ['none', undefined],
+  ] as const)('shows the %s subtitle', (subtitleField, expected) => {
+    const render = { ...viewStateOf(file, 'sys').render, subtitleField };
+    const withCounts = { ...render, flowCounts: new Map([['a', 1]]) };
+    const nodes = toFlowNodes(file, topLevelGraph(file), view({ render: withCounts }));
+    expect((nodes[0] as DeckFlowNode).data.subtitle).toBe(expected);
+  });
+
+  it('keeps tech subtitles without a render (System defaults)', () => {
+    const nodes = toFlowNodes(file, topLevelGraph(file), view()) as DeckFlowNode[];
+    expect(nodes.map((n) => n.data.subtitle)).toEqual(['Swift', 'Go']);
+  });
+
+  it('uses the view position over the base position, and base positions elsewhere', () => {
+    expect(nodesIn('sys')[1]?.position).toEqual({ x: 10, y: 20 });
+    expect(nodesIn('inf')[1]?.position).toEqual({ x: 400, y: 50 });
+  });
+
+  it('dims and pins per view, and rebuilds the node when that changes', () => {
+    const infra = nodesIn('inf');
+    expect(infra[0]?.data.viewDimmed).toBe(true);
+    expect(infra[0]?.className).toBe('view-dimmed');
+    expect(infra[1]?.data.pinned).toBe(true);
+    const system = nodesIn('sys');
+    expect(system[0]?.data.viewDimmed).toBeUndefined();
+    expect(system[0]).not.toBe(infra[0]);
+    expect(nodesIn('sys')[0]).toBe(system[0]);
   });
 });
 

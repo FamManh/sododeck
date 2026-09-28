@@ -556,6 +556,70 @@ describe('canvas handlers', () => {
     expect(editor().canUndo()).toBe(false);
   });
 
+  describe('drags go through the current view (011 FR-020, FR-021)', () => {
+    const drag = (
+      h: ReturnType<typeof handlers>['h'],
+      id: string,
+      to: { x: number; y: number },
+    ) => {
+      act(() => {
+        h().onNodeDragStart({}, flowNode(id));
+        h().onNodesChange([
+          { type: 'position', id, position: { x: to.x - 5, y: to.y }, dragging: true },
+        ]);
+        h().onNodesChange([{ type: 'position', id, position: to, dragging: true }]);
+        h().onNodeDragStop();
+      });
+    };
+
+    it('writes the base position in the base view, one undo step', () => {
+      const { h, doc, editor } = handlers();
+      drag(h, 'a', { x: 40, y: 50 });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 40, y: 50 });
+      expect(toJSON(doc).views).toEqual([]);
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 0, y: 0 });
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('writes a view position in another view, and one undo removes it', () => {
+      const { h, doc, editor } = handlers();
+      act(() => {
+        ui().switchView('infra');
+      });
+      drag(h, 'a', { x: 40, y: 50 });
+      const file = toJSON(doc);
+      expect(file.nodes[0]?.position).toEqual({ x: 0, y: 0 });
+      expect(file.views.find((v) => v.id === 'infra')?.positions).toEqual({ a: { x: 40, y: 50 } });
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).views.find((v) => v.id === 'infra')?.positions).toBeUndefined();
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('keeps a pinned note where it is dropped in a view that moved its component', () => {
+      const { h, doc } = handlers(
+        deckOf({
+          nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+          stickies: [{ id: 'st', text: 'Note', anchor: 'a', position: { x: 10, y: -20 } }],
+          views: [
+            { id: 'base', type: 'system', title: 'Base' },
+            { id: 'moved', type: 'custom', title: 'Moved', positions: { a: { x: 500, y: 0 } } },
+          ],
+        }),
+      );
+      act(() => {
+        ui().switchView('moved');
+        h().onNodesChange([{ type: 'position', id: 'sticky:st', position: { x: 530, y: -40 } }]);
+      });
+      // Offset from where A is drawn in this view (500, 0).
+      expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 30, y: -40 });
+    });
+  });
+
   it('selects an unselected component when its drag starts', () => {
     const { h } = handlers();
     act(() => {

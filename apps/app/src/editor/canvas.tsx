@@ -58,6 +58,7 @@ import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
+import { readViewState, useViewState } from './views/use-current-view';
 import { MAX_ZOOM, MIN_ZOOM, ZoomControl } from './zoom-control';
 
 const nodeTypes: NodeTypes = {
@@ -115,7 +116,7 @@ function useViewSync(): void {
         ) {
           return;
         }
-        const deck = readDeck(editor.doc);
+        const deck = readViewState(editor.doc).deck;
         const ui = useUiStore.getState();
         const before = ui.drill;
         ui.pruneView({
@@ -183,7 +184,7 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     const root = wrapper.current;
     if (focusedId === null || !root?.contains(document.activeElement)) return;
-    const deck = readDeck(editor.doc);
+    const deck = readViewState(editor.doc).deck;
     const ui = useUiStore.getState();
     const { zoom: currentZoom } = getViewport();
     const scope = scopeOf(ui.drill);
@@ -230,7 +231,11 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
  */
 export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasProps) {
   const editor = useEditor();
-  const deck = useDeckSnapshot(editor.doc);
+  const fullDeck = useDeckSnapshot(editor.doc);
+  // The canvas draws the deck as the current view shows it (011, ADR 0012 §6).
+  const viewState = useViewState();
+  const deck = viewState.deck;
+  const render = viewState.render;
   const selection = useUiStore((s) => s.selection);
   const drill = useUiStore((s) => s.drill);
   const collapsed = useUiStore((s) => s.collapsed);
@@ -342,8 +347,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       level,
       focus,
       marks: collapsedMarks,
+      render,
     }),
-    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks],
+    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks, render],
   );
 
   const nodes = useMemo(
@@ -585,7 +591,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         )}
         <SelectionFrame deck={deck} level={level} />
       </ReactFlow>
-      {deck.nodes.length === 0 && <EmptyCanvasCard />}
+      {fullDeck.nodes.length === 0 && <EmptyCanvasCard />}
       {drilledEmpty && (
         <EmptyCanvasCard
           title="No components in this group"
@@ -593,9 +599,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           action={null}
         />
       )}
-      <EdgePopover deck={deck} />
+      <EdgePopover deck={fullDeck} />
       <MergedEdgePopover deck={deck} />
-      <ConnectPopover deck={deck} />
+      <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
     </div>
   );

@@ -26,6 +26,7 @@ import {
 } from './flows/flow-overlay';
 import type { Level } from './levels';
 import type { VisibleGraph } from './visible-graph';
+import { subtitleOf, type ViewRender } from './views/view-state';
 
 type DeckNodeObject = SododeckFile['nodes'][number];
 type DeckEdgeObject = SododeckFile['edges'][number];
@@ -47,6 +48,12 @@ export interface DeckNodeData extends Record<string, unknown> {
   flowStart?: string;
   /** Flow mode (007): from/to of the current step, a ring and `aria-current="step"`. */
   currentStep?: boolean;
+  /** Dimmed by the view's settings (011 FR-013): reduced opacity, still interactive. */
+  viewDimmed?: boolean;
+  /** Pinned in the current view (011 FR-023): a pin glyph; Tidy layout leaves it in place. */
+  pinned?: boolean;
+  /** Created here while the view hides it (011): shown until the view is left, with a note. */
+  hiddenInView?: boolean;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -210,6 +217,8 @@ export interface CanvasView {
   level: Level;
   focus: FocusSet | null;
   marks: CollapsedFlowMarks;
+  /** The current view's subtitles, dimming, pins and notes (011); none = System defaults. */
+  render?: ViewRender;
 }
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
@@ -250,12 +259,25 @@ function toFlowNode(
   const selected = view.selection.nodes.includes(node.id);
   const focused = node.id === view.focusedId;
   const dimmed = view.focus !== null && !view.focus.members.has(node.id);
-  const className = [inFlow ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+  const render = view.render;
+  const subtitle = render === undefined ? node.tech : subtitleOf(node, render);
+  const viewDimmed = render?.dimmed.has(node.id) === true;
+  const pinned = render?.pinned.has(node.id) === true;
+  const hiddenInView = render?.revealedHidden.has(node.id) === true;
+  const className = [
+    inFlow ? 'in-flow' : null,
+    inFocus ? 'in-focus' : null,
+    viewDimmed ? 'view-dimmed' : null,
+  ]
     .filter(Boolean)
     .join(' ');
   const size = sizeForLevel(view.level);
   if (
     cached?.selected === selected &&
+    cached.data.subtitle === subtitle &&
+    (cached.data.viewDimmed === true) === viewDimmed &&
+    (cached.data.pinned === true) === pinned &&
+    (cached.data.hiddenInView === true) === hiddenInView &&
     cached.data.focused === focused &&
     cached.data.level === view.level &&
     cached.data.childCount === childCount &&
@@ -279,7 +301,7 @@ function toFlowNode(
     data: {
       title: node.title,
       kind: node.type,
-      subtitle: node.tech,
+      subtitle,
       owner: node.owner,
       tags: node.tags ?? [],
       hasRules: (node.rules?.length ?? 0) > 0,
@@ -289,6 +311,9 @@ function toFlowNode(
       focused,
       ...(flowStart === undefined ? {} : { flowStart }),
       ...(currentStep ? { currentStep } : {}),
+      ...(viewDimmed ? { viewDimmed } : {}),
+      ...(pinned ? { pinned } : {}),
+      ...(hiddenInView ? { hiddenInView } : {}),
     },
   };
   nodeCache.set(node, flowNode);

@@ -12,6 +12,7 @@ import { useEditor } from '../../model/use-editor';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { useLiveField } from '../fields/use-live-field';
+import { moveStickyInView, readViewState } from '../views/use-current-view';
 import type { StickyFlowNode } from '../deck-to-flow';
 import { finishDraft, notesAreReadOnly } from './sticky-actions';
 import { stickyTintClass } from './sticky-tint';
@@ -89,8 +90,8 @@ export const StickyNode = memo(function StickyNode({
           event.preventDefault();
           const sticky = readDeck(editor.doc).stickies.find((entry) => entry.id === data.stickyId);
           if (sticky === undefined) return;
-          const point = stickyCanvasPosition(readDeck(editor.doc), sticky).point;
-          editor.moveSticky(data.stickyId, { x: point.x + move.x, y: point.y + move.y });
+          const point = stickyCanvasPosition(readViewState(editor.doc).deck, sticky).point;
+          moveStickyInView(editor, data.stickyId, { x: point.x + move.x, y: point.y + move.y });
           return;
         }
         if (event.key === 'Enter' || event.key === 'F2') {

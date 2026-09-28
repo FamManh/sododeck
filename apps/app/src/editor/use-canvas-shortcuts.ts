@@ -37,6 +37,7 @@ import { effectiveLevel, levelForZoom } from './levels';
 import { useSaveControls } from './save-context';
 import { addNoteAt } from './stickies/sticky-actions';
 import { scopeOf, visibleGraph } from './visible-graph';
+import { moveStickyInView, readViewState } from './views/use-current-view';
 
 export { isTextTarget };
 
@@ -104,7 +105,8 @@ export function useCanvasKeyDown() {
     (event: ReactKeyboardEvent) => {
       if (event.defaultPrevented || isTextTarget(event.target)) return;
       const ui = useUiStore.getState();
-      const deck = readDeck(editor.doc);
+      // Geometry and targets as the current view draws them (011).
+      const deck = readViewState(editor.doc).deck;
       const graph = visibleGraph(deck, scopeOf(ui.drill), ui.collapsed);
       const key = event.key;
       const session = ui.flowSession;
@@ -241,7 +243,7 @@ export function useCanvasKeyDown() {
               : direction === 'left'
                 ? { x: -step, y: 0 }
                 : { x: step, y: 0 };
-        editor.moveSticky(selectedSticky, { x: point.x + delta.x, y: point.y + delta.y });
+        moveStickyInView(editor, selectedSticky, { x: point.x + delta.x, y: point.y + delta.y });
         return;
       }
       if (direction) {
