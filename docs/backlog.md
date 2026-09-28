@@ -1285,7 +1285,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 021-design-sync-canvas-first
 
-- **Status:** implemented (2026-09-28) — see [`spec.md`](../specs/021-design-sync-canvas-first/spec.md). Design files, screenshots 86–116, design-analysis §a–§d and DESIGN.md "Canvas-first Editor" / "Card Colours" are in the repo. Importing found five more mismatches with defaults (§g-48–§g-52: ⌘. and C shortcuts, per-deck UI memory, icon-only save status, 12 custom colours) for 018–020 to confirm.
+- **Status:** implemented (2026-09-28) — see [`spec.md`](../specs/021-design-sync-canvas-first/spec.md). Design files, screenshots 86–116, design-analysis §a–§d and DESIGN.md "Canvas-first Editor" / "Card Colours" are in the repo. Importing found six more mismatches with defaults (§g-48–§g-54: ⌘. and C shortcuts, per-deck UI memory, icon-only save status, 12 custom colours, no keyboard path for resize and routing) for 018–020 to confirm.
 - **Milestone:** after M4 · **Depends on:** 011 · **Estimate:** 1 d (docs only, no app code)
 - **Goal:** The canvas-first design (86–116) lives in the repo and the design rules point to it,
   so 018–020 are specified and built against it rather than the 3-column prototype.
