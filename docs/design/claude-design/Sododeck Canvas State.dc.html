@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="./sododeck-data.js"></script>
+<script src="./sododeck-states.js"></script>
+<script src="./sododeck-canvas.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<style>html,body{margin:0}*{box-sizing:border-box}a{color:#d9560f}a:hover{color:#b3480c}</style>
+</helmet>
+<sc-if value="{{ notReady }}"><div ref="{{ phRef }}" style="width:100%;height:100%;min-width:1024px;min-height:768px;background:#e9e9e6"></div></sc-if>
+<sc-if value="{{ ready }}">
+<div ref="{{ rootRef }}" style="{{ s.root }}">
+  <div style="{{ s.dots }}"></div>
+  <div style="{{ s.w.st }}">
+    <sc-for list="{{ s.w.groups }}" as="g"><div style="{{ g.st }}"><div style="{{ g.lst }}"><sc-if value="{{ g.icon }}"><span data-i="{{ g.icon }}" style="{{ g.ist }}"></span></sc-if><span>{{ g.label }}</span><sc-if value="{{ g.count }}"><span style="font-weight:400;opacity:.8">{{ g.count }}</span></sc-if></div></div></sc-for>
+    <svg width="10" height="10" style="position:absolute;left:0;top:0;overflow:visible;pointer-events:none;z-index:1">
+      <sc-for list="{{ s.w.edges }}" as="e"><path d="{{ e.d }}" style="{{ e.st }}"></path><sc-if value="{{ e.dot }}"><circle cx="{{ e.ex }}" cy="{{ e.ey }}" r="{{ e.r }}" style="{{ e.dst }}"></circle></sc-if></sc-for>
+    </svg>
+    <sc-for list="{{ s.w.nodes }}" as="n">
+      <div style="{{ n.st }}">
+        <sc-if value="{{ n.tileOn }}"><div style="{{ n.tile }}"><span data-i="{{ n.icon }}" style="{{ n.ist }}"></span></div></sc-if>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+          <div style="{{ n.tst }}"><sc-for list="{{ n.tp }}" as="p"><span style="{{ p.st }}">{{ p.t }}</span></sc-for></div>
+          <sc-if value="{{ n.sub }}"><div style="{{ n.sst }}">{{ n.sub }}</div></sc-if>
+        </div>
+        <sc-if value="{{ n.rules }}"><span data-i="table" style="{{ n.rst }}"></span></sc-if>
+        <sc-for list="{{ n.decos }}" as="d"><div style="{{ d.st }}"><sc-if value="{{ d.icon }}"><span data-i="{{ d.icon }}" style="{{ d.ist }}"></span></sc-if><sc-if value="{{ d.t }}"><span>{{ d.t }}</span></sc-if></div></sc-for>
+      </div>
+    </sc-for>
+    <sc-for list="{{ s.w.decos }}" as="d"><div style="{{ d.st }}"><sc-if value="{{ d.icon }}"><span data-i="{{ d.icon }}" style="{{ d.ist }}"></span></sc-if><sc-if value="{{ d.t }}"><span style="white-space:pre">{{ d.t }}</span></sc-if></div></sc-for>
+  </div>
+  <sc-for list="{{ s.panels }}" as="p"><div style="{{ p.st }}"><sc-for list="{{ p.rows }}" as="r"><div style="{{ r.st }}"><sc-for list="{{ r.cells }}" as="c"><div style="{{ c.st }}">
+    <sc-if value="{{ c.hasTile }}"><div style="{{ c.tileSt }}"><span data-i="{{ c.tileIcon }}" style="{{ c.tileIst }}"></span></div></sc-if>
+    <sc-if value="{{ c.icon }}"><span data-i="{{ c.icon }}" style="{{ c.ist }}"></span></sc-if>
+    <sc-if value="{{ c.one }}"><span style="{{ c.tst }}">{{ c.t }}</span></sc-if>
+    <sc-if value="{{ c.two }}"><div style="{{ c.wst }}"><span style="{{ c.tst }}">{{ c.t }}</span><span style="{{ c.t2st }}">{{ c.t2 }}</span></div></sc-if>
+    <sc-for list="{{ c.segs }}" as="g"><span style="{{ g.st }}"><sc-if value="{{ g.icon }}"><span data-i="{{ g.icon }}" style="{{ g.ist }}"></span></sc-if><sc-if value="{{ g.t }}"><span>{{ g.t }}</span></sc-if></span></sc-for>
+    <sc-if value="{{ c.kbd }}"><span style="{{ c.kst }}">{{ c.kbd }}</span></sc-if>
+    <sc-if value="{{ c.chev }}"><span data-i="{{ c.chev }}" style="{{ c.cst }}"></span></sc-if>
+  </div></sc-for></div></sc-for></div></sc-for>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;state&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;86&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;eager&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { ready: !!window.SODO_CV };
+  componentDidMount() {
+    this.t = setInterval(() => {
+      if (!this.state.ready && window.SODO_CV) this.setState({ ready: true });
+      if (this.state.ready && window.lucide && this.fill()) clearInterval(this.t);
+    }, 120);
+  }
+  componentDidUpdate() { this.fill(); }
+  componentWillUnmount() { clearInterval(this.t); if (this.cleanupWatch) this.cleanupWatch(); }
+  watch(el) {
+    if (!el || this.io || this.state.vis) return;
+    this.ph = el;
+    const show = () => { if (this.state.vis) return; this.setState({ vis: true }); cleanup(); };
+    const check = () => { const p = this.ph; if (!p || !p.isConnected) return; const r = p.getBoundingClientRect(), m = 400; if (r.bottom > -m && r.top < innerHeight + m && r.right > -m && r.left < innerWidth + m) show(); };
+    const cleanup = () => { if (this.io) this.io.disconnect(); clearInterval(this.pt); removeEventListener('scroll', check, true); removeEventListener('resize', check); removeEventListener('beforeprint', show); };
+    this.io = window.IntersectionObserver ? new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) show(); }, { rootMargin: '400px' }) : { disconnect() {}, observe() {} };
+    this.io.observe(el);
+    addEventListener('scroll', check, true); addEventListener('resize', check); addEventListener('beforeprint', show);
+    this.pt = setInterval(check, 300);
+    this.cleanupWatch = cleanup;
+    check();
+  }
+  fill() { return !!(window.SODO_ICONS && this.root && window.SODO_ICONS(this.root)); }
+  renderVals() {
+    const vis = this.state.vis || this.props.eager;
+    if (!vis) return { ready: false, notReady: true, s: {}, rootRef: null, phRef: el => this.watch(el) };
+    let s = null;
+    if (this.state.ready && window.SODO_CV) { try { s = window.SODO_CV.build(String(this.props.state || '86'), this.props.theme || 'light'); } catch (e) { console.error('state build failed', this.props.state, e); } }
+    return { ready: !!s, notReady: !s, s: s || {}, phRef: el => this.watch(el), rootRef: el => { this.root = el; if (el) setTimeout(() => this.fill(), 0); } };
+  }
+}
+</script>
+</body>
+</html>
