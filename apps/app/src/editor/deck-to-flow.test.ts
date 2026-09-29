@@ -203,7 +203,7 @@ describe('toFlowNodes', () => {
     });
   });
 
-  it('adds non-interactive group boundaries below the components', () => {
+  it('adds group frames below the components, dragged by their handles only (016 R5)', () => {
     const [group] = toFlowNodes(deck, topLevelGraph(deck), view());
     expect(group).toMatchObject({
       id: 'group:g',
@@ -211,12 +211,49 @@ describe('toFlowNodes', () => {
       position: { x: 5 - 24, y: 6 - 24 },
       width: 164 + 48,
       height: 50 + 48,
-      selectable: false,
-      draggable: false,
+      selectable: true,
+      draggable: true,
+      dragHandle: '.sd-group-handle',
+      // Empty space inside the frame lets the pointer through to the pane (FR-017).
+      style: { pointerEvents: 'none' },
       focusable: false,
       zIndex: -1,
       data: { title: 'Core', count: 1, level: 'system' },
     });
+  });
+
+  it('follows a change to the groups alone: a rename or a resized frame (016)', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const renamed = {
+      ...deck,
+      groups: deck.groups.map((g) => ({
+        ...g,
+        title: 'Renamed',
+        position: { x: 0, y: 0 },
+        size: { width: 500, height: 400 },
+      })),
+    };
+    const next = toFlowNodes(renamed, topLevelGraph(renamed), view());
+    const frame = next.find((n) => n.id === 'group:g');
+    expect(frame).not.toBe(first.find((n) => n.id === 'group:g'));
+    expect(frame).toMatchObject({ width: 500, height: 400, data: { title: 'Renamed' } });
+  });
+
+  it('marks a selected group frame, and rebuilds only that frame', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const selected = toFlowNodes(
+      deck,
+      graph,
+      view({ selection: { ...EMPTY_SELECTION, groups: ['g'] } }),
+    );
+    const frame = selected.find((n) => n.id === 'group:g');
+    // In data, not React Flow's `selected`: that would lift the frame above its members.
+    expect(frame?.data).toMatchObject({ selected: true });
+    expect(frame?.selected).toBeUndefined();
+    expect(frame).not.toBe(first.find((n) => n.id === 'group:g'));
+    expect(selected.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
   });
 
   it('returns the same object when level is unchanged and rebuilds when level or dimming changes', () => {

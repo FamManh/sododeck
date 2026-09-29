@@ -58,7 +58,12 @@ function Item({ action }: { action: ResolvedAction }) {
     const checked = action.children.find((child) => child.checked);
     return (
       <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger
+          disabled={action.disabled !== null}
+          {...(action.disabled === null
+            ? {}
+            : { title: action.disabled, 'aria-description': action.disabled })}
+        >
           {icon}
           {action.label}
         </DropdownMenuSubTrigger>
@@ -77,7 +82,12 @@ function Item({ action }: { action: ResolvedAction }) {
               ))}
             </DropdownMenuRadioGroup>
           ) : (
-            action.children.map((child) => <Item key={child.id} action={child} />)
+            action.children.map((child) => (
+              <Fragment key={child.id}>
+                {child.separatorBefore && <DropdownMenuSeparator />}
+                <Item action={child} />
+              </Fragment>
+            ))
           )}
         </DropdownMenuSubContent>
       </DropdownMenuSub>

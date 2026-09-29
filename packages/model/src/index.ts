@@ -22,6 +22,8 @@ export {
 } from './problems';
 export type { RemovalResult } from './ops/cascade';
 export type { ViewSettingsPatch } from './ops/views';
+export type { PastedIds, PasteOptions } from './ops/paste';
+export type { GroupSelection } from './ops/group-selection';
 export {
   baseViewId,
   CUSTOM_VIEW_DEFAULTS,
@@ -38,6 +40,14 @@ export {
   type NewBranch,
 } from './ops/branches';
 export { createDeckSnapshot, type DeckSnapshot } from './snapshot';
+export {
+  fragmentOrigin,
+  parseFragment,
+  serializeFragment,
+  toFragment,
+  type Fragment,
+  type FragmentSelection,
+} from './fragment';
 export { previewRemoval, removeTarget, type RemovalTarget } from './preview';
 export {
   serializeEntries,
@@ -58,6 +68,8 @@ export { evaluateRule, ruleChecks, type Evaluation, type RuleChecks } from './ru
 export { ruleUsage, type RuleUsage } from './rules/usage';
 export type { RuleHost } from './ops/rule-links';
 export {
+  fitGroupFrames,
+  frameOf,
   NODE_GRID,
   STICKY_DEFAULT_OFFSET,
   nodeCanvasPosition,
@@ -65,6 +77,7 @@ export {
   stickyLabel,
   viewNodePosition,
   viewPosition,
+  type FitOptions,
   type Point,
   type StickyPlacement,
 } from './geometry';

@@ -30,16 +30,16 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
   it('lists each target’s menu, in sections', () => {
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
-      ['Copy JSON'],
-      ['Arrange'],
+      ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
+      ['Group', 'Align', 'Arrange'],
       ['Pin'],
       ['Delete'],
     ]);
     expect(labels(TARGETS.parent, 'menu')[0]).toEqual(['Open details', 'Open inside', 'Rename']);
     expect(labels(TARGETS.components, 'menu')).toEqual([
       ['Open details'],
-      ['Copy JSON'],
-      ['Arrange'],
+      ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
+      ['Group', 'Align', 'Arrange'],
       ['Pin all'],
       ['Delete'],
     ]);
@@ -51,9 +51,11 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.group, 'menu')).toEqual([
       ['Open details', 'Rename'],
       ['Collapse', 'Select members'],
+      ['Copy', 'Cut', 'Duplicate'],
       ['Delete group'],
     ]);
     expect(labels(TARGETS.canvas, 'menu')).toEqual([
+      ['Paste'],
       ['Add component', 'Add sticky'],
       ['Select all', 'Fit'],
     ]);
@@ -61,11 +63,14 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.mixed, 'menu')).toEqual([['Copy JSON'], ['Delete']]);
   });
 
-  it('keeps only Open details, Copy JSON and Fit in flow mode and sessions', () => {
+  it('keeps only Open details, Copy, Copy JSON and Fit in flow mode and sessions', () => {
     for (const mode of ['flow', 'session'] as const) {
-      expect(labels(TARGETS.component, 'menu', mode)).toEqual([['Open details'], ['Copy JSON']]);
+      expect(labels(TARGETS.component, 'menu', mode)).toEqual([
+        ['Open details'],
+        ['Copy', 'Copy JSON'],
+      ]);
       expect(labels(TARGETS.connection, 'menu', mode)).toEqual([['Open details'], ['Copy JSON']]);
-      expect(labels(TARGETS.group, 'menu', mode)).toEqual([['Open details']]);
+      expect(labels(TARGETS.group, 'menu', mode)).toEqual([['Open details'], ['Copy']]);
       expect(labels(TARGETS.canvas, 'menu', mode)).toEqual([['Fit']]);
     }
   });
@@ -86,6 +91,8 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Owner: none',
       'Tags',
       'Technology: none',
+      'Group',
+      'Align',
       'More actions',
     ]);
     expect(labels(TARGETS.connection, 'toolbar').flat()).toEqual([

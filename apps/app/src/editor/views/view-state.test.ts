@@ -71,6 +71,30 @@ describe('viewDeck: the deck as a view draws it (ADR 0012 §6)', () => {
   });
 });
 
+describe('viewDeck: group frames of a view (016, R4)', () => {
+  const framed: SododeckFile = {
+    ...deck,
+    groups: [{ id: 'g', title: 'G', position: { x: 0, y: 0 }, size: { width: 500, height: 300 } }],
+  };
+  const own = { position: { x: 40, y: 50 }, size: { width: 600, height: 400 } };
+
+  it('projects the view’s own frame onto the group, keeping the other fields', () => {
+    const v = view({ groupFrames: { g: own } });
+    const projected = viewDeck(framed, v, none);
+    expect(projected.groups[0]).toEqual({ id: 'g', title: 'G', ...own });
+    expect(groupBounds(projected).get('g')).toEqual({ x: 40, y: 50, width: 600, height: 400 });
+    expect(projected.nodes).toBe(framed.nodes);
+    expect(viewDeck({ ...framed }, v, none).groups).toBe(projected.groups);
+  });
+
+  it('leaves base frames alone when the view has none', () => {
+    expect(viewDeck(framed, view(), none)).toBe(framed);
+    expect(viewDeck(framed, view({ groupFrames: {} }), none)).toBe(framed);
+    const [base] = viewStateOf(framed, null).deck.groups;
+    expect(base).toBe(framed.groups[0]);
+  });
+});
+
 describe('visibleGraph over a view deck (FR-012)', () => {
   const top = { node: null, group: null };
 

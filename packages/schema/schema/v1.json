@@ -112,6 +112,28 @@
         "y": { "description": "Vertical coordinate.", "type": "number" }
       }
     },
+    "Size": {
+      "title": "Size",
+      "description": "A width and a height in canvas pixels. Both are greater than 0.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "description": "Width in pixels.", "type": "number", "exclusiveMinimum": 0 },
+        "height": { "description": "Height in pixels.", "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "Frame": {
+      "title": "Frame",
+      "description": "A rectangle on the canvas: its top-left corner and its size.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["position", "size"],
+      "properties": {
+        "position": { "$ref": "#/$defs/Position" },
+        "size": { "$ref": "#/$defs/Size" }
+      }
+    },
     "Link": {
       "title": "Link",
       "description": "A link to external documentation, a dashboard, a repository…",
@@ -227,10 +249,11 @@
     },
     "Group": {
       "title": "Group",
-      "description": "A named set of nodes (domain, bounded context, VPC). Its bounds are derived from its nodes; no geometry is stored.",
+      "description": "A named frame that holds nodes and nested groups (domain, bounded context, VPC). Membership is stored on the members (`node.group`, `group.parent`). `position` and `size` place the frame. Older files may omit them, and the app then fits a frame around the members.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "title"],
+      "dependentRequired": { "position": ["size"], "size": ["position"] },
       "properties": {
         "id": { "$ref": "#/$defs/Id" },
         "title": { "$ref": "#/$defs/Text", "description": "Display name." },
@@ -238,6 +261,14 @@
         "parent": {
           "$ref": "#/$defs/Id",
           "description": "Id of the enclosing group, for nested groups."
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "Top-left corner of the frame on the base canvas. Set together with `size`."
+        },
+        "size": {
+          "$ref": "#/$defs/Size",
+          "description": "Size of the frame on the base canvas. Set together with `position`."
         }
       }
     },
@@ -314,6 +345,12 @@
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/Id" },
           "additionalProperties": { "$ref": "#/$defs/Position" }
+        },
+        "groupFrames": {
+          "description": "Per-group frame overrides for this view, keyed by group id. Keys must be ids of groups in the file. Absent means the base frames.",
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/Id" },
+          "additionalProperties": { "$ref": "#/$defs/Frame" }
         },
         "pinned": {
           "description": "Ids of the nodes that automatic layout must not move in this view. Absent means none.",

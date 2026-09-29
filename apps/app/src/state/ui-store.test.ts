@@ -24,6 +24,63 @@ describe('ui store', () => {
     localStorage.clear();
   });
 
+  describe('canvas editing (016)', () => {
+    const guide = { axis: 'x' as const, at: 10, from: 0, to: 100 };
+
+    it('holds the gesture state, UI-only', () => {
+      state().setCanvasGesture('group-drag');
+      state().setDropTarget('g');
+      state().setGuides([guide]);
+      state().setDragReadout({ dx: 100, dy: -40 });
+      state().setMarqueeCount(3);
+      state().setPasteSerial({ at: { x: 1, y: 2 }, count: 2 });
+      expect(state()).toMatchObject({
+        canvasGesture: 'group-drag',
+        dropTarget: 'g',
+        guides: [guide],
+        dragReadout: { dx: 100, dy: -40 },
+        marqueeCount: 3,
+        pasteSerial: { at: { x: 1, y: 2 }, count: 2 },
+      });
+      for (const gesture of ['resize', 'marquee'] as const) {
+        state().setCanvasGesture(gesture);
+        expect(state().canvasGesture).toBe(gesture);
+      }
+    });
+
+    it('clears everything when another deck opens', () => {
+      state().setDropTarget('g');
+      state().setGuides([guide]);
+      state().setDragReadout({ dx: 1, dy: 1 });
+      state().setMarqueeCount(3);
+      state().setPasteSerial({ at: { x: 1, y: 2 }, count: 2 });
+      state().resetForDeck(null);
+      expect(state()).toMatchObject({
+        dropTarget: null,
+        guides: [],
+        dragReadout: null,
+        marqueeCount: null,
+        pasteSerial: null,
+      });
+    });
+
+    it('drops a drop target whose group is gone', () => {
+      state().setDropTarget('g');
+      const none = new Set<string>();
+      state().pruneSelection({ nodes: none, edges: none, groups: new Set(['g']), stickies: none });
+      expect(state().dropTarget).toBe('g');
+      state().pruneSelection({ nodes: none, edges: none, groups: none, stickies: none });
+      expect(state().dropTarget).toBeNull();
+    });
+
+    it('keeps the same guides array when nothing changed', () => {
+      state().setGuides([]);
+      const before = state().guides;
+      state().setGuides([]);
+      expect(state().guides).toBe(before);
+    });
+  });
+
   it('keeps the last visited problem until the deck changes (015 FR-021)', () => {
     const ui = useUiStore.getState;
     expect(ui().problemCursor).toBeNull();

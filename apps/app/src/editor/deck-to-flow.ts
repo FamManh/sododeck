@@ -64,6 +64,11 @@ export interface GroupBoundaryData extends Record<string, unknown> {
   count: number;
   level: Level;
   focused: boolean;
+  /**
+   * Selected (016): shows the resize handles. Not React Flow's `selected`, which would raise the
+   * frame above its members (`elevateNodesOnSelect`).
+   */
+  selected?: boolean;
 }
 
 export interface DeckEdgeData extends Record<string, unknown> {
@@ -134,6 +139,8 @@ export { NODE_SIZE };
 
 /** Group boundaries are React Flow nodes too; their ids are prefixed so they never clash. */
 export const GROUP_NODE_PREFIX = 'group:';
+/** What a group frame is dragged by: its label and an 8 px edge band (016 R5). */
+export const GROUP_HANDLE_CLASS = 'sd-group-handle';
 export const COLLAPSED_NODE_PREFIX = 'collapsed:';
 export const PORT_NODE_PREFIX = 'port:';
 export const MERGED_EDGE_PREFIX = 'merged:';
@@ -165,13 +172,32 @@ interface DeckLookups {
   nodeTitleById: ReadonlyMap<string, string>;
   edgeNodeViews: ReadonlyMap<string, { position: Point; title: string }>;
   edgesById: ReadonlyMap<string, DeckEdgeObject>;
-  groupsById: ReadonlyMap<string, SododeckFile['groups'][number]>;
 }
 
 const deckLookupCache = new WeakMap<
   ReadonlyArray<DeckNodeObject>,
   WeakMap<ReadonlyArray<DeckEdgeObject>, DeckLookups>
 >();
+
+const groupLookupCache = new WeakMap<
+  SododeckFile['groups'],
+  ReadonlyMap<string, SododeckFile['groups'][number]>
+>();
+
+/**
+ * Groups by id, keyed by the groups array itself: a rename or a frame edit changes only
+ * `deck.groups` (016), so it must not hide behind the node / edge lookups.
+ */
+function groupLookup(
+  groups: SododeckFile['groups'],
+): ReadonlyMap<string, SododeckFile['groups'][number]> {
+  let lookup = groupLookupCache.get(groups);
+  if (lookup === undefined) {
+    lookup = new Map(groups.map((group) => [group.id, group]));
+    groupLookupCache.set(groups, lookup);
+  }
+  return lookup;
+}
 
 function deckLookups(deck: SododeckFile): DeckLookups {
   let byEdges = deckLookupCache.get(deck.nodes);
@@ -196,7 +222,6 @@ function deckLookups(deck: SododeckFile): DeckLookups {
     edgeNodeViews.set(node.id, { position, title: node.title });
   });
   const edgesById = new Map(deck.edges.map((edge) => [edge.id, edge]));
-  const groupsById = new Map(deck.groups.map((group) => [group.id, group]));
   const lookups = {
     nodesById,
     nodeIndexById,
@@ -204,7 +229,6 @@ function deckLookups(deck: SododeckFile): DeckLookups {
     nodeTitleById,
     edgeNodeViews,
     edgesById,
-    groupsById,
   };
   byEdges.set(deck.edges, lookups);
   return lookups;
@@ -364,7 +388,7 @@ function groupNodes(
   view: CanvasView,
 ): GroupFlowNode[] {
   if (deck.groups.length === 0) return [];
-  const { groupsById } = deckLookups(deck);
+  const groupsById = groupLookup(deck.groups);
   const bounds = groupBounds(deck, sizeForLevel(level));
   const counts = groupCounts(deck);
   return graph.groups.flatMap((groupId) => {
@@ -376,8 +400,10 @@ function groupNodes(
     const count = counts.get(groupId) ?? 0;
     const focused = view.focusedId === id;
     const inFocus = view.focus?.members.has(id) === true;
+    const selected = view.selection.groups.includes(groupId);
     const cached = groupCache.get(id);
     if (
+      (cached?.data.selected === true) === selected &&
       cached?.data.title === group.title &&
       cached.data.count === count &&
       cached.data.level === level &&
@@ -396,8 +422,13 @@ function groupNodes(
       position: { x: rect.x, y: rect.y },
       width: rect.width,
       height: rect.height,
-      selectable: false,
-      draggable: false,
+      // A frame (016 R5): dragged by its label or edge band only, resized with its handles.
+      // The wrapper lets the pointer through, so empty space inside still pans and marquees
+      // (FR-017); the handles opt back in.
+      selectable: true,
+      draggable: true,
+      dragHandle: `.${GROUP_HANDLE_CLASS}`,
+      style: { pointerEvents: 'none' },
       focusable: false,
       connectable: false,
       ...(inFocus ? { className: 'in-focus' } : {}),
@@ -405,7 +436,7 @@ function groupNodes(
         ? { domAttributes: { 'aria-hidden': true, inert: true } }
         : {}),
       zIndex: -1,
-      data: { title: group.title, count, level, focused },
+      data: { title: group.title, count, level, focused, ...(selected ? { selected } : {}) },
     };
     groupCache.set(id, flowNode);
     return flowNode;

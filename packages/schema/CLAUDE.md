@@ -5,7 +5,7 @@
 - `schema/v1.json` — JSON Schema (draft 2020-12). **The source of truth.** Edit this file, never the generated code.
 - `src/generated/` — TS types (`json-schema-to-typescript`) and Zod validators (`json-schema-to-zod`), produced by `pnpm schema:generate`. Committed. `pnpm test` fails if they are stale.
 - `src/index.ts` — public API: types, `sododeckFileSchema`, `parseSododeckFile()`, `checkSemanticRules()`, `Issue`, `emptySododeckFile()`, `jsonSchema`, `SCHEMA_URL`.
-- `src/semantic-rules.ts` — rules the generated Zod cannot check: S1 decision-table rows have one cell per column, S2 a sticky has an anchor or a position, S3 map keys are ids. `parseSododeckFile()` runs them after Zod; Ajv users call `checkSemanticRules()` themselves.
+- `src/semantic-rules.ts` — rules the generated Zod cannot check: S1 decision-table rows have one cell per column, S2 a sticky has an anchor or a position, S3 map keys are ids, S4 a group has both `position` and `size` or neither (016), S5 `view.groupFrames` keys are group ids of the file (016). `parseSododeckFile()` runs them after Zod; Ajv users call `checkSemanticRules()` themselves.
 - `examples/` — `minimal`, `flow-and-rule`, `full` (uses every field and enum value; a coverage test enforces it).
 - `test/` — Ajv/Zod parity over examples and 60 invalid fixtures (`fixtures.ts`), lossless parse, key order, generator guards.
 
@@ -34,5 +34,7 @@ v1 complete (feature 001). 006 added flow branches as optional, additive fields 
 - `Sticky.showInFlows?: boolean` — `true` keeps the note at full strength during flow playback; the editor writes `true` or removes the key.
 
 Keep the sticky property order `id, text, color, anchor, position, collapsed, showInFlows`, extend `examples/full.sododeck.json`, and cover invalid non-boolean values in fixtures when these fields change.
+
+016 adds group frames with no version bump (ADR 0017): `$defs/Size` `{ width, height }` (both > 0; 017 reuses it for `node.size`), `$defs/Frame` `{ position, size }`, optional `Group.position` / `Group.size` (after `parent`, set together: `dependentRequired` in v1.json, S4 in `semantic-rules.ts`) and optional `View.groupFrames` (group id → `Frame`, after `positions`; S5). Per-object validation in `@sododeck/model` runs S4 on groups and supplies the named groups for S5 on a single view.
 
 011 adds optional view fields with no version bump (ADR 0012): `View.excludeGroups`, `excludeKinds`, `excludeTags`, `dimKinds`, `pinned`, `collapsed` (unique lists; absent when empty), and `SubtitleField` gains `flows` ("<n> flows · <owner>"). The example `full.sododeck.json` uses all of them; invalid fixtures cover unknown kinds, duplicates and bad ids.

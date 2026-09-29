@@ -5,7 +5,8 @@ import { isApplePlatform } from '../../lib/features';
  * island tooltips and the "Keyboard shortcuts" dialog, so labels and keys cannot drift. The key
  * handling itself lives in `use-canvas-shortcuts.ts`, `use-shell-shortcuts.ts` and the flow hooks.
  */
-export type ShortcutSection = 'Canvas' | 'Tools' | 'Panels' | 'Quick edit' | 'Flows' | 'JSON';
+export type ShortcutSection =
+  'Canvas' | 'Tools' | 'Panels' | 'Quick edit' | 'Editing' | 'Flows' | 'JSON';
 
 export interface Shortcut {
   id: string;
@@ -24,7 +25,7 @@ export const SHORTCUTS = [
   { id: 'add-kind', label: 'Add a kind (palette open)', section: 'Tools', keys: same('1–6') },
   { id: 'sticky', label: 'Sticky note', section: 'Tools', keys: same('S') },
   { id: 'note-here', label: 'Add a note at the pointer', section: 'Tools', keys: same('N') },
-  { id: 'group', label: 'Group', section: 'Tools', keys: same('G') },
+  { id: 'group', label: 'Group', section: 'Tools', keys: mod('⌘G', 'Ctrl+G') },
   { id: 'connector', label: 'Connector', section: 'Tools', keys: same('L') },
   { id: 'connect', label: 'Connect the focused card', section: 'Tools', keys: same('C') },
   { id: 'undo', label: 'Undo', section: 'Tools', keys: mod('⌘Z', 'Ctrl+Z') },
@@ -85,6 +86,41 @@ export const SHORTCUTS = [
     section: 'Quick edit',
     keys: same('P'),
   },
+  // Editing (016): clipboard, align, nudge, and keys held during a drag
+  { id: 'copy', label: 'Copy', section: 'Editing', keys: mod('⌘C', 'Ctrl+C') },
+  { id: 'cut', label: 'Cut', section: 'Editing', keys: mod('⌘X', 'Ctrl+X') },
+  { id: 'paste', label: 'Paste', section: 'Editing', keys: mod('⌘V', 'Ctrl+V') },
+  { id: 'duplicate', label: 'Duplicate', section: 'Editing', keys: mod('⌘D', 'Ctrl+D') },
+  { id: 'align-left', label: 'Align left', section: 'Editing', keys: mod('⌥A', 'Alt+A') },
+  { id: 'align-right', label: 'Align right', section: 'Editing', keys: mod('⌥D', 'Alt+D') },
+  { id: 'align-top', label: 'Align top', section: 'Editing', keys: mod('⌥W', 'Alt+W') },
+  { id: 'align-bottom', label: 'Align bottom', section: 'Editing', keys: mod('⌥S', 'Alt+S') },
+  { id: 'nudge', label: 'Nudge 1 px', section: 'Editing', keys: mod('⌥ Arrows', 'Alt+Arrows') },
+  {
+    id: 'nudge-10',
+    label: 'Nudge 10 px',
+    section: 'Editing',
+    keys: mod('⌥⇧ Arrows', 'Alt+Shift+Arrows'),
+  },
+  {
+    id: 'drag-no-snap',
+    label: 'Drag without snapping',
+    section: 'Editing',
+    keys: mod('Hold ⌘', 'Hold Ctrl'),
+  },
+  { id: 'drag-lock-axis', label: 'Lock the drag axis', section: 'Editing', keys: same('Hold ⇧') },
+  {
+    id: 'drag-duplicate',
+    label: 'Duplicate while dragging',
+    section: 'Editing',
+    keys: mod('⌥ + drag', 'Alt + drag'),
+  },
+  {
+    id: 'drop-without-group',
+    label: 'Drop without changing the group',
+    section: 'Editing',
+    keys: mod('⌥ + drop', 'Alt + drop'),
+  },
   // Flows
   { id: 'filter-flows', label: 'Filter flows', section: 'Flows', keys: same('/') },
   { id: 'step', label: 'Previous / next step', section: 'Flows', keys: same('← / →') },
@@ -101,6 +137,7 @@ export const SHORTCUT_SECTIONS: readonly ShortcutSection[] = [
   'Panels',
   'Canvas',
   'Quick edit',
+  'Editing',
   'Flows',
   'JSON',
 ];

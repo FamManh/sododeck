@@ -3,6 +3,9 @@
  *
  * - S1: JSON Schema cannot compare array lengths, so decision-table cell counts live here.
  * - S2, S3: v1.json expresses these (`anyOf`, `propertyNames`), but json-schema-to-zod drops them.
+ * - S4 (frame pair): v1.json states it with `dependentRequired`, which json-schema-to-zod drops.
+ * - S5 (group frame keys): `view.groupFrames` keys name groups of the same file, which no JSON
+ *   Schema keyword can check.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -33,7 +36,7 @@ function checkKeys(map: Record<string, unknown>, path: string, issues: Issue[]):
   }
 }
 
-/** Returns every S1–S3 violation in a structurally valid file (empty when there are none). */
+/** Returns every S1–S5 violation in a structurally valid file (empty when there are none). */
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
@@ -56,9 +59,31 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
     });
   }
 
+  file.groups.forEach((group, index) => {
+    if ((group.position === undefined) !== (group.size === undefined)) {
+      issues.push({
+        path: `groups.${String(index)}`,
+        message: `Group "${group.id}" needs both a position and a size, or neither.`,
+      });
+    }
+  });
+
+  const groupIds = new Set(file.groups.map((group) => group.id));
   file.views.forEach((view, index) => {
     if (view.positions !== undefined) {
       checkKeys(view.positions, `views.${String(index)}.positions`, issues);
+    }
+    if (view.groupFrames !== undefined) {
+      const path = `views.${String(index)}.groupFrames`;
+      checkKeys(view.groupFrames, path, issues);
+      for (const key of Object.keys(view.groupFrames)) {
+        if (ID_PATTERN.test(key) && !groupIds.has(key)) {
+          issues.push({
+            path: `${path}.${key}`,
+            message: `Key "${key}" is not the id of a group in this file.`,
+          });
+        }
+      }
     }
   });
 

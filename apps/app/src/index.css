@@ -243,3 +243,25 @@
 .react-flow__node.dragging .sd-details-button {
   visibility: hidden;
 }
+
+/* Group frame resize handles (016, DESIGN.md "Resize handle"): 8 × 8, 2 px radius, Surface fill,
+   1.5 px orange; Orange Soft on hover, orange while dragged. Pointer only; hit area 16. */
+.react-flow__resize-control.handle.sd-resize-handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-surface);
+  pointer-events: all;
+}
+.react-flow__resize-control.handle.sd-resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+.react-flow__resize-control.handle.sd-resize-handle:hover {
+  background: var(--color-primary-soft);
+}
+.react-flow__resize-control.handle.sd-resize-handle:active {
+  background: var(--color-primary);
+}

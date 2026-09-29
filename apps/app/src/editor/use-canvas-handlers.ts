@@ -15,13 +15,19 @@ import type {
 } from '@xyflow/react';
 import { useReactFlow } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
 import { targetOf } from './actions/use-action-context';
-import { addComponent, centredOn, connectComponents, nodeElement } from './canvas-actions';
+import {
+  addComponent,
+  canvasElement,
+  centredOn,
+  connectComponents,
+  nodeElement,
+} from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
   COLLAPSED_NODE_PREFIX,
@@ -34,6 +40,8 @@ import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
+import { DragController, setActiveGesture } from './editing/drag-session';
+import { useUndoToast } from './undo-toast';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
@@ -62,6 +70,27 @@ export function useCanvasHandlers() {
   const editor = useEditor();
   const { getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
+  const undoToast = useUndoToast();
+  // Component and group drags (016): one controller for the canvas's lifetime, so a re-render
+  // mid-drag (a toast appearing changes `undoToast`) never drops the running session and leaves
+  // its gesture open. It gets the latest inputs after each render.
+  const [controller] = useState(
+    () =>
+      new DragController({
+        editor,
+        getViewport,
+        screenToFlowPosition,
+        undoToast,
+        canvasSize: () => {
+          const box = canvasElement()?.getBoundingClientRect();
+          return { width: box?.width ?? 0, height: box?.height ?? 0 };
+        },
+      }),
+  );
+  useEffect(() => {
+    controller.update({ getViewport, screenToFlowPosition, undoToast });
+  });
+
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
 
@@ -100,6 +129,7 @@ export function useCanvasHandlers() {
         else set.delete(value);
       }
       ui().select({ nodes: [...nodes], edges: [...edges], stickies: [...stickies] });
+      ui().setMarqueeCount(nodes.size + stickies.size);
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -323,18 +353,45 @@ export function useCanvasHandlers() {
         ui().clearSelection();
         ui().closePopover();
       },
+      /**
+       * A marquee (016 R13): its count chip and hint bar; Esc puts the selection back as it was
+       * before the marquee started.
+       */
       onSelectionStart: () => {
         marquee.current = true;
+        const before = ui().selection;
+        ui().setCanvasGesture('marquee');
+        ui().setMarqueeCount(0);
+        setActiveGesture({
+          cancel: () => {
+            if (!marquee.current) return false;
+            marquee.current = false;
+            ui().select(before);
+            ui().setMarqueeCount(null);
+            ui().setCanvasGesture(null);
+            ui().announce('Cancelled');
+            return true;
+          },
+          arrow: () => false,
+        });
       },
       onSelectionEnd: () => {
         marquee.current = false;
+        setActiveGesture(null);
+        ui().setMarqueeCount(null);
+        if (ui().canvasGesture === 'marquee') ui().setCanvasGesture(null);
       },
 
       onNodeDragStart: (_: unknown, node: Node) => {
         if (viewOnly()) return;
         // The selection toolbar hides while a card moves (019 FR-026).
         ui().setCanvasGesture('drag');
-        if (isGroupNode(node.id) || isCollapsedNode(node.id) || isPortNode(node.id)) return;
+        if (isGroupNode(node.id)) {
+          // A frame dragged by its label or edge (016 R5): the whole subtree moves.
+          controller.startGroup(node.id.slice(GROUP_NODE_PREFIX.length));
+          return;
+        }
+        if (isCollapsedNode(node.id) || isPortNode(node.id)) return;
         const stickyId = stickyIdOf(node.id);
         if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
@@ -343,6 +400,10 @@ export function useCanvasHandlers() {
         } else {
           if (!ui().selection.nodes.includes(node.id)) ui().select({ nodes: [node.id] });
           ui().focus(node.id);
+          // One drag, however many frames and nodes, is one undo step (research R2); snapping,
+          // drop into groups, ⌥ copies and Esc live in the controller (016).
+          controller.startNodes(node.id);
+          return;
         }
         if (!gestureOpen.current) {
           gestureOpen.current = true;
@@ -354,8 +415,14 @@ export function useCanvasHandlers() {
        * Writes dragged positions straight to the document, all moved nodes in one batch, through
        * the current view (011 FR-020/021: base positions in the base view, overrides elsewhere).
        */
-      onNodesChange: (changes: NodeChange[]) => {
+      /** Pointer and modifier keys during a drag: the drop target, ⌥, ⇧ and ⌘ (016). */
+      onNodeDrag: (event: ReactMouseEvent | MouseEvent | TouchEvent) => {
+        if ('clientX' in event) controller.pointer(event);
+      },
+      onNodesChange: (all: NodeChange[]) => {
         if (flowMode()) return;
+        // The drag controller moves its components and frames itself; notes go on below.
+        const changes = controller.change(all);
         const moves = changes.flatMap((c) =>
           c.type === 'position' &&
           c.position !== undefined &&
@@ -392,7 +459,11 @@ export function useCanvasHandlers() {
           changes.flatMap((c) => (c.type === 'select' ? [{ ...c, type: 'edge' as const }] : [])),
         );
       },
-      onNodeDragStop: () => {
+      onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
+        // ⌥ copies, otherwise the pointer decides membership (016 FR-009, FR-018).
+        if (controller.dragging) {
+          controller.stop(event);
+        }
         if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();
       },
@@ -437,5 +508,5 @@ export function useCanvasHandlers() {
         addComponent(editor, kind, centredOn(point), { edit: true });
       },
     };
-  }, [editor, getViewport, screenToFlowPosition]);
+  }, [editor, getViewport, screenToFlowPosition, controller]);
 }

@@ -1,5 +1,5 @@
-import type { NodeProps } from '@xyflow/react';
-import { memo } from 'react';
+import { NodeResizeControl, type NodeProps, type ResizeDragEvent } from '@xyflow/react';
+import { memo, useRef } from 'react';
 
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -7,13 +7,41 @@ import { ChevronDown } from 'lucide-react';
 
 import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { applyResize, endResize, startResize, type ResizeSession } from './editing/frame-resize';
+import type { Handle } from './editing/resize-limits';
 import { setGroupCollapsed } from './views/use-current-view';
-import type { GroupFlowNode } from './deck-to-flow';
+import { GROUP_HANDLE_CLASS, type GroupFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
 
+const HANDLES: readonly Handle[] = [
+  'top-left',
+  'top',
+  'top-right',
+  'right',
+  'bottom-right',
+  'bottom',
+  'bottom-left',
+  'left',
+];
+
+/** The 8 px band along each edge that drags the frame (016 R5); the label drags it too. */
+const EDGE_BANDS = [
+  'inset-x-0 top-0 h-2',
+  'inset-x-0 bottom-0 h-2',
+  'inset-y-0 left-0 w-2',
+  'inset-y-0 right-0 w-2',
+] as const;
+
+const modsOf = (event: ResizeDragEvent) => {
+  const source = event.sourceEvent as Partial<MouseEvent> | null | undefined;
+  return { shift: source?.shiftKey === true, alt: source?.altKey === true };
+};
+
 /**
- * Dashed group boundary with a micro label "TITLE n" (DESIGN.md group-boundary, design 02).
- * Derived from its members' positions, never stored; it lets pointer events through to the canvas.
+ * A group frame (DESIGN.md group-boundary, design 02; 016): a dashed boundary with a micro label
+ * "TITLE n", at the position and size stored on the group. Empty space inside lets pointer events
+ * through to the canvas; the label and an edge band drag it, and while it is selected eight
+ * handles resize it (pointer only: the drawer's X / Y / W / H fields are the keyboard path).
  */
 export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   id,
@@ -21,6 +49,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   width,
   height,
 }: NodeProps<GroupFlowNode>) {
+  const selected = data.selected === true;
   const focus = useUiStore((state) => state.focus);
   const select = useUiStore((state) => state.select);
   const editor = useEditor();
@@ -30,17 +59,57 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   const titleEdit = useUiStore((state) =>
     state.titleEdit?.target === 'group' && state.titleEdit.id === groupId ? state.titleEdit : null,
   );
+  const editable = useUiStore((state) => !isFlowMode(state) && state.flowSession === null);
+  const dropTarget = useUiStore((state) => state.dropTarget === groupId);
+  const resize = useRef<ResizeSession | null>(null);
 
   return (
     <div
       data-testid="group-boundary"
       data-level={data.level}
       style={{ width, height }}
+      {...(dropTarget ? { 'data-drop-target': '' } : {})}
       className={cn(
-        'group pointer-events-none rounded-group border border-dashed border-border bg-group',
+        'group pointer-events-none relative rounded-group border border-dashed border-border bg-group',
         data.level === 'landscape' && 'border-solid bg-surface-2/80',
+        // Drop target (screen 110): the dashed orange border is the cue, not the colour alone.
+        dropTarget && 'border-[1.5px] border-dashed border-primary bg-primary/7',
       )}
     >
+      {editable &&
+        EDGE_BANDS.map((band) => (
+          <div
+            key={band}
+            aria-hidden
+            className={cn(GROUP_HANDLE_CLASS, 'pointer-events-auto absolute cursor-move', band)}
+          />
+        ))}
+      {dropTarget && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2 py-0.5 text-caption font-medium whitespace-nowrap text-on-primary">
+          Drop into {data.title}
+        </span>
+      )}
+      {selected &&
+        editable &&
+        HANDLES.map((handle) => (
+          <NodeResizeControl
+            key={handle}
+            nodeId={id}
+            position={handle}
+            className="sd-resize-handle"
+            onResizeStart={() => {
+              resize.current = startResize(editor, groupId, handle);
+            }}
+            onResize={(event, params) => {
+              if (resize.current !== null)
+                applyResize(editor, resize.current, params, modsOf(event));
+            }}
+            onResizeEnd={() => {
+              if (resize.current !== null) endResize(editor, resize.current);
+              resize.current = null;
+            }}
+          />
+        ))}
       {titleEdit !== null ? (
         <div
           data-node-id={id}
@@ -60,12 +129,6 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
           aria-expanded="true"
           tabIndex={data.focused ? 0 : -1}
           title="Double-click or ↵ to open"
-          onMouseDownCapture={(event) => {
-            event.stopPropagation();
-          }}
-          onMouseDown={(event) => {
-            event.stopPropagation();
-          }}
           onClick={(event) => {
             if (flowMode) return;
             event.stopPropagation();
@@ -73,6 +136,8 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
             focus(id);
           }}
           className={cn(
+            // The label drags the frame (016 R5); a click still selects it.
+            GROUP_HANDLE_CLASS,
             'pointer-events-auto absolute top-2 left-3 flex gap-1.5 rounded-full px-1 text-micro text-ink-muted uppercase',
             data.level === 'landscape' &&
               'top-4 left-4 bg-surface px-2 py-1 text-body font-medium normal-case text-ink',

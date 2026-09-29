@@ -1,7 +1,7 @@
 /**
  * Pure canvas geometry (no React). Positions are flow coordinates of a node's top-left corner.
  */
-import { NODE_GRID, type Point } from '@sododeck/model';
+import { frameOf, NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
@@ -73,8 +73,10 @@ const groupBoundsCache = new WeakMap<
 >();
 
 /**
- * Bounds of every non-empty group: its members' boxes and its child groups' bounds, plus
- * padding. Groups in a parent cycle, and groups with nothing inside, get none.
+ * The box of every group (016 research R3, the one place that resolves it): the stored frame when
+ * the group has one; otherwise, for a deck an older tab has not fitted yet, its members' boxes and
+ * its child groups' boxes plus padding. Unframed groups in a parent cycle, and unframed groups
+ * with nothing inside, get none.
  */
 export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map<string, Rect> {
   let byGroups = groupBoundsCache.get(deck.nodes);
@@ -107,6 +109,10 @@ export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map
   }
 
   const out = new Map<string, Rect>();
+  for (const group of deck.groups) {
+    const frame = frameOf(group);
+    if (frame !== undefined) out.set(group.id, { ...frame.position, ...frame.size });
+  }
   const visiting = new Set<string>();
   const resolve = (id: string): Rect | undefined => {
     if (out.has(id)) return out.get(id);

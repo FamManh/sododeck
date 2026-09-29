@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   isApplePlatform,
   isQuotaError,
+  supportsClipboardRead,
   supportsClipboardWrite,
   supportsFileSystemAccess,
   supportsIdleCallback,
@@ -37,6 +38,17 @@ describe('feature detection', () => {
     expect(supportsClipboardWrite()).toBe(false);
     vi.stubGlobal('navigator', undefined);
     expect(supportsClipboardWrite()).toBe(false);
+  });
+
+  it('detects clipboard reading (016: the menu Paste item)', () => {
+    vi.stubGlobal('navigator', { clipboard: { readText: () => Promise.resolve('') } });
+    expect(supportsClipboardRead()).toBe(true);
+    vi.stubGlobal('navigator', { clipboard: { writeText: () => Promise.resolve() } });
+    expect(supportsClipboardRead()).toBe(false);
+    vi.stubGlobal('navigator', {});
+    expect(supportsClipboardRead()).toBe(false);
+    vi.stubGlobal('navigator', undefined);
+    expect(supportsClipboardRead()).toBe(false);
   });
 
   it('detects matchMedia', () => {

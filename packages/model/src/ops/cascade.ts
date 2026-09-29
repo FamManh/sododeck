@@ -177,12 +177,17 @@ function removeGroup(cascade: Cascade, doc: DeckDoc, group: YObject): void {
       cascade.update({ scope: 'groups', id: idOf(child) }, repoint(child, 'parent'));
     }
   }
-  // Per-view lists (011): undo of the delete restores them with the group (FR-050).
+  // Per-view lists (011) and frames (016): undo of the delete restores them with the group.
   for (const view of collectionArray(doc, 'views')) {
-    if (listHas(view, 'excludeGroups', id) || listHas(view, 'collapsed', id)) {
+    const frames = view.get('groupFrames');
+    const framed = frames instanceof Y.Map && frames.has(id);
+    if (listHas(view, 'excludeGroups', id) || listHas(view, 'collapsed', id) || framed) {
       cascade.update({ scope: 'views', id: idOf(view) }, () => {
         removeFromList(view, 'excludeGroups', id, true);
         removeFromList(view, 'collapsed', id, true);
+        if (!framed) return;
+        frames.delete(id);
+        if (frames.size === 0) view.delete('groupFrames');
       });
     }
   }

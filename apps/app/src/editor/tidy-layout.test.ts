@@ -2,8 +2,13 @@ import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import { COLLAPSED_CARD_SIZE, COMPONENT_CARD_SIZE, NODE_SIZE } from './canvas-geometry';
-import { buildLayoutRequest, expandResult, movedCount } from './tidy-layout';
+import {
+  COLLAPSED_CARD_SIZE,
+  COMPONENT_CARD_SIZE,
+  GROUP_PADDING,
+  NODE_SIZE,
+} from './canvas-geometry';
+import { buildLayoutRequest, expandResult, laidOutFrames, movedCount } from './tidy-layout';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
 
@@ -116,5 +121,34 @@ describe('expandResult', () => {
     // Pinned components are never written.
     expect(positions).not.toHaveProperty('a');
     expect(movedCount(positions, state.deck)).toBe(4);
+  });
+});
+
+describe('laidOutFrames (016 FR-045)', () => {
+  it('refits the groups of moved components, inner-first, around their new positions', () => {
+    const frames = laidOutFrames(state.deck, { c: { x: 1000, y: 1000 }, b: { x: 900, y: 1000 } });
+    expect(Object.keys(frames).sort()).toEqual(['core', 'inner']);
+    expect(frames.inner).toEqual({
+      position: { x: 1000 - GROUP_PADDING, y: 1000 - GROUP_PADDING },
+      size: {
+        width: COMPONENT_CARD_SIZE.width + 2 * GROUP_PADDING,
+        height: COMPONENT_CARD_SIZE.height + 2 * GROUP_PADDING,
+      },
+    });
+    expect(frames.core?.position).toEqual({ x: 900 - GROUP_PADDING, y: 1000 - 2 * GROUP_PADDING });
+  });
+
+  it('replaces stored frames of laid-out groups and leaves the others alone', () => {
+    const framed: SododeckFile = {
+      ...state.deck,
+      groups: state.deck.groups.map((g) => ({
+        ...g,
+        position: { x: -999, y: -999 },
+        size: { width: 5000, height: 5000 },
+      })),
+    };
+    const frames = laidOutFrames(framed, { d: { x: 0, y: 0 } });
+    expect(Object.keys(frames)).toEqual(['side']);
+    expect(frames.side?.position).toEqual({ x: -GROUP_PADDING, y: -GROUP_PADDING });
   });
 });

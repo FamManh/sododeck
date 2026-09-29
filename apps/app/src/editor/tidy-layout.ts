@@ -1,10 +1,11 @@
 /**
  * Tidy layout (011 US3, research R9): what to send to the ELK worker, how to read its answer, and
  * the hook that runs it. The worker is created on first use and terminated on Cancel, so `elkjs`
- * never enters the main bundle; the result is one `moveInView` batch (one undo step, FR-033).
+ * never enters the main bundle; the result is one `moveInView` + `setGroupFrames` batch (one undo
+ * step, FR-033; frames since 016).
  */
-import type { Point } from '@sododeck/model';
-import type { Id, SododeckFile } from '@sododeck/schema';
+import { fitGroupFrames, type Point } from '@sododeck/model';
+import type { Frame, Id, SododeckFile } from '@sododeck/schema';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -12,7 +13,13 @@ import type { LayoutRequest, LayoutResult } from '../layout/elk-layout';
 import { createLayoutClient, LayoutCancelled, type LayoutClient } from '../layout/layout-client';
 import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
-import { COLLAPSED_CARD_SIZE, displayPosition, nodeSize } from './canvas-geometry';
+import {
+  COLLAPSED_CARD_SIZE,
+  COMPONENT_CARD_SIZE,
+  displayPosition,
+  GROUP_PADDING,
+  nodeSize,
+} from './canvas-geometry';
 import { COLLAPSED_NODE_PREFIX } from './deck-to-flow';
 import { effectiveLevel, levelForZoom, type Level } from './levels';
 import { readViewState, useViewState } from './views/use-current-view';
@@ -121,6 +128,43 @@ export function expandResult(
   return out;
 }
 
+/**
+ * New frames for the groups a layout moved (016 FR-045): every group holding a moved component,
+ * directly or through nested groups, refitted inner-first around the new positions (full-detail
+ * card size plus `GROUP_PADDING`, like frames fitted on open). Other groups keep their frames.
+ */
+export function laidOutFrames(
+  deck: SododeckFile,
+  positions: Readonly<Record<Id, Point>>,
+): Record<Id, Frame> {
+  const parents = new Map(deck.groups.map((g) => [g.id, g.parent]));
+  const affected = new Set<Id>();
+  for (const node of deck.nodes) {
+    if (positions[node.id] === undefined) continue;
+    let group = node.group;
+    while (group !== undefined && !affected.has(group)) {
+      affected.add(group);
+      group = parents.get(group);
+    }
+  }
+  if (affected.size === 0) return {};
+  const moved: SododeckFile = {
+    ...deck,
+    nodes: deck.nodes.map((node, index) => ({
+      ...node,
+      position: positions[node.id] ?? displayPosition(node, index),
+    })),
+    groups: deck.groups.map((group) => {
+      if (!affected.has(group.id)) return group;
+      const { position: _position, size: _size, ...rest } = group;
+      return rest;
+    }),
+    views: [],
+  };
+  const fitted = fitGroupFrames(moved, { cardSize: COMPONENT_CARD_SIZE, padding: GROUP_PADDING });
+  return Object.fromEntries([...fitted].filter(([id]) => affected.has(id)));
+}
+
 /** How many of `positions` differ from where `deck` (the view deck) draws them. */
 export function movedCount(positions: Readonly<Record<Id, Point>>, deck: SododeckFile): number {
   let moved = 0;
@@ -207,8 +251,11 @@ export function useTidyLayout(): { run: () => Promise<void>; cancel: () => void 
       }
       const moved = movedCount(positions, start.deck);
       if (Object.keys(positions).length > 0) {
+        // Frames follow the layout in the same undo step (016 FR-045).
+        const frames = laidOutFrames(start.deck, positions);
         editor.batch(() => {
           editor.moveInView(viewId, positions);
+          editor.setGroupFrames(viewId, frames);
         });
       }
       if (now.view.id === viewId) {

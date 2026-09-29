@@ -4,7 +4,15 @@ import {
   ToolbarSeparator,
   ToolbarText,
 } from '@sododeck/ui/components/toolbar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@sododeck/ui/components/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
+import { ChevronDown } from 'lucide-react';
 import { useStore } from '@xyflow/react';
 import {
   Fragment,
@@ -102,6 +110,43 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
       </FieldPopover>
     );
   }
+  if (action.children !== undefined) {
+    // A submenu button (Align ▸, 016): the same items as the canvas menu's submenu.
+    const children = action.children;
+    return (
+      <DropdownMenu>
+        {withTooltip(
+          action,
+          <DropdownMenuTrigger asChild disabled={action.disabled !== null}>
+            <ToolbarButton aria-label={action.label} aria-haspopup="menu">
+              {Icon !== undefined && <Icon aria-hidden />}
+              <span>{action.label}</span>
+              <ChevronDown aria-hidden className="size-3.5" />
+            </ToolbarButton>
+          </DropdownMenuTrigger>,
+        )}
+        <DropdownMenuContent aria-label={action.label}>
+          {children.map((child) => (
+            <Fragment key={child.id}>
+              {child.separatorBefore && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                disabled={child.disabled !== null}
+                {...(child.shortcut === undefined
+                  ? {}
+                  : { shortcut: shortcutLabel(child.shortcut) })}
+                {...(child.disabled === null ? {} : { title: child.disabled })}
+                onSelect={() => {
+                  child.run();
+                }}
+              >
+                {child.label}
+              </DropdownMenuItem>
+            </Fragment>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
   if (action.id === 'more') {
     return withTooltip(
       action,
@@ -134,7 +179,7 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
       }}
     >
       {content}
-      {Icon === undefined && action.label}
+      {(Icon === undefined || action.toolbarText) && <span>{action.label}</span>}
     </ToolbarButton>,
   );
 }

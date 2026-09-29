@@ -11,6 +11,7 @@ import {
   type Issue,
   type SododeckFile,
 } from '@sododeck/schema';
+import { isRecord } from './convert';
 import { collectionArray, indexOfId, rulesMap, type Collection, type DeckDoc } from './layout';
 import { DeckEditError } from './errors';
 
@@ -54,7 +55,14 @@ function zodIssues(issues: { path: PropertyKey[]; message: string }[]): Issue[] 
 function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | undefined {
   const file = emptySododeckFile();
   switch (kind) {
-    case 'views':
+    case 'views': {
+      // S5 needs the groups `groupFrames` names; whether they exist is the model's job (the
+      // cascade and the integrity report), not a format check of one view.
+      const frames = isRecord(candidate) ? candidate.groupFrames : undefined;
+      const groups = isRecord(frames) ? Object.keys(frames).map((id) => ({ id, title: id })) : [];
+      return { ...file, groups, views: [candidate] } as SododeckFile;
+    }
+    case 'groups':
     case 'flows':
     case 'stickies':
       return { ...file, [kind]: [candidate] };

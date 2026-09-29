@@ -1,5 +1,6 @@
 import { Banner } from '@sododeck/ui/components/banner';
 import { Button } from '@sododeck/ui/components/button';
+import { HintBar } from '@sododeck/ui/components/hint-bar';
 import { TagChip } from '@sododeck/ui/components/tag-chip';
 import { TagInput } from '@sododeck/ui/components/tag-input';
 import { useToast } from '@sododeck/ui/components/toast';
@@ -24,8 +25,8 @@ export function FeedbackSection() {
   return (
     <GallerySection
       id="feedback"
-      title="Tags, banners and toasts"
-      description="Reference: 02-editor-node-selected (tags), 01-library (banner), 22-editor-custom-view-toast (toast)."
+      title="Tags, banners, toasts and hints"
+      description="Reference: 02-editor-node-selected (tags), 01-library (banner), 22-editor-custom-view-toast (toast), 108–111 (hint bar, 016)."
     >
       <SampleRow label="tag input">
         <TagInput
@@ -120,6 +121,25 @@ export function FeedbackSection() {
         >
           Burst of 3
         </Button>
+      </SampleRow>
+      <SampleRow label="hint bar">
+        <div className="flex flex-col items-start gap-2">
+          <HintBar
+            items={[
+              { keys: '⇧', label: 'Add' },
+              { keys: '⌥', label: 'Touch' },
+              { keys: 'Esc', label: 'Cancel' },
+            ]}
+          />
+          <HintBar
+            items={[
+              { keys: '⌥', label: 'Duplicate / No group' },
+              { keys: '⇧', label: 'Lock axis' },
+              { keys: '⌘', label: 'No snap' },
+              { keys: 'Esc', label: 'Cancel' },
+            ]}
+          />
+        </div>
       </SampleRow>
     </GallerySection>
   );

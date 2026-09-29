@@ -6,7 +6,7 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { Branch, Rule, SododeckFile, Step, Sticky, ViewType } from '@sododeck/schema';
+import type { Branch, Frame, Rule, SododeckFile, Step, Sticky, ViewType } from '@sododeck/schema';
 
 import { defaultNewId, makeIdAllocator } from './ids';
 import { getObject } from './deck';
@@ -29,6 +29,10 @@ import {
   type RemovalResult,
 } from './ops/cascade';
 import { addObject, reorderObject, updateObject } from './ops/collections';
+import { fillGroupFrames, setGroupFrames } from './ops/frames';
+import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
+import { groupSelection, type GroupSelection } from './ops/group-selection';
+import type { Fragment } from './fragment';
 import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
 import {
@@ -198,6 +202,36 @@ export interface DeckEditor {
   setCollapsed(viewId: Id, groupId: Id, collapsed: boolean): void;
 
   /**
+   * Writes frames for groups that have none (016): `base` on the groups, `perView` into stored
+   * views' `groupFrames`. Existing frames are kept. Untracked: never an undo step (research R2).
+   */
+  fillGroupFrames(
+    base: ReadonlyMap<Id, Frame>,
+    perView?: ReadonlyMap<Id, ReadonlyMap<Id, Frame>>,
+  ): void;
+  /**
+   * Sets group frames in a view (016, R4): `group.position` / `group.size` in the base view,
+   * `view.groupFrames` in others (the first write there copies the base frames, untracked).
+   * Unknown groups are skipped; non-finite or non-positive values are `invalid`. Merges inside a
+   * gesture or batch.
+   */
+  setGroupFrames(viewId: Id, frames: Readonly<Record<Id, Frame>>): void;
+  /**
+   * Pastes a clipboard fragment (016, R10) as one undo step: new ids, references remapped inside
+   * the fragment, top-level nodes and groups into `parent`, unknown rule ids dropped, positions and
+   * frames moved by `offset` (and written into a non-base `viewId` too). Returns the new ids in
+   * fragment order. `missing-reference` for an unknown parent, `invalid` for a bad object.
+   */
+  pasteFragment(fragment: Fragment, options: PasteOptions): PastedIds;
+  /**
+   * Groups nodes and groups (016, R11) as one undo step: a new group titled `title` in `parent`,
+   * with its base frame and per-view frames; the nodes' `group` and the groups' `parent` point to
+   * it. Returns its id. `missing-reference` for unknown ids, `invalid` for a blank title or a
+   * parent inside the selected groups.
+   */
+  groupSelection(selection: GroupSelection): Id;
+
+  /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
    * Nested batches flatten. Each operation inside still validates before it writes, but Yjs cannot
    * roll back: if `fn` throws halfway, the edits made before the throw stay applied.
@@ -210,6 +244,12 @@ export interface DeckEditor {
   beginGesture(): void;
   /** @throws Error when there is no open gesture. */
   endGesture(): void;
+  /**
+   * Ends the open gesture (all nesting levels) and undoes it, leaving no undo or redo entry: the
+   * undo and redo stacks are as before `beginGesture` (016, R14; Esc during a drag).
+   * @throws Error when there is no open gesture.
+   */
+  cancelGesture(): void;
   /** Undoes this editor's last step. Returns false when there is nothing to undo. */
   undo(): boolean;
   redo(): boolean;
@@ -241,6 +281,36 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
   let lastKey: string | undefined;
   let gestureDepth = 0;
   let savedTimeout = undoManager.captureTimeout;
+
+  // A gesture holds back the redo stack instead of clearing it (Yjs clears it on the first new
+  // edit), so `cancelGesture` can put it back. The held items stay protected from garbage
+  // collection until the gesture ends normally, when they are cleared for real (016, R14).
+  type StackItem = (typeof undoManager.redoStack)[number];
+  const clearStacks = undoManager.clear.bind(undoManager);
+  let heldRedo: StackItem[] = [];
+  let gestureUndoLength = 0;
+  undoManager.clear = (clearUndoStack = true, clearRedoStack = true) => {
+    if (gestureDepth > 0 && !clearUndoStack && clearRedoStack) {
+      heldRedo = [...heldRedo, ...undoManager.redoStack];
+      undoManager.redoStack = [];
+      return;
+    }
+    clearStacks(clearUndoStack, clearRedoStack);
+  };
+  /** Clears these redo items for real (lets Yjs collect what they kept alive). */
+  const dropRedo = (items: StackItem[]) => {
+    if (items.length === 0) return;
+    const current = undoManager.redoStack;
+    undoManager.redoStack = items;
+    clearStacks(false, true);
+    undoManager.redoStack = current;
+  };
+  const closeGesture = () => {
+    gestureDepth = 0;
+    undoManager.captureTimeout = savedTimeout;
+    undoManager.stopCapturing();
+    lastKey = undefined;
+  };
 
   // History-change notification (also used by the sticky draft, which can change availability
   // without a Yjs event: popping a stack item manually fires none).
@@ -414,21 +484,45 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     setCollapsed: (viewId, groupId, collapsed) => {
       setCollapsed(ctx, viewId, groupId, collapsed);
     },
+    fillGroupFrames: (base, perView) => {
+      fillGroupFrames(ctx, base, perView);
+    },
+    setGroupFrames: (viewId, frames) => {
+      setGroupFrames(ctx, viewId, frames);
+    },
+    pasteFragment: (fragment, options) => pasteFragment(ctx, fragment, options),
+    groupSelection: (selection) => groupSelection(ctx, selection),
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {
         undoManager.stopCapturing();
         savedTimeout = undoManager.captureTimeout;
         undoManager.captureTimeout = Infinity;
+        gestureUndoLength = undoManager.undoStack.length;
+        heldRedo = [];
       }
     },
     endGesture: () => {
       if (gestureDepth === 0) throw new Error('endGesture() called without beginGesture().');
       if (--gestureDepth === 0) {
-        undoManager.captureTimeout = savedTimeout;
-        undoManager.stopCapturing();
-        lastKey = undefined;
+        closeGesture();
+        dropRedo(heldRedo);
+        heldRedo = [];
       }
+    },
+    cancelGesture: () => {
+      if (gestureDepth === 0) throw new Error('cancelGesture() called without beginGesture().');
+      closeGesture();
+      const undone: StackItem[] = [];
+      while (undoManager.undoStack.length > gestureUndoLength) {
+        undoManager.undo();
+        const item = undoManager.redoStack.pop();
+        if (item !== undefined) undone.push(item);
+      }
+      dropRedo(undone);
+      undoManager.redoStack = heldRedo;
+      heldRedo = [];
+      checkHistoryChange();
     },
     undo: () => undoManager.undo() !== null,
     redo: () => undoManager.redo() !== null,

@@ -76,6 +76,54 @@ describe('groupBounds', () => {
   });
 });
 
+describe('groupBounds with stored frames (016)', () => {
+  const frame = { position: { x: -500, y: -400 }, size: { width: 900, height: 700 } };
+  const framed = deck({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', group: 'inner', position: { x: 0, y: 0 } },
+      { id: 'c', type: 'service', title: 'C', group: 'outer', position: { x: 0, y: 100 } },
+    ],
+    groups: [
+      { id: 'outer', title: 'Outer' },
+      { id: 'inner', title: 'Inner', parent: 'outer', ...frame },
+      { id: 'empty', title: 'Empty', position: { x: 1, y: 2 }, size: { width: 160, height: 96 } },
+    ],
+  });
+
+  it('returns the stored frame of a group that has one, even with no members', () => {
+    const bounds = groupBounds(framed, COMPONENT_CARD_SIZE);
+    expect(bounds.get('inner')).toEqual({ x: -500, y: -400, width: 900, height: 700 });
+    expect(bounds.get('empty')).toEqual({ x: 1, y: 2, width: 160, height: 96 });
+  });
+
+  it('falls back to the derived box, around stored child frames', () => {
+    const outer = groupBounds(framed, COMPONENT_CARD_SIZE).get('outer');
+    expect(outer).toEqual({
+      x: -500 - GROUP_PADDING,
+      y: -400 - GROUP_PADDING,
+      width: 900 + 2 * GROUP_PADDING,
+      height: 700 + 2 * GROUP_PADDING,
+    });
+  });
+
+  it('is recomputed when deck.groups changes', () => {
+    const first = groupBounds(framed, COMPONENT_CARD_SIZE);
+    expect(groupBounds(framed, COMPONENT_CARD_SIZE)).toBe(first);
+    const moved = {
+      ...framed,
+      groups: framed.groups.map((g) =>
+        g.id === 'inner' ? { ...g, position: { x: 10, y: 20 } } : g,
+      ),
+    };
+    expect(groupBounds(moved, COMPONENT_CARD_SIZE).get('inner')).toEqual({
+      x: 10,
+      y: 20,
+      width: 900,
+      height: 700,
+    });
+  });
+});
+
 describe('nodeSize', () => {
   it('returns the box size for each zoom level', () => {
     expect(nodeSize('landscape')).toEqual(NODE_SIZE);

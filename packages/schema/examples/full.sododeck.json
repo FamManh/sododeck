@@ -111,7 +111,12 @@
   ],
   "groups": [
     { "id": "platform", "title": "Platform", "description": "Everything we run." },
-    { "id": "clients", "title": "Clients" },
+    {
+      "id": "clients",
+      "title": "Clients",
+      "position": { "x": 16, "y": 56 },
+      "size": { "width": 212, "height": 152 }
+    },
     { "id": "edge", "title": "Edge", "parent": "platform" },
     { "id": "core", "title": "Core services", "parent": "platform" },
     { "id": "messaging", "title": "Messaging", "parent": "platform" },
@@ -192,6 +197,9 @@
       "subtitleField": "host",
       "dimKinds": ["client"],
       "positions": { "orders-db": { "x": 900, "y": 120 } },
+      "groupFrames": {
+        "data": { "position": { "x": 876, "y": 96 }, "size": { "width": 212, "height": 152 } }
+      },
       "pinned": ["orders-db", "api-gateway"]
     },
     {

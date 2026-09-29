@@ -37,6 +37,12 @@ export function supportsClipboardWrite(): boolean {
   return typeof clipboard?.writeText === 'function';
 }
 
+/** `navigator.clipboard.readText` (016: the menu's Paste; ⌘V uses the paste event instead). */
+export function supportsClipboardRead(): boolean {
+  const clipboard = (navigator as Partial<Navigator> | undefined)?.clipboard;
+  return typeof clipboard?.readText === 'function';
+}
+
 export function supportsResizeObserver(): boolean {
   return typeof ResizeObserver !== 'undefined';
 }

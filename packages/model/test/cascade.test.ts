@@ -436,4 +436,24 @@ describe('view references (011, FR-061)', () => {
       viewDeck,
     );
   });
+
+  it('group: deletes its frame from every view in the same step (016)', () => {
+    const frame = { position: { x: 0, y: 0 }, size: { width: 200, height: 120 } };
+    removeAndUndo(
+      (editor) => editor.remove('groups', 'inner'),
+      (out, result) => {
+        expect(out.views[0]).not.toHaveProperty('groupFrames');
+        expect(out.views[1]?.groupFrames).toEqual({ outer: frame });
+        expect(result.updated).toContainEqual({ scope: 'views', id: 'x' });
+      },
+      {
+        ...viewDeck,
+        views: [
+          { id: 'v', type: 'system', title: 'V', groupFrames: { inner: frame } },
+          { id: 'w', type: 'custom', title: 'W', groupFrames: { inner: frame, outer: frame } },
+          { id: 'x', type: 'custom', title: 'X', groupFrames: { inner: frame } },
+        ],
+      },
+    );
+  });
 });

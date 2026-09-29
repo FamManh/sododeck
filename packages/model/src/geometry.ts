@@ -1,8 +1,9 @@
 /**
- * Sticky note geometry: pure functions of a plain `SododeckFile`, shared by the model's cascade
- * and the app's canvas so a note's screen point never disagrees between them (ADR 0010).
+ * Canvas geometry: pure functions of a plain `SododeckFile`. Sticky placement is shared by the
+ * model's cascade and the app's canvas so a note's screen point never disagrees between them
+ * (ADR 0010); group frames are fitted here for decks saved before frames were stored (016).
  */
-import type { Id, Node, SododeckFile, Sticky, View } from '@sododeck/schema';
+import type { Frame, Group, Id, Node, SododeckFile, Sticky, View } from '@sododeck/schema';
 
 export interface Point {
   x: number;
@@ -97,4 +98,126 @@ export function viewNodePosition(
   node: Pick<Node, 'id' | 'position'>,
 ): Point | undefined {
   return view.positions?.[node.id] ?? node.position;
+}
+
+/** A group's stored frame on the base canvas, or undefined when it has none (older files). */
+export function frameOf(group: Pick<Group, 'position' | 'size'>): Frame | undefined {
+  const { position, size } = group;
+  return position === undefined || size === undefined ? undefined : { position, size };
+}
+
+export interface FitOptions {
+  /** Card size used for every member (the app passes its largest, so members fit at any level). */
+  cardSize: { width: number; height: number };
+  /** Space between the members' box and the frame. */
+  padding: number;
+  /** Fit for this view's own positions and frames; the base canvas when absent. */
+  viewId?: Id;
+}
+
+interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+function unionBox(a: Box | undefined, b: Box): Box {
+  if (a === undefined) return b;
+  return {
+    left: Math.min(a.left, b.left),
+    top: Math.min(a.top, b.top),
+    right: Math.max(a.right, b.right),
+    bottom: Math.max(a.bottom, b.bottom),
+  };
+}
+
+const boxOfFrame = ({ position, size }: Frame): Box => ({
+  left: position.x,
+  top: position.y,
+  right: position.x + size.width,
+  bottom: position.y + size.height,
+});
+
+/**
+ * Frames for the groups that have none (016 research R2): inner-first, the union of the member
+ * cards and the child frames (stored or fitted), plus padding. Empty groups and groups in a parent
+ * cycle get none. With `viewId`, positions come from that view and a group counts as framed when
+ * the view or the base has a frame. Linear in nodes + groups.
+ */
+export function fitGroupFrames(
+  file: Pick<SododeckFile, 'nodes' | 'groups' | 'views'>,
+  options: FitOptions,
+): Map<Id, Frame> {
+  const { cardSize, padding, viewId } = options;
+  const view = viewId === undefined ? undefined : file.views.find((v) => v.id === viewId);
+  const stored = new Map<Id, Frame>();
+  for (const group of file.groups) {
+    const own = view?.groupFrames?.[group.id] ?? frameOf(group);
+    if (own !== undefined) stored.set(group.id, own);
+  }
+
+  const content = new Map<Id, Box>();
+  file.nodes.forEach((node, index) => {
+    if (node.group === undefined) return;
+    const at = (view === undefined ? node.position : viewNodePosition(view, node)) ?? {
+      x: (index % NODE_GRID.columns) * NODE_GRID.dx,
+      y: Math.floor(index / NODE_GRID.columns) * NODE_GRID.dy,
+    };
+    const card = {
+      left: at.x,
+      top: at.y,
+      right: at.x + cardSize.width,
+      bottom: at.y + cardSize.height,
+    };
+    content.set(node.group, unionBox(content.get(node.group), card));
+  });
+
+  const children = new Map<Id, Id[]>();
+  for (const group of file.groups) {
+    if (group.parent === undefined) continue;
+    const list = children.get(group.parent) ?? [];
+    list.push(group.id);
+    children.set(group.parent, list);
+  }
+
+  const fitted = new Map<Id, Frame>();
+  const done = new Map<Id, Box | null>();
+  const visiting = new Set<Id>();
+  const resolve = (id: Id): Box | null => {
+    const known = done.get(id);
+    if (known !== undefined) return known;
+    if (visiting.has(id)) return null;
+    const own = stored.get(id);
+    if (own !== undefined) {
+      const box = boxOfFrame(own);
+      done.set(id, box);
+      return box;
+    }
+    visiting.add(id);
+    let inner = content.get(id);
+    for (const child of children.get(id) ?? []) {
+      const box = resolve(child);
+      if (box !== null) inner = unionBox(inner, box);
+    }
+    visiting.delete(id);
+    if (inner === undefined) {
+      done.set(id, null);
+      return null;
+    }
+    const box = {
+      left: inner.left - padding,
+      top: inner.top - padding,
+      right: inner.right + padding,
+      bottom: inner.bottom + padding,
+    };
+    done.set(id, box);
+    fitted.set(id, {
+      position: { x: box.left, y: box.top },
+      size: { width: box.right - box.left, height: box.bottom - box.top },
+    });
+    return box;
+  };
+  for (const group of file.groups) resolve(group.id);
+  return fitted;
 }

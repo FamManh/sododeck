@@ -18,6 +18,8 @@ import {
 import { forwardRef, type ComponentProps } from 'react';
 
 import { useUiStore, type Tool } from '../../state/ui-store';
+import { modeOf, useRunAction } from '../actions/use-action-context';
+import { groupableCount } from '../editing/group-from-selection';
 import { useProblems } from '../problems/use-problems';
 import type { FlyoutId } from './shell-prefs';
 import { flyoutElementId, railButtonId } from './shell-ids';
@@ -26,6 +28,8 @@ import { shortcutLabel, type ShortcutId } from './shortcuts';
 
 /** Rail tooltips wait a little longer than the app default (DESIGN.md "Left rail"). */
 const RAIL_TOOLTIP_DELAY = 400;
+
+const GROUP_DISABLED = 'Select two or more components';
 
 type RailButtonProps = Omit<ComponentProps<'button'>, 'aria-label'> & {
   label: string;
@@ -109,8 +113,8 @@ function RailDivider() {
 /**
  * The left rail (018 FR-012–FR-020, contract "Rail"): tools (Select, Add component, Sticky note,
  * Group, Connector), then the panels opened as flyouts (Outline, Flows & features, Rules),
- * Search and Problems. Group waits for 016 ("group from selection"), so it is shown disabled with
- * the reason (founder-approved exception, plan Complexity Tracking).
+ * Search and Problems. Group (016) groups the selection, like ⌘G; with fewer than two items it
+ * stays visible, disabled, with the reason.
  */
 export function Rail() {
   const tool = useUiStore((s) => s.tool);
@@ -119,6 +123,14 @@ export function Rail() {
   const openFlyout = useUiStore((s) => s.openFlyout);
   const openPalette = useUiStore((s) => s.openPalette);
   const problems = useProblems()?.total ?? 0;
+  const runAction = useRunAction();
+  const canGroup = useUiStore(
+    (s) =>
+      groupableCount(s.selection) >= 2 &&
+      s.selection.edges.length === 0 &&
+      s.selection.stickies.length === 0 &&
+      modeOf(s) === 'edit',
+  );
 
   const panelButton = (id: FlyoutId, label: string, icon: LucideIcon, shortcut?: ShortcutId) => (
     <RailTip key={id} label={label} {...(shortcut === undefined ? {} : { shortcut })}>
@@ -157,14 +169,16 @@ export function Rail() {
       {TOOLS.map((entry) => toolButton(entry.tool, entry.label, entry.icon, entry.shortcut))}
       {panelButton('palette', 'Add component', Plus, 'add-component')}
       {toolButton('sticky', 'Sticky note', StickyNote, 'sticky')}
-      <RailTip label="Group" shortcut="group" hint="Group from selection — coming soon">
+      <RailTip label="Group" shortcut="group" {...(canGroup ? {} : { hint: GROUP_DISABLED })}>
         <RailButton
           id={railButtonId('group')}
           label="Group"
           icon={Group}
-          aria-disabled
+          {...(canGroup ? {} : { 'aria-disabled': true })}
           onClick={(event) => {
             event.preventDefault();
+            // The same action as ⌘G and the menus (016 FR-010).
+            if (canGroup) runAction('group.create');
           }}
         />
       </RailTip>

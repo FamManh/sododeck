@@ -50,7 +50,7 @@ function currentViews(ctx: EditContext): { views: readonly View[]; stored: boole
   return { views: array.toArray().map((m) => fromY(m) as View), stored: true };
 }
 
-function resolveView(ctx: EditContext, viewId: Id): { view: View; index: number } {
+export function resolveView(ctx: EditContext, viewId: Id): { view: View; index: number } {
   const { views } = currentViews(ctx);
   const index = views.findIndex((v) => v.id === viewId);
   const view = views[index];
@@ -72,7 +72,7 @@ function materialize(ctx: EditContext): void {
 }
 
 /** The view's Y.Map, storing the presets first if needed. Call only after validating. */
-function viewMap(ctx: EditContext, viewId: Id): YObject {
+export function viewMap(ctx: EditContext, viewId: Id): YObject {
   materialize(ctx);
   const array = collectionArray(ctx.doc, 'views');
   const map = array.get(indexOfId(array, viewId));

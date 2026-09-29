@@ -111,6 +111,8 @@ describe('SelectionToolbar (019 US3)', () => {
       'Owner: Mixed',
       'Tags',
       'Technology: none',
+      'Group',
+      'Align',
       'More actions',
     ]);
   });

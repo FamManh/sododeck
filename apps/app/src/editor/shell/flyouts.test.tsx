@@ -12,6 +12,7 @@ import { Canvas } from '../canvas';
 import { CanvasShell } from './canvas-shell';
 import { Flyouts } from './flyouts';
 import { Rail } from './rail';
+import { shortcutLabel } from './shortcuts';
 import { useShellShortcuts } from './use-shell-shortcuts';
 
 function Shell() {
@@ -170,7 +171,7 @@ describe('Rail and flyouts (018 US2, contract "Rail" and "Flyout")', () => {
 });
 
 describe('Rail tools (018 R8)', () => {
-  it('names every item, shows the active tool and keeps Group disabled until 016', async () => {
+  it('names every item, shows the active tool, and Group needs two or more components', async () => {
     const { user } = setup();
     for (const name of [
       'Select',
@@ -192,6 +193,18 @@ describe('Rail tools (018 R8)', () => {
     expect(railButton('Group')).toHaveAttribute('aria-disabled', 'true');
     await user.click(railButton('Group'));
     expect(ui().tool).toBe('sticky');
+  });
+
+  it('groups the selection from the rail (016 FR-010)', async () => {
+    const { user } = setup();
+    act(() => {
+      ui().select({ nodes: ['a', 'b'] });
+    });
+    expect(railButton('Group')).not.toHaveAttribute('aria-disabled');
+    await user.hover(railButton('Group'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(`Group${shortcutLabel('group')}`);
+    await user.click(railButton('Group'));
+    expect(ui().titleEdit).toMatchObject({ target: 'group', isNew: true });
   });
 
   it('shows the tooltip with the shortcut after a short wait', async () => {

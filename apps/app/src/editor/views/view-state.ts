@@ -2,7 +2,7 @@
  * The current view as the canvas uses it (011, ADR 0012 §6). Pure and memoized per snapshot:
  *
  * - `deck` is the deck projected through the view: components at their view position (the view's
- *   own, else the base one), hidden components left out (others keep their grid slot), notes on
+ *   own, else the base one), groups with the view's own frames (016), hidden components left out (others keep their grid slot), notes on
  *   hidden components left out. Every geometry helper (`visibleGraph`, `groupBounds`, sticky
  *   placement, fit) reads it unchanged. A view with no own positions and nothing hidden returns
  *   the snapshot itself, so the base view costs exactly what it did before views existed.
@@ -11,7 +11,7 @@
  * Never written anywhere: the document stays the snapshot; writes go through the editor ops.
  */
 import { NODE_GRID, resolveViews, viewNodePosition } from '@sododeck/model';
-import type { Id, Node, SododeckFile, SubtitleField, View } from '@sododeck/schema';
+import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sododeck/schema';
 
 import { flowCountByNode, viewFilter } from '../view-filter';
 
@@ -38,6 +38,7 @@ export interface ViewState {
 
 const EMPTY: ReadonlySet<Id> = new Set();
 const NO_POSITIONS: NonNullable<View['positions']> = {};
+const NO_FRAMES: NonNullable<View['groupFrames']> = {};
 
 /** Subtitle text of a component in a view (FR-010, FR-011). */
 export function subtitleOf(
@@ -90,10 +91,11 @@ const nodeLists = new WeakMap<
 >();
 
 function projectNodes(
-  nodes: readonly Node[],
+  nodes: Node[],
   positions: NonNullable<View['positions']>,
   hidden: ReadonlySet<Id>,
 ): Node[] {
+  if (hidden.size === 0 && positions === NO_POSITIONS) return nodes;
   let byPositions = nodeLists.get(nodes);
   if (byPositions === undefined) {
     byPositions = new WeakMap();
@@ -150,21 +152,59 @@ function projectStickies(
   return out;
 }
 
-const projectedDecks = new WeakMap<
-  SododeckFile,
-  { nodes: Node[]; stickies: SododeckFile['stickies']; deck: SododeckFile }
+const groupLists = new WeakMap<
+  readonly Group[],
+  WeakMap<NonNullable<View['groupFrames']>, Group[]>
 >();
 
-/** The deck as `view` draws it. Returns `deck` itself when the view changes nothing. */
+/** Groups with the view's own frames in place of their base frames (016, R4). */
+function projectGroups(
+  groups: readonly Group[],
+  frames: NonNullable<View['groupFrames']>,
+): Group[] {
+  let byFrames = groupLists.get(groups);
+  if (byFrames === undefined) {
+    byFrames = new WeakMap();
+    groupLists.set(groups, byFrames);
+  }
+  const cached = byFrames.get(frames);
+  if (cached !== undefined) return cached;
+  const out = groups.map((group) => {
+    const own = frames[group.id];
+    return own === undefined ? group : { ...group, position: own.position, size: own.size };
+  });
+  byFrames.set(frames, out);
+  return out;
+}
+
+const projectedDecks = new WeakMap<
+  SododeckFile,
+  {
+    nodes: Node[];
+    groups: SododeckFile['groups'];
+    stickies: SododeckFile['stickies'];
+    deck: SododeckFile;
+  }
+>();
+
+/**
+ * The deck as `view` draws it. Returns `deck` itself when the view changes nothing. Like
+ * positions, a view's own group frames win in any view (a view that became the base keeps them).
+ */
 export function viewDeck(deck: SododeckFile, view: View, hidden: ReadonlySet<Id>): SododeckFile {
   const positions = view.positions ?? NO_POSITIONS;
-  if (hidden.size === 0 && Object.keys(positions).length === 0) return deck;
+  const frames = view.groupFrames ?? NO_FRAMES;
+  const noFrames = Object.keys(frames).length === 0;
+  if (hidden.size === 0 && Object.keys(positions).length === 0 && noFrames) return deck;
   const nodes = projectNodes(deck.nodes, positions, hidden);
+  const groups = noFrames ? deck.groups : projectGroups(deck.groups, frames);
   const stickies = projectStickies(deck.stickies, hidden);
   const cached = projectedDecks.get(deck);
-  if (cached?.nodes === nodes && cached.stickies === stickies) return cached.deck;
-  const projected = { ...deck, nodes, stickies };
-  projectedDecks.set(deck, { nodes, stickies, deck: projected });
+  if (cached?.nodes === nodes && cached.groups === groups && cached.stickies === stickies) {
+    return cached.deck;
+  }
+  const projected = { ...deck, nodes, groups, stickies };
+  projectedDecks.set(deck, { nodes, groups, stickies, deck: projected });
   return projected;
 }
 

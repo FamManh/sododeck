@@ -1119,6 +1119,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 016-canvas-editing
 
+- **Status:** implemented (2026-09-29) — see [`tasks.md`](../specs/016-canvas-editing/tasks.md) and [ADR 0017](decisions/0017-group-frames-and-clipboard.md). Groups are stored frames (`group.position` / `size`, `view.groupFrames`); copy / paste / duplicate, ⌘G, frame drag and resize, drop into / out of groups, align and distribute, snapping, ⌥ nudge, marquee refinements and the hint bar. Actions: `clipboard-actions.ts`, `group-actions.ts` (`group.create`), `align-actions.ts`; gestures in `apps/app/src/editor/editing/`.
 - **Milestone:** after M4 · **Depends on:** 019 (menu and toolbar surfaces) · **Estimate:** 6 d (was 4 d before §g-55)
 - **Menus and toolbar (019):** add this feature's items as an action module in
   `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar
@@ -1224,6 +1225,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 017-resize-edge-routing
 
+- **Note (016):** the schema already has `$defs/Size` (reuse it for `node.size`), and the resize wrapper exists: `NodeResizeControl` handles styled as `.sd-resize-handle` in `group-boundary-node.tsx`, with the pure `editing/resize-limits.ts` (handles, ⇧ ratio, ⌥ from centre, minimum box) and `editing/frame-resize.ts` (one gesture, Esc cancels). Snapping (`editing/snap.ts`) and the hint bar (`HintBar`, `editing/gesture-hints.ts`) are ready to reuse.
 - **Milestone:** after M4 · **Depends on:** 003 (soft: 016 for snapping) · **Estimate:** 4 d
 - **Menus and toolbar (019):** add this feature's items as an action module in
   `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar
@@ -1511,6 +1513,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 020-card-style
 
+- **Note (016):** groups now store a frame (`position`, `size`); put `group.style` next to it in the Group schema.
 - **Milestone:** after M4 · **Depends on:** 019 · **Estimate:** 3 d
 - **Menus and toolbar (019):** add this feature's items as an action module in
   `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar

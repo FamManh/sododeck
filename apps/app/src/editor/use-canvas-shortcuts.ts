@@ -15,7 +15,10 @@ import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
-import { targetOf, useRunAction } from './actions/use-action-context';
+import { alignSelection } from './actions/align-actions';
+import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
+import type { AlignMode } from './editing/align';
+import { useNudge } from './editing/use-nudge';
 import {
   consumeLeftToolbar,
   focusSelectionToolbar,
@@ -51,6 +54,7 @@ import {
 } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
+import { cancelActiveGesture, nudgeActiveDrag } from './editing/drag-session';
 
 export { isTextTarget };
 
@@ -61,7 +65,7 @@ function restoreFocus(target: HTMLElement | null): void {
   }, 0);
 }
 
-function inDialog(target: EventTarget | null): boolean {
+export function inDialog(target: EventTarget | null): boolean {
   return (
     target instanceof Element && target.closest('[role="dialog"], [role="alertdialog"]') !== null
   );
@@ -72,7 +76,7 @@ function inDialog(target: EventTarget | null): boolean {
  * float over the canvas but are not dialogs: Delete and Esc there belong to their fields and
  * buttons, never to the canvas selection.
  */
-function inOverlay(target: EventTarget | null): boolean {
+export function inOverlay(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
     target.closest(
@@ -135,8 +139,16 @@ function openMenuFromKeyboard(opener: HTMLElement | null): void {
 const hasSelection = (s: Selection) =>
   s.nodes.length + s.edges.length + s.groups.length + s.stickies.length > 0;
 
+const ALIGN_KEYS: Readonly<Record<string, AlignMode>> = {
+  KeyA: 'left',
+  KeyD: 'right',
+  KeyW: 'top',
+  KeyS: 'bottom',
+};
+
 export function useCanvasKeyDown() {
   const editor = useEditor();
+  const nudger = useNudge();
   const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
     useReactFlow();
 
@@ -234,6 +246,27 @@ export function useCanvasKeyDown() {
         })();
         if (handled) event.preventDefault();
         return;
+      }
+      // ⌥(⇧) arrows nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by
+      // `code` because ⌥ changes `key` on macOS.
+      if (event.altKey) {
+        if (nudger.key(event)) {
+          event.preventDefault();
+          return;
+        }
+        const mode = ALIGN_KEYS[event.code];
+        if (mode !== undefined && !event.shiftKey && session === null) {
+          event.preventDefault();
+          alignSelection(
+            readActionContext(
+              editor,
+              { fitView, screenToFlowPosition, getViewport },
+              () => undefined,
+            ),
+            mode,
+          );
+          return;
+        }
       }
       if (event.altKey) return;
 
@@ -507,7 +540,17 @@ export function useCanvasKeyDown() {
           return;
       }
     },
-    [editor, zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition],
+    [
+      editor,
+      nudger,
+      zoomIn,
+      zoomOut,
+      fitView,
+      setCenter,
+      getViewport,
+      getZoom,
+      screenToFlowPosition,
+    ],
   );
 }
 
@@ -561,11 +604,49 @@ export function useEditorShortcuts({
       if (isTextTarget(event.target) || inDialog(event.target)) return;
       const ui = useUiStore.getState();
 
+      // During a pointer drag or resize (016): Esc cancels it (R14), arrows add 1 / 10 px (§g-45).
+      if (key === 'escape' && cancelActiveGesture()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const dragArrow = ARROWS[event.key];
+      if (dragArrow !== undefined && !isMod(event) && !event.altKey) {
+        const step = event.shiftKey ? 10 : 1;
+        const [dx, dy] =
+          dragArrow === 'left'
+            ? [-step, 0]
+            : dragArrow === 'right'
+              ? [step, 0]
+              : dragArrow === 'up'
+                ? [0, -step]
+                : [0, step];
+        if (nudgeActiveDrag(dx, dy)) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+      }
+
       // `code`, not `key`: Shift turns "." into ">" on many layouts.
       const walkProblems = problemRef.current;
       if (isMod(event) && !event.altKey && event.code === 'Period' && walkProblems !== undefined) {
         event.preventDefault();
         walkProblems(event.shiftKey ? -1 : 1);
+        return;
+      }
+
+      // ⌘D duplicates (016 FR-009), never the browser's bookmark dialog; the menu's action, so
+      // it works exactly when Duplicate is offered. ⌘G below likewise.
+      if (isMod(event) && !event.shiftKey && !event.altKey && event.code === 'KeyD' && canvas) {
+        event.preventDefault();
+        runRef.current('clipboard.duplicate');
+        return;
+      }
+      // ⌘G groups the selection (016 FR-010), never the browser's "find next".
+      if (isMod(event) && !event.shiftKey && !event.altKey && event.code === 'KeyG' && canvas) {
+        event.preventDefault();
+        runRef.current('group.create');
         return;
       }
 

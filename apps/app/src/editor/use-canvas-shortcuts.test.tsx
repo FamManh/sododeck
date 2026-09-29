@@ -503,6 +503,102 @@ describe('editor shortcuts', () => {
   });
 });
 
+describe('⌘D duplicate (016 FR-009)', () => {
+  it('duplicates the selection 24 px away and blocks the bookmark dialog', () => {
+    const { doc, editor } = setup();
+    focusNode('n00');
+    const before = toJSON(doc).nodes.length;
+    expect(fireEvent.keyDown(document.body, { key: 'd', code: 'KeyD', metaKey: true })).toBe(false);
+    const nodes = toJSON(doc).nodes;
+    expect(nodes).toHaveLength(before + 1);
+    const original = nodes.find((n) => n.id === 'n00');
+    expect(nodes.at(-1)?.position).toEqual({
+      x: (original?.position?.x ?? 0) + 24,
+      y: (original?.position?.y ?? 0) + 24,
+    });
+    expect(ui().selection.nodes).toEqual([nodes.at(-1)?.id]);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).nodes).toHaveLength(before);
+  });
+
+  it('does nothing in a text field or without a selection', async () => {
+    const { doc, user } = setup();
+    const before = toJSON(doc).nodes.length;
+    fireEvent.keyDown(document.body, { key: 'd', code: 'KeyD', ctrlKey: true });
+    act(() => {
+      ui().select({ nodes: ['n00'] });
+    });
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('{Meta>}d{/Meta}');
+    expect(toJSON(doc).nodes).toHaveLength(before);
+  });
+});
+
+describe('⌘G group (016 FR-010)', () => {
+  it('groups the selection, blocks the browser find and opens the new name', () => {
+    const { doc } = setup();
+    act(() => {
+      ui().select({ nodes: ['n00', 'n01'] });
+    });
+    expect(fireEvent.keyDown(document.body, { key: 'g', code: 'KeyG', metaKey: true })).toBe(false);
+    const group = toJSON(doc).groups.at(-1);
+    expect(group?.title).toBe('New group');
+    expect(ui().titleEdit).toMatchObject({ target: 'group', id: group?.id, isNew: true });
+  });
+
+  it('does nothing with one component, and plain G no longer announces anything', () => {
+    const { doc } = setup();
+    focusNode('n00');
+    fireEvent.keyDown(document.body, { key: 'g', code: 'KeyG', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 'g', code: 'KeyG' });
+    expect(toJSON(doc).groups).toEqual([]);
+    expect(ui().announcement.text).not.toMatch(/coming soon/);
+  });
+});
+
+describe('⌥ keys on the canvas (016 US3, US5)', () => {
+  it('aligns with ⌥A / ⌥D / ⌥W / ⌥S, matched by code', () => {
+    const { doc } = setup();
+    focusNode('n00');
+    act(() => {
+      ui().select({ nodes: ['n00', 'n11'] });
+    });
+    const el = document.querySelector<HTMLElement>('[data-node-id="n00"]');
+    if (el === null) throw new Error('no card');
+    // ⌥A types "å" on a Mac: the code decides.
+    fireEvent.keyDown(el, { key: 'å', code: 'KeyA', altKey: true });
+    const [n00, n11] = ['n00', 'n11'].map((id) => toJSON(doc).nodes.find((n) => n.id === id));
+    expect(n11?.position?.x).toBe(n00?.position?.x);
+    expect(ui().announcement.text).toBe('Aligned 2 components left');
+  });
+
+  it('nudges with ⌥ arrows and still moves focus with plain arrows', () => {
+    const { doc } = setup();
+    focusNode('n11');
+    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]');
+    if (el === null) throw new Error('no card');
+    const before = toJSON(doc).nodes.find((n) => n.id === 'n11')?.position;
+    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'n11')?.position).toEqual({
+      x: (before?.x ?? 0) + 1,
+      y: before?.y ?? 0,
+    });
+  });
+
+  it('ignores ⌥ keys in a text field', async () => {
+    const { doc, user } = setup();
+    act(() => {
+      ui().select({ nodes: ['n00', 'n11'] });
+    });
+    const before = toJSON(doc);
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('{Alt>}a{ArrowRight}{/Alt}');
+    expect(toJSON(doc)).toEqual(before);
+  });
+});
+
 describe('problem walk (015 FR-021)', () => {
   function Walker({ onProblem, canvas }: { onProblem: (d: 1 | -1) => void; canvas: boolean }) {
     useEditorShortcuts({ canvas, onProblem });

@@ -127,10 +127,28 @@ export const sododeckFileSchema = z
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
               .describe('Id of the enclosing group, for nested groups.')
               .optional(),
+            position: z
+              .object({
+                x: z.number().describe('Horizontal coordinate.'),
+                y: z.number().describe('Vertical coordinate.'),
+              })
+              .strict()
+              .describe(
+                'Top-left corner of the frame on the base canvas. Set together with `size`.',
+              )
+              .optional(),
+            size: z
+              .object({
+                width: z.number().gt(0).describe('Width in pixels.'),
+                height: z.number().gt(0).describe('Height in pixels.'),
+              })
+              .strict()
+              .describe('Size of the frame on the base canvas. Set together with `position`.')
+              .optional(),
           })
           .strict()
           .describe(
-            'A named set of nodes (domain, bounded context, VPC). Its bounds are derived from its nodes; no geometry is stored.',
+            'A named frame that holds nodes and nested groups (domain, bounded context, VPC). Membership is stored on the members (`node.group`, `group.parent`). `position` and `size` place the frame. Older files may omit them, and the app then fits a frame around the members.',
           ),
       )
       .describe(
@@ -295,6 +313,33 @@ export const sododeckFileSchema = z
               )
               .describe(
                 'Per-node position overrides for this view, keyed by node id. Keys must be valid ids.',
+              )
+              .optional(),
+            groupFrames: z
+              .record(
+                z.string(),
+                z
+                  .object({
+                    position: z
+                      .object({
+                        x: z.number().describe('Horizontal coordinate.'),
+                        y: z.number().describe('Vertical coordinate.'),
+                      })
+                      .strict()
+                      .describe('Canvas coordinates in pixels. May be negative or fractional.'),
+                    size: z
+                      .object({
+                        width: z.number().gt(0).describe('Width in pixels.'),
+                        height: z.number().gt(0).describe('Height in pixels.'),
+                      })
+                      .strict()
+                      .describe('A width and a height in canvas pixels. Both are greater than 0.'),
+                  })
+                  .strict()
+                  .describe('A rectangle on the canvas: its top-left corner and its size.'),
+              )
+              .describe(
+                'Per-group frame overrides for this view, keyed by group id. Keys must be ids of groups in the file. Absent means the base frames.',
               )
               .optional(),
             pinned: z
