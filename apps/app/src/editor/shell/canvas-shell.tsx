@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { GestureHint } from '../editing/gesture-hint';
+
 /**
  * The canvas-first layout (018, ADR 0014): the canvas fills the whole screen and never shares its
  * box, so opening chrome never resizes it (FR-002). All chrome sits in one overlay layer that
@@ -21,6 +23,7 @@ export function CanvasShell({
       </div>
       <div data-testid="shell-overlay" className="pointer-events-none absolute inset-0 z-10">
         {children}
+        <GestureHint />
       </div>
     </div>
   );

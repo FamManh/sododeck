@@ -10,6 +10,7 @@ import {
   MiniMap,
   Panel,
   ReactFlow,
+  SelectionMode,
   useStore,
   useReactFlow,
   type EdgeTypes,
@@ -55,6 +56,7 @@ import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { GuidesOverlay } from './editing/guides-overlay';
+import { MarqueeChip } from './editing/marquee-chip';
 import { useClipboardEvents } from './editing/use-clipboard-events';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
@@ -289,6 +291,23 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useStickyDraftLifecycle();
   // ⌘C / ⌘X / ⌘V through the platform clipboard events (016 R9).
   useClipboardEvents();
+  // ⌥ held during a marquee switches it to "touch" selection (016 R13). Only while a marquee
+  // runs, so the prop (which re-renders React Flow) does not change for other ⌥ keys.
+  const marqueeRunning = useUiStore((s) => s.canvasGesture === 'marquee');
+  const [touchSelect, setTouchSelect] = useState(false);
+  useEffect(() => {
+    if (!marqueeRunning) return;
+    const onKey = (event: KeyboardEvent) => {
+      setTouchSelect(event.altKey);
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('keyup', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keyup', onKey);
+      setTouchSelect(false);
+    };
+  }, [marqueeRunning]);
 
   // The shown or recorded flow's marks (006): badges, candidates, preview, invalid, start ring.
   const flow = findFlow(deck, session?.flowId ?? activeFlow?.flowId ?? null);
@@ -594,6 +613,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         edgesFocusable={false}
         deleteKeyCode={null}
         // Selection: click / shift-click / ⌘-click, shift-drag marquee, plain drag pans.
+        // ⌥ during a marquee also selects the cards it touches (016 R13).
+        selectionMode={marqueeRunning && touchSelect ? SelectionMode.Partial : SelectionMode.Full}
         multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         selectionKeyCode="Shift"
         selectionOnDrag={false}
@@ -649,6 +670,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       <MergedEdgePopover deck={deck} />
       <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
+      <MarqueeChip />
     </div>
   );
 }

@@ -40,7 +40,7 @@ import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
-import { DragController } from './editing/drag-session';
+import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
@@ -121,6 +121,7 @@ export function useCanvasHandlers() {
         else set.delete(value);
       }
       ui().select({ nodes: [...nodes], edges: [...edges], stickies: [...stickies] });
+      ui().setMarqueeCount(nodes.size + stickies.size);
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -344,11 +345,33 @@ export function useCanvasHandlers() {
         ui().clearSelection();
         ui().closePopover();
       },
+      /**
+       * A marquee (016 R13): its count chip and hint bar; Esc puts the selection back as it was
+       * before the marquee started.
+       */
       onSelectionStart: () => {
         marquee.current = true;
+        const before = ui().selection;
+        ui().setCanvasGesture('marquee');
+        ui().setMarqueeCount(0);
+        setActiveGesture({
+          cancel: () => {
+            if (!marquee.current) return false;
+            marquee.current = false;
+            ui().select(before);
+            ui().setMarqueeCount(null);
+            ui().setCanvasGesture(null);
+            ui().announce('Cancelled');
+            return true;
+          },
+          arrow: () => false,
+        });
       },
       onSelectionEnd: () => {
         marquee.current = false;
+        setActiveGesture(null);
+        ui().setMarqueeCount(null);
+        if (ui().canvasGesture === 'marquee') ui().setCanvasGesture(null);
       },
 
       onNodeDragStart: (_: unknown, node: Node) => {

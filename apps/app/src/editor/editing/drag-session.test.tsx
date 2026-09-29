@@ -357,3 +357,47 @@ describe('resizing a group frame (016 US2, FR-013–FR-015)', () => {
     expect(editor().canUndo()).toBe(false);
   });
 });
+
+describe('marquee (016 US6, R13)', () => {
+  it('counts the cards it selects and restores the old selection on Esc', () => {
+    const { h } = setup();
+    act(() => {
+      ui().select({ nodes: ['c'] });
+      h().onSelectionStart();
+    });
+    expect(ui().canvasGesture).toBe('marquee');
+    expect(ui().marqueeCount).toBe(0);
+    act(() => {
+      h().onNodesChange([
+        { type: 'select', id: 'm1', selected: true },
+        { type: 'select', id: 'm2', selected: true },
+      ]);
+    });
+    expect(ui().marqueeCount).toBe(3);
+    act(() => {
+      expect(cancelActiveGesture()).toBe(true);
+    });
+    expect(ui().selection.nodes).toEqual(['c']);
+    expect(ui().canvasGesture).toBeNull();
+    expect(ui().marqueeCount).toBeNull();
+    act(() => {
+      // React Flow keeps reporting until the pointer is released: ignored.
+      h().onNodesChange([{ type: 'select', id: 's1', selected: true }]);
+      h().onSelectionEnd();
+    });
+    expect(ui().selection.nodes).toEqual(['c']);
+  });
+
+  it('ends cleanly', () => {
+    const { h } = setup();
+    act(() => {
+      h().onSelectionStart();
+      h().onNodesChange([{ type: 'select', id: 'm1', selected: true }]);
+      h().onSelectionEnd();
+    });
+    expect(ui().selection.nodes).toEqual(['m1']);
+    expect(ui().canvasGesture).toBeNull();
+    expect(ui().marqueeCount).toBeNull();
+    expect(cancelActiveGesture()).toBe(false);
+  });
+});
