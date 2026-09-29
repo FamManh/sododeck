@@ -7,7 +7,9 @@ import { FRAGMENT_HINT_KEY } from '../editing/clipboard-ops';
 import { shortcutLabel } from '../shell/shortcuts';
 import { actionsFor, findAction, runAction } from './actions-for';
 import { ACTIONS } from './index';
-import type { ActionContext } from './types';
+import type { MenuTarget } from '../../state/ui-store';
+import { commitTitle } from '../quick-edit/title-edit';
+import type { ActionContext, Mode } from './types';
 
 const ui = () => useUiStore.getState();
 
@@ -285,5 +287,56 @@ describe('clipboard actions (016 US1)', () => {
         s.actions.map((a) => a.id),
       ),
     ).not.toContain('clipboard.paste');
+  });
+});
+
+describe('group.create (016 US2, ⌘G)', () => {
+  const four = { kind: 'components', ids: sel({ nodes: ['a', 'b', 'p', 'child'] }) } as const;
+
+  it('groups the components in a fitted frame and opens its name for editing', () => {
+    const ctx = actionContext(four);
+    expect(runAction(ACTIONS, 'group.create', ctx)).toBe(true);
+    const file = toJSON(ctx.doc);
+    const group = file.groups.at(-1);
+    // Cards at full detail (164 × 104) from (0, 0) to (300, 300), plus 24 px padding.
+    expect(group).toMatchObject({
+      title: 'New group',
+      position: { x: -24, y: -24 },
+      size: { width: 300 + 164 + 48, height: 300 + 104 + 48 },
+    });
+    expect(group).not.toHaveProperty('parent');
+    expect(file.nodes.map((n) => n.group)).toEqual(Array(4).fill(group?.id));
+    expect(ui().titleEdit).toEqual({ target: 'group', id: group?.id, isNew: true });
+    expect(ui().selection.groups).toEqual([group?.id]);
+    expect(ui().announcement.text).toBe('Grouped 4 components');
+  });
+
+  it('undoes the name, then the group', () => {
+    const ctx = actionContext(four);
+    runAction(ACTIONS, 'group.create', ctx);
+    const id = toJSON(ctx.doc).groups.at(-1)?.id ?? '';
+    commitTitle(ctx.editor, 'group', id, 'Payments', 'New group');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).groups.at(-1)?.title).toBe('New group');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).groups.map((g) => g.id)).toEqual(['g']);
+    expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('nests the new group in the innermost common group', () => {
+    const ctx = actionContext(TARGETS.components);
+    runAction(ACTIONS, 'group.create', ctx);
+    expect(toJSON(ctx.doc).groups.at(-1)?.parent).toBe('g');
+  });
+
+  it('is disabled below two components and absent in flow mode', () => {
+    const item = (target: MenuTarget, mode: Mode = 'edit') =>
+      actionsFor(ACTIONS, actionContext(target, mode), 'menu')
+        .flatMap((s) => s.actions)
+        .find((a) => a.id === 'group.create');
+    expect(item(TARGETS.component)?.disabled).toBe('Select two or more components');
+    expect(item(TARGETS.components)?.disabled).toBeNull();
+    expect(item(TARGETS.components, 'flow')).toBeUndefined();
+    expect(item(TARGETS.mixed)).toBeUndefined();
   });
 });

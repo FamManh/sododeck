@@ -570,10 +570,16 @@ export function useEditorShortcuts({
       }
 
       // ⌘D duplicates (016 FR-009), never the browser's bookmark dialog; the menu's action, so
-      // it works exactly when Duplicate is offered.
+      // it works exactly when Duplicate is offered. ⌘G below likewise.
       if (isMod(event) && !event.shiftKey && !event.altKey && event.code === 'KeyD' && canvas) {
         event.preventDefault();
         runRef.current('clipboard.duplicate');
+        return;
+      }
+      // ⌘G groups the selection (016 FR-010), never the browser's "find next".
+      if (isMod(event) && !event.shiftKey && !event.altKey && event.code === 'KeyG' && canvas) {
+        event.preventDefault();
+        runRef.current('group.create');
         return;
       }
 

@@ -153,13 +153,6 @@ export function useShellShortcuts(): void {
         });
         return;
       }
-      if (key === 'g') {
-        // Group from selection comes with 016; the rail says so.
-        handle(() => {
-          ui.announce('Grouping is coming soon');
-        });
-        return;
-      }
       if (key === 'c') {
         handle(() => {
           ui.openFlyout('palette');

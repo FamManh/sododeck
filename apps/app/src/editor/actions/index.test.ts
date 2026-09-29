@@ -31,7 +31,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
       ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
-      ['Arrange'],
+      ['Group', 'Arrange'],
       ['Pin'],
       ['Delete'],
     ]);
@@ -39,7 +39,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.components, 'menu')).toEqual([
       ['Open details'],
       ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
-      ['Arrange'],
+      ['Group', 'Arrange'],
       ['Pin all'],
       ['Delete'],
     ]);
@@ -91,6 +91,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Owner: none',
       'Tags',
       'Technology: none',
+      'Group',
       'More actions',
     ]);
     expect(labels(TARGETS.connection, 'toolbar').flat()).toEqual([

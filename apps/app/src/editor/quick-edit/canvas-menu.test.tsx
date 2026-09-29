@@ -66,6 +66,7 @@ describe('CanvasMenu (019 US5)', () => {
       'CutCtrl+X',
       'DuplicateCtrl+D',
       'Copy JSONCtrl+Shift+C',
+      'GroupCtrl+G',
       'Arrange',
       'Pin',
       'DeleteDelete',

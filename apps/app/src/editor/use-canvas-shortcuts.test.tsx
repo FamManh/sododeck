@@ -536,6 +536,28 @@ describe('⌘D duplicate (016 FR-009)', () => {
   });
 });
 
+describe('⌘G group (016 FR-010)', () => {
+  it('groups the selection, blocks the browser find and opens the new name', () => {
+    const { doc } = setup();
+    act(() => {
+      ui().select({ nodes: ['n00', 'n01'] });
+    });
+    expect(fireEvent.keyDown(document.body, { key: 'g', code: 'KeyG', metaKey: true })).toBe(false);
+    const group = toJSON(doc).groups.at(-1);
+    expect(group?.title).toBe('New group');
+    expect(ui().titleEdit).toMatchObject({ target: 'group', id: group?.id, isNew: true });
+  });
+
+  it('does nothing with one component, and plain G no longer announces anything', () => {
+    const { doc } = setup();
+    focusNode('n00');
+    fireEvent.keyDown(document.body, { key: 'g', code: 'KeyG', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 'g', code: 'KeyG' });
+    expect(toJSON(doc).groups).toEqual([]);
+    expect(ui().announcement.text).not.toMatch(/coming soon/);
+  });
+});
+
 describe('problem walk (015 FR-021)', () => {
   function Walker({ onProblem, canvas }: { onProblem: (d: 1 | -1) => void; canvas: boolean }) {
     useEditorShortcuts({ canvas, onProblem });

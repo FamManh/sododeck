@@ -1,7 +1,8 @@
-import { ChevronsDownUp, SquareDashedMousePointer, Trash2, Ungroup } from 'lucide-react';
+import { ChevronsDownUp, Group, SquareDashedMousePointer, Trash2, Ungroup } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
 import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX } from '../deck-to-flow';
+import { groupableCount, groupFromSelection } from '../editing/group-from-selection';
 import { oneStep } from '../fields/one-step';
 import { toggleGroupCollapsed } from '../views/use-current-view';
 import type { Action, ActionContext } from './types';
@@ -24,8 +25,26 @@ function ungroup(ctx: ActionContext) {
   useUiStore.getState().announce(`Ungrouped ${group.title}`);
 }
 
-/** Collapse / Expand, Select members, Ungroup and Delete group (019 FR-023, FR-032). */
+/**
+ * Group (⌘G, 016 R11), Collapse / Expand, Select members, Ungroup and Delete group (019 FR-023,
+ * FR-032).
+ */
 export const GROUP_ACTIONS: readonly Action[] = [
+  {
+    id: 'group.create',
+    label: 'Group',
+    icon: Group,
+    shortcut: 'group',
+    // With Align and Arrange, after the clipboard items (screens 99, 102).
+    section: 'arrange',
+    where: { menu: ['component', 'components', 'mixed'], toolbar: ['components'] },
+    applies: (ctx) => ctx.selection.edges.length === 0 && ctx.selection.stickies.length === 0,
+    disabledReason: (ctx) =>
+      groupableCount(ctx.selection) < 2 ? 'Select two or more components' : null,
+    run: (ctx) => {
+      groupFromSelection(ctx.editor, ctx.selection);
+    },
+  },
   {
     id: 'group.ungroup',
     label: 'Ungroup',
