@@ -15,7 +15,7 @@ import type {
 } from '@xyflow/react';
 import { useReactFlow } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
@@ -71,23 +71,31 @@ export function useCanvasHandlers() {
   const { getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   const undoToast = useUndoToast();
+  // Component and group drags (016): one controller for the canvas's lifetime, so a re-render
+  // mid-drag (a toast appearing changes `undoToast`) never drops the running session and leaves
+  // its gesture open. It gets the latest inputs after each render.
+  const [controller] = useState(
+    () =>
+      new DragController({
+        editor,
+        getViewport,
+        screenToFlowPosition,
+        undoToast,
+        canvasSize: () => {
+          const box = canvasElement()?.getBoundingClientRect();
+          return { width: box?.width ?? 0, height: box?.height ?? 0 };
+        },
+      }),
+  );
+  useEffect(() => {
+    controller.update({ getViewport, screenToFlowPosition, undoToast });
+  });
+
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
 
   return useMemo(() => {
     const ui = () => useUiStore.getState();
-    // Component and group drags (016): one session per drag. Its inputs are stable, so the
-    // controller lives as long as these handlers.
-    const controller = new DragController({
-      editor,
-      getViewport,
-      screenToFlowPosition,
-      undoToast,
-      canvasSize: () => {
-        const box = canvasElement()?.getBoundingClientRect();
-        return { width: box?.width ?? 0, height: box?.height ?? 0 };
-      },
-    });
 
     const endGesture = () => {
       if (gestureOpen.current) {
@@ -500,5 +508,5 @@ export function useCanvasHandlers() {
         addComponent(editor, kind, centredOn(point), { edit: true });
       },
     };
-  }, [editor, getViewport, screenToFlowPosition, undoToast]);
+  }, [editor, getViewport, screenToFlowPosition, controller]);
 }

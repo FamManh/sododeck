@@ -138,7 +138,9 @@ export function CardTitleInput({
       value={title}
       autoFocus
       startEmpty={edit.isNew}
-      {...(edit.isNew ? { placeholder: 'Name this component' } : {})}
+      {...(edit.isNew
+        ? { placeholder: edit.target === 'group' ? 'Name this group' : 'Name this component' }
+        : {})}
       onCommit={commit}
       onKeyDown={(event, draft) => {
         if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && edit.isNew) {

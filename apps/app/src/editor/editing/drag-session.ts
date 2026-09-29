@@ -131,7 +131,12 @@ export class DragController {
     if (session.lastRaw !== null) this.apply(session.lastRaw);
   };
 
-  constructor(private readonly deps: DragDeps) {}
+  constructor(private deps: DragDeps) {}
+
+  /** The latest canvas callbacks, after a re-render; a running drag keeps its session. */
+  update(inputs: Pick<DragDeps, 'getViewport' | 'screenToFlowPosition' | 'undoToast'>): void {
+    this.deps = { ...this.deps, ...inputs };
+  }
 
   get dragging(): boolean {
     return this.session !== null;
@@ -157,6 +162,8 @@ export class DragController {
     nodes: readonly Id[],
     groups: readonly Id[],
   ) {
+    // React Flow skips the stop of an aborted drag: never leave its gesture open.
+    if (this.session !== null) this.stop();
     const { editor, getViewport } = this.deps;
     const view = readViewState(editor.doc);
     const deck = readDeck(editor.doc);

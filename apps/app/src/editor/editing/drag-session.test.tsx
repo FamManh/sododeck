@@ -1,5 +1,6 @@
 import { toJSON } from '@sododeck/model';
 import type { Frame, SododeckFile } from '@sododeck/schema';
+import { useToast } from '@sododeck/ui/components/toast';
 import { act, renderHook, screen } from '@testing-library/react';
 import type { Node, NodeChange } from '@xyflow/react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
@@ -399,5 +400,49 @@ describe('marquee (016 US6, R13)', () => {
     expect(ui().canvasGesture).toBeNull();
     expect(ui().marqueeCount).toBeNull();
     expect(cancelActiveGesture()).toBe(false);
+  });
+});
+
+describe('a drag survives re-rendered handlers (016 regression)', () => {
+  it('keeps its session when a toast appears mid-drag, and closes its gesture', () => {
+    const env = editorWrapper(deck);
+    const { result } = renderHook(
+      () => ({ handlers: useCanvasHandlers(), toast: useToast().toast }),
+      { wrapper: env.wrapper },
+    );
+    act(() => {
+      result.current.handlers.onNodeDragStart({}, flowNode('c'));
+      result.current.handlers.onNodesChange(move('c', 1500, 1500));
+    });
+    act(() => {
+      // Any toast changes the toast context and re-renders the handlers.
+      result.current.toast({ message: 'Something else' });
+    });
+    act(() => {
+      result.current.handlers.onNodesChange(move('c', 1600, 1600));
+      result.current.handlers.onNodeDragStop(pointer(0, 0));
+    });
+    expect(position(toJSON(env.doc), 'c')).toEqual({ x: 1600, y: 1600 });
+    // The gesture is closed: a later edit is an undo step of its own.
+    act(() => {
+      env.editor().update('nodes', 'c', { title: 'Renamed' });
+      env.editor().undo();
+    });
+    expect(position(toJSON(env.doc), 'c')).toEqual({ x: 1600, y: 1600 });
+  });
+
+  it('closes a drag React Flow never stopped before the next one starts', () => {
+    const { h, doc, editor } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 1500, 1500));
+      // No stop (an aborted drag); the next drag starts.
+      h().onNodeDragStart({}, flowNode('m1'));
+      h().onNodesChange(move('m1', 20, 20));
+      h().onNodeDragStop(pointer(40, 40));
+      editor().undo();
+    });
+    expect(position(toJSON(doc), 'm1')).toEqual({ x: 0, y: 0 });
+    expect(position(toJSON(doc), 'c')).toEqual({ x: 1500, y: 1500 });
   });
 });
