@@ -30,6 +30,8 @@ import {
 } from './ops/cascade';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
+import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
+import type { Fragment } from './fragment';
 import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
 import {
@@ -213,6 +215,13 @@ export interface DeckEditor {
    * gesture or batch.
    */
   setGroupFrames(viewId: Id, frames: Readonly<Record<Id, Frame>>): void;
+  /**
+   * Pastes a clipboard fragment (016, R10) as one undo step: new ids, references remapped inside
+   * the fragment, top-level nodes and groups into `parent`, unknown rule ids dropped, positions and
+   * frames moved by `offset` (and written into a non-base `viewId` too). Returns the new ids in
+   * fragment order. `missing-reference` for an unknown parent, `invalid` for a bad object.
+   */
+  pasteFragment(fragment: Fragment, options: PasteOptions): PastedIds;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -473,6 +482,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     setGroupFrames: (viewId, frames) => {
       setGroupFrames(ctx, viewId, frames);
     },
+    pasteFragment: (fragment, options) => pasteFragment(ctx, fragment, options),
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {

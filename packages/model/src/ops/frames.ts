@@ -123,7 +123,7 @@ export function fillGroupFrames(
  * Copies every base frame into a view that has no frames of its own yet, untracked: from its
  * first frame edit on, the view keeps its own frames, as it keeps its own positions (R4).
  */
-function materializeFrames(ctx: EditContext, view: YObject): void {
+export function materializeFrames(ctx: EditContext, view: YObject): void {
   if (view.get('groupFrames') instanceof Y.Map) return;
   const copies = [...groupMaps(ctx)].flatMap(([id, group]) => {
     const frame = frameOfMap(group);

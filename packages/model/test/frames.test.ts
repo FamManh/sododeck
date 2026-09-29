@@ -251,3 +251,38 @@ describe('fillGroupFrames and setGroupFrames (R2, R4)', () => {
     expect(editor.canUndo()).toBe(false);
   });
 });
+
+describe('views with frames stay editable (016)', () => {
+  it('updateView accepts a view that has groupFrames', () => {
+    const doc = fromJSON({
+      ...emptySododeckFile(),
+      groups: [{ id: 'g', title: 'G' }],
+      views: [
+        { id: 'v1', type: 'system', title: 'One' },
+        {
+          id: 'v2',
+          type: 'infra',
+          title: 'Two',
+          groupFrames: { g: frame(0, 0, 200, 100) },
+        },
+      ],
+    });
+    const editor = createEditor(doc);
+    editor.updateView('v2', { title: 'Renamed' });
+    expect(getObject(doc, 'views', 'v2')?.title).toBe('Renamed');
+    expectValid(doc);
+  });
+});
+
+describe('a group frame is both fields or neither (S4)', () => {
+  it('refuses a group update that leaves half a frame', () => {
+    const doc = fromJSON({ ...emptySododeckFile(), groups: [{ id: 'g', title: 'G' }] });
+    const editor = createEditor(doc);
+    expect(() => {
+      editor.update('groups', 'g', { position: { x: 1, y: 2 } });
+    }).toThrow();
+    editor.update('groups', 'g', { position: { x: 1, y: 2 }, size: { width: 160, height: 96 } });
+    expect(frameOf(getObject(doc, 'groups', 'g') ?? {})).toEqual(frame(1, 2, 160, 96));
+    expectValid(doc);
+  });
+});
