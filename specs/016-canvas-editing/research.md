@@ -26,7 +26,7 @@ Every decision below was checked against `main` (`57c4f46`). Paths are repo-rela
 - **Decision**:
   - A pure function `fitGroupFrames(deck, cardSize, padding)` in `packages/model/src/geometry.ts` returns frames for groups that have none. It is inner-first: the union of member cards and child frames, plus padding. Cycles and empty groups are skipped. It works for the base positions and, separately, for each view that has its own positions.
   - A new editor op, `DeckEditor.fillGroupFrames(frames)`, writes them inside `ctx.transactUntracked`, like the untracked view materialize step (`packages/model/src/ops/views.ts:66-73`). It adds no undo step.
-  - The app calls it once after a deck is open and synced, in `apps/app/src/editor/open-deck.ts`, with `COMPONENT_CARD_SIZE` (164×104) and `GROUP_PADDING` (24).
+  - The app calls it once after the editor is created for an opened deck (`apps/app/src/routes/editor-page.tsx`, helper in `apps/app/src/editor/open-deck.ts`), with `COMPONENT_CARD_SIZE` (164×104) and `GROUP_PADDING` (24).
 - **Rationale**:
   - The model owns document writes, but card sizes live in the app, so the size is passed in.
   - Fitting at the largest card size means members fit at every semantic zoom level. At full detail the frame matches today's derived box exactly (SC-003b); at smaller levels it is a little looser than today.

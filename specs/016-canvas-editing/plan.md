@@ -188,7 +188,7 @@ apps/app/src/
 ├── editor/use-canvas-handlers.ts           # group drag, resize, drop, snap, ⌥-drag, marquee Esc
 ├── editor/canvas.tsx (+test)               # selectionMode, overlays, onNodeDrag
 ├── editor/use-canvas-shortcuts.ts (+test)  # ⌥ arrows, ⌥A / D / W / S, arrows during drag
-├── editor/open-deck.ts                     # fillGroupFrames after open
+├── editor/open-deck.ts, routes/editor-page.tsx  # fitMissingFrames after open
 ├── editor/tidy-layout.ts (+test)           # write ELK group boxes as frames
 ├── editor/inspector/group-inspector.tsx (+test)  # Frame section X / Y / W / H
 ├── editor/shell/shortcuts.ts (+test)       # "Editing" section, G → ⌘G
