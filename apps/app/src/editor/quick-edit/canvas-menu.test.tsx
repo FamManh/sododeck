@@ -62,6 +62,9 @@ describe('CanvasMenu (019 US5)', () => {
     expect(items()).toEqual([
       'Open detailsEnter',
       'RenameF2',
+      'CopyCtrl+C',
+      'CutCtrl+X',
+      'DuplicateCtrl+D',
       'Copy JSONCtrl+Shift+C',
       'Arrange',
       'Pin',
@@ -101,7 +104,17 @@ describe('CanvasMenu (019 US5)', () => {
     if (pane === null) throw new Error('no pane');
     fireEvent.contextMenu(pane, { clientX: 300, clientY: 200 });
     expect(screen.getByRole('menu', { name: 'Actions for canvas' })).toBeInTheDocument();
-    expect(items()).toEqual(['Add component', 'Add stickyN', 'Select allCtrl+A', 'FitCtrl+0']);
+    expect(items()).toEqual([
+      'PasteCtrl+V',
+      'Add component',
+      'Add stickyN',
+      'Select allCtrl+A',
+      'FitCtrl+0',
+    ]);
+    // Nothing was copied yet (016 contract): Paste stays visible, disabled, with its reason.
+    const paste = within(menu()).getByRole('menuitem', { name: /Paste/ });
+    expect(paste).toHaveAttribute('aria-disabled', 'true');
+    expect(paste.getAttribute('title')).toMatch(/to paste/);
     await user.click(within(menu()).getByRole('menuitem', { name: 'Add component' }));
     const sub = await screen.findByRole('menu', { name: 'Add component' });
     expect(
@@ -162,7 +175,7 @@ describe('CanvasMenu (019 US5)', () => {
       ui().openFlow('f');
     });
     fireEvent.contextMenu(card('Service: A'), { clientX: 40, clientY: 50 });
-    expect(items()).toEqual(['Open detailsEnter', 'Copy JSONCtrl+Shift+C']);
+    expect(items()).toEqual(['Open detailsEnter', 'CopyCtrl+C', 'Copy JSONCtrl+Shift+C']);
     expect(ui().activeFlow).not.toBeNull();
   });
 
@@ -187,6 +200,9 @@ describe('CanvasMenu (019 US5)', () => {
       'RenameF2',
       'CollapseSpace',
       'Select members',
+      'CopyCtrl+C',
+      'CutCtrl+X',
+      'DuplicateCtrl+D',
       'Delete group',
     ]);
     const item = within(menu()).getByRole('menuitem', { name: 'Delete group' });

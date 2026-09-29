@@ -1,5 +1,6 @@
 import { ARRANGE_ACTIONS } from './arrange-actions';
 import { CANVAS_ACTIONS } from './canvas-actions';
+import { CLIPBOARD_ACTIONS } from './clipboard-actions';
 import { COMMON_ACTIONS } from './common-actions';
 import { CONNECTION_ACTIONS } from './connection-actions';
 import { FIELD_ACTIONS } from './field-actions';
@@ -18,6 +19,7 @@ export const ACTIONS: readonly Action[] = [
   ...GROUP_ACTIONS,
   ...FIELD_ACTIONS,
   ...CANVAS_ACTIONS,
+  ...CLIPBOARD_ACTIONS,
   ...COMMON_ACTIONS,
   ...ARRANGE_ACTIONS,
 ];

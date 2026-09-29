@@ -601,6 +601,54 @@ describe('canvas handlers', () => {
     expect(editor().canUndo()).toBe(false);
   });
 
+  describe('⌥-drag duplicates (016 FR-009)', () => {
+    it('puts the originals back and drops a copy, as one undo step', () => {
+      const { h, doc, editor } = handlers();
+      act(() => {
+        ui().select({ nodes: ['a', 'b'] });
+      });
+      act(() => {
+        h().onNodeDragStart({}, flowNode('a'));
+        h().onNodesChange([
+          { type: 'position', id: 'a', position: { x: 100, y: 40 }, dragging: true },
+          { type: 'position', id: 'b', position: { x: 400, y: 40 }, dragging: true },
+        ]);
+        h().onNodeDragStop(click({ altKey: true }));
+      });
+      const file = toJSON(doc);
+      expect(file.nodes.slice(0, 2).map((n) => n.position)).toEqual([
+        { x: 0, y: 0 },
+        { x: 300, y: 0 },
+      ]);
+      const copies = file.nodes.slice(4);
+      expect(copies.map((n) => n.position)).toEqual([
+        { x: 100, y: 40 },
+        { x: 400, y: 40 },
+      ]);
+      expect(ui().selection.nodes).toEqual(copies.map((n) => n.id));
+      expect(ui().announcement.text).toBe('Duplicated 2 components');
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).nodes).toHaveLength(4);
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 0, y: 0 });
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('moves as usual without ⌥', () => {
+      const { h, doc } = handlers();
+      act(() => {
+        h().onNodeDragStart({}, flowNode('a'));
+        h().onNodesChange([
+          { type: 'position', id: 'a', position: { x: 10, y: 20 }, dragging: true },
+        ]);
+        h().onNodeDragStop(click());
+      });
+      expect(toJSON(doc).nodes).toHaveLength(4);
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 10, y: 20 });
+    });
+  });
+
   describe('drags go through the current view (011 FR-020, FR-021)', () => {
     const drag = (
       h: ReturnType<typeof handlers>['h'],

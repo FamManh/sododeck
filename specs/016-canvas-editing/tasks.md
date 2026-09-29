@@ -57,14 +57,14 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `016-canvas-editing` from the latest `main`, after the docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` on the unchanged code. Save both tables in `specs/016-canvas-editing/bench-before.md`.
-- [ ] T003 Add two scenarios to `apps/app/bench/perf.bench.ts` (R15, FR-038):
+- [x] T001 Create branch `016-canvas-editing` from the latest `main`, after the docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T002 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` on the unchanged code. Save both tables in `specs/016-canvas-editing/bench-before.md`.
+- [x] T003 Add two scenarios to `apps/app/bench/perf.bench.ts` (R15, FR-038):
   - `drag-100-selected`: select 100 nodes near the centre and drag them for 2 s.
   - `group-drag` (only with `BENCH_GROUPS`): drag a group label for 2 s.
   - Both record fps like the existing `drag` scenario.
   - Until group dragging exists (T041), `group-drag` logs `TODO(016): not available yet` and records no number.
-- [ ] T004 [P] Write ADR `docs/decisions/0017-group-frames-and-clipboard.md` in the header format of 0016. It records:
+- [x] T004 [P] Write ADR `docs/decisions/0017-group-frames-and-clipboard.md` in the header format of 0016. It records:
   - Groups as frames (R1). This supersedes the "no geometry stored" part of ADR 0004 / 0006.
   - Fitting frames untracked on open (R2).
   - The `groupBounds` choke point (R3).
@@ -82,7 +82,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Schema
 
-- [ ] T005 Write failing cases in `packages/schema/test/fixtures.ts` for:
+- [x] T005 Write failing cases in `packages/schema/test/fixtures.ts` for:
   - a group with `position` but no `size` (S-frame-pair);
   - a `size` with `width: 0`;
   - a `view.groupFrames` key that is not a group id (S-group-frames-keys);
@@ -90,7 +90,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Extend `packages/schema/examples/full.sododeck.json` with a group `position` / `size` and one `view.groupFrames` entry, which the coverage test needs.
 
-- [ ] T006 Edit `packages/schema/schema/v1.json` (R1, data-model):
+- [x] T006 Edit `packages/schema/schema/v1.json` (R1, data-model):
   - Add `$defs/Size` and `$defs/Frame`.
   - Add `Group.position` and `Group.size` after `parent`, and rewrite the Group description.
   - Add `View.groupFrames` after `positions`.
@@ -99,45 +99,45 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Model
 
-- [ ] T007 [P] Write a failing round-trip test in `packages/model/test/round-trip.test.ts`. Cover a group with a frame, a group without a frame, and a view with `groupFrames`. Also check that key order is `…parent, position, size` and that the text is identical after `serializeDeck`.
-- [ ] T008 [P] Write failing tests in `packages/model/test/frames.test.ts` for `fitGroupFrames` (R2):
+- [x] T007 [P] Write a failing round-trip test in `packages/model/test/round-trip.test.ts`. Cover a group with a frame, a group without a frame, and a view with `groupFrames`. Also check that key order is `…parent, position, size` and that the text is identical after `serializeDeck`.
+- [x] T008 [P] Write failing tests in `packages/model/test/frames.test.ts` for `fitGroupFrames` (R2):
   - nested groups inner-first;
   - empty groups and parent cycles skipped;
   - the padding and card size come from the arguments;
   - a view variant uses `view.positions`;
   - only groups missing a frame are returned;
   - 2,000 nodes in under 50 ms.
-- [ ] T009 Implement `fitGroupFrames` and a `frameOf(group)` helper in `packages/model/src/geometry.ts`, and export them from `packages/model/src/index.ts`.
-- [ ] T010 Write failing tests in `packages/model/test/frames.test.ts`:
+- [x] T009 Implement `fitGroupFrames` and a `frameOf(group)` helper in `packages/model/src/geometry.ts`, and export them from `packages/model/src/index.ts`.
+- [x] T010 Write failing tests in `packages/model/test/frames.test.ts`:
   - `editor.fillGroupFrames` writes only missing frames and adds **no** undo step.
   - `editor.setGroupFrames(baseViewId, …)` writes `group.position` / `group.size` as one undo step.
   - `setGroupFrames(otherViewId, …)` materializes the view, writes `view.groupFrames`, and leaves the base frame unchanged.
   - `materialize` copies the base frames into the view.
-- [ ] T011 Implement `packages/model/src/ops/frames.ts` (`fillGroupFrames` with `transactUntracked`; `setGroupFrames` with undo key `views:<id>:groupFrames`). Extend `materialize` in `packages/model/src/ops/views.ts` to copy frames, and wire both ops into `packages/model/src/editor.ts`.
-- [ ] T012 [P] Write a failing test in `packages/model/test/cascade.test.ts` that removing a group deletes `view.groupFrames[id]` in every view in the same step. Implement it in `packages/model/src/ops/cascade.ts`.
-- [ ] T013 [P] Write a failing test in `packages/model/test/cancel-gesture.test.ts`: after `beginGesture()`, moves, then `cancelGesture()`, the document is restored and both the undo and redo stacks are the same as before the gesture (R14). Implement `cancelGesture` in `packages/model/src/editor.ts`.
+- [x] T011 Implement `packages/model/src/ops/frames.ts` (`fillGroupFrames` with `transactUntracked`; `setGroupFrames` with undo key `views:<id>:groupFrames`). Extend `materialize` in `packages/model/src/ops/views.ts` to copy frames, and wire both ops into `packages/model/src/editor.ts`.
+- [x] T012 [P] Write a failing test in `packages/model/test/cascade.test.ts` that removing a group deletes `view.groupFrames[id]` in every view in the same step. Implement it in `packages/model/src/ops/cascade.ts`.
+- [x] T013 [P] Write a failing test in `packages/model/test/cancel-gesture.test.ts`: after `beginGesture()`, moves, then `cancelGesture()`, the document is restored and both the undo and redo stacks are the same as before the gesture (R14). Implement `cancelGesture` in `packages/model/src/editor.ts`.
 
 ### App rendering and layout
 
-- [ ] T014 Write a failing test in `apps/app/src/editor/canvas-geometry.test.ts`:
+- [x] T014 Write a failing test in `apps/app/src/editor/canvas-geometry.test.ts`:
   - `groupBounds` returns the stored frame when a group has `position` and `size`.
   - Otherwise it falls back to the derived box.
   - The cache is invalidated when `deck.groups` changes.
 
   Implement it in `apps/app/src/editor/canvas-geometry.ts` (R3).
 
-- [ ] T015 Write a failing test in `apps/app/src/editor/views/view-state.test.ts` that `viewDeck` projects `view.groupFrames[id]` onto the group for a non-base view and leaves the base view's frames alone. Implement it in `apps/app/src/editor/views/view-state.ts`.
-- [ ] T016 Add `fitMissingFrames(editor, deck)` in `apps/app/src/editor/open-deck.ts`, and call it once after the editor is created for an opened deck, in `apps/app/src/routes/editor-page.tsx` (near the `openDeck(source)` call). It calls `editor.fillGroupFrames(...)`. Pass the base frames and the frames for each view with its own positions, from `fitGroupFrames` with `COMPONENT_CARD_SIZE` and `GROUP_PADDING`. Add a test in `apps/app/src/editor/open-deck.test.ts` (new): an old deck gets frames, ⌘Z does nothing, and the rendered group boxes at component level equal the old derived boxes (SC-003b).
-- [ ] T017 [P] Write a failing test in `apps/app/src/editor/tidy-layout.test.ts` that Tidy writes each laid-out group's ELK box as its frame in the same step as the positions (FR-045). Implement it in `apps/app/src/editor/tidy-layout.ts`.
-- [ ] T018 [P] Update `apps/app/src/editor/export/scene.test.ts` so that an export of a deck with a frame larger than its members uses the stored frame.
-- [ ] T019 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the fields from data-model:
+- [x] T015 Write a failing test in `apps/app/src/editor/views/view-state.test.ts` that `viewDeck` projects `view.groupFrames[id]` onto the group for a non-base view and leaves the base view's frames alone. Implement it in `apps/app/src/editor/views/view-state.ts`.
+- [x] T016 Add `fitMissingFrames(editor, deck)` in `apps/app/src/editor/open-deck.ts`, and call it once after the editor is created for an opened deck, in `apps/app/src/routes/editor-page.tsx` (near the `openDeck(source)` call). It calls `editor.fillGroupFrames(...)`. Pass the base frames and the frames for each view with its own positions, from `fitGroupFrames` with `COMPONENT_CARD_SIZE` and `GROUP_PADDING`. Add a test in `apps/app/src/editor/open-deck.test.ts` (new): an old deck gets frames, ⌘Z does nothing, and the rendered group boxes at component level equal the old derived boxes (SC-003b).
+- [x] T017 [P] Write a failing test in `apps/app/src/editor/tidy-layout.test.ts` that Tidy writes each laid-out group's ELK box as its frame in the same step as the positions (FR-045). Implement it in `apps/app/src/editor/tidy-layout.ts`.
+- [x] T018 [P] Update `apps/app/src/editor/export/scene.test.ts` so that an export of a deck with a frame larger than its members uses the stored frame.
+- [x] T019 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the fields from data-model:
   - `canvasGesture` gains `'group-drag' | 'resize' | 'marquee'`.
   - `dropTarget`, `guides`, `dragReadout`, `marqueeCount`, `pasteSerial`.
   - `resetForDeck` and pruning clear them.
-- [ ] T020 [P] Add an "Editing" section to `apps/app/src/editor/shell/shortcuts.ts` (+ test) with every id in the contract. Change `group` from G to ⌘G.
-- [ ] T021 [P] Add `supportsClipboardRead()` (`navigator.clipboard.readText`) to `apps/app/src/lib/features.ts` (+ test).
-- [ ] T022 [P] Create `HintBar` in `packages/ui/src/components/hint-bar.tsx` (+ test, gallery entry): an inverse pill, 30 px tall, bottom centre, with key caps in Mono, as in the DESIGN.md hint bar. Its props are `items: { keys: string; label: string }[]`.
-- [ ] T023 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The canvas must be visually unchanged: compare the demo deck against the screenshots from 018 / 019.
+- [x] T020 [P] Add an "Editing" section to `apps/app/src/editor/shell/shortcuts.ts` (+ test) with every id in the contract. Change `group` from G to ⌘G.
+- [x] T021 [P] Add `supportsClipboardRead()` (`navigator.clipboard.readText`) to `apps/app/src/lib/features.ts` (+ test).
+- [x] T022 [P] Create `HintBar` in `packages/ui/src/components/hint-bar.tsx` (+ test, gallery entry): an inverse pill, 30 px tall, bottom centre, with key caps in Mono, as in the DESIGN.md hint bar. Its props are `items: { keys: string; label: string }[]`.
+- [x] T023 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The canvas must be visually unchanged: compare the demo deck against the screenshots from 018 / 019.
 
 **Checkpoint**: frames are stored, rendered, exported and laid out. Stories can start.
 

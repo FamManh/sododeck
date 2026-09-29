@@ -54,6 +54,7 @@ import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
+import { useClipboardEvents } from './editing/use-clipboard-events';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
@@ -285,6 +286,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useUndoAcrossViews();
   useRovingFocus(wrapper);
   useStickyDraftLifecycle();
+  // ⌘C / ⌘X / ⌘V through the platform clipboard events (016 R9).
+  useClipboardEvents();
 
   // The shown or recorded flow's marks (006): badges, candidates, preview, invalid, start ring.
   const flow = findFlow(deck, session?.flowId ?? activeFlow?.flowId ?? null);

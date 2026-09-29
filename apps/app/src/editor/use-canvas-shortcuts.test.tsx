@@ -503,6 +503,39 @@ describe('editor shortcuts', () => {
   });
 });
 
+describe('⌘D duplicate (016 FR-009)', () => {
+  it('duplicates the selection 24 px away and blocks the bookmark dialog', () => {
+    const { doc, editor } = setup();
+    focusNode('n00');
+    const before = toJSON(doc).nodes.length;
+    expect(fireEvent.keyDown(document.body, { key: 'd', code: 'KeyD', metaKey: true })).toBe(false);
+    const nodes = toJSON(doc).nodes;
+    expect(nodes).toHaveLength(before + 1);
+    const original = nodes.find((n) => n.id === 'n00');
+    expect(nodes.at(-1)?.position).toEqual({
+      x: (original?.position?.x ?? 0) + 24,
+      y: (original?.position?.y ?? 0) + 24,
+    });
+    expect(ui().selection.nodes).toEqual([nodes.at(-1)?.id]);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).nodes).toHaveLength(before);
+  });
+
+  it('does nothing in a text field or without a selection', async () => {
+    const { doc, user } = setup();
+    const before = toJSON(doc).nodes.length;
+    fireEvent.keyDown(document.body, { key: 'd', code: 'KeyD', ctrlKey: true });
+    act(() => {
+      ui().select({ nodes: ['n00'] });
+    });
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('{Meta>}d{/Meta}');
+    expect(toJSON(doc).nodes).toHaveLength(before);
+  });
+});
+
 describe('problem walk (015 FR-021)', () => {
   function Walker({ onProblem, canvas }: { onProblem: (d: 1 | -1) => void; canvas: boolean }) {
     useEditorShortcuts({ canvas, onProblem });

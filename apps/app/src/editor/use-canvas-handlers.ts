@@ -34,6 +34,7 @@ import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
+import { duplicateOnDrop, startNodeDrag, type DragSession } from './editing/drag-session';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
@@ -62,6 +63,8 @@ export function useCanvasHandlers() {
   const editor = useEditor();
   const { getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
+  // The components (016: or group) the current pointer drag moves, and where they started.
+  const drag = useRef<DragSession | null>(null);
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
 
@@ -343,6 +346,7 @@ export function useCanvasHandlers() {
         } else {
           if (!ui().selection.nodes.includes(node.id)) ui().select({ nodes: [node.id] });
           ui().focus(node.id);
+          drag.current = startNodeDrag(editor, node.id, ui().selection.nodes);
         }
         if (!gestureOpen.current) {
           gestureOpen.current = true;
@@ -392,7 +396,13 @@ export function useCanvasHandlers() {
           changes.flatMap((c) => (c.type === 'select' ? [{ ...c, type: 'edge' as const }] : [])),
         );
       },
-      onNodeDragStop: () => {
+      onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
+        const session = drag.current;
+        drag.current = null;
+        // ⌥ on release copies instead of moving (016 FR-009), inside the drag's undo step.
+        if (session !== null && event?.altKey === true && gestureOpen.current && !viewOnly()) {
+          duplicateOnDrop(editor, session);
+        }
         if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();
       },

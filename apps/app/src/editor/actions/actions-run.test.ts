@@ -1,8 +1,10 @@
-import { fromJSON, toJSON } from '@sododeck/model';
+import { fromJSON, parseFragment, toJSON } from '@sododeck/model';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { actionContext, sel, TARGETS } from '../../test/action-fixtures';
+import { FRAGMENT_HINT_KEY } from '../editing/clipboard-ops';
+import { shortcutLabel } from '../shell/shortcuts';
 import { actionsFor, findAction, runAction } from './actions-for';
 import { ACTIONS } from './index';
 import type { ActionContext } from './types';
@@ -134,5 +136,154 @@ describe('running actions (019 R8)', () => {
     expect(runAction(ACTIONS, 'canvas.fit', ctx)).toBe(true);
     expect(ctx.canvas?.fitView).toHaveBeenCalledWith({ padding: 0.2 });
     expect(findAction(ACTIONS, 'canvas.fit')?.modes).toContain('flow');
+  });
+});
+
+describe('clipboard actions (016 US1)', () => {
+  const clipboard = (readText?: () => Promise<string>) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText, ...(readText === undefined ? {} : { readText }) },
+      configurable: true,
+    });
+    return writeText;
+  };
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('copies the components with their connections and announces it', async () => {
+    const writeText = clipboard();
+    const ctx = actionContext(TARGETS.components);
+    expect(runAction(ACTIONS, 'clipboard.copy', ctx)).toBe(true);
+    await vi.waitFor(() => {
+      expect(ui().announcement.text).toBe('Copied 2 components and 1 connection');
+    });
+    const text = String(writeText.mock.calls[0]?.[0]);
+    expect(parseFragment(text)?.deck.nodes.map((n) => n.id)).toEqual(['a', 'b']);
+    expect(localStorage.getItem(FRAGMENT_HINT_KEY)).not.toBeNull();
+    // Copying never writes the deck.
+    expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('copies a group with its whole subtree', async () => {
+    const writeText = clipboard();
+    runAction(ACTIONS, 'clipboard.copy', actionContext(TARGETS.group));
+    await vi.waitFor(() => {
+      expect(writeText).toHaveBeenCalled();
+    });
+    const fragment = parseFragment(String(writeText.mock.calls[0]?.[0]));
+    expect(fragment?.deck.groups.map((g) => g.id)).toEqual(['g']);
+    expect(fragment?.deck.nodes.map((n) => n.id)).toEqual(['a', 'b']);
+  });
+
+  it('says so when the clipboard refuses the write', async () => {
+    const ctx = actionContext(TARGETS.component);
+    runAction(ACTIONS, 'clipboard.copy', ctx);
+    await vi.waitFor(() => {
+      expect(ctx.toast).toHaveBeenCalledWith('Could not use the clipboard');
+    });
+  });
+
+  it('cuts: the copy, then the Delete confirmation', async () => {
+    clipboard();
+    runAction(ACTIONS, 'clipboard.cut', actionContext(TARGETS.components));
+    await vi.waitFor(() => {
+      expect(ui().pendingDelete?.targets).toEqual([
+        { scope: 'nodes', id: 'a' },
+        { scope: 'nodes', id: 'b' },
+      ]);
+    });
+    expect(ui().announcement.text).toBe('Cut 2 components and 1 connection');
+  });
+
+  it('duplicates 24 px away as one undo step, leaving the clipboard alone', () => {
+    const writeText = clipboard();
+    const ctx = actionContext(TARGETS.components);
+    expect(runAction(ACTIONS, 'clipboard.duplicate', ctx)).toBe(true);
+    const file = toJSON(ctx.doc);
+    const copies = file.nodes.slice(4);
+    expect(copies.map((n) => n.position)).toEqual([
+      { x: 24, y: 24 },
+      { x: 324, y: 24 },
+    ]);
+    // Still in the group the originals are in.
+    expect(copies.map((n) => n.group)).toEqual(['g', 'g']);
+    expect(file.edges).toHaveLength(2);
+    expect(ui().selection.nodes).toEqual(copies.map((n) => n.id));
+    expect(ui().announcement.text).toBe('Duplicated 2 components');
+    expect(writeText).not.toHaveBeenCalled();
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).nodes).toHaveLength(4);
+    expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('pastes from the menu at the menu point, and names what it pasted', async () => {
+    const source = actionContext(TARGETS.components);
+    const writeText = clipboard();
+    runAction(ACTIONS, 'clipboard.copy', source);
+    await vi.waitFor(() => {
+      expect(ui().announcement.text).toMatch(/^Copied/);
+    });
+    const text = String(writeText.mock.calls[0]?.[0]);
+    clipboard(() => Promise.resolve(text));
+    const ctx = actionContext(TARGETS.canvas);
+    expect(runAction(ACTIONS, 'clipboard.paste', ctx)).toBe(true);
+    await vi.waitFor(() => {
+      expect(toJSON(ctx.doc).nodes).toHaveLength(6);
+    });
+    // The fake canvas maps the menu point (100, 100) to (200, 200): the copies' top-left.
+    expect(
+      toJSON(ctx.doc)
+        .nodes.slice(4)
+        .map((n) => n.position),
+    ).toEqual([
+      { x: 200, y: 200 },
+      { x: 500, y: 200 },
+    ]);
+    expect(ui().announcement.text).toBe('Pasted 2 components and 1 connection');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).nodes).toHaveLength(4);
+  });
+
+  it('pastes nothing from plain text', async () => {
+    clipboard(() => Promise.resolve('just some text'));
+    localStorage.setItem(FRAGMENT_HINT_KEY, '1');
+    const ctx = actionContext(TARGETS.canvas);
+    runAction(ACTIONS, 'clipboard.paste', ctx);
+    await vi.waitFor(() => {
+      expect(ui().announcement.text).toBe('Nothing to paste');
+    });
+    expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('disables Paste with a reason', () => {
+    const paste = () =>
+      actionsFor(ACTIONS, actionContext(TARGETS.canvas), 'menu')
+        .flatMap((s) => s.actions)
+        .find((a) => a.id === 'clipboard.paste');
+    clipboard();
+    expect(paste()?.disabled).toBe(`Press ${shortcutLabel('paste')} to paste`);
+    clipboard(() => Promise.resolve(''));
+    expect(paste()?.disabled).toBe('Nothing to paste: copy components first');
+    localStorage.setItem(FRAGMENT_HINT_KEY, '1');
+    expect(paste()?.disabled).toBeNull();
+  });
+
+  it('offers Copy in flow mode and nothing that edits', () => {
+    const ids = (mode: 'flow' | 'session') =>
+      actionsFor(ACTIONS, actionContext(TARGETS.components, mode), 'menu').flatMap((s) =>
+        s.actions.map((a) => a.id),
+      );
+    for (const mode of ['flow', 'session'] as const) {
+      expect(ids(mode)).toContain('clipboard.copy');
+      expect(ids(mode)).not.toContain('clipboard.cut');
+      expect(ids(mode)).not.toContain('clipboard.duplicate');
+    }
+    expect(
+      actionsFor(ACTIONS, actionContext(TARGETS.canvas, 'flow'), 'menu').flatMap((s) =>
+        s.actions.map((a) => a.id),
+      ),
+    ).not.toContain('clipboard.paste');
   });
 });

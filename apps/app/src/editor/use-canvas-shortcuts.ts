@@ -61,7 +61,7 @@ function restoreFocus(target: HTMLElement | null): void {
   }, 0);
 }
 
-function inDialog(target: EventTarget | null): boolean {
+export function inDialog(target: EventTarget | null): boolean {
   return (
     target instanceof Element && target.closest('[role="dialog"], [role="alertdialog"]') !== null
   );
@@ -72,7 +72,7 @@ function inDialog(target: EventTarget | null): boolean {
  * float over the canvas but are not dialogs: Delete and Esc there belong to their fields and
  * buttons, never to the canvas selection.
  */
-function inOverlay(target: EventTarget | null): boolean {
+export function inOverlay(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
     target.closest(
@@ -566,6 +566,14 @@ export function useEditorShortcuts({
       if (isMod(event) && !event.altKey && event.code === 'Period' && walkProblems !== undefined) {
         event.preventDefault();
         walkProblems(event.shiftKey ? -1 : 1);
+        return;
+      }
+
+      // ⌘D duplicates (016 FR-009), never the browser's bookmark dialog; the menu's action, so
+      // it works exactly when Duplicate is offered.
+      if (isMod(event) && !event.shiftKey && !event.altKey && event.code === 'KeyD' && canvas) {
+        event.preventDefault();
+        runRef.current('clipboard.duplicate');
         return;
       }
 
