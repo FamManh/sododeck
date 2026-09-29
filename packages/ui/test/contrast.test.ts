@@ -78,6 +78,7 @@ const NON_TEXT_PAIRS: Pair[] = [
   ['clay-ink', 'surface'], // invalid input border + icon
   ['muted', 'surface'], // dashed border of a partial tag chip (008 bulk edit)
   ['success-ink', 'surface'], // matched-row check icon (008 decision tables)
+  ['primary', 'canvas'], // snap guides, drop-target and landing-slot dashes, resize handles (016)
 ];
 // Not asserted: primary fill vs inverse (coach-mark Next button) is 2.38:1 in dark. WCAG 1.4.11
 // does not require a text button's fill to contrast with its background; the label identifies
