@@ -33,7 +33,7 @@ const twMerge = extendTailwindMerge({
         'row',
         'banner',
       ],
-      shadow: ['rest', 'float', 'modal', 'selection', 'hover', 'tour'],
+      shadow: ['rest', 'float', 'modal', 'selection', 'hover', 'tour', 'menu'],
     },
   },
 });

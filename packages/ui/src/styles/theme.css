@@ -127,4 +127,6 @@
   --shadow-selection: 0 0 0 3px var(--sd-primary-soft);
   --shadow-hover: 0 4px 16px var(--sd-shadow);
   --shadow-tour: 0 12px 32px var(--sd-shadow-tour);
+  /* Menus and toolbar popovers (DESIGN.md Float, 019). */
+  --shadow-menu: 0 12px 32px var(--sd-shadow);
 }

@@ -198,8 +198,24 @@ describe('Keyboard regions (018 US6)', () => {
     });
     await user.keyboard('?');
     const dialog = screen.getByRole('dialog', { name: 'Keyboard shortcuts' });
-    for (const section of ['Tools', 'Panels', 'Canvas', 'Flows', 'JSON']) {
+    for (const section of ['Tools', 'Panels', 'Canvas', 'Quick edit', 'Flows', 'JSON']) {
       expect(within(dialog).getByRole('heading', { name: section })).toBeInTheDocument();
+    }
+    // Every key 019 adds (FR-045), in its own section.
+    const quick = within(dialog).getByRole('region', { name: 'Quick edit' });
+    for (const action of [
+      'Rename',
+      'Save and add another',
+      'Focus the selection toolbar',
+      'Open the context menu',
+      'Copy JSON',
+      'Ungroup',
+      'Connection protocol',
+    ]) {
+      expect(within(quick).getAllByRole('cell', { name: action }).length).toBeGreaterThan(0);
+    }
+    for (const keys of ['F2', 'Double-click', 'Ctrl+Enter', 'Ctrl+E', '⇧F10', 'Ctrl+Shift+C']) {
+      expect(within(quick).getByText(keys)).toBeInTheDocument();
     }
     for (const action of ['Next region', 'Hide UI', 'Show or hide JSON', 'Details drawer']) {
       expect(within(dialog).getByRole('cell', { name: action })).toBeInTheDocument();

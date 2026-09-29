@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react';
+import { toJSON } from '@sododeck/model';
+import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -68,5 +69,21 @@ describe('CollapsedGroupNode', () => {
     reduced = true;
     renderWithEditor(<CollapsedGroupNode {...props({ flowInside: 'current' })} />, deckOf({}));
     expect(screen.getByTestId('collapsed-flow-dot')).not.toHaveClass('sd-flow-inside-dot');
+  });
+
+  it('edits the group title in place (019 FR-008)', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(
+      <CollapsedGroupNode {...props()} />,
+      deckOf({ groups: [{ id: 'core', title: 'Core services' }] }),
+    );
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'group', id: 'core', isNew: false });
+    });
+    const field = screen.getByRole('textbox', { name: 'Group title' });
+    expect(field).toHaveValue('Core services');
+    await user.keyboard('Core{Enter}');
+    expect(toJSON(doc).groups[0]?.title).toBe('Core');
+    expect(useUiStore.getState().titleEdit).toBeNull();
   });
 });

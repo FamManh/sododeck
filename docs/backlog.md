@@ -1120,6 +1120,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 ## 016-canvas-editing
 
 - **Milestone:** after M4 · **Depends on:** 019 (menu and toolbar surfaces) · **Estimate:** 4 d
+- **Menus and toolbar (019):** add this feature's items as an action module in
+  `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar
+  and the keys pick them up (ADR 0015).
 - **Goal:** Everyday diagram editing feels like a design tool: copy, paste, duplicate, group what is
   selected, move a group as one piece, and line things up without fiddling.
 - **Spec IDs:** C-6 (editing ergonomics); no new file-format fields.
@@ -1217,6 +1220,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 ## 017-resize-edge-routing
 
 - **Milestone:** after M4 · **Depends on:** 003 (soft: 016 for snapping) · **Estimate:** 4 d
+- **Menus and toolbar (019):** add this feature's items as an action module in
+  `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar
+  and the keys pick them up (ADR 0015).
 - **Goal:** Users control the look of the diagram: make important cards bigger and route
   connectors where they want them, so busy diagrams stay tidy.
 - **Spec IDs:** C-6; **schema change** decided in §g-37.
@@ -1425,6 +1431,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 019-card-quick-edit
 
+- **Status:** implemented (2026-09-28) — see [`tasks.md`](../specs/019-card-quick-edit/tasks.md) and [ADR 0015](decisions/0015-canvas-actions-and-quick-edit.md). FR-001 option A: double-click and F2 rename, Enter keeps opening details / drilling in. The "Paste is disabled with nothing copied" criterion moved to 016 (no Paste item until 016). Menu and toolbar items live in the action list `apps/app/src/editor/actions/`.
 - **Milestone:** after M4 · **Depends on:** 018 · **Estimate:** 3 d
 - **Goal:** Most diagram edits need only the title; everything else is one click away on the card
   itself, without opening a panel.
@@ -1500,6 +1507,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 ## 020-card-style
 
 - **Milestone:** after M4 · **Depends on:** 019 · **Estimate:** 3 d
+- **Menus and toolbar (019):** add this feature's items as an action module in
+  `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar
+  and the keys pick them up (ADR 0015).
 - **Goal:** Users colour cards to show meaning at a glance (team, status, phase), with colours
   that look right in light and dark themes.
 - **Spec IDs:** C-6; **schema change** decided in §g-39.

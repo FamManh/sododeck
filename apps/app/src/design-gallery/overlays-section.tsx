@@ -53,6 +53,7 @@ import {
 import { useId, useState } from 'react';
 
 import { GallerySection } from './gallery-section';
+import { QuickEditSamples } from './quick-edit-samples';
 import { SampleRow } from './sample-row';
 
 const TOUR = [
@@ -74,7 +75,7 @@ export function OverlaysSection() {
     <GallerySection
       id="overlays"
       title="Dialog, popover and coach mark"
-      description="Reference: 06-export-json (dialog, switch), 05-empty-deck-tour-1 (coach mark)."
+      description="Reference: 06-export-json (dialog, switch), 05-empty-deck-tour-1 (coach mark), 98–104 (selection toolbar, toolbar popover, title edit)."
     >
       <SampleRow label="dialog">
         <Dialog>
@@ -274,6 +275,7 @@ export function OverlaysSection() {
           {current?.body}
         </CoachMark>
       </SampleRow>
+      <QuickEditSamples />
     </GallerySection>
   );
 }

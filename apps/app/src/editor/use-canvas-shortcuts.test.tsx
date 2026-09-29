@@ -245,6 +245,40 @@ describe('canvas keyboard', () => {
     expect(screen.getByRole('textbox', { name: 'Title' })).toHaveValue('N22');
   });
 
+  it('renames the focused component with F2, all text selected (019 FR-002)', async () => {
+    const { user } = setup();
+    focusNode('n11');
+    await user.keyboard('{F2}');
+    const field = screen.getByRole<HTMLInputElement>('textbox', { name: 'Component title' });
+    expect(field).toHaveFocus();
+    expect([field.selectionStart, field.selectionEnd]).toEqual([0, 3]);
+    expect(ui().titleEdit).toEqual({ target: 'node', id: 'n11', isNew: false });
+    expect(screen.queryByRole('complementary', { name: 'Details' })).not.toBeInTheDocument();
+    await user.keyboard('Renamed{Enter}');
+    expect(screen.getByRole('group', { name: 'Service: Renamed' })).toHaveFocus();
+  });
+
+  it('renames the selected group with F2 (019 FR-008)', async () => {
+    const { user } = setup(groupedDeck);
+    act(() => {
+      ui().select({ groups: ['core'] });
+      ui().focus('group:core');
+      document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
+    });
+    await user.keyboard('{F2}');
+    expect(screen.getByRole('textbox', { name: 'Group title' })).toHaveFocus();
+  });
+
+  it('ignores F2 in flow mode (019 FR-010)', async () => {
+    const { user } = setup(playbackDeck);
+    focusNode('a');
+    act(() => {
+      ui().openFlow('checkout');
+    });
+    await user.keyboard('{F2}');
+    expect(ui().titleEdit).toBeNull();
+  });
+
   it('clears the selection with Escape, but closes a popover first', async () => {
     const { user } = setup();
     focusNode('n00');

@@ -5,7 +5,7 @@ import { isApplePlatform } from '../../lib/features';
  * island tooltips and the "Keyboard shortcuts" dialog, so labels and keys cannot drift. The key
  * handling itself lives in `use-canvas-shortcuts.ts`, `use-shell-shortcuts.ts` and the flow hooks.
  */
-export type ShortcutSection = 'Canvas' | 'Tools' | 'Panels' | 'Flows' | 'JSON';
+export type ShortcutSection = 'Canvas' | 'Tools' | 'Panels' | 'Quick edit' | 'Flows' | 'JSON';
 
 export interface Shortcut {
   id: string;
@@ -60,6 +60,31 @@ export const SHORTCUTS = [
   { id: 'zoom-out', label: 'Zoom out', section: 'Canvas', keys: mod('⌘−', 'Ctrl+−') },
   { id: 'minimap', label: 'Minimap', section: 'Canvas', keys: same('M') },
   { id: 'escape', label: 'Clear selection or close', section: 'Canvas', keys: same('Esc') },
+  { id: 'zoom-fit', label: 'Zoom to fit', section: 'Canvas', keys: mod('⌘0', 'Ctrl+0') },
+  // Quick edit (019): on-card title, selection toolbar, context menu
+  { id: 'rename', label: 'Rename', section: 'Quick edit', keys: same('F2') },
+  { id: 'rename-pointer', label: 'Rename', section: 'Quick edit', keys: same('Double-click') },
+  {
+    id: 'save-and-add',
+    label: 'Save and add another',
+    section: 'Quick edit',
+    keys: mod('⌘⏎', 'Ctrl+Enter'),
+  },
+  {
+    id: 'focus-toolbar',
+    label: 'Focus the selection toolbar',
+    section: 'Quick edit',
+    keys: mod('⌘E', 'Ctrl+E'),
+  },
+  { id: 'context-menu', label: 'Open the context menu', section: 'Quick edit', keys: same('⇧F10') },
+  { id: 'copy-json', label: 'Copy JSON', section: 'Quick edit', keys: mod('⇧⌘C', 'Ctrl+Shift+C') },
+  { id: 'ungroup', label: 'Ungroup', section: 'Quick edit', keys: mod('⇧⌘G', 'Ctrl+Shift+G') },
+  {
+    id: 'connection-protocol',
+    label: 'Connection protocol',
+    section: 'Quick edit',
+    keys: same('P'),
+  },
   // Flows
   { id: 'filter-flows', label: 'Filter flows', section: 'Flows', keys: same('/') },
   { id: 'step', label: 'Previous / next step', section: 'Flows', keys: same('← / →') },
@@ -75,6 +100,7 @@ export const SHORTCUT_SECTIONS: readonly ShortcutSection[] = [
   'Tools',
   'Panels',
   'Canvas',
+  'Quick edit',
   'Flows',
   'JSON',
 ];

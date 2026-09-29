@@ -1,21 +1,37 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { copyText } from './clipboard';
+import { copyText, couldNotCopyText } from './clipboard';
 
-afterEach(() => vi.unstubAllGlobals());
+const setClipboard = (clipboard: unknown) => {
+  Object.defineProperty(navigator, 'clipboard', { value: clipboard, configurable: true });
+};
+
+afterEach(() => {
+  setClipboard(undefined);
+});
 
 describe('copyText', () => {
-  it('writes when available', async () => {
+  it('writes the text and resolves true', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    expect(await copyText('hello')).toBe(true);
-    expect(writeText).toHaveBeenCalledWith('hello');
+    setClipboard({ writeText });
+    await expect(copyText('{"a":1}')).resolves.toBe(true);
+    expect(writeText).toHaveBeenCalledWith('{"a":1}');
   });
 
-  it('returns false if denied or unavailable', async () => {
-    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockRejectedValue('denied') } });
-    expect(await copyText('hello')).toBe(false);
-    vi.stubGlobal('navigator', {});
-    expect(await copyText('hello')).toBe(false);
+  it('resolves false when the clipboard is missing', async () => {
+    setClipboard(undefined);
+    await expect(copyText('x')).resolves.toBe(false);
+  });
+
+  it('resolves false when the write is refused', async () => {
+    setClipboard({ writeText: vi.fn().mockRejectedValue(new Error('denied')) });
+    await expect(copyText('x')).resolves.toBe(false);
+  });
+});
+
+describe('couldNotCopyText', () => {
+  it('names the platform copy keys', () => {
+    expect(couldNotCopyText(true)).toBe("Couldn't copy — select the text and press ⌘C");
+    expect(couldNotCopyText(false)).toBe("Couldn't copy — select the text and press Ctrl+C");
   });
 });

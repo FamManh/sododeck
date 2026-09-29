@@ -129,6 +129,22 @@ describe('Rail and flyouts (018 US2, contract "Rail" and "Flyout")', () => {
     expect(doc.getArray('nodes').length).toBe(1);
     // The palette closes after adding unless it is pinned.
     expect(ui().flyout).toBeNull();
+    // The new card is being named (019 FR-011).
+    expect(ui().titleEdit).toMatchObject({ target: 'node', isNew: true });
+  });
+
+  it('keeps a pinned palette open while the new card is named (019 US2)', async () => {
+    const { user } = setup(deckOf({}));
+    act(() => {
+      ui().openFlyout('palette');
+      ui().togglePin();
+    });
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    await user.keyboard('2');
+    expect(ui().flyout).toBe('palette');
+    expect(ui().titleEdit).toMatchObject({ isNew: true });
   });
 
   it('shows the flow steps in flow mode, and pins Flows during a recording', () => {

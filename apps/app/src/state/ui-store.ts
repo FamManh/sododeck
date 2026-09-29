@@ -1,5 +1,6 @@
 import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
+import type { ComponentKind } from '@sododeck/ui/lib/icons';
 import { create } from 'zustand';
 
 import { clampDrawerWidth } from '../editor/shell/shell-geometry';
@@ -158,6 +159,40 @@ export interface DrawerState {
 /** Rail tools (018 R8). Sticky and Connector act on the next click, then fall back to Select. */
 export type Tool = 'select' | 'sticky' | 'connector';
 
+/**
+ * A title being edited inside its card (019 R2). The draft text lives only in the input; the
+ * document is written once, on commit. `isNew`: a just-added component ("Untitled <kind>", R3).
+ */
+export interface TitleEdit {
+  target: 'node' | 'group';
+  id: Id;
+  isNew: boolean;
+  kind?: ComponentKind;
+}
+
+/** What a canvas menu (and the action list) acts on (019 R7). `sticky`: only stickies selected. */
+export type MenuTarget =
+  | {
+      kind: 'component' | 'components' | 'connection' | 'group' | 'sticky' | 'mixed';
+      ids: Selection;
+    }
+  | { kind: 'canvas' };
+
+/** The open canvas menu: where it is anchored, how it was opened and who gets focus back. */
+export interface ContextMenuState {
+  target: MenuTarget;
+  point: { x: number; y: number };
+  via: 'pointer' | 'keyboard' | 'toolbar';
+  returnFocus: HTMLElement | null;
+}
+
+/** The selection toolbar's popovers (019 R6). */
+export type ToolbarFieldId =
+  'kind' | 'owner' | 'tags' | 'tech' | 'links' | 'rules' | 'protocol' | 'direction';
+
+/** A pointer gesture on the canvas: the selection toolbar hides while one runs (019 R5). */
+export type CanvasGesture = 'pan' | 'drag';
+
 export interface UiState {
   selection: Selection;
   /** The view this tab shows (011, FR-005); `null` = the first view. Never written to the deck. */
@@ -224,6 +259,10 @@ export interface UiState {
   minimap: boolean;
   tool: Tool;
   helpOpen: boolean;
+  titleEdit: TitleEdit | null;
+  contextMenu: ContextMenuState | null;
+  toolbarField: ToolbarFieldId | null;
+  canvasGesture: CanvasGesture | null;
 
   select: (selection: Partial<Selection>) => void;
   toggle: (id: Id, type: 'node' | 'edge' | 'sticky') => void;
@@ -338,6 +377,21 @@ export interface UiState {
   setMinimap: (on: boolean) => void;
   setTool: (tool: Tool) => void;
   setHelpOpen: (open: boolean) => void;
+  /**
+   * Starts editing a title in place (019), closing the menu and any toolbar popover. Refused
+   * (returns false) in flow mode and during a flow session (FR-010).
+   */
+  startTitleEdit: (edit: TitleEdit) => boolean;
+  /** Ends the title edit; the caller has already committed or cancelled. */
+  endTitleEdit: () => void;
+  openContextMenu: (
+    menu: Omit<ContextMenuState, 'returnFocus'> & { returnFocus?: HTMLElement | null },
+  ) => void;
+  closeContextMenu: () => void;
+  openToolbarField: (id: ToolbarFieldId) => void;
+  closeToolbarField: () => void;
+  /** A pan, zoom or drag starts (closes the toolbar popover) or ends (`null`). */
+  setCanvasGesture: (gesture: CanvasGesture | null) => void;
   /**
    * Forgets everything that pointed into the previous deck (opening another one) and reads the
    * shell preferences of `deckId` (`null`: the demo or an in-memory deck, defaults only).
@@ -494,6 +548,10 @@ export const useUiStore = create<UiState>()((set, get) => {
     minimap: false,
     tool: 'select',
     helpOpen: false,
+    titleEdit: null,
+    contextMenu: null,
+    toolbarField: null,
+    canvasGesture: null,
 
     select: ({ nodes = [], edges = [], groups = [], stickies = [] }) => {
       const empty =
@@ -547,12 +605,31 @@ export const useUiStore = create<UiState>()((set, get) => {
           patch.stickyEditing = null;
         if (state.stickyDraft !== null && !existing.stickies.has(state.stickyDraft))
           patch.stickyDraft = null;
+        const edit = state.titleEdit;
+        if (
+          edit !== null &&
+          !(edit.target === 'node' ? existing.nodes : existing.groups).has(edit.id)
+        )
+          patch.titleEdit = null;
+        const menu = state.contextMenu?.target;
+        if (
+          menu !== undefined &&
+          menu.kind !== 'canvas' &&
+          (menu.ids.nodes.some((id) => !existing.nodes.has(id)) ||
+            menu.ids.edges.some((id) => !existing.edges.has(id)) ||
+            menu.ids.groups.some((id) => !existing.groups.has(id)) ||
+            menu.ids.stickies.some((id) => !existing.stickies.has(id)))
+        )
+          patch.contextMenu = null;
         return patch;
       });
     },
     switchView: (id) => {
       set({
         currentViewId: id,
+        titleEdit: null,
+        contextMenu: null,
+        toolbarField: null,
         selection: EMPTY_SELECTION,
         drill: [],
         focusMode: false,
@@ -665,6 +742,9 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({
         activeFlow: openedFlow(flowId, stepId, alternativeId),
         lastPlayedFlowId: null,
+        titleEdit: null,
+        contextMenu: null,
+        toolbarField: null,
         selection: EMPTY_SELECTION,
         drill: [],
         focusMode: false,
@@ -725,6 +805,9 @@ export const useUiStore = create<UiState>()((set, get) => {
           branchCheck: 0,
         },
         activeFlow: null,
+        titleEdit: null,
+        contextMenu: null,
+        toolbarField: null,
         selection: EMPTY_SELECTION,
         focusMode: false,
         stickyEditing: null,
@@ -751,6 +834,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         activeFlow: openedFlow(flowId),
         focusMode: false,
+        titleEdit: null,
+        contextMenu: null,
+        toolbarField: null,
         selection: EMPTY_SELECTION,
         stickyEditing: null,
         stickyDraft: null,
@@ -917,6 +1003,30 @@ export const useUiStore = create<UiState>()((set, get) => {
     setHelpOpen: (helpOpen) => {
       set({ helpOpen });
     },
+    startTitleEdit: (titleEdit) => {
+      const state = get();
+      if (isFlowMode(state) || state.flowSession !== null) return false;
+      set({ titleEdit, contextMenu: null, toolbarField: null });
+      return true;
+    },
+    endTitleEdit: () => {
+      set({ titleEdit: null });
+    },
+    openContextMenu: ({ returnFocus = null, ...menu }) => {
+      set({ contextMenu: { ...menu, returnFocus }, toolbarField: null });
+    },
+    closeContextMenu: () => {
+      set({ contextMenu: null });
+    },
+    openToolbarField: (toolbarField) => {
+      set({ toolbarField, contextMenu: null });
+    },
+    closeToolbarField: () => {
+      set({ toolbarField: null });
+    },
+    setCanvasGesture: (canvasGesture) => {
+      set(canvasGesture === null ? { canvasGesture } : { canvasGesture, toolbarField: null });
+    },
     resetForDeck: (deckId = null) => {
       const prefs = loadShellPrefs(deckId);
       set({
@@ -956,6 +1066,10 @@ export const useUiStore = create<UiState>()((set, get) => {
         canvasPointer: null,
         palette: { open: false, returnFocus: null },
         exportDialog: { open: false, returnFocus: null },
+        titleEdit: null,
+        contextMenu: null,
+        toolbarField: null,
+        canvasGesture: null,
       });
     },
   };
