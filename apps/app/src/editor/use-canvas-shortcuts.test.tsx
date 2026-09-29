@@ -558,6 +558,47 @@ describe('⌘G group (016 FR-010)', () => {
   });
 });
 
+describe('⌥ keys on the canvas (016 US3, US5)', () => {
+  it('aligns with ⌥A / ⌥D / ⌥W / ⌥S, matched by code', () => {
+    const { doc } = setup();
+    focusNode('n00');
+    act(() => {
+      ui().select({ nodes: ['n00', 'n11'] });
+    });
+    const el = document.querySelector<HTMLElement>('[data-node-id="n00"]');
+    if (el === null) throw new Error('no card');
+    // ⌥A types "å" on a Mac: the code decides.
+    fireEvent.keyDown(el, { key: 'å', code: 'KeyA', altKey: true });
+    const [n00, n11] = ['n00', 'n11'].map((id) => toJSON(doc).nodes.find((n) => n.id === id));
+    expect(n11?.position?.x).toBe(n00?.position?.x);
+    expect(ui().announcement.text).toBe('Aligned 2 components left');
+  });
+
+  it('nudges with ⌥ arrows and still moves focus with plain arrows', () => {
+    const { doc } = setup();
+    focusNode('n11');
+    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]');
+    if (el === null) throw new Error('no card');
+    const before = toJSON(doc).nodes.find((n) => n.id === 'n11')?.position;
+    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'n11')?.position).toEqual({
+      x: (before?.x ?? 0) + 1,
+      y: before?.y ?? 0,
+    });
+  });
+
+  it('ignores ⌥ keys in a text field', async () => {
+    const { doc, user } = setup();
+    act(() => {
+      ui().select({ nodes: ['n00', 'n11'] });
+    });
+    const before = toJSON(doc);
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('{Alt>}a{ArrowRight}{/Alt}');
+    expect(toJSON(doc)).toEqual(before);
+  });
+});
+
 describe('problem walk (015 FR-021)', () => {
   function Walker({ onProblem, canvas }: { onProblem: (d: 1 | -1) => void; canvas: boolean }) {
     useEditorShortcuts({ canvas, onProblem });

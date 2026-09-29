@@ -73,6 +73,8 @@ export interface Action {
   /** A tooltip for an enabled item (e.g. "Members move to the parent level"). */
   description?: string;
   destructive?: boolean;
+  /** In a submenu: a rule before this item (Align ▸, 016). */
+  separatorBefore?: boolean;
   /** Submenu items. With `radio`, the children are one choice each and `checked` marks one. */
   children?: (ctx: ActionContext) => readonly Action[];
   radio?: boolean;
@@ -96,6 +98,7 @@ export interface ResolvedAction {
   field?: ToolbarFieldId;
   radio: boolean;
   checked: boolean;
+  separatorBefore: boolean;
   children?: readonly ResolvedAction[];
   run: () => void;
 }

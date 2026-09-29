@@ -41,6 +41,7 @@ function resolve(action: Action, ctx: ActionContext, surface: Surface): Resolved
     destructive: action.destructive === true,
     disabled: action.disabledReason?.(ctx) ?? null,
     radio: action.radio === true,
+    separatorBefore: action.separatorBefore === true,
     checked: action.checked?.(ctx) ?? false,
     run: () => {
       action.run?.(ctx);

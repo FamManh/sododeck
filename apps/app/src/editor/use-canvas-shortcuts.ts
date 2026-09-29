@@ -15,7 +15,10 @@ import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
-import { targetOf, useRunAction } from './actions/use-action-context';
+import { alignSelection } from './actions/align-actions';
+import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
+import type { AlignMode } from './editing/align';
+import { useNudge } from './editing/use-nudge';
 import {
   consumeLeftToolbar,
   focusSelectionToolbar,
@@ -136,8 +139,16 @@ function openMenuFromKeyboard(opener: HTMLElement | null): void {
 const hasSelection = (s: Selection) =>
   s.nodes.length + s.edges.length + s.groups.length + s.stickies.length > 0;
 
+const ALIGN_KEYS: Readonly<Record<string, AlignMode>> = {
+  KeyA: 'left',
+  KeyD: 'right',
+  KeyW: 'top',
+  KeyS: 'bottom',
+};
+
 export function useCanvasKeyDown() {
   const editor = useEditor();
+  const nudger = useNudge();
   const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
     useReactFlow();
 
@@ -235,6 +246,27 @@ export function useCanvasKeyDown() {
         })();
         if (handled) event.preventDefault();
         return;
+      }
+      // ⌥(⇧) arrows nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by
+      // `code` because ⌥ changes `key` on macOS.
+      if (event.altKey) {
+        if (nudger.key(event)) {
+          event.preventDefault();
+          return;
+        }
+        const mode = ALIGN_KEYS[event.code];
+        if (mode !== undefined && !event.shiftKey && session === null) {
+          event.preventDefault();
+          alignSelection(
+            readActionContext(
+              editor,
+              { fitView, screenToFlowPosition, getViewport },
+              () => undefined,
+            ),
+            mode,
+          );
+          return;
+        }
       }
       if (event.altKey) return;
 
@@ -508,7 +540,17 @@ export function useCanvasKeyDown() {
           return;
       }
     },
-    [editor, zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition],
+    [
+      editor,
+      nudger,
+      zoomIn,
+      zoomOut,
+      fitView,
+      setCenter,
+      getViewport,
+      getZoom,
+      screenToFlowPosition,
+    ],
   );
 }
 

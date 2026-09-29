@@ -54,6 +54,7 @@ import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
+import { GuidesOverlay } from './editing/guides-overlay';
 import { useClipboardEvents } from './editing/use-clipboard-events';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
@@ -634,6 +635,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           </Panel>
         )}
         <SelectionFrame deck={deck} level={level} />
+        <GuidesOverlay />
       </ReactFlow>
       {fullDeck.nodes.length === 0 && <EmptyCanvasCard />}
       {drilledEmpty && (

@@ -1,3 +1,4 @@
+import { toJSON } from '@sododeck/model';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
@@ -35,5 +36,56 @@ describe('GroupInspector', () => {
     expect(screen.getByText(/collapsed:core|b/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Expand group' }));
     expect(collapsedOf(doc).has('core')).toBe(false);
+  });
+});
+
+describe('GroupInspector Frame fields (016 FR-044)', () => {
+  const framed = deckOf({
+    nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core', position: { x: 0, y: 0 } }],
+    groups: [
+      {
+        id: 'core',
+        title: 'Core services',
+        position: { x: -24, y: -24 },
+        size: { width: 400, height: 300 },
+      },
+    ],
+  });
+
+  it('shows X, Y, Width and Height, and each commit is one undo step', async () => {
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(<Inspector deck={framed} />, framed);
+    act(() => {
+      useUiStore.getState().select({ groups: ['core'] });
+    });
+    const width = screen.getByRole('spinbutton', { name: 'Width' });
+    expect(screen.getByRole('spinbutton', { name: 'X' })).toHaveValue(-24);
+    expect(screen.getByRole('spinbutton', { name: 'Y' })).toHaveValue(-24);
+    expect(width).toHaveValue(400);
+    expect(screen.getByRole('spinbutton', { name: 'Height' })).toHaveValue(300);
+    await user.clear(width);
+    await user.type(width, '600{Enter}');
+    expect(toJSON(doc).groups[0]?.size).toEqual({ width: 600, height: 300 });
+    // Members never move.
+    expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 0, y: 0 });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).groups[0]?.size).toEqual({ width: 400, height: 300 });
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('applies the resize limits: never smaller than the members plus padding', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Inspector deck={framed} />, framed);
+    act(() => {
+      useUiStore.getState().select({ groups: ['core'] });
+    });
+    const width = screen.getByRole('spinbutton', { name: 'Width' });
+    await user.clear(width);
+    await user.type(width, '10');
+    await user.tab();
+    // The member card is 164 wide at full detail, plus 24 px each side.
+    expect(toJSON(doc).groups[0]?.size?.width).toBe(212);
   });
 });

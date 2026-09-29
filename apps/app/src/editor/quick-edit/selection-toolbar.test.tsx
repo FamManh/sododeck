@@ -112,6 +112,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Tags',
       'Technology: none',
       'Group',
+      'Align',
       'More actions',
     ]);
   });

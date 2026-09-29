@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { actionContext, sel, TARGETS } from '../../test/action-fixtures';
+import { deckOf } from '../../test/render-canvas';
 import { FRAGMENT_HINT_KEY } from '../editing/clipboard-ops';
 import { shortcutLabel } from '../shell/shortcuts';
 import { actionsFor, findAction, runAction } from './actions-for';
@@ -338,5 +339,73 @@ describe('group.create (016 US2, ⌘G)', () => {
     expect(item(TARGETS.components)?.disabled).toBeNull();
     expect(item(TARGETS.components, 'flow')).toBeUndefined();
     expect(item(TARGETS.mixed)).toBeUndefined();
+  });
+});
+
+describe('Align ▸ (016 US3, R12)', () => {
+  const threeDeck = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 250, y: 40 } },
+      { id: 'c', type: 'service', title: 'C', position: { x: 700, y: 90 } },
+    ],
+  });
+  const three = { kind: 'components', ids: sel({ nodes: ['a', 'b', 'c'] }) } as const;
+  const submenu = (target: MenuTarget) =>
+    actionsFor(ACTIONS, actionContext(target, 'edit', threeDeck), 'menu')
+      .flatMap((s) => s.actions)
+      .find((a) => a.id === 'arrange.align');
+
+  it('lists the contract items in order, with rules between the groups', () => {
+    const items = submenu(three)?.children ?? [];
+    expect(items.map((i) => i.label)).toEqual([
+      'Align left',
+      'Align centre',
+      'Align right',
+      'Align top',
+      'Align middle',
+      'Align bottom',
+      'Distribute horizontally',
+      'Distribute vertically',
+    ]);
+    expect(items.filter((i) => i.separatorBefore).map((i) => i.label)).toEqual([
+      'Align top',
+      'Distribute horizontally',
+    ]);
+    expect(items.find((i) => i.label === 'Align left')?.shortcut).toBe('align-left');
+  });
+
+  it('is disabled below two components, distribute below three', () => {
+    expect(submenu({ kind: 'component', ids: sel({ nodes: ['a'] }) })?.disabled).toBe(
+      'Select two or more components',
+    );
+    const two = submenu({ kind: 'components', ids: sel({ nodes: ['a', 'b'] }) });
+    expect(two?.disabled).toBeNull();
+    expect(two?.children?.find((i) => i.id === 'arrange.distribute.horizontal')?.disabled).toBe(
+      'Select three or more components',
+    );
+  });
+
+  it('aligns left as one undo step and says so', () => {
+    const ctx = actionContext(three, 'edit', threeDeck);
+    runChild(ctx, 'arrange.align', 'arrange.align.left');
+    expect(toJSON(ctx.doc).nodes.map((n) => n.position?.x)).toEqual([0, 0, 0]);
+    expect(ui().announcement.text).toBe('Aligned 3 components left');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).nodes.map((n) => n.position?.x)).toEqual([0, 250, 700]);
+    expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('distributes with equal gaps, the outermost cards staying put', () => {
+    const ctx = actionContext(three, 'edit', threeDeck);
+    runChild(ctx, 'arrange.align', 'arrange.distribute.horizontal');
+    const xs = toJSON(ctx.doc).nodes.map((n) => n.position?.x ?? 0);
+    expect(xs[0]).toBe(0);
+    expect(xs[2]).toBe(700);
+    // The fake canvas zoom is 1: component cards, 164 wide.
+    const gap1 = (xs[1] ?? 0) - 164;
+    const gap2 = 700 - ((xs[1] ?? 0) + 164);
+    expect(Math.abs(gap1 - gap2)).toBeLessThanOrEqual(1);
+    expect(ui().announcement.text).toBe('Distributed 3 components horizontally');
   });
 });

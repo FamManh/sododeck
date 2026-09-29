@@ -12,6 +12,7 @@ import { scopeOf, visibleGraph } from '../visible-graph';
 import { viewStateOf } from '../views/view-state';
 import { setGroupCollapsed, toggleGroupCollapsed } from '../views/use-current-view';
 import { useEditor } from '../../model/use-editor';
+import { FrameFields } from './frame-fields';
 import { InspectorFrame } from './inspector-frame';
 
 export function GroupInspector({
@@ -66,6 +67,7 @@ export function GroupInspector({
           />
         </div>
       </PanelSection>
+      <FrameFields view={viewState} groupId={group.id} />
       <PanelSection label="Merged connections">
         {rows.length === 0 ? (
           <p className="text-body-sm text-ink-secondary">No merged connections.</p>
