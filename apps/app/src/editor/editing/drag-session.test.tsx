@@ -1,0 +1,359 @@
+import { toJSON } from '@sododeck/model';
+import type { Frame, SododeckFile } from '@sododeck/schema';
+import { act, renderHook, screen } from '@testing-library/react';
+import type { Node, NodeChange } from '@xyflow/react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
+import { describe, expect, it } from 'vitest';
+
+import { useUiStore } from '../../state/ui-store';
+import { deckOf, editorWrapper } from '../../test/render-canvas';
+import { useCanvasHandlers } from '../use-canvas-handlers';
+import { cancelActiveGesture, nudgeActiveDrag } from './drag-session';
+import { applyResize, endResize, startResize } from './frame-resize';
+
+const ui = () => useUiStore.getState();
+const frame = (x: number, y: number, width: number, height: number): Frame => ({
+  position: { x, y },
+  size: { width, height },
+});
+const flowNode = (id: string) => ({ id }) as Node;
+const pointer = (x: number, y: number, patch: Partial<ReactMouseEvent> = {}) =>
+  ({
+    clientX: x,
+    clientY: y,
+    altKey: false,
+    shiftKey: false,
+    metaKey: false,
+    ctrlKey: false,
+    ...patch,
+  }) as ReactMouseEvent;
+
+/**
+ * Payments (with Fraud inside it) at the top left, Shop far to the right, a loose card far
+ * below. Everything is far apart so snapping never interferes unless a test wants it.
+ */
+const deck: SododeckFile = deckOf({
+  nodes: [
+    { id: 'm1', type: 'service', title: 'Charge', group: 'pay', position: { x: 0, y: 0 } },
+    { id: 'm2', type: 'service', title: 'Refund', group: 'pay', position: { x: 300, y: 0 } },
+    { id: 'm3', type: 'service', title: 'Score', group: 'fraud', position: { x: 0, y: 300 } },
+    { id: 's1', type: 'service', title: 'Cart', group: 'shop', position: { x: 3000, y: 0 } },
+    { id: 'c', type: 'service', title: 'Fraud check', position: { x: 0, y: 3000 } },
+  ],
+  groups: [
+    { id: 'pay', title: 'Payments', ...frame(-48, -48, 560, 540) },
+    { id: 'fraud', title: 'Fraud', parent: 'pay', ...frame(-24, 276, 212, 152) },
+    { id: 'shop', title: 'Shop', ...frame(2900, -100, 800, 800) },
+  ],
+});
+
+function setup(file: SododeckFile = deck) {
+  const env = editorWrapper(file);
+  const { result } = renderHook(() => useCanvasHandlers(), { wrapper: env.wrapper });
+  return { ...env, h: () => result.current };
+}
+
+const move = (id: string, x: number, y: number): NodeChange[] => [
+  { type: 'position', id, position: { x, y }, dragging: true },
+];
+const position = (file: SododeckFile, id: string) => file.nodes.find((n) => n.id === id)?.position;
+const frameOf = (file: SododeckFile, id: string) => {
+  const g = file.groups.find((group) => group.id === id);
+  return g?.position === undefined || g.size === undefined
+    ? undefined
+    : { position: g.position, size: g.size };
+};
+
+describe('dragging a group frame (016 US2, R5)', () => {
+  it('moves the frame, nested frames and every member by the delta, as one undo step', () => {
+    const { h, doc, editor } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodesChange(move('group:pay', -48 + 50, -48 + 20));
+      h().onNodesChange(move('group:pay', -48 + 100, -48 + 40));
+    });
+    expect(ui().canvasGesture).toBe('group-drag');
+    expect(ui().dragReadout).toEqual({ dx: 100, dy: 40 });
+    expect(ui().selection.groups).toEqual(['pay']);
+    act(() => {
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    const file = toJSON(doc);
+    expect(frameOf(file, 'pay')).toEqual(frame(52, -8, 560, 540));
+    expect(frameOf(file, 'fraud')).toEqual(frame(76, 316, 212, 152));
+    expect(position(file, 'm1')).toEqual({ x: 100, y: 40 });
+    expect(position(file, 'm3')).toEqual({ x: 100, y: 340 });
+    expect(position(file, 's1')).toEqual({ x: 3000, y: 0 });
+    expect(ui().dragReadout).toBeNull();
+    expect(ui().canvasGesture).toBeNull();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(deck);
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('locks the axis with ⇧', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodeDrag(pointer(10, 10, { shiftKey: true }));
+      h().onNodesChange(move('group:pay', -48 + 100, -48 + 30));
+      h().onNodeDragStop(pointer(10, 10));
+    });
+    expect(position(toJSON(doc), 'm1')).toEqual({ x: 100, y: 0 });
+  });
+
+  it('cancels with Esc: everything back, no undo entry', () => {
+    const { h, doc, editor } = setup();
+    act(() => {
+      editor().update('nodes', 'c', { title: 'Before' });
+    });
+    const before = toJSON(doc);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodesChange(move('group:pay', 200, 200));
+    });
+    let cancelled = false;
+    act(() => {
+      cancelled = cancelActiveGesture();
+    });
+    expect(cancelled).toBe(true);
+    expect(toJSON(doc)).toEqual(before);
+    expect(ui().announcement.text).toBe('Cancelled');
+    act(() => {
+      // The rest of the drag is ignored.
+      h().onNodesChange(move('group:pay', 400, 400));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(toJSON(doc)).toEqual(before);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'c')?.title).toBe('Fraud check');
+  });
+
+  it('adds 1 / 10 px with the arrows during the drag (§g-45)', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodesChange(move('group:pay', -48 + 100, -48));
+      nudgeActiveDrag(1, 0);
+      nudgeActiveDrag(0, 10);
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(position(toJSON(doc), 'm1')).toEqual({ x: 101, y: 10 });
+  });
+
+  it('duplicates the whole group with ⌥ on release', () => {
+    const { h, doc, editor } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodesChange(move('group:pay', -48 + 1000, -48 + 1000));
+      h().onNodeDragStop(pointer(0, 0, { altKey: true }));
+    });
+    const file = toJSON(doc);
+    expect(frameOf(file, 'pay')).toEqual(frame(-48, -48, 560, 540));
+    expect(file.groups).toHaveLength(5);
+    expect(file.nodes).toHaveLength(8);
+    const copy = file.groups.find((g) => g.title === 'Payments' && g.id !== 'pay');
+    expect(copy?.position).toEqual({ x: 952, y: 952 });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(deck);
+  });
+
+  it('nests a group dropped inside another frame, with an Undo toast', async () => {
+    const { h, doc, editor } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:fraud'));
+      h().onNodesChange(move('group:fraud', 3100, 100));
+      h().onNodeDrag(pointer(3150, 150));
+    });
+    expect(ui().dropTarget).toBe('shop');
+    act(() => {
+      h().onNodeDragStop(pointer(3150, 150));
+    });
+    const file = toJSON(doc);
+    expect(file.groups.find((g) => g.id === 'fraud')?.parent).toBe('shop');
+    // Members keep their group; frames never grow (FR-046).
+    expect(file.nodes.find((n) => n.id === 'm3')?.group).toBe('fraud');
+    expect(frameOf(file, 'shop')).toEqual(frame(2900, -100, 800, 800));
+    expect(ui().announcement.text).toBe('Moved Fraud into Shop');
+    expect(await screen.findByText('Moved Fraud into Shop')).toBeInTheDocument();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(deck);
+  });
+
+  it('never nests a group into itself, and leaves the parent when dropped outside it', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:fraud'));
+      h().onNodesChange(move('group:fraud', 1500, 1500));
+      h().onNodeDrag(pointer(1550, 1550));
+      h().onNodeDragStop(pointer(1550, 1550));
+    });
+    expect(toJSON(doc).groups.find((g) => g.id === 'fraud')).not.toHaveProperty('parent');
+    expect(ui().announcement.text).toBe('Moved Fraud out of Payments');
+  });
+});
+
+describe('dropping components into and out of groups (016 US4, R6)', () => {
+  it('drops a card into the frame under the pointer, and the frame does not grow', () => {
+    const { h, doc, editor } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 3100, 300));
+      h().onNodeDrag(pointer(3180, 350));
+    });
+    expect(ui().dropTarget).toBe('shop');
+    act(() => {
+      h().onNodeDragStop(pointer(3180, 350));
+    });
+    const file = toJSON(doc);
+    expect(file.nodes.find((n) => n.id === 'c')?.group).toBe('shop');
+    expect(frameOf(file, 'shop')).toEqual(frame(2900, -100, 800, 800));
+    expect(ui().announcement.text).toBe('Moved Fraud check into Shop');
+    expect(ui().dropTarget).toBeNull();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(deck);
+  });
+
+  it('takes a card out of its group when dropped outside every frame', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('m1'));
+      h().onNodesChange(move('m1', 1500, 1500));
+      h().onNodeDragStop(pointer(1550, 1550));
+    });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'm1')).not.toHaveProperty('group');
+    expect(ui().announcement.text).toBe('Moved Charge out of Payments');
+  });
+
+  it('keeps the card in its group while it moves inside the frame, with no highlight', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('m2'));
+      h().onNodesChange(move('m2', 320, 40));
+      h().onNodeDrag(pointer(350, 60));
+    });
+    expect(ui().dropTarget).toBeNull();
+    act(() => {
+      h().onNodeDragStop(pointer(350, 60));
+    });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'm2')?.group).toBe('pay');
+  });
+
+  it('keeps membership with ⌥ (and drops a copy)', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 3100, 300));
+      h().onNodeDrag(pointer(3180, 350, { altKey: true }));
+    });
+    expect(ui().dropTarget).toBeNull();
+    act(() => {
+      h().onNodeDragStop(pointer(3180, 350, { altKey: true }));
+    });
+    const file = toJSON(doc);
+    expect(file.nodes.find((n) => n.id === 'c')).not.toHaveProperty('group');
+    expect(file.nodes.find((n) => n.id === 'c')?.position).toEqual({ x: 0, y: 3000 });
+    expect(file.nodes.at(-1)).not.toHaveProperty('group');
+  });
+});
+
+describe('snapping (016 US3, R7)', () => {
+  const lined: SododeckFile = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+    ],
+  });
+
+  it('snaps to another card’s edge within 6 px and shows a guide', () => {
+    const { h, doc } = setup(lined);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('b'));
+      h().onNodesChange(move('b', 400, 300 + 4));
+    });
+    expect(ui().guides).toEqual([]);
+    act(() => {
+      h().onNodesChange(move('b', 3, 300));
+    });
+    expect(ui().guides.some((g) => g.axis === 'x' && g.at === 0)).toBe(true);
+    act(() => {
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(position(toJSON(doc), 'b')).toEqual({ x: 0, y: 300 });
+    expect(ui().guides).toEqual([]);
+  });
+
+  it('does not snap while ⌘ is held', () => {
+    const { h, doc } = setup(lined);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('b'));
+      h().onNodeDrag(pointer(0, 0, { metaKey: true }));
+      h().onNodesChange(move('b', 3, 300));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(position(toJSON(doc), 'b')).toEqual({ x: 3, y: 300 });
+  });
+});
+
+describe('resizing a group frame (016 US2, FR-013–FR-015)', () => {
+  it('resizes only the frame, clamped to the members plus padding, as one undo step', () => {
+    const { doc, editor } = setup();
+    act(() => {
+      const session = startResize(editor(), 'pay', 'bottom-right');
+      if (session === null) throw new Error('no frame');
+      expect(ui().canvasGesture).toBe('resize');
+      applyResize(
+        editor(),
+        session,
+        { x: -48, y: -48, width: 700, height: 600 },
+        { shift: false, alt: false },
+      );
+      // Past the members: stops at members + 24 px.
+      applyResize(
+        editor(),
+        session,
+        { x: -48, y: -48, width: 100, height: 100 },
+        { shift: false, alt: false },
+      );
+      endResize(editor(), session);
+    });
+    const file = toJSON(doc);
+    // Members span (0,0)–(464,104) and the Fraud frame reaches y 428; plus 24 px.
+    expect(frameOf(file, 'pay')).toEqual(frame(-48, -48, 464 + 24 + 48, 428 + 24 + 48));
+    expect(file.nodes).toEqual(deck.nodes);
+    expect(ui().canvasGesture).toBeNull();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(deck);
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('cancels with Esc', () => {
+    const { doc, editor } = setup();
+    act(() => {
+      const session = startResize(editor(), 'pay', 'right');
+      if (session === null) throw new Error('no frame');
+      applyResize(
+        editor(),
+        session,
+        { x: -48, y: -48, width: 900, height: 540 },
+        { shift: false, alt: false },
+      );
+      expect(cancelActiveGesture()).toBe(true);
+      endResize(editor(), session);
+    });
+    expect(toJSON(doc)).toEqual(deck);
+    expect(editor().canUndo()).toBe(false);
+  });
+});

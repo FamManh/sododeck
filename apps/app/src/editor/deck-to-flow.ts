@@ -134,6 +134,8 @@ export { NODE_SIZE };
 
 /** Group boundaries are React Flow nodes too; their ids are prefixed so they never clash. */
 export const GROUP_NODE_PREFIX = 'group:';
+/** What a group frame is dragged by: its label and an 8 px edge band (016 R5). */
+export const GROUP_HANDLE_CLASS = 'sd-group-handle';
 export const COLLAPSED_NODE_PREFIX = 'collapsed:';
 export const PORT_NODE_PREFIX = 'port:';
 export const MERGED_EDGE_PREFIX = 'merged:';
@@ -376,9 +378,11 @@ function groupNodes(
     const count = counts.get(groupId) ?? 0;
     const focused = view.focusedId === id;
     const inFocus = view.focus?.members.has(id) === true;
+    const selected = view.selection.groups.includes(groupId);
     const cached = groupCache.get(id);
     if (
-      cached?.data.title === group.title &&
+      cached?.selected === selected &&
+      cached.data.title === group.title &&
       cached.data.count === count &&
       cached.data.level === level &&
       cached.data.focused === focused &&
@@ -396,8 +400,14 @@ function groupNodes(
       position: { x: rect.x, y: rect.y },
       width: rect.width,
       height: rect.height,
-      selectable: false,
-      draggable: false,
+      // A frame (016 R5): dragged by its label or edge band only, resized with its handles.
+      // The wrapper lets the pointer through, so empty space inside still pans and marquees
+      // (FR-017); the handles opt back in.
+      selected,
+      selectable: true,
+      draggable: true,
+      dragHandle: `.${GROUP_HANDLE_CLASS}`,
+      style: { pointerEvents: 'none' },
       focusable: false,
       connectable: false,
       ...(inFocus ? { className: 'in-focus' } : {}),

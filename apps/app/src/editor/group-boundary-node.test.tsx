@@ -82,3 +82,59 @@ describe('GroupBoundaryNode', () => {
     expect(toJSON(doc).groups[0]?.title).toBe('Billing');
   });
 });
+
+describe('GroupBoundaryNode as a frame (016)', () => {
+  const props = (patch: Partial<NodeProps<GroupFlowNode>> = {}) =>
+    ({
+      id: 'group:core',
+      data: { title: 'Core services', count: 2, focused: false },
+      width: 300,
+      height: 200,
+      ...patch,
+    }) as unknown as NodeProps<GroupFlowNode>;
+
+  it('drags by the label and an edge band; empty space inside lets the pointer through', () => {
+    renderWithEditor(<GroupBoundaryNode {...props()} />);
+    const label = screen.getByRole('button', { name: 'Core services group, 2 nodes' });
+    expect(label).toHaveClass('sd-group-handle');
+    const boundary = screen.getByTestId('group-boundary');
+    expect(boundary).toHaveClass('pointer-events-none');
+    expect(boundary.querySelectorAll('.sd-group-handle[aria-hidden]')).toHaveLength(4);
+  });
+
+  it('shows eight resize handles only while selected and editable', () => {
+    const { unmount } = renderWithEditor(<GroupBoundaryNode {...props()} />);
+    expect(document.querySelectorAll('.react-flow__resize-control')).toHaveLength(0);
+    unmount();
+    renderWithEditor(<GroupBoundaryNode {...props({ selected: true })} />);
+    expect(document.querySelectorAll('.react-flow__resize-control.sd-resize-handle')).toHaveLength(
+      8,
+    );
+    act(() => {
+      useUiStore.setState({
+        activeFlow: {
+          flowId: 'f',
+          stepId: null,
+          branchId: null,
+          alternativeId: null,
+          playing: false,
+          speed: 1,
+        },
+      });
+    });
+    expect(document.querySelectorAll('.react-flow__resize-control')).toHaveLength(0);
+    expect(document.querySelectorAll('.sd-group-handle[aria-hidden]')).toHaveLength(0);
+  });
+
+  it('highlights a drop target with a dashed border and a chip (screen 110)', () => {
+    renderWithEditor(<GroupBoundaryNode {...props()} />);
+    expect(screen.queryByText('Drop into Core services')).toBeNull();
+    act(() => {
+      useUiStore.getState().setDropTarget('core');
+    });
+    expect(screen.getByText('Drop into Core services')).toBeInTheDocument();
+    const boundary = screen.getByTestId('group-boundary');
+    expect(boundary).toHaveAttribute('data-drop-target');
+    expect(boundary).toHaveClass('border-dashed', 'border-primary');
+  });
+});

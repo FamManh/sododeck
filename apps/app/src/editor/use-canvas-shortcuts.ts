@@ -51,6 +51,7 @@ import {
 } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
+import { cancelActiveGesture, nudgeActiveDrag } from './editing/drag-session';
 
 export { isTextTarget };
 
@@ -560,6 +561,30 @@ export function useEditorShortcuts({
       }
       if (isTextTarget(event.target) || inDialog(event.target)) return;
       const ui = useUiStore.getState();
+
+      // During a pointer drag or resize (016): Esc cancels it (R14), arrows add 1 / 10 px (§g-45).
+      if (key === 'escape' && cancelActiveGesture()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const dragArrow = ARROWS[event.key];
+      if (dragArrow !== undefined && !isMod(event) && !event.altKey) {
+        const step = event.shiftKey ? 10 : 1;
+        const [dx, dy] =
+          dragArrow === 'left'
+            ? [-step, 0]
+            : dragArrow === 'right'
+              ? [step, 0]
+              : dragArrow === 'up'
+                ? [0, -step]
+                : [0, step];
+        if (nudgeActiveDrag(dx, dy)) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+      }
 
       // `code`, not `key`: Shift turns "." into ">" on many layouts.
       const walkProblems = problemRef.current;

@@ -21,7 +21,13 @@ import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
 import { targetOf } from './actions/use-action-context';
-import { addComponent, centredOn, connectComponents, nodeElement } from './canvas-actions';
+import {
+  addComponent,
+  canvasElement,
+  centredOn,
+  connectComponents,
+  nodeElement,
+} from './canvas-actions';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
   COLLAPSED_NODE_PREFIX,
@@ -34,7 +40,8 @@ import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { addNoteAt } from './stickies/sticky-actions';
-import { duplicateOnDrop, startNodeDrag, type DragSession } from './editing/drag-session';
+import { DragController } from './editing/drag-session';
+import { useUndoToast } from './undo-toast';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
@@ -63,13 +70,24 @@ export function useCanvasHandlers() {
   const editor = useEditor();
   const { getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
-  // The components (016: or group) the current pointer drag moves, and where they started.
-  const drag = useRef<DragSession | null>(null);
+  const undoToast = useUndoToast();
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
 
   return useMemo(() => {
     const ui = () => useUiStore.getState();
+    // Component and group drags (016): one session per drag. Its inputs are stable, so the
+    // controller lives as long as these handlers.
+    const controller = new DragController({
+      editor,
+      getViewport,
+      screenToFlowPosition,
+      undoToast,
+      canvasSize: () => {
+        const box = canvasElement()?.getBoundingClientRect();
+        return { width: box?.width ?? 0, height: box?.height ?? 0 };
+      },
+    });
 
     const endGesture = () => {
       if (gestureOpen.current) {
@@ -337,7 +355,12 @@ export function useCanvasHandlers() {
         if (viewOnly()) return;
         // The selection toolbar hides while a card moves (019 FR-026).
         ui().setCanvasGesture('drag');
-        if (isGroupNode(node.id) || isCollapsedNode(node.id) || isPortNode(node.id)) return;
+        if (isGroupNode(node.id)) {
+          // A frame dragged by its label or edge (016 R5): the whole subtree moves.
+          controller.startGroup(node.id.slice(GROUP_NODE_PREFIX.length));
+          return;
+        }
+        if (isCollapsedNode(node.id) || isPortNode(node.id)) return;
         const stickyId = stickyIdOf(node.id);
         if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
@@ -346,7 +369,10 @@ export function useCanvasHandlers() {
         } else {
           if (!ui().selection.nodes.includes(node.id)) ui().select({ nodes: [node.id] });
           ui().focus(node.id);
-          drag.current = startNodeDrag(editor, node.id, ui().selection.nodes);
+          // One drag, however many frames and nodes, is one undo step (research R2); snapping,
+          // drop into groups, ⌥ copies and Esc live in the controller (016).
+          controller.startNodes(node.id);
+          return;
         }
         if (!gestureOpen.current) {
           gestureOpen.current = true;
@@ -358,8 +384,14 @@ export function useCanvasHandlers() {
        * Writes dragged positions straight to the document, all moved nodes in one batch, through
        * the current view (011 FR-020/021: base positions in the base view, overrides elsewhere).
        */
-      onNodesChange: (changes: NodeChange[]) => {
+      /** Pointer and modifier keys during a drag: the drop target, ⌥, ⇧ and ⌘ (016). */
+      onNodeDrag: (event: ReactMouseEvent | MouseEvent | TouchEvent) => {
+        if ('clientX' in event) controller.pointer(event);
+      },
+      onNodesChange: (all: NodeChange[]) => {
         if (flowMode()) return;
+        // The drag controller moves its components and frames itself; notes go on below.
+        const changes = controller.change(all);
         const moves = changes.flatMap((c) =>
           c.type === 'position' &&
           c.position !== undefined &&
@@ -397,11 +429,9 @@ export function useCanvasHandlers() {
         );
       },
       onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
-        const session = drag.current;
-        drag.current = null;
-        // ⌥ on release copies instead of moving (016 FR-009), inside the drag's undo step.
-        if (session !== null && event?.altKey === true && gestureOpen.current && !viewOnly()) {
-          duplicateOnDrop(editor, session);
+        // ⌥ copies, otherwise the pointer decides membership (016 FR-009, FR-018).
+        if (controller.dragging) {
+          controller.stop(event);
         }
         if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();
@@ -447,5 +477,5 @@ export function useCanvasHandlers() {
         addComponent(editor, kind, centredOn(point), { edit: true });
       },
     };
-  }, [editor, getViewport, screenToFlowPosition]);
+  }, [editor, getViewport, screenToFlowPosition, undoToast]);
 }

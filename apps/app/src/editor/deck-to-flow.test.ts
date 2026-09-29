@@ -203,7 +203,7 @@ describe('toFlowNodes', () => {
     });
   });
 
-  it('adds non-interactive group boundaries below the components', () => {
+  it('adds group frames below the components, dragged by their handles only (016 R5)', () => {
     const [group] = toFlowNodes(deck, topLevelGraph(deck), view());
     expect(group).toMatchObject({
       id: 'group:g',
@@ -211,12 +211,30 @@ describe('toFlowNodes', () => {
       position: { x: 5 - 24, y: 6 - 24 },
       width: 164 + 48,
       height: 50 + 48,
-      selectable: false,
-      draggable: false,
+      selected: false,
+      selectable: true,
+      draggable: true,
+      dragHandle: '.sd-group-handle',
+      // Empty space inside the frame lets the pointer through to the pane (FR-017).
+      style: { pointerEvents: 'none' },
       focusable: false,
       zIndex: -1,
       data: { title: 'Core', count: 1, level: 'system' },
     });
+  });
+
+  it('marks a selected group frame, and rebuilds only that frame', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const selected = toFlowNodes(
+      deck,
+      graph,
+      view({ selection: { ...EMPTY_SELECTION, groups: ['g'] } }),
+    );
+    const frame = selected.find((n) => n.id === 'group:g');
+    expect(frame?.selected).toBe(true);
+    expect(frame).not.toBe(first.find((n) => n.id === 'group:g'));
+    expect(selected.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
   });
 
   it('returns the same object when level is unchanged and rebuilds when level or dimming changes', () => {

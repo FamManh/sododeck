@@ -1,17 +1,54 @@
 /**
- * One pointer drag of components or a group (016 research R5–R8): where everything started, so
- * the drag can be moved as a whole, snapped, cancelled (Esc) or turned into a copy (⌥ on release).
- * Lives in a handler ref for the length of one gesture, never in the document or the store.
+ * One pointer drag of components or of a group frame (016 research R5–R8): what moves, where it
+ * started, and what each frame of the drag does with it.
+ *
+ * - The whole drag is one editor gesture (one undo step). Every frame moves everything by the
+ *   anchor's delta: the selected components, and for a group its frame, nested frames and every
+ *   member (hidden ones too).
+ * - ⇧ locks the axis, ⌘ / Ctrl turns snapping off, arrows add 1 / 10 px (§g-45).
+ * - On release the pointer decides membership (R6); with ⌥ the originals go back and a copy lands
+ *   instead (FR-009). Esc cancels: the document is restored and no undo entry is left (R14).
+ *
+ * The session lives in a handler ref for the length of one drag; guides, the drop target and the
+ * offset readout are UI-only store fields. Nothing here is document state.
  */
-import type { DeckEditor } from '@sododeck/model';
+import { viewNodePosition, type DeckEditor } from '@sododeck/model';
 import type { Frame, Id } from '@sododeck/schema';
+import type { NodeChange } from '@xyflow/react';
 
 import { readDeck } from '../../model/use-deck-snapshot';
-import { useUiStore } from '../../state/ui-store';
-import { displayPosition, type Point } from '../canvas-geometry';
+import { useUiStore, type CanvasGesture, type Guide } from '../../state/ui-store';
+import { displayPosition, groupBounds, nodeSize, type Point, type Rect } from '../canvas-geometry';
+import { GROUP_NODE_PREFIX } from '../deck-to-flow';
+import { effectiveLevel, levelForZoom } from '../levels';
+import { scopeOf, visibleGraph } from '../visible-graph';
 import { readViewState } from '../views/use-current-view';
 import { selectionFragment } from './clipboard-ops';
 import { commonParent } from './common-parent';
+import { dropTarget, frameEntries, type FrameEntry } from './drop-target';
+import { equalGaps, nearestGap } from './gaps';
+import { membershipChanges, type MembershipChange } from './membership-changes';
+import { snap, snapCandidates, type SnapCandidates } from './snap';
+import { groupSubtree } from './subtree';
+
+/** DESIGN.md "Snap guide": within 6 screen px. */
+const SNAP_SCREEN_PX = 6;
+
+export interface DragDeps {
+  editor: DeckEditor;
+  getViewport: () => { x: number; y: number; zoom: number };
+  screenToFlowPosition: (point: Point) => Point;
+  /** Shows a message with an Undo button (a group nested by drag). */
+  undoToast: (message: string) => void;
+  /** Size of the canvas on screen (candidates for snapping are the cards on screen). */
+  canvasSize: () => { width: number; height: number };
+}
+
+interface Mods {
+  alt: boolean;
+  shift: boolean;
+  mod: boolean;
+}
 
 export interface DragSession {
   viewId: Id;
@@ -25,19 +62,431 @@ export interface DragSession {
   frames: Readonly<Record<Id, Frame>>;
 }
 
-/** A drag of the selected components, starting now. */
-export function startNodeDrag(
-  editor: DeckEditor,
-  anchor: string,
-  nodes: readonly Id[],
-): DragSession {
-  const view = readViewState(editor.doc);
-  const ids = new Set(nodes);
-  const start: Record<Id, Point> = {};
-  view.deck.nodes.forEach((node, index) => {
-    if (ids.has(node.id)) start[node.id] = displayPosition(node, index);
-  });
-  return { viewId: view.view.id, anchor, nodes, groups: [], start, frames: {} };
+interface Session extends DragSession {
+  kind: 'nodes' | 'group';
+  anchorStart: Point;
+  /** Union of everything that moves, at the start. */
+  box: Rect;
+  candidates: SnapCandidates;
+  others: readonly Rect[];
+  threshold: number;
+  targets: readonly FrameEntry[];
+  excluded: ReadonlySet<Id>;
+  scope: Id | undefined;
+  /** The anchor's own group: dropping back into it is no change. */
+  home: Id | undefined;
+  mods: Mods;
+  arrow: Point;
+  lastRaw: Point | null;
+  pointer: Point | null;
+  delta: Point;
+  moved: boolean;
+  cancelled: boolean;
+}
+
+const plural = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
+
+function union(rects: readonly Rect[]): Rect {
+  if (rects.length === 0) return { x: 0, y: 0, width: 0, height: 0 };
+  const left = Math.min(...rects.map((r) => r.x));
+  const top = Math.min(...rects.map((r) => r.y));
+  const right = Math.max(...rects.map((r) => r.x + r.width));
+  const bottom = Math.max(...rects.map((r) => r.y + r.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+/** The Esc and arrow handlers of the drag in progress, for the keyboard map. */
+let active: { cancel: () => boolean; arrow: (dx: number, dy: number) => boolean } | null = null;
+
+/** Esc during a drag or a resize (R14): cancels it. Returns whether one was running. */
+export function cancelActiveGesture(): boolean {
+  return active?.cancel() ?? false;
+}
+
+/** Arrows during a pointer drag (§g-45): nudge the drag by 1 / 10 px. */
+export function nudgeActiveDrag(dx: number, dy: number): boolean {
+  return active?.arrow(dx, dy) ?? false;
+}
+
+/** Registers the cancel of a resize, which is not a drag session (see `frame-resize.ts`). */
+export function setActiveGesture(handlers: typeof active): void {
+  active = handlers;
+}
+
+export class DragController {
+  private session: Session | null = null;
+  private readonly onKey = (event: KeyboardEvent) => {
+    const session = this.session;
+    if (session === null) return;
+    const mods = { alt: event.altKey, shift: event.shiftKey, mod: event.metaKey || event.ctrlKey };
+    if (
+      mods.alt === session.mods.alt &&
+      mods.shift === session.mods.shift &&
+      mods.mod === session.mods.mod
+    ) {
+      return;
+    }
+    session.mods = mods;
+    this.updateTarget();
+    if (session.lastRaw !== null) this.apply(session.lastRaw);
+  };
+
+  constructor(private readonly deps: DragDeps) {}
+
+  get dragging(): boolean {
+    return this.session !== null;
+  }
+
+  /** A drag of the selected components (and selected groups, if the selection is mixed). */
+  startNodes(anchor: Id): void {
+    const { selection } = useUiStore.getState();
+    this.begin(anchor, 'nodes', selection.nodes, selection.groups);
+  }
+
+  /** A drag of a group by its label or edge: the selected groups, or just this one. */
+  startGroup(groupId: Id): void {
+    const ui = useUiStore.getState();
+    if (!ui.selection.groups.includes(groupId)) ui.select({ groups: [groupId] });
+    const { selection } = useUiStore.getState();
+    this.begin(`${GROUP_NODE_PREFIX}${groupId}`, 'group', selection.nodes, selection.groups);
+  }
+
+  private begin(
+    anchor: string,
+    kind: Session['kind'],
+    nodes: readonly Id[],
+    groups: readonly Id[],
+  ) {
+    const { editor, getViewport } = this.deps;
+    const view = readViewState(editor.doc);
+    const deck = readDeck(editor.doc);
+    const ui = useUiStore.getState();
+    const scope = scopeOf(ui.drill);
+    const zoom = getViewport().zoom;
+    const level = effectiveLevel(levelForZoom(zoom), scope);
+    const size = nodeSize(level);
+    const bounds = groupBounds(view.deck, size);
+
+    const tree = groupSubtree(deck, groups);
+    const moving = new Set([...nodes, ...tree.nodes]);
+    const start: Record<Id, Point> = {};
+    deck.nodes.forEach((node, index) => {
+      if (!moving.has(node.id)) return;
+      start[node.id] = viewNodePosition(view.view, node) ?? displayPosition(node, index);
+    });
+    const frames: Record<Id, Frame> = {};
+    for (const id of tree.groups) {
+      const rect = bounds.get(id);
+      if (rect !== undefined) {
+        frames[id] = {
+          position: { x: rect.x, y: rect.y },
+          size: { width: rect.width, height: rect.height },
+        };
+      }
+    }
+    const anchorId = kind === 'group' ? anchor.slice(GROUP_NODE_PREFIX.length) : anchor;
+    const anchorStart =
+      kind === 'group' ? (frames[anchorId]?.position ?? { x: 0, y: 0 }) : start[anchorId];
+    if (anchorStart === undefined) return;
+
+    // Snapping looks at the components on screen that are not moving (R7).
+    const graph = visibleGraph(view.deck, scope, view.collapsed);
+    const vp = getViewport();
+    const screen = this.deps.canvasSize();
+    const onScreen: Rect = {
+      x: -vp.x / vp.zoom,
+      y: -vp.y / vp.zoom,
+      width: screen.width / vp.zoom,
+      height: screen.height / vp.zoom,
+    };
+    const visible = new Set(graph.nodes);
+    const others: Rect[] = [];
+    view.deck.nodes.forEach((node, index) => {
+      if (!visible.has(node.id) || moving.has(node.id)) return;
+      const rect = { ...displayPosition(node, index), ...size };
+      const inView =
+        screen.width === 0 ||
+        (rect.x + rect.width >= onScreen.x &&
+          rect.x <= onScreen.x + onScreen.width &&
+          rect.y + rect.height >= onScreen.y &&
+          rect.y <= onScreen.y + onScreen.height);
+      if (inView) others.push(rect);
+    });
+    const box = union([
+      ...Object.values(start).map((p) => ({ ...p, ...size })),
+      ...Object.values(frames).map((f) => ({ ...f.position, ...f.size })),
+    ]);
+
+    const excluded = new Set(tree.groups);
+    this.session = {
+      viewId: view.view.id,
+      anchor,
+      kind,
+      nodes,
+      groups,
+      start,
+      frames,
+      anchorStart,
+      box,
+      candidates: snapCandidates(others),
+      others,
+      threshold: SNAP_SCREEN_PX / (zoom > 0 ? zoom : 1),
+      targets: frameEntries(view.deck, bounds, graph.groups),
+      excluded,
+      scope: scope.group ?? undefined,
+      home:
+        kind === 'group'
+          ? deck.groups.find((g) => g.id === anchorId)?.parent
+          : deck.nodes.find((n) => n.id === anchorId)?.group,
+      mods: { alt: false, shift: false, mod: false },
+      arrow: { x: 0, y: 0 },
+      lastRaw: null,
+      pointer: null,
+      delta: { x: 0, y: 0 },
+      moved: false,
+      cancelled: false,
+    };
+    editor.beginGesture();
+    const gesture: CanvasGesture = kind === 'group' ? 'group-drag' : 'drag';
+    ui.setCanvasGesture(gesture);
+    document.addEventListener('keydown', this.onKey, true);
+    document.addEventListener('keyup', this.onKey, true);
+    active = {
+      cancel: () => this.cancel(),
+      arrow: (dx, dy) => this.arrow(dx, dy),
+    };
+  }
+
+  /**
+   * Takes React Flow's position changes for this drag: the anchor's position becomes the delta
+   * applied to everything. Returns the changes it did not handle (notes, other kinds).
+   */
+  change(changes: NodeChange[]): NodeChange[] {
+    const session = this.session;
+    if (session === null) return changes;
+    const moving = new Set([...Object.keys(session.start), session.anchor]);
+    const rest: NodeChange[] = [];
+    for (const change of changes) {
+      if (change.type !== 'position') {
+        rest.push(change);
+        continue;
+      }
+      if (change.id === session.anchor) {
+        if (change.position !== undefined && !session.cancelled) this.apply(change.position);
+        continue;
+      }
+      // Everything else that moves with the drag follows the anchor, not its own report.
+      if (moving.has(change.id) || change.id.startsWith(GROUP_NODE_PREFIX)) continue;
+      rest.push(change);
+    }
+    return rest;
+  }
+
+  /** The pointer and modifier keys of a drag event: they decide the drop target. */
+  pointer(event: {
+    clientX: number;
+    clientY: number;
+    altKey?: boolean;
+    shiftKey?: boolean;
+    metaKey?: boolean;
+    ctrlKey?: boolean;
+  }): void {
+    const session = this.session;
+    if (session === null) return;
+    session.pointer = this.deps.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const mods = {
+      alt: event.altKey === true,
+      shift: event.shiftKey === true,
+      mod: event.metaKey === true || event.ctrlKey === true,
+    };
+    const changed =
+      mods.alt !== session.mods.alt ||
+      mods.shift !== session.mods.shift ||
+      mods.mod !== session.mods.mod;
+    session.mods = mods;
+    this.updateTarget();
+    if (changed && session.lastRaw !== null) this.apply(session.lastRaw);
+  }
+
+  private targetAt(point: Point | null): Id | null {
+    const session = this.session;
+    if (session === null || point === null) return null;
+    return dropTarget(session.targets, point, session.excluded);
+  }
+
+  /** The anchor card's centre now: where it drops when no pointer was reported. */
+  private anchorCentre(): Point {
+    const session = this.session;
+    if (session === null) return { x: 0, y: 0 };
+    const x = session.anchorStart.x + session.delta.x;
+    const y = session.anchorStart.y + session.delta.y;
+    if (session.kind === 'group') return { x, y };
+    const size = nodeSize(effectiveLevel(levelForZoom(this.deps.getViewport().zoom), scopeOf([])));
+    return { x: x + size.width / 2, y: y + size.height / 2 };
+  }
+
+  private updateTarget(): void {
+    const session = this.session;
+    if (session === null) return;
+    const target = session.mods.alt ? null : this.targetAt(session.pointer);
+    // The own group is no change: no "Drop into" there (screen 110).
+    useUiStore.getState().setDropTarget(target === session.home ? null : target);
+  }
+
+  private apply(raw: Point): void {
+    const session = this.session;
+    if (session === null) return;
+    session.lastRaw = raw;
+    let dx = raw.x - session.anchorStart.x + session.arrow.x;
+    let dy = raw.y - session.anchorStart.y + session.arrow.y;
+    let lock: 'x' | 'y' | null = null;
+    if (session.mods.shift) {
+      lock = Math.abs(dx) >= Math.abs(dy) ? 'y' : 'x';
+      if (lock === 'y') dy = 0;
+      else dx = 0;
+    }
+    let guides: Guide[] = [];
+    if (!session.mods.mod) {
+      const moved = { ...session.box, x: session.box.x + dx, y: session.box.y + dy };
+      const result = snap(moved, session.candidates, session.threshold);
+      const sx = lock === 'x' ? 0 : result.dx;
+      const sy = lock === 'y' ? 0 : result.dy;
+      dx += sx;
+      dy += sy;
+      const box = { ...moved, x: moved.x + sx, y: moved.y + sy };
+      guides = result.guides
+        .filter((g) => (g.axis === 'x' ? lock !== 'x' : lock !== 'y'))
+        .map((guide) => withLabels(guide, box, session.others));
+    }
+    dx = Math.round(dx);
+    dy = Math.round(dy);
+    session.delta = { x: dx, y: dy };
+    session.moved = session.moved || dx !== 0 || dy !== 0;
+
+    const { editor } = this.deps;
+    const positions: Record<Id, Point> = {};
+    for (const [id, p] of Object.entries(session.start))
+      positions[id] = { x: p.x + dx, y: p.y + dy };
+    const frames: Record<Id, Frame> = {};
+    for (const [id, f] of Object.entries(session.frames)) {
+      frames[id] = { position: { x: f.position.x + dx, y: f.position.y + dy }, size: f.size };
+    }
+    editor.batch(() => {
+      if (Object.keys(positions).length > 0) editor.moveInView(session.viewId, positions);
+      if (Object.keys(frames).length > 0) editor.setGroupFrames(session.viewId, frames);
+    });
+    const ui = useUiStore.getState();
+    ui.setGuides(guides);
+    if (session.kind === 'group') ui.setDragReadout({ dx, dy });
+    if (session.pointer === null) this.updateTarget();
+  }
+
+  private arrow(dx: number, dy: number): boolean {
+    const session = this.session;
+    if (session === null || session.cancelled) return false;
+    session.arrow = { x: session.arrow.x + dx, y: session.arrow.y + dy };
+    this.apply(session.lastRaw ?? session.anchorStart);
+    return true;
+  }
+
+  /** Esc: back to the start, no undo entry; the rest of the drag is ignored. */
+  cancel(): boolean {
+    const session = this.session;
+    if (session === null || session.cancelled) return false;
+    session.cancelled = true;
+    this.deps.editor.cancelGesture();
+    this.clearUi();
+    useUiStore.getState().announce('Cancelled');
+    return true;
+  }
+
+  /** Release: a copy with ⌥, otherwise the membership the pointer decides. */
+  stop(event?: { altKey?: boolean; clientX?: number; clientY?: number }): void {
+    const session = this.session;
+    if (session === null) return;
+    if (!session.cancelled) {
+      if (event?.clientX !== undefined && event.clientY !== undefined) {
+        session.pointer = this.deps.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      }
+      if (event?.altKey === true) session.mods = { ...session.mods, alt: true };
+      if (session.moved && session.mods.alt) {
+        duplicateOnDrop(this.deps.editor, session);
+      } else if (session.moved) {
+        this.drop(session);
+      }
+      this.deps.editor.endGesture();
+    }
+    this.end();
+  }
+
+  private drop(session: Session): void {
+    const { editor, undoToast } = this.deps;
+    const deck = readDeck(editor.doc);
+    const target = this.targetAt(session.pointer ?? this.anchorCentre());
+    const changes = membershipChanges(deck, session, {
+      target,
+      scope: session.scope,
+      keep: false,
+    });
+    if (changes.length === 0) return;
+    editor.batch(() => {
+      for (const change of changes) {
+        if (change.kind === 'node') editor.update('nodes', change.id, { group: change.to ?? null });
+        else editor.update('groups', change.id, { parent: change.to ?? null });
+      }
+    });
+    const message = moveMessage(deck, changes);
+    useUiStore.getState().announce(message);
+    if (changes.some((c) => c.kind === 'group' && c.to !== undefined)) undoToast(message);
+  }
+
+  private clearUi(): void {
+    const ui = useUiStore.getState();
+    ui.setGuides([]);
+    ui.setDropTarget(null);
+    ui.setDragReadout(null);
+  }
+
+  private end(): void {
+    this.clearUi();
+    const ui = useUiStore.getState();
+    if (ui.canvasGesture === 'drag' || ui.canvasGesture === 'group-drag') ui.setCanvasGesture(null);
+    document.removeEventListener('keydown', this.onKey, true);
+    document.removeEventListener('keyup', this.onKey, true);
+    active = null;
+    this.session = null;
+  }
+}
+
+/** A guide with its distance and equal-gap labels, measured along the guide (R7). */
+function withLabels(guide: Guide, box: Rect, others: readonly Rect[]): Guide {
+  const axis = guide.axis === 'x' ? 'y' : 'x';
+  const distance = nearestGap(box, others, axis);
+  const gaps = equalGaps(box, others, axis);
+  return {
+    ...guide,
+    ...(distance === null ? {} : { distance }),
+    ...(gaps.length === 0 ? {} : { equalGaps: gaps }),
+  };
+}
+
+/** "Moved Fraud check into Payments" / "Moved 3 components out of Payments" (contract). */
+export function moveMessage(
+  deck: Pick<ReturnType<typeof readDeck>, 'nodes' | 'groups'>,
+  changes: readonly MembershipChange[],
+): string {
+  const title = (change: MembershipChange) =>
+    change.kind === 'node'
+      ? (deck.nodes.find((n) => n.id === change.id)?.title ?? change.id)
+      : (deck.groups.find((g) => g.id === change.id)?.title ?? change.id);
+  const groupTitle = (id: Id) => deck.groups.find((g) => g.id === id)?.title ?? id;
+  const [first] = changes;
+  if (first === undefined) return '';
+  const what = changes.length === 1 ? title(first) : plural(changes.length, 'item');
+  if (first.to !== undefined) return `Moved ${what} into ${groupTitle(first.to)}`;
+  return first.from === undefined
+    ? `Moved ${what}`
+    : `Moved ${what} out of ${groupTitle(first.from)}`;
 }
 
 /**
@@ -58,6 +507,5 @@ export function duplicateOnDrop(editor: DeckEditor, session: DragSession): void 
   });
   const ui = useUiStore.getState();
   ui.select({ nodes: ids.nodes, groups: ids.groups });
-  const n = ids.nodes.length;
-  ui.announce(`Duplicated ${String(n)} ${n === 1 ? 'component' : 'components'}`);
+  ui.announce(`Duplicated ${plural(ids.nodes.length, 'component')}`);
 }

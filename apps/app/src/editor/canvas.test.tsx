@@ -610,8 +610,8 @@ describe('canvas handlers', () => {
       act(() => {
         h().onNodeDragStart({}, flowNode('a'));
         h().onNodesChange([
-          { type: 'position', id: 'a', position: { x: 100, y: 40 }, dragging: true },
-          { type: 'position', id: 'b', position: { x: 400, y: 40 }, dragging: true },
+          { type: 'position', id: 'a', position: { x: 2000, y: 1400 }, dragging: true },
+          { type: 'position', id: 'b', position: { x: 2300, y: 1400 }, dragging: true },
         ]);
         h().onNodeDragStop(click({ altKey: true }));
       });
@@ -622,8 +622,8 @@ describe('canvas handlers', () => {
       ]);
       const copies = file.nodes.slice(4);
       expect(copies.map((n) => n.position)).toEqual([
-        { x: 100, y: 40 },
-        { x: 400, y: 40 },
+        { x: 2000, y: 1400 },
+        { x: 2300, y: 1400 },
       ]);
       expect(ui().selection.nodes).toEqual(copies.map((n) => n.id));
       expect(ui().announcement.text).toBe('Duplicated 2 components');
@@ -640,12 +640,12 @@ describe('canvas handlers', () => {
       act(() => {
         h().onNodeDragStart({}, flowNode('a'));
         h().onNodesChange([
-          { type: 'position', id: 'a', position: { x: 10, y: 20 }, dragging: true },
+          { type: 'position', id: 'a', position: { x: 2000, y: 1400 }, dragging: true },
         ]);
         h().onNodeDragStop(click());
       });
       expect(toJSON(doc).nodes).toHaveLength(4);
-      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 10, y: 20 });
+      expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 2000, y: 1400 });
     });
   });
 
