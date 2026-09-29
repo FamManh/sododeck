@@ -58,6 +58,8 @@ export { evaluateRule, ruleChecks, type Evaluation, type RuleChecks } from './ru
 export { ruleUsage, type RuleUsage } from './rules/usage';
 export type { RuleHost } from './ops/rule-links';
 export {
+  fitGroupFrames,
+  frameOf,
   NODE_GRID,
   STICKY_DEFAULT_OFFSET,
   nodeCanvasPosition,
@@ -65,6 +67,7 @@ export {
   stickyLabel,
   viewNodePosition,
   viewPosition,
+  type FitOptions,
   type Point,
   type StickyPlacement,
 } from './geometry';

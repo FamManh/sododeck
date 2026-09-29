@@ -65,6 +65,35 @@ const perType: [string, SododeckFile][] = [
     },
   ],
   [
+    'group frames and per-view frames (016)',
+    {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A', group: 'framed', position: { x: 40, y: 80 } }],
+      groups: [
+        {
+          id: 'framed',
+          title: 'Framed',
+          parent: 'plain',
+          position: { x: 16, y: 56.5 },
+          size: { width: 212, height: 152 },
+        },
+        { id: 'plain', title: 'No frame yet' },
+      ],
+      views: [
+        { id: 'v1', type: 'system', title: 'One' },
+        {
+          id: 'v2',
+          type: 'infra',
+          title: 'Two',
+          positions: { a: { x: 300, y: 0 } },
+          groupFrames: {
+            framed: { position: { x: 276, y: -24 }, size: { width: 400, height: 300 } },
+          },
+        },
+      ],
+    },
+  ],
+  [
     'edge',
     {
       ...empty,
@@ -461,6 +490,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
 const MAP_PATHS = [
   /^rules$/,
   /^views\.\d+\.positions$/,
+  /^views\.\d+\.groupFrames$/,
   /^flows\.\d+\.steps\.\d+\.ruleInputs(\.[^.]+)?$/,
 ];
 
@@ -547,6 +577,26 @@ describe('canonical key order (FR-022, research R2)', () => {
       'collapsed',
       'showInFlows',
     ]);
+  });
+});
+
+describe('group frames (016)', () => {
+  it('writes a group frame after parent, and a view frame after positions', () => {
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    editor.add('groups', { id: 'p', title: 'P' });
+    editor.add('groups', {
+      size: { height: 96, width: 160 },
+      position: { y: 2, x: 1 },
+      parent: 'p',
+      title: 'G',
+      id: 'g',
+    });
+    const group = toJSON(doc).groups[1];
+    expect(Object.keys(group ?? {})).toEqual(['id', 'title', 'parent', 'position', 'size']);
+    expect(Object.keys(group?.size ?? {})).toEqual(['width', 'height']);
+    const text = serializeDeck(toJSON(doc));
+    expect(serializeDeck(toJSON(fromJSON(toJSON(doc))))).toBe(text);
   });
 });
 
