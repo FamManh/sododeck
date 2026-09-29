@@ -167,13 +167,32 @@ interface DeckLookups {
   nodeTitleById: ReadonlyMap<string, string>;
   edgeNodeViews: ReadonlyMap<string, { position: Point; title: string }>;
   edgesById: ReadonlyMap<string, DeckEdgeObject>;
-  groupsById: ReadonlyMap<string, SododeckFile['groups'][number]>;
 }
 
 const deckLookupCache = new WeakMap<
   ReadonlyArray<DeckNodeObject>,
   WeakMap<ReadonlyArray<DeckEdgeObject>, DeckLookups>
 >();
+
+const groupLookupCache = new WeakMap<
+  SododeckFile['groups'],
+  ReadonlyMap<string, SododeckFile['groups'][number]>
+>();
+
+/**
+ * Groups by id, keyed by the groups array itself: a rename or a frame edit changes only
+ * `deck.groups` (016), so it must not hide behind the node / edge lookups.
+ */
+function groupLookup(
+  groups: SododeckFile['groups'],
+): ReadonlyMap<string, SododeckFile['groups'][number]> {
+  let lookup = groupLookupCache.get(groups);
+  if (lookup === undefined) {
+    lookup = new Map(groups.map((group) => [group.id, group]));
+    groupLookupCache.set(groups, lookup);
+  }
+  return lookup;
+}
 
 function deckLookups(deck: SododeckFile): DeckLookups {
   let byEdges = deckLookupCache.get(deck.nodes);
@@ -198,7 +217,6 @@ function deckLookups(deck: SododeckFile): DeckLookups {
     edgeNodeViews.set(node.id, { position, title: node.title });
   });
   const edgesById = new Map(deck.edges.map((edge) => [edge.id, edge]));
-  const groupsById = new Map(deck.groups.map((group) => [group.id, group]));
   const lookups = {
     nodesById,
     nodeIndexById,
@@ -206,7 +224,6 @@ function deckLookups(deck: SododeckFile): DeckLookups {
     nodeTitleById,
     edgeNodeViews,
     edgesById,
-    groupsById,
   };
   byEdges.set(deck.edges, lookups);
   return lookups;
@@ -366,7 +383,7 @@ function groupNodes(
   view: CanvasView,
 ): GroupFlowNode[] {
   if (deck.groups.length === 0) return [];
-  const { groupsById } = deckLookups(deck);
+  const groupsById = groupLookup(deck.groups);
   const bounds = groupBounds(deck, sizeForLevel(level));
   const counts = groupCounts(deck);
   return graph.groups.flatMap((groupId) => {

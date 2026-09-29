@@ -223,6 +223,24 @@ describe('toFlowNodes', () => {
     });
   });
 
+  it('follows a change to the groups alone: a rename or a resized frame (016)', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const renamed = {
+      ...deck,
+      groups: deck.groups.map((g) => ({
+        ...g,
+        title: 'Renamed',
+        position: { x: 0, y: 0 },
+        size: { width: 500, height: 400 },
+      })),
+    };
+    const next = toFlowNodes(renamed, topLevelGraph(renamed), view());
+    const frame = next.find((n) => n.id === 'group:g');
+    expect(frame).not.toBe(first.find((n) => n.id === 'group:g'));
+    expect(frame).toMatchObject({ width: 500, height: 400, data: { title: 'Renamed' } });
+  });
+
   it('marks a selected group frame, and rebuilds only that frame', () => {
     const graph = topLevelGraph(deck);
     const first = toFlowNodes(deck, graph, view());
