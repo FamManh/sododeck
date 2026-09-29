@@ -35,6 +35,14 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - **Added by 015** (model validation, contract: `specs/015-model-validation/contracts/model-problems.md`, ADR 0013):
   - `src/problems.ts` (pure): `checkDeck(file)` → `DeckProblems` (`list` sorted by kind, object title, step order; `total`; `byObject` id → problems) and `PROBLEM_KINDS`. Nine kinds: duplicate connection, step without connection, broken chain, incomplete flow, overlapping branch conditions, missing rule, rule without catch-all, invalid rule cells, broken reference. Built on `analyzeFlow`, `ruleChecks` and `checkIntegrity` (step `edge` / `branch` integrity problems are left to `analyzeFlow`). Problem keys are stable (kind + ids). Derived for display; never stored.
 
+- **Added by 016** (canvas editing, ADR 0017):
+  - `geometry.ts`: `frameOf(group)` (the stored frame or undefined), `fitGroupFrames(file, { cardSize, padding, viewId? })` → `Map<groupId, Frame>` for groups with no frame (inner-first: member cards and child frames plus padding; empty groups and cycles skipped; with `viewId`, that view's positions, and a group counts as framed when the view or the base has a frame).
+  - Editor ops (`src/ops/frames.ts`): `fillGroupFrames(base, perView?)` writes only missing frames, **untracked** (fitting on open is never an undo step); `setGroupFrames(viewId, frames)` mirrors `moveInView` (base view → `group.position` / `size` and drops its own entry; other views → `view.groupFrames`, after copying every base frame into it untracked the first time). Removing a group deletes its `groupFrames` entry in every view (cascade).
+  - `src/fragment.ts` (pure): `toFragment(file, { nodes, groups }, viewId?)` (selected nodes, edges with both ends selected, selected groups whose whole subtree is selected; outside `group` / `parent` refs dropped; view positions), `serializeFragment`, `parseFragment(text)` (`null` for plain text, other JSON, invalid decks, duplicate ids), `fragmentOrigin`. Envelope `{ "sododeckFragment": 1, "deck": <file> }`.
+  - `pasteFragment(fragment, { offset, parent?, viewId? })` (`src/ops/paste.ts`): one undo step, new ids, references remapped inside the fragment, top-level items into `parent`, unknown rule ids dropped, non-base view positions and frames written too. Returns the new ids.
+  - `groupSelection({ nodes, groups, title, parent?, frame, viewFrames? })` (`src/ops/group-selection.ts`): one undo step; refuses a parent inside the selected groups.
+  - `cancelGesture()`: ends the open gesture and undoes it; the redo stack held back during the gesture is restored, so both stacks are as before `beginGesture`.
+
 ## Rules
 
 - Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case (`test/round-trip.test.ts`).
@@ -56,7 +64,8 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006) · `problems.ts` deck-wide problems (015)
 - `rules/`: `cells.ts`, `evaluate.ts`, `usage.ts` (008, pure)
 - `views.ts` presets and view resolution (011)
-- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
+- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `frames`, `paste`, `group-selection` (016), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
+- `fragment.ts` clipboard fragments (016)
 
 ## Boundaries
 

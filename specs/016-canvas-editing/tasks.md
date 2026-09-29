@@ -203,14 +203,14 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent test**: quickstart scenarios 4, 5, 8 and 9.
 
-- [ ] T035 [P] [US2] Write failing tests in `packages/model/test/group-selection.test.ts`:
+- [x] T035 [P] [US2] Write failing tests in `packages/model/test/group-selection.test.ts`:
   - The group is added with its title, parent and frames (base and per-view).
   - The members' `group` and the selected groups' `parent` are repointed.
   - It is one undo step.
   - The new id is returned.
-- [ ] T036 [US2] Implement `packages/model/src/ops/group-selection.ts` and wire `editor.groupSelection`.
+- [x] T036 [US2] Implement `packages/model/src/ops/group-selection.ts` and wire `editor.groupSelection`.
 - [x] T037 [P] [US2] Write failing tests in `apps/app/src/editor/editing/common-parent.test.ts` for the innermost common ancestor, the top level, and mixed groups. Implement `common-parent.ts`.
-- [ ] T038 [US2] Write failing tests for `group.create` in `apps/app/src/editor/actions/group-actions.ts`:
+- [x] T038 [US2] Write failing tests for `group.create` in `apps/app/src/editor/actions/group-actions.ts`:
   - ⌘G with 4 components creates "New group" with a fitted frame (members' box plus `GROUP_PADDING`) and starts `titleEdit` on it.
   - Two ⌘Z undo the rename, then the group.
   - It is disabled with "Select two or more components" for fewer than 2.
@@ -227,10 +227,10 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Implement `resize-limits.ts`.
 
-- [ ] T041 [US2] Make group boundary nodes selectable and draggable with `dragHandle: '.sd-group-handle'` in `apps/app/src/editor/deck-to-flow.ts` (+ test). In `apps/app/src/editor/group-boundary-node.tsx` (+ test):
+- [x] T041 [US2] Make group boundary nodes selectable and draggable with `dragHandle: '.sd-group-handle'` in `apps/app/src/editor/deck-to-flow.ts` (+ test). In `apps/app/src/editor/group-boundary-node.tsx` (+ test):
   - Add the handle class to the label and an 8 px edge band. Empty space inside keeps `pointer-events: none` (FR-017).
   - Show `NodeResizer` with 8 controls while the group is selected and editing is allowed.
-- [ ] T042 [US2] Implement group drag in `apps/app/src/editor/use-canvas-handlers.ts` together with a new `apps/app/src/editor/editing/use-drag-editing.ts`:
+- [x] T042 [US2] Implement group drag in `apps/app/src/editor/use-canvas-handlers.ts` together with a new `apps/app/src/editor/editing/use-drag-editing.ts`:
   - On start, record the subtree's start positions and frames and set `canvasGesture: 'group-drag'`.
   - On each change, one `editor.batch` applies `moveInView` to the members and `setGroupFrames` to the frames by the delta, and sets `dragReadout`.
   - ⇧ locks the axis.
@@ -239,10 +239,10 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Add tests in `canvas.test.tsx`: a drag by (100, 40) moves everything, one ⌘Z moves it back, Esc leaves no history, and ⌥ duplicates.
 
-- [ ] T043 [US2] Implement resize in the same hook: `onResize` clamps with `resize-limits`, and on end one `setGroupFrames` runs inside a gesture. Test that no card moves, membership is unchanged, it is one step, and Esc cancels.
-- [ ] T044 [US2] Implement nesting on group drop (FR-016): a group released inside another frame nests there, never in itself or a descendant, and shows `showUndoToast` "Moved Payments into Checkout". A nested group released outside its parent's frame leaves the parent. This depends on `dropTarget` (T047), so T044 lands after T047.
-- [ ] T045 [US2] Add a "Frame" section with X, Y, Width and Height `spinbutton`s to `apps/app/src/editor/inspector/group-inspector.tsx` (+ test). Each commit is one `setGroupFrames` step with the resize limits applied (FR-044).
-- [ ] T046 [US2] Render the dashed ghost of the start frame and the offset readout during a group drag in `apps/app/src/editor/editing/guides-overlay.tsx` (created here, extended in US3), with a test.
+- [x] T043 [US2] Implement resize in the same hook: `onResize` clamps with `resize-limits`, and on end one `setGroupFrames` runs inside a gesture. Test that no card moves, membership is unchanged, it is one step, and Esc cancels.
+- [x] T044 [US2] Implement nesting on group drop (FR-016): a group released inside another frame nests there, never in itself or a descendant, and shows `showUndoToast` "Moved Payments into Checkout". A nested group released outside its parent's frame leaves the parent. This depends on `dropTarget` (T047), so T044 lands after T047.
+- [x] T045 [US2] Add a "Frame" section with X, Y, Width and Height `spinbutton`s to `apps/app/src/editor/inspector/group-inspector.tsx` (+ test). Each commit is one `setGroupFrames` step with the resize limits applied (FR-044).
+- [x] T046 [US2] Render the dashed ghost of the start frame and the offset readout during a group drag in `apps/app/src/editor/editing/guides-overlay.tsx` (created here, extended in US3), with a test.
 
 **Checkpoint**: groups are real frames and can be created, moved, resized, nested and edited by keyboard.
 
@@ -271,12 +271,12 @@ This is ordered before US3 because T044 depends on it.
 
   Implement `membership-changes.ts`.
 
-- [ ] T049 [US4] Wire `onNodeDrag` in `use-drag-editing.ts` so it sets `ui.dropTarget`, null while ⌥ is held. On drag stop, write the membership changes inside the open gesture, with the announcements "Moved X into Y" / "Moved X out of Y". Add tests in `canvas.test.tsx`:
+- [x] T049 [US4] Wire `onNodeDrag` in `use-drag-editing.ts` so it sets `ui.dropTarget`, null while ⌥ is held. On drag stop, write the membership changes inside the open gesture, with the announcements "Moved X into Y" / "Moved X out of Y". Add tests in `canvas.test.tsx`:
   - In, out and ⌥ each work.
   - A collapsed-group drop updates the count.
   - No frame size changes.
   - Each is one undo step.
-- [ ] T050 [US4] Render the drop-target highlight (110) in `group-boundary-node.tsx` (+ test) when `ui.dropTarget` is this group: a 1.5 px dashed Deck Orange border, a 7 % fill, and a "Drop into <title>" chip. Render the dashed landing slot in `guides-overlay.tsx`. Use tokens only, and the dashed pattern is the non-colour cue.
+- [x] T050 [US4] Render the drop-target highlight (110) in `group-boundary-node.tsx` (+ test) when `ui.dropTarget` is this group: a 1.5 px dashed Deck Orange border, a 7 % fill, and a "Drop into <title>" chip. Render the dashed landing slot in `guides-overlay.tsx`. Use tokens only, and the dashed pattern is the non-colour cue.
 
 **Checkpoint**: membership can be edited by drag and drop.
 
@@ -295,7 +295,7 @@ This is ordered before US3 because T044 depends on it.
 
   Implement `align.ts`.
 
-- [ ] T052 [US3] Write failing tests for `apps/app/src/editor/actions/align-actions.ts`:
+- [x] T052 [US3] Write failing tests for `apps/app/src/editor/actions/align-actions.ts`:
   - The Align ▸ submenu order is as in the contract.
   - It is disabled for fewer than 2 (distribute: fewer than 3) with the tooltip.
   - It is one undo step.
@@ -304,7 +304,7 @@ This is ordered before US3 because T044 depends on it.
 
   Implement it and register it.
 
-- [ ] T053 [US3] Add ⌥A / ⌥D / ⌥W / ⌥S, matched by `event.code`, to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test), before the `altKey` return.
+- [x] T053 [US3] Add ⌥A / ⌥D / ⌥W / ⌥S, matched by `event.code`, to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test), before the `altKey` return.
 - [x] T054 [P] [US3] Write failing tests in `apps/app/src/editor/editing/snap.test.ts`:
   - Edges and centres snap within `6 / zoom`.
   - The nearest line wins per axis, and the axes are independent.
@@ -314,7 +314,7 @@ This is ordered before US3 because T044 depends on it.
   Implement `snap.ts`.
 
 - [x] T055 [P] [US3] Write failing tests in `apps/app/src/editor/editing/gaps.test.ts`: the distance to the nearest neighbour on the axis, and equal-gap detection in the same row or column. Implement `gaps.ts`.
-- [ ] T056 [US3] Wire snapping into `use-drag-editing.ts`:
+- [x] T056 [US3] Wire snapping into `use-drag-editing.ts`:
   - At drag start, collect candidates from the on-screen, non-dragged components.
   - In `onNodesChange`, add the snap offset to every dragged change and set `ui.guides`.
   - ⌘ / Ctrl held skips snapping. ⇧ locks the axis for component drags too.
@@ -322,7 +322,7 @@ This is ordered before US3 because T044 depends on it.
 
   Test it in `canvas.test.tsx`.
 
-- [ ] T057 [US3] Render the guides and labels in `guides-overlay.tsx` (+ test), using a `ViewportPortal`, a 1 px Deck Orange hairline, Mono 10.5 pill labels, and dashed gap ticks. They are `aria-hidden`.
+- [x] T057 [US3] Render the guides and labels in `guides-overlay.tsx` (+ test), using a `ViewportPortal`, a 1 px Deck Orange hairline, Mono 10.5 pill labels, and dashed gap ticks. They are `aria-hidden`.
 - [ ] T058 [US3] Run `pnpm bench` for `drag` and `drag-100-selected`. If fps drops below 60, reduce the candidates (only the viewport, and the nearest 200) and record the change in research R7.
 
 **Checkpoint**: diagrams can be lined up precisely.
@@ -335,7 +335,7 @@ This is ordered before US3 because T044 depends on it.
 
 **Independent test**: quickstart scenario 7 (nudge), plus a keyboard-only pass of stories 1–3.
 
-- [ ] T059 [US5] Write failing tests in `apps/app/src/editor/editing/use-nudge.test.tsx`:
+- [x] T059 [US5] Write failing tests in `apps/app/src/editor/editing/use-nudge.test.tsx`:
   - ⌥→ moves 1 px and ⌥⇧→ 10 px.
   - Three presses within 1 s undo in one step.
   - A press after a 1 s pause is a new step.
@@ -346,8 +346,8 @@ This is ordered before US3 because T044 depends on it.
 
   Implement `use-nudge.ts` and call it from `useCanvasKeyDown` before the `altKey` return.
 
-- [ ] T060 [US5] Implement arrows during a pointer drag (§g-45): add 1 / 10 px to the drag offset ref in `use-drag-editing.ts`, with a test.
-- [ ] T061 [US5] Confirm the keyboard-shortcut help lists every new shortcut, and add a test for `apps/app/src/editor/shell/shortcut-help-dialog.tsx` (new `shortcut-help-dialog.test.tsx`). Check that no new shortcut fires in a text field (one test per group of keys).
+- [x] T060 [US5] Implement arrows during a pointer drag (§g-45): add 1 / 10 px to the drag offset ref in `use-drag-editing.ts`, with a test.
+- [x] T061 [US5] Confirm the keyboard-shortcut help lists every new shortcut, and add a test for `apps/app/src/editor/shell/shortcut-help-dialog.tsx` (new `shortcut-help-dialog.test.tsx`). Check that no new shortcut fires in a text field (one test per group of keys).
 
 ---
 
@@ -357,9 +357,9 @@ This is ordered before US3 because T044 depends on it.
 
 **Independent test**: quickstart scenario 10.
 
-- [ ] T062 [US6] In `apps/app/src/editor/canvas.tsx` and `use-canvas-handlers.ts`, set `selectionMode` to `SelectionMode.Partial` while ⌥ is held during a marquee (otherwise `Full`). Save the selection at `onSelectionStart`, restore it on Esc, and set `canvasGesture: 'marquee'` and `marqueeCount`. Test these in `canvas.test.tsx`.
-- [ ] T063 [P] [US6] Create `apps/app/src/editor/editing/marquee-chip.tsx` (+ test): an inverse 22 px chip with the count that follows the pointer.
-- [ ] T064 [US6] Create `apps/app/src/editor/editing/gesture-hint.tsx` (+ test). It shows `HintBar` with the contract text for each `canvasGesture` value and announces it once per gesture through the live region. Mount it in `apps/app/src/editor/shell/canvas-shell.tsx`. It is hidden in Hide UI.
+- [x] T062 [US6] In `apps/app/src/editor/canvas.tsx` and `use-canvas-handlers.ts`, set `selectionMode` to `SelectionMode.Partial` while ⌥ is held during a marquee (otherwise `Full`). Save the selection at `onSelectionStart`, restore it on Esc, and set `canvasGesture: 'marquee'` and `marqueeCount`. Test these in `canvas.test.tsx`.
+- [x] T063 [P] [US6] Create `apps/app/src/editor/editing/marquee-chip.tsx` (+ test): an inverse 22 px chip with the count that follows the pointer.
+- [x] T064 [US6] Create `apps/app/src/editor/editing/gesture-hint.tsx` (+ test). It shows `HintBar` with the contract text for each `canvasGesture` value and announces it once per gesture through the live region. Mount it in `apps/app/src/editor/shell/canvas-shell.tsx`. It is hidden in Hide UI.
 
 ---
 
