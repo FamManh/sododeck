@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+
+import { generateBenchDeck } from '../../bench/generate-deck';
+import { LIGHT_PALETTE } from './export-palette';
+import { renderSvg } from './render-svg';
+import { buildScene } from './scene';
+import { fixedWidthMeasurer } from './text-measure';
+
+/**
+ * Regression ceiling in jsdom. The real budget (< 50 ms, no long task) is measured in the bench
+ * browser (`pnpm bench`, export-preview scenario; ADR 0016).
+ */
+const CEILING_MS = 250;
+
+describe('export scene performance', () => {
+  it('builds and renders 500 components / 1,000 connections under the ceiling', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { flows: true, groups: true, stickies: 20 });
+    const ui = {
+      currentViewId: null,
+      revealed: new Set<string>(),
+      drill: [],
+      activeFlowId: null,
+      notesDisplay: 'dimmed' as const,
+    };
+    const measure = fixedWidthMeasurer();
+    // Warm-up run (module init, JIT), then a timed one on a fresh copy: the canvas helpers
+    // memoise per deck object, and a real preview meets a new snapshot.
+    buildScene({ deck, scope: 'deck', ui });
+    const fresh = structuredClone(deck);
+    const start = performance.now();
+    const scene = buildScene({ deck: fresh, scope: 'deck', ui });
+    const svg = renderSvg(scene, {
+      transparent: false,
+      palette: LIGHT_PALETTE,
+      fonts: '',
+      measure,
+      title: 'Bench',
+    });
+    const elapsed = performance.now() - start;
+    console.info(
+      `export scene + svg (500 / 1000): ${elapsed.toFixed(1)} ms, ${String(svg.length)} chars`,
+    );
+    expect(scene.cards.length).toBeGreaterThan(0);
+    expect(elapsed).toBeLessThan(CEILING_MS);
+  });
+});

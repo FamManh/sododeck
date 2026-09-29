@@ -89,7 +89,7 @@ export function OverlaysSection() {
             <DialogHeader>
               <DialogTitle>Export deck</DialogTitle>
               <DialogDescription>
-                Choose a format. Everything stays in this browser.
+                Exports are generated in your browser. Nothing is uploaded.
               </DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4">
@@ -103,14 +103,13 @@ export function OverlaysSection() {
                     <SelectItem value="json">JSON · .sododeck.json</SelectItem>
                     <SelectItem value="png">PNG</SelectItem>
                     <SelectItem value="svg">SVG</SelectItem>
-                    <SelectItem value="mermaid">Mermaid</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2 self-end pb-2">
                 <Switch id={notesId} defaultChecked />
                 <label htmlFor={notesId} className="text-body">
-                  Include notes and rules
+                  Include descriptions, links and rules
                 </label>
               </div>
             </div>

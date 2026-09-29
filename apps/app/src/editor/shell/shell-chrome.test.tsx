@@ -245,4 +245,17 @@ describe('Zoom island (FR-033)', () => {
     );
     expect(document.querySelector('.react-flow__minimap')).not.toBeNull();
   });
+
+  it('mounts the Export dialog while the store asks for it (012)', async () => {
+    setup();
+    expect(screen.queryByRole('dialog', { name: 'Export deck' })).not.toBeInTheDocument();
+    act(() => {
+      ui().openExport(null);
+    });
+    expect(await screen.findByRole('dialog', { name: 'Export deck' })).toBeInTheDocument();
+    act(() => {
+      ui().closeExport();
+    });
+    expect(screen.queryByRole('dialog', { name: 'Export deck' })).not.toBeInTheDocument();
+  });
 });

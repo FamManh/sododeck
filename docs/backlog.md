@@ -982,6 +982,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 012-export
 
+- **Status:** implemented in PR #37 (2026-09-29) — see [`tasks.md`](../specs/012-export/tasks.md) and [ADR 0016](decisions/0016-export-rendering.md). Later: PDF and Mermaid export (below).
 - **Milestone:** M5 · **Depends on:** 007, 011 · **Estimate:** 4 d
 - **Goal:** Users take their diagrams anywhere — docs, slides, wikis, git — in open formats, generated
   entirely in the browser.

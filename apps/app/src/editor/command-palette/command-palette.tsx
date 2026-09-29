@@ -10,7 +10,6 @@ import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useUiStore } from '../../state/ui-store';
 import { useThemeStore } from '../../theme/theme-store';
 import { openFlow } from '../flows/flow-mode';
-import { useExportDeck } from '../use-export-deck';
 
 import { buildCommands } from './commands';
 import { openResult } from './open-result';
@@ -39,7 +38,7 @@ function CommandPaletteSession({
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const navigate = useNavigate();
-  const exportDeck = useExportDeck();
+  const openExport = useUiStore((state) => state.openExport);
   const closePalette = useUiStore((state) => state.closePalette);
   const announce = useUiStore((state) => state.announce);
   const select = useUiStore((state) => state.select);
@@ -63,7 +62,9 @@ function CommandPaletteSession({
         openRules: () => {
           openRules();
         },
-        exportDeck,
+        openExport: () => {
+          openExport(null);
+        },
         theme: { value: theme, resolved: theme, setTheme },
         focusModeAvailable: false,
         ...(screen === 'canvas'
@@ -84,7 +85,7 @@ function CommandPaletteSession({
             }
           : {}),
       }),
-    [exportDeck, navigate, openRules, setTheme, theme, screen, hasSelection, jsonShown],
+    [openExport, navigate, openRules, setTheme, theme, screen, hasSelection, jsonShown],
   );
   const currentViewId = useUiStore((state) => state.currentViewId);
   const revealed = useUiStore((state) => state.revealed);

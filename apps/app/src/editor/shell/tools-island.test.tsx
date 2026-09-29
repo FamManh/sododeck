@@ -1,9 +1,8 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
-import * as download from '../../storage/download';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { ToolsIsland } from './tools-island';
 
@@ -50,14 +49,15 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
     expect(button('Notes: shown')).toBeInTheDocument();
   });
 
-  it('switches the theme and exports the deck', async () => {
+  it('switches the theme and opens export', async () => {
     const user = userEvent.setup();
-    const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     renderWithEditor(<ToolsIsland />, deckOf({ name: 'Shop' }));
     expect(button(/^Switch to (dark|light) theme$/)).toBeInTheDocument();
     await user.click(button('Export'));
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', expect.any(String));
-    downloadText.mockRestore();
+    expect(useUiStore.getState().exportDialog).toEqual({
+      open: true,
+      returnFocus: button('Export'),
+    });
   });
 
   it('keeps accessible names in the compact islands (FR-041)', () => {

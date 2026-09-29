@@ -7,6 +7,8 @@ import { useSearchParams } from 'react-router';
 import { generateBenchDeck } from '../bench/generate-deck';
 import { Canvas } from '../editor/canvas';
 import { CommandPalette } from '../editor/command-palette/command-palette';
+import { preloadExportDialog } from '../editor/export/export-dialog-loader';
+import { ExportDialogMount } from '../editor/export/export-dialog-mount';
 import { DetailDrawer } from '../editor/shell/detail-drawer';
 import { JsonOverlay } from '../editor/shell/json-overlay';
 import { SelectionToolbar } from '../editor/quick-edit/selection-toolbar';
@@ -379,6 +381,31 @@ function ViewsBenchHooks() {
   return null;
 }
 
+/** An Export button and the lazily loaded Export dialog, as in the tools island (012 SC-003). */
+function ExportBench() {
+  const open = useUiStore((s) => s.exportDialog.open);
+  const openExport = useUiStore((s) => s.openExport);
+  useEffect(() => {
+    void preloadExportDialog();
+  }, []);
+  return (
+    <>
+      <div role="toolbar" aria-label="Tools" className="absolute top-3 right-3">
+        <button
+          type="button"
+          className="rounded-button bg-primary px-3 py-1.5 text-body-sm text-on-primary"
+          onClick={(event) => {
+            openExport(event.currentTarget);
+          }}
+        >
+          Export
+        </button>
+      </div>
+      {open && <ExportDialogMount />}
+    </>
+  );
+}
+
 /** The details drawer and JSON overlay over the canvas, as in the editor (018 SC-006). */
 function BenchShell() {
   const deck = useDeckSnapshot(useEditor().doc);
@@ -392,8 +419,9 @@ function BenchShell() {
 
 /**
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1&json=deck&flows=1&inspector=1
- * &groups=1&drawer=1&toolbar=1 (`drawer=1`: the canvas-first details drawer and JSON overlay, 018;
- * `toolbar=1`: the selection toolbar, 019)
+ * &groups=1&drawer=1&toolbar=1&export=1 (`drawer=1`: the canvas-first details drawer and JSON
+ * overlay, 018; `toolbar=1`: the selection toolbar, 019; `export=1`: an Export button and the
+ * Export dialog, 012)
  * Goes through the real read and write path: model document, editor, incremental snapshot and
  * the real Canvas (so dragging is measured too). `json=deck` adds the JSON panel under the
  * canvas with the Deck tab open (004 SC-003), as in the editor.
@@ -410,6 +438,7 @@ export function BenchPage() {
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
   const views = params.get('views') === '1';
   const drawer = params.get('drawer') === '1';
+  const exporting = params.get('export') === '1';
   const toolbar = params.get('toolbar') === '1';
 
   const [doc] = useState(() => {
@@ -462,6 +491,7 @@ export function BenchPage() {
                   }}
                 />
               </div>
+              {exporting && <ExportBench />}
               {(drawer || inspector) && (
                 <div className="pointer-events-none absolute inset-0">
                   <BenchShell />

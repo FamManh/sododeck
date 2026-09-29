@@ -351,7 +351,7 @@ describe('EditorPage', () => {
     });
   });
 
-  it('exports <name>.sododeck.json from the tools island', async () => {
+  it('exports <name>.sododeck.json from the tools island dialog', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     const file = { ...emptySododeckFile(), name: 'Shop' };
     const { user } = await openEditor(file);
@@ -360,7 +360,16 @@ describe('EditorPage', () => {
         name: 'Export',
       }),
     );
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(file));
+    await screen.findByRole('dialog', { name: 'Export deck' });
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: 'Download' }));
+    expect(downloadText).toHaveBeenCalledWith(
+      'shop.sododeck.json',
+      serializeDeck(file),
+      'application/json',
+    );
     await waitFor(async () => {
       expect((await record())?.exportedAt).not.toBeNull();
     });

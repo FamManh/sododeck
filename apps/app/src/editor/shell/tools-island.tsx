@@ -13,7 +13,6 @@ import { useRef, type ReactNode } from 'react';
 
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { useThemeStore } from '../../theme/theme-store';
-import { useExportDeck } from '../use-export-deck';
 import { Island, IslandDivider } from './island';
 import { shortcutLabel } from './shortcuts';
 
@@ -83,7 +82,7 @@ export function ToolsIsland({ compact = false }: { compact?: boolean }) {
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
-  const exportDeck = useExportDeck();
+  const openExport = useUiStore((s) => s.openExport);
   const jumpRef = useRef<HTMLButtonElement>(null);
   const jumpShortcut = shortcutLabel('search');
 
@@ -190,7 +189,9 @@ export function ToolsIsland({ compact = false }: { compact?: boolean }) {
         variant="primary"
         aria-label={compact ? 'Export' : undefined}
         className={cn(compact && 'size-8.5 px-0')}
-        onClick={exportDeck}
+        onClick={(event) => {
+          openExport(event.currentTarget);
+        }}
       >
         <Download />
         {!compact && 'Export'}

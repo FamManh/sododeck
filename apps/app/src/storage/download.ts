@@ -19,7 +19,11 @@ export function safeFileName(name: string): string {
 
 /** Saves `text` as a local file through a temporary `<a download>` (no network, FR-041). */
 export function downloadText(fileName: string, text: string, mime = 'application/json'): void {
-  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  downloadBlob(fileName, new Blob([text], { type: mime }));
+}
+
+export function downloadBlob(fileName: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = fileName;

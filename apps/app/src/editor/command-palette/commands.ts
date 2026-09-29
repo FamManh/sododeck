@@ -5,7 +5,7 @@ import type { PaletteCommand } from './palette-results';
 export interface CommandContext {
   navigate: (to: string) => void;
   openRules: () => void;
-  exportDeck: () => void;
+  openExport: () => void;
   theme: {
     value: Theme | 'system';
     resolved: Theme;
@@ -27,13 +27,13 @@ export interface CommandContext {
 export function buildCommands({
   navigate,
   openRules,
-  exportDeck,
+  openExport,
   theme,
   focusModeAvailable,
   shell,
 }: CommandContext): readonly PaletteCommand[] {
   const commands: PaletteCommand[] = [
-    { id: 'export', title: 'Export deck…', run: exportDeck },
+    { id: 'export', title: 'Export deck…', run: openExport },
     {
       id: 'toggle-dark-mode',
       title: 'Toggle dark mode',

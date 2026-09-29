@@ -185,6 +185,17 @@ describe('ui store', () => {
     expect(state().palette).toEqual({ open: false, returnFocus: null });
   });
 
+  it('opens, closes, and resets the export dialog', () => {
+    const button = document.createElement('button');
+    state().openExport(button);
+    expect(state().exportDialog).toEqual({ open: true, returnFocus: button });
+    state().closeExport();
+    expect(state().exportDialog).toEqual({ open: false, returnFocus: null });
+    state().openExport(button);
+    state().resetForDeck();
+    expect(state().exportDialog).toEqual({ open: false, returnFocus: null });
+  });
+
   it('tracks focus', () => {
     state().focus('a');
     expect(state().focusedId).toBe('a');

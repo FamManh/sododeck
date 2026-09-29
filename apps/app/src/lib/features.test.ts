@@ -5,6 +5,7 @@ import {
   isQuotaError,
   supportsClipboardWrite,
   supportsFileSystemAccess,
+  supportsIdleCallback,
   supportsMatchMedia,
   supportsPersistentStorage,
   supportsResizeObserver,
@@ -43,6 +44,13 @@ describe('feature detection', () => {
     expect(supportsMatchMedia()).toBe(true);
     vi.stubGlobal('matchMedia', undefined);
     expect(supportsMatchMedia()).toBe(false);
+  });
+
+  it('detects requestIdleCallback', () => {
+    vi.stubGlobal('requestIdleCallback', () => 1);
+    expect(supportsIdleCallback()).toBe(true);
+    vi.stubGlobal('requestIdleCallback', undefined);
+    expect(supportsIdleCallback()).toBe(false);
   });
 
   it('detects ResizeObserver', () => {

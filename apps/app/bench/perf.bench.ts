@@ -752,6 +752,92 @@ test(`⌘K type → results: 2000 nodes / 4000 edges`, async ({ page }) => {
   });
 });
 
+/** 012 SC-003: the Export dialog opens fast, and preparing a picture never blocks the page. */
+const EXPORT_TARGETS = { dialog: 300, preview: 2000, longTask: 50, png: 5000 };
+
+/** Clicks `click` in the page and returns the ms until `until` exists and a frame is painted. */
+function clickUntilPainted(page: Page, click: string, until: string) {
+  return page.evaluate(
+    async ([clickSelector, untilSelector]) => {
+      const frame = () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => {
+            resolve();
+          });
+        });
+      const start = performance.now();
+      document.querySelector<HTMLElement>(clickSelector)?.click();
+      while (document.querySelector(untilSelector) === null) await frame();
+      await frame();
+      return performance.now() - start;
+    },
+    [click, until] as const,
+  );
+}
+
+const longTasks = {
+  start: (page: Page) =>
+    page.evaluate(() => {
+      const w = window as unknown as { __longTasks: number[]; __longTaskObserver?: boolean };
+      w.__longTasks = [];
+      if (w.__longTaskObserver === true) return;
+      w.__longTaskObserver = true;
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) w.__longTasks.push(entry.duration);
+      }).observe({ type: 'longtask' });
+    }),
+  read: (page: Page) =>
+    page.evaluate(() => [...(window as unknown as { __longTasks: number[] }).__longTasks]),
+};
+
+test(`export-preview: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  await openBench(page, '&export=1&flows=1&groups=1&stickies=20');
+  // Let the prefetch of the export chunk finish, as the editor does when idle.
+  await page.waitForTimeout(1000);
+  await longTasks.start(page);
+  const dialogMs = await clickUntilPainted(
+    page,
+    '[role="toolbar"][aria-label="Tools"] button',
+    '[role="dialog"] [role="radiogroup"][aria-label="Format"]',
+  );
+  const openingTasks = await longTasks.read(page);
+  const dialog = page.getByRole('dialog', { name: 'Export deck' });
+  // Wait for the JSON preview first, so only the PNG preparation is measured below.
+  await expect(dialog.getByRole('button', { name: 'Download' })).toBeEnabled({ timeout: 30_000 });
+  await longTasks.start(page);
+  const previewMs = await clickUntilPainted(
+    page,
+    '[role="dialog"] button[role="radio"][aria-label="PNG"]',
+    '[role="region"][aria-label="Preview"] img',
+  );
+  await expect(dialog.getByRole('img', { name: /^Preview of .*\.png$/ })).toBeVisible();
+  const preparingTasks = await longTasks.read(page);
+  console.log(
+    `export long tasks (ms): opening dialog [${openingTasks.map((ms) => ms.toFixed(0)).join(', ')}], preparing PNG [${preparingTasks.map((ms) => ms.toFixed(0)).join(', ')}]`,
+  );
+  const longTaskMs = Math.max(0, ...preparingTasks);
+  const start = Date.now();
+  const download = page.waitForEvent('download', { timeout: 30_000 });
+  await dialog.getByRole('button', { name: 'Download' }).click();
+  await download;
+  const pngMs = Date.now() - start;
+  for (const [scenario, ms, targetMs] of [
+    ['export: click → dialog painted', dialogMs, EXPORT_TARGETS.dialog],
+    ['export: PNG → preview painted', previewMs, EXPORT_TARGETS.preview],
+    ['export: longest task while preparing', longTaskMs, EXPORT_TARGETS.longTask],
+    ['export: 2× PNG click → download', pngMs, EXPORT_TARGETS.png],
+  ] as const) {
+    actionResults.push({
+      scenario,
+      nodes: NODES,
+      edges: EDGES,
+      ms,
+      targetMs,
+      meetsTarget: ms < targetMs,
+    });
+  }
+});
+
 test.afterAll(async () => {
   if (results.length === 0 && actionResults.length === 0) return;
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');

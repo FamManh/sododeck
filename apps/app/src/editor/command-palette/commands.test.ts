@@ -9,7 +9,7 @@ function context() {
   return {
     navigate: vi.fn(),
     openRules: vi.fn(),
-    exportDeck: vi.fn(),
+    openExport: vi.fn(),
     theme: {
       value: 'light' as const,
       resolved: 'light' as const,
@@ -41,7 +41,7 @@ describe('buildCommands', () => {
     commands[3]?.run();
     commands[4]?.run();
 
-    expect(ctx.exportDeck).toHaveBeenCalledOnce();
+    expect(ctx.openExport).toHaveBeenCalledOnce();
     expect(ctx.openRules).toHaveBeenCalledOnce();
     expect(ctx.navigate).toHaveBeenCalledWith('/');
     expect(ctx.navigate).toHaveBeenCalledWith('/deck/new');
