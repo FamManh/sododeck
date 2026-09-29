@@ -472,6 +472,109 @@ for (const scenario of [
   });
 }
 
+/** Screen centre of the canvas area, where drags start. */
+function canvasCentre(page: Page) {
+  return page.evaluate(() => {
+    const canvas = document.querySelector<HTMLElement>('[data-canvas]')?.getBoundingClientRect();
+    return canvas === undefined
+      ? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+      : { x: canvas.left + canvas.width / 2, y: canvas.top + canvas.height * 0.35 };
+  });
+}
+
+/** ~2 s of small pointer moves from `from`, like a hand drag, while frames are recorded. */
+async function recordDrag(page: Page, from: { x: number; y: number }) {
+  await startRecording(page);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  for (let i = 1; i <= 120; i++) {
+    await page.mouse.move(from.x + i * 2, from.y + i);
+    await page.waitForTimeout(16);
+  }
+  await page.mouse.up();
+  return summarize(await stopRecording(page));
+}
+
+/**
+ * 016 FR-038 / SC-006: dragging 100 selected components (snapping on) stays at 60 fps. The 100
+ * components nearest the canvas centre are selected, then one of them is dragged for ~2 s.
+ */
+test(`drag-100-selected: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  const opened = await openBench(page, '');
+  const centre = await canvasCentre(page);
+  const picked = await page.evaluate(({ x, y }) => {
+    const found: { id: string; d: number; cx: number; cy: number }[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')) {
+      const r = el.getBoundingClientRect();
+      const id = el.getAttribute('data-node-id');
+      const cx = r.x + r.width / 2;
+      const cy = r.y + r.height / 2;
+      if (id !== null) found.push({ id, d: Math.hypot(cx - x, cy - y), cx, cy });
+    }
+    found.sort((a, b) => a.d - b.d);
+    const chosen = found.slice(0, 100);
+    const handle = chosen.find((n) => document.elementsFromPoint(n.cx, n.cy).some(
+      (el) => el.getAttribute('data-node-id') === n.id,
+    ));
+    return { ids: chosen.map((n) => n.id), handle };
+  }, centre);
+  if (picked.handle === undefined) throw new Error('no visible node to drag');
+  await page.evaluate((ids) => {
+    window.__sododeckBench?.selectNodes?.(ids);
+  }, picked.ids);
+  await page.waitForTimeout(100);
+  const node = page.locator(`[data-testid="deck-node"][data-node-id="${picked.handle.id}"]`);
+  const transform = () =>
+    node.evaluate((el) => el.closest<HTMLElement>('.react-flow__node')?.style.transform);
+  const before = await transform();
+  const stats = await recordDrag(page, { x: picked.handle.cx, y: picked.handle.cy });
+  expect(await transform()).not.toBe(before);
+  results.push({
+    scenario: 'drag-100-selected',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodesZoomedIn: opened.renderedNodes,
+    maxZoom: await viewportZoom(page),
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
+
+/** 016 FR-038: dragging a group by its label (the whole subtree moves every frame). */
+test(`group-drag: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  if (!GROUPS) return;
+  const opened = await openBench(page, '');
+  const centre = await canvasCentre(page);
+  const handle = await page.evaluate(({ x, y }) => {
+    let best: { x: number; y: number; d: number } | null = null;
+    for (const el of document.querySelectorAll<HTMLElement>('.sd-group-handle[role="button"]')) {
+      const r = el.getBoundingClientRect();
+      const px = r.x + Math.min(24, r.width / 2);
+      const py = r.y + r.height / 2;
+      if (!document.elementsFromPoint(px, py).includes(el)) continue;
+      const d = Math.hypot(px - x, py - y);
+      if (best === null || d < best.d) best = { x: px, y: py, d };
+    }
+    return best;
+  }, centre);
+  if (handle === null) {
+    console.log('group-drag: TODO(016): not available yet');
+    return;
+  }
+  const stats = await recordDrag(page, handle);
+  results.push({
+    scenario: 'group-drag',
+    nodes: NODES,
+    edges: EDGES,
+    ...opened,
+    renderedNodesZoomedIn: opened.renderedNodes,
+    maxZoom: await viewportZoom(page),
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
+
 /**
  * 006 research R15: from the action to the first painted frame with the step badge, on the
  * 500 / 1,000 deck with 21 flows. Median of 5 runs.

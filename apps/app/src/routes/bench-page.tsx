@@ -37,6 +37,8 @@ declare global {
       /** 019: the selection toolbar is rendered (`toolbar=1`). */
       toolbar?: boolean;
       clearSelection?: () => void;
+      /** 016 FR-038: selects components (the drag-100-selected scenario). */
+      selectNodes?: (nodeIds: string[]) => void;
       /** 019 SC-004: selects the components, resolves with ms until the toolbar is painted. */
       selectAndWaitForToolbar?: (nodeIds: string[]) => Promise<number>;
       collapseAll?: () => Promise<void>;
@@ -485,6 +487,9 @@ export function BenchPage() {
                           edges: deck.edges.length,
                           shell: drawer,
                           toolbar,
+                          selectNodes: (nodeIds: string[]) => {
+                            useUiStore.getState().select({ nodes: nodeIds });
+                          },
                         };
                       }),
                     );
