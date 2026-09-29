@@ -23,6 +23,7 @@ export {
 export type { RemovalResult } from './ops/cascade';
 export type { ViewSettingsPatch } from './ops/views';
 export type { PastedIds, PasteOptions } from './ops/paste';
+export type { GroupSelection } from './ops/group-selection';
 export {
   baseViewId,
   CUSTOM_VIEW_DEFAULTS,

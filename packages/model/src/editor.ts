@@ -31,6 +31,7 @@ import {
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
+import { groupSelection, type GroupSelection } from './ops/group-selection';
 import type { Fragment } from './fragment';
 import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
@@ -222,6 +223,13 @@ export interface DeckEditor {
    * fragment order. `missing-reference` for an unknown parent, `invalid` for a bad object.
    */
   pasteFragment(fragment: Fragment, options: PasteOptions): PastedIds;
+  /**
+   * Groups nodes and groups (016, R11) as one undo step: a new group titled `title` in `parent`,
+   * with its base frame and per-view frames; the nodes' `group` and the groups' `parent` point to
+   * it. Returns its id. `missing-reference` for unknown ids, `invalid` for a blank title or a
+   * parent inside the selected groups.
+   */
+  groupSelection(selection: GroupSelection): Id;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -483,6 +491,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       setGroupFrames(ctx, viewId, frames);
     },
     pasteFragment: (fragment, options) => pasteFragment(ctx, fragment, options),
+    groupSelection: (selection) => groupSelection(ctx, selection),
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {
