@@ -56,6 +56,8 @@ function renameKey(path: string, from: string, to: string): unknown {
 const RULE = 'rules.delivery-tier';
 const STEP = 'flows.0.steps.0';
 const BRANCH = 'flows.2.branches.1';
+const GROUP = 'groups.1';
+const FRAMES = 'views.2.groupFrames';
 
 export const invalidFixtures: InvalidFixture[] = [
   // Envelope
@@ -268,5 +270,28 @@ export const invalidFixtures: InvalidFixture[] = [
     name: 'ruleInputs column key that is not an id',
     input: renameKey(`${STEP}.ruleInputs.delivery-tier`, 'distance', 'distance km'),
     path: `${STEP}.ruleInputs.delivery-tier.distance km`,
+  },
+
+  // Group frames (016)
+  { name: 'group with position but no size', input: remove(`${GROUP}.size`), path: GROUP },
+  {
+    name: 'group size with zero width',
+    input: set(`${GROUP}.size.width`, 0),
+    path: `${GROUP}.size.width`,
+  },
+  {
+    name: 'group size with an unknown key',
+    input: set(`${GROUP}.size.depth`, 3),
+    path: `${GROUP}.size`,
+  },
+  {
+    name: 'view groupFrames key that is not a group',
+    input: renameKey(FRAMES, 'data', 'orders-db'),
+    path: `${FRAMES}.orders-db`,
+  },
+  {
+    name: 'view groupFrames value without size',
+    input: remove(`${FRAMES}.data.size`),
+    path: `${FRAMES}.data.size`,
   },
 ];

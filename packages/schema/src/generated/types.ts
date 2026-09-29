@@ -209,7 +209,7 @@ export interface Position {
   y: number;
 }
 /**
- * A named set of nodes (domain, bounded context, VPC). Its bounds are derived from its nodes; no geometry is stored.
+ * A named frame that holds nodes and nested groups (domain, bounded context, VPC). Membership is stored on the members (`node.group`, `group.parent`). `position` and `size` place the frame. Older files may omit them, and the app then fits a frame around the members.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Group".
@@ -222,6 +222,24 @@ export interface Group {
    */
   description?: string;
   parent?: Id;
+  position?: Position;
+  size?: Size;
+}
+/**
+ * A width and a height in canvas pixels. Both are greater than 0.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Size".
+ */
+export interface Size {
+  /**
+   * Width in pixels.
+   */
+  width: number;
+  /**
+   * Height in pixels.
+   */
+  height: number;
 }
 /**
  * A connection between two nodes.
@@ -286,6 +304,12 @@ export interface View {
     [k: string]: Position;
   };
   /**
+   * Per-group frame overrides for this view, keyed by group id. Keys must be ids of groups in the file. Absent means the base frames.
+   */
+  groupFrames?: {
+    [k: string]: Frame;
+  };
+  /**
    * Ids of the nodes that automatic layout must not move in this view. Absent means none.
    */
   pinned?: Id[];
@@ -293,6 +317,16 @@ export interface View {
    * Ids of the groups shown collapsed in this view. Absent means none.
    */
   collapsed?: Id[];
+}
+/**
+ * A rectangle on the canvas: its top-left corner and its size.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Frame".
+ */
+export interface Frame {
+  position: Position;
+  size: Size;
 }
 /**
  * A business capability that groups flows.
