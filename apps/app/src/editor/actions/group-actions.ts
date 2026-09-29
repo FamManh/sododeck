@@ -35,6 +35,7 @@ export const GROUP_ACTIONS: readonly Action[] = [
     label: 'Group',
     icon: Group,
     shortcut: 'group',
+    toolbarText: true,
     // With Align and Arrange, after the clipboard items (screens 99, 102).
     section: 'arrange',
     where: { menu: ['component', 'components', 'mixed'], toolbar: ['components'] },

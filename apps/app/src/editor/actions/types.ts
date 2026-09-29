@@ -73,6 +73,8 @@ export interface Action {
   /** A tooltip for an enabled item (e.g. "Members move to the parent level"). */
   description?: string;
   destructive?: boolean;
+  /** In the toolbar: the label shows next to the icon (Group, Align; screen 99). */
+  toolbarText?: boolean;
   /** In a submenu: a rule before this item (Align ▸, 016). */
   separatorBefore?: boolean;
   /** Submenu items. With `radio`, the children are one choice each and `checked` marks one. */
@@ -99,6 +101,7 @@ export interface ResolvedAction {
   radio: boolean;
   checked: boolean;
   separatorBefore: boolean;
+  toolbarText: boolean;
   children?: readonly ResolvedAction[];
   run: () => void;
 }

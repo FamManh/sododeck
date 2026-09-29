@@ -64,6 +64,11 @@ export interface GroupBoundaryData extends Record<string, unknown> {
   count: number;
   level: Level;
   focused: boolean;
+  /**
+   * Selected (016): shows the resize handles. Not React Flow's `selected`, which would raise the
+   * frame above its members (`elevateNodesOnSelect`).
+   */
+  selected?: boolean;
 }
 
 export interface DeckEdgeData extends Record<string, unknown> {
@@ -398,8 +403,8 @@ function groupNodes(
     const selected = view.selection.groups.includes(groupId);
     const cached = groupCache.get(id);
     if (
-      cached?.selected === selected &&
-      cached.data.title === group.title &&
+      (cached?.data.selected === true) === selected &&
+      cached?.data.title === group.title &&
       cached.data.count === count &&
       cached.data.level === level &&
       cached.data.focused === focused &&
@@ -420,7 +425,6 @@ function groupNodes(
       // A frame (016 R5): dragged by its label or edge band only, resized with its handles.
       // The wrapper lets the pointer through, so empty space inside still pans and marquees
       // (FR-017); the handles opt back in.
-      selected,
       selectable: true,
       draggable: true,
       dragHandle: `.${GROUP_HANDLE_CLASS}`,
@@ -432,7 +436,7 @@ function groupNodes(
         ? { domAttributes: { 'aria-hidden': true, inert: true } }
         : {}),
       zIndex: -1,
-      data: { title: group.title, count, level, focused },
+      data: { title: group.title, count, level, focused, ...(selected ? { selected } : {}) },
     };
     groupCache.set(id, flowNode);
     return flowNode;

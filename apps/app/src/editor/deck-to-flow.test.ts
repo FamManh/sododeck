@@ -211,7 +211,6 @@ describe('toFlowNodes', () => {
       position: { x: 5 - 24, y: 6 - 24 },
       width: 164 + 48,
       height: 50 + 48,
-      selected: false,
       selectable: true,
       draggable: true,
       dragHandle: '.sd-group-handle',
@@ -250,7 +249,9 @@ describe('toFlowNodes', () => {
       view({ selection: { ...EMPTY_SELECTION, groups: ['g'] } }),
     );
     const frame = selected.find((n) => n.id === 'group:g');
-    expect(frame?.selected).toBe(true);
+    // In data, not React Flow's `selected`: that would lift the frame above its members.
+    expect(frame?.data).toMatchObject({ selected: true });
+    expect(frame?.selected).toBeUndefined();
     expect(frame).not.toBe(first.find((n) => n.id === 'group:g'));
     expect(selected.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
   });

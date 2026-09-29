@@ -48,8 +48,8 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   data,
   width,
   height,
-  selected,
 }: NodeProps<GroupFlowNode>) {
+  const selected = data.selected === true;
   const focus = useUiStore((state) => state.focus);
   const select = useUiStore((state) => state.select);
   const editor = useEditor();

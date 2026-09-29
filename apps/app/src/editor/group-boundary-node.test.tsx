@@ -106,7 +106,19 @@ describe('GroupBoundaryNode as a frame (016)', () => {
     const { unmount } = renderWithEditor(<GroupBoundaryNode {...props()} />);
     expect(document.querySelectorAll('.react-flow__resize-control')).toHaveLength(0);
     unmount();
-    renderWithEditor(<GroupBoundaryNode {...props({ selected: true })} />);
+    renderWithEditor(
+      <GroupBoundaryNode
+        {...props({
+          data: {
+            title: 'Core services',
+            count: 2,
+            focused: false,
+            level: 'system',
+            selected: true,
+          },
+        })}
+      />,
+    );
     expect(document.querySelectorAll('.react-flow__resize-control.sd-resize-handle')).toHaveLength(
       8,
     );

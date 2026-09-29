@@ -179,7 +179,7 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
       }}
     >
       {content}
-      {Icon === undefined && action.label}
+      {(Icon === undefined || action.toolbarText) && <span>{action.label}</span>}
     </ToolbarButton>,
   );
 }
