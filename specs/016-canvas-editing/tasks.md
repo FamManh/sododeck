@@ -323,7 +323,7 @@ This is ordered before US3 because T044 depends on it.
   Test it in `canvas.test.tsx`.
 
 - [x] T057 [US3] Render the guides and labels in `guides-overlay.tsx` (+ test), using a `ViewportPortal`, a 1 px Deck Orange hairline, Mono 10.5 pill labels, and dashed gap ticks. They are `aria-hidden`.
-- [ ] T058 [US3] Run `pnpm bench` for `drag` and `drag-100-selected`. If fps drops below 60, reduce the candidates (only the viewport, and the nearest 200) and record the change in research R7.
+- [x] T058 [US3] Run `pnpm bench` for `drag` and `drag-100-selected`. If fps drops below 60, reduce the candidates (only the viewport, and the nearest 200) and record the change in research R7.
 
 **Checkpoint**: diagrams can be lined up precisely.
 
@@ -365,15 +365,15 @@ This is ordered before US3 because T044 depends on it.
 
 ## Phase 9: Polish and cross-cutting
 
-- [ ] T065 [P] Update `packages/schema/CLAUDE.md` (the frame fields), `packages/model/CLAUDE.md` (the new ops, fragment, `cancelGesture`, fitting), `apps/app/CLAUDE.md` (`editor/editing/`, the new actions) and `packages/ui/CLAUDE.md` (`HintBar`).
-- [ ] T066 [P] Update `docs/backlog.md`:
+- [x] T065 [P] Update `packages/schema/CLAUDE.md` (the frame fields), `packages/model/CLAUDE.md` (the new ops, fragment, `cancelGesture`, fitting), `apps/app/CLAUDE.md` (`editor/editing/`, the new actions) and `packages/ui/CLAUDE.md` (`HintBar`).
+- [x] T066 [P] Update `docs/backlog.md`:
   - Mark 016 as implemented, with links.
   - Note in 017 that `Size` and the resize wrapper exist.
   - Note in 020 that `group.style` sits next to the frame.
-- [ ] T067 Accessibility pass. Check that every new action works with the keyboard only. Check contrast of the guides, labels, drop chip and hint bar against Canvas in both themes; if a new pair is introduced, add it to `packages/ui/test/contrast.test.ts`. Check that reduced motion shows no animations.
-- [ ] T068 Visual check against screens 92 (Align part), 99, 102–104 (016 items) and 108–111, in light and dark. Take screenshots into `specs/016-canvas-editing/screens/` and list the differences in `specs/016-canvas-editing/visual-check.md` (SC-009).
-- [ ] T069 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` after the change. Save the results in `specs/016-canvas-editing/bench-after.md` next to `bench-before.md`, and confirm ≥ 60 fps for `drag-100-selected` (FR-038, SC-006).
-- [ ] T070 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
+- [x] T067 Accessibility pass. Check that every new action works with the keyboard only. Check contrast of the guides, labels, drop chip and hint bar against Canvas in both themes; if a new pair is introduced, add it to `packages/ui/test/contrast.test.ts`. Check that reduced motion shows no animations.
+- [x] T068 Visual check against screens 92 (Align part), 99, 102–104 (016 items) and 108–111, in light and dark. Take screenshots into `specs/016-canvas-editing/screens/` and list the differences in `specs/016-canvas-editing/visual-check.md` (SC-009).
+- [x] T069 Run `pnpm bench` and `BENCH_GROUPS=1 pnpm bench` after the change. Save the results in `specs/016-canvas-editing/bench-after.md` next to `bench-before.md`, and confirm ≥ 60 fps for `drag-100-selected` (FR-038, SC-006).
+- [x] T070 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
 - [ ] T071 Run the quickstart scenarios 1–11 by hand and record the results in the PR description.
 
 ---
