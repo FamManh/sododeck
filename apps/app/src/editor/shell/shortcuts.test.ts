@@ -52,6 +52,41 @@ describe('SHORTCUTS', () => {
   });
 });
 
+describe('Editing section (016)', () => {
+  it('lists every editing shortcut of the contract', () => {
+    const editing = SHORTCUTS.filter((s) => s.section === 'Editing').map((s) => s.id);
+    expect(editing).toEqual([
+      'copy',
+      'cut',
+      'paste',
+      'duplicate',
+      'align-left',
+      'align-right',
+      'align-top',
+      'align-bottom',
+      'nudge',
+      'nudge-10',
+      'drag-no-snap',
+      'drag-lock-axis',
+      'drag-duplicate',
+      'drop-without-group',
+    ]);
+    expect(SHORTCUT_SECTIONS).toContain('Editing');
+  });
+
+  it('labels the keys per platform, and Group is ⌘G', () => {
+    expect(shortcutLabel('copy', true)).toBe('⌘C');
+    expect(shortcutLabel('paste', false)).toBe('Ctrl+V');
+    expect(shortcutLabel('duplicate', true)).toBe('⌘D');
+    expect(shortcutLabel('align-left', true)).toBe('⌥A');
+    expect(shortcutLabel('align-bottom', false)).toBe('Alt+S');
+    expect(shortcutLabel('nudge-10', true)).toBe('⌥⇧ Arrows');
+    expect(shortcutLabel('group', true)).toBe('⌘G');
+    expect(shortcutLabel('group', false)).toBe('Ctrl+G');
+    expect(shortcutLabel('ungroup', true)).toBe('⇧⌘G');
+  });
+});
+
 describe('shortcutLabel', () => {
   it('returns the platform keys', () => {
     expect(shortcutLabel('outline', true)).toBe('⌥1');

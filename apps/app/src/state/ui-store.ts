@@ -190,8 +190,31 @@ export interface ContextMenuState {
 export type ToolbarFieldId =
   'kind' | 'owner' | 'tags' | 'tech' | 'links' | 'rules' | 'protocol' | 'direction';
 
-/** A pointer gesture on the canvas: the selection toolbar hides while one runs (019 R5). */
-export type CanvasGesture = 'pan' | 'drag';
+/**
+ * A pointer gesture on the canvas: the selection toolbar hides while one runs (019 R5), and the
+ * hint bar shows its keys (016 R13).
+ */
+export type CanvasGesture = 'pan' | 'drag' | 'group-drag' | 'resize' | 'marquee';
+
+/** A snapping guide during a drag (016 R7), in canvas px. UI-only, never saved. */
+export interface Guide {
+  axis: 'x' | 'y';
+  /** The x (axis `x`, a vertical line) or y (axis `y`) the cards line up on. */
+  at: number;
+  /** Span of the line across the aligned cards, on the other axis. */
+  from: number;
+  to: number;
+  /** Distance to the nearest neighbour on the other axis, and where its label goes. */
+  distance?: { value: number; at: { x: number; y: number } };
+  /** Equal gaps in the same row or column, and where their labels go. */
+  equalGaps?: { value: number; at: { x: number; y: number } }[];
+}
+
+/** Where the last paste landed and how many repeats (016 FR-004: +24 px per repeat). */
+export interface PasteSerial {
+  at: { x: number; y: number };
+  count: number;
+}
 
 export interface UiState {
   selection: Selection;
@@ -263,6 +286,14 @@ export interface UiState {
   contextMenu: ContextMenuState | null;
   toolbarField: ToolbarFieldId | null;
   canvasGesture: CanvasGesture | null;
+  /** The frame a drag would drop into (016 R6, screen 110); null outside frames or with ⌥. */
+  dropTarget: Id | null;
+  guides: readonly Guide[];
+  /** Offset of a group drag from its start, shown next to the frame. */
+  dragReadout: { dx: number; dy: number } | null;
+  /** Cards a running marquee selects. */
+  marqueeCount: number | null;
+  pasteSerial: PasteSerial | null;
 
   select: (selection: Partial<Selection>) => void;
   toggle: (id: Id, type: 'node' | 'edge' | 'sticky') => void;
@@ -392,6 +423,11 @@ export interface UiState {
   closeToolbarField: () => void;
   /** A pan, zoom or drag starts (closes the toolbar popover) or ends (`null`). */
   setCanvasGesture: (gesture: CanvasGesture | null) => void;
+  setDropTarget: (groupId: Id | null) => void;
+  setGuides: (guides: readonly Guide[]) => void;
+  setDragReadout: (readout: { dx: number; dy: number } | null) => void;
+  setMarqueeCount: (count: number | null) => void;
+  setPasteSerial: (serial: PasteSerial | null) => void;
   /**
    * Forgets everything that pointed into the previous deck (opening another one) and reads the
    * shell preferences of `deckId` (`null`: the demo or an in-memory deck, defaults only).
@@ -471,6 +507,8 @@ export function selectionTargets(selection: Partial<Selection>): RemovalTarget[]
     ...(selection.stickies ?? []).map((id): RemovalTarget => ({ scope: 'stickies', id })),
   ];
 }
+
+const NO_GUIDES: readonly Guide[] = [];
 
 export const useUiStore = create<UiState>()((set, get) => {
   const patchSession = (patch: Partial<FlowSession>) => {
@@ -552,6 +590,11 @@ export const useUiStore = create<UiState>()((set, get) => {
     contextMenu: null,
     toolbarField: null,
     canvasGesture: null,
+    dropTarget: null,
+    guides: NO_GUIDES,
+    dragReadout: null,
+    marqueeCount: null,
+    pasteSerial: null,
 
     select: ({ nodes = [], edges = [], groups = [], stickies = [] }) => {
       const empty =
@@ -601,6 +644,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         if (state.focusedEdgeId !== null && !existing.edges.has(state.focusedEdgeId))
           patch.focusedEdgeId = null;
         if (popoverGone) patch.popover = null;
+        if (state.dropTarget !== null && !existing.groups.has(state.dropTarget))
+          patch.dropTarget = null;
         if (state.stickyEditing !== null && !existing.stickies.has(state.stickyEditing))
           patch.stickyEditing = null;
         if (state.stickyDraft !== null && !existing.stickies.has(state.stickyDraft))
@@ -1027,6 +1072,22 @@ export const useUiStore = create<UiState>()((set, get) => {
     setCanvasGesture: (canvasGesture) => {
       set(canvasGesture === null ? { canvasGesture } : { canvasGesture, toolbarField: null });
     },
+    setDropTarget: (dropTarget) => {
+      if (get().dropTarget !== dropTarget) set({ dropTarget });
+    },
+    setGuides: (guides) => {
+      if (guides.length === 0 && get().guides.length === 0) return;
+      set({ guides: guides.length === 0 ? NO_GUIDES : guides });
+    },
+    setDragReadout: (dragReadout) => {
+      set({ dragReadout });
+    },
+    setMarqueeCount: (marqueeCount) => {
+      if (get().marqueeCount !== marqueeCount) set({ marqueeCount });
+    },
+    setPasteSerial: (pasteSerial) => {
+      set({ pasteSerial });
+    },
     resetForDeck: (deckId = null) => {
       const prefs = loadShellPrefs(deckId);
       set({
@@ -1070,6 +1131,11 @@ export const useUiStore = create<UiState>()((set, get) => {
         contextMenu: null,
         toolbarField: null,
         canvasGesture: null,
+        dropTarget: null,
+        guides: NO_GUIDES,
+        dragReadout: null,
+        marqueeCount: null,
+        pasteSerial: null,
       });
     },
   };
