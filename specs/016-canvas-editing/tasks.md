@@ -149,12 +149,12 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent test**: quickstart scenarios 1–3.
 
-- [ ] T024 [P] [US1] Write failing tests in `packages/model/test/fragment.test.ts`:
+- [x] T024 [P] [US1] Write failing tests in `packages/model/test/fragment.test.ts`:
   - `toFragment` includes the selected nodes, the edges with both ends selected, and only groups whose whole subtree is selected, with frames.
   - `serializeFragment` / `parseFragment` round-trip.
   - `parseFragment` returns `null` for plain text, JSON that is not an envelope, an invalid deck, and duplicate ids.
-- [ ] T025 [US1] Implement `packages/model/src/fragment.ts` (R9) and export it.
-- [ ] T026 [P] [US1] Write failing tests in `packages/model/test/paste.test.ts` for `pasteFragment`:
+- [x] T025 [US1] Implement `packages/model/src/fragment.ts` (R9) and export it.
+- [x] T026 [P] [US1] Write failing tests in `packages/model/test/paste.test.ts` for `pasteFragment`:
   - new ids, and no collisions with existing ids;
   - edges remapped;
   - nodes' `group` and groups' `parent` remapped inside the set, and outside parents set to `options.parent`;
@@ -163,22 +163,22 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - in a non-base view, view positions and frames written as well;
   - one undo step;
   - the new ids returned.
-- [ ] T027 [US1] Implement `packages/model/src/ops/paste.ts` and wire `editor.pasteFragment` in `packages/model/src/editor.ts`.
-- [ ] T028 [P] [US1] Write failing tests in `apps/app/src/editor/editing/paste-placement.test.ts` for FR-004: at the pointer; otherwise +24 px when that is on screen; otherwise the view centre; +24 for each repeat at the same point. Implement `paste-placement.ts`.
-- [ ] T029 [US1] Write failing tests for `apps/app/src/editor/actions/clipboard-actions.ts`, in `actions-run.test.ts` and `actions-for.test.ts`:
+- [x] T027 [US1] Implement `packages/model/src/ops/paste.ts` and wire `editor.pasteFragment` in `packages/model/src/editor.ts`.
+- [x] T028 [P] [US1] Write failing tests in `apps/app/src/editor/editing/paste-placement.test.ts` for FR-004: at the pointer; otherwise +24 px when that is on screen; otherwise the view centre; +24 for each repeat at the same point. Implement `paste-placement.ts`.
+- [x] T029 [US1] Write failing tests for `apps/app/src/editor/actions/clipboard-actions.ts`, in `actions-run.test.ts` and `actions-for.test.ts`:
   - `clipboard.copy`, `clipboard.cut`, `clipboard.paste` and `clipboard.duplicate` are offered per the contract table.
   - Copy stays enabled in flow and view-only modes, and the others do not.
   - Paste is disabled with "Nothing to paste: copy components first", or "Press ⌘V to paste" without `supportsClipboardRead`.
   - Duplicate pastes at +24 and leaves the clipboard alone.
   - Cut runs the existing delete path.
   - The announcements match the contract.
-- [ ] T030 [US1] Implement `clipboard-actions.ts`:
+- [x] T030 [US1] Implement `clipboard-actions.ts`:
   - Duplicate uses `toFragment` → `pasteFragment`.
   - Paste in the menu uses `readText`.
   - The paste target parent is the innermost frame under the paste point, else the drill scope (FR-008), via `dropTarget` from T047. Until then, use a local call to the same pure function.
   - Write the timestamp hint `sododeck:fragment-copied` on copy.
   - Register the module in `apps/app/src/editor/actions/index.ts`.
-- [ ] T031 [US1] Write failing tests in `apps/app/src/editor/editing/use-clipboard-events.test.tsx`:
+- [x] T031 [US1] Write failing tests in `apps/app/src/editor/editing/use-clipboard-events.test.tsx`:
   - The document `copy` / `cut` / `paste` events on the canvas write and read `text/plain` envelopes.
   - Nothing happens in text fields or with a non-fragment paste.
   - Selecting pasted objects.
@@ -186,12 +186,12 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Implement it, and mount it in `apps/app/src/editor/canvas.tsx`.
 
-- [ ] T032 [US1] Add ⌘D to `useEditorShortcuts` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test), calling `clipboard.duplicate`. It must `preventDefault` the browser bookmark.
-- [ ] T033 [US1] Implement ⌥-drag duplicate in `apps/app/src/editor/use-canvas-handlers.ts` (FR-009), with a test in `canvas.test.tsx`. When ⌥ is held on drag stop:
+- [x] T032 [US1] Add ⌘D to `useEditorShortcuts` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test), calling `clipboard.duplicate`. It must `preventDefault` the browser bookmark.
+- [x] T033 [US1] Implement ⌥-drag duplicate in `apps/app/src/editor/use-canvas-handlers.ts` (FR-009), with a test in `canvas.test.tsx`. When ⌥ is held on drag stop:
   1. Restore the originals to their start positions.
   2. Paste a fragment of them at the dropped offset.
   3. Do both inside the same gesture, so there is one undo step.
-- [ ] T034 [US1] Add Copy, Cut and Duplicate to the component, components and group menus, and Paste to the canvas menu (contract). Check this in `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`.
+- [x] T034 [US1] Add Copy, Cut and Duplicate to the component, components and group menus, and Paste to the canvas menu (contract). Check this in `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`.
 
 **Checkpoint**: US1 is fully usable and testable on its own.
 
@@ -209,7 +209,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - It is one undo step.
   - The new id is returned.
 - [ ] T036 [US2] Implement `packages/model/src/ops/group-selection.ts` and wire `editor.groupSelection`.
-- [ ] T037 [P] [US2] Write failing tests in `apps/app/src/editor/editing/common-parent.test.ts` for the innermost common ancestor, the top level, and mixed groups. Implement `common-parent.ts`.
+- [x] T037 [P] [US2] Write failing tests in `apps/app/src/editor/editing/common-parent.test.ts` for the innermost common ancestor, the top level, and mixed groups. Implement `common-parent.ts`.
 - [ ] T038 [US2] Write failing tests for `group.create` in `apps/app/src/editor/actions/group-actions.ts`:
   - ⌘G with 4 components creates "New group" with a fitted frame (members' box plus `GROUP_PADDING`) and starts `titleEdit` on it.
   - Two ⌘Z undo the rename, then the group.
@@ -219,8 +219,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Implement it. Enable the rail Group button in `apps/app/src/editor/shell/rail.tsx`, and add Group to the components toolbar and menus.
 
-- [ ] T039 [P] [US2] Write failing tests in `apps/app/src/editor/editing/subtree.test.ts`: a group's members and nested groups are collected recursively, cycles are safe, and the result includes hidden members. Implement `subtree.ts`.
-- [ ] T040 [P] [US2] Write failing tests in `apps/app/src/editor/editing/resize-limits.test.ts`:
+- [x] T039 [P] [US2] Write failing tests in `apps/app/src/editor/editing/subtree.test.ts`: a group's members and nested groups are collected recursively, cycles are safe, and the result includes hidden members. Implement `subtree.ts`.
+- [x] T040 [P] [US2] Write failing tests in `apps/app/src/editor/editing/resize-limits.test.ts`:
   - The minimum frame is the members' and nested frames' box plus padding, and at least 160 × 96.
   - ⇧ keeps the aspect ratio.
   - ⌥ resizes from the centre, computed from `direction`.
@@ -256,14 +256,14 @@ This is ordered before US3 because T044 depends on it.
 
 **Independent test**: quickstart scenario 6.
 
-- [ ] T047 [P] [US4] Write failing tests in `apps/app/src/editor/editing/drop-target.test.ts`:
+- [x] T047 [P] [US4] Write failing tests in `apps/app/src/editor/editing/drop-target.test.ts`:
   - The innermost frame containing the pointer wins: the deepest first, then the smaller area.
   - Dragged groups and their descendants are excluded.
   - The result is `null` outside every frame.
 
   Implement `drop-target.ts`.
 
-- [ ] T048 [P] [US4] Write failing tests in `apps/app/src/editor/editing/membership-changes.test.ts`, covering each dragged top-level item:
+- [x] T048 [P] [US4] Write failing tests in `apps/app/src/editor/editing/membership-changes.test.ts`, covering each dragged top-level item:
   - It gets the new parent: the target, else the drill scope, else none.
   - There is no change when the target equals the current group.
   - There is no change with ⌥.
@@ -288,7 +288,7 @@ This is ordered before US3 because T044 depends on it.
 
 **Independent test**: quickstart scenario 7 (align and snap).
 
-- [ ] T051 [P] [US3] Write failing tests in `apps/app/src/editor/editing/align.test.ts`:
+- [x] T051 [P] [US3] Write failing tests in `apps/app/src/editor/editing/align.test.ts`:
   - The six alignments and two distributions over displayed rects.
   - The outermost cards stay put when distributing.
   - Gaps are equal within 1 px (SC-004).
@@ -305,7 +305,7 @@ This is ordered before US3 because T044 depends on it.
   Implement it and register it.
 
 - [ ] T053 [US3] Add ⌥A / ⌥D / ⌥W / ⌥S, matched by `event.code`, to `useCanvasKeyDown` in `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test), before the `altKey` return.
-- [ ] T054 [P] [US3] Write failing tests in `apps/app/src/editor/editing/snap.test.ts`:
+- [x] T054 [P] [US3] Write failing tests in `apps/app/src/editor/editing/snap.test.ts`:
   - Edges and centres snap within `6 / zoom`.
   - The nearest line wins per axis, and the axes are independent.
   - Nothing snaps outside the threshold.
@@ -313,7 +313,7 @@ This is ordered before US3 because T044 depends on it.
 
   Implement `snap.ts`.
 
-- [ ] T055 [P] [US3] Write failing tests in `apps/app/src/editor/editing/gaps.test.ts`: the distance to the nearest neighbour on the axis, and equal-gap detection in the same row or column. Implement `gaps.ts`.
+- [x] T055 [P] [US3] Write failing tests in `apps/app/src/editor/editing/gaps.test.ts`: the distance to the nearest neighbour on the axis, and equal-gap detection in the same row or column. Implement `gaps.ts`.
 - [ ] T056 [US3] Wire snapping into `use-drag-editing.ts`:
   - At drag start, collect candidates from the on-screen, non-dragged components.
   - In `onNodesChange`, add the snap offset to every dragged change and set `ui.guides`.
