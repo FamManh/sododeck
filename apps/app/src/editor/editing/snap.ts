@@ -1,0 +1,104 @@
+/**
+ * Snapping of a dragged box to the lines of the other on-screen cards (016 R7). Pure; one pass
+ * over the candidates per call, so it stays cheap at pointer-move rate.
+ */
+import type { Guide } from '../../state/ui-store';
+import type { Rect } from '../canvas-geometry';
+
+/** A line a box can snap to. `from`/`to`: the candidate card's span on the other axis. */
+export interface SnapLine {
+  at: number;
+  from: number;
+  to: number;
+}
+
+export interface SnapCandidates {
+  x: readonly SnapLine[];
+  y: readonly SnapLine[];
+}
+
+export interface SnapResult {
+  dx: number;
+  dy: number;
+  guides: Guide[];
+}
+
+/** Lines closer than this count as the same line when spanning a guide. */
+const SAME_LINE = 0.5;
+
+/** Candidate lines of the non-dragged, on-screen cards: left, centre, right x; top, middle, bottom y. */
+export function snapCandidates(rects: readonly Rect[]): SnapCandidates {
+  const x: SnapLine[] = [];
+  const y: SnapLine[] = [];
+  for (const r of rects) {
+    const vertical = { from: r.y, to: r.y + r.height };
+    const horizontal = { from: r.x, to: r.x + r.width };
+    x.push(
+      { at: r.x, ...vertical },
+      { at: r.x + r.width / 2, ...vertical },
+      { at: r.x + r.width, ...vertical },
+    );
+    y.push(
+      { at: r.y, ...horizontal },
+      { at: r.y + r.height / 2, ...horizontal },
+      { at: r.y + r.height, ...horizontal },
+    );
+  }
+  return { x, y };
+}
+
+function snapAxis(
+  lines: readonly number[],
+  candidates: readonly SnapLine[],
+  threshold: number,
+): { offset: number; at: number } | null {
+  let best: { offset: number; at: number } | null = null;
+  let bestDistance = Infinity;
+  for (const candidate of candidates) {
+    for (const line of lines) {
+      const distance = Math.abs(candidate.at - line);
+      // Strictly smaller: ties keep the earlier candidate, then the earlier box line.
+      if (distance <= threshold && distance < bestDistance) {
+        bestDistance = distance;
+        best = { offset: candidate.at - line, at: candidate.at };
+      }
+    }
+  }
+  return best;
+}
+
+function guideFor(
+  axis: 'x' | 'y',
+  at: number,
+  span: { from: number; to: number },
+  candidates: readonly SnapLine[],
+): Guide {
+  let { from, to } = span;
+  for (const c of candidates) {
+    if (Math.abs(c.at - at) <= SAME_LINE) {
+      from = Math.min(from, c.from);
+      to = Math.max(to, c.to);
+    }
+  }
+  return { axis, at, from, to };
+}
+
+/** Snaps a moving box (the dragged selection's union box). threshold = 6 / zoom, passed in. */
+export function snap(box: Rect, candidates: SnapCandidates, threshold: number): SnapResult {
+  const x = snapAxis([box.x, box.x + box.width / 2, box.x + box.width], candidates.x, threshold);
+  const y = snapAxis([box.y, box.y + box.height / 2, box.y + box.height], candidates.y, threshold);
+  const dx = x?.offset ?? 0;
+  const dy = y?.offset ?? 0;
+  const guides: Guide[] = [];
+  if (x) {
+    guides.push(
+      guideFor('x', x.at, { from: box.y + dy, to: box.y + dy + box.height }, candidates.x),
+    );
+  }
+  if (y) {
+    guides.push(
+      guideFor('y', y.at, { from: box.x + dx, to: box.x + dx + box.width }, candidates.y),
+    );
+  }
+  return { dx, dy, guides };
+}
