@@ -548,7 +548,7 @@ test(`group-drag: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
   const centre = await canvasCentre(page);
   const handle = await page.evaluate(({ x, y }) => {
     let best: { x: number; y: number; d: number } | null = null;
-    for (const el of document.querySelectorAll<HTMLElement>('.sd-group-handle[role="button"]')) {
+    for (const el of document.querySelectorAll<HTMLElement>('button.sd-group-handle')) {
       const r = el.getBoundingClientRect();
       const px = r.x + Math.min(24, r.width / 2);
       const py = r.y + r.height / 2;
