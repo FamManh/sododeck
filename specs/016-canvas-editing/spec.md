@@ -297,7 +297,7 @@ While the architect Shift+drags a selection box, a small chip at the cursor coun
 - **SC-002**: Building a 30-component diagram from a 5-component pattern (copy, paste, align) takes under 5 minutes for a first-time tester.
 - **SC-003**: Grouping a selection and naming the group takes one shortcut plus typing the name.
 - **SC-003a**: Moving a member inside its frame, adding a member or removing one never changes the frame's size (0 px) in 100 % of tested cases. Resizing a frame never moves a card.
-- **SC-003b**: Every deck saved before this feature opens with each group visually where it was (frame within 1 px of the old derived box) and passes the round trip.
+- **SC-003b**: Every deck saved before this feature opens with each group visually where it was (at full-detail zoom, frame within 1 px of the old derived box; at smaller zoom levels, members stay inside it) and passes the round trip.
 - **SC-004**: After "Align" and "Distribute", positions are exactly equal (0 px difference) along the aligned axis and gaps differ by at most 1 px.
 - **SC-005**: A dragged card snaps whenever it comes within 6 screen px of a neighbour's edge or centre, and never when ⌘ is held.
 - **SC-006**: Canvas drag of 100 selected components stays at ≥ 60 fps at 500 components / 1,000 connections, and pan / zoom shows no regression against the benchmark measured before this change.
