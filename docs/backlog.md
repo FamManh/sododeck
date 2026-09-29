@@ -122,30 +122,30 @@ UI and card rendering.
 
 ## Feature list
 
-| ID  | Name                     | Milestone | Depends on | Est. | Needs design?                                  |
-| --- | ------------------------ | --------- | ---------- | ---- | ---------------------------------------------- |
-| 000 | design-foundation        | M1        | —          | 4 d  | —                                              |
-| 001 | json-schema-v1           | M1        | —          | 3 d  | ⚠ decision (§g-4)                              |
-| 002 | yjs-model                | M1        | 001        | 4 d  | —                                              |
-| 003 | canvas-basic             | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28           |
-| 004 | json-panel-sync          | M1        | 003        | 2 d  | decided (§g-3): read-only                      |
-| 005 | local-library-autosave   | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35          |
-| 006 | flow-authoring           | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                      |
-| 007 | flow-playback            | M2        | 006        | 4 d  | — (branch picker in 46)                        |
-| 008 | inspector-rules          | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26           |
-| 015 | model-validation         | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                         |
-| 009 | stickies-search          | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                     |
-| 010 | zoom-groups-focus        | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                      |
-| 011 | views-autolayout         | M4        | 010        | 5 d  | custom view config, layout button (default ok) |
-| 012 | export                   | M5        | 007, 011   | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later        |
-| 013 | samples-onboarding       | M5        | 005, 009   | 3 d  | —                                              |
-| 014 | analytics-feedback       | M5        | 005        | 2 d  | feedback button (small)                        |
-| 021 | design-sync-canvas-first | after M4  | 011        | 1 d  | docs only; designed (86–116)                   |
-| 018 | canvas-first-layout      | after M4  | 021        | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46     |
-| 019 | card-quick-edit          | after M4  | 018        | 3 d  | designed (95–104)                              |
-| 016 | canvas-editing           | after M4  | 019        | 4 d  | designed (92, 99, 102–104, 108–111); ⚠ §g-45   |
-| 017 | resize-edge-routing      | after M4  | 003 (016)  | 4 d  | designed (112–114); ⚠ §g-44; schema change     |
-| 020 | card-style               | after M4  | 019        | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change |
+| ID  | Name                     | Milestone | Depends on | Est. | Needs design?                                             |
+| --- | ------------------------ | --------- | ---------- | ---- | --------------------------------------------------------- |
+| 000 | design-foundation        | M1        | —          | 4 d  | —                                                         |
+| 001 | json-schema-v1           | M1        | —          | 3 d  | ⚠ decision (§g-4)                                         |
+| 002 | yjs-model                | M1        | 001        | 4 d  | —                                                         |
+| 003 | canvas-basic             | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                      |
+| 004 | json-panel-sync          | M1        | 003        | 2 d  | decided (§g-3): read-only                                 |
+| 005 | local-library-autosave   | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35                     |
+| 006 | flow-authoring           | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                                 |
+| 007 | flow-playback            | M2        | 006        | 4 d  | — (branch picker in 46)                                   |
+| 008 | inspector-rules          | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                      |
+| 015 | model-validation         | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                                    |
+| 009 | stickies-search          | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                                |
+| 010 | zoom-groups-focus        | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                                 |
+| 011 | views-autolayout         | M4        | 010        | 5 d  | custom view config, layout button (default ok)            |
+| 012 | export                   | M5        | 007, 011   | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                   |
+| 013 | samples-onboarding       | M5        | 005, 009   | 3 d  | —                                                         |
+| 014 | analytics-feedback       | M5        | 005        | 2 d  | feedback button (small)                                   |
+| 021 | design-sync-canvas-first | after M4  | 011        | 1 d  | docs only; designed (86–116)                              |
+| 018 | canvas-first-layout      | after M4  | 021        | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                |
+| 019 | card-quick-edit          | after M4  | 018        | 3 d  | designed (95–104)                                         |
+| 016 | canvas-editing           | after M4  | 019        | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
+| 017 | resize-edge-routing      | after M4  | 003 (016)  | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
+| 020 | card-style               | after M4  | 019        | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1119,13 +1119,18 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 016-canvas-editing
 
-- **Milestone:** after M4 · **Depends on:** 019 (menu and toolbar surfaces) · **Estimate:** 4 d
+- **Milestone:** after M4 · **Depends on:** 019 (menu and toolbar surfaces) · **Estimate:** 6 d (was 4 d before §g-55)
 - **Menus and toolbar (019):** add this feature's items as an action module in
   `apps/app/src/editor/actions/` (registered in `ACTIONS`); the context menu, the selection toolbar
   and the keys pick them up (ADR 0015).
 - **Goal:** Everyday diagram editing feels like a design tool: copy, paste, duplicate, group what is
   selected, move a group as one piece, and line things up without fiddling.
-- **Spec IDs:** C-6 (editing ergonomics); no new file-format fields.
+- **Spec IDs:** C-6 (editing ergonomics).
+- **Decision (founder, 2026-09-29, §g-55):** groups become **frames** with a stored position and
+  size (optional `group` geometry plus per-view group geometry in views with their own
+  positions). Users drag and resize frames, which never auto-scale; a card released outside its
+  group's frame leaves the group. This reverses "bounds are derived" in schema v1 (additive, no
+  version bump) and needs an ADR. Spec: [`spec.md`](../specs/016-canvas-editing/spec.md).
 - **Design references:** 92 bulk drawer (Align, distribute), 99 toolbar multi-selection, 102–104
   context menus (actions from here), 108 marquee, 109 dragging a group, 110 drop-into-group,
   111 alignment guides; inventory: snap guide, marquee, drop target, hint bar.

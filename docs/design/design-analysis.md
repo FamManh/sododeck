@@ -1024,3 +1024,14 @@ changes them before the owning feature is specified.
     **Default:** 017 specifies one before it is built (for example W / H fields in the drawer's
     Appearance section, and Reset route plus a side picker in the connection toolbar); the
     handles themselves stay pointer-only.
+
+### Decisions from the 016 clarification (2026-09-29)
+
+55. **Groups as frames** (109, 110): 002 and schema v1 derive a group's box from its members, so
+    the box grows when a member moves and a card cannot be dragged out of a group.
+    **Decision (founder, 2026-09-29):** a group is a frame with a stored position and size, like a
+    card. Users drag it and resize it, and it never auto-scales. A card released with the pointer
+    outside its group's frame leaves the group (⌥ keeps membership). A view with its own
+    component positions (011) stores its own frame per group. Older decks get fitted frames on
+    open. The fields are additive and optional (no version bump). 016 builds it, with an ADR, and
+    017 reuses the size shape and the resize handles.
