@@ -1,4 +1,4 @@
-import type { DeckDoc } from '@sododeck/model';
+import { createEditor, type DeckDoc } from '@sododeck/model';
 import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +11,7 @@ import { ConfirmDeleteDialog } from '../editor/confirm-delete-dialog';
 import { DeckDeletedDialog } from '../editor/deck-deleted-dialog';
 import { useFlowShortcuts, usePlaybackShortcuts } from '../editor/flows/use-flow-shortcuts';
 import { useFlowSync } from '../editor/flows/use-flow-sync';
-import { openDeck, type DeckSource } from '../editor/open-deck';
+import { fitMissingFrames, openDeck, type DeckSource } from '../editor/open-deck';
 import { SaveContext, type SaveControls } from '../editor/save-context';
 import { nextProblem } from '../editor/problems/next-problem';
 import { ProblemsProvider } from '../editor/problems/problems-provider';
@@ -24,7 +24,7 @@ import { RuleNavContext, type RuleNav } from '../editor/rules/rule-nav';
 import { useEditorShortcuts } from '../editor/use-canvas-shortcuts';
 import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
-import { useDeckSnapshot } from '../model/use-deck-snapshot';
+import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { attachDeckChannel } from '../storage/deck-channel';
 import { attachDeckPersistence, type DeckPersistence } from '../storage/deck-persistence';
@@ -180,6 +180,12 @@ function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-foun
     return openDeck(source);
   });
   const save = useSaveControlsFor(data, doc);
+  // After storage is attached (effects run in order), so the fitted frames are saved and synced.
+  useEffect(() => {
+    const fitter = createEditor(doc);
+    fitMissingFrames(fitter, readDeck(doc));
+    fitter.destroy();
+  }, [doc]);
 
   return (
     <SaveContext value={save}>

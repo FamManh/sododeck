@@ -99,6 +99,21 @@ describe('buildScene: whole deck', () => {
     }
   });
 
+  it('draws a stored frame larger than its members as stored (016)', () => {
+    const framed = {
+      ...grouped,
+      groups: [
+        {
+          id: 'g',
+          title: 'Core',
+          position: { x: -300, y: -200 },
+          size: { width: 900, height: 700 },
+        },
+      ],
+    };
+    expect(scene(framed).groups[0]?.rect).toEqual({ x: -300, y: -200, width: 900, height: 700 });
+  });
+
   it('bounds every shape plus the margin', () => {
     const { bounds, cards, groups, stickies } = scene(grouped);
     for (const rect of [...cards, ...groups, ...stickies].map((item) => item.rect)) {

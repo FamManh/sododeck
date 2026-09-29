@@ -1,8 +1,9 @@
-import { fromJSON, type DeckDoc } from '@sododeck/model';
-import { emptySododeckFile } from '@sododeck/schema';
+import { fitGroupFrames, fromJSON, type DeckDoc, type DeckEditor } from '@sododeck/model';
+import { emptySododeckFile, type Frame, type Id, type SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { storageOrigin } from '../storage/origins';
+import { COMPONENT_CARD_SIZE, GROUP_PADDING } from './canvas-geometry';
 import { demoDeck } from './demo-deck';
 
 /** Where the editor's deck comes from (research R12, R15). */
@@ -30,4 +31,23 @@ export function openDeck(source: DeckSource): DeckDoc {
       return doc;
     }
   }
+}
+
+/**
+ * Stores a frame for every group that has none (016 research R2): decks saved before frames
+ * existed, or groups an older tab added. Fitted at the full-detail card size, so they match the
+ * boxes those decks showed; views with their own positions get their own frames. Untracked: ⌘Z
+ * never "unfits". Writes nothing when every group is framed.
+ */
+export function fitMissingFrames(editor: DeckEditor, deck: SododeckFile): void {
+  const options = { cardSize: COMPONENT_CARD_SIZE, padding: GROUP_PADDING };
+  const base = fitGroupFrames(deck, options);
+  const perView = new Map<Id, Map<Id, Frame>>();
+  for (const view of deck.views) {
+    if (view.positions === undefined || Object.keys(view.positions).length === 0) continue;
+    const frames = fitGroupFrames(deck, { ...options, viewId: view.id });
+    if (frames.size > 0) perView.set(view.id, frames);
+  }
+  if (base.size === 0 && perView.size === 0) return;
+  editor.fillGroupFrames(base, perView);
 }
