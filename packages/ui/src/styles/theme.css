@@ -43,6 +43,36 @@
   --color-ink-muted: var(--sd-muted);
   --color-scrim: var(--sd-scrim);
 
+  /* Named card colours (020) */
+  --color-card-red-fill: var(--sd-card-red-fill);
+  --color-card-red-stroke: var(--sd-card-red-stroke);
+  --color-card-orange-fill: var(--sd-card-orange-fill);
+  --color-card-orange-stroke: var(--sd-card-orange-stroke);
+  --color-card-amber-fill: var(--sd-card-amber-fill);
+  --color-card-amber-stroke: var(--sd-card-amber-stroke);
+  --color-card-yellow-fill: var(--sd-card-yellow-fill);
+  --color-card-yellow-stroke: var(--sd-card-yellow-stroke);
+  --color-card-lime-fill: var(--sd-card-lime-fill);
+  --color-card-lime-stroke: var(--sd-card-lime-stroke);
+  --color-card-green-fill: var(--sd-card-green-fill);
+  --color-card-green-stroke: var(--sd-card-green-stroke);
+  --color-card-teal-fill: var(--sd-card-teal-fill);
+  --color-card-teal-stroke: var(--sd-card-teal-stroke);
+  --color-card-cyan-fill: var(--sd-card-cyan-fill);
+  --color-card-cyan-stroke: var(--sd-card-cyan-stroke);
+  --color-card-blue-fill: var(--sd-card-blue-fill);
+  --color-card-blue-stroke: var(--sd-card-blue-stroke);
+  --color-card-indigo-fill: var(--sd-card-indigo-fill);
+  --color-card-indigo-stroke: var(--sd-card-indigo-stroke);
+  --color-card-violet-fill: var(--sd-card-violet-fill);
+  --color-card-violet-stroke: var(--sd-card-violet-stroke);
+  --color-card-pink-fill: var(--sd-card-pink-fill);
+  --color-card-pink-stroke: var(--sd-card-pink-stroke);
+  --color-card-slate-fill: var(--sd-card-slate-fill);
+  --color-card-slate-stroke: var(--sd-card-slate-stroke);
+  --color-card-text-dark: var(--sd-card-text-dark);
+  --color-card-text-light: var(--sd-card-text-light);
+
   /* ── Colors: shadcn/ui aliases ── */
   --color-background: var(--sd-surface);
   --color-foreground: var(--sd-ink);

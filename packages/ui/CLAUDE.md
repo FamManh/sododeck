@@ -12,7 +12,8 @@
 - `src/lib/icons.ts` — `ICON_STROKE_WIDTH` (1.5), `ComponentKind`, `KIND_STYLE`, `toComponentKind()` (accepts prototype `edge`/`data`), `MATERIAL_TO_LUCIDE` for every prototype glyph. Human-readable copy: `docs/design/icon-mapping.md` (kept in sync by a test).
 - `src/lib/menu.ts` — the shared classes of `DropdownMenu` and `ContextMenu`.
 - `src/lib/tags.ts` — `normalizeTag` / `addTag` / `removeTag` (trim, lower-case, de-duplicate).
-- `src/lib/contrast.ts` — `contrastRatio(hexA, hexB)` (WCAG 2.1).
+- `src/lib/contrast.ts` — `contrastRatio(hexA, hexB)` (WCAG 2.1), `relativeLuminance(hex)`, `readableText(hex)` (020: picks dark or light card text, whichever has higher contrast, switching near luminance 0.204; `readable` false in the ≈ 0.183–0.227 band).
+- `src/lib/colour.ts` — `normalizeHex(value)` (020: accepts `#rrggbb` or `rrggbb`, lower-cases, else `null`), `hexToHsv` / `hsvToHex` (round-trip HSV conversion for the colour picker).
 - `src/lib/markdown.ts` — `parseMarkdown(text)` → `Block[]` (008): paragraphs, one level of `-`/`*`/`+` bullets, inline `` `code` ``; everything else stays literal text.
 - `src/hooks/use-reduced-motion.ts` — `useReducedMotion()`, live `prefers-reduced-motion`.
 
@@ -88,11 +89,16 @@ DESIGN.md `text-secondary` → `ink-secondary`, `muted` → `ink-muted` (to avoi
 - Color: `--sd-selection-text` (primary at 26 % light / 36 % dark), the `::selection` of `[data-slot='inline-edit']` (in-card title edit, design 96).
 - Shadow: `shadow-menu` `0 12px 32px var(--sd-shadow)` (DESIGN.md Float for menus and toolbar popovers). `lib/menu.ts` uses it; pass it to a toolbar's `PopoverContent`.
 
+## Tokens added by 020
+
+- Color: 13 named card colours × fill/stroke, same in both themes conceptually but with different hex values per theme (`--sd-card-<name>-fill` / `--sd-card-<name>-stroke` for `red`, `orange`, `amber`, `yellow`, `lime`, `green`, `teal`, `cyan`, `blue`, `indigo`, `violet`, `pink`, `slate`; mapped to `bg-card-<name>-fill` / `border-card-<name>-stroke` via `theme.css`). Plus `--sd-card-text-dark` (`#1c1c1a`) / `--sd-card-text-light` (`#ffffff`), the same value in both themes — the two candidates `readableText` picks between for a custom (non-named) fill.
+
 ## Enforced by tests (`test/`)
 
 - `tokens-only.test.ts`: no hex/rgb/hsl, Tailwind palette colors, arbitrary colors or radii, or `dark:` in components; no `text-ink-muted` on `bg-surface-2` (4.40:1, use `text-ink-secondary`).
 - `token-parity.test.ts`: every dark `--sd-*` token exists in light; the 019 tokens and `shadow-menu` are wired.
-- `contrast.test.ts`: every text token pair ≥ 4.5:1 and focus/non-text pairs ≥ 3:1 in both themes. Input border and switch-off track are founder-approved exceptions; adding one needs founder approval.
+- `contrast.test.ts`: every text token pair ≥ 4.5:1 and focus/non-text pairs ≥ 3:1 in both themes, including `ink`/`text-secondary` on every named card fill and every card stroke on `surface` (020). Input border and switch-off track are founder-approved exceptions; adding one needs founder approval.
+- `readable-text.test.ts`, `colour.test.ts`: `readableText`'s luminance switch/warning band and `normalizeHex` / `hexToHsv` / `hsvToHex` round trips (020).
 - Component tests query by role/label and drive the keyboard; `keyboard-a11y.test.tsx` checks tab order, `focusRing` and accessible names across controls.
 
 ## Boundaries

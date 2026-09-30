@@ -134,7 +134,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Tokens and pure colour helpers (`packages/ui`)
 
-- [ ] T015 [P] Write failing tests:
+- [x] T015 [P] Write failing tests:
   - In `packages/ui/test/contrast.test.ts`, add `TEXT_PAIRS` `['ink','card-<name>-fill']` and `['text-secondary','card-<name>-fill']` for all 13 names at 4.5:1, and a non-text list `['card-<name>-stroke','surface']` at 3:1, in both themes.
   - In `packages/ui/test/readable-text.test.ts`:
     - `#1f2a44` gives `light` and is readable.
@@ -142,14 +142,14 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
     - The switch happens near luminance 0.204.
     - `#7c7c7c` is not readable.
     - Both ends of the ≈ 0.183–0.227 band are not readable.
-- [ ] T016 [P] Write failing tests in `packages/ui/test/colour.test.ts` for `normalizeHex`:
+- [x] T016 [P] Write failing tests in `packages/ui/test/colour.test.ts` for `normalizeHex`:
   - `7A3CFF` and `#7a3cff` both give `#7a3cff`.
   - `#abc`, `zzzzzz` and an empty string give `null`.
 
   Also test `hexToHsv` / `hsvToHex` round trips for primaries, grey, black and white, and for `#7a3cff`.
 
-- [ ] T017 Add the 26 hex tokens per theme plus `--sd-card-text-dark` / `--sd-card-text-light` to `packages/ui/src/styles/tokens.css` (values in the [data-model table](data-model.md#named-colour-tokens)). Map them in `packages/ui/src/styles/theme.css` `@theme inline` as `--color-card-<name>-fill`, `--color-card-<name>-stroke`, `--color-card-text-dark` and `--color-card-text-light`. `token-parity.test.ts` and T015's pair tests are now green.
-- [ ] T018 In `packages/ui/src/lib/contrast.ts`, export `relativeLuminance` and add `readableText(hex)`, returning `{ text: 'dark' | 'light'; ratio; readable }` against `#1c1c1a` / `#ffffff` (R6). Create `packages/ui/src/lib/colour.ts` with `normalizeHex`, `hexToHsv` and `hsvToHex`, and export both modules from the package entry. T015 and T016 are now green.
+- [x] T017 Add the 26 hex tokens per theme plus `--sd-card-text-dark` / `--sd-card-text-light` to `packages/ui/src/styles/tokens.css` (values in the [data-model table](data-model.md#named-colour-tokens)). Map them in `packages/ui/src/styles/theme.css` `@theme inline` as `--color-card-<name>-fill`, `--color-card-<name>-stroke`, `--color-card-text-dark` and `--color-card-text-light`. `token-parity.test.ts` and T015's pair tests are now green.
+- [x] T018 In `packages/ui/src/lib/contrast.ts`, export `relativeLuminance` and add `readableText(hex)`, returning `{ text: 'dark' | 'light'; ratio; readable }` against `#1c1c1a` / `#ffffff` (R6). Create `packages/ui/src/lib/colour.ts` with `normalizeHex`, `hexToHsv` and `hsvToHex`, and export both modules from the package entry. T015 and T016 are now green.
 
 ### App derived look
 

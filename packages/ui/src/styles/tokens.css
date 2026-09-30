@@ -46,6 +46,37 @@
   --sd-text-secondary: #55554f;
   --sd-muted: #72726b;
 
+  /* Named card colours (020): fill / stroke per name, converted from DESIGN.md's OKLCH values. */
+  --sd-card-red-fill: #ffe4de;
+  --sd-card-red-stroke: #d15c53;
+  --sd-card-orange-fill: #ffe7d2;
+  --sd-card-orange-stroke: #c9690c;
+  --sd-card-amber-fill: #ffeccd;
+  --sd-card-amber-stroke: #b47900;
+  --sd-card-yellow-fill: #f4f0ce;
+  --sd-card-yellow-stroke: #998800;
+  --sd-card-lime-fill: #e5f5d6;
+  --sd-card-lime-stroke: #679725;
+  --sd-card-green-fill: #d9f8e0;
+  --sd-card-green-stroke: #259f56;
+  --sd-card-teal-fill: #cff9f1;
+  --sd-card-teal-stroke: #00a28d;
+  --sd-card-cyan-fill: #cdf7ff;
+  --sd-card-cyan-stroke: #009bbe;
+  --sd-card-blue-fill: #dbf1ff;
+  --sd-card-blue-stroke: #4087de;
+  --sd-card-indigo-fill: #e7ecff;
+  --sd-card-indigo-stroke: #737ade;
+  --sd-card-violet-fill: #f4e8ff;
+  --sd-card-violet-stroke: #986dd0;
+  --sd-card-pink-fill: #ffe3f3;
+  --sd-card-pink-stroke: #c65b93;
+  --sd-card-slate-fill: #e6ecf3;
+  --sd-card-slate-stroke: #667383;
+  /* Text on a custom (non-named) fill: same in both themes (readableText picks between them). */
+  --sd-card-text-dark: #1c1c1a;
+  --sd-card-text-light: #ffffff;
+
   /* Scrim & shadow */
   --sd-scrim: rgba(28, 28, 26, 0.3);
   --sd-shadow: rgba(0, 0, 0, 0.06);
@@ -108,6 +139,36 @@
   --sd-ink: #ededea;
   --sd-text-secondary: #b8b8b1;
   --sd-muted: #909089;
+
+  /* Named card colours (020): dark theme fill / stroke per name. */
+  --sd-card-red-fill: #482521;
+  --sd-card-red-stroke: #eb8278;
+  --sd-card-orange-fill: #452813;
+  --sd-card-orange-stroke: #e28d4f;
+  --sd-card-amber-fill: #3f2d0a;
+  --sd-card-amber-stroke: #cf9a35;
+  --sd-card-yellow-fill: #36310b;
+  --sd-card-yellow-stroke: #b5a737;
+  --sd-card-lime-fill: #273617;
+  --sd-card-lime-stroke: #89b559;
+  --sd-card-green-fill: #183822;
+  --sd-card-green-stroke: #5ebc7b;
+  --sd-card-teal-fill: #013932;
+  --sd-card-teal-stroke: #00beab;
+  --sd-card-cyan-fill: #003742;
+  --sd-card-cyan-stroke: #00b8d7;
+  --sd-card-blue-fill: #1c314c;
+  --sd-card-blue-stroke: #6aa7f4;
+  --sd-card-indigo-fill: #2a2d4c;
+  --sd-card-indigo-stroke: #929bf5;
+  --sd-card-violet-fill: #352947;
+  --sd-card-violet-stroke: #b490e8;
+  --sd-card-pink-fill: #452434;
+  --sd-card-pink-stroke: #e181b0;
+  --sd-card-slate-fill: #292e35;
+  --sd-card-slate-stroke: #8693a5;
+  --sd-card-text-dark: #1c1c1a;
+  --sd-card-text-light: #ffffff;
 
   --sd-scrim: rgba(0, 0, 0, 0.6);
   --sd-shadow: rgba(0, 0, 0, 0.45);
