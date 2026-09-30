@@ -403,7 +403,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - Check that reduced motion shows no popover or preview animation.
   - Confirm the contrast tests from T015 cover every new pair.
 - [x] T062 Visual check against screens 91 (Appearance), 105, 106 and 107, in light and dark at 1440×900. Take screenshots into `specs/020-card-style/screens/` and list the differences in `specs/020-card-style/visual-check.md` (SC-007). Call out the new error ring on uncoloured problem cards.
-- [ ] T063 Run `pnpm bench` and `BENCH_COLOURS=1 pnpm bench` after the change, and save them in `specs/020-card-style/bench-after.md` next to `bench-before.md`. Confirm pan, zoom and drag are within 5 % and flow highlight is < 100 ms (SC-005).
+- [x] T063 Run `pnpm bench` and `BENCH_COLOURS=1 pnpm bench` after the change, and save them in `specs/020-card-style/bench-after.md` next to `bench-before.md`. Confirm pan, zoom and drag are within 5 % and flow highlight is < 100 ms (SC-005).
 - [ ] T064 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
 - [ ] T065 Run the quickstart scenarios 1–12 by hand and record the results in the PR description.
 
