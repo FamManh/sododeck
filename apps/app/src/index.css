@@ -40,6 +40,19 @@
   border: 1.5px solid var(--color-primary);
 }
 
+/* Reconnect drag (017 R12): the hovered card's four side targets render as 12 px rings; the
+   nearest side is filled and larger, not colour only. */
+.react-flow__handle.sd-handle[data-endpoint-target] {
+  width: 12px;
+  height: 12px;
+}
+
+.react-flow__handle.sd-handle[data-endpoint-hot] {
+  width: 16px;
+  height: 16px;
+  background: var(--color-primary);
+}
+
 /* While a connection is drawn, the whole node accepts the drop. */
 .react-flow__handle.sd-body-handle {
   inset: 0;
@@ -146,6 +159,12 @@
 
 [data-level='landscape'] .react-flow__edge {
   opacity: 0.35;
+}
+
+/* Reconnect drag (017 R12): the edge being moved is a 40 % ghost while the connection line shows
+   the live path. */
+.sd-edge-reconnecting {
+  opacity: 0.4;
 }
 
 /* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */

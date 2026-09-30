@@ -141,6 +141,25 @@ describe('DeckNode', () => {
     expect(screen.getAllByRole('button', { name: 'Connect from Order Service' })).toHaveLength(4);
   });
 
+  it('shows its side targets, with the hot side marked, during a reconnect drag (017 R12)', () => {
+    renderNode();
+    act(() => {
+      useUiStore.getState().setCanvasGesture('endpoint');
+      useUiStore.getState().setEndpointHover({ nodeId: 'svc', side: 'right' });
+    });
+    const handles = screen.getAllByRole('button', { name: 'Connect from Order Service' });
+    expect(handles.every((handle) => handle.hasAttribute('data-endpoint-target'))).toBe(true);
+    expect(handles.filter((handle) => handle.hasAttribute('data-endpoint-hot'))).toHaveLength(1);
+    act(() => {
+      useUiStore.getState().setEndpointHover({ nodeId: 'other', side: 'right' });
+    });
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Connect from Order Service' })
+        .some((handle) => handle.hasAttribute('data-endpoint-target')),
+    ).toBe(false);
+  });
+
   it('shows selection and takes the Tab stop when focused', () => {
     renderNode(props({ focused: true }, true));
     const node = screen.getByTestId('deck-node');

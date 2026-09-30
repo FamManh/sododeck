@@ -274,19 +274,19 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US3. Drop each end on each side of its own card, reconnect to another card, press Esc mid-drag, use Reset route from the toolbar, the menu and the drawer.
 
-- [ ] T039 [P] [US3] Write failing tests in `apps/app/src/editor/use-canvas-handlers.test.ts` (new) for `onReconnect` (R12):
+- [x] T039 [P] [US3] Write failing tests in `apps/app/src/editor/use-canvas-handlers.test.ts` (new) for `onReconnect` (R12):
   - drop on the same card → only `fromSide` / `toSide` changes, picked by `nearestSide` of the drop point (also for the `body` target);
   - drop on another card → `from` / `to` and that side change, `offset` is cleared, one undo step;
   - a refused connection (`self`, `duplicate`) changes nothing and announces as today;
   - the announcements "Connection now leaves from the top" / "…enters from the left".
-- [ ] T040 [US3] Implement it in `apps/app/src/editor/use-canvas-handlers.ts`:
+- [x] T040 [US3] Implement it in `apps/app/src/editor/use-canvas-handlers.ts`:
   - `onReconnectStart` sets `setCanvasGesture('endpoint')` and remembers the moving end.
   - `onReconnect` applies the rules above in one `oneStep`.
   - `onReconnectEnd` clears the gesture and `endpointHover`.
   - A pointer move during the gesture updates `endpointHover` with `nearestSide`.
-- [ ] T041 [US3] Show the side targets in `apps/app/src/editor/deck-node.tsx`: while `canvasGesture === 'endpoint'`, the hovered card's four handles render as 12 px rings, and the `endpointHover` side is filled and larger (not colour only). Styles go in `apps/app/src/index.css`. Add a test for the hot-side attribute.
-- [ ] T042 [US3] Create `apps/app/src/editor/routing/endpoint-connection-line.tsx`, a custom `connectionLineComponent` that draws the live path dashed in primary with `routedStepPath` and the hot side. Pass it in `apps/app/src/editor/canvas.tsx`. The edge being moved gets 40 % opacity through the gesture class, as the ghost.
-- [ ] T043 [US3] Add `edge.resetRoute` to `apps/app/src/editor/actions/shape-actions.ts`:
+- [x] T041 [US3] Show the side targets in `apps/app/src/editor/deck-node.tsx`: while `canvasGesture === 'endpoint'`, the hovered card's four handles render as 12 px rings, and the `endpointHover` side is filled and larger (not colour only). Styles go in `apps/app/src/index.css`. Add a test for the hot-side attribute.
+- [x] T042 [US3] Create `apps/app/src/editor/routing/endpoint-connection-line.tsx`, a custom `connectionLineComponent` that draws the live path dashed in primary with `routedStepPath` and the hot side. Pass it in `apps/app/src/editor/canvas.tsx`. The edge being moved gets 40 % opacity through the gesture class, as the ghost.
+- [x] T043 [US3] Add `edge.resetRoute` to `apps/app/src/editor/actions/shape-actions.ts`:
   - where: connection menu and connection toolbar;
   - icon `RotateCcw`;
   - `disabledReason` "Route is automatic";
@@ -294,7 +294,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Add tests: the toolbar button and the menu item are disabled or enabled by the route, and there is one undo step.
 
-- [ ] T044 [US3] Update `apps/app/src/editor/inspector/edge-inspector.tsx`: when the reattach flow changes an end's card, it also clears that end's side and the offset, in the same `writeOnce`. Add a test.
+- [x] T044 [US3] Update `apps/app/src/editor/inspector/edge-inspector.tsx`: when the reattach flow changes an end's card, it also clears that end's side and the offset, in the same `writeOnce`. Add a test.
 
 **Checkpoint**: US3 works (quickstart 6). Commit.
 

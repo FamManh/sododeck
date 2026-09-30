@@ -296,6 +296,8 @@ export interface UiState {
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
   /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
   endpointHover: { nodeId: Id; side: Side } | null;
+  /** The edge whose end is being dragged to reconnect it (017 R12); drawn as a 40 % ghost. */
+  reconnectingEdgeId: Id | null;
   /** Cards a running marquee selects. */
   marqueeCount: number | null;
   pasteSerial: PasteSerial | null;
@@ -435,6 +437,7 @@ export interface UiState {
     readout: { width: number; height: number; x: number; y: number } | null,
   ) => void;
   setEndpointHover: (hover: { nodeId: Id; side: Side } | null) => void;
+  setReconnectingEdge: (edgeId: Id | null) => void;
   setMarqueeCount: (count: number | null) => void;
   setPasteSerial: (serial: PasteSerial | null) => void;
   /**
@@ -604,6 +607,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     dragReadout: null,
     resizeReadout: null,
     endpointHover: null,
+    reconnectingEdgeId: null,
     marqueeCount: null,
     pasteSerial: null,
 
@@ -1099,6 +1103,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     setEndpointHover: (endpointHover) => {
       set({ endpointHover });
     },
+    setReconnectingEdge: (reconnectingEdgeId) => {
+      set({ reconnectingEdgeId });
+    },
     setMarqueeCount: (marqueeCount) => {
       if (get().marqueeCount !== marqueeCount) set({ marqueeCount });
     },
@@ -1153,6 +1160,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         dragReadout: null,
         resizeReadout: null,
         endpointHover: null,
+        reconnectingEdgeId: null,
         marqueeCount: null,
         pasteSerial: null,
       });

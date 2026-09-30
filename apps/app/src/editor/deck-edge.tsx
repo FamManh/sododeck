@@ -58,6 +58,9 @@ export const DeckEdge = memo(function DeckEdge({
   // The automatic-route ghost (017 R7, T036): shown only while this edge's own segment is being
   // dragged, so the user can see where letting go without snapping would leave it.
   const dragging = useUiStore((s) => s.canvasGesture) === 'segment' && showHandle;
+  // This edge's own end is being dragged to reconnect it (017 R12): drawn as a 40 % ghost while
+  // the custom connection line shows the live path.
+  const reconnecting = useUiStore((s) => s.reconnectingEdgeId === id);
   const { path, labelX, labelY, segment } = routedStepPath({
     sourceX,
     sourceY,
@@ -118,7 +121,10 @@ export const DeckEdge = memo(function DeckEdge({
         id={id}
         path={path}
         interactionWidth={interactionWidth ?? 12}
-        className={cn(flow?.style === 'invalid' && !reducedMotion && 'sd-edge-flash')}
+        className={cn(
+          flow?.style === 'invalid' && !reducedMotion && 'sd-edge-flash',
+          reconnecting && 'sd-edge-reconnecting',
+        )}
         style={{
           stroke,
           strokeWidth: width,

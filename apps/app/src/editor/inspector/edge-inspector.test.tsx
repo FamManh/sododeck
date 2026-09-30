@@ -75,6 +75,26 @@ describe('EdgeInspector (story 1, FR-009)', () => {
     ).toBeInTheDocument();
   });
 
+  it('clears the moved end side and the offset when reattach changes a card (017 R12)', async () => {
+    const routedDeck = {
+      ...inspectorDeck,
+      edges: inspectorDeck.edges.map((e) =>
+        e.id === 'op'
+          ? { ...e, route: { fromSide: 'right' as const, toSide: 'left' as const, offset: 12 } }
+          : e,
+      ),
+    };
+    const { user, doc } = renderInspector(routedDeck, { edges: ['op'] });
+    expect(edge(doc)?.route).toEqual({ fromSide: 'right', toSide: 'left', offset: 12 });
+
+    const to = screen.getByRole('combobox', { name: 'To' });
+    await user.clear(to);
+    await user.type(to, 'Payment');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(edge(doc)?.to).toBe('y');
+    expect(edge(doc)?.route).toEqual({ fromSide: 'right' });
+  });
+
   it('lists the flow steps that use it and opens one', async () => {
     const { user, ui } = setup();
     const uses = screen.getByRole('list', { name: 'Used in flows' });

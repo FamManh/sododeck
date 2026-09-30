@@ -83,6 +83,11 @@ export const DeckNode = memo(function DeckNode({
   const announce = useUiStore((s) => s.announce);
   const connecting = useConnecting();
   const role = useConnectionRole(id);
+  // Reconnect drag (017 R12): while dragging an endpoint, this card's four side targets show as
+  // rings when the pointer is over it, with the nearest side "hot" (filled and larger).
+  const canvasGesture = useUiStore((s) => s.canvasGesture);
+  const endpointHover = useUiStore((s) => s.endpointHover);
+  const isEndpointTarget = canvasGesture === 'endpoint' && endpointHover?.nodeId === id;
   const { getZoom } = useReactFlow();
   const resize = useRef<CardResizeSession | null>(null);
   const [activeHandle, setActiveHandle] = useState<ResizeHandleName | null>(null);
@@ -297,29 +302,35 @@ export const DeckNode = memo(function DeckNode({
             }}
           />
         ))}
-      {SIDES.map(({ id: side, position }) => (
-        <Handle
-          key={side}
-          id={side}
-          type="source"
-          position={position}
-          role="button"
-          aria-label={`Connect from ${data.title}`}
-          tabIndex={tabIndex}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              event.stopPropagation();
-              openConnectPopover(id);
-            }
-          }}
-          className={cn(
-            'sd-handle opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100',
-            focusRing,
-            role !== null && 'opacity-100',
-          )}
-        />
-      ))}
+      {SIDES.map(({ id: side, position }) => {
+        const hot = isEndpointTarget && endpointHover.side === side;
+        return (
+          <Handle
+            key={side}
+            id={side}
+            type="source"
+            position={position}
+            role="button"
+            aria-label={`Connect from ${data.title}`}
+            tabIndex={tabIndex}
+            {...(isEndpointTarget ? { 'data-endpoint-target': '' } : {})}
+            {...(hot ? { 'data-endpoint-hot': '' } : {})}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+                openConnectPopover(id);
+              }
+            }}
+            className={cn(
+              'sd-handle opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100',
+              focusRing,
+              role !== null && 'opacity-100',
+              isEndpointTarget && 'opacity-100',
+            )}
+          />
+        );
+      })}
       {/* While a connection is drawn, the whole node is a drop target, not only its handles. */}
       {connecting && role !== 'source' && (
         <Handle

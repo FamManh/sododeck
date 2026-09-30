@@ -50,6 +50,7 @@ import { effectiveLevel, levelForZoom, levelSelector, type Level } from './level
 import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
 import { PortPillNode } from './port-pill-node';
+import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
@@ -629,6 +630,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
         connectionMode={ConnectionMode.Loose}
         connectionLineStyle={connectionLineStyle}
+        connectionLineComponent={EndpointConnectionLine}
         edgesReconnectable={!recording}
         {...handlers}
       >

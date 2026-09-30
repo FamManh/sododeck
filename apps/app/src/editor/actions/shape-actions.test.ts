@@ -30,3 +30,31 @@ describe('node.resetSize (017 R4)', () => {
     });
   });
 });
+
+describe('edge.resetRoute (017 R12)', () => {
+  it('is offered on a connection, disabled when the route is automatic', () => {
+    expect(labels(TARGETS.connection, 'menu').flat()).toContain('Reset route');
+    const ctx = actionContext(TARGETS.connection, 'edit');
+    const action = ACTIONS.find((a) => a.id === 'edge.resetRoute');
+    expect(action?.disabledReason?.(ctx)).toBe('Route is automatic');
+  });
+
+  it('clears a pinned side and offset in one undo step and announces it', () => {
+    useUiStore.getState().resetForDeck();
+    const routedDeck = {
+      ...actionDeck,
+      edges: actionDeck.edges.map((e) =>
+        e.id === 'e' ? { ...e, route: { fromSide: 'right' as const, offset: 20 } } : e,
+      ),
+    };
+    const ctx = actionContext(TARGETS.connection, 'edit', routedDeck);
+    expect(runAction(ACTIONS, 'edge.resetRoute', ctx)).toBe(true);
+    expect(toJSON(ctx.doc).edges.find((e) => e.id === 'e')?.route).toBeUndefined();
+    expect(useUiStore.getState().announcement.text).toBe('Route reset');
+    expect(ctx.editor.undo()).toBe(true);
+    expect(toJSON(ctx.doc).edges.find((e) => e.id === 'e')?.route).toEqual({
+      fromSide: 'right',
+      offset: 20,
+    });
+  });
+});
