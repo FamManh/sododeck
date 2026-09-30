@@ -22,7 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { cardBox, groupBounds, NODE_SIZE } from './canvas-geometry';
+import { cardBox, groupBounds, CARD_SIZE_LIMITS } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -85,8 +85,9 @@ const edgeTypes: EdgeTypes = {
 };
 
 /** Cards narrower than 80 px on screen hide their details button (019 FR-018). */
+/** Text is unreadable below this; a resized card can be as narrow as the minimum (017 R4). */
 const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
-  s.transform[2] * NODE_SIZE.width < 80;
+  s.transform[2] * CARD_SIZE_LIMITS.min.width < 80;
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',

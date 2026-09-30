@@ -75,6 +75,39 @@ describe('GuidesOverlay (016 US3 / US2 / US4)', () => {
     expect(screen.getByTestId('landing-slot')).toBeInTheDocument();
   });
 
+  it('sizes the landing slot to a resized card’s own stored size (017 R2)', () => {
+    const resized = deckOf({
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          group: 'g',
+          position: { x: 0, y: 0 },
+          size: { width: 300, height: 100 },
+        },
+      ],
+      groups: [
+        { id: 'g', title: 'G', position: { x: 100, y: 40 }, size: { width: 400, height: 300 } },
+      ],
+    });
+    const env = editorWrapper(resized);
+    render(
+      <ReactFlow nodes={[]} edges={[]}>
+        <GuidesOverlay />
+      </ReactFlow>,
+      { wrapper: env.wrapper },
+    );
+    act(() => {
+      useUiStore.getState().select({ nodes: ['a'] });
+      useUiStore.getState().setCanvasGesture('drag');
+      useUiStore.getState().setDropTarget('g');
+    });
+    const slot = screen.getByTestId('landing-slot');
+    expect(slot.style.width).toBe(`${300 + 8}px`);
+    expect(slot.style.height).toBe(`${100 + 8}px`);
+  });
+
   it('shows the W × H readout during a card resize (017 R4)', () => {
     setup();
     act(() => {

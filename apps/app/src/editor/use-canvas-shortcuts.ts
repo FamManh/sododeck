@@ -26,11 +26,10 @@ import {
 } from './quick-edit/toolbar-focus';
 import { canvasElement, nodeElement, selectAllComponents } from './canvas-actions';
 import {
+  cardSize,
   displayPosition,
   groupBounds,
   nearestInDirection,
-  nodeSize,
-  NODE_SIZE,
   type Direction,
 } from './canvas-geometry';
 import {
@@ -191,11 +190,16 @@ export function useCanvasKeyDown() {
           const from = deck.nodes[index2(edge?.from)];
           const to = deck.nodes[index2(edge?.to)];
           if (edge && from && to) {
+            const level = effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill));
             const a = displayPosition(from, index2(edge.from));
             const b = displayPosition(to, index2(edge.to));
-            void setCenter((a.x + b.x + NODE_SIZE.width) / 2, (a.y + b.y + NODE_SIZE.height) / 2, {
-              zoom: getZoom(),
-            });
+            const sizeA = cardSize(from, level);
+            const sizeB = cardSize(to, level);
+            void setCenter(
+              (a.x + sizeA.width / 2 + (b.x + sizeB.width / 2)) / 2,
+              (a.y + sizeA.height / 2 + (b.y + sizeB.height / 2)) / 2,
+              { zoom: getZoom() },
+            );
             ui.announce(edgeName(from.title, to.title, edge.label));
           }
           return;
@@ -348,7 +352,7 @@ export function useCanvasKeyDown() {
             const node = index < 0 ? undefined : deck.nodes[index];
             if (node === undefined) return [];
             const p = displayPosition(node, index);
-            const size = nodeSize(level);
+            const size = cardSize(node, level);
             return [{ id: node.id, x: p.x + size.width / 2, y: p.y + size.height / 2 }];
           }),
         ];

@@ -10,7 +10,7 @@ import { useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { useUiStore, type Guide } from '../../state/ui-store';
-import { displayPosition, groupBounds, nodeSize, type Point, type Rect } from '../canvas-geometry';
+import { displayPosition, groupBounds, cardSize, type Point, type Rect } from '../canvas-geometry';
 import { levelForZoom } from '../levels';
 import { useViewState } from '../views/use-current-view';
 
@@ -111,8 +111,8 @@ export function GuidesOverlay() {
   if (guides.length === 0 && readout === null && resizeReadout === null && dropTarget === null)
     return null;
 
-  const size = nodeSize(levelForZoom(zoom));
-  const bounds = groupBounds(view.deck, levelForZoom(zoom));
+  const level = levelForZoom(zoom);
+  const bounds = groupBounds(view.deck, level);
   const ghosts =
     gesture === 'group-drag' && readout !== null
       ? selection.groups.flatMap((id) => {
@@ -126,7 +126,9 @@ export function GuidesOverlay() {
   const slots =
     gesture === 'drag' && dropTarget !== null
       ? view.deck.nodes.flatMap((node, index) =>
-          moving.has(node.id) ? [{ ...displayPosition(node, index), ...size }] : [],
+          moving.has(node.id)
+            ? [{ ...displayPosition(node, index), ...cardSize(node, level) }]
+            : [],
         )
       : [];
   const lead = ghosts[0];

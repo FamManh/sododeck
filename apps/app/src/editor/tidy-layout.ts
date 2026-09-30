@@ -14,11 +14,11 @@ import { createLayoutClient, LayoutCancelled, type LayoutClient } from '../layou
 import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import {
+  cardSize,
   COLLAPSED_CARD_SIZE,
   COMPONENT_CARD_SIZE,
   displayPosition,
   GROUP_PADDING,
-  nodeSize,
 } from './canvas-geometry';
 import { COLLAPSED_NODE_PREFIX } from './deck-to-flow';
 import { effectiveLevel, levelForZoom, type Level } from './levels';
@@ -59,7 +59,6 @@ export function buildLayoutRequest(
 ): LayoutRequest {
   const parents = new Map(deck.groups.map((g) => [g.id, g.parent]));
   const shown = new Set(graph.groups);
-  const size = nodeSize(level);
   const indexOf = new Map(deck.nodes.map((n, i) => [n.id, i]));
   const nodesById = new Map(deck.nodes.map((n) => [n.id, n]));
 
@@ -76,7 +75,11 @@ export function buildLayoutRequest(
     const node = nodesById.get(id);
     if (node === undefined) continue;
     const parent = nearestShown(node.group, parents, shown, true);
-    request.nodes.push({ id, ...size, ...(parent === undefined ? {} : { parent }) });
+    request.nodes.push({
+      id,
+      ...cardSize(node, level),
+      ...(parent === undefined ? {} : { parent }),
+    });
     if (pinned.has(id)) request.pinned[id] = displayPosition(node, indexOf.get(id) ?? 0);
   }
   for (const groupId of graph.groups) {
@@ -161,7 +164,11 @@ export function laidOutFrames(
     }),
     views: [],
   };
-  const fitted = fitGroupFrames(moved, { cardSize: COMPONENT_CARD_SIZE, padding: GROUP_PADDING });
+  const fitted = fitGroupFrames(moved, {
+    cardSize: COMPONENT_CARD_SIZE,
+    sizeOf: (node) => cardSize(node, 'component'),
+    padding: GROUP_PADDING,
+  });
   return Object.fromEntries([...fitted].filter(([id]) => affected.has(id)));
 }
 
