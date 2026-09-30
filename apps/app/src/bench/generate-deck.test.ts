@@ -103,4 +103,16 @@ describe('generateBenchDeck', () => {
       generateBenchDeck(500, 1000, 42, { groups: true }),
     );
   });
+
+  it('adds a fill to every node and a blue stroke to every 5th, cycling the 15 colours (020)', () => {
+    const { deck } = generateBenchDeck(40, 80, 42, { colours: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.nodes.every((node) => node.style?.fill !== undefined)).toBe(true);
+    const strokeCount = deck.nodes.filter((node) => node.style?.stroke === 'blue').length;
+    expect(strokeCount).toBe(8);
+    expect(new Set(deck.nodes.map((node) => node.style?.fill)).size).toBe(15);
+    expect(generateBenchDeck(40, 80, 42, { colours: true })).toEqual(
+      generateBenchDeck(40, 80, 42, { colours: true }),
+    );
+  });
 });

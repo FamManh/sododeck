@@ -421,9 +421,9 @@ function BenchShell() {
 
 /**
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1&json=deck&flows=1&inspector=1
- * &groups=1&drawer=1&toolbar=1&export=1 (`drawer=1`: the canvas-first details drawer and JSON
- * overlay, 018; `toolbar=1`: the selection toolbar, 019; `export=1`: an Export button and the
- * Export dialog, 012)
+ * &groups=1&drawer=1&toolbar=1&export=1&colours=1 (`drawer=1`: the canvas-first details drawer and
+ * JSON overlay, 018; `toolbar=1`: the selection toolbar, 019; `export=1`: an Export button and the
+ * Export dialog, 012; `colours=1`: every node has a fill, and every 5th a blue stroke, 020)
  * Goes through the real read and write path: model document, editor, incremental snapshot and
  * the real Canvas (so dragging is measured too). `json=deck` adds the JSON panel under the
  * canvas with the Deck tab open (004 SC-003), as in the editor.
@@ -442,6 +442,7 @@ export function BenchPage() {
   const drawer = params.get('drawer') === '1';
   const exporting = params.get('export') === '1';
   const toolbar = params.get('toolbar') === '1';
+  const colours = params.get('colours') === '1';
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -457,7 +458,7 @@ export function BenchPage() {
       useUiStore.getState().openDrawer();
     }
     return fromJSON(
-      generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views }).deck,
+      generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views, colours }).deck,
     );
   });
 

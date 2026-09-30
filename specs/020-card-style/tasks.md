@@ -55,7 +55,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 - [ ] T001 Create branch `020-card-style` from the latest `main`, after the docs PR for this spec is merged. Run `pnpm install && pnpm test` to confirm a green start.
 - [ ] T002 Run `pnpm bench` on the unchanged code, and save the table in `specs/020-card-style/bench-before.md`.
-- [ ] T003 [P] Add a `colours=1` query parameter to `apps/app/src/routes/bench-page.tsx` and `apps/app/src/bench/generate-deck.ts` (R13). Every node gets a fill (cycling through the 13 names plus `#7a3cff` and `#1f2a44`), and every 5th node gets a `blue` stroke. Pass it from `apps/app/bench/perf.bench.ts` when `BENCH_COLOURS=1`. Until T012 lands, the generator writes nothing and logs `TODO(020): styles not in schema yet`.
+- [x] T003 [P] Add a `colours=1` query parameter to `apps/app/src/routes/bench-page.tsx` and `apps/app/src/bench/generate-deck.ts` (R13). Every node gets a fill (cycling through the 13 names plus `#7a3cff` and `#1f2a44`), and every 5th node gets a `blue` stroke. Pass it from `apps/app/bench/perf.bench.ts` when `BENCH_COLOURS=1`. Until T012 lands, the generator writes nothing and logs `TODO(020): styles not in schema yet`.
 - [x] T004 [P] Write ADR `docs/decisions/0018-card-style.md` (or the next free number, if 017 took 0018) in the header format of 0017. It records:
   - `ColorRef` as a named enum plus lowercase hex, and `Style` with `minProperties: 1` (R1).
   - `setStyle` writing key by key (R2).
