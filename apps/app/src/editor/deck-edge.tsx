@@ -6,12 +6,14 @@ import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 
+import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { DeckFlowEdge } from './deck-to-flow';
 import { DOT_RADIUS } from './edge-constants';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES } from './flow-strokes';
 import { routedStepPath } from './routing/route-path';
+import { SegmentHandle } from './routing/segment-handle';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions, so a route's offset can be applied. */
 const SIDE_OF_POSITION: Record<Position, Side> = {
@@ -40,8 +42,23 @@ export const DeckEdge = memo(function DeckEdge({
   interactionWidth,
 }: EdgeProps<DeckFlowEdge>) {
   const reducedMotion = useReducedMotion();
+  // The segment handle (017 R7, FR-012): pointer only, the single selected connector, never in
+  // flow mode or recording, and only when it has a movable middle segment (routable, below).
+  const showHandle = useUiStore(
+    (s) =>
+      selected === true &&
+      !isFlowMode(s) &&
+      s.flowSession === null &&
+      s.selection.edges.length === 1 &&
+      s.selection.nodes.length === 0 &&
+      s.selection.groups.length === 0 &&
+      s.selection.stickies.length === 0,
+  );
   const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
-  const { path, labelX, labelY } = routedStepPath({
+  // The automatic-route ghost (017 R7, T036): shown only while this edge's own segment is being
+  // dragged, so the user can see where letting go without snapping would leave it.
+  const dragging = useUiStore((s) => s.canvasGesture) === 'segment' && showHandle;
+  const { path, labelX, labelY, segment } = routedStepPath({
     sourceX,
     sourceY,
     targetX,
@@ -59,6 +76,10 @@ export const DeckEdge = memo(function DeckEdge({
     ...(direction === 'none' ? [] : [{ x: targetX, y: targetY }]),
   ];
   const hasBadges = (flow?.badges.length ?? 0) > 0;
+  // The automatic path (no route), computed only while dragging, to draw the ghost.
+  const ghostPath = dragging
+    ? routedStepPath({ sourceX, sourceY, targetX, targetY, sides, borderRadius: 8 }).path
+    : null;
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
@@ -70,6 +91,18 @@ export const DeckEdge = memo(function DeckEdge({
 
   return (
     <>
+      {ghostPath !== null && (
+        <path
+          d={ghostPath}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={1.5}
+          strokeDasharray="4 3"
+          strokeOpacity={0.4}
+          aria-hidden
+          data-testid="edge-route-ghost"
+        />
+      )}
       {data?.focused && (
         <path
           d={path}
@@ -175,6 +208,14 @@ export const DeckEdge = memo(function DeckEdge({
             </span>
           )}
         </EdgeLabelRenderer>
+      )}
+      {showHandle && data?.routable === true && segment !== null && (
+        <SegmentHandle
+          edgeId={id}
+          level={data.level}
+          segment={segment}
+          offset={data.route?.offset ?? 0}
+        />
       )}
     </>
   );

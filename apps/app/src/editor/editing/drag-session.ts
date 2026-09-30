@@ -102,8 +102,13 @@ function union(rects: readonly Rect[]): Rect {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-/** The Esc and arrow handlers of the drag in progress, for the keyboard map. */
-let active: { cancel: () => boolean; arrow: (dx: number, dy: number) => boolean } | null = null;
+/** The Esc, arrow and (segment drags only) R handlers of the drag in progress, for the keyboard
+ * map. `reset` is only set by a segment drag (017 R7): other gestures have no reset action. */
+let active: {
+  cancel: () => boolean;
+  arrow: (dx: number, dy: number) => boolean;
+  reset?: () => boolean;
+} | null = null;
 
 /** Esc during a drag or a resize (R14): cancels it. Returns whether one was running. */
 export function cancelActiveGesture(): boolean {
@@ -113,6 +118,12 @@ export function cancelActiveGesture(): boolean {
 /** Arrows during a pointer drag (§g-45): nudge the drag by 1 / 10 px. */
 export function nudgeActiveDrag(dx: number, dy: number): boolean {
   return active?.arrow(dx, dy) ?? false;
+}
+
+/** R during a segment drag (017 R7, FR-014): resets it to automatic routing. Returns whether one
+ * was running with a reset action (other gestures ignore R). */
+export function resetActiveGesture(): boolean {
+  return active?.reset?.() ?? false;
 }
 
 /** Registers the cancel of a resize, which is not a drag session (see `frame-resize.ts`). */

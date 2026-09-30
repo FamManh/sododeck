@@ -1297,3 +1297,9 @@ describe('resizing a card (017)', () => {
     expect(container.querySelectorAll('.sd-resize-handle')).toHaveLength(0);
   });
 });
+
+// T038's three scenarios (segment slider shown for a stacked pair, hidden for perpendicular
+// sides, flow highlight on a shifted path) live in `deck-edge.test.tsx` instead of a `<Canvas>`
+// mount: React Flow never measures node size under jsdom, so edges (and anything they portal
+// through `EdgeLabelRenderer`, like the segment handle) never render here — see "canvas in flow
+// mode (007)" above, which hits the same limit for the step player's node-only assertions.

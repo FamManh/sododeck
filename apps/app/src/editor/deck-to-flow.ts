@@ -89,6 +89,14 @@ export interface DeckEdgeData extends Record<string, unknown> {
   problems?: ProblemMark;
   /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
   route?: DeckEdgeObject['route'];
+  /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
+  level: Level;
+  /**
+   * Both endpoints are real, on-screen cards (017 R7): a route can be edited. False for an edge
+   * drawn to a collapsed group's port pill, where the resolved sides don't match either card's
+   * real box and a route offset would not mean what it looks like.
+   */
+  routable: boolean;
 }
 
 export interface CollapsedGroupData extends Record<string, unknown> {
@@ -796,7 +804,8 @@ export function toFlowEdges(
       cached.data.inFocus === inFocus &&
       cached.data.dimmed === dimmed &&
       cached.data.fromTitle === from.title &&
-      cached.data.toTitle === to.title
+      cached.data.toTitle === to.title &&
+      cached.data.level === view.level
     ) {
       return [cached];
     }
@@ -831,6 +840,8 @@ export function toFlowEdges(
         focused,
         inFocus,
         dimmed,
+        level: view.level,
+        routable: true,
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),
         ...(edge.route === undefined ? {} : { route: edge.route }),
@@ -884,7 +895,8 @@ export function toFlowEdges(
             .join(' '),
         ) &&
         cached.data.fromTitle === from.title &&
-        cached.data.toTitle === to.title
+        cached.data.toTitle === to.title &&
+        cached.data.level === view.level
       ) {
         return [cached];
       }
@@ -916,6 +928,8 @@ export function toFlowEdges(
           focused,
           inFocus,
           dimmed,
+          level: view.level,
+          routable: false,
           ...(mark === undefined ? {} : { flow: mark }),
         },
       };

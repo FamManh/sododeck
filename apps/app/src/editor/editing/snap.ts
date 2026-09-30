@@ -109,6 +109,28 @@ export interface EdgeSnapResult {
   guides: Guide[];
 }
 
+export interface SegmentSnapResult {
+  at: number;
+  guides: Guide[];
+}
+
+/**
+ * Snaps a connector's movable middle segment (017 R7): only its own moving axis may snap, to the
+ * candidates' left/centre/right or top/middle/bottom lines, spanning the segment's fixed extent.
+ */
+export function snapSegment(
+  at: number,
+  axis: 'vertical' | 'horizontal',
+  span: { from: number; to: number },
+  candidates: SnapCandidates,
+  threshold: number,
+): SegmentSnapResult {
+  const lines = axis === 'vertical' ? candidates.y : candidates.x;
+  const hit = snapAxis([at], lines, threshold);
+  if (hit === null) return { at, guides: [] };
+  return { at: hit.at, guides: [guideFor(axis === 'vertical' ? 'y' : 'x', hit.at, span, lines)] };
+}
+
 /**
  * Snaps a card resize (017 R4): only the edge(s) the handle actually drags may snap, to the
  * candidates' own left/centre/right or top/middle/bottom lines — never the box's centre, and

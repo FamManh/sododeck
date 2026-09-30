@@ -15,6 +15,7 @@ import { isTextTarget, useEditorShortcuts } from './use-canvas-shortcuts';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { collapsedOf, toggleGroupCollapsed } from './views/use-current-view';
+import { startSegmentDrag } from './editing/segment-drag';
 
 /** 3×3 grid: n00 … n22 (row, column), 300 px apart. */
 const grid = deckOf({
@@ -625,6 +626,29 @@ describe('problem walk (015 FR-021)', () => {
     await user.click(screen.getByRole('textbox', { name: 'Notes' }));
     await user.keyboard('{Meta>}[Period]{/Meta}');
     expect(onProblem).not.toHaveBeenCalled();
+  });
+});
+
+describe('R resets a segment drag (017 R7, T037)', () => {
+  it('does nothing outside a segment gesture', () => {
+    const env = editorWrapper(grid);
+    render(<Editor />, { wrapper: env.wrapper });
+    expect(fireEvent.keyDown(document.body, { key: 'r' })).toBe(true);
+    expect(ui().announcement.text).not.toBe('Reset middle segment');
+  });
+
+  it('resets the segment to automatic routing mid-drag, without leaving the drag in history', () => {
+    const env = editorWrapper(grid);
+    render(<Editor />, { wrapper: env.wrapper });
+    const editor = env.editor();
+    editor.setEdgeRoute('e1', { offset: 40 });
+    const session = startSegmentDrag(editor, 'e1', 'component');
+    expect(session).not.toBeNull();
+    expect(fireEvent.keyDown(document.body, { key: 'r' })).toBe(false);
+    expect(ui().announcement.text).toBe('Reset middle segment');
+    expect(readDeck(editor.doc).edges.find((e) => e.id === 'e1')?.route).toBeUndefined();
+    editor.undo();
+    expect(readDeck(editor.doc).edges.find((e) => e.id === 'e1')?.route?.offset).toBe(40);
   });
 });
 

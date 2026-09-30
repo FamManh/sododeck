@@ -53,7 +53,7 @@ import {
 } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
-import { cancelActiveGesture, nudgeActiveDrag } from './editing/drag-session';
+import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './editing/drag-session';
 
 export { isTextTarget };
 
@@ -610,6 +610,12 @@ export function useEditorShortcuts({
 
       // During a pointer drag or resize (016): Esc cancels it (R14), arrows add 1 / 10 px (§g-45).
       if (key === 'escape' && cancelActiveGesture()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      // R during a segment drag (017 R7, FR-014): back to automatic routing, mid-drag.
+      if (key === 'r' && !isMod(event) && !event.altKey && resetActiveGesture()) {
         event.preventDefault();
         event.stopPropagation();
         return;

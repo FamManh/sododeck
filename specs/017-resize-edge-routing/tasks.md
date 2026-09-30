@@ -240,7 +240,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US2. Drag the handle 60 px, check `route.offset`, the label and badges on the new path, one undo step, Esc, R to reset, and no handle for L / U shapes.
 
-- [ ] T033 [P] [US2] Write failing tests in `apps/app/src/editor/editing/segment-drag.test.ts` with a real `DeckEditor`:
+- [x] T033 [P] [US2] Write failing tests in `apps/app/src/editor/editing/segment-drag.test.ts` with a real `DeckEditor`:
   - moves write `offset` = pointer − automatic middle, and pass over cards with no clamp;
   - 1-D snapping to card centre lines and edges within 6 screen px; ⌘ disables it;
   - end is one undo step;
@@ -248,8 +248,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `resetDuringDrag` cancels, then removes `route`, as one undo step;
   - the readout shows the signed offset;
   - it announces "Moved middle segment to +60".
-- [ ] T034 [US2] Implement `apps/app/src/editor/editing/segment-drag.ts` (R7): `startSegmentDrag`, `applySegmentDrag`, `endSegmentDrag`, `resetDuringDrag`, using `beginGesture` / `setEdgeRoute` / `endGesture` / `cancelGesture`, `setCanvasGesture('segment')` and `setActiveGesture({ cancel })`. Reuse `dragReadout` for the offset.
-- [ ] T035 [US2] Create `apps/app/src/editor/routing/segment-handle.tsx` (+ test):
+- [x] T034 [US2] Implement `apps/app/src/editor/editing/segment-drag.ts` (R7): `startSegmentDrag`, `applySegmentDrag`, `endSegmentDrag`, `resetDuringDrag`, using `beginGesture` / `setEdgeRoute` / `endGesture` / `cancelGesture`, `setCanvasGesture('segment')` and `setActiveGesture({ cancel })`. Reuse `dragReadout` for the offset.
+- [x] T035 [US2] Create `apps/app/src/editor/routing/segment-handle.tsx` (+ test):
   - a 10 × 24 handle rotated to the segment axis, rendered through `EdgeLabelRenderer` at the segment midpoint;
   - `role="slider"`, name "Move middle segment", `aria-valuenow` = offset, `aria-orientation`;
   - focusable; arrows move it with the same step rules as ⌥ + arrow (T046);
@@ -257,9 +257,9 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Render it from `apps/app/src/editor/deck-edge.tsx` only when the edge is the single selection, editing is allowed, and `segment` is not null (FR-012).
 
-- [ ] T036 [US2] In `apps/app/src/editor/deck-edge.tsx`, while `canvasGesture === 'segment'` for this edge, draw the automatic-route ghost: `routedStepPath` without the route, dashed, 40 % opacity, `aria-hidden`. Add a test: the ghost appears only during the gesture.
-- [ ] T037 [US2] Handle **R** in `apps/app/src/editor/use-canvas-shortcuts.ts` during a segment gesture only: it calls `resetDuringDrag`. Add a test in `use-canvas-shortcuts.test.ts` that R does nothing outside the gesture.
-- [ ] T038 [US2] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
+- [x] T036 [US2] In `apps/app/src/editor/deck-edge.tsx`, while `canvasGesture === 'segment'` for this edge, draw the automatic-route ghost: `routedStepPath` without the route, dashed, 40 % opacity, `aria-hidden`. Add a test: the ghost appears only during the gesture.
+- [x] T037 [US2] Handle **R** in `apps/app/src/editor/use-canvas-shortcuts.ts` during a segment gesture only: it calls `resetDuringDrag`. Add a test in `use-canvas-shortcuts.test.ts` that R does nothing outside the gesture.
+- [x] T038 [US2] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
   - a selected connector between stacked cards shows the slider;
   - a perpendicular-sides connector shows none;
   - a flow-highlighted connector with an offset draws its highlight on the shifted path.

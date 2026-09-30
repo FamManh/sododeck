@@ -268,3 +268,28 @@
 .react-flow__resize-control.handle.sd-resize-handle[data-active] {
   background: var(--color-primary);
 }
+
+/* Connector middle-segment handle (017 R7, FR-012): 10 × 24, rotated for a horizontal-moving
+   segment (`data-axis="vertical"`); Surface fill, 1.5 px orange; Orange Soft on hover, orange
+   while dragged. A focusable slider, so keyboard and pointer both work. */
+.sd-segment-handle {
+  width: 10px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-surface);
+  pointer-events: all;
+  cursor: grab;
+}
+.sd-segment-handle[data-axis='vertical'] {
+  width: 24px;
+  height: 10px;
+}
+.sd-segment-handle:hover {
+  background: var(--color-primary-soft);
+}
+.sd-segment-handle:active,
+.sd-segment-handle[data-active] {
+  background: var(--color-primary);
+  cursor: grabbing;
+}
