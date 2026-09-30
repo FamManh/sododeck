@@ -277,12 +277,12 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent test**: quickstart scenario 9, plus the design-gallery board of states on colour.
 
-- [ ] T039 [P] [US6] Add failing tests to `apps/app/src/editor/deck-node.test.tsx`:
+- [x] T039 [P] [US6] Add failing tests to `apps/app/src/editor/deck-node.test.tsx`:
   - A card that is the current flow step and has a stroke shows no stroke marker (`data-stroke` absent) and keeps its step badge and announcement.
   - A card with a problem has the error ring marker (`data-problem`) and the alert badge named as today, with and without a fill.
   - A selected coloured card keeps `aria-selected` and the "Selected" description.
-- [ ] T040 [US6] Implement the design-107 error ring in `apps/app/src/editor/deck-node.tsx`: a 3 px dashed `outline-clay-ink` 3 px outside the card for cards with problems (015), and the alert glyph on a surface-coloured disc so it reads on any fill. Confirm the flow / focus / view dim rules in `apps/app/src/index.css` apply to coloured cards unchanged (the opacity is on `.react-flow__node`). T039 is now green.
-- [ ] T041 [US6] Create `apps/app/src/design-gallery/style-samples.tsx`, a board like design 107:
+- [x] T040 [US6] Implement the design-107 error ring in `apps/app/src/editor/deck-node.tsx`: a 3 px dashed `outline-clay-ink` 3 px outside the card for cards with problems (015), and the alert glyph on a surface-coloured disc so it reads on any fill. Confirm the flow / focus / view dim rules in `apps/app/src/index.css` apply to coloured cards unchanged (the opacity is on `.react-flow__node`). T039 is now green.
+- [x] T041 [US6] Create `apps/app/src/design-gallery/style-samples.tsx`, a board like design 107:
   - all 13 fills with title, subtitle and rules glyph
   - all 13 strokes
   - custom fills `#1f2a44`, `#e8d5b7` and `#c9e7dc`

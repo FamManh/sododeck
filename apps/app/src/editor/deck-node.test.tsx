@@ -309,3 +309,40 @@ describe('DeckNode colour (020 R5)', () => {
     expect(screen.getByTestId('deck-node')).toHaveAttribute('data-text', 'light');
   });
 });
+
+describe('DeckNode colour states (020 US6)', () => {
+  it('keeps the flow-step border instead of a coloured stroke, badge and announcement (007)', () => {
+    const look = resolveLook({ stroke: 'blue' });
+    renderNode(props({ look, currentStep: true }));
+    const node = screen.getByTestId('deck-node');
+    expect(node).not.toHaveAttribute('data-stroke');
+    expect(node).toHaveAttribute('aria-current', 'step');
+  });
+
+  it('shows the error ring marker and the alert badge, with a fill', () => {
+    const look = resolveLook({ fill: 'green' });
+    renderNode(
+      props({ look, problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }),
+    );
+    const node = screen.getByTestId('deck-node');
+    expect(node).toHaveAttribute('data-problem', '');
+    expect(screen.getByTestId('problem-glyph')).toBeInTheDocument();
+  });
+
+  it('shows the error ring marker and the alert badge, without a fill', () => {
+    renderNode(
+      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }),
+    );
+    const node = screen.getByTestId('deck-node');
+    expect(node).toHaveAttribute('data-problem', '');
+    expect(screen.getByTestId('problem-glyph')).toBeInTheDocument();
+  });
+
+  it('keeps aria-selected and the "Selected" description on a selected coloured card', () => {
+    const look = resolveLook({ fill: 'green' });
+    renderNode(props({ look }, true));
+    const node = screen.getByTestId('deck-node');
+    expect(node).toHaveAttribute('aria-selected', 'true');
+    expect(node).toHaveAttribute('aria-description', expect.stringContaining('Selected'));
+  });
+});
