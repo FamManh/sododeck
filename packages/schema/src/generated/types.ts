@@ -14,6 +14,13 @@ export type Text = string;
  */
 export type Tags = Text[];
 /**
+ * Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "HexColor".
+ */
+export type HexColor = string;
+/**
  * Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -48,6 +55,33 @@ export type Links = Link[];
  * via the `definition` "IdList".
  */
 export type IdList = Id[];
+/**
+ * A card or group colour: a named colour or a custom hex value.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "ColorRef".
+ */
+export type ColorRef = CardColor | HexColor;
+/**
+ * Named card colour, a design-system tint that follows the theme.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "CardColor".
+ */
+export type CardColor =
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'yellow'
+  | 'lime'
+  | 'green'
+  | 'teal'
+  | 'cyan'
+  | 'blue'
+  | 'indigo'
+  | 'violet'
+  | 'pink'
+  | 'slate';
 /**
  * Protocol family: `http` (incl. HTTPS, REST, GraphQL), `grpc`, `event` (message brokers such as Kafka), `sql`, `websocket`, `other`. Put specifics ("Kafka", "HTTPS") in the edge label.
  *
@@ -109,6 +143,10 @@ export interface SododeckFile {
    */
   description?: string;
   tags?: Tags;
+  /**
+   * Custom hex colours saved for reuse by this deck's cards and groups, in the order they were added. At most 12; the app enforces the cap when adding.
+   */
+  swatches?: HexColor[];
   /**
    * Components of the system.
    */
@@ -178,6 +216,7 @@ export interface Node {
   parent?: Id;
   rules?: IdList;
   position?: Position;
+  style?: Style;
 }
 /**
  * A link to external documentation, a dashboard, a repository…
@@ -209,6 +248,16 @@ export interface Position {
   y: number;
 }
 /**
+ * Fill and/or stroke colour of a card or group. At least one of `fill` / `stroke` is set; absent `style` means no colour.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Style".
+ */
+export interface Style {
+  fill?: ColorRef;
+  stroke?: ColorRef;
+}
+/**
  * A named frame that holds nodes and nested groups (domain, bounded context, VPC). Membership is stored on the members (`node.group`, `group.parent`). `position` and `size` place the frame. Older files may omit them, and the app then fits a frame around the members.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -224,6 +273,7 @@ export interface Group {
   parent?: Id;
   position?: Position;
   size?: Size;
+  style?: Style;
 }
 /**
  * A width and a height in canvas pixels. Both are greater than 0.

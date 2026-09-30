@@ -71,7 +71,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Schema
 
-- [ ] T005 Add invalid fixtures first in `packages/schema/test/fixtures.ts`, following the 016 block:
+- [x] T005 Add invalid fixtures first in `packages/schema/test/fixtures.ts`, following the 016 block:
   - `nodes[0].style.fill` set to `"Green"`, `"#7A3CFF"`, `"#abc"` and `"purple"`
   - `nodes[0].style` set to `{}`
   - `nodes[0].style.opacity` set to `0.5`
@@ -81,7 +81,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Each expects its issue `path`. In `packages/schema/test/schema-walk.ts`, follow `anyOf` branches: pick the branch whose schema accepts the value, and report enum values of that branch. Run the tests and confirm the new fixtures fail.
 
-- [ ] T006 Edit `packages/schema/schema/v1.json` (R1, [data-model](data-model.md#file-format-schema-v1-additive-no-version-bump)). Every property gets a `description`.
+- [x] T006 Edit `packages/schema/schema/v1.json` (R1, [data-model](data-model.md#file-format-schema-v1-additive-no-version-bump)). Every property gets a `description`.
   - Add `$defs`:
     - `CardColor`: an enum of the 13 names, in DESIGN.md order.
     - `HexColor`: pattern `^#[0-9a-f]{6}$`.
@@ -89,13 +89,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
     - `Style`: `fill?` and `stroke?` as `ColorRef`, with `additionalProperties: false` and `minProperties: 1`.
   - Add `Node.style` after `position`, and `Group.style` after `size`.
   - Add root `swatches` (an array of `HexColor` with `uniqueItems: true`, no `maxItems`) after `tags`.
-- [ ] T007 Run `pnpm schema:generate` and inspect `packages/schema/src/generated/{types,zod}.ts`:
+- [x] T007 Run `pnpm schema:generate` and inspect `packages/schema/src/generated/{types,zod}.ts`:
   - `ColorRef` must be a `z.union` of an enum and a regex string.
   - `minProperties` and `uniqueItems` must be kept.
 
   For each one Zod drops, add a semantic rule in `packages/schema/src/semantic-rules.ts` (+ test): **S6** "style has at least one of fill / stroke" and/or **S7** "swatches are unique". Keep `generated.test.ts` green.
 
-- [ ] T008 Extend `packages/schema/examples/full.sododeck.json` in schema key order:
+- [x] T008 Extend `packages/schema/examples/full.sododeck.json` in schema key order:
   - use all 13 names across node and group `fill` / `stroke`
   - at least one hex value on a node and one on a group
   - `"swatches": ["#7a3cff", "#1f2a44"]`
@@ -104,33 +104,33 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Model
 
-- [ ] T009 [P] Write failing round-trip cases in `packages/model/test/round-trip.test.ts` (a `perType` entry `'card style and swatches (020)'`, next to the 016 frames case):
+- [x] T009 [P] Write failing round-trip cases in `packages/model/test/round-trip.test.ts` (a `perType` entry `'card style and swatches (020)'`, next to the 016 frames case):
   - a node with a named fill, a node with a hex stroke, a node with both
   - a group with a fill and a stroke
   - a deck with `swatches` whose order is preserved
   - a deck with 14 swatches
   - an old deck that gains no `style` or `swatches` keys
   - key order: `style` after `position` / `size`, and `swatches` after `tags`
-- [ ] T010 [P] Write failing tests in `packages/model/test/style.test.ts` for `setStyle` (R2):
+- [x] T010 [P] Write failing tests in `packages/model/test/style.test.ts` for `setStyle` (R2):
   - It sets a fill on 2 nodes and 1 group in one undo step.
   - `null` clears only that channel, and clearing the last channel removes `style`.
   - An invalid value (`'Green'`, `'#abc'`) throws `DeckEditError` and writes nothing.
   - Unknown ids are skipped, and empty targets do nothing.
   - Two docs synced through updates, one setting fill and the other stroke on the same node, end with both.
-- [ ] T011 [P] Write failing tests in `packages/model/test/swatches.test.ts` for `addSwatch` / `removeSwatch` (R3):
+- [x] T011 [P] Write failing tests in `packages/model/test/swatches.test.ts` for `addSwatch` / `removeSwatch` (R3):
   - `addSwatch` lowercases and adds the `#`, and does nothing for a duplicate.
   - The 13th add throws `DeckEditError('invalid')`, but a file loaded with 14 is kept.
   - `removeSwatch` removes every match and never touches node styles, and does nothing when the colour is absent.
   - Concurrent adds from two docs both survive.
   - `MAX_SWATCHES === 12`.
-- [ ] T012 Implement `swatches` as a meta field. In `packages/model/src/deck.ts` (`fromJSON` / `toJSON`), `src/ops/meta.ts` (`FIELDS`, `MetaPatch`), `src/validate.ts` (the meta pick) and `src/editor.ts` (the `updateMeta` type), store it as a `Y.Array` via `toY`, like `tags`. T009 is now green.
-- [ ] T013 Create `packages/model/src/ops/style.ts` with `setStyle(ctx, targets, channel, value)` (R2, [data-model](data-model.md#model-api-added-by-020)):
+- [x] T012 Implement `swatches` as a meta field. In `packages/model/src/deck.ts` (`fromJSON` / `toJSON`), `src/ops/meta.ts` (`FIELDS`, `MetaPatch`), `src/validate.ts` (the meta pick) and `src/editor.ts` (the `updateMeta` type), store it as a `Y.Array` via `toY`, like `tags`. T009 is now green.
+- [x] T013 Create `packages/model/src/ops/style.ts` with `setStyle(ctx, targets, channel, value)` (R2, [data-model](data-model.md#model-api-added-by-020)):
   - Validate `value` with the generated Zod `ColorRef` first.
   - In one `ctx.transact`, per target, get or create the nested `style` `Y.Map` and set or delete `channel` key by key (the `writeFields` pattern from `ops/frames.ts`). Delete `style` when it becomes empty.
 
   Wire `DeckEditor.setStyle` in `src/editor.ts` and export the types (`StyleChannel`, `StyleTargets`) from `src/index.ts`. T010 is now green.
 
-- [ ] T014 Create `packages/model/src/ops/swatches.ts` with `addSwatch`, `removeSwatch` and `MAX_SWATCHES = 12`, operating on the `meta` `swatches` `Y.Array` (creating it on the first add). Wire them into `DeckEditor` and export `MAX_SWATCHES`. T011 is now green.
+- [x] T014 Create `packages/model/src/ops/swatches.ts` with `addSwatch`, `removeSwatch` and `MAX_SWATCHES = 12`, operating on the `meta` `swatches` `Y.Array` (creating it on the first add). Wire them into `DeckEditor` and export `MAX_SWATCHES`. T011 is now green.
 
 ### Tokens and pure colour helpers (`packages/ui`)
 
