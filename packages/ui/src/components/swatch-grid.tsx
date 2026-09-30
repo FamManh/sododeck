@@ -64,6 +64,8 @@ interface SwatchGridProps {
   /** Grid column count for ↑/↓ navigation (contract: 7 for the named palette). */
   columns?: number;
   onSelect: (value: string) => void;
+  /** Hovered (or keyboard-focused) option's value, `null` when none (020 picker footer). */
+  onHoverChange?: (value: string | null) => void;
   className?: string;
 }
 
@@ -72,7 +74,15 @@ interface SwatchGridProps {
  * with ←/→ (by 1) and ↑/↓ (by `columns`), Home/End jump to the ends, and Enter/Space apply the
  * focused swatch. Arrow keys only move focus; they never apply on their own.
  */
-function SwatchGrid({ label, options, value, columns = 7, onSelect, className }: SwatchGridProps) {
+function SwatchGrid({
+  label,
+  options,
+  value,
+  columns = 7,
+  onSelect,
+  onHoverChange,
+  className,
+}: SwatchGridProps) {
   const checkedIndex = options.findIndex((option) => option.value === value);
   const [activeIndex, setActiveIndex] = useState(checkedIndex === -1 ? 0 : checkedIndex);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -149,6 +159,13 @@ function SwatchGrid({ label, options, value, columns = 7, onSelect, className }:
             }}
             onFocus={() => {
               setActiveIndex(index);
+              onHoverChange?.(option.value);
+            }}
+            onMouseEnter={() => {
+              onHoverChange?.(option.value);
+            }}
+            onMouseLeave={() => {
+              onHoverChange?.(null);
             }}
             style={swatchStyle(option.swatch, option.ringSwatch)}
             className={cn('rounded-full', focusRing)}

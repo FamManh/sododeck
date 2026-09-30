@@ -24,7 +24,7 @@ export const CARD_COLORS: readonly CardColor[] = [
 
 const NAMED_COLORS: ReadonlySet<string> = new Set(CARD_COLORS);
 
-function isNamedColor(value: ColorRef): value is CardColor {
+export function isNamedColor(value: ColorRef): value is CardColor {
   return NAMED_COLORS.has(value);
 }
 

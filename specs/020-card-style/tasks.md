@@ -199,7 +199,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - The checked radio has `aria-checked` and a check icon.
   - Nothing is checked when `value` is `null`.
   - The swatch colour comes from a CSS custom property prop, not a class.
-- [ ] T024 [P] [US1] Write failing tests in `apps/app/src/editor/style/style-picker.test.tsx`, by role and name from the [contract](contracts/card-style-ui.md#picker-stylepopover-dialog):
+- [x] T024 [P] [US1] Write failing tests in `apps/app/src/editor/style/style-picker.test.tsx`, by role and name from the [contract](contracts/card-style-ui.md#picker-stylepopover-dialog):
   - It shows a dialog "Colour" with a "Colour target" radiogroup (Fill / Stroke), a "No colour" button, and a "Colours" radiogroup with 13 radios "Red"…"Slate".
   - Picking "Green" calls `onApply('fill', 'green')`.
   - Switching to Stroke then picking "Blue" calls `onApply('stroke', 'blue')`.
@@ -223,7 +223,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 ### Implementation
 
 - [x] T028 [P] [US1] Create `packages/ui/src/components/swatch-grid.tsx`: `SwatchGrid` (`role="radiogroup"`, `columns` prop, roving focus) and `Swatch` (28 px circle, background from a `--swatch` custom property, a 1 px ring from `--swatch-ring`, and when checked a 2 px surface gap, a 2 px orange ring and a lucide `Check`). Add it to the design gallery (`apps/app/src/design-gallery/`) with checked, focused and unchecked samples. T023 is now green.
-- [ ] T029 [US1] Create `apps/app/src/editor/style/style-picker.tsx`: Fill / Stroke `SegmentedControl` (bound to `stylePickerTab`), a "No colour" button (lucide `Ban`, `aria-pressed`), the named `SwatchGrid` with 7 columns, and the footer `status`. It takes `value: { fill; stroke } | 'mixed'` per channel, `onApply` and `deckColours` (rendered in US3). T024 is now green (except the US3 parts).
+- [x] T029 [US1] Create `apps/app/src/editor/style/style-picker.tsx`: Fill / Stroke `SegmentedControl` (bound to `stylePickerTab`), a "No colour" button (lucide `Ban`, `aria-pressed`), the named `SwatchGrid` with 7 columns, and the footer `status`. It takes `value: { fill; stroke } | 'mixed'` per channel, `onApply` and `deckColours` (rendered in US3). T024 is now green (except the US3 parts).
 - [x] T030 [US1] Create `apps/app/src/editor/style/apply-style.ts`: `applyStyle`, which is `oneStep(editor, () => editor.setStyle(targets, channel, value))`, plus the announcement through the live region (`useUiStore.getState().announce`). T026 is now green.
 - [x] T031 [US1] Create `apps/app/src/editor/actions/style-actions.ts` with `style.colour` (`field: 'style'`, section `edit`, `where` per the contract, default modes). Its menu run closes the menu and calls `openToolbarField('style')`. Register it in `apps/app/src/editor/actions/index.ts` `ACTIONS` after `FIELD`. T025 is now green.
 - [ ] T032 [US1] Wire the toolbar:
