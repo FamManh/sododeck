@@ -124,6 +124,22 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(screen.getByRole('button', { name: 'Colour: Blue' })).toBeInTheDocument();
   });
 
+  it("shows the group toolbar's Colour button after Collapse (020 T054)", () => {
+    const groupDeck = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core' }],
+      groups: [{ id: 'core', title: 'Core services' }],
+    });
+    renderWithEditor(<Harness />, groupDeck);
+    act(() => {
+      ui().select({ groups: ['core'] });
+    });
+    const labels = names();
+    const collapseIndex = labels.indexOf('Collapse');
+    const colourIndex = labels.findIndex((label) => label?.startsWith('Colour:'));
+    expect(collapseIndex).toBeGreaterThanOrEqual(0);
+    expect(colourIndex).toBeGreaterThan(collapseIndex);
+  });
+
   it('shows the count and the shared fields for several components, "Mixed" when they differ', () => {
     setup();
     select(['a', 'b', 'c']);

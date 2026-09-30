@@ -363,16 +363,16 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent test**: quickstart scenario 10.
 
-- [ ] T052 [P] [US5] Add failing tests:
+- [x] T052 [P] [US5] Add failing tests:
   - In `apps/app/src/editor/group-boundary-node.test.tsx`, a group with `look.fill` has the description "Teal fill", and one with `look.stroke` has "Red stroke" and `data-stroke`. With a custom dark fill, the label has `data-text="light"`.
   - In `collapsed-group-node.test.tsx`, a collapsed coloured group renders with the same description as a card.
-- [ ] T053 [US5] Render group colours:
+- [x] T053 [US5] Render group colours:
   - In `apps/app/src/editor/group-boundary-node.tsx`, the fill replaces `bg-group` through `--card-fill`, and the stroke becomes `border-[1.5px] border-dashed border-(--card-stroke)`. The drop-target state still wins. The label follows the text rule on custom fills.
   - In `apps/app/src/editor/collapsed-group-node.tsx`, apply the same rules as `DeckNode` (the front plate only).
 
   T052 is now green.
 
-- [ ] T054 [US5] Add `AppearanceSection` to `apps/app/src/editor/inspector/group-inspector.tsx`, after `FrameFields`. Check that the group toolbar shows the Colour button after Collapse. Add tests.
+- [x] T054 [US5] Add `AppearanceSection` to `apps/app/src/editor/inspector/group-inspector.tsx`, after `FrameFields`. Check that the group toolbar shows the Colour button after Collapse. Add tests.
 
 **Checkpoint**: US5 scenarios 1–4 pass.
 

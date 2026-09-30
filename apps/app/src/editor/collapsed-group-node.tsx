@@ -2,11 +2,12 @@ import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
-import { memo, useEffect } from 'react';
+import { memo, useEffect, type CSSProperties } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
+import { describeChannel } from './style/card-style';
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -34,6 +35,24 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
       : null,
   );
 
+  // Colour (020 US5): the front plate only, mirroring DeckNode's rule (R5).
+  const look = data.look;
+  const showFill = look?.fill !== undefined;
+  const showStroke = look?.stroke !== undefined;
+  const customText = look !== undefined && look.text !== 'default' ? look.text : undefined;
+  const textRoleClass =
+    customText === 'light'
+      ? 'text-card-text-light'
+      : customText === 'dark'
+        ? 'text-card-text-dark'
+        : null;
+  const colourDescription = [
+    look?.fillRef !== undefined ? describeChannel('fill', look.fillRef) : null,
+    look?.strokeRef !== undefined ? describeChannel('stroke', look.strokeRef) : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(', ');
+
   useEffect(() => {
     updateNodeInternals(id);
   }, [id, updateNodeInternals]);
@@ -47,8 +66,11 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         data-testid="collapsed-group-node"
         data-node-id={id}
         aria-label={`${data.title}, collapsed group, ${String(data.nodeCount)} nodes, ${String(data.edgeCount)} edges${hasFlowInside ? ', flow step inside' : ''}`}
+        aria-description={colourDescription === '' ? undefined : colourDescription}
         aria-expanded="false"
         {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
+        {...(showStroke ? { 'data-stroke': '' } : {})}
+        {...(customText === undefined ? {} : { 'data-text': customText })}
         tabIndex={data.focused ? 0 : -1}
         onMouseDownCapture={(event) => {
           event.stopPropagation();
@@ -62,24 +84,33 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
           select({ groups: [data.groupId] });
           focus(id);
         }}
+        style={
+          {
+            ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
+            ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+          } as CSSProperties
+        }
         className={cn(
           'absolute inset-0 flex w-full flex-col items-start justify-center gap-1 rounded-node border border-border bg-surface px-3 text-left shadow-rest',
           focusRing,
           hasFlowInside && 'ring-1 ring-primary ring-offset-2 ring-offset-canvas',
           selected && 'border-primary shadow-selection ring-1 ring-primary',
+          showFill && 'bg-(--card-fill)',
+          showStroke && 'border-[1.5px] border-(--card-stroke)',
         )}
       >
         {hasFlowInside && <span data-testid="collapsed-flow-ring" className="sr-only" />}
         {currentFlowInside && <FlowInsideDot />}
         <span
           className={cn(
-            'truncate text-body font-medium text-ink',
+            'truncate text-body font-medium',
+            textRoleClass ?? 'text-ink',
             titleEdit !== null && 'invisible',
           )}
         >
           {data.title}
         </span>
-        <span className="text-caption text-ink-secondary">
+        <span className={cn('text-caption', textRoleClass ?? 'text-ink-secondary')}>
           {data.nodeCount} nodes · {data.edgeCount} edges
         </span>
       </button>
