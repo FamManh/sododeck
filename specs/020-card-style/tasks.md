@@ -192,7 +192,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Tests first
 
-- [ ] T023 [P] [US1] Write failing tests in `packages/ui/test/swatch-grid.test.tsx` for `SwatchGrid` / `Swatch`:
+- [x] T023 [P] [US1] Write failing tests in `packages/ui/test/swatch-grid.test.tsx` for `SwatchGrid` / `Swatch`:
   - It is a `radiogroup` with a name, and has `radio`s named by their labels.
   - It has a roving tabindex. ←/→ move by 1, ↑/↓ by the column count (7), and Home / End jump to the ends.
   - Enter and Space call `onSelect`.
@@ -222,7 +222,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Implementation
 
-- [ ] T028 [P] [US1] Create `packages/ui/src/components/swatch-grid.tsx`: `SwatchGrid` (`role="radiogroup"`, `columns` prop, roving focus) and `Swatch` (28 px circle, background from a `--swatch` custom property, a 1 px ring from `--swatch-ring`, and when checked a 2 px surface gap, a 2 px orange ring and a lucide `Check`). Add it to the design gallery (`apps/app/src/design-gallery/`) with checked, focused and unchecked samples. T023 is now green.
+- [x] T028 [P] [US1] Create `packages/ui/src/components/swatch-grid.tsx`: `SwatchGrid` (`role="radiogroup"`, `columns` prop, roving focus) and `Swatch` (28 px circle, background from a `--swatch` custom property, a 1 px ring from `--swatch-ring`, and when checked a 2 px surface gap, a 2 px orange ring and a lucide `Check`). Add it to the design gallery (`apps/app/src/design-gallery/`) with checked, focused and unchecked samples. T023 is now green.
 - [ ] T029 [US1] Create `apps/app/src/editor/style/style-picker.tsx`: Fill / Stroke `SegmentedControl` (bound to `stylePickerTab`), a "No colour" button (lucide `Ban`, `aria-pressed`), the named `SwatchGrid` with 7 columns, and the footer `status`. It takes `value: { fill; stroke } | 'mixed'` per channel, `onApply` and `deckColours` (rendered in US3). T024 is now green (except the US3 parts).
 - [ ] T030 [US1] Create `apps/app/src/editor/style/apply-style.ts`: `applyStyle`, which is `oneStep(editor, () => editor.setStyle(targets, channel, value))`, plus the announcement through the live region (`useUiStore.getState().announce`). T026 is now green.
 - [ ] T031 [US1] Create `apps/app/src/editor/actions/style-actions.ts` with `style.colour` (`field: 'style'`, section `edit`, `where` per the contract, default modes). Its menu run closes the menu and calls `openToolbarField('style')`. Register it in `apps/app/src/editor/actions/index.ts` `ACTIONS` after `FIELD`. T025 is now green.

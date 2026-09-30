@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@sododeck/ui/components/select';
 import { Switch } from '@sododeck/ui/components/switch';
+import { SwatchGrid } from '@sododeck/ui/components/swatch-grid';
 import { Textarea } from '@sododeck/ui/components/textarea';
 import { LayoutGrid, List } from 'lucide-react';
 import { type ReactNode, useId, useState } from 'react';
@@ -35,6 +36,16 @@ function Field({ label, children }: { label: string; children: (id: string) => R
   );
 }
 
+const SWATCH_SAMPLE = [
+  { value: 'red', label: 'Red', swatch: 'var(--color-card-red-fill)' },
+  { value: 'orange', label: 'Orange', swatch: 'var(--color-card-orange-fill)' },
+  { value: 'amber', label: 'Amber', swatch: 'var(--color-card-amber-fill)' },
+  { value: 'yellow', label: 'Yellow', swatch: 'var(--color-card-yellow-fill)' },
+  { value: 'lime', label: 'Lime', swatch: 'var(--color-card-lime-fill)' },
+  { value: 'green', label: 'Green', swatch: 'var(--color-card-green-fill)' },
+  { value: 'teal', label: 'Teal', swatch: 'var(--color-card-teal-fill)' },
+];
+
 export function FieldsSection() {
   const [deckName, setDeckName] = useState('Checkout platform');
   const [layout, setLayout] = useState('grid');
@@ -42,6 +53,7 @@ export function FieldsSection() {
   const [notes, setNotes] = useState(true);
   const [owner, setOwner] = useState('Orders');
   const [kind, setKind] = useState('service');
+  const [swatch, setSwatch] = useState('green');
   const switchId = useId();
 
   return (
@@ -231,6 +243,20 @@ export function FieldsSection() {
           <RadioGroupItem value="host" label="Hosting" />
           <RadioGroupItem value="none" label="None" disabled />
         </RadioGroup>
+      </SampleRow>
+      <SampleRow label="swatch grid">
+        <SwatchGrid
+          label="Colours (checked)"
+          options={SWATCH_SAMPLE}
+          value={swatch}
+          onSelect={setSwatch}
+        />
+        <SwatchGrid
+          label="Colours (unchecked)"
+          options={SWATCH_SAMPLE}
+          value={null}
+          onSelect={() => {}}
+        />
       </SampleRow>
     </GallerySection>
   );
