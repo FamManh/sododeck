@@ -12,6 +12,7 @@ import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import { edgePath } from './edge-geometry';
+import { exportLook, type ExportLook } from './export-palette';
 import type { ImageScope } from './types';
 
 export const EXPORT_MARGIN = 32;
@@ -29,12 +30,18 @@ export interface SceneCard {
   hasRules: boolean;
   childCount: number;
   level: Level;
+  fill?: string;
+  stroke?: string;
+  text: 'default' | 'dark' | 'light';
 }
 export interface SceneGroup {
   id: string;
   rect: Rect;
   label: string;
   count: number;
+  fill?: string;
+  stroke?: string;
+  text: 'default' | 'dark' | 'light';
 }
 export interface SceneCollapsed {
   id: string;
@@ -42,6 +49,9 @@ export interface SceneCollapsed {
   title: string;
   nodeCount: number;
   edgeCount: number;
+  fill?: string;
+  stroke?: string;
+  text: 'default' | 'dark' | 'light';
 }
 export interface ScenePort {
   id: string;
@@ -93,6 +103,7 @@ export interface SceneInput {
 }
 
 const EMPTY_BOUNDS: Rect = { x: 0, y: 0, width: 0, height: 0 };
+const EMPTY_LOOK: ExportLook = { text: 'default' };
 
 /** Estimated label pill width; the renderer measures the real one (R6). */
 function labelPill(edge: SceneEdge): Rect | null {
@@ -184,9 +195,11 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
         hasRules: (node.rules?.length ?? 0) > 0,
         childCount: graph.childCount.get(id) ?? 0,
         level,
+        ...(exportLook(node.style) ?? EMPTY_LOOK),
       },
     ];
   });
+  const groupsById = new Map(source.groups.map((group) => [group.id, group]));
   const collapsed: SceneCollapsed[] = graph.cards
     .filter(
       (card) =>
@@ -198,6 +211,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       title: card.title,
       nodeCount: card.nodeCount,
       edgeCount: card.edgeCount,
+      ...(exportLook(groupsById.get(card.groupId)?.style) ?? EMPTY_LOOK),
     }));
   const ports: ScenePort[] = exportPortRects(source, graph).filter((port) => keep(port.id));
 
@@ -305,7 +319,15 @@ function sceneGroups(
     const rect = frames.get(id);
     const group = byId.get(id);
     if (rect === undefined || group === undefined || (flowOnly && !withCard.has(id))) return [];
-    return [{ id, rect, label: group.title, count: counts.get(id) ?? 0 }];
+    return [
+      {
+        id,
+        rect,
+        label: group.title,
+        count: counts.get(id) ?? 0,
+        ...(exportLook(group.style) ?? EMPTY_LOOK),
+      },
+    ];
   });
 }
 
