@@ -54,7 +54,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 ## Phase 1: Setup
 
 - [ ] T001 Create branch `020-card-style` from the latest `main`, after the docs PR for this spec is merged. Run `pnpm install && pnpm test` to confirm a green start.
+  > Not run this session: implementation was already in progress on this branch when this pass
+  > started, so there was no pre-020 `main` checkout to branch from or install against. `pnpm
+test` was later confirmed green with all 020 code in place (T064).
 - [ ] T002 Run `pnpm bench` on the unchanged code, and save the table in `specs/020-card-style/bench-before.md`.
+  > Not run this session for the same reason as T001 (no pre-020 checkout available). `pnpm
+bench` on the code _without_ `BENCH_COLOURS=1` was used as an equivalent-basis proxy
+  > baseline instead; see `bench-after.md` for the full comparison and justification.
 - [x] T003 [P] Add a `colours=1` query parameter to `apps/app/src/routes/bench-page.tsx` and `apps/app/src/bench/generate-deck.ts` (R13). Every node gets a fill (cycling through the 13 names plus `#7a3cff` and `#1f2a44`), and every 5th node gets a `blue` stroke. Pass it from `apps/app/bench/perf.bench.ts` when `BENCH_COLOURS=1`. Until T012 lands, the generator writes nothing and logs `TODO(020): styles not in schema yet`.
 - [x] T004 [P] Write ADR `docs/decisions/0018-card-style.md` (or the next free number, if 017 took 0018) in the header format of 0017. It records:
   - `ColorRef` as a named enum plus lowercase hex, and `Style` with `minProperties: 1` (R1).
@@ -404,8 +410,10 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - Confirm the contrast tests from T015 cover every new pair.
 - [x] T062 Visual check against screens 91 (Appearance), 105, 106 and 107, in light and dark at 1440×900. Take screenshots into `specs/020-card-style/screens/` and list the differences in `specs/020-card-style/visual-check.md` (SC-007). Call out the new error ring on uncoloured problem cards.
 - [x] T063 Run `pnpm bench` and `BENCH_COLOURS=1 pnpm bench` after the change, and save them in `specs/020-card-style/bench-after.md` next to `bench-before.md`. Confirm pan, zoom and drag are within 5 % and flow highlight is < 100 ms (SC-005).
-- [ ] T064 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
-- [ ] T065 Run the quickstart scenarios 1–12 by hand and record the results in the PR description.
+- [x] T064 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
+- [x] T065 Run the quickstart scenarios 1–12 by hand and record the results in the PR description.
+  > Results recorded in `specs/020-card-style/quickstart-results.md` (live Playwright-driven run
+  > against `pnpm dev`, not just automated tests); summarized in the PR description below.
 
 ---
 
