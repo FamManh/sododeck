@@ -30,6 +30,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
   it('lists each target’s menu, in sections', () => {
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
+      ['Reset size'],
       ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
       ['Group', 'Align', 'Arrange'],
       ['Pin'],

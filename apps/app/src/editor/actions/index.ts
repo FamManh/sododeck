@@ -6,6 +6,7 @@ import { COMMON_ACTIONS } from './common-actions';
 import { CONNECTION_ACTIONS } from './connection-actions';
 import { FIELD_ACTIONS } from './field-actions';
 import { GROUP_ACTIONS } from './group-actions';
+import { SHAPE_ACTIONS } from './shape-actions';
 import { TITLE_ACTIONS } from './title-actions';
 import type { Action } from './types';
 
@@ -18,6 +19,7 @@ export const ACTIONS: readonly Action[] = [
   ...TITLE_ACTIONS,
   ...CONNECTION_ACTIONS,
   ...GROUP_ACTIONS,
+  ...SHAPE_ACTIONS,
   ...FIELD_ACTIONS,
   ...CANVAS_ACTIONS,
   ...CLIPBOARD_ACTIONS,

@@ -116,6 +116,19 @@ describe('DeckNode', () => {
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
   });
 
+  it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {
+    const title = 'Order Fulfilment and Inventory Reconciliation Service';
+    const p = {
+      ...props({ level: 'component', title }),
+      width: 200,
+      height: 44,
+    } as NodeProps<DeckFlowNode>;
+    renderNode(p);
+    const text = screen.getByText(title);
+    expect(text).toHaveStyle({ WebkitLineClamp: '1' });
+    expect(screen.getByRole('group')).toHaveAttribute('title', title);
+  });
+
   it('shows a child-count marker for components with children', () => {
     renderNode(props({ childCount: 3 }));
     expect(

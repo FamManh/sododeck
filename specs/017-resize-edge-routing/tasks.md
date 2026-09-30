@@ -202,9 +202,9 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `startCardResize`: `beginGesture`, `setCanvasGesture('card-resize')`, `setActiveGesture({ cancel })`, and on-screen snap candidates collected once.
   - `applyCardResize`: `resizeBox`, then `snapEdges` unless ⌘ is held, then `setCardSize` and `moveInView` when x / y change, then `resizeReadout`.
   - `endCardResize`: `endGesture` and the announcement.
-- [ ] T026 [US1] Add eight `NodeResizeControl`s to `apps/app/src/editor/deck-node.tsx`, with the `.sd-resize-handle` class and pointer only. Render them only when the card is the single selected object and editing is allowed (not flow mode, recording, view-only, or inside a collapsed group). Wire them to T025. Double-click on a handle runs `node.resetSize` (T030). Mark the active handle filled through a `data-active` attribute. Styles go in `apps/app/src/index.css`, next to the 016 handle rules, using tokens only.
-- [ ] T027 [US1] Render the `W × H` readout pill from `resizeReadout` in `apps/app/src/editor/editing/guides-overlay.tsx`, next to the dragged corner. Reuse the offset readout style, and show snap guides the same way as for drags.
-- [ ] T028 [US1] Apply `textLines` in `apps/app/src/editor/deck-node.tsx`: `-webkit-line-clamp` on the title and subtitle, same font size, the full text kept in `title` (FR-008). Add a component test in `deck-node.test.tsx`: a sized card renders the title with the computed clamp, and the tooltip holds the full title.
+- [x] T026 [US1] Add eight `NodeResizeControl`s to `apps/app/src/editor/deck-node.tsx`, with the `.sd-resize-handle` class and pointer only. Render them only when the card is the single selected object and editing is allowed (not flow mode, recording, view-only, or inside a collapsed group). Wire them to T025. Double-click on a handle runs `node.resetSize` (T030). Mark the active handle filled through a `data-active` attribute. Styles go in `apps/app/src/index.css`, next to the 016 handle rules, using tokens only.
+- [x] T027 [US1] Render the `W × H` readout pill from `resizeReadout` in `apps/app/src/editor/editing/guides-overlay.tsx`, next to the dragged corner. Reuse the offset readout style, and show snap guides the same way as for drags.
+- [x] T028 [US1] Apply `textLines` in `apps/app/src/editor/deck-node.tsx`: `-webkit-line-clamp` on the title and subtitle, same font size, the full text kept in `title` (FR-008). Add a component test in `deck-node.test.tsx`: a sized card renders the title with the computed clamp, and the tooltip holds the full title.
 - [ ] T029 [US1] Switch every fixed-size call site to `cardSize` / `cardBox` (R3, plan list). Update the listed tests to use sized fixtures where relevant. The call sites:
   - `editor/visible-graph.ts` (`scopeBounds`)
   - `editor/open-deck.ts` (`fitMissingFrames` with `sizeOf: n => node.size ?? COMPONENT_CARD_SIZE`)
@@ -216,7 +216,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `editor/canvas.tsx` (focus scroll; `tinyCardsSelector` uses the minimum width 120)
   - `editor/stickies/sticky-actions.ts` (`nodeAtPoint`)
   - `editor/flows/use-flow-viewport.ts` through `boundsOf`
-- [ ] T030 [US1] Create `apps/app/src/editor/actions/shape-actions.ts` with `node.resetSize`:
+- [x] T030 [US1] Create `apps/app/src/editor/actions/shape-actions.ts` with `node.resetSize`:
   - where: component menu;
   - `disabledReason` "Default size";
   - icon `Scaling`;

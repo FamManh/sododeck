@@ -74,4 +74,13 @@ describe('GuidesOverlay (016 US3 / US2 / US4)', () => {
     });
     expect(screen.getByTestId('landing-slot')).toBeInTheDocument();
   });
+
+  it('shows the W × H readout during a card resize (017 R4)', () => {
+    setup();
+    act(() => {
+      ui().setCanvasGesture('card-resize');
+      ui().setResizeReadout({ width: 244, height: 80, x: 0, y: 0 });
+    });
+    expect(screen.getByTestId('resize-readout')).toHaveTextContent('244 × 80');
+  });
 });

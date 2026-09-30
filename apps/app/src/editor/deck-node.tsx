@@ -3,7 +3,14 @@ import { TagChip } from '@sododeck/ui/components/tag-chip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import {
+  Handle,
+  NodeResizeControl,
+  Position,
+  useReactFlow,
+  type NodeProps,
+  type ResizeDragEvent,
+} from '@xyflow/react';
 import {
   Ban,
   CornerDownRight,
@@ -14,17 +21,27 @@ import {
   Table,
   TriangleAlert,
 } from 'lucide-react';
-import { memo, useEffect } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
-import { useUiStore } from '../state/ui-store';
+import { isFlowMode, useUiStore } from '../state/ui-store';
+import { nodeSize } from './canvas-geometry';
+import { textLines } from './card-text';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
-import { NODE_SIZE, type DeckFlowNode } from './deck-to-flow';
+import {
+  applyCardResize,
+  endCardResize,
+  startCardResize,
+  type CardResizeSession,
+} from './editing/card-resize';
+import { oneStep } from './fields/one-step';
 import { kindLabel } from './kind-label';
+import type { Handle as ResizeHandleName } from './editing/resize-limits';
 import { CardTitleInput } from './quick-edit/card-title-input';
 import { DetailsButton } from './quick-edit/details-button';
 import { useConnecting, useConnectionRole } from './use-connection-role';
+import type { DeckFlowNode } from './deck-to-flow';
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -32,6 +49,26 @@ const SIDES = [
   { id: 'bottom', position: Position.Bottom },
   { id: 'left', position: Position.Left },
 ] as const;
+
+const RESIZE_HANDLES: readonly ResizeHandleName[] = [
+  'top-left',
+  'top',
+  'top-right',
+  'right',
+  'bottom-right',
+  'bottom',
+  'bottom-left',
+  'left',
+];
+
+const modsOf = (event: ResizeDragEvent) => {
+  const source = event.sourceEvent as Partial<MouseEvent> | null | undefined;
+  return {
+    shift: source?.shiftKey === true,
+    alt: source?.altKey === true,
+    mod: source?.metaKey === true || source?.ctrlKey === true,
+  };
+};
 
 /** Canvas node, 164×50 (DESIGN.md "node", design 02 and 53–55). */
 export const DeckNode = memo(function DeckNode({
@@ -46,6 +83,21 @@ export const DeckNode = memo(function DeckNode({
   const announce = useUiStore((s) => s.announce);
   const connecting = useConnecting();
   const role = useConnectionRole(id);
+  const { getZoom } = useReactFlow();
+  const resize = useRef<CardResizeSession | null>(null);
+  const [activeHandle, setActiveHandle] = useState<ResizeHandleName | null>(null);
+  // Resizing (017 R4): pointer only, and only the single selected card, never in flow mode,
+  // recording, view-only or inside a collapsed group (those never render a DeckNode at all).
+  const resizable = useUiStore(
+    (s) =>
+      selected &&
+      !isFlowMode(s) &&
+      s.flowSession === null &&
+      s.selection.nodes.length === 1 &&
+      s.selection.edges.length === 0 &&
+      s.selection.groups.length === 0 &&
+      s.selection.stickies.length === 0,
+  );
   // Only this card re-renders when its title edit starts or ends (the others select `null`).
   const titleEdit = useUiStore((s) =>
     s.titleEdit?.target === 'node' && s.titleEdit.id === id ? s.titleEdit : null,
@@ -77,6 +129,17 @@ export const DeckNode = memo(function DeckNode({
   const isSystem = data.level === 'system';
   const isContainer = data.level === 'container';
   const isComponent = data.level === 'component';
+  // Clamp to what the resized card can actually show (017 R11, FR-008); the full title always
+  // stays in the `title` attribute above, so a hover still reveals the rest.
+  const defaultSize = nodeSize(data.level);
+  const box = { width: width ?? defaultSize.width, height: height ?? defaultSize.height };
+  const lines = textLines(box, data.level);
+  const clampStyle = (n: number): CSSProperties => ({
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: n,
+    overflow: 'hidden',
+  });
 
   return (
     <div
@@ -91,7 +154,18 @@ export const DeckNode = memo(function DeckNode({
       {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
       tabIndex={tabIndex}
       title={data.title}
-      style={{ width: width ?? NODE_SIZE.width, height: height ?? NODE_SIZE.height }}
+      style={{ width: box.width, height: box.height }}
+      onDoubleClickCapture={(event) => {
+        // A handle double-click resets the size (T030), not the title edit underneath it.
+        if (!resizable) return;
+        const target = event.target as HTMLElement;
+        if (target.closest('.sd-resize-handle') === null) return;
+        event.stopPropagation();
+        oneStep(editor, () => {
+          editor.setCardSize(id, null);
+        });
+        announce('Size reset');
+      }}
       className={cn(
         // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
         'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
@@ -120,12 +194,18 @@ export const DeckNode = memo(function DeckNode({
             <KindTile kind={data.kind} size={30} decorative />
             <span className="min-w-0 flex-1">
               {titleInput ?? (
-                <span className="block truncate text-body-sm font-medium text-ink">
+                <span
+                  className="break-words text-body-sm font-medium text-ink"
+                  style={clampStyle(lines.title)}
+                >
                   {data.title}
                 </span>
               )}
-              {data.subtitle && (
-                <span className="block truncate font-mono text-node-sub text-ink-muted">
+              {data.subtitle && lines.subtitle > 0 && (
+                <span
+                  className="break-words font-mono text-node-sub text-ink-muted"
+                  style={clampStyle(lines.subtitle)}
+                >
                   {data.subtitle}
                 </span>
               )}
@@ -157,10 +237,18 @@ export const DeckNode = memo(function DeckNode({
           {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
           <span className="flex min-w-0 flex-1 flex-col">
             {titleInput ?? (
-              <span className="truncate text-body-sm font-medium text-ink">{data.title}</span>
+              <span
+                className="break-words text-body-sm font-medium text-ink"
+                style={clampStyle(lines.title)}
+              >
+                {data.title}
+              </span>
             )}
-            {isContainer && data.subtitle && (
-              <span className="truncate font-mono text-node-sub text-ink-muted">
+            {isContainer && data.subtitle && lines.subtitle > 0 && (
+              <span
+                className="break-words font-mono text-node-sub text-ink-muted"
+                style={clampStyle(lines.subtitle)}
+              >
                 {data.subtitle}
               </span>
             )}
@@ -186,6 +274,29 @@ export const DeckNode = memo(function DeckNode({
         </span>
       )}
 
+      {resizable &&
+        RESIZE_HANDLES.map((handle) => (
+          <NodeResizeControl
+            key={handle}
+            nodeId={id}
+            position={handle}
+            className="sd-resize-handle"
+            {...(activeHandle === handle ? { 'data-active': '' } : {})}
+            onResizeStart={() => {
+              setActiveHandle(handle);
+              resize.current = startCardResize(editor, id, handle, data.level);
+            }}
+            onResize={(event, params) => {
+              if (resize.current !== null)
+                applyCardResize(editor, resize.current, params, modsOf(event), getZoom());
+            }}
+            onResizeEnd={() => {
+              if (resize.current !== null) endCardResize(editor, resize.current);
+              resize.current = null;
+              setActiveHandle(null);
+            }}
+          />
+        ))}
       {SIDES.map(({ id: side, position }) => (
         <Handle
           key={side}

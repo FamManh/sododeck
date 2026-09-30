@@ -24,14 +24,17 @@ function Label({
   zoom,
   children,
   className,
+  testId,
 }: {
   at: Point;
   zoom: number;
   children: ReactNode;
   className?: string;
+  testId?: string;
 }) {
   return (
     <span
+      data-testid={testId}
       className={cn(
         'absolute flex h-4.5 origin-top-left items-center rounded-full bg-primary px-1.5 font-mono text-[10.5px] leading-none whitespace-nowrap text-on-primary',
         className,
@@ -99,12 +102,14 @@ function DashedBox({ rect, zoom, testId }: { rect: Rect; zoom: number; testId: s
 export function GuidesOverlay() {
   const guides = useUiStore((s) => s.guides);
   const readout = useUiStore((s) => s.dragReadout);
+  const resizeReadout = useUiStore((s) => s.resizeReadout);
   const gesture = useUiStore((s) => s.canvasGesture);
   const dropTarget = useUiStore((s) => s.dropTarget);
   const selection = useUiStore((s) => s.selection);
   const zoom = useStore(zoomSelector);
   const view = useViewState();
-  if (guides.length === 0 && readout === null && dropTarget === null) return null;
+  if (guides.length === 0 && readout === null && resizeReadout === null && dropTarget === null)
+    return null;
 
   const size = nodeSize(levelForZoom(zoom));
   const bounds = groupBounds(view.deck, levelForZoom(zoom));
@@ -147,6 +152,19 @@ export function GuidesOverlay() {
             className="bg-inverse text-on-inverse"
           >
             {`${signed(readout.dx)}, ${signed(readout.dy)}`}
+          </Label>
+        )}
+        {resizeReadout !== null && (
+          <Label
+            at={{
+              x: resizeReadout.x + resizeReadout.width,
+              y: resizeReadout.y + resizeReadout.height + 12 / zoom,
+            }}
+            zoom={zoom}
+            className="bg-inverse text-on-inverse"
+            testId="resize-readout"
+          >
+            {`${String(resizeReadout.width)} × ${String(resizeReadout.height)}`}
           </Label>
         )}
         {slots.map((rect) => (
