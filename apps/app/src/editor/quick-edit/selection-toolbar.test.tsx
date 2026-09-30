@@ -102,6 +102,28 @@ describe('SelectionToolbar (019 US3)', () => {
     );
   });
 
+  it('shows the fill as a mini swatch on the Colour button (020 T032)', () => {
+    const env = setup();
+    select(['a']);
+    act(() => {
+      env.editor().setStyle({ nodes: ['a'], groups: [] }, 'fill', 'green');
+    });
+    const button = screen.getByRole('button', { name: 'Colour: Green' });
+    const swatch = button.querySelector('[data-slot="swatch"]');
+    expect(swatch).toHaveStyle({ '--swatch': 'var(--color-card-green-fill)' });
+  });
+
+  it('opens the Colour popover and writes the pick through the editor (020 T032)', async () => {
+    const { user, doc } = setup();
+    select(['a']);
+    await user.click(screen.getByRole('button', { name: 'Colour: none' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Colour' });
+    await user.click(within(dialog).getByRole('radio', { name: 'Blue' }));
+    const node = toJSON(doc).nodes.find((n) => n.id === 'a');
+    expect(node?.style).toEqual({ fill: 'blue' });
+    expect(screen.getByRole('button', { name: 'Colour: Blue' })).toBeInTheDocument();
+  });
+
   it('shows the count and the shared fields for several components, "Mixed" when they differ', () => {
     setup();
     select(['a', 'b', 'c']);

@@ -226,7 +226,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 - [x] T029 [US1] Create `apps/app/src/editor/style/style-picker.tsx`: Fill / Stroke `SegmentedControl` (bound to `stylePickerTab`), a "No colour" button (lucide `Ban`, `aria-pressed`), the named `SwatchGrid` with 7 columns, and the footer `status`. It takes `value: { fill; stroke } | 'mixed'` per channel, `onApply` and `deckColours` (rendered in US3). T024 is now green (except the US3 parts).
 - [x] T030 [US1] Create `apps/app/src/editor/style/apply-style.ts`: `applyStyle`, which is `oneStep(editor, () => editor.setStyle(targets, channel, value))`, plus the announcement through the live region (`useUiStore.getState().announce`). T026 is now green.
 - [x] T031 [US1] Create `apps/app/src/editor/actions/style-actions.ts` with `style.colour` (`field: 'style'`, section `edit`, `where` per the contract, default modes). Its menu run closes the menu and calls `openToolbarField('style')`. Register it in `apps/app/src/editor/actions/index.ts` `ACTIONS` after `FIELD`. T025 is now green.
-- [ ] T032 [US1] Wire the toolbar:
+- [x] T032 [US1] Wire the toolbar:
   - In `apps/app/src/editor/quick-edit/field-popover.tsx`, render `StylePopover` for `field === 'style'` at 272 px, with `aria-label` "Colour". The popover reads the selected objects from the snapshot, computes each channel's value or `'mixed'` (reusing `bulkView`), and calls `applyStyle`. Picking keeps the popover open.
   - In `selection-toolbar.tsx`, the button shows the current fill as a mini swatch, with the accessible name "Colour: Green", "Colour: none" or "Colour: Mixed".
   - Place it after Rules (component and components) and after Collapse (group).
