@@ -390,7 +390,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   Add tests in `export/scene.test.ts` and `render-svg.test.ts`.
 
 - [x] T058 [P] Update `DESIGN.md` "Card colours": add a hex column, state that OKLCH is the design source and hex is what ships, and replace "below 0.18 … flip to white" with the higher-contrast rule (switching near 0.20) and the warning band. Add the error ring (107) to the node states line.
-- [ ] T059 [P] Update the package docs:
+- [x] T059 [P] Update the package docs:
   - `packages/schema/CLAUDE.md` Status (the colour defs, `swatches`, S6 / S7 if added).
   - `packages/model/CLAUDE.md` "Added by 020" (`setStyle`, `addSwatch`, `removeSwatch`, `MAX_SWATCHES`).
   - `packages/ui/CLAUDE.md` ("Tokens added by 020", `SwatchGrid`, `ColourArea`, `HueSlider`, `readableText`, `colour.ts`).
