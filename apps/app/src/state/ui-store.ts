@@ -1,5 +1,5 @@
 import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
-import type { Id } from '@sododeck/schema';
+import type { Id, Side } from '@sododeck/schema';
 import type { ComponentKind } from '@sododeck/ui/lib/icons';
 import { create } from 'zustand';
 
@@ -194,7 +194,8 @@ export type ToolbarFieldId =
  * A pointer gesture on the canvas: the selection toolbar hides while one runs (019 R5), and the
  * hint bar shows its keys (016 R13).
  */
-export type CanvasGesture = 'pan' | 'drag' | 'group-drag' | 'resize' | 'marquee';
+export type CanvasGesture =
+  'pan' | 'drag' | 'group-drag' | 'resize' | 'marquee' | 'card-resize' | 'segment' | 'endpoint';
 
 /** A snapping guide during a drag (016 R7), in canvas px. UI-only, never saved. */
 export interface Guide {
@@ -291,6 +292,10 @@ export interface UiState {
   guides: readonly Guide[];
   /** Offset of a group drag from its start, shown next to the frame. */
   dragReadout: { dx: number; dy: number } | null;
+  /** The `W × H` readout pill next to a dragged corner while resizing a card (017). */
+  resizeReadout: { width: number; height: number; x: number; y: number } | null;
+  /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
+  endpointHover: { nodeId: Id; side: Side } | null;
   /** Cards a running marquee selects. */
   marqueeCount: number | null;
   pasteSerial: PasteSerial | null;
@@ -426,6 +431,10 @@ export interface UiState {
   setDropTarget: (groupId: Id | null) => void;
   setGuides: (guides: readonly Guide[]) => void;
   setDragReadout: (readout: { dx: number; dy: number } | null) => void;
+  setResizeReadout: (
+    readout: { width: number; height: number; x: number; y: number } | null,
+  ) => void;
+  setEndpointHover: (hover: { nodeId: Id; side: Side } | null) => void;
   setMarqueeCount: (count: number | null) => void;
   setPasteSerial: (serial: PasteSerial | null) => void;
   /**
@@ -593,6 +602,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     dropTarget: null,
     guides: NO_GUIDES,
     dragReadout: null,
+    resizeReadout: null,
+    endpointHover: null,
     marqueeCount: null,
     pasteSerial: null,
 
@@ -1082,6 +1093,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     setDragReadout: (dragReadout) => {
       set({ dragReadout });
     },
+    setResizeReadout: (resizeReadout) => {
+      set({ resizeReadout });
+    },
+    setEndpointHover: (endpointHover) => {
+      set({ endpointHover });
+    },
     setMarqueeCount: (marqueeCount) => {
       if (get().marqueeCount !== marqueeCount) set({ marqueeCount });
     },
@@ -1134,6 +1151,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         dropTarget: null,
         guides: NO_GUIDES,
         dragReadout: null,
+        resizeReadout: null,
+        endpointHover: null,
         marqueeCount: null,
         pasteSerial: null,
       });

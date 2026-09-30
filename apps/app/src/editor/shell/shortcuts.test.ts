@@ -8,11 +8,14 @@ describe('SHORTCUTS', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('uses each key once per section, except C (palette or connect, §g-49)', () => {
+  it('uses each key once per section, except keys shared by mutually exclusive gestures (§g-49, 017)', () => {
+    // C: palette or connect. Hold ⌘ / Hold ⇧ / Hold ⌥ and ⌥ Arrows / ⌥⇧ Arrows: drag, resize and
+    // segment gestures reuse the same modifier meaning, but only one gesture runs at a time.
+    const shared = new Set(['C', 'Hold ⌘', 'Hold ⇧', 'Hold ⌥', '⌥ Arrows', '⌥⇧ Arrows']);
     for (const section of SHORTCUT_SECTIONS) {
       const keys = SHORTCUTS.filter((s) => s.section === section)
         .map((s) => s.keys.apple)
-        .filter((key) => key !== 'C');
+        .filter((key) => !shared.has(key));
       expect(new Set(keys).size, section).toBe(keys.length);
     }
   });
@@ -52,7 +55,7 @@ describe('SHORTCUTS', () => {
   });
 });
 
-describe('Editing section (016)', () => {
+describe('Editing section (016, 017)', () => {
   it('lists every editing shortcut of the contract', () => {
     const editing = SHORTCUTS.filter((s) => s.section === 'Editing').map((s) => s.id);
     expect(editing).toEqual([
@@ -70,6 +73,13 @@ describe('Editing section (016)', () => {
       'drag-lock-axis',
       'drag-duplicate',
       'drop-without-group',
+      'resize-card',
+      'move-segment',
+      'move-segment-10',
+      'reset-route',
+      'resize-no-snap',
+      'resize-ratio',
+      'resize-centre',
     ]);
     expect(SHORTCUT_SECTIONS).toContain('Editing');
   });
@@ -84,6 +94,14 @@ describe('Editing section (016)', () => {
     expect(shortcutLabel('group', true)).toBe('⌘G');
     expect(shortcutLabel('group', false)).toBe('Ctrl+G');
     expect(shortcutLabel('ungroup', true)).toBe('⇧⌘G');
+  });
+
+  it('labels the card resize and segment keys (017)', () => {
+    expect(shortcutLabel('resize-card', true)).toBe('⌘⇧ Arrows');
+    expect(shortcutLabel('resize-card', false)).toBe('Ctrl+Shift+Arrows');
+    expect(shortcutLabel('move-segment', true)).toBe('⌥ Arrows');
+    expect(shortcutLabel('move-segment-10', true)).toBe('⌥⇧ Arrows');
+    expect(shortcutLabel('reset-route', true)).toBe('R');
   });
 });
 

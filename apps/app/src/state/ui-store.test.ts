@@ -32,6 +32,8 @@ describe('ui store', () => {
       state().setDropTarget('g');
       state().setGuides([guide]);
       state().setDragReadout({ dx: 100, dy: -40 });
+      state().setResizeReadout({ width: 200, height: 120, x: 10, y: 20 });
+      state().setEndpointHover({ nodeId: 'n1', side: 'top' });
       state().setMarqueeCount(3);
       state().setPasteSerial({ at: { x: 1, y: 2 }, count: 2 });
       expect(state()).toMatchObject({
@@ -39,10 +41,12 @@ describe('ui store', () => {
         dropTarget: 'g',
         guides: [guide],
         dragReadout: { dx: 100, dy: -40 },
+        resizeReadout: { width: 200, height: 120, x: 10, y: 20 },
+        endpointHover: { nodeId: 'n1', side: 'top' },
         marqueeCount: 3,
         pasteSerial: { at: { x: 1, y: 2 }, count: 2 },
       });
-      for (const gesture of ['resize', 'marquee'] as const) {
+      for (const gesture of ['resize', 'marquee', 'card-resize', 'segment', 'endpoint'] as const) {
         state().setCanvasGesture(gesture);
         expect(state().canvasGesture).toBe(gesture);
       }
@@ -52,6 +56,8 @@ describe('ui store', () => {
       state().setDropTarget('g');
       state().setGuides([guide]);
       state().setDragReadout({ dx: 1, dy: 1 });
+      state().setResizeReadout({ width: 200, height: 120, x: 10, y: 20 });
+      state().setEndpointHover({ nodeId: 'n1', side: 'top' });
       state().setMarqueeCount(3);
       state().setPasteSerial({ at: { x: 1, y: 2 }, count: 2 });
       state().resetForDeck(null);
@@ -59,6 +65,8 @@ describe('ui store', () => {
         dropTarget: null,
         guides: [],
         dragReadout: null,
+        resizeReadout: null,
+        endpointHover: null,
         marqueeCount: null,
         pasteSerial: null,
       });

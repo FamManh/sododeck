@@ -155,11 +155,11 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 - [x] T014 Implement `apps/app/src/editor/routing/route-path.ts`. Make `facingSides` in `deck-to-flow.ts` compare box centres, and route every plain edge's `sourceHandle` / `targetHandle` through `resolveSides(fromBox, toBox, edge.route)`. Merged edges and port edges stay automatic (edge case). Add a `deck-to-flow` test: a pinned side sets the handle, and a changed route breaks the edge cache.
 - [x] T015 Switch `apps/app/src/editor/deck-edge.tsx` to `routedStepPath`, passing `data.route`. Add `route` to the `DeckFlowEdge` data in `deck-to-flow.ts`, and point `apps/app/src/editor/merged-edge.tsx` at the shared helper with no route. Add a test in `deck-edge.test.tsx` (new or existing): with an offset, the label pill, the edge anchor and the step badge sit at the shifted `labelX` / `labelY`. The flow token and the focus ring use the same `d` (FR-017).
 - [x] T016 [P] Update `apps/app/src/editor/export/edge-geometry.ts` (+ test): `edgePath(from, to, route?)` uses `routedStepPath`, and `extent` includes the shifted middle segment. Update `apps/app/src/editor/export/scene.ts` (+ `scene.test.ts`) so card rects use `cardSize` and plain edges pass `edge.route`. Resolve the two `TODO(017)` markers.
-- [ ] T017 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the data-model fields:
+- [x] T017 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the data-model fields:
   - `canvasGesture` gains `'card-resize' | 'segment' | 'endpoint'`.
   - `resizeReadout` and `endpointHover`.
   - `resetForDeck` clears them.
-- [ ] T018 [P] Add the contract ids to the "Editing" section of `apps/app/src/editor/shell/shortcuts.ts` (+ test): `resize-card`, `move-segment`, `move-segment-10`, `reset-route`, `resize-no-snap`, `resize-ratio`, `resize-centre`.
+- [x] T018 [P] Add the contract ids to the "Editing" section of `apps/app/src/editor/shell/shortcuts.ts` (+ test): `resize-card`, `move-segment`, `move-segment-10`, `reset-route`, `resize-no-snap`, `resize-ratio`, `resize-centre`.
 - [ ] T019 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The demo deck must look unchanged. Import `full.sododeck.json` and check the sized card and the routed edge by eye.
 
 **Checkpoint**: stored sizes and routes render on the canvas and in export. The stories can start.
