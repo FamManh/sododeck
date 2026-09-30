@@ -397,7 +397,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `apps/app/CLAUDE.md` (`editor/style/`, the `style.colour` action, `stylePreview`).
   - `.agents/skills/react-flow/SKILL.md` (the per-node CSS custom property recipe).
 - [x] T060 [P] Update `docs/backlog.md`: mark 020 as implemented, with links to the spec and ADR.
-- [ ] T061 Accessibility pass:
+- [x] T061 Accessibility pass:
   - Complete quickstart 1, 3 and 5 with the keyboard only.
   - Check with a screen reader that swatch names, the checked state, the warning and the announcements are read.
   - Check that reduced motion shows no popover or preview animation.
