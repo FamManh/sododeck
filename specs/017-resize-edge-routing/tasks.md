@@ -356,7 +356,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US6. Start each gesture and check the hint text and the one-time announcement.
 
-- [ ] T051 [US6] Add `card-resize`, `segment` and `endpoint` to `HINTS` in `apps/app/src/editor/editing/gesture-hints.ts`, with the contract texts and ⌘ → Ctrl through the `apple` flag. Extend `gesture-hints.test.ts` and the `gesture-hint.tsx` test: each text appears during its gesture, disappears after, and is announced once.
+- [x] T051 [US6] Add `card-resize`, `segment` and `endpoint` to `HINTS` in `apps/app/src/editor/editing/gesture-hints.ts`, with the contract texts and ⌘ → Ctrl through the `apple` flag. Extend `gesture-hints.test.ts` and the `gesture-hint.tsx` test: each text appears during its gesture, disappears after, and is announced once.
 
 ---
 

@@ -3,7 +3,7 @@ import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
 
 export interface HintBarItem {
-  /** The key or keys, e.g. "⌥" or "Esc", shown in a Mono key cap. */
+  /** The key or keys, e.g. "⌥" or "Esc", shown in a Mono key cap. `''` for plain instructional text. */
   keys: string;
   /** What the key does, e.g. "Duplicate". */
   label: string;
@@ -31,9 +31,11 @@ function HintBar({
     >
       {items.map((item) => (
         <span key={`${item.keys} ${item.label}`} className="inline-flex items-center gap-1.5">
-          <kbd className="rounded-segment bg-on-inverse/28 px-1.5 py-px font-mono text-micro tracking-normal">
-            {item.keys}
-          </kbd>
+          {item.keys !== '' && (
+            <kbd className="rounded-segment bg-on-inverse/28 px-1.5 py-px font-mono text-micro tracking-normal">
+              {item.keys}
+            </kbd>
+          )}
           <span>{item.label}</span>
         </span>
       ))}

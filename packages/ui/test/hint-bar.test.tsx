@@ -28,6 +28,21 @@ describe('HintBar', () => {
     expect(container.querySelector('[tabindex]')).toBeNull();
   });
 
+  it('omits the key cap for a plain-text item (017 R14)', () => {
+    const { container } = render(
+      <HintBar
+        items={[
+          { keys: '', label: 'Drop on a side to pin it' },
+          { keys: 'Esc', label: 'Keep old end' },
+        ]}
+      />,
+    );
+    const bar = container.querySelector('[data-slot="hint-bar"]');
+    expect(bar?.textContent).toBe('Drop on a side to pin itEscKeep old end');
+    const caps = [...container.querySelectorAll('kbd')].map((kbd) => kbd.textContent);
+    expect(caps).toEqual(['Esc']);
+  });
+
   it('passes extra props and classes through', () => {
     const { container } = render(<HintBar items={items} className="absolute" data-testid="h" />);
     expect(screen.getByTestId('h').className).toContain('absolute');
