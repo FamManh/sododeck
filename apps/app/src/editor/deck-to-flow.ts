@@ -7,7 +7,15 @@ import { stickyCanvasPosition, stickyLabel, type StickyPlacement } from '@sodode
 import type { SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
-import { cardSize, displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
+import {
+  cardBox,
+  cardSize,
+  displayPosition,
+  groupBounds,
+  NODE_SIZE,
+  type Point,
+} from './canvas-geometry';
+import { resolveSides, type Box } from './routing/route-path';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
 import type { CollapsedFlowMarks } from './collapse-flow-marks';
@@ -689,12 +697,12 @@ export function toStickyNodes(
   });
 }
 
-/** Picks the facing sides of two boxes, so edges leave and enter where it looks natural. */
-export function facingSides(from: Point, to: Point): [HandleSide, HandleSide] {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? ['right', 'left'] : ['left', 'right'];
-  return dy >= 0 ? ['bottom', 'top'] : ['top', 'bottom'];
+/**
+ * Picks the facing sides of two boxes by comparing their centres, so edges leave and enter where
+ * it looks natural (017 R6: identical to the old position-based comparison for equal-size cards).
+ */
+export function facingSides(from: Box, to: Box): readonly [HandleSide, HandleSide] {
+  return resolveSides(from, to);
 }
 
 /** Accessible name of a connection: "<from> to <to>[: label]". */
@@ -740,14 +748,31 @@ export function toFlowEdges(
   }
   const titles = representativeTitles(deck, graph);
   const selected = new Set(view.selection.edges);
+  const cardsByGroupId = new Map(graph.cards.map((card) => [card.groupId, card]));
+  const portsById = new Map(ports.map((port) => [port.id, port]));
+  /** A representative id's box (017 R6): a plain node, a collapsed group card, or a port pill. */
+  function boxFor(id: string): Box | undefined {
+    if (id.startsWith(COLLAPSED_NODE_PREFIX)) {
+      return cardsByGroupId.get(id.slice(COLLAPSED_NODE_PREFIX.length))?.rect;
+    }
+    const port = portsById.get(id);
+    if (port !== undefined)
+      return { x: port.position.x, y: port.position.y, width: 120, height: 36 };
+    const node = lookups.nodesById.get(id);
+    const index = lookups.nodeIndexById.get(id);
+    if (node === undefined || index === undefined) return undefined;
+    return cardBox(node, index, view.level);
+  }
   const plainEdges = graph.edges.flatMap((edgeId) => {
     const edge = lookups.edgesById.get(edgeId);
     if (edge === undefined) return [];
     const from = nodes.get(edge.from);
     const to = nodes.get(edge.to);
+    const fromBox = boxFor(edge.from);
+    const toBox = boxFor(edge.to);
     // The schema does not check references; a file may still point at missing nodes.
-    if (!from || !to) return [];
-    const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+    if (!from || !to || fromBox === undefined || toBox === undefined) return [];
+    const [sourceHandle, targetHandle] = resolveSides(fromBox, toBox, edge.route);
     const isSelected = selected.has(edge.id);
     const focused = edge.id === view.focusedEdgeId;
     const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
@@ -824,8 +849,11 @@ export function toFlowEdges(
       const toId = edge.to === insideNodeId ? representative : port.id;
       const from = nodes.get(fromId);
       const to = nodes.get(toId);
-      if (from === undefined || to === undefined) return [];
-      const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+      const fromBox = boxFor(fromId);
+      const toBox = boxFor(toId);
+      if (from === undefined || to === undefined || fromBox === undefined || toBox === undefined)
+        return [];
+      const [sourceHandle, targetHandle] = facingSides(fromBox, toBox);
       const isSelected = selected.has(edge.id);
       const focused = edge.id === view.focusedEdgeId;
       const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
@@ -895,8 +923,11 @@ export function toFlowEdges(
   const mergedEdges = graph.merged.flatMap((edge) => {
     const from = nodes.get(edge.a);
     const to = nodes.get(edge.b);
-    if (from === undefined || to === undefined) return [];
-    const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+    const fromBox = boxFor(edge.a);
+    const toBox = boxFor(edge.b);
+    if (from === undefined || to === undefined || fromBox === undefined || toBox === undefined)
+      return [];
+    const [sourceHandle, targetHandle] = facingSides(fromBox, toBox);
     const focused = edge.id === view.focusedEdgeId;
     const inFocus = view.focus?.edges.has(edge.id) === true;
     const flow = view.marks.merged.get(edge.id);

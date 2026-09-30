@@ -446,11 +446,12 @@ describe('toFlowEdges', () => {
     expect(focused.find((edge) => edge.id === 'e1')?.data?.showLabel).toBe(true);
   });
 
-  it('connects the facing sides of the two nodes', () => {
-    expect(facingSides({ x: 0, y: 0 }, { x: 200, y: 20 })).toEqual(['right', 'left']);
-    expect(facingSides({ x: 0, y: 0 }, { x: -200, y: 20 })).toEqual(['left', 'right']);
-    expect(facingSides({ x: 0, y: 0 }, { x: 10, y: 200 })).toEqual(['bottom', 'top']);
-    expect(facingSides({ x: 0, y: 0 }, { x: 10, y: -200 })).toEqual(['top', 'bottom']);
+  it('connects the facing sides of the two nodes, comparing centres (017)', () => {
+    const box = (x: number, y: number) => ({ x, y, width: 160, height: 50 });
+    expect(facingSides(box(0, 0), box(200, 20))).toEqual(['right', 'left']);
+    expect(facingSides(box(0, 0), box(-200, 20))).toEqual(['left', 'right']);
+    expect(facingSides(box(0, 0), box(10, 200))).toEqual(['bottom', 'top']);
+    expect(facingSides(box(0, 0), box(10, -200))).toEqual(['top', 'bottom']);
   });
 
   it('reuses edge objects when nothing about them changed', () => {
@@ -473,6 +474,30 @@ describe('toFlowEdges', () => {
     );
     expect(next[0]).not.toBe(first[0]);
     expect(next[0]?.data).toMatchObject({ dimmed: true });
+  });
+
+  it('pins a handle to the side named by edge.route (017)', () => {
+    const routed: SododeckFile = {
+      ...deck,
+      edges: [{ id: 'e1', from: 'a', to: 'b', route: { fromSide: 'top', toSide: 'top' } }],
+    };
+    const graph = topLevelGraph(routed);
+    const [edge] = toFlowEdges(routed, graph, view());
+    // B sits below and to the right of A, so automatic routing would pick bottom/top-ish
+    // sides facing each other; the pinned route forces both ends to "top" instead.
+    expect(edge?.sourceHandle).toBe('top');
+    expect(edge?.targetHandle).toBe('top');
+  });
+
+  it('breaks the edge cache when edge.route changes (017)', () => {
+    const graph = topLevelGraph(deck);
+    const routed: SododeckFile = {
+      ...deck,
+      edges: [{ id: 'e1', from: 'a', to: 'b', route: { offset: 20 } }],
+    };
+    const first = toFlowEdges(deck, graph, view());
+    const second = toFlowEdges(routed, topLevelGraph(routed), view());
+    expect(second[0]).not.toBe(first[0]);
   });
 });
 

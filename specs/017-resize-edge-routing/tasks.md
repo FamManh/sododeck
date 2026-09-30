@@ -143,7 +143,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - The group boxes use the new `groupBounds(deck, level)`.
   - The port pill x uses the anchor's width (`:511`).
   - Tests: a sized node renders at its size at every level, and changing only `size` gives a new node object.
-- [ ] T013 [P] Write failing tests in `apps/app/src/editor/routing/route-path.test.ts` (new) for (R6):
+- [x] T013 [P] Write failing tests in `apps/app/src/editor/routing/route-path.test.ts` (new) for (R6):
   - `resolveSides`: the pinned side wins; otherwise sides are picked by comparing centres, which is equal to today's `facingSides` result for equal-size cards;
   - `middleSegment` for all 16 side pairs;
   - `nearestSide`;
@@ -152,7 +152,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
     - `offset: 60` on a vertical pair moves the middle segment and `labelY` by 60;
     - on a horizontal pair it moves `centerX` / `labelX`;
     - on a perpendicular or same-side pair, the offset is ignored and `segment` is null.
-- [ ] T014 Implement `apps/app/src/editor/routing/route-path.ts`. Make `facingSides` in `deck-to-flow.ts` compare box centres, and route every plain edge's `sourceHandle` / `targetHandle` through `resolveSides(fromBox, toBox, edge.route)`. Merged edges and port edges stay automatic (edge case). Add a `deck-to-flow` test: a pinned side sets the handle, and a changed route breaks the edge cache.
+- [x] T014 Implement `apps/app/src/editor/routing/route-path.ts`. Make `facingSides` in `deck-to-flow.ts` compare box centres, and route every plain edge's `sourceHandle` / `targetHandle` through `resolveSides(fromBox, toBox, edge.route)`. Merged edges and port edges stay automatic (edge case). Add a `deck-to-flow` test: a pinned side sets the handle, and a changed route breaks the edge cache.
 - [ ] T015 Switch `apps/app/src/editor/deck-edge.tsx` to `routedStepPath`, passing `data.route`. Add `route` to the `DeckFlowEdge` data in `deck-to-flow.ts`, and point `apps/app/src/editor/merged-edge.tsx` at the shared helper with no route. Add a test in `deck-edge.test.tsx` (new or existing): with an offset, the label pill, the edge anchor and the step badge sit at the shifted `labelX` / `labelY`. The flow token and the focus ring use the same `d` (FR-017).
 - [ ] T016 [P] Update `apps/app/src/editor/export/edge-geometry.ts` (+ test): `edgePath(from, to, route?)` uses `routedStepPath`, and `extent` includes the shifted middle segment. Update `apps/app/src/editor/export/scene.ts` (+ `scene.test.ts`) so card rects use `cardSize` and plain edges pass `edge.route`. Resolve the two `TODO(017)` markers.
 - [ ] T017 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the data-model fields:
