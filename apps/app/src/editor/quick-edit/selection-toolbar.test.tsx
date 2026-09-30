@@ -89,6 +89,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Technology: none',
       'Links',
       'Rules',
+      'Colour: none',
       'More actions',
     ]);
     expect(screen.getByRole('button', { name: 'Owner: Checkout' })).toHaveAttribute(
@@ -111,6 +112,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Owner: Mixed',
       'Tags',
       'Technology: none',
+      'Colour: none',
       'Group',
       'Align',
       'More actions',

@@ -3,7 +3,7 @@
  * view. Pure functions of the snapshot; nothing here is stored (FR-035).
  */
 import { analyzeFlow, ruleUsage } from '@sododeck/model';
-import type { Id, Node, SododeckFile } from '@sododeck/schema';
+import type { ColorRef, Group, Id, Node, SododeckFile } from '@sododeck/schema';
 
 const byName = (a: string, b: string) =>
   a.localeCompare(b, undefined, { sensitivity: 'base' }) || a.localeCompare(b);
@@ -151,5 +151,20 @@ export function bulkView(nodes: readonly Node[]): BulkView {
     tech: shared(nodes.map((n) => n.tech ?? '')),
     group: shared(nodes.map((n) => n.group ?? null)),
     tags: [...counts].map(([tag, count]) => ({ tag, count })),
+  };
+}
+
+export interface StyleView {
+  fill: Shared<ColorRef | null>;
+  stroke: Shared<ColorRef | null>;
+}
+
+/** One shared colour (or `null` / Mixed) per channel, across selected components and groups (020). */
+export function styleView(
+  objects: readonly (Pick<Node, 'style'> | Pick<Group, 'style'>)[],
+): StyleView {
+  return {
+    fill: shared(objects.map((o) => o.style?.fill ?? null)),
+    stroke: shared(objects.map((o) => o.style?.stroke ?? null)),
   };
 }

@@ -30,6 +30,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
   it('lists each target’s menu, in sections', () => {
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
+      ['Colour: none'],
       ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
       ['Group', 'Align', 'Arrange'],
       ['Pin'],
@@ -38,6 +39,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.parent, 'menu')[0]).toEqual(['Open details', 'Open inside', 'Rename']);
     expect(labels(TARGETS.components, 'menu')).toEqual([
       ['Open details'],
+      ['Colour: none'],
       ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
       ['Group', 'Align', 'Arrange'],
       ['Pin all'],
@@ -50,7 +52,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     ]);
     expect(labels(TARGETS.group, 'menu')).toEqual([
       ['Open details', 'Rename'],
-      ['Collapse', 'Select members'],
+      ['Collapse', 'Select members', 'Colour: none'],
       ['Copy', 'Cut', 'Duplicate'],
       ['Delete group'],
     ]);
@@ -60,7 +62,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Select all', 'Fit'],
     ]);
     expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Copy JSON'], ['Delete']]);
-    expect(labels(TARGETS.mixed, 'menu')).toEqual([['Copy JSON'], ['Delete']]);
+    expect(labels(TARGETS.mixed, 'menu')).toEqual([['Colour: none'], ['Copy JSON'], ['Delete']]);
   });
 
   it('keeps only Open details, Copy, Copy JSON and Fit in flow mode and sessions', () => {
@@ -84,6 +86,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Technology: none',
       'Links',
       'Rules',
+      'Colour: none',
       'More actions',
     ]);
     expect(labels(TARGETS.components, 'toolbar').flat()).toEqual([
@@ -91,6 +94,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Owner: none',
       'Tags',
       'Technology: none',
+      'Colour: none',
       'Group',
       'Align',
       'More actions',
@@ -106,9 +110,10 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Ungroup',
       'Collapse',
       'Select members',
+      'Colour: none',
       'More actions',
     ]);
-    expect(labels(TARGETS.mixed, 'toolbar').flat()).toEqual(['More actions']);
+    expect(labels(TARGETS.mixed, 'toolbar').flat()).toEqual(['Colour: none', 'More actions']);
   });
 
   it('has a runnable action behind every item it shows (SC-006)', () => {

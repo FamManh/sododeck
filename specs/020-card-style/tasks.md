@@ -205,12 +205,12 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - Switching to Stroke then picking "Blue" calls `onApply('stroke', 'blue')`.
   - "No colour" calls `onApply('fill', null)`.
   - The footer `status` shows "Green · card-green-fill" for the checked or hovered swatch.
-- [ ] T025 [P] [US1] Write failing tests in `apps/app/src/editor/actions/style-actions.test.ts`:
+- [x] T025 [P] [US1] Write failing tests in `apps/app/src/editor/actions/style-actions.test.ts`:
   - `style.colour` is offered on the toolbar and menu for `component`, `components`, `group` and `mixed`.
   - It is not offered for `connection`, `sticky` or `canvas`.
   - It is not offered in `flow` or `session` mode.
   - Running it from the menu calls `openToolbarField('style')`.
-- [ ] T026 [P] [US1] Write failing tests in `apps/app/src/editor/style/apply-style.test.ts`:
+- [x] T026 [P] [US1] Write failing tests in `apps/app/src/editor/style/apply-style.test.ts`:
   - `applyStyle(editor, selection, channel, value)` is one undo step (one `editor.undo()` restores all).
   - It passes only nodes and groups to `setStyle`.
   - It announces "Fill set to Green on 1 component" or "Fill removed from 3 components".
@@ -224,8 +224,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 - [x] T028 [P] [US1] Create `packages/ui/src/components/swatch-grid.tsx`: `SwatchGrid` (`role="radiogroup"`, `columns` prop, roving focus) and `Swatch` (28 px circle, background from a `--swatch` custom property, a 1 px ring from `--swatch-ring`, and when checked a 2 px surface gap, a 2 px orange ring and a lucide `Check`). Add it to the design gallery (`apps/app/src/design-gallery/`) with checked, focused and unchecked samples. T023 is now green.
 - [ ] T029 [US1] Create `apps/app/src/editor/style/style-picker.tsx`: Fill / Stroke `SegmentedControl` (bound to `stylePickerTab`), a "No colour" button (lucide `Ban`, `aria-pressed`), the named `SwatchGrid` with 7 columns, and the footer `status`. It takes `value: { fill; stroke } | 'mixed'` per channel, `onApply` and `deckColours` (rendered in US3). T024 is now green (except the US3 parts).
-- [ ] T030 [US1] Create `apps/app/src/editor/style/apply-style.ts`: `applyStyle`, which is `oneStep(editor, () => editor.setStyle(targets, channel, value))`, plus the announcement through the live region (`useUiStore.getState().announce`). T026 is now green.
-- [ ] T031 [US1] Create `apps/app/src/editor/actions/style-actions.ts` with `style.colour` (`field: 'style'`, section `edit`, `where` per the contract, default modes). Its menu run closes the menu and calls `openToolbarField('style')`. Register it in `apps/app/src/editor/actions/index.ts` `ACTIONS` after `FIELD`. T025 is now green.
+- [x] T030 [US1] Create `apps/app/src/editor/style/apply-style.ts`: `applyStyle`, which is `oneStep(editor, () => editor.setStyle(targets, channel, value))`, plus the announcement through the live region (`useUiStore.getState().announce`). T026 is now green.
+- [x] T031 [US1] Create `apps/app/src/editor/actions/style-actions.ts` with `style.colour` (`field: 'style'`, section `edit`, `where` per the contract, default modes). Its menu run closes the menu and calls `openToolbarField('style')`. Register it in `apps/app/src/editor/actions/index.ts` `ACTIONS` after `FIELD`. T025 is now green.
 - [ ] T032 [US1] Wire the toolbar:
   - In `apps/app/src/editor/quick-edit/field-popover.tsx`, render `StylePopover` for `field === 'style'` at 272 px, with `aria-label` "Colour". The popover reads the selected objects from the snapshot, computes each channel's value or `'mixed'` (reusing `bulkView`), and calls `applyStyle`. Picking keeps the popover open.
   - In `selection-toolbar.tsx`, the button shows the current fill as a mini swatch, with the accessible name "Colour: Green", "Colour: none" or "Colour: Mixed".
