@@ -48,6 +48,7 @@ const perType: [string, SododeckFile][] = [
           parent: 'p',
           rules: ['R-1'],
           position: { x: -1.5, y: 20 },
+          size: { width: 244, height: 80 },
         },
       ],
       groups: [{ id: 'g', title: 'G' }],
@@ -110,6 +111,7 @@ const perType: [string, SododeckFile][] = [
           owner: 'Team',
           tags: ['t'],
           links: [{ url: 'https://example.com' }],
+          route: { fromSide: 'right', toSide: 'left', offset: -12 },
         },
       ],
     },
@@ -597,6 +599,71 @@ describe('group frames (016)', () => {
     expect(Object.keys(group?.size ?? {})).toEqual(['width', 'height']);
     const text = serializeDeck(toJSON(doc));
     expect(serializeDeck(toJSON(fromJSON(toJSON(doc))))).toBe(text);
+  });
+});
+
+describe('card size and connector route (017)', () => {
+  it('round-trips a node with and without size', () => {
+    const withSize: SododeckFile = {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A', size: { width: 244, height: 80 } }],
+    };
+    const withoutSize: SododeckFile = {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+    };
+    for (const file of [withSize, withoutSize]) {
+      expect(toJSON(fromJSON(file))).toEqual(file);
+    }
+    expect(toJSON(fromJSON(withoutSize)).nodes[0]).not.toHaveProperty('size');
+  });
+
+  it('round-trips an edge route of sides only, offset only, all three, and a hand-written {}', () => {
+    const base: Omit<SododeckFile, 'edges'> = {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+    };
+    const routes = [
+      { fromSide: 'top', toSide: 'bottom' },
+      { offset: 24 },
+      { fromSide: 'left', toSide: 'right', offset: -8 },
+      {},
+    ] as const;
+    for (const route of routes) {
+      const file: SododeckFile = {
+        ...base,
+        edges: [{ id: 'e', from: 'a', to: 'a', route }],
+      };
+      expect(toJSON(fromJSON(file))).toEqual(file);
+    }
+  });
+
+  it('writes size after position and route after links', () => {
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    editor.add('nodes', { id: 'a', type: 'client', title: 'A', position: { x: 1, y: 2 } });
+    editor.setCardSize('a', { width: 200, height: 72 });
+    editor.add('edges', { id: 'e', from: 'a', to: 'a', links: [{ url: 'https://example.com' }] });
+    editor.setEdgeRoute('e', { fromSide: 'top', toSide: 'bottom' });
+    const [node] = toJSON(doc).nodes;
+    const [edge] = toJSON(doc).edges;
+    expect(Object.keys(node ?? {})).toEqual(['id', 'type', 'title', 'position', 'size']);
+    expect(Object.keys(edge ?? {})).toEqual(['id', 'from', 'to', 'links', 'route']);
+  });
+
+  it('keeps size and route absent after an edit to another field', () => {
+    const doc = fromJSON({
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+      edges: [{ id: 'e', from: 'a', to: 'a' }],
+    });
+    const editor = createEditor(doc);
+    editor.update('nodes', 'a', { title: 'Renamed' });
+    editor.update('edges', 'e', { label: 'Call' });
+    const [node] = toJSON(doc).nodes;
+    const [edge] = toJSON(doc).edges;
+    expect(node).not.toHaveProperty('size');
+    expect(edge).not.toHaveProperty('route');
   });
 });
 

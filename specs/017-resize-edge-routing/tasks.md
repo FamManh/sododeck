@@ -71,7 +71,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `017-resize-edge-routing` from the latest `main`, after the 017 docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T001 Create branch `017-resize-edge-routing` from the latest `main`, after the 017 docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
 - [ ] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/017-resize-edge-routing/bench-before.md`.
 - [ ] T003 Add a `resized-routed` scenario to `apps/app/bench/perf.bench.ts` (R15, FR-031), enabled with `BENCH_ROUTES=1`:
   - Give every bench node `size` 200 × 72.
@@ -97,7 +97,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Schema
 
-- [ ] T005 Write failing cases in `packages/schema/test/fixtures.ts`:
+- [x] T005 Write failing cases in `packages/schema/test/fixtures.ts`:
   - a node `size` with `width: 0`;
   - `route.fromSide: "middle"`;
   - `route` with an extra key `points`;
@@ -105,7 +105,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Extend `packages/schema/examples/full.sododeck.json` with one node `size` and one edge `route` that has all three keys (the coverage test needs them).
 
-- [ ] T006 Edit `packages/schema/schema/v1.json` (R1, data-model):
+- [x] T006 Edit `packages/schema/schema/v1.json` (R1, data-model):
   - Add `$defs/Side` and `$defs/EdgeRoute`, with a description on every property that states the default.
   - Add `Node.size` (`$ref: Size`) right after `position`.
   - Add `Edge.route` after `links`.
@@ -114,18 +114,18 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Model
 
-- [ ] T007 [P] Write failing round-trip cases in `packages/model/test/round-trip.test.ts`:
+- [x] T007 [P] Write failing round-trip cases in `packages/model/test/round-trip.test.ts`:
   - a node with and without `size`;
   - an edge with a route of sides only, offset only, all three, and a hand-written `{}`;
   - the key order `…position, size` / `…links, route`;
   - identical text after `serializeDeck`;
   - absent fields stay absent after updating another field (e.g. a title).
-- [ ] T008 [P] Write failing tests in `packages/model/test/shape.test.ts` (new):
+- [x] T008 [P] Write failing tests in `packages/model/test/shape.test.ts` (new):
   - `setCardSize` sets, replaces and removes (`null`), is one undo step, joins an open gesture, and rejects `width <= 0`.
   - `setEdgeRoute` merges into an existing route, `null` clears a key, `offset: 0` is dropped, `route` is removed when empty, a `null` patch removes it, and it is one undo step.
   - Two docs synced through updates that change `fromSide` and `offset` concurrently both keep their change.
-- [ ] T009 Extend `writePatch` in `packages/model/src/ops/patch.ts` to write `size` and `route` per key, as `position` is written. Implement `packages/model/src/ops/shape.ts` (`setCardSize` with undo key `nodes:<id>:size`, `setEdgeRoute` with undo key `edges:<id>:route`). Wire both into `DeckEditor` in `packages/model/src/editor.ts`, and export them from `packages/model/src/index.ts`. T007 and T008 go green.
-- [ ] T010 [P] Write a failing test in `packages/model/test/frames.test.ts` that `fitGroupFrames(deck, { sizeOf })` sizes each member with `sizeOf`, and that the default without `sizeOf` is unchanged. Implement it in `packages/model/src/geometry.ts`.
+- [x] T009 Extend `writePatch` in `packages/model/src/ops/patch.ts` to write `size` and `route` per key, as `position` is written. Implement `packages/model/src/ops/shape.ts` (`setCardSize` with undo key `nodes:<id>:size`, `setEdgeRoute` with undo key `edges:<id>:route`). Wire both into `DeckEditor` in `packages/model/src/editor.ts`, and export them from `packages/model/src/index.ts`. T007 and T008 go green.
+- [x] T010 [P] Write a failing test in `packages/model/test/frames.test.ts` that `fitGroupFrames(deck, { sizeOf })` sizes each member with `sizeOf`, and that the default without `sizeOf` is unchanged. Implement it in `packages/model/src/geometry.ts`.
 
 ### App geometry and rendering of stored values
 
