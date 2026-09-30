@@ -174,7 +174,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Tests
 
-- [ ] T020 [P] [US1] Write failing tests in `apps/app/src/editor/editing/resize-limits.test.ts` for the new `resizeBox` (R4):
+- [x] T020 [P] [US1] Write failing tests in `apps/app/src/editor/editing/resize-limits.test.ts` for the new `resizeBox` (R4):
   - all 8 handles;
   - absolute sizes rounded to multiples of 4 (164 + 80 → 244, 50 + 30 → 80);
   - min 120 × 44 and max 800 × 600;
@@ -182,13 +182,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - ⌥ from the centre;
   - resizing from the top or left moves x / y;
   - the existing group-frame cases (content minimum, `MIN_FRAME`) still pass through `resizeFrame`.
-- [ ] T021 [P] [US1] Write failing tests in `apps/app/src/editor/editing/snap.test.ts` for `snapEdges(box, handle, candidates, threshold)`:
+- [x] T021 [P] [US1] Write failing tests in `apps/app/src/editor/editing/snap.test.ts` for `snapEdges(box, handle, candidates, threshold)`:
   - only the dragged edges snap, within 6 screen px;
   - the nearest line wins;
   - the guides are returned;
   - an empty candidate list means no change.
-- [ ] T022 [P] [US1] Write failing tests in `apps/app/src/editor/card-text.test.ts` for `textLines(size, level)`: 44 px tall gives 1 title line; 80 px tall gives 2 title lines and 1 subtitle line; the compact and full layouts differ; there is never less than 1 line.
-- [ ] T023 [P] [US1] Write failing tests in `apps/app/src/editor/editing/card-resize.test.ts` with a real `DeckEditor`:
+- [x] T022 [P] [US1] Write failing tests in `apps/app/src/editor/card-text.test.ts` for `textLines(size, level)`: 44 px tall gives 1 title line; 80 px tall gives 2 title lines and 1 subtitle line; the compact and full layouts differ; there is never less than 1 line.
+- [x] T023 [P] [US1] Write failing tests in `apps/app/src/editor/editing/card-resize.test.ts` with a real `DeckEditor`:
   - start, several apply calls and end give one undo step with the final size;
   - from the top-left, the position is written through `moveInView` in the same step, and in a non-base view only that view's position changes;
   - cancel restores the size and position and leaves no undo entry;
@@ -197,8 +197,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Implementation
 
-- [ ] T024 [US1] Refactor `apps/app/src/editor/editing/resize-limits.ts` into `resizeBox` plus the card limits. Keep `resizeFrame` / `clampFrame` as thin wrappers, so 016's callers are unchanged. Add `snapEdges` to `apps/app/src/editor/editing/snap.ts`. T020 and T021 go green.
-- [ ] T025 [US1] Implement `apps/app/src/editor/editing/card-resize.ts`, following `frame-resize.ts`:
+- [x] T024 [US1] Refactor `apps/app/src/editor/editing/resize-limits.ts` into `resizeBox` plus the card limits. Keep `resizeFrame` / `clampFrame` as thin wrappers, so 016's callers are unchanged. Add `snapEdges` to `apps/app/src/editor/editing/snap.ts`. T020 and T021 go green.
+- [x] T025 [US1] Implement `apps/app/src/editor/editing/card-resize.ts`, following `frame-resize.ts`:
   - `startCardResize`: `beginGesture`, `setCanvasGesture('card-resize')`, `setActiveGesture({ cancel })`, and on-screen snap candidates collected once.
   - `applyCardResize`: `resizeBox`, then `snapEdges` unless ⌘ is held, then `setCardSize` and `moveInView` when x / y change, then `resizeReadout`.
   - `endCardResize`: `endGesture` and the announcement.

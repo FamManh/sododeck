@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { snap, snapCandidates } from './snap';
+import { snap, snapCandidates, snapEdges } from './snap';
 
 const card = { x: 100, y: 100, width: 100, height: 50 };
 
@@ -85,5 +85,46 @@ describe('snap', () => {
   it('covers the box beyond the candidate on the other axis', () => {
     const r = snap({ x: 102, y: 400, width: 40, height: 40 }, candidates, 6);
     expect(r.guides).toEqual([{ axis: 'x', at: 100, from: 100, to: 440 }]);
+  });
+});
+
+describe('snapEdges (017 R4)', () => {
+  const candidates = snapCandidates([card]);
+
+  it('snaps only the dragged right edge on a side handle', () => {
+    // right edge proposed at 203 (card's right line is 200): the left edge stays put.
+    const box = { x: 100, y: 400, width: 103, height: 30 };
+    const r = snapEdges(box, 'right', candidates, 6);
+    expect(r.box).toEqual({ x: 100, y: 400, width: 100, height: 30 });
+    expect(r.guides).toHaveLength(1);
+    expect(r.guides[0]).toMatchObject({ axis: 'x', at: 200 });
+  });
+
+  it('snaps only the dragged left edge, keeping the right edge fixed', () => {
+    // left edge proposed at 104: the card's left line is 100, so it moves and width grows.
+    const box = { x: 104, y: 400, width: 60, height: 30 };
+    const r = snapEdges(box, 'left', candidates, 6);
+    expect(r.box).toEqual({ x: 100, y: 400, width: 64, height: 30 });
+    expect(r.guides[0]).toMatchObject({ axis: 'x', at: 100 });
+  });
+
+  it('snaps both dragged edges of a corner handle, never the centre', () => {
+    // right edge near 200, bottom edge near 150 (card spans y 100..150).
+    const box = { x: 100, y: 100, width: 103, height: 53 };
+    const r = snapEdges(box, 'bottom-right', candidates, 6);
+    expect(r.box).toEqual({ x: 100, y: 100, width: 100, height: 50 });
+    expect(r.guides.map((g) => g.axis).sort()).toEqual(['x', 'y']);
+  });
+
+  it('does not snap beyond the threshold', () => {
+    const box = { x: 500, y: 400, width: 110, height: 30 };
+    const r = snapEdges(box, 'right', candidates, 6);
+    expect(r).toEqual({ box, guides: [] });
+  });
+
+  it('leaves the box unchanged with no candidates', () => {
+    const empty = { x: [], y: [] };
+    const box = { x: 500, y: 400, width: 100, height: 30 };
+    expect(snapEdges(box, 'bottom-right', empty, 6)).toEqual({ box, guides: [] });
   });
 });

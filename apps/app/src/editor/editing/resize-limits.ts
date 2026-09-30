@@ -1,6 +1,8 @@
 /**
- * Limits of a group frame resize (016 R5, FR-044): the frame always contains its members plus
- * padding and is never smaller than MIN_FRAME. Pure; the resizer and the drawer fields share it.
+ * Limits of a group frame resize (016 R5, FR-044) and of a card resize (017 R4): `resizeFrame`
+ * keeps a frame containing its members plus padding, never smaller than MIN_FRAME; `resizeBox`
+ * generalises the same span math to any min/max/step (cards: 120×44–800×600, step 4). Pure; the
+ * resizers and the drawer fields share it.
  */
 import type { Rect } from '../canvas-geometry';
 
@@ -107,8 +109,44 @@ function toRect(x: Span, y: Span): Rect {
   return { x: left, y: top, width: Math.round(x.hi) - left, height: Math.round(y.hi) - top };
 }
 
-export function resizeFrame(input: ResizeInput): Rect {
-  const { start, proposed, handle, keepRatio, fromCentre } = input;
+/**
+ * Limits of a card resize (017 R4, CARD_SIZE_LIMITS): min/max size and a step that rounds the
+ * absolute width/height of a moved edge to its nearest multiple (never a fixed, undragged edge).
+ */
+export interface BoxResizeInput {
+  start: Rect;
+  proposed: Rect;
+  handle: Handle;
+  min: { width: number; height: number };
+  max: { width: number; height: number };
+  step: number;
+  keepRatio: boolean;
+  fromCentre: boolean;
+}
+
+function clampStep(size: number, min: number, max: number, step: number): number {
+  const clamped = Math.min(max, Math.max(min, size));
+  return Math.round(clamped / step) * step;
+}
+
+interface Spans {
+  x: Span;
+  y: Span;
+  modeX: AxisMode;
+  modeY: AxisMode;
+}
+
+/**
+ * The moving edges' spans before either resizer's own clamp: the handle's axes proposed (or
+ * mirrored with ⌥), then ⇧'s ratio lock. Shared by `resizeBox` and `resizeFrame` (017 R4, T024).
+ */
+function proposedSpans(
+  start: Rect,
+  proposed: Rect,
+  handle: Handle,
+  keepRatio: boolean,
+  fromCentre: boolean,
+): Spans {
   const startX = xSpan(start);
   const startY = ySpan(start);
   const moveX = axisMode(handle, 'left', 'right');
@@ -138,11 +176,48 @@ export function resizeFrame(input: ResizeInput): Rect {
       x = sized(startX, modeX, height * ratio);
     }
   }
+  return { x, y, modeX, modeY };
+}
 
-  const required = requiredBox(input.content, input.padding);
-  x = clampSpan(x, startX, modeX, required ? xSpan(required) : null, MIN_FRAME.width);
-  y = clampSpan(y, startY, modeY, required ? ySpan(required) : null, MIN_FRAME.height);
+export function resizeBox(input: BoxResizeInput): Rect {
+  const { start, proposed, handle, keepRatio, fromCentre, min, max, step } = input;
+  const startX = xSpan(start);
+  const startY = ySpan(start);
+  const {
+    x: rawX,
+    y: rawY,
+    modeX,
+    modeY,
+  } = proposedSpans(start, proposed, handle, keepRatio, fromCentre);
+  let x = rawX;
+  let y = rawY;
+
+  // Only a moved edge rounds to `step`; an axis the handle never touches keeps its exact start
+  // value, so a card whose stored size is not itself a multiple of 4 never drifts on one axis.
+  if (modeX !== 'fixed') {
+    x = sized(startX, modeX, clampStep(x.hi - x.lo, min.width, max.width, step));
+  }
+  if (modeY !== 'fixed') {
+    y = sized(startY, modeY, clampStep(y.hi - y.lo, min.height, max.height, step));
+  }
   return toRect(x, y);
+}
+
+export function resizeFrame(input: ResizeInput): Rect {
+  const { start, handle, content, padding } = input;
+  const startX = xSpan(start);
+  const startY = ySpan(start);
+  const { x, y, modeX, modeY } = proposedSpans(
+    start,
+    input.proposed,
+    handle,
+    input.keepRatio,
+    input.fromCentre,
+  );
+  const required = requiredBox(content, padding);
+  const clampedX = clampSpan(x, startX, modeX, required ? xSpan(required) : null, MIN_FRAME.width);
+  const clampedY = clampSpan(y, startY, modeY, required ? ySpan(required) : null, MIN_FRAME.height);
+  return toRect(clampedX, clampedY);
 }
 
 /**
