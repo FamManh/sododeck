@@ -27,6 +27,7 @@ const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
   rules: 'Rules',
   protocol: 'Protocol',
   direction: 'Direction',
+  style: 'Colour',
 };
 
 const count = (n: number) => `${String(n)} ${n === 1 ? 'component' : 'components'}`;

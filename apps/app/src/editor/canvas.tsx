@@ -380,6 +380,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const problems = problemMarks(useProblems());
+  const stylePreview = useUiStore((s) => s.stylePreview);
   const view = useMemo(
     () => ({
       selection,
@@ -391,8 +392,20 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       marks: collapsedMarks,
       render,
       problems,
+      stylePreview,
     }),
-    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks, render, problems],
+    [
+      selection,
+      focusedId,
+      focusedEdgeId,
+      labelsOn,
+      level,
+      focus,
+      collapsedMarks,
+      render,
+      problems,
+      stylePreview,
+    ],
   );
 
   const nodes = useMemo(

@@ -153,7 +153,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### App derived look
 
-- [ ] T019 [P] Write failing tests in `apps/app/src/editor/style/card-style.test.ts` for `resolveLook(style, preview?)`:
+- [x] T019 [P] Write failing tests in `apps/app/src/editor/style/card-style.test.ts` for `resolveLook(style, preview?)`:
   - It returns `undefined` with no style.
   - A named fill gives `var(--sd-card-green-fill)`, `namedFill: true` and `text: 'default'`.
   - A hex fill gives the hex, `text` from `readableText`, and `namedFill: false`.
@@ -162,8 +162,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Also test `colourName(ref)`: "Green", or the hex as-is.
 
-- [ ] T020 Create `apps/app/src/editor/style/card-style.ts` with `CardLook`, `resolveLook`, `colourName` and the `CARD_COLORS` list (from the generated schema type). T019 is now green.
-- [ ] T021 In `apps/app/src/editor/deck-to-flow.ts`:
+- [x] T020 Create `apps/app/src/editor/style/card-style.ts` with `CardLook`, `resolveLook`, `colourName` and the `CARD_COLORS` list (from the generated schema type). T019 is now green.
+- [x] T021 In `apps/app/src/editor/deck-to-flow.ts`:
   - Add `look?: CardLook` to `DeckNodeData`, `GroupBoundaryData` and the collapsed-group data.
   - Compute it in `toFlowNode`, `groupNodes` and `collapsedNodes`.
   - Add it to each cache check with a structural compare of its fields.
@@ -173,7 +173,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - An unchanged node keeps its object identity across a snapshot where another node's style changed.
   - A preview changes only the selected nodes' `look`.
 
-- [ ] T022 In `apps/app/src/state/ui-store.ts`:
+- [x] T022 In `apps/app/src/state/ui-store.ts`:
   - Add `'style'` to `ToolbarFieldId`.
   - Add `stylePickerTab: 'fill' | 'stroke'` (default `'fill'`), `stylePreview` and `setStylePreview`.
   - Clear `stylePreview` on selection change, on `closeToolbarField` and on `setCanvasGesture`.
