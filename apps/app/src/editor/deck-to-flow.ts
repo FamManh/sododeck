@@ -7,13 +7,7 @@ import { stickyCanvasPosition, stickyLabel, type StickyPlacement } from '@sodode
 import type { SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
-import {
-  displayPosition,
-  groupBounds,
-  NODE_SIZE,
-  nodeSize as sizeForLevel,
-  type Point,
-} from './canvas-geometry';
+import { cardSize, displayPosition, groupBounds, NODE_SIZE, type Point } from './canvas-geometry';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
 import type { CollapsedFlowMarks } from './collapse-flow-marks';
@@ -303,7 +297,7 @@ function toFlowNode(
   ]
     .filter(Boolean)
     .join(' ');
-  const size = sizeForLevel(view.level);
+  const size = cardSize(node, view.level);
   if (
     cached?.selected === selected &&
     cached.data.subtitle === subtitle &&
@@ -319,7 +313,9 @@ function toFlowNode(
     (cached.data.currentStep === true) === currentStep &&
     sameClassName(cached.className, className) &&
     cached.position.x === position.x &&
-    cached.position.y === position.y
+    cached.position.y === position.y &&
+    cached.width === size.width &&
+    cached.height === size.height
   ) {
     return cached;
   }
@@ -500,22 +496,29 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
 export function exportPortRects(
   deck: SododeckFile,
   graph: VisibleGraph,
+  level: Level = 'system',
 ): { id: string; rect: { x: number; y: number; width: number; height: number }; label: string }[] {
-  const { nodePositionById: positions } = deckLookups(deck);
+  const { nodePositionById: positions, nodesById } = deckLookups(deck);
   return graph.ports.flatMap((port) => {
-    const anchors = port.insideNodeIds
-      .map((nodeId) => positions.get(nodeId))
-      .filter((point): point is Point => point !== undefined);
+    const anchors = port.insideNodeIds.flatMap((nodeId) => {
+      const point = positions.get(nodeId);
+      const node = nodesById.get(nodeId);
+      if (point === undefined || node === undefined) return [];
+      return [{ point, width: cardSize(node, level).width }];
+    });
     if (anchors.length === 0) return [];
-    const x =
-      anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length + NODE_SIZE.width + 32;
-    const y = anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length;
+    const x = anchors.reduce((sum, a) => sum + a.point.x + a.width, 0) / anchors.length + 32;
+    const y = anchors.reduce((sum, a) => sum + a.point.y, 0) / anchors.length;
     return [{ id: port.id, rect: { x, y, width: 120, height: 36 }, label: port.outsideTitle }];
   });
 }
 
-function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
-  return exportPortRects(deck, graph).map((port) => {
+function portNodes(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+  level: Level = 'system',
+): PortFlowNode[] {
+  return exportPortRects(deck, graph, level).map((port) => {
     const { x, y } = port.rect;
     const outsideNodeId = port.id.slice(PORT_NODE_PREFIX.length);
     const cached = portCache.get(port.id);
@@ -549,7 +552,7 @@ function portNodesWithView(
   graph: VisibleGraph,
   view: CanvasView,
 ): PortFlowNode[] {
-  return portNodes(deck, graph).map((port) => {
+  return portNodes(deck, graph, view.level).map((port) => {
     const inFocus = view.focus?.members.has(port.id) === true;
     const dimmed = view.focus !== null && !inFocus;
     return {
@@ -719,7 +722,7 @@ export function toFlowEdges(
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): (DeckFlowEdge | MergedFlowEdge)[] {
   const lookups = deckLookups(deck);
-  const ports = portNodes(deck, graph);
+  const ports = portNodes(deck, graph, view.level);
   const nodes =
     graph.cards.length === 0 && ports.length === 0
       ? lookups.edgeNodeViews

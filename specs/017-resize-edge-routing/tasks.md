@@ -138,7 +138,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Implement them in `apps/app/src/editor/canvas-geometry.ts` (R2, R3). `groupBounds` / `selectionFrame` / `boundsOf` take a `level` instead of a size.
 
-- [ ] T012 Update `apps/app/src/editor/deck-to-flow.ts` (+ `deck-to-flow.test.ts`):
+- [x] T012 Update `apps/app/src/editor/deck-to-flow.ts` (+ `deck-to-flow.test.ts`):
   - Node `width` / `height` come from `cardSize`, and the node cache compares them (`:307-323`).
   - The group boxes use the new `groupBounds(deck, level)`.
   - The port pill x uses the anchor's width (`:511`).

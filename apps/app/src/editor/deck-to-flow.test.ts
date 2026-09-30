@@ -105,6 +105,37 @@ describe('toFlowNodes', () => {
     });
   });
 
+  it('renders a sized node at its own size at every level (017)', () => {
+    const sized: SododeckFile = {
+      ...deck,
+      nodes: deck.nodes.map((node) =>
+        node.id === 'a' ? { ...node, size: { width: 240, height: 90 } } : node,
+      ),
+    };
+    for (const level of ['system', 'container', 'component'] as const) {
+      const [a] = toFlowNodes(sized, topLevelGraph(sized), view({ level })).filter(
+        (n) => n.id === 'a',
+      );
+      expect(a).toMatchObject({ width: 240, height: 90 });
+    }
+  });
+
+  it('returns a new node object when only size changes (017)', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const resized: SododeckFile = {
+      ...deck,
+      nodes: deck.nodes.map((node) =>
+        node.id === 'a' ? { ...node, size: { width: 300, height: 120 } } : node,
+      ),
+    };
+    const second = toFlowNodes(resized, topLevelGraph(resized), view());
+    const a1 = first.find((n) => n.id === 'a');
+    const a2 = second.find((n) => n.id === 'a');
+    expect(a1).not.toBe(a2);
+    expect(a2).toMatchObject({ width: 300, height: 120 });
+  });
+
   describe('toStickyNodes', () => {
     it('maps notes with position, selection and data', () => {
       const stickyNodes = toStickyNodes(deck, {
