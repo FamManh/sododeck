@@ -80,6 +80,7 @@ flowchart LR
   F019[019 card-quick-edit]
   F020[020 card-style]
   F021[021 design-sync-canvas-first]
+  F022[022 connector-style]
 
   F001 --> F002 --> F003
   F000 --> F003
@@ -99,6 +100,8 @@ flowchart LR
   F019 --> F016
   F016 -.-> F017
   F019 --> F020
+  F017 --> F022
+  F020 --> F022
 ```
 
 ## Critical path
@@ -119,6 +122,9 @@ badge in 018) → **021** design sync → **018** canvas-first layout → **019*
 **013** samples and onboarding. **014** analytics-feedback is independent and can run in
 parallel. Canvas-first goes before M5 so export and the onboarding tour are built once, on the new
 UI and card rendering.
+
+**022** connector-style (added 2026-09-29) comes after 017 and 020; its place relative to 012 / 013
+is the founder's call.
 
 ## Feature list
 
@@ -146,6 +152,7 @@ UI and card rendering.
 | 016 | canvas-editing           | after M4  | 019        | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
 | 017 | resize-edge-routing      | after M4  | 003 (016)  | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
 | 020 | card-style               | after M4  | 019        | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
+| 022 | connector-style          | after M4  | 017, 020   | 5 d  | needs design (Miro-like line popover); schema change      |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1587,6 +1594,67 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > round-trip cases. packages/ui: named card colour tokens (light/dark) in the Tailwind theme.
   > apps/app: colour picker component shared by toolbar and drawer; contrast helper as a pure
   > function. Run `pnpm bench`.
+
+## 022-connector-style
+
+- **Added:** 2026-09-29, founder request during 017 clarify (Miro-like connector options, reference
+  screenshots in the conversation: Miro's line toolbar with Type / weight / dash popover and a
+  curved line with waypoint handles). Kept out of 017 so 017 stays at 4 d.
+- **Milestone:** after M4 · **Depends on:** 017 (route model, handles, hint bar), 020 (colour
+  picker, `ColorRef`, deck swatches) · **Estimate:** 5 d (split at `/speckit.specify` if it grows)
+- **Menus and toolbar (019):** add this feature's items as an action module in
+  `apps/app/src/editor/actions/` (registered in `ACTIONS`), so the connection toolbar (100), the
+  connection menu, the drawer and the keys pick them up (ADR 0015).
+- **Goal:** Users style connectors the way they are used to in Miro: pick the line shape, the dash,
+  the weight and the colour, place the label where it reads best, and make a connector "run" to
+  show the direction of a flow at a glance.
+- **Spec IDs:** C-6; **schema change** (reverses part of §g-37: 017 stores only sides + one
+  middle-segment offset; this feature adds free waypoints and curves, so it needs a founder
+  decision and an ADR).
+- **Design references:** none yet (needs design: connection toolbar "Type" popover, weight
+  slider, dash row, colour swatch, label drag, waypoint handles). Miro's line popover is the
+  reference.
+- **In scope:**
+  - **Line type:** straight, elbow (orthogonal, today's look, the default) and curved.
+  - **Free waypoints** for elbow and curved lines: drag a midpoint handle to add a bend point,
+    drag a bend point to move it, double-click (or ⌫) to remove it; Reset route (017) clears them.
+  - **Dash:** solid (default), dashed, dotted.
+  - **Weight:** a slider with a few fixed steps (e.g. 1–6 px); default = today's 1.5 px.
+  - **Colour:** 020's palette, the deck's custom swatches and "No colour".
+  - **Label position:** drag the label along the line (stored as a fraction of the path length,
+    0–1, default 0.5), so it can sit near an end or away from a bend; it stays on the line when
+    cards move.
+  - **Animated line:** a per-connector toggle that makes the dashes run from source to target (or
+    both ways for bidirectional connectors), to show flow direction. Off by default; static under
+    reduced motion and in PNG / SVG export.
+  - Applies to a multi-selection of connectors in one undo step; drawer fields and keyboard
+    access for every option; round-trip and parity tests.
+- **Later (not in this feature unless cheap):** **line jumps** (small arcs where two connectors
+  cross); arrowhead shapes; line styles for sticky leaders.
+- **Out of scope:** automatic obstacle-avoiding routing (011); per-view styles (styles are shared
+  by every view, like 017's size and route); flow-mode styling (006/007 keep their own
+  highlight, which wins over the connector's style while a flow is shown).
+- **Schema (v1, additive, all optional, names to be settled in the ADR):** `edge.style`:
+  `{ "shape"?: "straight"|"elbow"|"curved", "dash"?: "solid"|"dashed"|"dotted", "width"?: number,
+"color"?: ColorRef, "animated"?: boolean }`; `edge.route.waypoints?: Position[]` (how they relate
+  to 017's `offset` is decided in the ADR); `edge.labelAt?: number` (0–1). Absent = today's look.
+- **Acceptance criteria (draft):**
+  - Given a selected connector, When the user picks "Curved", Then the line is a smooth curve
+    between the same sides, the JSON shows `"style": { "shape": "curved" }`, and one ⌘Z restores it.
+  - Given an elbow connector, When the user drags its midpoint handle, Then a bend point is added
+    where it is dropped and stored in `route.waypoints`; double-clicking it removes it.
+  - Given three selected connectors, When the user picks "Dashed" and weight 3, Then all three
+    change in one undo step.
+  - Given a connector label, When the user drags it towards the source end, Then it stays on the
+    line at that fraction when either card moves.
+  - Given "Animated" on, When reduced motion is set, Then the line is drawn static; the direction
+    stays readable from the end dots / arrowheads (not from motion alone).
+  - Given a deck without any of these fields, When opened, edited and exported, Then they are
+    still absent.
+  - Given the bench deck with 200 animated connectors, When panning, Then ≥ 60 fps.
+- **Risks:** waypoints vs 017's offset (one route model, not two); curves and labels in export
+  (012); animation cost on large decks (CSS-only, paused off-screen); colour on connectors must
+  not be the only cue for flow, error or selection states (constitution VII).
 
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
