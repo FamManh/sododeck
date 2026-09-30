@@ -18,6 +18,7 @@ export function PickField({
   mixed = false,
   hint,
   error,
+  disabled,
 }: {
   label: string;
   listLabel: string;
@@ -27,6 +28,7 @@ export function PickField({
   mixed?: boolean;
   hint?: string;
   error?: string;
+  disabled?: boolean;
 }) {
   const id = useId();
   const describedBy = [
@@ -48,6 +50,7 @@ export function PickField({
         options={options}
         onValueChange={onPick}
         placeholder={mixed ? 'Mixed' : undefined}
+        disabled={disabled}
         aria-describedby={describedBy === '' ? undefined : describedBy}
         aria-invalid={error !== undefined || undefined}
         className={cn(mixed && 'placeholder:italic')}

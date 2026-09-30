@@ -23,6 +23,7 @@ import { PickField } from '../fields/pick-field';
 import { TagsField } from '../fields/tags-field';
 import { edgeUsage } from './derive';
 import { InspectorFrame } from './inspector-frame';
+import { RouteFields } from './route-fields';
 
 type EdgePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
@@ -202,6 +203,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
             }}
           />
         </PanelSection>
+        <RouteFields deck={deck} edge={edge} />
         <PanelSection label="Used in flows">
           {uses.length === 0 ? (
             <p className="text-body-sm text-ink-secondary">Not used in any flow</p>

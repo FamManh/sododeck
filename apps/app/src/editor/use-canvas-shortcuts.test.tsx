@@ -8,6 +8,7 @@ import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { Canvas } from './canvas';
+import { canvasElement } from './canvas-actions';
 import { openFlow } from './flows/flow-mode';
 import { DetailDrawer } from './shell/detail-drawer';
 import { SaveContext } from './save-context';
@@ -16,6 +17,7 @@ import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { collapsedOf, toggleGroupCollapsed } from './views/use-current-view';
 import { startSegmentDrag } from './editing/segment-drag';
+import { NUDGE_IDLE_MS } from './editing/use-nudge';
 
 /** 3×3 grid: n00 … n22 (row, column), 300 px apart. */
 const grid = deckOf({
@@ -771,5 +773,130 @@ describe('keyboard in flow mode (007)', () => {
     expect(ui().drill).toEqual([]);
     await user.keyboard('{Escape}');
     expect(ui().activeFlow).toBeNull();
+  });
+});
+
+describe('⌘⇧ arrow resize (017 US5, T048)', () => {
+  it('grows 4 px with → and ↓, keeping the top-left corner, one undo step and a final announcement', () => {
+    vi.useFakeTimers();
+    const { doc } = setup();
+    focusNode('n11');
+    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]');
+    if (el === null) throw new Error('no card');
+    const before = toJSON(doc).nodes.find((n) => n.id === 'n11')?.position;
+    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', metaKey: true, shiftKey: true });
+    fireEvent.keyDown(el, { key: 'ArrowDown', code: 'ArrowDown', metaKey: true, shiftKey: true });
+    vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
+    const node = toJSON(doc).nodes.find((n) => n.id === 'n11');
+    expect(node?.size).toEqual({ width: 168, height: 54 });
+    expect(node?.position).toEqual(before);
+    expect(ui().announcement.text).toBe('Resized N11 to 168 × 54');
+    vi.useRealTimers();
+  });
+
+  it('shrinks with ← and ↑, clamped to the minimum size', () => {
+    const { doc } = setup();
+    focusNode('n11');
+    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]');
+    if (el === null) throw new Error('no card');
+    for (let i = 0; i < 40; i++) {
+      fireEvent.keyDown(el, { key: 'ArrowLeft', code: 'ArrowLeft', metaKey: true, shiftKey: true });
+    }
+    expect(toJSON(doc).nodes.find((n) => n.id === 'n11')?.size?.width).toBe(120);
+  });
+
+  it('does nothing without a focused component, and ⌘⇧A still selects all', () => {
+    const { doc } = setup();
+    const canvas = canvasElement();
+    if (canvas === null) throw new Error('no canvas');
+    const before = toJSON(doc);
+    expect(
+      fireEvent.keyDown(canvas, {
+        key: 'ArrowRight',
+        code: 'ArrowRight',
+        metaKey: true,
+        shiftKey: true,
+      }),
+    ).toBe(true);
+    expect(toJSON(doc)).toEqual(before);
+    fireEvent.keyDown(canvas, { key: 'a', code: 'KeyA', metaKey: true, shiftKey: true });
+    expect(ui().selection.nodes.length).toBe(9);
+  });
+});
+
+describe('⌥ arrow segment move (017 US5, T048)', () => {
+  it('moves e1 (left/right) across the segment with ← / →, one undo step and an announcement', () => {
+    vi.useFakeTimers();
+    const { doc } = setup();
+    act(() => {
+      ui().select({ edges: ['e1'] });
+    });
+    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]') ?? document.body;
+    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true, shiftKey: true });
+    vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
+    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toEqual({ offset: 11 });
+    expect(ui().announcement.text).toBe('Moved middle segment to +11');
+    vi.useRealTimers();
+  });
+
+  it('does nothing for the arrow along the segment, and moves e2 (top/bottom) with ↑ / ↓', () => {
+    const { doc } = setup();
+    const canvas = canvasElement();
+    if (canvas === null) throw new Error('no canvas');
+    act(() => {
+      ui().select({ edges: ['e1'] });
+    });
+    fireEvent.keyDown(canvas, { key: 'ArrowUp', code: 'ArrowUp', altKey: true });
+    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toBeUndefined();
+    act(() => {
+      ui().select({ edges: ['e2'] });
+    });
+    fireEvent.keyDown(canvas, { key: 'ArrowUp', code: 'ArrowUp', altKey: true });
+    expect(toJSON(doc).edges.find((e) => e.id === 'e2')?.route).toEqual({ offset: -1 });
+  });
+
+  it('still nudges a component selection with ⌥ arrows (016 regression)', () => {
+    const { doc } = setup();
+    focusNode('n11');
+    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]');
+    if (el === null) throw new Error('no card');
+    const before = toJSON(doc).nodes.find((n) => n.id === 'n11')?.position;
+    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'n11')?.position).toEqual({
+      x: (before?.x ?? 0) + 1,
+      y: before?.y ?? 0,
+    });
+  });
+
+  it('ignores ⌘⇧ arrows and ⌥ arrows in a text field', async () => {
+    const { doc, user } = setup();
+    act(() => {
+      ui().select({ edges: ['e1'], nodes: [] });
+    });
+    const before = toJSON(doc);
+    await user.click(screen.getByRole('textbox', { name: 'Notes' }));
+    await user.keyboard('{Meta>}{Shift>}{ArrowRight}{/Shift}{/Meta}');
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('ignores ⌥ arrows and ⌘⇧ arrows in flow mode (view-only, 007 FR-009)', () => {
+    const { doc, editor } = setup(playbackDeck);
+    act(() => {
+      ui().select({ edges: ['ab'] });
+      openFlow(editor(), 'order');
+    });
+    const canvas = canvasElement();
+    if (canvas === null) throw new Error('no canvas');
+    const before = toJSON(doc);
+    fireEvent.keyDown(canvas, { key: 'ArrowRight', code: 'ArrowRight', altKey: true });
+    fireEvent.keyDown(canvas, {
+      key: 'ArrowRight',
+      code: 'ArrowRight',
+      metaKey: true,
+      shiftKey: true,
+    });
+    expect(toJSON(doc)).toEqual(before);
   });
 });

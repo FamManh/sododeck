@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
-import { NUDGE_IDLE_MS, nudgeDistance, useNudge } from './use-nudge';
+import { createBurst, NUDGE_IDLE_MS, nudgeDistance, useNudge } from './use-nudge';
 
 const ui = () => useUiStore.getState();
 const deck = deckOf({
@@ -127,5 +127,58 @@ describe('⌥ arrow nudges (016 US5, R8)', () => {
     expect(nudgeDistance({ x: 30, y: 0 })).toBe('30 px right');
     expect(nudgeDistance({ x: 0, y: -10 })).toBe('10 px up');
     expect(nudgeDistance({ x: -1, y: 2 })).toBe('1 px left and 2 px down');
+  });
+});
+
+describe('createBurst (017 R9)', () => {
+  it('opens on the first step, calls onStep every step, and closes once after the idle timeout', () => {
+    const onFirst = vi.fn();
+    const onStep = vi.fn();
+    const onEnd = vi.fn();
+    const burst = createBurst(onFirst, onStep, onEnd);
+    expect(burst.isOpen()).toBe(false);
+    burst.step();
+    expect(onFirst).toHaveBeenCalledOnce();
+    expect(onStep).toHaveBeenCalledOnce();
+    expect(burst.isOpen()).toBe(true);
+    burst.step();
+    burst.step();
+    expect(onFirst).toHaveBeenCalledOnce();
+    expect(onStep).toHaveBeenCalledTimes(3);
+    expect(onEnd).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
+    expect(onEnd).toHaveBeenCalledOnce();
+    expect(burst.isOpen()).toBe(false);
+  });
+
+  it('ends on demand, and a second end is a no-op', () => {
+    const onEnd = vi.fn();
+    const burst = createBurst(vi.fn(), vi.fn(), onEnd);
+    burst.step();
+    burst.end();
+    expect(onEnd).toHaveBeenCalledOnce();
+    burst.end();
+    expect(onEnd).toHaveBeenCalledOnce();
+  });
+
+  it('starts a fresh burst (onFirst again) after ending', () => {
+    const onFirst = vi.fn();
+    const burst = createBurst(onFirst, vi.fn(), vi.fn());
+    burst.step();
+    burst.end();
+    burst.step();
+    expect(onFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it('resets the idle timer on every step', () => {
+    const onEnd = vi.fn();
+    const burst = createBurst(vi.fn(), vi.fn(), onEnd);
+    burst.step();
+    vi.advanceTimersByTime(NUDGE_IDLE_MS - 10);
+    burst.step();
+    vi.advanceTimersByTime(NUDGE_IDLE_MS - 10);
+    expect(onEnd).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(20);
+    expect(onEnd).toHaveBeenCalledOnce();
   });
 });

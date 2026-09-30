@@ -322,13 +322,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US5. Keyboard only: resize, reset the size, move the segment, set the sides, reset the route. Check the undo steps and announcements.
 
-- [ ] T047 [P] [US5] Generalise the burst in `apps/app/src/editor/editing/use-nudge.ts` into `createBurst(onFirst, onStep, onEnd)` (1 s idle, as `NUDGE_IDLE_MS`). Keep `createNudger` on top of it, and keep its tests green. Add tests for `createBurst`.
-- [ ] T048 [US5] In `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test):
+- [x] T047 [P] [US5] Generalise the burst in `apps/app/src/editor/editing/use-nudge.ts` into `createBurst(onFirst, onStep, onEnd)` (1 s idle, as `NUDGE_IDLE_MS`). Keep `createNudger` on top of it, and keep its tests green. Add tests for `createBurst`.
+- [x] T048 [US5] In `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test):
   - ⌘⇧ + arrow with one focused or selected component resizes by 4 px (→ / ↓ grow, ← / ↑ shrink), keeping the top-left and the limits, in a burst, announcing "Resized … to W × H" at the end.
   - ⌥(⇧) + arrow with a single selected connection moves the segment by 1 / 10 px across the segment. Arrows along the segment do nothing, and connectors without a segment do nothing.
   - ⌥ + arrow with components keeps 016's nudge.
   - None of this fires in text targets or when editing is off.
-- [ ] T049 [P] [US5] Create `apps/app/src/editor/inspector/size-fields.tsx` (+ test), following the `frame-fields.tsx` pattern:
+- [x] T049 [P] [US5] Create `apps/app/src/editor/inspector/size-fields.tsx` (+ test), following the `frame-fields.tsx` pattern:
   - a "Size" section with `spinbutton` "Width" / "Height";
   - a draft while typing, commit on Enter or blur, Esc cancels;
   - values clamped and rounded to whole px;
@@ -338,7 +338,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Mount it in `apps/app/src/editor/inspector/node-inspector.tsx`.
 
-- [ ] T050 [P] [US5] Create `apps/app/src/editor/inspector/route-fields.tsx` (+ test):
+- [x] T050 [P] [US5] Create `apps/app/src/editor/inspector/route-fields.tsx` (+ test):
   - a "Route" section with `combobox` "From side" / "To side" (Auto, Top, Right, Bottom, Left), each change one step through `setEdgeRoute`;
   - a `spinbutton` "Offset", disabled with the description "No middle segment for these sides" when `middleSegment` is null;
   - a "Reset route" button;

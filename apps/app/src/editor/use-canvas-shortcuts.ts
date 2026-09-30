@@ -19,6 +19,8 @@ import { alignSelection } from './actions/align-actions';
 import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
 import type { AlignMode } from './editing/align';
 import { useNudge } from './editing/use-nudge';
+import { useResizeKey } from './editing/use-resize-key';
+import { useSegmentKey } from './editing/use-segment-key';
 import {
   consumeLeftToolbar,
   focusSelectionToolbar,
@@ -106,6 +108,12 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
     : `${GROUP_NODE_PREFIX}${groupId}`;
 }
 
+/** The one real component `⌘⇧` + arrow would resize (T048): never a group or collapsed group. */
+function singleComponentId(ui: { focusedId: string | null; selection: Selection }): string | null {
+  if (ui.focusedId !== null) return groupIdOf(ui.focusedId) === null ? ui.focusedId : null;
+  return ui.selection.nodes.length === 1 ? (ui.selection.nodes[0] ?? null) : null;
+}
+
 /**
  * ⇧F10 / ContextMenu (019 R7): the menu of the selection (or the focused card), anchored at the
  * bottom-left of its element, or the canvas menu at the view centre.
@@ -148,6 +156,8 @@ const ALIGN_KEYS: Readonly<Record<string, AlignMode>> = {
 export function useCanvasKeyDown() {
   const editor = useEditor();
   const nudger = useNudge();
+  const resizeKeyer = useResizeKey();
+  const segmentKeyer = useSegmentKey();
   const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
     useReactFlow();
 
@@ -229,6 +239,27 @@ export function useCanvasKeyDown() {
       }
 
       if (isMod(event)) {
+        // ⌘⇧ arrows resize the focused component (017 R9/R10), one real card at a time.
+        if (event.shiftKey && key in ARROWS) {
+          const id = singleComponentId(ui);
+          const index = id === null ? -1 : deck.nodes.findIndex((n) => n.id === id);
+          const node = index === -1 ? undefined : deck.nodes[index];
+          if (node !== undefined) {
+            const level = effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill));
+            const size = cardSize(node, level);
+            if (
+              resizeKeyer.key(event, {
+                id: node.id,
+                title: node.title,
+                width: size.width,
+                height: size.height,
+              })
+            ) {
+              event.preventDefault();
+              return;
+            }
+          }
+        }
         const handled = (() => {
           switch (key.toLowerCase()) {
             case 'a':
@@ -251,9 +282,14 @@ export function useCanvasKeyDown() {
         if (handled) event.preventDefault();
         return;
       }
-      // ⌥(⇧) arrows nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by
-      // `code` because ⌥ changes `key` on macOS.
+      // ⌥(⇧) arrows move a single selected connection's middle segment (017 R9), or otherwise
+      // nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by `code` because ⌥
+      // changes `key` on macOS.
       if (event.altKey) {
+        if (segmentKeyer.key(event, effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill)))) {
+          event.preventDefault();
+          return;
+        }
         if (nudger.key(event)) {
           event.preventDefault();
           return;
@@ -547,6 +583,8 @@ export function useCanvasKeyDown() {
     [
       editor,
       nudger,
+      resizeKeyer,
+      segmentKeyer,
       zoomIn,
       zoomOut,
       fitView,
