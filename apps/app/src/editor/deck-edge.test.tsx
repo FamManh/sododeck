@@ -101,6 +101,37 @@ describe('DeckEdge', () => {
   });
 });
 
+describe('DeckEdge routing (017 R6)', () => {
+  it('shifts the label pill and the edge anchor to the offset labelX, for a horizontal pair', () => {
+    const { container } = renderEdge({
+      route: { offset: 60 },
+      showLabel: true,
+      flow: {
+        badges: [{ label: '2', errorPath: false, current: true, chainBreak: false }],
+        style: 'path',
+        errorIcon: false,
+        current: { speed: 1 },
+      },
+    });
+    const anchor = container.querySelector('[data-edge-anchor="e1"]');
+    const label = screen.getByTestId('edge-label');
+    const token = screen.getByTestId('flow-token');
+    const anchorTransform = anchor?.getAttribute('style') ?? '';
+    const labelTransform = label.getAttribute('style') ?? '';
+    // Both sit at the same offset labelX (the anchor has no translate(-50%, -50%) prefix).
+    const anchorMatch = /translate\((-?\d+(?:\.\d+)?)px/.exec(anchorTransform);
+    const labelMatch = /translate\(-50%, -50%\) translate\((-?\d+(?:\.\d+)?)px/.exec(
+      labelTransform,
+    );
+    expect(anchorMatch?.[1]).toBe(labelMatch?.[1]);
+    expect(Number(anchorMatch?.[1])).not.toBe(100); // 100 is the unrouted midpoint for this fixture
+    // The flow token draws the same `d` as the base edge path, so it follows the offset route.
+    const tokenPath = token.querySelector('animateMotion')?.getAttribute('path');
+    const basePath = container.querySelector('.react-flow__edge-path')?.getAttribute('d');
+    expect(tokenPath).toBe(basePath);
+  });
+});
+
 describe('DeckEdge flow marks (006 research R6)', () => {
   const badge = (label: string, errorPath = false) => ({
     label,

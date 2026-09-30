@@ -87,6 +87,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   flow?: EdgeFlowMark;
   /** The connection's problems (015): an amber glyph on its label pill. */
   problems?: ProblemMark;
+  /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
+  route?: DeckEdgeObject['route'];
 }
 
 export interface CollapsedGroupData extends Record<string, unknown> {
@@ -831,6 +833,7 @@ export function toFlowEdges(
         dimmed,
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),
+        ...(edge.route === undefined ? {} : { route: edge.route }),
       },
     };
     edgeCache.set(edge, flowEdge);

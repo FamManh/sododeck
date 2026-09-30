@@ -1,7 +1,8 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
+import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 
@@ -10,6 +11,15 @@ import { DOT_RADIUS } from './edge-constants';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES } from './flow-strokes';
+import { routedStepPath } from './routing/route-path';
+
+/** The reverse of `deck-node.tsx`'s fixed handle positions, so a route's offset can be applied. */
+const SIDE_OF_POSITION: Record<Position, Side> = {
+  [Position.Top]: 'top',
+  [Position.Right]: 'right',
+  [Position.Bottom]: 'bottom',
+  [Position.Left]: 'left',
+};
 
 /**
  * Connection (DESIGN.md: orthogonal routing, 8px corners, 3px end dot; designs 11, 12, 57).
@@ -30,13 +40,14 @@ export const DeckEdge = memo(function DeckEdge({
   interactionWidth,
 }: EdgeProps<DeckFlowEdge>) {
   const reducedMotion = useReducedMotion();
-  const [path, labelX, labelY] = getSmoothStepPath({
+  const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
+  const { path, labelX, labelY } = routedStepPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
-    sourcePosition,
-    targetPosition,
+    sides,
+    offset: data?.route?.offset,
     borderRadius: 8,
   });
   const direction = data?.direction ?? 'forward';
