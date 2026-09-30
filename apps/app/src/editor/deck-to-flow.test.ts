@@ -329,6 +329,8 @@ describe('toFlowNodes', () => {
       stroke: undefined,
       text: 'default',
       namedFill: true,
+      fillRef: 'green',
+      strokeRef: undefined,
     });
   });
 

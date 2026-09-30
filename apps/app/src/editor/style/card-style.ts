@@ -48,6 +48,9 @@ export interface CardLook {
   text: 'default' | 'dark' | 'light';
   /** Whether the fill is a named colour: the subtitle switches muted → secondary. */
   namedFill: boolean;
+  /** Raw refs (020 R5): the accessible description reads these via `colourName`. */
+  fillRef?: ColorRef;
+  strokeRef?: ColorRef;
 }
 
 /** A live, unsaved edit (R9): overrides one channel for the objects it previews on. */
@@ -80,10 +83,17 @@ export function resolveLook(
     stroke: stroke?.token,
     text,
     namedFill: fill?.named ?? false,
+    fillRef: fillValue,
+    strokeRef: strokeValue,
   };
 }
 
 /** A named colour's display label ("Green"), or the hex value as-is. */
 export function colourName(ref: ColorRef): string {
   return isNamedColor(ref) ? ref.charAt(0).toUpperCase() + ref.slice(1) : ref;
+}
+
+/** The accessible description for a channel (020 R5): "Green fill" / "Custom fill #7a3cff". */
+export function describeChannel(channel: 'fill' | 'stroke', ref: ColorRef): string {
+  return isNamedColor(ref) ? `${colourName(ref)} ${channel}` : `Custom ${channel} ${ref}`;
 }

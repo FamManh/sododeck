@@ -14,6 +14,8 @@ describe('resolveLook', () => {
       stroke: undefined,
       text: 'default',
       namedFill: true,
+      fillRef: 'green',
+      strokeRef: undefined,
     });
   });
 
@@ -24,6 +26,8 @@ describe('resolveLook', () => {
       stroke: undefined,
       text: 'light',
       namedFill: false,
+      fillRef: '#1f2a44',
+      strokeRef: undefined,
     });
   });
 
@@ -34,6 +38,8 @@ describe('resolveLook', () => {
       stroke: 'var(--color-card-blue-stroke)',
       text: 'default',
       namedFill: false,
+      fillRef: undefined,
+      strokeRef: 'blue',
     });
   });
 
@@ -44,6 +50,8 @@ describe('resolveLook', () => {
       stroke: 'var(--color-card-blue-stroke)',
       text: 'default',
       namedFill: true,
+      fillRef: 'red',
+      strokeRef: 'blue',
     });
   });
 });

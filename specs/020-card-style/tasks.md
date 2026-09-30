@@ -214,7 +214,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `applyStyle(editor, selection, channel, value)` is one undo step (one `editor.undo()` restores all).
   - It passes only nodes and groups to `setStyle`.
   - It announces "Fill set to Green on 1 component" or "Fill removed from 3 components".
-- [ ] T027 [P] [US1] Write failing tests in `apps/app/src/editor/deck-node.test.tsx`:
+- [x] T027 [P] [US1] Write failing tests in `apps/app/src/editor/deck-node.test.tsx`:
   - A card with `look.fill` has an accessible description containing "Green fill".
   - With a named fill, the subtitle uses the secondary text role. Check via computed style from the tokens map, not class names, or assert through `data-text="secondary"` as the design gallery does.
   - A hex fill with `text: 'light'` sets `data-text="light"`.
@@ -231,7 +231,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - In `selection-toolbar.tsx`, the button shows the current fill as a mini swatch, with the accessible name "Colour: Green", "Colour: none" or "Colour: Mixed".
   - Place it after Rules (component and components) and after Collapse (group).
   - Add a test in `selection-toolbar.test.tsx`.
-- [ ] T033 [US1] Render colours on cards in `apps/app/src/editor/deck-node.tsx` (R5):
+- [x] T033 [US1] Render colours on cards in `apps/app/src/editor/deck-node.tsx` (R5):
   - Set `--card-fill` / `--card-stroke` inline from `data.look`.
   - Add a fill class (`bg-(--card-fill)`), and a stroke class (`border-[1.5px] border-(--card-stroke)`) only when neither the current-step nor the connect-target class is active.
   - On a named fill the subtitle uses `text-ink-secondary`. On a custom fill, the title, subtitle, owner and glyphs use `text-card-text-dark` / `text-card-text-light`, and the node gets `data-text`.

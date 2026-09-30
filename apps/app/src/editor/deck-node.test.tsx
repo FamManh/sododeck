@@ -3,6 +3,7 @@ import type { NodeProps } from '@xyflow/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
+import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { DeckNode } from './deck-node';
 import type { DeckFlowNode } from './deck-to-flow';
@@ -274,5 +275,37 @@ describe('DeckNode details button (019 US4)', () => {
       useUiStore.getState().startTitleEdit({ target: 'node', id: 'svc', isNew: false });
     });
     expect(screen.queryByRole('button', { name: 'Open details for Order Service' })).toBeNull();
+  });
+});
+
+describe('DeckNode colour (020 R5)', () => {
+  it('extends the accessible description with "Green fill" for a named fill', () => {
+    const look = resolveLook({ fill: 'green' });
+    renderNode(props({ look }));
+    expect(screen.getByRole('group')).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Green fill'),
+    );
+  });
+
+  it('extends the accessible description with "Blue stroke" for a stroke', () => {
+    const look = resolveLook({ stroke: 'blue' });
+    renderNode(props({ look }));
+    expect(screen.getByRole('group')).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Blue stroke'),
+    );
+  });
+
+  it('uses the secondary text role for the subtitle on a named fill', () => {
+    const look = resolveLook({ fill: 'green' });
+    renderNode(props({ look, level: 'container', subtitle: 'orders.svc' }));
+    expect(screen.getByText('orders.svc')).toHaveAttribute('data-text', 'secondary');
+  });
+
+  it('sets data-text="light" on the card for a hex fill resolving to light text', () => {
+    const look = resolveLook({ fill: '#1c1c1a' });
+    renderNode(props({ look }));
+    expect(screen.getByTestId('deck-node')).toHaveAttribute('data-text', 'light');
   });
 });
