@@ -3,7 +3,7 @@ import type { SododeckFile } from '@sododeck/schema';
 import { toComponentKind, type ComponentKind } from '@sododeck/ui/lib/icons';
 
 import type { DrillFrame } from '../../state/ui-store';
-import { displayPosition, groupBounds, nodeSize, type Rect } from '../canvas-geometry';
+import { groupBounds, cardBox, type Rect } from '../canvas-geometry';
 import { collapseFlowMarks } from '../collapse-flow-marks';
 import { COLLAPSED_NODE_PREFIX, exportPortRects, groupCounts } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
@@ -157,7 +157,6 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     view?.collapsed ?? new Set(),
   );
   const level = effectiveLevel('container', graph.scope);
-  const size = nodeSize(level); // TODO(017): use the card's own node.size when it exists.
   const flow =
     scope === 'flow' ? source.flows.find((entry) => entry.id === ui.activeFlowId) : undefined;
   if (scope === 'flow' && (flow === undefined || flow.steps.length === 0)) {
@@ -177,7 +176,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     return [
       {
         id,
-        rect: { ...displayPosition(node, index), ...size },
+        rect: cardBox(node, index, level),
         kind: toComponentKind(node.type) ?? 'fallback',
         title: node.title,
         subtitle: (view === null ? node.tech : subtitleOf(node, view.render)) ?? null,
@@ -324,13 +323,14 @@ function sceneEdges(
     label: string | null,
     dots: SceneEdge['dots'],
     memberIds: readonly string[],
+    route?: SododeckFile['edges'][number]['route'],
   ) => {
     const a = rects.get(from);
     const b = rects.get(to);
     if (a === undefined || b === undefined) return;
     const marks = memberIds.flatMap((memberId) => overlay?.edges.get(memberId) ?? []);
     if (overlay !== null && marks.length === 0) return;
-    const geometry = edgePath(a, b);
+    const geometry = edgePath(a, b, route);
     edges.push({
       id,
       path: geometry.path,
@@ -349,7 +349,7 @@ function sceneEdges(
   for (const id of graph.edges) {
     const edge = byId.get(id);
     if (edge === undefined) continue;
-    add(id, edge.from, edge.to, edge.label || null, dotsOf(edge.direction), [id]);
+    add(id, edge.from, edge.to, edge.label || null, dotsOf(edge.direction), [id], edge.route);
   }
   // Edges that leave a drilled scope end at the outside component's port pill, as on the canvas.
   for (const port of graph.ports) {

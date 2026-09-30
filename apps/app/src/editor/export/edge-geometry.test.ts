@@ -38,4 +38,23 @@ describe('edgePath', () => {
     expect(contains(edge.extent, edge.target.x, edge.target.y)).toBe(true);
     expect(edge.extent.x).toBe(Math.min(edge.source.x, edge.target.x) - 20);
   });
+
+  it('pins the handles to a route, ignoring the automatic centre comparison (017)', () => {
+    const from = { x: 0, y: 0, width: 100, height: 50 };
+    const to = { x: 300, y: 0, width: 100, height: 50 };
+    const edge = edgePath(from, to, { fromSide: 'top', toSide: 'top' });
+    expect(edge.source).toEqual(handlePoint(from, 'top'));
+    expect(edge.target).toEqual(handlePoint(to, 'top'));
+  });
+
+  it('shifts labelX and widens the extent for an offset horizontal pair (017)', () => {
+    const from = { x: 0, y: 0, width: 100, height: 50 };
+    const to = { x: 300, y: 0, width: 100, height: 50 };
+    const plain = edgePath(from, to);
+    const routed = edgePath(from, to, { offset: 200 });
+    expect(routed.labelX).toBe(plain.labelX + 200);
+    expect(routed.extent.x + routed.extent.width).toBeGreaterThan(
+      plain.extent.x + plain.extent.width,
+    );
+  });
 });
