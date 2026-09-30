@@ -9,6 +9,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { useUiStore } from '../state/ui-store';
 import { buildOutline, visibleItems, type VisibleItem } from './outline';
+import { describeChannel, type CardLook } from './style/card-style';
 import { scopeOf } from './visible-graph';
 import { currentViewCrumb } from './views/view-title';
 
@@ -111,6 +112,13 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
         const isUp = item.type === 'up';
         const isSelected = item.type === 'node' && selected.has(item.id);
         const expanded = isGroup ? !collapsed.has(item.id) : undefined;
+        const look = item.type === 'up' ? undefined : item.look;
+        const colourDescription = [
+          look?.fillRef !== undefined ? describeChannel('fill', look.fillRef) : null,
+          look?.strokeRef !== undefined ? describeChannel('stroke', look.strokeRef) : null,
+        ]
+          .filter((part): part is string => part !== null)
+          .join(', ');
         return (
           <li
             key={item.id}
@@ -119,6 +127,7 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
             aria-level={level}
             aria-expanded={expanded}
             aria-selected={isGroup ? undefined : isSelected}
+            aria-description={colourDescription === '' ? undefined : colourDescription}
             tabIndex={item.id === active?.item.id ? 0 : -1}
             onClick={() => {
               choose(visible);
@@ -157,12 +166,14 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
                   strokeWidth={ICON_STROKE_WIDTH}
                   className="size-4 shrink-0 text-ink-secondary"
                 />
+                {look !== undefined && <ColourMark look={look} />}
                 <span className="min-w-0 flex-1 truncate font-medium">{item.title}</span>
                 <span className="text-caption text-ink-secondary">{item.count}</span>
               </>
             ) : (
               <>
                 <KindTile kind={item.kind} size={22} decorative />
+                {look !== undefined && <ColourMark look={look} />}
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
               </>
             )}
@@ -170,5 +181,22 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
         );
       })}
     </ul>
+  );
+}
+
+/** An 8 px colour mark (FR-035): the fill, or a stroke-only ring when there is no fill. */
+function ColourMark({ look }: { look: CardLook }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'size-2 shrink-0 rounded-full',
+        look.fill === undefined && look.stroke !== undefined && 'border-2 border-(--card-stroke)',
+      )}
+      style={{
+        ...(look.fill === undefined ? {} : { backgroundColor: look.fill }),
+        ...(look.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+      }}
+    />
   );
 }

@@ -107,3 +107,23 @@ describe('buildNotesOutline', () => {
     ]);
   });
 });
+
+describe('buildOutline colour (020 T055)', () => {
+  it("carries each node and group's look", () => {
+    const coloured = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', style: { fill: 'green' } }],
+      groups: [{ id: 'g', title: 'G', style: { stroke: 'red' } }],
+    });
+    const tree = buildOutline(coloured);
+    const node = tree.find((i) => i.id === 'a' && i.type === 'node');
+    const group = tree.find((i) => i.id === 'g' && i.type === 'group');
+    expect(node?.type === 'node' ? node.look?.fillRef : undefined).toBe('green');
+    expect(group?.type === 'group' ? group.look?.strokeRef : undefined).toBe('red');
+  });
+
+  it('omits `look` for plain items', () => {
+    const plain = deckOf({ nodes: [{ id: 'a', type: 'service', title: 'A' }] });
+    const node = buildOutline(plain).find((i) => i.id === 'a' && i.type === 'node');
+    expect(node?.type === 'node' ? node.look : undefined).toBeUndefined();
+  });
+});

@@ -83,3 +83,24 @@ describe('OutlineTree', () => {
     expect(useUiStore.getState().drill).toEqual([]);
   });
 });
+
+describe('OutlineTree colour (020 T055)', () => {
+  it("extends the row's accessible description with the colour", () => {
+    const coloured = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', group: 'core' },
+        { id: 'web', type: 'client', title: 'Web', style: { fill: 'green' } },
+      ],
+      groups: [{ id: 'core', title: 'Core services', style: { stroke: 'red' } }],
+    });
+    renderWithEditor(<OutlineTree deck={coloured} />, coloured);
+    expect(screen.getByRole('treeitem', { name: 'Web' })).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Green fill'),
+    );
+    expect(screen.getByRole('treeitem', { name: /Core services/ })).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Red stroke'),
+    );
+  });
+});
