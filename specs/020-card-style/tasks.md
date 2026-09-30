@@ -381,7 +381,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 ## Phase 9: Polish and cross-cutting
 
 - [x] T055 [P] Outline: in `apps/app/src/editor/outline.ts`, `buildOutline` carries `look`. In `outline-tree.tsx`, show an 8 px `aria-hidden` mark before the title (the fill, or a stroke-only ring) and add the colour to the row's accessible description. Add tests (FR-035).
-- [ ] T056 [P] Minimap: in `apps/app/src/editor/canvas.tsx`, `nodeColor={(n) => n.data.look?.fill ?? 'var(--color-surface-3)'}` and `nodeStrokeColor` in the same way. Add a test through the node data mapping.
+- [x] T056 [P] Minimap: in `apps/app/src/editor/canvas.tsx`, `nodeColor={(n) => n.data.look?.fill ?? 'var(--color-surface-3)'}` and `nodeStrokeColor` in the same way. Add a test through the node data mapping.
 - [ ] T057 [P] Export:
   - `apps/app/src/editor/export/export-palette.ts` `LIGHT_PALETTE.cardColours` (the light hex values from the tokens), plus `cardText { dark, light }`, guarded in `export-palette.test.ts` against `tokens.css`.
   - `scene.ts`: `SceneCard` / `SceneGroup` gain `fill?`, `stroke?` and `text`.
