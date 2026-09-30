@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { COMPONENT_CARD_SIZE, displayPosition, groupBounds, type Point } from '../canvas-geometry';
+import { displayPosition, groupBounds, type Point } from '../canvas-geometry';
 import { readViewState } from '../views/use-current-view';
 import { groupSubtree } from './subtree';
 
@@ -46,7 +46,7 @@ function moveSelection(editor: DeckEditor, delta: Point): number {
     const at = viewNodePosition(view.view, node) ?? displayPosition(node, index);
     positions[node.id] = { x: at.x + delta.x, y: at.y + delta.y };
   });
-  const bounds = groupBounds(view.deck, COMPONENT_CARD_SIZE);
+  const bounds = groupBounds(view.deck, 'component');
   const frames: Record<Id, Frame> = {};
   for (const id of tree.groups) {
     const rect = bounds.get(id);

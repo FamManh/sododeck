@@ -22,7 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { displayPosition, groupBounds, nodeSize, NODE_SIZE } from './canvas-geometry';
+import { cardBox, groupBounds, NODE_SIZE } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -196,7 +196,7 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
     const point = (() => {
       if (focusedId.startsWith(GROUP_NODE_PREFIX)) {
         const groupId = focusedId.slice(GROUP_NODE_PREFIX.length);
-        const rect = groupBounds(deck, nodeSize(level)).get(groupId);
+        const rect = groupBounds(deck, level).get(groupId);
         return rect === undefined ? null : { x: rect.x, y: rect.y, width: 1, height: 1 };
       }
       if (focusedId.startsWith(COLLAPSED_NODE_PREFIX)) {
@@ -207,8 +207,7 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
       const index = deck.nodes.findIndex((n) => n.id === focusedId);
       const node = index < 0 ? undefined : deck.nodes[index];
       if (node === undefined) return null;
-      const size = nodeSize(level);
-      return { ...displayPosition(node, index), ...size };
+      return cardBox(node, index, level);
     })();
     if (point === null) return;
     const { x: vx, y: vy, zoom } = getViewport();

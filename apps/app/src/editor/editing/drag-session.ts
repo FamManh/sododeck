@@ -172,7 +172,7 @@ export class DragController {
     const zoom = getViewport().zoom;
     const level = effectiveLevel(levelForZoom(zoom), scope);
     const size = nodeSize(level);
-    const bounds = groupBounds(view.deck, size);
+    const bounds = groupBounds(view.deck, level);
 
     const tree = groupSubtree(deck, groups);
     const moving = new Set([...nodes, ...tree.nodes]);

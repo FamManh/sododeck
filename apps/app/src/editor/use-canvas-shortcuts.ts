@@ -329,7 +329,7 @@ export function useCanvasKeyDown() {
         event.preventDefault();
         const scope = scopeOf(ui.drill);
         const level = effectiveLevel(levelForZoom(getZoom()), scope);
-        const bounds = groupBounds(deck, nodeSize(level));
+        const bounds = groupBounds(deck, level);
         const points = [
           ...graph.groups.flatMap((groupId) => {
             const boundsForGroup = bounds.get(groupId);

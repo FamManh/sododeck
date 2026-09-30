@@ -389,7 +389,7 @@ function groupNodes(
 ): GroupFlowNode[] {
   if (deck.groups.length === 0) return [];
   const groupsById = groupLookup(deck.groups);
-  const bounds = groupBounds(deck, sizeForLevel(level));
+  const bounds = groupBounds(deck, level);
   const counts = groupCounts(deck);
   return graph.groups.flatMap((groupId) => {
     const group = groupsById.get(groupId);

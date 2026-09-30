@@ -207,7 +207,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     ...ports.map((port) => [port.id, port.rect] as const),
   ]);
 
-  const groups = sceneGroups(source, graph, size, cards, inFlow !== null);
+  const groups = sceneGroups(source, graph, level, cards, inFlow !== null);
   const edges = sceneEdges(source, graph, rects, overlay);
 
   // Notes as the canvas draws them: free notes and notes on non-components (edges, flows,
@@ -284,11 +284,11 @@ function emptyScene(): ExportScene {
 function sceneGroups(
   deck: SododeckFile,
   graph: VisibleGraph,
-  size: { width: number; height: number },
+  level: Level,
   cards: readonly SceneCard[],
   flowOnly: boolean,
 ): SceneGroup[] {
-  const frames = groupBounds(deck, size);
+  const frames = groupBounds(deck, level);
   const counts = groupCounts(deck);
   const byId = new Map(deck.groups.map((group) => [group.id, group]));
   const nodeGroup = new Map(deck.nodes.map((node) => [node.id, node.group]));

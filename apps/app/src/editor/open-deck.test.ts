@@ -3,7 +3,7 @@ import full from '@sododeck/schema/examples/full.sododeck.json' with { type: 'js
 import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { COMPONENT_CARD_SIZE, groupBounds } from './canvas-geometry';
+import { groupBounds } from './canvas-geometry';
 import { fitMissingFrames } from './open-deck';
 import { viewStateOf } from './views/view-state';
 
@@ -33,9 +33,7 @@ describe('fitMissingFrames (016 research R2, SC-003b)', () => {
     const doc = fromJSON(oldDeck);
     fitMissingFrames(createEditor(doc), toJSON(doc));
     const after = toJSON(doc);
-    expect(groupBounds(after, COMPONENT_CARD_SIZE)).toEqual(
-      groupBounds(oldDeck, COMPONENT_CARD_SIZE),
-    );
+    expect(groupBounds(after, 'component')).toEqual(groupBounds(oldDeck, 'component'));
   });
 
   it('fits views with their own positions from those positions', () => {
@@ -46,8 +44,8 @@ describe('fitMissingFrames (016 research R2, SC-003b)', () => {
     expect(Object.keys(infra?.groupFrames ?? {})).not.toHaveLength(0);
     // The view draws its members inside its own frames.
     const before = viewStateOf(oldDeck, 'infra').deck;
-    expect(groupBounds(viewStateOf(after, 'infra').deck, COMPONENT_CARD_SIZE)).toEqual(
-      groupBounds(before, COMPONENT_CARD_SIZE),
+    expect(groupBounds(viewStateOf(after, 'infra').deck, 'component')).toEqual(
+      groupBounds(before, 'component'),
     );
     // Views without own positions keep using the base frames.
     expect(after.views.find((v) => v.id === 'feature')?.groupFrames).toBeUndefined();

@@ -8,13 +8,7 @@ import type { Frame, Id, SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useUiStore, type Selection } from '../../state/ui-store';
-import {
-  COMPONENT_CARD_SIZE,
-  displayPosition,
-  GROUP_PADDING,
-  groupBounds,
-  type Rect,
-} from '../canvas-geometry';
+import { cardBox, GROUP_PADDING, groupBounds, type Rect } from '../canvas-geometry';
 import { readViewState } from '../views/use-current-view';
 import { commonParent } from './common-parent';
 import { groupSubtree } from './subtree';
@@ -47,10 +41,10 @@ export function frameAround(
   members: { nodes: readonly Id[]; groups: readonly Id[] },
 ): Frame | null {
   const nodes = new Set(members.nodes);
-  const bounds = groupBounds(deck, COMPONENT_CARD_SIZE);
+  const bounds = groupBounds(deck, 'component');
   const rects: Rect[] = [];
   deck.nodes.forEach((node, index) => {
-    if (nodes.has(node.id)) rects.push({ ...displayPosition(node, index), ...COMPONENT_CARD_SIZE });
+    if (nodes.has(node.id)) rects.push(cardBox(node, index, 'component'));
   });
   for (const id of members.groups) {
     const rect = bounds.get(id);

@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   boundsOf,
+  CARD_SIZE_LIMITS,
+  cardBox,
+  cardSize,
   COLLAPSED_CARD_SIZE,
   COMPONENT_CARD_SIZE,
   displayPosition,
@@ -23,6 +26,46 @@ describe('displayPosition', () => {
     expect(displayPosition({ position: { x: 3, y: 4 } }, 7)).toEqual({ x: 3, y: 4 });
     expect(displayPosition({}, 0)).toEqual({ x: 0, y: 0 });
     expect(displayPosition({}, 11)).toEqual({ x: 220, y: 110 });
+  });
+});
+
+describe('CARD_SIZE_LIMITS (017 R2)', () => {
+  it('is 120×44 to 800×600', () => {
+    expect(CARD_SIZE_LIMITS).toEqual({
+      min: { width: 120, height: 44 },
+      max: { width: 800, height: 600 },
+      step: 4,
+    });
+  });
+});
+
+describe('cardSize (017 R2/R3)', () => {
+  it('is the level size when the node has no stored size', () => {
+    expect(cardSize({}, 'system')).toEqual(NODE_SIZE);
+    expect(cardSize({}, 'component')).toEqual(COMPONENT_CARD_SIZE);
+  });
+
+  it('is the stored size, unclamped when within the limits', () => {
+    expect(cardSize({ size: { width: 244, height: 80 } }, 'system')).toEqual({
+      width: 244,
+      height: 80,
+    });
+  });
+
+  it('clamps a stored size outside the limits', () => {
+    expect(cardSize({ size: { width: 20, height: 900 } }, 'system')).toEqual({
+      width: CARD_SIZE_LIMITS.min.width,
+      height: CARD_SIZE_LIMITS.max.height,
+    });
+  });
+});
+
+describe('cardBox', () => {
+  it('combines displayPosition and cardSize', () => {
+    expect(
+      cardBox({ position: { x: 10, y: 20 }, size: { width: 244, height: 80 } }, 0, 'system'),
+    ).toEqual({ x: 10, y: 20, width: 244, height: 80 });
+    expect(cardBox({}, 0, 'component')).toEqual({ x: 0, y: 0, ...COMPONENT_CARD_SIZE });
   });
 });
 
@@ -66,13 +109,41 @@ describe('groupBounds', () => {
   });
 
   it('accepts a taller component-level node size', () => {
-    const bounds = groupBounds(d, COMPONENT_CARD_SIZE);
+    const bounds = groupBounds(d, 'component');
     expect(bounds.get('inner')).toEqual({
       x: -GROUP_PADDING,
       y: -GROUP_PADDING,
       width: 200 + COMPONENT_CARD_SIZE.width + 2 * GROUP_PADDING,
       height: 100 + COMPONENT_CARD_SIZE.height + 2 * GROUP_PADDING,
     });
+  });
+
+  it('sizes each member with its own stored size (017)', () => {
+    const sized = deck({
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          group: 'g',
+          position: { x: 0, y: 0 },
+          size: { width: 300, height: 200 },
+        },
+        { id: 'b', type: 'service', title: 'B', group: 'g', position: { x: 400, y: 0 } },
+      ],
+      groups: [{ id: 'g', title: 'G' }],
+    });
+    expect(groupBounds(sized).get('g')).toEqual({
+      x: -GROUP_PADDING,
+      y: -GROUP_PADDING,
+      width: 400 + NODE_SIZE.width + 2 * GROUP_PADDING,
+      height: 200 + 2 * GROUP_PADDING,
+    });
+  });
+
+  it('is not cached across different card sizes (the cache is no longer keyed by one size)', () => {
+    expect(groupBounds(d, 'system')).not.toBe(groupBounds(d, 'component'));
+    expect(groupBounds(d, 'system')).toBe(groupBounds(d, 'system'));
   });
 });
 
@@ -91,13 +162,13 @@ describe('groupBounds with stored frames (016)', () => {
   });
 
   it('returns the stored frame of a group that has one, even with no members', () => {
-    const bounds = groupBounds(framed, COMPONENT_CARD_SIZE);
+    const bounds = groupBounds(framed, 'component');
     expect(bounds.get('inner')).toEqual({ x: -500, y: -400, width: 900, height: 700 });
     expect(bounds.get('empty')).toEqual({ x: 1, y: 2, width: 160, height: 96 });
   });
 
   it('falls back to the derived box, around stored child frames', () => {
-    const outer = groupBounds(framed, COMPONENT_CARD_SIZE).get('outer');
+    const outer = groupBounds(framed, 'component').get('outer');
     expect(outer).toEqual({
       x: -500 - GROUP_PADDING,
       y: -400 - GROUP_PADDING,
@@ -107,15 +178,15 @@ describe('groupBounds with stored frames (016)', () => {
   });
 
   it('is recomputed when deck.groups changes', () => {
-    const first = groupBounds(framed, COMPONENT_CARD_SIZE);
-    expect(groupBounds(framed, COMPONENT_CARD_SIZE)).toBe(first);
+    const first = groupBounds(framed, 'component');
+    expect(groupBounds(framed, 'component')).toBe(first);
     const moved = {
       ...framed,
       groups: framed.groups.map((g) =>
         g.id === 'inner' ? { ...g, position: { x: 10, y: 20 } } : g,
       ),
     };
-    expect(groupBounds(moved, COMPONENT_CARD_SIZE).get('inner')).toEqual({
+    expect(groupBounds(moved, 'component').get('inner')).toEqual({
       x: 10,
       y: 20,
       width: 900,
@@ -198,6 +269,27 @@ describe('boundsOf / rectInView (007)', () => {
     expect(boundsOf(d, ['gone'])).toBeNull();
   });
 
+  it('sizes each node with its own stored size (017)', () => {
+    const sized = deck({
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          position: { x: 0, y: 0 },
+          size: { width: 300, height: 200 },
+        },
+        { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+      ],
+    });
+    expect(boundsOf(sized, ['a', 'b'])).toEqual({
+      x: 0,
+      y: 0,
+      width: 400 + NODE_SIZE.width,
+      height: 200,
+    });
+  });
+
   it('checks a rect against the viewport in screen pixels', () => {
     const rect = { x: 100, y: 100, width: 100, height: 50 };
     const size = { width: 400, height: 300 };
@@ -209,18 +301,39 @@ describe('boundsOf / rectInView (007)', () => {
 });
 
 describe('selectionFrame', () => {
-  it('uses the provided node size when boxing the selection', () => {
+  it('uses the level size when boxing the selection', () => {
     const d = deck({
       nodes: [
         { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
         { id: 'b', type: 'service', title: 'B', position: { x: 200, y: 100 } },
       ],
     });
-    expect(selectionFrame(d, ['a', 'b'], COMPONENT_CARD_SIZE)).toEqual({
+    expect(selectionFrame(d, ['a', 'b'], 'component')).toEqual({
       x: -8,
       y: -8,
       width: 200 + COMPONENT_CARD_SIZE.width + 16,
       height: 100 + COMPONENT_CARD_SIZE.height + 16,
+    });
+  });
+
+  it('sizes each member with its own stored size (017)', () => {
+    const d = deck({
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          position: { x: 0, y: 0 },
+          size: { width: 300, height: 200 },
+        },
+        { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+      ],
+    });
+    expect(selectionFrame(d, ['a', 'b'])).toEqual({
+      x: -8,
+      y: -8,
+      width: 400 + NODE_SIZE.width + 16,
+      height: 200 + 16,
     });
   });
 });

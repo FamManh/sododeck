@@ -8,13 +8,7 @@ import type { DeckEditor } from '@sododeck/model';
 import type { Frame, Id, SododeckFile } from '@sododeck/schema';
 
 import { useUiStore } from '../../state/ui-store';
-import {
-  COMPONENT_CARD_SIZE,
-  displayPosition,
-  GROUP_PADDING,
-  groupBounds,
-  type Rect,
-} from '../canvas-geometry';
+import { cardBox, GROUP_PADDING, groupBounds, type Rect } from '../canvas-geometry';
 import { readViewState } from '../views/use-current-view';
 import { setActiveGesture } from './drag-session';
 import { clampFrame, resizeFrame, type Handle } from './resize-limits';
@@ -26,10 +20,9 @@ import { clampFrame, resizeFrame, type Handle } from './resize-limits';
 export function frameContent(deck: SododeckFile, groupId: Id): Rect | null {
   const rects: Rect[] = [];
   deck.nodes.forEach((node, index) => {
-    if (node.group === groupId)
-      rects.push({ ...displayPosition(node, index), ...COMPONENT_CARD_SIZE });
+    if (node.group === groupId) rects.push(cardBox(node, index, 'component'));
   });
-  const bounds = groupBounds(deck, COMPONENT_CARD_SIZE);
+  const bounds = groupBounds(deck, 'component');
   for (const group of deck.groups) {
     const rect = group.parent === groupId ? bounds.get(group.id) : undefined;
     if (rect !== undefined) rects.push(rect);
@@ -67,7 +60,7 @@ export interface ResizeSession {
 /** Starts a resize from `handle`: one gesture until `endResize`. Null for a frame not drawn. */
 export function startResize(editor: DeckEditor, groupId: Id, handle: Handle): ResizeSession | null {
   const view = readViewState(editor.doc);
-  const start = groupBounds(view.deck, COMPONENT_CARD_SIZE).get(groupId);
+  const start = groupBounds(view.deck, 'component').get(groupId);
   if (start === undefined) return null;
   const session: ResizeSession = {
     groupId,

@@ -129,7 +129,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### App geometry and rendering of stored values
 
-- [ ] T011 Write failing tests in `apps/app/src/editor/canvas-geometry.test.ts`:
+- [x] T011 Write failing tests in `apps/app/src/editor/canvas-geometry.test.ts`:
   - `CARD_SIZE_LIMITS`;
   - `cardSize(node, level)`: the stored size clamped to 120 × 44 – 800 × 600, and without it the level size (164 × 50, or 164 × 104 at the component level);
   - `cardBox`;

@@ -1,5 +1,14 @@
 import type { ProblemKind } from '@sododeck/model';
-import { Copy, Link2Off, Split, Table2, Unplug, Workflow, type LucideIcon } from 'lucide-react';
+import {
+  Copy,
+  Link2Off,
+  Maximize2,
+  Split,
+  Table2,
+  Unplug,
+  Workflow,
+  type LucideIcon,
+} from 'lucide-react';
 
 export const problemCountLabel = (count: number) =>
   count === 1 ? '1 problem' : `${String(count)} problems`;
@@ -15,4 +24,5 @@ export const PROBLEM_ICONS: Record<ProblemKind, LucideIcon> = {
   'rule-without-catch-all': Table2,
   'invalid-rule-cells': Table2,
   'broken-reference': Link2Off,
+  'card-size-out-of-range': Maximize2,
 };

@@ -107,7 +107,7 @@ export function GuidesOverlay() {
   if (guides.length === 0 && readout === null && dropTarget === null) return null;
 
   const size = nodeSize(levelForZoom(zoom));
-  const bounds = groupBounds(view.deck, size);
+  const bounds = groupBounds(view.deck, levelForZoom(zoom));
   const ghosts =
     gesture === 'group-drag' && readout !== null
       ? selection.groups.flatMap((id) => {
