@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithEditor, deckOf } from '../../test/render-canvas';
 import { useUiStore } from '../../state/ui-store';
-import { addDeckColour, applyStyle, skippedCount } from './apply-style';
+import { addDeckColour, applyStyle, removeDeckColour, skippedCount } from './apply-style';
 
 function fileWithNodesAndGroup() {
   return deckOf({
@@ -136,5 +136,38 @@ describe('addDeckColour (020 T044)', () => {
 
     expect(ok).toBe(false);
     expect(toJSON(doc)).toEqual(before);
+  });
+});
+
+describe('removeDeckColour (020 T050)', () => {
+  it('is one undo step, and leaves node styles untouched', () => {
+    const { editor, doc } = renderWithEditor(
+      null,
+      deckOf({
+        ...fileWithNodesAndGroup(),
+        swatches: ['#7a3cff', '#111111'],
+        nodes: [
+          { id: 'n1', title: 'A', type: 'service', style: { fill: '#7a3cff' } },
+          { id: 'n2', title: 'B', type: 'service' },
+        ],
+      }),
+    );
+
+    removeDeckColour(editor(), '#7a3cff');
+
+    expect(toJSON(doc).swatches).toEqual(['#111111']);
+    expect(toJSON(doc).nodes.find((n) => n.id === 'n1')?.style?.fill).toBe('#7a3cff');
+
+    editor().undo();
+    expect(toJSON(doc).swatches).toEqual(['#7a3cff', '#111111']);
+  });
+
+  it('announces "Removed #7a3cff from deck colours"', () => {
+    const { editor } = renderWithEditor(
+      null,
+      deckOf({ ...fileWithNodesAndGroup(), swatches: ['#7a3cff'] }),
+    );
+    removeDeckColour(editor(), '#7a3cff');
+    expect(useUiStore.getState().announcement.text).toBe('Removed #7a3cff from deck colours');
   });
 });

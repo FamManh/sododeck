@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type * as React from 'react';
 
@@ -66,6 +66,9 @@ interface SwatchGridProps {
   onSelect: (value: string) => void;
   /** Hovered (or keyboard-focused) option's value, `null` when none (020 picker footer). */
   onHoverChange?: (value: string | null) => void;
+  /** Deck colours only (020 T050/T051): each swatch gets a sibling remove button. */
+  removable?: boolean;
+  onRemove?: (value: string) => void;
   className?: string;
 }
 
@@ -81,6 +84,8 @@ function SwatchGrid({
   columns = 7,
   onSelect,
   onHoverChange,
+  removable = false,
+  onRemove,
   className,
 }: SwatchGridProps) {
   const checkedIndex = options.findIndex((option) => option.value === value);
@@ -126,6 +131,17 @@ function SwatchGrid({
         if (option !== undefined) onSelect(option.value);
         break;
       }
+      case 'Backspace':
+      case 'Delete': {
+        if (!removable || onRemove === undefined) break;
+        event.preventDefault();
+        const option = options[index];
+        if (option === undefined) break;
+        onRemove(option.value);
+        if (index + 1 < options.length) focusIndex(index + 1);
+        else if (index - 1 >= 0) focusIndex(index - 1);
+        break;
+      }
       default:
         break;
     }
@@ -141,37 +157,53 @@ function SwatchGrid({
       {options.map((option, index) => {
         const checked = option.value === value;
         return (
-          <button
-            key={option.value}
-            ref={(el) => {
-              refs.current[index] = el;
-            }}
-            type="button"
-            role="radio"
-            aria-checked={checked}
-            aria-label={option.label}
-            tabIndex={index === activeIndex ? 0 : -1}
-            onClick={() => {
-              onSelect(option.value);
-            }}
-            onKeyDown={(event) => {
-              onKeyDown(event, index);
-            }}
-            onFocus={() => {
-              setActiveIndex(index);
-              onHoverChange?.(option.value);
-            }}
-            onMouseEnter={() => {
-              onHoverChange?.(option.value);
-            }}
-            onMouseLeave={() => {
-              onHoverChange?.(null);
-            }}
-            style={swatchStyle(option.swatch, option.ringSwatch)}
-            className={cn('rounded-full', focusRing)}
-          >
-            <Swatch swatch={option.swatch} ringSwatch={option.ringSwatch} checked={checked} />
-          </button>
+          <div key={option.value} className="group/swatch relative">
+            <button
+              ref={(el) => {
+                refs.current[index] = el;
+              }}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              aria-label={option.label}
+              tabIndex={index === activeIndex ? 0 : -1}
+              onClick={() => {
+                onSelect(option.value);
+              }}
+              onKeyDown={(event) => {
+                onKeyDown(event, index);
+              }}
+              onFocus={() => {
+                setActiveIndex(index);
+                onHoverChange?.(option.value);
+              }}
+              onMouseEnter={() => {
+                onHoverChange?.(option.value);
+              }}
+              onMouseLeave={() => {
+                onHoverChange?.(null);
+              }}
+              style={swatchStyle(option.swatch, option.ringSwatch)}
+              className={cn('rounded-full', focusRing)}
+            >
+              <Swatch swatch={option.swatch} ringSwatch={option.ringSwatch} checked={checked} />
+            </button>
+            {removable ? (
+              <button
+                type="button"
+                aria-label={`Remove ${option.label} from deck colours`}
+                onClick={() => {
+                  onRemove?.(option.value);
+                }}
+                className={cn(
+                  'absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-ink text-surface opacity-0 transition-opacity group-hover/swatch:opacity-100 group-focus-within/swatch:opacity-100',
+                  focusRing,
+                )}
+              >
+                <X aria-hidden size={10} strokeWidth={ICON_STROKE_WIDTH} />
+              </button>
+            ) : null}
+          </div>
         );
       })}
     </div>

@@ -347,11 +347,11 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent test**: quickstart scenario 5.
 
-- [ ] T050 [P] [US4] Add failing tests:
+- [x] T050 [P] [US4] Add failing tests:
   - In `packages/ui/test/swatch-grid.test.tsx`, a `removable` swatch shows a `button` "Remove #7a3cff from deck colours" on hover and on focus. ⌫ or Delete on the focused swatch calls `onRemove`, and focus moves to the next swatch (or "+").
   - In `apps/app/src/editor/style/apply-style.test.ts`, `removeDeckColour` is one undo step, leaves node styles untouched, and announces "Removed #7a3cff from deck colours".
   - In `style-picker.test.tsx`, a card whose fill is a hex not in the deck list shows no checked radio, and the footer shows the hex.
-- [ ] T051 [US4] Add `removable` / `onRemove` to `packages/ui/src/components/swatch-grid.tsx` (a 16 px inverse × badge that is a sibling button, not nested in the radio). Implement `removeDeckColour` in `apps/app/src/editor/style/apply-style.ts`, and wire it into the deck grid in `style-picker.tsx`. When the deck drops below 12, "+" comes back. T050 is now green.
+- [x] T051 [US4] Add `removable` / `onRemove` to `packages/ui/src/components/swatch-grid.tsx` (a 16 px inverse × badge that is a sibling button, not nested in the radio). Implement `removeDeckColour` in `apps/app/src/editor/style/apply-style.ts`, and wire it into the deck grid in `style-picker.tsx`. When the deck drops below 12, "+" comes back. T050 is now green.
 
 **Checkpoint**: US4 scenarios 1–4 pass.
 

@@ -15,7 +15,7 @@ import { oneStep } from '../fields/one-step';
 import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { KIND_OPTIONS } from '../inspector/choices';
 import { bulkView, styleView, tagSuggestions } from '../inspector/derive';
-import { applyStyle, addDeckColour, skippedCount } from '../style/apply-style';
+import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues, tagChoices } from './choice-state';
 
@@ -216,6 +216,9 @@ function StyleFieldContent({ selection }: { selection: Selection }) {
       onAddColour={(channel, hex) => {
         addDeckColour(editor, selection, channel, hex);
         setStylePreview(null);
+      }}
+      onRemoveColour={(hex) => {
+        removeDeckColour(editor, hex);
       }}
     />
   );

@@ -36,6 +36,8 @@ export interface StylePickerProps {
   onPreview?: (channel: 'fill' | 'stroke', value: string | null) => void;
   /** Saves a new hex colour to the deck and applies it (020 T044/T046). */
   onAddColour?: (channel: 'fill' | 'stroke', hex: string) => void;
+  /** Removes a custom hex colour from the deck (020 T050/T051). */
+  onRemoveColour?: (hex: string) => void;
 }
 
 const DEFAULT_HSV = { h: 262, s: 0.6, v: 0.4 };
@@ -168,6 +170,7 @@ export function StylePicker({
   deckColours = [],
   onPreview,
   onAddColour,
+  onRemoveColour,
 }: StylePickerProps) {
   const tab = useUiStore((s) => s.stylePickerTab);
   const setTab = useUiStore((s) => s.setStylePickerTab);
@@ -185,6 +188,8 @@ export function StylePicker({
     swatch: `var(--color-card-${colour}-${tab})`,
   }));
   const deckOptions = deckColours.map(({ hex }) => ({ value: hex, label: hex, swatch: hex }));
+  const checkedHexInDeck =
+    checkedHex !== null && deckColours.some((c) => c.hex === checkedHex) ? checkedHex : null;
 
   const activeName = hovered !== null && isNamedColor(hovered) ? hovered : checkedNamed;
   const activeHex =
@@ -260,12 +265,14 @@ export function StylePicker({
             <SwatchGrid
               label="Deck colours"
               options={deckOptions}
-              value={checkedHex}
+              value={checkedHexInDeck}
               columns={7}
               onSelect={(next) => {
                 onApply(tab, next);
               }}
               onHoverChange={setHovered}
+              removable
+              onRemove={onRemoveColour}
             />
           ) : null}
           {atCap ? null : (

@@ -27,6 +27,7 @@ function AppearanceRow({
   deckColours,
   onApply,
   onAddColour,
+  onRemoveColour,
   skipped,
 }: {
   channel: 'fill' | 'stroke';
@@ -34,6 +35,7 @@ function AppearanceRow({
   deckColours?: readonly { hex: string }[];
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
   onAddColour?: (channel: 'fill' | 'stroke', hex: string) => void;
+  onRemoveColour?: (hex: string) => void;
   skipped?: { colored: number; total: number };
 }) {
   const [open, setOpen] = useState(false);
@@ -77,6 +79,7 @@ function AppearanceRow({
             onAddColour?.(addChannel, hex);
             setStylePreview(null);
           }}
+          onRemoveColour={onRemoveColour}
         />
       </PopoverContent>
     </Popover>
@@ -88,12 +91,14 @@ export function AppearanceSection({
   deckColours,
   onApply,
   onAddColour,
+  onRemoveColour,
   skipped,
 }: {
   value: StylePickerValue;
   deckColours?: readonly { hex: string }[];
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
   onAddColour?: (channel: 'fill' | 'stroke', hex: string) => void;
+  onRemoveColour?: (hex: string) => void;
   /** Selected items that can't be coloured (bulk selections, 020 T037/T038). */
   skipped?: { colored: number; total: number };
 }) {
@@ -106,6 +111,7 @@ export function AppearanceSection({
           deckColours={deckColours}
           onApply={onApply}
           onAddColour={onAddColour}
+          onRemoveColour={onRemoveColour}
           skipped={skipped}
         />
         <AppearanceRow
@@ -114,6 +120,7 @@ export function AppearanceSection({
           deckColours={deckColours}
           onApply={onApply}
           onAddColour={onAddColour}
+          onRemoveColour={onRemoveColour}
           skipped={skipped}
         />
       </div>

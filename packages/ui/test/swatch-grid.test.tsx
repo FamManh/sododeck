@@ -76,3 +76,51 @@ describe('SwatchGrid', () => {
     expect(onSelect).toHaveBeenCalledWith('c2');
   });
 });
+
+describe('SwatchGrid removable swatches (020 T050)', () => {
+  const deckOptions = [
+    { value: '#7a3cff', label: '#7a3cff', swatch: '#7a3cff' },
+    { value: '#111111', label: '#111111', swatch: '#111111' },
+    { value: '#222222', label: '#222222', swatch: '#222222' },
+  ];
+
+  it('shows a remove button next to a removable swatch, as a sibling of the radio', () => {
+    render(
+      <SwatchGrid
+        label="Deck colours"
+        options={deckOptions}
+        value={null}
+        removable
+        onSelect={() => {}}
+      />,
+    );
+    const button = screen.getByRole('button', { name: 'Remove #7a3cff from deck colours' });
+    expect(button).toBeInTheDocument();
+    expect(button.closest('[role="radio"]')).toBeNull();
+  });
+
+  it('⌫ and Delete on a focused swatch call onRemove and move focus to the next swatch', async () => {
+    const user = userEvent.setup();
+    const onRemove = vi.fn();
+    render(
+      <SwatchGrid
+        label="Deck colours"
+        options={deckOptions}
+        value={null}
+        removable
+        onSelect={() => {}}
+        onRemove={onRemove}
+      />,
+    );
+    const radios = screen.getAllByRole('radio');
+    await user.tab();
+    expect(radios[0]).toHaveFocus();
+    await user.keyboard('{Backspace}');
+    expect(onRemove).toHaveBeenCalledWith('#7a3cff');
+    expect(radios[1]).toHaveFocus();
+
+    await user.keyboard('{Delete}');
+    expect(onRemove).toHaveBeenCalledWith('#111111');
+    expect(radios[2]).toHaveFocus();
+  });
+});

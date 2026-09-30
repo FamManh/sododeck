@@ -81,3 +81,15 @@ export function addDeckColour(
     .announce(`Saved to this deck as ${String(savedAt)} of ${String(MAX_SWATCHES)}`);
   return true;
 }
+
+/**
+ * Removes a custom hex colour from the deck's swatches, one undo step (020 T050/T051, contract
+ * "Deck colours"). Never touches any node or group's style: a card keeps its stored colour even
+ * after its swatch is removed (data-model.md).
+ */
+export function removeDeckColour(editor: DeckEditor, hex: string): void {
+  oneStep(editor, () => {
+    editor.removeSwatch(hex);
+  });
+  useUiStore.getState().announce(`Removed ${hex} from deck colours`);
+}

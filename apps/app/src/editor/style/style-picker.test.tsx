@@ -212,5 +212,23 @@ describe('StylePicker (020 T024)', () => {
         '12 of 12 deck colours: remove one to add another',
       );
     });
+
+    it('a fill hex not in the deck list shows no checked radio, and the footer shows the hex (020 T050)', () => {
+      const value: StylePickerValue = {
+        fill: { mixed: false, value: '#abcdef' },
+        stroke: { mixed: false, value: null },
+      };
+      renderPicker(value, vi.fn(), undefined, { deckColours });
+      const colourGroups = [
+        screen.getByRole('radiogroup', { name: 'Colours' }),
+        screen.getByRole('radiogroup', { name: 'Deck colours' }),
+      ];
+      for (const group of colourGroups) {
+        for (const radio of within(group).getAllByRole('radio')) {
+          expect(radio).toHaveAttribute('aria-checked', 'false');
+        }
+      }
+      expect(screen.getByRole('status')).toHaveTextContent('#abcdef');
+    });
   });
 });
