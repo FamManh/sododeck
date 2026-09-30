@@ -160,7 +160,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `resizeReadout` and `endpointHover`.
   - `resetForDeck` clears them.
 - [x] T018 [P] Add the contract ids to the "Editing" section of `apps/app/src/editor/shell/shortcuts.ts` (+ test): `resize-card`, `move-segment`, `move-segment-10`, `reset-route`, `resize-no-snap`, `resize-ratio`, `resize-centre`.
-- [ ] T019 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The demo deck must look unchanged. Import `full.sododeck.json` and check the sized card and the routed edge by eye.
+- [x] T019 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The demo deck must look unchanged. Import `full.sododeck.json` and check the sized card and the routed edge by eye.
 
 **Checkpoint**: stored sizes and routes render on the canvas and in export. The stories can start.
 
