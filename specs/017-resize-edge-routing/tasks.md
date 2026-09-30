@@ -72,13 +72,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 ## Phase 1: Setup
 
 - [x] T001 Create branch `017-resize-edge-routing` from the latest `main`, after the 017 docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/017-resize-edge-routing/bench-before.md`.
-- [ ] T003 Add a `resized-routed` scenario to `apps/app/bench/perf.bench.ts` (R15, FR-031), enabled with `BENCH_ROUTES=1`:
+- [x] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/017-resize-edge-routing/bench-before.md`.
+- [x] T003 Add a `resized-routed` scenario to `apps/app/bench/perf.bench.ts` (R15, FR-031), enabled with `BENCH_ROUTES=1`:
   - Give every bench node `size` 200 × 72.
   - Give 200 edges a `route`: a mix of `fromSide` / `toSide` and `offset` ±40.
   - Pan and zoom for 2 s, recording fps the same way as the existing pan scenario.
   - Until T006 lands, the scenario logs `TODO(017): not available yet` and records no number.
-- [ ] T004 [P] Write ADR `docs/decisions/0019-card-size-and-connector-route.md` in the header format of 0017. It records the R16 points:
+- [x] T004 [P] Write ADR `docs/decisions/0019-card-size-and-connector-route.md` in the header format of 0017. It records the R16 points:
   - optional `node.size` / `edge.route`
   - sides plus one middle-segment offset instead of waypoints, and why
   - the offset is relative to the automatic middle, in px

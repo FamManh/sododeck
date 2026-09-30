@@ -442,6 +442,7 @@ export function BenchPage() {
   const drawer = params.get('drawer') === '1';
   const exporting = params.get('export') === '1';
   const toolbar = params.get('toolbar') === '1';
+  const routes = params.get('routes') === '1';
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -457,7 +458,7 @@ export function BenchPage() {
       useUiStore.getState().openDrawer();
     }
     return fromJSON(
-      generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views }).deck,
+      generateBenchDeck(nodeCount, edgeCount, 42, { flows, groups, stickies, views, routes }).deck,
     );
   });
 
