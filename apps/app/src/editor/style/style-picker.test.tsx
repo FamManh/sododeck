@@ -11,17 +11,31 @@ function renderPicker(
   value: StylePickerValue,
   onApply = vi.fn(),
   skipped?: { colored: number; total: number },
+  extra?: {
+    deckColours?: readonly { hex: string }[];
+    onPreview?: (channel: 'fill' | 'stroke', value: string | null) => void;
+    onAddColour?: (channel: 'fill' | 'stroke', hex: string) => void;
+  },
 ) {
+  const onPreview = extra?.onPreview ?? vi.fn();
+  const onAddColour = extra?.onAddColour ?? vi.fn();
   render(
     <TooltipProvider>
       <Popover open>
         <PopoverContent aria-label="Colour" className="w-[272px]">
-          <StylePicker value={value} onApply={onApply} skipped={skipped} />
+          <StylePicker
+            value={value}
+            onApply={onApply}
+            skipped={skipped}
+            deckColours={extra?.deckColours}
+            onPreview={onPreview}
+            onAddColour={onAddColour}
+          />
         </PopoverContent>
       </Popover>
     </TooltipProvider>,
   );
-  return { onApply, user: userEvent.setup() };
+  return { onApply, onPreview, onAddColour, user: userEvent.setup() };
 }
 
 const noStyle: StylePickerValue = {
@@ -118,5 +132,85 @@ describe('StylePicker (020 T024)', () => {
   it('reads "Colours 1 of 2 selected items" when an item was skipped (020 T036/T037)', () => {
     renderPicker(noStyle, vi.fn(), { colored: 1, total: 2 });
     expect(screen.getByRole('status')).toHaveTextContent('Colours 1 of 2 selected items');
+  });
+
+  describe('deck colours and the add panel (020 T043)', () => {
+    const deckColours = [{ hex: '#7a3cff' }, { hex: '#1f2a44' }];
+
+    it('lists the deck colours in a "Deck colours" radiogroup, then the "Add a deck colour" button', () => {
+      renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      const group = screen.getByRole('radiogroup', { name: 'Deck colours' });
+      expect(within(group).getByRole('radio', { name: '#7a3cff' })).toBeInTheDocument();
+      expect(within(group).getByRole('radio', { name: '#1f2a44' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add a deck colour' })).toBeInTheDocument();
+    });
+
+    it('"+" opens the panel with the "Hex colour" textbox', async () => {
+      const { user } = renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      expect(screen.getByRole('textbox', { name: 'Hex colour' })).toBeInTheDocument();
+    });
+
+    it('typing a valid hex enables Add and previews it', async () => {
+      const { user, onPreview } = renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      await user.type(screen.getByRole('textbox', { name: 'Hex colour' }), '7A3CFF');
+      expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+      expect(onPreview).toHaveBeenLastCalledWith('fill', '#7a3cff');
+    });
+
+    it('an invalid hex disables Add and shows the error', async () => {
+      const { user } = renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      await user.type(screen.getByRole('textbox', { name: 'Hex colour' }), '#abc');
+      expect(screen.getByRole('button', { name: 'Add' })).toBeDisabled();
+      const hex = screen.getByRole('textbox', { name: 'Hex colour' });
+      const errorId = hex.getAttribute('aria-describedby');
+      expect(errorId).not.toBeNull();
+      expect(document.getElementById(errorId ?? '')).toHaveTextContent(
+        'Enter a 6-digit hex colour, e.g. #7a3cff',
+      );
+    });
+
+    it('a low-contrast hex shows the readability warning, with Add still enabled', async () => {
+      const { user } = renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      await user.type(screen.getByRole('textbox', { name: 'Hex colour' }), '7c7c7c');
+      expect(screen.getByText('Text may be hard to read on this colour')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Add' })).toBeEnabled();
+    });
+
+    it('Add calls onAddColour with the channel and normalized hex', async () => {
+      const { user, onAddColour } = renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      await user.type(screen.getByRole('textbox', { name: 'Hex colour' }), '7A3CFF');
+      await user.click(screen.getByRole('button', { name: 'Add' }));
+      expect(onAddColour).toHaveBeenCalledWith('fill', '#7a3cff');
+    });
+
+    it('Cancel and Esc call onPreview(null) and return to the palette', async () => {
+      const { user, onPreview } = renderPicker(noStyle, vi.fn(), undefined, { deckColours });
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      await user.type(screen.getByRole('textbox', { name: 'Hex colour' }), '7A3CFF');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(onPreview).toHaveBeenLastCalledWith('fill', null);
+      expect(screen.getByRole('radiogroup', { name: 'Colours' })).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Add a deck colour' }));
+      await user.keyboard('{Escape}');
+      expect(onPreview).toHaveBeenLastCalledWith('fill', null);
+      expect(screen.getByRole('radiogroup', { name: 'Colours' })).toBeInTheDocument();
+    });
+
+    it('hides "+" and shows the cap footer at 12 deck colours', () => {
+      const twelve = Array.from({ length: 12 }, (_, i) => ({
+        hex: `#${String(i).padStart(6, '0')}`,
+      }));
+      renderPicker(noStyle, vi.fn(), undefined, { deckColours: twelve });
+      expect(screen.queryByRole('button', { name: 'Add a deck colour' })).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(
+        '12 of 12 deck colours: remove one to add another',
+      );
+    });
   });
 });

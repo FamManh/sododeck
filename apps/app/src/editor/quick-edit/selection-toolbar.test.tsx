@@ -272,4 +272,27 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(screen.getByRole('button', { name: 'Kind: Database' })).toBeInTheDocument();
     expect(within(drawer).getByRole('combobox', { name: 'Kind' })).toHaveValue('Database');
   });
+
+  it('previews a new deck colour on the card, and Cancel clears it without an undo step (020 T048)', async () => {
+    const { user, doc, editor } = setup();
+    select(['a']);
+    await user.click(screen.getByRole('button', { name: 'Colour: none' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Colour' });
+    await user.click(within(dialog).getByRole('button', { name: 'Add a deck colour' }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Hex colour' }), '7A3CFF');
+
+    const nodeA = document.querySelector('[data-node-id="a"]');
+    expect(nodeA).not.toBeNull();
+    expect(nodeA).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Custom fill #7a3cff'),
+    );
+    expect(toJSON(doc).nodes.find((n) => n.id === 'a')?.style).toBeUndefined();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(nodeA).not.toHaveAttribute('aria-description', expect.stringContaining('#7a3cff'));
+    expect(toJSON(doc).nodes.find((n) => n.id === 'a')?.style).toBeUndefined();
+    expect(toJSON(doc).swatches).toBeUndefined();
+    expect(editor().canUndo()).toBe(false);
+  });
 });

@@ -24,21 +24,29 @@ function channelLabel(channel: 'fill' | 'stroke', value: Shared<ColorRef | null>
 function AppearanceRow({
   channel,
   value,
+  deckColours,
   onApply,
+  onAddColour,
   skipped,
 }: {
   channel: 'fill' | 'stroke';
   value: StylePickerValue;
+  deckColours?: readonly { hex: string }[];
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
+  onAddColour?: (channel: 'fill' | 'stroke', hex: string) => void;
   skipped?: { colored: number; total: number };
 }) {
   const [open, setOpen] = useState(false);
   const setTab = useUiStore((s) => s.setStylePickerTab);
+  const setStylePreview = useUiStore((s) => s.setStylePreview);
   return (
     <Popover
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
+        // This popover isn't tied to `toolbarField` (020 T048), so its own close must clear the
+        // preview: the toolbar's does this already via `closeToolbarField`.
+        if (!next) setStylePreview(null);
       }}
     >
       <PopoverTrigger asChild>
@@ -57,7 +65,19 @@ function AppearanceRow({
         </button>
       </PopoverTrigger>
       <PopoverContent aria-label="Colour" align="start" className="w-[272px] shadow-menu">
-        <StylePicker value={value} onApply={onApply} skipped={skipped} />
+        <StylePicker
+          value={value}
+          onApply={onApply}
+          skipped={skipped}
+          deckColours={deckColours}
+          onPreview={(previewChannel, hex) => {
+            setStylePreview(hex === null ? null : { channel: previewChannel, value: hex });
+          }}
+          onAddColour={(addChannel, hex) => {
+            onAddColour?.(addChannel, hex);
+            setStylePreview(null);
+          }}
+        />
       </PopoverContent>
     </Popover>
   );
@@ -65,19 +85,37 @@ function AppearanceRow({
 
 export function AppearanceSection({
   value,
+  deckColours,
   onApply,
+  onAddColour,
   skipped,
 }: {
   value: StylePickerValue;
+  deckColours?: readonly { hex: string }[];
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
+  onAddColour?: (channel: 'fill' | 'stroke', hex: string) => void;
   /** Selected items that can't be coloured (bulk selections, 020 T037/T038). */
   skipped?: { colored: number; total: number };
 }) {
   return (
     <PanelSection label="Appearance">
       <div className="flex flex-col">
-        <AppearanceRow channel="fill" value={value} onApply={onApply} skipped={skipped} />
-        <AppearanceRow channel="stroke" value={value} onApply={onApply} skipped={skipped} />
+        <AppearanceRow
+          channel="fill"
+          value={value}
+          deckColours={deckColours}
+          onApply={onApply}
+          onAddColour={onAddColour}
+          skipped={skipped}
+        />
+        <AppearanceRow
+          channel="stroke"
+          value={value}
+          deckColours={deckColours}
+          onApply={onApply}
+          onAddColour={onAddColour}
+          skipped={skipped}
+        />
       </div>
     </PanelSection>
   );

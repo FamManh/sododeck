@@ -1,5 +1,7 @@
 import { Checkbox } from '@sododeck/ui/components/checkbox';
+import { ColourArea } from '@sododeck/ui/components/colour-area';
 import { Combobox } from '@sododeck/ui/components/combobox';
+import { HueSlider } from '@sododeck/ui/components/hue-slider';
 import { InlineEdit } from '@sododeck/ui/components/inline-edit';
 import { MarkdownView } from '@sododeck/ui/components/markdown-view';
 import { RadioGroup, RadioGroupItem } from '@sododeck/ui/components/radio-group';
@@ -54,6 +56,7 @@ export function FieldsSection() {
   const [owner, setOwner] = useState('Orders');
   const [kind, setKind] = useState('service');
   const [swatch, setSwatch] = useState('green');
+  const [hsv, setHsv] = useState({ h: 262, s: 0.6, v: 0.4 });
   const switchId = useId();
 
   return (
@@ -257,6 +260,24 @@ export function FieldsSection() {
           value={null}
           onSelect={() => {}}
         />
+      </SampleRow>
+      <SampleRow label="colour area / hue slider">
+        <div className="flex w-60 flex-col gap-2">
+          <ColourArea
+            hue={hsv.h}
+            saturation={hsv.s}
+            value={hsv.v}
+            onChange={({ s, v }) => {
+              setHsv((prev) => ({ ...prev, s, v }));
+            }}
+          />
+          <HueSlider
+            hue={hsv.h}
+            onChange={(h) => {
+              setHsv((prev) => ({ ...prev, h }));
+            }}
+          />
+        </div>
       </SampleRow>
     </GallerySection>
   );

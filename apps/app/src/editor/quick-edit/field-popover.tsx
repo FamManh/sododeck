@@ -15,7 +15,7 @@ import { oneStep } from '../fields/one-step';
 import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { KIND_OPTIONS } from '../inspector/choices';
 import { bulkView, styleView, tagSuggestions } from '../inspector/derive';
-import { applyStyle, skippedCount } from '../style/apply-style';
+import { applyStyle, addDeckColour, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues, tagChoices } from './choice-state';
 
@@ -191,6 +191,7 @@ function EdgeFieldContent({ field, edge }: { field: ToolbarFieldId; edge: Edge }
 function StyleFieldContent({ selection }: { selection: Selection }) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
+  const setStylePreview = useUiStore((s) => s.setStylePreview);
   const nodeIds = new Set(selection.nodes);
   const groupIds = new Set(selection.groups);
   const objects = [
@@ -205,8 +206,16 @@ function StyleFieldContent({ selection }: { selection: Selection }) {
       skipped={
         skipped > 0 ? { colored: objects.length, total: objects.length + skipped } : undefined
       }
+      deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}
       onApply={(channel, value) => {
         applyStyle(editor, selection, channel, value);
+      }}
+      onPreview={(channel, value) => {
+        setStylePreview(value === null ? null : { channel, value });
+      }}
+      onAddColour={(channel, hex) => {
+        addDeckColour(editor, selection, channel, hex);
+        setStylePreview(null);
       }}
     />
   );

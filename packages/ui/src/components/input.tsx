@@ -1,4 +1,5 @@
 import { CircleAlert } from 'lucide-react';
+import { forwardRef } from 'react';
 import type * as React from 'react';
 
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -15,34 +16,33 @@ const fieldClasses = cn(
  * Single-line text field. `invalid` adds aria-invalid, a clay border and an alert icon,
  * so the error state is never shown by color alone.
  */
-function Input({
-  className,
-  invalid = false,
-  ...props
-}: React.ComponentProps<'input'> & { invalid?: boolean }) {
-  const input = (
-    <input
-      data-slot="input"
-      aria-invalid={invalid || undefined}
-      className={cn(
-        fieldClasses,
-        invalid && 'border-clay-ink pr-8 focus:border-clay-ink',
-        className,
-      )}
-      {...props}
-    />
-  );
-  if (!invalid) return input;
-  return (
-    <span data-slot="input-wrapper" className="relative flex w-full items-center">
-      {input}
-      <CircleAlert
-        aria-hidden
-        strokeWidth={ICON_STROKE_WIDTH}
-        className="pointer-events-none absolute right-2.5 size-4 text-clay-ink"
-      />
-    </span>
-  );
-}
+const Input = forwardRef<HTMLInputElement, React.ComponentProps<'input'> & { invalid?: boolean }>(
+  function Input({ className, invalid = false, ...props }, ref) {
+    // Always the same wrapper shape (invalid toggling mid-type must not remount the input and
+    // drop the DOM node a caller or a test is still typing into).
+    return (
+      <span data-slot="input-wrapper" className="relative flex w-full items-center">
+        <input
+          ref={ref}
+          data-slot="input"
+          aria-invalid={invalid || undefined}
+          className={cn(
+            fieldClasses,
+            invalid && 'border-clay-ink pr-8 focus:border-clay-ink',
+            className,
+          )}
+          {...props}
+        />
+        {invalid ? (
+          <CircleAlert
+            aria-hidden
+            strokeWidth={ICON_STROKE_WIDTH}
+            className="pointer-events-none absolute right-2.5 size-4 text-clay-ink"
+          />
+        ) : null}
+      </span>
+    );
+  },
+);
 
 export { Input };

@@ -302,12 +302,12 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Tests first
 
-- [ ] T042 [P] [US3] Write failing tests in `packages/ui/test/colour-area.test.tsx` and `packages/ui/test/hue-slider.test.tsx`:
+- [x] T042 [P] [US3] Write failing tests in `packages/ui/test/colour-area.test.tsx` and `packages/ui/test/hue-slider.test.tsx`:
   - The roles are `slider` "Saturation and brightness" (`aria-valuetext` "Saturation 60 %, brightness 40 %") and `slider` "Hue" (0–359, `aria-valuetext` "Hue 262°").
   - Arrows step by 1, and ⇧ plus arrows by 10.
   - Values are clamped.
   - `onChange` is called with the new HSV or hue.
-- [ ] T043 [P] [US3] Add failing tests to `apps/app/src/editor/style/style-picker.test.tsx` for the add panel:
+- [x] T043 [P] [US3] Add failing tests to `apps/app/src/editor/style/style-picker.test.tsx` for the add panel:
   - The "Deck colours" radiogroup lists the deck's hex swatches in order, followed by the "Add a deck colour" button.
   - "+" opens the panel with the "Hex colour" textbox.
   - Typing `7A3CFF` enables Add and calls `onPreview('fill', '#7a3cff')`.
@@ -316,7 +316,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - Add calls `onAddColour('fill', '#7a3cff')`.
   - Cancel and Esc call `onPreview(null)` and return to the palette.
   - With 12 deck colours, "+" is not in the DOM and the footer reads "12 of 12 deck colours: remove one to add another".
-- [ ] T044 [P] [US3] Add failing tests to `apps/app/src/editor/style/apply-style.test.ts` for `addDeckColour(editor, selection, channel, hex)`:
+- [x] T044 [P] [US3] Add failing tests to `apps/app/src/editor/style/apply-style.test.ts` for `addDeckColour(editor, selection, channel, hex)`:
   - In one undo step, the swatch is added and the colour applied.
   - Adding an existing colour applies it without duplicating it.
   - It announces "Saved to this deck as n of 12".
@@ -324,9 +324,9 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Implementation
 
-- [ ] T045 [P] [US3] Create `packages/ui/src/components/colour-area.tsx` (an S×V box: pointer drag with pointer capture, and keyboard control per T042) and `packages/ui/src/components/hue-slider.tsx`. Use tokens only; the gradient backgrounds are built from the `hue` prop through CSS custom properties. Add gallery samples. T042 is now green.
-- [ ] T046 [US3] Implement `addDeckColour` in `apps/app/src/editor/style/apply-style.ts`: `oneStep(editor, () => { editor.addSwatch(hex); editor.setStyle(targets, channel, hex); })`, guarded by `MAX_SWATCHES`, with the announcement. T044 is now green.
-- [ ] T047 [US3] Extend `apps/app/src/editor/style/style-picker.tsx`:
+- [x] T045 [P] [US3] Create `packages/ui/src/components/colour-area.tsx` (an S×V box: pointer drag with pointer capture, and keyboard control per T042) and `packages/ui/src/components/hue-slider.tsx`. Use tokens only; the gradient backgrounds are built from the `hue` prop through CSS custom properties. Add gallery samples. T042 is now green.
+- [x] T046 [US3] Implement `addDeckColour` in `apps/app/src/editor/style/apply-style.ts`: `oneStep(editor, () => { editor.addSwatch(hex); editor.setStyle(targets, channel, hex); })`, guarded by `MAX_SWATCHES`, with the announcement. T044 is now green.
+- [x] T047 [US3] Extend `apps/app/src/editor/style/style-picker.tsx`:
   - The "Deck colours" `SwatchGrid` (7 columns) plus the "+" button (dashed border; hidden at `>= MAX_SWATCHES`).
   - The add panel: `ColourArea`, `HueSlider`, the hex `Input` (kept in sync both ways through `normalizeHex` / `hsvToHex`), the error text, the `readableText` warning (FR-026), and Add and Cancel.
   - "Saved to this deck as n of 12" in the footer.
@@ -334,8 +334,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   T043 is now green.
 
-- [ ] T048 [US3] Wire the preview and the add in `StylePopover` (`field-popover.tsx`) and in `appearance-section.tsx`: closing the popover or changing the selection clears `stylePreview` (T022). Add a test showing that the preview changes the rendered card's `data-text` / description, and that Cancel leaves `editor.undoManager` with no new step.
-- [ ] T049 [US3] Confirm the paste behaviour (R12) with a test in `packages/model/test/fragment.test.ts`: a fragment of a node with a hex fill pastes the hex into a deck that has no such swatch, and the target's `swatches` is unchanged.
+- [x] T048 [US3] Wire the preview and the add in `StylePopover` (`field-popover.tsx`) and in `appearance-section.tsx`: closing the popover or changing the selection clears `stylePreview` (T022). Add a test showing that the preview changes the rendered card's `data-text` / description, and that Cancel leaves `editor.undoManager` with no new step.
+- [x] T049 [US3] Confirm the paste behaviour (R12) with a test in `packages/model/test/fragment.test.ts`: a fragment of a node with a hex fill pastes the hex into a deck that has no such swatch, and the target's `swatches` is unchanged.
 
 **Checkpoint**: US3 scenarios 1–9 pass. Export and re-import keep the swatches and their order (quickstart 8).
 

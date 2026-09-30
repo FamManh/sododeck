@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithEditor, deckOf } from '../../test/render-canvas';
 import { useUiStore } from '../../state/ui-store';
-import { applyStyle, skippedCount } from './apply-style';
+import { addDeckColour, applyStyle, skippedCount } from './apply-style';
 
 function fileWithNodesAndGroup() {
   return deckOf({
@@ -82,5 +82,59 @@ describe('applyStyle (020 T030)', () => {
     expect(
       skippedCount({ ...emptySelection, nodes: ['n1'], edges: ['e1'], stickies: ['s1'] }),
     ).toBe(2);
+  });
+});
+
+describe('addDeckColour (020 T044)', () => {
+  it('adds the swatch and applies the colour in one undo step', () => {
+    const { editor, doc } = renderWithEditor(null, fileWithNodesAndGroup());
+    const ok = addDeckColour(
+      editor(),
+      { ...emptySelection, nodes: ['n1', 'n2'] },
+      'fill',
+      '#7a3cff',
+    );
+
+    expect(ok).toBe(true);
+    expect(toJSON(doc).swatches).toEqual(['#7a3cff']);
+    expect(toJSON(doc).nodes.filter((n) => n.style?.fill === '#7a3cff')).toHaveLength(2);
+
+    editor().undo();
+    expect(toJSON(doc).swatches).toBeUndefined();
+    expect(toJSON(doc).nodes.every((n) => n.style?.fill === undefined)).toBe(true);
+  });
+
+  it('applies an existing deck colour without duplicating the swatch', () => {
+    const { editor, doc } = renderWithEditor(
+      null,
+      deckOf({ ...fileWithNodesAndGroup(), swatches: ['#7a3cff'] }),
+    );
+    addDeckColour(editor(), { ...emptySelection, nodes: ['n1'] }, 'fill', '#7a3cff');
+
+    expect(toJSON(doc).swatches).toEqual(['#7a3cff']);
+    expect(toJSON(doc).nodes.find((n) => n.id === 'n1')?.style?.fill).toBe('#7a3cff');
+  });
+
+  it('announces "Saved to this deck as n of 12"', () => {
+    const { editor } = renderWithEditor(
+      null,
+      deckOf({ ...fileWithNodesAndGroup(), swatches: ['#111111'] }),
+    );
+    addDeckColour(editor(), { ...emptySelection, nodes: ['n1'] }, 'fill', '#7a3cff');
+    expect(useUiStore.getState().announcement.text).toBe('Saved to this deck as 2 of 12');
+  });
+
+  it('at 12 colours returns false and writes nothing', () => {
+    const twelve = Array.from({ length: 12 }, (_, i) => `#${String(i).padStart(6, '0')}`);
+    const { editor, doc } = renderWithEditor(
+      null,
+      deckOf({ ...fileWithNodesAndGroup(), swatches: twelve }),
+    );
+    const before = toJSON(doc);
+
+    const ok = addDeckColour(editor(), { ...emptySelection, nodes: ['n1'] }, 'fill', '#7a3cff');
+
+    expect(ok).toBe(false);
+    expect(toJSON(doc)).toEqual(before);
   });
 });

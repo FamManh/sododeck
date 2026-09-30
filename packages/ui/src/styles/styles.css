@@ -29,3 +29,32 @@
 [data-slot='inline-edit']::selection {
   background-color: var(--sd-selection-text);
 }
+
+/*
+ * 020 T045: the hue track (a full rainbow) and the saturation/brightness gradient (built from one
+ * hue) for the "Add a deck colour" panel. Raw color functions belong here, not in src/components
+ * (see test/tokens-only.test.ts).
+ */
+.sd-hue-track {
+  background: linear-gradient(
+    to right,
+    hsl(0 100% 50%),
+    hsl(60 100% 50%),
+    hsl(120 100% 50%),
+    hsl(180 100% 50%),
+    hsl(240 100% 50%),
+    hsl(300 100% 50%),
+    hsl(360 100% 50%)
+  );
+}
+
+.sd-colour-area {
+  background:
+    linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent),
+    hsl(var(--hue) 100% 50%);
+}
+
+.sd-colour-cursor {
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 40%);
+}

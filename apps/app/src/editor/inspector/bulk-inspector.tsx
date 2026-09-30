@@ -15,7 +15,7 @@ import { FieldLabel } from '../fields/field-label';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
 import { writeNodes, writeNodesOnce, type NodePatch } from '../fields/write-nodes';
-import { applyStyle, skippedCount } from '../style/apply-style';
+import { addDeckColour, applyStyle, skippedCount } from '../style/apply-style';
 import { AppearanceSection } from './appearance-section';
 import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { bulkView, styleView, tagSuggestions, type Shared } from './derive';
@@ -49,6 +49,9 @@ export function BulkInspector({
   const styleSkipped = skippedCount(styleSelection);
   const applyBulkStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {
     applyStyle(editor, styleSelection, channel, value);
+  };
+  const addBulkColour = (channel: 'fill' | 'stroke', hex: string) => {
+    addDeckColour(editor, styleSelection, channel, hex);
   };
 
   /** One batch over the selection; inside a text field's gesture, one undo step per edit. */
@@ -96,7 +99,9 @@ export function BulkInspector({
         </PanelSection>
         <AppearanceSection
           value={style}
+          deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}
           onApply={applyBulkStyle}
+          onAddColour={addBulkColour}
           skipped={styleSkipped > 0 ? { colored: n, total: n + styleSkipped } : undefined}
         />
         <PanelSection className="grid grid-cols-2 gap-3">

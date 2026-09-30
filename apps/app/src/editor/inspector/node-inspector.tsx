@@ -19,7 +19,7 @@ import { PickField } from '../fields/pick-field';
 import { TagsField } from '../fields/tags-field';
 import { kindLabel } from '../kind-label';
 import { LEVEL_NAMES, nodeLevel } from '../levels';
-import { applyStyle } from '../style/apply-style';
+import { addDeckColour, applyStyle } from '../style/apply-style';
 import { AppearanceSection } from './appearance-section';
 import { groupName, groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { nodeConnections, styleView } from './derive';
@@ -48,6 +48,9 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   const style = styleView([node]);
   const applyNodeStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {
     applyStyle(editor, { nodes: [node.id], groups: [], edges: [], stickies: [] }, channel, value);
+  };
+  const addNodeColour = (channel: 'fill' | 'stroke', hex: string) => {
+    addDeckColour(editor, { nodes: [node.id], groups: [], edges: [], stickies: [] }, channel, hex);
   };
   const titleOf = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
   const level = nodeLevel(deck, node.id);
@@ -170,7 +173,12 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
         <PanelSection>
           <PinSwitch nodeIds={[node.id]} />
         </PanelSection>
-        <AppearanceSection value={style} onApply={applyNodeStyle} />
+        <AppearanceSection
+          value={style}
+          deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}
+          onApply={applyNodeStyle}
+          onAddColour={addNodeColour}
+        />
         <AttachedRules deck={deck} host={{ kind: 'node', id: node.id }} ruleIds={node.rules} />
         <PanelSection label={`Connections · ${String(connections.length)}`}>
           {connections.length === 0 ? (
