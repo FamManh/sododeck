@@ -252,20 +252,20 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent test**: quickstart scenario 2.
 
-- [ ] T035 [P] [US2] Add failing tests to `apps/app/src/editor/style/style-picker.test.tsx`:
+- [x] T035 [P] [US2] Add failing tests to `apps/app/src/editor/style/style-picker.test.tsx`:
   - With `value.fill === 'mixed'`, no radio is checked and the footer reads "Mixed".
   - When all targets share `amber`, "Amber" is checked.
   - "No colour" has `aria-pressed="true"` only when no target has that channel.
-- [ ] T036 [P] [US2] Add failing tests to `apps/app/src/editor/style/apply-style.test.ts`:
+- [x] T036 [P] [US2] Add failing tests to `apps/app/src/editor/style/apply-style.test.ts`:
   - For a selection of 2 components, 1 group and 1 sticky, `setStyle` gets `{ nodes: [2], groups: [1] }`, and the footer helper `skippedCount` returns 1 ("Colours 3 of 4 selected items").
   - "No colour" on 3 cards with different fills keeps their strokes, and one undo restores each fill.
-- [ ] T037 [US2] Implement mixed values and the skipped-items footer:
+- [x] T037 [US2] Implement mixed values and the skipped-items footer:
   - A pure `channelValue(objects, channel)` in `apps/app/src/editor/style/card-style.ts`, returning a `ColorRef`, `null` or `'mixed'`.
   - `skippedCount` in `apply-style.ts`.
 
   Use both in `style-picker.tsx` and the toolbar button name. T035 and T036 are now green.
 
-- [ ] T038 [US2] Add `AppearanceSection` to `apps/app/src/editor/inspector/bulk-inspector.tsx`, with mixed values shown as "Fill: Mixed". Add a test.
+- [x] T038 [US2] Add `AppearanceSection` to `apps/app/src/editor/inspector/bulk-inspector.tsx`, with mixed values shown as "Fill: Mixed". Add a test.
 
 **Checkpoint**: US2 scenarios 1–5 pass.
 

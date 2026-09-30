@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { renderWithEditor, deckOf } from '../../test/render-canvas';
 import { useUiStore } from '../../state/ui-store';
-import { applyStyle } from './apply-style';
+import { applyStyle, skippedCount } from './apply-style';
 
 function fileWithNodesAndGroup() {
   return deckOf({
@@ -60,5 +60,27 @@ describe('applyStyle (020 T030)', () => {
     const { editor } = renderWithEditor(null, fileWithNodesAndGroup());
     applyStyle(editor(), { ...emptySelection, groups: ['g1'] }, 'stroke', '#7a3cff');
     expect(useUiStore.getState().announcement.text).toBe('Stroke set to #7a3cff on 1 group');
+  });
+
+  it('"No colour" on fill keeps the stroke, and one undo restores each fill (020 T036)', () => {
+    const { editor, doc } = renderWithEditor(null, fileWithNodesAndGroup());
+    applyStyle(editor(), { ...emptySelection, nodes: ['n1', 'n2'] }, 'stroke', 'blue');
+    applyStyle(editor(), { ...emptySelection, nodes: ['n1', 'n2'] }, 'fill', 'green');
+
+    applyStyle(editor(), { ...emptySelection, nodes: ['n1', 'n2'] }, 'fill', null);
+    expect(toJSON(doc).nodes.filter((n) => n.style?.fill !== undefined)).toHaveLength(0);
+    expect(toJSON(doc).nodes.filter((n) => n.style?.stroke === 'blue')).toHaveLength(2);
+
+    editor().undo();
+    expect(toJSON(doc).nodes.filter((n) => n.style?.fill === 'green')).toHaveLength(2);
+    expect(toJSON(doc).nodes.filter((n) => n.style?.stroke === 'blue')).toHaveLength(2);
+  });
+
+  it('skippedCount counts selected edges and stickies (020 T036/T037)', () => {
+    expect(skippedCount({ ...emptySelection, nodes: ['n1'] })).toBe(0);
+    expect(skippedCount({ ...emptySelection, nodes: ['n1'], edges: ['e1'] })).toBe(1);
+    expect(
+      skippedCount({ ...emptySelection, nodes: ['n1'], edges: ['e1'], stickies: ['s1'] }),
+    ).toBe(2);
   });
 });

@@ -7,12 +7,16 @@ import { TooltipProvider } from '@sododeck/ui/components/tooltip';
 import { useUiStore } from '../../state/ui-store';
 import { StylePicker, type StylePickerValue } from './style-picker';
 
-function renderPicker(value: StylePickerValue, onApply = vi.fn()) {
+function renderPicker(
+  value: StylePickerValue,
+  onApply = vi.fn(),
+  skipped?: { colored: number; total: number },
+) {
   render(
     <TooltipProvider>
       <Popover open>
         <PopoverContent aria-label="Colour" className="w-[272px]">
-          <StylePicker value={value} onApply={onApply} />
+          <StylePicker value={value} onApply={onApply} skipped={skipped} />
         </PopoverContent>
       </Popover>
     </TooltipProvider>,
@@ -90,5 +94,29 @@ describe('StylePicker (020 T024)', () => {
   it('reads "Mixed" in the footer for a mixed channel with nothing hovered', () => {
     renderPicker({ fill: { mixed: true }, stroke: { mixed: false, value: null } });
     expect(screen.getByRole('status')).toHaveTextContent('Mixed');
+  });
+
+  it('checks no radio when the fill channel is mixed (020 T035)', () => {
+    renderPicker({ fill: { mixed: true }, stroke: { mixed: false, value: null } });
+    const colours = screen.getByRole('radiogroup', { name: 'Colours' });
+    expect(within(colours).queryAllByRole('radio', { checked: true })).toHaveLength(0);
+  });
+
+  it('checks Amber when every target shares it (020 T035)', () => {
+    renderPicker({ fill: { mixed: false, value: 'amber' }, stroke: { mixed: false, value: null } });
+    expect(screen.getByRole('radio', { name: 'Amber' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('marks "No colour" not pressed when a target has a colour (020 T035)', () => {
+    renderPicker({ fill: { mixed: false, value: 'green' }, stroke: { mixed: false, value: null } });
+    expect(screen.getByRole('button', { name: 'No colour' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
+  it('reads "Colours 1 of 2 selected items" when an item was skipped (020 T036/T037)', () => {
+    renderPicker(noStyle, vi.fn(), { colored: 1, total: 2 });
+    expect(screen.getByRole('status')).toHaveTextContent('Colours 1 of 2 selected items');
   });
 });

@@ -15,7 +15,7 @@ import { oneStep } from '../fields/one-step';
 import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { KIND_OPTIONS } from '../inspector/choices';
 import { bulkView, styleView, tagSuggestions } from '../inspector/derive';
-import { applyStyle } from '../style/apply-style';
+import { applyStyle, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues, tagChoices } from './choice-state';
 
@@ -198,9 +198,13 @@ function StyleFieldContent({ selection }: { selection: Selection }) {
     ...deck.groups.filter((g) => groupIds.has(g.id)),
   ];
   const view = styleView(objects);
+  const skipped = skippedCount(selection);
   return (
     <StylePicker
       value={view}
+      skipped={
+        skipped > 0 ? { colored: objects.length, total: objects.length + skipped } : undefined
+      }
       onApply={(channel, value) => {
         applyStyle(editor, selection, channel, value);
       }}

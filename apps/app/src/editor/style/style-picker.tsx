@@ -24,9 +24,11 @@ export interface StylePickerProps {
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
   /** Custom deck colours (020 US3): the grid and "Add a deck colour" render there. */
   deckColours?: readonly { hex: string }[];
+  /** Selected items that can't be coloured (020 T037): drives the "Colours X of Y" footer. */
+  skipped?: { colored: number; total: number };
 }
 
-export function StylePicker({ value, onApply }: StylePickerProps) {
+export function StylePicker({ value, onApply, skipped }: StylePickerProps) {
   const tab = useUiStore((s) => s.stylePickerTab);
   const setTab = useUiStore((s) => s.setStylePickerTab);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -47,7 +49,9 @@ export function StylePicker({ value, onApply }: StylePickerProps) {
       ? `${colourName(activeName)} · card-${activeName}-${tab}`
       : channel.mixed
         ? 'Mixed'
-        : 'No colour';
+        : skipped !== undefined
+          ? `Colours ${String(skipped.colored)} of ${String(skipped.total)} selected items`
+          : 'No colour';
 
   return (
     <div className="flex flex-col gap-3">

@@ -1,4 +1,4 @@
-import type { Node, SododeckFile } from '@sododeck/schema';
+import type { ColorRef, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Combobox } from '@sododeck/ui/components/combobox';
 import { PanelSection } from '@sododeck/ui/components/panel';
@@ -15,8 +15,10 @@ import { FieldLabel } from '../fields/field-label';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
 import { writeNodes, writeNodesOnce, type NodePatch } from '../fields/write-nodes';
+import { applyStyle, skippedCount } from '../style/apply-style';
+import { AppearanceSection } from './appearance-section';
 import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
-import { bulkView, tagSuggestions, type Shared } from './derive';
+import { bulkView, styleView, tagSuggestions, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
 
@@ -42,6 +44,12 @@ export function BulkInspector({
   const n = nodes.length;
   const ids = nodes.map((node) => node.id);
   const same = (shared: Shared<unknown>) => (shared.mixed ? undefined : `Same on all ${String(n)}`);
+  const styleSelection = { nodes: ids, edges: edgeIds, groups: [], stickies: [] };
+  const style = styleView(nodes);
+  const styleSkipped = skippedCount(styleSelection);
+  const applyBulkStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {
+    applyStyle(editor, styleSelection, channel, value);
+  };
 
   /** One batch over the selection; inside a text field's gesture, one undo step per edit. */
   const writeAll = (patch: (node: Node) => NodePatch | null) => {
@@ -86,6 +94,11 @@ export function BulkInspector({
         <PanelSection>
           <PinSwitch nodeIds={ids} />
         </PanelSection>
+        <AppearanceSection
+          value={style}
+          onApply={applyBulkStyle}
+          skipped={styleSkipped > 0 ? { colored: n, total: n + styleSkipped } : undefined}
+        />
         <PanelSection className="grid grid-cols-2 gap-3">
           <PickField
             label="Kind"

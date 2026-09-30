@@ -46,3 +46,8 @@ export function applyStyle(
       : `${channelLabel} set to ${colourName(value)} on ${String(count)} ${word}`;
   useUiStore.getState().announce(message);
 }
+
+/** How many selected items can't be coloured (edges, stickies): 020 T037, contract footer. */
+export function skippedCount(selection: Selection): number {
+  return selection.edges.length + selection.stickies.length;
+}

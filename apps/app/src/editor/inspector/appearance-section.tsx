@@ -25,10 +25,12 @@ function AppearanceRow({
   channel,
   value,
   onApply,
+  skipped,
 }: {
   channel: 'fill' | 'stroke';
   value: StylePickerValue;
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
+  skipped?: { colored: number; total: number };
 }) {
   const [open, setOpen] = useState(false);
   const setTab = useUiStore((s) => s.setStylePickerTab);
@@ -55,7 +57,7 @@ function AppearanceRow({
         </button>
       </PopoverTrigger>
       <PopoverContent aria-label="Colour" align="start" className="w-[272px] shadow-menu">
-        <StylePicker value={value} onApply={onApply} />
+        <StylePicker value={value} onApply={onApply} skipped={skipped} />
       </PopoverContent>
     </Popover>
   );
@@ -64,15 +66,18 @@ function AppearanceRow({
 export function AppearanceSection({
   value,
   onApply,
+  skipped,
 }: {
   value: StylePickerValue;
   onApply: (channel: 'fill' | 'stroke', value: ColorRef | null) => void;
+  /** Selected items that can't be coloured (bulk selections, 020 T037/T038). */
+  skipped?: { colored: number; total: number };
 }) {
   return (
     <PanelSection label="Appearance">
       <div className="flex flex-col">
-        <AppearanceRow channel="fill" value={value} onApply={onApply} />
-        <AppearanceRow channel="stroke" value={value} onApply={onApply} />
+        <AppearanceRow channel="fill" value={value} onApply={onApply} skipped={skipped} />
+        <AppearanceRow channel="stroke" value={value} onApply={onApply} skipped={skipped} />
       </div>
     </PanelSection>
   );
