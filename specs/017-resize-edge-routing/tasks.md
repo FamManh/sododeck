@@ -224,8 +224,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Register it in `apps/app/src/editor/actions/index.ts`. Add tests in `shape-actions.test.ts`: availability, the disabled tooltip, and one undo step.
 
-- [ ] T031 [P] [US1] Update `apps/app/src/storage/deck-summary.ts` so node tuples carry an optional `w, h`, and `apps/app/src/library/deck-thumbnail.tsx` so it draws per-node sizes, with the default when they are absent (R13). Update `deck-summary.test.ts` and the thumbnail test.
-- [ ] T032 [US1] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
+- [x] T031 [P] [US1] Update `apps/app/src/storage/deck-summary.ts` so node tuples carry an optional `w, h`, and `apps/app/src/library/deck-thumbnail.tsx` so it draws per-node sizes, with the default when they are absent (R13). Update `deck-summary.test.ts` and the thumbnail test.
+- [x] T032 [US1] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
   - a resized member overhangs its group frame, and the frame is unchanged (FR-010);
   - the 016 frame resize minimum uses the enlarged card;
   - the handles are absent in flow mode and in view-only.

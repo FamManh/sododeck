@@ -25,6 +25,9 @@ import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
 import { addComponent } from './canvas-actions';
+import { GROUP_PADDING } from './canvas-geometry';
+import { frameContent } from './editing/frame-resize';
+import { clampFrame } from './editing/resize-limits';
 import { collapsedOf, setGroupCollapsed, toggleGroupCollapsed } from './views/use-current-view';
 import { useEditorShortcuts } from './use-canvas-shortcuts';
 
@@ -1225,5 +1228,72 @@ describe('canvas in flow mode (007)', () => {
       renderWithEditor(<Canvas />, other);
       expect(card(/^Right, collapsed group/)).toBeInTheDocument();
     });
+  });
+});
+
+describe('resizing a card (017)', () => {
+  const grouped = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', group: 'g', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'database', title: 'B', group: 'g', position: { x: 300, y: 0 } },
+    ],
+    groups: [
+      { id: 'g', title: 'G', position: { x: -20, y: -20 }, size: { width: 400, height: 200 } },
+    ],
+  });
+
+  it('never changes a group frame when a member is resized, even if it overhangs (FR-010)', () => {
+    const { editor, doc } = renderWithEditor(<Canvas />, grouped);
+    act(() => {
+      useUiStore.getState().select({ nodes: ['a'] });
+    });
+    act(() => {
+      editor().setCardSize('a', { width: 600, height: 500 });
+    });
+    const group = toJSON(doc).groups.find((g) => g.id === 'g');
+    // The resized card (600 x 500) is far bigger than the frame (400 x 200): it overhangs, and
+    // the stored frame itself never moves or grows.
+    expect(group?.position).toEqual({ x: -20, y: -20 });
+    expect(group?.size).toEqual({ width: 400, height: 200 });
+  });
+
+  it('the 016 frame resize minimum grows to keep the enlarged card inside (FR-013)', () => {
+    const { editor, doc } = renderWithEditor(<Canvas />, grouped);
+    const before = frameContent(toJSON(doc), 'g');
+    act(() => {
+      editor().setCardSize('a', { width: 700, height: 600 });
+    });
+    const after = frameContent(toJSON(doc), 'g');
+    expect(after?.width).toBeGreaterThan(before?.width ?? 0);
+    expect(after?.height).toBeGreaterThan(before?.height ?? 0);
+    // A frame can never be clamped smaller than its (now bigger) content plus padding.
+    const shrunk = clampFrame({ x: 0, y: 0, width: 10, height: 10 }, after, GROUP_PADDING);
+    expect(shrunk.width).toBeGreaterThanOrEqual((after?.width ?? 0) + 2 * GROUP_PADDING);
+    expect(shrunk.height).toBeGreaterThanOrEqual((after?.height ?? 0) + 2 * GROUP_PADDING);
+  });
+
+  it('shows resize handles only for one selected card, never in flow mode or a flow session', () => {
+    const { container, editor } = renderWithEditor(<Canvas />, playbackDeck);
+    act(() => {
+      useUiStore.getState().select({ nodes: ['a'] });
+    });
+    expect(container.querySelectorAll('.sd-resize-handle').length).toBeGreaterThan(0);
+
+    act(() => {
+      openFlow(editor(), 'order');
+    });
+    expect(container.querySelectorAll('.sd-resize-handle')).toHaveLength(0);
+    act(() => {
+      exitFlow();
+    });
+    act(() => {
+      useUiStore.getState().select({ nodes: ['a'] });
+    });
+    expect(container.querySelectorAll('.sd-resize-handle').length).toBeGreaterThan(0);
+
+    act(() => {
+      useUiStore.getState().startRecording('Place order', null);
+    });
+    expect(container.querySelectorAll('.sd-resize-handle')).toHaveLength(0);
   });
 });
