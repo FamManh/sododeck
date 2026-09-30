@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { fromJSON, serializeDeck, toJSON } from '@sododeck/model';
-import { emptySododeckFile } from '@sododeck/schema';
+import { createEditor, fromJSON, serializeDeck, toJSON } from '@sododeck/model';
+import full from '@sododeck/schema/examples/full.sododeck.json' with { type: 'json' };
+import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
@@ -74,5 +75,57 @@ describe('library ops', () => {
 
     // A fresh history, not a copy of the original's: the two logs never share updates.
     expect(Y.decodeStateVector(Y.encodeStateVector(copy)).has(source.clientID)).toBe(false);
+  });
+});
+
+describe('library ops keep card size and connector route (017 US4)', () => {
+  it('keeps size and route unchanged when importing, editing a title and exporting', () => {
+    const file = { ...(full as SododeckFile), name: 'Full' };
+    const text = serializeDeck(file);
+    const { bytes } = importFile(text);
+    const doc = docOf([bytes]);
+    const before = Y.encodeStateVector(doc);
+    const editor = createEditor(doc);
+    const node = toJSON(doc).nodes[0];
+    if (node === undefined) throw new Error('fixture has no nodes');
+    editor.update('nodes', node.id, { title: `${node.title} v2` });
+    editor.destroy();
+    const delta = Y.encodeStateAsUpdate(doc, before);
+    const exported = exportDeck([bytes, delta]);
+    const exportedFile = JSON.parse(exported.json) as SododeckFile;
+    expect(exportedFile.nodes.find((n) => n.id === node.id)?.title).toBe(`${node.title} v2`);
+    expect(exportedFile.nodes.map((n) => n.size)).toEqual(file.nodes.map((n) => n.size));
+    expect(exportedFile.edges.map((e) => e.route)).toEqual(file.edges.map((e) => e.route));
+  });
+
+  it('has neither field when importing and exporting a deck without them', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      name: 'Bare',
+      nodes: [{ id: 'a', type: 'service', title: 'A' }],
+    };
+    const text = serializeDeck(file);
+    const { bytes } = importFile(text);
+    const doc = docOf([bytes]);
+    const before = Y.encodeStateVector(doc);
+    const editor = createEditor(doc);
+    editor.update('nodes', 'a', { title: 'A2' });
+    editor.destroy();
+    const delta = Y.encodeStateAsUpdate(doc, before);
+    const exported = exportDeck([bytes, delta]);
+    const exportedFile = JSON.parse(exported.json) as SododeckFile;
+    expect(exportedFile.nodes[0]?.size).toBeUndefined();
+  });
+
+  it('imports an out-of-range size without an error', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      name: 'Oversized',
+      nodes: [{ id: 'a', type: 'service', title: 'A', size: { width: 900, height: 40 } }],
+    };
+    const text = serializeDeck(file);
+    const { bytes, summary } = importFile(text);
+    expect(summary.nodeCount).toBe(1);
+    expect(toJSON(docOf([bytes])).nodes[0]?.size).toEqual({ width: 900, height: 40 });
   });
 });

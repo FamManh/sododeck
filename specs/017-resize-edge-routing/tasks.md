@@ -306,8 +306,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US4. Round-trip decks with and without the fields, and import a deck with an out-of-range size.
 
-- [ ] T045 [P] [US4] Write a failing test in `packages/model/test/problems.test.ts`: a node with `size` 900 × 40 yields `card-size-out-of-range` with the message from the contract, targeting the component, and in-range sizes yield nothing. Implement it in `packages/model/src/problems.ts` and append the kind to `PROBLEM_KINDS`. Map the kind's label and "open" target in the app's Problems panel if it needs a per-kind entry (`apps/app/src/editor/problems/`).
-- [ ] T046 [P] [US4] Add an app-level test in `apps/app/src/storage/library-ops.test.ts`:
+- [x] T045 [P] [US4] Write a failing test in `packages/model/test/problems.test.ts`: a node with `size` 900 × 40 yields `card-size-out-of-range` with the message from the contract, targeting the component, and in-range sizes yield nothing. Implement it in `packages/model/src/problems.ts` and append the kind to `PROBLEM_KINDS`. Map the kind's label and "open" target in the app's Problems panel if it needs a per-kind entry (`apps/app/src/editor/problems/`).
+- [x] T046 [P] [US4] Add an app-level test in `apps/app/src/storage/library-ops.test.ts`:
   - importing `full.sododeck.json`, editing a title and exporting keeps `size` / `route` unchanged;
   - importing a deck without them and exporting after an edit has neither field;
   - a deck with `size` 900 × 40 imports without an error.
