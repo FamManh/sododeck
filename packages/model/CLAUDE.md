@@ -42,6 +42,10 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - `pasteFragment(fragment, { offset, parent?, viewId? })` (`src/ops/paste.ts`): one undo step, new ids, references remapped inside the fragment, top-level items into `parent`, unknown rule ids dropped, non-base view positions and frames written too. Returns the new ids.
   - `groupSelection({ nodes, groups, title, parent?, frame, viewFrames? })` (`src/ops/group-selection.ts`): one undo step; refuses a parent inside the selected groups.
   - `cancelGesture()`: ends the open gesture and undoes it; the redo stack held back during the gesture is restored, so both stacks are as before `beginGesture`.
+- **Added by 017** (card resize and connector routing, ADR 0019):
+  - `src/ops/shape.ts`: `setCardSize(nodeId, size | null)` sets or clears a node's stored `size`; does not clamp (the schema only requires both dimensions above 0 — clamping to the level's limits is the app's job). `setEdgeRoute(edgeId, patch | null)` merges an `EdgeRoutePatch` (`fromSide?`, `toSide?`, `offset?`, each `null` clearing that key) into the edge's `route`, key by key (so two tabs changing different keys both keep their change); `offset: 0` is dropped; `null` clears the whole route. Both join an open gesture (one undo step per drag, one per burst).
+  - `fitGroupFrames` gains `sizeOf?: (node) => Size`, used instead of `cardSize` for a member with a stored size, so group frames fit resized cards.
+  - `problems.ts` gains the `'card-size-out-of-range'` kind: a stored `node.size` outside `CARD_SIZE_RANGE` (120×44 to 800×600, mirroring the app's clamp limits, checked at the model layer so a foreign or corrupted file is still flagged).
 
 ## Rules
 

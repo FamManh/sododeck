@@ -362,8 +362,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ## Phase 9: Polish and cross-cutting
 
-- [ ] T052 [P] Update `packages/schema/CLAUDE.md` (`Side`, `EdgeRoute`, `Node.size`, `Edge.route`), `packages/model/CLAUDE.md` (`setCardSize`, `setEdgeRoute`, `writePatch` keys, `fitGroupFrames({ sizeOf })`, the problem kind) and `apps/app/CLAUDE.md` (`cardSize` as the only size source, `editor/routing/`, the new gestures and actions).
-- [ ] T053 [P] Update `docs/backlog.md`:
+- [x] T052 [P] Update `packages/schema/CLAUDE.md` (`Side`, `EdgeRoute`, `Node.size`, `Edge.route`), `packages/model/CLAUDE.md` (`setCardSize`, `setEdgeRoute`, `writePatch` keys, `fitGroupFrames({ sizeOf })`, the problem kind) and `apps/app/CLAUDE.md` (`cardSize` as the only size source, `editor/routing/`, the new gestures and actions).
+- [x] T053 [P] Update `docs/backlog.md`:
   - Mark 017 as implemented, with links.
   - Replace the 017 design delta "a segment stops 12 px from any card edge" with the clarified free drag.
   - Note in 022 that `routing/route-path.ts` and `EdgeRoute` are the extension points.

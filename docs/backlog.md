@@ -1232,6 +1232,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 017-resize-edge-routing
 
+- **Status:** implemented (2026-09-30) — see [`tasks.md`](../specs/017-resize-edge-routing/tasks.md) and [ADR 0019](decisions/0019-card-size-and-connector-route.md). Cards resize by drag or ⌘⇧+arrow (`node.size`, clamped by `cardSize()`); connectors pin a side and move a middle segment by drag, ⌘⇧+arrow or the inspector (`edge.route`); `R` / "Reset route" clears it. Routing: `apps/app/src/editor/routing/`; resize keys and gestures in `apps/app/src/editor/editing/`.
 - **Note (016):** the schema already has `$defs/Size` (reuse it for `node.size`), and the resize wrapper exists: `NodeResizeControl` handles styled as `.sd-resize-handle` in `group-boundary-node.tsx`, with the pure `editing/resize-limits.ts` (handles, ⇧ ratio, ⌥ from centre, minimum box) and `editing/frame-resize.ts` (one gesture, Esc cancels). Snapping (`editing/snap.ts`) and the hint bar (`HintBar`, `editing/gesture-hints.ts`) are ready to reuse.
 - **Milestone:** after M4 · **Depends on:** 003 (soft: 016 for snapping) · **Estimate:** 4 d
 - **Menus and toolbar (019):** add this feature's items as an action module in
@@ -1248,8 +1249,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     corner; connections re-attach live; **sizes snap to 4 px**; ⇧ keep ratio, ⌥ from centre, Esc
     cancels. Minimum 120 × 44 (as planned).
   - Segment (113): 10×24 handle; dashed ghost of the automatic route; offset readout (`−18`);
-    **⇧ snaps to grid, R resets the route**; a segment **stops 12 px from any card edge** (cannot
-    cross a card).
+    **⇧ snaps to grid, R resets the route**; the segment **moves freely, with no 12 px stop from a
+    card edge** (clarified 2026-09-29: the plan drops the design's fixed stop).
   - Endpoint (114): four side targets on the hovered card, nearest one "hot"; dashed orange live
     path + ghost of the old route; dropping on the same card only changes the side; Esc keeps the
     old target. The design's "⌥ leaves a free end" is an open question (§g-44).
@@ -1600,6 +1601,11 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Added:** 2026-09-29, founder request during 017 clarify (Miro-like connector options, reference
   screenshots in the conversation: Miro's line toolbar with Type / weight / dash popover and a
   curved line with waypoint handles). Kept out of 017 so 017 stays at 4 d.
+- **Extension points (017, ADR 0019):** `apps/app/src/editor/routing/route-path.ts`'s
+  `resolveSides` / `middleSegment` already resolve each end's side and the movable middle segment;
+  build line type, waypoints, dash and weight on top of them, not beside them. `Edge.route`
+  (`fromSide`, `toSide`, `offset`) is where a schema change for free waypoints or curves goes;
+  keep the three existing keys' meaning unchanged so 017 decks stay valid.
 - **Milestone:** after M4 · **Depends on:** 017 (route model, handles, hint bar), 020 (colour
   picker, `ColorRef`, deck swatches) · **Estimate:** 5 d (split at `/speckit.specify` if it grows)
 - **Menus and toolbar (019):** add this feature's items as an action module in
