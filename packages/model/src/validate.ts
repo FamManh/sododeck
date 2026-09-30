@@ -39,8 +39,14 @@ const ELEMENT_SCHEMAS = {
   rule: shape.rules.valueType,
   column: shape.rules.valueType.shape.inputs.element,
   row: shape.rules.valueType.shape.rows.element,
-  meta: sododeckFileSchema.pick({ name: true, description: true, tags: true }).strict(),
-} satisfies Record<Collection | 'step' | 'branch' | 'rule' | 'column' | 'row' | 'meta', Schema>;
+  meta: sododeckFileSchema
+    .pick({ name: true, description: true, tags: true, swatches: true })
+    .strict(),
+  style: shape.nodes.element.shape.style.unwrap(),
+} satisfies Record<
+  Collection | 'step' | 'branch' | 'rule' | 'column' | 'row' | 'meta' | 'style',
+  Schema
+>;
 
 export type ValidationKind = keyof typeof ELEMENT_SCHEMAS;
 

@@ -92,7 +92,10 @@ function apply(doc: DeckDoc, previous: SododeckFile, changes: ObjectChange[]): S
       const value = metaChanged
         ? fromY(meta.get(key))
         : (previous as unknown as Record<string, unknown>)[key];
-      if (value !== undefined) parts[key] = value;
+      // `swatches` is always a stored Y.Array (020, R3), but is emitted only when non-empty,
+      // exactly like `toJSON` (an old deck without any keeps no `swatches` key).
+      const omit = key === 'swatches' && Array.isArray(value) && value.length === 0;
+      if (value !== undefined && !omit) parts[key] = value;
     }
   }
   return parts as unknown as SododeckFile;

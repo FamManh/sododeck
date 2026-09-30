@@ -35,6 +35,8 @@ import { groupSelection, type GroupSelection } from './ops/group-selection';
 import type { Fragment } from './fragment';
 import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
+import { setStyle, type StyleChannel, type StyleTargets } from './ops/style';
+import { addSwatch, removeSwatch } from './ops/swatches';
 import {
   addRule,
   addRuleColumn,
@@ -81,8 +83,8 @@ export interface EditorOptions {
 export interface DeckEditor {
   readonly doc: DeckDoc;
 
-  /** Sets or clears (`null`) the deck's name, description and tags. */
-  updateMeta(patch: Patch<Pick<SododeckFile, 'name' | 'description' | 'tags'>>): void;
+  /** Sets or clears (`null`) the deck's name, description, tags and custom colour swatches. */
+  updateMeta(patch: Patch<Pick<SododeckFile, 'name' | 'description' | 'tags' | 'swatches'>>): void;
 
   /** Adds an object and returns its id (generated unless `data.id` is given). */
   add<C extends Collection>(c: C, data: NewObject<C>): Id;
@@ -230,6 +232,23 @@ export interface DeckEditor {
    * parent inside the selected groups.
    */
   groupSelection(selection: GroupSelection): Id;
+
+  /**
+   * Sets or clears (`value === null`) one style channel (`fill` or `stroke`) on every target node
+   * and group as one undo step (020, R2). Unknown ids are skipped; empty targets do nothing.
+   * `invalid` when `value` is not a valid `ColorRef`.
+   */
+  setStyle(targets: StyleTargets, channel: StyleChannel, value: string | null): void;
+  /**
+   * Adds a custom hex colour to the deck's swatches (020, R3): normalizes to lowercase
+   * `#rrggbb`, is a no-op on a duplicate. `invalid` for a malformed hex or past the 12-colour cap.
+   */
+  addSwatch(hex: string): void;
+  /**
+   * Removes a custom hex colour from the deck's swatches (020, R3). Does nothing when absent;
+   * never touches any node or group's stored `style`.
+   */
+  removeSwatch(hex: string): void;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -492,6 +511,15 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     pasteFragment: (fragment, options) => pasteFragment(ctx, fragment, options),
     groupSelection: (selection) => groupSelection(ctx, selection),
+    setStyle: (targets, channel, value) => {
+      setStyle(ctx, targets, channel, value);
+    },
+    addSwatch: (hex) => {
+      addSwatch(ctx, hex);
+    },
+    removeSwatch: (hex) => {
+      removeSwatch(ctx, hex);
+    },
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {
