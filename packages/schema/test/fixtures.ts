@@ -294,4 +294,26 @@ export const invalidFixtures: InvalidFixture[] = [
     input: remove(`${FRAMES}.data.size`),
     path: `${FRAMES}.data.size`,
   },
+
+  // Card size and connector route (017)
+  {
+    name: 'node size with zero width',
+    input: set('nodes.0.size.width', 0),
+    path: 'nodes.0.size.width',
+  },
+  {
+    name: 'edge route fromSide is not a side',
+    input: set('edges.0.route.fromSide', 'middle'),
+    path: 'edges.0.route.fromSide',
+  },
+  {
+    name: 'edge route with an unknown key',
+    input: set('edges.0.route.points', []),
+    path: 'edges.0.route',
+  },
+  {
+    name: 'edge route offset is a string',
+    input: set('edges.0.route.offset', '10'),
+    path: 'edges.0.route.offset',
+  },
 ];

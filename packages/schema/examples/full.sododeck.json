@@ -18,7 +18,8 @@
       "icon": "credit-card",
       "links": [{ "label": "Status page", "url": "https://status.example.com" }],
       "group": "external",
-      "position": { "x": 900, "y": 360 }
+      "position": { "x": 900, "y": 360 },
+      "size": { "width": 200, "height": 72 }
     },
     {
       "id": "delivery-platform",
@@ -134,14 +135,16 @@
       "description": "Checkout request with the cart and the delivery address.",
       "owner": "Mobile",
       "tags": ["public"],
-      "links": [{ "label": "OpenAPI", "url": "https://api.example.com/openapi.json" }]
+      "links": [{ "label": "OpenAPI", "url": "https://api.example.com/openapi.json" }],
+      "route": { "fromSide": "right", "toSide": "left", "offset": 40 }
     },
     {
       "id": "e2",
       "from": "api-gateway",
       "to": "order-svc",
       "protocol": "grpc",
-      "label": "CreateOrder"
+      "label": "CreateOrder",
+      "route": { "fromSide": "bottom", "toSide": "top" }
     },
     {
       "id": "e3",

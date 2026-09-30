@@ -134,6 +134,32 @@
         "size": { "$ref": "#/$defs/Size" }
       }
     },
+    "Side": {
+      "title": "Side",
+      "description": "A side of a card: `top`, `right`, `bottom` or `left`.",
+      "type": "string",
+      "enum": ["top", "right", "bottom", "left"]
+    },
+    "EdgeRoute": {
+      "title": "EdgeRoute",
+      "description": "How a connector is drawn between its two cards. All fields optional; an empty object is valid.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fromSide": {
+          "$ref": "#/$defs/Side",
+          "description": "Side of the source card the connector leaves from. When absent, it is picked automatically."
+        },
+        "toSide": {
+          "$ref": "#/$defs/Side",
+          "description": "Side of the target card the connector enters. When absent, it is picked automatically."
+        },
+        "offset": {
+          "description": "Shift of the middle segment, in canvas pixels, relative to where automatic routing puts it. Positive values go right or down. When absent, it is 0. It only applies when the resolved sides are opposite.",
+          "type": "number"
+        }
+      }
+    },
     "Link": {
       "title": "Link",
       "description": "A link to external documentation, a dashboard, a repository…",
@@ -244,6 +270,10 @@
         "position": {
           "$ref": "#/$defs/Position",
           "description": "Canvas position. Views may override it."
+        },
+        "size": {
+          "$ref": "#/$defs/Size",
+          "description": "Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported; values outside that range are drawn clamped and reported as a problem."
         }
       }
     },
@@ -294,7 +324,11 @@
         "description": { "description": "Details of the connection (markdown).", "type": "string" },
         "owner": { "description": "Owning team or person (free text).", "type": "string" },
         "tags": { "$ref": "#/$defs/Tags" },
-        "links": { "$ref": "#/$defs/Links" }
+        "links": { "$ref": "#/$defs/Links" },
+        "route": {
+          "$ref": "#/$defs/EdgeRoute",
+          "description": "Pinned sides and middle-segment offset, shared by every view. When absent, the connector is routed automatically."
+        }
       }
     },
     "View": {
