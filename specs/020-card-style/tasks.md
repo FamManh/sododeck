@@ -240,7 +240,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   T027 is now green.
 
-- [ ] T034 [US1] Create `apps/app/src/editor/inspector/appearance-section.tsx` (+ test): a `PanelSection` "Appearance" with two `button`s, "Fill: <name|none>" and "Stroke: <name|none>" (`aria-haspopup="dialog"`). Each opens `StylePicker` in a `Popover` with its tab preselected, and Esc returns focus to the row. Add it to `apps/app/src/editor/inspector/node-inspector.tsx`, after the Links / Pin sections and before `AttachedRules`.
+- [x] T034 [US1] Create `apps/app/src/editor/inspector/appearance-section.tsx` (+ test): a `PanelSection` "Appearance" with two `button`s, "Fill: <name|none>" and "Stroke: <name|none>" (`aria-haspopup="dialog"`). Each opens `StylePicker` in a `Popover` with its tab preselected, and Esc returns focus to the row. Add it to `apps/app/src/editor/inspector/node-inspector.tsx`, after the Links / Pin sections and before `AttachedRules`.
 
 **Checkpoint**: US1 acceptance scenarios 1–7 pass. The JSON panel shows `"style": { "fill": "green" }`.
 
