@@ -1,10 +1,9 @@
-import { analyzeFlow, nodeCanvasPosition, type Problem } from '@sododeck/model';
+import { analyzeFlow, type Problem } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { NODE_SIZE } from '../canvas-geometry';
-import { openResult, type OpenResultContext } from '../command-palette/open-result';
+import { openResult, edgeCenter, type OpenResultContext } from '../command-palette/open-result';
 import type { PaletteResult } from '../command-palette/palette-results';
 import { visibleGraph, scopeOf } from '../visible-graph';
 import { readViewState, selectView, setGroupCollapsed } from '../views/use-current-view';
@@ -66,14 +65,9 @@ function goToEdges(context: ProblemNavContext, ids: readonly Id[]): boolean {
   if (context.screen === 'rules') context.navigateToCanvas();
   if (isFlowMode(useUiStore.getState())) context.exitFlow();
   context.select({ edges: edges.map((e) => e.id) });
-  const from = nodeCanvasPosition(deck, first.from);
-  const to = nodeCanvasPosition(deck, first.to);
-  if (from !== null && to !== null) {
-    context.setCenter(
-      (from.x + to.x + NODE_SIZE.width) / 2,
-      (from.y + to.y + NODE_SIZE.height) / 2,
-      { zoom: context.getZoom() },
-    );
+  const center = edgeCenter(deck, first.from, first.to, context.getZoom());
+  if (center !== null) {
+    context.setCenter(center.x, center.y, { zoom: context.getZoom() });
   }
   return true;
 }

@@ -42,18 +42,22 @@ export function DeckThumbnail({ name, thumb }: { name: string; thumb: DeckThumb 
               vectorEffect="non-scaling-stroke"
             />
           ))}
-          {thumb.nodes.map(([x, y, kind], i) => (
-            <rect
-              key={`n${String(i)}`}
-              x={x}
-              y={y}
-              width={thumb.node[0]}
-              height={thumb.node[1]}
-              rx={Math.min(thumb.node[1] / 4, 16)}
-              className={`${KIND_FILL[kind]} stroke-border`}
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
+          {thumb.nodes.map(([x, y, kind, w, h], i) => {
+            const width = w ?? thumb.node[0];
+            const height = h ?? thumb.node[1];
+            return (
+              <rect
+                key={`n${String(i)}`}
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                rx={Math.min(height / 4, 16)}
+                className={`${KIND_FILL[kind]} stroke-border`}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
         </svg>
       )}
     </div>

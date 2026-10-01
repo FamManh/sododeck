@@ -71,14 +71,14 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `017-resize-edge-routing` from the latest `main`, after the 017 docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
-- [ ] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/017-resize-edge-routing/bench-before.md`.
-- [ ] T003 Add a `resized-routed` scenario to `apps/app/bench/perf.bench.ts` (R15, FR-031), enabled with `BENCH_ROUTES=1`:
+- [x] T001 Create branch `017-resize-edge-routing` from the latest `main`, after the 017 docs PR is merged. Run `pnpm install && pnpm test` to confirm a green start.
+- [x] T002 Run `pnpm bench` on the unchanged code and save the table in `specs/017-resize-edge-routing/bench-before.md`.
+- [x] T003 Add a `resized-routed` scenario to `apps/app/bench/perf.bench.ts` (R15, FR-031), enabled with `BENCH_ROUTES=1`:
   - Give every bench node `size` 200 × 72.
   - Give 200 edges a `route`: a mix of `fromSide` / `toSide` and `offset` ±40.
   - Pan and zoom for 2 s, recording fps the same way as the existing pan scenario.
   - Until T006 lands, the scenario logs `TODO(017): not available yet` and records no number.
-- [ ] T004 [P] Write ADR `docs/decisions/0019-card-size-and-connector-route.md` in the header format of 0017. It records the R16 points:
+- [x] T004 [P] Write ADR `docs/decisions/0019-card-size-and-connector-route.md` in the header format of 0017. It records the R16 points:
   - optional `node.size` / `edge.route`
   - sides plus one middle-segment offset instead of waypoints, and why
   - the offset is relative to the automatic middle, in px
@@ -97,7 +97,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Schema
 
-- [ ] T005 Write failing cases in `packages/schema/test/fixtures.ts`:
+- [x] T005 Write failing cases in `packages/schema/test/fixtures.ts`:
   - a node `size` with `width: 0`;
   - `route.fromSide: "middle"`;
   - `route` with an extra key `points`;
@@ -105,7 +105,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Extend `packages/schema/examples/full.sododeck.json` with one node `size` and one edge `route` that has all three keys (the coverage test needs them).
 
-- [ ] T006 Edit `packages/schema/schema/v1.json` (R1, data-model):
+- [x] T006 Edit `packages/schema/schema/v1.json` (R1, data-model):
   - Add `$defs/Side` and `$defs/EdgeRoute`, with a description on every property that states the default.
   - Add `Node.size` (`$ref: Size`) right after `position`.
   - Add `Edge.route` after `links`.
@@ -114,22 +114,22 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Model
 
-- [ ] T007 [P] Write failing round-trip cases in `packages/model/test/round-trip.test.ts`:
+- [x] T007 [P] Write failing round-trip cases in `packages/model/test/round-trip.test.ts`:
   - a node with and without `size`;
   - an edge with a route of sides only, offset only, all three, and a hand-written `{}`;
   - the key order `…position, size` / `…links, route`;
   - identical text after `serializeDeck`;
   - absent fields stay absent after updating another field (e.g. a title).
-- [ ] T008 [P] Write failing tests in `packages/model/test/shape.test.ts` (new):
+- [x] T008 [P] Write failing tests in `packages/model/test/shape.test.ts` (new):
   - `setCardSize` sets, replaces and removes (`null`), is one undo step, joins an open gesture, and rejects `width <= 0`.
   - `setEdgeRoute` merges into an existing route, `null` clears a key, `offset: 0` is dropped, `route` is removed when empty, a `null` patch removes it, and it is one undo step.
   - Two docs synced through updates that change `fromSide` and `offset` concurrently both keep their change.
-- [ ] T009 Extend `writePatch` in `packages/model/src/ops/patch.ts` to write `size` and `route` per key, as `position` is written. Implement `packages/model/src/ops/shape.ts` (`setCardSize` with undo key `nodes:<id>:size`, `setEdgeRoute` with undo key `edges:<id>:route`). Wire both into `DeckEditor` in `packages/model/src/editor.ts`, and export them from `packages/model/src/index.ts`. T007 and T008 go green.
-- [ ] T010 [P] Write a failing test in `packages/model/test/frames.test.ts` that `fitGroupFrames(deck, { sizeOf })` sizes each member with `sizeOf`, and that the default without `sizeOf` is unchanged. Implement it in `packages/model/src/geometry.ts`.
+- [x] T009 Extend `writePatch` in `packages/model/src/ops/patch.ts` to write `size` and `route` per key, as `position` is written. Implement `packages/model/src/ops/shape.ts` (`setCardSize` with undo key `nodes:<id>:size`, `setEdgeRoute` with undo key `edges:<id>:route`). Wire both into `DeckEditor` in `packages/model/src/editor.ts`, and export them from `packages/model/src/index.ts`. T007 and T008 go green.
+- [x] T010 [P] Write a failing test in `packages/model/test/frames.test.ts` that `fitGroupFrames(deck, { sizeOf })` sizes each member with `sizeOf`, and that the default without `sizeOf` is unchanged. Implement it in `packages/model/src/geometry.ts`.
 
 ### App geometry and rendering of stored values
 
-- [ ] T011 Write failing tests in `apps/app/src/editor/canvas-geometry.test.ts`:
+- [x] T011 Write failing tests in `apps/app/src/editor/canvas-geometry.test.ts`:
   - `CARD_SIZE_LIMITS`;
   - `cardSize(node, level)`: the stored size clamped to 120 × 44 – 800 × 600, and without it the level size (164 × 50, or 164 × 104 at the component level);
   - `cardBox`;
@@ -138,12 +138,12 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Implement them in `apps/app/src/editor/canvas-geometry.ts` (R2, R3). `groupBounds` / `selectionFrame` / `boundsOf` take a `level` instead of a size.
 
-- [ ] T012 Update `apps/app/src/editor/deck-to-flow.ts` (+ `deck-to-flow.test.ts`):
+- [x] T012 Update `apps/app/src/editor/deck-to-flow.ts` (+ `deck-to-flow.test.ts`):
   - Node `width` / `height` come from `cardSize`, and the node cache compares them (`:307-323`).
   - The group boxes use the new `groupBounds(deck, level)`.
   - The port pill x uses the anchor's width (`:511`).
   - Tests: a sized node renders at its size at every level, and changing only `size` gives a new node object.
-- [ ] T013 [P] Write failing tests in `apps/app/src/editor/routing/route-path.test.ts` (new) for (R6):
+- [x] T013 [P] Write failing tests in `apps/app/src/editor/routing/route-path.test.ts` (new) for (R6):
   - `resolveSides`: the pinned side wins; otherwise sides are picked by comparing centres, which is equal to today's `facingSides` result for equal-size cards;
   - `middleSegment` for all 16 side pairs;
   - `nearestSide`;
@@ -152,15 +152,15 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
     - `offset: 60` on a vertical pair moves the middle segment and `labelY` by 60;
     - on a horizontal pair it moves `centerX` / `labelX`;
     - on a perpendicular or same-side pair, the offset is ignored and `segment` is null.
-- [ ] T014 Implement `apps/app/src/editor/routing/route-path.ts`. Make `facingSides` in `deck-to-flow.ts` compare box centres, and route every plain edge's `sourceHandle` / `targetHandle` through `resolveSides(fromBox, toBox, edge.route)`. Merged edges and port edges stay automatic (edge case). Add a `deck-to-flow` test: a pinned side sets the handle, and a changed route breaks the edge cache.
-- [ ] T015 Switch `apps/app/src/editor/deck-edge.tsx` to `routedStepPath`, passing `data.route`. Add `route` to the `DeckFlowEdge` data in `deck-to-flow.ts`, and point `apps/app/src/editor/merged-edge.tsx` at the shared helper with no route. Add a test in `deck-edge.test.tsx` (new or existing): with an offset, the label pill, the edge anchor and the step badge sit at the shifted `labelX` / `labelY`. The flow token and the focus ring use the same `d` (FR-017).
-- [ ] T016 [P] Update `apps/app/src/editor/export/edge-geometry.ts` (+ test): `edgePath(from, to, route?)` uses `routedStepPath`, and `extent` includes the shifted middle segment. Update `apps/app/src/editor/export/scene.ts` (+ `scene.test.ts`) so card rects use `cardSize` and plain edges pass `edge.route`. Resolve the two `TODO(017)` markers.
-- [ ] T017 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the data-model fields:
+- [x] T014 Implement `apps/app/src/editor/routing/route-path.ts`. Make `facingSides` in `deck-to-flow.ts` compare box centres, and route every plain edge's `sourceHandle` / `targetHandle` through `resolveSides(fromBox, toBox, edge.route)`. Merged edges and port edges stay automatic (edge case). Add a `deck-to-flow` test: a pinned side sets the handle, and a changed route breaks the edge cache.
+- [x] T015 Switch `apps/app/src/editor/deck-edge.tsx` to `routedStepPath`, passing `data.route`. Add `route` to the `DeckFlowEdge` data in `deck-to-flow.ts`, and point `apps/app/src/editor/merged-edge.tsx` at the shared helper with no route. Add a test in `deck-edge.test.tsx` (new or existing): with an offset, the label pill, the edge anchor and the step badge sit at the shifted `labelX` / `labelY`. The flow token and the focus ring use the same `d` (FR-017).
+- [x] T016 [P] Update `apps/app/src/editor/export/edge-geometry.ts` (+ test): `edgePath(from, to, route?)` uses `routedStepPath`, and `extent` includes the shifted middle segment. Update `apps/app/src/editor/export/scene.ts` (+ `scene.test.ts`) so card rects use `cardSize` and plain edges pass `edge.route`. Resolve the two `TODO(017)` markers.
+- [x] T017 [P] Extend `apps/app/src/state/ui-store.ts` (+ test) with the data-model fields:
   - `canvasGesture` gains `'card-resize' | 'segment' | 'endpoint'`.
   - `resizeReadout` and `endpointHover`.
   - `resetForDeck` clears them.
-- [ ] T018 [P] Add the contract ids to the "Editing" section of `apps/app/src/editor/shell/shortcuts.ts` (+ test): `resize-card`, `move-segment`, `move-segment-10`, `reset-route`, `resize-no-snap`, `resize-ratio`, `resize-centre`.
-- [ ] T019 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The demo deck must look unchanged. Import `full.sododeck.json` and check the sized card and the routed edge by eye.
+- [x] T018 [P] Add the contract ids to the "Editing" section of `apps/app/src/editor/shell/shortcuts.ts` (+ test): `resize-card`, `move-segment`, `move-segment-10`, `reset-route`, `resize-no-snap`, `resize-ratio`, `resize-centre`.
+- [x] T019 Commit, then run `pnpm lint && pnpm typecheck && pnpm test`. The demo deck must look unchanged. Import `full.sododeck.json` and check the sized card and the routed edge by eye.
 
 **Checkpoint**: stored sizes and routes render on the canvas and in export. The stories can start.
 
@@ -174,7 +174,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Tests
 
-- [ ] T020 [P] [US1] Write failing tests in `apps/app/src/editor/editing/resize-limits.test.ts` for the new `resizeBox` (R4):
+- [x] T020 [P] [US1] Write failing tests in `apps/app/src/editor/editing/resize-limits.test.ts` for the new `resizeBox` (R4):
   - all 8 handles;
   - absolute sizes rounded to multiples of 4 (164 + 80 → 244, 50 + 30 → 80);
   - min 120 × 44 and max 800 × 600;
@@ -182,13 +182,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - ⌥ from the centre;
   - resizing from the top or left moves x / y;
   - the existing group-frame cases (content minimum, `MIN_FRAME`) still pass through `resizeFrame`.
-- [ ] T021 [P] [US1] Write failing tests in `apps/app/src/editor/editing/snap.test.ts` for `snapEdges(box, handle, candidates, threshold)`:
+- [x] T021 [P] [US1] Write failing tests in `apps/app/src/editor/editing/snap.test.ts` for `snapEdges(box, handle, candidates, threshold)`:
   - only the dragged edges snap, within 6 screen px;
   - the nearest line wins;
   - the guides are returned;
   - an empty candidate list means no change.
-- [ ] T022 [P] [US1] Write failing tests in `apps/app/src/editor/card-text.test.ts` for `textLines(size, level)`: 44 px tall gives 1 title line; 80 px tall gives 2 title lines and 1 subtitle line; the compact and full layouts differ; there is never less than 1 line.
-- [ ] T023 [P] [US1] Write failing tests in `apps/app/src/editor/editing/card-resize.test.ts` with a real `DeckEditor`:
+- [x] T022 [P] [US1] Write failing tests in `apps/app/src/editor/card-text.test.ts` for `textLines(size, level)`: 44 px tall gives 1 title line; 80 px tall gives 2 title lines and 1 subtitle line; the compact and full layouts differ; there is never less than 1 line.
+- [x] T023 [P] [US1] Write failing tests in `apps/app/src/editor/editing/card-resize.test.ts` with a real `DeckEditor`:
   - start, several apply calls and end give one undo step with the final size;
   - from the top-left, the position is written through `moveInView` in the same step, and in a non-base view only that view's position changes;
   - cancel restores the size and position and leaves no undo entry;
@@ -197,15 +197,15 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 ### Implementation
 
-- [ ] T024 [US1] Refactor `apps/app/src/editor/editing/resize-limits.ts` into `resizeBox` plus the card limits. Keep `resizeFrame` / `clampFrame` as thin wrappers, so 016's callers are unchanged. Add `snapEdges` to `apps/app/src/editor/editing/snap.ts`. T020 and T021 go green.
-- [ ] T025 [US1] Implement `apps/app/src/editor/editing/card-resize.ts`, following `frame-resize.ts`:
+- [x] T024 [US1] Refactor `apps/app/src/editor/editing/resize-limits.ts` into `resizeBox` plus the card limits. Keep `resizeFrame` / `clampFrame` as thin wrappers, so 016's callers are unchanged. Add `snapEdges` to `apps/app/src/editor/editing/snap.ts`. T020 and T021 go green.
+- [x] T025 [US1] Implement `apps/app/src/editor/editing/card-resize.ts`, following `frame-resize.ts`:
   - `startCardResize`: `beginGesture`, `setCanvasGesture('card-resize')`, `setActiveGesture({ cancel })`, and on-screen snap candidates collected once.
   - `applyCardResize`: `resizeBox`, then `snapEdges` unless ⌘ is held, then `setCardSize` and `moveInView` when x / y change, then `resizeReadout`.
   - `endCardResize`: `endGesture` and the announcement.
-- [ ] T026 [US1] Add eight `NodeResizeControl`s to `apps/app/src/editor/deck-node.tsx`, with the `.sd-resize-handle` class and pointer only. Render them only when the card is the single selected object and editing is allowed (not flow mode, recording, view-only, or inside a collapsed group). Wire them to T025. Double-click on a handle runs `node.resetSize` (T030). Mark the active handle filled through a `data-active` attribute. Styles go in `apps/app/src/index.css`, next to the 016 handle rules, using tokens only.
-- [ ] T027 [US1] Render the `W × H` readout pill from `resizeReadout` in `apps/app/src/editor/editing/guides-overlay.tsx`, next to the dragged corner. Reuse the offset readout style, and show snap guides the same way as for drags.
-- [ ] T028 [US1] Apply `textLines` in `apps/app/src/editor/deck-node.tsx`: `-webkit-line-clamp` on the title and subtitle, same font size, the full text kept in `title` (FR-008). Add a component test in `deck-node.test.tsx`: a sized card renders the title with the computed clamp, and the tooltip holds the full title.
-- [ ] T029 [US1] Switch every fixed-size call site to `cardSize` / `cardBox` (R3, plan list). Update the listed tests to use sized fixtures where relevant. The call sites:
+- [x] T026 [US1] Add eight `NodeResizeControl`s to `apps/app/src/editor/deck-node.tsx`, with the `.sd-resize-handle` class and pointer only. Render them only when the card is the single selected object and editing is allowed (not flow mode, recording, view-only, or inside a collapsed group). Wire them to T025. Double-click on a handle runs `node.resetSize` (T030). Mark the active handle filled through a `data-active` attribute. Styles go in `apps/app/src/index.css`, next to the 016 handle rules, using tokens only.
+- [x] T027 [US1] Render the `W × H` readout pill from `resizeReadout` in `apps/app/src/editor/editing/guides-overlay.tsx`, next to the dragged corner. Reuse the offset readout style, and show snap guides the same way as for drags.
+- [x] T028 [US1] Apply `textLines` in `apps/app/src/editor/deck-node.tsx`: `-webkit-line-clamp` on the title and subtitle, same font size, the full text kept in `title` (FR-008). Add a component test in `deck-node.test.tsx`: a sized card renders the title with the computed clamp, and the tooltip holds the full title.
+- [x] T029 [US1] Switch every fixed-size call site to `cardSize` / `cardBox` (R3, plan list). Update the listed tests to use sized fixtures where relevant. The call sites:
   - `editor/visible-graph.ts` (`scopeBounds`)
   - `editor/open-deck.ts` (`fitMissingFrames` with `sizeOf: n => node.size ?? COMPONENT_CARD_SIZE`)
   - `editor/tidy-layout.ts` (the ELK request sizes and `fitGroupFrames` `sizeOf`)
@@ -216,7 +216,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `editor/canvas.tsx` (focus scroll; `tinyCardsSelector` uses the minimum width 120)
   - `editor/stickies/sticky-actions.ts` (`nodeAtPoint`)
   - `editor/flows/use-flow-viewport.ts` through `boundsOf`
-- [ ] T030 [US1] Create `apps/app/src/editor/actions/shape-actions.ts` with `node.resetSize`:
+- [x] T030 [US1] Create `apps/app/src/editor/actions/shape-actions.ts` with `node.resetSize`:
   - where: component menu;
   - `disabledReason` "Default size";
   - icon `Scaling`;
@@ -224,8 +224,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Register it in `apps/app/src/editor/actions/index.ts`. Add tests in `shape-actions.test.ts`: availability, the disabled tooltip, and one undo step.
 
-- [ ] T031 [P] [US1] Update `apps/app/src/storage/deck-summary.ts` so node tuples carry an optional `w, h`, and `apps/app/src/library/deck-thumbnail.tsx` so it draws per-node sizes, with the default when they are absent (R13). Update `deck-summary.test.ts` and the thumbnail test.
-- [ ] T032 [US1] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
+- [x] T031 [P] [US1] Update `apps/app/src/storage/deck-summary.ts` so node tuples carry an optional `w, h`, and `apps/app/src/library/deck-thumbnail.tsx` so it draws per-node sizes, with the default when they are absent (R13). Update `deck-summary.test.ts` and the thumbnail test.
+- [x] T032 [US1] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
   - a resized member overhangs its group frame, and the frame is unchanged (FR-010);
   - the 016 frame resize minimum uses the enlarged card;
   - the handles are absent in flow mode and in view-only.
@@ -240,7 +240,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US2. Drag the handle 60 px, check `route.offset`, the label and badges on the new path, one undo step, Esc, R to reset, and no handle for L / U shapes.
 
-- [ ] T033 [P] [US2] Write failing tests in `apps/app/src/editor/editing/segment-drag.test.ts` with a real `DeckEditor`:
+- [x] T033 [P] [US2] Write failing tests in `apps/app/src/editor/editing/segment-drag.test.ts` with a real `DeckEditor`:
   - moves write `offset` = pointer − automatic middle, and pass over cards with no clamp;
   - 1-D snapping to card centre lines and edges within 6 screen px; ⌘ disables it;
   - end is one undo step;
@@ -248,8 +248,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - `resetDuringDrag` cancels, then removes `route`, as one undo step;
   - the readout shows the signed offset;
   - it announces "Moved middle segment to +60".
-- [ ] T034 [US2] Implement `apps/app/src/editor/editing/segment-drag.ts` (R7): `startSegmentDrag`, `applySegmentDrag`, `endSegmentDrag`, `resetDuringDrag`, using `beginGesture` / `setEdgeRoute` / `endGesture` / `cancelGesture`, `setCanvasGesture('segment')` and `setActiveGesture({ cancel })`. Reuse `dragReadout` for the offset.
-- [ ] T035 [US2] Create `apps/app/src/editor/routing/segment-handle.tsx` (+ test):
+- [x] T034 [US2] Implement `apps/app/src/editor/editing/segment-drag.ts` (R7): `startSegmentDrag`, `applySegmentDrag`, `endSegmentDrag`, `resetDuringDrag`, using `beginGesture` / `setEdgeRoute` / `endGesture` / `cancelGesture`, `setCanvasGesture('segment')` and `setActiveGesture({ cancel })`. Reuse `dragReadout` for the offset.
+- [x] T035 [US2] Create `apps/app/src/editor/routing/segment-handle.tsx` (+ test):
   - a 10 × 24 handle rotated to the segment axis, rendered through `EdgeLabelRenderer` at the segment midpoint;
   - `role="slider"`, name "Move middle segment", `aria-valuenow` = offset, `aria-orientation`;
   - focusable; arrows move it with the same step rules as ⌥ + arrow (T046);
@@ -257,9 +257,9 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Render it from `apps/app/src/editor/deck-edge.tsx` only when the edge is the single selection, editing is allowed, and `segment` is not null (FR-012).
 
-- [ ] T036 [US2] In `apps/app/src/editor/deck-edge.tsx`, while `canvasGesture === 'segment'` for this edge, draw the automatic-route ghost: `routedStepPath` without the route, dashed, 40 % opacity, `aria-hidden`. Add a test: the ghost appears only during the gesture.
-- [ ] T037 [US2] Handle **R** in `apps/app/src/editor/use-canvas-shortcuts.ts` during a segment gesture only: it calls `resetDuringDrag`. Add a test in `use-canvas-shortcuts.test.ts` that R does nothing outside the gesture.
-- [ ] T038 [US2] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
+- [x] T036 [US2] In `apps/app/src/editor/deck-edge.tsx`, while `canvasGesture === 'segment'` for this edge, draw the automatic-route ghost: `routedStepPath` without the route, dashed, 40 % opacity, `aria-hidden`. Add a test: the ghost appears only during the gesture.
+- [x] T037 [US2] Handle **R** in `apps/app/src/editor/use-canvas-shortcuts.ts` during a segment gesture only: it calls `resetDuringDrag`. Add a test in `use-canvas-shortcuts.test.ts` that R does nothing outside the gesture.
+- [x] T038 [US2] Add a component test in `apps/app/src/editor/canvas.test.tsx`:
   - a selected connector between stacked cards shows the slider;
   - a perpendicular-sides connector shows none;
   - a flow-highlighted connector with an offset draws its highlight on the shifted path.
@@ -274,19 +274,19 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US3. Drop each end on each side of its own card, reconnect to another card, press Esc mid-drag, use Reset route from the toolbar, the menu and the drawer.
 
-- [ ] T039 [P] [US3] Write failing tests in `apps/app/src/editor/use-canvas-handlers.test.ts` (new) for `onReconnect` (R12):
+- [x] T039 [P] [US3] Write failing tests in `apps/app/src/editor/use-canvas-handlers.test.ts` (new) for `onReconnect` (R12):
   - drop on the same card → only `fromSide` / `toSide` changes, picked by `nearestSide` of the drop point (also for the `body` target);
   - drop on another card → `from` / `to` and that side change, `offset` is cleared, one undo step;
   - a refused connection (`self`, `duplicate`) changes nothing and announces as today;
   - the announcements "Connection now leaves from the top" / "…enters from the left".
-- [ ] T040 [US3] Implement it in `apps/app/src/editor/use-canvas-handlers.ts`:
+- [x] T040 [US3] Implement it in `apps/app/src/editor/use-canvas-handlers.ts`:
   - `onReconnectStart` sets `setCanvasGesture('endpoint')` and remembers the moving end.
   - `onReconnect` applies the rules above in one `oneStep`.
   - `onReconnectEnd` clears the gesture and `endpointHover`.
   - A pointer move during the gesture updates `endpointHover` with `nearestSide`.
-- [ ] T041 [US3] Show the side targets in `apps/app/src/editor/deck-node.tsx`: while `canvasGesture === 'endpoint'`, the hovered card's four handles render as 12 px rings, and the `endpointHover` side is filled and larger (not colour only). Styles go in `apps/app/src/index.css`. Add a test for the hot-side attribute.
-- [ ] T042 [US3] Create `apps/app/src/editor/routing/endpoint-connection-line.tsx`, a custom `connectionLineComponent` that draws the live path dashed in primary with `routedStepPath` and the hot side. Pass it in `apps/app/src/editor/canvas.tsx`. The edge being moved gets 40 % opacity through the gesture class, as the ghost.
-- [ ] T043 [US3] Add `edge.resetRoute` to `apps/app/src/editor/actions/shape-actions.ts`:
+- [x] T041 [US3] Show the side targets in `apps/app/src/editor/deck-node.tsx`: while `canvasGesture === 'endpoint'`, the hovered card's four handles render as 12 px rings, and the `endpointHover` side is filled and larger (not colour only). Styles go in `apps/app/src/index.css`. Add a test for the hot-side attribute.
+- [x] T042 [US3] Create `apps/app/src/editor/routing/endpoint-connection-line.tsx`, a custom `connectionLineComponent` that draws the live path dashed in primary with `routedStepPath` and the hot side. Pass it in `apps/app/src/editor/canvas.tsx`. The edge being moved gets 40 % opacity through the gesture class, as the ghost.
+- [x] T043 [US3] Add `edge.resetRoute` to `apps/app/src/editor/actions/shape-actions.ts`:
   - where: connection menu and connection toolbar;
   - icon `RotateCcw`;
   - `disabledReason` "Route is automatic";
@@ -294,7 +294,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Add tests: the toolbar button and the menu item are disabled or enabled by the route, and there is one undo step.
 
-- [ ] T044 [US3] Update `apps/app/src/editor/inspector/edge-inspector.tsx`: when the reattach flow changes an end's card, it also clears that end's side and the offset, in the same `writeOnce`. Add a test.
+- [x] T044 [US3] Update `apps/app/src/editor/inspector/edge-inspector.tsx`: when the reattach flow changes an end's card, it also clears that end's side and the offset, in the same `writeOnce`. Add a test.
 
 **Checkpoint**: US3 works (quickstart 6). Commit.
 
@@ -306,8 +306,8 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US4. Round-trip decks with and without the fields, and import a deck with an out-of-range size.
 
-- [ ] T045 [P] [US4] Write a failing test in `packages/model/test/problems.test.ts`: a node with `size` 900 × 40 yields `card-size-out-of-range` with the message from the contract, targeting the component, and in-range sizes yield nothing. Implement it in `packages/model/src/problems.ts` and append the kind to `PROBLEM_KINDS`. Map the kind's label and "open" target in the app's Problems panel if it needs a per-kind entry (`apps/app/src/editor/problems/`).
-- [ ] T046 [P] [US4] Add an app-level test in `apps/app/src/storage/library-ops.test.ts`:
+- [x] T045 [P] [US4] Write a failing test in `packages/model/test/problems.test.ts`: a node with `size` 900 × 40 yields `card-size-out-of-range` with the message from the contract, targeting the component, and in-range sizes yield nothing. Implement it in `packages/model/src/problems.ts` and append the kind to `PROBLEM_KINDS`. Map the kind's label and "open" target in the app's Problems panel if it needs a per-kind entry (`apps/app/src/editor/problems/`).
+- [x] T046 [P] [US4] Add an app-level test in `apps/app/src/storage/library-ops.test.ts`:
   - importing `full.sododeck.json`, editing a title and exporting keeps `size` / `route` unchanged;
   - importing a deck without them and exporting after an edit has neither field;
   - a deck with `size` 900 × 40 imports without an error.
@@ -322,13 +322,13 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US5. Keyboard only: resize, reset the size, move the segment, set the sides, reset the route. Check the undo steps and announcements.
 
-- [ ] T047 [P] [US5] Generalise the burst in `apps/app/src/editor/editing/use-nudge.ts` into `createBurst(onFirst, onStep, onEnd)` (1 s idle, as `NUDGE_IDLE_MS`). Keep `createNudger` on top of it, and keep its tests green. Add tests for `createBurst`.
-- [ ] T048 [US5] In `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test):
+- [x] T047 [P] [US5] Generalise the burst in `apps/app/src/editor/editing/use-nudge.ts` into `createBurst(onFirst, onStep, onEnd)` (1 s idle, as `NUDGE_IDLE_MS`). Keep `createNudger` on top of it, and keep its tests green. Add tests for `createBurst`.
+- [x] T048 [US5] In `apps/app/src/editor/use-canvas-shortcuts.ts` (+ test):
   - ⌘⇧ + arrow with one focused or selected component resizes by 4 px (→ / ↓ grow, ← / ↑ shrink), keeping the top-left and the limits, in a burst, announcing "Resized … to W × H" at the end.
   - ⌥(⇧) + arrow with a single selected connection moves the segment by 1 / 10 px across the segment. Arrows along the segment do nothing, and connectors without a segment do nothing.
   - ⌥ + arrow with components keeps 016's nudge.
   - None of this fires in text targets or when editing is off.
-- [ ] T049 [P] [US5] Create `apps/app/src/editor/inspector/size-fields.tsx` (+ test), following the `frame-fields.tsx` pattern:
+- [x] T049 [P] [US5] Create `apps/app/src/editor/inspector/size-fields.tsx` (+ test), following the `frame-fields.tsx` pattern:
   - a "Size" section with `spinbutton` "Width" / "Height";
   - a draft while typing, commit on Enter or blur, Esc cancels;
   - values clamped and rounded to whole px;
@@ -338,7 +338,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
   Mount it in `apps/app/src/editor/inspector/node-inspector.tsx`.
 
-- [ ] T050 [P] [US5] Create `apps/app/src/editor/inspector/route-fields.tsx` (+ test):
+- [x] T050 [P] [US5] Create `apps/app/src/editor/inspector/route-fields.tsx` (+ test):
   - a "Route" section with `combobox` "From side" / "To side" (Auto, Top, Right, Bottom, Left), each change one step through `setEdgeRoute`;
   - a `spinbutton` "Offset", disabled with the description "No middle segment for these sides" when `middleSegment` is null;
   - a "Reset route" button;
@@ -356,25 +356,25 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
 
 **Independent Test**: spec US6. Start each gesture and check the hint text and the one-time announcement.
 
-- [ ] T051 [US6] Add `card-resize`, `segment` and `endpoint` to `HINTS` in `apps/app/src/editor/editing/gesture-hints.ts`, with the contract texts and ⌘ → Ctrl through the `apple` flag. Extend `gesture-hints.test.ts` and the `gesture-hint.tsx` test: each text appears during its gesture, disappears after, and is announced once.
+- [x] T051 [US6] Add `card-resize`, `segment` and `endpoint` to `HINTS` in `apps/app/src/editor/editing/gesture-hints.ts`, with the contract texts and ⌘ → Ctrl through the `apple` flag. Extend `gesture-hints.test.ts` and the `gesture-hint.tsx` test: each text appears during its gesture, disappears after, and is announced once.
 
 ---
 
 ## Phase 9: Polish and cross-cutting
 
-- [ ] T052 [P] Update `packages/schema/CLAUDE.md` (`Side`, `EdgeRoute`, `Node.size`, `Edge.route`), `packages/model/CLAUDE.md` (`setCardSize`, `setEdgeRoute`, `writePatch` keys, `fitGroupFrames({ sizeOf })`, the problem kind) and `apps/app/CLAUDE.md` (`cardSize` as the only size source, `editor/routing/`, the new gestures and actions).
-- [ ] T053 [P] Update `docs/backlog.md`:
+- [x] T052 [P] Update `packages/schema/CLAUDE.md` (`Side`, `EdgeRoute`, `Node.size`, `Edge.route`), `packages/model/CLAUDE.md` (`setCardSize`, `setEdgeRoute`, `writePatch` keys, `fitGroupFrames({ sizeOf })`, the problem kind) and `apps/app/CLAUDE.md` (`cardSize` as the only size source, `editor/routing/`, the new gestures and actions).
+- [x] T053 [P] Update `docs/backlog.md`:
   - Mark 017 as implemented, with links.
   - Replace the 017 design delta "a segment stops 12 px from any card edge" with the clarified free drag.
   - Note in 022 that `routing/route-path.ts` and `EdgeRoute` are the extension points.
-- [ ] T054 Accessibility pass:
+- [x] T054 Accessibility pass:
   - Keyboard-only run of every action.
   - Contrast of the handles, readouts, side targets and ghost against Canvas in both themes; add any new token pair to `packages/ui/test/contrast.test.ts`.
   - The hot side target and the active handle differ by more than colour.
   - No animation under reduced motion.
-- [ ] T055 Visual check against screens 100 (Reset route), 112, 113 and 114, light and dark. Take screenshots into `specs/017-resize-edge-routing/screens/` and list the differences in `specs/017-resize-edge-routing/visual-check.md` (SC-008). The expected, allowed differences: no 12 px stop in 113, and no "⌥ Free end" in 114.
-- [ ] T056 Run `pnpm bench` and `BENCH_ROUTES=1 pnpm bench` after the change. Save both in `specs/017-resize-edge-routing/bench-after.md` next to `bench-before.md`, and confirm ≥ 60 fps for `resized-routed` and no regression elsewhere (FR-031, SC-006).
-- [ ] T057 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
+- [x] T055 Visual check against screens 100 (Reset route), 112, 113 and 114, light and dark. Take screenshots into `specs/017-resize-edge-routing/screens/` and list the differences in `specs/017-resize-edge-routing/visual-check.md` (SC-008). The expected, allowed differences: no 12 px stop in 113, and no "⌥ Free end" in 114.
+- [ ] T056 (skipped per user request — bench verification not run this session) Run `pnpm bench` and `BENCH_ROUTES=1 pnpm bench` after the change. Save both in `specs/017-resize-edge-routing/bench-after.md` next to `bench-before.md`, and confirm ≥ 60 fps for `resized-routed` and no regression elsewhere (FR-031, SC-006).
+- [x] T057 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
 - [ ] T058 Run the quickstart scenarios 1–10 by hand and record the results in the PR description.
 
 ---

@@ -304,6 +304,31 @@ describe('snapping (016 US3, R7)', () => {
     });
     expect(position(toJSON(doc), 'b')).toEqual({ x: 3, y: 300 });
   });
+
+  it('snaps to a resized card’s own right edge, not the default card width (017 R2)', () => {
+    const sized: SododeckFile = deckOf({
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          position: { x: 0, y: 0 },
+          size: { width: 400, height: 44 },
+        },
+        { id: 'b', type: 'service', title: 'B', position: { x: 800, y: 0 } },
+      ],
+    });
+    const { h, doc } = setup(sized);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('b'));
+      h().onNodesChange(move('b', 403, 300));
+    });
+    expect(ui().guides.some((g) => g.axis === 'x' && g.at === 400)).toBe(true);
+    act(() => {
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(position(toJSON(doc), 'b')).toEqual({ x: 400, y: 300 });
+  });
 });
 
 describe('resizing a group frame (016 US2, FR-013–FR-015)', () => {

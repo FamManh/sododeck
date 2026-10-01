@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { COMPONENT_CARD_SIZE, displayPosition, groupBounds, type Point } from '../canvas-geometry';
+import { displayPosition, groupBounds, type Point } from '../canvas-geometry';
 import { readViewState } from '../views/use-current-view';
 import { groupSubtree } from './subtree';
 
@@ -46,7 +46,7 @@ function moveSelection(editor: DeckEditor, delta: Point): number {
     const at = viewNodePosition(view.view, node) ?? displayPosition(node, index);
     positions[node.id] = { x: at.x + delta.x, y: at.y + delta.y };
   });
-  const bounds = groupBounds(view.deck, COMPONENT_CARD_SIZE);
+  const bounds = groupBounds(view.deck, 'component');
   const frames: Record<Id, Frame> = {};
   for (const id of tree.groups) {
     const rect = bounds.get(id);
@@ -73,10 +73,23 @@ export interface Nudger {
   end: () => void;
 }
 
-export function createNudger(editor: DeckEditor): Nudger {
+export interface Burst {
+  /** True while a burst (and its undo step) is open. */
+  isOpen: () => boolean;
+  /** One step: opens the burst (calling `onFirst`) if it wasn't already, then calls `onStep`. */
+  step: () => void;
+  /** Closes the open burst now (calling `onEnd`), or does nothing if it's already closed. */
+  end: () => void;
+}
+
+/**
+ * A keyboard repeat that is one undo step until the keys stop coming (017 R9): `onFirst` opens
+ * the step, `onStep` runs on every key (including the first), `onEnd` closes it — on a 1 s idle
+ * timeout, another key, or a pointer down. Shared by the arrow nudge, the resize keys and the
+ * segment-move keys.
+ */
+export function createBurst(onFirst: () => void, onStep: () => void, onEnd: () => void): Burst {
   let open = false;
-  let total: Point = { x: 0, y: 0 };
-  let moved = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const end = () => {
@@ -84,15 +97,48 @@ export function createNudger(editor: DeckEditor): Nudger {
     timer = null;
     if (!open) return;
     open = false;
-    editor.endGesture();
-    if (moved > 0 && (total.x !== 0 || total.y !== 0)) {
-      useUiStore
-        .getState()
-        .announce(
-          `Moved ${String(moved)} ${moved === 1 ? 'component' : 'components'} ${nudgeDistance(total)}`,
-        );
-    }
+    onEnd();
   };
+
+  const step = () => {
+    if (!open) {
+      open = true;
+      onFirst();
+    }
+    onStep();
+    if (timer !== null) clearTimeout(timer);
+    timer = setTimeout(end, NUDGE_IDLE_MS);
+  };
+
+  return { isOpen: () => open, step, end };
+}
+
+export function createNudger(editor: DeckEditor): Nudger {
+  let total: Point = { x: 0, y: 0 };
+  let moved = 0;
+  let pending: Point = { x: 0, y: 0 };
+
+  const burst = createBurst(
+    () => {
+      editor.beginGesture();
+      total = { x: 0, y: 0 };
+    },
+    () => {
+      moved = moveSelection(editor, pending);
+      total = { x: total.x + pending.x, y: total.y + pending.y };
+    },
+    () => {
+      editor.endGesture();
+      if (moved > 0 && (total.x !== 0 || total.y !== 0)) {
+        useUiStore
+          .getState()
+          .announce(
+            `Moved ${String(moved)} ${moved === 1 ? 'component' : 'components'} ${nudgeDistance(total)}`,
+          );
+      }
+    },
+  );
+  const end = burst.end;
 
   const key: Nudger['key'] = (event) => {
     const direction = ARROWS[event.key];
@@ -101,16 +147,8 @@ export function createNudger(editor: DeckEditor): Nudger {
     if (isFlowMode(ui) || ui.flowSession !== null) return false;
     if (ui.selection.nodes.length + ui.selection.groups.length === 0) return false;
     const step = event.shiftKey ? 10 : 1;
-    const delta = { x: direction.x * step, y: direction.y * step };
-    if (!open) {
-      editor.beginGesture();
-      open = true;
-      total = { x: 0, y: 0 };
-    }
-    moved = moveSelection(editor, delta);
-    total = { x: total.x + delta.x, y: total.y + delta.y };
-    if (timer !== null) clearTimeout(timer);
-    timer = setTimeout(end, NUDGE_IDLE_MS);
+    pending = { x: direction.x * step, y: direction.y * step };
+    burst.step();
     return true;
   };
 

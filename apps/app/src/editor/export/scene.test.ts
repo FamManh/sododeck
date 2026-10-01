@@ -114,6 +114,30 @@ describe('buildScene: whole deck', () => {
     expect(scene(framed).groups[0]?.rect).toEqual({ x: -300, y: -200, width: 900, height: 700 });
   });
 
+  it('draws a card at its own stored size (017)', () => {
+    const resized = {
+      ...grouped,
+      nodes: grouped.nodes.map((node) =>
+        node.id === 'a' ? { ...node, size: { width: 260, height: 140 } } : node,
+      ),
+    };
+    const cards = new Map(scene(resized).cards.map((card) => [card.id, card]));
+    expect(cards.get('a')?.rect).toMatchObject({ width: 260, height: 140 });
+    expect(cards.get('b')?.rect).toMatchObject(NODE_SIZE);
+  });
+
+  it('routes an edge through its stored route (017)', () => {
+    const routed = {
+      ...grouped,
+      edges: grouped.edges.map((edge) =>
+        edge.id === 'a-b' ? { ...edge, route: { offset: 40 } } : edge,
+      ),
+    };
+    const plainLabelY = scene(grouped).edges.find((edge) => edge.id === 'a-b')?.labelPoint.y;
+    const edge = scene(routed).edges.find((edge) => edge.id === 'a-b');
+    expect(edge?.labelPoint.y).toBe((plainLabelY ?? 0) + 40);
+  });
+
   it('bounds every shape plus the margin', () => {
     const { bounds, cards, groups, stickies } = scene(grouped);
     for (const rect of [...cards, ...groups, ...stickies].map((item) => item.rect)) {

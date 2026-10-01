@@ -5,6 +5,7 @@
  *   pnpm bench                          # from repo root (builds first)
  *   BENCH_CPU_THROTTLE=4 pnpm bench     # simulate a slower machine
  *   BENCH_FLOWS=1 pnpm bench            # the deck also has 21 flows (006); flow scenarios always do
+ *   BENCH_ROUTES=1 pnpm bench           # adds the resized-routed scenario (017)
  *   BENCH_COLOURS=1 pnpm bench          # every node has a fill, every 5th also a stroke (020)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
@@ -246,6 +247,32 @@ for (const scenario of [
     const stats = summarize(await stopRecording(page));
     results.push({
       scenario: scenario.name,
+      nodes: NODES,
+      edges: EDGES,
+      ...opened,
+      renderedNodesZoomedIn,
+      maxZoom,
+      ...stats,
+      meetsTarget: meetsTarget(stats),
+    });
+  });
+}
+
+/**
+ * 017 research R15, FR-031, SC-006: every node has a stored `size` (200 × 72) and 200 edges have
+ * a `route` (opposite sides, ±40 px offset), enabled with `BENCH_ROUTES=1` (opt-in: it changes the
+ * deck other scenarios share a baseline against).
+ */
+if (process.env.BENCH_ROUTES === '1') {
+  test(`resized-routed: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+    const opened = await openBench(page, '&routes=1');
+    await startRecording(page);
+    const startZoom = await viewportZoom(page);
+    const { maxZoom, renderedNodesZoomedIn } = await panAndZoom(page);
+    expect(maxZoom).toBeGreaterThan(startZoom * 2);
+    const stats = summarize(await stopRecording(page));
+    results.push({
+      scenario: 'resized-routed',
       nodes: NODES,
       edges: EDGES,
       ...opened,

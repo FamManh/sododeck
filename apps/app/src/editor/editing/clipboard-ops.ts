@@ -18,7 +18,7 @@ import type { Id, SododeckFile } from '@sododeck/schema';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useUiStore, type Selection } from '../../state/ui-store';
 import { canvasElement } from '../canvas-actions';
-import { COMPONENT_CARD_SIZE, groupBounds, type Point, type Rect } from '../canvas-geometry';
+import { groupBounds, type Point, type Rect } from '../canvas-geometry';
 import { scopeOf, visibleGraph } from '../visible-graph';
 import { readViewState } from '../views/use-current-view';
 import { commonParent } from './common-parent';
@@ -78,7 +78,7 @@ export function pasteParent(editor: DeckEditor, point: Point): Id | undefined {
   const view = readViewState(editor.doc);
   const scope = scopeOf(useUiStore.getState().drill);
   const graph = visibleGraph(view.deck, scope, view.collapsed);
-  const frames = frameEntries(view.deck, groupBounds(view.deck, COMPONENT_CARD_SIZE), graph.groups);
+  const frames = frameEntries(view.deck, groupBounds(view.deck, 'component'), graph.groups);
   return dropTarget(frames, point, new Set()) ?? scope.group ?? undefined;
 }
 

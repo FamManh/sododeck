@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { readViewState } from '../views/use-current-view';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { NODE_SIZE } from '../canvas-geometry';
+import { cardSize } from '../canvas-geometry';
 
 const normalizePoint = ({ x, y }: Point): Point => ({
   x: Number.isFinite(x) ? Math.round(x) : 0,
@@ -16,11 +16,13 @@ function nodeAtPoint(deck: SododeckFile, point: Point): SododeckFile['nodes'][nu
   for (const node of deck.nodes) {
     const position = nodeCanvasPosition(deck, node.id);
     if (position === null) continue;
+    // Pinning happens at component scale (011); a resized card uses its own stored size (017 R2).
+    const size = cardSize(node, 'component');
     const inside =
       point.x >= position.x &&
-      point.x <= position.x + NODE_SIZE.width &&
+      point.x <= position.x + size.width &&
       point.y >= position.y &&
-      point.y <= position.y + NODE_SIZE.height;
+      point.y <= position.y + size.height;
     if (inside) return node;
   }
   return null;

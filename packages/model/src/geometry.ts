@@ -107,12 +107,14 @@ export function frameOf(group: Pick<Group, 'position' | 'size'>): Frame | undefi
 }
 
 export interface FitOptions {
-  /** Card size used for every member (the app passes its largest, so members fit at any level). */
+  /** Card size used for a member with no `sizeOf`, or every member without one. */
   cardSize: { width: number; height: number };
   /** Space between the members' box and the frame. */
   padding: number;
   /** Fit for this view's own positions and frames; the base canvas when absent. */
   viewId?: Id;
+  /** Per-node size (017); defaults to `cardSize` for every node. */
+  sizeOf?: (node: Node) => { width: number; height: number };
 }
 
 interface Box {
@@ -149,7 +151,7 @@ export function fitGroupFrames(
   file: Pick<SododeckFile, 'nodes' | 'groups' | 'views'>,
   options: FitOptions,
 ): Map<Id, Frame> {
-  const { cardSize, padding, viewId } = options;
+  const { cardSize, padding, viewId, sizeOf } = options;
   const view = viewId === undefined ? undefined : file.views.find((v) => v.id === viewId);
   const stored = new Map<Id, Frame>();
   for (const group of file.groups) {
@@ -164,11 +166,12 @@ export function fitGroupFrames(
       x: (index % NODE_GRID.columns) * NODE_GRID.dx,
       y: Math.floor(index / NODE_GRID.columns) * NODE_GRID.dy,
     };
+    const size = sizeOf?.(node) ?? cardSize;
     const card = {
       left: at.x,
       top: at.y,
-      right: at.x + cardSize.width,
-      bottom: at.y + cardSize.height,
+      right: at.x + size.width,
+      bottom: at.y + size.height,
     };
     content.set(node.group, unionBox(content.get(node.group), card));
   });

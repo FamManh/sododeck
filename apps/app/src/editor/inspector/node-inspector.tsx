@@ -25,6 +25,7 @@ import { groupName, groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { nodeConnections, styleView } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
+import { SizeFields } from './size-fields';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
@@ -176,6 +177,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
         <PanelSection>
           <PinSwitch nodeIds={[node.id]} />
         </PanelSection>
+        <SizeFields node={node} />
         <AppearanceSection
           value={style}
           deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}

@@ -67,6 +67,23 @@ describe('generateBenchDeck', () => {
     expect(deck.flows.at(-1)?.branches).toHaveLength(2);
   });
 
+  it('sizes every node and routes 200 edges with opposite sides (017 T003)', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { routes: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.nodes.every((node) => node.size?.width === 200 && node.size.height === 72)).toBe(
+      true,
+    );
+    const routed = deck.edges.filter((edge) => edge.route !== undefined);
+    expect(routed).toHaveLength(200);
+    for (const edge of routed) {
+      expect(['right', 'bottom']).toContain(edge.route?.fromSide);
+      expect(['left', 'top']).toContain(edge.route?.toSide);
+      expect(Math.abs(edge.route?.offset ?? 0)).toBe(40);
+    }
+    expect(deck.edges.slice(200).every((edge) => edge.route === undefined)).toBe(true);
+    expect(generateBenchDeck(500, 1000, 42, { routes: true })).toEqual({ deck });
+  });
+
   it('adds deterministic benchmark groups', () => {
     const { deck } = generateBenchDeck(500, 1000, 42, { groups: true });
     expect(parseSododeckFile(deck).success).toBe(true);

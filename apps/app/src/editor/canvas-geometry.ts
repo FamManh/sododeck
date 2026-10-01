@@ -20,7 +20,17 @@ export const NODE_SIZE = { width: 164, height: 50 } as const;
 export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
 export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
 type NodeSize = { width: number; height: number };
-type SizeKey = `${number}x${number}`;
+
+/** Sizes a resized card may have (017 R2/R4): drawn clamped to this range, in 4 px steps. */
+export const CARD_SIZE_LIMITS = {
+  min: { width: 120, height: 44 },
+  max: { width: 800, height: 600 },
+  step: 4,
+} as const;
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 /** Space between a group's members and its dashed boundary. */
 export const GROUP_PADDING = 24;
@@ -67,37 +77,50 @@ export function nodeSize(level: Level): NodeSize {
   return level === 'component' ? COMPONENT_CARD_SIZE : NODE_SIZE;
 }
 
+/** A card's drawn size (017 R2): the stored size clamped to the limits, else the level size. */
+export function cardSize(node: Pick<Node, 'size'>, level: Level): NodeSize {
+  const stored = node.size;
+  if (stored === undefined) return nodeSize(level);
+  return {
+    width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
+    height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
+  };
+}
+
+/** A card's box at its display position (017). */
+export function cardBox(node: Pick<Node, 'position' | 'size'>, index: number, level: Level): Rect {
+  return { ...displayPosition(node, index), ...cardSize(node, level) };
+}
+
 const groupBoundsCache = new WeakMap<
   ReadonlyArray<SododeckFile['nodes'][number]>,
-  WeakMap<ReadonlyArray<SododeckFile['groups'][number]>, Map<SizeKey, Map<string, Rect>>>
+  WeakMap<ReadonlyArray<SododeckFile['groups'][number]>, Map<Level, Map<string, Rect>>>
 >();
 
 /**
  * The box of every group (016 research R3, the one place that resolves it): the stored frame when
- * the group has one; otherwise, for a deck an older tab has not fitted yet, its members' boxes and
- * its child groups' boxes plus padding. Unframed groups in a parent cycle, and unframed groups
- * with nothing inside, get none.
+ * the group has one; otherwise, for a deck an older tab has not fitted yet, its members' boxes
+ * (each at its own `cardSize`, 017) and its child groups' boxes plus padding. Unframed groups in a
+ * parent cycle, and unframed groups with nothing inside, get none.
  */
-export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map<string, Rect> {
+export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<string, Rect> {
   let byGroups = groupBoundsCache.get(deck.nodes);
   if (byGroups === undefined) {
     byGroups = new WeakMap();
     groupBoundsCache.set(deck.nodes, byGroups);
   }
-  let bySize = byGroups.get(deck.groups);
-  if (bySize === undefined) {
-    bySize = new Map();
-    byGroups.set(deck.groups, bySize);
+  let byLevel = byGroups.get(deck.groups);
+  if (byLevel === undefined) {
+    byLevel = new Map();
+    byGroups.set(deck.groups, byLevel);
   }
-  const sizeKey: SizeKey = `${size.width}x${size.height}`;
-  const cached = bySize.get(sizeKey);
+  const cached = byLevel.get(level);
   if (cached !== undefined) return cached;
 
   const content = new Map<string, Rect>();
   deck.nodes.forEach((node, index) => {
     if (node.group === undefined) return;
-    const { x, y } = displayPosition(node, index);
-    content.set(node.group, union(content.get(node.group), { x, y, ...size }));
+    content.set(node.group, union(content.get(node.group), cardBox(node, index, level)));
   });
 
   const children = new Map<string, string[]>();
@@ -130,7 +153,7 @@ export function groupBounds(deck: SododeckFile, size: NodeSize = NODE_SIZE): Map
     return bounds;
   };
   for (const group of deck.groups) resolve(group.id);
-  bySize.set(sizeKey, out);
+  byLevel.set(level, out);
   return out;
 }
 
@@ -189,23 +212,27 @@ const FRAME_PADDING = 8;
 export function selectionFrame(
   deck: SododeckFile,
   selected: readonly string[],
-  size: NodeSize = NODE_SIZE,
+  level: Level = 'system',
 ): Rect | null {
   if (selected.length < 2) return null;
   const ids = new Set(selected);
   let box: Rect | undefined;
   deck.nodes.forEach((node, index) => {
-    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...size });
+    if (ids.has(node.id)) box = union(box, cardBox(node, index, level));
   });
   return box ? pad(box, FRAME_PADDING) : null;
 }
 
 /** Union box of the given nodes at their display positions, or null when none exists (007). */
-export function boundsOf(deck: SododeckFile, nodeIds: Iterable<string>): Rect | null {
+export function boundsOf(
+  deck: SododeckFile,
+  nodeIds: Iterable<string>,
+  level: Level = 'system',
+): Rect | null {
   const ids = new Set(nodeIds);
   let box: Rect | undefined;
   deck.nodes.forEach((node, index) => {
-    if (ids.has(node.id)) box = union(box, { ...displayPosition(node, index), ...NODE_SIZE });
+    if (ids.has(node.id)) box = union(box, cardBox(node, index, level));
   });
   return box ?? null;
 }

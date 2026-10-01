@@ -38,9 +38,13 @@ export function writePatch(
     const existing = map.get(key);
     if (value === undefined) {
       map.delete(key);
-    } else if (key === 'position' && existing instanceof Y.Map && isRecord(value)) {
-      // Keep the nested map so concurrent x and y edits merge (FR-004).
-      for (const axis of ['x', 'y'] as const) {
+    } else if (
+      (key === 'position' || key === 'size') &&
+      existing instanceof Y.Map &&
+      isRecord(value)
+    ) {
+      // Keep the nested map so concurrent field edits merge (FR-004; 017 extends this to `size`).
+      for (const axis of Object.keys(value)) {
         if (existing.get(axis) !== value[axis]) existing.set(axis, toY(value[axis]));
       }
     } else {

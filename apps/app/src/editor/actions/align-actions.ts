@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
-import { displayPosition, nodeSize, COMPONENT_CARD_SIZE } from '../canvas-geometry';
+import { cardSize, displayPosition } from '../canvas-geometry';
 import {
   align,
   distribute,
@@ -27,16 +27,18 @@ import type { Action, ActionContext } from './types';
 
 const plural = (n: number) => `${String(n)} ${n === 1 ? 'component' : 'components'}`;
 
-/** The selected cards as the canvas shows them now: the level's card size (R12, SC-004). */
+/** The selected cards as the canvas shows them now: each card's own size (R12, SC-004, 017 R2). */
 function selectedRects(ctx: ActionContext): IdRect[] {
   const zoom = ctx.canvas?.getViewport().zoom;
-  const size =
+  const level =
     zoom === undefined
-      ? COMPONENT_CARD_SIZE
-      : nodeSize(effectiveLevel(levelForZoom(zoom), scopeOf(useUiStore.getState().drill)));
+      ? 'component'
+      : effectiveLevel(levelForZoom(zoom), scopeOf(useUiStore.getState().drill));
   const ids = new Set(ctx.selection.nodes);
   return ctx.view.deck.nodes.flatMap((node, index) =>
-    ids.has(node.id) ? [{ id: node.id, ...displayPosition(node, index), ...size }] : [],
+    ids.has(node.id)
+      ? [{ id: node.id, ...displayPosition(node, index), ...cardSize(node, level) }]
+      : [],
   );
 }
 

@@ -22,7 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { displayPosition, groupBounds, nodeSize, NODE_SIZE } from './canvas-geometry';
+import { cardBox, groupBounds, CARD_SIZE_LIMITS } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -51,6 +51,7 @@ import { effectiveLevel, levelForZoom, levelSelector, type Level } from './level
 import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
 import { PortPillNode } from './port-pill-node';
+import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import type { CardLook } from './style/card-style';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
@@ -87,8 +88,9 @@ const edgeTypes: EdgeTypes = {
 };
 
 /** Cards narrower than 80 px on screen hide their details button (019 FR-018). */
+/** Text is unreadable below this; a resized card can be as narrow as the minimum (017 R4). */
 const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
-  s.transform[2] * NODE_SIZE.width < 80;
+  s.transform[2] * CARD_SIZE_LIMITS.min.width < 80;
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -198,7 +200,7 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
     const point = (() => {
       if (focusedId.startsWith(GROUP_NODE_PREFIX)) {
         const groupId = focusedId.slice(GROUP_NODE_PREFIX.length);
-        const rect = groupBounds(deck, nodeSize(level)).get(groupId);
+        const rect = groupBounds(deck, level).get(groupId);
         return rect === undefined ? null : { x: rect.x, y: rect.y, width: 1, height: 1 };
       }
       if (focusedId.startsWith(COLLAPSED_NODE_PREFIX)) {
@@ -209,8 +211,7 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
       const index = deck.nodes.findIndex((n) => n.id === focusedId);
       const node = index < 0 ? undefined : deck.nodes[index];
       if (node === undefined) return null;
-      const size = nodeSize(level);
-      return { ...displayPosition(node, index), ...size };
+      return cardBox(node, index, level);
     })();
     if (point === null) return;
     const { x: vx, y: vy, zoom } = getViewport();
@@ -644,6 +645,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
         connectionMode={ConnectionMode.Loose}
         connectionLineStyle={connectionLineStyle}
+        connectionLineComponent={EndpointConnectionLine}
         edgesReconnectable={!recording}
         {...handlers}
       >

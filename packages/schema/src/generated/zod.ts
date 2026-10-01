@@ -115,6 +115,16 @@ export const sododeckFileSchema = z
               .strict()
               .describe('Canvas position. Views may override it.')
               .optional(),
+            size: z
+              .object({
+                width: z.number().gt(0).describe('Width in pixels.'),
+                height: z.number().gt(0).describe('Height in pixels.'),
+              })
+              .strict()
+              .describe(
+                'Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported; values outside that range are drawn clamped and reported as a problem.',
+              )
+              .optional(),
             style: z
               .object({
                 fill: z
@@ -331,6 +341,32 @@ export const sododeckFileSchema = z
                   .describe('A link to external documentation, a dashboard, a repository…'),
               )
               .describe('Links to related resources.')
+              .optional(),
+            route: z
+              .object({
+                fromSide: z
+                  .enum(['top', 'right', 'bottom', 'left'])
+                  .describe(
+                    'Side of the source card the connector leaves from. When absent, it is picked automatically.',
+                  )
+                  .optional(),
+                toSide: z
+                  .enum(['top', 'right', 'bottom', 'left'])
+                  .describe(
+                    'Side of the target card the connector enters. When absent, it is picked automatically.',
+                  )
+                  .optional(),
+                offset: z
+                  .number()
+                  .describe(
+                    'Shift of the middle segment, in canvas pixels, relative to where automatic routing puts it. Positive values go right or down. When absent, it is 0. It only applies when the resolved sides are opposite.',
+                  )
+                  .optional(),
+              })
+              .strict()
+              .describe(
+                'Pinned sides and middle-segment offset, shared by every view. When absent, the connector is routed automatically.',
+              )
               .optional(),
           })
           .strict()

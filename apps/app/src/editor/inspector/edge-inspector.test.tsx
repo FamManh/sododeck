@@ -75,6 +75,26 @@ describe('EdgeInspector (story 1, FR-009)', () => {
     ).toBeInTheDocument();
   });
 
+  it('clears the moved end side and the offset when reattach changes a card (017 R12)', async () => {
+    const routedDeck = {
+      ...inspectorDeck,
+      edges: inspectorDeck.edges.map((e) =>
+        e.id === 'op'
+          ? { ...e, route: { fromSide: 'right' as const, toSide: 'left' as const, offset: 12 } }
+          : e,
+      ),
+    };
+    const { user, doc } = renderInspector(routedDeck, { edges: ['op'] });
+    expect(edge(doc)?.route).toEqual({ fromSide: 'right', toSide: 'left', offset: 12 });
+
+    const to = screen.getByRole('combobox', { name: 'To' });
+    await user.clear(to);
+    await user.type(to, 'Payment');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(edge(doc)?.to).toBe('y');
+    expect(edge(doc)?.route).toEqual({ fromSide: 'right' });
+  });
+
   it('lists the flow steps that use it and opens one', async () => {
     const { user, ui } = setup();
     const uses = screen.getByRole('list', { name: 'Used in flows' });
@@ -92,5 +112,80 @@ describe('EdgeInspector (story 1, FR-009)', () => {
     expect(screen.getByText('Not used in any flow')).toBeInTheDocument();
     await view.user.click(screen.getByRole('button', { name: 'Delete connection' }));
     expect(view.ui().pendingDelete).toEqual({ targets: [{ scope: 'edges', id: 'py' }] });
+  });
+});
+
+describe('EdgeInspector Route fields (017 T050)', () => {
+  it('pins From/To side by picking, each one undo step; "Auto" clears', async () => {
+    const { user, doc, editor } = setup();
+    const fromSide = screen.getByRole('combobox', { name: 'From side' });
+    await user.clear(fromSide);
+    await user.type(fromSide, 'Top');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(edge(doc)?.route).toEqual({ fromSide: 'top' });
+
+    const toSide = screen.getByRole('combobox', { name: 'To side' });
+    await user.clear(toSide);
+    await user.type(toSide, 'Bottom');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(edge(doc)?.route).toEqual({ fromSide: 'top', toSide: 'bottom' });
+
+    await user.clear(fromSide);
+    await user.type(fromSide, 'Auto');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(edge(doc)?.route).toEqual({ toSide: 'bottom' });
+
+    act(() => {
+      editor().undo();
+    });
+    expect(edge(doc)?.route).toEqual({ fromSide: 'top', toSide: 'bottom' });
+    act(() => {
+      editor().undo();
+    });
+    expect(edge(doc)?.route).toEqual({ fromSide: 'top' });
+  });
+
+  it('commits the offset on Enter, as one undo step', async () => {
+    const { user, doc, editor } = setup();
+    const offset = screen.getByRole('spinbutton', { name: 'Offset' });
+    expect(offset).not.toBeDisabled();
+    await user.clear(offset);
+    await user.type(offset, '24{Enter}');
+    expect(edge(doc)?.route).toEqual({ offset: 24 });
+    act(() => {
+      editor().undo();
+    });
+    expect(edge(doc)?.route).toBeUndefined();
+  });
+
+  it('disables the offset with a hint when the sides share no movable segment', () => {
+    const routedDeck = {
+      ...inspectorDeck,
+      edges: inspectorDeck.edges.map((e) =>
+        e.id === 'op' ? { ...e, route: { fromSide: 'top' as const, toSide: 'left' as const } } : e,
+      ),
+    };
+    renderInspector(routedDeck, { edges: ['op'] });
+    const offset = screen.getByRole('spinbutton', { name: 'Offset' });
+    expect(offset).toBeDisabled();
+    expect(screen.getByText('No middle segment for these sides')).toBeInTheDocument();
+  });
+
+  it('resets the route in one step, disabled without one, and announces', async () => {
+    const routedDeck = {
+      ...inspectorDeck,
+      edges: inspectorDeck.edges.map((e) =>
+        e.id === 'op'
+          ? { ...e, route: { fromSide: 'right' as const, toSide: 'left' as const, offset: 12 } }
+          : e,
+      ),
+    };
+    const { user, doc, ui } = renderInspector(routedDeck, { edges: ['op'] });
+    const reset = screen.getByRole('button', { name: 'Reset route' });
+    expect(reset).not.toBeDisabled();
+    await user.click(reset);
+    expect(edge(doc)?.route).toBeUndefined();
+    expect(ui().announcement.text).toBe('Route reset');
+    expect(screen.getByRole('button', { name: 'Reset route' })).toBeDisabled();
   });
 });

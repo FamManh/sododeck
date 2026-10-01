@@ -19,6 +19,8 @@ import { alignSelection } from './actions/align-actions';
 import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
 import type { AlignMode } from './editing/align';
 import { useNudge } from './editing/use-nudge';
+import { useResizeKey } from './editing/use-resize-key';
+import { useSegmentKey } from './editing/use-segment-key';
 import {
   consumeLeftToolbar,
   focusSelectionToolbar,
@@ -26,11 +28,10 @@ import {
 } from './quick-edit/toolbar-focus';
 import { canvasElement, nodeElement, selectAllComponents } from './canvas-actions';
 import {
+  cardSize,
   displayPosition,
   groupBounds,
   nearestInDirection,
-  nodeSize,
-  NODE_SIZE,
   type Direction,
 } from './canvas-geometry';
 import {
@@ -54,7 +55,7 @@ import {
 } from './views/use-current-view';
 import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
-import { cancelActiveGesture, nudgeActiveDrag } from './editing/drag-session';
+import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './editing/drag-session';
 
 export { isTextTarget };
 
@@ -107,6 +108,12 @@ function selectionForFocusedGroup(collapsed: ReadonlySet<string>, groupId: strin
     : `${GROUP_NODE_PREFIX}${groupId}`;
 }
 
+/** The one real component `⌘⇧` + arrow would resize (T048): never a group or collapsed group. */
+function singleComponentId(ui: { focusedId: string | null; selection: Selection }): string | null {
+  if (ui.focusedId !== null) return groupIdOf(ui.focusedId) === null ? ui.focusedId : null;
+  return ui.selection.nodes.length === 1 ? (ui.selection.nodes[0] ?? null) : null;
+}
+
 /**
  * ⇧F10 / ContextMenu (019 R7): the menu of the selection (or the focused card), anchored at the
  * bottom-left of its element, or the canvas menu at the view centre.
@@ -149,6 +156,8 @@ const ALIGN_KEYS: Readonly<Record<string, AlignMode>> = {
 export function useCanvasKeyDown() {
   const editor = useEditor();
   const nudger = useNudge();
+  const resizeKeyer = useResizeKey();
+  const segmentKeyer = useSegmentKey();
   const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
     useReactFlow();
 
@@ -191,11 +200,16 @@ export function useCanvasKeyDown() {
           const from = deck.nodes[index2(edge?.from)];
           const to = deck.nodes[index2(edge?.to)];
           if (edge && from && to) {
+            const level = effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill));
             const a = displayPosition(from, index2(edge.from));
             const b = displayPosition(to, index2(edge.to));
-            void setCenter((a.x + b.x + NODE_SIZE.width) / 2, (a.y + b.y + NODE_SIZE.height) / 2, {
-              zoom: getZoom(),
-            });
+            const sizeA = cardSize(from, level);
+            const sizeB = cardSize(to, level);
+            void setCenter(
+              (a.x + sizeA.width / 2 + (b.x + sizeB.width / 2)) / 2,
+              (a.y + sizeA.height / 2 + (b.y + sizeB.height / 2)) / 2,
+              { zoom: getZoom() },
+            );
             ui.announce(edgeName(from.title, to.title, edge.label));
           }
           return;
@@ -225,6 +239,27 @@ export function useCanvasKeyDown() {
       }
 
       if (isMod(event)) {
+        // ⌘⇧ arrows resize the focused component (017 R9/R10), one real card at a time.
+        if (event.shiftKey && key in ARROWS) {
+          const id = singleComponentId(ui);
+          const index = id === null ? -1 : deck.nodes.findIndex((n) => n.id === id);
+          const node = index === -1 ? undefined : deck.nodes[index];
+          if (node !== undefined) {
+            const level = effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill));
+            const size = cardSize(node, level);
+            if (
+              resizeKeyer.key(event, {
+                id: node.id,
+                title: node.title,
+                width: size.width,
+                height: size.height,
+              })
+            ) {
+              event.preventDefault();
+              return;
+            }
+          }
+        }
         const handled = (() => {
           switch (key.toLowerCase()) {
             case 'a':
@@ -247,9 +282,14 @@ export function useCanvasKeyDown() {
         if (handled) event.preventDefault();
         return;
       }
-      // ⌥(⇧) arrows nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by
-      // `code` because ⌥ changes `key` on macOS.
+      // ⌥(⇧) arrows move a single selected connection's middle segment (017 R9), or otherwise
+      // nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by `code` because ⌥
+      // changes `key` on macOS.
       if (event.altKey) {
+        if (segmentKeyer.key(event, effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill)))) {
+          event.preventDefault();
+          return;
+        }
         if (nudger.key(event)) {
           event.preventDefault();
           return;
@@ -329,7 +369,7 @@ export function useCanvasKeyDown() {
         event.preventDefault();
         const scope = scopeOf(ui.drill);
         const level = effectiveLevel(levelForZoom(getZoom()), scope);
-        const bounds = groupBounds(deck, nodeSize(level));
+        const bounds = groupBounds(deck, level);
         const points = [
           ...graph.groups.flatMap((groupId) => {
             const boundsForGroup = bounds.get(groupId);
@@ -348,7 +388,7 @@ export function useCanvasKeyDown() {
             const node = index < 0 ? undefined : deck.nodes[index];
             if (node === undefined) return [];
             const p = displayPosition(node, index);
-            const size = nodeSize(level);
+            const size = cardSize(node, level);
             return [{ id: node.id, x: p.x + size.width / 2, y: p.y + size.height / 2 }];
           }),
         ];
@@ -543,6 +583,8 @@ export function useCanvasKeyDown() {
     [
       editor,
       nudger,
+      resizeKeyer,
+      segmentKeyer,
       zoomIn,
       zoomOut,
       fitView,
@@ -606,6 +648,12 @@ export function useEditorShortcuts({
 
       // During a pointer drag or resize (016): Esc cancels it (R14), arrows add 1 / 10 px (§g-45).
       if (key === 'escape' && cancelActiveGesture()) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      // R during a segment drag (017 R7, FR-014): back to automatic routing, mid-drag.
+      if (key === 'r' && !isMod(event) && !event.altKey && resetActiveGesture()) {
         event.preventDefault();
         event.stopPropagation();
         return;

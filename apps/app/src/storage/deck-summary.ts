@@ -1,6 +1,12 @@
-import type { SododeckFile } from '@sododeck/schema';
+import type { Node, SododeckFile } from '@sododeck/schema';
 
-import { displayPosition, groupBounds, NODE_SIZE, type Rect } from '../editor/canvas-geometry';
+import {
+  displayPosition,
+  groupBounds,
+  CARD_SIZE_LIMITS,
+  NODE_SIZE,
+  type Rect,
+} from '../editor/canvas-geometry';
 import type { DeckThumb } from './library-db';
 
 export interface DeckSummary {
@@ -12,6 +18,19 @@ export interface DeckSummary {
 }
 
 const BOX = 1000;
+
+/** A card's own size (017 R2), clamped to the drawable range, else the default. */
+function sizeOf(node: Pick<Node, 'size'>): { width: number; height: number } {
+  const stored = node.size;
+  if (stored === undefined) return NODE_SIZE;
+  return {
+    width: Math.min(Math.max(stored.width, CARD_SIZE_LIMITS.min.width), CARD_SIZE_LIMITS.max.width),
+    height: Math.min(
+      Math.max(stored.height, CARD_SIZE_LIMITS.min.height),
+      CARD_SIZE_LIMITS.max.height,
+    ),
+  };
+}
 
 /**
  * The library's cached view of a deck (research R6, R10): name, counts and a thumbnail drawn
@@ -33,6 +52,7 @@ export function summarizeDeck(
 function thumbOf(file: SododeckFile, maxNodes: number): DeckThumb | null {
   if (file.nodes.length === 0) return null;
   const points = file.nodes.map((node, index) => displayPosition(node, index));
+  const sizes = file.nodes.map((node) => sizeOf(node));
   const groups = [...groupBounds(file).values()];
 
   let minX = Infinity;
@@ -45,7 +65,9 @@ function thumbOf(file: SododeckFile, maxNodes: number): DeckThumb | null {
     maxX = Math.max(maxX, r.x + r.width);
     maxY = Math.max(maxY, r.y + r.height);
   };
-  for (const p of points) include({ ...p, ...NODE_SIZE });
+  points.forEach((p, i) => {
+    include({ ...p, ...(sizes[i] ?? NODE_SIZE) });
+  });
   for (const g of groups) include(g);
 
   const scale = BOX / Math.max(maxX - minX, maxY - minY);
@@ -56,7 +78,15 @@ function thumbOf(file: SododeckFile, maxNodes: number): DeckThumb | null {
     node: [Math.max(1, n(NODE_SIZE.width)), Math.max(1, n(NODE_SIZE.height))],
     nodes: file.nodes.slice(0, maxNodes).map((node, i) => {
       const p = points[i] ?? displayPosition(node, i);
-      return [n(p.x - minX), n(p.y - minY), node.type];
+      if (node.size === undefined) return [n(p.x - minX), n(p.y - minY), node.type];
+      const size = sizes[i] ?? NODE_SIZE;
+      return [
+        n(p.x - minX),
+        n(p.y - minY),
+        node.type,
+        Math.max(1, n(size.width)),
+        Math.max(1, n(size.height)),
+      ];
     }),
     groups: groups.map((g) => [n(g.x - minX), n(g.y - minY), n(g.width), n(g.height)]),
   };

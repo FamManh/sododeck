@@ -46,6 +46,7 @@ export function generateBenchDeck(
     groups?: boolean;
     stickies?: number;
     views?: boolean;
+    routes?: boolean;
     colours?: boolean;
   } = {},
 ) {
@@ -67,6 +68,7 @@ export function generateBenchDeck(
       type: KINDS[i % KINDS.length] ?? 'service',
       title: `Node ${i}`,
       position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
+      ...(options.routes === true ? { size: { width: 200, height: 72 } } : {}),
       ...(style ? { style } : {}),
     };
   });
@@ -84,6 +86,7 @@ export function generateBenchDeck(
     seen.add(key);
     edges.push({ id: `e${edges.length}`, from: `n${a}`, to: `n${b}` });
   }
+  if (options.routes === true) addBenchRoutes(edges);
 
   const deck: SododeckFile = { ...emptySododeckFile(), nodes, edges };
   if (options.groups === true) addBenchGroups(deck);
@@ -91,6 +94,22 @@ export function generateBenchDeck(
   if (options.flows === true) addBenchFlows(deck, random);
   if (options.views === true) addBenchViews(deck, random);
   return { deck };
+}
+
+/**
+ * 017 research R15: pins a route on the first 200 edges, mixing horizontal and vertical opposite
+ * sides with a ±40 px offset (only an opposite pair has a movable middle segment).
+ */
+function addBenchRoutes(edges: SododeckFile['edges']): void {
+  const ROUTED = Math.min(200, edges.length);
+  for (let i = 0; i < ROUTED; i++) {
+    const edge = edges[i];
+    if (edge === undefined) continue;
+    edge.route =
+      i % 2 === 0
+        ? { fromSide: 'right', toSide: 'left', offset: i % 4 === 0 ? 40 : -40 }
+        : { fromSide: 'bottom', toSide: 'top', offset: i % 4 === 1 ? 40 : -40 };
+  }
 }
 
 function addBenchGroups(deck: SododeckFile): void {

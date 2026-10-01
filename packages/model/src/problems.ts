@@ -21,7 +21,8 @@ export type ProblemKind =
   | 'missing-rule'
   | 'rule-without-catch-all'
   | 'invalid-rule-cells'
-  | 'broken-reference';
+  | 'broken-reference'
+  | 'card-size-out-of-range';
 
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
@@ -34,6 +35,7 @@ export const PROBLEM_KINDS: readonly ProblemKind[] = [
   'rule-without-catch-all',
   'invalid-rule-cells',
   'broken-reference',
+  'card-size-out-of-range',
 ];
 
 /** Where a problem is fixed. */
@@ -97,7 +99,14 @@ const TITLES: Record<ProblemKind, string> = {
   'rule-without-catch-all': 'Rule without catch-all',
   'invalid-rule-cells': 'Invalid rule cells',
   'broken-reference': 'Broken reference',
+  'card-size-out-of-range': 'Card size out of range',
 };
+
+/**
+ * Sizes a card may have (017, research R11): drawn clamped to this range at every size outside
+ * it, and reported here instead of a schema error. Keep in sync with the app's `CARD_SIZE_LIMITS`.
+ */
+const CARD_SIZE_RANGE = { min: { width: 120, height: 44 }, max: { width: 800, height: 600 } };
 
 /** Every problem in `file`. Same input, same output and order. */
 export function checkDeck(file: SododeckFile): DeckProblems {
@@ -144,10 +153,33 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   }
 
   checkReferences(file, analyses, nodeTitle, add);
+  checkCardSizes(file.nodes, add);
   return finish(drafts);
 }
 
 type Add = (d: Omit<Draft, 'title'>) => void;
+
+/** A stored size outside the supported range (017, research R11); the file still opens. */
+function checkCardSizes(nodes: readonly Node[], add: Add): void {
+  const { min, max } = CARD_SIZE_RANGE;
+  for (const node of nodes) {
+    const size = node.size;
+    if (size === undefined) continue;
+    if (size.width >= min.width && size.width <= max.width) {
+      if (size.height >= min.height && size.height <= max.height) continue;
+    }
+    add({
+      kind: 'card-size-out-of-range',
+      ids: [node.id],
+      target: { type: 'node', id: node.id },
+      on: [node.id],
+      detail:
+        `${node.title} has a size of ${String(size.width)} × ${String(size.height)}; ` +
+        `allowed ${String(min.width)} × ${String(min.height)} to ${String(max.width)} × ${String(max.height)}`,
+      objectTitle: node.title,
+    });
+  }
+}
 
 function checkDuplicates(edges: readonly Edge[], nodeTitle: (id: Id) => string, add: Add): void {
   const groups = new Map<string, Edge[]>();

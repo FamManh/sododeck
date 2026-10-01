@@ -72,6 +72,17 @@ describe('fitGroupFrames (R2)', () => {
     );
   });
 
+  it('sizes each member with sizeOf (017), and defaults to cardSize without one', () => {
+    const sizeOf = (node: SododeckFile['nodes'][number]) =>
+      node.id === 'a' ? { width: 300, height: 200 } : CARD;
+    const frames = fitGroupFrames(deck, { ...opts, sizeOf });
+    // a's box grows to 300x200 at (0,0)…(300,200); b stays 164x104 at (200,100)…(364,204).
+    expect(frames.get('inner')).toEqual(frame(-24, -24, 364 + 48, 204 + 48));
+    expect(fitGroupFrames(deck, opts)).toEqual(
+      fitGroupFrames(deck, { ...opts, sizeOf: undefined }),
+    );
+  });
+
   it('returns only groups missing a frame, and fits parents around stored child frames', () => {
     const file: SododeckFile = {
       ...deck,

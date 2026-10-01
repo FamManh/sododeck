@@ -6,7 +6,16 @@
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import type { Branch, Frame, Rule, SododeckFile, Step, Sticky, ViewType } from '@sododeck/schema';
+import type {
+  Branch,
+  Frame,
+  Rule,
+  SododeckFile,
+  Size,
+  Step,
+  Sticky,
+  ViewType,
+} from '@sododeck/schema';
 
 import { defaultNewId, makeIdAllocator } from './ids';
 import { getObject } from './deck';
@@ -32,6 +41,7 @@ import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
 import { groupSelection, type GroupSelection } from './ops/group-selection';
+import { setCardSize, setEdgeRoute, type EdgeRoutePatch } from './ops/shape';
 import type { Fragment } from './fragment';
 import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
@@ -233,6 +243,18 @@ export interface DeckEditor {
    */
   groupSelection(selection: GroupSelection): Id;
 
+  /**
+   * Sets or clears (`null`) a card's stored size (017). Does not clamp: the schema only requires
+   * positive `width` / `height`; the app clamps and reports out-of-range sizes as a problem. One
+   * undo step, joining an open gesture.
+   */
+  setCardSize(nodeId: Id, size: Size | null): void;
+  /**
+   * Merges `patch` into an edge's stored route (017), or clears it entirely (`null`). A `null`
+   * key removes it, `offset: 0` is dropped, and `route` itself is removed once no key is left. One
+   * undo step, joining an open gesture.
+   */
+  setEdgeRoute(edgeId: Id, patch: EdgeRoutePatch | null): void;
   /**
    * Sets or clears (`value === null`) one style channel (`fill` or `stroke`) on every target node
    * and group as one undo step (020, R2). Unknown ids are skipped; empty targets do nothing.
@@ -511,6 +533,12 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     pasteFragment: (fragment, options) => pasteFragment(ctx, fragment, options),
     groupSelection: (selection) => groupSelection(ctx, selection),
+    setCardSize: (nodeId, size) => {
+      setCardSize(ctx, nodeId, size);
+    },
+    setEdgeRoute: (edgeId, patch) => {
+      setEdgeRoute(ctx, edgeId, patch);
+    },
     setStyle: (targets, channel, value) => {
       setStyle(ctx, targets, channel, value);
     },

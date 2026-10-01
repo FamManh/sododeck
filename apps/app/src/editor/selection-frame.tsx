@@ -2,13 +2,13 @@ import type { SododeckFile } from '@sododeck/schema';
 import { ViewportPortal } from '@xyflow/react';
 
 import { useUiStore } from '../state/ui-store';
-import { nodeSize, selectionFrame } from './canvas-geometry';
+import { selectionFrame } from './canvas-geometry';
 import type { Level } from './levels';
 
 /** Frame around a multi-selection (design 58; 1 px solid since 018), in flow coordinates. */
 export function SelectionFrame({ deck, level }: { deck: SododeckFile; level: Level }) {
   const selected = useUiStore((s) => s.selection.nodes);
-  const frame = selectionFrame(deck, selected, nodeSize(level));
+  const frame = selectionFrame(deck, selected, level);
   if (!frame) return null;
   return (
     <ViewportPortal>

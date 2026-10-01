@@ -8,12 +8,14 @@ import type { SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
 import {
+  cardBox,
+  cardSize,
   displayPosition,
   groupBounds,
   NODE_SIZE,
-  nodeSize as sizeForLevel,
   type Point,
 } from './canvas-geometry';
+import { resolveSides, type Box } from './routing/route-path';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
 import type { CollapsedFlowMarks } from './collapse-flow-marks';
@@ -90,6 +92,16 @@ export interface DeckEdgeData extends Record<string, unknown> {
   flow?: EdgeFlowMark;
   /** The connection's problems (015): an amber glyph on its label pill. */
   problems?: ProblemMark;
+  /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
+  route?: DeckEdgeObject['route'];
+  /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
+  level: Level;
+  /**
+   * Both endpoints are real, on-screen cards (017 R7): a route can be edited. False for an edge
+   * drawn to a collapsed group's port pill, where the resolved sides don't match either card's
+   * real box and a route offset would not mean what it looks like.
+   */
+  routable: boolean;
 }
 
 export interface CollapsedGroupData extends Record<string, unknown> {
@@ -322,7 +334,7 @@ function toFlowNode(
   ]
     .filter(Boolean)
     .join(' ');
-  const size = sizeForLevel(view.level);
+  const size = cardSize(node, view.level);
   if (
     cached?.selected === selected &&
     cached.data.subtitle === subtitle &&
@@ -339,7 +351,9 @@ function toFlowNode(
     (cached.data.currentStep === true) === currentStep &&
     sameClassName(cached.className, className) &&
     cached.position.x === position.x &&
-    cached.position.y === position.y
+    cached.position.y === position.y &&
+    cached.width === size.width &&
+    cached.height === size.height
   ) {
     return cached;
   }
@@ -410,7 +424,7 @@ function groupNodes(
 ): GroupFlowNode[] {
   if (deck.groups.length === 0) return [];
   const groupsById = groupLookup(deck.groups);
-  const bounds = groupBounds(deck, sizeForLevel(level));
+  const bounds = groupBounds(deck, level);
   const counts = groupCounts(deck);
   return graph.groups.flatMap((groupId) => {
     const group = groupsById.get(groupId);
@@ -541,22 +555,29 @@ function collapsedNodes(
 export function exportPortRects(
   deck: SododeckFile,
   graph: VisibleGraph,
+  level: Level = 'system',
 ): { id: string; rect: { x: number; y: number; width: number; height: number }; label: string }[] {
-  const { nodePositionById: positions } = deckLookups(deck);
+  const { nodePositionById: positions, nodesById } = deckLookups(deck);
   return graph.ports.flatMap((port) => {
-    const anchors = port.insideNodeIds
-      .map((nodeId) => positions.get(nodeId))
-      .filter((point): point is Point => point !== undefined);
+    const anchors = port.insideNodeIds.flatMap((nodeId) => {
+      const point = positions.get(nodeId);
+      const node = nodesById.get(nodeId);
+      if (point === undefined || node === undefined) return [];
+      return [{ point, width: cardSize(node, level).width }];
+    });
     if (anchors.length === 0) return [];
-    const x =
-      anchors.reduce((sum, point) => sum + point.x, 0) / anchors.length + NODE_SIZE.width + 32;
-    const y = anchors.reduce((sum, point) => sum + point.y, 0) / anchors.length;
+    const x = anchors.reduce((sum, a) => sum + a.point.x + a.width, 0) / anchors.length + 32;
+    const y = anchors.reduce((sum, a) => sum + a.point.y, 0) / anchors.length;
     return [{ id: port.id, rect: { x, y, width: 120, height: 36 }, label: port.outsideTitle }];
   });
 }
 
-function portNodes(deck: SododeckFile, graph: VisibleGraph): PortFlowNode[] {
-  return exportPortRects(deck, graph).map((port) => {
+function portNodes(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+  level: Level = 'system',
+): PortFlowNode[] {
+  return exportPortRects(deck, graph, level).map((port) => {
     const { x, y } = port.rect;
     const outsideNodeId = port.id.slice(PORT_NODE_PREFIX.length);
     const cached = portCache.get(port.id);
@@ -590,7 +611,7 @@ function portNodesWithView(
   graph: VisibleGraph,
   view: CanvasView,
 ): PortFlowNode[] {
-  return portNodes(deck, graph).map((port) => {
+  return portNodes(deck, graph, view.level).map((port) => {
     const inFocus = view.focus?.members.has(port.id) === true;
     const dimmed = view.focus !== null && !inFocus;
     return {
@@ -727,12 +748,12 @@ export function toStickyNodes(
   });
 }
 
-/** Picks the facing sides of two boxes, so edges leave and enter where it looks natural. */
-export function facingSides(from: Point, to: Point): [HandleSide, HandleSide] {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? ['right', 'left'] : ['left', 'right'];
-  return dy >= 0 ? ['bottom', 'top'] : ['top', 'bottom'];
+/**
+ * Picks the facing sides of two boxes by comparing their centres, so edges leave and enter where
+ * it looks natural (017 R6: identical to the old position-based comparison for equal-size cards).
+ */
+export function facingSides(from: Box, to: Box): readonly [HandleSide, HandleSide] {
+  return resolveSides(from, to);
 }
 
 /** Accessible name of a connection: "<from> to <to>[: label]". */
@@ -760,7 +781,7 @@ export function toFlowEdges(
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): (DeckFlowEdge | MergedFlowEdge)[] {
   const lookups = deckLookups(deck);
-  const ports = portNodes(deck, graph);
+  const ports = portNodes(deck, graph, view.level);
   const nodes =
     graph.cards.length === 0 && ports.length === 0
       ? lookups.edgeNodeViews
@@ -778,14 +799,31 @@ export function toFlowEdges(
   }
   const titles = representativeTitles(deck, graph);
   const selected = new Set(view.selection.edges);
+  const cardsByGroupId = new Map(graph.cards.map((card) => [card.groupId, card]));
+  const portsById = new Map(ports.map((port) => [port.id, port]));
+  /** A representative id's box (017 R6): a plain node, a collapsed group card, or a port pill. */
+  function boxFor(id: string): Box | undefined {
+    if (id.startsWith(COLLAPSED_NODE_PREFIX)) {
+      return cardsByGroupId.get(id.slice(COLLAPSED_NODE_PREFIX.length))?.rect;
+    }
+    const port = portsById.get(id);
+    if (port !== undefined)
+      return { x: port.position.x, y: port.position.y, width: 120, height: 36 };
+    const node = lookups.nodesById.get(id);
+    const index = lookups.nodeIndexById.get(id);
+    if (node === undefined || index === undefined) return undefined;
+    return cardBox(node, index, view.level);
+  }
   const plainEdges = graph.edges.flatMap((edgeId) => {
     const edge = lookups.edgesById.get(edgeId);
     if (edge === undefined) return [];
     const from = nodes.get(edge.from);
     const to = nodes.get(edge.to);
+    const fromBox = boxFor(edge.from);
+    const toBox = boxFor(edge.to);
     // The schema does not check references; a file may still point at missing nodes.
-    if (!from || !to) return [];
-    const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+    if (!from || !to || fromBox === undefined || toBox === undefined) return [];
+    const [sourceHandle, targetHandle] = resolveSides(fromBox, toBox, edge.route);
     const isSelected = selected.has(edge.id);
     const focused = edge.id === view.focusedEdgeId;
     const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
@@ -807,7 +845,8 @@ export function toFlowEdges(
       cached.data.inFocus === inFocus &&
       cached.data.dimmed === dimmed &&
       cached.data.fromTitle === from.title &&
-      cached.data.toTitle === to.title
+      cached.data.toTitle === to.title &&
+      cached.data.level === view.level
     ) {
       return [cached];
     }
@@ -842,8 +881,11 @@ export function toFlowEdges(
         focused,
         inFocus,
         dimmed,
+        level: view.level,
+        routable: true,
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),
+        ...(edge.route === undefined ? {} : { route: edge.route }),
       },
     };
     edgeCache.set(edge, flowEdge);
@@ -862,8 +904,11 @@ export function toFlowEdges(
       const toId = edge.to === insideNodeId ? representative : port.id;
       const from = nodes.get(fromId);
       const to = nodes.get(toId);
-      if (from === undefined || to === undefined) return [];
-      const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+      const fromBox = boxFor(fromId);
+      const toBox = boxFor(toId);
+      if (from === undefined || to === undefined || fromBox === undefined || toBox === undefined)
+        return [];
+      const [sourceHandle, targetHandle] = facingSides(fromBox, toBox);
       const isSelected = selected.has(edge.id);
       const focused = edge.id === view.focusedEdgeId;
       const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
@@ -891,7 +936,8 @@ export function toFlowEdges(
             .join(' '),
         ) &&
         cached.data.fromTitle === from.title &&
-        cached.data.toTitle === to.title
+        cached.data.toTitle === to.title &&
+        cached.data.level === view.level
       ) {
         return [cached];
       }
@@ -923,6 +969,8 @@ export function toFlowEdges(
           focused,
           inFocus,
           dimmed,
+          level: view.level,
+          routable: false,
           ...(mark === undefined ? {} : { flow: mark }),
         },
       };
@@ -933,8 +981,11 @@ export function toFlowEdges(
   const mergedEdges = graph.merged.flatMap((edge) => {
     const from = nodes.get(edge.a);
     const to = nodes.get(edge.b);
-    if (from === undefined || to === undefined) return [];
-    const [sourceHandle, targetHandle] = facingSides(from.position, to.position);
+    const fromBox = boxFor(edge.a);
+    const toBox = boxFor(edge.b);
+    if (from === undefined || to === undefined || fromBox === undefined || toBox === undefined)
+      return [];
+    const [sourceHandle, targetHandle] = facingSides(fromBox, toBox);
     const focused = edge.id === view.focusedEdgeId;
     const inFocus = view.focus?.edges.has(edge.id) === true;
     const flow = view.marks.merged.get(edge.id);

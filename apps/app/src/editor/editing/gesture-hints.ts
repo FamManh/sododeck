@@ -27,6 +27,21 @@ const HINTS: Partial<Record<CanvasGesture, readonly HintBarItem[]>> = {
     { keys: '⌥', label: 'From centre' },
     { keys: 'Esc', label: 'Cancel' },
   ],
+  'card-resize': [
+    { keys: '⇧', label: 'Keep ratio' },
+    { keys: '⌥', label: 'From centre' },
+    { keys: '⌘', label: 'No snap' },
+    { keys: 'Esc', label: 'Cancel' },
+  ],
+  segment: [
+    { keys: '⌘', label: 'No snap' },
+    { keys: 'R', label: 'Reset route' },
+    { keys: 'Esc', label: 'Cancel' },
+  ],
+  endpoint: [
+    { keys: '', label: 'Drop on a side to pin it' },
+    { keys: 'Esc', label: 'Keep old end' },
+  ],
 };
 
 const OTHER_KEYS: Readonly<Record<string, string>> = { '⌥': 'Alt', '⌘': 'Ctrl', '⇧': 'Shift' };
@@ -45,5 +60,7 @@ export function gestureHint(
 
 /** "⇧ Add · ⌥ Touch · Esc Cancel" */
 export function hintText(items: readonly HintBarItem[]): string {
-  return items.map((item) => `${item.keys} ${item.label}`).join(' · ');
+  return items
+    .map((item) => (item.keys === '' ? item.label : `${item.keys} ${item.label}`))
+    .join(' · ');
 }

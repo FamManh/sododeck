@@ -18,7 +18,14 @@ import type { NodeChange } from '@xyflow/react';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useUiStore, type CanvasGesture, type Guide } from '../../state/ui-store';
-import { displayPosition, groupBounds, nodeSize, type Point, type Rect } from '../canvas-geometry';
+import {
+  cardSize,
+  displayPosition,
+  groupBounds,
+  nodeSize,
+  type Point,
+  type Rect,
+} from '../canvas-geometry';
 import { GROUP_NODE_PREFIX } from '../deck-to-flow';
 import { effectiveLevel, levelForZoom } from '../levels';
 import { scopeOf, visibleGraph } from '../visible-graph';
@@ -95,8 +102,13 @@ function union(rects: readonly Rect[]): Rect {
   return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
-/** The Esc and arrow handlers of the drag in progress, for the keyboard map. */
-let active: { cancel: () => boolean; arrow: (dx: number, dy: number) => boolean } | null = null;
+/** The Esc, arrow and (segment drags only) R handlers of the drag in progress, for the keyboard
+ * map. `reset` is only set by a segment drag (017 R7): other gestures have no reset action. */
+let active: {
+  cancel: () => boolean;
+  arrow: (dx: number, dy: number) => boolean;
+  reset?: () => boolean;
+} | null = null;
 
 /** Esc during a drag or a resize (R14): cancels it. Returns whether one was running. */
 export function cancelActiveGesture(): boolean {
@@ -106,6 +118,12 @@ export function cancelActiveGesture(): boolean {
 /** Arrows during a pointer drag (§g-45): nudge the drag by 1 / 10 px. */
 export function nudgeActiveDrag(dx: number, dy: number): boolean {
   return active?.arrow(dx, dy) ?? false;
+}
+
+/** R during a segment drag (017 R7, FR-014): resets it to automatic routing. Returns whether one
+ * was running with a reset action (other gestures ignore R). */
+export function resetActiveGesture(): boolean {
+  return active?.reset?.() ?? false;
 }
 
 /** Registers the cancel of a resize, which is not a drag session (see `frame-resize.ts`). */
@@ -171,15 +189,17 @@ export class DragController {
     const scope = scopeOf(ui.drill);
     const zoom = getViewport().zoom;
     const level = effectiveLevel(levelForZoom(zoom), scope);
-    const size = nodeSize(level);
-    const bounds = groupBounds(view.deck, size);
+    const bounds = groupBounds(view.deck, level);
 
     const tree = groupSubtree(deck, groups);
     const moving = new Set([...nodes, ...tree.nodes]);
     const start: Record<Id, Point> = {};
+    const movingBoxes: Rect[] = [];
     deck.nodes.forEach((node, index) => {
       if (!moving.has(node.id)) return;
-      start[node.id] = viewNodePosition(view.view, node) ?? displayPosition(node, index);
+      const at = viewNodePosition(view.view, node) ?? displayPosition(node, index);
+      start[node.id] = at;
+      movingBoxes.push({ ...at, ...cardSize(node, level) });
     });
     const frames: Record<Id, Frame> = {};
     for (const id of tree.groups) {
@@ -210,7 +230,7 @@ export class DragController {
     const others: Rect[] = [];
     view.deck.nodes.forEach((node, index) => {
       if (!visible.has(node.id) || moving.has(node.id)) return;
-      const rect = { ...displayPosition(node, index), ...size };
+      const rect = { ...displayPosition(node, index), ...cardSize(node, level) };
       const inView =
         screen.width === 0 ||
         (rect.x + rect.width >= onScreen.x &&
@@ -220,7 +240,7 @@ export class DragController {
       if (inView) others.push(rect);
     });
     const box = union([
-      ...Object.values(start).map((p) => ({ ...p, ...size })),
+      ...movingBoxes,
       ...Object.values(frames).map((f) => ({ ...f.position, ...f.size })),
     ]);
 
@@ -328,7 +348,9 @@ export class DragController {
     const x = session.anchorStart.x + session.delta.x;
     const y = session.anchorStart.y + session.delta.y;
     if (session.kind === 'group') return { x, y };
-    const size = nodeSize(effectiveLevel(levelForZoom(this.deps.getViewport().zoom), scopeOf([])));
+    const level = effectiveLevel(levelForZoom(this.deps.getViewport().zoom), scopeOf([]));
+    const anchorNode = readDeck(this.deps.editor.doc).nodes.find((n) => n.id === session.anchor);
+    const size = anchorNode === undefined ? nodeSize(level) : cardSize(anchorNode, level);
     return { x: x + size.width / 2, y: y + size.height / 2 };
   }
 

@@ -1,12 +1,6 @@
 import type { SododeckFile } from '@sododeck/schema';
 
-import {
-  COLLAPSED_CARD_SIZE,
-  displayPosition,
-  groupBounds,
-  nodeSize,
-  type Rect,
-} from './canvas-geometry';
+import { cardBox, COLLAPSED_CARD_SIZE, groupBounds, type Rect } from './canvas-geometry';
 import type { Level } from './levels';
 
 export interface Scope {
@@ -420,8 +414,7 @@ export function visibleGraph(
 }
 
 export function scopeBounds(deck: SododeckFile, graph: VisibleGraph, level: Level): Rect | null {
-  const size = nodeSize(level);
-  const groupRects = groupBounds(deck, size);
+  const groupRects = groupBounds(deck, level);
   let box: Rect | null = null;
   const merge = (rect: Rect | undefined) => {
     if (rect === undefined) return;
@@ -446,7 +439,7 @@ export function scopeBounds(deck: SododeckFile, graph: VisibleGraph, level: Leve
     if (index < 0) continue;
     const node = deck.nodes[index];
     if (node === undefined) continue;
-    merge({ ...displayPosition(node, index), ...size });
+    merge(cardBox(node, index, level));
   }
   return box;
 }

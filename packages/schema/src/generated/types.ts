@@ -97,6 +97,13 @@ export type Protocol = 'http' | 'grpc' | 'event' | 'sql' | 'websocket' | 'other'
  */
 export type Direction = 'forward' | 'both' | 'none';
 /**
+ * A side of a card: `top`, `right`, `bottom` or `left`.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Side".
+ */
+export type Side = 'top' | 'right' | 'bottom' | 'left';
+/**
  * Kind of view: `system`, `feature`, `infra` or `custom`.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -216,6 +223,7 @@ export interface Node {
   parent?: Id;
   rules?: IdList;
   position?: Position;
+  size?: Size;
   style?: Style;
 }
 /**
@@ -248,6 +256,22 @@ export interface Position {
   y: number;
 }
 /**
+ * A width and a height in canvas pixels. Both are greater than 0.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Size".
+ */
+export interface Size {
+  /**
+   * Width in pixels.
+   */
+  width: number;
+  /**
+   * Height in pixels.
+   */
+  height: number;
+}
+/**
  * Fill and/or stroke colour of a card or group. At least one of `fill` / `stroke` is set; absent `style` means no colour.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -276,22 +300,6 @@ export interface Group {
   style?: Style;
 }
 /**
- * A width and a height in canvas pixels. Both are greater than 0.
- *
- * This interface was referenced by `SododeckFile`'s JSON-Schema
- * via the `definition` "Size".
- */
-export interface Size {
-  /**
-   * Width in pixels.
-   */
-  width: number;
-  /**
-   * Height in pixels.
-   */
-  height: number;
-}
-/**
  * A connection between two nodes.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -317,6 +325,21 @@ export interface Edge {
   owner?: string;
   tags?: Tags;
   links?: Links;
+  route?: EdgeRoute;
+}
+/**
+ * How a connector is drawn between its two cards. All fields optional; an empty object is valid.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "EdgeRoute".
+ */
+export interface EdgeRoute {
+  fromSide?: Side;
+  toSide?: Side;
+  /**
+   * Shift of the middle segment, in canvas pixels, relative to where automatic routing puts it. Positive values go right or down. When absent, it is 0. It only applies when the resolved sides are opposite.
+   */
+  offset?: number;
 }
 /**
  * A saved lens over the same model. Edits in any view change the one model.

@@ -121,6 +121,48 @@ export const SHORTCUTS = [
     section: 'Editing',
     keys: mod('⌥ + drop', 'Alt + drop'),
   },
+  {
+    id: 'resize-card',
+    label: 'Resize the selected card',
+    section: 'Editing',
+    keys: mod('⌘⇧ Arrows', 'Ctrl+Shift+Arrows'),
+  },
+  {
+    id: 'move-segment',
+    label: "Move a connector's middle segment",
+    section: 'Editing',
+    keys: mod('⌥ Arrows', 'Alt+Arrows'),
+  },
+  {
+    id: 'move-segment-10',
+    label: "Move a connector's middle segment 10 px",
+    section: 'Editing',
+    keys: mod('⌥⇧ Arrows', 'Alt+Shift+Arrows'),
+  },
+  {
+    id: 'reset-route',
+    label: 'Reset the route to automatic, while moving the segment',
+    section: 'Editing',
+    keys: same('R'),
+  },
+  {
+    id: 'resize-no-snap',
+    label: 'Resize without snapping',
+    section: 'Editing',
+    keys: mod('Hold ⌘', 'Hold Ctrl'),
+  },
+  {
+    id: 'resize-ratio',
+    label: 'Keep the aspect ratio while resizing',
+    section: 'Editing',
+    keys: same('Hold ⇧'),
+  },
+  {
+    id: 'resize-centre',
+    label: 'Resize from the centre',
+    section: 'Editing',
+    keys: mod('Hold ⌥', 'Hold Alt'),
+  },
   // Flows
   { id: 'filter-flows', label: 'Filter flows', section: 'Flows', keys: same('/') },
   { id: 'step', label: 'Previous / next step', section: 'Flows', keys: same('← / →') },

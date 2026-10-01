@@ -117,6 +117,19 @@ describe('DeckNode', () => {
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
   });
 
+  it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {
+    const title = 'Order Fulfilment and Inventory Reconciliation Service';
+    const p = {
+      ...props({ level: 'component', title }),
+      width: 200,
+      height: 44,
+    } as NodeProps<DeckFlowNode>;
+    renderNode(p);
+    const text = screen.getByText(title);
+    expect(text).toHaveStyle({ WebkitLineClamp: '1' });
+    expect(screen.getByRole('group')).toHaveAttribute('title', title);
+  });
+
   it('shows a child-count marker for components with children', () => {
     renderNode(props({ childCount: 3 }));
     expect(
@@ -127,6 +140,25 @@ describe('DeckNode', () => {
   it('has four named connection handles', () => {
     renderNode();
     expect(screen.getAllByRole('button', { name: 'Connect from Order Service' })).toHaveLength(4);
+  });
+
+  it('shows its side targets, with the hot side marked, during a reconnect drag (017 R12)', () => {
+    renderNode();
+    act(() => {
+      useUiStore.getState().setCanvasGesture('endpoint');
+      useUiStore.getState().setEndpointHover({ nodeId: 'svc', side: 'right' });
+    });
+    const handles = screen.getAllByRole('button', { name: 'Connect from Order Service' });
+    expect(handles.every((handle) => handle.hasAttribute('data-endpoint-target'))).toBe(true);
+    expect(handles.filter((handle) => handle.hasAttribute('data-endpoint-hot'))).toHaveLength(1);
+    act(() => {
+      useUiStore.getState().setEndpointHover({ nodeId: 'other', side: 'right' });
+    });
+    expect(
+      screen
+        .getAllByRole('button', { name: 'Connect from Order Service' })
+        .some((handle) => handle.hasAttribute('data-endpoint-target')),
+    ).toBe(false);
   });
 
   it('shows selection and takes the Tab stop when focused', () => {

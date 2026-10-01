@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { COMPONENT_CARD_SIZE, groupBounds } from '../canvas-geometry';
+import { groupBounds } from '../canvas-geometry';
 import { frameRect } from '../editing/frame-resize';
 import { oneStep } from '../fields/one-step';
 import type { ViewState } from '../views/view-state';
@@ -26,7 +26,7 @@ export function FrameFields({ view, groupId }: { view: ViewState; groupId: Id })
   const editor = useEditor();
   const id = useId();
   const editable = useUiStore((s) => !isFlowMode(s) && s.flowSession === null);
-  const rect = groupBounds(view.deck, COMPONENT_CARD_SIZE).get(groupId);
+  const rect = groupBounds(view.deck, 'component').get(groupId);
   if (rect === undefined) return null;
   return (
     <PanelSection label="Frame">

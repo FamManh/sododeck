@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react';
 import type * as XYFlow from '@xyflow/react';
 import { Position, type EdgeProps } from '@xyflow/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DeckEdge } from './deck-edge';
 import type { DeckEdgeData, DeckFlowEdge } from './deck-to-flow';
+import { EMPTY_SELECTION, useUiStore } from '../state/ui-store';
 
 vi.mock('@xyflow/react', async (importOriginal) => {
   const actual = await importOriginal<typeof XYFlow>();
@@ -13,7 +14,24 @@ vi.mock('@xyflow/react', async (importOriginal) => {
   return { ...actual, EdgeLabelRenderer: ({ children }: { children: ReactNode }) => children };
 });
 
-function renderEdge(data: Partial<DeckEdgeData>, selected = false) {
+// The handle itself (pointer/keyboard drag, ReactFlow + editor context) is `segment-handle.test.tsx`'s
+// job; here only its render-gating in `deck-edge.tsx` is under test (017 R7, T035).
+vi.mock('./routing/segment-handle', () => ({
+  SegmentHandle: () => <div data-testid="segment-handle" />,
+}));
+
+function renderEdge(
+  data: Partial<DeckEdgeData>,
+  selected = false,
+  geometry: {
+    sourceX?: number;
+    sourceY?: number;
+    targetX?: number;
+    targetY?: number;
+    sourcePosition?: Position;
+    targetPosition?: Position;
+  } = {},
+) {
   const props = {
     id: 'e1',
     source: 'a',
@@ -24,6 +42,7 @@ function renderEdge(data: Partial<DeckEdgeData>, selected = false) {
     targetY: 40,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
+    ...geometry,
     selected,
     data: {
       label: 'POST /orders',
@@ -98,6 +117,182 @@ describe('DeckEdge', () => {
   it('places a popover anchor when selected', () => {
     const { container } = renderEdge({}, true);
     expect(container.querySelector('[data-edge-anchor="e1"]')).not.toBeNull();
+  });
+});
+
+describe('DeckEdge routing (017 R6)', () => {
+  it('shifts the label pill and the edge anchor to the offset labelX, for a horizontal pair', () => {
+    const { container } = renderEdge({
+      route: { offset: 60 },
+      showLabel: true,
+      flow: {
+        badges: [{ label: '2', errorPath: false, current: true, chainBreak: false }],
+        style: 'path',
+        errorIcon: false,
+        current: { speed: 1 },
+      },
+    });
+    const anchor = container.querySelector('[data-edge-anchor="e1"]');
+    const label = screen.getByTestId('edge-label');
+    const token = screen.getByTestId('flow-token');
+    const anchorTransform = anchor?.getAttribute('style') ?? '';
+    const labelTransform = label.getAttribute('style') ?? '';
+    // Both sit at the same offset labelX (the anchor has no translate(-50%, -50%) prefix).
+    const anchorMatch = /translate\((-?\d+(?:\.\d+)?)px/.exec(anchorTransform);
+    const labelMatch = /translate\(-50%, -50%\) translate\((-?\d+(?:\.\d+)?)px/.exec(
+      labelTransform,
+    );
+    expect(anchorMatch?.[1]).toBe(labelMatch?.[1]);
+    expect(Number(anchorMatch?.[1])).not.toBe(100); // 100 is the unrouted midpoint for this fixture
+    // The flow token draws the same `d` as the base edge path, so it follows the offset route.
+    const tokenPath = token.querySelector('animateMotion')?.getAttribute('path');
+    const basePath = container.querySelector('.react-flow__edge-path')?.getAttribute('d');
+    expect(tokenPath).toBe(basePath);
+  });
+
+  // 017 R7 / T038: the three canvas-level scenarios (a selected connector between stacked cards
+  // shows the slider; a perpendicular-sides one shows none; a flow-highlighted offset connector
+  // draws its highlight on the shifted path) as `DeckEdge` unit tests, not a `canvas.test.tsx`
+  // mount: React Flow never measures node size under jsdom, so `<Canvas>` draws nodes but no
+  // edges at all (see the same note on "canvas in flow mode (007)" in `canvas.test.tsx`) — there
+  // is nothing to query there. The gating tests below, and this one, cover the same three cases.
+  it('draws the current step thicker on the shifted path, for a vertical (stacked) pair', () => {
+    const { container } = renderEdge(
+      {
+        route: { offset: 30 },
+        showLabel: true,
+        flow: { badges: [], style: 'path', errorIcon: false, current: { speed: 1 } },
+      },
+      false,
+      {
+        sourceX: 82,
+        sourceY: 104,
+        targetX: 82,
+        targetY: 300,
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
+      },
+    );
+    const path = container.querySelector('.react-flow__edge-path');
+    expect(path).toHaveStyle({ strokeWidth: '3' });
+    const token = screen.getByTestId('flow-token');
+    const tokenPath = token.querySelector('animateMotion')?.getAttribute('path');
+    expect(tokenPath).toBe(path?.getAttribute('d'));
+    // 82 is the unrouted midpoint x for this vertical pair; the offset moves the segment's x.
+    expect(path?.getAttribute('d')).not.toContain('82,');
+  });
+});
+
+describe('DeckEdge segment handle (017 R7, T035)', () => {
+  afterEach(() => {
+    useUiStore.setState({ selection: EMPTY_SELECTION, flowSession: null, activeFlow: null });
+  });
+
+  it('shows the handle for the single selected, routable connector with a movable segment', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ routable: true }, true);
+    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+  });
+
+  it('hides the handle when the edge is not selected', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ routable: true }, false);
+    expect(screen.queryByTestId('segment-handle')).toBeNull();
+  });
+
+  it('hides the handle with other items in the selection', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'], nodes: ['n1'] } });
+    renderEdge({ routable: true }, true);
+    expect(screen.queryByTestId('segment-handle')).toBeNull();
+  });
+
+  it('hides the handle in flow mode', () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      activeFlow: {
+        flowId: 'f1',
+        stepId: null,
+        branchId: null,
+        alternativeId: null,
+        playing: false,
+        speed: 1,
+      },
+    });
+    renderEdge({ routable: true }, true);
+    expect(screen.queryByTestId('segment-handle')).toBeNull();
+  });
+
+  it('hides the handle for a non-routable edge (a port or merged edge)', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ routable: false }, true);
+    expect(screen.queryByTestId('segment-handle')).toBeNull();
+  });
+
+  it('hides the handle when the resolved sides have no movable segment (an L shape)', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    const props = {
+      id: 'e1',
+      source: 'a',
+      target: 'b',
+      sourceX: 0,
+      sourceY: 0,
+      targetX: 200,
+      targetY: 40,
+      sourcePosition: Position.Bottom,
+      targetPosition: Position.Left,
+      selected: true,
+      data: {
+        label: 'POST /orders',
+        protocol: 'http',
+        direction: 'forward',
+        showLabel: false,
+        fromTitle: 'A',
+        toTitle: 'B',
+        focused: false,
+        routable: true,
+      },
+    } as unknown as EdgeProps<DeckFlowEdge>;
+    render(
+      <svg>
+        <DeckEdge {...props} />
+      </svg>,
+    );
+    expect(screen.queryByTestId('segment-handle')).toBeNull();
+  });
+});
+
+describe('DeckEdge automatic-route ghost (017 R7, T036)', () => {
+  afterEach(() => {
+    useUiStore.setState({
+      selection: EMPTY_SELECTION,
+      flowSession: null,
+      activeFlow: null,
+      canvasGesture: null,
+    });
+  });
+
+  it('draws the ghost only for the single selected edge mid segment-drag', () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      canvasGesture: 'segment',
+    });
+    renderEdge({ routable: true, route: { offset: 40 } }, true);
+    expect(screen.getByTestId('edge-route-ghost')).toBeInTheDocument();
+  });
+
+  it('draws no ghost outside a segment gesture', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ routable: true, route: { offset: 40 } }, true);
+    expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
+  });
+
+  it('draws no ghost on a different, unselected edge while a segment gesture is active', () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e2'] },
+      canvasGesture: 'segment',
+    });
+    renderEdge({ routable: true, route: { offset: 40 } }, false);
+    expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
   });
 });
 

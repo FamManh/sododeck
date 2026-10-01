@@ -1,9 +1,10 @@
 /**
- * Snapping of a dragged box to the lines of the other on-screen cards (016 R7). Pure; one pass
- * over the candidates per call, so it stays cheap at pointer-move rate.
+ * Snapping of a dragged box to the lines of the other on-screen cards (016 R7, 017 R4). Pure; one
+ * pass over the candidates per call, so it stays cheap at pointer-move rate.
  */
 import type { Guide } from '../../state/ui-store';
 import type { Rect } from '../canvas-geometry';
+import type { Handle } from './resize-limits';
 
 /** A line a box can snap to. `from`/`to`: the candidate card's span on the other axis. */
 export interface SnapLine {
@@ -101,4 +102,78 @@ export function snap(box: Rect, candidates: SnapCandidates, threshold: number): 
     );
   }
   return { dx, dy, guides };
+}
+
+export interface EdgeSnapResult {
+  box: Rect;
+  guides: Guide[];
+}
+
+export interface SegmentSnapResult {
+  at: number;
+  guides: Guide[];
+}
+
+/**
+ * Snaps a connector's movable middle segment (017 R7): only its own moving axis may snap, to the
+ * candidates' left/centre/right or top/middle/bottom lines, spanning the segment's fixed extent.
+ */
+export function snapSegment(
+  at: number,
+  axis: 'vertical' | 'horizontal',
+  span: { from: number; to: number },
+  candidates: SnapCandidates,
+  threshold: number,
+): SegmentSnapResult {
+  const lines = axis === 'vertical' ? candidates.y : candidates.x;
+  const hit = snapAxis([at], lines, threshold);
+  if (hit === null) return { at, guides: [] };
+  return { at: hit.at, guides: [guideFor(axis === 'vertical' ? 'y' : 'x', hit.at, span, lines)] };
+}
+
+/**
+ * Snaps a card resize (017 R4): only the edge(s) the handle actually drags may snap, to the
+ * candidates' own left/centre/right or top/middle/bottom lines — never the box's centre, and
+ * never the edge that stayed put.
+ */
+export function snapEdges(
+  box: Rect,
+  handle: Handle,
+  candidates: SnapCandidates,
+  threshold: number,
+): EdgeSnapResult {
+  let { x, y, width, height } = box;
+  const guides: Guide[] = [];
+
+  if (handle.includes('left')) {
+    const hit = snapAxis([x], candidates.x, threshold);
+    if (hit) {
+      width += x - hit.at;
+      x = hit.at;
+      guides.push(guideFor('x', hit.at, { from: y, to: y + height }, candidates.x));
+    }
+  } else if (handle.includes('right')) {
+    const hit = snapAxis([x + width], candidates.x, threshold);
+    if (hit) {
+      width = hit.at - x;
+      guides.push(guideFor('x', hit.at, { from: y, to: y + height }, candidates.x));
+    }
+  }
+
+  if (handle.includes('top')) {
+    const hit = snapAxis([y], candidates.y, threshold);
+    if (hit) {
+      height += y - hit.at;
+      y = hit.at;
+      guides.push(guideFor('y', hit.at, { from: x, to: x + width }, candidates.y));
+    }
+  } else if (handle.includes('bottom')) {
+    const hit = snapAxis([y + height], candidates.y, threshold);
+    if (hit) {
+      height = hit.at - y;
+      guides.push(guideFor('y', hit.at, { from: x, to: x + width }, candidates.y));
+    }
+  }
+
+  return { box: { x, y, width, height }, guides };
 }

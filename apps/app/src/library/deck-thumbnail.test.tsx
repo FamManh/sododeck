@@ -29,4 +29,27 @@ describe('DeckThumbnail', () => {
     render(<DeckThumbnail name="Empty" thumb={null} />);
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
+
+  it('draws a resized card at its own size, not the default (017 R13)', () => {
+    const { container } = render(
+      <DeckThumbnail
+        name="Shop"
+        thumb={{
+          w: 1000,
+          h: 400,
+          node: [160, 50],
+          nodes: [
+            [0, 0, 'service'],
+            [500, 300, 'database', 300, 120],
+          ],
+          groups: [],
+        }}
+      />,
+    );
+    const rects = container.querySelectorAll('rect');
+    expect(rects[0]).toHaveAttribute('width', '160');
+    expect(rects[0]).toHaveAttribute('height', '50');
+    expect(rects[1]).toHaveAttribute('width', '300');
+    expect(rects[1]).toHaveAttribute('height', '120');
+  });
 });

@@ -139,3 +139,53 @@ describe('NodeInspector (story 1, FR-008)', () => {
     expect(toJSON(doc).views.find((v) => v.id === 'system')?.pinned).toEqual(['p']);
   });
 });
+
+describe('NodeInspector Size fields (017 T049)', () => {
+  it('shows the level default size, disables "Reset size" until stored, one undo step per commit', async () => {
+    const { user, doc, editor } = setup();
+    const width = screen.getByRole('spinbutton', { name: 'Width' });
+    const height = screen.getByRole('spinbutton', { name: 'Height' });
+    expect(width).toHaveValue(164);
+    expect(height).toHaveValue(104);
+    const reset = screen.getByRole('button', { name: 'Reset size' });
+    expect(reset).toBeDisabled();
+
+    await user.clear(width);
+    await user.type(width, '300{Enter}');
+    expect(node(doc)?.size).toEqual({ width: 300, height: 104 });
+    expect(reset).not.toBeDisabled();
+
+    await user.clear(height);
+    await user.type(height, '120');
+    await user.tab();
+    expect(node(doc)?.size).toEqual({ width: 300, height: 120 });
+
+    act(() => {
+      editor().undo();
+    });
+    expect(node(doc)?.size).toEqual({ width: 300, height: 104 });
+    act(() => {
+      editor().undo();
+    });
+    expect(node(doc)?.size).toBeUndefined();
+  });
+
+  it('clamps to the resize limits, and "Reset size" clears the stored size in one undo step', async () => {
+    const { user, doc, editor, ui } = setup();
+    const width = screen.getByRole('spinbutton', { name: 'Width' });
+    await user.clear(width);
+    await user.type(width, '10{Enter}');
+    expect(node(doc)?.size?.width).toBe(120);
+    await user.clear(width);
+    await user.type(width, '5000{Enter}');
+    expect(node(doc)?.size?.width).toBe(800);
+
+    await user.click(screen.getByRole('button', { name: 'Reset size' }));
+    expect(node(doc)?.size).toBeUndefined();
+    expect(ui().announcement.text).toBe('Size reset');
+    act(() => {
+      editor().undo();
+    });
+    expect(node(doc)?.size?.width).toBe(800);
+  });
+});

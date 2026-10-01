@@ -74,6 +74,15 @@ describe('buildLayoutRequest (011 research R9)', () => {
     expect(request.nodes[0]).toMatchObject(COMPONENT_CARD_SIZE);
   });
 
+  it('uses a node’s stored size over the level size (017 R2)', () => {
+    const sized: SododeckFile = deckOf({
+      nodes: [{ id: 'a', type: 'client', title: 'A', size: { width: 260, height: 90 } }],
+    });
+    const graph = visibleGraph(sized, top, new Set());
+    const request = buildLayoutRequest(sized, graph, new Set(), 'system');
+    expect(request.nodes[0]).toMatchObject({ width: 260, height: 90 });
+  });
+
   it('sends a collapsed group as one card, with its merged connections', () => {
     const graph = visibleGraph(state.deck, top, new Set(['side']));
     const request = buildLayoutRequest(state.deck, graph, state.render.pinned, 'system');
@@ -136,6 +145,20 @@ describe('laidOutFrames (016 FR-045)', () => {
       },
     });
     expect(frames.core?.position).toEqual({ x: 900 - GROUP_PADDING, y: 1000 - 2 * GROUP_PADDING });
+  });
+
+  it('fits a moved component\u2019s own stored size, not the fixed component size (017 R2)', () => {
+    const sized: SododeckFile = {
+      ...state.deck,
+      nodes: state.deck.nodes.map((n) =>
+        n.id === 'c' ? { ...n, size: { width: 300, height: 200 } } : n,
+      ),
+    };
+    const frames = laidOutFrames(sized, { c: { x: 1000, y: 1000 } });
+    expect(frames.inner).toEqual({
+      position: { x: 1000 - GROUP_PADDING, y: 1000 - GROUP_PADDING },
+      size: { width: 300 + 2 * GROUP_PADDING, height: 200 + 2 * GROUP_PADDING },
+    });
   });
 
   it('replaces stored frames of laid-out groups and leaves the others alone', () => {

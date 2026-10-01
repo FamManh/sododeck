@@ -3,7 +3,8 @@ import type { View } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, type Selection, type UiState, useUiStore } from '../../state/ui-store';
-import { NODE_SIZE } from '../canvas-geometry';
+import { cardSize } from '../canvas-geometry';
+import { levelForZoom } from '../levels';
 import { selectView } from '../views/use-current-view';
 
 import type { PaletteResult } from './palette-results';
@@ -57,6 +58,27 @@ function ensureCanvasReady(result: PaletteResult, context: OpenResultContext): v
   }
 }
 
+/** The midpoint of an edge's two endpoint cards, each sized by its own stored size (017 R2). */
+export function edgeCenter(
+  deck: ReturnType<typeof readDeck>,
+  fromId: string,
+  toId: string,
+  zoom: number,
+): { x: number; y: number } | null {
+  const from = nodeCanvasPosition(deck, fromId);
+  const to = nodeCanvasPosition(deck, toId);
+  const fromNode = deck.nodes.find((n) => n.id === fromId);
+  const toNode = deck.nodes.find((n) => n.id === toId);
+  if (from === null || to === null || fromNode === undefined || toNode === undefined) return null;
+  const level = levelForZoom(zoom);
+  const fromSize = cardSize(fromNode, level);
+  const toSize = cardSize(toNode, level);
+  return {
+    x: (from.x + fromSize.width / 2 + (to.x + toSize.width / 2)) / 2,
+    y: (from.y + fromSize.height / 2 + (to.y + toSize.height / 2)) / 2,
+  };
+}
+
 export function openResult(result: PaletteResult, context: OpenResultContext): boolean {
   const deck = readDeck(context.editor.doc);
   switch (result.kind) {
@@ -95,18 +117,12 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
     }
     case 'edge': {
       const edge = deck.edges.find((entry) => entry.id === result.id);
-      const from = edge === undefined ? null : nodeCanvasPosition(deck, edge.from);
-      const to = edge === undefined ? null : nodeCanvasPosition(deck, edge.to);
-      if (edge === undefined || from === null || to === null) break;
+      const center =
+        edge === undefined ? null : edgeCenter(deck, edge.from, edge.to, context.getZoom());
+      if (edge === undefined || center === null) break;
       ensureCanvasReady(result, context);
       context.select(selectionFor(result));
-      context.setCenter(
-        (from.x + to.x + NODE_SIZE.width) / 2,
-        (from.y + to.y + NODE_SIZE.height) / 2,
-        {
-          zoom: context.getZoom(),
-        },
-      );
+      context.setCenter(center.x, center.y, { zoom: context.getZoom() });
       return true;
     }
     case 'sticky': {

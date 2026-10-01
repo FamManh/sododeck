@@ -90,6 +90,32 @@ describe('checkDeck (015)', () => {
     });
   });
 
+  describe('card size out of range (017, research R11)', () => {
+    it('reports a node with an out-of-range size, targeting the component', () => {
+      const file = deck({
+        nodes: [node('a', { title: 'API Gateway', size: { width: 900, height: 40 } })],
+      });
+      const problem = only(file);
+      expect(problem.kind).toBe('card-size-out-of-range');
+      expect(problem.target).toEqual({ type: 'node', id: 'a' });
+      expect(problem.detail).toBe(
+        'API Gateway has a size of 900 × 40; allowed 120 × 44 to 800 × 600',
+      );
+    });
+
+    it('reports nothing for in-range sizes, absent sizes, or exactly the limits', () => {
+      const file = deck({
+        nodes: [
+          node('a', { size: { width: 200, height: 72 } }),
+          node('b'),
+          node('c', { size: { width: 120, height: 44 } }),
+          node('d', { size: { width: 800, height: 600 } }),
+        ],
+      });
+      expect(kinds(file)).toEqual([]);
+    });
+  });
+
   describe('duplicate connections', () => {
     it('reports copies with the same source, target and label once, with the count', () => {
       const file = deck({

@@ -1,7 +1,8 @@
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowRight, ArrowRightLeft, Ban, CircleAlert } from 'lucide-react';
-import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, type EdgeProps } from '@xyflow/react';
+import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
+import type { Side } from '@sododeck/schema';
 import { memo, useEffect, useRef } from 'react';
 
 import { useUiStore } from '../state/ui-store';
@@ -9,6 +10,15 @@ import type { MergedFlowEdge } from './deck-to-flow';
 import { StepBadge } from './flow-badges';
 import { FlowToken } from './flow-token';
 import { FLOW_STROKES } from './flow-strokes';
+import { routedStepPath } from './routing/route-path';
+
+/** The reverse of `deck-node.tsx`'s fixed handle positions (017). */
+const SIDE_OF_POSITION: Record<Position, Side> = {
+  [Position.Top]: 'top',
+  [Position.Right]: 'right',
+  [Position.Bottom]: 'bottom',
+  [Position.Left]: 'left',
+};
 
 function directionIcon(direction: NonNullable<MergedFlowEdge['data']>['direction']) {
   return direction === 'both' ? ArrowRightLeft : ArrowRight;
@@ -38,13 +48,13 @@ export const MergedEdge = memo(function MergedEdge({
     focused: false,
     inFocus: false,
   };
-  const [path, labelX, labelY] = getSmoothStepPath({
+  const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
+  const { path, labelX, labelY } = routedStepPath({
     sourceX,
     sourceY,
     targetX,
     targetY,
-    sourcePosition,
-    targetPosition,
+    sides,
     borderRadius: 8,
   });
   const Icon = directionIcon(merged.direction);
