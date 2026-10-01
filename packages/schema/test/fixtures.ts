@@ -196,6 +196,53 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'stickies.0.showInFlows',
   },
 
+  // Card style and swatches (020)
+  {
+    name: 'style fill capitalized name',
+    input: set('nodes.0.style.fill', 'Green'),
+    path: 'nodes.0.style.fill',
+  },
+  {
+    name: 'style fill uppercase hex',
+    input: set('nodes.0.style.fill', '#7A3CFF'),
+    path: 'nodes.0.style.fill',
+  },
+  {
+    name: 'style fill short hex',
+    input: set('nodes.0.style.fill', '#abc'),
+    path: 'nodes.0.style.fill',
+  },
+  {
+    name: 'style fill unknown name',
+    input: set('nodes.0.style.fill', 'purple'),
+    path: 'nodes.0.style.fill',
+  },
+  {
+    name: 'empty style',
+    input: set('nodes.0.style', {}),
+    path: 'nodes.0.style',
+  },
+  {
+    name: 'unknown style key',
+    input: set('nodes.0.style.opacity', 0.5),
+    path: 'nodes.0.style',
+  },
+  {
+    name: 'group style stroke with trailing space',
+    input: set('groups.1.style.stroke', 'red '),
+    path: 'groups.1.style.stroke',
+  },
+  {
+    name: 'duplicate deck swatch',
+    input: set('swatches', ['#7a3cff', '#7a3cff']),
+    path: 'swatches',
+  },
+  {
+    name: 'deck swatch missing #',
+    input: set('swatches', ['7a3cff']),
+    path: 'swatches.0',
+  },
+
   // Ids
   { name: 'id with a space', input: set('nodes.0.id', 'order svc'), path: 'nodes.0.id' },
   {

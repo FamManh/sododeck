@@ -7,14 +7,16 @@ import type { ReactNode } from 'react';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
-import { useUiStore, type ToolbarFieldId } from '../../state/ui-store';
+import { useUiStore, type Selection, type ToolbarFieldId } from '../../state/ui-store';
 import { DIRECTIONS, PROTOCOLS } from '../fields/edge-choices';
 import { AttachedRules } from '../fields/attached-rules';
 import { LinksField } from '../fields/links-field';
 import { oneStep } from '../fields/one-step';
 import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { KIND_OPTIONS } from '../inspector/choices';
-import { bulkView, tagSuggestions } from '../inspector/derive';
+import { bulkView, styleView, tagSuggestions } from '../inspector/derive';
+import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../style/apply-style';
+import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues, tagChoices } from './choice-state';
 
 /** The popover's accessible name per field (contract "Field popover"). */
@@ -27,6 +29,7 @@ const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
   rules: 'Rules',
   protocol: 'Protocol',
   direction: 'Direction',
+  style: 'Colour',
 };
 
 const count = (n: number) => `${String(n)} ${n === 1 ? 'component' : 'components'}`;
@@ -184,6 +187,43 @@ function EdgeFieldContent({ field, edge }: { field: ToolbarFieldId; edge: Edge }
   );
 }
 
+/** Colour (020 T032): reads both nodes and groups, unlike `NodeFieldContent`. */
+function StyleFieldContent({ selection }: { selection: Selection }) {
+  const editor = useEditor();
+  const deck = useDeckSnapshot(editor.doc);
+  const setStylePreview = useUiStore((s) => s.setStylePreview);
+  const nodeIds = new Set(selection.nodes);
+  const groupIds = new Set(selection.groups);
+  const objects = [
+    ...deck.nodes.filter((n) => nodeIds.has(n.id)),
+    ...deck.groups.filter((g) => groupIds.has(g.id)),
+  ];
+  const view = styleView(objects);
+  const skipped = skippedCount(selection);
+  return (
+    <StylePicker
+      value={view}
+      skipped={
+        skipped > 0 ? { colored: objects.length, total: objects.length + skipped } : undefined
+      }
+      deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}
+      onApply={(channel, value) => {
+        applyStyle(editor, selection, channel, value);
+      }}
+      onPreview={(channel, value) => {
+        setStylePreview(value === null ? null : { channel, value });
+      }}
+      onAddColour={(channel, hex) => {
+        addDeckColour(editor, selection, channel, hex);
+        setStylePreview(null);
+      }}
+      onRemoveColour={(hex) => {
+        removeDeckColour(editor, hex);
+      }}
+    />
+  );
+}
+
 /** What a field popover edits: the selected components, or the one selected connection. */
 function FieldContent({ field }: { field: ToolbarFieldId }) {
   const deck = useDeckSnapshot(useEditor().doc);
@@ -191,6 +231,9 @@ function FieldContent({ field }: { field: ToolbarFieldId }) {
   if (field === 'protocol' || field === 'direction') {
     const edge = deck.edges.find((e) => e.id === selection.edges[0]);
     return edge === undefined ? null : <EdgeFieldContent field={field} edge={edge} />;
+  }
+  if (field === 'style') {
+    return <StyleFieldContent selection={selection} />;
   }
   const ids = new Set(selection.nodes);
   return <NodeFieldContent field={field} nodes={deck.nodes.filter((n) => ids.has(n.id))} />;
@@ -213,7 +256,7 @@ export function FieldPopover({
   children: ReactNode;
 }) {
   const open = useUiStore((s) => s.toolbarField === field);
-  const wide = field === 'links' || field === 'rules';
+  const wide = field === 'links' || field === 'rules' || field === 'style';
   return (
     <Tooltip>
       <Popover

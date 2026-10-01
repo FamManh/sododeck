@@ -12,6 +12,7 @@ import type { Handle } from './editing/resize-limits';
 import { setGroupCollapsed } from './views/use-current-view';
 import { GROUP_HANDLE_CLASS, type GroupFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
+import { describeChannel } from './style/card-style';
 
 const HANDLES: readonly Handle[] = [
   'top-left',
@@ -63,17 +64,39 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
   const dropTarget = useUiStore((state) => state.dropTarget === groupId);
   const resize = useRef<ResizeSession | null>(null);
 
+  // Colour (020 US5): mirrors DeckNode's rule (R5); the group label follows the text rule.
+  const look = data.look;
+  const showFill = look?.fill !== undefined;
+  const showStroke = look?.stroke !== undefined;
+  const customText = look !== undefined && look.text !== 'default' ? look.text : undefined;
+  const colourDescription = [
+    look?.fillRef !== undefined ? describeChannel('fill', look.fillRef) : null,
+    look?.strokeRef !== undefined ? describeChannel('stroke', look.strokeRef) : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(', ');
+
   return (
     <div
       data-testid="group-boundary"
       data-level={data.level}
-      style={{ width, height }}
+      style={{
+        width,
+        height,
+        ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
+        ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+      }}
       {...(dropTarget ? { 'data-drop-target': '' } : {})}
+      {...(showStroke ? { 'data-stroke': '' } : {})}
+      {...(customText === undefined ? {} : { 'data-text': customText })}
       className={cn(
         'group pointer-events-none relative rounded-group border border-dashed border-border bg-group',
         data.level === 'landscape' && 'border-solid bg-surface-2/80',
         // Drop target (screen 110): the dashed orange border is the cue, not the colour alone.
+        // It wins over a custom colour (the drop cue must stay unambiguous).
         dropTarget && 'border-[1.5px] border-dashed border-primary bg-primary/7',
+        !dropTarget && showFill && 'bg-(--card-fill)',
+        !dropTarget && showStroke && 'border-[1.5px] border-dashed border-(--card-stroke)',
       )}
     >
       {editable &&
@@ -126,6 +149,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
           type="button"
           data-node-id={id}
           aria-label={`${data.title} group, ${String(data.count)} nodes`}
+          aria-description={colourDescription === '' ? undefined : colourDescription}
           aria-expanded="true"
           tabIndex={data.focused ? 0 : -1}
           title="Double-click or ↵ to open"

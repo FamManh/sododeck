@@ -1,5 +1,5 @@
 import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
-import type { Id, Side } from '@sododeck/schema';
+import type { ColorRef, Id, Side } from '@sododeck/schema';
 import type { ComponentKind } from '@sododeck/ui/lib/icons';
 import { create } from 'zustand';
 
@@ -188,7 +188,13 @@ export interface ContextMenuState {
 
 /** The selection toolbar's popovers (019 R6). */
 export type ToolbarFieldId =
-  'kind' | 'owner' | 'tags' | 'tech' | 'links' | 'rules' | 'protocol' | 'direction';
+  'kind' | 'owner' | 'tags' | 'tech' | 'links' | 'rules' | 'protocol' | 'direction' | 'style';
+
+/** A live, unsaved colour choice shown on canvas before it is applied (020 R9). */
+export interface StylePreview {
+  channel: 'fill' | 'stroke';
+  value: ColorRef;
+}
 
 /**
  * A pointer gesture on the canvas: the selection toolbar hides while one runs (019 R5), and the
@@ -286,6 +292,10 @@ export interface UiState {
   titleEdit: TitleEdit | null;
   contextMenu: ContextMenuState | null;
   toolbarField: ToolbarFieldId | null;
+  /** The active tab in the fill/stroke picker (020). */
+  stylePickerTab: 'fill' | 'stroke';
+  /** A colour hovered/typed in the picker but not yet applied (020 R9); cleared, never undone. */
+  stylePreview: StylePreview | null;
   canvasGesture: CanvasGesture | null;
   /** The frame a drag would drop into (016 R6, screen 110); null outside frames or with ⌥. */
   dropTarget: Id | null;
@@ -428,6 +438,8 @@ export interface UiState {
   closeContextMenu: () => void;
   openToolbarField: (id: ToolbarFieldId) => void;
   closeToolbarField: () => void;
+  setStylePickerTab: (tab: 'fill' | 'stroke') => void;
+  setStylePreview: (preview: StylePreview | null) => void;
   /** A pan, zoom or drag starts (closes the toolbar popover) or ends (`null`). */
   setCanvasGesture: (gesture: CanvasGesture | null) => void;
   setDropTarget: (groupId: Id | null) => void;
@@ -601,6 +613,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     titleEdit: null,
     contextMenu: null,
     toolbarField: null,
+    stylePickerTab: 'fill',
+    stylePreview: null,
     canvasGesture: null,
     dropTarget: null,
     guides: NO_GUIDES,
@@ -617,6 +631,7 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({
         selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
         descriptionMode: NO_MODES,
+        stylePreview: null,
         // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
         ...(empty || get().flowSession !== null ? {} : { activeFlow: null }),
       });
@@ -631,11 +646,12 @@ export const useUiStore = create<UiState>()((set, get) => {
             [key]: list.includes(id) ? without(list, id) : [...list, id],
           },
           descriptionMode: NO_MODES,
+          stylePreview: null,
         };
       });
     },
     clearSelection: () => {
-      set({ selection: EMPTY_SELECTION, descriptionMode: NO_MODES });
+      set({ selection: EMPTY_SELECTION, descriptionMode: NO_MODES, stylePreview: null });
     },
     pruneSelection: (existing) => {
       set((state) => {
@@ -698,6 +714,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         popover: null,
         revealed: NO_IDS,
         descriptionMode: NO_MODES,
+        stylePreview: null,
       });
     },
     reveal: (id) => {
@@ -1082,10 +1099,20 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({ toolbarField, contextMenu: null });
     },
     closeToolbarField: () => {
-      set({ toolbarField: null });
+      set({ toolbarField: null, stylePreview: null });
+    },
+    setStylePickerTab: (stylePickerTab) => {
+      set({ stylePickerTab });
+    },
+    setStylePreview: (stylePreview) => {
+      set({ stylePreview });
     },
     setCanvasGesture: (canvasGesture) => {
-      set(canvasGesture === null ? { canvasGesture } : { canvasGesture, toolbarField: null });
+      set(
+        canvasGesture === null
+          ? { canvasGesture }
+          : { canvasGesture, toolbarField: null, stylePreview: null },
+      );
     },
     setDropTarget: (dropTarget) => {
       if (get().dropTarget !== dropTarget) set({ dropTarget });

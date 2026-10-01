@@ -8,6 +8,7 @@ import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CollapsedGroupNode } from './collapsed-group-node';
+import { resolveLook } from './style/card-style';
 
 let reduced = false;
 vi.mock('@sododeck/ui/hooks/use-reduced-motion', () => ({ useReducedMotion: () => reduced }));
@@ -85,5 +86,35 @@ describe('CollapsedGroupNode', () => {
     await user.keyboard('Core{Enter}');
     expect(toJSON(doc).groups[0]?.title).toBe('Core');
     expect(useUiStore.getState().titleEdit).toBeNull();
+  });
+});
+
+describe('CollapsedGroupNode colour (020 T052)', () => {
+  function props(patch: Partial<NonNullable<NodeProps<CollapsedFlowNode>['data']>> = {}) {
+    return {
+      id: 'collapsed:core',
+      data: {
+        groupId: 'core',
+        title: 'Core services',
+        nodeCount: 8,
+        edgeCount: 12,
+        focused: true,
+        dimmed: false,
+        ...patch,
+      },
+      selected: false,
+      width: 180,
+      height: 64,
+    } as unknown as NodeProps<CollapsedFlowNode>;
+  }
+
+  it('renders the same description as a card, coloured', () => {
+    const look = resolveLook({ fill: 'teal' });
+    renderWithEditor(<CollapsedGroupNode {...props({ look })} />, deckOf({}));
+    expect(
+      screen.getByRole('button', {
+        name: 'Core services, collapsed group, 8 nodes, 12 edges',
+      }),
+    ).toHaveAttribute('aria-description', expect.stringContaining('Teal fill'));
   });
 });

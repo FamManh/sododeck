@@ -136,4 +136,38 @@ describe('renderSvg', () => {
     expect(errorBadge?.getAttribute('fill')).toBe(LIGHT_PALETTE.clayInk);
     expect(edge('cx')?.querySelector('path')?.getAttribute('stroke')).toBe(LIGHT_PALETTE.clayInk);
   });
+
+  it('draws a card and a group in their custom colour (020 T057)', () => {
+    const coloured = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 }, group: 'g' }],
+      groups: [{ id: 'g', title: 'G', style: { fill: 'teal', stroke: 'teal' } }],
+    });
+    const withCardFill = {
+      ...coloured,
+      nodes: coloured.nodes.map((node) =>
+        node.id === 'a' ? { ...node, style: { fill: '#123456' } } : node,
+      ),
+    };
+    const doc = parse(svgOf(withCardFill));
+    const card = doc.querySelector('[data-export="card"][data-id="a"] rect');
+    expect(card?.getAttribute('fill')).toBe('#123456');
+    const cardTitle = doc.querySelector('[data-export="card"][data-id="a"] text');
+    expect(cardTitle?.getAttribute('fill')).toBe(LIGHT_PALETTE.cardText.light);
+    const group = doc.querySelector('[data-export="group"][data-id="g"] rect');
+    expect(group?.getAttribute('fill')).toBe(LIGHT_PALETTE.cardColours.teal.fill);
+    expect(group?.getAttribute('stroke')).toBe(LIGHT_PALETTE.cardColours.teal.stroke);
+  });
+
+  it("draws a collapsed card in its group's custom colour", () => {
+    const colouredGroup = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 }, group: 'g' }],
+      groups: [{ id: 'g', title: 'G', style: { fill: 'teal' } }],
+      views: [{ id: 'v', type: 'custom', title: 'V', collapsed: ['g'] }],
+    });
+    const doc = parse(
+      svgOf(colouredGroup, {}, { scope: 'view', ui: { ...ui, currentViewId: 'v' } }),
+    );
+    const collapsed = doc.querySelectorAll('[data-export="collapsed"][data-id="g"] rect');
+    expect(collapsed[2]?.getAttribute('fill')).toBe(LIGHT_PALETTE.cardColours.teal.fill);
+  });
 });

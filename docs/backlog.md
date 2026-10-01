@@ -1521,6 +1521,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 020-card-style
 
+- **Status:** implemented (2026-09-30) — see [`spec.md`](../specs/020-card-style/spec.md), [`tasks.md`](../specs/020-card-style/tasks.md) and [ADR 0018](decisions/0018-card-style.md).
 - **Note (016):** groups now store a frame (`position`, `size`); put `group.style` next to it in the Group schema.
 - **Milestone:** after M4 · **Depends on:** 019 · **Estimate:** 3 d
 - **Menus and toolbar (019):** add this feature's items as an action module in

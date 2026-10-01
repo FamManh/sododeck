@@ -23,6 +23,7 @@ const perType: [string, SododeckFile][] = [
       name: 'Delivery',
       description: 'Last-mile **delivery**.',
       tags: ['a', 'b'],
+      swatches: ['#7a3cff', '#1f2a44'],
       ...collections,
     },
   ],
@@ -49,6 +50,7 @@ const perType: [string, SododeckFile][] = [
           rules: ['R-1'],
           position: { x: -1.5, y: 20 },
           size: { width: 244, height: 80 },
+          style: { fill: 'red', stroke: '#1f2a44' },
         },
       ],
       groups: [{ id: 'g', title: 'G' }],
@@ -61,8 +63,29 @@ const perType: [string, SododeckFile][] = [
       ...empty,
       groups: [
         { id: 'outer', title: 'Outer' },
-        { id: 'g', title: 'Inner', description: 'Nested', parent: 'outer' },
+        {
+          id: 'g',
+          title: 'Inner',
+          description: 'Nested',
+          parent: 'outer',
+          style: { fill: 'amber' },
+        },
       ],
+    },
+  ],
+  [
+    'card style (020)',
+    {
+      $schema,
+      version,
+      swatches: Array.from({ length: 14 }, (_, i) => `#${(i + 1).toString(16).padStart(6, '0')}`),
+      ...collections,
+      nodes: [
+        { id: 'a', type: 'client', title: 'A', style: { fill: 'red' } },
+        { id: 'b', type: 'client', title: 'B', style: { stroke: '#123abc' } },
+        { id: 'c', type: 'client', title: 'C', style: { fill: 'blue', stroke: 'green' } },
+      ],
+      groups: [{ id: 'g', title: 'G', style: { fill: '#abcdef', stroke: 'violet' } }],
     },
   ],
   [

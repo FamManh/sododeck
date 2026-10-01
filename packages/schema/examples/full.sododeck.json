@@ -4,6 +4,7 @@
   "name": "Logistics Delivery (excerpt)",
   "description": "Last-mile delivery: ordering, dispatch and payment. Uses every object type and field of format v1.",
   "tags": ["logistics", "example"],
+  "swatches": ["#7a3cff", "#1f2a44"],
   "nodes": [
     {
       "id": "payments-provider",
@@ -19,7 +20,8 @@
       "links": [{ "label": "Status page", "url": "https://status.example.com" }],
       "group": "external",
       "position": { "x": 900, "y": 360 },
-      "size": { "width": 200, "height": 72 }
+      "size": { "width": 200, "height": 72 },
+      "style": { "fill": "red" }
     },
     {
       "id": "delivery-platform",
@@ -28,7 +30,8 @@
       "level": "system",
       "description": "Everything the delivery team runs.",
       "owner": "Delivery",
-      "position": { "x": 460, "y": -120 }
+      "position": { "x": 460, "y": -120 },
+      "style": { "fill": "orange", "stroke": "indigo" }
     },
     {
       "id": "customer-app",
@@ -43,7 +46,8 @@
       "icon": "smartphone",
       "links": [{ "url": "docs/customer-app.md" }],
       "group": "clients",
-      "position": { "x": 40, "y": 80 }
+      "position": { "x": 40, "y": 80 },
+      "style": { "fill": "#7a3cff" }
     },
     {
       "id": "api-gateway",
@@ -53,7 +57,8 @@
       "tech": "Envoy",
       "host": "EKS eu-west-1",
       "group": "edge",
-      "position": { "x": 250, "y": 140 }
+      "position": { "x": 250, "y": 140 },
+      "style": { "fill": "yellow" }
     },
     {
       "id": "order-svc",
@@ -70,7 +75,8 @@
       "group": "core",
       "parent": "delivery-platform",
       "rules": ["delivery-tier"],
-      "position": { "x": 460, "y": 80.5 }
+      "position": { "x": 460, "y": 80.5 },
+      "style": { "fill": "lime", "stroke": "violet" }
     },
     {
       "id": "order-validator",
@@ -78,7 +84,8 @@
       "title": "Order Validator",
       "level": "component",
       "parent": "order-svc",
-      "position": { "x": 460, "y": 200 }
+      "position": { "x": 460, "y": 200 },
+      "style": { "fill": "green" }
     },
     {
       "id": "dispatch-svc",
@@ -89,7 +96,8 @@
       "host": "EKS eu-west-1",
       "group": "core",
       "parent": "delivery-platform",
-      "position": { "x": 660, "y": 80 }
+      "position": { "x": 660, "y": 80 },
+      "style": { "fill": "teal" }
     },
     {
       "id": "order-events",
@@ -98,7 +106,8 @@
       "tech": "Kafka",
       "host": "MSK",
       "group": "messaging",
-      "position": { "x": 560, "y": 480 }
+      "position": { "x": 560, "y": 480 },
+      "style": { "fill": "cyan" }
     },
     {
       "id": "orders-db",
@@ -107,18 +116,25 @@
       "tech": "Postgres 16",
       "host": "RDS",
       "group": "data",
-      "position": { "x": 900, "y": 80 }
+      "position": { "x": 900, "y": 80 },
+      "style": { "fill": "blue", "stroke": "#1f2a44" }
     }
   ],
   "groups": [
-    { "id": "platform", "title": "Platform", "description": "Everything we run." },
+    {
+      "id": "platform",
+      "title": "Platform",
+      "description": "Everything we run.",
+      "style": { "fill": "amber" }
+    },
     {
       "id": "clients",
       "title": "Clients",
       "position": { "x": 16, "y": 56 },
-      "size": { "width": 212, "height": 152 }
+      "size": { "width": 212, "height": 152 },
+      "style": { "fill": "pink", "stroke": "slate" }
     },
-    { "id": "edge", "title": "Edge", "parent": "platform" },
+    { "id": "edge", "title": "Edge", "parent": "platform", "style": { "fill": "#1f2a44" } },
     { "id": "core", "title": "Core services", "parent": "platform" },
     { "id": "messaging", "title": "Messaging", "parent": "platform" },
     { "id": "data", "title": "Data", "parent": "platform" },

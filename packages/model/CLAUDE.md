@@ -68,7 +68,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 - `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006) · `problems.ts` deck-wide problems (015)
 - `rules/`: `cells.ts`, `evaluate.ts`, `usage.ts` (008, pure)
 - `views.ts` presets and view resolution (011)
-- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `frames`, `paste`, `group-selection` (016), `meta`, `cascade`, plus `context` (what ops get from the editor), `patch`, `refs`, `types`
+- `ops/`: `collections`, `steps`, `branches` (006), `rules`, `rule-links` (008), `views` (011), `frames`, `paste`, `group-selection` (016), `meta`, `cascade`, `style`, `swatches` (020), plus `context` (what ops get from the editor), `patch`, `refs`, `types`
 - `fragment.ts` clipboard fragments (016)
 
 ## Boundaries
@@ -79,3 +79,5 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
 ## Status
 
 Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and gestures, change events, load-time duplicate-id refusal, canonical key order, integrity report, perf test (500 nodes / 1,000 edges). 003 added the snapshot and the removal preview. 006 added flow branches, `analyzeFlow` and the edit-mode checkpoint. 008 added rule evaluation, rule usage and the rule-link ops. 011 added saved views: presets, view ops, the untracked collapse origin and the view cascade.
+
+020 added card style: `ops/style.ts`'s `setStyle(ctx, targets, channel, value)` writes `fill`/`stroke` key by key into a node or group's nested `style` `Y.Map` (like `writeFields` in `ops/frames.ts`), so concurrent edits to different channels merge; validates against the `style` entry in `validate.ts`'s `ELEMENT_SCHEMAS` before writing. `ops/swatches.ts`'s `addSwatch`/`removeSwatch` operate on the deck's `swatches` `Y.Array` (`MAX_SWATCHES = 12`); `fromJSON` always creates this array (even empty) so concurrent `addSwatch` calls in two tabs share one `Y.Array` from the start instead of racing to create it — `toJSON` and `snapshot.ts` both omit it from output when empty, keeping old decks byte-stable. `layout.ts` exports `swatchesArray(doc)` for this shared read.

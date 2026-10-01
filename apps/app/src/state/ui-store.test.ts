@@ -115,6 +115,41 @@ describe('ui store', () => {
     expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
 
+  describe('style preview (020 R9)', () => {
+    it('defaults to the fill tab and no preview', () => {
+      expect(state().stylePickerTab).toBe('fill');
+      expect(state().stylePreview).toBeNull();
+    });
+
+    it('sets and switches the picker tab and preview colour', () => {
+      state().setStylePickerTab('stroke');
+      expect(state().stylePickerTab).toBe('stroke');
+      state().setStylePreview({ channel: 'stroke', value: '#7a3cff' });
+      expect(state().stylePreview).toEqual({ channel: 'stroke', value: '#7a3cff' });
+    });
+
+    it('clears the preview on a selection change', () => {
+      state().setStylePreview({ channel: 'fill', value: 'green' });
+      state().select({ nodes: ['a'] });
+      expect(state().stylePreview).toBeNull();
+      state().setStylePreview({ channel: 'fill', value: 'green' });
+      state().toggle('b', 'node');
+      expect(state().stylePreview).toBeNull();
+      state().setStylePreview({ channel: 'fill', value: 'green' });
+      state().clearSelection();
+      expect(state().stylePreview).toBeNull();
+    });
+
+    it('clears the preview when the toolbar field closes or a canvas gesture starts', () => {
+      state().setStylePreview({ channel: 'fill', value: 'green' });
+      state().closeToolbarField();
+      expect(state().stylePreview).toBeNull();
+      state().setStylePreview({ channel: 'fill', value: 'green' });
+      state().setCanvasGesture('pan');
+      expect(state().stylePreview).toBeNull();
+    });
+  });
+
   it('prunes ids that no longer exist, and keeps the same object when nothing is pruned', () => {
     state().select({
       nodes: ['a', 'gone'],

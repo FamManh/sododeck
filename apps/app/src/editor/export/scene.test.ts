@@ -193,6 +193,39 @@ describe('buildScene: whole deck', () => {
     expect(result.cards).toEqual([]);
     expect(result.bounds).toEqual({ x: 0, y: 0, width: 0, height: 0 });
   });
+
+  it("resolves a card and a group's colour to literal hex (020 T057)", () => {
+    const coloured = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', style: { fill: 'green' }, group: 'g' },
+        { id: 'b', type: 'service', title: 'B', style: { fill: '#123456' } },
+      ],
+      groups: [{ id: 'g', title: 'G', style: { stroke: 'red' } }],
+    });
+    const result = scene(coloured);
+    expect(result.cards.find((card) => card.id === 'a')).toMatchObject({
+      fill: '#d9f8e0',
+      text: 'default',
+    });
+    expect(result.cards.find((card) => card.id === 'b')).toMatchObject({
+      fill: '#123456',
+      text: 'light',
+    });
+    expect(result.groups.find((group) => group.id === 'g')).toMatchObject({
+      stroke: '#d15c53',
+      text: 'default',
+    });
+  });
+
+  it('carries no colour for a plain card or group', () => {
+    const result = scene(grouped);
+    expect(result.cards[0]?.fill).toBeUndefined();
+    expect(result.cards[0]?.stroke).toBeUndefined();
+    expect(result.cards[0]?.text).toBe('default');
+    expect(result.groups[0]?.fill).toBeUndefined();
+    expect(result.groups[0]?.stroke).toBeUndefined();
+    expect(result.groups[0]?.text).toBe('default');
+  });
 });
 
 describe('buildScene: current view', () => {
@@ -220,6 +253,16 @@ describe('buildScene: current view', () => {
     expect(result.edges).toEqual([
       expect.objectContaining({ label: '×2', dots: 'none', stroke: 'default' }),
     ]);
+  });
+
+  it("carries the group's colour onto its collapsed card (020 T057)", () => {
+    const colouredGroup = {
+      ...grouped,
+      groups: grouped.groups.map((g) => (g.id === 'g' ? { ...g, style: { fill: 'teal' } } : g)),
+      views: [view({ collapsed: ['g'] })],
+    };
+    const result = scene(colouredGroup, 'view', { currentViewId: 'v' });
+    expect(result.collapsed[0]).toMatchObject({ id: 'g', fill: '#cff9f1' });
   });
 
   it('draws only the members when drilled into a group, with port pills for outside ends', () => {

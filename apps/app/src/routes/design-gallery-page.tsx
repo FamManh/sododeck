@@ -10,6 +10,7 @@ import { KindsSection } from '../design-gallery/kinds-section';
 import { MotionSection } from '../design-gallery/motion-section';
 import { OverlaysSection } from '../design-gallery/overlays-section';
 import { PanelGallerySection } from '../design-gallery/panel-section';
+import { StyleSamples } from '../design-gallery/style-samples';
 import { useThemeStore } from '../theme/theme-store';
 
 const SECTIONS: [id: string, label: string][] = [
@@ -21,6 +22,7 @@ const SECTIONS: [id: string, label: string][] = [
   ['motion', 'Motion'],
   ['panel', 'Panel & tooltip'],
   ['keyboard', 'Keyboard'],
+  ['style', 'Card style'],
 ];
 
 /**
@@ -74,6 +76,7 @@ export function DesignGalleryPage() {
           <MotionSection />
           <PanelGallerySection />
           <KeyboardSection />
+          <StyleSamples />
         </main>
       </div>
       <Toaster />

@@ -1,7 +1,15 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { fragmentOrigin, parseFragment, serializeFragment, toFragment } from '../src';
+import {
+  createEditor,
+  fragmentOrigin,
+  fromJSON,
+  parseFragment,
+  serializeFragment,
+  toFragment,
+  toJSON,
+} from '../src';
 
 const deck: SododeckFile = {
   ...emptySododeckFile(),
@@ -141,5 +149,32 @@ describe('serializeFragment / parseFragment', () => {
       x: 200,
       y: 20,
     });
+  });
+});
+
+describe('paste a hex fill (020 T049, R12)', () => {
+  it('pastes the hex colour as-is into a deck that has no such swatch, leaving swatches unchanged', () => {
+    const colored: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes: [
+        {
+          id: 'src',
+          type: 'service',
+          title: 'Source',
+          position: { x: 0, y: 0 },
+          style: { fill: '#7a3cff' },
+        },
+      ],
+    };
+    const fragment = toFragment(colored, { nodes: ['src'], groups: [] });
+
+    const target: SododeckFile = { ...emptySododeckFile(), swatches: ['#111111'] };
+    const doc = fromJSON(target);
+    const editor = createEditor(doc);
+    const ids = editor.pasteFragment(fragment, { offset: { x: 0, y: 0 } });
+
+    const pasted = toJSON(doc).nodes.find((n) => n.id === ids.nodes[0]);
+    expect(pasted?.style).toEqual({ fill: '#7a3cff' });
+    expect(toJSON(doc).swatches).toEqual(['#111111']);
   });
 });

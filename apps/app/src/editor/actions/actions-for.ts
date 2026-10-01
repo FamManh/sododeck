@@ -14,6 +14,13 @@ const labelOf = (action: Action, ctx: ActionContext, surface: Surface) => {
   return typeof label === 'function' ? label(ctx) : label;
 };
 
+const swatchOf = (action: Action, ctx: ActionContext): string | null | undefined =>
+  action.swatch === undefined
+    ? undefined
+    : typeof action.swatch === 'function'
+      ? action.swatch(ctx)
+      : action.swatch;
+
 /** Whether `action` is offered for this target and mode on `surface` (any surface when omitted). */
 function offered(action: Action, ctx: ActionContext, surface?: Surface): boolean {
   const kinds =
@@ -29,10 +36,12 @@ function offered(action: Action, ctx: ActionContext, surface?: Surface): boolean
 
 function resolve(action: Action, ctx: ActionContext, surface: Surface): ResolvedAction {
   const children = action.children?.(ctx).map((child) => resolve(child, ctx, surface));
+  const swatch = swatchOf(action, ctx);
   return {
     id: action.id,
     label: labelOf(action, ctx, surface),
     ...(action.icon === undefined ? {} : { icon: action.icon }),
+    ...(swatch === undefined ? {} : { swatch }),
     ...(action.shortcut === undefined ? {} : { shortcut: action.shortcut }),
     ...(action.hint === undefined ? {} : { hint: action.hint }),
     ...(action.description === undefined ? {} : { description: action.description }),

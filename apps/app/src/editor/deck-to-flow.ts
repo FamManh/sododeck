@@ -28,6 +28,7 @@ import {
 } from './flows/flow-overlay';
 import type { Level } from './levels';
 import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems/problem-marks';
+import { resolveLook, type CardLook, type StylePreview } from './style/card-style';
 import type { VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
 
@@ -59,6 +60,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   hiddenInView?: boolean;
   /** The component's problems (015): an amber glyph and a count in its accessible name. */
   problems?: ProblemMark;
+  /** Resolved fill/stroke colour (020); absent when the card has no colour. */
+  look?: CardLook;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -71,6 +74,8 @@ export interface GroupBoundaryData extends Record<string, unknown> {
    * frame above its members (`elevateNodesOnSelect`).
    */
   selected?: boolean;
+  /** Resolved fill/stroke colour (020); absent when the group has no colour. */
+  look?: CardLook;
 }
 
 export interface DeckEdgeData extends Record<string, unknown> {
@@ -107,6 +112,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   focused: boolean;
   dimmed: boolean;
   flowInside?: 'current' | 'path';
+  /** Resolved fill/stroke colour (020); absent when the group has no colour. */
+  look?: CardLook;
 }
 
 export interface PortNodeData extends Record<string, unknown> {
@@ -250,6 +257,15 @@ function sameClassName(actual: string | undefined, expected: string): boolean {
   return (actual ?? '') === expected;
 }
 
+/** Structural compare of a resolved look (020): a new object every render, cached by value. */
+function sameLook(a: CardLook | undefined, b: CardLook | undefined): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined) return false;
+  return (
+    a.fill === b.fill && a.stroke === b.stroke && a.text === b.text && a.namedFill === b.namedFill
+  );
+}
+
 export interface CanvasView {
   selection: Selection;
   focusedId: string | null;
@@ -262,6 +278,8 @@ export interface CanvasView {
   render?: ViewRender;
   /** Problems by component / connection id (015); none = no glyphs. */
   problems?: ProblemMarks;
+  /** Live, unsaved colour edit (020, R9); applied only to selected nodes/groups. */
+  stylePreview?: StylePreview | null;
 }
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
@@ -308,6 +326,7 @@ function toFlowNode(
   const pinned = render?.pinned.has(node.id) === true;
   const hiddenInView = render?.revealedHidden.has(node.id) === true;
   const problems = view.problems?.get(node.id);
+  const look = resolveLook(node.style, selected ? (view.stylePreview ?? undefined) : undefined);
   const className = [
     inFlow ? 'in-flow' : null,
     inFocus ? 'in-focus' : null,
@@ -323,6 +342,7 @@ function toFlowNode(
     (cached.data.pinned === true) === pinned &&
     (cached.data.hiddenInView === true) === hiddenInView &&
     sameProblemMark(cached.data.problems, problems) &&
+    sameLook(cached.data.look, look) &&
     cached.data.focused === focused &&
     cached.data.level === view.level &&
     cached.data.childCount === childCount &&
@@ -362,6 +382,7 @@ function toFlowNode(
       ...(pinned ? { pinned } : {}),
       ...(hiddenInView ? { hiddenInView } : {}),
       ...(problems === undefined ? {} : { problems }),
+      ...(look === undefined ? {} : { look }),
     },
   };
   nodeCache.set(node, flowNode);
@@ -415,6 +436,7 @@ function groupNodes(
     const focused = view.focusedId === id;
     const inFocus = view.focus?.members.has(id) === true;
     const selected = view.selection.groups.includes(groupId);
+    const look = resolveLook(group.style, selected ? (view.stylePreview ?? undefined) : undefined);
     const cached = groupCache.get(id);
     if (
       (cached?.data.selected === true) === selected &&
@@ -422,6 +444,7 @@ function groupNodes(
       cached.data.count === count &&
       cached.data.level === level &&
       cached.data.focused === focused &&
+      sameLook(cached.data.look, look) &&
       sameClassName(cached.className, inFocus ? 'in-focus' : '') &&
       cached.position.x === rect.x &&
       cached.position.y === rect.y &&
@@ -450,14 +473,26 @@ function groupNodes(
         ? { domAttributes: { 'aria-hidden': true, inert: true } }
         : {}),
       zIndex: -1,
-      data: { title: group.title, count, level, focused, ...(selected ? { selected } : {}) },
+      data: {
+        title: group.title,
+        count,
+        level,
+        focused,
+        ...(selected ? { selected } : {}),
+        ...(look === undefined ? {} : { look }),
+      },
     };
     groupCache.set(id, flowNode);
     return flowNode;
   });
 }
 
-function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNode[] {
+function collapsedNodes(
+  deck: SododeckFile,
+  view: CanvasView,
+  graph: VisibleGraph,
+): CollapsedFlowNode[] {
+  const groupsById = groupLookup(deck.groups);
   return graph.cards.map((card) => {
     const id = `${COLLAPSED_NODE_PREFIX}${card.groupId}`;
     const focused = view.focusedId === id;
@@ -465,6 +500,10 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
     const inFocus = view.focus?.members.has(id) === true;
     const dimmed = view.focus !== null && !inFocus;
     const flowInside = view.marks.cards.get(card.groupId);
+    const look = resolveLook(
+      groupsById.get(card.groupId)?.style,
+      selected ? (view.stylePreview ?? undefined) : undefined,
+    );
     const className = [flowInside !== undefined ? 'in-flow' : null, inFocus ? 'in-focus' : null]
       .filter(Boolean)
       .join(' ');
@@ -474,6 +513,7 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
       cached.data.focused === focused &&
       cached.data.dimmed === dimmed &&
       cached.data.flowInside === flowInside &&
+      sameLook(cached.data.look, look) &&
       sameClassName(cached.className, className) &&
       Boolean(cached.domAttributes?.['aria-hidden']) === dimmed &&
       cached.position.x === card.rect.x &&
@@ -503,6 +543,7 @@ function collapsedNodes(view: CanvasView, graph: VisibleGraph): CollapsedFlowNod
         focused,
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),
+        ...(look === undefined ? {} : { look }),
       },
     };
     collapsedCache.set(id, flowNode);
@@ -607,7 +648,7 @@ export function toFlowNodes(
   });
   const next: CanvasFlowNode[] = [
     ...groupNodes(deck, graph, view.level, view),
-    ...collapsedNodes(view, graph),
+    ...collapsedNodes(deck, view, graph),
     ...ports,
     ...components,
   ];

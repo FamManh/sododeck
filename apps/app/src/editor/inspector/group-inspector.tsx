@@ -1,4 +1,4 @@
-import type { SododeckFile } from '@sododeck/schema';
+import type { ColorRef, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
 import { Switch } from '@sododeck/ui/components/switch';
@@ -12,6 +12,9 @@ import { scopeOf, visibleGraph } from '../visible-graph';
 import { viewStateOf } from '../views/view-state';
 import { setGroupCollapsed, toggleGroupCollapsed } from '../views/use-current-view';
 import { useEditor } from '../../model/use-editor';
+import { addDeckColour, applyStyle, removeDeckColour } from '../style/apply-style';
+import { AppearanceSection } from './appearance-section';
+import { styleView } from './derive';
 import { FrameFields } from './frame-fields';
 import { InspectorFrame } from './inspector-frame';
 
@@ -39,6 +42,17 @@ export function GroupInspector({
       edge.a === `${COLLAPSED_NODE_PREFIX}${group.id}` ||
       edge.b === `${COLLAPSED_NODE_PREFIX}${group.id}`,
   );
+  const style = styleView([group]);
+  const groupSelection = { nodes: [], groups: [group.id], edges: [], stickies: [] };
+  const applyGroupStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {
+    applyStyle(editor, groupSelection, channel, value);
+  };
+  const addGroupColour = (channel: 'fill' | 'stroke', hex: string) => {
+    addDeckColour(editor, groupSelection, channel, hex);
+  };
+  const removeGroupColour = (hex: string) => {
+    removeDeckColour(editor, hex);
+  };
 
   return (
     <InspectorFrame
@@ -68,6 +82,13 @@ export function GroupInspector({
         </div>
       </PanelSection>
       <FrameFields view={viewState} groupId={group.id} />
+      <AppearanceSection
+        value={style}
+        deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}
+        onApply={applyGroupStyle}
+        onAddColour={addGroupColour}
+        onRemoveColour={removeGroupColour}
+      />
       <PanelSection label="Merged connections">
         {rows.length === 0 ? (
           <p className="text-body-sm text-ink-secondary">No merged connections.</p>

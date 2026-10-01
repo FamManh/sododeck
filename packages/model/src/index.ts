@@ -21,6 +21,8 @@ export {
   type ProblemTarget,
 } from './problems';
 export type { RemovalResult } from './ops/cascade';
+export type { StyleChannel, StyleTargets } from './ops/style';
+export { MAX_SWATCHES } from './ops/swatches';
 export type { ViewSettingsPatch } from './ops/views';
 export type { EdgeRoutePatch } from './ops/shape';
 export type { PastedIds, PasteOptions } from './ops/paste';

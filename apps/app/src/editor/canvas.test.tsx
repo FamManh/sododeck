@@ -108,6 +108,21 @@ describe('Canvas', () => {
     expect(screen.getByLabelText('Minimap')).toBeInTheDocument();
   });
 
+  it('colours a minimap node by its fill (020 T056)', () => {
+    const coloured = deckOf({
+      nodes: [{ id: 'x', type: 'service', title: 'X', style: { fill: 'green' } }],
+    });
+    const { container } = renderWithEditor(<Canvas />, coloured);
+    act(() => {
+      useUiStore.getState().setMinimap(true);
+    });
+    const rect = container.querySelector('.react-flow__minimap-node');
+    expect(rect).toHaveStyle({
+      fill: 'var(--color-card-green-fill)',
+      stroke: 'var(--color-border)',
+    });
+  });
+
   it('writes nothing on open, even for components without positions', () => {
     const { editor } = renderWithEditor(
       <Canvas />,

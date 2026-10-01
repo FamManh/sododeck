@@ -17,6 +17,18 @@ export const sododeckFileSchema = z
       .array(z.string().min(1).describe('Non-empty text.'))
       .describe('Free-form tags for the deck.')
       .optional(),
+    swatches: z
+      .array(
+        z
+          .string()
+          .regex(new RegExp('^#[0-9a-f]{6}$'))
+          .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+      )
+      .refine((arr) => arr.every((item, i) => arr.indexOf(item) == i), 'All items must be unique!')
+      .describe(
+        "Custom hex colours saved for reuse by this deck's cards and groups, in the order they were added. At most 12; the app enforces the cap when adding.",
+      )
+      .optional(),
     nodes: z
       .array(
         z
@@ -113,6 +125,64 @@ export const sododeckFileSchema = z
                 'Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported; values outside that range are drawn clamped and reported as a problem.',
               )
               .optional(),
+            style: z
+              .object({
+                fill: z
+                  .union([
+                    z
+                      .enum([
+                        'red',
+                        'orange',
+                        'amber',
+                        'yellow',
+                        'lime',
+                        'green',
+                        'teal',
+                        'cyan',
+                        'blue',
+                        'indigo',
+                        'violet',
+                        'pink',
+                        'slate',
+                      ])
+                      .describe('Named card colour, a design-system tint that follows the theme.'),
+                    z
+                      .string()
+                      .regex(new RegExp('^#[0-9a-f]{6}$'))
+                      .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+                  ])
+                  .describe('Background colour.')
+                  .optional(),
+                stroke: z
+                  .union([
+                    z
+                      .enum([
+                        'red',
+                        'orange',
+                        'amber',
+                        'yellow',
+                        'lime',
+                        'green',
+                        'teal',
+                        'cyan',
+                        'blue',
+                        'indigo',
+                        'violet',
+                        'pink',
+                        'slate',
+                      ])
+                      .describe('Named card colour, a design-system tint that follows the theme.'),
+                    z
+                      .string()
+                      .regex(new RegExp('^#[0-9a-f]{6}$'))
+                      .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+                  ])
+                  .describe('Border colour.')
+                  .optional(),
+              })
+              .strict()
+              .describe('Fill and/or stroke colour. Absent means no colour.')
+              .optional(),
           })
           .strict()
           .describe(
@@ -154,6 +224,64 @@ export const sododeckFileSchema = z
               })
               .strict()
               .describe('Size of the frame on the base canvas. Set together with `position`.')
+              .optional(),
+            style: z
+              .object({
+                fill: z
+                  .union([
+                    z
+                      .enum([
+                        'red',
+                        'orange',
+                        'amber',
+                        'yellow',
+                        'lime',
+                        'green',
+                        'teal',
+                        'cyan',
+                        'blue',
+                        'indigo',
+                        'violet',
+                        'pink',
+                        'slate',
+                      ])
+                      .describe('Named card colour, a design-system tint that follows the theme.'),
+                    z
+                      .string()
+                      .regex(new RegExp('^#[0-9a-f]{6}$'))
+                      .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+                  ])
+                  .describe('Background colour.')
+                  .optional(),
+                stroke: z
+                  .union([
+                    z
+                      .enum([
+                        'red',
+                        'orange',
+                        'amber',
+                        'yellow',
+                        'lime',
+                        'green',
+                        'teal',
+                        'cyan',
+                        'blue',
+                        'indigo',
+                        'violet',
+                        'pink',
+                        'slate',
+                      ])
+                      .describe('Named card colour, a design-system tint that follows the theme.'),
+                    z
+                      .string()
+                      .regex(new RegExp('^#[0-9a-f]{6}$'))
+                      .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+                  ])
+                  .describe('Border colour.')
+                  .optional(),
+              })
+              .strict()
+              .describe('Fill and/or stroke colour. Absent means no colour.')
               .optional(),
           })
           .strict()

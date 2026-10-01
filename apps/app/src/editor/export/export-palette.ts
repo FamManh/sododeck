@@ -1,4 +1,5 @@
-import type { StickyColor } from '@sododeck/schema';
+import { readableText } from '@sododeck/ui/lib/contrast';
+import type { CardColor, ColorRef, StickyColor, Style } from '@sododeck/schema';
 import type { ComponentKind } from '@sododeck/ui/lib/icons';
 
 /**
@@ -30,9 +31,67 @@ export const LIGHT_PALETTE = {
   successInk: '#17603f',
   inverse: '#1c1c1a',
   onInverse: '#ffffff',
+  /** Named card colours (020, R2): light hex values, copied from `tokens.css`'s `:root`. */
+  cardColours: {
+    red: { fill: '#ffe4de', stroke: '#d15c53' },
+    orange: { fill: '#ffe7d2', stroke: '#c9690c' },
+    amber: { fill: '#ffeccd', stroke: '#b47900' },
+    yellow: { fill: '#f4f0ce', stroke: '#998800' },
+    lime: { fill: '#e5f5d6', stroke: '#679725' },
+    green: { fill: '#d9f8e0', stroke: '#259f56' },
+    teal: { fill: '#cff9f1', stroke: '#00a28d' },
+    cyan: { fill: '#cdf7ff', stroke: '#009bbe' },
+    blue: { fill: '#dbf1ff', stroke: '#4087de' },
+    indigo: { fill: '#e7ecff', stroke: '#737ade' },
+    violet: { fill: '#f4e8ff', stroke: '#986dd0' },
+    pink: { fill: '#ffe3f3', stroke: '#c65b93' },
+    slate: { fill: '#e6ecf3', stroke: '#667383' },
+  } satisfies Record<CardColor, { fill: string; stroke: string }>,
+  cardText: { dark: '#1c1c1a', light: '#ffffff' },
 };
 
-export type ExportPalette = { readonly [K in keyof typeof LIGHT_PALETTE]: string };
+export type ExportPalette = typeof LIGHT_PALETTE;
+
+function isCardColour(value: ColorRef): value is CardColor {
+  return value in LIGHT_PALETTE.cardColours;
+}
+
+/** Resolves one channel to a literal hex: the light token for a named colour, else the hex as-is. */
+function resolveExportChannel(value: ColorRef, channel: 'fill' | 'stroke'): string {
+  return isCardColour(value) ? LIGHT_PALETTE.cardColours[value][channel] : value;
+}
+
+/** A card/group's resolved colour for export (020, R2): literal hex, since images are light-only. */
+export interface ExportLook {
+  fill?: string;
+  stroke?: string;
+  text: 'default' | 'dark' | 'light';
+}
+
+/** Mirrors `card-style.ts`'s `resolveLook`, but for the flattened SVG/PNG export. */
+export function exportLook(style: Style | undefined): ExportLook | undefined {
+  if (style?.fill === undefined && style?.stroke === undefined) return undefined;
+  const fill = style.fill === undefined ? undefined : resolveExportChannel(style.fill, 'fill');
+  const stroke =
+    style.stroke === undefined ? undefined : resolveExportChannel(style.stroke, 'stroke');
+  const text: ExportLook['text'] =
+    style.fill !== undefined && !isCardColour(style.fill)
+      ? readableText(style.fill).text
+      : 'default';
+  return { fill, stroke, text };
+}
+
+/** The literal ink colour for a resolved `text` role. */
+export function exportTextColour(text: ExportLook['text'], palette: ExportPalette): string {
+  switch (text) {
+    case 'dark':
+      return palette.cardText.dark;
+    case 'light':
+      return palette.cardText.light;
+    case 'default':
+      return palette.ink;
+  }
+}
 
 /** Kind tile fill and icon colour, as `KIND_STYLE[kind].tone` / `KIND_FALLBACK`. */
 export function kindColours(

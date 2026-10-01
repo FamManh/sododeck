@@ -374,7 +374,7 @@ Write each test first and watch it fail. Do not add Playwright tests. The smoke 
   - No animation under reduced motion.
 - [x] T055 Visual check against screens 100 (Reset route), 112, 113 and 114, light and dark. Take screenshots into `specs/017-resize-edge-routing/screens/` and list the differences in `specs/017-resize-edge-routing/visual-check.md` (SC-008). The expected, allowed differences: no 12 px stop in 113, and no "⌥ Free end" in 114.
 - [ ] T056 (skipped per user request — bench verification not run this session) Run `pnpm bench` and `BENCH_ROUTES=1 pnpm bench` after the change. Save both in `specs/017-resize-edge-routing/bench-after.md` next to `bench-before.md`, and confirm ≥ 60 fps for `resized-routed` and no regression elsewhere (FR-031, SC-006).
-- [ ] T057 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
+- [x] T057 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and fix anything red. The smoke suite (including the no-third-party-requests check) must pass unchanged.
 - [ ] T058 Run the quickstart scenarios 1–10 by hand and record the results in the PR description.
 
 ---
