@@ -1,6 +1,25 @@
-import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
+import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
 
 const KINDS = ['service', 'service', 'database', 'client', 'external'] as const;
+
+/** 020 R13: the 13 named card colours plus two custom hex colours, cycled across nodes. */
+const BENCH_FILLS: readonly (CardColor | `#${string}`)[] = [
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'teal',
+  'cyan',
+  'blue',
+  'indigo',
+  'violet',
+  'pink',
+  'slate',
+  '#7a3cff',
+  '#1f2a44',
+];
 
 /** Small deterministic PRNG so every benchmark run renders the same graph. */
 function mulberry32(seed: number) {
@@ -22,17 +41,33 @@ export function generateBenchDeck(
   nodeCount: number,
   edgeCount: number,
   seed = 42,
-  options: { flows?: boolean; groups?: boolean; stickies?: number; views?: boolean } = {},
+  options: {
+    flows?: boolean;
+    groups?: boolean;
+    stickies?: number;
+    views?: boolean;
+    colours?: boolean;
+  } = {},
 ) {
   const random = mulberry32(seed);
   const columns = Math.max(1, Math.ceil(Math.sqrt(nodeCount * 1.25)));
 
   const nodes = Array.from({ length: nodeCount }, (_, i) => {
+    // 020 R13: every node gets a fill (cycling the 13 named colours plus 2 custom hex), and
+    // every 5th node also gets a blue stroke, to benchmark the per-node colour CSS properties.
+    const style =
+      options.colours === true
+        ? {
+            fill: BENCH_FILLS[i % BENCH_FILLS.length],
+            ...(i % 5 === 0 ? { stroke: 'blue' as const } : {}),
+          }
+        : undefined;
     return {
       id: `n${i}`,
       type: KINDS[i % KINDS.length] ?? 'service',
       title: `Node ${i}`,
       position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
+      ...(style ? { style } : {}),
     };
   });
 

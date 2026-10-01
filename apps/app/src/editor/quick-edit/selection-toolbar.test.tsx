@@ -89,6 +89,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Technology: none',
       'Links',
       'Rules',
+      'Colour: none',
       'More actions',
     ]);
     expect(screen.getByRole('button', { name: 'Owner: Checkout' })).toHaveAttribute(
@@ -101,6 +102,44 @@ describe('SelectionToolbar (019 US3)', () => {
     );
   });
 
+  it('shows the fill as a mini swatch on the Colour button (020 T032)', () => {
+    const env = setup();
+    select(['a']);
+    act(() => {
+      env.editor().setStyle({ nodes: ['a'], groups: [] }, 'fill', 'green');
+    });
+    const button = screen.getByRole('button', { name: 'Colour: Green' });
+    const swatch = button.querySelector('[data-slot="swatch"]');
+    expect(swatch).toHaveStyle({ '--swatch': 'var(--color-card-green-fill)' });
+  });
+
+  it('opens the Colour popover and writes the pick through the editor (020 T032)', async () => {
+    const { user, doc } = setup();
+    select(['a']);
+    await user.click(screen.getByRole('button', { name: 'Colour: none' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Colour' });
+    await user.click(within(dialog).getByRole('radio', { name: 'Blue' }));
+    const node = toJSON(doc).nodes.find((n) => n.id === 'a');
+    expect(node?.style).toEqual({ fill: 'blue' });
+    expect(screen.getByRole('button', { name: 'Colour: Blue' })).toBeInTheDocument();
+  });
+
+  it("shows the group toolbar's Colour button after Collapse (020 T054)", () => {
+    const groupDeck = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core' }],
+      groups: [{ id: 'core', title: 'Core services' }],
+    });
+    renderWithEditor(<Harness />, groupDeck);
+    act(() => {
+      ui().select({ groups: ['core'] });
+    });
+    const labels = names();
+    const collapseIndex = labels.indexOf('Collapse');
+    const colourIndex = labels.findIndex((label) => label?.startsWith('Colour:'));
+    expect(collapseIndex).toBeGreaterThanOrEqual(0);
+    expect(colourIndex).toBeGreaterThan(collapseIndex);
+  });
+
   it('shows the count and the shared fields for several components, "Mixed" when they differ', () => {
     setup();
     select(['a', 'b', 'c']);
@@ -111,6 +150,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Owner: Mixed',
       'Tags',
       'Technology: none',
+      'Colour: none',
       'Group',
       'Align',
       'More actions',
@@ -247,5 +287,28 @@ describe('SelectionToolbar (019 US3)', () => {
     await user.keyboard('data{Enter}');
     expect(screen.getByRole('button', { name: 'Kind: Database' })).toBeInTheDocument();
     expect(within(drawer).getByRole('combobox', { name: 'Kind' })).toHaveValue('Database');
+  });
+
+  it('previews a new deck colour on the card, and Cancel clears it without an undo step (020 T048)', async () => {
+    const { user, doc, editor } = setup();
+    select(['a']);
+    await user.click(screen.getByRole('button', { name: 'Colour: none' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Colour' });
+    await user.click(within(dialog).getByRole('button', { name: 'Add a deck colour' }));
+    await user.type(within(dialog).getByRole('textbox', { name: 'Hex colour' }), '7A3CFF');
+
+    const nodeA = document.querySelector('[data-node-id="a"]');
+    expect(nodeA).not.toBeNull();
+    expect(nodeA).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Custom fill #7a3cff'),
+    );
+    expect(toJSON(doc).nodes.find((n) => n.id === 'a')?.style).toBeUndefined();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(nodeA).not.toHaveAttribute('aria-description', expect.stringContaining('#7a3cff'));
+    expect(toJSON(doc).nodes.find((n) => n.id === 'a')?.style).toBeUndefined();
+    expect(toJSON(doc).swatches).toBeUndefined();
+    expect(editor().canUndo()).toBe(false);
   });
 });

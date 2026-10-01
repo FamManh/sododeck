@@ -10,6 +10,8 @@ export interface SchemaNode {
   items?: SchemaNode;
   additionalProperties?: SchemaNode | boolean;
   enum?: string[];
+  pattern?: string;
+  anyOf?: SchemaNode[];
   $defs?: Record<string, SchemaNode>;
 }
 
@@ -25,6 +27,24 @@ export interface Visitor {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Resolves `$ref` to its target `$def`, or returns the schema unchanged. */
+function resolve(schema: SchemaNode): SchemaNode {
+  if (schema.$ref === undefined) return schema;
+  const target = defs[schema.$ref.slice('#/$defs/'.length)];
+  if (target === undefined) throw new Error(`Unresolved ${schema.$ref}`);
+  return target;
+}
+
+/** Whether `value` fits an `anyOf` branch, resolving `$ref` and checking `enum` / `pattern`. */
+function matches(value: unknown, branch: SchemaNode): boolean {
+  const resolved = resolve(branch);
+  if (resolved.enum !== undefined) return resolved.enum.includes(value as string);
+  if (resolved.pattern !== undefined) {
+    return typeof value === 'string' && new RegExp(resolved.pattern).test(value);
+  }
+  return false;
 }
 
 /** Walks `value` together with `schema`, following `$ref`, `properties`, `items` and maps. */
@@ -44,6 +64,12 @@ export function walk(
   }
   if (schema.enum !== undefined) {
     visitor.enumValue?.(type, value);
+    return;
+  }
+  if (schema.anyOf !== undefined && schema.properties === undefined) {
+    const branch = schema.anyOf.find((candidate) => matches(value, candidate));
+    if (branch === undefined) return;
+    walk(value, visitor, branch, type, path);
     return;
   }
   if (Array.isArray(value)) {

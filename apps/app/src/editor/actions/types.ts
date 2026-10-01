@@ -57,6 +57,8 @@ export interface Action {
   /** The toolbar's name when it differs, e.g. "Protocol: HTTP" for the menu's "Protocol". */
   toolbarLabel?: Dynamic<string>;
   icon?: LucideIcon;
+  /** A CSS colour value shown as a mini swatch instead of `icon` (`null` = no colour; 020). */
+  swatch?: Dynamic<string | null>;
   /** A key from `SHORTCUTS` shown as the hint (menu) or in the tooltip (toolbar). */
   shortcut?: ShortcutId;
   /** A literal key hint when no `SHORTCUTS` entry fits one item (e.g. "2" in Add component ▸). */
@@ -91,6 +93,7 @@ export interface ResolvedAction {
   id: string;
   label: string;
   icon?: LucideIcon;
+  swatch?: string | null;
   shortcut?: ShortcutId;
   hint?: string;
   description?: string;

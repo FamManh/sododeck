@@ -62,6 +62,7 @@ describe('CanvasMenu (019 US5)', () => {
     expect(items()).toEqual([
       'Open detailsEnter',
       'RenameF2',
+      'Colour: none',
       'CopyCtrl+C',
       'CutCtrl+X',
       'DuplicateCtrl+D',
@@ -202,6 +203,7 @@ describe('CanvasMenu (019 US5)', () => {
       'RenameF2',
       'CollapseSpace',
       'Select members',
+      'Colour: none',
       'CopyCtrl+C',
       'CutCtrl+X',
       'DuplicateCtrl+D',

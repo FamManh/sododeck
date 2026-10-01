@@ -24,6 +24,7 @@ import { NODE_SIZE, type DeckFlowNode } from './deck-to-flow';
 import { kindLabel } from './kind-label';
 import { CardTitleInput } from './quick-edit/card-title-input';
 import { DetailsButton } from './quick-edit/details-button';
+import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 
 const SIDES = [
@@ -78,6 +79,31 @@ export const DeckNode = memo(function DeckNode({
   const isContainer = data.level === 'container';
   const isComponent = data.level === 'component';
 
+  // Colour (020 R5): the current-step and connect-target cues take the border, so the stroke
+  // class steps aside while either is active (both use `border-*`/`outline-*` of their own).
+  const look = data.look;
+  const hasFlowStep = data.currentStep === true;
+  const hasConnectTarget = target === 'ok';
+  const showFill = look?.fill !== undefined;
+  const showStroke = look?.stroke !== undefined && !hasFlowStep && !hasConnectTarget;
+  const customText = look !== undefined && look.text !== 'default' ? look.text : undefined;
+  const textRoleClass =
+    customText === 'light'
+      ? 'text-card-text-light'
+      : customText === 'dark'
+        ? 'text-card-text-dark'
+        : null;
+  const subtitleClass =
+    textRoleClass ?? (look?.namedFill === true ? 'text-ink-secondary' : 'text-ink-muted');
+  const subtitleDataText = customText ?? (look?.namedFill === true ? 'secondary' : undefined);
+  const colourDescription = [
+    look?.fillRef !== undefined ? describeChannel('fill', look.fillRef) : null,
+    look?.strokeRef !== undefined ? describeChannel('stroke', look.strokeRef) : null,
+  ].filter((part): part is string => part !== null);
+  const description = [selected ? 'Selected' : null, ...colourDescription]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <div
       data-testid="deck-node"
@@ -86,12 +112,20 @@ export const DeckNode = memo(function DeckNode({
       aria-roledescription="component"
       aria-label={name}
       aria-selected={selected}
-      aria-description={selected ? 'Selected' : undefined}
+      aria-description={description === '' ? undefined : description}
       aria-current={data.currentStep === true ? 'step' : undefined}
       {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
+      {...(customText === undefined ? {} : { 'data-text': customText })}
+      {...(showStroke ? { 'data-stroke': '' } : {})}
+      {...(data.problems !== undefined && target !== 'ok' ? { 'data-problem': '' } : {})}
       tabIndex={tabIndex}
       title={data.title}
-      style={{ width: width ?? NODE_SIZE.width, height: height ?? NODE_SIZE.height }}
+      style={{
+        width: width ?? NODE_SIZE.width,
+        height: height ?? NODE_SIZE.height,
+        ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
+        ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+      }}
       className={cn(
         // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
         'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
@@ -110,6 +144,14 @@ export const DeckNode = memo(function DeckNode({
         refusal && 'outline-2 outline-offset-4 outline-clay-ink outline-dashed',
         // Where the next flow step must start (006 FR-009): a ring plus the tag text.
         data.flowStart !== undefined && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
+        // Problem (015, 020 design 107): a 3 px dashed clay ring 3 px outside the card, so it
+        // reads on any fill; unless the connect "+" owns the corner.
+        data.problems !== undefined &&
+          target !== 'ok' &&
+          'outline-[3px] outline-offset-[3px] outline-clay-ink outline-dashed',
+        // Colour (020 R5): fill and stroke, unless the flow-step/connect-target border owns it.
+        showFill && 'bg-(--card-fill)',
+        showStroke && 'border-[1.5px] border-(--card-stroke)',
       )}
     >
       {isLandscape ? (
@@ -120,12 +162,20 @@ export const DeckNode = memo(function DeckNode({
             <KindTile kind={data.kind} size={30} decorative />
             <span className="min-w-0 flex-1">
               {titleInput ?? (
-                <span className="block truncate text-body-sm font-medium text-ink">
+                <span
+                  className={cn(
+                    'block truncate text-body-sm font-medium',
+                    textRoleClass ?? 'text-ink',
+                  )}
+                >
                   {data.title}
                 </span>
               )}
               {data.subtitle && (
-                <span className="block truncate font-mono text-node-sub text-ink-muted">
+                <span
+                  data-text={subtitleDataText}
+                  className={cn('block truncate font-mono text-node-sub', subtitleClass)}
+                >
                   {data.subtitle}
                 </span>
               )}
@@ -135,12 +185,12 @@ export const DeckNode = memo(function DeckNode({
                 role="img"
                 aria-label="Has rules"
                 strokeWidth={ICON_STROKE_WIDTH}
-                className="size-3.5 shrink-0 text-primary-ink"
+                className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
               />
             )}
           </div>
           <div className="flex w-full items-center justify-between gap-2">
-            <span className="truncate text-caption text-ink-secondary">
+            <span className={cn('truncate text-caption', textRoleClass ?? 'text-ink-secondary')}>
               {data.owner ?? 'No owner'}
             </span>
           </div>
@@ -157,10 +207,17 @@ export const DeckNode = memo(function DeckNode({
           {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
           <span className="flex min-w-0 flex-1 flex-col">
             {titleInput ?? (
-              <span className="truncate text-body-sm font-medium text-ink">{data.title}</span>
+              <span
+                className={cn('truncate text-body-sm font-medium', textRoleClass ?? 'text-ink')}
+              >
+                {data.title}
+              </span>
             )}
             {isContainer && data.subtitle && (
-              <span className="truncate font-mono text-node-sub text-ink-muted">
+              <span
+                data-text={subtitleDataText}
+                className={cn('truncate font-mono text-node-sub', subtitleClass)}
+              >
                 {data.subtitle}
               </span>
             )}
@@ -170,7 +227,7 @@ export const DeckNode = memo(function DeckNode({
               role="img"
               aria-label="Has rules"
               strokeWidth={ICON_STROKE_WIDTH}
-              className="size-3.5 shrink-0 text-primary-ink"
+              className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
             />
           )}
         </>
@@ -238,13 +295,14 @@ export const DeckNode = memo(function DeckNode({
           Hidden in this view
         </span>
       )}
-      {/* Problems (015 FR-022): top-right, unless the connect "+" uses that corner. */}
+      {/* Problems (015 FR-022): top-right, unless the connect "+" uses that corner. A surface
+          disc (020 design 107) so the alert glyph reads on any fill. */}
       {data.problems !== undefined && target !== 'ok' && (
         <span
           aria-hidden
           title={data.problems.titles}
           data-testid="problem-glyph"
-          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full border border-amber-ink bg-amber-soft text-amber-ink shadow-rest"
+          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full border border-clay-ink bg-surface text-clay-ink shadow-rest"
         >
           <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
         </span>

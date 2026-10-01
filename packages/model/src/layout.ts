@@ -1,6 +1,6 @@
 /** Root types of the deck document and lookups over them. The layout is documented in deck.ts. */
 import type { Id, SododeckFile } from '@sododeck/schema';
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
 
 import type { YObject, YValue } from './convert';
 
@@ -44,6 +44,15 @@ export function rootTypes(doc: DeckDoc): Y.AbstractType<unknown>[] {
 
 export function metaMap(doc: DeckDoc): YObject {
   return doc.getMap<YValue>('meta');
+}
+
+/**
+ * The deck's custom colour swatches (020, R3): always a `Y.Array`, created empty if a doc
+ * predates it. Returns the shared type when present, so pushes from concurrent tabs merge.
+ */
+export function swatchesArray(doc: DeckDoc): Y.Array<YValue> {
+  const existing = metaMap(doc).get('swatches');
+  return existing instanceof Y.Array ? existing : new Y.Array<YValue>();
 }
 
 export function collectionArray(doc: DeckDoc, c: Collection): Y.Array<YObject> {

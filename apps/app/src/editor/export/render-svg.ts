@@ -1,7 +1,7 @@
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
 import { DOT_RADIUS } from '../edge-constants';
-import { kindColours, stickyColours, type ExportPalette } from './export-palette';
+import { exportTextColour, kindColours, stickyColours, type ExportPalette } from './export-palette';
 import { ICON_PATHS, type IconNode } from './icon-paths';
 import type { ExportScene, SceneCard, SceneEdge } from './scene';
 import { truncate, type TextMeasurer } from './text-measure';
@@ -117,9 +117,13 @@ function icon(nodes: IconNode, x: number, y: number, size: number, colour: strin
 function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): string {
   const { x, y, width, height } = item.rect;
   const colours = kindColours(item.kind, palette);
+  const ink = exportTextColour(item.text, palette);
+  const subtitleInk = item.text === 'default' ? palette.inkMuted : ink;
+  const rulesInk = item.text === 'default' ? palette.primaryInk : ink;
   const out: string[] = [`<g data-export="card" data-id="${escapeXml(item.id)}">`];
-  // TODO(020): node.style fill and stroke once card colours exist.
-  out.push(box(x, y, width, height, 12, palette.surface, palette.border));
+  out.push(
+    box(x, y, width, height, 12, item.fill ?? palette.surface, item.stroke ?? palette.border),
+  );
   const container = item.level !== 'component';
   const tileY = container ? y + (height - TILE) / 2 : y + 8;
   out.push(box(x + PAD, tileY, TILE, TILE, 9, colours.fill));
@@ -139,18 +143,18 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
   }
   if (item.hasRules) {
     right -= 14;
-    out.push(icon(ICON_PATHS.rules, right, rowMiddle - 7, 14, palette.primaryInk));
+    out.push(icon(ICON_PATHS.rules, right, rowMiddle - 7, 14, rulesInk));
     right -= 8;
   }
   const textX = x + PAD + TILE + 9;
   const textWidth = Math.max(0, right - textX);
   const title = truncate(item.title, FONTS.title, textWidth, measure);
   if (item.subtitle === null || item.subtitle === '') {
-    out.push(text('t', textX, rowMiddle + 4.5, palette.ink, title));
+    out.push(text('t', textX, rowMiddle + 4.5, ink, title));
   } else {
-    out.push(text('t', textX, rowMiddle - 2, palette.ink, title));
+    out.push(text('t', textX, rowMiddle - 2, ink, title));
     const subtitle = truncate(item.subtitle, FONTS.subtitle, textWidth, measure);
-    out.push(text('s', textX, rowMiddle + 12, palette.inkMuted, subtitle));
+    out.push(text('s', textX, rowMiddle + 12, subtitleInk, subtitle));
   }
   out.push('</g>');
   return out.join('');
@@ -233,23 +237,40 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
   }
   for (const group of scene.groups) {
     const { x, y, width, height } = group.rect;
+    const labelInk =
+      group.text === 'default' ? palette.inkMuted : exportTextColour(group.text, palette);
     out.push(`<g data-export="group" data-id="${escapeXml(group.id)}">`);
-    out.push(box(x, y, width, height, 16, palette.group, palette.border, '4 3'));
+    out.push(
+      box(
+        x,
+        y,
+        width,
+        height,
+        16,
+        group.fill ?? palette.group,
+        group.stroke ?? palette.border,
+        '4 3',
+      ),
+    );
     // Upper-cased in the text itself: vector editors ignore `text-transform`.
     const label = truncate(group.label.toUpperCase(), FONTS.group, width - 48, measure);
-    out.push(text('g', x + 16, y + 20, palette.inkMuted, `${label}  ${String(group.count)}`));
+    out.push(text('g', x + 16, y + 20, labelInk, `${label}  ${String(group.count)}`));
     out.push('</g>');
   }
   for (const item of scene.collapsed) {
     const { x, y, width, height } = item.rect;
+    const ink = exportTextColour(item.text, palette);
+    const subtitleInk = item.text === 'default' ? palette.inkSecondary : ink;
     out.push(`<g data-export="collapsed" data-id="${escapeXml(item.id)}">`);
     out.push(box(x + 12, y + 8, width - 24, height, 12, palette.surface2, palette.hairline));
     out.push(box(x + 6, y + 4, width - 12, height, 12, palette.surface2, palette.hairline));
-    out.push(box(x, y, width, height, 12, palette.surface, palette.border));
+    out.push(
+      box(x, y, width, height, 12, item.fill ?? palette.surface, item.stroke ?? palette.border),
+    );
     const name = truncate(item.title, FONTS.title, width - 24, measure);
-    out.push(text('t', x + 12, y + height / 2 - 3, palette.ink, name));
+    out.push(text('t', x + 12, y + height / 2 - 3, ink, name));
     const counts = `${String(item.nodeCount)} nodes · ${String(item.edgeCount)} edges`;
-    out.push(text('c', x + 12, y + height / 2 + 13, palette.inkSecondary, counts));
+    out.push(text('c', x + 12, y + height / 2 + 13, subtitleInk, counts));
     out.push('</g>');
   }
   for (const item of scene.edges) out.push(edge(item, palette, measure));

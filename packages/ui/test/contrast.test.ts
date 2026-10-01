@@ -46,6 +46,23 @@ const dark = new Map([...light, ...hexTokens(/\.dark\s*\{([^}]*)\}/.exec(tokensC
 
 type Pair = [foreground: string, background: string];
 
+/** The 13 card colour names (020, DESIGN.md order). */
+const CARD_COLOR_NAMES = [
+  'red',
+  'orange',
+  'amber',
+  'yellow',
+  'lime',
+  'green',
+  'teal',
+  'cyan',
+  'blue',
+  'indigo',
+  'violet',
+  'pink',
+  'slate',
+] as const;
+
 /** Text and meaningful icons: WCAG 2.1 AA 4.5:1. */
 const TEXT_PAIRS: Pair[] = [
   ['ink', 'surface'],
@@ -60,6 +77,11 @@ const TEXT_PAIRS: Pair[] = [
   ['blue-ink', 'blue-soft'],
   ['clay-ink', 'clay-soft'],
   ['success-ink', 'success-soft'],
+  // Card fills (020): ink and text-secondary stay readable on every named card fill.
+  ...CARD_COLOR_NAMES.flatMap((name): Pair[] => [
+    ['ink', `card-${name}-fill`],
+    ['text-secondary', `card-${name}-fill`],
+  ]),
 ];
 
 /** Sticky-note tints (009): each note body and its icon/label text stay AA in both themes. */
@@ -79,6 +101,8 @@ const NON_TEXT_PAIRS: Pair[] = [
   ['muted', 'surface'], // dashed border of a partial tag chip (008 bulk edit)
   ['success-ink', 'surface'], // matched-row check icon (008 decision tables)
   ['primary', 'canvas'], // snap guides, drop-target and landing-slot dashes, resize handles (016)
+  // Card strokes (020): every named card stroke stays visible against the card surface.
+  ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-stroke`, 'surface']),
 ];
 // Not asserted: primary fill vs inverse (coach-mark Next button) is 2.38:1 in dark. WCAG 1.4.11
 // does not require a text button's fill to contrast with its background; the label identifies

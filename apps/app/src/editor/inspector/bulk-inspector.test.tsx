@@ -124,6 +124,27 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
     ]);
   });
 
+  it('shows "Fill: Mixed" when styles differ, and applies fill to all as one undo step (020 T038)', async () => {
+    const { user, doc, editor } = setup();
+    act(() => {
+      editor().setStyle({ nodes: ['p'], groups: [] }, 'fill', 'green');
+    });
+    expect(screen.getByRole('button', { name: 'Fill: Mixed' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Fill: Mixed' }));
+    await user.click(screen.getByRole('radio', { name: 'Amber' }));
+    expect(nodes(doc).map((n) => n.style?.fill)).toEqual(['amber', 'amber', 'amber']);
+    act(() => {
+      editor().undo();
+    });
+    expect(nodes(doc).map((n) => n.style?.fill)).toEqual(['green', undefined, undefined]);
+  });
+
+  it('reads the skipped-items footer when a connection is also selected (020 T038)', async () => {
+    const { user } = setup(['op']);
+    await user.click(screen.getByRole('button', { name: 'Fill: none' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Colours 3 of 4 selected items');
+  });
+
   it('says when only some are pinned, and pins them all in one undo step (011)', async () => {
     const { user, doc, editor } = setup();
     act(() => {

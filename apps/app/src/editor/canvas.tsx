@@ -35,6 +35,7 @@ import {
   toFlowNodes,
   toLeaderEdges,
   toStickyNodes,
+  type CanvasFlowNode,
 } from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
 import { EmptyCanvasCard } from './empty-canvas-card';
@@ -51,6 +52,7 @@ import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
 import { PortPillNode } from './port-pill-node';
 import { SelectionFrame } from './selection-frame';
+import type { CardLook } from './style/card-style';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
@@ -380,6 +382,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const problems = problemMarks(useProblems());
+  const stylePreview = useUiStore((s) => s.stylePreview);
   const view = useMemo(
     () => ({
       selection,
@@ -391,8 +394,20 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       marks: collapsedMarks,
       render,
       problems,
+      stylePreview,
     }),
-    [selection, focusedId, focusedEdgeId, labelsOn, level, focus, collapsedMarks, render, problems],
+    [
+      selection,
+      focusedId,
+      focusedEdgeId,
+      labelsOn,
+      level,
+      focus,
+      collapsedMarks,
+      render,
+      problems,
+      stylePreview,
+    ],
   );
 
   const nodes = useMemo(
@@ -635,12 +650,16 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
         {/* The minimap (018 FR-033): off by default, above the zoom island (M). */}
         {minimap && !hideUi && (
-          <MiniMap
+          <MiniMap<CanvasFlowNode>
             ariaLabel="Minimap"
             position="bottom-right"
             pannable
-            nodeColor="var(--color-surface-3)"
-            nodeStrokeColor="var(--color-border)"
+            nodeColor={(n) =>
+              (n.data.look as CardLook | undefined)?.fill ?? 'var(--color-surface-3)'
+            }
+            nodeStrokeColor={(n) =>
+              (n.data.look as CardLook | undefined)?.stroke ?? 'var(--color-border)'
+            }
             maskColor="var(--xy-minimap-mask-background-color)"
             onClick={(_, position) => {
               void setCenter(position.x, position.y, { zoom: getZoom() });

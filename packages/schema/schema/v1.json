@@ -40,6 +40,12 @@
       "$ref": "#/$defs/Tags",
       "description": "Free-form tags for the deck."
     },
+    "swatches": {
+      "description": "Custom hex colours saved for reuse by this deck's cards and groups, in the order they were added. At most 12; the app enforces the cap when adding.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/HexColor" },
+      "uniqueItems": true
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
@@ -208,6 +214,48 @@
       "type": "string",
       "enum": ["amber", "blue", "green", "clay", "grey"]
     },
+    "CardColor": {
+      "title": "CardColor",
+      "description": "Named card colour, a design-system tint that follows the theme.",
+      "type": "string",
+      "enum": [
+        "red",
+        "orange",
+        "amber",
+        "yellow",
+        "lime",
+        "green",
+        "teal",
+        "cyan",
+        "blue",
+        "indigo",
+        "violet",
+        "pink",
+        "slate"
+      ]
+    },
+    "HexColor": {
+      "title": "HexColor",
+      "description": "Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.",
+      "type": "string",
+      "pattern": "^#[0-9a-f]{6}$"
+    },
+    "ColorRef": {
+      "title": "ColorRef",
+      "description": "A card or group colour: a named colour or a custom hex value.",
+      "anyOf": [{ "$ref": "#/$defs/CardColor" }, { "$ref": "#/$defs/HexColor" }]
+    },
+    "Style": {
+      "title": "Style",
+      "description": "Fill and/or stroke colour of a card or group. At least one of `fill` / `stroke` is set; absent `style` means no colour.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "fill": { "$ref": "#/$defs/ColorRef", "description": "Background colour." },
+        "stroke": { "$ref": "#/$defs/ColorRef", "description": "Border colour." }
+      }
+    },
     "Node": {
       "title": "Node",
       "description": "A component of the system: client, gateway, service, queue, database or external system.",
@@ -244,6 +292,10 @@
         "position": {
           "$ref": "#/$defs/Position",
           "description": "Canvas position. Views may override it."
+        },
+        "style": {
+          "$ref": "#/$defs/Style",
+          "description": "Fill and/or stroke colour. Absent means no colour."
         }
       }
     },
@@ -269,6 +321,10 @@
         "size": {
           "$ref": "#/$defs/Size",
           "description": "Size of the frame on the base canvas. Set together with `position`."
+        },
+        "style": {
+          "$ref": "#/$defs/Style",
+          "description": "Fill and/or stroke colour. Absent means no colour."
         }
       }
     },

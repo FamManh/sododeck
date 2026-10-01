@@ -5,7 +5,8 @@
  * Yjs layout: persisted from feature 005 on, so changing it needs an ADR and a migration
  * (ADR 0005, specs/002-yjs-model/data-model.md).
  *
- *   doc.getMap('meta')         Y.Map        $schema, version, name?, description?, tags? (Y.Array)
+ *   doc.getMap('meta')         Y.Map        $schema, version, name?, description?, tags? (Y.Array),
+ *                                              swatches (Y.Array, always present, 020)
  *   doc.getArray('nodes')      Y.Array<Y.Map>  one map per node, in file order
  *   doc.getArray('groups')     Y.Array<Y.Map>  one map per group
  *   doc.getArray('edges')      Y.Array<Y.Map>  one map per edge
@@ -42,6 +43,7 @@ import {
   indexOfId,
   metaMap,
   rulesMap,
+  swatchesArray,
   type Collection,
   type DeckDoc,
   type ObjectOf,
@@ -83,6 +85,9 @@ export function fromJSON(input: unknown): DeckDoc {
     if (file.name !== undefined) meta.set('name', file.name);
     if (file.description !== undefined) meta.set('description', file.description);
     if (file.tags !== undefined) meta.set('tags', toY(file.tags));
+    // Always present (even empty), so concurrent addSwatch() calls in two tabs share one
+    // Y.Array from the start instead of racing to create it (research R3).
+    meta.set('swatches', toY(file.swatches ?? []));
 
     for (const name of COLLECTIONS) {
       doc.getArray<YValue>(name).push(file[name].map((item) => toY(item)));
@@ -103,6 +108,7 @@ export function toJSON(doc: DeckDoc): SododeckFile {
   const name = meta.get('name');
   const description = meta.get('description');
   const tags = meta.get('tags');
+  const swatchList = swatchesArray(doc).toArray() as string[];
 
   return canonicalize({
     $schema: meta.get('$schema') as SododeckFile['$schema'],
@@ -111,6 +117,8 @@ export function toJSON(doc: DeckDoc): SododeckFile {
     ...(name === undefined ? {} : { name: name as string }),
     ...(description === undefined ? {} : { description: description as string }),
     ...(tags === undefined ? {} : { tags: fromY(tags) as string[] }),
+    // `swatches` is always stored (possibly empty), but only ever emitted non-empty.
+    ...(swatchList.length === 0 ? {} : { swatches: swatchList }),
     nodes: collection('nodes'),
     groups: collection('groups'),
     edges: collection('edges'),

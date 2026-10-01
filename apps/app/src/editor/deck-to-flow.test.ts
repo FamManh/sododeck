@@ -309,6 +309,46 @@ describe('toFlowNodes', () => {
       first.find((n) => n.id === 'a'),
     );
   });
+
+  it("keeps an unchanged node's identity across a snapshot where another node's style changed (020)", () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    const styled: SododeckFile = {
+      ...deck,
+      nodes: [
+        { ...deck.nodes[0], style: { fill: 'green' } } as SododeckFile['nodes'][number],
+        deck.nodes[1] as SododeckFile['nodes'][number],
+      ],
+    };
+    const second = toFlowNodes(styled, topLevelGraph(styled), view());
+    expect(second.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
+    const a = second.find((n) => n.id === 'a') as DeckFlowNode;
+    expect(a).not.toBe(first.find((n) => n.id === 'a'));
+    expect(a.data.look).toEqual({
+      fill: 'var(--color-card-green-fill)',
+      stroke: undefined,
+      text: 'default',
+      namedFill: true,
+      fillRef: 'green',
+      strokeRef: undefined,
+    });
+  });
+
+  it('applies a style preview only to selected nodes (020 R9)', () => {
+    const graph = topLevelGraph(deck);
+    const preview = toFlowNodes(
+      deck,
+      graph,
+      view({
+        selection: { ...EMPTY_SELECTION, nodes: ['a'] },
+        stylePreview: { channel: 'fill', value: 'green' },
+      }),
+    );
+    const a = preview.find((n) => n.id === 'a') as DeckFlowNode;
+    const b = preview.find((n) => n.id === 'b') as DeckFlowNode;
+    expect(a.data.look?.fill).toBe('var(--color-card-green-fill)');
+    expect(b.data.look).toBeUndefined();
+  });
 });
 
 describe('view render (011)', () => {

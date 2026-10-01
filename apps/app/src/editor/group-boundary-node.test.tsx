@@ -8,6 +8,7 @@ import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import type { GroupFlowNode } from './deck-to-flow';
 import { GroupBoundaryNode } from './group-boundary-node';
+import { resolveLook } from './style/card-style';
 
 describe('GroupBoundaryNode', () => {
   it('labels the boundary with the group title and member count', () => {
@@ -148,5 +149,41 @@ describe('GroupBoundaryNode as a frame (016)', () => {
     const boundary = screen.getByTestId('group-boundary');
     expect(boundary).toHaveAttribute('data-drop-target');
     expect(boundary).toHaveClass('border-dashed', 'border-primary');
+  });
+});
+
+describe('GroupBoundaryNode colour (020 T052)', () => {
+  const props = (dataPatch: Record<string, unknown> = {}) =>
+    ({
+      id: 'group:core',
+      data: { title: 'Core services', count: 2, focused: false, ...dataPatch },
+      width: 300,
+      height: 200,
+    }) as unknown as NodeProps<GroupFlowNode>;
+
+  it('extends the accessible description with "Teal fill" for a fill', () => {
+    const look = resolveLook({ fill: 'teal' });
+    renderWithEditor(<GroupBoundaryNode {...props({ look })} />);
+    expect(screen.getByRole('button', { name: /Core services group/ })).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Teal fill'),
+    );
+  });
+
+  it('extends the accessible description with "Red stroke", and sets data-stroke, for a stroke', () => {
+    const look = resolveLook({ stroke: 'red' });
+    renderWithEditor(<GroupBoundaryNode {...props({ look })} />);
+    const boundary = screen.getByTestId('group-boundary');
+    expect(boundary).toHaveAttribute('data-stroke');
+    expect(screen.getByRole('button', { name: /Core services group/ })).toHaveAttribute(
+      'aria-description',
+      expect.stringContaining('Red stroke'),
+    );
+  });
+
+  it('sets data-text="light" on the boundary for a custom dark fill', () => {
+    const look = resolveLook({ fill: '#1c1c1a' });
+    renderWithEditor(<GroupBoundaryNode {...props({ look })} />);
+    expect(screen.getByTestId('group-boundary')).toHaveAttribute('data-text', 'light');
   });
 });

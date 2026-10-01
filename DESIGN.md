@@ -147,25 +147,25 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 
 ### Card Colours
 
-Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, in OKLCH. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill.
+Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, designed in OKLCH; the hex values below are what actually ships (`packages/ui/src/styles/tokens.css`), since browsers vary in OKLCH → sRGB rounding. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill (error is a dashed 3px Clay ring outside the card plus a Clay alert badge, same as on a plain card, 107).
 
-| Colour | Light fill | Light stroke | Dark fill | Dark stroke |
-|---|---|---|---|---|
-| red | oklch(0.95 0.045 27) | oklch(0.62 0.15 27) | oklch(0.31 0.055 27) | oklch(0.72 0.13 27) |
-| orange | oklch(0.95 0.045 55) | oklch(0.62 0.15 55) | oklch(0.31 0.055 55) | oklch(0.72 0.13 55) |
-| amber | oklch(0.95 0.045 80) | oklch(0.62 0.15 80) | oklch(0.31 0.055 80) | oklch(0.72 0.13 80) |
-| yellow | oklch(0.95 0.045 102) | oklch(0.62 0.15 102) | oklch(0.31 0.055 102) | oklch(0.72 0.13 102) |
-| lime | oklch(0.95 0.045 130) | oklch(0.62 0.15 130) | oklch(0.31 0.055 130) | oklch(0.72 0.13 130) |
-| green | oklch(0.95 0.045 152) | oklch(0.62 0.15 152) | oklch(0.31 0.055 152) | oklch(0.72 0.13 152) |
-| teal | oklch(0.95 0.045 182) | oklch(0.62 0.15 182) | oklch(0.31 0.055 182) | oklch(0.72 0.13 182) |
-| cyan | oklch(0.95 0.045 215) | oklch(0.62 0.15 215) | oklch(0.31 0.055 215) | oklch(0.72 0.13 215) |
-| blue | oklch(0.95 0.045 255) | oklch(0.62 0.15 255) | oklch(0.31 0.055 255) | oklch(0.72 0.13 255) |
-| indigo | oklch(0.95 0.045 278) | oklch(0.62 0.15 278) | oklch(0.31 0.055 278) | oklch(0.72 0.13 278) |
-| violet | oklch(0.95 0.045 302) | oklch(0.62 0.15 302) | oklch(0.31 0.055 302) | oklch(0.72 0.13 302) |
-| pink | oklch(0.95 0.045 350) | oklch(0.62 0.15 350) | oklch(0.31 0.055 350) | oklch(0.72 0.13 350) |
-| slate | oklch(0.94 0.012 255) | oklch(0.55 0.03 255) | oklch(0.30 0.015 255) | oklch(0.66 0.03 255) |
+| Colour | Light fill | Light stroke | Light OKLCH fill | Light OKLCH stroke | Dark fill | Dark stroke | Dark OKLCH fill | Dark OKLCH stroke |
+|---|---|---|---|---|---|---|---|---|
+| red | #ffe4de | #d15c53 | oklch(0.95 0.045 27) | oklch(0.62 0.15 27) | #482521 | #eb8278 | oklch(0.31 0.055 27) | oklch(0.72 0.13 27) |
+| orange | #ffe7d2 | #c9690c | oklch(0.95 0.045 55) | oklch(0.62 0.15 55) | #452813 | #e28d4f | oklch(0.31 0.055 55) | oklch(0.72 0.13 55) |
+| amber | #ffeccd | #b47900 | oklch(0.95 0.045 80) | oklch(0.62 0.15 80) | #3f2d0a | #cf9a35 | oklch(0.31 0.055 80) | oklch(0.72 0.13 80) |
+| yellow | #f4f0ce | #998800 | oklch(0.95 0.045 102) | oklch(0.62 0.15 102) | #36310b | #b5a737 | oklch(0.31 0.055 102) | oklch(0.72 0.13 102) |
+| lime | #e5f5d6 | #679725 | oklch(0.95 0.045 130) | oklch(0.62 0.15 130) | #273617 | #89b559 | oklch(0.31 0.055 130) | oklch(0.72 0.13 130) |
+| green | #d9f8e0 | #259f56 | oklch(0.95 0.045 152) | oklch(0.62 0.15 152) | #183822 | #5ebc7b | oklch(0.31 0.055 152) | oklch(0.72 0.13 152) |
+| teal | #cff9f1 | #00a28d | oklch(0.95 0.045 182) | oklch(0.62 0.15 182) | #013932 | #00beab | oklch(0.31 0.055 182) | oklch(0.72 0.13 182) |
+| cyan | #cdf7ff | #009bbe | oklch(0.95 0.045 215) | oklch(0.62 0.15 215) | #003742 | #00b8d7 | oklch(0.31 0.055 215) | oklch(0.72 0.13 215) |
+| blue | #dbf1ff | #4087de | oklch(0.95 0.045 255) | oklch(0.62 0.15 255) | #1c314c | #6aa7f4 | oklch(0.31 0.055 255) | oklch(0.72 0.13 255) |
+| indigo | #e7ecff | #737ade | oklch(0.95 0.045 278) | oklch(0.62 0.15 278) | #2a2d4c | #929bf5 | oklch(0.31 0.055 278) | oklch(0.72 0.13 278) |
+| violet | #f4e8ff | #986dd0 | oklch(0.95 0.045 302) | oklch(0.62 0.15 302) | #352947 | #b490e8 | oklch(0.31 0.055 302) | oklch(0.72 0.13 302) |
+| pink | #ffe3f3 | #c65b93 | oklch(0.95 0.045 350) | oklch(0.62 0.15 350) | #452434 | #e181b0 | oklch(0.31 0.055 350) | oklch(0.72 0.13 350) |
+| slate | #e6ecf3 | #667383 | oklch(0.94 0.012 255) | oklch(0.55 0.03 255) | #292e35 | #8693a5 | oklch(0.30 0.015 255) | oklch(0.66 0.03 255) |
 
-**Custom colours:** a deck can add up to 12 custom hex colours to its own swatches (106). On a custom fill below 0.18 relative luminance, card text flips to white.
+**Custom colours:** a deck can add up to 12 custom hex colours to its own swatches (106). Card text (`--sd-card-text-dark` #1c1c1a or `--sd-card-text-light` #ffffff) is whichever gives the higher contrast against the custom fill, switching near relative luminance 0.204; in the ≈ 0.183–0.227 band neither choice reaches WCAG AA 4.5:1, so the colour picker shows a warning, but the colour is still allowed (FR-026).
 
 ## Typography
 
@@ -272,7 +272,7 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 
 ### Canvas
 
-- **`node`**: Surface fill, 1px Border, 12px radius, Rest shadow, kind tile plus title (12.5/500) and subtitle (11, muted). A rule glyph appears when rules are attached. Optional fill and stroke from the card colours (020). States: selected (2px outside selection frame), on the current flow step (primary border + halo), dimmed (opacity .2–.22 in focus and flow modes; `--sd-opacity-view-dim` .4 when a saved view dims its kind, e.g. clients in Infra), pinned (small pin glyph on the top-left corner, every level except Landscape), dragging (grab cursor).
+- **`node`**: Surface fill, 1px Border, 12px radius, Rest shadow, kind tile plus title (12.5/500) and subtitle (11, muted). A rule glyph appears when rules are attached. Optional fill and stroke from the card colours (020). States: selected (2px outside selection frame), on the current flow step (primary border + halo), error (3px dashed Clay ring 3px outside the card plus a Clay alert badge, 107 — same on any card colour), dimmed (opacity .2–.22 in focus and flow modes; `--sd-opacity-view-dim` .4 when a saved view dims its kind, e.g. clients in Infra), pinned (small pin glyph on the top-left corner, every level except Landscape), dragging (grab cursor).
 - **`group-boundary`**: dashed 1px Border with a 16px radius and Group Fill. Clicking the label drills into that level.
 - **`edge`**: 1.5px Edge stroke. Connected to selection: 1.75px Secondary. Selected or in flow: 2–3px Deck Orange. Dimmed: opacity .15–.18. It has a 12px invisible hit area.
 - **`edge-label`**: Mono 10.5px pill, Surface fill, 1px Border. It turns solid orange with an On Primary label on the current step.

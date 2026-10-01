@@ -5,6 +5,7 @@
  *   pnpm bench                          # from repo root (builds first)
  *   BENCH_CPU_THROTTLE=4 pnpm bench     # simulate a slower machine
  *   BENCH_FLOWS=1 pnpm bench            # the deck also has 21 flows (006); flow scenarios always do
+ *   BENCH_COLOURS=1 pnpm bench          # every node has a fill, every 5th also a stroke (020)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -23,6 +24,8 @@ const STICKIES = Math.max(0, Number(process.env.BENCH_STICKIES ?? 0) || 0);
 const FLOWS = process.env.BENCH_FLOWS === '1' ? '&flows=1' : '';
 const GROUPS_QUERY = GROUPS ? '&groups=1' : '';
 const STICKIES_QUERY = STICKIES > 0 ? `&stickies=${String(STICKIES)}` : '';
+/** 020 T063 SC-005: the deck also has a fill (and every 5th node a stroke) on every node. */
+const COLOURS_QUERY = process.env.BENCH_COLOURS === '1' ? '&colours=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -206,7 +209,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,

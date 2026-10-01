@@ -7,9 +7,9 @@ import { assertValid, validateObject } from '../validate';
 import { applyPatch, writePatch } from './patch';
 import type { Patch } from './types';
 
-export type MetaPatch = Patch<Pick<SododeckFile, 'name' | 'description' | 'tags'>>;
+export type MetaPatch = Patch<Pick<SododeckFile, 'name' | 'description' | 'tags' | 'swatches'>>;
 
-const FIELDS = ['name', 'description', 'tags'] as const;
+const FIELDS = ['name', 'description', 'tags', 'swatches'] as const;
 
 /** Sets or clears (`null`) the deck's name, description and tags. */
 export function updateMeta(ctx: EditContext, patch: MetaPatch): void {

@@ -4,11 +4,19 @@ import { stickyLabel } from '@sododeck/model';
 
 import type { Scope } from './visible-graph';
 import { visibleGraph } from './visible-graph';
+import { resolveLook, type CardLook } from './style/card-style';
 
 export type OutlineItem =
   | { type: 'up'; id: 'up'; title: string; children: [] }
-  | { type: 'group'; id: string; title: string; count: number; children: OutlineItem[] }
-  | { type: 'node'; id: string; title: string; kind: string; children: [] };
+  | {
+      type: 'group';
+      id: string;
+      title: string;
+      count: number;
+      children: OutlineItem[];
+      look?: CardLook;
+    }
+  | { type: 'node'; id: string; title: string; kind: string; children: []; look?: CardLook };
 
 /** The group's parent when it exists and does not lead back into a cycle; else undefined. */
 function effectiveParents(deck: SododeckFile): Map<string, string | undefined> {
@@ -93,7 +101,15 @@ export function buildOutline(
   const parents = effectiveParents(scopedDeck);
   const groups = new Map<string, Extract<OutlineItem, { type: 'group' }>>();
   for (const g of scopedDeck.groups) {
-    groups.set(g.id, { type: 'group', id: g.id, title: g.title, count: 0, children: [] });
+    const look = resolveLook(g.style);
+    groups.set(g.id, {
+      type: 'group',
+      id: g.id,
+      title: g.title,
+      count: 0,
+      children: [],
+      ...(look === undefined ? {} : { look }),
+    });
   }
   const root: OutlineItem[] = [];
   for (const g of scopedDeck.groups) {
@@ -104,12 +120,14 @@ export function buildOutline(
   }
   const loose: OutlineItem[] = [];
   for (const n of scopedDeck.nodes) {
+    const look = resolveLook(n.style);
     const item: OutlineItem = {
       type: 'node',
       id: n.id,
       title: n.title,
       kind: n.type,
       children: [],
+      ...(look === undefined ? {} : { look }),
     };
     const group = n.group === undefined ? undefined : groups.get(n.group);
     if (group) group.children.push(item);

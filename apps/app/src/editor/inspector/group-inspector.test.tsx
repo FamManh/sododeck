@@ -39,6 +39,24 @@ describe('GroupInspector', () => {
   });
 });
 
+describe('GroupInspector colour (020 T054)', () => {
+  it('shows Appearance with the group fill, and applying a colour is one undo step', async () => {
+    const user = userEvent.setup();
+    const deck = deckOf({
+      groups: [{ id: 'core', title: 'Core services', style: { fill: 'teal' } }],
+    });
+    const { doc } = renderWithEditor(<Inspector deck={deck} />, deck);
+    act(() => {
+      useUiStore.getState().select({ groups: ['core'] });
+    });
+
+    expect(screen.getByRole('button', { name: 'Fill: Teal' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Fill: Teal' }));
+    await user.click(screen.getByRole('radio', { name: 'Green' }));
+    expect(toJSON(doc).groups.find((g) => g.id === 'core')?.style?.fill).toBe('green');
+  });
+});
+
 describe('GroupInspector Frame fields (016 FR-044)', () => {
   const framed = deckOf({
     nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core', position: { x: 0, y: 0 } }],

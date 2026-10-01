@@ -6,6 +6,8 @@
  * - S4 (frame pair): v1.json states it with `dependentRequired`, which json-schema-to-zod drops.
  * - S5 (group frame keys): `view.groupFrames` keys name groups of the same file, which no JSON
  *   Schema keyword can check.
+ * - S6 (style has a colour): v1.json states it with `minProperties: 1`, which json-schema-to-zod
+ *   drops.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -66,6 +68,22 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
         message: `Group "${group.id}" needs both a position and a size, or neither.`,
       });
     }
+  });
+
+  function checkStyle(
+    id: string,
+    style: { fill?: unknown; stroke?: unknown } | undefined,
+    path: string,
+  ): void {
+    if (style !== undefined && style.fill === undefined && style.stroke === undefined) {
+      issues.push({ path, message: `Style of "${id}" needs a fill, a stroke, or both.` });
+    }
+  }
+  file.nodes.forEach((node, index) => {
+    checkStyle(node.id, node.style, `nodes.${String(index)}.style`);
+  });
+  file.groups.forEach((group, index) => {
+    checkStyle(group.id, group.style, `groups.${String(index)}.style`);
   });
 
   const groupIds = new Set(file.groups.map((group) => group.id));

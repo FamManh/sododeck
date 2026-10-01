@@ -1,3 +1,4 @@
+import { Swatch } from '@sododeck/ui/components/swatch-grid';
 import {
   Toolbar,
   ToolbarButton,
@@ -95,7 +96,10 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
   const value = action.field === undefined ? null : valueText(action.label);
   const content = (
     <>
-      {Icon !== undefined && <Icon aria-hidden />}
+      {action.swatch !== undefined && (
+        <Swatch swatch={action.swatch ?? 'var(--color-border)'} className="size-4" />
+      )}
+      {action.swatch === undefined && Icon !== undefined && <Icon aria-hidden />}
       {value !== null && <span className="max-w-28 truncate">{value}</span>}
     </>
   );
