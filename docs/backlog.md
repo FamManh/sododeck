@@ -1656,6 +1656,11 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   - **Line type:** straight, elbow (orthogonal, today's look, the default) and curved.
   - **Free waypoints** for elbow and curved lines: drag a midpoint handle to add a bend point,
     drag a bend point to move it, double-click (or ⌫) to remove it; Reset route (017) clears them.
+    Founder feedback (2026-10-02): 017's segment only moves along one axis (horizontal or
+    vertical) and that feels rigid; bends must be free to move in any direction, like Miro.
+  - **Lighter handles** (founder feedback, 2026-10-02): 017's 10×24 px segment pill and endpoint
+    grips look heavy. Show small round handles (≈ 8 px) only on hover or while the connector is
+    selected, with a larger invisible hit area so they stay easy to grab.
   - **Dash:** solid (default), dashed, dotted.
   - **Weight:** a slider with a few fixed steps (e.g. 1–6 px); default = today's 1.5 px.
   - **Colour:** 020's palette, the deck's custom swatches and "No colour".
