@@ -20,7 +20,11 @@ describe('ACTIONS', () => {
 
   it('offers every action on at least one surface and target', () => {
     for (const action of ACTIONS) {
-      const kinds = [...(action.where.menu ?? []), ...(action.where.toolbar ?? [])];
+      const kinds = [
+        ...(action.where.menu ?? []),
+        ...(action.where.toolbar ?? []),
+        ...(action.where.keys ?? []),
+      ];
       expect(kinds.length, action.id).toBeGreaterThan(0);
     }
   });
@@ -31,7 +35,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
       ['Reset size', 'Colour: none'],
-      ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
+      ['Copy', 'Cut', 'Duplicate'],
       ['Group', 'Align', 'Arrange'],
       ['Pin'],
       ['Delete'],
@@ -40,7 +44,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.components, 'menu')).toEqual([
       ['Open details'],
       ['Colour: none'],
-      ['Copy', 'Cut', 'Duplicate', 'Copy JSON'],
+      ['Copy', 'Cut', 'Duplicate'],
       ['Group', 'Align', 'Arrange'],
       ['Pin all'],
       ['Delete'],
@@ -48,7 +52,6 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.connection, 'menu')).toEqual([
       ['Open details', 'Edit label', 'Protocol', 'Direction'],
       ['Reset route'],
-      ['Copy JSON'],
       ['Delete'],
     ]);
     expect(labels(TARGETS.group, 'menu')).toEqual([
@@ -62,17 +65,14 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Add component', 'Add sticky'],
       ['Select all', 'Fit'],
     ]);
-    expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Copy JSON'], ['Delete']]);
-    expect(labels(TARGETS.mixed, 'menu')).toEqual([['Colour: none'], ['Copy JSON'], ['Delete']]);
+    expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Delete']]);
+    expect(labels(TARGETS.mixed, 'menu')).toEqual([['Colour: none'], ['Delete']]);
   });
 
-  it('keeps only Open details, Copy, Copy JSON and Fit in flow mode and sessions', () => {
+  it('keeps only Open details, Copy and Fit in flow mode and sessions', () => {
     for (const mode of ['flow', 'session'] as const) {
-      expect(labels(TARGETS.component, 'menu', mode)).toEqual([
-        ['Open details'],
-        ['Copy', 'Copy JSON'],
-      ]);
-      expect(labels(TARGETS.connection, 'menu', mode)).toEqual([['Open details'], ['Copy JSON']]);
+      expect(labels(TARGETS.component, 'menu', mode)).toEqual([['Open details'], ['Copy']]);
+      expect(labels(TARGETS.connection, 'menu', mode)).toEqual([['Open details']]);
       expect(labels(TARGETS.group, 'menu', mode)).toEqual([['Open details'], ['Copy']]);
       expect(labels(TARGETS.canvas, 'menu', mode)).toEqual([['Fit']]);
     }

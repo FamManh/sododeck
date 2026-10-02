@@ -67,7 +67,6 @@ describe('CanvasMenu (019 US5)', () => {
       'CopyCtrl+C',
       'CutCtrl+X',
       'DuplicateCtrl+D',
-      'Copy JSONCtrl+Shift+C',
       'GroupCtrl+G',
       'Align',
       'Arrange',
@@ -179,7 +178,7 @@ describe('CanvasMenu (019 US5)', () => {
       ui().openFlow('f');
     });
     fireEvent.contextMenu(card('Service: A'), { clientX: 40, clientY: 50 });
-    expect(items()).toEqual(['Open detailsEnter', 'CopyCtrl+C', 'Copy JSONCtrl+Shift+C']);
+    expect(items()).toEqual(['Open detailsEnter', 'CopyCtrl+C']);
     expect(ui().activeFlow).not.toBeNull();
   });
 

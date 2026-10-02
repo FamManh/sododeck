@@ -11,7 +11,8 @@ import type { MenuTarget, Selection, ToolbarFieldId } from '../../state/ui-store
 import type { ShortcutId } from '../shell/shortcuts';
 import type { ViewState } from '../views/view-state';
 
-export type Surface = 'menu' | 'toolbar';
+/** `keys`: offered only through its shortcut, never listed in a menu or toolbar. */
+export type Surface = 'menu' | 'toolbar' | 'keys';
 
 /** `viewOnly`: the narrow-window editor (< 1024 px); see `use-action-context.ts`. */
 export type Mode = 'edit' | 'flow' | 'session' | 'viewOnly';
