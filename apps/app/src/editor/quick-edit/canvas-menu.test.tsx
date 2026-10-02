@@ -183,11 +183,13 @@ describe('CanvasMenu (019 US5)', () => {
     expect(ui().activeFlow).not.toBeNull();
   });
 
-  it('asks for confirmation on Delete, as the Delete key does (FR-038)', async () => {
-    const { user } = setup();
+  it('deletes at once on Delete, as the Delete key does (FR-038)', async () => {
+    const { user, doc } = setup();
+    const before = toJSON(doc).nodes.length;
     fireEvent.contextMenu(card('Service: A'), { clientX: 40, clientY: 50 });
     await user.click(within(menu()).getByRole('menuitem', { name: /Delete/ }));
-    expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(toJSON(doc).nodes).toHaveLength(before - 1);
   });
 
   it('explains Delete group in its tooltip and ungroups', async () => {

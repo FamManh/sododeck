@@ -191,14 +191,11 @@ describe('EditorPage', () => {
     });
     record();
 
-    // delete + confirm
+    // delete (no confirmation on the canvas, §g-56)
     act(() => {
       ui().select({ nodes: [id] });
       ui().requestDelete({ nodes: [id], edges: [] });
     });
-    const dialog = screen.getByRole('alertdialog', { name: 'Delete Orders?' });
-    expect(dialog).toHaveTextContent('Also removes 1 connection.');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
     expect(announced()).toMatch(/^Deleted Orders and 1 connection/);
     record();
 
@@ -267,12 +264,9 @@ describe('EditorPage', () => {
       expect(nodeEl('Service: Untitled service')).toHaveFocus();
     });
 
-    // 4. Delete the selected connection, confirm on "Delete".
+    // 4. Delete the selected connection (no confirmation on the canvas, §g-56).
     await user.keyboard('{Delete}');
-    const dialog = await screen.findByRole('alertdialog');
-    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
-    await user.tab();
-    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
     expect(toJSON(doc).edges).toEqual([]);
 
     // 5. ⌘Z brings it back.

@@ -53,6 +53,8 @@ Recorded in design-analysis §g and applied to the features below.
 | 45  | Arrows nudge only during a drag; otherwise ⌥+arrows (1 px) / ⌥⇧+arrows (10 px). Plain arrows keep moving focus.                                                                                                                     | 016                     |
 | 46  | Placement of controls missing in 86–116: view settings + Tidy in the views menu, pin in toolbar "More" / context menu, drill breadcrumb as a deck-island chip, problems as a rail badge + flyout, sticky visibility next to Labels. | 018, 015                |
 | 47  | Order: **015**, then canvas-first **021 → 018 → 019 → 016 → 017 → 020**, then **012 → 013**; 014 anywhere.                                                                                                                          | all remaining           |
+| 56  | **Canvas deletes do not ask** (cards, notes, connectors, cut): Undo toast + ⌘Z instead. Flows, features, branches, rules still ask. Reverses §g-11 on the canvas.                                                                   | 003, 009, 016           |
+| 57  | **Select (V) + Hand (H) tools**: Select drags a marquee with an arrow cursor; Hand pans. Space+drag and scroll still pan. Reverses §g-36.                                                                                           | 003, 018                |
 
 ## Dependency graph
 

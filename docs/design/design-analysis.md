@@ -1035,3 +1035,12 @@ changes them before the owning feature is specified.
     component positions (011) stores its own frame per group. Older decks get fitted frames on
     open. The fields are additive and optional (no version bump). 016 builds it, with an ADR, and
     017 reuses the size shape and the resize handles.
+
+### Founder fixes after 020 (2026-10-02)
+
+56. **Canvas deletes no longer ask.** Reverses §g-11 for canvas objects. Deleting cards, notes,
+    connectors (and cutting a group) happens at once; the Undo toast (§g-19) and ⌘Z are the
+    safety net. Flows, features, branches and rules are off-canvas and still ask first.
+57. **Select and Hand tools** (reverses §g-36). Select (V) is the default: an arrow cursor, and a
+    drag on empty canvas draws a selection marquee. Hand (H) pans with a drag (grab cursor).
+    Space+drag, the middle mouse button and two-finger scroll still pan while Select is active.
