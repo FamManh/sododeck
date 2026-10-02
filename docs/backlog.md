@@ -146,7 +146,7 @@ review) are **not scheduled**. They come after M5 at the earliest and need a fou
 023 starts with a large-deck benchmark, and that result decides whether the renderer work is
 done at all. The measurement plan is in `docs/performance.md`.
 
-**025** format-compatibility (ADR 0018, proposed) should land before the first public release,
+**025** format-compatibility (ADR 0020, proposed) should land before the first public release,
 ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
 and **027** ai-deck-skill are not scheduled.
 
@@ -179,7 +179,7 @@ and **027** ai-deck-skill are not scheduled.
 | 022 | connector-style          | after M4   | 017, 020      | 5 d  | needs design (Miro-like line popover); schema change      |
 | 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design |
 | 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR      |
-| 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0018; banner copy; schema change             |
+| 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0020; banner copy; schema change             |
 | 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
 | 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
 
@@ -1801,7 +1801,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 025-format-compatibility
 
-- **Added:** 2026-09-30, architecture review. Implements ADR 0018 once the founder accepts it.
+- **Added:** 2026-09-30, architecture review. Implements ADR 0020 once the founder accepts it.
 - **Milestone:** before the first public release (ideally before 022 ships more optional fields;
   017 and 020 already have) · **Depends on:** 005 (library, deck channel) · **Estimate:** 2 d
 - **Goal:** A deck written by a newer Sododeck never breaks an older one: an older tab, a

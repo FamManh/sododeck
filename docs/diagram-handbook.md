@@ -80,7 +80,7 @@ Sododeck hiện dùng:
 | Layout      | ELK trong Web Worker, có pin vị trí              | ADR 0012                   |
 | Vẽ          | React Flow (DOM + SVG); export vẽ từ scene riêng | ADR 0006, 0016             |
 | Lưu trữ     | Dexie/IndexedDB, update log, sync nhiều tab      | ADR 0007                   |
-| File format | JSON + JSON Schema v1, Zod sinh tự động          | ADR 0002, 0004, 0018       |
+| File format | JSON + JSON Schema v1, Zod sinh tự động          | ADR 0002, 0004, 0020       |
 
 ---
 
@@ -252,9 +252,9 @@ có) chỉ để đồng bộ. Ưu điểm: nhanh, chạy offline, riêng tư. �
 | Khái niệm                     | Nghĩa                                                                  | Sododeck                         |
 | ----------------------------- | ---------------------------------------------------------------------- | -------------------------------- |
 | **JSON Schema**               | Hợp đồng mô tả file hợp lệ; sinh được type và validator                | `packages/schema/schema/v1.json` |
-| **Versioning**                | `version` (major, thay đổi phá vỡ) và `revision` (thêm field tuỳ chọn) | ADR 0002, 0018                   |
+| **Versioning**                | `version` (major, thay đổi phá vỡ) và `revision` (thêm field tuỳ chọn) | ADR 0002, 0020                   |
 | **Migration**                 | Code chuyển file cũ sang định dạng mới                                 | `packages/model`                 |
-| **Forward / backward compat** | Bản cũ đọc file mới / bản mới đọc file cũ                              | ADR 0018                         |
+| **Forward / backward compat** | Bản cũ đọc file mới / bản mới đọc file cũ                              | ADR 0020                         |
 | **Round-trip lossless**       | Import rồi export ra đúng file ban đầu                                 | Có test                          |
 | **Diagram-as-code**           | Viết diagram bằng văn bản: Mermaid, PlantUML, D2, Structurizr DSL      | Backlog 026                      |
 | **Export**                    | Ảnh (PNG raster, SVG vector), PDF, hoặc sang định dạng tool khác       | ADR 0016                         |
@@ -314,7 +314,7 @@ Xếp từ khó đảo ngược nhất. "Xem lại khi" là tín hiệu nên m�
 | Quyết định                           | Vì sao khó đảo ngược                                 | Sododeck hiện tại                           | Xem lại khi                                                 |
 | ------------------------------------ | ---------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------- |
 | Lưu ý nghĩa hay lưu hình vẽ          | Quyết định mọi tính năng về sau                      | Ý nghĩa (graph model)                       | Không nên đổi                                               |
-| File format và cách versioning       | File đã nằm trên máy người dùng, trong git, trong AI | JSON Schema v1, strict, revision (ADR 0018) | Trước mỗi thay đổi schema                                   |
+| File format và cách versioning       | File đã nằm trên máy người dùng, trong git, trong AI | JSON Schema v1, strict, revision (ADR 0020) | Trước mỗi thay đổi schema                                   |
 | Nguồn sự thật và mô hình đồng bộ     | Đổi sau thì phải viết lại lưu trữ và mọi view        | Yjs (CRDT), local-first                     | Khi làm cộng tác qua server                                 |
 | Id và tham chiếu                     | Id sai thì dữ liệu cũ gãy                            | Id ổn định, không suy từ tên                | Không nên đổi                                               |
 | Miền nghiệp vụ (kind cố định hay mở) | Enum cố định đi vào schema, icon, rules, views       | 6 kind cố định                              | Trước khi có nhiều người dùng ngoài kiến trúc (backlog 024) |
@@ -376,7 +376,7 @@ Xếp từ khó đảo ngược nhất. "Xem lại khi" là tín hiệu nên m�
 
 Mỗi bước khoảng một buổi. Đọc theo thứ tự, vì bước sau dựa trên bước trước.
 
-1. **Kiến trúc của chính Sododeck.** Đọc `AGENTS.md`, rồi ADR 0005, 0006, 0011, 0016, 0018. Mục
+1. **Kiến trúc của chính Sododeck.** Đọc `AGENTS.md`, rồi ADR 0005, 0006, 0011, 0016, 0020. Mục
    tiêu: tự vẽ lại sơ đồ ở mục 0 mà không cần nhìn.
 2. **C4 model.** Trang chính thức c4model.com. Mục tiêu: hiểu vì sao Sododeck có 4 level và
    chúng khác gì so với "zoom to nhỏ".

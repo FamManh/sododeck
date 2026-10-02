@@ -1,4 +1,4 @@
-# 0018. File format compatibility: a format revision and a read-only guard
+# 0020. File format compatibility: a format revision and a read-only guard
 
 - **Status:** Proposed (needs founder acceptance; implemented by backlog 025)
 - **Date:** 2026-09-30
