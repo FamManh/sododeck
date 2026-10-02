@@ -22,7 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { cardBox, groupBounds, CARD_SIZE_LIMITS } from './canvas-geometry';
+import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -182,6 +182,18 @@ function useSelectionSync(): void {
   );
 }
 
+/** The rendered card nearest the middle of the canvas, by its on-screen box. */
+function nearestVisibleCard(root: HTMLElement): string | null {
+  const box = root.getBoundingClientRect();
+  const cards = [...root.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')].flatMap(
+    (element) => {
+      const id = element.dataset.nodeId;
+      return id === undefined ? [] : [{ id, rect: element.getBoundingClientRect() }];
+    },
+  );
+  return nearestToCentre(cards, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
+}
+
 /**
  * Roving focus (research R3): the canvas is one Tab stop. Keyboard focus follows `focusedId`
  * while focus is inside the canvas, and the focused node is panned into view.
@@ -273,6 +285,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const { setCenter, setViewport, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
   const wrapper = useRef<HTMLDivElement>(null);
+  // Set by a pointer press: focus that lands on the wrapper from a click must not move focus to a
+  // card (and pan to it); only Tab into the canvas does.
+  const pointerFocus = useRef(false);
   const previousDrill = useRef(drill);
   const announcedZoomLevel = useRef<Level | null>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
@@ -578,19 +593,28 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       {...(focus !== null ? { 'data-focus-mode': '' } : {})}
       {...(session !== null ? { 'data-flow-session': '' } : {})}
       {...(hideUi ? { 'data-hide-ui': '' } : {})}
+      {...(hand ? { 'data-tool-hand': '' } : {})}
       {...(dragging ? { 'data-dragging': '' } : {})}
       {...(tinyCards ? { 'data-tiny-cards': '' } : {})}
       data-level={level}
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
+      onPointerDownCapture={() => {
+        pointerFocus.current = true;
+        setTimeout(() => {
+          pointerFocus.current = false;
+        }, 0);
+      }}
       onFocus={(event) => {
-        if (event.target !== event.currentTarget) return;
+        if (event.target !== event.currentTarget || pointerFocus.current) return;
         const ui = useUiStore.getState();
         // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
         if (ui.flowSession !== null) return;
-        const first = ui.selection.nodes[0] ?? deck.nodes[0]?.id;
-        if (first === undefined) return;
+        // The selection, else the card nearest the middle of the view: never the deck's first
+        // card, which may be far away and would pan the canvas there.
+        const first = ui.selection.nodes[0] ?? nearestVisibleCard(event.currentTarget);
+        if (first === null) return;
         ui.focus(first);
         // Moving focus inside a focus event is fragile; hand it over once this event is done.
         setTimeout(() => {
@@ -645,8 +669,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         // Recording pauses structure editing (006 FR-017). Flow mode is view-only too, but through
         // the handlers and CSS: toggling these props re-renders every node and edge, which costs
         // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
-        // Hand pans even over a card (§g-57); switching tools is rare, so the re-render is fine.
-        nodesDraggable={!recording && !hand}
+        nodesDraggable={!recording}
         nodesConnectable={!recording}
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
         connectionMode={ConnectionMode.Loose}

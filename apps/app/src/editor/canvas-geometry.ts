@@ -168,6 +168,31 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
 /**
+ * The card whose on-screen centre is nearest `centre` (Tab into the canvas lands on what is in
+ * view, never on a card far away that would pan the canvas). `null` with no cards.
+ */
+export function nearestToCentre(
+  cards: readonly {
+    id: string;
+    rect: { left: number; top: number; width: number; height: number };
+  }[],
+  centre: { x: number; y: number },
+): string | null {
+  let best: string | null = null;
+  let bestDistance = Infinity;
+  for (const { id, rect } of cards) {
+    const dx = rect.left + rect.width / 2 - centre.x;
+    const dy = rect.top + rect.height / 2 - centre.y;
+    const distance = dx * dx + dy * dy;
+    if (distance < bestDistance) {
+      best = id;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+/**
  * The nearest point within ±45° of `dir` from `fromId` (arrow-key navigation), ties broken by
  * the smaller id. `null` when there is none.
  */

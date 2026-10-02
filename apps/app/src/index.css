@@ -96,6 +96,21 @@
   opacity: 0.2;
 }
 
+/* Hand tool (§g-57): cards, notes and connectors let the pointer through, so a drag over them
+   pans too. CSS, not `nodesDraggable`: toggling that prop re-renders every card. */
+[data-tool-hand] .react-flow__node,
+[data-tool-hand] .react-flow__edge,
+[data-tool-hand] .react-flow__handle,
+[data-tool-hand] .react-flow__edge-path,
+[data-tool-hand] .react-flow__edge-interaction,
+[data-tool-hand] .react-flow__edgeupdater,
+[data-tool-hand] .sd-segment-handle,
+[data-tool-hand] .sd-resize-handle {
+  /* React Flow sets pointer-events inline on each node, and on these parts in its CSS. Named
+     classes only: a universal descendant selector slows every style recalc. */
+  pointer-events: none !important;
+}
+
 /* Select tool (§g-57): an arrow, not React Flow's pointer, while a drag draws a marquee. */
 .react-flow__pane.selection {
   cursor: default;

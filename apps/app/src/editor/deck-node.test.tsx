@@ -1,5 +1,6 @@
 import { act, screen, within } from '@testing-library/react';
 import type { NodeProps } from '@xyflow/react';
+import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
@@ -53,6 +54,27 @@ describe('DeckNode', () => {
   beforeEach(() => {
     connection.role = null;
     connection.connecting = false;
+  });
+
+  it('does not re-render while the canvas pans or zooms (2026-10-02 perf)', () => {
+    const onRender = vi.fn();
+    renderWithEditor(
+      <Profiler id="card" onRender={onRender}>
+        <DeckNode {...props()} />
+      </Profiler>,
+      deck,
+    );
+    onRender.mockClear();
+    act(() => {
+      useUiStore.getState().setCanvasGesture('pan');
+    });
+    act(() => {
+      useUiStore.getState().setCanvasGesture('drag');
+    });
+    act(() => {
+      useUiStore.getState().setCanvasGesture(null);
+    });
+    expect(onRender).not.toHaveBeenCalled();
   });
 
   it('shows a problem glyph and says the count in its name (015 FR-022, FR-025)', () => {

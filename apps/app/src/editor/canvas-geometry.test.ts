@@ -13,6 +13,7 @@ import {
   groupBounds,
   nearestInDirection,
   NODE_SIZE,
+  nearestToCentre,
   nodeSize,
   rectInView,
   selectionFrame,
@@ -203,6 +204,26 @@ describe('nodeSize', () => {
     expect(nodeSize('container')).toEqual(NODE_SIZE);
     expect(nodeSize('component')).toEqual(NODE_SIZE);
     expect(COLLAPSED_CARD_SIZE).toEqual({ width: 180, height: 64 });
+  });
+});
+
+describe('nearestToCentre', () => {
+  const rect = (x: number, y: number) => ({ left: x, top: y, width: 10, height: 10 });
+
+  it('picks the card whose centre is nearest the viewport centre', () => {
+    expect(
+      nearestToCentre(
+        [
+          { id: 'far', rect: rect(0, 0) },
+          { id: 'mid', rect: rect(95, 95) },
+        ],
+        { x: 100, y: 100 },
+      ),
+    ).toBe('mid');
+  });
+
+  it('is null with no cards', () => {
+    expect(nearestToCentre([], { x: 0, y: 0 })).toBeNull();
   });
 });
 

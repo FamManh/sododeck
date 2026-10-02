@@ -88,9 +88,11 @@ export const DeckNode = memo(function DeckNode({
   const role = useConnectionRole(id);
   // Reconnect drag (017 R12): while dragging an endpoint, this card's four side targets show as
   // rings when the pointer is over it, with the nearest side "hot" (filled and larger).
-  const canvasGesture = useUiStore((s) => s.canvasGesture);
-  const endpointHover = useUiStore((s) => s.endpointHover);
-  const isEndpointTarget = canvasGesture === 'endpoint' && endpointHover?.nodeId === id;
+  // A primitive per card: selecting the whole gesture re-rendered every card on each pan / zoom.
+  const hotSide = useUiStore((s) =>
+    s.canvasGesture === 'endpoint' && s.endpointHover?.nodeId === id ? s.endpointHover.side : null,
+  );
+  const isEndpointTarget = hotSide !== null;
   const { getZoom } = useReactFlow();
   const resize = useRef<CardResizeSession | null>(null);
   const [activeHandle, setActiveHandle] = useState<ResizeHandleName | null>(null);
@@ -312,7 +314,7 @@ export const DeckNode = memo(function DeckNode({
           />
         ))}
       {SIDES.map(({ id: side, position }) => {
-        const hot = isEndpointTarget && endpointHover.side === side;
+        const hot = hotSide === side;
         return (
           <Handle
             key={side}
