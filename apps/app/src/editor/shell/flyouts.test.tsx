@@ -175,7 +175,6 @@ describe('Rail tools (018 R8)', () => {
     const { user } = setup();
     for (const name of [
       'Select',
-      'Hand',
       'Add component',
       'Sticky note',
       'Group',
@@ -212,6 +211,20 @@ describe('Rail tools (018 R8)', () => {
     const { user } = setup();
     await user.hover(railButton('Connector'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent('ConnectorL');
+  });
+
+  it('toggles Select and Hand from one rail button (§g-57)', async () => {
+    const { user } = setup();
+    expect(within(rail()).queryByRole('button', { name: 'Hand' })).not.toBeInTheDocument();
+    await user.click(railButton('Select'));
+    expect(ui().tool).toBe('hand');
+    expect(railButton('Hand')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(railButton('Hand'));
+    expect(ui().tool).toBe('select');
+    await user.click(railButton('Sticky note'));
+    expect(railButton('Select')).toHaveAttribute('aria-pressed', 'false');
+    await user.click(railButton('Select'));
+    expect(ui().tool).toBe('select');
   });
 
   it('sets tools with V, H, S and L, and Esc goes back to Select', async () => {

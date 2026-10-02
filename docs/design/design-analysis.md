@@ -1043,4 +1043,5 @@ changes them before the owning feature is specified.
     safety net. Flows, features, branches and rules are off-canvas and still ask first.
 57. **Select and Hand tools** (reverses §g-36). Select (V) is the default: an arrow cursor, and a
     drag on empty canvas draws a selection marquee. Hand (H) pans with a drag (grab cursor).
-    Space+drag, the middle mouse button and two-finger scroll still pan while Select is active.
+    Space+drag and the middle mouse button still pan while Select is active. Select and Hand
+    share one rail button that shows the current mode; a click switches (founder, 2026-10-02).
