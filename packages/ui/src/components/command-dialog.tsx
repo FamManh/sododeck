@@ -2,7 +2,6 @@ import { Search } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
-import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 
@@ -120,7 +119,9 @@ export function CommandDialog({
         <DialogHeader>
           <DialogTitle>Jump to</DialogTitle>
         </DialogHeader>
-        <div className="flex items-center gap-2 rounded-card border border-border bg-surface-2 px-3">
+        {/* The field's own border turns orange on focus, like `Input` (DESIGN.md text-input): the
+            dialog opens with focus here, so a ring around the bare input looked misplaced. */}
+        <div className="flex items-center gap-2 rounded-card border border-border bg-surface-2 px-3 transition-colors focus-within:border-primary">
           <Search
             aria-hidden
             strokeWidth={ICON_STROKE_WIDTH}
@@ -172,10 +173,7 @@ export function CommandDialog({
                 onOpenChange(false);
               }
             }}
-            className={cn(
-              'h-11 w-full bg-transparent text-body text-ink outline-none placeholder:text-ink-muted',
-              focusRing,
-            )}
+            className="h-11 w-full bg-transparent text-body text-ink outline-none placeholder:text-ink-muted"
           />
           <kbd aria-hidden className="text-caption text-ink-muted">
             esc
