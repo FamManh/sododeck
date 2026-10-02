@@ -26,6 +26,19 @@ describe('token parity', () => {
     expect(missing).toEqual([]);
   });
 
+  it('emits every named card colour, which the app only names at runtime (020)', () => {
+    // `var(--color-card-${name}-${channel})` is invisible to Tailwind: without `static` the
+    // unused names are dropped and the picker swatches and card strokes render empty.
+    const start = themeCss.indexOf('@theme inline static {');
+    expect(start).toBeGreaterThan(-1);
+    const block = themeCss.slice(start, themeCss.indexOf('\n}', start));
+    const outside = themeCss.slice(0, start) + themeCss.slice(start + block.length);
+    expect(outside).not.toMatch(/--color-card-(\w+-(fill|stroke)|text-)/);
+    for (const [, name] of tokensCss.matchAll(/--sd-(card-[\w-]+):/g)) {
+      expect(block).toContain(`--color-${name ?? ''}: var(--sd-${name ?? ''});`);
+    }
+  });
+
   it('defines the inline-edit selection colour in both themes (019)', () => {
     expect(names(':root').has('--sd-selection-text')).toBe(true);
     expect(names('.dark').has('--sd-selection-text')).toBe(true);
