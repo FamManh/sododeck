@@ -81,6 +81,11 @@ flowchart LR
   F020[020 card-style]
   F021[021 design-sync-canvas-first]
   F022[022 connector-style]
+  F023[023 hybrid-canvas-renderer]
+  F024[024 domain-kind-packs]
+  F025[025 format-compatibility]
+  F026[026 diagram-as-code]
+  F027[027 ai-deck-skill]
 
   F001 --> F002 --> F003
   F000 --> F003
@@ -102,6 +107,16 @@ flowchart LR
   F019 --> F020
   F017 --> F022
   F020 --> F022
+  F012 -.-> F023
+  F010 -.-> F023
+  F020 -.-> F024
+  F005 --> F025
+  F004 --> F026
+  F018 --> F026
+  F025 --> F026
+  F025 --> F027
+  F024 -.-> F027
+  F026 -.-> F027
 ```
 
 ## Critical path
@@ -126,33 +141,47 @@ UI and card rendering.
 **022** connector-style (added 2026-09-29) comes after 017 and 020; its place relative to 012 / 013
 is the founder's call.
 
+**023** hybrid-canvas-renderer and **024** domain-kind-packs (added 2026-09-30, architecture
+review) are **not scheduled**. They come after M5 at the earliest and need a founder go-ahead.
+023 starts with a large-deck benchmark, and that result decides whether the renderer work is
+done at all. The measurement plan is in `docs/performance.md`.
+
+**025** format-compatibility (ADR 0018, proposed) should land before the first public release,
+ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
+and **027** ai-deck-skill are not scheduled.
+
 ## Feature list
 
-| ID  | Name                     | Milestone | Depends on | Est. | Needs design?                                             |
-| --- | ------------------------ | --------- | ---------- | ---- | --------------------------------------------------------- |
-| 000 | design-foundation        | M1        | —          | 4 d  | —                                                         |
-| 001 | json-schema-v1           | M1        | —          | 3 d  | ⚠ decision (§g-4)                                         |
-| 002 | yjs-model                | M1        | 001        | 4 d  | —                                                         |
-| 003 | canvas-basic             | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                      |
-| 004 | json-panel-sync          | M1        | 003        | 2 d  | decided (§g-3): read-only                                 |
-| 005 | local-library-autosave   | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35                     |
-| 006 | flow-authoring           | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                                 |
-| 007 | flow-playback            | M2        | 006        | 4 d  | — (branch picker in 46)                                   |
-| 008 | inspector-rules          | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                      |
-| 015 | model-validation         | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                                    |
-| 009 | stickies-search          | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                                |
-| 010 | zoom-groups-focus        | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                                 |
-| 011 | views-autolayout         | M4        | 010        | 5 d  | custom view config, layout button (default ok)            |
-| 012 | export                   | M5        | 007, 011   | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                   |
-| 013 | samples-onboarding       | M5        | 005, 009   | 3 d  | —                                                         |
-| 014 | analytics-feedback       | M5        | 005        | 2 d  | feedback button (small)                                   |
-| 021 | design-sync-canvas-first | after M4  | 011        | 1 d  | docs only; designed (86–116)                              |
-| 018 | canvas-first-layout      | after M4  | 021        | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                |
-| 019 | card-quick-edit          | after M4  | 018        | 3 d  | designed (95–104)                                         |
-| 016 | canvas-editing           | after M4  | 019        | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
-| 017 | resize-edge-routing      | after M4  | 003 (016)  | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
-| 020 | card-style               | after M4  | 019        | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
-| 022 | connector-style          | after M4  | 017, 020   | 5 d  | needs design (Miro-like line popover); schema change      |
+| ID  | Name                     | Milestone  | Depends on    | Est. | Needs design?                                             |
+| --- | ------------------------ | ---------- | ------------- | ---- | --------------------------------------------------------- |
+| 000 | design-foundation        | M1         | —             | 4 d  | —                                                         |
+| 001 | json-schema-v1           | M1         | —             | 3 d  | ⚠ decision (§g-4)                                         |
+| 002 | yjs-model                | M1         | 001           | 4 d  | —                                                         |
+| 003 | canvas-basic             | M1         | 000, 002      | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                      |
+| 004 | json-panel-sync          | M1         | 003           | 2 d  | decided (§g-3): read-only                                 |
+| 005 | local-library-autosave   | M1         | 000, 002      | 4 d  | designed (72–85); decided §g-33–§g-35                     |
+| 006 | flow-authoring           | M2         | 003           | 5 d  | designed (41–48); ⚠ §g-18                                 |
+| 007 | flow-playback            | M2         | 006           | 4 d  | — (branch picker in 46)                                   |
+| 008 | inspector-rules          | M3         | 006           | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                      |
+| 015 | model-validation         | M3         | 006           | 2 d  | designed (60); ⚠ §g-23                                    |
+| 009 | stickies-search          | M3         | 008           | 4 d  | designed (62, 63); ⚠ §g-21                                |
+| 010 | zoom-groups-focus        | M4         | 003           | 5 d  | designed (64–71); ⚠ §g-22                                 |
+| 011 | views-autolayout         | M4         | 010           | 5 d  | custom view config, layout button (default ok)            |
+| 012 | export                   | M5         | 007, 011      | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                   |
+| 013 | samples-onboarding       | M5         | 005, 009      | 3 d  | —                                                         |
+| 014 | analytics-feedback       | M5         | 005           | 2 d  | feedback button (small)                                   |
+| 021 | design-sync-canvas-first | after M4   | 011           | 1 d  | docs only; designed (86–116)                              |
+| 018 | canvas-first-layout      | after M4   | 021           | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                |
+| 019 | card-quick-edit          | after M4   | 018           | 3 d  | designed (95–104)                                         |
+| 016 | canvas-editing           | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
+| 017 | resize-edge-routing      | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
+| 020 | card-style               | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
+| 022 | connector-style          | after M4   | 017, 020      | 5 d  | needs design (Miro-like line popover); schema change      |
+| 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design |
+| 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR      |
+| 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0018; banner copy; schema change             |
+| 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
+| 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1662,6 +1691,218 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Risks:** waypoints vs 017's offset (one route model, not two); curves and labels in export
   (012); animation cost on large decks (CSS-only, paused off-screen); colour on connectors must
   not be the only cue for flow, error or selection states (constitution VII).
+
+## 023-hybrid-canvas-renderer
+
+- **Added:** 2026-09-30, architecture review ("the app feels boxed in for dense graphs such as
+  logistics networks"). Not scheduled; needs a founder go-ahead.
+- **Milestone:** later (after M5) · **Depends on:** 010 (levels, visible graph), 012 (export
+  scene) · **Estimate:** 8 d (split at `/speckit.specify`: gate + culling, then far-zoom layer,
+  then bundling)
+- **Goal:** Decks with thousands of components and connections stay smooth to pan, zoom and
+  read, without changing how anyone edits a diagram.
+- **Why hybrid, not a rewrite:** ADR 0006 / 0011 already make the canvas a pure view
+  (Yjs → snapshot → `visibleGraph` → `deck-to-flow` → React Flow), and ADR 0016's
+  `editor/export/scene.ts` already turns a deck into positioned shapes without React Flow. A
+  second, non-interactive layer can draw from that scene. React Flow keeps every interaction
+  (drag, connect, marquee, snapping, frames, roving tabindex, quick edit, popovers), so model,
+  schema, storage, flows, rules, JSON panel and inspector do not change.
+- **In scope:**
+  - **Step 0 (gate):** the plan in `docs/performance.md` (fix today's misses, measure load,
+    snapshot, derivation, autosave and memory at 2,000 / 5,000 / 10,000 nodes, bench budget in
+    CI). If React Flow with culling meets the targets at the sizes users need, stop here and
+    record that in the ADR.
+  - **Viewport culling off the main thread:** a spatial index (R-tree) over the derived scene,
+    built and queried in a worker, feeding `visibleGraph` the ids inside the viewport plus a
+    margin. It is also used for hit-testing the far-zoom layer.
+  - **Far-zoom layer:** at `landscape` / `system` levels (or above a node-count threshold),
+    draw components and connections as Canvas 2D shapes from the export scene; nothing is
+    mounted in React Flow. Zooming in or selecting hands over to the DOM layer at the same
+    positions, with no visible jump. WebGL only if Canvas 2D is measured too slow.
+  - **Accessibility:** the far-zoom layer is `aria-hidden`; the canvas keeps one Tab stop and
+    the roving focus moves over the same ids, and focusing a component zooms to the DOM layer
+    (constitution VII).
+  - **Edge bundling (last, optional):** a pure bundling pass in a worker for plain edges at far
+    zoom. Merged edges of collapsed groups (010) stay as they are. Off in flow mode.
+- **Out of scope:** replacing React Flow for editing; WebGL text; changing the file format;
+  new semantic zoom levels (024 may make them configurable).
+- **Acceptance criteria (draft):**
+  - Given the bench deck at the size agreed in step 0, When panning and zooming at fit, Then
+    ≥ 60 fps and p95 frame ≤ 16.7 ms.
+  - Given 500 / 1,000, When a flow is selected, Then its marks are painted in < 100 ms.
+  - Given the far-zoom layer is shown, When the user zooms into a component, Then the DOM card
+    appears at the same place and the JSON panel and export are byte-identical before and after.
+  - Given keyboard focus on the canvas at far zoom, When the user presses an arrow key, Then
+    focus moves to the nearest component and it is announced as today.
+  - Given the smoke suite, When run against the production build, Then it passes and no
+    third-party request is made.
+- **Risks:** two drawings of the same card drifting apart (one scene, one palette, a visual test
+  against export); hand-over jank between layers; new runtime dependency for the R-tree
+  (`rbush` or similar, needs approval, or a small in-repo index); worker transfer cost on every
+  drag (index updates must be incremental).
+- **`/speckit.plan` hint:**
+  > apps/app: bench generator sizes + report rows; `editor/scene-index` worker (build, update,
+  > query); `Canvas` gets a far-zoom `<canvas>` under React Flow drawn from `export/scene.ts`
+  > and `export-palette.ts` (dark palette needed); level selector decides which layer is live.
+  > ADR "hybrid canvas renderer". Run `pnpm bench` before and after every step.
+
+## 024-domain-kind-packs
+
+- **Added:** 2026-09-30, architecture review. Not scheduled; needs a founder decision on open
+  kinds before `/speckit.specify`.
+- **Milestone:** later (after M5) · **Depends on:** 001 (schema), soft: 020 (colour tokens,
+  swatches) · **Estimate:** 6 d
+- **Goal:** Model systems other than software architecture (logistics networks, business
+  processes, org and data flows) with their own component kinds, icons and zoom levels, while
+  every existing deck opens and behaves exactly as today.
+- **Today:** `NodeKind` is a closed enum (`client`, `gateway`, `service`, `queue`, `database`,
+  `external`) and `Level` is C4-shaped (`landscape` → `component`). Kinds are hard-coded in
+  `packages/ui/src/lib/icons.ts`, `editor/palette-order.ts`, `editor/export/icon-paths.ts`,
+  `export-palette.ts`, views (`hiddenKinds` / `dimmedKinds`), the library thumbnail and the
+  connection rules.
+- **In scope:**
+  - **Kind pack:** a named set of kind definitions (id, label, icon from `lucide-react`, default
+    colour token, allowed connections) plus the level names for semantic zoom. The built-in
+    "Software architecture" pack is today's six kinds and four levels, byte for byte.
+  - **Deck-level choice:** a deck uses one pack (default: software architecture). A few more
+    built-in packs (e.g. logistics: hub, warehouse, carrier, route point, customer, supplier;
+    business process: actor, activity, decision, document, system).
+  - **Custom kinds in the deck:** the deck file can define extra kinds (id, label, icon key,
+    colour); the palette, views, inspector, export and thumbnails read kinds from one registry
+    instead of the enum.
+  - **Migration:** decks without the new fields are software-architecture decks; no rewrite on
+    open.
+- **Out of scope:** user-defined typed attributes (see "Later" below); a pack marketplace or
+  sharing packs between decks; per-pack validation rules beyond allowed connections.
+- **Schema (decision needed, ADR):** option A, additive in v1: keep `kind` as the enum and add
+  optional `node.type` referring to a top-level `kinds` array (`kind` stays the fallback for
+  older builds). Option B, v2: `kind` becomes a string resolved against the pack, with a v1 → v2
+  migration in `@sododeck/model`. A is safer for existing files; B is cleaner long term. Either
+  way: Ajv/Zod parity, round-trip cases, and stable kind ids (renaming a kind label never breaks
+  references, constitution III).
+- **Acceptance criteria (draft):**
+  - Given a deck saved before 024, When opened, edited and exported, Then its JSON has no new
+    fields and every card looks as before.
+  - Given a new deck with the logistics pack, When the user opens the add palette, Then it lists
+    the pack's kinds with their icons, and the semantic zoom levels use the pack's names.
+  - Given a custom kind "Cold storage" added to the deck, When it is renamed "Cold room", Then
+    every card of that kind keeps it and the JSON shows the same kind id.
+  - Given a view that hides a custom kind, When the view is applied, Then those cards are hidden
+    as with built-in kinds.
+- **Risks:** file-format change (older builds reject unknown kinds under option B); every
+  hard-coded kind lookup must move to the registry (easy to miss one, so add a test that no app
+  code imports the enum values directly); icons must stay bundled (constitution IV);
+  "allowed connections" may overlap with 015's problems.
+- **`/speckit.plan` hint:**
+  > packages/schema: kinds / pack fields, `pnpm schema:generate`, parity test; packages/model:
+  > round-trip + migration cases; packages/ui: icon registry keyed by icon id, not kind;
+  > apps/app: `kind-registry.ts` (pure) used by palette, views, inspector, export, thumbnail,
+  > connection rules. ADR "domain kind packs".
+
+## 025-format-compatibility
+
+- **Added:** 2026-09-30, architecture review. Implements ADR 0018 once the founder accepts it.
+- **Milestone:** before the first public release (ideally before 022 ships more optional fields;
+  017 and 020 already have) · **Depends on:** 005 (library, deck channel) · **Estimate:** 2 d
+- **Goal:** A deck written by a newer Sododeck never breaks an older one: an older tab, a
+  rolled-back deploy or an older import opens it read-only with a clear "Reload to edit" banner,
+  instead of rejecting edits with no explanation.
+- **Spec IDs:** G-3 (import/export); **schema change** (optional root `revision`).
+- **In scope:** `FORMAT_REVISION` in `@sododeck/schema` plus a hash test on `v1.json`; optional
+  root `revision` written on export; `formatRevision` on the Dexie deck record, raised on flush;
+  `hello` on the deck channel carries the revision; read-only editor mode + banner (canvas, JSON
+  panel, playback and export still work); import of a newer-revision file stores it unchanged and
+  opens it read-only; model test that ops keep unknown keys.
+- **Out of scope:** tolerant schema, per-field feature flags, migrations (ADR 0002 §6 covers
+  breaking changes).
+- **Acceptance criteria (draft):**
+  - Given a file with `"revision"` higher than the app's, When it is imported, Then it is stored,
+    opens read-only with the banner, and exporting it gives the same file.
+  - Given two tabs on the same deck where one has a newer build, When the older tab receives the
+    `hello`, Then it goes read-only with the banner and Reload brings it to the new build.
+  - Given a deck without `revision`, When it is opened, edited and exported, Then the JSON panel
+    never shows `revision` and the export carries the app's revision.
+  - Given a change to `v1.json` without a `FORMAT_REVISION` bump, When CI runs, Then a test fails.
+- **Risks:** the read-only mode must cover every write path (canvas, quick edit, drawer,
+  shortcuts, paste, layout); do it with one flag checked in `DeckEditor`, not per surface.
+
+## 026-diagram-as-code
+
+- **Added:** 2026-09-30, architecture review. Picks up the deferred part of 004 (`TODO(C-5)`,
+  §g-3, §g-42).
+- **Milestone:** later (after M5) · **Depends on:** 004, 018 (JSON overlay), 025 · **Estimate:**
+  8 d (split at `/speckit.specify`: editable JSON, then importers)
+- **Goal:** The deck is data that people and tools can write, not only draw. Developers edit the
+  JSON directly and bring existing diagrams in, so a new user starts from their real system
+  instead of an empty canvas.
+- **Spec IDs:** C-5 (two-way sync), G-3 (import).
+- **In scope:**
+  - **Editable JSON panel:** Monaco with the bundled schema (autocomplete, inline errors, no
+    schema request); edits apply to Yjs on a valid parse as one undo step through
+    `@sododeck/model` (the only JSON → Yjs path, constitution I–II); invalid JSON never touches
+    the document; selection tab edits one object, deck tab edits all.
+  - **Paste a deck:** pasting a whole `.sododeck.json` on the canvas or library imports it.
+  - **Importers (run in a worker):** Mermaid `flowchart` (nodes, edges, subgraphs → groups),
+    Structurizr DSL (people, systems, containers, components → kinds and levels), OpenAPI (one
+    service, its endpoints as notes or features). Each maps to the schema, gives stable ids from
+    the source ids, and lays out nodes without positions with the ELK worker.
+  - An import report: what was mapped, what was skipped and why.
+- **Out of scope:** export to those formats (Mermaid export is already in M5 "later"); live
+  sync with an external file; Terraform / Kubernetes importers (later, if asked).
+- **Acceptance criteria (draft):**
+  - Given the deck tab of the JSON panel, When the user changes a node's `title` and the JSON is
+    valid, Then the card updates, and one ⌘Z restores it in both places.
+  - Given invalid JSON, When the user types, Then the error is shown inline and the canvas does
+    not change.
+  - Given a Mermaid flowchart with 30 nodes and 2 subgraphs, When imported, Then the deck has 30
+    components, 2 groups, the same edges, and a readable automatic layout.
+  - Given an import, When it completes, Then no network request has been made (constitution IV).
+- **Risks:** two-way sync fighting the user's cursor (apply on pause or explicit Apply, decided
+  in the ADR); the importers are new parsers (new dependencies need approval; prefer small
+  in-repo parsers for the subsets we support).
+
+## 027-ai-deck-skill
+
+- **Added:** 2026-09-30, founder request: a skill, like the diagram skills for AI agents, that
+  lets users generate a deck with their own AI and then just import it.
+- **Milestone:** later · **Depends on:** 001 (schema), 025 (revision); soft: 024 (kind packs),
+  026 (paste a deck) · **Estimate:** 3 d
+- **Goal:** Users describe a system (or point their agent at a codebase) and get a valid
+  `.sododeck.json` with components, connections, groups, flows and rules, ready to import. The AI
+  runs on the user's side, so Sododeck still never sends diagram content anywhere
+  (constitution IV).
+- **In scope:**
+  - **A skill package** (`SKILL.md` + references + scripts) for Claude Code / Claude.ai skills
+    and similar agents (Codex, others via a plain `AGENTS.md`-style prompt):
+    - how to model a system as a deck: kinds and levels, groups, flows with steps and branches,
+      decision tables, stickies; stable, readable ids (never from titles, constitution III);
+      when to omit positions so the app lays out;
+    - the bundled `v1.json` and a few example decks (small, logistics once 024 exists);
+    - `validate` script (Node, bundled Ajv or the generated Zod, no network) that checks the file
+      and prints fixable errors, so the agent loops until it is valid;
+    - modes: from a description, from a codebase (read services, queues, databases, calls), from
+      an existing Mermaid / C4 text.
+  - **Generated, not hand-kept:** a build step in this repo writes the skill's schema, examples
+    and `revision` from `packages/schema`, so the skill is never behind the app. Lives in
+    `skills/sododeck-deck/` (or `packages/skill/`), published as a public download or repo
+    while the app stays closed source.
+  - **App side:** import already exists (005). Make sure a deck without positions is laid out on
+    import (check; add if missing) and that the import error lists schema issues with paths, so
+    the user can paste them back to their AI.
+  - **Docs page** on sododeck.com: install the skill, a prompt example, import.
+- **Out of scope:** an AI feature inside the app or any hosted AI (would send content, and needs
+  its own decision); an MCP server (later, next to the CLI).
+- **Acceptance criteria (draft):**
+  - Given the skill and the prompt "an e-commerce checkout with web, API gateway, order service,
+    payment provider, Kafka and Postgres, plus the checkout flow", When an agent runs it, Then it
+    writes a file that passes `validate` and imports without errors.
+  - Given that file imported, When opened, Then components are laid out automatically and the
+    checkout flow plays step by step.
+  - Given a schema change in this repo, When the skill build runs, Then its bundled schema and
+    `revision` match the app's (test).
+- **Risks:** quality of AI-written decks (examples and the validate loop matter more than prose);
+  skill formats differ per agent (keep the core as plain Markdown + a Node script); publishing the
+  schema publicly (ADR 0002 already plans `https://sododeck.com/schema/v1.json`).
 
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
