@@ -1,7 +1,7 @@
-import { InlineEdit } from '@sododeck/ui/components/inline-edit';
+import { InlineTextarea } from '@sododeck/ui/components/inline-textarea';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore, type TitleEdit } from '../../state/ui-store';
@@ -71,31 +71,46 @@ function useRevealWhileEditing(edit: TitleEdit) {
 
 /**
  * The title of a card or group label while it is edited in place (019 R2, contract "Inline title
- * edit"). The only copy of the text is the input's draft; the document is written once, on commit,
+ * edit"). The only copy of the text is the field's draft; the document is written once, on commit,
  * as one undo step. Enter or a click outside commits, Esc cancels, Tab / ⇧Tab commit and move to
  * the next / previous card, and on a new card ⌘⏎ commits and adds another of the same kind.
+ *
+ * What you edit looks like what is shown (founder, 2026-10-02): a bare textarea with the caller's
+ * type classes, wrapping over the same lines, so starting an edit moves nothing. Titles are one
+ * paragraph: Enter commits and pasted line breaks become spaces.
  */
 export function CardTitleInput({
   edit,
   title,
   className,
+  style,
 }: {
   edit: TitleEdit;
   /** The committed title, from the document. */
   title: string;
+  /** The type classes of the title it replaces. */
   className?: string;
+  /** E.g. a `maxHeight` of the lines the card shows; longer titles scroll. */
+  style?: CSSProperties;
 }) {
   const editor = useEditor();
+  const [draft, setDraft] = useState(edit.isNew ? '' : title);
+  const field = useRef<HTMLTextAreaElement>(null);
   // Set once the edit is committed or cancelled: a later blur (focus moving back to the card or
   // on to the next one) must not write again.
   const done = useRef(false);
   useRevealWhileEditing(edit);
 
-  const commit = (draft: string) => {
+  useEffect(() => {
+    field.current?.focus({ preventScroll: true });
+    field.current?.select();
+  }, []);
+
+  const commit = (value: string) => {
     if (done.current) return;
     done.current = true;
-    if (commitTitle(editor, edit.target, edit.id, draft, title) === 'renamed') {
-      useUiStore.getState().announce(`Renamed to ${draft.trim()}`);
+    if (commitTitle(editor, edit.target, edit.id, value, title) === 'renamed') {
+      useUiStore.getState().announce(`Renamed to ${value.trim()}`);
     }
   };
   const end = () => {
@@ -133,42 +148,41 @@ export function CardTitleInput({
   };
 
   return (
-    <InlineEdit
-      label={edit.target === 'node' ? 'Component title' : 'Group title'}
-      value={title}
-      autoFocus
-      startEmpty={edit.isNew}
+    <InlineTextarea
+      ref={field}
+      aria-label={edit.target === 'node' ? 'Component title' : 'Group title'}
+      value={draft}
       {...(edit.isNew
         ? { placeholder: edit.target === 'group' ? 'Name this group' : 'Name this component' }
         : {})}
-      onCommit={commit}
-      onKeyDown={(event, draft) => {
+      onChange={(event) => {
+        setDraft(event.target.value.replace(/\s*\n\s*/g, ' '));
+      }}
+      onKeyDown={(event) => {
         if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && edit.isNew) {
           event.preventDefault();
           commit(draft);
           addAnother();
-          return true;
+          return;
         }
         if (event.key === 'Enter') {
           event.preventDefault();
           commit(draft);
           backToCard();
-          return true;
+          return;
         }
         if (event.key === 'Escape') {
           event.preventDefault();
           event.stopPropagation();
           done.current = true;
           backToCard();
-          return true;
+          return;
         }
         if (event.key === 'Tab' && edit.target === 'node') {
           event.preventDefault();
           commit(draft);
           if (!moveTo(event.shiftKey ? -1 : 1)) backToCard();
-          return true;
         }
-        return false;
       }}
       onBlur={(event) => {
         commit(event.currentTarget.value);
@@ -181,12 +195,8 @@ export function CardTitleInput({
       onDoubleClick={(event) => {
         event.stopPropagation();
       }}
-      // A quiet field inside the card (design 96–97): the card's own ring marks it, so the
-      // input shows a light fill and the caret instead of a second focus outline.
-      className={cn(
-        'nodrag nopan h-6 w-full rounded-row border-transparent bg-surface-2 px-1 text-body-sm font-medium hover:border-transparent focus:border-transparent focus-visible:outline-none',
-        className,
-      )}
+      className={cn('nodrag nopan nowheel caret-primary', className)}
+      style={style}
     />
   );
 }

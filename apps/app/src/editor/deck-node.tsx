@@ -43,6 +43,9 @@ import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
 
+/** theme.css's --text-body-sm line height, so an edited title shows as many lines as the card. */
+const TITLE_LINE_EM = 1.45;
+
 const SIDES = [
   { id: 'top', position: Position.Top },
   { id: 'right', position: Position.Right },
@@ -107,8 +110,6 @@ export const DeckNode = memo(function DeckNode({
   const titleEdit = useUiStore((s) =>
     s.titleEdit?.target === 'node' && s.titleEdit.id === id ? s.titleEdit : null,
   );
-  const titleInput =
-    titleEdit === null ? null : <CardTitleInput edit={titleEdit} title={data.title} />;
 
   let target: ConnectionCheck | null = null;
   if (role?.startsWith('target:')) {
@@ -160,6 +161,20 @@ export const DeckNode = memo(function DeckNode({
       : customText === 'dark'
         ? 'text-card-text-dark'
         : null;
+  // The title edits in place, in its own type and over the same lines (founder, 2026-10-02).
+  const titleInput =
+    titleEdit === null ? null : (
+      <CardTitleInput
+        edit={titleEdit}
+        title={data.title}
+        className={cn(
+          'break-words text-body-sm font-medium',
+          isLandscape && 'text-center',
+          textRoleClass ?? 'text-ink',
+        )}
+        style={{ maxHeight: `${String(lines.title * TITLE_LINE_EM)}em` }}
+      />
+    );
   const subtitleClass =
     textRoleClass ?? (look?.namedFill === true ? 'text-ink-secondary' : 'text-ink-muted');
   const subtitleDataText = customText ?? (look?.namedFill === true ? 'secondary' : undefined);

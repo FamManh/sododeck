@@ -117,7 +117,11 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
       {titleEdit !== null && (
         // Over the title line; a field can't sit inside the card's button.
         <div className="absolute inset-x-2 top-1/2 -translate-y-full">
-          <CardTitleInput edit={titleEdit} title={data.title} className="bg-surface text-body" />
+          <CardTitleInput
+            edit={titleEdit}
+            title={data.title}
+            className={cn('text-body font-medium', textRoleClass ?? 'text-ink')}
+          />
         </div>
       )}
       {SIDES.map(({ id: side, position }) => (
