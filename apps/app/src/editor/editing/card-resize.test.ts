@@ -49,11 +49,11 @@ describe('card resize (017 R4)', () => {
     const { doc, editor } = setup();
     const session = startCardResize(editor, 'n1', 'top-left', 'component');
     if (session === null) throw new Error('no session');
-    applyCardResize(editor, session, { x: -40, y: -20, width: 204, height: 124 }, noMods, 1);
+    applyCardResize(editor, session, { x: -40, y: -22, width: 204, height: 72 }, noMods, 1);
     endCardResize(editor, session);
     const node = toJSON(doc).nodes.find((n) => n.id === 'n1');
-    expect(node?.position).toEqual({ x: -40, y: -20 });
-    expect(node?.size).toEqual({ width: 204, height: 124 });
+    expect(node?.position).toEqual({ x: -40, y: -22 });
+    expect(node?.size).toEqual({ width: 204, height: 72 });
   });
 
   it('writes the position only to the current view when not the base view', () => {
@@ -61,11 +61,11 @@ describe('card resize (017 R4)', () => {
     useUiStore.setState({ currentViewId: 'v2' });
     const session = startCardResize(editor, 'n1', 'top-left', 'component');
     if (session === null) throw new Error('no session');
-    applyCardResize(editor, session, { x: -40, y: -20, width: 204, height: 124 }, noMods, 1);
+    applyCardResize(editor, session, { x: -40, y: -22, width: 204, height: 72 }, noMods, 1);
     endCardResize(editor, session);
     const after = toJSON(doc);
     expect(after.nodes.find((n) => n.id === 'n1')?.position).toEqual({ x: 0, y: 0 });
-    expect(after.views.find((v) => v.id === 'v2')?.positions?.n1).toEqual({ x: -40, y: -20 });
+    expect(after.views.find((v) => v.id === 'v2')?.positions?.n1).toEqual({ x: -40, y: -22 });
   });
 
   it('restores size and position and writes nothing on cancel', () => {

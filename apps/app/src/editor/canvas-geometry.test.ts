@@ -7,7 +7,6 @@ import {
   cardBox,
   cardSize,
   COLLAPSED_CARD_SIZE,
-  COMPONENT_CARD_SIZE,
   displayPosition,
   freeSpot,
   GROUP_PADDING,
@@ -40,9 +39,11 @@ describe('CARD_SIZE_LIMITS (017 R2)', () => {
 });
 
 describe('cardSize (017 R2/R3)', () => {
-  it('is the level size when the node has no stored size', () => {
-    expect(cardSize({}, 'system')).toEqual(NODE_SIZE);
-    expect(cardSize({}, 'component')).toEqual(COMPONENT_CARD_SIZE);
+  it('keeps one size at every zoom level when the node has no stored size (§g-58)', () => {
+    for (const level of ['landscape', 'system', 'container', 'component'] as const) {
+      expect(cardSize({}, level)).toEqual(NODE_SIZE);
+      expect(nodeSize(level)).toEqual(NODE_SIZE);
+    }
   });
 
   it('is the stored size, unclamped when within the limits', () => {
@@ -65,7 +66,7 @@ describe('cardBox', () => {
     expect(
       cardBox({ position: { x: 10, y: 20 }, size: { width: 244, height: 80 } }, 0, 'system'),
     ).toEqual({ x: 10, y: 20, width: 244, height: 80 });
-    expect(cardBox({}, 0, 'component')).toEqual({ x: 0, y: 0, ...COMPONENT_CARD_SIZE });
+    expect(cardBox({}, 0, 'component')).toEqual({ x: 0, y: 0, ...NODE_SIZE });
   });
 });
 
@@ -108,13 +109,13 @@ describe('groupBounds', () => {
     expect(bounds.has('loop1')).toBe(false);
   });
 
-  it('accepts a taller component-level node size', () => {
+  it('fits the same card size at the component level', () => {
     const bounds = groupBounds(d, 'component');
     expect(bounds.get('inner')).toEqual({
       x: -GROUP_PADDING,
       y: -GROUP_PADDING,
-      width: 200 + COMPONENT_CARD_SIZE.width + 2 * GROUP_PADDING,
-      height: 100 + COMPONENT_CARD_SIZE.height + 2 * GROUP_PADDING,
+      width: 200 + NODE_SIZE.width + 2 * GROUP_PADDING,
+      height: 100 + NODE_SIZE.height + 2 * GROUP_PADDING,
     });
   });
 
@@ -200,7 +201,7 @@ describe('nodeSize', () => {
     expect(nodeSize('landscape')).toEqual(NODE_SIZE);
     expect(nodeSize('system')).toEqual(NODE_SIZE);
     expect(nodeSize('container')).toEqual(NODE_SIZE);
-    expect(nodeSize('component')).toEqual(COMPONENT_CARD_SIZE);
+    expect(nodeSize('component')).toEqual(NODE_SIZE);
     expect(COLLAPSED_CARD_SIZE).toEqual({ width: 180, height: 64 });
   });
 });
@@ -301,7 +302,7 @@ describe('boundsOf / rectInView (007)', () => {
 });
 
 describe('selectionFrame', () => {
-  it('uses the level size when boxing the selection', () => {
+  it('uses the card size when boxing the selection, at any level', () => {
     const d = deck({
       nodes: [
         { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
@@ -311,8 +312,8 @@ describe('selectionFrame', () => {
     expect(selectionFrame(d, ['a', 'b'], 'component')).toEqual({
       x: -8,
       y: -8,
-      width: 200 + COMPONENT_CARD_SIZE.width + 16,
-      height: 100 + COMPONENT_CARD_SIZE.height + 16,
+      width: 200 + NODE_SIZE.width + 16,
+      height: 100 + NODE_SIZE.height + 16,
     });
   });
 

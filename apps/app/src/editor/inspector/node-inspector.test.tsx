@@ -146,13 +146,13 @@ describe('NodeInspector Size fields (017 T049)', () => {
     const width = screen.getByRole('spinbutton', { name: 'Width' });
     const height = screen.getByRole('spinbutton', { name: 'Height' });
     expect(width).toHaveValue(164);
-    expect(height).toHaveValue(104);
+    expect(height).toHaveValue(50);
     const reset = screen.getByRole('button', { name: 'Reset size' });
     expect(reset).toBeDisabled();
 
     await user.clear(width);
     await user.type(width, '300{Enter}');
-    expect(node(doc)?.size).toEqual({ width: 300, height: 104 });
+    expect(node(doc)?.size).toEqual({ width: 300, height: 50 });
     expect(reset).not.toBeDisabled();
 
     await user.clear(height);
@@ -163,7 +163,7 @@ describe('NodeInspector Size fields (017 T049)', () => {
     act(() => {
       editor().undo();
     });
-    expect(node(doc)?.size).toEqual({ width: 300, height: 104 });
+    expect(node(doc)?.size).toEqual({ width: 300, height: 50 });
     act(() => {
       editor().undo();
     });

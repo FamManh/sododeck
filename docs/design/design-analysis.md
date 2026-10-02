@@ -1045,3 +1045,7 @@ changes them before the owning feature is specified.
     drag on empty canvas draws a selection marquee. Hand (H) pans with a drag (grab cursor).
     Space+drag and the middle mouse button still pan while Select is active. Select and Hand
     share one rail button that shows the current mode; a click switches (founder, 2026-10-02).
+58. **Cards keep one size at every zoom level** (changes 67). The Component level no longer
+    grows cards to 164×104 with owner and tag rows; it reads like Container (kind tile, title,
+    subtitle) at 164×50. Landscape and System still hide the tile or text. Owner and tags stay
+    in the details drawer. Tidy and group fitting keep the roomier 104 px layout cell.

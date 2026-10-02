@@ -100,8 +100,8 @@ describe('DeckNode', () => {
     expect(screen.getByText('Go')).toBeInTheDocument();
   });
 
-  it('renders title, tech, owner, tags and the rule glyph at Component level', () => {
-    renderNode(
+  it('reads like Container at Component level, at the same size: no owner or tags (§g-58)', () => {
+    const { container } = renderNode(
       props({
         level: 'component',
         subtitle: 'Go',
@@ -112,9 +112,10 @@ describe('DeckNode', () => {
     );
     expect(screen.getByText('Order Service')).toBeInTheDocument();
     expect(screen.getByText('Go')).toBeInTheDocument();
-    expect(screen.getByText('Team Apollo')).toBeInTheDocument();
-    expect(screen.getByText('critical')).toBeInTheDocument();
+    expect(screen.queryByText('Team Apollo')).not.toBeInTheDocument();
+    expect(screen.queryByText('critical')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="deck-node"]')).toHaveStyle({ height: '50px' });
   });
 
   it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {

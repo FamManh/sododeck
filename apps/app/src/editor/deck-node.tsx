@@ -1,5 +1,4 @@
 import { KindTile } from '@sododeck/ui/components/kind-tile';
-import { TagChip } from '@sododeck/ui/components/tag-chip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -133,13 +132,13 @@ export const DeckNode = memo(function DeckNode({
   const tabIndex = data.focused ? 0 : -1;
   const isLandscape = data.level === 'landscape';
   const isSystem = data.level === 'system';
-  const isContainer = data.level === 'container';
-  const isComponent = data.level === 'component';
+  // Component (zoomed in) reads like Container, at the same size (§g-58).
+  const isContainer = data.level === 'container' || data.level === 'component';
   // Clamp to what the resized card can actually show (017 R11, FR-008); the full title always
   // stays in the `title` attribute above, so a hover still reveals the rest.
   const defaultSize = nodeSize(data.level);
   const box = { width: width ?? defaultSize.width, height: height ?? defaultSize.height };
-  const lines = textLines(box, data.level);
+  const lines = textLines(box);
   const clampStyle = (n: number): CSSProperties => ({
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -208,11 +207,7 @@ export const DeckNode = memo(function DeckNode({
       className={cn(
         // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
         'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
-        isLandscape
-          ? 'flex items-center justify-center'
-          : isComponent
-            ? 'flex flex-col items-start gap-2 px-3 py-2'
-            : 'flex items-center gap-[9px] px-2.5',
+        isLandscape ? 'flex items-center justify-center' : 'flex items-center gap-[9px] px-2.5',
         focusRing,
         // Selected (018, designs 86–116): a 2 px frame 2 px outside the card, which reads on any
         // fill; a shape cue, so it is never color-only (plus aria-selected).
@@ -235,54 +230,6 @@ export const DeckNode = memo(function DeckNode({
     >
       {isLandscape ? (
         (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
-      ) : isComponent ? (
-        <>
-          <div className="flex w-full items-start gap-2">
-            <KindTile kind={data.kind} size={30} decorative />
-            <span className="min-w-0 flex-1">
-              {titleInput ?? (
-                <span
-                  className={cn(
-                    'break-words text-body-sm font-medium',
-                    textRoleClass ?? 'text-ink',
-                  )}
-                  style={clampStyle(lines.title)}
-                >
-                  {data.title}
-                </span>
-              )}
-              {data.subtitle && lines.subtitle > 0 && (
-                <span
-                  data-text={subtitleDataText}
-                  className={cn('break-words font-mono text-node-sub', subtitleClass)}
-                  style={clampStyle(lines.subtitle)}
-                >
-                  {data.subtitle}
-                </span>
-              )}
-            </span>
-            {data.hasRules && (
-              <Table
-                role="img"
-                aria-label="Has rules"
-                strokeWidth={ICON_STROKE_WIDTH}
-                className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
-              />
-            )}
-          </div>
-          <div className="flex w-full items-center justify-between gap-2">
-            <span className={cn('truncate text-caption', textRoleClass ?? 'text-ink-secondary')}>
-              {data.owner ?? 'No owner'}
-            </span>
-          </div>
-          {data.tags.length > 0 && (
-            <div className="flex w-full flex-wrap gap-1">
-              {data.tags.slice(0, 2).map((tag) => (
-                <TagChip key={tag} label={tag} />
-              ))}
-            </div>
-          )}
-        </>
       ) : (
         <>
           {!isSystem && <KindTile kind={data.kind} size={30} decorative />}

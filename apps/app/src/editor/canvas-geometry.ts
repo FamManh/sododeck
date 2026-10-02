@@ -17,6 +17,10 @@ export interface Rect extends Point {
 
 /** DESIGN.md: nodes are a fixed 164×50. */
 export const NODE_SIZE = { width: 164, height: 50 } as const;
+/**
+ * A roomier layout cell for Tidy and for fitting group frames: cards no longer grow at the
+ * component level (§g-58), but the spacing laid out for them stays generous.
+ */
 export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
 export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
 type NodeSize = { width: number; height: number };
@@ -73,8 +77,12 @@ function pad(rect: Rect, by: number): Rect {
   };
 }
 
-export function nodeSize(level: Level): NodeSize {
-  return level === 'component' ? COMPONENT_CARD_SIZE : NODE_SIZE;
+/**
+ * A card's default size: the same at every zoom level (§g-58), so zooming in never makes a card
+ * grow or re-flow. Zoom levels only change what a card shows (kind tile, subtitle).
+ */
+export function nodeSize(_level?: Level): NodeSize {
+  return NODE_SIZE;
 }
 
 /** A card's drawn size (017 R2): the stored size clamped to the limits, else the level size. */

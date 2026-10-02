@@ -124,8 +124,8 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
   out.push(
     box(x, y, width, height, 12, item.fill ?? palette.surface, item.stroke ?? palette.border),
   );
-  const container = item.level !== 'component';
-  const tileY = container ? y + (height - TILE) / 2 : y + 8;
+  // Every level draws the same compact card (§g-58).
+  const tileY = y + (height - TILE) / 2;
   out.push(box(x + PAD, tileY, TILE, TILE, 9, colours.fill));
   out.push(icon(ICON_PATHS[item.kind], x + PAD + 6, tileY + 6, 18, colours.ink));
 
