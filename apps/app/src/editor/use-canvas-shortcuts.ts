@@ -753,8 +753,8 @@ export function useEditorShortcuts({
       }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
-        const { nodes, edges, groups } = ui.selection;
-        if (nodes.length === 0 && edges.length === 0) {
+        const { nodes, edges, groups, stickies } = ui.selection;
+        if (nodes.length === 0 && edges.length === 0 && stickies.length === 0) {
           if (groups.length === 0 && ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
@@ -774,7 +774,7 @@ export function useEditorShortcuts({
           return;
         }
         event.preventDefault();
-        ui.requestDelete({ nodes, edges });
+        ui.requestDelete({ nodes, edges, stickies });
         return;
       }
       if (key === 'escape' && ui.popover === null && ui.pendingDelete === null) {

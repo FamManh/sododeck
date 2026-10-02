@@ -455,6 +455,18 @@ describe('editor shortcuts', () => {
     expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'n00' }] });
   });
 
+  it('deletes a selected note with Backspace or Delete', async () => {
+    const { user } = setup(stickyDeck);
+    focusSticky();
+    await user.keyboard('{Backspace}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'stickies', id: 'st1' }] });
+    act(() => {
+      ui().cancelDelete();
+    });
+    await user.keyboard('{Delete}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'stickies', id: 'st1' }] });
+  });
+
   it('does nothing on Delete with an empty selection', async () => {
     const { user } = setup();
     focusNode('n00');
