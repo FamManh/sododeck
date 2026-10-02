@@ -164,7 +164,7 @@ export function useCanvasHandlers() {
      */
     const applyTool = (event: ReactMouseEvent, nodeId: string | null): boolean => {
       const tool = ui().tool;
-      if (tool === 'select' || viewOnly()) return false;
+      if (tool === 'select' || tool === 'hand' || viewOnly()) return false;
       if (tool === 'sticky') {
         addNoteAt(editor, screenToFlowPosition({ x: event.clientX, y: event.clientY }));
       } else if (nodeId !== null && readDeck(editor.doc).nodes.some((n) => n.id === nodeId)) {

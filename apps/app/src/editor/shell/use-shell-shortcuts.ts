@@ -146,7 +146,15 @@ export function useShellShortcuts(): void {
       // Editing keys: not in flow mode or during a recording (the canvas is view-only then).
       if (isFlowMode(ui) || ui.flowSession !== null || event.shiftKey) return;
       const tool =
-        key === 'v' ? 'select' : key === 's' ? 'sticky' : key === 'l' ? 'connector' : null;
+        key === 'v'
+          ? 'select'
+          : key === 'h'
+            ? 'hand'
+            : key === 's'
+              ? 'sticky'
+              : key === 'l'
+                ? 'connector'
+                : null;
       if (tool !== null) {
         handle(() => {
           ui.setTool(tool);

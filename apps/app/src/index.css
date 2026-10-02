@@ -96,6 +96,11 @@
   opacity: 0.2;
 }
 
+/* Select tool (§g-57): an arrow, not React Flow's pointer, while a drag draws a marquee. */
+.react-flow__pane.selection {
+  cursor: default;
+}
+
 /* View-only (007): no connection handles or reconnect grips, no grab cursor. Hidden, not
    `display: none`: React Flow measures handle bounds to draw edges. */
 [data-flow-mode] .react-flow__handle.sd-handle,

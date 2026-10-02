@@ -473,6 +473,22 @@ describe('Canvas', () => {
     expect(canvas).not.toHaveAttribute('data-tiny-cards');
   });
 
+  it('drags a marquee with Select and pans with Hand (§g-57)', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    const pane = () => container.querySelector('.react-flow__pane');
+    // Select: an arrow cursor (React Flow's grab cursor comes with its `draggable` class).
+    expect(ui().tool).toBe('select');
+    expect(pane()).not.toHaveClass('draggable');
+    act(() => {
+      ui().setTool('hand');
+    });
+    expect(pane()).toHaveClass('draggable');
+    act(() => {
+      ui().setTool('select');
+    });
+    expect(pane()).not.toHaveClass('draggable');
+  });
+
   it('dims non-neighbours in focus mode, follows the selection, and leaves the deck unchanged', async () => {
     const user = userEvent.setup();
     const before = structuredClone(deck);

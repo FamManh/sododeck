@@ -4,6 +4,7 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import {
   Group,
+  Hand,
   ListTree,
   MousePointer2,
   Plus,
@@ -97,6 +98,7 @@ function RailTip({
 
 const TOOLS: readonly { tool: Tool; label: string; icon: LucideIcon; shortcut: ShortcutId }[] = [
   { tool: 'select', label: 'Select', icon: MousePointer2, shortcut: 'select' },
+  { tool: 'hand', label: 'Hand', icon: Hand, shortcut: 'hand' },
 ];
 
 const PANELS: readonly { id: FlyoutId; label: string; icon: LucideIcon; shortcut?: ShortcutId }[] =
@@ -111,7 +113,7 @@ function RailDivider() {
 }
 
 /**
- * The left rail (018 FR-012–FR-020, contract "Rail"): tools (Select, Add component, Sticky note,
+ * The left rail (018 FR-012–FR-020, contract "Rail"): tools (Select, Hand, Add component, Sticky note,
  * Group, Connector), then the panels opened as flyouts (Outline, Flows & features, Rules),
  * Search and Problems. Group (016) groups the selection, like ⌘G; with fewer than two items it
  * stays visible, disabled, with the reason.

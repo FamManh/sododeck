@@ -92,6 +92,9 @@ const edgeTypes: EdgeTypes = {
 const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2] * CARD_SIZE_LIMITS.min.width < 80;
 
+/** With the Select tool only the middle mouse button pans (plus Space+drag, React Flow's default). */
+const PAN_BUTTONS = [1];
+
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
   strokeWidth: 1.5,
@@ -254,6 +257,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const jsonHeight = useUiStore((s) => (s.jsonPanel.open ? s.jsonPanel.height : JSON_COLLAPSED));
   const minimapBottom = zoomIslandBottom(jsonShown, jsonHeight) + ISLAND_HEIGHT + STACK_GAP;
   const hideUi = useUiStore((s) => s.hideUi);
+  const hand = useUiStore((s) => s.tool === 'hand');
   const drawerWidth = useUiStore((s) => (s.drawer.open ? s.drawer.width : null));
   const minimapRight = drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE;
   const playerStyle = {
@@ -628,19 +632,21 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         nodesFocusable={false}
         edgesFocusable={false}
         deleteKeyCode={null}
-        // Selection: click / shift-click / ⌘-click, shift-drag marquee, plain drag pans.
-        // ⌥ during a marquee also selects the cards it touches (016 R13).
+        // Selection: click / shift-click / ⌘-click. A plain drag draws a marquee with Select and
+        // pans with Hand (§g-57); Space+drag and the middle button always pan, Shift+drag always
+        // marquees. ⌥ during a marquee also selects the cards it touches (016 R13).
         selectionMode={marqueeRunning && touchSelect ? SelectionMode.Partial : SelectionMode.Full}
         multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         selectionKeyCode="Shift"
-        selectionOnDrag={false}
+        selectionOnDrag={!hand}
         selectNodesOnDrag={false}
-        panOnDrag
+        panOnDrag={hand ? true : PAN_BUTTONS}
         zoomOnDoubleClick={false}
         // Recording pauses structure editing (006 FR-017). Flow mode is view-only too, but through
         // the handlers and CSS: toggling these props re-renders every node and edge, which costs
         // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
-        nodesDraggable={!recording}
+        // Hand pans even over a card (§g-57); switching tools is rare, so the re-render is fine.
+        nodesDraggable={!recording && !hand}
         nodesConnectable={!recording}
         // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
         connectionMode={ConnectionMode.Loose}
