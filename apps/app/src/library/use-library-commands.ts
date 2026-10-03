@@ -14,6 +14,7 @@ import {
   type LibraryActionContext,
 } from './library-actions';
 import { useLibraryStore } from './library-store';
+import { libraryErrorMessage } from './library-error-message';
 
 export interface LibraryCommands {
   ctx: LibraryActionContext;
@@ -38,8 +39,8 @@ export function useLibraryCommands(): LibraryCommands | null {
     if (!db) return null;
     const ctx: LibraryActionContext = { db, client: getLibraryClient() };
     const store = () => useLibraryStore.getState();
-    const failed = () => {
-      toast({ message: 'Something went wrong. Nothing was changed.' });
+    const failed = (error: unknown) => {
+      toast({ message: libraryErrorMessage(error) });
     };
     return {
       ctx,
@@ -53,8 +54,8 @@ export function useLibraryCommands(): LibraryCommands | null {
         try {
           await duplicateDeck(ctx, deck.id);
           toast({ message: `Duplicated "${deck.name}"` });
-        } catch {
-          failed();
+        } catch (error) {
+          failed(error);
         }
       },
       move: async (deck, folderId) => {
@@ -63,8 +64,8 @@ export function useLibraryCommands(): LibraryCommands | null {
       exportDeck: async (deck) => {
         try {
           await exportDeckFile(ctx, deck.id);
-        } catch {
-          failed();
+        } catch (error) {
+          failed(error);
         }
       },
       requestDelete: (deck) => {

@@ -21,6 +21,7 @@ import { renameDeck } from '../library/library-actions';
 import { inProcessLibraryClient } from '../test/in-process-library-client';
 import { setLibraryDbForTests } from '../storage/library-db-instance';
 import { EditorProbe } from '../test/editor-probe';
+import { legacyDeckBytes } from '../test/legacy-deck';
 import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
 import { RulesPage } from '../editor/rules/rules-page';
 import { deckLoader } from './deck-loader';
@@ -289,6 +290,20 @@ describe('EditorPage', () => {
   it('renders "Deck not found" for an unknown id', async () => {
     renderAt('/deck/nope');
     expect(await screen.findByRole('heading', { name: 'Deck not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/');
+  });
+
+  it('explains that a deck stored by an earlier build cannot be opened (036 FR-027)', async () => {
+    await insertDeck(db, deckRecord('old', { name: 'Old deck' }), legacyDeckBytes());
+    renderAt('/deck/old');
+    expect(
+      await screen.findByRole('heading', { name: "This deck can't be opened" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "This deck was saved by an earlier development build and can't be opened. Import its exported .sododeck.json file again.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/');
   });
 

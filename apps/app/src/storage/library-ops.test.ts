@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { generateBenchDeck } from '../bench/generate-deck';
+import { legacyDeckBytes } from '../test/legacy-deck';
 import { create, duplicate, exportDeck, importFile, LibraryOpError, rename } from './library-ops';
 
 const docOf = (updates: Uint8Array[]) => {
@@ -15,6 +16,21 @@ const docOf = (updates: Uint8Array[]) => {
 };
 
 describe('library ops', () => {
+  it('refuses to read a deck stored by a build before 036 (FR-027)', () => {
+    const code = (fn: () => unknown) => {
+      try {
+        fn();
+      } catch (error) {
+        return error instanceof LibraryOpError ? error.code : 'other';
+      }
+      return 'none';
+    };
+    const legacy = [legacyDeckBytes()];
+    expect(code(() => exportDeck(legacy))).toBe('unsupported-deck');
+    expect(code(() => rename(legacy, 'New name'))).toBe('unsupported-deck');
+    expect(code(() => duplicate(legacy, 'Copy'))).toBe('unsupported-deck');
+  });
+
   it('creates an empty named deck', () => {
     const { bytes, summary } = create('Untitled deck');
     expect(toJSON(docOf([bytes]))).toEqual({ ...emptySododeckFile(), name: 'Untitled deck' });
