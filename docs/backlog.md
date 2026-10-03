@@ -145,6 +145,8 @@ flowchart LR
   F036 --> F029
   F036 --> F037
   F037 -.-> F023
+  F036 --> F038
+  F029 -.-> F038
 ```
 
 ## Critical path
@@ -229,6 +231,7 @@ and **027** ai-deck-skill are not scheduled.
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
 | 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                 |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                         |
+| 038 | card-icons               | after 036  | 036, (029)    | 4 d  | decided: lucide now, packs later; type name kept          |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -2211,6 +2214,52 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 - **Out of scope:** fixes (each miss becomes its own item), CI budget (§3, later).
 - **Acceptance criteria:** the table in `docs/performance.md` §2 has numbers for every row at
   every size, from a run anyone can repeat with `pnpm bench`.
+
+## 038-card-icons
+
+- **Status:** specified (2026-10-03) — see [`spec.md`](../specs/038-card-icons/spec.md). Not
+  planned yet.
+- **Added:** 2026-10-03, founder request: cards only show the icon of their type; users want to
+  pick their own.
+- **Milestone:** after 036 · **Depends on:** 036 (model writes), coordinate with 029 (card header
+  tile) and 030 (type registry) · **Estimate:** 4 d
+- **Goal:** A user picks an icon for one or more cards from a searchable picker. Lucide is the only
+  icon pack for now; the format and the code accept more packs later (e.g. Simple Icons for brand
+  logos) without a file format change or a migration.
+- **Founder decisions (2026-10-03):**
+  - **Lucide only for now** (ISC, already a dependency, matches the stroke style). Simple Icons
+    (CC0, brand logos, trademark rules) is a later pack, not part of 038.
+  - **Curated set of about 300 lucide icons** grouped by category, not the whole set; adding
+    an icon is a data change.
+  - **Extensible by design:** an icon reference names its pack and its icon (`"lucide:server"`);
+    a reference without a pack means lucide, so the existing `icon: "server"` stays valid.
+  - **The type name stays.** A custom icon replaces the icon in the card's type tile (and the
+    Landscape plate of 029); the type name next to it is unchanged.
+- **In scope:**
+  - Icon picker (search by name and keywords, groups, "Used in this deck", "Reset to type icon")
+    from the selection toolbar, the context menu and the drawer's Appearance section;
+    multi-selection in one undo step; full keyboard access.
+  - One resolver used by every surface (card, outline, drawer, search, Landscape, minimap if it
+    draws icons, PNG / SVG export): custom icon → type icon (030 later) → kind icon → fallback.
+  - Icon packs as data: id, name, licence, line or solid drawing, entries with keywords. Unknown
+    pack or icon: show the type icon, keep the stored reference on save.
+  - Export draws icons from the pack data (replaces the hand-copied `icon-paths.ts`).
+  - Third-party licence notices for the bundled packs.
+- **Out of scope:** Simple Icons or other packs, uploaded custom icons, icon colour separate from
+  the card colours, icons on groups, stickies or connectors.
+- **Split to avoid conflicts:** the pack system, resolver, picker component and export can start
+  while 036 is in progress (they live in `packages/ui` and the export code); wiring the model and
+  the card render waits for 036 to merge and for 029's header tile.
+- **Acceptance criteria (draft):**
+  - Given a selected card, When the user picks "Server", Then the tile shows it, the type name is
+    unchanged, the JSON shows `"icon": "lucide:server"` and one ⌘Z removes it.
+  - Given a file with `"icon": "simple:kafka"` (pack not available), When opened and saved, Then
+    the card shows its type icon and the saved file still has `"simple:kafka"`.
+  - Given a deck with custom icons, When exported to SVG, Then every card shows its custom icon.
+  - Round-trip and Ajv / Zod parity green; `pnpm bench` shows no regression.
+- **Risks:** bundle size if the whole lucide set is loaded up front; lucide renaming icons between
+  versions (aliases needed); solid icons (later packs) must not render as a filled blob in a
+  line-drawing renderer.
 
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
