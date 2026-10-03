@@ -77,7 +77,7 @@ Sododeck is a precise, calm workspace for architecture and flow diagrams. The ch
 
 Colour is used to mean something, not to decorate. Beyond orange there are **semantic tints** tied to node kinds and states: amber for logic and rules, blue for data, clay (rose-red) for external systems and errors, green for success, and neutral grey for clients. Each tint has a soft fill and a readable ink pair, and they are used only in icon tiles, rule headers and status chips.
 
-Type is **Geist** for all UI and **Geist Mono** for anything machine-readable: ids, JSON, edge labels, conditions, SLA values and rule cells. Weights stay at 400–500, with 600 used only for the wordmark and small status headings. Display sizes are small (22px max). The diagram carries the visual weight, not the typography.
+Type is **Geist** for all UI and **Geist Mono** for anything machine-readable: ids, JSON, edge labels, conditions, SLA values and rule cells. Weights stay at 400–500, with 600 used only for the wordmark and small status headings, and, in the Deck card look, card titles, chips and count discs (§g-68). Display sizes are small (22px max). The diagram carries the visual weight, not the typography.
 
 The shape language is **soft-technical**: 9px buttons, 10px inputs, 12px nodes and cards, 16px group boundaries and deck cards, 20px modals, and full pills for chips and status. Icons are **Lucide** (`lucide-react`) outline icons at 1.5px stroke, 15–21px.
 
@@ -147,7 +147,7 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 
 ### Card Colours
 
-Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, designed in OKLCH; the hex values below are what actually ships (`packages/ui/src/styles/tokens.css`), since browsers vary in OKLCH → sRGB rounding. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill (error is a dashed 3px Clay ring outside the card plus a Clay alert badge, same as on a plain card, 107).
+Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, designed in OKLCH; the hex values below are what actually ships (`packages/ui/src/styles/tokens.css`), since browsers vary in OKLCH → sRGB rounding. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill (error is a dashed 3px Clay ring outside the card plus a Clay alert badge, same as on a plain card, 107). The Deck look (029) adds `chip`, `ink` and `dot` to each colour; see [Extended palette](#extended-palette) under Card system (Deck).
 
 | Colour | Light fill | Light stroke | Light OKLCH fill | Light OKLCH stroke | Dark fill | Dark stroke | Dark OKLCH fill | Dark OKLCH stroke |
 |---|---|---|---|---|---|---|---|---|
@@ -166,6 +166,140 @@ Users can colour a card's fill and stroke from 13 named colours (design 105–10
 | slate | #e6ecf3 | #667383 | oklch(0.94 0.012 255) | oklch(0.55 0.03 255) | #292e35 | #8693a5 | oklch(0.30 0.015 255) | oklch(0.66 0.03 255) |
 
 **Custom colours:** a deck can add up to 12 custom hex colours to its own swatches (106). Card text (`--sd-card-text-dark` #1c1c1a or `--sd-card-text-light` #ffffff) is whichever gives the higher contrast against the custom fill, switching near relative luminance 0.204; in the ≈ 0.183–0.227 band neither choice reaches WCAG AA 4.5:1, so the colour picker shows a warning, but the colour is still allowed (FR-026).
+
+### Card system (Deck)
+
+The card look chosen on 2026-10-03 (direction **B · Deck**, design-analysis §g-63): cards are thick paper with a solid lip, 14px corners and filled pill chips; connectors are 2px smooth curves; playing a flow deals the deck; a collapsed group is a fanned hand. Reference frames **117–127** ([design-analysis §a](docs/design/design-analysis.md), screenshots in `docs/design/screens/117-…127-…`); source `docs/design/claude-design/Sododeck Cards.dc.html` + `sododeck-cards.js` (boards A and C in the same file are history, not reference). Built by 029 (look), 031 (shapes), 032 (fields), 033 (tag colours), 034 (connections) and 035 (playback). Until 029 ships, the `node` and `edge` entries under Components describe what the app draws today. Where this section and a founder decision disagree, the decision wins (§g-66–§g-80).
+
+**Rule from the design's own risk note (§g-63):** on dense boards the lip is not drawn below 60 % zoom, and chips become 6px dots at System level. Zooming never changes a card's size (§g-58).
+
+#### Tokens
+
+Light / dark values; "Border-strong" is `#cfcfc7` / `#45453f`, "Surface 2" `#f4f4f1` / `#212120`, "Surface 3" `#ecece8` / `#2b2b29`, "Orange Soft" `#fdeee4` / `#3a2214`, "Orange Ink" `#b3480c` / `#ffb285`. Names are what 029 adds to `packages/ui/src/styles/tokens.css`.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `--sd-deck-card-width` | 184 | Default card width; user-resizable (017), height computed from content |
+| `--sd-deck-card-radius` | 14 | Card corners |
+| `--sd-deck-frame-radius` | 20 | Expanded group frame |
+| `--sd-deck-panel-radius` | 16 | Popovers, pickers, step player in the Deck look (inputs 10) |
+| `--sd-deck-card-border` | 1.5px Border-strong, or the card's colour stroke | Card and frame border |
+| `--sd-deck-lip` / `-hover` / `-drag` | `0 3px 0 0` / `0 5px 0 0` / `0 6px 0 0`, in the border colour, no blur | The lip. 5px on hover and on the current flow step (Deck Orange there); 6px while dragging, plus Float shadow |
+| `--sd-deck-card-padding` | 12 vertical, 13 horizontal | Card body |
+| `--sd-deck-card-gap` | 8 | Between header, title, description, fields, tags |
+| `--sd-deck-tile` | 24 × 24, radius 8, Surface 2 (or colour `chip`), icon 14 / stroke 2 in Secondary (or colour `ink`) | Type tile in the header |
+| `--sd-deck-title` | Geist 14 / 600 / 1.28, Ink, max 3 lines | Card title |
+| `--sd-deck-type-name` | Geist 11.5 / 500, Muted (Secondary on a colour fill), one line | Type name next to the tile |
+| `--sd-deck-body` | Geist 12 / 400 / 1.4, Secondary, max 3 lines | Description |
+| `--sd-deck-chip` | 21 tall pill, padding 0 8 0 7, Geist 11.5 / 500, icon 12, colour `chip` fill + `ink` text | Field chips (status, select, person, date, range) |
+| `--sd-deck-tag` | 18 tall pill, padding 0 6, Geist 10.5 / 500, colour `chip` + `ink`, wrap gap 4 | Tags on the card (21 tall with × in the drawer) |
+| `--sd-deck-handle` / `-active` | 12 round, Surface fill, 2px Secondary border / 16 round, Deck Orange, 4px Orange Soft halo | Connection handles at the four side midpoints |
+| `--sd-deck-edge` | 2px, `#b4b4ab` / `#5a5a53` | Connector line |
+| `--sd-deck-edge-arrow` | filled triangle 9 long × 10 wide, 2px round-joined stroke, line colour | Connector end |
+| `--sd-deck-edge-knob` | circle r 3.5, line colour | Connector start |
+| `--sd-deck-lift` | `translateY(-2px)` | Hover and current flow step |
+| `--sd-deck-tilt` | −2.5° (cards), −3° (shapes) | While dragging |
+| `--sd-deck-grid` | 1.6px dots every 26px | Canvas dot grid |
+
+#### Card anatomy
+
+Top to bottom; an empty region is not drawn and the card gets shorter (120):
+
+1. **Header**, 24 tall: type tile, type name (ellipsis), then a right-aligned badge slot: status chip (small; icon-only below 150 wide, 121), pin (12), problem badge.
+2. **Title**: up to 3 lines, then "…"; a title-only tooltip appears when it is cut (121, D5).
+3. **Description**: up to 3 lines.
+4. **Fields** (032): chip-type fields (select, status, person, date, date range) float on one shelf with gap 4 and no label; text, number (Mono 11.5), link and bar fields are label–value rows (min 19 tall, label 11.5 Muted). Hidden fields show as a "+n fields" pill (20 tall, 1.5px dashed Border-strong) (124).
+5. **Tags**: up to 10 tag pills, wrapping (121, 125).
+6. **Has children**: a 24 tall Surface 2 pill "n inside" with a ⏎ key hint.
+
+A person chip has a 16px Surface 3 avatar with Mono 7.5 / 600 initials. A bar field is an 8px Surface 3 track, radius 4, filled in Secondary, with a Mono value.
+
+#### States (122)
+
+Every state has a cue that does not rely on colour.
+
+| State | Card | Shape |
+| --- | --- | --- |
+| Hover | lifts 2px, lip 5px, handles shown | stroke Secondary, handles |
+| Selected | 2px Deck Orange outline, offset 2 | outline offset 4 |
+| Editing title | same type and wrap; caret and selection (`#fbd9c3` / `#6a3315`) | same |
+| Has a problem | 1.5px dashed Clay outline, offset 4, plus a Clay Soft badge (20 tall pill, ⚠ 12 + count, 11 / 600) in the header | outline offset 5, badge top-right |
+| Current flow step | Deck Orange border and lip (5px), lifted 2px, step sticker | orange stroke, 9px Orange Soft halo, sticker |
+| Dimmed | 22 % opacity | same |
+| Being dragged | tilted −2.5°, lip 6px, Float shadow; a dashed Muted ghost stays at the origin | tilted −3° |
+| Connection target | Deck Orange border, the hovered side's handle active | same |
+| Has child components | "n inside ⏎" pill as the last row | pill below the shape |
+| Highlighted neighbour | border and lip in Secondary; stays at 100 % while the rest dims | Secondary stroke |
+
+Tilt and lift are paint-only: they never move the card's box for snapping, hit tests, edge anchors or export (§g-74).
+
+#### Groups (119)
+
+- **Collapsed group, the fanned hand:** 184 × 112. Two back sheets with the group's fill, stroke and 3px lip, rotated −7° and +4° around their bottom centre, behind a front card (padding 11 / 12, gap 7): header with a 24px tile (layers icon), "Group" (11.5 / 500 Secondary) and the member count in a 26px Ink disc (13 / 700, Surface text); the name (14 / 600); one 22px member-type tile per member (radius 7, 1.5px stroke). Each neighbour gets one merged connector with an "×n" badge; ⏎ or double-click expands. A group of shapes also stacks as cards (122).
+- **Expanded group frame:** radius 20, 1.5px border in the colour stroke or Border-strong, fill in the colour fill or Surface 2. The label is a pill sitting on the top edge (left 16, top −14): 28 tall, Surface, 1.5px border, 2px lip, chevron + name (12.5 / 600) + count in an 18px Ink disc.
+
+#### Connectors (117–119)
+
+- **Line types** (§g-64): **curved** (default; a cubic leaving each end along the side normal with control distance max(28, 0.42 × length)), **elbow** (orthogonal, 017's route) and **straight**. The design only draws curved.
+- **States:** played Secondary 2.5px; current Deck Orange 3.25px over an 8px orange halo at 18 %; upcoming dashed `2 6` with round caps; dimmed 20 % opacity; highlighted Ink 2.75px; error path Clay 2.5px dashed `7 4` ending in an × (no arrow).
+- **Label:** 20 tall pill, 11 / 600, Surface fill, 1.5px Border-strong, Secondary text. Current step: solid Deck Orange with On Primary text. Error: Clay Soft fill, Clay border and text with an ⊗ icon.
+- **Bundle count:** 22px Ink pill "×n" (11.5 / 700, Surface text) with a 2px canvas ring (118, 119).
+- **Drill-in outside proxy** (118): 150 wide, 1.5px dashed Secondary, radius 14, canvas fill; type icon, title 12.5 / 600 and "Outside" (10, Muted). Belongs to 034.
+
+#### Flow playback (117, owned by 035)
+
+- **Step sticker** on the card's top-left corner (−9, −9): played = 22px Ink disc with a check; current = 26px Deck Orange disc with the step number (12.5 / 700); upcoming = 22px Surface disc with a 1.5px dashed Secondary border and the number. Played and current discs have a 2px Surface ring.
+- **Token:** a 24px Deck Orange disc carrying the step number (11.5 / 700, On Primary), 2.5px Surface ring and a 3px Orange Ink lip.
+- **Step player:** 560 wide panel (radius 16, 1.5px Border-strong, 3px Border-strong lip + Float shadow), 40px round play button with an Orange Ink lip, "Step 3 of 8" (14 / 700), the from → to line, a Mono speed pill, and one 8px segment per step (played Secondary, current Deck Orange, upcoming Surface 3, the next branch point outlined dashed).
+- **Branch popover:** a panel next to the decision listing each path with a number key; an error path has a dashed Clay border and ⊗.
+
+#### Zoom levels (123)
+
+Same thresholds as the app (`levels.ts`). The card keeps one size; only detail changes.
+
+| Level | Zoom | Card shows |
+| --- | --- | --- |
+| Landscape | ≤ 45 % | the type icon (30px, colour `ink` or Secondary) centred on the colour fill or Surface 2; no text. Shapes show only their geometry |
+| System | 45–90 % | tile + title; chips (tags, field chips) as 6px dots (§g-63) |
+| Container | 90–150 % | + type name, description, status |
+| Component | > 150 % | everything |
+
+No lip below 60 % (§g-63), whatever the level. Tags follow §g-59 (§g-70).
+
+#### Extended palette
+
+Each of the 13 named colours has five variants. `fill` and `stroke` are what 020 ships (unchanged, see Card Colours and §g-66); `chip`, `ink` and `dot` are new from the Deck design and computed from its OKLCH values (hex as Chromium renders them). `chip` is the solid tint behind tag and field chips and the type tile; `ink` is the same-hue text on `chip` (and the icon in a coloured tile); `dot` is the 6px dot at System level, the status-icon colour and the swatch ring. The last column is the WCAG contrast of `ink` on `chip`: all 26 pairs pass AA (≥ 4.5:1) for 10.5px / 500 text. Tokens: `--sd-card-{name}-chip`, `--sd-card-{name}-ink`, `--sd-card-{name}-dot`, next to the existing `-fill` and `-stroke`.
+
+| Colour | Theme | fill | stroke | chip | ink | dot | chip / ink |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| red | light | `#ffe4de` oklch(0.95 0.045 27) | `#d15c53` oklch(0.62 0.15 27) | `#ffd3cc` oklch(0.915 0.065 27) | `#7e302a` oklch(0.42 0.11 27) | `#ca564d` oklch(0.6 0.15 27) | 6.6 |
+|  | dark | `#482521` oklch(0.31 0.055 27) | `#eb8278` oklch(0.72 0.13 27) | `#69322d` oklch(0.39 0.08 27) | `#ffcdc5` oklch(0.9 0.07 27) | `#f2897e` oklch(0.74 0.13 27) | 7.1 |
+| orange | light | `#ffe7d2` oklch(0.95 0.045 55) | `#c9690c` oklch(0.62 0.15 55) | `#ffd8ba` oklch(0.915 0.065 55) | `#793900` oklch(0.42 0.11 55) | `#c26300` oklch(0.6 0.15 55) | 6.6 |
+|  | dark | `#452813` oklch(0.31 0.055 55) | `#e28d4f` oklch(0.72 0.13 55) | `#653815` oklch(0.39 0.08 55) | `#ffd3b2` oklch(0.9 0.07 55) | `#e99355` oklch(0.74 0.13 55) | 7.1 |
+| amber | light | `#ffeccd` oklch(0.95 0.045 80) | `#b47900` oklch(0.62 0.15 80) | `#fadfb3` oklch(0.915 0.065 80) | `#6c4400` oklch(0.42 0.11 80) | `#a46a00` oklch(0.57 0.15 80) | 6.6 |
+|  | dark | `#3f2d0a` oklch(0.31 0.055 80) | `#cf9a35` oklch(0.72 0.13 80) | `#5b3f01` oklch(0.39 0.08 80) | `#f7daaa` oklch(0.9 0.07 80) | `#d5a13c` oklch(0.74 0.13 80) | 7.2 |
+| yellow | light | `#f4f0ce` oklch(0.95 0.045 102) | `#998800` oklch(0.62 0.15 102) | `#ede5b3` oklch(0.915 0.065 100) | `#5c4d00` oklch(0.42 0.11 100) | `#8d7700` oklch(0.57 0.15 100) | 6.5 |
+|  | dark | `#36310b` oklch(0.31 0.055 102) | `#b5a737` oklch(0.72 0.13 102) | `#4f4502` oklch(0.39 0.08 100) | `#e8e0aa` oklch(0.9 0.07 100) | `#beac3d` oklch(0.74 0.13 100) | 7.2 |
+| lime | light | `#e5f5d6` oklch(0.95 0.045 130) | `#679725` oklch(0.62 0.15 130) | `#d5ecbf` oklch(0.915 0.065 130) | `#385805` oklch(0.42 0.11 130) | `#59880a` oklch(0.57 0.15 130) | 6.5 |
+|  | dark | `#273617` oklch(0.31 0.055 130) | `#89b559` oklch(0.72 0.13 130) | `#364d1b` oklch(0.39 0.08 130) | `#cfe8b7` oklch(0.9 0.07 130) | `#8fbb5f` oklch(0.74 0.13 130) | 7.1 |
+| green | light | `#d9f8e0` oklch(0.95 0.045 152) | `#259f56` oklch(0.62 0.15 152) | `#c4f0ce` oklch(0.915 0.065 152) | `#015d2d` oklch(0.42 0.11 152) | `#1a9951` oklch(0.6 0.15 152) | 6.4 |
+|  | dark | `#183822` oklch(0.31 0.055 152) | `#5ebc7b` oklch(0.72 0.13 152) | `#1d512f` oklch(0.39 0.08 152) | `#bcecc8` oklch(0.9 0.07 152) | `#65c281` oklch(0.74 0.13 152) | 7.0 |
+| teal | light | `#cff9f1` oklch(0.95 0.045 182) | `#00a28d` oklch(0.62 0.15 182) | `#b3f2e6` oklch(0.915 0.065 182) | `#005f52` oklch(0.42 0.11 182) | `#009b87` oklch(0.6 0.15 182) | 6.1 |
+|  | dark | `#013932` oklch(0.31 0.055 182) | `#00beab` oklch(0.72 0.13 182) | `#005248` oklch(0.39 0.08 182) | `#aaeee1` oklch(0.9 0.07 182) | `#15c5b1` oklch(0.74 0.13 182) | 7.0 |
+| cyan | light | `#cdf7ff` oklch(0.95 0.045 215) | `#009bbe` oklch(0.62 0.15 215) | `#b2effe` oklch(0.915 0.065 215) | `#005a72` oklch(0.42 0.11 215) | `#0094b7` oklch(0.6 0.15 215) | 6.2 |
+|  | dark | `#003742` oklch(0.31 0.055 215) | `#00b8d7` oklch(0.72 0.13 215) | `#004f60` oklch(0.39 0.08 215) | `#a8ebfb` oklch(0.9 0.07 215) | `#07bfde` oklch(0.74 0.13 215) | 7.0 |
+| blue | light | `#dbf1ff` oklch(0.95 0.045 255) | `#4087de` oklch(0.62 0.15 255) | `#c6e6ff` oklch(0.915 0.065 255) | `#1d4d87` oklch(0.42 0.11 255) | `#3a81d7` oklch(0.6 0.15 255) | 6.6 |
+|  | dark | `#1c314c` oklch(0.31 0.055 255) | `#6aa7f4` oklch(0.72 0.13 255) | `#25466f` oklch(0.39 0.08 255) | `#bfe1ff` oklch(0.9 0.07 255) | `#70adfb` oklch(0.74 0.13 255) | 7.1 |
+| indigo | light | `#e7ecff` oklch(0.95 0.045 278) | `#737ade` oklch(0.62 0.15 278) | `#d8e0ff` oklch(0.915 0.065 278) | `#404488` oklch(0.42 0.11 278) | `#6d74d8` oklch(0.6 0.15 278) | 6.7 |
+|  | dark | `#2a2d4c` oklch(0.31 0.055 278) | `#929bf5` oklch(0.72 0.13 278) | `#3b406f` oklch(0.39 0.08 278) | `#d2daff` oklch(0.9 0.07 278) | `#98a2fc` oklch(0.74 0.13 278) | 7.1 |
+| violet | light | `#f4e8ff` oklch(0.95 0.045 302) | `#986dd0` oklch(0.62 0.15 302) | `#ebd9ff` oklch(0.915 0.065 302) | `#593c7e` oklch(0.42 0.11 302) | `#9267ca` oklch(0.6 0.15 302) | 6.7 |
+|  | dark | `#352947` oklch(0.31 0.055 302) | `#b490e8` oklch(0.72 0.13 302) | `#4d3a68` oklch(0.39 0.08 302) | `#e6d4ff` oklch(0.9 0.07 302) | `#ba96ef` oklch(0.74 0.13 302) | 7.2 |
+| pink | light | `#ffe3f3` oklch(0.95 0.045 350) | `#c65b93` oklch(0.62 0.15 350) | `#ffd2e9` oklch(0.915 0.065 350) | `#772f55` oklch(0.42 0.11 350) | `#c0558d` oklch(0.6 0.15 350) | 6.7 |
+|  | dark | `#452434` oklch(0.31 0.055 350) | `#e181b0` oklch(0.72 0.13 350) | `#64324b` oklch(0.39 0.08 350) | `#ffcce5` oklch(0.9 0.07 350) | `#e887b6` oklch(0.74 0.13 350) | 7.2 |
+| slate | light | `#e6ecf3` oklch(0.94 0.012 255) | `#667383` oklch(0.55 0.03 255) | `#dde4ed` oklch(0.915 0.014 255) | `#444e5a` oklch(0.42 0.024 255) | `#738294` oklch(0.6 0.033 255) | 6.6 |
+|  | dark | `#292e35` oklch(0.30 0.015 255) | `#8693a5` oklch(0.66 0.03 255) | `#3f464f` oklch(0.39 0.018 255) | `#d7dfe8` oklch(0.9 0.015 255) | `#9facbd` oklch(0.74 0.029 255) | 7.1 |
+
+Custom deck colours (106) have no `chip` / `ink` / `dot`: their chips use the hex as the fill with the flipped text colour (§g-79).
 
 ## Typography
 
@@ -349,5 +483,7 @@ Both themes share token names. Dark mode does **not** invert tints. Soft fills b
 - **Group editing:** group from selection, rename, ungroup, drag and drop-into-group are designed (99, 101, 104, 109, 110). Resizing a group boundary is not.
 - **Custom view rules:** a custom view is created with default content. The filter/field configuration UI is not designed.
 - **Validation states:** only JSON and rule-match errors are defined. Field-level validation is not.
-- **Dynamic card attributes:** user-defined card fields are deferred; cards keep the existing fields.
+- **Dynamic card attributes:** typed fields, their on-card display and the field editor are designed (124) and built by 032; until then cards keep the existing fields.
+- **Connector relationships:** the Deck design draws relationship line styles (calls, reads, writes, depends on), bundled connectors and ends that slide along a side (118); none has a schema or a decision yet (§g-76, backlog 022 / 034).
+- **Card ↔ shape switch:** the two forms of decision, database and document are designed (120); the control that switches them is not.
 - **Collaboration / sharing:** out of scope for the local-only MVP.
