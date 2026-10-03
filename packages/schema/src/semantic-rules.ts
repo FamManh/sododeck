@@ -12,6 +12,12 @@
  * - S8 (tag colour keys): no empty key, and no two keys equal ignoring case and spacing. JSON
  *   Schema cannot compare keys. The key rule (trim, collapse spaces, lower-case) is inlined: the
  *   schema package must not import `@sododeck/model` or `@sododeck/ui`, which carry the same rule.
+ * - S9 (anchor needs a side): `route.fromAt` needs `route.fromSide`, `route.toAt` needs
+ *   `route.toSide`. A position along a side means nothing without the side. `dependentRequired`
+ *   would state it, but json-schema-to-zod drops it.
+ * - S10 (offset xor waypoints): a route holds 017's `offset` or free `waypoints`, never both.
+ * - S11 (one key per axis): each waypoint has exactly one of `x` / `dx` and one of `y` / `dy`.
+ *   `oneOf` per axis would state it, but the generators mishandle it (as with `anyOf`).
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -42,7 +48,7 @@ function checkKeys(map: Record<string, unknown>, path: string, issues: Issue[]):
   }
 }
 
-/** Returns every S1–S8 violation in a structurally valid file (empty when there are none). */
+/** Returns every S1–S11 violation in a structurally valid file (empty when there are none). */
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
@@ -91,12 +97,51 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
   });
 
   file.edges.forEach((edge, index) => {
-    if (edge.style !== undefined && edge.style.shape === undefined) {
+    if (edge.style !== undefined && Object.keys(edge.style).length === 0) {
       issues.push({
         path: `edges.${String(index)}.style`,
         message: `Style of connector "${edge.id}" needs at least one key.`,
       });
     }
+  });
+
+  file.edges.forEach((edge, index) => {
+    const route = edge.route;
+    if (route === undefined) return;
+    const path = `edges.${String(index)}.route`;
+    if (route.fromAt !== undefined && route.fromSide === undefined) {
+      issues.push({
+        path: `${path}.fromAt`,
+        message: `Connector "${edge.id}" has a "fromAt" position but no "fromSide".`,
+      });
+    }
+    if (route.toAt !== undefined && route.toSide === undefined) {
+      issues.push({
+        path: `${path}.toAt`,
+        message: `Connector "${edge.id}" has a "toAt" position but no "toSide".`,
+      });
+    }
+    if (route.offset !== undefined && route.waypoints !== undefined) {
+      issues.push({
+        path,
+        message: `Connector "${edge.id}" route has both "offset" and "waypoints"; use one.`,
+      });
+    }
+    route.waypoints?.forEach((point, pointIndex) => {
+      const pointPath = `${path}.waypoints.${String(pointIndex)}`;
+      if ((point.x === undefined) === (point.dx === undefined)) {
+        issues.push({
+          path: pointPath,
+          message: `Bend ${String(pointIndex + 1)} of "${edge.id}" needs exactly one of "x" and "dx".`,
+        });
+      }
+      if ((point.y === undefined) === (point.dy === undefined)) {
+        issues.push({
+          path: pointPath,
+          message: `Bend ${String(pointIndex + 1)} of "${edge.id}" needs exactly one of "y" and "dy".`,
+        });
+      }
+    });
   });
 
   const groupIds = new Set(file.groups.map((group) => group.id));

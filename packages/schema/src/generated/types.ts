@@ -327,6 +327,10 @@ export interface Edge {
    * Short label, e.g. "POST /orders" or "OrderPlaced · Kafka".
    */
   label?: string;
+  /**
+   * Where the label sits along the drawn line, as a fraction of its length from the source (0 to 1). When absent, 0.5 (the middle). Shared by every view.
+   */
+  labelAt?: number;
   direction?: Direction;
   /**
    * Details of the connection (markdown).
@@ -342,7 +346,7 @@ export interface Edge {
   style?: EdgeStyle;
 }
 /**
- * How a connector is drawn between its two cards. All fields optional; an empty object is valid.
+ * How a connector is drawn between its two cards. All fields optional; an empty object is valid. `offset` and `waypoints` are never both set.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "EdgeRoute".
@@ -354,6 +358,44 @@ export interface EdgeRoute {
    * Shift of the middle segment, in canvas pixels, relative to where automatic routing puts it. Positive values go right or down. When absent, it is 0. It only applies when the resolved sides are opposite.
    */
   offset?: number;
+  /**
+   * Where the connector leaves `fromSide`, as a fraction along that side (0 to 1; left to right on top and bottom, top to bottom on left and right). When absent, 0.5 (the middle). Needs `fromSide`.
+   */
+  fromAt?: number;
+  /**
+   * Where the connector enters `toSide`, as a fraction along that side (0 to 1; left to right on top and bottom, top to bottom on left and right). When absent, 0.5 (the middle). Needs `toSide`.
+   */
+  toAt?: number;
+  /**
+   * Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. Never together with `offset`.
+   *
+   * @minItems 1
+   */
+  waypoints?: [RouteWaypoint, ...RouteWaypoint[]];
+}
+/**
+ * One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source card centre and T the target card centre in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "RouteWaypoint".
+ */
+export interface RouteWaypoint {
+  /**
+   * Fraction of the source-to-target span on x.
+   */
+  x?: number;
+  /**
+   * Pixels from the midpoint on x; used when the x span was under 22 px.
+   */
+  dx?: number;
+  /**
+   * Fraction of the source-to-target span on y.
+   */
+  y?: number;
+  /**
+   * Pixels from the midpoint on y; used when the y span was under 22 px.
+   */
+  dy?: number;
 }
 /**
  * How a connector line looks. At least one key is set; absent `style` means the default look.
@@ -363,6 +405,19 @@ export interface EdgeRoute {
  */
 export interface EdgeStyle {
   shape?: EdgeShape;
+  /**
+   * Dash pattern. When absent, `solid`.
+   */
+  dash?: 'solid' | 'dashed' | 'dotted';
+  /**
+   * Line weight in canvas pixels. When absent, 2.
+   */
+  width?: 1 | 1.5 | 2 | 3 | 4;
+  color?: ColorRef;
+  /**
+   * `true` runs dashes along the line toward the arrow. When absent, `false`.
+   */
+  animated?: boolean;
 }
 /**
  * A saved lens over the same model. Edits in any view change the one model.
