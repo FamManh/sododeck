@@ -22,6 +22,7 @@ import {
   Copy,
   CreditCard,
   Database,
+  Diamond,
   Download,
   ExternalLink,
   FileText,
@@ -54,6 +55,7 @@ import {
   PenTool,
   Play,
   Plus,
+  Puzzle,
   ReceiptText,
   RefreshCw,
   Route,
@@ -67,14 +69,17 @@ import {
   Smartphone,
   Sparkles,
   Spline,
+  SquareCheck,
   SquareDashed,
   StickyNote,
   Sun,
   Table,
   Tag,
+  Ticket,
   Trash2,
   TriangleAlert,
   Truck,
+  Warehouse,
   Waypoints,
   X,
   Zap,
@@ -84,64 +89,61 @@ import {
 /**
  * Icon vocabulary for Sododeck. The Claude Design prototype uses Material Symbols; the product
  * uses lucide (AGENTS.md, constitution). This file is the single typed source for both the
- * component-kind icons and the full glyph mapping; docs/design/icon-mapping.md mirrors it
+ * card-type icons and the full glyph mapping; docs/design/icon-mapping.md mirrors it
  * (a test keeps them in sync).
  */
 
 /** lucide stroke weight that visually matches the prototype's Material Symbols weight 300. */
 export const ICON_STROKE_WIDTH = 1.5;
 
-// ── Component kinds ──
+// ── Card types (030) ──
 
-export const COMPONENT_KINDS = [
-  'client',
-  'gateway',
-  'service',
-  'queue',
-  'database',
-  'external',
-] as const;
-
-export type ComponentKind = (typeof COMPONENT_KINDS)[number];
-
-export interface KindStyle {
+export interface TypeStyle {
   icon: LucideIcon;
-  label: string;
-  /** Soft fill + ink foreground token classes (DESIGN.md "Kind & Semantic Tints"). */
+  /** Soft fill + ink foreground token classes (DESIGN.md "Type & Semantic Tints"). */
   tone: string;
 }
 
-export const KIND_STYLE: Record<ComponentKind, KindStyle> = {
-  client: { icon: MonitorSmartphone, label: 'Client', tone: 'bg-surface-2 text-ink-secondary' },
-  gateway: { icon: Router, label: 'Gateway', tone: 'bg-inverse text-on-inverse' },
-  service: { icon: Box, label: 'Service', tone: 'bg-primary-soft text-primary-ink' },
-  queue: { icon: ArrowLeftRight, label: 'Queue', tone: 'bg-amber-soft text-amber-ink' },
-  database: { icon: Database, label: 'Database', tone: 'bg-blue-soft text-blue-ink' },
-  external: { icon: Cloud, label: 'External', tone: 'bg-clay-soft text-clay-ink' },
+/**
+ * Icon and tile tone per card type id. Names, packs and categories live in
+ * `@sododeck/model`'s registry (this package never imports it); an app test checks that every
+ * registry id has an entry here. Tones reuse the soft tokens: the icon, not the tone, is what
+ * tells two types apart.
+ */
+export const TYPE_STYLE: Readonly<Record<string, TypeStyle>> = {
+  service: { icon: Box, tone: 'bg-primary-soft text-primary-ink' },
+  database: { icon: Database, tone: 'bg-blue-soft text-blue-ink' },
+  gateway: { icon: Router, tone: 'bg-inverse text-on-inverse' },
+  client: { icon: MonitorSmartphone, tone: 'bg-surface-2 text-ink-secondary' },
+  queue: { icon: ArrowLeftRight, tone: 'bg-amber-soft text-amber-ink' },
+  external: { icon: Cloud, tone: 'bg-clay-soft text-clay-ink' },
+  component: { icon: Puzzle, tone: 'bg-surface-2 text-ink-secondary' },
+  task: { icon: SquareCheck, tone: 'bg-success-soft text-success-ink' },
+  decision: { icon: Diamond, tone: 'bg-amber-soft text-amber-ink' },
+  document: { icon: FileText, tone: 'bg-blue-soft text-blue-ink' },
+  warehouse: { icon: Warehouse, tone: 'bg-success-soft text-success-ink' },
+  'truck-route': { icon: Truck, tone: 'bg-amber-soft text-amber-ink' },
+  issue: { icon: Ticket, tone: 'bg-clay-soft text-clay-ink' },
 };
 
 /**
- * Unknown or missing kind: neutral tile, never an error. Uses ink-secondary, not ink-muted,
+ * Unknown or missing type: neutral tile, never an error. Uses ink-secondary, not ink-muted,
  * because muted on surface-2 is below AA in light (research.md R5).
  */
-export const KIND_FALLBACK: KindStyle = {
+export const TYPE_FALLBACK: TypeStyle = {
   icon: Shapes,
-  label: 'Component',
   tone: 'bg-surface-2 text-ink-secondary',
 };
 
-/** Prototype kind names that differ from ours (design-analysis §g-4). */
-const KIND_ALIASES: Readonly<Record<string, ComponentKind>> = { edge: 'gateway', data: 'database' };
+/** Prototype type names that differ from ours (design-analysis §g-4). */
+const TYPE_ALIASES: Readonly<Record<string, string>> = { edge: 'gateway', data: 'database' };
 
-function isComponentKind(value: string): value is ComponentKind {
-  return (COMPONENT_KINDS as readonly string[]).includes(value);
-}
-
-/** Case-insensitive kind lookup that also accepts the prototype's `edge` and `data`. */
-export function toComponentKind(value: string): ComponentKind | null {
-  const key = value.trim().toLowerCase();
-  if (isComponentKind(key)) return key;
-  return KIND_ALIASES[key] ?? null;
+/** Case-insensitive lookup that also accepts the prototype's `edge` and `data`; unknown → fallback. */
+export function typeStyle(id: string): TypeStyle {
+  const key = id.trim().toLowerCase();
+  return Object.hasOwn(TYPE_STYLE, key)
+    ? (TYPE_STYLE[key] ?? TYPE_FALLBACK)
+    : (TYPE_STYLE[TYPE_ALIASES[key] ?? ''] ?? TYPE_FALLBACK);
 }
 
 // ── Material Symbols → lucide ──
