@@ -25,6 +25,78 @@ const BENCH_FILLS: readonly (CardColor | `#${string}`)[] = [
   '#1f2a44',
 ];
 
+/** 032 R10: the three types with default fields, cycled. */
+const FIELD_TYPES = ['task', 'warehouse', 'issue'] as const;
+
+/**
+ * 032 R10: Owner on the card for every type, and Warehouse's defaults materialised with Region
+ * options, so each card shows four values (Task: status, assignee, due, owner; Warehouse:
+ * capacity, SLA, region, owner; Issue: status, assignee, dates, estimate).
+ */
+const BENCH_FIELD_DEFS: Pick<SododeckFile, 'fields' | 'fieldDefaults'> = {
+  fields: [
+    {
+      id: 'warehouse.capacity',
+      name: 'Capacity',
+      kind: 'progress',
+      types: ['warehouse'],
+      onCard: true,
+    },
+    {
+      id: 'warehouse.sla',
+      name: 'SLA',
+      kind: 'number',
+      types: ['warehouse'],
+      onCard: true,
+      unit: 'h',
+    },
+    {
+      id: 'warehouse.region',
+      name: 'Region',
+      kind: 'select',
+      types: ['warehouse'],
+      onCard: true,
+      options: [
+        { id: 'north', label: 'North', color: 'blue' },
+        { id: 'south', label: 'South', color: 'amber' },
+      ],
+    },
+    { id: 'owner', name: 'Owner', kind: 'person', onCard: true },
+  ],
+  fieldDefaults: ['warehouse'],
+};
+
+const PEOPLE = ['Lan', 'Minh Tran', 'Bao', 'Thu Le'];
+
+function benchValues(i: number): Pick<SododeckFile['nodes'][number], 'owner' | 'values'> {
+  const person = PEOPLE[i % PEOPLE.length] ?? 'Lan';
+  switch (FIELD_TYPES[i % FIELD_TYPES.length]) {
+    case 'task':
+      return {
+        owner: `Team ${String(i % 7)}`,
+        values: { 'task.assignee': person, 'task.due': '2026-10-14', 'task.status': 'doing' },
+      };
+    case 'warehouse':
+      return {
+        owner: `Team ${String(i % 7)}`,
+        values: {
+          'warehouse.capacity': (i * 7) % 101,
+          'warehouse.region': i % 2 === 0 ? 'north' : 'south',
+          'warehouse.sla': 24,
+        },
+      };
+    default:
+      return {
+        values: {
+          'issue.assignee': person,
+          'issue.dates': { from: '2026-10-06', to: '2026-10-17' },
+          'issue.estimate': 5,
+          'issue.status': 'todo',
+        },
+      };
+  }
+}
+
 /** Small deterministic PRNG so every benchmark run renders the same graph. */
 function mulberry32(seed: number) {
   let a = seed;
@@ -98,6 +170,8 @@ export function generateBenchDeck(
     lineTypes?: boolean;
     tags?: boolean;
     types?: boolean;
+    /** 032: Task / Warehouse / Issue cards, each with four on-card field values. */
+    fields?: boolean;
     /** 022: 200 edges animated (half of them dashed). */
     animated?: boolean;
     /** 022: 200 edges with three free bends each, mixed shapes. */
@@ -120,13 +194,17 @@ export function generateBenchDeck(
     return {
       id: `n${i}`,
       type:
-        (options.types === true ? ALL_TYPES[i % ALL_TYPES.length] : KINDS[i % KINDS.length]) ??
-        'service',
+        (options.fields === true
+          ? FIELD_TYPES[i % FIELD_TYPES.length]
+          : options.types === true
+            ? ALL_TYPES[i % ALL_TYPES.length]
+            : KINDS[i % KINDS.length]) ?? 'service',
       title: `Node ${i}`,
       position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
       ...(options.routes === true ? { size: { width: 200, height: 72 } } : {}),
       ...(style ? { style } : {}),
       ...(options.tags === true ? { tags: benchTags(i) } : {}),
+      ...(options.fields === true ? benchValues(i) : {}),
     };
   });
 
@@ -156,7 +234,8 @@ export function generateBenchDeck(
   const deck: SododeckFile = {
     ...emptySododeckFile(),
     // BENCH_TYPES: every pack on, so the Add flyout and pickers list all 13 types too.
-    ...(options.types === true ? { packs: [...NEW_DECK_PACKS] } : {}),
+    ...(options.types === true || options.fields === true ? { packs: [...NEW_DECK_PACKS] } : {}),
+    ...(options.fields === true ? BENCH_FIELD_DEFS : {}),
     nodes,
     edges,
   };

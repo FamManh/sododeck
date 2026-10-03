@@ -1,3 +1,4 @@
+import { checkDeck, fieldsOfType, hasValue, valueOf } from '@sododeck/model';
 import { analyzeFlow } from '@sododeck/model';
 import { parseSododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
@@ -164,6 +165,24 @@ describe('generateBenchDeck', () => {
     expect(generateBenchDeck(40, 80, 42).deck.packs).toBeUndefined();
     expect(generateBenchDeck(40, 80, 42, { types: true }).deck.edges).toEqual(
       generateBenchDeck(40, 80, 42).deck.edges,
+    );
+  });
+});
+
+describe('generateBenchDeck 032 fields', () => {
+  it('cycles Task / Warehouse / Issue with four on-card values each, valid and clean', () => {
+    const { deck } = generateBenchDeck(30, 60, 42, { fields: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(new Set(deck.nodes.map((n) => n.type))).toEqual(new Set(['task', 'warehouse', 'issue']));
+    for (const node of deck.nodes) {
+      const onCard = fieldsOfType(deck, node.type).filter(
+        (f) => f.onCard === true && hasValue(valueOf(node, f.id)),
+      );
+      expect(onCard.length).toBeGreaterThanOrEqual(4);
+    }
+    expect(checkDeck(deck).total).toBe(0);
+    expect(generateBenchDeck(30, 60, 42, { fields: true }).deck.edges).toEqual(
+      generateBenchDeck(30, 60, 42).deck.edges,
     );
   });
 });
