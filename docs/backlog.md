@@ -2117,7 +2117,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 032-typed-fields
 
-- **Status:** unblocked by 030 (type ids and the registry exist). Re-clarify against 030's type ids before planning.
+- **Status:** built (2026-10-03, `specs/032-typed-fields`, ADR 0027). Field definitions per type with defaults (frame 120), Tech / Host / Owner in the list, the drawer field editor, the card's fields block and export, search, bulk, clipboard and Problems. Values are stored one document key per card and field (ADR 0027 §5).
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
   (split at `/speckit.specify` if it grows) · **Lifts:** §g-40
 - **Goal:** Users add typed fields to cards and choose which show on the card (§g-61 D3).

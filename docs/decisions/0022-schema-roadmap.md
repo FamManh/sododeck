@@ -102,22 +102,27 @@ its own tests, and may still be refined in that feature's spec.
 
 ### Typed fields (032)
 
-| Field              | Type                                                                                                    | Added by | Absent means             |
-| ------------------ | ------------------------------------------------------------------------------------------------------- | -------- | ------------------------ |
-| `fields`           | list of field definitions                                                                               | 032      | only the built-in fields |
-| `fields[].id`      | id                                                                                                      | 032      | n/a (required)           |
-| `fields[].name`    | text                                                                                                    | 032      | n/a (required)           |
-| `fields[].kind`    | `text` \| `number` \| `select` \| `status` \| `person` \| `date` \| `dateRange` \| `link` \| `progress` | 032      | n/a (required)           |
-| `fields[].options` | list of `{ id, label, color? }` (select and status)                                                     | 032      | no options               |
-| `fields[].types`   | type ids the field applies to                                                                           | 032      | every type               |
-| `fields[].onCard`  | boolean                                                                                                 | 032      | `false` (drawer only)    |
-| `node.values`      | object: field id → value                                                                                | 032      | no values                |
+Built by 032 and refined there (ADR 0027): `unit`, status `icon`, `fieldDefaults` and built-in
+entries were added; values are stored one document key each.
+
+| Field              | Type                                                                                                    | Added by | Absent means                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------ |
+| `fields`           | list of field definitions                                                                               | 032 ✅   | only the built-in and default fields |
+| `fields[].id`      | id                                                                                                      | 032 ✅   | n/a (required)                       |
+| `fields[].name`    | text                                                                                                    | 032 ✅   | n/a (required)                       |
+| `fields[].kind`    | `text` \| `number` \| `select` \| `status` \| `person` \| `date` \| `dateRange` \| `link` \| `progress` | 032 ✅   | n/a (required)                       |
+| `fields[].options` | list of `{ id, label, color?, icon? }` (select and status; `icon` status only)                          | 032 ✅   | no options                           |
+| `fields[].types`   | type ids the field applies to                                                                           | 032 ✅   | every type                           |
+| `fields[].onCard`  | boolean                                                                                                 | 032 ✅   | `false` (drawer only)                |
+| `fields[].unit`    | text, number fields only                                                                                | 032 ✅   | no unit                              |
+| `fieldDefaults`    | type ids whose default fields live in `fields`                                                          | 032 ✅   | every type uses the app's defaults   |
+| `node.values`      | object: field id → value                                                                                | 032 ✅   | no values                            |
 
 - Values by kind: a string for text, person, date (`YYYY-MM-DD`) and select / status (an option
   id); a number for number and progress (0–100); `{ from, to }` for a date range;
   `{ url, label? }` for a link.
-- Today's `tech`, `host`, `owner`, `tags` and `links` keep their fields and storage. The type
-  registry lists them as a type's built-in fields.
+- Today's `tech`, `host` and `owner` keep their fields and storage; they appear in the field list
+  as built-ins, and an entry with their id in `fields` stores only order and `onCard`.
 - A value whose field or option no longer exists is kept and reported, like any dangling
   reference.
 
