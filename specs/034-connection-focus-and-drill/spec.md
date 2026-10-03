@@ -17,9 +17,9 @@
 **In scope**
 
 - **Hover focus**: resting the pointer on a card (or keyboard-focusing it) highlights that card's connections and neighbours and dims everything else, with no toggle and no click. Leaving restores the canvas.
-- **Highlighted look**: connected connectors draw in Ink at 2.75px, neighbours keep their full look, everything else drops to 20 % opacity (`DESIGN.md` Connectors). Today's focus mode (F) and selection focus keep working and use the same look.
+- **Highlighted look**: connected connectors draw in Ink at 2.75px, neighbours keep their full look, everything else drops to 20 % opacity (`DESIGN.md` Connectors). Today's focus mode (F) keeps working and uses the same look.
 - **Bundles**: two or more connectors between the same pair of visible cards draw as one curve with a "×n" count pill. Clicking the count fans the bundle out into its individual connectors; clicking again (or Esc, or clicking the canvas) folds it back.
-- **Drill-in header and proxies**: inside a group or card the canvas shows an "Inside <name>" title with the count of what is inside, and each external connection ends on a dashed **outside** proxy card (type icon, title, "Outside") instead of today's port pill. Selecting a proxy and double-clicking (or ⏎) leaves the drill-in and selects the real card.
+- **Drill-in header and proxies**: inside a group or card the canvas shows an "Inside <name>" title with the count of what is inside, and each external connection ends on a dashed **outside** proxy card (type icon, title, "Outside") instead of today's port pill. Clicking a proxy focuses it; double-clicking it (or ⏎ on it) leaves the drill-in and selects the real card.
 - Light and dark themes; reduced motion; focus states readable without colour; keyboard-operable.
 
 **Out of scope**
@@ -98,7 +98,7 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 **Acceptance Scenarios**:
 
 1. **Given** a drill-in with 4 cards inside, **When** it opens, **Then** the canvas shows "Inside <name>" with a count of 4 and the breadcrumb path.
-2. **Given** a connection from an inside card to an outside card, **When** drilled in, **Then** it ends on a dashed outside proxy (150px wide, type icon, title, "Outside") placed at the edge of the view.
+2. **Given** a connection from an inside card to an outside card, **When** drilled in, **Then** it ends on a dashed outside proxy (150px wide, type icon, title, "Outside") placed just outside the drilled-in content: in a left column when every connection comes in from that card, otherwise in a right column.
 3. **Given** several inside connections to the same outside card, **When** drilled in, **Then** they share one proxy, and the connectors to it bundle as in Story 2 when they join the same two cards.
 4. **Given** an outside proxy, **When** the user double-clicks it or presses ⏎ on it, **Then** the drill-in closes to the level that contains the outside card, the real card is selected and brought into view.
 5. **Given** an outside proxy, **When** the user tries to move, resize or edit it, **Then** nothing changes in the deck (proxies are views, not cards).
@@ -115,11 +115,11 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 - Hover on touch devices (no hover): hover focus does not apply; tap-to-select with pinned focus remains.
 - A bundle whose connectors have different labels: the pill shows only the count; labels appear when fanned out or in the popover.
 - Fanned-out bundle and a card moved: the fan follows; folding it back works after the move.
-- A bundle at very low zoom (Landscape / System levels): the pill stays readable or reduces to the plain curve per 029's zoom rules; the count never overlaps the cards.
+- A bundle at very low zoom: at System level the pill shrinks to a small Ink dot (no number, per 029's "chips as dots at System level" rule) and at Landscape level only the curve is drawn; the count never overlaps the cards, and fan-out still works from the bundle popover.
 - A flow step runs between two cards joined by a "×3" bundle: in flow mode the step's connector draws on its own with the step look and the other two show as "×2"; closing the flow shows "×3" again.
 - A connector between a card and itself (self-loop): not bundled with others and drawn as today.
 - A pair with two automatic connectors and one adjusted connector: the two draw as one "×2" bundle and the adjusted one keeps its own route beside it. Resetting the adjusted one's route (`R`) makes it join the bundle ("×3"); adjusting a bundled connector (e.g. after fan-out) takes it out of the bundle.
-- A collapsed group's merged connector (029): keeps today's "×n" behaviour and look; a bundle between two ordinary cards uses the same pill.
+- A collapsed group's merged connector (029): keeps today's behaviour (click or ⏎ opens its list) and takes the same Ink "×n" pill as a bundle (`DESIGN.md` Connectors).
 - Drill-in into a group with more than about 12 external neighbours: proxies stay legible (stacked, no overlap) and scroll with the canvas.
 - An outside card that is itself hidden (collapsed in an outer group): the proxy stands for the visible representative and selecting it leaves the drill-in to that representative.
 - Reduced motion: dimming, highlighting and fan-out change state without animation; no information is conveyed by motion alone.
@@ -131,18 +131,19 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 ### Functional Requirements
 
 - **FR-001**: Resting the pointer on a card for about 150 ms, or focusing it with the keyboard (at once), MUST highlight its connections and neighbours and dim all other cards and connectors, without a click or a toggle, and MUST restore the canvas when the pointer or focus leaves (after a grace of about 100 ms for the pointer). Moving the pointer from a focused card straight onto another MUST switch the focus at once, with no rest delay. Passing the pointer across cards without resting MUST NOT dim the canvas.
-- **FR-002**: The highlighted look MUST be: connected connectors in Ink at 2.75px, neighbours at full opacity, everything else at 20 % opacity; the same look MUST be used by pinned focus (F) and by selection focus. Colour and weight MUST be applied as separate rules so 022 can keep a connector's own colour without changing the weight rule.
-- **FR-003**: A pinned focus (F, or selection focus) MUST take priority over hover focus; hover focus MUST be suspended during flow playback, dragging, resizing and connector drawing.
+- **FR-002**: The highlighted look MUST be: connected connectors in Ink at 2.75px; neighbour cards at full opacity with their border and lip in Secondary; other cards at 22 % and other connectors and labels at 20 % opacity (`DESIGN.md` Card states and Connectors); the same look MUST be used by pinned focus (F). Colour and weight MUST be applied as separate rules so 022 can keep a connector's own colour without changing the weight rule.
+- **FR-003**: A pinned focus (F on a selected card) MUST take priority over hover focus; hover focus MUST be suspended during flow playback, dragging, resizing and connector drawing.
 - **FR-004**: Hover focus MUST combine with a saved view's dimming without hiding cards the view dimmed more strongly, and MUST NOT change selection, the document or the undo history.
 - **FR-005**: Two or more connectors on the automatic route between the same pair of visible cards, in either direction, MUST draw as one curve with a "×n" Ink pill (22px, 11.5 / 700 text, 2px canvas ring) showing the number of bundled connectors; self-loops and connectors with an adjusted route (017 `edge.route`) MUST NOT bundle and MUST draw as today.
-- **FR-005a**: While a flow is shown or playing, connectors that belong to that flow MUST NOT be bundled and MUST draw on their own with the flow look (035); the remaining connectors of the pair MUST stay bundled if two or more remain, with the count updated, and the bundle MUST re-form when the flow is closed.
+- **FR-005a**: While a flow is shown or playing, connectors that belong to that flow MUST NOT be bundled and MUST draw on their own with the flow look (035); the remaining connectors of the pair MUST stay bundled if two or more remain, with the count updated, and the bundle MUST re-form when the flow is closed. While a flow is being recorded (006), no connector MUST be bundled, so every connector can be clicked as a step.
 - **FR-006**: Clicking a bundle's count MUST fan the bundle out into its individual connectors, and clicking again, Esc, or clicking empty canvas MUST fold it back; the fanned state is UI-only and is never saved in the deck.
 - **FR-007**: A bundle MUST highlight as one connection under hover focus and MUST draw an arrowhead for each direction present; selecting it MUST expose each underlying connector for selection, editing and deletion.
+- **FR-007a**: A bundle MUST be fully operable by keyboard: ⏎ on a focused bundle opens its list (as for a collapsed group's merged connector today), and the list offers Fan out / Fold plus Select and Delete for each connector.
 - **FR-008**: A pair that drops below two connectors MUST draw as an ordinary connector with no count; a pair with one connector MUST look exactly as before this feature.
 - **FR-009**: Drilling into a group or card MUST show an "Inside <name>" header with the count of what is inside and the existing breadcrumb path.
 - **FR-010**: Each connection from inside the drill-in to an outside card MUST end on a dashed outside proxy (150px wide, 1.5px dashed Secondary, radius 14, canvas fill, type icon, title 12.5 / 600, "Outside" 10 Muted); connections to the same outside card MUST share one proxy.
 - **FR-011**: Activating an outside proxy (double-click or ⏎) MUST leave the drill-in to the level containing the real card (or its visible representative) and select and reveal it; proxies MUST NOT be movable, resizable or editable and MUST NOT be stored in the deck.
-- **FR-012**: Today's port pills MUST be replaced by the outside proxies without losing any behaviour they have today (navigating out, showing the count of connections, keyboard access).
+- **FR-012**: Today's port pills MUST be replaced by the outside proxies without losing what they offer today (navigating out to the real card, keyboard access). Navigating out moves from a single click to double-click or ⏎ (FR-011), so a click can focus a proxy without leaving the drill-in.
 - **FR-013**: All highlight, bundle and proxy states MUST be readable in light and dark themes and without relying on colour alone (weight, opacity, dash, count text).
 - **FR-014**: Hover focus, bundling and proxies MUST be keyboard-operable and expose roles and labels to assistive technology (a bundle announces its count and endpoints; a proxy announces "<title>, outside, press Enter to go to it"); reduced motion MUST remove any animation without removing information.
 - **FR-015**: This feature MUST NOT change the file format, MUST NOT add a connector relationship type or legend, and MUST NOT make any network call.
@@ -152,7 +153,7 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 
 - **Focus set**: the card under the pointer or focus, its neighbours and the connectors between them; derived from the document each time, never stored.
 - **Bundle**: the group of automatic-route connectors between one pair of visible cards, drawn as one curve with a count; derived, never stored; its fanned-out state is UI-only.
-- **Outside proxy**: a read-only stand-in for a card outside the current drill-in, shown at the edge of the view; derived, never stored.
+- **Outside proxy**: a read-only stand-in for a card outside the current drill-in, placed in a column just outside the drilled-in content; derived, never stored.
 
 ## Success Criteria _(mandatory)_
 
@@ -172,6 +173,6 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 - Relationship types and the legends in frame 118 (a and d) are not drawn in 034; the highlighted connectors use Ink for all connectors. Whether a connector styled by 022 keeps its own colour when highlighted is 022's decision.
 - No schema change: bundles, focus sets, fan-out and proxies are all derived from the document or kept as UI-only state.
 - 034 depends only on 029. Moving a connector end along a side (frame 118 c) belongs to 022, not to 034.
-- Today's focus mode (F), selection focus, merged connectors for collapsed groups and the drill-in breadcrumb stay; 034 only changes their look and adds hover, bundles and proxies.
+- Today's focus mode (F), merged connectors for collapsed groups and the drill-in breadcrumb stay; 034 only changes their look and adds hover, bundles and proxies.
 - Real-time collaboration is out of scope; the document model stays collaboration-ready (036).
 - This feature is independent of 033 and 035 and may be built in parallel with them; 035 owns the look during flow playback, and hover focus yields to it.

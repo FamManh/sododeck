@@ -106,6 +106,7 @@ apps/app/src/routes/bench-page.tsx        # bench hook for hover
 
 ## Docs to update
 
+- ADR `docs/decisions/0023-derived-connector-bundles.md` (constitution VIII): bundles and proxies are derived and never stored; only automatic-route connectors bundle, which 022 inherits; hover focus is CSS-only.
 - `apps/app/CLAUDE.md`: hover focus mechanism, bundle ids, proxy prefix.
 - `.claude/skills/react-flow/SKILL.md` map: `bundles.ts`, `hover-focus/`, proxies.
 - `docs/backlog.md`: 034 status; 022 note: "connectors with their own waypoints or style never bundle; 022 decides whether a styled connector keeps its colour when highlighted".

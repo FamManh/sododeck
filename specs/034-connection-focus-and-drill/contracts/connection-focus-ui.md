@@ -52,17 +52,18 @@ Cache rule: each derived object keeps its cached RF object while its inputs are 
 
 ## Interaction
 
-| Input                                 | Effect                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------------ |
-| Pointer rests 150 ms on a card        | Hover focus on it (unless suspended, research R3).                             |
-| Pointer moves card → card             | Focus switches at once.                                                        |
-| Pointer leaves                        | Clears after 100 ms unless another card is entered.                            |
-| Keyboard focus on a card              | Hover focus at once (`source: 'keyboard'`); clears when focus leaves.          |
-| Click "×n" pill / ⏎ on focused bundle | Toggle fan-out.                                                                |
-| Click bundle curve                    | Open the bundle popover: each connector with label, direction, Select, Delete. |
-| Esc / click empty canvas              | Fold every fanned bundle (Esc first closes an open popover, as today).         |
-| Click proxy                           | Focus it.                                                                      |
-| Double-click / ⏎ on proxy             | Leave the drill-in to the real card's level; select it, focus it, centre it.   |
+| Input                          | Effect                                                                                              |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Pointer rests 150 ms on a card | Hover focus on it (unless suspended, research R3).                                                  |
+| Pointer moves card → card      | Focus switches at once.                                                                             |
+| Pointer leaves                 | Clears after 100 ms unless another card is entered.                                                 |
+| Keyboard focus on a card       | Hover focus at once (`source: 'keyboard'`); clears when focus leaves.                               |
+| Click "×n" pill                | Toggle fan-out.                                                                                     |
+| ⏎ on a focused bundle          | Open the bundle popover (same as a merged connector today); focus moves into it.                    |
+| Click bundle curve             | Open the bundle popover: Fan out / Fold, then each connector with label, direction, Select, Delete. |
+| Esc / click empty canvas       | Fold every fanned bundle (Esc first closes an open popover, as today).                              |
+| Click proxy                    | Focus it.                                                                                           |
+| Double-click / ⏎ on proxy      | Leave the drill-in to the real card's level; select it, focus it, centre it.                        |
 
 ## Accessible names
 

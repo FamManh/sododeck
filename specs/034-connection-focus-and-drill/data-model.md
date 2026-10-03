@@ -64,9 +64,9 @@ State transitions of a pair (derived each render):
 
 ## UI-only state (`state/ui-store.ts`)
 
-| Field           | Type                                                      | Set by                                 | Cleared by                                                                  |
-| --------------- | --------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
-| `hoverFocus`    | `{ id: string; source: 'pointer' \| 'keyboard' } \| null` | `useHoverFocus` (after rest / at once) | grace timer, focus leaving, any suspension (R3), view / drill / deck switch |
-| `fannedBundles` | `ReadonlySet<string>`                                     | pill click, ⏎ on a focused bundle      | pill click, Esc, pane click, view / drill / deck switch; pruned when gone   |
+| Field           | Type                                                      | Set by                                    | Cleared by                                                                  |
+| --------------- | --------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| `hoverFocus`    | `{ id: string; source: 'pointer' \| 'keyboard' } \| null` | `useHoverFocus` (after rest / at once)    | grace timer, focus leaving, any suspension (R3), view / drill / deck switch |
+| `fannedBundles` | `ReadonlySet<string>`                                     | pill click, Fan out in the bundle popover | pill click, Esc, pane click, view / drill / deck switch; pruned when gone   |
 
 `focusedEdgeId` (existing) may now hold a `bundle:` id; `focusedId` may hold a `port:` id. `pruneSelection` / focus pruning learn both prefixes. Undo history is never touched by any of these (FR-004).
