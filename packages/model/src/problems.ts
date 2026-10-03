@@ -6,6 +6,7 @@
  */
 import type { Edge, Flow, Id, Node, SododeckFile } from '@sododeck/schema';
 
+import { isKnownPack, isKnownType } from './card-types';
 import { analyzeFlow, type FlowAnalysis, type PathStep } from './flow-paths';
 import { stickyLabel } from './geometry';
 import { checkIntegrity, type IntegrityProblem } from './integrity';
@@ -22,7 +23,9 @@ export type ProblemKind =
   | 'rule-without-catch-all'
   | 'invalid-rule-cells'
   | 'broken-reference'
-  | 'card-size-out-of-range';
+  | 'card-size-out-of-range'
+  | 'unknown-card-type'
+  | 'unknown-pack';
 
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
@@ -36,11 +39,14 @@ export const PROBLEM_KINDS: readonly ProblemKind[] = [
   'invalid-rule-cells',
   'broken-reference',
   'card-size-out-of-range',
+  'unknown-card-type',
+  'unknown-pack',
 ];
 
 /** Where a problem is fixed. */
 export type ProblemTarget =
   | { type: 'node'; id: Id }
+  | { type: 'nodes'; ids: readonly Id[] }
   | { type: 'edges'; ids: readonly Id[] }
   | { type: 'flow'; flowId: Id; stepId?: Id; branchIds?: readonly Id[] }
   | { type: 'rule'; ruleId: Id }
@@ -100,6 +106,8 @@ const TITLES: Record<ProblemKind, string> = {
   'invalid-rule-cells': 'Invalid rule cells',
   'broken-reference': 'Broken reference',
   'card-size-out-of-range': 'Card size out of range',
+  'unknown-card-type': 'Unknown card type',
+  'unknown-pack': 'Unknown pack',
 };
 
 /**
@@ -111,7 +119,7 @@ const CARD_SIZE_RANGE = { min: { width: 120, height: 44 }, max: { width: 800, he
 /** Every problem in `file`. Same input, same output and order. */
 export function checkDeck(file: SododeckFile): DeckProblems {
   const drafts: Draft[] = [];
-  const add = (d: Omit<Draft, 'title'>) => drafts.push({ ...d, title: TITLES[d.kind] });
+  const add: Add = (d) => drafts.push({ ...d, title: d.title ?? TITLES[d.kind] });
 
   const nodeById = new Map<Id, Node>(file.nodes.map((n) => [n.id, n]));
   const nodeTitle = (id: Id) => nodeById.get(id)?.title ?? id;
@@ -154,10 +162,12 @@ export function checkDeck(file: SododeckFile): DeckProblems {
 
   checkReferences(file, analyses, nodeTitle, add);
   checkCardSizes(file.nodes, add);
+  checkCardTypes(file, add);
   return finish(drafts);
 }
 
-type Add = (d: Omit<Draft, 'title'>) => void;
+/** `title` overrides the kind's title when the id belongs in it (030: "Unknown pack x"). */
+type Add = (d: Omit<Draft, 'title'> & { title?: string }) => void;
 
 /** A stored size outside the supported range (017, research R11); the file still opens. */
 function checkCardSizes(nodes: readonly Node[], add: Add): void {
@@ -177,6 +187,41 @@ function checkCardSizes(nodes: readonly Node[], add: Add): void {
         `${node.title} has a size of ${String(size.width)} × ${String(size.height)}; ` +
         `allowed ${String(min.width)} × ${String(min.height)} to ${String(max.width)} × ${String(max.height)}`,
       objectTitle: node.title,
+    });
+  }
+}
+
+/** Type and pack ids this version has no entry for (030): kept in the file, drawn generically. */
+function checkCardTypes(file: SododeckFile, add: Add): void {
+  const byType = new Map<string, Node[]>();
+  for (const node of file.nodes) {
+    if (isKnownType(node.type)) continue;
+    const group = byType.get(node.type);
+    if (group === undefined) byType.set(node.type, [node]);
+    else group.push(node);
+  }
+  for (const [type, nodes] of byType) {
+    const ids = nodes.map((n) => n.id);
+    add({
+      kind: 'unknown-card-type',
+      ids,
+      target: { type: 'nodes', ids },
+      on: ids,
+      title: `Unknown card type ${type}`,
+      detail: `${nodes.map((n) => n.title).join(', ')} use a type this version does not know`,
+      objectTitle: type,
+    });
+  }
+  for (const pack of file.packs ?? []) {
+    if (isKnownPack(pack)) continue;
+    add({
+      kind: 'unknown-pack',
+      ids: [pack],
+      target: { type: 'object', ref: { scope: 'meta', id: '' } },
+      on: [],
+      title: `Unknown pack ${pack}`,
+      detail: 'Kept in the file; this version has no types for it',
+      objectTitle: pack,
     });
   }
 }
@@ -428,6 +473,8 @@ function targetIds(target: ProblemTarget): readonly Id[] {
   switch (target.type) {
     case 'node':
       return [target.id];
+    case 'nodes':
+      return target.ids;
     case 'edges':
       return target.ids;
     case 'flow':

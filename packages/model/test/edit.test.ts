@@ -268,12 +268,9 @@ describe('refused edits (FR-007)', () => {
     expectRefused(doc, 'invalid', () => editor.add('groups', { title: '' }));
   });
 
-  it('refuses an unknown node type', () => {
+  it('refuses a malformed node type id', () => {
     const { doc, editor } = setup(base);
-    expectRefused(doc, 'invalid', () =>
-      // @ts-expect-error not a node kind
-      editor.add('nodes', { type: 'lambda', title: 'Fn' }),
-    );
+    expectRefused(doc, 'invalid', () => editor.add('nodes', { type: 'Lambda', title: 'Fn' }));
   });
 
   it('refuses an edge to a missing node', () => {

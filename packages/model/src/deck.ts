@@ -8,7 +8,9 @@
  *
  *   doc.getMap('meta')       Y.Map            $schema, version, name?, description (Y.Text), tags?
  *                                               (Y.Array), swatches (Y.Array, always present, 020),
- *                                               tagColors (Y.Map tag → colour, always present, 033)
+ *                                               tagColors (Y.Map tag → colour, always present, 033),
+ *                                               packs (Y.Map packId → true, only once the deck has a
+ *                                               pack choice, 030)
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component
  *   doc.getMap('groups')     Y.Map<id, Y.Map>  one map per group
  *   doc.getMap('edges')      Y.Map<id, Y.Map>  one map per connection
@@ -36,6 +38,7 @@ import type { Id, Rule, SododeckFile } from '@sododeck/schema';
 import { parseSododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
+import { NEW_DECK_PACKS } from './card-types';
 import { toY } from './convert';
 import { DeckValidationError } from './errors';
 import { canonicalize } from './key-order';
@@ -67,6 +70,7 @@ export function createDeck(): DeckDoc {
     flows: [],
     rules: {},
     stickies: [],
+    packs: [...NEW_DECK_PACKS],
   } satisfies SododeckFile);
 }
 
@@ -96,6 +100,11 @@ export function fromJSON(input: unknown): DeckDoc {
     meta.set('swatches', toY(file.swatches ?? []));
     // Same reason for `tagColors` (033 R2): two tabs colouring their first tag must share one map.
     meta.set('tagColors', toY(file.tagColors ?? {}));
+    // Lazy, unlike the two above: a file without `packs` must stay without it (030 R4). A deck
+    // that has one carries it from the start, so two tabs toggling packs share the map.
+    if (file.packs !== undefined) {
+      meta.set('packs', toY(Object.fromEntries(file.packs.map((id) => [id, true]))));
+    }
 
     for (const name of COLLECTIONS) {
       const list = collectionMap(doc, name);

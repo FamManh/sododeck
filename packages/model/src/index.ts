@@ -10,6 +10,27 @@ export {
   type Scope,
 } from './layout';
 export { DeckEditError, DeckValidationError, type DeckEditErrorCode } from './errors';
+export {
+  CARD_TYPES,
+  cardType,
+  CATEGORIES,
+  deckPacks,
+  isKnownPack,
+  isKnownType,
+  LEGACY_PACKS,
+  NEW_DECK_PACKS,
+  PACKS,
+  packTypeCount,
+  typeName,
+  typesOfPacks,
+  type CardType,
+  type Category,
+  type CategoryInfo,
+  type Family,
+  type Pack,
+  type PackId,
+  type TypeId,
+} from './card-types';
 export { createEditor, type DeckEditor, type EditorOptions } from './editor';
 export { observeDeck, type DeckChange, type ObjectChange } from './observe';
 export { checkIntegrity, type IntegrityProblem } from './integrity';

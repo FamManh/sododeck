@@ -245,7 +245,7 @@ describe('updateView (FR-041, FR-043)', () => {
     ).toBe('invalid');
     expect(
       code(() => {
-        editor.updateView('v1', { excludeKinds: ['lambda' as never] });
+        editor.updateView('v1', { excludeKinds: ['Lambda'] });
       }),
     ).toBe('invalid');
     expect(
