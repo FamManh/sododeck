@@ -270,7 +270,7 @@ export function Palette() {
                         )}
                       >
                         <TypeTile type={type.id} size={28} decorative />
-                        <span className="w-full truncate text-body-sm font-medium text-ink">
+                        <span className="w-full truncate text-caption font-medium text-ink">
                           {type.name}
                         </span>
                         {badge !== null && (
@@ -323,7 +323,7 @@ export function Palette() {
           setPalette({ view: 'packs', search: '' });
         }}
         className={cn(
-          'flex w-full items-center gap-2 rounded-row border-t border-hairline px-1 pt-3 text-body-sm text-ink hover:text-primary-ink',
+          'sticky bottom-0 flex w-full items-center gap-2 rounded-row border-t border-hairline bg-surface px-1 py-2.5 text-body-sm text-ink hover:text-primary-ink',
           focusRing,
         )}
       >
