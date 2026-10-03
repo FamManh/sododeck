@@ -138,9 +138,12 @@ not change in this feature.
   guarantees 1–6, tested with two documents in both delivery orders).
 - Long text merges letter by letter; undo reverts only the local characters.
 - Lookups by id do not depend on deck size. At 10,000 components a field edit costs the same as
-  at 500 and a move about 4 ms (budget 10 ms). Loading a 500-component file builds more Yjs
-  types (one `Y.Text` per long field) and is slower than before but well inside its budget
-  (`specs/036-collab-ready-document/bench-after.md`).
+  at 500 and a move about 5 ms (budget 10 ms).
+- The stored deck is bigger and slower to open: update bytes grow 17–23%, and opening a stored
+  deck (decode, snapshot, `toJSON`) takes about 31–35% longer (500 components: ~8.5 → ~11.5 ms;
+  2,000: ~33.5 → ~44 ms). This misses spec SC-006 (≤ 10%) and needs the founder's acceptance
+  (`specs/036-collab-ready-document/bench-after.md`). The cost is structural (keyed entries, order
+  keys, `Y.Text`), not the always-present empty texts.
 - Every new list and every new markdown field uses this layout (ADR 0022).
 - **Known last-write-wins spots (R11)**, recorded rather than solved:
   - The first creation of an optional nested container on one object by two clients at once
