@@ -193,7 +193,7 @@ export interface RoutedPathOptions {
 }
 
 /** Outward unit normal of each side. */
-const NORMAL: Record<Side, Point> = {
+export const NORMAL: Record<Side, Point> = {
   top: { x: 0, y: -1 },
   right: { x: 1, y: 0 },
   bottom: { x: 0, y: 1 },

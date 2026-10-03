@@ -39,10 +39,10 @@ its own tests, and may still be refined in that feature's spec.
 | `edge.style`           | object, at least one key          | 029      | default look                                                                          |
 | `edge.style.shape`     | `curved` \| `elbow` \| `straight` | 029      | `curved`; `elbow` when the connection has a stored `route.offset` (keeps a 017 tweak) |
 | `edge.style.dash`      | `solid` \| `dashed` \| `dotted`   | 022      | `solid`                                                                               |
-| `edge.style.width`     | number, 1–6                       | 022      | the theme's connector width                                                           |
+| `edge.style.width`     | `1` \| `1.5` \| `2` \| `3` \| `4` | 022      | 2 (the canvas line since 029)                                                         |
 | `edge.style.color`     | `ColorRef`                        | 022      | the theme's connector colour                                                          |
 | `edge.style.animated`  | boolean                           | 022      | `false`                                                                               |
-| `edge.route.waypoints` | `Position[]`                      | 022      | no bend points; `offset` (017) still applies to an elbow line without waypoints       |
+| `edge.route.waypoints` | `RouteWaypoint[]`, relative       | 022      | no bend points; `offset` (017) still applies to an elbow line without waypoints       |
 | `edge.route.fromAt`    | number, 0–1                       | 022      | the middle of `fromSide` (0.5). Only meaningful with `fromSide`.                      |
 | `edge.route.toAt`      | number, 0–1                       | 022      | the middle of `toSide`                                                                |
 | `edge.labelAt`         | number, 0–1                       | 022      | 0.5 (the middle of the path)                                                          |
@@ -58,6 +58,11 @@ its own tests, and may still be refined in that feature's spec.
   not turn curved. An empty `style` object is invalid; the Zod generator drops `minProperties`, so
   semantic rule **S7** reports it (S6 is the same rule for card styles).
 - `route` keeps `fromSide`, `toSide` and `offset` with their 017 meaning (ADR 0019).
+- **Built by 022** (2026-10-03, ADR 0024). Refinements: `waypoints` items are relative to the two
+  card centres (`x` / `dx`, `y` / `dy`), not `Position`; `width` is one of 1, 1.5, 2, 3, 4 with 2
+  the default; defaults are never stored; rules S9 (anchor needs its side), S10 (`offset` xor
+  `waypoints`) and S11 (non-empty list, one key per axis) live in `semantic-rules.ts`; the first
+  bend edit converts an `offset` into two bends and pins `elbow`.
 - Reserved, not scheduled: `edge.relation` (calls / reads / writes / depends on, with 034's
   legend).
 

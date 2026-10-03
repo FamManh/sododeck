@@ -177,4 +177,65 @@ describe('checkSemanticRules', () => {
       ).toEqual(['tagColors. pci   DSS ']);
     });
   });
+
+  describe('S9–S11: connector anchors and bends (022)', () => {
+    const withRoute = (
+      route: NonNullable<SododeckFile['edges'][number]['route']>,
+    ): SododeckFile => {
+      const edge = full.edges[1];
+      if (edge === undefined) throw new Error('full example has no second edge');
+      return { ...full, edges: [{ ...edge, route }] };
+    };
+
+    it('accepts anchors with their sides, free bends, and either alone', () => {
+      expect(
+        checkSemanticRules(
+          withRoute({
+            fromSide: 'right',
+            fromAt: 0,
+            toSide: 'left',
+            toAt: 1,
+            waypoints: [
+              { x: 0.5, y: 0.5 },
+              { dx: 3, dy: -3 },
+            ],
+          }),
+        ),
+      ).toEqual([]);
+      expect(checkSemanticRules(withRoute({ offset: 10 }))).toEqual([]);
+    });
+
+    it('S9 reports an anchor without its side', () => {
+      expect(checkSemanticRules(withRoute({ fromAt: 0.2, toSide: 'top', toAt: 0.2 }))).toEqual([
+        {
+          path: 'edges.0.route.fromAt',
+          message: 'Connector "e2" has a "fromAt" position but no "fromSide".',
+        },
+      ]);
+      expect(checkSemanticRules(withRoute({ toAt: 0.2 }))[0]?.path).toBe('edges.0.route.toAt');
+    });
+
+    it('S10 reports offset together with waypoints', () => {
+      expect(checkSemanticRules(withRoute({ offset: 4, waypoints: [{ x: 0.5, y: 0.5 }] }))).toEqual(
+        [
+          {
+            path: 'edges.0.route',
+            message: 'Connector "e2" route has both "offset" and "waypoints"; use one.',
+          },
+        ],
+      );
+    });
+
+    it('S11 reports a waypoint with two keys or none on an axis', () => {
+      expect(
+        checkSemanticRules(withRoute({ waypoints: [{ x: 0.5, dx: 1, y: 0.5 }, { y: 0.5 }] })).map(
+          (issue) => issue.path,
+        ),
+      ).toEqual(['edges.0.route.waypoints.0', 'edges.0.route.waypoints.1']);
+      expect(checkSemanticRules(withRoute({ waypoints: [{ x: 0.5, y: 1, dy: 2 }] }))[0]).toEqual({
+        path: 'edges.0.route.waypoints.0',
+        message: 'Bend 1 of "e2" needs exactly one of "y" and "dy".',
+      });
+    });
+  });
 });

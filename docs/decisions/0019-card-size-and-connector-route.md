@@ -96,3 +96,8 @@ level)` is the **only** place that turns a node into a drawn box: the stored siz
 - Screens 112–114 and 100 stay the design reference for handles, readouts and the reset button;
   the 12 px stop and the free-end modifier are recorded as intentional, allowed differences
   (T055).
+
+## Update (022)
+
+`offset` is read as two implicit bends once a connector gets free bends, anchors or a style; the
+route model that replaced the one-axis segment drag is ADR 0024.

@@ -155,13 +155,20 @@
       "to": "api-gateway",
       "protocol": "http",
       "label": "POST /orders · HTTPS",
+      "labelAt": 0.25,
       "direction": "forward",
       "description": "Checkout request with the cart and the delivery address.",
       "owner": "Mobile",
       "tags": ["public"],
       "links": [{ "label": "OpenAPI", "url": "https://api.example.com/openapi.json" }],
       "route": { "fromSide": "right", "toSide": "left", "offset": 40 },
-      "style": { "shape": "curved" }
+      "style": {
+        "shape": "curved",
+        "dash": "dashed",
+        "width": 3,
+        "color": "blue",
+        "animated": true
+      }
     },
     {
       "id": "e2",
@@ -169,8 +176,17 @@
       "to": "order-svc",
       "protocol": "grpc",
       "label": "CreateOrder",
-      "route": { "fromSide": "bottom", "toSide": "top" },
-      "style": { "shape": "elbow" }
+      "route": {
+        "fromSide": "bottom",
+        "toSide": "top",
+        "fromAt": 0.25,
+        "toAt": 0.75,
+        "waypoints": [
+          { "x": 0.5, "dy": -24 },
+          { "dx": 12, "y": 0.5 }
+        ]
+      },
+      "style": { "shape": "elbow", "dash": "dotted", "width": 1.5, "color": "#7a3cff" }
     },
     {
       "id": "e3",

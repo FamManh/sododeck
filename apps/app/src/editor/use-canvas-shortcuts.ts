@@ -20,7 +20,6 @@ import { readActionContext, targetOf, useRunAction } from './actions/use-action-
 import type { AlignMode } from './editing/align';
 import { useNudge } from './editing/use-nudge';
 import { useResizeKey } from './editing/use-resize-key';
-import { useSegmentKey } from './editing/use-segment-key';
 import {
   consumeLeftToolbar,
   focusSelectionToolbar,
@@ -160,7 +159,6 @@ export function useCanvasKeyDown() {
   const editor = useEditor();
   const nudger = useNudge();
   const resizeKeyer = useResizeKey();
-  const segmentKeyer = useSegmentKey();
   const { zoomIn, zoomOut, fitView, setCenter, getViewport, getZoom, screenToFlowPosition } =
     useReactFlow();
 
@@ -285,14 +283,9 @@ export function useCanvasKeyDown() {
         if (handled) event.preventDefault();
         return;
       }
-      // ⌥(⇧) arrows move a single selected connection's middle segment (017 R9), or otherwise
-      // nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by `code` because ⌥
+      // ⌥(⇧) arrows nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by `code` because ⌥
       // changes `key` on macOS.
       if (event.altKey) {
-        if (segmentKeyer.key(event, effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill)))) {
-          event.preventDefault();
-          return;
-        }
         if (nudger.key(event)) {
           event.preventDefault();
           return;
@@ -650,7 +643,6 @@ export function useCanvasKeyDown() {
       editor,
       nudger,
       resizeKeyer,
-      segmentKeyer,
       zoomIn,
       zoomOut,
       fitView,
@@ -718,7 +710,7 @@ export function useEditorShortcuts({
         event.stopPropagation();
         return;
       }
-      // R during a segment drag (017 R7, FR-014): back to automatic routing, mid-drag.
+      // R during a bend drag (022): back to automatic routing, mid-drag.
       if (key === 'r' && !isMod(event) && !event.altKey && resetActiveGesture()) {
         event.preventDefault();
         event.stopPropagation();

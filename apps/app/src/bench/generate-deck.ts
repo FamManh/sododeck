@@ -98,6 +98,10 @@ export function generateBenchDeck(
     lineTypes?: boolean;
     tags?: boolean;
     types?: boolean;
+    /** 022: 200 edges animated (half of them dashed). */
+    animated?: boolean;
+    /** 022: 200 edges with three free bends each, mixed shapes. */
+    bends?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -146,6 +150,8 @@ export function generateBenchDeck(
     });
   }
   if (options.routes === true) addBenchRoutes(edges);
+  if (options.animated === true) addBenchAnimated(edges);
+  if (options.bends === true) addBenchBends(edges);
 
   const deck: SododeckFile = {
     ...emptySododeckFile(),
@@ -159,6 +165,33 @@ export function generateBenchDeck(
   if (options.flows === true) addBenchFlows(deck, random);
   if (options.views === true) addBenchViews(deck, random);
   return { deck };
+}
+
+/** 022 R11: the first 200 edges run moving dashes, every other one dashed. */
+function addBenchAnimated(edges: SododeckFile['edges']): void {
+  edges.slice(0, 200).forEach((edge, i) => {
+    edge.style = {
+      ...edge.style,
+      ...(i % 2 === 0 ? { dash: 'dashed' as const } : {}),
+      animated: true,
+    };
+  });
+}
+
+/** 022 R1: the first 200 edges get three free bends, in the three line types. */
+function addBenchBends(edges: SododeckFile['edges']): void {
+  edges.slice(0, 200).forEach((edge, i) => {
+    const shape = LINE_TYPES[i % 3];
+    edge.style = { ...edge.style, ...(shape === undefined ? {} : { shape }) };
+    edge.route = {
+      ...edge.route,
+      waypoints: [
+        { x: 0.25, dy: -40 },
+        { x: 0.5, dy: 40 },
+        { x: 0.75, dy: -40 },
+      ],
+    };
+  });
 }
 
 /**

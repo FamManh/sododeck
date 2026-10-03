@@ -1,6 +1,8 @@
 import { readableText } from '@sododeck/ui/lib/contrast';
 import type { CardColor, ColorRef, StickyColor, Style } from '@sododeck/schema';
 
+import { lineColour } from '../style/line-colour';
+
 /**
  * Light token values for standalone images (R2: images are always light). Copied from
  * `packages/ui/src/styles/tokens.css`; `export-palette.test.ts` fails if a token changes.
@@ -72,6 +74,15 @@ export type ExportPalette = typeof LIGHT_PALETTE;
 
 function isCardColour(value: ColorRef): value is CardColor {
   return value in LIGHT_PALETTE.cardColours;
+}
+
+/**
+ * A connector's colour as a literal hex for the light export: a named colour's stroke, or a
+ * custom hex mixed toward black until it reaches 3:1 on the canvas (the canvas's own rule).
+ */
+export function exportLineColour(value: ColorRef): string {
+  if (isCardColour(value)) return LIGHT_PALETTE.cardColours[value].stroke;
+  return lineColour(value, 'light');
 }
 
 /** Resolves one channel to a literal hex: the light token for a named colour, else the hex as-is. */

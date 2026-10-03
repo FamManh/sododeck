@@ -77,6 +77,7 @@ function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | unde
       return { ...file, groups, views: [candidate] } as SododeckFile;
     }
     case 'groups':
+    case 'edges':
     case 'flows':
     case 'stickies':
       return { ...file, [kind]: [candidate] };

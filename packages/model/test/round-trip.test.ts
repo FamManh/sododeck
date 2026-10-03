@@ -877,3 +877,93 @@ describe('edits change only what they touch (US2 AS2)', () => {
     expect(serializeDeck(toJSON(doc))).toBe(serializeDeck(expected));
   });
 });
+
+describe('connector style, anchors, bends and label position (022)', () => {
+  const nodes: SododeckFile['nodes'] = [{ id: 'a', type: 'client', title: 'A' }];
+
+  it('round-trips every new key', () => {
+    const file: SododeckFile = {
+      ...empty,
+      nodes,
+      edges: [
+        {
+          id: 'e1',
+          from: 'a',
+          to: 'a',
+          label: 'call',
+          labelAt: 0.2,
+          route: {
+            fromSide: 'right',
+            toSide: 'left',
+            fromAt: 0.25,
+            toAt: 1,
+            waypoints: [
+              { x: 0.5, dy: -88 },
+              { dx: 4, y: 1 },
+            ],
+          },
+          style: { shape: 'elbow', dash: 'dashed', width: 3, color: 'blue', animated: true },
+        },
+        { id: 'e2', from: 'a', to: 'a', style: { dash: 'dotted', width: 1.5, color: '#7a3cff' } },
+      ],
+    };
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(serializeDeck(out)).toBe(serializeDeck(file));
+  });
+
+  it('keeps a 017 offset route unchanged on load and save', () => {
+    const file: SododeckFile = {
+      ...empty,
+      nodes,
+      edges: [
+        { id: 'e', from: 'a', to: 'a', route: { fromSide: 'right', toSide: 'left', offset: 40 } },
+      ],
+    };
+    expect(toJSON(fromJSON(file))).toEqual(file);
+  });
+
+  it('adds no 022 key after an unrelated edit of a pre-022 file', () => {
+    const file: SododeckFile = {
+      ...empty,
+      nodes,
+      edges: [{ id: 'e', from: 'a', to: 'a', style: { shape: 'straight' } }],
+    };
+    const doc = fromJSON(file);
+    const editor = createEditor(doc);
+    editor.update('edges', 'e', { label: 'Call' });
+    editor.update('nodes', 'a', { title: 'Renamed' });
+    expect(toJSON(doc).edges[0]).toEqual({
+      id: 'e',
+      from: 'a',
+      to: 'a',
+      label: 'Call',
+      style: { shape: 'straight' },
+    });
+  });
+
+  it('orders style keys shape, dash, width, color, animated and route keys by the schema', () => {
+    const doc = createDeck();
+    const editor = createEditor(doc);
+    editor.add('nodes', { id: 'a', type: 'client', title: 'A' });
+    editor.add('edges', { id: 'e', from: 'a', to: 'a' });
+    editor.setEdgeStyle(['e'], { animated: true, color: 'red', width: 3, dash: 'dashed' });
+    editor.setEdgeStyle(['e'], { shape: 'straight' });
+    editor.setEdgeRoute('e', {
+      waypoints: [{ x: 0.5, y: 0.5 }],
+      toAt: 0.2,
+      toSide: 'top',
+      fromAt: 0.1,
+      fromSide: 'left',
+    });
+    const [edge] = toJSON(doc).edges;
+    expect(Object.keys(edge?.style ?? {})).toEqual(['shape', 'dash', 'width', 'color', 'animated']);
+    expect(Object.keys(edge?.route ?? {})).toEqual([
+      'fromSide',
+      'toSide',
+      'fromAt',
+      'toAt',
+      'waypoints',
+    ]);
+  });
+});

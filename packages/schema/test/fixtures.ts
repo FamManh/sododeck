@@ -406,6 +406,93 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'edges.0.style',
   },
 
+  // Connector style, anchors, bends and label position (022)
+  {
+    name: 'edge style dash is not a dash',
+    input: set('edges.0.style.dash', 'wavy'),
+    path: 'edges.0.style.dash',
+  },
+  {
+    name: 'edge style width is not a step',
+    input: set('edges.0.style.width', 2.5),
+    path: 'edges.0.style.width',
+  },
+  {
+    name: 'edge style width is zero',
+    input: set('edges.0.style.width', 0),
+    path: 'edges.0.style.width',
+  },
+  {
+    name: 'edge style animated is a string',
+    input: set('edges.0.style.animated', 'yes'),
+    path: 'edges.0.style.animated',
+  },
+  {
+    name: 'edge style colour is not a colour',
+    input: set('edges.0.style.color', 'teal-ish'),
+    path: 'edges.0.style.color',
+  },
+  {
+    name: 'edge route fromAt above 1',
+    input: set('edges.1.route.fromAt', 1.2),
+    path: 'edges.1.route.fromAt',
+  },
+  {
+    name: 'edge route toAt below 0',
+    input: set('edges.1.route.toAt', -0.1),
+    path: 'edges.1.route.toAt',
+  },
+  {
+    name: 'edge route fromAt without fromSide (S9)',
+    input: set('edges.1.route', { toSide: 'top', fromAt: 0.5 }),
+    path: 'edges.1.route.fromAt',
+  },
+  {
+    name: 'edge route toAt without toSide (S9)',
+    input: set('edges.1.route', { fromSide: 'bottom', toAt: 0.5 }),
+    path: 'edges.1.route.toAt',
+  },
+  {
+    name: 'edge route with offset and waypoints (S10)',
+    input: set('edges.1.route.offset', 12),
+    path: 'edges.1.route',
+  },
+  {
+    name: 'edge route with no waypoints in the list',
+    input: set('edges.1.route.waypoints', []),
+    path: 'edges.1.route.waypoints',
+  },
+  {
+    name: 'waypoint with x and dx (S11)',
+    input: set('edges.1.route.waypoints.0.dx', 4),
+    path: 'edges.1.route.waypoints.0',
+  },
+  {
+    name: 'waypoint with no y or dy (S11)',
+    input: set('edges.1.route.waypoints', [{ x: 0.5 }]),
+    path: 'edges.1.route.waypoints.0',
+  },
+  {
+    name: 'waypoint with an unknown key',
+    input: set('edges.1.route.waypoints.0.z', 1),
+    path: 'edges.1.route.waypoints.0',
+  },
+  {
+    name: 'waypoint x is a string',
+    input: set('edges.1.route.waypoints.0.x', '0.5'),
+    path: 'edges.1.route.waypoints.0.x',
+  },
+  {
+    name: 'edge labelAt below 0',
+    input: set('edges.0.labelAt', -0.1),
+    path: 'edges.0.labelAt',
+  },
+  {
+    name: 'edge labelAt above 1',
+    input: set('edges.0.labelAt', 1.5),
+    path: 'edges.0.labelAt',
+  },
+
   // Card size and connector route (017)
   {
     name: 'node size with zero width',

@@ -67,3 +67,36 @@ describe('edge.resetRoute (017 R12)', () => {
     });
   });
 });
+
+describe('edge.resetRoute with bends and anchors (022)', () => {
+  const routed = (route: object, shape: 'curved' | 'straight') => ({
+    ...actionDeck,
+    edges: actionDeck.edges.map((e) => ({ ...e, route, style: { shape } })),
+  });
+  const offered = (deck: typeof actionDeck) =>
+    actionsFor(ACTIONS, actionContext(TARGETS.connection, 'edit', deck), 'menu')
+      .flatMap((s) => s.actions)
+      .map((a) => a.label)
+      .includes('Reset route');
+
+  it('is offered for every shape once a connector has bends, anchors or an offset', () => {
+    expect(offered(routed({ waypoints: [{ x: 0.5, y: 0.5 }] }, 'curved'))).toBe(true);
+    expect(offered(routed({ fromSide: 'right', fromAt: 0.2 }, 'straight'))).toBe(true);
+    expect(offered(routed({ offset: 10 }, 'straight'))).toBe(true);
+    expect(offered(routed({ fromSide: 'right' }, 'curved'))).toBe(false);
+  });
+
+  it('clears bends and anchors together in one undo step and announces it', () => {
+    useUiStore.getState().resetForDeck();
+    const deck = routed(
+      { fromSide: 'right', fromAt: 0.2, waypoints: [{ x: 0.5, y: 0.5 }] },
+      'curved',
+    );
+    const ctx = actionContext(TARGETS.connection, 'edit', deck);
+    expect(runAction(ACTIONS, 'edge.resetRoute', ctx)).toBe(true);
+    expect(toJSON(ctx.doc).edges.find((e) => e.id === 'e')).not.toHaveProperty('route');
+    expect(useUiStore.getState().announcement.text).toBe('Route reset');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).edges.find((e) => e.id === 'e')?.route?.waypoints).toHaveLength(1);
+  });
+});

@@ -1,4 +1,11 @@
-import { analyzeFlow, edgeShape, stickyCanvasPosition, stickyLabel, tagKey } from '@sododeck/model';
+import {
+  analyzeFlow,
+  edgeLineStyle,
+  edgeShape,
+  stickyCanvasPosition,
+  stickyLabel,
+  tagKey,
+} from '@sododeck/model';
 import type { Direction, SododeckFile } from '@sododeck/schema';
 
 import type { DrillFrame } from '../../state/ui-store';
@@ -14,11 +21,14 @@ import { typeName } from '../type-label';
 import { typeIconKey, type IconKey } from './icon-paths';
 import { effectiveLevel, type Level } from '../levels';
 import type { PathEnds, PathShape } from '../routing/route-path';
+import { labelClamp } from '../editing/label-drag';
+import { labelPoint, samplePath } from '../routing/connector-geometry';
+import { lineCap, lineDash } from '../style/line-colour';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import { edgePath } from './edge-geometry';
-import { exportLook, exportTagColours, type ExportLook } from './export-palette';
+import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
 import type { ImageScope } from './types';
 
@@ -92,6 +102,14 @@ export interface SceneBadge {
   label: string;
   errorPath: boolean;
 }
+/** Dash, weight and colour of a styled connector, already resolved for the light export. */
+export interface SceneEdgeStyle {
+  width: number;
+  /** A literal colour (named colours use their light stroke), or null for the default grey. */
+  colour: string | null;
+  dash?: string;
+  cap?: 'round';
+}
 export interface SceneEdge {
   id: string;
   path: string;
@@ -107,6 +125,8 @@ export interface SceneEdge {
   extent: Rect;
   labelPoint: { x: number; y: number };
   stroke: 'default' | 'flow' | 'flow-error';
+  /** The connector's own look (022); absent for the default one. Flow strokes ignore it. */
+  style?: SceneEdgeStyle;
   label: string | null;
   /** The label is a folded count ("×n"): drawn as the Ink pill, like the canvas (034). */
   count?: true;
@@ -426,6 +446,22 @@ function sceneGroups(
   });
 }
 
+/** The own look of a connector for the light export, or undefined when it has none. */
+function sceneStyle(style: SododeckFile['edges'][number]['style']): SceneEdgeStyle | undefined {
+  if (style === undefined) return undefined;
+  const own = edgeLineStyle({ style });
+  const colour = own.color === null ? null : exportLineColour(own.color);
+  if (own.dash === 'solid' && own.width === 2 && colour === null) return undefined;
+  const dash = lineDash(own.dash, own.width);
+  const cap = lineCap(own.dash);
+  return {
+    width: own.width,
+    colour,
+    ...(dash === undefined ? {} : { dash }),
+    ...(cap === undefined ? {} : { cap }),
+  };
+}
+
 function sceneEdges(
   deck: SododeckFile,
   graph: VisibleGraph,
@@ -445,6 +481,8 @@ function sceneEdges(
     shape: PathShape,
     memberIds: readonly string[],
     route?: SododeckFile['edges'][number]['route'],
+    style?: SododeckFile['edges'][number]['style'],
+    labelAt?: number,
     count?: true,
   ) => {
     const a = rects.get(from);
@@ -453,6 +491,12 @@ function sceneEdges(
     const marks = memberIds.flatMap((memberId) => overlay?.edges.get(memberId) ?? []);
     if (overlay !== null && marks.length === 0) return;
     const geometry = edgePath(a, b, route, shape, direction);
+    const badgeCount = marks.reduce((sum, mark) => sum + mark.badges.length, 0);
+    // The label at its stored fraction of the drawn line, as on the canvas (022 R10).
+    const spot =
+      labelAt === undefined
+        ? { x: geometry.labelX, y: geometry.labelY }
+        : labelPoint(samplePath(geometry.path), labelAt, labelClamp(label, badgeCount));
     edges.push({
       id,
       path: geometry.path,
@@ -462,8 +506,9 @@ function sceneEdges(
       target: geometry.target,
       ends: geometry.ends,
       extent: geometry.extent,
-      labelPoint: { x: geometry.labelX, y: geometry.labelY },
+      labelPoint: spot,
       stroke: strokeOf(marks),
+      ...(sceneStyle(style) === undefined ? {} : { style: sceneStyle(style) }),
       label,
       ...(count === undefined ? {} : { count }),
       badges: marks.flatMap((mark) =>
@@ -475,7 +520,18 @@ function sceneEdges(
     const edge = byId.get(id);
     if (edge === undefined || !drawnAlone.has(id)) continue;
     const direction = edge.direction ?? 'forward';
-    add(id, edge.from, edge.to, edge.label || null, direction, edgeShape(edge), [id], edge.route);
+    add(
+      id,
+      edge.from,
+      edge.to,
+      edge.label || null,
+      direction,
+      edgeShape(edge),
+      [id],
+      edge.route,
+      edge.style,
+      edge.labelAt,
+    );
   }
   // Edges that leave a drilled scope end at the outside component's port pill, as on the canvas.
   for (const port of graph.ports) {
@@ -504,6 +560,8 @@ function sceneEdges(
       'curved',
       merged.edgeIds,
       undefined,
+      undefined,
+      undefined,
       true,
     );
   }
@@ -518,6 +576,8 @@ function sceneEdges(
       bundle.direction === 'both' ? 'both' : 'forward',
       'curved',
       bundle.edgeIds,
+      undefined,
+      undefined,
       undefined,
       true,
     );

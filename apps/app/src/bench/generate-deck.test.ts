@@ -167,3 +167,24 @@ describe('generateBenchDeck', () => {
     );
   });
 });
+
+describe('generateBenchDeck 022 options', () => {
+  it('animates 200 connectors, half of them dashed', () => {
+    const { deck } = generateBenchDeck(300, 600, 42, { animated: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    const animated = deck.edges.filter((e) => e.style?.animated === true);
+    expect(animated).toHaveLength(200);
+    expect(animated.filter((e) => e.style?.dash === 'dashed')).toHaveLength(100);
+  });
+
+  it('gives 200 connectors three bends each in mixed shapes', () => {
+    const { deck } = generateBenchDeck(300, 600, 42, { bends: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    const bent = deck.edges.filter((e) => e.route?.waypoints?.length === 3);
+    expect(bent).toHaveLength(200);
+    expect(new Set(bent.map((e) => e.style?.shape)).size).toBe(3);
+    expect(generateBenchDeck(300, 600, 42).deck.edges.every((e) => e.route === undefined)).toBe(
+      true,
+    );
+  });
+});

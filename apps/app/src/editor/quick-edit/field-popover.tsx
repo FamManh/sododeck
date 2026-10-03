@@ -18,6 +18,7 @@ import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../st
 import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues } from './choice-state';
 import { TagPicker } from '../tags/tag-picker';
+import { LineStylePopover } from '../line-style/line-style-popover';
 import { tagPickerEscape } from '../tags/tag-picker-escape';
 
 /** The popover's accessible name per field (contract "Field popover"). */
@@ -31,6 +32,7 @@ const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
   protocol: 'Protocol',
   direction: 'Direction',
   style: 'Colour',
+  lineStyle: 'Line style',
 };
 
 const count = (n: number) => `${String(n)} ${n === 1 ? 'component' : 'components'}`;
@@ -214,6 +216,10 @@ function FieldContent({ field }: { field: ToolbarFieldId }) {
     const edge = deck.edges.find((e) => e.id === selection.edges[0]);
     return edge === undefined ? null : <EdgeFieldContent field={field} edge={edge} />;
   }
+  if (field === 'lineStyle') {
+    const ids = new Set(selection.edges);
+    return <LineStylePopover edges={deck.edges.filter((e) => ids.has(e.id))} />;
+  }
   if (field === 'style') {
     return <StyleFieldContent selection={selection} />;
   }
@@ -256,7 +262,13 @@ export function FieldPopover({
           aria-label={FIELD_NAMES[field]}
           align="start"
           onEscapeKeyDown={tagPickerEscape}
-          className={wide ? 'w-[272px] shadow-menu' : 'w-[236px] shadow-menu'}
+          className={
+            field === 'lineStyle'
+              ? 'max-h-[min(640px,80vh)] w-72 overflow-y-auto shadow-menu'
+              : wide
+                ? 'w-[272px] shadow-menu'
+                : 'w-[236px] shadow-menu'
+          }
         >
           <FieldContent field={field} />
         </PopoverContent>

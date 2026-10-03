@@ -214,7 +214,7 @@ and **027** ai-deck-skill are not scheduled.
 | 016 | canvas-editing           | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change     |
 | 017 | resize-edge-routing      | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                    |
 | 020 | card-style               | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change                |
-| 022 | connector-style          | after M4   | 017, 020, 029 | 5 d  | needs design (connector toolbar popover); schema change       |
+| 022 | connector-style          | after M4   | 017, 020, 029 | 8 d  | implemented (ADR 0024, frames 128–133); schema change         |
 | 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design     |
 | 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR          |
 | 025 | format-compatibility     | pre-launch | 005           | 2 d  | deferred (§g-81); re-confirm ADR 0020 before launch           |
@@ -1689,6 +1689,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 022-connector-style
 
+- **Status (2026-10-03): implemented** (ADR 0024, `specs/022-connector-style`). Relationship types and a legend moved to the Database pack (`docs/backlog-database.md`); a free-number weight became five fixed steps (1, 1.5, 2, 3, 4) with 2 px as the default.
 - **Added:** 2026-09-29, founder request during 017 clarify (richer connector options, reference
   screenshots in the conversation: a line toolbar with a Type / weight / dash popover and a
   curved line with waypoint handles). Kept out of 017 so 017 stays at 4 d.

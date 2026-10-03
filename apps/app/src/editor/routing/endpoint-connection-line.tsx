@@ -27,11 +27,16 @@ export function EndpointConnectionLine({
   toPosition,
 }: ConnectionLineComponentProps) {
   const hover = useUiStore((s) => s.endpointHover);
+  const anchor = useUiStore((s) => s.endpointAnchor);
+  const readout = useUiStore((s) => s.connectorReadout);
   const toSide = hover?.side ?? SIDE_OF_POSITION[toPosition];
+  // Over a card side the preview ends on the anchor the drop would make (022 R4).
+  const end =
+    anchor !== null && !anchor.automatic && hover !== null ? anchor.point : { x: toX, y: toY };
   const { path, ends } = routedPath(
     'elbow',
     { x: fromX, y: fromY, width: 0, height: 0 },
-    { x: toX, y: toY, width: 0, height: 0 },
+    { x: end.x, y: end.y, width: 0, height: 0 },
     [SIDE_OF_POSITION[fromPosition], toSide],
   );
   return (
@@ -45,6 +50,19 @@ export function EndpointConnectionLine({
         data-testid="endpoint-connection-line"
       />
       <EdgeEnds {...ends} direction="forward" color="var(--color-deck-orange)" />
+      {readout !== null && (
+        <text
+          x={end.x + 12}
+          y={end.y + 16}
+          fontSize={10.5}
+          fill="var(--color-deck-orange)"
+          fontFamily="var(--font-mono)"
+          aria-hidden
+          data-testid="endpoint-readout"
+        >
+          {readout}
+        </text>
+      )}
     </g>
   );
 }

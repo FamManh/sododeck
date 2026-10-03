@@ -215,7 +215,16 @@ export interface ContextMenuState {
 
 /** The selection toolbar's popovers (019 R6). */
 export type ToolbarFieldId =
-  'type' | 'owner' | 'tags' | 'tech' | 'links' | 'rules' | 'protocol' | 'direction' | 'style';
+  | 'type'
+  | 'owner'
+  | 'tags'
+  | 'tech'
+  | 'links'
+  | 'rules'
+  | 'protocol'
+  | 'direction'
+  | 'style'
+  | 'lineStyle';
 
 /** A live, unsaved colour choice shown on canvas before it is applied (020 R9). */
 export interface StylePreview {
@@ -228,7 +237,22 @@ export interface StylePreview {
  * hint bar shows its keys (016 R13).
  */
 export type CanvasGesture =
-  'pan' | 'drag' | 'group-drag' | 'resize' | 'marquee' | 'card-resize' | 'segment' | 'endpoint';
+  | 'pan'
+  | 'drag'
+  | 'group-drag'
+  | 'resize'
+  | 'marquee'
+  | 'card-resize'
+  | 'bend'
+  | 'anchor'
+  | 'label'
+  | 'endpoint';
+
+/** The bends of a connector while one is dragged (022): UI-only until release, then one op. */
+export interface BendPreview {
+  edgeId: Id;
+  bends: readonly { x: number; y: number }[];
+}
 
 /** A snapping guide during a drag (016 R7), in canvas px. UI-only, never saved. */
 export interface Guide {
@@ -344,10 +368,26 @@ export interface UiState {
   guides: readonly Guide[];
   /** Offset of a group drag from its start, shown next to the frame. */
   dragReadout: { dx: number; dy: number } | null;
+  /** The live bends of the connector being dragged (022); null outside a bend gesture. */
+  bendPreview: BendPreview | null;
+  /** What a connector handle shows while dragged: "x 288 · y 144", "left side · 78 %", "label 20 %". */
+  connectorReadout: string | null;
+  /** The label position while its pill is dragged (022); null outside a label gesture. */
+  labelPreview: { edgeId: Id; at: number; snapped: boolean } | null;
   /** The `W × H` readout pill next to a dragged corner while resizing a card (017). */
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
   /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
   endpointHover: { nodeId: Id; side: Side } | null;
+  /**
+   * Where along the hot side the dragged end would attach (022 R4): the position after snapping,
+   * whether a drop would clear the pinned side (deep in the card body), and the anchor point.
+   */
+  endpointAnchor: {
+    at: number;
+    snapped: boolean;
+    automatic: boolean;
+    point: { x: number; y: number };
+  } | null;
   /** The edge whose end is being dragged to reconnect it (017 R12); drawn as a 40 % ghost. */
   reconnectingEdgeId: Id | null;
   /** Cards a running marquee selects. */
@@ -500,10 +540,14 @@ export interface UiState {
   setDropTarget: (groupId: Id | null) => void;
   setGuides: (guides: readonly Guide[]) => void;
   setDragReadout: (readout: { dx: number; dy: number } | null) => void;
+  setBendPreview: (preview: BendPreview | null) => void;
+  setLabelPreview: (preview: UiState['labelPreview']) => void;
+  setConnectorReadout: (readout: string | null) => void;
   setResizeReadout: (
     readout: { width: number; height: number; x: number; y: number } | null,
   ) => void;
   setEndpointHover: (hover: { nodeId: Id; side: Side } | null) => void;
+  setEndpointAnchor: (anchor: UiState['endpointAnchor']) => void;
   setReconnectingEdge: (edgeId: Id | null) => void;
   setMarqueeCount: (count: number | null) => void;
   setPasteSerial: (serial: PasteSerial | null) => void;
@@ -679,8 +723,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     dropTarget: null,
     guides: NO_GUIDES,
     dragReadout: null,
+    bendPreview: null,
+    connectorReadout: null,
+    labelPreview: null,
     resizeReadout: null,
     endpointHover: null,
+    endpointAnchor: null,
     reconnectingEdgeId: null,
     marqueeCount: null,
     pasteSerial: null,
@@ -1225,6 +1273,15 @@ export const useUiStore = create<UiState>()((set, get) => {
       if (guides.length === 0 && get().guides.length === 0) return;
       set({ guides: guides.length === 0 ? NO_GUIDES : guides });
     },
+    setBendPreview: (bendPreview) => {
+      set({ bendPreview });
+    },
+    setLabelPreview: (labelPreview) => {
+      set({ labelPreview });
+    },
+    setConnectorReadout: (connectorReadout) => {
+      set({ connectorReadout });
+    },
     setDragReadout: (dragReadout) => {
       set({ dragReadout });
     },
@@ -1233,6 +1290,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     setEndpointHover: (endpointHover) => {
       set({ endpointHover });
+    },
+    setEndpointAnchor: (endpointAnchor) => {
+      set({ endpointAnchor });
     },
     setReconnectingEdge: (reconnectingEdgeId) => {
       set({ reconnectingEdgeId });
@@ -1291,8 +1351,12 @@ export const useUiStore = create<UiState>()((set, get) => {
         dropTarget: null,
         guides: NO_GUIDES,
         dragReadout: null,
+        bendPreview: null,
+        connectorReadout: null,
+        labelPreview: null,
         resizeReadout: null,
         endpointHover: null,
+        endpointAnchor: null,
         reconnectingEdgeId: null,
         marqueeCount: null,
         pasteSerial: null,

@@ -74,8 +74,8 @@ describe('Editing section (016, 017)', () => {
       'drag-duplicate',
       'drop-without-group',
       'resize-card',
-      'move-segment',
-      'move-segment-10',
+      'move-bend',
+      'move-bend-1',
       'reset-route',
       'resize-no-snap',
       'resize-ratio',
@@ -96,11 +96,11 @@ describe('Editing section (016, 017)', () => {
     expect(shortcutLabel('ungroup', true)).toBe('⇧⌘G');
   });
 
-  it('labels the card resize and segment keys (017)', () => {
+  it('labels the card resize and bend keys (017, 022)', () => {
     expect(shortcutLabel('resize-card', true)).toBe('⌘⇧ Arrows');
     expect(shortcutLabel('resize-card', false)).toBe('Ctrl+Shift+Arrows');
-    expect(shortcutLabel('move-segment', true)).toBe('⌥ Arrows');
-    expect(shortcutLabel('move-segment-10', true)).toBe('⌥⇧ Arrows');
+    expect(shortcutLabel('move-bend', true)).toBe('Arrows');
+    expect(shortcutLabel('move-bend-1', true)).toBe('⇧ Arrows');
     expect(shortcutLabel('reset-route', true)).toBe('R');
   });
 });

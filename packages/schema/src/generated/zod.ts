@@ -369,6 +369,14 @@ export const sododeckFileSchema = z
               .string()
               .describe('Short label, e.g. "POST /orders" or "OrderPlaced · Kafka".')
               .optional(),
+            labelAt: z
+              .number()
+              .gte(0)
+              .lte(1)
+              .describe(
+                'Where the label sits along the drawn line, as a fraction of its length from the source (0 to 1). When absent, 0.5 (the middle). Shared by every view.',
+              )
+              .optional(),
             direction: z
               .enum(['forward', 'both', 'none'])
               .describe('`forward` (from → to), `both` or `none`. Absent means `forward`.')
@@ -411,6 +419,56 @@ export const sododeckFileSchema = z
                     'Shift of the middle segment, in canvas pixels, relative to where automatic routing puts it. Positive values go right or down. When absent, it is 0. It only applies when the resolved sides are opposite.',
                   )
                   .optional(),
+                fromAt: z
+                  .number()
+                  .gte(0)
+                  .lte(1)
+                  .describe(
+                    'Where the connector leaves `fromSide`, as a fraction along that side (0 to 1; left to right on top and bottom, top to bottom on left and right). When absent, 0.5 (the middle). Needs `fromSide`.',
+                  )
+                  .optional(),
+                toAt: z
+                  .number()
+                  .gte(0)
+                  .lte(1)
+                  .describe(
+                    'Where the connector enters `toSide`, as a fraction along that side (0 to 1; left to right on top and bottom, top to bottom on left and right). When absent, 0.5 (the middle). Needs `toSide`.',
+                  )
+                  .optional(),
+                waypoints: z
+                  .array(
+                    z
+                      .object({
+                        x: z
+                          .number()
+                          .describe('Fraction of the source-to-target span on x.')
+                          .optional(),
+                        dx: z
+                          .number()
+                          .describe(
+                            'Pixels from the midpoint on x; used when the x span was under 22 px.',
+                          )
+                          .optional(),
+                        y: z
+                          .number()
+                          .describe('Fraction of the source-to-target span on y.')
+                          .optional(),
+                        dy: z
+                          .number()
+                          .describe(
+                            'Pixels from the midpoint on y; used when the y span was under 22 px.',
+                          )
+                          .optional(),
+                      })
+                      .strict()
+                      .describe(
+                        'One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source card centre and T the target card centre in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.',
+                      ),
+                  )
+                  .describe(
+                    'Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.',
+                  )
+                  .optional(),
               })
               .strict()
               .describe(
@@ -423,6 +481,46 @@ export const sododeckFileSchema = z
                   .enum(['curved', 'elbow', 'straight'])
                   .describe(
                     'Line type. When absent, a connector with a route `offset` is `elbow`, any other is `curved`.',
+                  )
+                  .optional(),
+                dash: z
+                  .enum(['solid', 'dashed', 'dotted'])
+                  .describe('Dash pattern. When absent, `solid`.')
+                  .optional(),
+                width: z
+                  .union([z.literal(1), z.literal(1.5), z.literal(2), z.literal(3), z.literal(4)])
+                  .describe('Line weight in canvas pixels. When absent, 2.')
+                  .optional(),
+                color: z
+                  .union([
+                    z
+                      .enum([
+                        'red',
+                        'orange',
+                        'amber',
+                        'yellow',
+                        'lime',
+                        'green',
+                        'teal',
+                        'cyan',
+                        'blue',
+                        'indigo',
+                        'violet',
+                        'pink',
+                        'slate',
+                      ])
+                      .describe('Named card colour, a design-system tint that follows the theme.'),
+                    z
+                      .string()
+                      .regex(new RegExp('^#[0-9a-f]{6}$'))
+                      .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+                  ])
+                  .describe('Line colour. When absent, the default grey.')
+                  .optional(),
+                animated: z
+                  .boolean()
+                  .describe(
+                    '`true` runs dashes along the line toward the arrow. When absent, `false`.',
                   )
                   .optional(),
               })

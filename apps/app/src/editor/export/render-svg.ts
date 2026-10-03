@@ -464,32 +464,56 @@ function collapsedHand(
   return out.join('');
 }
 
-function edgeStroke(edge: SceneEdge, palette: ExportPalette): { colour: string; width: number } {
+interface StrokeLook {
+  colour: string;
+  width: number;
+  dash?: string;
+  cap?: 'round';
+}
+
+function edgeStroke(edge: SceneEdge, palette: ExportPalette): StrokeLook {
   switch (edge.stroke) {
     case 'flow':
       return { colour: palette.primary, width: 2 };
     case 'flow-error':
       return { colour: palette.clayInk, width: 2 };
-    case 'default':
-      return { colour: palette.deckEdge, width: 2 };
+    case 'default': {
+      const own = edge.style;
+      if (own === undefined) return { colour: palette.deckEdge, width: 2 };
+      return {
+        colour: own.colour ?? palette.deckEdge,
+        width: own.width,
+        ...(own.dash === undefined ? {} : { dash: own.dash }),
+        ...(own.cap === undefined ? {} : { cap: own.cap }),
+      };
+    }
   }
 }
 
 function edge(item: SceneEdge, palette: ExportPalette, measure: TextMeasurer): string {
-  const { colour, width } = edgeStroke(item, palette);
+  const { colour, width, dash, cap } = edgeStroke(item, palette);
+  // The knob and arrow grow a quarter per px above the default weight, as on the canvas.
+  const scale = width > 2 ? 1 + (width - 2) * 0.25 : 1;
   const out: string[] = [`<g data-export="edge" data-id="${escapeXml(item.id)}">`];
   out.push(
-    `<path ${attrs({ d: item.path, fill: 'none', stroke: colour, 'stroke-width': width })}/>`,
+    `<path ${attrs({
+      d: item.path,
+      fill: 'none',
+      stroke: colour,
+      'stroke-width': width,
+      ...(dash === undefined ? {} : { 'stroke-dasharray': dash }),
+      ...(cap === undefined ? {} : { 'stroke-linecap': cap }),
+    })}/>`,
   );
   // The canvas's own end marks (`endMarks`), in the line colour.
   for (const mark of endMarks(item.ends, item.direction)) {
     out.push(
       mark.kind === 'knob'
-        ? `<circle ${attrs({ 'data-mark': 'knob', cx: mark.at.x, cy: mark.at.y, r: KNOB_RADIUS, fill: colour })}/>`
+        ? `<circle ${attrs({ 'data-mark': 'knob', cx: mark.at.x, cy: mark.at.y, r: KNOB_RADIUS * scale, fill: colour })}/>`
         : `<path ${attrs({
             'data-mark': 'arrow',
             d: ARROW_PATH,
-            transform: `translate(${n(mark.at.x)} ${n(mark.at.y)}) rotate(${String(mark.angle)})`,
+            transform: `translate(${n(mark.at.x)} ${n(mark.at.y)}) rotate(${String(mark.angle)})${scale === 1 ? '' : ` scale(${String(scale)})`}`,
             fill: colour,
             stroke: colour,
             'stroke-width': 2,

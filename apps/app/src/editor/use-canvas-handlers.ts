@@ -46,6 +46,7 @@ import { stepForEdge, stepForNode } from './flows/played-path';
 import { oneStep } from './fields/one-step';
 import { effectiveLevel, levelSelector } from './levels';
 import { nearestSide } from './routing/route-path';
+import { anchorFromPoint, anchorReadout } from './editing/anchor-drag';
 import { addNoteAt } from './stickies/sticky-actions';
 import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
@@ -509,6 +510,7 @@ export function useCanvasHandlers() {
         ui().setCanvasGesture('endpoint');
         ui().setReconnectingEdge(edge.id);
         reconnectEnd.current = handleType;
+        const ownNodeId = handleType === 'source' ? edge.source : edge.target;
         const level = effectiveLevel(zoomLevel, scopeOf(ui().drill));
         const onMove = (event: MouseEvent) => {
           const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -530,6 +532,28 @@ export function useCanvasHandlers() {
               ? null
               : { nodeId: hovered.nodeId, side: nearestSide(hovered.box, point) },
           );
+          // Where along that side the end would attach (022 R4); deep in the card it would clear.
+          const hit =
+            hovered === null
+              ? null
+              : anchorFromPoint(hovered.box, point, { mod: event.metaKey || event.ctrlKey });
+          ui().setEndpointAnchor(
+            hit === null || hovered === null
+              ? null
+              : {
+                  at: hit.at,
+                  snapped: hit.snapped,
+                  automatic: hit.automatic,
+                  point: hit.point,
+                },
+          );
+          ui().setConnectorReadout(
+            hit === null
+              ? null
+              : hit.automatic && hovered?.nodeId === ownNodeId
+                ? 'automatic'
+                : anchorReadout(hit.side, hit.at, hit.snapped),
+          );
         };
         endpointMoveHandler.current = onMove;
         window.addEventListener('mousemove', onMove);
@@ -541,6 +565,8 @@ export function useCanvasHandlers() {
         }
         if (ui().canvasGesture === 'endpoint') ui().setCanvasGesture(null);
         ui().setEndpointHover(null);
+        ui().setEndpointAnchor(null);
+        ui().setConnectorReadout(null);
         ui().setReconnectingEdge(null);
         reconnectEnd.current = null;
       },
@@ -559,14 +585,24 @@ export function useCanvasHandlers() {
         const end = reconnectEnd.current ?? 'target';
         const movedNodeId = end === 'source' ? c.source : c.target;
         const hover = ui().endpointHover;
-        const side = hover !== null && hover.nodeId === movedNodeId ? hover.side : null;
+        const anchor = ui().endpointAnchor;
+        const hot = hover !== null && hover.nodeId === movedNodeId;
         const sameCard = oldEdge.source === c.source && oldEdge.target === c.target;
-        if (sameCard && side === null) return;
+        // Dropped deep in its own card (022 R4): the end goes back to automatic.
+        const toAutomatic = sameCard && hot && anchor?.automatic === true;
+        const side = hot && !toAutomatic ? hover.side : null;
+        const at = side !== null && anchor !== null && !anchor.automatic ? anchor.at : null;
+        if (sameCard && side === null && !toAutomatic) return;
         oneStep(editor, () => {
           if (!sameCard) editor.update('edges', oldEdge.id, { from: c.source, to: c.target });
-          if (side !== null) {
+          if (toAutomatic) {
+            editor.setEdgeRoute(
+              oldEdge.id,
+              end === 'source' ? { fromSide: null } : { toSide: null },
+            );
+          } else if (side !== null) {
             editor.setEdgeRoute(oldEdge.id, {
-              ...(end === 'source' ? { fromSide: side } : { toSide: side }),
+              ...(end === 'source' ? { fromSide: side, fromAt: at } : { toSide: side, toAt: at }),
               ...(sameCard ? {} : { offset: null }),
             });
           } else if (!sameCard) {

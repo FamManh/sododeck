@@ -112,6 +112,13 @@ apps/app/src/routes/bench-page.tsx        # bench hook for hover
 - `docs/backlog.md`: 034 status; 022 note: "connectors with their own waypoints or style never bundle; 022 decides whether a styled connector keeps its colour when highlighted".
 - `DESIGN.md`: nothing new unless the visual check finds a gap.
 
+## Contract with 022 (connector style)
+
+022 stores a connector's own look and route, and 034 must honour it (022 FR-024, tasks T045):
+
+- A connector with `route.waypoints`, `route.fromAt` / `route.toAt` or any `style` key other than `shape` never joins a bundle (its bends and look would be lost).
+- The focus highlight keeps the connector's own colour (`lineColour(style.color, theme)` in `apps/app/src/editor/style/line-colour.ts`) and takes the highlight weight (2.75 px); an uncoloured connector turns Ink.
+
 ## Complexity Tracking
 
 No violations.
