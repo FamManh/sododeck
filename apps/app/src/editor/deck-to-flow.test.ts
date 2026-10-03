@@ -358,6 +358,9 @@ describe('toFlowNodes', () => {
     expect(a.data.look).toEqual({
       fill: 'var(--color-card-green-fill)',
       stroke: undefined,
+      chip: 'var(--color-card-green-chip)',
+      ink: 'var(--color-card-green-ink)',
+      dot: 'var(--color-card-green-dot)',
       text: 'default',
       namedFill: true,
       fillRef: 'green',

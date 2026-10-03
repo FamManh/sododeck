@@ -30,8 +30,11 @@ describe('theme colour variables', () => {
         [...readFileSync(file, 'utf8').matchAll(/var\((--color-[a-z0-9-]+)/g)].map((m) => m[1]),
       ),
     );
-    // `--color-card-${name}-${channel}` is built at runtime; token-parity covers it.
-    const missing = [...used].filter((name) => name !== '--color-card-' && !defined.has(name));
+    // `--color-card-${name}-${channel}` and `--color-card-text-${dark|light}` are built at
+    // runtime; the ui package's token-parity test covers them.
+    const missing = [...used].filter(
+      (name) => name !== '--color-card-' && name !== '--color-card-text-' && !defined.has(name),
+    );
     expect(missing).toEqual([]);
   });
 });
