@@ -40,7 +40,7 @@ const ELEMENT_SCHEMAS = {
   column: shape.rules.valueType.shape.inputs.element,
   row: shape.rules.valueType.shape.rows.element,
   meta: sododeckFileSchema
-    .pick({ name: true, description: true, tags: true, swatches: true })
+    .pick({ name: true, description: true, tags: true, swatches: true, tagColors: true })
     .strict(),
   style: shape.nodes.element.shape.style.unwrap(),
   edgeStyle: shape.edges.element.shape.style.unwrap(),

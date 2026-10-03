@@ -89,6 +89,16 @@ const perType: [string, SododeckFile][] = [
     },
   ],
   [
+    'tag colours: named, hex, mixed-case keys in file order (033)',
+    {
+      $schema,
+      version,
+      tagColors: { Lan: '#7a3cff', PCI: 'violet', 'pci-dss': 'red', 'Zone A': 'slate' },
+      ...collections,
+      nodes: [{ id: 'a', type: 'client', title: 'A', tags: ['PCI', 'pic', 'Lan'] }],
+    },
+  ],
+  [
     'group frames and per-view frames (016)',
     {
       ...empty,
@@ -564,6 +574,22 @@ const cases: [string, SododeckFile][] = [
 ];
 
 describe('round-trip (US2 AS1, FR-022/023)', () => {
+  it('writes tagColors right after swatches, keeps its entry order, and drops an empty map (033)', () => {
+    const colored = toJSON(
+      fromJSON({
+        ...empty,
+        swatches: ['#7a3cff'],
+        tagColors: { b: 'red', A: 'blue' },
+        nodes: [{ id: 'n', type: 'client', title: 'N' }],
+      }),
+    );
+    const keys = Object.keys(colored);
+    expect(keys.indexOf('tagColors')).toBe(keys.indexOf('swatches') + 1);
+    expect(Object.keys(colored.tagColors ?? {})).toEqual(['b', 'A']);
+    expect(toJSON(fromJSON({ ...empty, tagColors: {} }))).not.toHaveProperty('tagColors');
+    expect(toJSON(fromJSON(empty))).not.toHaveProperty('tagColors');
+  });
+
   it('createDeck() produces an empty valid file', () => {
     expect(toJSON(createDeck())).toEqual(emptySododeckFile());
   });
@@ -599,6 +625,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
 /** Map-like objects keep their own key order; every other object is reversed. */
 const MAP_PATHS = [
   /^rules$/,
+  /^tagColors$/,
   /^views\.\d+\.positions$/,
   /^views\.\d+\.groupFrames$/,
   /^flows\.\d+\.steps\.\d+\.ruleInputs(\.[^.]+)?$/,

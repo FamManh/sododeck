@@ -7,7 +7,8 @@
  * it, and lookups do not depend on list size:
  *
  *   doc.getMap('meta')       Y.Map            $schema, version, name?, description (Y.Text), tags?
- *                                               (Y.Array), swatches (Y.Array, always present, 020)
+ *                                               (Y.Array), swatches (Y.Array, always present, 020),
+ *                                               tagColors (Y.Map tag → colour, always present, 033)
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component
  *   doc.getMap('groups')     Y.Map<id, Y.Map>  one map per group
  *   doc.getMap('edges')      Y.Map<id, Y.Map>  one map per connection
@@ -93,6 +94,8 @@ export function fromJSON(input: unknown): DeckDoc {
     // Always present (even empty), so concurrent addSwatch() calls in two tabs share one
     // Y.Array from the start instead of racing to create it (020 research R3).
     meta.set('swatches', toY(file.swatches ?? []));
+    // Same reason for `tagColors` (033 R2): two tabs colouring their first tag must share one map.
+    meta.set('tagColors', toY(file.tagColors ?? {}));
 
     for (const name of COLLECTIONS) {
       const list = collectionMap(doc, name);

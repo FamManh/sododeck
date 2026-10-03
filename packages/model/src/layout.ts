@@ -70,6 +70,16 @@ export function swatchesArray(doc: DeckDoc): Y.Array<YValue> {
   return existing instanceof Y.Array ? existing : new Y.Array<YValue>();
 }
 
+/**
+ * The deck's tag colours (033, R2): always a `Y.Map<string>` (tag → colour), created empty by
+ * `fromJSON`. A stored document that predates it gets a detached empty map here, which a writer
+ * attaches on its first write (as `attachedSwatches` does), so reads never write.
+ */
+export function tagColorsMap(doc: DeckDoc): Y.Map<string> {
+  const existing = metaMap(doc).get('tagColors');
+  return existing instanceof Y.Map ? (existing as Y.Map<string>) : new Y.Map<string>();
+}
+
 export function collectionMap(doc: DeckDoc, c: Collection): ListMap {
   return doc.getMap<YObject>(c);
 }

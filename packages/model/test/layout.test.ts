@@ -1,7 +1,10 @@
 import { emptySododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
+import * as Y from 'yjs';
+
 import { createEditor, fromJSON, toJSON } from '../src';
+import { tagColorsMap } from '../src/layout';
 import { seqIds } from './helpers';
 
 const nodes = (ids: string[]) => ids.map((id) => ({ id, type: 'service' as const, title: id }));
@@ -43,5 +46,31 @@ describe('appends inside one transaction (036 R3, cached last key)', () => {
     });
     const titles = toJSON(doc).nodes.map((n) => n.title);
     expect(titles).toEqual(Array.from({ length: 10_000 }, (_, i) => String(i)));
+  });
+});
+
+describe('tagColorsMap (033, R2)', () => {
+  it('is the stored map after fromJSON, with the file entries', () => {
+    const doc = fromJSON({ ...emptySododeckFile(), tagColors: { PCI: 'violet' } });
+    const map = tagColorsMap(doc);
+    expect(map.doc).toBe(doc);
+    expect(map.get('PCI')).toBe('violet');
+  });
+
+  it('is present and empty for a file without tag colours, and is not emitted', () => {
+    const doc = fromJSON(emptySododeckFile());
+    expect(tagColorsMap(doc).doc).toBe(doc);
+    expect(tagColorsMap(doc).size).toBe(0);
+    expect(toJSON(doc)).not.toHaveProperty('tagColors');
+  });
+
+  it('is a detached empty map for a stored document that predates it', () => {
+    const doc = fromJSON(emptySododeckFile());
+    doc.getMap('meta').delete('tagColors');
+    const map = tagColorsMap(doc);
+    expect(map).toBeInstanceOf(Y.Map);
+    expect(map.doc).toBeNull();
+    expect(map.size).toBe(0);
+    expect(toJSON(doc)).not.toHaveProperty('tagColors');
   });
 });
