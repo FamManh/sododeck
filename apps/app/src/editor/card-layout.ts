@@ -34,6 +34,8 @@ export interface CardLayoutInput {
   tags?: readonly string[] | undefined;
   /** Components inside a card that holds some (the "n inside" row). */
   childCount?: number | undefined;
+  /** Height of the typed fields block (032, `card-fields.ts` `fieldBlock`); 0 or absent for none. */
+  fieldsHeight?: number | undefined;
   /** A stored size (017): kept, but never below the minimum layout. */
   size?: { width: number; height: number } | undefined;
 }
@@ -49,6 +51,8 @@ export interface CardLayout {
   descriptionLines: number;
   /** Rows of tag pills (0 without tags). */
   tagRows: number;
+  /** Height of the fields block between the description and the tags (032); 0 for none. */
+  fieldsHeight: number;
   hasChildrenRow: boolean;
 }
 
@@ -113,9 +117,10 @@ function stepUp(height: number): number {
 
 /**
  * Lays out a card of `width` px (the default, or the stored width when `input.size` is set).
- * Height = 12 + header 24 + 8 + title + (8 + description) + (8 + tags) + (8 + "n inside" row) + 12,
- * rounded up to the 4 px size step. A stored height wins but never goes below the minimum
- * (header, one title line, the tag block, padding); the lines shrink to what fits, title first.
+ * Height = 12 + header 24 + 8 + title + (8 + description) + (8 + fields) + (8 + tags)
+ * + (8 + "n inside" row) + 12, rounded up to the 4 px size step. A stored height wins but never
+ * goes below the minimum (header, one title line, the fields and tag blocks, padding); the lines
+ * shrink to what fits, title first.
  */
 export function cardLayout(
   input: CardLayoutInput,
@@ -140,12 +145,14 @@ export function cardLayout(
   // Rows back out of the block height, so the chips are measured once.
   const rows = tagBlock === 0 ? 0 : (tagBlock + TAG_CHIP.gap) / (TAG_CHIP.height + TAG_CHIP.gap);
   const hasChildrenRow = (input.childCount ?? 0) > 0;
+  const fieldsHeight = input.fieldsHeight ?? 0;
 
   // Everything but the title and description lines.
   const chrome =
     2 * c.paddingY +
     c.headerHeight +
     c.gap +
+    (fieldsHeight > 0 ? c.gap + fieldsHeight : 0) +
     (tagBlock > 0 ? c.gap + tagBlock : 0) +
     (hasChildrenRow ? c.gap + c.childrenRowHeight : 0);
   const natural =
@@ -161,6 +168,7 @@ export function cardLayout(
       titleCut: titleNatural > title,
       descriptionLines: naturalDescription,
       tagRows: rows,
+      fieldsHeight,
       hasChildrenRow,
     };
   }
@@ -183,6 +191,7 @@ export function cardLayout(
     titleCut: titleNatural > titleLines,
     descriptionLines,
     tagRows: rows,
+    fieldsHeight,
     hasChildrenRow,
   };
 }

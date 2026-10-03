@@ -1,5 +1,6 @@
 import type { SododeckFile } from '@sododeck/schema';
 
+import { cardFieldView } from './card-fields';
 import { cardBox, COLLAPSED_CARD_SIZE, groupBounds, type Rect } from './canvas-geometry';
 import type { Level } from './levels';
 
@@ -452,7 +453,7 @@ export function scopeBounds(deck: SododeckFile, graph: VisibleGraph, level: Leve
     if (index < 0) continue;
     const node = deck.nodes[index];
     if (node === undefined) continue;
-    merge(cardBox(node, index, level));
+    merge(cardBox(node, index, level, { fields: cardFieldView(deck, node) }));
   }
   return box;
 }

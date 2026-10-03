@@ -10,6 +10,8 @@ import type { NodeProps } from '@xyflow/react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useState } from 'react';
 
+import { EMPTY_FIELD_VIEW } from '../editor/card-fields';
+import { cardLayout } from '../editor/card-layout';
 import { DeckNode } from '../editor/deck-node';
 import type { DeckFlowNode, DeckNodeData } from '../editor/deck-to-flow';
 import { NODE_SIZE } from '../editor/deck-to-flow';
@@ -36,11 +38,14 @@ function Sample({
       subtitle: undefined,
       owner: undefined,
       tagLooks: [],
+      fields: EMPTY_FIELD_VIEW,
       hasRules: true,
       childCount: 0,
       dimmed: false,
       level: 'component',
       focused: false,
+      // The box the card draws (029 R7): the samples sit at the default size.
+      layout: cardLayout({ title: data.title, size: NODE_SIZE }),
       ...data,
     },
   } as unknown as NodeProps<DeckFlowNode>;

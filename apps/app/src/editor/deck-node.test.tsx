@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
+import { EMPTY_FIELD_VIEW, fieldBlock, type CardFieldView } from './card-fields';
 import { cardLayout, type CardLayout } from './card-layout';
 import { DeckNode } from './deck-node';
 import { tagColours } from './tags/tag-colours';
@@ -39,6 +40,7 @@ function props(patch: PropsPatch = {}, selected = false, id = 'svc', layout?: Ca
     subtitle: undefined,
     owner: undefined,
     tagLooks: tags.map((text) => ({ text, ...tagColours(undefined) })),
+    fields: EMPTY_FIELD_VIEW,
     hasRules: false,
     childCount: 0,
     dimmed: false,
@@ -60,6 +62,7 @@ function props(patch: PropsPatch = {}, selected = false, id = 'svc', layout?: Ca
           description: data.subtitle,
           tags: data.tagLooks.map((look) => look.text),
           childCount: data.childCount,
+          fieldsHeight: fieldBlock(data.fields, 184).height,
         }),
     },
   } as unknown as NodeProps<DeckFlowNode>;
@@ -699,5 +702,103 @@ describe('DeckNode card types (030)', () => {
       expect(container.querySelector(`svg.lucide-${icon}`), kind).not.toBeNull();
       unmount();
     }
+  });
+});
+
+describe('DeckNode typed fields (032)', () => {
+  const view: CardFieldView = {
+    header: {
+      fieldId: 'stage',
+      kind: 'status',
+      name: 'Status: In progress',
+      text: 'In progress',
+      color: 'blue',
+      icon: 'circle-dot',
+    },
+    chips: [
+      { fieldId: 'region', kind: 'select', name: 'Region: South', text: 'South', color: 'amber' },
+      { fieldId: 'who', kind: 'person', name: 'Assignee: Lan', text: 'Lan', initials: 'L' },
+      { fieldId: 'due', kind: 'date', name: 'Due date: 14 Oct', text: '14 Oct' },
+    ],
+    rows: [
+      { fieldId: 'cap', kind: 'progress', label: 'Capacity', text: '82 %', progress: 82 },
+      { fieldId: 'sla', kind: 'number', label: 'SLA', text: '24 h' },
+      {
+        fieldId: 'doc',
+        kind: 'link',
+        label: 'Runbook',
+        text: 'runbook.sodo.dev/orders',
+        href: 'https://runbook.sodo.dev/orders',
+      },
+    ],
+    hidden: 3,
+  };
+
+  beforeEach(() => {
+    connection.role = null;
+    connection.connecting = false;
+  });
+
+  it('draws the header status, the chip shelf, the rows and the "+N fields" pill', () => {
+    renderNode(props({ level: 'container', fields: view }));
+    expect(screen.getByTestId('header-status')).toHaveTextContent('In progress');
+    const chips = within(screen.getByRole('list', { name: 'Fields' })).getAllByRole('listitem');
+    expect(chips.map((chip) => chip.getAttribute('aria-label'))).toEqual([
+      'Region: South',
+      'Assignee: Lan',
+      'Due date: 14 Oct',
+    ]);
+    const rows = within(screen.getByRole('list', { name: 'Field values' })).getAllByRole(
+      'listitem',
+    );
+    expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual([
+      'Capacity: 82 %',
+      'SLA: 24 h',
+      'Runbook: runbook.sodo.dev/orders',
+    ]);
+    const link = screen.getByRole('link', { name: /runbook\.sodo\.dev/ });
+    expect(link).toHaveAttribute('href', 'https://runbook.sodo.dev/orders');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByRole('button', { name: '3 more fields' })).toHaveTextContent('+3 fields');
+  });
+
+  it('opens the drawer at the fields from the pill, selecting the card', async () => {
+    const user = userEvent.setup();
+    renderNode(props({ level: 'container', fields: view }));
+    await user.click(screen.getByRole('button', { name: '3 more fields' }));
+    const ui = useUiStore.getState();
+    expect(ui.selection.nodes).toEqual(['svc']);
+    expect(ui.drawer.open).toBe(true);
+    expect(ui.drawerSection).toBe('fields');
+  });
+
+  it('shows the header status as a named icon on a narrow card', () => {
+    const layout = cardLayout({ title: 'Order Service', size: { width: 140, height: 120 } });
+    renderNode(props({ level: 'container', fields: view }, false, 'svc', layout));
+    expect(screen.getByRole('img', { name: 'Status: In progress' })).toBeInTheDocument();
+    expect(screen.queryByText('In progress')).not.toBeInTheDocument();
+  });
+
+  it('draws chips as named dots and no rows at System level', () => {
+    renderNode(props({ level: 'system', fields: view }));
+    const dots = within(screen.getByRole('list', { name: 'Fields' })).getAllByRole('listitem');
+    expect(dots.map((dot) => dot.getAttribute('aria-label'))).toEqual([
+      'Region: South',
+      'Assignee: Lan',
+      'Due date: 14 Oct',
+    ]);
+    for (const dot of dots) expect(dot).toBeEmptyDOMElement();
+    expect(screen.queryByRole('list', { name: 'Field values' })).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Status: In progress' })).toBeInTheDocument();
+  });
+
+  it('draws no fields at Landscape level, and nothing for a card without fields', () => {
+    const { unmount } = renderNode(props({ level: 'landscape', fields: view }));
+    expect(screen.queryByTestId('card-fields')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('header-status')).not.toBeInTheDocument();
+    unmount();
+    renderNode(props({ level: 'container' }));
+    expect(screen.queryByTestId('card-fields')).not.toBeInTheDocument();
   });
 });
