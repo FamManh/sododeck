@@ -1,6 +1,7 @@
 import { createEditor, fromJSON, type DeckProblems } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import * as Y from 'yjs';
 
 import { deckOf } from '../../test/render-canvas';
 import { createInlineProblemsClient, type ProblemsClient } from './problems-client';
@@ -32,6 +33,27 @@ describe('createProblemsStore (015 R4)', () => {
     const stop = store.subscribe(() => undefined);
     await flush();
     expect(store.get()?.total).toBe(0);
+    stop();
+  });
+
+  it('follows a change from another tab with no user action (036 FR-019, SC-007)', async () => {
+    const doc = fromJSON(twoNodes);
+    const store = createProblemsStore(doc, createInlineProblemsClient());
+    const listener = vi.fn();
+    const stop = store.subscribe(listener);
+    await flush();
+    expect(store.get()?.total).toBe(0);
+    listener.mockClear();
+
+    // Another tab adds a duplicate connection; its update arrives with no editor origin here.
+    const other = new Y.Doc();
+    Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
+    createEditor(other).add('edges', { id: 'dup', from: 'a', to: 'b' });
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
+
+    await vi.advanceTimersByTimeAsync(PROBLEMS_DELAY_MS);
+    expect(store.get()?.list.map((p) => p.kind)).toEqual(['duplicate-connection']);
+    expect(listener).toHaveBeenCalledTimes(1);
     stop();
   });
 
