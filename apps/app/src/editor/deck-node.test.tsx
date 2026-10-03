@@ -1,4 +1,5 @@
 import { act, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
+import { cardLayout, type CardLayout } from './card-layout';
 import { DeckNode } from './deck-node';
 import type { DeckFlowNode } from './deck-to-flow';
 
@@ -25,23 +27,40 @@ const deck = deckOf({
   edges: [{ id: 'e1', from: 'svc', to: 'db' }],
 });
 
-function props(patch: Partial<DeckFlowNode['data']> = {}, selected = false, id = 'svc') {
+function props(
+  patch: Partial<DeckFlowNode['data']> = {},
+  selected = false,
+  id = 'svc',
+  layout?: CardLayout,
+) {
+  const data = {
+    title: 'Order Service',
+    kind: 'service',
+    subtitle: undefined,
+    owner: undefined,
+    tags: [],
+    hasRules: false,
+    childCount: 0,
+    dimmed: false,
+    level: 'component',
+    focused: false,
+    ...patch,
+  };
   return {
     id,
     type: 'deck',
     selected,
     data: {
-      title: 'Order Service',
-      kind: 'service',
-      subtitle: undefined,
-      owner: undefined,
-      tags: [],
-      hasRules: false,
-      childCount: 0,
-      dimmed: false,
-      level: 'component',
-      focused: false,
-      ...patch,
+      ...data,
+      // What deck-to-flow computes (029): the same pure layout the card draws from.
+      layout:
+        layout ??
+        cardLayout({
+          title: data.title,
+          description: data.subtitle,
+          tags: data.tags,
+          childCount: data.childCount,
+        }),
     },
   } as unknown as NodeProps<DeckFlowNode>;
 }
@@ -151,17 +170,20 @@ describe('DeckNode', () => {
     expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
   });
 
-  it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {
+  it('clamps a resized card\u2019s title to the lines it can show, with the full text in a tooltip (017 R11, FR-008)', async () => {
     const title = 'Order Fulfilment and Inventory Reconciliation Service';
+    const small = cardLayout({ title, size: { width: 200, height: 4 } });
+    expect(small.titleLines).toBe(1);
     const p = {
-      ...props({ level: 'component', title }),
+      ...props({ level: 'component', title }, false, 'svc', small),
       width: 200,
-      height: 44,
+      height: small.height,
     } as NodeProps<DeckFlowNode>;
     renderNode(p);
     const text = screen.getByText(title);
     expect(text).toHaveStyle({ WebkitLineClamp: '1' });
-    expect(screen.getByRole('group')).toHaveAttribute('title', title);
+    await userEvent.hover(text);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
   });
 
   it('shows a child-count marker for components with children', () => {
@@ -214,11 +236,12 @@ describe('DeckNode', () => {
     expect(screen.getByTestId('deck-node')).not.toHaveAttribute('aria-current');
   });
 
-  it('truncates a long title but keeps it in the name and tooltip', () => {
-    const title = 'A very long component title that does not fit into 164 pixels at all';
+  it('keeps a long title in the accessible name and shows it in a tooltip when cut', async () => {
+    const title = Array.from({ length: 30 }, (_, i) => `component${String(i)}`).join(' ');
     renderNode(props({ title }));
-    const node = screen.getByRole('group', { name: `Service: ${title}` });
-    expect(node).toHaveAttribute('title', title);
+    expect(screen.getByRole('group', { name: `Service: ${title}` })).not.toHaveAttribute('title');
+    await userEvent.hover(screen.getByText(title));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
   });
 
   it('keeps the same accessible name at every level', () => {
@@ -410,5 +433,66 @@ describe('DeckNode colour states (020 US6)', () => {
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('aria-selected', 'true');
     expect(node).toHaveAttribute('aria-description', expect.stringContaining('Selected'));
+  });
+});
+
+describe('DeckNode Deck look (029 US1)', () => {
+  beforeEach(() => {
+    connection.role = null;
+    connection.connecting = false;
+  });
+
+  it('shows the type name in the header, next to the tile', () => {
+    renderNode(props({ kind: 'database', title: 'Orders DB' }));
+    const header = screen.getByTestId('card-header');
+    expect(within(header).getByText('Database')).toBeInTheDocument();
+  });
+
+  it('clamps a long title to three lines and shows no tooltip for a short one', () => {
+    const title = Array.from({ length: 40 }, (_, i) => `word${String(i)}`).join(' ');
+    const { unmount } = renderNode(props({ title }));
+    expect(screen.getByText(title)).toHaveStyle({ WebkitLineClamp: '3' });
+    unmount();
+    renderNode(props({ title: 'Short' }));
+    expect(screen.getByText('Short')).toHaveStyle({ WebkitLineClamp: '1' });
+  });
+
+  it('shows the description clamped to three lines, and nothing when it is empty', () => {
+    const description = Array.from({ length: 60 }, (_, i) => `detail${String(i)}`).join(' ');
+    const { unmount } = renderNode(props({ subtitle: description }));
+    expect(screen.getByText(description)).toHaveStyle({ WebkitLineClamp: '3' });
+    unmount();
+    renderNode(props({ subtitle: '   ' }));
+    expect(screen.queryByTestId('card-description')).not.toBeInTheDocument();
+  });
+
+  it('lists tags as pills in a "Tags" list', () => {
+    renderNode(props({ tags: ['payments', 'critical'] }));
+    const list = screen.getByRole('list', { name: 'Tags' });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((i) => i.textContent),
+    ).toEqual(['payments', 'critical']);
+  });
+
+  it('draws no description or tag elements for a card with neither', () => {
+    renderNode(props({ subtitle: undefined, tags: [] }));
+    expect(screen.queryByTestId('card-description')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
+  });
+
+  it('keeps its group role, label and description', () => {
+    renderNode(props({}, true));
+    const node = screen.getByRole('group', { name: 'Service: Order Service' });
+    expect(node).toHaveAttribute('aria-roledescription', 'component');
+    expect(node).toHaveAttribute('aria-description', 'Selected');
+  });
+
+  it('takes the card chip and ink colours from the look', () => {
+    renderNode(props({ look: resolveLook({ fill: 'green' }) }));
+    const node = screen.getByTestId('deck-node');
+    expect(node.style.getPropertyValue('--card-chip')).toBe('var(--color-card-green-chip)');
+    expect(node.style.getPropertyValue('--card-ink')).toBe('var(--color-card-green-ink)');
   });
 });
