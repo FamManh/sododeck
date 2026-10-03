@@ -407,7 +407,9 @@ describe('Canvas', () => {
     await user.keyboard(' ');
     expect(collapsedOf(doc).has('left')).toBe(true);
     expect(ui().focusedId).toBe('collapsed:left');
-    expect(screen.getByTestId('collapsed-group-node')).toHaveTextContent('2 nodes · 0 edges');
+    expect(screen.getByTestId('collapsed-group-node')).toHaveAccessibleName(
+      'Left, collapsed group, 2 nodes, 0 edges',
+    );
 
     // 011: collapse is saved in the current view, never on the group, and never an undo step.
     expect(toJSON(doc).groups).toEqual(before.groups);

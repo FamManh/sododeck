@@ -120,6 +120,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   title: string;
   nodeCount: number;
   edgeCount: number;
+  /** Member kinds for the tiles on the fanned hand (029 US5). */
+  memberKinds: readonly string[];
   focused: boolean;
   dimmed: boolean;
   flowInside?: 'current' | 'path';
@@ -262,6 +264,10 @@ function deckLookups(deck: SododeckFile): DeckLookups {
   };
   byEdges.set(deck.edges, lookups);
   return lookups;
+}
+
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a === b || (a.length === b.length && a.every((item, index) => item === b[index]));
 }
 
 function sameClassName(actual: string | undefined, expected: string): boolean {
@@ -542,7 +548,8 @@ function collapsedNodes(
       cached.height === card.rect.height &&
       cached.data.title === card.title &&
       cached.data.nodeCount === card.nodeCount &&
-      cached.data.edgeCount === card.edgeCount
+      cached.data.edgeCount === card.edgeCount &&
+      sameList(cached.data.memberKinds, card.memberKinds)
     ) {
       return cached;
     }
@@ -560,6 +567,7 @@ function collapsedNodes(
         title: card.title,
         nodeCount: card.nodeCount,
         edgeCount: card.edgeCount,
+        memberKinds: card.memberKinds,
         focused,
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),

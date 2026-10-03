@@ -58,6 +58,8 @@ describe('visibleGraph', () => {
     expect(oneCollapsed.cards).toMatchObject([
       { groupId: 'a', edgeCount: 1, hiddenEdges: ['inside-a'] },
     ]);
+    // The hand shows one tile per member (029 US5): the kinds, in deck order.
+    expect(oneCollapsed.cards[0]?.memberKinds).toHaveLength(oneCollapsed.cards[0]?.nodeCount ?? -1);
     expect(oneCollapsed.merged).toHaveLength(1);
     expect(oneCollapsed.merged[0]?.edgeIds).toEqual(
       Array.from({ length: 12 }, (_, index) => `ab${String(index)}`),

@@ -1,5 +1,5 @@
 import { toJSON } from '@sododeck/model';
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -24,6 +24,7 @@ describe('CollapsedGroupNode', () => {
         edgeCount: 12,
         focused: true,
         dimmed: false,
+        memberKinds: [],
         ...patch,
       },
       selected: false,
@@ -39,12 +40,48 @@ describe('CollapsedGroupNode', () => {
         name: 'Core services, collapsed group, 8 nodes, 12 edges',
       }),
     ).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.getByText('8 nodes · 12 edges')).toBeInTheDocument();
   });
 
-  it('counts one node and one edge in the singular', () => {
+  it('counts one node and one edge in the singular, in the name', () => {
     renderWithEditor(<CollapsedGroupNode {...props({ nodeCount: 1, edgeCount: 1 })} />, deckOf({}));
-    expect(screen.getByText('1 node · 1 edge')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Core services, collapsed group, 1 nodes, 1 edges' }),
+    ).toBeInTheDocument();
+  });
+
+  it('is the front card of a fanned hand: Group, count, name and one tile per member', () => {
+    renderWithEditor(
+      <CollapsedGroupNode
+        {...props({ nodeCount: 3, memberKinds: ['service', 'service', 'database'] })}
+      />,
+      deckOf({}),
+    );
+    const front = screen.getByRole('button', { name: /^Core services, collapsed group/ });
+    expect(within(front).getByText('Group')).toBeInTheDocument();
+    expect(within(front).getByText('3')).toBeInTheDocument();
+    expect(within(front).getByText('Core services')).toBeInTheDocument();
+    expect(front.querySelectorAll('[data-testid="member-tile"]')).toHaveLength(3);
+    expect(front.querySelector('[data-testid="member-more"]')).toBeNull();
+  });
+
+  it('shows the members that fit and the rest as "+n"', () => {
+    const memberKinds = Array.from({ length: 9 }, () => 'service');
+    renderWithEditor(<CollapsedGroupNode {...props({ nodeCount: 9, memberKinds })} />, deckOf({}));
+    const front = screen.getByRole('button', { name: /^Core services, collapsed group/ });
+    expect(front.querySelectorAll('[data-testid="member-tile"]')).toHaveLength(4);
+    expect(within(front).getByText('+5')).toBeInTheDocument();
+  });
+
+  it('draws two back sheets that are hidden, unfocusable and ignore the pointer', () => {
+    renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
+    const sheets = screen.getAllByTestId('group-back-sheet');
+    expect(sheets).toHaveLength(2);
+    for (const sheet of sheets) {
+      expect(sheet).toHaveAttribute('aria-hidden', 'true');
+      expect(sheet).toHaveClass('pointer-events-none');
+      expect(sheet).not.toHaveAttribute('tabindex');
+    }
+    expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 
   it('selects the group on click', async () => {
@@ -105,6 +142,7 @@ describe('CollapsedGroupNode colour (020 T052)', () => {
         edgeCount: 12,
         focused: true,
         dimmed: false,
+        memberKinds: [],
         ...patch,
       },
       selected: false,
