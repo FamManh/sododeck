@@ -13,7 +13,9 @@ import {
   toStickyNodes,
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
+import { bundleEdges } from './bundles';
 import { cardLayout } from './card-layout';
+import { focusSet } from './focus-set';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
 
@@ -816,3 +818,104 @@ describe('draw order (019 FR-037)', () => {
     expect(ids.indexOf('z')).toBeLessThan(ids.indexOf('a'));
   });
 });
+
+describe('bundles and fanned connectors (034)', () => {
+  const none = new Set<string>();
+  const parallel: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+      { id: 'c', type: 'service', title: 'C', position: { x: 0, y: 300 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'a', to: 'b', label: 'one' },
+      { id: 'e2', from: 'a', to: 'b', label: 'two' },
+      { id: 'e3', from: 'a', to: 'b', label: 'three' },
+      { id: 'e4', from: 'a', to: 'c' },
+    ],
+  };
+  const graph = topLevelGraph(parallel);
+  const edgesFor = (fanned: string[] = [], file = parallel, focus: CanvasView['focus'] = null) => {
+    const g = file === parallel ? graph : topLevelGraph(file);
+    const bundles = bundleEdges(file, g, { exclude: none, fanned: new Set(fanned), off: false });
+    return toFlowEdges(file, g, view({ focus }), undefined, bundles);
+  };
+
+  it('draws a bundle as one merged edge and leaves out the connectors it folds', () => {
+    const edges = edgesFor();
+    expect(edges.map((e) => e.id)).toEqual(['e4', 'bundle:a|b']);
+    const bundle = edges.find((e) => e.id === 'bundle:a|b');
+    expect(bundle).toMatchObject({
+      type: 'merged',
+      source: 'a',
+      target: 'b',
+      ariaLabel: '3 connections between A and B',
+      data: { kind: 'bundle', count: 3, direction: 'a-to-b', fanned: false, level: 'system' },
+    });
+    expect(bundle?.data).toMatchObject({ edgeIds: ['e1', 'e2', 'e3'] });
+  });
+
+  it('draws a fanned bundle as plain connectors with their spread slots and the pill', () => {
+    const edges = edgesFor(['bundle:a|b']);
+    expect(edges.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'bundle:a|b']);
+    expect((edges[0] as DeckFlowEdgeLike).data?.fan).toEqual({ index: 0, count: 3 });
+    expect((edges[2] as DeckFlowEdgeLike).data?.fan).toEqual({ index: 2, count: 3 });
+    expect((edges[3] as DeckFlowEdgeLike).data?.fan).toBeUndefined();
+    expect((edges[0] as DeckFlowEdgeLike).data?.showLabel).toBe(true);
+    expect(edges.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ fanned: true });
+  });
+
+  it('keeps cached objects while inputs are equal, and rebuilds only what changed', () => {
+    const first = edgesFor();
+    const second = edgesFor();
+    expect(second).toBe(first);
+    const fanned = edgesFor(['bundle:a|b']);
+    // The lone connector is the same object; the bundle is rebuilt for its new state.
+    expect(fanned.find((e) => e.id === 'e4')).toBe(first.find((e) => e.id === 'e4'));
+    expect(fanned.find((e) => e.id === 'bundle:a|b')).not.toBe(
+      first.find((e) => e.id === 'bundle:a|b'),
+    );
+    const folded = edgesFor();
+    expect(folded.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ fanned: false });
+  });
+
+  it('edits one connector without rebuilding the others', () => {
+    const edited: SododeckFile = {
+      ...parallel,
+      edges: parallel.edges.map((e) => (e.id === 'e4' ? { ...e, label: 'x' } : e)),
+    };
+    const before = edgesFor();
+    const after = edgesFor([], edited);
+    expect(after.find((e) => e.id === 'e4')).not.toBe(before.find((e) => e.id === 'e4'));
+    expect(after.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ count: 3 });
+  });
+
+  it('keeps a fanned bundle fanned and moves its spread connectors when a card moves', () => {
+    const moved: SododeckFile = {
+      ...parallel,
+      nodes: parallel.nodes.map((n) => (n.id === 'b' ? { ...n, position: { x: 500, y: 40 } } : n)),
+    };
+    const edges = edgesFor(['bundle:a|b'], moved);
+    expect(edges.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'bundle:a|b']);
+    expect(edges.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ fanned: true });
+  });
+
+  it('marks a bundle in pinned focus and dims it otherwise', () => {
+    const bundles = bundleEdges(parallel, graph, { exclude: none, fanned: none, off: false });
+    const set = focusSet(parallel, graph, 'c', bundles);
+    const edges = toFlowEdges(parallel, graph, view({ focus: set }), undefined, bundles);
+    const bundle = edges.find((e) => e.id === 'bundle:a|b');
+    expect(bundle?.className).toBeUndefined();
+    expect(bundle?.domAttributes).toEqual({ 'aria-hidden': true });
+    const lit = focusSet(parallel, graph, 'a', bundles);
+    const litEdges = toFlowEdges(parallel, graph, view({ focus: lit }), undefined, bundles);
+    expect(litEdges.find((e) => e.id === 'bundle:a|b')?.className).toBe('in-focus');
+  });
+
+  it("draws every connector separately without a bundle result (today's behaviour)", () => {
+    expect(toFlowEdges(parallel, graph, view()).map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4']);
+  });
+});
+
+type DeckFlowEdgeLike = { data?: { fan?: { index: number; count: number }; showLabel?: boolean } };

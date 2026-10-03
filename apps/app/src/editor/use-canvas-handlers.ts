@@ -29,6 +29,7 @@ import {
   connectComponents,
   nodeElement,
 } from './canvas-actions';
+import { BUNDLE_EDGE_PREFIX } from './bundles';
 import { cardBox, type Rect } from './canvas-geometry';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
@@ -59,6 +60,7 @@ const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
 const isCollapsedNode = (id: string) => id.startsWith(COLLAPSED_NODE_PREFIX);
 const isPortNode = (id: string) => id.startsWith(PORT_NODE_PREFIX);
 const isMergedEdge = (id: string) => id.startsWith(MERGED_EDGE_PREFIX);
+const isBundleEdge = (id: string) => id.startsWith(BUNDLE_EDGE_PREFIX);
 const stickyIdOf = (id: string) =>
   id.startsWith(STICKY_NODE_PREFIX) ? id.slice(STICKY_NODE_PREFIX.length) : null;
 const groupIdOf = (id: string) =>
@@ -225,7 +227,7 @@ export function useCanvasHandlers() {
         openMenu(event, clicked, nodeElement(node.id));
       },
       onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => {
-        if (isMergedEdge(edge.id)) {
+        if (isMergedEdge(edge.id) || isBundleEdge(edge.id)) {
           event.preventDefault();
           return;
         }
@@ -304,6 +306,13 @@ export function useCanvasHandlers() {
         ui().startTitleEdit({ target: 'node', id: node.id, isNew: false });
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+        if (isBundleEdge(edge.id)) {
+          // A bundle's curve opens the list of its connectors (034 R6); its pill fans them out.
+          if (flowMode() || inSession()) return;
+          ui().focusEdge(edge.id);
+          ui().openMergedPopover(edge.id);
+          return;
+        }
         if (isMergedEdge(edge.id)) {
           if (flowMode()) {
             jumpTo((playback) => {
@@ -336,7 +345,7 @@ export function useCanvasHandlers() {
       },
       onEdgeDoubleClick: (_: ReactMouseEvent, edge: Edge) => {
         if (viewOnly()) return;
-        if (isMergedEdge(edge.id)) {
+        if (isMergedEdge(edge.id) || isBundleEdge(edge.id)) {
           ui().focusEdge(edge.id);
           ui().openMergedPopover(edge.id);
           return;
@@ -363,6 +372,8 @@ export function useCanvasHandlers() {
         if (applyTool(event, null)) return;
         ui().clearSelection();
         ui().closePopover();
+        // Clicking empty canvas folds every fanned-out bundle (034).
+        ui().foldBundles();
       },
       /**
        * A marquee (016 R13): its count chip and hint bar; Esc puts the selection back as it was

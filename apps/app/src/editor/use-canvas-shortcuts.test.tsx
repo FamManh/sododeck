@@ -194,6 +194,44 @@ describe('canvas keyboard', () => {
     });
   });
 
+  describe('bundles (034)', () => {
+    const bundleDeck = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+        { id: 'c', type: 'service', title: 'C', position: { x: 0, y: 300 } },
+      ],
+      edges: [
+        { id: 'e1', from: 'a', to: 'b' },
+        { id: 'e2', from: 'a', to: 'b' },
+        { id: 'e3', from: 'a', to: 'c' },
+      ],
+    });
+
+    it("E cycles a card's connections, a bundle counted once, and Enter opens its popover", async () => {
+      const { user } = setup(bundleDeck);
+      focusNode('a');
+      await user.keyboard('e');
+      expect(ui().focusedEdgeId).toBe('e3');
+      await user.keyboard('e');
+      expect(ui().focusedEdgeId).toBe('bundle:a|b');
+      expect(ui().announcement.text).toBe('2 connections between A and B');
+      await user.keyboard('{Enter}');
+      expect(ui().popover).toEqual({ kind: 'merged', edgeId: 'bundle:a|b' });
+    });
+
+    it('Esc folds fanned bundles', async () => {
+      const { user } = setup(bundleDeck);
+      focusNode('a');
+      act(() => {
+        ui().toggleBundleFan('bundle:a|b');
+      });
+      expect(ui().fannedBundles.size).toBe(1);
+      await user.keyboard('{Escape}');
+      expect(ui().fannedBundles.size).toBe(0);
+    });
+  });
+
   it('extends the selection with shift + arrows', async () => {
     const { user } = setup();
     focusNode('n00');

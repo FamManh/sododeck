@@ -2,6 +2,7 @@ import type { SododeckFile } from '@sododeck/schema';
 import { memo, useEffect, useMemo, type RefObject } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
+import type { BundleResult } from '../bundles';
 import { focusSet } from '../focus-set';
 import { hoverFocusCss } from './hover-focus-css';
 import type { VisibleGraph } from '../visible-graph';
@@ -9,6 +10,8 @@ import type { VisibleGraph } from '../visible-graph';
 interface HoverFocusStyleProps {
   deck: SododeckFile;
   graph: VisibleGraph;
+  /** Folded bundles count as one connection when a card is lit (034 Story 2.3). */
+  bundles?: BundleResult;
   /** The canvas wrapper: carries `data-hover-focus` while a hover shows, set without a render. */
   wrapper: RefObject<HTMLElement | null>;
 }
@@ -20,12 +23,13 @@ interface HoverFocusStyleProps {
 export const HoverFocusStyle = memo(function HoverFocusStyle({
   deck,
   graph,
+  bundles,
   wrapper,
 }: HoverFocusStyleProps) {
   const hoverId = useUiStore((s) => s.hoverFocus?.id ?? null);
   const set = useMemo(
-    () => (hoverId === null ? null : focusSet(deck, graph, hoverId)),
-    [hoverId, deck, graph],
+    () => (hoverId === null ? null : focusSet(deck, graph, hoverId, bundles)),
+    [hoverId, deck, graph, bundles],
   );
   const css = useMemo(() => (set === null ? null : hoverFocusCss(set)), [set]);
   const active = css !== null;

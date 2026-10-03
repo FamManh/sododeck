@@ -254,3 +254,47 @@ describe('routedPath', () => {
     expect(Math.hypot((sx ?? 0) - 184, 0)).toBeGreaterThan(8);
   });
 });
+
+describe('routedPath spread (034 R6)', () => {
+  const to = far(400, 120);
+  const sides = ['right', 'left'] as const;
+  const shapes: PathShape[] = ['curved', 'elbow', 'straight'];
+
+  it.each(shapes)("returns exactly today's %s path for no spread or 0", (shape) => {
+    const base = routedPath(shape, near, to, sides, 12);
+    expect(routedPath(shape, near, to, sides, 12, {}, undefined)).toEqual(base);
+    expect(routedPath(shape, near, to, sides, 12, {}, 0)).toEqual(base);
+  });
+
+  it('moves the curve control points along the chord normal, and the label with them', () => {
+    const base = routedPath('curved', near, to, sides);
+    const moved = routedPath('curved', near, to, sides, 0, {}, 14);
+    expect(moved.path).not.toBe(base.path);
+    expect(moved.labelY).not.toBe(base.labelY);
+    const opposite = routedPath('curved', near, to, sides, 0, {}, -14);
+    // Symmetric about the unspread curve.
+    expect(moved.labelX + opposite.labelX).toBeCloseTo(2 * base.labelX, 5);
+    expect(moved.labelY + opposite.labelY).toBeCloseTo(2 * base.labelY, 5);
+    // Both ends stay on the card sides.
+    expect(moved.ends).toEqual(base.ends);
+  });
+
+  it("adds the spread to the elbow's middle segment, without a stored route", () => {
+    const moved = routedPath('elbow', near, to, sides, 0, {}, 20);
+    expect(moved.path).toBe(routedPath('elbow', near, to, sides, 20).path);
+    expect(moved.segment?.at).toBe(routedPath('elbow', near, to, sides, 20).segment?.at);
+  });
+
+  it('shifts a straight line sideways and moves its label point', () => {
+    const base = routedPath('straight', near, to, sides);
+    const moved = routedPath('straight', near, to, sides, 0, {}, 14);
+    expect(moved.path).not.toBe(base.path);
+    expect(Math.hypot(moved.labelX - base.labelX, moved.labelY - base.labelY)).toBeCloseTo(14, 5);
+  });
+
+  it('spreads an elbow with no middle segment by moving its ends', () => {
+    const corner = routedPath('elbow', near, far(300, 200), ['right', 'top']);
+    const moved = routedPath('elbow', near, far(300, 200), ['right', 'top'], 0, {}, 14);
+    expect(moved.path).not.toBe(corner.path);
+  });
+});

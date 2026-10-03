@@ -23,6 +23,9 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
   [Position.Left]: 'left',
 };
 
+/** Distance between neighbouring connectors of a fanned-out bundle (034 R6). */
+const FAN_SPACING = 14;
+
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
 
@@ -87,6 +90,7 @@ export const DeckEdge = memo(function DeckEdge({
     sides,
     data?.route?.offset,
     arrows,
+    data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
   );
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   // A plain connector reads its colour and width through the highlight variables (034 R2), so a

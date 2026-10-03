@@ -44,6 +44,7 @@ export const MergedEdge = memo(function MergedEdge({
 }: EdgeProps<MergedFlowEdge>) {
   const open = useUiStore((state) => state.openMergedPopover);
   const close = useUiStore((state) => state.closePopover);
+  const toggleFan = useUiStore((state) => state.toggleBundleFan);
   const timer = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const merged = data ?? {
     count: 0,
@@ -64,6 +65,11 @@ export const MergedEdge = memo(function MergedEdge({
   const { path, labelX, labelY, ends } = reversed
     ? routedPath('curved', targetBox, sourceBox, [sides[1], sides[0]], 0, arrows)
     : routedPath('curved', sourceBox, targetBox, sides, 0, arrows);
+  const isBundle = merged.kind === 'bundle';
+  const fanned = isBundle && merged.fanned === true;
+  // A bundle is a dot at System level and only its curve at Landscape (034, 029 zoom rules).
+  const showPill = !(isBundle && merged.level === 'landscape');
+  const asDot = isBundle && merged.level === 'system';
   const Icon = directionIcon(merged.direction);
   const flowStroke =
     merged.flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(merged.flow)];
@@ -90,23 +96,27 @@ export const MergedEdge = memo(function MergedEdge({
           data-testid="edge-halo"
         />
       )}
-      <BaseEdge
-        id={id}
-        path={path}
-        interactionWidth={12}
-        style={{
-          stroke,
-          strokeWidth: flowStroke?.width ?? 'var(--sd-edge-hl-width, 2)',
-          ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
-          ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
-        }}
-      />
-      <EdgeEnds
-        {...ends}
-        direction={merged.direction === 'both' ? 'both' : 'forward'}
-        color={stroke}
-        errorEnd={errorEnd}
-      />
+      {!fanned && (
+        <BaseEdge
+          id={id}
+          path={path}
+          interactionWidth={12}
+          style={{
+            stroke,
+            strokeWidth: flowStroke?.width ?? 'var(--sd-edge-hl-width, 2)',
+            ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
+            ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
+          }}
+        />
+      )}
+      {!fanned && (
+        <EdgeEnds
+          {...ends}
+          direction={merged.direction === 'both' ? 'both' : 'forward'}
+          color={stroke}
+          errorEnd={errorEnd}
+        />
+      )}
       {merged.flow?.current != null && (
         <FlowToken
           path={path}
@@ -117,72 +127,94 @@ export const MergedEdge = memo(function MergedEdge({
         />
       )}
       <EdgeLabelRenderer>
-        <button
-          type="button"
-          data-edge-anchor={id}
-          data-testid="merged-edge-label"
-          data-edge-label-for={id}
-          data-in-flow={merged.flow?.inPath === true ? '' : undefined}
-          data-step-state={merged.flow?.state}
-          data-in-focus={merged.inFocus ? '' : undefined}
-          className={cn(
-            'merged-edge-label nodrag nopan absolute flex items-center gap-1 rounded-full border bg-surface py-0.5 pr-2 text-edge-label shadow-rest',
-            merged.flow?.style === 'error'
-              ? 'border-clay-ink bg-clay-soft text-clay-ink'
-              : merged.flow?.current != null
-                ? 'border-primary bg-primary text-on-primary'
-                : merged.flow?.style === 'invalid'
-                  ? 'border-dashed border-clay-ink text-clay-ink'
-                  : merged.flow?.state !== undefined
-                    ? 'border-border-strong text-ink-secondary'
-                    : 'border-border text-ink-secondary',
-            merged.focused && 'ring-1 ring-primary',
-          )}
-          style={{
-            transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,
-          }}
-          onMouseEnter={() => {
-            if (timer.current !== null) globalThis.clearTimeout(timer.current);
-            timer.current = globalThis.setTimeout(() => {
-              open(id);
-            }, 150);
-          }}
-          onMouseLeave={() => {
-            if (timer.current !== null) globalThis.clearTimeout(timer.current);
-            close();
-          }}
-          onClick={(event) => {
-            event.stopPropagation();
-            open(id);
-          }}
-        >
-          {merged.flow?.badges.map((badge) => (
-            <StepBadge key={badge.label} badge={badge} />
-          ))}
-          {merged.flow?.style === 'invalid' && (
-            <Ban
-              role="img"
-              aria-label="Can't add this edge"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="size-3.5"
-            />
-          )}
-          {merged.flow?.errorIcon === true && merged.flow.badges.length === 0 && (
-            <CircleAlert
-              role="img"
-              aria-label="Error path"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className="size-3.5"
-            />
-          )}
-          <Icon
-            role="img"
-            aria-label={directionLabel(merged.direction)}
-            strokeWidth={ICON_STROKE_WIDTH}
-            className="size-3.5"
-          />
-          ×{merged.count}
-        </button>
+        {showPill && (
+          <button
+            type="button"
+            data-edge-anchor={id}
+            data-testid="merged-edge-label"
+            data-edge-label-for={id}
+            data-in-flow={merged.flow?.inPath === true ? '' : undefined}
+            data-step-state={merged.flow?.state}
+            data-in-focus={merged.inFocus ? '' : undefined}
+            aria-label={isBundle ? merged.name : undefined}
+            aria-expanded={isBundle ? fanned : undefined}
+            className={cn(
+              'merged-edge-label nodrag nopan absolute flex items-center rounded-full',
+              asDot
+                ? 'size-3 justify-center border-0 bg-ink ring-2 ring-canvas'
+                : 'gap-1 border py-0.5 pr-2 text-edge-label shadow-rest',
+              asDot
+                ? null
+                : merged.flow == null
+                  ? // The Ink pill (DESIGN.md "Bundle count"): Surface text, a canvas ring around it.
+                    'h-[22px] border-ink bg-ink pl-2 text-[11.5px] leading-none font-bold text-surface ring-2 ring-canvas'
+                  : 'bg-surface',
+              !asDot && merged.flow?.style === 'error'
+                ? 'border-clay-ink bg-clay-soft text-clay-ink'
+                : merged.flow?.current != null
+                  ? 'border-primary bg-primary text-on-primary'
+                  : merged.flow?.style === 'invalid'
+                    ? 'border-dashed border-clay-ink text-clay-ink'
+                    : merged.flow?.state !== undefined
+                      ? 'border-border-strong text-ink-secondary'
+                      : null,
+              fanned && 'ring-primary',
+              merged.focused && 'ring-1 ring-primary',
+            )}
+            style={{
+              transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,
+            }}
+            onMouseEnter={() => {
+              // A bundle's pill only toggles; the popover opens from its curve or the keyboard.
+              if (isBundle) return;
+              if (timer.current !== null) globalThis.clearTimeout(timer.current);
+              timer.current = globalThis.setTimeout(() => {
+                open(id);
+              }, 150);
+            }}
+            onMouseLeave={() => {
+              if (isBundle) return;
+              if (timer.current !== null) globalThis.clearTimeout(timer.current);
+              close();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (isBundle) toggleFan(id);
+              else open(id);
+            }}
+          >
+            {merged.flow?.badges.map((badge) => (
+              <StepBadge key={badge.label} badge={badge} />
+            ))}
+            {merged.flow?.style === 'invalid' && (
+              <Ban
+                role="img"
+                aria-label="Can't add this edge"
+                strokeWidth={ICON_STROKE_WIDTH}
+                className="size-3.5"
+              />
+            )}
+            {merged.flow?.errorIcon === true && merged.flow.badges.length === 0 && (
+              <CircleAlert
+                role="img"
+                aria-label="Error path"
+                strokeWidth={ICON_STROKE_WIDTH}
+                className="size-3.5"
+              />
+            )}
+            {!asDot && (
+              <>
+                <Icon
+                  role="img"
+                  aria-label={directionLabel(merged.direction)}
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  className="size-3.5"
+                />
+                ×{merged.count}
+              </>
+            )}
+          </button>
+        )}
       </EdgeLabelRenderer>
     </>
   );

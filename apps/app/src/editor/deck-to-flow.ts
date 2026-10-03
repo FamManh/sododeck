@@ -25,6 +25,7 @@ import { resolveSides, type Box } from './routing/route-path';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
 import type { CollapsedFlowMarks } from './collapse-flow-marks';
+import type { BundleResult, PlainEdge } from './bundles';
 import type { FocusSet } from './focus-set';
 import {
   EMPTY_OVERLAY,
@@ -119,6 +120,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
    * real box and a route offset would not mean what it looks like.
    */
   routable: boolean;
+  /** This connector's slot among the fanned-out members of a bundle (034 R6). */
+  fan?: { index: number; count: number };
 }
 
 export interface CollapsedGroupData extends Record<string, unknown> {
@@ -150,6 +153,14 @@ export interface MergedEdgeData extends Record<string, unknown> {
   focused: boolean;
   inFocus: boolean;
   flow?: EdgeFlowMark;
+  /** `bundle` for parallel connectors folded into one curve (034); absent for a collapsed group. */
+  kind?: 'bundle';
+  /** A bundle the user fanned out: its connectors draw on their own, the pill stays. */
+  fanned?: boolean;
+  /** The zoom level (029): at System a bundle is a dot, at Landscape no pill. */
+  level?: Level;
+  /** "3 connections between A and B": the accessible name of a bundle's pill. */
+  name?: string;
 }
 
 export interface StickyNodeData extends Record<string, unknown> {
@@ -196,6 +207,7 @@ const collapsedCache = new Map<string, CollapsedFlowNode>();
 const portCache = new Map<string, PortFlowNode>();
 const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
 const mergedCache = new Map<string, MergedFlowEdge>();
+const bundleCache = new Map<string, MergedFlowEdge>();
 const stickyNodeCache = new WeakMap<StickyObject, StickyFlowNode>();
 const stickyLeaderCache = new WeakMap<StickyObject, StickyLeaderFlowEdge>();
 let lastNodes: CanvasFlowNode[] = [];
@@ -842,13 +854,32 @@ function representativeTitles(
   return titles;
 }
 
+function fanOf(entry: PlainEdge | undefined): { index: number; count: number } | undefined {
+  return entry?.fanIndex === undefined || entry.fanCount === undefined
+    ? undefined
+    : { index: entry.fanIndex, count: entry.fanCount };
+}
+
+function sameFan(
+  a: { index: number; count: number } | undefined,
+  b: { index: number; count: number } | undefined,
+): boolean {
+  return a === b || (a?.index === b?.index && a?.count === b?.count);
+}
+
 export function toFlowEdges(
   deck: SododeckFile,
   graph: VisibleGraph,
   view: CanvasView,
   overlay: FlowOverlay = EMPTY_OVERLAY,
+  /** Parallel connectors folded into bundles (034); absent = every connector draws on its own. */
+  bundles?: BundleResult,
 ): (DeckFlowEdge | MergedFlowEdge)[] {
   const lookups = deckLookups(deck);
+  const plainInfo: ReadonlyMap<string, PlainEdge> | undefined =
+    bundles === undefined
+      ? undefined
+      : new Map(bundles.plain.map((entry) => [entry.edgeId, entry]));
   const ports = portNodes(deck, graph, view.level);
   const nodes =
     graph.cards.length === 0 && ports.length === 0
@@ -885,6 +916,8 @@ export function toFlowEdges(
   const plainEdges = graph.edges.flatMap((edgeId) => {
     const edge = lookups.edgesById.get(edgeId);
     if (edge === undefined) return [];
+    if (plainInfo !== undefined && !plainInfo.has(edgeId)) return [];
+    const fan = fanOf(plainInfo?.get(edgeId));
     const from = nodes.get(edge.from);
     const to = nodes.get(edge.to);
     const fromBox = boxFor(edge.from);
@@ -898,7 +931,8 @@ export function toFlowEdges(
     const inFocus = view.focus?.edges.has(edge.id) === true;
     const showLabel =
       (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
-      view.focus?.edges.has(edge.id) === true;
+      view.focus?.edges.has(edge.id) === true ||
+      (fan !== undefined && edge.label !== undefined && edge.label !== '');
     const mark = overlay.edges.get(edge.id);
     const problems = view.problems?.get(edge.id);
     const shape = edgeShape(edge);
@@ -916,7 +950,8 @@ export function toFlowEdges(
       cached.data.dimmed === dimmed &&
       cached.data.fromTitle === from.title &&
       cached.data.toTitle === to.title &&
-      cached.data.level === view.level
+      cached.data.level === view.level &&
+      sameFan(cached.data.fan, fan)
     ) {
       return [cached];
     }
@@ -954,6 +989,7 @@ export function toFlowEdges(
         shape,
         level: view.level,
         routable: true,
+        ...(fan === undefined ? {} : { fan }),
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),
         ...(edge.route === undefined ? {} : { route: edge.route }),
@@ -966,6 +1002,8 @@ export function toFlowEdges(
     port.edgeIds.flatMap((edgeId) => {
       const edge = lookups.edgesById.get(edgeId);
       if (edge === undefined) return [];
+      if (plainInfo !== undefined && !plainInfo.has(edgeId)) return [];
+      const fan = fanOf(plainInfo?.get(edgeId));
       const insideNodeId = port.insideNodeIds.find(
         (nodeId) => edge.from === nodeId || edge.to === nodeId,
       );
@@ -986,7 +1024,8 @@ export function toFlowEdges(
       const inFocus = view.focus?.edges.has(edge.id) === true;
       const showLabel =
         (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
-        view.focus?.edges.has(edge.id) === true;
+        view.focus?.edges.has(edge.id) === true ||
+        (fan !== undefined && edge.label !== undefined && edge.label !== '');
       const mark = overlay.edges.get(edge.id);
       const shape = edgeShape(edge);
       const cached = edgeCache.get(edge);
@@ -1010,7 +1049,8 @@ export function toFlowEdges(
         ) &&
         cached.data.fromTitle === from.title &&
         cached.data.toTitle === to.title &&
-        cached.data.level === view.level
+        cached.data.level === view.level &&
+        sameFan(cached.data.fan, fan)
       ) {
         return [cached];
       }
@@ -1045,6 +1085,7 @@ export function toFlowEdges(
           shape,
           level: view.level,
           routable: false,
+          ...(fan === undefined ? {} : { fan }),
           ...(mark === undefined ? {} : { flow: mark }),
         },
       };
@@ -1074,6 +1115,7 @@ export function toFlowEdges(
       cached.data.direction === edge.direction &&
       cached.data.focused === focused &&
       cached.data.inFocus === inFocus &&
+      cached.data.level === view.level &&
       sameMark(cached.data.flow, flow) &&
       sameClassName(cached.className, className) &&
       Boolean(cached.domAttributes?.['aria-hidden']) === (view.focus !== null && !inFocus) &&
@@ -1103,13 +1145,73 @@ export function toFlowEdges(
         edgeIds: edge.edgeIds,
         focused,
         inFocus,
+        level: view.level,
         ...(flow === undefined ? {} : { flow }),
       },
     };
     mergedCache.set(edge.id, flowEdge);
     return [flowEdge];
   });
-  const next = [...plainEdges, ...portEdges, ...mergedEdges];
+  const bundleEdgesOut = (bundles?.bundles ?? []).flatMap((bundle) => {
+    const from = nodes.get(bundle.a);
+    const to = nodes.get(bundle.b);
+    const fromBox = boxFor(bundle.a);
+    const toBox = boxFor(bundle.b);
+    if (from === undefined || to === undefined || fromBox === undefined || toBox === undefined)
+      return [];
+    const [sourceHandle, targetHandle] = facingSides(fromBox, toBox);
+    const focused = bundle.id === view.focusedEdgeId;
+    const inFocus = view.focus?.edges.has(bundle.id) === true;
+    const dimmed = view.focus !== null && !inFocus;
+    const className = inFocus ? 'in-focus' : '';
+    const name = `${String(bundle.edgeIds.length)} connections between ${titles.get(bundle.a) ?? bundle.a} and ${titles.get(bundle.b) ?? bundle.b}`;
+    const cached = bundleCache.get(bundle.id);
+    if (
+      cached?.data !== undefined &&
+      cached.data.name === name &&
+      cached.data.count === bundle.edgeIds.length &&
+      cached.data.direction === bundle.direction &&
+      cached.data.fanned === bundle.fanned &&
+      cached.data.focused === focused &&
+      cached.data.inFocus === inFocus &&
+      cached.data.level === view.level &&
+      sameClassName(cached.className, className) &&
+      Boolean(cached.domAttributes?.['aria-hidden']) === dimmed &&
+      cached.source === bundle.a &&
+      cached.target === bundle.b &&
+      cached.sourceHandle === sourceHandle &&
+      cached.targetHandle === targetHandle &&
+      sameList(cached.data.edgeIds, bundle.edgeIds)
+    ) {
+      return [cached];
+    }
+    const flowEdge: MergedFlowEdge = {
+      id: bundle.id,
+      type: 'merged',
+      source: bundle.a,
+      target: bundle.b,
+      sourceHandle,
+      targetHandle,
+      interactionWidth: 12,
+      ...(className === '' ? {} : { className }),
+      ...(dimmed ? { domAttributes: { 'aria-hidden': true } } : {}),
+      ariaLabel: name,
+      data: {
+        kind: 'bundle',
+        name,
+        count: bundle.edgeIds.length,
+        direction: bundle.direction,
+        edgeIds: bundle.edgeIds,
+        fanned: bundle.fanned,
+        focused,
+        inFocus,
+        level: view.level,
+      },
+    };
+    bundleCache.set(bundle.id, flowEdge);
+    return [flowEdge];
+  });
+  const next = [...plainEdges, ...portEdges, ...mergedEdges, ...bundleEdgesOut];
   // A drag moves nodes, rarely edges: keep the array identity when nothing in it changed.
   if (next.length === lastEdges.length && next.every((e, i) => e === lastEdges[i]))
     return lastEdges;

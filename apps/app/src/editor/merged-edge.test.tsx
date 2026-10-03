@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type * as XYFlow from '@xyflow/react';
 import { Position, type EdgeProps } from '@xyflow/react';
 import { type ReactNode } from 'react';
@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { MergedFlowEdge } from './deck-to-flow';
 import { MergedEdge } from './merged-edge';
+import { useUiStore } from '../state/ui-store';
 
 vi.mock('@xyflow/react', async (importOriginal) => {
   const actual = await importOriginal<typeof XYFlow>();
@@ -205,5 +206,120 @@ describe('MergedEdge', () => {
       expect(screen.queryByTestId('edge-arrow')).toBeNull();
       expect(screen.queryByTestId('flow-token')).toBeNull();
     });
+  });
+});
+
+describe('MergedEdge as a bundle (034)', () => {
+  function drawBundle(
+    data: Partial<NonNullable<MergedFlowEdge['data']>> = {},
+    direction: 'a-to-b' | 'b-to-a' | 'both' = 'a-to-b',
+  ) {
+    const props = {
+      id: 'bundle:a|b',
+      source: 'a',
+      target: 'b',
+      sourceX: 0,
+      sourceY: 0,
+      targetX: 200,
+      targetY: 40,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      data: {
+        kind: 'bundle',
+        name: '3 connections between A and B',
+        count: 3,
+        direction,
+        edgeIds: ['e1', 'e2', 'e3'],
+        fanned: false,
+        focused: false,
+        inFocus: false,
+        level: 'container',
+        ...data,
+      },
+    } as unknown as EdgeProps<MergedFlowEdge>;
+    return render(
+      <svg>
+        <MergedEdge {...props} />
+      </svg>,
+    );
+  }
+
+  it('is a button named for its connections, collapsed until fanned', () => {
+    drawBundle();
+    const pill = screen.getByRole('button', { name: '3 connections between A and B' });
+    expect(pill).toHaveAttribute('aria-expanded', 'false');
+    expect(pill).toHaveTextContent('×3');
+  });
+
+  it('toggles the fan-out when clicked, and does not open the popover', () => {
+    useUiStore.setState({ fannedBundles: new Set(), popover: null });
+    drawBundle();
+    fireEvent.click(screen.getByRole('button', { name: '3 connections between A and B' }));
+    expect([...useUiStore.getState().fannedBundles]).toEqual(['bundle:a|b']);
+    expect(useUiStore.getState().popover).toBeNull();
+  });
+
+  it('shows the pressed state and only the pill while fanned', () => {
+    const { container } = drawBundle({ fanned: true });
+    expect(screen.getByRole('button', { name: /3 connections/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(container.querySelector('.react-flow__edge-path')).toBeNull();
+    expect(screen.queryByTestId('edge-arrow')).toBeNull();
+  });
+
+  it('is a dot with the same name and no visible number at System level', () => {
+    drawBundle({ level: 'system' });
+    const dot = screen.getByRole('button', { name: '3 connections between A and B' });
+    expect(dot).not.toHaveTextContent('×');
+    expect(dot).toHaveTextContent('');
+  });
+
+  it('shows the curve alone, with no pill, at Landscape level', () => {
+    const { container } = drawBundle({ level: 'landscape' });
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(container.querySelector('.react-flow__edge-path')).not.toBeNull();
+  });
+
+  it.each([
+    ['a-to-b', 1, 1],
+    ['b-to-a', 1, 1],
+    ['both', 2, 0],
+  ] as const)('draws the arrowheads for %s', (direction, arrows, knobs) => {
+    drawBundle({}, direction);
+    expect(screen.getAllByTestId('edge-arrow')).toHaveLength(arrows);
+    expect(screen.queryAllByTestId('edge-knob')).toHaveLength(knobs);
+  });
+
+  it('gives a collapsed-group merged pill the Ink look and still opens the popover', () => {
+    useUiStore.setState({ popover: null });
+    const props = {
+      id: 'merged:a|b',
+      source: 'a',
+      target: 'b',
+      sourceX: 0,
+      sourceY: 0,
+      targetX: 200,
+      targetY: 40,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      data: {
+        count: 2,
+        direction: 'both',
+        edgeIds: ['e1', 'e2'],
+        focused: false,
+        inFocus: false,
+      },
+    } as unknown as EdgeProps<MergedFlowEdge>;
+    render(
+      <svg>
+        <MergedEdge {...props} />
+      </svg>,
+    );
+    const pill = screen.getByTestId('merged-edge-label');
+    expect(pill.getAttribute('class')).toContain('bg-ink');
+    fireEvent.click(pill);
+    expect(useUiStore.getState().popover).toEqual({ kind: 'merged', edgeId: 'merged:a|b' });
   });
 });

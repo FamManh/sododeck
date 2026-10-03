@@ -26,6 +26,7 @@ import {
   focusSelectionToolbar,
   toolbarShown,
 } from './quick-edit/toolbar-focus';
+import { bundleEdges, BUNDLE_EDGE_PREFIX } from './bundles';
 import { canvasElement, nodeElement, selectAllComponents } from './canvas-actions';
 import {
   cardSize,
@@ -528,16 +529,42 @@ export function useCanvasKeyDown() {
             return;
           }
           const titles = new Map(deck.nodes.map((n) => [n.id, n.title]));
+          // Folded bundles (034) stand in for the connectors they hide; the cycle visits each.
+          const bundles = bundleEdges(deck, graph, {
+            exclude: new Set(),
+            fanned: ui.fannedBundles,
+            off: ui.flowSession !== null,
+          }).bundles.filter((bundle) => !bundle.fanned);
+          const hidden = new Set(bundles.flatMap((bundle) => bundle.edgeIds));
           const own = deck.edges.filter(
             (e) =>
-              (e.from === current || e.to === current) && titles.has(e.from) && titles.has(e.to),
+              (e.from === current || e.to === current) &&
+              titles.has(e.from) &&
+              titles.has(e.to) &&
+              !hidden.has(e.id),
           );
-          if (own.length === 0) return;
+          const ownBundles = bundles.filter(
+            (bundle) => bundle.a === current || bundle.b === current,
+          );
+          const cycle = [...own.map((e) => e.id), ...ownBundles.map((bundle) => bundle.id)];
+          if (cycle.length === 0) return;
           event.preventDefault();
-          const index = own.findIndex((e) => e.id === ui.focusedEdgeId);
-          const edge = own[(index + 1) % own.length];
-          if (!edge) return;
+          const index = cycle.findIndex((id) => id === ui.focusedEdgeId);
+          const nextId = cycle[(index + 1) % cycle.length];
+          if (nextId === undefined) return;
           if (ui.focusedId !== current) ui.focus(current);
+          const bundle = ownBundles.find((entry) => entry.id === nextId);
+          if (bundle !== undefined) {
+            useUiStore.getState().focusEdge(bundle.id);
+            ui.select({});
+            const other = bundle.a === current ? bundle.b : bundle.a;
+            ui.announce(
+              `${String(bundle.edgeIds.length)} connections between ${titles.get(current) ?? current} and ${titles.get(other) ?? deck.nodes.find((n) => `port:${n.id}` === other)?.title ?? other}`,
+            );
+            return;
+          }
+          const edge = own.find((e) => e.id === nextId);
+          if (!edge) return;
           useUiStore.getState().focusEdge(edge.id);
           ui.select({ edges: [edge.id] });
           ui.announce(edgeName(titles.get(edge.from) ?? '', titles.get(edge.to) ?? '', edge.label));
@@ -547,7 +574,10 @@ export function useCanvasKeyDown() {
           if (selectedSticky !== null) {
             event.preventDefault();
             ui.setStickyEditing(selectedSticky);
-          } else if (ui.focusedEdgeId?.startsWith(MERGED_EDGE_PREFIX) === true) {
+          } else if (
+            ui.focusedEdgeId?.startsWith(MERGED_EDGE_PREFIX) === true ||
+            ui.focusedEdgeId?.startsWith(BUNDLE_EDGE_PREFIX) === true
+          ) {
             event.preventDefault();
             ui.openMergedPopover(ui.focusedEdgeId);
           } else if (current !== null && groupIdOf(current) !== null) {
@@ -767,6 +797,17 @@ export function useEditorShortcuts({
           if (ui.flowSession.invalid !== null) ui.setInvalid(null);
           else if (!ui.flowSession.confirmingCancel) requestCancel(editor);
         }
+        return;
+      }
+      // Esc folds fanned-out bundles (034) once any popover has closed.
+      if (
+        key === 'escape' &&
+        ui.popover === null &&
+        ui.pendingDelete === null &&
+        ui.fannedBundles.size > 0
+      ) {
+        event.preventDefault();
+        ui.foldBundles();
         return;
       }
       if (key === 'delete' || key === 'backspace') {

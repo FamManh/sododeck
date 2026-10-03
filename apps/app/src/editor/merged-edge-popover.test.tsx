@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, editorWrapper } from '../test/render-canvas';
+import { bundleEdges } from './bundles';
 import { MergedEdgePopover } from './merged-edge-popover';
+import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf } from './views/use-current-view';
 
 describe('MergedEdgePopover', () => {
@@ -46,5 +48,79 @@ describe('MergedEdgePopover', () => {
     await user.click(first);
     expect(collapsedOf(env.doc).size).toBe(0);
     expect(useUiStore.getState().selection.edges).toEqual(['e0']);
+  });
+
+  describe('for a bundle (034)', () => {
+    const deck = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A' },
+        { id: 'b', type: 'service', title: 'B' },
+      ],
+      edges: [
+        { id: 'e1', from: 'a', to: 'b', label: 'orders' },
+        { id: 'e2', from: 'b', to: 'a', label: 'replies' },
+        { id: 'e3', from: 'a', to: 'b' },
+      ],
+    });
+    const none = new Set<string>();
+    const open = (fanned: string[] = []) => {
+      const env = editorWrapper(deck);
+      const graph = visibleGraph(deck, scopeOf([]), none);
+      const bundles = bundleEdges(deck, graph, {
+        exclude: none,
+        fanned: new Set(fanned),
+        off: false,
+      });
+      act(() => {
+        useUiStore.setState({ popover: { kind: 'merged', edgeId: 'bundle:a|b' } });
+      });
+      render(<MergedEdgePopover deck={deck} bundles={bundles} />, { wrapper: env.wrapper });
+      return env;
+    };
+
+    it('starts with Fan out, then lists each connector with label and direction', () => {
+      open();
+      expect(
+        screen.getByRole('dialog', { name: 'Connections between A and B' }),
+      ).toBeInTheDocument();
+      const buttons = screen
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label') ?? b.textContent);
+      expect(buttons[0]).toBe('Fan out');
+      const rows = screen.getAllByRole('listitem');
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveTextContent('orders');
+      expect(rows[0]).toHaveTextContent('forward');
+      expect(rows[2]).toHaveTextContent('A → B');
+    });
+
+    it('toggles the fan-out and says Fold while fanned', async () => {
+      const user = userEvent.setup();
+      useUiStore.setState({ fannedBundles: new Set() });
+      open();
+      await user.click(screen.getByRole('button', { name: 'Fan out' }));
+      expect([...useUiStore.getState().fannedBundles]).toEqual(['bundle:a|b']);
+    });
+
+    it('offers Fold when the bundle is fanned', () => {
+      open(['bundle:a|b']);
+      expect(screen.getByRole('button', { name: 'Fold' })).toBeInTheDocument();
+    });
+
+    it('selects one connector', async () => {
+      const user = userEvent.setup();
+      open();
+      await user.click(screen.getByRole('button', { name: 'Select orders' }));
+      expect(useUiStore.getState().selection.edges).toEqual(['e1']);
+      expect(useUiStore.getState().popover).toBeNull();
+    });
+
+    it('deletes one connector through the confirmation, as one request', async () => {
+      const user = userEvent.setup();
+      open();
+      await user.click(screen.getByRole('button', { name: 'Delete replies' }));
+      expect(useUiStore.getState().pendingDelete).not.toBeNull();
+      expect(useUiStore.getState().pendingDelete?.targets).toEqual([{ scope: 'edges', id: 'e2' }]);
+    });
   });
 });
