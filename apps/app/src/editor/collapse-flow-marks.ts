@@ -2,16 +2,21 @@ import type { SododeckFile } from '@sododeck/schema';
 
 import type { EdgeFlowMark, FlowOverlay } from './flows/flow-overlay';
 import type { PlayedPath } from './flows/played-path';
+import type { StepState } from './flows/step-marks';
 import type { VisibleGraph } from './visible-graph';
 
 export interface CollapsedFlowMarks {
   merged: ReadonlyMap<string, EdgeFlowMark>;
-  cards: ReadonlyMap<string, 'current' | 'path'>;
+  /** Folded step state of each collapsed group's front card: current > played > upcoming. */
+  cards: ReadonlyMap<string, StepState>;
+  /** The number the folded sticker prints (current and upcoming only; played shows a check). */
+  cardNumbers: ReadonlyMap<string, string>;
 }
 
 const EMPTY_COLLAPSED_FLOW_MARKS: CollapsedFlowMarks = {
   merged: new Map(),
   cards: new Map(),
+  cardNumbers: new Map(),
 };
 
 export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): CollapsedFlowMarks {
@@ -21,7 +26,8 @@ export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): Co
   if (overlay.edges.size === 0) return EMPTY_COLLAPSED_FLOW_MARKS;
 
   const merged = new Map<string, EdgeFlowMark>();
-  const cards = new Map<string, 'current' | 'path'>();
+  const cards = new Map<string, StepState>();
+  const cardNumbers = new Map<string, string>();
 
   for (const mergedEdge of graph.merged) {
     const edgeMarks = mergedEdge.edgeIds
@@ -33,6 +39,7 @@ export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): Co
       style: edgeMarks.every((mark) => mark.style === 'error') ? 'error' : 'path',
       errorIcon: edgeMarks.some((mark) => mark.errorIcon),
       inPath: edgeMarks.some((mark) => mark.inPath === true),
+      ...stateOf(edgeMarks),
       current: edgeMarks.find((mark) => mark.current != null)?.current ?? null,
     });
   }
@@ -41,14 +48,37 @@ export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): Co
     const hiddenMarks = card.hiddenEdges
       .map((edgeId) => overlay.edges.get(edgeId))
       .filter((mark): mark is EdgeFlowMark => mark !== undefined);
-    if (hiddenMarks.some((mark) => mark.current != null)) {
-      cards.set(card.groupId, 'current');
-    } else if (hiddenMarks.some((mark) => mark.inPath === true)) {
-      cards.set(card.groupId, 'path');
-    }
+    const state = foldState(hiddenMarks);
+    if (state === undefined) continue;
+    cards.set(card.groupId, state);
+    const number = numberOf(hiddenMarks, state);
+    if (number !== undefined) cardNumbers.set(card.groupId, number);
   }
 
-  return { merged, cards };
+  return { merged, cards, cardNumbers };
+}
+
+/** current > played > upcoming over the marks on the path; `undefined` when none is. */
+function foldState(marks: readonly EdgeFlowMark[]): StepState | undefined {
+  const onPath = marks.filter((mark) => mark.inPath === true);
+  if (onPath.some((mark) => mark.current != null || mark.state === 'current')) return 'current';
+  if (onPath.some((mark) => mark.state === 'played')) return 'played';
+  return onPath.length > 0 ? 'upcoming' : undefined;
+}
+
+/** The step number a folded sticker prints: the current step's, or the earliest upcoming one. */
+function numberOf(marks: readonly EdgeFlowMark[], state: StepState): string | undefined {
+  if (state === 'played') return undefined;
+  if (state === 'current') return marks.find((mark) => mark.current != null)?.current?.number;
+  const upcoming = marks
+    .filter((mark) => mark.inPath === true && mark.state === 'upcoming')
+    .flatMap((mark) => mark.badges.map((badge) => badge.label));
+  return upcoming.sort((a, b) => parseInt(a, 10) - parseInt(b, 10) || a.localeCompare(b))[0];
+}
+
+function stateOf(marks: readonly EdgeFlowMark[]): { state?: StepState } {
+  const state = foldState(marks);
+  return state === undefined ? {} : { state };
 }
 
 export function groupAtStep(

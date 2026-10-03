@@ -104,13 +104,85 @@ describe('flowOverlay in flow mode (007)', () => {
     speed,
   });
 
-  it('marks played edges and nodes, the current edge and its nodes', () => {
+  it('marks played edges and nodes, the current edge and its target card', () => {
     const overlay = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f2', playback('f2', 2));
-    expect(overlay.edges.get('bc')).toMatchObject({ inPath: true, current: { speed: 2 } });
-    expect(overlay.edges.get('ab')).toMatchObject({ inPath: true, current: null });
-    expect(overlay.nodes.get('b')).toEqual({ inPath: true, currentStep: true });
-    expect(overlay.nodes.get('c')).toEqual({ inPath: true, currentStep: true });
-    expect(overlay.nodes.get('a')).toEqual({ inPath: true, currentStep: false });
+    expect(overlay.edges.get('bc')).toMatchObject({
+      inPath: true,
+      state: 'current',
+      current: { speed: 2, number: '2' },
+    });
+    expect(overlay.edges.get('ab')).toMatchObject({ inPath: true, state: 'played', current: null });
+    expect(overlay.nodes.get('c')).toEqual({
+      inPath: true,
+      currentStep: true,
+      step: { state: 'current', number: '2' },
+    });
+    // The source of the current step is played, not current (035 clarification).
+    expect(overlay.nodes.get('b')).toEqual({
+      inPath: true,
+      currentStep: false,
+      step: { state: 'played', number: null },
+    });
+    expect(overlay.nodes.get('a')).toMatchObject({ currentStep: false, step: { state: 'played' } });
+  });
+
+  it('gives later steps upcoming edges and cards, numbered by their first step', () => {
+    const overlay = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f1', playback('f1'));
+    expect(overlay.edges.get('bc')).toMatchObject({ state: 'upcoming', current: null });
+    expect(overlay.nodes.get('c')?.step).toEqual({ state: 'upcoming', number: '2' });
+    expect(overlay.nodes.get('b')?.step).toEqual({ state: 'current', number: '1' });
+  });
+
+  it('removes the other alternative from the marks when the branch switches (035)', () => {
+    const ok = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f4a', playback('f4a'));
+    expect(ok.nodes.get('d')?.step).toEqual({ state: 'upcoming', number: '5a' });
+    expect(ok.edges.get('cd')).toMatchObject({ inPath: true, state: 'upcoming' });
+    expect(ok.edges.get('xn')).toMatchObject({ inPath: false });
+    const failed = {
+      played: new Set(['f1', 'f2', 'f3', 'f4b', 'f5b']),
+      currentStepId: 'f4b',
+      speed: 1 as const,
+    };
+    const other = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f4b', failed);
+    // No sticker, no path mark on the alternative that is no longer played: it dims.
+    expect(other.nodes.has('d')).toBe(false);
+    expect(other.edges.get('cd')).toMatchObject({ inPath: false, current: null });
+    expect(other.edges.get('cd')?.state).toBeUndefined();
+  });
+
+  it('gives an error-path target the normal sticker, and its connector the error style (FR-013)', () => {
+    const failed = {
+      played: new Set(['f1', 'f2', 'f3', 'f4b', 'f5b']),
+      currentStepId: 'f4b',
+      speed: 1 as const,
+    };
+    const overlay = flowOverlay(playbackDeck, forkAnalysis, null, null, 'f4b', failed);
+    expect(overlay.nodes.get('n')).toEqual({
+      inPath: true,
+      currentStep: true,
+      step: { state: 'current', number: '4b' },
+    });
+    expect(overlay.nodes.get('x')?.step).toEqual({ state: 'played', number: null });
+    expect(overlay.edges.get('xn')).toMatchObject({
+      style: 'error',
+      state: 'current',
+      current: { number: '4b' },
+    });
+  });
+
+  it('shows the most advanced state on an edge several steps travel', () => {
+    const order = playbackDeck.flows.find((f) => f.id === 'order') as Flow;
+    const analysis = analyzeFlow(order, playbackDeck.edges);
+    const played = new Set(order.steps.map((s) => s.id));
+    // bc is step 2 (played) and step 4 (upcoming) while step 3 is current.
+    const overlay = flowOverlay(playbackDeck, analysis, null, null, 'o3', {
+      played,
+      currentStepId: 'o3',
+      speed: 1,
+    });
+    expect(overlay.edges.get('bc')?.state).toBe('played');
+    expect(overlay.edges.get('cb')).toMatchObject({ state: 'current', current: { number: '3' } });
+    expect(overlay.edges.get('cx')?.state).toBe('upcoming');
   });
 
   it('keeps badges on the other alternative, outside the path', () => {

@@ -32,6 +32,7 @@ import {
   type FlowOverlay,
   type NodeFlowMark,
 } from './flows/flow-overlay';
+import type { NodeStepMark, StepState } from './flows/step-marks';
 import type { CardLayout } from './card-layout';
 import type { Level } from './levels';
 import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems/problem-marks';
@@ -57,8 +58,10 @@ export interface DeckNodeData extends Record<string, unknown> {
   focused: boolean;
   /** "Step n starts here" while recording a flow (006): a ring and a tag. */
   flowStart?: string;
-  /** Flow mode (007): from/to of the current step, a ring and `aria-current="step"`. */
+  /** Flow mode (007): the target card of the current step, lifted, with `aria-current="step"`. */
   currentStep?: boolean;
+  /** Flow mode (035): the card's corner sticker (✓, number or dashed number). */
+  step?: NodeStepMark;
   /** Dimmed by the view's settings (011 FR-013): reduced opacity, still interactive. */
   viewDimmed?: boolean;
   /** Pinned in the current view (011 FR-023): a pin glyph; Tidy layout leaves it in place. */
@@ -124,7 +127,10 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   memberKinds: readonly string[];
   focused: boolean;
   dimmed: boolean;
-  flowInside?: 'current' | 'path';
+  /** Flow mode (035): the front card's folded step state, drawn as the same sticker. */
+  flowInside?: StepState;
+  /** The number the folded sticker prints; absent when played (✓). */
+  flowNumber?: string;
   /** Resolved fill/stroke colour (020); absent when the group has no colour. */
   look?: CardLook;
 }
@@ -313,7 +319,9 @@ function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boo
     a.style === b.style &&
     a.errorIcon === b.errorIcon &&
     a.inPath === b.inPath &&
+    a.state === b.state &&
     a.current?.speed === b.current?.speed &&
+    a.current?.number === b.current?.number &&
     a.badges.length === b.badges.length &&
     a.badges.every((x, i) => {
       const y = b.badges[i];
@@ -338,6 +346,7 @@ function toFlowNode(
   const cached = nodeCache.get(node);
   const flowStart = mark?.startsHere;
   const currentStep = mark?.currentStep === true;
+  const step = mark?.step ?? undefined;
   const inFlow = mark?.inPath === true;
   const inFocus = view.focus?.members.has(node.id) === true;
   const selected = view.selection.nodes.includes(node.id);
@@ -374,6 +383,8 @@ function toFlowNode(
     cached.data.dimmed === dimmed &&
     cached.data.flowStart === flowStart &&
     (cached.data.currentStep === true) === currentStep &&
+    cached.data.step?.state === step?.state &&
+    cached.data.step?.number === step?.number &&
     sameClassName(cached.className, className) &&
     cached.position.x === position.x &&
     cached.position.y === position.y &&
@@ -403,6 +414,7 @@ function toFlowNode(
       focused,
       ...(flowStart === undefined ? {} : { flowStart }),
       ...(currentStep ? { currentStep } : {}),
+      ...(step === undefined ? {} : { step }),
       ...(viewDimmed ? { viewDimmed } : {}),
       ...(pinned ? { pinned } : {}),
       ...(hiddenInView ? { hiddenInView } : {}),
@@ -526,6 +538,7 @@ function collapsedNodes(
     const inFocus = view.focus?.members.has(id) === true;
     const dimmed = view.focus !== null && !inFocus;
     const flowInside = view.marks.cards.get(card.groupId);
+    const flowNumber = view.marks.cardNumbers.get(card.groupId);
     const look = resolveLook(
       groupsById.get(card.groupId)?.style,
       selected ? (view.stylePreview ?? undefined) : undefined,
@@ -539,6 +552,7 @@ function collapsedNodes(
       cached.data.focused === focused &&
       cached.data.dimmed === dimmed &&
       cached.data.flowInside === flowInside &&
+      cached.data.flowNumber === flowNumber &&
       sameLook(cached.data.look, look) &&
       sameClassName(cached.className, className) &&
       Boolean(cached.domAttributes?.['aria-hidden']) === dimmed &&
@@ -571,6 +585,7 @@ function collapsedNodes(
         focused,
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),
+        ...(flowNumber === undefined ? {} : { flowNumber }),
         ...(look === undefined ? {} : { look }),
       },
     };
