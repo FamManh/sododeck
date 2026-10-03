@@ -16,31 +16,8 @@ import { StepSticker } from '../step-sticker';
 import { describeChannel } from '../style/card-style';
 import { typeName } from '../type-label';
 import { useComponentNodeState } from '../use-component-node-state';
-import {
-  outlinePoint,
-  SHAPE_TITLE_LINE,
-  shapePath,
-  titleBox,
-  type Box,
-  type Geometry,
-} from './shape-geometry';
-
-/** Rings around a shape follow its geometry: the box grown by this much, then re-drawn. */
-const SELECTED_RING = 4;
-const PROBLEM_RING = 7;
-
-const grow = (box: Box, by: number): Box => ({
-  x: box.x - by,
-  y: box.y - by,
-  width: box.width + 2 * by,
-  height: box.height + 2 * by,
-});
-
-/** A ring path: the geometry at a grown box; a plain rectangle for shapes with no outline. */
-function ringPath(geometry: Geometry, box: Box, by: number): string {
-  const ringGeometry = geometry === 'actor' || geometry === 'none' ? 'rounded-rect' : geometry;
-  return shapePath(ringGeometry, grow(box, by)).outline;
-}
+import { outlinePoint, SHAPE_TITLE_LINE, shapePath, titleBox } from './shape-geometry';
+import { Ring } from './shape-ring';
 
 /**
  * A component drawn as a shape (031 research R3; DESIGN.md "Card system (Deck)", Shape column of
@@ -76,6 +53,15 @@ export const ShapeNode = memo(function ShapeNode({
   const paths = useMemo(() => shapePath(geometry, box), [geometry, box]);
   const title = useMemo(() => titleBox(geometry, box), [geometry, box]);
   const isText = geometry === 'none';
+  // Shapes with no closed outline (actor, text) take their rings around the box.
+  const ringBase = useMemo(
+    () =>
+      geometry === 'actor' || geometry === 'none'
+        ? shapePath('rounded-rect', box).outline
+        : paths.outline,
+    [geometry, box, paths.outline],
+  );
+  const maskId = `sd-ring-${id.replace(/[^\w-]/g, '_')}`;
   const isLandscape = data.level === 'landscape';
 
   // The text shape shows words only, in the default ink: no colour (FR-003).
@@ -123,8 +109,16 @@ export const ShapeNode = memo(function ShapeNode({
   });
 
   const placeAt = (side: HandleSide): CSSProperties => {
+    // React Flow's side classes pin right / bottom handles with `right` / `bottom` and a +50 %
+    // shift; a handle on the outline is centred on its point whatever the side.
     const point = outlinePoint(geometry, box, side);
-    return { left: point.x, top: point.y };
+    return {
+      left: point.x,
+      top: point.y,
+      right: 'auto',
+      bottom: 'auto',
+      transform: 'translate(-50%, -50%)',
+    };
   };
 
   const titleStyle: CSSProperties = {
@@ -212,22 +206,25 @@ export const ShapeNode = memo(function ShapeNode({
         {paths.extra !== undefined && (
           <path data-testid="shape-extra" className="sd-shape-extra" d={paths.extra} />
         )}
-        {selected && (
-          <path
-            data-testid="shape-selected-ring"
+        {(selected || data.flowStart !== undefined) && (
+          <Ring
+            kind="selected"
+            d={ringBase}
+            maskId={maskId}
+            box={box}
             className="sd-shape-ring"
-            d={ringPath(geometry, box, SELECTED_RING)}
+            testId="shape-selected-ring"
           />
         )}
         {hasProblem && (
-          <path
-            data-testid="problem-outline"
+          <Ring
+            kind="problem"
+            d={ringBase}
+            maskId={maskId}
+            box={box}
             className="sd-shape-problem"
-            d={ringPath(geometry, box, PROBLEM_RING)}
+            testId="problem-outline"
           />
-        )}
-        {data.flowStart !== undefined && (
-          <path className="sd-shape-ring" d={ringPath(geometry, box, SELECTED_RING)} />
         )}
       </svg>
 
