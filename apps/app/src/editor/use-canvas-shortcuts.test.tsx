@@ -16,7 +16,7 @@ import { isTextTarget, useEditorShortcuts } from './use-canvas-shortcuts';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { collapsedOf, toggleGroupCollapsed } from './views/use-current-view';
-import { startSegmentDrag } from './editing/segment-drag';
+import { startBendDrag } from './editing/bend-drag';
 import { NUDGE_IDLE_MS } from './editing/use-nudge';
 
 /** 3×3 grid: n00 … n22 (row, column), 300 px apart. */
@@ -716,23 +716,34 @@ describe('problem walk (015 FR-021)', () => {
   });
 });
 
-describe('R resets a segment drag (017 R7, T037)', () => {
-  it('does nothing outside a segment gesture', () => {
+describe('R resets a bend drag (022)', () => {
+  it('does nothing outside a bend gesture', () => {
     const env = editorWrapper(grid);
     render(<Editor />, { wrapper: env.wrapper });
     expect(fireEvent.keyDown(document.body, { key: 'r' })).toBe(true);
-    expect(ui().announcement.text).not.toBe('Reset middle segment');
+    expect(ui().announcement.text).not.toBe('Route reset');
   });
 
-  it('resets the segment to automatic routing mid-drag, without leaving the drag in history', () => {
+  it('resets the route to automatic mid-drag, without leaving the drag in history', () => {
     const env = editorWrapper(grid);
     render(<Editor />, { wrapper: env.wrapper });
     const editor = env.editor();
     editor.setEdgeRoute('e1', { offset: 40 });
-    const session = startSegmentDrag(editor, 'e1', 'component');
-    expect(session).not.toBeNull();
+    const corner = { x: 0, y: 0 };
+    startBendDrag(
+      editor,
+      {
+        edgeId: 'e1',
+        fromCentre: corner,
+        toCentre: { x: 100, y: 100 },
+        start: corner,
+        end: { x: 100, y: 100 },
+        bends: [{ x: 50, y: 0 }],
+      },
+      { kind: 'move', index: 0 },
+    );
     expect(fireEvent.keyDown(document.body, { key: 'r' })).toBe(false);
-    expect(ui().announcement.text).toBe('Reset middle segment');
+    expect(ui().announcement.text).toBe('Route reset');
     expect(readDeck(editor.doc).edges.find((e) => e.id === 'e1')?.route).toBeUndefined();
     editor.undo();
     expect(readDeck(editor.doc).edges.find((e) => e.id === 'e1')?.route?.offset).toBe(40);
@@ -909,38 +920,7 @@ describe('⌘⇧ arrow resize (017 US5, T048)', () => {
   });
 });
 
-describe('⌥ arrow segment move (017 US5, T048)', () => {
-  it('moves e1 (left/right) across the segment with ← / →, one undo step and an announcement', () => {
-    vi.useFakeTimers();
-    const { doc } = setup();
-    act(() => {
-      ui().select({ edges: ['e1'] });
-    });
-    const el = document.querySelector<HTMLElement>('[data-node-id="n11"]') ?? document.body;
-    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true });
-    fireEvent.keyDown(el, { key: 'ArrowRight', code: 'ArrowRight', altKey: true, shiftKey: true });
-    vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
-    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toEqual({ offset: 11 });
-    expect(ui().announcement.text).toBe('Moved middle segment to +11');
-    vi.useRealTimers();
-  });
-
-  it('does nothing for the arrow along the segment, and moves e2 (top/bottom) with ↑ / ↓', () => {
-    const { doc } = setup();
-    const canvas = canvasElement();
-    if (canvas === null) throw new Error('no canvas');
-    act(() => {
-      ui().select({ edges: ['e1'] });
-    });
-    fireEvent.keyDown(canvas, { key: 'ArrowUp', code: 'ArrowUp', altKey: true });
-    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toBeUndefined();
-    act(() => {
-      ui().select({ edges: ['e2'] });
-    });
-    fireEvent.keyDown(canvas, { key: 'ArrowUp', code: 'ArrowUp', altKey: true });
-    expect(toJSON(doc).edges.find((e) => e.id === 'e2')?.route).toEqual({ offset: -1 });
-  });
-
+describe('⌥ arrows (016 nudge)', () => {
   it('still nudges a component selection with ⌥ arrows (016 regression)', () => {
     const { doc } = setup();
     focusNode('n11');

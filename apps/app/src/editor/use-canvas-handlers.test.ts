@@ -58,7 +58,10 @@ describe('use-canvas-handlers: reconnect pins a side (017 R12)', () => {
         { source: 'a', target: 'b', sourceHandle: null, targetHandle: 'left' },
       );
     });
-    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toEqual({ toSide: 'left' });
+    const route = toJSON(doc).edges.find((e) => e.id === 'e1')?.route;
+    expect(route).toMatchObject({ toSide: 'left' });
+    // The drop position along the side is kept too (022 R4).
+    expect(route?.toAt).toBeGreaterThan(0);
     expect(ui().announcement.text).toBe('Connection now enters from the left');
     act(() => {
       h().onReconnectEnd();
@@ -86,8 +89,39 @@ describe('use-canvas-handlers: reconnect pins a side (017 R12)', () => {
         { source: 'a', target: 'b', sourceHandle: 'top', targetHandle: null },
       );
     });
-    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toEqual({ fromSide: 'top' });
+    const route = toJSON(doc).edges.find((e) => e.id === 'e1')?.route;
+    expect(route).toMatchObject({ fromSide: 'top' });
+    expect(route?.fromAt).toBeGreaterThan(0);
     expect(ui().announcement.text).toBe('Connection now leaves from the top');
+  });
+
+  it('shows the anchor and a readout while the pointer is over a side, then clears them', () => {
+    const { h } = handlers();
+    dragTo(h, flowEdge('e1'), { x: 302, y: 25 });
+    expect(ui().endpointAnchor).toMatchObject({ automatic: false });
+    expect(ui().connectorReadout).toMatch(/^left side · \d+ %/);
+    act(() => {
+      h().onReconnectEnd();
+    });
+    expect(ui().endpointAnchor).toBeNull();
+    expect(ui().connectorReadout).toBeNull();
+  });
+
+  it('a drop deep inside its own card clears the pinned side and position (022 R4)', () => {
+    const { h, doc, editor } = handlers();
+    act(() => {
+      editor().setEdgeRoute('e1', { toSide: 'left', toAt: 0.2 });
+    });
+    // the middle of b's box: far more than 12 px from every side
+    dragTo(h, { id: 'e1', source: 'a', target: 'b' }, { x: 380, y: 25 });
+    expect(ui().connectorReadout).toBe('automatic');
+    act(() => {
+      h().onReconnect(
+        { id: 'e1', source: 'a', target: 'b' },
+        { source: 'a', target: 'b', sourceHandle: null, targetHandle: null },
+      );
+    });
+    expect(toJSON(doc).edges.find((e) => e.id === 'e1')?.route).toBeUndefined();
   });
 
   it('moving to a different card updates from/to, pins the side and clears the offset', () => {

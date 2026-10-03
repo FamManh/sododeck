@@ -652,6 +652,47 @@ describe('toFlowEdges', () => {
   });
 });
 
+describe('toFlowEdges bends, sizes and style (022)', () => {
+  it('faces the handles toward the first and last bend when sides are automatic', () => {
+    const bent: SododeckFile = {
+      ...deck,
+      edges: [{ id: 'e1', from: 'a', to: 'b', route: { waypoints: [{ x: 0.5, dy: -400 }] } }],
+    };
+    const [edge] = toFlowEdges(bent, topLevelGraph(bent), view());
+    expect(edge?.sourceHandle).toBe('top');
+    expect(edge?.data?.fromSize).toBeDefined();
+    expect(edge?.data?.toSize).toBeDefined();
+  });
+
+  it('a pinned side still wins over the bend', () => {
+    const bent: SododeckFile = {
+      ...deck,
+      edges: [
+        {
+          id: 'e1',
+          from: 'a',
+          to: 'b',
+          route: { fromSide: 'left', waypoints: [{ x: 0.5, dy: -400 }] },
+        },
+      ],
+    };
+    const [edge] = toFlowEdges(bent, topLevelGraph(bent), view());
+    expect(edge?.sourceHandle).toBe('left');
+  });
+
+  it('carries the style and refreshes the edge when it changes', () => {
+    const styled: SododeckFile = {
+      ...deck,
+      edges: [{ id: 'e1', from: 'a', to: 'b', style: { dash: 'dashed', width: 3 } }],
+    };
+    const [before] = toFlowEdges(deck, topLevelGraph(deck), view());
+    const [after] = toFlowEdges(styled, topLevelGraph(styled), view());
+    expect(after).not.toBe(before);
+    expect(after?.data?.style).toEqual({ dash: 'dashed', width: 3 });
+    expect(before?.data).not.toHaveProperty('style');
+  });
+});
+
 describe('toFlowEdges line type (029 T044)', () => {
   const withEdge = (edge: SododeckFile['edges'][number]): SododeckFile => ({
     ...deck,

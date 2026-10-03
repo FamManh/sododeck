@@ -116,7 +116,7 @@ describe('EdgeInspector (story 1, FR-009)', () => {
 });
 
 describe('EdgeInspector Line section (029 T043)', () => {
-  const lineGroup = () => screen.getByRole('radiogroup', { name: 'Line type' });
+  const lineGroup = () => screen.getByRole('radiogroup', { name: 'Type' });
 
   it('shows the effective line type and sets it in one undo step', async () => {
     const { user, doc, editor, ui } = setup();
@@ -235,5 +235,48 @@ describe('EdgeInspector Route fields (017 T050)', () => {
     expect(edge(doc)?.route).toBeUndefined();
     expect(ui().announcement.text).toBe('Route reset');
     expect(screen.getByRole('button', { name: 'Reset route' })).toBeDisabled();
+  });
+});
+
+describe('EdgeInspector Label position (022 US4)', () => {
+  it('shows 50 % when unset and stores a new position as one undo step', async () => {
+    const { user, doc, editor } = setup();
+    const field = screen.getByRole('spinbutton', { name: 'Label position' });
+    expect(field).toHaveValue(50);
+    await user.clear(field);
+    await user.type(field, '20{Enter}');
+    expect(edge(doc)?.labelAt).toBe(0.2);
+    act(() => {
+      editor().undo();
+    });
+    expect(edge(doc)?.labelAt).toBeUndefined();
+  });
+
+  it('clamps to 0–100 and 50 removes the key', async () => {
+    const { user, doc } = setup();
+    const field = screen.getByRole('spinbutton', { name: 'Label position' });
+    await user.clear(field);
+    await user.type(field, '250{Enter}');
+    expect(edge(doc)?.labelAt).toBe(1);
+    await user.clear(field);
+    await user.type(field, '50{Enter}');
+    expect(edge(doc)).not.toHaveProperty('labelAt');
+  });
+});
+
+describe('EdgeInspector Route fields with bends (022 US2)', () => {
+  it('shows the bend count and Reset route for a curved connector that has bends', async () => {
+    const { user, doc, editor } = setup();
+    act(() => {
+      editor().setEdgeRoute('op', {
+        waypoints: [
+          { x: 0.5, y: 0.5 },
+          { x: 0.7, y: 0.2 },
+        ],
+      });
+    });
+    expect(screen.getByText('Bends: 2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reset route' }));
+    expect(edge(doc)).not.toHaveProperty('route');
   });
 });

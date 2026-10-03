@@ -43,7 +43,8 @@ import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
 import { groupSelection, type GroupSelection } from './ops/group-selection';
-import { setEdgeShape } from './ops/edge-style';
+import { setEdgeLabelAt } from './ops/edge-label';
+import { setEdgeShape, setEdgeStyle, type EdgeStylePatch } from './ops/edge-style';
 import { setCardSize, setEdgeRoute, type EdgeRoutePatch } from './ops/shape';
 import type { Fragment } from './fragment';
 import { editorOrigins, type EditContext } from './ops/context';
@@ -264,6 +265,17 @@ export interface DeckEditor {
    * undo step, joining an open gesture.
    */
   setEdgeRoute(edgeId: Id, patch: EdgeRoutePatch | null): void;
+  /**
+   * Sets the label position of an edge (022) as a fraction 0 to 1 of the drawn line; `null` or
+   * 0.5 removes it. `invalid` outside 0 to 1. One undo step, joining an open gesture.
+   */
+  setEdgeLabelAt(edgeId: Id, at: number | null): void;
+  /**
+   * Writes only the keys in `patch` (`shape`, `dash`, `width`, `color`, `animated`) to every
+   * listed edge as one undo step (022). `null` or a default value removes the key (and `style`
+   * when empty). Validates every id and value before writing.
+   */
+  setEdgeStyle(edgeIds: readonly Id[], patch: EdgeStylePatch): void;
   /**
    * Sets the line type of every listed edge as one undo step (029). Validates every id and the
    * shape before writing (`not-found` / `invalid`). Never changes an edge's `route`.
@@ -590,6 +602,12 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setEdgeRoute: (edgeId, patch) => {
       setEdgeRoute(ctx, edgeId, patch);
+    },
+    setEdgeStyle: (edgeIds, patch) => {
+      setEdgeStyle(ctx, edgeIds, patch);
+    },
+    setEdgeLabelAt: (edgeId, at) => {
+      setEdgeLabelAt(ctx, edgeId, at);
     },
     setEdgeShape: (edgeIds, shape) => {
       setEdgeShape(ctx, edgeIds, shape);

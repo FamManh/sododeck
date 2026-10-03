@@ -246,6 +246,15 @@ Tilt and lift are paint-only: they never move the card's box for snapping, hit t
 - **Bundle count:** 22px Ink pill "×n" (11.5 / 700, Surface text) with a 2px canvas ring (118, 119).
 - **Drill-in outside proxy** (118): 150 wide, 1.5px dashed Secondary, radius 14, canvas fill; type icon, title 12.5 / 600 and "Outside" (10, Muted). Belongs to 034.
 
+#### Connector style (128–133, 022)
+
+- **Line style popover:** 288 wide, 8 px under the toolbar's Line style button, radius 16, 1.5px Border-strong. Sections Type (Curved / Elbow / Straight), Dash (Solid / Dashed / Dotted), Weight (5 stops 1, 1.5, 2, 3, 4 px; default 2), Colour (No colour, the 13 names, deck colours) and an Animate direction switch. A section that differs across the selection says "Mixed" and the values in use get a 1.5px dashed ring. Every pick is one undo step.
+- **Dash:** dashed is 4w on, 3.5w off; dotted is round dots every 3w. **Weight** scales the knob and arrow a quarter per px above 2.
+- **Colour:** a named colour draws with its `stroke` token (3:1 on the canvas in both themes); a custom hex is mixed toward the text colour until it reaches 3:1. Selection, flow, error and candidate looks win over it.
+- **Handles:** light round handles with a 24px round hit area. Bend 8px filled dot, midpoint 8px ring, end 10px ring; hover 12px with a 4px Orange Soft halo. While dragged: guides, a 40 % dashed ghost of the old route and a mono readout ("x 288 · y 144", "left side · 78 %", "label 20 %"). Snapping to a neighbour's line within 6 screen px, then the 22px grid; ⌘ turns it off.
+- **Label:** a pill on the line at `labelAt`, never rotated; ticks at 25 / 50 / 75 % while dragging.
+- **Animate direction:** dashes run toward the arrow at 24 px/s over a 32 % track (a dashed line runs itself); still under reduced motion, in flows, when selected and in exports.
+
 #### Flow playback (117, owned by 035)
 
 - **Step sticker** on the card's top-left corner (−9, −9): played = 22px Ink disc with a check; current = 26px Deck Orange disc with the step number (12.5 / 700); upcoming = 22px Surface disc with a 1.5px dashed Secondary border and the number. Played and current discs have a 2px Surface ring.

@@ -89,7 +89,7 @@ describe('Inspector', () => {
       useUiStore.getState().select({ edges: ['e1', 'e2'] });
     });
     expect(screen.getByRole('heading', { name: '2 connectors' })).toBeInTheDocument();
-    const group = screen.getByRole('radiogroup', { name: 'Line type' });
+    const group = screen.getByRole('radiogroup', { name: 'Type' });
     expect(within(group).queryByRole('radio', { checked: true })).toBeNull();
     await userEvent.setup().click(within(group).getByRole('radio', { name: 'Elbow' }));
     expect(toJSON(view.doc).edges.map((e) => e.style?.shape)).toEqual(['elbow', 'elbow']);

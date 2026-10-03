@@ -10,6 +10,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@sododeck/ui/components/dropdown-menu';
+import { Check } from 'lucide-react';
 import { Fragment, useEffect, useRef } from 'react';
 
 import { useUiStore, type ContextMenuState } from '../../state/ui-store';
@@ -107,6 +108,7 @@ function Item({ action }: { action: ResolvedAction }) {
     >
       {icon}
       {action.label}
+      {action.checked && <Check aria-hidden className="ml-auto size-4" />}
     </DropdownMenuItem>
   );
 }

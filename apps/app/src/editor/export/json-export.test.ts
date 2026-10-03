@@ -134,3 +134,70 @@ describe('tag colours in the JSON export (033)', () => {
     expect(toJSON(fromJSON(JSON.parse(text))).tagColors).toEqual(coloured.tagColors);
   });
 });
+
+describe('jsonExport keeps connector style compatible (022 SC-004, SC-005)', () => {
+  const nodes: SododeckFile['nodes'] = [
+    { id: 'a', type: 'client', title: 'A' },
+    { id: 'b', type: 'service', title: 'B' },
+  ];
+  const keysOf = (file: SododeckFile) => JSON.stringify(file);
+
+  it('adds no 022 key to a deck from before 022, even after unrelated edits', () => {
+    const old: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes,
+      edges: [
+        { id: 'e1', from: 'a', to: 'b', route: { fromSide: 'right', offset: 12 } },
+        { id: 'e2', from: 'b', to: 'a', style: { shape: 'straight' } },
+        { id: 'e3', from: 'a', to: 'b', label: 'plain' },
+      ],
+    };
+    const { text } = jsonExport(old, { includeKnowledge: true, pretty: true });
+    const out = JSON.parse(text) as SododeckFile;
+    expect(out.edges).toEqual(old.edges);
+    for (const key of [
+      'dash',
+      'width',
+      'color',
+      'animated',
+      'fromAt',
+      'toAt',
+      'waypoints',
+      'labelAt',
+    ]) {
+      expect(keysOf(out)).not.toContain(`"${key}"`);
+    }
+  });
+
+  it('a deck using every 022 key survives export, import and save unchanged', () => {
+    const full: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes,
+      edges: [
+        {
+          id: 'e1',
+          from: 'a',
+          to: 'b',
+          label: 'go',
+          labelAt: 0.2,
+          route: {
+            fromSide: 'right',
+            fromAt: 0.25,
+            toSide: 'left',
+            toAt: 1,
+            waypoints: [
+              { x: 0.5, dy: -88 },
+              { dx: 4, y: 1 },
+            ],
+          },
+          style: { shape: 'elbow', dash: 'dashed', width: 3, color: 'blue', animated: true },
+        },
+      ],
+    };
+    const { text } = jsonExport(full, { includeKnowledge: true, pretty: true });
+    const parsed = JSON.parse(text) as SododeckFile;
+    expect(parseSododeckFile(parsed).success).toBe(true);
+    expect(toJSON(fromJSON(parsed)).edges).toEqual(full.edges);
+    expect(serializeDeck(toJSON(fromJSON(parsed)))).toBe(serializeDeck(parsed));
+  });
+});

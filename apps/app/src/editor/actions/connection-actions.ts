@@ -1,10 +1,14 @@
 import type { Edge } from '@sododeck/schema';
+import { edgeLineStyle } from '@sododeck/model';
 import { ArrowRightLeft, Cable, Spline, Type } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
 import { DIRECTIONS, PROTOCOLS, protocolLabel } from '../fields/edge-choices';
-import { applyLineType, LINE_TYPES, lineTypeLabel, sharedLineShape } from '../fields/line-type';
+import { applyLineType, LINE_TYPES, sharedLineShape } from '../fields/line-type';
 import { oneStep } from '../fields/one-step';
+import { applyLineStyle } from '../line-style/apply-line-style';
+import { DASHES, WIDTHS, widthText } from '../line-style/line-style-options';
+import { lineStyleView } from '../line-style/line-style-view';
 import type { Action, ActionContext } from './types';
 
 const edgeOf = (ctx: ActionContext): Edge | undefined =>
@@ -95,18 +99,22 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
       })),
   },
   {
-    id: 'connection.lineType',
-    label: 'Line type',
-    toolbarLabel: (ctx) => {
-      const shape = sharedLineShape(selectedEdges(ctx));
-      return `Line type: ${shape === null ? 'mixed' : lineTypeLabel(shape)}`;
-    },
+    id: 'connection.lineStyle',
+    label: 'Line style',
     icon: Spline,
     section: 'edit',
-    where: {
-      menu: ['connection', 'connections'],
-      toolbar: ['connection', 'connections'],
+    field: 'lineStyle',
+    where: { toolbar: ['connection', 'connections'] },
+    run: () => {
+      useUiStore.getState().openToolbarField('lineStyle');
     },
+  },
+  {
+    id: 'connection.lineType',
+    label: 'Line type',
+    icon: Spline,
+    section: 'edit',
+    where: { menu: ['connection', 'connections'] },
     radio: true,
     children: () =>
       LINE_TYPES.map(({ value, label, icon }) => ({
@@ -124,5 +132,86 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
           );
         },
       })),
+  },
+  {
+    id: 'connection.dash',
+    label: 'Dash',
+    section: 'edit',
+    where: { menu: ['connection', 'connections'] },
+    radio: true,
+    children: () =>
+      DASHES.map(({ value, label }) => ({
+        id: `connection.dash.${value}`,
+        label,
+        section: 'edit',
+        where: {},
+        checked: (ctx) => {
+          const dash = lineStyleView(selectedEdges(ctx)).dash.shared;
+          return !dash.mixed && dash.value === value;
+        },
+        run: (ctx) => {
+          applyLineStyle(
+            ctx.editor,
+            selectedEdges(ctx).map((edge) => edge.id),
+            { dash: value },
+            `Dash set to ${label}`,
+          );
+        },
+      })),
+  },
+  {
+    id: 'connection.weight',
+    label: 'Weight',
+    section: 'edit',
+    where: { menu: ['connection', 'connections'] },
+    radio: true,
+    children: () =>
+      WIDTHS.map((value) => ({
+        id: `connection.weight.${String(value)}`,
+        label: widthText(value),
+        section: 'edit',
+        where: {},
+        checked: (ctx) => {
+          const width = lineStyleView(selectedEdges(ctx)).width.shared;
+          return !width.mixed && width.value === value;
+        },
+        run: (ctx) => {
+          applyLineStyle(
+            ctx.editor,
+            selectedEdges(ctx).map((edge) => edge.id),
+            { width: value },
+            `Weight set to ${widthText(value)}`,
+          );
+        },
+      })),
+  },
+  {
+    id: 'connection.colour',
+    label: 'Colour…',
+    section: 'edit',
+    where: { menu: ['connection', 'connections'] },
+    run: () => {
+      useUiStore.getState().openToolbarField('lineStyle');
+    },
+  },
+  {
+    id: 'connection.animate',
+    label: 'Animate direction',
+    section: 'edit',
+    where: { menu: ['connection', 'connections'] },
+    checked: (ctx) => {
+      const edges = selectedEdges(ctx);
+      return edges.length > 0 && edges.every((edge) => edgeLineStyle(edge).animated);
+    },
+    run: (ctx) => {
+      const edges = selectedEdges(ctx);
+      const next = !edges.every((edge) => edgeLineStyle(edge).animated);
+      applyLineStyle(
+        ctx.editor,
+        edges.map((edge) => edge.id),
+        { animated: next },
+        `Animate direction, ${next ? 'on' : 'off'}`,
+      );
+    },
   },
 ];

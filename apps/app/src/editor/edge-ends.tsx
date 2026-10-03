@@ -11,9 +11,11 @@ interface EdgeEndsProps extends PathEnds {
   color?: string | undefined;
   /** The connector is an error path (035): it ends in × instead of an arrow. */
   errorEnd?: boolean | undefined;
+  /** Grows the knob and arrow with a heavier line (022, frame 133); 1 at the default weight. */
+  scale?: number | undefined;
 }
 
-function Mark({ mark }: { mark: EndMark }) {
+function Mark({ mark, scale }: { mark: EndMark; scale: number }) {
   if (mark.kind === 'knob') {
     return (
       <circle
@@ -21,7 +23,7 @@ function Mark({ mark }: { mark: EndMark }) {
         aria-hidden="true"
         cx={mark.at.x}
         cy={mark.at.y}
-        r={KNOB_RADIUS}
+        r={KNOB_RADIUS * scale}
         fill="currentColor"
       />
     );
@@ -45,7 +47,7 @@ function Mark({ mark }: { mark: EndMark }) {
     <path
       data-testid="edge-arrow"
       aria-hidden="true"
-      d={arrowPathAt(mark.at.x, mark.at.y, mark.angle)}
+      d={arrowPathAt(mark.at.x, mark.at.y, mark.angle, scale)}
       fill="currentColor"
       stroke="currentColor"
       strokeWidth={2}
@@ -66,12 +68,13 @@ export function EdgeEnds({
   direction,
   color,
   errorEnd,
+  scale = 1,
 }: EdgeEndsProps) {
   return (
     <g style={color === undefined ? undefined : { color }}>
       {endMarks({ start, end, startDir, endDir }, direction, errorEnd === true).map(
         (mark, index) => (
-          <Mark key={index} mark={mark} />
+          <Mark key={index} mark={mark} scale={scale} />
         ),
       )}
     </g>

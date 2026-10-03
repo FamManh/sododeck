@@ -18,16 +18,17 @@ export const ARROW_PATH = `M 0 0 L -${String(ARROW_LENGTH)} -${String(ARROW_WIDT
  * rather than placed with a `transform`: 1,000 rotated paths made panning and dragging 500 cards
  * drop from 60 to about 30 fps (029 T060 bench).
  */
-export function arrowPathAt(x: number, y: number, angle: number): string {
+export function arrowPathAt(x: number, y: number, angle: number, scale = 1): string {
   const rad = (angle * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
-  const half = ARROW_WIDTH / 2;
+  const half = (ARROW_WIDTH / 2) * scale;
+  const length = ARROW_LENGTH * scale;
   // Number() drops a stray "-0" and trailing zeros.
   const n = (value: number) => String(Number(value.toFixed(2)));
   const at = (back: number, side: number) =>
     `${n(x + cos * back - sin * side)} ${n(y + sin * back + cos * side)}`;
-  return `M ${String(x)} ${String(y)} L ${at(-ARROW_LENGTH, -half)} L ${at(-ARROW_LENGTH, half)} Z`;
+  return `M ${String(x)} ${String(y)} L ${at(-length, -half)} L ${at(-length, half)} Z`;
 }
 
 /** Half the width of the × that ends an error path. */

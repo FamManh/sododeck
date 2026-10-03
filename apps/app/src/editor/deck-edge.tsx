@@ -1,19 +1,33 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
+import { edgeLineStyle } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { labelClamp, labelHalfWidth } from './editing/label-drag';
+import { useThemeStore } from '../theme/theme-store';
 import type { DeckFlowEdge } from './deck-to-flow';
 import { EdgeEnds } from './edge-ends';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
-import { routedPath, type Box } from './routing/route-path';
-import { SegmentHandle } from './routing/segment-handle';
+import type { BendContext } from './editing/bend-drag';
+import {
+  cardCentre,
+  connectorPath,
+  decodeWaypoints,
+  labelPoint,
+  offsetBends,
+  samplePath,
+} from './routing/connector-geometry';
+import { LabelHandle } from './routing/label-handle';
+import { RouteHandles } from './routing/route-handles';
+import type { Box, Point } from './routing/route-path';
+import { lineCap, lineColour, lineDash } from './style/line-colour';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions, so a route's offset can be applied. */
 const SIDE_OF_POSITION: Record<Position, Side> = {
@@ -28,6 +42,24 @@ const FAN_SPACING = 14;
 
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
+
+/** The card's box from its side midpoint (React Flow's live handle position) and its size. */
+function boxAt(x: number, y: number, side: Side, size: { width: number; height: number }): Box {
+  const { width, height } = size;
+  switch (side) {
+    case 'top':
+      return { x: x - width / 2, y, width, height };
+    case 'bottom':
+      return { x: x - width / 2, y: y - height, width, height };
+    case 'left':
+      return { x, y: y - height / 2, width, height };
+    case 'right':
+      return { x: x - width, y: y - height / 2, width, height };
+  }
+}
+
+/** Knob and arrow grow a quarter per px above the default weight (frame 133). */
+const markScale = (width: number): number => (width > 2 ? 1 + (width - 2) * 0.25 : 1);
 
 /**
  * Connection (DESIGN.md "Card system (Deck)": 2 px line, knob at the start and arrow at the end).
@@ -50,8 +82,8 @@ export const DeckEdge = memo(function DeckEdge({
   interactionWidth,
 }: EdgeProps<DeckFlowEdge>) {
   const reducedMotion = useReducedMotion();
-  // The segment handle (017 R7, FR-012): pointer only, the single selected connector, never in
-  // flow mode or recording, and only when it has a movable middle segment (routable, below).
+  const theme = useThemeStore((s) => s.theme);
+  // The route handles (022): the single selected connector, never in flow mode or recording.
   const showHandle = useUiStore(
     (s) =>
       selected === true &&
@@ -63,17 +95,29 @@ export const DeckEdge = memo(function DeckEdge({
       s.selection.stickies.length === 0,
   );
   const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
-  // The automatic-route ghost (017 R7, T036): shown only while this edge's own segment is being
-  // dragged, so the user can see where letting go without snapping would leave it.
-  // A boolean, not the whole gesture: pans and zooms must not re-render every connector.
-  const segmentGesture = useUiStore((s) => s.canvasGesture === 'segment');
-  const dragging = segmentGesture && showHandle;
+  // The live bends of this connector while one is dragged (022); the ghost of the route it had
+  // before is drawn under them. A boolean-ish selector: pans and zooms must not re-render every
+  // connector, and other connectors' drags are null here.
+  const preview = useUiStore((s) => (s.bendPreview?.edgeId === id ? s.bendPreview : null));
+  const dragging = preview !== null && showHandle;
   // This edge's own end is being dragged to reconnect it (017 R12): drawn as a 40 % ghost while
   // the custom connection line shows the live path.
   const reconnecting = useUiStore((s) => s.reconnectingEdgeId === id);
   const direction = data?.direction ?? 'forward';
-  const fromBox = pointBox(sourceX, sourceY);
-  const toBox = pointBox(targetX, targetY);
+  const route = data?.route;
+  // Bends and anchors need the real cards (their centres and sides); everything else only needs
+  // the handle points, so a connector without them draws exactly as before.
+  const needsBoxes =
+    (route?.waypoints?.length ?? 0) > 0 || route?.fromAt !== undefined || route?.toAt !== undefined;
+  const sized = needsBoxes && data?.fromSize !== undefined && data.toSize !== undefined;
+  const fromBox =
+    sized && data.fromSize !== undefined
+      ? boxAt(sourceX, sourceY, sides[0], data.fromSize)
+      : pointBox(sourceX, sourceY);
+  const toBox =
+    sized && data.toSize !== undefined
+      ? boxAt(targetX, targetY, sides[1], data.toSize)
+      : pointBox(targetX, targetY);
   // An error path ends in × instead of an arrow (035 FR-009).
   const flow = data?.flow;
   const errorEnd = flow?.style === 'error';
@@ -83,24 +127,55 @@ export const DeckEdge = memo(function DeckEdge({
     arrowAtEnd: direction !== 'none' && !errorEnd,
   };
   const shape = data?.shape ?? 'curved';
-  const { path, labelX, labelY, segment, ends } = routedPath(
+  const {
+    path,
+    labelX: pathLabelX,
+    labelY: pathLabelY,
+    segment,
+    ends,
+  } = connectorPath({
     shape,
     fromBox,
     toBox,
     sides,
-    data?.route?.offset,
-    arrows,
-    data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
-  );
+    route,
+    bends: preview?.bends,
+    options: arrows,
+    spread: data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
+  });
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
-  // A plain connector reads its colour and width through the highlight variables (034 R2), so a
-  // focus rule can light it without a React Flow update; a selected or flow-marked one keeps its own.
+  // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
+  // colour, dash and weight > the defaults. A colour never carries a state alone. A plain
+  // connector reads its colour and width through the highlight variables (034 R2), so a focus rule
+  // can light it without a React Flow update; one with its own colour keeps it (022 FR-024) and
+  // only takes the highlight weight.
+  const own = edgeLineStyle({ style: data?.style });
   const stroke = selected
     ? 'var(--color-deck-orange)'
-    : (flowStroke?.stroke ?? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))');
+    : (flowStroke?.stroke ??
+      (own.color === null
+        ? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))'
+        : lineColour(own.color, theme)));
   const hasBadges = (flow?.badges.length ?? 0) > 0;
-  // The automatic path (no route), computed only while dragging, to draw the ghost.
-  const ghostPath = dragging ? routedPath(shape, fromBox, toBox, sides, 0, arrows).path : null;
+  // The route as it was before this bend gesture, computed only while dragging, for the ghost.
+  const ghostPath = dragging
+    ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows }).path
+    : null;
+  // The bends the handles sit on: the stored ones, or a 017 offset's two corners (R3).
+  const bends: Point[] =
+    route?.waypoints !== undefined && sized
+      ? decodeWaypoints(route.waypoints, cardCentre(fromBox), cardCentre(toBox))
+      : shape === 'elbow' && segment !== null && data?.routable === true
+        ? offsetBends(segment, ends.start)
+        : [];
+  const bendContext: BendContext = {
+    edgeId: id,
+    fromCentre: cardCentre(fromBox),
+    toCentre: cardCentre(toBox),
+    start: ends.start,
+    end: ends.end,
+    bends,
+  };
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
@@ -108,12 +183,44 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
-  const width = selected ? 2.5 : (flowStroke?.width ?? 'var(--sd-edge-hl-width, 2)');
+  const width = selected
+    ? 2.5
+    : (flowStroke?.width ?? `var(--sd-edge-hl-width, ${String(own.width)})`);
+  const ownDash = flowStroke === undefined ? lineDash(own.dash, own.width) : undefined;
+  // Moving dashes (022 R11): only when asked for, not under reduced motion, not while a flow is
+  // shown or recorded, and not on the selected connector, whose look is the selection's.
+  const flowActive = useUiStore((s) => isFlowMode(s) || s.flowSession !== null);
+  const animate =
+    own.animated && !reducedMotion && !flowActive && selected !== true && flow === undefined;
+  // One dash period in px: the run overlay's 3w + 5w, or the line's own dash pattern.
+  const period =
+    own.dash === 'solid' ? 8 * own.width : own.dash === 'dashed' ? 7.5 * own.width : 3 * own.width;
+  const runStyle = {
+    '--sd-run': `${String(period)}px`,
+    animationDuration: `${String(period / 24)}s`,
+  };
+  const ownCap = flowStroke === undefined ? lineCap(own.dash) : undefined;
   // The step label (FR-010): a 20px pill. In flow mode (a `state` is set) it is neutral, solid
   // orange when current and Clay Soft on an error path; while recording it keeps the path look.
   const isPill = hasBadges || flowIcon !== null;
   const playing = flow?.state !== undefined;
   const errorLabel = flow?.style === 'error' || flow?.style === 'invalid';
+
+  // The label sits at `labelAt` along the drawn line (022 R10); unset, at the line's middle.
+  const labelAt = data?.labelAt;
+  const previewAt = useUiStore((s) => (s.labelPreview?.edgeId === id ? s.labelPreview.at : null));
+  const labelEditable = showLabel && showHandle && flow === undefined && data?.routable === true;
+  const wantSamples = labelAt !== undefined || previewAt !== null || labelEditable;
+  const samples = useMemo(() => (wantSamples ? samplePath(path) : null), [wantSamples, path]);
+  const badgeCount = flow?.badges.length ?? 0;
+  const pillClamp = labelClamp(data?.label ?? null, badgeCount);
+  const placedAt = previewAt ?? labelAt;
+  const labelSpot =
+    samples !== null && placedAt !== undefined
+      ? labelPoint(samples, placedAt, pillClamp)
+      : { x: pathLabelX, y: pathLabelY };
+  const labelX = labelSpot.x;
+  const labelY = labelSpot.y;
 
   /** Fill, border and text of the label (FR-010). */
   function labelLook(): string {
@@ -174,6 +281,7 @@ export const DeckEdge = memo(function DeckEdge({
         path={path}
         interactionWidth={interactionWidth ?? 12}
         className={cn(
+          animate && own.dash !== 'solid' && 'sd-edge-run',
           flow?.style === 'invalid' && !reducedMotion && 'sd-edge-flash',
           reconnecting && 'sd-edge-reconnecting',
         )}
@@ -182,14 +290,41 @@ export const DeckEdge = memo(function DeckEdge({
           strokeWidth: width,
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
           ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
+          ...(ownDash === undefined ? {} : { strokeDasharray: ownDash }),
+          ...(ownCap === undefined ? {} : { strokeLinecap: ownCap }),
+          ...(animate && own.dash === 'solid' ? { strokeOpacity: 0.32 } : {}),
+          ...(animate && own.dash !== 'solid' ? runStyle : {}),
         }}
       />
-      <EdgeEnds {...ends} direction={direction} color={stroke} errorEnd={errorEnd} />
+      {animate &&
+        own.dash === 'solid' &&
+        (direction === 'both' ? [false, true] : [false]).map((reverse) => (
+          <path
+            key={String(reverse)}
+            d={path}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={width}
+            strokeDasharray={`${String(3 * own.width)} ${String(5 * own.width)}`}
+            className={cn('sd-edge-run', reverse && 'sd-edge-run-reverse')}
+            style={runStyle}
+            pointerEvents="none"
+            aria-hidden
+            data-testid="edge-run"
+          />
+        ))}
+      <EdgeEnds
+        {...ends}
+        direction={direction}
+        color={stroke}
+        errorEnd={errorEnd}
+        scale={markScale(own.width)}
+      />
       {current !== null && (
         <FlowToken
           path={path}
-          x={labelX}
-          y={labelY}
+          x={pathLabelX}
+          y={pathLabelY}
           speed={current.speed}
           number={current.number}
         />
@@ -260,12 +395,26 @@ export const DeckEdge = memo(function DeckEdge({
           )}
         </EdgeLabelRenderer>
       )}
-      {showHandle && shape === 'elbow' && data?.routable === true && segment !== null && (
-        <SegmentHandle
+      {labelEditable && samples !== null && (
+        <LabelHandle
           edgeId={id}
-          level={data.level}
-          segment={segment}
-          offset={data.route?.offset ?? 0}
+          text={data.label ?? ''}
+          at={labelAt ?? 0.5}
+          samples={samples}
+          clamp={pillClamp}
+          width={labelHalfWidth(data.label ?? null, badgeCount) * 2}
+          rest={{ x: labelX, y: labelY }}
+        />
+      )}
+      {showHandle && shape !== 'straight' && data?.routable === true && (
+        <RouteHandles
+          context={bendContext}
+          anchors={{
+            fromSide: sides[0],
+            fromAt: route?.fromAt ?? 0.5,
+            toSide: sides[1],
+            toAt: route?.toAt ?? 0.5,
+          }}
         />
       )}
     </>

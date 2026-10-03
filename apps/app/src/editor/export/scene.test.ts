@@ -249,6 +249,28 @@ describe('buildScene: whole deck', () => {
     expect(edge?.labelPoint.y).toBe((plainLabelY ?? 0) + 40);
   });
 
+  it("carries a connector's own style, resolved for the light export (022)", () => {
+    const styled = {
+      ...grouped,
+      edges: grouped.edges.map((edge) =>
+        edge.id === 'a-b'
+          ? {
+              ...edge,
+              style: { dash: 'dashed' as const, width: 3 as const, color: 'blue' as const },
+            }
+          : edge,
+      ),
+    };
+    const find = (file: typeof grouped, id: string) =>
+      scene(file).edges.find((edge) => edge.id === id);
+    expect(find(styled, 'a-b')?.style).toEqual({
+      width: 3,
+      colour: '#4087de',
+      dash: '12 10.5',
+    });
+    expect(find(grouped, 'a-b')).not.toHaveProperty('style');
+  });
+
   it('bounds every shape plus the margin', () => {
     const { bounds, cards, groups, stickies } = scene(grouped);
     for (const rect of [...cards, ...groups, ...stickies].map((item) => item.rect)) {
@@ -497,6 +519,38 @@ describe('buildScene: selected flow', () => {
     for (const mark of ['"step"', '"state"', '"currentStep"', '"inPath"', 'sticker', 'token']) {
       expect(text).not.toContain(mark);
     }
+  });
+});
+
+describe('buildScene label position (022 US4)', () => {
+  // The a → db connector is long enough (about 240 px) for the label to move.
+  const withLabel = (labelAt?: number) => ({
+    ...grouped,
+    edges: grouped.edges.map((edge) =>
+      edge.id === 'a-db'
+        ? { ...edge, label: 'call', ...(labelAt === undefined ? {} : { labelAt }) }
+        : edge,
+    ),
+  });
+  const find = (file: typeof grouped) => scene(file).edges.find((edge) => edge.id === 'a-db');
+
+  it('puts the label at the stored fraction of the drawn line', () => {
+    const middle = find(withLabel());
+    const early = find(withLabel(0.2));
+    expect(early?.labelPoint).not.toEqual(middle?.labelPoint);
+    expect(early?.path).toBe(middle?.path);
+  });
+
+  it('stays on the path and off the cards at the extremes', () => {
+    const start = find(withLabel(0))?.labelPoint;
+    const end = find(withLabel(1))?.labelPoint;
+    const edge = find(withLabel());
+    expect(
+      Math.hypot((start?.x ?? 0) - (edge?.source.x ?? 0), (start?.y ?? 0) - (edge?.source.y ?? 0)),
+    ).toBeGreaterThanOrEqual(8);
+    expect(
+      Math.hypot((end?.x ?? 0) - (edge?.target.x ?? 0), (end?.y ?? 0) - (edge?.target.y ?? 0)),
+    ).toBeGreaterThanOrEqual(8);
   });
 });
 

@@ -5,11 +5,11 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { Spline, Trash2 } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
-import { LineTypeField } from '../fields/line-type-field';
+import { LineStyleControls } from '../line-style/line-style-controls';
 import { InspectorFrame } from './inspector-frame';
 
 /**
- * Two or more connections selected, nothing else (029 R5): the line type is the one field they
+ * Two or more connections selected, nothing else (029 R5): line style is the one thing they
  * share; everything else is edited one connection at a time.
  */
 export function ConnectorsInspector({ edges }: { edges: readonly Edge[] }) {
@@ -33,7 +33,7 @@ export function ConnectorsInspector({ edges }: { edges: readonly Edge[] }) {
       }
     >
       <PanelSection label="Line">
-        <LineTypeField edges={edges} />
+        <LineStyleControls edges={edges} />
       </PanelSection>
     </InspectorFrame>
   );

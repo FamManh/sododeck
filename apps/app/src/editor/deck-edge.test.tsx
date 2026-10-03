@@ -15,10 +15,14 @@ vi.mock('@xyflow/react', async (importOriginal) => {
   return { ...actual, EdgeLabelRenderer: ({ children }: { children: ReactNode }) => children };
 });
 
-// The handle itself (pointer/keyboard drag, ReactFlow + editor context) is `segment-handle.test.tsx`'s
-// job; here only its render-gating in `deck-edge.tsx` is under test (017 R7, T035).
-vi.mock('./routing/segment-handle', () => ({
-  SegmentHandle: () => <div data-testid="segment-handle" />,
+// The handles themselves (pointer/keyboard drag, ReactFlow + editor context) are
+// `route-handles.test.tsx`'s job; here only their render-gating in `deck-edge.tsx` is under test.
+vi.mock('./routing/label-handle', () => ({
+  LabelHandle: () => <div data-testid="label-handle" />,
+}));
+
+vi.mock('./routing/route-handles', () => ({
+  RouteHandles: () => <div data-testid="route-handles" />,
 }));
 
 function renderEdge(
@@ -305,43 +309,43 @@ describe('DeckEdge line type (029 T044)', () => {
     expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toContain('C');
   });
 
-  it('shows the segment handle only for an elbow line', () => {
+  it('shows the route handles for curved and elbow lines, not for a straight one (022)', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
-    for (const shape of ['curved', 'straight'] as const) {
+    for (const shape of ['curved', 'elbow'] as const) {
       const { unmount } = renderEdge({ routable: true, shape }, true);
-      expect(screen.queryByTestId('segment-handle')).toBeNull();
+      expect(screen.getByTestId('route-handles')).toBeInTheDocument();
       unmount();
     }
-    renderEdge({ routable: true, shape: 'elbow' }, true);
-    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+    renderEdge({ routable: true, shape: 'straight' }, true);
+    expect(screen.queryByTestId('route-handles')).toBeNull();
     useUiStore.setState({ selection: EMPTY_SELECTION });
   });
 });
 
-describe('DeckEdge segment handle (017 R7, T035)', () => {
+describe('DeckEdge route handles gating (022)', () => {
   afterEach(() => {
     useUiStore.setState({ selection: EMPTY_SELECTION, flowSession: null, activeFlow: null });
   });
 
-  it('shows the handle for the single selected, routable connector with a movable segment', () => {
+  it('shows the handles for the single selected, routable connector', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: true }, true);
-    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+    expect(screen.getByTestId('route-handles')).toBeInTheDocument();
   });
 
-  it('hides the handle when the edge is not selected', () => {
+  it('hides the handles when the edge is not selected', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: true }, false);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 
-  it('hides the handle with other items in the selection', () => {
+  it('hides the handles with other items in the selection', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'], nodes: ['n1'] } });
     renderEdge({ routable: true }, true);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 
-  it('hides the handle in flow mode', () => {
+  it('hides the handles in flow mode', () => {
     useUiStore.setState({
       selection: { ...EMPTY_SELECTION, edges: ['e1'] },
       activeFlow: {
@@ -354,79 +358,230 @@ describe('DeckEdge segment handle (017 R7, T035)', () => {
       },
     });
     renderEdge({ routable: true }, true);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 
-  it('hides the handle for a non-routable edge (a port or merged edge)', () => {
+  it('hides the handles for a non-routable edge (a port or merged edge)', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: false }, true);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
-  });
-
-  it('hides the handle when the resolved sides have no movable segment (an L shape)', () => {
-    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
-    const props = {
-      id: 'e1',
-      source: 'a',
-      target: 'b',
-      sourceX: 0,
-      sourceY: 0,
-      targetX: 200,
-      targetY: 40,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Left,
-      selected: true,
-      data: {
-        label: 'POST /orders',
-        protocol: 'http',
-        direction: 'forward',
-        showLabel: false,
-        fromTitle: 'A',
-        toTitle: 'B',
-        focused: false,
-        routable: true,
-      },
-    } as unknown as EdgeProps<DeckFlowEdge>;
-    render(
-      <svg>
-        <DeckEdge {...props} />
-      </svg>,
-    );
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 });
 
-describe('DeckEdge automatic-route ghost (017 R7, T036)', () => {
+describe('DeckEdge label position (022 US4)', () => {
   afterEach(() => {
+    useUiStore.setState({ labelPreview: null, selection: EMPTY_SELECTION });
+  });
+  /** The pill's transform, with the render removed again so renders can be compared. */
+  const pillTransform = (
+    data: Partial<DeckEdgeData>,
+    geometry: Parameters<typeof renderEdge>[2] = {},
+  ) => {
+    const view = renderEdge(
+      { shape: 'straight', showLabel: true, routable: true, ...data },
+      false,
+      geometry,
+    );
+    const transform = view.getByTestId('edge-label').style.transform;
+    view.unmount();
+    return transform;
+  };
+
+  it('puts the label at labelAt along the line, never rotated', () => {
+    // straight line from (0, 0) to (200, 40) minus the arrow: the pill is moved with labelAt
+    const middle = pillTransform({});
+    const early = pillTransform({ labelAt: 0.2 });
+    expect(early).not.toBe(middle);
+    expect(early).not.toMatch(/rotate/);
+  });
+
+  it('keeps the label at that fraction after the cards move', () => {
+    const x = (offset: number) => {
+      const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)$/.exec(
+        pillTransform({ labelAt: 0.25 }, { sourceX: offset, targetX: offset + 200 }),
+      );
+      return Number(m?.[1]);
+    };
+    expect(x(100) - x(0)).toBeCloseTo(100, 6);
+  });
+
+  it('follows a label drag from the UI store', () => {
+    const rest = pillTransform({ labelAt: 0.5 });
+    useUiStore.setState({ labelPreview: { edgeId: 'e1', at: 0.2, snapped: false } });
+    expect(pillTransform({ labelAt: 0.5 })).not.toBe(rest);
+  });
+
+  it('offers the draggable label only for the selected, routable, labelled connector', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'straight', showLabel: true, routable: true }, true);
+    expect(screen.getByTestId('label-handle')).toBeInTheDocument();
+  });
+
+  it('hides it when the label is off, or the edge is not selected', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'straight', showLabel: false, routable: true }, true);
+    expect(screen.queryByTestId('label-handle')).toBeNull();
+    renderEdge({ shape: 'straight', showLabel: true, routable: true }, false);
+    expect(screen.queryByTestId('label-handle')).toBeNull();
+  });
+});
+
+describe('DeckEdge animated direction (022 US5)', () => {
+  const runs = (container: HTMLElement) => [
+    ...container.querySelectorAll<SVGPathElement>('[data-testid="edge-run"]'),
+  ];
+  const originalMatchMedia = window.matchMedia.bind(window);
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    useUiStore.setState({ selection: EMPTY_SELECTION, flowSession: null, activeFlow: null });
+  });
+
+  it('runs dashes over a 32 % track on a solid line', () => {
+    const { container } = renderEdge({ style: { animated: true } });
+    const [run] = runs(container);
+    expect(run).toBeDefined();
+    expect(run?.classList.contains('sd-edge-run')).toBe(true);
+    expect(run?.getAttribute('stroke-dasharray')).toBe('6 10');
+    const track = container.querySelector('.react-flow__edge-path') as HTMLElement;
+    expect(track.style.strokeOpacity).toBe('0.32');
+  });
+
+  it('runs a dashed line itself, with no track', () => {
+    const { container } = renderEdge({ style: { animated: true, dash: 'dashed' } });
+    expect(runs(container)).toHaveLength(0);
+    const line = container.querySelector('.react-flow__edge-path');
+    expect(line?.classList.contains('sd-edge-run')).toBe(true);
+    expect((line as HTMLElement).style.strokeOpacity).toBe('');
+  });
+
+  it('draws two runs in opposite directions for a two-way connector', () => {
+    const { container } = renderEdge({ direction: 'both', style: { animated: true } });
+    const list = runs(container);
+    expect(list).toHaveLength(2);
+    expect(list.map((r) => r.classList.contains('sd-edge-run-reverse'))).toEqual([false, true]);
+  });
+
+  it('does not animate without the flag', () => {
+    const { container } = renderEdge({ style: { dash: 'dashed' } });
+    expect(runs(container)).toHaveLength(0);
+    expect(container.querySelector('.sd-edge-run')).toBeNull();
+  });
+
+  it('is still under reduced motion', () => {
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    const { container } = renderEdge({ style: { animated: true } });
+    expect(container.querySelector('.sd-edge-run')).toBeNull();
+    expect(runs(container)).toHaveLength(0);
+  });
+
+  it('is still while the connector is selected', () => {
+    const { container } = renderEdge({ style: { animated: true } }, true);
+    expect(container.querySelector('.sd-edge-run')).toBeNull();
+  });
+
+  it('is still in flow mode and while recording a flow', () => {
     useUiStore.setState({
-      selection: EMPTY_SELECTION,
-      flowSession: null,
-      activeFlow: null,
-      canvasGesture: null,
+      activeFlow: {
+        flowId: 'f1',
+        stepId: null,
+        branchId: null,
+        alternativeId: null,
+        playing: false,
+        speed: 1,
+      },
+    });
+    expect(
+      renderEdge({ style: { animated: true } }).container.querySelector('.sd-edge-run'),
+    ).toBeNull();
+  });
+});
+
+describe('DeckEdge anchors (022 US3)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+
+  it('starts the line at fromAt along the pinned side and follows the card', () => {
+    // source handle = right-side midpoint of a 160 × 50 card whose top-left is (0, 0)
+    const at = (y: number) =>
+      renderEdge({ shape: 'straight', ...sizes, route: { fromSide: 'right', fromAt: 0 } }, false, {
+        sourceX: 160,
+        sourceY: 25 + y,
+        targetX: 400,
+        targetY: 25 + y,
+      })
+        .container.querySelector('.react-flow__edge-path')
+        ?.getAttribute('d');
+    expect(at(0)).toMatch(/^M ?160[ ,]0 /);
+    // moving the card down moves the end with it
+    expect(at(100)).toMatch(/^M ?160[ ,]100 /);
+  });
+});
+
+describe('DeckEdge bends (022 US2)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+  // Handles are the side midpoints: right of the source box, left of the target box.
+  const geometry = { sourceX: 160, sourceY: 25, targetX: 400, targetY: 25 };
+  const pathOf = (data: Partial<DeckEdgeData>, geo = geometry) =>
+    renderEdge({ shape: 'elbow', ...sizes, ...data }, false, geo)
+      .container.querySelector('.react-flow__edge-path')
+      ?.getAttribute('d');
+
+  afterEach(() => {
+    useUiStore.setState({ bendPreview: null, selection: EMPTY_SELECTION });
+  });
+
+  it('draws a path through the stored bends, relative to both cards', () => {
+    const plain = pathOf({});
+    const bent = pathOf({ route: { waypoints: [{ x: 0.5, dy: -80 }] } });
+    expect(bent).not.toBe(plain);
+  });
+
+  it('moving both cards by the same delta translates the path exactly', () => {
+    const route = { waypoints: [{ x: 0.5, dy: -80 }] };
+    const a = pathOf({ route });
+    const b = pathOf({ route }, { sourceX: 210, sourceY: 75, targetX: 450, targetY: 75 });
+    const numbers = (d: string | null | undefined) => d?.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+    expect(numbers(b).length).toBe(numbers(a).length);
+    numbers(a).forEach((n, i) => {
+      expect(numbers(b)[i]).toBeCloseTo(n + 50, 6);
     });
   });
 
-  it('draws the ghost only for the single selected edge mid segment-drag', () => {
+  it('draws the same bends with each shape, and none for straight', () => {
+    const route = { waypoints: [{ x: 0.5, dy: -80 }] };
+    const curved = pathOf({ shape: 'curved', route });
+    const straight = pathOf({ shape: 'straight', route });
+    expect(curved).toContain('C');
+    expect(straight).toBe(pathOf({ shape: 'straight' }));
+  });
+
+  it('draws the live bends of a drag, and the previous route as a 40 % ghost', () => {
     useUiStore.setState({
       selection: { ...EMPTY_SELECTION, edges: ['e1'] },
-      canvasGesture: 'segment',
+      bendPreview: { edgeId: 'e1', bends: [{ x: 280, y: -100 }] },
     });
-    renderEdge({ routable: true, route: { offset: 40 } }, true);
+    const route = { waypoints: [{ x: 0.5, dy: -80 }] };
+    const { container } = renderEdge(
+      { shape: 'elbow', ...sizes, routable: true, route },
+      true,
+      geometry,
+    );
     expect(screen.getByTestId('edge-route-ghost')).toBeInTheDocument();
+    const live = container.querySelector('.react-flow__edge-path')?.getAttribute('d');
+    expect(live).not.toBe(screen.getByTestId('edge-route-ghost').getAttribute('d'));
   });
 
-  it('draws no ghost outside a segment gesture', () => {
+  it("draws no ghost without a bend gesture or for another connector's gesture", () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: true, route: { offset: 40 } }, true);
     expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
-  });
-
-  it('draws no ghost on a different, unselected edge while a segment gesture is active', () => {
-    useUiStore.setState({
-      selection: { ...EMPTY_SELECTION, edges: ['e2'] },
-      canvasGesture: 'segment',
-    });
-    renderEdge({ routable: true, route: { offset: 40 } }, false);
+    useUiStore.setState({ bendPreview: { edgeId: 'other', bends: [] } });
+    renderEdge({ routable: true, route: { offset: 40 } }, true);
     expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
   });
 });
@@ -675,5 +830,88 @@ describe('DeckEdge playback states (035)', () => {
         screen.getByRole('img', { name: 'Step 4b, error path' }).querySelector('svg'),
       ).not.toBeNull();
     });
+  });
+});
+
+describe('DeckEdge own style (022 US1)', () => {
+  const edgePath = (container: HTMLElement) => container.querySelector('.react-flow__edge-path');
+
+  it("draws no style attributes beyond today's for a connector without style", () => {
+    const el = edgePath(renderEdge({}).container);
+    expect(el).toHaveStyle({
+      stroke: 'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      strokeWidth: 'var(--sd-edge-hl-width, 2)',
+    });
+    expect((el as HTMLElement).style.strokeDasharray).toBe('');
+    expect((el as HTMLElement).style.strokeLinecap).toBe('');
+  });
+
+  it('draws the chosen dash, weight and colour', () => {
+    const el = edgePath(
+      renderEdge({ style: { dash: 'dashed', width: 3, color: 'blue' } }).container,
+    ) as HTMLElement;
+    expect(el).toHaveStyle({
+      stroke: 'var(--color-card-blue-stroke)',
+      strokeWidth: 'var(--sd-edge-hl-width, 3)',
+    });
+    expect(el.style.strokeDasharray).toBe('12 10.5');
+  });
+
+  it('draws dots with round caps and a custom hex that is visible enough', () => {
+    const el = edgePath(
+      renderEdge({ style: { dash: 'dotted', color: '#7a3cff' } }).container,
+    ) as HTMLElement;
+    expect(el.style.strokeDasharray).toBe('0 6');
+    expect(el.style.strokeLinecap).toBe('round');
+    expect(el.style.stroke).toBe('rgb(122, 60, 255)');
+  });
+
+  it('keeps selection orange and 2.5 px over the own colour and weight', () => {
+    const el = edgePath(
+      renderEdge({ style: { color: 'blue', width: 4 } }, true).container,
+    ) as HTMLElement;
+    expect(el).toHaveStyle({ stroke: 'var(--color-deck-orange)', strokeWidth: '2.5' });
+  });
+
+  it('lets a flow stroke replace the own colour and dash', () => {
+    const el = edgePath(
+      renderEdge({
+        style: { color: 'blue', dash: 'dotted' },
+        flow: { badges: [], style: 'error', errorIcon: true },
+      }).container,
+    ) as HTMLElement;
+    expect(el.style.stroke).not.toBe('var(--color-card-blue-stroke)');
+    expect(el.style.strokeDasharray).not.toBe('0 6');
+  });
+
+  it('shows the state look while it lasts and the own colour and dash again after (T044)', () => {
+    const own = { color: 'blue', dash: 'dashed' } as const;
+    const stroke = (data: Partial<DeckEdgeData>, selected = false) => {
+      const el = edgePath(renderEdge(data, selected).container) as HTMLElement;
+      const result = { stroke: el.style.stroke, dash: el.style.strokeDasharray };
+      document.body.innerHTML = '';
+      return result;
+    };
+    const flow = (style: 'path' | 'error' | 'preview' | 'invalid') => ({
+      badges: [],
+      style,
+      errorIcon: style === 'error',
+    });
+    const ownLook = stroke({ style: own });
+    for (const style of ['path', 'error', 'preview', 'invalid'] as const) {
+      const during = stroke({ style: own, flow: flow(style) });
+      expect(during.stroke).not.toBe(ownLook.stroke);
+    }
+    expect(stroke({ style: own, flow: flow('path') }).dash).not.toBe(ownLook.dash);
+    expect(stroke({ style: own }, true).stroke).toBe('var(--color-deck-orange)');
+    expect(stroke({ style: own })).toEqual(ownLook);
+  });
+
+  it('grows the arrow with the weight', () => {
+    const small = renderEdge({}).container.querySelector('[data-testid="edge-arrow"]');
+    const big = renderEdge({ style: { width: 4 } }).container.querySelector(
+      '[data-testid="edge-arrow"]',
+    );
+    expect(small?.getAttribute('d')).not.toBe(big?.getAttribute('d'));
   });
 });

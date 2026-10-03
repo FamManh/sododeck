@@ -165,3 +165,38 @@ describe('pasteFragment (016 R10)', () => {
     expect(editor.canUndo()).toBe(false);
   });
 });
+
+describe('connector style on copy and create (022 FR-005a)', () => {
+  const styled: SododeckFile = {
+    ...source,
+    edges: [
+      {
+        id: 'ab',
+        from: 'a',
+        to: 'b',
+        style: { dash: 'dashed', width: 3, color: 'blue', animated: true },
+        route: { fromSide: 'right', fromAt: 0.25, waypoints: [{ x: 0.5, dy: -20 }] },
+        labelAt: 0.2,
+      },
+    ],
+  };
+
+  it('a pasted connector keeps its style, bends, anchors and label position', () => {
+    const doc = fromJSON(styled);
+    const editor = createEditor(doc, { newId: seqIds() });
+    const fragment = toFragment(styled, { nodes: ['a', 'b'], groups: [] });
+    editor.pasteFragment(fragment, { offset: { x: 50, y: 50 } });
+    const copy = toJSON(doc).edges.find((edge) => edge.id !== 'ab');
+    expect(copy?.style).toEqual(styled.edges[0]?.style);
+    expect(copy?.route).toEqual(styled.edges[0]?.route);
+    expect(copy?.labelAt).toBe(0.2);
+    expectValid(doc);
+  });
+
+  it('a newly created connector has no style', () => {
+    const doc = fromJSON(styled);
+    const editor = createEditor(doc, { newId: seqIds() });
+    const id = editor.add('edges', { from: 'b', to: 'c' });
+    expect(getObject(doc, 'edges', id)).not.toHaveProperty('style');
+  });
+});

@@ -9,6 +9,8 @@
  *   BENCH_COLOURS=1 pnpm bench          # every node has a fill, every 5th also a stroke (020)
  *   BENCH_LINE_TYPES=1 pnpm bench       # a third of the edges each curved, elbow, straight (029)
  *   BENCH_TAGS=1 pnpm bench             # every card has 3 to 10 tags from a pool of 24 (033)
+ *   BENCH_ANIMATED=1 pnpm bench         # 200 connectors with moving dashes, half of them dashed (022)
+ *   BENCH_BENDS=1 pnpm bench            # 200 connectors with three free bends each, mixed shapes (022)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -32,6 +34,10 @@ const COLOURS_QUERY = process.env.BENCH_COLOURS === '1' ? '&colours=1' : '';
 /** 029 T060: connectors split evenly across the three line types. */
 const LINE_TYPES_QUERY = process.env.BENCH_LINE_TYPES === '1' ? '&lineTypes=1' : '';
 /** 033 R11: every card carries 3 to 10 tags, mixed case, from a pool of 24. */
+/** 022 R11: 200 connectors animate. */
+const ANIMATED_QUERY = process.env.BENCH_ANIMATED === '1' ? '&animated=1' : '';
+/** 022 R1: 200 connectors have three bends. */
+const BENDS_QUERY = process.env.BENCH_BENDS === '1' ? '&bends=1' : '';
 const TAGS_QUERY = process.env.BENCH_TAGS === '1' ? '&tags=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
@@ -216,7 +222,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
@@ -549,9 +555,9 @@ test(`drag-100-selected: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
     }
     found.sort((a, b) => a.d - b.d);
     const chosen = found.slice(0, 100);
-    const handle = chosen.find((n) => document.elementsFromPoint(n.cx, n.cy).some(
-      (el) => el.getAttribute('data-node-id') === n.id,
-    ));
+    const handle = chosen.find((n) =>
+      document.elementsFromPoint(n.cx, n.cy).some((el) => el.getAttribute('data-node-id') === n.id),
+    );
     return { ids: chosen.map((n) => n.id), handle };
   }, centre);
   if (picked.handle === undefined) throw new Error('no visible node to drag');
