@@ -18,7 +18,9 @@ const BASE={light:{app:'#e9e9e6',s:'#ffffff',s2:'#f4f4f1',s3:'#ecece8',cv:'#fafa
  dark:{app:'#0b0b0a',s:'#171716',s2:'#212120',s3:'#2b2b29',cv:'#121211',dot:'#2a2a27',hl:'#262624',bd:'#35352f',bd2:'#45453f',edge:'#3d3d38',tx:'#ededea',tx2:'#b8b8b1',mu:'#909089',ac:'#f07a32',acs:'#3a2214',aci:'#ffb285',onac:'#1c1c1a',clay:'#ef9f8a',clayS:'#3a1f19',inv:'#ededea',invt:'#171716',sh:'rgba(0,0,0,.5)',grp:'rgba(255,255,255,.025)',selT:'#6a3315'}};
 function TK(dir,th){const b=BASE[th],L=th==='light';const t=as({dir,th},b);
  if(dir==='A')as(t,{w:176,r:6,bw:1,cb:b.bd,pad:10,gap:6,hdr:16,tf:13.5,tw:500,tlh:1.3,df:11.5,dlh:1.4,lip:0,anc:24,rowH:19,tagRowH:17,tagPer:3,edgeR:8,edgeW:1.25,edgeC:L?'#b9b9b1':'#4d4d47'});
- if(dir==='B')as(t,{w:184,r:14,bw:1.5,cb:b.bd2,pad:12,gap:8,hdr:24,tf:14,tw:600,tlh:1.28,df:12,dlh:1.4,lip:3,anc:30,rowH:24,tagRowH:22,tagPer:3,edgeW:2,edgeC:L?'#b4b4ab':'#5a5a53'});
+ if(dir==='B')as(t,{w:184,r:14,bw:1.5,cb:b.bd2,pad:12,gap:8,hdr:24,tf:14,tw:600,tlh:1.28,df:12,dlh:1.4,lip:3,anc:30,rowH:24,tagRowH:22,tagPer:3,edgeW:2,edgeC:L?'#b4b4ab':'#5a5a53',
+  // Database pack (sododeck-db.js): table width, column row, row limit, crow's foot
+  tblW:240,colH:24,colMax:12,colInset:4,keyW:16,crowLen:12,crowSpread:6,crowBar:16,crowRing:4});
  if(dir==='C')as(t,{w:188,r:2,bw:1,cb:L?'#b5b5ad':'#4d4d46',pad:9,gap:5,hdr:22,tf:12.5,tw:500,tlh:1.35,df:11,dlh:1.4,lip:0,anc:36,rowH:20,tagRowH:20,tagPer:3,edgeR:0,edgeW:1,edgeC:L?'#8f8f87':'#6a6a62'});
  t.REL={calls:{dash:null,c:t.dir==='C'?t.tx2:null},reads:{dash:'6 4',c:t.dir==='C'?PAL.blue[th].stroke:null},writes:{dash:'12 3',c:t.dir==='C'?PAL.violet[th].stroke:null},depends:{dash:'1.5 4',c:t.dir==='C'?PAL.teal[th].stroke:null}};
  return t;}
@@ -118,7 +120,7 @@ function card(t,c,s){s=s||{};const A=t.dir==='A',B=t.dir==='B',C=t.dir==='C',z=s
  const extras=[];if(s.hover||s.target||s.handles)extras.push(handles(t,s.target?'l':null));if(ph)extras.push(stepBadge(t,ph,s.n));
  if(z==='land')return D(as(root,{alignItems:'center',justifyContent:'center',background:col?col.fill:t.s2}),Ic(icon,30,col?col.ink:t.tx2,1.5),extras);
  const full=z==='ctr'||z==='cmp',lab=col?t.tx2:t.mu;
- const badges=[];if(full&&c.status)badges.push(w<150?Ic(STAT[c.status][1],13,PAL[STAT[c.status][0]][t.th].dot,2.25):statChip(t,c.status,{sm:true}));if(c.pin)badges.push(Ic('pin',12,t.mu,2));if(s.problem)badges.push(probBadge(t));
+ const badges=[];if(full&&c.status)badges.push(w<150?Ic(STAT[c.status][1],13,PAL[STAT[c.status][0]][t.th].dot,2.25):statChip(t,c.status,{sm:true}));if(c.pin)badges.push(Ic('pin',12,t.mu,2));if(s.problem)badges.push(probBadge(t));if(full&&c.dialect)badges.push(neutralChip(t,'database',c.dialect));
  let hdr;
  if(A)hdr=D({display:'flex',alignItems:'center',gap:5,height:16,minWidth:0},Ic(icon,13,col?col.ink:t.tx2,1.75),full&&tname&&S({fontSize:10,letterSpacing:'.07em',textTransform:'uppercase',color:lab,fontWeight:500,flex:1,minWidth:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},tname),!full&&S({flex:1}),badges);
  else if(B)hdr=D({display:'flex',alignItems:'center',gap:6,height:24,minWidth:0},D({width:24,height:24,borderRadius:8,background:col?col.chip:t.s2,color:col?col.ink:t.tx2,display:'flex',alignItems:'center',justifyContent:'center',flex:'none'},Ic(icon,14,null,2)),full&&tname&&S({fontSize:11.5,fontWeight:500,color:lab,flex:1,minWidth:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},tname),!full&&S({flex:1}),badges);
@@ -464,7 +466,225 @@ const ROWS=[['sample','Signature moment · sample board with a flow playing','~2
  ['groups','Groups','collapsed stack with merged connectors, expanded frame',rowGroups],
  ['set','Sample set','information cards, shapes, and the in-between types in both forms',rowSet],
  ['edge','Edge cases','',rowEdge],['states','States','',rowStates],['zoom','Zoom levels','',rowZoom],['fields','Typed fields','',rowFields],['tags','Tags','',rowTags],['palette','Colour','',rowPalette],['types','Type palette','',rowTypes]];
-window.SDC={ROWS:ROWS.map(r=>({id:r[0],title:r[1],sub:r[2]})),NOTES,CMP,
+// ---------- connector styling · board B only (rows 12–17)
+const CW=[1,1.5,2,3,4],CW0=1.5,FLOWV=24;
+const hx2=v=>'#'+v.map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
+function lineSafe(t,hx){if(CR(hx,t.cv)>=3)return hx;const rgb=[1,3,5].map(i=>parseInt(hx.substr(i,2),16)),to=t.th==='light'?0:255;for(let k=1;k<=24;k++){const c=hx2(rgb.map(v=>v+(to-v)*k/24));if(CR(c,t.cv)>=3)return c;}return hx;}
+function lcol(t,c){if(!c)return t.edgeC;if(PAL[c])return PAL[c][t.th].stroke;const u=CUSTOM.find(x=>x[0]===c);return u?lineSafe(t,u[1]):t.edgeC;}
+const udash=(k,w)=>k==='dashed'?{d:`${4*w} ${3.5*w}`,cap:'round'}:k==='dotted'?{d:`0.01 ${3*w}`,cap:'round'}:{d:null,cap:'round'};
+function cgeom(t,p1,s1,p2,s2,shape,wps){wps=wps||[];const n1=NRM[s1],n2=NRM[s2];let d,pts,qi;
+ if(shape==='straight'){pts=[p1,p2];qi=[0,1];d=`M${p1.x} ${p1.y}L${p2.x} ${p2.y}`;wps=[];}
+ else if(shape==='elbow'){pts=wps.length?[p1,...wps,p2]:route(p1,s1,p2,s2);qi=pts.map((_,i)=>i);d=pathOrth(pts,10);}
+ else{const Q=[p1,...wps,p2],n=Q.length;const T=Q.map((q,i)=>{if(i===0||i===n-1){const o=Q[i===0?1:n-2],k=Math.max(28,Math.hypot(o.x-q.x,o.y-q.y)*(wps.length?.5:.42))*3,v=i===0?n1:n2,sg=i===0?1:-1;return {x:v[0]*k*sg,y:v[1]*k*sg};}return {x:(Q[i+1].x-Q[i-1].x)/2,y:(Q[i+1].y-Q[i-1].y)/2};});
+  pts=[p1];qi=[0];d=`M${p1.x} ${p1.y}`;for(let i=0;i<n-1;i++){const a=Q[i],b=Q[i+1],c1={x:a.x+T[i].x/3,y:a.y+T[i].y/3},c2={x:b.x-T[i+1].x/3,y:b.y-T[i+1].y/3};d+=` C${c1.x} ${c1.y} ${c2.x} ${c2.y} ${b.x} ${b.y}`;for(let j=1;j<=24;j++){const f=j/24,u=1-f;pts.push({x:u*u*u*a.x+3*u*u*f*c1.x+3*u*f*f*c2.x+f*f*f*b.x,y:u*u*u*a.y+3*u*u*f*c1.y+3*u*f*f*c2.y+f*f*f*b.y});}qi.push(pts.length-1);}}
+ const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));const L=cum[cum.length-1]||1;
+ const atL=l=>{for(let i=1;i<pts.length;i++)if(l<=cum[i]){const s=cum[i]-cum[i-1]||1,q=(l-cum[i-1])/s;return {x:pts[i-1].x+(pts[i].x-pts[i-1].x)*q,y:pts[i-1].y+(pts[i].y-pts[i-1].y)*q};}return pts[pts.length-1];};
+ const tan=f=>{const a=atL(Math.max(0,f*L-3)),b=atL(Math.min(L,f*L+3)),l=Math.hypot(b.x-a.x,b.y-a.y)||1;return {x:(b.x-a.x)/l,y:(b.y-a.y)/l};};
+ return {d,pts,L,p1,p2,at:f=>atL(f*L),tan,mids:qi.slice(1).map((q,i)=>atL((cum[qi[i]]+cum[q])/2)),bends:wps,fOf:i=>cum[qi[i]]/L};}
+function arrV(t,p,u,col,w,key){const s=.75+w/8,q=[-u.y,u.x],pt=(a,b)=>`${p.x+(u.x*a+q[0]*b)*s} ${p.y+(u.y*a+q[1]*b)*s}`;return h('path',{key,d:`M${pt(-1,0)}L${pt(-9,-5)}L${pt(-9,5)}Z`,stroke:col,strokeWidth:2,fill:col,strokeLinejoin:'round'});}
+function cres(t,e){const s=e.style||{},r=e.rel&&t.REL[e.rel];let c=lcol(t,s.color),w=s.width!=null?s.width:t.edgeW,dd=udash(s.dash,w),op=1,anim=!!s.animated,halo=false;
+ if(r&&r.dash)dd={d:r.dash,cap:e.rel==='depends'?'round':'butt'};
+ if(e.st==='cur'){c=t.ac;w=Math.max(w,t.edgeW+1.25);dd={d:null,cap:'round'};anim=false;halo=true;}else if(e.st==='next'){dd={d:'2 6',cap:'round'};anim=false;}else if(e.st==='dim'){op=.2;anim=false;}
+ return {c,w,dd,op,anim,halo};}
+function cline(t,e,g,k){const R=cres(t,e),w=R.w,o=[];
+ if(e.ghost)return [h('path',{key:k,d:g.d,fill:'none',stroke:t.mu,strokeWidth:1.25,strokeDasharray:'3 3',opacity:.8})];
+ if(e.sel||R.halo)o.push(h('path',{key:'h',d:g.d,fill:'none',stroke:t.ac,strokeOpacity:e.sel?.22:.18,strokeWidth:w+(e.sel?8:6),strokeLinecap:'round',strokeLinejoin:'round'}));
+ if(R.anim&&!e.still){const pat=R.dd.d||`${3*w} ${5*w}`,per=pat.split(' ').reduce((a,b)=>a+(+b),0),ph=e.phase||0,dur=(per/FLOWV).toFixed(2)+'s';
+  if(!R.dd.d)o.push(h('path',{key:'tr',d:g.d,fill:'none',stroke:R.c,strokeOpacity:.32,strokeWidth:w,strokeLinecap:'round'}));
+  const lay=(dir,k2,off)=>h('path',{key:k2,d:g.d,fill:'none',stroke:R.c,strokeWidth:w,strokeDasharray:pat,strokeLinecap:'round',strokeDashoffset:dir>0?per*(1-ph):off+per*ph},e.live?h('animate',{attributeName:'stroke-dashoffset',values:dir>0?`${per};0`:`${off};${off+per}`,dur,repeatCount:'indefinite'}):null);
+  o.push(lay(1,'f',0));if(e.bidir)o.push(lay(-1,'b',per/2));}
+ else o.push(h('path',{key:'m',d:g.d,fill:'none',stroke:R.c,strokeWidth:w,strokeDasharray:R.dd.d,strokeLinecap:R.dd.cap,strokeLinejoin:'round'}));
+ o.push(arrV(t,g.p2,g.tan(1),R.c,w,'a2'));
+ if(e.bidir){const u=g.tan(0);o.push(arrV(t,g.p1,{x:-u.x,y:-u.y},R.c,w,'a1'));}else o.push(h('circle',{key:'kn',cx:g.p1.x,cy:g.p1.y,r:3.5*(.75+w/8),fill:R.c}));
+ return [h('g',{key:k,opacity:R.op},o)];}
+function hdl(t,p,kind,o){o=o||{};const hv=o.hover,sz=kind==='end'?(hv?14:10):(hv?12:8),bend=kind==='bend';const sh=[];if(bend&&!hv)sh.push(`0 0 0 1px ${t.ac}`);if(hv)sh.push(`0 0 0 4px ${t.acs}`);if(o.focus)sh.push(`0 0 0 2px ${t.s}`,`0 0 0 4px ${t.ac}`);
+ return D({position:'absolute',left:p.x,top:p.y,width:0,height:0,zIndex:6},o.hit&&D({position:'absolute',left:-12,top:-12,width:24,height:24,borderRadius:99,border:`1px dashed ${t.mu}`,boxSizing:'border-box'}),
+  D({position:'absolute',left:-sz/2,top:-sz/2,width:sz,height:sz,borderRadius:99,boxSizing:'border-box',background:bend?t.ac:t.s,border:`${kind==='end'?2:1.5}px solid ${bend?t.s:t.ac}`,boxShadow:sh.length?sh.join(','):'none'}));}
+function chand(t,g,o){o=o||{};const hv=o.hover||{},r=[hdl(t,g.p1,'end',{hover:hv.e1}),hdl(t,g.p2,'end',{hover:hv.e2})];if(o.mids!==false)g.mids.forEach((m,i)=>r.push(hdl(t,m,'mid',{hover:hv['m'+i]})));g.bends.forEach((b,i)=>r.push(hdl(t,b,'bend',{hover:hv['b'+i],focus:o.focus==='b'+i})));return r;}
+const ldrag=(t,p,txt)=>D({position:'absolute',left:p.x,top:p.y,transform:'translate(-50%,-50%)',whiteSpace:'nowrap',zIndex:7,display:'flex',alignItems:'center',gap:4,height:22,padding:'0 9px 0 5px',borderRadius:99,background:t.s,color:t.tx,border:`1.5px solid ${t.ac}`,boxShadow:`0 3px 0 0 ${t.ac}, 0 8px 18px ${t.sh}`,fontSize:11,fontWeight:600,boxSizing:'border-box'},Ic('grip-vertical',11,t.mu,2),txt);
+const rdo=(t,x,y,txt)=>D({position:'absolute',left:x,top:y,height:22,padding:'0 8px',borderRadius:99,background:t.inv,color:t.invt,fontFamily:M,fontSize:10.5,display:'flex',alignItems:'center',whiteSpace:'nowrap',zIndex:8},txt);
+function cboard(t,nodes,conns,o){o=o||{};const box={};nodes.forEach(n=>{box[n.k]=nodeBox(t,n);});const svg=[],over=[],G=[];
+ conns.forEach((e,i)=>{const a=box[e.a],b=box[e.b];const p1=e.p1||anc(t,a,e.as,e.aat),p2=e.p2||anc(t,b,e.bs,e.bat);const s=e.style||{};const g=cgeom(t,p1,e.as,p2,e.bs,s.shape||'curved',(e.route||{}).waypoints);G.push(g);
+  svg.push(...cline(t,e,g,'c'+i));const la=e.labelAt!=null?e.labelAt:.5;
+  if(e.label)over.push(e.ldrag?ldrag(t,g.at(la),e.label):labelEl(t,g.at(la),e.label,{cur:e.st==='cur',dim:e.st==='dim'}));
+  if(e.tok!=null)over.push(token(t,g.at(e.tok),e.tokN));
+  if(e.sel&&!e.nohd)over.push(chand(t,g,e.hd));});
+ return {els:[X('svg',{width:PW,height:o.h||800,style:{position:'absolute',left:0,top:0,overflow:'visible',pointerEvents:'none'}},svg),nodes.map(n=>nodeEl(t,n)),over],G};}
+const STG=(H,...k)=>D({position:'relative',height:H,margin:'0 -28px'},k);
+const HR=(t,y)=>D({position:'absolute',left:16,right:16,top:y,height:1.5,background:t.hl});
+const VR=(t,x,y,hh)=>D({position:'absolute',left:x,top:y,width:1.5,height:hh,background:t.hl});
+const ovl=(k)=>X('svg',{width:PW,height:2000,style:{position:'absolute',left:0,top:0,overflow:'visible',pointerEvents:'none',zIndex:4}},k);
+function cnotes(t,items,cols){return D({display:'grid',gridTemplateColumns:`repeat(${cols||3},minmax(0,1fr))`,gap:'16px 28px',borderTop:`1.5px solid ${t.hl}`,paddingTop:18},items.map(([k,v])=>D({display:'flex',flexDirection:'column',gap:4},S({fontFamily:M,fontSize:10.5,letterSpacing:'.04em',color:t.tx2,textTransform:'uppercase'},k),S({fontSize:12.5,lineHeight:1.5,color:t.tx,textWrap:'pretty'},v))));}
+const cpv=(d,dash)=>X('svg',{width:40,height:14},h('path',{d,fill:'none',stroke:'currentColor',strokeWidth:2,strokeDasharray:dash,strokeLinecap:'round',strokeLinejoin:'round'}));
+const SHP=[['curved','Curved','M3 11C17 11 23 3 37 3'],['elbow','Elbow','M3 11H17Q20 11 20 8V6Q20 3 23 3H37'],['straight','Straight','M3 11L37 3']],DSH=[['solid','Solid'],['dashed','Dashed'],['dotted','Dotted']];
+function cseg(t,items,sel,o){o=o||{};const ring=`0 0 0 2px ${t.s}, 0 0 0 4px ${t.ac}`;return D({display:'flex',gap:2,padding:2,borderRadius:10,background:t.s2,opacity:o.lock?.45:1},items.map(([k,lab,p],i)=>{const on=sel===k,u=o.used&&o.used.includes(k),fc=o.focus&&(on||(!sel&&i===0));
+ return D({flex:1,height:48,borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,background:on?t.s:'transparent',border:`1.5px ${u?'dashed':'solid'} ${on?t.bd2:u?t.tx2:'transparent'}`,boxShadow:[on?`0 2px 0 0 ${t.bd2}`:'',fc?ring:''].filter(Boolean).join(',')||'none',boxSizing:'border-box',color:on?t.tx:t.tx2,fontSize:11.5,fontWeight:on?600:500},p,lab);}));}
+const typeItems=()=>SHP.map(([k,l,d])=>[k,l,cpv(d)]),dashItems=()=>DSH.map(([k,l])=>[k,l,cpv('M3 7H37',udash(k,2).d)]);
+function ctool(t,x,y,o){o=o||{};const ring=`0 0 0 2px ${t.s}, 0 0 0 4px ${t.ac}`,f=o.focus||{};
+ const b=(k,ic,w,lab,on,chev)=>D({width:w,height:34,borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',gap:5,background:on?t.acs:'transparent',color:on?t.aci:t.tx2,boxShadow:f[k]?ring:'none',flex:'none',boxSizing:'border-box'},ic&&Ic(ic,16,null,2),lab&&S({color:on?t.aci:t.tx,fontFamily:k==='proto'?M:G,fontSize:k==='proto'?11:12,fontWeight:600},lab),chev&&Ic('chevron-down',12,null,2.25));
+ const dv=()=>D({width:1,height:20,background:t.bd,margin:'0 4px',flex:'none'});
+ return D({position:'absolute',left:x,top:y,height:44,padding:4,display:'flex',alignItems:'center',gap:2,background:t.s,border:`1px solid ${t.bd}`,borderRadius:12,boxShadow:`0 6px 20px ${t.sh}`,boxSizing:'border-box',zIndex:9,fontFamily:G},
+  o.n&&D({width:104,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:600,color:t.tx,flex:'none'},o.n+' connectors'),o.n&&dv(),
+  b('label','type',34),b('proto',null,78,o.n?'Mixed':'HTTPS',false,true),b('dir','arrow-right',34),dv(),b('style','spline',112,'Line style',o.open,true),dv(),b('reset','rotate-ccw',34));}
+function cpop(t,x,y,o){o=o||{};const v=o.v||{},mx=o.mx||{},F=o.focus,ring=`0 0 0 2px ${t.s}, 0 0 0 4px ${t.ac}`;
+ const mixP=S({display:'inline-flex',alignItems:'center',height:18,padding:'0 7px',borderRadius:99,border:`1.5px dashed ${t.tx2}`,fontSize:10.5,fontWeight:600,color:t.tx2,boxSizing:'border-box'},'Mixed');
+ const hd=(txt,r)=>D({display:'flex',alignItems:'center',justifyContent:'space-between',minHeight:18},S({fontSize:11.5,fontWeight:600,color:t.tx2},txt),r);
+ const val=s=>S({fontFamily:M,fontSize:11,color:t.tx},s),sec=(...k)=>D({display:'flex',flexDirection:'column',gap:7},k);
+ const nm=c=>c==null?'No colour':PAL[c]?c[0].toUpperCase()+c.slice(1):c;
+ const wi=CW.indexOf(v.width),wu=mx.width,lc=lcol(t,v.color);
+ const wprev=X('svg',{width:260,height:16,style:{display:'block'}},wu?wu.map((w,i)=>h('path',{key:i,d:`M${6+i*90} 8H${80+i*90}`,stroke:t.edgeC,strokeWidth:w,strokeLinecap:'round'})):h('path',{d:'M6 8H254',stroke:lc,strokeWidth:v.width||CW0,strokeLinecap:'round'}));
+ const stop=(w,i)=>D({position:'absolute',left:i*25+'%',top:12,width:0,height:0},D({position:'absolute',left:-3,top:-3,width:6,height:6,borderRadius:3,background:i<=wi?t.tx2:t.bd2}),wu&&wu.includes(w)&&D({position:'absolute',left:-8,top:-8,width:16,height:16,borderRadius:99,border:`1.5px dashed ${t.tx2}`,boxSizing:'border-box'}),
+  D({position:'absolute',left:-22,width:44,top:12,textAlign:'center',fontFamily:M,fontSize:10,color:w===CW0?t.tx:t.mu,fontWeight:w===CW0?600:400},String(w)),w===CW0&&D({position:'absolute',left:-26,width:52,top:25,textAlign:'center',fontSize:10,color:t.mu},'default'),w===CW0&&D({position:'absolute',left:-.75,top:-13,width:1.5,height:5,background:t.mu}));
+ const slider=D({position:'relative',height:42,margin:'0 12px'},D({position:'absolute',left:0,right:0,top:10,height:4,borderRadius:2,background:t.s3}),wi>=0&&D({position:'absolute',left:0,width:(wi*25)+'%',top:10,height:4,borderRadius:2,background:t.tx2}),CW.map(stop),
+  wi>=0&&D({position:'absolute',left:wi*25+'%',top:12,width:0,height:0},D({position:'absolute',left:-8,top:-8,width:16,height:16,borderRadius:99,background:t.s,border:`2px solid ${t.tx2}`,boxSizing:'border-box',boxShadow:[`0 2px 0 0 ${t.bd2}`,F?ring:''].filter(Boolean).join(',')})));
+ const cl=mx.color;
+ const sw=(cn,hx)=>{const on=!cl&&v.color!==undefined&&v.color===cn,u=cl&&cl.includes(cn),p=cn&&PAL[cn]?PAL[cn][t.th]:null;const bg=hx||(p?p.fill:t.s),bd=hx?t.bd2:(p?p.stroke:t.bd2);
+  return D({width:24,height:24,borderRadius:99,background:bg,border:`1.5px solid ${bd}`,boxSizing:'border-box',display:'flex',alignItems:'center',justifyContent:'center',position:'relative',flex:'none',boxShadow:on?`0 0 0 2px ${t.s}, 0 0 0 4px ${t.tx}`:'none',outline:u?`1.5px dashed ${t.tx2}`:(F&&on?`2px solid ${t.ac}`:'none'),outlineOffset:u?2:5},
+   cn==null&&!hx&&D({position:'absolute',left:10,top:-1,width:1.5,height:23,background:t.tx2,transform:'rotate(45deg)'}),on&&Ic('check',12,p?p.ink:(hx?(lum(hx)<.18?'#ffffff':'#1c1c1a'):t.tx),3));};
+ const an=mx.anim?'mixed':!!v.animated;
+ const swi=an==='mixed'?S({width:28,height:16,borderRadius:99,background:t.s3,border:`1.5px dashed ${t.tx2}`,position:'relative',display:'inline-block',boxSizing:'border-box',flex:'none'},S({position:'absolute',left:7.5,top:5.5,width:10,height:2,borderRadius:1,background:t.tx2})):tog(t,an);
+ return pnl(t,{position:'absolute',left:x,top:y,width:288,padding:'12px 14px 14px',display:'flex',flexDirection:'column',gap:14,zIndex:9},
+  D({display:'flex',flexDirection:'column',gap:2},D({display:'flex',alignItems:'center',gap:8},S({fontSize:13.5,fontWeight:600,whiteSpace:'nowrap'},'Line style'),S({flex:1}),kbd(t,'Esc')),o.n&&S({fontSize:11.5,color:t.mu},o.n+' connectors · one change applies to all')),
+  sec(hd('Type',mx.shape?mixP:val(nm(v.shape)&&SHP.find(s=>s[0]===v.shape)?SHP.find(s=>s[0]===v.shape)[1]:'')),cseg(t,typeItems(),v.shape,{used:mx.shape,focus:F})),
+  sec(hd('Dash',o.lock?S({display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:t.tx2},Ic('lock',11,t.tx2,2),'From relationship · '+o.lock):mx.dash?mixP:null),cseg(t,dashItems(),v.dash,{used:mx.dash,focus:F,lock:!!o.lock})),
+  sec(hd('Weight',wu?mixP:val((v.width||CW0)+' px')),wprev,slider),
+  sec(hd('Colour',cl?mixP:val(nm(v.color))),D({display:'grid',gridTemplateColumns:'repeat(7,24px)',justifyContent:'space-between',rowGap:10},[null].concat(HUES.map(x=>x[0])).map(c=>sw(c))),
+   D({display:'flex',alignItems:'center',gap:8,marginTop:2},S({fontSize:11.5,color:t.mu,flex:1},'Deck colours'),CUSTOM.map(([n,hx])=>sw(n,hx)),S({width:24,height:24,borderRadius:99,border:`1.5px dashed ${t.bd2}`,display:'inline-flex',alignItems:'center',justifyContent:'center',boxSizing:'border-box'},Ic('plus',12,t.tx2,2)))),
+  D({display:'flex',alignItems:'flex-start',gap:10,paddingTop:2},D({display:'flex',borderRadius:99,boxShadow:F?ring:'none',marginTop:1},swi),D({display:'flex',flexDirection:'column',gap:2,flex:1},S({fontSize:12.5,fontWeight:500},'Animate direction'),S({fontSize:11.5,color:t.mu,lineHeight:1.4,textWrap:'pretty'},'Dashes run toward the arrow. Still with reduced motion and in exports.')),an==='mixed'&&mixP));}
+const kmap=(t,rows)=>D({display:'flex',flexDirection:'column'},rows.map(([ks,txt])=>D({display:'grid',gridTemplateColumns:'190px minmax(0,1fr)',gap:12,alignItems:'center',minHeight:34,borderTop:`1px solid ${t.hl}`},D({display:'flex',gap:4,flexWrap:'wrap'},ks.map(k=>kbd(t,k))),S({fontSize:12.5,color:t.tx,lineHeight:1.4},txt))));
+function rowCStyle(t){
+ const nodes=dx=>[{k:'gw',x:24+dx,y:170,c:as({},K.gw,{w:132})},{k:'svc',x:436+dx,y:230,c:{type:'service',title:'Order Service',desc:'Go',w:132}}];
+ const ed=[{a:'gw',as:'r',aat:20,b:'svc',bs:'l',bat:20,style:{shape:'curved',dash:'solid',width:2,color:'blue'},label:'createOrder',labelAt:.3,sel:true}];
+ const A=cboard(t,nodes(0),ed),B=cboard(t,nodes(600),ed);
+ const gap12=D({position:'absolute',left:168,top:173,height:12,width:30,borderLeft:`1px solid ${t.mu}`,zIndex:6},S({position:'absolute',left:4,top:0,fontFamily:M,fontSize:9.5,color:t.mu,lineHeight:'12px'},'12'));
+ const nc=[{k:'svc',x:40,y:900,c:{type:'service',title:'Order Service',desc:'Go · Payments team',w:170}},{k:'db',x:960,y:800,c:{type:'database',title:'Orders DB',desc:'PostgreSQL 16',w:170}},{k:'q',x:960,y:940,c:as({},K.an,{w:170})},{k:'nt',x:960,y:1080,c:as({},K.nt,{w:170})}];
+ const ec=[{a:'svc',as:'r',aat:24,b:'db',bs:'l',style:{shape:'curved',dash:'solid',width:1.5},sel:true,nohd:true},{a:'svc',as:'r',aat:48,b:'q',bs:'l',style:{shape:'curved',dash:'dashed',width:3,color:'blue',animated:true},sel:true,nohd:true},{a:'svc',as:'r',aat:72,b:'nt',bs:'l',style:{shape:'curved',dash:'solid',width:1.5,color:'blue'},sel:true,nohd:true}];
+ const C=cboard(t,nc,ec,{h:1400});
+ const kb=[[['⏎'],'On a selected connector: focus the toolbar'],[['←','→'],'Move between toolbar buttons'],[['⏎','Space','↓'],'Open Line style; focus goes to Type'],[['Tab','⇧ Tab'],'Next / previous section in the popover'],[['←','→'],'Type, Dash: choose (radio group)'],[['←','→','Home','End'],'Weight: one step, thinnest, thickest'],[['↑','↓','←','→','⏎'],'Colour: move in the grid, pick'],[['Space'],'Animate direction on / off'],[['Esc'],'Close; focus returns to Line style']];
+ return plate(t,0,[STG(2000,
+  cap(t,'a · Closed · one connector selected',24,20),A.els,ctool(t,90,129),gap12,
+  VR(t,590,16,700),cap(t,'b · Line style open · one connector',614,20),B.els,ctool(t,690,129,{open:true}),cpop(t,858,181,{v:{shape:'curved',dash:'solid',width:2,color:'blue',animated:false}}),
+  HR(t,740),cap(t,'c · Open on 3 connectors · mixed values',24,756),C.els,ctool(t,360,769,{n:3,open:true}),cpop(t,645,821,{n:3,v:{shape:'curved'},mx:{dash:['solid','dashed'],width:[1.5,3],color:[null,'blue'],anim:true}}),
+  D({position:'absolute',left:40,top:1040,zIndex:6},lbl(t,'Mixed','Dashed ring marks values used by some of the 3. One pick writes that value to all 3; other sections keep each connector’s own value.')),
+  HR(t,1360),cap(t,'d · Keyboard focus · rings shown on every control at once for review',24,1376),ctool(t,40,1410,{open:true,focus:{style:true}}),cpop(t,208,1462,{focus:true,v:{shape:'elbow',dash:'dashed',width:3,color:'orange',animated:true}}),
+  D({position:'absolute',left:600,top:1410,width:540,display:'flex',flexDirection:'column',gap:10},sh(t,'Keyboard'),kmap(t,kb))),
+  cnotes(t,[['Toolbar','44 tall, 4 padding, 34 buttons, 1×20 dividers, 12 radius, 1 px hairline, 12 px above the selection. Line style is 112 wide (icon, text, chevron); open state uses accent soft.'],
+   ['Popover','288 wide, 8 px under Line style, left edges aligned; B panel (1.5 px border-strong, 16 radius, 3 px lip). It may cover the board; Esc, a canvas click or a new selection closes it.'],
+   ['Writes','Type → style.shape · Dash → style.dash · Weight → style.width · Colour → style.color (null = No colour) · Animate → style.animated. Each pick is one undo step.'],
+   ['Multi-selection','Sections where the selection differs show “Mixed”; values in use get a 1.5 px dashed ring. A pick writes that one key on every selected connector.'],
+   ['Weight','5 stops: 1 · 1.5 · 2 · 3 · 4 px. Default 1.5, marked with a tick and “default”. The preview line uses the chosen colour and weight.'],
+   ['Focus','2 px surface gap + 2 px accent ring on every control. The selected swatch uses an ink ring + check here, so it never looks like focus.']])],{flow:true});}
+function rowCBend(t){const out=[];
+ out.push(cap(t,'Handles · resting and hover · dashed circle = 24 px hit area',24,20));
+ const kinds=[['end','Endpoint'],['mid','Midpoint'],['bend','Bend point']],desc={end:['10 px, 2 px accent ring','14 px + 4 px halo · drag reconnects'],mid:['8 px, 1.5 px accent ring','12 px + halo · drag adds a bend'],bend:['8 px, accent fill','12 px + halo · drag moves it']};
+ const ls=[];kinds.forEach(([k,n],i)=>[0,1].forEach(hv=>{const j=i*2+hv,x=100+j*186;ls.push(h('path',{key:'l'+j,d:k==='end'?`M${x} 96H${x+80}`:`M${x-60} 96H${x+60}`,stroke:t.edgeC,strokeWidth:2,fill:'none'}));out.push(hdl(t,{x,y:96},k,{hover:!!hv,hit:true}),D({position:'absolute',left:x-60,top:128},lbl(t,n+' · '+(hv?'hover':'resting'),desc[k][hv])));}));
+ out.push(X('svg',{width:PW,height:200,style:{position:'absolute',left:0,top:0,overflow:'visible'}},ls));
+ const sc=(x0,y0,kind,wps,o)=>{o=o||{};const N=[{k:'a',kind:'shape',x:x0+24,y:y0+24,c:{shape:'rrect',title:kind==='elbow'?'Cart':'Checkout',w:96,h:48}},{k:'b',kind:'shape',x:x0+432,y:y0+120,c:{shape:'rrect',title:kind==='elbow'?'Orders':'Payments',w:96,h:48}}];
+  const P=pp=>pp.map(p=>({x:x0+p[0],y:y0+p[1]}));const E=[];if(o.ghost)E.push({a:'a',as:'r',b:'b',bs:'l',style:{shape:kind},route:{waypoints:P(o.ghost)},ghost:true});
+  E.push({a:'a',as:'r',b:'b',bs:'l',style:{shape:kind,width:2},route:{waypoints:P(wps)},sel:true,hd:o.hd});
+  return [cboard(t,N,E,{h:1200}).els,S({position:'absolute',left:x0+480,top:y0+2,fontFamily:M,fontSize:10.5,color:t.mu,zIndex:6},kind)];};
+ const snap=(x0,y0,bx,by)=>{const X0=x0+bx,Y0=y0+by,s=[];for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)s.push(h('circle',{key:i+'_'+j,cx:X0+24*i,cy:Y0+24*j,r:1.6,fill:t.ac,opacity:.55}));
+  s.push(h('path',{key:'gv',d:`M${X0} ${y0}V${y0+184}`,stroke:t.ac,strokeWidth:1,strokeDasharray:'4 3',opacity:.8}),h('path',{key:'gh',d:`M${x0+8} ${Y0}H${x0+544}`,stroke:t.ac,strokeWidth:1,strokeDasharray:'4 3',opacity:.8}));return ovl(s);};
+ const ik=k=>S({fontFamily:M,fontSize:10.5,padding:'0 5px',height:18,display:'inline-flex',alignItems:'center',borderRadius:5,border:`1px solid ${t.mu}`,color:t.invt},k);
+ const hint=(x,y)=>D({position:'absolute',left:x,top:y,height:32,padding:'0 12px',borderRadius:99,background:t.inv,color:t.invt,display:'flex',alignItems:'center',gap:8,fontSize:12,whiteSpace:'nowrap',zIndex:8},S({fontWeight:600},'Bend selected'),S({},'· double-click or'),ik('⌫'),S({},'removes it'),S({width:1,height:14,background:t.mu,margin:'0 2px'}),ik('Tab'),S({},'next handle'),ik('Esc'),S({},'done'));
+ const F=[[24,220,'a · Selected · midpoint handles between bends'],[604,220,'b · Drag a midpoint · it becomes a bend'],[24,700,'c · Drag a bend freely · snaps to the 24 px grid'],[604,700,'d · Remove a bend']];
+ F.forEach(([x,y,c])=>out.push(cap(t,c,x,y)));
+ const E1=[24,260],E2=[604,260],E3=[24,740],E4=[604,740],C1=[24,460],C2=[604,460],C3=[24,940],C4=[604,940];
+ out.push(HR(t,204),HR(t,684),VR(t,590,220,940));
+ out.push(sc(...E1,'elbow',[[288,48]]),sc(...C1,'curved',[[264,96]]));
+ out.push(sc(...E2,'elbow',[[288,48],[300,152]],{ghost:[[288,48]],hd:{mids:false,hover:{b1:true}}}),rdo(t,E2[0]+312,E2[1]+160,'2 bends'),sc(...C2,'curved',[[264,96],[372,176]],{ghost:[[264,96]],hd:{mids:false,hover:{b1:true}}}),rdo(t,C2[0]+384,C2[1]+150,'2 bends'));
+ out.push(snap(...E3,288,144),sc(...E3,'elbow',[[288,48],[288,144]],{hd:{mids:false,hover:{b1:true}}}),rdo(t,E3[0]+300,E3[1]+152,'x 288 · y 144'),snap(...C3,360,168),sc(...C3,'curved',[[264,96],[360,168]],{hd:{mids:false,hover:{b1:true}}}),rdo(t,C3[0]+256,C3[1]+150,'x 360 · y 168'));
+ out.push(sc(...E4,'elbow',[[288,48],[288,144]],{hd:{focus:'b1'}}),sc(...C4,'curved',[[264,96],[360,168]],{hd:{focus:'b1'}}),hint(620,1128));
+ return plate(t,0,[STG(1176,out),cnotes(t,[['Handles','Endpoint 10 px (14 on hover), midpoint and bend 8 px (12 on hover), each with a 24 px round hit area. They replace the earlier end grips and segment pill and draw above cards and labels.'],
+  ['Midpoints','One between each pair of neighbouring points (end, bends, end). Shown on hover and while selected; hidden while any handle is dragged.'],
+  ['Adding a bend','Dragging a midpoint inserts a point at that index of route.waypoints. The previous route stays as a 1.25 px dashed ghost until release; the readout shows the new count.'],
+  ['Moving a bend','Free in x and y; snaps to the 24 px board grid (Alt places it freely). Guides mark the snapped row and column; the readout shows x, y. Writes route.waypoints[i] = {x, y} in board units.'],
+  ['Removing','Double-click a bend, or Tab to it and press ⌫. Removing the last bend returns the automatic route; Reset route clears all bends.'],
+  ['Shapes','Curved passes smoothly through every bend; elbow draws straight runs with 10 px rounded corners. Straight keeps stored bends but hides them.'],
+  ['Keyboard','Connector selected: Tab cycles ends → midpoints → bends. Arrows move a bend 24 px (⇧ 1 px); ⏎ on a midpoint adds a bend; ⌫ removes the focused bend; Esc ends.'],
+  ['Open','B’s dot grid is drawn every 26 px; this brief snaps to 24. Either the grid moves to 24 or snapping uses 26.']])],{flow:true});}
+function rowCLabel(t){const out=[];
+ const sc=(x0,y0,elb)=>[{k:'a',kind:'shape',x:x0+24,y:y0+(elb?56:80),c:{shape:'rrect',title:'Checkout',w:112,h:48}},{k:'b',kind:'shape',x:x0+416,y:y0+(elb?176:120),c:{shape:'rrect',title:'Payments',w:112,h:48}}];
+ const ticks=(g,hi)=>ovl([.25,.5,.75].map(f=>{const p=g.at(f),u=g.tan(f),n={x:-u.y,y:u.x},on=hi===f;return h('g',{key:f},h('path',{d:`M${p.x-n.x*10} ${p.y-n.y*10}L${p.x+n.x*10} ${p.y+n.y*10}`,stroke:t.ac,strokeWidth:on?2.5:1.5,strokeLinecap:'round'}),h('text',{x:p.x+n.x*22,y:p.y+n.y*22+3.5,textAnchor:'middle',fontFamily:M,fontSize:10,fill:t.tx2},String(Math.round(f*100))));}));
+ const fr=[[24,0,'a · Default · label at the middle'],[604,0,'b · Dragged toward the source'],[24,300,'c · Through a bend · the label stays on the line'],[604,300,'d · Snap at 25 / 50 / 75 %']];fr.forEach(([x,y,c])=>out.push(cap(t,c,x,y+16)));
+ out.push(HR(t,290),VR(t,590,10,580));
+ const base={a:'a',as:'r',b:'b',bs:'l',label:'charge',style:{shape:'curved',width:2}};
+ const A=cboard(t,sc(24,40),[as({},base,{labelAt:.5})]);out.push(A.els,rdo(t,250,62,'labelAt 0.5'));
+ const B=cboard(t,sc(604,40),[as({},base,{labelAt:.2,ldrag:true,sel:true,nohd:true})]);const pb=B.G[0].at(.2);out.push(B.els,ticks(B.G[0]),rdo(t,pb.x-30,pb.y-44,'label 20 %'));
+ const gC=cgeom(t,{x:160,y:420},'r',{x:440,y:540},'l','elbow',[{x:288,y:420},{x:288,y:540}]),fC=gC.fOf(2);const C=cboard(t,sc(24,340,true),[as({},base,{style:{shape:'elbow',width:2},route:{waypoints:[{x:288,y:420},{x:288,y:540}]},labelAt:fC,ldrag:true,sel:true,nohd:true})]);const pc=C.G[0].at(fC);out.push(C.els,rdo(t,pc.x-150,pc.y-40,'label '+Math.round(fC*100)+' % · on the bend'));
+ const Dd=cboard(t,sc(604,340),[as({},base,{labelAt:.75,ldrag:true,sel:true,nohd:true})]);const pd=Dd.G[0].at(.75);out.push(Dd.els,ticks(Dd.G[0],.75),rdo(t,pd.x-60,pd.y-46,'label 75 % · snapped'));
+ return plate(t,0,[STG(590,out),cnotes(t,[['Writes','labelAt, 0–1 along the drawn route (not straight-line distance). Default 0.5. It is kept when bends are added or the route changes, so the label rides along.'],
+  ['Drag','The whole pill is the hit area (min 32 × 24). While dragging: connector halo, accent border and lip on the pill, readout “label 20 %”, ticks at 25 / 50 / 75 %.'],
+  ['Snap','Within 4 % of a tick the label snaps (tick thickens, readout adds “snapped”), same as sliding an end along a side. Alt drags without snapping. Clamped so the pill keeps 8 px from either end.'],
+  ['Bends','The pill stays centred on the route through corners and curves and never rotates. On a corner it covers the corner rather than leaving the line.'],
+  ['Keyboard','Label focused (Tab from the connector): ← → move 5 %, ⇧ ← → jump to the previous / next tick, Home / End go to the clamped ends, ⏎ edits the text.']])],{flow:true});}
+function rowCAnim(t){const out=[];const cw=216,ch=128,gx=10,mk=[];
+ const cell=(i,y,ttl,sub,e)=>{const x=24+i*(cw+gx);const N=[{k:'a',kind:'shape',x:x+12,y:y+28,c:{shape:'rrect',title:'Orders',w:72,h:36}},{k:'b',kind:'shape',x:x+132,y:y+28,c:{shape:'rrect',title:'Events',w:72,h:36}}];
+  mk.push(h('path',{key:'m'+i+'_'+y,d:`M${x+108} ${y+18}V${y+78}`,stroke:t.mu,strokeWidth:1,strokeDasharray:'2 3'}));
+  return [D({position:'absolute',left:x,top:y,width:cw,height:ch,border:`1.5px solid ${t.hl}`,borderRadius:14,boxSizing:'border-box'}),cboard(t,N,[as({a:'a',as:'r',b:'b',bs:'l'},e)],{h:1200}).els,D({position:'absolute',left:x+12,top:y+ch-40},lbl(t,ttl,sub))];};
+ const an={shape:'curved',width:2,animated:true},off={shape:'curved',width:2};
+ out.push(cap(t,'a · Source → target · three frames, live, off',24,16));
+ [0,1,2].forEach(k=>out.push(cell(k,40,'Frame '+(k+1)+' · '+Math.round(k*667/3)+' ms',k?'dashes moved '+(k*5.3).toFixed(1)+' px →':'dotted line = fixed reference',{style:an,phase:k/3})));
+ out.push(cell(3,40,'Live','16 px period · 24 px/s · 0.67 s loop',{style:an,live:true}),cell(4,40,'Animation off','plain line, no track',{style:off}));
+ out.push(cap(t,'b · Both ways · two dash trains, half a period apart',24,188));
+ [0,1,2].forEach(k=>out.push(cell(k,212,'Frame '+(k+1)+' · '+Math.round(k*667/3)+' ms',k?'trains pass each other':'arrowheads at both ends',{style:an,phase:k/3,bidir:true})));
+ out.push(cell(3,212,'Live','both directions',{style:an,live:true,bidir:true}),cell(4,212,'Animation off','arrowheads carry direction',{style:off,bidir:true}));
+ out.push(ovl(mk),HR(t,366),VR(t,590,380,340),cap(t,'c · Reduced motion and export · drawn still',24,384),cap(t,'d · During flow playback · the flow highlight wins',614,384));
+ const NC=[{k:'a',kind:'shape',x:48,y:440,c:{shape:'rrect',title:'Order Service',w:128,h:48}},{k:'b',kind:'shape',x:400,y:440,c:{shape:'rrect',title:'Order events',w:128,h:48}},{k:'c',kind:'shape',x:48,y:560,c:{shape:'rrect',title:'Ledger',w:128,h:48}},{k:'d',kind:'shape',x:400,y:560,c:{shape:'rrect',title:'Payments',w:128,h:48}}];
+ out.push(cboard(t,NC,[{a:'a',as:'r',b:'b',bs:'l',style:an,still:true},{a:'c',as:'r',b:'d',bs:'l',style:an,still:true,bidir:true}]).els);
+ const ann=(x,y,txt,al)=>S({position:'absolute',left:x,top:y,fontFamily:M,fontSize:10.5,color:t.tx2,whiteSpace:'nowrap',transform:al?'translateX(-100%)':null,zIndex:6},txt);
+ out.push(ann(184,476,'start knob · source'),ann(392,476,'arrowhead · target',true),ann(392,596,'arrowheads · both ways',true),D({position:'absolute',left:48,top:640,width:500,zIndex:6},lbl(t,'prefers-reduced-motion · PNG / SVG / PDF export · print','Same drawing as animation off. Direction reads from the arrowhead and the start knob, never from motion.')));
+ const NF=[{k:'a',kind:'shape',x:628,y:440,c:{shape:'rrect',title:'Cart',w:96,h:44},s:{ph:'done'}},{k:'b',kind:'shape',x:828,y:440,c:{shape:'rrect',title:'Orders',w:96,h:44},s:{ph:'cur',n:2}},{k:'c',kind:'shape',x:1040,y:440,c:{shape:'rrect',title:'Payments',w:96,h:44},s:{ph:'next',n:3}},{k:'d',kind:'shape',x:828,y:572,c:{shape:'rrect',title:'Audit log',w:96,h:44},s:{dim:true}}];
+ out.push(cboard(t,NF,[{a:'a',as:'r',b:'b',bs:'l',st:'cur',tok:.5,tokN:2,style:an},{a:'b',as:'r',b:'c',bs:'l',st:'next',style:an},{a:'b',as:'b',b:'d',bs:'t',st:'dim',style:an}]).els,
+  D({position:'absolute',left:628,top:640,width:520,zIndex:6},lbl(t,'All three connectors have Animate direction on','While a flow is shown animation pauses: current step accent + halo + token, upcoming dotted, others 20 %. It resumes when the flow closes.')));
+ return plate(t,0,[STG(720,out),cnotes(t,[['Writes','style.animated (boolean, default off). Direction comes from the connector’s ends; both-ways connectors run two dash trains in opposite directions.'],
+  ['Look','Solid lines: a 32 % track in the line colour plus running dashes 3w on / 5w off (w = weight), round caps, 24 px/s. Dashed and dotted lines run their own pattern, with no track.'],
+  ['Still','With prefers-reduced-motion, in exports and in print the line draws exactly as with animation off; arrowhead (target) and start knob (source) carry direction.'],
+  ['Flow playback','While a flow is shown, flow styling replaces style.dash, style.color and style.animated on every connector; nothing moves except the flow token.'],
+  ['Canvas 2D','setLineDash([3w, 5w]); lineDashOffset = −(t × 24 / 1000) mod 8w. Only animated connectors in view redraw per frame; paused when the tab is hidden.'],
+  ['Keyboard','Space on the “Animate direction” switch; announced as “Animate direction, on / off”.']])],{flow:true});}
+function rowCSample(t){const N=[{k:'web',x:40,y:90,c:K.web},{k:'gw',x:340,y:90,c:K.gw},{k:'svc',x:620,y:90,c:K.svc},{k:'pay',x:900,y:90,c:K.pay},{k:'bank',x:900,y:400,c:K.bank},{k:'an',x:340,y:400,c:K.an},{k:'nt',x:40,y:560,c:K.nt},{k:'dbc',x:620,y:520,c:K.dbc}];
+ const E=[{a:'web',as:'r',b:'gw',bs:'l'},{a:'gw',as:'r',b:'svc',bs:'l',style:{width:4,color:'orange'},label:'createOrder'},{a:'svc',as:'r',b:'pay',bs:'l',style:{width:4,color:'orange'},label:'charge'},
+  {a:'pay',as:'r',b:'bank',bs:'r',style:{shape:'elbow'},route:{waypoints:[{x:1132,y:120},{x:1132,y:430}]},label:'3DS'},{a:'svc',as:'b',b:'dbc',bs:'t',style:{dash:'dashed',color:'blue'},label:'persists',labelAt:.8},
+  {a:'svc',as:'b',aat:40,b:'an',bs:'r',style:{color:'teal',animated:true},live:true},{a:'an',as:'l',b:'nt',bs:'r',style:{dash:'dotted',width:1.5},label:'optional'},{a:'nt',as:'t',b:'web',bs:'b',style:{shape:'straight',width:1.5},label:'push'}];
+ const items=[['Payment path',{width:4,color:'orange'}],['Event stream · animated',{color:'teal',animated:true},true],['Optional · dotted 1.5',{dash:'dotted',width:1.5}],['Persists · dashed blue',{dash:'dashed',color:'blue'}],['3DS loop · elbow, 2 bends',{}],['Push · straight 1.5',{width:1.5}]];
+ const leg=D({position:'absolute',left:24,top:712,display:'flex',gap:18,alignItems:'center',flexWrap:'wrap',fontSize:11.5,color:t.tx2,zIndex:6},items.map(([l,s,lv])=>{const R=cres(t,{style:s}),g={d:'M2 5H30'};return D({display:'flex',alignItems:'center',gap:6},X('svg',{width:32,height:10},h('path',{d:g.d,stroke:R.c,strokeWidth:R.w,strokeDasharray:R.anim?`${3*R.w} ${5*R.w}`:R.dd.d,strokeLinecap:'round'},lv?h('animate',{attributeName:'stroke-dashoffset',values:`${8*R.w};0`,dur:(8*R.w/FLOWV).toFixed(2)+'s',repeatCount:'indefinite'}):null)),l);}),S({color:t.mu},'· label “persists” moved to 80 %'));
+ return plate(t,0,[STG(750,cap(t,'Sample board · new connector styles together',24,20),cboard(t,N,E).els,leg),cnotes(t,[['Reading','Orange 4 px marks the payment path by user choice. It is not the flow highlight: no halo, no token, no card sticker.'],['Contrast','Palette strokes clear 3:1 on the canvas (Colour row). The default grey does not; see the next row.'],['Density','Above 2 px a line reads as emphasis. Keep 3 and 4 px for one or two paths per board.']])],{flow:true});}
+function rowCRules(t){const out=[];
+ out.push(cap(t,'a · Relationship dash and style dash on one board',24,20));
+ out.push(D({position:'absolute',left:24,top:44,display:'flex',gap:14,fontSize:11,color:t.tx2,zIndex:6,alignItems:'center'},S({fontFamily:M,fontSize:10.5,color:t.mu},'LEGEND'),...['calls','reads','writes','depends'].map(r=>{const st=edgeStyle(t,{rel:r});return D({display:'flex',alignItems:'center',gap:6},X('svg',{width:30,height:8},h('path',{d:'M1 4H29',stroke:t.tx2,strokeWidth:2,strokeDasharray:st.dash,strokeLinecap:r==='depends'?'round':'butt'})),r==='depends'?'depends on':r);})));
+ const N=[{k:'svc',x:250,y:250,c:{type:'service',title:'Order Service',desc:'Go',w:170}},{k:'db',x:30,y:100,c:{type:'database',title:'Orders DB',w:150}},{k:'q',x:470,y:100,c:as({},K.an,{w:150})},{k:'bank',x:30,y:420,c:as({},K.bank,{w:150})},{k:'auth',x:470,y:420,c:{type:'service',title:'Auth service',w:150}}];
+ const E=[{a:'svc',as:'l',b:'db',bs:'r',rel:'reads',style:{dash:'dotted'}},{a:'svc',as:'r',b:'q',bs:'l',rel:'writes'},{a:'svc',as:'l',aat:70,b:'bank',bs:'r',rel:'calls'},{a:'svc',as:'r',aat:70,b:'auth',bs:'l',rel:'depends'},{a:'q',as:'b',b:'auth',bs:'t',style:{dash:'dashed'},label:'retry'},{a:'bank',as:'t',b:'db',bs:'b',style:{dash:'dotted'},label:'backfill'}];
+ out.push(cboard(t,N,E).els,D({position:'absolute',left:200,top:208,fontFamily:M,fontSize:10,color:t.tx2,zIndex:6,lineHeight:1.4,width:150},'reads + style dotted → draws reads'));
+ out.push(VR(t,640,16,540),cap(t,'b · Dash when a relationship sets one',664,20));
+ out.push(pnl(t,{position:'absolute',left:664,top:50,width:288,padding:'12px 14px 14px',display:'flex',flexDirection:'column',gap:7,zIndex:6},D({display:'flex',alignItems:'center',justifyContent:'space-between'},S({fontSize:11.5,fontWeight:600,color:t.tx2},'Dash'),S({display:'inline-flex',alignItems:'center',gap:4,fontSize:11,color:t.tx2},Ic('lock',11,t.tx2,2),'From relationship · reads')),cseg(t,dashItems(),'dotted',{lock:true}),S({fontSize:11.5,color:t.mu,lineHeight:1.4},'Dotted is stored but not drawn. Set the relationship to calls, or clear it, to use it.')));
+ const row=(n,dash,cap2,w,sp)=>D({display:'grid',gridTemplateColumns:'120px 150px minmax(0,1fr)',gap:12,alignItems:'center',minHeight:26,borderTop:`1px solid ${t.hl}`},S({fontSize:12,color:t.tx},n),X('svg',{width:150,height:10},h('path',{d:'M3 5H147',stroke:t.tx2,strokeWidth:w,strokeDasharray:dash,strokeLinecap:cap2})),S({fontFamily:M,fontSize:10,color:t.mu},sp));
+ out.push(D({position:'absolute',left:664,top:236,width:490,display:'flex',flexDirection:'column',zIndex:6},sh(t,'Relationship · fixed length, flat ends'),D({height:6}),row('calls',null,'butt',2,'solid'),row('reads','6 4','butt',2,'6 4'),row('writes','12 3','butt',2,'12 3'),row('depends on','1.5 4','round',2,'1.5 4 round'),D({height:14}),sh(t,'Style · scales with weight, round ends'),D({height:6}),
+  ...[1.5,2,3].map(w=>row('Dashed · '+w,udash('dashed',w).d,'round',w,'4w 3.5w')),...[1.5,2,3].map(w=>row('Dotted · '+w,udash('dotted',w).d,'round',w,'0 3w'))));
+ const lines=[['Default grey',t.edgeC],['edgeC3 (proposed)',t.th==='light'?'#8f8f87':'#6c6c64']].concat(HUES.map(([n])=>[n,PAL[n][t.th].stroke])).concat(CUSTOM.map(([n,hx])=>[n+' · raw',hx])).concat(CUSTOM.map(([n])=>[n+' · line-safe',lcol(t,n)]));
+ const badge=r=>S({fontFamily:M,fontSize:10.5,color:r>=3?t.tx2:t.clay,display:'inline-flex',alignItems:'center',gap:3},r>=3?Ic('check',11,t.tx2,2.5):Ic('x',11,t.clay,2.5),r.toFixed(1));
+ const ctab=D({display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',columnGap:24},lines.map(([n,c])=>D({display:'flex',alignItems:'center',gap:8,minHeight:30,borderTop:`1px solid ${t.hl}`},X('svg',{width:36,height:8},h('path',{d:'M2 4H34',stroke:c,strokeWidth:1.5,strokeLinecap:'round'})),S({fontSize:12,flex:1,textTransform:n.length<8?'capitalize':'none'},n),S({fontFamily:M,fontSize:10,color:t.mu},c),badge(CR(c,t.cv)))));
+ const spec=[['Type','style.shape','curved · elbow · straight','curved','← → (radio group)'],['Dash','style.dash','solid · dashed · dotted','solid','← →; locked while a relationship sets a dash'],['Weight','style.width','1 · 1.5 · 2 · 3 · 4 px','1.5','← → step · Home · End'],['Colour','style.color','null · 13 palette names · deck custom id','null (default grey)','arrows in the grid · ⏎'],['Animate direction','style.animated','true · false','false','Space'],['Bends','route.waypoints','[{x, y}] board units, snapped to 24','[] (automatic route)','Tab to a handle · arrows · ⏎ adds · ⌫ removes'],['Label position','labelAt','0–1 along the route; snaps .25 · .5 · .75','0.5','← → 5 % · ⇧ ← → tick']];
+ const stab=D({display:'flex',flexDirection:'column'},D({display:'grid',gridTemplateColumns:'150px 150px minmax(0,1.3fr) 150px minmax(0,1.2fr)',gap:14,paddingBottom:6},...['Control','Writes','Values','Default','Keyboard'].map(x=>ml(t,x))),spec.map(r=>D({display:'grid',gridTemplateColumns:'150px 150px minmax(0,1.3fr) 150px minmax(0,1.2fr)',gap:14,alignItems:'center',minHeight:32,borderTop:`1px solid ${t.hl}`,fontSize:12.5},S({fontWeight:500},r[0]),S({fontFamily:M,fontSize:11.5},r[1]),S({color:t.tx2},r[2]),S({fontFamily:M,fontSize:11.5,color:t.tx2},r[3]),S({color:t.tx2},r[4]))));
+ return plate(t,0,[STG(560,out),sh(t,'Spec · what each control writes','names are placeholders'),stab,sh(t,'Line contrast · '+t.th,'1.5 px line on the canvas '+t.cv+', ≥ 3:1 required'),ctab,
+  cnotes(t,[['Which dash wins','A relationship with a dash (reads, writes, depends) always draws its own pattern; style.dash is kept but not drawn and the Dash section shows “From relationship”. calls has no dash, so style.dash applies.'],
+   ['Telling them apart','Relationship: fixed-length pattern, flat ends, listed in the board legend, set in the relationship field. Style: pattern scaled to the weight, round ends, never in the legend, set in the Style popover.'],
+   ['Colour is never the only cue','Selected: halo + handles. Error: clay + 7 4 dash + ✕ end + label icon. Current flow step: accent + halo + token + card sticker. These override style.color and style.dash while shown, so the cue survives any user colour.'],
+   ['Hit areas','Line: 12 px stroke hit area at every weight. Handles: 24 px circles. Label: the pill, min 32 × 24. Toolbar buttons 34, swatches 24 with 10 px gaps.'],
+   ['New tokens (proposed)','cw 1 / 1.5 / 2 / 3 / 4, cw0 1.5 · dashUser dashed 4w 3.5w, dotted 0 3w, round · flowDash 3w 5w, track .32, 24 px/s · hEnd 10/14, hPt 8/12, hHit 24 · arrow scale .75 + w/8 (knob 3.5 × same) · edgeC3 #8f8f87 / #6c6c64.'],
+   ['Custom colours','Deck custom hex values that miss 3:1 on the canvas are mixed toward black (light) or white (dark) in 1/24 steps until they pass; the card fill keeps the raw hex.'],
+   ['Open · grey','B’s connector grey (#b4b4ab / #5a5a53) measures below 3:1 in both themes (table above). Proposed edgeC3 passes; it is listed, not applied, since existing rows reuse edgeC.'],
+   ['Open · weight','The brief sets 1.5 as default, while B draws connectors at 2 px (edgeW). Either B’s default becomes 1.5 or unset connectors keep 2 and the slider shows 2 for them.'],
+   ['Precedence','Flow / error / selection > relationship dash > style.dash. Flow > style.color. Reduced motion > style.animated.']])],{flow:true});}
+ROWS.push(['cstyle','Connector style · toolbar and Style popover','Line style button; popover closed, open on one connector, open on 3 with mixed values, keyboard focus',rowCStyle,'B'],
+ ['cbend','Connector bend points','resting and hover handles; add, drag with 24 px snap, remove; elbow and curved with 2 bends',rowCBend,'B'],
+ ['clabel','Connector label position','default middle, dragged to 20 %, through a bend, snap at 25 / 50 / 75 %',rowCLabel,'B'],
+ ['canim','Animated direction','motion strip, both ways, reduced motion and export, under flow playback',rowCAnim,'B'],
+ ['csample','Connector styles on a board','8 cards, 8 connectors: thick orange, dotted grey, elbow with 2 bends, animated, label near an end',rowCSample,'B'],
+ ['crules','Style dash vs relationship dash · spec','which wins, how they are told apart, what each control writes, line contrast',rowCRules,'B']);
+// lib: internal helpers for packs built on top of this board (sododeck-db.js). use(React) binds the element factory.
+const LIB={use(R){h=R.createElement;},TK,PAL,BASE,TYPES,K,GPAY,STAT,TAGC,Ic,X,D,S,as,G,M,okl,CR,lines,est,clamp,ml,kbd,chip,statChip,neutralChip,person,tagsBlock,fieldsBlock,probBadge,stepBadge,handles,editTitle,card,shape,kidsPill,stack,stackH,frame,proxy,NRM,anc,route,pathOrth,polyAt,geom,arrow,startMark,edgeStyle,labelEl,countBadge,token,nodeBox,nodeEl,board,PW,plate,cap,sh,lbl,pnl,tog,inp,btnI,player};
+window.SDC={lib:LIB,ROWS:ROWS.map(r=>({id:r[0],title:r[1],sub:r[2],only:r[4]})),NOTES,CMP,
  plate(React,row,dir,th){h=React.createElement;const r=ROWS.find(x=>x[0]===row);try{return r[3](TK(dir,th));}catch(e){console.error('plate',row,dir,th,e);return null;}},
  compare(React,dir,th){h=React.createElement;return compareEl(dir,th);}};
 })();
