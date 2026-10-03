@@ -45,7 +45,9 @@ import { InvalidEdgePopover } from './flows/invalid-edge-popover';
 import { findFlow } from './flows/session-path';
 import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
-import { focusSet } from './focus-set';
+import { connectionCount, connectionsText, focusSet } from './focus-set';
+import { HoverFocusStyle } from './hover-focus/hover-focus-style';
+import { useHoverFocus } from './hover-focus/use-hover-focus';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelSelector, type Level } from './levels';
 import { MergedEdge } from './merged-edge';
@@ -100,6 +102,9 @@ export const liplessSelector = (s: { transform: [number, number, number] }) => s
 
 /** With the Select tool only the middle mouse button pans (plus Space+drag, React Flow's default). */
 const PAN_BUTTONS = [1];
+
+/** Focus arriving within this long after a key press counts as keyboard navigation. */
+const KEY_FOCUS_WINDOW_MS = 100;
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -294,6 +299,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   // Set by a pointer press: focus that lands on the wrapper from a click must not move focus to a
   // card (and pan to it); only Tab into the canvas does.
   const pointerFocus = useRef(false);
+  // When the user last pressed a key in the canvas: only focus that follows a key press is read
+  // out (034), not focus a command moves (a card just added announces "Added …" instead).
+  const lastKeyAt = useRef(Number.NEGATIVE_INFINITY);
   const previousDrill = useRef(drill);
   const announcedZoomLevel = useRef<Level | null>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
@@ -311,6 +319,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const handlers = useCanvasHandlers();
   const onKeyDown = useCanvasKeyDown();
+  const hover = useHoverFocus();
 
   useSelectionSync();
   useViewSync();
@@ -608,14 +617,36 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
-      onPointerDownCapture={() => {
+      onPointerOverCapture={(event) => {
+        hover.notePointerType(event.pointerType);
+      }}
+      onPointerDownCapture={(event) => {
+        hover.notePointerType(event.pointerType);
         pointerFocus.current = true;
         setTimeout(() => {
           pointerFocus.current = false;
         }, 0);
       }}
       onFocus={(event) => {
-        if (event.target !== event.currentTarget || pointerFocus.current) return;
+        if (event.target !== event.currentTarget) {
+          // Roving keyboard focus on a card lights its connections at once (034 R3).
+          const cardId = (event.target as HTMLElement)
+            .closest<HTMLElement>('[data-node-id]')
+            ?.getAttribute('data-node-id');
+          if (cardId !== null && cardId !== undefined && !pointerFocus.current) {
+            const set = focusSet(deck, graph, cardId);
+            const title = deck.nodes.find((node) => node.id === cardId)?.title;
+            const keyed = performance.now() - lastKeyAt.current < KEY_FOCUS_WINDOW_MS;
+            hover.onCardFocus(
+              cardId,
+              !keyed || set === null || title === undefined
+                ? undefined
+                : connectionsText(title, connectionCount(set, graph)),
+            );
+          }
+          return;
+        }
+        if (pointerFocus.current) return;
         const ui = useUiStore.getState();
         // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
         if (ui.flowSession !== null) return;
@@ -633,6 +664,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
             nodeElement(first)?.focus({ preventScroll: true });
           }
         }, 0);
+      }}
+      onBlur={hover.onCardBlur}
+      onKeyDownCapture={() => {
+        lastKeyAt.current = performance.now();
       }}
       onKeyDown={onKeyDown}
       className={cn('relative h-full', focusRing)}
@@ -684,6 +719,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         connectionLineStyle={connectionLineStyle}
         connectionLineComponent={EndpointConnectionLine}
         edgesReconnectable={!recording}
+        onNodeMouseEnter={hover.onNodeMouseEnter}
+        onNodeMouseLeave={hover.onNodeMouseLeave}
         {...handlers}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
@@ -724,6 +761,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           action={null}
         />
       )}
+      <HoverFocusStyle deck={deck} graph={graph} wrapper={wrapper} />
       <EdgePopover deck={fullDeck} />
       <MergedEdgePopover deck={deck} />
       <ConnectPopover deck={fullDeck} />

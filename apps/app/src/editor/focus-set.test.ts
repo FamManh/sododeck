@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import { focusSet } from './focus-set';
+import { connectionCount, connectionsText, focusSet } from './focus-set';
 import { visibleGraph } from './visible-graph';
 
 describe('focusSet', () => {
@@ -55,5 +55,30 @@ describe('focusSet', () => {
     });
     const graph = visibleGraph(deck, { node: null, group: null }, new Set());
     expect(focusSet(deck, graph, 'child')).toBeNull();
+  });
+});
+
+describe('connection counts (034)', () => {
+  it('counts every connector a merged connector folds, and words the announcement', () => {
+    const deck = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', group: 'core' },
+        { id: 'b', type: 'service', title: 'B', group: 'core' },
+        { id: 'c', type: 'service', title: 'C' },
+        { id: 'd', type: 'service', title: 'D' },
+      ],
+      groups: [{ id: 'core', title: 'Core' }],
+      edges: [
+        { id: 'ac', from: 'a', to: 'c' },
+        { id: 'bc', from: 'b', to: 'c' },
+        { id: 'cd', from: 'c', to: 'd' },
+      ],
+    });
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set(['core']));
+    const set = focusSet(deck, graph, 'c');
+    expect(set === null ? 0 : connectionCount(set, graph)).toBe(3);
+    expect(connectionsText('C', 3)).toBe('C: 3 connections');
+    expect(connectionsText('C', 1)).toBe('C: 1 connection');
+    expect(connectionsText('C', 0)).toBe('C: 0 connections');
   });
 });

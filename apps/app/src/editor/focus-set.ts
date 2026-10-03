@@ -38,3 +38,16 @@ export function focusSet(deck: SododeckFile, graph: VisibleGraph, id: string): F
 
   return { focusId: id, members, edges };
 }
+
+/** What a keyboard focus announces: "<title>: 3 connections" (034 US1.4). */
+export function connectionsText(title: string, count: number): string {
+  return `${title}: ${String(count)} ${count === 1 ? 'connection' : 'connections'}`;
+}
+
+/** Deck connections behind a focus set: a merged connector counts every connector it folds. */
+export function connectionCount(set: FocusSet, graph: VisibleGraph): number {
+  const folded = new Map(graph.merged.map((edge) => [edge.id, edge.edgeIds.length]));
+  let count = 0;
+  for (const id of set.edges) count += folded.get(id) ?? 1;
+  return count;
+}

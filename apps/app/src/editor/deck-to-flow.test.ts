@@ -2,7 +2,7 @@ import { STICKY_DEFAULT_OFFSET, stickyCanvasPosition } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { EMPTY_SELECTION } from '../state/ui-store';
+import { EMPTY_SELECTION, useUiStore } from '../state/ui-store';
 import {
   type CanvasView,
   type DeckFlowNode,
@@ -323,6 +323,18 @@ describe('toFlowNodes', () => {
     );
     expect(moved.find((n) => n.id === 'a')?.className).toBe('in-focus sd-focus-neighbour');
     expect(moved.find((n) => n.id === 'b')?.className).toBe('in-focus');
+  });
+
+  it('returns the same React Flow objects while a hover focus changes (034 R1)', () => {
+    const graph = topLevelGraph(deck);
+    const canvasView = view();
+    const nodes = toFlowNodes(deck, graph, canvasView);
+    const edges = toFlowEdges(deck, graph, canvasView);
+    useUiStore.getState().setHoverFocus({ id: 'a', source: 'pointer' });
+    expect(toFlowNodes(deck, graph, canvasView)).toBe(nodes);
+    expect(toFlowEdges(deck, graph, canvasView)).toBe(edges);
+    useUiStore.getState().clearHoverFocus();
+    expect(toFlowNodes(deck, graph, canvasView)).toBe(nodes);
   });
 
   it('carries problem marks and rebuilds only when they change (015 FR-022)', () => {
