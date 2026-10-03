@@ -21,6 +21,33 @@ export type Tags = Text[];
  */
 export type HexColor = string;
 /**
+ * A card or group colour: a named colour or a custom hex value.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "ColorRef".
+ */
+export type ColorRef = CardColor | HexColor;
+/**
+ * Named card colour, a design-system tint that follows the theme.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "CardColor".
+ */
+export type CardColor =
+  | 'red'
+  | 'orange'
+  | 'amber'
+  | 'yellow'
+  | 'lime'
+  | 'green'
+  | 'teal'
+  | 'cyan'
+  | 'blue'
+  | 'indigo'
+  | 'violet'
+  | 'pink'
+  | 'slate';
+/**
  * Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -55,33 +82,6 @@ export type Links = Link[];
  * via the `definition` "IdList".
  */
 export type IdList = Id[];
-/**
- * A card or group colour: a named colour or a custom hex value.
- *
- * This interface was referenced by `SododeckFile`'s JSON-Schema
- * via the `definition` "ColorRef".
- */
-export type ColorRef = CardColor | HexColor;
-/**
- * Named card colour, a design-system tint that follows the theme.
- *
- * This interface was referenced by `SododeckFile`'s JSON-Schema
- * via the `definition` "CardColor".
- */
-export type CardColor =
-  | 'red'
-  | 'orange'
-  | 'amber'
-  | 'yellow'
-  | 'lime'
-  | 'green'
-  | 'teal'
-  | 'cyan'
-  | 'blue'
-  | 'indigo'
-  | 'violet'
-  | 'pink'
-  | 'slate';
 /**
  * Protocol family: `http` (incl. HTTPS, REST, GraphQL), `grpc`, `event` (message brokers such as Kafka), `sql`, `websocket`, `other`. Put specifics ("Kafka", "HTTPS") in the edge label.
  *
@@ -161,6 +161,12 @@ export interface SododeckFile {
    * Custom hex colours saved for reuse by this deck's cards and groups, in the order they were added. At most 12; the app enforces the cap when adding.
    */
   swatches?: HexColor[];
+  /**
+   * One colour per tag for the whole deck: the tag as first typed (case kept) maps to a card colour name or a `#rrggbb` hex. A tag with no entry is slate. Keys are non-empty and no two keys are equal when case and spacing are ignored. Tags on nodes, connections, flows and steps stay plain text; this map only colours them.
+   */
+  tagColors?: {
+    [k: string]: ColorRef;
+  };
   /**
    * Components of the system.
    */

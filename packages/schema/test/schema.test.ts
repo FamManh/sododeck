@@ -75,6 +75,15 @@ describe('schema v1', () => {
     for (const issue of issuesOf(input)) expect(issue.message).not.toBe('');
   });
 
+  it('accepts tag colours: named, hex, and keys that differ in more than case (033)', () => {
+    const input = {
+      ...emptySododeckFile(),
+      tagColors: { PCI: 'violet', 'pci-dss': '#7a3cff', Lan: 'slate' },
+    };
+    expectBothValidators(input, true);
+    expectBothValidators({ ...emptySododeckFile(), tagColors: {} }, true);
+  });
+
   it('names the allowed values when an enum value is wrong', () => {
     const [issue] = issuesOf({
       ...emptySododeckFile(),

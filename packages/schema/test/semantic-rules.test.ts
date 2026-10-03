@@ -142,4 +142,39 @@ describe('checkSemanticRules', () => {
       );
     });
   });
+
+  describe('S8: tagColors keys are non-empty and unique ignoring case (033)', () => {
+    const withColors = (tagColors: Record<string, string>): SododeckFile => ({
+      ...emptySododeckFile(),
+      tagColors,
+    });
+
+    it('accepts distinct keys, case-only variants kept apart by other letters, and no map', () => {
+      expect(checkSemanticRules(withColors({ PCI: 'violet', 'pci-dss': 'red' }))).toEqual([]);
+      expect(checkSemanticRules(emptySododeckFile())).toEqual([]);
+    });
+
+    it('reports an empty key and a key of spaces', () => {
+      expect(checkSemanticRules(withColors({ '': 'red' }))).toEqual([
+        { path: 'tagColors.', message: 'Tag colour key "" is empty.' },
+      ]);
+      expect(checkSemanticRules(withColors({ '  ': 'red' }))).toEqual([
+        { path: 'tagColors.  ', message: 'Tag colour key "  " is empty.' },
+      ]);
+    });
+
+    it('reports the second of two keys equal ignoring case, spacing and edges', () => {
+      expect(checkSemanticRules(withColors({ PCI: 'violet', pci: 'red' }))).toEqual([
+        {
+          path: 'tagColors.pci',
+          message: 'Tag colour key "pci" is the same tag as "PCI" (case and spacing are ignored).',
+        },
+      ]);
+      expect(
+        checkSemanticRules(withColors({ 'Pci dss': 'violet', ' pci   DSS ': 'red' })).map(
+          (issue) => issue.path,
+        ),
+      ).toEqual(['tagColors. pci   DSS ']);
+    });
+  });
 });
