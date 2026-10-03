@@ -1070,3 +1070,7 @@ changes them before the owning feature is specified.
     reads as a stack, with its connectors rerouted to it. Reference video ideas: hover highlights
     a card's connections, bundled connectors with counts, drill-in with outside proxies. Connector
     ends may attach anywhere on a side (backlog 022).
+63. **Card direction B "Deck"** (founder, 2026-10-03), from `Sododeck Cards.dc.html`: thick-paper
+    cards with a solid 3px lip, 14px corners, solid-tint pill chips, 2px curved connectors,
+    playback that deals the deck, a collapsed group as a fanned hand. The design's risk note
+    becomes a rule: lip off below 60 % zoom, chips as dots at System. Backlog 028–035.

@@ -88,6 +88,14 @@ flowchart LR
   F025[025 format-compatibility]
   F026[026 diagram-as-code]
   F027[027 ai-deck-skill]
+  F028[028 design-sync-card-system]
+  F029[029 card-look-deck]
+  F030[030 card-types-and-packs]
+  F031[031 shapes]
+  F032[032 typed-fields]
+  F033[033 deck-tag-colours]
+  F034[034 connection-focus-and-drill]
+  F035[035 flow-playback-deck]
 
   F001 --> F002 --> F003
   F000 --> F003
@@ -119,6 +127,14 @@ flowchart LR
   F025 --> F027
   F024 -.-> F027
   F026 -.-> F027
+  F028 --> F029
+  F029 --> F030
+  F030 --> F031
+  F030 --> F032
+  F029 --> F033
+  F029 --> F034
+  F022 -.-> F034
+  F029 --> F035
 ```
 
 ## Critical path
@@ -147,6 +163,9 @@ is the founder's call.
 review) are **not scheduled**. They come after M5 at the earliest and need a founder go-ahead.
 023 starts with a large-deck benchmark, and that result decides whether the renderer work is
 done at all. The measurement plan is in `docs/performance.md`.
+
+**028–035** card system, direction B "Deck" (added 2026-10-03, §g-63): **028 → 029 → 035**, then
+**033**, **030 → 032 / 031**, then **034**. 030 supersedes 024; 032 lifts §g-40.
 
 **025** format-compatibility (ADR 0020, proposed) should land before the first public release,
 ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
@@ -184,6 +203,14 @@ and **027** ai-deck-skill are not scheduled.
 | 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0020; banner copy; schema change             |
 | 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
 | 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
+| 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                       |
+| 029 | card-look-deck           | after M4   | 028           | 5 d  | designed (B); ⚠ curves vs 017 orthogonal routing          |
+| 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR            |
+| 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                   |
+| 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR            |
+| 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                          |
+| 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                  |
+| 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1760,6 +1787,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 024-domain-kind-packs
 
+- **Superseded by 030-card-types-and-packs (2026-10-03).** Kept for its analysis of where kinds
+  are hard-coded and the schema options.
 - **Added:** 2026-09-30, architecture review. Not scheduled; needs a founder decision on open
   kinds before `/speckit.specify`.
 - **Milestone:** later (after M5) · **Depends on:** 001 (schema), soft: 020 (colour tokens,
@@ -1916,9 +1945,181 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   skill formats differ per agent (keep the core as plain Markdown + a Node script); publishing the
   schema publicly (ADR 0002 already plans `https://sododeck.com/schema/v1.json`).
 
+## Card system, direction B "Deck" (028–035)
+
+Founder picked direction **B · Deck** on 2026-10-03 (§g-63) from the three Claude Design boards in
+`Sododeck Cards.dc.html` + `sododeck-cards.js` (Claude Design project "Sododeck"). Requirements:
+[`claude-design-prompt-card-system.md`](design/claude-design-prompt-card-system.md) (§g-61,
+§g-62). B in one line: cards are thick paper (a solid 3px lip in the stroke colour, 14px corners,
+filled pill chips), connectors are 2px smooth curves, and playing a flow **deals the deck** (✓
+stickers on played cards, the current card lifts on an orange lip, upcoming cards wait with a
+dashed number); a collapsed group is a fanned hand of cards. The design's own risk note is kept as
+a rule: on dense boards drop the lip below 60 % zoom and show chips as dots at System level.
+
+Order: **028 → 029 → 035**, then **033**, **030 → 032 / 031**, then **034**. 030 supersedes 024.
+
+## 028-design-sync-card-system
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** — · **Estimate:** 1 d
+- **Goal:** The card system design is in the repo as the reference for 029–035, like 021 did for
+  the canvas-first frames.
+- **In scope:** read-only copies of `Sododeck Cards.dc.html` and `sododeck-cards.js` in
+  `docs/design/claude-design/`; screenshots of **board B** (every row, light and dark) as
+  `docs/design/screens/117-…`; design-analysis §a entries for the new frames and §g notes for
+  every mismatch with DESIGN.md or founder decisions; a **DESIGN.md "Card system (Deck)"** section
+  with B's tokens (radius 14 card / 20 frame / pill chips; 1.5px Border-strong `#cfcfc7` /
+  `#45453f` or the colour stroke; lip `0 3px 0` in the stroke colour, 5px hover and current, 6px
+  dragging, no blur; title 14/600 1.28, type name 11.5/500, body 12, chips 11.5/500; 184 wide,
+  12 padding, 8 gap; solid-tint chips at L .915 / .39 with same-hue ink L .42 / .90; 12px round
+  handles, 16px orange with a 4px halo when active; 2px curved connectors with a rounded filled
+  arrow and a 3.5px start knob) and the extended palette (each of the 13 colours gains `chip`,
+  `ink` and `dot` next to `fill` / `stroke`, light and dark, from the design's OKLCH values).
+- **Out of scope:** code.
+- **Acceptance criteria:** every B row has a light and dark screenshot in `screens/`; DESIGN.md
+  names every token 029 uses; the palette table lists hex + OKLCH for all five variants.
+
+## 029-card-look-deck
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 028 · **Estimate:** 5 d
+- **Goal:** Today's cards, groups, handles and connectors take B's look, with no schema change.
+- **In scope:**
+  - **Card frame:** 184 × content, 14px radius, 1.5px border, the solid lip (stroke colour; 5px on
+    hover and the current flow step, 6px and a −2.5° tilt while dragging), header with the type
+    icon in a 24px rounded tile and the type name, title up to 3 lines (14/600), description up
+    to 3 lines, tags as solid-tint pills. `cardSize` / `card-tags.ts` switch to B's metrics, still
+    computed, still the same at every zoom (§g-58, §g-59).
+  - **States:** selected (2px orange outline, offset 2), problem (1.5px dashed Clay outline,
+    offset 4, plus a Clay-soft badge with the count), dimmed 22 %, connection target (orange
+    border, handles shown), has children, hover (lip 5px, lift 2px).
+  - **Handles:** 12px round knobs, 16px orange with a 4px halo when active; never React Flow's
+    grey dots.
+  - **Collapsed group:** a fanned hand (the design's `stack`), name and member count; merged
+    connectors meet it (§g-62).
+  - **Connectors:** 2px, B's edge colour, rounded filled arrow, 3.5px start knob. ⚠ decision: B
+    draws smooth curves; 017 routes orthogonally with a movable segment. Either curves become the
+    default line type here (017's segment handle then only applies to elbow lines), or curves
+    wait for 022's line-type picker. Settle at `/speckit.clarify`.
+  - **Zoom rules:** lip off below 60 %; chips become dots at System; Landscape shows the type
+    icon on the colour fill (B's `land` plate).
+  - **Palette:** the 13 colours get B's `chip` / `ink` / `dot` tokens (light, dark), contrast-tested.
+  - **Export:** PNG / SVG draw B's frame, lip and tags (today's export leaves the tag area empty).
+- **Out of scope:** flow playback styling (035), shapes (031), typed fields (032), deck tag colours
+  (033).
+- **Acceptance criteria (draft):**
+  - Given any existing deck, When opened, Then every card renders in the Deck look and the JSON is
+    unchanged.
+  - Given a card on the bench deck, When zooming from 30 % to 400 %, Then its on-canvas size never
+    changes; the lip disappears below 60 % and chips turn into dots at System.
+  - Given a card selected with a problem, Then the selection and the problem read without colour
+    (outline style and badge icon).
+  - `pnpm bench` before / after: no regression in pan FPS or long frames (200 lips are one extra
+    box-shadow each).
+- **Risks:** noise on dense boards (the design's own warning); cards ~20 % taller, so fewer fit
+  per screen; the tilt while dragging must not affect snapping or hit tests.
+
+## 030-card-types-and-packs
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 5 d
+  · **Supersedes:** 024
+- **Goal:** Card types are data, grouped in packs a deck turns on (§g-61 D1, D10).
+- **In scope:**
+  - **Type registry:** a type is `{ id, family: 'card' | 'shape', shape?, icon, name, category,
+accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, database,
+    gateway, client, queue, external, component), Process (task, decision, document, start/end,
+    actor), Logistics (warehouse, truck route), Data cards (issue), Basic shapes. Today's six kinds
+    map to Architecture types byte for byte.
+  - **Packs per deck:** on / off (`deck.packs`); turning a pack off hides its types from Add, and
+    cards already on the board keep rendering (design copy).
+  - **Add flyout** (B's "Card type palette" row): search with `/`, category tabs (All ·
+    Architecture · Process · Logistics · Data · Shapes), sections of 3-column tiles, "Packs · N on"
+    footer opening the packs panel.
+  - Everything that switches on the kind today (icons, palette order, export icons and palette,
+    views' hidden / dimmed kinds, thumbnails, connection rules) reads the registry.
+- **Schema:** change + ADR (024's options A / B): stable type ids, older decks read as the
+  Architecture pack, Ajv/Zod parity and round-trip cases.
+- **Out of scope:** user-defined types, a pack marketplace, BPMN / C4 / cloud packs (shown "off" in
+  the design as future packs).
+- **Acceptance criteria (draft):** a deck saved before 030 opens unchanged; turning Logistics on
+  lists its types in Add; turning it off hides them while existing warehouse cards still render;
+  renaming a type label never changes the stored type id.
+
+## 031-shapes
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
+- **Goal:** The shape family: real geometry with centred text (§g-61 D2).
+- **In scope:** rectangle, rounded rectangle, ellipse, diamond, pill (start / end), cylinder,
+  document, parallelogram, hexagon, actor, sticky, text, frame, in B's look (1.5px stroke, lip
+  where the outline allows it); text up to 3 lines; connectors meet the outline, not the bounding
+  box; resize keeps the geometry; in-between types (decision, database, document) switch "show as
+  card ↔ show as shape" from the toolbar and drawer, keeping id, fields and connections.
+- **Out of scope:** free drawing, arbitrary SVG shapes, rotation.
+- **Acceptance criteria (draft):** a decision shown as a diamond connects at its points; switching
+  it to a card and back keeps every connection and field; export draws the geometry.
+
+## 032-typed-fields
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
+  (split at `/speckit.specify` if it grows) · **Lifts:** §g-40
+- **Goal:** Users add typed fields to cards and choose which show on the card (§g-61 D3).
+- **In scope:** field definitions per type in the deck (default fields from the type plus user
+  fields); kinds text, number, coloured select, status, person (free text with initials), date,
+  date range, link, progress; "show on card" per field; B's display (status, select, person, date,
+  range as pills in a wrapping row; number, link, progress, text as label–value rows; a dashed
+  "+N fields" pill when more stay in the drawer); the field editor in the drawer (add field, pick
+  its kind, toggle "show on card"); card height follows the fields shown.
+- **Schema:** change + ADR (deck-level `fields` definitions, `node.values`); today's tech, host,
+  owner become built-in fields with unchanged storage, or migrate (decide in the ADR).
+- **Out of scope:** formulas, relations between cards, per-view field visibility.
+- **Acceptance criteria (draft):** a "Status" select added to the Task type shows as a pill on
+  every task with a value; toggling "show on card" off moves it to the drawer and shrinks the
+  card; older decks open unchanged.
+
+## 033-deck-tag-colours
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 3 d
+- **Goal:** Tags are defined once per deck with a colour (§g-61 D7).
+- **In scope:** deck-level tag definitions `{ name, color }` (named colour or deck custom hex);
+  B's tag picker (search, the deck's tags with colour and usage count, "Create tag “…” ⏎",
+  pencil to edit); tag editor (name, 13 swatches plus deck colours, "Delete tag · used on N
+  cards"); drawer tag row (pills with ×, focus ⌫ removes, ⏎ opens the picker); cards show the tag
+  colour as a solid-tint pill; still max 10 per card. Decide whether tag names keep their case
+  (today they are lower-cased).
+- **Schema:** additive (`deck.tags` gains definitions; untyped tag strings stay valid and render
+  slate).
+- **Acceptance criteria (draft):** colouring `pci` violet recolours it on every card in one undo
+  step; deleting a tag removes it from every card after showing the usage count; older decks
+  open unchanged.
+
+## 034-connection-focus-and-drill
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 4 d
+- **Goal:** B's "Connections and focus" row (§g-62, from the founder's reference video).
+- **In scope:** hovering or selecting a card highlights its connections and neighbours and dims
+  the rest (today's focus mode, on hover, without a toggle); parallel connectors between the same
+  cards bundle into one curve with a count; drill-in shows "Inside <card>" with dashed **outside**
+  proxy cards for its external connections (restyle today's port pills); an end moved along a
+  side (needs 022's free anchors).
+- **Out of scope / later:** relationship types with their own colour and dash (calls, reads,
+  writes, depends on) and the header legend with counts: needs `edge.relation` (schema) and
+  belongs with 022.
+- **Acceptance criteria (draft):** hovering a card on the bench deck dims non-neighbours within one
+  frame and restores on leave; three connectors between two cards draw as one bundle "×3".
+
+## 035-flow-playback-deck
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 3 d
+- **Goal:** The signature moment (§g-62): playing a flow deals the deck.
+- **In scope:** played cards get a ✓ sticker (top-left, 22px), the current card lifts 2px on a 5px
+  orange lip with a 26px orange number sticker, upcoming cards show a dashed number; the token
+  is a numbered disc; branch points and error paths in B's style; dimmed rest at 22 %; static
+  under reduced motion (stickers and lip stay, no lift animation); readable without colour.
+- **Acceptance criteria (draft):** stepping through "Checkout" moves the orange lip and sticker to
+  the current card and adds ✓ to played ones; under reduced motion nothing animates; `pnpm bench`
+  "next step → current painted" stays within target.
+
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
 Deck-defined typed fields (text, number, select with coloured options, status, date, date range,
 person) with values per component and a per-deck choice of which fields show as chips on the card
 (like the founder's Miro cards: year, status, date range). Needs its own schema design and ADR.
-Until then cards show the existing fields.
+Until then cards show the existing fields. **Now scheduled as 032-typed-fields (§g-61).**
