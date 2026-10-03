@@ -53,6 +53,10 @@ export function TagPicker({ nodeIds }: { nodeIds: readonly string[] }) {
         onBack={() => {
           setEditing(null);
         }}
+        onRenamed={setEditing}
+        onDeleted={() => {
+          setEditing(null);
+        }}
       />
     );
   }
