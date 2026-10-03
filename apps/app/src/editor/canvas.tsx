@@ -66,6 +66,7 @@ import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { GuidesOverlay } from './editing/guides-overlay';
 import { MarqueeChip } from './editing/marquee-chip';
+import { FrameDrawLayer } from './frame-tool/frame-draw-layer';
 import { useClipboardEvents } from './editing/use-clipboard-events';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
@@ -293,6 +294,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const minimapBottom = zoomIslandBottom(jsonShown, jsonHeight) + ISLAND_HEIGHT + STACK_GAP;
   const hideUi = useUiStore((s) => s.hideUi);
   const hand = useUiStore((s) => s.tool === 'hand');
+  const frameTool = useUiStore((s) => s.tool === 'frame');
   const drawerWidth = useUiStore((s) => (s.drawer.open ? s.drawer.width : null));
   const minimapRight = drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE;
   const playerStyle = {
@@ -819,6 +821,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
       <MarqueeChip />
+      {frameTool && <FrameDrawLayer />}
     </div>
   );
 }
