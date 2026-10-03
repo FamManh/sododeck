@@ -1976,6 +1976,7 @@ then 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
 
 ## 028-design-sync-card-system
 
+- **Status:** implemented (2026-10-03) — see [`spec.md`](../specs/028-design-sync-card-system/spec.md). Design files, screenshots 117–127, design-analysis §a–§c and DESIGN.md "Card system (Deck)" with the extended palette are in the repo. Importing found fifteen mismatches (§g-66–§g-80: palette fill / stroke vs 020, card width, weight 600, problem state, detail per zoom level, tag size and others), each with a default for 029–035 to confirm.
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** — · **Estimate:** 1 d
 - **Goal:** The card system design is in the repo as the reference for 029–035, like 021 did for
   the canvas-first frames.
@@ -1985,7 +1986,7 @@ then 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
   every mismatch with DESIGN.md or founder decisions; a **DESIGN.md "Card system (Deck)"** section
   with B's tokens (radius 14 card / 20 frame / pill chips; 1.5px Border-strong `#cfcfc7` /
   `#45453f` or the colour stroke; lip `0 3px 0` in the stroke colour, 5px hover and current, 6px
-  dragging, no blur; title 14/600 1.28, type name 11.5/500, body 12, chips 11.5/500; 184 wide,
+  dragging, no blur; title 14/600 1.28, type name 11.5/500, body 12, field chips 11.5/500 and tags 10.5/500 (§g-75); 184 wide,
   12 padding, 8 gap; solid-tint chips at L .915 / .39 with same-hue ink L .42 / .90; 12px round
   handles, 16px orange with a 4px halo when active; 2px curved connectors with a rounded filled
   arrow and a 3.5px start knob) and the extended palette (each of the 13 colours gains `chip`,

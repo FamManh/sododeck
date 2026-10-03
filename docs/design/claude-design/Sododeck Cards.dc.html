@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="./sododeck-cards.js"></script>
+<style>html,body{margin:0;background:#dcdcd8;font-family:'Geist',system-ui,sans-serif;color:#1c1c1a}*{box-sizing:border-box}a{color:#d9560f}a:hover{color:#b3480c}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:48px;width:max-content">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1500px">
+    <div style="font-size:34px;font-weight:500;letter-spacing:-.02em">Sododeck · card system, three directions</div>
+    <div style="font-size:16px;color:#55554f;line-height:1.5;text-wrap:pretty">Each board (A Ledger, B Deck, C Spec) shows the same content, light on the left and dark on the right. Rows line up across boards so a topic can be compared horizontally; a board reads top to bottom. Every card, shape, connector and chip is drawn from one data description plus the direction’s tokens, so the same values can drive the Canvas 2D renderer.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <a href="#board-A" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">A · Ledger</a>
+      <a href="#board-B" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">B · Deck</a>
+      <a href="#board-C" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">C · Spec</a>
+      <a href="#compare" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#1c1c1a;text-decoration:none;color:#fff">Comparison ↓</a>
+    </div>
+  </div>
+  <div style="display:flex;gap:80px;align-items:stretch">
+    <sc-for list="{{ notes }}" as="b" hint-placeholder-count="3">
+      <div id="{{ b.anchor }}" style="{{ b.st }}">
+        <div style="display:flex;align-items:baseline;gap:14px"><span style="font:500 15px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:7px;padding:4px 10px">{{ b.id }}</span><span style="font-size:32px;font-weight:500;letter-spacing:-.02em">{{ b.name }}</span><span style="font-size:16px;color:#72726b">{{ b.kind }}</span></div>
+        <div style="font-size:17px;line-height:1.5;max-width:1300px;text-wrap:pretty">{{ b.tagline }}</div>
+        <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr);gap:36px">
+          <div style="display:flex;flex-direction:column;gap:0">
+            <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:6px">TOKENS</div>
+            <sc-for list="{{ b.tokens }}" as="tk"><div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;padding:6px 0;border-top:1px solid #ecece8;font-size:14px;line-height:1.45"><span style="color:#72726b">{{ tk.k }}</span><span style="text-wrap:pretty">{{ tk.v }}</span></div></sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:18px;font-size:14.5px;line-height:1.5">
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:6px">DISTINCT FROM A GENERIC CARD</div><div style="text-wrap:pretty">{{ b.distinct }}</div></div>
+            <div><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:6px">THE DECK</div><div style="text-wrap:pretty">{{ b.deck }}</div></div>
+          </div>
+          <div style="font-size:14.5px;line-height:1.5"><div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:6px">RISKS</div><div style="text-wrap:pretty">{{ b.risks }}</div></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="2">
+    <div id="{{ r.anchor }}" style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:baseline;gap:14px;border-top:1px solid #c9c9c2;padding-top:22px"><span style="font:500 13px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:4px 9px">{{ r.n }}</span><span style="font-size:26px;font-weight:500;letter-spacing:-.02em">{{ r.title }}</span><span style="font-size:15px;color:#72726b">{{ r.sub }}</span></div>
+      <div style="display:flex;gap:80px;align-items:stretch">
+        <sc-for list="{{ r.boards }}" as="b">
+          <div style="display:flex;gap:20px;align-items:stretch">
+            <sc-for list="{{ b.plates }}" as="p">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="font:500 13px 'Geist Mono',monospace;color:#55554f">{{ p.label }}</div>
+                {{ p.el }}
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+  <div id="compare" style="display:flex;flex-direction:column;gap:24px;border-top:1px solid #c9c9c2;padding-top:24px;max-width:3800px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em">Comparison</div>
+    <div style="display:flex;gap:24px">
+      <sc-for list="{{ cmpEls }}" as="c"><div style="display:flex;flex-direction:column;gap:8px">{{ c.el }}</div></sc-for>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:8px 28px;max-width:3588px">
+      <div style="display:grid;grid-template-columns:220px repeat(3,minmax(0,1fr));gap:24px;padding:14px 0;border-bottom:1px solid #deded8;font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500"><span></span><span>A · LEDGER</span><span>B · DECK</span><span>C · SPEC</span></div>
+      <sc-for list="{{ cmp }}" as="c">
+        <div style="display:grid;grid-template-columns:220px repeat(3,minmax(0,1fr));gap:24px;padding:13px 0;border-bottom:1px solid #ecece8;font-size:15px;line-height:1.5"><span style="font-weight:500">{{ c.k }}</span><span style="text-wrap:pretty">{{ c.a }}</span><span style="text-wrap:pretty">{{ c.b }}</span><span style="text-wrap:pretty">{{ c.c }}</span></div>
+      </sc-for>
+    </div>
+    <div style="font-size:16px;line-height:1.55;max-width:1500px;text-wrap:pretty;color:#1c1c1a">Suggested path: start from A for density and calm on large boards, borrow C’s balloons and relationship dashes as an option for architecture views, and use B’s lip only on the current flow step so playback is the one physical moment on the board.</div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;boards&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;A&quot;,&quot;B&quot;,&quot;C&quot;],&quot;default&quot;:&quot;all&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;themes&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { ok: !!(window.SDC && window.lucide) };
+  componentDidMount() { if (!this.state.ok) this.t = setInterval(() => { if (window.SDC && window.lucide) { clearInterval(this.t); this.setState({ ok: true }); } }, 100); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const S = window.SDC;
+    try { const dbg = sessionStorage.getItem('sdcDbg'); if (dbg) { const [b, t] = dbg.split('-'); window.__SDB = b; window.__SDT = t; } } catch (e) {}
+    const bsel = window.__SDB || this.props.boards || 'all';
+    const dirs = bsel === 'all' ? ['A', 'B', 'C'] : [bsel];
+    const th = window.__SDT || this.props.themes || 'both';
+    const themes = th === 'both' ? ['light', 'dark'] : [th];
+    const bw = themes.length * 1180 + (themes.length - 1) * 20;
+    if (!S || !this.state.ok) return { notes: [], rows: [], cmp: [], cmpEls: [] };
+    const notes = dirs.map(d => ({ id: d, anchor: 'board-' + d, ...S.NOTES[d], tokens: S.NOTES[d].tokens.map(([k, v]) => ({ k, v })), st: { width: bw, flex: 'none', display: 'flex', flexDirection: 'column', gap: 18, background: '#fff', borderRadius: 16, padding: '28px 32px' } }));
+    const rows = S.ROWS.map((r, i) => ({ ...r, n: String(i + 1).padStart(2, '0'), anchor: 'row-' + r.id, boards: dirs.map(d => ({ plates: themes.map(t => ({ label: d + ' · ' + S.NOTES[d].name + ' · ' + t, el: S.plate(React, r.id, d, t) })) })) }));
+    const cmp = S.CMP.map(([k, a, b, c]) => ({ k, a, b, c }));
+    const cmpEls = ['A', 'B', 'C'].map(d => ({ el: S.compare(React, d, 'light') }));
+    return { notes, rows, cmp, cmpEls };
+  }
+}
+</script>
+</body>
+</html>
