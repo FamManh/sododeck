@@ -103,19 +103,19 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 2 (write first)
 
-- [ ] T020 [P] [US2] `apps/app/src/editor/card-fields.test.ts`: from a node and its type's fields, the header status (first on-card status with a value), chips (select, status, person, date, dateRange in field order), rows (text, number with unit, link, progress), hidden count (values in fields not on the card), empty values skipped, dangling values skipped; date formatting ("14 Oct", year when not current, "6–17 Oct", one date when equal).
-- [ ] T021 [P] [US2] Extend `apps/app/src/editor/card-layout.test.ts`: the fields block height (chip shelf wrap like tags, 19 px rows, 20 px "+N" pill, 8 px gaps); minimum height includes it; a stored height below the minimum is raised; a card with no fields keeps today's height exactly.
-- [ ] T022 [P] [US2] Extend `apps/app/src/editor/deck-node.test.tsx` and `deck-to-flow.test.ts`: the block renders per the UI contract (names "<field>: <value>", header status icon-only under 150 px, "N more fields" button opens the drawer at Fields); System shows named dots and no rows; Landscape none; toggling "On card" re-renders that type's cards (cache keys include the field list and `values`).
-- [ ] T023 [P] [US2] Extend `apps/app/src/editor/export/scene.test.ts` and `render-svg.test.ts`: the fields block is drawn like the canvas (light theme); a deck without fields exports unchanged (snapshot).
-- [ ] T024 [P] [US2] Extend the chip contrast test (033's `tags/tag-colours.test.ts` or `packages/ui/test/contrast.test.ts`): option chips in the 13 colours, slate and sample deck colours reach ≥ 4.5:1 in both themes.
+- [x] T020 [P] [US2] `apps/app/src/editor/card-fields.test.ts`: from a node and its type's fields, the header status (first on-card status with a value), chips (select, status, person, date, dateRange in field order), rows (text, number with unit, link, progress), hidden count (values in fields not on the card), empty values skipped, dangling values skipped; date formatting ("14 Oct", year when not current, "6–17 Oct", one date when equal).
+- [x] T021 [P] [US2] Extend `apps/app/src/editor/card-layout.test.ts`: the fields block height (chip shelf wrap like tags, 19 px rows, 20 px "+N" pill, 8 px gaps); minimum height includes it; a stored height below the minimum is raised; a card with no fields keeps today's height exactly.
+- [x] T022 [P] [US2] Extend `apps/app/src/editor/deck-node.test.tsx` and `deck-to-flow.test.ts`: the block renders per the UI contract (names "<field>: <value>", header status icon-only under 150 px, "N more fields" button opens the drawer at Fields); System shows named dots and no rows; Landscape none; toggling "On card" re-renders that type's cards (cache keys include the field list and `values`).
+- [x] T023 [P] [US2] Extend `apps/app/src/editor/export/scene.test.ts` and `render-svg.test.ts`: the fields block is drawn like the canvas (light theme); a deck without fields exports unchanged (snapshot).
+- [x] T024 [P] [US2] Extend the chip contrast test (033's `tags/tag-colours.test.ts` or `packages/ui/test/contrast.test.ts`): option chips in the 13 colours, slate and sample deck colours reach ≥ 4.5:1 in both themes.
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Create `apps/app/src/editor/card-fields.ts`. Make T020 pass.
-- [ ] T026 [US2] Add the fields block to `apps/app/src/editor/card-layout.ts` (height and minimum). Make T021 pass.
-- [ ] T027 [US2] Render the block in `apps/app/src/editor/deck-node.tsx` (between description and tags; header status slot; "+N" pill; System dots) and pass the field view from `deck-to-flow.ts`. Wire the "On card" switch in `typed-fields-section.tsx` to `updateField(id, { onCard })` with the "Applies to every <type>" description. Make T022 pass.
-- [ ] T028 [US2] Export the block in `apps/app/src/editor/export/scene.ts` and `render-svg.ts`. Make T023 and T024 pass.
-- [ ] T029 [US2] Screenshot frame-124 / 120 cards (Task, Warehouse, Issue, "+3 fields") light and dark into `specs/032-typed-fields/screens/`; compare and fix spacing.
+- [x] T025 [US2] Create `apps/app/src/editor/card-fields.ts`. Make T020 pass.
+- [x] T026 [US2] Add the fields block to `apps/app/src/editor/card-layout.ts` (height and minimum). Make T021 pass.
+- [x] T027 [US2] Render the block in `apps/app/src/editor/deck-node.tsx` (between description and tags; header status slot; "+N" pill; System dots) and pass the field view from `deck-to-flow.ts`. Wire the "On card" switch in `typed-fields-section.tsx` to `updateField(id, { onCard })` with the "Applies to every <type>" description. Make T022 pass.
+- [x] T028 [US2] Export the block in `apps/app/src/editor/export/scene.ts` and `render-svg.ts`. Make T023 and T024 pass.
+- [x] T029 [US2] Screenshot frame-124 / 120 cards (Task, Warehouse, Issue, "+3 fields") light and dark into `specs/032-typed-fields/screens/`; compare and fix spacing.
 
 **Checkpoint**: US1 + US2 are the P1 scope.
 
@@ -143,8 +143,8 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 **Independent Test**: quickstart step 6.
 
-- [ ] T032 [P] [US4] Extend `typed-fields-section.test.tsx` and `deck-node.test.tsx`: built-in rows offer only reorder and the switch; turning Owner on for services draws person chips on every service and stores only an `owner` entry in `fields` (order / on-card), never in `values`; a deck saved before 032 shows the same values with "On card" off.
-- [ ] T033 [US4] Fix anything T032 exposes in `typed-fields-section.tsx`, `card-fields.ts` or `ops/fields.ts`.
+- [x] T032 [P] [US4] Extend `typed-fields-section.test.tsx` and `deck-node.test.tsx`: built-in rows offer only reorder and the switch; turning Owner on for services draws person chips on every service and stores only an `owner` entry in `fields` (order / on-card), never in `values`; a deck saved before 032 shows the same values with "On card" off.
+- [x] T033 [US4] Fix anything T032 exposes in `typed-fields-section.tsx`, `card-fields.ts` or `ops/fields.ts`.
 
 ---
 
@@ -172,8 +172,8 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 ## Phase 8: Polish and cross-cutting
 
 - [x] T041 [P] Docs: new `docs/decisions/0027-typed-fields.md` (three sources and materialisation R1, format and S12 / S13 R2, layout R3, per-type on-card, conversions R6, dangling values, person spelling); `docs/decisions/0022-schema-roadmap.md` typed-fields rows marked built and refined (`unit`, `icon`, `fieldDefaults`, built-in entries); `DESIGN.md` (fields block details, field editor, Add field); `packages/schema/CLAUDE.md` (S12 / S13), `packages/model/CLAUDE.md` (`fields.ts`, `field-values.ts`, `ops/fields.ts`, storage lines), `apps/app/CLAUDE.md` (`card-fields.ts`, `fields/typed-fields-section.tsx`, value controls); `docs/backlog.md` §032 status. Do not name other diagram or database tools anywhere.
-- [ ] T042 Accessibility pass: keyboard-only quickstart step 9; visible focus on every row, control, switch and menu; names per [contracts/fields-ui.md](contracts/fields-ui.md); announcements; a greyscale screenshot of field chips still readable by text.
-- [ ] T043 Run the quickstart walk 1–9 light and dark; screenshots in `specs/032-typed-fields/screens/`, results in `quickstart-results.md`.
+- [x] T042 Accessibility pass: keyboard-only quickstart step 9; visible focus on every row, control, switch and menu; names per [contracts/fields-ui.md](contracts/fields-ui.md); announcements; a greyscale screenshot of field chips still readable by text.
+- [x] T043 Run the quickstart walk 1–9 light and dark; screenshots in `specs/032-typed-fields/screens/`, results in `quickstart-results.md`.
 - [ ] T044 Performance: add `BENCH_FIELDS=1` to `apps/app/bench/perf.bench.ts` and `apps/app/src/bench/generate-deck.ts` (500 Task / Warehouse / Issue cards with four on-card values); run it, `pnpm bench` and `BENCH_TYPES=1` → `bench-after.md` vs `bench-before.md`; re-run `scene.perf`.
 - [ ] T045 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass, no skipped or `.only` tests, smoke suite green. Final report: what changed, what was skipped, what is uncertain, bench numbers, next step. Stop; do not start the next feature.
 
