@@ -30,7 +30,8 @@ export const CANVAS_ACTIONS: readonly Action[] = [
         where: {},
         run: (ctx) => {
           const point = flowPoint(ctx);
-          if (point !== null) addComponent(ctx.editor, kind, centredOn(point), { edit: true });
+          if (point !== null)
+            addComponent(ctx.editor, kind, centredOn(point, kind), { edit: true });
         },
       })),
   },

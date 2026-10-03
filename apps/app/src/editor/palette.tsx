@@ -161,7 +161,7 @@ export function Palette() {
     });
   };
   const addAtCentre = (type: string) => {
-    addComponent(editor, type, centredOn(centrePoint()), { edit: true });
+    addComponent(editor, type, centredOn(centrePoint(), type), { edit: true });
   };
 
   if (view === 'packs') return <PacksPanel />;
