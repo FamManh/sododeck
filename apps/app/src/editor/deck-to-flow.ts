@@ -15,7 +15,6 @@ import type { Edge, Node } from '@xyflow/react';
 import {
   cardBox,
   cardLayoutOf,
-  cardSize,
   displayPosition,
   groupBounds,
   NODE_SIZE,
@@ -40,7 +39,8 @@ import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems
 import { resolveLook, type CardLook, type StylePreview } from './style/card-style';
 import { cardTagLooks, sameTagLooks, tagColourMap, type TagColourMap } from './tags/card-tag-looks';
 import type { TagLook } from './tags/tag-colours';
-import type { VisibleGraph } from './visible-graph';
+import { PROXY_SIZE, proxyLayout } from './proxy-layout';
+import { scopeBounds, type VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
 
 type DeckNodeObject = SododeckFile['nodes'][number];
@@ -144,6 +144,16 @@ export interface CollapsedGroupData extends Record<string, unknown> {
 export interface PortNodeData extends Record<string, unknown> {
   outsideNodeId: string;
   outsideTitle: string;
+  /** The outside card's kind, for the proxy's icon (034). */
+  kind: string;
+  /** Inputs stand left of the scope, the rest right (034 R7). */
+  side: 'left' | 'right';
+}
+
+export interface ScopeLabelData extends Record<string, unknown> {
+  title: string;
+  /** Cards inside the scope: visible ones plus the members of collapsed cards. */
+  count: number;
 }
 
 export interface MergedEdgeData extends Record<string, unknown> {
@@ -181,8 +191,14 @@ export type GroupFlowNode = Node<GroupBoundaryData, 'group-boundary'>;
 export type CollapsedFlowNode = Node<CollapsedGroupData, 'collapsed-group'>;
 export type PortFlowNode = Node<PortNodeData, 'port'>;
 export type StickyFlowNode = Node<StickyNodeData, 'sticky'>;
+export type ScopeLabelFlowNode = Node<ScopeLabelData, 'scope-label'>;
 export type CanvasFlowNode =
-  DeckFlowNode | GroupFlowNode | CollapsedFlowNode | PortFlowNode | StickyFlowNode;
+  | DeckFlowNode
+  | GroupFlowNode
+  | CollapsedFlowNode
+  | PortFlowNode
+  | ScopeLabelFlowNode
+  | StickyFlowNode;
 export type DeckFlowEdge = Edge<DeckEdgeData, 'deck'>;
 export type MergedFlowEdge = Edge<MergedEdgeData, 'merged'>;
 export type StickyLeaderFlowEdge = Edge<Record<string, never>, 'sticky-leader'>;
@@ -195,6 +211,9 @@ export const GROUP_NODE_PREFIX = 'group:';
 export const GROUP_HANDLE_CLASS = 'sd-group-handle';
 export const COLLAPSED_NODE_PREFIX = 'collapsed:';
 export const PORT_NODE_PREFIX = 'port:';
+export const SCOPE_LABEL_PREFIX = 'scope-label:';
+/** How far the "Inside <name>" label floats above the scope's top edge. */
+const SCOPE_LABEL_LIFT = 44;
 export const MERGED_EDGE_PREFIX = 'merged:';
 export const STICKY_NODE_PREFIX = 'sticky:';
 export const STICKY_LEADER_PREFIX = 'sticky-leader:';
@@ -205,6 +224,7 @@ const nodeCache = new WeakMap<DeckNodeObject, DeckFlowNode>();
 const groupCache = new Map<string, GroupFlowNode>();
 const collapsedCache = new Map<string, CollapsedFlowNode>();
 const portCache = new Map<string, PortFlowNode>();
+const scopeLabelCache = new Map<string, ScopeLabelFlowNode>();
 const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
 const mergedCache = new Map<string, MergedFlowEdge>();
 const bundleCache = new Map<string, MergedFlowEdge>();
@@ -324,6 +344,8 @@ export interface CanvasView {
   problems?: ProblemMarks;
   /** Live, unsaved colour edit (020, R9); applied only to selected nodes/groups. */
   stylePreview?: StylePreview | null;
+  /** The drilled-in group or card's name (034): drives the "Inside <name>" label; none at the top. */
+  scopeTitle?: string | undefined;
 }
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
@@ -628,25 +650,25 @@ function collapsedNodes(
   });
 }
 
-/** Cache-free port geometry for export; React Flow's identity caches stay untouched. */
+/** Cache-free proxy geometry for export; React Flow's identity caches stay untouched. */
 export function exportPortRects(
   deck: SododeckFile,
   graph: VisibleGraph,
   level: Level = 'system',
-): { id: string; rect: { x: number; y: number; width: number; height: number }; label: string }[] {
-  const { nodePositionById: positions, nodesById } = deckLookups(deck);
-  return graph.ports.flatMap((port) => {
-    const anchors = port.insideNodeIds.flatMap((nodeId) => {
-      const point = positions.get(nodeId);
-      const node = nodesById.get(nodeId);
-      if (point === undefined || node === undefined) return [];
-      return [{ point, width: cardSize(node, level).width }];
-    });
-    if (anchors.length === 0) return [];
-    const x = anchors.reduce((sum, a) => sum + a.point.x + a.width, 0) / anchors.length + 32;
-    const y = anchors.reduce((sum, a) => sum + a.point.y, 0) / anchors.length;
-    return [{ id: port.id, rect: { x, y, width: 120, height: 36 }, label: port.outsideTitle }];
-  });
+): {
+  id: string;
+  rect: { x: number; y: number; width: number; height: number };
+  label: string;
+  kind: string;
+  side: 'left' | 'right';
+}[] {
+  return proxyLayout(deck, graph, level).map((proxy) => ({
+    id: proxy.id,
+    rect: proxy.rect,
+    label: proxy.title,
+    kind: proxy.kind,
+    side: proxy.side,
+  }));
 }
 
 function portNodes(
@@ -662,7 +684,9 @@ function portNodes(
       cached?.position.x === x &&
       cached.position.y === y &&
       cached.data.outsideNodeId === outsideNodeId &&
-      cached.data.outsideTitle === port.label
+      cached.data.outsideTitle === port.label &&
+      cached.data.kind === port.kind &&
+      cached.data.side === port.side
     ) {
       return cached;
     }
@@ -670,17 +694,61 @@ function portNodes(
       id: port.id,
       type: 'port',
       position: { x, y },
-      width: 120,
-      height: 36,
+      width: port.rect.width,
+      height: port.rect.height,
+      // A proxy stands for a card outside the scope: it is never moved, picked or connected.
+      draggable: false,
       selectable: false,
+      connectable: false,
       data: {
         outsideNodeId,
         outsideTitle: port.label,
+        kind: port.kind,
+        side: port.side,
       },
     };
     portCache.set(port.id, flowNode);
     return flowNode;
   });
+}
+
+/** "Inside <name> · n", on the drilled scope's top edge (034 R8); none at the top level. */
+function scopeLabelNodes(
+  deck: SododeckFile,
+  graph: VisibleGraph,
+  view: CanvasView,
+): ScopeLabelFlowNode[] {
+  const frame = graph.scope.node ?? graph.scope.group;
+  if (frame === null || view.scopeTitle === undefined) return [];
+  const bounds = scopeBounds(deck, graph, view.level);
+  if (bounds === null) return [];
+  const id = `${SCOPE_LABEL_PREFIX}${frame}`;
+  const count = graph.nodes.length + graph.cards.reduce((sum, card) => sum + card.nodeCount, 0);
+  const x = bounds.x;
+  const y = bounds.y - SCOPE_LABEL_LIFT;
+  const cached = scopeLabelCache.get(id);
+  if (
+    cached?.position.x === x &&
+    cached.position.y === y &&
+    cached.data.title === view.scopeTitle &&
+    cached.data.count === count
+  ) {
+    return [cached];
+  }
+  const node: ScopeLabelFlowNode = {
+    id,
+    type: 'scope-label',
+    position: { x, y },
+    draggable: false,
+    selectable: false,
+    focusable: false,
+    connectable: false,
+    deletable: false,
+    zIndex: 1,
+    data: { title: view.scopeTitle, count },
+  };
+  scopeLabelCache.set(id, node);
+  return [node];
 }
 
 function portNodesWithView(
@@ -692,6 +760,7 @@ function portNodesWithView(
     const inFocus = view.focus?.members.has(port.id) === true;
     const dimmed = view.focus !== null && !inFocus;
     const className = focusClass(view, port.id);
+    if (className === null && !dimmed) return port;
     return {
       ...port,
       ...(className === null ? {} : { className }),
@@ -728,6 +797,7 @@ export function toFlowNodes(
   });
   const next: CanvasFlowNode[] = [
     ...groupNodes(deck, graph, view.level, view),
+    ...scopeLabelNodes(deck, graph, view),
     ...collapsedNodes(deck, view, graph),
     ...ports,
     ...components,
@@ -907,7 +977,12 @@ export function toFlowEdges(
     }
     const port = portsById.get(id);
     if (port !== undefined)
-      return { x: port.position.x, y: port.position.y, width: 120, height: 36 };
+      return {
+        x: port.position.x,
+        y: port.position.y,
+        width: port.width ?? PROXY_SIZE.width,
+        height: port.height ?? PROXY_SIZE.height,
+      };
     const node = lookups.nodesById.get(id);
     const index = lookups.nodeIndexById.get(id);
     if (node === undefined || index === undefined) return undefined;

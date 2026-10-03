@@ -27,6 +27,7 @@ import {
   toolbarShown,
 } from './quick-edit/toolbar-focus';
 import { bundleEdges, BUNDLE_EDGE_PREFIX } from './bundles';
+import { proxyLayout } from './proxy-layout';
 import { canvasElement, nodeElement, selectAllComponents } from './canvas-actions';
 import {
   cardSize,
@@ -40,6 +41,7 @@ import {
   edgeName,
   GROUP_NODE_PREFIX,
   MERGED_EDGE_PREFIX,
+  PORT_NODE_PREFIX,
 } from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
@@ -392,12 +394,22 @@ export function useCanvasKeyDown() {
             const size = cardSize(node, level);
             return [{ id: node.id, x: p.x + size.width / 2, y: p.y + size.height / 2 }];
           }),
+          // Outside proxies (034): reachable by arrow, focus only (never selected or edited).
+          ...proxyLayout(deck, graph, level).map((proxy) => ({
+            id: proxy.id,
+            x: proxy.rect.x + proxy.rect.width / 2,
+            y: proxy.rect.y + proxy.rect.height / 2,
+          })),
         ];
         const next =
           current === null
             ? (points[0]?.id ?? null)
             : nearestInDirection(points, current, direction);
         if (next === null) return;
+        if (next.startsWith(PORT_NODE_PREFIX)) {
+          ui.focus(next);
+          return;
+        }
         const groupId = groupIdOf(next);
         if (event.shiftKey) {
           if (groupId !== null) {
@@ -416,7 +428,13 @@ export function useCanvasKeyDown() {
             });
           } else {
             ui.select({
-              nodes: [...new Set([...ui.selection.nodes, ...(current ? [current] : []), next])],
+              nodes: [
+                ...new Set([
+                  ...ui.selection.nodes,
+                  ...(current && !current.startsWith(PORT_NODE_PREFIX) ? [current] : []),
+                  next,
+                ]),
+              ],
               edges: ui.selection.edges,
               groups: ui.selection.groups,
               stickies: ui.selection.stickies,

@@ -137,6 +137,30 @@ describe('Canvas', () => {
       expect(editor().canUndo()).toBe(false);
     });
 
+    it('treats an outside proxy as a neighbour inside a drill-in (US3.6)', async () => {
+      const drilled = deckOf({
+        nodes: [
+          { id: 'in', type: 'service', title: 'In', group: 'core', position: { x: 0, y: 0 } },
+          { id: 'far', type: 'service', title: 'Far', group: 'core', position: { x: 0, y: 300 } },
+          { id: 'out', type: 'service', title: 'Out', position: { x: 900, y: 0 } },
+        ],
+        groups: [{ id: 'core', title: 'Core' }],
+        edges: [{ id: 'e', from: 'in', to: 'out' }],
+      });
+      const { container } = renderWithEditor(<Canvas />, drilled);
+      act(() => {
+        ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } });
+      });
+      const target = container.querySelector('.react-flow__node[data-id="in"]');
+      if (target === null) throw new Error('no node in');
+      fireEvent.mouseEnter(target);
+      await waitFor(() => {
+        expect(ui().hoverFocus?.id).toBe('in');
+      });
+      const text = lit(container);
+      expect(text).toContain(CSS.escape('port:out'));
+    });
+
     it('lights a keyboard-focused card at once and announces its connections', async () => {
       const user = userEvent.setup();
       const { container } = renderWithEditor(<Canvas />, deck);
@@ -421,9 +445,13 @@ describe('Canvas', () => {
     );
     expect(screen.getAllByTestId('deck-node')).toHaveLength(2);
     expect(screen.queryByRole('group', { name: 'Service: Gateway' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to Gateway' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Gateway, outside/ })).toBeInTheDocument();
+    expect(screen.getByText('Inside Core services')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Go to Gateway' }));
+    // A click only focuses the proxy; double-click leaves the drill-in for the real card.
+    await user.click(screen.getByRole('button', { name: /Gateway, outside/ }));
+    expect(ui().drill).toHaveLength(1);
+    await user.dblClick(screen.getByRole('button', { name: /Gateway, outside/ }));
     expect(ui().drill).toEqual([]);
     expect(ui().selection.nodes).toEqual(['gateway']);
 

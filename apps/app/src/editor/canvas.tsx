@@ -32,6 +32,7 @@ import { DeckNode } from './deck-node';
 import {
   COLLAPSED_NODE_PREFIX,
   GROUP_NODE_PREFIX,
+  PORT_NODE_PREFIX,
   toFlowEdges,
   toFlowNodes,
   toLeaderEdges,
@@ -53,7 +54,9 @@ import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelSelector, type Level } from './levels';
 import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
-import { PortPillNode } from './port-pill-node';
+import { OutsideProxyNode } from './outside-proxy-node';
+import { proxyLayout } from './proxy-layout';
+import { ScopeLabelNode } from './scope-label-node';
 import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import type { CardLook } from './style/card-style';
@@ -81,7 +84,8 @@ const nodeTypes: NodeTypes = {
   'collapsed-group': CollapsedGroupNode,
   deck: DeckNode,
   'group-boundary': GroupBoundaryNode,
-  port: PortPillNode,
+  port: OutsideProxyNode,
+  'scope-label': ScopeLabelNode,
   sticky: StickyNode,
 };
 const edgeTypes: EdgeTypes = {
@@ -229,6 +233,11 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
         const groupId = focusedId.slice(GROUP_NODE_PREFIX.length);
         const rect = groupBounds(deck, level).get(groupId);
         return rect === undefined ? null : { x: rect.x, y: rect.y, width: 1, height: 1 };
+      }
+      if (focusedId.startsWith(PORT_NODE_PREFIX)) {
+        return (
+          proxyLayout(deck, graph, level).find((proxy) => proxy.id === focusedId)?.rect ?? null
+        );
       }
       if (focusedId.startsWith(COLLAPSED_NODE_PREFIX)) {
         const groupId = focusedId.slice(COLLAPSED_NODE_PREFIX.length);
@@ -437,6 +446,15 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       if (!bundles.bundles.some((bundle) => bundle.id === ui.focusedEdgeId)) ui.focusEdge(null);
     }
   }, [bundles]);
+  // A focused proxy (034) is dropped when the drill-in changes and it no longer exists.
+  const proxyIds = useMemo(
+    () => new Set(proxyLayout(deck, graph, level).map((proxy) => proxy.id)),
+    [deck, graph, level],
+  );
+  useEffect(() => {
+    const ui = useUiStore.getState();
+    if (ui.focusedId?.startsWith('port:') === true && !proxyIds.has(ui.focusedId)) ui.focus(null);
+  }, [proxyIds]);
   const focus = useMemo(
     () => (focusId !== null ? focusSet(deck, graph, focusId, bundles) : null),
     [focusId, deck, graph, bundles],
@@ -444,8 +462,13 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const problems = problemMarks(useProblems());
   const stylePreview = useUiStore((s) => s.stylePreview);
+  const scopeTitle = useMemo(
+    () => (drill.length === 0 ? undefined : drillScopeTitle(deck, drill, '')),
+    [deck, drill],
+  );
   const view = useMemo(
     () => ({
+      scopeTitle,
       selection,
       focusedId,
       focusedEdgeId,
@@ -458,6 +481,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       stylePreview,
     }),
     [
+      scopeTitle,
       selection,
       focusedId,
       focusedEdgeId,

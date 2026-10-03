@@ -194,6 +194,26 @@ describe('canvas keyboard', () => {
     });
   });
 
+  describe('outside proxies (034)', () => {
+    it('reaches a proxy with the arrows without selecting it, and Enter goes to the real card', async () => {
+      const { user } = setup(groupedDeck);
+      act(() => {
+        ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } });
+      });
+      focusNode('inside');
+      await user.keyboard('{ArrowRight}');
+      expect(ui().focusedId).toBe('port:outside');
+      expect(ui().selection.nodes).toEqual(['inside']);
+      await waitFor(() => {
+        expect(document.querySelector('[data-node-id="port:outside"]')).toHaveFocus();
+      });
+      await user.keyboard('{Enter}');
+      expect(ui().drill).toEqual([]);
+      expect(ui().selection.nodes).toEqual(['outside']);
+      expect(ui().focusedId).toBe('outside');
+    });
+  });
+
   describe('bundles (034)', () => {
     const bundleDeck = deckOf({
       nodes: [

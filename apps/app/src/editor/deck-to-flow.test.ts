@@ -919,3 +919,99 @@ describe('bundles and fanned connectors (034)', () => {
 });
 
 type DeckFlowEdgeLike = { data?: { fan?: { index: number; count: number }; showLabel?: boolean } };
+
+describe('drill-in proxies and scope label (034 US3)', () => {
+  const drilled = emptySododeckFile();
+  const file: SododeckFile = {
+    ...drilled,
+    nodes: [
+      { id: 'in1', type: 'service', title: 'In 1', group: 'core', position: { x: 0, y: 0 } },
+      { id: 'in2', type: 'service', title: 'In 2', group: 'core', position: { x: 0, y: 200 } },
+      { id: 'src', type: 'client', title: 'Source', position: { x: 900, y: 0 } },
+      { id: 'dst', type: 'database', title: 'Dest', position: { x: 900, y: 200 } },
+    ],
+    groups: [{ id: 'core', title: 'Core' }],
+    edges: [
+      { id: 'a', from: 'src', to: 'in1' },
+      { id: 'b', from: 'in2', to: 'dst' },
+    ],
+  };
+  const scope = { node: null, group: 'core' };
+  const graph = visibleGraph(file, scope, new Set());
+
+  it('places proxies from proxyLayout and keeps them out of drag, selection and connections', () => {
+    const nodes = toFlowNodes(file, graph, view({ scopeTitle: 'Core' }));
+    const proxies = nodes.filter((n) => n.type === 'port');
+    expect(proxies.map((p) => p.id).sort()).toEqual(['port:dst', 'port:src']);
+    for (const proxy of proxies) {
+      expect(proxy).toMatchObject({
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        width: 150,
+        height: 52,
+      });
+    }
+    const src = proxies.find((p) => p.id === 'port:src');
+    const dst = proxies.find((p) => p.id === 'port:dst');
+    expect(src?.data).toMatchObject({
+      outsideNodeId: 'src',
+      outsideTitle: 'Source',
+      kind: 'client',
+      side: 'left',
+    });
+    expect(dst?.data).toMatchObject({ kind: 'database', side: 'right' });
+    expect((src?.position.x ?? 0) < (dst?.position.x ?? 0)).toBe(true);
+  });
+
+  it('adds one scope label per drill-in, counting the cards inside, and none at the top', () => {
+    const labels = toFlowNodes(file, graph, view({ scopeTitle: 'Core' })).filter(
+      (n) => n.type === 'scope-label',
+    );
+    expect(labels).toHaveLength(1);
+    expect(labels[0]).toMatchObject({
+      id: 'scope-label:core',
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      data: { title: 'Core', count: 2 },
+    });
+    const top = visibleGraph(file, { node: null, group: null }, new Set());
+    expect(toFlowNodes(file, top, view()).some((n) => n.type === 'scope-label')).toBe(false);
+  });
+
+  it('counts the members of collapsed cards in scope', () => {
+    const nested: SododeckFile = {
+      ...file,
+      nodes: [...file.nodes.map((n) => (n.id === 'in2' ? { ...n, group: 'sub' } : n))],
+      groups: [...file.groups, { id: 'sub', title: 'Sub', parent: 'core' }],
+    };
+    const g = visibleGraph(nested, scope, new Set(['sub']));
+    const label = toFlowNodes(nested, g, view({ scopeTitle: 'Core' })).find(
+      (n) => n.type === 'scope-label',
+    );
+    expect(label?.data).toMatchObject({ count: 2 });
+  });
+
+  it('keeps cached proxy and label objects while their inputs are equal', () => {
+    const first = toFlowNodes(file, graph, view({ scopeTitle: 'Core' }));
+    const second = toFlowNodes(file, graph, view({ scopeTitle: 'Core' }));
+    expect(second).toBe(first);
+    const renamed = toFlowNodes(file, graph, view({ scopeTitle: 'Core 2' }));
+    expect(renamed.find((n) => n.type === 'scope-label')).not.toBe(
+      first.find((n) => n.type === 'scope-label'),
+    );
+    expect(renamed.find((n) => n.id === 'port:src')).toBe(first.find((n) => n.id === 'port:src'));
+  });
+
+  it('draws connectors to a proxy with a handle on the facing side', () => {
+    const edges = toFlowEdges(file, graph, view());
+    const toProxy = edges.find((e) => e.id === 'a');
+    expect(toProxy).toMatchObject({
+      source: 'port:src',
+      target: 'in1',
+      sourceHandle: 'right',
+      targetHandle: 'left',
+    });
+  });
+});
