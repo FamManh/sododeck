@@ -154,6 +154,26 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
     expect(ctx.select).toHaveBeenCalledWith({ stickies: ['n1'] });
   });
 
+  it('selects every card of an unknown type (030)', () => {
+    const base = deck();
+    const { ctx, problem } = setup({
+      ...base,
+      nodes: [
+        ...base.nodes,
+        { id: 'r1', type: 'robot', title: 'R1', position: { x: 400, y: 0 } },
+        { id: 'r2', type: 'robot', title: 'R2', position: { x: 600, y: 0 } },
+      ],
+    });
+    goToProblem(problem('unknown-card-type'), ctx);
+    expect(ctx.select).toHaveBeenLastCalledWith({ nodes: ['r1', 'r2'] });
+  });
+
+  it('goes to the deck level for an unknown pack without selecting anything (030)', () => {
+    const { ctx, problem } = setup({ ...deck(), packs: ['architecture', 'future-pack'] });
+    expect(goToProblem(problem('unknown-pack'), ctx)).toBe(true);
+    expect(ctx.select).toHaveBeenCalledWith({});
+  });
+
   it('offers another view when the current one hides the component', () => {
     const { ctx, onLonely } = setup({
       ...deck(),

@@ -1,5 +1,5 @@
 import { tagKey, type ViewSettingsPatch } from '@sododeck/model';
-import type { NodeKind, SododeckFile, SubtitleField, View } from '@sododeck/schema';
+import type { SododeckFile, SubtitleField, View } from '@sododeck/schema';
 import { Checkbox } from '@sododeck/ui/components/checkbox';
 import { PopoverContent } from '@sododeck/ui/components/popover';
 import { RadioGroup, RadioGroupItem } from '@sododeck/ui/components/radio-group';
@@ -14,7 +14,7 @@ import { useId, type ReactNode } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { oneStep } from '../fields/one-step';
-import { kindLabel } from '../kind-label';
+import { typeGroups, type TypeGroup } from '../type-groups';
 
 const SUBTITLES: { value: SubtitleField; label: string }[] = [
   { value: 'tech', label: 'Technology' },
@@ -27,11 +27,6 @@ const SUBTITLES: { value: SubtitleField; label: string }[] = [
 const ALL_FEATURES = '__all__';
 /** Nesting of "Hide groups" rows, by depth. */
 const INDENT = ['', 'ps-4', 'ps-8', 'ps-12'] as const;
-
-/** Kinds used by the deck's components, plus any already chosen (FR-043: domain-neutral). */
-function kindsOf(deck: SododeckFile, chosen: readonly NodeKind[]): NodeKind[] {
-  return [...new Set([...deck.nodes.map((n) => n.type), ...chosen])];
-}
 
 /** One entry per tag key, in the spelling the cards use (a chosen tag no card has keeps its own). */
 function tagsOf(deck: SododeckFile, chosen: readonly string[]): string[] {
@@ -70,6 +65,25 @@ function toggled<T>(list: readonly T[] | undefined, value: T, on: boolean): T[] 
   return on ? [...current.filter((v) => v !== value), value] : current.filter((v) => v !== value);
 }
 
+/** A category heading over its type rows (the pack of a type is not shown: the category is). */
+function TypeGroupRows({
+  group,
+  children,
+}: {
+  group: TypeGroup;
+  children: (type: TypeGroup['types'][number]) => ReactNode;
+}) {
+  const id = useId();
+  return (
+    <div role="group" aria-labelledby={id} className="flex flex-col gap-1.5">
+      <span id={id} className="text-caption text-ink-muted">
+        {group.name}
+      </span>
+      {group.types.map((type) => children(type))}
+    </div>
+  );
+}
+
 function Fieldset({ label, children }: { label: string; children: ReactNode }) {
   const id = useId();
   return (
@@ -84,8 +98,8 @@ function Fieldset({ label, children }: { label: string; children: ReactNode }) {
 
 /**
  * "View settings…" (011 FR-043, clarification Q3, undesigned: DESIGN.md defaults): subtitle,
- * groups / kinds / tags to hide, kinds to dim and the feature to limit to. Kinds and tags come
- * from the deck itself. Every change applies at once as one undo step. Render inside a `Popover`
+ * groups / types / tags to hide, types to dim and the feature to limit to. Types and tags come
+ * from the deck itself (types: packs on, in use or chosen). Every change applies at once as one undo step. Render inside a `Popover`
  * anchored to the view's tab; Esc or an outside click closes it and focus returns to the tab.
  */
 export function ViewSettingsPopover({
@@ -106,7 +120,7 @@ export function ViewSettingsPopover({
   const subtitleId = useId();
   const featureId = useId();
   const groups = groupRows(deck);
-  const kinds = kindsOf(deck, [...(view.excludeKinds ?? []), ...(view.dimKinds ?? [])]);
+  const typeGroupList = typeGroups(deck, [...(view.excludeKinds ?? []), ...(view.dimKinds ?? [])]);
   const tags = tagsOf(deck, view.excludeTags ?? []);
   const featureGone =
     view.feature !== undefined && !deck.features.some((f) => f.id === view.feature);
@@ -187,16 +201,20 @@ export function ViewSettingsPopover({
           ))}
         </Fieldset>
       )}
-      <Fieldset label="Hide kinds">
-        {kinds.map((kind) => (
-          <Checkbox
-            key={kind}
-            label={kindLabel(kind)}
-            checked={view.excludeKinds?.includes(kind) === true}
-            onCheckedChange={(on) => {
-              update({ excludeKinds: toggled(view.excludeKinds, kind, on === true) });
-            }}
-          />
+      <Fieldset label="Hide types">
+        {typeGroupList.map((group) => (
+          <TypeGroupRows key={group.name} group={group}>
+            {(type) => (
+              <Checkbox
+                key={type.id}
+                label={type.name}
+                checked={view.excludeKinds?.includes(type.id) === true}
+                onCheckedChange={(on) => {
+                  update({ excludeKinds: toggled(view.excludeKinds, type.id, on === true) });
+                }}
+              />
+            )}
+          </TypeGroupRows>
         ))}
       </Fieldset>
       {tags.length > 0 && (
@@ -214,16 +232,20 @@ export function ViewSettingsPopover({
           ))}
         </Fieldset>
       )}
-      <Fieldset label="Dim kinds">
-        {kinds.map((kind) => (
-          <Checkbox
-            key={kind}
-            label={kindLabel(kind)}
-            checked={view.dimKinds?.includes(kind) === true}
-            onCheckedChange={(on) => {
-              update({ dimKinds: toggled(view.dimKinds, kind, on === true) });
-            }}
-          />
+      <Fieldset label="Dim types">
+        {typeGroupList.map((group) => (
+          <TypeGroupRows key={group.name} group={group}>
+            {(type) => (
+              <Checkbox
+                key={type.id}
+                label={type.name}
+                checked={view.dimKinds?.includes(type.id) === true}
+                onCheckedChange={(on) => {
+                  update({ dimKinds: toggled(view.dimKinds, type.id, on === true) });
+                }}
+              />
+            )}
+          </TypeGroupRows>
         ))}
       </Fieldset>
     </PopoverContent>

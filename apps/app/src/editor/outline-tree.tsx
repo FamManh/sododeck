@@ -1,5 +1,5 @@
 import type { SododeckFile } from '@sododeck/schema';
-import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { TypeTile } from '@sododeck/ui/components/type-tile';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -172,7 +172,7 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
               </>
             ) : (
               <>
-                <KindTile kind={item.kind} size={22} decorative />
+                <TypeTile type={item.kind} size={22} decorative />
                 {look !== undefined && <ColourMark look={look} />}
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
               </>

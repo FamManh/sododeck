@@ -10,7 +10,7 @@ import type { CommandDialogItem } from '@sododeck/ui/components/command-dialog';
 
 import { normalizeText } from '@sododeck/model';
 
-import { kindLabel } from '../kind-label';
+import { typeName } from '../type-label';
 import { HIT_POLICIES } from '../rules/rule-text';
 
 export interface PaletteCommand {
@@ -64,8 +64,8 @@ function metaFor(deck: SododeckFile, kind: SearchKind, id: string, flowId?: stri
       const node = deck.nodes.find((entry) => entry.id === id);
       const group = deck.groups.find((entry) => entry.id === node?.group)?.title;
       return group === undefined
-        ? kindLabel(node?.type ?? '')
-        : `${kindLabel(node?.type ?? '')} · ${group}`;
+        ? typeName(node?.type ?? '')
+        : `${typeName(node?.type ?? '')} · ${group}`;
     }
     case 'edge': {
       const edge = deck.edges.find((entry) => entry.id === id);

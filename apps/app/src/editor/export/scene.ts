@@ -1,6 +1,5 @@
 import { analyzeFlow, edgeShape, stickyCanvasPosition, stickyLabel, tagKey } from '@sododeck/model';
 import type { Direction, SododeckFile } from '@sododeck/schema';
-import { toComponentKind, type ComponentKind } from '@sododeck/ui/lib/icons';
 
 import type { DrillFrame } from '../../state/ui-store';
 import { bundleEdges, type BundleResult } from '../bundles';
@@ -11,7 +10,8 @@ import { tagColourMap } from '../tags/card-tag-looks';
 import { collapseFlowMarks } from '../collapse-flow-marks';
 import { COLLAPSED_NODE_PREFIX, exportPortRects, groupCounts } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
-import { kindLabel } from '../kind-label';
+import { typeName } from '../type-label';
+import { typeIconKey, type IconKey } from './icon-paths';
 import { effectiveLevel, type Level } from '../levels';
 import type { PathEnds, PathShape } from '../routing/route-path';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
@@ -29,7 +29,7 @@ export const STICKY_SIZE = { width: 180, height: 40 } as const;
 export interface SceneCard {
   id: string;
   rect: Rect;
-  kind: ComponentKind | 'fallback';
+  kind: IconKey;
   /** The type name next to the header tile ("Service"). */
   typeName: string;
   title: string;
@@ -73,7 +73,7 @@ export interface SceneCollapsed {
   nodeCount: number;
   edgeCount: number;
   /** One tile per member on the fanned hand, in deck order. */
-  memberKinds: readonly (ComponentKind | 'fallback')[];
+  memberKinds: readonly IconKey[];
   fill?: string;
   stroke?: string;
   chip?: string;
@@ -86,7 +86,7 @@ export interface ScenePort {
   rect: Rect;
   label: string;
   /** The outside card's kind, for the proxy's icon. */
-  kind: ComponentKind | 'fallback';
+  kind: IconKey;
 }
 export interface SceneBadge {
   label: string;
@@ -245,8 +245,8 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       {
         id,
         rect: { ...displayPosition(node, index), width: layout.width, height: layout.height },
-        kind: toComponentKind(node.type) ?? 'fallback',
-        typeName: kindLabel(node.type),
+        kind: typeIconKey(node.type),
+        typeName: typeName(node.type),
         title: node.title,
         titleLines: clampLines(
           wrapText(node.title, inner, DECK_CARD.titleFont, measure),
@@ -291,7 +291,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       title: card.title,
       nodeCount: card.nodeCount,
       edgeCount: card.edgeCount,
-      memberKinds: card.memberKinds.map((kind) => toComponentKind(kind) ?? 'fallback'),
+      memberKinds: card.memberKinds.map((kind) => typeIconKey(kind)),
       ...(exportLook(groupsById.get(card.groupId)?.style) ?? EMPTY_LOOK),
     }));
   const ports: ScenePort[] = exportPortRects(source, graph)
@@ -300,7 +300,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       id,
       rect,
       label,
-      kind: toComponentKind(kind) ?? 'fallback',
+      kind: typeIconKey(kind),
     }));
   // Parallel connectors export folded, as on the canvas; hover and focus are UI state and never
   // reach a file. A flow's own connectors stay out of the bundles (034 R9).

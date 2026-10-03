@@ -129,7 +129,7 @@ function shared<T>(values: readonly T[]): Shared<T> {
 }
 
 export interface BulkView {
-  kind: Shared<Node['type']>;
+  type: Shared<Node['type']>;
   owner: Shared<string>;
   tech: Shared<string>;
   group: Shared<Id | null>;
@@ -153,7 +153,7 @@ export function bulkView(nodes: readonly Node[]): BulkView {
     }
   }
   return {
-    kind: shared(nodes.map((n) => n.type)),
+    type: shared(nodes.map((n) => n.type)),
     owner: shared(nodes.map((n) => n.owner ?? '')),
     tech: shared(nodes.map((n) => n.tech ?? '')),
     group: shared(nodes.map((n) => n.group ?? null)),

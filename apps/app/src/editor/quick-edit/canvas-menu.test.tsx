@@ -124,7 +124,15 @@ describe('CanvasMenu (019 US5)', () => {
       within(sub)
         .getAllByRole('menuitem')
         .map((i) => i.textContent),
-    ).toEqual(['Service1', 'Database2', 'Queue3', 'Gateway4', 'Client5', 'External6']);
+    ).toEqual([
+      'Service1',
+      'Database2',
+      'Gateway3',
+      'Client4',
+      'Queue5',
+      'External6',
+      'Component7',
+    ]);
     act(() => {
       within(sub)
         .getByRole('menuitem', { name: /Database/ })

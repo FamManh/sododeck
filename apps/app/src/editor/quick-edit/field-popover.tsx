@@ -12,7 +12,7 @@ import { AttachedRules } from '../fields/attached-rules';
 import { LinksField } from '../fields/links-field';
 import { oneStep } from '../fields/one-step';
 import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
-import { KIND_OPTIONS } from '../inspector/choices';
+import { typeOptions } from '../inspector/choices';
 import { bulkView, styleView } from '../inspector/derive';
 import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
@@ -22,7 +22,7 @@ import { tagPickerEscape } from '../tags/tag-picker-escape';
 
 /** The popover's accessible name per field (contract "Field popover"). */
 const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
-  kind: 'Kind',
+  type: 'Type',
   owner: 'Owner',
   tags: 'Tags',
   tech: 'Technology',
@@ -57,22 +57,27 @@ function NodeFieldContent({ field, nodes }: { field: ToolbarFieldId; nodes: read
   };
 
   switch (field) {
-    case 'kind':
+    case 'type': {
+      const options = typeOptions(
+        deck,
+        nodes.map((node) => node.type),
+      );
       return (
         <ChoiceList
-          label="Kind options"
-          filterLabel="Filter kind"
-          options={choiceState(view.kind, KIND_OPTIONS)}
-          mixed={view.kind.mixed}
+          label="Type options"
+          filterLabel="Filter types"
+          options={choiceState(view.type, options)}
+          mixed={view.type.mixed}
           onPick={(value) => {
-            const option = KIND_OPTIONS.find((o) => o.value === value);
+            const option = options.find((o) => o.value === value);
             if (option === undefined) return;
-            write(() => ({ type: option.value as Node['type'] }));
-            announce(`Kind set to ${option.label} on ${count(n)}`);
+            write(() => ({ type: option.value }));
+            announce(`Type set to ${option.label} on ${count(n)}`);
             close();
           }}
         />
       );
+    }
     case 'owner':
     case 'tech': {
       const values = deckValues(deck, field);

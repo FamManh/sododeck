@@ -146,10 +146,10 @@ describe('EditorPage', () => {
         name: 'Add component',
       }),
     );
-    await user.click(screen.getByRole('button', { name: 'Add Service' }));
+    await user.click(screen.getByRole('button', { name: 'Service' }));
     expect(announced()).toBe('Added Untitled service');
     record();
-    await user.click(screen.getByRole('button', { name: 'Add Database' }));
+    await user.click(screen.getByRole('button', { name: 'Database' }));
     record();
 
     // connect with the keyboard, then label it in the popover
@@ -227,8 +227,10 @@ describe('EditorPage', () => {
     });
     await user.keyboard('{Enter}');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Add Service' })).toHaveFocus();
+      expect(screen.getByRole('searchbox', { name: 'Search types' })).toHaveFocus();
     });
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('button', { name: 'Service' })).toHaveFocus();
     await user.keyboard('{Enter}');
     // The new card starts in title edit (019 US2); Esc keeps "Untitled service".
     const name = screen.getByRole('textbox', { name: 'Component title' });
@@ -237,7 +239,7 @@ describe('EditorPage', () => {
     await user.keyboard('{Escape}');
     // The palette flyout is still open (018 rules).
     act(() => {
-      screen.getByRole('button', { name: 'Add Database' }).focus();
+      screen.getByRole('button', { name: 'Database' }).focus();
     });
     await user.keyboard('{Enter}');
     await user.keyboard('{Escape}');

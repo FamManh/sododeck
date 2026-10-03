@@ -18,7 +18,7 @@ import { PickField } from '../fields/pick-field';
 import { writeNodes, writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { addDeckColour, applyStyle, removeDeckColour, skippedCount } from '../style/apply-style';
 import { AppearanceSection } from './appearance-section';
-import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
+import { groupOptions, NO_GROUP, typeOptions } from './choices';
 import { bulkView, styleView, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
@@ -31,7 +31,7 @@ import { tagPickerEscape } from '../tags/tag-picker-escape';
 const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 's'}`;
 
 /**
- * Bulk edit of several components (FR-013–FR-017, design 58): kind, owner, tech, group and tags.
+ * Bulk edit of several components (FR-013–FR-017, design 58): type, owner, tech, group and tags.
  * A field whose values differ shows "Mixed" and changes nothing until the user types or picks;
  * each change applies to every selected component as one undo step. Connections in the
  * selection are counted but never changed.
@@ -116,14 +116,17 @@ export function BulkInspector({
         />
         <PanelSection className="grid grid-cols-2 gap-3">
           <PickField
-            label="Kind"
-            listLabel="Kinds"
-            value={view.kind.mixed ? '' : view.kind.value}
-            mixed={view.kind.mixed}
-            hint={same(view.kind)}
-            options={KIND_OPTIONS}
+            label="Type"
+            listLabel="Types"
+            value={view.type.mixed ? '' : view.type.value}
+            mixed={view.type.mixed}
+            hint={same(view.type)}
+            options={typeOptions(
+              deck,
+              nodes.map((node) => node.type),
+            )}
             onPick={(type) => {
-              writeAllOnce(() => ({ type: type as Node['type'] }));
+              writeAllOnce(() => ({ type }));
             }}
           />
           <PickField

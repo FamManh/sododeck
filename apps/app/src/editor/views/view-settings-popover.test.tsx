@@ -47,7 +47,7 @@ async function openSettings(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('view settings popover (FR-043)', () => {
-  it('lists subtitle choices and only the kinds and tags the deck uses', async () => {
+  it('lists subtitle choices and the types of packs that are on and the tags the deck uses', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Harness />, deck);
     const dialog = await openSettings(user);
@@ -60,9 +60,18 @@ describe('view settings popover (FR-043)', () => {
         .map((box) => box.id)
         .map((id) => document.querySelector(`label[for="${id}"]`)?.textContent);
     expect(names('Hide groups')).toEqual(['Clients', 'Core', 'Data']);
-    expect(names('Hide kinds')).toEqual(['Client', 'Service', 'Database']);
+    const architecture = [
+      'Service',
+      'Database',
+      'Gateway',
+      'Client',
+      'Queue',
+      'External',
+      'Component',
+    ];
+    expect(names('Hide types')).toEqual(architecture);
     expect(names('Hide tags')).toEqual(['legacy', 'mobile']);
-    expect(names('Dim kinds')).toEqual(['Client', 'Service', 'Database']);
+    expect(names('Dim types')).toEqual(architecture);
   });
 
   it('shows a deleted feature, and offers All features or a feature', async () => {
@@ -147,5 +156,30 @@ describe('view settings: tags by key (033)', () => {
     renderWithEditor(<Harness />, stored);
     const dialog = await openSettings(user);
     expect(within(dialog).getByRole('checkbox', { name: 'PCI' })).toBeChecked();
+  });
+
+  it('groups types by category and keeps a hidden type whose pack is off (030)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(
+      <Harness />,
+      deckOf({
+        ...deck,
+        packs: ['architecture', 'process'],
+        views: [
+          { id: 'sys', type: 'system', title: 'System' },
+          { id: 'mine', type: 'custom', title: 'Mine', excludeKinds: ['warehouse'] },
+        ],
+      }),
+    );
+    const dialog = await openSettings(user);
+    const hide = within(dialog).getByRole('group', { name: 'Hide types' });
+    expect(
+      within(hide)
+        .getAllByRole('group')
+        .map((g) => g.getAttribute('aria-labelledby'))
+        .map((id) => document.getElementById(id ?? '')?.textContent),
+    ).toEqual(['Architecture', 'Process', 'Logistics']);
+    expect(within(hide).getByRole('checkbox', { name: 'Warehouse' })).toBeChecked();
+    expect(within(hide).queryByRole('checkbox', { name: 'Truck route' })).toBeNull();
   });
 });

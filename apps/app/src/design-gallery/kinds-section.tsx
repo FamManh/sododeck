@@ -1,10 +1,6 @@
-import { KindTile } from '@sododeck/ui/components/kind-tile';
-import {
-  COMPONENT_KINDS,
-  ICON_STROKE_WIDTH,
-  KIND_STYLE,
-  MATERIAL_TO_LUCIDE,
-} from '@sododeck/ui/lib/icons';
+import { CARD_TYPES } from '@sododeck/model';
+import { TypeTile } from '@sododeck/ui/components/type-tile';
+import { ICON_STROKE_WIDTH, MATERIAL_TO_LUCIDE } from '@sododeck/ui/lib/icons';
 
 import { GallerySection } from './gallery-section';
 import { SampleRow } from './sample-row';
@@ -15,30 +11,30 @@ export function KindsSection() {
   return (
     <GallerySection
       id="kinds"
-      title="Kind tiles and icons"
-      description="Six component kinds at 22 / 28 / 30 / 40 px, plus the Material → lucide mapping (docs/design/icon-mapping.md). Reference: 14-editor-palette-tab."
+      title="Type tiles and icons"
+      description="Thirteen card types at 22 / 28 / 30 / 40 px, plus the Material → lucide mapping (docs/design/icon-mapping.md). Reference: 14-editor-palette-tab."
     >
-      {COMPONENT_KINDS.map((kind) => (
-        <SampleRow key={kind} label={KIND_STYLE[kind].label}>
+      {CARD_TYPES.map((type) => (
+        <SampleRow key={type.id} label={type.name}>
           {SIZES.map((size) => (
-            <KindTile key={size} kind={kind} size={size} />
+            <TypeTile key={size} type={type.id} label={type.name} size={size} />
           ))}
         </SampleRow>
       ))}
       <SampleRow label="Unknown">
         {SIZES.map((size) => (
-          <KindTile key={size} kind="mainframe" size={size} />
+          <TypeTile key={size} type="mainframe" label="mainframe" size={size} />
         ))}
       </SampleRow>
       <SampleRow label="Palette tiles">
         <div className="grid w-full max-w-md grid-cols-2 gap-2">
-          {COMPONENT_KINDS.map((kind) => (
+          {CARD_TYPES.map((type) => (
             <div
-              key={kind}
+              key={type.id}
               className="flex items-center gap-2.5 rounded-card border border-border bg-surface p-2.5"
             >
-              <KindTile kind={kind} size={28} decorative />
-              <span className="text-body font-medium">{KIND_STYLE[kind].label}</span>
+              <TypeTile type={type.id} size={28} decorative />
+              <span className="text-body font-medium">{type.name}</span>
             </div>
           ))}
         </div>

@@ -138,12 +138,17 @@ export const TYPE_FALLBACK: TypeStyle = {
 /** Prototype type names that differ from ours (design-analysis §g-4). */
 const TYPE_ALIASES: Readonly<Record<string, string>> = { edge: 'gateway', data: 'database' };
 
-/** Case-insensitive lookup that also accepts the prototype's `edge` and `data`; unknown → fallback. */
-export function typeStyle(id: string): TypeStyle {
+/** The built-in type id a value names (any case; `edge` and `data` accepted), or null. */
+export function resolveTypeId(id: string): string | null {
   const key = id.trim().toLowerCase();
-  return Object.hasOwn(TYPE_STYLE, key)
-    ? (TYPE_STYLE[key] ?? TYPE_FALLBACK)
-    : (TYPE_STYLE[TYPE_ALIASES[key] ?? ''] ?? TYPE_FALLBACK);
+  if (Object.hasOwn(TYPE_STYLE, key)) return key;
+  return TYPE_ALIASES[key] ?? null;
+}
+
+/** Style of a type id (see {@link resolveTypeId}); unknown → fallback. */
+export function typeStyle(id: string): TypeStyle {
+  const resolved = resolveTypeId(id);
+  return (resolved === null ? undefined : TYPE_STYLE[resolved]) ?? TYPE_FALLBACK;
 }
 
 // ── Material Symbols → lucide ──

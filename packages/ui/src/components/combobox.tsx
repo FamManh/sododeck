@@ -10,6 +10,8 @@ import { cn } from '@sododeck/ui/lib/utils';
 export interface ComboboxOption {
   value: string;
   label: string;
+  /** Heading the option is listed under (030: card types by category). Optional. */
+  group?: string;
 }
 
 type ComboboxProps = Omit<

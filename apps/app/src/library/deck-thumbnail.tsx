@@ -1,16 +1,24 @@
-import type { NodeKind } from '@sododeck/schema';
-
 import type { DeckThumb } from '../storage/library-db';
 
-/** Soft kind tints (DESIGN.md "Kind & Semantic Tints"), lighter than on the canvas. */
-const KIND_FILL: Record<NodeKind, string> = {
+/** Soft type tints (DESIGN.md "Type & Semantic Tints"), lighter than on the canvas. */
+const TYPE_FILL: Readonly<Record<string, string>> = {
   client: 'fill-surface-2',
   gateway: 'fill-surface-3',
   service: 'fill-primary-soft',
   queue: 'fill-amber-soft',
   database: 'fill-blue-soft',
   external: 'fill-clay-soft',
+  component: 'fill-surface-2',
+  task: 'fill-success-soft',
+  decision: 'fill-amber-soft',
+  document: 'fill-blue-soft',
+  warehouse: 'fill-success-soft',
+  'truck-route': 'fill-amber-soft',
+  issue: 'fill-clay-soft',
 };
+
+/** A type this version has no tint for (an unknown id) draws neutral. */
+const FALLBACK_FILL = 'fill-surface-2';
 
 const PAD = 60;
 
@@ -42,7 +50,7 @@ export function DeckThumbnail({ name, thumb }: { name: string; thumb: DeckThumb 
               vectorEffect="non-scaling-stroke"
             />
           ))}
-          {thumb.nodes.map(([x, y, kind, w, h], i) => {
+          {thumb.nodes.map(([x, y, type, w, h], i) => {
             const width = w ?? thumb.node[0];
             const height = h ?? thumb.node[1];
             return (
@@ -53,7 +61,7 @@ export function DeckThumbnail({ name, thumb }: { name: string; thumb: DeckThumb 
                 width={width}
                 height={height}
                 rx={Math.min(height / 4, 16)}
-                className={`${KIND_FILL[kind]} stroke-border`}
+                className={`${(Object.hasOwn(TYPE_FILL, type) ? TYPE_FILL[type] : undefined) ?? FALLBACK_FILL} stroke-border`}
                 vectorEffect="non-scaling-stroke"
               />
             );

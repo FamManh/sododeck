@@ -81,7 +81,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
   it('lists each toolbar variant’s buttons', () => {
     expect(labels(TARGETS.component, 'toolbar').flat()).toEqual([
       'Open details',
-      'Kind: Service',
+      'Type: Service',
       'Owner: none',
       'Tags',
       'Technology: none',
@@ -91,7 +91,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'More actions',
     ]);
     expect(labels(TARGETS.components, 'toolbar').flat()).toEqual([
-      'Kind: Mixed',
+      'Type: Mixed',
       'Owner: none',
       'Tags',
       'Technology: none',

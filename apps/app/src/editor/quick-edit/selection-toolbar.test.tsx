@@ -83,7 +83,7 @@ describe('SelectionToolbar (019 US3)', () => {
     );
     expect(names()).toEqual([
       'Open details',
-      'Kind: Service',
+      'Type: Service',
       'Owner: Checkout',
       'Tags',
       'Technology: none',
@@ -146,7 +146,7 @@ describe('SelectionToolbar (019 US3)', () => {
     const bar = screen.getByRole('toolbar', { name: 'Selection: 3 components' });
     expect(within(bar).getByText('3 selected')).toBeInTheDocument();
     expect(names()).toEqual([
-      'Kind: Mixed',
+      'Type: Mixed',
       'Owner: Mixed',
       'Tags',
       'Technology: none',
@@ -315,12 +315,12 @@ describe('SelectionToolbar (019 US3)', () => {
   it('closes a popover with Esc and gives focus back to its button', async () => {
     const { user } = setup();
     select(['a']);
-    await user.click(screen.getByRole('button', { name: 'Kind: Service' }));
-    expect(screen.getByRole('dialog', { name: 'Kind' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Type: Service' }));
+    expect(screen.getByRole('dialog', { name: 'Type' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Kind' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Type' })).toBeNull();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Kind: Service' })).toHaveFocus();
+      expect(screen.getByRole('button', { name: 'Type: Service' })).toHaveFocus();
     });
     expect(ui().selection.nodes).toEqual(['a']);
   });
@@ -334,10 +334,10 @@ describe('SelectionToolbar (019 US3)', () => {
     await waitFor(() => {
       expect(within(drawer).getByRole('textbox', { name: 'Title' })).toHaveFocus();
     });
-    await user.click(screen.getByRole('button', { name: 'Kind: Service' }));
+    await user.click(screen.getByRole('button', { name: 'Type: Service' }));
     await user.keyboard('data{Enter}');
-    expect(screen.getByRole('button', { name: 'Kind: Database' })).toBeInTheDocument();
-    expect(within(drawer).getByRole('combobox', { name: 'Kind' })).toHaveValue('Database');
+    expect(screen.getByRole('button', { name: 'Type: Database' })).toBeInTheDocument();
+    expect(within(drawer).getByRole('combobox', { name: 'Type' })).toHaveValue('Database');
   });
 
   it('previews a new deck colour on the card, and Cancel clears it without an undo step (020 T048)', async () => {

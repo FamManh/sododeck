@@ -1,5 +1,5 @@
 import { Button } from '@sododeck/ui/components/button';
-import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { TypeTile } from '@sododeck/ui/components/type-tile';
 import {
   Panel,
   PanelContent,
@@ -26,7 +26,7 @@ export function PanelGallerySection() {
           className="h-64 w-84 rounded-card border border-hairline"
         >
           <PanelHeader>
-            <KindTile kind="service" size={28} decorative />
+            <TypeTile type="service" size={28} decorative />
             <PanelTitle>Order Service</PanelTitle>
           </PanelHeader>
           <PanelContent>

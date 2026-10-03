@@ -24,7 +24,7 @@ import { Canvas, liplessSelector } from './canvas';
 import { demoDeck } from './demo-deck';
 import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
-import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
+import { TYPE_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
 import { addComponent } from './canvas-actions';
 import { GROUP_PADDING } from './canvas-geometry';
 import { frameContent } from './editing/frame-resize';
@@ -249,8 +249,8 @@ describe('Canvas', () => {
     });
     fireEvent.drop(canvas, data(['text/plain'], 'service'));
     expect(toJSON(doc).nodes).toHaveLength(0);
-    fireEvent.dragOver(canvas, data([KIND_MIME]));
-    fireEvent.drop(canvas, data([KIND_MIME], 'database'));
+    fireEvent.dragOver(canvas, data([TYPE_MIME]));
+    fireEvent.drop(canvas, data([TYPE_MIME], 'database'));
     const [node] = toJSON(doc).nodes;
     expect(node).toMatchObject({ type: 'database', title: 'Untitled database' });
     expect(ui().selection.nodes).toEqual([node?.id]);
@@ -280,7 +280,7 @@ describe('Canvas', () => {
   it('creates nothing when a palette card is dropped outside the canvas', () => {
     const { doc } = renderWithEditor(<Canvas />, deckOf({}));
     fireEvent.drop(document.body, {
-      dataTransfer: { types: [KIND_MIME], getData: () => 'service', dropEffect: '' },
+      dataTransfer: { types: [TYPE_MIME], getData: () => 'service', dropEffect: '' },
     });
     expect(toJSON(doc).nodes).toEqual([]);
   });
@@ -989,7 +989,7 @@ describe('canvas during a flow session (006 FR-017)', () => {
       clientX: 0,
       clientY: 0,
       preventDefault: () => undefined,
-      dataTransfer: { types: [KIND_MIME], getData: () => 'service', dropEffect: '' },
+      dataTransfer: { types: [TYPE_MIME], getData: () => 'service', dropEffect: '' },
     } as unknown as DragEvent;
     act(() => {
       h().onDrop(drop);
@@ -1085,7 +1085,7 @@ describe('canvas in flow mode (007)', () => {
       clientX: 0,
       clientY: 0,
       preventDefault: () => undefined,
-      dataTransfer: { types: [KIND_MIME], getData: () => 'service', dropEffect: '' },
+      dataTransfer: { types: [TYPE_MIME], getData: () => 'service', dropEffect: '' },
     } as unknown as DragEvent;
     act(() => {
       h().onDragOver(drop);

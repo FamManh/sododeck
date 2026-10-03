@@ -1,6 +1,6 @@
 import type { ColorRef, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
-import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { TypeTile } from '@sododeck/ui/components/type-tile';
 import { PanelSection } from '@sododeck/ui/components/panel';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
@@ -17,11 +17,11 @@ import { oneStep } from '../fields/one-step';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
 import { CardTagsField } from '../tags/card-tags-field';
-import { kindLabel } from '../kind-label';
+import { typeName } from '../type-label';
 import { LEVEL_NAMES, nodeLevel } from '../levels';
 import { addDeckColour, applyStyle, removeDeckColour } from '../style/apply-style';
 import { AppearanceSection } from './appearance-section';
-import { groupName, groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
+import { groupName, groupOptions, NO_GROUP, typeOptions } from './choices';
 import { nodeConnections, styleView } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
@@ -30,7 +30,7 @@ import { SizeFields } from './size-fields';
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
 /**
- * Component inspector (FR-008, designs 02, 18, 23): title, kind, group, markdown description,
+ * Component inspector (FR-008, designs 02, 18, 23): title, type, group, markdown description,
  * owner and tech, host, tags, links, attached rules and connections. Text fields save while
  * typing; choices and list edits are one undo step each.
  */
@@ -66,9 +66,9 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   return (
     <InspectorFrame
       plainIcon
-      icon={<KindTile kind={node.type} size={40} decorative />}
+      icon={<TypeTile type={node.type} size={40} decorative />}
       heading={node.title}
-      subtitle={`${kindLabel(node.type)} · ${groupName(deck, node.group)} · ${node.id}`}
+      subtitle={`${typeName(node.type)} · ${groupName(deck, node.group)} · ${node.id}`}
       actions={
         <Button
           variant="ghost"
@@ -94,12 +94,12 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
         </PanelSection>
         <PanelSection className="grid grid-cols-2 gap-3">
           <PickField
-            label="Kind"
-            listLabel="Kinds"
+            label="Type"
+            listLabel="Types"
             value={node.type}
-            options={KIND_OPTIONS}
+            options={typeOptions(deck, [node.type])}
             onPick={(type) => {
-              writeOnce({ type: type as Node['type'] });
+              writeOnce({ type });
             }}
           />
           <PickField
