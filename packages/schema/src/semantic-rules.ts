@@ -20,6 +20,15 @@
  *   one of `y` / `dy`. `minItems` makes json-schema-to-typescript emit a tuple type that nothing
  *   can build from a plain array, and `oneOf` per axis is mishandled by the generators (as is
  *   `anyOf`).
+ * - S12 (field definitions, 032): a field id appears once in `fields`; the built-in ids `tech`,
+ *   `host` and `owner` keep their kinds (`text`, `text`, `person`); `unit` only on number fields;
+ *   `options` only on select and status fields; option ids unique within a field; `icon` only on
+ *   status options. JSON Schema cannot tie one key's allowed values to another key's value
+ *   without `if` / `then`, which the generators mishandle, nor compare ids across array items.
+ * - S13 (values, 032): `node.values` keys are ids (as S3) and never a built-in id: tech, host and
+ *   owner keep their own node keys, so one value is never stored twice. `propertyNames` would
+ *   state it, but json-schema-to-zod drops it. A value whose field or option is missing, or whose
+ *   shape does not fit its field, stays valid: the model keeps and reports it.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -50,7 +59,14 @@ function checkKeys(map: Record<string, unknown>, path: string, issues: Issue[]):
   }
 }
 
-/** Returns every S1–S11 violation in a structurally valid file (empty when there are none). */
+/** Built-in typed fields (032) and their fixed kinds; their values live on their own node keys. */
+const BUILT_IN_FIELD_KINDS: Readonly<Record<string, string>> = {
+  tech: 'text',
+  host: 'text',
+  owner: 'person',
+};
+
+/** Returns every S1–S13 violation in a structurally valid file (empty when there are none). */
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
@@ -202,6 +218,69 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
       }
     }
   }
+
+  const fieldIds = new Set<string>();
+  file.fields?.forEach((field, index) => {
+    const path = `fields.${String(index)}`;
+    if (fieldIds.has(field.id)) {
+      issues.push({
+        path: `${path}.id`,
+        message: `Field id "${field.id}" is used by more than one field.`,
+      });
+    }
+    fieldIds.add(field.id);
+    const builtIn = BUILT_IN_FIELD_KINDS[field.id];
+    if (builtIn !== undefined && field.kind !== builtIn) {
+      issues.push({
+        path: `${path}.kind`,
+        message: `Built-in field "${field.id}" must have kind "${builtIn}".`,
+      });
+    }
+    if (field.unit !== undefined && field.kind !== 'number') {
+      issues.push({
+        path: `${path}.unit`,
+        message: `Field "${field.id}" has a unit, but only number fields have one.`,
+      });
+    }
+    const choice = field.kind === 'select' || field.kind === 'status';
+    if (field.options !== undefined && !choice) {
+      issues.push({
+        path: `${path}.options`,
+        message: `Field "${field.id}" has options, but only select and status fields have them.`,
+      });
+    }
+    const optionIds = new Set<string>();
+    field.options?.forEach((option, optionIndex) => {
+      const optionPath = `${path}.options.${String(optionIndex)}`;
+      if (option.icon !== undefined && field.kind !== 'status') {
+        issues.push({
+          path: `${optionPath}.icon`,
+          message: `Option "${option.id}" of field "${field.id}" has an icon, but only status options have one.`,
+        });
+      }
+      if (optionIds.has(option.id)) {
+        issues.push({
+          path: `${optionPath}.id`,
+          message: `Option id "${option.id}" is used twice in field "${field.id}".`,
+        });
+      }
+      optionIds.add(option.id);
+    });
+  });
+
+  file.nodes.forEach((node, index) => {
+    if (node.values === undefined) return;
+    const path = `nodes.${String(index)}.values`;
+    checkKeys(node.values, path, issues);
+    for (const key of Object.keys(node.values)) {
+      if (Object.hasOwn(BUILT_IN_FIELD_KINDS, key)) {
+        issues.push({
+          path: `${path}.${key}`,
+          message: `Card "${node.id}" stores built-in field "${key}" in values; use its own key.`,
+        });
+      }
+    }
+  });
 
   file.stickies.forEach((sticky, index) => {
     if (sticky.anchor === undefined && sticky.position === undefined) {

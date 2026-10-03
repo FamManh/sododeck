@@ -77,6 +77,159 @@ export const sododeckFileSchema = z
         'Ids of the card-type packs that are on for this deck: the Add flyout and the type pickers list their types. Absent means `["architecture"]` only. At least one id; unknown ids are kept.',
       )
       .optional(),
+    fields: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            name: z
+              .string()
+              .min(1)
+              .max(64)
+              .describe(
+                'Field name, 1–64 characters. Unique within a card type ignoring case (checked by the app).',
+              ),
+            kind: z
+              .enum([
+                'text',
+                'number',
+                'select',
+                'status',
+                'person',
+                'date',
+                'dateRange',
+                'link',
+                'progress',
+              ])
+              .describe(
+                'What a typed field holds: `text`, `number` (with an optional unit), `select` or `status` (one of its options), `person` (free text), `date`, `dateRange`, `link` or `progress` (0–100, drawn as a bar).',
+              ),
+            types: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
+                  .describe(
+                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+                  ),
+              )
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe('Card types the field applies to. Absent means every type.')
+              .optional(),
+            onCard: z
+              .boolean()
+              .describe(
+                '`true` shows the field on every card of its types. Absent means false (drawer only).',
+              )
+              .optional(),
+            unit: z
+              .string()
+              .min(1)
+              .max(12)
+              .describe(
+                'Number fields only: a unit shown after the value, e.g. `h` or `pts`, 1–12 characters.',
+              )
+              .optional(),
+            options: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                      ),
+                    label: z
+                      .string()
+                      .min(1)
+                      .max(48)
+                      .describe('Text shown on the chip, 1–48 characters.'),
+                    color: z
+                      .union([
+                        z
+                          .enum([
+                            'red',
+                            'orange',
+                            'amber',
+                            'yellow',
+                            'lime',
+                            'green',
+                            'teal',
+                            'cyan',
+                            'blue',
+                            'indigo',
+                            'violet',
+                            'pink',
+                            'slate',
+                          ])
+                          .describe(
+                            'Named card colour, a design-system tint that follows the theme.',
+                          ),
+                        z
+                          .string()
+                          .regex(new RegExp('^#[0-9a-f]{6}$'))
+                          .describe(
+                            'Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.',
+                          ),
+                      ])
+                      .describe('Chip colour. Absent means slate.')
+                      .optional(),
+                    icon: z
+                      .enum([
+                        'circle',
+                        'circle-dashed',
+                        'circle-dot',
+                        'circle-check',
+                        'eye',
+                        'door-open',
+                      ])
+                      .describe(
+                        'Status options only: the icon drawn before the label. Absent means `circle`.',
+                      )
+                      .optional(),
+                  })
+                  .strict()
+                  .describe(
+                    'One choice of a select or status field. Renaming it never changes its id or the values that point at it.',
+                  ),
+              )
+              .describe(
+                'Select and status fields only: the choices, in order. Option ids are unique within the field.',
+              )
+              .optional(),
+          })
+          .strict()
+          .describe(
+            'A typed field (032): a name and a kind, the card types it applies to and whether it shows on the card. The ids `tech`, `host` and `owner` are the built-in fields: their entry stores their order and on-card choice, and their kind is fixed (`text`, `text`, `person`).',
+          ),
+      )
+      .describe(
+        "Typed field definitions of the deck (032), in deck order: user fields, plus any built-in (`tech`, `host`, `owner`) or default field (e.g. `task.status`) whose order, on-card choice or definition the user changed. A type's fields are this list filtered to that type. Absent means only the built-in fields and each type's default fields, as the app defines them.",
+      )
+      .optional(),
+    fieldDefaults: z
+      .array(
+        z
+          .string()
+          .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
+          .describe(
+            'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+          ),
+      )
+      .refine((arr) => arr.every((item, i) => arr.indexOf(item) == i), 'All items must be unique!')
+      .describe(
+        "Card types whose default fields now live in `fields` (032): for these types the app no longer adds its own default fields, so a deleted default stays deleted. Absent means every type uses the app's default fields.",
+      )
+      .optional(),
     nodes: z
       .array(
         z
@@ -114,6 +267,40 @@ export const sododeckFileSchema = z
               .string()
               .describe(
                 'Where it runs, e.g. "EKS eu-west-1". Shown as the subtitle in infra views.',
+              )
+              .optional(),
+            values: z
+              .record(
+                z.string(),
+                z
+                  .union([
+                    z.string(),
+                    z.number(),
+                    z
+                      .object({
+                        from: z.string().describe('Start date, `YYYY-MM-DD`.'),
+                        to: z.string().describe('End date, `YYYY-MM-DD`.'),
+                      })
+                      .strict()
+                      .describe(
+                        'A date range value: start and end as `YYYY-MM-DD`, the end on or after the start (checked by the app).',
+                      ),
+                    z
+                      .object({
+                        url: z.string().describe('An `http:`, `https:` or `mailto:` address.'),
+                        label: z.string().describe('Text shown instead of the address.').optional(),
+                      })
+                      .strict()
+                      .describe(
+                        'A link value: a web or mail address and an optional label. The app never fetches it.',
+                      ),
+                  ])
+                  .describe(
+                    "A card's value for one typed field; its shape depends on the field's kind.",
+                  ),
+              )
+              .describe(
+                'Values of typed fields (032): field id → value. Text, person, date (`YYYY-MM-DD`) and select / status (option id) values are strings; number and progress (0–100) values are numbers; a date range is `{ from, to }`; a link is `{ url, label? }`. Tech, host and owner keep their own keys and never appear here. A value whose field or option does not exist, or whose shape does not fit its field, is kept and reported. Absent means no values.',
               )
               .optional(),
             icon: z

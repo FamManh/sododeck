@@ -39,6 +39,14 @@ describe('canonical key order', () => {
     expect(order.indexOf('packs')).toBe(order.indexOf('tagColors') + 1);
   });
 
+  it('declares fields and fieldDefaults right after packs, and values after host (032)', () => {
+    const order = Object.keys(jsonSchema.properties);
+    expect(order.indexOf('fields')).toBe(order.indexOf('packs') + 1);
+    expect(order.indexOf('fieldDefaults')).toBe(order.indexOf('fields') + 1);
+    const node = Object.keys(jsonSchema.$defs.Node.properties);
+    expect(node.indexOf('values')).toBe(node.indexOf('host') + 1);
+  });
+
   it('detects keys out of order', () => {
     const file = { $schema: 'x', version: 1, nodes: [{ title: 'A', id: 'a', type: 'service' }] };
     expect(keyOrderViolations(file)).toEqual([

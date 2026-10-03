@@ -238,4 +238,126 @@ describe('checkSemanticRules', () => {
       });
     });
   });
+
+  describe('S12 / S13: typed fields (032)', () => {
+    const withFields = (fields: unknown[], values?: Record<string, unknown>): SododeckFile =>
+      ({
+        ...emptySododeckFile(),
+        fields,
+        nodes: values === undefined ? [] : [{ id: 'n1', type: 'task', title: 'A', values }],
+      }) as SododeckFile;
+
+    it('accepts fields of every kind with their own keys, and built-ins with their kinds', () => {
+      expect(
+        checkSemanticRules(
+          withFields([
+            { id: 'n', name: 'N', kind: 'number', unit: 'h' },
+            {
+              id: 's',
+              name: 'S',
+              kind: 'status',
+              options: [
+                { id: 'a', label: 'A', icon: 'circle' },
+                { id: 'b', label: 'B', icon: 'circle-check' },
+              ],
+            },
+            { id: 'sel', name: 'Sel', kind: 'select', options: [{ id: 'a', label: 'A' }] },
+            { id: 'tech', name: 'Tech', kind: 'text' },
+            { id: 'host', name: 'Host', kind: 'text' },
+            { id: 'owner', name: 'Owner', kind: 'person' },
+          ]),
+        ),
+      ).toEqual([]);
+    });
+
+    it('S12 reports a field id used twice', () => {
+      expect(
+        checkSemanticRules(
+          withFields([
+            { id: 'f', name: 'A', kind: 'text' },
+            { id: 'f', name: 'B', kind: 'text' },
+          ]),
+        ),
+      ).toEqual([{ path: 'fields.1.id', message: 'Field id "f" is used by more than one field.' }]);
+    });
+
+    it('S12 reports a built-in field with another kind', () => {
+      expect(
+        checkSemanticRules(withFields([{ id: 'owner', name: 'Owner', kind: 'text' }])),
+      ).toEqual([
+        { path: 'fields.0.kind', message: 'Built-in field "owner" must have kind "person".' },
+      ]);
+      expect(
+        checkSemanticRules(withFields([{ id: 'tech', name: 'Tech', kind: 'select' }]))[0]?.path,
+      ).toBe('fields.0.kind');
+    });
+
+    it('S12 reports a unit outside number fields and options outside select / status', () => {
+      expect(
+        checkSemanticRules(
+          withFields([
+            { id: 'a', name: 'A', kind: 'progress', unit: '%' },
+            { id: 'b', name: 'B', kind: 'text', options: [] },
+          ]),
+        ),
+      ).toEqual([
+        {
+          path: 'fields.0.unit',
+          message: 'Field "a" has a unit, but only number fields have one.',
+        },
+        {
+          path: 'fields.1.options',
+          message: 'Field "b" has options, but only select and status fields have them.',
+        },
+      ]);
+    });
+
+    it('S12 reports duplicate option ids and icons on select options', () => {
+      expect(
+        checkSemanticRules(
+          withFields([
+            {
+              id: 'f',
+              name: 'F',
+              kind: 'select',
+              options: [
+                { id: 'a', label: 'A', icon: 'eye' },
+                { id: 'a', label: 'B' },
+              ],
+            },
+          ]),
+        ),
+      ).toEqual([
+        {
+          path: 'fields.0.options.0.icon',
+          message: 'Option "a" of field "f" has an icon, but only status options have one.',
+        },
+        {
+          path: 'fields.0.options.1.id',
+          message: 'Option id "a" is used twice in field "f".',
+        },
+      ]);
+    });
+
+    it('S13 reports built-in ids in values and keys that are not ids', () => {
+      expect(checkSemanticRules(withFields([], { tech: 'Go', 'a b': 'x', ok: 1 }))).toEqual([
+        {
+          path: 'nodes.0.values.a b',
+          message: 'Key "a b" is not a valid id (1–64 letters, digits, "-", "_", "." or ":").',
+        },
+        {
+          path: 'nodes.0.values.tech',
+          message: 'Card "n1" stores built-in field "tech" in values; use its own key.',
+        },
+      ]);
+    });
+
+    it('keeps dangling values valid (missing field, missing option, wrong shape)', () => {
+      expect(
+        checkSemanticRules(
+          withFields([{ id: 'p', name: 'P', kind: 'progress' }], { p: 140, gone: 'x' }),
+        ),
+      ).toEqual([]);
+    });
+  });
 });

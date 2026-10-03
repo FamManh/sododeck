@@ -290,6 +290,92 @@ export const invalidFixtures: InvalidFixture[] = [
   { name: 'pack id is uppercase', input: set('packs', ['Process']), path: 'packs.0' },
   { name: 'tagColors is an array', input: set('tagColors', ['violet']), path: 'tagColors' },
 
+  // Typed fields (032): S12 / S13 and shapes
+  {
+    name: 'duplicate field ids',
+    input: set('fields.1.id', 'warehouse.capacity'),
+    path: 'fields.1.id',
+  },
+  {
+    name: 'built-in owner with kind text',
+    input: set('fields.9.kind', 'text'),
+    path: 'fields.9.kind',
+  },
+  { name: 'unit on a select field', input: set('fields.2.unit', 'h'), path: 'fields.2.unit' },
+  {
+    name: 'options on a number field',
+    input: set('fields.1.options', [{ id: 'o_a', label: 'A' }]),
+    path: 'fields.1.options',
+  },
+  {
+    name: 'duplicate option ids in a field',
+    input: set('fields.2.options.1.id', 'o_south'),
+    path: 'fields.2.options.1.id',
+  },
+  {
+    name: 'icon on a select option',
+    input: set('fields.2.options.0.icon', 'circle'),
+    path: 'fields.2.options.0.icon',
+  },
+  {
+    name: 'built-in tech in values',
+    input: set('nodes.9.values.tech', 'Go'),
+    path: 'nodes.9.values.tech',
+  },
+  { name: 'empty field name', input: set('fields.0.name', ''), path: 'fields.0.name' },
+  { name: 'unknown field kind', input: set('fields.0.kind', 'formula'), path: 'fields.0.kind' },
+  {
+    name: 'unknown status icon',
+    input: set('fields.3.options.0.icon', 'star'),
+    path: 'fields.3.options.0.icon',
+  },
+  {
+    name: 'empty option label',
+    input: set('fields.2.options.0.label', ''),
+    path: 'fields.2.options.0.label',
+  },
+  {
+    name: 'unit longer than 12',
+    input: set('fields.1.unit', 'h'.repeat(13)),
+    path: 'fields.1.unit',
+  },
+  { name: 'unknown key on a field', input: set('fields.0.hidden', true), path: 'fields.0' },
+  {
+    name: 'duplicate types in a field',
+    input: set('fields.0.types', ['warehouse', 'warehouse']),
+    path: 'fields.0.types',
+  },
+  {
+    name: 'duplicate fieldDefaults',
+    input: set('fieldDefaults', ['warehouse', 'warehouse']),
+    path: 'fieldDefaults',
+  },
+  {
+    name: 'fieldDefaults id is uppercase',
+    input: set('fieldDefaults', ['Task']),
+    path: 'fieldDefaults.0',
+  },
+  {
+    name: 'value is a boolean',
+    input: set('nodes.9.values.f_notes', true),
+    path: 'nodes.9.values.f_notes',
+  },
+  {
+    name: 'date range value with an unknown key',
+    input: set('nodes.9.values.f_audit', { from: '2026-10-06', until: '2026-10-17' }),
+    path: 'nodes.9.values.f_audit',
+  },
+  {
+    name: 'link value without url',
+    input: set('nodes.9.values.f_runbook', { label: 'Runbook' }),
+    path: 'nodes.9.values.f_runbook',
+  },
+  {
+    name: 'values key is not an id',
+    input: set('nodes.9.values.bad key', 'x'),
+    path: 'nodes.9.values.bad key',
+  },
+
   // Ids
   { name: 'id with a space', input: set('nodes.0.id', 'order svc'), path: 'nodes.0.id' },
   {
