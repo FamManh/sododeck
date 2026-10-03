@@ -175,6 +175,18 @@ export const DeckEdge = memo(function DeckEdge({
   const current = flow?.current ?? null;
   const width = selected ? 2.5 : (flowStroke?.width ?? own.width);
   const ownDash = flowStroke === undefined ? lineDash(own.dash, own.width) : undefined;
+  // Moving dashes (022 R11): only when asked for, not under reduced motion, not while a flow is
+  // shown or recorded, and not on the selected connector, whose look is the selection's.
+  const flowActive = useUiStore((s) => isFlowMode(s) || s.flowSession !== null);
+  const animate =
+    own.animated && !reducedMotion && !flowActive && selected !== true && flow === undefined;
+  // One dash period in px: the run overlay's 3w + 5w, or the line's own dash pattern.
+  const period =
+    own.dash === 'solid' ? 8 * own.width : own.dash === 'dashed' ? 7.5 * own.width : 3 * own.width;
+  const runStyle = {
+    '--sd-run': `${String(period)}px`,
+    animationDuration: `${String(period / 24)}s`,
+  };
   const ownCap = flowStroke === undefined ? lineCap(own.dash) : undefined;
   // The step label (FR-010): a 20px pill. In flow mode (a `state` is set) it is neutral, solid
   // orange when current and Clay Soft on an error path; while recording it keeps the path look.
@@ -257,6 +269,7 @@ export const DeckEdge = memo(function DeckEdge({
         path={path}
         interactionWidth={interactionWidth ?? 12}
         className={cn(
+          animate && own.dash !== 'solid' && 'sd-edge-run',
           flow?.style === 'invalid' && !reducedMotion && 'sd-edge-flash',
           reconnecting && 'sd-edge-reconnecting',
         )}
@@ -267,8 +280,27 @@ export const DeckEdge = memo(function DeckEdge({
           ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
           ...(ownDash === undefined ? {} : { strokeDasharray: ownDash }),
           ...(ownCap === undefined ? {} : { strokeLinecap: ownCap }),
+          ...(animate && own.dash === 'solid' ? { strokeOpacity: 0.32 } : {}),
+          ...(animate && own.dash !== 'solid' ? runStyle : {}),
         }}
       />
+      {animate &&
+        own.dash === 'solid' &&
+        (direction === 'both' ? [false, true] : [false]).map((reverse) => (
+          <path
+            key={String(reverse)}
+            d={path}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={width}
+            strokeDasharray={`${String(3 * own.width)} ${String(5 * own.width)}`}
+            className={cn('sd-edge-run', reverse && 'sd-edge-run-reverse')}
+            style={runStyle}
+            pointerEvents="none"
+            aria-hidden
+            data-testid="edge-run"
+          />
+        ))}
       <EdgeEnds
         {...ends}
         direction={direction}

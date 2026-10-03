@@ -365,6 +365,82 @@ describe('DeckEdge label position (022 US4)', () => {
   });
 });
 
+describe('DeckEdge animated direction (022 US5)', () => {
+  const runs = (container: HTMLElement) => [
+    ...container.querySelectorAll<SVGPathElement>('[data-testid="edge-run"]'),
+  ];
+  const originalMatchMedia = window.matchMedia.bind(window);
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    useUiStore.setState({ selection: EMPTY_SELECTION, flowSession: null, activeFlow: null });
+  });
+
+  it('runs dashes over a 32 % track on a solid line', () => {
+    const { container } = renderEdge({ style: { animated: true } });
+    const [run] = runs(container);
+    expect(run).toBeDefined();
+    expect(run?.classList.contains('sd-edge-run')).toBe(true);
+    expect(run?.getAttribute('stroke-dasharray')).toBe('6 10');
+    const track = container.querySelector('.react-flow__edge-path') as HTMLElement;
+    expect(track.style.strokeOpacity).toBe('0.32');
+  });
+
+  it('runs a dashed line itself, with no track', () => {
+    const { container } = renderEdge({ style: { animated: true, dash: 'dashed' } });
+    expect(runs(container)).toHaveLength(0);
+    const line = container.querySelector('.react-flow__edge-path');
+    expect(line?.classList.contains('sd-edge-run')).toBe(true);
+    expect((line as HTMLElement).style.strokeOpacity).toBe('');
+  });
+
+  it('draws two runs in opposite directions for a two-way connector', () => {
+    const { container } = renderEdge({ direction: 'both', style: { animated: true } });
+    const list = runs(container);
+    expect(list).toHaveLength(2);
+    expect(list.map((r) => r.classList.contains('sd-edge-run-reverse'))).toEqual([false, true]);
+  });
+
+  it('does not animate without the flag', () => {
+    const { container } = renderEdge({ style: { dash: 'dashed' } });
+    expect(runs(container)).toHaveLength(0);
+    expect(container.querySelector('.sd-edge-run')).toBeNull();
+  });
+
+  it('is still under reduced motion', () => {
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    const { container } = renderEdge({ style: { animated: true } });
+    expect(container.querySelector('.sd-edge-run')).toBeNull();
+    expect(runs(container)).toHaveLength(0);
+  });
+
+  it('is still while the connector is selected', () => {
+    const { container } = renderEdge({ style: { animated: true } }, true);
+    expect(container.querySelector('.sd-edge-run')).toBeNull();
+  });
+
+  it('is still in flow mode and while recording a flow', () => {
+    useUiStore.setState({
+      activeFlow: {
+        flowId: 'f1',
+        stepId: null,
+        branchId: null,
+        alternativeId: null,
+        playing: false,
+        speed: 1,
+      },
+    });
+    expect(
+      renderEdge({ style: { animated: true } }).container.querySelector('.sd-edge-run'),
+    ).toBeNull();
+  });
+});
+
 describe('DeckEdge anchors (022 US3)', () => {
   const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
 

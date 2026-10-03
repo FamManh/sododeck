@@ -190,12 +190,12 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 5 (write first)
 
-- [ ] T051 [P] [US5] Extend `deck-edge.test.tsx`: `animated` adds the `sd-edge-run` class and a 32 % track on solid lines; a two-way connector draws two runs in opposite directions; no class when reduced motion is on (mock `useReducedMotion`), when a flow is shown or recorded, or when the connector is selected; the export scene never animates.
+- [x] T051 [P] [US5] Extend `deck-edge.test.tsx`: `animated` adds the `sd-edge-run` class and a 32 % track on solid lines; a two-way connector draws two runs in opposite directions; no class when reduced motion is on (mock `useReducedMotion`), when a flow is shown or recorded, or when the connector is selected; the export scene never animates.
 
 ### Implementation for User Story 5
 
-- [ ] T052 [US5] Add `sd-edge-run` keyframes (`stroke-dashoffset`, period `8w`, 24 px/s, linear infinite; reverse variant) and a `prefers-reduced-motion` guard to `apps/app/src/index.css`; apply them in `deck-edge.tsx` per R11. Make T051 pass.
-- [ ] T053 [US5] Add `BENCH_ANIMATED=1` to `apps/app/bench/perf.bench.ts` (200 edges get `style.animated: true`, half of them dashed; document it in the header) and run it. If panning is below 60 fps, pause off-screen animations with `animation-play-state` from a viewport-derived edge set (R11) and re-measure; record both runs. Screenshot against `131-connector-animated-direction-*.png` (still frames).
+- [x] T052 [US5] Add `sd-edge-run` keyframes (`stroke-dashoffset`, period `8w`, 24 px/s, linear infinite; reverse variant) and a `prefers-reduced-motion` guard to `apps/app/src/index.css`; apply them in `deck-edge.tsx` per R11. Make T051 pass.
+- [x] T053 [US5] Add `BENCH_ANIMATED=1` to `apps/app/bench/perf.bench.ts` (200 edges get `style.animated: true`, half of them dashed; document it in the header) and run it. If panning is below 60 fps, pause off-screen animations with `animation-play-state` from a viewport-derived edge set (R11) and re-measure; record both runs. Screenshot against `131-connector-animated-direction-*.png` (still frames).
 
 ---
 

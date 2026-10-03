@@ -179,6 +179,24 @@
   }
 }
 
+.sd-edge-run {
+  /* Dashes travel along the path, toward the arrow; one dash period per `--sd-run` of length. */
+  animation: sd-edge-run linear infinite;
+}
+.sd-edge-run-reverse {
+  animation-direction: reverse;
+}
+@keyframes sd-edge-run {
+  to {
+    stroke-dashoffset: calc(var(--sd-run) * -1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-edge-run {
+    animation: none;
+  }
+}
+
 .sd-edge-flash {
   animation: sd-edge-flash 400ms ease-in-out 3;
 }
