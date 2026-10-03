@@ -1074,3 +1074,7 @@ changes them before the owning feature is specified.
     cards with a solid 3px lip, 14px corners, solid-tint pill chips, 2px curved connectors,
     playback that deals the deck, a collapsed group as a fanned hand. The design's risk note
     becomes a rule: lip off below 60 % zoom, chips as dots at System. Backlog 028–035.
+64. **Card system follow-ups** (founder, 2026-10-03). Connectors offer three user-chosen line types,
+    curved (default), elbow and straight, in 029 (moved from 022). Tags keep the case the user
+    typed; matching ignores case. 030 and 032 schema changes approved in principle (ADRs at
+    their specs). Order: 028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034.

@@ -135,6 +135,8 @@ flowchart LR
   F029 --> F034
   F022 -.-> F034
   F029 --> F035
+  F029 --> F022
+  F025 --> F029
 ```
 
 ## Critical path
@@ -164,8 +166,10 @@ review) are **not scheduled**. They come after M5 at the earliest and need a fou
 023 starts with a large-deck benchmark, and that result decides whether the renderer work is
 done at all. The measurement plan is in `docs/performance.md`.
 
-**028–035** card system, direction B "Deck" (added 2026-10-03, §g-63): **028 → 029 → 035**, then
-**033**, **030 → 032 / 031**, then **034**. 030 supersedes 024; 032 lifts §g-40.
+**Order from 2026-10-03 (§g-64):** **028** → **025** → **029** → **035** → **033** → **022** →
+**030** → **032** → **031** → **034**. 025 moves up because 029 starts the run of schema changes
+(029, 033, 022, 030, 032). 030 supersedes 024; 032 lifts §g-40. 013 and 014 are paused by the
+founder; 023, 026 and 027 stay unscheduled.
 
 **025** format-compatibility (ADR 0020, proposed) should land before the first public release,
 ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
@@ -197,14 +201,14 @@ and **027** ai-deck-skill are not scheduled.
 | 016 | canvas-editing           | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
 | 017 | resize-edge-routing      | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
 | 020 | card-style               | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
-| 022 | connector-style          | after M4   | 017, 020      | 5 d  | needs design (Miro-like line popover); schema change      |
+| 022 | connector-style          | after M4   | 017, 020, 029 | 5 d  | needs design (Miro-like line popover); schema change      |
 | 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design |
 | 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR      |
 | 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0020; banner copy; schema change             |
 | 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
 | 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
 | 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                       |
-| 029 | card-look-deck           | after M4   | 028           | 5 d  | designed (B); ⚠ curves vs 017 orthogonal routing          |
+| 029 | card-look-deck           | after M4   | 028, 025      | 6 d  | designed (B); line types (§g-64); schema change           |
 | 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR            |
 | 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                   |
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR            |
@@ -1680,7 +1684,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   slider, dash row, colour swatch, label drag, waypoint handles). Miro's line popover is the
   reference.
 - **In scope:**
-  - **Line type:** straight, elbow (orthogonal, today's look, the default) and curved.
+  - **Line type:** moved to 029 (curved, elbow, straight, §g-64); waypoints below build on it.
   - **Free waypoints** for elbow and curved lines: drag a midpoint handle to add a bend point,
     drag a bend point to move it, double-click (or ⌫) to remove it; Reset route (017) clears them.
     Founder feedback (2026-10-02): 017's segment only moves along one axis (horizontal or
@@ -1956,7 +1960,7 @@ stickers on played cards, the current card lifts on an orange lip, upcoming card
 dashed number); a collapsed group is a fanned hand of cards. The design's own risk note is kept as
 a rule: on dense boards drop the lip below 60 % zoom and show chips as dots at System level.
 
-Order: **028 → 029 → 035**, then **033**, **030 → 032 / 031**, then **034**. 030 supersedes 024.
+Order (§g-64): **028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**. 030 supersedes 024.
 
 ## 028-design-sync-card-system
 
@@ -1980,8 +1984,9 @@ Order: **028 → 029 → 035**, then **033**, **030 → 032 / 031**, then **034*
 
 ## 029-card-look-deck
 
-- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 028 · **Estimate:** 5 d
-- **Goal:** Today's cards, groups, handles and connectors take B's look, with no schema change.
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 028, 025 · **Estimate:** 6 d
+- **Goal:** Today's cards, groups, handles and connectors take B's look; connectors get a
+  user-chosen line type (the only schema change).
 - **In scope:**
   - **Card frame:** 184 × content, 14px radius, 1.5px border, the solid lip (stroke colour; 5px on
     hover and the current flow step, 6px and a −2.5° tilt while dragging), header with the type
@@ -1995,10 +2000,14 @@ Order: **028 → 029 → 035**, then **033**, **030 → 032 / 031**, then **034*
     grey dots.
   - **Collapsed group:** a fanned hand (the design's `stack`), name and member count; merged
     connectors meet it (§g-62).
-  - **Connectors:** 2px, B's edge colour, rounded filled arrow, 3.5px start knob. ⚠ decision: B
-    draws smooth curves; 017 routes orthogonally with a movable segment. Either curves become the
-    default line type here (017's segment handle then only applies to elbow lines), or curves
-    wait for 022's line-type picker. Settle at `/speckit.clarify`.
+  - **Connectors:** 2px, B's edge colour, rounded filled arrow, 3.5px start knob.
+  - **Line type, chosen by the user (founder, 2026-10-03, §g-64):** **curved** (B's default),
+    **elbow** (orthogonal, today's routing with 017's movable segment) and **straight**. Picked
+    per connector from the connection toolbar, the context menu and the drawer, for a
+    multi-selection in one undo step. Stored as optional `edge.style.shape`
+    (`'curved' | 'elbow' | 'straight'`, additive schema change, ADR). Absent = curved, except an
+    edge with a stored 017 `route.offset`, which stays elbow so its tweak is kept. 017's segment
+    handle only shows on elbow lines. Moved here from 022.
   - **Zoom rules:** lip off below 60 %; chips become dots at System; Landscape shows the type
     icon on the colour fill (B's `land` plate).
   - **Palette:** the 13 colours get B's `chip` / `ink` / `dot` tokens (light, dark), contrast-tested.
@@ -2082,8 +2091,9 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
   B's tag picker (search, the deck's tags with colour and usage count, "Create tag “…” ⏎",
   pencil to edit); tag editor (name, 13 swatches plus deck colours, "Delete tag · used on N
   cards"); drawer tag row (pills with ×, focus ⌫ removes, ⏎ opens the picker); cards show the tag
-  colour as a solid-tint pill; still max 10 per card. Decide whether tag names keep their case
-  (today they are lower-cased).
+  colour as a solid-tint pill; still max 10 per card. **Tags keep the case the user typed**
+  ("PIC", "Lan"; founder, §g-64): matching and uniqueness ignore case, so "pic" picks the
+  existing "PIC", and the first spelling wins. Existing lower-cased tags stay as they are.
 - **Schema:** additive (`deck.tags` gains definitions; untyped tag strings stay valid and render
   slate).
 - **Acceptance criteria (draft):** colouring `pci` violet recolours it on every card in one undo
