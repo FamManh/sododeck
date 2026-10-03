@@ -6,18 +6,18 @@
  */
 import type { SododeckFile } from '@sododeck/schema';
 
-import { fromY } from './convert';
 import { toJSON } from './deck';
 import { canonicalizeEntry, fileKeyOrder } from './key-order';
 import {
-  collectionArray,
+  collectionMap,
   COLLECTIONS,
-  metaMap,
+  orderedEntries,
   rulesMap,
   type Collection,
   type DeckDoc,
 } from './layout';
 import { observeDeck, type ObjectChange } from './observe';
+import { readMeta, readObject, readRule } from './read';
 
 export interface DeckSnapshot {
   /** Current plain deck. A new top-level object after every change; untouched objects keep identity. */
@@ -30,25 +30,36 @@ export interface DeckSnapshot {
 
 type Item = { id: string };
 
-/** Rebuilds a collection in document order, reusing every object that was not touched. */
+/** What one transaction touched in a scope: ids to rebuild, and whether its order may change. */
+interface Touched {
+  ids: Set<string>;
+  reorder: boolean;
+}
+
+/**
+ * Rebuilds a collection, reusing every object that was not touched. The previous order is kept
+ * when no item was added, removed or moved (research R6): a field edit costs no sort.
+ */
 function rebuildCollection(
   doc: DeckDoc,
   c: Collection,
   previous: readonly Item[],
-  touched: ReadonlySet<string>,
+  { ids, reorder }: Touched,
 ): Item[] {
+  const list = collectionMap(doc, c);
+  const read = (id: string) => {
+    const map = list.get(id);
+    return map === undefined ? undefined : canonicalizeEntry(c, readObject(c, id, map) as Item);
+  };
+  if (!reorder) {
+    return previous.flatMap((item) => (ids.has(item.id) ? (read(item.id) ?? []) : [item]));
+  }
   const byId = new Map<string, Item>();
   for (const item of previous) if (!byId.has(item.id)) byId.set(item.id, item);
-  const seen = new Set<string>();
-  const out: Item[] = [];
-  for (const map of collectionArray(doc, c)) {
-    const id = map.get('id');
-    const reusable =
-      typeof id === 'string' && !touched.has(id) && !seen.has(id) ? byId.get(id) : undefined;
-    if (typeof id === 'string') seen.add(id);
-    out.push(reusable ?? canonicalizeEntry(c, fromY(map) as Item));
-  }
-  return out;
+  return orderedEntries(list).map(([id, map]) => {
+    const reusable = ids.has(id) ? undefined : byId.get(id);
+    return reusable ?? canonicalizeEntry(c, readObject(c, id, map) as Item);
+  });
 }
 
 function rebuildRules(
@@ -57,45 +68,45 @@ function rebuildRules(
   touched: ReadonlySet<string>,
 ): SododeckFile['rules'] {
   const out: SododeckFile['rules'] = {};
-  for (const [id, rule] of rulesMap(doc).entries()) {
+  for (const [id, rule] of orderedEntries(rulesMap(doc))) {
     const reusable = touched.has(id) ? undefined : previous[id];
-    out[id] = reusable ?? canonicalizeEntry('rules', fromY(rule) as SododeckFile['rules'][string]);
+    out[id] = reusable ?? canonicalizeEntry('rules', readRule(rule));
   }
   return out;
 }
 
 /** Applies one transaction's changes to the previous deck. */
 function apply(doc: DeckDoc, previous: SododeckFile, changes: ObjectChange[]): SododeckFile {
-  const touched = new Map<string, Set<string>>();
+  const touched = new Map<string, Touched>();
   for (const change of changes) {
-    let ids = touched.get(change.scope);
-    if (ids === undefined) {
-      ids = new Set();
-      touched.set(change.scope, ids);
+    let entry = touched.get(change.scope);
+    if (entry === undefined) {
+      entry = { ids: new Set(), reorder: false };
+      touched.set(change.scope, entry);
     }
     // A step, column or row change rebuilds its owning flow or rule.
-    ids.add(change.id);
+    entry.ids.add(change.id);
+    if (change.child === undefined && (change.kind !== 'updated' || change.keys.length === 0)) {
+      entry.reorder = true;
+    }
   }
 
   const parts: Record<string, unknown> = {};
-  const meta = metaMap(doc);
-  const metaChanged = touched.has('meta');
+  const meta = touched.has('meta') ? (readMeta(doc) as Record<string, unknown>) : undefined;
   for (const key of fileKeyOrder()) {
     if ((COLLECTIONS as readonly string[]).includes(key)) {
       const c = key as Collection;
-      const ids = touched.get(c);
-      parts[key] = ids === undefined ? previous[c] : rebuildCollection(doc, c, previous[c], ids);
+      const entry = touched.get(c);
+      parts[key] =
+        entry === undefined ? previous[c] : rebuildCollection(doc, c, previous[c], entry);
     } else if (key === 'rules') {
-      const ids = touched.get('rules');
-      parts[key] = ids === undefined ? previous.rules : rebuildRules(doc, previous.rules, ids);
+      const entry = touched.get('rules');
+      parts[key] =
+        entry === undefined ? previous.rules : rebuildRules(doc, previous.rules, entry.ids);
     } else {
-      const value = metaChanged
-        ? fromY(meta.get(key))
-        : (previous as unknown as Record<string, unknown>)[key];
-      // `swatches` is always a stored Y.Array (020, R3), but is emitted only when non-empty,
-      // exactly like `toJSON` (an old deck without any keeps no `swatches` key).
-      const omit = key === 'swatches' && Array.isArray(value) && value.length === 0;
-      if (value !== undefined && !omit) parts[key] = value;
+      const value =
+        meta === undefined ? (previous as unknown as Record<string, unknown>)[key] : meta[key];
+      if (value !== undefined) parts[key] = value;
     }
   }
   return parts as unknown as SododeckFile;

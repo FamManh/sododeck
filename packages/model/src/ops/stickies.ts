@@ -7,7 +7,7 @@ import type { Id, Sticky } from '@sododeck/schema';
 
 import { toJSON } from '../deck';
 import { nodeCanvasPosition, stickyCanvasPosition, type Point } from '../geometry';
-import { collectionArray, indexOfId } from '../layout';
+import { collectionMap } from '../layout';
 import { addObject, updateObject } from './collections';
 import type { EditContext } from './context';
 import { DeckEditError } from '../errors';
@@ -22,11 +22,10 @@ export function addSticky(ctx: EditContext, data: Omit<NewObject<'stickies'>, 'i
 
 /** Deletes a sticky if it still exists (a no-op when removed remotely). Keyed like `addSticky`. */
 export function deleteStickyIfPresent(ctx: EditContext, id: Id): void {
-  const array = collectionArray(ctx.doc, 'stickies');
-  const index = indexOfId(array, id);
-  if (index === -1) return;
+  const list = collectionMap(ctx.doc, 'stickies');
+  if (!list.has(id)) return;
   ctx.transact(() => {
-    array.delete(index, 1);
+    list.delete(id);
   }, `stickies:${id}`);
 }
 

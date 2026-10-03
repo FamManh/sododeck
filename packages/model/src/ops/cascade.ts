@@ -11,18 +11,21 @@ import { toY, type YObject } from '../convert';
 import { toJSON } from '../deck';
 import { nodeCanvasPosition, STICKY_DEFAULT_OFFSET } from '../geometry';
 import {
-  collectionArray,
+  childList,
+  collectionMap,
+  orderedEntries,
   rulesMap,
   type Collection,
   type DeckDoc,
+  type ListMap,
   type ObjectRef,
 } from '../layout';
-import { findIndexById, type EditContext } from './context';
+import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { checkIntegrity, type IntegrityProblem } from '../integrity';
 import { LABELS } from './collections';
 import { branchListOf } from './branches';
-import { flowMapOf, stepsOf } from './steps';
+import { stepsOf } from './steps';
 
 export interface RemovalResult {
   /** The deleted object first, then everything deleted with it. */
@@ -72,18 +75,15 @@ class Cascade {
   }
 }
 
-function idOf(map: YObject): Id {
-  const id = map.get('id');
-  return typeof id === 'string' ? id : '';
-}
-
-/** Deletes the map with `id` from its array at write time (indices shift during a cascade). */
-function deleteById(array: Y.Array<YObject>, id: Id): () => void {
+/** Deletes the item with `id` from its list at write time. */
+function deleteById(list: ListMap, id: Id): () => void {
   return () => {
-    const index = findIndexById(array, id, 'Object');
-    array.delete(index, 1);
+    list.delete(id);
   };
 }
+
+/** A collection's items in list order, so results list objects in the order they are shown. */
+const entriesOf = (doc: DeckDoc, c: Collection) => orderedEntries(collectionMap(doc, c));
 
 function listHas(map: YObject, field: string, id: Id): boolean {
   const list = map.get(field);
@@ -98,12 +98,11 @@ function removeFromList(map: YObject, field: string, id: Id, dropEmpty: boolean)
   if (dropEmpty && list.length === 0) map.delete(field);
 }
 
-function forEachStep(doc: DeckDoc, visit: (step: YObject, flowId: Id) => void): void {
-  for (const flow of collectionArray(doc, 'flows')) {
-    const steps = flow.get('steps');
-    if (steps instanceof Y.Array) {
-      for (const step of steps as Y.Array<YObject>) visit(step, idOf(flow));
-    }
+function forEachStep(doc: DeckDoc, visit: (step: YObject, flowId: Id, stepId: Id) => void): void {
+  for (const [flowId, flow] of entriesOf(doc, 'flows')) {
+    const steps = childList(flow, 'steps');
+    if (steps === undefined) continue;
+    for (const [stepId, step] of orderedEntries(steps)) visit(step, flowId, stepId);
   }
 }
 
@@ -116,24 +115,24 @@ const stepRef = (flowId: Id, stepId: Id): ObjectRef => ({
 function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
   const file = toJSON(doc);
   const base = nodeCanvasPosition(file, id);
-  const edges = collectionArray(doc, 'edges');
-  for (const edge of edges) {
+  const edges = collectionMap(doc, 'edges');
+  for (const [edgeId, edge] of entriesOf(doc, 'edges')) {
     if (edge.get('from') === id || edge.get('to') === id) {
-      cascade.remove({ scope: 'edges', id: idOf(edge) }, deleteById(edges, idOf(edge)));
+      cascade.remove({ scope: 'edges', id: edgeId }, deleteById(edges, edgeId));
     }
   }
-  for (const node of collectionArray(doc, 'nodes')) {
-    if (node.get('parent') === id && idOf(node) !== id) {
-      cascade.update({ scope: 'nodes', id: idOf(node) }, () => {
+  for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
+    if (node.get('parent') === id && nodeId !== id) {
+      cascade.update({ scope: 'nodes', id: nodeId }, () => {
         node.delete('parent');
       });
     }
   }
-  for (const view of collectionArray(doc, 'views')) {
+  for (const [viewId, view] of entriesOf(doc, 'views')) {
     const positions = view.get('positions');
     const inPositions = positions instanceof Y.Map && positions.has(id);
     if (listHas(view, 'includes', id) || listHas(view, 'pinned', id) || inPositions) {
-      cascade.update({ scope: 'views', id: idOf(view) }, () => {
+      cascade.update({ scope: 'views', id: viewId }, () => {
         removeFromList(view, 'includes', id, false);
         removeFromList(view, 'pinned', id, true);
         if (inPositions) positions.delete(id);
@@ -141,9 +140,8 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
     }
   }
   if (base === null) return;
-  for (const sticky of collectionArray(doc, 'stickies')) {
+  for (const [stickyId, sticky] of entriesOf(doc, 'stickies')) {
     if (sticky.get('anchor') !== id) continue;
-    const stickyId = idOf(sticky);
     const position = sticky.get('position');
     const x =
       position instanceof Y.Map && typeof position.get('x') === 'number'
@@ -161,28 +159,27 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
   }
 }
 
-function removeGroup(cascade: Cascade, doc: DeckDoc, group: YObject): void {
-  const id = idOf(group);
+function removeGroup(cascade: Cascade, doc: DeckDoc, id: Id, group: YObject): void {
   const parent = group.get('parent');
   const repoint = (map: YObject, field: string) => () => {
     if (typeof parent === 'string') map.set(field, parent);
     else map.delete(field);
   };
-  for (const node of collectionArray(doc, 'nodes')) {
+  for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
     if (node.get('group') === id)
-      cascade.update({ scope: 'nodes', id: idOf(node) }, repoint(node, 'group'));
+      cascade.update({ scope: 'nodes', id: nodeId }, repoint(node, 'group'));
   }
-  for (const child of collectionArray(doc, 'groups')) {
+  for (const [childId, child] of entriesOf(doc, 'groups')) {
     if (child.get('parent') === id) {
-      cascade.update({ scope: 'groups', id: idOf(child) }, repoint(child, 'parent'));
+      cascade.update({ scope: 'groups', id: childId }, repoint(child, 'parent'));
     }
   }
   // Per-view lists (011) and frames (016): undo of the delete restores them with the group.
-  for (const view of collectionArray(doc, 'views')) {
+  for (const [viewId, view] of entriesOf(doc, 'views')) {
     const frames = view.get('groupFrames');
     const framed = frames instanceof Y.Map && frames.has(id);
     if (listHas(view, 'excludeGroups', id) || listHas(view, 'collapsed', id) || framed) {
-      cascade.update({ scope: 'views', id: idOf(view) }, () => {
+      cascade.update({ scope: 'views', id: viewId }, () => {
         removeFromList(view, 'excludeGroups', id, true);
         removeFromList(view, 'collapsed', id, true);
         if (!framed) return;
@@ -195,9 +192,9 @@ function removeGroup(cascade: Cascade, doc: DeckDoc, group: YObject): void {
 
 function removeFeature(cascade: Cascade, doc: DeckDoc, id: Id): void {
   for (const c of ['views', 'flows'] as const) {
-    for (const map of collectionArray(doc, c)) {
+    for (const [objectId, map] of entriesOf(doc, c)) {
       if (map.get('feature') === id) {
-        cascade.update({ scope: c, id: idOf(map) }, () => {
+        cascade.update({ scope: c, id: objectId }, () => {
           map.delete('feature');
         });
       }
@@ -208,16 +205,16 @@ function removeFeature(cascade: Cascade, doc: DeckDoc, id: Id): void {
 /** Removes an object of a collection with its cascade. */
 export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalResult {
   const { doc } = ctx;
-  const array = collectionArray(doc, c);
-  const map = array.get(findIndexById(array, id, LABELS[c]));
+  const list = collectionMap(doc, c);
+  const map = requireEntry(list, id, LABELS[c]);
   const cascade = new Cascade(ctx);
-  cascade.remove({ scope: c, id }, deleteById(array, id));
+  cascade.remove({ scope: c, id }, deleteById(list, id));
   switch (c) {
     case 'nodes':
       removeNode(cascade, doc, id);
       break;
     case 'groups':
-      removeGroup(cascade, doc, map);
+      removeGroup(cascade, doc, id, map);
       break;
     case 'features':
       removeFeature(cascade, doc, id);
@@ -228,10 +225,10 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
         ['steps', 'step'],
         ['branches', 'branch'],
       ] as const) {
-        const children = map.get(field);
-        if (!(children instanceof Y.Array)) continue;
-        for (const child of children as Y.Array<YObject>) {
-          cascade.remove({ scope: 'flows', id, child: { kind, id: idOf(child) } }, () => undefined);
+        const children = childList(map, field);
+        if (children === undefined) continue;
+        for (const [childId] of orderedEntries(children)) {
+          cascade.remove({ scope: 'flows', id, child: { kind, id: childId } }, () => undefined);
         }
       }
       break;
@@ -247,28 +244,27 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
 
 export function removeStep(ctx: EditContext, flowId: Id, stepId: Id): RemovalResult {
   const steps = stepsOf(ctx, flowId);
-  findIndexById(steps, stepId, 'Step');
+  requireEntry(steps, stepId, 'Step');
   const cascade = new Cascade(ctx);
   cascade.remove(stepRef(flowId, stepId), deleteById(steps, stepId));
   return cascade.commit();
 }
 
 /**
- * Removes a branch and its steps (FR-028, ADR 0008). The other branches stay; the `branches` field
- * goes when the last one does. One transaction, one undo step.
+ * Removes a branch and its steps (FR-028, ADR 0008). The other branches stay; the `branches` list
+ * stays too (it reads as absent once empty). One transaction, one undo step.
  */
 export function removeBranch(ctx: EditContext, flowId: Id, branchId: Id): RemovalResult {
-  const flow = flowMapOf(ctx, flowId);
   const branches = branchListOf(ctx, flowId, branchId);
   const steps = stepsOf(ctx, flowId);
   const cascade = new Cascade(ctx);
-  cascade.remove({ scope: 'flows', id: flowId, child: { kind: 'branch', id: branchId } }, () => {
-    branches.delete(findIndexById(branches, branchId, 'Branch'), 1);
-    if (branches.length === 0) flow.delete('branches');
-  });
-  for (const step of steps) {
+  cascade.remove(
+    { scope: 'flows', id: flowId, child: { kind: 'branch', id: branchId } },
+    deleteById(branches, branchId),
+  );
+  for (const [stepId, step] of orderedEntries(steps)) {
     if (step.get('branch') === branchId) {
-      cascade.remove(stepRef(flowId, idOf(step)), deleteById(steps, idOf(step)));
+      cascade.remove(stepRef(flowId, stepId), deleteById(steps, stepId));
     }
   }
   return cascade.commit();
@@ -285,18 +281,18 @@ export function removeRule(ctx: EditContext, id: Id): RemovalResult {
   cascade.remove({ scope: 'rules', id }, () => {
     rules.delete(id);
   });
-  for (const node of collectionArray(doc, 'nodes')) {
+  for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
     if (listHas(node, 'rules', id)) {
-      cascade.update({ scope: 'nodes', id: idOf(node) }, () => {
+      cascade.update({ scope: 'nodes', id: nodeId }, () => {
         removeFromList(node, 'rules', id, true);
       });
     }
   }
-  forEachStep(doc, (step, flowId) => {
+  forEachStep(doc, (step, flowId, stepId) => {
     const inputs = step.get('ruleInputs');
     const hasInputs = inputs instanceof Y.Map && inputs.has(id);
     if (!listHas(step, 'rules', id) && !hasInputs) return;
-    cascade.update(stepRef(flowId, idOf(step)), () => {
+    cascade.update(stepRef(flowId, stepId), () => {
       removeFromList(step, 'rules', id, true);
       if (hasInputs) {
         inputs.delete(id);
@@ -315,22 +311,24 @@ export function removeRuleColumn(
   side: 'inputs' | 'outputs',
   columnId: Id,
 ): RemovalResult {
-  const columns = rule.get(side) as Y.Array<YObject>;
-  const index = findIndexById(columns, columnId, 'Column');
-  const cellField = side === 'inputs' ? 'when' : 'then';
+  const columns = childList(rule, side);
+  if (columns === undefined) throw new TypeError(`Rule "${ruleId}" has no "${side}" list.`);
+  requireEntry(columns, columnId, 'Column');
+  const rows = childList(rule, 'rows');
   const cascade = new Cascade(ctx);
   cascade.remove({ scope: 'rules', id: ruleId, child: { kind: 'column', id: columnId } }, () => {
-    columns.delete(index, 1);
-    for (const row of rule.get('rows') as Y.Array<YObject>) {
-      (row.get(cellField) as Y.Array<string>).delete(index, 1);
+    columns.delete(columnId);
+    for (const row of rows?.values() ?? []) {
+      const cells = row.get('cells');
+      if (cells instanceof Y.Map && cells.has(columnId)) cells.delete(columnId);
     }
   });
   if (side === 'inputs') {
-    forEachStep(ctx.doc, (step, flowId) => {
+    forEachStep(ctx.doc, (step, flowId, stepId) => {
       const inputs = step.get('ruleInputs');
       const values = inputs instanceof Y.Map ? inputs.get(ruleId) : undefined;
       if (values instanceof Y.Map && values.has(columnId)) {
-        cascade.update(stepRef(flowId, idOf(step)), () => {
+        cascade.update(stepRef(flowId, stepId), () => {
           values.delete(columnId);
         });
       }

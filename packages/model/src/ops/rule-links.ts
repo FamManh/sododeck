@@ -8,9 +8,9 @@ import * as Y from 'yjs';
 
 import { fromY, isRecord, jsonEqual, toY, type YObject } from '../convert';
 import { DeckEditError } from '../errors';
-import { collectionArray, rulesMap } from '../layout';
+import { collectionMap, rulesMap } from '../layout';
 import { inputColumnsOf } from './collections';
-import { getMapById, type EditContext } from './context';
+import { requireEntry, type EditContext } from './context';
 import { stepsOf } from './steps';
 
 /** What a rule attaches to: a component, or a step of a flow. */
@@ -18,8 +18,8 @@ export type RuleHost = { kind: 'node'; id: Id } | { kind: 'step'; flowId: Id; st
 
 function hostMap(ctx: EditContext, host: RuleHost): YObject {
   return host.kind === 'node'
-    ? getMapById(collectionArray(ctx.doc, 'nodes'), host.id, 'Component')
-    : getMapById(stepsOf(ctx, host.flowId), host.stepId, 'Step');
+    ? requireEntry(collectionMap(ctx.doc, 'nodes'), host.id, 'Component')
+    : requireEntry(stepsOf(ctx, host.flowId), host.stepId, 'Step');
 }
 
 function rulesOf(map: YObject): Id[] {
@@ -79,7 +79,7 @@ export function setRuleInputs(
   ruleId: Id,
   values: Readonly<Record<Id, string>>,
 ): void {
-  const step = getMapById(stepsOf(ctx, flowId), stepId, 'Step');
+  const step = requireEntry(stepsOf(ctx, flowId), stepId, 'Step');
   if (!rulesOf(step).includes(ruleId)) {
     throw new DeckEditError('missing-reference', [
       { path: `ruleInputs.${ruleId}`, message: `Rule "${ruleId}" is not attached to this step.` },

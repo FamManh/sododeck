@@ -1,36 +1,42 @@
 /** Flow step operations. Steps are owned by their flow (data-model "References and delete cascade"). */
 import type { Id, Step } from '@sododeck/schema';
-import * as Y from 'yjs';
 
-import { fromY, toY, type YObject } from '../convert';
-import { collectionArray } from '../layout';
-import { findIndexById, getMapById, type EditContext } from './context';
+import type { YObject } from '../convert';
+import {
+  childList,
+  collectionMap,
+  insertAt,
+  orderedEntries,
+  orderedIds,
+  planMove,
+  type ListMap,
+} from '../layout';
+import { readObject } from '../read';
+import { createObject, writeFields } from '../write';
+import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { anchorableIds } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
-import { assertFreeIds, inputColumnsOf, moveInArray } from './collections';
-import { applyPatch, writePatch } from './patch';
+import { assertFreeIds, inputColumnsOf } from './collections';
+import { applyPatch } from './patch';
 import { stepBranchIssues, stepRefs } from './refs';
 import type { NewStep, Patch } from './types';
 
 export function flowMapOf(ctx: EditContext, flowId: Id): YObject {
-  return getMapById(collectionArray(ctx.doc, 'flows'), flowId, 'Flow');
+  return requireEntry(collectionMap(ctx.doc, 'flows'), flowId, 'Flow');
 }
 
-export function stepsOf(ctx: EditContext, flowId: Id): Y.Array<YObject> {
-  const steps = flowMapOf(ctx, flowId).get('steps');
-  if (!(steps instanceof Y.Array)) throw new TypeError(`Flow "${flowId}" has no step list.`);
-  return steps as Y.Array<YObject>;
+/** A flow's steps: one flat order across all paths, as the file's array (research R4). */
+export function stepsOf(ctx: EditContext, flowId: Id): ListMap {
+  const steps = childList(flowMapOf(ctx, flowId), 'steps');
+  if (steps === undefined) throw new TypeError(`Flow "${flowId}" has no step list.`);
+  return steps;
 }
 
 /** Ids of a flow's branches, in order (empty when it has none). */
 export function branchIdsOf(flow: YObject): Id[] {
-  const branches = flow.get('branches');
-  if (!(branches instanceof Y.Array)) return [];
-  return (branches as Y.Array<YObject>)
-    .toArray()
-    .map((b) => b.get('id'))
-    .filter((id): id is Id => typeof id === 'string');
+  const branches = childList(flow, 'branches');
+  return branches === undefined ? [] : orderedIds(branches);
 }
 
 function checkStepRefs(
@@ -59,10 +65,8 @@ export function addStep(ctx: EditContext, flowId: Id, data: NewStep, index?: num
   if (explicitId !== undefined) assertFreeIds(ctx.doc, [{ path: 'id', id }]);
   checkStepRefs(ctx, flowId, step);
 
-  const at =
-    index === undefined ? steps.length : Math.max(0, Math.min(steps.length, Math.trunc(index)));
   ctx.transact(() => {
-    steps.insert(at, [toY(step) as YObject]);
+    insertAt(steps, id, createObject('step', step, ''), index);
   });
   ctx.reserve([id]);
   return id;
@@ -70,8 +74,8 @@ export function addStep(ctx: EditContext, flowId: Id, data: NewStep, index?: num
 
 export function updateStep(ctx: EditContext, flowId: Id, stepId: Id, patch: Patch<Step>): void {
   const steps = stepsOf(ctx, flowId);
-  const map = getMapById(steps, stepId, 'Step');
-  const { candidate, changed } = applyPatch(fromY(map) as Record<string, unknown>, patch, []);
+  const map = requireEntry(steps, stepId, 'Step');
+  const { candidate, changed } = applyPatch(readObject('step', stepId, map), patch, []);
   if (changed.length === 0) return;
   assertValid(validateObject('step', candidate));
   // Sample inputs depend on the step's rules, so a change to either re-checks both. Only changed
@@ -84,7 +88,7 @@ export function updateStep(ctx: EditContext, flowId: Id, stepId: Id, patch: Patc
     ruleFields ? [...changed, 'rules'] : changed,
   );
   ctx.transact(() => {
-    writePatch(map, candidate, changed);
+    writeFields(map, 'step', candidate, changed);
   }, `flows:${flowId}:${stepId}`);
 }
 
@@ -109,10 +113,12 @@ const isNormal = (ranks: readonly number[]) =>
 export function moveStep(ctx: EditContext, flowId: Id, stepId: Id, toIndex: number): void {
   const flow = flowMapOf(ctx, flowId);
   const steps = stepsOf(ctx, flowId);
-  const from = findIndexById(steps, stepId, 'Step');
-  const to = Math.max(0, Math.min(steps.length - 1, Math.trunc(toIndex)));
+  requireEntry(steps, stepId, 'Step');
+  const entries = orderedEntries(steps);
+  const from = entries.findIndex(([id]) => id === stepId);
+  const to = Math.max(0, Math.min(entries.length - 1, Math.trunc(toIndex)));
   const branchIds = branchIdsOf(flow);
-  const before = steps.toArray().map((s) => ({ id: s.get('id'), branch: s.get('branch') }));
+  const before = entries.map(([id, s]) => ({ id, branch: s.get('branch') }));
   const after = [...before];
   const [moved] = after.splice(from, 1);
   if (moved === undefined) return;
@@ -131,5 +137,6 @@ export function moveStep(ctx: EditContext, flowId: Id, stepId: Id, toIndex: numb
       refuse('The branch step stays the last step of the main path.');
     }
   }
-  moveInArray(ctx, steps, from, to);
+  const move = planMove(steps, stepId, to);
+  if (move !== undefined) ctx.transact(move);
 }

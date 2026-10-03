@@ -6,10 +6,11 @@
 import type { Frame, Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { toY, type YObject } from '../convert';
+import { toY } from '../convert';
 import { DeckEditError } from '../errors';
 import { anchorableIds } from '../ids';
-import { collectionArray, indexOfId } from '../layout';
+import { collectionMap, insertAt } from '../layout';
+import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject, type Ref } from '../validate';
 import type { EditContext } from './context';
 import { materializeFrames } from './frames';
@@ -30,10 +31,9 @@ export interface GroupSelection {
 /** `id` and every group it encloses (cycle-safe). */
 function subtreeOf(ctx: EditContext, ids: readonly Id[]): Set<Id> {
   const children = new Map<Id, Id[]>();
-  for (const group of collectionArray(ctx.doc, 'groups')) {
+  for (const [id, group] of collectionMap(ctx.doc, 'groups').entries()) {
     const parent = group.get('parent');
-    const id = group.get('id');
-    if (typeof parent !== 'string' || typeof id !== 'string') continue;
+    if (typeof parent !== 'string') continue;
     children.set(parent, [...(children.get(parent) ?? []), id]);
   }
   const out = new Set<Id>();
@@ -93,11 +93,11 @@ export function groupSelection(ctx: EditContext, selection: GroupSelection): Id 
     });
 
   ctx.transact(() => {
-    collectionArray(ctx.doc, 'groups').push([toY(group) as YObject]);
-    const nodeArray = collectionArray(ctx.doc, 'nodes');
-    for (const nodeId of nodes) nodeArray.get(indexOfId(nodeArray, nodeId)).set('group', id);
-    const groupArray = collectionArray(ctx.doc, 'groups');
-    for (const groupId of groups) groupArray.get(indexOfId(groupArray, groupId)).set('parent', id);
+    const groupList = collectionMap(ctx.doc, 'groups');
+    insertAt(groupList, id, createObject('groups', group, ''));
+    const nodeList = collectionMap(ctx.doc, 'nodes');
+    for (const nodeId of nodes) nodeList.get(nodeId)?.set('group', id);
+    for (const groupId of groups) groupList.get(groupId)?.set('parent', id);
     for (const { map, own } of targets) {
       const frames = map.get('groupFrames');
       if (own !== undefined && frames instanceof Y.Map) {

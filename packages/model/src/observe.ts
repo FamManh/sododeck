@@ -4,8 +4,9 @@
  */
 import * as Y from 'yjs';
 
-import { COLLECTIONS, type DeckDoc, type ObjectRef, type Scope } from './layout';
+import { COLLECTIONS, isInternalKey, type DeckDoc, type ObjectRef, type Scope } from './layout';
 import { editorOrigins } from './ops/context';
+import { BLANK_PREFIX } from './text';
 
 export interface ObjectChange extends ObjectRef {
   kind: 'added' | 'updated' | 'removed';
@@ -19,36 +20,22 @@ export interface DeckChange {
   changes: ObjectChange[];
 }
 
-type Root = Y.Map<unknown> | Y.Array<unknown>;
+type Root = Y.Map<unknown>;
 /** The event type `observeDeep` hands out. */
 type DeckEvent = Parameters<Parameters<Root['observeDeep']>[0]>[0][number];
 
 const SCOPE_ORDER: readonly Scope[] = ['meta', ...COLLECTIONS, 'rules'];
 
-const CHILD_KINDS: Readonly<Record<string, 'step' | 'branch' | 'column' | 'row'>> = {
+/** Child lists of a flow and of a rule, and the kind of child they hold. */
+const FLOW_CHILDREN: Readonly<Record<string, 'step' | 'branch'>> = {
   steps: 'step',
   branches: 'branch',
+};
+const RULE_CHILDREN: Readonly<Record<string, 'column' | 'row'>> = {
   inputs: 'column',
   outputs: 'column',
   rows: 'row',
 };
-
-/** Id of a Y.Map item, including one deleted in this transaction (read before it is GC'd). */
-function idOfItem(item: Y.Item): string | undefined {
-  if (!(item.content instanceof Y.ContentType)) return undefined;
-  const type = item.content.type;
-  if (!(type instanceof Y.Map)) return undefined;
-  const value: unknown = type._map.get('id')?.content.getContent()[0];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function idAt(array: unknown, index: unknown): string | undefined {
-  if (!(array instanceof Y.Array) || typeof index !== 'number') return undefined;
-  const item: unknown = array.get(index);
-  if (!(item instanceof Y.Map)) return undefined;
-  const id: unknown = item.get('id');
-  return typeof id === 'string' ? id : undefined;
-}
 
 type Kind = ObjectChange['kind'];
 
@@ -96,67 +83,52 @@ class ChangeBuffer {
   }
 }
 
-/** Children added to / removed from an array of id-carrying maps. */
-function recordArrayDelta(
+/** Field names a map event changed: internal keys dropped, a blank marker named as its field. */
+function fieldKeys(event: DeckEvent): string[] {
+  if (!(event instanceof Y.YMapEvent)) return [];
+  const keys: string[] = [];
+  for (const key of event.keysChanged as Set<string>) {
+    if (key.startsWith(BLANK_PREFIX)) keys.push(key.slice(BLANK_PREFIX.length));
+    else if (!isInternalKey(key)) keys.push(key);
+  }
+  return keys;
+}
+
+/** Keys changed by an event at `rest` below an object: its own fields, or the field it is inside. */
+function keysOf(event: DeckEvent, rest: readonly (string | number)[]): string[] {
+  const first = rest[0];
+  return first === undefined ? fieldKeys(event) : [String(first)];
+}
+
+/** Items added, removed or replaced in a list map (the event's own key changes). */
+function recordListKeys(
   event: DeckEvent,
   buffer: ChangeBuffer,
   refOf: (id: string) => ObjectRef,
 ): void {
-  for (const item of event.changes.added) {
-    const id = idOfItem(item);
-    if (id !== undefined) buffer.record(refOf(id), 'added');
+  for (const [id, change] of event.changes.keys) {
+    if (isInternalKey(id)) continue;
+    const kind =
+      change.action === 'add' ? 'added' : change.action === 'delete' ? 'removed' : 'updated';
+    buffer.record(refOf(id), kind);
   }
-  for (const item of event.changes.deleted) {
-    const id = idOfItem(item);
-    if (id !== undefined) buffer.record(refOf(id), 'removed');
-  }
-}
-
-/** Items of a Y.Array, including those deleted in this transaction. */
-function itemsOf(array: unknown): Y.Item[] {
-  const items: Y.Item[] = [];
-  if (!(array instanceof Y.Array)) return items;
-  for (let item = array._start; item !== null; item = item.right) items.push(item);
-  return items;
 }
 
 /**
- * A flow's `branches` field is optional, so the first branch sets it and removing the last one
- * deletes it (ADR 0008). Reports that as branch children added or removed, like steps.
+ * The side (`when` / `then`) of each cell key a row's `cells` event changed. A column removed in
+ * the same transaction is gone from its list but still known to it as a deleted entry.
  */
-function recordBranchesField(
-  event: Y.YMapEvent<unknown>,
-  buffer: ChangeBuffer,
-  ref: ObjectRef,
-): void {
-  const change = event.changes.keys.get('branches');
-  if (change === undefined) return;
-  const childRef = (id: string): ObjectRef => ({ ...ref, child: { kind: 'branch', id } });
-  if (change.action !== 'add') {
-    for (const item of itemsOf(change.oldValue)) {
-      const id = idOfItem(item);
-      if (id !== undefined) buffer.record(childRef(id), 'removed');
-    }
+function cellSides(event: DeckEvent, rule: Y.Map<unknown>): string[] {
+  const outputs = rule.get('outputs');
+  const sides = new Set<string>();
+  for (const column of event.changes.keys.keys()) {
+    const isOutput = outputs instanceof Y.Map && (outputs.has(column) || outputs._map.has(column));
+    sides.add(isOutput ? 'then' : 'when');
   }
-  if (change.action !== 'delete') {
-    for (const item of itemsOf(event.target.get('branches'))) {
-      const id = item.deleted ? undefined : idOfItem(item);
-      if (id !== undefined) buffer.record(childRef(id), 'added');
-    }
-  }
+  return [...sides];
 }
 
-function keysOf(event: DeckEvent, rest: readonly (string | number)[]): string[] {
-  const first = rest[0];
-  if (first === undefined)
-    return event instanceof Y.YMapEvent ? Array.from(event.keysChanged, String) : [];
-  return [String(first)];
-}
-
-/**
- * Records one event of an object map subtree. `path` is relative to the object; `children` gives
- * the array holding a child kind (steps, columns, rows).
- */
+/** Records one event of an object's subtree; `path` is relative to the object. */
 function recordObjectEvent(
   event: DeckEvent,
   buffer: ChangeBuffer,
@@ -164,27 +136,26 @@ function recordObjectEvent(
   object: Y.Map<unknown>,
   path: readonly (string | number)[],
 ): void {
-  const [field, index, ...rest] = path;
-  if (field === undefined && ref.scope === 'flows' && event instanceof Y.YMapEvent) {
-    recordBranchesField(event, buffer, ref);
-    const keys = keysOf(event, path).filter((k) => k !== 'branches');
-    if (keys.length > 0 || !event.keysChanged.has('branches')) buffer.record(ref, 'updated', keys);
+  const [field, childId, ...rest] = path;
+  if (field === undefined) {
+    buffer.record(ref, 'updated', fieldKeys(event));
     return;
   }
-  const childKind = typeof field === 'string' ? CHILD_KINDS[field] : undefined;
-  const flowChild = field === 'steps' || field === 'branches';
-  if (childKind === undefined || (ref.scope === 'rules') === flowChild) {
-    buffer.record(ref, 'updated', keysOf(event, path));
+  const children =
+    ref.scope === 'flows' ? FLOW_CHILDREN : ref.scope === 'rules' ? RULE_CHILDREN : {};
+  const childKind = typeof field === 'string' ? children[field] : undefined;
+  if (childKind === undefined) {
+    buffer.record(ref, 'updated', [String(field)]);
     return;
   }
-  const children = object.get(field as string);
   const childRef = (id: string): ObjectRef => ({ ...ref, child: { kind: childKind, id } });
-  if (index === undefined) {
-    recordArrayDelta(event, buffer, childRef);
+  if (childId === undefined) {
+    recordListKeys(event, buffer, childRef);
     return;
   }
-  const childId = idAt(children, index);
-  if (childId !== undefined) buffer.record(childRef(childId), 'updated', keysOf(event, rest));
+  const keys =
+    childKind === 'row' && rest[0] === 'cells' ? cellSides(event, object) : keysOf(event, rest);
+  buffer.record(childRef(String(childId)), 'updated', keys);
 }
 
 function recordEvent(scope: Scope, root: Root, event: DeckEvent, buffer: ChangeBuffer): void {
@@ -194,30 +165,14 @@ function recordEvent(scope: Scope, root: Root, event: DeckEvent, buffer: ChangeB
     return;
   }
   const [head, ...rest] = path;
-  if (scope === 'rules') {
-    if (head === undefined) {
-      for (const [id, change] of event.changes.keys) {
-        buffer.record(
-          { scope, id },
-          change.action === 'add' ? 'added' : change.action === 'delete' ? 'removed' : 'updated',
-        );
-      }
-      return;
-    }
-    const rule: unknown = root instanceof Y.Map ? root.get(String(head)) : undefined;
-    if (rule instanceof Y.Map)
-      recordObjectEvent(event, buffer, { scope, id: String(head) }, rule, rest);
-    return;
-  }
   if (head === undefined) {
-    recordArrayDelta(event, buffer, (id) => ({ scope, id }));
+    recordListKeys(event, buffer, (id) => ({ scope, id }));
     return;
   }
-  const object: unknown =
-    root instanceof Y.Array && typeof head === 'number' ? root.get(head) : undefined;
-  const id = idAt(root, head);
-  if (object instanceof Y.Map && id !== undefined)
-    recordObjectEvent(event, buffer, { scope, id }, object, rest);
+  const object = root.get(String(head));
+  if (object instanceof Y.Map) {
+    recordObjectEvent(event, buffer, { scope, id: String(head) }, object, rest);
+  }
 }
 
 function originOf(origin: unknown): DeckChange['origin'] {
@@ -233,7 +188,7 @@ export function observeDeck(doc: DeckDoc, listener: (change: DeckChange) => void
   const buffer = new ChangeBuffer();
   const roots: [Scope, Root][] = [
     ['meta', doc.getMap('meta')],
-    ...COLLECTIONS.map((c): [Scope, Root] => [c, doc.getArray(c)]),
+    ...COLLECTIONS.map((c): [Scope, Root] => [c, doc.getMap(c)]),
     ['rules', doc.getMap('rules')],
   ];
   const handlers = roots.map(([scope, root]) => {

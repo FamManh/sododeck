@@ -8,17 +8,12 @@ import * as Y from 'yjs';
 
 import { toY, type YObject } from '../convert';
 import { DeckEditError } from '../errors';
-import { collectionArray } from '../layout';
+import { collectionMap, orderedEntries, type ListMap } from '../layout';
 import type { EditContext } from './context';
 import { resolveView, viewMap } from './views';
 
-function groupMaps(ctx: EditContext): Map<Id, YObject> {
-  const maps = new Map<Id, YObject>();
-  for (const group of collectionArray(ctx.doc, 'groups')) {
-    const id = group.get('id');
-    if (typeof id === 'string') maps.set(id, group);
-  }
-  return maps;
+function groupMaps(ctx: EditContext): ListMap {
+  return collectionMap(ctx.doc, 'groups');
 }
 
 function assertFrames(entries: readonly (readonly [Id, Frame])[]): void {
@@ -91,15 +86,13 @@ export function fillGroupFrames(
 ): void {
   assertFrames([...base, ...[...perView.values()].flatMap((frames) => [...frames])]);
   const groups = groupMaps(ctx);
-  const views = collectionArray(ctx.doc, 'views')
-    .toArray()
-    .filter((view) => perView.has(view.get('id') as Id));
+  const views = orderedEntries(collectionMap(ctx.doc, 'views')).filter(([id]) => perView.has(id));
   const baseWrites = [...base].filter(([id]) => {
     const group = groups.get(id);
     return group !== undefined && frameOfMap(group) === undefined;
   });
-  const viewWrites = views.flatMap((view) => {
-    const frames = perView.get(view.get('id') as Id) ?? new Map<Id, Frame>();
+  const viewWrites = views.flatMap(([viewId, view]) => {
+    const frames = perView.get(viewId) ?? new Map<Id, Frame>();
     const own = view.get('groupFrames');
     const missing = [...frames].filter(
       ([id]) => groups.has(id) && !(own instanceof Y.Map && own.has(id)),
@@ -160,8 +153,8 @@ export function setGroupFrames(
         const group = groups.get(id);
         if (group !== undefined) writeGroupFrame(group as Y.Map<unknown>, frame);
       }
-      if (!dropOwn) return;
-      const map = collectionArray(ctx.doc, 'views').get(0);
+      const map = collectionMap(ctx.doc, 'views').get(view.id);
+      if (!dropOwn || map === undefined) return;
       const stored = map.get('groupFrames');
       if (!(stored instanceof Y.Map)) return;
       for (const [id] of entries) stored.delete(id);

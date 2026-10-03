@@ -2,6 +2,7 @@ export { createDeck, fromJSON, getObject, getRule, serializeDeck, toJSON } from 
 export {
   ARRAY_COLLECTIONS,
   COLLECTIONS,
+  isLegacyLayout,
   type Collection,
   type DeckDoc,
   type ObjectOf,

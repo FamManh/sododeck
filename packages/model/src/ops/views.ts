@@ -9,10 +9,13 @@
 import type { Id, View, ViewType } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { fromY, jsonEqual, toY, type YObject } from '../convert';
+import { jsonEqual, toY, type YObject } from '../convert';
 import { DeckEditError } from '../errors';
 import type { Point } from '../geometry';
-import { collectionArray, indexOfId } from '../layout';
+import { collectionMap, insertAt, orderedEntries, type ListMap } from '../layout';
+import { keysBetween } from '../order-key';
+import { readObject } from '../read';
+import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject, type Ref } from '../validate';
 import { anchorableIds } from '../ids';
 import { CUSTOM_VIEW_DEFAULTS, nextCustomTitle, VIEW_PRESETS } from '../views';
@@ -45,9 +48,12 @@ const SETTINGS_KEYS = [
 
 /** The views the deck shows now (stored, else presets), as plain data. */
 function currentViews(ctx: EditContext): { views: readonly View[]; stored: boolean } {
-  const array = collectionArray(ctx.doc, 'views');
-  if (array.length === 0) return { views: VIEW_PRESETS, stored: false };
-  return { views: array.toArray().map((m) => fromY(m) as View), stored: true };
+  const list = collectionMap(ctx.doc, 'views');
+  if (list.size === 0) return { views: VIEW_PRESETS, stored: false };
+  const views = orderedEntries(list).map(
+    ([id, m]) => readObject('views', id, m) as unknown as View,
+  );
+  return { views, stored: true };
 }
 
 export function resolveView(ctx: EditContext, viewId: Id): { view: View; index: number } {
@@ -62,21 +68,26 @@ export function resolveView(ctx: EditContext, viewId: Id): { view: View; index: 
   return { view, index };
 }
 
-/** Stores the presets when the deck has none (untracked: never an undo step, FR-001). */
+/**
+ * Stores the presets when the deck has none (untracked: never an undo step, FR-001). Fixed ids and
+ * fixed order keys, so two tabs doing it at once converge on three views, not six (R2).
+ */
 function materialize(ctx: EditContext): void {
-  const array = collectionArray(ctx.doc, 'views');
-  if (array.length > 0) return;
+  const list = collectionMap(ctx.doc, 'views');
+  if (list.size > 0) return;
+  const keys = keysBetween(null, null, VIEW_PRESETS.length);
   ctx.transactUntracked(() => {
-    array.push(VIEW_PRESETS.map((v) => toY(v) as YObject));
+    VIEW_PRESETS.forEach((view, i) => {
+      list.set(view.id, createObject('views', { ...view }, keys[i] ?? ''));
+    });
   });
 }
 
 /** The view's Y.Map, storing the presets first if needed. Call only after validating. */
 export function viewMap(ctx: EditContext, viewId: Id): YObject {
   materialize(ctx);
-  const array = collectionArray(ctx.doc, 'views');
-  const map = array.get(indexOfId(array, viewId));
-  if (!(map instanceof Y.Map)) {
+  const map = collectionMap(ctx.doc, 'views').get(viewId);
+  if (map === undefined) {
     throw new DeckEditError('not-found', [
       { path: '', message: `View "${viewId}" does not exist.` },
     ]);
@@ -84,13 +95,8 @@ export function viewMap(ctx: EditContext, viewId: Id): YObject {
   return map;
 }
 
-function nodeMaps(ctx: EditContext): Map<Id, YObject> {
-  const maps = new Map<Id, YObject>();
-  for (const node of collectionArray(ctx.doc, 'nodes')) {
-    const id = node.get('id');
-    if (typeof id === 'string') maps.set(id, node);
-  }
-  return maps;
+function nodeMaps(ctx: EditContext): ListMap {
+  return collectionMap(ctx.doc, 'nodes');
 }
 
 /** Sets `map[field]` to `{x,y}`, keeping an existing nested map so concurrent axes merge. */
@@ -161,8 +167,8 @@ export function moveInView(
         const node = nodes.get(id);
         if (node !== undefined) writePoint(node as Y.Map<unknown>, 'position', point);
       }
-      if (!dropOwn) return;
-      const map = collectionArray(ctx.doc, 'views').get(0);
+      const map = collectionMap(ctx.doc, 'views').get(view.id);
+      if (!dropOwn || map === undefined) return;
       const stored = map.get('positions');
       if (!(stored instanceof Y.Map)) return;
       for (const [id] of entries) stored.delete(id);
@@ -289,7 +295,7 @@ export function addView(ctx: EditContext, data: { title?: string; type?: ViewTyp
   assertValid(validateObject('views', view));
   materialize(ctx);
   ctx.transact(() => {
-    collectionArray(ctx.doc, 'views').push([toY(view) as YObject]);
+    insertAt(collectionMap(ctx.doc, 'views'), id, createObject('views', { ...view }, ''));
   });
   return id;
 }

@@ -2,53 +2,56 @@
  * The deck document model. This module is the ONLY place that converts
  * between the Yjs document and the `.sododeck.json` format.
  *
- * Yjs layout: persisted from feature 005 on, so changing it needs an ADR and a migration
- * (ADR 0005, specs/002-yjs-model/data-model.md).
+ * Yjs layout 2 (036, ADR 0021; replaces the layout of ADR 0005 §1). Every list is stored by id with
+ * an order, so a move is one key change, a delete takes everything written inside the item with
+ * it, and lookups do not depend on list size:
  *
- *   doc.getMap('meta')         Y.Map        $schema, version, name?, description?, tags? (Y.Array),
- *                                              swatches (Y.Array, always present, 020)
- *   doc.getArray('nodes')      Y.Array<Y.Map>  one map per node, in file order
- *   doc.getArray('groups')     Y.Array<Y.Map>  one map per group
- *   doc.getArray('edges')      Y.Array<Y.Map>  one map per edge
- *   doc.getArray('views')      Y.Array<Y.Map>  includes → Y.Array; positions → Y.Map(node id → Y.Map x,y);
- *                                              011 (ADR 0012, optional): excludeGroups, excludeKinds,
- *                                              excludeTags, dimKinds, pinned, collapsed → Y.Array.
- *                                              `collapsed` is written with an untracked origin.
- *   doc.getArray('features')   Y.Array<Y.Map>  one map per feature
- *   doc.getArray('flows')      Y.Array<Y.Map>  steps → Y.Array<Y.Map>; step ruleInputs → nested Y.Map;
- *                                              branches (006, optional) → Y.Array<Y.Map>
- *   doc.getMap('rules')        Y.Map<Y.Map>    rule id → rule; inputs/outputs/rows → Y.Array<Y.Map>;
- *                                              row when/then → Y.Array<string>
- *   doc.getArray('stickies')   Y.Array<Y.Map>  one map per sticky
+ *   doc.getMap('meta')       Y.Map            $schema, version, name?, description (Y.Text), tags?
+ *                                               (Y.Array), swatches (Y.Array, always present, 020)
+ *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component
+ *   doc.getMap('groups')     Y.Map<id, Y.Map>  one map per group
+ *   doc.getMap('edges')      Y.Map<id, Y.Map>  one map per connection
+ *   doc.getMap('views')      Y.Map<id, Y.Map>  includes, filters, pinned, collapsed → Y.Array;
+ *                                               positions, groupFrames → Y.Map. `collapsed` and the
+ *                                               presets are written with an untracked origin (011).
+ *   doc.getMap('features')   Y.Map<id, Y.Map>  one map per feature
+ *   doc.getMap('flows')      Y.Map<id, Y.Map>  steps, branches → Y.Map<id, Y.Map> (always present);
+ *                                               step ruleInputs → nested Y.Map
+ *   doc.getMap('rules')      Y.Map<id, Y.Map>  inputs, outputs, rows → Y.Map<id, Y.Map> (always
+ *                                               present); row cells → Y.Map<columnId, string>
+ *   doc.getMap('stickies')   Y.Map<id, Y.Map>  one map per note
  *
- * Inside objects, nested objects (position, positions, ruleInputs, links) become Y.Map and arrays
- * become Y.Array, so every field is individually editable and mergeable (FR-004). Scalars,
- * including all text, are plain values: two concurrent writes to one text field resolve as last
- * write wins for that field (no Y.Text; letter-by-letter merge is a later layout change).
- * Optional fields are absent when unset, never stored as null or undefined.
+ * Inside a list item: the id is the map key (no `id` field); `$order` is a fractional-index key and
+ * lists read sorted by (`$order`, id) (order-key.ts); `$blank:<field>` keeps an explicitly empty
+ * value. Long text fields (text-fields.ts) are `Y.Text`, always present, merged letter by letter;
+ * every other scalar is a plain value (last write wins). Nested objects are `Y.Map`, arrays
+ * `Y.Array`, so every field is individually editable and mergeable. Optional fields are absent
+ * when unset. Keys starting with `$` are internal: never output, never reported.
  *
- * Output key order is not taken from Y.Map; `toJSON` rebuilds every object in schema order
- * (key-order.ts).
+ * `read.ts` and `write.ts` are the only readers and writers of these maps. Output key order is not
+ * taken from Y.Map; `toJSON` rebuilds every object in schema order (key-order.ts).
  */
 import type { Id, Rule, SododeckFile } from '@sododeck/schema';
 import { parseSododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { fromY, toY, type YValue } from './convert';
+import { toY } from './convert';
 import { DeckValidationError } from './errors';
 import { canonicalize } from './key-order';
 import {
-  collectionArray,
+  collectionMap,
   COLLECTIONS,
-  indexOfId,
   metaMap,
   rulesMap,
-  swatchesArray,
   type Collection,
   type DeckDoc,
   type ObjectOf,
 } from './layout';
 import { checkDuplicateIds } from './load-checks';
+import { keysBetween } from './order-key';
+import { readCollection, readMeta, readObject, readRule, readRules } from './read';
+import { blankKey } from './text';
+import { createObject, createRule } from './write';
 
 /** Creates a new, empty deck document. */
 export function createDeck(): DeckDoc {
@@ -83,51 +86,50 @@ export function fromJSON(input: unknown): DeckDoc {
     meta.set('$schema', file.$schema);
     meta.set('version', file.version);
     if (file.name !== undefined) meta.set('name', file.name);
-    if (file.description !== undefined) meta.set('description', file.description);
+    // Always a Y.Text, so two tabs typing the first description share it (research R7).
+    meta.set('description', new Y.Text(file.description ?? ''));
+    if (file.description === '') meta.set(blankKey('description'), true);
     if (file.tags !== undefined) meta.set('tags', toY(file.tags));
     // Always present (even empty), so concurrent addSwatch() calls in two tabs share one
-    // Y.Array from the start instead of racing to create it (research R3).
+    // Y.Array from the start instead of racing to create it (020 research R3).
     meta.set('swatches', toY(file.swatches ?? []));
 
     for (const name of COLLECTIONS) {
-      doc.getArray<YValue>(name).push(file[name].map((item) => toY(item)));
+      const list = collectionMap(doc, name);
+      const items = file[name];
+      const keys = keysBetween(null, null, items.length);
+      items.forEach((item, i) => {
+        list.set(
+          item.id,
+          createObject(name, item as unknown as Record<string, unknown>, keys[i] ?? ''),
+        );
+      });
     }
 
-    const rules = doc.getMap<YValue>('rules');
-    for (const [id, rule] of Object.entries(file.rules)) rules.set(id, toY(rule));
+    // Rules carry an order too, so every client writes the `rules` object in the same key order.
+    const rules = rulesMap(doc);
+    const entries = Object.entries(file.rules);
+    const keys = keysBetween(null, null, entries.length);
+    entries.forEach(([id, rule], i) => {
+      rules.set(id, createRule(rule, keys[i] ?? ''));
+    });
   });
   return doc;
 }
 
 /** Reads the document back into a plain `.sododeck.json` object in canonical key order. */
 export function toJSON(doc: DeckDoc): SododeckFile {
-  const meta = metaMap(doc);
-  const collection = <K extends Collection>(name: K) =>
-    collectionArray(doc, name).toArray().map(fromY) as SododeckFile[K];
-
-  const name = meta.get('name');
-  const description = meta.get('description');
-  const tags = meta.get('tags');
-  const swatchList = swatchesArray(doc).toArray() as string[];
-
   return canonicalize({
-    $schema: meta.get('$schema') as SododeckFile['$schema'],
-    version: meta.get('version') as SododeckFile['version'],
-    // Optional metadata is emitted only when present, so files without it round-trip unchanged.
-    ...(name === undefined ? {} : { name: name as string }),
-    ...(description === undefined ? {} : { description: description as string }),
-    ...(tags === undefined ? {} : { tags: fromY(tags) as string[] }),
-    // `swatches` is always stored (possibly empty), but only ever emitted non-empty.
-    ...(swatchList.length === 0 ? {} : { swatches: swatchList }),
-    nodes: collection('nodes'),
-    groups: collection('groups'),
-    edges: collection('edges'),
-    views: collection('views'),
-    features: collection('features'),
-    flows: collection('flows'),
-    rules: fromY(rulesMap(doc)) as SododeckFile['rules'],
-    stickies: collection('stickies'),
-  });
+    ...readMeta(doc),
+    nodes: readCollection(doc, 'nodes'),
+    groups: readCollection(doc, 'groups'),
+    edges: readCollection(doc, 'edges'),
+    views: readCollection(doc, 'views'),
+    features: readCollection(doc, 'features'),
+    flows: readCollection(doc, 'flows'),
+    rules: readRules(doc),
+    stickies: readCollection(doc, 'stickies'),
+  } as SododeckFile);
 }
 
 /** Serializes a file for saving/export, in canonical key order so git diffs show only edits. */
@@ -141,13 +143,12 @@ export function getObject<C extends Collection>(
   c: C,
   id: Id,
 ): ObjectOf<C> | undefined {
-  const array = collectionArray(doc, c);
-  const index = indexOfId(array, id);
-  return index === -1 ? undefined : (fromY(array.get(index)) as ObjectOf<C>);
+  const map = collectionMap(doc, c).get(id);
+  return map === undefined ? undefined : (readObject(c, id, map) as unknown as ObjectOf<C>);
 }
 
 /** Reads one rule (decision table) as plain data. */
 export function getRule(doc: DeckDoc, id: Id): Rule | undefined {
   const rule = rulesMap(doc).get(id);
-  return rule === undefined ? undefined : (fromY(rule) as Rule);
+  return rule === undefined ? undefined : readRule(rule);
 }
