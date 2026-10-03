@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 
 import { emptySododeckFile, parseSododeckFile, type SododeckFile } from '@sododeck/schema';
 import { expect } from 'vitest';
+import * as Y from 'yjs';
 
 import { toJSON, type DeckDoc } from '../src';
 
@@ -113,4 +114,43 @@ export function largeDeck(
     );
   }
   return file;
+}
+
+/** Which sign of the layout used before 036 a hand-built legacy document carries. */
+export type LegacySign = 'collection' | 'rule' | 'description';
+
+/**
+ * A document in the layout used before 036 (layout 1), built by hand: collections as `Y.Array`,
+ * a rule's columns as `Y.Array`, `meta.description` as a string. Only the chosen sign is present.
+ */
+export function legacyDoc(sign: LegacySign): Y.Doc {
+  const doc = new Y.Doc();
+  doc.transact(() => {
+    const meta = doc.getMap<unknown>('meta');
+    meta.set('$schema', 'https://sododeck.com/schema/v1.json');
+    meta.set('version', 1);
+    if (sign === 'description') meta.set('description', 'An old deck.');
+    if (sign === 'collection') {
+      const node = new Y.Map<unknown>();
+      node.set('id', 'n');
+      node.set('type', 'service');
+      node.set('title', 'Old');
+      doc.getArray('nodes').push([node]);
+    }
+    if (sign === 'rule') {
+      const rule = new Y.Map<unknown>();
+      rule.set('title', 'Old rule');
+      rule.set('hitPolicy', 'first');
+      for (const field of ['inputs', 'outputs', 'rows']) rule.set(field, new Y.Array());
+      doc.getMap('rules').set('R', rule);
+    }
+  });
+  return doc;
+}
+
+/** A copy of `doc` loaded from its update bytes, as storage would load it. */
+export function reload(doc: Y.Doc): Y.Doc {
+  const copy = new Y.Doc();
+  Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc));
+  return copy;
 }
