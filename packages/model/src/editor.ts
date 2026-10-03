@@ -50,7 +50,7 @@ import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
 import { setStyle, type StyleChannel, type StyleTargets } from './ops/style';
 import { addSwatch, removeSwatch } from './ops/swatches';
-import { setTagColor } from './ops/tags';
+import { deleteTag, renameTag, setTagColor, type TagChange } from './ops/tags';
 import {
   addRule,
   addRuleColumn,
@@ -292,6 +292,19 @@ export interface DeckEditor {
    * name or `#rrggbb`.
    */
   setTagColor(tag: string, color: ColorRef | null): void;
+  /**
+   * Renames a tag everywhere (033): cards, connections, flows, steps, the deck's tags, every view's
+   * hidden tags and the colour entry, as one undo step. A new name that another tag already has
+   * merges onto that tag's spelling and colour; the same name in another case only respells.
+   * Repeats inside a list are dropped (first position kept). `invalid` for an empty name; no change
+   * event when nothing changes.
+   */
+  renameTag(from: string, to: string): TagChange;
+  /**
+   * Deletes a tag everywhere (033): from every carrier and every view's hidden tags, and drops its
+   * colour entry, as one undo step. An absent tag returns zero counts and writes nothing.
+   */
+  deleteTag(tag: string): TagChange;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -590,6 +603,8 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     setTagColor: (tag, color) => {
       setTagColor(ctx, tag, color);
     },
+    renameTag: (from, to) => renameTag(ctx, from, to),
+    deleteTag: (tag) => deleteTag(ctx, tag),
     removeSwatch: (hex) => {
       removeSwatch(ctx, hex);
     },
