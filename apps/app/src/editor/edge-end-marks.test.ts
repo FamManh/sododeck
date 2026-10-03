@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ARROW_PATH, endMarks } from './edge-end-marks';
+import { ARROW_PATH, arrowPathAt, endMarks } from './edge-end-marks';
 
 const ends = {
   start: { x: 10, y: 20 },
@@ -35,5 +35,11 @@ describe('endMarks', () => {
 
   it('draws the arrow 9 long and 10 wide with the tip at the origin', () => {
     expect(ARROW_PATH).toBe('M 0 0 L -9 -5 L -9 5 Z');
+  });
+
+  it('bakes the rotation into the path instead of a transform', () => {
+    expect(arrowPathAt(110, 60, 0)).toBe('M 110 60 L 101 55 L 101 65 Z');
+    expect(arrowPathAt(110, 60, 90)).toBe('M 110 60 L 115 51 L 105 51 Z');
+    expect(arrowPathAt(10, 20, 180)).toBe('M 10 20 L 19 25 L 19 15 Z');
   });
 });

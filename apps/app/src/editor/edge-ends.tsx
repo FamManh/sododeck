@@ -1,7 +1,7 @@
 import type { Direction } from '@sododeck/schema';
 
 import { KNOB_RADIUS } from './edge-constants';
-import { ARROW_PATH, endMarks, type EndMark } from './edge-end-marks';
+import { arrowPathAt, endMarks, type EndMark } from './edge-end-marks';
 import type { PathEnds } from './routing/route-path';
 
 interface EdgeEndsProps extends PathEnds {
@@ -30,8 +30,7 @@ function Mark({ mark }: { mark: EndMark }) {
     <path
       data-testid="edge-arrow"
       aria-hidden="true"
-      d={ARROW_PATH}
-      transform={`translate(${String(mark.at.x)} ${String(mark.at.y)}) rotate(${String(mark.angle)})`}
+      d={arrowPathAt(mark.at.x, mark.at.y, mark.angle)}
       fill="currentColor"
       stroke="currentColor"
       strokeWidth={2}

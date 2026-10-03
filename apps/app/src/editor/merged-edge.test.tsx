@@ -65,8 +65,8 @@ describe('MergedEdge', () => {
 
   it('puts the arrow at the first card when the connections run b to a', () => {
     renderEdge('b-to-a');
-    // The first card's side midpoint is x = 0; the arrow transform starts there.
-    expect(screen.getByTestId('edge-arrow').getAttribute('transform')).toMatch(/^translate\(0 /);
+    // The first card's side midpoint is x = 0; the arrow path's tip starts there.
+    expect(screen.getByTestId('edge-arrow').getAttribute('d')).toMatch(/^M 0 /);
   });
 
   it('renders folded flow badges in order and marks the current step', () => {

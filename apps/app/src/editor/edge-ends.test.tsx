@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { arrowPathAt } from './edge-end-marks';
 import { EdgeEnds } from './edge-ends';
 import { ARROW_LENGTH, ARROW_WIDTH, KNOB_RADIUS } from './edge-constants';
 
@@ -35,7 +36,7 @@ describe('EdgeEnds', () => {
       expect(knobs[0]?.getAttribute('cy')).toBe('20');
       expect(knobs[0]?.getAttribute('r')).toBe(String(KNOB_RADIUS));
       expect(knobs[0]?.getAttribute('r')).toBe('3.5');
-      expect(arrows[0]?.getAttribute('transform')).toContain('translate(110 60)');
+      expect(arrows[0]?.getAttribute('d')).toBe(arrowPathAt(110, 60, 0));
     },
   );
 
@@ -44,7 +45,8 @@ describe('EdgeEnds', () => {
     expect(ARROW_WIDTH).toBe(10);
     const { arrows } = draw('forward');
     const arrow = arrows[0];
-    expect(arrow?.getAttribute('d')).toBe('M 0 0 L -9 -5 L -9 5 Z');
+    expect(arrow?.getAttribute('d')).toBe('M 110 60 L 101 55 L 101 65 Z');
+    expect(arrow?.hasAttribute('transform')).toBe(false);
     expect(arrow?.getAttribute('fill')).toBe('currentColor');
     expect(arrow?.getAttribute('stroke')).toBe('currentColor');
     expect(arrow?.getAttribute('stroke-width')).toBe('2');
@@ -55,10 +57,9 @@ describe('EdgeEnds', () => {
     const { knobs, arrows } = draw('both');
     expect(knobs).toHaveLength(0);
     expect(arrows).toHaveLength(2);
-    expect(arrows[0]?.getAttribute('transform')).toContain('translate(10 20)');
     // The start arrow points back into the source, against the line's first direction.
-    expect(arrows[0]?.getAttribute('transform')).toContain('rotate(180)');
-    expect(arrows[1]?.getAttribute('transform')).toContain('translate(110 60)');
+    expect(arrows[0]?.getAttribute('d')).toBe(arrowPathAt(10, 20, 180));
+    expect(arrows[1]?.getAttribute('d')).toBe(arrowPathAt(110, 60, 0));
   });
 
   it('none: knobs at both ends, no arrow', () => {
@@ -73,8 +74,8 @@ describe('EdgeEnds', () => {
   it('the arrow rotation follows endDir', () => {
     const down = draw('forward', { endDir: { x: 0, y: 1 } }).arrows[0];
     const left = draw('forward', { endDir: { x: -1, y: 0 } }).arrows[0];
-    expect(down?.getAttribute('transform')).toContain('rotate(90)');
-    expect(left?.getAttribute('transform')).toContain('rotate(180)');
+    expect(down?.getAttribute('d')).toBe(arrowPathAt(110, 60, 90));
+    expect(left?.getAttribute('d')).toBe(arrowPathAt(110, 60, 180));
   });
 
   it('every mark is hidden from assistive technology', () => {
