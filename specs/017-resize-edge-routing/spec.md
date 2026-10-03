@@ -44,7 +44,7 @@
 
 - Q: In a view with its own card positions (011), are card size and connector route stored per view or shared by every view? → A: Shared by every view (option A); only card positions differ between views.
 - Q: While dragging a connector's middle segment, should it stop 12 px before any card, only before the two connected cards, or move freely? → A: Freely (option C): the user drags it wherever they want, over any card; only guide snapping applies (⌘ disables it). Frame 113's 12 px stop is dropped.
-- Q: Should Miro-like connector options (line type, waypoints, dash, weight, colour, label position, line jumps) be part of 017? → A: No. 017 keeps its scope (sides + middle-segment offset); those options, plus an animated "running" line to show flow direction, go to a new backlog feature **022-connector-style** (after 017 and 020).
+- Q: Should richer connector options (line type, waypoints, dash, weight, colour, label position, line jumps) be part of 017? → A: No. 017 keeps its scope (sides + middle-segment offset); those options, plus an animated "running" line to show flow direction, go to a new backlog feature **022-connector-style** (after 017 and 020).
 - Q: How is the extra space of an enlarged card used? → A: Option A: the font size stays the same; the title and the subtitle wrap onto as many lines as the size allows and are clamped with an ellipsis only when they do not fit. No description text and no font scaling.
 
 ## User Scenarios & Testing _(mandatory)_

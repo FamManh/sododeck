@@ -2,12 +2,12 @@
 
 Paste the block below into the existing Sododeck Claude Design project (the one with
 `Sododeck.dc.html`, `Sododeck State.dc.html`, `Sododeck Extensions.dc.html`). Attach the founder's
-Miro screenshots (empty board, dense board at 51 %, selection toolbar, More menu, right-click menu,
+reference screenshots (empty board, dense board at 51 %, selection toolbar, More menu, right-click menu,
 colour popover) and `DESIGN.md`.
 
 ---
 
-Redesign the Sododeck **editor** as a **canvas-first** workspace, like Miro or Figma. Keep the
+Redesign the Sododeck **editor** as a **canvas-first** workspace, like a modern whiteboard. Keep the
 Sododeck visual language (DESIGN.md: warm neutrals, orange primary `#f2661c`, Geist / Geist Mono,
 12 px node radius, hairline borders, quiet shadows, lucide icons, light and dark themes). Only
 the **placement** of the editor chrome changes, plus a few new on-canvas controls. Panel content
@@ -58,7 +58,7 @@ a hairline border, 12 px radius and the rest shadow. They sit 12 px from the edg
 ## 2. Card quick-edit (backlog 019)
 
 - **Card hover:** a small round "open details" icon appears in the card's top-right corner (like
-  Miro's panel icon). Clicking it opens the drawer.
+  a panel icon). Clicking it opens the drawer.
 - **Inline title edit:** double-click a card and its title becomes an input inside the card
   (caret, selection highlight, no layout jump). Show the state for a new card from the palette
   with an empty title and a placeholder.

@@ -6,7 +6,7 @@
 
 - Size and route are shared by every view.
 - The middle segment moves freely (no 12 px stop).
-- Miro-like connector styling moved to backlog **022-connector-style**.
+- richer connector styling moved to backlog **022-connector-style**.
 - Enlarged cards wrap the title and subtitle at the same font size.
 
 The plan research corrected three spec points, and the spec was updated to match:

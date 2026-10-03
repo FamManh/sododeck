@@ -11,8 +11,7 @@ Design project.
 
 Cards today look like every other React Flow app (rounded box, grey hairline, square kind tile on
 the left), and the layout of title, tags and info is weak. Sododeck also needs to grow past six
-software-architecture kinds: users should pick the card categories they need, like draw.io's or
-Miro's shape libraries.
+software-architecture kinds: users should pick the card categories they need, like the shape libraries of common drawing tools.
 
 ### Decisions
 
@@ -21,10 +20,10 @@ Miro's shape libraries.
 | D1  | Categories         | All five, as **category packs** a deck turns on: Architecture, Process, Logistics, Basic shapes, Data cards. Users use the ones they need.                                                                                                                                                                                                        |
 | D2  | Families           | **Hybrid.** Information **cards** (Architecture, Logistics, Data cards, and Process tasks) share one frame; **shapes** (Process decision / start / end / actor, Basic shapes) are true geometry with text only. In-between types (decision, database…) can switch "show as card ↔ show as shape".                                                 |
 | D3  | Fields             | Each card type has **default fields**; users can add **typed fields** (text, number, coloured select, status, person, date, date range, link) and choose which show on the card (chip or label–value row) and which stay in the drawer.                                                                                                           |
-| D4  | Visual direction   | Claude Design draws **three directions** with the same content: A editorial/quiet (Linear, Eraser), B tactile/playful (Miro, FigJam), C technical/blueprint (IcePanel). The founder picks or mixes.                                                                                                                                               |
+| D4  | Visual direction   | Claude Design draws **three directions** with the same content: A editorial/quiet, B tactile/playful, C technical/blueprint. The founder picks or mixes.                                                                                                                                                                                          |
 | D5  | Tooltip            | **Title only**: an app tooltip with the full title when it is cut. No preview card.                                                                                                                                                                                                                                                               |
 | D6  | Title, description | Title wraps, **up to 3 lines**, then "…"; the description (when shown on the card) also up to 3 lines. The card height grows with its content. Full text is in the details drawer.                                                                                                                                                                |
-| D7  | Tags               | Up to 10 per card. **Deck-level tag definitions** (name + colour from the shared palette, like Miro): set a colour once, every card shows it. Schema change, additive only.                                                                                                                                                                       |
+| D7  | Tags               | Up to 10 per card. **Deck-level tag definitions** (name + colour from the shared palette, like a shared label set): set a colour once, every card shows it. Schema change, additive only.                                                                                                                                                         |
 | D8  | Colour             | **One shared palette** (the 13 named colours, each with fill / stroke / chip variants, light and dark) for card fill and stroke, tags, select options and statuses, plus deck custom colours.                                                                                                                                                     |
 | D9  | Size               | Default width fixed (164 today) and resizable; height = the visible regions, computed (not measured) so edges, groups and export agree. **Zooming never changes a card's size**; far zoom only hides detail.                                                                                                                                      |
 | D10 | Data-driven types  | A card type is data (family, shape, icon, accent, default fields, which fields show), not a React component per type, so a Canvas 2D renderer (backlog 023) can draw the same cards later.                                                                                                                                                        |
@@ -55,7 +54,7 @@ picked).
 
 Paste the block below into the existing **Sododeck** Claude Design project (the one with
 `Sododeck Canvas-first.dc.html`). Attach `DESIGN.md`, screenshots of today's cards (light and
-dark, with tags), the founder's Miro screenshots (tag picker, card details panel), and frames from
+dark, with tags), the founder's reference screenshots (tag picker, card details panel), and frames from
 the founder's reference video (hover highlight, bundled connectors, drill-in with outside proxies).
 
 ---
@@ -68,11 +67,11 @@ Give Sododeck cards a recognisable identity, and make the system grow to many ca
 Draw **three directions** as three separate boards with **exactly the same content**, so they can
 be compared side by side, each in light and dark:
 
-- **A. Editorial / quiet** (think Linear, Eraser): flat surfaces, hairlines, type-led, colour only
+- **A. Editorial / quiet** (think quiet, type-led documents): flat surfaces, hairlines, type-led, colour only
   as an accent. Must stay calm on a dense board of 200+ cards.
-- **B. Tactile / playful** (think Miro, FigJam): stronger fills, larger radii, chunky chips, a
+- **B. Tactile / playful** (think chunky, sticker-like): stronger fills, larger radii, chunky chips, a
   paper-like feel. Friendly, but check it on a dense board.
-- **C. Technical / blueprint** (think IcePanel, engineering drawings): visible structure (header /
+- **C. Technical / blueprint** (think engineering drawings): visible structure (header /
   body / footer rules), mono labels, a grid feel.
 
 For each direction, add a short note: its tokens (radius, border, shadow, type scale, spacing),
@@ -133,7 +132,7 @@ the drawer. Also design the field editor in the details drawer (add field, pick 
 
 **Tags.** Tags are defined once per deck with a colour; every card with the tag shows that
 colour. Design: the tag chip on cards (small, it must fit 10 on a card), the tag picker popover
-(search / create, the deck's tags with their colours, edit a tag's colour and name; see the Miro
+(search / create, the deck's tags with their colours, edit a tag's colour and name; see the reference
 screenshot), and the tag row in the details drawer.
 
 **Colour.** One shared palette for card fill, card stroke, tags, select options and statuses:
@@ -153,7 +152,7 @@ never carries state.
 3. Logistics: Warehouse "Warehouse HCM" (capacity 82 % as a progress bar, SLA 24 h, status
    "Open"); Truck / route.
 4. Basic shapes: rectangle, ellipse, diamond, sticky, text, frame.
-5. Data card (Jira / Miro style): status, assignee, estimate, date range and 8 coloured tags
+5. Data card (task-tracker style): status, assignee, estimate, date range and 8 coloured tags
    (`1 pt`, `11 pts`, `2 pts`, `3 pts`, `5 pts`, `8 pts`, `Lan`, `PIC`).
 
 **Content edge cases:** a one-line title; a long title cut at 3 lines with its tooltip; a card
