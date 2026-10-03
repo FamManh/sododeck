@@ -115,6 +115,103 @@ describe('ui store', () => {
     expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
 
+  describe('hover focus and fanned bundles (034)', () => {
+    it('sets and clears the hover focus, UI-only', () => {
+      state().setHoverFocus({ id: 'n1', source: 'pointer' });
+      expect(state().hoverFocus).toEqual({ id: 'n1', source: 'pointer' });
+      state().clearHoverFocus();
+      expect(state().hoverFocus).toBeNull();
+    });
+
+    it('does not replace an equal hover focus (no needless subscriber updates)', () => {
+      state().setHoverFocus({ id: 'n1', source: 'pointer' });
+      const before = state().hoverFocus;
+      state().setHoverFocus({ id: 'n1', source: 'pointer' });
+      expect(state().hoverFocus).toBe(before);
+    });
+
+    it('toggles, folds and prunes fanned bundles', () => {
+      state().toggleBundleFan('bundle:a|b');
+      state().toggleBundleFan('bundle:c|d');
+      expect([...state().fannedBundles]).toEqual(['bundle:a|b', 'bundle:c|d']);
+      state().toggleBundleFan('bundle:a|b');
+      expect([...state().fannedBundles]).toEqual(['bundle:c|d']);
+      state().pruneFannedBundles(new Set(['bundle:x|y']));
+      expect(state().fannedBundles.size).toBe(0);
+      state().toggleBundleFan('bundle:a|b');
+      state().foldBundles();
+      expect(state().fannedBundles.size).toBe(0);
+    });
+
+    it('keeps the same set when pruning or folding removes nothing', () => {
+      state().toggleBundleFan('bundle:a|b');
+      const before = state().fannedBundles;
+      state().pruneFannedBundles(new Set(['bundle:a|b']));
+      expect(state().fannedBundles).toBe(before);
+      state().foldBundles();
+      const empty = state().fannedBundles;
+      state().foldBundles();
+      expect(state().fannedBundles).toBe(empty);
+    });
+
+    it.each([
+      [
+        'switchView',
+        () => {
+          state().switchView('v2');
+        },
+      ],
+      [
+        'drillInto',
+        () => {
+          state().drillInto({ kind: 'group', id: 'g', viewport: { x: 0, y: 0, zoom: 1 } });
+        },
+      ],
+      [
+        'drillUp',
+        () => {
+          state().drillUp(0);
+        },
+      ],
+      [
+        'resetForDeck',
+        () => {
+          state().resetForDeck('other');
+        },
+      ],
+    ])('%s clears both', (_name, act) => {
+      state().setHoverFocus({ id: 'n1', source: 'pointer' });
+      state().toggleBundleFan('bundle:a|b');
+      act();
+      expect(state().hoverFocus).toBeNull();
+      expect(state().fannedBundles.size).toBe(0);
+    });
+
+    it('prunes a focused proxy or bundle that no longer exists', () => {
+      const none = new Set<string>();
+      state().focus('port:n9');
+      state().pruneSelection({
+        nodes: none,
+        edges: none,
+        groups: none,
+        stickies: none,
+        ports: none,
+        bundles: none,
+      });
+      expect(state().focusedId).toBeNull();
+      state().focusEdge('bundle:a|b');
+      state().pruneSelection({
+        nodes: none,
+        edges: none,
+        groups: none,
+        stickies: none,
+        ports: none,
+        bundles: none,
+      });
+      expect(state().focusedEdgeId).toBeNull();
+    });
+  });
+
   describe('last line type (029)', () => {
     it('defaults to curved, is set by the setter and survives opening another deck', () => {
       expect(state().lastLineShape).toBe('curved');

@@ -23,6 +23,9 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
   [Position.Left]: 'left',
 };
 
+/** Distance between neighbouring connectors of a fanned-out bundle (034 R6). */
+const FAN_SPACING = 14;
+
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
 
@@ -87,11 +90,14 @@ export const DeckEdge = memo(function DeckEdge({
     sides,
     data?.route?.offset,
     arrows,
+    data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
   );
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
+  // A plain connector reads its colour and width through the highlight variables (034 R2), so a
+  // focus rule can light it without a React Flow update; a selected or flow-marked one keeps its own.
   const stroke = selected
     ? 'var(--color-deck-orange)'
-    : (flowStroke?.stroke ?? 'var(--color-deck-edge)');
+    : (flowStroke?.stroke ?? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))');
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The automatic path (no route), computed only while dragging, to draw the ghost.
   const ghostPath = dragging ? routedPath(shape, fromBox, toBox, sides, 0, arrows).path : null;
@@ -102,7 +108,7 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
-  const width = selected ? 2.5 : (flowStroke?.width ?? 2);
+  const width = selected ? 2.5 : (flowStroke?.width ?? 'var(--sd-edge-hl-width, 2)');
   // The step label (FR-010): a 20px pill. In flow mode (a `state` is set) it is neutral, solid
   // orange when current and Clay Soft on an error path; while recording it keeps the path look.
   const isPill = hasBadges || flowIcon !== null;
@@ -199,6 +205,7 @@ export const DeckEdge = memo(function DeckEdge({
           {(showLabel || showFlowLabel || problems !== undefined) && (
             <span
               data-testid="edge-label"
+              data-edge-label-for={id}
               data-flow-style={flow?.style}
               data-in-flow={flow?.inPath === true ? '' : undefined}
               data-in-focus={data?.inFocus === true ? '' : undefined}

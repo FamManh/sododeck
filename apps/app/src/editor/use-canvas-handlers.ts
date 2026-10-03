@@ -29,6 +29,7 @@ import {
   connectComponents,
   nodeElement,
 } from './canvas-actions';
+import { BUNDLE_EDGE_PREFIX } from './bundles';
 import { cardBox, type Rect } from './canvas-geometry';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import {
@@ -36,6 +37,7 @@ import {
   GROUP_NODE_PREFIX,
   MERGED_EDGE_PREFIX,
   PORT_NODE_PREFIX,
+  SCOPE_LABEL_PREFIX,
   STICKY_NODE_PREFIX,
 } from './deck-to-flow';
 import { currentPlayback, goToStep } from './flows/flow-mode';
@@ -59,6 +61,8 @@ const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
 const isCollapsedNode = (id: string) => id.startsWith(COLLAPSED_NODE_PREFIX);
 const isPortNode = (id: string) => id.startsWith(PORT_NODE_PREFIX);
 const isMergedEdge = (id: string) => id.startsWith(MERGED_EDGE_PREFIX);
+const isScopeLabel = (id: string) => id.startsWith(SCOPE_LABEL_PREFIX);
+const isBundleEdge = (id: string) => id.startsWith(BUNDLE_EDGE_PREFIX);
 const stickyIdOf = (id: string) =>
   id.startsWith(STICKY_NODE_PREFIX) ? id.slice(STICKY_NODE_PREFIX.length) : null;
 const groupIdOf = (id: string) =>
@@ -209,7 +213,7 @@ export function useCanvasHandlers() {
 
     return {
       onNodeContextMenu: (event: ReactMouseEvent, node: Node) => {
-        if (isPortNode(node.id)) {
+        if (isPortNode(node.id) || isScopeLabel(node.id)) {
           event.preventDefault();
           return;
         }
@@ -225,7 +229,7 @@ export function useCanvasHandlers() {
         openMenu(event, clicked, nodeElement(node.id));
       },
       onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => {
-        if (isMergedEdge(edge.id)) {
+        if (isMergedEdge(edge.id) || isBundleEdge(edge.id)) {
           event.preventDefault();
           return;
         }
@@ -248,6 +252,7 @@ export function useCanvasHandlers() {
         });
       },
       onNodeClick: (event: ReactMouseEvent, node: Node) => {
+        if (isScopeLabel(node.id)) return;
         if (applyTool(event, node.id)) return;
         const groupId = groupIdOf(node.id);
         if (groupId !== null) {
@@ -296,7 +301,7 @@ export function useCanvasHandlers() {
           if (title !== undefined) openScope({ kind: 'group', id: groupId }, title);
           return;
         }
-        if (stickyIdOf(node.id) !== null || isPortNode(node.id)) return;
+        if (stickyIdOf(node.id) !== null || isPortNode(node.id) || isScopeLabel(node.id)) return;
         // Any component, with or without children, renames in place (019 FR-001); Enter still
         // opens details or drills in, and "Open inside" drills in by pointer.
         ui().select({ nodes: [node.id] });
@@ -304,6 +309,13 @@ export function useCanvasHandlers() {
         ui().startTitleEdit({ target: 'node', id: node.id, isNew: false });
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+        if (isBundleEdge(edge.id)) {
+          // A bundle's curve opens the list of its connectors (034 R6); its pill fans them out.
+          if (flowMode() || inSession()) return;
+          ui().focusEdge(edge.id);
+          ui().openMergedPopover(edge.id);
+          return;
+        }
         if (isMergedEdge(edge.id)) {
           if (flowMode()) {
             jumpTo((playback) => {
@@ -336,7 +348,7 @@ export function useCanvasHandlers() {
       },
       onEdgeDoubleClick: (_: ReactMouseEvent, edge: Edge) => {
         if (viewOnly()) return;
-        if (isMergedEdge(edge.id)) {
+        if (isMergedEdge(edge.id) || isBundleEdge(edge.id)) {
           ui().focusEdge(edge.id);
           ui().openMergedPopover(edge.id);
           return;
@@ -363,6 +375,8 @@ export function useCanvasHandlers() {
         if (applyTool(event, null)) return;
         ui().clearSelection();
         ui().closePopover();
+        // Clicking empty canvas folds every fanned-out bundle (034).
+        ui().foldBundles();
       },
       /**
        * A marquee (016 R13): its count chip and hint bar; Esc puts the selection back as it was
@@ -402,7 +416,7 @@ export function useCanvasHandlers() {
           controller.startGroup(node.id.slice(GROUP_NODE_PREFIX.length));
           return;
         }
-        if (isCollapsedNode(node.id) || isPortNode(node.id)) return;
+        if (isCollapsedNode(node.id) || isPortNode(node.id) || isScopeLabel(node.id)) return;
         const stickyId = stickyIdOf(node.id);
         if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });

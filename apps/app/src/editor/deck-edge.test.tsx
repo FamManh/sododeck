@@ -134,7 +134,41 @@ describe('DeckEdge Deck look (029 US1)', () => {
       arrowAtEnd: true,
     }).path;
     expect(path?.getAttribute('d')).toBe(expected);
-    expect(path).toHaveStyle({ stroke: 'var(--color-deck-edge)', strokeWidth: '2' });
+    expect(path).toHaveStyle({
+      stroke: 'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      strokeWidth: 'var(--sd-edge-hl-width, 2)',
+    });
+  });
+
+  describe('highlight variables (034 R2)', () => {
+    it('lets focus rules recolour and thicken a plain connector, and its end marks follow', () => {
+      const { container } = renderEdge({ direction: 'forward' });
+      expect(container.querySelector('.react-flow__edge-path')?.getAttribute('style')).toContain(
+        'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      );
+      expect(screen.getByTestId('edge-arrow').closest('g')).toHaveStyle({
+        color: 'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      });
+    });
+
+    it('keeps a selected connector on its own literal stroke and width', () => {
+      const { container } = renderEdge({}, true);
+      const style = container.querySelector('.react-flow__edge-path')?.getAttribute('style');
+      expect(style).not.toContain('--sd-edge-hl');
+    });
+
+    it('keeps a flow-marked connector on its own literal stroke and width', () => {
+      const { container } = renderEdge({
+        flow: { badges: [], style: 'path', errorIcon: false },
+      });
+      const style = container.querySelector('.react-flow__edge-path')?.getAttribute('style');
+      expect(style).not.toContain('--sd-edge-hl');
+    });
+
+    it('names its connector on the label pill so hover rules can reach the HTML layer', () => {
+      renderEdge({ showLabel: true });
+      expect(screen.getByTestId('edge-label')).toHaveAttribute('data-edge-label-for', 'e1');
+    });
   });
 
   it('stops the line short of the end that carries an arrow, by direction', () => {
@@ -162,6 +196,33 @@ describe('DeckEdge Deck look (029 US1)', () => {
     expect(screen.getByTestId('edge-arrow').closest('g')).toHaveStyle({
       color: 'var(--color-deck-orange)',
     });
+  });
+});
+
+describe('DeckEdge fan-out (034 R6)', () => {
+  const at = (x: number, y: number) => ({ x, y, width: 0, height: 0 });
+  it('spreads fanned connectors 14 px apart around the middle of the bundle', () => {
+    const arrows = { arrowAtStart: false, arrowAtEnd: true };
+    const pathFor = (fan: { index: number; count: number }) =>
+      renderEdge({ shape: 'curved', fan }).container.querySelector('.react-flow__edge-path');
+    const first = pathFor({ index: 0, count: 3 });
+    expect(first?.getAttribute('d')).toBe(
+      routedPath('curved', at(0, 0), at(200, 40), ['right', 'left'], 0, arrows, -14).path,
+    );
+    const middle = renderEdge({ shape: 'curved', fan: { index: 1, count: 3 } });
+    expect(middle.container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toBe(
+      routedPath('curved', at(0, 0), at(200, 40), ['right', 'left'], 0, arrows).path,
+    );
+  });
+
+  it('draws a plain connector exactly as before', () => {
+    const { container } = renderEdge({ shape: 'curved' });
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toBe(
+      routedPath('curved', at(0, 0), at(200, 40), ['right', 'left'], 0, {
+        arrowAtStart: false,
+        arrowAtEnd: true,
+      }).path,
+    );
   });
 });
 

@@ -22,6 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
+import { bundleEdges, bundleOptions } from './bundles';
 import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
@@ -31,6 +32,7 @@ import { DeckNode } from './deck-node';
 import {
   COLLAPSED_NODE_PREFIX,
   GROUP_NODE_PREFIX,
+  PORT_NODE_PREFIX,
   toFlowEdges,
   toFlowNodes,
   toLeaderEdges,
@@ -45,12 +47,16 @@ import { InvalidEdgePopover } from './flows/invalid-edge-popover';
 import { findFlow } from './flows/session-path';
 import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
-import { focusSet } from './focus-set';
+import { connectionCount, connectionsText, focusSet } from './focus-set';
+import { HoverFocusStyle } from './hover-focus/hover-focus-style';
+import { useHoverFocus } from './hover-focus/use-hover-focus';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelSelector, type Level } from './levels';
 import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
-import { PortPillNode } from './port-pill-node';
+import { OutsideProxyNode } from './outside-proxy-node';
+import { proxyLayout } from './proxy-layout';
+import { ScopeLabelNode } from './scope-label-node';
 import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import type { CardLook } from './style/card-style';
@@ -78,7 +84,8 @@ const nodeTypes: NodeTypes = {
   'collapsed-group': CollapsedGroupNode,
   deck: DeckNode,
   'group-boundary': GroupBoundaryNode,
-  port: PortPillNode,
+  port: OutsideProxyNode,
+  'scope-label': ScopeLabelNode,
   sticky: StickyNode,
 };
 const edgeTypes: EdgeTypes = {
@@ -100,6 +107,9 @@ export const liplessSelector = (s: { transform: [number, number, number] }) => s
 
 /** With the Select tool only the middle mouse button pans (plus Space+drag, React Flow's default). */
 const PAN_BUTTONS = [1];
+
+/** Focus arriving within this long after a key press counts as keyboard navigation. */
+const KEY_FOCUS_WINDOW_MS = 100;
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -224,6 +234,11 @@ function useRovingFocus(wrapper: React.RefObject<HTMLDivElement | null>): void {
         const rect = groupBounds(deck, level).get(groupId);
         return rect === undefined ? null : { x: rect.x, y: rect.y, width: 1, height: 1 };
       }
+      if (focusedId.startsWith(PORT_NODE_PREFIX)) {
+        return (
+          proxyLayout(deck, graph, level).find((proxy) => proxy.id === focusedId)?.rect ?? null
+        );
+      }
       if (focusedId.startsWith(COLLAPSED_NODE_PREFIX)) {
         const groupId = focusedId.slice(COLLAPSED_NODE_PREFIX.length);
         const card = graph.cards.find((entry) => entry.groupId === groupId);
@@ -294,6 +309,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   // Set by a pointer press: focus that lands on the wrapper from a click must not move focus to a
   // card (and pan to it); only Tab into the canvas does.
   const pointerFocus = useRef(false);
+  // When the user last pressed a navigation key in the canvas: only focus that follows an arrow or
+  // Tab is read out (034), not focus a command moves (a rename announces "Renamed …" instead).
+  const lastKeyAt = useRef(Number.NEGATIVE_INFINITY);
   const previousDrill = useRef(drill);
   const announcedZoomLevel = useRef<Level | null>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
@@ -311,6 +329,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const handlers = useCanvasHandlers();
   const onKeyDown = useCanvasKeyDown();
+  const hover = useHoverFocus();
 
   useSelectionSync();
   useViewSync();
@@ -403,15 +422,53 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     }
     return null;
   }, [focusMode, selection, collapsed]);
+  // Parallel automatic connectors fold into bundles (034). A shown flow draws its own connectors
+  // on their own; recording a flow turns bundles off so every connector is a candidate step.
+  const fannedBundles = useUiStore((s) => s.fannedBundles);
+  const flowShown = activeFlow !== null;
+  const recordingFlow = session !== null;
+  const bundles = useMemo(
+    () =>
+      bundleEdges(
+        deck,
+        graph,
+        bundleOptions(
+          { shown: flowShown, recording: recordingFlow, markedEdges: overlay.edges.keys() },
+          fannedBundles,
+        ),
+      ),
+    [deck, graph, flowShown, recordingFlow, overlay, fannedBundles],
+  );
+  useEffect(() => {
+    const ui = useUiStore.getState();
+    ui.pruneFannedBundles(new Set(bundles.bundles.map((bundle) => bundle.id)));
+    if (ui.focusedEdgeId?.startsWith('bundle:') === true) {
+      if (!bundles.bundles.some((bundle) => bundle.id === ui.focusedEdgeId)) ui.focusEdge(null);
+    }
+  }, [bundles]);
+  // A focused proxy (034) is dropped when the drill-in changes and it no longer exists.
+  const proxyIds = useMemo(
+    () => new Set(proxyLayout(deck, graph, level).map((proxy) => proxy.id)),
+    [deck, graph, level],
+  );
+  useEffect(() => {
+    const ui = useUiStore.getState();
+    if (ui.focusedId?.startsWith('port:') === true && !proxyIds.has(ui.focusedId)) ui.focus(null);
+  }, [proxyIds]);
   const focus = useMemo(
-    () => (focusId !== null ? focusSet(deck, graph, focusId) : null),
-    [focusId, deck, graph],
+    () => (focusId !== null ? focusSet(deck, graph, focusId, bundles) : null),
+    [focusId, deck, graph, bundles],
   );
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const problems = problemMarks(useProblems());
   const stylePreview = useUiStore((s) => s.stylePreview);
+  const scopeTitle = useMemo(
+    () => (drill.length === 0 ? undefined : drillScopeTitle(deck, drill, '')),
+    [deck, drill],
+  );
   const view = useMemo(
     () => ({
+      scopeTitle,
       selection,
       focusedId,
       focusedEdgeId,
@@ -424,6 +481,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       stylePreview,
     }),
     [
+      scopeTitle,
       selection,
       focusedId,
       focusedEdgeId,
@@ -450,8 +508,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     [deck, graph, view, selection, overlay, flowMode, notesDisplay, emptyFlow, brokenCurrentStep],
   );
   const edges = useMemo(
-    () => [...toFlowEdges(deck, graph, view, overlay), ...toLeaderEdges(deck)],
-    [deck, graph, view, overlay],
+    () => [...toFlowEdges(deck, graph, view, overlay, bundles), ...toLeaderEdges(deck)],
+    [deck, graph, view, overlay, bundles],
   );
   const recording = session !== null;
   const hasFocusedNode = focusedId !== null && deck.nodes.some((n) => n.id === focusedId);
@@ -608,14 +666,36 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
-      onPointerDownCapture={() => {
+      onPointerOverCapture={(event) => {
+        hover.notePointerType(event.pointerType);
+      }}
+      onPointerDownCapture={(event) => {
+        hover.notePointerType(event.pointerType);
         pointerFocus.current = true;
         setTimeout(() => {
           pointerFocus.current = false;
         }, 0);
       }}
       onFocus={(event) => {
-        if (event.target !== event.currentTarget || pointerFocus.current) return;
+        if (event.target !== event.currentTarget) {
+          // Roving keyboard focus on a card lights its connections at once (034 R3).
+          const cardId = (event.target as HTMLElement)
+            .closest<HTMLElement>('[data-node-id]')
+            ?.getAttribute('data-node-id');
+          if (cardId !== null && cardId !== undefined && !pointerFocus.current) {
+            const set = focusSet(deck, graph, cardId, bundles);
+            const title = deck.nodes.find((node) => node.id === cardId)?.title;
+            const keyed = performance.now() - lastKeyAt.current < KEY_FOCUS_WINDOW_MS;
+            hover.onCardFocus(
+              cardId,
+              !keyed || set === null || title === undefined
+                ? undefined
+                : connectionsText(title, connectionCount(set, graph, bundles)),
+            );
+          }
+          return;
+        }
+        if (pointerFocus.current) return;
         const ui = useUiStore.getState();
         // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
         if (ui.flowSession !== null) return;
@@ -633,6 +713,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
             nodeElement(first)?.focus({ preventScroll: true });
           }
         }, 0);
+      }}
+      onBlur={hover.onCardBlur}
+      onKeyDownCapture={(event) => {
+        if (event.key.startsWith('Arrow') || event.key === 'Tab')
+          lastKeyAt.current = performance.now();
       }}
       onKeyDown={onKeyDown}
       className={cn('relative h-full', focusRing)}
@@ -684,6 +769,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         connectionLineStyle={connectionLineStyle}
         connectionLineComponent={EndpointConnectionLine}
         edgesReconnectable={!recording}
+        onNodeMouseEnter={hover.onNodeMouseEnter}
+        onNodeMouseLeave={hover.onNodeMouseLeave}
         {...handlers}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
@@ -724,8 +811,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
           action={null}
         />
       )}
+      <HoverFocusStyle deck={deck} graph={graph} bundles={bundles} wrapper={wrapper} />
       <EdgePopover deck={fullDeck} />
-      <MergedEdgePopover deck={deck} />
+      <MergedEdgePopover deck={deck} bundles={bundles} />
       <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
       <MarqueeChip />

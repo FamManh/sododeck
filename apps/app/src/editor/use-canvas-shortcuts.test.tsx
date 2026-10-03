@@ -194,6 +194,64 @@ describe('canvas keyboard', () => {
     });
   });
 
+  describe('outside proxies (034)', () => {
+    it('reaches a proxy with the arrows without selecting it, and Enter goes to the real card', async () => {
+      const { user } = setup(groupedDeck);
+      act(() => {
+        ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } });
+      });
+      focusNode('inside');
+      await user.keyboard('{ArrowRight}');
+      expect(ui().focusedId).toBe('port:outside');
+      expect(ui().selection.nodes).toEqual(['inside']);
+      await waitFor(() => {
+        expect(document.querySelector('[data-node-id="port:outside"]')).toHaveFocus();
+      });
+      await user.keyboard('{Enter}');
+      expect(ui().drill).toEqual([]);
+      expect(ui().selection.nodes).toEqual(['outside']);
+      expect(ui().focusedId).toBe('outside');
+    });
+  });
+
+  describe('bundles (034)', () => {
+    const bundleDeck = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+        { id: 'c', type: 'service', title: 'C', position: { x: 0, y: 300 } },
+      ],
+      edges: [
+        { id: 'e1', from: 'a', to: 'b' },
+        { id: 'e2', from: 'a', to: 'b' },
+        { id: 'e3', from: 'a', to: 'c' },
+      ],
+    });
+
+    it("E cycles a card's connections, a bundle counted once, and Enter opens its popover", async () => {
+      const { user } = setup(bundleDeck);
+      focusNode('a');
+      await user.keyboard('e');
+      expect(ui().focusedEdgeId).toBe('e3');
+      await user.keyboard('e');
+      expect(ui().focusedEdgeId).toBe('bundle:a|b');
+      expect(ui().announcement.text).toBe('2 connections between A and B');
+      await user.keyboard('{Enter}');
+      expect(ui().popover).toEqual({ kind: 'merged', edgeId: 'bundle:a|b' });
+    });
+
+    it('Esc folds fanned bundles', async () => {
+      const { user } = setup(bundleDeck);
+      focusNode('a');
+      act(() => {
+        ui().toggleBundleFan('bundle:a|b');
+      });
+      expect(ui().fannedBundles.size).toBe(1);
+      await user.keyboard('{Escape}');
+      expect(ui().fannedBundles.size).toBe(0);
+    });
+  });
+
   it('extends the selection with shift + arrows', async () => {
     const { user } = setup();
     focusNode('n00');

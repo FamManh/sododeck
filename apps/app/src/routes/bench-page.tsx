@@ -46,6 +46,9 @@ declare global {
       prepareFocus?: (nodeId: string) => Promise<void>;
       focus?: (nodeId: string) => Promise<number>;
       resetViewModes?: () => void;
+      /** 034: sets the hover focus directly (no rest delay); ms until the lit canvas is painted. */
+      hover?: (nodeId: string) => Promise<number>;
+      clearHover?: () => void;
     };
     /** 006 flow scenarios: each resolves with ms from the action to the painted step badge. */
     __sododeckFlowBench?: {
@@ -245,6 +248,34 @@ function FlowBenchHooks() {
       window.__sododeckFlowBench = undefined;
     };
   }, [editor]);
+  return null;
+}
+
+/** Exposes the hover-focus benchmark (034 SC-001): the rest delay is not part of the cost. */
+function HoverBenchHooks() {
+  useEffect(() => {
+    const hover = (nodeId: string) => {
+      const ui = useUiStore.getState();
+      ui.clearHoverFocus();
+      const start = performance.now();
+      ui.setHoverFocus({ id: nodeId, source: 'pointer' });
+      return paintedAfter(start, () => document.querySelector('[data-hover-focus]') !== null);
+    };
+    const clearHover = () => {
+      useUiStore.getState().clearHoverFocus();
+    };
+    window.__sododeckBench = {
+      ...(window.__sododeckBench ?? { readyAt: 0, nodes: 0, edges: 0 }),
+      hover,
+      clearHover,
+    };
+    return () => {
+      if (window.__sododeckBench !== undefined) {
+        delete window.__sododeckBench.hover;
+        delete window.__sododeckBench.clearHover;
+      }
+    };
+  }, []);
   return null;
 }
 
@@ -489,6 +520,7 @@ export function BenchPage() {
           {groups && <GroupsBenchHooks />}
           {inspector && <InspectorBenchHooks />}
           <PaletteBenchHooks />
+          <HoverBenchHooks />
           <ReactFlowProvider>
             <ViewsBenchHooks />
             <div className="relative flex min-h-0 flex-1">
