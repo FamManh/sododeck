@@ -4,7 +4,14 @@ import { emptySododeckFile, parseSododeckFile, type SododeckFile } from '@sodode
 import { expect } from 'vitest';
 import * as Y from 'yjs';
 
-import { toJSON, type DeckDoc } from '../src';
+import {
+  createEditor,
+  fromJSON,
+  serializeDeck,
+  toJSON,
+  type DeckDoc,
+  type DeckEditor,
+} from '../src';
 
 export async function readExample(file: string): Promise<SododeckFile> {
   const url = new URL(import.meta.resolve(`@sododeck/schema/examples/${file}`));
@@ -153,4 +160,67 @@ export function reload(doc: Y.Doc): Y.Doc {
   const copy = new Y.Doc();
   Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc));
   return copy;
+}
+
+/** One side of a two-document test: a document and its editor. */
+export interface Side {
+  doc: DeckDoc;
+  editor: DeckEditor;
+}
+
+/**
+ * Two documents holding the same deck, as two tabs would: `b` is loaded from `a`'s state. Each
+ * editor generates its own ids (`node-a0`, `node-b0`, …), as two clients' random ids never collide.
+ */
+export function twoDocs(file: SododeckFile): { a: Side; b: Side } {
+  const docA = fromJSON(file);
+  const docB = reload(docA);
+  const ids = (side: string) => {
+    let n = 0;
+    return (prefix: string) => `${prefix}-${side}${String(n++)}`;
+  };
+  return {
+    a: { doc: docA, editor: createEditor(docA, { newId: ids('a') }) },
+    b: { doc: docB, editor: createEditor(docB, { newId: ids('b') }) },
+  };
+}
+
+/** Exchanges what each side is missing, delivering `a`'s changes first (`ab`) or `b`'s (`ba`). */
+export function sync(a: Side, b: Side, order: 'ab' | 'ba' = 'ab'): void {
+  const toB = Y.encodeStateAsUpdate(a.doc, Y.encodeStateVector(b.doc));
+  const toA = Y.encodeStateAsUpdate(b.doc, Y.encodeStateVector(a.doc));
+  if (order === 'ab') {
+    Y.applyUpdate(b.doc, toB);
+    Y.applyUpdate(a.doc, toA);
+  } else {
+    Y.applyUpdate(a.doc, toA);
+    Y.applyUpdate(b.doc, toB);
+  }
+}
+
+/** Both sides read as the same deck, every list in the same order (036 contract guarantee 1). */
+export function expectConverged(a: Side, b: Side): void {
+  const left = toJSON(a.doc);
+  expect(toJSON(b.doc)).toEqual(left);
+  expect(serializeDeck(toJSON(b.doc))).toBe(serializeDeck(left));
+}
+
+/**
+ * Runs a two-sided scenario once per delivery order: `editA` on one side, `editB` on the other,
+ * then a sync. Asserts convergence before handing both sides to `check`.
+ */
+export function bothOrders(
+  file: SododeckFile,
+  editA: (side: Side) => void,
+  editB: (side: Side) => void,
+  check: (a: Side, b: Side) => void,
+): void {
+  for (const order of ['ab', 'ba'] as const) {
+    const { a, b } = twoDocs(file);
+    editA(a);
+    editB(b);
+    sync(a, b, order);
+    expectConverged(a, b);
+    check(a, b);
+  }
 }
