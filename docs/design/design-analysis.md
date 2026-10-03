@@ -1169,3 +1169,8 @@ Found while importing board B (028). Each has a default; the founder confirms or
 78. **The board's "suggested path"** (start from A, use B's lip only on the current flow step) is superseded by the founder's pick of B (§g-63).
 79. **Custom colours in the Deck look** ([126](screens/126-deck-colour-light.png)): custom deck colours have no `chip` / `ink` / `dot`; chips use the hex as fill with the flipped text colour, and light customs (Sand, Mint) fail 3:1 as a stroke on the canvas. **Default:** as designed; colour is decoration and the existing text-contrast warning (FR-026) stays the only check.
 80. **Sizes inside the states row** ([122](screens/122-deck-states-light.png)): the states frame draws cards 164 wide to fit six per row. **Default:** measure from the other rows (184); 122 is the reference for state styling only.
+
+### Founder decisions on format compatibility (2026-10-03)
+
+81. **ADR 0020 deferred** (founder, 2026-10-03). There are no users yet and the app is in development, so the `.sododeck.json` format and the stored deck can change freely: no format revision, no read-only guard, no handling of files or tabs from older builds. Backlog 025 moves to just before the first public release, where ADR 0020 is re-confirmed; 036 no longer depends on it.
+82. **036 decisions** (founder, 2026-10-03). Decks stored in the browser before 036 are not migrated and get no layout version (export before upgrading, import after). Collapsed groups stay shared document data per view. The 036 spec keeps anything a person wrote when concurrent edits clash (reported in Problems) and repairs only content-free leftovers.

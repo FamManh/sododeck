@@ -138,7 +138,6 @@ flowchart LR
   F022 -.-> F034
   F029 --> F035
   F029 --> F022
-  F025 --> F036
   F036 --> F029
   F036 --> F037
   F037 -.-> F023
@@ -171,17 +170,17 @@ review) are **not scheduled**. They come after M5 at the earliest and need a fou
 023 starts with a large-deck benchmark, and that result decides whether the renderer work is
 done at all. The measurement plan is in `docs/performance.md`.
 
-**Order from 2026-10-03 (§g-64, §g-65), every open feature:** **028** → **025** → **036** →
-**037** → **029** → **035** → **033** → **022** → **030** → **032** → **031** → **034** → **013** →
-**014** → **026** → **027** → **023**. 025 and 036 come first because 029 starts the run of schema
+**Order from 2026-10-03 (§g-64, §g-65, §g-81), every open feature:** **028** → **036** →
+**037** → **029** → **035** → **033** → **022** → **030** → **032** → **031** → **034** → **025** →
+**013** → **014** → **026** → **027** → **023**. 036 comes first because 029 starts the run of schema
 changes (029, 033, 022, 030, 032) and 036 makes the stored document collaboration-ready while
 there are no real users to migrate. 037 measures large decks early, on the new layout. 013 and 014
 (paused by the founder) come after the card system, so samples and the tour show the final cards
 and packs, and before a public launch. 026 and 027 wait for the schema to settle (030, 032). 023
 stays last and is decided by 037's numbers. 030 supersedes 024; 032 lifts §g-40.
 
-**025** format-compatibility (ADR 0020, proposed) should land before the first public release,
-ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
+**025** format-compatibility (ADR 0020, deferred §g-81): no users yet, so the format changes freely
+during development and old files are not handled; 025 lands before the first public release. **026** diagram-as-code
 and **027** ai-deck-skill are not scheduled.
 
 ## Feature list
@@ -213,7 +212,7 @@ and **027** ai-deck-skill are not scheduled.
 | 022 | connector-style          | after M4   | 017, 020, 029 | 5 d  | needs design (Miro-like line popover); schema change      |
 | 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design |
 | 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR      |
-| 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0020; banner copy; schema change             |
+| 025 | format-compatibility     | pre-launch | 005           | 2 d  | deferred (§g-81); re-confirm ADR 0020 before launch       |
 | 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
 | 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
 | 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                       |
@@ -224,7 +223,7 @@ and **027** ai-deck-skill are not scheduled.
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                          |
 | 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                  |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
-| 036 | collab-ready-document    | before 029 | 025           | 6 d  | — (ADR: layout v2 + schema roadmap); ⚠ shared view state  |
+| 036 | collab-ready-document    | before 029 | —             | 6 d  | — (ADR: layout v2 + schema roadmap); ⚠ shared view state  |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                         |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
@@ -1858,6 +1857,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 ## 025-format-compatibility
 
 - **Added:** 2026-09-30, architecture review. Implements ADR 0020 once the founder accepts it.
+- **Deferred** (founder, 2026-10-03, §g-81): no users yet, so files from older builds are not
+  handled during development. Picked up before the first public release; spec draft in
+  `specs/025-format-compatibility/`.
 - **Milestone:** before the first public release (ideally before 022 ships more optional fields;
   017 and 020 already have) · **Depends on:** 005 (library, deck channel) · **Estimate:** 2 d
 - **Goal:** A deck written by a newer Sododeck never breaks an older one: an older tab, a
@@ -1971,8 +1973,8 @@ stickers on played cards, the current card lifts on an orange lip, upcoming card
 dashed number); a collapsed group is a fanned hand of cards. The design's own risk note is kept as
 a rule: on dense boards drop the lip below 60 % zoom and show chips as dots at System level.
 
-Order (§g-64, §g-65): **028 → 025 → 036 → 037 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**,
-then 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
+Order (§g-64, §g-65, §g-81): **028 → 036 → 037 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**,
+then 025 → 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
 
 ## 028-design-sync-card-system
 
@@ -2142,9 +2144,12 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 036-collab-ready-document
 
+- **Status:** specified and planned (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md), [`plan.md`](../specs/036-collab-ready-document/plan.md) and [`tasks.md`](../specs/036-collab-ready-document/tasks.md) (48 tasks). Not implemented yet.
+  The spec narrows "integrity on receive": content is kept and reported, only content-free
+  leftovers are repaired (FR-020 / FR-021).
 - **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real
   users yet, so the stored layout can change now at almost no cost.
-- **Milestone:** before 029 · **Depends on:** 025 · **Estimate:** 6 d (split at
+- **Milestone:** before 029 · **Depends on:** — · **Estimate:** 6 d (split at
   `/speckit.specify` if it grows)
 - **Goal:** The Yjs document and the file format are ready for the schema changes of 029–032 and
   for a later server and real-time collaboration, without changing what users see.
@@ -2161,24 +2166,23 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
     by the writer's Zod check. After each remote transaction, run the integrity check, report
     breakage as problems (ADR 0013) and repair what is safe to repair automatically (e.g. a
     duplicated id from a concurrent paste gets a fresh id and its references follow).
-  - **Layout version + migration.** `meta.layout` (absent = 1). Opening a version-1 deck migrates
-    it once, in one untracked transaction (never an undo step), before the editor shows it. A tab
-    still on layout 1 that meets layout 2 reloads.
+  - **No layout version and no migration** (founder, 2026-10-03, §g-81 / §g-82): decks stored
+    before 036 are not supported; export to `.sododeck.json` before upgrading and import after.
+    Opening an old stored deck ends in the existing "can't open" outcome, never a crash.
   - **One schema roadmap ADR** naming every field 029, 033, 022, 030 and 032 will add
     (`edge.style.shape`, waypoints, free anchors, dash / width / colour, `labelAt`; deck tag
-    definitions; the card type registry and packs; field definitions and values), with their
-    `FORMAT_REVISION` steps, so the format grows by design rather than five separate patches.
+    definitions; the card type registry and packs; field definitions and values), so the format
+    grows by design rather than five separate patches.
   - **Deck identity.** Deck ids are already `crypto.randomUUID()`; record in the ADR that they are
     the global id (the future server room name) and never reused.
-  - ⚠ **Shared or per-user view state:** collapsed groups (per view) are document data today, so
-    with collaborators one person's collapse collapses for everyone. Decide in the ADR (shared
-    like Miro frames, or per-user like a viewport).
+  - **Collapsed groups stay shared** document data per view (founder, 2026-10-03, §g-82);
+    recorded in the ADR.
 - **Unchanged:** the `.sododeck.json` file format (arrays in file order, canonical key order,
   ADR 0004 / 0005 §6): `toJSON` / `serializeDeck` output is byte-identical before and after.
 - **Out of scope:** a server, accounts, presence (awareness), sharing, permissions.
 - **Acceptance criteria (draft):**
-  - Given a deck stored before 036, When opened, Then it is migrated once, `toJSON` is
-    byte-identical to before, and ⌘Z does not undo the migration.
+  - Given any valid file, When imported and exported, Then the text is byte-identical to the
+    export before 036.
   - Given two tabs, When one reorders a flow's steps while the other edits a step's title, Then
     both changes survive and no step is duplicated.
   - Given two tabs typing into the same node description at once, Then both texts survive.
