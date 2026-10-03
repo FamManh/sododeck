@@ -593,7 +593,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
   it('createDeck() produces an empty valid file', () => {
     expect(toJSON(createDeck())).toEqual({
       ...emptySododeckFile(),
-      packs: ['architecture', 'process', 'logistics', 'data'],
+      packs: ['architecture', 'process', 'logistics', 'data', 'shapes'],
     });
   });
 

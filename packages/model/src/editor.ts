@@ -52,6 +52,7 @@ import { updateMeta } from './ops/meta';
 import { setStyle, type StyleChannel, type StyleTargets } from './ops/style';
 import { addSwatch, removeSwatch } from './ops/swatches';
 import { setPackOn } from './ops/packs';
+import { setNodeDisplay, type NodeDisplay } from './ops/node-display';
 import { deleteTag, renameTag, setTagColor, type TagChange } from './ops/tags';
 import {
   addRule,
@@ -260,6 +261,11 @@ export interface DeckEditor {
    * undo step, joining an open gesture.
    */
   setCardSize(nodeId: Id, size: Size | null): void;
+  /**
+   * Card or shape form of every listed node (031): one undo step; `null`, or the type's own
+   * family, removes `display`. Throws `invalid` / `not-found` before any write.
+   */
+  setNodeDisplay(nodeIds: readonly Id[], display: NodeDisplay | null): void;
   /**
    * Merges `patch` into an edge's stored route (017), or clears it entirely (`null`). A `null`
    * key removes it, `offset: 0` is dropped, and `route` itself is removed once no key is left. One
@@ -604,6 +610,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     pasteFragment: (fragment, options) => pasteFragment(ctx, fragment, options),
     groupSelection: (selection) => groupSelection(ctx, selection),
+    setNodeDisplay: (nodeIds, display) => {
+      setNodeDisplay(ctx, nodeIds, display);
+    },
     setCardSize: (nodeId, size) => {
       setCardSize(ctx, nodeId, size);
     },
