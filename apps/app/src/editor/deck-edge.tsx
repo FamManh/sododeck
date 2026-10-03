@@ -8,11 +8,11 @@ import { memo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { DeckFlowEdge } from './deck-to-flow';
-import { KNOB_RADIUS } from './edge-constants';
+import { EdgeEnds } from './edge-ends';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES } from './flow-strokes';
-import { routedStepPath } from './routing/route-path';
+import { routedPath, type Box } from './routing/route-path';
 import { SegmentHandle } from './routing/segment-handle';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions, so a route's offset can be applied. */
@@ -23,9 +23,13 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
   [Position.Left]: 'left',
 };
 
+/** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
+const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
+
 /**
- * Connection (DESIGN.md: orthogonal routing, 8px corners, 3px end dot; designs 11, 12, 57).
- * Direction is shown by the dots: at the target (forward), at both ends (both), none (none).
+ * Connection (DESIGN.md "Card system (Deck)": 2 px line, knob at the start and arrow at the end).
+ * Direction is shown by the end marks: knob → arrow (forward), arrows at both ends (both), knobs
+ * at both ends (none). Every edge is drawn elbow for now; TODO(M2): the stored line type (T044).
  * A flow mark (006) draws step badges and the path, error, candidate, preview or invalid style;
  * in flow mode (007) the current step's edge is thicker, with a filled label and the token.
  */
@@ -63,28 +67,27 @@ export const DeckEdge = memo(function DeckEdge({
   // This edge's own end is being dragged to reconnect it (017 R12): drawn as a 40 % ghost while
   // the custom connection line shows the live path.
   const reconnecting = useUiStore((s) => s.reconnectingEdgeId === id);
-  const { path, labelX, labelY, segment } = routedStepPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sides,
-    offset: data?.route?.offset,
-    borderRadius: 8,
-  });
   const direction = data?.direction ?? 'forward';
+  const fromBox = pointBox(sourceX, sourceY);
+  const toBox = pointBox(targetX, targetY);
+  // The line stops one arrow short of an end that carries an arrow (029 R6).
+  const arrows = { arrowAtStart: direction === 'both', arrowAtEnd: direction !== 'none' };
+  const { path, labelX, labelY, segment, ends } = routedPath(
+    'elbow',
+    fromBox,
+    toBox,
+    sides,
+    data?.route?.offset,
+    arrows,
+  );
   const flow = data?.flow;
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flow.style];
-  const stroke = selected ? 'var(--color-primary)' : (flowStroke?.stroke ?? 'var(--color-edge)');
-  const dots = [
-    ...(direction === 'both' ? [{ x: sourceX, y: sourceY }] : []),
-    ...(direction === 'none' ? [] : [{ x: targetX, y: targetY }]),
-  ];
+  const stroke = selected
+    ? 'var(--color-deck-orange)'
+    : (flowStroke?.stroke ?? 'var(--color-deck-edge)');
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The automatic path (no route), computed only while dragging, to draw the ghost.
-  const ghostPath = dragging
-    ? routedStepPath({ sourceX, sourceY, targetX, targetY, sides, borderRadius: 8 }).path
-    : null;
+  const ghostPath = dragging ? routedPath('elbow', fromBox, toBox, sides, 0, arrows).path : null;
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
@@ -92,7 +95,7 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
-  const width = selected ? 2.5 : current !== null ? 3 : (flowStroke?.width ?? 1.5);
+  const width = selected ? 2.5 : current !== null ? 3 : (flowStroke?.width ?? 2);
 
   return (
     <>
@@ -133,16 +136,7 @@ export const DeckEdge = memo(function DeckEdge({
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
         }}
       />
-      {dots.map((dot) => (
-        <circle
-          key={`${String(dot.x)},${String(dot.y)}`}
-          data-testid="edge-dot"
-          cx={dot.x}
-          cy={dot.y}
-          r={KNOB_RADIUS}
-          fill={stroke}
-        />
-      ))}
+      <EdgeEnds {...ends} direction={direction} color={stroke} />
       {current !== null && <FlowToken path={path} x={labelX} y={labelY} speed={current.speed} />}
       {(showLabel || selected || flow !== undefined || problems !== undefined) && (
         <EdgeLabelRenderer>
