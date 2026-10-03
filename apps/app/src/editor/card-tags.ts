@@ -8,16 +8,14 @@ import { canvasMeasurer, fixedWidthMeasurer, type TextMeasurer } from './export/
 
 export const MAX_CARD_TAGS = 10;
 
-/** The on-card chip (`deck-node.tsx`'s `CardTag`): h-5, px-2, gap-1, text-caption. */
+/** The Deck tag pill (029, DESIGN.md `--sd-deck-tag`): 18 tall, padding 0 6, gap 4, Geist 10.5 / 500. */
 export const TAG_CHIP = {
-  height: 20,
+  height: 18,
   gap: 4,
-  paddingX: 8,
-  /** Under the last row (pb-2). */
-  paddingBottom: 8,
-  /** The card's px-2.5 on each side. */
-  cardPaddingX: 10,
-  font: "11.5px 'Geist Variable', system-ui, sans-serif",
+  paddingX: 6,
+  /** The card's horizontal padding (13) on each side. */
+  cardPaddingX: 13,
+  font: "500 10.5px 'Geist Variable', system-ui, sans-serif",
   /** Slack per chip, for a font still loading or sub-pixel rounding: never wrap later than CSS. */
   slack: 2,
 } as const;
@@ -53,19 +51,19 @@ export function tagRows(
 let defaultMeasure: TextMeasurer | null = null;
 
 /** The canvas text measurer in a browser; a fixed-width estimate where there is no canvas. */
-function measurer(): TextMeasurer {
+export function textMeasurer(): TextMeasurer {
   defaultMeasure ??= canvasMeasurer() ?? fixedWidthMeasurer(0.55);
   return defaultMeasure;
 }
 
-/** The height the tag block adds under the title row of a `cardWidth` px card (0 without tags). */
+/** The height of the tag block of a `cardWidth` px card (0 without tags); the gap above it is the card's. */
 export function tagBlockHeight(
   tags: readonly string[] | undefined,
   cardWidth: number,
-  measure: TextMeasurer = measurer(),
+  measure: TextMeasurer = textMeasurer(),
 ): number {
   const shown = cardTags(tags);
   if (shown.length === 0) return 0;
   const rows = tagRows(shown, cardWidth - 2 * TAG_CHIP.cardPaddingX, measure);
-  return rows * TAG_CHIP.height + (rows - 1) * TAG_CHIP.gap + TAG_CHIP.paddingBottom;
+  return rows * TAG_CHIP.height + (rows - 1) * TAG_CHIP.gap;
 }

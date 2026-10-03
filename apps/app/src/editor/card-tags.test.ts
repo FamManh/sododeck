@@ -3,17 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { fixedWidthMeasurer } from './export/text-measure';
 import { MAX_CARD_TAGS, TAG_CHIP, cardTags, tagBlockHeight, tagRows } from './card-tags';
 
-// 11.5px × 0.5 ≈ 5.75 px per character, so "abcd" is a 23 px label and a 39 px chip.
+// 10.5px × 0.5 = 5.25 px per character, so "abcd" is a 21 px label and a 35 px chip (+2 slack).
 const measure = fixedWidthMeasurer(0.5);
 
 describe('card tags (2026-10-03)', () => {
   it('has no tag block without tags', () => {
     expect(tagRows([], 144, measure)).toBe(0);
-    expect(tagBlockHeight(undefined, 164, measure)).toBe(0);
+    expect(tagBlockHeight(undefined, 184, measure)).toBe(0);
   });
 
   it('wraps chips into rows that fit the card', () => {
-    // Three 39 px chips + 4 px gaps = 125 px: one row in 144 px, two rows in 100 px.
+    // Three 35 px chips + 2 px slack each + 4 px gaps = 119 px: one row in 144 px, two in 100 px.
     expect(tagRows(['abcd', 'efgh', 'ijkl'], 144, measure)).toBe(1);
     expect(tagRows(['abcd', 'efgh', 'ijkl'], 100, measure)).toBe(2);
   });
@@ -22,11 +22,11 @@ describe('card tags (2026-10-03)', () => {
     expect(tagRows(['x'.repeat(60), 'ab'], 144, measure)).toBe(2);
   });
 
-  it('adds the rows, the gaps between them and the bottom padding', () => {
-    const one = tagBlockHeight(['abcd'], 164, measure);
+  it('adds the rows and the gaps between them', () => {
+    const one = tagBlockHeight(['abcd'], 184, measure);
     const two = tagBlockHeight(['abcd', 'efgh', 'ijkl'], 120, measure);
-    expect(one).toBe(TAG_CHIP.height + TAG_CHIP.paddingBottom);
-    expect(two).toBe(2 * TAG_CHIP.height + TAG_CHIP.gap + TAG_CHIP.paddingBottom);
+    expect(one).toBe(TAG_CHIP.height);
+    expect(two).toBe(2 * TAG_CHIP.height + TAG_CHIP.gap);
   });
 
   it('shows at most ten tags', () => {

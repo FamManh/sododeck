@@ -10,9 +10,9 @@ export interface TextLines {
   subtitle: number;
 }
 
-// Rounded from theme.css's --text-body-sm (12.5px × 1.45) and --text-node-sub (11px × 1.3).
+// The Deck card's line heights (029): title 14 × 1.28, description 12 × 1.4.
 const TITLE_LINE_HEIGHT = 18;
-const SUBTITLE_LINE_HEIGHT = 12;
+const SUBTITLE_LINE_HEIGHT = 16.8;
 
 export function textLines(size: { width: number; height: number }): TextLines {
   const available = Math.max(0, size.height);
