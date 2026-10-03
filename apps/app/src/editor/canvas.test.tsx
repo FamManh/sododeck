@@ -1,4 +1,4 @@
-import { toJSON, type DeckEditor } from '@sododeck/model';
+import { fromJSON, toJSON, type DeckEditor } from '@sododeck/model';
 import * as Y from 'yjs';
 import {
   act,
@@ -21,6 +21,7 @@ import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
 import { Canvas } from './canvas';
+import { demoDeck } from './demo-deck';
 import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
@@ -119,7 +120,7 @@ describe('Canvas', () => {
     const rect = container.querySelector('.react-flow__minimap-node');
     expect(rect).toHaveStyle({
       fill: 'var(--color-card-green-fill)',
-      stroke: 'var(--color-border)',
+      stroke: 'var(--color-border-strong)',
     });
   });
 
@@ -1346,3 +1347,14 @@ describe('resizing a card (017)', () => {
 // mount: React Flow never measures node size under jsdom, so edges (and anything they portal
 // through `EdgeLabelRenderer`, like the segment handle) never render here — see "canvas in flow
 // mode (007)" above, which hits the same limit for the step player's node-only assertions.
+
+describe('the Deck look leaves the file alone (029 SC-001)', () => {
+  it('serialises the demo deck identically before and after it is rendered', () => {
+    const doc = fromJSON(demoDeck);
+    const before = JSON.stringify(toJSON(doc));
+    renderWithEditor(<Canvas />, doc);
+    expect(screen.getAllByTestId('deck-node').length).toBeGreaterThan(0);
+    // Drawing only reads the document: no default size or position is written back.
+    expect(JSON.stringify(toJSON(doc))).toBe(before);
+  });
+});

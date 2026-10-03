@@ -689,7 +689,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
               (n.data.look as CardLook | undefined)?.fill ?? 'var(--color-surface-3)'
             }
             nodeStrokeColor={(n) =>
-              (n.data.look as CardLook | undefined)?.stroke ?? 'var(--color-border)'
+              (n.data.look as CardLook | undefined)?.stroke ?? 'var(--color-border-strong)'
             }
             maskColor="var(--xy-minimap-mask-background-color)"
             onClick={(_, position) => {
