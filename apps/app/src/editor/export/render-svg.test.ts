@@ -258,24 +258,50 @@ describe('renderSvg: the Deck card (029)', () => {
     expect(bare?.querySelectorAll('rect')).toHaveLength(3);
   });
 
-  it('colours the tile and tags from the card colour', () => {
+  it('colours the tile from the card colour and each tag from its own colour (033)', () => {
     const coloured = deckOf({
+      tagColors: { PCI: 'violet', Lan: '#1f2a44' },
       nodes: [
         {
           id: 'a',
           type: 'service',
           title: 'A',
-          tags: ['x'],
+          tags: ['pci', 'Lan', 'plain'],
           position: { x: 0, y: 0 },
           style: { fill: 'teal' },
         },
       ],
     });
     const card = inCard(parse(svgOf(coloured)), 'a');
-    const chips = LIGHT_PALETTE.cardChips.teal;
-    expect(card?.querySelector('[data-part="tile"]')?.getAttribute('fill')).toBe(chips.chip);
-    expect(card?.querySelector('[data-part="tag"]')?.getAttribute('fill')).toBe(chips.chip);
-    expect(card?.querySelector('text.tg')?.getAttribute('fill')).toBe(chips.ink);
+    const teal = LIGHT_PALETTE.cardChips.teal;
+    expect(card?.querySelector('[data-part="tile"]')?.getAttribute('fill')).toBe(teal.chip);
+    const pills = [...(card?.querySelectorAll('[data-part="tag"]') ?? [])];
+    const labels = [...(card?.querySelectorAll('text.tg') ?? [])];
+    const violet = LIGHT_PALETTE.cardChips.violet;
+    const slate = LIGHT_PALETTE.cardChips.slate;
+    expect(pills.map((pill) => pill.getAttribute('fill'))).toEqual([
+      violet.chip,
+      '#1f2a44',
+      slate.chip,
+    ]);
+    expect(labels.map((label) => label.getAttribute('fill'))).toEqual([
+      violet.ink,
+      LIGHT_PALETTE.cardText.light,
+      slate.ink,
+    ]);
+  });
+
+  it('draws a tag in a light-only slate pill when no colour is set, even on a coloured card (033)', () => {
+    const plain = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', tags: ['x'], position: { x: 0, y: 0 } }],
+    });
+    const card = inCard(parse(svgOf(plain)), 'a');
+    expect(card?.querySelector('[data-part="tag"]')?.getAttribute('fill')).toBe(
+      LIGHT_PALETTE.cardChips.slate.chip,
+    );
+    expect(card?.querySelector('text.tg')?.getAttribute('fill')).toBe(
+      LIGHT_PALETTE.cardChips.slate.ink,
+    );
   });
 
   it('draws nothing of hover, drag or selection', () => {

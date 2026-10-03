@@ -35,7 +35,7 @@ function Sample({
       kind: 'service',
       subtitle: undefined,
       owner: undefined,
-      tags: [],
+      tagLooks: [],
       hasRules: true,
       childCount: 0,
       dimmed: false,

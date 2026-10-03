@@ -117,6 +117,17 @@ export function exportLook(style: Style | undefined): ExportLook | undefined {
   };
 }
 
+/**
+ * A tag pill's chip and ink for export (033): the light palette's chip for a named colour, the hex
+ * with a readable ink for a custom one, slate when the tag has no colour. Light-only (ADR 0016).
+ */
+export function exportTagColours(color: ColorRef | undefined): { chip: string; ink: string } {
+  const ref = color ?? 'slate';
+  return isCardColour(ref)
+    ? LIGHT_PALETTE.cardChips[ref]
+    : { chip: ref, ink: LIGHT_PALETTE.cardText[readableText(ref).text] };
+}
+
 /** The literal ink colour for a resolved `text` role. */
 export function exportTextColour(text: ExportLook['text'], palette: ExportPalette): string {
   switch (text) {

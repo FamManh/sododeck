@@ -387,6 +387,80 @@ describe('toFlowNodes', () => {
   });
 });
 
+describe('tag colours (033)', () => {
+  const tagged: SododeckFile = {
+    ...emptySododeckFile(),
+    tagColors: { PCI: 'violet', Lan: '#1f2a44' },
+    nodes: [
+      {
+        id: 'a',
+        type: 'service',
+        title: 'A',
+        style: { fill: 'green' },
+        tags: ['pci', 'Lan', 'plain'],
+      },
+      { id: 'b', type: 'service', title: 'B' },
+    ],
+  };
+  const lookOf = (file: SododeckFile, id: string) =>
+    (toFlowNodes(file, topLevelGraph(file), view()).find((n) => n.id === id) as DeckFlowNode).data
+      .tagLooks;
+
+  it('gives each tag its own colour, matched by key, and an uncoloured tag slate (even on a coloured card)', () => {
+    expect(lookOf(tagged, 'a')).toEqual([
+      {
+        text: 'pci',
+        chip: 'var(--color-card-violet-chip)',
+        ink: 'var(--color-card-violet-ink)',
+        dot: 'var(--color-card-violet-dot)',
+      },
+      { text: 'Lan', chip: '#1f2a44', ink: 'var(--color-card-text-light)', dot: '#1f2a44' },
+      {
+        text: 'plain',
+        chip: 'var(--color-card-slate-chip)',
+        ink: 'var(--color-card-slate-ink)',
+        dot: 'var(--color-card-slate-dot)',
+      },
+    ]);
+    expect(lookOf(tagged, 'b')).toEqual([]);
+  });
+
+  it('carries the first ten tags only', () => {
+    const many: SododeckFile = {
+      ...tagged,
+      nodes: [
+        {
+          id: 'm',
+          type: 'service',
+          title: 'M',
+          tags: Array.from({ length: 12 }, (_, i) => `t${String(i)}`),
+        },
+      ],
+    };
+    expect(lookOf(many, 'm')).toHaveLength(10);
+  });
+
+  it('rebuilds a card whose tag colour changed and keeps the identity of cards it does not touch', () => {
+    const file: SododeckFile = {
+      ...tagged,
+      nodes: [...tagged.nodes, { id: 'c', type: 'service', title: 'C', tags: ['other'] }],
+    };
+    const first = toFlowNodes(file, topLevelGraph(file), view());
+    const recoloured: SododeckFile = { ...file, tagColors: { PCI: 'red', Lan: '#1f2a44' } };
+    const second = toFlowNodes(recoloured, topLevelGraph(recoloured), view());
+    const get = (list: typeof first, id: string) => list.find((n) => n.id === id) as DeckFlowNode;
+    expect(get(second, 'a')).not.toBe(get(first, 'a'));
+    expect(get(second, 'a').data.tagLooks[0]?.chip).toBe('var(--color-card-red-chip)');
+    expect(get(second, 'b')).toBe(get(first, 'b'));
+    expect(get(second, 'c')).toBe(get(first, 'c'));
+  });
+
+  it('removing the colour map returns the tags to slate', () => {
+    const { tagColors: _removed, ...plain } = tagged;
+    expect(lookOf(plain, 'a')[0]?.chip).toBe('var(--color-card-slate-chip)');
+  });
+});
+
 describe('view render (011)', () => {
   const file: SododeckFile = {
     ...emptySododeckFile(),

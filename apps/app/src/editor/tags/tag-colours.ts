@@ -28,3 +28,8 @@ export function chipColours(color: ColorRef): TagColours {
 export function tagColours(color: ColorRef | undefined): TagColours {
   return chipColours(color ?? 'slate');
 }
+
+/** One pill of a card's tag list: its text as stored, and its colours. */
+export interface TagLook extends TagColours {
+  text: string;
+}

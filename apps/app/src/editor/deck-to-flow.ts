@@ -36,6 +36,8 @@ import type { CardLayout } from './card-layout';
 import type { Level } from './levels';
 import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems/problem-marks';
 import { resolveLook, type CardLook, type StylePreview } from './style/card-style';
+import { cardTagLooks, sameTagLooks, tagColourMap, type TagColourMap } from './tags/card-tag-looks';
+import type { TagLook } from './tags/tag-colours';
 import type { VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
 
@@ -48,7 +50,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   kind: string;
   subtitle: string | undefined;
   owner: string | undefined;
-  tags: readonly string[];
+  /** The first ten tags with their own colours (033); empty without tags. */
+  tagLooks: readonly TagLook[];
   hasRules: boolean;
   level: Level;
   childCount: number;
@@ -328,14 +331,22 @@ function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boo
   );
 }
 
+/** The tag colour map each cached card was built with: a recolour revisits only cards with tags. */
+const nodeTagColours = new WeakMap<DeckFlowNode, TagColourMap>();
+
 function toFlowNode(
   node: DeckNodeObject,
   position: Point,
   view: CanvasView,
   childCount: number,
   mark: NodeFlowMark | undefined,
+  tagColours: TagColourMap,
 ): DeckFlowNode {
   const cached = nodeCache.get(node);
+  const tagLooks =
+    cached !== undefined && nodeTagColours.get(cached) === tagColours
+      ? cached.data.tagLooks
+      : cardTagLooks(node.tags, tagColours);
   const flowStart = mark?.startsHere;
   const currentStep = mark?.currentStep === true;
   const inFlow = mark?.inPath === true;
@@ -368,6 +379,7 @@ function toFlowNode(
     (cached.data.hiddenInView === true) === hiddenInView &&
     sameProblemMark(cached.data.problems, problems) &&
     sameLook(cached.data.look, look) &&
+    sameTagLooks(cached.data.tagLooks, tagLooks) &&
     cached.data.focused === focused &&
     cached.data.level === view.level &&
     cached.data.childCount === childCount &&
@@ -380,6 +392,7 @@ function toFlowNode(
     cached.width === size.width &&
     cached.height === size.height
   ) {
+    nodeTagColours.set(cached, tagColours);
     return cached;
   }
   const flowNode: DeckFlowNode = {
@@ -395,7 +408,7 @@ function toFlowNode(
       kind: node.type,
       subtitle,
       owner: node.owner,
-      tags: node.tags ?? [],
+      tagLooks,
       hasRules: (node.rules?.length ?? 0) > 0,
       level: view.level,
       childCount,
@@ -412,6 +425,7 @@ function toFlowNode(
     },
   };
   nodeCache.set(node, flowNode);
+  nodeTagColours.set(flowNode, tagColours);
   return flowNode;
 }
 
@@ -658,6 +672,7 @@ export function toFlowNodes(
   overlay: FlowOverlay = EMPTY_OVERLAY,
 ): CanvasFlowNode[] {
   const lookups = deckLookups(deck);
+  const tagColours = tagColourMap(deck.tagColors);
   const ports = portNodesWithView(deck, graph, view);
   const components = graph.nodes.flatMap((nodeId) => {
     const node = lookups.nodesById.get(nodeId);
@@ -671,6 +686,7 @@ export function toFlowNodes(
         view,
         graph.childCount.get(node.id) ?? 0,
         overlay.nodes.get(node.id),
+        tagColours,
       ),
     ];
   });

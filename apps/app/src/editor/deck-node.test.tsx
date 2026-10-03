@@ -9,6 +9,7 @@ import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { cardLayout, type CardLayout } from './card-layout';
 import { DeckNode } from './deck-node';
+import { tagColours } from './tags/tag-colours';
 import type { DeckFlowNode } from './deck-to-flow';
 
 const connection = vi.hoisted(() => ({ role: null as string | null, connecting: false }));
@@ -27,24 +28,23 @@ const deck = deckOf({
   edges: [{ id: 'e1', from: 'svc', to: 'db' }],
 });
 
-function props(
-  patch: Partial<DeckFlowNode['data']> = {},
-  selected = false,
-  id = 'svc',
-  layout?: CardLayout,
-) {
+/** Test shorthand: `tags` become uncoloured (slate) `tagLooks`, as `toFlowNodes` makes them. */
+type PropsPatch = Partial<DeckFlowNode['data']> & { tags?: readonly string[] };
+
+function props(patch: PropsPatch = {}, selected = false, id = 'svc', layout?: CardLayout) {
+  const { tags = [], ...rest } = patch;
   const data = {
     title: 'Order Service',
     kind: 'service',
     subtitle: undefined,
     owner: undefined,
-    tags: [],
+    tagLooks: tags.map((text) => ({ text, ...tagColours(undefined) })),
     hasRules: false,
     childCount: 0,
     dimmed: false,
     level: 'component',
     focused: false,
-    ...patch,
+    ...rest,
   };
   return {
     id,
@@ -58,7 +58,7 @@ function props(
         cardLayout({
           title: data.title,
           description: data.subtitle,
-          tags: data.tags,
+          tags: data.tagLooks.map((look) => look.text),
           childCount: data.childCount,
         }),
     },
@@ -511,6 +511,38 @@ describe('DeckNode per level (029 US4, R8)', () => {
     const items = within(screen.getByRole('list', { name: 'Tags' })).getAllByRole('listitem');
     expect(items.map((item) => item.getAttribute('aria-label'))).toEqual(['critical', 'pci']);
     for (const item of items) expect(item).toBeEmptyDOMElement();
+  });
+
+  it("paints each tag pill in the tag's own colour, not the card's (033)", () => {
+    const violet = tagColours('violet');
+    renderNode(
+      props({
+        level: 'container',
+        look: resolveLook({ fill: 'green' }),
+        tagLooks: [
+          { text: 'PCI', ...violet },
+          { text: 'plain', ...tagColours(undefined) },
+        ],
+      }),
+    );
+    const [pci, plain] = within(screen.getByRole('list', { name: 'Tags' })).getAllByRole(
+      'listitem',
+    );
+    expect(pci).toHaveTextContent('PCI');
+    expect(pci).toHaveStyle({ '--tag-chip': violet.chip, '--tag-ink': violet.ink });
+    expect(plain).toHaveTextContent('plain');
+    expect(plain).toHaveStyle({
+      '--tag-chip': 'var(--color-card-slate-chip)',
+      '--tag-ink': 'var(--color-card-slate-ink)',
+    });
+  });
+
+  it('paints named dots in the tag colour at System (033)', () => {
+    const violet = tagColours('violet');
+    renderNode(props({ level: 'system', tagLooks: [{ text: 'PCI', ...violet }] }));
+    const dot = screen.getByRole('listitem', { name: 'PCI' });
+    expect(dot).toBeEmptyDOMElement();
+    expect(dot).toHaveStyle({ '--tag-dot': violet.dot });
   });
 
   it('paints only the type icon on the card fill at Landscape', () => {

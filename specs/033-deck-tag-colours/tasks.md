@@ -43,7 +43,7 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 ## Phase 1: Setup
 
 - [x] T001 Work in a git worktree or branch `033-deck-tag-colours` from the latest `main` (at or after `2e85e4a`). Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` to confirm a green start. Confirm the lucide names `Pencil`, `Plus`, `Trash2`, `Check`, `ArrowLeft` exist in the installed version.
-- [ ] T002 Add a `BENCH_TAGS` option to `apps/app/bench/perf.bench.ts` (read its header for the existing `BENCH_*` options): every card gets 3 to 10 tags from a pool of 24 (mixed case, e.g. "PCI", "pci", "Lan"). Then run `pnpm bench` and `BENCH_TAGS=1 pnpm bench` on the unchanged rendering and save both tables in `specs/033-deck-tag-colours/bench-before.md`. Also record `pnpm --filter @sododeck/app test scene.perf`.
+- [x] T002 Add a `BENCH_TAGS` option to `apps/app/bench/perf.bench.ts` (read its header for the existing `BENCH_*` options): every card gets 3 to 10 tags from a pool of 24 (mixed case, e.g. "PCI", "pci", "Lan"). Then run `pnpm bench` and `BENCH_TAGS=1 pnpm bench` on the unchanged rendering and save both tables in `specs/033-deck-tag-colours/bench-before.md`. Also record `pnpm --filter @sododeck/app test scene.perf`.
 
 ---
 
