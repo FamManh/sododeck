@@ -120,6 +120,8 @@ const NON_TEXT_PAIRS: Pair[] = [
   ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-stroke`, 'surface']),
   // Deck dots (029): the 6px dot and status icon on the card fill.
   ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-dot`, `card-${name}-fill`]),
+  // Connector colours (022 R12, SC-008): a coloured line is drawn with the colour's stroke token.
+  ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-stroke`, 'canvas']),
 ];
 // Not asserted: primary fill vs inverse (coach-mark Next button) is 2.38:1 in dark. WCAG 1.4.11
 // does not require a text button's fill to contrast with its background; the label identifies
