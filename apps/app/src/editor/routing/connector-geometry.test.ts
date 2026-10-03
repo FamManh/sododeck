@@ -567,3 +567,42 @@ describe('path sampling', () => {
     }
   });
 });
+
+describe('connectorPath with shape ends (031)', () => {
+  const diamond: Box = { x: 0, y: 0, width: 176, height: 112 };
+  const right: Box = { x: 400, y: 0, width: 184, height: 112 };
+
+  it('ends on the outline: a parallelogram’s slant, not its box', () => {
+    const para: Box = { x: 0, y: 0, width: 168, height: 72 };
+    const plain = connectorPath({
+      shape: 'straight',
+      fromBox: para,
+      toBox: right,
+      sides: ['right', 'left'],
+    });
+    const shaped = connectorPath({
+      shape: 'straight',
+      fromBox: para,
+      toBox: right,
+      sides: ['right', 'left'],
+      fromGeometry: 'parallelogram',
+    });
+    expect(plain.ends.start).toEqual({ x: 168, y: 36 });
+    expect(shaped.ends.start.x).toBeCloseTo(168 - (168 * 0.16) / 2, 6);
+    expect(shaped.ends.end).toEqual(plain.ends.end);
+  });
+
+  it('moves an anchored end along the outline (022 anchors)', () => {
+    const anchored = connectorPath({
+      shape: 'curved',
+      fromBox: diamond,
+      toBox: right,
+      sides: ['top', 'left'],
+      route: { fromAt: 0.25 },
+      fromGeometry: 'diamond',
+    });
+    // A quarter along the top: on the upper-left edge of the diamond, below the box top.
+    expect(anchored.ends.start.x).toBeCloseTo(44, 6);
+    expect(anchored.ends.start.y).toBeCloseTo(28, 6);
+  });
+});

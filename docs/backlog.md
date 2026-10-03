@@ -223,7 +223,7 @@ and **027** ai-deck-skill are not scheduled.
 | 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                           |
 | 029 | card-look-deck           | after M4   | 028, 036      | 6 d  | implemented (2026-10-03); visual check and quickstart partial |
 | 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR                |
-| 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                       |
+| 031 | shapes                   | after M4   | 030           | 6 d  | built (2026-10-03); see `specs/031-shapes/`, ADR 0026         |
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | implemented (2026-10-03); visual check and quickstart partial |
 | 034 | connection-focus-drill   | after M4   | 029           | 4 d  | implemented (2026-10-03)                                      |
@@ -2104,6 +2104,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 031-shapes
 
+- **Status:** built (2026-10-03, `specs/031-shapes`, ADR 0026): eleven shapes, Show as card / shape (`node.display`), the Frame tool (Frame = Group), Sticky and Text tiles, empty groups drawn.
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
 - **Goal:** The shape family: real geometry with centred text (§g-61 D2).
 - **In scope:** rectangle, rounded rectangle, ellipse, diamond, pill (start / end), cylinder,

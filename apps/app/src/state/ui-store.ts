@@ -167,9 +167,10 @@ export interface DrawerState {
 
 /**
  * Rail tools (018 R8). Select drags a marquee and Hand pans (§g-57); both stay on. Sticky and
- * Connector act on the next click, then fall back to Select.
+ * Connector act on the next click, then fall back to Select. Frame (031, from Add's Frame tile)
+ * draws one group frame with the next drag or click, then falls back to Select.
  */
-export type Tool = 'select' | 'hand' | 'sticky' | 'connector';
+export type Tool = 'select' | 'hand' | 'sticky' | 'connector' | 'frame';
 
 /**
  * A title being edited inside its card (019 R2). The draft text lives only in the input; the

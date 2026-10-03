@@ -218,6 +218,28 @@ Top to bottom; an empty region is not drawn and the card gets shorter (120):
 
 A person chip has a 16px Surface 3 avatar with Mono 7.5 / 600 initials. A bar field is an 8px Surface 3 track, radius 4, filled in Secondary, with a Mono value.
 
+#### Shapes (120, 127; 031, ADR 0026)
+
+The Basic shapes pack (Add → Shapes, "Basic shapes · 13 types"): eleven shape types, then the **Sticky** tile (today's sticky note) and the **Frame** tile (tooltip "Draw a group frame"; "Group" everywhere else). A shape draws its true geometry with a 1.5px outline in the stroke colour (or Border-strong), the fill colour (or Surface), the lip (the outline 3px lower, in the stroke colour) and its title centred, Geist 13 / 600 / 16px lines, up to 3 lines, "…" plus a title-only tooltip. No header, fields or tags on the canvas. Tiles draw a mini outline of the shape.
+
+| Shape | Geometry | Default / minimum | Lip | Title box | Connection points |
+| --- | --- | --- | --- | --- | --- |
+| Rectangle | box | 160 × 72 / 64 × 40 | yes | inset 10 / 6 | side midpoints |
+| Rounded rectangle | box, radius 14 | 160 × 72 / 64 × 40 | yes | inset clear of the corners | side midpoints |
+| Ellipse | ellipse | 152 × 80 / 64 × 40 | yes | w / √2 by h / √2 | side extremes |
+| Diamond | four points at the side midpoints | 176 × 112 / 80 × 56 | yes | the inner half | the four points |
+| Pill (start / end) | stadium | 176 × 52 / 80 × 36 | yes | clear of the round ends | side midpoints |
+| Cylinder | caps 18 % of the height, front rim drawn | 152 × 104 / 64 × 56 | yes | the body, below the top cap | top of the cap, sides, bottom |
+| Document | wavy bottom, 12 % of the height | 152 × 96 / 64 × 48 | yes | above the wave | bottom point on the wave |
+| Parallelogram | skew 16 % of the width | 168 × 72 / 72 × 40 | yes | inside both slants | left / right on the slants at mid-height |
+| Hexagon | points inset 12 % of the width | 160 × 76 / 72 × 40 | yes | inside the points | side midpoints (left / right points) |
+| Actor | stick figure in the top 64 %, upright and centred | 80 × 112 / 48 × 72 | no | below the figure, on the canvas | head, hand tips, between the feet |
+| Text | none (the box is for hit tests) | 160 × 40 / 40 × 24 | no | the box | the box |
+
+The text shape takes no colour. Decision, database and document also draw as a diamond, cylinder or document ("Show as" Card / Shape in the toolbar, menu and drawer). At Landscape a shape shows only its geometry.
+
+**Frame tool:** the Frame tile arms it (crosshair, the tile pressed); a drag shows a dashed 1.5px Deck Orange rectangle (radius 20) with a Mono "W × H" readout, at least 160 × 96; a click places 320 × 200 centred on it; ⏎ on the tile places one at the view centre. The new group takes the items fully inside, then its label opens on "New group". Esc cancels.
+
 #### States (122)
 
 Every state has a cue that does not rely on colour.
@@ -225,9 +247,9 @@ Every state has a cue that does not rely on colour.
 | State | Card | Shape |
 | --- | --- | --- |
 | Hover | lifts 2px, lip 5px, handles shown | stroke Secondary, handles |
-| Selected | 2px Deck Orange outline, offset 2 | outline offset 4 |
+| Selected | 2px Deck Orange outline, offset 2 | the geometry at offset 4, 2px Deck Orange |
 | Editing title | same type and wrap; caret and selection (`#fbd9c3` / `#6a3315`) | same |
-| Has a problem | 1.5px dashed Clay outline, offset 4, plus a Clay Soft badge (20 tall pill, ⚠ 12 + count, 11 / 600) in the header | outline offset 5, badge top-right |
+| Has a problem | 1.5px dashed Clay outline, offset 4, plus a Clay Soft badge (20 tall pill, ⚠ 12 + count, 11 / 600) in the header | the geometry at offset 7 (clear of the selection ring), badge top-right |
 | Current flow step | Deck Orange border and lip (5px), lifted 2px, step sticker | orange stroke, 9px Orange Soft halo, sticker |
 | Dimmed | 22 % opacity | same |
 | Being dragged | tilted −2.5°, lip 6px, Float shadow; a dashed Muted ghost stays at the origin | tilted −3° |
@@ -500,5 +522,4 @@ Both themes share token names. Dark mode does **not** invert tints. Soft fills b
 - **Validation states:** only JSON and rule-match errors are defined. Field-level validation is not.
 - **Dynamic card attributes:** typed fields, their on-card display and the field editor are designed (124) and built by 032 (see Card system (Deck) item 4).
 - **Connector relationships:** the Deck design draws relationship line styles (calls, reads, writes, depends on), bundled connectors and ends that slide along a side (118); none has a schema or a decision yet (§g-76, backlog 022 / 034).
-- **Card ↔ shape switch:** the two forms of decision, database and document are designed (120); the control that switches them is not.
 - **Collaboration / sharing:** out of scope for the local-only MVP.

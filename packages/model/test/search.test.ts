@@ -288,3 +288,14 @@ describe('searching typed field values (032 FR-020)', () => {
     expect(searchDeck(index, 'z1').results).toEqual([]);
   });
 });
+
+describe('shapes in search (031)', () => {
+  it('finds a shape by its title and by its shape name', () => {
+    const index = buildSearchIndex({
+      ...emptySododeckFile(),
+      nodes: [{ id: 'ok', type: 'diamond', title: 'Payment OK?' }],
+    });
+    expect(resultIds(searchDeck(index, 'payment').results)).toEqual(['ok']);
+    expect(resultIds(searchDeck(index, 'diamond').results)).toEqual(['ok']);
+  });
+});

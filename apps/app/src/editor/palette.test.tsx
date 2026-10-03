@@ -15,22 +15,100 @@ const tileNames = () =>
     .map((b) => b.textContent.replace(/\d+$/, ''));
 
 describe('Palette: Add flyout (030)', () => {
-  it('a new deck shows five tabs, four sections with counts 7 / 3 / 2 / 1 and the packs footer', () => {
+  it('a new deck shows six tabs, five sections with counts 7 / 3 / 2 / 1 / 13 and the packs footer', () => {
     renderWithEditor(<Palette />, newDeck());
     expect(
       within(screen.getByRole('tablist', { name: 'Categories' }))
         .getAllByRole('tab')
         .map((t) => t.textContent),
-    ).toEqual(['All', 'Architecture', 'Process', 'Logistics', 'Data']);
+    ).toEqual(['All', 'Architecture', 'Process', 'Logistics', 'Data', 'Shapes']);
     const sections = screen.getAllByRole('group');
     expect(sections.map((s) => within(s).getByRole('heading').textContent)).toEqual([
       'Architecture7',
       'Process3',
       'Logistics2',
       'Data1',
+      'Basic shapes13',
     ]);
-    expect(screen.getByRole('button', { name: 'Packs · 4 on' })).toBeInTheDocument();
-    expect(tileNames()).toHaveLength(13);
+    expect(screen.getByRole('button', { name: 'Packs · 5 on' })).toBeInTheDocument();
+    expect(tileNames()).toHaveLength(26);
+  });
+
+  it('the Shapes tab lists the eleven shapes with mini outlines, then Sticky and Frame (031)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Shapes' }));
+    expect(tileNames()).toEqual([
+      'Rectangle',
+      'Rounded rectangle',
+      'Ellipse',
+      'Diamond',
+      'Pill',
+      'Cylinder',
+      'Document',
+      'Parallelogram',
+      'Hexagon',
+      'Actor',
+      'Text',
+      'Sticky',
+      'Frame',
+    ]);
+    const parallelogram = screen.getByRole('button', { name: 'Parallelogram' });
+    expect(within(parallelogram).getByTestId('shape-glyph')).toHaveAttribute(
+      'data-geometry',
+      'parallelogram',
+    );
+    expect(screen.getAllByRole('gridcell')).toHaveLength(13);
+  });
+
+  it('adding a shape tile creates that shape at its default size, title in edit (031)', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('button', { name: 'Diamond' }));
+    const [node] = toJSON(doc).nodes;
+    expect(node).toMatchObject({ type: 'diamond', title: 'Untitled diamond' });
+    // No stored size: the shape draws at its default (176 × 112).
+    expect(node?.size).toBeUndefined();
+    expect(useUiStore.getState().titleEdit).toMatchObject({ target: 'node', id: node?.id });
+  });
+
+  it('the Sticky tile adds today’s sticky note, like the rail tool (031 US4)', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    expect(toJSON(doc).stickies).toHaveLength(1);
+    expect(toJSON(doc).nodes).toEqual([]);
+    const drag = new Map<string, string>();
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Sticky' }), {
+      dataTransfer: { setData: (k: string, v: string) => drag.set(k, v), effectAllowed: '' },
+    });
+    expect(drag.get(NOTE_MIME)).toBe('note');
+  });
+
+  it('the Frame tile arms the frame tool on click; Enter places a frame (031 US2)', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    const frame = screen.getByRole('button', { name: 'Frame' });
+    await user.click(frame);
+    expect(useUiStore.getState().tool).toBe('frame');
+    expect(frame).toHaveAttribute('aria-pressed', 'true');
+    act(() => {
+      useUiStore.getState().setTool('select');
+    });
+    frame.focus();
+    await user.keyboard('{Enter}');
+    expect(toJSON(doc).groups).toMatchObject([
+      { title: 'New group', size: { width: 320, height: 200 } },
+    ]);
+  });
+
+  it('turning Basic shapes off hides its tiles; shapes on the board are not touched', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, deckOf({ packs: ['architecture'] }));
+    expect(screen.queryByRole('tab', { name: 'Shapes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Frame' })).not.toBeInTheDocument();
+    await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'sticky');
+    expect(screen.getByText('No types match')).toBeInTheDocument();
   });
 
   it('a deck from before packs lists only Architecture', () => {
@@ -164,7 +242,8 @@ describe('Palette: Add flyout (030)', () => {
       'Task8',
       'Decision9',
     ]);
-    expect(useUiStore.getState().addFlyout.visible).toHaveLength(13);
+    // Types only: the Sticky and Frame tiles are never a number key (031).
+    expect(useUiStore.getState().addFlyout.visible).toHaveLength(24);
     await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'e');
     expect(useUiStore.getState().addFlyout.visible[0]).toBe('service');
   });
@@ -204,7 +283,7 @@ describe('Palette: Add flyout (030)', () => {
   it('opens the packs view from the footer and Back returns to Add', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Palette />, newDeck());
-    await user.click(screen.getByRole('button', { name: 'Packs · 4 on' }));
+    await user.click(screen.getByRole('button', { name: 'Packs · 5 on' }));
     expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back to Add' }));
     expect(screen.getByRole('searchbox', { name: 'Search types' })).toBeInTheDocument();

@@ -1,3 +1,4 @@
+import type { Geometry } from '@sododeck/model';
 import type { Direction, Side } from '@sododeck/schema';
 
 import type { Point, Rect } from '../canvas-geometry';
@@ -93,6 +94,8 @@ export function edgePath(
   route?: ConnectorRoute & { fromSide?: Side; toSide?: Side },
   shape: PathShape = 'curved',
   direction: Direction = 'forward',
+  /** Shape ends (031): the connector meets their outline, not their box. */
+  shapes: { fromGeometry?: Geometry | undefined; toGeometry?: Geometry | undefined } = {},
 ): EdgeGeometry {
   // Free bends: the automatic sides face the first and last bend, as on the canvas (022 R4).
   const bends =
@@ -107,6 +110,7 @@ export function edgePath(
     sides: bends.length === 0 ? resolveSides(from, to, route) : sides,
     route,
     options: { arrowAtStart: direction === 'both', arrowAtEnd: direction !== 'none' },
+    ...shapes,
   });
   const extent =
     shape === 'elbow' &&

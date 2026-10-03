@@ -45,3 +45,11 @@ describe('typeGroups (030)', () => {
     expect(groups.at(-1)?.types).toEqual([{ id: 'robot', name: 'robot' }]);
   });
 });
+
+describe('shapes in the view settings type list (031)', () => {
+  it('lists the eleven shapes under Shapes when Basic shapes is on', () => {
+    const groups = typeGroups({ ...emptySododeckFile(), packs: ['architecture', 'shapes'] });
+    expect(groups.map((g) => g.name)).toEqual(['Architecture', 'Shapes']);
+    expect(groups[1]?.types).toHaveLength(11);
+  });
+});

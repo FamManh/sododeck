@@ -510,7 +510,8 @@ describe('dragging a card with the Deck tilt (029 FR-016)', () => {
       const targets = selector.split(',').map((part) => part.trim());
       for (const target of targets) {
         if (!target.includes('.react-flow__node')) continue;
-        expect(target, `transform on ${target}`).toMatch(/\.sd-card/);
+        // A shape's tilt lives on its art (031), the card's on `.sd-card`.
+        expect(target, `transform on ${target}`).toMatch(/\.sd-card|\.sd-shape-(art|lip)/);
       }
     }
   });

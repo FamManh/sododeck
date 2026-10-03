@@ -133,6 +133,103 @@
   }
 }
 
+/* Shapes (031, DESIGN.md "Card system (Deck)", Shape column of the States table). The SVG in
+   `shapes/shape-node.tsx` takes the card colour variables; every transform lives on
+   `.sd-shape-art`, never on the node, so tilt and lift stay paint-only (§g-74). Each state keeps a
+   cue that is not colour: a ring, a dashed ring, a halo, a sticker, a tilt. */
+.sd-shape-art {
+  transform-origin: 50% 50%;
+  transition: transform var(--sd-dur-hover) var(--sd-ease);
+}
+
+.sd-shape-outline {
+  fill: var(--card-fill, var(--color-surface));
+  stroke: var(--card-stroke, var(--color-border-strong));
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.sd-shape-extra {
+  fill: none;
+  stroke: var(--card-stroke, var(--color-border-strong));
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sd-shape-lip {
+  fill: var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+  stroke: var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transform: translateY(var(--sd-deck-lip));
+}
+
+.sd-shape-ring {
+  fill: none;
+  stroke: var(--color-deck-orange);
+  stroke-width: 2;
+}
+
+.sd-shape-problem {
+  fill: none;
+  stroke: var(--color-clay-ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.sd-shape-halo {
+  fill: none;
+  stroke: var(--color-deck-orange-soft);
+  stroke-width: 18;
+  stroke-linejoin: round;
+}
+
+.sd-shape:not([data-stroke]):hover :is(.sd-shape-outline, .sd-shape-extra),
+.react-flow__node.sd-focus-neighbour .sd-shape :is(.sd-shape-outline, .sd-shape-extra) {
+  stroke: var(--color-ink-secondary);
+}
+
+.react-flow__node.sd-focus-neighbour .sd-shape {
+  --card-lip: var(--color-ink-secondary);
+}
+
+.sd-shape.current-step,
+.sd-shape[aria-current='step'],
+.sd-shape.connect-target {
+  --card-lip: var(--color-deck-orange);
+}
+
+.sd-shape.current-step :is(.sd-shape-outline, .sd-shape-extra),
+.sd-shape[aria-current='step'] :is(.sd-shape-outline, .sd-shape-extra),
+.sd-shape.connect-target :is(.sd-shape-outline, .sd-shape-extra) {
+  stroke: var(--color-deck-orange);
+}
+
+.sd-shape.current-step .sd-shape-lip,
+.sd-shape[aria-current='step'] .sd-shape-lip {
+  transform: translateY(var(--sd-deck-lip-current));
+}
+
+.sd-shape.connect-refused :is(.sd-shape-outline, .sd-shape-extra) {
+  stroke: var(--color-clay-ink);
+  stroke-dasharray: 5 3;
+}
+
+.react-flow__node.dragging .sd-shape-art {
+  transform: rotate(-3deg);
+}
+
+.react-flow__node.dragging .sd-shape-lip {
+  transform: translateY(var(--sd-deck-lip-drag));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-shape-art {
+    transition: none;
+  }
+}
+
 /* Connection handles (DESIGN.md "Card system (Deck)", frame 120): 12 px round with a Surface
    fill and a 2 px Secondary border, shown on card hover/focus (deck-node.tsx). */
 .react-flow__handle.sd-handle {

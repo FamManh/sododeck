@@ -226,3 +226,29 @@ describe('viewFilter by card type (030)', () => {
     expect([...viewFilter(off, mk({ excludeKinds: ['warehouse'] }), none).hidden]).toEqual(['w']);
   });
 });
+
+describe('shape types in views (031 US5)', () => {
+  const file = deckOf({
+    nodes: [
+      { id: 'ok', type: 'diamond', title: 'OK?' },
+      { id: 'go', type: 'pill', title: 'Go' },
+      { id: 'svc', type: 'service', title: 'Svc' },
+    ],
+  });
+  const custom = (patch: Partial<View>): View => ({
+    id: 'v',
+    type: 'custom',
+    title: 'V',
+    ...patch,
+  });
+
+  it('hides and dims each shape type like a card type', () => {
+    const result = viewFilter(
+      file,
+      custom({ excludeKinds: ['diamond'], dimKinds: ['pill'] }),
+      new Set(),
+    );
+    expect([...result.hidden]).toEqual(['ok']);
+    expect([...result.dimmed]).toEqual(['go']);
+  });
+});

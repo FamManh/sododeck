@@ -281,6 +281,8 @@ export const invalidFixtures: InvalidFixture[] = [
     input: set('nodes.0.type', `a${'b'.repeat(48)}`),
     path: 'nodes.0.type',
   },
+  { name: 'node display is icon', input: set('nodes.0.display', 'icon'), path: 'nodes.0.display' },
+  { name: 'node display is a number', input: set('nodes.0.display', 1), path: 'nodes.0.display' },
   { name: 'packs is empty', input: set('packs', []), path: 'packs' },
   {
     name: 'duplicate pack ids',

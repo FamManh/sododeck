@@ -255,6 +255,20 @@ export function visibleGraph(
     nodeLineages.set(node.id, line);
     for (const groupId of line) visibleGroups.add(groupId);
   }
+  // An empty group (031: a frame drawn first) has no member to make it visible; it shows inside
+  // its scope like any group. Groups whose members a view hides are not in a view's deck at all.
+  if (scope.node === null) {
+    const filled = new Set<string>();
+    for (const node of deck.nodes) {
+      for (const groupId of lineage(node.group, groupParents)) filled.add(groupId);
+    }
+    for (const group of deck.groups) {
+      if (filled.has(group.id) || group.id === scope.group) continue;
+      const line = lineage(group.id, groupParents);
+      if (scope.group !== null && !line.includes(scope.group)) continue;
+      for (const groupId of line) if (groupId !== scope.group) visibleGroups.add(groupId);
+    }
+  }
 
   const collapsedVisible = new Set([...visibleGroups].filter((groupId) => collapsed.has(groupId)));
   const representative = new Map<string, string>();

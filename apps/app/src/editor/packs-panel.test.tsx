@@ -31,15 +31,22 @@ describe('PacksPanel (030)', () => {
     const user = userEvent.setup();
     const { doc, editor } = renderWithEditor(<PacksPanel />, newDeck());
     await user.click(screen.getByRole('switch', { name: 'Logistics' }));
-    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data']);
+    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data', 'shapes']);
     expect(useUiStore.getState().announcement.text).toBe('Logistics off');
     act(() => {
       editor().undo();
     });
-    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'logistics', 'data']);
+    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'logistics', 'data', 'shapes']);
     await user.click(screen.getByRole('switch', { name: 'Process' }));
     await user.click(screen.getByRole('switch', { name: 'Process' }));
     expect(useUiStore.getState().announcement.text).toBe('Process on');
+  });
+
+  it('counts the Basic shapes tiles: eleven shapes plus Sticky and Frame (031)', () => {
+    renderWithEditor(<PacksPanel />, newDeck());
+    const row = screen.getByRole('switch', { name: 'Basic shapes' }).closest('li');
+    expect(row).toHaveTextContent('13 types');
+    expect(screen.getByRole('switch', { name: 'Basic shapes' })).toBeChecked();
   });
 
   it('disables the last pack on and says why', () => {

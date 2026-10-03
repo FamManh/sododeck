@@ -113,6 +113,31 @@ describe('schema v1', () => {
     expectBothValidators({ ...base, packs: ['architecture', 'future-pack'] }, true);
   });
 
+  it.each([
+    'rectangle',
+    'rounded-rectangle',
+    'ellipse',
+    'diamond',
+    'pill',
+    'cylinder',
+    'document-shape',
+    'parallelogram',
+    'hexagon',
+    'actor',
+    'text',
+  ])('accepts the shape type id %s (031)', (type) => {
+    expectBothValidators({ ...emptySododeckFile(), nodes: [{ id: 'n1', type, title: 'A' }] }, true);
+  });
+
+  it.each(['card', 'shape'])('accepts display "%s" on any node (031)', (display) => {
+    for (const type of ['database', 'service', 'diamond', 'robot']) {
+      expectBothValidators(
+        { ...emptySododeckFile(), nodes: [{ id: 'n1', type, title: 'A', display }] },
+        true,
+      );
+    }
+  });
+
   it('accepts new type ids in view hide and dim lists (030)', () => {
     const view = {
       id: 'v1',

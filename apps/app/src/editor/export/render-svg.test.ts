@@ -597,3 +597,51 @@ describe('renderSvg: typed fields (032)', () => {
     expect(pill?.getAttribute('stroke-dasharray')).toBe('3 2');
   });
 });
+
+describe('shapes in the export (031 FR-016)', () => {
+  const shapes = deckOf({
+    nodes: [
+      { id: 'ok', type: 'diamond', title: 'Payment OK?', position: { x: 0, y: 0 } },
+      {
+        id: 'db',
+        type: 'database',
+        display: 'shape',
+        title: 'Orders DB',
+        position: { x: 400, y: 0 },
+        style: { fill: 'blue', stroke: 'red' },
+      },
+      { id: 'who', type: 'actor', title: 'Customer', position: { x: 0, y: 300 } },
+      { id: 'h', type: 'text', title: 'Checkout v2', position: { x: 400, y: 300 } },
+      { id: 'svc', type: 'service', title: 'Svc', position: { x: 800, y: 0 } },
+    ],
+    edges: [{ id: 'e', from: 'ok', to: 'db' }],
+  });
+
+  it('draws each shape’s geometry, lip and centred title; cards stay cards', () => {
+    const doc = parse(svgOf(shapes));
+    const shape = (id: string) => doc.querySelector(`[data-export="shape"][data-id="${id}"]`);
+    expect(shape('ok')?.querySelector('[data-part="outline"]')?.getAttribute('d')).toMatch(/^M /);
+    expect(shape('ok')?.querySelector('[data-part="lip"]')).not.toBeNull();
+    const title = shape('ok')?.querySelector('text');
+    expect(title?.textContent).toBe('Payment OK?');
+    expect(title?.getAttribute('text-anchor')).toBe('middle');
+    // Actor: no lip; text: no outline at all.
+    expect(shape('who')?.querySelector('[data-part="lip"]')).toBeNull();
+    expect(shape('who')?.querySelector('[data-part="extra"]')).not.toBeNull();
+    expect(shape('h')?.querySelector('[data-part="outline"]')).toBeNull();
+    expect(shape('h')?.querySelector('text')?.textContent).toBe('Checkout v2');
+    expect(doc.querySelector('[data-export="card"][data-id="svc"]')).not.toBeNull();
+    expect(doc.querySelector('[data-export="card"][data-id="ok"]')).toBeNull();
+  });
+
+  it('takes the shape’s colours (not on the text shape) and never tilts', () => {
+    const svg = svgOf(shapes);
+    const doc = parse(svg);
+    const outline = doc.querySelector('[data-export="shape"][data-id="db"] [data-part="outline"]');
+    expect(outline?.getAttribute('fill')).not.toBe(LIGHT_PALETTE.surface);
+    expect(outline?.getAttribute('stroke')).not.toBe(LIGHT_PALETTE.borderStrong);
+    for (const group of doc.querySelectorAll('[data-export="shape"]')) {
+      expect(group.outerHTML).not.toMatch(/rotate|transform/);
+    }
+  });
+});

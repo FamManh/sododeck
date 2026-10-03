@@ -15,12 +15,17 @@ export {
   cardType,
   CATEGORIES,
   deckPacks,
+  drawnShapeType,
+  effectiveFamily,
+  hasTwoForms,
   isKnownPack,
   isKnownType,
   LEGACY_PACKS,
   NEW_DECK_PACKS,
   PACKS,
   packTypeCount,
+  SHAPE_TYPE_IDS,
+  shapeGeometryOf,
   STATUS_OPTIONS,
   typeName,
   typesOfPacks,
@@ -28,7 +33,10 @@ export {
   type Category,
   type CategoryInfo,
   type Family,
+  type FormNode,
+  type Geometry,
   type Pack,
+  type PackTool,
   type PackId,
   type TypeId,
 } from './card-types';
@@ -60,6 +68,7 @@ export {
 } from './edge-shape';
 export type { EdgeStylePatch } from './ops/edge-style';
 export type { EdgeRoutePatch } from './ops/shape';
+export type { NodeDisplay } from './ops/node-display';
 export type { PastedIds, PasteOptions } from './ops/paste';
 export type { GroupSelection } from './ops/group-selection';
 export {

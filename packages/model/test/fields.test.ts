@@ -34,7 +34,7 @@ describe('built-in fields (032)', () => {
 
 describe('default fields per type (032 founder table)', () => {
   const table = Object.fromEntries(
-    CARD_TYPES.map((type) => [
+    CARD_TYPES.filter((type) => type.family === 'card').map((type) => [
       type.id,
       type.defaultFields.map((f) => [f.id, f.name, f.kind, f.unit ?? null]),
     ]),
@@ -69,6 +69,12 @@ describe('default fields per type (032 founder table)', () => {
         ['issue.estimate', 'Estimate', 'number', 'pts'],
       ],
     });
+  });
+
+  it('give shapes none: their fields stay in the drawer (031)', () => {
+    const shapes = CARD_TYPES.filter((type) => type.family === 'shape');
+    expect(shapes.length).toBeGreaterThan(0);
+    for (const shape of shapes) expect(shape.defaultFields).toEqual([]);
   });
 
   it('are on the card, apply to their own type only, and Region starts with no options', () => {

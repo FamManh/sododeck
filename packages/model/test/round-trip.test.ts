@@ -593,7 +593,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
   it('createDeck() produces an empty valid file', () => {
     expect(toJSON(createDeck())).toEqual({
       ...emptySododeckFile(),
-      packs: ['architecture', 'process', 'logistics', 'data'],
+      packs: ['architecture', 'process', 'logistics', 'data', 'shapes'],
     });
   });
 
@@ -1043,5 +1043,49 @@ describe('typed fields (032)', () => {
     node.values.d_link = { label: 'X', url: 'https://x.io' };
     expect(serializeDeck(shuffled)).toBe(serializeDeck(withFields));
     expect(serializeDeck(toJSON(fromJSON(shuffled)))).toBe(serializeDeck(withFields));
+  });
+});
+
+describe('shapes and forms (031)', () => {
+  it('opens and saves a deck from before 031 byte for byte, packs included', async () => {
+    const before = await readExample('minimal.sododeck.json');
+    const legacy: SododeckFile = {
+      ...before,
+      packs: ['architecture', 'process', 'logistics', 'data'],
+    };
+    const text = serializeDeck(legacy);
+    expect(serializeDeck(toJSON(fromJSON(JSON.parse(text) as SododeckFile)))).toBe(text);
+  });
+
+  it('round-trips every shape type and both forms, display right after type', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      packs: ['architecture', 'process', 'logistics', 'data', 'shapes'],
+      nodes: [
+        ...[
+          'rectangle',
+          'rounded-rectangle',
+          'ellipse',
+          'diamond',
+          'pill',
+          'cylinder',
+          'document-shape',
+          'parallelogram',
+          'hexagon',
+          'actor',
+          'text',
+        ].map((type, i) => ({ id: `s${String(i)}`, type, title: type })),
+        {
+          id: 'db',
+          type: 'database',
+          display: 'shape',
+          title: 'DB',
+          size: { width: 200, height: 120 },
+        },
+        { id: 'doc', type: 'document', display: 'card', title: 'Doc' },
+      ],
+    };
+    expect(toJSON(fromJSON(file))).toEqual(file);
+    expect(serializeDeck(file)).toContain('"type": "database",\n      "display": "shape",');
   });
 });

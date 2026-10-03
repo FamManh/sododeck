@@ -300,6 +300,10 @@ export interface FieldOption {
 export interface Node {
   id: Id;
   type: TypeId;
+  /**
+   * Whether the node draws as a card or a shape. Absent = the type's own family. Only types with two forms (decision, database, document) change look; on other types it is kept and ignored.
+   */
+  display?: 'card' | 'shape';
   title: Text;
   level?: Level;
   /**

@@ -1,5 +1,4 @@
 import type { SododeckFile } from '@sododeck/schema';
-import { TypeTile } from '@sododeck/ui/components/type-tile';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -7,6 +6,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ArrowLeft, ChevronRight, SquareDashed } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
+import { NodeTypeTile } from './shapes/shape-tile';
 import { useUiStore } from '../state/ui-store';
 import { buildOutline, visibleItems, type VisibleItem } from './outline';
 import { describeChannel, type CardLook } from './style/card-style';
@@ -172,7 +172,7 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
               </>
             ) : (
               <>
-                <TypeTile type={item.kind} size={22} decorative />
+                <NodeTypeTile type={item.kind} size={22} decorative />
                 {look !== undefined && <ColourMark look={look} />}
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
               </>

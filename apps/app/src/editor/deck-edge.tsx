@@ -1,7 +1,7 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { edgeLineStyle } from '@sododeck/model';
+import { edgeLineStyle, type Geometry } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
@@ -17,6 +17,7 @@ import { StepBadge } from './flow-badges';
 import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
 import type { BendContext } from './editing/bend-drag';
 import {
+  anchorPoint,
   cardCentre,
   connectorPath,
   decodeWaypoints,
@@ -26,6 +27,7 @@ import {
 } from './routing/connector-geometry';
 import { LabelHandle } from './routing/label-handle';
 import { RouteHandles } from './routing/route-handles';
+import { outlinePoint } from './shapes/shape-geometry';
 import type { Box, Point } from './routing/route-path';
 import { lineCap, lineColour, lineDash } from './style/line-colour';
 
@@ -43,9 +45,28 @@ const FAN_SPACING = 14;
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
 
-/** The card's box from its side midpoint (React Flow's live handle position) and its size. */
-function boxAt(x: number, y: number, side: Side, size: { width: number; height: number }): Box {
+/**
+ * The card's box from its handle (React Flow's live handle position) and its size. A shape's
+ * handle sits on its outline (031), so the outline point's offset from the side midpoint is
+ * taken back out first.
+ */
+function boxAt(
+  handleX: number,
+  handleY: number,
+  side: Side,
+  size: { width: number; height: number },
+  geometry?: Geometry,
+): Box {
   const { width, height } = size;
+  let x = handleX;
+  let y = handleY;
+  if (geometry !== undefined) {
+    const local = { x: 0, y: 0, width, height };
+    const onOutline = outlinePoint(geometry, local, side);
+    const midpoint = anchorPoint(local, side);
+    x -= onOutline.x - midpoint.x;
+    y -= onOutline.y - midpoint.y;
+  }
   switch (side) {
     case 'top':
       return { x: x - width / 2, y, width, height };
@@ -112,12 +133,15 @@ export const DeckEdge = memo(function DeckEdge({
   const sized = needsBoxes && data?.fromSize !== undefined && data.toSize !== undefined;
   const fromBox =
     sized && data.fromSize !== undefined
-      ? boxAt(sourceX, sourceY, sides[0], data.fromSize)
+      ? boxAt(sourceX, sourceY, sides[0], data.fromSize, data.fromGeometry)
       : pointBox(sourceX, sourceY);
   const toBox =
     sized && data.toSize !== undefined
-      ? boxAt(targetX, targetY, sides[1], data.toSize)
+      ? boxAt(targetX, targetY, sides[1], data.toSize, data.toGeometry)
       : pointBox(targetX, targetY);
+  // Shape ends (031) follow the outline; only real boxes carry a geometry (a handle point is
+  // already on the outline).
+  const endShapes = sized ? { fromGeometry: data.fromGeometry, toGeometry: data.toGeometry } : {};
   // An error path ends in × instead of an arrow (035 FR-009).
   const flow = data?.flow;
   const errorEnd = flow?.style === 'error';
@@ -141,6 +165,7 @@ export const DeckEdge = memo(function DeckEdge({
     route,
     bends: preview?.bends,
     options: arrows,
+    ...endShapes,
     spread: data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
   });
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
@@ -159,7 +184,7 @@ export const DeckEdge = memo(function DeckEdge({
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The route as it was before this bend gesture, computed only while dragging, for the ghost.
   const ghostPath = dragging
-    ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows }).path
+    ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows, ...endShapes }).path
     : null;
   // The bends the handles sit on: the stored ones, or a 017 offset's two corners (R3).
   const bends: Point[] =

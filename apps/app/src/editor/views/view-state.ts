@@ -178,6 +178,44 @@ function projectGroups(
   return out;
 }
 
+const shownGroupLists = new WeakMap<readonly Group[], WeakMap<readonly Node[], Group[]>>();
+
+/**
+ * Groups minus those whose members the view hides all of (031): an empty group shows as an empty
+ * frame (`visibleGraph`), so a group emptied only by this view's filters must leave the view's
+ * deck, as it did before empty groups were drawn. Groups that were empty to begin with stay.
+ */
+function withoutHiddenGroups(
+  groups: readonly Group[],
+  allNodes: readonly Node[],
+  shownNodes: readonly Node[],
+): Group[] {
+  let byNodes = shownGroupLists.get(groups);
+  if (byNodes === undefined) {
+    byNodes = new WeakMap();
+    shownGroupLists.set(groups, byNodes);
+  }
+  const cached = byNodes.get(shownNodes);
+  if (cached !== undefined) return cached;
+  const parents = new Map(groups.map((group) => [group.id, group.parent]));
+  const filledBy = (nodes: readonly Node[]) => {
+    const out = new Set<Id>();
+    for (const node of nodes) {
+      let current = node.group;
+      while (current !== undefined && !out.has(current) && parents.has(current)) {
+        out.add(current);
+        current = parents.get(current);
+      }
+    }
+    return out;
+  };
+  const filled = filledBy(allNodes);
+  const shown = filledBy(shownNodes);
+  const out = groups.filter((group) => !filled.has(group.id) || shown.has(group.id));
+  byNodes.set(shownNodes, out);
+  return out;
+}
+
 const projectedDecks = new WeakMap<
   SododeckFile,
   {
@@ -198,7 +236,8 @@ export function viewDeck(deck: SododeckFile, view: View, hidden: ReadonlySet<Id>
   const noFrames = Object.keys(frames).length === 0;
   if (hidden.size === 0 && Object.keys(positions).length === 0 && noFrames) return deck;
   const nodes = projectNodes(deck.nodes, positions, hidden);
-  const groups = noFrames ? deck.groups : projectGroups(deck.groups, frames);
+  const framed = noFrames ? deck.groups : projectGroups(deck.groups, frames);
+  const groups = hidden.size === 0 ? framed : withoutHiddenGroups(framed, deck.nodes, nodes);
   const stickies = projectStickies(deck.stickies, hidden);
   const cached = projectedDecks.get(deck);
   if (cached?.nodes === nodes && cached.groups === groups && cached.stickies === stickies) {

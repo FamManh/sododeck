@@ -7,7 +7,7 @@ import type { SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
-import { freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
+import { cardSize, freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
 import { typeName } from './type-label';
 import { readViewState } from './views/use-current-view';
@@ -22,8 +22,10 @@ const round = ({ x, y }: Point): Point => ({
 });
 
 /** Top-left position for a node centred on a flow point. */
-export function centredOn(point: Point): Point {
-  return round({ x: point.x - NODE_SIZE.width / 2, y: point.y - NODE_SIZE.height / 2 });
+export function centredOn(point: Point, type?: string): Point {
+  // A shape type is centred by its own default size (031); a card by the default card.
+  const size = type === undefined ? NODE_SIZE : cardSize({ type });
+  return round({ x: point.x - size.width / 2, y: point.y - size.height / 2 });
 }
 
 /**

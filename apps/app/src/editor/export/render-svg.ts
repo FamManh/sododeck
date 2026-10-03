@@ -2,6 +2,7 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
 import { FIELD_BLOCK, FIELD_CHIP, fieldChipWidth, hiddenLabel } from '../card-fields';
 import { DECK_CARD } from '../card-layout';
+import { SHAPE_TITLE_FONT, SHAPE_TITLE_LINE, shapePath, titleBox } from '../shapes/shape-geometry';
 import { TAG_CHIP } from '../card-tags';
 import { KNOB_RADIUS } from '../edge-constants';
 import { ARROW_PATH, endMarks } from '../edge-end-marks';
@@ -35,6 +36,8 @@ const MONO = "'Geist Mono Variable', ui-monospace, monospace";
 export const FONTS = {
   /** The Deck card title (029); the box was laid out with this font (`cardLayout`). */
   title: DECK_CARD.titleFont,
+  /** A shape's centred title (031, 13 / 600). */
+  shapeTitle: SHAPE_TITLE_FONT,
   description: DECK_CARD.descriptionFont,
   typeName: `500 11.5px ${SANS}`,
   tag: TAG_CHIP.font,
@@ -60,6 +63,7 @@ export const FONTS = {
 
 const STYLE = [
   `.ti{font:${FONTS.title}}`,
+  `.st{font:${FONTS.shapeTitle}}`,
   `.d{font:${FONTS.description}}`,
   `.ty{font:${FONTS.typeName}}`,
   `.tg{font:${FONTS.tag}}`,
@@ -500,6 +504,45 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
   return out.join('');
 }
 
+/**
+ * A shape (031 R7): the lip (the outline 3 px lower, in the stroke colour), the filled 1.5 px
+ * outline and any extra strokes, from the same `shapePath` the canvas draws, then the title
+ * centred in its title box. Never tilted or lifted (§g-74).
+ */
+function shape(item: SceneCard, palette: ExportPalette): string {
+  const geometry = item.geometry ?? 'rect';
+  const fill = item.fill ?? palette.surface;
+  const stroke = item.stroke ?? palette.borderStrong;
+  const paths = shapePath(geometry, item.rect);
+  const out: string[] = [`<g data-export="shape" data-id="${escapeXml(item.id)}">`];
+  const path = (part: string, d: string, values: Record<string, string | number>) =>
+    `<path ${attrs({ 'data-part': part, d, 'stroke-width': BORDER, 'stroke-linejoin': 'round', ...values })}/>`;
+  if (paths.lip !== null) out.push(path('lip', paths.lip, { fill: stroke, stroke }));
+  if (paths.outline !== '') out.push(path('outline', paths.outline, { fill, stroke }));
+  if (paths.extra !== undefined) {
+    out.push(path('extra', paths.extra, { fill: 'none', stroke, 'stroke-linecap': 'round' }));
+  }
+  const box = titleBox(geometry, item.rect);
+  // The actor's title sits on the canvas, below the figure.
+  const ink = geometry === 'actor' ? palette.ink : exportTextColour(item.text, palette);
+  const lines = item.level === 'landscape' ? [] : item.titleLines;
+  const top = box.y + (box.height - lines.length * SHAPE_TITLE_LINE) / 2;
+  for (const [index, line] of lines.entries()) {
+    out.push(
+      text(
+        'st',
+        box.x + box.width / 2,
+        baseline(top + index * SHAPE_TITLE_LINE, SHAPE_TITLE_LINE, 13),
+        ink,
+        line,
+        'middle',
+      ),
+    );
+  }
+  out.push('</g>');
+  return out.join('');
+}
+
 function groupFrame(group: SceneGroup, palette: ExportPalette, measure: TextMeasurer): string {
   const { x, y, width, height } = group.rect;
   const stroke = group.stroke ?? palette.borderStrong;
@@ -807,7 +850,9 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
     out.push(text('o', x + 12 + 24 + 8, y + height / 2 + 11, palette.inkMuted, 'Outside'));
     out.push('</g>');
   }
-  for (const item of scene.cards) out.push(card(item, palette, measure));
+  for (const item of scene.cards) {
+    out.push(item.geometry === undefined ? card(item, palette, measure) : shape(item, palette));
+  }
   for (const sticky of scene.stickies) {
     const { x, y, width, height } = sticky.rect;
     const colours = stickyColours(sticky.tint, palette);

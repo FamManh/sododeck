@@ -13,6 +13,7 @@
  *   BENCH_FIELDS=1 pnpm bench           # Task / Warehouse / Issue cards, four on-card values each (032)
  *   BENCH_ANIMATED=1 pnpm bench         # 200 connectors with moving dashes, half of them dashed (022)
  *   BENCH_BENDS=1 pnpm bench            # 200 connectors with three free bends each, mixed shapes (022)
+ *   BENCH_SHAPES=1 pnpm bench           # every third node a shape, the eleven geometries (031)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -45,6 +46,7 @@ const TAGS_QUERY = process.env.BENCH_TAGS === '1' ? '&tags=1' : '';
 const TYPES_QUERY = process.env.BENCH_TYPES === '1' ? '&types=1' : '';
 /** 032 R10: 500 cards with four on-card typed field values each. */
 const FIELDS_QUERY = process.env.BENCH_FIELDS === '1' ? '&fields=1' : '';
+const SHAPES_QUERY = process.env.BENCH_SHAPES === '1' ? '&shapes=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -104,8 +106,12 @@ async function emptyCanvasPoint(
       if (!stack.some((el) => el.classList.contains('react-flow__pane'))) return false;
       return !stack.some(
         (el) =>
-          el.matches('[data-testid="deck-node"], [data-testid="sticky-node"]') ||
-          el.closest('[data-testid="deck-node"], [data-testid="sticky-node"]') !== null ||
+          el.matches(
+            '[data-testid="deck-node"], [data-testid="shape-node"], [data-testid="sticky-node"]',
+          ) ||
+          el.closest(
+            '[data-testid="deck-node"], [data-testid="shape-node"], [data-testid="sticky-node"]',
+          ) !== null ||
           el.matches('[data-testid="edge-label"], [aria-label^="Go to "]') ||
           el.closest('[data-testid="edge-label"], [aria-label^="Go to "]') !== null ||
           // A drag that starts on a connector re-routes it (022), which is not a pan.
@@ -158,7 +164,9 @@ async function panAndZoom(page: Page) {
     await page.waitForTimeout(16);
   }
   const maxZoom = await viewportZoom(page);
-  const renderedNodesZoomedIn = await page.getByTestId('deck-node').count();
+  const renderedNodesZoomedIn = await page
+    .locator('[data-testid="deck-node"], [data-testid="shape-node"]')
+    .count();
   // Pan across the graph.
   for (const [dx, dy] of [
     [-500, 0],
@@ -237,7 +245,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
@@ -250,7 +258,10 @@ async function openBench(
     });
   }
   const inPageReadyMs = await page.evaluate(() => window.__sododeckBench?.readyAt ?? 0);
-  const renderedNodes = await page.getByTestId('deck-node').count();
+  // Cards and shapes (031).
+  const renderedNodes = await page
+    .locator('[data-testid="deck-node"], [data-testid="shape-node"]')
+    .count();
   expect(renderedNodes).toBeGreaterThan(0);
   return { renderMs, inPageReadyMs: Math.round(inPageReadyMs), renderedNodes };
 }
@@ -1039,7 +1050,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',

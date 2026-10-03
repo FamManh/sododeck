@@ -2,6 +2,7 @@ import {
   analyzeFlow,
   edgeLineStyle,
   edgeShape,
+  type Geometry,
   stickyCanvasPosition,
   stickyLabel,
   tagKey,
@@ -10,7 +11,13 @@ import type { Direction, SododeckFile } from '@sododeck/schema';
 
 import type { DrillFrame } from '../../state/ui-store';
 import { bundleEdges, type BundleResult } from '../bundles';
-import { cardLayoutOf, displayPosition, groupBounds, type Rect } from '../canvas-geometry';
+import {
+  cardLayoutOf,
+  displayPosition,
+  geometryOf,
+  groupBounds,
+  type Rect,
+} from '../canvas-geometry';
 import { DECK_CARD, wrapText, type CardLayout } from '../card-layout';
 import { cardTags, tagChips, textMeasurer, type TagChip } from '../card-tags';
 import { tagColourMap } from '../tags/card-tag-looks';
@@ -29,6 +36,7 @@ import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import {
   cardFieldView,
+  EMPTY_FIELD_VIEW,
   fieldBlock,
   fieldChipBoxes,
   type CardFieldView,
@@ -37,6 +45,8 @@ import {
   type FieldChipBox,
   type FieldRow,
 } from '../card-fields';
+import { SHAPE_TITLE_FONT, titleBox } from '../shapes/shape-geometry';
+import { shapeTitleLines } from '../shapes/shape-layout';
 import { edgePath } from './edge-geometry';
 import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
@@ -69,6 +79,8 @@ export interface SceneCard {
   level: Level;
   /** The same `cardLayout` the canvas used for this card; `rect` is its box. */
   layout: CardLayout;
+  /** Drawn as a shape (031): its geometry; `titleLines` then wrap in its title box. */
+  geometry?: Geometry;
   fill?: string;
   stroke?: string;
   /** Tile and pill colours that follow the card colour; absent means the neutral ones. */
@@ -251,6 +263,49 @@ function flowMembers(deck: SododeckFile, graph: VisibleGraph, overlay: FlowOverl
  * - `view`: what the current view shows at the current drill level, over its whole extent.
  * - `flow`: the current view reduced to the shown flow's objects, with step badges.
  */
+/**
+ * A shape's scene entry (031 R7): its box, geometry and title lines as the canvas wraps them;
+ * no description, tags or fields (they stay in the drawer). The text shape takes no colour.
+ */
+function shapeCard(
+  node: SododeckFile['nodes'][number],
+  index: number,
+  geometry: Geometry,
+  layout: CardLayout,
+  childCount: number,
+  level: Level,
+): SceneCard {
+  const measure = textMeasurer();
+  const size = { width: layout.width, height: layout.height };
+  const width = titleBox(geometry, { x: 0, y: 0, ...size }).width;
+  return {
+    id: node.id,
+    rect: { ...displayPosition(node, index), ...size },
+    kind: typeIconKey(node.type),
+    typeName: typeName(node.type),
+    title: node.title,
+    titleLines: clampLines(
+      shapeTitleLines(geometry, size, node.title, measure),
+      layout.titleLines,
+      width,
+      SHAPE_TITLE_FONT,
+      measure,
+    ),
+    description: null,
+    descriptionLines: [],
+    tags: [],
+    tagChips: [],
+    // Shapes keep their typed fields in the drawer only (031 / 032).
+    fields: sceneFields(EMPTY_FIELD_VIEW, layout.width, width, measure),
+    hasRules: false,
+    childCount,
+    level,
+    layout,
+    geometry,
+    ...((geometry === 'none' ? undefined : exportLook(node.style)) ?? EMPTY_LOOK),
+  };
+}
+
 export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const view = scope === 'deck' ? null : viewStateOf(deck, ui.currentViewId, ui.revealed);
   const source = view?.deck ?? deck;
@@ -288,6 +343,8 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       childCount,
       fields: fieldView,
     });
+    const geometry = geometryOf(node);
+    if (geometry !== null) return [shapeCard(node, index, geometry, layout, childCount, level)];
     const inner = layout.width - 2 * DECK_CARD.paddingX;
     const description = subtitle?.trim() ?? '';
     const tags = cardTags(node.tags);
@@ -368,7 +425,13 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   ]);
 
   const groups = sceneGroups(source, graph, level, cards, inFlow !== null);
-  const edges = sceneEdges(source, graph, rects, overlay, bundles);
+  // Shape ends meet the outline (031), as on the canvas.
+  const shapeEnds = new Map(
+    cards.flatMap((card) =>
+      card.geometry === undefined ? [] : [[card.id, card.geometry] as const],
+    ),
+  );
+  const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds);
 
   // Notes as the canvas draws them: free notes and notes on non-components (edges, flows,
   // steps) at their own point, notes pinned to a component only when that card is drawn. The
@@ -499,6 +562,7 @@ function sceneEdges(
   rects: ReadonlyMap<string, Rect>,
   overlay: FlowOverlay | null,
   bundles: BundleResult,
+  shapeEnds: ReadonlyMap<string, Geometry>,
 ): SceneEdge[] {
   const drawnAlone = new Set(bundles.plain.map((entry) => entry.edgeId));
   const byId = new Map(deck.edges.map((edge) => [edge.id, edge]));
@@ -521,7 +585,10 @@ function sceneEdges(
     if (a === undefined || b === undefined) return;
     const marks = memberIds.flatMap((memberId) => overlay?.edges.get(memberId) ?? []);
     if (overlay !== null && marks.length === 0) return;
-    const geometry = edgePath(a, b, route, shape, direction);
+    const geometry = edgePath(a, b, route, shape, direction, {
+      fromGeometry: shapeEnds.get(from),
+      toGeometry: shapeEnds.get(to),
+    });
     const badgeCount = marks.reduce((sum, mark) => sum + mark.badges.length, 0);
     // The label at its stored fraction of the drawn line, as on the canvas (022 R10).
     const spot =

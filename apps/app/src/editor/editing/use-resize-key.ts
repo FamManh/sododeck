@@ -10,7 +10,7 @@ import { useEffect, useMemo } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
-import { CARD_SIZE_LIMITS } from '../canvas-geometry';
+import { CARD_SIZE_LIMITS, type SizeLimits } from '../canvas-geometry';
 import { createBurst } from './use-nudge';
 
 const RESIZE_ARROWS: Readonly<Record<string, { width: number; height: number }>> = {
@@ -26,6 +26,8 @@ export interface ResizeTarget {
   title: string;
   width: number;
   height: number;
+  /** A shape's own limits (031); cards use `CARD_SIZE_LIMITS`. */
+  limits?: SizeLimits;
 }
 
 export interface ResizeKeyer {
@@ -45,6 +47,7 @@ export function createResizeKeyer(editor: DeckEditor): ResizeKeyer {
   let width = 0;
   let height = 0;
   let pending = { width: 0, height: 0 };
+  let limits: SizeLimits = CARD_SIZE_LIMITS;
 
   const burst = createBurst(
     () => {
@@ -52,12 +55,8 @@ export function createResizeKeyer(editor: DeckEditor): ResizeKeyer {
     },
     () => {
       if (nodeId === null) return;
-      width = clamp(width + pending.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width);
-      height = clamp(
-        height + pending.height,
-        CARD_SIZE_LIMITS.min.height,
-        CARD_SIZE_LIMITS.max.height,
-      );
+      width = clamp(width + pending.width, limits.min.width, limits.max.width);
+      height = clamp(height + pending.height, limits.min.height, limits.max.height);
       editor.setCardSize(nodeId, { width, height });
     },
     () => {
@@ -78,6 +77,7 @@ export function createResizeKeyer(editor: DeckEditor): ResizeKeyer {
       title = target.title;
       width = target.width;
       height = target.height;
+      limits = target.limits ?? CARD_SIZE_LIMITS;
     }
     pending = {
       width: direction.width * CARD_SIZE_LIMITS.step,
