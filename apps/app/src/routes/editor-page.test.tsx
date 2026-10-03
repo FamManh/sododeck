@@ -345,15 +345,12 @@ describe('EditorPage', () => {
     });
   });
 
-  it('exports <name>.sododeck.json from the tools island dialog', async () => {
+  it('exports <name>.sododeck.json from the deck menu dialog', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     const file = { ...emptySododeckFile(), name: 'Shop' };
     const { user } = await openEditor(file);
-    await user.click(
-      within(screen.getByRole('toolbar', { name: 'Tools' })).getByRole('button', {
-        name: 'Export',
-      }),
-    );
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Export…' }));
     await screen.findByRole('dialog', { name: 'Export deck' });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();

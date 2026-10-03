@@ -7,13 +7,24 @@ import {
   DropdownMenuTrigger,
 } from '@sododeck/ui/components/dropdown-menu';
 import { useToast } from '@sododeck/ui/components/toast';
-import { Braces, Download, FileUp, LibraryBig, Menu, Settings2 } from 'lucide-react';
+import {
+  Braces,
+  Download,
+  FileUp,
+  Keyboard,
+  LibraryBig,
+  Menu,
+  Moon,
+  Settings2,
+  Sun,
+} from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router';
 
 import { importDeckFile } from '../../library/library-actions';
 import { importMessage } from '../../library/use-import-files';
 import { useUiStore } from '../../state/ui-store';
+import { useThemeStore } from '../../theme/theme-store';
 import { getLibraryClient } from '../../storage/library-client';
 import { getLibraryDb } from '../../storage/library-db-instance';
 import { shortcutLabel } from './shortcuts';
@@ -26,6 +37,8 @@ import { shortcutLabel } from './shortcuts';
 export function DeckMenu() {
   const navigate = useNavigate();
   const openExport = useUiStore((s) => s.openExport);
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const jsonShown = useUiStore((s) => s.jsonShown);
   const { toast } = useToast();
@@ -131,6 +144,25 @@ export function DeckMenu() {
           >
             <Braces />
             {jsonShown ? 'Hide JSON' : 'Show JSON'}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {/* Set once and forgotten, so they live here rather than in the tools (§g-60). */}
+          <DropdownMenuItem
+            onSelect={() => {
+              setTheme(theme === 'dark' ? 'light' : 'dark');
+            }}
+          >
+            {theme === 'dark' ? <Sun /> : <Moon />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            shortcut={shortcutLabel('help')}
+            onSelect={() => {
+              useUiStore.getState().setHelpOpen(true);
+            }}
+          >
+            <Keyboard />
+            Keyboard shortcuts
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -75,7 +75,7 @@ export function ShellChrome({
       ) : (
         <>
           <DeckIsland deck={deck} compact={compact} />
-          <ToolsIsland compact={compact} />
+          <ToolsIsland />
           <div className="pointer-events-none absolute top-1/2 left-3 flex -translate-y-1/2 flex-col gap-2">
             <Rail />
             <HistoryIsland />

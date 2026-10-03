@@ -1054,3 +1054,7 @@ changes them before the owning feature is specified.
     not measured, so `cardSize` stays the one size source). Zooming never changes the size. Tag
     inputs stop at ten per card. Tags stay lower-cased (existing rule); tag colours are not part
     of this change.
+60. **Leaner floating chrome** (founder, 2026-10-03). Zoom goes to 400 %. The tools island keeps
+    only Jump to, Labels and Focus as icons with tooltips; Export, the theme switch and keyboard
+    shortcuts move to the deck menu; the flow-notes display moves into the step player. Fit
+    diagram and fit selection get distinct icons (`Expand`, `SquareDashed`).

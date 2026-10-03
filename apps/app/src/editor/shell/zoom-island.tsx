@@ -2,7 +2,7 @@ import { Button } from '@sododeck/ui/components/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow, useStore, useViewport } from '@xyflow/react';
-import { Keyboard, Map as MapIcon, Maximize, Minus, Plus, Scan } from 'lucide-react';
+import { Expand, Map as MapIcon, Minus, Plus, SquareDashed } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -66,7 +66,6 @@ export function ZoomIsland({ bottom, right = EDGE }: { bottom: number; right?: n
   const hasSelection = useUiStore((s) => s.selection.nodes.length + s.selection.groups.length > 0);
   const minimap = useUiStore((s) => s.minimap);
   const setMinimap = useUiStore((s) => s.setMinimap);
-  const setHelpOpen = useUiStore((s) => s.setHelpOpen);
   const fitSelection = useFitSelection();
   const scope = scopeOf(drill);
   const level = effectiveLevel(zoomLevel, scope);
@@ -85,7 +84,8 @@ export function ZoomIsland({ bottom, right = EDGE }: { bottom: number; right?: n
   return (
     <Island region="zoom" label="Zoom" style={{ bottom, right }}>
       <ZoomButton label="Fit diagram" shortcut="fit" onClick={() => void fitView({ padding: 0.2 })}>
-        <Maximize />
+        {/* Arrows out: the whole diagram; a dashed box: the selection (§g-60, they looked alike). */}
+        <Expand />
       </ZoomButton>
       <ZoomButton
         label="Fit selection"
@@ -93,7 +93,7 @@ export function ZoomIsland({ bottom, right = EDGE }: { bottom: number; right?: n
         disabled={!hasSelection}
         onClick={fitSelection}
       >
-        <Scan />
+        <SquareDashed />
       </ZoomButton>
       <IslandDivider />
       <ZoomButton
@@ -126,15 +126,6 @@ export function ZoomIsland({ bottom, right = EDGE }: { bottom: number; right?: n
         }}
       >
         <MapIcon />
-      </ZoomButton>
-      <ZoomButton
-        label="Keyboard shortcuts"
-        shortcut="help"
-        onClick={() => {
-          setHelpOpen(true);
-        }}
-      >
-        <Keyboard />
       </ZoomButton>
     </Island>
   );
