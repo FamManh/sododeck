@@ -10,7 +10,8 @@ import type { MergedFlowEdge } from './deck-to-flow';
 import { StepBadge } from './flow-badges';
 import { FlowToken } from './flow-token';
 import { FLOW_STROKES } from './flow-strokes';
-import { routedStepPath } from './routing/route-path';
+import { EdgeEnds } from './edge-ends';
+import { routedPath, type Box } from './routing/route-path';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions (017). */
 const SIDE_OF_POSITION: Record<Position, Side> = {
@@ -19,6 +20,9 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
   [Position.Bottom]: 'bottom',
   [Position.Left]: 'left',
 };
+
+/** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
+const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
 
 function directionIcon(direction: NonNullable<MergedFlowEdge['data']>['direction']) {
   return direction === 'both' ? ArrowRightLeft : ArrowRight;
@@ -49,16 +53,18 @@ export const MergedEdge = memo(function MergedEdge({
     inFocus: false,
   };
   const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
-  const { path, labelX, labelY } = routedStepPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sides,
-    borderRadius: 8,
-  });
+  // Curved like a plain connector (029), with the same knob and arrow. The ends are one-way or
+  // both: a "b to a" bundle is drawn from b so its arrow still lands on the right card.
+  const reversed = merged.direction === 'b-to-a';
+  const sourceBox = pointBox(sourceX, sourceY);
+  const targetBox = pointBox(targetX, targetY);
+  const arrows = { arrowAtStart: merged.direction === 'both', arrowAtEnd: true };
+  const { path, labelX, labelY, ends } = reversed
+    ? routedPath('curved', targetBox, sourceBox, [sides[1], sides[0]], 0, arrows)
+    : routedPath('curved', sourceBox, targetBox, sides, 0, arrows);
   const Icon = directionIcon(merged.direction);
   const flowStroke = merged.flow === undefined ? undefined : FLOW_STROKES[merged.flow.style];
+  const stroke = flowStroke?.stroke ?? 'var(--color-deck-edge)';
 
   useEffect(
     () => () => {
@@ -74,10 +80,15 @@ export const MergedEdge = memo(function MergedEdge({
         path={path}
         interactionWidth={12}
         style={{
-          stroke: flowStroke?.stroke ?? 'var(--color-ink-secondary)',
-          strokeWidth: merged.flow?.current != null ? 3 : (flowStroke?.width ?? 2.25),
+          stroke,
+          strokeWidth: merged.flow?.current != null ? 3 : (flowStroke?.width ?? 2),
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
         }}
+      />
+      <EdgeEnds
+        {...ends}
+        direction={merged.direction === 'both' ? 'both' : 'forward'}
+        color={stroke}
       />
       {merged.flow?.current != null && (
         <FlowToken path={path} x={labelX} y={labelY} speed={merged.flow.current.speed} />

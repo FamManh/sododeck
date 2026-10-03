@@ -50,6 +50,25 @@ describe('MergedEdge', () => {
     expect(screen.getByRole('img', { name: 'Forward direction' })).toBeInTheDocument();
   });
 
+  it('draws a curved line with a knob and an arrow for one direction (029 US5)', () => {
+    const { container } = renderEdge('a-to-b');
+    expect(container.querySelector('path.react-flow__edge-path')?.getAttribute('d')).toContain('C');
+    expect(screen.getAllByTestId('edge-arrow')).toHaveLength(1);
+    expect(screen.getAllByTestId('edge-knob')).toHaveLength(1);
+  });
+
+  it('draws arrows at both ends for both directions', () => {
+    renderEdge('both');
+    expect(screen.getAllByTestId('edge-arrow')).toHaveLength(2);
+    expect(screen.queryByTestId('edge-knob')).not.toBeInTheDocument();
+  });
+
+  it('puts the arrow at the first card when the connections run b to a', () => {
+    renderEdge('b-to-a');
+    // The first card's side midpoint is x = 0; the arrow transform starts there.
+    expect(screen.getByTestId('edge-arrow').getAttribute('transform')).toMatch(/^translate\(0 /);
+  });
+
   it('renders folded flow badges in order and marks the current step', () => {
     const props = {
       id: 'merged:a|b',
