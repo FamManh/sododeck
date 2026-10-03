@@ -92,10 +92,20 @@ export function orderOf(item: YObject): string {
 
 /** Items sorted by (order key, id), the same on every client (ties broken by id, R3). */
 export function orderedEntries(list: ListMap): [Id, YObject][] {
-  const entries: [Id, YObject, string][] = [];
-  for (const [id, item] of list.entries()) entries.push([id, item, orderOf(item)]);
-  entries.sort((a, b) => compareKeys(a[2], b[2]) || compareKeys(a[0], b[0]));
-  return entries.map(([id, item]) => [id, item]);
+  // Parallel arrays and an index sort: a move at 10,000 items sorts once, so allocations matter.
+  const ids: Id[] = [];
+  const items: YObject[] = [];
+  const keys: string[] = [];
+  list.forEach((item, id) => {
+    ids.push(id);
+    items.push(item);
+    keys.push(orderOf(item));
+  });
+  const order = Array.from(ids, (_, i) => i);
+  order.sort(
+    (a, b) => compareKeys(keys[a] ?? '', keys[b] ?? '') || compareKeys(ids[a] ?? '', ids[b] ?? ''),
+  );
+  return order.map((i): [Id, YObject] => [ids[i] ?? '', items[i] as YObject]);
 }
 
 export function orderedIds(list: ListMap): Id[] {
@@ -243,7 +253,9 @@ export function planMove(list: ListMap, id: Id, toIndex: number): (() => void) |
   if (moved === undefined) return undefined;
   const to = Math.max(0, Math.min(entries.length - 1, Math.trunc(toIndex)));
   if (to === from) return undefined;
-  const rest = entries.filter(([existing]) => existing !== id);
+  // The sorted array is ours: take the moved item out in place rather than copying 10,000 items.
+  entries.splice(from, 1);
+  const rest = entries;
   return () => {
     try {
       const { key, rekeyed } = slotKeys(rest, to);
