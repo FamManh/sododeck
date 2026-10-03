@@ -1058,3 +1058,10 @@ changes them before the owning feature is specified.
     only Jump to, Labels and Focus as icons with tooltips; Export, the theme switch and keyboard
     shortcuts move to the deck menu; the flow-notes display moves into the step player. Fit
     diagram and fit selection get distinct icons (`Expand`, `SquareDashed`).
+61. **Card system direction** (founder brainstorm, 2026-10-03). Five category packs a deck turns
+    on (Architecture, Process, Logistics, Basic shapes, Data cards); two families, information
+    cards and true shapes, with a card ↔ shape switch for in-between types; typed user fields with
+    a "show on card" choice (lifts §g-40); deck-level tag colours; one shared palette; titles and
+    descriptions up to 3 lines with a title-only tooltip; data-driven card types so a Canvas 2D
+    renderer can draw them. Claude Design draws three directions; requirements and the prompt are
+    in `claude-design-prompt-card-system.md`.
