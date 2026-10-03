@@ -8,6 +8,7 @@
  *   Schema keyword can check.
  * - S6 (style has a colour): v1.json states it with `minProperties: 1`, which json-schema-to-zod
  *   drops.
+ * - S7 (edge style has a key): same `minProperties: 1` on `EdgeStyle`.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -84,6 +85,15 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
   });
   file.groups.forEach((group, index) => {
     checkStyle(group.id, group.style, `groups.${String(index)}.style`);
+  });
+
+  file.edges.forEach((edge, index) => {
+    if (edge.style !== undefined && edge.style.shape === undefined) {
+      issues.push({
+        path: `edges.${String(index)}.style`,
+        message: `Style of connector "${edge.id}" needs at least one key.`,
+      });
+    }
   });
 
   const groupIds = new Set(file.groups.map((group) => group.id));

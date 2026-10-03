@@ -104,6 +104,13 @@ export type Direction = 'forward' | 'both' | 'none';
  */
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 /**
+ * Line type of a connector: `curved`, `elbow` (right-angle segments) or `straight`.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "EdgeShape".
+ */
+export type EdgeShape = 'curved' | 'elbow' | 'straight';
+/**
  * Kind of view: `system`, `feature`, `infra` or `custom`.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -326,6 +333,7 @@ export interface Edge {
   tags?: Tags;
   links?: Links;
   route?: EdgeRoute;
+  style?: EdgeStyle;
 }
 /**
  * How a connector is drawn between its two cards. All fields optional; an empty object is valid.
@@ -340,6 +348,15 @@ export interface EdgeRoute {
    * Shift of the middle segment, in canvas pixels, relative to where automatic routing puts it. Positive values go right or down. When absent, it is 0. It only applies when the resolved sides are opposite.
    */
   offset?: number;
+}
+/**
+ * How a connector line looks. At least one key is set; absent `style` means the default look.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "EdgeStyle".
+ */
+export interface EdgeStyle {
+  shape?: EdgeShape;
 }
 /**
  * A saved lens over the same model. Edits in any view change the one model.

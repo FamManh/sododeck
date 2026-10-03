@@ -152,7 +152,8 @@
       "owner": "Mobile",
       "tags": ["public"],
       "links": [{ "label": "OpenAPI", "url": "https://api.example.com/openapi.json" }],
-      "route": { "fromSide": "right", "toSide": "left", "offset": 40 }
+      "route": { "fromSide": "right", "toSide": "left", "offset": 40 },
+      "style": { "shape": "curved" }
     },
     {
       "id": "e2",
@@ -160,14 +161,16 @@
       "to": "order-svc",
       "protocol": "grpc",
       "label": "CreateOrder",
-      "route": { "fromSide": "bottom", "toSide": "top" }
+      "route": { "fromSide": "bottom", "toSide": "top" },
+      "style": { "shape": "elbow" }
     },
     {
       "id": "e3",
       "from": "order-svc",
       "to": "orders-db",
       "protocol": "sql",
-      "label": "insert order"
+      "label": "insert order",
+      "style": { "shape": "straight" }
     },
     {
       "id": "e4",

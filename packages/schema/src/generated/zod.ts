@@ -368,6 +368,20 @@ export const sododeckFileSchema = z
                 'Pinned sides and middle-segment offset, shared by every view. When absent, the connector is routed automatically.',
               )
               .optional(),
+            style: z
+              .object({
+                shape: z
+                  .enum(['curved', 'elbow', 'straight'])
+                  .describe(
+                    'Line type. When absent, a connector with a route `offset` is `elbow`, any other is `curved`.',
+                  )
+                  .optional(),
+              })
+              .strict()
+              .describe(
+                'Line style of the connector, shared by every view. When absent, the default look.',
+              )
+              .optional(),
           })
           .strict()
           .describe('A connection between two nodes.'),
