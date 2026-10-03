@@ -28,7 +28,7 @@ Here "pic" and "PCI" are different tags; "PIC" and "pic" would be one.
 
 ### Yjs layout (ADR 0021, one added line)
 
-`meta` map gains `tagColors`: `Y.Map<string>` (tag → colour string), always present after `fromJSON`, created lazily and attached on first write for stored documents that predate it. `readMeta` emits it only when it has entries.
+`meta` map gains `tagColors`: `Y.Map<string>` (tag → colour string), always present after `fromJSON`, created lazily and attached on first write for stored documents that predate it. `readMeta` emits it only when it has entries, sorted by tag key (replicas must read the same deck).
 
 ## Derived (never stored)
 
