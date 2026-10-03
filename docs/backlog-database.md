@@ -176,6 +176,18 @@ Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 →
   tokens (table width, column row height, row limit, key glyphs, crow's foot geometry, row
   separator).
 - **Out of scope:** code.
+- **Known design deviations (founder, 2026-10-03: not fixed in the design; the app wins, fix
+  while implementing).** Record each one as a §g note when importing the frames:
+  - **≡ menu:** the app's shortcuts (Show JSON ⌘J, Keyboard shortcuts ?) and icons
+    (`deck-menu.tsx`) win over the frame, which drops the shortcuts and uses other icons.
+  - **Dialect convert confirm (S3):** the existing confirm dialog with the single standard overlay;
+    the frame adds a second dim layer.
+  - **Deck drawer, existing sections:** Problems, Summary and Storage stay as `DeckInspector`
+    draws them today (full problems list, 2×2 summary tiles with a neutral Rules tile, Storage
+    with "Export .sododeck.json"); only the **Database** section is new (043).
+  - **Toggle / checkbox / segmented controls:** the board draws local copies; use the app's
+    `packages/ui` components and tokens (the frame's toggle hard-codes `#fff` and an rgba knob
+    shadow).
 - **Acceptance criteria:** every screen and row has a light and dark screenshot; DESIGN.md names
   every token 041–043 use; the row limit (DB9) has a proposed value.
 
