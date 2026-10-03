@@ -109,6 +109,97 @@ describe('Canvas', () => {
     expect(screen.getByLabelText('Minimap')).toBeInTheDocument();
   });
 
+  describe('hover focus (034)', () => {
+    const lit = (container: HTMLElement) => container.querySelector('style')?.textContent ?? '';
+
+    it('lights a resting card, its neighbours and connectors without changing any object', async () => {
+      const before = structuredClone(deck);
+      const { container, doc, editor } = renderWithEditor(<Canvas />, deck);
+      const root = screen.getByLabelText('Diagram canvas').closest('[data-region="canvas"]');
+      const wrapperNode = container.querySelector('.react-flow__node[data-id="b"]');
+      expect(wrapperNode).not.toBeNull();
+      if (wrapperNode === null) return;
+      fireEvent.mouseEnter(wrapperNode);
+      expect(root).not.toHaveAttribute('data-hover-focus');
+      await waitFor(() => {
+        expect(root).toHaveAttribute('data-hover-focus');
+      });
+      // b touches a (e1) and c (e2): d and e3 are dimmed, and nothing is inert or hidden.
+      expect(lit(container)).toContain('[data-id="e1"], [data-id="e2"]');
+      expect(lit(container)).not.toMatch(/inert|aria-hidden/);
+      expect(screen.getAllByTestId('deck-node')).toHaveLength(4);
+      expect(container.querySelector('[inert]')).toBeNull();
+      fireEvent.mouseLeave(wrapperNode);
+      await waitFor(() => {
+        expect(root).not.toHaveAttribute('data-hover-focus');
+      });
+      // Fanning a bundle and drilling in are UI state as well: the saved deck is byte-identical.
+      const serialised = JSON.stringify(toJSON(doc));
+      act(() => {
+        ui().toggleBundleFan('bundle:a|b');
+        ui().drillInto({ kind: 'node', id: 'a', viewport: { x: 0, y: 0, zoom: 1 } });
+      });
+      expect(JSON.stringify(toJSON(doc))).toBe(serialised);
+      expect(toJSON(doc)).toEqual(before);
+      expect(editor().canUndo()).toBe(false);
+    });
+
+    it('treats an outside proxy as a neighbour inside a drill-in (US3.6)', async () => {
+      const drilled = deckOf({
+        nodes: [
+          { id: 'in', type: 'service', title: 'In', group: 'core', position: { x: 0, y: 0 } },
+          { id: 'far', type: 'service', title: 'Far', group: 'core', position: { x: 0, y: 300 } },
+          { id: 'out', type: 'service', title: 'Out', position: { x: 900, y: 0 } },
+        ],
+        groups: [{ id: 'core', title: 'Core' }],
+        edges: [{ id: 'e', from: 'in', to: 'out' }],
+      });
+      const { container } = renderWithEditor(<Canvas />, drilled);
+      act(() => {
+        ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } });
+      });
+      const target = container.querySelector('.react-flow__node[data-id="in"]');
+      if (target === null) throw new Error('no node in');
+      fireEvent.mouseEnter(target);
+      await waitFor(() => {
+        expect(ui().hoverFocus?.id).toBe('in');
+      });
+      const text = lit(container);
+      expect(text).toContain(CSS.escape('port:out'));
+    });
+
+    it('lights a keyboard-focused card at once and announces its connections', async () => {
+      const user = userEvent.setup();
+      const { container } = renderWithEditor(<Canvas />, deck);
+      const root = screen.getByLabelText('Diagram canvas').closest('[data-region="canvas"]');
+      act(() => {
+        ui().focus('a');
+        document.querySelector<HTMLElement>('[data-node-id="a"]')?.focus();
+      });
+      expect(root).toHaveAttribute('data-hover-focus');
+      await user.keyboard('{ArrowRight}');
+      expect(ui().hoverFocus?.source).toBe('keyboard');
+      expect(lit(container)).toContain('[data-id="e1"]');
+    });
+
+    it('does not light anything while pinned focus is on', async () => {
+      const { container } = renderWithEditor(<Canvas />, deck);
+      const root = screen.getByLabelText('Diagram canvas').closest('[data-region="canvas"]');
+      act(() => {
+        ui().select({ nodes: ['a'] });
+        ui().setFocusMode(true);
+      });
+      const target = container.querySelector('.react-flow__node[data-id="b"]');
+      if (target === null) throw new Error('no node b');
+      fireEvent.mouseEnter(target);
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      });
+      expect(ui().hoverFocus).toBeNull();
+      expect(root).not.toHaveAttribute('data-hover-focus');
+    });
+  });
+
   it('colours a minimap node by its fill (020 T056)', () => {
     const coloured = deckOf({
       nodes: [{ id: 'x', type: 'service', title: 'X', style: { fill: 'green' } }],
@@ -361,9 +452,13 @@ describe('Canvas', () => {
     );
     expect(screen.getAllByTestId('deck-node')).toHaveLength(2);
     expect(screen.queryByRole('group', { name: 'Service: Gateway' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to Gateway' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Gateway, outside/ })).toBeInTheDocument();
+    expect(screen.getByText('Inside Core services')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Go to Gateway' }));
+    // A click only focuses the proxy; double-click leaves the drill-in for the real card.
+    await user.click(screen.getByRole('button', { name: /Gateway, outside/ }));
+    expect(ui().drill).toHaveLength(1);
+    await user.dblClick(screen.getByRole('button', { name: /Gateway, outside/ }));
     expect(ui().drill).toEqual([]);
     expect(ui().selection.nodes).toEqual(['gateway']);
 

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
+import { useUiStore } from '../../state/ui-store';
 import { cardLayout } from '../card-layout';
 import { NODE_SIZE } from '../canvas-geometry';
 import { LIGHT_PALETTE } from './export-palette';
@@ -550,5 +551,58 @@ describe('buildScene label position (022 US4)', () => {
     expect(
       Math.hypot((end?.x ?? 0) - (edge?.target.x ?? 0), (end?.y ?? 0) - (edge?.target.y ?? 0)),
     ).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe('buildScene: bundles and proxies (034 R9)', () => {
+  const parallel = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'a', to: 'b' },
+      { id: 'e2', from: 'a', to: 'b' },
+      { id: 'e3', from: 'b', to: 'a' },
+    ],
+    flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'e2' }] }],
+  });
+
+  it('draws parallel connectors as one folded curve with an "×n" count pill', () => {
+    const result = scene(parallel);
+    expect(result.edges.map((e) => e.id)).toEqual(['bundle:a|b']);
+    expect(result.edges[0]).toMatchObject({
+      label: '×3',
+      count: true,
+      direction: 'both',
+      shape: 'curved',
+    });
+  });
+
+  it("keeps the exported flow's connector on its own, with its badge, and no bundle of one", () => {
+    const result = scene(parallel, 'flow', { activeFlowId: 'f' });
+    expect(result.edges.map((e) => e.id)).toEqual(['e2']);
+    expect(result.edges[0]?.badges).toHaveLength(1);
+  });
+
+  it('places drill-in proxies as the canvas does: 150 × 52, outside the scope', () => {
+    const result = scene(grouped, 'view', { drill: [{ kind: 'group', id: 'g' }] });
+    const [port] = result.ports;
+    expect(port).toMatchObject({ id: 'port:db', label: 'Orders DB', kind: 'database' });
+    expect(port?.rect).toMatchObject({ width: 150, height: 52 });
+    const cards = result.cards.map((c) => c.rect.x + c.rect.width);
+    expect(port?.rect.x ?? 0).toBeGreaterThan(Math.max(...cards));
+  });
+
+  it('is not changed by hover or pinned focus, which are UI state', () => {
+    const before = JSON.stringify(scene(parallel));
+    useUiStore.getState().setHoverFocus({ id: 'a', source: 'pointer' });
+    useUiStore.getState().toggleBundleFan('bundle:a|b');
+    useUiStore.getState().setFocusMode(true);
+    const after = JSON.stringify(scene(parallel));
+    useUiStore.getState().clearHoverFocus();
+    useUiStore.getState().foldBundles();
+    useUiStore.getState().setFocusMode(false);
+    expect(after).toBe(before);
   });
 });

@@ -2,7 +2,7 @@ import { STICKY_DEFAULT_OFFSET, stickyCanvasPosition } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { EMPTY_SELECTION } from '../state/ui-store';
+import { EMPTY_SELECTION, useUiStore } from '../state/ui-store';
 import {
   type CanvasView,
   type DeckFlowNode,
@@ -13,7 +13,9 @@ import {
   toStickyNodes,
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
+import { bundleEdges } from './bundles';
 import { cardLayout } from './card-layout';
+import { focusSet } from './focus-set';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
 
@@ -305,6 +307,36 @@ describe('toFlowNodes', () => {
     );
     expect(dimmed.find((n) => n.id === 'b')).not.toBe(first.find((n) => n.id === 'b'));
     expect(dimmed.find((n) => n.id === 'b')?.data).toMatchObject({ dimmed: true });
+  });
+
+  it('marks pinned-focus neighbours, not the focus card itself (034 T008)', () => {
+    const graph = topLevelGraph(deck);
+    const nodes = toFlowNodes(
+      deck,
+      graph,
+      view({ focus: { focusId: 'a', members: new Set(['a', 'b']), edges: new Set(['e1']) } }),
+    );
+    expect(nodes.find((n) => n.id === 'a')?.className).toBe('in-focus');
+    expect(nodes.find((n) => n.id === 'b')?.className).toBe('in-focus sd-focus-neighbour');
+    const moved = toFlowNodes(
+      deck,
+      graph,
+      view({ focus: { focusId: 'b', members: new Set(['a', 'b']), edges: new Set(['e1']) } }),
+    );
+    expect(moved.find((n) => n.id === 'a')?.className).toBe('in-focus sd-focus-neighbour');
+    expect(moved.find((n) => n.id === 'b')?.className).toBe('in-focus');
+  });
+
+  it('returns the same React Flow objects while a hover focus changes (034 R1)', () => {
+    const graph = topLevelGraph(deck);
+    const canvasView = view();
+    const nodes = toFlowNodes(deck, graph, canvasView);
+    const edges = toFlowEdges(deck, graph, canvasView);
+    useUiStore.getState().setHoverFocus({ id: 'a', source: 'pointer' });
+    expect(toFlowNodes(deck, graph, canvasView)).toBe(nodes);
+    expect(toFlowEdges(deck, graph, canvasView)).toBe(edges);
+    useUiStore.getState().clearHoverFocus();
+    expect(toFlowNodes(deck, graph, canvasView)).toBe(nodes);
   });
 
   it('carries problem marks and rebuilds only when they change (015 FR-022)', () => {
@@ -825,5 +857,202 @@ describe('draw order (019 FR-037)', () => {
     };
     const ids = toFlowNodes(file, topLevelGraph(file), view()).map((node) => node.id);
     expect(ids.indexOf('z')).toBeLessThan(ids.indexOf('a'));
+  });
+});
+
+describe('bundles and fanned connectors (034)', () => {
+  const none = new Set<string>();
+  const parallel: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+      { id: 'c', type: 'service', title: 'C', position: { x: 0, y: 300 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'a', to: 'b', label: 'one' },
+      { id: 'e2', from: 'a', to: 'b', label: 'two' },
+      { id: 'e3', from: 'a', to: 'b', label: 'three' },
+      { id: 'e4', from: 'a', to: 'c' },
+    ],
+  };
+  const graph = topLevelGraph(parallel);
+  const edgesFor = (fanned: string[] = [], file = parallel, focus: CanvasView['focus'] = null) => {
+    const g = file === parallel ? graph : topLevelGraph(file);
+    const bundles = bundleEdges(file, g, { exclude: none, fanned: new Set(fanned), off: false });
+    return toFlowEdges(file, g, view({ focus }), undefined, bundles);
+  };
+
+  it('draws a bundle as one merged edge and leaves out the connectors it folds', () => {
+    const edges = edgesFor();
+    expect(edges.map((e) => e.id)).toEqual(['e4', 'bundle:a|b']);
+    const bundle = edges.find((e) => e.id === 'bundle:a|b');
+    expect(bundle).toMatchObject({
+      type: 'merged',
+      source: 'a',
+      target: 'b',
+      ariaLabel: '3 connections between A and B',
+      data: { kind: 'bundle', count: 3, direction: 'a-to-b', fanned: false, level: 'system' },
+    });
+    expect(bundle?.data).toMatchObject({ edgeIds: ['e1', 'e2', 'e3'] });
+  });
+
+  it('draws a fanned bundle as plain connectors with their spread slots and the pill', () => {
+    const edges = edgesFor(['bundle:a|b']);
+    expect(edges.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'bundle:a|b']);
+    expect((edges[0] as DeckFlowEdgeLike).data?.fan).toEqual({ index: 0, count: 3 });
+    expect((edges[2] as DeckFlowEdgeLike).data?.fan).toEqual({ index: 2, count: 3 });
+    expect((edges[3] as DeckFlowEdgeLike).data?.fan).toBeUndefined();
+    expect((edges[0] as DeckFlowEdgeLike).data?.showLabel).toBe(true);
+    expect(edges.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ fanned: true });
+  });
+
+  it('keeps cached objects while inputs are equal, and rebuilds only what changed', () => {
+    const first = edgesFor();
+    const second = edgesFor();
+    expect(second).toBe(first);
+    const fanned = edgesFor(['bundle:a|b']);
+    // The lone connector is the same object; the bundle is rebuilt for its new state.
+    expect(fanned.find((e) => e.id === 'e4')).toBe(first.find((e) => e.id === 'e4'));
+    expect(fanned.find((e) => e.id === 'bundle:a|b')).not.toBe(
+      first.find((e) => e.id === 'bundle:a|b'),
+    );
+    const folded = edgesFor();
+    expect(folded.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ fanned: false });
+  });
+
+  it('edits one connector without rebuilding the others', () => {
+    const edited: SododeckFile = {
+      ...parallel,
+      edges: parallel.edges.map((e) => (e.id === 'e4' ? { ...e, label: 'x' } : e)),
+    };
+    const before = edgesFor();
+    const after = edgesFor([], edited);
+    expect(after.find((e) => e.id === 'e4')).not.toBe(before.find((e) => e.id === 'e4'));
+    expect(after.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ count: 3 });
+  });
+
+  it('keeps a fanned bundle fanned and moves its spread connectors when a card moves', () => {
+    const moved: SododeckFile = {
+      ...parallel,
+      nodes: parallel.nodes.map((n) => (n.id === 'b' ? { ...n, position: { x: 500, y: 40 } } : n)),
+    };
+    const edges = edgesFor(['bundle:a|b'], moved);
+    expect(edges.map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4', 'bundle:a|b']);
+    expect(edges.find((e) => e.id === 'bundle:a|b')?.data).toMatchObject({ fanned: true });
+  });
+
+  it('marks a bundle in pinned focus and dims it otherwise', () => {
+    const bundles = bundleEdges(parallel, graph, { exclude: none, fanned: none, off: false });
+    const set = focusSet(parallel, graph, 'c', bundles);
+    const edges = toFlowEdges(parallel, graph, view({ focus: set }), undefined, bundles);
+    const bundle = edges.find((e) => e.id === 'bundle:a|b');
+    expect(bundle?.className).toBeUndefined();
+    expect(bundle?.domAttributes).toEqual({ 'aria-hidden': true });
+    const lit = focusSet(parallel, graph, 'a', bundles);
+    const litEdges = toFlowEdges(parallel, graph, view({ focus: lit }), undefined, bundles);
+    expect(litEdges.find((e) => e.id === 'bundle:a|b')?.className).toBe('in-focus');
+  });
+
+  it("draws every connector separately without a bundle result (today's behaviour)", () => {
+    expect(toFlowEdges(parallel, graph, view()).map((e) => e.id)).toEqual(['e1', 'e2', 'e3', 'e4']);
+  });
+});
+
+type DeckFlowEdgeLike = { data?: { fan?: { index: number; count: number }; showLabel?: boolean } };
+
+describe('drill-in proxies and scope label (034 US3)', () => {
+  const drilled = emptySododeckFile();
+  const file: SododeckFile = {
+    ...drilled,
+    nodes: [
+      { id: 'in1', type: 'service', title: 'In 1', group: 'core', position: { x: 0, y: 0 } },
+      { id: 'in2', type: 'service', title: 'In 2', group: 'core', position: { x: 0, y: 200 } },
+      { id: 'src', type: 'client', title: 'Source', position: { x: 900, y: 0 } },
+      { id: 'dst', type: 'database', title: 'Dest', position: { x: 900, y: 200 } },
+    ],
+    groups: [{ id: 'core', title: 'Core' }],
+    edges: [
+      { id: 'a', from: 'src', to: 'in1' },
+      { id: 'b', from: 'in2', to: 'dst' },
+    ],
+  };
+  const scope = { node: null, group: 'core' };
+  const graph = visibleGraph(file, scope, new Set());
+
+  it('places proxies from proxyLayout and keeps them out of drag, selection and connections', () => {
+    const nodes = toFlowNodes(file, graph, view({ scopeTitle: 'Core' }));
+    const proxies = nodes.filter((n) => n.type === 'port');
+    expect(proxies.map((p) => p.id).sort()).toEqual(['port:dst', 'port:src']);
+    for (const proxy of proxies) {
+      expect(proxy).toMatchObject({
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        width: 150,
+        height: 52,
+      });
+    }
+    const src = proxies.find((p) => p.id === 'port:src');
+    const dst = proxies.find((p) => p.id === 'port:dst');
+    expect(src?.data).toMatchObject({
+      outsideNodeId: 'src',
+      outsideTitle: 'Source',
+      kind: 'client',
+      side: 'left',
+    });
+    expect(dst?.data).toMatchObject({ kind: 'database', side: 'right' });
+    expect((src?.position.x ?? 0) < (dst?.position.x ?? 0)).toBe(true);
+  });
+
+  it('adds one scope label per drill-in, counting the cards inside, and none at the top', () => {
+    const labels = toFlowNodes(file, graph, view({ scopeTitle: 'Core' })).filter(
+      (n) => n.type === 'scope-label',
+    );
+    expect(labels).toHaveLength(1);
+    expect(labels[0]).toMatchObject({
+      id: 'scope-label:core',
+      draggable: false,
+      selectable: false,
+      focusable: false,
+      data: { title: 'Core', count: 2 },
+    });
+    const top = visibleGraph(file, { node: null, group: null }, new Set());
+    expect(toFlowNodes(file, top, view()).some((n) => n.type === 'scope-label')).toBe(false);
+  });
+
+  it('counts the members of collapsed cards in scope', () => {
+    const nested: SododeckFile = {
+      ...file,
+      nodes: [...file.nodes.map((n) => (n.id === 'in2' ? { ...n, group: 'sub' } : n))],
+      groups: [...file.groups, { id: 'sub', title: 'Sub', parent: 'core' }],
+    };
+    const g = visibleGraph(nested, scope, new Set(['sub']));
+    const label = toFlowNodes(nested, g, view({ scopeTitle: 'Core' })).find(
+      (n) => n.type === 'scope-label',
+    );
+    expect(label?.data).toMatchObject({ count: 2 });
+  });
+
+  it('keeps cached proxy and label objects while their inputs are equal', () => {
+    const first = toFlowNodes(file, graph, view({ scopeTitle: 'Core' }));
+    const second = toFlowNodes(file, graph, view({ scopeTitle: 'Core' }));
+    expect(second).toBe(first);
+    const renamed = toFlowNodes(file, graph, view({ scopeTitle: 'Core 2' }));
+    expect(renamed.find((n) => n.type === 'scope-label')).not.toBe(
+      first.find((n) => n.type === 'scope-label'),
+    );
+    expect(renamed.find((n) => n.id === 'port:src')).toBe(first.find((n) => n.id === 'port:src'));
+  });
+
+  it('draws connectors to a proxy with a handle on the facing side', () => {
+    const edges = toFlowEdges(file, graph, view());
+    const toProxy = edges.find((e) => e.id === 'a');
+    expect(toProxy).toMatchObject({
+      source: 'port:src',
+      target: 'in1',
+      sourceHandle: 'right',
+      targetHandle: 'left',
+    });
   });
 });

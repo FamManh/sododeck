@@ -2,7 +2,7 @@ import { toJSON } from '@sododeck/model';
 import { act, fireEvent, renderHook } from '@testing-library/react';
 import type { Edge } from '@xyflow/react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, editorWrapper } from '../test/render-canvas';
@@ -177,5 +177,45 @@ describe('use-canvas-handlers: reconnect pins a side (017 R12)', () => {
     });
     expect(ui().announcement.text).toBe("Can't connect to itself");
     expect(toJSON(doc)).toEqual(before);
+  });
+});
+
+describe('use-canvas-handlers: bundles (034)', () => {
+  const click = {} as ReactMouseEvent;
+
+  it('opens the popover from a click on the bundle curve instead of selecting it', () => {
+    const { h } = handlers();
+    act(() => {
+      h().onEdgeClick(click, flowEdge('bundle:a|b'));
+    });
+    expect(ui().popover).toEqual({ kind: 'merged', edgeId: 'bundle:a|b' });
+    expect(ui().focusedEdgeId).toBe('bundle:a|b');
+    expect(ui().selection.edges).toEqual([]);
+  });
+
+  it('opens it on double-click too, and gives a bundle no context menu', () => {
+    const { h } = handlers();
+    act(() => {
+      h().onEdgeDoubleClick(click, flowEdge('bundle:a|b'));
+    });
+    expect(ui().popover).toEqual({ kind: 'merged', edgeId: 'bundle:a|b' });
+    const preventDefault = vi.fn();
+    act(() => {
+      h().onEdgeContextMenu(
+        { preventDefault } as unknown as ReactMouseEvent,
+        flowEdge('bundle:a|b'),
+      );
+    });
+    expect(preventDefault).toHaveBeenCalled();
+    expect(ui().contextMenu).toBeNull();
+  });
+
+  it('folds every fanned bundle on a click on empty canvas', () => {
+    const { h } = handlers();
+    act(() => {
+      ui().toggleBundleFan('bundle:a|b');
+      h().onPaneClick(click);
+    });
+    expect(ui().fannedBundles.size).toBe(0);
   });
 });

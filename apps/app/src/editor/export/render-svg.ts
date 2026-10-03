@@ -38,6 +38,9 @@ export const FONTS = {
   caption: `11.5px ${SANS}`,
   label: `10.5px ${MONO}`,
   badge: `500 10px ${MONO}`,
+  /** The bundle's "×n" pill (DESIGN.md "Bundle count"). */
+  bundle: `700 11.5px ${SANS}`,
+  outside: `500 10px ${SANS}`,
 } as const;
 
 const STYLE = [
@@ -53,6 +56,8 @@ const STYLE = [
   `.c{font:${FONTS.caption}}`,
   `.l{font:${FONTS.label}}`,
   `.b{font:${FONTS.badge}}`,
+  `.bn{font:${FONTS.bundle}}`,
+  `.o{font:${FONTS.outside}}`,
 ].join('');
 
 /** The Deck card's corner radius and lip (DESIGN.md `--sd-deck-card-radius`, `--sd-deck-lip`). */
@@ -516,7 +521,18 @@ function edge(item: SceneEdge, palette: ExportPalette, measure: TextMeasurer): s
           })}/>`,
     );
   }
-  if (item.label !== null || item.badges.length > 0) {
+  if (item.count === true && item.label !== null && item.badges.length === 0) {
+    // The Ink "×n" pill: 22 tall, Surface text, a 2 px canvas ring around it (frame 118, 119).
+    const width = measure(item.label, FONTS.bundle) + 20;
+    const left = item.labelPoint.x - width / 2;
+    const top = item.labelPoint.y - 11;
+    out.push(
+      `<rect ${attrs({ 'data-part': 'bundle-pill', x: left, y: top, width, height: 22, rx: 11, fill: palette.ink, stroke: palette.canvas, 'stroke-width': 2 })}/>`,
+    );
+    out.push(
+      text('bn', item.labelPoint.x, baseline(top, 22, 11.5), palette.surface, item.label, 'middle'),
+    );
+  } else if (item.label !== null || item.badges.length > 0) {
     const label = item.label ?? '';
     const badgeWidths = item.badges.map((badge) =>
       Math.max(BADGE, measure(badge.label, FONTS.badge) + 8),
@@ -571,28 +587,30 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
   for (const item of scene.collapsed) out.push(collapsedHand(item, palette, measure));
   for (const item of scene.edges) out.push(edge(item, palette, measure));
   for (const port of scene.ports) {
-    // The canvas pill (port-pill-node.tsx): dashed primary border, fitted to its label and
-    // centred in the port box. "Go to …" is a UI action, so only the outside title is drawn.
+    // The canvas proxy (outside-proxy-node.tsx): a dashed 1.5 px Secondary card on the canvas
+    // colour with the outside card's type tile, its title and "Outside". "Go to" is a UI action.
     const { x, y, width, height } = port.rect;
-    const name = truncate(port.label, FONTS.title, width * 2, measure);
-    const pillWidth = measure(name, FONTS.title) + 24;
-    const pillHeight = 26;
-    const left = x + (width - pillWidth) / 2;
-    const top = y + (height - pillHeight) / 2;
     out.push(`<g data-export="port" data-id="${escapeXml(port.id)}">`);
     out.push(
       box(
-        left,
-        top,
-        pillWidth,
-        pillHeight,
-        pillHeight / 2,
-        palette.surface,
-        palette.primary,
-        '4 3',
-      ),
+        x + 0.75,
+        y + 0.75,
+        width - 1.5,
+        height - 1.5,
+        CARD_RADIUS,
+        palette.canvas,
+        palette.inkSecondary,
+        '5 4',
+        'proxy',
+      ).replace('/>', ` stroke-width="${String(BORDER)}"/>`),
     );
-    out.push(text('t', left + 12, top + pillHeight / 2 + 4.5, palette.primaryInk, name));
+    out.push(box(x + 12, y + (height - 24) / 2, 24, 24, 8, palette.surface2));
+    out.push(
+      icon(ICON_PATHS[port.kind], x + 17, y + (height - 14) / 2, 14, palette.inkSecondary, 2),
+    );
+    const name = truncate(port.label, FONTS.groupLabel, width - 12 - 24 - 8 - 12, measure);
+    out.push(text('gl', x + 12 + 24 + 8, y + height / 2 - 2, palette.ink, name));
+    out.push(text('o', x + 12 + 24 + 8, y + height / 2 + 11, palette.inkMuted, 'Outside'));
     out.push('</g>');
   }
   for (const item of scene.cards) out.push(card(item, palette, measure));

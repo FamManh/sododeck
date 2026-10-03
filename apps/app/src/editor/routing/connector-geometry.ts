@@ -312,6 +312,8 @@ export interface ConnectorInput {
   route?: ConnectorRoute | undefined;
   /** Absolute bends that replace the route's own (a bend being dragged: nothing is stored yet). */
   bends?: readonly Point[] | undefined;
+  /** Sideways shift of a bundle's fanned connector (034 R6); a bent or anchored one ignores it. */
+  spread?: number;
   options?: RoutedPathOptions;
 }
 
@@ -331,7 +333,7 @@ export function connectorPath(input: ConnectorInput): RoutedShapePath {
   const anchored = route?.fromAt !== undefined || route?.toAt !== undefined;
   const bent = (input.bends?.length ?? waypoints.length) > 0 && shape !== 'straight';
   if (sameBox(fromBox, toBox) || (!bent && !anchored)) {
-    return routedPath(shape, fromBox, toBox, sides, route?.offset ?? 0, options);
+    return routedPath(shape, fromBox, toBox, sides, route?.offset ?? 0, options, input.spread ?? 0);
   }
 
   const { arrowAtStart = false, arrowAtEnd = true } = options;

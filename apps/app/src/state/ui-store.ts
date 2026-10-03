@@ -31,6 +31,16 @@ export interface Selection {
   readonly stickies: readonly Id[];
 }
 
+/** Hover or keyboard focus on a card (034): who is lit and how it started. */
+export interface HoverFocus {
+  readonly id: string;
+  readonly source: 'pointer' | 'keyboard';
+}
+
+/** Derived ids (034) that `pruneSelection` checks against sets it is given. */
+const PORT_ID_PREFIX = 'port:';
+const BUNDLE_ID_PREFIX = 'bundle:';
+
 export type Popover =
   | { kind: 'edge'; edgeId: string }
   | { kind: 'connect'; fromId: string }
@@ -274,6 +284,13 @@ export interface UiState {
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
   focusedEdgeId: string | null;
+  /**
+   * The card whose connections are lit by hover or keyboard focus (034). UI-only and CSS-driven:
+   * it never reaches a React Flow object, the deck or the undo history.
+   */
+  hoverFocus: HoverFocus | null;
+  /** Bundles (034) the user fanned out into their connectors; ids are `bundle:a|b`. */
+  fannedBundles: ReadonlySet<string>;
   outlineCollapsed: ReadonlySet<string>;
   labelsOn: boolean;
   notesDisplay: NotesDisplay;
@@ -372,6 +389,9 @@ export interface UiState {
     edges: ReadonlySet<Id>;
     groups: ReadonlySet<Id>;
     stickies: ReadonlySet<Id>;
+    /** Derived ids (034): `port:` proxies and `bundle:` connectors; omitted = not checked. */
+    ports?: ReadonlySet<string>;
+    bundles?: ReadonlySet<string>;
   }) => void;
   /**
    * Shows another view (011): clears selection, focus, drill-in, focus mode and revealed
@@ -385,6 +405,12 @@ export interface UiState {
   drillInto: (frame: DrillFrame) => void;
   drillUp: (depth?: number) => readonly DrillFrame[];
   setFocusMode: (on: boolean) => void;
+  setHoverFocus: (focus: HoverFocus) => void;
+  clearHoverFocus: () => void;
+  toggleBundleFan: (id: string) => void;
+  foldBundles: () => void;
+  /** Drops fanned ids whose bundle is gone (a connector deleted, adjusted or a flow shown). */
+  pruneFannedBundles: (existing: ReadonlySet<string>) => void;
   pruneView: (existing: { nodes: ReadonlySet<Id>; groups: ReadonlySet<Id> }) => void;
   setStickyEditing: (id: Id | null) => void;
   setStickyDraft: (id: Id | null) => void;
@@ -641,6 +667,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     exportDialog: { open: false, returnFocus: null },
     focusedId: null,
     focusedEdgeId: null,
+    hoverFocus: null,
+    fannedBundles: NO_IDS,
     outlineCollapsed: new Set(),
     labelsOn: readLabelsOn(),
     notesDisplay: readNotesDisplay(),
@@ -733,10 +761,18 @@ export const useUiStore = create<UiState>()((set, get) => {
           (state.popover?.kind === 'connect' && !existing.nodes.has(state.popover.fromId));
         const patch: Partial<UiState> = {};
         if (selectionChanged) patch.selection = { nodes, edges, groups, stickies };
-        if (state.focusedId !== null && !existing.nodes.has(state.focusedId))
-          patch.focusedId = null;
-        if (state.focusedEdgeId !== null && !existing.edges.has(state.focusedEdgeId))
-          patch.focusedEdgeId = null;
+        if (state.focusedId !== null) {
+          const known = state.focusedId.startsWith(PORT_ID_PREFIX)
+            ? (existing.ports?.has(state.focusedId) ?? true)
+            : existing.nodes.has(state.focusedId);
+          if (!known) patch.focusedId = null;
+        }
+        if (state.focusedEdgeId !== null) {
+          const known = state.focusedEdgeId.startsWith(BUNDLE_ID_PREFIX)
+            ? (existing.bundles?.has(state.focusedEdgeId) ?? true)
+            : existing.edges.has(state.focusedEdgeId);
+          if (!known) patch.focusedEdgeId = null;
+        }
         if (popoverGone) patch.popover = null;
         if (state.dropTarget !== null && !existing.groups.has(state.dropTarget))
           patch.dropTarget = null;
@@ -774,6 +810,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         focusMode: false,
         focusedId: null,
         focusedEdgeId: null,
+        hoverFocus: null,
+        fannedBundles: NO_IDS,
         popover: null,
         revealed: NO_IDS,
         descriptionMode: NO_MODES,
@@ -793,6 +831,8 @@ export const useUiStore = create<UiState>()((set, get) => {
       set((state) => ({
         drill: [...state.drill, frame],
         selection: EMPTY_SELECTION,
+        hoverFocus: null,
+        fannedBundles: NO_IDS,
         focusMode: false,
         descriptionMode: NO_MODES,
       }));
@@ -801,11 +841,34 @@ export const useUiStore = create<UiState>()((set, get) => {
       const drill = get().drill;
       const nextDepth = depth ?? Math.max(0, drill.length - 1);
       const popped = drill.slice(nextDepth);
-      set({ drill: drill.slice(0, nextDepth) });
+      set({ drill: drill.slice(0, nextDepth), hoverFocus: null, fannedBundles: NO_IDS });
       return popped;
     },
     setFocusMode: (focusMode) => {
       set({ focusMode });
+    },
+    setHoverFocus: (focus) => {
+      const current = get().hoverFocus;
+      if (current?.id === focus.id && current.source === focus.source) return;
+      set({ hoverFocus: focus });
+    },
+    clearHoverFocus: () => {
+      if (get().hoverFocus !== null) set({ hoverFocus: null });
+    },
+    toggleBundleFan: (id) => {
+      set(({ fannedBundles }) => {
+        const next = new Set(fannedBundles);
+        if (!next.delete(id)) next.add(id);
+        return { fannedBundles: next };
+      });
+    },
+    foldBundles: () => {
+      if (get().fannedBundles.size > 0) set({ fannedBundles: NO_IDS });
+    },
+    pruneFannedBundles: (existing) => {
+      const { fannedBundles } = get();
+      const kept = [...fannedBundles].filter((id) => existing.has(id));
+      if (kept.length !== fannedBundles.size) set({ fannedBundles: new Set(kept) });
     },
     pruneView: (existing) => {
       set((state) => ({
@@ -1243,6 +1306,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         stickyDraft: null,
         focusedId: null,
         focusedEdgeId: null,
+        hoverFocus: null,
+        fannedBundles: NO_IDS,
         outlineCollapsed: new Set(),
         drill: [],
         focusMode: false,

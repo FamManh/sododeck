@@ -785,6 +785,37 @@ for (const scenario of ['collapse-toggle', 'focus'] as const) {
   });
 }
 
+/** 034 SC-001: resting on a card lights its connections within one frame (16 ms). */
+const HOVER_TARGET_MS = 16;
+
+test(`hover → focus painted: ${NODES} nodes / ${EDGES} edges`, async ({ page }) => {
+  await openBench(page, '');
+  await page.waitForFunction(() => window.__sododeckBench?.hover !== undefined);
+  const runs: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    await page.evaluate(() => {
+      window.__sododeckBench?.clearHover?.();
+    });
+    await page.waitForTimeout(100);
+    runs.push(
+      await page.evaluate(
+        (id) => window.__sododeckBench?.hover?.(id) ?? Promise.resolve(NaN),
+        `n${String(i)}`,
+      ),
+    );
+  }
+  const ms = [...runs].sort((a, b) => a - b)[2] ?? NaN;
+  expect(Number.isFinite(ms)).toBe(true);
+  actionResults.push({
+    scenario: 'hover → focus painted',
+    nodes: NODES,
+    edges: EDGES,
+    ms,
+    targetMs: HOVER_TARGET_MS,
+    meetsTarget: ms < HOVER_TARGET_MS,
+  });
+});
+
 /** 011 SC-003: switching views updates the canvas within 200 ms. */
 const VIEW_SWITCH_TARGET_MS = 200;
 

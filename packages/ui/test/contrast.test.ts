@@ -99,6 +99,13 @@ const TEXT_PAIRS: Pair[] = [
   ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-ink`, `card-${name}-chip`]),
 ];
 
+/** Connection focus and drill-in (034): the Ink "×n" pill and the Outside proxy text. */
+const CONNECTION_TEXT_PAIRS: Pair[] = [
+  ['surface', 'ink'], // "×n" count in the Ink pill
+  ['ink', 'canvas'], // proxy title
+  ['muted', 'canvas'], // proxy "Outside" caption
+];
+
 /** Sticky-note tints (009): each note body and its icon/label text stay AA in both themes. */
 const STICKY_TINT_TEXT_PAIRS: Pair[] = [
   ['amber-ink', 'amber-soft'],
@@ -116,6 +123,8 @@ const NON_TEXT_PAIRS: Pair[] = [
   ['muted', 'surface'], // dashed border of a partial tag chip (008 bulk edit)
   ['success-ink', 'surface'], // matched-row check icon (008 decision tables)
   ['primary', 'canvas'], // snap guides, drop-target and landing-slot dashes, resize handles (016)
+  ['text-secondary', 'canvas'], // the Outside proxy's dashed border (034)
+  ['ink', 'canvas'], // a lit connector (Ink 2.75px) and the pill's canvas ring (034)
   // Card strokes (020): every named card stroke stays visible against the card surface.
   ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-stroke`, 'surface']),
   // Deck dots (029): the 6px dot and status icon on the card fill.
@@ -149,6 +158,10 @@ describe.each([
   ['dark', dark],
 ] as const)('token contrast (%s)', (_name, theme) => {
   it.each(TEXT_PAIRS)('%s on %s is at least 4.5:1', (fg, bg) => {
+    expect(ratio(theme, [fg, bg])).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(CONNECTION_TEXT_PAIRS)('connection focus %s on %s is at least 4.5:1', (fg, bg) => {
     expect(ratio(theme, [fg, bg])).toBeGreaterThanOrEqual(4.5);
   });
 

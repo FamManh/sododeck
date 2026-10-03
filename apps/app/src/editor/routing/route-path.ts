@@ -250,6 +250,7 @@ export function routedPath(
   sides: ResolvedSides,
   offset = 0,
   options: RoutedPathOptions = {},
+  spread = 0,
 ): RoutedShapePath {
   const { arrowAtStart = false, arrowAtEnd = true } = options;
   const loop = sameBox(fromBox, toBox);
@@ -273,8 +274,18 @@ export function routedPath(
   const startCut = arrowAtStart ? ARROW_LENGTH : 0;
   const endCut = arrowAtEnd ? ARROW_LENGTH : 0;
   const gap = Math.hypot(end.x - start.x, end.y - start.y);
-  const lineStart = move(start, startDir, startCut);
-  const lineEnd = move(end, endDir, -endCut);
+  let lineStart = move(start, startDir, startCut);
+  let lineEnd = move(end, endDir, -endCut);
+  // Fan-out (034 R6): a render-only sideways shift along the chord's normal, never stored.
+  const chordLength = Math.hypot(lineEnd.x - lineStart.x, lineEnd.y - lineStart.y);
+  const shift: Point =
+    spread === 0 || loop || chordLength === 0
+      ? { x: 0, y: 0 }
+      : {
+          x: (-(lineEnd.y - lineStart.y) / chordLength) * spread,
+          y: ((lineEnd.x - lineStart.x) / chordLength) * spread,
+        };
+  const hasMiddle = shape === 'elbow' && !loop && middleSegment(sides) !== null;
   const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
   if (!loop && gap < startCut + endCut) {
     return { path: '', labelX: mid.x, labelY: mid.y, segment: null, ends };
@@ -286,6 +297,10 @@ export function routedPath(
       : Math.max(40, 0.4 * Math.hypot(lineEnd.x - lineStart.x, lineEnd.y - lineStart.y));
     const c1 = move(lineStart, startDir, reach);
     const c2 = move(lineEnd, endDir, -reach);
+    c1.x += shift.x;
+    c1.y += shift.y;
+    c2.x += shift.x;
+    c2.y += shift.y;
     const label = bezierMiddle(lineStart, c1, c2, lineEnd);
     return {
       path: bezier(lineStart, c1, c2, lineEnd),
@@ -296,11 +311,18 @@ export function routedPath(
     };
   }
 
+  if (shape === 'straight' || (!hasMiddle && (shift.x !== 0 || shift.y !== 0))) {
+    // A straight line, and an elbow with no middle segment to move, shift both ends instead.
+    lineStart = { x: lineStart.x + shift.x, y: lineStart.y + shift.y };
+    lineEnd = { x: lineEnd.x + shift.x, y: lineEnd.y + shift.y };
+  }
+
   if (shape === 'straight') {
+    const shiftedMid = { x: mid.x + shift.x, y: mid.y + shift.y };
     return {
       path: `M ${format(lineStart)} L ${format(lineEnd)}`,
-      labelX: mid.x,
-      labelY: mid.y,
+      labelX: shiftedMid.x,
+      labelY: shiftedMid.y,
       segment: null,
       ends,
     };
@@ -312,7 +334,7 @@ export function routedPath(
     targetX: lineEnd.x,
     targetY: lineEnd.y,
     sides: [fromSide, toSide],
-    offset,
+    offset: hasMiddle ? offset + spread : offset,
   });
   return { ...step, ends };
 }

@@ -10,6 +10,7 @@ import type { Direction, SododeckFile } from '@sododeck/schema';
 import { toComponentKind, type ComponentKind } from '@sododeck/ui/lib/icons';
 
 import type { DrillFrame } from '../../state/ui-store';
+import { bundleEdges, type BundleResult } from '../bundles';
 import { cardLayoutOf, displayPosition, groupBounds, type Rect } from '../canvas-geometry';
 import { DECK_CARD, wrapText, type CardLayout } from '../card-layout';
 import { cardTags, tagChips, textMeasurer, type TagChip } from '../card-tags';
@@ -91,8 +92,11 @@ export interface SceneCollapsed {
 }
 export interface ScenePort {
   id: string;
+  /** 150 × 52, placed by `proxyLayout` exactly as on the canvas (034 R7). */
   rect: Rect;
   label: string;
+  /** The outside card's kind, for the proxy's icon. */
+  kind: ComponentKind | 'fallback';
 }
 export interface SceneBadge {
   label: string;
@@ -124,6 +128,8 @@ export interface SceneEdge {
   /** The connector's own look (022); absent for the default one. Flow strokes ignore it. */
   style?: SceneEdgeStyle;
   label: string | null;
+  /** The label is a folded count ("×n"): drawn as the Ink pill, like the canvas (034). */
+  count?: true;
   badges: SceneBadge[];
 }
 export interface SceneSticky {
@@ -308,7 +314,21 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       memberKinds: card.memberKinds.map((kind) => toComponentKind(kind) ?? 'fallback'),
       ...(exportLook(groupsById.get(card.groupId)?.style) ?? EMPTY_LOOK),
     }));
-  const ports: ScenePort[] = exportPortRects(source, graph).filter((port) => keep(port.id));
+  const ports: ScenePort[] = exportPortRects(source, graph)
+    .filter((port) => keep(port.id))
+    .map(({ id, rect, label, kind }) => ({
+      id,
+      rect,
+      label,
+      kind: toComponentKind(kind) ?? 'fallback',
+    }));
+  // Parallel connectors export folded, as on the canvas; hover and focus are UI state and never
+  // reach a file. A flow's own connectors stay out of the bundles (034 R9).
+  const bundles = bundleEdges(source, graph, {
+    exclude: overlay === null ? new Set() : new Set(overlay.edges.keys()),
+    fanned: new Set(),
+    off: false,
+  });
 
   const rects = new Map<string, Rect>([
     ...cards.map((card) => [card.id, card.rect] as const),
@@ -317,7 +337,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   ]);
 
   const groups = sceneGroups(source, graph, level, cards, inFlow !== null);
-  const edges = sceneEdges(source, graph, rects, overlay);
+  const edges = sceneEdges(source, graph, rects, overlay, bundles);
 
   // Notes as the canvas draws them: free notes and notes on non-components (edges, flows,
   // steps) at their own point, notes pinned to a component only when that card is drawn. The
@@ -447,7 +467,9 @@ function sceneEdges(
   graph: VisibleGraph,
   rects: ReadonlyMap<string, Rect>,
   overlay: FlowOverlay | null,
+  bundles: BundleResult,
 ): SceneEdge[] {
+  const drawnAlone = new Set(bundles.plain.map((entry) => entry.edgeId));
   const byId = new Map(deck.edges.map((edge) => [edge.id, edge]));
   const edges: SceneEdge[] = [];
   const add = (
@@ -461,6 +483,7 @@ function sceneEdges(
     route?: SododeckFile['edges'][number]['route'],
     style?: SododeckFile['edges'][number]['style'],
     labelAt?: number,
+    count?: true,
   ) => {
     const a = rects.get(from);
     const b = rects.get(to);
@@ -487,6 +510,7 @@ function sceneEdges(
       stroke: strokeOf(marks),
       ...(sceneStyle(style) === undefined ? {} : { style: sceneStyle(style) }),
       label,
+      ...(count === undefined ? {} : { count }),
       badges: marks.flatMap((mark) =>
         mark.badges.map((badge) => ({ label: badge.label, errorPath: badge.errorPath })),
       ),
@@ -494,7 +518,7 @@ function sceneEdges(
   };
   for (const id of graph.edges) {
     const edge = byId.get(id);
-    if (edge === undefined) continue;
+    if (edge === undefined || !drawnAlone.has(id)) continue;
     const direction = edge.direction ?? 'forward';
     add(
       id,
@@ -514,7 +538,7 @@ function sceneEdges(
     for (const edgeId of port.edgeIds) {
       const edge = byId.get(edgeId);
       const inside = port.insideNodeIds.find((id) => id === edge?.from || id === edge?.to);
-      if (edge === undefined || inside === undefined) continue;
+      if (edge === undefined || inside === undefined || !drawnAlone.has(edgeId)) continue;
       const representative = graph.representative.get(inside) ?? inside;
       const from = edge.from === inside ? representative : port.id;
       const to = edge.to === inside ? representative : port.id;
@@ -535,6 +559,27 @@ function sceneEdges(
       merged.direction === 'both' ? 'both' : 'forward',
       'curved',
       merged.edgeIds,
+      undefined,
+      undefined,
+      undefined,
+      true,
+    );
+  }
+  // A bundle of parallel connectors: one curve with the same "×n" pill (034).
+  for (const bundle of bundles.bundles) {
+    const [from, to] = bundle.direction === 'b-to-a' ? [bundle.b, bundle.a] : [bundle.a, bundle.b];
+    add(
+      bundle.id,
+      from,
+      to,
+      `×${String(bundle.edgeIds.length)}`,
+      bundle.direction === 'both' ? 'both' : 'forward',
+      'curved',
+      bundle.edgeIds,
+      undefined,
+      undefined,
+      undefined,
+      true,
     );
   }
   return edges;

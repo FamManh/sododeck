@@ -37,6 +37,9 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
   [Position.Left]: 'left',
 };
 
+/** Distance between neighbouring connectors of a fanned-out bundle (034 R6). */
+const FAN_SPACING = 14;
+
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
 
@@ -138,14 +141,21 @@ export const DeckEdge = memo(function DeckEdge({
     route,
     bends: preview?.bends,
     options: arrows,
+    spread: data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
   });
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
-  // colour, dash and weight > the defaults. A colour never carries a state alone.
+  // colour, dash and weight > the defaults. A colour never carries a state alone. A plain
+  // connector reads its colour and width through the highlight variables (034 R2), so a focus rule
+  // can light it without a React Flow update; one with its own colour keeps it (022 FR-024) and
+  // only takes the highlight weight.
   const own = edgeLineStyle({ style: data?.style });
   const stroke = selected
     ? 'var(--color-deck-orange)'
-    : (flowStroke?.stroke ?? lineColour(own.color, theme));
+    : (flowStroke?.stroke ??
+      (own.color === null
+        ? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))'
+        : lineColour(own.color, theme)));
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The route as it was before this bend gesture, computed only while dragging, for the ghost.
   const ghostPath = dragging
@@ -173,7 +183,9 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
-  const width = selected ? 2.5 : (flowStroke?.width ?? own.width);
+  const width = selected
+    ? 2.5
+    : (flowStroke?.width ?? `var(--sd-edge-hl-width, ${String(own.width)})`);
   const ownDash = flowStroke === undefined ? lineDash(own.dash, own.width) : undefined;
   // Moving dashes (022 R11): only when asked for, not under reduced motion, not while a flow is
   // shown or recorded, and not on the selected connector, whose look is the selection's.
@@ -328,6 +340,7 @@ export const DeckEdge = memo(function DeckEdge({
           {(showLabel || showFlowLabel || problems !== undefined) && (
             <span
               data-testid="edge-label"
+              data-edge-label-for={id}
               data-flow-style={flow?.style}
               data-in-flow={flow?.inPath === true ? '' : undefined}
               data-in-focus={data?.inFocus === true ? '' : undefined}

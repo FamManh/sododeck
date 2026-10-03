@@ -470,3 +470,55 @@ describe('renderSvg: connector style (022)', () => {
     expect(svgOf(styled({ animated: true, dash: 'dashed' }))).not.toMatch(/animate|@keyframes/);
   });
 });
+
+describe('renderSvg: bundles and proxies (034 R9)', () => {
+  const parallel = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'a', to: 'b' },
+      { id: 'e2', from: 'a', to: 'b' },
+    ],
+  });
+
+  it('draws the Ink "×n" pill on a folded curve', () => {
+    const doc = parse(svgOf(parallel));
+    const edge = doc.querySelector('[data-export="edge"][data-id="bundle:a|b"]');
+    const pill = edge?.querySelector('[data-part="bundle-pill"]');
+    expect(pill?.getAttribute('fill')).toBe(LIGHT_PALETTE.ink);
+    expect(pill?.getAttribute('stroke')).toBe(LIGHT_PALETTE.canvas);
+    expect(pill?.getAttribute('height')).toBe('22');
+    const label = edge?.querySelector('text');
+    expect(label?.textContent).toBe('×2');
+    expect(label?.getAttribute('fill')).toBe(LIGHT_PALETTE.surface);
+  });
+
+  it('draws the dashed Outside proxy with its title', () => {
+    const outside = deckOf({
+      nodes: [
+        { id: 'in', type: 'service', title: 'In', group: 'g', position: { x: 0, y: 0 } },
+        { id: 'out', type: 'database', title: 'Orders DB', position: { x: 600, y: 0 } },
+      ],
+      groups: [{ id: 'g', title: 'G' }],
+      edges: [{ id: 'e', from: 'in', to: 'out' }],
+    });
+    const doc = parse(
+      svgOf(
+        outside,
+        {},
+        {
+          scope: 'view',
+          ui: { ...ui, drill: [{ kind: 'group', id: 'g', viewport: { x: 0, y: 0, zoom: 1 } }] },
+        },
+      ),
+    );
+    const port = doc.querySelector('[data-export="port"][data-id="port:out"]');
+    expect(port?.querySelector('[data-part="proxy"]')?.getAttribute('stroke-dasharray')).toBe(
+      '5 4',
+    );
+    expect(port?.textContent).toContain('Orders DB');
+    expect(port?.textContent).toContain('Outside');
+  });
+});
