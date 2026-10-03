@@ -32,16 +32,39 @@
   font-size: var(--text-edge-label);
 }
 
-/* Connection handles (DESIGN.md node, designs 52–55): shown on node hover/focus (deck-node.tsx). */
-.react-flow__handle.sd-handle {
-  width: 10px;
-  height: 10px;
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-primary);
+/* The card's resting lip (029, DESIGN.md "Card system (Deck)"): a solid shadow with no blur, in
+   the card's stroke colour. It is written through `--tw-shadow` and composed with Tailwind's ring
+   variables, so the selection and problem rings still draw next to it instead of being replaced. */
+.sd-card {
+  --tw-shadow: 0 var(--sd-deck-lip) 0 0
+    var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+  box-shadow:
+    var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
-/* Reconnect drag (017 R12): the hovered card's four side targets render as 12 px rings; the
-   nearest side is filled and larger, not colour only. */
+.sd-card:hover {
+  --tw-shadow: 0 var(--sd-deck-lip-hover) 0 0
+    var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+}
+
+/* The current flow step keeps its orange border and takes an orange lip (color is not the only
+   cue: aria-current and the ring stay). */
+.sd-card[aria-current='step'] {
+  --card-lip: var(--color-deck-orange);
+}
+
+/* Connection handles (DESIGN.md "Card system (Deck)", frame 120): 12 px round with a Surface
+   fill and a 2 px Secondary border, shown on card hover/focus (deck-node.tsx). */
+.react-flow__handle.sd-handle {
+  width: 12px;
+  height: 12px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-ink-secondary);
+}
+
+/* Reconnect drag (017 R12): the hovered card's four side targets render as handles; the nearest
+   side is the hot one, larger, filled Deck Orange with a 4 px soft halo, not colour only. */
 .react-flow__handle.sd-handle[data-endpoint-target] {
   width: 12px;
   height: 12px;
@@ -50,7 +73,9 @@
 .react-flow__handle.sd-handle[data-endpoint-hot] {
   width: 16px;
   height: 16px;
-  background: var(--color-primary);
+  background: var(--color-deck-orange);
+  border-color: var(--color-deck-orange);
+  box-shadow: 0 0 0 4px var(--color-deck-orange-soft);
 }
 
 /* While a connection is drawn, the whole node accepts the drop. */
