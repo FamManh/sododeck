@@ -61,5 +61,11 @@ conversion (`toFlowNodes` / `toFlowEdges`) keeps single-slot caches for array id
 - Known differences from the canvas: no dotted background, stickies in their one-line form, edge
   labels always drawn, merged edges show "×n" without the direction icon, port pills show
   the outside component's title without "Go to".
+- 029 (Deck look): the export draws the Deck card (lip, type tile, wrapped title, tags as pills,
+  count discs), the three line types through the shared `routedPath`, the knob and arrow marks from
+  `edge-end-marks.ts` (as `transform`ed paths: the export is static) and fanned collapsed groups.
+  The pure modules shared with the canvas are `card-layout.ts`, `edge-end-marks.ts` and the tag chip
+  placement. `buildScene` + `renderSvg` on the 500 / 1,000 bench deck takes about 17 ms (jsdom),
+  under the 50 ms budget, so decision 6 (main thread) still holds (`specs/029-card-look-deck/bench-after.md`).
 - PDF and Mermaid can be added to the data-driven format list later.
 - 0015 is reserved for the 019 plan.

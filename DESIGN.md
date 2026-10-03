@@ -51,8 +51,8 @@ typography:
 rounded:
   button: 9px
   input: 10px
-  node: 12px
-  card: 12px
+  node: 14px
+  card: 14px
   group: 16px
   deck-card: 16px
   modal: 20px
@@ -77,9 +77,9 @@ Sododeck is a precise, calm workspace for architecture and flow diagrams. The ch
 
 Colour is used to mean something, not to decorate. Beyond orange there are **semantic tints** tied to node kinds and states: amber for logic and rules, blue for data, clay (rose-red) for external systems and errors, green for success, and neutral grey for clients. Each tint has a soft fill and a readable ink pair, and they are used only in icon tiles, rule headers and status chips.
 
-Type is **Geist** for all UI and **Geist Mono** for anything machine-readable: ids, JSON, edge labels, conditions, SLA values and rule cells. Weights stay at 400–500, with 600 used only for the wordmark and small status headings, and, in the Deck card look, card titles, chips and count discs (§g-68). Display sizes are small (22px max). The diagram carries the visual weight, not the typography.
+Type is **Geist** for all UI and **Geist Mono** for anything machine-readable: ids, JSON, edge labels, conditions, SLA values and rule cells. Weights stay at 400–500. 600 is used for the wordmark and small status headings, and inside Deck cards (titles, chips, count discs, §g-68); nowhere else on the canvas. Display sizes are small (22px max). The diagram carries the visual weight, not the typography.
 
-The shape language is **soft-technical**: 9px buttons, 10px inputs, 12px nodes and cards, 16px group boundaries and deck cards, 20px modals, and full pills for chips and status. Icons are **Lucide** (`lucide-react`) outline icons at 1.5px stroke, 15–21px.
+The shape language is **soft-technical**: 9px buttons, 10px inputs, 14px nodes and Deck cards (12px for other cards), 16px group boundaries and deck cards, 20px modals, and full pills for chips and status. Icons are **Lucide** (`lucide-react`) outline icons at 1.5px stroke, 15–21px.
 
 Sododeck ships **light and dark** themes built from the same token names. Every surface reads from CSS variables, so a theme switch is a single swap of the variable set.
 
@@ -147,7 +147,7 @@ Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon o
 
 ### Card Colours
 
-Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, designed in OKLCH; the hex values below are what actually ships (`packages/ui/src/styles/tokens.css`), since browsers vary in OKLCH → sRGB rounding. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill (error is a dashed 3px Clay ring outside the card plus a Clay alert badge, same as on a plain card, 107). The Deck look (029) adds `chip`, `ink` and `dot` to each colour; see [Extended palette](#extended-palette) under Card system (Deck).
+Users can colour a card's fill and stroke from 13 named colours (design 105–107, built in 020). Each colour is a **fill / stroke** pair with a light and a dark value, designed in OKLCH; the hex values below are what actually ships (`packages/ui/src/styles/tokens.css`), since browsers vary in OKLCH → sRGB rounding. Tokens are `--sd-card-{name}-fill` and `--sd-card-{name}-stroke`. Fills sit behind Ink text in both themes (≥ 12:1); on a coloured fill the subtitle uses Secondary instead of Muted to stay above 4.5:1. The stroke is a 1.5px card border and the swatch ring. Colour is decoration chosen by the user, so it never carries state: selection, flow and error keep their own frame, border, badge and icon on top of any fill (a problem is a 1.5px dashed Clay outline offset 4 outside the card plus a Clay Soft count badge in the header, same on any card colour, 122). The Deck look (029) adds `chip`, `ink` and `dot` to each colour; see [Extended palette](#extended-palette) under Card system (Deck).
 
 | Colour | Light fill | Light stroke | Light OKLCH fill | Light OKLCH stroke | Dark fill | Dark stroke | Dark OKLCH fill | Dark OKLCH stroke |
 |---|---|---|---|---|---|---|---|---|
@@ -169,7 +169,7 @@ Users can colour a card's fill and stroke from 13 named colours (design 105–10
 
 ### Card system (Deck)
 
-The card look chosen on 2026-10-03 (direction **B · Deck**, design-analysis §g-63): cards are thick paper with a solid lip, 14px corners and filled pill chips; connectors are 2px smooth curves; playing a flow deals the deck; a collapsed group is a fanned hand. Reference frames **117–127** ([design-analysis §a](docs/design/design-analysis.md), screenshots in `docs/design/screens/117-…127-…`); source `docs/design/claude-design/Sododeck Cards.dc.html` + `sododeck-cards.js` (boards A and C in the same file are history, not reference). Built by 029 (look), 031 (shapes), 032 (fields), 033 (tag colours), 034 (connections) and 035 (playback). Until 029 ships, the `node` and `edge` entries under Components describe what the app draws today. Where this section and a founder decision disagree, the decision wins (§g-66–§g-80).
+The card look chosen on 2026-10-03 (direction **B · Deck**, design-analysis §g-63): cards are thick paper with a solid lip, 14px corners and filled pill chips; connectors are 2px smooth curves; playing a flow deals the deck; a collapsed group is a fanned hand. Reference frames **117–127** ([design-analysis §a](docs/design/design-analysis.md), screenshots in `docs/design/screens/117-…127-…`); source `docs/design/claude-design/Sododeck Cards.dc.html` + `sododeck-cards.js` (boards A and C in the same file are history, not reference). Built by 029 (look), 031 (shapes), 032 (fields), 033 (tag colours), 034 (connections) and 035 (playback). The `node`, `edge`, handle and group entries under Components point here; this section is what the app draws since 029. Where this section and a founder decision disagree, the decision wins (§g-66–§g-80).
 
 **Rule from the design's own risk note (§g-63):** on dense boards the lip is not drawn below 60 % zoom, and chips become 6px dots at System level. Zooming never changes a card's size (§g-58).
 
@@ -364,9 +364,9 @@ Designed in states 86–116 (`docs/design/screens/86-…` to `116-…`). The can
 
 ### Canvas Geometry
 
-- Nodes are 164×50px by default with a 30px icon tile and 9px gap. Users can resize a card (017): minimum 120×44, 4px steps.
-- Groups are dashed 1px boundaries with a 16px radius and an uppercase label at top-left.
-- Edges use orthogonal routing with 8px rounded corners and end in a 3px dot. Queue connections route through a shared vertical lane.
+- Cards are 184px wide by default, with the height computed from the content (`card-layout.ts`). Users can resize a card (017): minimum 120×44, 4px steps.
+- Expanded groups are 20px-radius frames with a label pill on the top edge; collapsed groups are the fanned hand.
+- Connectors are curved, elbow (8px rounded corners) or straight, start with a knob and end in an arrow. Queue connections route through a shared vertical lane.
 - The canvas pads the world by 36px and fits it to the viewport on load (zoom range 30–400%, §g-60).
 
 ### Whitespace Philosophy
@@ -406,9 +406,9 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 
 ### Canvas
 
-- **`node`**: Surface fill, 1px Border, 12px radius, Rest shadow, kind tile plus title (12.5/500) and subtitle (11, muted). A rule glyph appears when rules are attached. Optional fill and stroke from the card colours (020). States: selected (2px outside selection frame), on the current flow step (primary border + halo), error (3px dashed Clay ring 3px outside the card plus a Clay alert badge, 107 — same on any card colour), dimmed (opacity .2–.22 in focus and flow modes; `--sd-opacity-view-dim` .4 when a saved view dims its kind, e.g. clients in Infra), pinned (small pin glyph on the top-left corner, every level except Landscape), dragging (grab cursor).
-- **`group-boundary`**: dashed 1px Border with a 16px radius and Group Fill. Clicking the label drills into that level.
-- **`edge`**: 1.5px Edge stroke. Connected to selection: 1.75px Secondary. Selected or in flow: 2–3px Deck Orange. Dimmed: opacity .15–.18. It has a 12px invisible hit area.
+- **`node`**: the Deck card (see [Card system (Deck)](#card-system-deck)): Surface fill, 1.5px Border-strong border, 14px radius, 3px lip, header with a 24px type tile and type name, 14 / 600 title, optional description, field chips and tag pills; 184 wide by default, height from content, user-resizable (minimum 120×44, 4px steps). Optional fill and stroke from the card colours (020). States are listed under States in that section (selected, current flow step, problem, dimmed in focus and flow modes, dimmed by a saved view at `--sd-opacity-view-dim` .4, pinned, being dragged).
+- **`group-boundary`**: the expanded group frame of the Deck look (20px radius, 1.5px border, label pill on the top edge); collapsed it is the fanned hand. Clicking the label drills into that level. See Groups under Card system (Deck).
+- **`edge`**: a 2px connector in `--sd-deck-edge`, drawn curved, elbow or straight (the line type, 029), with a knob at the start and a 9×10 arrow at the end. Selected or in flow: Deck Orange, 2–3px. Dimmed: opacity .15–.18. It has a 12px invisible hit area. Full state list under Connectors in Card system (Deck).
 - **`edge-label`**: Mono 10.5px pill, Surface fill, 1px Border. It turns solid orange with an On Primary label on the current step.
 - **`flow-token`**: 5px orange dot with a 2px Surface stroke and a 10px halo at 20% opacity. It animates along the current edge path (1.4s per loop at 1×).
 - **`minimap`**: 182×112 Surface card. Nodes and groups are drawn as rects, and the viewport is an 8-unit orange outline. Clicking pans the canvas.
@@ -474,7 +474,7 @@ Both themes share token names. Dark mode does **not** invert tints. Soft fills b
 
 ### Touch & hit targets
 
-- Primary controls are 34–36px tall. Canvas nodes are 164×50 by default (at least 120×44). Edges have a 12px hit stroke. Resize handles have a 16px hit area.
+- Primary controls are 34–36px tall. Canvas cards are 184 wide by default (at least 120×44). Edges have a 12px hit stroke. Resize handles have a 16px hit area.
 - Icon buttons are at least 28px, and 34px in the top bar.
 
 ## Known Gaps

@@ -48,6 +48,15 @@ its own tests, and may still be refined in that feature's spec.
 | `edge.labelAt`         | number, 0–1                       | 022      | 0.5 (the middle of the path)                                                          |
 
 - 029 and 022 share `edge.style`. 029 creates the object with `shape`; 022 adds keys to it.
+- **Confirmed by 029** (shipped 2026-10-03, `edge.style.shape` as in the row above, no version
+  bump). Refinements: the model stores `shape` explicitly for every choice except `curved` on a
+  connection with no `route.offset`, where it removes the key (and an emptied `style`); the
+  effective shape is `edgeShape(edge)` in `@sododeck/model`, used by the canvas, the merged edge
+  and the export. Switching away from `elbow` never touches `route`, so switching back restores the
+  offset. Resetting or dropping a route offset on a connection that is elbow only by that default
+  first writes `shape: 'elbow'` in the same transaction ("reset-route pinning"), so the line does
+  not turn curved. An empty `style` object is invalid; the Zod generator drops `minProperties`, so
+  semantic rule **S7** reports it (S6 is the same rule for card styles).
 - `route` keeps `fromSide`, `toSide` and `offset` with their 017 meaning (ADR 0019).
 - Reserved, not scheduled: `edge.relation` (calls / reads / writes / depends on, with 034's
   legend).
