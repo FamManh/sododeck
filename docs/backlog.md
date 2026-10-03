@@ -223,7 +223,7 @@ and **027** ai-deck-skill are not scheduled.
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                          |
 | 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                  |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
-| 036 | collab-ready-document    | before 029 | —             | 6 d  | — (ADR: layout v2 + schema roadmap); ⚠ shared view state  |
+| 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                 |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                         |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
@@ -2144,7 +2144,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 036-collab-ready-document
 
-- **Status:** specified and planned (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md), [`plan.md`](../specs/036-collab-ready-document/plan.md) and [`tasks.md`](../specs/036-collab-ready-document/tasks.md) (48 tasks). Not implemented yet.
+- **Status:** implemented (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md), [`plan.md`](../specs/036-collab-ready-document/plan.md), [`tasks.md`](../specs/036-collab-ready-document/tasks.md), [ADR 0021](decisions/0021-collab-ready-document-layout.md) (layout 2) and [ADR 0022](decisions/0022-schema-roadmap.md) (schema roadmap). **Open:** storage load is 31–35% slower than before, beyond SC-006's 10% ([`bench-after.md`](../specs/036-collab-ready-document/bench-after.md)); needs the founder's acceptance before merge. The two-tab manual walk ([`quickstart-results.md`](../specs/036-collab-ready-document/quickstart-results.md)) is still to do.
   The spec narrows "integrity on receive": content is kept and reported, only content-free
   leftovers are repaired (FR-020 / FR-021).
 - **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real
