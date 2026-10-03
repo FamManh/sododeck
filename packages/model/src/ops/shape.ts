@@ -3,10 +3,10 @@
  * model validates and merges, but never clamps a size or picks a default side — that is the app's
  * job (`cardSize`, `resolveSides`).
  */
-import type { EdgeRoute, Id, Side, Size } from '@sododeck/schema';
+import type { EdgeRoute, Id, RouteWaypoint, Side, Size } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { isRecord, jsonEqual, toY, type YObject } from '../convert';
+import { fromY, isRecord, jsonEqual, toY, type YObject } from '../convert';
 import { collectionMap } from '../layout';
 import { readObject } from '../read';
 import { requireEntry, type EditContext } from './context';
@@ -19,6 +19,11 @@ export type EdgeRoutePatch = {
   fromSide?: Side | null;
   toSide?: Side | null;
   offset?: number | null;
+  /** Position along `fromSide` (0 to 1); 0.5 is the default and is not stored. */
+  fromAt?: number | null;
+  toAt?: number | null;
+  /** Replaces the whole bend list; `null` or `[]` removes it. */
+  waypoints?: readonly RouteWaypoint[] | null;
 };
 
 /**
@@ -43,18 +48,37 @@ export function setCardSize(ctx: EditContext, nodeId: Id, size: Size | null): vo
   }, `nodes:${nodeId}:size`);
 }
 
-const ROUTE_KEYS = ['fromSide', 'toSide', 'offset'] as const;
+const ROUTE_KEYS = ['fromSide', 'toSide', 'offset', 'fromAt', 'toAt'] as const;
 
 /** Merges `patch` into the current route: `null` removes a key, `offset: 0` is dropped. */
 function mergeRoute(current: EdgeRoute | undefined, patch: EdgeRoutePatch): EdgeRoute | undefined {
-  const merged: { fromSide?: Side; toSide?: Side; offset?: number } = { ...current };
-  if (patch.fromSide === null) delete merged.fromSide;
-  else if (patch.fromSide !== undefined) merged.fromSide = patch.fromSide;
-  if (patch.toSide === null) delete merged.toSide;
-  else if (patch.toSide !== undefined) merged.toSide = patch.toSide;
+  const merged: EdgeRoute = { ...current };
+  // A position along a side means nothing once the side is cleared (S9).
+  if (patch.fromSide === null) {
+    delete merged.fromSide;
+    delete merged.fromAt;
+  } else if (patch.fromSide !== undefined) merged.fromSide = patch.fromSide;
+  if (patch.toSide === null) {
+    delete merged.toSide;
+    delete merged.toAt;
+  } else if (patch.toSide !== undefined) merged.toSide = patch.toSide;
   if (patch.offset === null) delete merged.offset;
   else if (patch.offset !== undefined) merged.offset = patch.offset;
   if (merged.offset === 0) delete merged.offset;
+  if (patch.fromAt === null) delete merged.fromAt;
+  else if (patch.fromAt !== undefined) merged.fromAt = patch.fromAt;
+  if (patch.toAt === null) delete merged.toAt;
+  else if (patch.toAt !== undefined) merged.toAt = patch.toAt;
+  if (merged.fromAt === 0.5) delete merged.fromAt;
+  if (merged.toAt === 0.5) delete merged.toAt;
+  if (patch.waypoints !== undefined) {
+    if (patch.waypoints === null || patch.waypoints.length === 0) delete merged.waypoints;
+    else {
+      merged.waypoints = patch.waypoints.map((point) => ({ ...point }));
+      // Free bends replace 017's offset (R3): the first bend edit converts it.
+      if (patch.offset === undefined) delete merged.offset;
+    }
+  }
   return Object.keys(merged).length === 0 ? undefined : merged;
 }
 
@@ -76,6 +100,13 @@ function writeRoute(edgeMap: YObject, merged: EdgeRoute | undefined): void {
     } else if (routeMap.get(key) !== value) {
       routeMap.set(key, toY(value));
     }
+  }
+  // One intention, replaced whole: merging two tabs' half-edited lists would draw a route nobody
+  // drew (R6). Stored as a plain JSON value, not a Y.Array.
+  if (merged.waypoints === undefined) {
+    if (routeMap.has('waypoints')) routeMap.delete('waypoints');
+  } else if (!jsonEqual(fromY(routeMap.get('waypoints')), merged.waypoints)) {
+    (routeMap as Y.Map<unknown>).set('waypoints', structuredClone(merged.waypoints));
   }
 }
 

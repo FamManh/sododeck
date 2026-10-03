@@ -27,7 +27,15 @@ export { MAX_SWATCHES } from './ops/swatches';
 export { sameTag, tagKey } from './tags';
 export type { TagChange } from './ops/tags';
 export type { ViewSettingsPatch } from './ops/views';
-export { edgeShape, type EdgeShape } from './edge-shape';
+export {
+  edgeLineStyle,
+  edgeShape,
+  type Dash,
+  type EdgeLineStyle,
+  type EdgeShape,
+  type Width,
+} from './edge-shape';
+export type { EdgeStylePatch } from './ops/edge-style';
 export type { EdgeRoutePatch } from './ops/shape';
 export type { PastedIds, PasteOptions } from './ops/paste';
 export type { GroupSelection } from './ops/group-selection';
