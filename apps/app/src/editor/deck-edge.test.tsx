@@ -679,6 +679,29 @@ describe('DeckEdge own style (022 US1)', () => {
     expect(el.style.strokeDasharray).not.toBe('0 6');
   });
 
+  it('shows the state look while it lasts and the own colour and dash again after (T044)', () => {
+    const own = { color: 'blue', dash: 'dashed' } as const;
+    const stroke = (data: Partial<DeckEdgeData>, selected = false) => {
+      const el = edgePath(renderEdge(data, selected).container) as HTMLElement;
+      const result = { stroke: el.style.stroke, dash: el.style.strokeDasharray };
+      document.body.innerHTML = '';
+      return result;
+    };
+    const flow = (style: 'path' | 'error' | 'preview' | 'invalid') => ({
+      badges: [],
+      style,
+      errorIcon: style === 'error',
+    });
+    const ownLook = stroke({ style: own });
+    for (const style of ['path', 'error', 'preview', 'invalid'] as const) {
+      const during = stroke({ style: own, flow: flow(style) });
+      expect(during.stroke).not.toBe(ownLook.stroke);
+    }
+    expect(stroke({ style: own, flow: flow('path') }).dash).not.toBe(ownLook.dash);
+    expect(stroke({ style: own }, true).stroke).toBe('var(--color-deck-orange)');
+    expect(stroke({ style: own })).toEqual(ownLook);
+  });
+
   it('grows the arrow with the weight', () => {
     const small = renderEdge({}).container.querySelector('[data-testid="edge-arrow"]');
     const big = renderEdge({ style: { width: 4 } }).container.querySelector(

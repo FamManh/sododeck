@@ -157,10 +157,10 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 **Independent Test**: quickstart steps 6, 7, 10 (flow part) and 11.
 
-- [ ] T043 [P] [US6] `packages/model/test/round-trip.test.ts` / `apps/app/src/editor/export/json-export.test.ts`: a 017 deck, a 029 deck with shapes and a deck with no edge extras export without any 022 key after unrelated edits (SC-004); a deck using every 022 key survives export → import → save → reopen unchanged (SC-005).
-- [ ] T044 [P] [US6] `deck-edge.test.tsx`: precedence per the UI contract: a coloured, dashed, animated connector that is selected, on an error path, a candidate or the current flow step shows that state's look; colour and dash return when the state ends.
-- [ ] T045 [US6] 034 interplay (R14): if 034 is merged, make its bundling skip edges with `waypoints`, `fromAt` / `toAt` or any `style` key other than `shape`, and make its highlight keep `lineColour(style.color)` at 2.75 px (uncoloured → Ink), with tests next to 034's code; if 034 is not merged, add a short note to `specs/034-connection-focus-and-drill/plan.md` pointing at 022 FR-024 so 034 implements it.
-- [ ] T046 [US6] Fix anything T043 / T044 expose in `deck-edge.tsx`, `deck-to-flow.ts`, `export/*` or the model ops.
+- [x] T043 [P] [US6] `packages/model/test/round-trip.test.ts` / `apps/app/src/editor/export/json-export.test.ts`: a 017 deck, a 029 deck with shapes and a deck with no edge extras export without any 022 key after unrelated edits (SC-004); a deck using every 022 key survives export → import → save → reopen unchanged (SC-005).
+- [x] T044 [P] [US6] `deck-edge.test.tsx`: precedence per the UI contract: a coloured, dashed, animated connector that is selected, on an error path, a candidate or the current flow step shows that state's look; colour and dash return when the state ends.
+- [x] T045 [US6] 034 interplay (R14): if 034 is merged, make its bundling skip edges with `waypoints`, `fromAt` / `toAt` or any `style` key other than `shape`, and make its highlight keep `lineColour(style.color)` at 2.75 px (uncoloured → Ink), with tests next to 034's code; if 034 is not merged, add a short note to `specs/034-connection-focus-and-drill/plan.md` pointing at 022 FR-024 so 034 implements it.
+- [x] T046 [US6] Fix anything T043 / T044 expose in `deck-edge.tsx`, `deck-to-flow.ts`, `export/*` or the model ops.
 
 ---
 
