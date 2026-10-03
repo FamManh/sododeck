@@ -40,6 +40,10 @@
 - Q: Does a bundle count connectors in both directions? → A (default): yes, any connector between the same two cards in either direction; the curve shows arrowheads for each direction that exists, and the count popover (today's merged-connector list) still lists each connector with its direction.
 - Q: What happens to hover focus while a flow plays, a card is dragged, or a connector is being drawn? → A (default): it is suspended, so it never fights the flow look (035), the drag or the connection target highlight.
 - Q: The end-along-a-side move needs 022's free anchors; does 034 own it? → A (founder, 2026-10-03): **no**. It moves to 022, so 034 depends only on 029 and can run in parallel with 033 and 035.
+- Q: Do connectors with a route the user adjusted (017: chosen sides or moved middle segment) join a bundle? → A: **no**. Only connectors on the automatic route bundle; an adjusted connector always draws on its own, even between the same two cards. 022 applies the same rule to connectors with their own waypoints or style.
+- Q: When 022 adds per-connector colour and dash, does a highlighted connector keep its own style? → A: 034 highlights every connector in Ink at 2.75px (no connector has its own colour yet); **022 decides** whether a styled connector keeps its colour when highlighted. The highlight sets colour and weight separately so 022 can change the colour rule alone.
+- Q: While a flow is shown or playing (007 / 035), how does a bundle that contains one of the flow's connectors draw? → A: the flow's connectors leave their bundle and draw on their own (with 035's step look and token); the rest of the bundle stays bundled with its count lowered. Leaving the flow re-forms the bundle.
+- Q: Does hover focus start as soon as the pointer touches a card? → A: no, after the pointer rests on the card for about 150 ms; moving from a focused card straight to another switches at once; leaving clears it after a grace of about 100 ms. Keyboard focus applies at once.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -53,7 +57,7 @@ A user looks at a busy deck and rests the pointer on "Order Service". Its neighb
 
 **Acceptance Scenarios**:
 
-1. **Given** a card with 3 neighbours, **When** the pointer rests on it, **Then** the card, its 3 neighbours and their connectors keep full opacity, the connectors draw in Ink at 2.75px, and every other card and connector drops to 20 % opacity within one frame.
+1. **Given** a card with 3 neighbours, **When** the pointer rests on it for about 150 ms, **Then** the card, its 3 neighbours and their connectors keep full opacity, the connectors draw in Ink at 2.75px, and every other card and connector drops to 20 % opacity within one frame.
 2. **Given** hover focus is showing, **When** the pointer leaves the card, **Then** the whole canvas returns to its resting look within one frame.
 3. **Given** the pointer moves from one card straight to another, **When** it enters the second, **Then** the focus moves to the second card with no flash of the undimmed deck in between.
 4. **Given** a card is focused with the keyboard (Tab or arrow keys), **When** it receives focus, **Then** it shows the same highlight as hover, and it clears when focus moves away.
@@ -107,12 +111,14 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 
 - A card with no connections: hover shows the card alone at full strength and dims the rest; the deck is not left blank.
 - A card connected to nearly every other card: hover focus keeps them all at full strength; nothing misleading is dimmed.
-- Pointer jitter at a card edge: focus must not flicker; a short grace delay on leaving (under 100 ms) avoids strobing when crossing the gap between cards.
+- Pointer jitter at a card edge or sweeping across a dense deck: focus must not flicker; the rest delay (about 150 ms) on entering and the grace delay (about 100 ms) on leaving avoid strobing.
 - Hover on touch devices (no hover): hover focus does not apply; tap-to-select with pinned focus remains.
 - A bundle whose connectors have different labels: the pill shows only the count; labels appear when fanned out or in the popover.
 - Fanned-out bundle and a card moved: the fan follows; folding it back works after the move.
 - A bundle at very low zoom (Landscape / System levels): the pill stays readable or reduces to the plain curve per 029's zoom rules; the count never overlaps the cards.
+- A flow step runs between two cards joined by a "×3" bundle: in flow mode the step's connector draws on its own with the step look and the other two show as "×2"; closing the flow shows "×3" again.
 - A connector between a card and itself (self-loop): not bundled with others and drawn as today.
+- A pair with two automatic connectors and one adjusted connector: the two draw as one "×2" bundle and the adjusted one keeps its own route beside it. Resetting the adjusted one's route (`R`) makes it join the bundle ("×3"); adjusting a bundled connector (e.g. after fan-out) takes it out of the bundle.
 - A collapsed group's merged connector (029): keeps today's "×n" behaviour and look; a bundle between two ordinary cards uses the same pill.
 - Drill-in into a group with more than about 12 external neighbours: proxies stay legible (stacked, no overlap) and scroll with the canvas.
 - An outside card that is itself hidden (collapsed in an outer group): the proxy stands for the visible representative and selecting it leaves the drill-in to that representative.
@@ -124,11 +130,12 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 
 ### Functional Requirements
 
-- **FR-001**: Resting the pointer on a card, or focusing it with the keyboard, MUST highlight its connections and neighbours and dim all other cards and connectors, without a click or a toggle, and MUST restore the canvas when the pointer or focus leaves.
-- **FR-002**: The highlighted look MUST be: connected connectors in Ink at 2.75px, neighbours at full opacity, everything else at 20 % opacity; the same look MUST be used by pinned focus (F) and by selection focus.
+- **FR-001**: Resting the pointer on a card for about 150 ms, or focusing it with the keyboard (at once), MUST highlight its connections and neighbours and dim all other cards and connectors, without a click or a toggle, and MUST restore the canvas when the pointer or focus leaves (after a grace of about 100 ms for the pointer). Moving the pointer from a focused card straight onto another MUST switch the focus at once, with no rest delay. Passing the pointer across cards without resting MUST NOT dim the canvas.
+- **FR-002**: The highlighted look MUST be: connected connectors in Ink at 2.75px, neighbours at full opacity, everything else at 20 % opacity; the same look MUST be used by pinned focus (F) and by selection focus. Colour and weight MUST be applied as separate rules so 022 can keep a connector's own colour without changing the weight rule.
 - **FR-003**: A pinned focus (F, or selection focus) MUST take priority over hover focus; hover focus MUST be suspended during flow playback, dragging, resizing and connector drawing.
 - **FR-004**: Hover focus MUST combine with a saved view's dimming without hiding cards the view dimmed more strongly, and MUST NOT change selection, the document or the undo history.
-- **FR-005**: Two or more connectors between the same pair of visible cards, in either direction, MUST draw as one curve with a "×n" Ink pill (22px, 11.5 / 700 text, 2px canvas ring) showing the number of connectors; self-loops MUST NOT bundle.
+- **FR-005**: Two or more connectors on the automatic route between the same pair of visible cards, in either direction, MUST draw as one curve with a "×n" Ink pill (22px, 11.5 / 700 text, 2px canvas ring) showing the number of bundled connectors; self-loops and connectors with an adjusted route (017 `edge.route`) MUST NOT bundle and MUST draw as today.
+- **FR-005a**: While a flow is shown or playing, connectors that belong to that flow MUST NOT be bundled and MUST draw on their own with the flow look (035); the remaining connectors of the pair MUST stay bundled if two or more remain, with the count updated, and the bundle MUST re-form when the flow is closed.
 - **FR-006**: Clicking a bundle's count MUST fan the bundle out into its individual connectors, and clicking again, Esc, or clicking empty canvas MUST fold it back; the fanned state is UI-only and is never saved in the deck.
 - **FR-007**: A bundle MUST highlight as one connection under hover focus and MUST draw an arrowhead for each direction present; selecting it MUST expose each underlying connector for selection, editing and deletion.
 - **FR-008**: A pair that drops below two connectors MUST draw as an ordinary connector with no count; a pair with one connector MUST look exactly as before this feature.
@@ -144,14 +151,14 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 ### Key Entities
 
 - **Focus set**: the card under the pointer or focus, its neighbours and the connectors between them; derived from the document each time, never stored.
-- **Bundle**: the group of connectors between one pair of visible cards, drawn as one curve with a count; derived, never stored; its fanned-out state is UI-only.
+- **Bundle**: the group of automatic-route connectors between one pair of visible cards, drawn as one curve with a count; derived, never stored; its fanned-out state is UI-only.
 - **Outside proxy**: a read-only stand-in for a card outside the current drill-in, shown at the edge of the view; derived, never stored.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: On the 500-card benchmark deck, hovering a card dims every non-neighbour within one frame (under 16 ms at the benchmark's measured baseline) and restores on leave.
+- **SC-001**: On the 500-card benchmark deck, once the rest delay (about 150 ms) has passed, hovering a card dims every non-neighbour within one frame (under 16 ms at the benchmark's measured baseline) and restores on leave.
 - **SC-002**: In a deck with three connectors between two cards, the canvas shows exactly one curve with "×3"; fanning out shows exactly three connectors; folding back shows one curve again, in 100 % of cases tried.
 - **SC-003**: A user can find all connections of a given card in a dense deck in under 3 seconds by hovering it, without clicking or toggling anything.
 - **SC-004**: Every outside connection in a drilled-in group ends on exactly one proxy, and 100 % of proxies take the user to the right card with one action (⏎ or double-click).
@@ -162,7 +169,7 @@ A user drills into "Order Service". The canvas shows "Inside Order Service · 4"
 ## Assumptions
 
 - The highlighted look, dim level, count pill and proxy size come from `DESIGN.md` "Card system (Deck)" and frame 118; `DESIGN.md` wins where they differ.
-- Relationship types and the legends in frame 118 (a and d) are not drawn in 034; the highlighted connectors use Ink for all connectors.
+- Relationship types and the legends in frame 118 (a and d) are not drawn in 034; the highlighted connectors use Ink for all connectors. Whether a connector styled by 022 keeps its own colour when highlighted is 022's decision.
 - No schema change: bundles, focus sets, fan-out and proxies are all derived from the document or kept as UI-only state.
 - 034 depends only on 029. Moving a connector end along a side (frame 118 c) belongs to 022, not to 034.
 - Today's focus mode (F), selection focus, merged connectors for collapsed groups and the drill-in breadcrumb stay; 034 only changes their look and adds hover, bundles and proxies.
