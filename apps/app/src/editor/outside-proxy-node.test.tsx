@@ -85,3 +85,13 @@ describe('OutsideProxyNode (034 US3)', () => {
     expect(proxy).not.toHaveAttribute('draggable', 'true');
   });
 });
+
+describe('OutsideProxyNode icons (030)', () => {
+  it.each([
+    ['warehouse', 'lucide-warehouse'],
+    ['robot', 'lucide-shapes'],
+  ])('draws the %s icon', (kind, className) => {
+    const { proxy } = setup('outside', 'Orders DB', kind);
+    expect(proxy.querySelector(`svg.${className}`)).not.toBeNull();
+  });
+});

@@ -208,7 +208,8 @@ describe('searchDeck', () => {
     );
     const afterOrder = after.entries.find((entry) => entry.kind === 'node' && entry.id === 'order');
 
-    expect(searchDeck(after, 'order service').results).toEqual([]);
+    // The old title no longer matches as a title (the type name "Service" still matches the body).
+    expect(searchDeck(after, 'order service').results.map((r) => r.match)).not.toContain('title');
     expect(resultIds(searchDeck(after, 'checkout core').results)).toContain('order');
     expect(afterSticky).toBe(beforeSticky);
     expect(afterOrder).not.toBe(beforeOrder);
@@ -216,5 +217,20 @@ describe('searchDeck', () => {
     snapshot.destroy();
     editor.destroy();
     doc.destroy();
+  });
+});
+
+describe('searching by card type (030)', () => {
+  it('finds cards by their type name, built-in or unknown', () => {
+    const deck = emptySododeckFile();
+    deck.nodes.push(
+      { id: 'a', type: 'truck-route', title: 'HCM to DN' },
+      { id: 'b', type: 'warehouse', title: 'Hub' },
+      { id: 'c', type: 'robot', title: 'Rover' },
+    );
+    const index = buildSearchIndex(deck);
+    expect(searchDeck(index, 'truck route').results.map((r) => r.id)).toEqual(['a']);
+    expect(searchDeck(index, 'robot').results.map((r) => r.id)).toEqual(['c']);
+    expect(searchDeck(index, 'warehouse').results.map((r) => r.id)).toEqual(['b']);
   });
 });

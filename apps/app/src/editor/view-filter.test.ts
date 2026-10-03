@@ -205,3 +205,24 @@ describe('firstViewShowing (FR-016)', () => {
     expect(firstViewShowing(deck, views.slice(0, 2), 'web')).toBeNull();
   });
 });
+
+describe('viewFilter by card type (030)', () => {
+  const typed = deckOf({
+    nodes: [
+      { id: 'w', type: 'warehouse', title: 'Hub' },
+      { id: 'r', type: 'truck-route', title: 'Route' },
+      { id: 's', type: 'service', title: 'Svc' },
+    ],
+  });
+  const mk = (patch: Partial<View>): View => ({ id: 'v', type: 'custom', title: 'V', ...patch });
+
+  it('hides and dims by new type ids', () => {
+    expect([...viewFilter(typed, mk({ excludeKinds: ['warehouse'] }), none).hidden]).toEqual(['w']);
+    expect([...viewFilter(typed, mk({ dimKinds: ['truck-route'] }), none).dimmed]).toEqual(['r']);
+  });
+
+  it('keeps hiding a type whose pack is off', () => {
+    const off = deckOf({ ...typed, packs: ['architecture'] });
+    expect([...viewFilter(off, mk({ excludeKinds: ['warehouse'] }), none).hidden]).toEqual(['w']);
+  });
+});

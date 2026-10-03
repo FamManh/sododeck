@@ -3,6 +3,7 @@ import { stickyLabel } from '../geometry';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { normalizeText } from './normalize';
+import { typeName } from '../card-types';
 import type { SearchField, SearchIndex, SearchEntry, SearchFieldValue, SearchKind } from './search';
 
 const nodeCache = new WeakMap<SododeckFile['nodes'][number], SearchEntry>();
@@ -85,7 +86,12 @@ function nodeEntries(deck: SododeckFile): SearchEntry[] {
       id: node.id,
       title: node.title,
       context: `${kindLabel('node')} · ${groups.get(node.group ?? '') ?? 'No group'}`,
-      fields: [field('title', node.title), field('description', node.description)],
+      // The type's name is searchable too (030): "truck route" finds every truck route card.
+      fields: [
+        field('title', node.title),
+        field('description', node.description),
+        field('type', typeName(node.type)),
+      ],
     }),
   );
 }

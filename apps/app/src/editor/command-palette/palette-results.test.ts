@@ -131,3 +131,17 @@ describe('buildPaletteResults', () => {
     ).toBe('Note');
   });
 });
+
+describe('type names in results (030)', () => {
+  it('shows the registry name, and the raw id for an unknown type', () => {
+    const deck = emptySododeckFile();
+    deck.nodes.push(
+      { id: 'a', type: 'truck-route', title: 'HCM to DN' },
+      { id: 'b', type: 'robot', title: 'Rover' },
+    );
+    const run = (query: string) =>
+      buildPaletteResults({ deck, searchIndex: buildSearchIndex(deck), query, commands: [] });
+    expect(run('truck route').items.find((r) => r.id === 'a')?.meta).toBe('Truck route');
+    expect(run('robot').items.find((r) => r.id === 'b')?.meta).toBe('robot');
+  });
+});

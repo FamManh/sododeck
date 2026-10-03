@@ -118,6 +118,7 @@ export function BulkInspector({
           <PickField
             label="Type"
             listLabel="Types"
+            maxOptions={32}
             value={view.type.mixed ? '' : view.type.value}
             mixed={view.type.mixed}
             hint={same(view.type)}

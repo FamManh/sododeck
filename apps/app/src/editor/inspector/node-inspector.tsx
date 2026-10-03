@@ -96,6 +96,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
           <PickField
             label="Type"
             listLabel="Types"
+            maxOptions={32}
             value={node.type}
             options={typeOptions(deck, [node.type])}
             onPick={(type) => {

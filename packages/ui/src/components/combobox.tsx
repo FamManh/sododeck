@@ -1,6 +1,6 @@
 import { Check, ChevronDown } from 'lucide-react';
 import { Popover as PopoverPrimitive } from 'radix-ui';
-import { useId, useMemo, useRef, useState } from 'react';
+import { Fragment, useId, useMemo, useRef, useState } from 'react';
 import type * as React from 'react';
 
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -217,35 +217,44 @@ function Combobox({
         >
           <ul id={listId} role="listbox" aria-label={listLabel}>
             {shown.map((option, i) => (
-              <li
-                key={option.value}
-                id={`${optionId}-${String(i)}`}
-                role="option"
-                aria-selected={i === active}
-                onMouseDown={(event) => {
-                  // Keep focus in the field.
-                  event.preventDefault();
-                }}
-                onClick={() => {
-                  choose(option);
-                }}
-                onMouseMove={() => {
-                  setActive(i);
-                }}
-                className={cn(
-                  'relative flex h-8 cursor-pointer items-center truncate rounded-row pr-8 pl-2.5 text-body select-none',
-                  i === active && 'bg-surface-2',
+              <Fragment key={option.value}>
+                {option.group !== undefined && option.group !== shown[i - 1]?.group && (
+                  <li
+                    role="presentation"
+                    className="px-2.5 pt-2 pb-1 text-micro tracking-wide text-ink-muted uppercase"
+                  >
+                    {option.group}
+                  </li>
                 )}
-              >
-                {option.label}
-                {mode === 'pick' && option.value === value && (
-                  <Check
-                    aria-hidden
-                    strokeWidth={ICON_STROKE_WIDTH}
-                    className="absolute right-2.5 size-4 text-primary-ink"
-                  />
-                )}
-              </li>
+                <li
+                  id={`${optionId}-${String(i)}`}
+                  role="option"
+                  aria-selected={i === active}
+                  onMouseDown={(event) => {
+                    // Keep focus in the field.
+                    event.preventDefault();
+                  }}
+                  onClick={() => {
+                    choose(option);
+                  }}
+                  onMouseMove={() => {
+                    setActive(i);
+                  }}
+                  className={cn(
+                    'relative flex h-8 cursor-pointer items-center truncate rounded-row pr-8 pl-2.5 text-body select-none',
+                    i === active && 'bg-surface-2',
+                  )}
+                >
+                  {option.label}
+                  {mode === 'pick' && option.value === value && (
+                    <Check
+                      aria-hidden
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className="absolute right-2.5 size-4 text-primary-ink"
+                    />
+                  )}
+                </li>
+              </Fragment>
             ))}
           </ul>
         </PopoverPrimitive.Content>

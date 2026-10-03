@@ -155,4 +155,15 @@ describe('generateBenchDeck', () => {
       generateBenchDeck(40, 80, 42).deck.edges,
     );
   });
+
+  it('cycles the 13 card types with every pack on, and changes nothing else (030)', () => {
+    const { deck } = generateBenchDeck(40, 80, 42, { types: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(new Set(deck.nodes.map((n) => n.type)).size).toBe(13);
+    expect(deck.packs).toEqual(['architecture', 'process', 'logistics', 'data']);
+    expect(generateBenchDeck(40, 80, 42).deck.packs).toBeUndefined();
+    expect(generateBenchDeck(40, 80, 42, { types: true }).deck.edges).toEqual(
+      generateBenchDeck(40, 80, 42).deck.edges,
+    );
+  });
 });

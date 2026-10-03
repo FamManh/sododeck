@@ -1,6 +1,10 @@
+import { CARD_TYPES, NEW_DECK_PACKS } from '@sododeck/model';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
 
 const KINDS = ['service', 'service', 'database', 'client', 'external'] as const;
+
+/** 030 SC-007: every built-in card type, one after the other. */
+const ALL_TYPES = CARD_TYPES.map((type) => type.id);
 
 /** 020 R13: the 13 named card colours plus two custom hex colours, cycled across nodes. */
 const BENCH_FILLS: readonly (CardColor | `#${string}`)[] = [
@@ -93,6 +97,7 @@ export function generateBenchDeck(
     colours?: boolean;
     lineTypes?: boolean;
     tags?: boolean;
+    types?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -110,7 +115,9 @@ export function generateBenchDeck(
         : undefined;
     return {
       id: `n${i}`,
-      type: KINDS[i % KINDS.length] ?? 'service',
+      type:
+        (options.types === true ? ALL_TYPES[i % ALL_TYPES.length] : KINDS[i % KINDS.length]) ??
+        'service',
       title: `Node ${i}`,
       position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
       ...(options.routes === true ? { size: { width: 200, height: 72 } } : {}),
@@ -140,7 +147,13 @@ export function generateBenchDeck(
   }
   if (options.routes === true) addBenchRoutes(edges);
 
-  const deck: SododeckFile = { ...emptySododeckFile(), nodes, edges };
+  const deck: SododeckFile = {
+    ...emptySododeckFile(),
+    // BENCH_TYPES: every pack on, so the Add flyout and pickers list all 13 types too.
+    ...(options.types === true ? { packs: [...NEW_DECK_PACKS] } : {}),
+    nodes,
+    edges,
+  };
   if (options.groups === true) addBenchGroups(deck);
   if ((options.stickies ?? 0) > 0) addBenchStickies(deck, options.stickies ?? 0, random);
   if (options.flows === true) addBenchFlows(deck, random);

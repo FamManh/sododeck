@@ -29,7 +29,7 @@ export function QuickEditSamples() {
             <PanelRight aria-hidden strokeWidth={1.5} />
           </ToolbarButton>
           <ToolbarSeparator />
-          <ToolbarButton aria-label="Kind: Service">
+          <ToolbarButton aria-label="Type: Service">
             <Shapes aria-hidden strokeWidth={1.5} />
           </ToolbarButton>
           <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
@@ -75,7 +75,7 @@ export function QuickEditSamples() {
         <Toolbar aria-label="Selection: 3 components">
           <ToolbarText>3 selected</ToolbarText>
           <ToolbarSeparator />
-          <ToolbarButton>Kind</ToolbarButton>
+          <ToolbarButton>Type</ToolbarButton>
           <ToolbarButton>Owner: Mixed</ToolbarButton>
         </Toolbar>
       </SampleRow>

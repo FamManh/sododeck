@@ -169,3 +169,37 @@ describe('CollapsedGroupNode colour (020 T052)', () => {
     ).toHaveAttribute('aria-description', expect.stringContaining('Teal fill'));
   });
 });
+
+describe('CollapsedGroupNode member tiles (030)', () => {
+  it('draws each member type icon and the fallback for an unknown id', () => {
+    const { container } = renderWithEditor(
+      <CollapsedGroupNode
+        {...(() => {
+          const base = {
+            id: 'collapsed:core',
+            data: {
+              groupId: 'core',
+              title: 'Core',
+              nodeCount: 3,
+              edgeCount: 0,
+              focused: true,
+              dimmed: false,
+              memberKinds: ['warehouse', 'truck-route', 'robot'],
+            },
+            selected: false,
+            width: 180,
+            height: 64,
+          };
+          return base as unknown as NodeProps<CollapsedFlowNode>;
+        })()}
+      />,
+      deckOf({}),
+    );
+    const tiles = [...container.querySelectorAll('[data-testid="member-tile"] svg')];
+    expect(tiles.map((svg) => svg.getAttribute('class')?.match(/lucide-([\w-]+)/)?.[1])).toEqual([
+      'warehouse',
+      'truck',
+      'shapes',
+    ]);
+  });
+});

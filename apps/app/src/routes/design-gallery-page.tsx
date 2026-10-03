@@ -16,7 +16,7 @@ import { useThemeStore } from '../theme/theme-store';
 const SECTIONS: [id: string, label: string][] = [
   ['buttons', 'Buttons'],
   ['fields', 'Fields'],
-  ['kinds', 'Kinds & icons'],
+  ['kinds', 'Types & icons'],
   ['feedback', 'Tags, banners, toasts'],
   ['overlays', 'Dialog & coach mark'],
   ['motion', 'Motion'],

@@ -23,7 +23,7 @@ export const SHORTCUTS = [
   { id: 'select', label: 'Select', section: 'Tools', keys: same('V') },
   { id: 'hand', label: 'Hand (pan)', section: 'Tools', keys: same('H') },
   { id: 'add-component', label: 'Add component', section: 'Tools', keys: same('C') },
-  { id: 'add-kind', label: 'Add a kind (palette open)', section: 'Tools', keys: same('1–6') },
+  { id: 'add-kind', label: 'Add a type (Add open)', section: 'Tools', keys: same('1–9') },
   { id: 'sticky', label: 'Sticky note', section: 'Tools', keys: same('S') },
   { id: 'note-here', label: 'Add a note at the pointer', section: 'Tools', keys: same('N') },
   { id: 'group', label: 'Group', section: 'Tools', keys: mod('⌘G', 'Ctrl+G') },
