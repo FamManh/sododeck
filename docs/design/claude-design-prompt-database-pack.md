@@ -203,7 +203,7 @@ Also show:
   line type, colour, delete), canvas (add table, add enum, paste, import SQL / DBML).
 - **Detail level control** in the tools or zoom island: Names · Keys · All, for the deck or the
   current view.
-- **Deck settings** (the existing ≡ menu → Deck settings, frame 34) with a **Database** section:
+- **Deck settings** (the existing ≡ menu → Deck settings, which opens the details drawer in deck mode, frame 10) with a **Database** section:
   dialect for the whole deck (Generic, Postgres, MySQL, SQLite), notation (crow's foot or `1` / `n` labels), show data types, show nullable, show cardinality
   ends, show relationship labels, show notes, "Block SQL export with errors".
 - **Locked table:** a lock badge in the header; it cannot be moved or edited until unlocked.
@@ -336,7 +336,7 @@ new tooltip variants) and the notes call that "identical", which it is not.
   the Names · Keys · All control (drawn with the existing segmented-control style, placed in the
   zoom island), and the database sections inside the existing panels.
 - **No new tools-island button.** Remove the "Schema settings" popover (screen S) and move its
-  content into the existing **≡ menu → Deck settings** (frame 34) as a **Database** section
+  content into the existing **≡ menu → Deck settings** (the details drawer in deck mode, frame 10) as a **Database** section
   (see 3).
 
 **2. Other categories stay in the same deck.**
@@ -428,3 +428,60 @@ In the signature row, A11a and A11b:
 Then update the board notes: the final row limit, the Show all / Show fewer spec, the dialect
 chip spec, the R / W row markers, every new token, and an explicit list of what is reused
 unchanged from `sododeck-canvas.js`.
+
+## Part 4: fix prompt (2026-10-03, review of the updated board)
+
+A review of the board after Part 3 found Deck settings drawn as a new modal with a left nav, and a
+few database screens still using local copies of controls. Paste into the same conversation.
+
+---
+
+Fix the **Database pack** board in one pass. Everything else from the last update is correct;
+keep it.
+
+**1. Deck settings is the details drawer in deck mode, not a modal.**
+In Sododeck, the deck island **≡ menu → "Deck settings"** opens the **right-side details drawer
+in deck mode** (the deck inspector, frame 10; `inspDeck()` in `sododeck-states.js`, drawn with
+`sododeck-canvas.js` `drawer()` + `dHead()`). There is no settings modal, no left nav and no
+General / Teams / Labels / Rules pages.
+
+- **Delete `settingsDlg`** and the dimmed canvas behind it.
+- **S1 · ≡ menu:** exactly the app's items, in this order, with their icons and no invented
+  shortcuts: All decks · — · Import… · Export… · — · Deck settings · Show JSON · — · Dark mode ·
+  Keyboard shortcuts. Remove New deck, Open library and the "…" on Deck settings.
+- **S2 · the drawer:** canvas.js drawer, header with the layers tile, title "Shop", subtitle
+  "Deck", then the existing sections in order: Problems · Name · Description (markdown) · Tags ·
+  Summary (Components / Connections / Flows counts + the Rules tile with its arrow) ·
+  **Database** (new) · Storage.
+- **Database section** (same section label style as the other sections, canvas.js controls
+  `inp` / `tog` / `seg`): Dialect select (Generic, Postgres, MySQL, SQLite, one-line hint each);
+  Notation (Crow's foot / 1 / n); Show on tables: data types, nullable marker, notes, index
+  footer; Show on relationships: cardinality ends, labels (Follow Labels / Hover / Always / Off);
+  Export: block SQL export with errors.
+- **S3:** the "Convert 23 columns from Postgres to MySQL?" confirm is the existing confirm dialog
+  over the drawer (no extra dim layer), then the Undo toast.
+- Point every "Deck settings → Database" reference (A8 and others) at this drawer.
+
+**2. Dialect on the database card is read-only.** The database card shows the deck's dialect as
+a chip only; remove the editable `select` field from the database card (`DBC`) and its drawer. Its
+drawer may show "Dialect: Postgres · set in Deck settings" as plain text with a link.
+
+**3. Use the canvas.js controls and dialogs everywhere.** Replace the local copies (`btn`, `ib`,
+`seg`, `cinp` / `selF`, `ctog`, `check`, `chipN`, `cpnl`) with the canvas.js ones (`PRIM`, `SEC`,
+`inp`, `tog`, `seg`, `chip`, panel) in A5 import, A9 export, A7c notice, S2 / S3 and the drawer
+rows. Section labels use canvas.js `LAB`. The A9 export dialog and the import dialog use the
+existing dialog style, not a new B-style panel.
+
+**4. Step player:** use the canvas-first step player from canvas.js (32-px `PRIM` / `SEC` buttons,
+"Step n of 8 · …"), not a B-style player with a lip. The stickers, orange lip and token on the
+cards stay as board B draws them.
+
+**5. Schema name in the table header:** the deck has two schemas (`users` is in `auth`, the rest in
+`public`), so every table header shows its schema name next to "Table" (e.g. "Table · auth"). A
+deck with one schema shows only "Table".
+
+**6. Rail Problems badge:** draw it as the rail button's own badge (as in canvas.js), not a
+separately placed panel.
+
+Update the board notes to list the Deck settings drawer structure and the controls reused from
+canvas.js.

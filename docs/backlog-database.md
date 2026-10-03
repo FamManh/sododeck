@@ -289,7 +289,7 @@ note? }[] }`;
     used-by list).
   - Type lists per dialect (Generic, Postgres, MySQL, SQLite) as data in the app, plus the type
     conversion table used when the deck's dialect changes (toast with the conversions + Undo).
-  - Deck settings (≡ menu, frame 34) gains a **Database** section: dialect, notation (crow's foot
+  - Deck settings (≡ menu → the details drawer in deck mode, `DeckInspector`, frame 10) gains a **Database** section: dialect, notation (crow's foot
     or 1 / n), show data types, nullable, notes, index footer, cardinality ends, relationship
     labels (hover / always / off), block SQL export with errors.
   - Duplicate a table, copy / paste across decks (new ids, relationships to tables outside the
