@@ -26,6 +26,9 @@ const SEARCH_BUDGET_MS = 50 * SLACK;
 const SEARCH_INDEX_BUDGET_MS = 100 * SLACK;
 // 015: the problems worker checks a fresh structured clone on every edit, so caches are cold.
 const CHECK_DECK_BUDGET_MS = 30 * SLACK;
+// 036 SC-005: lookups by id, so a field edit does not grow with the deck; a move is one key.
+const BIG_EDIT_BUDGET_MS = 1 * SLACK;
+const BIG_MOVE_BUDGET_MS = 10 * SLACK;
 
 function cpuMs(run: () => void): number {
   const start = process.cpuUsage();
@@ -94,6 +97,24 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
     expect(timings.rename).toBeLessThan(EDIT_BUDGET_MS);
     expect(timings.move).toBeLessThan(EDIT_BUDGET_MS);
     expect(timings['rename last edge']).toBeLessThan(EDIT_BUDGET_MS);
+  });
+
+  it(`edits one of 10,000 components in ≤ 2× the 500-component time, moves one in < ${String(BIG_MOVE_BUDGET_MS)} ms (036 SC-005)`, () => {
+    const big = fromJSON(
+      largeDeck({ nodes: 10_000, edges: 20_000, flows: 20, stepsPerFlow: 10, rules: 10 }),
+    );
+    const editor = createEditor(big);
+    let i = 0;
+    timings['rename at 10k'] = median(() => {
+      editor.update('nodes', 'n9999', { title: `Renamed ${String(i++)}` });
+    });
+    timings['reorder at 10k'] = median(() => {
+      editor.reorder('nodes', i++ % 2 === 0 ? 'n9999' : 'n0', i % 2 === 0 ? 0 : 9_999);
+    });
+    editor.destroy();
+    expect(timings['rename at 10k']).toBeLessThan(BIG_EDIT_BUDGET_MS);
+    expect(timings['rename at 10k']).toBeLessThanOrEqual(Math.max(2 * (timings.rename ?? 0), 0.1));
+    expect(timings['reorder at 10k']).toBeLessThan(BIG_MOVE_BUDGET_MS);
   });
 
   it(`moves a node and updates the incremental snapshot in < ${String(SNAPSHOT_BUDGET_MS)} ms`, () => {
