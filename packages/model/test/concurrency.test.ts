@@ -1,7 +1,15 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { analyzeFlow, fromJSON, getObject, getRule, toJSON } from '../src';
+import {
+  analyzeFlow,
+  checkDeck,
+  checkIntegrity,
+  fromJSON,
+  getObject,
+  getRule,
+  toJSON,
+} from '../src';
 import { bothOrders, expectConverged, sync, twoDocs, type Side } from './helpers';
 
 /**
@@ -482,5 +490,145 @@ describe('long text under concurrent typing (036 US3)', () => {
       expectConverged(a, b);
       expect(description(b)).toBe('Theirs Start. Middle. End.');
     }
+  });
+});
+
+describe('changes from elsewhere never leave a silently broken deck (036 US4)', () => {
+  it('keeps a connection to a node deleted elsewhere, reports it, and undo makes it whole (AS1, AS2)', () => {
+    for (const order of ['ab', 'ba'] as const) {
+      const { a, b } = twoDocs(base);
+      a.editor.remove('nodes', 'n3');
+      const edge = b.editor.add('edges', { from: 'n1', to: 'n3' });
+      sync(a, b, order);
+      expectConverged(a, b);
+      for (const side of [a, b]) {
+        expect(getObject(side.doc, 'edges', edge)).toBeDefined();
+        const broken = checkDeck(toJSON(side.doc)).list.filter(
+          (p) => p.kind === 'broken-reference',
+        );
+        expect(broken.some((p) => p.key.includes(edge))).toBe(true);
+      }
+      expect(a.editor.undo()).toBe(true);
+      sync(a, b, order);
+      expectConverged(a, b);
+      const after = checkDeck(toJSON(b.doc)).list.filter((p) => p.kind === 'broken-reference');
+      expect(after.some((p) => p.key.includes(edge))).toBe(false);
+    }
+  });
+
+  it('drops a pin, position or include of a node deleted elsewhere (AS3)', () => {
+    const withView = {
+      ...base,
+      views: [
+        { id: 'base', type: 'system' as const, title: 'Base' },
+        { id: 'v', type: 'custom' as const, title: 'V' },
+      ],
+    };
+    bothOrders(
+      withView,
+      ({ editor }) => {
+        editor.remove('nodes', 'n2');
+      },
+      ({ editor }) => {
+        editor.setPinned('v', ['n2'], true);
+        editor.moveInView('v', { n2: { x: 5, y: 5 } });
+      },
+      (a) => {
+        const view = toJSON(a.doc).views.find((v) => v.id === 'v');
+        expect(view?.pinned).toBeUndefined();
+        expect(view?.positions ?? {}).toEqual({});
+      },
+    );
+  });
+
+  it('reads two cleared style channels as no style (AS4)', () => {
+    const styled = {
+      ...base,
+      nodes: [
+        {
+          id: 'n1',
+          type: 'service' as const,
+          title: 'One',
+          style: { fill: 'red', stroke: 'blue' },
+        },
+        ...base.nodes.slice(1),
+      ],
+    };
+    bothOrders(
+      styled,
+      ({ editor }) => {
+        editor.setStyle({ nodes: ['n1'], groups: [] }, 'fill', null);
+      },
+      ({ editor }) => {
+        editor.setStyle({ nodes: ['n1'], groups: [] }, 'stroke', null);
+      },
+      (a) => {
+        expect(getObject(a.doc, 'nodes', 'n1')?.style).toBeUndefined();
+        expect(() => fromJSON(toJSON(a.doc))).not.toThrow();
+      },
+    );
+  });
+
+  it('keeps both groups of a parent cycle and reports it (AS5)', () => {
+    const grouped = {
+      ...base,
+      groups: [
+        { id: 'g1', title: 'G1' },
+        { id: 'g2', title: 'G2' },
+      ],
+    };
+    bothOrders(
+      grouped,
+      ({ editor }) => {
+        editor.update('groups', 'g1', { parent: 'g2' });
+      },
+      ({ editor }) => {
+        editor.update('groups', 'g2', { parent: 'g1' });
+      },
+      (a) => {
+        const file = toJSON(a.doc);
+        expect(file.groups.map((g) => g.id)).toEqual(['g1', 'g2']);
+        expect(checkIntegrity(file).some((p) => p.kind === 'cycle')).toBe(true);
+      },
+    );
+  });
+
+  it('keeps a step appended to a branch removed elsewhere, reported as unknown-branch', () => {
+    const branched: SododeckFile = {
+      ...base,
+      flows: [
+        {
+          id: 'f',
+          title: 'Flow',
+          branches: [
+            { id: 'a', label: 'A', condition: 'x' },
+            { id: 'b', label: 'B', condition: 'y' },
+          ],
+          steps: [
+            { id: 's1', edge: 'e1' },
+            { id: 's2', edge: 'e2', branch: 'a' },
+            { id: 's3', edge: 'e2', branch: 'b' },
+          ],
+        },
+      ],
+    };
+    bothOrders(
+      branched,
+      ({ editor }) => {
+        editor.removeBranch('f', 'b');
+      },
+      ({ editor }) => {
+        editor.appendStep('f', 'b', { edge: 'e3', title: 'Late' });
+      },
+      (a) => {
+        const file = toJSON(a.doc);
+        const flow = file.flows[0];
+        if (flow === undefined) throw new Error('flow missing');
+        const late = flow.steps.find((s) => s.title === 'Late');
+        expect(late?.branch).toBe('b');
+        const problems = analyzeFlow(flow, file.edges).problems;
+        expect(problems.some((p) => p.kind === 'unknown-branch')).toBe(true);
+      },
+    );
   });
 });
