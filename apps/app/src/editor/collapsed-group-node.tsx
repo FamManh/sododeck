@@ -1,4 +1,3 @@
-import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import {
   ICON_STROKE_WIDTH,
@@ -14,6 +13,7 @@ import { memo, useEffect, type CSSProperties } from 'react';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
+import { StepSticker } from './step-sticker';
 import { describeChannel } from './style/card-style';
 
 /** Member tiles per hand, the last slot becoming "+n" when there are more. */
@@ -51,7 +51,6 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
   const updateNodeInternals = useUpdateNodeInternals();
   const flowMode = useUiStore((state) => isFlowMode(state));
   const hasFlowInside = data.flowInside !== undefined;
-  const currentFlowInside = data.flowInside === 'current';
   const titleEdit = useUiStore((state) =>
     state.titleEdit?.target === 'group' && state.titleEdit.id === data.groupId
       ? state.titleEdit
@@ -145,7 +144,9 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         )}
       >
         {hasFlowInside && <span data-testid="collapsed-flow-ring" className="sr-only" />}
-        {currentFlowInside && <FlowInsideDot />}
+        {data.flowInside !== undefined && (
+          <StepSticker state={data.flowInside} number={data.flowNumber ?? null} />
+        )}
         <span className="flex h-6 shrink-0 items-center gap-2">
           <span
             aria-hidden
@@ -214,18 +215,3 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
     </div>
   );
 });
-
-function FlowInsideDot() {
-  const reducedMotion = useReducedMotion();
-
-  return (
-    <span
-      data-testid="collapsed-flow-dot"
-      aria-hidden
-      className={cn(
-        'absolute top-2 right-2 size-2.5 rounded-full bg-primary shadow-rest',
-        !reducedMotion && 'sd-flow-inside-dot',
-      )}
-    />
-  );
-}
