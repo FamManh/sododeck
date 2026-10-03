@@ -25,6 +25,7 @@ import { groupName, groupOptions, NO_GROUP, typeOptions } from './choices';
 import { nodeConnections, styleView } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
+import { ShowAsField } from './show-as-field';
 import { SizeFields } from './size-fields';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
@@ -113,6 +114,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
             }}
           />
         </PanelSection>
+        <ShowAsField node={node} />
         <PanelSection>
           <div className="flex items-center justify-between gap-3 text-body">
             <span className="text-ink-secondary">Level</span>

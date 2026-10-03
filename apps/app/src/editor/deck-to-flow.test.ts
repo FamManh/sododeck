@@ -1115,3 +1115,51 @@ describe('shapes (031)', () => {
     expect(next?.data?.toGeometry).toBe('cylinder');
   });
 });
+
+describe('switching form keeps the object (031 US3, SC-003)', () => {
+  const base: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      {
+        id: 'db',
+        type: 'database',
+        title: 'Orders DB',
+        description: 'Holds orders.',
+        tags: ['pci'],
+        style: { fill: 'blue' },
+        group: 'g',
+        position: { x: 10, y: 20 },
+      },
+    ],
+    groups: [{ id: 'g', title: 'Data' }],
+  };
+  const drawn = (file: SododeckFile) =>
+    toFlowNodes(file, topLevelGraph(file), view()).find((n) => n.id === 'db') as DeckFlowNode;
+  const withNode = (patch: Partial<SododeckFile['nodes'][number]>): SododeckFile => ({
+    ...base,
+    nodes: base.nodes.map((n) => ({ ...n, ...patch })),
+  });
+
+  it('each form uses its own default size when none is stored', () => {
+    expect(drawn(base)).toMatchObject({ type: 'deck', width: 184 });
+    expect(drawn(withNode({ display: 'shape' }))).toMatchObject({
+      type: 'shape',
+      width: 152,
+      height: 104,
+      position: { x: 10, y: 20 },
+    });
+  });
+
+  it('a size the user set is kept in both forms', () => {
+    const size = { width: 240, height: 160 };
+    expect(drawn(withNode({ size }))).toMatchObject({ type: 'deck', ...size });
+    expect(drawn(withNode({ size, display: 'shape' }))).toMatchObject({ type: 'shape', ...size });
+  });
+
+  it('carries title, colour and id unchanged into the shape', () => {
+    const shape = drawn(withNode({ display: 'shape' }));
+    expect(shape.id).toBe('db');
+    expect(shape.data.title).toBe('Orders DB');
+    expect(shape.data.look).toEqual(drawn(base).data.look);
+  });
+});
