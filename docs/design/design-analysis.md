@@ -1065,3 +1065,8 @@ changes them before the owning feature is specified.
     descriptions up to 3 lines with a title-only tooltip; data-driven card types so a Canvas 2D
     renderer can draw them. Claude Design draws three directions; requirements and the prompt are
     in `claude-design-prompt-card-system.md`.
+62. **Card system signature** (founder, 2026-10-03). Flow playback is the signature moment every
+    card direction must show; the "deck of cards" metaphor may drive the look. A collapsed group
+    reads as a stack, with its connectors rerouted to it. Reference video ideas: hover highlights
+    a card's connections, bundled connectors with counts, drill-in with outside proxies. Connector
+    ends may attach anywhere on a side (backlog 022).

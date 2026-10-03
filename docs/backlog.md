@@ -1661,6 +1661,11 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   - **Lighter handles** (founder feedback, 2026-10-02): 017's 10×24 px segment pill and endpoint
     grips look heavy. Show small round handles (≈ 8 px) only on hover or while the connector is
     selected, with a larger invisible hit area so they stay easy to grab.
+  - **Free anchor points** (founder feedback, 2026-10-03): an end can attach anywhere along a
+    card's side, not only at its middle. Dragging an end along a side moves its anchor (stored
+    as the side plus a 0–1 fraction, snapping to the middle and the corners); dropping it on the
+    card body keeps today's automatic side. Extends 017's `fromSide` / `toSide` (schema change,
+    additive, same ADR as waypoints).
   - **Dash:** solid (default), dashed, dotted.
   - **Weight:** a slider with a few fixed steps (e.g. 1–6 px); default = today's 1.5 px.
   - **Colour:** 020's palette, the deck's custom swatches and "No colour".

@@ -16,18 +16,21 @@ Miro's shape libraries.
 
 ### Decisions
 
-| #   | Topic              | Decision                                                                                                                                                                                                                                                                                          |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | Categories         | All five, as **category packs** a deck turns on: Architecture, Process, Logistics, Basic shapes, Data cards. Users use the ones they need.                                                                                                                                                        |
-| D2  | Families           | **Hybrid.** Information **cards** (Architecture, Logistics, Data cards, and Process tasks) share one frame; **shapes** (Process decision / start / end / actor, Basic shapes) are true geometry with text only. In-between types (decision, database…) can switch "show as card ↔ show as shape". |
-| D3  | Fields             | Each card type has **default fields**; users can add **typed fields** (text, number, coloured select, status, person, date, date range, link) and choose which show on the card (chip or label–value row) and which stay in the drawer.                                                           |
-| D4  | Visual direction   | Claude Design draws **three directions** with the same content: A editorial/quiet (Linear, Eraser), B tactile/playful (Miro, FigJam), C technical/blueprint (IcePanel). The founder picks or mixes.                                                                                               |
-| D5  | Tooltip            | **Title only**: an app tooltip with the full title when it is cut. No preview card.                                                                                                                                                                                                               |
-| D6  | Title, description | Title wraps, **up to 3 lines**, then "…"; the description (when shown on the card) also up to 3 lines. The card height grows with its content. Full text is in the details drawer.                                                                                                                |
-| D7  | Tags               | Up to 10 per card. **Deck-level tag definitions** (name + colour from the shared palette, like Miro): set a colour once, every card shows it. Schema change, additive only.                                                                                                                       |
-| D8  | Colour             | **One shared palette** (the 13 named colours, each with fill / stroke / chip variants, light and dark) for card fill and stroke, tags, select options and statuses, plus deck custom colours.                                                                                                     |
-| D9  | Size               | Default width fixed (164 today) and resizable; height = the visible regions, computed (not measured) so edges, groups and export agree. **Zooming never changes a card's size**; far zoom only hides detail.                                                                                      |
-| D10 | Data-driven types  | A card type is data (family, shape, icon, accent, default fields, which fields show), not a React component per type, so a Canvas 2D renderer (backlog 023) can draw the same cards later.                                                                                                        |
+| #   | Topic              | Decision                                                                                                                                                                                                                                                                                                                                          |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Categories         | All five, as **category packs** a deck turns on: Architecture, Process, Logistics, Basic shapes, Data cards. Users use the ones they need.                                                                                                                                                                                                        |
+| D2  | Families           | **Hybrid.** Information **cards** (Architecture, Logistics, Data cards, and Process tasks) share one frame; **shapes** (Process decision / start / end / actor, Basic shapes) are true geometry with text only. In-between types (decision, database…) can switch "show as card ↔ show as shape".                                                 |
+| D3  | Fields             | Each card type has **default fields**; users can add **typed fields** (text, number, coloured select, status, person, date, date range, link) and choose which show on the card (chip or label–value row) and which stay in the drawer.                                                                                                           |
+| D4  | Visual direction   | Claude Design draws **three directions** with the same content: A editorial/quiet (Linear, Eraser), B tactile/playful (Miro, FigJam), C technical/blueprint (IcePanel). The founder picks or mixes.                                                                                                                                               |
+| D5  | Tooltip            | **Title only**: an app tooltip with the full title when it is cut. No preview card.                                                                                                                                                                                                                                                               |
+| D6  | Title, description | Title wraps, **up to 3 lines**, then "…"; the description (when shown on the card) also up to 3 lines. The card height grows with its content. Full text is in the details drawer.                                                                                                                                                                |
+| D7  | Tags               | Up to 10 per card. **Deck-level tag definitions** (name + colour from the shared palette, like Miro): set a colour once, every card shows it. Schema change, additive only.                                                                                                                                                                       |
+| D8  | Colour             | **One shared palette** (the 13 named colours, each with fill / stroke / chip variants, light and dark) for card fill and stroke, tags, select options and statuses, plus deck custom colours.                                                                                                                                                     |
+| D9  | Size               | Default width fixed (164 today) and resizable; height = the visible regions, computed (not measured) so edges, groups and export agree. **Zooming never changes a card's size**; far zoom only hides detail.                                                                                                                                      |
+| D10 | Data-driven types  | A card type is data (family, shape, icon, accent, default fields, which fields show), not a React component per type, so a Canvas 2D renderer (backlog 023) can draw the same cards later.                                                                                                                                                        |
+| D11 | Signature moment   | **A diagram that plays.** Flow playback is what no other diagram tool has, so every direction must show how cards, connectors and the moving token look while a flow plays. The "deck of cards" metaphor (the name Sododeck) may drive the look: cards like real cards, groups like a stack, playing a flow like dealing the deck.                |
+| D12 | Collapsed group    | A collapsed group must read as a group at a glance, never like a plain card: a **stack of cards** (or something more special), with its member count. Connectors to its members **reroute to the stack**, merged with a count.                                                                                                                    |
+| D13 | Connections        | From the founder's reference video: hovering or selecting a card highlights its connections and dims the rest; parallel connectors bundle into smooth curves with a count; drilling into a card shows "Inside X" plus dashed **outside** proxy cards for its external connections. Connector ends can attach anywhere along a side (backlog 022). |
 
 ### Card anatomy (information card)
 
@@ -52,7 +55,8 @@ picked).
 
 Paste the block below into the existing **Sododeck** Claude Design project (the one with
 `Sododeck Canvas-first.dc.html`). Attach `DESIGN.md`, screenshots of today's cards (light and
-dark, with tags), and the founder's Miro screenshots (tag picker, card details panel).
+dark, with tags), the founder's Miro screenshots (tag picker, card details panel), and frames from
+the founder's reference video (hover highlight, bundled connectors, drill-in with outside proxies).
 
 ---
 
@@ -73,6 +77,37 @@ be compared side by side, each in light and dark:
 
 For each direction, add a short note: its tokens (radius, border, shadow, type scale, spacing),
 what makes it distinct from a generic React Flow card, and its risks.
+
+### Signature moment: a diagram that plays
+
+Sododeck's one thing no other diagram tool has is **flow playback**: a flow (for example
+"Checkout") plays step by step across the diagram, a token moves along each connector, the
+current step's cards light up, the step player shows "Step 3 of 8", and branches let the user pick
+a path. Make this the most memorable part of each direction. Show, on the sample board: a flow
+playing (current step, already-played steps, not-yet-played steps, dimmed rest), the token on a
+connector, a branch point, and an error path.
+
+The name Sododeck suggests a **deck of cards**. A direction may lean on it: cards that feel like
+real cards, a collapsed group as a stack, playing a flow as dealing the deck in order. Each
+direction interprets this its own way (or explains why it doesn't).
+
+### Groups
+
+A **collapsed group** must read as a group at a glance, never as a plain card: a stack of cards
+(or something more distinctive), with the group name and its member count. Connectors that went to
+its members now meet the stack, merged into one connector per neighbour with a count (×3). Also
+show an **expanded group**: a frame with a label that holds its member cards.
+
+### Connections and focus
+
+The founder's reference (a dark, technical diagram viewer): hovering or selecting a card
+highlights its connections and dims everything else; parallel connectors bundle into smooth curves
+with a count badge; drilling into a card shows "Inside <card>" with its parts, and dashed
+**outside** proxy cards for the things it connects to; a header legend counts connections by
+relationship. Show hover-highlight, a bundle with a count, and the drill-in view with outside
+proxies in each direction. Connector ends attach anywhere along a card's side (not only the
+middle): show an end being moved along a side. Relationship types with their own colour and dash
+(calls, reads, writes, depends on) are optional: explore them if a direction benefits.
 
 ### The system to design
 
@@ -130,8 +165,8 @@ narrow one.
 Default · hover · selected · editing the title in place (it must look **exactly** like the shown
 title: same type, same wrapping, no field box) · has a problem · current step of a playing flow
 (problem and flow step must not rely on colour alone) · dimmed (focus mode / flow) · being
-dragged · connection target · has child components (Enter opens them) · collapsed group (a
-stacked card, design 69).
+dragged · connection target · has child components (Enter opens them) · collapsed group (see
+Groups) · highlighted neighbour while another card is hovered.
 
 ### Zoom
 
@@ -143,8 +178,8 @@ appears or disappears. Show how a dense board reads at Landscape.
 
 - The **card type palette** (the rail's Add flyout): categories as sections or tabs, a search,
   turning a category pack on or off for the deck.
-- A **sample board** with about 20 cards mixing all five categories, connected, to judge the
-  whole.
+- A **sample board** with about 20 cards mixing all five categories, connected, with one
+  collapsed group and a flow playing, to judge the whole.
 
 ### Rules
 
@@ -161,7 +196,8 @@ appears or disappears. Show how a dense board reads at Landscape.
 
 ### Deliver
 
-Three boards (A, B, C), each with: the sample set, the edge cases, the states, the four zoom
-levels, the palette (13 colours × fill / stroke / chip × light / dark with contrast notes), the tag
+Three boards (A, B, C), each with: the flow-playback moment, groups (collapsed and expanded),
+connections and focus, the sample set, the edge cases, the states, the four zoom levels, the
+palette (13 colours × fill / stroke / chip × light / dark with contrast notes), the tag
 chip and picker, field chips, the type palette, and the sample board. End with a one-page
 comparison of the three directions.
