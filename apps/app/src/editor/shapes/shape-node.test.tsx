@@ -185,4 +185,24 @@ describe('ShapeNode (031)', () => {
     const left = handles.find((h) => h.getAttribute('data-handleid') === 'left');
     expect(Number.parseFloat(left?.style.left ?? '')).toBeCloseTo((168 * 0.16) / 2, 1);
   });
+
+  it('centres every handle on its outline point, right and bottom too', () => {
+    renderWithEditor(<ShapeNode {...props()} />, deck);
+    for (const handle of screen.getAllByRole('button', { name: 'Connect from Payment OK?' })) {
+      expect(handle.style.transform).toBe('translate(-50%, -50%)');
+      expect(handle.style.right).toBe('auto');
+      expect(handle.style.bottom).toBe('auto');
+    }
+  });
+
+  it('draws the selected ring as a band 4 to 6 px outside the outline', () => {
+    renderWithEditor(<ShapeNode {...props({}, true)} />, deck);
+    const ring = screen.getByTestId('shape-selected-ring');
+    expect(ring.style.strokeWidth).toBe('12');
+    const mask = document.getElementById(ring.getAttribute('mask')?.slice(5, -1) ?? '');
+    const widths = [...(mask?.querySelectorAll('path') ?? [])].map((p) =>
+      p.getAttribute('stroke-width'),
+    );
+    expect(widths).toEqual(['12', '8']);
+  });
 });
