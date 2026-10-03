@@ -78,6 +78,20 @@ describe('bundleEdges (034 R4)', () => {
     expect(result.plain.map((p) => p.edgeId)).not.toContain('loop1');
   });
 
+  it('keeps a connector with its own style (a line type) out of bundles', () => {
+    const deck = deckOf({
+      nodes: [...nodes],
+      edges: [
+        { id: 'e1', from: 'a', to: 'b' },
+        { id: 'e2', from: 'a', to: 'b' },
+        { id: 'st', from: 'a', to: 'b', style: { shape: 'straight' } },
+      ],
+    });
+    const result = bundleEdges(deck, graphOf(deck), options);
+    expect(result.bundles[0]?.edgeIds).toEqual(['e1', 'e2']);
+    expect(result.plain).toEqual([{ edgeId: 'st' }]);
+  });
+
   it('keeps an own-route connector out while the automatic ones around it still fold', () => {
     const deck = deckOf({
       nodes: [...nodes],

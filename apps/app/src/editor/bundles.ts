@@ -47,12 +47,12 @@ interface Candidate {
 const cache = new WeakMap<VisibleGraph, Map<string, BundleResult>>();
 
 /**
- * Only an automatic connector folds into a bundle (034): one with its own route, and later one
- * with waypoints, anchors or a style of its own (022), always draws on its own. Keep every such
+ * Only an automatic connector folds into a bundle (034): one with its own route or its own style
+ * (a line type today; waypoints and anchors with 022) always draws on its own. Keep every such
  * rule here.
  */
 function foldable(edge: DeckEdgeObject): boolean {
-  return edge.route === undefined;
+  return edge.route === undefined && edge.style === undefined;
 }
 
 function directionOf(candidate: Candidate, a: string): MergedEdge['direction'] {

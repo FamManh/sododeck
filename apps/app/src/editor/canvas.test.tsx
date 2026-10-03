@@ -133,6 +133,13 @@ describe('Canvas', () => {
       await waitFor(() => {
         expect(root).not.toHaveAttribute('data-hover-focus');
       });
+      // Fanning a bundle and drilling in are UI state as well: the saved deck is byte-identical.
+      const serialised = JSON.stringify(toJSON(doc));
+      act(() => {
+        ui().toggleBundleFan('bundle:a|b');
+        ui().drillInto({ kind: 'node', id: 'a', viewport: { x: 0, y: 0, zoom: 1 } });
+      });
+      expect(JSON.stringify(toJSON(doc))).toBe(serialised);
       expect(toJSON(doc)).toEqual(before);
       expect(editor().canUndo()).toBe(false);
     });

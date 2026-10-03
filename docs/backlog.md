@@ -226,7 +226,7 @@ and **027** ai-deck-skill are not scheduled.
 | 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                       |
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | implemented (2026-10-03); visual check and quickstart partial |
-| 034 | connection-focus-drill   | after M4   | 029           | 4 d  | designed (B connections)                                      |
+| 034 | connection-focus-drill   | after M4   | 029           | 4 d  | implemented (2026-10-03)                                      |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
 | 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                             |
@@ -1728,6 +1728,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     additive, same ADR as waypoints). Interaction from frame 118 c (moved here from 034,
     2026-10-03): the end snaps at 25 / 50 / 75 %, a "left side · 78 %" readout follows the
     pointer, the old route shows dashed until release, Esc cancels.
+  - **Bundles (034):** a connector with waypoints, a non-automatic anchor or a style of its own
+    never joins a 034 bundle, same as a 017 adjusted route; 034's hover highlight sets colour
+    and weight in separate rules, so 022 can keep a styled connector's colour and still thicken it.
   - **Dash:** solid (default), dashed, dotted.
   - **Weight:** a slider with a few fixed steps (e.g. 1–6 px); default = today's 1.5 px.
   - **Colour:** 020's palette, the deck's custom swatches and "No colour".
@@ -2147,6 +2150,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 034-connection-focus-and-drill
 
+- **Status:** implemented (2026-10-03), see [`spec.md`](../specs/034-connection-focus-and-drill/spec.md) and [ADR 0023](decisions/0023-derived-connector-bundles.md). Only automatic-route connectors bundle: a connector with its own route or style (a line type today; waypoints, anchors and a style with 022) always draws on its own, and 022 decides whether a styled connector keeps its colour under the Ink highlight (034 sets colour and weight as two rules, so only the colour rule changes).
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 (only; runs in parallel with 033 and 035) · **Estimate:** 4 d
 - **Goal:** B's "Connections and focus" row (§g-62, from the founder's reference video).
 - **In scope:** hovering or selecting a card highlights its connections and neighbours and dims
