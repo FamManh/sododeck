@@ -29,6 +29,14 @@ const BENCH_FILLS: readonly (CardColor | `#${string}`)[] = [
 const FIELD_TYPES = ['task', 'warehouse', 'issue'] as const;
 
 /**
+ * Every 10th card is a Client with no values, so the Infra view (which dims clients) still has
+ * something to dim in the view-switch scenario.
+ */
+function fieldBenchType(i: number): string {
+  return i % 10 === 9 ? 'client' : (FIELD_TYPES[i % FIELD_TYPES.length] ?? 'task');
+}
+
+/**
  * 032 R10: Owner on the card for every type, and Warehouse's defaults materialised with Region
  * options, so each card shows four values (Task: status, assignee, due, owner; Warehouse:
  * capacity, SLA, region, owner; Issue: status, assignee, dates, estimate).
@@ -195,16 +203,21 @@ export function generateBenchDeck(
       id: `n${i}`,
       type:
         (options.fields === true
-          ? FIELD_TYPES[i % FIELD_TYPES.length]
+          ? fieldBenchType(i)
           : options.types === true
             ? ALL_TYPES[i % ALL_TYPES.length]
             : KINDS[i % KINDS.length]) ?? 'service',
       title: `Node ${i}`,
-      position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
+      // Cards with a fields block are taller (032): rows further apart so they barely overlap,
+      // columns a little closer so the whole deck still fits one PNG canvas (16.7 M px).
+      position: {
+        x: (i % columns) * (options.fields === true ? 200 : 220),
+        y: Math.floor(i / columns) * (options.fields === true ? 150 : 110),
+      },
       ...(options.routes === true ? { size: { width: 200, height: 72 } } : {}),
       ...(style ? { style } : {}),
       ...(options.tags === true ? { tags: benchTags(i) } : {}),
-      ...(options.fields === true ? benchValues(i) : {}),
+      ...(options.fields === true && fieldBenchType(i) !== 'client' ? benchValues(i) : {}),
     };
   });
 

@@ -173,8 +173,10 @@ describe('generateBenchDeck 032 fields', () => {
   it('cycles Task / Warehouse / Issue with four on-card values each, valid and clean', () => {
     const { deck } = generateBenchDeck(30, 60, 42, { fields: true });
     expect(parseSododeckFile(deck).success).toBe(true);
-    expect(new Set(deck.nodes.map((n) => n.type))).toEqual(new Set(['task', 'warehouse', 'issue']));
-    for (const node of deck.nodes) {
+    expect(new Set(deck.nodes.map((n) => n.type))).toEqual(
+      new Set(['task', 'warehouse', 'issue', 'client']),
+    );
+    for (const node of deck.nodes.filter((n) => n.type !== 'client')) {
       const onCard = fieldsOfType(deck, node.type).filter(
         (f) => f.onCard === true && hasValue(valueOf(node, f.id)),
       );

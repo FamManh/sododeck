@@ -91,6 +91,13 @@ async function emptyCanvasPoint(
   page: Page,
   box: { x: number; y: number; width: number; height: number },
 ) {
+  // The search is not part of the pan: pause frame recording and mark the gap (a NaN), so
+  // `summarize` does not count it (on a dense deck it can take a few hundred ms).
+  await page.evaluate(() => {
+    const w = window as unknown as { __paused?: boolean; __frames?: number[] };
+    w.__paused = true;
+    w.__frames?.push(Number.NaN);
+  });
   const point = await page.evaluate(({ x, y, width, height }) => {
     const okAt = (px: number, py: number) => {
       const stack = document.elementsFromPoint(px, py);
@@ -100,7 +107,9 @@ async function emptyCanvasPoint(
           el.matches('[data-testid="deck-node"], [data-testid="sticky-node"]') ||
           el.closest('[data-testid="deck-node"], [data-testid="sticky-node"]') !== null ||
           el.matches('[data-testid="edge-label"], [aria-label^="Go to "]') ||
-          el.closest('[data-testid="edge-label"], [aria-label^="Go to "]') !== null,
+          el.closest('[data-testid="edge-label"], [aria-label^="Go to "]') !== null ||
+          // A drag that starts on a connector re-routes it (022), which is not a pan.
+          el.closest('.react-flow__edge') !== null,
       );
     };
 
