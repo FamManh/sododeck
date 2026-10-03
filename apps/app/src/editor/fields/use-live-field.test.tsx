@@ -1,4 +1,4 @@
-import { toJSON } from '@sododeck/model';
+import { createEditor, toJSON } from '@sododeck/model';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
@@ -166,5 +166,72 @@ describe('useLiveField (research R4)', () => {
       editor().undo();
     });
     expect(title()).toBe('Orders!');
+  });
+});
+
+function DescriptionField({ id }: { id: string }) {
+  const editor = useEditor();
+  const file = useDeckSnapshot(editor.doc);
+  const node = file.nodes.find((n) => n.id === id);
+  const field = useLiveField({
+    label: 'Description',
+    value: node?.description ?? '',
+    multiline: true,
+    onWrite: (description) => {
+      editor.update('nodes', id, { description: description === '' ? null : description });
+    },
+  });
+  return (
+    <textarea
+      aria-label="Description"
+      value={field.value}
+      onChange={(e) => {
+        field.onChange(e.target.value);
+      }}
+      onFocus={field.onFocus}
+      onBlur={field.onBlur}
+      onKeyDown={field.onKeyDown}
+    />
+  );
+}
+
+describe('useLiveField with a change from elsewhere (036 FR-016)', () => {
+  const described = deckOf({
+    nodes: [{ id: 'a', type: 'service', title: 'Orders', description: 'Hello world' }],
+  });
+
+  it('keeps the typing and the caret when another tab edits the focused field', async () => {
+    const view = renderWithEditor(<DescriptionField id="a" />, described);
+    const user = userEvent.setup();
+    const description = () => toJSON(view.doc).nodes[0]?.description;
+    const field = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Description' });
+    // The trailing space is typed but not written (the field trims what it writes).
+    await user.type(field, ' mine ');
+    await waitFor(() => {
+      expect(description()).toBe('Hello world mine');
+    });
+
+    // Another tab (a second editor on the same document) adds text at the start.
+    const other = createEditor(view.doc);
+    act(() => {
+      other.update('nodes', 'a', { description: 'Theirs: Hello world mine' });
+    });
+    expect(field).toHaveValue('Theirs: Hello world mine ');
+    expect(field.selectionStart).toBe('Theirs: Hello world mine '.length);
+
+    await user.keyboard('x');
+    await waitFor(() => {
+      expect(description()).toBe('Theirs: Hello world mine x');
+    });
+
+    // One focus session is still one undo step, and it reverts only this tab's characters.
+    act(() => {
+      field.blur();
+    });
+    act(() => {
+      view.editor().undo();
+    });
+    expect(description()).toBe('Theirs: Hello world');
+    other.destroy();
   });
 });

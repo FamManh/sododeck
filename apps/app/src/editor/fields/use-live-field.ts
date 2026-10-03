@@ -8,6 +8,7 @@ import {
 } from 'react';
 
 import { useEditor } from '../../model/use-editor';
+import { rebaseCaret, rebaseDraft } from './rebase-draft';
 
 interface LiveFieldOptions {
   /** Field name, for the "<Label> can’t be empty." error. */
@@ -32,6 +33,11 @@ export interface LiveField {
   onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
+type TextControl = HTMLInputElement | HTMLTextAreaElement;
+
+const isTextControl = (element: Element | null): element is TextControl =>
+  element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement;
+
 const frame = (fn: () => void): (() => void) => {
   if (typeof requestAnimationFrame !== 'function') {
     fn();
@@ -49,6 +55,9 @@ const frame = (fn: () => void): (() => void) => {
  * unmount end the gesture, so one focus session is one undo step however slowly the user types.
  * Esc writes back the value from before focus. While the field has focus ⌘Z stays the browser's
  * (`isTextTarget`), so model undo never splits a half-typed value.
+ *
+ * A change from elsewhere (another tab) while the user types is merged into the draft rather than
+ * overwritten by it, and the caret stays with the user's characters (036 FR-016, R7).
  */
 export function useLiveField({
   label,
@@ -67,10 +76,30 @@ export function useLiveField({
   });
   const session = useRef<{
     initial: string;
+    /** The document value the draft was typed over: the value at focus, then each own write. */
+    basis: string;
+    /** The last `value` seen, so only a real change of it counts. */
+    seen: string;
+    /**
+     * Texts this field wrote since focus. Callers may pass the document value a render late (a
+     * canvas node's data), so an own write can arrive after a newer one: it is not an outside change.
+     */
+    writes: Set<string>;
     gesture: boolean;
     pending: string | null;
     cancel: (() => void) | null;
-  }>({ initial: value, gesture: false, pending: null, cancel: null });
+    /** Caret to put back after a rebase re-renders the control. */
+    caret: { element: TextControl; at: number } | null;
+  }>({
+    initial: value,
+    basis: value,
+    seen: value,
+    writes: new Set(),
+    gesture: false,
+    pending: null,
+    cancel: null,
+    caret: null,
+  });
 
   const flush = useCallback(() => {
     const s = session.current;
@@ -80,8 +109,41 @@ export function useLiveField({
     const text = s.pending.trim();
     s.pending = null;
     if (latest.current.required && text === '') return;
+    s.basis = text;
+    s.writes.add(text);
     latest.current.onWrite(text);
   }, []);
+
+  // A document value that is not this field's own write, while it holds typing: rebase the draft
+  // onto it (the outside change replayed onto what the user typed), keeping the caret in place.
+  useLayoutEffect(() => {
+    const s = session.current;
+    if (value === s.seen) return;
+    s.seen = value;
+    if (draft === null) {
+      s.basis = value;
+      s.writes.clear();
+      return;
+    }
+    if (value === s.basis || s.writes.has(value)) return;
+    const next = rebaseDraft(s.basis, value, draft);
+    const element = document.activeElement;
+    if (isTextControl(element) && element.selectionStart !== null) {
+      s.caret = { element, at: rebaseCaret(s.basis, value, draft, element.selectionStart) };
+    }
+    s.basis = value;
+    s.writes.clear();
+    if (s.pending !== null) s.pending = next;
+    setDraft(next);
+  }, [value, draft]);
+
+  useLayoutEffect(() => {
+    const s = session.current;
+    if (s.caret === null) return;
+    const { element, at } = s.caret;
+    s.caret = null;
+    if (document.activeElement === element) element.setSelectionRange(at, at);
+  }, [draft]);
 
   const end = useCallback(() => {
     flush();
@@ -111,7 +173,11 @@ export function useLiveField({
     value: draft ?? value,
     error: invalid ? `${label} can’t be empty.` : undefined,
     onFocus: () => {
-      session.current.initial = value;
+      const s = session.current;
+      s.initial = value;
+      s.basis = value;
+      s.seen = value;
+      s.writes.clear();
     },
     onChange: (text) => {
       const s = session.current;
