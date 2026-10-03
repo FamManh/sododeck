@@ -1,17 +1,25 @@
 ---
 import '../styles/global.css';
 
+import { Layers, Menu } from 'lucide-react';
+
 import { ThemeToggle } from '../components/ThemeToggle';
-import { APP_URL, NAV } from '../site';
+import { APP_URL, FOOTER_NAV, NAV } from '../site';
 
 interface Props {
   title: string;
   description?: string;
+  /** Full-width content (the landing page draws its own grid). */
+  wide?: boolean;
 }
 
-const { title, description = 'Interactive, editable architecture and flow diagrams.' } =
-  Astro.props;
+const {
+  title,
+  description = 'Interactive, editable architecture and flow diagrams.',
+  wide = false,
+} = Astro.props;
 const pageTitle = title === 'Sododeck' ? title : `${title} · Sododeck`;
+const gutters = 'px-6 tab:px-8 desk:px-[max(40px,calc((100%-1200px)/2))]';
 ---
 
 <!doctype html>
@@ -34,43 +42,80 @@ const pageTitle = title === 'Sododeck' ? title : `${title} · Sododeck`;
       } catch {}
     </script>
   </head>
-  <body class="flex min-h-dvh flex-col">
-    <header class="border-b border-hairline bg-surface">
-      <div class="mx-auto flex h-14 max-w-5xl items-center gap-6 px-6">
-        <a href="/" class="flex items-center gap-2 text-title-sm font-semibold text-ink">
-          <img src="/favicon.svg" alt="" class="size-6" />
-          Sododeck
-        </a>
-        <nav class="flex gap-4 text-body text-ink-secondary">
+  <body class="flex min-h-dvh flex-col bg-canvas text-ink">
+    <header
+      class={`sticky top-0 z-50 flex h-16 items-center gap-2.5 border-b border-hairline bg-canvas tab:gap-8 ${gutters}`}
+    >
+      <a href="/" class="flex flex-none items-center gap-[9px] rounded-[9px]">
+        <span
+          class="flex size-7 items-center justify-center rounded-[9px] bg-inverse text-on-inverse"
+          aria-hidden="true"
+        >
+          <Layers size={16} strokeWidth={2} />
+        </span>
+        <span class="text-[16px] font-semibold tracking-[-0.01em] text-ink">Sododeck</span>
+      </a>
+      <nav aria-label="Main" class="hidden items-center gap-7 tab:flex">
+        {NAV.map((item) => (
+          <a href={item.href} class="text-[14px] text-ink-secondary hover:text-ink">
+            {item.label}
+          </a>
+        ))}
+      </nav>
+      <div class="flex-1"></div>
+      <div class="hidden tab:block">
+        <ThemeToggle client:load />
+      </div>
+      <a href={APP_URL} class="ld-btn ld-btn-secondary ld-btn-sm">
+        Open app
+      </a>
+      <details class="relative tab:hidden">
+        <summary
+          class="flex size-9 cursor-pointer list-none items-center justify-center rounded-[10px] border-[1.5px] border-border-strong bg-surface text-ink [&::-webkit-details-marker]:hidden"
+          aria-label="Menu"
+        >
+          <Menu size={17} strokeWidth={2} aria-hidden="true" />
+        </summary>
+        <div class="absolute top-11 right-0 flex w-52 flex-col gap-1 rounded-2xl border-[1.5px] border-border-strong bg-surface p-2 shadow-float">
           {NAV.map((item) => (
-            <a href={item.href} class="hover:text-ink">
+            <a
+              href={item.href}
+              class="rounded-lg px-3 py-2 text-[14px] text-ink-secondary hover:bg-surface-2 hover:text-ink"
+            >
               {item.label}
             </a>
           ))}
-        </nav>
-        <div class="flex-1"></div>
-        <ThemeToggle client:load />
-        <a
-          href={APP_URL}
-          class="inline-flex h-8.5 items-center rounded-button bg-primary px-3.5 text-body font-medium text-on-primary hover:bg-primary-hover"
-        >
-          Open the app
-        </a>
-      </div>
+          <div class="flex items-center justify-between px-3 py-1 text-[14px] text-ink-secondary">
+            Theme
+            <ThemeToggle client:load />
+          </div>
+        </div>
+      </details>
     </header>
-    <main class="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
+    <main class={wide ? 'flex-1' : 'mx-auto w-full max-w-5xl flex-1 px-6 py-12'}>
       <slot />
     </main>
-    <footer class="border-t border-hairline bg-surface">
-      <div class="mx-auto flex max-w-5xl gap-4 px-6 py-6 text-caption text-ink-muted">
-        <span>© {new Date().getFullYear()} Sododeck</span>
-        <a href="/privacy" class="hover:text-ink">
-          Privacy
-        </a>
-        <a href="/terms" class="hover:text-ink">
-          Terms
-        </a>
-      </div>
+    <footer
+      class={`flex flex-col items-start gap-5 border-t border-hairline pt-8 pb-10 tab:flex-row tab:items-center tab:gap-8 ${gutters}`}
+    >
+      <a href="/" class="flex flex-none items-center gap-[9px]">
+        <span
+          class="flex size-7 items-center justify-center rounded-[9px] bg-inverse text-on-inverse"
+          aria-hidden="true"
+        >
+          <Layers size={16} strokeWidth={2} />
+        </span>
+        <span class="text-[16px] font-semibold tracking-[-0.01em] text-ink">Sododeck</span>
+      </a>
+      <nav aria-label="Footer" class="flex flex-wrap gap-4 tab:gap-6">
+        {FOOTER_NAV.map((item) => (
+          <a href={item.href} class="text-[13.5px] text-ink-secondary hover:text-ink">
+            {item.label}
+          </a>
+        ))}
+      </nav>
+      <div class="flex-1"></div>
+      <span class="text-[13px] text-ink-muted">© {new Date().getFullYear()} Sododeck</span>
     </footer>
   </body>
 </html>

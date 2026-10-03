@@ -1,0 +1,110 @@
+/*
+ * Landing page (sododeck.com): marketing buttons, the animation stages and the Replay button.
+ * Tokens only; sizes follow DESIGN.md "Marketing type".
+ */
+
+/* ── Buttons: Deck lip that lifts on hover and drops when pressed ── */
+.ld-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-size: 15.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  box-sizing: border-box;
+  outline: none;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s,
+    background-color 0.12s;
+}
+.ld-btn-sm {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+.ld-btn-primary {
+  --ld-lip: var(--sd-primary-ink);
+  background: var(--sd-primary);
+  color: var(--sd-on-primary);
+  box-shadow: 0 3px 0 0 var(--ld-lip);
+}
+.ld-btn-secondary {
+  --ld-lip: var(--sd-border-strong);
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  border: 1.5px solid var(--sd-border-strong);
+  box-shadow: 0 3px 0 0 var(--ld-lip);
+}
+.ld-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 0 0 var(--ld-lip);
+}
+.ld-btn-secondary:hover,
+.ld-btn-secondary:active {
+  --ld-lip: var(--sd-text-secondary);
+  background: var(--sd-surface-2);
+  border-color: var(--sd-text-secondary);
+}
+.ld-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 0 var(--ld-lip);
+}
+.ld-btn:focus-visible {
+  box-shadow:
+    0 3px 0 0 var(--ld-lip),
+    0 0 0 2px var(--sd-canvas),
+    0 0 0 4.5px var(--sd-ink);
+}
+
+/* ── Animation stages (see components/landing/stage.tsx and scripts/landing-motion.ts) ── */
+.sdl-stage[data-play] .sdl-a {
+  animation: var(--sdl-a);
+}
+
+.sdl-replay {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 99px;
+  border: 1.5px solid var(--sd-border-strong);
+  background: var(--sd-surface);
+  color: var(--sd-ink);
+  box-shadow: 0 2px 0 0 var(--sd-border-strong);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sdl-replay[data-position='bottom'] {
+  top: auto;
+  bottom: 14px;
+}
+.sdl-replay[hidden] {
+  display: none;
+}
+.sdl-replay:focus-visible {
+  outline: 2px solid var(--sd-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sdl-stage .sdl-a {
+    animation: none !important;
+  }
+  .ld-btn {
+    transition: none;
+  }
+}
