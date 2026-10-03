@@ -104,6 +104,45 @@
   --text-code-sm--line-height: 1.5;
   --text-edge-label: 10.5px;
   --text-edge-label--line-height: 1;
+  /* Marketing site (sododeck.com landing): one size per breakpoint, phone / tablet / desktop. */
+  --text-marketing-hero: 56px;
+  --text-marketing-hero--line-height: 1.05;
+  --text-marketing-hero--letter-spacing: -0.035em;
+  --text-marketing-hero--font-weight: 500;
+  --text-marketing-hero-tablet: 52px;
+  --text-marketing-hero-tablet--line-height: 1.06;
+  --text-marketing-hero-tablet--letter-spacing: -0.03em;
+  --text-marketing-hero-tablet--font-weight: 500;
+  --text-marketing-hero-phone: 40px;
+  --text-marketing-hero-phone--line-height: 1.08;
+  --text-marketing-hero-phone--letter-spacing: -0.025em;
+  --text-marketing-hero-phone--font-weight: 500;
+  --text-marketing-h2: 38px;
+  --text-marketing-h2--line-height: 1.12;
+  --text-marketing-h2--letter-spacing: -0.025em;
+  --text-marketing-h2--font-weight: 500;
+  --text-marketing-h2-tablet: 32px;
+  --text-marketing-h2-tablet--line-height: 1.15;
+  --text-marketing-h2-tablet--letter-spacing: -0.02em;
+  --text-marketing-h2-tablet--font-weight: 500;
+  --text-marketing-h2-phone: 28px;
+  --text-marketing-h2-phone--line-height: 1.18;
+  --text-marketing-h2-phone--letter-spacing: -0.015em;
+  --text-marketing-h2-phone--font-weight: 500;
+  --text-marketing-lead: 19px;
+  --text-marketing-lead--line-height: 1.5;
+  --text-marketing-lead-tablet: 18px;
+  --text-marketing-lead-tablet--line-height: 1.5;
+  --text-marketing-lead-phone: 17px;
+  --text-marketing-lead-phone--line-height: 1.5;
+  --text-marketing-body: 17px;
+  --text-marketing-body--line-height: 1.55;
+  --text-marketing-body-phone: 16px;
+  --text-marketing-body-phone--line-height: 1.55;
+  --text-marketing-eyebrow: 12.5px;
+  --text-marketing-eyebrow--line-height: 1.3;
+  --text-marketing-eyebrow--letter-spacing: 0.05em;
+  --text-marketing-eyebrow--font-weight: 500;
 
   /* ── Radii ── */
   --radius-button: 9px;
