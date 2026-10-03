@@ -10,7 +10,6 @@
  *   BENCH_LINE_TYPES=1 pnpm bench       # a third of the edges each curved, elbow, straight (029)
  *   BENCH_TAGS=1 pnpm bench             # every card has 3 to 10 tags from a pool of 24 (033)
  *   BENCH_TYPES=1 pnpm bench            # the 13 card types round-robin, every pack on (030)
- *   BENCH_TYPES=1 pnpm bench            # the 13 card types round-robin, every pack on (030)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.

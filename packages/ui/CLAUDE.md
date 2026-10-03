@@ -9,7 +9,7 @@
 - `src/lib/utils.ts` — `cn()`; its tailwind-merge config must list every custom `text-*`, `rounded-*` and `shadow-*` key from theme.css.
 - `src/lib/focus.ts` — `focusRing`, the one keyboard focus style (2px orange outline, 2px gap). Every interactive element uses it.
 - `src/lib/motion.ts` — `MOTION` + `resolveMotion(reduced)`, the JS mirror of the motion tokens (a test keeps CSS and TS equal).
-- `src/lib/icons.ts` — `ICON_STROKE_WIDTH` (1.5), `ComponentKind`, `KIND_STYLE`, `toComponentKind()` (accepts prototype `edge`/`data`), `MATERIAL_TO_LUCIDE` for every prototype glyph. Human-readable copy: `docs/design/icon-mapping.md` (kept in sync by a test).
+- `src/lib/icons.ts` — `ICON_STROKE_WIDTH` (1.5), `TYPE_STYLE` (icon and tile tone per card type id, 030), `TYPE_FALLBACK`, `typeStyle(id)` (case-insensitive, aliases `edge`, `data`), `resolveTypeId`, `MATERIAL_TO_LUCIDE` for every prototype glyph. Human-readable copy: `docs/design/icon-mapping.md` (kept in sync by a test).
 - `src/lib/menu.ts` — the shared classes of `DropdownMenu` and `ContextMenu`.
 - `src/lib/tags.ts` — `tagKey` (trim, single-space, lower-case: the identity of a tag, the same rule as `@sododeck/model`'s), `normalizeTag` (trim and single-space, **case kept** since 033), `addTag` / `removeTag` (by key: "pci" next to "PCI" is the same tag and the first spelling stays).
 - `src/lib/contrast.ts` — `contrastRatio(hexA, hexB)` (WCAG 2.1), `relativeLuminance(hex)`, `readableText(hex)` (020: picks dark or light card text, whichever has higher contrast, switching near luminance 0.204; `readable` false in the ≈ 0.183–0.227 band).

@@ -81,13 +81,14 @@ its own tests, and may still be refined in that feature's spec.
 
 ### Card types and packs (030, 031)
 
-| Field                                | Type                           | Added by | Absent means                                                                                       |
-| ------------------------------------ | ------------------------------ | -------- | -------------------------------------------------------------------------------------------------- |
-| `node.type`                          | a type id (was a 6-value enum) | 030      | n/a (still required). Today's six kinds are type ids of the built-in Architecture pack, unchanged. |
-| `packs`                              | string[] (pack ids), unique    | 030      | `["architecture"]`                                                                                 |
-| `view.excludeKinds`, `view.dimKinds` | type ids (were the enum)       | 030      | unchanged                                                                                          |
-| `node.display`                       | `card` \| `shape`              | 031      | the type's own family                                                                              |
+| Field                                | Type                           | Added by    | Absent means                                                                                       |
+| ------------------------------------ | ------------------------------ | ----------- | -------------------------------------------------------------------------------------------------- |
+| `node.type`                          | a type id (was a 6-value enum) | 030 (built) | n/a (still required). Today's six kinds are type ids of the built-in Architecture pack, unchanged. |
+| `packs`                              | string[] (pack ids), unique    | 030 (built) | `["architecture"]`                                                                                 |
+| `view.excludeKinds`, `view.dimKinds` | type ids (were the enum)       | 030 (built) | unchanged                                                                                          |
+| `node.display`                       | `card` \| `shape`              | 031         | the type's own family                                                                              |
 
+- Built by 030 with no version bump (ADR 0025). Refined: type and pack ids share the pattern `^[a-z][a-z0-9-]{0,47}$` (`$defs/TypeId`, `$defs/PackId`), `packs` has at least one id, and the model reports `unknown-card-type` and `unknown-pack` problems.
 - Types and packs are defined in code (a registry), not in the file.
 - A type id the app does not know renders as a generic card and is reported in Problems. The file
   still loads.
