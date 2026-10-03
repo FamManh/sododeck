@@ -42,4 +42,12 @@ describe('endMarks', () => {
     expect(arrowPathAt(110, 60, 90)).toBe('M 110 60 L 115 51 L 105 51 Z');
     expect(arrowPathAt(10, 20, 180)).toBe('M 10 20 L 19 25 L 19 15 Z');
   });
+
+  it('ends in a cross instead of an arrow on an error path, keeping the start mark (035)', () => {
+    expect(endMarks(ends, 'forward', true)).toEqual([
+      { kind: 'knob', at: ends.start },
+      { kind: 'cross', at: ends.end },
+    ]);
+    expect(endMarks(ends, 'both', true)[1]).toEqual({ kind: 'cross', at: ends.end });
+  });
 });

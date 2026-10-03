@@ -94,7 +94,8 @@ describe('MergedEdge', () => {
           style: 'path',
           errorIcon: false,
           inPath: true,
-          current: { speed: 2 },
+          state: 'current',
+          current: { speed: 2, number: '5' },
         },
       },
     } as unknown as EdgeProps<MergedFlowEdge>;
@@ -106,8 +107,85 @@ describe('MergedEdge', () => {
     );
 
     expect(screen.getByRole('img', { name: 'Step 4' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Step 5' })).toHaveClass('ring-2');
+    expect(screen.getByRole('img', { name: 'Step 5' })).toBeInTheDocument();
     expect(screen.getByTestId('merged-edge-label')).toHaveAttribute('data-in-flow', '');
-    expect(screen.getByTestId('flow-token')).toBeInTheDocument();
+    expect(screen.getByTestId('merged-edge-label')).toHaveAttribute('data-step-state', 'current');
+    expect(screen.getByTestId('merged-edge-label')).toHaveClass('bg-primary');
+    // The token carries the number of the current step the bundle folds in.
+    expect(screen.getByTestId('flow-token')).toHaveTextContent('5');
+  });
+
+  describe('playback states (035)', () => {
+    const flowOf = (
+      state: 'played' | 'current' | 'upcoming',
+      style: 'path' | 'error' = 'path',
+    ) => ({
+      badges: [
+        {
+          label: '4',
+          errorPath: style === 'error',
+          current: state === 'current',
+          chainBreak: false,
+        },
+      ],
+      style,
+      errorIcon: style === 'error',
+      inPath: true,
+      state,
+      current: state === 'current' ? { speed: 1 as const, number: '4' } : null,
+    });
+    function draw(flow: ReturnType<typeof flowOf>) {
+      const props = {
+        id: 'merged:a|b',
+        source: 'a',
+        target: 'b',
+        sourceX: 0,
+        sourceY: 0,
+        targetX: 200,
+        targetY: 40,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        data: {
+          count: 2,
+          direction: 'a-to-b',
+          edgeIds: ['e1', 'e2'],
+          focused: false,
+          inFocus: false,
+          flow,
+        },
+      } as unknown as EdgeProps<MergedFlowEdge>;
+      return render(
+        <svg>
+          <MergedEdge {...props} />
+        </svg>,
+      );
+    }
+
+    it('strokes played, current and upcoming like a plain connector', () => {
+      const played = draw(flowOf('played'));
+      expect(played.container.querySelector('.react-flow__edge-path')).toHaveStyle({
+        stroke: 'var(--color-ink-secondary)',
+        strokeWidth: '2.5',
+      });
+      played.unmount();
+      const current = draw(flowOf('current'));
+      expect(current.container.querySelector('.react-flow__edge-path')).toHaveStyle({
+        stroke: 'var(--color-deck-orange)',
+        strokeWidth: '3.25',
+      });
+      expect(screen.getByTestId('edge-halo')).toBeInTheDocument();
+      current.unmount();
+      const upcoming = draw(flowOf('upcoming'));
+      expect(upcoming.container.querySelector('.react-flow__edge-path')).toHaveStyle({
+        strokeDasharray: '2 6',
+      });
+    });
+
+    it('ends an all-error bundle in × with no arrow, and no token when not current', () => {
+      draw(flowOf('played', 'error'));
+      expect(screen.getByTestId('edge-cross')).toBeInTheDocument();
+      expect(screen.queryByTestId('edge-arrow')).toBeNull();
+      expect(screen.queryByTestId('flow-token')).toBeNull();
+    });
   });
 });

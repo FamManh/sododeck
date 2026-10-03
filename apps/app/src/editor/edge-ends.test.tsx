@@ -85,4 +85,30 @@ describe('EdgeEnds', () => {
       for (const mark of all) expect(mark.getAttribute('aria-hidden')).toBe('true');
     }
   });
+
+  describe('error end (035)', () => {
+    it('draws a × instead of the arrow, centred on the end, and keeps the start knob', () => {
+      const { container } = render(
+        <svg>
+          <EdgeEnds {...ends} direction="forward" errorEnd />
+        </svg>,
+      );
+      expect(container.querySelector('[data-testid="edge-arrow"]')).toBeNull();
+      const cross = container.querySelector('[data-testid="edge-cross"]');
+      expect(cross).not.toBeNull();
+      expect(cross?.getAttribute('aria-hidden')).toBe('true');
+      expect(cross?.getAttribute('d')).toBe('M 105 55 L 115 65 M 105 65 L 115 55');
+      expect(container.querySelectorAll('[data-testid="edge-knob"]')).toHaveLength(1);
+    });
+
+    it('keeps the arrow when the connector is not an error path', () => {
+      const { container } = render(
+        <svg>
+          <EdgeEnds {...ends} direction="forward" />
+        </svg>,
+      );
+      expect(container.querySelector('[data-testid="edge-cross"]')).toBeNull();
+      expect(container.querySelector('[data-testid="edge-arrow"]')).not.toBeNull();
+    });
+  });
 });
