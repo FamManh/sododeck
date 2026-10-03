@@ -94,3 +94,5 @@ Vite + React SPA. No backend, no login: everything runs and is stored in the bro
 ## Env
 
 See `.env.example`. All `VITE_*` values are baked into the public bundle at build time, so never put secrets there. Telemetry turns on only when the flag is exactly `true` and a key is set.
+
+029 line types: `connection.lineType` (`editor/actions/connection-actions.ts`, radio children Curved / Elbow / Straight) works on one connection or on two or more (`connections` target kind in `use-action-context.ts`); the shared write path is `editor/fields/line-type.ts` `applyLineType` (one undo step via `editor.setEdgeShape`, remembers `lastLineShape` in `ui-store`, announces), also used by `LineTypeField` in the connection drawer and the multi-connection panel. `DeckEdgeData.shape` is `edgeShape(edge)`; `deck-edge.tsx` draws it through `routedPath` and shows the segment handle and Route fields only for elbow. New connectors get `lastLineShape` (memory only) via `connectComponents`.

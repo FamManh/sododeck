@@ -78,7 +78,12 @@ export function connectComponents(editor: DeckEditor, from: string, to: string):
     ui.announce(REFUSAL_TEXT[check]);
     return null;
   }
-  const id = editor.add('edges', { from, to });
+  // Curved is the default look, so it is never stored (029 R7).
+  const { lastLineShape } = ui;
+  const id = editor.add(
+    'edges',
+    lastLineShape === 'curved' ? { from, to } : { from, to, style: { shape: lastLineShape } },
+  );
   ui.select({ edges: [id] });
   ui.openEdgePopover(id);
   ui.announce(`Connected ${titleOf(deck, from)} to ${titleOf(deck, to)}`);
