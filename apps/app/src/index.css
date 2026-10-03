@@ -49,6 +49,19 @@
     box-shadow var(--sd-dur-hover) var(--sd-ease);
 }
 
+/* No lip below 60 % zoom (029 R8, §g-63): canvas.tsx sets data-lipless on the wrapper, so this is
+   pure CSS and no card re-renders. Cards, group frames and the fanned hand all read these vars. */
+[data-lipless] {
+  --sd-deck-lip: 0px;
+  --sd-deck-lip-hover: 0px;
+  --sd-deck-lip-drag: 0px;
+  --sd-deck-lip-current: 0px;
+}
+
+:root {
+  --sd-deck-lip-current: 5px;
+}
+
 /* Card states (029 US2, frame 122). Every transform lives on `.sd-card`, never on
    `.react-flow__node`: React Flow positions the node with its own transform and reads it back for
    drops, so a tilt or lift there would move the card the user drops. Each state also has a cue
@@ -71,7 +84,7 @@
 .sd-card.current-step,
 .sd-card[aria-current='step'] {
   --card-lip: var(--color-deck-orange);
-  --tw-shadow: 0 5px 0 0 var(--card-lip);
+  --tw-shadow: 0 var(--sd-deck-lip-current) 0 0 var(--card-lip);
   border-color: var(--color-deck-orange);
   transform: translateY(-2px);
 }

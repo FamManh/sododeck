@@ -92,6 +92,12 @@ const edgeTypes: EdgeTypes = {
 const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2] * CARD_SIZE_LIMITS.min.width < 80;
 
+/**
+ * Below 60 % zoom the lip is gone (029 R8, §g-63): one boolean for the wrapper, read by CSS, so
+ * crossing 60 % re-renders no card (the level boundaries are 45 % and 90 %).
+ */
+export const liplessSelector = (s: { transform: [number, number, number] }) => s.transform[2] < 0.6;
+
 /** With the Select tool only the middle mouse button pans (plus Space+drag, React Flow's default). */
 const PAN_BUTTONS = [1];
 
@@ -295,6 +301,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const zoomLevel = useStore(levelSelector);
   // One boolean for the whole canvas: cards never subscribe to the zoom (019 R4).
   const tinyCards = useStore(tinyCardsSelector);
+  const lipless = useStore(liplessSelector);
   const dragging = useUiStore((s) => s.canvasGesture === 'drag');
   useEffect(
     () => () => {
@@ -596,6 +603,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       {...(hand ? { 'data-tool-hand': '' } : {})}
       {...(dragging ? { 'data-dragging': '' } : {})}
       {...(tinyCards ? { 'data-tiny-cards': '' } : {})}
+      {...(lipless ? { 'data-lipless': '' } : {})}
       data-level={level}
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}

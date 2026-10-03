@@ -20,7 +20,7 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
-import { Canvas } from './canvas';
+import { Canvas, liplessSelector } from './canvas';
 import { demoDeck } from './demo-deck';
 import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
@@ -472,6 +472,17 @@ describe('Canvas', () => {
     }
     // jsdom's React Flow starts at zoom 1: a 164 px card is not tiny.
     expect(canvas).not.toHaveAttribute('data-tiny-cards');
+  });
+
+  it('flags the wrapper data-lipless below 60 % zoom and not at 60 % (029 R8)', () => {
+    const at = (zoom: number) => liplessSelector({ transform: [0, 0, zoom] });
+    expect(at(0.59)).toBe(true);
+    expect(at(0.3)).toBe(true);
+    expect(at(0.6)).toBe(false);
+    expect(at(1)).toBe(false);
+    // jsdom's React Flow starts at zoom 1: the wrapper has no flag.
+    const { container } = renderWithEditor(<Canvas />, deck);
+    expect(container.querySelector('[data-canvas]')).not.toHaveAttribute('data-lipless');
   });
 
   it('does not hand focus to a card when the canvas is pressed with the pointer', () => {
