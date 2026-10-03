@@ -303,6 +303,26 @@ describe('DeckEdge route handles gating (022)', () => {
   });
 });
 
+describe('DeckEdge anchors (022 US3)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+
+  it('starts the line at fromAt along the pinned side and follows the card', () => {
+    // source handle = right-side midpoint of a 160 × 50 card whose top-left is (0, 0)
+    const at = (y: number) =>
+      renderEdge({ shape: 'straight', ...sizes, route: { fromSide: 'right', fromAt: 0 } }, false, {
+        sourceX: 160,
+        sourceY: 25 + y,
+        targetX: 400,
+        targetY: 25 + y,
+      })
+        .container.querySelector('.react-flow__edge-path')
+        ?.getAttribute('d');
+    expect(at(0)).toMatch(/^M ?160[ ,]0 /);
+    // moving the card down moves the end with it
+    expect(at(100)).toMatch(/^M ?160[ ,]100 /);
+  });
+});
+
 describe('DeckEdge bends (022 US2)', () => {
   const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
   // Handles are the side midpoints: right of the source box, left of the target box.

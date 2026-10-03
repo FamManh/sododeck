@@ -6,11 +6,14 @@
  * Straight lines have no bends, so they show none. Live positions live in the UI store; the
  * document is written once, on release (`editing/bend-drag.ts`).
  */
+import type { Side } from '@sododeck/schema';
 import { EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
+import { anchorReadout, stepAnchor } from '../editing/anchor-drag';
+import { oneStep } from '../fields/one-step';
 import {
   addBendAt,
   BEND_STEP,
@@ -26,8 +29,17 @@ import {
 } from '../editing/bend-drag';
 import type { Point } from './route-path';
 
+/** Where each end sits on its card, for the keyboard (the pointer slides ends through React Flow). */
+export interface EndAnchors {
+  fromSide: Side;
+  fromAt: number;
+  toSide: Side;
+  toAt: number;
+}
+
 export interface RouteHandlesProps {
   context: BendContext;
+  anchors?: EndAnchors;
 }
 
 const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
@@ -39,7 +51,7 @@ function focusConnector(edgeId: string): void {
     ?.focus();
 }
 
-export function RouteHandles({ context }: RouteHandlesProps) {
+export function RouteHandles({ context, anchors }: RouteHandlesProps) {
   const editor = useEditor();
   const { getZoom, screenToFlowPosition } = useReactFlow();
   const session = useRef<BendSession | null>(null);
@@ -92,6 +104,31 @@ export function RouteHandles({ context }: RouteHandlesProps) {
     event.stopPropagation();
   }
 
+  /** ← / ↑ and → / ↓ move an end one stop along its side, onto the next side at a corner. */
+  function endKeys(event: KeyboardEvent<HTMLElement>, end: 'source' | 'target') {
+    if (anchors === undefined) return;
+    const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
+    const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
+    if (event.key === 'Escape') focusConnector(context.edgeId);
+    else if (!back && !forward) return;
+    else {
+      const [side, at] =
+        end === 'source' ? [anchors.fromSide, anchors.fromAt] : [anchors.toSide, anchors.toAt];
+      const next = stepAnchor(side, at, forward ? 1 : -1);
+      oneStep(editor, () => {
+        editor.setEdgeRoute(
+          context.edgeId,
+          end === 'source'
+            ? { fromSide: next.side, fromAt: next.at }
+            : { toSide: next.side, toAt: next.at },
+        );
+      });
+      useUiStore.getState().announce(`Anchor ${anchorReadout(next.side, next.at)}`);
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   const placed = (point: Point) => ({
     left: point.x,
     top: point.y,
@@ -100,6 +137,25 @@ export function RouteHandles({ context }: RouteHandlesProps) {
 
   return (
     <EdgeLabelRenderer>
+      {anchors !== undefined &&
+        (['source', 'target'] as const).map((end) => (
+          <button
+            key={end}
+            type="button"
+            aria-label={end === 'source' ? 'Source end' : 'Target end'}
+            data-kind="end"
+            data-testid={`route-end-${end}`}
+            className="sd-route-handle nodrag nopan absolute"
+            // The pointer drags ends through React Flow's reconnect anchors underneath.
+            style={{
+              ...placed(end === 'source' ? context.start : context.end),
+              pointerEvents: 'none',
+            }}
+            onKeyDown={(event) => {
+              endKeys(event, end);
+            }}
+          />
+        ))}
       {points.slice(0, -1).map((from, i) => {
         const to = points[i + 1];
         if (to === undefined || dragging) return null;

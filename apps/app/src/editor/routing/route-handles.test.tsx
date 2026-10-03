@@ -118,3 +118,33 @@ describe('RouteHandles (022 US2)', () => {
     expect(within(document.body).getAllByRole('button', { name: /^Add bend/ }).length).toBe(3);
   });
 });
+
+describe('RouteHandles end anchors (022 US3)', () => {
+  function withAnchors(anchors: { fromSide: 'right' | 'top'; fromAt: number }) {
+    return renderWithEditor(
+      <RouteHandles context={ctx()} anchors={{ ...anchors, toSide: 'left', toAt: 0.5 }} />,
+      deck,
+    );
+  }
+
+  it('has Source end and Target end buttons', () => {
+    withAnchors({ fromSide: 'right', fromAt: 0.5 });
+    expect(screen.getByRole('button', { name: 'Source end' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Target end' })).toBeInTheDocument();
+  });
+
+  it('→ moves the source end one stop along its side, announced', async () => {
+    const { doc } = withAnchors({ fromSide: 'right', fromAt: 0.5 });
+    screen.getByRole('button', { name: 'Source end' }).focus();
+    await userEvent.setup().keyboard('{ArrowRight}');
+    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0.75 });
+    expect(useUiStore.getState().announcement.text).toBe('Anchor right side · 75 %');
+  });
+
+  it('moves onto the next side at a corner', async () => {
+    const { doc } = withAnchors({ fromSide: 'top', fromAt: 1 });
+    screen.getByRole('button', { name: 'Source end' }).focus();
+    await userEvent.setup().keyboard('{ArrowRight}');
+    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0 });
+  });
+});

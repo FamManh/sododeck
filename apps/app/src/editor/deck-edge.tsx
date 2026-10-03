@@ -325,7 +325,15 @@ export const DeckEdge = memo(function DeckEdge({
         </EdgeLabelRenderer>
       )}
       {showHandle && shape !== 'straight' && data?.routable === true && (
-        <RouteHandles context={bendContext} />
+        <RouteHandles
+          context={bendContext}
+          anchors={{
+            fromSide: sides[0],
+            fromAt: route?.fromAt ?? 0.5,
+            toSide: sides[1],
+            toAt: route?.toAt ?? 0.5,
+          }}
+        />
       )}
     </>
   );

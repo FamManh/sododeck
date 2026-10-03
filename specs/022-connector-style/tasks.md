@@ -141,13 +141,13 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T039 [P] [US3] `apps/app/src/editor/editing/anchor-drag.test.ts`: the pointer projects to the nearest side; snaps within 4 % to the five stops, ⌘ disables; readout text "left side · 78 %"; a drop more than 12 px inside every side clears side and position; a drop on another card reconnects as today (017) and anchors when near a side; Esc cancels; one `setEdgeRoute` per gesture; keyboard steps move one stop and wrap to the next side at a corner.
-- [ ] T040 [P] [US3] Extend `deck-edge.test.tsx`: the end sits at `fromAt` along its side, follows card moves and resizes; `endpoint-connection-line.test.tsx`: the preview line uses the anchor while sliding.
+- [x] T039 [P] [US3] `apps/app/src/editor/editing/anchor-drag.test.ts`: the pointer projects to the nearest side; snaps within 4 % to the five stops, ⌘ disables; readout text "left side · 78 %"; a drop more than 12 px inside every side clears side and position; a drop on another card reconnects as today (017) and anchors when near a side; Esc cancels; one `setEdgeRoute` per gesture; keyboard steps move one stop and wrap to the next side at a corner.
+- [x] T040 [P] [US3] Extend `deck-edge.test.tsx`: the end sits at `fromAt` along its side, follows card moves and resizes; `endpoint-connection-line.test.tsx`: the preview line uses the anchor while sliding.
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Create `apps/app/src/editor/editing/anchor-drag.ts` (`canvasGesture: 'anchor'`, readout in the UI store); hook it into the end handles in `routing/route-handles.tsx` (slide along the own card vs. reconnect to another card, per R4). Make T039 pass.
-- [ ] T042 [US3] `deck-edge.tsx` and `routing/endpoint-connection-line.tsx`: compute ends with `anchorPoint` from React Flow's side midpoint plus the card size from edge data. `export/edge-geometry.ts`: same for the export. Make T040 pass.
+- [x] T041 [US3] Create `apps/app/src/editor/editing/anchor-drag.ts` (`canvasGesture: 'anchor'`, readout in the UI store); hook it into the end handles in `routing/route-handles.tsx` (slide along the own card vs. reconnect to another card, per R4). Make T039 pass.
+- [x] T042 [US3] `deck-edge.tsx` and `routing/endpoint-connection-line.tsx`: compute ends with `anchorPoint` from React Flow's side midpoint plus the card size from edge data. `export/edge-geometry.ts`: same for the export. Make T040 pass.
 
 ---
 
