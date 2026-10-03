@@ -1,7 +1,16 @@
 import { getSmoothStepPath, Position } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
 
-import { middleSegment, nearestSide, resolveSides, routedStepPath, type Box } from './route-path';
+import { ARROW_LENGTH } from '../edge-constants';
+import {
+  middleSegment,
+  nearestSide,
+  resolveSides,
+  routedPath,
+  routedStepPath,
+  type Box,
+  type PathShape,
+} from './route-path';
 
 const near: Box = { x: 0, y: 0, width: 160, height: 50 };
 const far = (x: number, y: number, width = 160, height = 50): Box => ({ x, y, width, height });
@@ -109,5 +118,139 @@ describe('routedStepPath', () => {
       routedStepPath({ ...common, sides: ['right', 'top'], offset: 0 }),
     );
     expect(sameSide).toEqual(routedStepPath({ ...common, sides: ['right', 'right'], offset: 0 }));
+  });
+});
+
+describe('routedPath', () => {
+  const shapes: PathShape[] = ['curved', 'elbow', 'straight'];
+  const from: Box = { x: 0, y: 0, width: 184, height: 100 };
+  const to: Box = { x: 400, y: 40, width: 184, height: 100 };
+  const sides: ['right', 'left'] = ['right', 'left'];
+  const noArrows = { arrowAtEnd: false };
+
+  it.each(shapes)('%s starts and ends at the side midpoints (Q4)', (shape) => {
+    const { ends } = routedPath(shape, from, to, sides, 0);
+    expect(ends.start).toEqual({ x: 184, y: 50 });
+    expect(ends.end).toEqual({ x: 400, y: 90 });
+  });
+
+  it('ends never move when the shape changes', () => {
+    const [curved, elbow, straight] = shapes.map((shape) => routedPath(shape, from, to, sides, 0));
+    expect(elbow?.ends.start).toEqual(curved?.ends.start);
+    expect(elbow?.ends.end).toEqual(curved?.ends.end);
+    expect(straight?.ends.start).toEqual(curved?.ends.start);
+    expect(straight?.ends.end).toEqual(curved?.ends.end);
+  });
+
+  it('elbow without arrows is exactly the step path from the same points', () => {
+    const step = routedStepPath({
+      sourceX: 184,
+      sourceY: 50,
+      targetX: 400,
+      targetY: 90,
+      sides,
+      offset: 30,
+    });
+    const routed = routedPath('elbow', from, to, sides, 30, noArrows);
+    expect(routed.path).toBe(step.path);
+    expect(routed.labelX).toBe(step.labelX);
+    expect(routed.labelY).toBe(step.labelY);
+    expect(routed.segment).toEqual(step.segment);
+  });
+
+  it('elbow stops an arrow length short of the target, along the side normal', () => {
+    const step = routedStepPath({
+      sourceX: 184,
+      sourceY: 50,
+      targetX: 400 - ARROW_LENGTH,
+      targetY: 90,
+      sides,
+    });
+    expect(routedPath('elbow', from, to, sides, 0).path).toBe(step.path);
+  });
+
+  it('curved control points lie on the side normals', () => {
+    const { path } = routedPath('curved', from, to, sides, 0, noArrows);
+    const numbers = path.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
+    // M sx sy C c1x c1y c2x c2y ex ey
+    const [sx, sy, c1x, c1y, c2x, c2y, ex, ey] = numbers;
+    expect(path.startsWith('M')).toBe(true);
+    expect(c1y).toBe(sy);
+    expect(c1x).toBeGreaterThan(sx ?? 0);
+    expect(c2y).toBe(ey);
+    expect(c2x).toBeLessThan(ex ?? 0);
+  });
+
+  it('curved on a vertical pair leaves along the vertical normal', () => {
+    const below: Box = { x: 20, y: 300, width: 184, height: 100 };
+    const { path, ends } = routedPath('curved', from, below, ['bottom', 'top'], 0, noArrows);
+    const [sx, , c1x, c1y, , , ,] = path.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
+    expect(c1x).toBe(sx);
+    expect(c1y).toBeGreaterThan(ends.start.y);
+  });
+
+  it('straight is one M L segment', () => {
+    const { path } = routedPath('straight', from, to, sides, 0, noArrows);
+    expect(path).toBe('M 184 50 L 400 90');
+  });
+
+  it('straight is shortened by the arrow length', () => {
+    const { path, ends } = routedPath('straight', from, to, sides, 0);
+    const [, , ex, ey] = path.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
+    expect(Math.hypot(400 - (ex ?? 0), 90 - (ey ?? 0))).toBeCloseTo(ARROW_LENGTH, 5);
+    expect(ends.end).toEqual({ x: 400, y: 90 });
+  });
+
+  it('endDir points into the target side for curved and elbow', () => {
+    for (const shape of ['curved', 'elbow'] as const) {
+      expect(routedPath(shape, from, to, sides, 0).ends.endDir).toEqual({ x: 1, y: 0 });
+      expect(routedPath(shape, from, to, ['right', 'top'], 0).ends.endDir).toEqual({ x: 0, y: 1 });
+    }
+  });
+
+  it('startDir leaves along the start side normal', () => {
+    expect(routedPath('curved', from, to, sides, 0).ends.startDir).toEqual({ x: 1, y: 0 });
+    expect(routedPath('elbow', from, to, ['bottom', 'left'], 0).ends.startDir).toEqual({
+      x: 0,
+      y: 1,
+    });
+  });
+
+  it('straight directions run along the line', () => {
+    const { ends } = routedPath('straight', from, to, sides, 0);
+    const length = Math.hypot(216, 40);
+    expect(ends.endDir.x).toBeCloseTo(216 / length, 10);
+    expect(ends.endDir.y).toBeCloseTo(40 / length, 10);
+    expect(ends.startDir).toEqual(ends.endDir);
+  });
+
+  it.each(shapes)(
+    '%s self-loop leaves the right side and enters the top, non-degenerate',
+    (shape) => {
+      const { path, ends } = routedPath(shape, from, from, ['right', 'left'], 0);
+      expect(ends.start).toEqual({ x: 184, y: 50 });
+      expect(ends.end).toEqual({ x: 92, y: 0 });
+      expect(ends.endDir).toEqual({ x: 0, y: 1 });
+      expect(path.startsWith('M 184 50 C')).toBe(true);
+    },
+  );
+
+  it.each(shapes)('%s with a gap shorter than the arrow has no path but valid ends', (shape) => {
+    const touching: Box = { x: 184 + 4, y: 0, width: 184, height: 100 };
+    const result = routedPath(shape, from, touching, sides, 0);
+    expect(result.path).toBe('');
+    expect(result.ends.start).toEqual({ x: 184, y: 50 });
+    expect(result.ends.end).toEqual({ x: 188, y: 50 });
+    expect(result.ends.endDir).toEqual({ x: 1, y: 0 });
+    expect(Number.isFinite(result.labelX) && Number.isFinite(result.labelY)).toBe(true);
+  });
+
+  it('shortens at the start too when there is an arrow there', () => {
+    const both = routedPath('straight', from, to, sides, 0, {
+      arrowAtStart: true,
+      arrowAtEnd: true,
+    });
+    const [sx] = both.path.match(/-?\d+(\.\d+)?/g)?.map(Number) ?? [];
+    expect(Math.hypot((sx ?? 0) - 184, 0)).toBeGreaterThan(8);
   });
 });
