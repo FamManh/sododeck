@@ -110,7 +110,7 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 - [x] T021 [US1] Add palette UI state to `apps/app/src/state/ui-store.ts`: search text, selected tab, `view: 'types' | 'packs'`, and the derived list of visible type ids (for the shortcuts). UI-only, never saved.
 - [x] T022 [US1] Rewrite `apps/app/src/editor/palette.tsx` (inside the existing `Flyout` host from `shell/flyouts.tsx`): `SearchField`, `tablist`, sections, 3-column tile `grid` with roving focus and drag, number badges, footer button; types from `typesOfPacks(deckPacks(deck))`. Delete `palette-order.ts`. Make T019 pass.
 - [x] T023 [US1] Update `apps/app/src/editor/shell/use-shell-shortcuts.ts` to `Digit1`–`Digit9` over the visible tile list from the store. Make T020 pass.
-- [ ] T024 [US1] Screenshot the flyout (All tab, a search, Process tab) light and dark into `specs/030-card-types-and-packs/screens/` and compare with `127-deck-type-palette-*.png`; fix spacing and sizes.
+- [x] T024 [US1] Screenshot the flyout (All tab, a search, Process tab) light and dark into `specs/030-card-types-and-packs/screens/` and compare with `127-deck-type-palette-*.png`; fix spacing and sizes.
 
 ---
 
@@ -128,7 +128,7 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 ### Implementation for User Story 2
 
 - [x] T027 [US2] Create `apps/app/src/editor/packs-panel.tsx` and switch to it from the palette footer (`view: 'packs'`). Make T025 and T026 pass.
-- [ ] T028 [US2] Screenshot the packs view light and dark against frame 127.
+- [x] T028 [US2] Screenshot the packs view light and dark against frame 127.
 
 **Checkpoint**: US5 + US1 + US2 are the P1 scope.
 
@@ -176,10 +176,10 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 ## Phase 8: Polish and cross-cutting
 
 - [x] T040 [P] Docs: new `docs/decisions/0025-card-type-registry.md` (registry split R1, open `TypeId` and `packs` R2, legacy and new-deck packs R4, unknown ids R7, "Gateway" kept, "Kind" → "Type"); `docs/decisions/0022-schema-roadmap.md` 030 rows marked built and refined (pattern, `PackId`, problems); `DESIGN.md` (left rail Add flyout, packs view, type tile tones); `packages/schema/CLAUDE.md`, `packages/model/CLAUDE.md` (`card-types.ts`, `setPackOn`, `meta.packs`), `packages/ui/CLAUDE.md` (`TYPE_STYLE`), `apps/app/CLAUDE.md` (palette, packs panel, type labels); `docs/backlog.md` §030 status and §032 "unblocked, re-clarify against 030's type ids". Do not name other diagram or database tools anywhere.
-- [ ] T041 Accessibility pass: keyboard-only run of quickstart steps 1–4, visible focus on tabs, tiles, switches and options, roles and names per [contracts/type-ui.md](contracts/type-ui.md), every type distinguishable by icon in a greyscale screenshot.
-- [ ] T042 Run the quickstart manual walk 1–9 in light and dark; save screenshots in `specs/030-card-types-and-packs/screens/` and results in `quickstart-results.md`.
-- [ ] T043 Performance: `pnpm bench` and `BENCH_TYPES=1 pnpm bench` → `specs/030-card-types-and-packs/bench-after.md`, compared with `bench-before.md` (no regression beyond run-to-run variation); re-run `scene.perf`.
-- [ ] T044 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass, no skipped or `.only` tests, the smoke suite (incl. no third-party requests) green. Final report: what changed, what was skipped, what is uncertain, bench numbers, next step (032 re-clarify, then 031). Stop; do not start the next feature.
+- [ ] T041 (roles, names and keyboard paths are test-asserted; the greyscale screenshot and a screen-reader pass are not done) Accessibility pass: keyboard-only run of quickstart steps 1–4, visible focus on tabs, tiles, switches and options, roles and names per [contracts/type-ui.md](contracts/type-ui.md), every type distinguishable by icon in a greyscale screenshot.
+- [x] T042 Run the quickstart manual walk 1–9 in light and dark; save screenshots in `specs/030-card-types-and-packs/screens/` and results in `quickstart-results.md`.
+- [x] T043 Performance: `pnpm bench` and `BENCH_TYPES=1 pnpm bench` → `specs/030-card-types-and-packs/bench-after.md`, compared with `bench-before.md` (no regression beyond run-to-run variation); re-run `scene.perf`.
+- [x] T044 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass, no skipped or `.only` tests, the smoke suite (incl. no third-party requests) green. Final report: what changed, what was skipped, what is uncertain, bench numbers, next step (032 re-clarify, then 031). Stop; do not start the next feature.
 
 ---
 
