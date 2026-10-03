@@ -106,6 +106,56 @@ describe('DeckNode', () => {
     expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Duplicate connection');
   });
 
+  it('puts the problem badge in the header, not on the corner (029 US2)', () => {
+    renderNode(
+      props({ problems: { count: 2, titles: 'Duplicate connection', label: '2 problems' } }),
+    );
+    const badge = screen.getByTestId('problem-glyph');
+    expect(screen.getByTestId('card-header')).toContainElement(badge);
+    expect(badge).toHaveAttribute('aria-hidden', 'true');
+    expect(badge).toHaveTextContent('2');
+    expect(screen.getByTestId('deck-node')).toHaveAttribute(
+      'aria-description',
+      'Duplicate connection',
+    );
+  });
+
+  it('draws the selection and the problem outline together', () => {
+    renderNode(
+      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }, true),
+    );
+    const node = screen.getByTestId('deck-node');
+    expect(node).toHaveClass('selected', 'has-problem');
+    expect(screen.getByTestId('problem-outline')).toBeInTheDocument();
+  });
+
+  it('has no problem outline without a problem', () => {
+    renderNode(props({}, true));
+    expect(screen.queryByTestId('problem-outline')).not.toBeInTheDocument();
+  });
+
+  it('reads "n inside" in the last row, keeping its label', () => {
+    renderNode(props({ childCount: 4 }));
+    const pill = screen.getByRole('img', { name: '4 components inside, press Enter to open' });
+    expect(pill).toHaveTextContent('4 inside');
+  });
+
+  it('marks a valid connect target, and the hovered side handle as active', () => {
+    connection.connecting = true;
+    connection.role = 'target:q';
+    renderNode();
+    act(() => {
+      useUiStore.getState().setCanvasGesture('endpoint');
+      useUiStore.getState().setEndpointHover({ nodeId: 'svc', side: 'left' });
+    });
+    expect(screen.getByTestId('deck-node')).toHaveClass('connect-target');
+    const handles = screen.getAllByRole('button', { name: 'Connect from Order Service' });
+    expect(handles.filter((h) => h.classList.contains('is-active'))).toHaveLength(1);
+    expect(handles.find((h) => h.classList.contains('is-active'))).toHaveClass(
+      'react-flow__handle-left',
+    );
+  });
+
   it('gives the corner to the connect "+" while it is a valid target', () => {
     connection.role = 'target:q';
     connection.connecting = true;
@@ -224,11 +274,11 @@ describe('DeckNode', () => {
     expect(node).toHaveAttribute('tabindex', '0');
   });
 
-  it('marks the from/to of the current flow step with the ring and aria-current (007)', () => {
+  it('marks the from/to of the current flow step with the lift and aria-current (007)', () => {
     renderNode(props({ currentStep: true }));
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('aria-current', 'step');
-    expect(node).toHaveClass('ring-primary');
+    expect(node).toHaveClass('current-step');
   });
 
   it('has no aria-current outside the current step', () => {

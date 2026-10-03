@@ -48,6 +48,7 @@ import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
 import { cardTags } from './card-tags';
+import { deckStateClasses } from './deck-states';
 
 /** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.28;
@@ -203,7 +204,19 @@ export const DeckNode = memo(function DeckNode({
     look?.fillRef !== undefined ? describeChannel('fill', look.fillRef) : null,
     look?.strokeRef !== undefined ? describeChannel('stroke', look.strokeRef) : null,
   ].filter((part): part is string => part !== null);
-  const description = [selected ? 'Selected' : null, ...colourDescription]
+  const hasProblem = data.problems !== undefined && target !== 'ok';
+  const stateClasses = deckStateClasses({
+    selected,
+    hasProblem,
+    connectTarget: hasConnectTarget,
+    connectRefused: refusal !== null,
+    currentStep: hasFlowStep,
+  });
+  const description = [
+    selected ? 'Selected' : null,
+    hasProblem ? (data.problems?.titles ?? null) : null,
+    ...colourDescription,
+  ]
     .filter(Boolean)
     .join(', ');
 
@@ -249,20 +262,12 @@ export const DeckNode = memo(function DeckNode({
         'flex flex-col gap-2 px-[11.5px] py-[10.5px]',
         isLandscape && 'items-center justify-center',
         focusRing,
-        // Selected (018, designs 86–116): a 2 px frame 2 px outside the card, which reads on any
-        // fill; a shape cue, so it is never color-only (plus aria-selected).
-        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
-        // From or to of the current flow step (007 FR-005): the selection ring and halo.
-        data.currentStep === true && 'ring-1 ring-primary',
-        target === 'ok' && 'outline-2 outline-offset-4 outline-primary outline-dashed',
-        refusal && 'outline-2 outline-offset-4 outline-clay-ink outline-dashed',
+        // The state classes (deck-states.ts) are styled in index.css: selected is a 2 px frame 2 px
+        // outside the card (a shape cue, plus aria-selected), the problem ring is its own layer
+        // below, so both draw together.
+        ...stateClasses,
         // Where the next flow step must start (006 FR-009): a ring plus the tag text.
         data.flowStart !== undefined && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
-        // Problem (015, 020 design 107): a 3 px dashed clay ring 3 px outside the card, so it
-        // reads on any fill; unless the connect "+" owns the corner.
-        data.problems !== undefined &&
-          target !== 'ok' &&
-          'outline-[3px] outline-offset-[3px] outline-clay-ink outline-dashed',
         // Colour (020 R5): fill and stroke, unless the flow-step/connect-target border owns it.
         showFill && 'bg-(--card-fill)',
         hasFlowStep
@@ -290,6 +295,17 @@ export const DeckNode = memo(function DeckNode({
             >
               {kindLabel(data.kind)}
             </span>
+            {data.problems !== undefined && hasProblem && (
+              <span
+                aria-hidden
+                title={data.problems.titles}
+                data-testid="problem-glyph"
+                className="flex h-5 shrink-0 items-center gap-1 rounded-full bg-clay-soft px-2 text-[11px] leading-none font-semibold text-clay-ink"
+              >
+                <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+                {data.problems.count}
+              </span>
+            )}
             {((data.hasRules && isContainer) || data.pinned === true) && (
               <span className="flex shrink-0 items-center gap-1.5">
                 {data.hasRules && isContainer && (
@@ -356,10 +372,10 @@ export const DeckNode = memo(function DeckNode({
         <span
           role="img"
           aria-label={`${String(data.childCount)} components inside, press Enter to open`}
-          className="flex h-6 shrink-0 items-center gap-1.5 self-start rounded-full bg-surface-2 px-2 text-caption text-ink-secondary"
+          className="flex h-6 shrink-0 items-center gap-1.5 rounded-row bg-surface-2 px-2 text-caption text-ink-secondary"
         >
           <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-          <span>{data.childCount} inside</span>
+          <span className="flex-1">{data.childCount} inside</span>
           <CornerDownLeft aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
         </span>
       )}
@@ -411,6 +427,7 @@ export const DeckNode = memo(function DeckNode({
               'sd-handle opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100',
               focusRing,
               role !== null && 'opacity-100',
+              hot && 'is-active',
               isEndpointTarget && 'opacity-100',
             )}
           />
@@ -440,17 +457,15 @@ export const DeckNode = memo(function DeckNode({
           Hidden in this view
         </span>
       )}
-      {/* Problems (015 FR-022): top-right, unless the connect "+" uses that corner. A surface
-          disc (020 design 107) so the alert glyph reads on any fill. */}
-      {data.problems !== undefined && target !== 'ok' && (
+      {/* Problem ring (frame 122): 1.5 px dashed Clay, 4 px outside the card. Its own layer, so the
+          selection outline (on the card) and this one draw together; hidden from assistive tech,
+          the count is in the badge and the card's name. */}
+      {hasProblem && (
         <span
           aria-hidden
-          title={data.problems.titles}
-          data-testid="problem-glyph"
-          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full border border-clay-ink bg-surface text-clay-ink shadow-rest"
-        >
-          <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-        </span>
+          data-testid="problem-outline"
+          className="pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed border-clay-ink"
+        />
       )}
       {target === 'ok' && (
         <span
