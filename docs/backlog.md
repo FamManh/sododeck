@@ -166,10 +166,13 @@ review) are **not scheduled**. They come after M5 at the earliest and need a fou
 023 starts with a large-deck benchmark, and that result decides whether the renderer work is
 done at all. The measurement plan is in `docs/performance.md`.
 
-**Order from 2026-10-03 (§g-64):** **028** → **025** → **029** → **035** → **033** → **022** →
-**030** → **032** → **031** → **034**. 025 moves up because 029 starts the run of schema changes
-(029, 033, 022, 030, 032). 030 supersedes 024; 032 lifts §g-40. 013 and 014 are paused by the
-founder; 023, 026 and 027 stay unscheduled.
+**Order from 2026-10-03 (§g-64), every open feature:** **028** → **025** → **029** → **035** →
+**033** → **022** → **030** → **032** → **031** → **034** → **013** → **014** → **026** →
+**027** → **023**. 025 moves up because 029 starts the run of schema changes (029, 033, 022, 030,
+032). 013 and 014 (paused by the founder) come after the card system, so samples and the tour
+show the final cards and packs, and before a public launch. 026 and 027 wait for the schema to
+settle (030, 032). 023 stays last and is gated by its large-deck bench. 030 supersedes 024; 032
+lifts §g-40.
 
 **025** format-compatibility (ADR 0020, proposed) should land before the first public release,
 ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
@@ -1960,7 +1963,8 @@ stickers on played cards, the current card lifts on an orange lip, upcoming card
 dashed number); a collapsed group is a fanned hand of cards. The design's own risk note is kept as
 a rule: on dense boards drop the lip below 60 % zoom and show chips as dots at System level.
 
-Order (§g-64): **028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**. 030 supersedes 024.
+Order (§g-64): **028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**, then 013 → 014 →
+026 → 027 → 023. 030 supersedes 024.
 
 ## 028-design-sync-card-system
 
