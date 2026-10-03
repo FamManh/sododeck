@@ -2148,6 +2148,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 035-flow-playback-deck
 
+- **Status:** specified and planned (2026-10-03) — see [`spec.md`](../specs/035-flow-playback-deck/spec.md), [`plan.md`](../specs/035-flow-playback-deck/plan.md), [`tasks.md`](../specs/035-flow-playback-deck/tasks.md). **Open:** the branch picker stays inline in the step player (007) instead of the popover of frame 117; confirm or open a follow-up.
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 3 d
 - **Goal:** The signature moment (§g-62): playing a flow deals the deck.
 - **In scope:** played cards get a ✓ sticker (top-left, 22px), the current card lifts 2px on a 5px
