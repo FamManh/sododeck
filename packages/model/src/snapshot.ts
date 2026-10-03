@@ -6,6 +6,7 @@
  */
 import type { SododeckFile } from '@sododeck/schema';
 
+import { jsonEqual } from './convert';
 import { toJSON } from './deck';
 import { canonicalizeEntry, fileKeyOrder } from './key-order';
 import {
@@ -104,8 +105,10 @@ function apply(doc: DeckDoc, previous: SododeckFile, changes: ObjectChange[]): S
       parts[key] =
         entry === undefined ? previous.rules : rebuildRules(doc, previous.rules, entry.ids);
     } else {
-      const value =
-        meta === undefined ? (previous as unknown as Record<string, unknown>)[key] : meta[key];
+      const before = (previous as unknown as Record<string, unknown>)[key];
+      // An unchanged meta value keeps its identity (032: `fields` feeds memoised field lists, so
+      // renaming the deck must not make every card rebuild its fields).
+      const value = meta === undefined || jsonEqual(before, meta[key]) ? before : meta[key];
       if (value !== undefined) parts[key] = value;
     }
   }

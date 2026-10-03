@@ -3,13 +3,13 @@
  * from plain objects and writes single fields, so order keys, blank markers, long text and child
  * lists are handled in one place. Ops never call `toY` on a deck object.
  */
-import type { Id, Rule } from '@sododeck/schema';
+import type { FieldDef, FieldOption, Id, Rule } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { isRecord, toY, type YObject, type YValue } from './convert';
+import { fromY, isRecord, jsonEqual, toY, type YObject, type YValue } from './convert';
 import { ORDER_KEY, type ListMap } from './layout';
 import { keysBetween } from './order-key';
-import { blankKey, writeText } from './text';
+import { blankKey, VALUE_PREFIX, valueKey, writeText } from './text';
 import { isRequiredText, isTextField, TEXT_FIELDS, type TextKind } from './text-fields';
 
 /** Kinds of stored objects with their own map (rules are built by `createRule`). */
@@ -54,6 +54,10 @@ export function createObject(
   for (const [key, value] of Object.entries(plain)) {
     if (key === 'id' || value === undefined || isTextField(kind, key)) continue;
     if (kind === 'flows' && (key === 'steps' || key === 'branches')) continue;
+    if (kind === 'nodes' && key === 'values') {
+      writeValues(map, value);
+      continue;
+    }
     map.set(key, toY(value));
   }
   createTexts(map, kind, plain);
@@ -139,6 +143,10 @@ export function writeField(map: YObject, kind: TextKind, key: string, value: unk
     if (!blank && map.has(marker)) map.delete(marker);
     return;
   }
+  if (kind === 'nodes' && key === 'values') {
+    writeValues(map, value);
+    return;
+  }
   const existing = map.get(key);
   if (value === undefined) {
     if (map.has(key)) map.delete(key);
@@ -155,6 +163,24 @@ export function writeField(map: YObject, kind: TextKind, key: string, value: unk
   }
 }
 
+/**
+ * Replaces a node's typed values (032) with `values` (absent clears them): one `$value:<field>`
+ * key each, unchanged keys left alone so a concurrent edit of another value survives.
+ */
+function writeValues(map: YObject, values: unknown): void {
+  const next = isRecord(values) ? values : {};
+  for (const key of [...map.keys()]) {
+    if (key.startsWith(VALUE_PREFIX) && !Object.hasOwn(next, key.slice(VALUE_PREFIX.length))) {
+      map.delete(key);
+    }
+  }
+  for (const [fieldId, value] of Object.entries(next)) {
+    if (value === undefined) continue;
+    const key = valueKey(fieldId);
+    if (!jsonEqual(fromY(map.get(key)), value)) map.set(key, toY(value));
+  }
+}
+
 /** Writes the changed keys of a validated candidate, field by field. */
 export function writeFields(
   map: YObject,
@@ -163,4 +189,41 @@ export function writeFields(
   changed: readonly string[],
 ): void {
   for (const key of changed) writeField(map, kind, key, candidate[key]);
+}
+
+/** A new stored field option (032): label, colour, icon; the id is the list key. */
+export function createOption(option: FieldOption, order: string): YObject {
+  const map = new Y.Map<YValue>();
+  map.set(ORDER_KEY, order);
+  for (const [key, value] of Object.entries(option)) {
+    if (key !== 'id' && value !== undefined) map.set(key, toY(value));
+  }
+  return map;
+}
+
+/** A new options list holding `options` in order. */
+export function createOptionList(options: readonly FieldOption[]): ListMap {
+  const list = newList();
+  const keys = keysBetween(null, null, options.length);
+  options.forEach((option, i) => {
+    list.set(option.id, createOption(option, keys[i] ?? ''));
+  });
+  return list;
+}
+
+/**
+ * A new stored field definition (032, R3): plain keys, `options` as a child list (present only
+ * when the definition has options). The id is the list key.
+ */
+export function createField(field: FieldDef, order: string): YObject {
+  const map = new Y.Map<YValue>();
+  map.set(ORDER_KEY, order);
+  for (const [key, value] of Object.entries(field)) {
+    if (key === 'id' || key === 'options' || key === 'source' || value === undefined) continue;
+    map.set(key, toY(value));
+  }
+  if (field.options !== undefined) {
+    map.set('options', createOptionList(field.options) as unknown as YValue);
+  }
+  return map;
 }

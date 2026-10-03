@@ -10,7 +10,10 @@
  *                                               (Y.Array), swatches (Y.Array, always present, 020),
  *                                               tagColors (Y.Map tag → colour, always present, 033),
  *                                               packs (Y.Map packId → true, only once the deck has a
- *                                               pack choice, 030)
+ *                                               pack choice, 030), fields (Y.Map<id, Y.Map> list of
+ *                                               field definitions, each with an `options` list, 032)
+ *                                               and fieldDefaults (Y.Map typeId → true, 032), both
+ *                                               only once the file has them or a field changed
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component
  *   doc.getMap('groups')     Y.Map<id, Y.Map>  one map per group
  *   doc.getMap('edges')      Y.Map<id, Y.Map>  one map per connection
@@ -26,7 +29,8 @@
  *
  * Inside a list item: the id is the map key (no `id` field); `$order` is a fractional-index key and
  * lists read sorted by (`$order`, id) (order-key.ts); `$blank:<field>` keeps an explicitly empty
- * value. Long text fields (text-fields.ts) are `Y.Text`, always present, merged letter by letter;
+ * value; `$value:<field id>` holds one typed field value of a card (032), read back as `values`.
+ * Long text fields (text-fields.ts) are `Y.Text`, always present, merged letter by letter;
  * every other scalar is a plain value (last write wins). Nested objects are `Y.Map`, arrays
  * `Y.Array`, so every field is individually editable and mergeable. Optional fields are absent
  * when unset. Keys starting with `$` are internal: never output, never reported.
@@ -39,7 +43,7 @@ import { parseSododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { NEW_DECK_PACKS } from './card-types';
-import { toY } from './convert';
+import { toY, type YObject, type YValue } from './convert';
 import { DeckValidationError } from './errors';
 import { canonicalize } from './key-order';
 import {
@@ -55,7 +59,7 @@ import { checkDuplicateIds } from './load-checks';
 import { keysBetween } from './order-key';
 import { readCollection, readMeta, readObject, readRule, readRules } from './read';
 import { blankKey } from './text';
-import { createObject, createRule } from './write';
+import { createField, createObject, createRule } from './write';
 
 /** Creates a new, empty deck document. */
 export function createDeck(): DeckDoc {
@@ -104,6 +108,21 @@ export function fromJSON(input: unknown): DeckDoc {
     // that has one carries it from the start, so two tabs toggling packs share the map.
     if (file.packs !== undefined) {
       meta.set('packs', toY(Object.fromEntries(file.packs.map((id) => [id, true]))));
+    }
+    // Typed fields (032, R3): lazy like `packs`, so an older deck is written back without them.
+    if (file.fields !== undefined) {
+      const fields = new Y.Map<YObject>();
+      const fieldKeys = keysBetween(null, null, file.fields.length);
+      file.fields.forEach((field, i) => {
+        fields.set(field.id, createField(field, fieldKeys[i] ?? ''));
+      });
+      meta.set('fields', fields as unknown as YValue);
+    }
+    if (file.fieldDefaults !== undefined) {
+      meta.set(
+        'fieldDefaults',
+        toY(Object.fromEntries(file.fieldDefaults.map((id) => [id, true]))),
+      );
     }
 
     for (const name of COLLECTIONS) {

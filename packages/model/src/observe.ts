@@ -6,7 +6,7 @@ import * as Y from 'yjs';
 
 import { COLLECTIONS, isInternalKey, type DeckDoc, type ObjectRef, type Scope } from './layout';
 import { editorOrigins } from './ops/context';
-import { BLANK_PREFIX } from './text';
+import { BLANK_PREFIX, VALUE_PREFIX } from './text';
 
 export interface ObjectChange extends ObjectRef {
   kind: 'added' | 'updated' | 'removed';
@@ -89,6 +89,7 @@ function fieldKeys(event: DeckEvent): string[] {
   const keys: string[] = [];
   for (const key of event.keysChanged as Set<string>) {
     if (key.startsWith(BLANK_PREFIX)) keys.push(key.slice(BLANK_PREFIX.length));
+    else if (key.startsWith(VALUE_PREFIX)) keys.push('values');
     else if (!isInternalKey(key)) keys.push(key);
   }
   return keys;

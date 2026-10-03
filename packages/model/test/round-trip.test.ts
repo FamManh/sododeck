@@ -967,3 +967,81 @@ describe('connector style, anchors, bends and label position (022)', () => {
     ]);
   });
 });
+
+describe('typed fields (032)', () => {
+  const withFields: SododeckFile = {
+    ...empty,
+    fields: [
+      { id: 'warehouse.capacity', name: 'Capacity', kind: 'progress', types: ['warehouse'] },
+      {
+        id: 'f_zone',
+        name: 'Zone',
+        kind: 'status',
+        types: ['warehouse'],
+        onCard: true,
+        options: [
+          { id: 'z1', label: 'Cold', color: 'cyan', icon: 'circle-dot' },
+          { id: 'z2', label: 'Dry' },
+        ],
+      },
+      { id: 'f_none', name: 'Empty select', kind: 'select', options: [] },
+      { id: 'owner', name: 'Owner', kind: 'person', onCard: true },
+    ],
+    fieldDefaults: ['warehouse', 'robot'],
+    nodes: [
+      {
+        id: 'w',
+        type: 'warehouse',
+        title: 'HCM',
+        owner: 'Lan',
+        values: {
+          a_text: 'x',
+          b_num: 3.5,
+          c_range: { from: '2026-10-06', to: '2026-10-17' },
+          d_link: { url: 'https://x.io', label: 'X' },
+          e_link: { url: 'mailto:a@x.io' },
+          f_zone: 'z1',
+          gone: 'dangling',
+          'warehouse.capacity': 140,
+        },
+      },
+    ],
+  };
+
+  it('round-trips materialised types, every value shape and dangling values unchanged', () => {
+    const out = toJSON(fromJSON(withFields));
+    expect(out).toEqual(withFields);
+    expect(serializeDeck(out)).toBe(serializeDeck(withFields));
+  });
+
+  it('writes a deck saved before 032 byte-identical, with no field data', () => {
+    for (const file of [minimal, flowAndRule]) {
+      expect(serializeDeck(toJSON(fromJSON(file)))).toBe(serializeDeck(file));
+    }
+    const out = toJSON(fromJSON(minimal));
+    expect(out.fields).toBeUndefined();
+    expect(out.fieldDefaults).toBeUndefined();
+  });
+
+  it('stores only values when no definition changed', () => {
+    const doc = fromJSON({
+      ...empty,
+      nodes: [{ id: 't', type: 'task', title: 'T' }],
+    });
+    createEditor(doc).setValues(['t'], 'task.status', 'doing');
+    const out = toJSON(doc);
+    expect(out.fields).toBeUndefined();
+    expect(out.nodes[0]?.values).toEqual({ 'task.status': 'doing' });
+    expect(toJSON(fromJSON(out))).toEqual(out);
+  });
+
+  it('writes values sorted by field id and value keys in schema order', () => {
+    const shuffled = structuredClone(withFields);
+    const node = shuffled.nodes[0];
+    if (node?.values === undefined) throw new Error('missing values');
+    node.values = Object.fromEntries(Object.entries(node.values).reverse());
+    node.values.d_link = { label: 'X', url: 'https://x.io' };
+    expect(serializeDeck(shuffled)).toBe(serializeDeck(withFields));
+    expect(serializeDeck(toJSON(fromJSON(shuffled)))).toBe(serializeDeck(withFields));
+  });
+});

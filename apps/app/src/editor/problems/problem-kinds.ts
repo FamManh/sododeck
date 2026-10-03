@@ -2,6 +2,7 @@ import type { ProblemKind } from '@sododeck/model';
 import {
   Copy,
   Link2Off,
+  ListX,
   Maximize2,
   Package,
   Shapes,
@@ -29,4 +30,5 @@ export const PROBLEM_ICONS: Record<ProblemKind, LucideIcon> = {
   'card-size-out-of-range': Maximize2,
   'unknown-card-type': Shapes,
   'unknown-pack': Package,
+  'field-value-dangling': ListX,
 };

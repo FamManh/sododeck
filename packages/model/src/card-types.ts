@@ -6,7 +6,7 @@
  * The file stores only `node.type` (any `TypeId`) and the deck's `packs`; everything here is app
  * data, so a type or pack this version does not know still loads and is kept on save.
  */
-import type { PackId, SododeckFile, TypeId } from '@sododeck/schema';
+import type { FieldDef, FieldOption, PackId, SododeckFile, TypeId } from '@sododeck/schema';
 
 export type { PackId, TypeId };
 
@@ -24,6 +24,11 @@ export interface CardType {
   family: Family;
   /** Position in the registry (also the order of tiles and options). */
   order: number;
+  /**
+   * Fields the type comes with (032, frame 120): ids `<type>.<name>`, never stored in a deck until
+   * the user changes one of them (then the whole set is materialised, see `fields.ts`).
+   */
+  defaultFields: readonly FieldDef[];
 }
 
 export interface Pack {
@@ -68,6 +73,39 @@ const TYPE_LIST: readonly (readonly [TypeId, string, PackId, Category])[] = [
   ['issue', 'Issue', 'data', 'data'],
 ];
 
+/** The options a new status field starts with (032 clarify): To do, In progress, Done. */
+export const STATUS_OPTIONS: readonly FieldOption[] = [
+  { id: 'todo', label: 'To do', color: 'slate', icon: 'circle' },
+  { id: 'doing', label: 'In progress', color: 'blue', icon: 'circle-dot' },
+  { id: 'done', label: 'Done', color: 'green', icon: 'circle-check' },
+];
+
+/** The founder's table of default fields per type (032 clarify, frame 120); every one on card. */
+const DEFAULT_FIELDS: Readonly<Record<TypeId, readonly Omit<FieldDef, 'types' | 'onCard'>[]>> = {
+  task: [
+    { id: 'task.status', name: 'Status', kind: 'status', options: [...STATUS_OPTIONS] },
+    { id: 'task.assignee', name: 'Assignee', kind: 'person' },
+    { id: 'task.due', name: 'Due date', kind: 'date' },
+  ],
+  document: [{ id: 'document.link', name: 'Link', kind: 'link' }],
+  warehouse: [
+    { id: 'warehouse.capacity', name: 'Capacity', kind: 'progress' },
+    { id: 'warehouse.sla', name: 'SLA', kind: 'number', unit: 'h' },
+    { id: 'warehouse.region', name: 'Region', kind: 'select' },
+  ],
+  'truck-route': [{ id: 'truck-route.departure', name: 'Departure', kind: 'date' }],
+  issue: [
+    { id: 'issue.status', name: 'Status', kind: 'status', options: [...STATUS_OPTIONS] },
+    { id: 'issue.assignee', name: 'Assignee', kind: 'person' },
+    { id: 'issue.dates', name: 'Dates', kind: 'dateRange' },
+    { id: 'issue.estimate', name: 'Estimate', kind: 'number', unit: 'pts' },
+  ],
+};
+
+function defaultFieldsOf(id: TypeId): readonly FieldDef[] {
+  return (DEFAULT_FIELDS[id] ?? []).map((field) => ({ ...field, types: [id], onCard: true }));
+}
+
 export const PACKS: readonly Pack[] = PACK_LIST.map((pack, order) => ({ ...pack, order }));
 
 export const CARD_TYPES: readonly CardType[] = TYPE_LIST.map(
@@ -78,6 +116,7 @@ export const CARD_TYPES: readonly CardType[] = TYPE_LIST.map(
     category,
     family: 'card',
     order,
+    defaultFields: defaultFieldsOf(id),
   }),
 );
 
@@ -112,6 +151,14 @@ export function sortPacks(ids: Iterable<PackId>): PackId[] {
   const set = new Set(ids);
   const known = PACKS.filter((pack) => set.has(pack.id)).map((pack) => pack.id);
   const unknown = [...set].filter((id) => !PACK_BY_ID.has(id)).sort();
+  return [...known, ...unknown];
+}
+
+/** Known types in registry order, then unknown ids sorted (032 `fieldDefaults`). */
+export function sortTypes(ids: Iterable<TypeId>): TypeId[] {
+  const set = new Set(ids);
+  const known = CARD_TYPES.filter((type) => set.has(type.id)).map((type) => type.id);
+  const unknown = [...set].filter((id) => !TYPE_BY_ID.has(id)).sort();
   return [...known, ...unknown];
 }
 

@@ -49,10 +49,20 @@ const ELEMENT_SCHEMAS = {
       packs: true,
     })
     .strict(),
+  field: shape.fields.unwrap().element,
   style: shape.nodes.element.shape.style.unwrap(),
   edgeStyle: shape.edges.element.shape.style.unwrap(),
 } satisfies Record<
-  Collection | 'step' | 'branch' | 'rule' | 'column' | 'row' | 'meta' | 'style' | 'edgeStyle',
+  | Collection
+  | 'step'
+  | 'branch'
+  | 'rule'
+  | 'column'
+  | 'row'
+  | 'meta'
+  | 'field'
+  | 'style'
+  | 'edgeStyle',
   Schema
 >;
 
@@ -83,6 +93,9 @@ function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | unde
       return { ...file, [kind]: [candidate] };
     case 'step':
       return { ...file, flows: [{ id: 'f', title: 'f', steps: [candidate] }] } as SododeckFile;
+    case 'field':
+      // S12 on one definition: built-in kinds, unit and options placement, option ids, icons.
+      return { ...file, fields: [candidate] } as SododeckFile;
     default:
       return undefined;
   }

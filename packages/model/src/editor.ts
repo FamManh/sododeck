@@ -3,7 +3,7 @@
  * I): a transaction origin, a Y.UndoManager, the gesture depth, the last edited object and the id
  * generator. Undo covers only this editor's own transactions (research R5).
  */
-import type { ColorRef, EdgeShape, Id, PackId } from '@sododeck/schema';
+import type { ColorRef, EdgeShape, FieldKind, Id, PackId, TypeId } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import type {
@@ -52,6 +52,22 @@ import { updateMeta } from './ops/meta';
 import { setStyle, type StyleChannel, type StyleTargets } from './ops/style';
 import { addSwatch, removeSwatch } from './ops/swatches';
 import { setPackOn } from './ops/packs';
+import {
+  addField,
+  addOption,
+  changeFieldKind,
+  deleteField,
+  deleteOption,
+  moveField,
+  moveOption,
+  setValues,
+  updateField,
+  updateOption,
+  type FieldPatch,
+  type NewField,
+  type NewFieldOption,
+  type OptionPatch,
+} from './ops/fields';
 import { deleteTag, renameTag, setTagColor, type TagChange } from './ops/tags';
 import {
   addRule,
@@ -324,6 +340,38 @@ export interface DeckEditor {
    * colour entry, as one undo step. An absent tag returns zero counts and writes nothing.
    */
   deleteTag(tag: string): TagChange;
+
+  /**
+   * Adds a typed field (032) at the end of the deck's field list (or after `after`) and returns
+   * its id; options without ids get new ones. `invalid` for an empty name, a name another field
+   * of one of its types already has (ignoring case), or a definition the format refuses (S12).
+   */
+  addField(field: NewField, opts?: { after?: Id }): Id;
+  /**
+   * Renames a field, changes its types (never to none), its on-card choice or its unit (`null`
+   * clears). Built-ins accept only `onCard`. Changing a code default materialises its type's
+   * defaults first (R1); a name typing burst is one undo step.
+   */
+  updateField(id: Id, patch: FieldPatch): void;
+  /** Moves a field before `beforeId` (or last) in `typeId`'s list; stores the type's code fields. */
+  moveField(id: Id, beforeId: Id | null, typeId: TypeId): void;
+  /** Deletes a field and every value it holds (one undo step). `invalid` for built-ins. */
+  deleteField(id: Id): void;
+  /** Adds an option to a select or status field and returns its id. */
+  addOption(fieldId: Id, option: NewFieldOption, opts?: { after?: Id }): Id;
+  /** Renames, recolours (`null` clears) or changes the status icon of an option. */
+  updateOption(fieldId: Id, optionId: Id, patch: OptionPatch): void;
+  moveOption(fieldId: Id, optionId: Id, beforeId: Id | null): void;
+  /** Deletes an option and clears the values using it (one undo step). */
+  deleteOption(fieldId: Id, optionId: Id): void;
+  /** Changes a field's kind, converting or clearing values (R6, one undo step). Not built-ins. */
+  changeFieldKind(id: Id, kind: FieldKind): void;
+  /**
+   * Sets (`null` clears) one field's value on every listed card as one undo step. Validated
+   * against the field; person values take the deck's spelling; built-ins write tech / host /
+   * owner. Never materialises definitions.
+   */
+  setValues(nodeIds: readonly Id[], fieldId: Id, value: unknown): void;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -635,6 +683,32 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     deleteTag: (tag) => deleteTag(ctx, tag),
     removeSwatch: (hex) => {
       removeSwatch(ctx, hex);
+    },
+    addField: (field, opts) => addField(ctx, field, opts),
+    updateField: (id, patch) => {
+      updateField(ctx, id, patch);
+    },
+    moveField: (id, beforeId, typeId) => {
+      moveField(ctx, id, beforeId, typeId);
+    },
+    deleteField: (id) => {
+      deleteField(ctx, id);
+    },
+    addOption: (fieldId, option, opts) => addOption(ctx, fieldId, option, opts),
+    updateOption: (fieldId, optionId, patch) => {
+      updateOption(ctx, fieldId, optionId, patch);
+    },
+    moveOption: (fieldId, optionId, beforeId) => {
+      moveOption(ctx, fieldId, optionId, beforeId);
+    },
+    deleteOption: (fieldId, optionId) => {
+      deleteOption(ctx, fieldId, optionId);
+    },
+    changeFieldKind: (id, kind) => {
+      changeFieldKind(ctx, id, kind);
+    },
+    setValues: (nodeIds, fieldId, value) => {
+      setValues(ctx, nodeIds, fieldId, value);
     },
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {

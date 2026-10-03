@@ -10,6 +10,7 @@ import {
   childList,
   collectionMap,
   COLLECTIONS,
+  fieldsList,
   rulesMap,
   type DeckDoc,
   type ListMap,
@@ -27,7 +28,9 @@ export type IdPrefix =
   | 'rule'
   | 'col'
   | 'row'
-  | 'sticky';
+  | 'sticky'
+  | 'field'
+  | 'option';
 
 const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
 const RANDOM_LENGTH = 10;
@@ -51,7 +54,7 @@ function listIds(list: ListMap | undefined, visit: (id: string) => boolean): boo
 
 /**
  * Calls `visit` with every id in the deck: collection objects, steps, branches, rules, rule
- * columns and rows. Stops early when `visit` returns true, and then returns true.
+ * columns and rows, field definitions and their options (032). Stops early when `visit` returns true, and then returns true.
  */
 export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boolean {
   for (const c of COLLECTIONS) {
@@ -66,6 +69,10 @@ export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boo
     for (const part of ['inputs', 'outputs', 'rows']) {
       if (listIds(childList(rule, part), visit)) return true;
     }
+  }
+  for (const [id, field] of fieldsList(doc)?.entries() ?? []) {
+    if (visit(id)) return true;
+    if (listIds(childList(field, 'options'), visit)) return true;
   }
   return false;
 }

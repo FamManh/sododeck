@@ -4,15 +4,17 @@
  * rebuilds rule rows' `when` / `then` from their keyed cells. Results are not in canonical key
  * order; callers canonicalize as before. Ops never call `fromY` on a deck object.
  */
-import type { Id, Rule, RuleRow, SododeckFile } from '@sododeck/schema';
+import type { FieldDef, Id, Rule, RuleRow, SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { sortPacks } from './card-types';
+import { sortPacks, sortTypes } from './card-types';
 import { compareTags } from './tags';
 import { fromY, type YObject } from './convert';
 import {
   childList,
   collectionMap,
+  fieldDefaultsMap,
+  fieldsList,
   isInternalKey,
   metaMap,
   orderedEntries,
@@ -24,13 +26,19 @@ import {
   type DeckDoc,
   type ObjectOf,
 } from './layout';
-import { blankKey, readText } from './text';
+import { blankKey, readText, VALUE_PREFIX } from './text';
 import { isRequiredText, isTextField, type TextKind } from './text-fields';
 import type { ObjectKind } from './write';
 
 /** Reads the fields of a stored map, the id included. */
-function readFields(kind: TextKind, map: YObject, out: Record<string, unknown>): void {
+function readStoredFields(kind: TextKind, map: YObject, out: Record<string, unknown>): void {
+  let values: Record<string, unknown> | undefined;
   for (const [key, value] of map.entries()) {
+    if (kind === 'nodes' && key.startsWith(VALUE_PREFIX)) {
+      values ??= {};
+      values[key.slice(VALUE_PREFIX.length)] = fromY(value);
+      continue;
+    }
     if (isInternalKey(key) || (kind === 'flows' && (key === 'steps' || key === 'branches'))) {
       continue;
     }
@@ -41,10 +49,45 @@ function readFields(kind: TextKind, map: YObject, out: Record<string, unknown>):
     }
     // Two clients clearing one channel each leave an empty style: no style at all (R9).
     if (key === 'style' && value instanceof Y.Map && value.size === 0) continue;
+
     out[key] = fromY(value);
   }
+  // Typed values (032) live in one `$value:<field>` key each; key order is set by key-order.ts.
+  if (values !== undefined) out.values = values;
   // A long text field whose Y.Text is missing still reads by the text rule.
   if (kind === 'stickies' && out.text === undefined) out.text = '';
+}
+
+/** One stored field definition as plain data (its options in order). */
+export function readField(id: Id, map: YObject): FieldDef {
+  const out: Record<string, unknown> = { id };
+  for (const [key, value] of map.entries()) {
+    if (isInternalKey(key) || key === 'options') continue;
+    out[key] = fromY(value);
+  }
+  const options = childList(map, 'options');
+  if (options !== undefined) {
+    out.options = orderedEntries(options).map(([optionId, option]) => {
+      const plain: Record<string, unknown> = { id: optionId };
+      for (const [key, value] of option.entries()) {
+        if (!isInternalKey(key)) plain[key] = fromY(value);
+      }
+      return plain;
+    });
+  }
+  return out as unknown as FieldDef;
+}
+
+/** The deck's field definitions in order, or undefined when the deck stores none (032). */
+export function readFields(doc: DeckDoc): FieldDef[] | undefined {
+  const list = fieldsList(doc);
+  return list === undefined ? undefined : orderedEntries(list).map(([id, m]) => readField(id, m));
+}
+
+/** Types whose defaults are materialised, in registry order, or undefined (032). */
+export function readFieldDefaults(doc: DeckDoc): string[] | undefined {
+  const map = fieldDefaultsMap(doc);
+  return map === undefined ? undefined : sortTypes(map.keys());
 }
 
 function readList(kind: ObjectKind, list: Y.Map<YObject> | undefined): Record<string, unknown>[] {
@@ -54,7 +97,7 @@ function readList(kind: ObjectKind, list: Y.Map<YObject> | undefined): Record<st
 /** A stored object of `kind` as plain data. */
 export function readObject(kind: ObjectKind, id: Id, map: YObject): Record<string, unknown> {
   const out: Record<string, unknown> = { id };
-  readFields(kind, map, out);
+  readStoredFields(kind, map, out);
   if (kind === 'flows') {
     out.steps = readList('step', childList(map, 'steps'));
     const branches = readList('branch', childList(map, 'branches'));
@@ -87,7 +130,7 @@ export function readRow(
 /** A stored rule as plain data (its id is the key in `rules`, not a field). */
 export function readRule(map: YObject): Rule {
   const out: Record<string, unknown> = {};
-  readFields('rule', map, out);
+  readStoredFields('rule', map, out);
   const inputs = columnIds(map, 'inputs');
   const outputs = columnIds(map, 'outputs');
   out.inputs = readList('column', childList(map, 'inputs'));
@@ -140,5 +183,11 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   // then unknown ids sorted, so every replica writes the same bytes.
   const packs = packsMap(doc);
   if (packs !== undefined && packs.size > 0) out.packs = sortPacks(packs.keys());
+  // `fields` / `fieldDefaults` (032): emitted whenever stored (even empty), so a file round-trips
+  // as written; created only by a file that has them or the first field definition change.
+  const fields = readFields(doc);
+  if (fields !== undefined) out.fields = fields;
+  const fieldDefaults = readFieldDefaults(doc);
+  if (fieldDefaults !== undefined) out.fieldDefaults = fieldDefaults;
   return out;
 }

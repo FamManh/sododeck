@@ -90,6 +90,21 @@ export function packsMap(doc: DeckDoc): Y.Map<YValue> | undefined {
   return existing instanceof Y.Map ? existing : undefined;
 }
 
+/**
+ * The deck's typed field definitions (032, R3): a layout-2 list in `meta.fields`, present only
+ * once the file has `fields` or a field definition changed (an older deck stays without it).
+ */
+export function fieldsList(doc: DeckDoc): ListMap | undefined {
+  const existing = metaMap(doc).get('fields');
+  return existing instanceof Y.Map ? (existing as unknown as ListMap) : undefined;
+}
+
+/** Types whose default fields are materialised (032): `Y.Map<true>` in `meta.fieldDefaults`, lazy. */
+export function fieldDefaultsMap(doc: DeckDoc): Y.Map<YValue> | undefined {
+  const existing = metaMap(doc).get('fieldDefaults');
+  return existing instanceof Y.Map ? existing : undefined;
+}
+
 export function collectionMap(doc: DeckDoc, c: Collection): ListMap {
   return doc.getMap<YObject>(c);
 }

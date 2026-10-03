@@ -2,7 +2,9 @@
  * Canonical key order on write-out (research R2, ADR 0004 §10): every object is rebuilt in the
  * order its `properties` are declared in the v1 JSON Schema, so files are byte-stable and git
  * diffs show only real edits. Map-like objects (`rules`, `positions`, `ruleInputs`) keep their
- * own key order. The order is derived from the schema, never from hand-kept tables.
+ * own key order, except a card's typed `values` (032), sorted by field id: a nested Y.Map's key
+ * order is arrival order, which differs between replicas. The order is derived from the schema,
+ * never from hand-kept tables.
  */
 import { jsonSchema } from '@sododeck/schema';
 
@@ -10,7 +12,8 @@ import { isRecord } from './convert';
 
 type Shape =
   | { kind: 'object'; properties: [string, Shape][] }
-  | { kind: 'map'; value: Shape }
+  | { kind: 'map'; value: Shape; sorted: boolean }
+  | { kind: 'union'; keys: string[] }
   | { kind: 'array'; items: Shape }
   | { kind: 'leaf' };
 
@@ -36,8 +39,20 @@ function shapeOf(node: unknown, defs: Record<string, unknown>): Shape {
       ]),
     };
   }
-  if (isRecord(schema.additionalProperties))
-    return { kind: 'map', value: shapeOf(schema.additionalProperties, defs) };
+  if (isRecord(schema.additionalProperties)) {
+    const sorted = schema.additionalProperties.$ref === '#/$defs/FieldValue';
+    return { kind: 'map', value: shapeOf(schema.additionalProperties, defs), sorted };
+  }
+  if (Array.isArray(schema.anyOf)) {
+    // A union of value shapes (032 `FieldValue`): an object value takes its branch's key order.
+    const keys = schema.anyOf.flatMap((branch) => {
+      const resolved = resolve(branch, defs);
+      return isRecord(resolved) && isRecord(resolved.properties)
+        ? Object.keys(resolved.properties)
+        : [];
+    });
+    if (keys.length > 0) return { kind: 'union', keys };
+  }
   if (schema.items !== undefined) return { kind: 'array', items: shapeOf(schema.items, defs) };
   return LEAF;
 }
@@ -57,10 +72,20 @@ function reorder(value: unknown, shape: Shape): unknown {
   switch (shape.kind) {
     case 'array':
       return Array.isArray(value) ? value.map((item) => reorder(item, shape.items)) : value;
-    case 'map':
-      return isRecord(value)
-        ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, reorder(v, shape.value)]))
-        : value;
+    case 'map': {
+      if (!isRecord(value)) return value;
+      const entries = Object.entries(value);
+      if (shape.sorted) entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+      return Object.fromEntries(entries.map(([k, v]) => [k, reorder(v, shape.value)]));
+    }
+    case 'union': {
+      if (!isRecord(value)) return value;
+      const out: Record<string, unknown> = {};
+      for (const key of shape.keys) if (Object.hasOwn(value, key)) out[key] = value[key];
+      for (const [key, child] of Object.entries(value))
+        if (!Object.hasOwn(out, key)) out[key] = child;
+      return out;
+    }
     case 'object': {
       if (!isRecord(value)) return value;
       const out: Record<string, unknown> = {};
