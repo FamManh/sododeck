@@ -176,7 +176,7 @@ describe('undo grouping (US4, FR-024–029)', () => {
     Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
 
     editor.update('nodes', 'a', { title: 'Mine' });
-    other.getArray<Y.Map<unknown>>('nodes').get(1).set('title', 'Theirs');
+    createEditor(other).update('nodes', 'b', { title: 'Theirs' });
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
 
     expect(editor.undo()).toBe(true);

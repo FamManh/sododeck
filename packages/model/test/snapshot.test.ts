@@ -237,15 +237,16 @@ describe('createDeckSnapshot', () => {
 
   it('reflects remote changes (transactions without an editor origin)', () => {
     const { doc, snapshot } = setup();
-    doc.transact(() => {
-      doc.getArray<Y.Map<unknown>>('nodes').get(0).set('title', 'Remote');
-      const node = new Y.Map<unknown>();
-      node.set('id', 'r');
-      node.set('type', 'client');
-      node.set('title', 'R');
-      doc.getArray<Y.Map<unknown>>('nodes').push([node]);
-      doc.getMap('meta').set('name', 'Remote deck');
+    // Another tab's edits, arriving as one update.
+    const other = new Y.Doc();
+    Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
+    const theirs = createEditor(other);
+    theirs.batch(() => {
+      theirs.update('nodes', 'a', { title: 'Remote' });
+      theirs.add('nodes', { id: 'r', type: 'client', title: 'R' });
+      theirs.updateMeta({ name: 'Remote deck' });
     });
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
     expectParity(snapshot, doc);
     expect(snapshot.get().nodes.map((n) => n.id)).toEqual(['a', 'n', 'child', 'r']);
   });

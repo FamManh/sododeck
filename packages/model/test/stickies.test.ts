@@ -92,8 +92,7 @@ describe('sticky draft (research R3, R5)', () => {
 
     const other = new Y.Doc();
     Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
-    const stickies = other.getArray<Y.Map<unknown>>('stickies');
-    stickies.delete(0, 1);
+    createEditor(other).remove('stickies', id);
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
 
     expect(getObject(doc, 'stickies', id)).toBeUndefined();
@@ -130,7 +129,7 @@ describe('sticky draft (research R3, R5)', () => {
 
     const other = new Y.Doc();
     Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
-    other.getArray<Y.Map<unknown>>('stickies').get(0).set('text', 'From another tab');
+    createEditor(other).update('stickies', id, { text: 'From another tab' });
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
 
     expect(events.at(-1)).toBe('remote');

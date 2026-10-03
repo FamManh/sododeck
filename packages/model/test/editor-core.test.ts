@@ -6,12 +6,12 @@ import { readExample } from './helpers';
 
 const example = await readExample('minimal.sododeck.json');
 
+/** Writes a node straight into the stored layout (036 layout 2: keyed by id, no editor op). */
 function pushNode(doc: Y.Doc, id: string): void {
   const map = new Y.Map<unknown>();
-  map.set('id', id);
   map.set('type', 'service');
   map.set('title', id);
-  doc.getArray('nodes').push([map]);
+  doc.getMap<Y.Map<unknown>>('nodes').set(id, map);
 }
 
 describe('editor core', () => {

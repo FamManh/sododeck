@@ -108,11 +108,8 @@ describe('observeDeck (US1 AS3, FR-002)', () => {
       [{ ...stepRef(step), kind: 'removed', keys: [] }],
       [{ ...ruleRef('row', row), kind: 'added', keys: [] }],
       [{ ...ruleRef('row', row), kind: 'updated', keys: ['then'] }],
-      [
-        { ...ruleRef('column', col), kind: 'added', keys: [] },
-        { ...ruleRef('row', 'r1'), kind: 'updated', keys: ['when'] },
-        { ...ruleRef('row', row), kind: 'updated', keys: ['when'] },
-      ],
+      // Cells are keyed by column (036 R5): a new column writes no row.
+      [{ ...ruleRef('column', col), kind: 'added', keys: [] }],
       [{ ...ruleRef('column', col), kind: 'updated', keys: ['label'] }],
     ]);
   });
@@ -162,7 +159,7 @@ describe('observeDeck (US1 AS3, FR-002)', () => {
 
     const other = new Y.Doc();
     Y.applyUpdate(other, Y.encodeStateAsUpdate(doc));
-    other.getArray<Y.Map<unknown>>('nodes').get(0).set('title', 'From another tab');
+    createEditor(other).update('nodes', 'a', { title: 'From another tab' });
     Y.applyUpdate(doc, Y.encodeStateAsUpdate(other, Y.encodeStateVector(doc)));
 
     expect(events.map((e) => e.origin)).toEqual(['local', 'undo', 'redo', 'remote']);
