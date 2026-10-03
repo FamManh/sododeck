@@ -146,4 +146,73 @@ describe('StepPlayer', () => {
     });
     expect(within(player).queryByText('inside Core services')).toBeNull();
   });
+
+  describe('Deck look (035)', () => {
+    it('marks the played, current and upcoming segments without colour', () => {
+      const { player } = setup('order', 'o3');
+      const segments = within(within(player).getByRole('list', { name: 'Progress' })).getAllByRole(
+        'button',
+      );
+      expect(segments.map((s) => s.getAttribute('aria-current'))).toEqual([
+        null,
+        null,
+        'step',
+        null,
+        null,
+        null,
+        null,
+        null,
+      ]);
+      const state = (s: HTMLElement) => s.firstElementChild?.getAttribute('data-segment-state');
+      expect(segments.map(state)).toEqual([
+        'played',
+        'played',
+        'current',
+        'upcoming',
+        'upcoming',
+        'upcoming',
+        'upcoming',
+        'upcoming',
+      ]);
+    });
+
+    it('outlines the next branch point with data-next-fork', () => {
+      const { player } = setup('fork', 'f1');
+      const progress = within(player).getByRole('list', { name: 'Progress' });
+      const marked = progress.querySelectorAll('[data-next-fork]');
+      expect(marked).toHaveLength(1);
+      expect(marked[0]?.closest('li')).toContainElement(
+        within(progress).getByRole('button', { name: /Go to step 3 of/ }),
+      );
+    });
+
+    it('drops the marker once the fork is reached', () => {
+      const { player } = setup('fork', 'f3');
+      expect(player.querySelector('[data-next-fork]')).toBeNull();
+    });
+
+    it('keeps every control named and focusable', () => {
+      const { player } = setup('order', 'o2');
+      for (const name of ['Previous step', 'Play', 'Next step', 'Speed 1×']) {
+        expect(within(player).getByRole('button', { name })).toBeEnabled();
+      }
+    });
+
+    it('fits 40 segments without growing past its panel', () => {
+      const steps = Array.from({ length: 40 }, (_, i) => ({
+        id: `m${String(i)}`,
+        edge: i % 2 === 0 ? 'ab' : 'bc',
+      }));
+      const big = {
+        ...playbackDeck,
+        flows: [{ id: 'long', title: 'Long', feature: 'checkout', steps }],
+      };
+      const { player } = setup('long', null, big);
+      const list = within(player).getByRole('list', { name: 'Progress' });
+      expect(within(list).getAllByRole('button')).toHaveLength(40);
+      // Segments shrink (min width, flex) and the list scrolls; the panel keeps its width class.
+      expect(list.className).toContain('overflow-x-auto');
+      expect(player.className).toContain('min(560px');
+    });
+  });
 });

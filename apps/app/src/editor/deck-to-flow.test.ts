@@ -29,7 +29,7 @@ function view(partial: Partial<CanvasView> = {}): CanvasView {
     labelsOn: false,
     level: 'system',
     focus: null,
-    marks: { merged: new Map(), cards: new Map() },
+    marks: { merged: new Map(), cards: new Map(), cardNumbers: new Map() },
     ...partial,
   };
 }
@@ -644,7 +644,7 @@ describe('flow mode marks (007)', () => {
     style: 'path',
     errorIcon: false,
     inPath,
-    current: current ? { speed: 1 } : null,
+    current: current ? { speed: 1, number: '1' } : null,
   });
   /** Steps ab, bc played (cd off path), `current` the current edge. */
   const overlay = (current: 'ab' | 'bc'): FlowOverlay => {
@@ -669,6 +669,22 @@ describe('flow mode marks (007)', () => {
     expect(nodes.map((n) => n.data.currentStep === true)).toEqual([true, true, false, false]);
     const edges = toFlowEdges(chain, graph, view(), overlay('ab'));
     expect(edges.map((e) => e.className)).toEqual(['in-flow', 'in-flow', undefined]);
+  });
+
+  it('carries the step mark of each card into node data and rebuilds the node when it changes', () => {
+    const graph = topLevelGraph(chain);
+    const marked = (state: 'played' | 'current', number: string | null): FlowOverlay => ({
+      edges: new Map(),
+      nodes: new Map<string, NodeFlowMark>([['a', { inPath: true, step: { state, number } }]]),
+    });
+    const first = toFlowNodes(chain, graph, view(), marked('current', '1'));
+    expect(first[0]?.data.step).toEqual({ state: 'current', number: '1' });
+    expect(first[1]?.data.step).toBeUndefined();
+    const same = toFlowNodes(chain, graph, view(), marked('current', '1'));
+    expect(same[0]).toBe(first[0]);
+    const next = toFlowNodes(chain, graph, view(), marked('played', null));
+    expect(next[0]).not.toBe(first[0]);
+    expect(next[0]?.data.step).toEqual({ state: 'played', number: null });
   });
 
   it('rebuilds only the old and new current edges and their nodes', () => {

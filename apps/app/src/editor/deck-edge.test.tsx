@@ -174,7 +174,7 @@ describe('DeckEdge routing (017 R6)', () => {
         badges: [{ label: '2', errorPath: false, current: true, chainBreak: false }],
         style: 'path',
         errorIcon: false,
-        current: { speed: 1 },
+        current: { speed: 1, number: '2' },
       },
     });
     const anchor = container.querySelector('[data-edge-anchor="e1"]');
@@ -206,7 +206,7 @@ describe('DeckEdge routing (017 R6)', () => {
       {
         route: { offset: 30 },
         showLabel: true,
-        flow: { badges: [], style: 'path', errorIcon: false, current: { speed: 1 } },
+        flow: { badges: [], style: 'path', errorIcon: false, current: { speed: 1, number: '2' } },
       },
       false,
       {
@@ -219,7 +219,7 @@ describe('DeckEdge routing (017 R6)', () => {
       },
     );
     const path = container.querySelector('.react-flow__edge-path');
-    expect(path).toHaveStyle({ strokeWidth: '3' });
+    expect(path).toHaveStyle({ strokeWidth: '3.25' });
     const token = screen.getByTestId('flow-token');
     const tokenPath = token.querySelector('animateMotion')?.getAttribute('path');
     expect(tokenPath).toBe(path?.getAttribute('d'));
@@ -392,7 +392,7 @@ describe('DeckEdge flow marks (006 research R6)', () => {
     });
     expect(screen.getByRole('img', { name: 'Step 4b, error path' })).toBeInTheDocument();
     expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
-      strokeDasharray: '6 4',
+      strokeDasharray: '7 4',
     });
   });
 
@@ -416,7 +416,7 @@ describe('DeckEdge flow marks (006 research R6)', () => {
 });
 
 describe('DeckEdge in flow mode (007)', () => {
-  const mark = (current: { speed: 1 | 2 } | null, inPath = true) => ({
+  const mark = (current: { speed: 1 | 2; number: string } | null, inPath = true) => ({
     badges: [{ label: '2', errorPath: false, current: current !== null, chainBreak: false }],
     style: 'path' as const,
     errorIcon: false,
@@ -425,8 +425,8 @@ describe('DeckEdge in flow mode (007)', () => {
   });
 
   it('draws the current edge thicker with a filled label and a looping token', () => {
-    const { container } = renderEdge({ flow: mark({ speed: 1 }) });
-    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '3' });
+    const { container } = renderEdge({ flow: mark({ speed: 1, number: '2' }) });
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '3.25' });
     const label = screen.getByTestId('edge-label');
     expect(label).toHaveClass('bg-primary');
     expect(label).toHaveAttribute('data-in-flow');
@@ -436,7 +436,7 @@ describe('DeckEdge in flow mode (007)', () => {
   });
 
   it('loops twice as fast at 2×', () => {
-    renderEdge({ flow: mark({ speed: 2 }) });
+    renderEdge({ flow: mark({ speed: 2, number: '2' }) });
     expect(screen.getByTestId('flow-token').querySelector('animateMotion')).toHaveAttribute(
       'dur',
       '700ms',
@@ -460,10 +460,159 @@ describe('DeckEdge in flow mode (007)', () => {
           removeEventListener: () => undefined,
         }) as unknown as MediaQueryList,
     );
-    renderEdge({ flow: mark({ speed: 1 }) });
+    renderEdge({ flow: mark({ speed: 1, number: '2' }) });
     const token = screen.getByTestId('flow-token');
     expect(token.querySelector('animateMotion')).toBeNull();
     expect(token.getAttribute('transform')).toMatch(/^translate\(/);
     spy.mockRestore();
+  });
+});
+
+describe('DeckEdge playback states (035)', () => {
+  const stateMark = (
+    state: 'played' | 'current' | 'upcoming',
+    patch: Partial<NonNullable<DeckEdgeData['flow']>> = {},
+  ): NonNullable<DeckEdgeData['flow']> => ({
+    badges: [{ label: '2', errorPath: false, current: state === 'current', chainBreak: false }],
+    style: 'path',
+    errorIcon: false,
+    inPath: true,
+    state,
+    current: state === 'current' ? { speed: 1, number: '2' } : null,
+    ...patch,
+  });
+  const edgePath = (container: HTMLElement) => container.querySelector('.react-flow__edge-path');
+
+  it('draws played in Secondary at 2.5px, solid', () => {
+    const { container } = renderEdge({ flow: stateMark('played') });
+    expect(edgePath(container)).toHaveStyle({
+      stroke: 'var(--color-ink-secondary)',
+      strokeWidth: '2.5',
+    });
+    expect(edgePath(container)?.getAttribute('style')).not.toContain('stroke-dasharray');
+    expect(screen.getByTestId('edge-label')).toHaveAttribute('data-step-state', 'played');
+  });
+
+  it('draws current in Deck Orange at 3.25px over an 8px halo at 18 %', () => {
+    const { container } = renderEdge({ flow: stateMark('current') });
+    expect(edgePath(container)).toHaveStyle({
+      stroke: 'var(--color-deck-orange)',
+      strokeWidth: '3.25',
+    });
+    const halo = screen.getByTestId('edge-halo');
+    expect(halo).toHaveAttribute('stroke-width', '8');
+    expect(halo).toHaveAttribute('stroke-opacity', '0.18');
+    expect(halo.getAttribute('d')).toBe(edgePath(container)?.getAttribute('d'));
+    expect(halo).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('draws upcoming dashed "2 6" with round caps and no halo', () => {
+    const { container } = renderEdge({ flow: stateMark('upcoming') });
+    expect(edgePath(container)).toHaveStyle({ strokeDasharray: '2 6', strokeLinecap: 'round' });
+    expect(screen.queryByTestId('edge-halo')).toBeNull();
+  });
+
+  it('keeps the selection colour on a selected connector', () => {
+    const { container } = renderEdge({ flow: stateMark('played') }, true);
+    expect(edgePath(container)).toHaveStyle({ stroke: 'var(--color-deck-orange)' });
+  });
+
+  it.each(['curved', 'elbow', 'straight'] as const)(
+    'puts the numbered token on the current %s connector, on its path',
+    (shape) => {
+      const { container } = renderEdge({ shape, flow: stateMark('current') });
+      const token = screen.getByTestId('flow-token');
+      expect(token).toHaveTextContent('2');
+      expect(token.querySelector('animateMotion')?.getAttribute('path')).toBe(
+        edgePath(container)?.getAttribute('d'),
+      );
+    },
+  );
+
+  it('puts the token on a self-loop step', () => {
+    renderEdge({ shape: 'curved', flow: stateMark('current') }, false, {
+      sourceX: 100,
+      sourceY: 0,
+      targetX: 100,
+      targetY: 0,
+      targetPosition: Position.Right,
+    });
+    expect(screen.getAllByTestId('flow-token')).toHaveLength(1);
+  });
+
+  it.each(['played', 'upcoming'] as const)('draws no token on a %s connector', (state) => {
+    renderEdge({ flow: stateMark(state) });
+    expect(screen.queryByTestId('flow-token')).toBeNull();
+  });
+
+  describe('error paths', () => {
+    const error = (state: 'played' | 'current' | 'upcoming') =>
+      stateMark(state, {
+        style: 'error',
+        errorIcon: true,
+        badges: [{ label: '4b', errorPath: true, current: state === 'current', chainBreak: false }],
+      });
+
+    it.each(['played', 'current', 'upcoming'] as const)(
+      'is Clay, 2.5px, dashed "7 4" and ends in × with no arrow when %s',
+      (state) => {
+        const { container } = renderEdge({ flow: error(state) });
+        expect(edgePath(container)).toHaveStyle({
+          stroke: 'var(--color-clay-ink)',
+          strokeWidth: '2.5',
+          strokeDasharray: '7 4',
+        });
+        expect(screen.getByTestId('edge-cross')).toBeInTheDocument();
+        expect(screen.queryByTestId('edge-arrow')).toBeNull();
+      },
+    );
+
+    it('keeps the arrow on other connectors, in every line type', () => {
+      for (const shape of ['curved', 'elbow', 'straight'] as const) {
+        const { unmount } = renderEdge({ shape, flow: stateMark('played') });
+        expect(screen.getByTestId('edge-arrow')).toBeInTheDocument();
+        expect(screen.queryByTestId('edge-cross')).toBeNull();
+        unmount();
+      }
+    });
+  });
+
+  describe('label pill (FR-010)', () => {
+    it('is 20px tall with Surface fill, a 1.5px Border-strong border and Secondary text', () => {
+      renderEdge({ flow: stateMark('played') });
+      const label = screen.getByTestId('edge-label');
+      expect(label).toHaveClass('h-5');
+      expect(label).toHaveClass('border-[1.5px]');
+      expect(label).toHaveClass('border-border-strong');
+      expect(label).toHaveClass('bg-surface');
+      expect(label).toHaveClass('text-ink-secondary');
+    });
+
+    it('is solid orange with On Primary text when current, and says so for AT', () => {
+      renderEdge({ flow: stateMark('current') });
+      const label = screen.getByTestId('edge-label');
+      expect(label).toHaveClass('bg-primary');
+      expect(label).toHaveClass('text-on-primary');
+      expect(label).toHaveAttribute('aria-current', 'step');
+      expect(label).toHaveTextContent('2');
+    });
+
+    it('is Clay Soft with a Clay border and text on an error path, with the step number', () => {
+      renderEdge({
+        flow: stateMark('played', {
+          style: 'error',
+          errorIcon: true,
+          badges: [{ label: '4b', errorPath: true, current: false, chainBreak: false }],
+        }),
+      });
+      const label = screen.getByTestId('edge-label');
+      expect(label).toHaveClass('bg-clay-soft');
+      expect(label).toHaveClass('border-clay-ink');
+      expect(label).toHaveClass('text-clay-ink');
+      expect(label).toHaveTextContent('4b');
+      expect(
+        screen.getByRole('img', { name: 'Step 4b, error path' }).querySelector('svg'),
+      ).not.toBeNull();
+    });
   });
 });

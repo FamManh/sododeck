@@ -1,4 +1,4 @@
-import { createEditor, fromJSON, type DeckEditor } from '@sododeck/model';
+import { createEditor, fromJSON, toJSON, type DeckEditor } from '@sododeck/model';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readDeck } from '../../model/use-deck-snapshot';
@@ -174,5 +174,23 @@ describe('alternatives', () => {
     expect(ui().activeFlow).toMatchObject({ alternativeId: 'failed', stepId: 'f3' });
     goToStep(editor, 'f5a');
     expect(ui().activeFlow).toMatchObject({ alternativeId: 'ok', stepId: 'f5a' });
+  });
+});
+
+describe('a playthrough leaves the stored deck alone (035 SC-006, SC-007)', () => {
+  it('open, step, go back and exit keep the serialised deck byte-identical', () => {
+    const before = JSON.stringify(toJSON(editor.doc));
+    openFlow(editor, 'fork');
+    nextStep(editor);
+    nextStep(editor);
+    nextStep(editor);
+    switchAlternative(editor, 'failed');
+    previousStep(editor);
+    goToStep(editor, 'f1');
+    exitFlow();
+    expect(JSON.stringify(toJSON(editor.doc))).toBe(before);
+    // Nothing of the playback survives: no active flow, and so no mark to draw.
+    expect(ui().activeFlow).toBeNull();
+    expect(editor.canUndo()).toBe(false);
   });
 });

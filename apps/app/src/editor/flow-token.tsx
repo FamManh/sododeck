@@ -8,14 +8,21 @@ interface FlowTokenProps {
   x: number;
   y: number;
   speed: 1 | 2;
+  /** The current step's number, printed on the disc. */
+  number: string;
 }
 
+// The 24px disc (--sd-flow-token), its 2.5px Surface ring and 3px Orange Ink lip, in SVG units.
+const DISC_R = 12;
+const RING = 2.5;
+const LIP = 3;
+
 /**
- * The animated token on the current step's edge (007 FR-006, research R5): a primary dot with a
- * surface stroke and a soft halo, looping along the edge with SVG `<animateMotion>` (no JS per
- * frame). Static at the midpoint under reduced motion.
+ * The numbered token on the current step's edge (035 FR-008, 007 FR-006): a Deck Orange disc with
+ * the step number, a Surface ring and an Orange Ink lip, looping along the edge with SVG
+ * `<animateMotion>` (no JS per frame). Static at the midpoint under reduced motion.
  */
-export function FlowToken({ path, x, y, speed }: FlowTokenProps) {
+export function FlowToken({ path, x, y, speed, number }: FlowTokenProps) {
   const reduced = useReducedMotion();
   const { tokenLoopMs } = resolveMotion(reduced);
   const animated = tokenLoopMs > 0;
@@ -26,8 +33,19 @@ export function FlowToken({ path, x, y, speed }: FlowTokenProps) {
       pointerEvents="none"
       {...(animated ? {} : { transform: `translate(${String(x)} ${String(y)})` })}
     >
-      <circle r={10} fill="var(--color-primary)" fillOpacity={0.2} />
-      <circle r={5} fill="var(--color-primary)" stroke="var(--color-surface)" strokeWidth={2} />
+      <circle cy={LIP} r={DISC_R + RING} fill="var(--color-deck-orange-ink)" />
+      <circle r={DISC_R + RING} fill="var(--color-surface)" />
+      <circle r={DISC_R} fill="var(--color-deck-orange)" />
+      <text
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={number.length > 2 ? 9 : 11.5}
+        fontWeight={700}
+        fill="var(--color-on-primary)"
+        className="font-mono"
+      >
+        {number}
+      </text>
       {animated && (
         <animateMotion
           path={path}

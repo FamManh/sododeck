@@ -22,6 +22,11 @@ function segmentName(segment: Segment, total: number): string {
   return `Go to step ${segment.number} of ${String(total)}${segment.errorPath ? ', error path' : ''}${segment.broken ? ', connection deleted' : ''}`;
 }
 
+function segmentState(segment: Segment): 'played' | 'current' | 'upcoming' {
+  if (segment.current) return 'current';
+  return segment.filled ? 'played' : 'upcoming';
+}
+
 /**
  * The step player of flow mode (007 contracts/flow-playback-ui.md, designs 03, 26, 46): previous /
  * play / next, the position and step title, speed, the progress segments and, from the fork on,
@@ -73,7 +78,7 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
   return (
     <section
       aria-label="Step player"
-      className="pointer-events-auto flex w-[min(560px,calc(100vw-2rem))] min-w-[420px] flex-col gap-2.5 rounded-[18px] border border-hairline bg-surface px-4 py-3 shadow-float"
+      className="pointer-events-auto flex w-[min(560px,calc(100vw-2rem))] min-w-[420px] flex-col gap-2.5 rounded-[16px] border-[1.5px] border-border-strong bg-surface px-4 py-3 shadow-[0_3px_0_0_var(--color-border-strong),0_8px_28px_var(--sd-shadow)]"
     >
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5">
@@ -90,6 +95,8 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
           <Button
             size="icon"
             variant="primary"
+            // 40px and round, on an Orange Ink lip (035 FR-015).
+            className="size-10 rounded-full shadow-[0_3px_0_0_var(--color-deck-orange-ink)]"
             aria-label={playing ? 'Pause' : 'Play'}
             aria-pressed={playing}
             disabled={empty}
@@ -116,14 +123,14 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
           </Button>
         </div>
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-body-sm text-ink-secondary">
+          <span className="truncate text-[14px] leading-tight font-bold text-ink">
             {playback.flow.title} · {view === null ? 'No steps' : view.label}
           </span>
           {title !== '' && (
-            <span className="truncate text-body font-medium text-ink" title={title}>
+            <span className="truncate text-body-sm text-ink-secondary" title={title}>
               {title}
               {insideGroup !== null && (
-                <span className="text-ink-secondary">{` · inside ${insideGroup}`}</span>
+                <span className="text-ink-muted">{` · inside ${insideGroup}`}</span>
               )}
             </span>
           )}
@@ -132,7 +139,7 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
           size="sm"
           aria-label={`Speed ${String(active.speed)}×`}
           disabled={empty}
-          className="font-mono"
+          className="rounded-full bg-surface-2 font-mono"
           onClick={() => {
             useUiStore.getState().setSpeed(active.speed === 1 ? 2 : 1);
           }}
@@ -156,22 +163,28 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
                 onClick={() => {
                   goToStep(editor, segment.stepId);
                 }}
-                className={cn('flex h-3 w-full cursor-pointer items-center rounded-sm', focusRing)}
+                className={cn('flex h-4 w-full cursor-pointer items-center rounded-sm', focusRing)}
               >
                 <span
                   aria-hidden
+                  data-segment-state={segmentState(segment)}
+                  {...(segment.nextFork ? { 'data-next-fork': '' } : {})}
                   className={cn(
-                    'h-1 w-full rounded-full',
+                    'h-2 w-full rounded-full',
                     segment.errorPath || segment.broken
                       ? segment.filled
                         ? 'text-clay-ink'
                         : 'text-ink-muted'
-                      : segment.filled
-                        ? 'bg-primary'
-                        : 'bg-surface-3',
+                      : segment.current
+                        ? 'bg-deck-orange'
+                        : segment.filled
+                          ? 'bg-ink-secondary'
+                          : 'bg-surface-3',
                     segment.errorPath && 'sd-segment-error',
                     segment.broken && 'sd-segment-broken',
-                    segment.current && 'h-1.5',
+                    // The next branch point: a dashed outline, a shape cue and not only a colour.
+                    segment.nextFork &&
+                      'outline-[1.5px] outline-offset-1 outline-ink-secondary outline-dashed',
                   )}
                 />
               </button>

@@ -16,6 +16,7 @@ const overlay: FlowOverlay = {
         style: 'path',
         errorIcon: false,
         inPath: true,
+        state: 'played',
       },
     ],
     [
@@ -25,7 +26,8 @@ const overlay: FlowOverlay = {
         style: 'path',
         errorIcon: false,
         inPath: true,
-        current: { speed: 2 },
+        state: 'current',
+        current: { speed: 2, number: '2' },
       },
     ],
     [
@@ -35,6 +37,7 @@ const overlay: FlowOverlay = {
         style: 'path',
         errorIcon: false,
         inPath: true,
+        state: 'upcoming',
       },
     ],
   ]),
@@ -65,9 +68,50 @@ describe('collapseFlowMarks', () => {
         { label: '2', current: true },
       ],
       inPath: true,
-      current: { speed: 2 },
+      state: 'current',
+      current: { speed: 2, number: '2' },
     });
-    expect(marks.cards.get('core')).toBe('path');
+    // The only hidden edge inside the group is ab, which is upcoming.
+    expect(marks.cards.get('core')).toBe('upcoming');
+  });
+
+  it('folds a card by current > played > upcoming over its hidden edges', () => {
+    const withState = (state: 'played' | 'current' | 'upcoming'): FlowOverlay => {
+      const edges = new Map(overlay.edges);
+      const ab = edges.get('ab');
+      if (ab === undefined) throw new Error('fixture');
+      edges.set('ab', {
+        ...ab,
+        state,
+        current: state === 'current' ? { speed: 1, number: '1' } : null,
+      });
+      return { edges, nodes: new Map() };
+    };
+    expect(collapseFlowMarks(withState('played'), graph).cards.get('core')).toBe('played');
+    expect(collapseFlowMarks(withState('current'), graph).cards.get('core')).toBe('current');
+  });
+
+  it('prints the current step number, the earliest upcoming one, and none when played', () => {
+    const withState = (state: 'played' | 'current' | 'upcoming'): FlowOverlay => {
+      const edges = new Map(overlay.edges);
+      const ab = edges.get('ab');
+      if (ab === undefined) throw new Error('fixture');
+      edges.set('ab', {
+        ...ab,
+        state,
+        badges: [
+          { label: '10', errorPath: false, current: false, chainBreak: false },
+          { label: '7b', errorPath: false, current: false, chainBreak: false },
+        ],
+        current: state === 'current' ? { speed: 1, number: '6' } : null,
+      });
+      return { edges, nodes: new Map() };
+    };
+    const number = (state: 'played' | 'current' | 'upcoming') =>
+      collapseFlowMarks(withState(state), graph).cardNumbers.get('core');
+    expect(number('current')).toBe('6');
+    expect(number('upcoming')).toBe('7b');
+    expect(number('played')).toBeUndefined();
   });
 
   it('returns the outer collapsed group title for a hidden edge', () => {

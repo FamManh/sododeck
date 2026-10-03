@@ -6,7 +6,9 @@ import type { PathEnds, Point } from './routing/route-path';
 /** One end mark of a connector, in canvas coordinates. */
 export type EndMark =
   | { kind: 'knob'; at: Point }
-  | { kind: 'arrow'; at: Point; /** Degrees, the way the tip points. */ angle: number };
+  | { kind: 'arrow'; at: Point; /** Degrees, the way the tip points. */ angle: number }
+  /** The × that closes an error path (035): no direction, so no angle. */
+  | { kind: 'cross'; at: Point };
 
 /** The arrow's outline with its tip at the origin, pointing along +x. */
 export const ARROW_PATH = `M 0 0 L -${String(ARROW_LENGTH)} -${String(ARROW_WIDTH / 2)} L -${String(ARROW_LENGTH)} ${String(ARROW_WIDTH / 2)} Z`;
@@ -28,6 +30,15 @@ export function arrowPathAt(x: number, y: number, angle: number): string {
   return `M ${String(x)} ${String(y)} L ${at(-ARROW_LENGTH, -half)} L ${at(-ARROW_LENGTH, half)} Z`;
 }
 
+/** Half the width of the × that ends an error path. */
+const CROSS_HALF = 5;
+
+/** The × centred on `x, y`, as two strokes in one path (baked, like the arrow). */
+export function crossPathAt(x: number, y: number): string {
+  const [x1, x2, y1, y2] = [x - CROSS_HALF, x + CROSS_HALF, y - CROSS_HALF, y + CROSS_HALF];
+  return `M ${String(x1)} ${String(y1)} L ${String(x2)} ${String(y2)} M ${String(x1)} ${String(y2)} L ${String(x2)} ${String(y1)}`;
+}
+
 /** Degrees, rounded so the attribute stays short and stable. */
 function angle(dir: Point): number {
   return Math.round((Math.atan2(dir.y, dir.x) * 180) / Math.PI);
@@ -38,7 +49,21 @@ function angle(dir: Point): number {
  * arrows at both ends for `both`, knobs at both ends for `none`. Pure and free of the canvas
  * library, so the canvas (`EdgeEnds`) and the export draw the same marks.
  */
-export function endMarks(ends: PathEnds, direction: Direction | undefined): EndMark[] {
+export function endMarks(
+  ends: PathEnds,
+  direction: Direction | undefined,
+): Exclude<EndMark, { kind: 'cross' }>[];
+/** With `errorEnd` (an error path, 035) the end is a × and never an arrow or a knob. */
+export function endMarks(
+  ends: PathEnds,
+  direction: Direction | undefined,
+  errorEnd: boolean,
+): EndMark[];
+export function endMarks(
+  ends: PathEnds,
+  direction: Direction | undefined,
+  errorEnd = false,
+): EndMark[] {
   const mode = direction ?? 'forward';
   const start: EndMark =
     mode === 'both'
@@ -48,8 +73,9 @@ export function endMarks(ends: PathEnds, direction: Direction | undefined): EndM
           angle: angle({ x: 0 - ends.startDir.x, y: 0 - ends.startDir.y }),
         }
       : { kind: 'knob', at: ends.start };
-  const end: EndMark =
-    mode === 'none'
+  const end: EndMark = errorEnd
+    ? { kind: 'cross', at: ends.end }
+    : mode === 'none'
       ? { kind: 'knob', at: ends.end }
       : { kind: 'arrow', at: ends.end, angle: angle(ends.endDir) };
   return [start, end];

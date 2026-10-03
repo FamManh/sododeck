@@ -214,4 +214,7 @@
   --color-deck-orange-ink: var(--sd-deck-orange-ink);
   --color-deck-text-selection: var(--sd-deck-text-selection);
   --color-deck-dot-neutral: var(--sd-deck-dot-neutral);
+  /* Opacity of an off-path card / connector in flow mode (035); read as var(--color-deck-dim*). */
+  --color-deck-dim: var(--sd-deck-dim);
+  --color-deck-dim-edge: var(--sd-deck-dim-edge);
 }

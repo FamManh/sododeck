@@ -3,11 +3,12 @@
  * candidate, preview and invalid styles on edges, and the "Step n starts here" ring on the next
  * start node; in flow mode (007) the played path, the current edge and its nodes. Pure; `toFlowEdges` / `toFlowNodes` read it through their per-object cache.
  */
-import type { FlowAnalysis } from '@sododeck/model';
+import type { FlowAnalysis, PathStep } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { FlowSession } from '../../state/ui-store';
 import { sessionPath } from './session-path';
+import { edgeStateOf, stepMarks, type NodeStepMark, type StepState } from './step-marks';
 
 export interface EdgeBadge {
   /** Step number, e.g. "3" or "4b". */
@@ -29,8 +30,10 @@ export interface EdgeFlowMark {
   errorIcon: boolean;
   /** Flow mode: a played step travels the edge (not dimmed). Absent outside flow mode. */
   inPath?: boolean;
-  /** Flow mode: the current step's edge (thicker, filled label, token). */
-  current?: { speed: 1 | 2 } | null;
+  /** Flow mode: played / current / upcoming, for the connector stroke (035). */
+  state?: StepState;
+  /** Flow mode: the current step's edge (thicker, filled label, numbered token). */
+  current?: { speed: 1 | 2; number: string } | null;
 }
 
 export interface NodeFlowMark {
@@ -38,8 +41,10 @@ export interface NodeFlowMark {
   startsHere?: string;
   /** Flow mode: from/to of a played step. */
   inPath?: boolean;
-  /** Flow mode: from/to of the current step (ring + `aria-current="step"`). */
+  /** Flow mode: the target card of the current step (lift + `aria-current="step"`). */
   currentStep?: boolean;
+  /** Flow mode: the card's sticker (035); absent for cards the played path does not touch. */
+  step?: NodeStepMark | null;
 }
 
 /** Flow mode input (007 data-model §3). */
@@ -125,6 +130,8 @@ export function flowOverlay(
   return { edges, nodes };
 }
 
+const EDGE_RANK: Record<StepState, number> = { upcoming: 0, played: 1, current: 2 };
+
 function markPlayback(
   analysis: FlowAnalysis,
   playback: PlaybackMarks,
@@ -132,22 +139,39 @@ function markPlayback(
   nodes: Map<string, NodeFlowMark>,
 ): void {
   for (const [edgeId, mark] of edges) edges.set(edgeId, { ...mark, inPath: false, current: null });
-  for (const stepId of playback.played) {
-    const s = analysis.byStepId.get(stepId);
-    if (s === undefined || s.broken) continue;
-    const isCurrent = stepId === playback.currentStepId;
-    const mark = edges.get(s.step.edge);
-    if (mark !== undefined) {
-      edges.set(s.step.edge, {
-        ...mark,
-        inPath: true,
-        current: isCurrent ? { speed: playback.speed } : (mark.current ?? null),
-      });
-    }
+  // `played` is built in path order, so the set's order is the order of the steps.
+  const steps = [...playback.played].flatMap((id) => analysis.byStepId.get(id) ?? []);
+  const currentIndex = steps.findIndex((s) => s.step.id === playback.currentStepId);
+  steps.forEach((s, k) => {
+    markStepEdge(s, edgeStateOf(k, currentIndex), playback, edges);
+  });
+  for (const s of steps) {
+    if (s.broken) continue;
     for (const nodeId of [s.from, s.to]) {
-      if (nodeId === null) continue;
-      const node = nodes.get(nodeId);
-      nodes.set(nodeId, { inPath: true, currentStep: isCurrent || node?.currentStep === true });
+      if (nodeId !== null) nodes.set(nodeId, { inPath: true, currentStep: false, step: null });
     }
   }
+  for (const [nodeId, step] of stepMarks(steps, currentIndex)) {
+    nodes.set(nodeId, { inPath: true, currentStep: step.state === 'current', step });
+  }
+}
+
+function markStepEdge(
+  s: PathStep,
+  state: StepState,
+  playback: PlaybackMarks,
+  edges: Map<string, EdgeFlowMark>,
+): void {
+  const mark = edges.get(s.step.edge);
+  if (s.broken || mark === undefined) return;
+  const isCurrent = s.step.id === playback.currentStepId;
+  // An edge several steps travel shows the most advanced of their states.
+  const known = mark.state;
+  const next = known === undefined || EDGE_RANK[state] > EDGE_RANK[known] ? state : known;
+  edges.set(s.step.edge, {
+    ...mark,
+    inPath: true,
+    state: next,
+    current: isCurrent ? { speed: playback.speed, number: s.number } : (mark.current ?? null),
+  });
 }

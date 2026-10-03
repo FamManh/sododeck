@@ -7,8 +7,10 @@ import { act, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { branchedDeck, flowDeck, playbackDeck } from '../../test/flow-fixtures';
+import { renderWithEditor } from '../../test/render-canvas';
 import { announced, renderFlows } from '../../test/render-flows';
-import { openFlow, play } from './flow-mode';
+import { Canvas } from '../canvas';
+import { nextStep, openFlow, play } from './flow-mode';
 import { recordClick, startEditing, startNewFlow } from './flow-session';
 import { useUiStore } from '../../state/ui-store';
 
@@ -169,5 +171,59 @@ describe('flow playback accessibility (007 FR-023, FR-024)', () => {
     expect(segment).toHaveAttribute('aria-current', 'step');
     expect(within(player).getByRole('radio', { name: 'payment failed, error path' })).toBeChecked();
     expect(unnamed(document.body)).toEqual([]);
+  });
+});
+
+describe('flow playback marks accessibility (035 FR-018, FR-019)', () => {
+  it('makes one polite announcement per step change and none for the marks', () => {
+    const { editor } = renderWithEditor(<Canvas />, playbackDeck);
+    act(() => {
+      openFlow(editor(), 'order', 'o1');
+    });
+    const texts: string[] = [];
+    const stop = useUiStore.subscribe((s, prev) => {
+      if (s.announcement.seq !== prev.announcement.seq) texts.push(s.announcement.text);
+    });
+    act(() => {
+      nextStep(editor());
+    });
+    stop();
+    expect(texts).toEqual(['Step 2 of 8: API Gateway → Order Service']);
+  });
+
+  it('hides stickers and the token from the accessibility tree', () => {
+    const { editor, container } = renderWithEditor(<Canvas />, playbackDeck);
+    act(() => {
+      openFlow(editor(), 'order', 'o2');
+    });
+    const stickers = [...container.querySelectorAll('[data-testid="step-sticker"]')];
+    expect(stickers.length).toBeGreaterThan(0);
+    for (const sticker of stickers) {
+      expect(sticker).toHaveAttribute('aria-hidden', 'true');
+      expect(sticker).not.toHaveAttribute('tabindex');
+    }
+    for (const token of container.querySelectorAll('[data-testid="flow-token"]')) {
+      expect(token).toHaveAttribute('aria-hidden', 'true');
+    }
+    // A card's name is unchanged by its sticker: it carries no step text.
+    for (const card of container.querySelectorAll('[data-testid="deck-node"]')) {
+      expect(card.getAttribute('aria-label')).not.toMatch(/step/i);
+    }
+  });
+
+  it('marks only the current card with aria-current, and says nothing else by colour alone', () => {
+    const { editor, container } = renderWithEditor(<Canvas />, playbackDeck);
+    act(() => {
+      openFlow(editor(), 'order', 'o5');
+    });
+    const current = container.querySelectorAll('[data-testid="deck-node"][aria-current="step"]');
+    expect(current).toHaveLength(1);
+    expect(current[0]?.getAttribute('data-node-id')).toBe('x');
+    // Each state has a shape cue: ✓ icon (played) or a number (current / upcoming).
+    for (const sticker of container.querySelectorAll('[data-testid="step-sticker"]')) {
+      const state = sticker.getAttribute('data-step-state');
+      if (state === 'played') expect(sticker.querySelector('svg')).not.toBeNull();
+      else expect(sticker.textContent).toMatch(/^\d+[a-z]?$/);
+    }
   });
 });

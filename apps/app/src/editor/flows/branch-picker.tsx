@@ -1,7 +1,7 @@
 import type { FlowAnalysis } from '@sododeck/model';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
-import { CircleAlert, GitBranch } from 'lucide-react';
+import { CircleX, GitBranch } from 'lucide-react';
 import { useId } from 'react';
 
 import { useEditor } from '../../model/use-editor';
@@ -16,7 +16,8 @@ interface BranchPickerProps {
 
 /**
  * "AT STEP n" + one option per alternative (007 FR-015, design 46). A radiogroup: arrow keys move
- * between alternatives inside it, so the player's ↑ / ↓ skip it.
+ * between alternatives inside it, so the player's ↑ / ↓ skip it. Deck look (035): a number hint on
+ * each option and a dashed Clay border with ⊗ on the error path; behaviour is unchanged.
  */
 export function BranchPicker({ analysis, played, forkNumber }: BranchPickerProps) {
   const editor = useEditor();
@@ -37,18 +38,30 @@ export function BranchPicker({ analysis, played, forkNumber }: BranchPickerProps
           switchAlternative(editor, value);
         }}
       >
-        {analysis.branches.map(({ branch }) => (
+        {analysis.branches.map(({ branch }, i) => (
           <SegmentedControlItem
             key={branch.id}
             value={branch.id}
             className={
               branch.errorPath === true
-                ? 'text-clay-ink data-[state=checked]:text-clay-ink'
+                ? 'border border-dashed border-clay-ink text-clay-ink data-[state=checked]:text-clay-ink'
                 : undefined
             }
           >
+            {/* The position in the list, as frame 117 shows it. Visual only: no key is bound. */}
+            <span
+              aria-hidden
+              data-testid="branch-number-hint"
+              className="inline-flex size-4 items-center justify-center rounded-full bg-surface-3 font-mono text-[10px] leading-none font-semibold text-ink-secondary"
+            >
+              {i + 1}
+            </span>
             {branch.errorPath === true ? (
-              <CircleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
+              <CircleX
+                aria-hidden
+                data-testid="branch-error-icon"
+                strokeWidth={ICON_STROKE_WIDTH}
+              />
             ) : (
               <GitBranch aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
             )}
