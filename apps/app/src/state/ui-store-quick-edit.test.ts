@@ -76,7 +76,7 @@ describe('ui store: quick edit (019)', () => {
     expect(state().toolbarField).toBeNull();
     state().setCanvasGesture(null);
     expect(state().canvasGesture).toBeNull();
-    state().openToolbarField('kind');
+    state().openToolbarField('type');
     state().closeToolbarField();
     expect(state().toolbarField).toBeNull();
   });

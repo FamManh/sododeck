@@ -52,7 +52,7 @@ describe('quick edit from the keyboard (019 US7)', () => {
     await user.keyboard('{Control>}e{/Control}');
     expect(within(bar()).getByRole('button', { name: 'Open details' })).toHaveFocus();
     await user.keyboard('{ArrowRight}');
-    expect(within(bar()).getByRole('button', { name: 'Kind: Service' })).toHaveFocus();
+    expect(within(bar()).getByRole('button', { name: 'Type: Service' })).toHaveFocus();
     await user.keyboard('{End}');
     expect(within(bar()).getByRole('button', { name: 'More actions' })).toHaveFocus();
     await user.keyboard('{Escape}');
@@ -60,16 +60,16 @@ describe('quick edit from the keyboard (019 US7)', () => {
     expect(ui().selection.nodes).toEqual(['a']);
   });
 
-  it('picks a kind with the keyboard only and lands back on the Kind button', async () => {
+  it('picks a type with the keyboard only and lands back on the Type button', async () => {
     const { user, doc } = setup();
     focusCard('a');
     await user.keyboard('{Control>}e{/Control}{ArrowRight}{Enter}');
-    const filter = await screen.findByRole('searchbox', { name: 'Filter kind' });
+    const filter = await screen.findByRole('searchbox', { name: 'Filter types' });
     expect(filter).toHaveFocus();
     await user.keyboard('{ArrowDown}{Enter}');
     expect(toJSON(doc).nodes[0]?.type).not.toBe('service');
     await waitFor(() => {
-      expect(within(bar()).getByRole('button', { name: /^Kind: / })).toHaveFocus();
+      expect(within(bar()).getByRole('button', { name: /^Type: / })).toHaveFocus();
     });
   });
 

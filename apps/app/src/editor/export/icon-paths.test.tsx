@@ -1,4 +1,4 @@
-import { KIND_FALLBACK, KIND_STYLE } from '@sododeck/ui/lib/icons';
+import { TYPE_FALLBACK, typeStyle } from '@sododeck/ui/lib/icons';
 import { render } from '@testing-library/react';
 import {
   ChevronDown,
@@ -13,13 +13,20 @@ import { describe, expect, it } from 'vitest';
 import { ICON_PATHS } from './icon-paths';
 
 const SOURCES: Record<keyof typeof ICON_PATHS, LucideIcon> = {
-  client: KIND_STYLE.client.icon,
-  gateway: KIND_STYLE.gateway.icon,
-  service: KIND_STYLE.service.icon,
-  queue: KIND_STYLE.queue.icon,
-  database: KIND_STYLE.database.icon,
-  external: KIND_STYLE.external.icon,
-  fallback: KIND_FALLBACK.icon,
+  client: typeStyle('client').icon,
+  gateway: typeStyle('gateway').icon,
+  service: typeStyle('service').icon,
+  queue: typeStyle('queue').icon,
+  database: typeStyle('database').icon,
+  external: typeStyle('external').icon,
+  component: typeStyle('component').icon,
+  task: typeStyle('task').icon,
+  decision: typeStyle('decision').icon,
+  document: typeStyle('document').icon,
+  warehouse: typeStyle('warehouse').icon,
+  'truck-route': typeStyle('truck-route').icon,
+  issue: typeStyle('issue').icon,
+  fallback: TYPE_FALLBACK.icon,
   rules: Table,
   children: Layers,
   sticky: StickyNote,

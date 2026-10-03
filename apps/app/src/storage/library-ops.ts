@@ -7,6 +7,7 @@ import {
   createEditor,
   DeckValidationError,
   fromJSON,
+  NEW_DECK_PACKS,
   isLegacyLayout,
   serializeDeck,
   toJSON,
@@ -62,9 +63,9 @@ function checkName(name: string): string {
   return trimmed;
 }
 
-/** A new, empty deck. */
+/** A new, empty deck with every pack on (030); imports keep the packs their file has. */
 export function create(name: string): DeckBytes {
-  return fromFile({ ...emptySododeckFile(), name: checkName(name) });
+  return fromFile({ ...emptySododeckFile(), name: checkName(name), packs: [...NEW_DECK_PACKS] });
 }
 
 /** Parses and validates one `.sododeck.json` file (FR-023, FR-024). */

@@ -80,6 +80,16 @@ export function tagColorsMap(doc: DeckDoc): Y.Map<string> {
   return existing instanceof Y.Map ? (existing as Y.Map<string>) : new Y.Map<string>();
 }
 
+/**
+ * The packs that are on (030, R4): a `Y.Map<true>` keyed by pack id, present only once a deck has
+ * a pack choice (a new deck, a file with `packs`, or the first toggle). Absent means Architecture
+ * only, so a deck saved before 030 is written back byte-identical until its packs change.
+ */
+export function packsMap(doc: DeckDoc): Y.Map<YValue> | undefined {
+  const existing = metaMap(doc).get('packs');
+  return existing instanceof Y.Map ? existing : undefined;
+}
+
 export function collectionMap(doc: DeckDoc, c: Collection): ListMap {
   return doc.getMap<YObject>(c);
 }

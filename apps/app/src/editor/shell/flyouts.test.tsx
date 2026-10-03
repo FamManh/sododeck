@@ -70,12 +70,12 @@ describe('Rail and flyouts (018 US2, contract "Rail" and "Flyout")', () => {
   it('moves focus into a flyout and back to its rail button on Esc', async () => {
     const { user } = setup();
     await user.click(railButton('Add component'));
-    const palette = screen.getByRole('dialog', { name: 'Components' });
+    const palette = screen.getByRole('dialog', { name: 'Add' });
     await waitFor(() => {
       expect(palette).toContainElement(document.activeElement as HTMLElement);
     });
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Components' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Add' })).not.toBeInTheDocument();
     expect(railButton('Add component')).toHaveFocus();
   });
 
@@ -112,12 +112,12 @@ describe('Rail and flyouts (018 US2, contract "Rail" and "Flyout")', () => {
     await user.click(railButton('Outline'));
     await user.click(screen.getByRole('button', { name: 'Pin Outline' }));
     await user.click(railButton('Add component'));
-    expect(screen.getByRole('dialog', { name: 'Components' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Close Components' }));
+    expect(screen.getByRole('dialog', { name: 'Add' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Close Add' }));
     expect(screen.getByRole('dialog', { name: 'Outline' })).toBeInTheDocument();
   });
 
-  it('adds a kind at the view centre with 1–6 while the palette is open', async () => {
+  it('adds the n-th visible type at the view centre with 1–9 while Add is open', async () => {
     const { user, doc, editor } = setup(deckOf({}));
     await user.keyboard('3');
     expect(editor().canUndo()).toBe(false);
@@ -133,6 +133,46 @@ describe('Rail and flyouts (018 US2, contract "Rail" and "Flyout")', () => {
     expect(ui().flyout).toBeNull();
     // The new card is being named (019 FR-011).
     expect(ui().titleEdit).toMatchObject({ target: 'node', isNew: true });
+  });
+
+  it('keys 1–9 follow the selected tab and the search, and stop at the visible count (030)', async () => {
+    const { user, doc } = setup(
+      deckOf({ packs: ['architecture', 'process', 'logistics', 'data'] }),
+    );
+    act(() => {
+      ui().openFlyout('palette');
+      ui().togglePin();
+    });
+    await user.click(screen.getByRole('tab', { name: 'Logistics' }));
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    await user.keyboard('3');
+    expect(toJSON(doc).nodes).toHaveLength(0);
+    await user.keyboard('2');
+    expect(toJSON(doc).nodes.map((n) => n.type)).toEqual(['truck-route']);
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('tab', { name: 'All' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'dec');
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    await user.keyboard('1');
+    expect(toJSON(doc).nodes.map((n) => n.type)).toEqual(['truck-route', 'decision']);
+  });
+
+  it('does nothing with a digit while the flyout is closed, and / focuses the search (030)', async () => {
+    const { user, doc } = setup(deckOf({ packs: ['architecture'] }));
+    await user.keyboard('1');
+    expect(toJSON(doc).nodes).toHaveLength(0);
+    act(() => {
+      ui().openFlyout('palette');
+    });
+    act(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+    });
+    await user.keyboard('/');
+    expect(screen.getByRole('searchbox', { name: 'Search types' })).toHaveFocus();
   });
 
   it('keeps a pinned palette open while the new card is named (019 US2)', async () => {

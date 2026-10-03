@@ -1,8 +1,8 @@
+import { deckPacks, typesOfPacks } from '@sododeck/model';
 import { CirclePlus, Maximize, SquareDashedMousePointer, StickyNote } from 'lucide-react';
 
 import { addComponent, centredOn, selectAllComponents } from '../canvas-actions';
-import { kindLabel } from '../kind-label';
-import { PALETTE_ORDER } from '../palette-order';
+import { typeName } from '../type-label';
 import { addNoteAt } from '../stickies/sticky-actions';
 import type { Action, ActionContext } from './types';
 
@@ -21,11 +21,11 @@ export const CANVAS_ACTIONS: readonly Action[] = [
     shortcut: 'add-component',
     section: 'edit',
     where: { menu: ['canvas'] },
-    children: () =>
-      PALETTE_ORDER.map((kind, index) => ({
+    children: (ctx) =>
+      typesOfPacks(deckPacks(ctx.deck)).map(({ id: kind }, index) => ({
         id: `canvas.add.${kind}`,
-        label: kindLabel(kind),
-        hint: String(index + 1),
+        label: typeName(kind),
+        hint: index < 9 ? String(index + 1) : undefined,
         section: 'edit',
         where: {},
         run: (ctx) => {

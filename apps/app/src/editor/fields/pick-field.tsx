@@ -19,6 +19,7 @@ export function PickField({
   hint,
   error,
   disabled,
+  maxOptions,
 }: {
   label: string;
   listLabel: string;
@@ -29,6 +30,8 @@ export function PickField({
   hint?: string;
   error?: string;
   disabled?: boolean;
+  /** Options listed at most (Combobox default 8). */
+  maxOptions?: number;
 }) {
   const id = useId();
   const describedBy = [
@@ -48,6 +51,7 @@ export function PickField({
         listLabel={listLabel}
         value={mixed ? '' : value}
         options={options}
+        maxOptions={maxOptions}
         onValueChange={onPick}
         placeholder={mixed ? 'Mixed' : undefined}
         disabled={disabled}

@@ -4,13 +4,12 @@
  */
 import type { DeckEditor } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
-import type { ComponentKind } from '@sododeck/ui/lib/icons';
 
 import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
 import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
-import { kindLabel } from './kind-label';
+import { typeName } from './type-label';
 import { readViewState } from './views/use-current-view';
 
 /** Marks the canvas wrapper, so focus helpers and the palette can find it. */
@@ -28,19 +27,19 @@ export function centredOn(point: Point): Point {
 }
 
 /**
- * Adds "Untitled <kind>" at `position` (moved to a free spot), selects it and announces it. With
+ * Adds "Untitled <type>" at `position` (moved to a free spot), selects it and announces it. With
  * `edit`, the new card starts in title edit with an empty field (019 FR-011); the stored title is
  * the fallback kept when the user leaves it empty (FR-014, ADR 0015: a title is never empty).
  */
 export function addComponent(
   editor: DeckEditor,
-  kind: ComponentKind,
+  type: string,
   position: Point,
   { edit = false }: { edit?: boolean } = {},
 ): string {
-  const title = `Untitled ${kindLabel(kind).toLowerCase()}`;
+  const title = `Untitled ${typeName(type).toLowerCase()}`;
   const id = editor.add('nodes', {
-    type: kind,
+    type,
     title,
     position: freeSpot(readViewState(editor.doc).deck, round(position)),
   });
@@ -50,7 +49,7 @@ export function addComponent(
   ui.select({ nodes: [id] });
   ui.focus(id);
   ui.announce(`Added ${title}`);
-  if (edit) ui.startTitleEdit({ target: 'node', id, isNew: true, kind });
+  if (edit) ui.startTitleEdit({ target: 'node', id, isNew: true, kind: type });
   return id;
 }
 
@@ -122,9 +121,9 @@ export function focusCanvas(): void {
 
 export const PALETTE_ID = 'palette-panel';
 
-/** Focuses the first palette card once the Palette tab is shown. */
+/** Focuses the Add flyout's search field once the flyout is shown. */
 export function focusPalette(): void {
   setTimeout(() => {
-    document.querySelector<HTMLElement>(`#${PALETTE_ID} button`)?.focus();
+    document.querySelector<HTMLElement>(`#${PALETTE_ID} input`)?.focus();
   }, 0);
 }

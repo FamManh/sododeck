@@ -53,3 +53,31 @@ describe('DeckThumbnail', () => {
     expect(rects[1]).toHaveAttribute('height', '120');
   });
 });
+
+describe('DeckThumbnail card types (030)', () => {
+  it('draws new and unknown types without errors, unknown ones neutral', () => {
+    const { container } = render(
+      <DeckThumbnail
+        name="Hub"
+        thumb={{
+          w: 1000,
+          h: 400,
+          node: [160, 50],
+          nodes: [
+            [0, 0, 'warehouse'],
+            [200, 0, 'truck-route'],
+            [400, 0, 'robot'],
+            [600, 0, 'issue'],
+          ],
+          groups: [],
+        }}
+      />,
+    );
+    const rects = [...container.querySelectorAll('rect')];
+    expect(rects).toHaveLength(4);
+    expect(rects[0]).toHaveClass('fill-success-soft');
+    expect(rects[1]).toHaveClass('fill-amber-soft');
+    expect(rects[2]).toHaveClass('fill-surface-2');
+    expect(rects[3]).toHaveClass('fill-clay-soft');
+  });
+});

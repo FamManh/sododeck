@@ -2077,6 +2077,7 @@ then 025 → 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
 
 ## 030-card-types-and-packs
 
+- **Status:** built (2026-10-03, `specs/030-card-types-and-packs`, ADR 0025). Basic shapes, start / end and actor, and default fields per type stay with 031 and 032.
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 5 d
   · **Supersedes:** 024
 - **Goal:** Card types are data, grouped in packs a deck turns on (§g-61 D1, D10).
@@ -2116,6 +2117,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 032-typed-fields
 
+- **Status:** unblocked by 030 (type ids and the registry exist). Re-clarify against 030's type ids before planning.
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
   (split at `/speckit.specify` if it grows) · **Lifts:** §g-40
 - **Goal:** Users add typed fields to cards and choose which show on the card (§g-61 D3).

@@ -35,7 +35,7 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
   it('refuses an invalid file with the problems and their locations', () => {
     const error = loadError({
       ...emptySododeckFile(),
-      nodes: [{ id: 'a', type: 'lambda', title: '' }],
+      nodes: [{ id: 'a', type: 'Lambda', title: '' }],
     });
     expect(error.issues.map((i) => i.path)).toEqual(['nodes.0.type', 'nodes.0.title']);
   });

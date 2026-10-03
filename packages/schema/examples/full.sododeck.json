@@ -6,6 +6,7 @@
   "tags": ["logistics", "example"],
   "swatches": ["#7a3cff", "#1f2a44"],
   "tagColors": { "Lan": "#7a3cff", "PCI": "violet" },
+  "packs": ["architecture", "process", "logistics", "data"],
   "nodes": [
     {
       "id": "payments-provider",
@@ -119,6 +120,12 @@
       "group": "data",
       "position": { "x": 900, "y": 80 },
       "style": { "fill": "blue", "stroke": "#1f2a44" }
+    },
+    {
+      "id": "fulfilment-hub",
+      "type": "warehouse",
+      "title": "Fulfilment hub",
+      "position": { "x": 900, "y": 480 }
     }
   ],
   "groups": [

@@ -84,6 +84,46 @@ describe('schema v1', () => {
     expectBothValidators({ ...emptySododeckFile(), tagColors: {} }, true);
   });
 
+  it.each([
+    'service',
+    'database',
+    'gateway',
+    'client',
+    'queue',
+    'external',
+    'component',
+    'task',
+    'decision',
+    'document',
+    'warehouse',
+    'truck-route',
+    'issue',
+    'robot',
+  ])('accepts the type id %s (030)', (type) => {
+    expectBothValidators({ ...emptySododeckFile(), nodes: [{ id: 'n1', type, title: 'A' }] }, true);
+  });
+
+  it('accepts packs: one, four and an unknown id (030)', () => {
+    const base = emptySododeckFile();
+    expectBothValidators({ ...base, packs: ['architecture'] }, true);
+    expectBothValidators(
+      { ...base, packs: ['architecture', 'process', 'logistics', 'data'] },
+      true,
+    );
+    expectBothValidators({ ...base, packs: ['architecture', 'future-pack'] }, true);
+  });
+
+  it('accepts new type ids in view hide and dim lists (030)', () => {
+    const view = {
+      id: 'v1',
+      type: 'custom',
+      title: 'V',
+      excludeKinds: ['warehouse', 'robot'],
+      dimKinds: ['truck-route'],
+    };
+    expectBothValidators({ ...emptySododeckFile(), views: [view] }, true);
+  });
+
   it('names the allowed values when an enum value is wrong', () => {
     const [issue] = issuesOf({
       ...emptySododeckFile(),

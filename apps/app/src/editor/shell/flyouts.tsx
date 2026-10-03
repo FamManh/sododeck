@@ -44,7 +44,7 @@ function ProblemsFlyout() {
 }
 
 const FLYOUT_TITLES: Readonly<Record<FlyoutId, string>> = {
-  palette: 'Components',
+  palette: 'Add',
   outline: 'Outline',
   flows: 'Flows & features',
   rules: 'Rules',

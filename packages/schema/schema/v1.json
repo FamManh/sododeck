@@ -51,6 +51,13 @@
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/ColorRef" }
     },
+    "packs": {
+      "description": "Ids of the card-type packs that are on for this deck: the Add flyout and the type pickers list their types. Absent means `[\"architecture\"]` only. At least one id; unknown ids are kept.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/PackId" },
+      "uniqueItems": true,
+      "minItems": 1
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
@@ -269,11 +276,17 @@
       "type": "array",
       "items": { "$ref": "#/$defs/Id" }
     },
-    "NodeKind": {
-      "title": "NodeKind",
-      "description": "Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).",
+    "TypeId": {
+      "title": "TypeId",
+      "description": "Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.",
       "type": "string",
-      "enum": ["client", "gateway", "service", "queue", "database", "external"]
+      "pattern": "^[a-z][a-z0-9-]{0,47}$"
+    },
+    "PackId": {
+      "title": "PackId",
+      "description": "Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`. Same pattern as a type id. An id the app does not know is kept on save and reported.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,47}$"
     },
     "Level": {
       "title": "Level",
@@ -361,13 +374,13 @@
     },
     "Node": {
       "title": "Node",
-      "description": "A component of the system: client, gateway, service, queue, database or external system.",
+      "description": "A component of the system: a card of any type (service, database, queue, warehouse and so on).",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "type", "title"],
       "properties": {
         "id": { "$ref": "#/$defs/Id" },
-        "type": { "$ref": "#/$defs/NodeKind" },
+        "type": { "$ref": "#/$defs/TypeId" },
         "title": { "$ref": "#/$defs/Text", "description": "Display name." },
         "level": { "$ref": "#/$defs/Level" },
         "description": { "description": "What the component does (markdown).", "type": "string" },
@@ -500,9 +513,9 @@
           "uniqueItems": true
         },
         "excludeKinds": {
-          "description": "Node kinds hidden in this view. Absent means none.",
+          "description": "Card type ids hidden in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/NodeKind" },
+          "items": { "$ref": "#/$defs/TypeId" },
           "uniqueItems": true
         },
         "excludeTags": {
@@ -512,9 +525,9 @@
           "uniqueItems": true
         },
         "dimKinds": {
-          "description": "Node kinds drawn dimmed in this view. Absent means none.",
+          "description": "Card type ids drawn dimmed in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/NodeKind" },
+          "items": { "$ref": "#/$defs/TypeId" },
           "uniqueItems": true
         },
         "positions": {

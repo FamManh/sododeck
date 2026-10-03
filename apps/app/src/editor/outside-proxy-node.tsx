@@ -1,11 +1,6 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
-import {
-  ICON_STROKE_WIDTH,
-  KIND_FALLBACK,
-  KIND_STYLE,
-  toComponentKind,
-} from '@sododeck/ui/lib/icons';
+import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
@@ -40,8 +35,7 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
   const editor = useEditor();
   const { setCenter, getZoom } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
-  const kind = toComponentKind(data.kind);
-  const Icon = kind === null ? KIND_FALLBACK.icon : KIND_STYLE[kind].icon;
+  const Icon = typeStyle(data.kind).icon;
 
   const goToOutside = () => {
     // Up until the real card (or the collapsed group holding it) is on screen.

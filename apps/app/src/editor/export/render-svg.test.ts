@@ -522,3 +522,17 @@ describe('renderSvg: bundles and proxies (034 R9)', () => {
     expect(port?.textContent).toContain('Outside');
   });
 });
+
+describe('renderSvg card types (030)', () => {
+  it('draws the icon of each type and the fallback for an unknown one', () => {
+    const typed = deckOf({
+      nodes: [
+        { id: 'w', type: 'warehouse', title: 'Hub', position: { x: 0, y: 0 } },
+        { id: 'r', type: 'robot', title: 'Rover', position: { x: 300, y: 0 } },
+      ],
+    });
+    const svg = renderSvg(buildScene({ deck: typed, scope: 'deck', ui }), options);
+    expect(svg).toContain('M18 21V10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v11');
+    expect(svg).toContain('M8.3 10a.7.7 0 0 1-.626-1.079');
+  });
+});

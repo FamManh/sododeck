@@ -1,3 +1,5 @@
+import { resolveTypeId } from '@sododeck/ui/lib/icons';
+
 /** Geometry copied from lucide-react v1.48.0 (ISC). Drift is checked against the installed icons. */
 export type IconNode = readonly (readonly [
   tag: 'path' | 'circle' | 'rect' | 'line' | 'polyline' | 'polygon' | 'ellipse',
@@ -10,6 +12,13 @@ export const ICON_PATHS: Record<
   | 'queue'
   | 'database'
   | 'external'
+  | 'component'
+  | 'task'
+  | 'decision'
+  | 'document'
+  | 'warehouse'
+  | 'truck-route'
+  | 'issue'
   | 'fallback'
   | 'rules'
   | 'children'
@@ -54,6 +63,72 @@ export const ICON_PATHS: Record<
     ['path', { d: 'M3 12A9 3 0 0 0 21 12' }],
   ],
   external: [['path', { d: 'M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z' }]],
+  component: [
+    [
+      'path',
+      {
+        d: 'M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z',
+      },
+    ],
+  ],
+  task: [
+    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12' }],
+  ],
+  decision: [
+    [
+      'path',
+      {
+        d: 'M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z',
+      },
+    ],
+  ],
+  document: [
+    [
+      'path',
+      {
+        d: 'M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z',
+      },
+    ],
+    ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5' }],
+    ['path', { d: 'M10 9H8' }],
+    ['path', { d: 'M16 13H8' }],
+    ['path', { d: 'M16 17H8' }],
+  ],
+  warehouse: [
+    ['path', { d: 'M18 21V10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v11' }],
+    [
+      'path',
+      {
+        d: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 1.132-1.803l7.95-3.974a2 2 0 0 1 1.837 0l7.948 3.974A2 2 0 0 1 22 8z',
+      },
+    ],
+    ['path', { d: 'M6 13h12' }],
+    ['path', { d: 'M6 17h12' }],
+  ],
+  'truck-route': [
+    ['path', { d: 'M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2' }],
+    ['path', { d: 'M15 18H9' }],
+    [
+      'path',
+      {
+        d: 'M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14',
+      },
+    ],
+    ['circle', { cx: '17', cy: '18', r: '2' }],
+    ['circle', { cx: '7', cy: '18', r: '2' }],
+  ],
+  issue: [
+    [
+      'path',
+      {
+        d: 'M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z',
+      },
+    ],
+    ['path', { d: 'M13 5v2' }],
+    ['path', { d: 'M13 17v2' }],
+    ['path', { d: 'M13 11v2' }],
+  ],
   fallback: [
     [
       'path',
@@ -95,3 +170,13 @@ export const ICON_PATHS: Record<
     ['path', { d: 'm9 10-5 5 5 5' }],
   ],
 };
+
+export type IconKey = keyof typeof ICON_PATHS;
+
+/** The export icon of a card type id; an id this version has no icon for draws the fallback. */
+export function typeIconKey(type: string): IconKey {
+  const resolved = resolveTypeId(type);
+  return resolved !== null && Object.hasOwn(ICON_PATHS, resolved)
+    ? (resolved as IconKey)
+    : 'fallback';
+}

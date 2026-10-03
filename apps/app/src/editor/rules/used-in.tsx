@@ -1,6 +1,6 @@
 import { ruleUsage } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
-import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { TypeTile } from '@sododeck/ui/components/type-tile';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -81,7 +81,7 @@ export function UsedIn({
                     useUiStore.getState().select({ nodes: [id] });
                   }}
                 >
-                  {node !== undefined && <KindTile kind={node.type} size={22} decorative />}
+                  {node !== undefined && <TypeTile type={node.type} size={22} decorative />}
                   <span className="min-w-0 flex-1 truncate text-body-sm">{title(id)}</span>
                   <ArrowRight aria-hidden className="size-4 shrink-0 text-ink-secondary" />
                 </button>

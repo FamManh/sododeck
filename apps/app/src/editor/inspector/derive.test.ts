@@ -187,7 +187,7 @@ describe('bulkView', () => {
 
   it('shows shared values, Mixed values and tag counts in first-seen order', () => {
     expect(bulkView(nodes)).toEqual({
-      kind: { mixed: false, value: 'service' },
+      type: { mixed: false, value: 'service' },
       owner: { mixed: true },
       tech: { mixed: false, value: 'Go' },
       group: { mixed: true },

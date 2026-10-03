@@ -56,6 +56,19 @@ function goToNode(context: ProblemNavContext, nodeId: Id): boolean {
   return openResult(result('node', nodeId), context);
 }
 
+/** Several cards: the first is opened (revealed, centred), then every card is selected (030). */
+function goToNodes(context: ProblemNavContext, ids: readonly Id[]): boolean {
+  const [first] = ids;
+  if (first === undefined) return false;
+  const opened = goToNode(context, first);
+  if (!opened || ids.length === 1) return opened;
+  const deck = readDeck(context.editor.doc);
+  const present = ids.filter((id) => deck.nodes.some((n) => n.id === id));
+  for (const id of present) reveal(context, id);
+  context.select({ nodes: present });
+  return true;
+}
+
 function goToEdges(context: ProblemNavContext, ids: readonly Id[]): boolean {
   const deck = readDeck(context.editor.doc);
   const edges = deck.edges.filter((e) => ids.includes(e.id));
@@ -100,6 +113,8 @@ export function goToProblem(problem: Problem, context: ProblemNavContext): boole
   switch (target.type) {
     case 'node':
       return goToNode(context, target.id);
+    case 'nodes':
+      return goToNodes(context, target.ids);
     case 'edges':
       return goToEdges(context, target.ids);
     case 'flow':
@@ -128,6 +143,11 @@ export function goToProblem(problem: Problem, context: ProblemNavContext): boole
           selectView(view);
           return true;
         }
+        case 'meta':
+          // Deck-level (an unknown pack id): nothing to select; the deck's settings are the place.
+          if (context.screen === 'rules') context.navigateToCanvas();
+          context.select({});
+          return true;
         default:
           break;
       }

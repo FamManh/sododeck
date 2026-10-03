@@ -28,6 +28,8 @@ const types = await compile(bareRefs(schema) as JSONSchema, 'SododeckFile', {
   bannerComment: '',
   additionalProperties: false,
   unreachableDefinitions: true,
+  // minItems would emit a non-empty tuple type that the Zod output (string[]) is not assignable to.
+  ignoreMinAndMaxItems: true,
 });
 
 // json-schema-to-zod does not follow $ref, so inline local refs first.

@@ -1,0 +1,63 @@
+import { NEW_DECK_PACKS, toJSON } from '@sododeck/model';
+import { act, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+
+import { useUiStore } from '../state/ui-store';
+import { deckOf, renderWithEditor } from '../test/render-canvas';
+import { PacksPanel } from './packs-panel';
+
+const newDeck = () => deckOf({ packs: [...NEW_DECK_PACKS] });
+
+describe('PacksPanel (030)', () => {
+  it('lists the four packs with type counts and a switch each', () => {
+    renderWithEditor(<PacksPanel />, newDeck());
+    expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
+    for (const name of ['Architecture', 'Process', 'Logistics', 'Data cards']) {
+      expect(screen.getByRole('switch', { name })).toBeChecked();
+    }
+    expect(screen.getByText('7 types')).toBeInTheDocument();
+    expect(screen.getByText('1 type')).toBeInTheDocument();
+    expect(screen.getByText(/Turning a pack off hides its types from Add/)).toBeInTheDocument();
+  });
+
+  it('shows a deck from before packs as Architecture only', () => {
+    renderWithEditor(<PacksPanel />);
+    expect(screen.getByRole('switch', { name: 'Architecture' })).toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Process' })).not.toBeChecked();
+  });
+
+  it('toggles one pack as one undo step and announces it', async () => {
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(<PacksPanel />, newDeck());
+    await user.click(screen.getByRole('switch', { name: 'Logistics' }));
+    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data']);
+    expect(useUiStore.getState().announcement.text).toBe('Logistics off');
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'logistics', 'data']);
+    await user.click(screen.getByRole('switch', { name: 'Process' }));
+    await user.click(screen.getByRole('switch', { name: 'Process' }));
+    expect(useUiStore.getState().announcement.text).toBe('Process on');
+  });
+
+  it('disables the last pack on and says why', () => {
+    renderWithEditor(<PacksPanel />);
+    const only = screen.getByRole('switch', { name: 'Architecture' });
+    expect(only).toBeDisabled();
+    expect(only).toHaveAccessibleDescription('At least one pack stays on');
+  });
+
+  it('Back and Esc return to the types view', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<PacksPanel />, newDeck());
+    useUiStore.getState().setPalette({ view: 'packs' });
+    await user.click(screen.getByRole('button', { name: 'Back to Add' }));
+    expect(useUiStore.getState().addFlyout.view).toBe('types');
+    useUiStore.getState().setPalette({ view: 'packs' });
+    screen.getByRole('switch', { name: 'Process' }).focus();
+    await user.keyboard('{Escape}');
+    expect(useUiStore.getState().addFlyout.view).toBe('types');
+  });
+});

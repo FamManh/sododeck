@@ -9,6 +9,7 @@
  *   BENCH_COLOURS=1 pnpm bench          # every node has a fill, every 5th also a stroke (020)
  *   BENCH_LINE_TYPES=1 pnpm bench       # a third of the edges each curved, elbow, straight (029)
  *   BENCH_TAGS=1 pnpm bench             # every card has 3 to 10 tags from a pool of 24 (033)
+ *   BENCH_TYPES=1 pnpm bench            # the 13 card types round-robin, every pack on (030)
  *   BENCH_ANIMATED=1 pnpm bench         # 200 connectors with moving dashes, half of them dashed (022)
  *   BENCH_BENDS=1 pnpm bench            # 200 connectors with three free bends each, mixed shapes (022)
  *
@@ -39,6 +40,8 @@ const ANIMATED_QUERY = process.env.BENCH_ANIMATED === '1' ? '&animated=1' : '';
 /** 022 R1: 200 connectors have three bends. */
 const BENDS_QUERY = process.env.BENCH_BENDS === '1' ? '&bends=1' : '';
 const TAGS_QUERY = process.env.BENCH_TAGS === '1' ? '&tags=1' : '';
+/** 030 SC-007: the 500 nodes cycle through the 13 built-in card types. */
+const TYPES_QUERY = process.env.BENCH_TYPES === '1' ? '&types=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -222,7 +225,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,

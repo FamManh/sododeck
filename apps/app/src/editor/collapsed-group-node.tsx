@@ -1,10 +1,5 @@
 import { focusRing } from '@sododeck/ui/lib/focus';
-import {
-  ICON_STROKE_WIDTH,
-  KIND_FALLBACK,
-  KIND_STYLE,
-  toComponentKind,
-} from '@sododeck/ui/lib/icons';
+import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
 import { Layers } from 'lucide-react';
@@ -20,8 +15,7 @@ import { describeChannel } from './style/card-style';
 const MAX_TILES = 5;
 
 function MemberTile({ kind }: { kind: string }) {
-  const resolved = toComponentKind(kind);
-  const Icon = resolved === null ? KIND_FALLBACK.icon : KIND_STYLE[resolved].icon;
+  const Icon = typeStyle(kind).icon;
   return (
     <span
       data-testid="member-tile"

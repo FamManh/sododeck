@@ -7,6 +7,7 @@
 import type { Id, Rule, RuleRow, SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
+import { sortPacks } from './card-types';
 import { compareTags } from './tags';
 import { fromY, type YObject } from './convert';
 import {
@@ -15,6 +16,7 @@ import {
   isInternalKey,
   metaMap,
   orderedEntries,
+  packsMap,
   rulesMap,
   swatchesArray,
   tagColorsMap,
@@ -134,5 +136,9 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
       [...tagColors.entries()].sort(([a], [b]) => compareTags(a, b)),
     );
   }
+  // `packs` (030): emitted only when a pack choice is stored; known packs in registry order,
+  // then unknown ids sorted, so every replica writes the same bytes.
+  const packs = packsMap(doc);
+  if (packs !== undefined && packs.size > 0) out.packs = sortPacks(packs.keys());
   return out;
 }

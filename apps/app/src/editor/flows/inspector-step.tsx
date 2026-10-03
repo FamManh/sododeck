@@ -5,7 +5,7 @@ import {
   type PathStep,
 } from '@sododeck/model';
 import type { Flow, SododeckFile } from '@sododeck/schema';
-import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { TypeTile } from '@sododeck/ui/components/type-tile';
 import {
   Panel,
   PanelContent,
@@ -321,8 +321,8 @@ function PlaybackHeader({
       ) : (
         <>
           <div className="flex items-center gap-2">
-            <KindTile
-              kind={kindOf(step.from)}
+            <TypeTile
+              type={kindOf(step.from)}
               size={30}
               aria-label={`From: ${nodeTitle(deck, step.from)}`}
             />
@@ -331,8 +331,8 @@ function PlaybackHeader({
               strokeWidth={ICON_STROKE_WIDTH}
               className="size-4 text-ink-muted"
             />
-            <KindTile
-              kind={kindOf(step.to)}
+            <TypeTile
+              type={kindOf(step.to)}
               size={30}
               aria-label={`To: ${nodeTitle(deck, step.to)}`}
             />

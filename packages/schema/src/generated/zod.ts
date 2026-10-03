@@ -62,6 +62,21 @@ export const sododeckFileSchema = z
         'One colour per tag for the whole deck: the tag as first typed (case kept) maps to a card colour name or a `#rrggbb` hex. A tag with no entry is slate. Keys are non-empty and no two keys are equal when case and spacing are ignored. Tags on nodes, connections, flows and steps stay plain text; this map only colours them.',
       )
       .optional(),
+    packs: z
+      .array(
+        z
+          .string()
+          .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
+          .describe(
+            'Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`. Same pattern as a type id. An id the app does not know is kept on save and reported.',
+          ),
+      )
+      .min(1)
+      .refine((arr) => arr.every((item, i) => arr.indexOf(item) == i), 'All items must be unique!')
+      .describe(
+        'Ids of the card-type packs that are on for this deck: the Add flyout and the type pickers list their types. Absent means `["architecture"]` only. At least one id; unknown ids are kept.',
+      )
+      .optional(),
     nodes: z
       .array(
         z
@@ -73,9 +88,10 @@ export const sododeckFileSchema = z
                 'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
               ),
             type: z
-              .enum(['client', 'gateway', 'service', 'queue', 'database', 'external'])
+              .string()
+              .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
               .describe(
-                'Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).',
+                'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
               ),
             title: z.string().min(1).describe('Display name.'),
             level: z
@@ -219,7 +235,7 @@ export const sododeckFileSchema = z
           })
           .strict()
           .describe(
-            'A component of the system: client, gateway, service, queue, database or external system.',
+            'A component of the system: a card of any type (service, database, queue, warehouse and so on).',
           ),
       )
       .describe('Components of the system.'),
@@ -574,16 +590,17 @@ export const sododeckFileSchema = z
             excludeKinds: z
               .array(
                 z
-                  .enum(['client', 'gateway', 'service', 'queue', 'database', 'external'])
+                  .string()
+                  .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
                   .describe(
-                    'Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).',
+                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
                   ),
               )
               .refine(
                 (arr) => arr.every((item, i) => arr.indexOf(item) == i),
                 'All items must be unique!',
               )
-              .describe('Node kinds hidden in this view. Absent means none.')
+              .describe('Card type ids hidden in this view. Absent means none.')
               .optional(),
             excludeTags: z
               .array(z.string().min(1).describe('Non-empty text.'))
@@ -598,16 +615,17 @@ export const sododeckFileSchema = z
             dimKinds: z
               .array(
                 z
-                  .enum(['client', 'gateway', 'service', 'queue', 'database', 'external'])
+                  .string()
+                  .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
                   .describe(
-                    'Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).',
+                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
                   ),
               )
               .refine(
                 (arr) => arr.every((item, i) => arr.indexOf(item) == i),
                 'All items must be unique!',
               )
-              .describe('Node kinds drawn dimmed in this view. Absent means none.')
+              .describe('Card type ids drawn dimmed in this view. Absent means none.')
               .optional(),
             positions: z
               .record(

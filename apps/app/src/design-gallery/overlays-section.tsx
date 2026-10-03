@@ -57,7 +57,7 @@ import { QuickEditSamples } from './quick-edit-samples';
 import { SampleRow } from './sample-row';
 
 const TOUR = [
-  { title: 'Add your first component', body: 'Drag a kind from the palette onto the canvas.' },
+  { title: 'Add your first component', body: 'Drag a type from the Add flyout onto the canvas.' },
   { title: 'Connect it', body: 'Drag from a node edge to another node to draw a call.' },
   { title: 'Trace a flow', body: 'Click edges in order to record a flow, then press Play.' },
 ];

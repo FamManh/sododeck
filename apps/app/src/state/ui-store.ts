@@ -1,6 +1,5 @@
 import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
 import type { ColorRef, EdgeShape, Id, Side } from '@sododeck/schema';
-import type { ComponentKind } from '@sododeck/ui/lib/icons';
 import { create } from 'zustand';
 
 import { clampDrawerWidth } from '../editor/shell/shell-geometry';
@@ -180,8 +179,22 @@ export interface TitleEdit {
   target: 'node' | 'group';
   id: Id;
   isNew: boolean;
-  kind?: ComponentKind;
+  kind?: string;
 }
+
+/** The Add flyout's own state (030 R5): never saved, reset when the flyout closes. */
+export interface PaletteState {
+  /** The search text. */
+  search: string;
+  /** `'all'` or a category id. */
+  tab: string;
+  /** Add (types) or "Packs in this deck". */
+  view: 'types' | 'packs';
+  /** Type ids of the tiles on screen now, in order: what keys 1–9 add. */
+  visible: readonly string[];
+}
+
+export const PALETTE_INITIAL: PaletteState = { search: '', tab: 'all', view: 'types', visible: [] };
 
 /** What a canvas menu (and the action list) acts on (019 R7). `sticky`: only stickies selected. */
 export type MenuTarget =
@@ -202,7 +215,7 @@ export interface ContextMenuState {
 
 /** The selection toolbar's popovers (019 R6). */
 export type ToolbarFieldId =
-  | 'kind'
+  | 'type'
   | 'owner'
   | 'tags'
   | 'tech'
@@ -321,6 +334,7 @@ export interface UiState {
   pinnedFlyout: FlyoutId | null;
   /** The pin to restore when a recording session ends (the session pins Flows). */
   sessionPinReturn: { pinned: FlyoutId | null; shown: FlyoutId | null } | null;
+  addFlyout: PaletteState;
   drawer: DrawerState;
   /** Canvas object that gets focus back when the drawer closes. */
   drawerReturn: string | null;
@@ -481,6 +495,8 @@ export interface UiState {
   /** Shows or hides the JSON overlay (⌘J), saved for this deck. */
   setJsonShown: (shown: boolean) => void;
   toggleJsonShown: () => void;
+  /** Patches the Add flyout's search, tab, view or visible tiles (030). */
+  setPalette: (patch: Partial<PaletteState>) => void;
   /** Shows a flyout; the one already shown closes (and unpins) instead. */
   openFlyout: (id: FlyoutId) => void;
   /** Closes the shown flyout: the pinned one returns, or closing the pinned one unpins it. */
@@ -687,6 +703,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     shellDeckId: null,
     flyout: null,
     pinnedFlyout: null,
+    addFlyout: PALETTE_INITIAL,
     sessionPinReturn: null,
     drawer: { open: false, width: DEFAULT_SHELL_PREFS.drawerWidth, mode: 'selection' },
     drawerReturn: null,
@@ -1125,6 +1142,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     toggleJsonShown: () => {
       get().setJsonShown(!get().jsonShown);
+    },
+    setPalette: (patch) => {
+      set({ addFlyout: { ...get().addFlyout, ...patch } });
     },
     openFlyout: (id) => {
       const { flyout, pinnedFlyout } = get();

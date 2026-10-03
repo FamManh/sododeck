@@ -661,3 +661,43 @@ describe('DeckNode Deck look (029 US1)', () => {
     });
   });
 });
+
+describe('DeckNode card types (030)', () => {
+  it.each([
+    ['component', 'Component'],
+    ['task', 'Task'],
+    ['decision', 'Decision'],
+    ['document', 'Document'],
+    ['warehouse', 'Warehouse'],
+    ['truck-route', 'Truck route'],
+    ['issue', 'Issue'],
+  ])('names a %s card by its type', (kind, name) => {
+    renderWithEditor(<DeckNode {...props({ kind, title: 'Hub' })} />, deck);
+    expect(screen.getByRole('group', { name: new RegExp(`^${name}: Hub`) })).toBeInTheDocument();
+  });
+
+  it('shows an unknown type as its raw id with the fallback tile', () => {
+    const { container } = renderWithEditor(
+      <DeckNode {...props({ kind: 'robot', title: 'Rover' })} />,
+      deck,
+    );
+    expect(screen.getByRole('group', { name: /^robot: Rover/ })).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-shapes')).not.toBeNull();
+  });
+
+  it('keeps the six legacy types drawing the icon they always had', () => {
+    const icons = {
+      service: 'box',
+      database: 'database',
+      gateway: 'router',
+      client: 'monitor-smartphone',
+      queue: 'arrow-left-right',
+      external: 'cloud',
+    };
+    for (const [kind, icon] of Object.entries(icons)) {
+      const { container, unmount } = renderWithEditor(<DeckNode {...props({ kind })} />, deck);
+      expect(container.querySelector(`svg.lucide-${icon}`), kind).not.toBeNull();
+      unmount();
+    }
+  });
+});

@@ -129,8 +129,6 @@ export const invalidFixtures: InvalidFixture[] = [
   },
 
   // Enumerations
-  { name: 'bad node type', input: set('nodes.0.type', 'db'), path: 'nodes.0.type' },
-  { name: 'prototype node kind name', input: set('nodes.0.type', 'data'), path: 'nodes.0.type' },
   { name: 'bad node level', input: set('nodes.0.level', 'module'), path: 'nodes.0.level' },
   { name: 'bad edge protocol', input: set('edges.0.protocol', 'HTTPS'), path: 'edges.0.protocol' },
   {
@@ -150,13 +148,13 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'views.0.subtitleField',
   },
   {
-    name: 'unknown kind in view excludeKinds',
-    input: set('views.4.excludeKinds', ['external', 'lambda']),
+    name: 'malformed type id in view excludeKinds',
+    input: set('views.4.excludeKinds', ['external', 'Lambda']),
     path: 'views.4.excludeKinds.1',
   },
   {
-    name: 'unknown kind in view dimKinds',
-    input: set('views.2.dimKinds', ['browser']),
+    name: 'malformed type id in view dimKinds',
+    input: set('views.2.dimKinds', ['web browser']),
     path: 'views.2.dimKinds.0',
   },
   {
@@ -275,6 +273,21 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'tagColors.PCI',
   },
   { name: 'tag colour is a number', input: set('tagColors', { PCI: 3 }), path: 'tagColors.PCI' },
+  { name: 'node type is uppercase', input: set('nodes.0.type', 'Service'), path: 'nodes.0.type' },
+  { name: 'node type is empty', input: set('nodes.0.type', ''), path: 'nodes.0.type' },
+  { name: 'node type has a space', input: set('nodes.0.type', 'a b'), path: 'nodes.0.type' },
+  {
+    name: 'node type is 49 characters',
+    input: set('nodes.0.type', `a${'b'.repeat(48)}`),
+    path: 'nodes.0.type',
+  },
+  { name: 'packs is empty', input: set('packs', []), path: 'packs' },
+  {
+    name: 'duplicate pack ids',
+    input: set('packs', ['architecture', 'architecture']),
+    path: 'packs',
+  },
+  { name: 'pack id is uppercase', input: set('packs', ['Process']), path: 'packs.0' },
   { name: 'tagColors is an array', input: set('tagColors', ['violet']), path: 'tagColors' },
 
   // Ids

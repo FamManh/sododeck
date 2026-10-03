@@ -103,7 +103,7 @@ Sododeck ships **light and dark** themes built from the same token names. Every 
 - **Orange Ink** (`{colors.primary-ink}` — #b3480c · dark #ffb285): Text and icons placed on Orange Soft.
 - **On Primary** (`{colors.on-primary}` — #1c1c1a · dark #171716): Labels and icons on Deck Orange fills. White fails contrast on this orange (3.1:1 light, 2.8:1 dark), so the label is dark in both themes (5.4:1 light, 6.4:1 dark).
 
-### Kind & Semantic Tints
+### Type & Semantic Tints
 
 Each tint is a *soft / ink* pair. Soft is the fill and ink is the text or icon on it.
 
@@ -361,6 +361,7 @@ Designed in states 86–116 (`docs/design/screens/86-…` to `116-…`). The can
   - **Undo / Redo island:** 8px below the rail.
   - **Zoom island** (bottom-right): fit diagram (`Expand`) · fit selection (`SquareDashed`, disabled with nothing selected) · − · Mono % · + · level · minimap. The minimap (182×112) opens above it. Keyboard shortcuts moved to the deck menu (`?` still opens them).
 - **Left rail:** 48px wide, vertically centred, 38×38 buttons with an 18px icon and 8px radius; 22×1 dividers. Tools: select / hand toggle (§g-57), add component (palette), sticky, group, connector; then panels: outline, flows & features, rules, search. Problems (015) is a rail button with a count badge. Tooltips: Inverse, 8px radius, label plus Mono shortcut, 400ms delay, 8px right of the rail.
+- **Add flyout (030, design 127):** search field with a `/` hint, a pill tablist (All plus one tab per category whose pack is on; the active tab is Inverse), sections with an uppercase Micro heading and count, tiles in a 3-column grid (type tile 28 over the name, 1px Hairline border, 12px radius; a mono 1–9 badge on the first nine visible tiles), the Note card, and a footer row "Packs · N on". "Packs in this deck" replaces the body: a back arrow, one row per pack (name, "<n> types", On / Off text, Switch) and a note that cards on the board keep rendering. Type tiles take their icon and soft / ink tone from `TYPE_STYLE`; the icon, not the tone, tells types apart.
 - **Flyout:** 280px wide, left 68 (rail + 8), top 68, up to viewport height − 80. Header 46 with title (13.5/500), pin (28) and close (28); rows 30–32px. Surface, 1px Hairline, 12px radius, Float shadow. One flyout at a time. A pinned flyout stays open while the user works on the canvas and returns when a temporary one closes. Content: palette, outline, flows & features, rules, problems.
 - **Detail drawer:** the inspector on demand. Right 12, top 68, bottom 12; 360px default, resizable 320–560px from a 4×48 grip on its left edge. Header 68 (40 kind tile, 15/500 title, 11.5 muted subline, More, Close); sections use 13/16px padding with hairlines. It overlays the canvas, and the canvas pans to keep the selection clear. Opened from a card's details button, ⏎ or ⌘⇧D; Esc closes and returns focus to the card.
 - **JSON overlay:** hidden by default, toggled with ⌘J. A bottom island from left 68 to the right edge (or the drawer's left edge), bottom 12, 268px tall, Float shadow. Header 42: JSON · Selection / Deck tabs · "In sync with canvas" · line count · Copy · ×. Body on Code surface, Geist Mono 12/1.6. **Read-only** for now; the zoom island moves above it.

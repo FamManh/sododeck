@@ -3,7 +3,7 @@ import { Cpu, Link, Shapes, Table2, Tags, User } from 'lucide-react';
 
 import { useUiStore, type ToolbarFieldId } from '../../state/ui-store';
 import { bulkView, type Shared } from '../inspector/derive';
-import { kindLabel } from '../kind-label';
+import { typeName } from '../type-label';
 import type { Action, ActionContext } from './types';
 
 /** The selected components, in deck order. */
@@ -40,8 +40,8 @@ const field = (
  */
 export const FIELD_ACTIONS: readonly Action[] = [
   field(
-    'kind',
-    (ctx) => `Kind: ${shown(bulkView(selectedNodes(ctx)).kind, kindLabel, 'none')}`,
+    'type',
+    (ctx) => `Type: ${shown(bulkView(selectedNodes(ctx)).type, typeName, 'none')}`,
     Shapes,
     true,
   ),

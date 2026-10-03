@@ -11,7 +11,7 @@ const setup = () => renderInspector(inspectorDeck, { nodes: ['p'] });
 const node = (doc: Parameters<typeof toJSON>[0]) => toJSON(doc).nodes[1];
 
 describe('NodeInspector (story 1, FR-008)', () => {
-  it('shows the kind tile, title and "Kind · Group · id", and deletes through the dialog', async () => {
+  it('shows the kind tile, title and "Type · Group · id", and deletes through the dialog', async () => {
     const { user, ui } = setup();
     expect(screen.getByRole('heading', { name: 'Pricing Service' })).toBeInTheDocument();
     expect(screen.getByText('Service · Core · p')).toBeInTheDocument();
@@ -19,9 +19,9 @@ describe('NodeInspector (story 1, FR-008)', () => {
     expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'p' }] });
   });
 
-  it('changes kind and group by picking, each one undo step; "No group" clears', async () => {
+  it('changes type and group by picking, each one undo step; "No group" clears', async () => {
     const { user, doc, editor } = setup();
-    const kind = screen.getByRole('combobox', { name: 'Kind' });
+    const kind = screen.getByRole('combobox', { name: 'Type' });
     await user.clear(kind);
     await user.type(kind, 'data');
     await user.keyboard('{ArrowDown}{Enter}');

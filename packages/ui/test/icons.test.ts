@@ -4,12 +4,28 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
-  COMPONENT_KINDS,
-  KIND_FALLBACK,
-  KIND_STYLE,
+  ArrowLeftRight,
+  Box,
+  Cloud,
+  Database,
+  Diamond,
+  FileText,
+  MonitorSmartphone,
+  Puzzle,
+  Router,
+  Shapes,
+  SquareCheck,
+  Ticket,
+  Truck,
+  Warehouse,
+} from 'lucide-react';
+
+import {
   MATERIAL_GLYPHS,
   MATERIAL_TO_LUCIDE,
-  toComponentKind,
+  TYPE_FALLBACK,
+  TYPE_STYLE,
+  typeStyle,
 } from '../src/lib/icons';
 
 const mappingDoc = readFileSync(
@@ -17,44 +33,78 @@ const mappingDoc = readFileSync(
   'utf8',
 );
 
-describe('component kinds', () => {
-  it('lists the six kinds in palette order', () => {
-    expect(COMPONENT_KINDS).toEqual([
-      'client',
-      'gateway',
-      'service',
-      'queue',
-      'database',
-      'external',
-    ]);
+const TYPE_IDS = [
+  'service',
+  'database',
+  'gateway',
+  'client',
+  'queue',
+  'external',
+  'component',
+  'task',
+  'decision',
+  'document',
+  'warehouse',
+  'truck-route',
+  'issue',
+] as const;
+
+describe('card type styles (030)', () => {
+  it('has the 13 built-in ids', () => {
+    expect(Object.keys(TYPE_STYLE).sort()).toEqual([...TYPE_IDS].sort());
   });
 
-  it.each(COMPONENT_KINDS)('%s has an icon, a label and a soft/ink tone', (kind) => {
-    const style = KIND_STYLE[kind];
+  it.each(TYPE_IDS)('%s has an icon and a soft/ink tone', (id) => {
+    const style = typeStyle(id);
     expect(style.icon).toBeDefined();
-    expect(style.label.length).toBeGreaterThan(0);
     expect(style.tone).toMatch(/^bg-\S+ text-\S+$/);
   });
 
-  it('has a neutral fallback', () => {
-    expect(KIND_FALLBACK.label).toBe('Component');
-    expect(KIND_FALLBACK.icon).toBeDefined();
+  it('keeps today’s icon and tone for the six legacy types', () => {
+    expect(TYPE_STYLE.client).toEqual({
+      icon: MonitorSmartphone,
+      tone: 'bg-surface-2 text-ink-secondary',
+    });
+    expect(TYPE_STYLE.gateway).toEqual({ icon: Router, tone: 'bg-inverse text-on-inverse' });
+    expect(TYPE_STYLE.service).toEqual({ icon: Box, tone: 'bg-primary-soft text-primary-ink' });
+    expect(TYPE_STYLE.queue).toEqual({
+      icon: ArrowLeftRight,
+      tone: 'bg-amber-soft text-amber-ink',
+    });
+    expect(TYPE_STYLE.database).toEqual({ icon: Database, tone: 'bg-blue-soft text-blue-ink' });
+    expect(TYPE_STYLE.external).toEqual({ icon: Cloud, tone: 'bg-clay-soft text-clay-ink' });
+  });
+
+  it('gives the new types the icons of research R3', () => {
+    expect(typeStyle('component').icon).toBe(Puzzle);
+    expect(typeStyle('task').icon).toBe(SquareCheck);
+    expect(typeStyle('decision').icon).toBe(Diamond);
+    expect(typeStyle('document').icon).toBe(FileText);
+    expect(typeStyle('warehouse').icon).toBe(Warehouse);
+    expect(typeStyle('truck-route').icon).toBe(Truck);
+    expect(typeStyle('issue').icon).toBe(Ticket);
+  });
+
+  it('has a neutral fallback with the Shapes icon', () => {
+    expect(TYPE_FALLBACK.icon).toBe(Shapes);
+    expect(TYPE_FALLBACK.tone).toBe('bg-surface-2 text-ink-secondary');
   });
 });
 
-describe('toComponentKind', () => {
+describe('typeStyle', () => {
   it.each([
     ['Database', 'database'],
     [' queue ', 'queue'],
     ['edge', 'gateway'],
     ['data', 'database'],
     ['EXTERNAL', 'external'],
-  ])('maps %j to %s', (input, expected) => {
-    expect(toComponentKind(input)).toBe(expected);
+    ['Truck-Route', 'truck-route'],
+  ] as const)('maps %j to the %s style', (input, id) => {
+    expect(typeStyle(input)).toBe(TYPE_STYLE[id]);
   });
 
-  it.each(['nope', '', 'note'])('returns null for %j', (input) => {
-    expect(toComponentKind(input)).toBeNull();
+  it.each(['nope', '', 'robot'])('falls back for %j', (input) => {
+    expect(typeStyle(input)).toBe(TYPE_FALLBACK);
   });
 });
 

@@ -606,3 +606,19 @@ describe('buildScene: bundles and proxies (034 R9)', () => {
     expect(after).toBe(before);
   });
 });
+
+describe('buildScene card types (030)', () => {
+  it('maps each type to its export icon, unknown to the fallback, with the registry name', () => {
+    const typed = deckOf({
+      nodes: [
+        { id: 'w', type: 'warehouse', title: 'Hub', position: { x: 0, y: 0 } },
+        { id: 't', type: 'truck-route', title: 'Route', position: { x: 300, y: 0 } },
+        { id: 'r', type: 'robot', title: 'Rover', position: { x: 600, y: 0 } },
+      ],
+    });
+    const cards = new Map(scene(typed).cards.map((card) => [card.id, card]));
+    expect(cards.get('w')).toMatchObject({ kind: 'warehouse', typeName: 'Warehouse' });
+    expect(cards.get('t')).toMatchObject({ kind: 'truck-route', typeName: 'Truck route' });
+    expect(cards.get('r')).toMatchObject({ kind: 'fallback', typeName: 'robot' });
+  });
+});

@@ -3,7 +3,6 @@
  * document change goes through the editor and every selection change through the UI store.
  * Exported as a hook so tests can drive the handlers without a real pointer (jsdom has no layout).
  */
-import { toComponentKind } from '@sododeck/ui/lib/icons';
 import type {
   Connection,
   Edge,
@@ -18,6 +17,7 @@ import { useReactFlow, useStore } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { isKnownType } from '@sododeck/model';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
@@ -55,7 +55,7 @@ import { collapsedOf, moveStickyInView, readViewState } from './views/use-curren
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
-export const KIND_MIME = 'application/x-sododeck-kind';
+export const TYPE_MIME = 'application/x-sododeck-type';
 export const NOTE_MIME = 'application/x-sododeck-note';
 
 const isGroupNode = (id: string) => id.startsWith(GROUP_NODE_PREFIX);
@@ -619,23 +619,24 @@ export function useCanvasHandlers() {
 
       onDragOver: (event: DragEvent) => {
         const types = event.dataTransfer.types;
-        if (viewOnly() || (!types.includes(KIND_MIME) && !types.includes(NOTE_MIME))) return;
+        if (viewOnly() || (!types.includes(TYPE_MIME) && !types.includes(NOTE_MIME))) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
       },
       onDrop: (event: DragEvent) => {
         if (viewOnly()) return;
         const note = event.dataTransfer.getData(NOTE_MIME);
-        const kind = toComponentKind(event.dataTransfer.getData(KIND_MIME));
-        if (kind === null && note !== 'note') return;
+        const dragged = event.dataTransfer.getData(TYPE_MIME);
+        const type = isKnownType(dragged) ? dragged : null;
+        if (type === null && note !== 'note') return;
         event.preventDefault();
         const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         if (note === 'note') {
           addNoteAt(editor, point);
           return;
         }
-        if (kind === null) return;
-        addComponent(editor, kind, centredOn(point), { edit: true });
+        if (type === null) return;
+        addComponent(editor, type, centredOn(point), { edit: true });
       },
     };
   }, [editor, getViewport, screenToFlowPosition, controller, zoomLevel]);

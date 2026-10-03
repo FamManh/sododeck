@@ -131,12 +131,12 @@ export function FieldsSection() {
             />
           )}
         </Field>
-        <Field label="Kind (pick)">
+        <Field label="Type (pick)">
           {(id) => (
             <Combobox
               id={id}
               mode="pick"
-              listLabel="Kinds"
+              listLabel="Types"
               value={kind}
               onValueChange={setKind}
               options={[

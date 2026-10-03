@@ -1,11 +1,6 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
-import {
-  ICON_STROKE_WIDTH,
-  KIND_FALLBACK,
-  KIND_STYLE,
-  toComponentKind,
-} from '@sododeck/ui/lib/icons';
+import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import {
   Handle,
@@ -40,7 +35,7 @@ import {
   type CardResizeSession,
 } from './editing/card-resize';
 import { oneStep } from './fields/one-step';
-import { kindLabel } from './kind-label';
+import { typeName } from './type-label';
 import type { Handle as ResizeHandleName } from './editing/resize-limits';
 import { CardTitleInput } from './quick-edit/card-title-input';
 import { DetailsButton } from './quick-edit/details-button';
@@ -132,7 +127,7 @@ export const DeckNode = memo(function DeckNode({
 
   // Dimmed and pinned are said in the name too, never shown by opacity or a glyph alone (011).
   const name = [
-    `${kindLabel(data.kind)}: ${data.title}`,
+    `${typeName(data.kind)}: ${data.title}`,
     data.viewDimmed === true ? 'dimmed in this view' : null,
     data.pinned === true ? 'pinned' : null,
     data.problems?.label ?? null,
@@ -196,8 +191,7 @@ export const DeckNode = memo(function DeckNode({
         style={{ maxHeight: `${String(layout.titleLines * TITLE_LINE_EM)}em` }}
       />
     );
-  const kindStyle = KIND_STYLE[toComponentKind(data.kind) ?? 'service'];
-  const KindIcon = toComponentKind(data.kind) === null ? KIND_FALLBACK.icon : kindStyle.icon;
+  const TypeIcon = typeStyle(data.kind).icon;
   const subtitleClass =
     textRoleClass ?? (look?.namedFill === true ? 'text-ink-secondary' : 'text-ink-muted');
   const subtitleDataText = customText ?? (look?.namedFill === true ? 'secondary' : undefined);
@@ -285,7 +279,7 @@ export const DeckNode = memo(function DeckNode({
       {isLandscape ? (
         // The plate (frame 123): the type icon on the card fill, no text.
         (titleInput ?? (
-          <KindIcon
+          <TypeIcon
             aria-hidden
             data-testid="card-plate-icon"
             size={30}
@@ -301,14 +295,14 @@ export const DeckNode = memo(function DeckNode({
               aria-hidden
               className="inline-flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-(--card-chip,var(--color-surface-2)) text-(--card-ink,var(--color-ink-secondary))"
             >
-              <KindIcon aria-hidden size={14} strokeWidth={2} />
+              <TypeIcon aria-hidden size={14} strokeWidth={2} />
             </span>
             {isContainer ? (
               <span
                 data-text={subtitleDataText}
                 className={cn('min-w-0 flex-1 truncate text-caption font-medium', subtitleClass)}
               >
-                {kindLabel(data.kind)}
+                {typeName(data.kind)}
               </span>
             ) : (
               // System: the tile alone (§g-58); the slot keeps the badges on the right.

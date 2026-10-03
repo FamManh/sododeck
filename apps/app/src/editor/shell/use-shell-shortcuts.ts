@@ -5,7 +5,7 @@ import { isTextTarget } from '../../lib/is-text-target';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { addComponent, canvasElement, centredOn, nodeElement } from '../canvas-actions';
-import { PALETTE_ORDER } from '../palette-order';
+import { PALETTE_SEARCH_ID } from '../palette';
 import { focusSelectionToolbar, toolbarShown } from '../quick-edit/toolbar-focus';
 import { useFitSelection } from './fit-selection';
 import { isRegionId, nextRegion, visibleRegions, type RegionId } from './regions';
@@ -167,9 +167,16 @@ export function useShellShortcuts(): void {
         });
         return;
       }
-      const digit = /^Digit([1-6])$/.exec(event.code)?.[1];
+      if (key === '/' && ui.flyout === 'palette' && ui.addFlyout.view === 'types') {
+        handle(() => {
+          document.getElementById(PALETTE_SEARCH_ID)?.focus();
+        });
+        return;
+      }
+      const digit = /^Digit([1-9])$/.exec(event.code)?.[1];
       if (digit !== undefined && ui.flyout === 'palette') {
-        const kind = PALETTE_ORDER[Number(digit) - 1];
+        // The n-th tile on screen: the tab and the search decide what that is (030).
+        const kind = ui.addFlyout.visible[Number(digit) - 1];
         if (kind === undefined) return;
         handle(() => {
           const rect = canvasElement()?.getBoundingClientRect();

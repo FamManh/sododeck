@@ -1,5 +1,5 @@
 import { Check, Search } from 'lucide-react';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import type * as React from 'react';
 
 import { TagChip } from '@sododeck/ui/components/tag-chip';
@@ -13,6 +13,8 @@ export interface ChoiceOption {
   state?: 'selected' | 'partial';
   /** Shown after a partial option's label and read with it, e.g. "2 of 3". */
   count?: string;
+  /** Heading this option is listed under (card types by category); options of a group stay together. */
+  group?: string;
 }
 
 type ChoiceListProps = Omit<React.ComponentProps<'div'>, 'onChange' | 'autoFocus'> & {
@@ -129,49 +131,62 @@ function ChoiceList({
         className="flex max-h-64 flex-col overflow-y-auto"
       >
         {rows.map((row, index) => {
+          const group = row.kind === 'option' ? row.option.group : undefined;
+          const before = rows[index - 1];
+          const previous = before?.kind === 'option' ? before.option.group : undefined;
+          const heading = group !== undefined && group !== previous ? group : null;
           const selected = row.kind === 'option' && row.option.state === 'selected';
           const partial = row.kind === 'option' && row.option.state === 'partial';
           const text = row.kind === 'option' ? row.option.label : row.label;
           return (
-            <div
-              key={row.kind === 'option' ? `o:${row.option.value}` : row.kind}
-              id={rowId(index)}
-              role="option"
-              aria-selected={selected}
-              aria-label={
-                partial && row.option.count !== undefined
-                  ? `${text}, ${row.option.count}`
-                  : undefined
-              }
-              data-active={index === activeIndex || undefined}
-              onMouseDown={(event) => {
-                // The filter keeps focus, so the keyboard keeps working after a click.
-                event.preventDefault();
-              }}
-              onMouseMove={() => {
-                if (index !== activeIndex) setActive(index);
-              }}
-              onClick={() => {
-                pick(row);
-              }}
-              className={cn(
-                'flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-row px-2.5 text-body-sm text-ink select-none data-[active]:bg-surface-2',
-                row.kind !== 'option' && 'text-ink-secondary',
+            <Fragment key={row.kind === 'option' ? `o:${row.option.value}` : row.kind}>
+              {heading !== null && (
+                <div
+                  role="presentation"
+                  className="px-2.5 pt-2 pb-1 text-micro tracking-wide text-ink-muted uppercase"
+                >
+                  {heading}
+                </div>
               )}
-            >
-              {partial ? (
-                <TagChip label={text} partial count={row.option.count} />
-              ) : (
-                <span className="min-w-0 flex-1 truncate">{text}</span>
-              )}
-              {selected && (
-                <Check
-                  aria-hidden
-                  strokeWidth={ICON_STROKE_WIDTH}
-                  className="ml-auto size-4 shrink-0 text-primary-ink"
-                />
-              )}
-            </div>
+              <div
+                id={rowId(index)}
+                role="option"
+                aria-selected={selected}
+                aria-label={
+                  partial && row.option.count !== undefined
+                    ? `${text}, ${row.option.count}`
+                    : undefined
+                }
+                data-active={index === activeIndex || undefined}
+                onMouseDown={(event) => {
+                  // The filter keeps focus, so the keyboard keeps working after a click.
+                  event.preventDefault();
+                }}
+                onMouseMove={() => {
+                  if (index !== activeIndex) setActive(index);
+                }}
+                onClick={() => {
+                  pick(row);
+                }}
+                className={cn(
+                  'flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-row px-2.5 text-body-sm text-ink select-none data-[active]:bg-surface-2',
+                  row.kind !== 'option' && 'text-ink-secondary',
+                )}
+              >
+                {partial ? (
+                  <TagChip label={text} partial count={row.option.count} />
+                ) : (
+                  <span className="min-w-0 flex-1 truncate">{text}</span>
+                )}
+                {selected && (
+                  <Check
+                    aria-hidden
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    className="ml-auto size-4 shrink-0 text-primary-ink"
+                  />
+                )}
+              </div>
+            </Fragment>
           );
         })}
       </div>

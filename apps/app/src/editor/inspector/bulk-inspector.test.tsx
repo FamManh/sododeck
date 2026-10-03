@@ -22,7 +22,7 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
     expect(owner).toHaveAttribute('placeholder', 'Mixed');
     expect(owner).toHaveValue('');
     expect(owner).toHaveAccessibleDescription('Mixed values');
-    expect(screen.getByRole('combobox', { name: 'Kind' })).toHaveAccessibleDescription(
+    expect(screen.getByRole('combobox', { name: 'Type' })).toHaveAccessibleDescription(
       'Same on all 3',
     );
     expect(screen.getByRole('textbox', { name: 'Tech' })).toHaveAccessibleDescription(
@@ -72,13 +72,13 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
     expect(nodes(doc).map((n) => n.owner)).toEqual(['Orders', 'Payments', 'Dispatch']);
   });
 
-  it('sets kind and group on all, each one undo step', async () => {
+  it('sets type and group on all, each one undo step', async () => {
     const { user, doc, editor } = setup();
     const group = screen.getByRole('combobox', { name: 'Group' });
     await user.type(group, 'Core');
     await user.keyboard('{ArrowDown}{Enter}');
     expect(nodes(doc).map((n) => n.group)).toEqual(['core', 'core', 'core']);
-    const kind = screen.getByRole('combobox', { name: 'Kind' });
+    const kind = screen.getByRole('combobox', { name: 'Type' });
     await user.clear(kind);
     await user.type(kind, 'queue');
     await user.keyboard('{ArrowDown}{Enter}');

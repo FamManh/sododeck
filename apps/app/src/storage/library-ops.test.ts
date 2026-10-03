@@ -33,7 +33,12 @@ describe('library ops', () => {
 
   it('creates an empty named deck', () => {
     const { bytes, summary } = create('Untitled deck');
-    expect(toJSON(docOf([bytes]))).toEqual({ ...emptySododeckFile(), name: 'Untitled deck' });
+    // A new deck starts with every pack on (030); an imported file keeps what it has.
+    expect(toJSON(docOf([bytes]))).toEqual({
+      ...emptySododeckFile(),
+      name: 'Untitled deck',
+      packs: ['architecture', 'process', 'logistics', 'data'],
+    });
     expect(summary).toMatchObject({ name: 'Untitled deck', nodeCount: 0, thumb: null });
   });
 

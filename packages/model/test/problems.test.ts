@@ -378,3 +378,36 @@ describe('checkDeck (015)', () => {
     });
   });
 });
+
+describe('card type and pack problems (030)', () => {
+  it('reports one problem per unknown type id, listing its cards', () => {
+    const file = deck({
+      nodes: [
+        node('a', { type: 'robot' }),
+        node('b', { type: 'robot' }),
+        node('c', { type: 'drone' }),
+        node('d', { type: 'warehouse' }),
+      ],
+    });
+    const found = checkDeck(file).list.filter((p) => p.kind === 'unknown-card-type');
+    expect(found).toHaveLength(2);
+    const robot = found.find((p) => p.title === 'Unknown card type robot');
+    expect(robot?.target).toEqual({ type: 'nodes', ids: ['a', 'b'] });
+    expect(robot?.detail).toContain('A, B');
+  });
+
+  it('reports an unknown pack id', () => {
+    const found = checkDeck(deck({ packs: ['architecture', 'future-pack'] })).list;
+    expect(found.map((p) => [p.kind, p.title])).toEqual([
+      ['unknown-pack', 'Unknown pack future-pack'],
+    ]);
+  });
+
+  it('reports nothing for known ids', () => {
+    const file = deck({
+      packs: ['architecture', 'process', 'logistics', 'data'],
+      nodes: [node('a', { type: 'task' }), node('b', { type: 'truck-route' })],
+    });
+    expect(kinds(file)).toEqual([]);
+  });
+});

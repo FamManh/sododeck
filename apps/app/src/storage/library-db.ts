@@ -1,4 +1,3 @@
-import type { NodeKind } from '@sododeck/schema';
 import { Dexie, type EntityTable } from 'dexie';
 
 import { removeShellPrefs } from '../editor/shell/shell-prefs';
@@ -14,14 +13,14 @@ import { folderNameKey, validateFolderName, type FolderNameError as Code } from 
 
 /**
  * A thumbnail summary normalized to a 0–1000 box, aspect ratio kept (research R10): the box
- * size, the node size, node top-left corners with their kind, and group boxes. A resized card
+ * size, the node size, node top-left corners with their type, and group boxes. A resized card
  * (017 R13) carries its own `w, h`; otherwise the thumbnail draws it at the default `node` size.
  */
 export interface DeckThumb {
   w: number;
   h: number;
   node: [w: number, h: number];
-  nodes: [x: number, y: number, kind: NodeKind, w?: number, h?: number][];
+  nodes: [x: number, y: number, type: string, w?: number, h?: number][];
   groups: [x: number, y: number, w: number, h: number][];
 }
 

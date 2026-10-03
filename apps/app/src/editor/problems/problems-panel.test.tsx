@@ -114,3 +114,25 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     expect(rowNames()).toHaveLength(PROBLEM_ROW_CAP + 1);
   });
 });
+
+describe('ProblemsPanel card types and packs (030)', () => {
+  it('lists an unknown card type and an unknown pack and activates the row', async () => {
+    const file = deckOf({
+      packs: ['architecture', 'future-pack'],
+      nodes: [
+        { id: 'a', type: 'robot', title: 'Rover' },
+        { id: 'b', type: 'robot', title: 'Walker' },
+      ],
+    });
+    const { onActivate, user } = setup(file);
+    await screen.findByRole('heading', { name: /Problems/ });
+    expect(rowNames()).toEqual([
+      'Unknown card type robotRover, Walker use a type this version does not know',
+      'Unknown pack future-packKept in the file; this version has no types for it',
+    ]);
+    await user.click(screen.getByRole('button', { name: /Unknown card type robot/ }));
+    expect(onActivate).toHaveBeenCalledWith(
+      expect.objectContaining({ target: { type: 'nodes', ids: ['a', 'b'] } }),
+    );
+  });
+});
