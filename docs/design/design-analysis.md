@@ -1173,3 +1173,4 @@ Found while importing board B (028). Each has a default; the founder confirms or
 ### Founder decisions on format compatibility (2026-10-03)
 
 81. **ADR 0020 deferred** (founder, 2026-10-03). There are no users yet and the app is in development, so the `.sododeck.json` format and the stored deck can change freely: no format revision, no read-only guard, no handling of files or tabs from older builds. Backlog 025 moves to just before the first public release, where ADR 0020 is re-confirmed; 036 no longer depends on it.
+82. **036 decisions** (founder, 2026-10-03). Decks stored in the browser before 036 are not migrated and get no layout version (export before upgrading, import after). Collapsed groups stay shared document data per view. The 036 spec keeps anything a person wrote when concurrent edits clash (reported in Problems) and repairs only content-free leftovers.

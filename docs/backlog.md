@@ -2144,6 +2144,9 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 036-collab-ready-document
 
+- **Status:** specified (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md).
+  The spec narrows "integrity on receive": content is kept and reported, only content-free
+  leftovers are repaired (FR-020 / FR-021).
 - **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real
   users yet, so the stored layout can change now at almost no cost.
 - **Milestone:** before 029 · **Depends on:** — · **Estimate:** 6 d (split at
@@ -2163,24 +2166,23 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
     by the writer's Zod check. After each remote transaction, run the integrity check, report
     breakage as problems (ADR 0013) and repair what is safe to repair automatically (e.g. a
     duplicated id from a concurrent paste gets a fresh id and its references follow).
-  - **Layout version + migration.** `meta.layout` (absent = 1). Opening a version-1 deck migrates
-    it once, in one untracked transaction (never an undo step), before the editor shows it. A tab
-    still on layout 1 that meets layout 2 reloads.
+  - **No layout version and no migration** (founder, 2026-10-03, §g-81 / §g-82): decks stored
+    before 036 are not supported; export to `.sododeck.json` before upgrading and import after.
+    Opening an old stored deck ends in the existing "can't open" outcome, never a crash.
   - **One schema roadmap ADR** naming every field 029, 033, 022, 030 and 032 will add
     (`edge.style.shape`, waypoints, free anchors, dash / width / colour, `labelAt`; deck tag
-    definitions; the card type registry and packs; field definitions and values), with their
-    `FORMAT_REVISION` steps, so the format grows by design rather than five separate patches.
+    definitions; the card type registry and packs; field definitions and values), so the format
+    grows by design rather than five separate patches.
   - **Deck identity.** Deck ids are already `crypto.randomUUID()`; record in the ADR that they are
     the global id (the future server room name) and never reused.
-  - ⚠ **Shared or per-user view state:** collapsed groups (per view) are document data today, so
-    with collaborators one person's collapse collapses for everyone. Decide in the ADR (shared
-    like Miro frames, or per-user like a viewport).
+  - **Collapsed groups stay shared** document data per view (founder, 2026-10-03, §g-82);
+    recorded in the ADR.
 - **Unchanged:** the `.sododeck.json` file format (arrays in file order, canonical key order,
   ADR 0004 / 0005 §6): `toJSON` / `serializeDeck` output is byte-identical before and after.
 - **Out of scope:** a server, accounts, presence (awareness), sharing, permissions.
 - **Acceptance criteria (draft):**
-  - Given a deck stored before 036, When opened, Then it is migrated once, `toJSON` is
-    byte-identical to before, and ⌘Z does not undo the migration.
+  - Given any valid file, When imported and exported, Then the text is byte-identical to the
+    export before 036.
   - Given two tabs, When one reorders a flow's steps while the other edits a step's title, Then
     both changes survive and no step is duplicated.
   - Given two tabs typing into the same node description at once, Then both texts survive.
