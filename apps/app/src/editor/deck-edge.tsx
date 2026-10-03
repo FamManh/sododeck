@@ -8,7 +8,7 @@ import { memo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { DeckFlowEdge } from './deck-to-flow';
-import { DOT_RADIUS } from './edge-constants';
+import { KNOB_RADIUS } from './edge-constants';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES } from './flow-strokes';
@@ -139,7 +139,7 @@ export const DeckEdge = memo(function DeckEdge({
           data-testid="edge-dot"
           cx={dot.x}
           cy={dot.y}
-          r={DOT_RADIUS}
+          r={KNOB_RADIUS}
           fill={stroke}
         />
       ))}

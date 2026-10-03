@@ -1,6 +1,6 @@
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
-import { DOT_RADIUS } from '../edge-constants';
+import { KNOB_RADIUS } from '../edge-constants';
 import { exportTextColour, kindColours, stickyColours, type ExportPalette } from './export-palette';
 import { ICON_PATHS, type IconNode } from './icon-paths';
 import type { ExportScene, SceneCard, SceneEdge } from './scene';
@@ -182,7 +182,7 @@ function edge(item: SceneEdge, palette: ExportPalette, measure: TextMeasurer): s
     ...(item.dots === 'none' ? [] : [item.target]),
   ];
   for (const dot of dots) {
-    out.push(`<circle ${attrs({ cx: dot.x, cy: dot.y, r: DOT_RADIUS, fill: colour })}/>`);
+    out.push(`<circle ${attrs({ cx: dot.x, cy: dot.y, r: KNOB_RADIUS, fill: colour })}/>`);
   }
   if (item.label !== null || item.badges.length > 0) {
     const label = item.label ?? '';
