@@ -54,7 +54,8 @@ export function PacksPanel() {
         {PACKS.map((pack) => {
           const isOn = on.has(pack.id);
           const lastOn = isOn && onKnown.length === 1 && on.size === 1;
-          const count = packTypeCount(pack.id);
+          // Tool tiles (031: Sticky, Frame) count as tiles of the pack, as Add shows them.
+          const count = packTypeCount(pack.id) + (pack.tools?.length ?? 0);
           const hintId = `${noteId}-${pack.id}`;
           return (
             <li key={pack.id} className="flex items-center gap-3 rounded-row px-1 py-1.5">
