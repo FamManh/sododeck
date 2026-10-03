@@ -27,6 +27,16 @@ import { lineCap, lineDash } from '../style/line-colour';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
+import {
+  cardFieldView,
+  fieldBlock,
+  fieldChipBoxes,
+  type CardFieldView,
+  type FieldBlock,
+  type FieldChip,
+  type FieldChipBox,
+  type FieldRow,
+} from '../card-fields';
 import { edgePath } from './edge-geometry';
 import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
@@ -52,6 +62,8 @@ export interface SceneCard {
   tags: readonly string[];
   /** Each pill's box with its own tag's export colours (033), slate when it has none. */
   tagChips: readonly (TagChip & { chip: string; ink: string })[];
+  /** Typed fields (032): header status, chip shelf, rows and "+N fields", laid out like the card. */
+  fields: SceneFields;
   hasRules: boolean;
   childCount: number;
   level: Level;
@@ -65,6 +77,19 @@ export interface SceneCard {
   /** The fill is a named colour, so the type name reads Secondary instead of Muted. */
   namedFill?: boolean;
   text: 'default' | 'dark' | 'light';
+}
+
+/** A field chip with its export colours: an option's own, else the card's tile (absent). */
+export interface SceneFieldChip extends FieldChip {
+  colours?: { chip: string; ink: string };
+}
+
+export interface SceneFields {
+  header: SceneFieldChip | undefined;
+  chips: readonly (FieldChipBox & { chip: SceneFieldChip })[];
+  rows: readonly FieldRow[];
+  hidden: number;
+  block: FieldBlock;
 }
 
 export interface SceneGroup {
@@ -257,7 +282,12 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     const childCount = graph.childCount.get(id) ?? 0;
     // The box and the lines come from the canvas's own `cardLayout`, so a card exports at the size
     // it has on screen (029 R7).
-    const layout = cardLayoutOf(node, { description: subtitle ?? undefined, childCount });
+    const fieldView = cardFieldView(source, node);
+    const layout = cardLayoutOf(node, {
+      description: subtitle ?? undefined,
+      childCount,
+      fields: fieldView,
+    });
     const inner = layout.width - 2 * DECK_CARD.paddingX;
     const description = subtitle?.trim() ?? '';
     const tags = cardTags(node.tags);
@@ -291,6 +321,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
           ...box,
           ...exportTagColours(tagColours.get(tagKey(box.tag))),
         })),
+        fields: sceneFields(fieldView, layout.width, inner, measure),
         hasRules: (node.rules?.length ?? 0) > 0,
         childCount,
         level,
@@ -583,4 +614,29 @@ function sceneEdges(
     );
   }
   return edges;
+}
+
+function withColours(chip: FieldChip): SceneFieldChip {
+  return chip.kind === 'select' || chip.kind === 'status'
+    ? { ...chip, colours: exportTagColours(chip.color) }
+    : chip;
+}
+
+/** A card's fields for the image (032): the same view and block geometry the canvas uses. */
+function sceneFields(
+  view: CardFieldView,
+  cardWidth: number,
+  inner: number,
+  measure: TextMeasurer,
+): SceneFields {
+  return {
+    header: view.header === undefined ? undefined : withColours(view.header),
+    chips: fieldChipBoxes(view.chips, inner, measure).map((box) => ({
+      ...box,
+      chip: withColours(box.chip),
+    })),
+    rows: view.rows,
+    hidden: view.hidden,
+    block: fieldBlock(view, cardWidth, measure),
+  };
 }

@@ -1,7 +1,16 @@
 import { TYPE_FALLBACK, typeStyle } from '@sododeck/ui/lib/icons';
 import { render } from '@testing-library/react';
 import {
+  Calendar,
+  CalendarRange,
   ChevronDown,
+  Circle,
+  CircleCheck,
+  CircleDashed,
+  CircleDot,
+  DoorOpen,
+  Eye,
+  Link,
   CornerDownLeft,
   Layers,
   StickyNote,
@@ -32,6 +41,15 @@ const SOURCES: Record<keyof typeof ICON_PATHS, LucideIcon> = {
   sticky: StickyNote,
   chevron: ChevronDown,
   enter: CornerDownLeft,
+  'status-circle': Circle,
+  'status-circle-dashed': CircleDashed,
+  'status-circle-dot': CircleDot,
+  'status-circle-check': CircleCheck,
+  'status-eye': Eye,
+  'status-door-open': DoorOpen,
+  date: Calendar,
+  'date-range': CalendarRange,
+  link: Link,
 };
 
 /** The rendered lucide icon's shapes, as `[tag, attributes]` pairs. */

@@ -24,7 +24,16 @@ export const ICON_PATHS: Record<
   | 'children'
   | 'sticky'
   | 'chevron'
-  | 'enter',
+  | 'enter'
+  | 'status-circle'
+  | 'status-circle-dashed'
+  | 'status-circle-dot'
+  | 'status-circle-check'
+  | 'status-eye'
+  | 'status-door-open'
+  | 'date'
+  | 'date-range'
+  | 'link',
   IconNode
 > = {
   client: [
@@ -168,6 +177,65 @@ export const ICON_PATHS: Record<
   enter: [
     ['path', { d: 'M20 4v7a4 4 0 0 1-4 4H4' }],
     ['path', { d: 'm9 10-5 5 5 5' }],
+  ],
+  // Typed field chips and rows (032).
+  'status-circle': [['circle', { cx: 12, cy: 12, r: 10 }]],
+  'status-circle-dashed': [
+    ['path', { d: 'M10.1 2.182a10 10 0 0 1 3.8 0' }],
+    ['path', { d: 'M13.9 21.818a10 10 0 0 1-3.8 0' }],
+    ['path', { d: 'M17.609 3.721a10 10 0 0 1 2.69 2.7' }],
+    ['path', { d: 'M2.182 13.9a10 10 0 0 1 0-3.8' }],
+    ['path', { d: 'M20.279 17.609a10 10 0 0 1-2.7 2.69' }],
+    ['path', { d: 'M21.818 10.1a10 10 0 0 1 0 3.8' }],
+    ['path', { d: 'M3.721 6.391a10 10 0 0 1 2.7-2.69' }],
+    ['path', { d: 'M6.391 20.279a10 10 0 0 1-2.69-2.7' }],
+  ],
+  'status-circle-dot': [
+    ['circle', { cx: 12, cy: 12, r: 1 }],
+    ['circle', { cx: 12, cy: 12, r: 10 }],
+  ],
+  'status-circle-check': [
+    ['circle', { cx: 12, cy: 12, r: 10 }],
+    ['path', { d: 'm16 9-5.5 5.5L8 12' }],
+  ],
+  'status-eye': [
+    [
+      'path',
+      {
+        d: 'M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0',
+      },
+    ],
+    ['circle', { cx: 12, cy: 12, r: 3 }],
+  ],
+  'status-door-open': [
+    ['path', { d: 'M10 21H2' }],
+    ['path', { d: 'M10 3H7a2 2 0 00-2 2v16' }],
+    ['path', { d: 'M14 12h.01' }],
+    [
+      'path',
+      { d: 'M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992z' },
+    ],
+    ['path', { d: 'M22 21h-3' }],
+  ],
+  date: [
+    ['path', { d: 'M8 2v3' }],
+    ['path', { d: 'M16 2v3' }],
+    ['rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+    ['path', { d: 'M3 9h18' }],
+  ],
+  'date-range': [
+    ['rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }],
+    ['path', { d: 'M16 2v3' }],
+    ['path', { d: 'M3 9h18' }],
+    ['path', { d: 'M8 2v3' }],
+    ['path', { d: 'M17 13h-6' }],
+    ['path', { d: 'M13 17H7' }],
+    ['path', { d: 'M7 13h.01' }],
+    ['path', { d: 'M17 17h.01' }],
+  ],
+  link: [
+    ['path', { d: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71' }],
+    ['path', { d: 'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71' }],
   ],
 };
 
