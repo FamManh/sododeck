@@ -37,6 +37,7 @@
   --color-code: var(--sd-code);
   --color-hairline: var(--sd-hairline);
   --color-border: var(--sd-border);
+  --color-border-strong: var(--sd-border-strong);
   --color-edge: var(--sd-edge);
   --color-ink: var(--sd-ink);
   --color-ink-secondary: var(--sd-text-secondary);

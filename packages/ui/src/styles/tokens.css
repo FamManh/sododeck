@@ -39,6 +39,7 @@
   /* Lines */
   --sd-hairline: #ecece8;
   --sd-border: #deded8;
+  --sd-border-strong: #cfcfc7;
   --sd-edge: #c9c9c2;
 
   /* Text */
@@ -188,6 +189,7 @@
 
   --sd-hairline: #262624;
   --sd-border: #35352f;
+  --sd-border-strong: #45453f;
   --sd-edge: #3d3d38;
 
   --sd-ink: #ededea;
