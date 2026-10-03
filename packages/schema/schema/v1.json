@@ -219,9 +219,8 @@
           "maximum": 1
         },
         "waypoints": {
-          "description": "Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. Never together with `offset`.",
+          "description": "Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.",
           "type": "array",
-          "minItems": 1,
           "items": { "$ref": "#/$defs/RouteWaypoint" }
         }
       }

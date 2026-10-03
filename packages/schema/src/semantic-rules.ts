@@ -16,8 +16,10 @@
  *   `route.toSide`. A position along a side means nothing without the side. `dependentRequired`
  *   would state it, but json-schema-to-zod drops it.
  * - S10 (offset xor waypoints): a route holds 017's `offset` or free `waypoints`, never both.
- * - S11 (one key per axis): each waypoint has exactly one of `x` / `dx` and one of `y` / `dy`.
- *   `oneOf` per axis would state it, but the generators mishandle it (as with `anyOf`).
+ * - S11 (waypoints): the list is not empty, and each waypoint has exactly one of `x` / `dx` and
+ *   one of `y` / `dy`. `minItems` makes json-schema-to-typescript emit a tuple type that nothing
+ *   can build from a plain array, and `oneOf` per axis is mishandled by the generators (as is
+ *   `anyOf`).
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -125,6 +127,12 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
       issues.push({
         path,
         message: `Connector "${edge.id}" route has both "offset" and "waypoints"; use one.`,
+      });
+    }
+    if (route.waypoints?.length === 0) {
+      issues.push({
+        path: `${path}.waypoints`,
+        message: `Connector "${edge.id}" has an empty "waypoints" list; remove it instead.`,
       });
     }
     route.waypoints?.forEach((point, pointIndex) => {

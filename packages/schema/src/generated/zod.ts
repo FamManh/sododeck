@@ -449,9 +449,8 @@ export const sododeckFileSchema = z
                         'One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source card centre and T the target card centre in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.',
                       ),
                   )
-                  .min(1)
                   .describe(
-                    'Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. Never together with `offset`.',
+                    'Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.',
                   )
                   .optional(),
               })
