@@ -1163,3 +1163,34 @@ describe('switching form keeps the object (031 US3, SC-003)', () => {
     expect(shape.data.look).toEqual(drawn(base).data.look);
   });
 });
+
+describe('flow playback through shapes (031 US5)', () => {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'start', type: 'pill', title: 'Start', position: { x: 0, y: 0 } },
+      { id: 'ok', type: 'diamond', title: 'OK?', position: { x: 300, y: 0 } },
+      { id: 'db', type: 'database', display: 'shape', title: 'DB', position: { x: 600, y: 0 } },
+    ],
+  };
+
+  it('marks the current, played and upcoming shapes like cards', () => {
+    const overlay: FlowOverlay = {
+      edges: new Map(),
+      nodes: new Map<string, NodeFlowMark>([
+        ['start', { inPath: true, step: { state: 'played', number: '1' } }],
+        ['ok', { inPath: true, currentStep: true, step: { state: 'current', number: '2' } }],
+        ['db', { inPath: true, step: { state: 'upcoming', number: '3' } }],
+      ]),
+    };
+    const nodes = toFlowNodes(file, topLevelGraph(file), view(), overlay);
+    const byId = (id: string) => nodes.find((n) => n.id === id) as DeckFlowNode;
+    expect(byId('ok')).toMatchObject({
+      type: 'shape',
+      className: 'in-flow',
+      data: { currentStep: true, step: { state: 'current' } },
+    });
+    expect(byId('start').data.step?.state).toBe('played');
+    expect(byId('db')).toMatchObject({ type: 'shape', data: { step: { state: 'upcoming' } } });
+  });
+});

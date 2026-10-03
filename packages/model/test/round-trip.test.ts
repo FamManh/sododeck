@@ -967,3 +967,47 @@ describe('connector style, anchors, bends and label position (022)', () => {
     ]);
   });
 });
+
+describe('shapes and forms (031)', () => {
+  it('opens and saves a deck from before 031 byte for byte, packs included', async () => {
+    const before = await readExample('minimal.sododeck.json');
+    const legacy: SododeckFile = {
+      ...before,
+      packs: ['architecture', 'process', 'logistics', 'data'],
+    };
+    const text = serializeDeck(legacy);
+    expect(serializeDeck(toJSON(fromJSON(JSON.parse(text) as SododeckFile)))).toBe(text);
+  });
+
+  it('round-trips every shape type and both forms, display right after type', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      packs: ['architecture', 'process', 'logistics', 'data', 'shapes'],
+      nodes: [
+        ...[
+          'rectangle',
+          'rounded-rectangle',
+          'ellipse',
+          'diamond',
+          'pill',
+          'cylinder',
+          'document-shape',
+          'parallelogram',
+          'hexagon',
+          'actor',
+          'text',
+        ].map((type, i) => ({ id: `s${String(i)}`, type, title: type })),
+        {
+          id: 'db',
+          type: 'database',
+          display: 'shape',
+          title: 'DB',
+          size: { width: 200, height: 120 },
+        },
+        { id: 'doc', type: 'document', display: 'card', title: 'Doc' },
+      ],
+    };
+    expect(toJSON(fromJSON(file))).toEqual(file);
+    expect(serializeDeck(file)).toContain('"type": "database",\n      "display": "shape",');
+  });
+});
