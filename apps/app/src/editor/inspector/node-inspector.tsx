@@ -1,12 +1,12 @@
 import type { ColorRef, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
-import { TypeTile } from '@sododeck/ui/components/type-tile';
 import { PanelSection } from '@sododeck/ui/components/panel';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
 
+import { NodeTypeTile } from '../shapes/shape-tile';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
@@ -25,6 +25,7 @@ import { groupName, groupOptions, NO_GROUP, typeOptions } from './choices';
 import { nodeConnections, styleView } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
+import { ShowAsField } from './show-as-field';
 import { SizeFields } from './size-fields';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
@@ -66,7 +67,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   return (
     <InspectorFrame
       plainIcon
-      icon={<TypeTile type={node.type} size={40} decorative />}
+      icon={<NodeTypeTile type={node.type} size={40} decorative />}
       heading={node.title}
       subtitle={`${typeName(node.type)} · ${groupName(deck, node.group)} · ${node.id}`}
       actions={
@@ -113,6 +114,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
             }}
           />
         </PanelSection>
+        <ShowAsField node={node} />
         <PanelSection>
           <div className="flex items-center justify-between gap-3 text-body">
             <span className="text-ink-secondary">Level</span>

@@ -1056,3 +1056,141 @@ describe('drill-in proxies and scope label (034 US3)', () => {
     });
   });
 });
+
+describe('shapes (031)', () => {
+  const shapes: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'ok', type: 'diamond', title: 'OK?', position: { x: 0, y: 0 } },
+      { id: 'db', type: 'database', title: 'Orders DB', position: { x: 400, y: 0 } },
+      { id: 'svc', type: 'service', title: 'Svc', position: { x: 0, y: 300 } },
+    ],
+    edges: [{ id: 'e1', from: 'ok', to: 'db', route: { fromAt: 0.25 } }],
+  };
+  const flowNode = (file: SododeckFile, id: string) =>
+    toFlowNodes(file, topLevelGraph(file), view()).find((n) => n.id === id) as DeckFlowNode;
+
+  it('draws a shape-family node as node type `shape` at its default size, with its geometry', () => {
+    expect(flowNode(shapes, 'ok')).toMatchObject({
+      type: 'shape',
+      width: 176,
+      height: 112,
+      data: { geometry: 'diamond', kind: 'diamond' },
+    });
+    expect(flowNode(shapes, 'svc').type).toBe('deck');
+    expect(flowNode(shapes, 'svc').data.geometry).toBeUndefined();
+    expect(flowNode(shapes, 'db').type).toBe('deck');
+  });
+
+  it('refreshes the cached object when display, type or size change; keeps it otherwise', () => {
+    const before = flowNode(shapes, 'db');
+    expect(flowNode(shapes, 'db')).toBe(before);
+    const switched: SododeckFile = {
+      ...shapes,
+      nodes: shapes.nodes.map((n) => (n.id === 'db' ? { ...n, display: 'shape' as const } : n)),
+    };
+    const after = flowNode(switched, 'db');
+    expect(after).toMatchObject({ type: 'shape', width: 152, height: 104 });
+    expect(after.data.geometry).toBe('cylinder');
+    // Unchanged neighbours keep their objects.
+    expect(flowNode(switched, 'ok')).toBe(flowNode(shapes, 'ok'));
+    const resized: SododeckFile = {
+      ...switched,
+      nodes: switched.nodes.map((n) =>
+        n.id === 'db' ? { ...n, size: { width: 300, height: 200 } } : n,
+      ),
+    };
+    expect(flowNode(resized, 'db')).toMatchObject({ width: 300, height: 200 });
+  });
+
+  it('gives connectors the geometry of each shape end, refreshed when it changes', () => {
+    const [edge] = toFlowEdges(shapes, topLevelGraph(shapes), view());
+    expect(edge?.data).toMatchObject({ fromGeometry: 'diamond' });
+    expect(edge?.data?.toGeometry).toBeUndefined();
+    const switched: SododeckFile = {
+      ...shapes,
+      nodes: shapes.nodes.map((n) => (n.id === 'db' ? { ...n, display: 'shape' as const } : n)),
+    };
+    const [next] = toFlowEdges(switched, topLevelGraph(switched), view());
+    expect(next?.data?.toGeometry).toBe('cylinder');
+  });
+});
+
+describe('switching form keeps the object (031 US3, SC-003)', () => {
+  const base: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      {
+        id: 'db',
+        type: 'database',
+        title: 'Orders DB',
+        description: 'Holds orders.',
+        tags: ['pci'],
+        style: { fill: 'blue' },
+        group: 'g',
+        position: { x: 10, y: 20 },
+      },
+    ],
+    groups: [{ id: 'g', title: 'Data' }],
+  };
+  const drawn = (file: SododeckFile) =>
+    toFlowNodes(file, topLevelGraph(file), view()).find((n) => n.id === 'db') as DeckFlowNode;
+  const withNode = (patch: Partial<SododeckFile['nodes'][number]>): SododeckFile => ({
+    ...base,
+    nodes: base.nodes.map((n) => ({ ...n, ...patch })),
+  });
+
+  it('each form uses its own default size when none is stored', () => {
+    expect(drawn(base)).toMatchObject({ type: 'deck', width: 184 });
+    expect(drawn(withNode({ display: 'shape' }))).toMatchObject({
+      type: 'shape',
+      width: 152,
+      height: 104,
+      position: { x: 10, y: 20 },
+    });
+  });
+
+  it('a size the user set is kept in both forms', () => {
+    const size = { width: 240, height: 160 };
+    expect(drawn(withNode({ size }))).toMatchObject({ type: 'deck', ...size });
+    expect(drawn(withNode({ size, display: 'shape' }))).toMatchObject({ type: 'shape', ...size });
+  });
+
+  it('carries title, colour and id unchanged into the shape', () => {
+    const shape = drawn(withNode({ display: 'shape' }));
+    expect(shape.id).toBe('db');
+    expect(shape.data.title).toBe('Orders DB');
+    expect(shape.data.look).toEqual(drawn(base).data.look);
+  });
+});
+
+describe('flow playback through shapes (031 US5)', () => {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'start', type: 'pill', title: 'Start', position: { x: 0, y: 0 } },
+      { id: 'ok', type: 'diamond', title: 'OK?', position: { x: 300, y: 0 } },
+      { id: 'db', type: 'database', display: 'shape', title: 'DB', position: { x: 600, y: 0 } },
+    ],
+  };
+
+  it('marks the current, played and upcoming shapes like cards', () => {
+    const overlay: FlowOverlay = {
+      edges: new Map(),
+      nodes: new Map<string, NodeFlowMark>([
+        ['start', { inPath: true, step: { state: 'played', number: '1' } }],
+        ['ok', { inPath: true, currentStep: true, step: { state: 'current', number: '2' } }],
+        ['db', { inPath: true, step: { state: 'upcoming', number: '3' } }],
+      ]),
+    };
+    const nodes = toFlowNodes(file, topLevelGraph(file), view(), overlay);
+    const byId = (id: string) => nodes.find((n) => n.id === id) as DeckFlowNode;
+    expect(byId('ok')).toMatchObject({
+      type: 'shape',
+      className: 'in-flow',
+      data: { currentStep: true, step: { state: 'current' } },
+    });
+    expect(byId('start').data.step?.state).toBe('played');
+    expect(byId('db')).toMatchObject({ type: 'shape', data: { step: { state: 'upcoming' } } });
+  });
+});

@@ -234,3 +234,14 @@ describe('searching by card type (030)', () => {
     expect(searchDeck(index, 'warehouse').results.map((r) => r.id)).toEqual(['b']);
   });
 });
+
+describe('shapes in search (031)', () => {
+  it('finds a shape by its title and by its shape name', () => {
+    const index = buildSearchIndex({
+      ...emptySododeckFile(),
+      nodes: [{ id: 'ok', type: 'diamond', title: 'Payment OK?' }],
+    });
+    expect(resultIds(searchDeck(index, 'payment').results)).toEqual(['ok']);
+    expect(resultIds(searchDeck(index, 'diamond').results)).toEqual(['ok']);
+  });
+});

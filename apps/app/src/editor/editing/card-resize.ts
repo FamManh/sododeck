@@ -10,7 +10,7 @@ import type { DeckEditor } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
 import { useUiStore, type Guide } from '../../state/ui-store';
-import { CARD_SIZE_LIMITS, cardBox, type Rect } from '../canvas-geometry';
+import { cardBox, sizeLimitsOf, type Rect, type SizeLimits } from '../canvas-geometry';
 import type { Level } from '../levels';
 import { scopeOf, visibleGraph } from '../visible-graph';
 import { readViewState } from '../views/use-current-view';
@@ -27,6 +27,8 @@ export interface CardResizeSession {
   viewId: Id;
   handle: Handle;
   start: Rect;
+  /** The card's limits, or a shape's own minimum (031). */
+  limits: SizeLimits;
   candidates: SnapCandidates;
   /** The last box `applyCardResize` wrote, for the closing announcement. */
   last: Rect;
@@ -65,6 +67,7 @@ export function startCardResize(
     viewId: view.view.id,
     handle,
     start,
+    limits: sizeLimitsOf(node),
     candidates: snapCandidates(others),
     last: start,
     cancelled: false,
@@ -100,9 +103,9 @@ export function applyCardResize(
     start: session.start,
     proposed,
     handle: session.handle,
-    min: CARD_SIZE_LIMITS.min,
-    max: CARD_SIZE_LIMITS.max,
-    step: CARD_SIZE_LIMITS.step,
+    min: session.limits.min,
+    max: session.limits.max,
+    step: session.limits.step,
     keepRatio: mods.shift,
     fromCentre: mods.alt,
   });

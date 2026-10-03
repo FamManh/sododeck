@@ -1,5 +1,5 @@
 import { VIEW_PRESETS } from '@sododeck/model';
-import type { SododeckFile, View } from '@sododeck/schema';
+import { emptySododeckFile, type SododeckFile, type View } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../../test/render-canvas';
@@ -192,5 +192,30 @@ describe('collapsed groups of a view keep their identity', () => {
     expect(b).toBe(a);
     expect([...a]).toEqual(['g']);
     expect(viewStateOf(deck, null).collapsed.size).toBe(0);
+  });
+});
+
+describe('empty groups and hidden members (031)', () => {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [{ id: 'q', type: 'queue', title: 'Q', group: 'full' }],
+    groups: [
+      { id: 'full', title: 'Full', position: { x: 0, y: 0 }, size: { width: 300, height: 200 } },
+      {
+        id: 'empty',
+        title: 'Empty',
+        position: { x: 400, y: 0 },
+        size: { width: 300, height: 200 },
+      },
+    ],
+    views: [{ id: 'v', title: 'No queues', type: 'custom', excludeKinds: ['queue'] }],
+  };
+
+  it('draws a group with no members, but not one whose members the view hides', () => {
+    const state = viewStateOf(file, 'v');
+    const graph = visibleGraph(state.deck, { node: null, group: null }, new Set());
+    expect(graph.groups).toEqual(['empty']);
+    const all = visibleGraph(file, { node: null, group: null }, new Set());
+    expect(all.groups).toEqual(['full', 'empty']);
   });
 });

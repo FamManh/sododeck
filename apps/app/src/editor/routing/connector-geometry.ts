@@ -4,9 +4,11 @@
  * label. Pure: no DOM, no React. A connector with no bends and no anchor positions is drawn by
  * `routedPath` unchanged, so every pre-022 connector keeps its exact path.
  */
+import type { Geometry } from '@sododeck/model';
 import type { EdgeRoute, RouteWaypoint, Side } from '@sododeck/schema';
 
 import { ARROW_LENGTH } from '../edge-constants';
+import { outlinePoint } from '../shapes/shape-geometry';
 import {
   NORMAL,
   resolveSides,
@@ -315,6 +317,22 @@ export interface ConnectorInput {
   /** Sideways shift of a bundle's fanned connector (034 R6); a bent or anchored one ignores it. */
   spread?: number;
   options?: RoutedPathOptions;
+  /** An end drawn as a shape (031): it meets the outline (`outlinePoint`), not the box side. */
+  fromGeometry?: Geometry | undefined;
+  toGeometry?: Geometry | undefined;
+}
+
+/** Where an end meets its card or shape on `side`, `at` along it (0.5 when absent). */
+function endPoint(box: Box, side: Side, at: number | undefined, geometry: Geometry | undefined) {
+  return geometry === undefined
+    ? anchorPoint(box, side, at)
+    : outlinePoint(geometry, box, side, at ?? 0.5);
+}
+
+/** A zero-size box on a shape's outline point: `routedPath` then starts exactly there. */
+function onOutline(box: Box, side: Side, geometry: Geometry | undefined): Box {
+  if (geometry === undefined) return box;
+  return { ...outlinePoint(geometry, box, side), width: 0, height: 0 };
 }
 
 function sameBox(a: Box, b: Box): boolean {
@@ -332,14 +350,25 @@ export function connectorPath(input: ConnectorInput): RoutedShapePath {
   const waypoints = route?.waypoints ?? [];
   const anchored = route?.fromAt !== undefined || route?.toAt !== undefined;
   const bent = (input.bends?.length ?? waypoints.length) > 0 && shape !== 'straight';
-  if (sameBox(fromBox, toBox) || (!bent && !anchored)) {
+  if (sameBox(fromBox, toBox)) {
     return routedPath(shape, fromBox, toBox, sides, route?.offset ?? 0, options, input.spread ?? 0);
+  }
+  if (!bent && !anchored) {
+    return routedPath(
+      shape,
+      onOutline(fromBox, sides[0], input.fromGeometry),
+      onOutline(toBox, sides[1], input.toGeometry),
+      sides,
+      route?.offset ?? 0,
+      options,
+      input.spread ?? 0,
+    );
   }
 
   const { arrowAtStart = false, arrowAtEnd = true } = options;
   const [fromSide, toSide] = sides;
-  const start = anchorPoint(fromBox, fromSide, route?.fromAt);
-  const end = anchorPoint(toBox, toSide, route?.toAt);
+  const start = endPoint(fromBox, fromSide, route?.fromAt, input.fromGeometry);
+  const end = endPoint(toBox, toSide, route?.toAt, input.toGeometry);
   let bends = !bent
     ? []
     : (input.bends ?? decodeWaypoints(waypoints, cardCentre(fromBox), cardCentre(toBox)));

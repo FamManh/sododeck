@@ -1,10 +1,11 @@
-import { CARD_TYPES, NEW_DECK_PACKS } from '@sododeck/model';
+import { CARD_TYPES, NEW_DECK_PACKS, SHAPE_TYPE_IDS } from '@sododeck/model';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
 
 const KINDS = ['service', 'service', 'database', 'client', 'external'] as const;
 
 /** 030 SC-007: every built-in card type, one after the other. */
-const ALL_TYPES = CARD_TYPES.map((type) => type.id);
+/** The 13 card-family types (030); shapes come with `BENCH_SHAPES` (031). */
+const ALL_TYPES = CARD_TYPES.filter((type) => type.family === 'card').map((type) => type.id);
 
 /** 020 R13: the 13 named card colours plus two custom hex colours, cycled across nodes. */
 const BENCH_FILLS: readonly (CardColor | `#${string}`)[] = [
@@ -102,6 +103,8 @@ export function generateBenchDeck(
     animated?: boolean;
     /** 022: 200 edges with three free bends each, mixed shapes. */
     bends?: boolean;
+    /** 031: every third node is a shape (the eleven geometries round-robin), every pack on. */
+    shapes?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -117,9 +120,14 @@ export function generateBenchDeck(
             ...(i % 5 === 0 ? { stroke: 'blue' as const } : {}),
           }
         : undefined;
+    const shape =
+      options.shapes === true && i % 3 === 0
+        ? SHAPE_TYPE_IDS[(i / 3) % SHAPE_TYPE_IDS.length]
+        : undefined;
     return {
       id: `n${i}`,
       type:
+        shape ??
         (options.types === true ? ALL_TYPES[i % ALL_TYPES.length] : KINDS[i % KINDS.length]) ??
         'service',
       title: `Node ${i}`,
@@ -156,7 +164,7 @@ export function generateBenchDeck(
   const deck: SododeckFile = {
     ...emptySododeckFile(),
     // BENCH_TYPES: every pack on, so the Add flyout and pickers list all 13 types too.
-    ...(options.types === true ? { packs: [...NEW_DECK_PACKS] } : {}),
+    ...(options.types === true || options.shapes === true ? { packs: [...NEW_DECK_PACKS] } : {}),
     nodes,
     edges,
   };

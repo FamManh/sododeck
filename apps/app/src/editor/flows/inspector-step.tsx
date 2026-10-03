@@ -5,7 +5,6 @@ import {
   type PathStep,
 } from '@sododeck/model';
 import type { Flow, SododeckFile } from '@sododeck/schema';
-import { TypeTile } from '@sododeck/ui/components/type-tile';
 import {
   Panel,
   PanelContent,
@@ -20,6 +19,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ArrowRight, CircleAlert, GitBranch, Spline, Unlink } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { NodeTypeTile } from '../shapes/shape-tile';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
@@ -321,20 +321,20 @@ function PlaybackHeader({
       ) : (
         <>
           <div className="flex items-center gap-2">
-            <TypeTile
+            <NodeTypeTile
               type={kindOf(step.from)}
               size={30}
-              aria-label={`From: ${nodeTitle(deck, step.from)}`}
+              label={`From: ${nodeTitle(deck, step.from)}`}
             />
             <ArrowRight
               aria-hidden
               strokeWidth={ICON_STROKE_WIDTH}
               className="size-4 text-ink-muted"
             />
-            <TypeTile
+            <NodeTypeTile
               type={kindOf(step.to)}
               size={30}
-              aria-label={`To: ${nodeTitle(deck, step.to)}`}
+              label={`To: ${nodeTitle(deck, step.to)}`}
             />
             {protocol !== undefined && (
               <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 font-mono text-caption text-ink-secondary">

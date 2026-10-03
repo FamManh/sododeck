@@ -93,6 +93,12 @@ export const sododeckFileSchema = z
               .describe(
                 'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
               ),
+            display: z
+              .enum(['card', 'shape'])
+              .describe(
+                "Whether the node draws as a card or a shape. Absent = the type's own family. Only types with two forms (decision, database, document) change look; on other types it is kept and ignored.",
+              )
+              .optional(),
             title: z.string().min(1).describe('Display name.'),
             level: z
               .enum(['landscape', 'system', 'container', 'component'])
@@ -171,7 +177,7 @@ export const sododeckFileSchema = z
               })
               .strict()
               .describe(
-                'Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported; values outside that range are drawn clamped and reported as a problem.',
+                'Card width and height in canvas pixels, shared by every view. When absent, the app uses its default size for the zoom level. Sizes from 120 × 44 to 800 × 600 are supported (a shape from its own minimum, as small as 40 × 24); values outside that range are drawn clamped and reported as a problem.',
               )
               .optional(),
             style: z

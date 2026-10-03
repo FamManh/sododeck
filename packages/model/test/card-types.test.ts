@@ -5,11 +5,15 @@ import {
   CATEGORIES,
   cardType,
   deckPacks,
+  effectiveFamily,
+  hasTwoForms,
   isKnownType,
   LEGACY_PACKS,
   NEW_DECK_PACKS,
   PACKS,
   packTypeCount,
+  SHAPE_TYPE_IDS,
+  shapeGeometryOf,
   typeName,
   typesOfPacks,
 } from '../src';
@@ -17,8 +21,9 @@ import {
 const LEGACY_IDS = ['service', 'database', 'gateway', 'client', 'queue', 'external'];
 
 describe('card type registry (030)', () => {
-  it('lists the 13 built-in types in registry order with packs and categories', () => {
-    expect(CARD_TYPES.map((t) => [t.id, t.pack, t.category])).toEqual([
+  it('lists the 13 card types in registry order with packs and categories', () => {
+    const cards = CARD_TYPES.filter((t) => t.family === 'card');
+    expect(cards.map((t) => [t.id, t.pack, t.category])).toEqual([
       ['service', 'architecture', 'architecture'],
       ['database', 'architecture', 'architecture'],
       ['gateway', 'architecture', 'architecture'],
@@ -34,13 +39,31 @@ describe('card type registry (030)', () => {
       ['issue', 'data', 'data'],
     ]);
     expect(CARD_TYPES.map((t) => t.order)).toEqual(CARD_TYPES.map((_, i) => i));
-    expect(CARD_TYPES.every((t) => t.family === 'card')).toBe(true);
+    expect(cards).toHaveLength(13);
   });
 
-  it('has four packs and four categories, in order', () => {
-    expect(PACKS.map((p) => p.id)).toEqual(['architecture', 'process', 'logistics', 'data']);
-    expect(CATEGORIES.map((c) => c.id)).toEqual(['architecture', 'process', 'logistics', 'data']);
-    expect(CATEGORIES.map((c) => c.name)).toEqual(['Architecture', 'Process', 'Logistics', 'Data']);
+  it('has five packs and five categories, in order', () => {
+    expect(PACKS.map((p) => p.id)).toEqual([
+      'architecture',
+      'process',
+      'logistics',
+      'data',
+      'shapes',
+    ]);
+    expect(CATEGORIES.map((c) => c.id)).toEqual([
+      'architecture',
+      'process',
+      'logistics',
+      'data',
+      'shapes',
+    ]);
+    expect(CATEGORIES.map((c) => c.name)).toEqual([
+      'Architecture',
+      'Process',
+      'Logistics',
+      'Data',
+      'Shapes',
+    ]);
   });
 
   it('gives every id the schema pattern and keeps ids apart from names', () => {
@@ -64,7 +87,7 @@ describe('card type registry (030)', () => {
 
   it('exposes the legacy and new-deck pack lists', () => {
     expect(LEGACY_PACKS).toEqual(['architecture']);
-    expect(NEW_DECK_PACKS).toEqual(['architecture', 'process', 'logistics', 'data']);
+    expect(NEW_DECK_PACKS).toEqual(['architecture', 'process', 'logistics', 'data', 'shapes']);
   });
 
   describe('deckPacks', () => {
@@ -101,8 +124,86 @@ describe('card type registry (030)', () => {
       expect(typesOfPacks(['nope'])).toEqual([]);
     });
     it('counts types per pack', () => {
-      expect(PACKS.map((p) => packTypeCount(p.id))).toEqual([7, 3, 2, 1]);
+      expect(PACKS.map((p) => packTypeCount(p.id))).toEqual([7, 3, 2, 1, 11]);
       expect(packTypeCount('nope')).toBe(0);
+    });
+  });
+
+  describe('Basic shapes pack (031)', () => {
+    const table = [
+      ['rectangle', 'Rectangle', 'rect', [160, 72], [64, 40]],
+      ['rounded-rectangle', 'Rounded rectangle', 'rounded-rect', [160, 72], [64, 40]],
+      ['ellipse', 'Ellipse', 'ellipse', [152, 80], [64, 40]],
+      ['diamond', 'Diamond', 'diamond', [176, 112], [80, 56]],
+      ['pill', 'Pill', 'stadium', [176, 52], [80, 36]],
+      ['cylinder', 'Cylinder', 'cylinder', [152, 104], [64, 56]],
+      ['document-shape', 'Document', 'document', [152, 96], [64, 48]],
+      ['parallelogram', 'Parallelogram', 'parallelogram', [168, 72], [72, 40]],
+      ['hexagon', 'Hexagon', 'hexagon', [160, 76], [72, 40]],
+      ['actor', 'Actor', 'actor', [80, 112], [48, 72]],
+      ['text', 'Text', 'none', [160, 40], [40, 24]],
+    ] as const;
+
+    it('holds the eleven shape types with geometry, default and minimum sizes', () => {
+      expect(PACKS.find((p) => p.id === 'shapes')).toMatchObject({
+        name: 'Basic shapes',
+        tools: ['sticky', 'frame'],
+      });
+      const shapes = typesOfPacks(['shapes']);
+      expect(shapes.map((t) => t.id)).toEqual(table.map(([id]) => id));
+      expect(SHAPE_TYPE_IDS).toEqual(table.map(([id]) => id));
+      for (const [id, name, geometry, [dw, dh], [mw, mh]] of table) {
+        expect(cardType(id)).toMatchObject({
+          name,
+          pack: 'shapes',
+          category: 'shapes',
+          family: 'shape',
+          geometry,
+          defaultSize: { width: dw, height: dh },
+          minSize: { width: mw, height: mh },
+        });
+      }
+    });
+
+    it('gives decision, database and document a shape form', () => {
+      expect(cardType('decision')?.shapeForm).toBe('diamond');
+      expect(cardType('database')?.shapeForm).toBe('cylinder');
+      expect(cardType('document')?.shapeForm).toBe('document-shape');
+      expect(CARD_TYPES.filter((t) => t.shapeForm !== undefined)).toHaveLength(3);
+      expect(['decision', 'database', 'document'].every(hasTwoForms)).toBe(true);
+      expect(['service', 'diamond', 'robot'].some(hasTwoForms)).toBe(false);
+    });
+
+    it('effectiveFamily: display only matters for types with two forms', () => {
+      expect(effectiveFamily({ type: 'service' })).toBe('card');
+      expect(effectiveFamily({ type: 'diamond' })).toBe('shape');
+      expect(effectiveFamily({ type: 'database' })).toBe('card');
+      expect(effectiveFamily({ type: 'database', display: 'shape' })).toBe('shape');
+      expect(effectiveFamily({ type: 'database', display: 'card' })).toBe('card');
+      expect(effectiveFamily({ type: 'service', display: 'shape' })).toBe('card');
+      expect(effectiveFamily({ type: 'diamond', display: 'card' })).toBe('shape');
+      expect(effectiveFamily({ type: 'robot', display: 'shape' })).toBe('card');
+    });
+
+    it('shapeGeometryOf: the geometry drawn, or null for a card', () => {
+      expect(shapeGeometryOf({ type: 'diamond' })).toBe('diamond');
+      expect(shapeGeometryOf({ type: 'text' })).toBe('none');
+      expect(shapeGeometryOf({ type: 'database' })).toBeNull();
+      expect(shapeGeometryOf({ type: 'database', display: 'shape' })).toBe('cylinder');
+      expect(shapeGeometryOf({ type: 'document', display: 'shape' })).toBe('document');
+      expect(shapeGeometryOf({ type: 'decision', display: 'shape' })).toBe('diamond');
+      expect(shapeGeometryOf({ type: 'service', display: 'shape' })).toBeNull();
+      expect(shapeGeometryOf({ type: 'robot' })).toBeNull();
+    });
+
+    it('keeps the packs of a deck saved before 031', () => {
+      expect(deckPacks({ packs: ['architecture', 'process', 'logistics', 'data'] })).toEqual([
+        'architecture',
+        'process',
+        'logistics',
+        'data',
+      ]);
+      expect(deckPacks({})).toEqual(['architecture']);
     });
   });
 });

@@ -2,78 +2,24 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import {
-  Handle,
-  NodeResizeControl,
-  Position,
-  useReactFlow,
-  type NodeProps,
-  type ResizeDragEvent,
-} from '@xyflow/react';
-import {
-  Ban,
-  CornerDownLeft,
-  CornerDownRight,
-  EyeOff,
-  Layers,
-  Pin,
-  Plus,
-  Table,
-  TriangleAlert,
-} from 'lucide-react';
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { type NodeProps } from '@xyflow/react';
+import { CornerDownLeft, Layers, Pin, Table, TriangleAlert } from 'lucide-react';
+import { memo, type CSSProperties } from 'react';
 
-import { useEditor } from '../model/use-editor';
-import { readDeck } from '../model/use-deck-snapshot';
-import { isFlowMode, useUiStore } from '../state/ui-store';
 import { MAX_CARD_TAGS } from './card-tags';
-import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
-import {
-  applyCardResize,
-  endCardResize,
-  startCardResize,
-  type CardResizeSession,
-} from './editing/card-resize';
+import { NodeNotes, ResizeControls, SideHandles } from './component-node-parts';
+import { useComponentNodeState } from './use-component-node-state';
 import { oneStep } from './fields/one-step';
 import { typeName } from './type-label';
-import type { Handle as ResizeHandleName } from './editing/resize-limits';
 import { CardTitleInput } from './quick-edit/card-title-input';
 import { DetailsButton } from './quick-edit/details-button';
 import { describeChannel } from './style/card-style';
-import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
 import { deckStateClasses } from './deck-states';
 import { StepSticker } from './step-sticker';
 
 /** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.28;
-
-const SIDES = [
-  { id: 'top', position: Position.Top },
-  { id: 'right', position: Position.Right },
-  { id: 'bottom', position: Position.Bottom },
-  { id: 'left', position: Position.Left },
-] as const;
-
-const RESIZE_HANDLES: readonly ResizeHandleName[] = [
-  'top-left',
-  'top',
-  'top-right',
-  'right',
-  'bottom-right',
-  'bottom',
-  'bottom-left',
-  'left',
-];
-
-const modsOf = (event: ResizeDragEvent) => {
-  const source = event.sourceEvent as Partial<MouseEvent> | null | undefined;
-  return {
-    shift: source?.shiftKey === true,
-    alt: source?.altKey === true,
-    mod: source?.metaKey === true || source?.ctrlKey === true,
-  };
-};
 
 /** Canvas card in the Deck look (029; DESIGN.md "Card system (Deck)", frames 117–121, 125). */
 export const DeckNode = memo(function DeckNode({
@@ -83,47 +29,18 @@ export const DeckNode = memo(function DeckNode({
   width,
   height,
 }: NodeProps<DeckFlowNode>) {
-  const editor = useEditor();
-  const openConnectPopover = useUiStore((s) => s.openConnectPopover);
-  const announce = useUiStore((s) => s.announce);
-  const connecting = useConnecting();
-  const role = useConnectionRole(id);
-  // Reconnect drag (017 R12): while dragging an endpoint, this card's four side targets show as
-  // rings when the pointer is over it, with the nearest side "hot" (filled and larger).
-  // A primitive per card: selecting the whole gesture re-rendered every card on each pan / zoom.
-  const hotSide = useUiStore((s) =>
-    s.canvasGesture === 'endpoint' && s.endpointHover?.nodeId === id ? s.endpointHover.side : null,
-  );
-  const isEndpointTarget = hotSide !== null;
-  const { getZoom } = useReactFlow();
-  const resize = useRef<CardResizeSession | null>(null);
-  const [activeHandle, setActiveHandle] = useState<ResizeHandleName | null>(null);
-  // Resizing (017 R4): pointer only, and only the single selected card, never in flow mode,
-  // recording, view-only or inside a collapsed group (those never render a DeckNode at all).
-  const resizable = useUiStore(
-    (s) =>
-      selected &&
-      !isFlowMode(s) &&
-      s.flowSession === null &&
-      s.selection.nodes.length === 1 &&
-      s.selection.edges.length === 0 &&
-      s.selection.groups.length === 0 &&
-      s.selection.stickies.length === 0,
-  );
-  // Only this card re-renders when its title edit starts or ends (the others select `null`).
-  const titleEdit = useUiStore((s) =>
-    s.titleEdit?.target === 'node' && s.titleEdit.id === id ? s.titleEdit : null,
-  );
-
-  let target: ConnectionCheck | null = null;
-  if (role?.startsWith('target:')) {
-    target = connectionCheck(readDeck(editor.doc), role.slice('target:'.length), id);
-  }
-  const refusal = target === null || target === 'ok' ? null : REFUSAL_TEXT[target];
-
-  useEffect(() => {
-    if (refusal) announce(refusal);
-  }, [refusal, announce]);
+  const {
+    editor,
+    announce,
+    openConnectPopover,
+    connecting,
+    role,
+    hotSide,
+    resizable,
+    titleEdit,
+    target,
+    refusal,
+  } = useComponentNodeState(id, selected);
 
   // Dimmed and pinned are said in the name too, never shown by opacity or a glyph alone (011).
   const name = [
@@ -414,84 +331,21 @@ export const DeckNode = memo(function DeckNode({
         </span>
       )}
 
-      {resizable &&
-        RESIZE_HANDLES.map((handle) => (
-          <NodeResizeControl
-            key={handle}
-            nodeId={id}
-            position={handle}
-            className="sd-resize-handle"
-            {...(activeHandle === handle ? { 'data-active': '' } : {})}
-            onResizeStart={() => {
-              setActiveHandle(handle);
-              resize.current = startCardResize(editor, id, handle, data.level);
-            }}
-            onResize={(event, params) => {
-              if (resize.current !== null)
-                applyCardResize(editor, resize.current, params, modsOf(event), getZoom());
-            }}
-            onResizeEnd={() => {
-              if (resize.current !== null) endCardResize(editor, resize.current);
-              resize.current = null;
-              setActiveHandle(null);
-            }}
-          />
-        ))}
-      {SIDES.map(({ id: side, position }) => {
-        const hot = hotSide === side;
-        return (
-          <Handle
-            key={side}
-            id={side}
-            type="source"
-            position={position}
-            role="button"
-            aria-label={`Connect from ${data.title}`}
-            tabIndex={tabIndex}
-            {...(isEndpointTarget ? { 'data-endpoint-target': '' } : {})}
-            {...(hot ? { 'data-endpoint-hot': '' } : {})}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                event.stopPropagation();
-                openConnectPopover(id);
-              }
-            }}
-            className={cn(
-              'sd-handle opacity-0',
-              // Landscape draws no handles (R8): the dense board stays clean.
-              !isLandscape && 'group-hover/node:opacity-100 group-focus-within/node:opacity-100',
-              focusRing,
-              role !== null && 'opacity-100',
-              hot && 'is-active',
-              isEndpointTarget && 'opacity-100',
-            )}
-          />
-        );
-      })}
-      {/* While a connection is drawn, the whole node is a drop target, not only its handles. */}
-      {connecting && role !== 'source' && (
-        <Handle
-          id="body"
-          type="target"
-          position={Position.Top}
-          isConnectableStart={false}
-          aria-hidden
-          className="sd-body-handle"
-        />
-      )}
+      {resizable && <ResizeControls id={id} level={data.level} />}
+      <SideHandles
+        title={data.title}
+        tabIndex={tabIndex}
+        role={role}
+        hotSide={hotSide}
+        connecting={connecting}
+        showOnHover={!isLandscape}
+        onActivate={() => {
+          openConnectPopover(id);
+        }}
+      />
 
       {titleEdit === null && !data.dimmed && (
         <DetailsButton id={id} title={data.title} focused={data.focused} />
-      )}
-      {data.hiddenInView === true && (
-        <span
-          role="note"
-          className="pointer-events-none absolute bottom-full left-0 z-10 mb-1.5 flex w-max items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-secondary shadow-rest"
-        >
-          <EyeOff aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-          Hidden in this view
-        </span>
       )}
       {/* Problem ring (frame 122): 1.5 px dashed Clay, 4 px outside the card. Its own layer, so the
           selection outline (on the card) and this one draw together; hidden from assistive tech,
@@ -503,32 +357,7 @@ export const DeckNode = memo(function DeckNode({
           className="pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed border-clay-ink"
         />
       )}
-      {target === 'ok' && (
-        <span
-          aria-hidden
-          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full bg-primary text-on-primary shadow-rest"
-        >
-          <Plus strokeWidth={2} className="size-3.5" />
-        </span>
-      )}
-      {data.flowStart !== undefined && (
-        <span
-          role="note"
-          className="pointer-events-none absolute top-full left-1/2 z-10 mt-2 flex w-max -translate-x-1/2 items-center gap-1 rounded-full bg-inverse px-2 py-0.5 text-caption text-on-inverse shadow-rest"
-        >
-          <CornerDownRight aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-          {data.flowStart}
-        </span>
-      )}
-      {refusal && (
-        <span
-          role="note"
-          className="absolute top-full left-0 z-10 mt-2 flex w-max items-center gap-1.5 rounded-row border border-clay-ink bg-surface px-2 py-1 text-caption text-clay-ink shadow-hover"
-        >
-          <Ban aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
-          {refusal}
-        </span>
-      )}
+      <NodeNotes data={data} target={target} refusal={refusal} />
     </div>
   );
 });

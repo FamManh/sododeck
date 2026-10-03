@@ -114,6 +114,7 @@
     {
       "id": "orders-db",
       "type": "database",
+      "display": "shape",
       "title": "Orders DB",
       "tech": "Postgres 16",
       "host": "RDS",
@@ -126,6 +127,13 @@
       "type": "warehouse",
       "title": "Fulfilment hub",
       "position": { "x": 900, "y": 480 }
+    },
+    {
+      "id": "payment-ok",
+      "type": "diamond",
+      "title": "Payment OK?",
+      "position": { "x": 1240, "y": 80 },
+      "size": { "width": 176, "height": 112 }
     }
   ],
   "groups": [

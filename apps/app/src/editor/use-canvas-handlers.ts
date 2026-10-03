@@ -636,7 +636,7 @@ export function useCanvasHandlers() {
           return;
         }
         if (type === null) return;
-        addComponent(editor, type, centredOn(point), { edit: true });
+        addComponent(editor, type, centredOn(point, type), { edit: true });
       },
     };
   }, [editor, getViewport, screenToFlowPosition, controller, zoomLevel]);

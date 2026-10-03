@@ -235,6 +235,20 @@ describe('Canvas', () => {
     expect(screen.queryByRole('heading', { name: 'Start your diagram' })).not.toBeInTheDocument();
   });
 
+  it('hides the empty-canvas card once a frame is drawn, even with no cards (031)', () => {
+    const { editor } = renderWithEditor(<Canvas />, deckOf({}));
+    expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
+    act(() => {
+      editor().groupSelection({
+        nodes: [],
+        groups: [],
+        title: 'Payments',
+        frame: { position: { x: 0, y: 0 }, size: { width: 320, height: 200 } },
+      });
+    });
+    expect(screen.queryByRole('heading', { name: 'Start your diagram' })).not.toBeInTheDocument();
+  });
+
   it('adds the dropped kind at the drop point, and ignores other drops', () => {
     const { doc } = renderWithEditor(<Canvas />, deckOf({}));
     const canvas = screen.getByLabelText('Diagram canvas');

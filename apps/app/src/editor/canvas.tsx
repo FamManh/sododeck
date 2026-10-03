@@ -66,6 +66,7 @@ import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { GuidesOverlay } from './editing/guides-overlay';
 import { MarqueeChip } from './editing/marquee-chip';
+import { FrameDrawLayer } from './frame-tool/frame-draw-layer';
 import { useClipboardEvents } from './editing/use-clipboard-events';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
@@ -78,6 +79,7 @@ import { PANEL_COLLAPSED as JSON_COLLAPSED } from './panel-height';
 import { MAX_ZOOM, MIN_ZOOM } from './zoom-limits';
 import { EDGE, ISLAND_HEIGHT, STACK_GAP, zoomIslandBottom } from './shell/shell-geometry';
 import { problemMarks } from './problems/problem-marks';
+import { ShapeNode } from './shapes/shape-node';
 import { useProblems } from './problems/use-problems';
 
 const nodeTypes: NodeTypes = {
@@ -86,6 +88,7 @@ const nodeTypes: NodeTypes = {
   'group-boundary': GroupBoundaryNode,
   port: OutsideProxyNode,
   'scope-label': ScopeLabelNode,
+  shape: ShapeNode,
   sticky: StickyNode,
 };
 const edgeTypes: EdgeTypes = {
@@ -291,6 +294,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const minimapBottom = zoomIslandBottom(jsonShown, jsonHeight) + ISLAND_HEIGHT + STACK_GAP;
   const hideUi = useUiStore((s) => s.hideUi);
   const hand = useUiStore((s) => s.tool === 'hand');
+  const frameTool = useUiStore((s) => s.tool === 'frame');
   const drawerWidth = useUiStore((s) => (s.drawer.open ? s.drawer.width : null));
   const minimapRight = drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE;
   const playerStyle = {
@@ -803,7 +807,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <SelectionFrame deck={deck} level={level} />
         <GuidesOverlay />
       </ReactFlow>
-      {fullDeck.nodes.length === 0 && <EmptyCanvasCard />}
+      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && <EmptyCanvasCard />}
       {drilledEmpty && (
         <EmptyCanvasCard
           title="No components in this group"
@@ -817,6 +821,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />
       <MarqueeChip />
+      {frameTool && <FrameDrawLayer />}
     </div>
   );
 }

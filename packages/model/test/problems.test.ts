@@ -114,6 +114,21 @@ describe('checkDeck (015)', () => {
       });
       expect(kinds(file)).toEqual([]);
     });
+
+    it('uses each shape’s own minimum (031)', () => {
+      const file = deck({
+        nodes: [
+          node('a', { type: 'text', size: { width: 40, height: 24 } }),
+          node('b', { type: 'diamond', size: { width: 80, height: 56 } }),
+          node('c', { type: 'database', display: 'shape', size: { width: 64, height: 56 } }),
+        ],
+      });
+      expect(kinds(file)).toEqual([]);
+      const small = deck({
+        nodes: [node('d', { type: 'diamond', title: 'OK?', size: { width: 70, height: 56 } })],
+      });
+      expect(only(small).detail).toBe('OK? has a size of 70 × 56; allowed 80 × 56 to 800 × 600');
+    });
   });
 
   describe('duplicate connections', () => {

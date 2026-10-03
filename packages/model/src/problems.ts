@@ -6,7 +6,7 @@
  */
 import type { Edge, Flow, Id, Node, SododeckFile } from '@sododeck/schema';
 
-import { isKnownPack, isKnownType } from './card-types';
+import { drawnShapeType, isKnownPack, isKnownType } from './card-types';
 import { analyzeFlow, type FlowAnalysis, type PathStep } from './flow-paths';
 import { stickyLabel } from './geometry';
 import { checkIntegrity, type IntegrityProblem } from './integrity';
@@ -171,10 +171,12 @@ type Add = (d: Omit<Draft, 'title'> & { title?: string }) => void;
 
 /** A stored size outside the supported range (017, research R11); the file still opens. */
 function checkCardSizes(nodes: readonly Node[], add: Add): void {
-  const { min, max } = CARD_SIZE_RANGE;
+  const { max } = CARD_SIZE_RANGE;
   for (const node of nodes) {
     const size = node.size;
     if (size === undefined) continue;
+    // A shape goes down to its own minimum (031 R1), a card to the card's.
+    const min = drawnShapeType(node)?.minSize ?? CARD_SIZE_RANGE.min;
     if (size.width >= min.width && size.width <= max.width) {
       if (size.height >= min.height && size.height <= max.height) continue;
     }

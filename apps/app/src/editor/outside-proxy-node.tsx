@@ -1,11 +1,11 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
-import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
+import { TypeGlyph } from './shapes/type-glyph';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
@@ -35,7 +35,6 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
   const editor = useEditor();
   const { setCenter, getZoom } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
-  const Icon = typeStyle(data.kind).icon;
 
   const goToOutside = () => {
     // Up until the real card (or the collapsed group holding it) is on screen.
@@ -114,7 +113,7 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
         )}
       >
         <span className="flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-surface-2 text-ink-secondary">
-          <Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+          <TypeGlyph kind={data.kind} size={14} />
         </span>
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[12.5px] leading-tight font-semibold text-ink">

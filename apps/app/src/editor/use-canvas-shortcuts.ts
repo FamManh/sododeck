@@ -30,6 +30,7 @@ import { proxyLayout } from './proxy-layout';
 import { canvasElement, nodeElement, selectAllComponents } from './canvas-actions';
 import {
   cardSize,
+  sizeLimitsOf,
   displayPosition,
   groupBounds,
   nearestInDirection,
@@ -254,6 +255,7 @@ export function useCanvasKeyDown() {
                 title: node.title,
                 width: size.width,
                 height: size.height,
+                limits: sizeLimitsOf(node),
               })
             ) {
               event.preventDefault();

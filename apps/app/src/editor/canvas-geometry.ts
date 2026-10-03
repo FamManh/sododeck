@@ -1,11 +1,12 @@
 /**
  * Pure canvas geometry (no React). Positions are flow coordinates of a node's top-left corner.
  */
-import { frameOf, NODE_GRID, type Point } from '@sododeck/model';
+import { drawnShapeType, frameOf, NODE_GRID, shapeGeometryOf, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
 import { cardLayout, DECK_CARD_WIDTH, type CardLayout } from './card-layout';
+import { SHAPE_MAX, shapeLayout } from './shapes/shape-layout';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -98,7 +99,33 @@ export function nodeSize(_level?: Level): NodeSize {
 }
 
 /** What `cardSize` reads of a node. All optional so a bare `{}` is a default card. */
-export type SizedNode = Pick<Node, 'size'> & Partial<Pick<Node, 'title' | 'tech' | 'tags'>>;
+export type SizedNode = Partial<
+  Pick<Node, 'size' | 'title' | 'tech' | 'tags' | 'type' | 'display'>
+>;
+
+/** The geometry a node draws as (031), or null for a card. */
+export function geometryOf(node: SizedNode): ReturnType<typeof shapeGeometryOf> {
+  return node.type === undefined
+    ? null
+    : shapeGeometryOf({ type: node.type, display: node.display });
+}
+
+export type SizeLimits = {
+  readonly min: { readonly width: number; readonly height: number };
+  readonly max: { readonly width: number; readonly height: number };
+  readonly step: number;
+};
+
+/** Resize limits of a node: a shape's own minimum (031 R1), else the card limits. */
+export function sizeLimitsOf(node: SizedNode): SizeLimits {
+  const min =
+    node.type === undefined
+      ? undefined
+      : drawnShapeType({ type: node.type, display: node.display })?.minSize;
+  return min === undefined
+    ? CARD_SIZE_LIMITS
+    : { min, max: SHAPE_MAX, step: CARD_SIZE_LIMITS.step };
+}
 
 /**
  * A card's drawn size (029 R7, 017 R2): 184 wide by the height `cardLayout` gives its content, or
@@ -107,6 +134,9 @@ export type SizedNode = Pick<Node, 'size'> & Partial<Pick<Node, 'title' | 'tech'
  * same box. The same at every zoom level.
  */
 export function cardLayoutOf(node: SizedNode, extra: CardExtra = {}): CardLayout {
+  // A shape keeps its own box and draws only its title (031).
+  const geometry = geometryOf(node);
+  if (geometry !== null) return shapeLayout(geometry, node);
   const stored = node.size;
   const size =
     stored === undefined

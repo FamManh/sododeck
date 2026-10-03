@@ -194,3 +194,43 @@ describe('NodeInspector Size fields (017 T049)', () => {
     expect(node(doc)?.size?.width).toBe(800);
   });
 });
+
+describe('Show as (031 US3)', () => {
+  const formDeck = deckOf({
+    nodes: [
+      {
+        id: 'db',
+        type: 'database',
+        title: 'Orders DB',
+        description: 'Holds orders.',
+        tags: ['pci'],
+      },
+      { id: 'svc', type: 'service', title: 'Svc' },
+    ],
+  });
+
+  it('offers a "Show as" radio group for a type with two forms, switching in one undo step', async () => {
+    const { doc, editor, user } = renderInspector(formDeck, { nodes: ['db'] });
+    const group = screen.getByRole('radiogroup', { name: 'Show as' });
+    expect(within(group).getByRole('radio', { name: 'Card' })).toBeChecked();
+    await user.click(within(group).getByRole('radio', { name: 'Shape' }));
+    expect(toJSON(doc).nodes[0]?.display).toBe('shape');
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).nodes[0]?.display).toBeUndefined();
+  });
+
+  it('keeps description and tags editable in shape form', () => {
+    const shaped = { ...formDeck, nodes: [{ ...formDeck.nodes[0], display: 'shape' as const }] };
+    renderInspector(shaped as typeof formDeck, { nodes: ['db'] });
+    expect(screen.getByRole('radio', { name: 'Shape' })).toBeChecked();
+    expect(screen.getByText('Holds orders.')).toBeInTheDocument();
+    expect(screen.getByText('pci')).toBeInTheDocument();
+  });
+
+  it('is absent for a type with one form', () => {
+    renderInspector(formDeck, { nodes: ['svc'] });
+    expect(screen.queryByRole('radiogroup', { name: 'Show as' })).not.toBeInTheDocument();
+  });
+});

@@ -5,6 +5,7 @@
  */
 import {
   edgeShape,
+  type Geometry,
   stickyCanvasPosition,
   stickyLabel,
   type StickyPlacement,
@@ -16,6 +17,7 @@ import {
   cardBox,
   cardLayoutOf,
   displayPosition,
+  geometryOf,
   groupBounds,
   NODE_SIZE,
   type Point,
@@ -79,6 +81,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   look?: CardLook;
   /** The card's drawn box and how many lines its text gets (029 R7): one pure function of the content. */
   layout: CardLayout;
+  /** Drawn as a shape (031): its geometry; the node type is then `shape`. */
+  geometry?: Geometry;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -119,6 +123,9 @@ export interface DeckEdgeData extends Record<string, unknown> {
   /** Both cards' sizes (022): with a side midpoint they give the boxes bends and anchors need. */
   fromSize?: { width: number; height: number };
   toSize?: { width: number; height: number };
+  /** An end drawn as a shape (031): anchors and bends follow its outline, not its box. */
+  fromGeometry?: Geometry;
+  toGeometry?: Geometry;
   /** Dash, weight, colour and animation (022); absent means the default look. */
   style?: DeckEdgeObject['style'];
   /** Where the label sits along the line, 0 to 1 (022); absent means the middle. */
@@ -197,7 +204,8 @@ export interface StickyNodeData extends Record<string, unknown> {
   flowState: StickyFlowState;
 }
 
-export type DeckFlowNode = Node<DeckNodeData, 'deck'>;
+/** A component: a card (`deck`) or a shape (`shape`, 031), from the same data. */
+export type DeckFlowNode = Node<DeckNodeData, 'deck' | 'shape'>;
 export type GroupFlowNode = Node<GroupBoundaryData, 'group-boundary'>;
 export type CollapsedFlowNode = Node<CollapsedGroupData, 'collapsed-group'>;
 export type PortFlowNode = Node<PortNodeData, 'port'>;
@@ -433,7 +441,9 @@ function toFlowNode(
   // The view's own subtitle and the "n inside" row take part, so the box fits what is drawn.
   const layout = cardLayoutOf(node, { description: subtitle, childCount });
   const size = { width: layout.width, height: layout.height };
+  const geometry = geometryOf(node) ?? undefined;
   if (
+    cached?.data.geometry === geometry &&
     cached?.selected === selected &&
     cached.data.subtitle === subtitle &&
     (cached.data.viewDimmed === true) === viewDimmed &&
@@ -461,7 +471,7 @@ function toFlowNode(
   }
   const flowNode: DeckFlowNode = {
     id: node.id,
-    type: 'deck',
+    type: geometry === undefined ? 'deck' : 'shape',
     ...size,
     position,
     selected,
@@ -486,6 +496,7 @@ function toFlowNode(
       ...(hiddenInView ? { hiddenInView } : {}),
       ...(problems === undefined ? {} : { problems }),
       ...(look === undefined ? {} : { look }),
+      ...(geometry === undefined ? {} : { geometry }),
       layout,
     },
   };
@@ -999,6 +1010,12 @@ export function toFlowEdges(
     if (node === undefined || index === undefined) return undefined;
     return cardBox(node, index, view.level);
   }
+  /** A plain end's shape geometry (031); collapsed cards and port pills are boxes. */
+  function endGeometry(id: string): Geometry | undefined {
+    if (id.startsWith(COLLAPSED_NODE_PREFIX) || portsById.has(id)) return undefined;
+    const node = lookups.nodesById.get(id);
+    return node === undefined ? undefined : (geometryOf(node) ?? undefined);
+  }
   const plainEdges = graph.edges.flatMap((edgeId) => {
     const edge = lookups.edgesById.get(edgeId);
     if (edge === undefined) return [];
@@ -1032,10 +1049,14 @@ export function toFlowEdges(
     const mark = overlay.edges.get(edge.id);
     const problems = view.problems?.get(edge.id);
     const shape = edgeShape(edge);
+    const fromGeometry = endGeometry(edge.from);
+    const toGeometry = endGeometry(edge.to);
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
       cached.data?.shape === shape &&
+      cached.data.fromGeometry === fromGeometry &&
+      cached.data.toGeometry === toGeometry &&
       sameMark(cached.data.flow, mark) &&
       sameProblemMark(cached.data.problems, problems) &&
       cached.sourceHandle === sourceHandle &&
@@ -1089,6 +1110,8 @@ export function toFlowEdges(
         routable: true,
         fromSize: { width: fromBox.width, height: fromBox.height },
         toSize: { width: toBox.width, height: toBox.height },
+        ...(fromGeometry === undefined ? {} : { fromGeometry }),
+        ...(toGeometry === undefined ? {} : { toGeometry }),
         ...(fan === undefined ? {} : { fan }),
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),

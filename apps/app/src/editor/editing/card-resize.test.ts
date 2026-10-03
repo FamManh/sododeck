@@ -10,6 +10,7 @@ const file = (): SododeckFile => ({
   nodes: [
     { id: 'n1', type: 'service', title: 'API Gateway', position: { x: 0, y: 0 } },
     { id: 'n2', type: 'service', title: 'Other', position: { x: 300, y: 0 } },
+    { id: 's1', type: 'diamond', title: 'OK?', position: { x: 0, y: 400 } },
   ],
   views: [
     { id: 'base', title: 'Base', type: 'custom' },
@@ -27,6 +28,22 @@ function setup() {
 
 beforeEach(() => {
   useUiStore.setState(initialUi, true);
+});
+
+describe('shape resize (031)', () => {
+  it('scales a shape down to its own minimum, one undo step', () => {
+    const { doc, editor } = setup();
+    const session = startCardResize(editor, 's1', 'bottom-right', 'component');
+    if (session === null) throw new Error('no session');
+    expect(session.start).toMatchObject({ width: 176, height: 112 });
+    applyCardResize(editor, session, { x: 0, y: 400, width: 120, height: 80 }, noMods, 1);
+    applyCardResize(editor, session, { x: 0, y: 400, width: 20, height: 20 }, noMods, 1);
+    endCardResize(editor, session);
+    expect(toJSON(doc).nodes.find((n) => n.id === 's1')?.size).toEqual({ width: 80, height: 56 });
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc).nodes.find((n) => n.id === 's1')?.size).toBeUndefined();
+    expect(editor.undo()).toBe(false);
+  });
 });
 
 describe('card resize (017 R4)', () => {
