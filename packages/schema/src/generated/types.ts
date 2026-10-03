@@ -48,6 +48,13 @@ export type CardColor =
   | 'pink'
   | 'slate';
 /**
+ * Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`. Same pattern as a type id. An id the app does not know is kept on save and reported.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "PackId".
+ */
+export type PackId = string;
+/**
  * Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -55,12 +62,12 @@ export type CardColor =
  */
 export type Id = string;
 /**
- * Kind of component: `client` (web/mobile app, user), `gateway` (API gateway, load balancer, edge), `service`, `queue` (broker, topic), `database` (any data store), `external` (third-party system).
+ * Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
- * via the `definition` "NodeKind".
+ * via the `definition` "TypeId".
  */
-export type NodeKind = 'client' | 'gateway' | 'service' | 'queue' | 'database' | 'external';
+export type TypeId = string;
 /**
  * Semantic zoom level, from widest to narrowest: `landscape`, `system`, `container`, `component`.
  *
@@ -168,6 +175,12 @@ export interface SododeckFile {
     [k: string]: ColorRef;
   };
   /**
+   * Ids of the card-type packs that are on for this deck: the Add flyout and the type pickers list their types. Absent means `["architecture"]` only. At least one id; unknown ids are kept.
+   *
+   * @minItems 1
+   */
+  packs?: PackId[];
+  /**
    * Components of the system.
    */
   nodes: Node[];
@@ -203,14 +216,14 @@ export interface SododeckFile {
   stickies: Sticky[];
 }
 /**
- * A component of the system: client, gateway, service, queue, database or external system.
+ * A component of the system: a card of any type (service, database, queue, warehouse and so on).
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Node".
  */
 export interface Node {
   id: Id;
-  type: NodeKind;
+  type: TypeId;
   title: Text;
   level?: Level;
   /**
@@ -382,17 +395,17 @@ export interface View {
    */
   excludeGroups?: Id[];
   /**
-   * Node kinds hidden in this view. Absent means none.
+   * Card type ids hidden in this view. Absent means none.
    */
-  excludeKinds?: NodeKind[];
+  excludeKinds?: TypeId[];
   /**
    * Tags that hide a node carrying any of them in this view. Absent means none.
    */
   excludeTags?: Text[];
   /**
-   * Node kinds drawn dimmed in this view. Absent means none.
+   * Card type ids drawn dimmed in this view. Absent means none.
    */
-  dimKinds?: NodeKind[];
+  dimKinds?: TypeId[];
   /**
    * Per-node position overrides for this view, keyed by node id. Keys must be valid ids.
    */
