@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="./sododeck-data.js"></script>
+<script src="./sododeck-states.js"></script>
+<script src="./sododeck-canvas.js"></script>
+<script src="./sododeck-cards.js"></script>
+<script src="./sododeck-db.js"></script>
+<script src="./sododeck-landing.js"></script>
+<style>html,body{margin:0;background:#dcdcd8;font-family:'Geist',system-ui,sans-serif;color:#1c1c1a}*{box-sizing:border-box}a{color:#d9560f}a:hover{color:#b3480c}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:56px;width:max-content">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1500px">
+    <div style="font-size:34px;font-weight:500;letter-spacing:-.02em">Sododeck · Landing page (sododeck.com) · direction B · Deck</div>
+    <div style="font-size:16px;color:#55554f;line-height:1.5;text-wrap:pretty;max-width:1200px">One deck, one story: every product visual is the “Checkout” sample deck, rendered live from sododeck-cards.js and sododeck-db.js. Each section is one step a user takes: generate, explore, flows, knowledge, database, code, edit, own your file. The hero loops; Flows and Database play once in view. Pages respond to the theme toggle in their nav.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <a href="#pages" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">1 · Full page 1440</a>
+      <a href="#small" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">2 · 390 and 768</a>
+      <a href="#story" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">3 · Hero storyboard</a>
+      <a href="#cta" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">4 · CTA states</a>
+      <a href="#copy" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">5 · Copy</a>
+      <a href="#notes" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#1c1c1a;text-decoration:none;color:#fff">6 · Notes</a>
+    </div>
+  </div>
+  <div id="pages" style="display:flex;flex-direction:column;gap:20px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">1 · Full page</div>
+    <div style="display:flex;gap:48px;align-items:flex-start">
+      <sc-for list="{{ pages }}" as="p" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px"><div style="font:500 13px 'Geist Mono',monospace;color:#55554f">{{ p.label }}</div><div style="border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.1);display:flex">{{ p.el }}</div></div>
+      </sc-for>
+    </div>
+  </div>
+  <sc-if value="{{ showAll }}" hint-placeholder-val="{{ true }}">
+    <div id="small" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">2 · 390 (full page) and 768 (hero + Database)</div>
+      <div style="display:flex;gap:48px;align-items:flex-start">
+        <sc-for list="{{ small }}" as="p" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:10px"><div style="font:500 13px 'Geist Mono',monospace;color:#55554f">{{ p.label }}</div><div style="border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.1);display:flex">{{ p.el }}</div></div>
+        </sc-for>
+      </div>
+    </div>
+    <div id="story" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">3 · Hero storyboard (10 s loop) and reduced-motion frame</div>
+      <div style="display:grid;grid-template-columns:repeat(2,800px);gap:40px">
+        <sc-for list="{{ story }}" as="s" hint-placeholder-count="4">
+          <div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;gap:12px;align-items:baseline"><span style="font:500 13px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:4px 9px">{{ s.label }}</span><span style="font-size:14px;color:#55554f">{{ s.sub }}</span></div>{{ s.el }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div id="cta" style="display:flex;flex-direction:column;gap:20px">
+      <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">4 · CTA states</div>
+      <div style="display:flex;gap:40px;align-items:flex-start">
+        <sc-for list="{{ ctas }}" as="c" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:10px"><div style="font:500 13px 'Geist Mono',monospace;color:#55554f">{{ c.label }}</div>{{ c.el }}</div>
+        </sc-for>
+      </div>
+    </div>
+    <div id="copy" style="display:flex;flex-direction:column;gap:20px;max-width:2400px">
+      <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">5 · Copy</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+        <sc-for list="{{ copy }}" as="n" hint-placeholder-count="4">
+          <div style="background:#fff;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:8px;text-transform:uppercase">{{ n.s }}</div>
+            <sc-for list="{{ n.items }}" as="it"><div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding:8px 0;border-top:1px solid #ecece8;font-size:14.5px;line-height:1.5"><span style="font-weight:500">{{ it.k }}</span><span style="text-wrap:pretty;color:#33332f">{{ it.v }}</span></div></sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div id="notes" style="display:flex;flex-direction:column;gap:20px;max-width:2400px">
+      <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">6 · Notes · tokens, reuse, deviations</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+        <sc-for list="{{ notes }}" as="n" hint-placeholder-count="4">
+          <div style="background:#fff;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:4px">
+            <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:8px">{{ n.title }}</div>
+            <sc-for list="{{ n.items }}" as="it"><div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding:8px 0;border-top:1px solid #ecece8;font-size:14.5px;line-height:1.5"><span style="font-weight:500">{{ it.k }}</span><span style="text-wrap:pretty;color:#33332f">{{ it.v }}</span></div></sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;width&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;1440&quot;,&quot;768&quot;,&quot;390&quot;],&quot;default&quot;:&quot;all&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;motion&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;off&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;heroCopy&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;],&quot;default&quot;:&quot;A&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { ok: !!window.SDL };
+  componentDidMount() { if (!this.state.ok) this.t = setInterval(() => { if (window.SDL) { clearInterval(this.t); this.setState({ ok: true }); } }, 100); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const S = window.SDL;
+    if (!S || !this.state.ok) return { pages: [], small: [], story: [], ctas: [], copy: [], notes: [], showAll: true };
+    const th = this.props.theme || 'both', W = String(this.props.width || 'all');
+    const themes = th === 'both' ? ['light', 'dark'] : [th];
+    const base = { motion: this.props.motion || 'auto', heroCopy: this.props.heroCopy || 'A' };
+    const page = (t, w, only) => React.createElement(S.Page, Object.assign({ key: t + w + (only || ''), theme: t, width: w, only }, base));
+    const all = W === 'all';
+    const pages = themes.map(t => ({ label: (all ? '1440' : W) + ' · ' + t, el: page(t, all ? 1440 : +W) }));
+    const small = all ? [{ label: '390 · light · full page', el: page('light', 390) }, { label: '768 · light · hero + Database', el: page('light', 768, 'hero-db') }] : [];
+    const story = all ? S.story(themes[0]) : [];
+    const ctas = all ? themes.map(t => ({ label: 'Buttons · ' + t, el: S.cta(t) })) : [];
+    const kv = a => a.map(([k, v]) => ({ k, v }));
+    return { pages, small, story, ctas, showAll: all, copy: S.COPY.map(c => ({ s: c.s, items: kv(c.items) })), notes: S.NOTES.map(n => ({ title: n.title, items: kv(n.items) })) };
+  }
+}
+</script>
+</body>
+</html>
