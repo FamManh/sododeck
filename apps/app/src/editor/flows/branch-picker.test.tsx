@@ -57,4 +57,41 @@ describe('BranchPicker', () => {
       'Step 4b of 5: Payment Service → Notification Service, branch payment failed',
     );
   });
+
+  describe('Deck look (035)', () => {
+    it('gives each alternative an aria-hidden number hint that is not part of its name', () => {
+      const { picker } = setup('f3');
+      const group = picker();
+      if (group === null) throw new Error('no picker');
+      const radios = within(group).getAllByRole('radio');
+      expect(radios).toHaveLength(2);
+      radios.forEach((radio, i) => {
+        const hint = radio.querySelector('[data-testid="branch-number-hint"]');
+        expect(hint).toHaveAttribute('aria-hidden', 'true');
+        expect(hint).toHaveTextContent(String(i + 1));
+      });
+      expect(within(group).getByRole('radio', { name: 'payment ok' })).toBeInTheDocument();
+    });
+
+    it('draws the error alternative with a dashed Clay border and a ⊗ icon, still announced', () => {
+      const { picker } = setup('f3');
+      const group = picker();
+      if (group === null) throw new Error('no picker');
+      const error = within(group).getByRole('radio', { name: 'payment failed, error path' });
+      expect(error.className).toContain('border-dashed');
+      expect(error.className).toContain('border-clay-ink');
+      expect(error.querySelector('svg[data-testid="branch-error-icon"]')).not.toBeNull();
+      const ok = within(group).getByRole('radio', { name: 'payment ok' });
+      expect(ok.className).not.toContain('border-dashed');
+    });
+
+    it('adds no number-key shortcut: pressing 2 keeps the alternative', async () => {
+      const { picker, user, ui } = setup('f3');
+      expect(picker()).not.toBeNull();
+      const before = ui().activeFlow;
+      await user.keyboard('2');
+      expect(ui().activeFlow?.alternativeId).toBe(before?.alternativeId);
+      expect(ui().activeFlow?.stepId).toBe(before?.stepId);
+    });
+  });
 });

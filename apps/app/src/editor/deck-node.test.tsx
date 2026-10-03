@@ -626,4 +626,38 @@ describe('DeckNode Deck look (029 US1)', () => {
     expect(node.style.getPropertyValue('--card-chip')).toBe('var(--color-card-green-chip)');
     expect(node.style.getPropertyValue('--card-ink')).toBe('var(--color-card-green-ink)');
   });
+
+  describe('step sticker (035)', () => {
+    it('mounts a sticker only for a marked card, with its state', () => {
+      renderNode(props({ step: { state: 'upcoming', number: '4' } }));
+      const sticker = screen.getByTestId('step-sticker');
+      expect(sticker).toHaveAttribute('data-step-state', 'upcoming');
+      expect(sticker).toHaveTextContent('4');
+      expect(screen.getByTestId('deck-node')).toHaveAttribute('data-step-state', 'upcoming');
+    });
+
+    it('has no sticker and no step state outside flow mode', () => {
+      renderNode(props());
+      expect(screen.queryByTestId('step-sticker')).not.toBeInTheDocument();
+      expect(screen.getByTestId('deck-node')).not.toHaveAttribute('data-step-state');
+    });
+
+    it('marks only the current card with aria-current, and keeps its name', () => {
+      const { unmount } = renderNode(props({ step: { state: 'played', number: null } }));
+      expect(screen.getByTestId('deck-node')).not.toHaveAttribute('aria-current');
+      unmount();
+      renderNode(props({ currentStep: true, step: { state: 'current', number: '2' } }));
+      const node = screen.getByTestId('deck-node');
+      expect(node).toHaveAttribute('aria-current', 'step');
+      expect(node).toHaveAttribute('aria-label', 'Service: Order Service');
+    });
+
+    it('does not change the card box (029 FR-016)', () => {
+      const { unmount } = renderNode(props());
+      const plain = screen.getByTestId('deck-node').getAttribute('style');
+      unmount();
+      renderNode(props({ step: { state: 'current', number: '2' } }));
+      expect(screen.getByTestId('deck-node').getAttribute('style')).toBe(plain);
+    });
+  });
 });

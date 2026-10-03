@@ -48,6 +48,7 @@ import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
 import { deckStateClasses } from './deck-states';
+import { StepSticker } from './step-sticker';
 
 /** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.28;
@@ -230,6 +231,7 @@ export const DeckNode = memo(function DeckNode({
       aria-selected={selected}
       aria-description={description === '' ? undefined : description}
       aria-current={data.currentStep === true ? 'step' : undefined}
+      data-step-state={data.step?.state}
       {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
       {...(customText === undefined ? {} : { 'data-text': customText })}
       {...(showStroke ? { 'data-stroke': '' } : {})}
@@ -279,6 +281,7 @@ export const DeckNode = memo(function DeckNode({
             : 'border-border-strong',
       )}
     >
+      {data.step !== undefined && <StepSticker state={data.step.state} number={data.step.number} />}
       {isLandscape ? (
         // The plate (frame 123): the type icon on the card fill, no text.
         (titleInput ?? (

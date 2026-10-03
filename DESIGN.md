@@ -410,7 +410,8 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 - **`group-boundary`**: the expanded group frame of the Deck look (20px radius, 1.5px border, label pill on the top edge); collapsed it is the fanned hand. Clicking the label drills into that level. See Groups under Card system (Deck).
 - **`edge`**: a 2px connector in `--sd-deck-edge`, drawn curved, elbow or straight (the line type, 029), with a knob at the start and a 9×10 arrow at the end. Selected or in flow: Deck Orange, 2–3px. Dimmed: opacity .15–.18. It has a 12px invisible hit area. Full state list under Connectors in Card system (Deck).
 - **`edge-label`**: Mono 10.5px pill, Surface fill, 1px Border. It turns solid orange with an On Primary label on the current step.
-- **`flow-token`**: 5px orange dot with a 2px Surface stroke and a 10px halo at 20% opacity. It animates along the current edge path (1.4s per loop at 1×).
+- **`flow-token`**: a numbered disc (035): 24px Deck Orange, 2.5px Surface ring, 3px Orange Ink lip, the step number in 11.5 / 700 On Primary. It animates along the current edge path (1.4s per loop at 1×); static at the label midpoint under reduced motion.
+- **Playback dimming and lip (035):** off-path cards fade to 22 % (`--sd-deck-dim`), off-path connectors and labels to 20 % (`--sd-deck-dim-edge`). The current card keeps its 5px lip (`--sd-deck-lip-current`) below 60 % zoom, the one exception to the no-lip rule.
 - **`minimap`**: 182×112 Surface card. Nodes and groups are drawn as rects, and the viewport is an 8-unit orange outline. Clicking pans the canvas.
 - **`breadcrumb-chip`**: the drill-in path (Deck → Group level), shown as a chip in the deck island.
 - **`zoom-control`**: its own island bottom-right: fit, −, Mono %, +, minimap, help.

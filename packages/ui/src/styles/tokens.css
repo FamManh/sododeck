@@ -128,6 +128,13 @@
   --sd-deck-lip: 3px;
   --sd-deck-lip-hover: 5px;
   --sd-deck-lip-drag: 6px;
+  /* Flow playback (035): the current card's lip (kept below 60 % zoom), the dim of an off-path
+     connector (cards use --sd-deck-dim), and the sizes of the step sticker and token. */
+  --sd-deck-lip-current: 5px;
+  --sd-deck-dim-edge: 0.2;
+  --sd-step-sticker: 22px;
+  --sd-step-sticker-current: 26px;
+  --sd-flow-token: 24px;
   /* Text on a custom (non-named) fill: same in both themes (readableText picks between them). */
   --sd-card-text-dark: #1c1c1a;
   --sd-card-text-light: #ffffff;

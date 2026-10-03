@@ -11,7 +11,7 @@ import type { DeckFlowEdge } from './deck-to-flow';
 import { EdgeEnds } from './edge-ends';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
-import { FLOW_STROKES } from './flow-strokes';
+import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
 import { routedPath, type Box } from './routing/route-path';
 import { SegmentHandle } from './routing/segment-handle';
 
@@ -71,8 +71,14 @@ export const DeckEdge = memo(function DeckEdge({
   const direction = data?.direction ?? 'forward';
   const fromBox = pointBox(sourceX, sourceY);
   const toBox = pointBox(targetX, targetY);
+  // An error path ends in × instead of an arrow (035 FR-009).
+  const flow = data?.flow;
+  const errorEnd = flow?.style === 'error';
   // The line stops one arrow short of an end that carries an arrow (029 R6).
-  const arrows = { arrowAtStart: direction === 'both', arrowAtEnd: direction !== 'none' };
+  const arrows = {
+    arrowAtStart: direction === 'both',
+    arrowAtEnd: direction !== 'none' && !errorEnd,
+  };
   const shape = data?.shape ?? 'curved';
   const { path, labelX, labelY, segment, ends } = routedPath(
     shape,
@@ -82,8 +88,7 @@ export const DeckEdge = memo(function DeckEdge({
     data?.route?.offset,
     arrows,
   );
-  const flow = data?.flow;
-  const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flow.style];
+  const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   const stroke = selected
     ? 'var(--color-deck-orange)'
     : (flowStroke?.stroke ?? 'var(--color-deck-edge)');
@@ -97,7 +102,29 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
-  const width = selected ? 2.5 : current !== null ? 3 : (flowStroke?.width ?? 2);
+  const width = selected ? 2.5 : (flowStroke?.width ?? 2);
+  // The step label (FR-010): a 20px pill. In flow mode (a `state` is set) it is neutral, solid
+  // orange when current and Clay Soft on an error path; while recording it keeps the path look.
+  const isPill = hasBadges || flowIcon !== null;
+  const playing = flow?.state !== undefined;
+  const errorLabel = flow?.style === 'error' || flow?.style === 'invalid';
+
+  /** Fill, border and text of the label (FR-010). */
+  function labelLook(): string {
+    if (flow?.style === 'error' && isPill) {
+      // Clay Soft keeps the error identity even on the current step, which adds an orange ring.
+      return cn(
+        'border-clay-ink bg-clay-soft text-clay-ink',
+        current !== null && 'ring-2 ring-primary',
+      );
+    }
+    if (current !== null) return 'border-primary bg-primary text-on-primary';
+    if (errorLabel) return 'border-dashed border-clay-ink text-clay-ink';
+    if (isPill && playing) return 'border-border-strong text-ink-secondary';
+    return selected || flow?.style === 'path' || flow?.style === 'preview'
+      ? 'border-primary text-primary-ink'
+      : 'border-border text-ink-secondary';
+  }
 
   return (
     <>
@@ -124,6 +151,18 @@ export const DeckEdge = memo(function DeckEdge({
           data-testid="edge-focus-ring"
         />
       )}
+      {current !== null && (
+        <path
+          d={path}
+          fill="none"
+          stroke="var(--color-deck-orange)"
+          strokeWidth={8}
+          strokeOpacity={0.18}
+          aria-hidden
+          pointerEvents="none"
+          data-testid="edge-halo"
+        />
+      )}
       <BaseEdge
         id={id}
         path={path}
@@ -136,10 +175,19 @@ export const DeckEdge = memo(function DeckEdge({
           stroke,
           strokeWidth: width,
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
+          ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
         }}
       />
-      <EdgeEnds {...ends} direction={direction} color={stroke} />
-      {current !== null && <FlowToken path={path} x={labelX} y={labelY} speed={current.speed} />}
+      <EdgeEnds {...ends} direction={direction} color={stroke} errorEnd={errorEnd} />
+      {current !== null && (
+        <FlowToken
+          path={path}
+          x={labelX}
+          y={labelY}
+          speed={current.speed}
+          number={current.number}
+        />
+      )}
       {(showLabel || selected || flow !== undefined || problems !== undefined) && (
         <EdgeLabelRenderer>
           {/* Anchor for the edge and invalid-click popovers, at the label point. */}
@@ -155,26 +203,18 @@ export const DeckEdge = memo(function DeckEdge({
               data-in-flow={flow?.inPath === true ? '' : undefined}
               data-in-focus={data?.inFocus === true ? '' : undefined}
               data-current={current !== null ? '' : undefined}
+              data-step-state={flow?.state}
               // The current step without color: filled label, token, and this for AT (007 FR-024).
               aria-current={current !== null ? 'step' : undefined}
               className={cn(
-                'nodrag nopan absolute flex items-center gap-1 rounded-full border bg-surface py-0.5 font-mono text-edge-label whitespace-nowrap',
+                'nodrag nopan absolute flex items-center gap-1 rounded-full bg-surface font-mono whitespace-nowrap',
+                isPill
+                  ? 'h-5 border-[1.5px] text-[11px] leading-none font-semibold'
+                  : 'border py-0.5 text-edge-label',
                 // A flow mark lets clicks through to the edge, so recording works on the label.
                 flow === undefined ? 'pointer-events-auto' : 'pointer-events-none',
-                showLabel ? 'pr-2' : 'pr-0.5',
-                hasBadges || flowIcon !== null ? 'pl-0.5' : 'pl-2',
-                current !== null
-                  ? cn(
-                      'text-on-primary',
-                      flow?.style === 'error'
-                        ? 'border-dashed border-clay-ink bg-clay-ink'
-                        : 'border-primary bg-primary',
-                    )
-                  : selected || flow?.style === 'path' || flow?.style === 'preview'
-                    ? 'border-primary text-primary-ink'
-                    : flow?.style === 'error' || flow?.style === 'invalid'
-                      ? 'border-dashed border-clay-ink text-clay-ink'
-                      : 'border-border text-ink-secondary',
+                isPill ? 'px-2' : showLabel ? 'pr-2 pl-2' : 'pr-0.5 pl-2',
+                labelLook(),
               )}
               style={{
                 transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,

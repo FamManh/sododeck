@@ -50,16 +50,12 @@
 }
 
 /* No lip below 60 % zoom (029 R8, §g-63): canvas.tsx sets data-lipless on the wrapper, so this is
-   pure CSS and no card re-renders. Cards, group frames and the fanned hand all read these vars. */
+   pure CSS and no card re-renders. Cards, group frames and the fanned hand all read these vars.
+   The current flow step keeps its lip (035 FR-006): --sd-deck-lip-current is not zeroed here. */
 [data-lipless] {
   --sd-deck-lip: 0px;
   --sd-deck-lip-hover: 0px;
   --sd-deck-lip-drag: 0px;
-  --sd-deck-lip-current: 0px;
-}
-
-:root {
-  --sd-deck-lip-current: 5px;
 }
 
 /* Card states (029 US2, frame 122). Every transform lives on `.sd-card`, never on
@@ -79,14 +75,24 @@
   outline-offset: 2px;
 }
 
-/* The current flow step keeps its orange border and takes an orange lip and a lift (the playback
-   look itself is 035). */
+/* The current flow step (035): the target card keeps its orange border, takes an orange lip, a 9px
+   Orange Soft halo and a lift. The lip comes first in the shadow list so the halo does not cover
+   it. Paint only: shadows and transforms never change the card's box. */
 .sd-card.current-step,
 .sd-card[aria-current='step'] {
   --card-lip: var(--color-deck-orange);
-  --tw-shadow: 0 var(--sd-deck-lip-current) 0 0 var(--card-lip);
+  --tw-shadow:
+    0 var(--sd-deck-lip-current) 0 0 var(--card-lip), 0 0 0 9px var(--color-deck-orange-soft);
   border-color: var(--color-deck-orange);
   transform: translateY(-2px);
+}
+
+/* The corner sticker eases between states; every duration is a token, 0 under reduced motion. */
+.sd-step-sticker {
+  transition:
+    background-color var(--sd-dur-dim) var(--sd-ease),
+    width var(--sd-dur-hover) var(--sd-ease),
+    height var(--sd-dur-hover) var(--sd-ease);
 }
 
 /* A connection target: orange border; refused: a dashed Clay border (the note says why). */
@@ -186,11 +192,14 @@
   transition: opacity var(--sd-dur-dim);
 }
 
-[data-flow-mode] .react-flow__node:not(.in-flow),
+[data-flow-mode] .react-flow__node:not(.in-flow) {
+  opacity: var(--color-deck-dim);
+}
+
 [data-flow-mode] .react-flow__edge:not(.in-flow),
 [data-flow-mode] [data-testid='edge-label']:not([data-in-flow]),
 [data-flow-mode] .merged-edge-label:not([data-in-flow]) {
-  opacity: 0.2;
+  opacity: var(--color-deck-dim-edge);
 }
 
 /* Hand tool (§g-57): cards, notes and connectors let the pointer through, so a drag over them
@@ -291,22 +300,6 @@
 
 .sd-segment-broken {
   background-image: repeating-linear-gradient(135deg, currentColor 0 2px, transparent 2px 5px);
-}
-
-@keyframes sd-flow-inside-dot {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0.7;
-  }
-}
-
-.sd-flow-inside-dot {
-  animation: sd-flow-inside-dot var(--sd-dur-dim) ease-in-out infinite;
 }
 
 /* Tidy layout progress (011 FR-032): indeterminate; static under reduced motion. */

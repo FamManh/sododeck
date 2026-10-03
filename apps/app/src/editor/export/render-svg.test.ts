@@ -140,6 +140,24 @@ describe('renderSvg', () => {
     expect(edge('cx')?.querySelector('path')?.getAttribute('stroke')).toBe(LIGHT_PALETTE.clayInk);
   });
 
+  it('carries no playback mark: no sticker, lip, halo, token or step state (035 FR-021)', () => {
+    const svg = renderSvg(
+      buildScene({ deck: branchedDeck, scope: 'flow', ui: { ...ui, activeFlowId: 'pay' } }),
+      options,
+    );
+    for (const mark of [
+      'step-sticker',
+      'flow-token',
+      'edge-halo',
+      'edge-cross',
+      'data-step-state',
+      'animateMotion',
+      'current-step',
+    ]) {
+      expect(svg).not.toContain(mark);
+    }
+  });
+
   it('draws a card and a group in their custom colour (020 T057)', () => {
     const coloured = deckOf({
       nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 }, group: 'g' }],

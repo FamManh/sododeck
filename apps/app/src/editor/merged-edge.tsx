@@ -9,7 +9,7 @@ import { useUiStore } from '../state/ui-store';
 import type { MergedFlowEdge } from './deck-to-flow';
 import { StepBadge } from './flow-badges';
 import { FlowToken } from './flow-token';
-import { FLOW_STROKES } from './flow-strokes';
+import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
 import { EdgeEnds } from './edge-ends';
 import { routedPath, type Box } from './routing/route-path';
 
@@ -58,12 +58,15 @@ export const MergedEdge = memo(function MergedEdge({
   const reversed = merged.direction === 'b-to-a';
   const sourceBox = pointBox(sourceX, sourceY);
   const targetBox = pointBox(targetX, targetY);
-  const arrows = { arrowAtStart: merged.direction === 'both', arrowAtEnd: true };
+  // A bundle made only of error-path steps ends in × instead of an arrow (035 FR-009).
+  const errorEnd = merged.flow?.style === 'error';
+  const arrows = { arrowAtStart: merged.direction === 'both', arrowAtEnd: !errorEnd };
   const { path, labelX, labelY, ends } = reversed
     ? routedPath('curved', targetBox, sourceBox, [sides[1], sides[0]], 0, arrows)
     : routedPath('curved', sourceBox, targetBox, sides, 0, arrows);
   const Icon = directionIcon(merged.direction);
-  const flowStroke = merged.flow === undefined ? undefined : FLOW_STROKES[merged.flow.style];
+  const flowStroke =
+    merged.flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(merged.flow)];
   const stroke = flowStroke?.stroke ?? 'var(--color-deck-edge)';
 
   useEffect(
@@ -75,23 +78,43 @@ export const MergedEdge = memo(function MergedEdge({
 
   return (
     <>
+      {merged.flow?.current != null && (
+        <path
+          d={path}
+          fill="none"
+          stroke="var(--color-deck-orange)"
+          strokeWidth={8}
+          strokeOpacity={0.18}
+          aria-hidden
+          pointerEvents="none"
+          data-testid="edge-halo"
+        />
+      )}
       <BaseEdge
         id={id}
         path={path}
         interactionWidth={12}
         style={{
           stroke,
-          strokeWidth: merged.flow?.current != null ? 3 : (flowStroke?.width ?? 2),
+          strokeWidth: flowStroke?.width ?? 2,
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
+          ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
         }}
       />
       <EdgeEnds
         {...ends}
         direction={merged.direction === 'both' ? 'both' : 'forward'}
         color={stroke}
+        errorEnd={errorEnd}
       />
       {merged.flow?.current != null && (
-        <FlowToken path={path} x={labelX} y={labelY} speed={merged.flow.current.speed} />
+        <FlowToken
+          path={path}
+          x={labelX}
+          y={labelY}
+          speed={merged.flow.current.speed}
+          number={merged.flow.current.number}
+        />
       )}
       <EdgeLabelRenderer>
         <button
@@ -99,16 +122,19 @@ export const MergedEdge = memo(function MergedEdge({
           data-edge-anchor={id}
           data-testid="merged-edge-label"
           data-in-flow={merged.flow?.inPath === true ? '' : undefined}
+          data-step-state={merged.flow?.state}
           data-in-focus={merged.inFocus ? '' : undefined}
           className={cn(
             'merged-edge-label nodrag nopan absolute flex items-center gap-1 rounded-full border bg-surface py-0.5 pr-2 text-edge-label shadow-rest',
-            merged.flow?.current != null
-              ? merged.flow.style === 'error'
-                ? 'border-dashed border-clay-ink bg-clay-ink text-on-primary'
-                : 'border-primary bg-primary text-on-primary'
-              : merged.flow?.style === 'error' || merged.flow?.style === 'invalid'
-                ? 'border-dashed border-clay-ink text-clay-ink'
-                : 'border-border text-ink-secondary',
+            merged.flow?.style === 'error'
+              ? 'border-clay-ink bg-clay-soft text-clay-ink'
+              : merged.flow?.current != null
+                ? 'border-primary bg-primary text-on-primary'
+                : merged.flow?.style === 'invalid'
+                  ? 'border-dashed border-clay-ink text-clay-ink'
+                  : merged.flow?.state !== undefined
+                    ? 'border-border-strong text-ink-secondary'
+                    : 'border-border text-ink-secondary',
             merged.focused && 'ring-1 ring-primary',
           )}
           style={{

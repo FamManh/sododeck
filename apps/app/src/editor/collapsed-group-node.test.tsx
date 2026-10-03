@@ -2,16 +2,13 @@ import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CollapsedGroupNode } from './collapsed-group-node';
 import { resolveLook } from './style/card-style';
-
-let reduced = false;
-vi.mock('@sododeck/ui/hooks/use-reduced-motion', () => ({ useReducedMotion: () => reduced }));
 
 describe('CollapsedGroupNode', () => {
   function props(patch: Partial<NonNullable<NodeProps<CollapsedFlowNode>['data']>> = {}) {
@@ -32,6 +29,25 @@ describe('CollapsedGroupNode', () => {
       height: 64,
     } as unknown as NodeProps<CollapsedFlowNode>;
   }
+
+  it('folds the step state into a sticker on the front card, with no pulsing dot (035)', () => {
+    renderWithEditor(
+      <CollapsedGroupNode {...props({ flowInside: 'current', flowNumber: '3' })} />,
+      deckOf({}),
+    );
+    const front = screen.getByRole('button', { name: /^Core services, collapsed group/ });
+    expect(front).toHaveAccessibleName(/, flow step inside$/);
+    const sticker = within(front).getByTestId('step-sticker');
+    expect(sticker).toHaveAttribute('data-step-state', 'current');
+    expect(sticker).toHaveTextContent('3');
+    expect(sticker).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByTestId('collapsed-flow-dot')).toBeNull();
+  });
+
+  it('has no sticker when no flow step is inside', () => {
+    renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
+    expect(screen.queryByTestId('step-sticker')).toBeNull();
+  });
 
   it('renders a button with its counts', () => {
     renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
@@ -96,8 +112,7 @@ describe('CollapsedGroupNode', () => {
     expect(useUiStore.getState().focusedId).toBe('collapsed:core');
   });
 
-  it('shows the flow-inside ring and dot, naming the hidden step', () => {
-    reduced = false;
+  it('shows the flow-inside ring, naming the hidden step', () => {
     renderWithEditor(<CollapsedGroupNode {...props({ flowInside: 'current' })} />, deckOf({}));
     expect(
       screen.getByRole('button', {
@@ -105,13 +120,6 @@ describe('CollapsedGroupNode', () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('collapsed-flow-ring')).toBeInTheDocument();
-    expect(screen.getByTestId('collapsed-flow-dot')).toHaveClass('sd-flow-inside-dot');
-  });
-
-  it('keeps the dot static under reduced motion', () => {
-    reduced = true;
-    renderWithEditor(<CollapsedGroupNode {...props({ flowInside: 'current' })} />, deckOf({}));
-    expect(screen.getByTestId('collapsed-flow-dot')).not.toHaveClass('sd-flow-inside-dot');
   });
 
   it('edits the group title in place (019 FR-008)', async () => {

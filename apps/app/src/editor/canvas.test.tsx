@@ -930,14 +930,56 @@ describe('canvas in flow mode (007)', () => {
     expect(wrapper()).toHaveAttribute('data-flow-mode');
     expect(screen.getByRole('region', { name: 'Step player' })).toBeInTheDocument();
     // jsdom has no layout, so React Flow draws nodes but not edges: check the step's nodes.
+    // The current card is the step's target only (035): the source is a played card.
     expect(
       container.querySelectorAll('[data-testid="deck-node"][aria-current="step"]'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     act(() => {
       exitFlow();
     });
     expect(wrapper()).not.toHaveAttribute('data-flow-mode');
     expect(screen.queryByRole('region', { name: 'Step player' })).not.toBeInTheDocument();
+  });
+
+  it('deals the deck: a sticker per card on the path, one lifted current card (035)', () => {
+    const { editor, container } = renderWithEditor(<Canvas />, playbackDeck);
+    // Step 2 of "Place order" is API Gateway → Order Service (b → c).
+    open(editor, 'o2');
+    const stickers = () => {
+      const marks: Record<string, string | null> = {};
+      for (const card of container.querySelectorAll('[data-testid="deck-node"]')) {
+        const sticker = card.querySelector('[data-testid="step-sticker"]');
+        const text = sticker?.textContent ?? '';
+        marks[card.getAttribute('data-node-id') ?? ''] =
+          sticker === null
+            ? null
+            : `${sticker.getAttribute('data-step-state') ?? ''}:${text === '' ? '✓' : text}`;
+      }
+      return marks;
+    };
+    expect(stickers()).toEqual({
+      a: 'played:✓',
+      b: 'played:✓',
+      c: 'current:2',
+      d: 'upcoming:7',
+      x: 'upcoming:5',
+      n: 'upcoming:8',
+      z: null,
+    });
+    // Off the path nothing is dealt, and only one card is lifted and current.
+    expect(container.querySelectorAll('.sd-card.current-step')).toHaveLength(1);
+    // The marks do not depend on the zoom: below 60 % only the CSS drops the lips.
+    container.querySelector('[data-canvas]')?.setAttribute('data-lipless', '');
+    expect(container.querySelectorAll('[data-testid="step-sticker"]')).toHaveLength(6);
+    act(() => {
+      openFlow(editor(), 'order', 'o3');
+    });
+    expect(stickers()).toMatchObject({ b: 'current:3', c: 'played:✓', x: 'upcoming:5' });
+    act(() => {
+      exitFlow();
+    });
+    expect(container.querySelectorAll('[data-testid="step-sticker"]')).toHaveLength(0);
+    expect(container.querySelectorAll('.sd-card.current-step')).toHaveLength(0);
   });
 
   it('refuses drags, drops, connections, reconnects and edge popovers', () => {
