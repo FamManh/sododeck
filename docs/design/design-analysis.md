@@ -1049,3 +1049,8 @@ changes them before the owning feature is specified.
     grows cards to 164×104 with owner and tag rows; it reads like Container (kind tile, title,
     subtitle) at 164×50. Landscape and System still hide the tile or text. Owner and tags stay
     in the details drawer. Tidy and group fitting keep the roomier 104 px layout cell.
+59. **Tags show on the card** (founder, 2026-10-03). Up to ten tags wrap as small chips under the
+    title at every level but Landscape, and the card grows to fit them (`card-tags.ts`; computed,
+    not measured, so `cardSize` stays the one size source). Zooming never changes the size. Tag
+    inputs stop at ten per card. Tags stay lower-cased (existing rule); tag colours are not part
+    of this change.

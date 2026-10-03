@@ -14,10 +14,13 @@ export function TagsField({
   deck,
   value,
   onCommit,
+  max,
 }: {
   deck: SododeckFile;
   value: readonly string[] | undefined;
   onCommit: (tags: string[] | null) => void;
+  /** E.g. ten on a card (2026-10-03); unlimited by default. */
+  max?: number;
 }) {
   const suggestions = useMemo(() => tagSuggestions(deck), [deck]);
   const tags = value ?? [];
@@ -29,6 +32,7 @@ export function TagsField({
         placeholder="+ Add tag"
         value={tags}
         suggestions={suggestions}
+        {...(max === undefined ? {} : { max })}
         onValueChange={(next) => {
           const added = next.find((t) => !tags.includes(t));
           onCommit(next.length === 0 ? null : [...next]);

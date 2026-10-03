@@ -122,22 +122,33 @@ describe('DeckNode', () => {
     expect(screen.getByText('Go')).toBeInTheDocument();
   });
 
-  it('reads like Container at Component level, at the same size: no owner or tags (§g-58)', () => {
-    const { container } = renderNode(
+  it('reads like Container at Component level: no owner row (§g-58)', () => {
+    renderNode(
       props({
         level: 'component',
         subtitle: 'Go',
         owner: 'Team Apollo',
-        tags: ['critical'],
         hasRules: true,
       }),
     );
     expect(screen.getByText('Order Service')).toBeInTheDocument();
     expect(screen.getByText('Go')).toBeInTheDocument();
     expect(screen.queryByText('Team Apollo')).not.toBeInTheDocument();
-    expect(screen.queryByText('critical')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="deck-node"]')).toHaveStyle({ height: '50px' });
+  });
+
+  it('shows up to ten tags under the title, at every level but Landscape (2026-10-03)', () => {
+    const tags = Array.from({ length: 12 }, (_, i) => `tag ${String(i + 1)}`);
+    const { unmount } = renderNode(props({ level: 'system', tags }));
+    const list = screen.getByRole('list', { name: 'Tags' });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(tags.slice(0, 10));
+    unmount();
+    renderNode(props({ level: 'landscape', tags }));
+    expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
   });
 
   it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {

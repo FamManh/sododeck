@@ -5,6 +5,7 @@ import { frameOf, NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
+import { tagBlockHeight } from './card-tags';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -85,18 +86,30 @@ export function nodeSize(_level?: Level): NodeSize {
   return NODE_SIZE;
 }
 
-/** A card's drawn size (017 R2): the stored size clamped to the limits, else the level size. */
-export function cardSize(node: Pick<Node, 'size'>, level: Level): NodeSize {
+/**
+ * A card's drawn size (017 R2): the stored size clamped to the limits, else the level size; then
+ * tall enough for the title row plus its tags (2026-10-03). The same at every zoom level.
+ */
+export function cardSize(node: Pick<Node, 'size' | 'tags'>, level: Level): NodeSize {
   const stored = node.size;
-  if (stored === undefined) return nodeSize(level);
-  return {
-    width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
-    height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
-  };
+  const base =
+    stored === undefined
+      ? nodeSize(level)
+      : {
+          width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
+          height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
+        };
+  const tags = tagBlockHeight(node.tags, base.width);
+  if (tags === 0) return base;
+  return { width: base.width, height: Math.max(base.height, NODE_SIZE.height + tags) };
 }
 
 /** A card's box at its display position (017). */
-export function cardBox(node: Pick<Node, 'position' | 'size'>, index: number, level: Level): Rect {
+export function cardBox(
+  node: Pick<Node, 'position' | 'size' | 'tags'>,
+  index: number,
+  level: Level,
+): Rect {
   return { ...displayPosition(node, index), ...cardSize(node, level) };
 }
 

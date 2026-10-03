@@ -42,6 +42,7 @@ import { DetailsButton } from './quick-edit/details-button';
 import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
+import { cardTags, tagBlockHeight } from './card-tags';
 
 /** theme.css's --text-body-sm line height, so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.45;
@@ -141,7 +142,10 @@ export const DeckNode = memo(function DeckNode({
   // stays in the `title` attribute above, so a hover still reveals the rest.
   const defaultSize = nodeSize(data.level);
   const box = { width: width ?? defaultSize.width, height: height ?? defaultSize.height };
-  const lines = textLines(box);
+  // Tags (2026-10-03): up to ten chips under the title; `cardSize` already made room for them.
+  const tags = cardTags(data.tags);
+  const tagBlock = tagBlockHeight(data.tags, box.width);
+  const lines = textLines({ width: box.width, height: box.height - tagBlock });
   const clampStyle = (n: number): CSSProperties => ({
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -224,7 +228,7 @@ export const DeckNode = memo(function DeckNode({
       className={cn(
         // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
         'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
-        isLandscape ? 'flex items-center justify-center' : 'flex items-center gap-[9px] px-2.5',
+        'flex flex-col',
         focusRing,
         // Selected (018, designs 86–116): a 2 px frame 2 px outside the card, which reads on any
         // fill; a shape cue, so it is never color-only (plus aria-selected).
@@ -245,49 +249,82 @@ export const DeckNode = memo(function DeckNode({
         showStroke && 'border-[1.5px] border-(--card-stroke)',
       )}
     >
-      {isLandscape ? (
-        (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
-      ) : (
-        <>
-          {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
-          <span className="flex min-w-0 flex-1 flex-col">
-            {titleInput ?? (
-              <span
-                className={cn('break-words text-body-sm font-medium', textRoleClass ?? 'text-ink')}
-                style={clampStyle(lines.title)}
-              >
-                {data.title}
-              </span>
+      {/* The title row keeps the card's own height; tags wrap below it (2026-10-03). */}
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 items-center',
+          isLandscape ? 'justify-center' : 'gap-[9px] px-2.5',
+        )}
+      >
+        {isLandscape ? (
+          (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
+        ) : (
+          <>
+            {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
+            <span className="flex min-w-0 flex-1 flex-col">
+              {titleInput ?? (
+                <span
+                  className={cn(
+                    'break-words text-body-sm font-medium',
+                    textRoleClass ?? 'text-ink',
+                  )}
+                  style={clampStyle(lines.title)}
+                >
+                  {data.title}
+                </span>
+              )}
+              {isContainer && data.subtitle && lines.subtitle > 0 && (
+                <span
+                  data-text={subtitleDataText}
+                  className={cn('break-words font-mono text-node-sub', subtitleClass)}
+                  style={clampStyle(lines.subtitle)}
+                >
+                  {data.subtitle}
+                </span>
+              )}
+            </span>
+            {data.hasRules && isContainer && (
+              <Table
+                role="img"
+                aria-label="Has rules"
+                strokeWidth={ICON_STROKE_WIDTH}
+                className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
+              />
             )}
-            {isContainer && data.subtitle && lines.subtitle > 0 && (
-              <span
-                data-text={subtitleDataText}
-                className={cn('break-words font-mono text-node-sub', subtitleClass)}
-                style={clampStyle(lines.subtitle)}
-              >
-                {data.subtitle}
-              </span>
-            )}
+          </>
+        )}
+        {data.childCount > 0 && (
+          <span
+            role="img"
+            aria-label={`${String(data.childCount)} components inside, press Enter to open`}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-caption text-ink-secondary"
+          >
+            <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+            <span>{data.childCount}</span>
           </span>
-          {data.hasRules && isContainer && (
-            <Table
-              role="img"
-              aria-label="Has rules"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
-            />
-          )}
-        </>
-      )}
-      {data.childCount > 0 && (
-        <span
-          role="img"
-          aria-label={`${String(data.childCount)} components inside, press Enter to open`}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-caption text-ink-secondary"
+        )}
+      </div>
+      {tags.length > 0 && !isLandscape && (
+        <ul
+          aria-label="Tags"
+          className="flex shrink-0 flex-wrap content-start gap-1 overflow-hidden px-2.5 pb-2"
+          style={{ height: tagBlock }}
         >
-          <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-          <span>{data.childCount}</span>
-        </span>
+          {tags.map((tag) => (
+            <li
+              key={tag}
+              title={tag}
+              className={cn(
+                'h-5 max-w-full truncate rounded-full px-2 text-caption leading-5',
+                look?.namedFill === true || customText !== undefined
+                  ? 'bg-surface/70 text-ink-secondary'
+                  : 'bg-surface-2 text-ink-secondary',
+              )}
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
       )}
 
       {resizable &&

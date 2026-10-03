@@ -26,6 +26,7 @@ import { nodeConnections, styleView } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
 import { SizeFields } from './size-fields';
+import { MAX_CARD_TAGS } from '../card-tags';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
@@ -161,6 +162,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
           <TagsField
             deck={deck}
             value={node.tags}
+            max={MAX_CARD_TAGS}
             onCommit={(tags) => {
               writeOnce({ tags });
             }}

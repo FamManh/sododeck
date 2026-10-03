@@ -1,6 +1,7 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
+import { tagBlockHeight } from './card-tags';
 import {
   boundsOf,
   CARD_SIZE_LIMITS,
@@ -45,6 +46,25 @@ describe('cardSize (017 R2/R3)', () => {
       expect(cardSize({}, level)).toEqual(NODE_SIZE);
       expect(nodeSize(level)).toEqual(NODE_SIZE);
     }
+  });
+
+  it('grows a card for its tags, the same at every zoom level (2026-10-03)', () => {
+    const tags = ['payments', 'critical'];
+    const extra = tagBlockHeight(tags, NODE_SIZE.width);
+    expect(extra).toBeGreaterThan(0);
+    for (const level of ['landscape', 'system', 'container', 'component'] as const) {
+      expect(cardSize({ tags }, level)).toEqual({
+        width: NODE_SIZE.width,
+        height: NODE_SIZE.height + extra,
+      });
+    }
+  });
+
+  it('keeps a stored size that fits the tags, and grows one that does not', () => {
+    const tags = ['payments'];
+    const needed = NODE_SIZE.height + tagBlockHeight(tags, 200);
+    expect(cardSize({ tags, size: { width: 200, height: 200 } }, 'system').height).toBe(200);
+    expect(cardSize({ tags, size: { width: 200, height: 50 } }, 'system').height).toBe(needed);
   });
 
   it('is the stored size, unclamped when within the limits', () => {
