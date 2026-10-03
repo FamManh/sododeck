@@ -2,7 +2,6 @@ import { createEditor, fromJSON } from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type * as Y from 'yjs';
 
 import { useDeckSnapshot } from './use-deck-snapshot';
 
@@ -23,7 +22,8 @@ describe('useDeckSnapshot', () => {
     expect(first.nodes[0]?.title).toBe('A');
 
     act(() => {
-      doc.getArray<Y.Map<unknown>>('nodes').get(0).set('title', 'B');
+      // A change made outside this hook (a second editor on the same document).
+      createEditor(doc).update('nodes', 'a', { title: 'B' });
     });
 
     expect(result.current.nodes[0]?.title).toBe('B');

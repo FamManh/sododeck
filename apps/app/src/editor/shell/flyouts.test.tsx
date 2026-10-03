@@ -1,3 +1,4 @@
+import { toJSON } from '@sododeck/model';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
@@ -127,7 +128,7 @@ describe('Rail and flyouts (018 US2, contract "Rail" and "Flyout")', () => {
       (document.activeElement as HTMLElement | null)?.blur();
     });
     await user.keyboard('3');
-    expect(doc.getArray('nodes').length).toBe(1);
+    expect(toJSON(doc).nodes).toHaveLength(1);
     // The palette closes after adding unless it is pinned.
     expect(ui().flyout).toBeNull();
     // The new card is being named (019 FR-011).
