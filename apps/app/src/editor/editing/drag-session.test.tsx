@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { toJSON } from '@sododeck/model';
 import type { Frame, SododeckFile } from '@sododeck/schema';
 import { useToast } from '@sododeck/ui/components/toast';
@@ -469,5 +472,46 @@ describe('a drag survives re-rendered handlers (016 regression)', () => {
     });
     expect(position(toJSON(doc), 'm1')).toEqual({ x: 0, y: 0 });
     expect(position(toJSON(doc), 'c')).toEqual({ x: 1500, y: 1500 });
+  });
+});
+
+describe('dragging a card with the Deck tilt (029 FR-016)', () => {
+  const drop = (withTilt: boolean) => {
+    const { h, doc } = setup();
+    let host: HTMLElement | null = null;
+    if (withTilt) {
+      // What React Flow renders while a card is dragged: the tilt is a style on `.sd-card`.
+      host = document.createElement('div');
+      host.className = 'react-flow__node dragging';
+      host.innerHTML = '<div class="sd-card"></div>';
+      document.body.append(host);
+    }
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 120, 3040));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    host?.remove();
+    return position(toJSON(doc), 'c');
+  };
+
+  it('drops at the same position with and without the tilt class on the card', () => {
+    expect(drop(true)).toEqual(drop(false));
+  });
+
+  it('keeps every transform on .sd-card, never on .react-flow__node', () => {
+    const css = readFileSync(resolve(__dirname, '../../index.css'), 'utf8').replace(
+      /\/\*[\s\S]*?\*\//g,
+      '',
+    );
+    for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (selector === undefined || body === undefined || !/(^|\s)transform\s*:/.test(body))
+        continue;
+      const targets = selector.split(',').map((part) => part.trim());
+      for (const target of targets) {
+        if (!target.includes('.react-flow__node')) continue;
+        expect(target, `transform on ${target}`).toMatch(/\.sd-card/);
+      }
+    }
   });
 });

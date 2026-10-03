@@ -43,15 +43,74 @@
     var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.sd-card {
+  transition:
+    transform var(--sd-dur-hover) var(--sd-ease),
+    box-shadow var(--sd-dur-hover) var(--sd-ease);
+}
+
+/* Card states (029 US2, frame 122). Every transform lives on `.sd-card`, never on
+   `.react-flow__node`: React Flow positions the node with its own transform and reads it back for
+   drops, so a tilt or lift there would move the card the user drops. Each state also has a cue
+   that is not colour (lift, lip depth, outline shape, badge, tag text). */
 .sd-card:hover {
   --tw-shadow: 0 var(--sd-deck-lip-hover) 0 0
     var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+  transform: translateY(-2px);
 }
 
-/* The current flow step keeps its orange border and takes an orange lip (color is not the only
-   cue: aria-current and the ring stay). */
+/* Selected: a 2 px solid frame 2 px outside. The problem ring is a separate element, so the two
+   draw together. */
+.sd-card.selected {
+  outline: 2px solid var(--color-deck-orange);
+  outline-offset: 2px;
+}
+
+/* The current flow step keeps its orange border and takes an orange lip and a lift (the playback
+   look itself is 035). */
+.sd-card.current-step,
 .sd-card[aria-current='step'] {
   --card-lip: var(--color-deck-orange);
+  --tw-shadow: 0 5px 0 0 var(--card-lip);
+  border-color: var(--color-deck-orange);
+  transform: translateY(-2px);
+}
+
+/* A connection target: orange border; refused: a dashed Clay border (the note says why). */
+.sd-card.connect-target {
+  border-color: var(--color-deck-orange);
+}
+
+.sd-card.connect-refused {
+  border-color: var(--color-clay-ink);
+  border-style: dashed;
+}
+
+/* The nearest side target of a card under a dragged connector end: filled Deck Orange. */
+.react-flow__handle.sd-handle.is-active {
+  background: var(--color-deck-orange);
+  border-color: var(--color-deck-orange);
+}
+
+/* Being dragged: tilted, a deeper lip and the Float shadow. */
+.react-flow__node.dragging .sd-card {
+  transform: rotate(-2.5deg);
+  --tw-shadow:
+    0 var(--sd-deck-lip-drag) 0 0 var(--card-lip, var(--card-stroke, var(--color-border-strong))),
+    var(--shadow-float);
+}
+
+/* The highlighted neighbour in focus mode: Secondary border and lip, still at full opacity. */
+.react-flow__node.in-focus .sd-card {
+  border-color: var(--color-ink-secondary);
+  --card-lip: var(--color-ink-secondary);
+  --tw-shadow: 0 var(--sd-deck-lip) 0 0 var(--card-lip);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-card {
+    transition: none;
+  }
 }
 
 /* Connection handles (DESIGN.md "Card system (Deck)", frame 120): 12 px round with a Surface
@@ -171,7 +230,7 @@
 /* Saved views (011 FR-013, design 20): components the view dims stay interactive and read "dimmed
    in this view"; hovering or focusing one shows it at full strength. */
 .react-flow__node.view-dimmed {
-  opacity: var(--sd-opacity-view-dim);
+  opacity: var(--sd-deck-dim);
   transition: opacity var(--sd-dur-dim);
 }
 
@@ -193,7 +252,7 @@
 [data-focus-mode] .react-flow__edge:not(.in-focus),
 [data-focus-mode] [data-testid='edge-label']:not([data-in-focus]),
 [data-focus-mode] .merged-edge-label:not([data-in-focus]) {
-  opacity: 0.2;
+  opacity: var(--sd-deck-dim);
 }
 
 [data-focus-mode] .react-flow__edge:not(.in-focus),
