@@ -1,6 +1,6 @@
 # Sổ tay nền tảng Diagram App
 
-- **Cập nhật:** 2026-09-30
+- **Cập nhật:** 2026-10-03
 - **Dành cho:** founder (người mới với mảng diagram) và các agent làm việc trong repo.
 - **Liên quan:** `docs/spec.md`, `docs/decisions/`, `docs/backlog.md`, `docs/performance.md`.
 
@@ -244,6 +244,64 @@ có) chỉ để đồng bộ. Ưu điểm: nhanh, chạy offline, riêng tư. �
   thì gộp tệ.
 - Cộng tác realtime cần server hoặc kênh P2P, và đó là "network với nội dung". Khi làm cần một ADR
   mới, vì AGENTS.md rule 5 hiện cấm.
+
+### Từ lưu trong trình duyệt lên server: vì sao gần như không phải viết lại phần lưu trữ
+
+**Sododeck lưu deck thế nào hôm nay (ADR 0007).** Deck không được lưu thành một file JSON to rồi
+ghi đè mỗi lần sửa. Mỗi thao tác (kéo card, đổi tiêu đề) sinh ra một **update**: một gói nhị phân
+nhỏ mô tả đúng thay đổi đó. Các update được **nối thêm** vào bảng `updates` trong IndexedDB, giống
+một cuốn nhật ký chỉ viết thêm, không sửa trang cũ. Mở deck = đọc lại toàn bộ nhật ký và áp lên
+một tài liệu Yjs rỗng. Khi nhật ký dài quá 200 dòng, các update được **gộp** (compaction) thành
+một dòng duy nhất.
+
+```text
+Hôm nay (một máy)                         Sau này (có server)
+
+ Tab A ──update──► IndexedDB              Máy A ──update──► Server ──update──► Máy B
+   │                                        │                 │
+   └──update──► BroadcastChannel ──► Tab B  └── IndexedDB      └── Kho lưu (DB/S3)
+```
+
+**Vì sao điều này hợp với server.** Mọi server đồng bộ Yjs đều làm đúng ba việc với cùng loại
+update đó:
+
+1. **Nhận update** từ một client và **lưu** nó (nối vào log hoặc gộp vào bản đã lưu).
+2. **Phát lại** update cho các client khác đang mở cùng deck.
+3. Khi một client kết nối lại, hai bên **trao đổi state vector** (bảng "tôi đã có đến đâu") rồi chỉ
+   gửi phần còn thiếu. Sododeck đã làm đúng bước này giữa các tab (`hello` / `diff` trong
+   `deck-channel.ts`).
+
+Nói cách khác, ở Sododeck **tab kia** và **server** nhận cùng một loại dữ liệu. Thay
+`BroadcastChannel` bằng một kết nối WebSocket tới server là đủ để đồng bộ giữa các máy. IndexedDB
+vẫn giữ lại làm bộ nhớ đệm offline: mất mạng vẫn sửa được, có mạng lại thì tự đồng bộ phần còn
+thiếu.
+
+**Các lựa chọn server** (kiến thức chung, cần kiểm tra tài liệu chính thức trước khi chọn):
+
+| Lựa chọn                  | Là gì                                                                             |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| **y-websocket**           | Server mẫu tối giản của chính Yjs. Tốt để thử, thiếu xác thực và lưu trữ bền vững |
+| **Hocuspocus**            | Server Node.js dựng trên Yjs, có sẵn hook xác thực, lưu vào database, webhook     |
+| **y-redis**               | Kiến trúc dùng Redis để chạy nhiều server song song, cho tải lớn                  |
+| **PartyKit / y-partykit** | Chạy mỗi deck như một "phòng" trên hạ tầng edge, ít phải tự vận hành              |
+| **Dịch vụ có sẵn**        | Ví dụ Liveblocks, Y-Sweet: trả phí, không phải tự vận hành server                 |
+| **Tự viết**               | Một WebSocket server nhỏ: nhận update, lưu vào Postgres/S3, phát lại cho cả phòng |
+
+**Những gì vẫn phải tự làm khi có server**
+
+- **Id deck toàn cục.** Deck đã dùng UUID làm id trong thư viện, nên dùng luôn làm tên phòng
+  trên server.
+- **Đăng nhập và quyền.** Ai được mở, ai được sửa. Quyền chỉ đặt được cho **cả deck**, vì mỗi
+  deck là một tài liệu Yjs.
+- **Gộp log phía server** để kho lưu không phình vô hạn, giống compaction ở trình duyệt.
+- **Kiểm tra hợp lệ.** Server không đọc được ý nghĩa của update nhị phân, nên mỗi client phải tự
+  kiểm tra và sửa khi nhận update của người khác (ví dụ edge trỏ tới node đã bị xoá).
+- **Một ADR mới** cho phép gửi nội dung ra mạng (AGENTS.md quy tắc 5).
+
+**Ba điểm cần sửa trước khi cộng tác thật** (backlog 036): văn bản dài phải là `Y.Text` thay vì
+chuỗi thường (để hai người cùng gõ không mất chữ); danh sách lưu theo id thay vì theo vị trí trong
+mảng (để sắp xếp lại không làm mất chỉnh sửa của người khác); và cơ chế tự kiểm tra khi nhận
+update từ bên ngoài. Định dạng file `.sododeck.json` không đổi, chỉ cách lưu Yjs bên trong đổi.
 
 ---
 
