@@ -616,3 +616,57 @@ describe('DeckEdge playback states (035)', () => {
     });
   });
 });
+
+describe('DeckEdge own style (022 US1)', () => {
+  const edgePath = (container: HTMLElement) => container.querySelector('.react-flow__edge-path');
+
+  it("draws no style attributes beyond today's for a connector without style", () => {
+    const el = edgePath(renderEdge({}).container);
+    expect(el).toHaveStyle({ stroke: 'var(--color-deck-edge)', strokeWidth: '2' });
+    expect((el as HTMLElement).style.strokeDasharray).toBe('');
+    expect((el as HTMLElement).style.strokeLinecap).toBe('');
+  });
+
+  it('draws the chosen dash, weight and colour', () => {
+    const el = edgePath(
+      renderEdge({ style: { dash: 'dashed', width: 3, color: 'blue' } }).container,
+    ) as HTMLElement;
+    expect(el).toHaveStyle({ stroke: 'var(--color-card-blue-stroke)', strokeWidth: '3' });
+    expect(el.style.strokeDasharray).toBe('12 10.5');
+  });
+
+  it('draws dots with round caps and a custom hex that is visible enough', () => {
+    const el = edgePath(
+      renderEdge({ style: { dash: 'dotted', color: '#7a3cff' } }).container,
+    ) as HTMLElement;
+    expect(el.style.strokeDasharray).toBe('0 6');
+    expect(el.style.strokeLinecap).toBe('round');
+    expect(el.style.stroke).toBe('rgb(122, 60, 255)');
+  });
+
+  it('keeps selection orange and 2.5 px over the own colour and weight', () => {
+    const el = edgePath(
+      renderEdge({ style: { color: 'blue', width: 4 } }, true).container,
+    ) as HTMLElement;
+    expect(el).toHaveStyle({ stroke: 'var(--color-deck-orange)', strokeWidth: '2.5' });
+  });
+
+  it('lets a flow stroke replace the own colour and dash', () => {
+    const el = edgePath(
+      renderEdge({
+        style: { color: 'blue', dash: 'dotted' },
+        flow: { badges: [], style: 'error', errorIcon: true },
+      }).container,
+    ) as HTMLElement;
+    expect(el.style.stroke).not.toBe('var(--color-card-blue-stroke)');
+    expect(el.style.strokeDasharray).not.toBe('0 6');
+  });
+
+  it('grows the arrow with the weight', () => {
+    const small = renderEdge({}).container.querySelector('[data-testid="edge-arrow"]');
+    const big = renderEdge({ style: { width: 4 } }).container.querySelector(
+      '[data-testid="edge-arrow"]',
+    );
+    expect(small?.getAttribute('d')).not.toBe(big?.getAttribute('d'));
+  });
+});

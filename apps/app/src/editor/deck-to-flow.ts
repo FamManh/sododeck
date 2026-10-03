@@ -111,6 +111,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   shape: EdgeShape;
   /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
   route?: DeckEdgeObject['route'];
+  /** Dash, weight, colour and animation (022); absent means the default look. */
+  style?: DeckEdgeObject['style'];
   /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
   level: Level;
   /**
@@ -948,6 +950,7 @@ export function toFlowEdges(
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),
         ...(edge.route === undefined ? {} : { route: edge.route }),
+        ...(edge.style === undefined ? {} : { style: edge.style }),
       },
     };
     edgeCache.set(edge, flowEdge);

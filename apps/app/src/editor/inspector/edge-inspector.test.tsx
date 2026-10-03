@@ -116,7 +116,7 @@ describe('EdgeInspector (story 1, FR-009)', () => {
 });
 
 describe('EdgeInspector Line section (029 T043)', () => {
-  const lineGroup = () => screen.getByRole('radiogroup', { name: 'Line type' });
+  const lineGroup = () => screen.getByRole('radiogroup', { name: 'Type' });
 
   it('shows the effective line type and sets it in one undo step', async () => {
     const { user, doc, editor, ui } = setup();

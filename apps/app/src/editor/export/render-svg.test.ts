@@ -428,3 +428,45 @@ describe('renderSvg: groups (029)', () => {
     );
   });
 });
+
+describe('renderSvg: connector style (022)', () => {
+  const styled = (style: NonNullable<SododeckFile['edges'][number]['style']>): SododeckFile => ({
+    ...deck,
+    edges: deck.edges.map((e) => ({ ...e, style })),
+  });
+  const edgePath = (file: SododeckFile) =>
+    parse(svgOf(file)).querySelector('[data-export="edge"] path');
+
+  it('draws a style-less deck exactly as before', () => {
+    const plain = edgePath(deck);
+    expect(plain?.getAttribute('stroke')).toBe(LIGHT_PALETTE.deckEdge);
+    expect(plain?.getAttribute('stroke-width')).toBe('2');
+    expect(plain?.hasAttribute('stroke-dasharray')).toBe(false);
+    expect(plain?.hasAttribute('stroke-linecap')).toBe(false);
+  });
+
+  it('draws dash, weight and the light stroke of a named colour', () => {
+    const path = edgePath(styled({ dash: 'dashed', width: 3, color: 'blue' }));
+    expect(path?.getAttribute('stroke')).toBe(LIGHT_PALETTE.cardColours.blue.stroke);
+    expect(path?.getAttribute('stroke-width')).toBe('3');
+    expect(path?.getAttribute('stroke-dasharray')).toBe('12 10.5');
+  });
+
+  it('draws dots with round caps and a custom hex', () => {
+    const path = edgePath(styled({ dash: 'dotted', color: '#7a3cff' }));
+    expect(path?.getAttribute('stroke-dasharray')).toBe('0 6');
+    expect(path?.getAttribute('stroke-linecap')).toBe('round');
+    expect(path?.getAttribute('stroke')).toBe('#7a3cff');
+  });
+
+  it('lets a heavier line grow the arrow', () => {
+    const arrow = (file: SododeckFile) =>
+      parse(svgOf(file)).querySelector('[data-mark="arrow"]')?.getAttribute('transform');
+    expect(arrow(styled({ width: 4 }))).toMatch(/scale\(1\.5\)/);
+    expect(arrow(deck)).not.toMatch(/scale/);
+  });
+
+  it('never animates in an export', () => {
+    expect(svgOf(styled({ animated: true, dash: 'dashed' }))).not.toMatch(/animate|@keyframes/);
+  });
+});

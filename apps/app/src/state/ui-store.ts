@@ -192,7 +192,16 @@ export interface ContextMenuState {
 
 /** The selection toolbar's popovers (019 R6). */
 export type ToolbarFieldId =
-  'kind' | 'owner' | 'tags' | 'tech' | 'links' | 'rules' | 'protocol' | 'direction' | 'style';
+  | 'kind'
+  | 'owner'
+  | 'tags'
+  | 'tech'
+  | 'links'
+  | 'rules'
+  | 'protocol'
+  | 'direction'
+  | 'style'
+  | 'lineStyle';
 
 /** A live, unsaved colour choice shown on canvas before it is applied (020 R9). */
 export interface StylePreview {

@@ -15,11 +15,11 @@ import { connectionCheck, REFUSAL_TEXT } from '../connection-rules';
 import { FieldEdit } from '../field-edit';
 import { DIRECTIONS, PROTOCOLS, type Direction } from '../fields/edge-choices';
 import { FieldLabel } from '../fields/field-label';
-import { LineTypeField } from '../fields/line-type-field';
 import { LinksField } from '../fields/links-field';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
 import { openFlow } from '../flows/flow-mode';
+import { LineStyleControls } from '../line-style/line-style-controls';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
 import { TagsField } from '../fields/tags-field';
@@ -206,7 +206,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
           />
         </PanelSection>
         <PanelSection label="Line">
-          <LineTypeField edges={[edge]} />
+          <LineStyleControls edges={[edge]} />
         </PanelSection>
         {edgeShape(edge) === 'elbow' && <RouteFields deck={deck} edge={edge} />}
         <PanelSection label="Used in flows">

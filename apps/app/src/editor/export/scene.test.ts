@@ -248,6 +248,28 @@ describe('buildScene: whole deck', () => {
     expect(edge?.labelPoint.y).toBe((plainLabelY ?? 0) + 40);
   });
 
+  it("carries a connector's own style, resolved for the light export (022)", () => {
+    const styled = {
+      ...grouped,
+      edges: grouped.edges.map((edge) =>
+        edge.id === 'a-b'
+          ? {
+              ...edge,
+              style: { dash: 'dashed' as const, width: 3 as const, color: 'blue' as const },
+            }
+          : edge,
+      ),
+    };
+    const find = (file: typeof grouped, id: string) =>
+      scene(file).edges.find((edge) => edge.id === id);
+    expect(find(styled, 'a-b')?.style).toEqual({
+      width: 3,
+      colour: '#4087de',
+      dash: '12 10.5',
+    });
+    expect(find(grouped, 'a-b')).not.toHaveProperty('style');
+  });
+
   it('bounds every shape plus the margin', () => {
     const { bounds, cards, groups, stickies } = scene(grouped);
     for (const rect of [...cards, ...groups, ...stickies].map((item) => item.rect)) {

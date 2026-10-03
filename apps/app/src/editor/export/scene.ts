@@ -1,4 +1,11 @@
-import { analyzeFlow, edgeShape, stickyCanvasPosition, stickyLabel, tagKey } from '@sododeck/model';
+import {
+  analyzeFlow,
+  edgeLineStyle,
+  edgeShape,
+  stickyCanvasPosition,
+  stickyLabel,
+  tagKey,
+} from '@sododeck/model';
 import type { Direction, SododeckFile } from '@sododeck/schema';
 import { toComponentKind, type ComponentKind } from '@sododeck/ui/lib/icons';
 
@@ -13,11 +20,12 @@ import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-
 import { kindLabel } from '../kind-label';
 import { effectiveLevel, type Level } from '../levels';
 import type { PathEnds, PathShape } from '../routing/route-path';
+import { lineCap, lineDash } from '../style/line-colour';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import { edgePath } from './edge-geometry';
-import { exportLook, exportTagColours, type ExportLook } from './export-palette';
+import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
 import type { ImageScope } from './types';
 
@@ -88,6 +96,14 @@ export interface SceneBadge {
   label: string;
   errorPath: boolean;
 }
+/** Dash, weight and colour of a styled connector, already resolved for the light export. */
+export interface SceneEdgeStyle {
+  width: number;
+  /** A literal colour (named colours use their light stroke), or null for the default grey. */
+  colour: string | null;
+  dash?: string;
+  cap?: 'round';
+}
 export interface SceneEdge {
   id: string;
   path: string;
@@ -103,6 +119,8 @@ export interface SceneEdge {
   extent: Rect;
   labelPoint: { x: number; y: number };
   stroke: 'default' | 'flow' | 'flow-error';
+  /** The connector's own look (022); absent for the default one. Flow strokes ignore it. */
+  style?: SceneEdgeStyle;
   label: string | null;
   badges: SceneBadge[];
 }
@@ -406,6 +424,22 @@ function sceneGroups(
   });
 }
 
+/** The own look of a connector for the light export, or undefined when it has none. */
+function sceneStyle(style: SododeckFile['edges'][number]['style']): SceneEdgeStyle | undefined {
+  if (style === undefined) return undefined;
+  const own = edgeLineStyle({ style });
+  const colour = own.color === null ? null : exportLineColour(own.color);
+  if (own.dash === 'solid' && own.width === 2 && colour === null) return undefined;
+  const dash = lineDash(own.dash, own.width);
+  const cap = lineCap(own.dash);
+  return {
+    width: own.width,
+    colour,
+    ...(dash === undefined ? {} : { dash }),
+    ...(cap === undefined ? {} : { cap }),
+  };
+}
+
 function sceneEdges(
   deck: SododeckFile,
   graph: VisibleGraph,
@@ -423,6 +457,7 @@ function sceneEdges(
     shape: PathShape,
     memberIds: readonly string[],
     route?: SododeckFile['edges'][number]['route'],
+    style?: SododeckFile['edges'][number]['style'],
   ) => {
     const a = rects.get(from);
     const b = rects.get(to);
@@ -441,6 +476,7 @@ function sceneEdges(
       extent: geometry.extent,
       labelPoint: { x: geometry.labelX, y: geometry.labelY },
       stroke: strokeOf(marks),
+      ...(sceneStyle(style) === undefined ? {} : { style: sceneStyle(style) }),
       label,
       badges: marks.flatMap((mark) =>
         mark.badges.map((badge) => ({ label: badge.label, errorPath: badge.errorPath })),
@@ -451,7 +487,17 @@ function sceneEdges(
     const edge = byId.get(id);
     if (edge === undefined) continue;
     const direction = edge.direction ?? 'forward';
-    add(id, edge.from, edge.to, edge.label || null, direction, edgeShape(edge), [id], edge.route);
+    add(
+      id,
+      edge.from,
+      edge.to,
+      edge.label || null,
+      direction,
+      edgeShape(edge),
+      [id],
+      edge.route,
+      edge.style,
+    );
   }
   // Edges that leave a drilled scope end at the outside component's port pill, as on the canvas.
   for (const port of graph.ports) {

@@ -1,12 +1,14 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
+import { edgeLineStyle } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { useThemeStore } from '../theme/theme-store';
 import type { DeckFlowEdge } from './deck-to-flow';
 import { EdgeEnds } from './edge-ends';
 import { FlowToken } from './flow-token';
@@ -14,6 +16,7 @@ import { StepBadge } from './flow-badges';
 import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
 import { routedPath, type Box } from './routing/route-path';
 import { SegmentHandle } from './routing/segment-handle';
+import { lineCap, lineColour, lineDash } from './style/line-colour';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions, so a route's offset can be applied. */
 const SIDE_OF_POSITION: Record<Position, Side> = {
@@ -25,6 +28,9 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
 
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
+
+/** Knob and arrow grow a quarter per px above the default weight (frame 133). */
+const markScale = (width: number): number => (width > 2 ? 1 + (width - 2) * 0.25 : 1);
 
 /**
  * Connection (DESIGN.md "Card system (Deck)": 2 px line, knob at the start and arrow at the end).
@@ -47,6 +53,7 @@ export const DeckEdge = memo(function DeckEdge({
   interactionWidth,
 }: EdgeProps<DeckFlowEdge>) {
   const reducedMotion = useReducedMotion();
+  const theme = useThemeStore((s) => s.theme);
   // The segment handle (017 R7, FR-012): pointer only, the single selected connector, never in
   // flow mode or recording, and only when it has a movable middle segment (routable, below).
   const showHandle = useUiStore(
@@ -89,9 +96,12 @@ export const DeckEdge = memo(function DeckEdge({
     arrows,
   );
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
+  // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
+  // colour, dash and weight > the defaults. A colour never carries a state alone.
+  const own = edgeLineStyle({ style: data?.style });
   const stroke = selected
     ? 'var(--color-deck-orange)'
-    : (flowStroke?.stroke ?? 'var(--color-deck-edge)');
+    : (flowStroke?.stroke ?? lineColour(own.color, theme));
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The automatic path (no route), computed only while dragging, to draw the ghost.
   const ghostPath = dragging ? routedPath(shape, fromBox, toBox, sides, 0, arrows).path : null;
@@ -102,7 +112,9 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
-  const width = selected ? 2.5 : (flowStroke?.width ?? 2);
+  const width = selected ? 2.5 : (flowStroke?.width ?? own.width);
+  const ownDash = flowStroke === undefined ? lineDash(own.dash, own.width) : undefined;
+  const ownCap = flowStroke === undefined ? lineCap(own.dash) : undefined;
   // The step label (FR-010): a 20px pill. In flow mode (a `state` is set) it is neutral, solid
   // orange when current and Clay Soft on an error path; while recording it keeps the path look.
   const isPill = hasBadges || flowIcon !== null;
@@ -176,9 +188,17 @@ export const DeckEdge = memo(function DeckEdge({
           strokeWidth: width,
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
           ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
+          ...(ownDash === undefined ? {} : { strokeDasharray: ownDash }),
+          ...(ownCap === undefined ? {} : { strokeLinecap: ownCap }),
         }}
       />
-      <EdgeEnds {...ends} direction={direction} color={stroke} errorEnd={errorEnd} />
+      <EdgeEnds
+        {...ends}
+        direction={direction}
+        color={stroke}
+        errorEnd={errorEnd}
+        scale={markScale(own.width)}
+      />
       {current !== null && (
         <FlowToken
           path={path}
