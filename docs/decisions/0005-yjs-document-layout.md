@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-27
 - **Feature:** `specs/002-yjs-model` (spec incl. clarifications, research R1–R10, data model)
-- **Amended by:** ADR 0012 (views gain `Y.Array` fields `excludeGroups`, `excludeKinds`, `excludeTags`, `dimKinds`, `pinned` and `collapsed`; `collapsed` is written with an untracked origin)
+- **Amended by:** ADR 0021 (layout 2: lists stored by id with order keys, long text as `Y.Text`, rule cells keyed by column, repair on receive; replaces §1, §2 and the Consequences below); ADR 0012 (views gain `Y.Array` fields `excludeGroups`, `excludeKinds`, `excludeTags`, `dimKinds`, `pinned` and `collapsed`; `collapsed` is written with an untracked origin)
 
 ## Context
 
@@ -16,7 +16,7 @@ later feature and the files users commit to git.
 
 ## Decision
 
-1. **Layout.** One root type per part of the file:
+1. **Layout.** _Replaced by ADR 0021 §1–§4 (layout 2). The original text follows._ One root type per part of the file:
 
    | Root       | Yjs type                   | Contents                                                                    |
    | ---------- | -------------------------- | --------------------------------------------------------------------------- |
@@ -34,7 +34,7 @@ later feature and the files users commit to git.
    Optional fields are absent when unset, never stored as `null`. The layout is documented at the
    top of `packages/model/src/deck.ts`.
 
-2. **Text is a plain string; the last write wins per field.** Titles, descriptions and cells are
+2. _Replaced by ADR 0021 §5: long markdown text is `Y.Text`; short text stays last write wins._ **Text is a plain string; the last write wins per field.** Titles, descriptions and cells are
    not `Y.Text`. Two tabs editing the same field converge on the later write; edits to other
    fields of the object are kept. `Y.Text` would merge letter by letter, but collaboration is
    post-MVP and it complicates every read and write. Upgrade path: switch the long markdown
@@ -75,6 +75,10 @@ later feature and the files users commit to git.
    references, and only then writes. A refused edit leaves the deck untouched.
 
 ## Consequences
+
+_ADR 0021 removes the first, second and fourth limits below (reorder, duplicate on move, linear
+lookup) and replaces the migration rule: layout changes are recorded in an ADR; decks stored
+before 036 are refused, not migrated (§g-81, §g-82)._
 
 - The layout is now a storage contract. Any change (e.g. `Y.Text`, collections keyed by id) needs
   an ADR and a migration of persisted decks.

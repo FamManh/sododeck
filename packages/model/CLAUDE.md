@@ -47,22 +47,30 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - `fitGroupFrames` gains `sizeOf?: (node) => Size`, used instead of `cardSize` for a member with a stored size, so group frames fit resized cards.
   - `problems.ts` gains the `'card-size-out-of-range'` kind: a stored `node.size` outside `CARD_SIZE_RANGE` (120×44 to 800×600, mirroring the app's clamp limits, checked at the model layer so a foreign or corrupted file is still flagged).
 
+- **Added by 036** (collaboration-ready document, ADR 0021; contract: `specs/036-collab-ready-document/contracts/model-contract.md`):
+  - **Layout 2:** every list (the seven collections, a flow's `steps` and `branches`, a rule's `inputs`, `outputs` and `rows`, and `rules` itself) is a `Y.Map<id, Y.Map>`; the id is the key; items carry a fractional-index `$order` (`order-key.ts`) and lists read sorted by (`$order`, id). A move is one key change; a delete takes concurrent edits inside the item with it. Rule rows store `cells: Y.Map<columnId, string>`. A flow's steps keep one flat order (R4).
+  - **Long text** (`text-fields.ts`): every markdown field plus step `payload` is a `Y.Text`, always present, written by `writeText` (minimal splice, `text.ts`). `$blank:<field>` keeps an explicit `""` (and `$blank:branches` a file's `branches: []`). Short text stays last write wins.
+  - **Reader / writer rule:** `read.ts` (`readObject`, `readRule`, `readRow`, `readMeta`, `readCollection`, `readRules`) and `write.ts` (`createObject`, `createRule`, `createRow`, `writeField`, `writeFields`) are the only code that knows the layout. Never `fromY` / `toY` a deck object. `$…` keys are internal: never output, never in `DeckChange.keys`. `Y.Text`, order keys and markers never leave the package.
+  - `layout.ts` list helpers: `collectionMap`, `childList`, `orderedEntries`, `orderedIds`, `insertAt` (re-keys a tied run), `appendAll`, `planMove`; `ops/context.ts`'s `requireEntry` replaces index lookups.
+  - `isLegacyLayout(doc)`: true for a document stored in layout 1 (callers that build a document from stored bytes check it; `toJSON`, snapshots and editors must not be used on such a document).
+  - `EditorOptions.repair` (default `true`): after a change that is not the editor's own and that removed a component or group or touched a view, `repairViewRefs` (`repair.ts`) removes view entries naming nothing, with the untracked origin (never an undo step). Throwaway editors (`previewRemoval`, the library worker) pass `false`. An empty `style` reads as no style.
+
 ## Rules
 
 - Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case (`test/round-trip.test.ts`).
 - Ids are stable. Never derive ids from titles; never rewrite ids on rename.
-- The Yjs layout is documented at the top of `src/deck.ts` and in ADR 0005. It is persisted from 005 on: changing it needs an ADR and a migration.
+- The Yjs layout is documented at the top of `src/deck.ts` and in ADR 0021 (layout 2, amending ADR 0005). Changing it needs an ADR; decks stored before 036 are refused, not migrated (founder, §g-81 / §g-82).
 - Validate before writing (Yjs cannot roll back). Validity comes from the generated Zod in `@sododeck/schema`; never redefine it here.
 - Delete policy (ADR 0005): edges and owned steps are removed; steps and stickies are kept and reported broken; groups re-parent their contents. A branch owns its steps (ADR 0008).
 - ADR 0010 amends node deletes only: stickies pinned to a removed node become free at the same screen point, reported in `RemovalResult.freed`, and restored by one undo.
-- Flow steps stay in normal order (main path first, then each branch's steps in `branches` order); branch ops keep it.
+- Flow steps stay in normal order (main path first, then each branch's steps in `branches` order); branch ops keep it. Concurrent edits from two clients may interleave paths in the flat order; `analyzeFlow` partitions by path, so that is harmless (036 R4).
 - Rule links (008): attach, detach and sample inputs go through `attachRule` / `detachRule` / `setRuleInputs`, never raw `rules` / `ruleInputs` patches. `step.ruleInputs` keys stay a subset of the step's rules and their input columns; detaching from a step drops its sample inputs in the same transaction.
 - View internals (`positions`, `pinned`, `collapsed`, filters, `subtitleField`, `title` from the switcher) are written only through the view ops, never through `update('views', …)` from the app (011).
 - Undo covers only the editor's own tracked origin; the untracked view-state origin (011) is never undone. Field edits pass an object key to `ctx.transact` so a typing burst on one object is one step.
 
 ## Layout of `src/`
 
-- `deck.ts` load/save + layout doc · `layout.ts` root types and lookups · `convert.ts` JSON ↔ Y · `geometry.ts` sticky and node canvas geometry (009)
+- `deck.ts` load/save + layout doc · `layout.ts` root types, list helpers, `isLegacyLayout` · `read.ts` / `write.ts` the only reader and writer of deck objects (036) · `order-key.ts` fractional-index keys · `text.ts` / `text-fields.ts` long text · `repair.ts` view repair on receive · `convert.ts` plain JSON ↔ Y for nested values · `geometry.ts` sticky and node canvas geometry (009)
 - `key-order.ts` canonical order from the schema · `load-checks.ts` duplicate ids · `ids.ts` id generator
 - `validate.ts` per-object validation · `errors.ts` · `editor.ts` · `observe.ts` · `integrity.ts`
 - `snapshot.ts` incremental read model (003) · `preview.ts` removal preview (003) · `serialize-entry.ts` text of single objects (004) · `flow-paths.ts` flow path derivation (006) · `problems.ts` deck-wide problems (015)
