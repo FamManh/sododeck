@@ -34,16 +34,29 @@ interface ResolvedChannel {
   named: boolean;
 }
 
-function resolveChannel(channel: 'fill' | 'stroke', value: ColorRef): ResolvedChannel {
+type Channel = 'fill' | 'stroke';
+
+function resolveChannel(channel: Channel, value: ColorRef): ResolvedChannel {
   return isNamedColor(value)
     ? { token: `var(--color-card-${value}-${channel})`, named: true }
     : { token: value, named: false };
 }
 
+/** The pill and tile colours of a card with no colour (029): Surface 2, Secondary, neutral dot. */
+export const NEUTRAL_CHIP = {
+  chip: 'var(--color-surface-2)',
+  ink: 'var(--color-ink-secondary)',
+  dot: 'var(--color-deck-dot-neutral)',
+} as const;
+
 /** Resolved look of one card or group; derived in `deck-to-flow.ts`, cached per object. */
 export interface CardLook {
   fill?: string;
   stroke?: string;
+  /** Deck chip, tile and dot colours (029): the card colour's tokens, or derived from a hex. */
+  chip: string;
+  ink: string;
+  dot: string;
   /** 'default' = theme ink; 'dark' / 'light' only on a custom (non-named) fill. */
   text: 'default' | 'dark' | 'light';
   /** Whether the fill is a named colour: the subtitle switches muted → secondary. */
@@ -78,9 +91,27 @@ export function resolveLook(
   const text: CardLook['text'] =
     fill !== undefined && !fill.named ? readableText(fillValue as string).text : 'default';
 
+  // The chips follow the fill, or the stroke when only that is set.
+  const chipValue = fillValue ?? strokeValue;
+  const chips =
+    chipValue === undefined
+      ? NEUTRAL_CHIP
+      : isNamedColor(chipValue)
+        ? {
+            chip: `var(--color-card-${chipValue}-chip)`,
+            ink: `var(--color-card-${chipValue}-ink)`,
+            dot: `var(--color-card-${chipValue}-dot)`,
+          }
+        : {
+            chip: chipValue,
+            ink: `var(--color-card-text-${readableText(chipValue).text})`,
+            dot: chipValue,
+          };
+
   return {
     fill: fill?.token,
     stroke: stroke?.token,
+    ...chips,
     text,
     namedFill: fill?.named ?? false,
     fillRef: fillValue,
