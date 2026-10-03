@@ -188,11 +188,11 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 **Independent Test**: export the demo deck to SVG and PNG and compare with the light canvas at 100 %.
 
-- [ ] T055 [P] [US6] Extend `apps/app/src/editor/export/scene.test.ts`: `SceneCard` carries `typeName`, `description`, `tags` and the `cardLayout` box (same size as the canvas); `SceneEdge` carries `shape` (from `edgeShape`) and `direction`; `SceneCollapsed` carries member kinds.
-- [ ] T056 [US6] Implement the scene changes in `apps/app/src/editor/export/scene.ts`. Make T055 pass.
-- [ ] T057 [P] [US6] Extend `apps/app/src/editor/export/render-svg.test.ts` and `edge-geometry.test.ts`: cards draw radius 14, a lip rect 3px below in the stroke colour, header tile + type name, title at weight 600, description, and one pill per tag (no empty tag area); edges use `routedPath` for each shape with arrow / knob per direction; collapsed groups draw three sheets; nothing hover / drag / selection related is drawn.
-- [ ] T058 [US6] Implement in `apps/app/src/editor/export/render-svg.ts` (`card`, `edge`, collapsed and frame drawing) and `apps/app/src/editor/export/edge-geometry.ts` (use `routedPath` and the shared ends). Add the new tokens to `apps/app/src/editor/export/export-palette.ts` `LIGHT_PALETTE` (kept in sync by `export-palette.test.ts`), the `Layers` path to `icon-paths.ts` (drift test), and `'600 14px "Geist Variable"'` to `export-fonts.ts`. Make T057 pass.
-- [ ] T059 [US6] Run `pnpm --filter @sododeck/app test scene.perf` and confirm scene + SVG stay under ADR 0016's 50 ms at 500 / 1,000; record the number in `specs/029-card-look-deck/bench-after.md`.
+- [x] T055 [P] [US6] Extend `apps/app/src/editor/export/scene.test.ts`: `SceneCard` carries `typeName`, `description`, `tags` and the `cardLayout` box (same size as the canvas); `SceneEdge` carries `shape` (from `edgeShape`) and `direction`; `SceneCollapsed` carries member kinds.
+- [x] T056 [US6] Implement the scene changes in `apps/app/src/editor/export/scene.ts`. Make T055 pass.
+- [x] T057 [P] [US6] Extend `apps/app/src/editor/export/render-svg.test.ts` and `edge-geometry.test.ts`: cards draw radius 14, a lip rect 3px below in the stroke colour, header tile + type name, title at weight 600, description, and one pill per tag (no empty tag area); edges use `routedPath` for each shape with arrow / knob per direction; collapsed groups draw three sheets; nothing hover / drag / selection related is drawn.
+- [x] T058 [US6] Implement in `apps/app/src/editor/export/render-svg.ts` (`card`, `edge`, collapsed and frame drawing) and `apps/app/src/editor/export/edge-geometry.ts` (use `routedPath` and the shared ends). Add the new tokens to `apps/app/src/editor/export/export-palette.ts` `LIGHT_PALETTE` (kept in sync by `export-palette.test.ts`), the `Layers` path to `icon-paths.ts` (drift test), and `'600 14px "Geist Variable"'` to `export-fonts.ts`. Make T057 pass.
+- [x] T059 [US6] Run `pnpm --filter @sododeck/app test scene.perf` and confirm scene + SVG stay under ADR 0016's 50 ms at 500 / 1,000; record the number in `specs/029-card-look-deck/bench-after.md`.
 
 **Checkpoint**: exported SVG / PNG of the demo deck match the canvas.
 
