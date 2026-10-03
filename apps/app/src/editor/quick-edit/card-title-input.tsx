@@ -195,7 +195,10 @@ export function CardTitleInput({
       onDoubleClick={(event) => {
         event.stopPropagation();
       }}
-      className={cn('nodrag nopan nowheel caret-primary', className)}
+      className={cn(
+        'nodrag nopan nowheel caret-primary selection:bg-deck-text-selection',
+        className,
+      )}
       style={style}
     />
   );
