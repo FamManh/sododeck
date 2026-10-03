@@ -82,6 +82,8 @@ const TEXT_PAIRS: Pair[] = [
     ['ink', `card-${name}-fill`],
     ['text-secondary', `card-${name}-fill`],
   ]),
+  // Deck chips (029): tag and field chip text on its tint.
+  ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-ink`, `card-${name}-chip`]),
 ];
 
 /** Sticky-note tints (009): each note body and its icon/label text stay AA in both themes. */
@@ -103,6 +105,8 @@ const NON_TEXT_PAIRS: Pair[] = [
   ['primary', 'canvas'], // snap guides, drop-target and landing-slot dashes, resize handles (016)
   // Card strokes (020): every named card stroke stays visible against the card surface.
   ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-stroke`, 'surface']),
+  // Deck dots (029): the 6px dot and status icon on the card fill.
+  ...CARD_COLOR_NAMES.map((name): Pair => [`card-${name}-dot`, `card-${name}-fill`]),
 ];
 // Not asserted: primary fill vs inverse (coach-mark Next button) is 2.38:1 in dark. WCAG 1.4.11
 // does not require a text button's fill to contrast with its background; the label identifies

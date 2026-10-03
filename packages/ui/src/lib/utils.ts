@@ -27,6 +27,7 @@ const twMerge = extendTailwindMerge({
         'node',
         'card',
         'group',
+        'frame',
         'deck-card',
         'modal',
         'segment',
