@@ -230,4 +230,50 @@ describe('CanvasMenu (019 US5)', () => {
     expect(await screen.findByText('Copied JSON for A')).toBeInTheDocument();
     Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
   });
+
+  it('has a Line type submenu with radio items on a connection (029 T042)', async () => {
+    const { user, doc } = setup();
+    act(() => {
+      ui().select({ edges: ['e'] });
+      ui().openContextMenu({
+        target: { kind: 'connection', ids: ui().selection },
+        point: { x: 40, y: 50 },
+        via: 'pointer',
+        returnFocus: null,
+      });
+    });
+    await user.click(within(menu()).getByRole('menuitem', { name: 'Line type' }));
+    const sub = await screen.findByRole('menu', { name: 'Line type' });
+    expect(within(sub).getByRole('menuitemradio', { name: 'Curved' })).toBeChecked();
+    within(sub).getByRole('menuitemradio', { name: 'Straight' }).focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(toJSON(doc).edges[0]?.style).toEqual({ shape: 'straight' });
+    });
+  });
+
+  it('opens the Line type submenu with the keyboard and closes it with Esc (029 T042)', async () => {
+    const { user } = setup();
+    act(() => {
+      ui().select({ edges: ['e'] });
+      ui().openContextMenu({
+        target: { kind: 'connection', ids: ui().selection },
+        point: { x: 40, y: 50 },
+        via: 'keyboard',
+        returnFocus: null,
+      });
+    });
+    const trigger = within(menu()).getByRole('menuitem', { name: 'Line type' });
+    await waitFor(() => {
+      expect(menu().contains(document.activeElement)).toBe(true);
+    });
+    trigger.focus();
+    await user.keyboard('{ArrowRight}');
+    const sub = await screen.findByRole('menu', { name: 'Line type' });
+    expect(within(sub).getAllByRole('menuitemradio')).toHaveLength(3);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('menu', { name: 'Line type' })).toBeNull();
+    });
+  });
 });

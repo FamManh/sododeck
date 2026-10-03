@@ -198,6 +198,55 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(toolbar()).toBeNull();
   });
 
+  it('picks a line type from the connection toolbar and the label follows (029 T042)', async () => {
+    const { user, doc } = setup();
+    act(() => {
+      ui().select({ edges: ['e'] });
+    });
+    const button = screen.getByRole('button', { name: 'Line type: Curved' });
+    await user.click(button);
+    const menu = screen.getByRole('menu', { name: /^Line type/ });
+    expect(within(menu).getByRole('menuitemradio', { name: 'Curved' })).toBeChecked();
+    await user.click(within(menu).getByRole('menuitemradio', { name: 'Elbow' }));
+    expect(toJSON(doc).edges[0]?.style).toEqual({ shape: 'elbow' });
+    expect(screen.getByRole('button', { name: 'Line type: Elbow' })).toBeInTheDocument();
+  });
+
+  it('opens the line type menu with the keyboard, picks, and closes with Esc (029 T042)', async () => {
+    const { user, doc } = setup();
+    act(() => {
+      ui().select({ edges: ['e'] });
+    });
+    screen.getByRole('button', { name: 'Line type: Curved' }).focus();
+    await user.keyboard('{Enter}');
+    const menu = screen.getByRole('menu', { name: /^Line type/ });
+    await user.keyboard('{ArrowDown}{ArrowDown}{Enter}');
+    await waitFor(() => {
+      expect(toJSON(doc).edges[0]?.style?.shape).toBeDefined();
+    });
+    expect(menu).not.toBeInTheDocument();
+    screen.getByRole('button', { name: /^Line type: / }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('menu', { name: /^Line type/ })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu', { name: /^Line type/ })).toBeNull();
+  });
+
+  it('shows "Line type: mixed" for connections that differ and sets all (029 T042)', async () => {
+    const { user, doc, editor } = setup();
+    act(() => {
+      editor().add('edges', { id: 'e2', from: 'b', to: 'c', style: { shape: 'straight' } });
+      ui().select({ edges: ['e', 'e2'] });
+    });
+    expect(screen.getByRole('toolbar', { name: 'Selection: 2 connections' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Line type: mixed' }));
+    const menu = screen.getByRole('menu', { name: /^Line type/ });
+    expect(within(menu).queryByRole('menuitemradio', { checked: true })).toBeNull();
+    await user.click(within(menu).getByRole('menuitemradio', { name: 'Elbow' }));
+    expect(toJSON(doc).edges.map((edge) => edge.style?.shape)).toEqual(['elbow', 'elbow']);
+    expect(screen.getByRole('button', { name: 'Line type: Elbow' })).toBeInTheDocument();
+  });
+
   it('flips below the selection near the top of the window', () => {
     setup();
     const node = document.querySelector('.react-flow__node[data-id="a"]');
