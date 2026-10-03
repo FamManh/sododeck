@@ -1,6 +1,4 @@
-import { isLegacyLayout } from '@sododeck/model';
 import { redirect, type LoaderFunctionArgs } from 'react-router';
-import * as Y from 'yjs';
 
 import { insertDeck, loadDeckLog, type LibraryDb } from '../storage/library-db';
 import { getLibraryDb } from '../storage/library-db-instance';
@@ -10,20 +8,7 @@ export type DeckLoaderData =
   | { kind: 'demo' }
   | { kind: 'memory' }
   | { kind: 'not-found' }
-  /** Stored by a build before 036 (layout 1): refused, never opened empty (FR-027). */
-  | { kind: 'unsupported' }
   | { kind: 'stored'; db: LibraryDb; deckId: string; bytes: Uint8Array[] };
-
-/** Whether stored update bytes hold a deck in the layout used before 036 (R10). */
-function isLegacyLog(bytes: readonly Uint8Array[]): boolean {
-  const doc = new Y.Doc();
-  doc.transact(() => {
-    for (const update of bytes) Y.applyUpdate(doc, update);
-  });
-  const legacy = isLegacyLayout(doc);
-  doc.destroy();
-  return legacy;
-}
 
 /**
  * `/deck/new` creates "Untitled deck" in `?folder=` (or Unfiled) and redirects to it, so the
@@ -63,7 +48,7 @@ export async function deckLoader({
   }
   if (!db) return { kind: 'not-found' };
   const log = await loadDeckLog(db, deckId);
-  if (!log) return { kind: 'not-found' };
-  if (isLegacyLog(log.bytes)) return { kind: 'unsupported' };
-  return { kind: 'stored', db, deckId, bytes: log.bytes };
+  // The bytes are decoded once, by the editor page, which also refuses a deck stored before 036.
+  // The loader re-runs on every move between the canvas and the rule editor, so it stays cheap.
+  return log ? { kind: 'stored', db, deckId, bytes: log.bytes } : { kind: 'not-found' };
 }

@@ -101,9 +101,10 @@ not change in this feature.
 
 9. **Decks stored before this feature are refused, not migrated (R10).** `isLegacyLayout(doc)`
    recognises layout 1 by structure (a collection root holding list items, a rule whose `inputs`
-   is a `Y.Array`, or a string `meta.description`). The deck loader returns `unsupported` and
-   the editor shows "This deck was saved by an earlier development build and can't be opened.
-   Import its exported .sododeck.json file again."; the library worker refuses export, rename
+   is a `Y.Array`, or a string `meta.description`). The editor page checks the document it builds
+   from the stored bytes (decoded once; the route loader never decodes them) and shows "This deck
+   was saved by an earlier development build and can't be opened. Import its exported
+   .sododeck.json file again."; the library worker refuses export, rename
    and duplicate with `unsupported-deck`. Nothing stored is changed. There is no stored version
    marker: when 025 returns, "absent = layout 2" holds for every deck stored from now on. The
    missing migration is a recorded deviation from constitution II, waived by the founder
