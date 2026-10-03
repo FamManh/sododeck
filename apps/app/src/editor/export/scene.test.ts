@@ -461,4 +461,12 @@ describe('buildScene: selected flow', () => {
     };
     expect(ids(scene(grouped2, 'flow', { activeFlowId: 'place' }).groups)).toEqual(['front']);
   });
+
+  it('has no playback marks for a deck with an open flow (035 R10)', () => {
+    const result = scene(branchedDeck, 'flow', { activeFlowId: 'pay' });
+    const text = JSON.stringify(result);
+    for (const mark of ['"step"', '"state"', '"currentStep"', '"inPath"', 'sticker', 'token']) {
+      expect(text).not.toContain(mark);
+    }
+  });
 });
