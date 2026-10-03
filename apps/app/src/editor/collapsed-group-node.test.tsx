@@ -42,6 +42,11 @@ describe('CollapsedGroupNode', () => {
     expect(screen.getByText('8 nodes · 12 edges')).toBeInTheDocument();
   });
 
+  it('counts one node and one edge in the singular', () => {
+    renderWithEditor(<CollapsedGroupNode {...props({ nodeCount: 1, edgeCount: 1 })} />, deckOf({}));
+    expect(screen.getByText('1 node · 1 edge')).toBeInTheDocument();
+  });
+
   it('selects the group on click', async () => {
     const user = userEvent.setup();
     renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
