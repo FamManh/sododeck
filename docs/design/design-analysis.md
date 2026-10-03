@@ -1078,3 +1078,9 @@ changes them before the owning feature is specified.
     curved (default), elbow and straight, in 029 (moved from 022). Tags keep the case the user
     typed; matching ignores case. 030 and 032 schema changes approved in principle (ADRs at
     their specs). Order: 028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034.
+65. **Format, scale and collaboration review** (founder, 2026-10-03). Before the schema changes of
+    029–032 and while there are no real users: backlog 036 makes the Yjs document
+    collaboration-ready (collections keyed by id with order keys, long text as `Y.Text`, integrity
+    on receive, one schema roadmap ADR) with the `.sododeck.json` format unchanged; 037 measures
+    decks up to 10,000 nodes before 023 is decided. Server sync is explained in the diagram
+    handbook §6.

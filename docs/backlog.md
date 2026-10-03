@@ -96,6 +96,8 @@ flowchart LR
   F033[033 deck-tag-colours]
   F034[034 connection-focus-and-drill]
   F035[035 flow-playback-deck]
+  F036[036 collab-ready-document]
+  F037[037 scale-bench]
 
   F001 --> F002 --> F003
   F000 --> F003
@@ -136,7 +138,10 @@ flowchart LR
   F022 -.-> F034
   F029 --> F035
   F029 --> F022
-  F025 --> F029
+  F025 --> F036
+  F036 --> F029
+  F036 --> F037
+  F037 -.-> F023
 ```
 
 ## Critical path
@@ -166,13 +171,14 @@ review) are **not scheduled**. They come after M5 at the earliest and need a fou
 023 starts with a large-deck benchmark, and that result decides whether the renderer work is
 done at all. The measurement plan is in `docs/performance.md`.
 
-**Order from 2026-10-03 (§g-64), every open feature:** **028** → **025** → **029** → **035** →
-**033** → **022** → **030** → **032** → **031** → **034** → **013** → **014** → **026** →
-**027** → **023**. 025 moves up because 029 starts the run of schema changes (029, 033, 022, 030,
-032). 013 and 014 (paused by the founder) come after the card system, so samples and the tour
-show the final cards and packs, and before a public launch. 026 and 027 wait for the schema to
-settle (030, 032). 023 stays last and is gated by its large-deck bench. 030 supersedes 024; 032
-lifts §g-40.
+**Order from 2026-10-03 (§g-64, §g-65), every open feature:** **028** → **025** → **036** →
+**037** → **029** → **035** → **033** → **022** → **030** → **032** → **031** → **034** → **013** →
+**014** → **026** → **027** → **023**. 025 and 036 come first because 029 starts the run of schema
+changes (029, 033, 022, 030, 032) and 036 makes the stored document collaboration-ready while
+there are no real users to migrate. 037 measures large decks early, on the new layout. 013 and 014
+(paused by the founder) come after the card system, so samples and the tour show the final cards
+and packs, and before a public launch. 026 and 027 wait for the schema to settle (030, 032). 023
+stays last and is decided by 037's numbers. 030 supersedes 024; 032 lifts §g-40.
 
 **025** format-compatibility (ADR 0020, proposed) should land before the first public release,
 ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
@@ -211,13 +217,15 @@ and **027** ai-deck-skill are not scheduled.
 | 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
 | 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
 | 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                       |
-| 029 | card-look-deck           | after M4   | 028, 025      | 6 d  | designed (B); line types (§g-64); schema change           |
+| 029 | card-look-deck           | after M4   | 028, 036      | 6 d  | designed (B); line types (§g-64); schema change           |
 | 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR            |
 | 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                   |
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR            |
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                          |
 | 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                  |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
+| 036 | collab-ready-document    | before 029 | 025           | 6 d  | — (ADR: layout v2 + schema roadmap); ⚠ shared view state  |
+| 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                         |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1963,8 +1971,8 @@ stickers on played cards, the current card lifts on an orange lip, upcoming card
 dashed number); a collapsed group is a fanned hand of cards. The design's own risk note is kept as
 a rule: on dense boards drop the lip below 60 % zoom and show chips as dots at System level.
 
-Order (§g-64): **028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**, then 013 → 014 →
-026 → 027 → 023. 030 supersedes 024.
+Order (§g-64, §g-65): **028 → 025 → 036 → 037 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**,
+then 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
 
 ## 028-design-sync-card-system
 
@@ -1988,7 +1996,7 @@ Order (§g-64): **028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 �
 
 ## 029-card-look-deck
 
-- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 028, 025 · **Estimate:** 6 d
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 028, 036 · **Estimate:** 6 d
 - **Goal:** Today's cards, groups, handles and connectors take B's look; connectors get a
   user-chosen line type (the only schema change).
 - **In scope:**
@@ -2130,6 +2138,70 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 - **Acceptance criteria (draft):** stepping through "Checkout" moves the orange lip and sticker to
   the current card and adds ✓ to played ones; under reduced motion nothing animates; `pnpm bench`
   "next step → current painted" stays within target.
+
+## 036-collab-ready-document
+
+- **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real
+  users yet, so the stored layout can change now at almost no cost.
+- **Milestone:** before 029 · **Depends on:** 025 · **Estimate:** 6 d (split at
+  `/speckit.specify` if it grows)
+- **Goal:** The Yjs document and the file format are ready for the schema changes of 029–032 and
+  for a later server and real-time collaboration, without changing what users see.
+- **In scope:**
+  - **Collections keyed by id.** `nodes`, `groups`, `edges`, `stickies`, `views`, `features`,
+    `flows` and each flow's `steps` become `Y.Map<id, Y.Map>` with an `order` key (fractional
+    index) instead of `Y.Array<Y.Map>`. Lookups stop being linear; a reorder changes one key
+    instead of delete + re-insert, so a concurrent edit of the moved object is kept and two
+    clients moving it cannot duplicate it (ADR 0005 consequences).
+  - **Long text as `Y.Text`.** Descriptions, step notes, sticky text and other markdown fields
+    merge letter by letter (ADR 0005 §2 upgrade path). Short fields (titles, labels) stay plain
+    strings, last write wins (decide the exact list in the ADR).
+  - **Integrity on receive.** Updates from another tab (later another client) are not validated
+    by the writer's Zod check. After each remote transaction, run the integrity check, report
+    breakage as problems (ADR 0013) and repair what is safe to repair automatically (e.g. a
+    duplicated id from a concurrent paste gets a fresh id and its references follow).
+  - **Layout version + migration.** `meta.layout` (absent = 1). Opening a version-1 deck migrates
+    it once, in one untracked transaction (never an undo step), before the editor shows it. A tab
+    still on layout 1 that meets layout 2 reloads.
+  - **One schema roadmap ADR** naming every field 029, 033, 022, 030 and 032 will add
+    (`edge.style.shape`, waypoints, free anchors, dash / width / colour, `labelAt`; deck tag
+    definitions; the card type registry and packs; field definitions and values), with their
+    `FORMAT_REVISION` steps, so the format grows by design rather than five separate patches.
+  - **Deck identity.** Deck ids are already `crypto.randomUUID()`; record in the ADR that they are
+    the global id (the future server room name) and never reused.
+  - ⚠ **Shared or per-user view state:** collapsed groups (per view) are document data today, so
+    with collaborators one person's collapse collapses for everyone. Decide in the ADR (shared
+    like Miro frames, or per-user like a viewport).
+- **Unchanged:** the `.sododeck.json` file format (arrays in file order, canonical key order,
+  ADR 0004 / 0005 §6): `toJSON` / `serializeDeck` output is byte-identical before and after.
+- **Out of scope:** a server, accounts, presence (awareness), sharing, permissions.
+- **Acceptance criteria (draft):**
+  - Given a deck stored before 036, When opened, Then it is migrated once, `toJSON` is
+    byte-identical to before, and ⌘Z does not undo the migration.
+  - Given two tabs, When one reorders a flow's steps while the other edits a step's title, Then
+    both changes survive and no step is duplicated.
+  - Given two tabs typing into the same node description at once, Then both texts survive.
+  - Given a remote update that leaves an edge pointing at a deleted node, Then the problems panel
+    lists it within one change event.
+  - Round-trip and Ajv / Zod parity tests stay green; `pnpm bench` shows no regression.
+- **Risks:** every model op touches the layout (large diff, keep the public API unchanged so
+  surfaces do not move); fractional-index keys need tests for interleaved inserts; `Y.Text` must
+  not leak into the snapshot API (surfaces keep reading plain strings).
+
+## 037-scale-bench
+
+- **Added:** 2026-10-03 (§g-65) · **Milestone:** before 023 · **Depends on:** 036 · **Estimate:**
+  2 d
+- **Goal:** Know where Sododeck slows down as decks grow, before deciding on 023.
+- **In scope:** `docs/performance.md` §1 and §2: stabilise the flaky flow scenario (warm-up,
+  median of more runs), then measure at 500 / 2,000 / 5,000 / 10,000 nodes (edges ×2) with
+  `onlyRenderVisibleElements` on and off: load (IndexedDB → Yjs → first paint), snapshot update
+  per transaction, `visibleGraph` + `toFlowNodes` / `toFlowEdges`, autosave flush and compaction,
+  update-log bytes, multi-tab convergence after a large paste, JSON panel, export, ELK layout,
+  JS heap. Record the baseline and a target per row in `docs/performance.md`.
+- **Out of scope:** fixes (each miss becomes its own item), CI budget (§3, later).
+- **Acceptance criteria:** the table in `docs/performance.md` §2 has numbers for every row at
+  every size, from a run anyone can repeat with `pnpm bench`.
 
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
