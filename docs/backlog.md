@@ -2144,7 +2144,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 036-collab-ready-document
 
-- **Status:** specified (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md).
+- **Status:** specified and planned (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md), [`plan.md`](../specs/036-collab-ready-document/plan.md) and [`tasks.md`](../specs/036-collab-ready-document/tasks.md) (48 tasks). Not implemented yet.
   The spec narrows "integrity on receive": content is kept and reported, only content-free
   leftovers are repaired (FR-020 / FR-021).
 - **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real
