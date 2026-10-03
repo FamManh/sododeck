@@ -1,0 +1,136 @@
+# 0022. Schema roadmap for connections, tags, card types and typed fields
+
+- **Status:** Accepted (as a roadmap; each row is confirmed by its own feature)
+- **Date:** 2026-10-03
+- **Feature:** `specs/036-collab-ready-document` (spec FR-024, FR-025, `contracts/schema-roadmap.md`)
+- **Builds on:** 0002 (JSON file format), 0004 (schema v1 shape), 0018 (`ColorRef`), 0019 (card
+  size and connector route), 0020 (format compatibility, deferred), 0021 (stored layout 2)
+
+## Context
+
+Five planned features change `.sododeck.json`: 029 (line type), 022 (connector style), 033 (tag
+colours), 030 (card types and packs, with 031's shapes) and 032 (typed fields). Each would
+otherwise pick its own field names and shapes in isolation. If two of them clash, a field gets
+renamed or moved later, and files valid today could stop being valid.
+
+036 changes how the document is stored (ADR 0021: lists stored by id with a fractional order key
+`$order`, long markdown text as `Y.Text`, `$blank:<field>` markers, rule cells keyed by column
+id). That is the moment to fix how the next five changes fit the file and the stored layout, so
+none of them has to undo another.
+
+036 adds none of these fields. This ADR is a roadmap: each row is added by its own feature, with
+its own tests, and may still be refined in that feature's spec.
+
+## Decision
+
+### Rules for every row
+
+- **Additive and optional.** An absent field means today's behaviour. `version` stays `1`.
+- **Identity and order.** Objects with identity (field definitions) get stable ids. Lists that
+  users order are stored by id and order key in the document (layout 2, ADR 0021) and written as
+  arrays in the file.
+- **Colours** are always a `ColorRef`: a named card colour or a deck hex colour (ADR 0018).
+- **No format revision number** for now (ADR 0020 is deferred, §g-81).
+
+### Connections (029, 022)
+
+| Field                  | Type                              | Added by | Absent means                                                                          |
+| ---------------------- | --------------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| `edge.style`           | object, at least one key          | 029      | default look                                                                          |
+| `edge.style.shape`     | `curved` \| `elbow` \| `straight` | 029      | `curved`; `elbow` when the connection has a stored `route.offset` (keeps a 017 tweak) |
+| `edge.style.dash`      | `solid` \| `dashed` \| `dotted`   | 022      | `solid`                                                                               |
+| `edge.style.width`     | number, 1–6                       | 022      | the theme's connector width                                                           |
+| `edge.style.color`     | `ColorRef`                        | 022      | the theme's connector colour                                                          |
+| `edge.style.animated`  | boolean                           | 022      | `false`                                                                               |
+| `edge.route.waypoints` | `Position[]`                      | 022      | no bend points; `offset` (017) still applies to an elbow line without waypoints       |
+| `edge.route.fromAt`    | number, 0–1                       | 022      | the middle of `fromSide` (0.5). Only meaningful with `fromSide`.                      |
+| `edge.route.toAt`      | number, 0–1                       | 022      | the middle of `toSide`                                                                |
+| `edge.labelAt`         | number, 0–1                       | 022      | 0.5 (the middle of the path)                                                          |
+
+- 029 and 022 share `edge.style`. 029 creates the object with `shape`; 022 adds keys to it.
+- `route` keeps `fromSide`, `toSide` and `offset` with their 017 meaning (ADR 0019).
+- Reserved, not scheduled: `edge.relation` (calls / reads / writes / depends on, with 034's
+  legend).
+
+### Tags (033)
+
+| Field       | Type                          | Added by | Absent means              |
+| ----------- | ----------------------------- | -------- | ------------------------- |
+| `tagColors` | object: tag text → `ColorRef` | 033      | every tag renders neutral |
+
+- `tagColors` sits at the root, next to the deck's own `tags`, which stay "tags of the deck".
+- A tag is still its text on each object; `node.tags` and the other `tags` fields do not change.
+- The key is the tag as first typed, with its case kept. Matching ignores case, so no two keys
+  may be equal when case is ignored (a semantic rule).
+- A tag with no entry is valid. Renaming or deleting a tag rewrites the objects that carry it, in
+  one undo step.
+
+### Card types and packs (030, 031)
+
+| Field                                | Type                           | Added by | Absent means                                                                                       |
+| ------------------------------------ | ------------------------------ | -------- | -------------------------------------------------------------------------------------------------- |
+| `node.type`                          | a type id (was a 6-value enum) | 030      | n/a (still required). Today's six kinds are type ids of the built-in Architecture pack, unchanged. |
+| `packs`                              | string[] (pack ids), unique    | 030      | `["architecture"]`                                                                                 |
+| `view.excludeKinds`, `view.dimKinds` | type ids (were the enum)       | 030      | unchanged                                                                                          |
+| `node.display`                       | `card` \| `shape`              | 031      | the type's own family                                                                              |
+
+- Types and packs are defined in code (a registry), not in the file.
+- A type id the app does not know renders as a generic card and is reported in Problems. The file
+  still loads.
+- User-defined types are out of scope. If they come, they are a root `types` list of objects with
+  ids, and `node.type` keeps pointing at an id.
+
+### Typed fields (032)
+
+| Field              | Type                                                                                                    | Added by | Absent means             |
+| ------------------ | ------------------------------------------------------------------------------------------------------- | -------- | ------------------------ |
+| `fields`           | list of field definitions                                                                               | 032      | only the built-in fields |
+| `fields[].id`      | id                                                                                                      | 032      | n/a (required)           |
+| `fields[].name`    | text                                                                                                    | 032      | n/a (required)           |
+| `fields[].kind`    | `text` \| `number` \| `select` \| `status` \| `person` \| `date` \| `dateRange` \| `link` \| `progress` | 032      | n/a (required)           |
+| `fields[].options` | list of `{ id, label, color? }` (select and status)                                                     | 032      | no options               |
+| `fields[].types`   | type ids the field applies to                                                                           | 032      | every type               |
+| `fields[].onCard`  | boolean                                                                                                 | 032      | `false` (drawer only)    |
+| `node.values`      | object: field id → value                                                                                | 032      | no values                |
+
+- Values by kind: a string for text, person, date (`YYYY-MM-DD`) and select / status (an option
+  id); a number for number and progress (0–100); `{ from, to }` for a date range;
+  `{ url, label? }` for a link.
+- Today's `tech`, `host`, `owner`, `tags` and `links` keep their fields and storage. The type
+  registry lists them as a type's built-in fields.
+- A value whose field or option no longer exists is kept and reported, like any dangling
+  reference.
+
+### Standing decisions
+
+- **Deck identity.** A deck's library id (a UUID from `crypto.randomUUID()`) is its global
+  identity: the name a sync server will know the deck by. It is never reused and is not stored
+  inside the deck file.
+- **Collapsed groups are shared.** A view's `collapsed` list is document data: collapsing a group
+  in a view collapses it for everyone looking at that view (founder, 2026-10-03). It stays outside
+  undo. Per-person collapse would be presence-like state, decided with the server feature.
+- **New lists and long text use layout 2.** New lists and new markdown fields added by these
+  features use the layout of ADR 0021 (stored by id with an order key; `Y.Text`): `fields`,
+  `fields[].options`, and any future description field.
+
+## Alternatives considered
+
+- **Let each feature decide its own fields:** simpler now, but 029 and 022 both touch `edge.style`
+  and 030 and 032 both depend on type ids. Deciding them apart risks a rename later.
+- **Tag definitions inside `deck.tags`:** would change the meaning of an existing field and break
+  files that store plain strings there. A separate root `tagColors` map is additive.
+- **Card types and packs in the file:** makes every deck carry definitions the app already has.
+  The registry stays in code until user-defined types are needed.
+- **A `version` bump for these changes:** unnecessary while every change is additive and optional
+  (ADR 0002); compatibility handling stays deferred (ADR 0020).
+
+## Consequences
+
+- Each of 029, 022, 033, 030, 031 and 032 still writes its own schema change, `pnpm
+schema:generate`, Ajv/Zod parity and round-trip cases, and confirms or refines its rows here.
+- A feature that needs to change a row (a name, a type, a default) updates this ADR in the same
+  change.
+- Files valid today stay valid after all five changes; no field is renamed or moved.
+- `fields` and `fields[].options` are added as layout-2 lists from the start, so 032 needs no
+  later storage change.
+- The deck's library id is the key a future sync server uses; the deck file stays free of it.
