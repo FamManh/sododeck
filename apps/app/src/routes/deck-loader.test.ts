@@ -31,10 +31,12 @@ describe('deckLoader', () => {
     expect(await load('d1')).toMatchObject({ kind: 'stored', deckId: 'd1' });
   });
 
-  it('refuses a deck stored by a build before 036, and changes nothing (FR-027)', async () => {
+  it('hands a deck stored before 036 to the editor page undecoded, and changes nothing', async () => {
+    // The loader re-runs on every canvas ↔ rule editor move, so it never decodes the bytes; the
+    // editor page refuses the deck (editor-page.test.tsx, FR-027).
     const bytes = legacyDeckBytes();
     await insertDeck(db, deckRecord('old'), bytes);
-    expect(await load('old')).toEqual({ kind: 'unsupported' });
+    expect(await load('old')).toMatchObject({ kind: 'stored', deckId: 'old' });
     const stored = (await loadDeckLog(db, 'old'))?.bytes ?? [];
     expect(stored.map((b) => Array.from(b))).toEqual([Array.from(bytes)]);
   });

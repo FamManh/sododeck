@@ -1,4 +1,4 @@
-import { createEditor, type DeckDoc } from '@sododeck/model';
+import { createEditor, isLegacyLayout, type DeckDoc } from '@sododeck/model';
 import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -124,10 +124,10 @@ function EditorChrome() {
 }
 
 /** Attaches storage to a stored deck and exposes flush/export bookkeeping to the editor. */
-function useSaveControlsFor(
-  data: Exclude<DeckLoaderData, { kind: 'not-found' | 'unsupported' }>,
-  doc: DeckDoc,
-) {
+/** Loader data of a deck the editor can open. */
+type OpenDeckData = Exclude<DeckLoaderData, { kind: 'not-found' }>;
+
+function useSaveControlsFor(data: OpenDeckData, doc: DeckDoc) {
   const persistenceRef = useRef<DeckPersistence | null>(null);
 
   useEffect(() => {
@@ -174,17 +174,11 @@ function useSaveControlsFor(
   );
 }
 
-function EditorShell({
-  data,
-}: {
-  data: Exclude<DeckLoaderData, { kind: 'not-found' | 'unsupported' }>;
-}) {
+function EditorShell({ data, opened }: { data: OpenDeckData; opened: DeckDoc }) {
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(data.kind === 'stored' ? data.deckId : null);
     useSaveStatusStore.getState().reset();
-    const source: DeckSource =
-      data.kind === 'stored' ? { kind: 'stored', bytes: data.bytes } : { kind: data.kind };
-    return openDeck(source);
+    return opened;
   });
   const save = useSaveControlsFor(data, doc);
   // After storage is attached (effects run in order), so the fitted frames are saved and synced.
@@ -220,6 +214,21 @@ function EditorShell({
 export function EditorPage() {
   const data = useLoaderData<DeckLoaderData>();
   if (data.kind === 'not-found') return <DeckNotFoundPage />;
-  if (data.kind === 'unsupported') return <DeckNotFoundPage reason="unsupported" />;
-  return <EditorShell key={data.kind === 'stored' ? data.deckId : data.kind} data={data} />;
+  return <DeckGate key={data.kind === 'stored' ? data.deckId : data.kind} data={data} />;
+}
+
+/**
+ * Builds the deck's document once (stored bytes are decoded here and nowhere else) and refuses a
+ * deck stored by a build before 036, which would otherwise read as empty (036 FR-027).
+ */
+function DeckGate({ data }: { data: OpenDeckData }) {
+  const [doc] = useState(() => {
+    const source: DeckSource =
+      data.kind === 'stored' ? { kind: 'stored', bytes: data.bytes } : { kind: data.kind };
+    return openDeck(source);
+  });
+  if (data.kind === 'stored' && isLegacyLayout(doc)) {
+    return <DeckNotFoundPage reason="unsupported" />;
+  }
+  return <EditorShell data={data} opened={doc} />;
 }

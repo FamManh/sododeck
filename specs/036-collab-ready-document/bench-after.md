@@ -24,6 +24,11 @@ key, and every non-empty long text is a `Y.Text` type instead of a string. Not c
 is not the cost. In absolute terms a 500-component deck opens about 3 ms later. Per T045 this
 blocks the merge unless the founder accepts it.
 
+The first version of 036 decoded the stored bytes twice when opening a deck (once in the route
+loader for the old-layout check, again in the editor page), and again on every move between the
+canvas and the rule editor. That extra decode was not in the numbers above. It is fixed: the
+editor page decodes once and checks the document it builds; the loader never decodes.
+
 How it was measured: a throwaway Vitest file (not committed) on this branch and on a worktree of
 `main` (`6e00ce2`), same generated deck (`largeDeck`, 500 or 2,000 nodes, 2× edges, 20 flows × 10
 steps, 10 rules, 50 notes): `Y.applyUpdate` of `encodeStateAsUpdate(fromJSON(deck))` into a new
