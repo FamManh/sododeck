@@ -29,7 +29,8 @@ const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
 /**
  * Connection (DESIGN.md "Card system (Deck)": 2 px line, knob at the start and arrow at the end).
  * Direction is shown by the end marks: knob → arrow (forward), arrows at both ends (both), knobs
- * at both ends (none). Every edge is drawn elbow for now; TODO(M2): the stored line type (T044).
+ * at both ends (none). The line is curved, elbow or straight (029); only elbow has a movable middle
+ * segment.
  * A flow mark (006) draws step badges and the path, error, candidate, preview or invalid style;
  * in flow mode (007) the current step's edge is thicker, with a filled label and the token.
  */
@@ -72,8 +73,9 @@ export const DeckEdge = memo(function DeckEdge({
   const toBox = pointBox(targetX, targetY);
   // The line stops one arrow short of an end that carries an arrow (029 R6).
   const arrows = { arrowAtStart: direction === 'both', arrowAtEnd: direction !== 'none' };
+  const shape = data?.shape ?? 'curved';
   const { path, labelX, labelY, segment, ends } = routedPath(
-    'elbow',
+    shape,
     fromBox,
     toBox,
     sides,
@@ -87,7 +89,7 @@ export const DeckEdge = memo(function DeckEdge({
     : (flowStroke?.stroke ?? 'var(--color-deck-edge)');
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The automatic path (no route), computed only while dragging, to draw the ghost.
-  const ghostPath = dragging ? routedPath('elbow', fromBox, toBox, sides, 0, arrows).path : null;
+  const ghostPath = dragging ? routedPath(shape, fromBox, toBox, sides, 0, arrows).path : null;
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
@@ -211,7 +213,7 @@ export const DeckEdge = memo(function DeckEdge({
           )}
         </EdgeLabelRenderer>
       )}
-      {showHandle && data?.routable === true && segment !== null && (
+      {showHandle && shape === 'elbow' && data?.routable === true && segment !== null && (
         <SegmentHandle
           edgeId={id}
           level={data.level}

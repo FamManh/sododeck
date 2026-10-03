@@ -3,8 +3,13 @@
  * snapshot; React Flow never owns document state. Results are cached per source object, so an
  * edit to one node returns the same React Flow objects for all the others and `memo` skips them.
  */
-import { stickyCanvasPosition, stickyLabel, type StickyPlacement } from '@sododeck/model';
-import type { SododeckFile } from '@sododeck/schema';
+import {
+  edgeShape,
+  stickyCanvasPosition,
+  stickyLabel,
+  type StickyPlacement,
+} from '@sododeck/model';
+import type { EdgeShape, SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
 import {
@@ -96,6 +101,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   flow?: EdgeFlowMark;
   /** The connection's problems (015): an amber glyph on its label pill. */
   problems?: ProblemMark;
+  /** The effective line type (029): the stored one, else elbow with a route offset, else curved. */
+  shape: EdgeShape;
   /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
   route?: DeckEdgeObject['route'];
   /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
@@ -846,14 +853,16 @@ export function toFlowEdges(
       view.focus?.edges.has(edge.id) === true;
     const mark = overlay.edges.get(edge.id);
     const problems = view.problems?.get(edge.id);
+    const shape = edgeShape(edge);
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
-      sameMark(cached.data?.flow, mark) &&
-      sameProblemMark(cached.data?.problems, problems) &&
+      cached.data?.shape === shape &&
+      sameMark(cached.data.flow, mark) &&
+      sameProblemMark(cached.data.problems, problems) &&
       cached.sourceHandle === sourceHandle &&
       cached.targetHandle === targetHandle &&
-      cached.data?.showLabel === showLabel &&
+      cached.data.showLabel === showLabel &&
       cached.data.focused === focused &&
       cached.data.inFocus === inFocus &&
       cached.data.dimmed === dimmed &&
@@ -894,6 +903,7 @@ export function toFlowEdges(
         focused,
         inFocus,
         dimmed,
+        shape,
         level: view.level,
         routable: true,
         ...(mark === undefined ? {} : { flow: mark }),
@@ -930,15 +940,17 @@ export function toFlowEdges(
         (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
         view.focus?.edges.has(edge.id) === true;
       const mark = overlay.edges.get(edge.id);
+      const shape = edgeShape(edge);
       const cached = edgeCache.get(edge);
       if (
         cached?.selected === isSelected &&
-        sameMark(cached.data?.flow, mark) &&
+        cached.data?.shape === shape &&
+        sameMark(cached.data.flow, mark) &&
         cached.source === fromId &&
         cached.target === toId &&
         cached.sourceHandle === sourceHandle &&
         cached.targetHandle === targetHandle &&
-        cached.data?.showLabel === showLabel &&
+        cached.data.showLabel === showLabel &&
         cached.data.focused === focused &&
         cached.data.inFocus === inFocus &&
         cached.data.dimmed === dimmed &&
@@ -982,6 +994,7 @@ export function toFlowEdges(
           focused,
           inFocus,
           dimmed,
+          shape,
           level: view.level,
           routable: false,
           ...(mark === undefined ? {} : { flow: mark }),

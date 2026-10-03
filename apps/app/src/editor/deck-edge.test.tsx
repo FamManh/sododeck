@@ -53,6 +53,7 @@ function renderEdge(
       fromTitle: 'A',
       toTitle: 'B',
       focused: false,
+      shape: 'elbow',
       ...data,
     },
   } as unknown as EdgeProps<DeckFlowEdge>;
@@ -224,6 +225,35 @@ describe('DeckEdge routing (017 R6)', () => {
     expect(tokenPath).toBe(path?.getAttribute('d'));
     // 82 is the unrouted midpoint x for this vertical pair; the offset moves the segment's x.
     expect(path?.getAttribute('d')).not.toContain('82,');
+  });
+});
+
+describe('DeckEdge line type (029 T044)', () => {
+  const at = (x: number, y: number) => ({ x, y, width: 0, height: 0 });
+  const arrows = { arrowAtStart: false, arrowAtEnd: true };
+
+  it.each(['curved', 'elbow', 'straight'] as const)('draws the %s path', (shape) => {
+    const { container } = renderEdge({ shape });
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toBe(
+      routedPath(shape, at(0, 0), at(200, 40), ['right', 'left'], 0, arrows).path,
+    );
+  });
+
+  it('draws a curved line as a bezier, not right angles', () => {
+    const { container } = renderEdge({ shape: 'curved' });
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toContain('C');
+  });
+
+  it('shows the segment handle only for an elbow line', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    for (const shape of ['curved', 'straight'] as const) {
+      const { unmount } = renderEdge({ routable: true, shape }, true);
+      expect(screen.queryByTestId('segment-handle')).toBeNull();
+      unmount();
+    }
+    renderEdge({ routable: true, shape: 'elbow' }, true);
+    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+    useUiStore.setState({ selection: EMPTY_SELECTION });
   });
 });
 

@@ -546,6 +546,37 @@ describe('toFlowEdges', () => {
   });
 });
 
+describe('toFlowEdges line type (029 T044)', () => {
+  const withEdge = (edge: SododeckFile['edges'][number]): SododeckFile => ({
+    ...deck,
+    edges: [edge],
+  });
+
+  it('puts the effective shape in the edge data', () => {
+    const shapeOf = (edge: SododeckFile['edges'][number]) => {
+      const file = withEdge(edge);
+      return toFlowEdges(file, topLevelGraph(file), view())[0]?.data?.shape;
+    };
+    expect(shapeOf({ id: 'e1', from: 'a', to: 'b' })).toBe('curved');
+    expect(shapeOf({ id: 'e1', from: 'a', to: 'b', route: { offset: 4 } })).toBe('elbow');
+    expect(shapeOf({ id: 'e1', from: 'a', to: 'b', style: { shape: 'straight' } })).toBe(
+      'straight',
+    );
+    expect(
+      shapeOf({ id: 'e1', from: 'a', to: 'b', route: { offset: 4 }, style: { shape: 'curved' } }),
+    ).toBe('curved');
+  });
+
+  it('breaks the edge cache when the shape changes', () => {
+    const first = withEdge({ id: 'e1', from: 'a', to: 'b' });
+    const second = withEdge({ id: 'e1', from: 'a', to: 'b', style: { shape: 'elbow' } });
+    const a = toFlowEdges(first, topLevelGraph(first), view());
+    const b = toFlowEdges(second, topLevelGraph(second), view());
+    expect(b[0]).not.toBe(a[0]);
+    expect(b[0]?.data?.shape).toBe('elbow');
+  });
+});
+
 describe('toLeaderEdges', () => {
   it('maps pinned notes only as non-interactive leader edges', () => {
     const leaders = toLeaderEdges(deck);
