@@ -622,3 +622,33 @@ describe('buildScene card types (030)', () => {
     expect(cards.get('r')).toMatchObject({ kind: 'fallback', typeName: 'robot' });
   });
 });
+
+describe('shapes in the scene (031)', () => {
+  const shapes = deckOf({
+    nodes: [
+      { id: 'ok', type: 'diamond', title: 'Payment OK?', position: { x: 0, y: 0 } },
+      { id: 'db', type: 'database', title: 'Orders DB', position: { x: 400, y: 0 } },
+      { id: 'para', type: 'parallelogram', title: 'Input', position: { x: 0, y: 400 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'ok', to: 'db' },
+      { id: 'e2', from: 'para', to: 'db', route: { fromSide: 'right', toSide: 'bottom' } },
+    ],
+  });
+
+  it('gives a shape its geometry, its default box and its title lines', () => {
+    const card = scene(shapes).cards.find((c) => c.id === 'ok');
+    expect(card).toMatchObject({
+      geometry: 'diamond',
+      rect: { x: 0, y: 0, width: 176, height: 112 },
+      titleLines: ['Payment OK?'],
+    });
+    expect(scene(shapes).cards.find((c) => c.id === 'db')?.geometry).toBeUndefined();
+  });
+
+  it('ends connectors on the outline: a parallelogram’s slanted side', () => {
+    const edge = scene(shapes).edges.find((e) => e.id === 'e2');
+    expect(edge?.source.x).toBeCloseTo(168 - (168 * 0.16) / 2, 6);
+    expect(edge?.source.y).toBeCloseTo(400 + 36, 6);
+  });
+});
