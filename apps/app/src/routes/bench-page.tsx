@@ -111,11 +111,14 @@ function InspectorBenchHooks() {
         input.focus();
         const start = performance.now();
         typeInto(input, title);
-        // The card has no native `title` attribute (029); its name is the aria-label.
+        // The card has no native `title` attribute (029); its name is the aria-label. A shape's
+        // name is "<title>, <shape>" (031).
         const ms = await paintedAfter(
           start,
           () =>
-            document.querySelector(`[data-testid="deck-node"][aria-label*=": ${title}"]`) !== null,
+            document.querySelector(
+              `[data-testid="deck-node"][aria-label*=": ${title}"], [data-testid="shape-node"][aria-label^="${title}, "]`,
+            ) !== null,
         );
         input.blur();
         return ms;

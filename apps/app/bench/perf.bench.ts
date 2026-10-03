@@ -96,8 +96,12 @@ async function emptyCanvasPoint(
       if (!stack.some((el) => el.classList.contains('react-flow__pane'))) return false;
       return !stack.some(
         (el) =>
-          el.matches('[data-testid="deck-node"], [data-testid="sticky-node"]') ||
-          el.closest('[data-testid="deck-node"], [data-testid="sticky-node"]') !== null ||
+          el.matches(
+            '[data-testid="deck-node"], [data-testid="shape-node"], [data-testid="sticky-node"]',
+          ) ||
+          el.closest(
+            '[data-testid="deck-node"], [data-testid="shape-node"], [data-testid="sticky-node"]',
+          ) !== null ||
           el.matches('[data-testid="edge-label"], [aria-label^="Go to "]') ||
           el.closest('[data-testid="edge-label"], [aria-label^="Go to "]') !== null,
       );
@@ -148,7 +152,9 @@ async function panAndZoom(page: Page) {
     await page.waitForTimeout(16);
   }
   const maxZoom = await viewportZoom(page);
-  const renderedNodesZoomedIn = await page.getByTestId('deck-node').count();
+  const renderedNodesZoomedIn = await page
+    .locator('[data-testid="deck-node"], [data-testid="shape-node"]')
+    .count();
   // Pan across the graph.
   for (const [dx, dy] of [
     [-500, 0],
@@ -240,7 +246,10 @@ async function openBench(
     });
   }
   const inPageReadyMs = await page.evaluate(() => window.__sododeckBench?.readyAt ?? 0);
-  const renderedNodes = await page.getByTestId('deck-node').count();
+  // Cards and shapes (031).
+  const renderedNodes = await page
+    .locator('[data-testid="deck-node"], [data-testid="shape-node"]')
+    .count();
   expect(renderedNodes).toBeGreaterThan(0);
   return { renderMs, inPageReadyMs: Math.round(inPageReadyMs), renderedNodes };
 }
