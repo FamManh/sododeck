@@ -103,3 +103,42 @@ describe('edgePath', () => {
     });
   });
 });
+
+describe('edgePath with bends and anchors (022)', () => {
+  const from = { x: 0, y: 0, width: 100, height: 50 };
+  const to = { x: 300, y: 0, width: 100, height: 50 };
+
+  it.each(['curved', 'elbow', 'straight'] as const)(
+    '%s: bends change the path, never the ends',
+    (shape) => {
+      const plain = edgePath(from, to, undefined, shape);
+      const bent = edgePath(from, to, { waypoints: [{ x: 0.5, dy: -120 }] }, shape);
+      expect(bent.source.x).toBe(plain.source.x);
+      expect(bent.target.x).toBe(plain.target.x);
+      if (shape === 'straight') expect(bent.path).toBe(plain.path);
+      else expect(bent.path).not.toBe(plain.path);
+    },
+  );
+
+  it('includes the bends in the extent', () => {
+    const edge = edgePath(from, to, { waypoints: [{ x: 0.5, dy: -200 }] }, 'elbow');
+    expect(edge.extent.y).toBeLessThanOrEqual(-175);
+    expect(contains(edge.extent, 200, -175)).toBe(true);
+  });
+
+  it('puts the ends where fromAt / toAt say', () => {
+    const edge = edgePath(
+      from,
+      to,
+      { fromSide: 'right', fromAt: 0, toSide: 'left', toAt: 1 },
+      'straight',
+    );
+    expect(edge.source).toEqual({ x: 100, y: 0 });
+    expect(edge.target).toEqual({ x: 300, y: 50 });
+  });
+
+  it('leaves from the side that faces the first bend', () => {
+    const edge = edgePath(from, to, { waypoints: [{ dx: 0, dy: -200 }] }, 'elbow');
+    expect(edge.source).toEqual(handlePoint(from, 'top'));
+  });
+});

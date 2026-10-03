@@ -26,10 +26,8 @@ describe('gesture hints (016 R13, 017 R14, contract "Hint bar texts")', () => {
     expect(hintText(gestureHint('card-resize', false))).toBe(
       'Shift Keep ratio · Alt From centre · Ctrl No snap · Esc Cancel',
     );
-    expect(hintText(gestureHint('segment', true))).toBe('⌘ No snap · R Reset route · Esc Cancel');
-    expect(hintText(gestureHint('segment', false))).toBe(
-      'Ctrl No snap · R Reset route · Esc Cancel',
-    );
+    expect(hintText(gestureHint('bend', true))).toBe('⌘ No snap · R Reset route · Esc Cancel');
+    expect(hintText(gestureHint('bend', false))).toBe('Ctrl No snap · R Reset route · Esc Cancel');
     expect(hintText(gestureHint('endpoint', true))).toBe(
       'Drop on a side to pin it · Esc Keep old end',
     );

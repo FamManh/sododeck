@@ -3,8 +3,14 @@ import type { Direction, Side } from '@sododeck/schema';
 import type { Point, Rect } from '../canvas-geometry';
 import { ARROW_WIDTH } from '../edge-constants';
 import {
+  autoSides,
+  cardCentre,
+  connectorPath,
+  decodeWaypoints,
+  type ConnectorRoute,
+} from '../routing/connector-geometry';
+import {
   resolveSides,
-  routedPath,
   type PathEnds,
   type PathShape,
   type RouteSegment,
@@ -78,27 +84,35 @@ function pathExtent(path: string, ends: PathEnds, pad: number): Rect {
 /**
  * The canvas's connector between two cards (029 R4): sides resolved from `route` or, absent one,
  * by comparing centres, then the shared `routedPath` for the line type, so the export draws what
- * `DeckEdge` draws. The line stops one arrow short of an end that carries an arrow. Elbow keeps
- * its offset middle segment (017).
+ * `DeckEdge` draws, including free bends and anchor positions (022). The line stops one arrow
+ * short of an end that carries an arrow. Elbow keeps its offset middle segment (017).
  */
 export function edgePath(
   from: Rect,
   to: Rect,
-  route?: { fromSide?: Side; toSide?: Side; offset?: number },
+  route?: ConnectorRoute & { fromSide?: Side; toSide?: Side },
   shape: PathShape = 'curved',
   direction: Direction = 'forward',
 ): EdgeGeometry {
-  const sides = resolveSides(from, to, route);
-  const { path, labelX, labelY, segment, ends } = routedPath(
+  // Free bends: the automatic sides face the first and last bend, as on the canvas (022 R4).
+  const bends =
+    route?.waypoints === undefined
+      ? []
+      : decodeWaypoints(route.waypoints, cardCentre(from), cardCentre(to));
+  const sides = autoSides(from, to, bends, route);
+  const { path, labelX, labelY, segment, ends } = connectorPath({
     shape,
-    from,
-    to,
-    sides,
-    route?.offset,
-    { arrowAtStart: direction === 'both', arrowAtEnd: direction !== 'none' },
-  );
+    fromBox: from,
+    toBox: to,
+    sides: bends.length === 0 ? resolveSides(from, to, route) : sides,
+    route,
+    options: { arrowAtStart: direction === 'both', arrowAtEnd: direction !== 'none' },
+  });
   const extent =
-    shape === 'elbow'
+    shape === 'elbow' &&
+    bends.length === 0 &&
+    route?.fromAt === undefined &&
+    route?.toAt === undefined
       ? extentOf(ends.start, ends.end, segment)
       : // Room for the arrow's tip and the knob.
         pathExtent(path, ends, ARROW_WIDTH);

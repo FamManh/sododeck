@@ -21,6 +21,7 @@ import {
   NODE_SIZE,
   type Point,
 } from './canvas-geometry';
+import { autoSides, cardCentre, decodeWaypoints } from './routing/connector-geometry';
 import { resolveSides, type Box } from './routing/route-path';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
 import type { Selection } from '../state/ui-store';
@@ -93,6 +94,9 @@ export interface GroupBoundaryData extends Record<string, unknown> {
   look?: CardLook;
 }
 
+const sameSize = (a: { width: number; height: number } | undefined, b: Box): boolean =>
+  a?.width === b.width && a.height === b.height;
+
 export interface DeckEdgeData extends Record<string, unknown> {
   label: string | undefined;
   protocol: DeckEdgeObject['protocol'];
@@ -111,6 +115,9 @@ export interface DeckEdgeData extends Record<string, unknown> {
   shape: EdgeShape;
   /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
   route?: DeckEdgeObject['route'];
+  /** Both cards' sizes (022): with a side midpoint they give the boxes bends and anchors need. */
+  fromSize?: { width: number; height: number };
+  toSize?: { width: number; height: number };
   /** Dash, weight, colour and animation (022); absent means the default look. */
   style?: DeckEdgeObject['style'];
   /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
@@ -884,7 +891,17 @@ export function toFlowEdges(
     const toBox = boxFor(edge.to);
     // The schema does not check references; a file may still point at missing nodes.
     if (!from || !to || fromBox === undefined || toBox === undefined) return [];
-    const [sourceHandle, targetHandle] = resolveSides(fromBox, toBox, edge.route);
+    // With free bends the automatic sides face the first and last bend (022 R4).
+    const waypoints = edge.route?.waypoints;
+    const [sourceHandle, targetHandle] =
+      waypoints === undefined
+        ? resolveSides(fromBox, toBox, edge.route)
+        : autoSides(
+            fromBox,
+            toBox,
+            decodeWaypoints(waypoints, cardCentre(fromBox), cardCentre(toBox)),
+            edge.route,
+          );
     const isSelected = selected.has(edge.id);
     const focused = edge.id === view.focusedEdgeId;
     const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
@@ -909,7 +926,9 @@ export function toFlowEdges(
       cached.data.dimmed === dimmed &&
       cached.data.fromTitle === from.title &&
       cached.data.toTitle === to.title &&
-      cached.data.level === view.level
+      cached.data.level === view.level &&
+      sameSize(cached.data.fromSize, fromBox) &&
+      sameSize(cached.data.toSize, toBox)
     ) {
       return [cached];
     }
@@ -947,6 +966,8 @@ export function toFlowEdges(
         shape,
         level: view.level,
         routable: true,
+        fromSize: { width: fromBox.width, height: fromBox.height },
+        toSize: { width: toBox.width, height: toBox.height },
         ...(mark === undefined ? {} : { flow: mark }),
         ...(problems === undefined ? {} : { problems }),
         ...(edge.route === undefined ? {} : { route: edge.route }),

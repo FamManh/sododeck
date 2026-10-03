@@ -15,10 +15,10 @@ vi.mock('@xyflow/react', async (importOriginal) => {
   return { ...actual, EdgeLabelRenderer: ({ children }: { children: ReactNode }) => children };
 });
 
-// The handle itself (pointer/keyboard drag, ReactFlow + editor context) is `segment-handle.test.tsx`'s
-// job; here only its render-gating in `deck-edge.tsx` is under test (017 R7, T035).
-vi.mock('./routing/segment-handle', () => ({
-  SegmentHandle: () => <div data-testid="segment-handle" />,
+// The handles themselves (pointer/keyboard drag, ReactFlow + editor context) are
+// `route-handles.test.tsx`'s job; here only their render-gating in `deck-edge.tsx` is under test.
+vi.mock('./routing/route-handles', () => ({
+  RouteHandles: () => <div data-testid="route-handles" />,
 }));
 
 function renderEdge(
@@ -244,43 +244,43 @@ describe('DeckEdge line type (029 T044)', () => {
     expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toContain('C');
   });
 
-  it('shows the segment handle only for an elbow line', () => {
+  it('shows the route handles for curved and elbow lines, not for a straight one (022)', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
-    for (const shape of ['curved', 'straight'] as const) {
+    for (const shape of ['curved', 'elbow'] as const) {
       const { unmount } = renderEdge({ routable: true, shape }, true);
-      expect(screen.queryByTestId('segment-handle')).toBeNull();
+      expect(screen.getByTestId('route-handles')).toBeInTheDocument();
       unmount();
     }
-    renderEdge({ routable: true, shape: 'elbow' }, true);
-    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+    renderEdge({ routable: true, shape: 'straight' }, true);
+    expect(screen.queryByTestId('route-handles')).toBeNull();
     useUiStore.setState({ selection: EMPTY_SELECTION });
   });
 });
 
-describe('DeckEdge segment handle (017 R7, T035)', () => {
+describe('DeckEdge route handles gating (022)', () => {
   afterEach(() => {
     useUiStore.setState({ selection: EMPTY_SELECTION, flowSession: null, activeFlow: null });
   });
 
-  it('shows the handle for the single selected, routable connector with a movable segment', () => {
+  it('shows the handles for the single selected, routable connector', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: true }, true);
-    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+    expect(screen.getByTestId('route-handles')).toBeInTheDocument();
   });
 
-  it('hides the handle when the edge is not selected', () => {
+  it('hides the handles when the edge is not selected', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: true }, false);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 
-  it('hides the handle with other items in the selection', () => {
+  it('hides the handles with other items in the selection', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'], nodes: ['n1'] } });
     renderEdge({ routable: true }, true);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 
-  it('hides the handle in flow mode', () => {
+  it('hides the handles in flow mode', () => {
     useUiStore.setState({
       selection: { ...EMPTY_SELECTION, edges: ['e1'] },
       activeFlow: {
@@ -293,79 +293,76 @@ describe('DeckEdge segment handle (017 R7, T035)', () => {
       },
     });
     renderEdge({ routable: true }, true);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 
-  it('hides the handle for a non-routable edge (a port or merged edge)', () => {
+  it('hides the handles for a non-routable edge (a port or merged edge)', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: false }, true);
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
-  });
-
-  it('hides the handle when the resolved sides have no movable segment (an L shape)', () => {
-    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
-    const props = {
-      id: 'e1',
-      source: 'a',
-      target: 'b',
-      sourceX: 0,
-      sourceY: 0,
-      targetX: 200,
-      targetY: 40,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Left,
-      selected: true,
-      data: {
-        label: 'POST /orders',
-        protocol: 'http',
-        direction: 'forward',
-        showLabel: false,
-        fromTitle: 'A',
-        toTitle: 'B',
-        focused: false,
-        routable: true,
-      },
-    } as unknown as EdgeProps<DeckFlowEdge>;
-    render(
-      <svg>
-        <DeckEdge {...props} />
-      </svg>,
-    );
-    expect(screen.queryByTestId('segment-handle')).toBeNull();
+    expect(screen.queryByTestId('route-handles')).toBeNull();
   });
 });
 
-describe('DeckEdge automatic-route ghost (017 R7, T036)', () => {
+describe('DeckEdge bends (022 US2)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+  // Handles are the side midpoints: right of the source box, left of the target box.
+  const geometry = { sourceX: 160, sourceY: 25, targetX: 400, targetY: 25 };
+  const pathOf = (data: Partial<DeckEdgeData>, geo = geometry) =>
+    renderEdge({ shape: 'elbow', ...sizes, ...data }, false, geo)
+      .container.querySelector('.react-flow__edge-path')
+      ?.getAttribute('d');
+
   afterEach(() => {
-    useUiStore.setState({
-      selection: EMPTY_SELECTION,
-      flowSession: null,
-      activeFlow: null,
-      canvasGesture: null,
+    useUiStore.setState({ bendPreview: null, selection: EMPTY_SELECTION });
+  });
+
+  it('draws a path through the stored bends, relative to both cards', () => {
+    const plain = pathOf({});
+    const bent = pathOf({ route: { waypoints: [{ x: 0.5, dy: -80 }] } });
+    expect(bent).not.toBe(plain);
+  });
+
+  it('moving both cards by the same delta translates the path exactly', () => {
+    const route = { waypoints: [{ x: 0.5, dy: -80 }] };
+    const a = pathOf({ route });
+    const b = pathOf({ route }, { sourceX: 210, sourceY: 75, targetX: 450, targetY: 75 });
+    const numbers = (d: string | null | undefined) => d?.match(/-?\d*\.?\d+/g)?.map(Number) ?? [];
+    expect(numbers(b).length).toBe(numbers(a).length);
+    numbers(a).forEach((n, i) => {
+      expect(numbers(b)[i]).toBeCloseTo(n + 50, 6);
     });
   });
 
-  it('draws the ghost only for the single selected edge mid segment-drag', () => {
+  it('draws the same bends with each shape, and none for straight', () => {
+    const route = { waypoints: [{ x: 0.5, dy: -80 }] };
+    const curved = pathOf({ shape: 'curved', route });
+    const straight = pathOf({ shape: 'straight', route });
+    expect(curved).toContain('C');
+    expect(straight).toBe(pathOf({ shape: 'straight' }));
+  });
+
+  it('draws the live bends of a drag, and the previous route as a 40 % ghost', () => {
     useUiStore.setState({
       selection: { ...EMPTY_SELECTION, edges: ['e1'] },
-      canvasGesture: 'segment',
+      bendPreview: { edgeId: 'e1', bends: [{ x: 280, y: -100 }] },
     });
-    renderEdge({ routable: true, route: { offset: 40 } }, true);
+    const route = { waypoints: [{ x: 0.5, dy: -80 }] };
+    const { container } = renderEdge(
+      { shape: 'elbow', ...sizes, routable: true, route },
+      true,
+      geometry,
+    );
     expect(screen.getByTestId('edge-route-ghost')).toBeInTheDocument();
+    const live = container.querySelector('.react-flow__edge-path')?.getAttribute('d');
+    expect(live).not.toBe(screen.getByTestId('edge-route-ghost').getAttribute('d'));
   });
 
-  it('draws no ghost outside a segment gesture', () => {
+  it("draws no ghost without a bend gesture or for another connector's gesture", () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: true, route: { offset: 40 } }, true);
     expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
-  });
-
-  it('draws no ghost on a different, unselected edge while a segment gesture is active', () => {
-    useUiStore.setState({
-      selection: { ...EMPTY_SELECTION, edges: ['e2'] },
-      canvasGesture: 'segment',
-    });
-    renderEdge({ routable: true, route: { offset: 40 } }, false);
+    useUiStore.setState({ bendPreview: { edgeId: 'other', bends: [] } });
+    renderEdge({ routable: true, route: { offset: 40 } }, true);
     expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
   });
 });

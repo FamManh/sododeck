@@ -214,7 +214,22 @@ export interface StylePreview {
  * hint bar shows its keys (016 R13).
  */
 export type CanvasGesture =
-  'pan' | 'drag' | 'group-drag' | 'resize' | 'marquee' | 'card-resize' | 'segment' | 'endpoint';
+  | 'pan'
+  | 'drag'
+  | 'group-drag'
+  | 'resize'
+  | 'marquee'
+  | 'card-resize'
+  | 'bend'
+  | 'anchor'
+  | 'label'
+  | 'endpoint';
+
+/** The bends of a connector while one is dragged (022): UI-only until release, then one op. */
+export interface BendPreview {
+  edgeId: Id;
+  bends: readonly { x: number; y: number }[];
+}
 
 /** A snapping guide during a drag (016 R7), in canvas px. UI-only, never saved. */
 export interface Guide {
@@ -322,6 +337,10 @@ export interface UiState {
   guides: readonly Guide[];
   /** Offset of a group drag from its start, shown next to the frame. */
   dragReadout: { dx: number; dy: number } | null;
+  /** The live bends of the connector being dragged (022); null outside a bend gesture. */
+  bendPreview: BendPreview | null;
+  /** What a connector handle shows while dragged: "x 288 · y 144", "left side · 78 %", "label 20 %". */
+  connectorReadout: string | null;
   /** The `W × H` readout pill next to a dragged corner while resizing a card (017). */
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
   /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
@@ -467,6 +486,8 @@ export interface UiState {
   setDropTarget: (groupId: Id | null) => void;
   setGuides: (guides: readonly Guide[]) => void;
   setDragReadout: (readout: { dx: number; dy: number } | null) => void;
+  setBendPreview: (preview: BendPreview | null) => void;
+  setConnectorReadout: (readout: string | null) => void;
   setResizeReadout: (
     readout: { width: number; height: number; x: number; y: number } | null,
   ) => void;
@@ -643,6 +664,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     dropTarget: null,
     guides: NO_GUIDES,
     dragReadout: null,
+    bendPreview: null,
+    connectorReadout: null,
     resizeReadout: null,
     endpointHover: null,
     reconnectingEdgeId: null,
@@ -1151,6 +1174,12 @@ export const useUiStore = create<UiState>()((set, get) => {
       if (guides.length === 0 && get().guides.length === 0) return;
       set({ guides: guides.length === 0 ? NO_GUIDES : guides });
     },
+    setBendPreview: (bendPreview) => {
+      set({ bendPreview });
+    },
+    setConnectorReadout: (connectorReadout) => {
+      set({ connectorReadout });
+    },
     setDragReadout: (dragReadout) => {
       set({ dragReadout });
     },
@@ -1215,6 +1244,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         dropTarget: null,
         guides: NO_GUIDES,
         dragReadout: null,
+        bendPreview: null,
+        connectorReadout: null,
         resizeReadout: null,
         endpointHover: null,
         reconnectingEdgeId: null,

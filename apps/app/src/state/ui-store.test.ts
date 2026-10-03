@@ -46,7 +46,7 @@ describe('ui store', () => {
         marqueeCount: 3,
         pasteSerial: { at: { x: 1, y: 2 }, count: 2 },
       });
-      for (const gesture of ['resize', 'marquee', 'card-resize', 'segment', 'endpoint'] as const) {
+      for (const gesture of ['resize', 'marquee', 'card-resize', 'bend', 'endpoint'] as const) {
         state().setCanvasGesture(gesture);
         expect(state().canvasGesture).toBe(gesture);
       }

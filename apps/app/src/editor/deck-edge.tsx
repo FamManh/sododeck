@@ -14,8 +14,15 @@ import { EdgeEnds } from './edge-ends';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
-import { routedPath, type Box } from './routing/route-path';
-import { SegmentHandle } from './routing/segment-handle';
+import type { BendContext } from './editing/bend-drag';
+import {
+  cardCentre,
+  connectorPath,
+  decodeWaypoints,
+  offsetBends,
+} from './routing/connector-geometry';
+import { RouteHandles } from './routing/route-handles';
+import type { Box, Point } from './routing/route-path';
 import { lineCap, lineColour, lineDash } from './style/line-colour';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions, so a route's offset can be applied. */
@@ -28,6 +35,21 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
 
 /** A zero-size box at a handle: React Flow hands over the side midpoints, which is all routing needs. */
 const pointBox = (x: number, y: number): Box => ({ x, y, width: 0, height: 0 });
+
+/** The card's box from its side midpoint (React Flow's live handle position) and its size. */
+function boxAt(x: number, y: number, side: Side, size: { width: number; height: number }): Box {
+  const { width, height } = size;
+  switch (side) {
+    case 'top':
+      return { x: x - width / 2, y, width, height };
+    case 'bottom':
+      return { x: x - width / 2, y: y - height, width, height };
+    case 'left':
+      return { x, y: y - height / 2, width, height };
+    case 'right':
+      return { x: x - width, y: y - height / 2, width, height };
+  }
+}
 
 /** Knob and arrow grow a quarter per px above the default weight (frame 133). */
 const markScale = (width: number): number => (width > 2 ? 1 + (width - 2) * 0.25 : 1);
@@ -54,8 +76,7 @@ export const DeckEdge = memo(function DeckEdge({
 }: EdgeProps<DeckFlowEdge>) {
   const reducedMotion = useReducedMotion();
   const theme = useThemeStore((s) => s.theme);
-  // The segment handle (017 R7, FR-012): pointer only, the single selected connector, never in
-  // flow mode or recording, and only when it has a movable middle segment (routable, below).
+  // The route handles (022): the single selected connector, never in flow mode or recording.
   const showHandle = useUiStore(
     (s) =>
       selected === true &&
@@ -67,17 +88,29 @@ export const DeckEdge = memo(function DeckEdge({
       s.selection.stickies.length === 0,
   );
   const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
-  // The automatic-route ghost (017 R7, T036): shown only while this edge's own segment is being
-  // dragged, so the user can see where letting go without snapping would leave it.
-  // A boolean, not the whole gesture: pans and zooms must not re-render every connector.
-  const segmentGesture = useUiStore((s) => s.canvasGesture === 'segment');
-  const dragging = segmentGesture && showHandle;
+  // The live bends of this connector while one is dragged (022); the ghost of the route it had
+  // before is drawn under them. A boolean-ish selector: pans and zooms must not re-render every
+  // connector, and other connectors' drags are null here.
+  const preview = useUiStore((s) => (s.bendPreview?.edgeId === id ? s.bendPreview : null));
+  const dragging = preview !== null && showHandle;
   // This edge's own end is being dragged to reconnect it (017 R12): drawn as a 40 % ghost while
   // the custom connection line shows the live path.
   const reconnecting = useUiStore((s) => s.reconnectingEdgeId === id);
   const direction = data?.direction ?? 'forward';
-  const fromBox = pointBox(sourceX, sourceY);
-  const toBox = pointBox(targetX, targetY);
+  const route = data?.route;
+  // Bends and anchors need the real cards (their centres and sides); everything else only needs
+  // the handle points, so a connector without them draws exactly as before.
+  const needsBoxes =
+    (route?.waypoints?.length ?? 0) > 0 || route?.fromAt !== undefined || route?.toAt !== undefined;
+  const sized = needsBoxes && data?.fromSize !== undefined && data.toSize !== undefined;
+  const fromBox =
+    sized && data.fromSize !== undefined
+      ? boxAt(sourceX, sourceY, sides[0], data.fromSize)
+      : pointBox(sourceX, sourceY);
+  const toBox =
+    sized && data.toSize !== undefined
+      ? boxAt(targetX, targetY, sides[1], data.toSize)
+      : pointBox(targetX, targetY);
   // An error path ends in × instead of an arrow (035 FR-009).
   const flow = data?.flow;
   const errorEnd = flow?.style === 'error';
@@ -87,14 +120,15 @@ export const DeckEdge = memo(function DeckEdge({
     arrowAtEnd: direction !== 'none' && !errorEnd,
   };
   const shape = data?.shape ?? 'curved';
-  const { path, labelX, labelY, segment, ends } = routedPath(
+  const { path, labelX, labelY, segment, ends } = connectorPath({
     shape,
     fromBox,
     toBox,
     sides,
-    data?.route?.offset,
-    arrows,
-  );
+    route,
+    bends: preview?.bends,
+    options: arrows,
+  });
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
   // colour, dash and weight > the defaults. A colour never carries a state alone.
@@ -103,8 +137,25 @@ export const DeckEdge = memo(function DeckEdge({
     ? 'var(--color-deck-orange)'
     : (flowStroke?.stroke ?? lineColour(own.color, theme));
   const hasBadges = (flow?.badges.length ?? 0) > 0;
-  // The automatic path (no route), computed only while dragging, to draw the ghost.
-  const ghostPath = dragging ? routedPath(shape, fromBox, toBox, sides, 0, arrows).path : null;
+  // The route as it was before this bend gesture, computed only while dragging, for the ghost.
+  const ghostPath = dragging
+    ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows }).path
+    : null;
+  // The bends the handles sit on: the stored ones, or a 017 offset's two corners (R3).
+  const bends: Point[] =
+    route?.waypoints !== undefined && sized
+      ? decodeWaypoints(route.waypoints, cardCentre(fromBox), cardCentre(toBox))
+      : shape === 'elbow' && segment !== null && data?.routable === true
+        ? offsetBends(segment, ends.start)
+        : [];
+  const bendContext: BendContext = {
+    edgeId: id,
+    fromCentre: cardCentre(fromBox),
+    toCentre: cardCentre(toBox),
+    start: ends.start,
+    end: ends.end,
+    bends,
+  };
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
@@ -273,13 +324,8 @@ export const DeckEdge = memo(function DeckEdge({
           )}
         </EdgeLabelRenderer>
       )}
-      {showHandle && shape === 'elbow' && data?.routable === true && segment !== null && (
-        <SegmentHandle
-          edgeId={id}
-          level={data.level}
-          segment={segment}
-          offset={data.route?.offset ?? 0}
-        />
+      {showHandle && shape !== 'straight' && data?.routable === true && (
+        <RouteHandles context={bendContext} />
       )}
     </>
   );

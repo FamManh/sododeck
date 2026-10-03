@@ -210,7 +210,7 @@
 [data-tool-hand] .react-flow__edge-path,
 [data-tool-hand] .react-flow__edge-interaction,
 [data-tool-hand] .react-flow__edgeupdater,
-[data-tool-hand] .sd-segment-handle,
+[data-tool-hand] .sd-route-handle,
 [data-tool-hand] .sd-resize-handle {
   /* React Flow sets pointer-events inline on each node, and on these parts in its CSS. Named
      classes only: a universal descendant selector slows every style recalc. */
@@ -398,27 +398,56 @@
   background: var(--color-primary);
 }
 
-/* Connector middle-segment handle (017 R7, FR-012): 10 × 24, rotated for a horizontal-moving
-   segment (`data-axis="vertical"`); Surface fill, 1.5 px orange; Orange Soft on hover, orange
-   while dragged. A focusable slider, so keyboard and pointer both work. */
-.sd-segment-handle {
-  width: 10px;
+/* Connector route handles (022, frame 129): light round handles with a 24 px round hit area.
+   Bends are filled 8 px dots, midpoints 8 px rings, ends 10 px rings; hover grows them with a
+   halo. Focusable buttons, so keyboard and pointer both work. */
+.sd-route-handle {
+  display: flex;
+  width: 24px;
   height: 24px;
-  border-radius: 5px;
-  border: 1.5px solid var(--color-primary);
-  background: var(--color-surface);
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
   pointer-events: all;
   cursor: grab;
 }
-.sd-segment-handle[data-axis='vertical'] {
-  width: 24px;
+.sd-route-handle::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-surface);
+  transition:
+    width var(--sd-dur-ring),
+    height var(--sd-dur-ring),
+    box-shadow var(--sd-dur-ring);
+}
+.sd-route-handle[data-kind='bend']::before {
+  background: var(--color-primary);
+}
+.sd-route-handle[data-kind='end']::before {
+  width: 10px;
   height: 10px;
 }
-.sd-segment-handle:hover {
-  background: var(--color-primary-soft);
+.sd-route-handle:hover::before,
+.sd-route-handle[data-active]::before {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
 }
-.sd-segment-handle:active,
-.sd-segment-handle[data-active] {
-  background: var(--color-primary);
+.sd-route-handle[data-active] {
   cursor: grabbing;
+}
+.sd-route-readout {
+  position: absolute;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 4px 8px;
 }

@@ -310,6 +310,8 @@ export interface ConnectorInput {
   /** Sides already resolved (`resolveSides`, or `autoSides` when the route has bends). */
   sides: ResolvedSides;
   route?: ConnectorRoute | undefined;
+  /** Absolute bends that replace the route's own (a bend being dragged: nothing is stored yet). */
+  bends?: readonly Point[] | undefined;
   options?: RoutedPathOptions;
 }
 
@@ -327,7 +329,7 @@ export function connectorPath(input: ConnectorInput): RoutedShapePath {
   const { shape, fromBox, toBox, sides, route, options = {} } = input;
   const waypoints = route?.waypoints ?? [];
   const anchored = route?.fromAt !== undefined || route?.toAt !== undefined;
-  const bent = waypoints.length > 0 && shape !== 'straight';
+  const bent = (input.bends?.length ?? waypoints.length) > 0 && shape !== 'straight';
   if (sameBox(fromBox, toBox) || (!bent && !anchored)) {
     return routedPath(shape, fromBox, toBox, sides, route?.offset ?? 0, options);
   }
@@ -336,7 +338,9 @@ export function connectorPath(input: ConnectorInput): RoutedShapePath {
   const [fromSide, toSide] = sides;
   const start = anchorPoint(fromBox, fromSide, route?.fromAt);
   const end = anchorPoint(toBox, toSide, route?.toAt);
-  let bends = bent ? decodeWaypoints(waypoints, cardCentre(fromBox), cardCentre(toBox)) : [];
+  let bends = !bent
+    ? []
+    : (input.bends ?? decodeWaypoints(waypoints, cardCentre(fromBox), cardCentre(toBox)));
   if (
     bends.length === 0 &&
     shape === 'elbow' &&

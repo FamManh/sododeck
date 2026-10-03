@@ -41,6 +41,7 @@ export function RouteFields({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
   const sides = resolveSides(fromBox, toBox, edge.route);
   const hasSegment = middleSegment(sides) !== null;
   const offset = edge.route?.offset ?? 0;
+  const bendCount = edge.route?.waypoints?.length ?? 0;
 
   const setSide = (key: 'fromSide' | 'toSide', value: string) => {
     oneStep(editor, () => {
@@ -72,6 +73,7 @@ export function RouteFields({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
           }}
         />
       </div>
+      {bendCount > 0 && <p className="text-body-sm text-ink-secondary">Bends: {bendCount}</p>}
       <div className="flex items-end gap-2">
         <OffsetField
           id={`${id}-offset`}
