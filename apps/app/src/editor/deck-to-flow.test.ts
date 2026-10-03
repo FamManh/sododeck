@@ -1056,3 +1056,62 @@ describe('drill-in proxies and scope label (034 US3)', () => {
     });
   });
 });
+
+describe('shapes (031)', () => {
+  const shapes: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'ok', type: 'diamond', title: 'OK?', position: { x: 0, y: 0 } },
+      { id: 'db', type: 'database', title: 'Orders DB', position: { x: 400, y: 0 } },
+      { id: 'svc', type: 'service', title: 'Svc', position: { x: 0, y: 300 } },
+    ],
+    edges: [{ id: 'e1', from: 'ok', to: 'db', route: { fromAt: 0.25 } }],
+  };
+  const flowNode = (file: SododeckFile, id: string) =>
+    toFlowNodes(file, topLevelGraph(file), view()).find((n) => n.id === id) as DeckFlowNode;
+
+  it('draws a shape-family node as node type `shape` at its default size, with its geometry', () => {
+    expect(flowNode(shapes, 'ok')).toMatchObject({
+      type: 'shape',
+      width: 176,
+      height: 112,
+      data: { geometry: 'diamond', kind: 'diamond' },
+    });
+    expect(flowNode(shapes, 'svc').type).toBe('deck');
+    expect(flowNode(shapes, 'svc').data.geometry).toBeUndefined();
+    expect(flowNode(shapes, 'db').type).toBe('deck');
+  });
+
+  it('refreshes the cached object when display, type or size change; keeps it otherwise', () => {
+    const before = flowNode(shapes, 'db');
+    expect(flowNode(shapes, 'db')).toBe(before);
+    const switched: SododeckFile = {
+      ...shapes,
+      nodes: shapes.nodes.map((n) => (n.id === 'db' ? { ...n, display: 'shape' as const } : n)),
+    };
+    const after = flowNode(switched, 'db');
+    expect(after).toMatchObject({ type: 'shape', width: 152, height: 104 });
+    expect(after.data.geometry).toBe('cylinder');
+    // Unchanged neighbours keep their objects.
+    expect(flowNode(switched, 'ok')).toBe(flowNode(shapes, 'ok'));
+    const resized: SododeckFile = {
+      ...switched,
+      nodes: switched.nodes.map((n) =>
+        n.id === 'db' ? { ...n, size: { width: 300, height: 200 } } : n,
+      ),
+    };
+    expect(flowNode(resized, 'db')).toMatchObject({ width: 300, height: 200 });
+  });
+
+  it('gives connectors the geometry of each shape end, refreshed when it changes', () => {
+    const [edge] = toFlowEdges(shapes, topLevelGraph(shapes), view());
+    expect(edge?.data).toMatchObject({ fromGeometry: 'diamond' });
+    expect(edge?.data?.toGeometry).toBeUndefined();
+    const switched: SododeckFile = {
+      ...shapes,
+      nodes: shapes.nodes.map((n) => (n.id === 'db' ? { ...n, display: 'shape' as const } : n)),
+    };
+    const [next] = toFlowEdges(switched, topLevelGraph(switched), view());
+    expect(next?.data?.toGeometry).toBe('cylinder');
+  });
+});

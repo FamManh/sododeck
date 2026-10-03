@@ -78,6 +78,7 @@ import { PANEL_COLLAPSED as JSON_COLLAPSED } from './panel-height';
 import { MAX_ZOOM, MIN_ZOOM } from './zoom-limits';
 import { EDGE, ISLAND_HEIGHT, STACK_GAP, zoomIslandBottom } from './shell/shell-geometry';
 import { problemMarks } from './problems/problem-marks';
+import { ShapeNode } from './shapes/shape-node';
 import { useProblems } from './problems/use-problems';
 
 const nodeTypes: NodeTypes = {
@@ -86,6 +87,7 @@ const nodeTypes: NodeTypes = {
   'group-boundary': GroupBoundaryNode,
   port: OutsideProxyNode,
   'scope-label': ScopeLabelNode,
+  shape: ShapeNode,
   sticky: StickyNode,
 };
 const edgeTypes: EdgeTypes = {

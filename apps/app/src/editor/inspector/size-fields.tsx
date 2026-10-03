@@ -6,22 +6,12 @@ import { useId, useState } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { CARD_SIZE_LIMITS, cardSize } from '../canvas-geometry';
+import { cardSize, sizeLimitsOf } from '../canvas-geometry';
 import { oneStep } from '../fields/one-step';
 
 const FIELDS = [
-  {
-    key: 'width',
-    label: 'Width',
-    limit: CARD_SIZE_LIMITS.min.width,
-    max: CARD_SIZE_LIMITS.max.width,
-  },
-  {
-    key: 'height',
-    label: 'Height',
-    limit: CARD_SIZE_LIMITS.min.height,
-    max: CARD_SIZE_LIMITS.max.height,
-  },
+  { key: 'width', label: 'Width' },
+  { key: 'height', label: 'Height' },
 ] as const;
 
 function clamp(value: number, min: number, max: number): number {
@@ -30,19 +20,20 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * The card's size as numbers (017 R4, FR-006): the keyboard path to resizing a card. Each commit
- * (Enter or leaving the field) is one undo step, clamped to `CARD_SIZE_LIMITS` like a handle
- * drag. "Reset size" clears the stored size, back to the level's default.
+ * (Enter or leaving the field) is one undo step, clamped to the node's limits like a handle
+ * drag (a shape's own minimum, 031). "Reset size" clears the stored size, back to the level's default.
  */
 export function SizeFields({ node }: { node: Node }) {
   const editor = useEditor();
   const id = useId();
   const editable = useUiStore((s) => !isFlowMode(s) && s.flowSession === null);
   const size = cardSize(node, 'component');
+  const limits = sizeLimitsOf(node);
   return (
     <PanelSection label="Size">
       <div className="flex items-end gap-2">
         <div className="grid flex-1 grid-cols-2 gap-2">
-          {FIELDS.map(({ key, label, limit, max }) => (
+          {FIELDS.map(({ key, label }) => (
             <SizeField
               key={key}
               id={`${id}-${key}`}
@@ -50,7 +41,7 @@ export function SizeFields({ node }: { node: Node }) {
               value={size[key]}
               disabled={!editable}
               onCommit={(value) => {
-                const next = { ...size, [key]: clamp(value, limit, max) };
+                const next = { ...size, [key]: clamp(value, limits.min[key], limits.max[key]) };
                 oneStep(editor, () => {
                   editor.setCardSize(node.id, next);
                 });

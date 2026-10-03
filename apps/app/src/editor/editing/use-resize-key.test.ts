@@ -47,6 +47,19 @@ describe('⌘⇧ arrow resize (017 R9/R10)', () => {
     expect(toJSON(doc).nodes[0]?.size?.width).toBe(120);
   });
 
+  it('clamps a shape to its own minimum (031)', () => {
+    const { doc, editor } = setup();
+    const keyer = createResizeKeyer(editor);
+    const limits = {
+      min: { width: 40, height: 24 },
+      max: { width: 800, height: 600 },
+      step: 4,
+    };
+    for (let i = 0; i < 60; i++) keyer.key({ key: 'ArrowLeft' }, { ...target(160, 40), limits });
+    vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
+    expect(toJSON(doc).nodes[0]?.size?.width).toBe(40);
+  });
+
   it('is one undo step for the whole burst, and announces the final size', () => {
     const { doc, editor } = setup();
     const keyer = createResizeKeyer(editor);
