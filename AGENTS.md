@@ -49,7 +49,8 @@ Single package: `pnpm --filter @sododeck/<name> <script>`.
 - `docs/design/` holds the Claude Design prototype: `claude-design/` (read-only originals, never copy its code), `screens/` (screenshot of every screen and state; match them pixel-close), `design-analysis.md` (inventory, token and schema mapping, gaps vs spec).
 - Frames **02–85** are the reference for panel **content** (outline, flows, inspector fields, rules, JSON, library). Frames **86–116** (canvas-first editor) are the reference for editor **placement** (islands, rail, flyouts, drawer, JSON overlay) and the new on-canvas controls. Do not change 02–85 to match the new placement. Frames **117–127** (board B "Deck") are the reference for the **card system** (card frame, states, groups, connectors, playback, fields, tags, palette; DESIGN.md "Card system (Deck)"), built by 029–035.
 - Where the prototype and `DESIGN.md` disagree (on-primary text, clay, success green, icons), `DESIGN.md` and `lucide-react` win. Where a frame and a founder decision in `design-analysis.md` §g disagree, the decision wins.
-- `docs/backlog.md` lists the Spec Kit features (000–037) with dependencies, acceptance criteria and ready-to-paste `/speckit.specify` prompts.
+- `docs/backlog.md` lists the Spec Kit features (000–038) with dependencies, acceptance criteria and ready-to-paste `/speckit.specify` prompts; the Database pack (039–049) is in `docs/backlog-database.md`.
+- Do not name other diagram or database tools anywhere in the repo (docs, specs, code, UI copy); describe features on their own terms.
 
 ## Architecture rules
 
