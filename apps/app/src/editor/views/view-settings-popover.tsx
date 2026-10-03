@@ -1,4 +1,4 @@
-import type { ViewSettingsPatch } from '@sododeck/model';
+import { tagKey, type ViewSettingsPatch } from '@sododeck/model';
 import type { NodeKind, SododeckFile, SubtitleField, View } from '@sododeck/schema';
 import { Checkbox } from '@sododeck/ui/components/checkbox';
 import { PopoverContent } from '@sododeck/ui/components/popover';
@@ -33,8 +33,13 @@ function kindsOf(deck: SododeckFile, chosen: readonly NodeKind[]): NodeKind[] {
   return [...new Set([...deck.nodes.map((n) => n.type), ...chosen])];
 }
 
+/** One entry per tag key, in the spelling the cards use (a chosen tag no card has keeps its own). */
 function tagsOf(deck: SododeckFile, chosen: readonly string[]): string[] {
-  return [...new Set([...deck.nodes.flatMap((n) => n.tags ?? []), ...chosen])].sort();
+  const byKey = new Map<string, string>();
+  for (const tag of [...deck.nodes.flatMap((n) => n.tags ?? []), ...chosen]) {
+    if (!byKey.has(tagKey(tag))) byKey.set(tagKey(tag), tag);
+  }
+  return [...byKey.values()].sort();
 }
 
 /** Groups in tree order with their depth, cycle-safe. */
@@ -200,9 +205,10 @@ export function ViewSettingsPopover({
             <Checkbox
               key={tag}
               label={tag}
-              checked={view.excludeTags?.includes(tag) === true}
+              checked={view.excludeTags?.some((t) => tagKey(t) === tagKey(tag)) === true}
               onCheckedChange={(on) => {
-                update({ excludeTags: toggled(view.excludeTags, tag, on === true) });
+                const others = (view.excludeTags ?? []).filter((t) => tagKey(t) !== tagKey(tag));
+                update({ excludeTags: on === true ? [...others, tag] : others });
               }}
             />
           ))}
