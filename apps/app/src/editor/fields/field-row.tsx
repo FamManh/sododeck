@@ -158,7 +158,7 @@ export function FieldRow({
         drag.over && 'shadow-[inset_0_2px_0_var(--color-primary)]',
       )}
     >
-      <div className="grid grid-cols-[1.25rem_1rem_minmax(0,6.5rem)_minmax(0,1fr)_auto_auto] items-center gap-2">
+      <div className="grid grid-cols-[1rem_1rem_minmax(0,5rem)_minmax(0,1fr)_auto_auto] items-center gap-1.5">
         {editable ? (
           <button
             type="button"
@@ -172,7 +172,7 @@ export function FieldRow({
               setDraggable(false);
             }}
             className={cn(
-              'inline-flex h-7 w-5 cursor-grab items-center justify-center rounded-row text-ink-muted hover:bg-surface-2',
+              'inline-flex h-7 w-4 cursor-grab items-center justify-center rounded-row text-ink-muted hover:bg-surface-2',
               focusRing,
             )}
           >
@@ -229,7 +229,7 @@ export function FieldRow({
                 type="button"
                 aria-label={`${field.name} options`}
                 className={cn(
-                  'inline-flex size-7 cursor-pointer items-center justify-center rounded-row text-ink-secondary hover:bg-surface-2',
+                  'inline-flex size-6 cursor-pointer items-center justify-center rounded-row text-ink-secondary hover:bg-surface-2',
                   focusRing,
                 )}
               >
@@ -294,7 +294,7 @@ export function FieldRow({
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <span className="w-7" />
+          <span className="w-6" />
         )}
         {editable ? (
           <>

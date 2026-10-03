@@ -83,15 +83,15 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 1 (write first)
 
-- [ ] T014 [P] [US1] `apps/app/src/editor/fields/typed-fields-section.test.tsx`: a Task's drawer lists Status, Assignee, Due date and Owner in order (empty) with the names, roles and switches of [contracts/fields-ui.md](contracts/fields-ui.md); a Service lists Tech, Host, Owner; a field for Warehouse only does not show on a Service; setting a value calls `setValues` once; clearing removes it; invalid input shows the message under the control and writes nothing.
-- [ ] T015 [P] [US1] `apps/app/src/editor/fields/value-controls/*.test.tsx`: one test per kind for the control's role, keyboard entry and commit (text, number with unit, select / status with search and colour, person with deck suggestions and canonical spelling, date, date range From / To, link URL + Label, progress slider and number).
-- [ ] T016 [P] [US1] `apps/app/src/editor/fields/add-field-form.test.tsx`: "Add field" opens name, "Kind: Text" menu in frame-124 order, "+ Option" row for select / status (status prefilled To do / In progress / Done), "Show on card"; ⏎ calls `addField` with `types: [the card's type]` and announces; Esc cancels; empty or duplicate name refused.
+- [x] T014 [P] [US1] `apps/app/src/editor/fields/typed-fields-section.test.tsx`: a Task's drawer lists Status, Assignee, Due date and Owner in order (empty) with the names, roles and switches of [contracts/fields-ui.md](contracts/fields-ui.md); a Service lists Tech, Host, Owner; a field for Warehouse only does not show on a Service; setting a value calls `setValues` once; clearing removes it; invalid input shows the message under the control and writes nothing.
+- [x] T015 [P] [US1] `apps/app/src/editor/fields/value-controls/*.test.tsx`: one test per kind for the control's role, keyboard entry and commit (text, number with unit, select / status with search and colour, person with deck suggestions and canonical spelling, date, date range From / To, link URL + Label, progress slider and number).
+- [x] T016 [P] [US1] `apps/app/src/editor/fields/add-field-form.test.tsx`: "Add field" opens name, "Kind: Text" menu in frame-124 order, "+ Option" row for select / status (status prefilled To do / In progress / Done), "Show on card"; ⏎ calls `addField` with `types: [the card's type]` and announces; Esc cancels; empty or duplicate name refused.
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Create `apps/app/src/editor/fields/value-controls/` (one file per kind, reusing `combo-field.tsx`, `pick-field.tsx`, `SwatchGrid` and 033's `chipColours` for option dots) and generalise `fields/owner-field.tsx` into the person control using `personSuggestions` / `canonicalPerson`. Make T015 pass.
-- [ ] T018 [US1] Create `apps/app/src/editor/fields/typed-fields-section.tsx` and replace the Owner / Tech / Host rows in `apps/app/src/editor/inspector/node-inspector.tsx` with it (writes via `oneStep`). Make T014 pass.
-- [ ] T019 [US1] Create `apps/app/src/editor/fields/add-field-form.tsx` and mount it at the end of the section. Make T016 pass.
+- [x] T017 [US1] Create `apps/app/src/editor/fields/value-controls/` (one file per kind, reusing `combo-field.tsx`, `pick-field.tsx`, `SwatchGrid` and 033's `chipColours` for option dots) and generalise `fields/owner-field.tsx` into the person control using `personSuggestions` / `canonicalPerson`. Make T015 pass.
+- [x] T018 [US1] Create `apps/app/src/editor/fields/typed-fields-section.tsx` and replace the Owner / Tech / Host rows in `apps/app/src/editor/inspector/node-inspector.tsx` with it (writes via `oneStep`). Make T014 pass.
+- [x] T019 [US1] Create `apps/app/src/editor/fields/add-field-form.tsx` and mount it at the end of the section. Make T016 pass.
 
 ---
 
@@ -129,11 +129,11 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T030 [P] [US3] Extend `typed-fields-section.test.tsx`: row menu items per the contract; Rename (empty / duplicate refused); drag and ⌥↑ / ⌥↓ reorder call `moveField` once; Edit options (add, rename, recolour, reorder, delete with "used on N cards"); "Also use for…" adds / removes types; Delete field shows "Delete field · used on N cards"; Change kind shows "N values will be cleared" only when N > 0 and calls `changeFieldKind` once; the first change to a default field shows no extra UI (materialisation is invisible).
+- [x] T030 [P] [US3] Extend `typed-fields-section.test.tsx`: row menu items per the contract; Rename (empty / duplicate refused); drag and ⌥↑ / ⌥↓ reorder call `moveField` once; Edit options (add, rename, recolour, reorder, delete with "used on N cards"); "Also use for…" adds / removes types; Delete field shows "Delete field · used on N cards"; Change kind shows "N values will be cleared" only when N > 0 and calls `changeFieldKind` once; the first change to a default field shows no extra UI (materialisation is invisible).
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Add the row menu, options editor, types picker and the two `alertdialog` confirmations to `apps/app/src/editor/fields/typed-fields-section.tsx` (split into `field-row-menu.tsx` and `field-options-editor.tsx` if the file grows). Make T030 pass.
+- [x] T031 [US3] Add the row menu, options editor, types picker and the two `alertdialog` confirmations to `apps/app/src/editor/fields/typed-fields-section.tsx` (split into `field-row-menu.tsx` and `field-options-editor.tsx` if the file grows). Make T030 pass.
 
 ---
 
@@ -156,22 +156,22 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 5 (write first)
 
-- [ ] T034 [P] [US5] Extend `apps/app/src/editor/inspector/bulk-inspector.test.tsx`: three warehouses show their fields with "Mixed" where values differ; setting writes all three in one step; a mixed-type selection shows only shared fields.
-- [ ] T035 [P] [US5] Extend `packages/model/test/search*.test.ts`: `'field'` search finds text, person, number, option labels and link labels; snippets name the field.
-- [ ] T036 [P] [US5] Extend clipboard tests (`packages/model/test/fragment*.test.ts` / paste tests): values travel with copied cards; pasting into a deck without the field keeps them and Problems reports them; no definition is invented.
-- [ ] T037 [P] [US5] Problems panel test: `field-value-dangling` rows show "Remove value", which clears it in one step.
+- [x] T034 [P] [US5] Extend `apps/app/src/editor/inspector/bulk-inspector.test.tsx`: three warehouses show their fields with "Mixed" where values differ; setting writes all three in one step; a mixed-type selection shows only shared fields.
+- [x] T035 [P] [US5] Extend `packages/model/test/search*.test.ts`: `'field'` search finds text, person, number, option labels and link labels; snippets name the field.
+- [x] T036 [P] [US5] Extend clipboard tests (`packages/model/test/fragment*.test.ts` / paste tests): values travel with copied cards; pasting into a deck without the field keeps them and Problems reports them; no definition is invented.
+- [x] T037 [P] [US5] Problems panel test: `field-value-dangling` rows show "Remove value", which clears it in one step.
 
 ### Implementation for User Story 5
 
-- [ ] T038 [US5] Bulk fields in `apps/app/src/editor/inspector/bulk-inspector.tsx` (+ `derive.ts` shared / mixed values). Make T034 pass.
-- [ ] T039 [US5] Search over values in `packages/model/src/search/index.ts` / `search.ts`. Make T035 pass.
-- [ ] T040 [US5] Fix clipboard and Problems panel paths T036 / T037 expose.
+- [x] T038 [US5] Bulk fields in `apps/app/src/editor/inspector/bulk-inspector.tsx` (+ `derive.ts` shared / mixed values). Make T034 pass.
+- [x] T039 [US5] Search over values in `packages/model/src/search/index.ts` / `search.ts`. Make T035 pass.
+- [x] T040 [US5] Fix clipboard and Problems panel paths T036 / T037 expose.
 
 ---
 
 ## Phase 8: Polish and cross-cutting
 
-- [ ] T041 [P] Docs: new `docs/decisions/0027-typed-fields.md` (three sources and materialisation R1, format and S12 / S13 R2, layout R3, per-type on-card, conversions R6, dangling values, person spelling); `docs/decisions/0022-schema-roadmap.md` typed-fields rows marked built and refined (`unit`, `icon`, `fieldDefaults`, built-in entries); `DESIGN.md` (fields block details, field editor, Add field); `packages/schema/CLAUDE.md` (S12 / S13), `packages/model/CLAUDE.md` (`fields.ts`, `field-values.ts`, `ops/fields.ts`, storage lines), `apps/app/CLAUDE.md` (`card-fields.ts`, `fields/typed-fields-section.tsx`, value controls); `docs/backlog.md` §032 status. Do not name other diagram or database tools anywhere.
+- [x] T041 [P] Docs: new `docs/decisions/0027-typed-fields.md` (three sources and materialisation R1, format and S12 / S13 R2, layout R3, per-type on-card, conversions R6, dangling values, person spelling); `docs/decisions/0022-schema-roadmap.md` typed-fields rows marked built and refined (`unit`, `icon`, `fieldDefaults`, built-in entries); `DESIGN.md` (fields block details, field editor, Add field); `packages/schema/CLAUDE.md` (S12 / S13), `packages/model/CLAUDE.md` (`fields.ts`, `field-values.ts`, `ops/fields.ts`, storage lines), `apps/app/CLAUDE.md` (`card-fields.ts`, `fields/typed-fields-section.tsx`, value controls); `docs/backlog.md` §032 status. Do not name other diagram or database tools anywhere.
 - [ ] T042 Accessibility pass: keyboard-only quickstart step 9; visible focus on every row, control, switch and menu; names per [contracts/fields-ui.md](contracts/fields-ui.md); announcements; a greyscale screenshot of field chips still readable by text.
 - [ ] T043 Run the quickstart walk 1–9 light and dark; screenshots in `specs/032-typed-fields/screens/`, results in `quickstart-results.md`.
 - [ ] T044 Performance: add `BENCH_FIELDS=1` to `apps/app/bench/perf.bench.ts` and `apps/app/src/bench/generate-deck.ts` (500 Task / Warehouse / Issue cards with four on-card values); run it, `pnpm bench` and `BENCH_TYPES=1` → `bench-after.md` vs `bench-before.md`; re-run `scene.perf`.
