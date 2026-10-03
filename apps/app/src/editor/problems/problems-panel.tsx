@@ -5,6 +5,9 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { ChevronRight, CircleCheck } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
+import { useEditor } from '../../model/use-editor';
+import { useUiStore } from '../../state/ui-store';
+import { oneStep } from '../fields/one-step';
 import { PROBLEM_ICONS } from './problem-kinds';
 import { PROBLEM_ROW_CAP } from './problems-dom';
 import { useProblems } from './use-problems';
@@ -15,6 +18,17 @@ import { useProblems } from './use-problems';
  */
 export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) => void }) {
   const problems = useProblems();
+  const editor = useEditor();
+  const announce = useUiStore((s) => s.announce);
+  /** A row's one-click fix (032: remove a dangling value), one undo step. */
+  const applyFix = (problem: Problem) => {
+    const { fix } = problem;
+    if (fix === undefined) return;
+    oneStep(editor, () => {
+      editor.setValues([fix.nodeId], fix.fieldId, null);
+    });
+    announce('Value removed');
+  };
   const [showAll, setShowAll] = useState<{ total: number } | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   if (problems === null) return null;
@@ -95,7 +109,12 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                     />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="text-title-sm text-ink">{problem.title}</span>
-                      <span className="text-body-sm text-ink-secondary">{problem.detail}</span>
+                      <span
+                        id={`${problem.key}-detail`}
+                        className="text-body-sm text-ink-secondary"
+                      >
+                        {problem.detail}
+                      </span>
                     </span>
                     <ChevronRight
                       aria-hidden
@@ -103,6 +122,21 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                       className="mt-0.5 size-4 shrink-0 text-ink-secondary"
                     />
                   </button>
+                  {problem.fix !== undefined && (
+                    <button
+                      type="button"
+                      aria-describedby={`${problem.key}-detail`}
+                      onClick={() => {
+                        applyFix(problem);
+                      }}
+                      className={cn(
+                        'mt-1 ml-7 cursor-pointer rounded-button px-2 py-1 text-body-sm text-ink hover:bg-surface-2',
+                        focusRing,
+                      )}
+                    >
+                      {problem.fix.label}
+                    </button>
+                  )}
                 </li>
               );
             })}

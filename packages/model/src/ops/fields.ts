@@ -478,6 +478,7 @@ export function changeFieldKind(ctx: EditContext, id: Id, kind: FieldKind): void
  * Sets (or clears with `null`) one field's value on every listed card, in one step. Validates
  * against the field (FR-015); person values take the deck's existing spelling (FR-014b);
  * built-ins write `node.tech` / `host` / `owner`. Setting a value never materialises definitions.
+ * Clearing (`null`) also works for a value whose field no longer exists (Problems' "Remove value").
  */
 export function setValues(
   ctx: EditContext,
@@ -486,7 +487,8 @@ export function setValues(
   value: unknown,
 ): void {
   const deck = fieldDeck(ctx);
-  const field = requireField(deck, fieldId);
+  // Clearing needs no definition: a dangling value (FR-017) is removed by its id.
+  const field = value === null ? findField(deck, fieldId) : requireField(deck, fieldId);
   const nodes = collectionMap(ctx.doc, 'nodes');
   const missing = nodeIds.filter((id) => !nodes.has(id));
   if (missing.length > 0) {
@@ -496,7 +498,7 @@ export function setValues(
     );
   }
   let next: unknown = value;
-  if (next !== null) {
+  if (next !== null && field !== undefined) {
     if (field.kind === 'person' && typeof next === 'string') {
       next = canonicalPerson({ ...deck, nodes: readCollection(ctx.doc, 'nodes') }, next);
     }

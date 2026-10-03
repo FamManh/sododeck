@@ -441,6 +441,20 @@ describe('setValues (032 FR-002, FR-014b, FR-015)', () => {
     expect(serializeDeck(deck())).toBe(before);
   });
 
+  it('clears a dangling value whose field no longer exists (Remove value)', () => {
+    const { editor } = setup({
+      ...base,
+      nodes: [{ id: 'x', type: 'task', title: 'X', values: { gone: 'kept' } }],
+    });
+    editor.setValues(['x'], 'gone', null);
+    expect(getObject(editor.doc, 'nodes', 'x')?.values).toBeUndefined();
+    expect(
+      codeOf(() => {
+        editor.setValues(['x'], 'gone', 'again');
+      }),
+    ).toBe('not-found');
+  });
+
   it('writes built-ins to tech / host / owner, never to values', () => {
     const { editor } = setup();
     editor.setValues(['s1'], 'tech', 'Rust');

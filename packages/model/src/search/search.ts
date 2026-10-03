@@ -27,7 +27,16 @@ export interface SearchIndex {
 export type SearchKind = 'node' | 'edge' | 'flow' | 'step' | 'rule' | 'sticky';
 
 export type SearchField =
-  'title' | 'description' | 'type' | 'condition' | 'notes' | 'text' | 'cell' | 'column';
+  | 'title'
+  | 'description'
+  | 'type'
+  | 'condition'
+  | 'notes'
+  | 'text'
+  | 'cell'
+  | 'column'
+  /** A typed field value (032), indexed as "<field>: <value>". */
+  | 'field';
 
 export interface SearchResult {
   kind: SearchKind;

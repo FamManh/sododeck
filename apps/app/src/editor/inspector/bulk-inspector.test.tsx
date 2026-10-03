@@ -177,3 +177,64 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
     expect(toJSON(doc).views[0]?.pinned).toEqual(['p']);
   });
 });
+
+describe('BulkInspector typed fields (032 FR-016)', () => {
+  const warehouses = {
+    ...inspectorDeck,
+    packs: ['architecture', 'process', 'logistics', 'data'],
+    fields: [
+      {
+        id: 'region',
+        name: 'Zone',
+        kind: 'select' as const,
+        types: ['warehouse'],
+        options: [
+          { id: 'n', label: 'North' },
+          { id: 's', label: 'South' },
+        ],
+      },
+    ],
+    nodes: [
+      ...inspectorDeck.nodes,
+      { id: 'w1', type: 'warehouse', title: 'W1', values: { region: 'n', 'warehouse.sla': 4 } },
+      { id: 'w2', type: 'warehouse', title: 'W2', values: { region: 's', 'warehouse.sla': 4 } },
+      { id: 'w3', type: 'warehouse', title: 'W3', values: { 'warehouse.sla': 4 } },
+      { id: 't1', type: 'task', title: 'T1' },
+    ],
+  };
+
+  it('shows Mixed where values differ and "Same on all 3" where they agree', () => {
+    renderInspector(warehouses, { nodes: ['w1', 'w2', 'w3'] });
+    const region = screen.getByRole('combobox', { name: 'Zone' });
+    expect(region).toHaveAttribute('placeholder', 'Mixed');
+    expect(region).toHaveAccessibleDescription('Mixed values');
+    expect(screen.getByRole('spinbutton', { name: 'SLA h' })).toHaveValue('4');
+    expect(screen.getByRole('spinbutton', { name: 'SLA h' })).toHaveAccessibleDescription(
+      'Same on all 3',
+    );
+  });
+
+  it('sets a value on all three in one undo step', async () => {
+    const { user, doc, editor } = renderInspector(warehouses, { nodes: ['w1', 'w2', 'w3'] });
+    await user.click(screen.getByRole('combobox', { name: 'Zone' }));
+    await user.click(screen.getByRole('option', { name: 'South' }));
+    const regions = () =>
+      toJSON(doc)
+        .nodes.filter((n) => n.type === 'warehouse')
+        .map((n) => n.values?.region);
+    expect(regions()).toEqual(['s', 's', 's']);
+    act(() => {
+      editor().undo();
+    });
+    expect(regions()).toEqual(['n', 's', undefined]);
+  });
+
+  it('lists only fields every card has for a mixed-type selection', () => {
+    renderInspector(warehouses, { nodes: ['w1', 't1'] });
+    const list = screen.getByRole('list', { name: 'Fields' });
+    expect(within(list).getByRole('combobox', { name: 'Owner' })).toBeInTheDocument();
+    expect(within(list).queryByRole('combobox', { name: 'Zone' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Owner on card' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add field' })).not.toBeInTheDocument();
+  });
+});

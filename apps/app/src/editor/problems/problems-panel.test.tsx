@@ -1,3 +1,4 @@
+import { toJSON } from '@sododeck/model';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -134,5 +135,23 @@ describe('ProblemsPanel card types and packs (030)', () => {
     expect(onActivate).toHaveBeenCalledWith(
       expect.objectContaining({ target: { type: 'nodes', ids: ['a', 'b'] } }),
     );
+  });
+});
+
+describe('ProblemsPanel typed field values (032 FR-017)', () => {
+  it('offers Remove value on a dangling value, clearing it in one undo step', async () => {
+    const file = deckOf({
+      nodes: [{ id: 'w', type: 'warehouse', title: 'Hub', values: { gone: 'Cold' } }],
+    });
+    const { editor, user } = setup(file);
+    const list = await screen.findByRole('list', { name: 'Problems' });
+    expect(within(list).getByText('Value without a field')).toBeInTheDocument();
+    await user.click(within(list).getByRole('button', { name: 'Remove value' }));
+    expect(toJSON(editor().doc).nodes[0]?.values).toBeUndefined();
+    expect(await screen.findByText('No problems')).toBeInTheDocument();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(editor().doc).nodes[0]?.values).toEqual({ gone: 'Cold' });
   });
 });
