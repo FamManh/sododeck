@@ -1,24 +1,25 @@
 /**
- * Rule (decision table) operations. Every row keeps exactly one `when` cell per input column and
- * one `then` cell per output column, in column order (data-model "Rule table invariants").
+ * Rule (decision table) operations. Columns and rows are ordered lists, and a row's cells are keyed
+ * by column id (036 research R5), so every row reads exactly one `when` cell per input column and
+ * one `then` cell per output column by construction, whatever two tabs do at once.
  */
 import { emptySododeckFile, type Id, type Rule } from '@sododeck/schema';
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
 
-import { fromY, toY, type YObject } from '../convert';
-import { rulesMap } from '../layout';
-import { findIndexById, getMapById, type EditContext } from './context';
+import type { YObject } from '../convert';
+import { childList, insertAt, planMove, rulesMap, type ListMap } from '../layout';
+import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { checkDuplicateIds } from '../load-checks';
+import { columnIds, readRow, readRule } from '../read';
 import { assertValid, validateObject, validateRule } from '../validate';
+import { createObject, createRow, createRule, writeFields } from '../write';
 import { removeRuleColumn as removeColumnCascade, type RemovalResult } from './cascade';
-import { assertFreeIds, moveInArray } from './collections';
-import { applyPatch, writePatch } from './patch';
+import { assertFreeIds } from './collections';
+import { applyPatch } from './patch';
 import type { NewRule, Patch } from './types';
 
 type Side = 'inputs' | 'outputs';
-
-const CELLS: Record<Side, 'when' | 'then'> = { inputs: 'when', outputs: 'then' };
 
 function ruleMap(ctx: EditContext, id: Id): YObject {
   const rule = rulesMap(ctx.doc).get(id);
@@ -28,29 +29,22 @@ function ruleMap(ctx: EditContext, id: Id): YObject {
   return rule;
 }
 
-function list(rule: YObject, field: 'inputs' | 'outputs' | 'rows'): Y.Array<YObject> {
-  return rule.get(field) as Y.Array<YObject>;
-}
-
-function cells(row: YObject, field: 'when' | 'then'): Y.Array<string> {
-  return row.get(field) as Y.Array<string>;
+function list(rule: YObject, field: 'inputs' | 'outputs' | 'rows'): ListMap {
+  const children = childList(rule, field);
+  if (children === undefined) throw new TypeError(`Rule has no "${field}" list.`);
+  return children;
 }
 
 /** The side a column is on, and its index there. */
 function findColumn(rule: YObject, columnId: Id): { side: Side; index: number } {
   for (const side of ['inputs', 'outputs'] as const) {
-    const index = list(rule, side)
-      .toArray()
-      .findIndex((column) => column.get('id') === columnId);
+    const index = columnIds(rule, side).indexOf(columnId);
     if (index !== -1) return { side, index };
   }
   throw new DeckEditError('not-found', [
     { path: '', message: `Column "${columnId}" does not exist.` },
   ]);
 }
-
-const clampInsert = (index: number | undefined, length: number) =>
-  index === undefined ? length : Math.max(0, Math.min(length, Math.trunc(index)));
 
 export function addRule(ctx: EditContext, data: NewRule): Id {
   const { id: explicitId, ...fields } = data;
@@ -70,7 +64,7 @@ export function addRule(ctx: EditContext, data: NewRule): Id {
   if (duplicates.length > 0) throw new DeckEditError('duplicate-id', duplicates);
 
   ctx.transact(() => {
-    rulesMap(ctx.doc).set(id, toY(rule) as YObject);
+    insertAt(rulesMap(ctx.doc), id, createRule(rule, ''));
   });
   ctx.reserve([id, ...[...rule.inputs, ...rule.outputs, ...rule.rows].map((x) => x.id)]);
   return id;
@@ -82,15 +76,12 @@ export function updateRule(
   patch: Patch<Omit<Rule, 'inputs' | 'outputs' | 'rows'>>,
 ): void {
   const map = ruleMap(ctx, id);
-  const { candidate, changed } = applyPatch(fromY(map) as Record<string, unknown>, patch, [
-    'inputs',
-    'outputs',
-    'rows',
-  ]);
+  const current = readRule(map) as unknown as Record<string, unknown>;
+  const { candidate, changed } = applyPatch(current, patch, ['inputs', 'outputs', 'rows']);
   if (changed.length === 0) return;
   assertValid(validateObject('rule', candidate));
   ctx.transact(() => {
-    writePatch(map, candidate, changed);
+    writeFields(map, 'rule', candidate, changed);
   }, `rules:${id}`);
 }
 
@@ -104,20 +95,18 @@ export function addRuleColumn(
   const rule = ruleMap(ctx, ruleId);
   const id = ctx.allocate('col');
   assertValid(validateObject('column', { id, label }));
-  const columns = list(rule, side);
-  const at = clampInsert(index, columns.length);
+  // One write: rows have no cell for the new column yet, which reads as `''` (any value).
   ctx.transact(() => {
-    columns.insert(at, [toY({ id, label }) as YObject]);
-    for (const row of list(rule, 'rows')) cells(row, CELLS[side]).insert(at, ['']);
+    insertAt(list(rule, side), id, createObject('column', { id, label }, ''), index);
   });
   return id;
 }
 
 export function renameRuleColumn(ctx: EditContext, ruleId: Id, columnId: Id, label: string): void {
   const rule = ruleMap(ctx, ruleId);
-  const { side, index } = findColumn(rule, columnId);
+  const { side } = findColumn(rule, columnId);
   assertValid(validateObject('column', { id: columnId, label }));
-  const column = list(rule, side).get(index);
+  const column = requireEntry(list(rule, side), columnId, 'Column');
   if (column.get('label') === label) return;
   ctx.transact(() => {
     column.set('label', label);
@@ -126,19 +115,10 @@ export function renameRuleColumn(ctx: EditContext, ruleId: Id, columnId: Id, lab
 
 export function moveRuleColumn(ctx: EditContext, ruleId: Id, columnId: Id, toIndex: number): void {
   const rule = ruleMap(ctx, ruleId);
-  const { side, index } = findColumn(rule, columnId);
-  const columns = list(rule, side);
-  const to = Math.max(0, Math.min(columns.length - 1, Math.trunc(toIndex)));
-  if (to === index) return;
-  ctx.transact(() => {
-    moveInArray(ctx, columns, index, to);
-    for (const row of list(rule, 'rows')) {
-      const rowCells = cells(row, CELLS[side]);
-      const value = rowCells.get(index);
-      rowCells.delete(index, 1);
-      rowCells.insert(to, [value]);
-    }
-  });
+  const { side } = findColumn(rule, columnId);
+  // Cells are keyed by column, so a move is one order change and touches no row.
+  const move = planMove(list(rule, side), columnId, toIndex);
+  if (move !== undefined) ctx.transact(move);
 }
 
 export function removeRuleColumn(ctx: EditContext, ruleId: Id, columnId: Id): RemovalResult {
@@ -156,7 +136,7 @@ export function addRuleRow(
 ): Id {
   const rule = ruleMap(ctx, ruleId);
   const fill = (values: string[] = [], side: Side, field: 'when' | 'then') => {
-    const count = list(rule, side).length;
+    const count = list(rule, side).size;
     if (values.length > count) {
       throw new DeckEditError('invalid', [
         {
@@ -174,10 +154,10 @@ export function addRuleRow(
     then: fill(given.then, 'outputs', 'then'),
   };
   assertValid(validateObject('row', row));
-  const rows = list(rule, 'rows');
-  const at = clampInsert(index, rows.length);
+  const inputs = columnIds(rule, 'inputs');
+  const outputs = columnIds(rule, 'outputs');
   ctx.transact(() => {
-    rows.insert(at, [toY(row) as YObject]);
+    insertAt(list(rule, 'rows'), id, createRow(row, inputs, outputs, ''), index);
   });
   return id;
 }
@@ -190,28 +170,35 @@ export function setRuleCell(
   value: string,
 ): void {
   const rule = ruleMap(ctx, ruleId);
-  const row = getMapById(list(rule, 'rows'), rowId, 'Row');
+  const row = requireEntry(list(rule, 'rows'), rowId, 'Row');
   const { side, index } = findColumn(rule, columnId);
-  const candidate = fromY(row) as Record<string, string[]>;
-  candidate[CELLS[side]]?.splice(index, 1, value);
+  const candidate = readRow(rowId, row, columnIds(rule, 'inputs'), columnIds(rule, 'outputs'));
+  const cellsOfSide = side === 'inputs' ? candidate.when : candidate.then;
+  if (cellsOfSide[index] === value) return;
+  cellsOfSide.splice(index, 1, value);
   assertValid(validateObject('row', candidate));
-  const rowCells = cells(row, CELLS[side]);
-  if (rowCells.get(index) === value) return;
   ctx.transact(() => {
-    rowCells.delete(index, 1);
-    rowCells.insert(index, [value]);
+    let cells = row.get('cells');
+    if (!(cells instanceof Y.Map)) {
+      cells = new Y.Map();
+      row.set('cells', cells);
+    }
+    // One key per cell, so two tabs editing different cells of a row both keep their edit.
+    cells.set(columnId, value);
   }, `rules:${ruleId}:${rowId}:${columnId}`);
 }
 
 export function moveRuleRow(ctx: EditContext, ruleId: Id, rowId: Id, toIndex: number): void {
   const rows = list(ruleMap(ctx, ruleId), 'rows');
-  moveInArray(ctx, rows, findIndexById(rows, rowId, 'Row'), toIndex);
+  requireEntry(rows, rowId, 'Row');
+  const move = planMove(rows, rowId, toIndex);
+  if (move !== undefined) ctx.transact(move);
 }
 
 export function removeRuleRow(ctx: EditContext, ruleId: Id, rowId: Id): void {
   const rows = list(ruleMap(ctx, ruleId), 'rows');
-  const index = findIndexById(rows, rowId, 'Row');
+  requireEntry(rows, rowId, 'Row');
   ctx.transact(() => {
-    rows.delete(index, 1);
+    rows.delete(rowId);
   });
 }

@@ -223,7 +223,7 @@ and **027** ai-deck-skill are not scheduled.
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                          |
 | 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                  |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
-| 036 | collab-ready-document    | before 029 | —             | 6 d  | — (ADR: layout v2 + schema roadmap); ⚠ shared view state  |
+| 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                 |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                         |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
@@ -1688,7 +1688,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   the weight and the colour, place the label where it reads best, and make a connector "run" to
   show the direction of a flow at a glance.
 - **Spec IDs:** C-6; **schema change** (reverses part of §g-37: 017 stores only sides + one
-  middle-segment offset; this feature adds free waypoints and curves, so it needs a founder
+  middle-segment offset; this feature adds free waypoints (curves moved to 029), so it needs a founder
   decision and an ADR).
 - **Design references:** none yet (needs design: connection toolbar "Type" popover, weight
   slider, dash row, colour swatch, label drag, waypoint handles). Miro's line popover is the
@@ -1723,8 +1723,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Out of scope:** automatic obstacle-avoiding routing (011); per-view styles (styles are shared
   by every view, like 017's size and route); flow-mode styling (006/007 keep their own
   highlight, which wins over the connector's style while a flow is shown).
-- **Schema (v1, additive, all optional, names to be settled in the ADR):** `edge.style`:
-  `{ "shape"?: "straight"|"elbow"|"curved", "dash"?: "solid"|"dashed"|"dotted", "width"?: number,
+- **Schema (v1, additive, all optional, names to be settled in the ADR):** `edge.style` (created
+  by 029 with `shape`, ADR 0022): `{ "dash"?: "solid"|"dashed"|"dotted", "width"?: number,
 "color"?: ColorRef, "animated"?: boolean }`; `edge.route.waypoints?: Position[]` (how they relate
   to 017's `offset` is decided in the ADR); `edge.labelAt?: number` (0–1). Absent = today's look.
 - **Acceptance criteria (draft):**
@@ -2092,7 +2092,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
   "+N fields" pill when more stay in the drawer); the field editor in the drawer (add field, pick
   its kind, toggle "show on card"); card height follows the fields shown.
 - **Schema:** change + ADR (deck-level `fields` definitions, `node.values`); today's tech, host,
-  owner become built-in fields with unchanged storage, or migrate (decide in the ADR).
+  owner become built-in fields with unchanged storage (ADR 0022).
 - **Out of scope:** formulas, relations between cards, per-view field visibility.
 - **Acceptance criteria (draft):** a "Status" select added to the Task type shows as a pill on
   every task with a value; toggling "show on card" off moves it to the drawer and shrinks the
@@ -2102,15 +2102,15 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 - **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 3 d
 - **Goal:** Tags are defined once per deck with a colour (§g-61 D7).
-- **In scope:** deck-level tag definitions `{ name, color }` (named colour or deck custom hex);
+- **In scope:** a deck-level colour per tag (`tagColors`, named colour or deck custom hex);
   B's tag picker (search, the deck's tags with colour and usage count, "Create tag “…” ⏎",
   pencil to edit); tag editor (name, 13 swatches plus deck colours, "Delete tag · used on N
   cards"); drawer tag row (pills with ×, focus ⌫ removes, ⏎ opens the picker); cards show the tag
   colour as a solid-tint pill; still max 10 per card. **Tags keep the case the user typed**
   ("PIC", "Lan"; founder, §g-64): matching and uniqueness ignore case, so "pic" picks the
   existing "PIC", and the first spelling wins. Existing lower-cased tags stay as they are.
-- **Schema:** additive (`deck.tags` gains definitions; untyped tag strings stay valid and render
-  slate).
+- **Schema:** additive (root `tagColors`: tag text → `ColorRef`, ADR 0022; the deck's own `tags`
+  are unchanged; a tag with no colour stays valid and renders slate).
 - **Acceptance criteria (draft):** colouring `pci` violet recolours it on every card in one undo
   step; deleting a tag removes it from every card after showing the usage count; older decks
   open unchanged.
@@ -2144,7 +2144,7 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 036-collab-ready-document
 
-- **Status:** specified and planned (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md), [`plan.md`](../specs/036-collab-ready-document/plan.md) and [`tasks.md`](../specs/036-collab-ready-document/tasks.md) (48 tasks). Not implemented yet.
+- **Status:** implemented (2026-10-03) — see [`spec.md`](../specs/036-collab-ready-document/spec.md), [`plan.md`](../specs/036-collab-ready-document/plan.md), [`tasks.md`](../specs/036-collab-ready-document/tasks.md), [ADR 0021](decisions/0021-collab-ready-document-layout.md) (layout 2) and [ADR 0022](decisions/0022-schema-roadmap.md) (schema roadmap). **Open:** storage load is 31–35% slower than before, beyond SC-006's 10% ([`bench-after.md`](../specs/036-collab-ready-document/bench-after.md)); needs the founder's acceptance before merge. The two-tab manual walk ([`quickstart-results.md`](../specs/036-collab-ready-document/quickstart-results.md)) is still to do.
   The spec narrows "integrity on receive": content is kept and reported, only content-free
   leftovers are repaired (FR-020 / FR-021).
 - **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real

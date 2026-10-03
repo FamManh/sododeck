@@ -298,10 +298,12 @@ thiếu.
   kiểm tra và sửa khi nhận update của người khác (ví dụ edge trỏ tới node đã bị xoá).
 - **Một ADR mới** cho phép gửi nội dung ra mạng (AGENTS.md quy tắc 5).
 
-**Ba điểm cần sửa trước khi cộng tác thật** (backlog 036): văn bản dài phải là `Y.Text` thay vì
-chuỗi thường (để hai người cùng gõ không mất chữ); danh sách lưu theo id thay vì theo vị trí trong
-mảng (để sắp xếp lại không làm mất chỉnh sửa của người khác); và cơ chế tự kiểm tra khi nhận
-update từ bên ngoài. Định dạng file `.sododeck.json` không đổi, chỉ cách lưu Yjs bên trong đổi.
+**Ba điểm cần sửa trước khi cộng tác thật đã xong ở 036** (ADR 0021): văn bản dài là `Y.Text`
+(hai người cùng gõ không mất chữ); danh sách lưu theo id kèm khoá thứ tự (sắp xếp lại không làm
+mất chỉnh sửa của người khác, không nhân đôi phần tử); và sau mỗi update từ bên ngoài, problems
+được tính lại còn các mục view trỏ vào thứ đã bị xoá được tự dọn. Định dạng file `.sododeck.json`
+không đổi, chỉ cách lưu Yjs bên trong đổi. Deck lưu bởi bản build trước 036 không mở được: xuất
+ra `.sododeck.json` ở bản cũ rồi nhập lại.
 
 ---
 

@@ -1,6 +1,5 @@
 import { DeckEditError } from '../errors';
-import { isRecord, jsonEqual, toY, type YObject } from '../convert';
-import * as Y from 'yjs';
+import { jsonEqual } from '../convert';
 
 /**
  * Applies `patch` to a copy of `current`: `null` deletes a key, `undefined` is ignored.
@@ -25,30 +24,4 @@ export function applyPatch(
     if (!jsonEqual(next.get(key), current[key])) changed.push(key);
   }
   return { candidate: Object.fromEntries(next), changed };
-}
-
-/** Writes the changed keys of a validated candidate into its Y.Map, field by field. */
-export function writePatch(
-  map: YObject,
-  candidate: Record<string, unknown>,
-  changed: readonly string[],
-): void {
-  for (const key of changed) {
-    const value = candidate[key];
-    const existing = map.get(key);
-    if (value === undefined) {
-      map.delete(key);
-    } else if (
-      (key === 'position' || key === 'size') &&
-      existing instanceof Y.Map &&
-      isRecord(value)
-    ) {
-      // Keep the nested map so concurrent field edits merge (FR-004; 017 extends this to `size`).
-      for (const axis of Object.keys(value)) {
-        if (existing.get(axis) !== value[axis]) existing.set(axis, toY(value[axis]));
-      }
-    } else {
-      map.set(key, toY(value));
-    }
-  }
 }

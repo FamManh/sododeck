@@ -6,11 +6,12 @@
 import type { EdgeRoute, Id, Side, Size } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { fromY, isRecord, jsonEqual, toY, type YObject } from '../convert';
-import { collectionArray } from '../layout';
-import { findIndexById, type EditContext } from './context';
+import { isRecord, jsonEqual, toY, type YObject } from '../convert';
+import { collectionMap } from '../layout';
+import { readObject } from '../read';
+import { requireEntry, type EditContext } from './context';
 import { assertValid, validateObject } from '../validate';
-import { writePatch } from './patch';
+import { writeField } from '../write';
 
 /** `null` removes a key of the route; `undefined` (an absent key) leaves it unchanged. */
 export type EdgeRoutePatch = {
@@ -24,9 +25,8 @@ export type EdgeRoutePatch = {
  * `width` / `height` above 0. One undo step, joining an open gesture.
  */
 export function setCardSize(ctx: EditContext, nodeId: Id, size: Size | null): void {
-  const array = collectionArray(ctx.doc, 'nodes');
-  const map = array.get(findIndexById(array, nodeId, 'Node'));
-  const current = fromY(map) as Record<string, unknown>;
+  const map = requireEntry(collectionMap(ctx.doc, 'nodes'), nodeId, 'Node');
+  const current = readObject('nodes', nodeId, map);
   if (size === null) {
     if (current.size === undefined) return;
     ctx.transact(() => {
@@ -38,7 +38,7 @@ export function setCardSize(ctx: EditContext, nodeId: Id, size: Size | null): vo
   const candidate = { ...current, size };
   assertValid(validateObject('nodes', candidate));
   ctx.transact(() => {
-    writePatch(map, candidate, ['size']);
+    writeField(map, 'nodes', 'size', size);
   }, `nodes:${nodeId}:size`);
 }
 
@@ -84,9 +84,8 @@ function writeRoute(edgeMap: YObject, merged: EdgeRoute | undefined): void {
  * joining an open gesture.
  */
 export function setEdgeRoute(ctx: EditContext, edgeId: Id, patch: EdgeRoutePatch | null): void {
-  const array = collectionArray(ctx.doc, 'edges');
-  const map = array.get(findIndexById(array, edgeId, 'Edge'));
-  const current = fromY(map) as Record<string, unknown>;
+  const map = requireEntry(collectionMap(ctx.doc, 'edges'), edgeId, 'Edge');
+  const current = readObject('edges', edgeId, map);
   const currentRoute = isRecord(current.route) ? (current.route as EdgeRoute) : undefined;
   const merged = patch === null ? undefined : mergeRoute(currentRoute, patch);
   if (jsonEqual(currentRoute, merged)) return;

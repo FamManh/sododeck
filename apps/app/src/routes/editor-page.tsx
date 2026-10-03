@@ -124,7 +124,10 @@ function EditorChrome() {
 }
 
 /** Attaches storage to a stored deck and exposes flush/export bookkeeping to the editor. */
-function useSaveControlsFor(data: Exclude<DeckLoaderData, { kind: 'not-found' }>, doc: DeckDoc) {
+function useSaveControlsFor(
+  data: Exclude<DeckLoaderData, { kind: 'not-found' | 'unsupported' }>,
+  doc: DeckDoc,
+) {
   const persistenceRef = useRef<DeckPersistence | null>(null);
 
   useEffect(() => {
@@ -171,7 +174,11 @@ function useSaveControlsFor(data: Exclude<DeckLoaderData, { kind: 'not-found' }>
   );
 }
 
-function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-found' }> }) {
+function EditorShell({
+  data,
+}: {
+  data: Exclude<DeckLoaderData, { kind: 'not-found' | 'unsupported' }>;
+}) {
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(data.kind === 'stored' ? data.deckId : null);
     useSaveStatusStore.getState().reset();
@@ -213,5 +220,6 @@ function EditorShell({ data }: { data: Exclude<DeckLoaderData, { kind: 'not-foun
 export function EditorPage() {
   const data = useLoaderData<DeckLoaderData>();
   if (data.kind === 'not-found') return <DeckNotFoundPage />;
+  if (data.kind === 'unsupported') return <DeckNotFoundPage reason="unsupported" />;
   return <EditorShell key={data.kind === 'stored' ? data.deckId : data.kind} data={data} />;
 }

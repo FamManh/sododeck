@@ -1,7 +1,10 @@
-/** Plain JSON ↔ nested Yjs types. The layout itself is documented in `deck.ts`. */
+/**
+ * Plain JSON ↔ nested Yjs types, for plain nested values (positions, lists, maps). Deck objects
+ * are read and written through `read.ts` / `write.ts`, which know the layout (deck.ts).
+ */
 import * as Y from 'yjs';
 
-export type YValue = null | boolean | number | string | Y.Map<YValue> | Y.Array<YValue>;
+export type YValue = null | boolean | number | string | Y.Map<YValue> | Y.Array<YValue> | Y.Text;
 export type YObject = Y.Map<YValue>;
 export type YList = Y.Array<YValue>;
 
@@ -33,6 +36,7 @@ export function toY(value: unknown): YValue {
 
 /** Returns plain JSON data; callers cast it to the schema type the document was built from. */
 export function fromY(value: unknown): unknown {
+  if (value instanceof Y.Text) return value.toJSON();
   if (value instanceof Y.Array) return value.toArray().map(fromY);
   if (value instanceof Y.Map) {
     const out: Record<string, unknown> = {};

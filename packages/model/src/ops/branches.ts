@@ -1,5 +1,5 @@
 /**
- * Flow branch operations (006, ADR 0008). A flow's `steps` stay one flat array in normal order:
+ * Flow branch operations (006, ADR 0008). A flow's `steps` stay one flat order in normal order:
  * main-path steps first, then each branch's steps grouped in `branches` order. The branch step is
  * derived (the last main-path step), so there is one branch point per flow and one level. Every op
  * here keeps the normal order and validates before it writes.
@@ -7,12 +7,26 @@
 import type { Branch, Id, SododeckFile, Step } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { fromY, toY, type YObject, type YValue } from '../convert';
+import type { YObject, YValue } from '../convert';
 import { DeckEditError } from '../errors';
 import { anchorableIds } from '../ids';
+import {
+  appendAll,
+  childList,
+  insertAt,
+  noteOrder,
+  orderedEntries,
+  orderOf,
+  setOrder,
+  type ListMap,
+} from '../layout';
+import { keysBetween } from '../order-key';
+import { readObject } from '../read';
+import { blankKey } from '../text';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
-import { findIndexById, getMapById, type EditContext } from './context';
-import { applyPatch, writePatch } from './patch';
+import { createObject, writeFields } from '../write';
+import { requireEntry, type EditContext } from './context';
+import { applyPatch } from './patch';
 import { addStep, branchIdsOf, flowMapOf, pathRank, stepsOf } from './steps';
 import type { NewStep, Patch } from './types';
 
@@ -34,14 +48,10 @@ const invalid = (path: string, message: string) =>
   new DeckEditError('invalid', [{ path, message }]);
 
 /** Index in `steps` where a new step at the end of path `branchId` goes, keeping normal order. */
-function appendIndex(
-  steps: Y.Array<YObject>,
-  branchIds: readonly Id[],
-  branchId: Id | null,
-): number {
+function appendIndex(steps: ListMap, branchIds: readonly Id[], branchId: Id | null): number {
   const target = pathRank(branchId ?? undefined, branchIds);
   let at = 0;
-  steps.toArray().forEach((s, i) => {
+  orderedEntries(steps).forEach(([, s], i) => {
     if (pathRank(s.get('branch'), branchIds) <= target) at = i + 1;
   });
   return at;
@@ -60,21 +70,25 @@ export function appendStep(ctx: EditContext, flowId: Id, branchId: Id | null, da
   return addStep(ctx, flowId, step, appendIndex(stepsOf(ctx, flowId), branchIds, branchId));
 }
 
-export function branchesArray(flow: YObject): Y.Array<YObject> | undefined {
-  const branches = flow.get('branches');
-  return branches instanceof Y.Array ? (branches as Y.Array<YObject>) : undefined;
+/** A flow's branch list, created if a damaged flow lacks it. Call inside a transaction. */
+function branchList(flow: YObject): ListMap {
+  const existing = childList(flow, 'branches');
+  if (existing !== undefined) return existing;
+  const list: ListMap = new Y.Map<YObject>();
+  flow.set('branches', list as unknown as YValue);
+  return list;
 }
 
 /** The branch list of a flow that holds `branchId`, or throws `not-found`. */
-export function branchListOf(ctx: EditContext, flowId: Id, branchId: Id): Y.Array<YObject> {
-  const array = branchesArray(flowMapOf(ctx, flowId));
-  if (array === undefined) {
+export function branchListOf(ctx: EditContext, flowId: Id, branchId: Id): ListMap {
+  const list = childList(flowMapOf(ctx, flowId), 'branches');
+  if (list === undefined) {
     throw new DeckEditError('not-found', [
       { path: '', message: `Branch "${branchId}" does not exist.` },
     ]);
   }
-  findIndexById(array, branchId, 'Branch');
-  return array;
+  requireEntry(list, branchId, 'Branch');
+  return list;
 }
 
 export interface NewBranch {
@@ -99,14 +113,13 @@ export function addBranch(
 ): { branchId: Id; stepId: Id | null } {
   const flow = flowMapOf(ctx, flowId);
   const steps = stepsOf(ctx, flowId);
-  const after = getMapById(steps, afterStepId, 'Step');
+  const after = requireEntry(steps, afterStepId, 'Step');
   if (after.get('branch') !== undefined) {
     throw invalid('afterStepId', 'Branches can only start from the main path.');
   }
-  const mainIds = steps
-    .toArray()
-    .filter((s) => s.get('branch') === undefined)
-    .map((s) => s.get('id') as Id);
+  const mainIds = orderedEntries(steps)
+    .filter(([, s]) => s.get('branch') === undefined)
+    .map(([id]) => id);
   const position = mainIds.indexOf(afterStepId);
   const existing = branchIdsOf(flow);
   if (existing.length > 0 && position !== mainIds.length - 1) {
@@ -144,19 +157,20 @@ export function addBranch(
   }
 
   ctx.transact(() => {
-    let array = branchesArray(flow);
-    if (array === undefined) {
-      array = new Y.Array<YObject>();
-      flow.set('branches', array as unknown as YValue);
-    }
-    for (const b of split === undefined ? [branch] : [split, branch]) {
-      array.push([toY(b) as YObject]);
-    }
+    // The list exists from the flow's creation, so two tabs adding a first branch share it (R2).
+    const list = branchList(flow);
+    const added = split === undefined ? [branch] : [split, branch];
+    appendAll(
+      list,
+      added.map((b) => [b.id, createObject('branch', b as unknown as Record<string, unknown>, '')]),
+    );
+    if (flow.has(blankKey('branches'))) flow.delete(blankKey('branches'));
     if (split !== undefined) {
-      for (const s of steps) if (following.includes(s.get('id') as Id)) s.set('branch', split.id);
+      for (const id of following) steps.get(id)?.set('branch', split.id);
     }
     if (first !== undefined) {
-      steps.insert(appendIndex(steps, branchIdsOf(flow), branch.id), [toY(first) as YObject]);
+      const at = appendIndex(steps, branchIdsOf(flow), branch.id);
+      insertAt(steps, first.id, createObject('step', { ...first }, ''), at);
     }
   });
   ctx.reserve(reserved);
@@ -170,12 +184,12 @@ export function updateBranch(
   branchId: Id,
   patch: Patch<Branch>,
 ): void {
-  const map = getMapById(branchListOf(ctx, flowId, branchId), branchId, 'Branch');
-  const { candidate, changed } = applyPatch(fromY(map) as Record<string, unknown>, patch, []);
+  const map = requireEntry(branchListOf(ctx, flowId, branchId), branchId, 'Branch');
+  const { candidate, changed } = applyPatch(readObject('branch', branchId, map), patch, []);
   if (changed.length === 0) return;
   assertValid(validateObject('branch', candidate));
   ctx.transact(() => {
-    writePatch(map, candidate, changed);
+    writeFields(map, 'branch', candidate, changed);
   }, `flows:${flowId}:branch:${branchId}`);
 }
 
@@ -225,38 +239,54 @@ export function restoreFlowStructure(
   }
   const flow = flowMapOf(ctx, flowId);
   const steps = stepsOf(ctx, flowId);
-  const current = fromY(flow) as { steps: Step[]; branches?: Branch[] };
-  const currentSteps = new Map(current.steps.map((s) => [s.id, s]));
-  const currentBranches = new Map((current.branches ?? []).map((b) => [b.id, b]));
+  const current = readObject('flows', flowId, flow) as unknown as {
+    steps: Step[];
+    branches?: Branch[];
+  };
   if (structureOf(current.steps, current.branches) === structureOf(data.steps, data.branches)) {
     return;
   }
 
-  const restoredSteps = data.steps.map((saved): Step => {
-    const now = currentSteps.get(saved.id);
-    if (now === undefined) return structuredClone(saved);
-    const { branch: _branch, ...text } = now;
-    return {
-      ...text,
-      edge: saved.edge,
-      ...(saved.branch === undefined ? {} : { branch: saved.branch }),
-    };
-  });
-  const restoredBranches = data.branches?.map((saved): Branch =>
-    structuredClone(currentBranches.get(saved.id) ?? saved),
-  );
-
+  // A diff, not a rewrite: objects that still exist keep their map (so their text, and any edit
+  // another tab makes to them meanwhile, stay); only membership, edge, branch and order change.
   ctx.transact(() => {
-    steps.delete(0, steps.length);
-    steps.insert(
-      0,
-      restoredSteps.map((s) => toY(s) as YObject),
-    );
-    if (restoredBranches === undefined) {
-      flow.delete('branches');
-    } else {
-      flow.set('branches', toY(restoredBranches));
-    }
+    restoreList(branchList(flow), data.branches ?? [], 'branch', () => undefined);
+    if (data.branches?.length === 0) flow.set(blankKey('branches'), true);
+    else if (flow.has(blankKey('branches'))) flow.delete(blankKey('branches'));
+    restoreList(steps, data.steps, 'step', (map, saved) => {
+      if (map.get('edge') !== saved.edge) map.set('edge', saved.edge);
+      if (saved.branch === undefined) {
+        if (map.has('branch')) map.delete('branch');
+      } else if (map.get('branch') !== saved.branch) {
+        map.set('branch', saved.branch);
+      }
+    });
   });
-  ctx.reserve([...restoredSteps.map((s) => s.id), ...(restoredBranches ?? []).map((b) => b.id)]);
+  ctx.reserve([...data.steps.map((s) => s.id), ...(data.branches ?? []).map((b) => b.id)]);
+}
+
+/**
+ * Makes `list` hold exactly `saved`, in that order: removes items not in it, re-creates removed
+ * ones from the checkpoint, re-keys the order and lets `restore` reset fields of kept items.
+ */
+function restoreList<T extends { id: Id }>(
+  list: ListMap,
+  saved: readonly T[],
+  kind: 'step' | 'branch',
+  restore: (map: YObject, saved: T) => void,
+): void {
+  const keep = new Set(saved.map((item) => item.id));
+  for (const id of [...list.keys()]) if (!keep.has(id)) list.delete(id);
+  const keys = keysBetween(null, null, saved.length);
+  saved.forEach((item, i) => {
+    const key = keys[i] ?? '';
+    const map = list.get(item.id);
+    if (map === undefined) {
+      list.set(item.id, createObject(kind, structuredClone(item) as Record<string, unknown>, key));
+      noteOrder(list, key);
+      return;
+    }
+    if (orderOf(map) !== key) setOrder(list, map, key);
+    restore(map, item);
+  });
 }

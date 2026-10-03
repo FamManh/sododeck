@@ -6,11 +6,12 @@
 import type { Edge, Group, Id, Node } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { toY, type YObject } from '../convert';
+import { toY } from '../convert';
 import type { Fragment } from '../fragment';
 import type { Point } from '../geometry';
 import { anchorableIds } from '../ids';
-import { collectionArray, rulesMap } from '../layout';
+import { appendAll, collectionMap, rulesMap } from '../layout';
+import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import type { EditContext } from './context';
 import { materializeFrames } from './frames';
@@ -123,9 +124,11 @@ export function pasteFragment(
   if (viewTarget !== undefined) materializeFrames(ctx, viewTarget);
 
   ctx.transact(() => {
-    collectionArray(ctx.doc, 'groups').push(groups.map((g) => toY(g) as YObject));
-    collectionArray(ctx.doc, 'nodes').push(nodes.map((n) => toY(n) as YObject));
-    collectionArray(ctx.doc, 'edges').push(edges.map((e) => toY(e) as YObject));
+    const created = (kind: 'groups' | 'nodes' | 'edges', items: readonly { id: Id }[]) =>
+      items.map((item) => [item.id, createObject(kind, { ...item }, '')] as const);
+    appendAll(collectionMap(ctx.doc, 'groups'), created('groups', groups));
+    appendAll(collectionMap(ctx.doc, 'nodes'), created('nodes', nodes));
+    appendAll(collectionMap(ctx.doc, 'edges'), created('edges', edges));
     if (viewTarget === undefined) return;
     let positions = viewTarget.get('positions');
     if (!(positions instanceof Y.Map)) {

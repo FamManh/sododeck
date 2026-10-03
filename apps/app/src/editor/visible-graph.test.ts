@@ -190,6 +190,22 @@ describe('visibleGraph', () => {
     ]);
   });
 
+  it('does not draw a connection whose end names no component (036 US4)', () => {
+    // A node deleted in one tab while another tab connected to it: the connection is kept in the
+    // deck (and reported as a problem) but has nothing to draw.
+    const deck = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A' },
+        { id: 'b', type: 'service', title: 'B' },
+      ],
+      edges: [
+        { id: 'dangling', from: 'a', to: 'gone' },
+        { id: 'kept', from: 'a', to: 'b' },
+      ],
+    });
+    expect(visibleGraph(deck, { node: null, group: null }, new Set()).edges).toEqual(['kept']);
+  });
+
   it('caches by deck arrays plus scope and collapsed ids', () => {
     const deck = deckOf({
       nodes: [{ id: 'a', type: 'service', title: 'A' }],

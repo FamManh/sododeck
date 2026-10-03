@@ -4,9 +4,16 @@
  * (not only per collection), so a sticky anchor, which may name any object, is unambiguous.
  */
 import type { Id } from '@sododeck/schema';
-import * as Y from 'yjs';
+import type * as Y from 'yjs';
 
-import { collectionArray, COLLECTIONS, rulesMap, type DeckDoc } from './layout';
+import {
+  childList,
+  collectionMap,
+  COLLECTIONS,
+  rulesMap,
+  type DeckDoc,
+  type ListMap,
+} from './layout';
 
 export type IdPrefix =
   | 'node'
@@ -36,14 +43,9 @@ export function defaultNewId(prefix: string): Id {
   return `${prefix}-${random}`;
 }
 
-function arrayIds(value: unknown, visit: (id: string) => boolean): boolean {
-  if (!(value instanceof Y.Array)) return false;
-  for (const item of value as Y.Array<unknown>) {
-    if (item instanceof Y.Map) {
-      const id: unknown = item.get('id');
-      if (typeof id === 'string' && visit(id)) return true;
-    }
-  }
+function listIds(list: ListMap | undefined, visit: (id: string) => boolean): boolean {
+  if (list === undefined) return false;
+  for (const id of list.keys()) if (visit(id)) return true;
   return false;
 }
 
@@ -53,17 +55,16 @@ function arrayIds(value: unknown, visit: (id: string) => boolean): boolean {
  */
 export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boolean {
   for (const c of COLLECTIONS) {
-    for (const map of collectionArray(doc, c)) {
-      const id = map.get('id');
-      if (typeof id === 'string' && visit(id)) return true;
-      if (c === 'flows' && arrayIds(map.get('steps'), visit)) return true;
-      if (c === 'flows' && arrayIds(map.get('branches'), visit)) return true;
+    for (const [id, map] of collectionMap(doc, c).entries()) {
+      if (visit(id)) return true;
+      if (c === 'flows' && listIds(childList(map, 'steps'), visit)) return true;
+      if (c === 'flows' && listIds(childList(map, 'branches'), visit)) return true;
     }
   }
   for (const [id, rule] of rulesMap(doc).entries()) {
     if (visit(id)) return true;
     for (const part of ['inputs', 'outputs', 'rows']) {
-      if (arrayIds(rule.get(part), visit)) return true;
+      if (listIds(childList(rule, part), visit)) return true;
     }
   }
   return false;
@@ -136,10 +137,9 @@ export function makeIdAllocator(
 export function anchorableIds(doc: DeckDoc): Set<Id> {
   const ids = new Set<Id>();
   for (const c of COLLECTIONS) {
-    for (const map of collectionArray(doc, c)) {
-      const id = map.get('id');
-      if (typeof id === 'string') ids.add(id);
-      if (c === 'flows') arrayIds(map.get('steps'), (stepId) => (ids.add(stepId), false));
+    for (const [id, map] of collectionMap(doc, c).entries()) {
+      ids.add(id);
+      if (c === 'flows') listIds(childList(map, 'steps'), (stepId) => (ids.add(stepId), false));
     }
   }
   for (const id of rulesMap(doc).keys()) ids.add(id);

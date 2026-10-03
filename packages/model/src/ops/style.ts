@@ -7,7 +7,7 @@ import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { toY, type YObject, type YValue } from '../convert';
-import { collectionArray, indexOfId } from '../layout';
+import { collectionMap } from '../layout';
 import { assertValid, validateObject } from '../validate';
 import type { EditContext } from './context';
 
@@ -56,10 +56,10 @@ export function setStyle(
   ];
   ctx.transact(() => {
     for (const [collection, ids] of collections) {
-      const array = collectionArray(ctx.doc, collection);
+      const list = collectionMap(ctx.doc, collection);
       for (const id of ids) {
-        const index = indexOfId(array, id);
-        if (index !== -1) writeChannel(array.get(index), channel, value);
+        const map = list.get(id);
+        if (map !== undefined) writeChannel(map, channel, value);
       }
     }
   });

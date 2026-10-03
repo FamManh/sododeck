@@ -12,7 +12,7 @@ import {
   type SododeckFile,
 } from '@sododeck/schema';
 import { isRecord } from './convert';
-import { collectionArray, indexOfId, rulesMap, type Collection, type DeckDoc } from './layout';
+import { collectionMap, rulesMap, type Collection, type DeckDoc } from './layout';
 import { DeckEditError } from './errors';
 
 /** The part of a Zod schema used here, so this package needs no direct zod dependency. */
@@ -115,7 +115,7 @@ function exists(doc: DeckDoc, ref: Ref, anyIds: () => ReadonlySet<Id>): boolean 
     case 'any':
       return anyIds().has(ref.id);
     default:
-      return indexOfId(collectionArray(doc, ref.target), ref.id) !== -1;
+      return collectionMap(doc, ref.target).has(ref.id);
   }
 }
 

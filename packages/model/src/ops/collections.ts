@@ -1,13 +1,23 @@
 /** Add, update and reorder objects of the top-level collections (data-model "Edit input and patch"). */
 import type { Id } from '@sododeck/schema';
 
-import { fromY, isRecord, toY } from '../convert';
-import { collectionArray, rulesMap, type Collection, type DeckDoc, type ObjectOf } from '../layout';
-import { findIndexById, type EditContext } from './context';
+import {
+  collectionMap,
+  insertAt,
+  planMove,
+  rulesMap,
+  type Collection,
+  type DeckDoc,
+  type ObjectOf,
+} from '../layout';
+import { isRecord } from '../convert';
+import { columnIds, readObject } from '../read';
+import { createObject, writeFields } from '../write';
+import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
-import { applyPatch, writePatch } from './patch';
+import { applyPatch } from './patch';
 import { allRefsOf, refsOf, stepBranchIssues, stepRefs } from './refs';
 import type { NewObject, Patch } from './types';
 
@@ -36,13 +46,7 @@ export const LABELS = {
 export function inputColumnsOf(doc: DeckDoc): (ruleId: Id) => ReadonlySet<Id> | undefined {
   return (ruleId) => {
     const rule = rulesMap(doc).get(ruleId);
-    if (rule === undefined) return undefined;
-    const inputs = fromY(rule.get('inputs'));
-    return new Set(
-      Array.isArray(inputs)
-        ? inputs.flatMap((c) => (isRecord(c) && typeof c.id === 'string' ? [c.id] : []))
-        : [],
-    );
+    return rule === undefined ? undefined : new Set(columnIds(rule, 'inputs'));
   };
 }
 
@@ -93,7 +97,7 @@ export function addObject<C extends Collection>(
   assertRefsExist(doc, refs, () => anchorableIds(doc));
 
   ctx.transact(() => {
-    collectionArray(doc, c).push([toY(object) as never]);
+    insertAt(collectionMap(doc, c), id, createObject(c, object, ''));
   }, key);
   ctx.reserve(explicitIds.map((e) => e.id));
   return id;
@@ -106,12 +110,8 @@ export function updateObject<C extends Collection>(
   patch: Patch<ObjectOf<C>>,
 ): void {
   const { doc } = ctx;
-  const array = collectionArray(doc, c);
-  const map = array.get(findIndexById(array, id, LABELS[c]));
-  const { candidate, changed } = applyPatch(fromY(map) as Record<string, unknown>, patch, [
-    'steps',
-    'branches',
-  ]);
+  const map = requireEntry(collectionMap(doc, c), id, LABELS[c]);
+  const { candidate, changed } = applyPatch(readObject(c, id, map), patch, ['steps', 'branches']);
   if (changed.length === 0) return;
 
   assertValid(validateObject(c, candidate));
@@ -123,29 +123,14 @@ export function updateObject<C extends Collection>(
   );
 
   ctx.transact(() => {
-    writePatch(map, candidate, changed);
+    writeFields(map, c, candidate, changed);
   }, `${c}:${id}`);
 }
 
-/** Moves an item of a Y.Array to `toIndex` (clamped), by re-inserting a copy. */
-export function moveInArray(
-  ctx: EditContext,
-  array: Parameters<typeof findIndexById>[0],
-  from: number,
-  toIndex: number,
-): void {
-  const to = Math.max(0, Math.min(array.length - 1, Math.trunc(toIndex)));
-  if (to === from) return;
-  // Yjs has no move: delete + insert in one transaction. A concurrent edit of the moved object
-  // in another tab is lost (known Y.Array limitation, spec Assumptions).
-  const copy = fromY(array.get(from));
-  ctx.transact(() => {
-    array.delete(from, 1);
-    array.insert(to, [toY(copy) as never]);
-  });
-}
-
+/** Moves an object to `toIndex` in its collection (clamped): one order key change (R3). */
 export function reorderObject(ctx: EditContext, c: Collection, id: Id, toIndex: number): void {
-  const array = collectionArray(ctx.doc, c);
-  moveInArray(ctx, array, findIndexById(array, id, LABELS[c]), toIndex);
+  const list = collectionMap(ctx.doc, c);
+  requireEntry(list, id, LABELS[c]);
+  const move = planMove(list, id, toIndex);
+  if (move !== undefined) ctx.transact(move);
 }

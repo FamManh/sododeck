@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 
 import type { DeckRecord } from '../storage/library-db';
 import { renameDeck } from './library-actions';
+import { libraryErrorMessage } from './library-error-message';
 import { useLibraryStore } from './library-store';
 import { RenameField } from './rename-field';
 import type { LibraryCommands } from './use-library-commands';
@@ -34,7 +35,11 @@ export function DeckName({
         label="Deck name"
         className="relative z-10"
         onSubmit={async (name) => {
-          await renameDeck(commands.ctx, deck.id, name);
+          try {
+            await renameDeck(commands.ctx, deck.id, name);
+          } catch (error) {
+            return libraryErrorMessage(error);
+          }
           return null;
         }}
         onDone={() => {

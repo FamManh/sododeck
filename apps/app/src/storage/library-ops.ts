@@ -7,6 +7,7 @@ import {
   createEditor,
   DeckValidationError,
   fromJSON,
+  isLegacyLayout,
   serializeDeck,
   toJSON,
   type DeckDoc,
@@ -15,9 +16,10 @@ import { emptySododeckFile, FORMAT_VERSION, type SododeckFile } from '@sododeck/
 import * as Y from 'yjs';
 
 import { summarizeDeck, type DeckSummary } from './deck-summary';
+import { UNSUPPORTED_DECK_MESSAGE } from './library-ops-messages';
 
 export type LibraryOpErrorCode =
-  'invalid-json' | 'invalid-deck' | 'unsupported-version' | 'invalid-name';
+  'invalid-json' | 'invalid-deck' | 'unsupported-version' | 'invalid-name' | 'unsupported-deck';
 
 export class LibraryOpError extends Error {
   constructor(
@@ -36,11 +38,16 @@ export interface DeckBytes {
 
 const IMPORTED_NAME = 'Imported deck';
 
+/**
+ * The stored deck as a document. A deck in the layout used before 036 would read as an empty deck,
+ * so it is refused instead (`unsupported-deck`): nothing is written (036 R10).
+ */
 function load(updates: readonly Uint8Array[]): DeckDoc {
   const doc = new Y.Doc();
   doc.transact(() => {
     for (const update of updates) Y.applyUpdate(doc, update);
   });
+  if (isLegacyLayout(doc)) throw new LibraryOpError('unsupported-deck', UNSUPPORTED_DECK_MESSAGE);
   return doc;
 }
 
@@ -105,7 +112,7 @@ export function rename(
   const next = checkName(name);
   const doc = load(updates);
   const before = Y.encodeStateVector(doc);
-  const editor = createEditor(doc);
+  const editor = createEditor(doc, { repair: false });
   editor.updateMeta({ name: next });
   editor.destroy();
   return { delta: Y.encodeStateAsUpdate(doc, before), summary: summarizeDeck(toJSON(doc)) };
