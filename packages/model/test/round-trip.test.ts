@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { createDeck, createEditor, fromJSON, serializeDeck, toJSON } from '../src';
-import { readExample } from './helpers';
+import { largeDeck, readExample } from './helpers';
 
 const minimal = await readExample('minimal.sododeck.json');
 const flowAndRule = await readExample('flow-and-rule.sododeck.json');
@@ -480,12 +480,87 @@ const perType: [string, SododeckFile][] = [
   ],
 ];
 
+/** Explicitly empty values and orders the layout must keep (036 data-model "Round-trip cases"). */
+const layoutEdgeCases: [string, SododeckFile][] = [
+  [
+    'explicitly empty long text (036)',
+    {
+      $schema,
+      version,
+      description: '',
+      ...collections,
+      nodes: [{ id: 'n', type: 'service', title: 'N', description: '' }],
+      edges: [{ id: 'e', from: 'n', to: 'n', description: '' }],
+      flows: [
+        {
+          id: 'f',
+          title: 'F',
+          description: '',
+          steps: [{ id: 's', edge: 'e', description: '', payload: '', notes: '' }],
+        },
+      ],
+      rules: {
+        R: { title: 'R', description: '', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
+      },
+      stickies: [{ id: 'k', text: '', position: { x: 0, y: 0 } }],
+    },
+  ],
+  [
+    'flow steps out of normal order (036)',
+    {
+      ...empty,
+      nodes: [{ id: 'n', type: 'service', title: 'N' }],
+      edges: [{ id: 'e', from: 'n', to: 'n' }],
+      flows: [
+        {
+          id: 'f',
+          title: 'F',
+          branches: [
+            { id: 'a', label: 'A', condition: '' },
+            { id: 'b', label: 'B', condition: 'x', description: 'Second' },
+          ],
+          steps: [
+            { id: 's1', edge: 'e' },
+            { id: 'b1', edge: 'e', branch: 'a' },
+            { id: 's2', edge: 'e' },
+            { id: 'b2', edge: 'e', branch: 'b' },
+            { id: 'b3', edge: 'e', branch: 'a' },
+          ],
+        },
+      ],
+    },
+  ],
+  [
+    'rule rows with empty cells (036)',
+    {
+      ...empty,
+      rules: {
+        Z: { title: 'Z', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
+        A: {
+          title: 'A',
+          hitPolicy: 'unique',
+          inputs: [
+            { id: 'i1', label: 'One' },
+            { id: 'i2', label: 'Two' },
+          ],
+          outputs: [{ id: 'o1', label: 'Out' }],
+          rows: [
+            { id: 'r1', when: ['', 'x'], then: [''] },
+            { id: 'r2', when: ['', ''], then: ['y'] },
+          ],
+        },
+      },
+    },
+  ],
+];
+
 const cases: [string, SododeckFile][] = [
   ['empty deck', empty],
   ['minimal example', minimal],
   ['flow-and-rule example', flowAndRule],
   ['full example', full],
   ...perType,
+  ...layoutEdgeCases,
 ];
 
 describe('round-trip (US2 AS1, FR-022/023)', () => {
@@ -498,6 +573,16 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
     expect(out).toEqual(file);
     expect(serializeDeck(out)).toBe(serializeDeck(file));
     expect(serializeDeck(out)).toBe(`${JSON.stringify(file, null, 2)}\n`);
+  });
+
+  it.each([
+    ['generated 500-node deck', largeDeck()],
+    [
+      'generated 2,000-node deck',
+      largeDeck({ nodes: 2000, edges: 4000, flows: 40, stepsPerFlow: 10, rules: 20, stickies: 50 }),
+    ],
+  ] as const)('serializes the %s byte-identically (SC-001)', (_name, file) => {
+    expect(serializeDeck(toJSON(fromJSON(file)))).toBe(serializeDeck(file));
   });
 
   it.each(cases)(
