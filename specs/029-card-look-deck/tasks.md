@@ -43,8 +43,8 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ## Phase 1: Setup
 
-- [ ] T001 Create the implementation branch from the latest `main` (at or after `c1c8acd`). Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` to confirm a green start. Confirm the lucide names `Spline`, `CornerDownRight`, `Minus`, `Layers`, `TriangleAlert` exist in `apps/app/node_modules/lucide-react`; if one is missing, pick the closest icon and note it in `specs/029-card-look-deck/research.md` R9.
-- [ ] T002 Run `pnpm bench` on the unchanged code, then again with `BENCH_ROUTES=1`, `BENCH_COLOURS=1` and `BENCH_GROUPS=1`. Save the tables in `specs/029-card-look-deck/bench-before.md`. Also record `pnpm --filter @sododeck/app test scene.perf`.
+- [x] T001 Create the implementation branch from the latest `main` (at or after `c1c8acd`). Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` to confirm a green start. Confirm the lucide names `Spline`, `CornerDownRight`, `Minus`, `Layers`, `TriangleAlert` exist in `apps/app/node_modules/lucide-react`; if one is missing, pick the closest icon and note it in `specs/029-card-look-deck/research.md` R9.
+- [x] T002 Run `pnpm bench` on the unchanged code, then again with `BENCH_ROUTES=1`, `BENCH_COLOURS=1` and `BENCH_GROUPS=1`. Save the tables in `specs/029-card-look-deck/bench-before.md`. Also record `pnpm --filter @sododeck/app test scene.perf`.
 
 ---
 
