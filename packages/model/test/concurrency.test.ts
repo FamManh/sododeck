@@ -335,3 +335,152 @@ describe('lists under concurrent edits (036 US2)', () => {
     );
   });
 });
+
+const textBase: SododeckFile = {
+  ...base,
+  nodes: [
+    { id: 'n1', type: 'service', title: 'One', description: 'Start. Middle. End.' },
+    ...base.nodes.slice(1),
+  ],
+  stickies: [{ id: 'k', text: '', position: { x: 0, y: 0 } }],
+};
+
+const description = (side: Side, id = 'n1') => getObject(side.doc, 'nodes', id)?.description;
+
+describe('long text under concurrent typing (036 US3)', () => {
+  it('keeps a sentence added at the start and one added at the end (AS1)', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Intro. Start. Middle. End.' });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Middle. End. Outro.' });
+      },
+      (a) => {
+        expect(description(a)).toBe('Intro. Start. Middle. End. Outro.');
+      },
+    );
+  });
+
+  it('keeps both words typed at the same place, neither inside the other (AS2)', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Middle. End. Alpha' });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Middle. End. Beta' });
+      },
+      (a) => {
+        // Each side inserted " Alpha" / " Beta" as one run after "End.".
+        expect(['Start. Middle. End. Alpha Beta', 'Start. Middle. End. Beta Alpha']).toContain(
+          description(a),
+        );
+      },
+    );
+  });
+
+  it('keeps what one tab typed while the other cleared the field', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: null });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Middle. End. More' });
+      },
+      (a) => {
+        expect(description(a)).toBe(' More');
+      },
+    );
+  });
+
+  it('keeps both first texts of an empty description, step notes and note text', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n2', { description: 'From A.' });
+        editor.updateStep('f', 's1', { notes: 'Notes A.' });
+        editor.update('stickies', 'k', { text: 'Note A.' });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n2', { description: 'From B.' });
+        editor.updateStep('f', 's1', { notes: 'Notes B.' });
+        editor.update('stickies', 'k', { text: 'Note B.' });
+      },
+      (a) => {
+        const both = (value: string | undefined, x: string, y: string) => {
+          expect([`${x}${y}`, `${y}${x}`]).toContain(value);
+        };
+        both(description(a, 'n2'), 'From A.', 'From B.');
+        both(getObject(a.doc, 'flows', 'f')?.steps[0]?.notes, 'Notes A.', 'Notes B.');
+        both(getObject(a.doc, 'stickies', 'k')?.text, 'Note A.', 'Note B.');
+      },
+    );
+  });
+
+  it('keeps the untouched parts when one tab replaces the whole field (FR-015)', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Changed. End.' });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Middle. End!!' });
+      },
+      (a) => {
+        expect(description(a)).toBe('Start. Changed. End!!');
+      },
+    );
+  });
+
+  it('keeps last write wins for a title changed on both sides (AS5)', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n2', { title: 'Left' });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n2', { title: 'Right' });
+      },
+      (a) => {
+        expect(['Left', 'Right']).toContain(getObject(a.doc, 'nodes', 'n2')?.title);
+      },
+    );
+  });
+
+  it('exports merged text as a plain string that round-trips (AS6)', () => {
+    bothOrders(
+      textBase,
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'A: Start. Middle. End.' });
+        editor.updateMeta({ description: 'Deck by A.' });
+      },
+      ({ editor }) => {
+        editor.update('nodes', 'n1', { description: 'Start. Middle. End. :B' });
+        editor.updateMeta({ description: 'Deck by B.' });
+      },
+      (a) => {
+        const file = toJSON(a.doc);
+        expect(typeof file.nodes[0]?.description).toBe('string');
+        expect(typeof file.description).toBe('string');
+        expect(toJSON(fromJSON(file))).toEqual(file);
+      },
+    );
+  });
+
+  it('undoes only the local characters (AS4, FR-017)', () => {
+    for (const order of ['ab', 'ba'] as const) {
+      const { a, b } = twoDocs(textBase);
+      a.editor.update('nodes', 'n1', { description: 'Start. Middle. End. Mine' });
+      b.editor.update('nodes', 'n1', { description: 'Theirs Start. Middle. End.' });
+      sync(a, b, order);
+      expect(description(a)).toBe('Theirs Start. Middle. End. Mine');
+      expect(a.editor.undo()).toBe(true);
+      sync(a, b, order);
+      expectConverged(a, b);
+      expect(description(b)).toBe('Theirs Start. Middle. End.');
+    }
+  });
+});
