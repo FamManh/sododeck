@@ -107,3 +107,30 @@ describe('withoutKnowledge', () => {
     expect(parseSododeckFile(withoutKnowledge(emptySododeckFile())).success).toBe(true);
   });
 });
+
+describe('tag colours in the JSON export (033)', () => {
+  const coloured: SododeckFile = {
+    ...emptySododeckFile(),
+    swatches: ['#7a3cff'],
+    tagColors: { Lan: '#7a3cff', PCI: 'violet' },
+    nodes: [{ id: 'a', type: 'service', title: 'A', tags: ['PCI', 'Lan'] }],
+  };
+
+  it.each([true, false])(
+    'keeps tagColors after swatches (includeKnowledge %s)',
+    (includeKnowledge) => {
+      const { text } = jsonExport(coloured, { includeKnowledge, pretty: true });
+      const parsed = JSON.parse(text) as SododeckFile;
+      expect(parsed.tagColors).toEqual({ Lan: '#7a3cff', PCI: 'violet' });
+      const keys = Object.keys(parsed);
+      expect(keys.indexOf('tagColors')).toBe(keys.indexOf('swatches') + 1);
+    },
+  );
+
+  it('is accepted again by the importer (schema and model)', () => {
+    const { text } = jsonExport(coloured, { includeKnowledge: true, pretty: true });
+    const result = parseSododeckFile(JSON.parse(text));
+    expect(result.success).toBe(true);
+    expect(toJSON(fromJSON(JSON.parse(text))).tagColors).toEqual(coloured.tagColors);
+  });
+});

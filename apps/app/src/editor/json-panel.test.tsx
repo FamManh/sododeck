@@ -425,3 +425,20 @@ describe('JsonPanel — collapse and resize (US5)', () => {
     });
   });
 });
+
+describe('tag colours in the Deck tab (033, US5)', () => {
+  it('shows tagColors after swatches once a tag is coloured, in sync with the document', () => {
+    const { editor, doc } = setup();
+    act(() => {
+      editor().setTagColor('pci', 'violet');
+      vi.advanceTimersByTime(300);
+    });
+    const text = screen.getByLabelText(/Deck JSON/i).textContent;
+    expect(text).toContain('"tagColors": {');
+    expect(text).toContain('"pci": "violet"');
+    expect(serializeDeck(toJSON(doc))).toContain('"pci": "violet"');
+    const swatches = text.indexOf('"swatches"');
+    const tagColors = text.indexOf('"tagColors"');
+    if (swatches !== -1) expect(tagColors).toBeGreaterThan(swatches);
+  });
+});
