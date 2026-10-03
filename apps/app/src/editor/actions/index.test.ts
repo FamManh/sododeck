@@ -51,7 +51,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     ]);
     expect(labels(TARGETS.connection, 'menu')).toEqual([
       ['Open details', 'Edit label', 'Protocol', 'Direction'],
-      ['Reset route'],
+      ['Line type'],
       ['Delete'],
     ]);
     expect(labels(TARGETS.group, 'menu')).toEqual([
@@ -104,7 +104,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Label',
       'Protocol: HTTP',
       'Direction: Forward',
-      'Reset route',
+      'Line type: Curved',
       'More actions',
     ]);
     expect(labels(TARGETS.group, 'toolbar').flat()).toEqual([

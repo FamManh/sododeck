@@ -63,6 +63,8 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
       const label = edge?.label ?? `${title(edge?.from) ?? ''} → ${title(edge?.to) ?? ''}`;
       return `Selection: connection ${label}`;
     }
+    case 'connections':
+      return `Selection: ${String(edges.length)} connections`;
     case 'group':
       return `Selection: group ${ctx.deck.groups.find((g) => g.id === groups[0])?.title ?? ''}`;
     default:

@@ -31,7 +31,7 @@ export const COMMON_ACTIONS: readonly Action[] = [
     section: 'clipboard',
     // Only ⇧⌘C (founder, 2026-10-02): a developer tool, kept out of the menus; groups have none
     // (spec FR-032). The JSON panel has its own Copy button.
-    where: { keys: ['component', 'components', 'connection', 'sticky', 'mixed'] },
+    where: { keys: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'] },
     modes: ALL_MODES,
     applies: (ctx) => selectionView(ctx.deck, ctx.selection).entries.length > 0,
     run: (ctx) => {
@@ -67,7 +67,7 @@ export const COMMON_ACTIONS: readonly Action[] = [
     shortcut: 'delete',
     section: 'danger',
     destructive: true,
-    where: { menu: ['component', 'components', 'connection', 'sticky', 'mixed'] },
+    where: { menu: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'] },
     // Groups are never deleted this way (the Delete key refuses them too).
     applies: (ctx) =>
       ctx.selection.nodes.length + ctx.selection.edges.length + ctx.selection.stickies.length > 0,
@@ -83,6 +83,6 @@ export const COMMON_ACTIONS: readonly Action[] = [
     icon: Ellipsis,
     shortcut: 'context-menu',
     section: 'danger',
-    where: { toolbar: ['component', 'components', 'connection', 'group', 'mixed'] },
+    where: { toolbar: ['component', 'components', 'connection', 'connections', 'group', 'mixed'] },
   },
 ];

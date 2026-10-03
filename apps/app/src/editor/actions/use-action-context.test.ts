@@ -26,7 +26,8 @@ describe('targetOf', () => {
   });
 
   it('is mixed for anything else', () => {
-    expect(targetOf(sel({ edges: ['e', 'f'] })).kind).toBe('mixed');
+    expect(targetOf(sel({ edges: ['e', 'f'] })).kind).toBe('connections');
+    expect(targetOf(sel({ edges: ['e'], stickies: ['s'] })).kind).toBe('mixed');
     expect(targetOf(sel({ groups: ['g', 'h'] })).kind).toBe('mixed');
     expect(targetOf(sel({ nodes: ['a'], edges: ['e'] })).kind).toBe('mixed');
     expect(targetOf(sel({ nodes: ['a'], groups: ['g'] })).kind).toBe('mixed');
