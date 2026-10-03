@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
+import { cardLayout } from '../card-layout';
 import { NODE_SIZE } from '../canvas-geometry';
 import { buildScene, EXPORT_MARGIN, type SceneInput } from './scene';
 
@@ -75,7 +76,12 @@ describe('buildScene: whole deck', () => {
       subtitle: 'Go',
       hasRules: false,
       level: 'container',
-      rect: { x: 0, y: 0, ...NODE_SIZE },
+      rect: {
+        x: 0,
+        y: 0,
+        width: NODE_SIZE.width,
+        height: cardLayout({ title: 'Orders', description: 'Go' }).height,
+      },
     });
     expect(cards.get('db')).toMatchObject({ kind: 'database', subtitle: null, hasRules: true });
   });

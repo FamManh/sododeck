@@ -43,6 +43,8 @@ export interface CardLayout {
   height: number;
   /** 1–3. */
   titleLines: number;
+  /** The title is longer than `titleLines`, so the card shows a tooltip with the full text. */
+  titleCut: boolean;
   /** 0–3. */
   descriptionLines: number;
   /** Rows of tag pills (0 without tags). */
@@ -111,10 +113,8 @@ export function cardLayout(
   const inner = cardWidth - 2 * DECK_CARD.paddingX;
   const c = DECK_CARD;
 
-  const title = Math.min(
-    c.maxTitleLines,
-    Math.max(1, wrappedLines(input.title, inner, c.titleFont, measure)),
-  );
+  const titleNatural = Math.max(1, wrappedLines(input.title, inner, c.titleFont, measure));
+  const title = Math.min(c.maxTitleLines, titleNatural);
   const description = (input.description ?? '').trim();
   const naturalDescription =
     description === ''
@@ -145,6 +145,7 @@ export function cardLayout(
       width: cardWidth,
       height: stepUp(natural),
       titleLines: title,
+      titleCut: titleNatural > title,
       descriptionLines: naturalDescription,
       tagRows: rows,
       hasChildrenRow,
@@ -162,5 +163,13 @@ export function cardLayout(
           0,
           Math.min(naturalDescription, Math.floor((left + 1e-9) / c.descriptionLineHeight)),
         );
-  return { width: cardWidth, height, titleLines, descriptionLines, tagRows: rows, hasChildrenRow };
+  return {
+    width: cardWidth,
+    height,
+    titleLines,
+    titleCut: titleNatural > titleLines,
+    descriptionLines,
+    tagRows: rows,
+    hasChildrenRow,
+  };
 }

@@ -13,6 +13,7 @@ import {
   toStickyNodes,
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
+import { cardLayout } from './card-layout';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
 
@@ -73,8 +74,9 @@ describe('toFlowNodes', () => {
     const [a, b] = nodes.filter((n) => n.type === 'deck');
     expect(a).toMatchObject({
       id: 'a',
-      width: 164,
-      height: 50,
+      // 029: 184 wide, tall enough for the title and the "Go" description.
+      width: 184,
+      height: cardLayout({ title: 'A', description: 'Go' }).height,
       position: { x: 5, y: 6 },
       selected: false,
       data: {
@@ -240,8 +242,8 @@ describe('toFlowNodes', () => {
       id: 'group:g',
       type: 'group-boundary',
       position: { x: 5 - 24, y: 6 - 24 },
-      width: 164 + 48,
-      height: 50 + 48,
+      width: 184 + 48,
+      height: cardLayout({ title: 'A', description: 'Go' }).height + 48,
       selectable: true,
       draggable: true,
       dragHandle: '.sd-group-handle',

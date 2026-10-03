@@ -1,6 +1,6 @@
 /**
  * Resizing a single card with one of its eight handles (017 R4, FR-002–FR-007): the pointer's
- * proposed rect goes through `resizeBox` (min 120 × 44, max 800 × 600, step 4), then snaps its
+ * proposed rect goes through `resizeBox` (min 120 × 76, max 800 × 600, step 4), then snaps its
  * dragged edges to the other on-screen cards (⌘ turns that off), then writes the size and, for a
  * top or left handle, the moved position — one undo step for the whole drag, and Esc cancels it.
  * Connections stay attached because they are drawn from the card's live box (R2), not recomputed

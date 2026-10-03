@@ -92,7 +92,7 @@ describe('running actions (019 R8)', () => {
     expect(added).toMatchObject({
       type: 'database',
       title: 'Untitled database',
-      position: { x: 118, y: 175 },
+      position: { x: 108, y: 162 },
     });
     expect(ui().titleEdit).toMatchObject({ isNew: true, kind: 'database' });
   });
@@ -299,11 +299,11 @@ describe('group.create (016 US2, ⌘G)', () => {
     expect(runAction(ACTIONS, 'group.create', ctx)).toBe(true);
     const file = toJSON(ctx.doc);
     const group = file.groups.at(-1);
-    // Cards (164 × 50 at every level) from (0, 0) to (300, 300), plus 24 px padding.
+    // Cards (184 × 76 at every level) from (0, 0) to (300, 300), plus 24 px padding.
     expect(group).toMatchObject({
       title: 'New group',
       position: { x: -24, y: -24 },
-      size: { width: 300 + 164 + 48, height: 300 + 50 + 48 },
+      size: { width: 300 + 184 + 48, height: 300 + 76 + 48 },
     });
     expect(group).not.toHaveProperty('parent');
     expect(file.nodes.map((n) => n.group)).toEqual(Array(4).fill(group?.id));

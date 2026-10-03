@@ -22,6 +22,19 @@ const layout = (input: CardLayoutInput, width = DECK_CARD_WIDTH) =>
   cardLayout(input, width, measure);
 const line = (n: number) => 'x'.repeat(n);
 
+describe('cardLayout titleCut', () => {
+  it('is false when the title fits and true past three lines or a short stored height', () => {
+    expect(layout({ title: 'Billing' }).titleCut).toBe(false);
+    expect(layout({ title: line(22 * 3) }).titleCut).toBe(false);
+    expect(layout({ title: `${line(21)} ${line(21)} ${line(21)} ${line(21)}` }).titleCut).toBe(
+      true,
+    );
+    const short = layout({ title: `${line(21)} ${line(21)}`, size: { width: 184, height: 4 } });
+    expect(short.titleLines).toBe(1);
+    expect(short.titleCut).toBe(true);
+  });
+});
+
 describe('cardLayout (research R7)', () => {
   it('defaults to a 184 px wide card', () => {
     expect(DECK_CARD_WIDTH).toBe(184);

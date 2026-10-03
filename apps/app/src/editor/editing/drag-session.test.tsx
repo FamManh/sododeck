@@ -354,8 +354,8 @@ describe('resizing a group frame (016 US2, FR-013–FR-015)', () => {
       endResize(editor(), session);
     });
     const file = toJSON(doc);
-    // Members span (0,0)–(464,104) and the Fraud frame reaches y 428; plus 24 px.
-    expect(frameOf(file, 'pay')).toEqual(frame(-48, -48, 464 + 24 + 48, 428 + 24 + 48));
+    // Members span (0,0)–(484, 76) and the Fraud frame reaches y 428; plus 24 px.
+    expect(frameOf(file, 'pay')).toEqual(frame(-48, -48, 484 + 24 + 48, 428 + 24 + 48));
     expect(file.nodes).toEqual(deck.nodes);
     expect(ui().canvasGesture).toBeNull();
     act(() => {

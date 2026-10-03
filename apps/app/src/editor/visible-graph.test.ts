@@ -253,7 +253,7 @@ describe('visibleGraph', () => {
       groups: [{ id: 'core', title: 'Core' }],
     });
     const top = visibleGraph(deck, { node: null, group: null }, new Set());
-    expect(scopeBounds(deck, top, 'system')).toEqual({ x: 0, y: 0, width: 164, height: 50 });
+    expect(scopeBounds(deck, top, 'system')).toEqual({ x: 0, y: 0, width: 184, height: 76 });
     expect(validDrillDepth(deck, [{ kind: 'node', id: 'parent' }])).toBe(1);
     expect(validDrillDepth(deck, [{ kind: 'node', id: 'missing' }])).toBe(0);
   });
