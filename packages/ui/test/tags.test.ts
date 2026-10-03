@@ -44,3 +44,11 @@ describe('removeTag', () => {
     expect(removeTag(tags, 'z')).toBe(tags);
   });
 });
+
+describe('addTag with a limit', () => {
+  it('adds nothing once the limit is reached', () => {
+    const two = ['a', 'b'] as const;
+    expect(addTag(two, 'c', 2)).toBe(two);
+    expect(addTag(two, 'c', 3)).toEqual(['a', 'b', 'c']);
+  });
+});

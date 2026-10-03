@@ -17,6 +17,8 @@ type TagInputProps = Omit<React.ComponentProps<'div'>, 'onChange'> & {
   placeholder?: string;
   /** Tags to suggest while typing (e.g. every tag in the deck); present ones are left out. */
   suggestions?: readonly string[];
+  /** At most this many tags: at the limit the add field gives way to a "<max> tags max" note. */
+  max?: number;
 };
 
 /**
@@ -31,9 +33,11 @@ function TagInput({
   listLabel = 'Tags',
   placeholder = '+ tag',
   suggestions = [],
+  max = Infinity,
   className,
   ...props
 }: TagInputProps) {
+  const full = value.length >= max;
   const [draft, setDraft] = useState('');
   const field = useRef<HTMLDivElement>(null);
   const removeButtons = useRef(new Map<string, HTMLButtonElement>());
@@ -59,7 +63,7 @@ function TagInput({
   }
 
   function add(raw: string) {
-    const next = addTag(value, raw);
+    const next = addTag(value, raw, max);
     if (next !== value) onValueChange(next);
     setDraft('');
   }
@@ -86,33 +90,40 @@ function TagInput({
           </li>
         ))}
       </ul>
-      <div ref={field} className="contents">
-        <Combobox
-          mode="free"
-          label={label}
-          listLabel="Tag suggestions"
-          value={draft}
-          onValueChange={setDraft}
-          onOptionSelect={add}
-          options={options}
-          chevron={false}
-          placeholder={placeholder}
-          wrapperClassName="w-24"
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              add(draft);
-            } else if (event.key === 'Backspace' && draft === '') {
-              const last = value.at(-1);
-              if (last !== undefined) {
+      {full && (
+        <span role="note" className="text-caption text-ink-muted">
+          {String(max)} tags max
+        </span>
+      )}
+      {!full && (
+        <div ref={field} className="contents">
+          <Combobox
+            mode="free"
+            label={label}
+            listLabel="Tag suggestions"
+            value={draft}
+            onValueChange={setDraft}
+            onOptionSelect={add}
+            options={options}
+            chevron={false}
+            placeholder={placeholder}
+            wrapperClassName="w-24"
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
                 event.preventDefault();
-                onValueChange(removeTag(value, last));
+                add(draft);
+              } else if (event.key === 'Backspace' && draft === '') {
+                const last = value.at(-1);
+                if (last !== undefined) {
+                  event.preventDefault();
+                  onValueChange(removeTag(value, last));
+                }
               }
-            }
-          }}
-          className="h-6.5 rounded-full border-dashed bg-transparent px-2.5 text-body-sm"
-        />
-      </div>
+            }}
+            className="h-6.5 rounded-full border-dashed bg-transparent px-2.5 text-body-sm"
+          />
+        </div>
+      )}
     </div>
   );
 }
