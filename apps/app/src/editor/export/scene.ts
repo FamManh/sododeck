@@ -20,6 +20,8 @@ import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-
 import { kindLabel } from '../kind-label';
 import { effectiveLevel, type Level } from '../levels';
 import type { PathEnds, PathShape } from '../routing/route-path';
+import { labelClamp } from '../editing/label-drag';
+import { labelPoint, samplePath } from '../routing/connector-geometry';
 import { lineCap, lineDash } from '../style/line-colour';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
@@ -458,6 +460,7 @@ function sceneEdges(
     memberIds: readonly string[],
     route?: SododeckFile['edges'][number]['route'],
     style?: SododeckFile['edges'][number]['style'],
+    labelAt?: number,
   ) => {
     const a = rects.get(from);
     const b = rects.get(to);
@@ -465,6 +468,12 @@ function sceneEdges(
     const marks = memberIds.flatMap((memberId) => overlay?.edges.get(memberId) ?? []);
     if (overlay !== null && marks.length === 0) return;
     const geometry = edgePath(a, b, route, shape, direction);
+    const badgeCount = marks.reduce((sum, mark) => sum + mark.badges.length, 0);
+    // The label at its stored fraction of the drawn line, as on the canvas (022 R10).
+    const spot =
+      labelAt === undefined
+        ? { x: geometry.labelX, y: geometry.labelY }
+        : labelPoint(samplePath(geometry.path), labelAt, labelClamp(label, badgeCount));
     edges.push({
       id,
       path: geometry.path,
@@ -474,7 +483,7 @@ function sceneEdges(
       target: geometry.target,
       ends: geometry.ends,
       extent: geometry.extent,
-      labelPoint: { x: geometry.labelX, y: geometry.labelY },
+      labelPoint: spot,
       stroke: strokeOf(marks),
       ...(sceneStyle(style) === undefined ? {} : { style: sceneStyle(style) }),
       label,
@@ -497,6 +506,7 @@ function sceneEdges(
       [id],
       edge.route,
       edge.style,
+      edge.labelAt,
     );
   }
   // Edges that leave a drilled scope end at the outside component's port pill, as on the canvas.

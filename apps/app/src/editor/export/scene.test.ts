@@ -520,3 +520,35 @@ describe('buildScene: selected flow', () => {
     }
   });
 });
+
+describe('buildScene label position (022 US4)', () => {
+  // The a → db connector is long enough (about 240 px) for the label to move.
+  const withLabel = (labelAt?: number) => ({
+    ...grouped,
+    edges: grouped.edges.map((edge) =>
+      edge.id === 'a-db'
+        ? { ...edge, label: 'call', ...(labelAt === undefined ? {} : { labelAt }) }
+        : edge,
+    ),
+  });
+  const find = (file: typeof grouped) => scene(file).edges.find((edge) => edge.id === 'a-db');
+
+  it('puts the label at the stored fraction of the drawn line', () => {
+    const middle = find(withLabel());
+    const early = find(withLabel(0.2));
+    expect(early?.labelPoint).not.toEqual(middle?.labelPoint);
+    expect(early?.path).toBe(middle?.path);
+  });
+
+  it('stays on the path and off the cards at the extremes', () => {
+    const start = find(withLabel(0))?.labelPoint;
+    const end = find(withLabel(1))?.labelPoint;
+    const edge = find(withLabel());
+    expect(
+      Math.hypot((start?.x ?? 0) - (edge?.source.x ?? 0), (start?.y ?? 0) - (edge?.source.y ?? 0)),
+    ).toBeGreaterThanOrEqual(8);
+    expect(
+      Math.hypot((end?.x ?? 0) - (edge?.target.x ?? 0), (end?.y ?? 0) - (edge?.target.y ?? 0)),
+    ).toBeGreaterThanOrEqual(8);
+  });
+});

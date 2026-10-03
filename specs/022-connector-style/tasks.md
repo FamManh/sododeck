@@ -172,13 +172,13 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ### Tests for User Story 4 (write first)
 
-- [ ] T047 [P] [US4] `apps/app/src/editor/editing/label-drag.test.ts`: pointer projection to a fraction on straight, elbow-with-bends and curved paths; snapping within 4 % of a tick ("snapped" readout), ⌘ disables; clamp keeps the pill 8 px plus half its width from each end; one `setEdgeLabelAt` per gesture; keys ← → 5 %, Shift jumps ticks, Home / End clamp ends.
-- [ ] T048 [P] [US4] Extend `deck-edge.test.tsx`: the label sits at `labelAt` along the path, never rotated, and stays at that fraction after a card move or a bend change; the pill is a `button` named "Label <text>, 20 % along" and ⏎ starts text editing. Extend `edge-inspector.test.tsx`: `spinbutton` "Label position". Extend `export/scene.test.ts`: label point matches the canvas within 0.5 px.
+- [x] T047 [P] [US4] `apps/app/src/editor/editing/label-drag.test.ts`: pointer projection to a fraction on straight, elbow-with-bends and curved paths; snapping within 4 % of a tick ("snapped" readout), ⌘ disables; clamp keeps the pill 8 px plus half its width from each end; one `setEdgeLabelAt` per gesture; keys ← → 5 %, Shift jumps ticks, Home / End clamp ends.
+- [x] T048 [P] [US4] Extend `deck-edge.test.tsx`: the label sits at `labelAt` along the path, never rotated, and stays at that fraction after a card move or a bend change; the pill is a `button` named "Label <text>, 20 % along" and ⏎ starts text editing. Extend `edge-inspector.test.tsx`: `spinbutton` "Label position". Extend `export/scene.test.ts`: label point matches the canvas within 0.5 px.
 
 ### Implementation for User Story 4
 
-- [ ] T049 [US4] Create `apps/app/src/editor/editing/label-drag.ts` (`canvasGesture: 'label'`, ticks and readout in the UI store). Make T047 pass.
-- [ ] T050 [US4] `deck-to-flow.ts` passes `labelAt`; `deck-edge.tsx` places the label with `labelPoint` (DOM `getPointAtLength` fast path allowed only with the parity test from T010) and makes it draggable and focusable; ticks drawn while dragging. Drawer "Label position" field in `inspector/edge-inspector.tsx`. Export label point in `export/scene.ts`. Make T048 pass. Screenshot against `130-connector-label-position-*.png`.
+- [x] T049 [US4] Create `apps/app/src/editor/editing/label-drag.ts` (`canvasGesture: 'label'`, ticks and readout in the UI store). Make T047 pass.
+- [x] T050 [US4] `deck-to-flow.ts` passes `labelAt`; `deck-edge.tsx` places the label with `labelPoint` (DOM `getPointAtLength` fast path allowed only with the parity test from T010) and makes it draggable and focusable; ticks drawn while dragging. Drawer "Label position" field in `inspector/edge-inspector.tsx`. Export label point in `export/scene.ts`. Make T048 pass. Screenshot against `130-connector-label-position-*.png`.
 
 ---
 

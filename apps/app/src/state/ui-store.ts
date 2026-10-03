@@ -341,6 +341,8 @@ export interface UiState {
   bendPreview: BendPreview | null;
   /** What a connector handle shows while dragged: "x 288 · y 144", "left side · 78 %", "label 20 %". */
   connectorReadout: string | null;
+  /** The label position while its pill is dragged (022); null outside a label gesture. */
+  labelPreview: { edgeId: Id; at: number; snapped: boolean } | null;
   /** The `W × H` readout pill next to a dragged corner while resizing a card (017). */
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
   /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
@@ -497,6 +499,7 @@ export interface UiState {
   setGuides: (guides: readonly Guide[]) => void;
   setDragReadout: (readout: { dx: number; dy: number } | null) => void;
   setBendPreview: (preview: BendPreview | null) => void;
+  setLabelPreview: (preview: UiState['labelPreview']) => void;
   setConnectorReadout: (readout: string | null) => void;
   setResizeReadout: (
     readout: { width: number; height: number; x: number; y: number } | null,
@@ -677,6 +680,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     dragReadout: null,
     bendPreview: null,
     connectorReadout: null,
+    labelPreview: null,
     resizeReadout: null,
     endpointHover: null,
     endpointAnchor: null,
@@ -1189,6 +1193,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     setBendPreview: (bendPreview) => {
       set({ bendPreview });
     },
+    setLabelPreview: (labelPreview) => {
+      set({ labelPreview });
+    },
     setConnectorReadout: (connectorReadout) => {
       set({ connectorReadout });
     },
@@ -1261,6 +1268,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         dragReadout: null,
         bendPreview: null,
         connectorReadout: null,
+        labelPreview: null,
         resizeReadout: null,
         endpointHover: null,
         endpointAnchor: null,

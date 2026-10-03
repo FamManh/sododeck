@@ -120,6 +120,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   toSize?: { width: number; height: number };
   /** Dash, weight, colour and animation (022); absent means the default look. */
   style?: DeckEdgeObject['style'];
+  /** Where the label sits along the line, 0 to 1 (022); absent means the middle. */
+  labelAt?: number;
   /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
   level: Level;
   /**
@@ -972,6 +974,7 @@ export function toFlowEdges(
         ...(problems === undefined ? {} : { problems }),
         ...(edge.route === undefined ? {} : { route: edge.route }),
         ...(edge.style === undefined ? {} : { style: edge.style }),
+        ...(edge.labelAt === undefined ? {} : { labelAt: edge.labelAt }),
       },
     };
     edgeCache.set(edge, flowEdge);

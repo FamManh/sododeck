@@ -17,6 +17,10 @@ vi.mock('@xyflow/react', async (importOriginal) => {
 
 // The handles themselves (pointer/keyboard drag, ReactFlow + editor context) are
 // `route-handles.test.tsx`'s job; here only their render-gating in `deck-edge.tsx` is under test.
+vi.mock('./routing/label-handle', () => ({
+  LabelHandle: () => <div data-testid="label-handle" />,
+}));
+
 vi.mock('./routing/route-handles', () => ({
   RouteHandles: () => <div data-testid="route-handles" />,
 }));
@@ -300,6 +304,64 @@ describe('DeckEdge route handles gating (022)', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     renderEdge({ routable: false }, true);
     expect(screen.queryByTestId('route-handles')).toBeNull();
+  });
+});
+
+describe('DeckEdge label position (022 US4)', () => {
+  afterEach(() => {
+    useUiStore.setState({ labelPreview: null, selection: EMPTY_SELECTION });
+  });
+  /** The pill's transform, with the render removed again so renders can be compared. */
+  const pillTransform = (
+    data: Partial<DeckEdgeData>,
+    geometry: Parameters<typeof renderEdge>[2] = {},
+  ) => {
+    const view = renderEdge(
+      { shape: 'straight', showLabel: true, routable: true, ...data },
+      false,
+      geometry,
+    );
+    const transform = view.getByTestId('edge-label').style.transform;
+    view.unmount();
+    return transform;
+  };
+
+  it('puts the label at labelAt along the line, never rotated', () => {
+    // straight line from (0, 0) to (200, 40) minus the arrow: the pill is moved with labelAt
+    const middle = pillTransform({});
+    const early = pillTransform({ labelAt: 0.2 });
+    expect(early).not.toBe(middle);
+    expect(early).not.toMatch(/rotate/);
+  });
+
+  it('keeps the label at that fraction after the cards move', () => {
+    const x = (offset: number) => {
+      const m = /translate\(([-\d.]+)px, ([-\d.]+)px\)$/.exec(
+        pillTransform({ labelAt: 0.25 }, { sourceX: offset, targetX: offset + 200 }),
+      );
+      return Number(m?.[1]);
+    };
+    expect(x(100) - x(0)).toBeCloseTo(100, 6);
+  });
+
+  it('follows a label drag from the UI store', () => {
+    const rest = pillTransform({ labelAt: 0.5 });
+    useUiStore.setState({ labelPreview: { edgeId: 'e1', at: 0.2, snapped: false } });
+    expect(pillTransform({ labelAt: 0.5 })).not.toBe(rest);
+  });
+
+  it('offers the draggable label only for the selected, routable, labelled connector', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'straight', showLabel: true, routable: true }, true);
+    expect(screen.getByTestId('label-handle')).toBeInTheDocument();
+  });
+
+  it('hides it when the label is off, or the edge is not selected', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'straight', showLabel: false, routable: true }, true);
+    expect(screen.queryByTestId('label-handle')).toBeNull();
+    renderEdge({ shape: 'straight', showLabel: true, routable: true }, false);
+    expect(screen.queryByTestId('label-handle')).toBeNull();
   });
 });
 

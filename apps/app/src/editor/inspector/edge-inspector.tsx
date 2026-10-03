@@ -15,6 +15,7 @@ import { connectionCheck, REFUSAL_TEXT } from '../connection-rules';
 import { FieldEdit } from '../field-edit';
 import { DIRECTIONS, PROTOCOLS, type Direction } from '../fields/edge-choices';
 import { FieldLabel } from '../fields/field-label';
+import { LabelPositionField } from '../fields/label-position-field';
 import { LinksField } from '../fields/links-field';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
@@ -208,6 +209,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
         </PanelSection>
         <PanelSection label="Line">
           <LineStyleControls edges={[edge]} />
+          <LabelPositionField edge={edge} />
         </PanelSection>
         {(edgeShape(edge) === 'elbow' || hasCustomRoute(edge)) && (
           <RouteFields deck={deck} edge={edge} />

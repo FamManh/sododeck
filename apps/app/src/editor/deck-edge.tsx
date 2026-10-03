@@ -5,9 +5,10 @@ import { edgeLineStyle } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { labelClamp, labelHalfWidth } from './editing/label-drag';
 import { useThemeStore } from '../theme/theme-store';
 import type { DeckFlowEdge } from './deck-to-flow';
 import { EdgeEnds } from './edge-ends';
@@ -19,8 +20,11 @@ import {
   cardCentre,
   connectorPath,
   decodeWaypoints,
+  labelPoint,
   offsetBends,
+  samplePath,
 } from './routing/connector-geometry';
+import { LabelHandle } from './routing/label-handle';
 import { RouteHandles } from './routing/route-handles';
 import type { Box, Point } from './routing/route-path';
 import { lineCap, lineColour, lineDash } from './style/line-colour';
@@ -120,7 +124,13 @@ export const DeckEdge = memo(function DeckEdge({
     arrowAtEnd: direction !== 'none' && !errorEnd,
   };
   const shape = data?.shape ?? 'curved';
-  const { path, labelX, labelY, segment, ends } = connectorPath({
+  const {
+    path,
+    labelX: pathLabelX,
+    labelY: pathLabelY,
+    segment,
+    ends,
+  } = connectorPath({
     shape,
     fromBox,
     toBox,
@@ -171,6 +181,22 @@ export const DeckEdge = memo(function DeckEdge({
   const isPill = hasBadges || flowIcon !== null;
   const playing = flow?.state !== undefined;
   const errorLabel = flow?.style === 'error' || flow?.style === 'invalid';
+
+  // The label sits at `labelAt` along the drawn line (022 R10); unset, at the line's middle.
+  const labelAt = data?.labelAt;
+  const previewAt = useUiStore((s) => (s.labelPreview?.edgeId === id ? s.labelPreview.at : null));
+  const labelEditable = showLabel && showHandle && flow === undefined && data?.routable === true;
+  const wantSamples = labelAt !== undefined || previewAt !== null || labelEditable;
+  const samples = useMemo(() => (wantSamples ? samplePath(path) : null), [wantSamples, path]);
+  const badgeCount = flow?.badges.length ?? 0;
+  const pillClamp = labelClamp(data?.label ?? null, badgeCount);
+  const placedAt = previewAt ?? labelAt;
+  const labelSpot =
+    samples !== null && placedAt !== undefined
+      ? labelPoint(samples, placedAt, pillClamp)
+      : { x: pathLabelX, y: pathLabelY };
+  const labelX = labelSpot.x;
+  const labelY = labelSpot.y;
 
   /** Fill, border and text of the label (FR-010). */
   function labelLook(): string {
@@ -253,8 +279,8 @@ export const DeckEdge = memo(function DeckEdge({
       {current !== null && (
         <FlowToken
           path={path}
-          x={labelX}
-          y={labelY}
+          x={pathLabelX}
+          y={pathLabelY}
           speed={current.speed}
           number={current.number}
         />
@@ -323,6 +349,17 @@ export const DeckEdge = memo(function DeckEdge({
             </span>
           )}
         </EdgeLabelRenderer>
+      )}
+      {labelEditable && samples !== null && (
+        <LabelHandle
+          edgeId={id}
+          text={data.label ?? ''}
+          at={labelAt ?? 0.5}
+          samples={samples}
+          clamp={pillClamp}
+          width={labelHalfWidth(data.label ?? null, badgeCount) * 2}
+          rest={{ x: labelX, y: labelY }}
+        />
       )}
       {showHandle && shape !== 'straight' && data?.routable === true && (
         <RouteHandles
