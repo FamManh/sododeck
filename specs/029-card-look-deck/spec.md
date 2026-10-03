@@ -46,7 +46,7 @@
 - Q: Where do curved and straight connectors attach to cards? → A: At the same side midpoints the existing routing picks for elbow (or the pinned sides); the three line types differ only in the path between those two points.
 - Q: Does "no lip below 60 % zoom" apply to every board or only dense ones? → A: Every board, every card and every state (hover, selected, dragging included); no density threshold.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Existing decks open in the Deck look (Priority: P1)
 
@@ -175,7 +175,7 @@ A user exports a deck to PNG or SVG and gets the same Deck look they see: frame,
 - Reduced motion preferred by the operating system: hover lift and lip changes apply without animated transitions.
 - A dense board of 200+ visible cards above 60 %: lips are drawn and pan / zoom stay within the bench budget (SC-004).
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -260,7 +260,7 @@ A user exports a deck to PNG or SVG and gets the same Deck look they see: frame,
 - **Connector (edge)**: Existing edge. Gains an optional **style** with **line type** (curved, elbow, straight). Its existing route (pinned sides, middle-segment offset) is kept and used by elbow lines.
 - **Named colour**: One of 13 palette entries; gains chip, ink and dot values per theme next to fill and stroke. Design tokens, not stored in decks.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
