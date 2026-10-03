@@ -12,7 +12,7 @@ import * as Y from 'yjs';
 import { jsonEqual, toY, type YObject } from '../convert';
 import { DeckEditError } from '../errors';
 import type { Point } from '../geometry';
-import { collectionMap, insertAt, orderedEntries, type ListMap } from '../layout';
+import { collectionMap, insertAt, noteOrder, orderedEntries, type ListMap } from '../layout';
 import { keysBetween } from '../order-key';
 import { readObject } from '../read';
 import { createObject } from '../write';
@@ -78,7 +78,9 @@ function materialize(ctx: EditContext): void {
   const keys = keysBetween(null, null, VIEW_PRESETS.length);
   ctx.transactUntracked(() => {
     VIEW_PRESETS.forEach((view, i) => {
-      list.set(view.id, createObject('views', { ...view }, keys[i] ?? ''));
+      const key = keys[i] ?? '';
+      list.set(view.id, createObject('views', { ...view }, key));
+      noteOrder(list, key);
     });
   });
 }

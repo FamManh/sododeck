@@ -102,13 +102,42 @@ export function orderedIds(list: ListMap): Id[] {
   return orderedEntries(list).map(([id]) => id);
 }
 
+/**
+ * The largest order key of each list, valid for one transaction: a batch of appends (paste, bulk
+ * add) scans the list once instead of once per item. Nothing else can change the list inside a
+ * transaction, as long as order keys are written through `setOrder` / `noteOrder`. A delete can
+ * leave the cached key above the real largest key, which is harmless: it still sorts last.
+ */
+const lastKeys = new WeakMap<ListMap, { transaction: Y.Transaction; key: string | null }>();
+
+function transactionOf(list: ListMap): Y.Transaction | null {
+  return list.doc?._transaction ?? null;
+}
+
+/** Records that `key` was written into `list` (keeps its cached largest key right). */
+export function noteOrder(list: ListMap, key: string): void {
+  const cached = lastKeys.get(list);
+  if (cached === undefined || cached.transaction !== transactionOf(list)) return;
+  if (cached.key === null || key > cached.key) cached.key = key;
+}
+
+/** Sets an item's order key. Use this (not `set('$order')`) so cached largest keys stay right. */
+export function setOrder(list: ListMap, item: YObject, key: string): void {
+  item.set(ORDER_KEY, key);
+  noteOrder(list, key);
+}
+
 /** The largest order key of a list, or null when it is empty or has no valid key. */
 export function lastKey(list: ListMap): string | null {
+  const transaction = transactionOf(list);
+  const cached = lastKeys.get(list);
+  if (transaction !== null && cached?.transaction === transaction) return cached.key;
   let last: string | null = null;
   for (const item of list.values()) {
     const key = orderOf(item);
     if (key !== '' && (last === null || key > last)) last = key;
   }
+  if (transaction !== null) lastKeys.set(list, { transaction, key: last });
   return last;
 }
 
@@ -142,8 +171,9 @@ function slotKeys(
 }
 
 /** Gives every item of `ordered` a fresh key in that order (fallback for a damaged list). */
-function rekeyAll(ordered: readonly YObject[]): void {
+function rekeyAll(list: ListMap, ordered: readonly YObject[]): void {
   const keys = keysBetween(null, null, ordered.length);
+  lastKeys.delete(list);
   ordered.forEach((item, i) => {
     const key = keys[i];
     if (key !== undefined && orderOf(item) !== key) item.set(ORDER_KEY, key);
@@ -163,7 +193,7 @@ export function insertAt(list: ListMap, id: Id, item: YObject, index?: number): 
     // Appending needs only the largest key, not a sort.
     const last = lastKey(list);
     try {
-      item.set(ORDER_KEY, keyBetween(last, null));
+      setOrder(list, item, keyBetween(last, null));
       list.set(id, item);
       return;
     } catch {
@@ -174,14 +204,14 @@ export function insertAt(list: ListMap, id: Id, item: YObject, index?: number): 
   const at = clampInsert(index, entries.length);
   try {
     const { key, rekeyed } = slotKeys(entries, at);
-    item.set(ORDER_KEY, key);
+    setOrder(list, item, key);
     list.set(id, item);
-    for (const [other, otherKey] of rekeyed) other.set(ORDER_KEY, otherKey);
+    for (const [other, otherKey] of rekeyed) setOrder(list, other, otherKey);
   } catch {
     list.set(id, item);
     const ordered = entries.map(([, other]) => other);
     ordered.splice(at, 0, item);
-    rekeyAll(ordered);
+    rekeyAll(list, ordered);
   }
 }
 
@@ -196,7 +226,7 @@ export function appendAll(list: ListMap, items: readonly (readonly [Id, YObject]
     return;
   }
   items.forEach(([id, item], i) => {
-    item.set(ORDER_KEY, keys[i] ?? '');
+    setOrder(list, item, keys[i] ?? '');
     list.set(id, item);
   });
 }
@@ -217,12 +247,12 @@ export function planMove(list: ListMap, id: Id, toIndex: number): (() => void) |
   return () => {
     try {
       const { key, rekeyed } = slotKeys(rest, to);
-      moved[1].set(ORDER_KEY, key);
-      for (const [other, otherKey] of rekeyed) other.set(ORDER_KEY, otherKey);
+      setOrder(list, moved[1], key);
+      for (const [other, otherKey] of rekeyed) setOrder(list, other, otherKey);
     } catch {
       const ordered = rest.map(([, other]) => other);
       ordered.splice(to, 0, moved[1]);
-      rekeyAll(ordered);
+      rekeyAll(list, ordered);
     }
   };
 }

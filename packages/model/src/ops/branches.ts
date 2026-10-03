@@ -14,9 +14,10 @@ import {
   appendAll,
   childList,
   insertAt,
-  ORDER_KEY,
+  noteOrder,
   orderedEntries,
   orderOf,
+  setOrder,
   type ListMap,
 } from '../layout';
 import { keysBetween } from '../order-key';
@@ -282,9 +283,10 @@ function restoreList<T extends { id: Id }>(
     const map = list.get(item.id);
     if (map === undefined) {
       list.set(item.id, createObject(kind, structuredClone(item) as Record<string, unknown>, key));
+      noteOrder(list, key);
       return;
     }
-    if (orderOf(map) !== key) map.set(ORDER_KEY, key);
+    if (orderOf(map) !== key) setOrder(list, map, key);
     restore(map, item);
   });
 }
