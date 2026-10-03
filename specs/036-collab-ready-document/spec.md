@@ -139,11 +139,12 @@ The founder, or an agent starting 029, 033, 022, 030 or 032, opens one decision 
 
 - **A deck stored in the browser before this feature.** Not supported and not migrated (§g-81). Opening it must fail with the app's existing "can't open this deck" outcome rather than a blank screen, and must not alter or delete what is stored. The founder exports decks worth keeping to `.sododeck.json` before upgrading and imports them afterwards (the file format is unchanged).
 - **A tab still running the previous build while a new tab edits the same deck.** Not handled (§g-81); the user reloads the old tab.
-- **Two items given the same place in a list by two tabs.** They get a stable order that is the same in every tab (ties are never broken by arrival time).
+- **Two items given the same place in a list by two tabs.** They get a stable order that is the same in every tab (ties are never broken by arrival time), and a later insert between them still lands between them.
 - **An item moved by one tab and deleted by the other.** The delete wins; no partial item remains.
-- **A flow whose branch structure is changed in two tabs at once** (one adds a branch, the other reorders the steps it splits). Steps are never lost or duplicated; the exported order stays "main path first, then each branch's steps"; anything the flow analysis finds inconsistent (a broken chain, a step naming a missing branch) is reported in Problems.
+- **A flow whose branch structure is changed in two tabs at once** (one adds a branch, the other appends or reorders steps). Steps are never lost or duplicated and both tabs agree on the order; each path keeps its own steps in order even if the stored order interleaves paths; anything the flow analysis finds inconsistent (a broken chain, a step naming a missing branch) is reported in Problems.
 - **The same new id appearing in two lists.** Ids are random, so this is not expected; if it happens it is reported in Problems and nothing is renamed automatically unless every reference to it can be followed without ambiguity.
-- **Long text set to empty by one tab while the other types in it.** The typed text survives; an empty optional text is absent from the exported file as today.
+- **Long text cleared by one tab while the other types in it.** The typed text survives. A cleared optional text is absent from the exported file as today, and a file that arrives with an explicitly empty text keeps it.
+- **Two tabs start the first text of the same field at once** (a description that was empty). Both texts survive; neither tab's new text replaces the other's.
 - **Long text replaced in one go** (paste over everything, import, "Esc reverts the field"). Only the characters that differ are changed, so text typed elsewhere at the same time is kept where it does not overlap.
 - **A very large list** (10,000 components). Finding, editing or moving one item does not slow down with the size of the list.
 - **Undo after a remote reorder.** A user's undo of their own earlier edit to an item still applies after someone else moved that item.
@@ -168,7 +169,7 @@ The founder, or an agent starting 029, 033, 022, 030 or 032, opens one decision 
 - **FR-008**: When two clients move the same item before syncing, the item MUST exist exactly once afterwards, at the same position on every client.
 - **FR-009**: When two clients insert items at the same position before syncing, all inserted items MUST be kept, in an order that is the same on every client and does not depend on the order in which changes arrive.
 - **FR-010**: When one client deletes an item and another edits or moves it before syncing, the item MUST be deleted on every client, with no partial item left in the document.
-- **FR-011**: The order of a flow's steps in every view and in the exported file MUST remain "main path first, then each branch's steps, in branch order", whatever combination of concurrent step and branch edits produced it.
+- **FR-011**: A flow's steps MUST keep one stored order, as today. For edits made by one client the exported order MUST stay what it was before this feature ("main path first, then each branch's steps, in branch order"; a file that arrived in another order keeps its order). Concurrent step and branch edits MUST NOT lose or duplicate a step, MUST give every client the same order, and MUST keep the steps of each path in the relative order they were edited into. A merged order may interleave paths; every reader works per path, so numbering and playback are unaffected.
 - **FR-012**: Looking up, editing, moving or deleting one item MUST NOT take longer as its list grows (no scan of the whole list per operation).
 
 **Long text**
@@ -184,7 +185,7 @@ The founder, or an agent starting 029, 033, 022, 030 or 032, opens one decision 
 
 - **FR-019**: After every change that arrives from outside the local editor (another tab today, another client later), the deck MUST be checked, and any broken reference, parent cycle or flow inconsistency MUST appear in Problems (ADR 0013) with the next change notification, with no user action.
 - **FR-020**: Objects that carry user-authored content (components, connections, steps, notes, groups, flows, rules and their text) MUST NOT be deleted or rewritten by an automatic repair. A reference left dangling by concurrent edits MUST be kept and reported, so that undoing the delete on the other side makes it whole again.
-- **FR-021**: The automatic repairs MUST be limited to structural leftovers that carry no user content: entries in a view's own lists and maps (members, positions, pinned, collapsed, excluded groups, group frames) that name an object that no longer exists; settings left empty by concurrent clears (a style with neither fill nor stroke, a route with no values); and equal order values, which MUST resolve to one stable order.
+- **FR-021**: The automatic repairs MUST be limited to structural leftovers that carry no user content: entries in a view's own lists and maps (members, positions, pinned, collapsed, excluded groups, group frames) that name an object that no longer exists are removed; a style left with neither fill nor stroke by concurrent clears is treated as no style (it never reaches a reader or the exported file); and equal order values resolve to one stable order on every client.
 - **FR-022**: Every automatic repair MUST give the same result on every client, MUST be safe to apply more than once, MUST NOT be an undo step, and MUST settle: after one repair round a document needs no further repair unless a new outside change arrives.
 - **FR-023**: Local edits MUST still be validated before they are written, as today; a refused edit leaves the deck untouched.
 
@@ -216,7 +217,7 @@ The founder, or an agent starting 029, 033, 022, 030 or 032, opens one decision 
 - **SC-002**: The existing automated tests of the model, the app and the smoke suite pass with no test removed or weakened; tests that asserted the old stored form are replaced by tests of the new one.
 - **SC-003**: In every scripted two-client scenario of User Stories 2–4 (each run with the changes delivered in both orders), both clients end with identical decks, and 0 items are lost, duplicated or left half-filled.
 - **SC-004**: In the concurrent-typing scenarios, 100 % of the characters typed on both sides are present after syncing.
-- **SC-005**: Editing or moving one item in a 10,000-component deck takes no more than twice as long as in a 500-component deck.
+- **SC-005**: Finding and changing one field of one item takes no more than twice as long in a 10,000-component deck as in a 500-component deck (the edit itself scans no list), and moving one item in a 10,000-item list stays under 10 ms.
 - **SC-006**: The canvas benchmark (500 components / 1,000 connections) shows no scenario worse than before beyond run-to-run noise, and opening that deck from storage is no more than 10 % slower.
 - **SC-007**: A problem caused by an outside change is listed in Problems within the same time as a problem caused by a local edit (no extra delay, no user action).
 - **SC-008**: Every schema change named in backlog 029, 033, 022, 030 and 032 can be found in the roadmap ADR.
