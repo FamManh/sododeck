@@ -87,7 +87,7 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 - [x] T019 [US1] Apply per-shape minimum sizes in `apps/app/src/editor/editing/resize-limits.ts` / `card-resize.ts`. Make T014 pass.
 - [x] T020 [US1] Export: `export/scene.ts` (shape entries), `export/render-svg.ts` (paths and title), `export/edge-geometry.ts` (outline points for shape ends). Make T015 pass.
 - [x] T021 [US1] Add the Shapes tab tiles to 030's palette (11 types from the registry; Sticky and Frame tiles wired in US4 and US2) in `apps/app/src/editor/palette.tsx`; packs panel shows "Basic shapes · 13 types". Make T013 pass.
-- [ ] T022 [US1] Screenshot the eleven shapes, the states and zoom levels light and dark into `specs/031-shapes/screens/`; compare with frames 120, 122, 123 and fix spacing.
+- [ ] T022 (partial: light/dark board, Add tab and selection in `screens/`; states and zoom levels not captured by hand) [US1] Screenshot the eleven shapes, the states and zoom levels light and dark into `specs/031-shapes/screens/`; compare with frames 120, 122, 123 and fix spacing.
 
 ---
 
@@ -158,11 +158,11 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 ## Phase 8: Polish and cross-cutting
 
-- [ ] T040 [P] Docs: new `docs/decisions/0026-shapes-and-frame-tool.md` (shapes as registry types, `document-shape` id, `node.display`, geometry module and outline points, mini-outline tiles, Frame = Group via `groupSelection`, empty groups valid); `docs/decisions/0022-schema-roadmap.md` (`node.display` built); `DESIGN.md` (Shape entry details per shape, Frame tool, Shapes tab; close the "Card ↔ shape switch" open item); `packages/model/CLAUDE.md`, `apps/app/CLAUDE.md` (`shapes/`, `frame-tool/`, shape node), `.claude/skills/react-flow/SKILL.md` (shape node row); `docs/backlog.md` §031 status. Do not name other diagram or database tools anywhere.
-- [ ] T041 Accessibility pass: keyboard-only quickstart step 9, visible focus on shapes, Show as and the Frame tile, names per [contracts/shape-ui.md](contracts/shape-ui.md), shape title contrast ≥ 4.5:1 on every named fill in both themes (extend the contrast test), states readable in greyscale.
-- [ ] T042 Run the quickstart walk 1–9 light and dark; screenshots in `specs/031-shapes/screens/`, results in `quickstart-results.md`.
-- [ ] T043 Performance: add `BENCH_SHAPES=1` to `apps/app/bench/perf.bench.ts` and `apps/app/src/bench/generate-deck.ts` (a third of nodes as mixed shapes); run it and `pnpm bench` → `bench-after.md` vs `bench-before.md`; re-run `scene.perf`.
-- [ ] T044 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass, no skipped or `.only` tests, smoke suite green. Final report: what changed, what was skipped, what is uncertain, bench numbers, next step (032 re-clarify). Stop; do not start the next feature.
+- [x] T040 [P] Docs: new `docs/decisions/0026-shapes-and-frame-tool.md` (shapes as registry types, `document-shape` id, `node.display`, geometry module and outline points, mini-outline tiles, Frame = Group via `groupSelection`, empty groups valid); `docs/decisions/0022-schema-roadmap.md` (`node.display` built); `DESIGN.md` (Shape entry details per shape, Frame tool, Shapes tab; close the "Card ↔ shape switch" open item); `packages/model/CLAUDE.md`, `apps/app/CLAUDE.md` (`shapes/`, `frame-tool/`, shape node), `.claude/skills/react-flow/SKILL.md` (shape node row); `docs/backlog.md` §031 status. Do not name other diagram or database tools anywhere.
+- [x] T041 Accessibility pass: keyboard-only quickstart step 9, visible focus on shapes, Show as and the Frame tile, names per [contracts/shape-ui.md](contracts/shape-ui.md), shape title contrast ≥ 4.5:1 on every named fill in both themes (extend the contrast test), states readable in greyscale.
+- [ ] T042 (partial: steps 1–3 in the browser, 4–9 by tests only; see `quickstart-results.md`) Run the quickstart walk 1–9 light and dark; screenshots in `specs/031-shapes/screens/`, results in `quickstart-results.md`.
+- [x] T043 Performance: add `BENCH_SHAPES=1` to `apps/app/bench/perf.bench.ts` and `apps/app/src/bench/generate-deck.ts` (a third of nodes as mixed shapes); run it and `pnpm bench` → `bench-after.md` vs `bench-before.md`; re-run `scene.perf`.
+- [x] T044 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass, no skipped or `.only` tests, smoke suite green. Final report: what changed, what was skipped, what is uncertain, bench numbers, next step (032 re-clarify). Stop; do not start the next feature.
 
 ---
 
