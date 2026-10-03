@@ -1,12 +1,13 @@
 import type { ColorRef, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
-import { Combobox } from '@sododeck/ui/components/combobox';
 import { PanelSection } from '@sododeck/ui/components/panel';
+import { Popover, PopoverContent, PopoverTrigger } from '@sododeck/ui/components/popover';
 import { TagChip } from '@sododeck/ui/components/tag-chip';
+import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
-import { addTag, normalizeTag, removeTag } from '@sododeck/ui/lib/tags';
-import { Info, Layers, Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { addTag, removeTag, tagKey } from '@sododeck/ui/lib/tags';
+import { cn } from '@sododeck/ui/lib/utils';
+import { Info, Layers, Plus, Trash2 } from 'lucide-react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
@@ -18,10 +19,14 @@ import { writeNodes, writeNodesOnce, type NodePatch } from '../fields/write-node
 import { addDeckColour, applyStyle, removeDeckColour, skippedCount } from '../style/apply-style';
 import { AppearanceSection } from './appearance-section';
 import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
-import { bulkView, styleView, tagSuggestions, type Shared } from './derive';
+import { bulkView, styleView, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
 import { MAX_CARD_TAGS } from '../card-tags';
+import { tagColourMap } from '../tags/card-tag-looks';
+import { tagColours } from '../tags/tag-colours';
+import { TagPicker } from '../tags/tag-picker';
+import { tagPickerEscape } from '../tags/tag-picker-escape';
 
 const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 's'}`;
 
@@ -157,7 +162,7 @@ export function BulkInspector({
         <PanelSection>
           <BulkTags
             deck={deck}
-            total={n}
+            nodeIds={ids}
             tags={view.tags}
             onAdd={(tag) => {
               setTags((tags) => addTag(tags, tag, MAX_CARD_TAGS));
@@ -187,30 +192,22 @@ export function BulkInspector({
   );
 }
 
-/** Tags across the selection: solid on all, dashed "k/n" on some (FR-016). */
+/** Tags across the selection: solid on all, dashed "k/n" on some (FR-016), in each tag's colour. */
 function BulkTags({
   deck,
-  total,
+  nodeIds,
   tags,
   onAdd,
   onRemove,
 }: {
   deck: SododeckFile;
-  total: number;
+  nodeIds: readonly string[];
   tags: readonly { tag: string; count: number }[];
   onAdd: (tag: string) => void;
   onRemove: (tag: string) => void;
 }) {
-  const [draft, setDraft] = useState('');
-  const suggestions = useMemo(() => tagSuggestions(deck), [deck]);
-  const add = (raw: string) => {
-    const tag = normalizeTag(raw);
-    if (tag !== null) {
-      onAdd(tag);
-      useUiStore.getState().announce(`${tag} added`);
-    }
-    setDraft('');
-  };
+  const total = nodeIds.length;
+  const colours = tagColourMap(deck.tagColors);
   return (
     <div className="flex flex-col gap-1.5">
       <FieldLabel>Tags</FieldLabel>
@@ -218,10 +215,12 @@ function BulkTags({
         <ul aria-label="Tags" className="contents">
           {tags.map(({ tag, count }) => {
             const partial = count < total;
+            const look = tagColours(colours.get(tagKey(tag)));
             return (
               <li key={tag} className="contents">
                 <TagChip
                   label={tag}
+                  colour={{ chip: look.chip, ink: look.ink }}
                   partial={partial}
                   count={partial ? `${String(count)}/${String(total)}` : undefined}
                   onActivate={
@@ -241,25 +240,24 @@ function BulkTags({
             );
           })}
         </ul>
-        <Combobox
-          mode="free"
-          label="Add tag"
-          listLabel="Tag suggestions"
-          placeholder="+ Add tag"
-          value={draft}
-          onValueChange={setDraft}
-          onOptionSelect={add}
-          options={suggestions.filter((s) => !tags.some((t) => t.tag === s && t.count === total))}
-          chevron={false}
-          wrapperClassName="w-28"
-          className="h-6.5 rounded-full border-dashed bg-transparent px-2.5 text-body-sm"
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              add(draft);
-            }
-          }}
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Add tag"
+              className={cn(
+                'inline-flex h-6.5 cursor-pointer items-center gap-1 rounded-full border border-dashed border-ink-muted px-2.5 text-body-sm text-ink-secondary hover:text-ink',
+                focusRing,
+              )}
+            >
+              <Plus aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+              Add tag
+            </button>
+          </PopoverTrigger>
+          <PopoverContent aria-label="Tags" onEscapeKeyDown={tagPickerEscape}>
+            <TagPicker nodeIds={nodeIds} />
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

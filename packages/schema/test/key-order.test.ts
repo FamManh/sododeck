@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SododeckFile } from '../src';
+import { jsonSchema, type SododeckFile } from '../src';
 import { examples, readExample, walk } from './schema-walk';
 
 /**
@@ -27,6 +27,11 @@ function keyOrderViolations(file: unknown): string[] {
 describe('canonical key order', () => {
   it.each(examples)('%s follows the schema key order', (_file, example) => {
     expect(keyOrderViolations(example)).toEqual([]);
+  });
+
+  it('declares tagColors right after swatches (033)', () => {
+    const order = Object.keys(jsonSchema.properties);
+    expect(order.indexOf('tagColors')).toBe(order.indexOf('swatches') + 1);
   });
 
   it('detects keys out of order', () => {

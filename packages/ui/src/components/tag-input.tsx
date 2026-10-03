@@ -3,7 +3,7 @@ import type * as React from 'react';
 
 import { Combobox } from '@sododeck/ui/components/combobox';
 import { TagChip } from '@sododeck/ui/components/tag-chip';
-import { addTag, removeTag } from '@sododeck/ui/lib/tags';
+import { addTag, removeTag, tagKey } from '@sododeck/ui/lib/tags';
 import { cn } from '@sododeck/ui/lib/utils';
 
 type TagInputProps = Omit<React.ComponentProps<'div'>, 'onChange'> & {
@@ -22,7 +22,7 @@ type TagInputProps = Omit<React.ComponentProps<'div'>, 'onChange'> & {
 };
 
 /**
- * Tag chips plus a dashed "+ tag" field. Enter adds (trimmed, lower-cased, de-duplicated);
+ * Tag chips plus a dashed "+ tag" field. Enter adds (trimmed, case kept, de-duplicated by `tagKey`);
  * choosing a suggestion adds it; Backspace in the empty field removes the last tag. After a
  * removal, focus moves to the next chip, or to the add field if none is left.
  */
@@ -42,10 +42,10 @@ function TagInput({
   const field = useRef<HTMLDivElement>(null);
   const removeButtons = useRef(new Map<string, HTMLButtonElement>());
   const focusAfterRemove = useRef<string | null>(null);
-  const options = useMemo(
-    () => suggestions.filter((s) => !value.includes(s)),
-    [suggestions, value],
-  );
+  const options = useMemo(() => {
+    const held = new Set(value.map(tagKey));
+    return suggestions.filter((s) => !held.has(tagKey(s)));
+  }, [suggestions, value]);
 
   const focusField = () => field.current?.querySelector('input')?.focus();
 

@@ -16,7 +16,7 @@ import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
 import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
-import { TagsField } from '../fields/tags-field';
+import { CardTagsField } from '../tags/card-tags-field';
 import { kindLabel } from '../kind-label';
 import { LEVEL_NAMES, nodeLevel } from '../levels';
 import { addDeckColour, applyStyle, removeDeckColour } from '../style/apply-style';
@@ -26,7 +26,6 @@ import { nodeConnections, styleView } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
 import { SizeFields } from './size-fields';
-import { MAX_CARD_TAGS } from '../card-tags';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
@@ -159,10 +158,9 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
           />
         </PanelSection>
         <PanelSection>
-          <TagsField
-            deck={deck}
-            value={node.tags}
-            max={MAX_CARD_TAGS}
+          <CardTagsField
+            nodeId={node.id}
+            tags={node.tags}
             onCommit={(tags) => {
               writeOnce({ tags });
             }}

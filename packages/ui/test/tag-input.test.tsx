@@ -41,9 +41,22 @@ describe('TagInput', () => {
     render(<Harness spy={spy} />);
     await userEvent.type(screen.getByRole('combobox', { name: 'Add tag' }), 'PII{Enter}{Enter}');
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
-    expect(screen.getByText('pii')).toBeInTheDocument();
+    expect(screen.getByText('PII')).toBeInTheDocument();
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy).toHaveBeenCalledWith(['pii']);
+    expect(spy).toHaveBeenCalledWith(['PII']);
+  });
+
+  it('does not add a second spelling of a tag it has, and leaves it out of the suggestions (033)', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={['PCI']} suggestions={['pci', 'Lan']} />);
+    const field = screen.getByRole('combobox', { name: 'Add tag' });
+    await user.type(field, 'pci{Enter}');
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    await user.click(field);
+    const options = within(screen.getByRole('listbox', { name: 'Tag suggestions' })).getAllByRole(
+      'option',
+    );
+    expect(options.map((o) => o.textContent)).toEqual(['Lan']);
   });
 
   it('clears the field after adding', async () => {
@@ -152,5 +165,49 @@ describe('TagChip', () => {
   it('has no remove button when onRemove is missing', () => {
     render(<TagChip label="pii" />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('keeps the neutral surface look without a colour or a size (029)', () => {
+    render(<TagChip label="pii" />);
+    const chip = screen.getByText('pii').closest('[data-slot="tag-chip"]');
+    expect(chip).toHaveClass('bg-surface-2', 'h-6.5');
+    expect(chip).not.toHaveAttribute('style');
+  });
+
+  it('takes a colour as chip and ink, and is then not the neutral surface (033)', () => {
+    render(<TagChip label="PCI" colour={{ chip: '#e3d7ff', ink: '#3b1d8f' }} />);
+    const chip = screen.getByText('PCI').closest('[data-slot="tag-chip"]');
+    expect(chip).toHaveStyle({ '--tag-chip': '#e3d7ff', '--tag-ink': '#3b1d8f' });
+    expect(chip).not.toHaveClass('bg-surface-2');
+  });
+
+  it('accepts token variables as the colour', () => {
+    render(
+      <TagChip
+        label="PCI"
+        colour={{ chip: 'var(--color-card-violet-chip)', ink: 'var(--color-card-violet-ink)' }}
+      />,
+    );
+    const chip = screen.getByText('PCI').closest('[data-slot="tag-chip"]');
+    expect(chip).toHaveStyle({
+      '--tag-chip': 'var(--color-card-violet-chip)',
+      '--tag-ink': 'var(--color-card-violet-ink)',
+    });
+  });
+
+  it('is 21 tall at size "deck" and keeps its remove button named', () => {
+    render(<TagChip label="PCI" size="deck" onRemove={() => undefined} />);
+    const chip = screen.getByText('PCI').closest('[data-slot="tag-chip"]');
+    expect(chip).toHaveClass('h-[21px]');
+    expect(chip).not.toHaveClass('h-6.5');
+    expect(screen.getByRole('button', { name: 'Remove tag PCI' })).toBeInTheDocument();
+  });
+
+  it('keeps a partial tag dashed when it is coloured, so "some" never rests on colour alone', () => {
+    render(
+      <TagChip label="PCI" partial count="1/3" colour={{ chip: '#e3d7ff', ink: '#3b1d8f' }} />,
+    );
+    const chip = screen.getByText('PCI').closest('[data-slot="tag-chip"]');
+    expect(chip).toHaveClass('border-dashed');
   });
 });

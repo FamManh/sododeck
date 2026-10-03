@@ -38,6 +38,20 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
     expect(screen.getByText(/Fields marked Mixed keep each component/)).toBeInTheDocument();
   });
 
+  it('colours each bulk tag with its own tag colour, dashed on some, and counts spellings once (033)', () => {
+    const file = {
+      ...inspectorDeck,
+      tagColors: { critical: 'red' },
+    };
+    renderInspector(file, { nodes: ['p', 'y', 'd'] });
+    const tags = screen.getByRole('list', { name: 'Tags' });
+    const critical = within(tags).getByText('critical').closest('[data-slot="tag-chip"]');
+    expect(critical).toHaveStyle({ '--tag-chip': 'var(--color-card-red-chip)' });
+    expect(critical).toHaveClass('border-dashed');
+    const pci = within(tags).getByText('pci').closest('[data-slot="tag-chip"]');
+    expect(pci).toHaveStyle({ '--tag-chip': 'var(--color-card-slate-chip)' });
+  });
+
   it('changes nothing when a Mixed field is left without typing', async () => {
     const { user, doc, editor } = setup();
     const before = nodes(doc);
@@ -99,8 +113,9 @@ describe('BulkInspector (story 3, FR-013–FR-017)', () => {
       ['critical'],
       ['core', 'critical'],
     ]);
-    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'Tier-1{Enter}');
-    expect(nodes(doc).every((n) => n.tags?.includes('tier-1'))).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    await user.type(await screen.findByRole('searchbox', { name: 'Filter tags' }), 'Tier-1{Enter}');
+    expect(nodes(doc).every((n) => n.tags?.includes('Tier-1'))).toBe(true);
   });
 
   it('with connections too, states both counts and changes components only', async () => {

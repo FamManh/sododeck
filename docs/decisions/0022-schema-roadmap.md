@@ -63,11 +63,16 @@ its own tests, and may still be refined in that feature's spec.
 
 ### Tags (033)
 
-| Field       | Type                          | Added by | Absent means              |
-| ----------- | ----------------------------- | -------- | ------------------------- |
-| `tagColors` | object: tag text → `ColorRef` | 033      | every tag renders neutral |
+| Field       | Type                          | Added by    | Absent means            |
+| ----------- | ----------------------------- | ----------- | ----------------------- |
+| `tagColors` | object: tag text → `ColorRef` | 033 (built) | every tag renders slate |
 
-- `tagColors` sits at the root, next to the deck's own `tags`, which stay "tags of the deck".
+- `tagColors` sits at the root, right after `swatches`, next to the deck's own `tags`, which stay "tags of the deck".
+- Built by 033 with no version bump. A file with `tagColors` is rejected by earlier app versions (root `additionalProperties: false`); compatibility is 025's.
+- **S8** (semantic rule, `semantic-rules.ts`): no empty key, and no two keys equal after trim, space-collapse and lower-casing.
+- The app writes entries sorted by tag key (not in colouring order), so every replica reads and exports the same bytes after concurrent edits (ADR 0021 guarantee); a hand-ordered file keeps its content and loses only the key order.
+- **Rename and delete rewrite every carrier** in one transaction and one undo step: cards, connections, flows, steps, the deck's `tags`, every view's `excludeTags`, and the colour entry. Renaming onto an existing key merges onto that tag's spelling and colour. Repeats inside a list are dropped, so a merge never adds tags to a card.
+- **Display spelling** of a tag: the `tagColors` key if it has one, else the first spelling in deck order (cards, connections, flows, steps, deck tags). Text typed for a tag that already exists is written in that spelling. Tag pills on a card follow the tag's colour (slate when none), not the card's.
 - A tag is still its text on each object; `node.tags` and the other `tags` fields do not change.
 - The key is the tag as first typed, with its case kept. Matching ignores case, so no two keys
   may be equal when case is ignored (a semantic rule).

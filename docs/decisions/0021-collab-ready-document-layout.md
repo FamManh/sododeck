@@ -29,17 +29,17 @@ not change in this feature.
 1. **Lists are stored by id with an order (R2).** Each collection root and every child list is a
    `Y.Map<id, Y.Map>`. The id is the map key (no `id` field inside). Same root names as before:
 
-   | Root       | Type               | Contents                                                                            |
-   | ---------- | ------------------ | ----------------------------------------------------------------------------------- |
-   | `meta`     | `Y.Map`            | `$schema`, `version`, `name?`, `description` (`Y.Text`), `tags?`, `swatches`        |
-   | `nodes`    | `Y.Map<id, Y.Map>` | one map per component                                                               |
-   | `groups`   | `Y.Map<id, Y.Map>` | one map per group                                                                   |
-   | `edges`    | `Y.Map<id, Y.Map>` | one map per connection                                                              |
-   | `views`    | `Y.Map<id, Y.Map>` | view fields as before (lists → `Y.Array`; `positions`, `groupFrames` → `Y.Map`)     |
-   | `features` | `Y.Map<id, Y.Map>` | one map per feature                                                                 |
-   | `flows`    | `Y.Map<id, Y.Map>` | `steps`, `branches` → `Y.Map<id, Y.Map>`, always present                            |
-   | `rules`    | `Y.Map<id, Y.Map>` | `inputs`, `outputs`, `rows` → `Y.Map<id, Y.Map>`, always present; row `cells` keyed |
-   | `stickies` | `Y.Map<id, Y.Map>` | one map per note                                                                    |
+   | Root       | Type               | Contents                                                                                                                              |
+   | ---------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+   | `meta`     | `Y.Map`            | `$schema`, `version`, `name?`, `description` (`Y.Text`), `tags?`, `swatches`, `tagColors` (033: `Y.Map` tag → colour, always present) |
+   | `nodes`    | `Y.Map<id, Y.Map>` | one map per component                                                                                                                 |
+   | `groups`   | `Y.Map<id, Y.Map>` | one map per group                                                                                                                     |
+   | `edges`    | `Y.Map<id, Y.Map>` | one map per connection                                                                                                                |
+   | `views`    | `Y.Map<id, Y.Map>` | view fields as before (lists → `Y.Array`; `positions`, `groupFrames` → `Y.Map`)                                                       |
+   | `features` | `Y.Map<id, Y.Map>` | one map per feature                                                                                                                   |
+   | `flows`    | `Y.Map<id, Y.Map>` | `steps`, `branches` → `Y.Map<id, Y.Map>`, always present                                                                              |
+   | `rules`    | `Y.Map<id, Y.Map>` | `inputs`, `outputs`, `rows` → `Y.Map<id, Y.Map>`, always present; row `cells` keyed                                                   |
+   | `stickies` | `Y.Map<id, Y.Map>` | one map per note                                                                                                                      |
 
    A delete removes the key, and with it anything a concurrent client wrote inside the item.
    Two clients writing the same fixed id (the view presets) converge on one entry.

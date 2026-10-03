@@ -256,7 +256,7 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
           chipBox.width,
           TAG_CHIP.height,
           9,
-          chip,
+          chipBox.chip,
           undefined,
           undefined,
           'tag',
@@ -272,7 +272,7 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
           'tg',
           left + chipBox.x + TAG_CHIP.paddingX,
           baseline(chipY, TAG_CHIP.height, 10.5),
-          chipInk,
+          chipBox.ink,
           label,
         ),
       );

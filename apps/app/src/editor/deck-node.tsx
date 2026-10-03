@@ -31,6 +31,7 @@ import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
+import { MAX_CARD_TAGS } from './card-tags';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
 import {
   applyCardResize,
@@ -46,7 +47,6 @@ import { DetailsButton } from './quick-edit/details-button';
 import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
-import { cardTags } from './card-tags';
 import { deckStateClasses } from './deck-states';
 import { StepSticker } from './step-sticker';
 
@@ -148,7 +148,8 @@ export const DeckNode = memo(function DeckNode({
   // clamped to a stored size; the full title stays reachable in a tooltip when it is cut.
   const layout = data.layout;
   const box = { width: width ?? layout.width, height: height ?? layout.height };
-  const tags = cardTags(data.tags);
+  // `toFlowNodes` already keeps ten; the card never draws more than its layout reserved room for.
+  const tags = data.tagLooks.slice(0, MAX_CARD_TAGS);
   const clampStyle = (n: number): CSSProperties => ({
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -241,8 +242,8 @@ export const DeckNode = memo(function DeckNode({
         height: box.height,
         ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
         ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
-        // The chip, tile and tag colours follow the card colour (029); none leaves the neutral
-        // fallbacks in the classes below.
+        // The tile and field chip colours follow the card colour (029); none leaves the neutral
+        // fallbacks in the classes below. Tag pills do not: each takes its own tag's colour.
         ...(look === undefined
           ? {}
           : { '--card-chip': look.chip, '--card-ink': look.ink, '--card-dot': look.dot }),
@@ -373,25 +374,36 @@ export const DeckNode = memo(function DeckNode({
               className="flex shrink-0 flex-wrap content-start gap-1 overflow-hidden"
               style={{ height: layout.tagRows * 18 + (layout.tagRows - 1) * 4 }}
             >
-              {tags.map((tag) =>
-                isContainer ? (
+              {tags.map((tag, index) => {
+                // Each tag takes its own colour (033), slate when it has none; the card colour
+                // only reaches the tile and the field chips.
+                const style = {
+                  '--tag-chip': tag.chip,
+                  '--tag-ink': tag.ink,
+                  '--tag-dot': tag.dot,
+                } as CSSProperties;
+                // A card may hold two spellings of one tag, so the text alone is not a key.
+                const key = `${String(index)}:${tag.text}`;
+                return isContainer ? (
                   <li
-                    key={tag}
-                    title={tag}
-                    className="h-[18px] max-w-full truncate rounded-full bg-(--card-chip,var(--color-surface-2)) px-1.5 text-[10.5px] leading-[18px] font-medium text-(--card-ink,var(--color-ink-secondary))"
+                    key={key}
+                    title={tag.text}
+                    style={style}
+                    className="h-[18px] max-w-full truncate rounded-full bg-(--tag-chip) px-1.5 text-[10.5px] leading-[18px] font-medium text-(--tag-ink)"
                   >
-                    {tag}
+                    {tag.text}
                   </li>
                 ) : (
                   // System: a 6 px dot in the same block (§g-63), named for assistive tech.
                   <li
-                    key={tag}
-                    aria-label={tag}
-                    title={tag}
-                    className="m-[6px] size-1.5 rounded-full bg-(--card-dot,var(--color-deck-dot-neutral))"
+                    key={key}
+                    aria-label={tag.text}
+                    title={tag.text}
+                    style={style}
+                    className="m-[6px] size-1.5 rounded-full bg-(--tag-dot)"
                   />
-                ),
-              )}
+                );
+              })}
             </ul>
           )}
         </>

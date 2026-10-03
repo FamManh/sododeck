@@ -55,6 +55,11 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - `isLegacyLayout(doc)`: true for a document stored in layout 1 (callers that build a document from stored bytes check it; `toJSON`, snapshots and editors must not be used on such a document).
   - `EditorOptions.repair` (default `true`): after a change that is not the editor's own and that removed a component or group or touched a view, `repairViewRefs` (`repair.ts`) removes view entries naming nothing, with the untracked origin (never an undo step). Throwaway editors (`previewRemoval`, the library worker) pass `false`. An empty `style` reads as no style.
 
+- **Added by 033** (tag colours, ADR 0022):
+  - `src/tags.ts` (pure): `tagKey(text)` (trim, collapse spaces, lower-case; accents untouched), `sameTag`, `compareTags`. `@sododeck/ui` carries the same one-line `tagKey`; a parity test in the app keeps them equal.
+  - `meta.tagColors` is a `Y.Map<string>` (tag → colour) always present after `fromJSON` (two tabs never create two maps); a stored document that predates it reads as absent (`tagColorsMap` returns a detached map) and the first write attaches it. `readMeta` emits it only when non-empty and **sorted by tag key**, so replicas that received entries in different orders still read the same deck.
+  - Editor ops (`src/ops/tags.ts`), each one transaction and one undo step, no change event when nothing changes: `setTagColor(tag, colour | null)` (keeps the stored spelling of the key; `invalid` for an empty tag or a bad colour), `renameTag(from, to)` and `deleteTag(tag)` returning `TagChange { cards, others }`. Rename and delete rewrite every carrier: card, connection, flow and step `tags`, the deck's `tags`, every stored view's `excludeTags`, and the colour entry. Rename onto an existing key merges onto that tag's spelling and colour; the same key in another case respells; repeats in a list are dropped (first position kept); an emptied list is removed.
+
 ## Rules
 
 - Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case (`test/round-trip.test.ts`).

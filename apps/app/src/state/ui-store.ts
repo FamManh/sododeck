@@ -298,6 +298,8 @@ export interface UiState {
   toolbarField: ToolbarFieldId | null;
   /** The active tab in the fill/stroke picker (020). */
   stylePickerTab: 'fill' | 'stroke';
+  /** The tag editor is open inside the tag picker (033): Escape goes back before it closes. */
+  tagEditing: boolean;
   /** A colour hovered/typed in the picker but not yet applied (020 R9); cleared, never undone. */
   stylePreview: StylePreview | null;
   /**
@@ -448,6 +450,7 @@ export interface UiState {
   openToolbarField: (id: ToolbarFieldId) => void;
   closeToolbarField: () => void;
   setStylePickerTab: (tab: 'fill' | 'stroke') => void;
+  setTagEditing: (editing: boolean) => void;
   setStylePreview: (preview: StylePreview | null) => void;
   setLastLineShape: (shape: EdgeShape) => void;
   /** A pan, zoom or drag starts (closes the toolbar popover) or ends (`null`). */
@@ -624,6 +627,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     contextMenu: null,
     toolbarField: null,
     stylePickerTab: 'fill',
+    tagEditing: false,
     stylePreview: null,
     lastLineShape: 'curved',
     canvasGesture: null,
@@ -1114,6 +1118,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     setStylePickerTab: (stylePickerTab) => {
       set({ stylePickerTab });
+    },
+    setTagEditing: (tagEditing) => {
+      set({ tagEditing });
     },
     setStylePreview: (stylePreview) => {
       set({ stylePreview });

@@ -192,7 +192,7 @@ Light / dark values; "Border-strong" is `#cfcfc7` / `#45453f`, "Surface 2" `#f4f
 | `--sd-deck-type-name` | Geist 11.5 / 500, Muted (Secondary on a colour fill), one line | Type name next to the tile |
 | `--sd-deck-body` | Geist 12 / 400 / 1.4, Secondary, max 3 lines | Description |
 | `--sd-deck-chip` | 21 tall pill, padding 0 8 0 7, Geist 11.5 / 500, icon 12, colour `chip` fill + `ink` text | Field chips (status, select, person, date, range) |
-| `--sd-deck-tag` | 18 tall pill, padding 0 6, Geist 10.5 / 500, colour `chip` + `ink`, wrap gap 4 | Tags on the card (21 tall with × in the drawer) |
+| `--sd-deck-tag` | 18 tall pill, padding 0 6, Geist 10.5 / 500, colour `chip` + `ink` of the **tag's** colour (slate when it has none; at System a 6px dot in the tag's `dot` colour), wrap gap 4 | Tags on the card (21 tall with × in the drawer) |
 | `--sd-deck-handle` / `-active` | 12 round, Surface fill, 2px Secondary border / 16 round, Deck Orange, 4px Orange Soft halo | Connection handles at the four side midpoints |
 | `--sd-deck-edge` | 2px, `#b4b4ab` / `#5a5a53` | Connector line |
 | `--sd-deck-edge-arrow` | filled triangle 9 long × 10 wide, 2px round-joined stroke, line colour | Connector end |
@@ -402,7 +402,7 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 - **`search-field`**: 34–36px, Surface 2 fill, leading search icon, borderless.
 - **`segmented`**: Surface 2 track with 2–3px padding. The active item is Surface with a Rest shadow and a 500 label; inactive items use Secondary.
 - **`toggle`**: 32×18px track (Surface 3 → Deck Orange) with a 14px white knob.
-- **`tag-chip`**: 26px pill on Surface 2 with a trailing × icon. The add field is a dashed pill.
+- **`tag-chip`**: 26px pill on Surface 2 with a trailing × icon. The add field is a dashed pill. With a tag colour (033) the pill takes that colour's `chip` fill and `ink` text; in the drawer tag row of a card it is the 21px deck chip (10.5 / 500) with ×, followed by a dashed "Add tag" pill that opens the tag picker (frame 125). A partial tag in the bulk drawer stays dashed with "k/n".
 
 ### Canvas
 

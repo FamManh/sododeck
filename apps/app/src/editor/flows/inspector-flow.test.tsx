@@ -72,7 +72,7 @@ describe('InspectorFlow (US3, FR-003)', () => {
     );
     expect(toJSON(doc).flows.find((f) => f.id === 'pay')).toMatchObject({
       description: '- charge `card`',
-      tags: ['checkout'],
+      tags: ['Checkout'],
       links: [{ url: 'https://example.com/brief', label: 'example.com' }],
     });
   });

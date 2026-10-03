@@ -1,4 +1,4 @@
-import type { Node, SododeckFile } from '@sododeck/schema';
+import { emptySododeckFile, type Node, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
@@ -75,6 +75,21 @@ describe('tagSuggestions', () => {
       'quote',
       'sync',
     ]);
+  });
+});
+
+describe('tagSuggestions: one per key (033)', () => {
+  it('lists "PCI" once for "pci" and "PCI", in the spelling the deck uses', () => {
+    const deck: SododeckFile = {
+      ...emptySododeckFile(),
+      tagColors: { Lan: 'red' },
+      tags: ['Pci'],
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', tags: ['PCI', 'lan'] },
+        { id: 'b', type: 'service', title: 'B', tags: ['pci'] },
+      ],
+    };
+    expect(tagSuggestions(deck)).toEqual(['Lan', 'PCI']);
   });
 });
 

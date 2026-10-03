@@ -243,6 +243,40 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'swatches.0',
   },
 
+  // Tag colours (033)
+  {
+    name: 'tag colour key is empty',
+    input: set('tagColors', { '': 'red' }),
+    path: 'tagColors.',
+  },
+  {
+    name: 'tag colour key is only spaces',
+    input: set('tagColors', { '   ': 'red' }),
+    path: 'tagColors.   ',
+  },
+  {
+    name: 'two tag colour keys equal ignoring case',
+    input: set('tagColors', { PCI: 'violet', pci: 'red' }),
+    path: 'tagColors.pci',
+  },
+  {
+    name: 'two tag colour keys equal after trimming and collapsing spaces',
+    input: set('tagColors', { 'Pci dss': 'violet', ' pci   DSS ': 'red' }),
+    path: 'tagColors. pci   DSS ',
+  },
+  {
+    name: 'tag colour is an unknown name',
+    input: set('tagColors', { PCI: 'purple' }),
+    path: 'tagColors.PCI',
+  },
+  {
+    name: 'tag colour is an uppercase hex',
+    input: set('tagColors', { PCI: '#7A3CFF' }),
+    path: 'tagColors.PCI',
+  },
+  { name: 'tag colour is a number', input: set('tagColors', { PCI: 3 }), path: 'tagColors.PCI' },
+  { name: 'tagColors is an array', input: set('tagColors', ['violet']), path: 'tagColors' },
+
   // Ids
   { name: 'id with a space', input: set('nodes.0.id', 'order svc'), path: 'nodes.0.id' },
   {

@@ -94,6 +94,22 @@ describe('viewFilter (FR-012–FR-014)', () => {
     ]);
   });
 
+  it('matches tags by key, ignoring case and spacing, in both directions (033)', () => {
+    const cased = {
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.id === 'pay' ? { ...n, tags: ['PCI', 'Legacy  Code'] } : n)),
+    };
+    expect(sorted(viewFilter(cased, view({ excludeTags: ['pci'] }), none).hidden)).toEqual(['pay']);
+    expect(
+      sorted(viewFilter(cased, view({ excludeTags: [' legacy code '] }), none).hidden),
+    ).toEqual(['pay']);
+    const lower = {
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.id === 'pay' ? { ...n, tags: ['pci'] } : n)),
+    };
+    expect(sorted(viewFilter(lower, view({ excludeTags: ['PCI'] }), none).hidden)).toEqual(['pay']);
+  });
+
   it('keeps only the ends of edges used by a feature flow', () => {
     expect(sorted(viewFilter(deck, view({ feature: 'checkout' }), none).hidden)).toEqual([
       'db',

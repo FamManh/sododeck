@@ -1101,7 +1101,8 @@ changes them before the owning feature is specified.
     title at every level but Landscape, and the card grows to fit them (`card-tags.ts`; computed,
     not measured, so `cardSize` stays the one size source). Zooming never changes the size. Tag
     inputs stop at ten per card. Tags stay lower-cased (existing rule); tag colours are not part
-    of this change.
+    of this change. (Superseded by 033: tags keep their case and take their own tag colour,
+    slate when none; the pill follows the tag, no longer the card colour.)
 60. **Leaner floating chrome** (founder, 2026-10-03). Zoom goes to 400 %. The tools island keeps
     only Jump to, Labels and Focus as icons with tooltips; Export, the theme switch and keyboard
     shortcuts move to the deck menu; the flow-notes display moves into the step player. Fit

@@ -61,6 +61,6 @@ tagColours(color: ColorRef | undefined): { chip: string; ink: string; dot: strin
 ## Invariants asserted by tests
 
 - `tagKey` agrees between model and ui on a table of 30 samples.
-- JSON → Yjs → JSON keeps `tagColors` byte-stable (key order as written, empty map not emitted).
+- JSON → Yjs → JSON keeps `tagColors` content and, for files the app wrote, bytes: entries are read **sorted by tag key** (so replicas that received concurrent entries in different orders still agree), and an empty map is not emitted.
 - After any op, no two `tagColors` keys are equal ignoring case.
 - Undo after each op restores the previous document exactly (carriers, colour entry, view filters).

@@ -9,6 +9,9 @@
  * - S6 (style has a colour): v1.json states it with `minProperties: 1`, which json-schema-to-zod
  *   drops.
  * - S7 (edge style has a key): same `minProperties: 1` on `EdgeStyle`.
+ * - S8 (tag colour keys): no empty key, and no two keys equal ignoring case and spacing. JSON
+ *   Schema cannot compare keys. The key rule (trim, collapse spaces, lower-case) is inlined: the
+ *   schema package must not import `@sododeck/model` or `@sododeck/ui`, which carry the same rule.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -39,7 +42,7 @@ function checkKeys(map: Record<string, unknown>, path: string, issues: Issue[]):
   }
 }
 
-/** Returns every S1–S5 violation in a structurally valid file (empty when there are none). */
+/** Returns every S1–S8 violation in a structurally valid file (empty when there are none). */
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
@@ -125,6 +128,27 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
       }
     });
   });
+
+  if (file.tagColors !== undefined) {
+    const seen = new Map<string, string>();
+    for (const key of Object.keys(file.tagColors)) {
+      const identity = key.trim().replace(/\s+/g, ' ').toLowerCase();
+      const path = `tagColors.${key}`;
+      if (identity === '') {
+        issues.push({ path, message: `Tag colour key "${key}" is empty.` });
+        continue;
+      }
+      const first = seen.get(identity);
+      if (first === undefined) {
+        seen.set(identity, key);
+      } else {
+        issues.push({
+          path,
+          message: `Tag colour key "${key}" is the same tag as "${first}" (case and spacing are ignored).`,
+        });
+      }
+    }
+  }
 
   file.stickies.forEach((sticky, index) => {
     if (sticky.anchor === undefined && sticky.position === undefined) {

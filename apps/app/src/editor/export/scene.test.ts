@@ -5,6 +5,7 @@ import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
 import { cardLayout } from '../card-layout';
 import { NODE_SIZE } from '../canvas-geometry';
+import { LIGHT_PALETTE } from './export-palette';
 import { buildScene, EXPORT_MARGIN, type SceneInput } from './scene';
 
 const ui: SceneInput['ui'] = {
@@ -155,6 +156,33 @@ describe('buildScene: whole deck', () => {
     const parent = cards.get('p');
     expect(parent?.layout.hasChildrenRow).toBe(true);
     expect(parent?.rect.height).toBe(cardLayout({ title: 'Parent', childCount: 1 }).height);
+  });
+
+  it('gives each tag pill its own export colours, matched by key, slate when none (033)', () => {
+    const coloured = deckOf({
+      tagColors: { PCI: 'violet', Lan: '#1f2a44' },
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          tags: ['pci', 'Lan', 'plain'],
+          style: { fill: 'green' },
+          position: { x: 0, y: 0 },
+        },
+      ],
+    });
+    const card = scene(coloured).cards.find((item) => item.id === 'a');
+    const pick = ({ tag, chip, ink }: { tag: string; chip: string; ink: string }) => ({
+      tag,
+      chip,
+      ink,
+    });
+    expect(card?.tagChips.map(pick)).toEqual([
+      { tag: 'pci', ...LIGHT_PALETTE.cardChips.violet },
+      { tag: 'Lan', chip: '#1f2a44', ink: LIGHT_PALETTE.cardText.light },
+      { tag: 'plain', ...LIGHT_PALETTE.cardChips.slate },
+    ]);
   });
 
   it('has no description or tags on a bare card', () => {

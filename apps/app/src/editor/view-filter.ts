@@ -2,6 +2,7 @@
  * What a saved view shows (011 research R7, FR-012–FR-014): pure, linear in the deck, and the
  * same for every view type (FR-002a). Presets differ only in the settings they carry.
  */
+import { tagKey } from '@sododeck/model';
 import type { Id, SododeckFile, View } from '@sododeck/schema';
 
 export interface ViewFilterResult {
@@ -63,7 +64,8 @@ export function viewFilter(
   const includes = view.includes === undefined ? null : new Set(view.includes);
   const excludeGroups = new Set(view.excludeGroups ?? []);
   const excludeKinds = new Set<string>(view.excludeKinds ?? []);
-  const excludeTags = new Set(view.excludeTags ?? []);
+  // Tags match by key (033): hiding "pci" hides a card tagged "PCI".
+  const excludeTags = new Set((view.excludeTags ?? []).map(tagKey));
   const dimKinds = new Set<string>(view.dimKinds ?? []);
   const feature =
     view.feature !== undefined && deck.features.some((f) => f.id === view.feature)
@@ -80,7 +82,7 @@ export function viewFilter(
       (includes !== null && !includes.has(node.id)) ||
       excludeKinds.has(node.type) ||
       (feature !== null && !feature.has(node.id)) ||
-      (node.tags ?? []).some((tag) => excludeTags.has(tag));
+      (node.tags ?? []).some((tag) => excludeTags.has(tagKey(tag)));
     if (!hide && parents !== null) {
       lineage.clear();
       lineageOf(node.group, parents, lineage);

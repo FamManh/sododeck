@@ -226,7 +226,7 @@ and **027** ai-deck-skill are not scheduled.
 | 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR                |
 | 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                       |
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
-| 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                              |
+| 033 | deck-tag-colours         | after M4   | 029           | 3 d  | implemented (2026-10-03); visual check and quickstart partial |
 | 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                      |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
 | 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |

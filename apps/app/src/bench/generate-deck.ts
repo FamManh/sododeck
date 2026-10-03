@@ -37,6 +37,46 @@ function mulberry32(seed: number) {
  * between nearby nodes (like real architecture maps), no duplicates or self-loops. With
  * `flows`, also features and flows of contiguous steps (006).
  */
+/** 033 R11: a pool of 24 tags in mixed case ("PCI" and "pci" are one tag), 3 to 10 per card. */
+const BENCH_TAG_POOL = [
+  'PCI',
+  'pci',
+  'Lan',
+  'edge',
+  'Core',
+  'billing',
+  'Auth',
+  'legacy',
+  'EU',
+  'eu-west',
+  'Batch',
+  'realtime',
+  'Public',
+  'internal',
+  'SLA-1',
+  'sla-2',
+  'Data',
+  'cache',
+  'Queue',
+  'search',
+  'Mobile',
+  'web',
+  'Admin',
+  'ops',
+];
+
+/** Distinct tags by index, no random draw, so the edge sequence of a seed does not change. */
+function benchTags(index: number): string[] {
+  const count = 3 + (index % 8);
+  const tags: string[] = [];
+  for (let k = 0; tags.length < count; k++) {
+    const tag = BENCH_TAG_POOL[(index * 7 + k * 5) % BENCH_TAG_POOL.length];
+    if (tag !== undefined && !tags.some((t) => t.toLowerCase() === tag.toLowerCase()))
+      tags.push(tag);
+  }
+  return tags;
+}
+
 /** 029 T060: one third of the connectors each, so every line type is drawn. */
 const LINE_TYPES = ['curved', 'elbow', 'straight'] as const;
 
@@ -52,6 +92,7 @@ export function generateBenchDeck(
     routes?: boolean;
     colours?: boolean;
     lineTypes?: boolean;
+    tags?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -74,6 +115,7 @@ export function generateBenchDeck(
       position: { x: (i % columns) * 220, y: Math.floor(i / columns) * 110 },
       ...(options.routes === true ? { size: { width: 200, height: 72 } } : {}),
       ...(style ? { style } : {}),
+      ...(options.tags === true ? { tags: benchTags(i) } : {}),
     };
   });
 

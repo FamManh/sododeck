@@ -2,8 +2,10 @@
  * Derived displays of the inspectors (008 data-model §2): suggestions, usage, counts and the bulk
  * view. Pure functions of the snapshot; nothing here is stored (FR-035).
  */
-import { analyzeFlow, ruleUsage } from '@sododeck/model';
+import { analyzeFlow, ruleUsage, tagKey } from '@sododeck/model';
 import type { ColorRef, Group, Id, Node, SododeckFile } from '@sododeck/schema';
+
+import { tagSpellings } from '../tags/deck-tags';
 
 const byName = (a: string, b: string) =>
   a.localeCompare(b, undefined, { sensitivity: 'base' }) || a.localeCompare(b);
@@ -25,14 +27,9 @@ export function ownerSuggestions(deck: SododeckFile): string[] {
   );
 }
 
-/** Tags already used on the deck, its components, connections, flows and steps. */
+/** Tags already used on the deck, its components, connections, flows and steps: one per key (033). */
 export function tagSuggestions(deck: SododeckFile): string[] {
-  return distinct([
-    ...(deck.tags ?? []),
-    ...[...deck.nodes, ...deck.edges, ...deck.flows, ...allSteps(deck)].flatMap(
-      (o) => o.tags ?? [],
-    ),
-  ]);
+  return [...tagSpellings(deck).values()].sort(byName);
 }
 
 export interface NodeConnection {
@@ -142,15 +139,25 @@ export interface BulkView {
 
 /** One shared value or Mixed per field, and tag counts, for bulk edit (FR-014, FR-016). */
 export function bulkView(nodes: readonly Node[]): BulkView {
-  const counts = new Map<string, number>();
-  for (const node of nodes)
-    for (const tag of node.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  // One entry per tag key, in the first spelling seen; a card holding two spellings counts once (033).
+  const counts = new Map<string, { tag: string; count: number }>();
+  for (const node of nodes) {
+    const onCard = new Set<string>();
+    for (const tag of node.tags ?? []) {
+      const key = tagKey(tag);
+      if (onCard.has(key)) continue;
+      onCard.add(key);
+      const entry = counts.get(key);
+      if (entry === undefined) counts.set(key, { tag, count: 1 });
+      else entry.count += 1;
+    }
+  }
   return {
     kind: shared(nodes.map((n) => n.type)),
     owner: shared(nodes.map((n) => n.owner ?? '')),
     tech: shared(nodes.map((n) => n.tech ?? '')),
     group: shared(nodes.map((n) => n.group ?? null)),
-    tags: [...counts].map(([tag, count]) => ({ tag, count })),
+    tags: [...counts.values()],
   };
 }
 

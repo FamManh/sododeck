@@ -110,3 +110,42 @@ describe('view settings popover (FR-043)', () => {
     expect(screen.getByRole('tab', { name: 'Mine, custom view' })).toHaveFocus();
   });
 });
+
+describe('view settings: tags by key (033)', () => {
+  const cased = deckOf({
+    nodes: [
+      { id: 'a', type: 'client', title: 'A', tags: ['PCI'] },
+      { id: 'b', type: 'service', title: 'B', tags: ['pci', 'Lan'] },
+    ],
+    views: [
+      { id: 'sys', type: 'system', title: 'System' },
+      { id: 'mine', type: 'custom', title: 'Mine' },
+    ],
+  });
+
+  it('lists one entry per tag key, and hiding stores the display spelling', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Harness />, cased);
+    const dialog = await openSettings(user);
+    const group = within(dialog).getByRole('group', { name: 'Hide tags' });
+    expect(within(group).getAllByRole('checkbox')).toHaveLength(2);
+    await user.click(within(group).getByRole('checkbox', { name: 'PCI' }));
+    expect(toJSON(doc).views.find((v) => v.id === 'mine')?.excludeTags).toEqual(['PCI']);
+    await user.click(within(group).getByRole('checkbox', { name: 'PCI' }));
+    expect(toJSON(doc).views.find((v) => v.id === 'mine')?.excludeTags).toBeUndefined();
+  });
+
+  it('shows a tag as hidden when the stored spelling differs only in case', async () => {
+    const user = userEvent.setup();
+    const stored = {
+      ...cased,
+      views: [
+        { id: 'sys', type: 'system' as const, title: 'System' },
+        { id: 'mine', type: 'custom' as const, title: 'Mine', excludeTags: ['pci'] },
+      ],
+    };
+    renderWithEditor(<Harness />, stored);
+    const dialog = await openSettings(user);
+    expect(within(dialog).getByRole('checkbox', { name: 'PCI' })).toBeChecked();
+  });
+});

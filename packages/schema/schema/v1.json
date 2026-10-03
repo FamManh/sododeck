@@ -46,6 +46,11 @@
       "items": { "$ref": "#/$defs/HexColor" },
       "uniqueItems": true
     },
+    "tagColors": {
+      "description": "One colour per tag for the whole deck: the tag as first typed (case kept) maps to a card colour name or a `#rrggbb` hex. A tag with no entry is slate. Keys are non-empty and no two keys are equal when case and spacing are ignored. Tags on nodes, connections, flows and steps stay plain text; this map only colours them.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/ColorRef" }
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",

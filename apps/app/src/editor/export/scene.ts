@@ -1,4 +1,4 @@
-import { analyzeFlow, edgeShape, stickyCanvasPosition, stickyLabel } from '@sododeck/model';
+import { analyzeFlow, edgeShape, stickyCanvasPosition, stickyLabel, tagKey } from '@sododeck/model';
 import type { Direction, SododeckFile } from '@sododeck/schema';
 import { toComponentKind, type ComponentKind } from '@sododeck/ui/lib/icons';
 
@@ -6,6 +6,7 @@ import type { DrillFrame } from '../../state/ui-store';
 import { cardLayoutOf, displayPosition, groupBounds, type Rect } from '../canvas-geometry';
 import { DECK_CARD, wrapText, type CardLayout } from '../card-layout';
 import { cardTags, tagChips, textMeasurer, type TagChip } from '../card-tags';
+import { tagColourMap } from '../tags/card-tag-looks';
 import { collapseFlowMarks } from '../collapse-flow-marks';
 import { COLLAPSED_NODE_PREFIX, exportPortRects, groupCounts } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
@@ -16,7 +17,7 @@ import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import { edgePath } from './edge-geometry';
-import { exportLook, type ExportLook } from './export-palette';
+import { exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
 import type { ImageScope } from './types';
 
@@ -38,7 +39,8 @@ export interface SceneCard {
   descriptionLines: readonly string[];
   /** The first ten tags, and where each pill sits in the tag block. */
   tags: readonly string[];
-  tagChips: readonly TagChip[];
+  /** Each pill's box with its own tag's export colours (033), slate when it has none. */
+  tagChips: readonly (TagChip & { chip: string; ink: string })[];
   hasRules: boolean;
   childCount: number;
   level: Level;
@@ -219,6 +221,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const keep = (id: string) => inFlow === null || inFlow.has(id);
 
   const nodes = new Map(source.nodes.map((node, index) => [node.id, { node, index }]));
+  const tagColours = tagColourMap(source.tagColors);
   const measure = textMeasurer();
   const cards: SceneCard[] = graph.nodes.flatMap((id) => {
     const entry = nodes.get(id);
@@ -258,7 +261,10 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
                 measure,
               ),
         tags,
-        tagChips: tagChips(tags, inner, measure),
+        tagChips: tagChips(tags, inner, measure).map((box) => ({
+          ...box,
+          ...exportTagColours(tagColours.get(tagKey(box.tag))),
+        })),
         hasRules: (node.rules?.length ?? 0) > 0,
         childCount,
         level,

@@ -1,7 +1,14 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { DeckValidationError, fromJSON, toJSON } from '../src';
+import {
+  createEditor,
+  DeckValidationError,
+  fromJSON,
+  observeDeck,
+  serializeDeck,
+  toJSON,
+} from '../src';
 import { readExample } from './helpers';
 
 function loadError(input: unknown): DeckValidationError {
@@ -198,5 +205,32 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
   it.each(['minimal', 'flow-and-rule', 'full'])('loads the %s example', async (name) => {
     const file = await readExample(`${name}.sododeck.json`);
     expect(toJSON(fromJSON(file))).toEqual(file);
+  });
+});
+
+describe('decks saved before tag colours (033, US5)', () => {
+  it.each(['minimal.sododeck.json', 'flow-and-rule.sododeck.json'])(
+    '%s loads and comes back byte-identical with no tagColors key',
+    async (name) => {
+      const file = await readExample(name);
+      expect(file).not.toHaveProperty('tagColors');
+      const doc = fromJSON(file);
+      expect(toJSON(doc)).not.toHaveProperty('tagColors');
+      expect(serializeDeck(toJSON(doc))).toBe(serializeDeck(file));
+    },
+  );
+
+  it('opening one and reading it makes no write', async () => {
+    const doc = fromJSON(await readExample('flow-and-rule.sododeck.json'));
+    let transactions = 0;
+    doc.on('afterTransaction', () => {
+      transactions += 1;
+    });
+    observeDeck(doc, () => {
+      transactions += 1;
+    });
+    createEditor(doc);
+    toJSON(doc);
+    expect(transactions).toBe(0);
   });
 });

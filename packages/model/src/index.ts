@@ -24,6 +24,8 @@ export {
 export type { RemovalResult } from './ops/cascade';
 export type { StyleChannel, StyleTargets } from './ops/style';
 export { MAX_SWATCHES } from './ops/swatches';
+export { sameTag, tagKey } from './tags';
+export type { TagChange } from './ops/tags';
 export type { ViewSettingsPatch } from './ops/views';
 export { edgeShape, type EdgeShape } from './edge-shape';
 export type { EdgeRoutePatch } from './ops/shape';

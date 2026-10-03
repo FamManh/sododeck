@@ -2,7 +2,7 @@ import type { Node } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../../test/render-canvas';
-import { choiceState, deckValues, tagChoices } from './choice-state';
+import { choiceState, deckValues } from './choice-state';
 
 const node = (id: string, patch: Partial<Node> = {}): Node => ({
   id,
@@ -26,20 +26,6 @@ describe('choiceState', () => {
 
   it('marks nothing when the values are mixed', () => {
     expect(choiceState({ mixed: true }, OPTIONS)).toEqual(OPTIONS);
-  });
-});
-
-describe('tagChoices', () => {
-  it('selects tags every component has, marks the others partial with "n of N"', () => {
-    const nodes = [node('a', { tags: ['pci', 'core'] }), node('b', { tags: ['pci'] }), node('c')];
-    expect(tagChoices(nodes, ['edge', 'pci'])).toEqual([
-      { value: 'pci', label: 'pci', state: 'partial', count: '2 of 3' },
-      { value: 'core', label: 'core', state: 'partial', count: '1 of 3' },
-      { value: 'edge', label: 'edge' },
-    ]);
-    expect(tagChoices([node('a', { tags: ['pci'] })], [])).toEqual([
-      { value: 'pci', label: 'pci', state: 'selected' },
-    ]);
   });
 });
 

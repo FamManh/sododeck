@@ -29,6 +29,39 @@ export const sododeckFileSchema = z
         "Custom hex colours saved for reuse by this deck's cards and groups, in the order they were added. At most 12; the app enforces the cap when adding.",
       )
       .optional(),
+    tagColors: z
+      .record(
+        z.string(),
+        z
+          .union([
+            z
+              .enum([
+                'red',
+                'orange',
+                'amber',
+                'yellow',
+                'lime',
+                'green',
+                'teal',
+                'cyan',
+                'blue',
+                'indigo',
+                'violet',
+                'pink',
+                'slate',
+              ])
+              .describe('Named card colour, a design-system tint that follows the theme.'),
+            z
+              .string()
+              .regex(new RegExp('^#[0-9a-f]{6}$'))
+              .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+          ])
+          .describe('A card or group colour: a named colour or a custom hex value.'),
+      )
+      .describe(
+        'One colour per tag for the whole deck: the tag as first typed (case kept) maps to a card colour name or a `#rrggbb` hex. A tag with no entry is slate. Keys are non-empty and no two keys are equal when case and spacing are ignored. Tags on nodes, connections, flows and steps stay plain text; this map only colours them.',
+      )
+      .optional(),
     nodes: z
       .array(
         z
