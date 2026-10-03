@@ -807,7 +807,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <SelectionFrame deck={deck} level={level} />
         <GuidesOverlay />
       </ReactFlow>
-      {fullDeck.nodes.length === 0 && <EmptyCanvasCard />}
+      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && <EmptyCanvasCard />}
       {drilledEmpty && (
         <EmptyCanvasCard
           title="No components in this group"
