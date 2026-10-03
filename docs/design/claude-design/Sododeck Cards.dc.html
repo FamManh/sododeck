@@ -91,7 +91,7 @@ class Component extends DCLogic {
     const bw = themes.length * 1180 + (themes.length - 1) * 20;
     if (!S || !this.state.ok) return { notes: [], rows: [], cmp: [], cmpEls: [] };
     const notes = dirs.map(d => ({ id: d, anchor: 'board-' + d, ...S.NOTES[d], tokens: S.NOTES[d].tokens.map(([k, v]) => ({ k, v })), st: { width: bw, flex: 'none', display: 'flex', flexDirection: 'column', gap: 18, background: '#fff', borderRadius: 16, padding: '28px 32px' } }));
-    const rows = S.ROWS.map((r, i) => ({ ...r, n: String(i + 1).padStart(2, '0'), anchor: 'row-' + r.id, boards: dirs.map(d => ({ plates: themes.map(t => ({ label: d + ' · ' + S.NOTES[d].name + ' · ' + t, el: S.plate(React, r.id, d, t) })) })) }));
+    const rows = S.ROWS.filter(r => !r.only || dirs.includes(r.only)).map((r, i) => ({ ...r, n: String(i + 1).padStart(2, '0'), anchor: 'row-' + r.id, boards: dirs.map(d => ({ plates: themes.map(t => (r.only && r.only !== d) ? { label: '', el: React.createElement('div', { style: { width: 1180 } }) } : ({ label: d + ' · ' + S.NOTES[d].name + ' · ' + t, el: S.plate(React, r.id, d, t) })) })) }));
     const cmp = S.CMP.map(([k, a, b, c]) => ({ k, a, b, c }));
     const cmpEls = ['A', 'B', 'C'].map(d => ({ el: S.compare(React, d, 'light') }));
     return { notes, rows, cmp, cmpEls };
