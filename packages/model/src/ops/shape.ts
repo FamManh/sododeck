@@ -12,6 +12,7 @@ import { readObject } from '../read';
 import { requireEntry, type EditContext } from './context';
 import { assertValid, validateObject } from '../validate';
 import { writeField } from '../write';
+import { writeEdgeShape } from './edge-style';
 
 /** `null` removes a key of the route; `undefined` (an absent key) leaves it unchanged. */
 export type EdgeRoutePatch = {
@@ -93,7 +94,13 @@ export function setEdgeRoute(ctx: EditContext, edgeId: Id, patch: EdgeRoutePatch
   if (merged === undefined) delete candidate.route;
   else candidate.route = merged;
   assertValid(validateObject('edges', candidate));
+  // Dropping the offset would turn a pre-029 elbow into a curve: keep the line elbow (029).
+  const pinElbow =
+    currentRoute?.offset !== undefined &&
+    merged?.offset === undefined &&
+    (current.style as { shape?: unknown } | undefined)?.shape === undefined;
   ctx.transact(() => {
+    if (pinElbow) writeEdgeShape(map, 'elbow');
     writeRoute(map, merged);
   }, `edges:${edgeId}:route`);
 }

@@ -9,6 +9,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@sododeck/ui/components/dropdown-menu';
@@ -63,6 +65,8 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
       const label = edge?.label ?? `${title(edge?.from) ?? ''} → ${title(edge?.to) ?? ''}`;
       return `Selection: connection ${label}`;
     }
+    case 'connections':
+      return `Selection: ${String(edges.length)} connections`;
     case 'group':
       return `Selection: group ${ctx.deck.groups.find((g) => g.id === groups[0])?.title ?? ''}`;
     default:
@@ -93,7 +97,7 @@ const valueText = (label: string) => {
 function ActionButton({ action, selection }: { action: ResolvedAction; selection: Selection }) {
   const menuOpen = useUiStore((s) => s.contextMenu?.via === 'toolbar');
   const Icon = action.icon;
-  const value = action.field === undefined ? null : valueText(action.label);
+  const value = action.field === undefined && !action.radio ? null : valueText(action.label);
   const content = (
     <>
       {action.swatch !== undefined && (
@@ -124,29 +128,48 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
           <DropdownMenuTrigger asChild disabled={action.disabled !== null}>
             <ToolbarButton aria-label={action.label} aria-haspopup="menu">
               {Icon !== undefined && <Icon aria-hidden />}
-              <span>{action.label}</span>
+              {action.radio ? (
+                value !== null && <span className="max-w-28 truncate">{value}</span>
+              ) : (
+                <span>{action.label}</span>
+              )}
               <ChevronDown aria-hidden className="size-3.5" />
             </ToolbarButton>
           </DropdownMenuTrigger>,
         )}
         <DropdownMenuContent aria-label={action.label}>
-          {children.map((child) => (
-            <Fragment key={child.id}>
-              {child.separatorBefore && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                disabled={child.disabled !== null}
-                {...(child.shortcut === undefined
-                  ? {}
-                  : { shortcut: shortcutLabel(child.shortcut) })}
-                {...(child.disabled === null ? {} : { title: child.disabled })}
-                onSelect={() => {
-                  child.run();
-                }}
-              >
-                {child.label}
-              </DropdownMenuItem>
-            </Fragment>
-          ))}
+          {action.radio ? (
+            <DropdownMenuRadioGroup
+              value={children.find((child) => child.checked)?.id ?? ''}
+              onValueChange={(id) => {
+                children.find((child) => child.id === id)?.run();
+              }}
+            >
+              {children.map((child) => (
+                <DropdownMenuRadioItem key={child.id} value={child.id}>
+                  {child.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          ) : (
+            children.map((child) => (
+              <Fragment key={child.id}>
+                {child.separatorBefore && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  disabled={child.disabled !== null}
+                  {...(child.shortcut === undefined
+                    ? {}
+                    : { shortcut: shortcutLabel(child.shortcut) })}
+                  {...(child.disabled === null ? {} : { title: child.disabled })}
+                  onSelect={() => {
+                    child.run();
+                  }}
+                >
+                  {child.label}
+                </DropdownMenuItem>
+              </Fragment>
+            ))
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     );

@@ -13,6 +13,7 @@ import {
   toStickyNodes,
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
+import { cardLayout } from './card-layout';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
 
@@ -73,8 +74,9 @@ describe('toFlowNodes', () => {
     const [a, b] = nodes.filter((n) => n.type === 'deck');
     expect(a).toMatchObject({
       id: 'a',
-      width: 164,
-      height: 50,
+      // 029: 184 wide, tall enough for the title and the "Go" description.
+      width: 184,
+      height: cardLayout({ title: 'A', description: 'Go' }).height,
       position: { x: 5, y: 6 },
       selected: false,
       data: {
@@ -240,8 +242,8 @@ describe('toFlowNodes', () => {
       id: 'group:g',
       type: 'group-boundary',
       position: { x: 5 - 24, y: 6 - 24 },
-      width: 164 + 48,
-      height: 50 + 48,
+      width: 184 + 48,
+      height: cardLayout({ title: 'A', description: 'Go' }).height + 48,
       selectable: true,
       draggable: true,
       dragHandle: '.sd-group-handle',
@@ -358,6 +360,9 @@ describe('toFlowNodes', () => {
     expect(a.data.look).toEqual({
       fill: 'var(--color-card-green-fill)',
       stroke: undefined,
+      chip: 'var(--color-card-green-chip)',
+      ink: 'var(--color-card-green-ink)',
+      dot: 'var(--color-card-green-dot)',
       text: 'default',
       namedFill: true,
       fillRef: 'green',
@@ -538,6 +543,37 @@ describe('toFlowEdges', () => {
     const first = toFlowEdges(deck, graph, view());
     const second = toFlowEdges(routed, topLevelGraph(routed), view());
     expect(second[0]).not.toBe(first[0]);
+  });
+});
+
+describe('toFlowEdges line type (029 T044)', () => {
+  const withEdge = (edge: SododeckFile['edges'][number]): SododeckFile => ({
+    ...deck,
+    edges: [edge],
+  });
+
+  it('puts the effective shape in the edge data', () => {
+    const shapeOf = (edge: SododeckFile['edges'][number]) => {
+      const file = withEdge(edge);
+      return toFlowEdges(file, topLevelGraph(file), view())[0]?.data?.shape;
+    };
+    expect(shapeOf({ id: 'e1', from: 'a', to: 'b' })).toBe('curved');
+    expect(shapeOf({ id: 'e1', from: 'a', to: 'b', route: { offset: 4 } })).toBe('elbow');
+    expect(shapeOf({ id: 'e1', from: 'a', to: 'b', style: { shape: 'straight' } })).toBe(
+      'straight',
+    );
+    expect(
+      shapeOf({ id: 'e1', from: 'a', to: 'b', route: { offset: 4 }, style: { shape: 'curved' } }),
+    ).toBe('curved');
+  });
+
+  it('breaks the edge cache when the shape changes', () => {
+    const first = withEdge({ id: 'e1', from: 'a', to: 'b' });
+    const second = withEdge({ id: 'e1', from: 'a', to: 'b', style: { shape: 'elbow' } });
+    const a = toFlowEdges(first, topLevelGraph(first), view());
+    const b = toFlowEdges(second, topLevelGraph(second), view());
+    expect(b[0]).not.toBe(a[0]);
+    expect(b[0]?.data?.shape).toBe('elbow');
   });
 });
 

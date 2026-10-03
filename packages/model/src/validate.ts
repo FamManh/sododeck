@@ -43,8 +43,9 @@ const ELEMENT_SCHEMAS = {
     .pick({ name: true, description: true, tags: true, swatches: true })
     .strict(),
   style: shape.nodes.element.shape.style.unwrap(),
+  edgeStyle: shape.edges.element.shape.style.unwrap(),
 } satisfies Record<
-  Collection | 'step' | 'branch' | 'rule' | 'column' | 'row' | 'meta' | 'style',
+  Collection | 'step' | 'branch' | 'rule' | 'column' | 'row' | 'meta' | 'style' | 'edgeStyle',
   Schema
 >;
 

@@ -25,9 +25,9 @@ describe('alignSelection (016 R12, 017 R2)', () => {
       file,
     );
     expect(alignSelection(ctx, 'right')).toBe(true);
-    // Right edge is 1000 + 300 = 1300; a (default width 164) lands at 1300 - 164.
+    // Right edge is 1000 + 300 = 1300; a (default width 184) lands at 1300 - 184.
     expect(toJSON(ctx.doc).nodes.find((n) => n.id === 'a')?.position).toEqual({
-      x: 1300 - 164,
+      x: 1300 - 184,
       y: 0,
     });
   });

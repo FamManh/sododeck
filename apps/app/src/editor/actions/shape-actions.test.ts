@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { actionContext, actionDeck, labels, TARGETS } from '../../test/action-fixtures';
-import { runAction } from './actions-for';
+import { actionsFor, runAction } from './actions-for';
 import { ACTIONS } from './index';
 
 describe('node.resetSize (017 R4)', () => {
@@ -32,9 +32,18 @@ describe('node.resetSize (017 R4)', () => {
 });
 
 describe('edge.resetRoute (017 R12)', () => {
-  it('is offered on a connection, disabled when the route is automatic', () => {
-    expect(labels(TARGETS.connection, 'menu').flat()).toContain('Reset route');
-    const ctx = actionContext(TARGETS.connection, 'edit');
+  it('is offered only on an elbow connection, disabled when the route is automatic (029)', () => {
+    expect(labels(TARGETS.connection, 'menu').flat()).not.toContain('Reset route');
+    const elbow = {
+      ...actionDeck,
+      edges: actionDeck.edges.map((e) => ({ ...e, style: { shape: 'elbow' as const } })),
+    };
+    const ctx = actionContext(TARGETS.connection, 'edit', elbow);
+    expect(
+      actionsFor(ACTIONS, ctx, 'menu')
+        .flatMap((s) => s.actions)
+        .map((a) => a.label),
+    ).toContain('Reset route');
     const action = ACTIONS.find((a) => a.id === 'edge.resetRoute');
     expect(action?.disabledReason?.(ctx)).toBe('Route is automatic');
   });

@@ -1,5 +1,5 @@
 import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
-import type { ColorRef, Id, Side } from '@sododeck/schema';
+import type { ColorRef, EdgeShape, Id, Side } from '@sododeck/schema';
 import type { ComponentKind } from '@sododeck/ui/lib/icons';
 import { create } from 'zustand';
 
@@ -176,7 +176,8 @@ export interface TitleEdit {
 /** What a canvas menu (and the action list) acts on (019 R7). `sticky`: only stickies selected. */
 export type MenuTarget =
   | {
-      kind: 'component' | 'components' | 'connection' | 'group' | 'sticky' | 'mixed';
+      kind:
+        'component' | 'components' | 'connection' | 'connections' | 'group' | 'sticky' | 'mixed';
       ids: Selection;
     }
   | { kind: 'canvas' };
@@ -299,6 +300,11 @@ export interface UiState {
   stylePickerTab: 'fill' | 'stroke';
   /** A colour hovered/typed in the picker but not yet applied (020 R9); cleared, never undone. */
   stylePreview: StylePreview | null;
+  /**
+   * The line type last picked in this tab; new connectors get it (029 R7). Memory only: never
+   * saved, not reset when another deck opens, not changed by undo or paste.
+   */
+  lastLineShape: EdgeShape;
   canvasGesture: CanvasGesture | null;
   /** The frame a drag would drop into (016 R6, screen 110); null outside frames or with ⌥. */
   dropTarget: Id | null;
@@ -443,6 +449,7 @@ export interface UiState {
   closeToolbarField: () => void;
   setStylePickerTab: (tab: 'fill' | 'stroke') => void;
   setStylePreview: (preview: StylePreview | null) => void;
+  setLastLineShape: (shape: EdgeShape) => void;
   /** A pan, zoom or drag starts (closes the toolbar popover) or ends (`null`). */
   setCanvasGesture: (gesture: CanvasGesture | null) => void;
   setDropTarget: (groupId: Id | null) => void;
@@ -618,6 +625,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     toolbarField: null,
     stylePickerTab: 'fill',
     stylePreview: null,
+    lastLineShape: 'curved',
     canvasGesture: null,
     dropTarget: null,
     guides: NO_GUIDES,
@@ -1109,6 +1117,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     setStylePreview: (stylePreview) => {
       set({ stylePreview });
+    },
+    setLastLineShape: (lastLineShape) => {
+      set({ lastLineShape });
     },
     setCanvasGesture: (canvasGesture) => {
       set(

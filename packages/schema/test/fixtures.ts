@@ -342,6 +342,23 @@ export const invalidFixtures: InvalidFixture[] = [
     path: `${FRAMES}.data.size`,
   },
 
+  // Connector line type (029)
+  {
+    name: 'edge style shape is not a shape',
+    input: set('edges.0.style.shape', 'zigzag'),
+    path: 'edges.0.style.shape',
+  },
+  {
+    name: 'empty edge style',
+    input: set('edges.0.style', {}),
+    path: 'edges.0.style',
+  },
+  {
+    name: 'edge style with an unknown key',
+    input: set('edges.0.style.fill', 'red'),
+    path: 'edges.0.style',
+  },
+
   // Card size and connector route (017)
   {
     name: 'node size with zero width',

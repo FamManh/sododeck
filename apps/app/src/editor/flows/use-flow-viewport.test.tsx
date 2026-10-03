@@ -62,7 +62,7 @@ describe('useFlowViewport', () => {
     expect(view.setViewport).toHaveBeenCalledTimes(1);
     expect(view.setViewport).toHaveBeenCalledWith(
       fitRectInFreeArea(
-        { x: 0, y: 0, width: 764, height: 250 },
+        { x: 0, y: 0, width: 784, height: 276 },
         { width: 1600, height: 900 },
         currentInsets(true),
         { padding: 0.2, minZoom: MIN_ZOOM, maxZoom: MAX_ZOOM },
@@ -91,7 +91,7 @@ describe('useFlowViewport', () => {
     );
     rerender({ p: playback('order', null) });
     expect(view.fitBounds).toHaveBeenCalledWith(
-      { x: 0, y: 0, width: 764, height: 250 },
+      { x: 0, y: 0, width: 784, height: 276 },
       { padding: 0.2, duration: 250 },
     );
   });
@@ -102,7 +102,7 @@ describe('useFlowViewport', () => {
     expect(view.setCenter).not.toHaveBeenCalled();
     view.getViewport.mockReturnValue({ x: 0, y: -600, zoom: 1.5 });
     rerender({ p: playback('order', 'o5') });
-    expect(view.setCenter).toHaveBeenCalledWith(482, 125, { zoom: 1.5, duration: 250 });
+    expect(view.setCenter).toHaveBeenCalledWith(492, 138, { zoom: 1.5, duration: 250 });
     expect(view.setViewport).toHaveBeenCalledTimes(1);
   });
 
@@ -112,7 +112,7 @@ describe('useFlowViewport', () => {
     const { rerender } = mount(playback('order', 'o1'));
     expect(view.setViewport).toHaveBeenCalledWith(expect.anything(), { duration: 0 });
     rerender({ p: playback('order', 'o5') });
-    expect(view.setCenter).toHaveBeenCalledWith(482, 125, { zoom: 1, duration: 0 });
+    expect(view.setCenter).toHaveBeenCalledWith(492, 138, { zoom: 1, duration: 0 });
   });
 
   it('does nothing outside flow mode', () => {

@@ -5,7 +5,7 @@ import { frameOf, NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
-import { tagBlockHeight } from './card-tags';
+import { cardLayout, DECK_CARD_WIDTH, type CardLayout } from './card-layout';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -16,19 +16,30 @@ export interface Rect extends Point {
   height: number;
 }
 
-/** DESIGN.md: nodes are a fixed 164×50. */
-export const NODE_SIZE = { width: 164, height: 50 } as const;
+/**
+ * The smallest default card (029): 184 wide, one title line and nothing else. Real cards grow
+ * from here through `cardLayout`; this is only the fallback for code that has no node at hand.
+ */
+export const NODE_SIZE = {
+  width: DECK_CARD_WIDTH,
+  height: cardLayout({ title: '' }).height,
+} as const;
 /**
  * A roomier layout cell for Tidy and for fitting group frames: cards no longer grow at the
  * component level (§g-58), but the spacing laid out for them stays generous.
  */
-export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
-export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
+export const COMPONENT_CARD_SIZE = { width: DECK_CARD_WIDTH, height: 128 } as const;
+/** The fanned hand of a collapsed group (DESIGN.md "Groups"). */
+export const COLLAPSED_CARD_SIZE = { width: DECK_CARD_WIDTH, height: 112 } as const;
 type NodeSize = { width: number; height: number };
 
-/** Sizes a resized card may have (017 R2/R4): drawn clamped to this range, in 4 px steps. */
+/**
+ * Sizes a resized card may have (017 R2/R4): drawn clamped to this range, in 4 px steps. The
+ * minimum height is the Deck card's own floor (header, one title line, padding), so a handle never
+ * shows a size the card cannot draw (029).
+ */
 export const CARD_SIZE_LIMITS = {
-  min: { width: 120, height: 44 },
+  min: { width: 120, height: NODE_SIZE.height },
   max: { width: 800, height: 600 },
   step: 4,
 } as const;
@@ -86,27 +97,48 @@ export function nodeSize(_level?: Level): NodeSize {
   return NODE_SIZE;
 }
 
+/** What `cardSize` reads of a node. All optional so a bare `{}` is a default card. */
+export type SizedNode = Pick<Node, 'size'> & Partial<Pick<Node, 'title' | 'tech' | 'tags'>>;
+
 /**
- * A card's drawn size (017 R2): the stored size clamped to the limits, else the level size; then
- * tall enough for the title row plus its tags (2026-10-03). The same at every zoom level.
+ * A card's drawn size (029 R7, 017 R2): 184 wide by the height `cardLayout` gives its content, or
+ * the stored size (clamped to the limits, never below the minimum layout). The description is the
+ * node's `tech`, the System view's subtitle; a view that shows another field paints inside the
+ * same box. The same at every zoom level.
  */
-export function cardSize(node: Pick<Node, 'size' | 'tags'>, level: Level): NodeSize {
+export function cardLayoutOf(node: SizedNode, extra: CardExtra = {}): CardLayout {
   const stored = node.size;
-  const base =
+  const size =
     stored === undefined
-      ? nodeSize(level)
+      ? undefined
       : {
           width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
           height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
         };
-  const tags = tagBlockHeight(node.tags, base.width);
-  if (tags === 0) return base;
-  return { width: base.width, height: Math.max(base.height, NODE_SIZE.height + tags) };
+  return cardLayout({
+    title: node.title ?? '',
+    description: 'description' in extra ? extra.description : node.tech,
+    tags: node.tags,
+    childCount: extra.childCount,
+    size,
+  });
+}
+
+/** What a view adds to a card's content: its own subtitle field, and the "n inside" row. */
+export interface CardExtra {
+  description?: string | undefined;
+  childCount?: number | undefined;
+}
+
+/** A card's drawn size, see `cardLayoutOf`. */
+export function cardSize(node: SizedNode, _level?: Level, extra: CardExtra = {}): NodeSize {
+  const { width, height } = cardLayoutOf(node, extra);
+  return { width, height };
 }
 
 /** A card's box at its display position (017). */
 export function cardBox(
-  node: Pick<Node, 'position' | 'size' | 'tags'>,
+  node: Pick<Node, 'position'> & SizedNode,
   index: number,
   level: Level,
 ): Rect {

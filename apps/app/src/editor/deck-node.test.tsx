@@ -1,4 +1,5 @@
 import { act, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
+import { cardLayout, type CardLayout } from './card-layout';
 import { DeckNode } from './deck-node';
 import type { DeckFlowNode } from './deck-to-flow';
 
@@ -25,23 +27,40 @@ const deck = deckOf({
   edges: [{ id: 'e1', from: 'svc', to: 'db' }],
 });
 
-function props(patch: Partial<DeckFlowNode['data']> = {}, selected = false, id = 'svc') {
+function props(
+  patch: Partial<DeckFlowNode['data']> = {},
+  selected = false,
+  id = 'svc',
+  layout?: CardLayout,
+) {
+  const data = {
+    title: 'Order Service',
+    kind: 'service',
+    subtitle: undefined,
+    owner: undefined,
+    tags: [],
+    hasRules: false,
+    childCount: 0,
+    dimmed: false,
+    level: 'component',
+    focused: false,
+    ...patch,
+  };
   return {
     id,
     type: 'deck',
     selected,
     data: {
-      title: 'Order Service',
-      kind: 'service',
-      subtitle: undefined,
-      owner: undefined,
-      tags: [],
-      hasRules: false,
-      childCount: 0,
-      dimmed: false,
-      level: 'component',
-      focused: false,
-      ...patch,
+      ...data,
+      // What deck-to-flow computes (029): the same pure layout the card draws from.
+      layout:
+        layout ??
+        cardLayout({
+          title: data.title,
+          description: data.subtitle,
+          tags: data.tags,
+          childCount: data.childCount,
+        }),
     },
   } as unknown as NodeProps<DeckFlowNode>;
 }
@@ -85,6 +104,56 @@ describe('DeckNode', () => {
       screen.getByRole('group', { name: 'Service: Order Service, 2 problems' }),
     ).toBeInTheDocument();
     expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Duplicate connection');
+  });
+
+  it('puts the problem badge in the header, not on the corner (029 US2)', () => {
+    renderNode(
+      props({ problems: { count: 2, titles: 'Duplicate connection', label: '2 problems' } }),
+    );
+    const badge = screen.getByTestId('problem-glyph');
+    expect(screen.getByTestId('card-header')).toContainElement(badge);
+    expect(badge).toHaveAttribute('aria-hidden', 'true');
+    expect(badge).toHaveTextContent('2');
+    expect(screen.getByTestId('deck-node')).toHaveAttribute(
+      'aria-description',
+      'Duplicate connection',
+    );
+  });
+
+  it('draws the selection and the problem outline together', () => {
+    renderNode(
+      props({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } }, true),
+    );
+    const node = screen.getByTestId('deck-node');
+    expect(node).toHaveClass('selected', 'has-problem');
+    expect(screen.getByTestId('problem-outline')).toBeInTheDocument();
+  });
+
+  it('has no problem outline without a problem', () => {
+    renderNode(props({}, true));
+    expect(screen.queryByTestId('problem-outline')).not.toBeInTheDocument();
+  });
+
+  it('reads "n inside" in the last row, keeping its label', () => {
+    renderNode(props({ childCount: 4 }));
+    const pill = screen.getByRole('img', { name: '4 components inside, press Enter to open' });
+    expect(pill).toHaveTextContent('4 inside');
+  });
+
+  it('marks a valid connect target, and the hovered side handle as active', () => {
+    connection.connecting = true;
+    connection.role = 'target:q';
+    renderNode();
+    act(() => {
+      useUiStore.getState().setCanvasGesture('endpoint');
+      useUiStore.getState().setEndpointHover({ nodeId: 'svc', side: 'left' });
+    });
+    expect(screen.getByTestId('deck-node')).toHaveClass('connect-target');
+    const handles = screen.getAllByRole('button', { name: 'Connect from Order Service' });
+    expect(handles.filter((h) => h.classList.contains('is-active'))).toHaveLength(1);
+    expect(handles.find((h) => h.classList.contains('is-active'))).toHaveClass(
+      'react-flow__handle-left',
+    );
   });
 
   it('gives the corner to the connect "+" while it is a valid target', () => {
@@ -139,7 +208,7 @@ describe('DeckNode', () => {
 
   it('shows up to ten tags under the title, at every level but Landscape (2026-10-03)', () => {
     const tags = Array.from({ length: 12 }, (_, i) => `tag ${String(i + 1)}`);
-    const { unmount } = renderNode(props({ level: 'system', tags }));
+    const { unmount } = renderNode(props({ level: 'container', tags }));
     const list = screen.getByRole('list', { name: 'Tags' });
     expect(
       within(list)
@@ -151,17 +220,20 @@ describe('DeckNode', () => {
     expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
   });
 
-  it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {
+  it('clamps a resized card\u2019s title to the lines it can show, with the full text in a tooltip (017 R11, FR-008)', async () => {
     const title = 'Order Fulfilment and Inventory Reconciliation Service';
+    const small = cardLayout({ title, size: { width: 200, height: 4 } });
+    expect(small.titleLines).toBe(1);
     const p = {
-      ...props({ level: 'component', title }),
+      ...props({ level: 'component', title }, false, 'svc', small),
       width: 200,
-      height: 44,
+      height: small.height,
     } as NodeProps<DeckFlowNode>;
     renderNode(p);
     const text = screen.getByText(title);
     expect(text).toHaveStyle({ WebkitLineClamp: '1' });
-    expect(screen.getByRole('group')).toHaveAttribute('title', title);
+    await userEvent.hover(text);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
   });
 
   it('shows a child-count marker for components with children', () => {
@@ -202,11 +274,11 @@ describe('DeckNode', () => {
     expect(node).toHaveAttribute('tabindex', '0');
   });
 
-  it('marks the from/to of the current flow step with the ring and aria-current (007)', () => {
+  it('marks the from/to of the current flow step with the lift and aria-current (007)', () => {
     renderNode(props({ currentStep: true }));
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('aria-current', 'step');
-    expect(node).toHaveClass('ring-primary');
+    expect(node).toHaveClass('current-step');
   });
 
   it('has no aria-current outside the current step', () => {
@@ -214,11 +286,12 @@ describe('DeckNode', () => {
     expect(screen.getByTestId('deck-node')).not.toHaveAttribute('aria-current');
   });
 
-  it('truncates a long title but keeps it in the name and tooltip', () => {
-    const title = 'A very long component title that does not fit into 164 pixels at all';
+  it('keeps a long title in the accessible name and shows it in a tooltip when cut', async () => {
+    const title = Array.from({ length: 30 }, (_, i) => `component${String(i)}`).join(' ');
     renderNode(props({ title }));
-    const node = screen.getByRole('group', { name: `Service: ${title}` });
-    expect(node).toHaveAttribute('title', title);
+    expect(screen.getByRole('group', { name: `Service: ${title}` })).not.toHaveAttribute('title');
+    await userEvent.hover(screen.getByText(title));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(title);
   });
 
   it('keeps the same accessible name at every level', () => {
@@ -410,5 +483,115 @@ describe('DeckNode colour states (020 US6)', () => {
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('aria-selected', 'true');
     expect(node).toHaveAttribute('aria-description', expect.stringContaining('Selected'));
+  });
+});
+
+describe('DeckNode per level (029 US4, R8)', () => {
+  const LEVELS = ['landscape', 'system', 'container', 'component'] as const;
+
+  it('keeps the same width and height at every level', () => {
+    const sizes = LEVELS.map((level) => {
+      const { unmount } = renderNode(
+        props({ level, subtitle: 'Go', tags: ['a', 'b'], title: 'Order Service' }),
+      );
+      const node = screen.getByTestId('deck-node');
+      const size = [node.style.width, node.style.height];
+      unmount();
+      return size;
+    });
+    for (const size of sizes) expect(size).toEqual(sizes[0]);
+  });
+
+  it('paints tile, title and tag dots at System, without the type name or description', () => {
+    renderNode(props({ level: 'system', subtitle: 'Go', tags: ['critical', 'pci'] }));
+    expect(screen.getByText('Order Service')).toBeInTheDocument();
+    expect(screen.getByTestId('card-header')).toBeInTheDocument();
+    expect(screen.queryByText('Service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go')).not.toBeInTheDocument();
+    const items = within(screen.getByRole('list', { name: 'Tags' })).getAllByRole('listitem');
+    expect(items.map((item) => item.getAttribute('aria-label'))).toEqual(['critical', 'pci']);
+    for (const item of items) expect(item).toBeEmptyDOMElement();
+  });
+
+  it('paints only the type icon on the card fill at Landscape', () => {
+    renderNode(props({ level: 'landscape', subtitle: 'Go', tags: ['a'] }));
+    expect(screen.queryByTestId('card-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('card-description')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-plate-icon')).toBeInTheDocument();
+    expect(screen.queryByText('Order Service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go')).not.toBeInTheDocument();
+    expect(screen.queryByText('Service')).not.toBeInTheDocument();
+  });
+
+  it('paints the type name, description and tag pills at Container and Component', () => {
+    for (const level of ['container', 'component'] as const) {
+      const { unmount } = renderNode(props({ level, subtitle: 'Go', tags: ['critical'] }));
+      expect(screen.getByText('Service')).toBeInTheDocument();
+      expect(screen.getByText('Go')).toBeInTheDocument();
+      expect(screen.getByText('critical')).toBeInTheDocument();
+      unmount();
+    }
+  });
+});
+
+describe('DeckNode Deck look (029 US1)', () => {
+  beforeEach(() => {
+    connection.role = null;
+    connection.connecting = false;
+  });
+
+  it('shows the type name in the header, next to the tile', () => {
+    renderNode(props({ kind: 'database', title: 'Orders DB' }));
+    const header = screen.getByTestId('card-header');
+    expect(within(header).getByText('Database')).toBeInTheDocument();
+  });
+
+  it('clamps a long title to three lines and shows no tooltip for a short one', () => {
+    const title = Array.from({ length: 40 }, (_, i) => `word${String(i)}`).join(' ');
+    const { unmount } = renderNode(props({ title }));
+    expect(screen.getByText(title)).toHaveStyle({ WebkitLineClamp: '3' });
+    unmount();
+    renderNode(props({ title: 'Short' }));
+    expect(screen.getByText('Short')).toHaveStyle({ WebkitLineClamp: '1' });
+  });
+
+  it('shows the description clamped to three lines, and nothing when it is empty', () => {
+    const description = Array.from({ length: 60 }, (_, i) => `detail${String(i)}`).join(' ');
+    const { unmount } = renderNode(props({ subtitle: description }));
+    expect(screen.getByText(description)).toHaveStyle({ WebkitLineClamp: '3' });
+    unmount();
+    renderNode(props({ subtitle: '   ' }));
+    expect(screen.queryByTestId('card-description')).not.toBeInTheDocument();
+  });
+
+  it('lists tags as pills in a "Tags" list', () => {
+    renderNode(props({ tags: ['payments', 'critical'] }));
+    const list = screen.getByRole('list', { name: 'Tags' });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((i) => i.textContent),
+    ).toEqual(['payments', 'critical']);
+  });
+
+  it('draws no description or tag elements for a card with neither', () => {
+    renderNode(props({ subtitle: undefined, tags: [] }));
+    expect(screen.queryByTestId('card-description')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
+  });
+
+  it('keeps its group role, label and description', () => {
+    renderNode(props({}, true));
+    const node = screen.getByRole('group', { name: 'Service: Order Service' });
+    expect(node).toHaveAttribute('aria-roledescription', 'component');
+    expect(node).toHaveAttribute('aria-description', 'Selected');
+  });
+
+  it('takes the card chip and ink colours from the look', () => {
+    renderNode(props({ look: resolveLook({ fill: 'green' }) }));
+    const node = screen.getByTestId('deck-node');
+    expect(node.style.getPropertyValue('--card-chip')).toBe('var(--color-card-green-chip)');
+    expect(node.style.getPropertyValue('--card-ink')).toBe('var(--color-card-green-ink)');
   });
 });

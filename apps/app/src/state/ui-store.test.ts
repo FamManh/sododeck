@@ -115,6 +115,16 @@ describe('ui store', () => {
     expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
 
+  describe('last line type (029)', () => {
+    it('defaults to curved, is set by the setter and survives opening another deck', () => {
+      expect(state().lastLineShape).toBe('curved');
+      state().setLastLineShape('elbow');
+      state().resetForDeck('other');
+      expect(state().lastLineShape).toBe('elbow');
+      state().setLastLineShape('curved');
+    });
+  });
+
   describe('style preview (020 R9)', () => {
     it('defaults to the fill tab and no preview', () => {
       expect(state().stylePickerTab).toBe('fill');

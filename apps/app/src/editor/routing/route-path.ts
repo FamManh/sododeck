@@ -6,6 +6,8 @@
 import { getSmoothStepPath, Position } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
 
+import { ARROW_LENGTH } from '../edge-constants';
+
 /** A card's box in canvas coordinates, as drawn (016/017). */
 export interface Box {
   x: number;
@@ -152,4 +154,165 @@ export function routedStepPath(input: RoutedStepPathInput): RoutedPath {
     labelY,
     segment: segmentFor(axis, labelX, labelY, sourceX, sourceY, targetX, targetY),
   };
+}
+
+/** The three line types. Mirrors the schema's `EdgeShape`, kept local so routing stays pure. */
+export type PathShape = 'curved' | 'elbow' | 'straight';
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+/** Where a path starts and ends, and the directions the end marks follow. */
+export interface PathEnds {
+  /** Midpoint of the source side. */
+  start: Point;
+  /** Midpoint of the target side. */
+  end: Point;
+  /** Unit vector leaving the start along the line. An arrow at the start points the other way. */
+  startDir: Point;
+  /** Unit vector entering the end along the line: the direction an end arrow points. */
+  endDir: Point;
+}
+
+export interface RoutedShapePath {
+  path: string;
+  labelX: number;
+  labelY: number;
+  /** The movable middle segment; only `elbow` between opposite sides has one. */
+  segment: RouteSegment | null;
+  ends: PathEnds;
+}
+
+export interface RoutedPathOptions {
+  /** Shorten the line at the start by the arrow length (direction `both`). Default false. */
+  arrowAtStart?: boolean;
+  /** Shorten the line at the end by the arrow length. Default true. */
+  arrowAtEnd?: boolean;
+}
+
+/** Outward unit normal of each side. */
+const NORMAL: Record<Side, Point> = {
+  top: { x: 0, y: -1 },
+  right: { x: 1, y: 0 },
+  bottom: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+};
+
+function sideMidpoint(box: Box, side: Side): Point {
+  switch (side) {
+    case 'top':
+      return { x: box.x + box.width / 2, y: box.y };
+    case 'bottom':
+      return { x: box.x + box.width / 2, y: box.y + box.height };
+    case 'left':
+      return { x: box.x, y: box.y + box.height / 2 };
+    case 'right':
+      return { x: box.x + box.width, y: box.y + box.height / 2 };
+  }
+}
+
+function sameBox(a: Box, b: Box): boolean {
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+function move(point: Point, dir: Point, distance: number): Point {
+  return { x: point.x + dir.x * distance, y: point.y + dir.y * distance };
+}
+
+function format(point: Point): string {
+  return `${point.x} ${point.y}`;
+}
+
+function bezier(start: Point, c1: Point, c2: Point, end: Point): string {
+  return `M ${format(start)} C ${format(c1)} ${format(c2)} ${format(end)}`;
+}
+
+/** Point of a cubic Bézier at t = 0.5, where the label sits. */
+function bezierMiddle(p0: Point, p1: Point, p2: Point, p3: Point): Point {
+  return {
+    x: (p0.x + 3 * p1.x + 3 * p2.x + p3.x) / 8,
+    y: (p0.y + 3 * p1.y + 3 * p2.y + p3.y) / 8,
+  };
+}
+
+/**
+ * One entry for the three line types (029 R4), shared by the canvas and the export. Every shape
+ * starts and ends at the same side midpoints, so changing the shape never moves an end (Q4).
+ * The line stops one arrow length short of an end that carries an arrow; the end points in
+ * `ends` stay on the card side. A gap shorter than the arrow yields an empty path.
+ */
+export function routedPath(
+  shape: PathShape,
+  fromBox: Box,
+  toBox: Box,
+  sides: ResolvedSides,
+  offset = 0,
+  options: RoutedPathOptions = {},
+): RoutedShapePath {
+  const { arrowAtStart = false, arrowAtEnd = true } = options;
+  const loop = sameBox(fromBox, toBox);
+  // A self-loop leaves the right side and comes back into the top, for every shape.
+  const [fromSide, toSide]: ResolvedSides = loop ? ['right', 'top'] : sides;
+  const start = sideMidpoint(fromBox, fromSide);
+  const end = sideMidpoint(toBox, toSide);
+  const startNormal = NORMAL[fromSide];
+  const endNormal = NORMAL[toSide];
+  const straightDir = (): Point => {
+    const length = Math.hypot(end.x - start.x, end.y - start.y);
+    return length === 0
+      ? { x: 1, y: 0 }
+      : { x: (end.x - start.x) / length, y: (end.y - start.y) / length };
+  };
+  const line = shape === 'straight' && !loop ? straightDir() : null;
+  const startDir = line ?? startNormal;
+  const endDir = line ?? { x: 0 - endNormal.x, y: 0 - endNormal.y };
+  const ends: PathEnds = { start, end, startDir, endDir };
+
+  const startCut = arrowAtStart ? ARROW_LENGTH : 0;
+  const endCut = arrowAtEnd ? ARROW_LENGTH : 0;
+  const gap = Math.hypot(end.x - start.x, end.y - start.y);
+  const lineStart = move(start, startDir, startCut);
+  const lineEnd = move(end, endDir, -endCut);
+  const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  if (!loop && gap < startCut + endCut) {
+    return { path: '', labelX: mid.x, labelY: mid.y, segment: null, ends };
+  }
+
+  if (loop || shape === 'curved') {
+    const reach = loop
+      ? 40
+      : Math.max(40, 0.4 * Math.hypot(lineEnd.x - lineStart.x, lineEnd.y - lineStart.y));
+    const c1 = move(lineStart, startDir, reach);
+    const c2 = move(lineEnd, endDir, -reach);
+    const label = bezierMiddle(lineStart, c1, c2, lineEnd);
+    return {
+      path: bezier(lineStart, c1, c2, lineEnd),
+      labelX: label.x,
+      labelY: label.y,
+      segment: null,
+      ends,
+    };
+  }
+
+  if (shape === 'straight') {
+    return {
+      path: `M ${format(lineStart)} L ${format(lineEnd)}`,
+      labelX: mid.x,
+      labelY: mid.y,
+      segment: null,
+      ends,
+    };
+  }
+
+  const step = routedStepPath({
+    sourceX: lineStart.x,
+    sourceY: lineStart.y,
+    targetX: lineEnd.x,
+    targetY: lineEnd.y,
+    sides: [fromSide, toSide],
+    offset,
+  });
+  return { ...step, ends };
 }

@@ -34,6 +34,8 @@ function menuName(ctx: ActionContext): string {
       const edge = ctx.deck.edges.find((e) => e.id === edges[0]);
       return `Actions for connection${edge?.label === undefined ? '' : ` ${edge.label}`}`;
     }
+    case 'connections':
+      return `Actions for ${String(edges.length)} connections`;
     case 'group':
       return `Actions for group ${ctx.deck.groups.find((g) => g.id === groups[0])?.title ?? ''}`;
     case 'sticky':

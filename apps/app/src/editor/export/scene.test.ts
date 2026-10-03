@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
+import { cardLayout } from '../card-layout';
 import { NODE_SIZE } from '../canvas-geometry';
 import { buildScene, EXPORT_MARGIN, type SceneInput } from './scene';
 
@@ -25,7 +26,7 @@ const grouped = deckOf({
   name: 'Grouped',
   nodes: [
     { id: 'a', type: 'service', title: 'Orders', tech: 'Go', position: { x: 0, y: 0 }, group: 'g' },
-    { id: 'b', type: 'service', title: 'Billing', position: { x: 0, y: 100 }, group: 'g' },
+    { id: 'b', type: 'service', title: 'Billing', position: { x: 0, y: 160 }, group: 'g' },
     {
       id: 'db',
       type: 'database',
@@ -72,19 +73,94 @@ describe('buildScene: whole deck', () => {
     expect(cards.get('a')).toMatchObject({
       kind: 'service',
       title: 'Orders',
-      subtitle: 'Go',
+      description: 'Go',
       hasRules: false,
       level: 'container',
-      rect: { x: 0, y: 0, ...NODE_SIZE },
+      rect: {
+        x: 0,
+        y: 0,
+        width: NODE_SIZE.width,
+        height: cardLayout({ title: 'Orders', description: 'Go' }).height,
+      },
     });
-    expect(cards.get('db')).toMatchObject({ kind: 'database', subtitle: null, hasRules: true });
+    expect(cards.get('db')).toMatchObject({ kind: 'database', description: null, hasRules: true });
   });
 
-  it('maps edge directions to dots and keeps labels', () => {
+  it('carries edge directions and keeps labels', () => {
     const edges = new Map(scene(grouped).edges.map((edge) => [edge.id, edge]));
-    expect(edges.get('a-b')).toMatchObject({ dots: 'target', label: null, stroke: 'default' });
-    expect(edges.get('a-db')).toMatchObject({ dots: 'both', label: 'SQL', badges: [] });
-    expect(edges.get('b-db')?.dots).toBe('none');
+    expect(edges.get('a-b')).toMatchObject({
+      direction: 'forward',
+      label: null,
+      stroke: 'default',
+    });
+    expect(edges.get('a-db')).toMatchObject({ direction: 'both', label: 'SQL', badges: [] });
+    expect(edges.get('b-db')?.direction).toBe('none');
+  });
+
+  it('carries the line type from edgeShape, with the ends on the card sides (029 R4)', () => {
+    const shaped = {
+      ...grouped,
+      edges: [
+        { id: 'curved', from: 'a', to: 'db' },
+        { id: 'straight', from: 'a', to: 'db', style: { shape: 'straight' as const } },
+        { id: 'elbow', from: 'a', to: 'db', route: { offset: 10 } },
+      ],
+    };
+    const edges = new Map(scene(shaped).edges.map((edge) => [edge.id, edge]));
+    expect(edges.get('curved')?.shape).toBe('curved');
+    expect(edges.get('straight')?.shape).toBe('straight');
+    // Files from before 029 with a route offset stay elbow.
+    expect(edges.get('elbow')?.shape).toBe('elbow');
+    const straight = edges.get('straight');
+    expect(straight?.path).toMatch(/^M [\d.-]+ [\d.-]+ L /);
+    expect(straight?.ends.start).toEqual(straight?.source);
+    expect(straight?.ends.end).toEqual(straight?.target);
+  });
+
+  it('draws each card at its cardLayout box, with its fields (029 R7, R13)', () => {
+    const rich = deckOf({
+      nodes: [
+        {
+          id: 'a',
+          type: 'database',
+          title: 'Orders database with a rather long title that wraps',
+          tech: 'Postgres 16 holding every order and its line items for the shop',
+          tags: ['core', 'pii'],
+          position: { x: 10, y: 20 },
+        },
+        { id: 'p', type: 'service', title: 'Parent', position: { x: 300, y: 0 } },
+        { id: 'c', type: 'service', title: 'Child', parent: 'p', position: { x: 0, y: 0 } },
+      ],
+    });
+    const cards = new Map(scene(rich).cards.map((card) => [card.id, card]));
+    const card = cards.get('a');
+    const expected = cardLayout({
+      title: 'Orders database with a rather long title that wraps',
+      description: 'Postgres 16 holding every order and its line items for the shop',
+      tags: ['core', 'pii'],
+    });
+    expect(card).toMatchObject({
+      typeName: 'Database',
+      description: 'Postgres 16 holding every order and its line items for the shop',
+      tags: ['core', 'pii'],
+      layout: expected,
+      rect: { x: 10, y: 20, width: expected.width, height: expected.height },
+    });
+    expect(card?.titleLines.length).toBe(expected.titleLines);
+    expect(card?.descriptionLines.length).toBe(expected.descriptionLines);
+    expect(Math.max(...(card?.tagChips.map((chip) => chip.row) ?? [-1])) + 1).toBe(
+      expected.tagRows,
+    );
+    // The "n inside" row makes the parent taller, as on the canvas.
+    const parent = cards.get('p');
+    expect(parent?.layout.hasChildrenRow).toBe(true);
+    expect(parent?.rect.height).toBe(cardLayout({ title: 'Parent', childCount: 1 }).height);
+  });
+
+  it('has no description or tags on a bare card', () => {
+    const card = scene(grouped).cards.find((item) => item.id === 'b');
+    expect(card).toMatchObject({ description: null, tags: [], titleLines: ['Billing'] });
+    expect(card?.tagChips).toEqual([]);
   });
 
   it('puts the group frame around both members', () => {
@@ -127,13 +203,19 @@ describe('buildScene: whole deck', () => {
   });
 
   it('routes an edge through its stored route (017)', () => {
-    const routed = {
+    const elbowed = {
       ...grouped,
       edges: grouped.edges.map((edge) =>
+        edge.id === 'a-b' ? { ...edge, style: { shape: 'elbow' as const } } : edge,
+      ),
+    };
+    const routed = {
+      ...grouped,
+      edges: elbowed.edges.map((edge) =>
         edge.id === 'a-b' ? { ...edge, route: { offset: 40 } } : edge,
       ),
     };
-    const plainLabelY = scene(grouped).edges.find((edge) => edge.id === 'a-b')?.labelPoint.y;
+    const plainLabelY = scene(elbowed).edges.find((edge) => edge.id === 'a-b')?.labelPoint.y;
     const edge = scene(routed).edges.find((edge) => edge.id === 'a-b');
     expect(edge?.labelPoint.y).toBe((plainLabelY ?? 0) + 40);
   });
@@ -248,10 +330,22 @@ describe('buildScene: current view', () => {
     expect(ids(result.cards)).toEqual(['db']);
     expect(result.groups).toEqual([]);
     expect(result.collapsed).toEqual([
-      expect.objectContaining({ id: 'g', title: 'Core', nodeCount: 2, edgeCount: 1 }),
+      expect.objectContaining({
+        id: 'g',
+        title: 'Core',
+        nodeCount: 2,
+        edgeCount: 1,
+        memberKinds: ['service', 'service'],
+      }),
     ]);
+    // Curved like the canvas's merged connector; a-db is two-way, so the bundle is too.
     expect(result.edges).toEqual([
-      expect.objectContaining({ label: '×2', dots: 'none', stroke: 'default' }),
+      expect.objectContaining({
+        label: '×2',
+        shape: 'curved',
+        direction: 'both',
+        stroke: 'default',
+      }),
     ]);
   });
 
@@ -287,8 +381,8 @@ describe('buildScene: current view', () => {
   it('uses the view subtitle field', () => {
     const owners = { ...grouped, views: [view({ subtitleField: 'owner' })] };
     const cards = scene(owners, 'view', { currentViewId: 'v' }).cards;
-    expect(cards.find((card) => card.id === 'db')?.subtitle).toBe('Data team');
-    expect(cards.find((card) => card.id === 'a')?.subtitle).toBeNull();
+    expect(cards.find((card) => card.id === 'db')?.description).toBe('Data team');
+    expect(cards.find((card) => card.id === 'a')?.description).toBeNull();
   });
 });
 

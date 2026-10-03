@@ -1,6 +1,6 @@
 export type TextMeasurer = (text: string, font: string) => number;
 
-function graphemes(text: string): string[] {
+export function graphemes(text: string): string[] {
   return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)].map(
     (part) => part.segment,
   );

@@ -1,6 +1,11 @@
-import { KindTile } from '@sododeck/ui/components/kind-tile';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
-import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
+import {
+  ICON_STROKE_WIDTH,
+  KIND_FALLBACK,
+  KIND_STYLE,
+  toComponentKind,
+} from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import {
   Handle,
@@ -12,6 +17,7 @@ import {
 } from '@xyflow/react';
 import {
   Ban,
+  CornerDownLeft,
   CornerDownRight,
   EyeOff,
   Layers,
@@ -25,8 +31,6 @@ import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
-import { nodeSize } from './canvas-geometry';
-import { textLines } from './card-text';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
 import {
   applyCardResize,
@@ -42,10 +46,11 @@ import { DetailsButton } from './quick-edit/details-button';
 import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
-import { cardTags, tagBlockHeight } from './card-tags';
+import { cardTags } from './card-tags';
+import { deckStateClasses } from './deck-states';
 
-/** theme.css's --text-body-sm line height, so an edited title shows as many lines as the card. */
-const TITLE_LINE_EM = 1.45;
+/** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
+const TITLE_LINE_EM = 1.28;
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -74,7 +79,7 @@ const modsOf = (event: ResizeDragEvent) => {
   };
 };
 
-/** Canvas node, 164×50 (DESIGN.md "node", design 02 and 53–55). */
+/** Canvas card in the Deck look (029; DESIGN.md "Card system (Deck)", frames 117–121, 125). */
 export const DeckNode = memo(function DeckNode({
   id,
   data,
@@ -135,17 +140,14 @@ export const DeckNode = memo(function DeckNode({
     .join(', ');
   const tabIndex = data.focused ? 0 : -1;
   const isLandscape = data.level === 'landscape';
-  const isSystem = data.level === 'system';
-  // Component (zoomed in) reads like Container, at the same size (§g-58).
+  // Component (zoomed in) reads like Container, at the same size (§g-58). The description and the
+  // rules mark wait for Container; US4 refines what each level paints.
   const isContainer = data.level === 'container' || data.level === 'component';
-  // Clamp to what the resized card can actually show (017 R11, FR-008); the full title always
-  // stays in the `title` attribute above, so a hover still reveals the rest.
-  const defaultSize = nodeSize(data.level);
-  const box = { width: width ?? defaultSize.width, height: height ?? defaultSize.height };
-  // Tags (2026-10-03): up to ten chips under the title; `cardSize` already made room for them.
+  // The box and the lines each text gets come from one pure `cardLayout` (029 R7), already
+  // clamped to a stored size; the full title stays reachable in a tooltip when it is cut.
+  const layout = data.layout;
+  const box = { width: width ?? layout.width, height: height ?? layout.height };
   const tags = cardTags(data.tags);
-  const tagBlock = tagBlockHeight(data.tags, box.width);
-  const lines = textLines({ width: box.width, height: box.height - tagBlock });
   const clampStyle = (n: number): CSSProperties => ({
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -167,6 +169,17 @@ export const DeckNode = memo(function DeckNode({
       : customText === 'dark'
         ? 'text-card-text-dark'
         : null;
+  const titleText = (
+    <span
+      className={cn(
+        'text-[14px] leading-[1.28] font-semibold break-words',
+        textRoleClass ?? 'text-ink',
+      )}
+      style={clampStyle(layout.titleLines)}
+    >
+      {data.title}
+    </span>
+  );
   // The title edits in place, in its own type and over the same lines (founder, 2026-10-02).
   const titleInput =
     titleEdit === null ? null : (
@@ -174,13 +187,15 @@ export const DeckNode = memo(function DeckNode({
         edit={titleEdit}
         title={data.title}
         className={cn(
-          'break-words text-body-sm font-medium',
+          'text-[14px] leading-[1.28] font-semibold break-words',
           isLandscape && 'text-center',
           textRoleClass ?? 'text-ink',
         )}
-        style={{ maxHeight: `${String(lines.title * TITLE_LINE_EM)}em` }}
+        style={{ maxHeight: `${String(layout.titleLines * TITLE_LINE_EM)}em` }}
       />
     );
+  const kindStyle = KIND_STYLE[toComponentKind(data.kind) ?? 'service'];
+  const KindIcon = toComponentKind(data.kind) === null ? KIND_FALLBACK.icon : kindStyle.icon;
   const subtitleClass =
     textRoleClass ?? (look?.namedFill === true ? 'text-ink-secondary' : 'text-ink-muted');
   const subtitleDataText = customText ?? (look?.namedFill === true ? 'secondary' : undefined);
@@ -188,7 +203,19 @@ export const DeckNode = memo(function DeckNode({
     look?.fillRef !== undefined ? describeChannel('fill', look.fillRef) : null,
     look?.strokeRef !== undefined ? describeChannel('stroke', look.strokeRef) : null,
   ].filter((part): part is string => part !== null);
-  const description = [selected ? 'Selected' : null, ...colourDescription]
+  const hasProblem = data.problems !== undefined && target !== 'ok';
+  const stateClasses = deckStateClasses({
+    selected,
+    hasProblem,
+    connectTarget: hasConnectTarget,
+    connectRefused: refusal !== null,
+    currentStep: hasFlowStep,
+  });
+  const description = [
+    selected ? 'Selected' : null,
+    hasProblem ? (data.problems?.titles ?? null) : null,
+    ...colourDescription,
+  ]
     .filter(Boolean)
     .join(', ');
 
@@ -207,12 +234,16 @@ export const DeckNode = memo(function DeckNode({
       {...(showStroke ? { 'data-stroke': '' } : {})}
       {...(data.problems !== undefined && target !== 'ok' ? { 'data-problem': '' } : {})}
       tabIndex={tabIndex}
-      title={data.title}
       style={{
         width: box.width,
         height: box.height,
         ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
         ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+        // The chip, tile and tag colours follow the card colour (029); none leaves the neutral
+        // fallbacks in the classes below.
+        ...(look === undefined
+          ? {}
+          : { '--card-chip': look.chip, '--card-ink': look.ink, '--card-dot': look.dot }),
       }}
       onDoubleClickCapture={(event) => {
         // A handle double-click resets the size (T030), not the title edit underneath it.
@@ -226,105 +257,152 @@ export const DeckNode = memo(function DeckNode({
         announce('Size reset');
       }}
       className={cn(
-        // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
-        'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
-        'flex flex-col',
+        // The thick-paper card (029): a 1.5 px border and the lip from `.sd-card` (index.css). Its
+        // padding is 12 / 13 less the border, so the text area matches what `cardLayout` measured.
+        'sd-card group/node relative rounded-card border-[1.5px] bg-surface',
+        'flex flex-col gap-2 px-[11.5px] py-[10.5px]',
+        isLandscape && 'items-center justify-center',
         focusRing,
-        // Selected (018, designs 86–116): a 2 px frame 2 px outside the card, which reads on any
-        // fill; a shape cue, so it is never color-only (plus aria-selected).
-        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
-        // From or to of the current flow step (007 FR-005): the selection ring and halo.
-        data.currentStep === true && 'border-primary shadow-selection ring-1 ring-primary',
-        target === 'ok' && 'outline-2 outline-offset-4 outline-primary outline-dashed',
-        refusal && 'outline-2 outline-offset-4 outline-clay-ink outline-dashed',
+        // The state classes (deck-states.ts) are styled in index.css: selected is a 2 px frame 2 px
+        // outside the card (a shape cue, plus aria-selected), the problem ring is its own layer
+        // below, so both draw together.
+        ...stateClasses,
         // Where the next flow step must start (006 FR-009): a ring plus the tag text.
         data.flowStart !== undefined && 'ring-2 ring-primary ring-offset-2 ring-offset-canvas',
-        // Problem (015, 020 design 107): a 3 px dashed clay ring 3 px outside the card, so it
-        // reads on any fill; unless the connect "+" owns the corner.
-        data.problems !== undefined &&
-          target !== 'ok' &&
-          'outline-[3px] outline-offset-[3px] outline-clay-ink outline-dashed',
         // Colour (020 R5): fill and stroke, unless the flow-step/connect-target border owns it.
         showFill && 'bg-(--card-fill)',
-        showStroke && 'border-[1.5px] border-(--card-stroke)',
+        hasFlowStep
+          ? 'border-primary'
+          : showStroke
+            ? 'border-(--card-stroke)'
+            : 'border-border-strong',
       )}
     >
-      {/* The title row keeps the card's own height; tags wrap below it (2026-10-03). */}
-      <div
-        className={cn(
-          'flex min-h-0 flex-1 items-center',
-          isLandscape ? 'justify-center' : 'gap-[9px] px-2.5',
-        )}
-      >
-        {isLandscape ? (
-          (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
-        ) : (
-          <>
-            {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
-            <span className="flex min-w-0 flex-1 flex-col">
-              {titleInput ?? (
-                <span
-                  className={cn(
-                    'break-words text-body-sm font-medium',
-                    textRoleClass ?? 'text-ink',
-                  )}
-                  style={clampStyle(lines.title)}
-                >
-                  {data.title}
-                </span>
-              )}
-              {isContainer && data.subtitle && lines.subtitle > 0 && (
-                <span
-                  data-text={subtitleDataText}
-                  className={cn('break-words font-mono text-node-sub', subtitleClass)}
-                  style={clampStyle(lines.subtitle)}
-                >
-                  {data.subtitle}
-                </span>
-              )}
-            </span>
-            {data.hasRules && isContainer && (
-              <Table
-                role="img"
-                aria-label="Has rules"
-                strokeWidth={ICON_STROKE_WIDTH}
-                className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
-              />
-            )}
-          </>
-        )}
-        {data.childCount > 0 && (
-          <span
-            role="img"
-            aria-label={`${String(data.childCount)} components inside, press Enter to open`}
-            className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-caption text-ink-secondary"
-          >
-            <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-            <span>{data.childCount}</span>
-          </span>
-        )}
-      </div>
-      {tags.length > 0 && !isLandscape && (
-        <ul
-          aria-label="Tags"
-          className="flex shrink-0 flex-wrap content-start gap-1 overflow-hidden px-2.5 pb-2"
-          style={{ height: tagBlock }}
-        >
-          {tags.map((tag) => (
-            <li
-              key={tag}
-              title={tag}
-              className={cn(
-                'h-5 max-w-full truncate rounded-full px-2 text-caption leading-5',
-                look?.namedFill === true || customText !== undefined
-                  ? 'bg-surface/70 text-ink-secondary'
-                  : 'bg-surface-2 text-ink-secondary',
-              )}
+      {isLandscape ? (
+        // The plate (frame 123): the type icon on the card fill, no text.
+        (titleInput ?? (
+          <KindIcon
+            aria-hidden
+            data-testid="card-plate-icon"
+            size={30}
+            strokeWidth={2}
+            className="text-(--card-ink,var(--color-ink-secondary))"
+          />
+        ))
+      ) : (
+        <>
+          {/* Header (frame 120): the type tile, the type name, then the badge slot. */}
+          <div data-testid="card-header" className="flex h-6 shrink-0 items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-(--card-chip,var(--color-surface-2)) text-(--card-ink,var(--color-ink-secondary))"
             >
-              {tag}
-            </li>
-          ))}
-        </ul>
+              <KindIcon aria-hidden size={14} strokeWidth={2} />
+            </span>
+            {isContainer ? (
+              <span
+                data-text={subtitleDataText}
+                className={cn('min-w-0 flex-1 truncate text-caption font-medium', subtitleClass)}
+              >
+                {kindLabel(data.kind)}
+              </span>
+            ) : (
+              // System: the tile alone (§g-58); the slot keeps the badges on the right.
+              <span aria-hidden className="min-w-0 flex-1" />
+            )}
+            {data.problems !== undefined && hasProblem && (
+              <span
+                aria-hidden
+                title={data.problems.titles}
+                data-testid="problem-glyph"
+                className="flex h-5 shrink-0 items-center gap-1 rounded-full bg-clay-soft px-2 text-[11px] leading-none font-semibold text-clay-ink"
+              >
+                <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+                {data.problems.count}
+              </span>
+            )}
+            {((data.hasRules && isContainer) || data.pinned === true) && (
+              <span className="flex shrink-0 items-center gap-1.5">
+                {data.hasRules && isContainer && (
+                  <Table
+                    role="img"
+                    aria-label="Has rules"
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    className={cn('size-3.5', textRoleClass ?? 'text-primary-ink')}
+                  />
+                )}
+                {data.pinned === true && (
+                  <Pin
+                    role="img"
+                    aria-label="Pinned"
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    className={cn('size-3', textRoleClass ?? 'text-primary-ink')}
+                  />
+                )}
+              </span>
+            )}
+          </div>
+          {titleInput ??
+            (layout.titleCut ? (
+              <Tooltip>
+                <TooltipTrigger asChild>{titleText}</TooltipTrigger>
+                <TooltipContent>{data.title}</TooltipContent>
+              </Tooltip>
+            ) : (
+              titleText
+            ))}
+          {isContainer && data.subtitle?.trim() && layout.descriptionLines > 0 && (
+            <span
+              data-testid="card-description"
+              data-text={subtitleDataText}
+              className={cn(
+                'text-[12px] leading-[1.4] break-words',
+                textRoleClass ?? 'text-ink-secondary',
+              )}
+              style={clampStyle(layout.descriptionLines)}
+            >
+              {data.subtitle.trim()}
+            </span>
+          )}
+          {tags.length > 0 && (
+            <ul
+              aria-label="Tags"
+              className="flex shrink-0 flex-wrap content-start gap-1 overflow-hidden"
+              style={{ height: layout.tagRows * 18 + (layout.tagRows - 1) * 4 }}
+            >
+              {tags.map((tag) =>
+                isContainer ? (
+                  <li
+                    key={tag}
+                    title={tag}
+                    className="h-[18px] max-w-full truncate rounded-full bg-(--card-chip,var(--color-surface-2)) px-1.5 text-[10.5px] leading-[18px] font-medium text-(--card-ink,var(--color-ink-secondary))"
+                  >
+                    {tag}
+                  </li>
+                ) : (
+                  // System: a 6 px dot in the same block (§g-63), named for assistive tech.
+                  <li
+                    key={tag}
+                    aria-label={tag}
+                    title={tag}
+                    className="m-[6px] size-1.5 rounded-full bg-(--card-dot,var(--color-deck-dot-neutral))"
+                  />
+                ),
+              )}
+            </ul>
+          )}
+        </>
+      )}
+      {data.childCount > 0 && (
+        <span
+          role="img"
+          aria-label={`${String(data.childCount)} components inside, press Enter to open`}
+          className="flex h-6 shrink-0 items-center gap-1.5 rounded-row bg-surface-2 px-2 text-caption text-ink-secondary"
+        >
+          <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+          <span className="flex-1">{data.childCount} inside</span>
+          <CornerDownLeft aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+        </span>
       )}
 
       {resizable &&
@@ -371,9 +449,12 @@ export const DeckNode = memo(function DeckNode({
               }
             }}
             className={cn(
-              'sd-handle opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100',
+              'sd-handle opacity-0',
+              // Landscape draws no handles (R8): the dense board stays clean.
+              !isLandscape && 'group-hover/node:opacity-100 group-focus-within/node:opacity-100',
               focusRing,
               role !== null && 'opacity-100',
+              hot && 'is-active',
               isEndpointTarget && 'opacity-100',
             )}
           />
@@ -394,11 +475,6 @@ export const DeckNode = memo(function DeckNode({
       {titleEdit === null && !data.dimmed && (
         <DetailsButton id={id} title={data.title} focused={data.focused} />
       )}
-      {data.pinned === true && !isLandscape && (
-        <span className="pointer-events-none absolute -top-2.5 -left-2.5 flex size-5 items-center justify-center rounded-full border border-primary bg-surface text-primary-ink shadow-rest">
-          <Pin role="img" aria-label="Pinned" strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-        </span>
-      )}
       {data.hiddenInView === true && (
         <span
           role="note"
@@ -408,17 +484,15 @@ export const DeckNode = memo(function DeckNode({
           Hidden in this view
         </span>
       )}
-      {/* Problems (015 FR-022): top-right, unless the connect "+" uses that corner. A surface
-          disc (020 design 107) so the alert glyph reads on any fill. */}
-      {data.problems !== undefined && target !== 'ok' && (
+      {/* Problem ring (frame 122): 1.5 px dashed Clay, 4 px outside the card. Its own layer, so the
+          selection outline (on the card) and this one draw together; hidden from assistive tech,
+          the count is in the badge and the card's name. */}
+      {hasProblem && (
         <span
           aria-hidden
-          title={data.problems.titles}
-          data-testid="problem-glyph"
-          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-full border border-clay-ink bg-surface text-clay-ink shadow-rest"
-        >
-          <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-        </span>
+          data-testid="problem-outline"
+          className="pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed border-clay-ink"
+        />
       )}
       {target === 'ok' && (
         <span

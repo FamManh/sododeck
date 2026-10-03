@@ -1,39 +1,59 @@
-import { analyzeFlow, stickyCanvasPosition, stickyLabel } from '@sododeck/model';
-import type { SododeckFile } from '@sododeck/schema';
+import { analyzeFlow, edgeShape, stickyCanvasPosition, stickyLabel } from '@sododeck/model';
+import type { Direction, SododeckFile } from '@sododeck/schema';
 import { toComponentKind, type ComponentKind } from '@sododeck/ui/lib/icons';
 
 import type { DrillFrame } from '../../state/ui-store';
-import { groupBounds, cardBox, type Rect } from '../canvas-geometry';
+import { cardLayoutOf, displayPosition, groupBounds, type Rect } from '../canvas-geometry';
+import { DECK_CARD, wrapText, type CardLayout } from '../card-layout';
+import { cardTags, tagChips, textMeasurer, type TagChip } from '../card-tags';
 import { collapseFlowMarks } from '../collapse-flow-marks';
 import { COLLAPSED_NODE_PREFIX, exportPortRects, groupCounts } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
+import { kindLabel } from '../kind-label';
 import { effectiveLevel, type Level } from '../levels';
+import type { PathEnds, PathShape } from '../routing/route-path';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import { edgePath } from './edge-geometry';
 import { exportLook, type ExportLook } from './export-palette';
+import { truncate, type TextMeasurer } from './text-measure';
 import type { ImageScope } from './types';
 
 export const EXPORT_MARGIN = 32;
 /** A sticky note in its one-line form (the canvas's collapsed note). */
 export const STICKY_SIZE = { width: 180, height: 40 } as const;
 
-type Direction = SododeckFile['edges'][number]['direction'];
-
 export interface SceneCard {
   id: string;
   rect: Rect;
   kind: ComponentKind | 'fallback';
+  /** The type name next to the header tile ("Service"). */
+  typeName: string;
   title: string;
-  subtitle: string | null;
+  /** The title as drawn: wrapped, clamped to `layout.titleLines`, the last line cut with "…". */
+  titleLines: readonly string[];
+  /** The trimmed description (the view's subtitle), or null when there is none. */
+  description: string | null;
+  descriptionLines: readonly string[];
+  /** The first ten tags, and where each pill sits in the tag block. */
+  tags: readonly string[];
+  tagChips: readonly TagChip[];
   hasRules: boolean;
   childCount: number;
   level: Level;
+  /** The same `cardLayout` the canvas used for this card; `rect` is its box. */
+  layout: CardLayout;
   fill?: string;
   stroke?: string;
+  /** Tile and pill colours that follow the card colour; absent means the neutral ones. */
+  chip?: string;
+  ink?: string;
+  /** The fill is a named colour, so the type name reads Secondary instead of Muted. */
+  namedFill?: boolean;
   text: 'default' | 'dark' | 'light';
 }
+
 export interface SceneGroup {
   id: string;
   rect: Rect;
@@ -49,8 +69,12 @@ export interface SceneCollapsed {
   title: string;
   nodeCount: number;
   edgeCount: number;
+  /** One tile per member on the fanned hand, in deck order. */
+  memberKinds: readonly (ComponentKind | 'fallback')[];
   fill?: string;
   stroke?: string;
+  chip?: string;
+  ink?: string;
   text: 'default' | 'dark' | 'light';
 }
 export interface ScenePort {
@@ -65,12 +89,17 @@ export interface SceneBadge {
 export interface SceneEdge {
   id: string;
   path: string;
-  /** Start and end of the path (the handle points), for the direction dots. */
+  /** The line type (`edgeShape`), already applied to `path`. */
+  shape: PathShape;
+  /** Which ends carry an arrow or a knob (`endMarks`). */
+  direction: Direction;
+  /** Start and end of the path (the card side midpoints). */
   source: { x: number; y: number };
   target: { x: number; y: number };
+  /** Where the end marks sit and point, from `routedPath`. */
+  ends: PathEnds;
   extent: Rect;
   labelPoint: { x: number; y: number };
-  dots: 'target' | 'both' | 'none';
   stroke: 'default' | 'flow' | 'flow-error';
   label: string | null;
   badges: SceneBadge[];
@@ -105,6 +134,21 @@ export interface SceneInput {
 const EMPTY_BOUNDS: Rect = { x: 0, y: 0, width: 0, height: 0 };
 const EMPTY_LOOK: ExportLook = { text: 'default' };
 
+/** The first `max` lines; when more follow, the last shown one is cut with "…" like the canvas's line clamp. */
+function clampLines(
+  lines: readonly string[],
+  max: number,
+  width: number,
+  font: string,
+  measure: TextMeasurer,
+): string[] {
+  if (lines.length <= max) return [...lines];
+  const shown = lines.slice(0, max);
+  const last = lines.slice(max - 1).join(' ');
+  shown[max - 1] = truncate(last, font, width, measure);
+  return shown;
+}
+
 /** Estimated label pill width; the renderer measures the real one (R6). */
 function labelPill(edge: SceneEdge): Rect | null {
   if (edge.label === null && edge.badges.length === 0) return null;
@@ -127,11 +171,6 @@ function union(a: Rect | null, b: Rect): Rect {
 function strokeOf(marks: readonly EdgeFlowMark[]): SceneEdge['stroke'] {
   if (marks.length === 0) return 'default';
   return marks.every((mark) => mark.style === 'error') ? 'flow-error' : 'flow';
-}
-
-function dotsOf(direction: Direction): SceneEdge['dots'] {
-  if (direction === 'both') return 'both';
-  return direction === 'none' ? 'none' : 'target';
 }
 
 /** Canvas ids (cards, `collapsed:<group>`, ports) that a flow travels through. */
@@ -180,20 +219,50 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const keep = (id: string) => inFlow === null || inFlow.has(id);
 
   const nodes = new Map(source.nodes.map((node, index) => [node.id, { node, index }]));
+  const measure = textMeasurer();
   const cards: SceneCard[] = graph.nodes.flatMap((id) => {
     const entry = nodes.get(id);
     if (entry === undefined || !keep(id)) return [];
     const { node, index } = entry;
+    const subtitle = (view === null ? node.tech : subtitleOf(node, view.render)) ?? null;
+    const childCount = graph.childCount.get(id) ?? 0;
+    // The box and the lines come from the canvas's own `cardLayout`, so a card exports at the size
+    // it has on screen (029 R7).
+    const layout = cardLayoutOf(node, { description: subtitle ?? undefined, childCount });
+    const inner = layout.width - 2 * DECK_CARD.paddingX;
+    const description = subtitle?.trim() ?? '';
+    const tags = cardTags(node.tags);
     return [
       {
         id,
-        rect: cardBox(node, index, level),
+        rect: { ...displayPosition(node, index), width: layout.width, height: layout.height },
         kind: toComponentKind(node.type) ?? 'fallback',
+        typeName: kindLabel(node.type),
         title: node.title,
-        subtitle: (view === null ? node.tech : subtitleOf(node, view.render)) ?? null,
+        titleLines: clampLines(
+          wrapText(node.title, inner, DECK_CARD.titleFont, measure),
+          layout.titleLines,
+          inner,
+          DECK_CARD.titleFont,
+          measure,
+        ),
+        description: description === '' ? null : description,
+        descriptionLines:
+          description === '' || layout.descriptionLines === 0
+            ? []
+            : clampLines(
+                wrapText(description, inner, DECK_CARD.descriptionFont, measure),
+                layout.descriptionLines,
+                inner,
+                DECK_CARD.descriptionFont,
+                measure,
+              ),
+        tags,
+        tagChips: tagChips(tags, inner, measure),
         hasRules: (node.rules?.length ?? 0) > 0,
-        childCount: graph.childCount.get(id) ?? 0,
+        childCount,
         level,
+        layout,
         ...(exportLook(node.style) ?? EMPTY_LOOK),
       },
     ];
@@ -210,6 +279,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       title: card.title,
       nodeCount: card.nodeCount,
       edgeCount: card.edgeCount,
+      memberKinds: card.memberKinds.map((kind) => toComponentKind(kind) ?? 'fallback'),
       ...(exportLook(groupsById.get(card.groupId)?.style) ?? EMPTY_LOOK),
     }));
   const ports: ScenePort[] = exportPortRects(source, graph).filter((port) => keep(port.id));
@@ -343,7 +413,8 @@ function sceneEdges(
     from: string,
     to: string,
     label: string | null,
-    dots: SceneEdge['dots'],
+    direction: Direction,
+    shape: PathShape,
     memberIds: readonly string[],
     route?: SododeckFile['edges'][number]['route'],
   ) => {
@@ -352,15 +423,17 @@ function sceneEdges(
     if (a === undefined || b === undefined) return;
     const marks = memberIds.flatMap((memberId) => overlay?.edges.get(memberId) ?? []);
     if (overlay !== null && marks.length === 0) return;
-    const geometry = edgePath(a, b, route);
+    const geometry = edgePath(a, b, route, shape, direction);
     edges.push({
       id,
       path: geometry.path,
+      shape,
+      direction,
       source: geometry.source,
       target: geometry.target,
+      ends: geometry.ends,
       extent: geometry.extent,
       labelPoint: { x: geometry.labelX, y: geometry.labelY },
-      dots,
       stroke: strokeOf(marks),
       label,
       badges: marks.flatMap((mark) =>
@@ -371,7 +444,8 @@ function sceneEdges(
   for (const id of graph.edges) {
     const edge = byId.get(id);
     if (edge === undefined) continue;
-    add(id, edge.from, edge.to, edge.label || null, dotsOf(edge.direction), [id], edge.route);
+    const direction = edge.direction ?? 'forward';
+    add(id, edge.from, edge.to, edge.label || null, direction, edgeShape(edge), [id], edge.route);
   }
   // Edges that leave a drilled scope end at the outside component's port pill, as on the canvas.
   for (const port of graph.ports) {
@@ -382,13 +456,24 @@ function sceneEdges(
       const representative = graph.representative.get(inside) ?? inside;
       const from = edge.from === inside ? representative : port.id;
       const to = edge.to === inside ? representative : port.id;
-      add(edge.id, from, to, edge.label || null, dotsOf(edge.direction), [edge.id]);
+      add(edge.id, from, to, edge.label || null, edge.direction ?? 'forward', edgeShape(edge), [
+        edge.id,
+      ]);
     }
   }
   // A merged edge (to a collapsed group) shows its count, like the canvas's "×n" pill.
   for (const merged of graph.merged) {
     const [from, to] = merged.direction === 'b-to-a' ? [merged.b, merged.a] : [merged.a, merged.b];
-    add(merged.id, from, to, `×${String(merged.edgeIds.length)}`, 'none', merged.edgeIds);
+    // Curved, with a knob to an arrow (or two arrows), as the canvas's merged connector.
+    add(
+      merged.id,
+      from,
+      to,
+      `×${String(merged.edgeIds.length)}`,
+      merged.direction === 'both' ? 'both' : 'forward',
+      'curved',
+      merged.edgeIds,
+    );
   }
   return edges;
 }

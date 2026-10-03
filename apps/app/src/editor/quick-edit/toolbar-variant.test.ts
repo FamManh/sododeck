@@ -15,6 +15,7 @@ describe('toolbarVariant', () => {
     expect(toolbarVariant(sel({ nodes: ['a'] }))).toBe('component');
     expect(toolbarVariant(sel({ nodes: ['a', 'b'] }))).toBe('components');
     expect(toolbarVariant(sel({ edges: ['e'] }))).toBe('connection');
+    expect(toolbarVariant(sel({ edges: ['e', 'f'] }))).toBe('connections');
     expect(toolbarVariant(sel({ groups: ['g'] }))).toBe('group');
     expect(toolbarVariant(sel({ nodes: ['a'], edges: ['e'] }))).toBe('mixed');
     expect(toolbarVariant(sel({ nodes: ['a'], stickies: ['s'] }))).toBe('mixed');

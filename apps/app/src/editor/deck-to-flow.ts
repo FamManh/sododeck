@@ -3,12 +3,18 @@
  * snapshot; React Flow never owns document state. Results are cached per source object, so an
  * edit to one node returns the same React Flow objects for all the others and `memo` skips them.
  */
-import { stickyCanvasPosition, stickyLabel, type StickyPlacement } from '@sododeck/model';
-import type { SododeckFile } from '@sododeck/schema';
+import {
+  edgeShape,
+  stickyCanvasPosition,
+  stickyLabel,
+  type StickyPlacement,
+} from '@sododeck/model';
+import type { EdgeShape, SododeckFile } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
 import {
   cardBox,
+  cardLayoutOf,
   cardSize,
   displayPosition,
   groupBounds,
@@ -26,6 +32,7 @@ import {
   type FlowOverlay,
   type NodeFlowMark,
 } from './flows/flow-overlay';
+import type { CardLayout } from './card-layout';
 import type { Level } from './levels';
 import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems/problem-marks';
 import { resolveLook, type CardLook, type StylePreview } from './style/card-style';
@@ -62,6 +69,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   problems?: ProblemMark;
   /** Resolved fill/stroke colour (020); absent when the card has no colour. */
   look?: CardLook;
+  /** The card's drawn box and how many lines its text gets (029 R7): one pure function of the content. */
+  layout: CardLayout;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -92,6 +101,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
   flow?: EdgeFlowMark;
   /** The connection's problems (015): an amber glyph on its label pill. */
   problems?: ProblemMark;
+  /** The effective line type (029): the stored one, else elbow with a route offset, else curved. */
+  shape: EdgeShape;
   /** Pinned sides and middle-segment offset (017 R6); absent means automatic routing. */
   route?: DeckEdgeObject['route'];
   /** The zoom level cards are drawn at (017 R7): the segment handle needs each endpoint's box. */
@@ -109,6 +120,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   title: string;
   nodeCount: number;
   edgeCount: number;
+  /** Member kinds for the tiles on the fanned hand (029 US5). */
+  memberKinds: readonly string[];
   focused: boolean;
   dimmed: boolean;
   flowInside?: 'current' | 'path';
@@ -253,6 +266,10 @@ function deckLookups(deck: SododeckFile): DeckLookups {
   return lookups;
 }
 
+function sameList(a: readonly string[], b: readonly string[]): boolean {
+  return a === b || (a.length === b.length && a.every((item, index) => item === b[index]));
+}
+
 function sameClassName(actual: string | undefined, expected: string): boolean {
   return (actual ?? '') === expected;
 }
@@ -262,7 +279,13 @@ function sameLook(a: CardLook | undefined, b: CardLook | undefined): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined) return false;
   return (
-    a.fill === b.fill && a.stroke === b.stroke && a.text === b.text && a.namedFill === b.namedFill
+    a.fill === b.fill &&
+    a.stroke === b.stroke &&
+    a.chip === b.chip &&
+    a.ink === b.ink &&
+    a.dot === b.dot &&
+    a.text === b.text &&
+    a.namedFill === b.namedFill
   );
 }
 
@@ -334,7 +357,9 @@ function toFlowNode(
   ]
     .filter(Boolean)
     .join(' ');
-  const size = cardSize(node, view.level);
+  // The view's own subtitle and the "n inside" row take part, so the box fits what is drawn.
+  const layout = cardLayoutOf(node, { description: subtitle, childCount });
+  const size = { width: layout.width, height: layout.height };
   if (
     cached?.selected === selected &&
     cached.data.subtitle === subtitle &&
@@ -383,6 +408,7 @@ function toFlowNode(
       ...(hiddenInView ? { hiddenInView } : {}),
       ...(problems === undefined ? {} : { problems }),
       ...(look === undefined ? {} : { look }),
+      layout,
     },
   };
   nodeCache.set(node, flowNode);
@@ -522,7 +548,8 @@ function collapsedNodes(
       cached.height === card.rect.height &&
       cached.data.title === card.title &&
       cached.data.nodeCount === card.nodeCount &&
-      cached.data.edgeCount === card.edgeCount
+      cached.data.edgeCount === card.edgeCount &&
+      sameList(cached.data.memberKinds, card.memberKinds)
     ) {
       return cached;
     }
@@ -540,6 +567,7 @@ function collapsedNodes(
         title: card.title,
         nodeCount: card.nodeCount,
         edgeCount: card.edgeCount,
+        memberKinds: card.memberKinds,
         focused,
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),
@@ -833,14 +861,16 @@ export function toFlowEdges(
       view.focus?.edges.has(edge.id) === true;
     const mark = overlay.edges.get(edge.id);
     const problems = view.problems?.get(edge.id);
+    const shape = edgeShape(edge);
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
-      sameMark(cached.data?.flow, mark) &&
-      sameProblemMark(cached.data?.problems, problems) &&
+      cached.data?.shape === shape &&
+      sameMark(cached.data.flow, mark) &&
+      sameProblemMark(cached.data.problems, problems) &&
       cached.sourceHandle === sourceHandle &&
       cached.targetHandle === targetHandle &&
-      cached.data?.showLabel === showLabel &&
+      cached.data.showLabel === showLabel &&
       cached.data.focused === focused &&
       cached.data.inFocus === inFocus &&
       cached.data.dimmed === dimmed &&
@@ -881,6 +911,7 @@ export function toFlowEdges(
         focused,
         inFocus,
         dimmed,
+        shape,
         level: view.level,
         routable: true,
         ...(mark === undefined ? {} : { flow: mark }),
@@ -917,15 +948,17 @@ export function toFlowEdges(
         (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
         view.focus?.edges.has(edge.id) === true;
       const mark = overlay.edges.get(edge.id);
+      const shape = edgeShape(edge);
       const cached = edgeCache.get(edge);
       if (
         cached?.selected === isSelected &&
-        sameMark(cached.data?.flow, mark) &&
+        cached.data?.shape === shape &&
+        sameMark(cached.data.flow, mark) &&
         cached.source === fromId &&
         cached.target === toId &&
         cached.sourceHandle === sourceHandle &&
         cached.targetHandle === targetHandle &&
-        cached.data?.showLabel === showLabel &&
+        cached.data.showLabel === showLabel &&
         cached.data.focused === focused &&
         cached.data.inFocus === inFocus &&
         cached.data.dimmed === dimmed &&
@@ -969,6 +1002,7 @@ export function toFlowEdges(
           focused,
           inFocus,
           dimmed,
+          shape,
           level: view.level,
           routable: false,
           ...(mark === undefined ? {} : { flow: mark }),

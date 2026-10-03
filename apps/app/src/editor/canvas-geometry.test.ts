@@ -1,13 +1,14 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { tagBlockHeight } from './card-tags';
+import { DECK_CARD_WIDTH, cardLayout } from './card-layout';
 import {
   boundsOf,
   CARD_SIZE_LIMITS,
   cardBox,
   cardSize,
   COLLAPSED_CARD_SIZE,
+  COMPONENT_CARD_SIZE,
   displayPosition,
   freeSpot,
   GROUP_PADDING,
@@ -31,9 +32,9 @@ describe('displayPosition', () => {
 });
 
 describe('CARD_SIZE_LIMITS (017 R2)', () => {
-  it('is 120×44 to 800×600', () => {
+  it('is 120×76 (the smallest Deck card) to 800×600', () => {
     expect(CARD_SIZE_LIMITS).toEqual({
-      min: { width: 120, height: 44 },
+      min: { width: 120, height: 76 },
       max: { width: 800, height: 600 },
       step: 4,
     });
@@ -42,29 +43,53 @@ describe('CARD_SIZE_LIMITS (017 R2)', () => {
 
 describe('cardSize (017 R2/R3)', () => {
   it('keeps one size at every zoom level when the node has no stored size (§g-58)', () => {
+    const expected = { width: 184, height: cardLayout({ title: '' }).height };
+    expect(NODE_SIZE).toEqual(expected);
     for (const level of ['landscape', 'system', 'container', 'component'] as const) {
-      expect(cardSize({}, level)).toEqual(NODE_SIZE);
-      expect(nodeSize(level)).toEqual(NODE_SIZE);
+      expect(cardSize({}, level)).toEqual(expected);
+      expect(nodeSize(level)).toEqual(expected);
     }
+  });
+
+  it('is 184 wide by the layout height of its content, at every level (029)', () => {
+    const node = {
+      title: 'A fairly long card title that wraps onto a second line or two',
+      tech: 'Node 24 service with a description',
+      tags: ['payments', 'critical'],
+    };
+    const layout = cardLayout({
+      title: node.title,
+      description: node.tech,
+      tags: node.tags,
+    });
+    expect(layout.width).toBe(DECK_CARD_WIDTH);
+    for (const level of ['landscape', 'system', 'container', 'component'] as const) {
+      expect(cardSize(node, level)).toEqual({ width: 184, height: layout.height });
+    }
+    expect(layout.height).toBeGreaterThan(NODE_SIZE.height);
   });
 
   it('grows a card for its tags, the same at every zoom level (2026-10-03)', () => {
     const tags = ['payments', 'critical'];
-    const extra = tagBlockHeight(tags, NODE_SIZE.width);
-    expect(extra).toBeGreaterThan(0);
+    const plain = cardSize({ title: 'A' }, 'system').height;
+    const tagged = cardSize({ title: 'A', tags }, 'system').height;
+    expect(tagged).toBeGreaterThan(plain);
     for (const level of ['landscape', 'system', 'container', 'component'] as const) {
-      expect(cardSize({ tags }, level)).toEqual({
-        width: NODE_SIZE.width,
-        height: NODE_SIZE.height + extra,
-      });
+      expect(cardSize({ title: 'A', tags }, level)).toEqual({ width: 184, height: tagged });
     }
   });
 
   it('keeps a stored size that fits the tags, and grows one that does not', () => {
     const tags = ['payments'];
-    const needed = NODE_SIZE.height + tagBlockHeight(tags, 200);
+    const needed = cardLayout({ title: '', tags, size: { width: 200, height: 4 } }).height;
     expect(cardSize({ tags, size: { width: 200, height: 200 } }, 'system').height).toBe(200);
     expect(cardSize({ tags, size: { width: 200, height: 50 } }, 'system').height).toBe(needed);
+  });
+
+  it('keeps a stored width and sizes the height from the layout (017)', () => {
+    const { width, height } = cardSize({ size: { width: 300, height: 90 } }, 'system');
+    expect(width).toBe(300);
+    expect(height).toBe(90);
   });
 
   it('is the stored size, unclamped when within the limits', () => {
@@ -223,7 +248,8 @@ describe('nodeSize', () => {
     expect(nodeSize('system')).toEqual(NODE_SIZE);
     expect(nodeSize('container')).toEqual(NODE_SIZE);
     expect(nodeSize('component')).toEqual(NODE_SIZE);
-    expect(COLLAPSED_CARD_SIZE).toEqual({ width: 180, height: 64 });
+    expect(COLLAPSED_CARD_SIZE).toEqual({ width: 184, height: 112 });
+    expect(COMPONENT_CARD_SIZE).toEqual({ width: 184, height: 128 });
   });
 });
 

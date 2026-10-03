@@ -1,9 +1,14 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
-import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
+import {
+  ICON_STROKE_WIDTH,
+  KIND_FALLBACK,
+  KIND_STYLE,
+  toComponentKind,
+} from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
-import { Boxes } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import { memo, useEffect, type CSSProperties } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
@@ -11,7 +16,21 @@ import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
 import { describeChannel } from './style/card-style';
 
-const countLabel = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
+/** Member tiles per hand, the last slot becoming "+n" when there are more. */
+const MAX_TILES = 5;
+
+function MemberTile({ kind }: { kind: string }) {
+  const resolved = toComponentKind(kind);
+  const Icon = resolved === null ? KIND_FALLBACK.icon : KIND_STYLE[resolved].icon;
+  return (
+    <span
+      data-testid="member-tile"
+      className="flex size-[22px] items-center justify-center rounded-[7px] border-[1.5px] border-border-strong text-ink-secondary"
+    >
+      <Icon strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+    </span>
+  );
+}
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -57,21 +76,40 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
     .filter((part): part is string => part !== null)
     .join(', ');
 
+  const lookVars = {
+    ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
+    ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
+    ...(look === undefined ? {} : { '--card-chip': look.chip, '--card-ink': look.ink }),
+  } as CSSProperties;
+
   useEffect(() => {
     updateNodeInternals(id);
   }, [id, updateNodeInternals]);
 
+  const kinds = data.memberKinds;
+  // 22 px tiles with a 4 px gap across the 160 px text area: five fit; past that the last slot
+  // reads "+n" (frame 119).
+  const shown = kinds.length > MAX_TILES ? kinds.slice(0, MAX_TILES - 1) : kinds;
+  const extra = kinds.length - shown.length;
+  // Paint-only sheets: rotated around the bottom centre, never on the node wrapper (§g-74).
+  const sheetClass =
+    'pointer-events-none absolute inset-0 origin-bottom rounded-card border-[1.5px] border-(--card-stroke,var(--color-border-strong)) bg-(--card-fill,var(--color-surface-2)) shadow-[0_var(--sd-deck-lip)_0_0_var(--card-stroke,var(--color-border-strong))]';
+
   return (
     <div style={{ width, height }} className="group/collapsed relative">
-      {/* The stack peeks out down and right (design 69), so a collapsed group never reads as a
-          plain card; the layers sat fully behind the card before. */}
+      {/* The fanned hand (DESIGN.md "Groups", frame 119): two sheets of the group's colour behind
+          the front card, so a collapsed group never reads as a plain card. */}
       <div
         aria-hidden
-        className="absolute inset-0 translate-x-2 translate-y-2 rounded-node border border-border bg-surface-2"
+        data-testid="group-back-sheet"
+        style={lookVars}
+        className={cn(sheetClass, '-rotate-[7deg]')}
       />
       <div
         aria-hidden
-        className="absolute inset-0 translate-x-1 translate-y-1 rounded-node border border-border bg-surface-2"
+        data-testid="group-back-sheet"
+        style={lookVars}
+        className={cn(sheetClass, 'rotate-[4deg]')}
       />
       <button
         type="button"
@@ -96,51 +134,70 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
           select({ groups: [data.groupId] });
           focus(id);
         }}
-        style={
-          {
-            ...(look?.fill === undefined ? {} : { '--card-fill': look.fill }),
-            ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
-          } as CSSProperties
-        }
+        style={lookVars}
         className={cn(
-          'absolute inset-0 flex w-full items-center gap-[9px] rounded-node border border-border bg-surface px-2.5 text-left shadow-rest',
+          'sd-card absolute inset-0 flex w-full flex-col gap-[7px] rounded-card border-[1.5px] border-border-strong bg-surface px-[10.5px] py-[9.5px] text-left',
           focusRing,
           hasFlowInside && 'ring-1 ring-primary ring-offset-2 ring-offset-canvas',
-          selected && 'border-primary shadow-selection ring-1 ring-primary',
+          selected && 'selected',
           showFill && 'bg-(--card-fill)',
-          showStroke && 'border-[1.5px] border-(--card-stroke)',
+          showStroke && 'border-(--card-stroke)',
         )}
       >
         {hasFlowInside && <span data-testid="collapsed-flow-ring" className="sr-only" />}
         {currentFlowInside && <FlowInsideDot />}
-        <span
-          aria-hidden
-          className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-surface-2 text-ink-secondary"
-        >
-          <Boxes strokeWidth={ICON_STROKE_WIDTH} className="size-4" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex h-6 shrink-0 items-center gap-2">
+          <span
+            aria-hidden
+            className="inline-flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-(--card-chip,var(--color-surface-2)) text-(--card-ink,var(--color-ink-secondary))"
+          >
+            <Layers strokeWidth={2} className="size-3.5" />
+          </span>
           <span
             className={cn(
-              'truncate text-body font-medium',
-              textRoleClass ?? 'text-ink',
-              titleEdit !== null && 'invisible',
+              'min-w-0 flex-1 truncate text-caption font-medium',
+              textRoleClass ?? 'text-ink-secondary',
             )}
           >
-            {data.title}
+            Group
           </span>
-          <span className={cn('text-caption', textRoleClass ?? 'text-ink-secondary')}>
-            {countLabel(data.nodeCount, 'node')} · {countLabel(data.edgeCount, 'edge')}
+          <span
+            aria-hidden
+            className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-ink text-[13px] leading-none font-bold text-surface"
+          >
+            {data.nodeCount}
           </span>
+        </span>
+        <span
+          className={cn(
+            'truncate text-[14px] leading-[1.28] font-semibold',
+            textRoleClass ?? 'text-ink',
+            titleEdit !== null && 'invisible',
+          )}
+        >
+          {data.title}
+        </span>
+        <span aria-hidden className="flex shrink-0 gap-1">
+          {shown.map((kind, index) => (
+            <MemberTile key={index} kind={kind} />
+          ))}
+          {extra > 0 && (
+            <span
+              data-testid="member-more"
+              className="flex h-[22px] min-w-[22px] items-center justify-center rounded-[7px] border-[1.5px] border-border-strong px-1 text-[10.5px] font-semibold text-ink-secondary"
+            >
+              +{extra}
+            </span>
+          )}
         </span>
       </button>
       {titleEdit !== null && (
-        // Over the title line; a field can't sit inside the card's button.
-        <div className="absolute top-1/2 right-2.5 left-[49px] -translate-y-full">
+        // Over the name line; a field can't sit inside the card's button.
+        <div className="absolute top-[43px] right-3 left-3">
           <CardTitleInput
             edit={titleEdit}
             title={data.title}
-            className={cn('text-body font-medium', textRoleClass ?? 'text-ink')}
+            className={cn('text-[14px] font-semibold', textRoleClass ?? 'text-ink')}
           />
         </div>
       )}

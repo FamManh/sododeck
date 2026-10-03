@@ -19,6 +19,8 @@ export interface CollapsedCard {
   nodeCount: number;
   edgeCount: number;
   hiddenEdges: readonly string[];
+  /** The kind of every member node, in deck order: one tile each on the fanned hand (029). */
+  memberKinds: readonly string[];
   rect: Rect;
 }
 
@@ -259,7 +261,13 @@ export function visibleGraph(
   const nodeCount = new Map<string, number>();
   const cardsByGroup = new Map<
     string,
-    { nodeCount: number; edgeCount: number; hiddenEdges: string[]; rect: Rect }
+    {
+      nodeCount: number;
+      edgeCount: number;
+      hiddenEdges: string[];
+      memberKinds: string[];
+      rect: Rect;
+    }
   >();
 
   if (collapsedVisible.size > 0) {
@@ -271,6 +279,7 @@ export function visibleGraph(
           nodeCount: 0,
           edgeCount: 0,
           hiddenEdges: [],
+          memberKinds: [],
           rect: centered(rect),
         });
     }
@@ -281,7 +290,10 @@ export function visibleGraph(
     for (const groupId of line) {
       if (collapsedVisible.has(groupId)) {
         const card = cardsByGroup.get(groupId);
-        if (card !== undefined) card.nodeCount += 1;
+        if (card !== undefined) {
+          card.nodeCount += 1;
+          card.memberKinds.push(node.type);
+        }
       }
       nodeCount.set(groupId, (nodeCount.get(groupId) ?? 0) + 1);
     }
@@ -386,6 +398,7 @@ export function visibleGraph(
           nodeCount: card.nodeCount,
           edgeCount: card.edgeCount,
           hiddenEdges: card.hiddenEdges,
+          memberKinds: card.memberKinds,
           rect: card.rect,
         },
       ];

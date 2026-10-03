@@ -1,8 +1,9 @@
 import type { Edge } from '@sododeck/schema';
-import { ArrowRightLeft, Cable, Type } from 'lucide-react';
+import { ArrowRightLeft, Cable, Spline, Type } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
 import { DIRECTIONS, PROTOCOLS, protocolLabel } from '../fields/edge-choices';
+import { applyLineType, LINE_TYPES, lineTypeLabel, sharedLineShape } from '../fields/line-type';
 import { oneStep } from '../fields/one-step';
 import type { Action, ActionContext } from './types';
 
@@ -21,6 +22,10 @@ function setEdge(
   });
   useUiStore.getState().announce(said);
 }
+
+/** The selected connections (one or several), in selection order, skipping stale ids. */
+const selectedEdges = (ctx: ActionContext): Edge[] =>
+  ctx.selection.edges.flatMap((id) => ctx.deck.edges.filter((edge) => edge.id === id));
 
 /** Edit label, Protocol ▸ and Direction ▸ on one connection (019 FR-022, FR-031). */
 export const CONNECTION_ACTIONS: readonly Action[] = [
@@ -86,6 +91,37 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
         checked: (ctx) => (edgeOf(ctx)?.direction ?? 'forward') === value,
         run: (ctx) => {
           setEdge(ctx, { direction: value }, `Direction set to ${label}`);
+        },
+      })),
+  },
+  {
+    id: 'connection.lineType',
+    label: 'Line type',
+    toolbarLabel: (ctx) => {
+      const shape = sharedLineShape(selectedEdges(ctx));
+      return `Line type: ${shape === null ? 'mixed' : lineTypeLabel(shape)}`;
+    },
+    icon: Spline,
+    section: 'edit',
+    where: {
+      menu: ['connection', 'connections'],
+      toolbar: ['connection', 'connections'],
+    },
+    radio: true,
+    children: () =>
+      LINE_TYPES.map(({ value, label, icon }) => ({
+        id: `connection.lineType.${value}`,
+        label,
+        icon,
+        section: 'edit',
+        where: {},
+        checked: (ctx) => sharedLineShape(selectedEdges(ctx)) === value,
+        run: (ctx) => {
+          applyLineType(
+            ctx.editor,
+            selectedEdges(ctx).map((edge) => edge.id),
+            value,
+          );
         },
       })),
   },

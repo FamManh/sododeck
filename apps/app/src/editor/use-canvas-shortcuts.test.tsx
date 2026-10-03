@@ -815,9 +815,9 @@ describe('⌘⇧ arrow resize (017 US5, T048)', () => {
     fireEvent.keyDown(el, { key: 'ArrowDown', code: 'ArrowDown', metaKey: true, shiftKey: true });
     vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
     const node = toJSON(doc).nodes.find((n) => n.id === 'n11');
-    expect(node?.size).toEqual({ width: 168, height: 54 });
+    expect(node?.size).toEqual({ width: 188, height: 80 });
     expect(node?.position).toEqual(before);
-    expect(ui().announcement.text).toBe('Resized N11 to 168 × 54');
+    expect(ui().announcement.text).toBe('Resized N11 to 188 × 80');
     vi.useRealTimers();
   });
 

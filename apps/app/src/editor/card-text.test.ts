@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { textLines } from './card-text';
 
 describe('textLines (017 research R11)', () => {
-  it('gives two title lines and one subtitle line at the default 50 px', () => {
-    expect(textLines({ width: 164, height: 50 })).toEqual({ title: 2, subtitle: 1 });
+  it('gives one title line and one description line at 50 px (Deck line heights 18 and 16.8)', () => {
+    expect(textLines({ width: 164, height: 50 })).toEqual({ title: 1, subtitle: 1 });
   });
 
   it('gives more title lines as the card grows', () => {
-    expect(textLines({ width: 164, height: 80 })).toEqual({ title: 3, subtitle: 2 });
+    expect(textLines({ width: 164, height: 80 })).toEqual({ title: 3, subtitle: 1 });
   });
 
   it('never gives fewer than one title line, even smaller than the minimum', () => {

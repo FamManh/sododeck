@@ -2,6 +2,7 @@
  * Reset size (017 R4, FR-006): a resized card back to its level's default, one undo step.
  * Reset route (017 R12): a connection's pinned sides and offset back to automatic.
  */
+import { edgeShape } from '@sododeck/model';
 import { RotateCcw, Scaling } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -41,6 +42,11 @@ export const SHAPE_ACTIONS: readonly Action[] = [
     icon: RotateCcw,
     section: 'edit',
     where: { menu: ['connection'], toolbar: ['connection'] },
+    // Sides and offset only mean something on an elbow line (029).
+    applies: (ctx) => {
+      const edge = edgeOf(ctx);
+      return edge !== undefined && edgeShape(edge) === 'elbow';
+    },
     disabledReason: (ctx) => (edgeOf(ctx)?.route === undefined ? 'Route is automatic' : null),
     run: (ctx) => {
       const edge = edgeOf(ctx);

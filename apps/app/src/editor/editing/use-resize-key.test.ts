@@ -26,16 +26,16 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const target = (width = 164, height = 50) => ({ id: 'n1', title: 'API Gateway', width, height });
+const target = (width = 184, height = 76) => ({ id: 'n1', title: 'API Gateway', width, height });
 
 describe('⌘⇧ arrow resize (017 R9/R10)', () => {
   it('grows 4 px with → and ↓, keeping the top-left corner', () => {
     const { doc, editor } = setup();
     const keyer = createResizeKeyer(editor);
     keyer.key({ key: 'ArrowRight' }, target());
-    keyer.key({ key: 'ArrowDown' }, target(168, 50));
+    keyer.key({ key: 'ArrowDown' }, target(188, 76));
     vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
-    expect(toJSON(doc).nodes[0]?.size).toEqual({ width: 168, height: 54 });
+    expect(toJSON(doc).nodes[0]?.size).toEqual({ width: 188, height: 80 });
     expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 0, y: 0 });
   });
 
@@ -51,10 +51,10 @@ describe('⌘⇧ arrow resize (017 R9/R10)', () => {
     const { doc, editor } = setup();
     const keyer = createResizeKeyer(editor);
     keyer.key({ key: 'ArrowRight' }, target());
-    keyer.key({ key: 'ArrowRight' }, target(168, 50));
+    keyer.key({ key: 'ArrowRight' }, target(188, 76));
     vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
-    expect(toJSON(doc).nodes[0]?.size).toEqual({ width: 172, height: 50 });
-    expect(useUiStore.getState().announcement.text).toBe('Resized API Gateway to 172 × 50');
+    expect(toJSON(doc).nodes[0]?.size).toEqual({ width: 192, height: 76 });
+    expect(useUiStore.getState().announcement.text).toBe('Resized API Gateway to 192 × 76');
     editor.undo();
     expect(toJSON(doc).nodes[0]?.size).toBeUndefined();
   });

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { deckOf } from '../../test/render-canvas';
 import { inspectorDeck } from '../../test/inspector-fixtures';
 import { renderInspector } from '../../test/render-inspector';
-import { cardSize } from '../canvas-geometry';
+import { cardSize, NODE_SIZE } from '../canvas-geometry';
 
 const setup = () => renderInspector(inspectorDeck, { nodes: ['p'] });
 const node = (doc: Parameters<typeof toJSON>[0]) => toJSON(doc).nodes[1];
@@ -145,11 +145,11 @@ describe('NodeInspector Size fields (017 T049)', () => {
   it('shows the level default size, disables "Reset size" until stored, one undo step per commit', async () => {
     const { user, doc, editor } = setup();
     // The card has tags, so its default height includes the tag block (2026-10-03).
-    const tall = cardSize({ tags: node(doc)?.tags }, 'system').height;
-    expect(tall).toBeGreaterThan(50);
+    const tall = cardSize({ ...node(doc) }, 'system').height;
+    expect(tall).toBeGreaterThan(NODE_SIZE.height);
     const width = screen.getByRole('spinbutton', { name: 'Width' });
     const height = screen.getByRole('spinbutton', { name: 'Height' });
-    expect(width).toHaveValue(164);
+    expect(width).toHaveValue(184);
     expect(height).toHaveValue(tall);
     const reset = screen.getByRole('button', { name: 'Reset size' });
     expect(reset).toBeDisabled();

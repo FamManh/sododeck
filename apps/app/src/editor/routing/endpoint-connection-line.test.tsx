@@ -34,8 +34,8 @@ describe('EndpointConnectionLine (017 R12)', () => {
       </svg>,
     );
     const path = screen.getByTestId('endpoint-connection-line');
-    // Right → Left, straight across.
-    expect(path).toHaveAttribute('d', 'M164 25L184 25L232 25L232 25L280 25L300 25');
+    // Right → Left, straight across, stopping one arrow length (9) short of the end.
+    expect(path).toHaveAttribute('d', 'M164 25L184 25L227.5 25L227.5 25L271 25L291 25');
   });
 
   it('routes to the hot side once a hover is recorded, even when it differs from toPosition', () => {
@@ -48,6 +48,6 @@ describe('EndpointConnectionLine (017 R12)', () => {
       </svg>,
     );
     const path = screen.getByTestId('endpoint-connection-line');
-    expect(path).not.toHaveAttribute('d', 'M164 25L184 25L232 25L232 25L280 25L300 25');
+    expect(path).not.toHaveAttribute('d', 'M164 25L184 25L227.5 25L227.5 25L271 25L291 25');
   });
 });

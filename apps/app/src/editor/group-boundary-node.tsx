@@ -90,13 +90,14 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
       {...(showStroke ? { 'data-stroke': '' } : {})}
       {...(customText === undefined ? {} : { 'data-text': customText })}
       className={cn(
-        'group pointer-events-none relative rounded-group border border-dashed border-border bg-group',
-        data.level === 'landscape' && 'border-solid bg-surface-2/80',
+        // The Deck frame (frame 119): radius 20, a 1.5 px solid border, Surface 2 or the colour fill.
+        'group pointer-events-none relative rounded-frame border-[1.5px] border-solid border-border-strong bg-surface-2',
+        data.level === 'landscape' && 'bg-surface-2/80',
         // Drop target (screen 110): the dashed orange border is the cue, not the colour alone.
         // It wins over a custom colour (the drop cue must stay unambiguous).
-        dropTarget && 'border-[1.5px] border-dashed border-primary bg-primary/7',
+        dropTarget && 'border-dashed border-primary bg-primary/7',
         !dropTarget && showFill && 'bg-(--card-fill)',
-        !dropTarget && showStroke && 'border-[1.5px] border-dashed border-(--card-stroke)',
+        !dropTarget && showStroke && 'border-(--card-stroke)',
       )}
     >
       {editable &&
@@ -139,7 +140,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
           tabIndex={-1}
           // Where the label sits, in its type, so renaming moves nothing (founder, 2026-10-02).
           className={cn(
-            'pointer-events-auto absolute top-2 left-3 w-56 px-1',
+            'pointer-events-auto absolute -top-3.5 left-4 w-56 px-1',
             data.level === 'landscape' && 'top-4 left-4 w-72 rounded-full bg-surface px-2 py-1',
           )}
         >
@@ -149,7 +150,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
             className={
               data.level === 'landscape'
                 ? 'text-body font-medium text-ink'
-                : 'text-micro text-ink uppercase'
+                : 'text-[12.5px] font-semibold text-ink'
             }
           />
         </div>
@@ -171,14 +172,21 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
           className={cn(
             // The label drags the frame (016 R5); a click still selects it.
             GROUP_HANDLE_CLASS,
-            'pointer-events-auto absolute top-2 left-3 flex gap-1.5 rounded-full px-1 text-micro text-ink-muted uppercase',
-            data.level === 'landscape' &&
-              'top-4 left-4 bg-surface px-2 py-1 text-body font-medium normal-case text-ink',
+            // The pill sits on the top edge (left 16, top -14): 28 tall, Surface, 1.5 px border and
+            // a 2 px lip that goes with the others below 60 % zoom.
+            'pointer-events-auto absolute -top-3.5 left-4 flex h-7 items-center gap-1.5 rounded-full border-[1.5px] border-border-strong bg-surface pr-1.5 pl-2 text-[12.5px] font-semibold text-ink shadow-[0_calc(var(--sd-deck-lip)*2/3)_0_0_var(--color-border-strong)]',
+            data.level === 'landscape' && 'top-4 left-4 text-body',
             focusRing,
           )}
         >
+          <ChevronDown aria-hidden className="size-3.5" />
           <span>{data.title}</span>
-          <span>{data.count}</span>
+          <span
+            aria-hidden
+            className="flex size-[18px] items-center justify-center rounded-full bg-ink text-[10.5px] leading-none font-bold text-surface"
+          >
+            {data.count}
+          </span>
         </button>
       )}
       <button

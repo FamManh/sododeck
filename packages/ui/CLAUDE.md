@@ -79,6 +79,10 @@ DESIGN.md `text-secondary` → `ink-secondary`, `muted` → `ink-muted` (to avoi
 - Motion: `--sd-dur-hover` 150ms (Tailwind's default transition duration), `--sd-dur-dim` 250ms, `--sd-dur-ring` 200ms, `--sd-flow-token-loop` 1400ms, `--sd-flow-step` 1700ms, `--sd-toast` 2600ms. Under `prefers-reduced-motion: reduce` the first four become 0ms; step and toast stay (reading time). Use `duration-(--sd-dur-*)`, never fixed ms.
 - Radius: `rounded-segment` 7px, `rounded-row` 8px, `rounded-banner` 14px. Shadow: `shadow-hover`, `shadow-tour`. Text: `text-code-md`.
 
+## Tokens added by 029 (Deck look)
+
+- Colour: `--sd-border-strong` (`border-strong`), per named card colour `--sd-card-<name>-chip` / `-ink` / `-dot`, and `--sd-deck-edge`, `-orange`, `-orange-soft`, `-orange-ink`, `-text-selection`, `-dot-neutral` (Tailwind `deck-*` colours). Radius: `--radius-card` is 14px (was 12px). Lip depth `--sd-deck-lip` 3px, `-hover` 5px, `-drag` 6px; dimmed card opacity `--sd-deck-dim` .22. The full list is DESIGN.md "Card system (Deck)".
+
 ## Tokens added by 003
 
 - Motion: `--sd-toast-undo` 6000ms (`MOTION.toastUndoMs`), the display time of a toast with an Undo action (delete, §g-19). Reading time, so not shortened under reduced motion.

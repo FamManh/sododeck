@@ -1,6 +1,5 @@
 import { readableText } from '@sododeck/ui/lib/contrast';
 import type { CardColor, ColorRef, StickyColor, Style } from '@sododeck/schema';
-import type { ComponentKind } from '@sododeck/ui/lib/icons';
 
 /**
  * Light token values for standalone images (R2: images are always light). Copied from
@@ -11,12 +10,15 @@ export const LIGHT_PALETTE = {
   surface: '#ffffff',
   surface2: '#f4f4f1',
   border: '#deded8',
+  borderStrong: '#cfcfc7',
   hairline: '#ecece8',
   group: 'rgba(255, 255, 255, 0.7)',
   ink: '#1c1c1a',
   inkSecondary: '#55554f',
   inkMuted: '#72726b',
   edge: '#c9c9c2',
+  /** The Deck connector line (029, `--sd-deck-edge`). */
+  deckEdge: '#b4b4ab',
   primary: '#f2661c',
   primarySoft: '#fdeee4',
   primaryInk: '#b3480c',
@@ -47,6 +49,22 @@ export const LIGHT_PALETTE = {
     pink: { fill: '#ffe3f3', stroke: '#c65b93' },
     slate: { fill: '#e6ecf3', stroke: '#667383' },
   } satisfies Record<CardColor, { fill: string; stroke: string }>,
+  /** Deck chip and ink per named colour (029): the header tile, the tag pills. */
+  cardChips: {
+    red: { chip: '#ffd3cc', ink: '#7e302a' },
+    orange: { chip: '#ffd8ba', ink: '#793900' },
+    amber: { chip: '#fadfb3', ink: '#6c4400' },
+    yellow: { chip: '#ede5b3', ink: '#5c4d00' },
+    lime: { chip: '#d5ecbf', ink: '#385805' },
+    green: { chip: '#c4f0ce', ink: '#015d2d' },
+    teal: { chip: '#b3f2e6', ink: '#005f52' },
+    cyan: { chip: '#b2effe', ink: '#005a72' },
+    blue: { chip: '#c6e6ff', ink: '#1d4d87' },
+    indigo: { chip: '#d8e0ff', ink: '#404488' },
+    violet: { chip: '#ebd9ff', ink: '#593c7e' },
+    pink: { chip: '#ffd2e9', ink: '#772f55' },
+    slate: { chip: '#dde4ed', ink: '#444e5a' },
+  } satisfies Record<CardColor, { chip: string; ink: string }>,
   cardText: { dark: '#1c1c1a', light: '#ffffff' },
 };
 
@@ -65,6 +83,11 @@ function resolveExportChannel(value: ColorRef, channel: 'fill' | 'stroke'): stri
 export interface ExportLook {
   fill?: string;
   stroke?: string;
+  /** Header tile and tag pill colours (029); they follow the fill, or the stroke when only that is set. */
+  chip?: string;
+  ink?: string;
+  /** The fill is a named colour: the type name reads Secondary instead of Muted. */
+  namedFill?: boolean;
   text: 'default' | 'dark' | 'light';
 }
 
@@ -78,7 +101,20 @@ export function exportLook(style: Style | undefined): ExportLook | undefined {
     style.fill !== undefined && !isCardColour(style.fill)
       ? readableText(style.fill).text
       : 'default';
-  return { fill, stroke, text };
+  const chipRef = style.fill ?? style.stroke;
+  const chips =
+    chipRef === undefined
+      ? {}
+      : isCardColour(chipRef)
+        ? LIGHT_PALETTE.cardChips[chipRef]
+        : { chip: chipRef, ink: LIGHT_PALETTE.cardText[readableText(chipRef).text] };
+  return {
+    fill,
+    stroke,
+    ...chips,
+    namedFill: style.fill !== undefined && isCardColour(style.fill),
+    text,
+  };
 }
 
 /** The literal ink colour for a resolved `text` role. */
@@ -90,28 +126,6 @@ export function exportTextColour(text: ExportLook['text'], palette: ExportPalett
       return palette.cardText.light;
     case 'default':
       return palette.ink;
-  }
-}
-
-/** Kind tile fill and icon colour, as `KIND_STYLE[kind].tone` / `KIND_FALLBACK`. */
-export function kindColours(
-  kind: ComponentKind | 'fallback',
-  palette: ExportPalette,
-): { fill: string; ink: string } {
-  switch (kind) {
-    case 'gateway':
-      return { fill: palette.inverse, ink: palette.onInverse };
-    case 'service':
-      return { fill: palette.primarySoft, ink: palette.primaryInk };
-    case 'queue':
-      return { fill: palette.amberSoft, ink: palette.amberInk };
-    case 'database':
-      return { fill: palette.blueSoft, ink: palette.blueInk };
-    case 'external':
-      return { fill: palette.claySoft, ink: palette.clayInk };
-    case 'client':
-    case 'fallback':
-      return { fill: palette.surface2, ink: palette.inkSecondary };
   }
 }
 

@@ -1,7 +1,7 @@
 /**
  * Limits of a group frame resize (016 R5, FR-044) and of a card resize (017 R4): `resizeFrame`
  * keeps a frame containing its members plus padding, never smaller than MIN_FRAME; `resizeBox`
- * generalises the same span math to any min/max/step (cards: 120×44–800×600, step 4). Pure; the
+ * generalises the same span math to any min/max/step (cards: 120×76–800×600, step 4). Pure; the
  * resizers and the drawer fields share it.
  */
 import type { Rect } from '../canvas-geometry';

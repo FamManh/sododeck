@@ -1,4 +1,4 @@
-import { toJSON, type DeckEditor } from '@sododeck/model';
+import { fromJSON, toJSON, type DeckEditor } from '@sododeck/model';
 import * as Y from 'yjs';
 import {
   act,
@@ -20,7 +20,8 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper, renderWithEditor } from '../test/render-canvas';
-import { Canvas } from './canvas';
+import { Canvas, liplessSelector } from './canvas';
+import { demoDeck } from './demo-deck';
 import { exitFlow, openFlow } from './flows/flow-mode';
 import { DeckIsland } from './shell/deck-island';
 import { KIND_MIME, NOTE_MIME, useCanvasHandlers } from './use-canvas-handlers';
@@ -119,7 +120,7 @@ describe('Canvas', () => {
     const rect = container.querySelector('.react-flow__minimap-node');
     expect(rect).toHaveStyle({
       fill: 'var(--color-card-green-fill)',
-      stroke: 'var(--color-border)',
+      stroke: 'var(--color-border-strong)',
     });
   });
 
@@ -406,7 +407,9 @@ describe('Canvas', () => {
     await user.keyboard(' ');
     expect(collapsedOf(doc).has('left')).toBe(true);
     expect(ui().focusedId).toBe('collapsed:left');
-    expect(screen.getByTestId('collapsed-group-node')).toHaveTextContent('2 nodes · 0 edges');
+    expect(screen.getByTestId('collapsed-group-node')).toHaveAccessibleName(
+      'Left, collapsed group, 2 nodes, 0 edges',
+    );
 
     // 011: collapse is saved in the current view, never on the group, and never an undo step.
     expect(toJSON(doc).groups).toEqual(before.groups);
@@ -471,6 +474,17 @@ describe('Canvas', () => {
     }
     // jsdom's React Flow starts at zoom 1: a 164 px card is not tiny.
     expect(canvas).not.toHaveAttribute('data-tiny-cards');
+  });
+
+  it('flags the wrapper data-lipless below 60 % zoom and not at 60 % (029 R8)', () => {
+    const at = (zoom: number) => liplessSelector({ transform: [0, 0, zoom] });
+    expect(at(0.59)).toBe(true);
+    expect(at(0.3)).toBe(true);
+    expect(at(0.6)).toBe(false);
+    expect(at(1)).toBe(false);
+    // jsdom's React Flow starts at zoom 1: the wrapper has no flag.
+    const { container } = renderWithEditor(<Canvas />, deck);
+    expect(container.querySelector('[data-canvas]')).not.toHaveAttribute('data-lipless');
   });
 
   it('does not hand focus to a card when the canvas is pressed with the pointer', () => {
@@ -1346,3 +1360,14 @@ describe('resizing a card (017)', () => {
 // mount: React Flow never measures node size under jsdom, so edges (and anything they portal
 // through `EdgeLabelRenderer`, like the segment handle) never render here — see "canvas in flow
 // mode (007)" above, which hits the same limit for the step player's node-only assertions.
+
+describe('the Deck look leaves the file alone (029 SC-001)', () => {
+  it('serialises the demo deck identically before and after it is rendered', () => {
+    const doc = fromJSON(demoDeck);
+    const before = JSON.stringify(toJSON(doc));
+    renderWithEditor(<Canvas />, doc);
+    expect(screen.getAllByTestId('deck-node').length).toBeGreaterThan(0);
+    // Drawing only reads the document: no default size or position is written back.
+    expect(JSON.stringify(toJSON(doc))).toBe(before);
+  });
+});

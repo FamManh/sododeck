@@ -7,6 +7,7 @@ import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { Canvas } from '../canvas';
 import { addComponent } from '../canvas-actions';
+import { cardLayout } from '../card-layout';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
 
 const deck = deckOf({
@@ -82,6 +83,15 @@ describe('CardTitleInput (019 US1)', () => {
     expect(field).toHaveValue('Order fulfilment and inventory');
     await user.keyboard('{Enter}');
     expect(titles()[0]).toBe('Order fulfilment and inventory');
+  });
+
+  it('wears the Deck title style: selection colour and the same line cap as the shown title (029)', () => {
+    renderCanvas();
+    const field = startEdit('a');
+    expect(field.className).toContain('selection:bg-deck-text-selection');
+    // The cap is the lines `cardLayout` gave the title, in the title's 1.28 line height.
+    const lines = cardLayout({ title: 'Service 3', tags: [], childCount: 0 }).titleLines;
+    expect(field.style.maxHeight).toBe(`${String(lines * 1.28)}em`);
   });
 
   it('cancels on Esc: nothing written, focus back on the card, the selection kept', async () => {

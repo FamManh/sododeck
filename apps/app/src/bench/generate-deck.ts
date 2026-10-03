@@ -37,6 +37,9 @@ function mulberry32(seed: number) {
  * between nearby nodes (like real architecture maps), no duplicates or self-loops. With
  * `flows`, also features and flows of contiguous steps (006).
  */
+/** 029 T060: one third of the connectors each, so every line type is drawn. */
+const LINE_TYPES = ['curved', 'elbow', 'straight'] as const;
+
 export function generateBenchDeck(
   nodeCount: number,
   edgeCount: number,
@@ -48,6 +51,7 @@ export function generateBenchDeck(
     views?: boolean;
     routes?: boolean;
     colours?: boolean;
+    lineTypes?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -84,7 +88,13 @@ export function generateBenchDeck(
     const key = a < b ? `${a}-${b}` : `${b}-${a}`;
     if (a === b || seen.has(key)) continue;
     seen.add(key);
-    edges.push({ id: `e${edges.length}`, from: `n${a}`, to: `n${b}` });
+    const shape = options.lineTypes === true ? LINE_TYPES[edges.length % 3] : undefined;
+    edges.push({
+      id: `e${edges.length}`,
+      from: `n${a}`,
+      to: `n${b}`,
+      ...(shape ? { style: { shape } } : {}),
+    });
   }
   if (options.routes === true) addBenchRoutes(edges);
 

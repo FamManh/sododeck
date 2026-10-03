@@ -13,7 +13,9 @@ export const ICON_PATHS: Record<
   | 'fallback'
   | 'rules'
   | 'children'
-  | 'sticky',
+  | 'sticky'
+  | 'chevron'
+  | 'enter',
   IconNode
 > = {
   client: [
@@ -86,5 +88,10 @@ export const ICON_PATHS: Record<
       },
     ],
     ['path', { d: 'M15 3v5a1 1 0 0 0 1 1h5' }],
+  ],
+  chevron: [['path', { d: 'm6 9 6 6 6-6' }]],
+  enter: [
+    ['path', { d: 'M20 4v7a4 4 0 0 1-4 4H4' }],
+    ['path', { d: 'm9 10-5 5 5 5' }],
   ],
 };

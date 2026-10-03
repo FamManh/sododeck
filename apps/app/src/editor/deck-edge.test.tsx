@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DeckEdge } from './deck-edge';
+import { routedPath } from './routing/route-path';
 import type { DeckEdgeData, DeckFlowEdge } from './deck-to-flow';
 import { EMPTY_SELECTION, useUiStore } from '../state/ui-store';
 
@@ -52,6 +53,7 @@ function renderEdge(
       fromTitle: 'A',
       toTitle: 'B',
       focused: false,
+      shape: 'elbow',
       ...data,
     },
   } as unknown as EdgeProps<DeckFlowEdge>;
@@ -101,12 +103,13 @@ describe('DeckEdge', () => {
   });
 
   it.each([
-    ['forward', 1],
-    ['both', 2],
-    ['none', 0],
-  ] as const)('draws end dots for direction %s', (direction, count) => {
+    ['forward', { knobs: 1, arrows: 1 }],
+    ['both', { knobs: 0, arrows: 2 }],
+    ['none', { knobs: 2, arrows: 0 }],
+  ] as const)('draws the end marks for direction %s (029)', (direction, expected) => {
     renderEdge({ direction });
-    expect(screen.queryAllByTestId('edge-dot')).toHaveLength(count);
+    expect(screen.queryAllByTestId('edge-knob')).toHaveLength(expected.knobs);
+    expect(screen.queryAllByTestId('edge-arrow')).toHaveLength(expected.arrows);
   });
 
   it('draws a focus ring for the keyboard-focused edge', () => {
@@ -117,6 +120,48 @@ describe('DeckEdge', () => {
   it('places a popover anchor when selected', () => {
     const { container } = renderEdge({}, true);
     expect(container.querySelector('[data-edge-anchor="e1"]')).not.toBeNull();
+  });
+});
+
+describe('DeckEdge Deck look (029 US1)', () => {
+  const at = (x: number, y: number) => ({ x, y, width: 0, height: 0 });
+
+  it('draws the connector from routedPath, 2 px in the Deck edge colour', () => {
+    const { container } = renderEdge({ direction: 'forward' });
+    const path = container.querySelector('.react-flow__edge-path');
+    const expected = routedPath('elbow', at(0, 0), at(200, 40), ['right', 'left'], 0, {
+      arrowAtStart: false,
+      arrowAtEnd: true,
+    }).path;
+    expect(path?.getAttribute('d')).toBe(expected);
+    expect(path).toHaveStyle({ stroke: 'var(--color-deck-edge)', strokeWidth: '2' });
+  });
+
+  it('stops the line short of the end that carries an arrow, by direction', () => {
+    const none = renderEdge({ direction: 'none' }).container.querySelector(
+      '.react-flow__edge-path',
+    );
+    expect(none?.getAttribute('d')).toBe(
+      routedPath('elbow', at(0, 0), at(200, 40), ['right', 'left'], 0, {
+        arrowAtStart: false,
+        arrowAtEnd: false,
+      }).path,
+    );
+  });
+
+  it('gives a selected connector 2.5 px in Deck Orange', () => {
+    const { container } = renderEdge({}, true);
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
+      stroke: 'var(--color-deck-orange)',
+      strokeWidth: '2.5',
+    });
+  });
+
+  it('colours the end marks like the line', () => {
+    renderEdge({ direction: 'forward' }, true);
+    expect(screen.getByTestId('edge-arrow').closest('g')).toHaveStyle({
+      color: 'var(--color-deck-orange)',
+    });
   });
 });
 
@@ -180,6 +225,35 @@ describe('DeckEdge routing (017 R6)', () => {
     expect(tokenPath).toBe(path?.getAttribute('d'));
     // 82 is the unrouted midpoint x for this vertical pair; the offset moves the segment's x.
     expect(path?.getAttribute('d')).not.toContain('82,');
+  });
+});
+
+describe('DeckEdge line type (029 T044)', () => {
+  const at = (x: number, y: number) => ({ x, y, width: 0, height: 0 });
+  const arrows = { arrowAtStart: false, arrowAtEnd: true };
+
+  it.each(['curved', 'elbow', 'straight'] as const)('draws the %s path', (shape) => {
+    const { container } = renderEdge({ shape });
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toBe(
+      routedPath(shape, at(0, 0), at(200, 40), ['right', 'left'], 0, arrows).path,
+    );
+  });
+
+  it('draws a curved line as a bezier, not right angles', () => {
+    const { container } = renderEdge({ shape: 'curved' });
+    expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toContain('C');
+  });
+
+  it('shows the segment handle only for an elbow line', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    for (const shape of ['curved', 'straight'] as const) {
+      const { unmount } = renderEdge({ routable: true, shape }, true);
+      expect(screen.queryByTestId('segment-handle')).toBeNull();
+      unmount();
+    }
+    renderEdge({ routable: true, shape: 'elbow' }, true);
+    expect(screen.getByTestId('segment-handle')).toBeInTheDocument();
+    useUiStore.setState({ selection: EMPTY_SELECTION });
   });
 });
 

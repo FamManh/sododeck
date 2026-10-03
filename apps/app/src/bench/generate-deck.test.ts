@@ -132,4 +132,12 @@ describe('generateBenchDeck', () => {
       generateBenchDeck(40, 80, 42, { colours: true }),
     );
   });
+
+  it('gives a third of the connectors each line type (029)', () => {
+    const { deck } = generateBenchDeck(40, 90, 42, { lineTypes: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    const count = (shape: string) => deck.edges.filter((e) => e.style?.shape === shape).length;
+    expect([count('curved'), count('elbow'), count('straight')]).toEqual([30, 30, 30]);
+    expect(generateBenchDeck(40, 90, 42).deck.edges.every((e) => e.style === undefined)).toBe(true);
+  });
 });

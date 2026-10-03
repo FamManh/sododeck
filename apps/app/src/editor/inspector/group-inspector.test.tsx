@@ -103,7 +103,7 @@ describe('GroupInspector Frame fields (016 FR-044)', () => {
     await user.clear(width);
     await user.type(width, '10');
     await user.tab();
-    // The member card is 164 wide at full detail, plus 24 px each side.
-    expect(toJSON(doc).groups[0]?.size?.width).toBe(212);
+    // The member card is 184 wide at full detail, plus 24 px each side.
+    expect(toJSON(doc).groups[0]?.size?.width).toBe(232);
   });
 });

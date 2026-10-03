@@ -4,17 +4,17 @@ What component tests assert, by role and accessible name (constitution VI, VII).
 
 ## Action: `connection.lineType`
 
-| Property | Value |
-| --- | --- |
-| Id | `connection.lineType` |
-| Label | "Line type" |
-| Children (radio) | "Curved", "Elbow", "Straight" (icons `Spline`, `CornerDownRight`, `Minus`) |
-| Targets | `connection` (one edge), `connections` (two or more edges, nothing else) — new target kind |
-| Where | Connection toolbar, context menu, drawer |
-| Modes | Edit mode only (hidden in flow mode and read-only views, like the other connection actions) |
-| Checked child | The shared effective shape; none when the selection is mixed |
-| Run | `setEdgeShape(selectedEdgeIds, shape)` in one `oneStep`; sets `lastLineShape` |
-| Announce | "Line type: Elbow" (one), "Line type: Elbow for 3 connectors" (several) |
+| Property         | Value                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| Id               | `connection.lineType`                                                                       |
+| Label            | "Line type"                                                                                 |
+| Children (radio) | "Curved", "Elbow", "Straight" (icons `Spline`, `CornerDownRight`, `Minus`)                  |
+| Targets          | `connection` (one edge), `connections` (two or more edges, nothing else) — new target kind  |
+| Where            | Connection toolbar, context menu, drawer                                                    |
+| Modes            | Edit mode only (hidden in flow mode and read-only views, like the other connection actions) |
+| Checked child    | The shared effective shape; none when the selection is mixed                                |
+| Run              | `setEdgeShape(selectedEdgeIds, shape)` in one `oneStep`; sets `lastLineShape`               |
+| Announce         | "Line type: Elbow" (one), "Line type: Elbow for 3 connectors" (several)                     |
 
 ### Toolbar
 
@@ -40,23 +40,23 @@ What component tests assert, by role and accessible name (constitution VI, VII).
 
 ## Card (`DeckNode`)
 
-| Element | Role / name |
-| --- | --- |
-| Card | `role="group"`, `aria-roledescription="component"`, `aria-label`, `aria-selected`, `aria-description`, `aria-current="step"` — unchanged |
-| Problem badge | Moves into the header and shows ⚠ + count as text; stays `aria-hidden` like today, the problems remain in the card's `aria-description` |
-| Children pill | Text "n inside" + `⏎` hint; keeps `role="img"` `aria-label="n components inside, press Enter to open"` |
-| Tags | `role="list"` `aria-label="Tags"`, `listitem` per tag; at System level the dots keep the list with `aria-label` per tag |
-| Title cut | Tooltip with the full title when cut after 3 lines |
+| Element       | Role / name                                                                                                                              |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Card          | `role="group"`, `aria-roledescription="component"`, `aria-label`, `aria-selected`, `aria-description`, `aria-current="step"` — unchanged |
+| Problem badge | Moves into the header and shows ⚠ + count as text; stays `aria-hidden` like today, the problems remain in the card's `aria-description`  |
+| Children pill | Text "n inside" + `⏎` hint; keeps `role="img"` `aria-label="n components inside, press Enter to open"`                                   |
+| Tags          | `role="list"` `aria-label="Tags"`, `listitem` per tag; at System level the dots keep the list with `aria-label` per tag                  |
+| Title cut     | Tooltip with the full title when cut after 3 lines                                                                                       |
 
 States are exposed as today (`aria-selected` on the selected card); the Deck look adds no state that exists only as colour.
 
 ## Collapsed group (fanned hand)
 
-| Element | Role / name |
-| --- | --- |
-| Front card | `button`, `aria-expanded="false"`, existing `aria-label` ("{title}, collapsed group, n nodes, m edges…") unchanged; Enter or double-click expands |
-| Member tiles | `aria-hidden` |
-| Back sheets | `aria-hidden`, not focusable, no pointer events |
+| Element      | Role / name                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Front card   | `button`, `aria-expanded="false"`, existing `aria-label` ("{title}, collapsed group, n nodes, m edges…") unchanged; Enter or double-click expands |
+| Member tiles | `aria-hidden`                                                                                                                                     |
+| Back sheets  | `aria-hidden`, not focusable, no pointer events                                                                                                   |
 
 ## Expanded group label
 
@@ -64,10 +64,10 @@ States are exposed as today (`aria-selected` on the selected card); the Deck loo
 
 ## Zoom flags on the canvas wrapper
 
-| Attribute | When | Effect |
-| --- | --- | --- |
+| Attribute      | When       | Effect                                   |
+| -------------- | ---------- | ---------------------------------------- |
 | `data-lipless` | zoom < 0.6 | Lip size 0 on every card, frame and hand |
-| `data-level` | existing | Landscape / System painting (R8) |
+| `data-level`   | existing   | Landscape / System painting (R8)         |
 
 ## Reduced motion
 

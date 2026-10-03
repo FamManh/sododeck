@@ -23,20 +23,20 @@ describe('summarizeDeck', () => {
         name: 'Shop',
         nodes: [
           { id: 'a', type: 'service', title: 'A', position: { x: 100, y: 100 } },
-          { id: 'b', type: 'database', title: 'B', position: { x: 936, y: 400 } },
+          { id: 'b', type: 'database', title: 'B', position: { x: 916, y: 400 } },
         ],
       }),
     );
-    // Box: x 100..1100 (1000 wide), y 100..450 (350 high) → scale 1.
+    // Box: x 100..1100 (1000 wide), y 100..476 (376 high) → scale 1.
     expect(summary.name).toBe('Shop');
     expect(summary.nodeCount).toBe(2);
     expect(summary.thumb).toEqual({
       w: 1000,
-      h: 350,
-      node: [164, 50],
+      h: 376,
+      node: [184, 76],
       nodes: [
         [0, 0, 'service'],
-        [836, 300, 'database'],
+        [816, 300, 'database'],
       ],
       groups: [],
     });
@@ -67,13 +67,13 @@ describe('summarizeDeck', () => {
             position: { x: 0, y: 0 },
             size: { width: 300, height: 100 },
           },
-          { id: 'b', type: 'database', title: 'B', position: { x: 836, y: 0 } },
+          { id: 'b', type: 'database', title: 'B', position: { x: 816, y: 0 } },
         ],
       }),
     );
-    // Box: x 0..1000 (836 + default width 164), scale 1.
+    // Box: x 0..1000 (816 + default width 184), scale 1.
     expect(summary.thumb?.nodes[0]).toEqual([0, 0, 'service', 300, 100]);
-    expect(summary.thumb?.nodes[1]).toEqual([836, 0, 'database']);
+    expect(summary.thumb?.nodes[1]).toEqual([816, 0, 'database']);
   });
 
   it('counts edges and flows and keeps at most maxNodes shapes', () => {

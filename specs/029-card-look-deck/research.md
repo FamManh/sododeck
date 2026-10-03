@@ -104,12 +104,12 @@ Decisions behind [plan.md](plan.md). Each entry gives the decision, why, and wha
 
 ## R8. What each zoom level paints (frame 123, §g-58, §g-59, §g-63)
 
-| Level (zoom) | Painted inside the same box |
-| --- | --- |
-| Landscape (≤ 45 %) | Type icon centred on the card fill (Surface when uncoloured), no text, no handles |
-| System (45–90 %) | Tile + title; tags as 6px dots (colour `dot`, neutral `--sd-deck-dot-neutral` uncoloured) in the tag block |
-| Container (90–150 %) | + type name, description, problem / pin badges, tag pills |
-| Component (> 150 %) | Same as Container (fields arrive with 032) |
+| Level (zoom)         | Painted inside the same box                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Landscape (≤ 45 %)   | Type icon centred on the card fill (Surface when uncoloured), no text, no handles                          |
+| System (45–90 %)     | Tile + title; tags as 6px dots (colour `dot`, neutral `--sd-deck-dot-neutral` uncoloured) in the tag block |
+| Container (90–150 %) | + type name, description, problem / pin badges, tag pills                                                  |
+| Component (> 150 %)  | Same as Container (fields arrive with 032)                                                                 |
 
 - **Lip below 60 %**: a single boolean selector `zoom < 0.6` sets `data-lipless` on the canvas wrapper, read by CSS, like the existing `data-tiny-cards` flag (019 R4: cards never subscribe to the zoom). No card re-renders when crossing 60 %.
 - The level boundaries and hysteresis in `levels.ts` do not change.

@@ -94,6 +94,37 @@ describe('setEdgeRoute (017)', () => {
     expect(getObject(doc, 'edges', 'e')?.route).toBeUndefined();
   });
 
+  it('pins elbow before clearing an offset that made the edge elbow (029)', () => {
+    const doc = fromJSON({
+      ...file,
+      edges: [{ id: 'e', from: 'a', to: 'b', route: { offset: 40 } }],
+    });
+    const editor = createEditor(doc);
+    editor.setEdgeRoute('e', null);
+    expect(getObject(doc, 'edges', 'e')?.style).toEqual({ shape: 'elbow' });
+    expect(getObject(doc, 'edges', 'e')?.route).toBeUndefined();
+    editor.undo();
+    expect(getObject(doc, 'edges', 'e')?.style).toBeUndefined();
+    expect(getObject(doc, 'edges', 'e')?.route).toEqual({ offset: 40 });
+  });
+
+  it('pins elbow when the offset alone is dropped, and keeps an explicit shape (029)', () => {
+    const { doc, editor } = setup();
+    editor.setEdgeRoute('e', { fromSide: 'right', offset: 40 });
+    editor.setEdgeRoute('e', { offset: 0 });
+    expect(getObject(doc, 'edges', 'e')?.style).toEqual({ shape: 'elbow' });
+    editor.setEdgeShape(['e'], 'straight');
+    editor.setEdgeRoute('e', null);
+    expect(getObject(doc, 'edges', 'e')?.style).toEqual({ shape: 'straight' });
+  });
+
+  it('does not pin when the edge was not elbow (029)', () => {
+    const { doc, editor } = setup();
+    editor.setEdgeRoute('e', { fromSide: 'right' });
+    editor.setEdgeRoute('e', null);
+    expect(getObject(doc, 'edges', 'e')?.style).toBeUndefined();
+  });
+
   it('is one undo step', () => {
     const { doc, editor } = setup();
     editor.setEdgeRoute('e', { fromSide: 'right' });

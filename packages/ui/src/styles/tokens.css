@@ -39,6 +39,7 @@
   /* Lines */
   --sd-hairline: #ecece8;
   --sd-border: #deded8;
+  --sd-border-strong: #cfcfc7;
   --sd-edge: #c9c9c2;
 
   /* Text */
@@ -73,6 +74,60 @@
   --sd-card-pink-stroke: #c65b93;
   --sd-card-slate-fill: #e6ecf3;
   --sd-card-slate-stroke: #667383;
+
+  /* Deck chip, ink and dot per named colour (029, DESIGN.md Extended palette). */
+  --sd-card-red-chip: #ffd3cc;
+  --sd-card-red-ink: #7e302a;
+  --sd-card-red-dot: #ca564d;
+  --sd-card-orange-chip: #ffd8ba;
+  --sd-card-orange-ink: #793900;
+  --sd-card-orange-dot: #c26300;
+  --sd-card-amber-chip: #fadfb3;
+  --sd-card-amber-ink: #6c4400;
+  --sd-card-amber-dot: #a46a00;
+  --sd-card-yellow-chip: #ede5b3;
+  --sd-card-yellow-ink: #5c4d00;
+  --sd-card-yellow-dot: #8d7700;
+  --sd-card-lime-chip: #d5ecbf;
+  --sd-card-lime-ink: #385805;
+  --sd-card-lime-dot: #59880a;
+  --sd-card-green-chip: #c4f0ce;
+  --sd-card-green-ink: #015d2d;
+  --sd-card-green-dot: #1a9951;
+  --sd-card-teal-chip: #b3f2e6;
+  --sd-card-teal-ink: #005f52;
+  --sd-card-teal-dot: #009b87;
+  --sd-card-cyan-chip: #b2effe;
+  --sd-card-cyan-ink: #005a72;
+  --sd-card-cyan-dot: #0094b7;
+  --sd-card-blue-chip: #c6e6ff;
+  --sd-card-blue-ink: #1d4d87;
+  --sd-card-blue-dot: #3a81d7;
+  --sd-card-indigo-chip: #d8e0ff;
+  --sd-card-indigo-ink: #404488;
+  --sd-card-indigo-dot: #6d74d8;
+  --sd-card-violet-chip: #ebd9ff;
+  --sd-card-violet-ink: #593c7e;
+  --sd-card-violet-dot: #9267ca;
+  --sd-card-pink-chip: #ffd2e9;
+  --sd-card-pink-ink: #772f55;
+  --sd-card-pink-dot: #c0558d;
+  --sd-card-slate-chip: #dde4ed;
+  --sd-card-slate-ink: #444e5a;
+  --sd-card-slate-dot: #738294;
+
+  /* Deck look (029): connector, orange accents, neutral dot. */
+  --sd-deck-edge: #b4b4ab;
+  --sd-deck-orange: var(--sd-primary);
+  --sd-deck-orange-soft: #fdeee4;
+  --sd-deck-orange-ink: #b3480c;
+  --sd-deck-text-selection: #fbd9c3;
+  --sd-deck-dot-neutral: #a5a59d;
+  /* Lip depth (rest, hover, drag) and the opacity of a dimmed card; same in both themes. */
+  --sd-deck-dim: 0.22;
+  --sd-deck-lip: 3px;
+  --sd-deck-lip-hover: 5px;
+  --sd-deck-lip-drag: 6px;
   /* Text on a custom (non-named) fill: same in both themes (readableText picks between them). */
   --sd-card-text-dark: #1c1c1a;
   --sd-card-text-light: #ffffff;
@@ -134,6 +189,7 @@
 
   --sd-hairline: #262624;
   --sd-border: #35352f;
+  --sd-border-strong: #45453f;
   --sd-edge: #3d3d38;
 
   --sd-ink: #ededea;
@@ -167,6 +223,55 @@
   --sd-card-pink-stroke: #e181b0;
   --sd-card-slate-fill: #292e35;
   --sd-card-slate-stroke: #8693a5;
+
+  /* Deck chip, ink and dot per named colour (029, DESIGN.md Extended palette). */
+  --sd-card-red-chip: #69322d;
+  --sd-card-red-ink: #ffcdc5;
+  --sd-card-red-dot: #f2897e;
+  --sd-card-orange-chip: #653815;
+  --sd-card-orange-ink: #ffd3b2;
+  --sd-card-orange-dot: #e99355;
+  --sd-card-amber-chip: #5b3f01;
+  --sd-card-amber-ink: #f7daaa;
+  --sd-card-amber-dot: #d5a13c;
+  --sd-card-yellow-chip: #4f4502;
+  --sd-card-yellow-ink: #e8e0aa;
+  --sd-card-yellow-dot: #beac3d;
+  --sd-card-lime-chip: #364d1b;
+  --sd-card-lime-ink: #cfe8b7;
+  --sd-card-lime-dot: #8fbb5f;
+  --sd-card-green-chip: #1d512f;
+  --sd-card-green-ink: #bcecc8;
+  --sd-card-green-dot: #65c281;
+  --sd-card-teal-chip: #005248;
+  --sd-card-teal-ink: #aaeee1;
+  --sd-card-teal-dot: #15c5b1;
+  --sd-card-cyan-chip: #004f60;
+  --sd-card-cyan-ink: #a8ebfb;
+  --sd-card-cyan-dot: #07bfde;
+  --sd-card-blue-chip: #25466f;
+  --sd-card-blue-ink: #bfe1ff;
+  --sd-card-blue-dot: #70adfb;
+  --sd-card-indigo-chip: #3b406f;
+  --sd-card-indigo-ink: #d2daff;
+  --sd-card-indigo-dot: #98a2fc;
+  --sd-card-violet-chip: #4d3a68;
+  --sd-card-violet-ink: #e6d4ff;
+  --sd-card-violet-dot: #ba96ef;
+  --sd-card-pink-chip: #64324b;
+  --sd-card-pink-ink: #ffcce5;
+  --sd-card-pink-dot: #e887b6;
+  --sd-card-slate-chip: #3f464f;
+  --sd-card-slate-ink: #d7dfe8;
+  --sd-card-slate-dot: #9facbd;
+
+  /* Deck look (029): connector, orange accents, neutral dot. */
+  --sd-deck-edge: #5a5a53;
+  --sd-deck-orange: var(--sd-primary);
+  --sd-deck-orange-soft: #3a2214;
+  --sd-deck-orange-ink: #ffb285;
+  --sd-deck-text-selection: #6a3315;
+  --sd-deck-dot-neutral: #6f6f67;
   --sd-card-text-dark: #1c1c1a;
   --sd-card-text-light: #ffffff;
 

@@ -146,6 +146,25 @@
       "type": "string",
       "enum": ["top", "right", "bottom", "left"]
     },
+    "EdgeShape": {
+      "title": "EdgeShape",
+      "description": "Line type of a connector: `curved`, `elbow` (right-angle segments) or `straight`.",
+      "type": "string",
+      "enum": ["curved", "elbow", "straight"]
+    },
+    "EdgeStyle": {
+      "title": "EdgeStyle",
+      "description": "How a connector line looks. At least one key is set; absent `style` means the default look.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "shape": {
+          "$ref": "#/$defs/EdgeShape",
+          "description": "Line type. When absent, a connector with a route `offset` is `elbow`, any other is `curved`."
+        }
+      }
+    },
     "EdgeRoute": {
       "title": "EdgeRoute",
       "description": "How a connector is drawn between its two cards. All fields optional; an empty object is valid.",
@@ -384,6 +403,10 @@
         "route": {
           "$ref": "#/$defs/EdgeRoute",
           "description": "Pinned sides and middle-segment offset, shared by every view. When absent, the connector is routed automatically."
+        },
+        "style": {
+          "$ref": "#/$defs/EdgeStyle",
+          "description": "Line style of the connector, shared by every view. When absent, the default look."
         }
       }
     },
