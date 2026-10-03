@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { contrastRatio } from '../src/lib/contrast';
+import { contrastRatio, readableText } from '../src/lib/contrast';
 
 describe('contrastRatio', () => {
   it('is 21 for white on black', () => {
@@ -148,6 +148,54 @@ describe.each([
   it.each(APPROVED_EXCEPTIONS)('%s on %s is a known, approved exception (< 3:1)', (fg, bg) => {
     // If a token change fixes one of these, remove it from the list.
     expect(ratio(theme, [fg, bg])).toBeLessThan(3);
+  });
+});
+
+// ── Tag chips on a custom colour (033) ──
+
+/** Custom tag colours: primaries (pure red is in the band, so a darker red stands in), near-white, near-black, mid-greys, pastels; none in the 0.183–0.227 band. */
+const CUSTOM_TAG_COLOURS = [
+  '#cc0000',
+  '#00ff00',
+  '#0000ff',
+  '#ffff00',
+  '#00ffff',
+  '#ff00ff',
+  '#ffffff',
+  '#fafafa',
+  '#f4f4f1',
+  '#050505',
+  '#000000',
+  '#1c1c1a',
+  '#1f2a44',
+  '#6a6a6a',
+  '#999999',
+  '#bbbbbb',
+  '#cccccc',
+  '#7a3cff',
+  '#f2661c',
+  '#0b6e4f',
+  '#e3d7ff',
+  '#fff59d',
+  '#8b0000',
+  '#ffc0cb',
+];
+
+describe('tag ink on a custom colour (033)', () => {
+  it('has 24 samples', () => {
+    expect(CUSTOM_TAG_COLOURS).toHaveLength(24);
+  });
+
+  it.each(CUSTOM_TAG_COLOURS)('the readable ink on %s is at least 4.5:1', (hex) => {
+    const { text, ratio: chosen, readable } = readableText(hex);
+    const ink = text === 'dark' ? '#1c1c1a' : '#ffffff';
+    expect(readable).toBe(true);
+    expect(contrastRatio(ink, hex)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(ink, hex)).toBeCloseTo(chosen, 5);
+  });
+
+  it('flags a colour in the band where neither ink reaches 4.5:1, so the editor can warn (020 FR-026)', () => {
+    expect(readableText('#808080').readable).toBe(false);
   });
 });
 

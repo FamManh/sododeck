@@ -651,3 +651,33 @@ describe('connector line type (029)', () => {
     );
   });
 });
+
+describe('tag colours (033)', () => {
+  it('keeps two tabs colouring different tags, and a recolour next to a clear', () => {
+    bothOrders(
+      base,
+      ({ editor }) => {
+        editor.setTagColor('pci', 'violet');
+      },
+      ({ editor }) => {
+        editor.setTagColor('lan', 'red');
+      },
+      (a) => {
+        expect(toJSON(a.doc).tagColors).toEqual({ pci: 'violet', lan: 'red' });
+      },
+    );
+    const withColours: SododeckFile = { ...base, tagColors: { pci: 'violet', lan: 'red' } };
+    bothOrders(
+      withColours,
+      ({ editor }) => {
+        editor.setTagColor('pci', 'blue');
+      },
+      ({ editor }) => {
+        editor.setTagColor('lan', null);
+      },
+      (a) => {
+        expect(toJSON(a.doc).tagColors).toEqual({ pci: 'blue' });
+      },
+    );
+  });
+});

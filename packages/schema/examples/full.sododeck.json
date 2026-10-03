@@ -5,7 +5,7 @@
   "description": "Last-mile delivery: ordering, dispatch and payment. Uses every object type and field of format v1.",
   "tags": ["logistics", "example"],
   "swatches": ["#7a3cff", "#1f2a44"],
-  "tagColors": { "PCI": "violet", "Lan": "#7a3cff" },
+  "tagColors": { "Lan": "#7a3cff", "PCI": "violet" },
   "nodes": [
     {
       "id": "payments-provider",

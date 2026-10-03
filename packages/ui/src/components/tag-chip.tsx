@@ -20,6 +20,10 @@ type TagChipProps = Omit<React.ComponentProps<'span'>, 'children'> & {
   /** Makes the label a button (e.g. "Add <tag> to all"); needs `activateLabel`. */
   onActivate?: () => void;
   activateLabel?: string;
+  /** A tag's colour (033): CSS values, tokens or a hex. Absent keeps the neutral Surface 2 chip. */
+  colour?: { chip: string; ink: string };
+  /** `deck` is the 21 px chip of the drawer tag row (DESIGN.md `tag-chip`); default is 26 px. */
+  size?: 'default' | 'deck';
 };
 
 /** Pill with a label and an optional remove button (DESIGN.md tag chip). */
@@ -32,6 +36,9 @@ function TagChip({
   count,
   onActivate,
   activateLabel,
+  colour,
+  size = 'default',
+  style,
   className,
   ...props
 }: TagChipProps) {
@@ -40,17 +47,33 @@ function TagChip({
       <span className="truncate" title={label}>
         {label}
       </span>
-      {count !== undefined && (
-        <span className="shrink-0 text-caption text-ink-secondary">{count}</span>
-      )}
+      {count !== undefined && <span className="shrink-0 text-caption">{count}</span>}
     </>
   );
   return (
     <span
       data-slot="tag-chip"
+      style={
+        colour === undefined
+          ? style
+          : ({
+              '--tag-chip': colour.chip,
+              '--tag-ink': colour.ink,
+              ...style,
+            } as React.CSSProperties)
+      }
       className={cn(
-        'inline-flex h-6.5 max-w-48 items-center gap-1 rounded-full border border-transparent bg-surface-2 pr-1 pl-2.5 text-body-sm text-ink-secondary',
-        partial && 'border-dashed border-ink-muted bg-transparent',
+        'inline-flex max-w-48 items-center gap-1 rounded-full border border-transparent pr-1 pl-2.5',
+        size === 'deck' ? 'h-[21px] text-[10.5px] leading-none font-medium' : 'h-6.5 text-body-sm',
+        colour === undefined
+          ? 'bg-surface-2 text-ink-secondary'
+          : 'bg-(--tag-chip) text-(--tag-ink)',
+        // Dashed means "on some"; the border follows the ink so it reads on the tint, and the
+        // fill stays so a coloured tag keeps its colour.
+        partial &&
+          (colour === undefined
+            ? 'border-dashed border-ink-muted bg-transparent'
+            : 'border-dashed border-(--tag-ink)'),
         !onRemove && 'pr-2.5',
         className,
       )}

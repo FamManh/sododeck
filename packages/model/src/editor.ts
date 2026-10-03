@@ -3,7 +3,7 @@
  * I): a transaction origin, a Y.UndoManager, the gesture depth, the last edited object and the id
  * generator. Undo covers only this editor's own transactions (research R5).
  */
-import type { EdgeShape, Id } from '@sododeck/schema';
+import type { ColorRef, EdgeShape, Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import type {
@@ -50,6 +50,7 @@ import { editorOrigins, type EditContext } from './ops/context';
 import { updateMeta } from './ops/meta';
 import { setStyle, type StyleChannel, type StyleTargets } from './ops/style';
 import { addSwatch, removeSwatch } from './ops/swatches';
+import { setTagColor } from './ops/tags';
 import {
   addRule,
   addRuleColumn,
@@ -284,6 +285,13 @@ export interface DeckEditor {
    * never touches any node or group's stored `style`.
    */
   removeSwatch(hex: string): void;
+  /**
+   * Sets or clears (`null`) the colour of a tag for the whole deck (033): `meta.tagColors`, keyed
+   * by the tag's existing spelling (a new key keeps the case given). One undo step; no change
+   * event when nothing changes. `invalid` for an empty tag or a colour that is not a card colour
+   * name or `#rrggbb`.
+   */
+  setTagColor(tag: string, color: ColorRef | null): void;
 
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
@@ -578,6 +586,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     addSwatch: (hex) => {
       addSwatch(ctx, hex);
+    },
+    setTagColor: (tag, color) => {
+      setTagColor(ctx, tag, color);
     },
     removeSwatch: (hex) => {
       removeSwatch(ctx, hex);

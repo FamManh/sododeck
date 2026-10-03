@@ -89,7 +89,7 @@ const perType: [string, SododeckFile][] = [
     },
   ],
   [
-    'tag colours: named, hex, mixed-case keys in file order (033)',
+    'tag colours: named, hex, mixed-case keys, sorted by key (033)',
     {
       $schema,
       version,
@@ -574,7 +574,7 @@ const cases: [string, SododeckFile][] = [
 ];
 
 describe('round-trip (US2 AS1, FR-022/023)', () => {
-  it('writes tagColors right after swatches, keeps its entry order, and drops an empty map (033)', () => {
+  it('writes tagColors right after swatches, sorted by tag key, and drops an empty map (033)', () => {
     const colored = toJSON(
       fromJSON({
         ...empty,
@@ -585,7 +585,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
     );
     const keys = Object.keys(colored);
     expect(keys.indexOf('tagColors')).toBe(keys.indexOf('swatches') + 1);
-    expect(Object.keys(colored.tagColors ?? {})).toEqual(['b', 'A']);
+    expect(Object.keys(colored.tagColors ?? {})).toEqual(['A', 'b']);
     expect(toJSON(fromJSON({ ...empty, tagColors: {} }))).not.toHaveProperty('tagColors');
     expect(toJSON(fromJSON(empty))).not.toHaveProperty('tagColors');
   });

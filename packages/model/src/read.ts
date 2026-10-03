@@ -7,6 +7,7 @@
 import type { Id, Rule, RuleRow, SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
+import { compareTags } from './tags';
 import { fromY, type YObject } from './convert';
 import {
   childList,
@@ -124,8 +125,14 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   // `swatches` is always stored (possibly empty), but only ever emitted non-empty (020).
   const swatches = swatchesArray(doc).toArray();
   if (swatches.length > 0) out.swatches = swatches;
-  // Same for `tagColors` (033): stored always, emitted only with entries, in insertion order.
+  // Same for `tagColors` (033): stored always, emitted only with entries. Sorted by tag key, not
+  // in map order: after two tabs add entries concurrently each replica holds them in its own
+  // arrival order, and every replica must read (and write out) the same deck (036 guarantee 1).
   const tagColors = tagColorsMap(doc);
-  if (tagColors.size > 0) out.tagColors = Object.fromEntries(tagColors.entries());
+  if (tagColors.size > 0) {
+    out.tagColors = Object.fromEntries(
+      [...tagColors.entries()].sort(([a], [b]) => compareTags(a, b)),
+    );
+  }
   return out;
 }
