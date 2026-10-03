@@ -1,5 +1,5 @@
 import { createEditor, serializeDeck, toJSON } from '@sododeck/model';
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
@@ -75,6 +75,29 @@ describe('Inspector', () => {
     await user.clear(label);
     await user.keyboard('{Enter}');
     expect(toJSON(doc).edges[0]?.label).toBeUndefined();
+  });
+
+  it('sets the line type of several connections as one undo step (029 T043)', async () => {
+    const view = renderWithEditor(<Harness />, {
+      ...deck,
+      edges: [
+        { id: 'e1', from: 'svc', to: 'db', label: 'insert' },
+        { id: 'e2', from: 'db', to: 'svc', style: { shape: 'straight' } },
+      ],
+    });
+    act(() => {
+      useUiStore.getState().select({ edges: ['e1', 'e2'] });
+    });
+    expect(screen.getByRole('heading', { name: '2 connectors' })).toBeInTheDocument();
+    const group = screen.getByRole('radiogroup', { name: 'Line type' });
+    expect(within(group).queryByRole('radio', { checked: true })).toBeNull();
+    await userEvent.setup().click(within(group).getByRole('radio', { name: 'Elbow' }));
+    expect(toJSON(view.doc).edges.map((e) => e.style?.shape)).toEqual(['elbow', 'elbow']);
+    expect(within(group).getByRole('radio', { name: 'Elbow' })).toBeChecked();
+    act(() => {
+      view.editor().undo();
+    });
+    expect(toJSON(view.doc).edges.map((e) => e.style?.shape)).toEqual([undefined, 'straight']);
   });
 
   it('edits the deck name when nothing is selected', async () => {

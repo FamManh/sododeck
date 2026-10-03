@@ -1,3 +1,4 @@
+import { edgeShape } from '@sododeck/model';
 import type { Edge, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
@@ -14,6 +15,7 @@ import { connectionCheck, REFUSAL_TEXT } from '../connection-rules';
 import { FieldEdit } from '../field-edit';
 import { DIRECTIONS, PROTOCOLS, type Direction } from '../fields/edge-choices';
 import { FieldLabel } from '../fields/field-label';
+import { LineTypeField } from '../fields/line-type-field';
 import { LinksField } from '../fields/links-field';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
@@ -203,7 +205,10 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
             }}
           />
         </PanelSection>
-        <RouteFields deck={deck} edge={edge} />
+        <PanelSection label="Line">
+          <LineTypeField edges={[edge]} />
+        </PanelSection>
+        {edgeShape(edge) === 'elbow' && <RouteFields deck={deck} edge={edge} />}
         <PanelSection label="Used in flows">
           {uses.length === 0 ? (
             <p className="text-body-sm text-ink-secondary">Not used in any flow</p>

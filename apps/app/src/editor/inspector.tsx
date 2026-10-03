@@ -10,6 +10,7 @@ import { BulkInspector } from './inspector/bulk-inspector';
 import { DeckInspector } from './inspector/deck-inspector';
 import { EdgeInspector } from './inspector/edge-inspector';
 import { GroupInspector } from './inspector/group-inspector';
+import { ConnectorsInspector } from './inspector/connectors-inspector';
 import { InspectorFrame } from './inspector/inspector-frame';
 import { NodeInspector } from './inspector/node-inspector';
 import { StickyInspector } from './inspector/sticky-inspector';
@@ -60,6 +61,9 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
   }
   if (nodes.length > 0) {
     return <BulkInspector deck={deck} nodes={nodes} edgeIds={edges.map((e) => e.id)} />;
+  }
+  if (edges.length > 1 && nodes.length + groups.length + stickies.length === 0) {
+    return <ConnectorsInspector edges={edges} />;
   }
   const total = edges.length + stickies.length;
   const heading = total === 1 ? '1 item selected' : `${String(total)} items selected`;

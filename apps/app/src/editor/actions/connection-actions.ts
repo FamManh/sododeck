@@ -1,10 +1,9 @@
-import { edgeShape } from '@sododeck/model';
-import type { Edge, EdgeShape } from '@sododeck/schema';
-import { ArrowRightLeft, Cable, CornerDownRight, Minus, Spline, Type } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import type { Edge } from '@sododeck/schema';
+import { ArrowRightLeft, Cable, Spline, Type } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
 import { DIRECTIONS, PROTOCOLS, protocolLabel } from '../fields/edge-choices';
+import { applyLineType, LINE_TYPES, lineTypeLabel, sharedLineShape } from '../fields/line-type';
 import { oneStep } from '../fields/one-step';
 import type { Action, ActionContext } from './types';
 
@@ -24,40 +23,9 @@ function setEdge(
   useUiStore.getState().announce(said);
 }
 
-const LINE_TYPES: readonly { value: EdgeShape; label: string; icon: LucideIcon }[] = [
-  { value: 'curved', label: 'Curved', icon: Spline },
-  { value: 'elbow', label: 'Elbow', icon: CornerDownRight },
-  { value: 'straight', label: 'Straight', icon: Minus },
-];
-
-const lineLabel = (shape: EdgeShape) => LINE_TYPES.find((t) => t.value === shape)?.label ?? shape;
-
 /** The selected connections (one or several), in selection order, skipping stale ids. */
-function selectedEdges(ctx: ActionContext): Edge[] {
-  return ctx.selection.edges.flatMap((id) => ctx.deck.edges.filter((edge) => edge.id === id));
-}
-
-/** The shape every selected connection shares, or `null` when they differ (or none). */
-export function sharedShape(ctx: ActionContext): EdgeShape | null {
-  const shapes = new Set(selectedEdges(ctx).map(edgeShape));
-  const [only] = shapes;
-  return shapes.size === 1 && only !== undefined ? only : null;
-}
-
-function setLineType(ctx: ActionContext, shape: EdgeShape): void {
-  const ids = selectedEdges(ctx).map((edge) => edge.id);
-  if (ids.length === 0) return;
-  oneStep(ctx.editor, () => {
-    ctx.editor.setEdgeShape(ids, shape);
-  });
-  const ui = useUiStore.getState();
-  ui.setLastLineShape(shape);
-  ui.announce(
-    ids.length === 1
-      ? `Line type: ${lineLabel(shape)}`
-      : `Line type: ${lineLabel(shape)} for ${String(ids.length)} connectors`,
-  );
-}
+const selectedEdges = (ctx: ActionContext): Edge[] =>
+  ctx.selection.edges.flatMap((id) => ctx.deck.edges.filter((edge) => edge.id === id));
 
 /** Edit label, Protocol ▸ and Direction ▸ on one connection (019 FR-022, FR-031). */
 export const CONNECTION_ACTIONS: readonly Action[] = [
@@ -130,8 +98,8 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
     id: 'connection.lineType',
     label: 'Line type',
     toolbarLabel: (ctx) => {
-      const shape = sharedShape(ctx);
-      return `Line type: ${shape === null ? 'mixed' : lineLabel(shape)}`;
+      const shape = sharedLineShape(selectedEdges(ctx));
+      return `Line type: ${shape === null ? 'mixed' : lineTypeLabel(shape)}`;
     },
     icon: Spline,
     section: 'edit',
@@ -147,9 +115,13 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
         icon,
         section: 'edit',
         where: {},
-        checked: (ctx) => sharedShape(ctx) === value,
+        checked: (ctx) => sharedLineShape(selectedEdges(ctx)) === value,
         run: (ctx) => {
-          setLineType(ctx, value);
+          applyLineType(
+            ctx.editor,
+            selectedEdges(ctx).map((edge) => edge.id),
+            value,
+          );
         },
       })),
   },

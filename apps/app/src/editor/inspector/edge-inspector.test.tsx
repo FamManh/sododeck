@@ -115,7 +115,55 @@ describe('EdgeInspector (story 1, FR-009)', () => {
   });
 });
 
+describe('EdgeInspector Line section (029 T043)', () => {
+  const lineGroup = () => screen.getByRole('radiogroup', { name: 'Line type' });
+
+  it('shows the effective line type and sets it in one undo step', async () => {
+    const { user, doc, editor, ui } = setup();
+    expect(within(lineGroup()).getByRole('radio', { name: 'Curved' })).toBeChecked();
+    await user.click(within(lineGroup()).getByRole('radio', { name: 'Elbow' }));
+    expect(edge(doc)?.style).toEqual({ shape: 'elbow' });
+    expect(within(lineGroup()).getByRole('radio', { name: 'Elbow' })).toBeChecked();
+    expect(ui().lastLineShape).toBe('elbow');
+    act(() => {
+      editor().undo();
+    });
+    expect(edge(doc)?.style).toBeUndefined();
+  });
+
+  it('shows Route fields only for an elbow line', async () => {
+    const { user } = setup();
+    expect(screen.queryByRole('combobox', { name: 'From side' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reset route' })).toBeNull();
+    await user.click(within(lineGroup()).getByRole('radio', { name: 'Elbow' }));
+    expect(screen.getByRole('combobox', { name: 'From side' })).toBeInTheDocument();
+    await user.click(within(lineGroup()).getByRole('radio', { name: 'Straight' }));
+    expect(screen.queryByRole('combobox', { name: 'From side' })).toBeNull();
+  });
+
+  it('reads a pre-029 offset as elbow', () => {
+    renderInspector(
+      {
+        ...inspectorDeck,
+        edges: inspectorDeck.edges.map((e) => (e.id === 'op' ? { ...e, route: { offset: 8 } } : e)),
+      },
+      { edges: ['op'] },
+    );
+    expect(within(lineGroup()).getByRole('radio', { name: 'Elbow' })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'From side' })).toBeInTheDocument();
+  });
+});
+
+const elbowDeck = {
+  ...inspectorDeck,
+  edges: inspectorDeck.edges.map((e) =>
+    e.id === 'op' ? { ...e, style: { shape: 'elbow' as const } } : e,
+  ),
+};
+
 describe('EdgeInspector Route fields (017 T050)', () => {
+  const setup = () => renderInspector(elbowDeck, { edges: ['op'] });
+
   it('pins From/To side by picking, each one undo step; "Auto" clears', async () => {
     const { user, doc, editor } = setup();
     const fromSide = screen.getByRole('combobox', { name: 'From side' });
@@ -160,8 +208,8 @@ describe('EdgeInspector Route fields (017 T050)', () => {
 
   it('disables the offset with a hint when the sides share no movable segment', () => {
     const routedDeck = {
-      ...inspectorDeck,
-      edges: inspectorDeck.edges.map((e) =>
+      ...elbowDeck,
+      edges: elbowDeck.edges.map((e) =>
         e.id === 'op' ? { ...e, route: { fromSide: 'top' as const, toSide: 'left' as const } } : e,
       ),
     };
@@ -173,8 +221,8 @@ describe('EdgeInspector Route fields (017 T050)', () => {
 
   it('resets the route in one step, disabled without one, and announces', async () => {
     const routedDeck = {
-      ...inspectorDeck,
-      edges: inspectorDeck.edges.map((e) =>
+      ...elbowDeck,
+      edges: elbowDeck.edges.map((e) =>
         e.id === 'op'
           ? { ...e, route: { fromSide: 'right' as const, toSide: 'left' as const, offset: 12 } }
           : e,
