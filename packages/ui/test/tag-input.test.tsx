@@ -41,9 +41,22 @@ describe('TagInput', () => {
     render(<Harness spy={spy} />);
     await userEvent.type(screen.getByRole('combobox', { name: 'Add tag' }), 'PII{Enter}{Enter}');
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
-    expect(screen.getByText('pii')).toBeInTheDocument();
+    expect(screen.getByText('PII')).toBeInTheDocument();
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy).toHaveBeenCalledWith(['pii']);
+    expect(spy).toHaveBeenCalledWith(['PII']);
+  });
+
+  it('does not add a second spelling of a tag it has, and leaves it out of the suggestions (033)', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={['PCI']} suggestions={['pci', 'Lan']} />);
+    const field = screen.getByRole('combobox', { name: 'Add tag' });
+    await user.type(field, 'pci{Enter}');
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    await user.click(field);
+    const options = within(screen.getByRole('listbox', { name: 'Tag suggestions' })).getAllByRole(
+      'option',
+    );
+    expect(options.map((o) => o.textContent)).toEqual(['Lan']);
   });
 
   it('clears the field after adding', async () => {

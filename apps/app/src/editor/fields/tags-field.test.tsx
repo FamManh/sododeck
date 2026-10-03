@@ -28,17 +28,29 @@ function setup() {
 }
 
 describe('TagsField (FR-005)', () => {
-  it('adds a normalized tag once, announces it, and each add is one undo step', async () => {
+  it('adds a trimmed tag once in the case typed, announces it, and each add is one undo step', async () => {
     const { user, doc, editor } = setup();
     const add = screen.getByRole('combobox', { name: 'Add tag' });
-    await user.type(add, ' PCI {Enter}');
-    expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci']);
-    await user.type(add, 'Critical{Enter}');
-    expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci', 'critical']);
-    expect(useUiStore.getState().announcement.text).toBe('critical added');
+    await user.type(add, ' Critical {Enter}');
+    expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci', 'Critical']);
+    await user.type(add, 'Audit{Enter}');
+    expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci', 'Critical', 'Audit']);
+    expect(useUiStore.getState().announcement.text).toBe('Audit added');
     act(() => {
       editor().undo();
     });
+    expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci', 'Critical']);
+  });
+
+  it('writes the spelling the deck already uses: "PRICING" becomes "pricing" (033)', async () => {
+    const { user, doc } = setup();
+    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'PRICING{Enter}');
+    expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci', 'pricing']);
+  });
+
+  it('does not add a second spelling of a tag the card already has', async () => {
+    const { user, doc } = setup();
+    await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'PCI{Enter}');
     expect(toJSON(doc).nodes[0]?.tags).toEqual(['pci']);
   });
 

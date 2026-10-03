@@ -79,7 +79,7 @@ describe('DeckInspector (story 2, FR-012)', () => {
     await user.type(screen.getByRole('textbox', { name: 'Description' }), 'Last mile.');
     await user.tab();
     await user.type(screen.getByRole('combobox', { name: 'Add tag' }), 'Logistics{Enter}');
-    expect(toJSON(doc)).toMatchObject({ description: 'Last mile.', tags: ['logistics'] });
+    expect(toJSON(doc)).toMatchObject({ description: 'Last mile.', tags: ['Logistics'] });
     act(() => {
       editor().undo();
     });

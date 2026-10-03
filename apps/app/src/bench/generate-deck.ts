@@ -71,7 +71,8 @@ function benchTags(index: number): string[] {
   const tags: string[] = [];
   for (let k = 0; tags.length < count; k++) {
     const tag = BENCH_TAG_POOL[(index * 7 + k * 5) % BENCH_TAG_POOL.length];
-    if (tag !== undefined && !tags.some((t) => t.toLowerCase() === tag.toLowerCase())) tags.push(tag);
+    if (tag !== undefined && !tags.some((t) => t.toLowerCase() === tag.toLowerCase()))
+      tags.push(tag);
   }
   return tags;
 }

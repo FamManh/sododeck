@@ -11,12 +11,12 @@ describe('tagKey', () => {
 });
 
 describe('normalizeTag', () => {
-  it('trims and lower-cases', () => {
-    expect(normalizeTag(' PII ')).toBe('pii');
+  it('trims and keeps the case typed (033)', () => {
+    expect(normalizeTag(' PII ')).toBe('PII');
   });
 
   it('collapses inner whitespace', () => {
-    expect(normalizeTag('Critical   Path')).toBe('critical path');
+    expect(normalizeTag('Critical   Path')).toBe('Critical Path');
   });
 
   it('returns null for empty or blank input', () => {
@@ -26,13 +26,15 @@ describe('normalizeTag', () => {
 });
 
 describe('addTag', () => {
-  it('adds "PII" once, then ignores an empty Enter', () => {
-    expect(addTag(addTag([], 'PII'), '')).toEqual(['pii']);
+  it('adds "PII" as typed once, then ignores an empty Enter', () => {
+    expect(addTag(addTag([], 'PII'), '')).toEqual(['PII']);
   });
 
-  it('ignores duplicates regardless of case and returns the same array', () => {
-    const tags = ['pii'];
-    expect(addTag(tags, 'Pii')).toBe(tags);
+  it('ignores a tag with the same key, keeps the first spelling and returns the same array', () => {
+    const tags = ['PII'];
+    expect(addTag(tags, 'pii')).toBe(tags);
+    expect(addTag(tags, '  Pii ')).toBe(tags);
+    expect(addTag(['Critical Path'], 'critical   path')).toEqual(['Critical Path']);
   });
 
   it('appends without mutating', () => {
@@ -45,6 +47,10 @@ describe('addTag', () => {
 describe('removeTag', () => {
   it('removes one tag and keeps order', () => {
     expect(removeTag(['a', 'b', 'c'], 'b')).toEqual(['a', 'c']);
+  });
+
+  it('matches by key, so "pii" removes "PII"', () => {
+    expect(removeTag(['a', 'PII', 'c'], 'pii')).toEqual(['a', 'c']);
   });
 
   it('returns the same array when the tag is absent', () => {

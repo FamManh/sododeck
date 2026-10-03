@@ -4,11 +4,12 @@ import { useMemo } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
 import { tagSuggestions } from '../inspector/derive';
+import { canonicalTag } from '../tags/deck-tags';
 import { FieldLabel } from './field-label';
 
 /**
- * TAGS: chips plus an add field with suggestions from the deck (FR-005). Tags are trimmed,
- * lower-cased and unique; an added tag is announced. `onCommit(null)` clears the field.
+ * TAGS: chips plus an add field with suggestions from the deck (FR-005). Tags are trimmed, keep
+ * their case, and are unique by key ("pic" next to "PIC" is the same tag, 033); an added tag is announced. `onCommit(null)` clears the field.
  */
 export function TagsField({
   deck,
@@ -33,9 +34,11 @@ export function TagsField({
         value={tags}
         suggestions={suggestions}
         {...(max === undefined ? {} : { max })}
-        onValueChange={(next) => {
+        onValueChange={(typed) => {
+          // A tag the deck already spells ("PIC") is written in that spelling, never a second one.
+          const next = typed.map((t) => (tags.includes(t) ? t : (canonicalTag(deck, t) ?? t)));
           const added = next.find((t) => !tags.includes(t));
-          onCommit(next.length === 0 ? null : [...next]);
+          onCommit(next.length === 0 ? null : next);
           if (added !== undefined) useUiStore.getState().announce(`${added} added`);
         }}
       />

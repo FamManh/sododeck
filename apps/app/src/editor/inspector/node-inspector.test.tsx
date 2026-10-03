@@ -68,9 +68,10 @@ describe('NodeInspector (story 1, FR-008)', () => {
     await user.clear(tech);
     await user.type(tech, 'Python{Enter}');
     await user.type(screen.getByRole('textbox', { name: 'Host' }), 'eu-west k8s{Enter}');
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.type(
-      screen.getByRole('combobox', { name: 'Add tag' }),
-      ' PCI {Enter}Billing{Enter}',
+      await screen.findByRole('searchbox', { name: 'Filter tags' }),
+      ' Audit {Enter}Billing{Enter}',
     );
     const addLink = screen.getByRole('textbox', { name: 'Add link' });
     await user.type(addLink, 'javascript:alert(1){Enter}');
@@ -85,7 +86,7 @@ describe('NodeInspector (story 1, FR-008)', () => {
       owner: 'Platform',
       tech: 'Python',
       host: 'eu-west k8s',
-      tags: ['critical', 'pci', 'billing'],
+      tags: ['critical', 'pci', 'Audit', 'Billing'],
       links: [{ url: 'https://runbooks.example.com/pricing', label: 'runbooks.example.com' }],
     });
     expect(screen.getByRole('heading', { name: 'Pricing Service v2' })).toBeInTheDocument();
@@ -93,7 +94,7 @@ describe('NodeInspector (story 1, FR-008)', () => {
       editor().undo();
     });
     expect(node(doc)?.links).toBeUndefined();
-    expect(node(doc)?.tags).toEqual(['critical', 'pci', 'billing']);
+    expect(node(doc)?.tags).toEqual(['critical', 'pci', 'Audit', 'Billing']);
   });
 
   it('lists connections with direction, and choosing one selects it', async () => {

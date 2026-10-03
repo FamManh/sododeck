@@ -26,14 +26,18 @@ export function tagColourMap(tagColors: SododeckFile['tagColors']): TagColourMap
   return map;
 }
 
-/** A card's pills: the first ten tags as stored, each with its tag's colours, slate when none. */
+/** Each tag as stored with its own tag's colours, slate when it has none. */
+export function tagLooksOf(tags: readonly string[], colours: TagColourMap): readonly TagLook[] {
+  return tags.map((text) => ({ text, ...tagColours(colours.get(tagKey(text))) }));
+}
+
+/** A card's pills: the first ten tags (older decks may hold more). */
 export function cardTagLooks(
   tags: readonly string[] | undefined,
   colours: TagColourMap,
 ): readonly TagLook[] {
   const shown = cardTags(tags);
-  if (shown.length === 0) return NO_LOOKS;
-  return shown.map((text) => ({ text, ...tagColours(colours.get(tagKey(text))) }));
+  return shown.length === 0 ? NO_LOOKS : tagLooksOf(shown, colours);
 }
 
 /** Same pills, same colours, in the same order. */

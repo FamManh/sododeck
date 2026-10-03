@@ -92,7 +92,7 @@ describe('InspectorStep (US3, FR-019, FR-027)', () => {
     );
     expect(toJSON(doc).flows[0]?.steps[1]).toMatchObject({
       owner: 'Orders',
-      tags: ['quote'],
+      tags: ['Quote'],
       links: [{ url: 'docs/quote.md', label: 'quote.md' }],
       description: 'Asks `pricing`.',
     });

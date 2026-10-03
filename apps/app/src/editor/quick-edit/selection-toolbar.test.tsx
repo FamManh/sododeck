@@ -298,9 +298,11 @@ describe('SelectionToolbar (019 US3)', () => {
     ).toEqual([undefined, undefined]);
 
     await user.click(screen.getByRole('button', { name: 'Tags' }));
-    const list = screen.getByRole('listbox', { name: 'Tags options' });
+    const list = screen.getByRole('listbox', { name: 'Deck tags' });
     expect(list).toHaveAttribute('aria-multiselectable', 'true');
-    await user.click(within(list).getByRole('option', { name: 'pci, 1 of 2' }));
+    const pci = within(list).getByRole('option', { name: /pci/ });
+    expect(pci).toHaveTextContent('1 of 2');
+    await user.click(pci);
     expect(
       toJSON(doc)
         .nodes.slice(0, 2)

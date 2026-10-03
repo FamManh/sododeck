@@ -2,7 +2,6 @@ import type { Edge, Node } from '@sododeck/schema';
 import { ChoiceList } from '@sododeck/ui/components/choice-list';
 import { Popover, PopoverContent, PopoverTrigger } from '@sododeck/ui/components/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
-import { addTag, normalizeTag, removeTag } from '@sododeck/ui/lib/tags';
 import type { ReactNode } from 'react';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
@@ -14,11 +13,12 @@ import { LinksField } from '../fields/links-field';
 import { oneStep } from '../fields/one-step';
 import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { KIND_OPTIONS } from '../inspector/choices';
-import { bulkView, styleView, tagSuggestions } from '../inspector/derive';
+import { bulkView, styleView } from '../inspector/derive';
 import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
-import { choiceState, deckValues, tagChoices } from './choice-state';
-import { MAX_CARD_TAGS } from '../card-tags';
+import { choiceState, deckValues } from './choice-state';
+import { TagPicker } from '../tags/tag-picker';
+import { tagPickerEscape } from '../tags/tag-picker-escape';
 
 /** The popover's accessible name per field (contract "Field popover"). */
 const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
@@ -101,38 +101,8 @@ function NodeFieldContent({ field, nodes }: { field: ToolbarFieldId; nodes: read
         />
       );
     }
-    case 'tags': {
-      const options = tagChoices(nodes, tagSuggestions(deck));
-      return (
-        <ChoiceList
-          label="Tags options"
-          filterLabel="Filter tags"
-          multiple
-          options={options}
-          create={typedChoice(options.map((o) => o.value))}
-          onPick={(value) => {
-            const tag = value === null ? null : normalizeTag(value);
-            if (tag === null) return;
-            // On every component: remove it; on some or none: add it to all (spec US3 AC3).
-            const onAll = options.some((o) => o.value === tag && o.state === 'selected');
-            // A card shows at most ten tags (2026-10-03): full cards are skipped.
-            const full = !onAll && nodes.some((node) => (node.tags ?? []).length >= MAX_CARD_TAGS);
-            write((node) => {
-              const before = node.tags ?? [];
-              const after = onAll ? removeTag(before, tag) : addTag(before, tag, MAX_CARD_TAGS);
-              return after === before ? null : { tags: after.length === 0 ? null : [...after] };
-            });
-            announce(
-              onAll
-                ? `Tag ${tag} removed from ${count(n)}`
-                : full
-                  ? `Tag ${tag} added; cards with ${String(MAX_CARD_TAGS)} tags were skipped`
-                  : `Tag ${tag} added to ${count(n)}`,
-            );
-          }}
-        />
-      );
-    }
+    case 'tags':
+      return <TagPicker nodeIds={nodes.map((node) => node.id)} />;
     case 'links': {
       const [node] = nodes;
       if (node === undefined) return null;
@@ -280,6 +250,7 @@ export function FieldPopover({
         <PopoverContent
           aria-label={FIELD_NAMES[field]}
           align="start"
+          onEscapeKeyDown={tagPickerEscape}
           className={wide ? 'w-[272px] shadow-menu' : 'w-[236px] shadow-menu'}
         >
           <FieldContent field={field} />

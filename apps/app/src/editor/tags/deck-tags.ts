@@ -88,38 +88,36 @@ export function tagUsage(deck: SododeckFile, tag: string): TagUsage {
 }
 
 /**
+ * Every tag key the deck holds, with the spelling to show and to write: the colour key first, then
+ * the first spelling on a card, a connection, a flow, a step and the deck's own tags.
+ */
+export function tagSpellings(deck: SododeckFile): Map<string, string> {
+  const spellings = new Map<string, string>();
+  const note = (text: string) => {
+    const key = tagKey(text);
+    if (key !== '' && !spellings.has(key)) spellings.set(key, text.trim().replace(/\s+/g, ' '));
+  };
+  for (const { tag } of colourEntries(deck).values()) note(tag);
+  for (const node of deck.nodes) node.tags?.forEach(note);
+  for (const edge of deck.edges) edge.tags?.forEach(note);
+  for (const flow of deck.flows) flow.tags?.forEach(note);
+  for (const flow of deck.flows) for (const step of flow.steps) step.tags?.forEach(note);
+  deck.tags?.forEach(note);
+  return spellings;
+}
+
+/**
  * The text to write when `typed` is added as a tag: the existing spelling when the key is already
- * in the deck (colour key first, then cards, connections, flows, steps and the deck's tags), else
- * the typed text trimmed and single-spaced with its case kept. `null` for empty text.
+ * in the deck (see `tagSpellings`), else the typed text trimmed and single-spaced with its case
+ * kept. `null` for empty text.
  */
 export function canonicalTag(deck: SododeckFile, typed: string): string | null {
   const text = typed.trim().replace(/\s+/g, ' ');
   if (text === '') return null;
-  const key = tagKey(text);
-  const coloured = colourEntries(deck).get(key);
-  if (coloured !== undefined) return coloured.tag;
-  const pick = (tags: readonly string[] | undefined): string | undefined =>
-    tags
-      ?.find((tag) => tagKey(tag) === key)
-      ?.trim()
-      .replace(/\s+/g, ' ');
-  for (const node of deck.nodes) {
-    const found = pick(node.tags);
-    if (found !== undefined) return found;
-  }
-  for (const edge of deck.edges) {
-    const found = pick(edge.tags);
-    if (found !== undefined) return found;
-  }
-  for (const flow of deck.flows) {
-    const found = pick(flow.tags);
-    if (found !== undefined) return found;
-  }
-  for (const flow of deck.flows) {
-    for (const step of flow.steps) {
-      const found = pick(step.tags);
-      if (found !== undefined) return found;
-    }
-  }
-  return pick(deck.tags) ?? text;
+  return tagSpellings(deck).get(tagKey(text)) ?? text;
+}
+
+/** The colour stored for a tag (matched by key), or `undefined` when it has none. */
+export function tagColourOf(deck: SododeckFile, tag: string): ColorRef | undefined {
+  return colourEntries(deck).get(tagKey(tag))?.color;
 }
