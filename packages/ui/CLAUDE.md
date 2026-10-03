@@ -2,7 +2,7 @@
 
 **Responsibility:** the design system — tokens, the Tailwind v4 theme, and shared React components (shadcn/ui on Radix, icons from `lucide-react`). The source of design truth is `/DESIGN.md`.
 
-- `src/styles/tokens.css` — raw CSS variables (`--sd-*`), light on `:root`, dark on `.dark`.
+- `src/styles/tokens.css` — raw CSS variables (`--sd-*`), light on `:root`, dark on `.dark`. Flow playback (035) adds `--sd-deck-lip-current`, `--sd-deck-dim-edge`, `--sd-step-sticker*` and `--sd-flow-token`.
 - `src/styles/theme.css` — Tailwind `@theme inline` mapping (the shared "preset"). DESIGN.md names (`bg-primary-soft`, `text-ink-muted`, `rounded-node`, `text-micro`, `shadow-rest`) plus shadcn aliases (`bg-background`, `text-muted-foreground`, …).
 - `src/styles/styles.css` — what apps import (fonts + tokens + theme + base styles).
 - `src/components/*` — one component per file, shadcn conventions (`data-slot`, `cva`, `cn`, function components, no barrel).

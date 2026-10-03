@@ -228,7 +228,7 @@ and **027** ai-deck-skill are not scheduled.
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                              |
 | 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                      |
-| 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                                 |
+| 035 | flow-playback-deck       | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
 | 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                             |
 | 038 | card-icons               | after 036  | 036, (029)    | 4 d  | decided: lucide now, packs later; type name kept              |
