@@ -359,6 +359,20 @@ Custom deck colours (106) have no `chip` / `ink` / `dot`: their chips use the he
 | `{typography.code-sm}` | 11–11.5px | 400 | 1.5 | 0 | Conditions, chips, export preview (Mono) |
 | `{typography.edge-label}` | 10.5px | 400 | 1 | 0 | Edge label pills on the canvas (Mono) |
 
+### Marketing type (sododeck.com)
+
+The landing page (board `Sododeck Landing.dc.html`, `docs/design/claude-design-prompt-landing.md`) uses its own larger steps, one size per breakpoint (phone < 700px, tablet 700–1279px, desktop ≥ 1280px). The editor never uses them.
+
+| Token | Desktop | Tablet | Phone | Weight | Tracking | Use |
+|---|---|---|---|---|---|---|
+| `marketing-hero` | 56 / 1.05 | 52 / 1.06 | 40 / 1.08 | 500 | -0.035 / -0.03 / -0.025em | Hero headline (h1) |
+| `marketing-h2` | 38 / 1.12 | 32 / 1.15 | 28 / 1.18 | 500 | -0.025 / -0.02 / -0.015em | Section headlines; the final CTA uses 1.1× |
+| `marketing-lead` | 19 / 1.5 | 18 / 1.5 | 17 / 1.5 | 400 | 0 | Hero and final CTA sublines, Secondary colour |
+| `marketing-body` | 17 / 1.55 | 17 / 1.55 | 16 / 1.55 | 400 | 0 | Section text, Secondary colour |
+| `marketing-eyebrow` | 12.5 / 1.3 | same | same | 500 | 0.05em, UPPERCASE, Mono | "Step 2 · Explore" |
+
+Marketing buttons are 46px tall (12px radius, 15.5px/500 label, 20px padding) with the Deck lip: 3px at rest (Orange Ink under Deck Orange, Border Strong under Surface), 4px and 1px up on hover, 0 and 3px down when pressed; focus adds a 2px Canvas gap and a 2.5px ink ring. The small size (nav "Open app") is 36px, 10px radius, 13.5px. Content is 1200px wide on desktop (440px text column, 64px gap, 696px visual), with 112 / 88 / 64px section padding.
+
 ### Principles
 
 Type stays quiet so the diagram can lead. There is no heavy display weight. Hierarchy comes from size steps of 1–2px, 500 vs 400 weight, and muted colour. Anything a developer might copy or search for is set in Mono. Long labels truncate with an ellipsis instead of wrapping in dense rows (nodes, outline, steps). Prose areas (descriptions, tooltips, empty states) use `text-wrap: pretty`.

@@ -1,7 +1,14 @@
 @import 'tailwindcss';
 @import '@sododeck/ui/styles.css';
+@import './landing.css';
 
 @source '../../../../packages/ui/src';
+
+/* Site breakpoints (DESIGN.md "Marketing type"): phone < 700px ≤ tablet < 1280px ≤ desktop. */
+@theme {
+  --breakpoint-tab: 700px;
+  --breakpoint-desk: 1280px;
+}
 
 @layer base {
   body {

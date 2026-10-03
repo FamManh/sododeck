@@ -4,6 +4,6 @@
     "types": ["astro/client"],
     "paths": { "@sododeck/ui/*": ["../../packages/ui/src/*"] }
   },
-  "include": [".astro/types.d.ts", "src", "*.mjs"],
+  "include": [".astro/types.d.ts", "src", "*.mjs", "*.ts"],
   "exclude": ["dist"]
 }

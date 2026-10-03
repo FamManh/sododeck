@@ -1,50 +1,18 @@
 ---
+import { LandingPage } from '../components/landing/landing-page';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { APP_URL } from '../site';
-
-const features = [
-  {
-    title: 'Canvas + JSON, in sync',
-    body: 'Draw on the canvas or edit the model as JSON. Both views are the same document.',
-  },
-  {
-    title: 'Flows are first-class',
-    body: 'Select a flow and watch it light up end to end, step by step.',
-  },
-  {
-    title: 'Knowledge next to the diagram',
-    body: 'Rules, notes and stickies attach to the exact node or step they describe.',
-  },
-  {
-    title: 'Local-first',
-    body: 'No account. Your decks stay in your browser and export to open formats.',
-  },
-];
 ---
 
-<BaseLayout title="Sododeck">
-  <section class="flex flex-col items-start gap-5 py-10">
-    <p class="text-micro text-primary-ink uppercase">Placeholder landing page</p>
-    <h1 class="max-w-2xl text-[40px] leading-tight font-medium tracking-tight text-ink">
-      The architecture map you can click, trace, edit and annotate.
-    </h1>
-    <p class="max-w-xl text-title-md font-normal text-ink-secondary">
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
-      labore et dolore magna aliqua.
-    </p>
-    <a
-      href={APP_URL}
-      class="inline-flex h-9 items-center rounded-button bg-primary px-4 text-body font-medium text-on-primary hover:bg-primary-hover"
-    >
-      Start drawing — no sign-up
-    </a>
-  </section>
-  <section class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-    {features.map((feature) => (
-      <article class="flex flex-col gap-1 rounded-card border border-hairline bg-surface p-5">
-        <h2 class="text-title-sm text-ink">{feature.title}</h2>
-        <p class="text-body text-ink-muted">{feature.body}</p>
-      </article>
-    ))}
-  </section>
+<BaseLayout
+  title="Sododeck"
+  description="Describe your system and get a living map: services, flows, rules and the database tables behind them on one canvas. Runs in your browser, no account."
+  wide
+>
+  <LandingPage />
 </BaseLayout>
+
+<script>
+  import { startLandingMotion } from '../scripts/landing-motion';
+
+  startLandingMotion();
+</script>
