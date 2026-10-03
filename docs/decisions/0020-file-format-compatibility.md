@@ -1,6 +1,8 @@
 # 0020. File format compatibility: a format revision and a read-only guard
 
-- **Status:** Proposed (needs founder acceptance; implemented by backlog 025)
+- **Status:** Deferred (founder, 2026-10-03, design-analysis §g-81): no users yet, so the format
+  changes freely during development and older files are not handled. Re-confirm before the first
+  public release; implemented by backlog 025.
 - **Date:** 2026-09-30
 - **Amends:** 0002 §6 (versioning)
 
