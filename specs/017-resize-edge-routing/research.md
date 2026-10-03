@@ -20,7 +20,7 @@ Findings come from reading `main` at `60cfc46` (016 merged). Each item records t
 
 - `minimum` / `maximum` in the schema: rejected, because one bad size would block the whole deck.
 - A semantic rule for a non-empty `route`: rejected. It would reject hand-written files for no user benefit.
-- Free waypoints (`points[]`): rejected by the backlog and the founder (§g-37). The Miro-like shapes are scheduled as 022-connector-style. That feature's ADR decides how waypoints relate to `offset`.
+- Free waypoints (`points[]`): rejected by the backlog and the founder (§g-37). The richer shapes are scheduled as 022-connector-style. That feature's ADR decides how waypoints relate to `offset`.
 
 ## R2. What a stored size means across zoom levels
 

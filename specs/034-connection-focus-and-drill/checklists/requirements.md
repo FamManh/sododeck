@@ -1,7 +1,7 @@
-# Specification Quality Checklist: Resize Cards and Route Connectors
+# Specification Quality Checklist: Connection Focus and Drill-in
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-09-29
+**Created**: 2026-10-03
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -31,6 +31,5 @@
 
 ## Notes
 
-- Field names (`size`, `route.fromSide`, `route.offset`) appear in acceptance scenarios because the JSON panel is a user-visible surface and the backlog acceptance criteria name them; no framework or code structure is named.
-- Deviations from the backlog draft, all driven by later founder decisions or merged 016 conventions, are listed in Assumptions: frames never grow on card resize (§g-55), no free connector end (§g-44), key steps aligned with 016 nudges (§g-45) and the 4 px size step, guide snapping instead of "⇧ snaps to grid".
-- Clarified 2026-09-29: size and route shared by every view; free segment drag (no 12 px stop); richer connector styling moved to backlog 022-connector-style; enlarged cards wrap title and subtitle at the same font size.
+- The end-along-a-side move (frame 118 c) is out of scope here and owned by 022 (Clarifications, 2026-10-03).
+- Product terms from `DESIGN.md` (Ink, 2.75px, ×n pill, `pnpm bench`) are kept because the design system defines them; they are not implementation choices.

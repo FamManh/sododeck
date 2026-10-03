@@ -47,7 +47,7 @@ Recorded in design-analysis §g and applied to the features below.
 | 35  | **Multi-tab = live sync**: every tab stays editable, edits sync between tabs and merge (Yjs); no read-only tab, lock banner or "Use here instead" (frame 82 not used). Undo is per tab.                                             | 005                     |
 | 36  | Canvas drag keeps **panning**; marquee select stays **Shift+drag** (003). No switch to drag-to-select for now.                                                                                                                      | 003, 016                |
 | 37  | Schema v1 may add **optional** `node.size` (resize) and `edge.route` (connector sides + segment offset). Additive only; older files stay valid.                                                                                     | 001, 002, 017           |
-| 38  | **Canvas-first editor** (Miro-like): full-bleed canvas, floating chrome, left icon rail with flyouts, inspector as an on-demand drawer, JSON panel hidden by default. Replaces the 3-column prototype layout.                       | 018, 019, DESIGN.md     |
+| 38  | **Canvas-first editor**: full-bleed canvas, floating chrome, left icon rail with flyouts, inspector as an on-demand drawer, JSON panel hidden by default. Replaces the 3-column prototype layout.                                   | 018, 019, DESIGN.md     |
 | 39  | Card **fill and stroke** colours from a fixed named palette, plus a **"+"** that adds a custom hex colour to the deck's own swatches.                                                                                               | 020                     |
 | 40  | **Dynamic card attributes deferred**: cards keep today's fields (tech, host, owner, tags, level, rules); user-defined fields come later.                                                                                            | 020, later              |
 | 41  | 016–020 are scheduled **after M4** (after 011), not before.                                                                                                                                                                         | 016–020                 |
@@ -139,7 +139,6 @@ flowchart LR
   F030 --> F032
   F029 --> F033
   F029 --> F034
-  F022 -.-> F034
   F029 --> F035
   F029 --> F022
   F036 --> F029
@@ -215,7 +214,7 @@ and **027** ai-deck-skill are not scheduled.
 | 016 | canvas-editing           | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change     |
 | 017 | resize-edge-routing      | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                    |
 | 020 | card-style               | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change                |
-| 022 | connector-style          | after M4   | 017, 020, 029 | 5 d  | needs design (Miro-like line popover); schema change          |
+| 022 | connector-style          | after M4   | 017, 020, 029 | 5 d  | needs design (connector toolbar popover); schema change       |
 | 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design     |
 | 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR          |
 | 025 | format-compatibility     | pre-launch | 005           | 2 d  | deferred (§g-81); re-confirm ADR 0020 before launch           |
@@ -227,7 +226,7 @@ and **027** ai-deck-skill are not scheduled.
 | 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                       |
 | 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
 | 033 | deck-tag-colours         | after M4   | 029           | 3 d  | implemented (2026-10-03); visual check and quickstart partial |
-| 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                      |
+| 034 | connection-focus-drill   | after M4   | 029           | 4 d  | designed (B connections)                                      |
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
 | 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                             |
@@ -239,7 +238,7 @@ and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 
 005 and the full export dialog (I-1) in 012.
 
 Added after founder review (2026-09-27), all scheduled **after M4** (§g-41):
-**018-canvas-first-layout** (Miro-like full-bleed canvas, §g-38), **019-card-quick-edit** (inline
+**018-canvas-first-layout** (full-bleed canvas, §g-38), **019-card-quick-edit** (inline
 title, selection toolbar, context menu, detail drawer from the card), **016-canvas-editing**
 (copy/paste, group from selection, drag a group, align, nudge, snap), **017-resize-edge-routing**
 (resizable cards, adjustable connectors) and **020-card-style** (fill and stroke colours). 017 and
@@ -1070,6 +1069,11 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 - **Status:** implemented in PR #37 (2026-09-29) — see [`tasks.md`](../specs/012-export/tasks.md) and [ADR 0016](decisions/0016-export-rendering.md). Later: PDF and Mermaid export (below).
 - **Milestone:** M5 · **Depends on:** 007, 011 · **Estimate:** 4 d
+- **Design update (2026-10-03):** implemented against the pre-Deck cards. The Deck look (029: lip,
+  14px corners, filled pills; 033 tag colours; 035 flow stickers) must also appear in PNG and SVG
+  exports, and the dialog preview must match the canvas. Treat this as a follow-up check owned by
+  029 / 033 / 035 (their specs list the export as an acceptance item), not as a new feature.
+  Screens 06 and 33–34 show the dialog, which `DESIGN.md` still describes correctly.
 - **Goal:** Users take their diagrams anywhere — docs, slides, wikis, git — in open formats, generated
   entirely in the browser.
 - **Spec IDs:** I-1, principle 6 (no lock-in).
@@ -1089,7 +1093,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   flow; live preview; filename from deck name; Copy for JSON and SVG; "Nothing is uploaded" note;
   generation off the main thread for large decks.
 - **Out of scope:** PDF and Mermaid export (deferred, below); partial JSON (current view / one
-  flow); import of Mermaid/draw.io (P1), embeds (P2), per-page PDF of every flow.
+  flow); import of Mermaid and other diagram formats (P1), embeds (P2), per-page PDF of every flow.
 - **Acceptance criteria:**
   - Given the JSON format, When downloaded and re-imported, Then the deck is identical (round-trip).
   - Given flow mode on "Place order", When the dialog opens, Then PNG is selected, scope is
@@ -1127,6 +1131,13 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   first-run tour.
 - **Spec IDs:** §13 demo deck, K-8 (lightweight first-run version; full guided tours stay P2),
   C-8 groundwork (templates are P1).
+- **Design update (2026-10-03):** board B "Deck" (§g-63) changes how cards look, so the sample and
+  the tour are built **after** the card system (029–035) and show the final look: frame
+  [117](design/screens/117-deck-sample-board-light.png) is the reference for a played sample flow
+  ("Checkout" on ~20 cards) and [120](design/screens/120-deck-sample-set-light.png) for the card
+  and shape types. `sododeck-data.js` stays the source of the data (components, flows, rules), not
+  of the look. The tour frames below predate the Deck look: recheck their anchors and copy
+  against 018's shell and 029's cards when this is specified.
 - **Design references:** data in
   [`claude-design/sododeck-data.js`](design/claude-design/sododeck-data.js) (20 nodes, 28 edges,
   5 flows, 3 rules); "Open sample" / Samples in [01](design/screens/01-library-light.png); tour
@@ -1433,7 +1444,7 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Status:** implemented (2026-09-28) — see [`tasks.md`](../specs/018-canvas-first-layout/tasks.md) and [ADR 0014](decisions/0014-canvas-first-shell.md). §g-49 (C) and §g-50 (per-deck UI memory) defaults confirmed; the Group rail tool stays disabled until 016.
 - **Milestone:** after M4 · **Depends on:** 021 · **Estimate:** 5 d
 - **Goal:** The drawing surface gets the whole screen. Chrome floats over the canvas in small
-  islands, like Miro, so a 100-component diagram has room to breathe (§g-38).
+  islands, so a 100-component diagram has room to breathe (§g-38).
 - **Spec IDs:** editor shell (spec §7); replaces the 3-column layout of the prototype (02).
 - **Design references:** 86 shell (empty deck), 87 dense deck at 50 %, 88 palette flyout, 89
   outline pinned, 90 flows flyout + flow mode, 91 drawer (component), 92 drawer (bulk), 93 JSON
@@ -1678,8 +1689,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 
 ## 022-connector-style
 
-- **Added:** 2026-09-29, founder request during 017 clarify (Miro-like connector options, reference
-  screenshots in the conversation: Miro's line toolbar with Type / weight / dash popover and a
+- **Added:** 2026-09-29, founder request during 017 clarify (richer connector options, reference
+  screenshots in the conversation: a line toolbar with a Type / weight / dash popover and a
   curved line with waypoint handles). Kept out of 017 so 017 stays at 4 d.
 - **Extension points (017, ADR 0019):** `apps/app/src/editor/routing/route-path.ts`'s
   `resolveSides` / `middleSegment` already resolve each end's side and the movable middle segment;
@@ -1691,21 +1702,22 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
 - **Menus and toolbar (019):** add this feature's items as an action module in
   `apps/app/src/editor/actions/` (registered in `ACTIONS`), so the connection toolbar (100), the
   connection menu, the drawer and the keys pick them up (ADR 0015).
-- **Goal:** Users style connectors the way they are used to in Miro: pick the line shape, the dash,
+- **Goal:** Users style connectors with a familiar line toolbar: pick the line shape, the dash,
   the weight and the colour, place the label where it reads best, and make a connector "run" to
   show the direction of a flow at a glance.
 - **Spec IDs:** C-6; **schema change** (reverses part of §g-37: 017 stores only sides + one
   middle-segment offset; this feature adds free waypoints (curves moved to 029), so it needs a founder
   decision and an ADR).
 - **Design references:** none yet (needs design: connection toolbar "Type" popover, weight
-  slider, dash row, colour swatch, label drag, waypoint handles). Miro's line popover is the
-  reference.
+  slider, dash row, colour swatch, label drag, waypoint handles). The founder's line-popover
+  screenshots are the reference; the prompt is
+  [`claude-design-prompt-connector-style.md`](design/claude-design-prompt-connector-style.md).
 - **In scope:**
   - **Line type:** moved to 029 (curved, elbow, straight, §g-64); waypoints below build on it.
   - **Free waypoints** for elbow and curved lines: drag a midpoint handle to add a bend point,
     drag a bend point to move it, double-click (or ⌫) to remove it; Reset route (017) clears them.
     Founder feedback (2026-10-02): 017's segment only moves along one axis (horizontal or
-    vertical) and that feels rigid; bends must be free to move in any direction, like Miro.
+    vertical) and that feels rigid; bends must be free to move in any direction.
   - **Lighter handles** (founder feedback, 2026-10-02): 017's 10×24 px segment pill and endpoint
     grips look heavy. Show small round handles (≈ 8 px) only on hover or while the connector is
     selected, with a larger invisible hit area so they stay easy to grab.
@@ -1713,7 +1725,9 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     card's side, not only at its middle. Dragging an end along a side moves its anchor (stored
     as the side plus a 0–1 fraction, snapping to the middle and the corners); dropping it on the
     card body keeps today's automatic side. Extends 017's `fromSide` / `toSide` (schema change,
-    additive, same ADR as waypoints).
+    additive, same ADR as waypoints). Interaction from frame 118 c (moved here from 034,
+    2026-10-03): the end snaps at 25 / 50 / 75 %, a "left side · 78 %" readout follows the
+    pointer, the old route shows dashed until release, Esc cancels.
   - **Dash:** solid (default), dashed, dotted.
   - **Weight:** a slider with a few fixed steps (e.g. 1–6 px); default = today's 1.5 px.
   - **Colour:** 020's palette, the deck's custom swatches and "No colour".
@@ -2133,14 +2147,14 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 034-connection-focus-and-drill
 
-- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 4 d
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 (only; runs in parallel with 033 and 035) · **Estimate:** 4 d
 - **Goal:** B's "Connections and focus" row (§g-62, from the founder's reference video).
 - **In scope:** hovering or selecting a card highlights its connections and neighbours and dims
   the rest (today's focus mode, on hover, without a toggle); parallel connectors between the same
   cards bundle into one curve with a count; drill-in shows "Inside <card>" with dashed **outside**
-  proxy cards for its external connections (restyle today's port pills); an end moved along a
-  side (needs 022's free anchors).
-- **Out of scope / later:** relationship types with their own colour and dash (calls, reads,
+  proxy cards for its external connections (restyle today's port pills).
+- **Out of scope / later:** an end moved along a side (frame 118 c) belongs to 022's free anchors
+  (founder, 2026-10-03); relationship types with their own colour and dash (calls, reads,
   writes, depends on) and the header legend with counts: needs `edge.relation` (schema) and
   belongs with 022.
 - **Acceptance criteria (draft):** hovering a card on the bench deck dims non-neighbours within one
@@ -2275,5 +2289,5 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 Deck-defined typed fields (text, number, select with coloured options, status, date, date range,
 person) with values per component and a per-deck choice of which fields show as chips on the card
-(like the founder's Miro cards: year, status, date range). Needs its own schema design and ADR.
+(like the founder's reference cards: year, status, date range). Needs its own schema design and ADR.
 Until then cards show the existing fields. **Now scheduled as 032-typed-fields (§g-61).**

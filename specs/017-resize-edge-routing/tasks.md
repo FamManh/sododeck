@@ -5,7 +5,7 @@
 - [plan.md](plan.md) and [spec.md](spec.md), clarified on 2026-09-29:
   - Size and route are shared by every view.
   - The middle segment moves freely.
-  - Miro-like connector styling goes to backlog 022.
+  - richer connector styling goes to backlog 022.
   - Enlarged cards wrap their text at the same font size.
   - The plan corrected four points: the stored size wins at every zoom level, an offset needs opposite sides, the resize keys are ⌘⇧ + arrow, and an out-of-range size is a problem, not a schema error.
 - [research.md](research.md) (R1–R16) and [data-model.md](data-model.md).

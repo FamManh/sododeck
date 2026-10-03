@@ -980,13 +980,13 @@ decision already covers it, that rule wins and the proposal only says how to app
 34. **Backup reminder and Safari warning** ([01](screens/01-library-light.png),
     [09](screens/09-library-folder-banner-dismissed-light.png), [80](screens/80-storage-off-light.png)):
     **Decision (founder, 2026-09-27):** **G-5 deferred**: no backup reminder banner and no Safari
-    7-day warning for now (Excalidraw ships neither). The storage card from 80–81 stays.
+    7-day warning for now (common drawing tools ship neither). The storage card from 80–81 stays.
 35. **Multi-tab** ([82](screens/82-second-tab-light.png)): the design locks the second tab
     (read-only banner, greyed fields, "Use here instead").
     **Decision (founder, 2026-09-27):** **live sync** instead: every tab showing a deck stays
     editable, edits sync between tabs within 1 s and merge without loss (Yjs), undo is per tab. No
     read-only tab, lock or take-over; frame 82 is not used.
-36. **Drag on empty canvas** (003): design tools like Figma select with a plain drag; the canvas
+36. **Drag on empty canvas** (003): most design tools select with a plain drag; the canvas
     pans with a plain drag and draws the selection box with Shift+drag.
     **Decision (founder, 2026-09-27):** keep it: plain drag pans, **Shift+drag** selects. Revisit
     later if users ask. Copy/paste, group from selection, group drag, align and snap go in backlog 016.
@@ -997,14 +997,14 @@ decision already covers it, that rule wins and the proposal only says how to app
     017; needs an ADR.
 38. **Editor layout** (02 and every editor frame): three fixed columns (sidebar 264 px, inspector
     336 px) plus the JSON panel leave about half the screen for the canvas.
-    **Decision (founder, 2026-09-27):** **canvas-first** like Miro: full-bleed canvas, floating
+    **Decision (founder, 2026-09-27):** **canvas-first**: full-bleed canvas, floating
     islands, a left icon rail with flyouts, the inspector as an on-demand drawer, the JSON panel
     hidden by default. Existing frames stay the reference for panel **content**, not placement.
     Backlog 018; needs a design pass, an ADR and a DESIGN.md update.
 39. **Card colours** (not in the design): cards are coloured by kind only.
     **Decision (founder, 2026-09-27):** fill and stroke from a fixed named palette, plus a "+"
     that adds custom hex colours to the deck's swatches. Backlog 020 (schema change).
-40. **Card attributes** (founder's Miro cards show year, status, date range): **deferred**. Cards
+40. **Card attributes** (founder's reference cards show year, status, date range): **deferred**. Cards
     keep the existing fields; user-defined typed fields come later.
 41. **Scheduling:** 016–020 run **after M4**.
 42. **JSON overlay editing** (93): the canvas-first frame shows the JSON panel with "⌘⏎ apply
