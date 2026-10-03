@@ -6,6 +6,13 @@ import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
 import { cardLayout, DECK_CARD_WIDTH, type CardLayout } from './card-layout';
+import {
+  cardFieldView,
+  currentFieldView,
+  EMPTY_FIELD_VIEW,
+  fieldBlock,
+  type CardFieldView,
+} from './card-fields';
 import { SHAPE_MAX, shapeLayout } from './shapes/shape-layout';
 
 type Node = SododeckFile['nodes'][number];
@@ -100,7 +107,10 @@ export function nodeSize(_level?: Level): NodeSize {
 
 /** What `cardSize` reads of a node. All optional so a bare `{}` is a default card. */
 export type SizedNode = Partial<
-  Pick<Node, 'size' | 'title' | 'tech' | 'tags' | 'type' | 'display'>
+  Pick<
+    Node,
+    'size' | 'title' | 'tech' | 'tags' | 'type' | 'display' | 'id' | 'host' | 'owner' | 'values'
+  >
 >;
 
 /** The geometry a node draws as (031), or null for a card. */
@@ -145,19 +155,25 @@ export function cardLayoutOf(node: SizedNode, extra: CardExtra = {}): CardLayout
           width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
           height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
         };
+  // The typed fields block (032): the caller's view (canvas, export) or the deck the canvas shows.
+  const fields =
+    extra.fields ?? (node.type === undefined ? EMPTY_FIELD_VIEW : currentFieldView(node as Node));
   return cardLayout({
     title: node.title ?? '',
     description: 'description' in extra ? extra.description : node.tech,
     tags: node.tags,
     childCount: extra.childCount,
+    fieldsHeight: fieldBlock(fields, size?.width ?? DECK_CARD_WIDTH).height,
     size,
   });
 }
 
-/** What a view adds to a card's content: its own subtitle field, and the "n inside" row. */
+/** What a view adds to a card's content: its own subtitle field, the "n inside" row, its fields. */
 export interface CardExtra {
   description?: string | undefined;
   childCount?: number | undefined;
+  /** The card's typed fields (032); defaults to `currentFieldView(node)`. */
+  fields?: CardFieldView | undefined;
 }
 
 /** A card's drawn size, see `cardLayoutOf`. */
@@ -171,13 +187,17 @@ export function cardBox(
   node: Pick<Node, 'position'> & SizedNode,
   index: number,
   level: Level,
+  extra: CardExtra = {},
 ): Rect {
-  return { ...displayPosition(node, index), ...cardSize(node, level) };
+  return { ...displayPosition(node, index), ...cardSize(node, level, extra) };
 }
 
 const groupBoundsCache = new WeakMap<
   ReadonlyArray<SododeckFile['nodes'][number]>,
-  WeakMap<ReadonlyArray<SododeckFile['groups'][number]>, Map<Level, Map<string, Rect>>>
+  WeakMap<
+    ReadonlyArray<SododeckFile['groups'][number]>,
+    Map<Level, { fields: unknown; fieldDefaults: unknown; rects: Map<string, Rect> }>
+  >
 >();
 
 /**
@@ -197,13 +217,21 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
     byLevel = new Map();
     byGroups.set(deck.groups, byLevel);
   }
+  // Card heights follow the typed fields shown (032), so the field definitions are in the key.
   const cached = byLevel.get(level);
-  if (cached !== undefined) return cached;
+  if (
+    cached !== undefined &&
+    cached.fields === deck.fields &&
+    cached.fieldDefaults === deck.fieldDefaults
+  ) {
+    return cached.rects;
+  }
 
   const content = new Map<string, Rect>();
   deck.nodes.forEach((node, index) => {
     if (node.group === undefined) return;
-    content.set(node.group, union(content.get(node.group), cardBox(node, index, level)));
+    const box = cardBox(node, index, level, { fields: cardFieldView(deck, node) });
+    content.set(node.group, union(content.get(node.group), box));
   });
 
   const children = new Map<string, string[]>();
@@ -236,7 +264,7 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
     return bounds;
   };
   for (const group of deck.groups) resolve(group.id);
-  byLevel.set(level, out);
+  byLevel.set(level, { fields: deck.fields, fieldDefaults: deck.fieldDefaults, rects: out });
   return out;
 }
 

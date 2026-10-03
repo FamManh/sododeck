@@ -12,6 +12,8 @@ export interface ComboboxOption {
   label: string;
   /** Heading the option is listed under (030: card types by category). Optional. */
   group?: string;
+  /** Drawn before the label (032: an option's colour dot or status icon). Decorative. */
+  leading?: React.ReactNode;
 }
 
 type ComboboxProps = Omit<
@@ -245,6 +247,11 @@ function Combobox({
                     i === active && 'bg-surface-2',
                   )}
                 >
+                  {option.leading !== undefined && (
+                    <span aria-hidden className="mr-2 inline-flex shrink-0 items-center">
+                      {option.leading}
+                    </span>
+                  )}
                   {option.label}
                   {mode === 'pick' && option.value === value && (
                     <Check

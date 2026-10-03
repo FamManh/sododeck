@@ -6,6 +6,8 @@ import { type NodeProps } from '@xyflow/react';
 import { CornerDownLeft, Layers, Pin, Table, TriangleAlert } from 'lucide-react';
 import { memo, type CSSProperties } from 'react';
 
+import { CardFieldsBlock, HeaderStatus } from './card-fields-block';
+import { fieldBlock } from './card-fields';
 import { MAX_CARD_TAGS } from './card-tags';
 import { NodeNotes, ResizeControls, SideHandles } from './component-node-parts';
 import { useComponentNodeState } from './use-component-node-state';
@@ -62,6 +64,10 @@ export const DeckNode = memo(function DeckNode({
   const box = { width: width ?? layout.width, height: height ?? layout.height };
   // `toFlowNodes` already keeps ten; the card never draws more than its layout reserved room for.
   const tags = data.tagLooks.slice(0, MAX_CARD_TAGS);
+  // Typed fields (032): measured by the same `fieldBlock` the layout reserved room with.
+  const fields = data.fields;
+  const block = fieldBlock(fields, layout.width);
+  const headerStatus = isLandscape ? undefined : fields.header;
   const clampStyle = (n: number): CSSProperties => ({
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -225,6 +231,10 @@ export const DeckNode = memo(function DeckNode({
               // System: the tile alone (§g-58); the slot keeps the badges on the right.
               <span aria-hidden className="min-w-0 flex-1" />
             )}
+            {headerStatus !== undefined && (
+              // System level: the icon alone, like a narrow card (§g-58 keeps the header).
+              <HeaderStatus chip={headerStatus} narrow={box.width < 150 || !isContainer} />
+            )}
             {data.problems !== undefined && hasProblem && (
               <span
                 aria-hidden
@@ -278,6 +288,16 @@ export const DeckNode = memo(function DeckNode({
             >
               {data.subtitle.trim()}
             </span>
+          )}
+          {block.height > 0 && (
+            <CardFieldsBlock
+              nodeId={id}
+              view={fields}
+              block={block}
+              dots={!isContainer}
+              textClass={textRoleClass}
+              focused={data.focused}
+            />
           )}
           {tags.length > 0 && (
             <ul

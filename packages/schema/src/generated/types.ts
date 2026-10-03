@@ -62,6 +62,14 @@ export type PackId = string;
  */
 export type Id = string;
 /**
+ * What a typed field holds: `text`, `number` (with an optional unit), `select` or `status` (one of its options), `person` (free text), `date`, `dateRange`, `link` or `progress` (0–100, drawn as a bar).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "FieldKind".
+ */
+export type FieldKind =
+  'text' | 'number' | 'select' | 'status' | 'person' | 'date' | 'dateRange' | 'link' | 'progress';
+/**
  * Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -69,12 +77,27 @@ export type Id = string;
  */
 export type TypeId = string;
 /**
+ * Icon of a status option.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "StatusIcon".
+ */
+export type StatusIcon =
+  'circle' | 'circle-dashed' | 'circle-dot' | 'circle-check' | 'eye' | 'door-open';
+/**
  * Semantic zoom level, from widest to narrowest: `landscape`, `system`, `container`, `component`.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Level".
  */
 export type Level = 'landscape' | 'system' | 'container' | 'component';
+/**
+ * A card's value for one typed field; its shape depends on the field's kind.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "FieldValue".
+ */
+export type FieldValue = string | number | DateRangeValue | LinkValue;
 /**
  * Links to related resources.
  *
@@ -181,6 +204,14 @@ export interface SododeckFile {
    */
   packs?: PackId[];
   /**
+   * Typed field definitions of the deck (032), in deck order: user fields, plus any built-in (`tech`, `host`, `owner`) or default field (e.g. `task.status`) whose order, on-card choice or definition the user changed. A type's fields are this list filtered to that type. Absent means only the built-in fields and each type's default fields, as the app defines them.
+   */
+  fields?: FieldDef[];
+  /**
+   * Card types whose default fields now live in `fields` (032): for these types the app no longer adds its own default fields, so a deleted default stays deleted. Absent means every type uses the app's default fields.
+   */
+  fieldDefaults?: TypeId[];
+  /**
    * Components of the system.
    */
   nodes: Node[];
@@ -216,6 +247,51 @@ export interface SododeckFile {
   stickies: Sticky[];
 }
 /**
+ * A typed field (032): a name and a kind, the card types it applies to and whether it shows on the card. The ids `tech`, `host` and `owner` are the built-in fields: their entry stores their order and on-card choice, and their kind is fixed (`text`, `text`, `person`).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "FieldDef".
+ */
+export interface FieldDef {
+  id: Id;
+  /**
+   * Field name, 1–64 characters. Unique within a card type ignoring case (checked by the app).
+   */
+  name: string;
+  kind: FieldKind;
+  /**
+   * Card types the field applies to. Absent means every type.
+   */
+  types?: TypeId[];
+  /**
+   * `true` shows the field on every card of its types. Absent means false (drawer only).
+   */
+  onCard?: boolean;
+  /**
+   * Number fields only: a unit shown after the value, e.g. `h` or `pts`, 1–12 characters.
+   */
+  unit?: string;
+  /**
+   * Select and status fields only: the choices, in order. Option ids are unique within the field.
+   */
+  options?: FieldOption[];
+}
+/**
+ * One choice of a select or status field. Renaming it never changes its id or the values that point at it.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "FieldOption".
+ */
+export interface FieldOption {
+  id: Id;
+  /**
+   * Text shown on the chip, 1–48 characters.
+   */
+  label: string;
+  color?: ColorRef;
+  icon?: StatusIcon;
+}
+/**
  * A component of the system: a card of any type (service, database, queue, warehouse and so on).
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -247,6 +323,12 @@ export interface Node {
    * Where it runs, e.g. "EKS eu-west-1". Shown as the subtitle in infra views.
    */
   host?: string;
+  /**
+   * Values of typed fields (032): field id → value. Text, person, date (`YYYY-MM-DD`) and select / status (option id) values are strings; number and progress (0–100) values are numbers; a date range is `{ from, to }`; a link is `{ url, label? }`. Tech, host and owner keep their own keys and never appear here. A value whose field or option does not exist, or whose shape does not fit its field, is kept and reported. Absent means no values.
+   */
+  values?: {
+    [k: string]: FieldValue;
+  };
   icon?: Text;
   links?: Links;
   group?: Id;
@@ -255,6 +337,38 @@ export interface Node {
   position?: Position;
   size?: Size;
   style?: Style;
+}
+/**
+ * A date range value: start and end as `YYYY-MM-DD`, the end on or after the start (checked by the app).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DateRangeValue".
+ */
+export interface DateRangeValue {
+  /**
+   * Start date, `YYYY-MM-DD`.
+   */
+  from: string;
+  /**
+   * End date, `YYYY-MM-DD`.
+   */
+  to: string;
+}
+/**
+ * A link value: a web or mail address and an optional label. The app never fetches it.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "LinkValue".
+ */
+export interface LinkValue {
+  /**
+   * An `http:`, `https:` or `mailto:` address.
+   */
+  url: string;
+  /**
+   * Text shown instead of the address.
+   */
+  label?: string;
 }
 /**
  * A link to external documentation, a dashboard, a repository…

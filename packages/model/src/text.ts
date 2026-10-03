@@ -11,6 +11,15 @@ export const BLANK_PREFIX = '$blank:';
 
 export const blankKey = (field: string) => `${BLANK_PREFIX}${field}`;
 
+/**
+ * Prefix of the node keys holding typed field values (032), e.g. `$value:task.status`. One key
+ * per value, so two tabs setting the first values of one card both keep theirs (a nested map
+ * created on both sides would keep only one). Read back as the node's `values` object.
+ */
+export const VALUE_PREFIX = '$value:';
+
+export const valueKey = (fieldId: string) => `${VALUE_PREFIX}${fieldId}`;
+
 const isHigh = (code: number) => code >= 0xd800 && code <= 0xdbff;
 const isLow = (code: number) => code >= 0xdc00 && code <= 0xdfff;
 

@@ -6,7 +6,9 @@
  */
 import type { Edge, Flow, Id, Node, SododeckFile } from '@sododeck/schema';
 
-import { drawnShapeType, isKnownPack, isKnownType } from './card-types';
+import { drawnShapeType, isKnownPack, isKnownType, typeName } from './card-types';
+import { validateValue } from './field-values';
+import { appliesTo, findField } from './fields';
 import { analyzeFlow, type FlowAnalysis, type PathStep } from './flow-paths';
 import { stickyLabel } from './geometry';
 import { checkIntegrity, type IntegrityProblem } from './integrity';
@@ -25,7 +27,8 @@ export type ProblemKind =
   | 'broken-reference'
   | 'card-size-out-of-range'
   | 'unknown-card-type'
-  | 'unknown-pack';
+  | 'unknown-pack'
+  | 'field-value-dangling';
 
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
@@ -41,6 +44,7 @@ export const PROBLEM_KINDS: readonly ProblemKind[] = [
   'card-size-out-of-range',
   'unknown-card-type',
   'unknown-pack',
+  'field-value-dangling',
 ];
 
 /** Where a problem is fixed. */
@@ -66,6 +70,16 @@ export interface Problem {
   objectTitle: string;
   /** Step position within a flow, else 0. */
   order: number;
+  /** A one-click fix the Problems panel offers (032: remove a dangling value). */
+  fix?: ProblemFix;
+}
+
+/** Fixes a problem row can offer. */
+export interface ProblemFix {
+  kind: 'remove-value';
+  nodeId: Id;
+  fieldId: Id;
+  label: string;
 }
 
 export interface DeckProblems {
@@ -93,6 +107,7 @@ interface Draft {
   order?: number;
   /** Object ids to show the problem on (defaults to the target's ids). */
   on: readonly Id[];
+  fix?: ProblemFix;
 }
 
 const TITLES: Record<ProblemKind, string> = {
@@ -108,6 +123,7 @@ const TITLES: Record<ProblemKind, string> = {
   'card-size-out-of-range': 'Card size out of range',
   'unknown-card-type': 'Unknown card type',
   'unknown-pack': 'Unknown pack',
+  'field-value-dangling': 'Value without a field',
 };
 
 /**
@@ -163,6 +179,7 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   checkReferences(file, analyses, nodeTitle, add);
   checkCardSizes(file.nodes, add);
   checkCardTypes(file, add);
+  checkFieldValues(file, add);
   return finish(drafts);
 }
 
@@ -225,6 +242,42 @@ function checkCardTypes(file: SododeckFile, add: Add): void {
       detail: 'Kept in the file; this version has no types for it',
       objectTitle: pack,
     });
+  }
+}
+
+/**
+ * Values the deck keeps but cannot show (032 FR-017): the field or the option is gone, the value
+ * does not fit its field, or the field no longer applies to the card's type. One per card and field.
+ */
+function checkFieldValues(file: SododeckFile, add: Add): void {
+  for (const node of file.nodes) {
+    for (const [fieldId, value] of Object.entries(node.values ?? {})) {
+      const field = findField(file, fieldId);
+      let detail: string | undefined;
+      if (field === undefined) {
+        detail = `${node.title} holds a value for a field this deck no longer has (${fieldId})`;
+      } else {
+        const message = validateValue(field, value);
+        const choice = field.kind === 'select' || field.kind === 'status';
+        if (choice && typeof value === 'string' && message !== null) {
+          detail = `${field.name} on ${node.title} points at an option that no longer exists`;
+        } else if (message !== null) {
+          detail = `${field.name} on ${node.title}: ${message}`;
+        } else if (!appliesTo(field, node.type)) {
+          detail = `${field.name} no longer applies to ${typeName(node.type)} cards (${node.title})`;
+        }
+      }
+      if (detail === undefined) continue;
+      add({
+        kind: 'field-value-dangling',
+        ids: [node.id, fieldId],
+        target: { type: 'node', id: node.id },
+        on: [node.id],
+        detail,
+        objectTitle: node.title,
+        fix: { kind: 'remove-value', nodeId: node.id, fieldId, label: 'Remove value' },
+      });
+    }
   }
 }
 
@@ -505,6 +558,7 @@ function finish(drafts: readonly Draft[]): DeckProblems {
       detail: d.detail,
       objectTitle: d.objectTitle,
       order: d.order ?? 0,
+      ...(d.fix === undefined ? {} : { fix: d.fix }),
     });
   }
   const on = new Map(drafts.map((d) => [`${d.kind}:${d.ids.join(':')}`, d.on]));

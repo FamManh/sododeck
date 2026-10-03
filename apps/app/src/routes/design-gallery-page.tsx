@@ -11,6 +11,7 @@ import { MotionSection } from '../design-gallery/motion-section';
 import { OverlaysSection } from '../design-gallery/overlays-section';
 import { PanelGallerySection } from '../design-gallery/panel-section';
 import { StyleSamples } from '../design-gallery/style-samples';
+import { TypedFieldSamples } from '../design-gallery/typed-field-samples';
 import { useThemeStore } from '../theme/theme-store';
 
 const SECTIONS: [id: string, label: string][] = [
@@ -77,6 +78,7 @@ export function DesignGalleryPage() {
           <PanelGallerySection />
           <KeyboardSection />
           <StyleSamples />
+          <TypedFieldSamples />
         </main>
       </div>
       <Toaster />

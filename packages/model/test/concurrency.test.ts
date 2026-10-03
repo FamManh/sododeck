@@ -681,3 +681,57 @@ describe('tag colours (033)', () => {
     );
   });
 });
+
+describe('typed fields (032)', () => {
+  const tasks: SododeckFile = {
+    ...base,
+    nodes: [...base.nodes, { id: 't', type: 'task', title: 'Task' }],
+    fields: [
+      {
+        id: 'sel',
+        name: 'Size',
+        kind: 'select',
+        options: [
+          { id: 's', label: 'S' },
+          { id: 'm', label: 'M' },
+        ],
+      },
+    ],
+  };
+
+  it('keeps two tabs setting the first values of different fields of one card', () => {
+    bothOrders(
+      tasks,
+      ({ editor }) => {
+        editor.setValues(['t'], 'task.status', 'doing');
+      },
+      ({ editor }) => {
+        editor.setValues(['t'], 'task.due', '2026-10-14');
+      },
+      (a) => {
+        expect(getObject(a.doc, 'nodes', 't')?.values).toEqual({
+          'task.due': '2026-10-14',
+          'task.status': 'doing',
+        });
+      },
+    );
+  });
+
+  it('keeps two tabs editing different options of one field', () => {
+    bothOrders(
+      tasks,
+      ({ editor }) => {
+        editor.updateOption('sel', 's', { label: 'Small', color: 'green' });
+      },
+      ({ editor }) => {
+        editor.updateOption('sel', 'm', { label: 'Medium' });
+      },
+      (a) => {
+        expect(toJSON(a.doc).fields?.[0]?.options).toEqual([
+          { id: 's', label: 'Small', color: 'green' },
+          { id: 'm', label: 'Medium' },
+        ]);
+      },
+    );
+  });
+});

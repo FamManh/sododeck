@@ -235,6 +235,60 @@ describe('searching by card type (030)', () => {
   });
 });
 
+describe('searching typed field values (032 FR-020)', () => {
+  const deck = (): SododeckFile => ({
+    ...emptySododeckFile(),
+    fields: [
+      {
+        id: 'zone',
+        name: 'Temperature zone',
+        kind: 'select',
+        types: ['warehouse'],
+        options: [{ id: 'z1', label: 'Frozen' }],
+      },
+      { id: 'notes', name: 'Dock notes', kind: 'text' },
+      { id: 'site', name: 'Site', kind: 'link' },
+    ],
+    nodes: [
+      {
+        id: 'w',
+        type: 'warehouse',
+        title: 'Hub',
+        owner: 'Minh Tran',
+        values: {
+          zone: 'z1',
+          notes: 'Bay four closed',
+          'warehouse.sla': 24,
+          site: { url: 'https://maps.example.com/hcm', label: 'HCM depot map' },
+          'warehouse.capacity': 82,
+        },
+      },
+      { id: 't', type: 'task', title: 'Pack', values: { 'task.assignee': 'Lan' } },
+      { id: 'x', type: 'service', title: 'Other', values: { gone: 'Frozen secret' } },
+    ],
+  });
+
+  it.each([
+    ['frozen', ['w'], 'Temperature zone: Frozen'],
+    ['bay four', ['w'], 'Dock notes: Bay four closed'],
+    ['lan', ['t'], 'Assignee: Lan'],
+    ['minh', ['w'], 'Owner: Minh Tran'],
+    ['depot map', ['w'], 'Site: HCM depot map'],
+    ['24', ['w'], 'SLA: 24 h'],
+  ])('finds %j by a value, with a snippet naming the field', (query, ids, snippet) => {
+    const { results } = searchDeck(buildSearchIndex(deck()), query);
+    expect(results.map((r) => r.id)).toEqual(ids);
+    expect(results[0]?.snippet?.field).toBe('field');
+    expect(results[0]?.snippet?.text).toBe(snippet);
+  });
+
+  it('does not search dangling values or option ids', () => {
+    const index = buildSearchIndex(deck());
+    expect(searchDeck(index, 'secret').results).toEqual([]);
+    expect(searchDeck(index, 'z1').results).toEqual([]);
+  });
+});
+
 describe('shapes in search (031)', () => {
   it('finds a shape by its title and by its shape name', () => {
     const index = buildSearchIndex({

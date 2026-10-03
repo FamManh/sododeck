@@ -1,5 +1,6 @@
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
+import { FIELD_BLOCK, FIELD_CHIP, fieldChipWidth, hiddenLabel } from '../card-fields';
 import { DECK_CARD } from '../card-layout';
 import { SHAPE_TITLE_FONT, SHAPE_TITLE_LINE, shapePath, titleBox } from '../shapes/shape-geometry';
 import { TAG_CHIP } from '../card-tags';
@@ -7,7 +8,15 @@ import { KNOB_RADIUS } from '../edge-constants';
 import { ARROW_PATH, endMarks } from '../edge-end-marks';
 import { exportTextColour, stickyColours, type ExportPalette } from './export-palette';
 import { ICON_PATHS, type IconNode } from './icon-paths';
-import type { ExportScene, SceneCard, SceneCollapsed, SceneEdge, SceneGroup } from './scene';
+import type {
+  ExportScene,
+  SceneCard,
+  SceneCollapsed,
+  SceneEdge,
+  SceneFieldChip,
+  SceneFields,
+  SceneGroup,
+} from './scene';
 import { truncate, type TextMeasurer } from './text-measure';
 
 export interface SvgOptions {
@@ -32,6 +41,12 @@ export const FONTS = {
   description: DECK_CARD.descriptionFont,
   typeName: `500 11.5px ${SANS}`,
   tag: TAG_CHIP.font,
+  /** Field chips and rows (032, `--sd-deck-chip`, row labels and values). */
+  fieldChip: FIELD_CHIP.font,
+  fieldRow: `11.5px ${SANS}`,
+  fieldMono: `11.5px ${MONO}`,
+  fieldPill: FIELD_BLOCK.pillFont,
+  initials: `600 7.5px ${MONO}`,
   groupLabel: `600 12.5px ${SANS}`,
   count: `700 13px ${SANS}`,
   groupCount: `700 10.5px ${SANS}`,
@@ -52,6 +67,11 @@ const STYLE = [
   `.d{font:${FONTS.description}}`,
   `.ty{font:${FONTS.typeName}}`,
   `.tg{font:${FONTS.tag}}`,
+  `.fc{font:${FONTS.fieldChip}}`,
+  `.fr{font:${FONTS.fieldRow}}`,
+  `.fm{font:${FONTS.fieldMono}}`,
+  `.fp{font:${FONTS.fieldPill}}`,
+  `.fi{font:${FONTS.initials}}`,
   `.gl{font:${FONTS.groupLabel}}`,
   `.n{font:${FONTS.count}}`,
   `.gc{font:${FONTS.groupCount}}`,
@@ -183,6 +203,161 @@ function baseline(top: number, height: number, size: number): number {
   return top + height / 2 + size * 0.35;
 }
 
+const STATUS_ICON_KEYS = {
+  circle: 'status-circle',
+  'circle-dashed': 'status-circle-dashed',
+  'circle-dot': 'status-circle-dot',
+  'circle-check': 'status-circle-check',
+  eye: 'status-eye',
+  'door-open': 'status-door-open',
+} as const;
+
+/** One field chip (032): 21 tall, its option's colours or the card tile's, icon / avatar first. */
+function fieldChip(
+  chip: SceneFieldChip,
+  x: number,
+  y: number,
+  width: number,
+  iconOnly: boolean,
+  cardChip: string,
+  cardInk: string,
+  palette: ExportPalette,
+  measure: TextMeasurer,
+): string {
+  const fill = chip.colours?.chip ?? cardChip;
+  const ink = chip.colours?.ink ?? cardInk;
+  const h = FIELD_CHIP.height;
+  const out = [box(x, y, width, h, h / 2, fill, undefined, undefined, 'field-chip')];
+  let cursor = iconOnly ? x + (width - FIELD_CHIP.icon) / 2 : x + FIELD_CHIP.paddingLeft;
+  const middle = y + h / 2;
+  if (chip.kind === 'status') {
+    out.push(
+      icon(ICON_PATHS[STATUS_ICON_KEYS[chip.icon ?? 'circle']], cursor, middle - 6, 12, ink, 2),
+    );
+    cursor += FIELD_CHIP.icon + FIELD_CHIP.iconGap;
+  } else if (chip.kind === 'date' || chip.kind === 'dateRange') {
+    out.push(
+      icon(ICON_PATHS[chip.kind === 'date' ? 'date' : 'date-range'], cursor, middle - 6, 12, ink),
+    );
+    cursor += FIELD_CHIP.icon + FIELD_CHIP.iconGap;
+  } else if (chip.kind === 'person') {
+    const r = FIELD_CHIP.avatar / 2;
+    out.push(`<circle ${attrs({ cx: cursor + r, cy: middle, r, fill: palette.surface3 })}/>`);
+    out.push(
+      text(
+        'fi',
+        cursor + r,
+        baseline(y, h, 7.5),
+        palette.inkSecondary,
+        chip.initials ?? '',
+        'middle',
+      ),
+    );
+    cursor += FIELD_CHIP.avatar + FIELD_CHIP.iconGap;
+  }
+  if (!iconOnly) {
+    const room = Math.max(0, x + width - FIELD_CHIP.paddingRight - cursor);
+    out.push(
+      text(
+        'fc',
+        cursor,
+        baseline(y, h, 11.5),
+        ink,
+        truncate(chip.text, FONTS.fieldChip, room, measure),
+      ),
+    );
+  }
+  return out.join('');
+}
+
+/** The fields block (032): chip shelf, label–value rows, "+N fields" pill, as the canvas lays it out. */
+function fieldsBlock(
+  fields: SceneFields,
+  left: number,
+  top: number,
+  inner: number,
+  cardChip: string,
+  cardInk: string,
+  palette: ExportPalette,
+  measure: TextMeasurer,
+): string {
+  const out: string[] = [];
+  for (const entry of fields.chips) {
+    const y = top + entry.row * (FIELD_CHIP.height + FIELD_CHIP.gap);
+    out.push(
+      fieldChip(
+        entry.chip,
+        left + entry.x,
+        y,
+        entry.width,
+        false,
+        cardChip,
+        cardInk,
+        palette,
+        measure,
+      ),
+    );
+  }
+  fields.rows.forEach((row, index) => {
+    const y = top + fields.block.rowsTop + index * FIELD_BLOCK.rowHeight;
+    const base = baseline(y, FIELD_BLOCK.rowHeight, 11.5);
+    out.push(text('fr', left, base, palette.inkMuted, row.label));
+    const valueLeft = left + measure(row.label, FONTS.fieldRow) + 8;
+    const right = left + inner;
+    if (row.kind === 'progress') {
+      const value = row.text;
+      const valueWidth = measure(value, FONTS.fieldMono);
+      out.push(text('fm', right, base, palette.ink, value, 'end'));
+      const trackRight = right - valueWidth - 8;
+      const trackWidth = Math.max(24, trackRight - valueLeft);
+      const trackY = y + (FIELD_BLOCK.rowHeight - 8) / 2;
+      out.push(
+        box(
+          trackRight - trackWidth,
+          trackY,
+          trackWidth,
+          8,
+          4,
+          palette.surface3,
+          undefined,
+          undefined,
+          'bar',
+        ),
+      );
+      const filled = (trackWidth * (row.progress ?? 0)) / 100;
+      if (filled > 0)
+        out.push(box(trackRight - trackWidth, trackY, filled, 8, 4, palette.inkSecondary));
+      return;
+    }
+    const font = row.kind === 'number' ? FONTS.fieldMono : FONTS.fieldRow;
+    const iconRoom = row.kind === 'link' ? 16 : 0;
+    const value = truncate(row.text, font, Math.max(0, right - valueLeft - iconRoom), measure);
+    out.push(text(row.kind === 'number' ? 'fm' : 'fr', right, base, palette.ink, value, 'end'));
+    if (row.kind === 'link') {
+      const iconX = right - measure(value, font) - 4 - 12;
+      out.push(icon(ICON_PATHS.link, iconX, y + (FIELD_BLOCK.rowHeight - 12) / 2, 12, palette.ink));
+    }
+  });
+  if (fields.hidden > 0) {
+    const label = hiddenLabel(fields.hidden);
+    const y = top + fields.block.pillTop;
+    const pillWidth = measure(label, FONTS.fieldPill) + 2 * 8 + 3;
+    out.push(
+      `<rect ${attrs({ 'data-part': 'more-fields', x: left + 0.75, y: y + 0.75, width: pillWidth - 1.5, height: FIELD_BLOCK.pillHeight - 1.5, rx: 9.25, fill: 'none', stroke: palette.borderStrong, 'stroke-width': 1.5, 'stroke-dasharray': '3 2' })}/>`,
+    );
+    out.push(
+      text(
+        'fp',
+        left + 8 + 1.5,
+        baseline(y, FIELD_BLOCK.pillHeight, 11),
+        palette.inkSecondary,
+        label,
+      ),
+    );
+  }
+  return out.join('');
+}
+
 function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): string {
   const { x, y, width, height } = item.rect;
   const c = DECK_CARD;
@@ -219,6 +394,19 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
     const rulesInk = custom ? ink : palette.primaryInk;
     out.push(icon(ICON_PATHS.rules, slotRight - 14, headerMiddle - 7, 14, rulesInk));
   }
+  const status = item.fields.header;
+  if (status !== undefined) {
+    // The first on-card status sits in the header's status slot; icon alone under 150 px (032).
+    const narrow = width < 150;
+    // As on the canvas the chip keeps its width and the type name takes what is left.
+    const room = Math.max(21, typeRight - (left + c.headerHeight + 8));
+    const chipWidth = narrow ? 21 : Math.min(room, fieldChipWidth(status, room, measure));
+    const chipX = typeRight - chipWidth;
+    out.push(
+      fieldChip(status, chipX, top + 1.5, chipWidth, narrow, chip, chipInk, palette, measure),
+    );
+    typeRight = chipX - 8;
+  }
   const typeX = left + c.headerHeight + 8;
   out.push(
     text(
@@ -252,6 +440,12 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
       );
     }
     top += item.descriptionLines.length * c.descriptionLineHeight;
+  }
+
+  if (item.fields.block.height > 0) {
+    top += c.gap;
+    out.push(fieldsBlock(item.fields, left, top, inner, chip, chipInk, palette, measure));
+    top += item.fields.block.height;
   }
 
   if (item.tagChips.length > 0) {

@@ -15,6 +15,7 @@ import {
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
 import { bundleEdges } from './bundles';
 import { cardLayout } from './card-layout';
+import { cardSize } from './canvas-geometry';
 import { focusSet } from './focus-set';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
@@ -1054,6 +1055,81 @@ describe('drill-in proxies and scope label (034 US3)', () => {
       sourceHandle: 'right',
       targetHandle: 'left',
     });
+  });
+});
+
+describe('typed fields on cards (032)', () => {
+  const fieldDeck: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      {
+        id: 't',
+        type: 'task',
+        title: 'Write spec',
+        position: { x: 0, y: 0 },
+        values: { 'task.status': 'doing', 'task.due': '2026-10-14' },
+      },
+      {
+        id: 'w',
+        type: 'warehouse',
+        title: 'HCM',
+        position: { x: 300, y: 0 },
+        values: { 'warehouse.sla': 24 },
+      },
+    ],
+  };
+  const card = (nodes: ReturnType<typeof toFlowNodes>, id: string) =>
+    nodes.find((n) => n.id === id) as DeckFlowNode;
+
+  it('puts the field view in node data and grows the card to fit it', () => {
+    const nodes = toFlowNodes(fieldDeck, topLevelGraph(fieldDeck), view({ level: 'container' }));
+    const task = card(nodes, 't');
+    expect(task.data.fields.header?.name).toBe('Status: In progress');
+    expect(task.data.fields.chips.map((c) => c.fieldId)).toEqual(['task.due']);
+    expect(task.data.layout.fieldsHeight).toBeGreaterThan(0);
+    expect(task.height).toBe(task.data.layout.height);
+    expect(task.height).toBeGreaterThan(cardLayout({ title: 'Write spec' }).height);
+  });
+
+  it('rebuilds only the cards of a type whose "On card" choice changes', () => {
+    const v = view({ level: 'container' });
+    const first = toFlowNodes(fieldDeck, topLevelGraph(fieldDeck), v);
+    const toggled: SododeckFile = {
+      ...fieldDeck,
+      fields: [
+        { id: 'warehouse.capacity', name: 'Capacity', kind: 'progress', types: ['warehouse'] },
+        { id: 'warehouse.sla', name: 'SLA', kind: 'number', unit: 'h', types: ['warehouse'] },
+        { id: 'warehouse.region', name: 'Region', kind: 'select', types: ['warehouse'] },
+      ],
+      fieldDefaults: ['warehouse'],
+    };
+    const next = toFlowNodes(toggled, topLevelGraph(toggled), v);
+    expect(card(next, 't')).toBe(card(first, 't'));
+    expect(card(next, 'w')).not.toBe(card(first, 'w'));
+    expect(card(next, 'w').data.fields.rows).toEqual([]);
+    expect(card(next, 'w').data.fields.hidden).toBe(1);
+  });
+
+  it('keeps cards without values exactly as before', () => {
+    const plain: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes: [{ id: 's', type: 'service', title: 'Orders', tech: 'Go', owner: 'Lan' }],
+    };
+    const [node] = toFlowNodes(plain, topLevelGraph(plain), view({ level: 'container' }));
+    expect((node as DeckFlowNode).data.layout.fieldsHeight).toBe(0);
+    expect((node as DeckFlowNode).height).toBe(
+      cardLayout({ title: 'Orders', description: 'Go' }).height,
+    );
+  });
+
+  it('sizes the card the same through cardSize once the view state is derived', () => {
+    viewStateOf(fieldDeck, null);
+    const [node] = fieldDeck.nodes;
+    const nodes = toFlowNodes(fieldDeck, topLevelGraph(fieldDeck), view({ level: 'container' }));
+    if (node === undefined) throw new Error('no node');
+    expect(card(nodes, 't').height).toBe(
+      cardSize(node, 'container', { description: node.tech }).height,
+    );
   });
 });
 

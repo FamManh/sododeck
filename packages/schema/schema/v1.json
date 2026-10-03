@@ -58,6 +58,17 @@
       "uniqueItems": true,
       "minItems": 1
     },
+    "fields": {
+      "description": "Typed field definitions of the deck (032), in deck order: user fields, plus any built-in (`tech`, `host`, `owner`) or default field (e.g. `task.status`) whose order, on-card choice or definition the user changed. A type's fields are this list filtered to that type. Absent means only the built-in fields and each type's default fields, as the app defines them.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/FieldDef" }
+    },
+    "fieldDefaults": {
+      "description": "Card types whose default fields now live in `fields` (032): for these types the app no longer adds its own default fields, so a deleted default stays deleted. Absent means every type uses the app's default fields.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/TypeId" },
+      "uniqueItems": true
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
@@ -372,6 +383,119 @@
         "stroke": { "$ref": "#/$defs/ColorRef", "description": "Border colour." }
       }
     },
+    "FieldKind": {
+      "title": "FieldKind",
+      "description": "What a typed field holds: `text`, `number` (with an optional unit), `select` or `status` (one of its options), `person` (free text), `date`, `dateRange`, `link` or `progress` (0–100, drawn as a bar).",
+      "type": "string",
+      "enum": [
+        "text",
+        "number",
+        "select",
+        "status",
+        "person",
+        "date",
+        "dateRange",
+        "link",
+        "progress"
+      ]
+    },
+    "StatusIcon": {
+      "title": "StatusIcon",
+      "description": "Icon of a status option.",
+      "type": "string",
+      "enum": ["circle", "circle-dashed", "circle-dot", "circle-check", "eye", "door-open"]
+    },
+    "FieldOption": {
+      "title": "FieldOption",
+      "description": "One choice of a select or status field. Renaming it never changes its id or the values that point at it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "label": {
+          "description": "Text shown on the chip, 1–48 characters.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "color": { "$ref": "#/$defs/ColorRef", "description": "Chip colour. Absent means slate." },
+        "icon": {
+          "$ref": "#/$defs/StatusIcon",
+          "description": "Status options only: the icon drawn before the label. Absent means `circle`."
+        }
+      }
+    },
+    "FieldDef": {
+      "title": "FieldDef",
+      "description": "A typed field (032): a name and a kind, the card types it applies to and whether it shows on the card. The ids `tech`, `host` and `owner` are the built-in fields: their entry stores their order and on-card choice, and their kind is fixed (`text`, `text`, `person`).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "name": {
+          "description": "Field name, 1–64 characters. Unique within a card type ignoring case (checked by the app).",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "kind": { "$ref": "#/$defs/FieldKind" },
+        "types": {
+          "description": "Card types the field applies to. Absent means every type.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/TypeId" },
+          "uniqueItems": true
+        },
+        "onCard": {
+          "description": "`true` shows the field on every card of its types. Absent means false (drawer only).",
+          "type": "boolean"
+        },
+        "unit": {
+          "description": "Number fields only: a unit shown after the value, e.g. `h` or `pts`, 1–12 characters.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12
+        },
+        "options": {
+          "description": "Select and status fields only: the choices, in order. Option ids are unique within the field.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/FieldOption" }
+        }
+      }
+    },
+    "DateRangeValue": {
+      "title": "DateRangeValue",
+      "description": "A date range value: start and end as `YYYY-MM-DD`, the end on or after the start (checked by the app).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "description": "Start date, `YYYY-MM-DD`.", "type": "string" },
+        "to": { "description": "End date, `YYYY-MM-DD`.", "type": "string" }
+      }
+    },
+    "LinkValue": {
+      "title": "LinkValue",
+      "description": "A link value: a web or mail address and an optional label. The app never fetches it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "url": { "description": "An `http:`, `https:` or `mailto:` address.", "type": "string" },
+        "label": { "description": "Text shown instead of the address.", "type": "string" }
+      }
+    },
+    "FieldValue": {
+      "title": "FieldValue",
+      "description": "A card's value for one typed field; its shape depends on the field's kind.",
+      "anyOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "$ref": "#/$defs/DateRangeValue" },
+        { "$ref": "#/$defs/LinkValue" }
+      ]
+    },
     "Node": {
       "title": "Node",
       "description": "A component of the system: a card of any type (service, database, queue, warehouse and so on).",
@@ -397,6 +521,11 @@
         "host": {
           "description": "Where it runs, e.g. \"EKS eu-west-1\". Shown as the subtitle in infra views.",
           "type": "string"
+        },
+        "values": {
+          "description": "Values of typed fields (032): field id → value. Text, person, date (`YYYY-MM-DD`) and select / status (option id) values are strings; number and progress (0–100) values are numbers; a date range is `{ from, to }`; a link is `{ url, label? }`. Tech, host and owner keep their own keys and never appear here. A value whose field or option does not exist, or whose shape does not fit its field, is kept and reported. Absent means no values.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/FieldValue" }
         },
         "icon": {
           "$ref": "#/$defs/Text",

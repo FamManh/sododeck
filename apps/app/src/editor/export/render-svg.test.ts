@@ -537,6 +537,67 @@ describe('renderSvg card types (030)', () => {
   });
 });
 
+describe('renderSvg: typed fields (032)', () => {
+  const typed = deckOf({
+    nodes: [
+      {
+        id: 't',
+        type: 'task',
+        title: 'Write spec',
+        position: { x: 0, y: 0 },
+        values: { 'task.status': 'doing', 'task.assignee': 'Lan' },
+      },
+      {
+        id: 'w',
+        type: 'warehouse',
+        title: 'HCM',
+        position: { x: 300, y: 0 },
+        values: { 'warehouse.capacity': 82, 'warehouse.sla': 24 },
+        owner: 'Minh',
+      },
+    ],
+    fields: [
+      {
+        id: 'warehouse.capacity',
+        name: 'Capacity',
+        kind: 'progress',
+        types: ['warehouse'],
+        onCard: true,
+      },
+      { id: 'warehouse.sla', name: 'SLA', kind: 'number', unit: 'h', types: ['warehouse'] },
+      {
+        id: 'warehouse.region',
+        name: 'Region',
+        kind: 'select',
+        types: ['warehouse'],
+        onCard: true,
+      },
+    ],
+    fieldDefaults: ['warehouse'],
+  });
+  const doc = parse(svgOf(typed));
+
+  it('draws the header status chip, person chip and initials like the canvas', () => {
+    const task = inCard(doc, 't');
+    const texts = [...(task?.querySelectorAll('text') ?? [])].map((t) => t.textContent);
+    expect(texts).toContain('In progress');
+    expect(texts).toContain('Lan');
+    expect(texts).toContain('L');
+    const chips = task?.querySelectorAll('[data-part="field-chip"]');
+    expect(chips?.length).toBe(2);
+    expect(chips?.[0]?.getAttribute('fill')).toBe(LIGHT_PALETTE.cardChips.blue.chip);
+  });
+
+  it('draws progress as a bar row, and hidden values as a dashed pill', () => {
+    const wh = inCard(doc, 'w');
+    const texts = [...(wh?.querySelectorAll('text') ?? [])].map((t) => t.textContent);
+    expect(texts).toEqual(expect.arrayContaining(['Capacity', '82 %', '+1 field']));
+    expect(wh?.querySelector('[data-part="bar"]')).not.toBeNull();
+    const pill = wh?.querySelector('[data-part="more-fields"]');
+    expect(pill?.getAttribute('stroke-dasharray')).toBe('3 2');
+  });
+});
+
 describe('shapes in the export (031 FR-016)', () => {
   const shapes = deckOf({
     nodes: [

@@ -149,6 +149,76 @@ describe('schema v1', () => {
     expectBothValidators({ ...emptySododeckFile(), views: [view] }, true);
   });
 
+  describe('typed fields (032)', () => {
+    const base = emptySododeckFile();
+    const kinds = [
+      'text',
+      'number',
+      'select',
+      'status',
+      'person',
+      'date',
+      'dateRange',
+      'link',
+      'progress',
+    ] as const;
+
+    it.each(kinds)('accepts a %s field', (kind) => {
+      expectBothValidators({ ...base, fields: [{ id: 'f1', name: 'F', kind }] }, true);
+    });
+
+    it('accepts built-in entries with their fixed kinds and fieldDefaults', () => {
+      expectBothValidators(
+        {
+          ...base,
+          fields: [
+            { id: 'tech', name: 'Tech', kind: 'text', onCard: true },
+            { id: 'host', name: 'Host', kind: 'text' },
+            { id: 'owner', name: 'Owner', kind: 'person', onCard: true },
+          ],
+          fieldDefaults: ['task', 'robot'],
+        },
+        true,
+      );
+    });
+
+    it('accepts every value shape', () => {
+      const values = {
+        a: 'text',
+        b: 3.5,
+        c: { from: '2026-10-06', to: '2026-10-17' },
+        d: { url: 'https://example.com' },
+        e: { url: 'mailto:a@example.com', label: 'Mail' },
+      };
+      expectBothValidators(
+        { ...base, nodes: [{ id: 'n1', type: 'task', title: 'A', values }] },
+        true,
+      );
+    });
+
+    it('accepts dangling values: unknown field, unknown option, wrong shape for the kind', () => {
+      expectBothValidators(
+        {
+          ...base,
+          fields: [
+            { id: 'p', name: 'Progress', kind: 'progress' },
+            { id: 'd', name: 'Due', kind: 'date' },
+            { id: 's', name: 'Size', kind: 'select', options: [{ id: 'o1', label: 'S' }] },
+          ],
+          nodes: [
+            {
+              id: 'n1',
+              type: 'task',
+              title: 'A',
+              values: { p: 140, d: '14/10', s: 'gone', missing: 'kept', d2: { url: 'x' } },
+            },
+          ],
+        },
+        true,
+      );
+    });
+  });
+
   it('names the allowed values when an enum value is wrong', () => {
     const [issue] = issuesOf({
       ...emptySododeckFile(),

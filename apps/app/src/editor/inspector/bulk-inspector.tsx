@@ -11,11 +11,10 @@ import { Info, Layers, Plus, Trash2 } from 'lucide-react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
-import { FieldEdit } from '../field-edit';
 import { FieldLabel } from '../fields/field-label';
-import { OwnerField } from '../fields/owner-field';
+import { TypedFieldsSection } from '../fields/typed-fields-section';
 import { PickField } from '../fields/pick-field';
-import { writeNodes, writeNodesOnce, type NodePatch } from '../fields/write-nodes';
+import { writeNodesOnce, type NodePatch } from '../fields/write-nodes';
 import { addDeckColour, applyStyle, removeDeckColour, skippedCount } from '../style/apply-style';
 import { AppearanceSection } from './appearance-section';
 import { groupOptions, NO_GROUP, typeOptions } from './choices';
@@ -63,14 +62,9 @@ export function BulkInspector({
     removeDeckColour(editor, hex);
   };
 
-  /** One batch over the selection; inside a text field's gesture, one undo step per edit. */
-  const writeAll = (patch: (node: Node) => NodePatch | null) => {
-    writeNodes(editor, nodes, patch);
-  };
   const writeAllOnce = (patch: (node: Node) => NodePatch | null) => {
     writeNodesOnce(editor, nodes, patch);
   };
-  const text = (value: string) => (value === '' ? null : value);
   const setTags = (next: (tags: readonly string[]) => readonly string[]) => {
     writeAllOnce((node) => {
       const before = node.tags ?? [];
@@ -142,27 +136,7 @@ export function BulkInspector({
             }}
           />
         </PanelSection>
-        <PanelSection className="grid grid-cols-2 gap-3">
-          <OwnerField
-            deck={deck}
-            value={view.owner.mixed ? '' : view.owner.value}
-            mixed={view.owner.mixed}
-            hint={view.owner.mixed || view.owner.value === '' ? undefined : same(view.owner)}
-            onCommit={(owner) => {
-              writeAll(() => ({ owner: text(owner) }));
-            }}
-          />
-          <FieldEdit
-            label="Tech"
-            allowEmpty
-            value={view.tech.mixed ? '' : view.tech.value}
-            mixed={view.tech.mixed}
-            hint={view.tech.mixed || view.tech.value === '' ? undefined : same(view.tech)}
-            onCommit={(tech) => {
-              writeAll(() => ({ tech: text(tech) }));
-            }}
-          />
-        </PanelSection>
+        <TypedFieldsSection deck={deck} nodes={nodes} />
         <PanelSection>
           <BulkTags
             deck={deck}

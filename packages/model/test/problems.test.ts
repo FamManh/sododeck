@@ -426,3 +426,61 @@ describe('card type and pack problems (030)', () => {
     expect(kinds(file)).toEqual([]);
   });
 });
+
+describe('field-value-dangling (032 FR-017)', () => {
+  const fields = [
+    {
+      id: 'f_zone',
+      name: 'Zone',
+      kind: 'select' as const,
+      types: ['warehouse'],
+      options: [{ id: 'z1', label: 'Cold' }],
+    },
+  ];
+  const wh = (values: Record<string, unknown>, type = 'warehouse') =>
+    deck({
+      fields,
+      nodes: [{ id: 'w', type, title: 'HCM', values } as SododeckFile['nodes'][number]],
+    });
+
+  it('reports nothing for valid values', () => {
+    expect(kinds(wh({ f_zone: 'z1', 'warehouse.capacity': 82, 'warehouse.sla': 4 }))).toEqual([]);
+  });
+
+  it.each([
+    [{ gone: 'x' }, 'gone', 'HCM holds a value for a field this deck no longer has (gone)'],
+    [{ f_zone: 'z9' }, 'f_zone', 'Zone on HCM points at an option that no longer exists'],
+    [
+      { 'warehouse.capacity': 140 },
+      'warehouse.capacity',
+      'Capacity on HCM: Enter a number from 0 to 100.',
+    ],
+    [{ 'task.due': '14/10' }, 'task.due', 'Due date on HCM: Enter a date as YYYY-MM-DD.'],
+  ])('reports %j with a Remove value fix', (values, fieldId, detail) => {
+    const problem = only(wh(values));
+    expect(problem.kind).toBe('field-value-dangling');
+    expect(problem.title).toBe('Value without a field');
+    expect(problem.detail).toBe(detail);
+    expect(problem.target).toEqual({ type: 'node', id: 'w' });
+    expect(problem.fix).toEqual({
+      kind: 'remove-value',
+      nodeId: 'w',
+      fieldId,
+      label: 'Remove value',
+    });
+    expect(problem.key).toBe(`field-value-dangling:w:${fieldId}`);
+  });
+
+  it('reports a value of a field that no longer applies to the card type', () => {
+    expect(only(wh({ f_zone: 'z1' }, 'service')).detail).toBe(
+      'Zone no longer applies to Service cards (HCM)',
+    );
+  });
+
+  it('reports one problem per card and field', () => {
+    expect(kinds(wh({ gone: 1, f_zone: 'z9' }))).toEqual([
+      'field-value-dangling',
+      'field-value-dangling',
+    ]);
+  });
+});

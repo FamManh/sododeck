@@ -112,6 +112,29 @@ describe('cardLayout (research R7)', () => {
     expect(layout({ title: 'A', description: 'd', tags: ['t'], childCount: 2 }).height).toBe(160);
   });
 
+  it('adds the typed fields block with its gap, before the tags (032)', () => {
+    // 74 + 8 + 41 (one chip row, a 19 px row) = 123 → 124; with tags 124 + 8 + 18 = 150 → 152
+    expect(layout({ title: 'A', fieldsHeight: 21 + 8 + 19 })).toMatchObject({
+      fieldsHeight: 48,
+      height: 132,
+    });
+    expect(layout({ title: 'A', fieldsHeight: 48, tags: ['t'] }).height).toBe(156);
+  });
+
+  it('keeps a card without fields exactly as before (032)', () => {
+    expect(layout({ title: 'A', fieldsHeight: 0 })).toEqual(layout({ title: 'A' }));
+    expect(layout({ title: 'A' }).fieldsHeight).toBe(0);
+  });
+
+  it('raises a stored height below the fields block to fit it (032)', () => {
+    const tiny = layout({ title: 'A', fieldsHeight: 48, size: { width: 200, height: 20 } });
+    // minimum: 74 + 8 + 48 = 130 → 132
+    expect(tiny.height).toBe(132);
+    expect(layout({ title: 'A', fieldsHeight: 48, size: { width: 200, height: 300 } }).height).toBe(
+      300,
+    );
+  });
+
   it('uses the stored width and height, and never goes below the minimum', () => {
     const stored = layout({ title: 'A', size: { width: 240, height: 200 } });
     expect(stored).toMatchObject({ width: 240, height: 200 });

@@ -623,6 +623,50 @@ describe('buildScene card types (030)', () => {
   });
 });
 
+describe('buildScene typed fields (032)', () => {
+  const typed = deckOf({
+    nodes: [
+      {
+        id: 't',
+        type: 'task',
+        title: 'Write spec',
+        position: { x: 0, y: 0 },
+        values: { 'task.status': 'doing', 'task.assignee': 'Lan', 'task.due': '2026-10-14' },
+      },
+      {
+        id: 'w',
+        type: 'warehouse',
+        title: 'HCM',
+        position: { x: 300, y: 0 },
+        values: { 'warehouse.capacity': 82, 'warehouse.sla': 24 },
+      },
+      { id: 's', type: 'service', title: 'Orders', position: { x: 600, y: 0 } },
+    ],
+  });
+
+  it('carries each card’s fields with the block the layout reserved', () => {
+    const cards = scene(typed).cards;
+    const task = cards.find((c) => c.id === 't');
+    expect(task?.fields.header?.name).toBe('Status: In progress');
+    expect(task?.fields.header?.colours).toEqual(LIGHT_PALETTE.cardChips.blue);
+    expect(task?.fields.chips.map((c) => c.chip.name)).toEqual([
+      'Assignee: Lan',
+      expect.stringMatching(/^Due date: 14 Oct/),
+    ]);
+    expect(task?.fields.chips[0]?.chip.colours).toBeUndefined();
+    const wh = cards.find((c) => c.id === 'w');
+    expect(wh?.fields.rows.map((r) => r.label)).toEqual(['Capacity', 'SLA']);
+    expect(wh?.layout.fieldsHeight).toBe(wh?.fields.block.height);
+    expect(wh?.rect.height).toBe(wh?.layout.height);
+  });
+
+  it('leaves a card without values unchanged', () => {
+    const svc = scene(typed).cards.find((c) => c.id === 's');
+    expect(svc?.fields.block.height).toBe(0);
+    expect(svc?.rect.height).toBe(cardLayout({ title: 'Orders' }).height);
+  });
+});
+
 describe('shapes in the scene (031)', () => {
   const shapes = deckOf({
     nodes: [

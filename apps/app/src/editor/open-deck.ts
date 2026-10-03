@@ -3,6 +3,7 @@ import { emptySododeckFile, type Frame, type Id, type SododeckFile } from '@sodo
 import * as Y from 'yjs';
 
 import { storageOrigin } from '../storage/origins';
+import { cardFieldView } from './card-fields';
 import { cardSize as cardSizeFor, COMPONENT_CARD_SIZE, GROUP_PADDING } from './canvas-geometry';
 import { demoDeck } from './demo-deck';
 
@@ -42,7 +43,9 @@ export function openDeck(source: DeckSource): DeckDoc {
 export function fitMissingFrames(editor: DeckEditor, deck: SododeckFile): void {
   const options = {
     cardSize: COMPONENT_CARD_SIZE,
-    sizeOf: (node: Parameters<typeof cardSizeFor>[0]) => cardSizeFor(node, 'component'),
+    // With this deck's typed fields (032): the frame fits the cards as they are drawn.
+    sizeOf: (node: SododeckFile['nodes'][number]) =>
+      cardSizeFor(node, 'component', { fields: cardFieldView(deck, node) }),
     padding: GROUP_PADDING,
   };
   const base = fitGroupFrames(deck, options);

@@ -1,7 +1,7 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { createEditor, fromJSON, getObject, toFragment, toJSON } from '../src';
+import { checkDeck, createEditor, fromJSON, getObject, toFragment, toJSON } from '../src';
 import { expectValid, seqIds } from './helpers';
 
 const source: SododeckFile = {
@@ -198,5 +198,47 @@ describe('connector style on copy and create (022 FR-005a)', () => {
     const editor = createEditor(doc, { newId: seqIds() });
     const id = editor.add('edges', { from: 'b', to: 'c' });
     expect(getObject(doc, 'edges', id)).not.toHaveProperty('style');
+  });
+});
+
+describe('typed values on the clipboard (032 FR-021)', () => {
+  const withValues: SododeckFile = {
+    ...emptySododeckFile(),
+    fields: [{ id: 'zone', name: 'Zone', kind: 'text', types: ['warehouse'] }],
+    nodes: [
+      {
+        id: 'w',
+        type: 'warehouse',
+        title: 'Hub',
+        values: { zone: 'Cold', 'warehouse.capacity': 40 },
+        position: { x: 0, y: 0 },
+      },
+    ],
+  };
+
+  it('keeps values on a duplicate in the same deck', () => {
+    const doc = fromJSON(withValues);
+    const editor = createEditor(doc, { newId: seqIds() });
+    const fragment = toFragment(toJSON(doc), { nodes: ['w'], groups: [] });
+    const { nodes } = editor.pasteFragment(fragment, { offset: { x: 24, y: 24 } });
+    expect(getObject(doc, 'nodes', nodes[0] ?? '')?.values).toEqual({
+      zone: 'Cold',
+      'warehouse.capacity': 40,
+    });
+  });
+
+  it('keeps values pasted into a deck without the field, inventing no definition', () => {
+    const fragment = toFragment(withValues, { nodes: ['w'], groups: [] });
+    const doc = fromJSON(emptySododeckFile());
+    const editor = createEditor(doc, { newId: seqIds() });
+    const { nodes } = editor.pasteFragment(fragment, { offset: { x: 0, y: 0 } });
+    const id = nodes[0] ?? '';
+    expect(getObject(doc, 'nodes', id)?.values).toEqual({ zone: 'Cold', 'warehouse.capacity': 40 });
+    expect(toJSON(doc).fields).toBeUndefined();
+    const problems = checkDeck(toJSON(doc)).list;
+    expect(problems.map((p) => [p.kind, p.key])).toEqual([
+      ['field-value-dangling', `field-value-dangling:${id}:zone`],
+    ]);
+    expectValid(doc);
   });
 });

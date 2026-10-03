@@ -16,6 +16,7 @@ const TOKEN_OF: Record<
   canvas: 'canvas',
   surface: 'surface',
   surface2: 'surface-2',
+  surface3: 'surface-3',
   border: 'border',
   borderStrong: 'border-strong',
   hairline: 'hairline',

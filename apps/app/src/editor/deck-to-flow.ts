@@ -42,6 +42,7 @@ import { sameProblemMark, type ProblemMark, type ProblemMarks } from './problems
 import { resolveLook, type CardLook, type StylePreview } from './style/card-style';
 import { cardTagLooks, sameTagLooks, tagColourMap, type TagColourMap } from './tags/card-tag-looks';
 import type { TagLook } from './tags/tag-colours';
+import { cardFieldView, sameFieldView, type CardFieldView } from './card-fields';
 import { PROXY_SIZE, proxyLayout } from './proxy-layout';
 import { scopeBounds, type VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
@@ -57,6 +58,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   owner: string | undefined;
   /** The first ten tags with their own colours (033); empty without tags. */
   tagLooks: readonly TagLook[];
+  /** What the card shows of its typed fields (032): header status, chips, rows, "+N fields". */
+  fields: CardFieldView;
   hasRules: boolean;
   level: Level;
   childCount: number;
@@ -411,6 +414,7 @@ function toFlowNode(
   childCount: number,
   mark: NodeFlowMark | undefined,
   tagColours: TagColourMap,
+  fields: CardFieldView,
 ): DeckFlowNode {
   const cached = nodeCache.get(node);
   const tagLooks =
@@ -439,7 +443,7 @@ function toFlowNode(
     .filter(Boolean)
     .join(' ');
   // The view's own subtitle and the "n inside" row take part, so the box fits what is drawn.
-  const layout = cardLayoutOf(node, { description: subtitle, childCount });
+  const layout = cardLayoutOf(node, { description: subtitle, childCount, fields });
   const size = { width: layout.width, height: layout.height };
   const geometry = geometryOf(node) ?? undefined;
   if (
@@ -452,6 +456,9 @@ function toFlowNode(
     sameProblemMark(cached.data.problems, problems) &&
     sameLook(cached.data.look, look) &&
     sameTagLooks(cached.data.tagLooks, tagLooks) &&
+    // The field view is memoised per node and per type's field list (032), so toggling "On card"
+    // for a type rebuilds only that type's cards.
+    sameFieldView(cached.data.fields, fields) &&
     cached.data.focused === focused &&
     cached.data.level === view.level &&
     cached.data.childCount === childCount &&
@@ -483,6 +490,7 @@ function toFlowNode(
       subtitle,
       owner: node.owner,
       tagLooks,
+      fields,
       hasRules: (node.rules?.length ?? 0) > 0,
       level: view.level,
       childCount,
@@ -814,6 +822,7 @@ export function toFlowNodes(
         graph.childCount.get(node.id) ?? 0,
         overlay.nodes.get(node.id),
         tagColours,
+        cardFieldView(deck, node),
       ),
     ];
   });
@@ -1008,7 +1017,7 @@ export function toFlowEdges(
     const node = lookups.nodesById.get(id);
     const index = lookups.nodeIndexById.get(id);
     if (node === undefined || index === undefined) return undefined;
-    return cardBox(node, index, view.level);
+    return cardBox(node, index, view.level, { fields: cardFieldView(deck, node) });
   }
   /** A plain end's shape geometry (031); collapsed cards and port pills are boxes. */
   function endGeometry(id: string): Geometry | undefined {

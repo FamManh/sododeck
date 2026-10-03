@@ -53,5 +53,7 @@ export function shapeLayout(
     descriptionLines: 0,
     tagRows: 0,
     hasChildrenRow: false,
+    // Shapes keep typed fields in the drawer only (032).
+    fieldsHeight: 0,
   };
 }

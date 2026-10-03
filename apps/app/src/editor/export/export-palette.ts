@@ -11,6 +11,8 @@ export const LIGHT_PALETTE = {
   canvas: '#fafaf8',
   surface: '#ffffff',
   surface2: '#f4f4f1',
+  /** Field bar tracks and person avatars (032). */
+  surface3: '#ecece8',
   border: '#deded8',
   borderStrong: '#cfcfc7',
   hairline: '#ecece8',

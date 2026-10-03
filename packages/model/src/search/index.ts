@@ -4,6 +4,8 @@ import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { normalizeText } from './normalize';
 import { typeName } from '../card-types';
+import { validateValue } from '../field-values';
+import { fieldsOfNode, valueOf, type ResolvedField } from '../fields';
 import type { SearchField, SearchIndex, SearchEntry, SearchFieldValue, SearchKind } from './search';
 
 const nodeCache = new WeakMap<SododeckFile['nodes'][number], SearchEntry>();
@@ -78,6 +80,56 @@ function entryOf(
   return entry;
 }
 
+/**
+ * A card's value as searchable text (032 FR-020): text, person, number (as typed, with its unit),
+ * option labels and link labels (else the address). Dates are not searched; dangling values (no
+ * field, no option, wrong shape) are left out, as on the card.
+ */
+function valueSearchText(field: ResolvedField, value: unknown): string | undefined {
+  if (value === undefined || value === '' || validateValue(field, value) !== null) return undefined;
+  switch (field.kind) {
+    case 'text':
+    case 'person':
+      return typeof value === 'string' ? value : undefined;
+    case 'number':
+      return typeof value === 'number'
+        ? `${String(value)}${field.unit === undefined ? '' : ` ${field.unit}`}`
+        : undefined;
+    case 'progress':
+      return typeof value === 'number' ? `${String(value)} %` : undefined;
+    case 'select':
+    case 'status':
+      return field.options?.find((option) => option.id === value)?.label;
+    case 'link': {
+      const link = value as { url: string; label?: string };
+      return link.label ?? link.url;
+    }
+    case 'date':
+    case 'dateRange':
+      return undefined;
+  }
+}
+
+const BUILT_IN_SEARCH = [
+  ['tech', 'Tech'],
+  ['host', 'Host'],
+  ['owner', 'Owner'],
+] as const;
+
+function valueFields(deck: SododeckFile, node: SododeckFile['nodes'][number]) {
+  // Most cards hold no typed values: read the built-ins directly, without merging field lists.
+  if (node.values === undefined) {
+    return BUILT_IN_SEARCH.map(([key, name]) => {
+      const text = node[key];
+      return text === undefined || text === '' ? null : field('field', `${name}: ${text}`);
+    });
+  }
+  return fieldsOfNode(deck, node).map((def) => {
+    const text = valueSearchText(def, valueOf(node, def.id));
+    return text === undefined ? null : field('field', `${def.name}: ${text}`);
+  });
+}
+
 function nodeEntries(deck: SododeckFile): SearchEntry[] {
   const groups = new Map(deck.groups.map((group) => [group.id, group.title]));
   return deck.nodes.map((node) =>
@@ -91,6 +143,7 @@ function nodeEntries(deck: SododeckFile): SearchEntry[] {
         field('title', node.title),
         field('description', node.description),
         field('type', typeName(node.type)),
+        ...valueFields(deck, node),
       ],
     }),
   );

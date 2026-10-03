@@ -26,6 +26,7 @@ export {
   packTypeCount,
   SHAPE_TYPE_IDS,
   shapeGeometryOf,
+  STATUS_OPTIONS,
   typeName,
   typesOfPacks,
   type CardType,
@@ -47,6 +48,7 @@ export {
   PROBLEM_KINDS,
   type DeckProblems,
   type Problem,
+  type ProblemFix,
   type ProblemKind,
   type ProblemTarget,
 } from './problems';
@@ -138,3 +140,33 @@ export {
   type SearchResult,
 } from './search/search';
 export { normalizeText } from './search/normalize';
+export {
+  appliesTo,
+  BUILT_IN_FIELDS,
+  canonicalPerson,
+  fieldsOfNode,
+  fieldsOfType,
+  fieldUsage,
+  findField,
+  hasValue,
+  isBuiltInField,
+  isDefaultField,
+  personKey,
+  personSuggestions,
+  usesCodeDefaults,
+  valueOf,
+  type BuiltInFieldId,
+  type FieldSource,
+  type ResolvedField,
+} from './fields';
+export {
+  clearedByKindChange,
+  convertValue,
+  FIELD_KINDS,
+  isDateString,
+  isLinkUrl,
+  planKindChange,
+  validateValue,
+  type KindChangePlan,
+} from './field-values';
+export type { FieldPatch, NewField, NewFieldOption, OptionPatch } from './ops/fields';

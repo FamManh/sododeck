@@ -6,6 +6,8 @@ import { jsonSchema } from '../src';
 export interface SchemaNode {
   $ref?: string;
   title?: string;
+  type?: string;
+  required?: string[];
   properties?: Record<string, SchemaNode | boolean>;
   items?: SchemaNode;
   additionalProperties?: SchemaNode | boolean;
@@ -37,12 +39,26 @@ function resolve(schema: SchemaNode): SchemaNode {
   return target;
 }
 
-/** Whether `value` fits an `anyOf` branch, resolving `$ref` and checking `enum` / `pattern`. */
+/**
+ * Whether `value` fits an `anyOf` branch, resolving `$ref` and checking `enum` / `pattern`, a
+ * plain `type` (032 `FieldValue`'s string and number), or an object's known and required keys.
+ */
 function matches(value: unknown, branch: SchemaNode): boolean {
   const resolved = resolve(branch);
   if (resolved.enum !== undefined) return resolved.enum.includes(value as string);
   if (resolved.pattern !== undefined) {
     return typeof value === 'string' && new RegExp(resolved.pattern).test(value);
+  }
+  const { properties } = resolved;
+  if (properties !== undefined) {
+    return (
+      isRecord(value) &&
+      Object.keys(value).every((key) => key in properties) &&
+      (resolved.required ?? []).every((key) => key in value)
+    );
+  }
+  if (resolved.type === 'string' || resolved.type === 'number') {
+    return typeof value === resolved.type;
   }
   return false;
 }

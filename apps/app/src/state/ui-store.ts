@@ -337,6 +337,11 @@ export interface UiState {
   sessionPinReturn: { pinned: FlyoutId | null; shown: FlyoutId | null } | null;
   addFlyout: PaletteState;
   drawer: DrawerState;
+  /**
+   * A drawer section to bring into view once (032: the card's "+N fields" pill asks for
+   * `'fields'`); the section clears it after scrolling to itself. UI-only.
+   */
+  drawerSection: 'fields' | null;
   /** Canvas object that gets focus back when the drawer closes. */
   drawerReturn: string | null;
   /**
@@ -511,6 +516,9 @@ export interface UiState {
   restoreAfterSession: () => void;
   /** Opens the drawer; without a selection it shows the deck. */
   openDrawer: (mode?: DrawerState['mode']) => void;
+  /** Opens the details drawer on the selection and scrolls to `section` (032). */
+  openDrawerAt: (section: 'fields') => void;
+  clearDrawerSection: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
   /** Resizes the drawer; `commit` (end of a drag, a key) also saves the width for this deck. */
@@ -707,6 +715,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     addFlyout: PALETTE_INITIAL,
     sessionPinReturn: null,
     drawer: { open: false, width: DEFAULT_SHELL_PREFS.drawerWidth, mode: 'selection' },
+    drawerSection: null,
     drawerReturn: null,
     jsonShown: false,
     hideUi: false,
@@ -1202,6 +1211,13 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         drawerReturn: state.focusedId,
       });
+    },
+    openDrawerAt: (section) => {
+      get().openDrawer('selection');
+      set({ drawerSection: section });
+    },
+    clearDrawerSection: () => {
+      if (get().drawerSection !== null) set({ drawerSection: null });
     },
     closeDrawer: () => {
       set(({ drawer }) => ({ drawer: { ...drawer, open: false, mode: 'selection' } }));

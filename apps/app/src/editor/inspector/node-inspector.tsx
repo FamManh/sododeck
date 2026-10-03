@@ -14,8 +14,8 @@ import { AttachedRules } from '../fields/attached-rules';
 import { LinksField } from '../fields/links-field';
 import { MarkdownField } from '../fields/markdown-field';
 import { oneStep } from '../fields/one-step';
-import { OwnerField } from '../fields/owner-field';
 import { PickField } from '../fields/pick-field';
+import { TypedFieldsSection } from '../fields/typed-fields-section';
 import { CardTagsField } from '../tags/card-tags-field';
 import { typeName } from '../type-label';
 import { LEVEL_NAMES, nodeLevel } from '../levels';
@@ -32,7 +32,8 @@ type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
 
 /**
  * Component inspector (FR-008, designs 02, 18, 23): title, type, group, markdown description,
- * owner and tech, host, tags, links, attached rules and connections. Text fields save while
+ * typed fields (032: the type's fields with Tech, Host and Owner among them), tags, links,
+ * attached rules and connections. Text fields save while
  * typing; choices and list edits are one undo step each.
  */
 export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }) {
@@ -131,35 +132,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
             }}
           />
         </PanelSection>
-        <PanelSection className="grid grid-cols-2 gap-3">
-          <OwnerField
-            deck={deck}
-            value={node.owner ?? ''}
-            onCommit={(owner) => {
-              write({ owner: text(owner) });
-            }}
-          />
-          <FieldEdit
-            label="Tech"
-            value={node.tech ?? ''}
-            allowEmpty
-            placeholder="e.g. Go"
-            onCommit={(tech) => {
-              write({ tech: text(tech) });
-            }}
-          />
-        </PanelSection>
-        <PanelSection>
-          <FieldEdit
-            label="Host"
-            value={node.host ?? ''}
-            allowEmpty
-            placeholder="e.g. eu-west k8s"
-            onCommit={(host) => {
-              write({ host: text(host) });
-            }}
-          />
-        </PanelSection>
+        <TypedFieldsSection deck={deck} nodes={[node]} />
         <PanelSection>
           <CardTagsField
             nodeId={node.id}

@@ -7,6 +7,57 @@
   "swatches": ["#7a3cff", "#1f2a44"],
   "tagColors": { "Lan": "#7a3cff", "PCI": "violet" },
   "packs": ["architecture", "process", "logistics", "data"],
+  "fields": [
+    {
+      "id": "warehouse.capacity",
+      "name": "Capacity",
+      "kind": "progress",
+      "types": ["warehouse"],
+      "onCard": true
+    },
+    {
+      "id": "warehouse.sla",
+      "name": "SLA",
+      "kind": "number",
+      "types": ["warehouse"],
+      "onCard": true,
+      "unit": "h"
+    },
+    {
+      "id": "warehouse.region",
+      "name": "Region",
+      "kind": "select",
+      "types": ["warehouse"],
+      "onCard": true,
+      "options": [
+        { "id": "o_south", "label": "South", "color": "amber" },
+        { "id": "o_north", "label": "North", "color": "#2f6fde" },
+        { "id": "o_east", "label": "East" }
+      ]
+    },
+    {
+      "id": "f_stage",
+      "name": "Stage",
+      "kind": "status",
+      "types": ["warehouse"],
+      "onCard": true,
+      "options": [
+        { "id": "s_plan", "label": "Planned", "color": "slate", "icon": "circle" },
+        { "id": "s_draft", "label": "Draft", "icon": "circle-dashed" },
+        { "id": "s_build", "label": "Building", "color": "blue", "icon": "circle-dot" },
+        { "id": "s_review", "label": "In review", "color": "violet", "icon": "eye" },
+        { "id": "s_live", "label": "Live", "color": "green", "icon": "circle-check" },
+        { "id": "s_closed", "label": "Closed", "icon": "door-open" }
+      ]
+    },
+    { "id": "f_manager", "name": "Manager", "kind": "person", "types": ["warehouse"] },
+    { "id": "f_opened", "name": "Opened", "kind": "date", "types": ["warehouse"] },
+    { "id": "f_audit", "name": "Audit window", "kind": "dateRange", "types": ["warehouse"] },
+    { "id": "f_runbook", "name": "Runbook", "kind": "link", "types": ["warehouse", "service"] },
+    { "id": "f_notes", "name": "Notes", "kind": "text" },
+    { "id": "owner", "name": "Owner", "kind": "person", "onCard": true }
+  ],
+  "fieldDefaults": ["warehouse"],
   "nodes": [
     {
       "id": "payments-provider",
@@ -126,6 +177,18 @@
       "id": "fulfilment-hub",
       "type": "warehouse",
       "title": "Fulfilment hub",
+      "owner": "Minh Tran",
+      "values": {
+        "f_audit": { "from": "2026-10-06", "to": "2026-10-17" },
+        "f_manager": "Lan Pham",
+        "f_notes": "Bay 4 closed for repairs",
+        "f_opened": "2024-03-02",
+        "f_runbook": { "url": "https://wiki.example.com/hub", "label": "Hub runbook" },
+        "f_stage": "s_live",
+        "warehouse.capacity": 82,
+        "warehouse.region": "o_south",
+        "warehouse.sla": 24
+      },
       "position": { "x": 900, "y": 480 }
     },
     {
