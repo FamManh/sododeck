@@ -1,4 +1,3 @@
-import { KindTile } from '@sododeck/ui/components/kind-tile';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import {
@@ -242,7 +241,9 @@ export const DeckNode = memo(function DeckNode({
         ...(look?.stroke === undefined ? {} : { '--card-stroke': look.stroke }),
         // The chip, tile and tag colours follow the card colour (029); none leaves the neutral
         // fallbacks in the classes below.
-        ...(look === undefined ? {} : { '--card-chip': look.chip, '--card-ink': look.ink }),
+        ...(look === undefined
+          ? {}
+          : { '--card-chip': look.chip, '--card-ink': look.ink, '--card-dot': look.dot }),
       }}
       onDoubleClickCapture={(event) => {
         // A handle double-click resets the size (T030), not the title edit underneath it.
@@ -278,7 +279,16 @@ export const DeckNode = memo(function DeckNode({
       )}
     >
       {isLandscape ? (
-        (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
+        // The plate (frame 123): the type icon on the card fill, no text.
+        (titleInput ?? (
+          <KindIcon
+            aria-hidden
+            data-testid="card-plate-icon"
+            size={30}
+            strokeWidth={2}
+            className="text-(--card-ink,var(--color-ink-secondary))"
+          />
+        ))
       ) : (
         <>
           {/* Header (frame 120): the type tile, the type name, then the badge slot. */}
@@ -289,12 +299,17 @@ export const DeckNode = memo(function DeckNode({
             >
               <KindIcon aria-hidden size={14} strokeWidth={2} />
             </span>
-            <span
-              data-text={subtitleDataText}
-              className={cn('min-w-0 flex-1 truncate text-caption font-medium', subtitleClass)}
-            >
-              {kindLabel(data.kind)}
-            </span>
+            {isContainer ? (
+              <span
+                data-text={subtitleDataText}
+                className={cn('min-w-0 flex-1 truncate text-caption font-medium', subtitleClass)}
+              >
+                {kindLabel(data.kind)}
+              </span>
+            ) : (
+              // System: the tile alone (§g-58); the slot keeps the badges on the right.
+              <span aria-hidden className="min-w-0 flex-1" />
+            )}
             {data.problems !== undefined && hasProblem && (
               <span
                 aria-hidden
@@ -355,15 +370,25 @@ export const DeckNode = memo(function DeckNode({
               className="flex shrink-0 flex-wrap content-start gap-1 overflow-hidden"
               style={{ height: layout.tagRows * 18 + (layout.tagRows - 1) * 4 }}
             >
-              {tags.map((tag) => (
-                <li
-                  key={tag}
-                  title={tag}
-                  className="h-[18px] max-w-full truncate rounded-full bg-(--card-chip,var(--color-surface-2)) px-1.5 text-[10.5px] leading-[18px] font-medium text-(--card-ink,var(--color-ink-secondary))"
-                >
-                  {tag}
-                </li>
-              ))}
+              {tags.map((tag) =>
+                isContainer ? (
+                  <li
+                    key={tag}
+                    title={tag}
+                    className="h-[18px] max-w-full truncate rounded-full bg-(--card-chip,var(--color-surface-2)) px-1.5 text-[10.5px] leading-[18px] font-medium text-(--card-ink,var(--color-ink-secondary))"
+                  >
+                    {tag}
+                  </li>
+                ) : (
+                  // System: a 6 px dot in the same block (§g-63), named for assistive tech.
+                  <li
+                    key={tag}
+                    aria-label={tag}
+                    title={tag}
+                    className="m-[6px] size-1.5 rounded-full bg-(--card-dot,var(--color-deck-dot-neutral))"
+                  />
+                ),
+              )}
             </ul>
           )}
         </>
@@ -424,7 +449,9 @@ export const DeckNode = memo(function DeckNode({
               }
             }}
             className={cn(
-              'sd-handle opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100',
+              'sd-handle opacity-0',
+              // Landscape draws no handles (R8): the dense board stays clean.
+              !isLandscape && 'group-hover/node:opacity-100 group-focus-within/node:opacity-100',
               focusRing,
               role !== null && 'opacity-100',
               hot && 'is-active',

@@ -208,7 +208,7 @@ describe('DeckNode', () => {
 
   it('shows up to ten tags under the title, at every level but Landscape (2026-10-03)', () => {
     const tags = Array.from({ length: 12 }, (_, i) => `tag ${String(i + 1)}`);
-    const { unmount } = renderNode(props({ level: 'system', tags }));
+    const { unmount } = renderNode(props({ level: 'container', tags }));
     const list = screen.getByRole('list', { name: 'Tags' });
     expect(
       within(list)
@@ -483,6 +483,55 @@ describe('DeckNode colour states (020 US6)', () => {
     const node = screen.getByTestId('deck-node');
     expect(node).toHaveAttribute('aria-selected', 'true');
     expect(node).toHaveAttribute('aria-description', expect.stringContaining('Selected'));
+  });
+});
+
+describe('DeckNode per level (029 US4, R8)', () => {
+  const LEVELS = ['landscape', 'system', 'container', 'component'] as const;
+
+  it('keeps the same width and height at every level', () => {
+    const sizes = LEVELS.map((level) => {
+      const { unmount } = renderNode(
+        props({ level, subtitle: 'Go', tags: ['a', 'b'], title: 'Order Service' }),
+      );
+      const node = screen.getByTestId('deck-node');
+      const size = [node.style.width, node.style.height];
+      unmount();
+      return size;
+    });
+    for (const size of sizes) expect(size).toEqual(sizes[0]);
+  });
+
+  it('paints tile, title and tag dots at System, without the type name or description', () => {
+    renderNode(props({ level: 'system', subtitle: 'Go', tags: ['critical', 'pci'] }));
+    expect(screen.getByText('Order Service')).toBeInTheDocument();
+    expect(screen.getByTestId('card-header')).toBeInTheDocument();
+    expect(screen.queryByText('Service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go')).not.toBeInTheDocument();
+    const items = within(screen.getByRole('list', { name: 'Tags' })).getAllByRole('listitem');
+    expect(items.map((item) => item.getAttribute('aria-label'))).toEqual(['critical', 'pci']);
+    for (const item of items) expect(item).toBeEmptyDOMElement();
+  });
+
+  it('paints only the type icon on the card fill at Landscape', () => {
+    renderNode(props({ level: 'landscape', subtitle: 'Go', tags: ['a'] }));
+    expect(screen.queryByTestId('card-header')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('card-description')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-plate-icon')).toBeInTheDocument();
+    expect(screen.queryByText('Order Service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Go')).not.toBeInTheDocument();
+    expect(screen.queryByText('Service')).not.toBeInTheDocument();
+  });
+
+  it('paints the type name, description and tag pills at Container and Component', () => {
+    for (const level of ['container', 'component'] as const) {
+      const { unmount } = renderNode(props({ level, subtitle: 'Go', tags: ['critical'] }));
+      expect(screen.getByText('Service')).toBeInTheDocument();
+      expect(screen.getByText('Go')).toBeInTheDocument();
+      expect(screen.getByText('critical')).toBeInTheDocument();
+      unmount();
+    }
   });
 });
 
