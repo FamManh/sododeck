@@ -85,7 +85,7 @@ export function mergeRemovals(results: readonly RemovalResult[]): RemovalResult 
  */
 export function previewRemoval(file: SododeckFile, targets: RemovalTarget[]): RemovalResult {
   const doc = fromJSON(file);
-  const editor = createEditor(doc);
+  const editor = createEditor(doc, { repair: false });
   try {
     const results = editor.batch(() => targets.flatMap((t) => removeTarget(editor, doc, t) ?? []));
     return mergeRemovals(results);

@@ -112,7 +112,7 @@ export function rename(
   const next = checkName(name);
   const doc = load(updates);
   const before = Y.encodeStateVector(doc);
-  const editor = createEditor(doc);
+  const editor = createEditor(doc, { repair: false });
   editor.updateMeta({ name: next });
   editor.destroy();
   return { delta: Y.encodeStateAsUpdate(doc, before), summary: summarizeDeck(toJSON(doc)) };

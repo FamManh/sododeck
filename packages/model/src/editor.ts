@@ -22,6 +22,8 @@ import { getObject } from './deck';
 import { DeckEditError } from './errors';
 import type { Point } from './geometry';
 import { rootTypes, type Collection, type DeckDoc, type ObjectOf } from './layout';
+import { observeDeck, type DeckChange } from './observe';
+import { hasDanglingViewRefs, repairViewRefs } from './repair';
 import {
   addBranch,
   appendStep,
@@ -84,6 +86,11 @@ export interface EditorOptions {
   captureTimeout?: number;
   /** Id generator, e.g. deterministic ids in tests. Collisions with existing ids are retried. */
   newId?: (prefix: string) => Id;
+  /**
+   * Repair view entries that name nothing after a change that is not this editor's own
+   * (default `true`). Runs with the untracked origin: saved and synced, never an undo step.
+   */
+  repair?: boolean;
 }
 
 /**
@@ -403,6 +410,24 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
   };
 
+  // Check and repair on receive (036 R9): after a change from elsewhere that removed a component
+  // or group, or added or changed a view, drop view entries that now name nothing. The repair is
+  // this editor's own (untracked) transaction, so it never triggers another round.
+  const touchesViewRefs = ({ changes }: DeckChange) =>
+    changes.some(
+      (c) =>
+        (c.scope === 'views' && c.child === undefined && c.kind !== 'removed') ||
+        ((c.scope === 'nodes' || c.scope === 'groups') && c.kind === 'removed'),
+    );
+  const stopRepair =
+    options.repair === false
+      ? undefined
+      : observeDeck(doc, (change) => {
+          if (change.origin !== 'remote' || !touchesViewRefs(change)) return;
+          if (!hasDanglingViewRefs(doc)) return;
+          ctx.transactUntracked(() => repairViewRefs(doc));
+        });
+
   return {
     doc,
     updateMeta: (patch) => {
@@ -591,6 +616,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       };
     },
     destroy: () => {
+      stopRepair?.();
       for (const event of ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const) {
         undoManager.off(event, checkHistoryChange);
       }
