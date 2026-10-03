@@ -23,6 +23,8 @@ export interface Segment {
   current: boolean;
   errorPath: boolean;
   broken: boolean;
+  /** The next branch point after the current step: drawn with a dashed outline (035 FR-014). */
+  nextFork: boolean;
 }
 
 export interface PlayerView {
@@ -81,6 +83,7 @@ export function playerView(
       current: k === i,
       errorPath: errorPath && s.branchId !== null,
       broken: s.broken,
+      nextFork: forkIndex !== undefined && forkIndex > i && k === forkIndex,
     })),
   };
 }

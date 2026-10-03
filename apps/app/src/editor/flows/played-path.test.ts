@@ -90,6 +90,22 @@ describe('playerView', () => {
     expect(playerView(broken, playedPath(broken, null), 'k1')?.segments[1]?.broken).toBe(true);
   });
 
+  it('marks the segment of the next branch point, strictly after the current step (035)', () => {
+    const played = playedPath(fork, null);
+    const nextFork = (stepId: string) =>
+      playerView(fork, played, stepId)?.segments.flatMap((s) => (s.nextFork ? [s.number] : []));
+    expect(nextFork('f1')).toEqual(['3']);
+    expect(nextFork('f2')).toEqual(['3']);
+    // At the fork itself and after it there is no later branch point.
+    expect(nextFork('f3')).toEqual([]);
+    expect(nextFork('f4a')).toEqual([]);
+  });
+
+  it('marks no next fork in a flow without branches', () => {
+    const view = playerView(order, playedPath(order, null), 'o1');
+    expect(view?.segments.some((s) => s.nextFork)).toBe(false);
+  });
+
   it('is null for an empty flow and tolerates unknown ids', () => {
     const empty = analysisOf('empty');
     expect(playerView(empty, playedPath(empty, null), null)).toBeNull();
