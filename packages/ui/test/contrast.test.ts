@@ -153,6 +153,16 @@ function ratio(theme: Map<string, string>, [fg, bg]: Pair): number {
   return contrastRatio(a, b);
 }
 
+/**
+ * Shape titles (031 SC-006): 13 / 600 in Ink, centred on the shape's fill (Surface or a named
+ * fill); the actor's and the text shape's title sit on the canvas.
+ */
+const SHAPE_TITLE_PAIRS: readonly Pair[] = [
+  ['ink', 'surface'],
+  ['ink', 'canvas'],
+  ...CARD_COLOR_NAMES.map((name): Pair => ['ink', `card-${name}-fill`]),
+];
+
 describe.each([
   ['light', light],
   ['dark', dark],
@@ -162,6 +172,10 @@ describe.each([
   });
 
   it.each(CONNECTION_TEXT_PAIRS)('connection focus %s on %s is at least 4.5:1', (fg, bg) => {
+    expect(ratio(theme, [fg, bg])).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(SHAPE_TITLE_PAIRS)('shape title %s on %s is at least 4.5:1', (fg, bg) => {
     expect(ratio(theme, [fg, bg])).toBeGreaterThanOrEqual(4.5);
   });
 
