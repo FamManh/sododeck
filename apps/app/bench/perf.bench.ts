@@ -12,6 +12,7 @@
  *   BENCH_TYPES=1 pnpm bench            # the 13 card types round-robin, every pack on (030)
  *   BENCH_ANIMATED=1 pnpm bench         # 200 connectors with moving dashes, half of them dashed (022)
  *   BENCH_BENDS=1 pnpm bench            # 200 connectors with three free bends each, mixed shapes (022)
+ *   BENCH_SHAPES=1 pnpm bench           # every third node a shape, the eleven geometries (031)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -42,6 +43,7 @@ const BENDS_QUERY = process.env.BENCH_BENDS === '1' ? '&bends=1' : '';
 const TAGS_QUERY = process.env.BENCH_TAGS === '1' ? '&tags=1' : '';
 /** 030 SC-007: the 500 nodes cycle through the 13 built-in card types. */
 const TYPES_QUERY = process.env.BENCH_TYPES === '1' ? '&types=1' : '';
+const SHAPES_QUERY = process.env.BENCH_SHAPES === '1' ? '&shapes=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -225,7 +227,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${SHAPES_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
@@ -1027,7 +1029,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',

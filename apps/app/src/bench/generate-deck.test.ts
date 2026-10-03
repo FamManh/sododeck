@@ -1,4 +1,4 @@
-import { analyzeFlow } from '@sododeck/model';
+import { analyzeFlow, SHAPE_TYPE_IDS } from '@sododeck/model';
 import { parseSododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -185,6 +185,20 @@ describe('generateBenchDeck 022 options', () => {
     expect(new Set(bent.map((e) => e.style?.shape)).size).toBe(3);
     expect(generateBenchDeck(300, 600, 42).deck.edges.every((e) => e.route === undefined)).toBe(
       true,
+    );
+  });
+});
+
+describe('generateBenchDeck shapes option (031)', () => {
+  it('makes every third node a shape, cycling the eleven geometries, every pack on', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { shapes: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    const shapes = deck.nodes.filter((n) => SHAPE_TYPE_IDS.includes(n.type));
+    expect(shapes).toHaveLength(167);
+    expect(new Set(shapes.map((n) => n.type)).size).toBe(11);
+    expect(deck.packs).toContain('shapes');
+    expect(generateBenchDeck(500, 1000, 42, { shapes: true }).deck.edges).toEqual(
+      generateBenchDeck(500, 1000, 42).deck.edges,
     );
   });
 });
