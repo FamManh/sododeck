@@ -110,7 +110,20 @@ function valueSearchText(field: ResolvedField, value: unknown): string | undefin
   }
 }
 
+const BUILT_IN_SEARCH = [
+  ['tech', 'Tech'],
+  ['host', 'Host'],
+  ['owner', 'Owner'],
+] as const;
+
 function valueFields(deck: SododeckFile, node: SododeckFile['nodes'][number]) {
+  // Most cards hold no typed values: read the built-ins directly, without merging field lists.
+  if (node.values === undefined) {
+    return BUILT_IN_SEARCH.map(([key, name]) => {
+      const text = node[key];
+      return text === undefined || text === '' ? null : field('field', `${name}: ${text}`);
+    });
+  }
   return fieldsOfNode(deck, node).map((def) => {
     const text = valueSearchText(def, valueOf(node, def.id));
     return text === undefined ? null : field('field', `${def.name}: ${text}`);

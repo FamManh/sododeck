@@ -269,15 +269,37 @@ export interface FieldBlock {
 
 export const NO_FIELD_BLOCK: FieldBlock = { height: 0, chipRows: 0, rowsTop: 0, pillTop: 0 };
 
+/**
+ * Blocks measured with the default text measurer, per view and card width. Views keep their
+ * identity per node (`cardFieldView`), and hit tests (marquee, edges, group frames) size every
+ * card on each pointer move, so measuring chip text again each time is what this saves.
+ */
+const blockCache = new WeakMap<CardFieldView, Map<number, FieldBlock>>();
+
 /** Shelf, rows and pill stacked 8 px apart (frame 124); the gap above the block is the card's. */
 export function fieldBlock(
   view: CardFieldView,
   cardWidth: number,
-  measure: TextMeasurer = textMeasurer(),
+  measure?: TextMeasurer,
 ): FieldBlock {
   if (view.chips.length === 0 && view.rows.length === 0 && view.hidden === 0) {
     return NO_FIELD_BLOCK;
   }
+  if (measure !== undefined) return measureBlock(view, cardWidth, measure);
+  let byWidth = blockCache.get(view);
+  if (byWidth === undefined) {
+    byWidth = new Map();
+    blockCache.set(view, byWidth);
+  }
+  let block = byWidth.get(cardWidth);
+  if (block === undefined) {
+    block = measureBlock(view, cardWidth, textMeasurer());
+    byWidth.set(cardWidth, block);
+  }
+  return block;
+}
+
+function measureBlock(view: CardFieldView, cardWidth: number, measure: TextMeasurer): FieldBlock {
   const inner = cardWidth - 2 * FIELD_BLOCK.cardPaddingX;
   const last = fieldChipBoxes(view.chips, inner, measure).at(-1);
   const chipRows = last === undefined ? 0 : last.row + 1;
