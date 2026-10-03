@@ -168,8 +168,8 @@ islands, left rail with flyouts, drawer on demand, JSON overlay), so the whole f
 product. Use the "Shop" sample.
 
 - **A1 · New schema deck, empty.** The empty-canvas card offers: Add table (T), Import SQL / DBML,
-  Start from a sample ("Shop", "SaaS auth", "Blog" as small previews). The deck island shows the
-  dialect (Postgres) as a chip.
+  Start from a sample ("Shop", "SaaS auth", "Blog" as small previews). The deck's dialect is
+  set in Deck settings (one per deck, Generic by default).
 - **A2 · Schema deck, working.** About 12 tables and 2 groups at 100 %; one table selected with
   its **selection toolbar** (colour, collapse to keys, add column, group, more) and the drawer
   open on its Columns tab; the Outline flyout pinned, listing groups → tables → columns.
@@ -193,12 +193,6 @@ product. Use the "Shop" sample.
 - **A11 · Flow touching tables.** The flow step drawer with a "Reads / writes" field (table and
   column picker); the architecture view during playback with a "writes orders" chip on the Orders
   DB card.
-- **A12 · Several databases.** An architecture board with Orders DB (Postgres, 8 tables), Analytics
-  DB (MySQL, 5 tables), Legacy DB (SQLite, 3 tables) and a Redis cache card (no tables, no
-  dialect): each database card shows its dialect as a small chip and "n tables inside". Show the
-  dialect select in the database card's drawer, "Export SQL" from one database card, and the
-  toast after moving a table from Orders DB to Analytics DB ("3 types converted: uuid → char(36)…
-  Undo").
 - **A10 · Narrow window** (frame 116 rules): the schema deck at 900 px wide.
 
 Also show:
@@ -209,8 +203,8 @@ Also show:
   line type, colour, delete), canvas (add table, add enum, paste, import SQL / DBML).
 - **Detail level control** in the tools or zoom island: Names · Keys · All, for the deck or the
   current view.
-- **Deck / database settings:** dialect (on the database card, deck default for loose tables),
-  notation (crow's foot or `1` / `n` labels), show data types, show nullable, show cardinality
+- **Deck settings** (the existing ≡ menu → Deck settings, frame 34) with a **Database** section:
+  dialect for the whole deck (Generic, Postgres, MySQL, SQLite), notation (crow's foot or `1` / `n` labels), show data types, show nullable, show cardinality
   ends, show relationship labels, show notes, "Block SQL export with errors".
 - **Locked table:** a lock badge in the header; it cannot be moved or edited until unlocked.
 
@@ -301,88 +295,136 @@ Postgres, schema `public`, deck "Shop":
 
 ### Deliver
 
-Part A (editor screens A1–A12, context menus, deck settings) and Part B (rows 1–14), all in light
+Part A (editor screens A1–A11, context menus, deck settings) and Part B (rows 1–14), all in light
 and dark, in `sododeck-db.js` built on `sododeck-cards.js`. Then a one-page note: the new tokens
 (table width, column row height, row limit, key glyphs, crow's foot geometry, row hairline), how
 column rows and crow's feet draw in Canvas 2D, what stays identical to B, and the risks (dense
 schemas, long tables, wide types, connector clutter, anchors when a table is cut, collapsed to
 keys or zoomed to System).
 
-## Part 3: update prompt (2026-10-03)
+## Part 3: update prompt (2026-10-03, after the first board)
 
-The founder ran the first version of Part 2 before the last round of decisions (DB6–DB11 in
-`backlog-database.md`). Paste the block below into the same Claude Design conversation to update
-the board instead of starting again.
+The founder ran Part 2 before the last decisions (DB6–DB11 in `backlog-database.md`, with DB11
+revised to one dialect per deck) and a review of the board found the editor chrome redrawn. Paste
+the block below into the same Claude Design conversation to fix the board in one pass. It
+replaces any earlier update prompt.
 
 ---
 
-Update the **Database pack** board (`Sododeck Database.dc.html`, `sododeck-db.js`). Keep everything
-that already matches; change or add only what is listed here. Same rules as before: direction B ·
-Deck, built on `sododeck-cards.js` tokens and helpers, light and dark, lucide icons, no blur,
-gradients or filters, readable without colour. If a frame already shows an item, keep it and
-just check it against the text.
+Update the **Database pack** board (`Sododeck Database.dc.html`, `sododeck-db.js`) in one pass.
+Keep everything that already matches; change only what is listed. Same rules as before: board B ·
+Deck for the database parts, light and dark, lucide icons, no blur, gradients or filters,
+readable without colour. Fix the board notes where they say otherwise.
 
-**1. Long tables: "Show all" / "Show fewer" (replaces the "+n columns" pill).**
-A table card shows at most a set number of column rows (propose the number, around 12), keys
-first (PK, then FK, then the rest). At the bottom of the card a dashed button **"Show all 60
-columns"** expands the card in place; once open it reads **"Show fewer"**. The choice is **per
-table and saved in the deck**: on the same board show one long table fully open and one cut.
-Rows that carry a connector always stay visible, even when the table is cut; a hidden column's
-connector anchors on the button. No scrolling inside a card. In row "Large tables", also show how
-the three controls combine: detail level (Names · Keys · All, for the deck or a view), the
-per-table Show all / Show fewer, and semantic zoom.
+**1. Editor chrome: reuse, do not restyle.**
+The islands, rail, toolbars, menus, flyouts, drawer, tooltips and toasts already exist in
+`sododeck-canvas.js` (the canvas-first editor, frames 86–116). The board currently redraws all of
+them in board B's style (pill islands with a lip, round icon buttons, 600 titles, 1.5px borders,
+new tooltip variants) and the notes call that "identical", which it is not.
 
-**2. New screen A12 · Several databases (full window).**
-An architecture board with **Orders DB** (Postgres, 8 tables), **Analytics DB** (MySQL, 5
-tables), **Legacy DB** (SQLite, 3 tables) and a **Redis cache** card (no tables, no dialect). Each
-database card shows its dialect as a small chip and "n tables inside ⏎". Show:
+- Load `sododeck-canvas.js` in `Sododeck Database.dc.html` and draw every screen with **its**
+  chrome components and tokens, unchanged: deck island (≡, deck name 500, save icon, the
+  existing views control), tools island (Jump to, **Labels**, Focus, theme, Export as it is),
+  left rail with its existing buttons (**keep Rules**; Problems is a badge on the rail as already
+  decided, using the existing accent badge, not Clay), undo / redo island, zoom island, minimap,
+  selection toolbar, context menus, flyouts, drawer, popovers.
+- **Tooltips:** use the existing canvas tooltip for every hover hint (buttons, column notes,
+  types). Truncated table names use board B's title tooltip. No other tooltip style.
+- **Toasts:** use the existing Undo toast style (6 s, Undo button, ⌘Z hint).
+- Only the **database parts** take a new style: table cards, column rows, crow's foot
+  connectors, enum card, the "Show all / Show fewer" button, the dialect chip on database cards,
+  the Names · Keys · All control (drawn with the existing segmented-control style, placed in the
+  zoom island), and the database sections inside the existing panels.
+- **No new tools-island button.** Remove the "Schema settings" popover (screen S) and move its
+  content into the existing **≡ menu → Deck settings** (frame 34) as a **Database** section
+  (see 3).
 
-- the database card's drawer with a **Dialect** select;
-- the column type picker inside Orders DB listing Postgres types (`uuid`, `jsonb`, `timestamptz`…);
-- "Export SQL" from the Orders DB card menu (Postgres SQL for its 8 tables only), and "Export SQL"
-  for the whole deck (one file per database);
-- the toast after dragging a table from Orders DB into Analytics DB: "3 types converted: uuid →
-  char(36), jsonb → json, timestamptz → datetime · Undo";
-- in deck settings, the **default dialect** used by tables that are not inside a database card.
+**2. Other categories stay in the same deck.**
+Keep showing tables next to architecture cards, stickies and proxies, as the board already does.
+The Add flyout keeps all packs (All · Architecture · Process · Logistics · Shapes · Database).
 
-**3. Relationships attach to the exact column row** at both ends (decided). Check every
-connector on the board: it must leave and enter at the row's vertical centre, never at the card's
-side midpoint. Composite keys mark every involved row.
+**3. One dialect per deck (replaces "deck default + database card override").**
 
-**4. Many-to-many.** An n–n connector can be drawn directly between `products` and `categories`.
-In the export SQL preview, show the **generated junction table** (`product_categories`) for it,
-and in Problems the hint "n–n between products and categories: create a junction table?" with a
-"Create" action.
+- The dialect is chosen once per deck in **Deck settings → Database**: Generic (default; a small
+  common type list, SQL export asks which dialect), Postgres, MySQL, SQLite. Show the select with
+  a one-line hint per option.
+- Every table and every database card in the deck uses it. A database card shows it as a **chip
+  only**; remove the dialect select from the database card's toolbar and drawer, and remove the
+  "Overrides the deck default" text.
+- Changing the deck's dialect converts column types: show the confirm ("Convert 23 columns from
+  Postgres to MySQL?" with the list) and the Undo toast ("23 types converted: uuid → char(36),
+  jsonb → json… · Undo").
+- The deck island shows no dialect chip and no "Architecture" chip; the existing views control
+  stays.
+- Import (A5): in an empty Generic deck the detected dialect becomes the deck's; in a deck with
+  another dialect, ask to convert. Export (A9): SQL is in the deck's dialect; a Generic deck asks
+  which one. Use "Postgres" everywhere (not "Postgres 16" in some places).
+- Deck settings → Database also holds: notation (crow's foot / 1 / n), show data types, nullable
+  marker, notes, index footer, cardinality ends, relationship labels (hover / always / off),
+  block SQL export with errors. Do not duplicate the existing Labels toggle: relationship labels
+  follow it unless set here.
+- There is **no** "several databases with different dialects" screen.
 
-**5. Editor details (add any that are missing).**
+**4. Long tables: "Show all" / "Show fewer" (replaces the "+n columns" pill).**
+At most a set number of column rows (propose it, around 12), keys first (PK, FK, then the rest).
+At the bottom of the card a dashed **"Show all 60 columns"** button expands the card in place;
+once open it reads **"Show fewer"**. The choice is **per table and saved in the deck**: show one
+long table open and one cut on the same board. Rows that carry a connector always stay visible;
+a hidden column's connector anchors on the button. No scrolling inside a card. In row "Large
+tables" show how detail level (Names · Keys · All), the per-table Show all / Show fewer and
+semantic zoom combine.
 
-- **Context menus:** table (edit, add column, detail level, colour, duplicate, copy, lock, group,
-  export this table as SQL, delete), column row (edit, set as PK, not null, unique, add index, add
-  relationship, move up / down, delete), relationship (cardinality, optional sides, on delete,
-  line type, colour, delete), canvas (add table, add enum, paste, import SQL / DBML).
-- **Detail level control** (Names · Keys · All) in the tools or zoom island.
-- **Deck settings:** default dialect, notation (crow's foot or `1` / `n` labels), show data types,
-  show nullable, show cardinality ends, show relationship labels, show notes, "Block SQL export
-  with errors".
+**5. Relationships attach to the exact column row** at both ends: check every connector on the
+board (leaves and enters at the row's vertical centre, never at the card's side midpoint);
+composite keys mark every involved row.
+
+**6. Many-to-many.** An n–n connector between `products` and `categories`; the export SQL preview
+shows the **generated junction table** (`product_categories`); Problems shows "n–n between
+products and categories: create a junction table?" with a "Create" action.
+
+**7. Flow playback touching tables** (architecture flows only; no flows drawn between tables).
+In the signature row, A11a and A11b:
+
+- step 4 "Create order" writes `orders` **and** `order_items`: inside Orders DB **both** tables
+  are lit as the current step (orange stroke, lip, sticker);
+- the touched **column rows** are highlighted, with reads and writes distinguishable without
+  colour (e.g. a small "R" / "W" marker or pencil / eye icon on the row);
+- the **step player and the flow chip stay on screen** inside the database view (A7b and the
+  signature "After" view), so the user keeps stepping; stepping to a step that does not touch
+  this database dims all tables and shows "Step 5 is outside Orders DB · Back to architecture";
+- at architecture level keep the "writes orders +1" chip on the database card.
+
+**8. Editor details (add any that are missing).**
+
+- **Context menus** (existing menu style): table (edit, add column, detail level, colour,
+  duplicate, copy, lock, group, export this table as SQL, delete), column row (edit, set as PK,
+  not null, unique, add index, add relationship, move up / down, delete), relationship
+  (cardinality, optional sides, on delete, line type, colour, delete), canvas (add table, add
+  enum, paste, import SQL / DBML).
 - **Locked table:** lock badge in the header; cannot be moved or edited until unlocked.
 - **Relationship colour** from the palette (stroke only).
-- **Drawer:** a **Checks** tab (named expressions); index rows with an expression column
-  (`lower(email)`) and a method select (btree, hash, gin…); the table's owner / tags / links;
-  enum values with notes, reorder and "used by orders.status".
+- **Drawer:** Checks tab; index rows with an expression column (`lower(email)`) and a method select
+  (btree, hash, gin…); owner / tags / links; enum values with notes, reorder and "used by
+  orders.status". The colour picker shows all **13** palette colours (indigo is missing today).
 - **Authoring:** duplicate a table; copy / paste a table into another deck (new ids; relationships
   to tables left behind are dropped with a toast); multi-select tables.
-- **A1 empty state:** "Start from a sample" with three small previews: Shop, SaaS auth, Blog.
-- **A5 import:** "Import into Orders DB" or "New deck"; after import, **foreign-key suggestions by
-  name** (`customer_id` → `customers.id`) to accept one by one or all at once; the report lists
-  skipped statements with line numbers.
-- **A6 large schema:** Jump to shows results for tables **and columns**; the views menu lists
-  saved views filtered by schema ("billing only") and by group.
-- **A9 export:** SQL (dialect), DBML, **Mermaid ER** and **Data dictionary (Markdown)** next to
-  PNG / SVG / PDF / JSON; scope selection / one database / whole deck; a lint warning before
-  export when the schema has errors.
-- **New screen A11 · Flow touching tables:** the flow step drawer with a **"Reads / writes"**
-  field (table and column picker); during playback, a "writes orders" chip on the Orders DB card
-  at architecture level, and the `orders` table lit inside the drilled-in view.
+- **A1 empty state:** "Start from a sample": Shop, SaaS auth, Blog as small previews.
+- **A5 import:** "Import into Orders DB" or "New deck"; foreign-key suggestions by name
+  (`customer_id` → `customers.id`) to accept one by one or all; skipped statements with line
+  numbers.
+- **A6 large schema:** Jump to returns tables **and columns**; the views menu lists saved views
+  filtered by schema ("billing only") and by group.
+- **A9 export:** SQL, DBML, **Mermaid ER**, **Data dictionary (Markdown)** next to PNG / SVG / PDF /
+  JSON; scope selection / one database / whole deck; lint warning before export.
 
-Then update the one-page note: the final row limit, the Show all / Show fewer button spec, the
-dialect chip spec, and any new tokens.
+**9. Small fixes.**
+
+- The board and notes say "Database pack (030)": it is the Database pack, backlog **039–049**
+  (030 is the type registry it plugs into).
+- Table header: the type name reads **"Table"**; the schema name (`public`, `billing`) shows only
+  when the deck has more than one schema.
+- Replace hard-coded colours (code panel backgrounds, canvas dim) with existing tokens.
+
+Then update the board notes: the final row limit, the Show all / Show fewer spec, the dialect
+chip spec, the R / W row markers, every new token, and an explicit list of what is reused
+unchanged from `sododeck-canvas.js`.

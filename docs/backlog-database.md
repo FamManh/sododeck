@@ -35,19 +35,19 @@ file exports runnable SQL.
 
 ## Founder decisions (2026-10-03)
 
-| #    | Decision                                                                                                                                                                                                                                                                                                                                                                          |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DB1  | A **Database pack** inside a normal deck (030), not a separate deck type. A deck with only tables is a "schema deck".                                                                                                                                                                                                                                                             |
-| DB2  | Text formats: **SQL DDL** (Postgres, MySQL, SQLite first) and **DBML**, both import and export. DBML is the code-panel format.                                                                                                                                                                                                                                                    |
-| DB3  | Look: card system direction **B · Deck** only (DESIGN.md "Card system (Deck)"); no new visual direction.                                                                                                                                                                                                                                                                          |
-| DB4  | Draw the **whole feature at once** in Claude Design (editor screens + components) before splitting the work.                                                                                                                                                                                                                                                                      |
-| DB5  | Copyright: no code, assets or copy from other tools; we build from the platform, our own design and permissive libraries only.                                                                                                                                                                                                                                                    |
-| DB6  | Parser (Q1, 2026-10-03): **`@dbml/core`** (Apache-2.0) for DBML and SQL, lazy-loaded inside a Web Worker only when importing, exporting or opening the DBML tab. Needs the dependency approval recorded in 044's ADR.                                                                                                                                                             |
-| DB7  | Storage (Q2): a table is a **node** of type `db.table` with `columns[]`, so groups, colours, search, views, export, drill-in and flows work for tables as they do for cards.                                                                                                                                                                                                      |
-| DB8  | Relationship ends (Q3): a foreign key connector attaches to the **exact column row** at both ends (`edge.fromPort` / `edge.toPort` = column ids); 022 reuses the same fields for side anchors later.                                                                                                                                                                              |
-| DB9  | Long tables (Q5): a table shows up to a limit (about 12, final number from the design) with keys first, then a **"Show all n columns" / "Show fewer"** button at the bottom of the card. The choice is **per table and saved in the deck** (`node.expanded`), so a user can keep some tables fully open. Detail levels (names / keys / all) and semantic zoom still apply on top. |
-| DB10 | Many-to-many (Q6): a real `n-n` cardinality can be drawn for quick sketching; SQL export writes the junction table; lint suggests creating one.                                                                                                                                                                                                                                   |
-| DB11 | Dialect (Q4): set on **each database card** (Postgres, MySQL, SQLite…), shown as a chip on the card; tables inside use its type list and export as its SQL; moving a table between databases converts types with a toast and Undo; tables outside any database card use the deck default. Worked example in 049.                                                                  |
+| #    | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DB1  | A **Database pack** inside a normal deck (030), not a separate deck type. A deck with only tables is a "schema deck".                                                                                                                                                                                                                                                                                                                                                  |
+| DB2  | Text formats: **SQL DDL** (Postgres, MySQL, SQLite first) and **DBML**, both import and export. DBML is the code-panel format.                                                                                                                                                                                                                                                                                                                                         |
+| DB3  | Look: card system direction **B · Deck** only (DESIGN.md "Card system (Deck)"); no new visual direction.                                                                                                                                                                                                                                                                                                                                                               |
+| DB4  | Draw the **whole feature at once** in Claude Design (editor screens + components) before splitting the work.                                                                                                                                                                                                                                                                                                                                                           |
+| DB5  | Copyright: no code, assets or copy from other tools; we build from the platform, our own design and permissive libraries only.                                                                                                                                                                                                                                                                                                                                         |
+| DB6  | Parser (Q1, 2026-10-03): **`@dbml/core`** (Apache-2.0) for DBML and SQL, lazy-loaded inside a Web Worker only when importing, exporting or opening the DBML tab. Needs the dependency approval recorded in 044's ADR.                                                                                                                                                                                                                                                  |
+| DB7  | Storage (Q2): a table is a **node** of type `db.table` with `columns[]`, so groups, colours, search, views, export, drill-in and flows work for tables as they do for cards.                                                                                                                                                                                                                                                                                           |
+| DB8  | Relationship ends (Q3): a foreign key connector attaches to the **exact column row** at both ends (`edge.fromPort` / `edge.toPort` = column ids); 022 reuses the same fields for side anchors later.                                                                                                                                                                                                                                                                   |
+| DB9  | Long tables (Q5): a table shows up to a limit (about 12, final number from the design) with keys first, then a **"Show all n columns" / "Show fewer"** button at the bottom of the card. The choice is **per table and saved in the deck** (`node.expanded`), so a user can keep some tables fully open. Detail levels (names / keys / all) and semantic zoom still apply on top.                                                                                      |
+| DB10 | Many-to-many (Q6): a real `n-n` cardinality can be drawn for quick sketching; SQL export writes the junction table; lint suggests creating one.                                                                                                                                                                                                                                                                                                                        |
+| DB11 | Dialect (Q4, revised 2026-10-03): **one dialect per deck**, chosen in **Deck settings** (≡ menu): Generic (default; a small common type list, SQL export asks which dialect), Postgres, MySQL or SQLite; an import sets it from the file. Every table and database card in the deck uses it; a database card only shows it as a chip. Changing it converts column types with a toast listing the conversions and Undo. A different database engine means another deck. |
 
 ## Feature inventory
 
@@ -186,7 +186,8 @@ Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 →
 - **Goal:** The file format and the Yjs model can hold a database schema losslessly.
 - **In scope:**
   - Database pack in the registry: types `db.table`, `db.enum` (and `db.database` = today's
-    `database` kind with an optional `dialect`).
+    `database` kind) and a deck-level `dialect` (`generic | postgres | mysql | sqlite`, default
+    `generic`, DB11).
   - Schema v1 additions, all **optional and additive** (ADR "Database pack model"):
     - on a table node: `schema?`, `columns[]`, `indexes[]`, `checks[]`, `expanded?` (DB9),
       `detail?: 'names' | 'keys' | 'all'`;
@@ -281,12 +282,16 @@ note? }[] }`;
     name, type, flags and default as you type; ⏎ adds the next row; Esc cancels. Rename in place
     (looks exactly like the shown row). Reorder by drag. ↑ ↓ ⏎ ⌫ keyboard. Delete with Undo toast.
   - Drawer tabs: **Table** (name, schema, colour, note, owner, tags, links), **Columns** (all
-    column settings, type picker for the deck's dialect with size / precision, enum picker),
+    column settings, type picker for the deck's dialect (DB11) with size / precision, enum picker),
     **Indexes** (columns as chips, expression, unique, method, name), **Checks**;
     **Relationship** drawer (from / to columns, cardinality picker drawn with the ends, optional
     sides, on delete / on update, name, colour); **Enum** editor (values with notes, reorder,
     used-by list).
-  - Type lists per dialect (Postgres, MySQL, SQLite + generic) as data in the app.
+  - Type lists per dialect (Generic, Postgres, MySQL, SQLite) as data in the app, plus the type
+    conversion table used when the deck's dialect changes (toast with the conversions + Undo).
+  - Deck settings (≡ menu, frame 34) gains a **Database** section: dialect, notation (crow's foot
+    or 1 / n), show data types, nullable, notes, index footer, cardinality ends, relationship
+    labels (hover / always / off), block SQL export with errors.
   - Duplicate a table, copy / paste across decks (new ids, relationships to tables outside the
     paste dropped with a toast), lock a table, multi-selection edits in one undo step.
   - Add flyout: Database tab (Table T, Enum, Note, Table group); packs list shows Database.
@@ -301,7 +306,8 @@ note? }[] }`;
 - **Goal:** An existing schema becomes a laid-out diagram in seconds.
 - **In scope:**
   - Import dialog (canvas empty state, Add flyout footer, File menu): paste text or drop `.sql` /
-    `.dbml`; dialect Postgres / MySQL / SQLite / auto; preview counts; import into the current
+    `.dbml`; dialect Postgres / MySQL / SQLite / auto (an empty Generic deck takes the detected
+    dialect; a deck with another dialect asks to convert); preview counts; import into the current
     deck (inside the selected database card if any) or a new deck.
   - Parsing and mapping in a **Web Worker**, parser lazy-loaded; positions from the ELK worker,
     grouped by schema.
@@ -389,18 +395,15 @@ note? }[] }`;
   - A database card shows "n tables inside"; Enter opens "Inside Orders DB"; tables created inside
     get `parent` = the card; foreign keys to tables in another database card show as dashed
     outside proxies.
-  - Dialect lives on the database card (Q4). Worked example: a board has Orders DB (Postgres,
-    8 tables inside), Analytics DB (MySQL, 5 tables), Legacy DB (SQLite, 3 tables) and a Redis
-    cache card (no tables, no dialect). Each database card shows its dialect as a small chip and
-    in the drawer. Tables inside Orders DB get the Postgres type list in the column type picker;
-    "Export SQL" from the Orders DB card writes Postgres SQL for its 8 tables only; "Export SQL"
-    for the whole deck writes one file per database. Moving a table from Orders DB into
-    Analytics DB converts its types (`uuid` → `char(36)`) and lists every conversion in a toast
-    with Undo. Tables not inside any database card (a quick sketch, or a schema-only deck) use
-    the deck's default dialect from deck settings.
-  - A flow step can list the tables (and optionally columns) it reads or writes; during playback
-    those tables light up inside the drilled-in view, and the database card shows a "writes
-    orders" chip at architecture level.
+  - The deck's dialect (DB11) shows as a chip on every database card; "Export SQL" from a
+    database card writes its tables only, in the deck's dialect (Generic asks which one).
+  - **Flow playback touching tables** (founder, 2026-10-03: architecture flows only, no flows
+    drawn between tables for now): a flow step can list the tables (and optionally columns) it
+    reads or writes. At architecture level the database card shows a "writes orders +1" chip on
+    the current step. Drilled into the database, **every** table the step touches is lit as the
+    current step, the touched column rows are highlighted (reads vs writes readable without
+    colour), and the step player and flow chip stay on screen so the user can keep stepping
+    inside the database.
   - Samples (013): "Shop" (architecture + schema + Checkout flow), "SaaS auth", "Blog".
 - **Acceptance criteria (draft):** playing "Checkout" with a step "Create order → writes orders"
   highlights `orders` when drilled into Orders DB; moving a table to another database card turns
