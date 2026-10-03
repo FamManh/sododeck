@@ -57,6 +57,24 @@ describe('MergedEdge', () => {
     expect(screen.getAllByTestId('edge-knob')).toHaveLength(1);
   });
 
+  it('lets focus rules recolour and thicken a plain bundle line (034 R2)', () => {
+    const { container } = renderEdge('a-to-b');
+    const style = container.querySelector('.react-flow__edge-path')?.getAttribute('style');
+    expect(style).toContain('var(--sd-edge-hl-stroke, var(--color-deck-edge))');
+    expect(style).toContain('var(--sd-edge-hl-width, 2)');
+    expect(screen.getByTestId('edge-arrow').closest('g')).toHaveStyle({
+      color: 'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+    });
+  });
+
+  it('names the pill so hover rules can reach the HTML layer (034)', () => {
+    renderEdge('both');
+    expect(screen.getByTestId('merged-edge-label')).toHaveAttribute(
+      'data-edge-label-for',
+      'merged:a|b',
+    );
+  });
+
   it('draws arrows at both ends for both directions', () => {
     renderEdge('both');
     expect(screen.getAllByTestId('edge-arrow')).toHaveLength(2);

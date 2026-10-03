@@ -307,6 +307,24 @@ describe('toFlowNodes', () => {
     expect(dimmed.find((n) => n.id === 'b')?.data).toMatchObject({ dimmed: true });
   });
 
+  it('marks pinned-focus neighbours, not the focus card itself (034 T008)', () => {
+    const graph = topLevelGraph(deck);
+    const nodes = toFlowNodes(
+      deck,
+      graph,
+      view({ focus: { focusId: 'a', members: new Set(['a', 'b']), edges: new Set(['e1']) } }),
+    );
+    expect(nodes.find((n) => n.id === 'a')?.className).toBe('in-focus');
+    expect(nodes.find((n) => n.id === 'b')?.className).toBe('in-focus sd-focus-neighbour');
+    const moved = toFlowNodes(
+      deck,
+      graph,
+      view({ focus: { focusId: 'b', members: new Set(['a', 'b']), edges: new Set(['e1']) } }),
+    );
+    expect(moved.find((n) => n.id === 'a')?.className).toBe('in-focus sd-focus-neighbour');
+    expect(moved.find((n) => n.id === 'b')?.className).toBe('in-focus');
+  });
+
   it('carries problem marks and rebuilds only when they change (015 FR-022)', () => {
     const graph = topLevelGraph(deck);
     const mark = { count: 1, titles: 'Duplicate connection', label: '1 problem' };

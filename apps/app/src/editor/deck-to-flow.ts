@@ -339,6 +339,15 @@ function sameMark(a: EdgeFlowMark | undefined, b: EdgeFlowMark | undefined): boo
   );
 }
 
+/**
+ * Class names a focus member carries (010, 034): every member is `in-focus`; the ones that are
+ * not the focus card itself also get the neighbour look (Secondary border and lip).
+ */
+function focusClass(view: CanvasView, id: string): string | null {
+  if (view.focus?.members.has(id) !== true) return null;
+  return view.focus.focusId === id ? 'in-focus' : 'in-focus sd-focus-neighbour';
+}
+
 /** The tag colour map each cached card was built with: a recolour revisits only cards with tags. */
 const nodeTagColours = new WeakMap<DeckFlowNode, TagColourMap>();
 
@@ -359,7 +368,6 @@ function toFlowNode(
   const currentStep = mark?.currentStep === true;
   const step = mark?.step ?? undefined;
   const inFlow = mark?.inPath === true;
-  const inFocus = view.focus?.members.has(node.id) === true;
   const selected = view.selection.nodes.includes(node.id);
   const focused = node.id === view.focusedId;
   const dimmed = view.focus !== null && !view.focus.members.has(node.id);
@@ -372,7 +380,7 @@ function toFlowNode(
   const look = resolveLook(node.style, selected ? (view.stylePreview ?? undefined) : undefined);
   const className = [
     inFlow ? 'in-flow' : null,
-    inFocus ? 'in-focus' : null,
+    focusClass(view, node.id),
     viewDimmed ? 'view-dimmed' : null,
   ]
     .filter(Boolean)
@@ -557,7 +565,7 @@ function collapsedNodes(
       groupsById.get(card.groupId)?.style,
       selected ? (view.stylePreview ?? undefined) : undefined,
     );
-    const className = [flowInside !== undefined ? 'in-flow' : null, inFocus ? 'in-focus' : null]
+    const className = [flowInside !== undefined ? 'in-flow' : null, focusClass(view, id)]
       .filter(Boolean)
       .join(' ');
     const cached = collapsedCache.get(id);
@@ -671,9 +679,10 @@ function portNodesWithView(
   return portNodes(deck, graph, view.level).map((port) => {
     const inFocus = view.focus?.members.has(port.id) === true;
     const dimmed = view.focus !== null && !inFocus;
+    const className = focusClass(view, port.id);
     return {
       ...port,
-      ...(inFocus ? { className: 'in-focus' } : {}),
+      ...(className === null ? {} : { className }),
       ...(dimmed ? { domAttributes: { 'aria-hidden': true, inert: true } } : {}),
     };
   });

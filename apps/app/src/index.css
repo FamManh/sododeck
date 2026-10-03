@@ -119,8 +119,9 @@
     var(--shadow-float);
 }
 
-/* The highlighted neighbour in focus mode: Secondary border and lip, still at full opacity. */
-.react-flow__node.in-focus .sd-card {
+/* The highlighted neighbour in focus mode (not the focus card itself): Secondary border and lip,
+   still at full opacity. */
+.react-flow__node.sd-focus-neighbour .sd-card {
   border-color: var(--color-ink-secondary);
   --card-lip: var(--color-ink-secondary);
   --tw-shadow: 0 var(--sd-deck-lip) 0 0 var(--card-lip);
@@ -270,17 +271,32 @@
   transition: opacity var(--sd-dur-dim);
 }
 
-[data-focus-mode] .react-flow__node:not(.in-focus),
+[data-focus-mode] .react-flow__node:not(.in-focus) {
+  opacity: var(--sd-deck-dim);
+}
+
+/* Connectors and their labels dim a little deeper than cards (034 R2), same as flow mode. */
 [data-focus-mode] .react-flow__edge:not(.in-focus),
 [data-focus-mode] [data-testid='edge-label']:not([data-in-focus]),
 [data-focus-mode] .merged-edge-label:not([data-in-focus]) {
-  opacity: var(--sd-deck-dim);
+  opacity: var(--color-deck-dim-edge);
 }
 
 [data-focus-mode] .react-flow__edge:not(.in-focus),
 [data-focus-mode] [data-testid='edge-label']:not([data-in-focus]),
 [data-focus-mode] .merged-edge-label:not([data-in-focus]) {
   pointer-events: none;
+}
+
+/* A lit connector (034 R2): Ink at 2.75 px. Colour and weight are two rules on purpose, so a
+   styled connector (022) can drop the colour and keep the weight. The inline stroke of a plain
+   connector reads these variables (deck-edge.tsx), so no React Flow object changes. */
+[data-focus-mode] .react-flow__edge.in-focus {
+  --sd-edge-hl-stroke: var(--color-ink);
+}
+
+[data-focus-mode] .react-flow__edge.in-focus {
+  --sd-edge-hl-width: 2.75px;
 }
 
 [data-level='landscape'] .react-flow__edge {

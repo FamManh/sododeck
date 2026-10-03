@@ -67,7 +67,7 @@ export const MergedEdge = memo(function MergedEdge({
   const Icon = directionIcon(merged.direction);
   const flowStroke =
     merged.flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(merged.flow)];
-  const stroke = flowStroke?.stroke ?? 'var(--color-deck-edge)';
+  const stroke = flowStroke?.stroke ?? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))';
 
   useEffect(
     () => () => {
@@ -96,7 +96,7 @@ export const MergedEdge = memo(function MergedEdge({
         interactionWidth={12}
         style={{
           stroke,
-          strokeWidth: flowStroke?.width ?? 2,
+          strokeWidth: flowStroke?.width ?? 'var(--sd-edge-hl-width, 2)',
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
           ...(flowStroke?.cap === undefined ? {} : { strokeLinecap: flowStroke.cap }),
         }}
@@ -121,6 +121,7 @@ export const MergedEdge = memo(function MergedEdge({
           type="button"
           data-edge-anchor={id}
           data-testid="merged-edge-label"
+          data-edge-label-for={id}
           data-in-flow={merged.flow?.inPath === true ? '' : undefined}
           data-step-state={merged.flow?.state}
           data-in-focus={merged.inFocus ? '' : undefined}

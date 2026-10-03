@@ -134,7 +134,41 @@ describe('DeckEdge Deck look (029 US1)', () => {
       arrowAtEnd: true,
     }).path;
     expect(path?.getAttribute('d')).toBe(expected);
-    expect(path).toHaveStyle({ stroke: 'var(--color-deck-edge)', strokeWidth: '2' });
+    expect(path).toHaveStyle({
+      stroke: 'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      strokeWidth: 'var(--sd-edge-hl-width, 2)',
+    });
+  });
+
+  describe('highlight variables (034 R2)', () => {
+    it('lets focus rules recolour and thicken a plain connector, and its end marks follow', () => {
+      const { container } = renderEdge({ direction: 'forward' });
+      expect(container.querySelector('.react-flow__edge-path')?.getAttribute('style')).toContain(
+        'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      );
+      expect(screen.getByTestId('edge-arrow').closest('g')).toHaveStyle({
+        color: 'var(--sd-edge-hl-stroke, var(--color-deck-edge))',
+      });
+    });
+
+    it('keeps a selected connector on its own literal stroke and width', () => {
+      const { container } = renderEdge({}, true);
+      const style = container.querySelector('.react-flow__edge-path')?.getAttribute('style');
+      expect(style).not.toContain('--sd-edge-hl');
+    });
+
+    it('keeps a flow-marked connector on its own literal stroke and width', () => {
+      const { container } = renderEdge({
+        flow: { badges: [], style: 'path', errorIcon: false },
+      });
+      const style = container.querySelector('.react-flow__edge-path')?.getAttribute('style');
+      expect(style).not.toContain('--sd-edge-hl');
+    });
+
+    it('names its connector on the label pill so hover rules can reach the HTML layer', () => {
+      renderEdge({ showLabel: true });
+      expect(screen.getByTestId('edge-label')).toHaveAttribute('data-edge-label-for', 'e1');
+    });
   });
 
   it('stops the line short of the end that carries an arrow, by direction', () => {
