@@ -1,5 +1,5 @@
 import { toJSON } from '@sododeck/model';
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
@@ -81,6 +81,39 @@ describe('GroupBoundaryNode', () => {
     fireEvent.doubleClick(screen.getByRole('textbox', { name: 'Group title' }));
     await user.keyboard('Billing{Enter}');
     expect(toJSON(doc).groups[0]?.title).toBe('Billing');
+  });
+});
+
+describe('GroupBoundaryNode Deck frame (029 US5)', () => {
+  const props = {
+    id: 'group:core',
+    data: { title: 'Core services', count: 8, focused: false },
+    width: 300,
+    height: 200,
+  } as unknown as NodeProps<GroupFlowNode>;
+
+  it('draws a radius 20 solid frame', () => {
+    renderWithEditor(<GroupBoundaryNode {...props} />);
+    const frame = screen.getByTestId('group-boundary');
+    expect(frame).toHaveClass('rounded-frame', 'border-solid', 'border-[1.5px]');
+    expect(frame).not.toHaveClass('border-dashed');
+  });
+
+  it('has a label pill on the top edge with the name and the count', () => {
+    renderWithEditor(<GroupBoundaryNode {...props} />);
+    const pill = screen.getByRole('button', { name: 'Core services group, 8 nodes' });
+    expect(pill).toHaveClass('rounded-full', '-top-3.5', 'left-4', 'h-7');
+    expect(within(pill).getByText('Core services')).toBeInTheDocument();
+    expect(within(pill).getByText('8')).toHaveClass('rounded-full', 'bg-ink');
+  });
+
+  it('keeps the drop-target cue: dashed primary border and the chip', () => {
+    renderWithEditor(<GroupBoundaryNode {...props} />);
+    act(() => {
+      useUiStore.getState().setDropTarget('core');
+    });
+    expect(screen.getByTestId('group-boundary')).toHaveClass('border-dashed', 'border-primary');
+    expect(screen.getByText('Drop into Core services')).toBeInTheDocument();
   });
 });
 
