@@ -1,17 +1,27 @@
-import { CATEGORIES, deckPacks, isKnownPack, typesOfPacks, type CardType } from '@sododeck/model';
+import {
+  CATEGORIES,
+  deckPacks,
+  isKnownPack,
+  PACKS,
+  typesOfPacks,
+  type CardType,
+  type PackTool,
+} from '@sododeck/model';
 import { SearchField } from '@sododeck/ui/components/search-field';
-import { TypeTile } from '@sododeck/ui/components/type-tile';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
-import { ChevronRight, Package } from 'lucide-react';
+import { ChevronRight, Frame, Package, StickyNote } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
+import { NodeTypeTile } from './shapes/shape-tile';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { PALETTE_INITIAL, useUiStore } from '../state/ui-store';
 import { addComponent, canvasElement, centredOn, PALETTE_ID } from './canvas-actions';
+import { armFrameTool, placeFrameAtCentre } from './frame-tool/frame-actions';
 import { PacksPanel } from './packs-panel';
 import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
 import { NOTE_MIME, TYPE_MIME } from './use-canvas-handlers';
@@ -24,33 +34,43 @@ interface Section {
   id: string;
   name: string;
   types: readonly CardType[];
+  /** Tool tiles after the types (031: Sticky, Frame), listed when their pack is on. */
+  tools: readonly PackTool[];
 }
+
+/** Tool tiles' ids in the roving focus; never type ids, so keys 1–9 never add one. */
+const toolTileId = (tool: PackTool) => `tool:${tool}`;
+const TOOL_NAMES: Record<PackTool, string> = { sticky: 'Sticky', frame: 'Frame' };
+
+const tileIds = (section: Section): string[] => [
+  ...section.types.map((t) => t.id),
+  ...section.tools.map(toolTileId),
+];
 
 /** The tile that arrow `key` moves to, by section row and column (a short last row is clamped). */
 function neighbour(sections: readonly Section[], from: string, key: string): string | null {
-  const flat = sections.flatMap((s) => s.types.map((t) => t.id));
+  const rows = sections.map(tileIds);
+  const flat = rows.flat();
   const at = flat.indexOf(from);
   if (at < 0) return null;
   if (key === 'ArrowRight') return flat[at + 1] ?? null;
   if (key === 'ArrowLeft') return flat[at - 1] ?? null;
-  const si = sections.findIndex((s) => s.types.some((t) => t.id === from));
-  const section = sections[si];
+  const si = rows.findIndex((ids) => ids.includes(from));
+  const section = rows[si];
   if (section === undefined) return null;
-  const i = section.types.findIndex((t) => t.id === from);
+  const i = section.indexOf(from);
   const col = i % COLUMNS;
   if (key === 'ArrowDown') {
-    if (i + COLUMNS < section.types.length) return section.types[i + COLUMNS]?.id ?? null;
-    const next = sections[si + 1];
-    return next === undefined
-      ? null
-      : (next.types[Math.min(col, next.types.length - 1)]?.id ?? null);
+    if (i + COLUMNS < section.length) return section[i + COLUMNS] ?? null;
+    const next = rows[si + 1];
+    return next === undefined ? null : (next[Math.min(col, next.length - 1)] ?? null);
   }
   if (key === 'ArrowUp') {
-    if (i - COLUMNS >= 0) return section.types[i - COLUMNS]?.id ?? null;
-    const prev = sections[si - 1];
+    if (i - COLUMNS >= 0) return section[i - COLUMNS] ?? null;
+    const prev = rows[si - 1];
     if (prev === undefined) return null;
-    const lastRow = Math.floor((prev.types.length - 1) / COLUMNS) * COLUMNS;
-    return prev.types[Math.min(lastRow + col, prev.types.length - 1)]?.id ?? null;
+    const lastRow = Math.floor((prev.length - 1) / COLUMNS) * COLUMNS;
+    return prev[Math.min(lastRow + col, prev.length - 1)] ?? null;
   }
   return null;
 }
@@ -68,6 +88,7 @@ export function Palette() {
   const { search, tab, view } = useUiStore((s) => s.addFlyout);
   const setPalette = useUiStore((s) => s.setPalette);
   const [active, setActive] = useState<string | null>(null);
+  const frameToolOn = useUiStore((s) => s.tool === 'frame');
   const tiles = useRef(new Map<string, HTMLButtonElement>());
 
   const stored = deck.packs;
@@ -84,17 +105,22 @@ export function Palette() {
     () =>
       tabs
         .filter((c) => shownTab === 'all' || c.id === shownTab)
-        .map((c) => ({
-          id: c.id,
-          name: c.name,
-          types: onTypes.filter(
-            (t) => t.category === c.id && (query === '' || t.name.toLowerCase().includes(query)),
-          ),
-        }))
-        .filter((s) => s.types.length > 0),
+        .map((c) => {
+          // A pack with tool tiles (031's Basic shapes) names its section after the pack.
+          const pack = PACKS.find((p) => p.id === c.id && p.tools !== undefined);
+          const matches = (name: string) => query === '' || name.toLowerCase().includes(query);
+          return {
+            id: c.id,
+            name: pack?.name ?? c.name,
+            types: onTypes.filter((t) => t.category === c.id && matches(t.name)),
+            tools: (pack?.tools ?? []).filter((tool) => matches(TOOL_NAMES[tool])),
+          };
+        })
+        .filter((s) => s.types.length > 0 || s.tools.length > 0),
     [tabs, onTypes, shownTab, query],
   );
   const visible = useMemo(() => sections.flatMap((s) => s.types.map((t) => t.id)), [sections]);
+  const focusable = useMemo(() => sections.flatMap(tileIds), [sections]);
 
   // Keys 1–9 read this list from the store, so it must match what is on screen.
   const visibleKey = view === 'types' ? visible.join(' ') : '';
@@ -120,12 +146,12 @@ export function Palette() {
   // A focused tile whose type just left the list (its pack went off) hands focus to the first
   // remaining tile instead of dropping it on the page.
   useEffect(() => {
-    if (active === null || visible.includes(active)) return;
+    if (active === null || focusable.includes(active)) return;
     const stray = document.activeElement;
     if (stray !== null && stray !== document.body) return;
-    const next = visible[0];
+    const next = focusable[0];
     if (next !== undefined) tiles.current.get(next)?.focus();
-  }, [active, visible]);
+  }, [active, focusable]);
 
   const centrePoint = () => {
     const rect = canvasElement()?.getBoundingClientRect();
@@ -158,7 +184,7 @@ export function Palette() {
     setActive(next);
     tiles.current.get(next)?.focus();
   };
-  const focusId = active !== null && visible.includes(active) ? active : (visible[0] ?? null);
+  const focusId = active !== null && focusable.includes(active) ? active : (focusable[0] ?? null);
   const onPacksCount = packs.filter(isKnownPack).length;
   let number = 0;
 
@@ -234,8 +260,8 @@ export function Palette() {
                 className="flex justify-between text-micro text-ink-muted uppercase"
               >
                 {section.name}
-                <span aria-label={`${String(section.types.length)} types`}>
-                  {section.types.length}
+                <span aria-label={`${String(section.types.length + section.tools.length)} types`}>
+                  {section.types.length + section.tools.length}
                 </span>
               </h3>
               <div className="grid grid-cols-3 gap-2">
@@ -269,7 +295,7 @@ export function Palette() {
                           focusRing,
                         )}
                       >
-                        <TypeTile type={type.id} size={28} decorative />
+                        <NodeTypeTile type={type.id} size={28} decorative />
                         <span className="w-full truncate text-caption font-medium text-ink">
                           {type.name}
                         </span>
@@ -282,6 +308,73 @@ export function Palette() {
                           </kbd>
                         )}
                       </button>
+                    </div>
+                  );
+                })}
+                {section.tools.map((tool) => {
+                  const tileId = toolTileId(tool);
+                  const Icon = tool === 'sticky' ? StickyNote : Frame;
+                  const button = (
+                    <button
+                      type="button"
+                      draggable={tool === 'sticky'}
+                      aria-label={TOOL_NAMES[tool]}
+                      aria-disabled={tool === 'sticky' && readOnly ? true : undefined}
+                      {...(tool === 'frame' && frameToolOn ? { 'aria-pressed': true } : {})}
+                      ref={(el) => {
+                        if (el === null) tiles.current.delete(tileId);
+                        else tiles.current.set(tileId, el);
+                      }}
+                      tabIndex={tileId === focusId ? 0 : -1}
+                      onFocus={() => {
+                        setActive(tileId);
+                      }}
+                      onClick={(event) => {
+                        if (tool === 'sticky') {
+                          if (!readOnly) addNoteAt(editor, centrePoint());
+                          return;
+                        }
+                        // ⏎ / Space place a default frame at the view centre (US2 AS8); a
+                        // pointer click arms the tool so the next drag draws one.
+                        if (event.detail === 0) placeFrameAtCentre(editor, centrePoint());
+                        else armFrameTool();
+                      }}
+                      onKeyDown={(event) => {
+                        onTileKey(event, tileId);
+                      }}
+                      onDragStart={(event) => {
+                        if (tool !== 'sticky' || readOnly) return;
+                        event.dataTransfer.setData(NOTE_MIME, 'note');
+                        event.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      className={cn(
+                        'relative flex w-full min-w-0 flex-col items-center gap-1.5 rounded-card border border-hairline bg-surface px-1 py-2.5 text-center transition-colors hover:border-border hover:shadow-rest',
+                        tool === 'sticky' ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer',
+                        tool === 'frame' && frameToolOn && 'border-primary bg-primary-soft',
+                        focusRing,
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className="inline-flex size-7 items-center justify-center rounded-[8px] bg-surface-2 text-ink-secondary"
+                      >
+                        <Icon size={18} strokeWidth={ICON_STROKE_WIDTH} />
+                      </span>
+                      <span className="w-full truncate text-caption font-medium text-ink">
+                        {TOOL_NAMES[tool]}
+                      </span>
+                    </button>
+                  );
+                  return (
+                    <div key={tileId} role="gridcell" className="contents">
+                      {tool === 'frame' ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{button}</TooltipTrigger>
+                          <TooltipContent>Draw a group frame</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        button
+                      )}
                     </div>
                   );
                 })}

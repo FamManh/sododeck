@@ -1,5 +1,4 @@
 import { focusRing } from '@sododeck/ui/lib/focus';
-import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
 import { Layers } from 'lucide-react';
@@ -8,6 +7,7 @@ import { memo, useEffect, type CSSProperties } from 'react';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
+import { TypeGlyph } from './shapes/type-glyph';
 import { StepSticker } from './step-sticker';
 import { describeChannel } from './style/card-style';
 
@@ -15,13 +15,12 @@ import { describeChannel } from './style/card-style';
 const MAX_TILES = 5;
 
 function MemberTile({ kind }: { kind: string }) {
-  const Icon = typeStyle(kind).icon;
   return (
     <span
       data-testid="member-tile"
       className="flex size-[22px] items-center justify-center rounded-[7px] border-[1.5px] border-border-strong text-ink-secondary"
     >
-      <Icon strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+      <TypeGlyph kind={kind} size={12} />
     </span>
   );
 }
