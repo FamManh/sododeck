@@ -5,6 +5,8 @@
 import { readableText } from '@sododeck/ui/lib/contrast';
 import type { CardColor, ColorRef, Style } from '@sododeck/schema';
 
+import { chipColours } from '../tags/tag-colours';
+
 /** The 13 named card colours, in DESIGN.md order (also the `SwatchGrid` order). */
 export const CARD_COLORS: readonly CardColor[] = [
   'red',
@@ -93,20 +95,7 @@ export function resolveLook(
 
   // The chips follow the fill, or the stroke when only that is set.
   const chipValue = fillValue ?? strokeValue;
-  const chips =
-    chipValue === undefined
-      ? NEUTRAL_CHIP
-      : isNamedColor(chipValue)
-        ? {
-            chip: `var(--color-card-${chipValue}-chip)`,
-            ink: `var(--color-card-${chipValue}-ink)`,
-            dot: `var(--color-card-${chipValue}-dot)`,
-          }
-        : {
-            chip: chipValue,
-            ink: `var(--color-card-text-${readableText(chipValue).text})`,
-            dot: chipValue,
-          };
+  const chips = chipValue === undefined ? NEUTRAL_CHIP : chipColours(chipValue);
 
   return {
     fill: fill?.token,

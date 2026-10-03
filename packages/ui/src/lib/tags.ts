@@ -1,3 +1,12 @@
+/**
+ * The identity of a tag (033, ADR 0022): trimmed, single-spaced and lower-cased, so "PCI", "pci"
+ * and " Pci " are one tag. The same one-line rule as `tagKey` in `@sododeck/model` (this package
+ * cannot import it); a parity test in the app keeps the two equal.
+ */
+export function tagKey(text: string): string {
+  return text.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
 /** Tags are trimmed, lower-cased and single-spaced, so "PII" and " pii " are one tag. */
 export function normalizeTag(raw: string): string | null {
   const tag = raw.trim().replace(/\s+/g, ' ').toLowerCase();

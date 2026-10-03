@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { addTag, normalizeTag, removeTag } from '../src/lib/tags';
+import { addTag, normalizeTag, removeTag, tagKey } from '../src/lib/tags';
+
+describe('tagKey', () => {
+  it('trims, single-spaces and lower-cases, and keeps accents', () => {
+    expect(tagKey('  Pci   DSS ')).toBe('pci dss');
+    expect(tagKey('Crème')).toBe('crème');
+    expect(tagKey('   ')).toBe('');
+  });
+});
 
 describe('normalizeTag', () => {
   it('trims and lower-cases', () => {
