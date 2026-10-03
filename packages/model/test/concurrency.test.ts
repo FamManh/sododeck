@@ -632,3 +632,22 @@ describe('changes from elsewhere never leave a silently broken deck (036 US4)', 
     );
   });
 });
+
+describe('connector line type (029)', () => {
+  it('keeps shape set in one tab and route.offset moved in another', () => {
+    bothOrders(
+      base,
+      ({ editor }) => {
+        editor.setEdgeShape(['e1'], 'elbow');
+      },
+      ({ editor }) => {
+        editor.setEdgeRoute('e1', { offset: 30 });
+      },
+      (a) => {
+        const e1 = getObject(a.doc, 'edges', 'e1');
+        expect(e1?.style).toEqual({ shape: 'elbow' });
+        expect(e1?.route).toEqual({ offset: 30 });
+      },
+    );
+  });
+});

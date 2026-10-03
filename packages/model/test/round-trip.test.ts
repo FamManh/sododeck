@@ -775,6 +775,27 @@ describe('card size and connector route (017)', () => {
   });
 });
 
+describe('connector line type (029)', () => {
+  it('round-trips each shape, curved with an offset, and no style staying absent', () => {
+    const edges: SododeckFile['edges'] = [
+      { id: 'e1', from: 'a', to: 'a', style: { shape: 'curved' } },
+      { id: 'e2', from: 'a', to: 'a', style: { shape: 'elbow' } },
+      { id: 'e3', from: 'a', to: 'a', style: { shape: 'straight' } },
+      { id: 'e4', from: 'a', to: 'a', route: { offset: 12 }, style: { shape: 'curved' } },
+      { id: 'e5', from: 'a', to: 'a' },
+    ];
+    const file: SododeckFile = {
+      ...empty,
+      nodes: [{ id: 'a', type: 'client', title: 'A' }],
+      edges,
+    };
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(out.edges[4]).not.toHaveProperty('style');
+    expect(Object.keys(out.edges[3] ?? {})).toEqual(['id', 'from', 'to', 'route', 'style']);
+  });
+});
+
 describe('rename safety for flows, features and branches (006, constitution III)', () => {
   const file: SododeckFile = {
     ...empty,
