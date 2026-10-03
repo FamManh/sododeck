@@ -1,6 +1,13 @@
 import { KIND_FALLBACK, KIND_STYLE } from '@sododeck/ui/lib/icons';
 import { render } from '@testing-library/react';
-import { Layers, StickyNote, Table, type LucideIcon } from 'lucide-react';
+import {
+  ChevronDown,
+  CornerDownLeft,
+  Layers,
+  StickyNote,
+  Table,
+  type LucideIcon,
+} from 'lucide-react';
 import { describe, expect, it } from 'vitest';
 
 import { ICON_PATHS } from './icon-paths';
@@ -16,6 +23,8 @@ const SOURCES: Record<keyof typeof ICON_PATHS, LucideIcon> = {
   rules: Table,
   children: Layers,
   sticky: StickyNote,
+  chevron: ChevronDown,
+  enter: CornerDownLeft,
 };
 
 /** The rendered lucide icon's shapes, as `[tag, attributes]` pairs. */
