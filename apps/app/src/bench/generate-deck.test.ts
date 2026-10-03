@@ -140,4 +140,19 @@ describe('generateBenchDeck', () => {
     expect([count('curved'), count('elbow'), count('straight')]).toEqual([30, 30, 30]);
     expect(generateBenchDeck(40, 90, 42).deck.edges.every((e) => e.style === undefined)).toBe(true);
   });
+
+  it('gives every card 3 to 10 distinct tags from a pool of 24 (033)', () => {
+    const { deck } = generateBenchDeck(40, 80, 42, { tags: true });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    for (const node of deck.nodes) {
+      const keys = (node.tags ?? []).map((tag) => tag.toLowerCase());
+      expect(keys.length).toBeGreaterThanOrEqual(3);
+      expect(keys.length).toBeLessThanOrEqual(10);
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+    expect(generateBenchDeck(40, 80, 42).deck.nodes.every((n) => n.tags === undefined)).toBe(true);
+    expect(generateBenchDeck(40, 80, 42, { tags: true }).deck.edges).toEqual(
+      generateBenchDeck(40, 80, 42).deck.edges,
+    );
+  });
 });
