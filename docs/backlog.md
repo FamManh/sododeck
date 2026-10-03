@@ -6,6 +6,10 @@ Bounded Spec Kit features derived from the Claude Design prototype
 Each feature is 1–5 days and goes through `/speckit.specify → /speckit.plan → /speckit.tasks →
 /speckit.implement`. **Do not start a feature before its dependencies are merged.**
 
+**Database pack (039–049)** lives in its own file:
+[`backlog-database.md`](backlog-database.md) (tables, columns, relationships, SQL / DBML import and
+export, a new category of the 030 type registry).
+
 Status: draft for founder review (2026-09-27). Items marked **⚠ decision** depend on the open
 questions in design-analysis §g.
 
