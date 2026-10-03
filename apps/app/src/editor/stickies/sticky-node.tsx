@@ -1,12 +1,12 @@
 import { stickyCanvasPosition } from '@sododeck/model';
 import { MarkdownView } from '@sododeck/ui/components/markdown-view';
-import { Textarea } from '@sododeck/ui/components/textarea';
+import { InlineTextarea } from '@sododeck/ui/components/inline-textarea';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import type { NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight, Pin, StickyNote } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { readDeck } from '../../model/use-deck-snapshot';
@@ -33,6 +33,24 @@ export const StickyNode = memo(function StickyNode({
 }: NodeProps<StickyFlowNode>) {
   const editor = useEditor();
   const editing = useUiStore((state) => state.stickyEditing === data.stickyId);
+  const textField = useRef<HTMLTextAreaElement>(null);
+  // React Flow keeps a new node hidden until it has measured it, and a hidden field can't take
+  // focus, so a note just added by a click lost its `autoFocus`. Retry for a few frames.
+  useEffect(() => {
+    if (!editing) return;
+    let frame = 0;
+    let tries = 0;
+    const tryFocus = () => {
+      const el = textField.current;
+      if (el === null || document.activeElement === el || tries++ > 10) return;
+      el.focus({ preventScroll: true });
+      frame = requestAnimationFrame(tryFocus);
+    };
+    frame = requestAnimationFrame(tryFocus);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [editing]);
   const setStickyEditing = useUiStore((state) => state.setStickyEditing);
   const flowMode = useUiStore((state) => isFlowMode(state));
   const readOnly = notesAreReadOnly();
@@ -114,7 +132,9 @@ export const StickyNode = memo(function StickyNode({
         />
         <div className="min-w-0 flex-1">
           {editing ? (
-            <Textarea
+            // Edited where it is read, in the same type (founder, 2026-10-02): no field chrome.
+            <InlineTextarea
+              ref={textField}
               autoFocus
               aria-label="Note text"
               value={field.value}
@@ -135,7 +155,7 @@ export const StickyNode = memo(function StickyNode({
                   finishEditing();
                 }
               }}
-              className="nodrag nowheel min-h-16 bg-transparent px-0 py-0"
+              className="nodrag nowheel max-h-60 text-body-sm text-ink caret-primary"
             />
           ) : collapsed ? (
             <p className="truncate text-body-sm font-medium">{data.label}</p>

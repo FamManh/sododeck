@@ -473,6 +473,34 @@ describe('Canvas', () => {
     expect(canvas).not.toHaveAttribute('data-tiny-cards');
   });
 
+  it('does not hand focus to a card when the canvas is pressed with the pointer', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    const canvas = container.querySelector<HTMLElement>('[data-canvas]');
+    if (canvas === null) throw new Error('no canvas');
+    // A press on empty canvas focuses the wrapper; jumping to the first card would pan away.
+    fireEvent.pointerDown(canvas);
+    act(() => {
+      canvas.focus();
+    });
+    expect(ui().focusedId).toBeNull();
+  });
+
+  it('drags a marquee with Select and pans with Hand (§g-57)', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    const pane = () => container.querySelector('.react-flow__pane');
+    // Select: an arrow cursor (React Flow's grab cursor comes with its `draggable` class).
+    expect(ui().tool).toBe('select');
+    expect(pane()).not.toHaveClass('draggable');
+    act(() => {
+      ui().setTool('hand');
+    });
+    expect(pane()).toHaveClass('draggable');
+    act(() => {
+      ui().setTool('select');
+    });
+    expect(pane()).not.toHaveClass('draggable');
+  });
+
   it('dims non-neighbours in focus mode, follows the selection, and leaves the deck unchanged', async () => {
     const user = userEvent.setup();
     const before = structuredClone(deck);

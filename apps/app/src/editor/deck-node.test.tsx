@@ -1,5 +1,6 @@
 import { act, screen, within } from '@testing-library/react';
 import type { NodeProps } from '@xyflow/react';
+import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
@@ -55,6 +56,27 @@ describe('DeckNode', () => {
     connection.connecting = false;
   });
 
+  it('does not re-render while the canvas pans or zooms (2026-10-02 perf)', () => {
+    const onRender = vi.fn();
+    renderWithEditor(
+      <Profiler id="card" onRender={onRender}>
+        <DeckNode {...props()} />
+      </Profiler>,
+      deck,
+    );
+    onRender.mockClear();
+    act(() => {
+      useUiStore.getState().setCanvasGesture('pan');
+    });
+    act(() => {
+      useUiStore.getState().setCanvasGesture('drag');
+    });
+    act(() => {
+      useUiStore.getState().setCanvasGesture(null);
+    });
+    expect(onRender).not.toHaveBeenCalled();
+  });
+
   it('shows a problem glyph and says the count in its name (015 FR-022, FR-025)', () => {
     renderNode(
       props({ problems: { count: 2, titles: 'Duplicate connection', label: '2 problems' } }),
@@ -100,21 +122,33 @@ describe('DeckNode', () => {
     expect(screen.getByText('Go')).toBeInTheDocument();
   });
 
-  it('renders title, tech, owner, tags and the rule glyph at Component level', () => {
+  it('reads like Container at Component level: no owner row (§g-58)', () => {
     renderNode(
       props({
         level: 'component',
         subtitle: 'Go',
         owner: 'Team Apollo',
-        tags: ['critical'],
         hasRules: true,
       }),
     );
     expect(screen.getByText('Order Service')).toBeInTheDocument();
     expect(screen.getByText('Go')).toBeInTheDocument();
-    expect(screen.getByText('Team Apollo')).toBeInTheDocument();
-    expect(screen.getByText('critical')).toBeInTheDocument();
+    expect(screen.queryByText('Team Apollo')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Has rules' })).toBeInTheDocument();
+  });
+
+  it('shows up to ten tags under the title, at every level but Landscape (2026-10-03)', () => {
+    const tags = Array.from({ length: 12 }, (_, i) => `tag ${String(i + 1)}`);
+    const { unmount } = renderNode(props({ level: 'system', tags }));
+    const list = screen.getByRole('list', { name: 'Tags' });
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(tags.slice(0, 10));
+    unmount();
+    renderNode(props({ level: 'landscape', tags }));
+    expect(screen.queryByRole('list', { name: 'Tags' })).not.toBeInTheDocument();
   });
 
   it('clamps a resized card\u2019s title to the lines it can show, keeping the full text in the tooltip (017 R11, FR-008)', () => {

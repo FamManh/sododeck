@@ -25,7 +25,11 @@ const swatchOf = (action: Action, ctx: ActionContext): string | null | undefined
 function offered(action: Action, ctx: ActionContext, surface?: Surface): boolean {
   const kinds =
     surface === undefined
-      ? [...(action.where.menu ?? []), ...(action.where.toolbar ?? [])]
+      ? [
+          ...(action.where.menu ?? []),
+          ...(action.where.toolbar ?? []),
+          ...(action.where.keys ?? []),
+        ]
       : (action.where[surface] ?? []);
   return (
     kinds.includes(ctx.target.kind) &&

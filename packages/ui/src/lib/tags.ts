@@ -4,10 +4,13 @@ export function normalizeTag(raw: string): string | null {
   return tag === '' ? null : tag;
 }
 
-/** Adds a tag unless it is empty or already present. Returns the same array when unchanged. */
-export function addTag(tags: readonly string[], raw: string): readonly string[] {
+/**
+ * Adds a tag unless it is empty, already present, or `max` tags are already there. Returns the
+ * same array when unchanged.
+ */
+export function addTag(tags: readonly string[], raw: string, max = Infinity): readonly string[] {
   const tag = normalizeTag(raw);
-  if (tag === null || tags.includes(tag)) return tags;
+  if (tag === null || tags.includes(tag) || tags.length >= max) return tags;
   return [...tags, tag];
 }
 

@@ -43,7 +43,7 @@ function startEdit(id: string) {
     ui().focus(id);
     ui().startTitleEdit({ target: 'node', id, isNew: false });
   });
-  return screen.getByRole<HTMLInputElement>('textbox', { name: 'Component title' });
+  return screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Component title' });
 }
 
 const card = (name: string) => screen.getByRole('group', { name });
@@ -69,6 +69,19 @@ describe('CardTitleInput (019 US1)', () => {
     });
     expect(titles()[0]).toBe('Service 3');
     expect(editor().canUndo()).toBe(false);
+  });
+
+  it('edits a long title over several lines, as shown; line breaks become spaces (2026-10-02)', async () => {
+    const user = userEvent.setup();
+    const { titles } = renderCanvas();
+    const field = startEdit('a');
+    // A wrapping field, not a one-line input that cuts the title off.
+    expect(field.tagName).toBe('TEXTAREA');
+    await user.clear(field);
+    await user.paste('Order fulfilment\nand inventory');
+    expect(field).toHaveValue('Order fulfilment and inventory');
+    await user.keyboard('{Enter}');
+    expect(titles()[0]).toBe('Order fulfilment and inventory');
   });
 
   it('cancels on Esc: nothing written, focus back on the card, the selection kept', async () => {

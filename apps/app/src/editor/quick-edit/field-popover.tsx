@@ -18,6 +18,7 @@ import { bulkView, styleView, tagSuggestions } from '../inspector/derive';
 import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues, tagChoices } from './choice-state';
+import { MAX_CARD_TAGS } from '../card-tags';
 
 /** The popover's accessible name per field (contract "Field popover"). */
 const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
@@ -114,13 +115,19 @@ function NodeFieldContent({ field, nodes }: { field: ToolbarFieldId; nodes: read
             if (tag === null) return;
             // On every component: remove it; on some or none: add it to all (spec US3 AC3).
             const onAll = options.some((o) => o.value === tag && o.state === 'selected');
+            // A card shows at most ten tags (2026-10-03): full cards are skipped.
+            const full = !onAll && nodes.some((node) => (node.tags ?? []).length >= MAX_CARD_TAGS);
             write((node) => {
               const before = node.tags ?? [];
-              const after = onAll ? removeTag(before, tag) : addTag(before, tag);
+              const after = onAll ? removeTag(before, tag) : addTag(before, tag, MAX_CARD_TAGS);
               return after === before ? null : { tags: after.length === 0 ? null : [...after] };
             });
             announce(
-              onAll ? `Tag ${tag} removed from ${count(n)}` : `Tag ${tag} added to ${count(n)}`,
+              onAll
+                ? `Tag ${tag} removed from ${count(n)}`
+                : full
+                  ? `Tag ${tag} added; cards with ${String(MAX_CARD_TAGS)} tags were skipped`
+                  : `Tag ${tag} added to ${count(n)}`,
             );
           }}
         />

@@ -16,6 +16,7 @@ import { usePlayback } from './use-playback';
 import { goToStep, nextStep, play, playbackOf, previousStep } from './flow-mode';
 import type { Segment } from './played-path';
 import { findFlow, stepRoute } from './session-path';
+import { NotesDisplayMenu } from './notes-display-menu';
 
 function segmentName(segment: Segment, total: number): string {
   return `Go to step ${segment.number} of ${String(total)}${segment.errorPath ? ', error path' : ''}${segment.broken ? ', connection deleted' : ''}`;
@@ -138,6 +139,7 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
         >
           {`${String(active.speed)}×`}
         </Button>
+        <NotesDisplayMenu />
       </div>
       {view !== null && (
         <ol

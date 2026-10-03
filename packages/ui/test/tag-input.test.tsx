@@ -30,6 +30,12 @@ function Harness({
 }
 
 describe('TagInput', () => {
+  it('stops at max: a note replaces the add field', () => {
+    render(<TagInput label="Add tag" value={['a', 'b']} max={2} onValueChange={() => {}} />);
+    expect(screen.getByRole('note')).toHaveTextContent('2 tags max');
+    expect(screen.queryByRole('combobox', { name: 'Add tag' })).not.toBeInTheDocument();
+  });
+
   it('adds "PII" once when Enter is pressed twice', async () => {
     const spy = vi.fn();
     render(<Harness spy={spy} />);

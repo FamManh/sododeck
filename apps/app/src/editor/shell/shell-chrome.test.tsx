@@ -191,7 +191,7 @@ describe('Keyboard regions (018 US6)', () => {
     expect(activeRegion()).toBe('deck');
   });
 
-  it('opens the shortcut list with ? and the zoom island button', async () => {
+  it('opens the shortcut list with ? and from the deck menu (§g-60)', async () => {
     const { user } = setup();
     act(() => {
       (document.activeElement as HTMLElement | null)?.blur();
@@ -221,7 +221,8 @@ describe('Keyboard regions (018 US6)', () => {
       expect(within(dialog).getByRole('cell', { name: action })).toBeInTheDocument();
     }
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: /^Keyboard shortcuts/ }));
     expect(screen.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
   });
 });

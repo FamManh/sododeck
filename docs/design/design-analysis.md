@@ -1035,3 +1035,52 @@ changes them before the owning feature is specified.
     component positions (011) stores its own frame per group. Older decks get fitted frames on
     open. The fields are additive and optional (no version bump). 016 builds it, with an ADR, and
     017 reuses the size shape and the resize handles.
+
+### Founder fixes after 020 (2026-10-02)
+
+56. **Canvas deletes no longer ask.** Reverses §g-11 for canvas objects. Deleting cards, notes,
+    connectors (and cutting a group) happens at once; the Undo toast (§g-19) and ⌘Z are the
+    safety net. Flows, features, branches and rules are off-canvas and still ask first.
+57. **Select and Hand tools** (reverses §g-36). Select (V) is the default: an arrow cursor, and a
+    drag on empty canvas draws a selection marquee. Hand (H) pans with a drag (grab cursor).
+    Space+drag and the middle mouse button still pan while Select is active. Select and Hand
+    share one rail button that shows the current mode; a click switches (founder, 2026-10-02).
+58. **Cards keep one size at every zoom level** (changes 67). The Component level no longer
+    grows cards to 164×104 with owner and tag rows; it reads like Container (kind tile, title,
+    subtitle) at 164×50. Landscape and System still hide the tile or text. Owner and tags stay
+    in the details drawer. Tidy and group fitting keep the roomier 104 px layout cell.
+59. **Tags show on the card** (founder, 2026-10-03). Up to ten tags wrap as small chips under the
+    title at every level but Landscape, and the card grows to fit them (`card-tags.ts`; computed,
+    not measured, so `cardSize` stays the one size source). Zooming never changes the size. Tag
+    inputs stop at ten per card. Tags stay lower-cased (existing rule); tag colours are not part
+    of this change.
+60. **Leaner floating chrome** (founder, 2026-10-03). Zoom goes to 400 %. The tools island keeps
+    only Jump to, Labels and Focus as icons with tooltips; Export, the theme switch and keyboard
+    shortcuts move to the deck menu; the flow-notes display moves into the step player. Fit
+    diagram and fit selection get distinct icons (`Expand`, `SquareDashed`).
+61. **Card system direction** (founder brainstorm, 2026-10-03). Five category packs a deck turns
+    on (Architecture, Process, Logistics, Basic shapes, Data cards); two families, information
+    cards and true shapes, with a card ↔ shape switch for in-between types; typed user fields with
+    a "show on card" choice (lifts §g-40); deck-level tag colours; one shared palette; titles and
+    descriptions up to 3 lines with a title-only tooltip; data-driven card types so a Canvas 2D
+    renderer can draw them. Claude Design draws three directions; requirements and the prompt are
+    in `claude-design-prompt-card-system.md`.
+62. **Card system signature** (founder, 2026-10-03). Flow playback is the signature moment every
+    card direction must show; the "deck of cards" metaphor may drive the look. A collapsed group
+    reads as a stack, with its connectors rerouted to it. Reference video ideas: hover highlights
+    a card's connections, bundled connectors with counts, drill-in with outside proxies. Connector
+    ends may attach anywhere on a side (backlog 022).
+63. **Card direction B "Deck"** (founder, 2026-10-03), from `Sododeck Cards.dc.html`: thick-paper
+    cards with a solid 3px lip, 14px corners, solid-tint pill chips, 2px curved connectors,
+    playback that deals the deck, a collapsed group as a fanned hand. The design's risk note
+    becomes a rule: lip off below 60 % zoom, chips as dots at System. Backlog 028–035.
+64. **Card system follow-ups** (founder, 2026-10-03). Connectors offer three user-chosen line types,
+    curved (default), elbow and straight, in 029 (moved from 022). Tags keep the case the user
+    typed; matching ignores case. 030 and 032 schema changes approved in principle (ADRs at
+    their specs). Order: 028 → 025 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034.
+65. **Format, scale and collaboration review** (founder, 2026-10-03). Before the schema changes of
+    029–032 and while there are no real users: backlog 036 makes the Yjs document
+    collaboration-ready (collections keyed by id with order keys, long text as `Y.Text`, integrity
+    on receive, one schema roadmap ADR) with the `.sododeck.json` format unchanged; 037 measures
+    decks up to 10,000 nodes before 023 is decided. Server sync is explained in the diagram
+    handbook §6.

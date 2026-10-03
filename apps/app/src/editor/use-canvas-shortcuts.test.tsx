@@ -153,6 +153,21 @@ describe('canvas keyboard', () => {
     expect(ui().selection.groups).toEqual(['core']);
   });
 
+  it('does not flip a group while Space is held to pan, only on a plain press (2026-10-03)', async () => {
+    const { user, doc } = setup(mergedDeck);
+    act(() => {
+      ui().focus('group:left');
+      ui().select({ groups: ['left'] });
+      document.querySelector<HTMLElement>('[data-node-id="group:left"]')?.focus();
+    });
+    // Held: the key repeats, and a drag pans meanwhile.
+    await user.keyboard('[Space>5]');
+    expect(collapsedOf(doc).has('left')).toBe(false);
+    fireEvent.pointerDown(document.body);
+    await user.keyboard('[/Space]');
+    expect(collapsedOf(doc).has('left')).toBe(false);
+  });
+
   it('collapses a focused group with Space and opens merged popovers from a focused card', async () => {
     const { user, editor, doc } = setup(mergedDeck);
     act(() => {
@@ -453,6 +468,18 @@ describe('editor shortcuts', () => {
     });
     await user.keyboard('{Backspace}');
     expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'nodes', id: 'n00' }] });
+  });
+
+  it('deletes a selected note with Backspace or Delete', async () => {
+    const { user } = setup(stickyDeck);
+    focusSticky();
+    await user.keyboard('{Backspace}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'stickies', id: 'st1' }] });
+    act(() => {
+      ui().cancelDelete();
+    });
+    await user.keyboard('{Delete}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'stickies', id: 'st1' }] });
   });
 
   it('does nothing on Delete with an empty selection', async () => {

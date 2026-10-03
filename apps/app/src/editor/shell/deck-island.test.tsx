@@ -82,6 +82,19 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
   });
 
+  it('switches the theme from its menu (§g-60)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Island />, shop);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    const first = screen.getByRole('menuitem', { name: /^(Dark|Light) mode$/ });
+    const label = first.textContent;
+    await user.click(first);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    expect(screen.getByRole('menuitem', { name: /^(Dark|Light) mode$/ }).textContent).not.toBe(
+      label,
+    );
+  });
+
   it('opens the Export dialog from "Export…" and returns focus to the menu button (012)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);

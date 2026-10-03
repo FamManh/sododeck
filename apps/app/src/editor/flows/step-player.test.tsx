@@ -36,6 +36,14 @@ describe('StepPlayer', () => {
     expect(within(player).getByRole('button', { name: 'Next step' })).toBeDisabled();
   });
 
+  it('sets how notes show during the flow from its Notes menu (§g-60)', async () => {
+    const { player, user, ui } = setup();
+    await user.click(within(player).getByRole('button', { name: 'Notes: dimmed' }));
+    const menu = screen.getByRole('menu', { name: 'Notes during flows' });
+    await user.click(within(menu).getByRole('menuitemradio', { name: 'Hidden' }));
+    expect(ui().notesDisplay).toBe('hidden');
+  });
+
   it('lists a segment per played step; clicking one makes it current', async () => {
     const { player, user, ui } = setup();
     const progress = within(player).getByRole('list', { name: 'Progress' });

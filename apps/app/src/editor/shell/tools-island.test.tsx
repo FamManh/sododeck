@@ -29,43 +29,29 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
   it('toggles Focus and disables it while a flow is shown', async () => {
     const user = userEvent.setup();
     renderWithEditor(<ToolsIsland />);
-    expect(button('Focus')).toHaveAttribute('title', 'Focus · F');
     await user.click(button('Focus'));
     expect(useUiStore.getState().focusMode).toBe(true);
     act(() => {
       useUiStore.getState().openFlow('order', 'o1');
     });
-    expect(button('Focus')).toBeDisabled();
-    expect(button('Focus')).toHaveAttribute('title', 'Not available while a flow is shown');
+    expect(button('Focus')).toHaveAttribute('aria-disabled', 'true');
+    const before = useUiStore.getState().focusMode;
+    await user.click(button('Focus'));
+    expect(useUiStore.getState().focusMode).toBe(before);
   });
 
-  it('sets sticky visibility from its menu, in and out of flow mode (§g-46)', async () => {
-    const user = userEvent.setup();
-    renderWithEditor(<ToolsIsland />);
-    await user.click(button('Notes: dimmed'));
-    const menu = screen.getByRole('menu', { name: 'Notes during flows' });
-    await user.click(within(menu).getByRole('menuitemradio', { name: 'Shown' }));
-    expect(useUiStore.getState().notesDisplay).toBe('shown');
-    expect(button('Notes: shown')).toBeInTheDocument();
-  });
-
-  it('switches the theme and opens export', async () => {
+  it('shows only Jump to, Labels and Focus, as icons with names (§g-60)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<ToolsIsland />, deckOf({ name: 'Shop' }));
-    expect(button(/^Switch to (dark|light) theme$/)).toBeInTheDocument();
-    await user.click(button('Export'));
-    expect(useUiStore.getState().exportDialog).toEqual({
-      open: true,
-      returnFocus: button('Export'),
-    });
-  });
-
-  it('keeps accessible names in the compact islands (FR-041)', () => {
-    renderWithEditor(<ToolsIsland compact />);
-    for (const name of [/^Jump to…/, 'Labels', 'Notes: dimmed', 'Focus', 'Export']) {
-      expect(button(name)).toBeInTheDocument();
-    }
+    expect(
+      within(tools())
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual([expect.stringMatching(/^Jump to…/), 'Labels', 'Focus']);
     expect(button('Labels')).not.toHaveTextContent('Labels');
-    expect(button('Labels')).toHaveAttribute('aria-pressed', 'false');
+    await user.hover(button('Focus'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      /Focus: dim all but the selection/,
+    );
   });
 });

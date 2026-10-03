@@ -22,7 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { CANVAS_ATTR, nodeElement } from './canvas-actions';
-import { cardBox, groupBounds, CARD_SIZE_LIMITS } from './canvas-geometry';
+import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
@@ -91,6 +91,9 @@ const edgeTypes: EdgeTypes = {
 /** Text is unreadable below this; a resized card can be as narrow as the minimum (017 R4). */
 const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
   s.transform[2] * CARD_SIZE_LIMITS.min.width < 80;
+
+/** With the Select tool only the middle mouse button pans (plus Space+drag, React Flow's default). */
+const PAN_BUTTONS = [1];
 
 const connectionLineStyle = {
   stroke: 'var(--color-primary)',
@@ -179,6 +182,18 @@ function useSelectionSync(): void {
   );
 }
 
+/** The rendered card nearest the middle of the canvas, by its on-screen box. */
+function nearestVisibleCard(root: HTMLElement): string | null {
+  const box = root.getBoundingClientRect();
+  const cards = [...root.querySelectorAll<HTMLElement>('[data-testid="deck-node"]')].flatMap(
+    (element) => {
+      const id = element.dataset.nodeId;
+      return id === undefined ? [] : [{ id, rect: element.getBoundingClientRect() }];
+    },
+  );
+  return nearestToCentre(cards, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
+}
+
 /**
  * Roving focus (research R3): the canvas is one Tab stop. Keyboard focus follows `focusedId`
  * while focus is inside the canvas, and the focused node is panned into view.
@@ -254,6 +269,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const jsonHeight = useUiStore((s) => (s.jsonPanel.open ? s.jsonPanel.height : JSON_COLLAPSED));
   const minimapBottom = zoomIslandBottom(jsonShown, jsonHeight) + ISLAND_HEIGHT + STACK_GAP;
   const hideUi = useUiStore((s) => s.hideUi);
+  const hand = useUiStore((s) => s.tool === 'hand');
   const drawerWidth = useUiStore((s) => (s.drawer.open ? s.drawer.width : null));
   const minimapRight = drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE;
   const playerStyle = {
@@ -269,6 +285,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const { setCenter, setViewport, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
   const wrapper = useRef<HTMLDivElement>(null);
+  // Set by a pointer press: focus that lands on the wrapper from a click must not move focus to a
+  // card (and pan to it); only Tab into the canvas does.
+  const pointerFocus = useRef(false);
   const previousDrill = useRef(drill);
   const announcedZoomLevel = useRef<Level | null>(null);
   // Coming back from the rule editor restores where the canvas was (008 FR-018).
@@ -574,19 +593,28 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       {...(focus !== null ? { 'data-focus-mode': '' } : {})}
       {...(session !== null ? { 'data-flow-session': '' } : {})}
       {...(hideUi ? { 'data-hide-ui': '' } : {})}
+      {...(hand ? { 'data-tool-hand': '' } : {})}
       {...(dragging ? { 'data-dragging': '' } : {})}
       {...(tinyCards ? { 'data-tiny-cards': '' } : {})}
       data-level={level}
       // One Tab stop: the focused node carries it; the canvas only while no node does.
       tabIndex={hasFocusedNode ? -1 : 0}
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
+      onPointerDownCapture={() => {
+        pointerFocus.current = true;
+        setTimeout(() => {
+          pointerFocus.current = false;
+        }, 0);
+      }}
       onFocus={(event) => {
-        if (event.target !== event.currentTarget) return;
+        if (event.target !== event.currentTarget || pointerFocus.current) return;
         const ui = useUiStore.getState();
         // While recording, the canvas keeps focus: Tab moves between candidate edges (006).
         if (ui.flowSession !== null) return;
-        const first = ui.selection.nodes[0] ?? deck.nodes[0]?.id;
-        if (first === undefined) return;
+        // The selection, else the card nearest the middle of the view: never the deck's first
+        // card, which may be far away and would pan the canvas there.
+        const first = ui.selection.nodes[0] ?? nearestVisibleCard(event.currentTarget);
+        if (first === null) return;
         ui.focus(first);
         // Moving focus inside a focus event is fragile; hand it over once this event is done.
         setTimeout(() => {
@@ -628,14 +656,15 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         nodesFocusable={false}
         edgesFocusable={false}
         deleteKeyCode={null}
-        // Selection: click / shift-click / ⌘-click, shift-drag marquee, plain drag pans.
-        // ⌥ during a marquee also selects the cards it touches (016 R13).
+        // Selection: click / shift-click / ⌘-click. A plain drag draws a marquee with Select and
+        // pans with Hand (§g-57); Space+drag and the middle button always pan, Shift+drag always
+        // marquees. ⌥ during a marquee also selects the cards it touches (016 R13).
         selectionMode={marqueeRunning && touchSelect ? SelectionMode.Partial : SelectionMode.Full}
         multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
         selectionKeyCode="Shift"
-        selectionOnDrag={false}
+        selectionOnDrag={!hand}
         selectNodesOnDrag={false}
-        panOnDrag
+        panOnDrag={hand ? true : PAN_BUTTONS}
         zoomOnDoubleClick={false}
         // Recording pauses structure editing (006 FR-017). Flow mode is view-only too, but through
         // the handlers and CSS: toggling these props re-renders every node and edge, which costs

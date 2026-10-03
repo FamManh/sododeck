@@ -57,7 +57,9 @@ export const DeckEdge = memo(function DeckEdge({
   const sides: [Side, Side] = [SIDE_OF_POSITION[sourcePosition], SIDE_OF_POSITION[targetPosition]];
   // The automatic-route ghost (017 R7, T036): shown only while this edge's own segment is being
   // dragged, so the user can see where letting go without snapping would leave it.
-  const dragging = useUiStore((s) => s.canvasGesture) === 'segment' && showHandle;
+  // A boolean, not the whole gesture: pans and zooms must not re-render every connector.
+  const segmentGesture = useUiStore((s) => s.canvasGesture === 'segment');
+  const dragging = segmentGesture && showHandle;
   // This edge's own end is being dragged to reconnect it (017 R12): drawn as a 40 % ghost while
   // the custom connection line shows the live path.
   const reconnecting = useUiStore((s) => s.reconnectingEdgeId === id);

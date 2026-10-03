@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@sododeck/ui/components/dialog';
 import { Trash2 } from 'lucide-react';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { isApplePlatform } from '../lib/features';
 import { readDeck } from '../model/use-deck-snapshot';
@@ -20,33 +20,38 @@ import { focusCanvas } from './canvas-actions';
 import { describeRemoval, removalToast, withNewProblems } from './describe-removal';
 import { useUndoToast } from './undo-toast';
 
+/** Canvas objects delete at once (founder, 2026-10-02): the Undo toast is the safety net. */
+const CANVAS_SCOPES: ReadonlySet<RemovalTarget['scope']> = new Set([
+  'nodes',
+  'edges',
+  'stickies',
+  'groups',
+]);
+
+const needsConfirmation = (targets: readonly RemovalTarget[]): boolean =>
+  targets.some((target) => !CANVAS_SCOPES.has(target.scope));
+
 /**
- * Delete confirmation (§g-11/§g-19, FR-017–019). The counts come from `previewRemoval`, which
- * runs the model's real cascade, so they match what the delete does. Confirm = one batch = one
- * undo step, then a 6 s toast with Undo (⌘Z keeps working after it is gone).
+ * Runs a requested delete (FR-017–019). Cards, notes, connectors and cut groups go at once;
+ * flows, features, branches and rules still ask first (§g-11), since they are off-canvas and
+ * easy to lose track of. The counts come from `previewRemoval`, which runs the model's real
+ * cascade, so they match what the delete does. One batch = one undo step, then a 6 s toast with
+ * Undo (⌘Z keeps working after it is gone).
  */
 export function ConfirmDeleteDialog({ deck }: { deck: SododeckFile }) {
   const pending = useUiStore((s) => s.pendingDelete);
   if (pending === null) return null;
+  const targets = pending.targets as RemovalTarget[];
+  if (!needsConfirmation(targets)) return <DeleteNow deck={deck} pending={pending} />;
   return <ConfirmDeleteContent deck={deck} pending={pending} />;
 }
 
-function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
+/** The delete itself, shared by the confirmation and the immediate canvas path. */
+function useRunDelete(deck: SododeckFile, targets: RemovalTarget[]) {
   const editor = useEditor();
   const showUndoToast = useUndoToast();
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const targets = pending.targets as RemovalTarget[];
-  // Computed once when the dialog opens; the deck cannot change underneath a modal dialog.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const preview = useMemo(() => previewRemoval(deck, targets), [targets]);
-  const canvasDelete = targets.every((t) => t.scope === 'nodes' || t.scope === 'edges');
-  const { title, body } = describeRemoval(deck, targets, preview);
-
-  const cancel = () => {
-    useUiStore.getState().cancelDelete();
-  };
-
-  const confirm = () => {
+  return () => {
+    const preview = previewRemoval(deck, targets);
     // The one synchronous problems check (015 FR-026, ADR 0013): before and after this delete.
     const before = checkDeck(readDeck(editor.doc)).total;
     editor.batch(() => {
@@ -60,9 +65,35 @@ function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: 
     );
     const ui = useUiStore.getState();
     ui.cancelDelete();
-    if (canvasDelete) ui.clearSelection();
+    if (!needsConfirmation(targets)) {
+      ui.clearSelection();
+      // The drawer or menu that asked may be gone with the object: keep keyboard users on the canvas.
+      focusCanvas();
+    }
     ui.announce(message);
     showUndoToast(message);
+  };
+}
+
+function DeleteNow({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
+  const run = useRunDelete(deck, pending.targets as RemovalTarget[]);
+  // Once per request: `pending` is a new object for every requestDelete.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(run, [pending]);
+  return null;
+}
+
+function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: PendingDelete }) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const targets = pending.targets as RemovalTarget[];
+  // Computed once when the dialog opens; the deck cannot change underneath a modal dialog.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const preview = useMemo(() => previewRemoval(deck, targets), [targets]);
+  const { title, body } = describeRemoval(deck, targets, preview);
+  const confirm = useRunDelete(deck, targets);
+
+  const cancel = () => {
+    useUiStore.getState().cancelDelete();
   };
 
   return (
@@ -78,12 +109,6 @@ function ConfirmDeleteContent({ deck, pending }: { deck: SododeckFile; pending: 
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           cancelRef.current?.focus();
-        }}
-        onCloseAutoFocus={(event) => {
-          // Deletes from the flow list return focus to where they came from (Radix default).
-          if (!canvasDelete) return;
-          event.preventDefault();
-          focusCanvas();
         }}
       >
         <DialogHeader>

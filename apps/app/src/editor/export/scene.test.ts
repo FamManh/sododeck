@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { branchedDeck, flowDeck } from '../../test/flow-fixtures';
 import { deckOf } from '../../test/render-canvas';
-import { COMPONENT_CARD_SIZE, NODE_SIZE } from '../canvas-geometry';
+import { NODE_SIZE } from '../canvas-geometry';
 import { buildScene, EXPORT_MARGIN, type SceneInput } from './scene';
 
 const ui: SceneInput['ui'] = {
@@ -281,7 +281,7 @@ describe('buildScene: current view', () => {
     });
     const result = scene(nested, 'view', { drill: [{ kind: 'node', id: 'p' }] });
     expect(ids(result.cards)).toEqual(['c1']);
-    expect(result.cards[0]).toMatchObject({ level: 'component', rect: COMPONENT_CARD_SIZE });
+    expect(result.cards[0]).toMatchObject({ level: 'component', rect: NODE_SIZE });
   });
 
   it('uses the view subtitle field', () => {

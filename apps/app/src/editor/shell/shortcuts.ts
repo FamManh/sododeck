@@ -21,6 +21,7 @@ const mod = (apple: string, other: string) => ({ apple, other });
 export const SHORTCUTS = [
   // Tools (rail)
   { id: 'select', label: 'Select', section: 'Tools', keys: same('V') },
+  { id: 'hand', label: 'Hand (pan)', section: 'Tools', keys: same('H') },
   { id: 'add-component', label: 'Add component', section: 'Tools', keys: same('C') },
   { id: 'add-kind', label: 'Add a kind (palette open)', section: 'Tools', keys: same('1–6') },
   { id: 'sticky', label: 'Sticky note', section: 'Tools', keys: same('S') },

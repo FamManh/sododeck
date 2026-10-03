@@ -5,6 +5,7 @@ import { frameOf, NODE_GRID, type Point } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
+import { tagBlockHeight } from './card-tags';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -17,6 +18,10 @@ export interface Rect extends Point {
 
 /** DESIGN.md: nodes are a fixed 164×50. */
 export const NODE_SIZE = { width: 164, height: 50 } as const;
+/**
+ * A roomier layout cell for Tidy and for fitting group frames: cards no longer grow at the
+ * component level (§g-58), but the spacing laid out for them stays generous.
+ */
 export const COMPONENT_CARD_SIZE = { width: 164, height: 104 } as const;
 export const COLLAPSED_CARD_SIZE = { width: 180, height: 64 } as const;
 type NodeSize = { width: number; height: number };
@@ -73,22 +78,38 @@ function pad(rect: Rect, by: number): Rect {
   };
 }
 
-export function nodeSize(level: Level): NodeSize {
-  return level === 'component' ? COMPONENT_CARD_SIZE : NODE_SIZE;
+/**
+ * A card's default size: the same at every zoom level (§g-58), so zooming in never makes a card
+ * grow or re-flow. Zoom levels only change what a card shows (kind tile, subtitle).
+ */
+export function nodeSize(_level?: Level): NodeSize {
+  return NODE_SIZE;
 }
 
-/** A card's drawn size (017 R2): the stored size clamped to the limits, else the level size. */
-export function cardSize(node: Pick<Node, 'size'>, level: Level): NodeSize {
+/**
+ * A card's drawn size (017 R2): the stored size clamped to the limits, else the level size; then
+ * tall enough for the title row plus its tags (2026-10-03). The same at every zoom level.
+ */
+export function cardSize(node: Pick<Node, 'size' | 'tags'>, level: Level): NodeSize {
   const stored = node.size;
-  if (stored === undefined) return nodeSize(level);
-  return {
-    width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
-    height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
-  };
+  const base =
+    stored === undefined
+      ? nodeSize(level)
+      : {
+          width: clamp(stored.width, CARD_SIZE_LIMITS.min.width, CARD_SIZE_LIMITS.max.width),
+          height: clamp(stored.height, CARD_SIZE_LIMITS.min.height, CARD_SIZE_LIMITS.max.height),
+        };
+  const tags = tagBlockHeight(node.tags, base.width);
+  if (tags === 0) return base;
+  return { width: base.width, height: Math.max(base.height, NODE_SIZE.height + tags) };
 }
 
 /** A card's box at its display position (017). */
-export function cardBox(node: Pick<Node, 'position' | 'size'>, index: number, level: Level): Rect {
+export function cardBox(
+  node: Pick<Node, 'position' | 'size' | 'tags'>,
+  index: number,
+  level: Level,
+): Rect {
   return { ...displayPosition(node, index), ...cardSize(node, level) };
 }
 
@@ -158,6 +179,31 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
 }
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
+
+/**
+ * The card whose on-screen centre is nearest `centre` (Tab into the canvas lands on what is in
+ * view, never on a card far away that would pan the canvas). `null` with no cards.
+ */
+export function nearestToCentre(
+  cards: readonly {
+    id: string;
+    rect: { left: number; top: number; width: number; height: number };
+  }[],
+  centre: { x: number; y: number },
+): string | null {
+  let best: string | null = null;
+  let bestDistance = Infinity;
+  for (const { id, rect } of cards) {
+    const dx = rect.left + rect.width / 2 - centre.x;
+    const dy = rect.top + rect.height / 2 - centre.y;
+    const distance = dx * dx + dy * dy;
+    if (distance < bestDistance) {
+      best = id;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
 
 /**
  * The nearest point within ±45° of `dir` from `fromId` (arrow-key navigation), ties broken by

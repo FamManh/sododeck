@@ -1,13 +1,17 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
+import { Boxes } from 'lucide-react';
 import { memo, useEffect, type CSSProperties } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
 import { describeChannel } from './style/card-style';
+
+const countLabel = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -59,8 +63,16 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
 
   return (
     <div style={{ width, height }} className="group/collapsed relative">
-      <div className="absolute inset-x-3 top-2 bottom-0 rounded-node border border-hairline bg-surface-2" />
-      <div className="absolute inset-x-1.5 top-1 bottom-0 rounded-node border border-hairline bg-surface-2" />
+      {/* The stack peeks out down and right (design 69), so a collapsed group never reads as a
+          plain card; the layers sat fully behind the card before. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 translate-x-2 translate-y-2 rounded-node border border-border bg-surface-2"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 translate-x-1 translate-y-1 rounded-node border border-border bg-surface-2"
+      />
       <button
         type="button"
         data-testid="collapsed-group-node"
@@ -91,7 +103,7 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
           } as CSSProperties
         }
         className={cn(
-          'absolute inset-0 flex w-full flex-col items-start justify-center gap-1 rounded-node border border-border bg-surface px-3 text-left shadow-rest',
+          'absolute inset-0 flex w-full items-center gap-[9px] rounded-node border border-border bg-surface px-2.5 text-left shadow-rest',
           focusRing,
           hasFlowInside && 'ring-1 ring-primary ring-offset-2 ring-offset-canvas',
           selected && 'border-primary shadow-selection ring-1 ring-primary',
@@ -102,22 +114,34 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         {hasFlowInside && <span data-testid="collapsed-flow-ring" className="sr-only" />}
         {currentFlowInside && <FlowInsideDot />}
         <span
-          className={cn(
-            'truncate text-body font-medium',
-            textRoleClass ?? 'text-ink',
-            titleEdit !== null && 'invisible',
-          )}
+          aria-hidden
+          className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-surface-2 text-ink-secondary"
         >
-          {data.title}
+          <Boxes strokeWidth={ICON_STROKE_WIDTH} className="size-4" />
         </span>
-        <span className={cn('text-caption', textRoleClass ?? 'text-ink-secondary')}>
-          {data.nodeCount} nodes · {data.edgeCount} edges
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span
+            className={cn(
+              'truncate text-body font-medium',
+              textRoleClass ?? 'text-ink',
+              titleEdit !== null && 'invisible',
+            )}
+          >
+            {data.title}
+          </span>
+          <span className={cn('text-caption', textRoleClass ?? 'text-ink-secondary')}>
+            {countLabel(data.nodeCount, 'node')} · {countLabel(data.edgeCount, 'edge')}
+          </span>
         </span>
       </button>
       {titleEdit !== null && (
         // Over the title line; a field can't sit inside the card's button.
-        <div className="absolute inset-x-2 top-1/2 -translate-y-full">
-          <CardTitleInput edit={titleEdit} title={data.title} className="bg-surface text-body" />
+        <div className="absolute top-1/2 right-2.5 left-[49px] -translate-y-full">
+          <CardTitleInput
+            edit={titleEdit}
+            title={data.title}
+            className={cn('text-body font-medium', textRoleClass ?? 'text-ink')}
+          />
         </div>
       )}
       {SIDES.map(({ id: side, position }) => (

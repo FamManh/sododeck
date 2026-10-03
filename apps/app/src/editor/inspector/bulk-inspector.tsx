@@ -21,6 +21,7 @@ import { groupOptions, KIND_OPTIONS, NO_GROUP } from './choices';
 import { bulkView, styleView, tagSuggestions, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { PinSwitch } from '../views/pin-controls';
+import { MAX_CARD_TAGS } from '../card-tags';
 
 const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 's'}`;
 
@@ -159,7 +160,7 @@ export function BulkInspector({
             total={n}
             tags={view.tags}
             onAdd={(tag) => {
-              setTags((tags) => addTag(tags, tag));
+              setTags((tags) => addTag(tags, tag, MAX_CARD_TAGS));
             }}
             onRemove={(tag) => {
               setTags((tags) => removeTag(tags, tag));

@@ -1,5 +1,4 @@
 import { KindTile } from '@sododeck/ui/components/kind-tile';
-import { TagChip } from '@sododeck/ui/components/tag-chip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -43,6 +42,10 @@ import { DetailsButton } from './quick-edit/details-button';
 import { describeChannel } from './style/card-style';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 import type { DeckFlowNode } from './deck-to-flow';
+import { cardTags, tagBlockHeight } from './card-tags';
+
+/** theme.css's --text-body-sm line height, so an edited title shows as many lines as the card. */
+const TITLE_LINE_EM = 1.45;
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -86,9 +89,11 @@ export const DeckNode = memo(function DeckNode({
   const role = useConnectionRole(id);
   // Reconnect drag (017 R12): while dragging an endpoint, this card's four side targets show as
   // rings when the pointer is over it, with the nearest side "hot" (filled and larger).
-  const canvasGesture = useUiStore((s) => s.canvasGesture);
-  const endpointHover = useUiStore((s) => s.endpointHover);
-  const isEndpointTarget = canvasGesture === 'endpoint' && endpointHover?.nodeId === id;
+  // A primitive per card: selecting the whole gesture re-rendered every card on each pan / zoom.
+  const hotSide = useUiStore((s) =>
+    s.canvasGesture === 'endpoint' && s.endpointHover?.nodeId === id ? s.endpointHover.side : null,
+  );
+  const isEndpointTarget = hotSide !== null;
   const { getZoom } = useReactFlow();
   const resize = useRef<CardResizeSession | null>(null);
   const [activeHandle, setActiveHandle] = useState<ResizeHandleName | null>(null);
@@ -108,8 +113,6 @@ export const DeckNode = memo(function DeckNode({
   const titleEdit = useUiStore((s) =>
     s.titleEdit?.target === 'node' && s.titleEdit.id === id ? s.titleEdit : null,
   );
-  const titleInput =
-    titleEdit === null ? null : <CardTitleInput edit={titleEdit} title={data.title} />;
 
   let target: ConnectionCheck | null = null;
   if (role?.startsWith('target:')) {
@@ -133,13 +136,16 @@ export const DeckNode = memo(function DeckNode({
   const tabIndex = data.focused ? 0 : -1;
   const isLandscape = data.level === 'landscape';
   const isSystem = data.level === 'system';
-  const isContainer = data.level === 'container';
-  const isComponent = data.level === 'component';
+  // Component (zoomed in) reads like Container, at the same size (§g-58).
+  const isContainer = data.level === 'container' || data.level === 'component';
   // Clamp to what the resized card can actually show (017 R11, FR-008); the full title always
   // stays in the `title` attribute above, so a hover still reveals the rest.
   const defaultSize = nodeSize(data.level);
   const box = { width: width ?? defaultSize.width, height: height ?? defaultSize.height };
-  const lines = textLines(box, data.level);
+  // Tags (2026-10-03): up to ten chips under the title; `cardSize` already made room for them.
+  const tags = cardTags(data.tags);
+  const tagBlock = tagBlockHeight(data.tags, box.width);
+  const lines = textLines({ width: box.width, height: box.height - tagBlock });
   const clampStyle = (n: number): CSSProperties => ({
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -161,6 +167,20 @@ export const DeckNode = memo(function DeckNode({
       : customText === 'dark'
         ? 'text-card-text-dark'
         : null;
+  // The title edits in place, in its own type and over the same lines (founder, 2026-10-02).
+  const titleInput =
+    titleEdit === null ? null : (
+      <CardTitleInput
+        edit={titleEdit}
+        title={data.title}
+        className={cn(
+          'break-words text-body-sm font-medium',
+          isLandscape && 'text-center',
+          textRoleClass ?? 'text-ink',
+        )}
+        style={{ maxHeight: `${String(lines.title * TITLE_LINE_EM)}em` }}
+      />
+    );
   const subtitleClass =
     textRoleClass ?? (look?.namedFill === true ? 'text-ink-secondary' : 'text-ink-muted');
   const subtitleDataText = customText ?? (look?.namedFill === true ? 'secondary' : undefined);
@@ -208,11 +228,7 @@ export const DeckNode = memo(function DeckNode({
       className={cn(
         // Hover lifts the card (019 US4); a static shadow, so nothing moves under reduced motion.
         'group/node relative rounded-node border border-border bg-surface shadow-rest hover:shadow-hover',
-        isLandscape
-          ? 'flex items-center justify-center'
-          : isComponent
-            ? 'flex flex-col items-start gap-2 px-3 py-2'
-            : 'flex items-center gap-[9px] px-2.5',
+        'flex flex-col',
         focusRing,
         // Selected (018, designs 86–116): a 2 px frame 2 px outside the card, which reads on any
         // fill; a shape cue, so it is never color-only (plus aria-selected).
@@ -233,13 +249,19 @@ export const DeckNode = memo(function DeckNode({
         showStroke && 'border-[1.5px] border-(--card-stroke)',
       )}
     >
-      {isLandscape ? (
-        (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
-      ) : isComponent ? (
-        <>
-          <div className="flex w-full items-start gap-2">
-            <KindTile kind={data.kind} size={30} decorative />
-            <span className="min-w-0 flex-1">
+      {/* The title row keeps the card's own height; tags wrap below it (2026-10-03). */}
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 items-center',
+          isLandscape ? 'justify-center' : 'gap-[9px] px-2.5',
+        )}
+      >
+        {isLandscape ? (
+          (titleInput ?? <KindTile kind={data.kind} size={40} decorative />)
+        ) : (
+          <>
+            {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
+            <span className="flex min-w-0 flex-1 flex-col">
               {titleInput ?? (
                 <span
                   className={cn(
@@ -251,7 +273,7 @@ export const DeckNode = memo(function DeckNode({
                   {data.title}
                 </span>
               )}
-              {data.subtitle && lines.subtitle > 0 && (
+              {isContainer && data.subtitle && lines.subtitle > 0 && (
                 <span
                   data-text={subtitleDataText}
                   className={cn('break-words font-mono text-node-sub', subtitleClass)}
@@ -261,7 +283,7 @@ export const DeckNode = memo(function DeckNode({
                 </span>
               )}
             </span>
-            {data.hasRules && (
+            {data.hasRules && isContainer && (
               <Table
                 role="img"
                 aria-label="Has rules"
@@ -269,61 +291,40 @@ export const DeckNode = memo(function DeckNode({
                 className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
               />
             )}
-          </div>
-          <div className="flex w-full items-center justify-between gap-2">
-            <span className={cn('truncate text-caption', textRoleClass ?? 'text-ink-secondary')}>
-              {data.owner ?? 'No owner'}
-            </span>
-          </div>
-          {data.tags.length > 0 && (
-            <div className="flex w-full flex-wrap gap-1">
-              {data.tags.slice(0, 2).map((tag) => (
-                <TagChip key={tag} label={tag} />
-              ))}
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          {!isSystem && <KindTile kind={data.kind} size={30} decorative />}
-          <span className="flex min-w-0 flex-1 flex-col">
-            {titleInput ?? (
-              <span
-                className={cn('break-words text-body-sm font-medium', textRoleClass ?? 'text-ink')}
-                style={clampStyle(lines.title)}
-              >
-                {data.title}
-              </span>
-            )}
-            {isContainer && data.subtitle && lines.subtitle > 0 && (
-              <span
-                data-text={subtitleDataText}
-                className={cn('break-words font-mono text-node-sub', subtitleClass)}
-                style={clampStyle(lines.subtitle)}
-              >
-                {data.subtitle}
-              </span>
-            )}
+          </>
+        )}
+        {data.childCount > 0 && (
+          <span
+            role="img"
+            aria-label={`${String(data.childCount)} components inside, press Enter to open`}
+            className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-caption text-ink-secondary"
+          >
+            <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+            <span>{data.childCount}</span>
           </span>
-          {data.hasRules && isContainer && (
-            <Table
-              role="img"
-              aria-label="Has rules"
-              strokeWidth={ICON_STROKE_WIDTH}
-              className={cn('size-3.5 shrink-0', textRoleClass ?? 'text-primary-ink')}
-            />
-          )}
-        </>
-      )}
-      {data.childCount > 0 && (
-        <span
-          role="img"
-          aria-label={`${String(data.childCount)} components inside, press Enter to open`}
-          className="flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-1.5 py-0.5 text-caption text-ink-secondary"
+        )}
+      </div>
+      {tags.length > 0 && !isLandscape && (
+        <ul
+          aria-label="Tags"
+          className="flex shrink-0 flex-wrap content-start gap-1 overflow-hidden px-2.5 pb-2"
+          style={{ height: tagBlock }}
         >
-          <Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
-          <span>{data.childCount}</span>
-        </span>
+          {tags.map((tag) => (
+            <li
+              key={tag}
+              title={tag}
+              className={cn(
+                'h-5 max-w-full truncate rounded-full px-2 text-caption leading-5',
+                look?.namedFill === true || customText !== undefined
+                  ? 'bg-surface/70 text-ink-secondary'
+                  : 'bg-surface-2 text-ink-secondary',
+              )}
+            >
+              {tag}
+            </li>
+          ))}
+        </ul>
       )}
 
       {resizable &&
@@ -350,7 +351,7 @@ export const DeckNode = memo(function DeckNode({
           />
         ))}
       {SIDES.map(({ id: side, position }) => {
-        const hot = isEndpointTarget && endpointHover.side === side;
+        const hot = hotSide === side;
         return (
           <Handle
             key={side}

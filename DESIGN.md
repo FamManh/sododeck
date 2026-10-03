@@ -213,11 +213,11 @@ Type stays quiet so the diagram can lead. There is no heavy display weight. Hier
 Designed in states 86–116 (`docs/design/screens/86-…` to `116-…`). The canvas is full-bleed: it fills the window and never resizes. All chrome floats over it and is reached from small islands. Frames 02–85 still define what the panels **contain**; 86–116 define where they **sit**.
 
 - **Islands:** 44px tall, 4px padding, 2px gap between items, 12px from the viewport edges. Surface, 1px Hairline, 12px radius, Rest shadow.
-  - **Deck island** (top-left): ≡ menu (34) → deck name (13.5/500, editable) → save-status icon (check / spinning loader / clay alert that opens the error popover) → divider → view switcher (segmented, 28px items). Chips join it when active: the **Flow chip** (Orange Soft, "Flow · {name}", ×) and the **drill breadcrumb** chip (010). The views control's menu holds view settings and Tidy layout (011).
-  - **Tools island** (top-right): Jump to field (176px, ⌘K) → Labels → sticky visibility → Focus → divider → theme toggle → Export (primary, 34).
+  - **Deck island** (top-left): ≡ menu (34: All decks · Import… · Export… · Deck settings · Show JSON · Dark / Light mode · Keyboard shortcuts) → deck name (13.5/500, editable) → save-status icon (check / spinning loader / clay alert that opens the error popover) → divider → view switcher (segmented, 28px items). Chips join it when active: the **Flow chip** (Orange Soft, "Flow · {name}", ×) and the **drill breadcrumb** chip (010). The views control's menu holds view settings and Tidy layout (011).
+  - **Tools island** (top-right): three 34px icon buttons with tooltips and no visible labels (§g-60): Jump to (⌘K) → Labels (connector labels) → Focus (F). Export, the theme and keyboard shortcuts live in the deck menu; the flow-notes display (dimmed / shown / hidden) lives in the step player, since it only matters while a flow plays.
   - **Undo / Redo island:** 8px below the rail.
-  - **Zoom island** (bottom-right): fit · − · Mono % · + · minimap · help. The minimap (182×112) opens above it.
-- **Left rail:** 48px wide, vertically centred, 38×38 buttons with an 18px icon and 8px radius; 22×1 dividers. Tools: select, add component (palette), sticky, group, connector; then panels: outline, flows & features, rules, search. Problems (015) is a rail button with a count badge. Tooltips: Inverse, 8px radius, label plus Mono shortcut, 400ms delay, 8px right of the rail.
+  - **Zoom island** (bottom-right): fit diagram (`Expand`) · fit selection (`SquareDashed`, disabled with nothing selected) · − · Mono % · + · level · minimap. The minimap (182×112) opens above it. Keyboard shortcuts moved to the deck menu (`?` still opens them).
+- **Left rail:** 48px wide, vertically centred, 38×38 buttons with an 18px icon and 8px radius; 22×1 dividers. Tools: select / hand toggle (§g-57), add component (palette), sticky, group, connector; then panels: outline, flows & features, rules, search. Problems (015) is a rail button with a count badge. Tooltips: Inverse, 8px radius, label plus Mono shortcut, 400ms delay, 8px right of the rail.
 - **Flyout:** 280px wide, left 68 (rail + 8), top 68, up to viewport height − 80. Header 46 with title (13.5/500), pin (28) and close (28); rows 30–32px. Surface, 1px Hairline, 12px radius, Float shadow. One flyout at a time. A pinned flyout stays open while the user works on the canvas and returns when a temporary one closes. Content: palette, outline, flows & features, rules, problems.
 - **Detail drawer:** the inspector on demand. Right 12, top 68, bottom 12; 360px default, resizable 320–560px from a 4×48 grip on its left edge. Header 68 (40 kind tile, 15/500 title, 11.5 muted subline, More, Close); sections use 13/16px padding with hairlines. It overlays the canvas, and the canvas pans to keep the selection clear. Opened from a card's details button, ⏎ or ⌘⇧D; Esc closes and returns focus to the card.
 - **JSON overlay:** hidden by default, toggled with ⌘J. A bottom island from left 68 to the right edge (or the drawer's left edge), bottom 12, 268px tall, Float shadow. Header 42: JSON · Selection / Deck tabs · "In sync with canvas" · line count · Copy · ×. Body on Code surface, Geist Mono 12/1.6. **Read-only** for now; the zoom island moves above it.
@@ -233,7 +233,7 @@ Designed in states 86–116 (`docs/design/screens/86-…` to `116-…`). The can
 - Nodes are 164×50px by default with a 30px icon tile and 9px gap. Users can resize a card (017): minimum 120×44, 4px steps.
 - Groups are dashed 1px boundaries with a 16px radius and an uppercase label at top-left.
 - Edges use orthogonal routing with 8px rounded corners and end in a 3px dot. Queue connections route through a shared vertical lane.
-- The canvas pads the world by 36px and fits it to the viewport on load (zoom range 30–200%).
+- The canvas pads the world by 36px and fits it to the viewport on load (zoom range 30–400%, §g-60).
 
 ### Whitespace Philosophy
 

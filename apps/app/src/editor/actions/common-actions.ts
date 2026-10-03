@@ -29,8 +29,9 @@ export const COMMON_ACTIONS: readonly Action[] = [
     icon: Copy,
     shortcut: 'copy-json',
     section: 'clipboard',
-    // Groups have no Copy JSON in their menu (spec FR-032).
-    where: { menu: ['component', 'components', 'connection', 'sticky', 'mixed'] },
+    // Only ⇧⌘C (founder, 2026-10-02): a developer tool, kept out of the menus; groups have none
+    // (spec FR-032). The JSON panel has its own Copy button.
+    where: { keys: ['component', 'components', 'connection', 'sticky', 'mixed'] },
     modes: ALL_MODES,
     applies: (ctx) => selectionView(ctx.deck, ctx.selection).entries.length > 0,
     run: (ctx) => {

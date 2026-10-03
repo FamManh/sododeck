@@ -53,6 +53,8 @@ Recorded in design-analysis §g and applied to the features below.
 | 45  | Arrows nudge only during a drag; otherwise ⌥+arrows (1 px) / ⌥⇧+arrows (10 px). Plain arrows keep moving focus.                                                                                                                     | 016                     |
 | 46  | Placement of controls missing in 86–116: view settings + Tidy in the views menu, pin in toolbar "More" / context menu, drill breadcrumb as a deck-island chip, problems as a rail badge + flyout, sticky visibility next to Labels. | 018, 015                |
 | 47  | Order: **015**, then canvas-first **021 → 018 → 019 → 016 → 017 → 020**, then **012 → 013**; 014 anywhere.                                                                                                                          | all remaining           |
+| 56  | **Canvas deletes do not ask** (cards, notes, connectors, cut): Undo toast + ⌘Z instead. Flows, features, branches, rules still ask. Reverses §g-11 on the canvas.                                                                   | 003, 009, 016           |
+| 57  | **Select (V) + Hand (H) tools**: Select drags a marquee with an arrow cursor; Hand pans. Space+drag and scroll still pan. Reverses §g-36.                                                                                           | 003, 018                |
 
 ## Dependency graph
 
@@ -81,6 +83,21 @@ flowchart LR
   F020[020 card-style]
   F021[021 design-sync-canvas-first]
   F022[022 connector-style]
+  F023[023 hybrid-canvas-renderer]
+  F024[024 domain-kind-packs]
+  F025[025 format-compatibility]
+  F026[026 diagram-as-code]
+  F027[027 ai-deck-skill]
+  F028[028 design-sync-card-system]
+  F029[029 card-look-deck]
+  F030[030 card-types-and-packs]
+  F031[031 shapes]
+  F032[032 typed-fields]
+  F033[033 deck-tag-colours]
+  F034[034 connection-focus-and-drill]
+  F035[035 flow-playback-deck]
+  F036[036 collab-ready-document]
+  F037[037 scale-bench]
 
   F001 --> F002 --> F003
   F000 --> F003
@@ -102,6 +119,29 @@ flowchart LR
   F019 --> F020
   F017 --> F022
   F020 --> F022
+  F012 -.-> F023
+  F010 -.-> F023
+  F020 -.-> F024
+  F005 --> F025
+  F004 --> F026
+  F018 --> F026
+  F025 --> F026
+  F025 --> F027
+  F024 -.-> F027
+  F026 -.-> F027
+  F028 --> F029
+  F029 --> F030
+  F030 --> F031
+  F030 --> F032
+  F029 --> F033
+  F029 --> F034
+  F022 -.-> F034
+  F029 --> F035
+  F029 --> F022
+  F025 --> F036
+  F036 --> F029
+  F036 --> F037
+  F037 -.-> F023
 ```
 
 ## Critical path
@@ -126,33 +166,66 @@ UI and card rendering.
 **022** connector-style (added 2026-09-29) comes after 017 and 020; its place relative to 012 / 013
 is the founder's call.
 
+**023** hybrid-canvas-renderer and **024** domain-kind-packs (added 2026-09-30, architecture
+review) are **not scheduled**. They come after M5 at the earliest and need a founder go-ahead.
+023 starts with a large-deck benchmark, and that result decides whether the renderer work is
+done at all. The measurement plan is in `docs/performance.md`.
+
+**Order from 2026-10-03 (§g-64, §g-65), every open feature:** **028** → **025** → **036** →
+**037** → **029** → **035** → **033** → **022** → **030** → **032** → **031** → **034** → **013** →
+**014** → **026** → **027** → **023**. 025 and 036 come first because 029 starts the run of schema
+changes (029, 033, 022, 030, 032) and 036 makes the stored document collaboration-ready while
+there are no real users to migrate. 037 measures large decks early, on the new layout. 013 and 014
+(paused by the founder) come after the card system, so samples and the tour show the final cards
+and packs, and before a public launch. 026 and 027 wait for the schema to settle (030, 032). 023
+stays last and is decided by 037's numbers. 030 supersedes 024; 032 lifts §g-40.
+
+**025** format-compatibility (ADR 0020, proposed) should land before the first public release,
+ideally before 022 adds more optional fields (017 and 020 already have). **026** diagram-as-code
+and **027** ai-deck-skill are not scheduled.
+
 ## Feature list
 
-| ID  | Name                     | Milestone | Depends on | Est. | Needs design?                                             |
-| --- | ------------------------ | --------- | ---------- | ---- | --------------------------------------------------------- |
-| 000 | design-foundation        | M1        | —          | 4 d  | —                                                         |
-| 001 | json-schema-v1           | M1        | —          | 3 d  | ⚠ decision (§g-4)                                         |
-| 002 | yjs-model                | M1        | 001        | 4 d  | —                                                         |
-| 003 | canvas-basic             | M1        | 000, 002   | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                      |
-| 004 | json-panel-sync          | M1        | 003        | 2 d  | decided (§g-3): read-only                                 |
-| 005 | local-library-autosave   | M1        | 000, 002   | 4 d  | designed (72–85); decided §g-33–§g-35                     |
-| 006 | flow-authoring           | M2        | 003        | 5 d  | designed (41–48); ⚠ §g-18                                 |
-| 007 | flow-playback            | M2        | 006        | 4 d  | — (branch picker in 46)                                   |
-| 008 | inspector-rules          | M3        | 006        | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                      |
-| 015 | model-validation         | M3        | 006        | 2 d  | designed (60); ⚠ §g-23                                    |
-| 009 | stickies-search          | M3        | 008        | 4 d  | designed (62, 63); ⚠ §g-21                                |
-| 010 | zoom-groups-focus        | M4        | 003        | 5 d  | designed (64–71); ⚠ §g-22                                 |
-| 011 | views-autolayout         | M4        | 010        | 5 d  | custom view config, layout button (default ok)            |
-| 012 | export                   | M5        | 007, 011   | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                   |
-| 013 | samples-onboarding       | M5        | 005, 009   | 3 d  | —                                                         |
-| 014 | analytics-feedback       | M5        | 005        | 2 d  | feedback button (small)                                   |
-| 021 | design-sync-canvas-first | after M4  | 011        | 1 d  | docs only; designed (86–116)                              |
-| 018 | canvas-first-layout      | after M4  | 021        | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                |
-| 019 | card-quick-edit          | after M4  | 018        | 3 d  | designed (95–104)                                         |
-| 016 | canvas-editing           | after M4  | 019        | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
-| 017 | resize-edge-routing      | after M4  | 003 (016)  | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
-| 020 | card-style               | after M4  | 019        | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
-| 022 | connector-style          | after M4  | 017, 020   | 5 d  | needs design (Miro-like line popover); schema change      |
+| ID  | Name                     | Milestone  | Depends on    | Est. | Needs design?                                             |
+| --- | ------------------------ | ---------- | ------------- | ---- | --------------------------------------------------------- |
+| 000 | design-foundation        | M1         | —             | 4 d  | —                                                         |
+| 001 | json-schema-v1           | M1         | —             | 3 d  | ⚠ decision (§g-4)                                         |
+| 002 | yjs-model                | M1         | 001           | 4 d  | —                                                         |
+| 003 | canvas-basic             | M1         | 000, 002      | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                      |
+| 004 | json-panel-sync          | M1         | 003           | 2 d  | decided (§g-3): read-only                                 |
+| 005 | local-library-autosave   | M1         | 000, 002      | 4 d  | designed (72–85); decided §g-33–§g-35                     |
+| 006 | flow-authoring           | M2         | 003           | 5 d  | designed (41–48); ⚠ §g-18                                 |
+| 007 | flow-playback            | M2         | 006           | 4 d  | — (branch picker in 46)                                   |
+| 008 | inspector-rules          | M3         | 006           | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                      |
+| 015 | model-validation         | M3         | 006           | 2 d  | designed (60); ⚠ §g-23                                    |
+| 009 | stickies-search          | M3         | 008           | 4 d  | designed (62, 63); ⚠ §g-21                                |
+| 010 | zoom-groups-focus        | M4         | 003           | 5 d  | designed (64–71); ⚠ §g-22                                 |
+| 011 | views-autolayout         | M4         | 010           | 5 d  | custom view config, layout button (default ok)            |
+| 012 | export                   | M5         | 007, 011      | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                   |
+| 013 | samples-onboarding       | M5         | 005, 009      | 3 d  | —                                                         |
+| 014 | analytics-feedback       | M5         | 005           | 2 d  | feedback button (small)                                   |
+| 021 | design-sync-canvas-first | after M4   | 011           | 1 d  | docs only; designed (86–116)                              |
+| 018 | canvas-first-layout      | after M4   | 021           | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                |
+| 019 | card-quick-edit          | after M4   | 018           | 3 d  | designed (95–104)                                         |
+| 016 | canvas-editing           | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change |
+| 017 | resize-edge-routing      | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                |
+| 020 | card-style               | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change            |
+| 022 | connector-style          | after M4   | 017, 020, 029 | 5 d  | needs design (Miro-like line popover); schema change      |
+| 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design |
+| 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR      |
+| 025 | format-compatibility     | pre-launch | 005           | 2 d  | ⚠ accept ADR 0020; banner copy; schema change             |
+| 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps           |
+| 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                             |
+| 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                       |
+| 029 | card-look-deck           | after M4   | 028, 036      | 6 d  | designed (B); line types (§g-64); schema change           |
+| 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR            |
+| 031 | shapes                   | after M4   | 030           | 5 d  | designed (B sample set)                                   |
+| 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR            |
+| 033 | deck-tag-colours         | after M4   | 029           | 3 d  | designed (B tags); schema change                          |
+| 034 | connection-focus-drill   | after M4   | 029, (022)    | 4 d  | designed (B connections)                                  |
+| 035 | flow-playback-deck       | after M4   | 029           | 3 d  | designed (B signature moment)                             |
+| 036 | collab-ready-document    | before 029 | 025           | 6 d  | — (ADR: layout v2 + schema roadmap); ⚠ shared view state  |
+| 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                         |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -1622,9 +1695,19 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   slider, dash row, colour swatch, label drag, waypoint handles). Miro's line popover is the
   reference.
 - **In scope:**
-  - **Line type:** straight, elbow (orthogonal, today's look, the default) and curved.
+  - **Line type:** moved to 029 (curved, elbow, straight, §g-64); waypoints below build on it.
   - **Free waypoints** for elbow and curved lines: drag a midpoint handle to add a bend point,
     drag a bend point to move it, double-click (or ⌫) to remove it; Reset route (017) clears them.
+    Founder feedback (2026-10-02): 017's segment only moves along one axis (horizontal or
+    vertical) and that feels rigid; bends must be free to move in any direction, like Miro.
+  - **Lighter handles** (founder feedback, 2026-10-02): 017's 10×24 px segment pill and endpoint
+    grips look heavy. Show small round handles (≈ 8 px) only on hover or while the connector is
+    selected, with a larger invisible hit area so they stay easy to grab.
+  - **Free anchor points** (founder feedback, 2026-10-03): an end can attach anywhere along a
+    card's side, not only at its middle. Dragging an end along a side moves its anchor (stored
+    as the side plus a 0–1 fraction, snapping to the middle and the corners); dropping it on the
+    card body keeps today's automatic side. Extends 017's `fromSide` / `toSide` (schema change,
+    additive, same ADR as waypoints).
   - **Dash:** solid (default), dashed, dotted.
   - **Weight:** a slider with a few fixed steps (e.g. 1–6 px); default = today's 1.5 px.
   - **Colour:** 020's palette, the deck's custom swatches and "No colour".
@@ -1663,9 +1746,466 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   (012); animation cost on large decks (CSS-only, paused off-screen); colour on connectors must
   not be the only cue for flow, error or selection states (constitution VII).
 
+## 023-hybrid-canvas-renderer
+
+- **Added:** 2026-09-30, architecture review ("the app feels boxed in for dense graphs such as
+  logistics networks"). Not scheduled; needs a founder go-ahead.
+- **Milestone:** later (after M5) · **Depends on:** 010 (levels, visible graph), 012 (export
+  scene) · **Estimate:** 8 d (split at `/speckit.specify`: gate + culling, then far-zoom layer,
+  then bundling)
+- **Goal:** Decks with thousands of components and connections stay smooth to pan, zoom and
+  read, without changing how anyone edits a diagram.
+- **Why hybrid, not a rewrite:** ADR 0006 / 0011 already make the canvas a pure view
+  (Yjs → snapshot → `visibleGraph` → `deck-to-flow` → React Flow), and ADR 0016's
+  `editor/export/scene.ts` already turns a deck into positioned shapes without React Flow. A
+  second, non-interactive layer can draw from that scene. React Flow keeps every interaction
+  (drag, connect, marquee, snapping, frames, roving tabindex, quick edit, popovers), so model,
+  schema, storage, flows, rules, JSON panel and inspector do not change.
+- **In scope:**
+  - **Step 0 (gate):** the plan in `docs/performance.md` (fix today's misses, measure load,
+    snapshot, derivation, autosave and memory at 2,000 / 5,000 / 10,000 nodes, bench budget in
+    CI). If React Flow with culling meets the targets at the sizes users need, stop here and
+    record that in the ADR.
+  - **Viewport culling off the main thread:** a spatial index (R-tree) over the derived scene,
+    built and queried in a worker, feeding `visibleGraph` the ids inside the viewport plus a
+    margin. It is also used for hit-testing the far-zoom layer.
+  - **Far-zoom layer:** at `landscape` / `system` levels (or above a node-count threshold),
+    draw components and connections as Canvas 2D shapes from the export scene; nothing is
+    mounted in React Flow. Zooming in or selecting hands over to the DOM layer at the same
+    positions, with no visible jump. WebGL only if Canvas 2D is measured too slow.
+  - **Accessibility:** the far-zoom layer is `aria-hidden`; the canvas keeps one Tab stop and
+    the roving focus moves over the same ids, and focusing a component zooms to the DOM layer
+    (constitution VII).
+  - **Edge bundling (last, optional):** a pure bundling pass in a worker for plain edges at far
+    zoom. Merged edges of collapsed groups (010) stay as they are. Off in flow mode.
+- **Out of scope:** replacing React Flow for editing; WebGL text; changing the file format;
+  new semantic zoom levels (024 may make them configurable).
+- **Acceptance criteria (draft):**
+  - Given the bench deck at the size agreed in step 0, When panning and zooming at fit, Then
+    ≥ 60 fps and p95 frame ≤ 16.7 ms.
+  - Given 500 / 1,000, When a flow is selected, Then its marks are painted in < 100 ms.
+  - Given the far-zoom layer is shown, When the user zooms into a component, Then the DOM card
+    appears at the same place and the JSON panel and export are byte-identical before and after.
+  - Given keyboard focus on the canvas at far zoom, When the user presses an arrow key, Then
+    focus moves to the nearest component and it is announced as today.
+  - Given the smoke suite, When run against the production build, Then it passes and no
+    third-party request is made.
+- **Risks:** two drawings of the same card drifting apart (one scene, one palette, a visual test
+  against export); hand-over jank between layers; new runtime dependency for the R-tree
+  (`rbush` or similar, needs approval, or a small in-repo index); worker transfer cost on every
+  drag (index updates must be incremental).
+- **`/speckit.plan` hint:**
+  > apps/app: bench generator sizes + report rows; `editor/scene-index` worker (build, update,
+  > query); `Canvas` gets a far-zoom `<canvas>` under React Flow drawn from `export/scene.ts`
+  > and `export-palette.ts` (dark palette needed); level selector decides which layer is live.
+  > ADR "hybrid canvas renderer". Run `pnpm bench` before and after every step.
+
+## 024-domain-kind-packs
+
+- **Superseded by 030-card-types-and-packs (2026-10-03).** Kept for its analysis of where kinds
+  are hard-coded and the schema options.
+- **Added:** 2026-09-30, architecture review. Not scheduled; needs a founder decision on open
+  kinds before `/speckit.specify`.
+- **Milestone:** later (after M5) · **Depends on:** 001 (schema), soft: 020 (colour tokens,
+  swatches) · **Estimate:** 6 d
+- **Goal:** Model systems other than software architecture (logistics networks, business
+  processes, org and data flows) with their own component kinds, icons and zoom levels, while
+  every existing deck opens and behaves exactly as today.
+- **Today:** `NodeKind` is a closed enum (`client`, `gateway`, `service`, `queue`, `database`,
+  `external`) and `Level` is C4-shaped (`landscape` → `component`). Kinds are hard-coded in
+  `packages/ui/src/lib/icons.ts`, `editor/palette-order.ts`, `editor/export/icon-paths.ts`,
+  `export-palette.ts`, views (`hiddenKinds` / `dimmedKinds`), the library thumbnail and the
+  connection rules.
+- **In scope:**
+  - **Kind pack:** a named set of kind definitions (id, label, icon from `lucide-react`, default
+    colour token, allowed connections) plus the level names for semantic zoom. The built-in
+    "Software architecture" pack is today's six kinds and four levels, byte for byte.
+  - **Deck-level choice:** a deck uses one pack (default: software architecture). A few more
+    built-in packs (e.g. logistics: hub, warehouse, carrier, route point, customer, supplier;
+    business process: actor, activity, decision, document, system).
+  - **Custom kinds in the deck:** the deck file can define extra kinds (id, label, icon key,
+    colour); the palette, views, inspector, export and thumbnails read kinds from one registry
+    instead of the enum.
+  - **Migration:** decks without the new fields are software-architecture decks; no rewrite on
+    open.
+- **Out of scope:** user-defined typed attributes (see "Later" below); a pack marketplace or
+  sharing packs between decks; per-pack validation rules beyond allowed connections.
+- **Schema (decision needed, ADR):** option A, additive in v1: keep `kind` as the enum and add
+  optional `node.type` referring to a top-level `kinds` array (`kind` stays the fallback for
+  older builds). Option B, v2: `kind` becomes a string resolved against the pack, with a v1 → v2
+  migration in `@sododeck/model`. A is safer for existing files; B is cleaner long term. Either
+  way: Ajv/Zod parity, round-trip cases, and stable kind ids (renaming a kind label never breaks
+  references, constitution III).
+- **Acceptance criteria (draft):**
+  - Given a deck saved before 024, When opened, edited and exported, Then its JSON has no new
+    fields and every card looks as before.
+  - Given a new deck with the logistics pack, When the user opens the add palette, Then it lists
+    the pack's kinds with their icons, and the semantic zoom levels use the pack's names.
+  - Given a custom kind "Cold storage" added to the deck, When it is renamed "Cold room", Then
+    every card of that kind keeps it and the JSON shows the same kind id.
+  - Given a view that hides a custom kind, When the view is applied, Then those cards are hidden
+    as with built-in kinds.
+- **Risks:** file-format change (older builds reject unknown kinds under option B); every
+  hard-coded kind lookup must move to the registry (easy to miss one, so add a test that no app
+  code imports the enum values directly); icons must stay bundled (constitution IV);
+  "allowed connections" may overlap with 015's problems.
+- **`/speckit.plan` hint:**
+  > packages/schema: kinds / pack fields, `pnpm schema:generate`, parity test; packages/model:
+  > round-trip + migration cases; packages/ui: icon registry keyed by icon id, not kind;
+  > apps/app: `kind-registry.ts` (pure) used by palette, views, inspector, export, thumbnail,
+  > connection rules. ADR "domain kind packs".
+
+## 025-format-compatibility
+
+- **Added:** 2026-09-30, architecture review. Implements ADR 0020 once the founder accepts it.
+- **Milestone:** before the first public release (ideally before 022 ships more optional fields;
+  017 and 020 already have) · **Depends on:** 005 (library, deck channel) · **Estimate:** 2 d
+- **Goal:** A deck written by a newer Sododeck never breaks an older one: an older tab, a
+  rolled-back deploy or an older import opens it read-only with a clear "Reload to edit" banner,
+  instead of rejecting edits with no explanation.
+- **Spec IDs:** G-3 (import/export); **schema change** (optional root `revision`).
+- **In scope:** `FORMAT_REVISION` in `@sododeck/schema` plus a hash test on `v1.json`; optional
+  root `revision` written on export; `formatRevision` on the Dexie deck record, raised on flush;
+  `hello` on the deck channel carries the revision; read-only editor mode + banner (canvas, JSON
+  panel, playback and export still work); import of a newer-revision file stores it unchanged and
+  opens it read-only; model test that ops keep unknown keys.
+- **Out of scope:** tolerant schema, per-field feature flags, migrations (ADR 0002 §6 covers
+  breaking changes).
+- **Acceptance criteria (draft):**
+  - Given a file with `"revision"` higher than the app's, When it is imported, Then it is stored,
+    opens read-only with the banner, and exporting it gives the same file.
+  - Given two tabs on the same deck where one has a newer build, When the older tab receives the
+    `hello`, Then it goes read-only with the banner and Reload brings it to the new build.
+  - Given a deck without `revision`, When it is opened, edited and exported, Then the JSON panel
+    never shows `revision` and the export carries the app's revision.
+  - Given a change to `v1.json` without a `FORMAT_REVISION` bump, When CI runs, Then a test fails.
+- **Risks:** the read-only mode must cover every write path (canvas, quick edit, drawer,
+  shortcuts, paste, layout); do it with one flag checked in `DeckEditor`, not per surface.
+
+## 026-diagram-as-code
+
+- **Added:** 2026-09-30, architecture review. Picks up the deferred part of 004 (`TODO(C-5)`,
+  §g-3, §g-42).
+- **Milestone:** later (after M5) · **Depends on:** 004, 018 (JSON overlay), 025 · **Estimate:**
+  8 d (split at `/speckit.specify`: editable JSON, then importers)
+- **Goal:** The deck is data that people and tools can write, not only draw. Developers edit the
+  JSON directly and bring existing diagrams in, so a new user starts from their real system
+  instead of an empty canvas.
+- **Spec IDs:** C-5 (two-way sync), G-3 (import).
+- **In scope:**
+  - **Editable JSON panel:** Monaco with the bundled schema (autocomplete, inline errors, no
+    schema request); edits apply to Yjs on a valid parse as one undo step through
+    `@sododeck/model` (the only JSON → Yjs path, constitution I–II); invalid JSON never touches
+    the document; selection tab edits one object, deck tab edits all.
+  - **Paste a deck:** pasting a whole `.sododeck.json` on the canvas or library imports it.
+  - **Importers (run in a worker):** Mermaid `flowchart` (nodes, edges, subgraphs → groups),
+    Structurizr DSL (people, systems, containers, components → kinds and levels), OpenAPI (one
+    service, its endpoints as notes or features). Each maps to the schema, gives stable ids from
+    the source ids, and lays out nodes without positions with the ELK worker.
+  - An import report: what was mapped, what was skipped and why.
+- **Out of scope:** export to those formats (Mermaid export is already in M5 "later"); live
+  sync with an external file; Terraform / Kubernetes importers (later, if asked).
+- **Acceptance criteria (draft):**
+  - Given the deck tab of the JSON panel, When the user changes a node's `title` and the JSON is
+    valid, Then the card updates, and one ⌘Z restores it in both places.
+  - Given invalid JSON, When the user types, Then the error is shown inline and the canvas does
+    not change.
+  - Given a Mermaid flowchart with 30 nodes and 2 subgraphs, When imported, Then the deck has 30
+    components, 2 groups, the same edges, and a readable automatic layout.
+  - Given an import, When it completes, Then no network request has been made (constitution IV).
+- **Risks:** two-way sync fighting the user's cursor (apply on pause or explicit Apply, decided
+  in the ADR); the importers are new parsers (new dependencies need approval; prefer small
+  in-repo parsers for the subsets we support).
+
+## 027-ai-deck-skill
+
+- **Added:** 2026-09-30, founder request: a skill, like the diagram skills for AI agents, that
+  lets users generate a deck with their own AI and then just import it.
+- **Milestone:** later · **Depends on:** 001 (schema), 025 (revision); soft: 024 (kind packs),
+  026 (paste a deck) · **Estimate:** 3 d
+- **Goal:** Users describe a system (or point their agent at a codebase) and get a valid
+  `.sododeck.json` with components, connections, groups, flows and rules, ready to import. The AI
+  runs on the user's side, so Sododeck still never sends diagram content anywhere
+  (constitution IV).
+- **In scope:**
+  - **A skill package** (`SKILL.md` + references + scripts) for Claude Code / Claude.ai skills
+    and similar agents (Codex, others via a plain `AGENTS.md`-style prompt):
+    - how to model a system as a deck: kinds and levels, groups, flows with steps and branches,
+      decision tables, stickies; stable, readable ids (never from titles, constitution III);
+      when to omit positions so the app lays out;
+    - the bundled `v1.json` and a few example decks (small, logistics once 024 exists);
+    - `validate` script (Node, bundled Ajv or the generated Zod, no network) that checks the file
+      and prints fixable errors, so the agent loops until it is valid;
+    - modes: from a description, from a codebase (read services, queues, databases, calls), from
+      an existing Mermaid / C4 text.
+  - **Generated, not hand-kept:** a build step in this repo writes the skill's schema, examples
+    and `revision` from `packages/schema`, so the skill is never behind the app. Lives in
+    `skills/sododeck-deck/` (or `packages/skill/`), published as a public download or repo
+    while the app stays closed source.
+  - **App side:** import already exists (005). Make sure a deck without positions is laid out on
+    import (check; add if missing) and that the import error lists schema issues with paths, so
+    the user can paste them back to their AI.
+  - **Docs page** on sododeck.com: install the skill, a prompt example, import.
+- **Out of scope:** an AI feature inside the app or any hosted AI (would send content, and needs
+  its own decision); an MCP server (later, next to the CLI).
+- **Acceptance criteria (draft):**
+  - Given the skill and the prompt "an e-commerce checkout with web, API gateway, order service,
+    payment provider, Kafka and Postgres, plus the checkout flow", When an agent runs it, Then it
+    writes a file that passes `validate` and imports without errors.
+  - Given that file imported, When opened, Then components are laid out automatically and the
+    checkout flow plays step by step.
+  - Given a schema change in this repo, When the skill build runs, Then its bundled schema and
+    `revision` match the app's (test).
+- **Risks:** quality of AI-written decks (examples and the validate loop matter more than prose);
+  skill formats differ per agent (keep the core as plain Markdown + a Node script); publishing the
+  schema publicly (ADR 0002 already plans `https://sododeck.com/schema/v1.json`).
+
+## Card system, direction B "Deck" (028–035)
+
+Founder picked direction **B · Deck** on 2026-10-03 (§g-63) from the three Claude Design boards in
+`Sododeck Cards.dc.html` + `sododeck-cards.js` (Claude Design project "Sododeck"). Requirements:
+[`claude-design-prompt-card-system.md`](design/claude-design-prompt-card-system.md) (§g-61,
+§g-62). B in one line: cards are thick paper (a solid 3px lip in the stroke colour, 14px corners,
+filled pill chips), connectors are 2px smooth curves, and playing a flow **deals the deck** (✓
+stickers on played cards, the current card lifts on an orange lip, upcoming cards wait with a
+dashed number); a collapsed group is a fanned hand of cards. The design's own risk note is kept as
+a rule: on dense boards drop the lip below 60 % zoom and show chips as dots at System level.
+
+Order (§g-64, §g-65): **028 → 025 → 036 → 037 → 029 → 035 → 033 → 022 → 030 → 032 → 031 → 034**,
+then 013 → 014 → 026 → 027 → 023. 030 supersedes 024.
+
+## 028-design-sync-card-system
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** — · **Estimate:** 1 d
+- **Goal:** The card system design is in the repo as the reference for 029–035, like 021 did for
+  the canvas-first frames.
+- **In scope:** read-only copies of `Sododeck Cards.dc.html` and `sododeck-cards.js` in
+  `docs/design/claude-design/`; screenshots of **board B** (every row, light and dark) as
+  `docs/design/screens/117-…`; design-analysis §a entries for the new frames and §g notes for
+  every mismatch with DESIGN.md or founder decisions; a **DESIGN.md "Card system (Deck)"** section
+  with B's tokens (radius 14 card / 20 frame / pill chips; 1.5px Border-strong `#cfcfc7` /
+  `#45453f` or the colour stroke; lip `0 3px 0` in the stroke colour, 5px hover and current, 6px
+  dragging, no blur; title 14/600 1.28, type name 11.5/500, body 12, chips 11.5/500; 184 wide,
+  12 padding, 8 gap; solid-tint chips at L .915 / .39 with same-hue ink L .42 / .90; 12px round
+  handles, 16px orange with a 4px halo when active; 2px curved connectors with a rounded filled
+  arrow and a 3.5px start knob) and the extended palette (each of the 13 colours gains `chip`,
+  `ink` and `dot` next to `fill` / `stroke`, light and dark, from the design's OKLCH values).
+- **Out of scope:** code.
+- **Acceptance criteria:** every B row has a light and dark screenshot in `screens/`; DESIGN.md
+  names every token 029 uses; the palette table lists hex + OKLCH for all five variants.
+
+## 029-card-look-deck
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 028, 036 · **Estimate:** 6 d
+- **Goal:** Today's cards, groups, handles and connectors take B's look; connectors get a
+  user-chosen line type (the only schema change).
+- **In scope:**
+  - **Card frame:** 184 × content, 14px radius, 1.5px border, the solid lip (stroke colour; 5px on
+    hover and the current flow step, 6px and a −2.5° tilt while dragging), header with the type
+    icon in a 24px rounded tile and the type name, title up to 3 lines (14/600), description up
+    to 3 lines, tags as solid-tint pills. `cardSize` / `card-tags.ts` switch to B's metrics, still
+    computed, still the same at every zoom (§g-58, §g-59).
+  - **States:** selected (2px orange outline, offset 2), problem (1.5px dashed Clay outline,
+    offset 4, plus a Clay-soft badge with the count), dimmed 22 %, connection target (orange
+    border, handles shown), has children, hover (lip 5px, lift 2px).
+  - **Handles:** 12px round knobs, 16px orange with a 4px halo when active; never React Flow's
+    grey dots.
+  - **Collapsed group:** a fanned hand (the design's `stack`), name and member count; merged
+    connectors meet it (§g-62).
+  - **Connectors:** 2px, B's edge colour, rounded filled arrow, 3.5px start knob.
+  - **Line type, chosen by the user (founder, 2026-10-03, §g-64):** **curved** (B's default),
+    **elbow** (orthogonal, today's routing with 017's movable segment) and **straight**. Picked
+    per connector from the connection toolbar, the context menu and the drawer, for a
+    multi-selection in one undo step. Stored as optional `edge.style.shape`
+    (`'curved' | 'elbow' | 'straight'`, additive schema change, ADR). Absent = curved, except an
+    edge with a stored 017 `route.offset`, which stays elbow so its tweak is kept. 017's segment
+    handle only shows on elbow lines. Moved here from 022.
+  - **Zoom rules:** lip off below 60 %; chips become dots at System; Landscape shows the type
+    icon on the colour fill (B's `land` plate).
+  - **Palette:** the 13 colours get B's `chip` / `ink` / `dot` tokens (light, dark), contrast-tested.
+  - **Export:** PNG / SVG draw B's frame, lip and tags (today's export leaves the tag area empty).
+- **Out of scope:** flow playback styling (035), shapes (031), typed fields (032), deck tag colours
+  (033).
+- **Acceptance criteria (draft):**
+  - Given any existing deck, When opened, Then every card renders in the Deck look and the JSON is
+    unchanged.
+  - Given a card on the bench deck, When zooming from 30 % to 400 %, Then its on-canvas size never
+    changes; the lip disappears below 60 % and chips turn into dots at System.
+  - Given a card selected with a problem, Then the selection and the problem read without colour
+    (outline style and badge icon).
+  - `pnpm bench` before / after: no regression in pan FPS or long frames (200 lips are one extra
+    box-shadow each).
+- **Risks:** noise on dense boards (the design's own warning); cards ~20 % taller, so fewer fit
+  per screen; the tilt while dragging must not affect snapping or hit tests.
+
+## 030-card-types-and-packs
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 5 d
+  · **Supersedes:** 024
+- **Goal:** Card types are data, grouped in packs a deck turns on (§g-61 D1, D10).
+- **In scope:**
+  - **Type registry:** a type is `{ id, family: 'card' | 'shape', shape?, icon, name, category,
+accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, database,
+    gateway, client, queue, external, component), Process (task, decision, document, start/end,
+    actor), Logistics (warehouse, truck route), Data cards (issue), Basic shapes. Today's six kinds
+    map to Architecture types byte for byte.
+  - **Packs per deck:** on / off (`deck.packs`); turning a pack off hides its types from Add, and
+    cards already on the board keep rendering (design copy).
+  - **Add flyout** (B's "Card type palette" row): search with `/`, category tabs (All ·
+    Architecture · Process · Logistics · Data · Shapes), sections of 3-column tiles, "Packs · N on"
+    footer opening the packs panel.
+  - Everything that switches on the kind today (icons, palette order, export icons and palette,
+    views' hidden / dimmed kinds, thumbnails, connection rules) reads the registry.
+- **Schema:** change + ADR (024's options A / B): stable type ids, older decks read as the
+  Architecture pack, Ajv/Zod parity and round-trip cases.
+- **Out of scope:** user-defined types, a pack marketplace, BPMN / C4 / cloud packs (shown "off" in
+  the design as future packs).
+- **Acceptance criteria (draft):** a deck saved before 030 opens unchanged; turning Logistics on
+  lists its types in Add; turning it off hides them while existing warehouse cards still render;
+  renaming a type label never changes the stored type id.
+
+## 031-shapes
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
+- **Goal:** The shape family: real geometry with centred text (§g-61 D2).
+- **In scope:** rectangle, rounded rectangle, ellipse, diamond, pill (start / end), cylinder,
+  document, parallelogram, hexagon, actor, sticky, text, frame, in B's look (1.5px stroke, lip
+  where the outline allows it); text up to 3 lines; connectors meet the outline, not the bounding
+  box; resize keeps the geometry; in-between types (decision, database, document) switch "show as
+  card ↔ show as shape" from the toolbar and drawer, keeping id, fields and connections.
+- **Out of scope:** free drawing, arbitrary SVG shapes, rotation.
+- **Acceptance criteria (draft):** a decision shown as a diamond connects at its points; switching
+  it to a card and back keeps every connection and field; export draws the geometry.
+
+## 032-typed-fields
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 030 · **Estimate:** 5 d
+  (split at `/speckit.specify` if it grows) · **Lifts:** §g-40
+- **Goal:** Users add typed fields to cards and choose which show on the card (§g-61 D3).
+- **In scope:** field definitions per type in the deck (default fields from the type plus user
+  fields); kinds text, number, coloured select, status, person (free text with initials), date,
+  date range, link, progress; "show on card" per field; B's display (status, select, person, date,
+  range as pills in a wrapping row; number, link, progress, text as label–value rows; a dashed
+  "+N fields" pill when more stay in the drawer); the field editor in the drawer (add field, pick
+  its kind, toggle "show on card"); card height follows the fields shown.
+- **Schema:** change + ADR (deck-level `fields` definitions, `node.values`); today's tech, host,
+  owner become built-in fields with unchanged storage, or migrate (decide in the ADR).
+- **Out of scope:** formulas, relations between cards, per-view field visibility.
+- **Acceptance criteria (draft):** a "Status" select added to the Task type shows as a pill on
+  every task with a value; toggling "show on card" off moves it to the drawer and shrinks the
+  card; older decks open unchanged.
+
+## 033-deck-tag-colours
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 3 d
+- **Goal:** Tags are defined once per deck with a colour (§g-61 D7).
+- **In scope:** deck-level tag definitions `{ name, color }` (named colour or deck custom hex);
+  B's tag picker (search, the deck's tags with colour and usage count, "Create tag “…” ⏎",
+  pencil to edit); tag editor (name, 13 swatches plus deck colours, "Delete tag · used on N
+  cards"); drawer tag row (pills with ×, focus ⌫ removes, ⏎ opens the picker); cards show the tag
+  colour as a solid-tint pill; still max 10 per card. **Tags keep the case the user typed**
+  ("PIC", "Lan"; founder, §g-64): matching and uniqueness ignore case, so "pic" picks the
+  existing "PIC", and the first spelling wins. Existing lower-cased tags stay as they are.
+- **Schema:** additive (`deck.tags` gains definitions; untyped tag strings stay valid and render
+  slate).
+- **Acceptance criteria (draft):** colouring `pci` violet recolours it on every card in one undo
+  step; deleting a tag removes it from every card after showing the usage count; older decks
+  open unchanged.
+
+## 034-connection-focus-and-drill
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 4 d
+- **Goal:** B's "Connections and focus" row (§g-62, from the founder's reference video).
+- **In scope:** hovering or selecting a card highlights its connections and neighbours and dims
+  the rest (today's focus mode, on hover, without a toggle); parallel connectors between the same
+  cards bundle into one curve with a count; drill-in shows "Inside <card>" with dashed **outside**
+  proxy cards for its external connections (restyle today's port pills); an end moved along a
+  side (needs 022's free anchors).
+- **Out of scope / later:** relationship types with their own colour and dash (calls, reads,
+  writes, depends on) and the header legend with counts: needs `edge.relation` (schema) and
+  belongs with 022.
+- **Acceptance criteria (draft):** hovering a card on the bench deck dims non-neighbours within one
+  frame and restores on leave; three connectors between two cards draw as one bundle "×3".
+
+## 035-flow-playback-deck
+
+- **Added:** 2026-10-03 · **Milestone:** after M4 · **Depends on:** 029 · **Estimate:** 3 d
+- **Goal:** The signature moment (§g-62): playing a flow deals the deck.
+- **In scope:** played cards get a ✓ sticker (top-left, 22px), the current card lifts 2px on a 5px
+  orange lip with a 26px orange number sticker, upcoming cards show a dashed number; the token
+  is a numbered disc; branch points and error paths in B's style; dimmed rest at 22 %; static
+  under reduced motion (stickers and lip stay, no lift animation); readable without colour.
+- **Acceptance criteria (draft):** stepping through "Checkout" moves the orange lip and sticker to
+  the current card and adds ✓ to played ones; under reduced motion nothing animates; `pnpm bench`
+  "next step → current painted" stays within target.
+
+## 036-collab-ready-document
+
+- **Added:** 2026-10-03, schema / scale / collaboration review with the founder (§g-65). No real
+  users yet, so the stored layout can change now at almost no cost.
+- **Milestone:** before 029 · **Depends on:** 025 · **Estimate:** 6 d (split at
+  `/speckit.specify` if it grows)
+- **Goal:** The Yjs document and the file format are ready for the schema changes of 029–032 and
+  for a later server and real-time collaboration, without changing what users see.
+- **In scope:**
+  - **Collections keyed by id.** `nodes`, `groups`, `edges`, `stickies`, `views`, `features`,
+    `flows` and each flow's `steps` become `Y.Map<id, Y.Map>` with an `order` key (fractional
+    index) instead of `Y.Array<Y.Map>`. Lookups stop being linear; a reorder changes one key
+    instead of delete + re-insert, so a concurrent edit of the moved object is kept and two
+    clients moving it cannot duplicate it (ADR 0005 consequences).
+  - **Long text as `Y.Text`.** Descriptions, step notes, sticky text and other markdown fields
+    merge letter by letter (ADR 0005 §2 upgrade path). Short fields (titles, labels) stay plain
+    strings, last write wins (decide the exact list in the ADR).
+  - **Integrity on receive.** Updates from another tab (later another client) are not validated
+    by the writer's Zod check. After each remote transaction, run the integrity check, report
+    breakage as problems (ADR 0013) and repair what is safe to repair automatically (e.g. a
+    duplicated id from a concurrent paste gets a fresh id and its references follow).
+  - **Layout version + migration.** `meta.layout` (absent = 1). Opening a version-1 deck migrates
+    it once, in one untracked transaction (never an undo step), before the editor shows it. A tab
+    still on layout 1 that meets layout 2 reloads.
+  - **One schema roadmap ADR** naming every field 029, 033, 022, 030 and 032 will add
+    (`edge.style.shape`, waypoints, free anchors, dash / width / colour, `labelAt`; deck tag
+    definitions; the card type registry and packs; field definitions and values), with their
+    `FORMAT_REVISION` steps, so the format grows by design rather than five separate patches.
+  - **Deck identity.** Deck ids are already `crypto.randomUUID()`; record in the ADR that they are
+    the global id (the future server room name) and never reused.
+  - ⚠ **Shared or per-user view state:** collapsed groups (per view) are document data today, so
+    with collaborators one person's collapse collapses for everyone. Decide in the ADR (shared
+    like Miro frames, or per-user like a viewport).
+- **Unchanged:** the `.sododeck.json` file format (arrays in file order, canonical key order,
+  ADR 0004 / 0005 §6): `toJSON` / `serializeDeck` output is byte-identical before and after.
+- **Out of scope:** a server, accounts, presence (awareness), sharing, permissions.
+- **Acceptance criteria (draft):**
+  - Given a deck stored before 036, When opened, Then it is migrated once, `toJSON` is
+    byte-identical to before, and ⌘Z does not undo the migration.
+  - Given two tabs, When one reorders a flow's steps while the other edits a step's title, Then
+    both changes survive and no step is duplicated.
+  - Given two tabs typing into the same node description at once, Then both texts survive.
+  - Given a remote update that leaves an edge pointing at a deleted node, Then the problems panel
+    lists it within one change event.
+  - Round-trip and Ajv / Zod parity tests stay green; `pnpm bench` shows no regression.
+- **Risks:** every model op touches the layout (large diff, keep the public API unchanged so
+  surfaces do not move); fractional-index keys need tests for interleaved inserts; `Y.Text` must
+  not leak into the snapshot API (surfaces keep reading plain strings).
+
+## 037-scale-bench
+
+- **Added:** 2026-10-03 (§g-65) · **Milestone:** before 023 · **Depends on:** 036 · **Estimate:**
+  2 d
+- **Goal:** Know where Sododeck slows down as decks grow, before deciding on 023.
+- **In scope:** `docs/performance.md` §1 and §2: stabilise the flaky flow scenario (warm-up,
+  median of more runs), then measure at 500 / 2,000 / 5,000 / 10,000 nodes (edges ×2) with
+  `onlyRenderVisibleElements` on and off: load (IndexedDB → Yjs → first paint), snapshot update
+  per transaction, `visibleGraph` + `toFlowNodes` / `toFlowEdges`, autosave flush and compaction,
+  update-log bytes, multi-tab convergence after a large paste, JSON panel, export, ELK layout,
+  JS heap. Record the baseline and a target per row in `docs/performance.md`.
+- **Out of scope:** fixes (each miss becomes its own item), CI budget (§3, later).
+- **Acceptance criteria:** the table in `docs/performance.md` §2 has numbers for every row at
+  every size, from a run anyone can repeat with `pnpm bench`.
+
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
 Deck-defined typed fields (text, number, select with coloured options, status, date, date range,
 person) with values per component and a per-deck choice of which fields show as chips on the card
 (like the founder's Miro cards: year, status, date range). Needs its own schema design and ADR.
-Until then cards show the existing fields.
+Until then cards show the existing fields. **Now scheduled as 032-typed-fields (§g-61).**

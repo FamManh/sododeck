@@ -51,30 +51,16 @@ function setup(nodes: string[] = ['svc'], edges: string[] = [], stickies: string
 }
 
 describe('ConfirmDeleteDialog', () => {
-  it('names what will be removed, with Cancel focused', () => {
-    setup();
-    const dialog = screen.getByRole('alertdialog', { name: 'Delete Order Service?' });
-    expect(dialog).toHaveTextContent('Also removes 2 connections.');
-    expect(dialog).toHaveTextContent('1 pinned note will stay on the canvas, unpinned.');
-    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
-  });
-
-  it('changes nothing on Cancel or Escape', async () => {
-    const { doc, user } = setup();
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  it('deletes cards, notes and connectors at once, without a dialog', () => {
+    const { doc } = setup(['svc'], [], ['note-2']);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    expect(toJSON(doc)).toEqual(deck);
-    act(() => {
-      useUiStore.getState().requestDelete({ nodes: ['svc'], edges: [] });
-    });
-    await user.keyboard('{Escape}');
     expect(useUiStore.getState().pendingDelete).toBeNull();
-    expect(toJSON(doc)).toEqual(deck);
+    expect(toJSON(doc).nodes.map((n) => n.id)).toEqual(['db', 'web']);
+    expect(toJSON(doc).stickies.map((sticky) => sticky.id)).toEqual(['note-1']);
   });
 
-  it('deletes in one undo step, shows an Undo toast, and undo restores the same ids', async () => {
-    const { doc, user, editor } = setup();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+  it('deletes in one undo step, shows an Undo toast, and undo restores the same ids', () => {
+    const { doc, editor } = setup();
     expect(toJSON(doc).nodes.map((n) => n.id)).toEqual(['db', 'web']);
     expect(toJSON(doc).edges).toEqual([]);
     expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-1')).toMatchObject({
@@ -99,10 +85,9 @@ describe('ConfirmDeleteDialog', () => {
     expect(toJSON(doc)).toEqual(deck);
   });
 
-  it('says how many new problems a delete created, and undo removes them (015 FR-026)', async () => {
-    const { doc, user, editor } = setup();
-    const before = checkDeck(toJSON(doc)).total;
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+  it('says how many new problems a delete created, and undo removes them (015 FR-026)', () => {
+    const before = checkDeck(deck).total;
+    const { doc, editor } = setup();
     // The Checkout flow loses both of its connections.
     expect(
       screen.getByText(/1 note unpinned · \d+ new problems? · (⌘Z|Ctrl\+Z) to undo$/),
@@ -114,32 +99,24 @@ describe('ConfirmDeleteDialog', () => {
     expect(checkDeck(toJSON(doc)).total).toBe(before);
   });
 
-  it('leaves the toast unchanged when nothing new breaks', async () => {
-    const { user } = setup([], [], ['note-2']);
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+  it('leaves the toast unchanged when nothing new breaks', () => {
+    setup([], [], ['note-2']);
     expect(useUiStore.getState().announcement.text).not.toMatch(/problem/);
   });
 
   it('undoes through the toast button', async () => {
     const { doc, user } = setup();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
     await user.click(screen.getByRole('button', { name: 'Undo' }));
     expect(toJSON(doc)).toEqual(deck);
   });
 
-  it('deletes a node and one of its own connections without double-removing', async () => {
-    const { doc, user } = setup(['svc'], ['e2']);
-    expect(screen.getByRole('alertdialog', { name: 'Delete 2 items?' })).toHaveTextContent(
-      'Also removes 1 connection.',
-    );
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+  it('deletes a node and one of its own connections without double-removing', () => {
+    const { doc } = setup(['svc'], ['e2']);
     expect(toJSON(doc).edges).toEqual([]);
   });
 
-  it('uses note-specific dialog text and delete targets for selected notes', async () => {
-    const { user, doc, editor } = setup([], [], ['note-2']);
-    expect(screen.getByRole('alertdialog', { name: 'Delete this note?' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+  it('uses note-specific toast text and delete targets for selected notes', () => {
+    const { doc, editor } = setup([], [], ['note-2']);
     expect(screen.getByText(/Note deleted · (⌘Z|Ctrl\+Z) to undo/)).toBeInTheDocument();
     expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-2')).toBeUndefined();
     act(() => {
@@ -148,14 +125,12 @@ describe('ConfirmDeleteDialog', () => {
     expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-2')).toBeDefined();
   });
 
-  it('replaces the toast on a second delete, and undo goes in reverse order', async () => {
-    const { doc, user, editor } = setup(['db']);
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+  it('replaces the toast on a second delete, and undo goes in reverse order', () => {
+    const { doc, editor } = setup(['db']);
     const afterFirst = toJSON(doc);
     act(() => {
       useUiStore.getState().requestDelete({ nodes: ['web'], edges: [] });
     });
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(screen.getByText(/Deleted Web/)).toBeInTheDocument();
     expect(screen.queryByText(/Deleted Orders DB/)).not.toBeInTheDocument();
     act(() => {
@@ -198,6 +173,18 @@ describe('ConfirmDeleteDialog', () => {
     expect(dialog).toHaveTextContent(
       'Used in 1 step and 1 component. It will be detached from them.',
     );
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(toJSON(doc)).toEqual(ruleDeck);
+    act(() => {
+      useUiStore.getState().requestRemoval([{ scope: 'rules', id: 'R' }]);
+    });
+    await user.keyboard('{Escape}');
+    expect(useUiStore.getState().pendingDelete).toBeNull();
+    expect(toJSON(doc)).toEqual(ruleDeck);
+    act(() => {
+      useUiStore.getState().requestRemoval([{ scope: 'rules', id: 'R' }]);
+    });
     await user.click(screen.getByRole('button', { name: 'Delete' }));
     expect(toJSON(doc).rules).toEqual({});
     expect(toJSON(doc).flows[0]?.steps[0]).toEqual({ id: 's1', edge: 'e1' });

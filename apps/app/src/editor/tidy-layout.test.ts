@@ -2,12 +2,7 @@ import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import {
-  COLLAPSED_CARD_SIZE,
-  COMPONENT_CARD_SIZE,
-  GROUP_PADDING,
-  NODE_SIZE,
-} from './canvas-geometry';
+import { COLLAPSED_CARD_SIZE, GROUP_PADDING, NODE_SIZE } from './canvas-geometry';
 import { buildLayoutRequest, expandResult, laidOutFrames, movedCount } from './tidy-layout';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
@@ -68,10 +63,10 @@ describe('buildLayoutRequest (011 research R9)', () => {
     expect(request.pinned).toEqual({ a: { x: 11, y: 22 } });
   });
 
-  it('sizes components for the zoom level', () => {
+  it('sizes components the same at every zoom level (§g-58)', () => {
     const graph = visibleGraph(state.deck, top, new Set());
     const request = buildLayoutRequest(state.deck, graph, state.render.pinned, 'component');
-    expect(request.nodes[0]).toMatchObject(COMPONENT_CARD_SIZE);
+    expect(request.nodes[0]).toMatchObject(NODE_SIZE);
   });
 
   it('uses a node’s stored size over the level size (017 R2)', () => {
@@ -140,8 +135,8 @@ describe('laidOutFrames (016 FR-045)', () => {
     expect(frames.inner).toEqual({
       position: { x: 1000 - GROUP_PADDING, y: 1000 - GROUP_PADDING },
       size: {
-        width: COMPONENT_CARD_SIZE.width + 2 * GROUP_PADDING,
-        height: COMPONENT_CARD_SIZE.height + 2 * GROUP_PADDING,
+        width: NODE_SIZE.width + 2 * GROUP_PADDING,
+        height: NODE_SIZE.height + 2 * GROUP_PADDING,
       },
     });
     expect(frames.core?.position).toEqual({ x: 900 - GROUP_PADDING, y: 1000 - 2 * GROUP_PADDING });

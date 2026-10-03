@@ -137,12 +137,21 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         <div
           data-node-id={id}
           tabIndex={-1}
+          // Where the label sits, in its type, so renaming moves nothing (founder, 2026-10-02).
           className={cn(
-            'pointer-events-auto absolute top-1 left-3 w-56',
-            data.level === 'landscape' && 'top-3 left-4 w-72',
+            'pointer-events-auto absolute top-2 left-3 w-56 px-1',
+            data.level === 'landscape' && 'top-4 left-4 w-72 rounded-full bg-surface px-2 py-1',
           )}
         >
-          <CardTitleInput edit={titleEdit} title={data.title} className="bg-surface" />
+          <CardTitleInput
+            edit={titleEdit}
+            title={data.title}
+            className={
+              data.level === 'landscape'
+                ? 'text-body font-medium text-ink'
+                : 'text-micro text-ink uppercase'
+            }
+          />
         </div>
       ) : (
         <button

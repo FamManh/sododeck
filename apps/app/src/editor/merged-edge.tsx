@@ -74,7 +74,7 @@ export const MergedEdge = memo(function MergedEdge({
         path={path}
         interactionWidth={12}
         style={{
-          stroke: flowStroke?.stroke ?? 'var(--color-text-secondary)',
+          stroke: flowStroke?.stroke ?? 'var(--color-ink-secondary)',
           strokeWidth: merged.flow?.current != null ? 3 : (flowStroke?.width ?? 2.25),
           ...(flowStroke?.dash === undefined ? {} : { strokeDasharray: flowStroke.dash }),
         }}

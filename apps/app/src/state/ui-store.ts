@@ -156,8 +156,11 @@ export interface DrawerState {
   mode: 'selection' | 'deck';
 }
 
-/** Rail tools (018 R8). Sticky and Connector act on the next click, then fall back to Select. */
-export type Tool = 'select' | 'sticky' | 'connector';
+/**
+ * Rail tools (018 R8). Select drags a marquee and Hand pans (§g-57); both stay on. Sticky and
+ * Connector act on the next click, then fall back to Select.
+ */
+export type Tool = 'select' | 'hand' | 'sticky' | 'connector';
 
 /**
  * A title being edited inside its card (019 R2). The draft text lives only in the input; the

@@ -448,13 +448,31 @@ export function useCanvasKeyDown() {
           const groupId = current === null ? null : groupIdOf(current);
           if (groupId === null) return;
           event.preventDefault();
-          const nextCollapsed = toggleGroupCollapsed(editor, groupId);
-          if (!flowMode) ui.select({ groups: [groupId] });
-          ui.focus(
-            nextCollapsed ? `${COLLAPSED_NODE_PREFIX}${groupId}` : `${GROUP_NODE_PREFIX}${groupId}`,
-          );
-          const title = deck.groups.find((group) => group.id === groupId)?.title ?? groupId;
-          ui.announce(`${title} ${nextCollapsed ? 'collapsed' : 'expanded'}`);
+          if (event.repeat) return;
+          // Toggle on release, and only for a plain press: holding Space pans the canvas (React
+          // Flow's pan key), and the repeating key used to flip the group open and shut.
+          let panned = false;
+          const onPointer = () => {
+            panned = true;
+          };
+          const onRelease = (up: KeyboardEvent) => {
+            if (up.key !== ' ') return;
+            document.removeEventListener('keyup', onRelease, true);
+            document.removeEventListener('pointerdown', onPointer, true);
+            if (panned) return;
+            const nextCollapsed = toggleGroupCollapsed(editor, groupId);
+            const now = useUiStore.getState();
+            if (!flowMode) now.select({ groups: [groupId] });
+            now.focus(
+              nextCollapsed
+                ? `${COLLAPSED_NODE_PREFIX}${groupId}`
+                : `${GROUP_NODE_PREFIX}${groupId}`,
+            );
+            const title = deck.groups.find((group) => group.id === groupId)?.title ?? groupId;
+            now.announce(`${title} ${nextCollapsed ? 'collapsed' : 'expanded'}`);
+          };
+          document.addEventListener('pointerdown', onPointer, true);
+          document.addEventListener('keyup', onRelease, true);
           return;
         }
         case 'c':
@@ -753,8 +771,8 @@ export function useEditorShortcuts({
       }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
-        const { nodes, edges, groups } = ui.selection;
-        if (nodes.length === 0 && edges.length === 0) {
+        const { nodes, edges, groups, stickies } = ui.selection;
+        if (nodes.length === 0 && edges.length === 0 && stickies.length === 0) {
           if (groups.length === 0 && ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
@@ -774,7 +792,7 @@ export function useEditorShortcuts({
           return;
         }
         event.preventDefault();
-        ui.requestDelete({ nodes, edges });
+        ui.requestDelete({ nodes, edges, stickies });
         return;
       }
       if (key === 'escape' && ui.popover === null && ui.pendingDelete === null) {
