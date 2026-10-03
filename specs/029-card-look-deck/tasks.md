@@ -157,10 +157,10 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 **Independent Test**: zoom the bench deck 30 % → 400 % and compare with frame 123.
 
-- [ ] T046 [P] [US4] Add `liplessSelector` (zoom < 0.6) tests next to `tinyCardsSelector` in `apps/app/src/editor/canvas.test.tsx` (or the selector's test file): the wrapper gets `data-lipless` below 0.6 and loses it at 0.6; no card component re-renders when crossing 0.6 (render counter on a memoized card).
-- [ ] T047 [US4] Implement `liplessSelector` and the `data-lipless` wrapper attribute in `apps/app/src/editor/canvas.tsx`; in `apps/app/src/index.css` `[data-lipless] { --lip: 0px }` overriding hover, drag and current-step lips on cards, group frames and the fanned hand. Make T046 pass.
-- [ ] T048 [P] [US4] Extend `apps/app/src/editor/deck-node.test.tsx`: at System the tags render as 6px dots (still a `list` "Tags" with a name per tag) and the type name / description are not painted; at Landscape only the type icon on the card fill is painted (no text, no handles); the card's width and height are identical at all four levels.
-- [ ] T049 [US4] Implement the per-level painting in `apps/app/src/editor/deck-node.tsx` per research R8 (Landscape plate, System tile + title + dots, Container / Component full). Make T048 pass.
+- [x] T046 [P] [US4] Add `liplessSelector` (zoom < 0.6) tests next to `tinyCardsSelector` in `apps/app/src/editor/canvas.test.tsx` (or the selector's test file): the wrapper gets `data-lipless` below 0.6 and loses it at 0.6; no card component re-renders when crossing 0.6 (render counter on a memoized card).
+- [x] T047 [US4] Implement `liplessSelector` and the `data-lipless` wrapper attribute in `apps/app/src/editor/canvas.tsx`; in `apps/app/src/index.css` `[data-lipless] { --lip: 0px }` overriding hover, drag and current-step lips on cards, group frames and the fanned hand. Make T046 pass.
+- [x] T048 [P] [US4] Extend `apps/app/src/editor/deck-node.test.tsx`: at System the tags render as 6px dots (still a `list` "Tags" with a name per tag) and the type name / description are not painted; at Landscape only the type icon on the card fill is painted (no text, no handles); the card's width and height are identical at all four levels.
+- [x] T049 [US4] Implement the per-level painting in `apps/app/src/editor/deck-node.tsx` per research R8 (Landscape plate, System tile + title + dots, Container / Component full). Make T048 pass.
 
 **Checkpoint**: frame 123 behaviour; no size change across levels.
 
@@ -172,11 +172,11 @@ Write each new test first and watch it fail. Do not add Playwright tests. The sm
 
 **Independent Test**: collapse / expand groups on a test deck and compare with frame 119.
 
-- [ ] T050 [P] [US5] Extend `apps/app/src/editor/collapsed-group-node.test.tsx`: the front card is a `button` with the unchanged `aria-label` and `aria-expanded="false"`; it shows "Group", the member count, the name and one tile per member (extra as "+n"); the two back sheets are `aria-hidden` and not focusable; Enter / double-click still expands.
-- [ ] T051 [US5] Rebuild `apps/app/src/editor/collapsed-group-node.tsx` as the fanned hand (DESIGN.md "Groups"): 184 × 112, two back sheets rotated −7° / +4° around bottom centre with the group fill, stroke and lip (paint-only, `pointer-events: none`), front card with `Layers` tile, "Group" (11.5 / 500), count in a 26px Ink disc (13 / 700), name (14 / 600), member-kind tiles 22px. Pass member kinds from `collapsedNodes` in `apps/app/src/editor/deck-to-flow.ts`. Make T050 pass.
-- [ ] T052 [US5] Switch `apps/app/src/editor/merged-edge.tsx` (and port edges) to `routedPath('curved', …)` + `EdgeEnds`, attached to the front-card box; keep the count badge and popover. Extend `merged-edge.test.tsx`.
-- [ ] T053 [P] [US5] Extend `apps/app/src/editor/group-boundary-node.test.tsx`: the label is a pill button with the name and count; drop-target cue unchanged.
-- [ ] T054 [US5] Restyle `apps/app/src/editor/group-boundary-node.tsx`: radius 20 (`rounded-frame`), 1.5px solid border (colour stroke or Border-strong), fill colour or Surface 2, label pill on the top edge (left 16, top −14, 28 tall, Surface, 1.5px border, 2px lip, chevron + name 12.5 / 600 + count in an 18px Ink disc). Make T053 pass.
+- [x] T050 [P] [US5] Extend `apps/app/src/editor/collapsed-group-node.test.tsx`: the front card is a `button` with the unchanged `aria-label` and `aria-expanded="false"`; it shows "Group", the member count, the name and one tile per member (extra as "+n"); the two back sheets are `aria-hidden` and not focusable; Enter / double-click still expands.
+- [x] T051 [US5] Rebuild `apps/app/src/editor/collapsed-group-node.tsx` as the fanned hand (DESIGN.md "Groups"): 184 × 112, two back sheets rotated −7° / +4° around bottom centre with the group fill, stroke and lip (paint-only, `pointer-events: none`), front card with `Layers` tile, "Group" (11.5 / 500), count in a 26px Ink disc (13 / 700), name (14 / 600), member-kind tiles 22px. Pass member kinds from `collapsedNodes` in `apps/app/src/editor/deck-to-flow.ts`. Make T050 pass.
+- [x] T052 [US5] Switch `apps/app/src/editor/merged-edge.tsx` (and port edges) to `routedPath('curved', …)` + `EdgeEnds`, attached to the front-card box; keep the count badge and popover. Extend `merged-edge.test.tsx`.
+- [x] T053 [P] [US5] Extend `apps/app/src/editor/group-boundary-node.test.tsx`: the label is a pill button with the name and count; drop-target cue unchanged.
+- [x] T054 [US5] Restyle `apps/app/src/editor/group-boundary-node.tsx`: radius 20 (`rounded-frame`), 1.5px solid border (colour stroke or Border-strong), fill colour or Surface 2, label pill on the top edge (left 16, top −14, 28 tall, Surface, 1.5px border, 2px lip, chevron + name 12.5 / 600 + count in an 18px Ink disc). Make T053 pass.
 
 **Checkpoint**: frame 119 reproducible; merged connectors meet the hand.
 
