@@ -108,7 +108,12 @@ function InspectorBenchHooks() {
         input.focus();
         const start = performance.now();
         typeInto(input, title);
-        const ms = await paintedAfter(start, `[data-testid="deck-node"][title="${title}"]`);
+        // The card has no native `title` attribute (029); its name is the aria-label.
+        const ms = await paintedAfter(
+          start,
+          () =>
+            document.querySelector(`[data-testid="deck-node"][aria-label*=": ${title}"]`) !== null,
+        );
         input.blur();
         return ms;
       },
@@ -423,7 +428,8 @@ function BenchShell() {
  * Unlinked benchmark page: /bench?nodes=500&edges=1000&visibleOnly=1&json=deck&flows=1&inspector=1
  * &groups=1&drawer=1&toolbar=1&export=1&colours=1 (`drawer=1`: the canvas-first details drawer and
  * JSON overlay, 018; `toolbar=1`: the selection toolbar, 019; `export=1`: an Export button and the
- * Export dialog, 012; `colours=1`: every node has a fill, and every 5th a blue stroke, 020)
+ * Export dialog, 012; `colours=1`: every node has a fill, and every 5th a blue stroke, 020; `lineTypes=1`: a third of
+ * the connectors each curved, elbow and straight, 029)
  * Goes through the real read and write path: model document, editor, incremental snapshot and
  * the real Canvas (so dragging is measured too). `json=deck` adds the JSON panel under the
  * canvas with the Deck tab open (004 SC-003), as in the editor.
@@ -444,6 +450,7 @@ export function BenchPage() {
   const toolbar = params.get('toolbar') === '1';
   const routes = params.get('routes') === '1';
   const colours = params.get('colours') === '1';
+  const lineTypes = params.get('lineTypes') === '1';
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -466,6 +473,7 @@ export function BenchPage() {
         views,
         routes,
         colours,
+        lineTypes,
       }).deck,
     );
   });

@@ -7,6 +7,7 @@
  *   BENCH_FLOWS=1 pnpm bench            # the deck also has 21 flows (006); flow scenarios always do
  *   BENCH_ROUTES=1 pnpm bench           # adds the resized-routed scenario (017)
  *   BENCH_COLOURS=1 pnpm bench          # every node has a fill, every 5th also a stroke (020)
+ *   BENCH_LINE_TYPES=1 pnpm bench       # a third of the edges each curved, elbow, straight (029)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -27,6 +28,8 @@ const GROUPS_QUERY = GROUPS ? '&groups=1' : '';
 const STICKIES_QUERY = STICKIES > 0 ? `&stickies=${String(STICKIES)}` : '';
 /** 020 T063 SC-005: the deck also has a fill (and every 5th node a stroke) on every node. */
 const COLOURS_QUERY = process.env.BENCH_COLOURS === '1' ? '&colours=1' : '';
+/** 029 T060: connectors split evenly across the three line types. */
+const LINE_TYPES_QUERY = process.env.BENCH_LINE_TYPES === '1' ? '&lineTypes=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -210,7 +213,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
