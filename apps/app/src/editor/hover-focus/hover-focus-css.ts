@@ -17,13 +17,14 @@ function only(name: string, ids: Iterable<string>): string | null {
 /**
  * The stylesheet for one hover focus (034 R1). Only non-members get an opacity, so a member that
  * a saved view dims keeps the view's opacity (FR-004). No `inert` and no `aria-hidden`: the
- * pointer must reach the next card, and assistive tech keeps every card.
+ * pointer must reach the next card, and assistive tech keeps every card. There is no fade: a
+ * transition would start one per card and connector in the first frame (~40 ms at 500 / 1,000,
+ * measured), against SC-001's 16 ms; the fade belongs to pinned focus, which rebuilds anyway.
  */
 export function hoverFocusCss(set: FocusSet): string {
   const scope = '[data-hover-focus]';
   const neighbours = [...set.members].filter((id) => id !== set.focusId);
   const lines = [
-    `${scope} .react-flow__node:not(.react-flow__node-group-boundary)${except('data-id', set.members)}, ${scope} .react-flow__edge, ${scope} [data-edge-label-for] { transition: opacity var(--sd-dur-dim); }`,
     `${scope} .react-flow__node:not(.react-flow__node-group-boundary)${except('data-id', set.members)} { opacity: var(--sd-deck-dim); }`,
     `${scope} .react-flow__edge${except('data-id', set.edges)} { opacity: var(--color-deck-dim-edge); }`,
     `${scope} [data-edge-label-for]${except('data-edge-label-for', set.edges)} { opacity: var(--color-deck-dim-edge); }`,

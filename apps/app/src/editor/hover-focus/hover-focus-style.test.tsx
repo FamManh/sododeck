@@ -115,12 +115,12 @@ describe('HoverFocusStyle (034 R1)', () => {
     expect(text).not.toMatch(/\.react-flow__node:is\([^)]*\)[^{]*\{[^}]*opacity/);
   });
 
-  it('fades with the --sd-dur-dim token', () => {
+  it('does not fade: a transition per card would cost the first frame (SC-001)', () => {
     const { container } = mount();
     act(() => {
       useUiStore.getState().setHoverFocus({ id: 'a', source: 'pointer' });
     });
-    expect(css(container)).toMatch(/transition:\s*opacity var\(--sd-dur-dim\)/);
+    expect(css(container)).not.toMatch(/transition/);
   });
 
   it('drops the style and the marker when the hover clears, or the id is not visible', () => {
