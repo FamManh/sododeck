@@ -139,7 +139,8 @@ export const MergedEdge = memo(function MergedEdge({
             aria-label={isBundle ? merged.name : undefined}
             aria-expanded={isBundle ? fanned : undefined}
             className={cn(
-              'merged-edge-label nodrag nopan absolute flex items-center rounded-full',
+              // The label layer lets pointers through; the pill takes them back (it is a button).
+              'merged-edge-label nodrag nopan pointer-events-auto absolute flex items-center rounded-full',
               asDot
                 ? 'size-3 justify-center border-0 bg-ink ring-2 ring-canvas'
                 : 'gap-1 border py-0.5 pr-2 text-edge-label shadow-rest',
