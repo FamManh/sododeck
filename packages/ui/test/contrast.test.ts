@@ -63,8 +63,21 @@ const CARD_COLOR_NAMES = [
   'slate',
 ] as const;
 
+/**
+ * Flow playback (035): the number on the current sticker and the token, the ✓ on a played sticker,
+ * the number on an upcoming sticker and the error label. Listed on their own so a token change
+ * that breaks the playback marks fails with a readable name.
+ */
+const PLAYBACK_PAIRS: Pair[] = [
+  ['on-primary', 'primary'], // Deck Orange is the primary token
+  ['surface', 'ink'],
+  ['text-secondary', 'surface'],
+  ['clay-ink', 'clay-soft'],
+];
+
 /** Text and meaningful icons: WCAG 2.1 AA 4.5:1. */
 const TEXT_PAIRS: Pair[] = [
+  ...PLAYBACK_PAIRS,
   ['ink', 'surface'],
   ['ink', 'surface-2'],
   ['text-secondary', 'surface'],
