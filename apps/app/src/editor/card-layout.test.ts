@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { cardLayout, DECK_CARD_WIDTH, type CardLayoutInput } from './card-layout';
+import {
+  cardLayout,
+  DECK_CARD,
+  DECK_CARD_WIDTH,
+  wrapText,
+  type CardLayoutInput,
+} from './card-layout';
 import { fixedWidthMeasurer } from './export/text-measure';
 
 // 0.5 em per character: 7 px at the 14 px title, 6 px at the 12 px description, 5.25 px in tags.
@@ -144,5 +150,34 @@ describe('cardLayout (research R7)', () => {
     const start = performance.now();
     for (const input of inputs) layout(input);
     expect(performance.now() - start).toBeLessThan(20);
+  });
+});
+
+const DECK_TITLE = DECK_CARD.titleFont;
+
+describe('wrapText', () => {
+  // 7 px per title character, 158 px inner width: 22 characters per line.
+  const font = '600 14px x';
+  it('wraps at word boundaries and keeps paragraphs apart', () => {
+    expect(wrapText(`${line(15)} ${line(15)}\nend`, 158, font, measure)).toEqual([
+      line(15),
+      line(15),
+      'end',
+    ]);
+  });
+
+  it('breaks a word wider than the card between characters', () => {
+    expect(wrapText(line(50), 158, font, measure).map((part) => part.length)).toEqual([22, 22, 6]);
+  });
+
+  it('counts the lines the layout uses', () => {
+    const text = `${line(15)} ${line(15)} ${line(15)}`;
+    expect(layout({ title: text }).titleLines).toBe(
+      wrapText(text, 158, DECK_TITLE, measure).length,
+    );
+  });
+
+  it('is empty for no text', () => {
+    expect(wrapText('', 158, font, measure)).toEqual([]);
   });
 });

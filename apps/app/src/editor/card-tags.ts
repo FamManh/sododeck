@@ -25,27 +25,47 @@ export function cardTags(tags: readonly string[] | undefined): readonly string[]
   return (tags ?? []).slice(0, MAX_CARD_TAGS);
 }
 
+/** One tag pill's place in the tag block: `row` from 0, `x` from the block's left edge. */
+export interface TagChip {
+  tag: string;
+  row: number;
+  x: number;
+  width: number;
+}
+
+/** Where each chip sits when they wrap across `innerWidth` px; the card and the export share it. */
+export function tagChips(
+  tags: readonly string[],
+  innerWidth: number,
+  measure: TextMeasurer,
+): TagChip[] {
+  const chips: TagChip[] = [];
+  let row = -1;
+  let used = 0;
+  for (const tag of tags) {
+    const width = Math.min(
+      innerWidth,
+      measure(tag, TAG_CHIP.font) + 2 * TAG_CHIP.paddingX + TAG_CHIP.slack,
+    );
+    if (row < 0 || used + TAG_CHIP.gap + width > innerWidth) {
+      row += 1;
+      chips.push({ tag, row, x: 0, width });
+    } else {
+      chips.push({ tag, row, x: used + TAG_CHIP.gap, width });
+    }
+    used = (chips.at(-1)?.x ?? 0) + width;
+  }
+  return chips;
+}
+
 /** How many rows the chips wrap into across `innerWidth` px (0 without tags). */
 export function tagRows(
   tags: readonly string[],
   innerWidth: number,
   measure: TextMeasurer,
 ): number {
-  let rows = 0;
-  let used = 0;
-  for (const tag of tags) {
-    const chip = Math.min(
-      innerWidth,
-      measure(tag, TAG_CHIP.font) + 2 * TAG_CHIP.paddingX + TAG_CHIP.slack,
-    );
-    if (rows === 0 || used + TAG_CHIP.gap + chip > innerWidth) {
-      rows += 1;
-      used = chip;
-    } else {
-      used += TAG_CHIP.gap + chip;
-    }
-  }
-  return rows;
+  const last = tagChips(tags, innerWidth, measure).at(-1);
+  return last === undefined ? 0 : last.row + 1;
 }
 
 let defaultMeasure: TextMeasurer | null = null;

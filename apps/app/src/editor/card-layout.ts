@@ -52,15 +52,24 @@ export interface CardLayout {
   hasChildrenRow: boolean;
 }
 
-const lineCache = new Map<string, number>();
+const lineCache = new Map<string, readonly string[]>();
 const LINE_CACHE_LIMIT = 20_000;
 
-/** How many lines `text` wraps into across `maxWidth` px: words first, long words by character. */
-function wrappedLines(text: string, maxWidth: number, font: string, measure: TextMeasurer): number {
+/**
+ * The lines `text` wraps into across `maxWidth` px: words first, long words by character. The one
+ * wrapping routine: the height (`cardLayout`), the canvas and the export all agree because they
+ * count or draw these same lines. Cached; the result must not be mutated.
+ */
+export function wrapText(
+  text: string,
+  maxWidth: number,
+  font: string,
+  measure: TextMeasurer,
+): readonly string[] {
   const key = `${font}\u0000${String(maxWidth)}\u0000${text}`;
   const known = lineCache.get(key);
   if (known !== undefined) return known;
-  let lines = 0;
+  const lines: string[] = [];
   for (const paragraph of text.split('\n')) {
     let current = '';
     for (const word of paragraph.split(/\s+/).filter((w) => w !== '')) {
@@ -69,7 +78,7 @@ function wrappedLines(text: string, maxWidth: number, font: string, measure: Tex
         current = candidate;
         continue;
       }
-      if (current !== '') lines += 1;
+      if (current !== '') lines.push(current);
       current = '';
       if (measure(word, font) <= maxWidth) {
         current = word;
@@ -79,18 +88,22 @@ function wrappedLines(text: string, maxWidth: number, font: string, measure: Tex
       for (const part of graphemes(word)) {
         const next = current + part;
         if (current !== '' && measure(next, font) > maxWidth) {
-          lines += 1;
+          lines.push(current);
           current = part;
         } else {
           current = next;
         }
       }
     }
-    if (current !== '') lines += 1;
+    if (current !== '') lines.push(current);
   }
   if (lineCache.size >= LINE_CACHE_LIMIT) lineCache.clear();
   lineCache.set(key, lines);
   return lines;
+}
+
+function wrappedLines(text: string, maxWidth: number, font: string, measure: TextMeasurer): number {
+  return wrapText(text, maxWidth, font, measure).length;
 }
 
 function stepUp(height: number): number {
