@@ -6,6 +6,7 @@ import { useUiStore } from '../state/ui-store';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { bundleEdges } from './bundles';
 import { MergedEdgePopover } from './merged-edge-popover';
+import { schemaGroupedDeck } from './schema-groups';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf } from './views/use-current-view';
 
@@ -48,6 +49,56 @@ describe('MergedEdgePopover', () => {
     await user.click(first);
     expect(collapsedOf(env.doc).size).toBe(0);
     expect(useUiStore.getState().selection.edges).toEqual(['e0']);
+  });
+
+  it('lists relationships as table.column → table.column · cardinality and selects one (048)', async () => {
+    const user = userEvent.setup();
+    const deck = deckOf({
+      nodes: [
+        {
+          id: 'orders',
+          type: 'db-table',
+          title: 'orders',
+          schema: 'sales',
+          columns: [
+            { id: 'c-id', name: 'id', type: 'uuid', pk: true },
+            { id: 'c-cust', name: 'customer_id', type: 'uuid' },
+          ],
+        },
+        {
+          id: 'customers',
+          type: 'db-table',
+          title: 'customers',
+          schema: 'crm',
+          columns: [{ id: 'k-id', name: 'id', type: 'uuid', pk: true }],
+        },
+      ],
+      groupingMode: 'schema',
+      views: [{ id: 'v', type: 'system', title: 'V', collapsed: ['schema:sales', 'schema:crm'] }],
+      edges: [
+        {
+          id: 'fk',
+          from: 'orders',
+          to: 'customers',
+          fromColumns: ['c-cust'],
+          toColumns: ['k-id'],
+          cardinality: 'n-1',
+        },
+      ],
+    });
+    const env = editorWrapper(deck);
+    act(() => {
+      useUiStore.setState({
+        popover: { kind: 'merged', edgeId: 'merged:collapsed:schema:crm|collapsed:schema:sales' },
+      });
+    });
+    render(<MergedEdgePopover deck={schemaGroupedDeck(deck)} />, { wrapper: env.wrapper });
+    const option = screen.getByRole('option', {
+      name: /^orders\.customer_id → customers\.id · n-1/,
+    });
+    await user.click(option);
+    expect(useUiStore.getState().selection.edges).toEqual(['fk']);
+    expect(collapsedOf(env.doc).size).toBe(0);
   });
 
   describe('for a bundle (034)', () => {
