@@ -74,6 +74,7 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - Cascade: `remove('groups', id)` removes every edge with an end at the group in the same transaction (one undo step); `previewRemoval` lists them under `removed`; steps using them are reported in `broken`.
   - Clipboard: `toFragment` keeps an edge when both ends are selected nodes or kept (whole) groups; `pasteFragment` remaps group ends through its group id map.
   - `checkDeck` and the search index title connections and steps by `endpointTitle`. `analyzeFlow` is unchanged: a group id is an ordinary end id (into G, then out of a card inside G, is a chain break).
+- **Added by 046** (schema code panel, ADR 0034): `editor.batch(fn, { merge })` (`BatchOptions`). Batches that repeat one merge key join the previous undo item whatever the time gap (`ctx.transact(fn, key, merge)` lifts `captureTimeout` for that transaction only). A run ends on a tracked write with another key or none, `undo`, `redo` or the new `stopCapturing()`; untracked (remote, storage) transactions never end it. Operations nested in a batch no longer touch the grouping state; only the outermost call decides the step.
 
 ## Rules
 
