@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createEditor,
   DeckEditError,
+  deckDialect,
   fromJSON,
   serializeDeck,
   toJSON,
@@ -305,6 +306,117 @@ describe('relationship ends (040 US2)', () => {
       fromColumns: ['s-order', 's-line'],
       toColumns: ['i-order', 'i-line'],
       onUpdate: 'cascade',
+    });
+  });
+});
+
+describe('dialect (040 US6)', () => {
+  const plain: SododeckFile = { ...shopDeck(), dialect: undefined, enums: undefined };
+  delete plain.dialect;
+  delete plain.enums;
+
+  it('reads generic when absent, from a file or a document', () => {
+    const { doc } = setup(plain);
+    expect(deckDialect(plain)).toBe('generic');
+    expect(deckDialect(doc)).toBe('generic');
+    expect(deckDialect(shopDeck())).toBe('postgres');
+  });
+
+  it('writes the key in one undo step; generic and null remove it', () => {
+    const { editor, deck, doc } = setup(plain);
+    oneStep(editor, deck, () => {
+      editor.setDialect('mysql');
+    });
+    expect(deck().dialect).toBe('mysql');
+    expect(deckDialect(doc)).toBe('mysql');
+    editor.setDialect('generic');
+    expect(deck()).not.toHaveProperty('dialect');
+    editor.setDialect('sqlite');
+    editor.setDialect(null);
+    expect(deck()).not.toHaveProperty('dialect');
+    refused(deck, 'invalid', () => {
+      editor.setDialect('oracle' as never);
+    });
+  });
+});
+
+describe('enums (040 US6)', () => {
+  it('creates the deck enums list on the first add, with generated ids', () => {
+    const file = { ...shopDeck() };
+    delete file.enums;
+    const nodes = file.nodes.map((n) => ({
+      ...n,
+      columns: n.columns?.map(({ enumRef: _ref, ...c }) => c),
+    }));
+    const { editor, deck } = setup({ ...file, nodes });
+    expect(deck()).not.toHaveProperty('enums');
+    let id = '';
+    oneStep(editor, deck, () => {
+      id = editor.addEnum({
+        name: 'mood',
+        values: [{ name: 'happy' }, { id: 'v-sad', name: 'sad' }],
+      });
+    });
+    expect(id).toMatch(/^enum-/);
+    expect(deck().enums).toEqual([
+      {
+        id,
+        name: 'mood',
+        values: [
+          { id: expect.stringMatching(/^enumval-/) as string, name: 'happy' },
+          { id: 'v-sad', name: 'sad' },
+        ],
+      },
+    ]);
+  });
+
+  it('updates, moves and removes; value ops work in place', () => {
+    const { editor, deck } = setup();
+    const second = editor.addEnum({ name: 'priority', schema: 'ops' });
+    expect(deck().enums?.[1]).toEqual({ id: second, name: 'priority', schema: 'ops', values: [] });
+    oneStep(editor, deck, () => {
+      editor.updateEnum(second, { schema: null, note: 'How urgent.' });
+    });
+    editor.moveEnum(second, 0);
+    expect(deck().enums?.map((e) => e.id)).toEqual([second, 'e-status']);
+    const low = editor.addEnumValue(second, { name: 'low' });
+    const high = editor.addEnumValue(second, { name: 'high', note: 'Page someone.' }, 0);
+    editor.moveEnumValue(second, low, 0);
+    editor.updateEnumValue(second, high, { note: null });
+    expect(deck().enums?.[0]?.values).toEqual([
+      { id: low, name: 'low' },
+      { id: high, name: 'high' },
+    ]);
+    oneStep(editor, deck, () => {
+      editor.removeEnumValue(second, low);
+    });
+    expect(deck().enums?.[0]?.values.map((v) => v.id)).toEqual([high]);
+  });
+
+  it('refuses ids used by another database part, bad names and unknown enums', () => {
+    const { editor, deck } = setup();
+    refused(deck, 'duplicate-id', () => editor.addEnum({ id: 'c-id', name: 'x' }));
+    refused(deck, 'duplicate-id', () =>
+      editor.addEnum({
+        name: 'x',
+        values: [
+          { id: 'v', name: 'a' },
+          { id: 'v', name: 'b' },
+        ],
+      }),
+    );
+    refused(deck, 'duplicate-id', () =>
+      editor.addEnumValue('e-status', { id: 'o-total', name: 'x' }),
+    );
+    refused(deck, 'invalid', () => editor.addEnum({ name: '' }));
+    refused(deck, 'invalid', () => {
+      editor.updateEnum('e-status', { values: [] } as never);
+    });
+    refused(deck, 'not-found', () => {
+      editor.updateEnum('gone', { name: 'x' });
+    });
+    refused(deck, 'not-found', () => {
+      editor.updateEnumValue('e-status', 'gone', { name: 'x' });
     });
   });
 });

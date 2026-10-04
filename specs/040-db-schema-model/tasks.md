@@ -159,8 +159,8 @@
 
 **Independent Test**: `concurrency.test.ts` additions.
 
-- [ ] T040 [P] [US4] Add to `packages/model/test/concurrency.test.ts` (two `Y.Doc`s, exchange updates, compare `toJSON`): edit column A's `type` and column B's `name`; add a column and reorder two others; remove a column and rename it concurrently (removed in both, no reference left after the remover's cascade); edit two values of one enum; set `cardinality` and `onDelete` on one edge from two docs (last write per key)
-- [ ] T041 [US4] Fix any failing case in `packages/model/src/write.ts` / `ops/db-tables.ts` (items must be written field by field with `writeField`, never replaced as a whole map); add a note to `packages/model/CLAUDE.md` rules if a new rule emerges
+- [x] T040 [P] [US4] Add to `packages/model/test/concurrency.test.ts` (two `Y.Doc`s, exchange updates, compare `toJSON`): edit column A's `type` and column B's `name`; add a column and reorder two others; remove a column and rename it concurrently (removed in both, no reference left after the remover's cascade); edit two values of one enum; set `cardinality` and `onDelete` on one edge from two docs (last write per key)
+- [x] T041 [US4] Fix any failing case in `packages/model/src/write.ts` / `ops/db-tables.ts` (items must be written field by field with `writeField`, never replaced as a whole map); add a note to `packages/model/CLAUDE.md` rules if a new rule emerges
 
 **Checkpoint**: SC-004 holds: no lost or duplicated column in any concurrent case.
 
@@ -172,10 +172,10 @@
 
 **Independent Test**: dialect and enum cases in `db-schema.test.ts`.
 
-- [ ] T042 [P] [US6] Add to `packages/model/test/db-schema.test.ts`: `deckDialect` is `'generic'` when absent; `setDialect('postgres')` writes the key, one undo clears it; `setDialect('generic')` and `setDialect(null)` remove it; `addEnum` (lazy `meta.enums` created on first add, `enum-…` id), `updateEnum`, `moveEnum`, `addEnumValue` / `updateEnumValue` / `moveEnumValue` / `removeEnumValue`, `duplicate-id` for an id used by a column
-- [ ] T043 [US6] Create `packages/model/src/ops/db-enums.ts` with `setDialect`, `addEnum`, `updateEnum`, `moveEnum`, `addEnumValue`, `updateEnumValue`, `moveEnumValue`, `removeEnumValue` (patterns of `ops/fields.ts` options), and `deckDialect(file | doc)` in `packages/model/src/read.ts` or a small `dialect.ts`
-- [ ] T044 [US6] Add `removeEnum` (clear `enumRef` on every column of every table, one transaction) to `packages/model/src/ops/cascade.ts`
-- [ ] T045 [US6] Wire `setDialect` and the enum methods into `packages/model/src/editor.ts` and exports; run `pnpm --filter @sododeck/model test` (T034 enum cases and T042 green)
+- [x] T042 [P] [US6] Add to `packages/model/test/db-schema.test.ts`: `deckDialect` is `'generic'` when absent; `setDialect('postgres')` writes the key, one undo clears it; `setDialect('generic')` and `setDialect(null)` remove it; `addEnum` (lazy `meta.enums` created on first add, `enum-…` id), `updateEnum`, `moveEnum`, `addEnumValue` / `updateEnumValue` / `moveEnumValue` / `removeEnumValue`, `duplicate-id` for an id used by a column
+- [x] T043 [US6] Create `packages/model/src/ops/db-enums.ts` with `setDialect`, `addEnum`, `updateEnum`, `moveEnum`, `addEnumValue`, `updateEnumValue`, `moveEnumValue`, `removeEnumValue` (patterns of `ops/fields.ts` options), and `deckDialect(file | doc)` in `packages/model/src/read.ts` or a small `dialect.ts`
+- [x] T044 [US6] Add `removeEnum` (clear `enumRef` on every column of every table, one transaction) to `packages/model/src/ops/cascade.ts`
+- [x] T045 [US6] Wire `setDialect` and the enum methods into `packages/model/src/editor.ts` and exports; run `pnpm --filter @sododeck/model test` (T034 enum cases and T042 green)
 
 **Checkpoint**: every op in contracts/model-additions.md exists and is tested.
 
