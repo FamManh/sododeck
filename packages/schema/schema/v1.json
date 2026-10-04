@@ -73,6 +73,10 @@
       "$ref": "#/$defs/Dialect",
       "description": "SQL dialect of the deck's database schema (040): one per deck. Absent means `generic`."
     },
+    "blockSqlExport": {
+      "const": true,
+      "description": "Database pack (052): SQL export is refused while the export scope has database errors. Absent means off."
+    },
     "enums": {
       "description": "Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.",
       "type": "array",

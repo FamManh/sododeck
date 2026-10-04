@@ -678,6 +678,8 @@ export const invalidFixtures: InvalidFixture[] = [
     input: set('dialect', 'oracle'),
     path: 'dialect',
   },
+  { name: 'blockSqlExport false', input: set('blockSqlExport', false), path: 'blockSqlExport' },
+  { name: 'blockSqlExport as text', input: set('blockSqlExport', 'yes'), path: 'blockSqlExport' },
   {
     name: 'enum without values',
     input: remove('enums.0.values'),
@@ -739,6 +741,8 @@ export const invalidFixtures: InvalidFixture[] = [
  * group → card and group → group, each with a route and a style, read against the group frame.
  */
 export const validFixtures: { name: string; input: unknown }[] = [
+  // 052: block SQL export.
+  { name: 'block SQL export on', input: set('blockSqlExport', true) },
   // 043: `locked` on any node type.
   { name: 'locked card', input: set('nodes.2.locked', true) },
   { name: 'locked shape', input: set('nodes.8.locked', true) },

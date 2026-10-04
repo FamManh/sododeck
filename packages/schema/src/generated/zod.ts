@@ -236,6 +236,12 @@ export const sododeckFileSchema = z
         "SQL dialect of the deck's database schema (040): one per deck. Absent means `generic`.",
       )
       .optional(),
+    blockSqlExport: z
+      .literal(true)
+      .describe(
+        'Database pack (052): SQL export is refused while the export scope has database errors. Absent means off.',
+      )
+      .optional(),
     enums: z
       .array(
         z
