@@ -9,6 +9,10 @@ import { useEditor } from '../../model/use-editor';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useUiStore } from '../../state/ui-store';
 import { useThemeStore } from '../../theme/theme-store';
+import { canRunAction, runAction } from '../actions/actions-for';
+import { ACTIONS } from '../actions/index';
+import type { CanvasApi } from '../actions/types';
+import { readActionContext } from '../actions/use-action-context';
 import { openFlow } from '../flows/flow-mode';
 
 import { buildCommands } from './commands';
@@ -46,52 +50,86 @@ function CommandPaletteSession({
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const [query, setQuery] = useState('');
-  const { fitView, getZoom, setCenter } = useReactFlow();
+  const { fitView, getZoom, setCenter, screenToFlowPosition, getViewport, getNodes, getEdges } =
+    useReactFlow();
   const searchIndex = useMemo(() => buildSearchIndex(deck), [deck]);
   const hasSelection = useUiStore((s) => {
     const { nodes, edges, groups, stickies } = s.selection;
     return nodes.length + edges.length + groups.length + stickies.length > 0;
   });
   const jsonShown = useUiStore((s) => s.jsonShown);
-  const commands = useMemo<readonly PaletteCommand[]>(
-    () =>
-      buildCommands({
-        navigate: (to) => {
-          void navigate(to);
-        },
-        openRules: () => {
-          openRules();
-        },
-        openExport: () => {
-          openExport(null);
-        },
-        theme: { value: theme, resolved: theme, setTheme },
-        focusModeAvailable: false,
-        ...(screen === 'canvas'
-          ? {
-              shell: {
-                canOpenDetails: hasSelection,
-                openDetails: () => {
-                  useUiStore.getState().openDrawer();
-                },
-                jsonShown,
-                toggleJson: () => {
-                  useUiStore.getState().toggleJsonShown();
-                },
-                hideUi: () => {
-                  useUiStore.getState().setHideUi(true);
-                },
+  const { toast } = useToast();
+  const commands = useMemo<readonly PaletteCommand[]>(() => {
+    // Canvas actions offered as commands run exactly when their menu item would (019 FR-039).
+    const canvasApi: CanvasApi = {
+      fitView,
+      screenToFlowPosition,
+      getViewport,
+      getNodes,
+      getEdges,
+    };
+    const actionContext = () =>
+      readActionContext(editor, canvasApi, (message) => {
+        toast({ message });
+      });
+    const spreadEnds =
+      screen === 'canvas' && canRunAction(ACTIONS, 'node.spreadEnds', actionContext())
+        ? () => {
+            runAction(ACTIONS, 'node.spreadEnds', actionContext());
+          }
+        : undefined;
+    return buildCommands({
+      navigate: (to) => {
+        void navigate(to);
+      },
+      openRules: () => {
+        openRules();
+      },
+      openExport: () => {
+        openExport(null);
+      },
+      theme: { value: theme, resolved: theme, setTheme },
+      focusModeAvailable: false,
+      ...(screen === 'canvas'
+        ? {
+            shell: {
+              canOpenDetails: hasSelection,
+              openDetails: () => {
+                useUiStore.getState().openDrawer();
               },
-            }
-          : {}),
-      }),
-    [openExport, navigate, openRules, setTheme, theme, screen, hasSelection, jsonShown],
-  );
+              jsonShown,
+              toggleJson: () => {
+                useUiStore.getState().toggleJsonShown();
+              },
+              hideUi: () => {
+                useUiStore.getState().setHideUi(true);
+              },
+              ...(spreadEnds === undefined ? {} : { spreadEnds }),
+            },
+          }
+        : {}),
+    });
+  }, [
+    openExport,
+    navigate,
+    openRules,
+    setTheme,
+    theme,
+    screen,
+    hasSelection,
+    jsonShown,
+    editor,
+    fitView,
+    screenToFlowPosition,
+    getViewport,
+    getNodes,
+    getEdges,
+    toast,
+  ]);
   const currentViewId = useUiStore((state) => state.currentViewId);
   const revealed = useUiStore((state) => state.revealed);
   const viewState = viewStateOf(deck, currentViewId, revealed);
   const hidden = viewState.hidden;
-  const { toast } = useToast();
   const results = useMemo(
     () => buildPaletteResults({ deck, searchIndex, query, commands, hidden }),
     [commands, deck, query, searchIndex, hidden],

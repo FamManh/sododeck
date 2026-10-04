@@ -21,6 +21,8 @@ export interface CommandContext {
     jsonShown: boolean;
     toggleJson: () => void;
     hideUi: () => void;
+    /** Spreads the selection's connector ends (050 US7); absent when it cannot run now. */
+    spreadEnds?: () => void;
   };
 }
 
@@ -83,6 +85,14 @@ export function buildCommands({
       },
       { id: 'hide-ui', title: 'Hide UI', aliases: ['present', 'hide controls'], run: shell.hideUi },
     );
+    if (shell.spreadEnds !== undefined) {
+      commands.push({
+        id: 'spread-ends',
+        title: 'Spread connector ends evenly',
+        aliases: ['distribute ends', 'spread ends'],
+        run: shell.spreadEnds,
+      });
+    }
   }
 
   if (focusModeAvailable) {

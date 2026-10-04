@@ -93,8 +93,21 @@ export function findAction(list: readonly Action[], id: string): Action | undefi
  */
 export function runAction(list: readonly Action[], id: string, ctx: ActionContext): boolean {
   const action = findAction(list, id);
-  if (action?.run === undefined || !offered(action, ctx)) return false;
-  if ((action.disabledReason?.(ctx) ?? null) !== null) return false;
+  if (action?.run === undefined || !canRun(action, ctx)) return false;
   action.run(ctx);
   return true;
+}
+
+function canRun(action: Action, ctx: ActionContext): boolean {
+  return (
+    action.run !== undefined &&
+    offered(action, ctx) &&
+    (action.disabledReason?.(ctx) ?? null) === null
+  );
+}
+
+/** Whether `runAction` would run it now (a palette lists a command only when it can run). */
+export function canRunAction(list: readonly Action[], id: string, ctx: ActionContext): boolean {
+  const action = findAction(list, id);
+  return action !== undefined && canRun(action, ctx);
 }
