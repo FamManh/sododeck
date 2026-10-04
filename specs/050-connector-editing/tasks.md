@@ -99,7 +99,7 @@
 
 **Independent Test**: quickstart 4–8.
 
-- [ ] T011 [P] [US2] Write failing tests in `apps/app/src/editor/routing/outline-attach.test.ts`:
+- [x] T011 [P] [US2] Write failing tests in `apps/app/src/editor/routing/outline-attach.test.ts`:
   - nearest point on each side of a rectangle;
   - continuity round all four corners: a pointer step of d moves the point by ≤ d + snap;
   - `at` snaps only to 0.5, within 6 screen px, scaled by zoom;
@@ -108,7 +108,7 @@
   - centre zone: `automatic` only with `allowAutomatic`, inside the middle 40 %, and only when the zone keeps a 24 px margin (true on 240×100, never on 60×40);
   - shapes (diamond, ellipse from `shapes/shape-geometry.ts`) put the point on the outline;
   - `nudgeAnchor` moves ±0.01 and carries round corners.
-- [ ] T012 [US2] Implement `apps/app/src/editor/routing/outline-attach.ts`:
+- [x] T012 [US2] Implement `apps/app/src/editor/routing/outline-attach.ts`:
   - `MIDPOINT_SNAP`, `CENTRE_ZONE`, `CENTRE_MARGIN`;
   - `attachToOutline`: exact rectangle projection; for shapes, 48 samples per side through `outlinePoint`, then refine;
   - `nudgeAnchor`.
@@ -169,20 +169,20 @@
 
 ### Schema and model
 
-- [X] T022 [P] [US4] In `packages/schema/schema/v1.json`, change the descriptions of root `edges`, `Edge`, `Edge.from` and `Edge.to` to "node or group". The S9–S11 wording in `packages/schema/src/semantic-rules.ts` becomes "card or group". Run `pnpm schema:generate`. Add a valid group-edge deck to `packages/schema/test/fixtures.ts` and an edge `"from": "<group id>"` to `packages/schema/examples/full.sododeck.json`. Parity test green.
-- [X] T023 [P] [US4] Write failing model tests:
+- [x] T022 [P] [US4] In `packages/schema/schema/v1.json`, change the descriptions of root `edges`, `Edge`, `Edge.from` and `Edge.to` to "node or group". The S9–S11 wording in `packages/schema/src/semantic-rules.ts` becomes "card or group". Run `pnpm schema:generate`. Add a valid group-edge deck to `packages/schema/test/fixtures.ts` and an edge `"from": "<group id>"` to `packages/schema/examples/full.sododeck.json`. Parity test green.
+- [x] T023 [P] [US4] Write failing model tests:
   - `packages/model/test/integrity.test.ts`: group ends are accepted; an unknown id is still broken; a node/group id collision gives `duplicate-id`.
   - `cascade.test.ts`: `removeGroup` removes its edges in one undo step, and `previewRemoval` lists them.
   - `fragment.test.ts` and `paste.test.ts`: group-ended edges are kept and remapped.
   - `problems.test.ts` and `search.test.ts`: titles come from the group.
   - `round-trip.test.ts`: card→group, group→card and group→group with route and style, plus an old file byte-identical.
   - A rename of a group keeps its edges (Principle III).
-- [X] T024 [US4] Add `packages/model/src/endpoint.ts` (`endpointOf`, exported from the package index). Then:
+- [x] T024 [US4] Add `packages/model/src/endpoint.ts` (`endpointOf`, exported from the package index). Then:
   - `src/ops/refs.ts` and `src/validate.ts`: add the `'nodes|groups'` ref target.
   - `src/integrity.ts`: check ends against both, plus the id-collision check (in `src/load-checks.ts` too).
   - `src/problems.ts` and `src/search/index.ts`: use `endpointOf`.
   - Make the integrity, problems and search tests pass.
-- [X] T025 [US4] Delete group edges in `packages/model/src/ops/cascade.ts` (`removeGroup`, `previewRemoval`), and keep and remap them in `packages/model/src/fragment.ts` and `src/ops/paste.ts`. Make the remaining T023 tests pass. Update `packages/model/CLAUDE.md` (edge ends, cascade).
+- [x] T025 [US4] Delete group edges in `packages/model/src/ops/cascade.ts` (`removeGroup`, `previewRemoval`), and keep and remap them in `packages/model/src/fragment.ts` and `src/ops/paste.ts`. Make the remaining T023 tests pass. Update `packages/model/CLAUDE.md` (edge ends, cascade).
 
 ### App
 
