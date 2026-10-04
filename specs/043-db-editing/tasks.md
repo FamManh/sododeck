@@ -34,8 +34,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `043-db-editing` from `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline.
-- [ ] T002 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` before any change. Save the summary as `specs/043-db-editing/bench-before.md`.
+- [x] T001 Create branch `043-db-editing` from `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline.
+- [x] T002 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` before any change. Save the summary as `specs/043-db-editing/bench-before.md`.
 
 ---
 
@@ -45,18 +45,18 @@
 
 ### Format and model
 
-- [ ] T003 [P] Add parity fixtures to `packages/schema/test/fixtures.ts`:
+- [x] T003 [P] Add parity fixtures to `packages/schema/test/fixtures.ts`:
   - valid: `locked: true` on a card, a shape and a `db-table`
   - invalid: `locked: false` and `locked: "yes"`
 
   Watch the invalid ones fail to be refused.
 
-- [ ] T004 Add `locked` (`const: true`, with a description) to Node in `packages/schema/schema/v1.json`, after `detail`. Run `pnpm schema:generate`. Add `"locked": true` to one node in `packages/schema/examples/full.sododeck.json`. `pnpm --filter @sododeck/schema test` is green.
-- [ ] T005 [P] Write model tests:
+- [x] T004 Add `locked` (`const: true`, with a description) to Node in `packages/schema/schema/v1.json`, after `detail`. Run `pnpm schema:generate`. Add `"locked": true` to one node in `packages/schema/examples/full.sododeck.json`. `pnpm --filter @sododeck/schema test` is green.
+- [x] T005 [P] Write model tests:
   - `packages/model/test/round-trip.test.ts`: a locked card, shape and table round-trip; a deck without `locked` stays byte-identical after an unrelated edit.
   - `packages/model/test/node-lock.test.ts`: `setLocked(ids, true)` writes `true`; `false` removes the key; unknown ids are ignored; it is one undo step.
-- [ ] T006 Implement `setLocked` in the new `packages/model/src/ops/node-lock.ts`. Wire it into `packages/model/src/editor.ts` (interface, with a doc comment) and `index.ts`. T005 is green.
-- [ ] T007 [P] Write paste tests in `packages/model/test/paste.test.ts`, per research R10:
+- [x] T006 Implement `setLocked` in the new `packages/model/src/ops/node-lock.ts`. Wire it into `packages/model/src/editor.ts` (interface, with a doc comment) and `index.ts`. T005 is green.
+- [x] T007 [P] Write paste tests in `packages/model/test/paste.test.ts`, per research R10:
   - `toFragment(…, { keepOutgoing: true })` puts relationships from a copied table to an outside table in `external`, and the enums the copied columns reference in `enums`.
   - Paste into the same deck keeps the external edges, remapped on the from side.
   - Paste into a deck without the target drops them and returns `droppedRelationships`.
@@ -68,11 +68,11 @@
   - 20 tables share 0 ids with the originals.
   - An old fragment without `external` / `enums` pastes as before.
   - The whole paste is one undo step.
-- [ ] T008 Implement the paste changes in `packages/model/src/fragment.ts` (`keepOutgoing`, `external`, `enums`, parse and validation of the new optional keys) and `packages/model/src/ops/paste.ts` (keep or drop external edges, link or copy enums, `copyName`, `droppedRelationships` in the result). Update the header comments. T007 is green.
+- [x] T008 Implement the paste changes in `packages/model/src/fragment.ts` (`keepOutgoing`, `external`, `enums`, parse and validation of the new optional keys) and `packages/model/src/ops/paste.ts` (keep or drop external edges, link or copy enums, `copyName`, `droppedRelationships` in the result). Update the header comments. T007 is green.
 
 ### Pure layer (apps/app)
 
-- [ ] T009 [P] Write `apps/app/src/db/column-line.test.ts`:
+- [x] T009 [P] Write `apps/app/src/db/column-line.test.ts`:
   - every row of the examples table in contracts/column-line.md
   - quoted names; `numeric(10,2)` → size `'10,2'`; an invalid size goes to ignored
   - last-wins for `null` / `not null`; `default` alone gives a hint
@@ -82,12 +82,12 @@
   - `columnLinePatch` writes `null` for removed parts and switches between `default` and `defaultExpr`, and never touches `note`, `check` or `id`
   - `lineError` returns `empty` / `taken` (case-insensitive, edited column excluded)
   - a 200-character line parses in < 1 ms
-- [ ] T010 Implement `apps/app/src/db/column-line.ts` (`parseColumnLine`, `formatColumnLine`, `columnLinePatch`, `lineError`, token ranges) per contracts/column-line.md. Reuse the `type(size)` split from `db/export/common-types.ts`. T009 is green.
-- [ ] T011 [P] Add tests:
+- [x] T010 Implement `apps/app/src/db/column-line.ts` (`parseColumnLine`, `formatColumnLine`, `columnLinePatch`, `lineError`, token ranges) per contracts/column-line.md. Reuse the `type(size)` split from `db/export/common-types.ts`. T009 is green.
+- [x] T011 [P] Add tests:
   - `apps/app/src/editor/table-keys.test.ts`: `mismatchedColumns(deck)` gives both rows of a mismatched pair the message "int → uuid · orders.customer_id"; composite pairs are compared by position; matching types and enum-to-same-enum give no entry; the result is cached by `edges` and `nodes` identity.
   - `apps/app/src/editor/canvas-actions.test.ts`: `nextTableName` (first free `table_n`).
-- [ ] T012 Implement `mismatchedColumns` in `apps/app/src/editor/table-keys.ts` using 042's `typeMismatch` (`relationships/type-mismatch.ts`), and `nextTableName` in `apps/app/src/editor/canvas-actions.ts`. T011 is green.
-- [ ] T013 Extend `apps/app/src/state/ui-store.ts` per contracts/editing-ui.md:
+- [x] T012 Implement `mismatchedColumns` in `apps/app/src/editor/table-keys.ts` using 042's `typeMismatch` (`relationships/type-mismatch.ts`), and `nextTableName` in `apps/app/src/editor/canvas-actions.ts`. T011 is green.
+- [x] T013 Extend `apps/app/src/state/ui-store.ts` per contracts/editing-ui.md:
   - `columnEdit` with `startColumnEdit` / `endColumnEdit`
   - `rowDrag`
   - the `rowEditTableId` selector
@@ -97,8 +97,8 @@
 
   Add store tests in `apps/app/src/state/ui-store.test.ts`.
 
-- [ ] T014 [P] Add a case to `apps/app/src/views/view-state.test.ts`: with `rowEditTableId` set, the projected table's `detail` is `'all'`; the document's `detail` and the other tables are unchanged; clearing the id restores the projection.
-- [ ] T015 Apply the override in `apps/app/src/views/view-state.ts` `projectNodes` (patch `detail: 'all'` on that one node, no write). T014 is green.
+- [x] T014 [P] Add a case to `apps/app/src/views/view-state.test.ts`: with `rowEditTableId` set, the projected table's `detail` is `'all'`; the document's `detail` and the other tables are unchanged; clearing the id restores the projection.
+- [x] T015 Apply the override in `apps/app/src/views/view-state.ts` `projectNodes` (patch `detail: 'all'` on that one node, no write). T014 is green.
 
 **Checkpoint**: format, model and pure helpers are ready, and all package tests are green.
 
@@ -122,7 +122,7 @@
   - Tab moves the caret to the type token
   - an empty name and a taken name show inline messages and write nothing
   - each save is undone by one ⌘Z
-- [ ] T017 [P] [US1] Add `apps/app/src/editor/table-layout.test.ts` cases: with a new-row edit open, the table is one row taller, and the rows below the insertion index (and their relationship anchors) shift by 24.
+- [x] T017 [P] [US1] Add `apps/app/src/editor/table-layout.test.ts` cases: with a new-row edit open, the table is one row taller, and the rows below the insertion index (and their relationship anchors) shift by 24.
 
 ### Implementation for User Story 1
 
