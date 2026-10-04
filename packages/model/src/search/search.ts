@@ -15,6 +15,8 @@ export interface SearchEntry {
   kind: SearchKind;
   id: string;
   flowId?: string;
+  /** A column entry's table (048); `id` is the column id. */
+  tableId?: string;
   title: string;
   context: string;
   fields: readonly SearchFieldValue[];
@@ -24,7 +26,7 @@ export interface SearchIndex {
   readonly entries: readonly SearchEntry[];
 }
 
-export type SearchKind = 'node' | 'edge' | 'flow' | 'step' | 'rule' | 'sticky';
+export type SearchKind = 'node' | 'table' | 'column' | 'edge' | 'flow' | 'step' | 'rule' | 'sticky';
 
 export type SearchField =
   | 'title'
@@ -42,6 +44,7 @@ export interface SearchResult {
   kind: SearchKind;
   id: string;
   flowId?: string;
+  tableId?: string;
   title: string;
   context: string;
   match: 'title' | 'body';
@@ -49,13 +52,18 @@ export interface SearchResult {
   snippet?: { field: SearchField; text: string; ranges: readonly Range[] };
 }
 
+// Same order as `localeCompare`, without its per-call cost on thousands of hits.
+const COLLATOR = new Intl.Collator();
+
 const ORDER: Record<SearchKind, number> = {
   node: 0,
-  edge: 1,
-  flow: 2,
-  step: 3,
-  rule: 4,
-  sticky: 5,
+  table: 1,
+  column: 2,
+  edge: 3,
+  flow: 4,
+  step: 5,
+  rule: 6,
+  sticky: 7,
 };
 
 function queryWords(query: string): string[] {
@@ -74,20 +82,31 @@ function titleField(entry: SearchEntry): SearchFieldValue | undefined {
   return entry.fields.find((field) => field.field === 'title');
 }
 
-function matches(entry: SearchEntry, words: readonly string[]): SearchResult | null {
+/** What sorting needs of a hit, so result objects (ranges, snippets) are built for the top only. */
+interface Hit {
+  entry: SearchEntry;
+  titleMatch: boolean;
+}
+
+function hitOf(entry: SearchEntry, words: readonly string[]): Hit | null {
   const title = titleField(entry);
   if (title === undefined) return null;
-  const titleMatch = words.every((word) => title.norm.includes(word));
-  const bodyFields = entry.fields.filter((field) => field.field !== 'title');
-  const allMatch = words.every((word) => entry.fields.some((field) => field.norm.includes(word)));
-  if (!allMatch) return null;
-  const bodyField = bodyFields.find((field) => words.some((word) => field.norm.includes(word)));
+  if (!words.every((word) => entry.fields.some((field) => field.norm.includes(word)))) return null;
+  return { entry, titleMatch: words.every((word) => title.norm.includes(word)) };
+}
+
+function resultOf(hit: Hit, words: readonly string[]): SearchResult {
+  const { entry, titleMatch } = hit;
+  const bodyField = entry.fields.find(
+    (field) => field.field !== 'title' && words.some((word) => field.norm.includes(word)),
+  );
   const snippet =
     titleMatch || bodyField === undefined ? undefined : rawSnippet(bodyField.raw, words);
   return {
     kind: entry.kind,
     id: entry.id,
     ...(entry.flowId === undefined ? {} : { flowId: entry.flowId }),
+    ...(entry.tableId === undefined ? {} : { tableId: entry.tableId }),
     title: entry.title,
     context: entry.context,
     match: titleMatch ? 'title' : 'body',
@@ -98,6 +117,11 @@ function matches(entry: SearchEntry, words: readonly string[]): SearchResult | n
   };
 }
 
+/**
+ * Finds `query` in the index. `results` holds the best `limit` (default 50); `total` counts every
+ * match, so the caller can say "n more" (048 FR-023). Hits are ranked from cheap keys first and
+ * only the returned ones get title ranges and snippets, so 10,000 matches cost one sort.
+ */
 export function searchDeck(
   index: SearchIndex,
   query: string,
@@ -105,16 +129,20 @@ export function searchDeck(
 ): { results: readonly SearchResult[]; total: number } {
   const words = queryWords(query);
   if (words.length === 0) return { results: [], total: 0 };
-  const matchesFound = index.entries
-    .map((entry) => matches(entry, words))
-    .filter((entry): entry is SearchResult => entry !== null)
-    .sort((a, b) => {
-      if (a.match !== b.match) return a.match === 'title' ? -1 : 1;
-      if (ORDER[a.kind] !== ORDER[b.kind]) return ORDER[a.kind] - ORDER[b.kind];
-      return a.title.localeCompare(b.title);
-    });
+  const hits: Hit[] = [];
+  for (const entry of index.entries) {
+    const hit = hitOf(entry, words);
+    if (hit !== null) hits.push(hit);
+  }
+  hits.sort((a, b) => {
+    if (a.titleMatch !== b.titleMatch) return a.titleMatch ? -1 : 1;
+    if (ORDER[a.entry.kind] !== ORDER[b.entry.kind]) {
+      return ORDER[a.entry.kind] - ORDER[b.entry.kind];
+    }
+    return COLLATOR.compare(a.entry.title, b.entry.title);
+  });
   return {
-    total: matchesFound.length,
-    results: matchesFound.slice(0, options.limit ?? 50),
+    total: hits.length,
+    results: hits.slice(0, options.limit ?? 50).map((hit) => resultOf(hit, words)),
   };
 }

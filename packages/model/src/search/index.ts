@@ -4,12 +4,13 @@ import { stickyLabel } from '../geometry';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { normalizeText } from './normalize';
-import { typeName } from '../card-types';
+import { isDbTable, typeName } from '../card-types';
 import { validateValue } from '../field-values';
 import { fieldsOfNode, valueOf, type ResolvedField } from '../fields';
 import type { SearchField, SearchIndex, SearchEntry, SearchFieldValue, SearchKind } from './search';
 
 const nodeCache = new WeakMap<SododeckFile['nodes'][number], SearchEntry>();
+const columnCache = new WeakMap<object, SearchEntry>();
 const edgeCache = new WeakMap<SododeckFile['edges'][number], SearchEntry>();
 const flowCache = new WeakMap<SododeckFile['flows'][number], SearchEntry>();
 const stepCache = new WeakMap<SododeckFile['flows'][number]['steps'][number], SearchEntry>();
@@ -30,6 +31,10 @@ function kindLabel(kind: SearchKind): string {
   switch (kind) {
     case 'node':
       return 'Node';
+    case 'table':
+      return 'Table';
+    case 'column':
+      return 'Column';
     case 'edge':
       return 'Connection';
     case 'flow':
@@ -55,6 +60,7 @@ function entryOf(
     cached.kind === data.kind &&
     cached.id === data.id &&
     cached.flowId === data.flowId &&
+    cached.tableId === data.tableId &&
     cached.title === data.title &&
     cached.context === data.context &&
     cached.fields.length === fields.length &&
@@ -74,6 +80,7 @@ function entryOf(
     kind: data.kind,
     id: data.id,
     ...(data.flowId === undefined ? {} : { flowId: data.flowId }),
+    ...(data.tableId === undefined ? {} : { tableId: data.tableId }),
     title: data.title,
     context: data.context,
     fields,
@@ -132,23 +139,105 @@ function valueFields(deck: SododeckFile, node: SododeckFile['nodes'][number]) {
   });
 }
 
+/** The column ids a relationship marks as foreign keys: its referencing end (the `n` side). */
+function foreignKeyColumns(deck: SododeckFile): Set<Id> {
+  const ids = new Set<Id>();
+  for (const edge of deck.edges) {
+    const columns = edge.cardinality === '1-n' ? edge.toColumns : edge.fromColumns;
+    for (const id of columns ?? []) ids.add(id);
+  }
+  return ids;
+}
+
+const tableEntryCache = new WeakMap<
+  SododeckFile['nodes'],
+  WeakMap<SododeckFile['edges'], SearchEntry[]>
+>();
+
+/**
+ * Table and column entries (048). Cached by the identity of `nodes` and `edges`, so typing in the
+ * palette (the same deck) never rebuilds them, and per object, so one edit rebuilds one entry.
+ */
+function tableEntries(deck: SododeckFile): SearchEntry[] {
+  const byEdges = tableEntryCache.get(deck.nodes);
+  const known = byEdges?.get(deck.edges);
+  if (known !== undefined) return known;
+  const entries: SearchEntry[] = [];
+  let foreign: Set<Id> | undefined;
+  for (const node of deck.nodes) {
+    if (!isDbTable(node)) continue;
+    const columns = node.columns ?? [];
+    const schema = node.schema === undefined || node.schema === '' ? undefined : node.schema;
+    entries.push(
+      entryOf(nodeCache, node, {
+        kind: 'table',
+        id: node.id,
+        title: node.title,
+        context: [
+          'Table',
+          ...(schema === undefined ? [] : [schema]),
+          `${String(columns.length)} ${columns.length === 1 ? 'column' : 'columns'}`,
+        ].join(' · '),
+        fields: [
+          field('title', node.title),
+          field('description', node.description),
+          field('type', schema === undefined ? 'Table' : `Table ${schema}`),
+        ],
+      }),
+    );
+    foreign ??= foreignKeyColumns(deck);
+    for (const column of columns) {
+      const marker =
+        column.pk === true
+          ? 'primary key'
+          : foreign.has(column.id)
+            ? 'foreign key'
+            : column.unique === true
+              ? 'unique'
+              : undefined;
+      const type = column.size === undefined ? column.type : `${column.type}(${column.size})`;
+      const title = `${node.title}.${column.name}`;
+      entries.push(
+        entryOf(columnCache, column, {
+          kind: 'column',
+          id: column.id,
+          tableId: node.id,
+          title,
+          context: ['Column', type, ...(marker === undefined ? [] : [marker])].join(' · '),
+          fields: [
+            field('title', title),
+            field('type', column.type),
+            field('description', column.note),
+          ],
+        }),
+      );
+    }
+  }
+  const next = byEdges ?? new WeakMap();
+  next.set(deck.edges, entries);
+  tableEntryCache.set(deck.nodes, next);
+  return entries;
+}
+
 function nodeEntries(deck: SododeckFile): SearchEntry[] {
   const groups = new Map(deck.groups.map((group) => [group.id, group.title]));
-  return deck.nodes.map((node) =>
-    entryOf(nodeCache, node, {
-      kind: 'node',
-      id: node.id,
-      title: node.title,
-      context: `${kindLabel('node')} · ${groups.get(node.group ?? '') ?? 'No group'}`,
-      // The type's name is searchable too (030): "truck route" finds every truck route card.
-      fields: [
-        field('title', node.title),
-        field('description', node.description),
-        field('type', typeName(node.type)),
-        ...valueFields(deck, node),
-      ],
-    }),
-  );
+  return deck.nodes
+    .filter((node) => !isDbTable(node))
+    .map((node) =>
+      entryOf(nodeCache, node, {
+        kind: 'node',
+        id: node.id,
+        title: node.title,
+        context: `${kindLabel('node')} · ${groups.get(node.group ?? '') ?? 'No group'}`,
+        // The type's name is searchable too (030): "truck route" finds every truck route card.
+        fields: [
+          field('title', node.title),
+          field('description', node.description),
+          field('type', typeName(node.type)),
+          ...valueFields(deck, node),
+        ],
+      }),
+    );
 }
 
 function edgeEntries(deck: SododeckFile): SearchEntry[] {
@@ -249,6 +338,7 @@ export function buildSearchIndex(file: SododeckFile): SearchIndex {
   return {
     entries: [
       ...nodeEntries(file),
+      ...tableEntries(file),
       ...edgeEntries(file),
       ...flowEntries(file),
       ...ruleEntries(file),
