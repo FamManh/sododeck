@@ -375,13 +375,9 @@ describe('buildPlan: dialects (FR-007…FR-009)', () => {
       ['varchar', '20'],
       ['int unsigned', undefined],
     ]);
-    expect(result.conversions).toEqual([
-      { from: 'datetime', to: 'timestamp', count: 2 },
-      { from: 'varchar', to: 'varchar', count: 1 },
-    ]);
+    expect(result.conversions).toEqual([{ from: 'datetime', to: 'timestamp', count: 2 }]);
     expect(result.report.changed.map((c) => [c.kind, c.detail])).toEqual([
       ['type-converted', 'datetime → timestamp (2 columns)'],
-      ['type-converted', 'varchar → varchar (1 column)'],
       ['type-kept', 'int unsigned kept as written (1 column)'],
     ]);
   });

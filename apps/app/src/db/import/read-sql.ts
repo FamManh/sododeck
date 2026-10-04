@@ -249,7 +249,7 @@ function onUpdateDropped(state: ReaderState, line: number, target: string): void
     line,
     target,
     kind: 'option-dropped',
-    detail: 'ON UPDATE CURRENT_TIMESTAMP is not stored',
+    detail: `${target}: ON UPDATE CURRENT_TIMESTAMP is not stored`,
   });
 }
 
@@ -302,7 +302,7 @@ function columnOf(
       line,
       target: `${table.name}.${name}`,
       kind: 'option-dropped',
-      detail: `${option} is not stored`,
+      detail: `${table.name}.${name}: ${option} is not stored`,
     });
   }
   const reference = def.reference_definition;

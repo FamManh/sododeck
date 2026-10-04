@@ -120,8 +120,8 @@ CREATE INDEX i ON t (a) WHERE a > 0;`);
       [5, 'unknown', 'only enum types are imported'],
     ]);
     expect(raw.changed.map((c) => [c.line, c.target, c.detail])).toEqual([
-      [1, 't.a', 'collation is not stored'],
-      [1, 't.g', 'generated expression is not stored'],
+      [1, 't.a', 't.a: collation is not stored'],
+      [1, 't.g', 't.g: generated expression is not stored'],
       [6, 'i', 'the index condition (WHERE) is not stored'],
     ]);
   });
@@ -155,7 +155,7 @@ describe('readSql: MySQL', () => {
     expect(t?.columns[2]?.default).toEqual({ kind: 'expr', expr: 'CURRENT_TIMESTAMP' });
     expect(t?.indexes.map((i) => i.name)).toEqual(['k', 'f']);
     expect(raw.changed.map((c) => c.detail)).toEqual([
-      'ON UPDATE CURRENT_TIMESTAMP is not stored',
+      'orders.t: ON UPDATE CURRENT_TIMESTAMP is not stored',
       'fulltext index kept as a plain index',
       'table options not stored: ENGINE',
     ]);

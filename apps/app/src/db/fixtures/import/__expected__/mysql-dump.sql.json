@@ -288,7 +288,7 @@
           "line": 17,
           "target": "customers.updated_at",
           "kind": "option-dropped",
-          "detail": "ON UPDATE CURRENT_TIMESTAMP is not stored"
+          "detail": "customers.updated_at: ON UPDATE CURRENT_TIMESTAMP is not stored"
         },
         {
           "line": 22,
@@ -300,13 +300,13 @@
           "line": 27,
           "target": "orders.note",
           "kind": "option-dropped",
-          "detail": "collation is not stored"
+          "detail": "orders.note: collation is not stored"
         },
         {
           "line": 27,
           "target": "orders.note",
           "kind": "option-dropped",
-          "detail": "character set is not stored"
+          "detail": "orders.note: character set is not stored"
         },
         {
           "line": 33,

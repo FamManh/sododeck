@@ -331,7 +331,10 @@ export function buildPlan(
       } else if (convertTo !== null) {
         const converted = convertType(type, size, convertTo.from, convertTo.to);
         const from = type;
-        if (converted.mapped) {
+        const unchanged = converted.type === type && converted.size === size;
+        if (converted.mapped && unchanged) {
+          // Written the same in both dialects: nothing to convert or report.
+        } else if (converted.mapped) {
           type = converted.type;
           size = converted.size;
           const k = `${from}\u0000${type}`;

@@ -289,13 +289,13 @@
           "line": 4,
           "target": "Order Items.label",
           "kind": "option-dropped",
-          "detail": "collation is not stored"
+          "detail": "Order Items.label: collation is not stored"
         },
         {
           "line": 5,
           "target": "Order Items.doubled",
           "kind": "option-dropped",
-          "detail": "generated expression is not stored"
+          "detail": "Order Items.doubled: generated expression is not stored"
         },
         {
           "line": 34,
