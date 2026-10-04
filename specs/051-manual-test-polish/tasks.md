@@ -186,10 +186,10 @@
 
 **Independent Test**: drag a card and a shape. They lift and never rotate.
 
-- [ ] T026 [P] [US4] Write a failing CSS test `apps/app/src/editor/drag-look-css.test.ts`, in the style of `quick-edit-css.test.ts`, that reads `apps/app/src/index.css`. It asserts:
+- [x] T026 [P] [US4] Write a failing CSS test `apps/app/src/editor/drag-look-css.test.ts`, in the style of `quick-edit-css.test.ts`, that reads `apps/app/src/index.css`. It asserts:
   - the `.react-flow__node.dragging .sd-card` and `.react-flow__node.dragging .sd-shape-art` rules contain no `rotate`;
   - they still reference `--sd-deck-lip-drag` or `--shadow-float`.
-- [ ] T027 [US4] In `apps/app/src/index.css`, remove `rotate(-2.5deg)` (:114-120) and `rotate(-3deg)` (:219-225) from the dragging rules. Keep the lip and the shadow, and drop the transform `transition` if nothing else needs it.
+- [x] T027 [US4] In `apps/app/src/index.css`, remove `rotate(-2.5deg)` (:114-120) and `rotate(-3deg)` (:219-225) from the dragging rules. Keep the lip and the shadow, and drop the transform `transition` if nothing else needs it.
 
 **Checkpoint**: T026 is green.
 
