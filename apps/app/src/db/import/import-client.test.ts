@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { createImportClient, createInlineImportClient, ImportCancelled } from './import-client';
+import {
+  createImportClient,
+  createInlineImportClient,
+  ImportCancelled,
+  StaleRead,
+} from './import-client';
 import type { ImportSource, ImportTarget } from './types';
 
 class FakeWorker {
@@ -81,7 +86,49 @@ describe('createImportClient', () => {
   });
 });
 
+describe('readDbml', () => {
+  it('posts a read-dbml request with the text', async () => {
+    const { client, workers } = setup();
+    const read = client.readDbml('Table a { id int }');
+    expect(workers[0]?.posted[0]).toMatchObject({
+      request: { kind: 'read-dbml', text: 'Table a { id int }' },
+    });
+    workers[0]?.reply(0, { schema: 'raw', problems: [] });
+    await expect(read).resolves.toEqual({ schema: 'raw', problems: [] });
+  });
+
+  it('drops a reply older than the newest request by rejecting it as stale', async () => {
+    const { client, workers } = setup();
+    const first = client.readDbml('a');
+    const second = client.readDbml('b');
+    await expect(first).rejects.toBeInstanceOf(StaleRead);
+    workers[0]?.reply(0, { schema: 'old', problems: [] });
+    workers[0]?.reply(1, { schema: 'new', problems: [] });
+    await expect(second).resolves.toEqual({ schema: 'new', problems: [] });
+  });
+
+  it('does not make a pending preview stale', async () => {
+    const { client, workers } = setup();
+    const preview = client.preview(source, target);
+    void client.readDbml('b');
+    workers[0]?.reply(0, 'the preview');
+    await expect(preview).resolves.toBe('the preview');
+  });
+});
+
 describe('createInlineImportClient', () => {
+  it('reads DBML with every problem, and latest wins', async () => {
+    const client = createInlineImportClient();
+    const first = client.readDbml('Table a { id int [not nul] }');
+    const second = client.readDbml('Table a { id int }');
+    await expect(first).rejects.toBeInstanceOf(StaleRead);
+    const result = await second;
+    expect(result.problems).toEqual([]);
+    expect(result.schema.tables).toHaveLength(1);
+    const bad = await client.readDbml('Table a { id int [not nul] }');
+    expect(bad.problems[0]).toMatchObject({ code: 'unknown-setting', suggestion: 'not null' });
+  });
+
   it('runs the same pipeline on the main thread', async () => {
     const client = createInlineImportClient();
     const preview = await client.preview(source, target);

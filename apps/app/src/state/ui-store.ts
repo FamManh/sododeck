@@ -15,6 +15,9 @@ import type { ConnectionCheck } from '../editor/connection-rules';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
 import {
   loadJsonPanelPrefs,
+  type CodeFormat,
+  type SchemaScope,
+  type SqlPreviewDialect,
   saveJsonPanelPrefs,
   type JsonPanelPrefs,
   type JsonTab,
@@ -636,6 +639,9 @@ export interface UiState {
   setJsonPanelOpen: (open: boolean) => void;
   setJsonPanelHeight: (height: number) => void;
   setJsonTab: (tab: JsonTab) => void;
+  setCodeFormat: (format: CodeFormat) => void;
+  setSchemaScope: (scope: SchemaScope) => void;
+  setSqlPreviewDialect: (dialect: SqlPreviewDialect) => void;
   toggleJsonPanel: () => void;
   /** Shows or hides the JSON overlay (⌘J), saved for this deck. */
   setJsonShown: (shown: boolean) => void;
@@ -1383,6 +1389,15 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     setJsonTab: (tab) => {
       setJsonPanel({ tab });
+    },
+    setCodeFormat: (format) => {
+      setJsonPanel({ format });
+    },
+    setSchemaScope: (schemaScope) => {
+      setJsonPanel({ schemaScope });
+    },
+    setSqlPreviewDialect: (sqlPreviewDialect) => {
+      setJsonPanel({ sqlPreviewDialect });
     },
     toggleJsonPanel: () => {
       setJsonPanel({ open: !get().jsonPanel.open });

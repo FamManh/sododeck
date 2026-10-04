@@ -11,9 +11,10 @@ export interface EditContext {
   /**
    * Runs `fn` in one transaction with the editor's origin. `key` names the object a field edit
    * targets (a typing burst on one key is one undo step); omit it for structural edits (add,
-   * remove, move), which are always a step of their own.
+   * remove, move), which are always a step of their own. With `merge` (046, `batch`), a repeated
+   * key joins the previous undo step whatever the time gap.
    */
-  transact<T>(fn: () => T, key?: string): T;
+  transact<T>(fn: () => T, key?: string, merge?: boolean): T;
   /**
    * Runs `fn` in one transaction with the editor's second, untracked origin (011, research R5):
    * saved and synced like any edit, reported as `local`, but never an undo step.

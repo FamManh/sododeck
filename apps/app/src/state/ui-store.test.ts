@@ -2,7 +2,7 @@ import { captureFlowStructure } from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { JSON_PANEL_KEY } from './json-panel-prefs';
+import { DEFAULT_JSON_PANEL, JSON_PANEL_KEY } from './json-panel-prefs';
 import {
   isFlowMode,
   LABELS_KEY,
@@ -619,23 +619,32 @@ describe('ui store', () => {
   });
 
   it('starts the JSON panel open on the Deck tab (clarification Q3)', () => {
-    expect(state().jsonPanel).toEqual({ open: true, height: 212, tab: 'deck' });
+    expect(state().jsonPanel).toEqual(DEFAULT_JSON_PANEL);
   });
 
   it('updates and saves each JSON panel preference', () => {
     const saved = () => JSON.parse(localStorage.getItem(JSON_PANEL_KEY) ?? 'null') as unknown;
     state().setJsonPanelOpen(false);
     expect(state().jsonPanel.open).toBe(false);
-    expect(saved()).toEqual({ open: false, height: 212, tab: 'deck' });
+    expect(saved()).toEqual({ ...DEFAULT_JSON_PANEL, open: false });
     state().setJsonPanelHeight(320);
     expect(state().jsonPanel.height).toBe(320);
-    expect(saved()).toEqual({ open: false, height: 320, tab: 'deck' });
+    expect(saved()).toEqual({ ...DEFAULT_JSON_PANEL, open: false, height: 320 });
     state().setJsonTab('selection');
     expect(state().jsonPanel.tab).toBe('selection');
-    expect(saved()).toEqual({ open: false, height: 320, tab: 'selection' });
+    expect(saved()).toEqual({ ...DEFAULT_JSON_PANEL, open: false, height: 320, tab: 'selection' });
     state().toggleJsonPanel();
     expect(state().jsonPanel.open).toBe(true);
-    expect(saved()).toEqual({ open: true, height: 320, tab: 'selection' });
+    expect(saved()).toEqual({ ...DEFAULT_JSON_PANEL, open: true, height: 320, tab: 'selection' });
+    state().setCodeFormat('dbml');
+    state().setSchemaScope('schema');
+    state().setSqlPreviewDialect('sqlite');
+    expect(state().jsonPanel).toMatchObject({
+      format: 'dbml',
+      schemaScope: 'schema',
+      sqlPreviewDialect: 'sqlite',
+    });
+    expect(saved()).toMatchObject({ format: 'dbml', schemaScope: 'schema' });
   });
 
   it('never switches the JSON tab when the selection changes (clarification Q2)', () => {

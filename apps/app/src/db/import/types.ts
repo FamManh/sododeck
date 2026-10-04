@@ -273,6 +273,16 @@ export interface RawNote {
   line: number;
 }
 
+/** A DBML block the code panel does not read as input (046 R15); the planner warns on it. */
+export interface RawNonInput {
+  kind: 'table-group' | 'note' | 'header-color' | 'project' | 'ref-color' | 'records';
+  /** 1-based start; `endLine` / `endColumn` close the range when the compiler gave one. */
+  line: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
 export interface RawSchema {
   format: ImportFormat;
   tables: RawTable[];
@@ -285,6 +295,8 @@ export interface RawSchema {
   dialect?: SqlDialect;
   skipped: SkippedEntry[];
   changed: ChangedEntry[];
+  /** DBML only (046): where the blocks that are not inputs sit. */
+  inputs?: RawNonInput[];
 }
 
 /** One statement of a SQL text (research R2). */

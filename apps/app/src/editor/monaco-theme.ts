@@ -45,6 +45,12 @@ export function buildMonacoTheme(
       { token: 'number', foreground: bare(tokens['--sd-primary-ink']) },
       { token: 'keyword', foreground: bare(tokens['--sd-amber-ink']) },
       { token: 'delimiter', foreground: bare(tokens['--sd-muted']) },
+      // DBML and SQL tokens (046): block and SQL keywords, settings, strings and comments.
+      { token: 'string', foreground: bare(tokens['--sd-blue-ink']) },
+      { token: 'type', foreground: bare(tokens['--sd-primary-ink']) },
+      { token: 'predefined', foreground: bare(tokens['--sd-primary-ink']) },
+      { token: 'operator', foreground: bare(tokens['--sd-muted']) },
+      { token: 'comment', foreground: bare(tokens['--sd-muted']) },
     ],
     colors: {
       'editor.background': tokens['--sd-code'],
