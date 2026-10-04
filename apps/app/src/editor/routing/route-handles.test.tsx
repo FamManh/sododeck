@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { BendContext } from '../editing/bend-drag';
-import { RouteHandles } from './route-handles';
+import { RelationshipEndHandles, RouteHandles } from './route-handles';
 
 vi.mock('@xyflow/react', async (importOriginal) => {
   const actual = await importOriginal<typeof XYFlow>();
@@ -146,5 +146,40 @@ describe('RouteHandles end anchors (022 US3)', () => {
     screen.getByRole('button', { name: 'Source end' }).focus();
     await userEvent.setup().keyboard('{ArrowRight}');
     expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0 });
+  });
+});
+
+describe('RelationshipEndHandles (042 US7)', () => {
+  const ends = (fromColumns: string[]) => ({
+    from: {
+      at: { x: 240, y: 106 },
+      tableId: 'orders',
+      columns: fromColumns,
+      side: 'right' as const,
+    },
+    to: { at: { x: 400, y: 182 }, tableId: 'customers', columns: ['c.id'], side: 'left' as const },
+  });
+
+  it('sits at the row anchors', () => {
+    renderWithEditor(<RelationshipEndHandles edgeId="r" {...ends(['o.cid'])} />, deck);
+    expect(screen.getByRole('button', { name: 'Source end' })).toHaveStyle({
+      left: '240px',
+      top: '106px',
+    });
+    expect(screen.getByRole('button', { name: 'Target end' })).toHaveStyle({
+      left: '400px',
+      top: '182px',
+    });
+  });
+
+  it('does not move a composite end and says where it is edited', () => {
+    renderWithEditor(<RelationshipEndHandles edgeId="r" {...ends(['o.a', 'o.b'])} />, deck);
+    const handle = screen.getByRole('button', { name: 'Source end' });
+    expect(handle).toHaveAccessibleDescription('Edit composite column ends in the details drawer');
+    fireEvent.pointerDown(handle, { button: 0 });
+    expect(useUiStore.getState().announcement.text).toContain(
+      'Edit composite column ends in the details drawer',
+    );
+    expect(useUiStore.getState().columnConnect).toBeNull();
   });
 });

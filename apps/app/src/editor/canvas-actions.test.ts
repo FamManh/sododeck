@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
-import { connectColumns, connectComponents } from './canvas-actions';
+import { connectColumns, connectComponents, reconnectColumnEnd } from './canvas-actions';
 
 const deck = deckOf({
   nodes: [
@@ -137,5 +137,101 @@ describe('connectColumns (042 FR-017, FR-019)', () => {
     const { doc, editor } = setupTables();
     expect(connectColumns(editor, source, source)).toBeNull();
     expect(toJSON(doc).edges).toEqual([]);
+  });
+});
+
+describe('reconnectColumnEnd (042 FR-020, FR-021)', () => {
+  const col = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name: id.split('.')[1] ?? id,
+    type: 'uuid',
+    ...extra,
+  });
+  const table = (id: string, x: number, names: string[]) => ({
+    id,
+    type: 'db-table',
+    title: id,
+    position: { x, y: 0 },
+    columns: names.map((name, i) => col(`${id}.${name}`, i === 0 ? { pk: true } : {})),
+  });
+  const file = deckOf({
+    nodes: [
+      table('orders', 0, ['id', 'customer_id', 'a', 'b']),
+      table('customers', 400, ['id', 'email']),
+      table('accounts', 800, ['id']),
+    ],
+    edges: [
+      {
+        id: 'r',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['orders.customer_id'],
+        toColumns: ['customers.id'],
+        cardinality: 'n-1',
+        fromOptional: true,
+        onDelete: 'restrict',
+        label: 'placed by',
+      },
+      {
+        id: 'composite',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['orders.a', 'orders.b'],
+        toColumns: ['customers.id', 'customers.email'],
+      },
+    ],
+  });
+  const setupFile = () => {
+    const doc = fromJSON(file);
+    return { doc, editor: createEditor(doc) };
+  };
+  const edge = (doc: ReturnType<typeof fromJSON>, id: string) =>
+    toJSON(doc).edges.find((e) => e.id === id);
+
+  it('moves an end to another table, keeping every other field, in one undo step', () => {
+    const { doc, editor } = setupFile();
+    expect(
+      reconnectColumnEnd(editor, 'r', 'to', { tableId: 'accounts', columnId: 'accounts.id' }),
+    ).toBe(true);
+    expect(edge(doc, 'r')).toEqual({
+      id: 'r',
+      from: 'orders',
+      to: 'accounts',
+      fromColumns: ['orders.customer_id'],
+      toColumns: ['accounts.id'],
+      cardinality: 'n-1',
+      fromOptional: true,
+      onDelete: 'restrict',
+      label: 'placed by',
+    });
+    editor.undo();
+    expect(edge(doc, 'r')?.to).toBe('customers');
+  });
+
+  it('changes only the column on the same table', () => {
+    const { doc, editor } = setupFile();
+    reconnectColumnEnd(editor, 'r', 'from', { tableId: 'orders', columnId: 'orders.a' });
+    expect(edge(doc, 'r')).toMatchObject({ from: 'orders', fromColumns: ['orders.a'] });
+  });
+
+  it('refuses a composite end and writes nothing', () => {
+    const { doc, editor } = setupFile();
+    const before = toJSON(doc);
+    expect(
+      reconnectColumnEnd(editor, 'composite', 'to', {
+        tableId: 'accounts',
+        columnId: 'accounts.id',
+      }),
+    ).toBe(false);
+    expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('deletes like any connector; one undo restores the same id and fields', () => {
+    const { doc, editor } = setupFile();
+    const before = edge(doc, 'r');
+    editor.remove('edges', 'r');
+    expect(edge(doc, 'r')).toBeUndefined();
+    editor.undo();
+    expect(edge(doc, 'r')).toEqual(before);
   });
 });

@@ -13,6 +13,8 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { anchorReadout, stepAnchor } from '../editing/anchor-drag';
+import { refuseCompositeDrag, startColumnDrag } from '../editing/column-connect-drag';
+import type { RelSide } from '../relationships/relationship-ends';
 import { oneStep } from '../fields/one-step';
 import {
   addBendAt,
@@ -223,6 +225,76 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
           {readout} · {String(bends.length)} {bends.length === 1 ? 'bend' : 'bends'}
         </span>
       )}
+    </EdgeLabelRenderer>
+  );
+}
+
+/** One end of a selected relationship (042 US7). */
+export interface RelationshipEndHandle {
+  at: Point;
+  tableId: string;
+  columns: readonly string[];
+  side: RelSide;
+}
+
+/**
+ * The end handles of a selected relationship (042 R13): at the row anchors, above the cards.
+ * Dragging a single-column end runs the column drag with the other end fixed and moves it to the
+ * row it is dropped on; a composite end does not move and says where its columns are edited.
+ * Ends never slide along the side (FR-006).
+ */
+export function RelationshipEndHandles({
+  edgeId,
+  from,
+  to,
+}: {
+  edgeId: string;
+  from: RelationshipEndHandle;
+  to: RelationshipEndHandle;
+}) {
+  const ends = { from, to } as const;
+  return (
+    <EdgeLabelRenderer>
+      {(['from', 'to'] as const).map((end) => {
+        const handle = ends[end];
+        const fixed = end === 'from' ? to : from;
+        const composite = handle.columns.length > 1;
+        return (
+          <button
+            key={end}
+            type="button"
+            tabIndex={-1}
+            aria-label={end === 'from' ? 'Source end' : 'Target end'}
+            aria-description={
+              composite ? 'Edit composite column ends in the details drawer' : undefined
+            }
+            data-kind="end"
+            data-testid={`relationship-end-${end}`}
+            className="sd-route-handle nodrag nopan absolute"
+            style={{
+              left: handle.at.x,
+              top: handle.at.y,
+              transform: 'translate(-50%, -50%)',
+              pointerEvents: 'all',
+            }}
+            onPointerDown={(event) => {
+              if (event.button !== 0) return;
+              event.preventDefault();
+              event.stopPropagation();
+              if (composite) {
+                refuseCompositeDrag();
+                return;
+              }
+              startColumnDrag(
+                event,
+                { tableId: fixed.tableId, columnId: fixed.columns[0] ?? '' },
+                fixed.side,
+                { edgeId, end },
+              );
+            }}
+          />
+        );
+      })}
     </EdgeLabelRenderer>
   );
 }

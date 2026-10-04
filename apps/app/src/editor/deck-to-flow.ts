@@ -177,7 +177,12 @@ export interface RelationshipData {
   self: boolean;
   notation: ResolvedRelationshipDisplay['notation'];
   hideEnds: boolean;
+  /** Each end's column ids (US7: a single-column end can be dragged to another row). */
+  columns: { from: readonly string[]; to: readonly string[] };
 }
+
+const sameIds = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((id, i) => id === b[i]);
 
 function sameRel(a: RelationshipData | undefined, b: RelationshipData | undefined): boolean {
   if (a === undefined || b === undefined) return a === b;
@@ -186,6 +191,8 @@ function sameRel(a: RelationshipData | undefined, b: RelationshipData | undefine
     a.self === b.self &&
     a.notation === b.notation &&
     a.hideEnds === b.hideEnds &&
+    sameIds(a.columns.from, b.columns.from) &&
+    sameIds(a.columns.to, b.columns.to) &&
     sameEnds(a.ends, b.ends)
   );
 }
@@ -1143,6 +1150,7 @@ export function toFlowEdges(
       self: edge.from === edge.to,
       notation,
       hideEnds,
+      columns: { from: edge.fromColumns ?? [], to: edge.toColumns ?? [] },
     };
   }
   const plainEdges = graph.edges.flatMap((edgeId) => {

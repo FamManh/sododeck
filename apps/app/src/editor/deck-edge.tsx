@@ -27,7 +27,7 @@ import {
   samplePath,
 } from './routing/connector-geometry';
 import { LabelHandle } from './routing/label-handle';
-import { RouteHandles } from './routing/route-handles';
+import { RelationshipEndHandles, RouteHandles } from './routing/route-handles';
 import { outlinePoint } from './shapes/shape-geometry';
 import type { Box, Point } from './routing/route-path';
 import { lineCap, lineColour, lineDash } from './style/line-colour';
@@ -93,6 +93,8 @@ const markScale = (width: number): number => (width > 2 ? 1 + (width - 2) * 0.25
  */
 export const DeckEdge = memo(function DeckEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -493,6 +495,27 @@ export const DeckEdge = memo(function DeckEdge({
           rest={{ x: labelX, y: labelY }}
         />
       )}
+      {showHandle &&
+        rel?.rows === true &&
+        relGeometry?.sides !== undefined &&
+        rel.columns.from.length > 0 &&
+        rel.columns.to.length > 0 && (
+          <RelationshipEndHandles
+            edgeId={id}
+            from={{
+              at: relGeometry.start,
+              tableId: source,
+              columns: rel.columns.from,
+              side: relGeometry.sides.from,
+            }}
+            to={{
+              at: relGeometry.end,
+              tableId: target,
+              columns: rel.columns.to,
+              side: relGeometry.sides.to,
+            }}
+          />
+        )}
       {showHandle && shape !== 'straight' && data?.routable === true && rel?.rows !== true && (
         <RouteHandles
           context={bendContext}

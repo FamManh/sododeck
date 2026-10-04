@@ -1347,6 +1347,7 @@ describe('relationships (042 US1)', () => {
       self: false,
       notation: 'crow',
       hideEnds: false,
+      columns: { from: ['orders.customer_id'], to: ['customers.id'] },
     });
     expect([edge.sourceHandle, edge.targetHandle]).toEqual(['right', 'left']);
     expect(edge.reconnectable).toBe(false);

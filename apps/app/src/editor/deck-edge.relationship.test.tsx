@@ -27,6 +27,7 @@ const rel = (over: Partial<RelationshipData> = {}): RelationshipData => ({
   self: false,
   notation: 'crow',
   hideEnds: false,
+  columns: { from: ['orders.customer_id'], to: ['customers.id'] },
   ...over,
 });
 
