@@ -14,6 +14,7 @@ import {
   startNewFlow,
   undoLastStep,
 } from './flow-session';
+import { playbackOf } from './flow-mode';
 
 const initial = useUiStore.getState();
 const ui = () => useUiStore.getState();
@@ -150,5 +151,56 @@ describe('branches (US4)', () => {
     expect(ui().announcement.text).toBe('Branches can only start from the main path.');
     expect(startBranch(editor, 'p1')).toBe(false);
     expect(ui().announcement.text).toBe('This flow already branches after step 2.');
+  });
+});
+
+describe('recording and playing through a group connector (050 US4)', () => {
+  const grouped = {
+    ...flowDeck,
+    nodes: [
+      { id: 'x', type: 'client' as const, title: 'Shop' },
+      { id: 'm', type: 'service' as const, title: 'Member', group: 'g' },
+      { id: 'z', type: 'database' as const, title: 'Store' },
+    ],
+    groups: [{ id: 'g', title: 'Data layer' }],
+    edges: [
+      { id: 'xg', from: 'x', to: 'g' },
+      { id: 'gz', from: 'g', to: 'z' },
+      { id: 'mz', from: 'm', to: 'z' },
+    ],
+    flows: [],
+    features: [],
+  };
+
+  it('records a step into a group and continues from the group', () => {
+    const { editor } = setup(grouped);
+    startNewFlow('Via group', null);
+    expect(recordClick(editor, 'xg')?.kind).toBe('create');
+    expect(ui().announcement.text).toBe('Step 1 added: Shop → Data layer');
+    // Out of a card inside the group: a different id, so not a continuation (research R6).
+    expect(recordClick(editor, 'mz')?.kind).toBe('invalid');
+    expect(ui().announcement.text).toBe(
+      "Can't add Member → Store as step 2. It doesn't start at Data layer.",
+    );
+    expect(recordClick(editor, 'gz')?.kind).toBe('append');
+    const flow = toJSON(editor.doc).flows[0];
+    expect(flow?.steps.map((s) => s.edge)).toEqual(['xg', 'gz']);
+    if (flow === undefined) throw new Error('no flow');
+    const playback = playbackOf(toJSON(editor.doc), flow, null, null);
+    expect(playback.played.steps.map((s) => s.step.edge)).toEqual(['xg', 'gz']);
+    expect(playback.analysis.main.some((s) => s.chainBreak)).toBe(false);
+  });
+
+  it('reports into a group then out of a card inside it as a chain break', () => {
+    const flow = {
+      id: 'f',
+      title: 'Broken',
+      steps: [
+        { id: 's1', edge: 'xg' },
+        { id: 's2', edge: 'mz' },
+      ],
+    };
+    const playback = playbackOf({ ...grouped, flows: [flow] }, flow, null, null);
+    expect(playback.analysis.main.map((s) => s.chainBreak)).toEqual([false, true]);
   });
 });

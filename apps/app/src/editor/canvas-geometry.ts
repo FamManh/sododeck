@@ -431,6 +431,14 @@ export function boundsOf(
   deck.nodes.forEach((node, index) => {
     if (ids.has(node.id)) box = union(box, cardBox(node, index, level));
   });
+  // A step may end on a group (050 R6): its frame counts.
+  if (deck.groups.some((group) => ids.has(group.id))) {
+    const frames = groupBounds(deck, level);
+    for (const group of deck.groups) {
+      const frame = ids.has(group.id) ? frames.get(group.id) : undefined;
+      if (frame !== undefined) box = union(box, frame);
+    }
+  }
   return box ?? null;
 }
 

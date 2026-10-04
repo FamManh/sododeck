@@ -203,7 +203,7 @@
   - Enable group targets in `endpoint-drag.ts` and `onConnectEnd`.
   - Extend `group-boundary-node.test.tsx` and `endpoint-drag.test.ts`: reconnect to a group, `'contains'` refused.
 - [x] T031 [P] [US4] List groups (with the group icon and "(group)") in `apps/app/src/editor/connect-popover.tsx` and in `inspector/edge-inspector.tsx` (`nodeOptions` → endpoint options). Count group connectors in `describe-removal.ts`. Use `endpointOf` for labels in `json-panel-view.ts`, `edge-popover.tsx`, `quick-edit/selection-toolbar.tsx`, `command-palette/palette-results.ts`, `command-palette/open-result.ts` and the `use-canvas-shortcuts.ts` `f`/`e` paths. Update their tests.
-- [ ] T032 [P] [US4] Flows:
+- [x] T032 [P] [US4] Flows:
   - `flows/candidate-edges.ts`, `flows/use-flow-viewport.ts` and `canvas-geometry.ts` `boundsOf` accept group ends and frame boxes;
   - `view-filter.ts` stops treating `edge.from/to` as node-only.
   - Add tests: record a step through a group edge and play it; into G then out of a member of G is reported as a break.

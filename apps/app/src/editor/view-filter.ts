@@ -33,17 +33,34 @@ function lineageOf(
   }
 }
 
-/** Nodes at either end of an edge used by a step of a flow of `featureId`. */
+/**
+ * Nodes at either end of an edge used by a step of a flow of `featureId`. An end may be a group
+ * (050 R6); a frame is drawn only around shown cards, so a group end keeps every card inside it.
+ */
 function featureNodes(deck: SododeckFile, featureId: Id): ReadonlySet<Id> {
   const edges = new Map(deck.edges.map((edge) => [edge.id, edge]));
-  const out = new Set<Id>();
+  const ends = new Set<Id>();
   for (const flow of deck.flows) {
     if (flow.feature !== featureId) continue;
     for (const step of flow.steps) {
       const edge = edges.get(step.edge);
       if (edge === undefined) continue;
-      out.add(edge.from);
-      out.add(edge.to);
+      ends.add(edge.from);
+      ends.add(edge.to);
+    }
+  }
+  if (!deck.groups.some((group) => ends.has(group.id))) return ends;
+  const parents = new Map(deck.groups.map((g) => [g.id, g.parent]));
+  const out = new Set(ends);
+  const lineage = new Set<Id>();
+  for (const node of deck.nodes) {
+    lineage.clear();
+    lineageOf(node.group, parents, lineage);
+    for (const groupId of lineage) {
+      if (ends.has(groupId)) {
+        out.add(node.id);
+        break;
+      }
     }
   }
   return out;

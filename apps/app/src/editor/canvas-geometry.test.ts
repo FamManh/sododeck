@@ -374,6 +374,17 @@ describe('boundsOf / rectInView (007)', () => {
     ],
   });
 
+  it('boxes a group end by its frame (050 US4)', () => {
+    const grouped = deck({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+      groups: [
+        { id: 'g', title: 'G', position: { x: 500, y: 400 }, size: { width: 300, height: 200 } },
+      ],
+    });
+    expect(boundsOf(grouped, ['g'])).toEqual({ x: 500, y: 400, width: 300, height: 200 });
+    expect(boundsOf(grouped, ['a', 'g'])).toEqual({ x: 0, y: 0, width: 800, height: 600 });
+  });
+
   it('boxes the given nodes, null when none exists', () => {
     expect(boundsOf(d, ['a', 'b'])).toEqual({
       x: 0,

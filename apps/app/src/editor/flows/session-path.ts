@@ -2,7 +2,7 @@
  * The path a session extends (006): its steps, where its next step must start and the number that
  * step will get. Pure, over `analyzeFlow`.
  */
-import type { FlowAnalysis, PathStep } from '@sododeck/model';
+import { endpointTitle, type FlowAnalysis, type PathStep } from '@sododeck/model';
 import type { Flow, SododeckFile } from '@sododeck/schema';
 
 import type { SessionTarget } from '../../state/ui-store';
@@ -44,10 +44,10 @@ export function sessionPath(analysis: FlowAnalysis | null, target: SessionTarget
   };
 }
 
-/** Title of a node, or its id when it is gone. */
+/** Title of a step end (a node or a group, 050 R6), or its id when it is gone. */
 export function nodeTitle(deck: SododeckFile, id: string | null): string {
   if (id === null) return '';
-  return deck.nodes.find((n) => n.id === id)?.title ?? id;
+  return endpointTitle(deck, id);
 }
 
 /** "<from> → <to>" of a step, or "Unknown connection" when its edge is gone. */
