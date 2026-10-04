@@ -163,16 +163,16 @@
 
 ### Tests for User Story 5
 
-- [ ] T040 [P] [US5] Write `apps/app/src/editor/inspector/table/general-tab.test.tsx`: name (`title`) and schema with the "A table named x already exists in y" check (same name in another schema is fine); Detail select; colour swatches; note (`description`); owner, tags, links fields; each one undo step.
-- [ ] T041 [P] [US5] Write `apps/app/src/editor/inspector/table/indexes-tab.test.tsx`: "+ Index" adds an unnamed index; column chips add ("+ Column" menu of the table's columns), remove and reorder; "+ Expression" adds an `{ expr }` chip; unique switch; method select from `INDEX_METHODS[dialect]` and hidden on SQLite while a stored method stays; name and note; delete from ⋯; each one undo step.
-- [ ] T042 [P] [US5] Write `apps/app/src/editor/inspector/table/checks-tab.test.tsx`: "+ Check" adds one; name and expression fields; delete; each one undo step.
+- [x] T040 [P] [US5] Write `apps/app/src/editor/inspector/table/general-tab.test.tsx`: name (`title`) and schema with the "A table named x already exists in y" check (same name in another schema is fine); Detail select; colour swatches; note (`description`); owner, tags, links fields; each one undo step.
+- [x] T041 [P] [US5] Write `apps/app/src/editor/inspector/table/indexes-tab.test.tsx`: "+ Index" adds an unnamed index; column chips add ("+ Column" menu of the table's columns), remove and reorder; "+ Expression" adds an `{ expr }` chip; unique switch; method select from `INDEX_METHODS[dialect]` and hidden on SQLite while a stored method stays; name and note; delete from ⋯; each one undo step.
+- [x] T042 [P] [US5] Write `apps/app/src/editor/inspector/table/checks-tab.test.tsx`: "+ Check" adds one; name and expression fields; delete; each one undo step.
 
 ### Implementation for User Story 5
 
-- [ ] T043 [P] [US5] Implement `apps/app/src/editor/inspector/table/general-tab.tsx` reusing `fields/` owner, tags (`tags/card-tags-field.tsx`), links, the 020 swatch grid and 041's detail action. T040 is green.
-- [ ] T044 [P] [US5] Implement `apps/app/src/editor/inspector/table/index-parts.tsx` and `indexes-tab.tsx` (frame 164 right). T041 is green.
-- [ ] T045 [P] [US5] Implement `apps/app/src/editor/inspector/table/checks-tab.tsx` (frame 164 bottom left). T042 is green.
-- [ ] T046 [US5] Mount General, Indexes and Checks in `apps/app/src/editor/inspector/table/table-inspector.tsx`.
+- [x] T043 [P] [US5] Implement `apps/app/src/editor/inspector/table/general-tab.tsx` reusing `fields/` owner, tags (`tags/card-tags-field.tsx`), links, the 020 swatch grid and 041's detail action. T040 is green.
+- [x] T044 [P] [US5] Implement `apps/app/src/editor/inspector/table/index-parts.tsx` and `indexes-tab.tsx` (frame 164 right). T041 is green.
+- [x] T045 [P] [US5] Implement `apps/app/src/editor/inspector/table/checks-tab.tsx` (frame 164 bottom left). T042 is green.
+- [x] T046 [US5] Mount General, Indexes and Checks in `apps/app/src/editor/inspector/table/table-inspector.tsx`.
 
 **Checkpoint**: every table field is editable in the drawer.
 
