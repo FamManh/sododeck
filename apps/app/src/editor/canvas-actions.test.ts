@@ -287,7 +287,7 @@ describe('tables created inside a database card (049 US1)', () => {
   it('belongs to the drilled-in card, in the same undo step', () => {
     const doc = fromJSON(dbDeck);
     const editor = createEditor(doc);
-    useUiStore.getState().drillInto({ kind: 'node', id: 'odb' });
+    useUiStore.getState().drillInto({ kind: 'node', id: 'odb', viewport: { x: 0, y: 0, zoom: 1 } });
     const id = addTable(editor, { x: 0, y: 0 });
     expect(node(doc, id)?.parent).toBe('odb');
     editor.undo();
@@ -297,7 +297,7 @@ describe('tables created inside a database card (049 US1)', () => {
   it('a table dropped from the palette inside the card belongs to it too', () => {
     const doc = fromJSON(dbDeck);
     const editor = createEditor(doc);
-    useUiStore.getState().drillInto({ kind: 'node', id: 'odb' });
+    useUiStore.getState().drillInto({ kind: 'node', id: 'odb', viewport: { x: 0, y: 0, zoom: 1 } });
     expect(node(doc, addComponent(editor, 'db-table', { x: 0, y: 0 }))?.parent).toBe('odb');
     expect(node(doc, addComponent(editor, 'service', { x: 0, y: 0 }))?.parent).toBeUndefined();
   });

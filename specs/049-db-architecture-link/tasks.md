@@ -40,8 +40,8 @@
 
 **Purpose**: ADR and the "before" bench numbers (taken before any code change).
 
-- [ ] T001 Write ADR `docs/decisions/0035-step-touches.md` (Status, Date 2026-10-04, Feature 049, Builds on 0022 / 0029): optional `step.touches` as a flat `{ table, column?, access }` list, ownership stays `node.parent`, derived lighting, touched rows forced visible through `table-layout.ts`, no flows between tables
-- [ ] T002 Run the baseline **before any feature change** and save to `specs/049-db-architecture-link/bench-before.md` (machine, settings, the 500-card default and a 150-table scenario if the harness supports `BENCH_TABLES`): `pnpm bench`
+- [x] T001 Write ADR `docs/decisions/0035-step-touches.md` (Status, Date 2026-10-04, Feature 049, Builds on 0022 / 0029): optional `step.touches` as a flat `{ table, column?, access }` list, ownership stays `node.parent`, derived lighting, touched rows forced visible through `table-layout.ts`, no flows between tables
+- [x] T002 Run the baseline **before any feature change** and save to `specs/049-db-architecture-link/bench-before.md` (machine, settings, the 500-card default and a 150-table scenario if the harness supports `BENCH_TABLES`): `pnpm bench`
 
 ---
 
@@ -49,15 +49,15 @@
 
 **Purpose**: the one format key, its model ops and cleanup, and the shared pure helpers.
 
-- [ ] T003 Write failing tests then edit `packages/schema/schema/v1.json`: add `$defs/Touch` (`table` Id, `column` Id optional, `access` enum `read`|`write`; `additionalProperties: false`; every property with a `description`) and `Step.touches` (array of `Touch`, declared after `ruleInputs`); run `pnpm schema:generate`; add valid and invalid fixtures (duplicate pair, bad `access`, missing `table`) in `packages/schema/test/fixtures.ts`; extend `packages/schema/examples/full.sododeck.json`; Ajv / Zod parity stays green
-- [ ] T004 Add rule S15 (no two touches in one step share the same `(table, column)` pair) in `packages/schema/src/semantic-rules.ts` with a test in `packages/schema/test/` (generators drop this check, so it must be a semantic rule)
-- [ ] T005 [P] Write failing tests `packages/model/test/touches.test.ts` then implement `packages/model/src/ops/touches.ts` (`addTouch`, `setTouchAccess`, `removeTouch`; rejects a duplicate pair, a table without `columns`, and a column not in that table) and expose them on `DeckEditor` in `packages/model/src/editor.ts`; follow the style of `ops/rule-links.ts`
-- [ ] T006 [P] Write failing tests `packages/model/test/db-owner.test.ts` then implement `packages/model/src/ops/db-owner.ts` (`setTableOwner(tableId, cardId | null)`: requires a `database` node or null, one transaction, keeps columns, edges and touches) and `DeckEditor.setTableOwner`
-- [ ] T007 Extend `packages/model/src/ops/cascade.ts`: `removeNode(table)` removes every touch with that `table`; `removeColumn` removes touches with that `column`; steps are kept and not reported as `broken`; tests in `packages/model/test/db-cascade.test.ts` (rename keeps touches, delete table, delete column, undo restores)
-- [ ] T008 [P] Extend `packages/model/src/integrity.ts` to report a touch whose table is missing or has no `columns`, or whose column is not a column of its table; tests in `packages/model/test/integrity.test.ts`
-- [ ] T009 [P] Round-trip cases in `packages/model/test/round-trip.test.ts` (touches with table-only and column entries, read and write; deck with a card owner)
-- [ ] T010 [P] Cover `previewRemoval` for a database card in `packages/model/test/preview.test.ts`: the result reports its tables as kept (children un-parented), not removed
-- [ ] T011 [P] Write failing tests then implement pure helpers in `apps/app/src/db/owner.ts` (`tablesOf(deck, cardId)`, `ownerOf(deck, tableId)`, `databaseCards(deck)`, count text "n tables inside" / "1 table inside" / "No tables yet") and `apps/app/src/db/touches.ts` (`touchedTables(step)` with write beating read, `touchedColumns(step)`, `cardChip(deck, cardId, step)` → text like "writes orders +1", `playerNotes(deck, step, scope, view)` → unowned / other card / hidden in this view lines)
+- [x] T003 Write failing tests then edit `packages/schema/schema/v1.json`: add `$defs/Touch` (`table` Id, `column` Id optional, `access` enum `read`|`write`; `additionalProperties: false`; every property with a `description`) and `Step.touches` (array of `Touch`, declared after `ruleInputs`); run `pnpm schema:generate`; add valid and invalid fixtures (duplicate pair, bad `access`, missing `table`) in `packages/schema/test/fixtures.ts`; extend `packages/schema/examples/full.sododeck.json`; Ajv / Zod parity stays green
+- [x] T004 Add rule S15 (no two touches in one step share the same `(table, column)` pair) in `packages/schema/src/semantic-rules.ts` with a test in `packages/schema/test/` (generators drop this check, so it must be a semantic rule)
+- [x] T005 [P] Write failing tests `packages/model/test/touches.test.ts` then implement `packages/model/src/ops/touches.ts` (`addTouch`, `setTouchAccess`, `removeTouch`; rejects a duplicate pair, a table without `columns`, and a column not in that table) and expose them on `DeckEditor` in `packages/model/src/editor.ts`; follow the style of `ops/rule-links.ts`
+- [x] T006 [P] Write failing tests `packages/model/test/db-owner.test.ts` then implement `packages/model/src/ops/db-owner.ts` (`setTableOwner(tableId, cardId | null)`: requires a `database` node or null, one transaction, keeps columns, edges and touches) and `DeckEditor.setTableOwner`
+- [x] T007 Extend `packages/model/src/ops/cascade.ts`: `removeNode(table)` removes every touch with that `table`; `removeColumn` removes touches with that `column`; steps are kept and not reported as `broken`; tests in `packages/model/test/db-cascade.test.ts` (rename keeps touches, delete table, delete column, undo restores)
+- [x] T008 [P] Extend `packages/model/src/integrity.ts` to report a touch whose table is missing or has no `columns`, or whose column is not a column of its table; tests in `packages/model/test/integrity.test.ts`
+- [x] T009 [P] Round-trip cases in `packages/model/test/round-trip.test.ts` (touches with table-only and column entries, read and write; deck with a card owner)
+- [x] T010 [P] Cover `previewRemoval` for a database card in `packages/model/test/preview.test.ts`: the result reports its tables as kept (children un-parented), not removed
+- [x] T011 [P] Write failing tests then implement pure helpers in `apps/app/src/db/owner.ts` (`tablesOf(deck, cardId)`, `ownerOf(deck, tableId)`, `databaseCards(deck)`, count text "n tables inside" / "1 table inside" / "No tables yet") and `apps/app/src/db/touches.ts` (`touchedTables(step)` with write beating read, `touchedColumns(step)`, `cardChip(deck, cardId, step)` → text like "writes orders +1", `playerNotes(deck, step, scope, view)` → unowned / other card / hidden in this view lines)
 
 **Checkpoint**: file format, model ops and pure logic exist and are tested; no UI yet.
 

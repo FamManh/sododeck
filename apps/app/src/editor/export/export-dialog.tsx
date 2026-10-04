@@ -84,7 +84,9 @@ export function ExportDialog() {
       schemaScope:
         seed?.scope === 'selection' && scopes.selection.length > 0
           ? 'selection'
-          : defaultSchemaScope(scopes),
+          : seed?.scope === 'database' && scopes.database !== null
+            ? 'database'
+            : defaultSchemaScope(scopes),
       ...(seed === undefined ? {} : { format: seed.format }),
     });
   });
