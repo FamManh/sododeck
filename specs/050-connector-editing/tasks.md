@@ -223,15 +223,15 @@
 
 **Independent Test**: quickstart 9.
 
-- [ ] T035 [P] [US3] Write failing tests:
+- [X] T035 [P] [US3] Write failing tests:
   - `apps/app/src/editor/deck-edge.test.tsx`: a selected edge with `style.width: 4` has stroke width 4 and an `edge-selection-halo`.
   - `apps/app/src/editor/line-style/line-style-popover.test.tsx`: a pointer drag on the slider track from the 1 to the 4 position sets `lineStylePreview` at each stop, writes once on release (one undo step), and Esc mid-drag writes nothing. A click on the track picks the nearest stop. Keys are unchanged. Several selected connectors take the value in one undo step.
-- [ ] T036 [US3] In `apps/app/src/editor/deck-edge.tsx`:
+- [X] T036 [US3] In `apps/app/src/editor/deck-edge.tsx`:
   - replace `selected ? 2.5` with the connector's own width;
   - add the halo path under the line (`var(--color-primary-soft)`, width + 6, `pointerEvents="none"`, `data-testid="edge-selection-halo"`);
   - read `lineStylePreview` with a per-edge selector before the stored width.
   - Add `lineStylePreview` to `apps/app/src/state/ui-store.ts`.
-- [ ] T037 [US3] Make `WeightSlider` in `apps/app/src/editor/line-style/line-style-controls.tsx` pointer-draggable via `startPointerDrag` (track x maps to the nearest of `WIDTHS`). Preview on move, `applyLineStyle` once on release, Esc cancels. Make T035 pass.
+- [X] T037 [US3] Make `WeightSlider` in `apps/app/src/editor/line-style/line-style-controls.tsx` pointer-draggable via `startPointerDrag` (track x maps to the nearest of `WIDTHS`). Preview on move, `applyLineStyle` once on release, Esc cancels. Make T035 pass.
 
 **Checkpoint**: quickstart 9 passes.
 
