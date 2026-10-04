@@ -234,3 +234,51 @@ describe('Show as (031 US3)', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Show as' })).not.toBeInTheDocument();
   });
 });
+
+describe('NodeInspector icon tile (038 T022)', () => {
+  const tile = () => screen.getByRole('button', { name: 'Change icon' });
+
+  it('is a "Change icon" button that opens the picker and writes the pick', async () => {
+    const { user, doc } = setup();
+    await user.hover(tile());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Type icon');
+    await user.click(tile());
+    const dialog = await screen.findByRole('dialog', { name: 'Choose icon' });
+    expect(within(dialog).getByRole('searchbox', { name: 'Search icons' })).toHaveFocus();
+    await user.click(within(dialog).getByRole('button', { name: 'Zap' }));
+    expect(node(doc)?.icon).toBe('lucide:zap');
+    expect(screen.queryByRole('dialog', { name: 'Choose icon' })).not.toBeInTheDocument();
+    expect(tile().querySelector('[data-icon="lucide:zap"]')).not.toBeNull();
+    // The type name stays in the subtitle.
+    expect(screen.getByText('Service · Core · p')).toBeInTheDocument();
+    expect(tile()).toHaveFocus();
+  });
+
+  it('opens with Enter and returns focus to the tile on Escape', async () => {
+    const { user } = setup();
+    tile().focus();
+    await user.keyboard('{Enter}');
+    await screen.findByRole('dialog', { name: 'Choose icon' });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Choose icon' })).not.toBeInTheDocument();
+    expect(tile()).toHaveFocus();
+  });
+
+  it('names the current icon in the tooltip', async () => {
+    const { user, editor } = setup();
+    act(() => {
+      editor().setNodeIcon(['p'], 'lucide:server');
+    });
+    await user.hover(tile());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Server');
+  });
+
+  it('is a plain tile, not a button, for a node drawn as a shape', () => {
+    renderInspector(
+      deckOf({ nodes: [{ id: 'r', type: 'rectangle', title: 'Box', icon: 'mdi:database' }] }),
+      { nodes: ['r'] },
+    );
+    expect(screen.getByRole('heading', { name: 'Box' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change icon' })).not.toBeInTheDocument();
+  });
+});
