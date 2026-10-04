@@ -115,3 +115,24 @@ describe('TableBody (041 contracts/table-card-ui.md)', () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe('TableBody editing marks (043)', () => {
+  it('shows the (!) icon on a mismatched row, named with both types, and drops it once they match', () => {
+    const mismatched = new Map([['orders:customer_id', 'int → uuid · orders.customer_id']]);
+    const { rerender } = renderBody(orders, { ...context(), mismatched });
+    expect(
+      screen.getByRole('img', { name: 'Type differs: int → uuid (orders.customer_id)' }),
+    ).toBeInTheDocument();
+    const layout = tableLayout(orders, context(), undefined, fixedWidthMeasurer(0.6));
+    rerender(<TableBody nodeId="orders" layout={layout} focused={false} />);
+    expect(screen.queryByRole('img', { name: /^Type differs/ })).toBeNull();
+  });
+
+  it('gives every row a reorder grip, except on a locked table', () => {
+    const { rerender } = renderBody();
+    expect(screen.getByRole('button', { name: 'Reorder customer_id' })).toBeInTheDocument();
+    const layout = tableLayout(orders, context(), undefined, fixedWidthMeasurer(0.6));
+    rerender(<TableBody nodeId="orders" layout={layout} focused={false} locked />);
+    expect(screen.queryByRole('button', { name: /^Reorder/ })).toBeNull();
+  });
+});

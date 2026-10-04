@@ -14,15 +14,18 @@ export const LEVEL_NAMES: Record<Level, string> = {
   component: 'Component',
 };
 
+/** The zoom "zoom to level" picks: inside each band (051: 30 / 50 / 150). */
 export const LEVEL_MID_ZOOM: Record<Level, number> = {
-  landscape: 0.375,
-  system: 0.68,
-  container: 1.2,
+  landscape: 0.2,
+  system: 0.4,
+  container: 1.0,
   component: 1.75,
 };
 
-const LANDSCAPE_MAX = 45;
-const SYSTEM_MAX = 90;
+// Card details (Container) show down to 51 % (051 R4). Landscape moved to 30 % with System so
+// that the System band stays wide enough not to flicker under the ±2 hysteresis.
+const LANDSCAPE_MAX = 30;
+const SYSTEM_MAX = 50;
 const CONTAINER_MAX = 150;
 const HYSTERESIS = 2;
 

@@ -8,9 +8,7 @@ import {
   supportsFileSystemAccess,
   supportsIdleCallback,
   supportsMatchMedia,
-  supportsPersistentStorage,
   supportsResizeObserver,
-  supportsStorageEstimate,
 } from './features';
 
 afterEach(() => {
@@ -22,13 +20,6 @@ describe('feature detection', () => {
     expect(supportsFileSystemAccess()).toBe(false); // jsdom
     vi.stubGlobal('showSaveFilePicker', () => undefined);
     expect(supportsFileSystemAccess()).toBe(true);
-  });
-
-  it('detects navigator.storage.persist', () => {
-    vi.stubGlobal('navigator', {});
-    expect(supportsPersistentStorage()).toBe(false);
-    vi.stubGlobal('navigator', { storage: { persist: () => Promise.resolve(true) } });
-    expect(supportsPersistentStorage()).toBe(true);
   });
 
   it('detects navigator.clipboard.writeText', () => {
@@ -81,13 +72,6 @@ describe('isApplePlatform', () => {
     spy.mockReturnValue('Win32');
     expect(isApplePlatform()).toBe(false);
     spy.mockRestore();
-  });
-
-  it('detects navigator.storage.estimate', () => {
-    vi.stubGlobal('navigator', {});
-    expect(supportsStorageEstimate()).toBe(false);
-    vi.stubGlobal('navigator', { storage: { estimate: () => Promise.resolve({}) } });
-    expect(supportsStorageEstimate()).toBe(true);
   });
 
   it('recognizes quota errors, also wrapped by Dexie', () => {

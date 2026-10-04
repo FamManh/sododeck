@@ -93,10 +93,10 @@ describe('column ports and row focus (042 US2)', () => {
     expect(document.querySelector('[data-node-id="orders"]')).toHaveFocus();
   });
 
-  it('connects a focused row with C: keys first, typing filters, Enter draws it', async () => {
+  it('connects a focused row with R: keys first, typing filters, Enter draws it', async () => {
     const { user, doc } = setup();
     focusTable('orders');
-    await user.keyboard('{ArrowDown}{ArrowDown}c');
+    await user.keyboard('{ArrowDown}{ArrowDown}r');
     const list = await screen.findByRole('listbox', { name: 'Connect customer_id to' });
     const labels = within(list)
       .getAllByRole('option')

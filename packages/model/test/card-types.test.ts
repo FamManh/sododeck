@@ -11,6 +11,7 @@ import {
   isKnownType,
   LEGACY_PACKS,
   NEW_DECK_PACKS,
+  PACK_DISPLAY_ORDER,
   PACKS,
   packTypeCount,
   SHAPE_TYPE_IDS,
@@ -44,7 +45,7 @@ describe('card type registry (030)', () => {
     expect(cards).toHaveLength(14);
   });
 
-  it('has six packs and six categories, in order', () => {
+  it('has six packs in file order and six categories in display order', () => {
     expect(PACKS.map((p) => p.id)).toEqual([
       'architecture',
       'process',
@@ -54,21 +55,35 @@ describe('card type registry (030)', () => {
       'shapes',
     ]);
     expect(CATEGORIES.map((c) => c.id)).toEqual([
-      'architecture',
+      'shapes',
       'process',
-      'logistics',
       'data',
       'database',
-      'shapes',
+      'architecture',
+      'logistics',
     ]);
     expect(CATEGORIES.map((c) => c.name)).toEqual([
-      'Architecture',
+      'Shapes',
       'Process',
-      'Logistics',
       'Data',
       'Database',
-      'Shapes',
+      'Architecture',
+      'Logistics',
     ]);
+  });
+
+  it('shows packs in display order, apart from the file order (051 US7)', () => {
+    expect([...PACK_DISPLAY_ORDER].sort()).toEqual(PACKS.map((p) => p.id).sort());
+    expect(new Set(PACK_DISPLAY_ORDER).size).toBe(PACKS.length);
+    expect([...PACKS].sort((a, b) => a.order - b.order).map((p) => p.name)).toEqual([
+      'Basic shapes',
+      'Process',
+      'Data cards',
+      'Database',
+      'Architecture',
+      'Logistics',
+    ]);
+    expect(PACKS.filter((p) => !p.onByDefault).map((p) => p.id)).toEqual(['logistics']);
   });
 
   it('gives every id the schema pattern and keeps ids apart from names', () => {
@@ -92,14 +107,8 @@ describe('card type registry (030)', () => {
 
   it('exposes the legacy and new-deck pack lists', () => {
     expect(LEGACY_PACKS).toEqual(['architecture']);
-    expect(NEW_DECK_PACKS).toEqual([
-      'architecture',
-      'process',
-      'logistics',
-      'data',
-      'database',
-      'shapes',
-    ]);
+    // File order (`sortPacks`), Logistics off (051 US7).
+    expect(NEW_DECK_PACKS).toEqual(['architecture', 'process', 'data', 'database', 'shapes']);
   });
 
   it('has the Database pack with its Table type (040)', () => {
@@ -193,6 +202,14 @@ describe('card type registry (030)', () => {
           minSize: { width: mw, height: mh },
         });
       }
+    });
+
+    it('gives the Database pack its note and table group tools and a description (043)', () => {
+      expect(PACKS.find((p) => p.id === 'database')).toMatchObject({
+        name: 'Database',
+        tools: ['sticky', 'frame'],
+        description: 'Table, note, table group',
+      });
     });
 
     it('gives decision, database and document a shape form', () => {

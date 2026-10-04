@@ -61,13 +61,16 @@ export type ExportAction =
 export function initialExportState({
   flowMode,
   schemaScope = 'deck',
+  format,
 }: {
   flowMode: boolean;
   /** The first available schema scope when the dialog opens (045 FR-002). */
   schemaScope?: SchemaScope;
+  /** The format an action opened the dialog on (043 R15: "Export this table as SQL"). */
+  format?: ExportFormat;
 }): ExportDialogState {
   return {
-    format: flowMode ? 'png' : 'json',
+    format: format ?? (flowMode ? 'png' : 'json'),
     imageScope: flowMode ? 'flow' : 'deck',
     schemaScope,
     sqlDialect: null,

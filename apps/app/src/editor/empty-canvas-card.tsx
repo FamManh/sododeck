@@ -24,11 +24,14 @@ export function EmptyCanvasCard({
       Add component
     </Button>
   ),
+  onAddTable,
   showImport = false,
 }: {
   title?: string;
   description?: string;
   action?: ReactNode;
+  /** With the Database pack on (043 R12): a second way to start, a table with an `id` key. */
+  onAddTable?: () => void;
   /** Adds "Import SQL or DBML" under the action (Database pack on). */
   showImport?: boolean;
 }) {
@@ -45,7 +48,16 @@ export function EmptyCanvasCard({
           {title}
         </h2>
         <p className="text-body-sm text-ink-secondary">{description}</p>
-        {action}
+        {onAddTable === undefined ? (
+          action
+        ) : (
+          <span className="flex flex-wrap justify-center gap-2">
+            {action}
+            <Button variant="secondary" onClick={onAddTable}>
+              Add table
+            </Button>
+          </span>
+        )}
         {showImport && (
           <Button
             variant="secondary"

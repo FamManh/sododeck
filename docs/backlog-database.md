@@ -138,6 +138,7 @@ flowchart LR
   F041[041 db-table-card]
   F042[042 db-relationships]
   F043[043 db-editing]
+  F052[052 db-drawer]
   F044[044 db-import]
   F045[045 db-export]
   F046[046 db-code-panel]
@@ -157,11 +158,13 @@ flowchart LR
   F015 --> F047
   F042 --> F047
   F043 --> F048
+  F043 --> F052
   F034 --> F049
   F043 --> F049
 ```
 
-Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 → 049 → 046** (046 waits for 026).
+Order: **039 → 040 → 041 → 042 → 043 → 052 → 044 → 045 → 047 → 048 → 049 → 046** (046 waits for
+026).
 
 ---
 
@@ -303,6 +306,11 @@ values: { id, name, note? }[] }`;
 
 ## 043-db-editing
 
+- **Status:** split at `/speckit.specify` (2026-10-04). **Canvas editing built** (spec
+  `specs/043-db-editing`): column line editor, row keys, reorder, delete with Undo, row / table /
+  relationship menus and quick settings, add / duplicate / paste tables, lock (`Node.locked`, ADR
+  0029 amendment), multi-select, Add flyout Database tab. The drawer half moved to
+  [052-db-drawer](#052-db-drawer).
 - **Milestone:** after 042 · **Depends on:** 042, 019 (quick edit), 016 · **Estimate:** 6 d (split
   at `/speckit.specify`: canvas editing, then drawer)
 - **Goal:** Users build and change a schema on the canvas without touching code.
@@ -328,6 +336,38 @@ values: { id, name, note? }[] }`;
 - **Acceptance criteria (draft):** typing `email text unique not null` and ⏎ adds a unique,
   not-null `email` column; renaming a column keeps its relationships and indexes; every change is
   one ⌘Z.
+
+## 052-db-drawer
+
+- **Milestone:** after 043 · **Depends on:** 043, 018 (details drawer) · **Estimate:** 4 d
+- **Goal:** Every table, relationship and enum setting has an editing surface, and column types
+  follow the deck's dialect.
+- **In scope:**
+  - Drawer tabs for a table: **General** (name, schema, colour, note, owner, tags, links),
+    **Columns** (all column settings, type picker for the deck's dialect with size / precision,
+    enum picker), **Indexes** (columns as chips, expression, unique, method, name), **Checks**.
+  - **Relationship** drawer: from / to columns as lists (composite ends), cardinality drawn with
+    the ends, optional sides, on delete / on update, name, colour.
+  - **Enum** editor (values with notes, reorder, used-by list), the Add flyout's **Enum** tile and
+    the canvas menu's "Add enum".
+  - Type lists per dialect (Generic, Postgres, MySQL, SQLite) as data in the app, and the type
+    conversion table used when the deck's dialect changes (toast with the conversions + Undo).
+  - Deck settings **Database** section: dialect select, block SQL export with errors.
+- **Out of scope:** SQL / DBML text (044–046), lint (047), custom types, views.
+- **Acceptance criteria (draft):** "Edit details" on a table opens its General tab; changing a
+  column's type in the Columns tab is one ⌘Z; switching the dialect from Postgres to MySQL shows
+  the converted types in a toast with Undo; an enum value added in the editor shows on the enum
+  chip's popover.
+- **Prompt:**
+
+  ```text
+  /speckit.specify 052 from docs/backlog-database.md: the details drawer for the Database pack.
+  Table tabs (General, Columns with the dialect type picker and enum picker, Indexes, Checks), the
+  relationship drawer (composite column ends, cardinality, optional sides, on delete / on update,
+  name, colour), the enum editor with the Enum tile and "Add enum", dialect type lists and
+  conversion with an Undo toast, and the Deck settings Database section (dialect, block SQL export
+  with errors). Builds on 043's canvas editing (specs/043-db-editing); every edit is one undo step.
+  ```
 
 ## 044-db-import
 

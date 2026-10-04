@@ -20,7 +20,8 @@ import { NodeTypeTile } from './shapes/shape-tile';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { PALETTE_INITIAL, useUiStore } from '../state/ui-store';
-import { addComponent, canvasElement, centredOn, PALETTE_ID } from './canvas-actions';
+import { addComponent, addTable, canvasElement, centredOn, PALETTE_ID } from './canvas-actions';
+import { groupableCount, groupFromSelection } from './editing/group-from-selection';
 import { armFrameTool, placeFrameAtCentre } from './frame-tool/frame-actions';
 import { neighbour } from './grid-nav';
 import { PacksPanel } from './packs-panel';
@@ -42,6 +43,19 @@ interface Section {
 /** Tool tiles' ids in the roving focus; never type ids, so keys 1–9 never add one. */
 const toolTileId = (tool: PackTool) => `tool:${tool}`;
 const TOOL_NAMES: Record<PackTool, string> = { sticky: 'Sticky', frame: 'Frame' };
+
+/** The Database section names its tools after what they make (043 R13, frame 168). */
+const DATABASE_TOOL_NAMES: Record<PackTool, string> = { sticky: 'Note', frame: 'Table group' };
+
+/** Letter keys shown on the Database tiles (frame 168): T, S and G. */
+const DATABASE_KEYS: Readonly<Record<string, string>> = {
+  'db-table': 'T',
+  sticky: 'S',
+  frame: 'G',
+};
+
+const toolName = (section: string, tool: PackTool) =>
+  section === 'database' ? DATABASE_TOOL_NAMES[tool] : TOOL_NAMES[tool];
 
 const tileIds = (section: Section): string[] => [
   ...section.types.map((t) => t.id),
@@ -86,7 +100,7 @@ export function Palette() {
             id: c.id,
             name: pack?.name ?? c.name,
             types: onTypes.filter((t) => t.category === c.id && matches(t.name)),
-            tools: (pack?.tools ?? []).filter((tool) => matches(TOOL_NAMES[tool])),
+            tools: (pack?.tools ?? []).filter((tool) => matches(toolName(c.id, tool))),
           };
         })
         .filter((s) => s.types.length > 0 || s.tools.length > 0),
@@ -134,7 +148,9 @@ export function Palette() {
     });
   };
   const addAtCentre = (type: string) => {
-    addComponent(editor, type, centredOn(centrePoint(), type), { edit: true });
+    // A table starts with an `id` key column (043 R12).
+    if (type === 'db-table') addTable(editor, centrePoint());
+    else addComponent(editor, type, centredOn(centrePoint(), type), { edit: true });
   };
 
   if (view === 'packs') return <PacksPanel />;
@@ -239,7 +255,9 @@ export function Palette() {
               </h3>
               <div className="grid grid-cols-3 gap-2">
                 {section.types.map((type) => {
-                  const badge = number < 9 ? ++number : null;
+                  const counted = number < 9 ? ++number : null;
+                  const badge =
+                    section.id === 'database' ? (DATABASE_KEYS[type.id] ?? counted) : counted;
                   return (
                     <div key={type.id} role="gridcell" className="contents">
                       <button
@@ -287,11 +305,13 @@ export function Palette() {
                 {section.tools.map((tool) => {
                   const tileId = toolTileId(tool);
                   const Icon = tool === 'sticky' ? StickyNote : Frame;
+                  const name = toolName(section.id, tool);
+                  const letter = section.id === 'database' ? DATABASE_KEYS[tool] : undefined;
                   const button = (
                     <button
                       type="button"
                       draggable={tool === 'sticky'}
-                      aria-label={TOOL_NAMES[tool]}
+                      aria-label={name}
                       aria-disabled={tool === 'sticky' && readOnly ? true : undefined}
                       {...(tool === 'frame' && frameToolOn ? { 'aria-pressed': true } : {})}
                       ref={(el) => {
@@ -305,6 +325,13 @@ export function Palette() {
                       onClick={(event) => {
                         if (tool === 'sticky') {
                           if (!readOnly) addNoteAt(editor, centrePoint());
+                          return;
+                        }
+                        // Table group (043 R13): groups the selection, else a frame at the centre.
+                        if (section.id === 'database') {
+                          const { selection } = useUiStore.getState();
+                          if (groupableCount(selection) >= 2) groupFromSelection(editor, selection);
+                          else placeFrameAtCentre(editor, centrePoint());
                           return;
                         }
                         // ⏎ / Space place a default frame at the view centre (US2 AS8); a
@@ -334,13 +361,21 @@ export function Palette() {
                         <Icon size={18} strokeWidth={ICON_STROKE_WIDTH} />
                       </span>
                       <span className="w-full truncate text-caption font-medium text-ink">
-                        {TOOL_NAMES[tool]}
+                        {name}
                       </span>
+                      {letter !== undefined && (
+                        <kbd
+                          aria-hidden
+                          className="absolute top-1 right-1 rounded-segment bg-surface-2 px-1 font-mono text-code-sm text-ink-secondary"
+                        >
+                          {letter}
+                        </kbd>
+                      )}
                     </button>
                   );
                   return (
                     <div key={tileId} role="gridcell" className="contents">
-                      {tool === 'frame' ? (
+                      {tool === 'frame' && section.id !== 'database' ? (
                         <Tooltip>
                           <TooltipTrigger asChild>{button}</TooltipTrigger>
                           <TooltipContent>Draw a group frame</TooltipContent>

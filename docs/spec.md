@@ -182,7 +182,7 @@ Priority: **P0** = MVP, **P1** = V2, **P2** = V3.
 | --- | --- | --- |
 | V-1 | Semantic zoom across 4 levels: landscape → system → container → component; double-click to drill down | P0 |
 | V-2 | Collapsible groups; edges inside collapse into one edge with a count (e.g. ×12) | P0 |
-| V-3 | Focus mode: select a node, dim everything not connected to it | P0 |
+| V-3 | Focus mode: a mode turned on with F or the toolbar; inside it, the hovered or selected node dims everything not connected to it (outside it nothing dims) | P0 |
 | V-4 | Saved views (infra, feature, system, custom) over the same model; edits propagate | P0 |
 | V-5 | Role-based views: business, technical, infra layers shown or hidden | P1 |
 | V-6 | Alternate renderings of a flow: sequence diagram and swimlane by actor | P1 |
@@ -282,7 +282,7 @@ Sododeck is local-first: every deck is stored in the browser first, and signing 
 | G-1 | Autosave every change to IndexedDB (not localStorage, which is \~5 MB and synchronous) | P0 |
 | G-2 | Local library: multiple decks, folders, search | P0 |
 | G-3 | Export / import `.sododeck` files | P0 |
-| G-4 | Request persistent storage (`navigator.storage.persist()`); show usage and quota warnings | P0 |
+| G-4 | ~~Request persistent storage (`navigator.storage.persist()`); show usage and quota warnings~~ Retired by founder decision on 2026-10-04 (ADR 0032) | — |
 | G-5 | Backup reminders (e.g. "not backed up for 5 days"); warn that Safari may clear site data after 7 days without a visit | P0 |
 | G-6 | Multi-tab sync via BroadcastChannel so two tabs never overwrite each other | P0 |
 | G-7 | Save to a local folder or git repo via the File System Access API (Chromium browsers) | P1 |
@@ -352,7 +352,7 @@ flowchart TB
 | Layout | ELK.js in a Web Worker | Respects pinned positions; off the main thread |
 | Text editor | Monaco + JSON Schema | Read-only view of the model in the MVP; two-way sync later |
 | Model | Yjs | Offline edits, merge, realtime collaboration |
-| Local storage | y-indexeddb, Dexie.js for library metadata | Persistent storage request |
+| Local storage | y-indexeddb, Dexie.js for library metadata | Autosave within 100 ms (the persistent storage request, G-4, was retired) |
 | Local files | File System Access API | Chromium only; fallback to download/upload |
 | Sync server | Hocuspocus (Node.js) | Auth-checked rooms per deck |
 | Database | Postgres | Users, workspaces, permissions, snapshots, comments |
@@ -416,7 +416,7 @@ The north-star metric is **weekly active decks with at least one flow played**, 
 | --- | --- | --- |
 | Canvas performance degrades beyond a few hundred nodes | Medium | Virtualised rendering, semantic zoom, layout in a worker, early benchmarks |
 | Diagrams drift from reality and users stop trusting them | High | Imports, drift detection, runtime overlay, owners per node |
-| Guest data loss (Safari eviction, cleared browser data) | Medium | Persistent storage request, backup reminders, local-folder save |
+| Guest data loss (Safari eviction, cleared browser data) | Medium | Backup reminders, export, local-folder save |
 | Scope creep: too many P1/P2 features before product-market fit | High | Ship the P0 flow-tracing wedge first; validate with design partners |
 | AI output is wrong on complex codebases | Medium | AI output is always a reviewable proposal, never an overwrite |
 | Name and trademark conflict for "Sododeck" | Unknown | Check domains, npm/GitHub names, and trademark classes 9 and 42 before launch |

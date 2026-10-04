@@ -36,10 +36,11 @@ describe('typeGroups (030)', () => {
       }),
       ['issue'],
     );
+    // Display order (051): Data before Architecture, Logistics last.
     expect(names(groups).map(([name]) => name)).toEqual([
+      'Data',
       'Architecture',
       'Logistics',
-      'Data',
       'Other',
     ]);
     expect(groups.at(-1)?.types).toEqual([{ id: 'robot', name: 'robot' }]);
@@ -49,7 +50,7 @@ describe('typeGroups (030)', () => {
 describe('shapes in the view settings type list (031)', () => {
   it('lists the eleven shapes under Shapes when Basic shapes is on', () => {
     const groups = typeGroups({ ...emptySododeckFile(), packs: ['architecture', 'shapes'] });
-    expect(groups.map((g) => g.name)).toEqual(['Architecture', 'Shapes']);
-    expect(groups[1]?.types).toHaveLength(11);
+    expect(groups.map((g) => g.name)).toEqual(['Shapes', 'Architecture']);
+    expect(groups[0]?.types).toHaveLength(11);
   });
 });

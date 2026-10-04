@@ -34,6 +34,7 @@ export {
   isKnownType,
   LEGACY_PACKS,
   NEW_DECK_PACKS,
+  PACK_DISPLAY_ORDER,
   PACKS,
   packTypeCount,
   SHAPE_TYPE_IDS,
@@ -82,7 +83,9 @@ export {
 export type { EdgeStylePatch } from './ops/edge-style';
 export type { EdgeRoutePatch } from './ops/shape';
 export type { NodeDisplay } from './ops/node-display';
+export { isLocked } from './ops/node-lock';
 export { iconUsage, type IconUsage } from './icons';
+export { copyName } from './ops/paste';
 export type { PastedIds, PasteOptions } from './ops/paste';
 export type { GroupSelection } from './ops/group-selection';
 export {
@@ -107,6 +110,7 @@ export {
   serializeFragment,
   toFragment,
   type Fragment,
+  type FragmentOptions,
   type FragmentSelection,
 } from './fragment';
 export { previewRemoval, removeTarget, type RemovalTarget } from './preview';

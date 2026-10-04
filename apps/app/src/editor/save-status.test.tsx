@@ -1,7 +1,7 @@
 import { serializeDeck } from '@sododeck/model';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as download from '../storage/download';
 import { useSaveStatusStore } from '../storage/save-status';
@@ -36,16 +36,30 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe('SaveStatus', () => {
-  it('shows "Saving…" then "Saved in this browser" in a polite status', () => {
-    setup();
-    expect(status()).toHaveTextContent('Saved in this browser');
-    expect(status()?.querySelector('svg')).not.toBeNull();
-    act(() => {
-      useSaveStatusStore.getState().dispatch({ type: 'pending' });
-    });
-    expect(status()).toHaveTextContent('Saving…');
-    expect(status()?.querySelector('svg')).not.toBeNull();
+  it('keeps "Saved in this browser" while a write is quick, "Saving…" after 1 s (051 US6)', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    try {
+      setup();
+      expect(status()).toHaveTextContent('Saved in this browser');
+      expect(status()?.querySelector('svg')).not.toBeNull();
+      act(() => {
+        useSaveStatusStore.getState().dispatch({ type: 'pending' });
+      });
+      expect(status()).toHaveTextContent('Saved in this browser');
+      expect(status()?.querySelector('.animate-spin, .motion-safe\\:animate-spin')).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(status()).toHaveTextContent('Saving…');
+      expect(status()?.querySelector('svg')).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows the error with Export, and details with Export and Retry', async () => {
@@ -86,12 +100,19 @@ describe('SaveStatus', () => {
     const icon = () => status()?.querySelector('svg');
 
     it('shows a different icon shape per state with the same words as its name', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
       setup({}, 'icon');
       expect(status()).toHaveTextContent('Saved in this browser');
       expect(icon()).toHaveClass('lucide-check');
       act(() => {
         useSaveStatusStore.getState().dispatch({ type: 'pending' });
       });
+      // A pending write looks saved until it has waited 1 s (051 US6).
+      expect(icon()).toHaveClass('lucide-check');
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      vi.useRealTimers();
       expect(status()).toHaveTextContent('Saving…');
       // The loader only spins when motion is allowed.
       expect(icon()).toHaveClass('lucide-loader-circle', 'motion-safe:animate-spin');

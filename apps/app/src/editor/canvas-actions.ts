@@ -14,6 +14,7 @@ import {
   REFUSAL_TEXT,
   type ColumnEnd,
 } from './connection-rules';
+import { oneStep } from './fields/one-step';
 import { typeName } from './type-label';
 import { readViewState } from './views/use-current-view';
 
@@ -57,6 +58,37 @@ export function addComponent(
   ui.focus(id);
   ui.announce(`Added ${title}`);
   if (edit) ui.startTitleEdit({ target: 'node', id, isNew: true, kind: type });
+  return id;
+}
+
+/** The first free `table_n` title among the deck's tables (043 R12), ignoring case. */
+export function nextTableName(deck: Pick<SododeckFile, 'nodes'>): string {
+  const taken = new Set(
+    deck.nodes.filter((node) => node.type === 'db-table').map((node) => node.title.toLowerCase()),
+  );
+  let n = 1;
+  while (taken.has(`table_${String(n)}`)) n += 1;
+  return `table_${String(n)}`;
+}
+
+/**
+ * Adds a table centred on `point` (043 R12, FR-012): the first free `table_n`, one column
+ * `id integer` primary key, one undo step. It is selected and its title opens for renaming.
+ */
+export function addTable(editor: DeckEditor, point: Point): string {
+  const title = nextTableName(readDeck(editor.doc));
+  const position = freeSpot(readViewState(editor.doc).deck, centredOn(point, 'db-table'));
+  let id = '';
+  oneStep(editor, () => {
+    id = editor.add('nodes', { type: 'db-table', title, position });
+    editor.addColumn(id, { name: 'id', type: 'integer', pk: true, notNull: true });
+  });
+  const ui = useUiStore.getState();
+  if (readViewState(editor.doc).hidden.has(id)) ui.reveal(id);
+  ui.select({ nodes: [id] });
+  ui.focus(id);
+  ui.announce(`Added table ${title}`);
+  ui.startTitleEdit({ target: 'node', id, isNew: false, kind: 'db-table' });
   return id;
 }
 

@@ -45,6 +45,7 @@ import { stepForEdge, stepForNode } from './flows/played-path';
 import { oneStep } from './fields/one-step';
 import { connectTarget, targetScene } from './routing/endpoint-target';
 import { addNoteAt } from './stickies/sticky-actions';
+import { isNodeLocked, refuseLocked } from './lock';
 import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
 import { scopeOf, visibleGraph } from './visible-graph';
@@ -298,6 +299,11 @@ export function useCanvasHandlers() {
         // opens details or drills in, and "Open inside" drills in by pointer.
         ui().select({ nodes: [node.id] });
         ui().focus(node.id);
+        // A locked card keeps its title (043 FR-023): say why instead.
+        if (isNodeLocked(deck, node.id)) {
+          refuseLocked();
+          return;
+        }
         ui().startTitleEdit({ target: 'node', id: node.id, isNew: false });
       },
       onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
@@ -477,9 +483,9 @@ export function useCanvasHandlers() {
         );
       },
       onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
-        // ⌥ copies, otherwise the pointer decides membership (016 FR-009, FR-018).
+        // Copies made with ⌥ stay (051), otherwise the pointer decides membership (016 FR-018).
         if (controller.dragging) {
-          controller.stop(event);
+          controller.stop(event !== undefined && 'clientX' in event ? event : undefined);
         }
         if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();

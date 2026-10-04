@@ -12,6 +12,7 @@ import type { DbColumn, DbDetail, Id, SododeckFile } from '@sododeck/schema';
 import { textMeasurer } from './card-tags';
 import { wrapText } from './card-layout';
 import { truncate, type TextMeasurer } from './export/text-measure';
+import { rowKey } from './relationships/row-key';
 import type { TableContext } from './table-keys';
 import type { DeckTableDetail } from '@sododeck/model';
 
@@ -37,6 +38,9 @@ export const TABLE_CARD = {
   typeGap: 8,
   nullableGap: 3,
   nullableSlot: 7,
+  /** The type mismatch icon (043): 12 px after a 4 px gap. */
+  mismatchGap: 4,
+  mismatchSlot: 12,
   chipPaddingX: 6,
   chipHeight: 18,
   pillGap: 6,
@@ -68,6 +72,8 @@ export interface TableRow {
   enum?: { id: Id; name: string; text: string; color?: string };
   /** Width the type text or chip takes at the right of the row. */
   typeWidth: number;
+  /** "int → uuid · orders.customer_id" when a relationship end's types differ (043 FR-010b). */
+  mismatch?: string;
 }
 
 export interface TableLayout {
@@ -88,6 +94,8 @@ export interface TableLayout {
   rows: readonly TableRow[];
   /** Columns not drawn as rows: "+n columns" at Keys, "n columns" at Names. */
   hidden: { count: number; kind: 'more' | 'all' } | undefined;
+  /** Where the new-row editor is drawn (043): its index among `rows`; later rows sit one lower. */
+  newRowIndex: number | undefined;
   /** Ids of the columns not drawn as rows (042: their relationship ends anchor on the pill). */
   hiddenIds: ReadonlySet<Id>;
   /** "1 index" / "n indexes", absent without indexes or when hidden. */
@@ -110,6 +118,24 @@ type Node = SododeckFile['nodes'][number];
 /** What `tableLayout` reads of a table node. */
 export type TableNode = Pick<Node, 'title'> &
   Partial<Pick<Node, 'id' | 'description' | 'schema' | 'columns' | 'indexes' | 'detail' | 'size'>>;
+
+const newRows = new WeakMap<TableNode, number>();
+
+/**
+ * Marks a projected table node as drawing the new-row editor before column `at` (043 R3): the
+ * card grows by one row and the rows below shift, so connectors follow. `node` must be a fresh
+ * object owned by the projection, never a document snapshot node.
+ */
+export function withNewRow<T extends TableNode>(node: T, at: number): T {
+  newRows.set(node, at);
+  return node;
+}
+
+/** `copy` with the new-row mark of `node`, if it has one (a projection copied for a helper). */
+export function withNewRowOf<T extends TableNode>(node: object, copy: T): T {
+  const at = newRows.get(node as TableNode);
+  return at === undefined ? copy : withNewRow(copy, at);
+}
 
 /** A table's detail: its own choice, else the deck's; Auto draws every column (R2). */
 export function effectiveDetail(own: DbDetail | undefined, deck: DeckTableDetail): DbDetail {
@@ -192,9 +218,18 @@ export function tableLayout(
       typeWidth = Math.min(typeMax, measure(shownType, t.typeFont));
     }
     const rowGlyphs = glyphs[i] ?? [];
+    const mismatch =
+      node.id === undefined ? undefined : context.mismatched?.get(rowKey(node.id, column.id));
+    // The (!) icon takes room at the right of the row, like the nullable slot.
+    const mismatchRoom = mismatch === undefined ? 0 : t.mismatchGap + t.mismatchSlot;
     const font = column.pk === true ? t.keyNameFont : t.nameFont;
     const nameMax =
-      inner - keySlot - t.keyGap - (typeWidth > 0 ? typeWidth + t.typeGap : 0) - nullableRoom;
+      inner -
+      keySlot -
+      t.keyGap -
+      (typeWidth > 0 ? typeWidth + t.typeGap : 0) -
+      nullableRoom -
+      mismatchRoom;
     const nameText = truncate(column.name, font, Math.max(0, nameMax), measure);
     return [
       {
@@ -208,10 +243,15 @@ export function tableLayout(
         nullable: !display.hideNullable && column.notNull !== true && column.pk !== true,
         ...(chip === undefined ? {} : { enum: chip }),
         typeWidth,
+        ...(mismatch === undefined ? {} : { mismatch }),
       },
     ];
   });
 
+  const pendingAt = newRows.get(node);
+  const newRowIndex =
+    pendingAt === undefined ? undefined : Math.max(0, Math.min(rows.length, pendingAt));
+  const slots = rows.length + (newRowIndex === undefined ? 0 : 1);
   const hiddenCount = columns.length - rows.length;
   const drawn = new Set(rows.map((row) => row.columnId));
   const hiddenIds: ReadonlySet<Id> = new Set(
@@ -222,7 +262,7 @@ export function tableLayout(
       ? undefined
       : { count: hiddenCount, kind: detail === 'names' ? 'all' : 'more' };
   const indexCount = node.indexes?.length ?? 0;
-  const hasBody = columns.length > 0;
+  const hasBody = columns.length > 0 || newRowIndex !== undefined;
   const footer =
     !hasBody || display.hideIndexes || indexCount === 0
       ? undefined
@@ -243,8 +283,8 @@ export function tableLayout(
   const morePill = hidden?.kind === 'more';
   const body = hasBody
     ? t.bodyGap +
-      rows.length * t.rowHeight +
-      (morePill ? (rows.length > 0 ? t.pillGap : 0) + t.pillHeight : 0) +
+      slots * t.rowHeight +
+      (morePill ? (slots > 0 ? t.pillGap : 0) + t.pillHeight : 0) +
       (footerRow ? t.footerHeight : 0) +
       t.bottom
     : t.paddingY;
@@ -263,7 +303,7 @@ export function tableLayout(
     (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
     t.bodyGap;
   const pillTop = morePill
-    ? rowsTop + rows.length * t.rowHeight + (rows.length > 0 ? t.pillGap : 0)
+    ? rowsTop + slots * t.rowHeight + (slots > 0 ? t.pillGap : 0)
     : undefined;
 
   const schema = node.schema;
@@ -280,6 +320,7 @@ export function tableLayout(
     keySlot,
     showNullable: !display.hideNullable,
     rows,
+    newRowIndex,
     hidden,
     hiddenIds,
     footer,
@@ -296,6 +337,13 @@ export function tableLayout(
   };
 }
 
+/** The row drawn in 24 px slot `slot` under `rowsTop`, skipping the new-row editor (043). */
+export function rowAtSlot(layout: TableLayout, slot: number): TableRow | undefined {
+  if (slot < 0 || slot === layout.newRowIndex) return undefined;
+  const shifted = layout.newRowIndex !== undefined && slot > layout.newRowIndex;
+  return layout.rows[shifted ? slot - 1 : slot];
+}
+
 /** Where a relationship end meets a table: a drawn row, the "+n columns" pill, or the title. */
 export interface RowAnchor {
   /** From the card's top. */
@@ -309,8 +357,10 @@ export interface RowAnchor {
  * Pure layout arithmetic, never measured, so canvas, drag hit test and export agree.
  */
 export function rowAnchorY(layout: TableLayout, columnId: Id): RowAnchor {
-  const index = layout.rows.findIndex((row) => row.columnId === columnId);
-  if (index >= 0) {
+  const found = layout.rows.findIndex((row) => row.columnId === columnId);
+  const shifted = layout.newRowIndex !== undefined && found >= layout.newRowIndex;
+  const index = shifted ? found + 1 : found;
+  if (found >= 0) {
     return {
       y: layout.rowsTop + index * TABLE_CARD.rowHeight + TABLE_CARD.rowHeight / 2,
       kind: 'row',

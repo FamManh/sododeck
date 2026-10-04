@@ -6,13 +6,15 @@
  *   anchor's delta: the selected components, and for a group its frame, nested frames and every
  *   member (hidden ones too).
  * - ⇧ locks the axis, ⌘ / Ctrl turns snapping off, arrows add 1 / 10 px (§g-45).
- * - On release the pointer decides membership (R6); with ⌥ the originals go back and a copy lands
- *   instead (FR-009). Esc cancels: the document is restored and no undo entry is left (R14).
+ * - On release the pointer decides membership (R6). With ⌥ (FR-009, 051 R2) the drag duplicates:
+ *   as soon as ⌥ is active the originals go back to their start and copies are pasted where they
+ *   are, inside the open gesture, and the copies move instead; releasing ⌥ removes them again.
+ *   Esc or a window blur cancels: the document is restored and no undo entry is left (R14).
  *
  * The session lives in a handler ref for the length of one drag; guides, the drop target and the
  * offset readout are UI-only store fields. Nothing here is document state.
  */
-import { viewNodePosition, type DeckEditor } from '@sododeck/model';
+import { isLocked, viewNodePosition, type DeckEditor } from '@sododeck/model';
 import type { Frame, Id } from '@sododeck/schema';
 import type { NodeChange } from '@xyflow/react';
 
@@ -69,8 +71,20 @@ export interface DragSession {
   frames: Readonly<Record<Id, Frame>>;
 }
 
+/** The copies of an ⌥ duplicate-drag (051 R2): they move instead of the originals. */
+interface Copies {
+  nodes: readonly Id[];
+  groups: readonly Id[];
+  /** Where the copies start (the originals' start): the drag delta applies to these. */
+  start: Readonly<Record<Id, Point>>;
+  frames: Readonly<Record<Id, Frame>>;
+}
+
 interface Session extends DragSession {
   kind: 'nodes' | 'group';
+  level: ReturnType<typeof effectiveLevel>;
+  /** `null` while moving the originals; the copies while duplicating. */
+  copies: Copies | null;
   anchorStart: Point;
   /** Union of everything that moves, at the start. */
   box: Rect;
@@ -222,7 +236,9 @@ export class DragController {
     const bounds = groupBounds(view.deck, level);
 
     const tree = groupSubtree(deck, groups);
-    const moving = new Set([...nodes, ...tree.nodes]);
+    // Locked cards stay put in a multi-drag (043 FR-024); a group still carries its members.
+    const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
+    const moving = new Set([...nodes.filter((id) => !locked.has(id)), ...tree.nodes]);
     const start: Record<Id, Point> = {};
     const movingBoxes: Rect[] = [];
     deck.nodes.forEach((node, index) => {
@@ -279,6 +295,8 @@ export class DragController {
       viewId: view.view.id,
       anchor,
       kind,
+      level,
+      copies: null,
       nodes,
       groups,
       start,
@@ -433,12 +451,17 @@ export class DragController {
     session.delta = { x: dx, y: dy };
     session.moved = session.moved || dx !== 0 || dy !== 0;
 
+    // ⌥ once the drag has moved: copies move, originals rest; ⌥ released: back to a move.
+    if (session.mods.alt && session.moved && session.copies === null) this.startCopies(session);
+    else if (!session.mods.alt && session.copies !== null) this.dropCopies(session);
+    const start = session.copies?.start ?? session.start;
+    const startFrames = session.copies?.frames ?? session.frames;
+
     const { editor } = this.deps;
     const positions: Record<Id, Point> = {};
-    for (const [id, p] of Object.entries(session.start))
-      positions[id] = { x: p.x + dx, y: p.y + dy };
+    for (const [id, p] of Object.entries(start)) positions[id] = { x: p.x + dx, y: p.y + dy };
     const frames: Record<Id, Frame> = {};
-    for (const [id, f] of Object.entries(session.frames)) {
+    for (const [id, f] of Object.entries(startFrames)) {
       frames[id] = { position: { x: f.position.x + dx, y: f.position.y + dy }, size: f.size };
     }
     editor.batch(() => {
@@ -449,6 +472,67 @@ export class DragController {
     ui.setGuides(guides);
     if (session.kind === 'group') ui.setDragReadout({ dx, dy });
     if (session.pointer === null) this.updateTarget();
+  }
+
+  /**
+   * Enters the duplicate mode (051 R2), inside the drag's gesture: the originals go back to their
+   * start and copies are pasted there, in the originals' innermost common group; the next write
+   * moves the copies by the current delta. Called once per switch, never per frame.
+   */
+  private startCopies(session: Session): void {
+    const { editor } = this.deps;
+    editor.batch(() => {
+      editor.moveInView(session.viewId, session.start);
+      if (Object.keys(session.frames).length > 0)
+        editor.setGroupFrames(session.viewId, session.frames);
+    });
+    const deck = readDeck(editor.doc);
+    const fragment = selectionFragment(deck, session, session.viewId);
+    if (fragment === null) return;
+    const ids = editor.pasteFragment(fragment, {
+      offset: { x: 0, y: 0 },
+      parent: commonParent(deck, session),
+      viewId: session.viewId,
+    });
+    // The copies sit exactly on the originals' start: read their positions and frames back.
+    const view = readViewState(editor.doc);
+    const pasted = new Set(ids.nodes);
+    const start: Record<Id, Point> = {};
+    view.deck.nodes.forEach((node, index) => {
+      if (pasted.has(node.id))
+        start[node.id] = viewNodePosition(view.view, node) ?? displayPosition(node, index);
+    });
+    const bounds = groupBounds(view.deck, session.level);
+    const frames: Record<Id, Frame> = {};
+    for (const id of ids.groups) {
+      const rect = bounds.get(id);
+      if (rect !== undefined) {
+        frames[id] = {
+          position: { x: rect.x, y: rect.y },
+          size: { width: rect.width, height: rect.height },
+        };
+      }
+    }
+    session.copies = { nodes: ids.nodes, groups: ids.groups, start, frames };
+    useUiStore.getState().setDragCopyIds([...ids.nodes, ...ids.groups]);
+  }
+
+  /** Leaves the duplicate mode (⌥ released mid-drag): exactly the copies go, inside the gesture. */
+  private dropCopies(session: Session): void {
+    const copies = session.copies;
+    if (copies === null) return;
+    const { editor } = this.deps;
+    editor.batch(() => {
+      for (const id of copies.nodes) {
+        if (readDeck(editor.doc).nodes.some((n) => n.id === id)) editor.remove('nodes', id);
+      }
+      // Pasted parents come first: remove the innermost copies first.
+      for (const id of [...copies.groups].reverse()) {
+        if (readDeck(editor.doc).groups.some((g) => g.id === id)) editor.remove('groups', id);
+      }
+    });
+    session.copies = null;
+    useUiStore.getState().clearDragCopyIds();
   }
 
   private arrow(dx: number, dy: number): boolean {
@@ -470,17 +554,18 @@ export class DragController {
     return true;
   }
 
-  /** Release: a copy with ⌥, otherwise the membership the pointer decides. */
-  stop(event?: { altKey?: boolean; clientX?: number; clientY?: number }): void {
+  /** Release: the copies made with ⌥ stay, otherwise the membership the pointer decides. */
+  stop(event?: { clientX?: number; clientY?: number }): void {
     const session = this.session;
     if (session === null) return;
     if (!session.cancelled) {
       if (event?.clientX !== undefined && event.clientY !== undefined) {
         session.pointer = this.deps.screenToFlowPosition({ x: event.clientX, y: event.clientY });
       }
-      if (event?.altKey === true) session.mods = { ...session.mods, alt: true };
-      if (session.moved && session.mods.alt) {
-        duplicateOnDrop(this.deps.editor, session);
+      if (session.copies !== null) {
+        const ui = useUiStore.getState();
+        ui.select({ nodes: [...session.copies.nodes], groups: [...session.copies.groups] });
+        ui.announce(`Duplicated ${plural(session.copies.nodes.length, 'component')}`);
       } else if (session.moved) {
         this.drop(session);
       }
@@ -512,6 +597,7 @@ export class DragController {
 
   private clearUi(): void {
     const ui = useUiStore.getState();
+    ui.clearDragCopyIds();
     ui.setGuides([]);
     ui.setDropTarget(null);
     ui.setDragReadout(null);
@@ -558,25 +644,4 @@ export function moveMessage(
   return first.from === undefined
     ? `Moved ${what}`
     : `Moved ${what} out of ${groupTitle(first.from)}`;
-}
-
-/**
- * ⌥ on release (FR-009): the originals go back where they started and a copy lands where they
- * were dropped, in the originals' innermost common group. Call inside the drag's gesture, so the
- * move back and the copy are one undo step.
- */
-export function duplicateOnDrop(editor: DeckEditor, session: DragSession): void {
-  const deck = readDeck(editor.doc);
-  const fragment = selectionFragment(deck, session, session.viewId);
-  if (fragment === null) return;
-  editor.moveInView(session.viewId, session.start);
-  if (Object.keys(session.frames).length > 0) editor.setGroupFrames(session.viewId, session.frames);
-  const ids = editor.pasteFragment(fragment, {
-    offset: { x: 0, y: 0 },
-    parent: commonParent(deck, session),
-    viewId: session.viewId,
-  });
-  const ui = useUiStore.getState();
-  ui.select({ nodes: ids.nodes, groups: ids.groups });
-  ui.announce(`Duplicated ${plural(ids.nodes.length, 'component')}`);
 }

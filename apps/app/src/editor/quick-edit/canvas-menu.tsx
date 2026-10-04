@@ -45,6 +45,12 @@ function menuName(ctx: ActionContext): string {
         : `Actions for ${String(stickies.length)} notes`;
     case 'mixed':
       return `Actions for ${String(nodes.length + edges.length + groups.length + stickies.length)} items`;
+    case 'row': {
+      const { tableId, columnId } = ctx.target.row;
+      const table = ctx.deck.nodes.find((n) => n.id === tableId);
+      const column = table?.columns?.find((c) => c.id === columnId);
+      return `Actions for column ${column?.name ?? ''}`;
+    }
   }
 }
 
@@ -159,14 +165,20 @@ function MenuBody({ menu }: { menu: ContextMenuState }) {
           event.preventDefault();
           const ui = useUiStore.getState();
           // The chosen action opened a title field (Rename, Add component), a popover (Edit
-          // label), a note (Add sticky) or the delete dialog: focus belongs there.
+          // label), a note (Add note) or the delete dialog: focus belongs there.
           if (ui.titleEdit !== null) {
             const field = document.querySelector<HTMLInputElement>('[data-slot="inline-edit"]');
             field?.focus();
             if (!ui.titleEdit.isNew) field?.select();
             return;
           }
-          if (ui.popover !== null || ui.pendingDelete !== null || ui.stickyEditing !== null) return;
+          if (
+            ui.popover !== null ||
+            ui.pendingDelete !== null ||
+            ui.stickyEditing !== null ||
+            ui.columnEdit !== null
+          )
+            return;
           // Back to the card, connection, group or button the menu was opened from.
           const back = menu.returnFocus;
           if (back?.isConnected === true) back.focus({ preventScroll: true });

@@ -11,7 +11,7 @@ import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connectio
 import { endpointIdOf } from './deck-to-flow';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 
-export function useComponentNodeState(id: string, selected: boolean) {
+export function useComponentNodeState(id: string, selected: boolean, locked = false) {
   const editor = useEditor();
   const openConnectPopover = useUiStore((s) => s.openConnectPopover);
   const announce = useUiStore((s) => s.announce);
@@ -30,8 +30,10 @@ export function useComponentNodeState(id: string, selected: boolean) {
   );
   // Resizing (017 R4): pointer only, and only the single selected node, never in flow mode,
   // recording, view-only or inside a collapsed group (those never render a component at all).
+  // A locked card is never resized (043 FR-023).
   const resizable = useUiStore(
     (s) =>
+      !locked &&
       selected &&
       !isFlowMode(s) &&
       s.flowSession === null &&

@@ -1,6 +1,7 @@
 import { Layers, PanelRight, Pencil } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { isNodeLocked, LOCKED_HINT } from '../lock';
 import type { Action, ActionContext } from './types';
 
 const onlyNode = (ctx: ActionContext) =>
@@ -55,6 +56,11 @@ export const TITLE_ACTIONS: readonly Action[] = [
     shortcut: 'rename',
     section: 'open',
     where: { menu: ['component', 'group'], toolbar: ['group'] },
+    // A locked card keeps its title (043 FR-023).
+    disabledReason: (ctx) => {
+      const node = onlyNode(ctx);
+      return node !== undefined && isNodeLocked(ctx.deck, node) ? LOCKED_HINT : null;
+    },
     run: (ctx) => {
       const ui = useUiStore.getState();
       const [group] = ctx.selection.groups;

@@ -10,8 +10,10 @@ const mouse = {} as ReactMouseEvent;
 const node = (id: string) => ({ id }) as never;
 const hover = () => useUiStore.getState().hoverFocus;
 
+/** Hover focus runs only in Focus mode with nothing pinned (051 R1), so tests start there. */
 function setup() {
   const { wrapper } = editorWrapper();
+  useUiStore.setState({ focusMode: true });
   return renderHook(() => useHoverFocus(), { wrapper });
 }
 
@@ -137,7 +139,15 @@ describe('useHoverFocus (034 R3)', () => {
   });
 
   it.each([
-    ['pinned focus', { focusMode: true }],
+    ['Focus mode off (051)', { focusMode: false }],
+    [
+      'a pinned focus (one card selected, 051)',
+      { focusMode: true, selection: { nodes: ['x'], edges: [], groups: [], stickies: [] } },
+    ],
+    [
+      'a pinned group focus (051)',
+      { focusMode: true, selection: { nodes: [], edges: [], groups: ['g'], stickies: [] } },
+    ],
     ['a shown flow', { activeFlow: { flowId: 'f' } }],
     ['a flow session', { flowSession: { flowId: 'f' } }],
     ['a drag', { canvasGesture: 'drag' }],
@@ -157,6 +167,20 @@ describe('useHoverFocus (034 R3)', () => {
       vi.advanceTimersByTime(REST_MS * 2);
     });
     expect(hover()).toBeNull();
+  });
+
+  it('runs in Focus mode with several cards selected: nothing is pinned (051)', () => {
+    const { result } = setup();
+    act(() => {
+      useUiStore.setState({
+        selection: { nodes: ['x', 'y'], edges: [], groups: [], stickies: [] },
+      });
+    });
+    act(() => {
+      result.current.onNodeMouseEnter(mouse, node('a'));
+      vi.advanceTimersByTime(REST_MS);
+    });
+    expect(hover()?.id).toBe('a');
   });
 
   it('clears a hover that is showing when a suspension starts', () => {
@@ -226,10 +250,17 @@ describe('useHoverFocus rows and relationships (042 R14)', () => {
     expect(hover()).toBeNull();
   });
 
-  it('keeps row highlights in focus mode and flows, where card hover is off', () => {
+  it.each([
+    ['outside Focus mode (051)', { focusMode: false }],
+    [
+      'with a pinned focus',
+      { focusMode: true, selection: { nodes: ['x'], edges: [], groups: [], stickies: [] } },
+    ],
+    ['in a shown flow', { activeFlow: { flowId: 'f' } }],
+  ])('keeps row highlights %s, where card hover is off', (_name, patch) => {
     const { result } = setup();
     act(() => {
-      useUiStore.getState().setFocusMode(true);
+      useUiStore.setState(patch as never);
     });
     act(() => {
       result.current.onNodeMouseEnter(mouse, node('orders'));

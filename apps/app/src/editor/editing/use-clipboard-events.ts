@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { isTextTarget } from '../../lib/is-text-target';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { useUndoToast } from '../undo-toast';
 import { inDialog, inOverlay } from '../use-canvas-shortcuts';
 import { CLIPBOARD_FAILED, copied, copySelectionText, deleteCut, pasteText } from './clipboard-ops';
 
@@ -40,6 +41,7 @@ export function useClipboardEvents(): void {
   const editor = useEditor();
   const { screenToFlowPosition } = useReactFlow();
   const { toast } = useToast();
+  const undoToast = useUndoToast();
 
   useEffect(() => {
     const write = (event: ClipboardEvent, cut: boolean) => {
@@ -65,7 +67,8 @@ export function useClipboardEvents(): void {
     const onPaste = (event: ClipboardEvent) => {
       if (leaveToBrowser(event) || !editable()) return;
       const text = event.clipboardData?.getData('text/plain') ?? '';
-      if (pasteText(editor, text, useUiStore.getState().canvasPointer, { screenToFlowPosition })) {
+      const pointer = useUiStore.getState().canvasPointer;
+      if (pasteText(editor, text, pointer, { screenToFlowPosition }, undoToast)) {
         event.preventDefault();
       }
     };
@@ -77,5 +80,5 @@ export function useClipboardEvents(): void {
       document.removeEventListener('cut', onCut);
       document.removeEventListener('paste', onPaste);
     };
-  }, [editor, screenToFlowPosition, toast]);
+  }, [editor, screenToFlowPosition, toast, undoToast]);
 }

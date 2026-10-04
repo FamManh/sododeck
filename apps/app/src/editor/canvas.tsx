@@ -21,12 +21,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
-import { CANVAS_ATTR, nodeElement } from './canvas-actions';
+import { addTable, CANVAS_ATTR, canvasElement, nodeElement } from './canvas-actions';
 import { bundleEdges, bundleOptions } from './bundles';
 import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
+import { focusTargetId } from './focus-target';
 import { DeckEdge } from './deck-edge';
 import { DeckNode } from './deck-node';
 import {
@@ -112,7 +113,7 @@ const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
 
 /**
  * Below 60 % zoom the lip is gone (029 R8, §g-63): one boolean for the wrapper, read by CSS, so
- * crossing 60 % re-renders no card (the level boundaries are 45 % and 90 %).
+ * crossing 60 % re-renders no card (the level boundaries are 30 %, 50 % and 150 %).
  */
 export const liplessSelector = (s: { transform: [number, number, number] }) => s.transform[2] < 0.6;
 
@@ -437,19 +438,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       setColumnDragEnv(null);
     };
   }, [deck, graph, level, editor, screenToFlowPosition]);
-  const focusId = useMemo(() => {
-    if (!focusMode) return null;
-    if (selection.nodes.length === 1) return selection.nodes[0] ?? null;
-    if (selection.groups.length === 1) {
-      const groupId = selection.groups[0];
-      return groupId === undefined
-        ? null
-        : collapsed.has(groupId)
-          ? `${COLLAPSED_NODE_PREFIX}${groupId}`
-          : `${GROUP_NODE_PREFIX}${groupId}`;
-    }
-    return null;
-  }, [focusMode, selection, collapsed]);
+  const focusId = useMemo(
+    () => (focusMode ? focusTargetId(selection, collapsed) : null),
+    [focusMode, selection, collapsed],
+  );
   // Parallel automatic connectors fold into bundles (034). A shown flow draws its own connectors
   // on their own; recording a flow turns bundles off so every connector is a candidate step.
   const fannedBundles = useUiStore((s) => s.fannedBundles);
@@ -491,6 +483,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const problems = problemMarks(useProblems());
   const stylePreview = useUiStore((s) => s.stylePreview);
+  // The copies of an ⌥ duplicate-drag carry the drag lift (051 R2).
+  const dragCopyIds = useUiStore((s) => s.dragCopyIds);
   const scopeTitle = useMemo(
     () => (drill.length === 0 ? undefined : drillScopeTitle(deck, drill, '')),
     [deck, drill],
@@ -508,6 +502,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       render,
       problems,
       stylePreview,
+      dragCopyIds,
     }),
     [
       scopeTitle,
@@ -521,6 +516,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       render,
       problems,
       stylePreview,
+      dragCopyIds,
     ],
   );
 
@@ -600,18 +596,6 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   }, [deck.edges, graph, selection]);
 
   useEffect(() => {
-    if (
-      focusMode &&
-      selection.nodes.length === 0 &&
-      selection.edges.length === 0 &&
-      selection.groups.length === 0 &&
-      selection.stickies.length === 0
-    ) {
-      useUiStore.getState().setFocusMode(false);
-    }
-  }, [focusMode, selection]);
-
-  useEffect(() => {
     if (announcedZoomLevel.current === zoomLevel) return;
     if (announcedZoomLevel.current !== null) {
       useUiStore.getState().announce(`${level.charAt(0).toUpperCase()}${level.slice(1)} level`);
@@ -689,6 +673,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       {...(hideUi ? { 'data-hide-ui': '' } : {})}
       {...(hand ? { 'data-tool-hand': '' } : {})}
       {...(dragging ? { 'data-dragging': '' } : {})}
+      {...(dragCopyIds.size > 0 ? { 'data-duplicating': '' } : {})}
       {...(tinyCards ? { 'data-tiny-cards': '' } : {})}
       {...(lipless ? { 'data-lipless': '' } : {})}
       data-level={level}
@@ -865,7 +850,23 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <ColumnConnectLine />
       </ReactFlow>
       {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && (
-        <EmptyCanvasCard showImport={deckPacks(fullDeck).includes('database')} />
+        <EmptyCanvasCard
+          showImport={deckPacks(fullDeck).includes('database')}
+          {...(deckPacks(fullDeck).includes('database')
+            ? {
+                onAddTable: () => {
+                  const rect = canvasElement()?.getBoundingClientRect();
+                  addTable(
+                    editor,
+                    screenToFlowPosition({
+                      x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+                      y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+                    }),
+                  );
+                },
+              }
+            : {})}
+        />
       )}
       {drilledEmpty && (
         <EmptyCanvasCard

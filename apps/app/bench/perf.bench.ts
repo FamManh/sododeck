@@ -829,6 +829,7 @@ test(`hover → focus painted: ${NODES} nodes / ${EDGES} edges`, async ({ page }
   await page.waitForFunction(() => window.__sododeckBench?.hover !== undefined);
   const runs: number[] = [];
   for (let i = 0; i < 5; i++) {
+    // clearHover also turns Focus mode on with nothing selected (051): hover only lights there.
     await page.evaluate(() => {
       window.__sododeckBench?.clearHover?.();
     });

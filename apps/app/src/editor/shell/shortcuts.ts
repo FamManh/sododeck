@@ -6,7 +6,7 @@ import { isApplePlatform } from '../../lib/features';
  * handling itself lives in `use-canvas-shortcuts.ts`, `use-shell-shortcuts.ts` and the flow hooks.
  */
 export type ShortcutSection =
-  'Canvas' | 'Tools' | 'Panels' | 'Quick edit' | 'Editing' | 'Flows' | 'JSON';
+  'Canvas' | 'Tools' | 'Panels' | 'Quick edit' | 'Editing' | 'Tables' | 'Flows' | 'JSON';
 
 export interface Shortcut {
   id: string;
@@ -164,6 +164,28 @@ export const SHORTCUTS = [
     section: 'Editing',
     keys: mod('Hold ⌥', 'Hold Alt'),
   },
+  { id: 'lock', label: 'Lock or unlock', section: 'Editing', keys: mod('⇧⌘L', 'Ctrl+Shift+L') },
+  // Tables (043): keys on a focused or selected table, and on its rows
+  { id: 'add-table', label: 'Add table', section: 'Tables', keys: same('T') },
+  { id: 'table-group', label: 'Table group', section: 'Tables', keys: same('G') },
+  { id: 'add-column', label: 'Add column', section: 'Tables', keys: same('C') },
+  { id: 'enter-rows', label: 'Enter the rows', section: 'Tables', keys: same('↓') },
+  { id: 'row-edit', label: 'Edit the row', section: 'Tables', keys: same('Enter / F2') },
+  {
+    id: 'row-connect',
+    label: 'Connect the table, or start a relationship from the row',
+    section: 'Tables',
+    keys: same('R'),
+  },
+  { id: 'row-move-up', label: 'Move the column up', section: 'Tables', keys: mod('⌥↑', 'Alt+↑') },
+  {
+    id: 'row-move-down',
+    label: 'Move the column down',
+    section: 'Tables',
+    keys: mod('⌥↓', 'Alt+↓'),
+  },
+  { id: 'row-delete', label: 'Delete the column', section: 'Tables', keys: same('Delete') },
+  { id: 'row-leave', label: 'Back to the table', section: 'Tables', keys: same('Esc') },
   // Flows
   { id: 'filter-flows', label: 'Filter flows', section: 'Flows', keys: same('/') },
   { id: 'step', label: 'Previous / next step', section: 'Flows', keys: same('← / →') },
@@ -181,6 +203,7 @@ export const SHORTCUT_SECTIONS: readonly ShortcutSection[] = [
   'Canvas',
   'Quick edit',
   'Editing',
+  'Tables',
   'Flows',
   'JSON',
 ];

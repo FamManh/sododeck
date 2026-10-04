@@ -45,7 +45,7 @@ export function setDialect(ctx: EditContext, dialect: Dialect | null): void {
 }
 
 /** `meta.enums`, created on the first enum. Call inside a transaction. */
-function attachedEnums(ctx: EditContext): ListMap {
+export function attachedEnums(ctx: EditContext): ListMap {
   const existing = enumsList(ctx.doc);
   if (existing !== undefined) return existing;
   const list = new Y.Map<YObject>();

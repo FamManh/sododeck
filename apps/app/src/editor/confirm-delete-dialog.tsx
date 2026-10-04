@@ -18,6 +18,7 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore, type PendingDelete } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
 import { describeRemoval, removalToast, withNewProblems } from './describe-removal';
+import { withoutLocked } from './lock';
 import { useUndoToast } from './undo-toast';
 
 /** Canvas objects delete at once (founder, 2026-10-02): the Undo toast is the safety net. */
@@ -47,10 +48,18 @@ export function ConfirmDeleteDialog({ deck }: { deck: SododeckFile }) {
 }
 
 /** The delete itself, shared by the confirmation and the immediate canvas path. */
-function useRunDelete(deck: SododeckFile, targets: RemovalTarget[]) {
+function useRunDelete(deck: SododeckFile, requested: RemovalTarget[]) {
   const editor = useEditor();
   const showUndoToast = useUndoToast();
   return () => {
+    const { targets, skipped } = withoutLocked(deck, requested);
+    const skippedText = `Skipped ${String(skipped)} locked`;
+    if (targets.length === 0) {
+      const ui = useUiStore.getState();
+      ui.cancelDelete();
+      ui.announce(skipped > 0 ? `${skippedText} · unlock to delete` : 'Nothing to delete');
+      return;
+    }
     const preview = previewRemoval(deck, targets);
     // The one synchronous problems check (015 FR-026, ADR 0013): before and after this delete.
     const before = checkDeck(readDeck(editor.doc)).total;
@@ -58,11 +67,12 @@ function useRunDelete(deck: SododeckFile, targets: RemovalTarget[]) {
       // A connection may already be gone with its component (cascade): removeTarget skips it.
       for (const target of targets) removeTarget(editor, editor.doc, target);
     });
-    const message = withNewProblems(
+    const removed = withNewProblems(
       removalToast(deck, targets, preview, isApplePlatform()),
       before,
       checkDeck(readDeck(editor.doc)).total,
     );
+    const message = skipped > 0 ? `${removed} · ${skippedText}` : removed;
     const ui = useUiStore.getState();
     ui.cancelDelete();
     if (!needsConfirmation(targets)) {

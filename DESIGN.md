@@ -198,7 +198,6 @@ Light / dark values; "Border-strong" is `#cfcfc7` / `#45453f`, "Surface 2" `#f4f
 | `--sd-deck-edge-arrow` | filled triangle 9 long × 10 wide, 2px round-joined stroke, line colour | Connector end |
 | `--sd-deck-edge-knob` | circle r 3.5, line colour | Connector start |
 | `--sd-deck-lift` | `translateY(-2px)` | Hover and current flow step |
-| `--sd-deck-tilt` | −2.5° (cards), −3° (shapes) | While dragging |
 | `--sd-deck-grid` | 1.6px dots every 26px | Canvas dot grid |
 
 #### Card anatomy
@@ -252,12 +251,12 @@ Every state has a cue that does not rely on colour.
 | Has a problem | 1.5px dashed Clay outline, offset 4, plus a Clay Soft badge (20 tall pill, ⚠ 12 + count, 11 / 600) in the header | the geometry at offset 7 (clear of the selection ring), badge top-right |
 | Current flow step | Deck Orange border and lip (5px), lifted 2px, step sticker | orange stroke, 9px Orange Soft halo, sticker |
 | Dimmed | 22 % opacity | same |
-| Being dragged | tilted −2.5°, lip 6px, Float shadow; a dashed Muted ghost stays at the origin | tilted −3° |
+| Being dragged | lifted: lip 6px and Float shadow, never tilted. With ⌥ the original rests at its start and the moving copy carries the lift | lip 6px, never tilted; same ⌥ rule |
 | Connection target | Deck Orange border, the hovered side's handle active | same |
 | Has child components | "n inside ⏎" pill as the last row | pill below the shape |
 | Highlighted neighbour | border and lip in Secondary; stays at 100 % while the rest dims | Secondary stroke |
 
-Tilt and lift are paint-only: they never move the card's box for snapping, hit tests, edge anchors or export (§g-74).
+The lift is paint-only: it never moves the card's box for snapping, hit tests, edge anchors or export (§g-74). There is no drag tilt (051).
 
 #### Groups (119)
 
@@ -297,9 +296,9 @@ Same thresholds as the app (`levels.ts`). The card keeps one size; only detail c
 
 | Level | Zoom | Card shows |
 | --- | --- | --- |
-| Landscape | ≤ 45 % | the type icon (30px, colour `ink` or Secondary) centred on the colour fill or Surface 2; no text. Shapes show only their geometry |
-| System | 45–90 % | tile + title; chips (tags, field chips) as 6px dots (§g-63) |
-| Container | 90–150 % | + type name, description, status |
+| Landscape | ≤ 30 % | the type icon (30px, colour `ink` or Secondary) centred on the colour fill or Surface 2; no text. Shapes show only their geometry |
+| System | 31–50 % | tile + title; chips (tags, field chips) as 6px dots (§g-63) |
+| Container | 51–150 % | + type name, description, status |
 | Component | > 150 % | everything |
 
 No lip below 60 % (§g-63), whatever the level. Tags follow §g-59 (§g-70).
@@ -358,6 +357,10 @@ The Database pack (features 040–049, board 134–168) adds one card type. **A 
 | Column name | Geist 12 / 500, Ink; the primary-key name is 600. On a problem row the name and type are Clay ink; on a matched row the name is Orange Ink 600. Cut with an ellipsis after the type is cut. | `--sd-deck-body` family | 156 |
 | Type text | Mono 11, Muted, right-aligned, at most 58 % of the row. Cut before the name. Enum columns draw the enum name as a chip in the enum's colour. | Muted; chip as `--sd-deck-chip` | 156 |
 | Nullable marker | "?" in a fixed 7px slot after the type, Muted, so types stay aligned. Defaults show in the drawer only. | Muted | 156 |
+| Row grip (043) | lucide `grip-vertical` 12 px, Muted, in a 12 px slot overlapping the row's left inset; shown on row hover only, never on a locked table. Drop line while dragging: 2 px Primary with a 2 px Primary soft ring at the target index. | Muted, Primary | 160 C |
+| Type mismatch (043) | lucide `triangle-alert` 12 px in Clay ink after the type (4 px gap), with "Type differs: int → uuid (orders.customer_id)" as its name and tooltip. Shown on both rows of a relationship end pair whose types differ. | Clay ink | 160 |
+| Line editor (043) | the row becomes a 24 px input in the name's font and position, 2 px Primary ring, Surface fill; the parsed parts show as Mono 10.5 chips (Surface 2, Secondary; the enum chip Orange soft / Orange ink; ignored words struck through in Muted) under the row; errors in a Clay soft / Clay ink line. | Primary, Surface 2, Clay | 160 A/B |
+| Lock badge (043) | lucide `lock` 14 px in a 20 px button in the header's badge slot, replacing the detail toggle; it is the Unlock button, with the tooltip "Locked · unlock to move or edit". Shapes carry it on their top-right corner. | Secondary | 160 J, 161 |
 | Row limit | **Row limit: 12** (DB9, frame 158) as `colMax`. Cut order PK, FK, then the rest. A row with a connector always stays, so a cut table can show more than 12. | new | 158 |
 | Show all / Show fewer | dashed 1.5px Border-strong button, full card width − 24, 24 tall, radius 8, Geist 11.5 / 500 Secondary, 6 above it. Text "Show all 60 columns" / "Show fewer". Saved per table in the deck. | Border-strong, Secondary | 158 |
 | In-table column search | typing in a selected table (⌘F, scoped to it) swaps the type tile for a search field with a match counter ("3/60"). Matching rows are highlighted (Orange Soft fill, Orange Ink name 600); the rest fold behind Show all. Required with the row limit (the board's risk note). | `inp` (input), Orange Soft | 158 |
@@ -405,9 +408,9 @@ Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; onl
 
 | Level | Zoom | Table shows |
 | --- | --- | --- |
-| Landscape | ≤ 45 % | the table icon on the colour fill; no text |
-| System | 45–90 % | name, PK / FK dots and the column count |
-| Container | 90–150 % | keys only and "+n columns" |
+| Landscape | ≤ 30 % | the table icon on the colour fill; no text |
+| System | 31–50 % | name, PK / FK dots and the column count |
+| Container | 51–150 % | keys only and "+n columns" |
 | Component | > 150 % | all columns, up to the row limit |
 
 A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; at System and Landscape connectors run table to table from the title row and merge ×n.

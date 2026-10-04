@@ -36,7 +36,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Open details', 'Rename'],
       ['Reset size', 'Colour: none', 'Icon…'],
       ['Copy', 'Cut', 'Duplicate'],
-      ['Group', 'Align', 'Arrange', 'Spread ends evenly'],
+      ['Group', 'Lock', 'Align', 'Arrange', 'Spread ends evenly'],
       ['Pin'],
       ['Delete'],
     ]);
@@ -45,7 +45,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Open details'],
       ['Colour: none', 'Icon…'],
       ['Copy', 'Cut', 'Duplicate'],
-      ['Group', 'Align', 'Arrange', 'Spread ends evenly'],
+      ['Group', 'Lock', 'Align', 'Arrange', 'Spread ends evenly'],
       ['Pin all'],
       ['Delete'],
     ]);
@@ -63,7 +63,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     ]);
     expect(labels(TARGETS.canvas, 'menu')).toEqual([
       ['Paste'],
-      ['Add component', 'Add sticky'],
+      ['Add component', 'Add note'],
       ['Select all', 'Fit'],
     ]);
     expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Delete']]);
@@ -94,6 +94,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Rules',
       'Colour: none',
       'Icon',
+      'Lock',
       'Spread ends evenly',
       'More actions',
     ]);
@@ -105,6 +106,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Colour: none',
       'Icon',
       'Group',
+      'Lock',
       'Align',
       'Spread ends evenly',
       'More actions',
