@@ -2,7 +2,7 @@ import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { checkDeck, createEditor, fromJSON, getObject, toFragment, toJSON } from '../src';
-import { expectValid, seqIds } from './helpers';
+import { expectValid, seqIds, shopDeck } from './helpers';
 
 const source: SododeckFile = {
   ...emptySododeckFile(),
@@ -240,5 +240,63 @@ describe('typed values on the clipboard (032 FR-021)', () => {
       ['field-value-dangling', `field-value-dangling:${id}:zone`],
     ]);
     expectValid(doc);
+  });
+});
+
+describe('pasting tables (040 FR-022a)', () => {
+  const shop = shopDeck();
+  const fragment = toFragment(shop, { nodes: ['shipments', 'items', 'orders'], groups: [] });
+
+  it('copies table lists and relationships with column ends into the fragment', () => {
+    const items = fragment.deck.nodes.find((n) => n.id === 'items');
+    expect(items?.columns?.map((c) => c.id)).toEqual(['i-order', 'i-line', 'i-qty']);
+    expect(fragment.deck.edges.map((e) => e.id)).toEqual(['r-ship-item']);
+  });
+
+  it('gives every column, index and check a new id and remaps index parts and column ends', () => {
+    const doc = fromJSON(shop);
+    const editor = createEditor(doc, { newId: seqIds() });
+    const before = toJSON(doc);
+    const pasted = editor.pasteFragment(fragment, { offset: { x: 40, y: 40 } });
+    const deck = toJSON(doc);
+    expectValid(doc);
+    const copyOf = (title: string) =>
+      deck.nodes.find((n) => n.title === title && pasted.nodes.includes(n.id));
+    const orders = copyOf('orders');
+    const items = copyOf('order_items');
+    const shipments = copyOf('shipments');
+    const oldIds = new Set(
+      before.nodes.flatMap((n) => [
+        ...(n.columns ?? []).map((c) => c.id),
+        ...(n.indexes ?? []).map((i) => i.id),
+        ...(n.checks ?? []).map((c) => c.id),
+      ]),
+    );
+    const newIds = [orders, items, shipments].flatMap((n) => [
+      ...(n?.columns ?? []).map((c) => c.id),
+      ...(n?.indexes ?? []).map((i) => i.id),
+      ...(n?.checks ?? []).map((c) => c.id),
+    ]);
+    expect(newIds).toHaveLength(13);
+    for (const id of newIds) expect(oldIds.has(id)).toBe(false);
+    const orderColumns = (orders?.columns ?? []).map((c) => c.id);
+    expect(orders?.indexes?.[1]?.columns).toEqual([orderColumns[1], orderColumns[2]]);
+    expect(orders?.indexes?.[2]?.columns).toEqual([{ expr: 'lower(note)' }]);
+    const relation = deck.edges.find((e) => e.id === pasted.edges[0]);
+    expect(relation?.fromColumns).toEqual((shipments?.columns ?? []).slice(1).map((c) => c.id));
+    expect(relation?.toColumns).toEqual((items?.columns ?? []).slice(0, 2).map((c) => c.id));
+    // The originals keep their ids; one undo removes the paste.
+    expect(deck.nodes.slice(0, before.nodes.length)).toEqual(before.nodes);
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('keeps enumRef as it is (enums are deck-level)', () => {
+    const doc = fromJSON(shop);
+    const editor = createEditor(doc, { newId: seqIds() });
+    const copy = toFragment(shop, { nodes: ['customers'], groups: [] });
+    const [id] = editor.pasteFragment(copy, { offset: { x: 0, y: 0 } }).nodes;
+    const pasted = toJSON(doc).nodes.find((n) => n.id === id);
+    expect(pasted?.columns?.[2]?.enumRef).toBe('e-status');
   });
 });

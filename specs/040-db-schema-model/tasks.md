@@ -139,15 +139,15 @@
 
 ### Tests for User Story 5 (write first)
 
-- [ ] T034 [P] [US5] Create `packages/model/test/db-cascade.test.ts` (spec US5 1–5): remove a column that is the only part of one index and one of two parts of another (first removed, second keeps the other part); remove a column that is a simple edge end (edge removed); remove one column of a composite end `(order_id, line_no)` (pair dropped on both ends, edge kept); remove the last pair (edge removed); self-reference (both ends checked); remove an enum used by two columns (`enumRef` cleared, `type` kept); remove an enum value (nothing else changes); remove a table (its edges removed by the existing node cascade); `RemovalResult` lists removed and updated indexes and edges; one `undo()` restores the exact prior `toJSON` in every case
-- [ ] T035 [P] [US5] Add to `packages/model/test/paste.test.ts` and `fragment.test.ts`: copying a table with columns, indexes and checks and one edge with `fromColumns` / `toColumns` between two copied tables; after paste every column, index and check has a new id, index parts and the pasted edge's ends point at the new column ids, `enumRef` is unchanged, the originals keep their ids; one undo removes the paste
+- [x] T034 [P] [US5] Create `packages/model/test/db-cascade.test.ts` (spec US5 1–5): remove a column that is the only part of one index and one of two parts of another (first removed, second keeps the other part); remove a column that is a simple edge end (edge removed); remove one column of a composite end `(order_id, line_no)` (pair dropped on both ends, edge kept); remove the last pair (edge removed); self-reference (both ends checked); remove an enum used by two columns (`enumRef` cleared, `type` kept); remove an enum value (nothing else changes); remove a table (its edges removed by the existing node cascade); `RemovalResult` lists removed and updated indexes and edges; one `undo()` restores the exact prior `toJSON` in every case
+- [x] T035 [P] [US5] Add to `packages/model/test/paste.test.ts` and `fragment.test.ts`: copying a table with columns, indexes and checks and one edge with `fromColumns` / `toColumns` between two copied tables; after paste every column, index and check has a new id, index parts and the pasted edge's ends point at the new column ids, `enumRef` is unchanged, the originals keep their ids; one undo removes the paste
 
 ### Implementation for User Story 5
 
-- [ ] T036 [US5] In `packages/model/src/ops/cascade.ts` add `removeColumn` (indexes, then edges per research R9, composite pairs by position, self-reference) and `removeIndex`, `removeCheck`, exported for `ops/db-tables.ts`; keep the delete policy in this file and extend its header comment
-- [ ] T037 [US5] Add `removeColumn`, `removeIndex`, `removeCheck` to `DeckEditor` in `packages/model/src/editor.ts` returning `RemovalResult`
-- [ ] T038 [US5] In `packages/model/src/fragment.ts` keep table lists in `toFragment`; in `packages/model/src/ops/paste.ts` re-id columns, indexes and checks of pasted tables with the `dbcol` / `dbidx` / `dbchk` prefixes and remap index parts and pasted edges' `fromColumns` / `toColumns` through the same map
-- [ ] T039 [US5] Run `pnpm --filter @sododeck/model test`; T034–T035 green (enum cascade cases go green after T045)
+- [x] T036 [US5] In `packages/model/src/ops/cascade.ts` add `removeColumn` (indexes, then edges per research R9, composite pairs by position, self-reference) and `removeIndex`, `removeCheck`, exported for `ops/db-tables.ts`; keep the delete policy in this file and extend its header comment
+- [x] T037 [US5] Add `removeColumn`, `removeIndex`, `removeCheck` to `DeckEditor` in `packages/model/src/editor.ts` returning `RemovalResult`
+- [x] T038 [US5] In `packages/model/src/fragment.ts` keep table lists in `toFragment`; in `packages/model/src/ops/paste.ts` re-id columns, indexes and checks of pasted tables with the `dbcol` / `dbidx` / `dbchk` prefixes and remap index parts and pasted edges' `fromColumns` / `toColumns` through the same map
+- [x] T039 [US5] Run `pnpm --filter @sododeck/model test`; T034–T035 green (enum cascade cases go green after T045)
 
 **Checkpoint**: removing and pasting tables never leaves a dangling reference made by the editor.
 
