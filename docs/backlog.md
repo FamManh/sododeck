@@ -230,7 +230,7 @@ and **027** ai-deck-skill are not scheduled.
 | 035 | flow-playback-deck       | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
 | 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
 | 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                             |
-| 038 | card-icons               | after 036  | 036, (029)    | 4 d  | planned (spec, plan, tasks); lucide now, icon sets later      |
+| 038 | card-icons               | after 036  | 036, (029)    | 4 d  | built; lucide now, icon sets later (ADR 0028)                 |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -2249,8 +2249,8 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 
 ## 038-card-icons
 
-- **Status:** specified (2026-10-03), refreshed, clarified and planned (2026-10-04) — see
-  [`specs/038-card-icons/`](../specs/038-card-icons/) (spec, plan, tasks). Not implemented yet.
+- **Status:** built (2026-10-04) — see [`specs/038-card-icons/`](../specs/038-card-icons/) and
+  ADR 0028.
 - **Added:** 2026-10-03, founder request: cards only show the icon of their type; users want to
   pick their own.
 - **Milestone:** after 036 · **Depends on:** 036 (model writes), coordinate with 029 (card header
