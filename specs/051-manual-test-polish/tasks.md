@@ -172,7 +172,7 @@
   - `deck-node.test.tsx`, `group-boundary-node.test.tsx`, `merged-edge.test.tsx`, `shapes/shape-node.test.tsx`;
   - `canvas.test.tsx` (level announcements), `export/scene.test.ts`;
   - `use-canvas-shortcuts.test.tsx`, `editing/drag-session` tests, `actions/align-actions` tests.
-- [ ] T025 [US3] Run `pnpm bench` and compare the zoom/pan fps scenarios with `bench-before.md`.
+- [x] T025 [US3] Run `pnpm bench` and compare the zoom/pan fps scenarios with `bench-before.md`.
   - If any regresses beyond 5 %, apply the research R4 fallback: hide the field and tag chips row at System, keep the description. Record it.
   - Save the table in `specs/051-manual-test-polish/bench-after.md`.
 
