@@ -369,7 +369,14 @@ function checkDuplicates(edges: readonly Edge[], nodeTitle: (id: Id) => string, 
   const groups = new Map<string, Edge[]>();
   for (const edge of edges) {
     if (edge.from === edge.to) continue;
-    const key = JSON.stringify([edge.from, edge.to, norm(edge.label)]);
+    // Two relationships on different columns of the same tables are not copies (042 FR-012).
+    const key = JSON.stringify([
+      edge.from,
+      edge.to,
+      norm(edge.label),
+      edge.fromColumns ?? null,
+      edge.toColumns ?? null,
+    ]);
     const group = groups.get(key);
     if (group === undefined) groups.set(key, [edge]);
     else group.push(edge);

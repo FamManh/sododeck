@@ -157,6 +157,20 @@ describe('checkDeck (015)', () => {
       ).toEqual(['duplicate-connection']);
     });
 
+    it('tells relationships apart by their column ends (042 FR-012)', () => {
+      const fk = (id: string, column: string) => ({
+        ...edge(id, 'a', 'b'),
+        fromColumns: [column],
+        toColumns: ['b-id'],
+      });
+      expect(
+        kinds(deck({ nodes: [node('a'), node('b')], edges: [fk('e1', 'x'), fk('e2', 'y')] })),
+      ).toEqual([]);
+      expect(
+        kinds(deck({ nodes: [node('a'), node('b')], edges: [fk('e1', 'x'), fk('e2', 'x')] })),
+      ).toEqual(['duplicate-connection']);
+    });
+
     it('ignores opposite directions, different labels and self-loops', () => {
       expect(
         kinds(
