@@ -159,16 +159,16 @@
 
 ### Tests for User Story 3 (write first, watch them fail)
 
-- [ ] T021 [P] [US3] In `apps/app/src/editor/levels.test.ts`:
+- [x] T021 [P] [US3] In `apps/app/src/editor/levels.test.ts`:
   - `levelForZoom` boundaries: 0.30 → landscape, 0.31 / 0.50 → system, 0.51 / 1.50 → container, 1.51 → component;
   - the `levelWithHysteresis` table rewritten for 30 / 50 / 150 with `HYSTERESIS = 2`;
   - `LEVEL_MID_ZOOM` values lie inside their own bands.
-- [ ] T022 [P] [US3] In `apps/app/src/editor/level-indicator.test.tsx`, picking each level zooms to the new `LEVEL_MID_ZOOM` (0.2 / 0.4 / 1.0 / 1.75).
+- [x] T022 [P] [US3] In `apps/app/src/editor/level-indicator.test.tsx`, picking each level zooms to the new `LEVEL_MID_ZOOM` (0.2 / 0.4 / 1.0 / 1.75).
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] In `apps/app/src/editor/levels.ts`, set `LANDSCAPE_MAX = 30`, `SYSTEM_MAX = 50`, and `LEVEL_MID_ZOOM = { landscape: 0.2, system: 0.4, container: 1.0, component: 1.75 }`. Update the comment on `liplessSelector` in `apps/app/src/editor/canvas.tsx` (:105-108), which names 45 % and 90 %. The 60 % lip rule stays.
-- [ ] T024 [US3] Run the affected suites and fix any assertion that hard-codes the old boundaries. Do not change component logic. Suites:
+- [x] T023 [US3] In `apps/app/src/editor/levels.ts`, set `LANDSCAPE_MAX = 30`, `SYSTEM_MAX = 50`, and `LEVEL_MID_ZOOM = { landscape: 0.2, system: 0.4, container: 1.0, component: 1.75 }`. Update the comment on `liplessSelector` in `apps/app/src/editor/canvas.tsx` (:105-108), which names 45 % and 90 %. The 60 % lip rule stays.
+- [x] T024 [US3] Run the affected suites and fix any assertion that hard-codes the old boundaries. Do not change component logic. Suites:
   - `deck-node.test.tsx`, `group-boundary-node.test.tsx`, `merged-edge.test.tsx`, `shapes/shape-node.test.tsx`;
   - `canvas.test.tsx` (level announcements), `export/scene.test.ts`;
   - `use-canvas-shortcuts.test.tsx`, `editing/drag-session` tests, `actions/align-actions` tests.

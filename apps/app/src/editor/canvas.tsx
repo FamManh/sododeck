@@ -113,7 +113,7 @@ const tinyCardsSelector = (s: { transform: [number, number, number] }) =>
 
 /**
  * Below 60 % zoom the lip is gone (029 R8, §g-63): one boolean for the wrapper, read by CSS, so
- * crossing 60 % re-renders no card (the level boundaries are 45 % and 90 %).
+ * crossing 60 % re-renders no card (the level boundaries are 30 %, 50 % and 150 %).
  */
 export const liplessSelector = (s: { transform: [number, number, number] }) => s.transform[2] < 0.6;
 
