@@ -91,8 +91,8 @@ Sododeck (reuse), 🆕 new in this backlog (feature id), ⏳ later (not schedule
 | Highlight a column's relationships on hover / select                                 | 🆕 042                                        |
 | Inline editing of columns (type a line like `email text unique not null`)            | 🆕 043                                        |
 | Reorder columns by drag; add / delete with keyboard                                  | 🆕 043                                        |
-| Drawer: table, columns, indexes, checks; relationship; enum                          | 🆕 043                                        |
-| Type picker per dialect                                                              | 🆕 043                                        |
+| Drawer: table, columns, indexes, checks; relationship; enum                          | 🆕 052                                        |
+| Type picker per dialect                                                              | 🆕 052                                        |
 | Duplicate, copy / paste tables (new ids), multi-select, lock a table                 | 🆕 043 (+✅ 016)                              |
 | Auto-connect foreign keys by naming convention (`customer_id` → `customers.id`)      | 🆕 044                                        |
 | Auto-layout                                                                          | ✅ ELK (011)                                  |
@@ -101,7 +101,7 @@ Sododeck (reuse), 🆕 new in this backlog (feature id), ⏳ later (not schedule
 | Saved views filtered by schema / group / table, keeping positions and collapse state | 🆕 048 (+✅ 011)                              |
 | Large tables (row limit, "+n columns", in-table search)                              | 🆕 048                                        |
 | Presentation (full screen, read-only, step through views)                            | ✅ views + flow playback; ⏳ a dedicated mode |
-| Problems / lint on the schema; block or warn on SQL export                           | 🆕 047 (+✅ 015)                              |
+| Problems / lint on the schema; block or warn on SQL export                           | ✅ 047 (+✅ 015, ✅ 052)                      |
 
 ### Import and export
 
@@ -438,14 +438,18 @@ values: { id, name, note? }[] }`;
 
 ## 047-db-lint
 
+- **Status:** built (spec `specs/047-db-lint`, ADR 0013 and ADR 0029 amendments). The "Block SQL
+  export with errors" switch was built by 052; 047 only gave it severities (it blocks on errors,
+  never on warnings).
 - **Milestone:** after 042 · **Depends on:** 015, 042 · **Estimate:** 2 d
 - **Goal:** Schema mistakes show up in the problems list before they reach SQL.
-- **In scope:** rules as pure functions: table without PK; duplicate table / column / index /
-  enum name; empty column name or type; FK type mismatch; FK to a missing column; FK not
-  referencing a PK or unique column; n–n without a junction table; enum without values; default
-  that does not match the type; not-null column with a null default; circular required FKs;
-  duplicate relationship. Clicking a problem selects the table and the row; a deck setting
-  "Block SQL export with errors".
+- **In scope:** rules as pure functions in `packages/model/src/db-lint.ts`: table without PK;
+  duplicate table / column / index / enum name; empty column name or type; FK type mismatch; FK to
+  a missing column; FK not referencing a PK or unique column; n–n without a junction table; enum
+  without values; default that does not match the type; not-null column with a null default;
+  circular required FKs; duplicate relationship. Every problem has a severity (error or warning)
+  and, where one makes sense, one-click fixes. Clicking a problem selects the table, reveals and
+  focuses the faulty row; the export banner shows errors and warnings.
 - **Acceptance criteria (draft):** "Shop" with `payments.id` removed shows "payments has no
   primary key" and the export warns.
 
