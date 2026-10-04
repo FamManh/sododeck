@@ -45,8 +45,8 @@ file exports runnable SQL.
 | DB4  | Draw the **whole feature at once** in Claude Design (editor screens + components) before splitting the work.                                                                                                                                                                                                                                                                                                                                                           |
 | DB5  | Copyright: no code, assets or copy from other tools; we build from the platform, our own design and permissive libraries only.                                                                                                                                                                                                                                                                                                                                         |
 | DB6  | Parser (Q1, 2026-10-03): **`@dbml/core`** (Apache-2.0) for DBML and SQL, lazy-loaded inside a Web Worker only when importing, exporting or opening the DBML tab. Needs the dependency approval recorded in 044's ADR.                                                                                                                                                                                                                                                  |
-| DB7  | Storage (Q2): a table is a **node** of type `db.table` with `columns[]`, so groups, colours, search, views, export, drill-in and flows work for tables as they do for cards.                                                                                                                                                                                                                                                                                           |
-| DB8  | Relationship ends (Q3): a foreign key connector attaches to the **exact column row** at both ends (`edge.fromPort` / `edge.toPort` = column ids); 022 reuses the same fields for side anchors later.                                                                                                                                                                                                                                                                   |
+| DB7  | Storage (Q2): a table is a **node** of type `db.table` (stored as `db-table`, 040) with `columns[]`, so groups, colours, search, views, export, drill-in and flows work for tables as they do for cards.                                                                                                                                                                                                                                                               |
+| DB8  | Relationship ends (Q3): a foreign key connector attaches to the **exact column row** at both ends (`edge.fromPort` / `edge.toPort` = column ids; built in 040 as `fromColumns` / `toColumns`, since 022 stores side anchors in `route`).                                                                                                                                                                                                                               |
 | DB9  | Long tables (Q5): a table shows up to a limit (**12**, from the design: DESIGN.md [Database pack](../DESIGN.md#database-pack), frame 158) with keys first, then a **"Show all n columns" / "Show fewer"** button at the bottom of the card. The choice is **per table and saved in the deck** (`node.expanded`), so a user can keep some tables fully open. Detail levels (names / keys / all) and semantic zoom still apply on top.                                   |
 | DB10 | Many-to-many (Q6): a real `n-n` cardinality can be drawn for quick sketching; SQL export writes the junction table; lint suggests creating one.                                                                                                                                                                                                                                                                                                                        |
 | DB11 | Dialect (Q4, revised 2026-10-03): **one dialect per deck**, chosen in **Deck settings** (≡ menu): Generic (default; a small common type list, SQL export asks which dialect), Postgres, MySQL or SQLite; an import sets it from the file. Every table and database card in the deck uses it; a database card only shows it as a chip. Changing it converts column types with a toast listing the conversions and Undo. A different database engine means another deck. |
@@ -195,6 +195,8 @@ Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 →
 
 ## 040-db-schema-model
 
+- **Status:** built (spec `specs/040-db-schema-model`, ADR 0029). Relationship ends are
+  `fromColumns` / `toColumns`; enums are a root `enums` list that columns name with `enumRef`.
 - **Milestone:** after 030 · **Depends on:** 030 (type registry), 036 (model writes) · **Estimate:**
   4 d
 - **Goal:** The file format and the Yjs model can hold a database schema losslessly.
@@ -206,12 +208,13 @@ Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 →
     - on a table node: `schema?`, `columns[]`, `indexes[]`, `checks[]`, `expanded?` (DB9),
       `detail?: 'names' | 'keys' | 'all'`;
     - column: `{ id, name, type, size?, pk?, notNull?, unique?, default?, defaultExpr?,
-increment?, check?, note?, enumRef? }`;
+increment?, check?, note?, enumRef? }` (`enumRef` names an enum of the root `enums` list);
     - index: `{ id, name?, columns: (columnId | { expr })[], unique?, method?, note? }`;
     - check: `{ id, name?, expr }`;
-    - enum (deck-level list, not a card; 040 clarify 2026-10-04): `{ id, name, schema?, values: { id, name,
-note? }[] }`;
-    - edge: `fromPort?`, `toPort?` (column ids; arrays for composite keys),
+    - enum (root `enums` list, not a card; 040 clarify 2026-10-04): `{ id, name, schema?, note?,
+values: { id, name, note? }[] }`;
+    - edge: `fromColumns?`, `toColumns?` (non-empty column id lists, paired by position; one item
+      for a simple key),
       `cardinality?: '1-1' | '1-n' | 'n-1' | 'n-n'`, `fromOptional?`, `toOptional?`,
       `onDelete?`, `onUpdate?` (`cascade | restrict | set-null | set-default | no-action`).
   - Every reference is by id (constitution III): renaming a column never breaks an index, a
@@ -224,12 +227,12 @@ note? }[] }`;
   - Given a deck with the "Shop" schema, When exported and imported, Then the JSON is identical
     (round-trip test).
   - Given a column renamed from `customer_id` to `buyer_id`, When the JSON is read, Then every
-    index, foreign key and port still points at the same column id.
+    index, foreign key and column end still points at the same column id.
   - Given a deck saved before 040, When opened and saved, Then no new field appears.
 - **Risks:** deep nested arrays in Yjs (columns inside a node) need fine-grained Y types so two
   tabs editing two columns merge; schema size on 150-table decks (bench in 048).
 - **`/speckit.specify` prompt:**
-  > Add the Database pack data model to Sododeck: tables (as cards of type db.table) with
+  > Add the Database pack data model to Sododeck: tables (as cards of type db-table) with
   > columns, indexes, check constraints and an optional schema name; enums; relationships as
   > connectors that attach to columns, with cardinality (1-1, 1-n, n-1, n-n), optional sides,
   > composite keys and on delete / on update actions. Every column, index, check, enum and enum
@@ -254,6 +257,8 @@ note? }[] }`;
   - Enum columns: hovering the type chip shows the enum's values (enums are a deck-level list, not
     cards; 040 clarify 2026-10-04).
   - Export (012) draws table cards in PNG / SVG / PDF.
+  - Model (040): read columns, indexes and checks from the node; relationship ends are the edge's
+    `fromColumns` / `toColumns`; enum values come from the root `enums` list via `enumRef`.
 - **Out of scope:** connectors to columns (042), editing (043), the row limit for long tables
   (048).
 - **Acceptance criteria (draft):** a 12-column table renders with fixed row heights at every zoom
@@ -271,7 +276,8 @@ note? }[] }`;
   by dragging.
 - **In scope:**
   - Ports: each column row has a handle on the left and right; a connector leaves from the side
-    facing the other table, at the row's centre; composite keys mark every involved row.
+    facing the other table, at the row's centre; composite keys mark every involved row. The
+    model stores the column ends as `fromColumns` / `toColumns` (040), paired by position.
   - Crow's foot ends: one, zero-or-one, one-or-many, zero-or-many, in B's 2px stroke; curved,
     elbow and straight lines (029).
   - Create by drag from a column to a column (target row highlighted); dropping on a
