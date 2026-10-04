@@ -5,7 +5,14 @@ import { DRAWER_DEFAULT, DRAWER_MAX, DRAWER_MIN } from './shell-geometry';
  * file or the Yjs document, and not synced between tabs (read once when a deck opens). Stored in
  * localStorage, which can be blocked, so reads fall back to defaults and writes are best-effort.
  */
-export const FLYOUT_IDS = ['palette', 'outline', 'flows', 'rules', 'problems'] as const;
+export const FLYOUT_IDS = [
+  'palette',
+  'outline',
+  'flows',
+  'rules',
+  'problems',
+  'import-report',
+] as const;
 export type FlyoutId = (typeof FLYOUT_IDS)[number];
 
 export interface ShellPrefs {

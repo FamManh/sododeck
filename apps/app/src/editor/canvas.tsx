@@ -1,4 +1,4 @@
-import { analyzeFlow, observeDeck } from '@sododeck/model';
+import { analyzeFlow, deckPacks, observeDeck } from '@sododeck/model';
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -864,7 +864,9 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <GuidesOverlay />
         <ColumnConnectLine />
       </ReactFlow>
-      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && <EmptyCanvasCard />}
+      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && (
+        <EmptyCanvasCard showImport={deckPacks(fullDeck).includes('database')} />
+      )}
       {drilledEmpty && (
         <EmptyCanvasCard
           title="No components in this group"

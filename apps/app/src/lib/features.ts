@@ -70,7 +70,7 @@ export function isQuotaError(error: unknown): boolean {
   return 'inner' in error && isQuotaError(error.inner);
 }
 
-/** Module workers (problems check, layout). Missing in jsdom; the app then checks in-process. */
+/** Module workers (problems check, layout, schema import). Missing in jsdom; the app then checks in-process. */
 export function supportsWorkers(): boolean {
   return typeof Worker !== 'undefined';
 }
