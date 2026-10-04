@@ -15,6 +15,7 @@
 - Q: How does a connector end go back to automatic placement? → A: Dropping it in the centre zone of its own card (the middle 40 % of the card's width and height) makes it automatic; the existing reset command also does.
 - Q: Which weight stops? → A: Keep the current five stops (1 / 1.5 / 2 / 3 / 4 px); stored values do not change. The visibility problem is fixed by drawing the selected connector at its real weight.
 - Q: Are groups connector endpoints in this feature? → A: Yes, in this feature. The founder uses card↔group and group↔group connectors often, so it is high priority.
+- Q: A card often carries many connectors (e.g. 40, about 10 per side) whose ends the founder nudges apart slightly. Does the centre zone or snapping get in the way? → A: The centre zone stays, but only where it is at least 24 screen px from every side (small cards have none). Snapping is reduced to the side's midpoint (50 %) within 6 screen px, so ends can be placed freely elsewhere; ⌘ still turns it off. Shift + arrow nudges a focused end by 1 % of the side. A new "Spread ends evenly" command spaces the ends on each side of a card evenly (P3, in this feature).
 
 ## Context
 
@@ -53,22 +54,24 @@ A user selects a connector and drags its ends, bends and midpoints. Every handle
 
 ### User Story 2 - Slide a connector end smoothly along a card (Priority: P1)
 
-A user drags a connector end around a card. The end glides continuously along the card's outline, following the pointer, with gentle snapping to the quarter points of a side. It never jumps on grab or mid-drag.
+A user drags a connector end around a card. The end glides continuously along the card's outline, following the pointer, with a gentle snap to the middle of a side and free placement everywhere else, so many ends on one side can be nudged apart. It never jumps on grab or mid-drag.
 
 **Why this priority**: Anchor placement is the most visible problem the founder reported, and the reason connector routing feels "not under my control".
 
-**Independent Test**: Drag one end of a connector slowly all the way around its card, both outside and inside the card's edge. The end follows the outline continuously, snaps near the quarter points, and lands where released.
+**Independent Test**: Drag one end of a connector slowly all the way around its card, both outside and inside the card's edge. The end follows the outline continuously, snaps only near the middle of each side, and lands where released.
 
 **Acceptance Scenarios**:
 
 1. **Given** a selected connector, **When** the user presses on an end without moving, **Then** the end does not move at all (no jump to the pointer or to a side midpoint).
 2. **Given** an end being dragged near or inside its card, **When** the pointer moves, **Then** the end sits on the point of the card's outline closest to the pointer and moves continuously with it.
 3. **Given** an end being dragged, **When** the pointer passes a card corner, **Then** the end moves around the corner onto the next side without skipping or jumping elsewhere on the card.
-4. **Given** an end being dragged, **When** it comes within the snap reach of 0, 25, 50, 75 or 100 % of a side, **Then** it snaps there and the readout says so. **When** the user holds ⌘ (Ctrl on Windows/Linux), **Then** there is no snapping.
+4. **Given** an end being dragged, **When** it comes within the snap reach of the middle (50 %) of a side, **Then** it snaps there and the readout says so. Anywhere else it stays exactly where the pointer puts it. **When** the user holds ⌘ (Ctrl on Windows/Linux), **Then** there is no snapping at all.
 5. **Given** an end being dragged, **When** the pointer moves onto a different card (or group, see US4), **Then** the end attaches to that card's outline in the same continuous way, and releasing reconnects the connector to it.
 6. **Given** an end being dragged, **When** it is released away from any card, **Then** the connector keeps its previous end (nothing changes) and the user is told why.
 7. **Given** an end with a pinned position, **When** the user drops it in the centre zone of its own card, or uses the existing reset command on the end, **Then** the end goes back to automatic placement.
-8. **Given** a connector end focused with the keyboard, **When** the user presses the arrow keys, **Then** it steps along the side to the next snap stop, as today (022).
+8. **Given** a connector end focused with the keyboard, **When** the user presses the arrow keys, **Then** it steps along the side to the next stop (0 / 25 / 50 / 75 / 100 %), as today (022). **When** they press Shift + arrow, **Then** it moves 1 % of the side.
+9. **Given** a side with ten connector ends spaced a few pixels apart, **When** the user drags one of them to sit between two others, **Then** it lands exactly there, without being pulled onto a neighbour or a stop.
+10. **Given** a small card whose centre zone would come closer than 24 screen px to a side, **When** an end is dropped anywhere on it, **Then** the end is pinned on the outline (no automatic zone); reset still makes it automatic.
 
 ---
 
@@ -143,9 +146,28 @@ Alignment guides appear while dragging a card, resizing, or dragging a connector
 
 ---
 
+### User Story 7 - Spread ends evenly on a card (Priority: P3)
+
+A card has many connectors bunched on its sides. The user runs one command and the ends on each side are spaced out evenly.
+
+**Why this priority**: The founder regularly separates many ends by hand (up to about 10 per side). One command saves dozens of small drags, but manual nudging (US2) already makes it possible.
+
+**Independent Test**: On a card with 10 connector ends on its right side, run "Spread ends evenly". The ten ends sit at equal spacing along the side, in an order that avoids crossings, and one undo puts them all back.
+
+**Acceptance Scenarios**:
+
+1. **Given** a selected card with several connector ends on a side, **When** the user runs "Spread ends evenly" (card context menu, card toolbar or command search), **Then** the ends on each side of that card are pinned at equal spacing along the side, with a margin at both corners.
+2. **Given** the command, **When** it orders the ends along a side, **Then** it orders them by where their other end is, so the lines cross as little as possible.
+3. **Given** the command has run, **When** the user presses undo once, **Then** every end returns to where it was.
+4. **Given** several selected cards, **When** the command runs, **Then** it applies to each of them in one undo step.
+5. **Given** a side with zero or one end, **When** the command runs, **Then** that side is left unchanged.
+
+---
+
 ### Edge Cases
 
-- **Tiny cards**: when a card is so small that the snap stops overlap, the end follows the pointer without snapping instead of flickering between stops.
+- **Tiny cards**: when a side is too short for the midpoint snap to be useful (shorter than 3 × the snap reach), the end follows the pointer without snapping. A card too small for a 24 px-margin centre zone has no automatic zone.
+- **Many ends on one side**: ends can sit a few pixels apart; nothing pulls them onto each other.
 - **Shapes**: on a non-rectangular shape (031), the end follows the shape's outline as it does today, not its bounding box.
 - **Overlapping targets**: when the pointer is over a card that sits on top of a group, the card is the target. A group is the target only where no card is on top.
 - **Both ends on the same card** (self-loop): each end can still be dragged independently, and the two ends never land on exactly the same point.
@@ -174,11 +196,11 @@ Alignment guides appear while dragging a card, resizing, or dragging a connector
 - **FR-007**: Pressing an end MUST NOT move it. The offset between the pointer and the end at press time MUST be kept for the whole drag.
 - **FR-008**: While dragging, an end over or near a target MUST attach to the point on the target's outline nearest the pointer, inside or outside the target. It MUST move continuously, including around corners.
 - **FR-009**: An end MUST attach to a target when the pointer is inside it or within 16 screen px of its outline. The topmost target under the pointer wins.
-- **FR-010**: An end MUST snap to 0, 25, 50, 75 and 100 % of a side within 8 screen px. Holding ⌘ / Ctrl MUST turn snapping off. The readout MUST show side, position and "snapped".
-- **FR-011**: An end MUST return to automatic placement only when dropped in the centre zone of its own card (the middle 40 % of its width and height), or through the existing reset command. While the pointer is in that zone, the preview and readout MUST show "automatic"; anywhere else on the card the end follows the outline (FR-008).
+- **FR-010**: While dragging, an end MUST snap only to the middle (50 %) of a side, within 6 screen px; elsewhere it MUST be placed exactly at the pointer. Holding ⌘ / Ctrl MUST turn snapping off. The readout MUST show side, position and "snapped".
+- **FR-011**: An end MUST return to automatic placement only when dropped in the centre zone of its own card (the middle 40 % of its width and height, and only where that zone is at least 24 screen px from every side; a card too small for that has no zone), or through the existing reset command. While the pointer is in that zone, the preview and readout MUST show "automatic"; anywhere else on the card the end follows the outline (FR-008).
 - **FR-012**: An end released away from every target MUST leave the connector unchanged and announce the reason.
 - **FR-013**: The preview line during an end drag MUST be drawn in the connector's own type (curved, elbow or straight) and end exactly where the end will land.
-- **FR-014**: Keyboard stepping of ends (022) MUST keep working unchanged.
+- **FR-014**: Keyboard stepping of ends (022) MUST keep working: arrows step to the next 0 / 25 / 50 / 75 / 100 % stop. Shift + arrow MUST move the end by 1 % of the side, one undo step per press.
 
 **Weight (US3)**
 
@@ -209,6 +231,12 @@ Alignment guides appear while dragging a card, resizing, or dragging a connector
 - **FR-028**: Guides MUST be removed whenever any gesture that shows them ends: release, cancel, pointer released outside the window, window blur, or the gesture being interrupted by another.
 - **FR-029**: No guide MUST remain on screen when no gesture is in progress.
 
+**Spread ends (US7)**
+
+- **FR-033**: A "Spread ends evenly" command MUST be available for the selected card(s) from the card context menu, the card toolbar and command search.
+- **FR-034**: For each side of each selected card with two or more ends, it MUST pin those ends at equal spacing along the side, keeping a margin at each corner, ordered by the position of each connector's other end to minimise crossings.
+- **FR-035**: The command MUST be one undo step and MUST announce what it did (for example "Spread 10 ends on 3 sides").
+
 **General**
 
 - **FR-030**: Drag threshold, snap reach, attachment distance and handle hit areas MUST be defined in screen px and stay the same size at any zoom.
@@ -228,7 +256,8 @@ Alignment guides appear while dragging a card, resizing, or dragging a connector
 - **SC-001**: In 20 consecutive attempts, a handle drag (end, bend, midpoint) follows the pointer to the release point every time, including handles under cards.
 - **SC-002**: Pressing and releasing a connector end without moving it changes nothing in 100 % of attempts.
 - **SC-003**: While dragging an end once around a card, the end never moves more than the pointer movement plus the snap reach in a single frame (no jumps).
-- **SC-004**: A user can place a connector end at a chosen quarter point of a side on the first try, without retrying.
+- **SC-004**: A user can place a connector end at the middle of a side, or between two neighbouring ends a few pixels apart, on the first try.
+- **SC-009**: Spreading the ends of a card with 40 connectors takes one action instead of up to 40 drags.
 - **SC-005**: After a weight change, the selected line's drawn width matches the chosen weight in 100 % of cases.
 - **SC-006**: Connectors card→group, group→card and group→group can be created, styled, reloaded and exported/imported with no loss.
 - **SC-007**: Across 50 mixed gestures ended in every supported way, no alignment guide remains visible afterwards.
@@ -238,8 +267,8 @@ Alignment guides appear while dragging a card, resizing, or dragging a connector
 
 - This feature changes interaction and drawing only, except FR-020 (group endpoints, a file-format change). Everything else keeps the current file format; weight values are unchanged.
 - "Target" means a card or (with US4) a group. Stickies and notes are not connector targets.
-- Thresholds (4 px drag, 16 px attach, 8 px snap, 24 px minimum segment) come from common practice in mature whiteboard editors and can be tuned during implementation.
-- Existing keyboard paths (022 bend nudging, end stepping, reset) stay as they are.
+- Thresholds (4 px drag, 16 px attach, 6 px midpoint snap, 24 px centre-zone margin, 24 px minimum segment) come from common practice in mature whiteboard editors and can be tuned during implementation.
+- Existing keyboard paths (022 bend nudging, end stepping, reset) stay as they are; Shift + arrow on an end is new.
 - The selection halo uses the existing Orange Soft selection token (DESIGN.md).
 - No new e2e tests (Principle VI, TODO(e2e)); behaviour is covered by unit and component tests, and the existing smoke suite must keep passing.
 - Connector type selection (curved / elbow / straight) is out of scope; it works.
