@@ -193,6 +193,22 @@ describe('DeckInspector › Database (041 US4)', () => {
     expect(toJSON(doc)).not.toHaveProperty('relationshipDisplay');
   });
 
+  it('groups tables by group or by schema in one undo step (048)', async () => {
+    const { doc, editor, user } = setupWith(tableDeck);
+    const mode = screen.getByRole('radiogroup', { name: 'Group tables' });
+    expect(within(mode).getByRole('radio', { name: 'By group' })).toBeChecked();
+    await user.click(within(mode).getByRole('radio', { name: 'By schema' }));
+    expect(toJSON(doc).groupingMode).toBe('schema');
+    expect(within(mode).getByRole('radio', { name: 'By schema' })).toBeChecked();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).not.toHaveProperty('groupingMode');
+    await user.click(within(mode).getByRole('radio', { name: 'By schema' }));
+    await user.click(within(mode).getByRole('radio', { name: 'By group' }));
+    expect(toJSON(doc)).not.toHaveProperty('groupingMode');
+  });
+
   it('is absent with no table and the Database pack off', () => {
     setupWith({ ...inspectorDeck, packs: ['architecture'] });
     expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
