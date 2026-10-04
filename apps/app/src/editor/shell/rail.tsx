@@ -1,3 +1,4 @@
+import type { Severity } from '@sododeck/model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
@@ -37,11 +38,13 @@ type RailButtonProps = Omit<ComponentProps<'button'>, 'aria-label'> & {
   icon: LucideIcon;
   active?: boolean;
   badge?: number;
+  /** Badge colour (047): clay while an error is listed, amber otherwise. */
+  badgeSeverity?: Severity;
 };
 
 /** A 38×38 rail button (DESIGN.md "Rail button"): Orange Soft while active or open. */
 export const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(function RailButton(
-  { label, icon: Icon, active = false, badge, className, ...props },
+  { label, icon: Icon, active = false, badge, badgeSeverity = 'warning', className, ...props },
   ref,
 ) {
   const disabled = props['aria-disabled'] === true;
@@ -63,7 +66,13 @@ export const RailButton = forwardRef<HTMLButtonElement, RailButtonProps>(functio
       {badge !== undefined && (
         <span
           aria-hidden
-          className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-soft px-1 text-[10px] leading-none font-medium text-amber-ink ring-2 ring-surface"
+          data-severity={badgeSeverity}
+          className={cn(
+            'absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-medium ring-2 ring-surface',
+            badgeSeverity === 'error'
+              ? 'bg-clay-soft text-clay-ink'
+              : 'bg-amber-soft text-amber-ink',
+          )}
         >
           {badge > 99 ? '99+' : badge}
         </span>
@@ -119,7 +128,9 @@ export function Rail() {
   const flyout = useUiStore((s) => s.flyout);
   const openFlyout = useUiStore((s) => s.openFlyout);
   const openPalette = useUiStore((s) => s.openPalette);
-  const problems = useProblems()?.total ?? 0;
+  const checked = useProblems();
+  const problems = checked?.total ?? 0;
+  const problemSeverity: Severity = (checked?.errors ?? 0) > 0 ? 'error' : 'warning';
   const runAction = useRunAction();
   const canGroup = useUiStore(
     (s) =>
@@ -138,7 +149,9 @@ export function Rail() {
         active={flyout === id}
         aria-expanded={flyout === id}
         aria-controls={flyout === id ? flyoutElementId(id) : undefined}
-        {...(id === 'problems' && problems > 0 ? { badge: problems } : {})}
+        {...(id === 'problems' && problems > 0
+          ? { badge: problems, badgeSeverity: problemSeverity }
+          : {})}
         onClick={() => {
           openFlyout(id);
         }}
