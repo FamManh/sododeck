@@ -140,7 +140,7 @@
   - add `endpointPreview` with its setter and reset;
   - remove `endpointHover`, `endpointAnchor` and `reconnectingEdgeId`;
   - update every reader. Grep for them in `routing/endpoint-connection-line.tsx`, `component-node-parts.tsx` (hot side), `deck-edge.tsx` and tests.
-- [ ] T018 [US2] Make the end buttons in `apps/app/src/editor/routing/route-handles.tsx` real handles:
+- [x] T018 [US2] Make the end buttons in `apps/app/src/editor/routing/route-handles.tsx` real handles:
   - draw them at `context.start` / `context.end`;
   - set `pointerEvents: auto`;
   - drag via `startPointerDrag` into `startEndpointDrag`.

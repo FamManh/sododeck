@@ -10,14 +10,25 @@
  * through `startPointerDrag`, so it keeps following the pointer while handles re-render and a
  * press below the drag threshold changes nothing. Midpoints are left out on runs shorter than
  * 24 screen px (FR-004).
+ *
+ * 050 R3: the two end handles sit at the drawn ends and drag them along the card outline or onto
+ * another card (`editing/endpoint-drag.ts`); arrows step an end to the next stop, Shift + arrow
+ * nudges it 1 %. A straight connector shows only its ends.
  */
-import type { Side } from '@sododeck/schema';
+import type { Id, Side } from '@sododeck/schema';
 import { useReactFlow, useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { anchorReadout, stepAnchor } from '../editing/anchor-drag';
+import {
+  cancelEndpointDrag,
+  endEndpointDrag,
+  moveEndpoint,
+  startEndpointDrag,
+  type EndpointSession,
+} from '../editing/endpoint-drag';
 import { oneStep } from '../fields/one-step';
 import {
   addBendAt,
@@ -34,9 +45,11 @@ import {
   type BendTarget,
 } from '../editing/bend-drag';
 import { startPointerDrag, type PointerDrag } from '../editing/pointer-drag';
+import { targetScene } from './endpoint-target';
+import { nudgeAnchor } from './outline-attach';
 import type { Point } from './route-path';
 
-/** Where each end sits on its card, for the keyboard (the pointer slides ends through React Flow). */
+/** Where each end sits on its card (resolved sides), for the keyboard. */
 export interface EndAnchors {
   fromSide: Side;
   fromAt: number;
@@ -44,9 +57,23 @@ export interface EndAnchors {
   toAt: number;
 }
 
+/** What the two ends are attached to, and their stored pins (no side = automatic), for drags. */
+export interface EndTargets {
+  source: Id;
+  target: Id;
+  fromSide?: Side | undefined;
+  fromAt?: number | undefined;
+  toSide?: Side | undefined;
+  toAt?: number | undefined;
+}
+
 export interface RouteHandlesProps {
   context: BendContext;
   anchors?: EndAnchors;
+  /** Without it the ends are keyboard-only. */
+  ends?: EndTargets;
+  /** Bends and midpoints: false for a straight connector, which shows only its ends. */
+  bendable?: boolean;
 }
 
 /** FR-004: runs shorter than this on screen get no midpoint handle, so handles never overlap. */
@@ -63,21 +90,27 @@ function focusConnector(edgeId: string): void {
     ?.focus();
 }
 
-export function RouteHandles({ context, anchors }: RouteHandlesProps) {
+export function RouteHandles({ context, anchors, ends, bendable = true }: RouteHandlesProps) {
   const editor = useEditor();
-  const { getZoom, screenToFlowPosition } = useReactFlow();
+  const { getNodes, getZoom, screenToFlowPosition } = useReactFlow();
   // Only the selected connector draws handles, so following the zoom here is cheap.
   const zoom = useStore(zoomSelector);
   const session = useRef<BendSession | null>(null);
+  const endSession = useRef<EndpointSession | null>(null);
   const drag = useRef<PointerDrag | null>(null);
   const [active, setActive] = useState<{ key: string; index: number } | null>(null);
   const preview = useUiStore((s) =>
     s.bendPreview?.edgeId === context.edgeId ? s.bendPreview : null,
   );
-  const readout = useUiStore((s) => (preview === null ? null : s.connectorReadout));
+  const endPreview = useUiStore((s) =>
+    s.endpointPreview?.edgeId === context.edgeId ? s.endpointPreview : null,
+  );
+  const readout = useUiStore((s) =>
+    preview === null && endPreview === null ? null : s.connectorReadout,
+  );
 
-  const bends = preview?.bends ?? context.bends;
-  const points = [context.start, ...bends, context.end];
+  const bends = bendable ? (preview?.bends ?? context.bends) : [];
+  const points = bendable ? [context.start, ...bends, context.end] : [];
   const live: BendContext = { ...context, bends };
   const dragging = active !== null;
 
@@ -127,7 +160,59 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
   function finish() {
     drag.current = null;
     session.current = null;
+    endSession.current = null;
     setActive(null);
+  }
+
+  /**
+   * Press on an end (050 R3). The drag starts after the threshold, from where the press was, so
+   * the end keeps its offset to the pointer and never jumps (FR-007).
+   */
+  function beginEnd(event: PointerEvent<HTMLElement>, end: 'source' | 'target') {
+    if (event.button !== 0 || ends === undefined) return;
+    event.stopPropagation();
+    drag.current?.cancel();
+    const pressed = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    const source = end === 'source';
+    const ctx = {
+      edgeId: context.edgeId,
+      end,
+      ownId: source ? ends.source : ends.target,
+      otherId: source ? ends.target : ends.source,
+      start: source ? context.start : context.end,
+      side: source ? ends.fromSide : ends.toSide,
+      at: source ? ends.fromAt : ends.toAt,
+    };
+    drag.current = startPointerDrag(event, {
+      onStart: () => {
+        // The drawn targets, once per drag: cards and frames don't move while an end is dragged.
+        endSession.current = startEndpointDrag(
+          editor,
+          { ...ctx, scene: targetScene(getNodes()) },
+          pressed,
+        );
+        setActive({ key: `end-${end}`, index: -1 });
+      },
+      onMove: (e) => {
+        if (endSession.current === null) return;
+        moveEndpoint(endSession.current, screenToFlowPosition({ x: e.clientX, y: e.clientY }), {
+          mod: e.metaKey || e.ctrlKey,
+          zoom: getZoom(),
+        });
+      },
+      onEnd: () => {
+        const s = endSession.current;
+        finish();
+        if (s !== null) endEndpointDrag(editor, s);
+      },
+      onCancel: () => {
+        const s = endSession.current;
+        finish();
+        if (s === null || s.cancelled) return;
+        cancelEndpointDrag(s);
+        useUiStore.getState().announce('Cancelled');
+      },
+    });
   }
 
   function bendKeys(event: KeyboardEvent<HTMLElement>, index: number) {
@@ -147,7 +232,10 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
     event.stopPropagation();
   }
 
-  /** ← / ↑ and → / ↓ move an end one stop along its side, onto the next side at a corner. */
+  /**
+   * ← / ↑ and → / ↓ move an end one stop along its side, onto the next side at a corner; with
+   * Shift, 1 % of the side (FR-014). One undo step per press.
+   */
   function endKeys(event: KeyboardEvent<HTMLElement>, end: 'source' | 'target') {
     if (anchors === undefined) return;
     const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
@@ -157,7 +245,9 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
     else {
       const [side, at] =
         end === 'source' ? [anchors.fromSide, anchors.fromAt] : [anchors.toSide, anchors.toAt];
-      const next = stepAnchor(side, at, forward ? 1 : -1);
+      const next = event.shiftKey
+        ? nudgeAnchor(side, at, forward ? 0.01 : -0.01)
+        : stepAnchor(side, at, forward ? 1 : -1);
       oneStep(editor, () => {
         editor.setEdgeRoute(
           context.edgeId,
@@ -180,25 +270,25 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
 
   return (
     <ViewportPortal>
-      {anchors !== undefined &&
-        (['source', 'target'] as const).map((end) => (
-          <button
-            key={end}
-            type="button"
-            aria-label={end === 'source' ? 'Source end' : 'Target end'}
-            data-kind="end"
-            data-testid={`route-end-${end}`}
-            className="sd-route-handle nodrag nopan absolute"
-            // The pointer drags ends through React Flow's reconnect anchors underneath.
-            style={{
-              ...placed(end === 'source' ? context.start : context.end),
-              pointerEvents: 'none',
-            }}
-            onKeyDown={(event) => {
-              endKeys(event, end);
-            }}
-          />
-        ))}
+      {(anchors === undefined ? [] : (['source', 'target'] as const)).map((end) => (
+        <button
+          key={end}
+          type="button"
+          aria-label={end === 'source' ? 'Source end' : 'Target end'}
+          data-kind="end"
+          data-testid={`route-end-${end}`}
+          {...(active?.key === `end-${end}` ? { 'data-active': '' } : {})}
+          className="sd-route-handle nodrag nopan absolute"
+          // Above the cards and pointer-active (`.sd-route-handle` in index.css, 050 R1).
+          style={placed(end === 'source' ? context.start : context.end)}
+          onPointerDown={(event) => {
+            beginEnd(event, end);
+          }}
+          onKeyDown={(event) => {
+            endKeys(event, end);
+          }}
+        />
+      ))}
       {points.slice(0, -1).map((from, i) => {
         const to = points[i + 1];
         if (to === undefined) return null;
@@ -252,6 +342,16 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
           }}
         />
       ))}
+      {readout !== null && endPreview !== null && (
+        <span
+          className="sd-route-readout"
+          data-testid="route-readout"
+          aria-hidden
+          style={{ left: endPreview.point.x + 14, top: endPreview.point.y + 14 }}
+        >
+          {readout}
+        </span>
+      )}
       {readout !== null && preview !== null && active !== null && (
         <span
           className="sd-route-readout"

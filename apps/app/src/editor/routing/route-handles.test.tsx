@@ -290,3 +290,115 @@ describe('RouteHandles pointer drags (050 US1)', () => {
     edge.remove();
   });
 });
+
+describe('RouteHandles end drags (050 US2)', () => {
+  const ui = () => useUiStore.getState();
+  const down = (el: HTMLElement, x: number, y: number) =>
+    fireEvent.pointerDown(el, { button: 0, pointerId: 1, clientX: x, clientY: y });
+  const move = (x: number, y: number) =>
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: x, clientY: y, metaKey: true });
+  const up = (x: number, y: number) =>
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: x, clientY: y });
+
+  // The drawn cards (A: 0,0 160×50; B: 400,200 160×50), so the target scene has boxes.
+  const nodeTypes = { deck: () => null };
+  const cards = [
+    { id: 'a', type: 'deck', position: { x: 0, y: 0 }, width: 160, height: 50, data: {} },
+    { id: 'b', type: 'deck', position: { x: 400, y: 200 }, width: 160, height: 50, data: {} },
+  ];
+  // Start on A's right side middle, end on B's left side middle.
+  const endCtx: BendContext = {
+    edgeId: 'e',
+    fromCentre: { x: 80, y: 25 },
+    toCentre: { x: 480, y: 225 },
+    start: { x: 160, y: 25 },
+    end: { x: 400, y: 225 },
+    bends: [],
+  };
+
+  function withEnds(bendable = true) {
+    return renderWithEditor(
+      <ReactFlow nodes={cards} edges={[]} nodeTypes={nodeTypes}>
+        <RouteHandles
+          context={endCtx}
+          anchors={{ fromSide: 'right', fromAt: 0.5, toSide: 'left', toAt: 0.5 }}
+          ends={{ source: 'a', target: 'b' }}
+          bendable={bendable}
+        />
+      </ReactFlow>,
+      deck,
+    );
+  }
+
+  it('the end drags while it sits under a card, and writes once on release', () => {
+    const { doc, editor } = withEnds();
+    const end = screen.getByRole('button', { name: 'Target end' });
+    expect(end.closest('.react-flow__viewport-portal')).not.toBeNull();
+    down(end, 400, 225);
+    move(390, 215);
+    move(390, 210);
+    expect(ui().endpointPreview).toMatchObject({
+      edgeId: 'e',
+      end: 'target',
+      targetId: 'b',
+      side: 'left',
+      at: 0.2,
+    });
+    expect(ui().canvasGesture).toBe('endpoint');
+    expect(screen.getByTestId('route-readout')).toHaveTextContent('left side · 20 %');
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    up(390, 210);
+    expect(toJSON(doc).edges[0]?.route).toEqual({ toSide: 'left', toAt: 0.2 });
+    expect(ui().endpointPreview).toBeNull();
+    expect(ui().canvasGesture).toBeNull();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('a press on an end without a drag writes nothing (FR-007)', () => {
+    const { doc, editor } = withEnds();
+    down(screen.getByRole('button', { name: 'Source end' }), 160, 25);
+    move(162, 26);
+    expect(ui().endpointPreview).toBeNull();
+    up(162, 26);
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('Esc during an end drag drops the preview and writes nothing', () => {
+    const { doc } = withEnds();
+    down(screen.getByRole('button', { name: 'Target end' }), 400, 225);
+    move(390, 210);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(ui().endpointPreview).toBeNull();
+    up(390, 210);
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    expect(ui().announcement.text).toBe('Cancelled');
+  });
+
+  it('a straight connector (not bendable) shows only the two ends', () => {
+    withEnds(false);
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Source end',
+      'Target end',
+    ]);
+  });
+
+  it.each([
+    ['{Shift>}{ArrowRight}{/Shift}', 0.51],
+    ['{Shift>}{ArrowLeft}{/Shift}', 0.49],
+    ['{ArrowRight}', 0.75],
+  ])('%s on the source end moves it to %s, one undo step each', async (keys, at) => {
+    const { doc, editor } = withEnds();
+    screen.getByRole('button', { name: 'Source end' }).focus();
+    await userEvent.setup().keyboard(keys);
+    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: at });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+  });
+});
