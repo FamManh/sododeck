@@ -1,9 +1,14 @@
 import { serializeDeck } from '@sododeck/model';
+import * as Y from 'yjs';
 import type { SododeckFile, View } from '@sododeck/schema';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { edgeCaseDeck } from '../../db/fixtures/export-edge-cases';
+import { shopDeck } from '../../db/fixtures/shop';
+import { schemaExport } from '../../db/export/schema-export';
+import { DEFAULT_SQL_OPTIONS } from '../../db/export/types';
 import { copyText } from '../../lib/clipboard';
 import type * as DownloadModule from '../../storage/download';
 import { openedFlow, useUiStore } from '../../state/ui-store';
@@ -53,10 +58,13 @@ function setup(
     flow,
     markExported = vi.fn(),
     opener = true,
+    ui,
   }: {
     flow?: string;
     markExported?: () => void;
     opener?: boolean;
+    /** UI state set before the dialog opens (selection, drill). */
+    ui?: Partial<ReturnType<typeof useUiStore.getState>>;
   } = {},
 ) {
   const { wrapper, editor } = editorWrapper(file);
@@ -65,6 +73,7 @@ function setup(
   document.body.append(button);
   openers.push(button);
   if (flow !== undefined) useUiStore.setState({ activeFlow: openedFlow(flow) });
+  if (ui !== undefined) useUiStore.setState(ui);
   const user = userEvent.setup();
   const view = render(
     <SaveContext value={{ mode: 'stored', flush: () => Promise.resolve(), markExported }}>
@@ -462,6 +471,212 @@ describe('ExportDialog: keyboard (US5)', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => {
       expect(screen.getByLabelText('Canvas')).toHaveFocus();
+    });
+  });
+});
+
+describe('ExportDialog: schema formats (045)', () => {
+  const shop = shopDeck('postgres');
+  const preview = () => screen.getByRole('region', { name: 'Preview' });
+  const selection = (nodes: string[]) => ({
+    selection: { nodes, edges: [], groups: [], stickies: [] },
+  });
+  const scopeRadio = (name: string) =>
+    within(screen.getByRole('radiogroup', { name: 'Scope' })).getByRole('radio', { name });
+
+  async function pick(user: ReturnType<typeof userEvent.setup>, format: string) {
+    await user.click(radio(format));
+    await waitFor(() => {
+      expect(radio(format)).toBeChecked();
+    });
+  }
+
+  it('hides the Schema group when the deck has no table', () => {
+    setup();
+    expect(screen.queryByRole('group', { name: 'Schema' })).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Image and data' })).toBeInTheDocument();
+  });
+
+  it('lists the schema formats above image and data, one radio group', () => {
+    setup(shop);
+    const formats = within(screen.getByRole('radiogroup', { name: 'Format' })).getAllByRole(
+      'radio',
+    );
+    expect(formats.map((f) => f.getAttribute('aria-label'))).toEqual([
+      'SQL',
+      'DBML',
+      'Mermaid ER',
+      'Data dictionary',
+      'JSON',
+      'PNG',
+      'SVG',
+    ]);
+    expect(radio('SQL')).toHaveAccessibleDescription('In the deck dialect · Postgres');
+    expect(radio('DBML')).toHaveAccessibleDescription('Database markup');
+  });
+
+  it('previews SQL in the deck dialect and downloads exactly that text', async () => {
+    const { user } = setup(shop);
+    await pick(user, 'SQL');
+    await footerName('shop.sql');
+    expect(screen.getByText('Postgres · deck dialect')).toBeInTheDocument();
+    expect(preview()).toHaveTextContent('-- Shop · Whole deck · Postgres');
+    await user.click(screen.getByRole('button', { name: 'Download' }));
+    const expected = schemaExport(shop, {
+      format: 'sql',
+      scope: { kind: 'deck' },
+      dialect: null,
+      sql: DEFAULT_SQL_OPTIONS,
+    }).text;
+    expect(downloadText).toHaveBeenCalledWith('shop.sql', expected, 'text/plain');
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(copyText).toHaveBeenCalledWith(expected);
+  });
+
+  it('changes the preview with the SQL options', async () => {
+    const { user } = setup(shop);
+    await pick(user, 'SQL');
+    await footerName('shop.sql');
+    expect(preview()).not.toHaveTextContent('IF NOT EXISTS customers');
+    await user.click(screen.getByRole('switch', { name: 'IF NOT EXISTS' }));
+    await waitFor(() => {
+      expect(preview()).toHaveTextContent('CREATE TABLE IF NOT EXISTS customers');
+    });
+    expect(screen.getByRole('switch', { name: 'Include enums and indexes' })).toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Write junction tables for n–n' })).toBeChecked();
+  });
+
+  it('asks a Generic deck for a dialect before writing SQL', async () => {
+    const { user } = setup(shopDeck('generic'));
+    expect(radio('SQL')).toHaveAccessibleDescription('Choose Postgres, MySQL or SQLite');
+    await pick(user, 'SQL');
+    await within(preview()).findByText('Choose a dialect to write SQL');
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
+    await user.click(screen.getByRole('combobox', { name: 'Dialect' }));
+    await user.click(await screen.findByRole('option', { name: 'MySQL' }));
+    await waitFor(() => {
+      expect(preview()).toHaveTextContent('-- Shop · Whole deck · MySQL');
+    });
+    expect(preview()).toHaveTextContent('id char(36) PRIMARY KEY');
+    // The pick lasts while the dialog is open.
+    await pick(user, 'DBML');
+    await pick(user, 'SQL');
+    await waitFor(() => {
+      expect(preview()).toHaveTextContent('-- Shop · Whole deck · MySQL');
+    });
+  });
+
+  it('never changes the deck', async () => {
+    const { user, editor } = setup(shop);
+    await waitFor(() => {
+      expect(radio('JSON')).toBeChecked();
+    });
+    const before = Y.encodeStateAsUpdate(editor().doc);
+    for (const format of ['SQL', 'DBML', 'Mermaid ER', 'Data dictionary']) {
+      await pick(user, format);
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+      });
+      await user.click(screen.getByRole('button', { name: 'Copy' }));
+      await user.click(screen.getByRole('button', { name: 'Download' }));
+    }
+    expect(Y.encodeStateAsUpdate(editor().doc)).toEqual(before);
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it.each([
+    ['DBML', 'shop.dbml', 'Table customers {'],
+    ['Mermaid ER', 'shop.mmd', 'erDiagram'],
+    ['Data dictionary', 'shop-dictionary.md', '# Shop · Whole deck · Postgres'],
+  ])('%s has no dialect or SQL options and downloads %s', async (format, file, text) => {
+    const { user } = setup(shop);
+    await pick(user, format);
+    await footerName(file);
+    expect(preview()).toHaveTextContent(text);
+    expect(screen.queryByText('Postgres · deck dialect')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'IF NOT EXISTS' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Download' }));
+    expect(downloadText).toHaveBeenCalledWith(file, expect.stringContaining(text), 'text/plain');
+  });
+
+  describe('scope (US2)', () => {
+    it('opens on Selection when tables are selected', async () => {
+      const { user } = setup(shop, { ui: selection(['orders', 'customers']) });
+      await pick(user, 'SQL');
+      expect(scopeRadio('Selection')).toBeChecked();
+      await footerName('shop-selection.sql');
+      expect(preview()).toHaveTextContent('-- Shop · Selection · Postgres');
+    });
+
+    it('opens on the database card drilled into, and switches scope', async () => {
+      const { user } = setup(shop, {
+        ui: { drill: [{ kind: 'node', id: 'card.orders-db', viewport: { x: 0, y: 0, zoom: 1 } }] },
+      });
+      await pick(user, 'SQL');
+      expect(scopeRadio('Orders DB')).toBeChecked();
+      await footerName('shop-orders-db.sql');
+      expect(preview()).not.toHaveTextContent('CREATE TABLE users');
+      await user.click(scopeRadio('Whole deck'));
+      await footerName('shop.sql');
+      expect(preview()).toHaveTextContent('CREATE TABLE users');
+    });
+
+    it('opens on Whole deck with Selection disabled when nothing is selected', async () => {
+      const { user } = setup(shop);
+      await pick(user, 'SQL');
+      expect(scopeRadio('Whole deck')).toBeChecked();
+      expect(scopeRadio('Selection')).toBeDisabled();
+      expect(scopeRadio('Selection').closest('[aria-describedby]')).toHaveAccessibleDescription(
+        'Select one or more tables',
+      );
+      expect(screen.queryByRole('radio', { name: 'Orders DB' })).not.toBeInTheDocument();
+    });
+
+    it('leaves the image scope control as it was', async () => {
+      const { user } = setup(shop, { ui: selection(['orders']) });
+      await pick(user, 'PNG');
+      expect(scopeRadio('Whole deck')).toBeChecked();
+      expect(screen.queryByRole('radio', { name: 'Selection' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('notes and problems (US6)', () => {
+    it('lists export notes, first three, then all', async () => {
+      const { user } = setup(edgeCaseDeck());
+      await pick(user, 'DBML');
+      const strip = await screen.findByRole('status', { name: /export notes$/ });
+      expect(within(strip).getAllByRole('listitem')).toHaveLength(3);
+      await user.click(within(strip).getByRole('button', { name: 'Show all' }));
+      expect(within(strip).getAllByRole('listitem').length).toBeGreaterThan(3);
+    });
+
+    it('shows no notes and no banner for a clean export', async () => {
+      const { user } = setup(shop);
+      await pick(user, 'SQL');
+      await footerName('shop.sql');
+      expect(screen.queryByRole('status', { name: /export notes?$/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('warns about database problems in scope; Show problems opens the Problems list', async () => {
+      const broken = shopDeck('postgres');
+      const status = broken.nodes
+        .find((n) => n.id === 'orders')
+        ?.columns?.find((c) => c.name === 'status');
+      if (status === undefined) throw new Error('fixture changed');
+      status.enumRef = 'enum.gone';
+      const { user } = setup(broken);
+      await pick(user, 'SQL');
+      const banner = await screen.findByRole('alert');
+      expect(banner).toHaveTextContent('1 error in the deck');
+      expect(banner).toHaveTextContent('orders.status uses an enum this deck does not have');
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+      });
+      await user.click(within(banner).getByRole('button', { name: 'Show problems' }));
+      expect(useUiStore.getState().exportDialog.open).toBe(false);
+      expect(useUiStore.getState().flyout).toBe('problems');
     });
   });
 });
