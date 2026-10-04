@@ -1,7 +1,8 @@
-import { isDbTable } from '@sododeck/model';
+import { isDbTable, isSchemaGroupId } from '@sododeck/model';
 import { Layers, PanelRight, Pencil } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { groupTitleOf } from '../schema-groups';
 import { isNodeLocked, LOCKED_HINT } from '../lock';
 import type { Action, ActionContext } from './types';
 
@@ -57,7 +58,7 @@ export const TITLE_ACTIONS: readonly Action[] = [
     run: (ctx) => {
       const group = onlyGroup(ctx);
       if (group !== undefined) {
-        const title = ctx.deck.groups.find((g) => g.id === group)?.title;
+        const title = groupTitleOf(ctx.deck, group);
         if (title === undefined || ctx.canvas === null) return;
         const ui = useUiStore.getState();
         ui.drillInto({ kind: 'group', id: group, viewport: ctx.canvas.getViewport() });
@@ -79,6 +80,8 @@ export const TITLE_ACTIONS: readonly Action[] = [
     shortcut: 'rename',
     section: 'open',
     where: { menu: ['component', 'group'], toolbar: ['group'] },
+    // A derived schema group (048) is named by its schema: nothing to rename.
+    applies: (ctx) => !isSchemaGroupId(onlyGroup(ctx) ?? ''),
     // A locked card keeps its title (043 FR-023).
     disabledReason: (ctx) => {
       const node = onlyNode(ctx);

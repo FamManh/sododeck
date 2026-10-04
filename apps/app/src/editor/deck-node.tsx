@@ -21,9 +21,11 @@ import { describeChannel } from './style/card-style';
 import type { DeckFlowNode } from './deck-to-flow';
 import { deckStateClasses } from './deck-states';
 import { StepSticker } from './step-sticker';
+import { useUiStore } from '../state/ui-store';
 import { TableBody } from './table/table-body';
 import { TableCompact } from './table/table-compact';
 import { TableDetailToggle } from './table/table-detail-toggle';
+import { TableFilter } from './table/table-filter';
 
 /** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.28;
@@ -49,6 +51,8 @@ export const DeckNode = memo(function DeckNode({
     refusal,
   } = useComponentNodeState(id, selected, data.locked === true);
   const locked = data.locked === true;
+  // The column filter (048) replaces the header's type name while it is open on this table.
+  const filtering = useUiStore((state) => state.tableFilter?.tableId === id);
 
   // A table card (041): the same frame, header and states, with a column list for a body.
   const table = data.layout.table;
@@ -234,7 +238,9 @@ export const DeckNode = memo(function DeckNode({
             >
               <IconGlyph icon={cardIcon} size={14} strokeWidth={2} />
             </span>
-            {isContainer ? (
+            {isContainer && table !== undefined && filtering ? (
+              <TableFilter nodeId={id} title={data.title} layout={table} />
+            ) : isContainer ? (
               <span
                 data-text={subtitleDataText}
                 className={cn('min-w-0 flex-1 truncate text-caption font-medium', subtitleClass)}
@@ -436,7 +442,7 @@ export const DeckNode = memo(function DeckNode({
           className="pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed border-clay-ink"
         />
       )}
-      <NodeNotes data={data} target={target} refusal={refusal} />
+      <NodeNotes nodeId={id} data={data} target={target} refusal={refusal} />
     </div>
   );
 });

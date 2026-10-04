@@ -40,10 +40,20 @@ export interface MergedEdge {
   direction: 'a-to-b' | 'b-to-a' | 'both';
 }
 
+/** A table the current view hides, drawn as an Outside proxy where it has a connector (048). */
+export interface OutsideTable {
+  title: string;
+  kind: string;
+  icon?: string;
+}
+
 export interface PortPill {
   id: string;
   outsideNodeId: string;
   outsideTitle: string;
+  /** Kind and icon of a view-hidden table, which is not in the deck the graph reads (048). */
+  outsideKind?: string;
+  outsideIcon?: string;
   edgeIds: readonly string[];
   insideNodeIds: readonly string[];
 }
@@ -96,9 +106,25 @@ function graphCacheFor(deck: SododeckFile): Map<string, VisibleGraph> {
   return byKey;
 }
 
-function cacheKey(scope: Scope, collapsed: ReadonlySet<string>): string {
+const outsideIds = new WeakMap<ReadonlyMap<string, OutsideTable>, number>();
+let nextOutsideId = 1;
+
+function cacheKey(
+  scope: Scope,
+  collapsed: ReadonlySet<string>,
+  outside: ReadonlyMap<string, OutsideTable> | undefined,
+): string {
   const collapsedIds = [...collapsed].sort().join(',');
-  return `${scope.node ?? ''}|${scope.group ?? ''}|${collapsedIds}`;
+  let outsideKey = '';
+  if (outside !== undefined && outside.size > 0) {
+    let id = outsideIds.get(outside);
+    if (id === undefined) {
+      id = nextOutsideId++;
+      outsideIds.set(outside, id);
+    }
+    outsideKey = `|o${String(id)}`;
+  }
+  return `${scope.node ?? ''}|${scope.group ?? ''}|${collapsedIds}${outsideKey}`;
 }
 
 function effectiveGroupParents(deck: SododeckFile): Map<string, string | undefined> {
@@ -232,8 +258,10 @@ export function visibleGraph(
   deck: SododeckFile,
   scope: Scope,
   collapsed: ReadonlySet<string>,
+  /** Tables the current view hides (048): a connector to one ends on its own proxy. */
+  outside?: ReadonlyMap<string, OutsideTable>,
 ): VisibleGraph {
-  const cached = graphCacheFor(deck).get(cacheKey(scope, collapsed));
+  const cached = graphCacheFor(deck).get(cacheKey(scope, collapsed, outside));
   if (cached !== undefined) return cached;
 
   const nodesById = new Map(deck.nodes.map((node) => [node.id, node]));
@@ -352,7 +380,13 @@ export function visibleGraph(
   >();
   const portsAcc = new Map<
     string,
-    { edgeIds: string[]; insideNodeIds: string[]; outsideTitle: string }
+    {
+      edgeIds: string[];
+      insideNodeIds: string[];
+      outsideTitle: string;
+      outsideKind?: string;
+      outsideIcon?: string;
+    }
   >();
 
   for (const edge of deck.edges) {
@@ -363,15 +397,22 @@ export function visibleGraph(
 
     if (fromInside !== toInside) {
       const outsideNodeId = fromInside ? edge.to : edge.from;
-      const outside = nodesById.get(outsideNodeId) ?? groupsById.get(outsideNodeId);
-      if (outside === undefined) continue;
+      const found = nodesById.get(outsideNodeId) ?? groupsById.get(outsideNodeId);
+      const hiddenTable = found === undefined ? outside?.get(outsideNodeId) : undefined;
+      if (found === undefined && hiddenTable === undefined) continue;
       const insideNodeId = fromInside ? edge.from : edge.to;
       const existing = portsAcc.get(outsideNodeId);
       if (existing === undefined) {
         portsAcc.set(outsideNodeId, {
           edgeIds: [edge.id],
           insideNodeIds: [insideNodeId],
-          outsideTitle: outside.title,
+          outsideTitle: (found ?? hiddenTable)?.title ?? '',
+          ...(hiddenTable === undefined
+            ? {}
+            : {
+                outsideKind: hiddenTable.kind,
+                ...(hiddenTable.icon === undefined ? {} : { outsideIcon: hiddenTable.icon }),
+              }),
         });
       } else {
         existing.edgeIds.push(edge.id);
@@ -458,6 +499,8 @@ export function visibleGraph(
       id: `${PORT_NODE_PREFIX}${outsideNodeId}`,
       outsideNodeId,
       outsideTitle: value.outsideTitle,
+      ...(value.outsideKind === undefined ? {} : { outsideKind: value.outsideKind }),
+      ...(value.outsideIcon === undefined ? {} : { outsideIcon: value.outsideIcon }),
       edgeIds: value.edgeIds,
       insideNodeIds: value.insideNodeIds,
     })),
@@ -465,7 +508,7 @@ export function visibleGraph(
     hiddenBy,
     childCount,
   };
-  graphCacheFor(deck).set(cacheKey(scope, collapsed), graph);
+  graphCacheFor(deck).set(cacheKey(scope, collapsed, outside), graph);
   return graph;
 }
 

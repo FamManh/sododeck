@@ -758,6 +758,45 @@ describe('renderSvg: table cards (041 US5)', () => {
   });
 });
 
+describe('renderSvg: row limit (048)', () => {
+  const long = (expanded: boolean) =>
+    deckOf({
+      nodes: [
+        {
+          id: 'wide',
+          type: 'db-table',
+          title: 'wide',
+          position: { x: 0, y: 0 },
+          ...(expanded ? { expanded } : {}),
+          columns: Array.from({ length: 30 }, (_, i) => ({
+            id: `c${String(i)}`,
+            name: `c${String(i)}`,
+            type: 'int',
+            ...(i === 0 ? { pk: true } : {}),
+          })),
+        },
+      ],
+    });
+
+  it('draws the limited rows and the Show all button, as the canvas does', () => {
+    const doc = parse(svgOf(long(false)));
+    expect(doc.querySelectorAll('[data-part="row"]')).toHaveLength(12);
+    expect(doc.querySelectorAll('[data-part="show-all"]')).toHaveLength(1);
+    const labels = [...doc.querySelectorAll('text')].map((t) => t.textContent);
+    expect(labels).toContain('Show all 30 columns');
+  });
+
+  it('draws every row and "Show fewer" for an opened table, one row taller per column', () => {
+    const limited = parse(svgOf(long(false)));
+    const open = parse(svgOf(long(true)));
+    expect(open.querySelectorAll('[data-part="row"]')).toHaveLength(30);
+    expect([...open.querySelectorAll('text')].map((t) => t.textContent)).toContain('Show fewer');
+    const height = (doc: Document) =>
+      Number(doc.querySelector('[data-export="card"] rect')?.getAttribute('height'));
+    expect(height(open) - height(limited)).toBe(18 * 24);
+  });
+});
+
 describe('renderSvg relationships (042 FR-027)', () => {
   const shop = deckOf({
     nodes: [

@@ -227,6 +227,9 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   if (meta.get('blockSqlExport') === true) out.blockSqlExport = true;
   const enums = readEnums(doc);
   if (enums !== undefined) out.enums = enums;
+  // `groupingMode` (048): emitted only when stored (By group is the absent key).
+  const groupingMode = meta.get('groupingMode');
+  if (groupingMode === 'schema') out.groupingMode = groupingMode;
   // `tableDisplay` (041): stored always, emitted only with entries, like `tagColors`.
   const tableDisplay = tableDisplayMap(doc);
   if (tableDisplay.size > 0) out.tableDisplay = fromY(tableDisplay);
@@ -234,4 +237,13 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   const relationshipDisplay = relationshipDisplayMap(doc);
   if (relationshipDisplay.size > 0) out.relationshipDisplay = fromY(relationshipDisplay);
   return out;
+}
+
+/** How the deck groups its tables (048): By group unless `groupingMode: 'schema'` is stored. */
+export type GroupingMode = 'group' | 'schema';
+
+/** The grouping mode of a plain deck or a deck document; absent (or unreadable) is By group. */
+export function groupingModeOf(deck: Pick<SododeckFile, 'groupingMode'> | DeckDoc): GroupingMode {
+  const value = deck instanceof Y.Doc ? metaMap(deck).get('groupingMode') : deck.groupingMode;
+  return value === 'schema' ? 'schema' : 'group';
 }

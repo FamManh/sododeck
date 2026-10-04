@@ -9,6 +9,7 @@ import { deckOf, editorWrapper } from '../../test/render-canvas';
 import { Canvas } from '../canvas';
 import { CanvasMenu } from '../quick-edit/canvas-menu';
 import { useShellShortcuts } from '../shell/use-shell-shortcuts';
+import { openResult } from '../command-palette/open-result';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
 
 const col = (id: string, extra: Record<string, unknown> = {}) => ({
@@ -265,5 +266,56 @@ describe('T and G with the Database pack (043 R5)', () => {
     const { user, doc } = setup({ ...shipments, packs: ['architecture'] });
     await user.keyboard('t');
     expect(toJSON(doc).nodes).toHaveLength(2);
+  });
+});
+
+describe('jump to a column leaves its row focused (048 FR-021)', () => {
+  const longTable = deckOf({
+    nodes: [
+      {
+        id: 'events',
+        type: 'db-table',
+        title: 'events',
+        position: { x: 0, y: 0 },
+        columns: Array.from({ length: 30 }, (_, i) => col(`e.c${String(i + 1)}`)),
+      },
+    ],
+  });
+
+  it('opens the table and puts keyboard focus on the row, so ↓ moves on from it', async () => {
+    const { user, editor } = setup(longTable);
+    expect(row('events:e.c25')).toBeNull();
+    act(() => {
+      openResult(
+        {
+          kind: 'column',
+          id: 'e.c25',
+          tableId: 'events',
+          title: 'events.c25',
+          meta: '',
+          titleRanges: [],
+        },
+        {
+          editor: editor(),
+          screen: 'canvas',
+          announce: () => undefined,
+          openRules: () => undefined,
+          navigateToCanvas: () => undefined,
+          fitView: () => undefined,
+          setCenter: () => undefined,
+          getZoom: () => 1,
+          select: ui().select,
+          focus: ui().focus,
+          exitFlow: ui().exitFlow,
+          openFlow: () => undefined,
+        },
+      );
+    });
+    await waitFor(() => {
+      expect(row('events:e.c25')).toHaveFocus();
+    });
+    expect(ui().selection.nodes).toEqual(['events']);
+    await user.keyboard('{ArrowDown}');
+    expect(ui().focusedRow?.columnId).toBe('e.c26');
   });
 });

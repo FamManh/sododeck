@@ -270,3 +270,56 @@ describe('viewFilter group ends (050 US4)', () => {
     ]);
   });
 });
+
+describe('viewFilter by schema (048 US5)', () => {
+  const tables: SododeckFile = deckOf({
+    nodes: [
+      { id: 'p', type: 'db-table', title: 'payments', schema: 'billing' },
+      { id: 'i', type: 'db-table', title: 'invoices', schema: 'billing' },
+      { id: 'c', type: 'db-table', title: 'customers', schema: 'crm' },
+      { id: 'u', type: 'db-table', title: 'users' },
+      { id: 's', type: 'service', title: 'Svc' },
+    ],
+  });
+
+  it('shows the tables of the listed schemas and hides the other tables', () => {
+    const result = viewFilter(tables, view({ schemas: ['billing'] }), none);
+    expect(sorted(result.hidden)).toEqual(['c', 'u']);
+  });
+
+  it('shows a table by schema or by id (union with includes)', () => {
+    const result = viewFilter(tables, view({ schemas: ['billing'], includes: ['c'] }), none);
+    expect(sorted(result.hidden)).toEqual(['s', 'u']);
+  });
+
+  it('leaves non-table nodes to the existing rules', () => {
+    expect(viewFilter(tables, view({ schemas: ['billing'] }), none).hidden.has('s')).toBe(false);
+    expect(
+      viewFilter(
+        tables,
+        view({ schemas: ['billing'], excludeKinds: ['service'] }),
+        none,
+      ).hidden.has('s'),
+    ).toBe(true);
+  });
+
+  it('still applies excluded groups to a table that matches by schema', () => {
+    const grouped: SododeckFile = deckOf({
+      nodes: [{ id: 'p', type: 'db-table', title: 'p', schema: 'billing', group: 'g' }],
+      groups: [{ id: 'g', title: 'G' }],
+    });
+    const result = viewFilter(grouped, view({ schemas: ['billing'], excludeGroups: ['g'] }), none);
+    expect(sorted(result.hidden)).toEqual(['p']);
+  });
+
+  it('a schema that matches nothing hides every table', () => {
+    const result = viewFilter(tables, view({ schemas: ['nope'] }), none);
+    expect(sorted(result.hidden)).toEqual(['c', 'i', 'p', 'u']);
+  });
+
+  it('a revealed table is never hidden, and equal results keep their identity', () => {
+    const v = view({ schemas: ['billing'] });
+    expect(viewFilter(tables, v, new Set(['c'])).hidden.has('c')).toBe(false);
+    expect(viewFilter(tables, v, none).hidden).toBe(viewFilter(tables, v, none).hidden);
+  });
+});

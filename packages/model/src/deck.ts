@@ -20,6 +20,7 @@
                                                tableDisplay (Y.Map, always present, written
                                                only with entries, 041)
  *                                               relationshipDisplay (Y.Map, the same, 042)
+ *                                               groupingMode (plain, only when 'schema', 048)
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component; a table's columns, indexes
  *                                               and checks → Y.Map<id, Y.Map> (only when stored,
  *                                               even empty; 040); index `columns` a whole value
@@ -143,6 +144,8 @@ export function fromJSON(input: unknown): DeckDoc {
       });
       meta.set('enums', enums as unknown as YValue);
     }
+    // Grouping mode (048): a plain scalar, only when the file has it, like `dialect`.
+    if (file.groupingMode !== undefined) meta.set('groupingMode', file.groupingMode);
     // Table display (041, R4): always present like `tagColors`, emitted only with entries.
     meta.set('tableDisplay', toY(file.tableDisplay ?? {}));
     // Relationship display (042): the same, so a first write on two tabs shares one map.

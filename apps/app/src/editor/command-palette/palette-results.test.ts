@@ -104,7 +104,7 @@ describe('buildPaletteResults', () => {
     });
 
     expect(results.items).toHaveLength(50);
-    expect(results.overflowText).toBe('Showing 50 of 60');
+    expect(results.overflowText).toBe('Showing 50 of 60 · 10 more');
   });
 
   it('formats meta text per result kind', () => {
@@ -199,5 +199,105 @@ describe('palette results group ends (050 US4)', () => {
     expect(results.items.find((item) => item.id === 'wg')?.meta).toBe(
       'Connection · Web → Data layer',
     );
+  });
+});
+
+describe('table and column results (048 FR-019, FR-022)', () => {
+  function tablesDeck(): SododeckFile {
+    const deck = emptySododeckFile();
+    deck.nodes.push(
+      {
+        id: 'payments',
+        type: 'db-table',
+        title: 'payments',
+        schema: 'billing',
+        columns: [
+          { id: 'p-id', name: 'id', type: 'uuid', pk: true },
+          { id: 'p-inv', name: 'invoice_id', type: 'uuid' },
+        ],
+      },
+      { id: 'invoices', type: 'db-table', title: 'invoices', columns: [] },
+    );
+    deck.edges.push({
+      id: 'fk',
+      from: 'payments',
+      to: 'invoices',
+      cardinality: 'n-1',
+      fromColumns: ['p-inv'],
+    });
+    return deck;
+  }
+  const run = (query: string, extra: Partial<Parameters<typeof buildPaletteResults>[0]> = {}) => {
+    const deck = tablesDeck();
+    return buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query,
+      commands: [],
+      ...extra,
+    });
+  };
+
+  it('lists a table with its schema and column count, and a column with type and key', () => {
+    const table = run('payments').items.find((item) => item.kind === 'table');
+    expect(table).toMatchObject({
+      id: 'payments',
+      title: 'payments',
+      meta: 'Table · billing · 2 columns',
+    });
+    const column = run('invoice_id').items[0];
+    expect(column).toMatchObject({
+      kind: 'column',
+      id: 'p-inv',
+      tableId: 'payments',
+      title: 'payments.invoice_id',
+      meta: 'Column · uuid · foreign key',
+    });
+  });
+
+  it('puts the table before its columns', () => {
+    expect(run('payments').items.map((item) => item.kind)).toEqual([
+      'table',
+      'column',
+      'column',
+      'edge',
+    ]);
+  });
+
+  it('marks a result hidden in this view, for a table and for its columns', () => {
+    const hidden = new Set(['payments']);
+    const items = run('payments', { hidden }).items.filter((item) => item.kind !== 'edge');
+    expect(items.every((item) => item.meta.endsWith('Hidden in this view'))).toBe(true);
+    expect(run('invoices', { hidden }).items[0]?.meta).toBe('Table · 0 columns');
+  });
+
+  it('marks a result in a collapsed schema group', () => {
+    const items = run('payments', { inCollapsedSchema: new Set(['payments']) }).items.filter(
+      (item) => item.kind !== 'edge',
+    );
+    expect(items.every((item) => item.meta.endsWith('In collapsed schema'))).toBe(true);
+  });
+
+  it('counts the rest honestly with a bounded search', () => {
+    const deck = emptySododeckFile();
+    deck.nodes.push({
+      id: 't',
+      type: 'db-table',
+      title: 't',
+      columns: Array.from({ length: 300 }, (_, i) => ({
+        id: `c${String(i)}`,
+        name: `invoice_${String(i)}`,
+        type: 'int',
+      })),
+    });
+    const results = buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query: 'invoice',
+      commands: [],
+    });
+    expect(results.items).toHaveLength(50);
+    expect(results.total).toBe(300);
+    expect(results.overflowText).toBe('Showing 50 of 300 · 250 more');
   });
 });

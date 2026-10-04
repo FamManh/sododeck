@@ -1,5 +1,6 @@
 import {
   deckPacks,
+  groupingModeOf,
   isDbTable,
   relationshipDisplayOf,
   tableDisplayOf,
@@ -85,6 +86,7 @@ export function DatabaseSection({ deck }: { deck: SododeckFile }) {
           </li>
         ))}
       </ul>
+      <GroupingControl deck={deck} />
       <RelationshipDisplayControls deck={deck} />
       <EnumList deck={deck} />
       <BlockSqlExportSwitch deck={deck} />
@@ -163,6 +165,31 @@ function RelationshipDisplayControls({ deck }: { deck: SododeckFile }) {
         </div>
       </div>
     </>
+  );
+}
+
+/** "Group tables" (048, ADR 0034): the deck-wide grouping mode, one undo step per change. */
+function GroupingControl({ deck }: { deck: SododeckFile }) {
+  const editor = useEditor();
+  const id = useId();
+  return (
+    <div className="flex h-8 items-center justify-between gap-3 pt-2">
+      <span id={`${id}-grouping`} className="text-body-sm text-ink">
+        Group tables
+      </span>
+      <SegmentedControl
+        aria-labelledby={`${id}-grouping`}
+        value={groupingModeOf(deck)}
+        onValueChange={(value) => {
+          oneStep(editor, () => {
+            editor.setGroupingMode(value === 'schema' ? 'schema' : null);
+          });
+        }}
+      >
+        <SegmentedControlItem value="group">By group</SegmentedControlItem>
+        <SegmentedControlItem value="schema">By schema</SegmentedControlItem>
+      </SegmentedControl>
+    </div>
   );
 }
 

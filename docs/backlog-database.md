@@ -451,6 +451,9 @@ values: { id, name, note? }[] }`;
 
 ## 048-db-scale
 
+- **Status:** built (spec `specs/048-db-scale`, ADR 0034 database scale). Bench numbers in
+  `docs/performance.md` §5 and `specs/048-db-scale/bench-after.md`; the 150-table deck meets p95 and
+  open time, avg FPS is 56.3 against 57 (harness ceiling about 56).
 - **Milestone:** after 043 · **Depends on:** 043, 011 (views), 037 (bench) · **Estimate:** 4 d
 - **Goal:** A 60-column table and a 150-table schema stay usable.
 - **In scope:**

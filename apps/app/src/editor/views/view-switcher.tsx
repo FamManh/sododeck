@@ -110,6 +110,9 @@ export function ViewSwitcher({
   // Overflow (edge case "Many views"): measure the centre slot and each shown tab (hidden tabs
   // keep their last width); without ResizeObserver every tab is shown and the list scrolls.
   const tablistRef = useRef<HTMLDivElement>(null);
+  // "Edit filter" on an empty view (048) asks for its settings from outside the tab strip.
+  const requested = useUiStore((state) => state.viewSettingsFor);
+  const settingsOpen = settingsFor ?? requested;
   useEffect(() => {
     const slot = rootRef.current?.parentElement;
     const list = tablistRef.current;
@@ -242,9 +245,12 @@ export function ViewSwitcher({
           return (
             <Popover
               key={view.id}
-              open={settingsFor === view.id}
+              open={settingsOpen === view.id}
               onOpenChange={(open) => {
-                if (!open) setSettingsFor(null);
+                if (!open) {
+                  setSettingsFor(null);
+                  useUiStore.getState().requestViewSettings(null);
+                }
               }}
             >
               <PopoverAnchor asChild>
@@ -335,7 +341,7 @@ export function ViewSwitcher({
                   />
                 </div>
               </PopoverAnchor>
-              {settingsFor === view.id && (
+              {settingsOpen === view.id && (
                 <ViewSettingsPopover
                   deck={deck}
                   view={view}

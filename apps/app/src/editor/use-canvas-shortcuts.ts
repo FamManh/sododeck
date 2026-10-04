@@ -72,6 +72,7 @@ import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './edit
 import { enterRows, leaveRows, moveRowFocus } from './table/row-focus';
 import { useUndoToast } from './undo-toast';
 import { isNodeLocked, refuseLocked } from './lock';
+import { groupTitleOf } from './schema-groups';
 
 export { isTextTarget };
 
@@ -287,6 +288,24 @@ export function useCanvasKeyDown() {
             case 'a':
               selectAllComponents(editor);
               return true;
+            case 'f': {
+              // ⌘F on one selected table finds a column in it (048); never the browser's find.
+              const only = ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : undefined;
+              const alone =
+                ui.selection.edges.length +
+                ui.selection.groups.length +
+                ui.selection.stickies.length;
+              if (
+                event.shiftKey ||
+                only === undefined ||
+                alone > 0 ||
+                !deck.nodes.some((n) => n.id === only && isDbTable(n))
+              ) {
+                return false;
+              }
+              ui.openTableFilter(only);
+              return true;
+            }
             case '=':
             case '+':
               void zoomIn();
@@ -546,7 +565,7 @@ export function useCanvasKeyDown() {
                 ? `${COLLAPSED_NODE_PREFIX}${groupId}`
                 : `${GROUP_NODE_PREFIX}${groupId}`,
             );
-            const title = deck.groups.find((group) => group.id === groupId)?.title ?? groupId;
+            const title = groupTitleOf(deck, groupId) ?? groupId;
             now.announce(`${title} ${nextCollapsed ? 'collapsed' : 'expanded'}`);
           };
           document.addEventListener('pointerdown', onPointer, true);
@@ -683,7 +702,7 @@ export function useCanvasKeyDown() {
           } else if (current !== null && groupIdOf(current) !== null) {
             const groupId = groupIdOf(current);
             if (groupId === null) return;
-            const title = deck.groups.find((group) => group.id === groupId)?.title;
+            const title = groupTitleOf(deck, groupId);
             if (title === undefined) return;
             event.preventDefault();
             ui.drillInto({ kind: 'group', id: groupId, viewport: getViewport() });
@@ -960,6 +979,13 @@ export function useEditorShortcuts({
         }
         event.preventDefault();
         ui.requestDelete({ nodes, edges, stickies });
+        return;
+      }
+      // Esc ends Focus mode first and keeps the selection (048 US6); the next one clears it.
+      if (key === 'escape' && ui.popover === null && ui.pendingDelete === null && ui.focusMode) {
+        event.preventDefault();
+        ui.setFocusMode(false);
+        ui.announce('Focus mode off');
         return;
       }
       if (key === 'escape' && ui.popover === null && ui.pendingDelete === null) {

@@ -131,3 +131,32 @@ describe('proxyLayout (034 R7)', () => {
     ).toEqual([]);
   });
 });
+
+describe('proxyLayout for tables a view hides (048)', () => {
+  it('places a proxy from the port, though the table is not in the deck', () => {
+    const deck = deckOf({
+      nodes: [
+        { id: 'a', type: 'db-table', title: 'orders', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'db-table', title: 'items', position: { x: 0, y: 200 } },
+      ],
+      edges: [
+        { id: 'e1', from: 'a', to: 'hidden' },
+        { id: 'e2', from: 'hidden2', to: 'b' },
+      ],
+    });
+    const graph = visibleGraph(
+      deck,
+      { node: null, group: null },
+      new Set(),
+      new Map([
+        ['hidden', { title: 'customers', kind: 'db-table' }],
+        ['hidden2', { title: 'products', kind: 'db-table' }],
+      ]),
+    );
+    const proxies = proxyLayout(deck, graph, 'system');
+    expect(proxies.map((p) => [p.outsideNodeId, p.title, p.kind, p.side])).toEqual([
+      ['hidden2', 'products', 'db-table', 'left'],
+      ['hidden', 'customers', 'db-table', 'right'],
+    ]);
+  });
+});

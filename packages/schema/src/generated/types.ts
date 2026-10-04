@@ -292,6 +292,10 @@ export interface SododeckFile {
   tableDisplay?: TableDisplay;
   relationshipDisplay?: RelationshipDisplay;
   /**
+   * How the deck's tables are grouped on the canvas (048): `schema` groups tables that share a schema name (shown as derived groups; stored groups and `group` / `parent` are untouched). Absent means By group, the groups stored in the file.
+   */
+  groupingMode?: 'schema';
+  /**
    * Components of the system.
    */
   nodes: Node[];
@@ -825,6 +829,12 @@ export interface View {
   feature?: Id;
   includes?: IdList;
   /**
+   * Schema names whose tables are shown in this view, in addition to the nodes listed in `includes` (048). Non-empty; absent means no schema filter. A name no table uses is kept and shows nothing.
+   *
+   * @minItems 1
+   */
+  schemas?: DbName[];
+  /**
    * Ids of groups whose members (nested groups included) are hidden in this view. Absent means none.
    */
   excludeGroups?: Id[];
@@ -857,9 +867,10 @@ export interface View {
    */
   pinned?: Id[];
   /**
-   * Ids of the groups shown collapsed in this view. Absent means none.
+   * Ids of the groups shown collapsed in this view, and of the derived schema groups (`schema:<name>`, 048). Absent means none.
    */
   collapsed?: Id[];
+  detail?: DbDetail;
 }
 /**
  * A rectangle on the canvas: its top-left corner and its size.

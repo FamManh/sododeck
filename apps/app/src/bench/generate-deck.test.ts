@@ -326,3 +326,60 @@ describe('generateBenchDeck 042 rel', () => {
     expect(rel.edges.map((e) => e.id)).toEqual(plain.edges.map((e) => e.id));
   });
 });
+
+describe('generateBenchDeck 048 wide and schemas', () => {
+  const SCALE = { tables: 150, rel: true, wide: true, schemas: 3 } as const;
+
+  it('gives every 10th table 60 columns and keeps the others at 12', () => {
+    const { deck } = generateBenchDeck(150, 250, 42, SCALE);
+    expect(parseSododeckFile(deck).success).toBe(true);
+    deck.nodes.forEach((n, i) => {
+      expect(n.columns).toHaveLength(i % 10 === 0 ? 60 : 12);
+    });
+    // The foreign keys of a wide table are still its first columns, so relationships resolve.
+    const wide = deck.nodes[0];
+    expect(wide?.columns?.some((c) => c.id === `${wide.id}-fk0`)).toBe(true);
+    const ids = wide?.columns?.map((c) => c.id) ?? [];
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('keeps 150 tables and about 250 relationships reachable', () => {
+    const { deck } = generateBenchDeck(150, 250, 42, SCALE);
+    expect(deck.nodes.filter((n) => n.type === 'db-table')).toHaveLength(150);
+    expect(deck.edges.filter((e) => e.fromColumns !== undefined).length).toBeGreaterThanOrEqual(
+      150,
+    );
+  });
+
+  it('assigns schema names round-robin', () => {
+    const { deck } = generateBenchDeck(150, 250, 42, SCALE);
+    expect(deck.nodes.map((n) => n.schema).slice(0, 4)).toEqual([
+      'schema_0',
+      'schema_1',
+      'schema_2',
+      'schema_0',
+    ]);
+    expect(new Set(deck.nodes.map((n) => n.schema)).size).toBe(3);
+  });
+
+  it('is deterministic by seed and leaves the plain deck unchanged without the options', () => {
+    expect(generateBenchDeck(150, 250, 42, SCALE).deck).toEqual(
+      generateBenchDeck(150, 250, 42, SCALE).deck,
+    );
+    const plain = generateBenchDeck(150, 250, 42, { tables: 150, rel: true }).deck;
+    const same = generateBenchDeck(150, 250, 42, {
+      tables: 150,
+      rel: true,
+      wide: false,
+      schemas: 0,
+    }).deck;
+    expect(same).toEqual(plain);
+    expect(plain.nodes.every((n) => n.schema === undefined)).toBe(true);
+  });
+
+  it('ignores wide and schemas without tables', () => {
+    expect(generateBenchDeck(50, 100, 42, { wide: true, schemas: 3 }).deck).toEqual(
+      generateBenchDeck(50, 100, 42).deck,
+    );
+  });
+});

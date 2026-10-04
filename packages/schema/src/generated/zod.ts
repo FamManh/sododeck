@@ -369,6 +369,12 @@ export const sododeckFileSchema = z
         "How relationships between tables draw in this deck (042). Absent means cardinality ends in crow's foot, labels following the Labels tool.",
       )
       .optional(),
+    groupingMode: z
+      .literal('schema')
+      .describe(
+        "How the deck's tables are grouped on the canvas (048): `schema` groups tables that share a schema name (shown as derived groups; stored groups and `group` / `parent` are untouched). Absent means By group, the groups stored in the file.",
+      )
+      .optional(),
     nodes: z
       .array(
         z
@@ -1167,6 +1173,22 @@ export const sododeckFileSchema = z
               )
               .describe('Ids of the nodes shown in this view. Absent means all nodes.')
               .optional(),
+            schemas: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[^\\n\\r]+$'))
+                  .min(1)
+                  .max(128)
+                  .describe(
+                    'A name in a database schema (table, column, index, enum, schema): 1–128 characters on one line, written as given.',
+                  ),
+              )
+              .min(1)
+              .describe(
+                'Schema names whose tables are shown in this view, in addition to the nodes listed in `includes` (048). Non-empty; absent means no schema filter. A name no table uses is kept and shows nothing.',
+              )
+              .optional(),
             excludeGroups: z
               .array(
                 z
@@ -1296,7 +1318,15 @@ export const sododeckFileSchema = z
                 (arr) => arr.every((item, i) => arr.indexOf(item) == i),
                 'All items must be unique!',
               )
-              .describe('Ids of the groups shown collapsed in this view. Absent means none.')
+              .describe(
+                'Ids of the groups shown collapsed in this view, and of the derived schema groups (`schema:<name>`, 048). Absent means none.',
+              )
+              .optional(),
+            detail: z
+              .enum(['names', 'keys', 'all'])
+              .describe(
+                "How much of each table this view shows (048). Absent means the deck's or the table's own setting.",
+              )
               .optional(),
           })
           .strict()
