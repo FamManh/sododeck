@@ -243,12 +243,12 @@
 
 **Independent Test**: quickstart 16.
 
-- [ ] T038 [P] [US6] Write failing tests:
+- [x] T038 [P] [US6] Write failing tests:
   - `apps/app/src/editor/editing/guides-overlay.test.tsx`: guide lines carry `data-testid="snap-guide"`, and none render when no gesture is registered even if `guides` is non-empty.
   - `apps/app/src/editor/canvas.test.tsx` (or a new `use-guide-safety-net.test.ts`): window `pointerup` / `pointercancel` / `blur` / `visibilitychange` with no active gesture clear `guides`, `bendPreview`, `endpointPreview`, `connectorReadout`, `resizeReadout` and a stale `canvasGesture`, and do nothing while a gesture is active.
   - `apps/app/src/editor/editing/drag-session.test.ts`: `DragController` clears guides on window blur, and when `apply()` throws.
   - `apps/app/src/editor/component-node-parts.test.tsx`: unmounting mid-resize cancels it and clears guides.
-- [ ] T039 [US6] Implement:
+- [x] T039 [US6] Implement:
   - the render guard and testid in `apps/app/src/editor/editing/guides-overlay.tsx`;
   - a `use-guide-safety-net.ts` hook used by `canvas.tsx` (microtask check of `hasActiveGesture()`);
   - blur handling and try/finally in `editing/drag-session.ts`;

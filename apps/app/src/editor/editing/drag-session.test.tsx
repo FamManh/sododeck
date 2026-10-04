@@ -7,7 +7,7 @@ import { useToast } from '@sododeck/ui/components/toast';
 import { act, renderHook, screen } from '@testing-library/react';
 import type { Node, NodeChange } from '@xyflow/react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
@@ -542,5 +542,51 @@ describe('hasActiveGesture (050 R9)', () => {
       h().onNodeDragStop(pointer(0, 0));
     });
     expect(hasActiveGesture()).toBe(false);
+  });
+});
+
+describe('DragController always clears its guides (050 R9)', () => {
+  const guide = { axis: 'x' as const, at: 10, from: 0, to: 100 };
+
+  it('window blur mid-drag cancels the drag and clears the guides', () => {
+    const { h, doc } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 40, 3020));
+      ui().setGuides([guide]);
+    });
+    act(() => {
+      window.dispatchEvent(new Event('blur'));
+    });
+    expect(ui().guides).toHaveLength(0);
+    expect(position(toJSON(doc), 'c')).toEqual({ x: 0, y: 3000 });
+    // Later frames of the abandoned drag are ignored until React Flow ends it.
+    act(() => {
+      h().onNodesChange(move('c', 90, 3090));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(position(toJSON(doc), 'c')).toEqual({ x: 0, y: 3000 });
+    expect(ui().canvasGesture).toBeNull();
+    expect(hasActiveGesture()).toBe(false);
+  });
+
+  it('clears the guides when a frame of the drag throws', () => {
+    const { h, editor } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 40, 3020));
+      ui().setGuides([guide]);
+    });
+    const spy = vi.spyOn(editor(), 'moveInView').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    expect(() => {
+      h().onNodesChange(move('c', 80, 3040));
+    }).toThrow('boom');
+    expect(ui().guides).toHaveLength(0);
+    spy.mockRestore();
+    act(() => {
+      h().onNodeDragStop(pointer(0, 0));
+    });
   });
 });

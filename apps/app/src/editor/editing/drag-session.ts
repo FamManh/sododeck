@@ -110,6 +110,15 @@ let active: {
   reset?: () => boolean;
 } | null = null;
 
+/** Listeners told when a gesture is registered or ends (the guides' render guard, 050 R9). */
+const gestureListeners = new Set<() => void>();
+
+function setActive(handlers: typeof active): void {
+  if (handlers === active) return;
+  active = handlers;
+  for (const listener of gestureListeners) listener();
+}
+
 /** Esc during a drag or a resize (R14): cancels it. Returns whether one was running. */
 export function cancelActiveGesture(): boolean {
   return active?.cancel() ?? false;
@@ -134,9 +143,17 @@ export function hasActiveGesture(): boolean {
   return active !== null;
 }
 
+/** Subscribes to `hasActiveGesture()` changes (for `useSyncExternalStore`). */
+export function subscribeActiveGesture(listener: () => void): () => void {
+  gestureListeners.add(listener);
+  return () => {
+    gestureListeners.delete(listener);
+  };
+}
+
 /** Registers the cancel of a resize, which is not a drag session (see `frame-resize.ts`). */
 export function setActiveGesture(handlers: typeof active): void {
-  active = handlers;
+  setActive(handlers);
 }
 
 export class DragController {
@@ -155,6 +172,11 @@ export class DragController {
     session.mods = mods;
     this.updateTarget();
     if (session.lastRaw !== null) this.apply(session.lastRaw);
+  };
+
+  /** Leaving the window mid-drag (050 R9): like Esc, so no guide or half-move is left behind. */
+  private readonly onBlur = () => {
+    this.cancel();
   };
 
   constructor(private deps: DragDeps) {}
@@ -286,10 +308,11 @@ export class DragController {
     ui.setCanvasGesture(gesture);
     document.addEventListener('keydown', this.onKey, true);
     document.addEventListener('keyup', this.onKey, true);
-    active = {
+    window.addEventListener('blur', this.onBlur);
+    setActive({
       cancel: () => this.cancel(),
       arrow: (dx, dy) => this.arrow(dx, dy),
-    };
+    });
   }
 
   /**
@@ -370,7 +393,17 @@ export class DragController {
     useUiStore.getState().setDropTarget(target === session.home ? null : target);
   }
 
+  /** One frame. If it throws, the guides go before the error does (050 R9). */
   private apply(raw: Point): void {
+    try {
+      this.applyFrame(raw);
+    } catch (error) {
+      this.clearUi();
+      throw error;
+    }
+  }
+
+  private applyFrame(raw: Point): void {
     const session = this.session;
     if (session === null) return;
     session.lastRaw = raw;
@@ -490,7 +523,8 @@ export class DragController {
     if (ui.canvasGesture === 'drag' || ui.canvasGesture === 'group-drag') ui.setCanvasGesture(null);
     document.removeEventListener('keydown', this.onKey, true);
     document.removeEventListener('keyup', this.onKey, true);
-    active = null;
+    window.removeEventListener('blur', this.onBlur);
+    setActive(null);
     this.session = null;
   }
 }

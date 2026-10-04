@@ -69,6 +69,7 @@ import { GuidesOverlay } from './editing/guides-overlay';
 import { MarqueeChip } from './editing/marquee-chip';
 import { FrameDrawLayer } from './frame-tool/frame-draw-layer';
 import { useClipboardEvents } from './editing/use-clipboard-events';
+import { useGuideSafetyNet } from './editing/use-guide-safety-net';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
@@ -344,6 +345,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useStickyDraftLifecycle();
   // ⌘C / ⌘X / ⌘V through the platform clipboard events (016 R9).
   useClipboardEvents();
+  // No guide or connector preview outlives its gesture (050 R9).
+  useGuideSafetyNet();
   // ⌥ held during a marquee switches it to "touch" selection (016 R13). Only while a marquee
   // runs, so the prop (which re-renders React Flow) does not change for other ⌥ keys.
   const marqueeRunning = useUiStore((s) => s.canvasGesture === 'marquee');
