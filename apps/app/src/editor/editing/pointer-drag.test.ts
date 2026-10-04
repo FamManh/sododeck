@@ -235,3 +235,18 @@ describe('startPointerDrag focus changes', () => {
     expect(h.onCancel).not.toHaveBeenCalled();
   });
 });
+
+describe('startPointerDrag without real animation frames', () => {
+  it('keeps moving when frames run synchronously', () => {
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0);
+      return 7;
+    });
+    const h = handlers();
+    press(h);
+    fire('pointermove', 110, 100);
+    fire('pointermove', 120, 100);
+    fire('pointermove', 130, 100);
+    expect(h.onMove).toHaveBeenCalledTimes(3);
+  });
+});

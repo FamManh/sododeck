@@ -78,14 +78,26 @@ export function startPointerDrag(press: PointerPress, handlers: PointerDragHandl
   let started = false;
   let done = false;
   let pending: PointerEvent | null = null;
+  /** The scheduled frame, if any. `scheduled` is separate so a synchronous frame works too. */
+  let scheduled = false;
   let frameId: number | null = null;
 
   const isDone = (): boolean => done;
+  const isScheduled = (): boolean => scheduled;
   // Synthetic events in tests may lack a pointer id; treat those as ours.
   const ours = (event: PointerEvent): boolean =>
     typeof event.pointerId !== 'number' || event.pointerId === pointerId;
 
+  function unschedule(): void {
+    if (scheduled && frameId !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(frameId);
+    }
+    scheduled = false;
+    frameId = null;
+  }
+
   function flush(): void {
+    scheduled = false;
     frameId = null;
     const event = pending;
     pending = null;
@@ -95,10 +107,7 @@ export function startPointerDrag(press: PointerPress, handlers: PointerDragHandl
   function finish(): void {
     done = true;
     pending = null;
-    if (frameId !== null && typeof cancelAnimationFrame === 'function') {
-      cancelAnimationFrame(frameId);
-    }
-    frameId = null;
+    unschedule();
     for (const [type, listener] of listeners) window.removeEventListener(type, listener, true);
     release(captured, pointerId);
   }
@@ -120,16 +129,19 @@ export function startPointerDrag(press: PointerPress, handlers: PointerDragHandl
       if (isDone()) return;
     }
     pending = e;
-    if (frameId === null) frameId = frame(flush);
+    if (!scheduled) {
+      scheduled = true;
+      const id = frame(flush);
+      // A synchronous frame (no rAF) has already flushed and cleared `scheduled`.
+      if (isScheduled()) frameId = id;
+    }
   }
 
   function onUp(event: Event): void {
     const e = event as PointerEvent;
     if (done || !ours(e)) return;
     if (started && pending !== null) {
-      if (frameId !== null && typeof cancelAnimationFrame === 'function') {
-        cancelAnimationFrame(frameId);
-      }
+      unschedule();
       flush();
     }
     finish();
