@@ -15,6 +15,7 @@ import {
   Router,
   Shapes,
   SquareCheck,
+  Table2,
   Ticket,
   Truck,
   Warehouse,
@@ -47,10 +48,11 @@ const TYPE_IDS = [
   'warehouse',
   'truck-route',
   'issue',
+  'db-table',
 ] as const;
 
 describe('card type styles (030)', () => {
-  it('has the 13 built-in ids', () => {
+  it('has the 14 built-in ids', () => {
     expect(Object.keys(TYPE_STYLE).sort()).toEqual([...TYPE_IDS].sort());
   });
 
@@ -89,6 +91,14 @@ describe('card type styles (030)', () => {
     expect(typeStyle('warehouse').icon).toBe(Warehouse);
     expect(typeStyle('truck-route').icon).toBe(Truck);
     expect(typeStyle('issue').icon).toBe(Ticket);
+  });
+
+  it('gives the table type (040) the Table2 icon in the database tone', () => {
+    expect(TYPE_STYLE['db-table']).toMatchObject({
+      icon: Table2,
+      iconName: 'table-2',
+      tone: TYPE_STYLE.database?.tone,
+    });
   });
 
   it('has a neutral fallback with the Shapes icon', () => {

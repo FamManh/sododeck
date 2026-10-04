@@ -67,19 +67,19 @@
 
 ### Tests for User Story 1 (write first)
 
-- [ ] T010 [P] [US1] Add round-trip cases to `packages/model/test/round-trip.test.ts`: the "Shop" deck from T008; a table with `columns: []`; a deck with `enums: []`; `dialect: "generic"` kept; a column with `pk: false` kept; an index mixing a column id and `{ expr }`; two edges between the same tables; an n–n edge; a self-reference; table keys on a `service` node and column keys on an edge between services (kept, FR-006 / FR-018). Assert `toJSON(fromJSON(x))` deep-equals `x` and key order matches
-- [ ] T011 [P] [US1] Add to `packages/model/test/load.test.ts`: duplicate column ids in two tables, a column id equal to an enum value id, and a duplicate index id inside one table each make `fromJSON` throw `DeckValidationError` naming every path; a column id equal to a node id is accepted
-- [ ] T012 [P] [US1] Add to `packages/model/test/text-fields.test.ts` (or its schema-walk table test) the expectation that `DbColumn`, `DbIndex`, `DbEnum`, `DbEnumValue` notes are not markdown and have no `Y.Text`
+- [x] T010 [P] [US1] Add round-trip cases to `packages/model/test/round-trip.test.ts`: the "Shop" deck from T008; a table with `columns: []`; a deck with `enums: []`; `dialect: "generic"` kept; a column with `pk: false` kept; an index mixing a column id and `{ expr }`; two edges between the same tables; an n–n edge; a self-reference; table keys on a `service` node and column keys on an edge between services (kept, FR-006 / FR-018). Assert `toJSON(fromJSON(x))` deep-equals `x` and key order matches
+- [x] T011 [P] [US1] Add to `packages/model/test/load.test.ts`: duplicate column ids in two tables, a column id equal to an enum value id, and a duplicate index id inside one table each make `fromJSON` throw `DeckValidationError` naming every path; a column id equal to a node id is accepted
+- [x] T012 [P] [US1] Add to `packages/model/test/text-fields.test.ts` (or its schema-walk table test) the expectation that `DbColumn`, `DbIndex`, `DbEnum`, `DbEnumValue` notes are not markdown and have no `Y.Text`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] In `packages/model/src/text-fields.ts` add `TextKind`s `dbColumn`, `dbIndex`, `dbCheck`, `enum`, `enumValue` with `[]` text fields
-- [ ] T014 [US1] In `packages/model/src/layout.ts` add `enumsList(doc)` (lazy `meta.enums` list, like `fieldsList`) and constants for the table child-list keys (`TABLE_LISTS = ['columns', 'indexes', 'checks']`); document them in the `deck.ts` layout comment (data-model.md "Yjs layout")
-- [ ] T015 [US1] In `packages/model/src/write.ts` `createObject('nodes', …)` build `columns` / `indexes` / `checks` child lists (items via `fillList` with kinds `dbColumn` / `dbIndex` / `dbCheck`) when the plain node has them, even empty; add `createEnum(plain, order)` building the enum map with a `values` child list
-- [ ] T016 [US1] In `packages/model/src/read.ts` read the three node child lists in order (skip them in `readStoredFields`, emit when stored, even empty) and add `readEnums(doc)`; in `readMeta` emit `dialect` when stored and `enums` when stored (even empty)
-- [ ] T017 [US1] In `packages/model/src/deck.ts` `fromJSON` write `meta.dialect` and build `meta.enums` when the file has them; confirm `toJSON` canonical key order (`key-order.ts`) covers the new nested `$defs` including the `DbIndexPart` `anyOf`; fix `key-order.ts` if the object branch is not ordered
-- [ ] T018 [US1] In `packages/model/src/load-checks.ts` add the database-parts scope (all tables' columns, indexes and checks, plus enums and their values) to `checkDuplicateIds`, paths like `nodes.3.columns.1.id` and `enums.0.values.2.id`; update the header comment
-- [ ] T019 [US1] Run `pnpm --filter @sododeck/model test`; T010–T012 green, every existing test green
+- [x] T013 [US1] In `packages/model/src/text-fields.ts` add `TextKind`s `dbColumn`, `dbIndex`, `dbCheck`, `enum`, `enumValue` with `[]` text fields
+- [x] T014 [US1] In `packages/model/src/layout.ts` add `enumsList(doc)` (lazy `meta.enums` list, like `fieldsList`) and constants for the table child-list keys (`TABLE_LISTS = ['columns', 'indexes', 'checks']`); document them in the `deck.ts` layout comment (data-model.md "Yjs layout")
+- [x] T015 [US1] In `packages/model/src/write.ts` `createObject('nodes', …)` build `columns` / `indexes` / `checks` child lists (items via `fillList` with kinds `dbColumn` / `dbIndex` / `dbCheck`) when the plain node has them, even empty; add `createEnum(plain, order)` building the enum map with a `values` child list
+- [x] T016 [US1] In `packages/model/src/read.ts` read the three node child lists in order (skip them in `readStoredFields`, emit when stored, even empty) and add `readEnums(doc)`; in `readMeta` emit `dialect` when stored and `enums` when stored (even empty)
+- [x] T017 [US1] In `packages/model/src/deck.ts` `fromJSON` write `meta.dialect` and build `meta.enums` when the file has them; confirm `toJSON` canonical key order (`key-order.ts`) covers the new nested `$defs` including the `DbIndexPart` `anyOf`; fix `key-order.ts` if the object branch is not ordered
+- [x] T018 [US1] In `packages/model/src/load-checks.ts` add the database-parts scope (all tables' columns, indexes and checks, plus enums and their values) to `checkDuplicateIds`, paths like `nodes.3.columns.1.id` and `enums.0.values.2.id`; update the header comment
+- [x] T019 [US1] Run `pnpm --filter @sododeck/model test`; T010–T012 green, every existing test green
 
 **Checkpoint**: "Shop" imports and exports identically; JSON panel shows the schema (quickstart §3 steps 1, 2, 4).
 
@@ -93,15 +93,15 @@
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T020 [P] [US3] Add a test to `packages/model/test/round-trip.test.ts` that loads every `apps/app/src/samples/*.sododeck.json` and `packages/schema/examples/{minimal,flow-and-rule}.sododeck.json`, moves one card through the editor, and asserts the output has no `dialect`, `enums`, table keys or edge relationship keys and is otherwise unchanged
-- [ ] T021 [P] [US3] Add to `packages/model/test/card-types.test.ts` and `packages/model/test/packs.test.ts`: pack `database` ("Database") exists after `data` and before `shapes`; type `db-table` ("Table", pack `database`, family `card`); `NEW_DECK_PACKS` includes `database`; a deck without `packs` still reads `["architecture"]`; a deck with `packs: ["architecture", "data"]` is unchanged; `isDbTable` true only for `db-table`
+- [x] T020 [P] [US3] Add a test to `packages/model/test/round-trip.test.ts` that loads every `apps/app/src/samples/*.sododeck.json` and `packages/schema/examples/{minimal,flow-and-rule}.sododeck.json`, moves one card through the editor, and asserts the output has no `dialect`, `enums`, table keys or edge relationship keys and is otherwise unchanged
+- [x] T021 [P] [US3] Add to `packages/model/test/card-types.test.ts` and `packages/model/test/packs.test.ts`: pack `database` ("Database") exists after `data` and before `shapes`; type `db-table` ("Table", pack `database`, family `card`); `NEW_DECK_PACKS` includes `database`; a deck without `packs` still reads `["architecture"]`; a deck with `packs: ["architecture", "data"]` is unchanged; `isDbTable` true only for `db-table`
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] In `packages/model/src/card-types.ts` add the pack `{ id: 'database', name: 'Database' }`, category `database` ("Database") and type `['db-table', 'Table', 'database', 'database']`; export `isDbTable(node: Pick<Node, 'type'>)`; update the file header comment
-- [ ] T023 [P] [US3] In `packages/ui/src/lib/icons.ts` add the `db-table` type style (lucide `Table2`, a neutral tone already in the palette, following the `database` entry) and update any test in `packages/ui/test/` that enumerates type styles
-- [ ] T024 [P] [US3] In `apps/app/src/library/deck-thumbnail.tsx` add a `db-table` fill (same token family as `database`); update its test if it enumerates types
-- [ ] T025 [US3] Run `pnpm test` (all packages); fix any exhaustive registry map in `apps/app/src` that the new pack or type breaks (search for `'truck-route'` and `'data'` pack keys), keeping UI copy "Database" / "Table"
+- [x] T022 [US3] In `packages/model/src/card-types.ts` add the pack `{ id: 'database', name: 'Database' }`, category `database` ("Database") and type `['db-table', 'Table', 'database', 'database']`; export `isDbTable(node: Pick<Node, 'type'>)`; update the file header comment
+- [x] T023 [P] [US3] In `packages/ui/src/lib/icons.ts` add the `db-table` type style (lucide `Table2`, a neutral tone already in the palette, following the `database` entry) and update any test in `packages/ui/test/` that enumerates type styles
+- [x] T024 [P] [US3] In `apps/app/src/library/deck-thumbnail.tsx` add a `db-table` fill (same token family as `database`); update its test if it enumerates types
+- [x] T025 [US3] Run `pnpm test` (all packages); fix any exhaustive registry map in `apps/app/src` that the new pack or type breaks (search for `'truck-route'` and `'data'` pack keys), keeping UI copy "Database" / "Table"
 
 **Checkpoint**: Packs panel lists "Database", Add shows "Table" (quickstart §3 step 3); old decks byte-identical.
 

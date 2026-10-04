@@ -74,6 +74,7 @@ import {
   StickyNote,
   Sun,
   Table,
+  Table2,
   Tag,
   Ticket,
   Trash2,
@@ -134,6 +135,8 @@ export const TYPE_STYLE: Readonly<Record<string, TypeStyle>> = {
   warehouse: { icon: Warehouse, iconName: 'warehouse', tone: 'bg-success-soft text-success-ink' },
   'truck-route': { icon: Truck, iconName: 'truck', tone: 'bg-amber-soft text-amber-ink' },
   issue: { icon: Ticket, iconName: 'ticket', tone: 'bg-clay-soft text-clay-ink' },
+  // Database pack (040): the database card's tone, so a table reads as part of its database.
+  'db-table': { icon: Table2, iconName: 'table-2', tone: 'bg-blue-soft text-blue-ink' },
 };
 
 /**

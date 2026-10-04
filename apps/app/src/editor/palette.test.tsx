@@ -15,23 +15,25 @@ const tileNames = () =>
     .map((b) => b.textContent.replace(/\d+$/, ''));
 
 describe('Palette: Add flyout (030)', () => {
-  it('a new deck shows six tabs, five sections with counts 7 / 3 / 2 / 1 / 13 and the packs footer', () => {
+  it('a new deck shows seven tabs, six sections with counts 7 / 3 / 2 / 1 / 1 / 13 and the packs footer', () => {
     renderWithEditor(<Palette />, newDeck());
     expect(
       within(screen.getByRole('tablist', { name: 'Categories' }))
         .getAllByRole('tab')
         .map((t) => t.textContent),
-    ).toEqual(['All', 'Architecture', 'Process', 'Logistics', 'Data', 'Shapes']);
+    ).toEqual(['All', 'Architecture', 'Process', 'Logistics', 'Data', 'Database', 'Shapes']);
     const sections = screen.getAllByRole('group');
     expect(sections.map((s) => within(s).getByRole('heading').textContent)).toEqual([
       'Architecture7',
       'Process3',
       'Logistics2',
       'Data1',
+      'Database1',
       'Basic shapes13',
     ]);
-    expect(screen.getByRole('button', { name: 'Packs · 5 on' })).toBeInTheDocument();
-    expect(tileNames()).toHaveLength(26);
+    expect(screen.getByRole('button', { name: 'Packs · 6 on' })).toBeInTheDocument();
+    expect(tileNames()).toHaveLength(27);
+    expect(tileNames()).toContain('Table');
   });
 
   it('the Shapes tab lists the eleven shapes with mini outlines, then Sticky and Frame (031)', async () => {
@@ -243,7 +245,7 @@ describe('Palette: Add flyout (030)', () => {
       'Decision9',
     ]);
     // Types only: the Sticky and Frame tiles are never a number key (031).
-    expect(useUiStore.getState().addFlyout.visible).toHaveLength(24);
+    expect(useUiStore.getState().addFlyout.visible).toHaveLength(25);
     await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'e');
     expect(useUiStore.getState().addFlyout.visible[0]).toBe('service');
   });
@@ -283,7 +285,7 @@ describe('Palette: Add flyout (030)', () => {
   it('opens the packs view from the footer and Back returns to Add', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Palette />, newDeck());
-    await user.click(screen.getByRole('button', { name: 'Packs · 5 on' }));
+    await user.click(screen.getByRole('button', { name: 'Packs · 6 on' }));
     expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back to Add' }));
     expect(screen.getByRole('searchbox', { name: 'Search types' })).toBeInTheDocument();

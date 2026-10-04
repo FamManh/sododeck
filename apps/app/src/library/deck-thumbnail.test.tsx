@@ -68,16 +68,18 @@ describe('DeckThumbnail card types (030)', () => {
             [200, 0, 'truck-route'],
             [400, 0, 'robot'],
             [600, 0, 'issue'],
+            [800, 0, 'db-table'],
           ],
           groups: [],
         }}
       />,
     );
     const rects = [...container.querySelectorAll('rect')];
-    expect(rects).toHaveLength(4);
+    expect(rects).toHaveLength(5);
     expect(rects[0]).toHaveClass('fill-success-soft');
     expect(rects[1]).toHaveClass('fill-amber-soft');
     expect(rects[2]).toHaveClass('fill-surface-2');
     expect(rects[3]).toHaveClass('fill-clay-soft');
+    expect(rects[4]).toHaveClass('fill-blue-soft');
   });
 });

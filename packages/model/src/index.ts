@@ -18,6 +18,7 @@ export {
   drawnShapeType,
   effectiveFamily,
   hasTwoForms,
+  isDbTable,
   isKnownPack,
   isKnownType,
   LEGACY_PACKS,

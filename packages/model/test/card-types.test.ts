@@ -7,6 +7,7 @@ import {
   deckPacks,
   effectiveFamily,
   hasTwoForms,
+  isDbTable,
   isKnownType,
   LEGACY_PACKS,
   NEW_DECK_PACKS,
@@ -21,7 +22,7 @@ import {
 const LEGACY_IDS = ['service', 'database', 'gateway', 'client', 'queue', 'external'];
 
 describe('card type registry (030)', () => {
-  it('lists the 13 card types in registry order with packs and categories', () => {
+  it('lists the 14 card types in registry order with packs and categories', () => {
     const cards = CARD_TYPES.filter((t) => t.family === 'card');
     expect(cards.map((t) => [t.id, t.pack, t.category])).toEqual([
       ['service', 'architecture', 'architecture'],
@@ -37,17 +38,19 @@ describe('card type registry (030)', () => {
       ['warehouse', 'logistics', 'logistics'],
       ['truck-route', 'logistics', 'logistics'],
       ['issue', 'data', 'data'],
+      ['db-table', 'database', 'database'],
     ]);
     expect(CARD_TYPES.map((t) => t.order)).toEqual(CARD_TYPES.map((_, i) => i));
-    expect(cards).toHaveLength(13);
+    expect(cards).toHaveLength(14);
   });
 
-  it('has five packs and five categories, in order', () => {
+  it('has six packs and six categories, in order', () => {
     expect(PACKS.map((p) => p.id)).toEqual([
       'architecture',
       'process',
       'logistics',
       'data',
+      'database',
       'shapes',
     ]);
     expect(CATEGORIES.map((c) => c.id)).toEqual([
@@ -55,6 +58,7 @@ describe('card type registry (030)', () => {
       'process',
       'logistics',
       'data',
+      'database',
       'shapes',
     ]);
     expect(CATEGORIES.map((c) => c.name)).toEqual([
@@ -62,6 +66,7 @@ describe('card type registry (030)', () => {
       'Process',
       'Logistics',
       'Data',
+      'Database',
       'Shapes',
     ]);
   });
@@ -87,7 +92,32 @@ describe('card type registry (030)', () => {
 
   it('exposes the legacy and new-deck pack lists', () => {
     expect(LEGACY_PACKS).toEqual(['architecture']);
-    expect(NEW_DECK_PACKS).toEqual(['architecture', 'process', 'logistics', 'data', 'shapes']);
+    expect(NEW_DECK_PACKS).toEqual([
+      'architecture',
+      'process',
+      'logistics',
+      'data',
+      'database',
+      'shapes',
+    ]);
+  });
+
+  it('has the Database pack with its Table type (040)', () => {
+    expect(PACKS.find((p) => p.id === 'database')?.name).toBe('Database');
+    expect(cardType('db-table')).toMatchObject({
+      name: 'Table',
+      pack: 'database',
+      category: 'database',
+      family: 'card',
+    });
+    expect(typesOfPacks(['database']).map((t) => t.id)).toEqual(['db-table']);
+    expect(deckPacks({ packs: ['architecture', 'data'] })).toEqual(['architecture', 'data']);
+  });
+
+  it('isDbTable is true only for db-table (040)', () => {
+    expect(isDbTable({ type: 'db-table' })).toBe(true);
+    expect(isDbTable({ type: 'database' })).toBe(false);
+    expect(isDbTable({ type: 'service' })).toBe(false);
   });
 
   describe('deckPacks', () => {
@@ -124,7 +154,7 @@ describe('card type registry (030)', () => {
       expect(typesOfPacks(['nope'])).toEqual([]);
     });
     it('counts types per pack', () => {
-      expect(PACKS.map((p) => packTypeCount(p.id))).toEqual([7, 3, 2, 1, 11]);
+      expect(PACKS.map((p) => packTypeCount(p.id))).toEqual([7, 3, 2, 1, 1, 11]);
       expect(packTypeCount('nope')).toBe(0);
     });
   });
