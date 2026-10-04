@@ -50,14 +50,14 @@
 
 **Purpose**: the shared pieces that US1, US2, US3, US5 and US6 all rely on. Nothing visible changes yet.
 
-- [ ] T003 [P] Write failing tests in `apps/app/src/editor/editing/pointer-drag.test.ts` per the API contract:
+- [x] T003 [P] Write failing tests in `apps/app/src/editor/editing/pointer-drag.test.ts` per the API contract:
   - no `onStart` / `onMove` below 4 screen px;
   - `onEnd(…, false)` for a click;
   - `onMove` keeps firing after the pressed element is removed from the DOM;
   - `onCancel` exactly once on `pointercancel`, window `blur` and `cancel()`;
   - every listener is removed on each exit;
   - moves are rAF-throttled (use fake timers / a mocked `requestAnimationFrame`).
-- [ ] T004 Implement `apps/app/src/editor/editing/pointer-drag.ts`:
+- [x] T004 Implement `apps/app/src/editor/editing/pointer-drag.ts`:
   - `DRAG_THRESHOLD = 4`;
   - `startPointerDrag(event, handlers)` with window `pointermove/pointerup/pointercancel/blur` listeners, best-effort `setPointerCapture`, the threshold measured in screen px, rAF-throttled moves, and a single `finish()`.
   - Make T003 pass.
