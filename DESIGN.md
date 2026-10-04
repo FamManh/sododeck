@@ -352,7 +352,7 @@ The Database pack (features 040–049, board 134–168) adds one card type. **A 
 | `colInset` | 4 from the card edge, radius 8. Fill for hover (Surface 2), highlight and R / W rows (Orange Soft), problem (Clay soft), selected and editing (Surface, 2px Deck Orange inset ring). The anchor (card edge, row centre) never moves. | new | 156, 161 |
 | Row separator | one hairline above the column list. Rows are separated by spacing only, with no line between them. | Hairline | 156 |
 | `keyW` | 16 key slot, or 30 when any row of the table carries two markers (PK + FK) | new | 156 |
-| Column name | Geist 12 / 500, Ink; the primary-key name is 600. Cut with an ellipsis after the type is cut. | `--sd-deck-body` family | 156 |
+| Column name | Geist 12 / 500, Ink; the primary-key name is 600. On a problem row the name and type are Clay ink; on a matched row the name is Orange Ink 600. Cut with an ellipsis after the type is cut. | `--sd-deck-body` family | 156 |
 | Type text | Mono 11, Muted, right-aligned, at most 58 % of the row. Cut before the name. Enum columns draw the enum name as a chip in the enum's colour. | Muted; chip as `--sd-deck-chip` | 156 |
 | Nullable marker | "?" in a fixed 7px slot after the type, Muted, so types stay aligned. Defaults show in the drawer only. | Muted | 156 |
 | Row limit | **Row limit: 12** (DB9, frame 158) as `colMax`. Cut order PK, FK, then the rest. A row with a connector always stays, so a cut table can show more than 12. | new | 158 |
@@ -413,9 +413,9 @@ Ratios computed from the DESIGN.md hex values (WCAG 2.x), light / dark. Pairs al
 | Pair | Where | Light | Dark | Result |
 | --- | --- | --- | --- | --- |
 | Muted on Surface | type text, nullable "?", indexes footer | 4.84 | 5.58 | pass |
-| Muted on Surface 2 | type text on a hovered row | 4.40 | 5.02 | light below 4.5 (§g-90) |
-| Muted on Orange Soft | type text on an R / W or highlighted row | 4.27 | 4.61 | light below 4.5 (§g-90) |
-| Muted on Clay soft | type text on a problem row | 3.96 | 4.85 | light below 4.5 (§g-90) |
+| Muted on Surface 2 | type text and "?" on a hovered row | 4.40 | 5.02 | light below 4.5 (§g-90) |
+| Muted on Orange Soft | type text and "?" on an R / W, matched or highlighted row | 4.27 | 4.61 | light below 4.5 (§g-90) |
+| Clay ink on Clay soft | name, type and glyph of a problem row | 5.62 | 7.70 | pass |
 | Orange Ink on Orange Soft | R marker letter | 4.81 | 8.43 | pass |
 | On Primary on Deck Orange | W marker letter | 5.44 | 6.44 | pass (recorded) |
 | Secondary on Surface 2 | dialect chip text | 6.81 | 8.08 | pass |
@@ -624,6 +624,6 @@ Both themes share token names. Dark mode does **not** invert tints. Soft fills b
 - **Validation states:** only JSON and rule-match errors are defined. Field-level validation is not.
 - **Dynamic card attributes:** typed fields, their on-card display and the field editor are designed (124) and built by 032 (see Card system (Deck) item 4).
 - **Connector relationships:** the Deck design draws relationship line styles (calls, reads, writes, depends on), bundled connectors and ends that slide along a side (118); none has a schema or a decision yet (§g-76, backlog 022 / 034).
-- **Database pack contrast:** the board draws table type text in Muted on hovered, highlighted and problem rows, which is below 4.5:1 in the light theme (4.40, 4.27, 3.96). 041 raises it to Secondary on those fills (§g-90).
+- **Database pack contrast:** the board draws table type text in Muted on hovered, highlighted and problem rows, which is below 4.5:1 in the light theme (4.40 and 4.27). 041 raises it to Secondary on those fills (§g-90).
 - **Database ER notation:** tables, column rows, crow's feet, ports and the Show all control are designed (134–168) and specified in [Database pack](#database-pack); no gap remains in the design, only features 040–049 to build.
 - **Collaboration / sharing:** out of scope for the local-only MVP.
