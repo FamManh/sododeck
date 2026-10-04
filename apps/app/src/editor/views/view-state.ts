@@ -28,6 +28,8 @@ export interface ViewRender {
   pinned: ReadonlySet<Id>;
   /** Revealed components this view would otherwise hide: they carry "Hidden in this view". */
   revealedHidden: ReadonlySet<Id>;
+  /** The view filters tables by schema or by name (048): a revealed table is outside that filter. */
+  tableFilter: boolean;
 }
 
 export interface ViewState {
@@ -429,6 +431,7 @@ export function viewStateOf(
       dimmed,
       pinned: setOf(view.pinned),
       revealedHidden,
+      tableFilter: view.schemas !== undefined || view.includes !== undefined,
     },
   };
   if (byView === undefined) {

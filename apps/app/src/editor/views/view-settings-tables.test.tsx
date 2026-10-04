@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
+import { addTable } from '../canvas-actions';
 import { Canvas } from '../canvas';
 import { ViewSwitcher } from './view-switcher';
 
@@ -120,5 +121,39 @@ describe('a view that shows no table (048 US5)', () => {
     expect(await screen.findByText('No tables match this view')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Edit filter' }));
     expect(await screen.findByRole('dialog', { name: 'View settings: Mine' })).toBeInTheDocument();
+  });
+});
+
+describe('a table created outside the filter (048 US5)', () => {
+  it('shows a note and Add to this view, which adds it to includes in one undo step', async () => {
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(<Harness />, tables({ schemas: ['billing'] }));
+    await user.click(screen.getByRole('tab', { name: 'Mine, custom view' }));
+    let id = '';
+    act(() => {
+      id = addTable(editor(), { x: 900, y: 900 });
+    });
+    expect(await screen.findByText("Outside this view's filter")).toBeInTheDocument();
+    expect(screen.queryByText('Hidden in this view')).not.toBeInTheDocument();
+    const before = JSON.stringify(viewOf(doc));
+    await user.click(screen.getByRole('button', { name: 'Add to this view' }));
+    expect(viewOf(doc)?.includes).toEqual([id]);
+    expect(viewOf(doc)?.schemas).toEqual(['billing']);
+    expect(screen.queryByText("Outside this view's filter")).not.toBeInTheDocument();
+    act(() => {
+      editor().undo();
+    });
+    expect(JSON.stringify(viewOf(doc))).toBe(before);
+  });
+
+  it('keeps "Hidden in this view" for a card a non-table filter hides', async () => {
+    const user = userEvent.setup();
+    const { editor } = renderWithEditor(<Harness />, tables({ excludeKinds: ['db-table'] }));
+    await user.click(screen.getByRole('tab', { name: 'Mine, custom view' }));
+    act(() => {
+      addTable(editor(), { x: 900, y: 900 });
+    });
+    expect(await screen.findByText('Hidden in this view')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add to this view' })).not.toBeInTheDocument();
   });
 });

@@ -442,7 +442,7 @@ export const DeckNode = memo(function DeckNode({
           className="pointer-events-none absolute -inset-[5.5px] rounded-[20px] border-[1.5px] border-dashed border-clay-ink"
         />
       )}
-      <NodeNotes data={data} target={target} refusal={refusal} />
+      <NodeNotes nodeId={id} data={data} target={target} refusal={refusal} />
     </div>
   );
 });
