@@ -69,6 +69,7 @@ export {
 export type { EdgeStylePatch } from './ops/edge-style';
 export type { EdgeRoutePatch } from './ops/shape';
 export type { NodeDisplay } from './ops/node-display';
+export { iconUsage, type IconUsage } from './icons';
 export type { PastedIds, PasteOptions } from './ops/paste';
 export type { GroupSelection } from './ops/group-selection';
 export {

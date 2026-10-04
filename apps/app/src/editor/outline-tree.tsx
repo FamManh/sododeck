@@ -6,6 +6,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ArrowLeft, ChevronRight, SquareDashed } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
+import { iconProp } from './card-icon';
 import { NodeTypeTile } from './shapes/shape-tile';
 import { useUiStore } from '../state/ui-store';
 import { buildOutline, visibleItems, type VisibleItem } from './outline';
@@ -172,7 +173,7 @@ export function OutlineTree({ deck }: { deck: SododeckFile }) {
               </>
             ) : (
               <>
-                <NodeTypeTile type={item.kind} size={22} decorative />
+                <NodeTypeTile type={item.kind} size={22} decorative {...iconProp(item.icon)} />
                 {look !== undefined && <ColourMark look={look} />}
                 <span className="min-w-0 flex-1 truncate">{item.title}</span>
               </>

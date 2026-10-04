@@ -1,5 +1,6 @@
 import type { SododeckFile } from '@sododeck/schema';
 
+import { cardIconRef } from './card-icon';
 import { cardFieldView } from './card-fields';
 import { cardBox, COLLAPSED_CARD_SIZE, groupBounds, type Rect } from './canvas-geometry';
 import type { Level } from './levels';
@@ -14,14 +15,20 @@ export interface DrillFrame {
   id: string;
 }
 
+/** A collapsed group's member: its type and, for a node drawn as a card, its stored icon (038). */
+export interface CollapsedMember {
+  kind: string;
+  icon?: string;
+}
+
 export interface CollapsedCard {
   groupId: string;
   title: string;
   nodeCount: number;
   edgeCount: number;
   hiddenEdges: readonly string[];
-  /** The kind of every member node, in deck order: one tile each on the fanned hand (029). */
-  memberKinds: readonly string[];
+  /** Every member node's kind and card icon, in deck order: one tile each on the fanned hand (029). */
+  members: readonly CollapsedMember[];
   rect: Rect;
 }
 
@@ -280,7 +287,7 @@ export function visibleGraph(
       nodeCount: number;
       edgeCount: number;
       hiddenEdges: string[];
-      memberKinds: string[];
+      members: CollapsedMember[];
       rect: Rect;
     }
   >();
@@ -294,7 +301,7 @@ export function visibleGraph(
           nodeCount: 0,
           edgeCount: 0,
           hiddenEdges: [],
-          memberKinds: [],
+          members: [],
           rect: centered(rect),
         });
     }
@@ -307,7 +314,8 @@ export function visibleGraph(
         const card = cardsByGroup.get(groupId);
         if (card !== undefined) {
           card.nodeCount += 1;
-          card.memberKinds.push(node.type);
+          const icon = cardIconRef(node);
+          card.members.push({ kind: node.type, ...(icon === undefined ? {} : { icon }) });
         }
       }
       nodeCount.set(groupId, (nodeCount.get(groupId) ?? 0) + 1);
@@ -413,7 +421,7 @@ export function visibleGraph(
           nodeCount: card.nodeCount,
           edgeCount: card.edgeCount,
           hiddenEdges: card.hiddenEdges,
-          memberKinds: card.memberKinds,
+          members: card.members,
           rect: card.rect,
         },
       ];

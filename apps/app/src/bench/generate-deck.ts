@@ -1,5 +1,8 @@
 import { CARD_TYPES, NEW_DECK_PACKS, SHAPE_TYPE_IDS } from '@sododeck/model';
+import { lucide } from '@sododeck/ui/icon-sets';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
+
+const BENCH_ICONS = lucide.icons;
 
 const KINDS = ['service', 'service', 'database', 'client', 'external'] as const;
 
@@ -187,6 +190,8 @@ export function generateBenchDeck(
     bends?: boolean;
     /** 031: every third node is a shape (the eleven geometries round-robin), every pack on. */
     shapes?: boolean;
+    /** 038: every card gets a catalog icon, round-robin over the lucide set. */
+    icons?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -225,6 +230,9 @@ export function generateBenchDeck(
       },
       ...(options.routes === true ? { size: { width: 200, height: 72 } } : {}),
       ...(style ? { style } : {}),
+      ...(options.icons === true && shape === undefined
+        ? { icon: `lucide:${BENCH_ICONS[i % BENCH_ICONS.length]?.name ?? 'box'}` }
+        : {}),
       ...(options.tags === true ? { tags: benchTags(i) } : {}),
       ...(options.fields === true && shape === undefined && fieldBenchType(i) !== 'client'
         ? benchValues(i)

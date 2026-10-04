@@ -529,7 +529,7 @@
         },
         "icon": {
           "$ref": "#/$defs/Text",
-          "description": "Icon key from the app's icon set. When absent, the icon of the node kind is used."
+          "description": "Icon reference `set:icon` (e.g. `lucide:server`); without a set it means lucide. A reference the app cannot show is kept and the node shows its type icon."
         },
         "links": { "$ref": "#/$defs/Links" },
         "group": { "$ref": "#/$defs/Id", "description": "Id of the group this node belongs to." },

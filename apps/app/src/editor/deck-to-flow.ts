@@ -44,7 +44,7 @@ import { cardTagLooks, sameTagLooks, tagColourMap, type TagColourMap } from './t
 import type { TagLook } from './tags/tag-colours';
 import { cardFieldView, sameFieldView, type CardFieldView } from './card-fields';
 import { PROXY_SIZE, proxyLayout } from './proxy-layout';
-import { scopeBounds, type VisibleGraph } from './visible-graph';
+import { scopeBounds, type CollapsedMember, type VisibleGraph } from './visible-graph';
 import { subtitleOf, type ViewRender } from './views/view-state';
 
 type DeckNodeObject = SododeckFile['nodes'][number];
@@ -54,6 +54,8 @@ type StickyObject = SododeckFile['stickies'][number];
 export interface DeckNodeData extends Record<string, unknown> {
   title: string;
   kind: string;
+  /** The node's stored icon reference (038), as written; the card resolves it with `nodeIcon`. */
+  icon?: string;
   subtitle: string | undefined;
   owner: string | undefined;
   /** The first ten tags with their own colours (033); empty without tags. */
@@ -151,7 +153,7 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   nodeCount: number;
   edgeCount: number;
   /** Member kinds for the tiles on the fanned hand (029 US5). */
-  memberKinds: readonly string[];
+  members: readonly CollapsedMember[];
   focused: boolean;
   dimmed: boolean;
   /** Flow mode (035): the front card's folded step state, drawn as the same sticker. */
@@ -167,6 +169,8 @@ export interface PortNodeData extends Record<string, unknown> {
   outsideTitle: string;
   /** The outside card's kind, for the proxy's icon (034). */
   kind: string;
+  /** The outside card's stored icon reference (038). */
+  icon?: string;
   /** Inputs stand left of the scope, the rest right (034 R7). */
   side: 'left' | 'right';
 }
@@ -329,6 +333,16 @@ function deckLookups(deck: SododeckFile): DeckLookups {
   return lookups;
 }
 
+function sameMembers(a: readonly CollapsedMember[], b: readonly CollapsedMember[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((member, index) => {
+      const other = b[index];
+      return other !== undefined && member.kind === other.kind && member.icon === other.icon;
+    })
+  );
+}
+
 function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a === b || (a.length === b.length && a.every((item, index) => item === b[index]));
 }
@@ -449,6 +463,7 @@ function toFlowNode(
   if (
     cached?.data.geometry === geometry &&
     cached?.selected === selected &&
+    cached.data.icon === node.icon &&
     cached.data.subtitle === subtitle &&
     (cached.data.viewDimmed === true) === viewDimmed &&
     (cached.data.pinned === true) === pinned &&
@@ -487,6 +502,7 @@ function toFlowNode(
     data: {
       title: node.title,
       kind: node.type,
+      ...(node.icon === undefined ? {} : { icon: node.icon }),
       subtitle,
       owner: node.owner,
       tagLooks,
@@ -649,7 +665,7 @@ function collapsedNodes(
       cached.data.title === card.title &&
       cached.data.nodeCount === card.nodeCount &&
       cached.data.edgeCount === card.edgeCount &&
-      sameList(cached.data.memberKinds, card.memberKinds)
+      sameMembers(cached.data.members, card.members)
     ) {
       return cached;
     }
@@ -667,7 +683,7 @@ function collapsedNodes(
         title: card.title,
         nodeCount: card.nodeCount,
         edgeCount: card.edgeCount,
-        memberKinds: card.memberKinds,
+        members: card.members,
         focused,
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),
@@ -690,6 +706,7 @@ export function exportPortRects(
   rect: { x: number; y: number; width: number; height: number };
   label: string;
   kind: string;
+  icon?: string;
   side: 'left' | 'right';
 }[] {
   return proxyLayout(deck, graph, level).map((proxy) => ({
@@ -697,6 +714,7 @@ export function exportPortRects(
     rect: proxy.rect,
     label: proxy.title,
     kind: proxy.kind,
+    ...(proxy.icon === undefined ? {} : { icon: proxy.icon }),
     side: proxy.side,
   }));
 }
@@ -716,6 +734,7 @@ function portNodes(
       cached.data.outsideNodeId === outsideNodeId &&
       cached.data.outsideTitle === port.label &&
       cached.data.kind === port.kind &&
+      cached.data.icon === port.icon &&
       cached.data.side === port.side
     ) {
       return cached;
@@ -734,6 +753,7 @@ function portNodes(
         outsideNodeId,
         outsideTitle: port.label,
         kind: port.kind,
+        ...(port.icon === undefined ? {} : { icon: port.icon }),
         side: port.side,
       },
     };

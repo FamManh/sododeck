@@ -17,6 +17,7 @@ import { bulkView, styleView } from '../inspector/derive';
 import { applyStyle, addDeckColour, removeDeckColour, skippedCount } from '../style/apply-style';
 import { StylePicker } from '../style/style-picker';
 import { choiceState, deckValues } from './choice-state';
+import { IconField } from '../icons/icon-field';
 import { TagPicker } from '../tags/tag-picker';
 import { LineStylePopover } from '../line-style/line-style-popover';
 import { tagPickerEscape } from '../tags/tag-picker-escape';
@@ -33,6 +34,7 @@ const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
   direction: 'Direction',
   style: 'Colour',
   lineStyle: 'Line style',
+  icon: 'Choose icon',
 };
 
 const count = (n: number) => `${String(n)} ${n === 1 ? 'component' : 'components'}`;
@@ -208,6 +210,10 @@ function StyleFieldContent({ selection }: { selection: Selection }) {
   );
 }
 
+const closeToolbarField = () => {
+  useUiStore.getState().closeToolbarField();
+};
+
 /** What a field popover edits: the selected components, or the one selected connection. */
 function FieldContent({ field }: { field: ToolbarFieldId }) {
   const deck = useDeckSnapshot(useEditor().doc);
@@ -222,6 +228,9 @@ function FieldContent({ field }: { field: ToolbarFieldId }) {
   }
   if (field === 'style') {
     return <StyleFieldContent selection={selection} />;
+  }
+  if (field === 'icon') {
+    return <IconField selection={selection} onDone={closeToolbarField} />;
   }
   const ids = new Set(selection.nodes);
   return <NodeFieldContent field={field} nodes={deck.nodes.filter((n) => ids.has(n.id))} />;
@@ -245,6 +254,7 @@ export function FieldPopover({
 }) {
   const open = useUiStore((s) => s.toolbarField === field);
   const wide = field === 'links' || field === 'rules' || field === 'style';
+  const iconPicker = field === 'icon';
   return (
     <Tooltip>
       <Popover
@@ -265,9 +275,11 @@ export function FieldPopover({
           className={
             field === 'lineStyle'
               ? 'max-h-[min(640px,80vh)] w-72 overflow-y-auto shadow-menu'
-              : wide
-                ? 'w-[272px] shadow-menu'
-                : 'w-[236px] shadow-menu'
+              : iconPicker
+                ? 'w-[320px] shadow-menu'
+                : wide
+                  ? 'w-[272px] shadow-menu'
+                  : 'w-[236px] shadow-menu'
           }
         >
           <FieldContent field={field} />

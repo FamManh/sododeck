@@ -28,6 +28,23 @@ describe('visibleGraph', () => {
     });
   });
 
+  it("lists each collapsed member's kind and card icon; a shape keeps no icon (038)", () => {
+    const deck = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', group: 'g', icon: 'lucide:search' },
+        { id: 'b', type: 'database', title: 'B', group: 'g' },
+        { id: 'c', type: 'rectangle', title: 'C', group: 'g', icon: 'lucide:search' },
+      ],
+      groups: [{ id: 'g', title: 'Core' }],
+    });
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set(['g']));
+    expect(graph.cards[0]?.members).toEqual([
+      { kind: 'service', icon: 'lucide:search' },
+      { kind: 'database' },
+      { kind: 'rectangle' },
+    ]);
+  });
+
   it('merges collapsed-group edges and hides internal ones', () => {
     const deck = deckOf({
       nodes: [
@@ -59,7 +76,7 @@ describe('visibleGraph', () => {
       { groupId: 'a', edgeCount: 1, hiddenEdges: ['inside-a'] },
     ]);
     // The hand shows one tile per member (029 US5): the kinds, in deck order.
-    expect(oneCollapsed.cards[0]?.memberKinds).toHaveLength(oneCollapsed.cards[0]?.nodeCount ?? -1);
+    expect(oneCollapsed.cards[0]?.members).toHaveLength(oneCollapsed.cards[0]?.nodeCount ?? -1);
     expect(oneCollapsed.merged).toHaveLength(1);
     expect(oneCollapsed.merged[0]?.edgeIds).toEqual(
       Array.from({ length: 12 }, (_, index) => `ab${String(index)}`),

@@ -25,6 +25,26 @@ function Harness() {
 const setup = () => ({ ...renderWithEditor(<Harness />, deck), user: userEvent.setup() });
 const names = () => screen.getAllByRole('treeitem').map((i) => i.textContent);
 
+describe('OutlineTree icons (038)', () => {
+  it("draws a node's own icon in its tile", () => {
+    renderWithEditor(
+      <OutlineTree
+        deck={deckOf({
+          nodes: [
+            { id: 'a', type: 'service', title: 'Has icon', icon: 'lucide:search' },
+            { id: 'b', type: 'service', title: 'No icon' },
+          ],
+        })}
+      />,
+      deck,
+    );
+    const [first, second] = screen.getAllByRole('treeitem');
+    expect(first?.querySelector('[data-icon="lucide:search"]')).not.toBeNull();
+    expect(second?.querySelector('[data-icon="lucide:search"]')).toBeNull();
+    expect(second?.querySelector('svg.lucide-box')).not.toBeNull();
+  });
+});
+
 describe('OutlineTree', () => {
   it('lists groups with counts and components under them', () => {
     setup();

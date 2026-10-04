@@ -36,6 +36,24 @@ const options = () => screen.getAllByRole('option');
 const active = () => options().find((o) => o.getAttribute('aria-selected') === 'true');
 
 describe('ConnectPopover', () => {
+  it("draws an option's own icon (038)", () => {
+    const iconed = deckOf({
+      nodes: [
+        { id: 'svc', type: 'service', title: 'Order Service' },
+        { id: 'db', type: 'database', title: 'Orders DB', icon: 'lucide:search' },
+      ],
+    });
+    renderWithEditor(<Harness />, iconed);
+    act(() => {
+      useUiStore.getState().openConnectPopover('svc');
+    });
+    expect(
+      screen
+        .getByRole('option', { name: /Orders DB/ })
+        .querySelector('[data-icon="lucide:search"]'),
+    ).not.toBeNull();
+  });
+
   it('lists the other components, would-be duplicates disabled', () => {
     setup();
     expect(screen.getByRole('dialog', { name: 'Connect Order Service to…' })).toBeInTheDocument();

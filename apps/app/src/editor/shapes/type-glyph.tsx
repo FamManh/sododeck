@@ -1,5 +1,7 @@
 import { cardType } from '@sododeck/model';
-import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
+import { IconGlyph } from '@sododeck/ui/components/icon-glyph';
+import { nodeIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { Type } from 'lucide-react';
 
 import { defaultSize, shapePath } from './shape-geometry';
@@ -12,17 +14,27 @@ import { defaultSize, shapePath } from './shape-geometry';
 export function TypeGlyph({
   kind,
   size,
+  icon,
   className,
 }: {
   kind: string;
   size: number;
+  /** A resolved icon (038) drawn instead of the type's own; shapes ignore it. */
+  icon?: ResolvedIcon;
   className?: string;
 }) {
   const type = cardType(kind);
   const geometry = type?.family === 'shape' ? type.geometry : undefined;
   if (geometry === undefined) {
-    const Icon = typeStyle(kind).icon;
-    return <Icon aria-hidden size={size} strokeWidth={ICON_STROKE_WIDTH} className={className} />;
+    // One resolver (038): the type's own icon unless the caller passes a resolved custom one.
+    return (
+      <IconGlyph
+        icon={icon ?? nodeIcon({ type: kind }).icon}
+        size={size}
+        strokeWidth={ICON_STROKE_WIDTH}
+        {...(className === undefined ? {} : { className })}
+      />
+    );
   }
   if (geometry === 'none') {
     return <Type aria-hidden size={size} strokeWidth={ICON_STROKE_WIDTH} className={className} />;

@@ -36,6 +36,23 @@ describe('buildOutline', () => {
     });
   });
 
+  it('carries the stored icon of a node drawn as a card, not of a shape (038)', () => {
+    const iconed = buildOutline(
+      deckOf({
+        nodes: [
+          { id: 'c', type: 'service', title: 'C', icon: 'lucide:search' },
+          { id: 's', type: 'rectangle', title: 'S', icon: 'lucide:search' },
+          { id: 'n', type: 'service', title: 'N' },
+        ],
+      }),
+    );
+    expect(iconed.map((i) => (i.type === 'node' ? i.icon : 'group'))).toEqual([
+      'lucide:search',
+      undefined,
+      undefined,
+    ]);
+  });
+
   it('counts nodes recursively', () => {
     expect(tree[0]).toMatchObject({ type: 'group', count: 2 });
     expect(tree[0]?.children[0]).toMatchObject({ count: 1 });

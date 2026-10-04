@@ -8,6 +8,7 @@ import {
   tagKey,
 } from '@sododeck/model';
 import type { Direction, SododeckFile } from '@sododeck/schema';
+import { nodeIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
 
 import type { DrillFrame } from '../../state/ui-store';
 import { bundleEdges, type BundleResult } from '../bundles';
@@ -18,6 +19,7 @@ import {
   groupBounds,
   type Rect,
 } from '../canvas-geometry';
+import { cardIconRef } from '../card-icon';
 import { DECK_CARD, wrapText, type CardLayout } from '../card-layout';
 import { cardTags, tagChips, textMeasurer, type TagChip } from '../card-tags';
 import { tagColourMap } from '../tags/card-tag-looks';
@@ -25,7 +27,6 @@ import { collapseFlowMarks } from '../collapse-flow-marks';
 import { COLLAPSED_NODE_PREFIX, exportPortRects, groupCounts } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
 import { typeName } from '../type-label';
-import { typeIconKey, type IconKey } from './icon-paths';
 import { effectiveLevel, type Level } from '../levels';
 import type { PathEnds, PathShape } from '../routing/route-path';
 import { labelClamp } from '../editing/label-drag';
@@ -52,6 +53,11 @@ import { exportLineColour, exportLook, exportTagColours, type ExportLook } from 
 import { truncate, type TextMeasurer } from './text-measure';
 import type { ImageScope } from './types';
 
+/** The icon a node's tile draws; a node drawn as a shape keeps its type's (038). */
+function iconOf(node: SododeckFile['nodes'][number]): ResolvedIcon {
+  return nodeIcon({ icon: cardIconRef(node), type: node.type }).icon;
+}
+
 export const EXPORT_MARGIN = 32;
 /** A sticky note in its one-line form (the canvas's collapsed note). */
 export const STICKY_SIZE = { width: 180, height: 40 } as const;
@@ -59,7 +65,8 @@ export const STICKY_SIZE = { width: 180, height: 40 } as const;
 export interface SceneCard {
   id: string;
   rect: Rect;
-  kind: IconKey;
+  /** The icon the header tile draws: the card's own or its type's (038). */
+  icon: ResolvedIcon;
   /** The type name next to the header tile ("Service"). */
   typeName: string;
   title: string;
@@ -120,7 +127,7 @@ export interface SceneCollapsed {
   nodeCount: number;
   edgeCount: number;
   /** One tile per member on the fanned hand, in deck order. */
-  memberKinds: readonly IconKey[];
+  memberIcons: readonly ResolvedIcon[];
   fill?: string;
   stroke?: string;
   chip?: string;
@@ -132,8 +139,8 @@ export interface ScenePort {
   /** 150 × 52, placed by `proxyLayout` exactly as on the canvas (034 R7). */
   rect: Rect;
   label: string;
-  /** The outside card's kind, for the proxy's icon. */
-  kind: IconKey;
+  /** The outside card's icon, for the proxy. */
+  icon: ResolvedIcon;
 }
 export interface SceneBadge {
   label: string;
@@ -281,7 +288,7 @@ function shapeCard(
   return {
     id: node.id,
     rect: { ...displayPosition(node, index), ...size },
-    kind: typeIconKey(node.type),
+    icon: iconOf(node),
     typeName: typeName(node.type),
     title: node.title,
     titleLines: clampLines(
@@ -352,7 +359,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       {
         id,
         rect: { ...displayPosition(node, index), width: layout.width, height: layout.height },
-        kind: typeIconKey(node.type),
+        icon: iconOf(node),
         typeName: typeName(node.type),
         title: node.title,
         titleLines: clampLines(
@@ -399,16 +406,18 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       title: card.title,
       nodeCount: card.nodeCount,
       edgeCount: card.edgeCount,
-      memberKinds: card.memberKinds.map((kind) => typeIconKey(kind)),
+      memberIcons: card.members.map(
+        (member) => nodeIcon({ icon: member.icon, type: member.kind }).icon,
+      ),
       ...(exportLook(groupsById.get(card.groupId)?.style) ?? EMPTY_LOOK),
     }));
   const ports: ScenePort[] = exportPortRects(source, graph)
     .filter((port) => keep(port.id))
-    .map(({ id, rect, label, kind }) => ({
+    .map(({ id, rect, label, kind, icon }) => ({
       id,
       rect,
       label,
-      kind: typeIconKey(kind),
+      icon: nodeIcon({ icon, type: kind }).icon,
     }));
   // Parallel connectors export folded, as on the canvas; hover and focus are UI state and never
   // reach a file. A flow's own connectors stay out of the bundles (034 R9).

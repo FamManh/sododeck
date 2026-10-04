@@ -101,6 +101,12 @@ its own tests, and may still be refined in that feature's spec.
 - User-defined types are out of scope. If they come, they are a root `types` list of objects with
   ids, and `node.type` keeps pointing at an id.
 
+### Node icon (038)
+
+`node.icon` exists since v1 as free text. 038 refines its meaning with no version bump (ADR 0028):
+a reference `set:icon` (a bare name means lucide); text the app cannot read or show is kept as
+written and the node shows its type icon.
+
 ### Typed fields (032)
 
 Built by 032 and refined there (ADR 0027): `unit`, status `icon`, `fieldDefaults` and built-in

@@ -1,3 +1,4 @@
+import { chromeIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
 import { FIELD_BLOCK, FIELD_CHIP, fieldChipWidth, hiddenLabel } from '../card-fields';
@@ -7,7 +8,6 @@ import { TAG_CHIP } from '../card-tags';
 import { KNOB_RADIUS } from '../edge-constants';
 import { ARROW_PATH, endMarks } from '../edge-end-marks';
 import { exportTextColour, stickyColours, type ExportPalette } from './export-palette';
-import { ICON_PATHS, type IconNode } from './icon-paths';
 import type {
   ExportScene,
   SceneCard,
@@ -178,18 +178,23 @@ function text(
   return `<text ${attrs({ class: className, x, y, fill, 'text-anchor': anchor })}>${escapeXml(value)}</text>`;
 }
 
-/** A lucide icon at `size` px, drawn like lucide-react (stroke 1.5, round caps and joins). */
+/** An icon at `size` px, drawn like lucide-react (stroke 1.5, round caps and joins). */
 function icon(
-  nodes: IconNode,
+  glyph: ResolvedIcon,
   x: number,
   y: number,
   size: number,
   colour: string,
   strokeWidth: number = ICON_STROKE_WIDTH,
 ): string {
-  const shapes = nodes.map(([tag, values]) => `<${tag} ${attrs(values)}/>`).join('');
+  const shapes = glyph.node.map(([tag, values]) => `<${tag} ${attrs(values)}/>`).join('');
+  const transform = `translate(${n(x)} ${n(y)}) scale(${n(size / 24)})`;
+  // A solid set is filled with the ink and has no outline (038 FR-013).
+  if (glyph.style === 'solid') {
+    return `<g ${attrs({ transform, fill: colour })}>${shapes}</g>`;
+  }
   return `<g ${attrs({
-    transform: `translate(${n(x)} ${n(y)}) scale(${n(size / 24)})`,
+    transform,
     fill: 'none',
     stroke: colour,
     'stroke-width': strokeWidth,
@@ -232,12 +237,12 @@ function fieldChip(
   const middle = y + h / 2;
   if (chip.kind === 'status') {
     out.push(
-      icon(ICON_PATHS[STATUS_ICON_KEYS[chip.icon ?? 'circle']], cursor, middle - 6, 12, ink, 2),
+      icon(chromeIcon(STATUS_ICON_KEYS[chip.icon ?? 'circle']), cursor, middle - 6, 12, ink, 2),
     );
     cursor += FIELD_CHIP.icon + FIELD_CHIP.iconGap;
   } else if (chip.kind === 'date' || chip.kind === 'dateRange') {
     out.push(
-      icon(ICON_PATHS[chip.kind === 'date' ? 'date' : 'date-range'], cursor, middle - 6, 12, ink),
+      icon(chromeIcon(chip.kind === 'date' ? 'date' : 'date-range'), cursor, middle - 6, 12, ink),
     );
     cursor += FIELD_CHIP.icon + FIELD_CHIP.iconGap;
   } else if (chip.kind === 'person') {
@@ -335,7 +340,9 @@ function fieldsBlock(
     out.push(text(row.kind === 'number' ? 'fm' : 'fr', right, base, palette.ink, value, 'end'));
     if (row.kind === 'link') {
       const iconX = right - measure(value, font) - 4 - 12;
-      out.push(icon(ICON_PATHS.link, iconX, y + (FIELD_BLOCK.rowHeight - 12) / 2, 12, palette.ink));
+      out.push(
+        icon(chromeIcon('link'), iconX, y + (FIELD_BLOCK.rowHeight - 12) / 2, 12, palette.ink),
+      );
     }
   });
   if (fields.hidden > 0) {
@@ -385,14 +392,14 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
   let top = y + c.paddingY;
 
   out.push(box(left, top, c.headerHeight, c.headerHeight, 8, chip, undefined, undefined, 'tile'));
-  out.push(icon(ICON_PATHS[item.kind], left + 5, top + 5, 14, chipInk, 2));
+  out.push(icon(item.icon, left + 5, top + 5, 14, chipInk, 2));
   const headerMiddle = top + c.headerHeight / 2;
   const slotRight = left + inner;
   let typeRight = slotRight;
   if (item.hasRules) {
     typeRight = slotRight - 14 - 8;
     const rulesInk = custom ? ink : palette.primaryInk;
-    out.push(icon(ICON_PATHS.rules, slotRight - 14, headerMiddle - 7, 14, rulesInk));
+    out.push(icon(chromeIcon('rules'), slotRight - 14, headerMiddle - 7, 14, rulesInk));
   }
   const status = item.fields.header;
   if (status !== undefined) {
@@ -488,7 +495,7 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
     top += c.gap;
     const middle = top + c.childrenRowHeight / 2;
     out.push(box(left, top, inner, c.childrenRowHeight, 8, palette.surface2));
-    out.push(icon(ICON_PATHS.children, left + 8, middle - 6, 12, palette.inkSecondary));
+    out.push(icon(chromeIcon('children'), left + 8, middle - 6, 12, palette.inkSecondary));
     out.push(
       text(
         'c',
@@ -498,7 +505,9 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
         `${String(item.childCount)} inside`,
       ),
     );
-    out.push(icon(ICON_PATHS.enter, left + inner - 8 - 12, middle - 6, 12, palette.inkSecondary));
+    out.push(
+      icon(chromeIcon('enter'), left + inner - 8 - 12, middle - 6, 12, palette.inkSecondary),
+    );
   }
   out.push('</g>');
   return out.join('');
@@ -569,7 +578,7 @@ function groupFrame(group: SceneGroup, palette: ExportPalette, measure: TextMeas
       body: 'pill',
     }),
   );
-  out.push(icon(ICON_PATHS.chevron, pillX + 8, pillY + 7, 14, labelInk));
+  out.push(icon(chromeIcon('chevron'), pillX + 8, pillY + 7, 14, labelInk));
   out.push(text('gl', pillX + 8 + 14 + 6, baseline(pillY, 28, 12.5), labelInk, name));
   const discX = pillX + pillWidth - 6 - disc;
   out.push(box(discX, pillY + 5, disc, disc, disc / 2, palette.ink));
@@ -645,7 +654,7 @@ function collapsedHand(
   const chip = item.chip ?? palette.surface2;
   const chipInk = item.ink ?? palette.inkSecondary;
   out.push(box(left, top, 24, 24, 8, chip, undefined, undefined, 'tile'));
-  out.push(icon(ICON_PATHS.children, left + 5, top + 5, 14, chipInk, 2));
+  out.push(icon(chromeIcon('children'), left + 5, top + 5, 14, chipInk, 2));
   const disc = 26;
   out.push(
     text(
@@ -673,12 +682,12 @@ function collapsedHand(
     text('ti', left, nameTop + 13.9, ink, truncate(item.title, FONTS.title, inner, measure)),
   );
   const tilesTop = nameTop + 18 + 7;
-  const kinds = item.memberKinds;
+  const kinds = item.memberIcons;
   const shown = kinds.length > MAX_TILES ? kinds.slice(0, MAX_TILES - 1) : kinds;
   let cursor = left;
-  for (const kind of shown) {
+  for (const glyph of shown) {
     out.push(outlineTile(cursor, tilesTop, 22, 'member', palette));
-    out.push(icon(ICON_PATHS[kind], cursor + 5, tilesTop + 5, 12, palette.inkSecondary));
+    out.push(icon(glyph, cursor + 5, tilesTop + 5, 12, palette.inkSecondary));
     cursor += 22 + 4;
   }
   const extra = kinds.length - shown.length;
@@ -842,9 +851,7 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
       ).replace('/>', ` stroke-width="${String(BORDER)}"/>`),
     );
     out.push(box(x + 12, y + (height - 24) / 2, 24, 24, 8, palette.surface2));
-    out.push(
-      icon(ICON_PATHS[port.kind], x + 17, y + (height - 14) / 2, 14, palette.inkSecondary, 2),
-    );
+    out.push(icon(port.icon, x + 17, y + (height - 14) / 2, 14, palette.inkSecondary, 2));
     const name = truncate(port.label, FONTS.groupLabel, width - 12 - 24 - 8 - 12, measure);
     out.push(text('gl', x + 12 + 24 + 8, y + height / 2 - 2, palette.ink, name));
     out.push(text('o', x + 12 + 24 + 8, y + height / 2 + 11, palette.inkMuted, 'Outside'));
@@ -858,7 +865,7 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
     const colours = stickyColours(sticky.tint, palette);
     out.push(`<g data-export="sticky" data-id="${escapeXml(sticky.id)}">`);
     out.push(box(x, y, width, height, 12, colours.fill, colours.border));
-    out.push(icon(ICON_PATHS.sticky, x + 12, y + (height - 16) / 2, 16, colours.ink));
+    out.push(icon(chromeIcon('sticky'), x + 12, y + (height - 16) / 2, 16, colours.ink));
     const label = truncate(sticky.label, FONTS.title, width - 48, measure);
     out.push(text('t', x + 36, y + height / 2 + 4.5, colours.ink, label));
     out.push('</g>');

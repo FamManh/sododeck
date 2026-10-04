@@ -4,6 +4,7 @@ import { SearchField } from '@sododeck/ui/components/search-field';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useId, useRef, useState } from 'react';
 
+import { iconProp } from './card-icon';
 import { NodeTypeTile } from './shapes/shape-tile';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
@@ -133,7 +134,7 @@ function ConnectPopoverContent({
                 index === activeIndex && 'bg-primary-soft font-medium text-primary-ink',
               )}
             >
-              <NodeTypeTile type={option.kind} size={22} decorative />
+              <NodeTypeTile type={option.kind} size={22} decorative {...iconProp(option.icon)} />
               <span className="min-w-0 flex-1 truncate">{option.title}</span>
               {option.disabled && <span className="text-caption">already connected</span>}
             </li>

@@ -163,6 +163,21 @@ describe('InspectorStep in flow mode (007 FR-019–021)', () => {
     expect(within(inspector()).queryByRole('meter')).toBeNull();
   });
 
+  it("draws each end's own icon in the from / to tiles (038)", () => {
+    const iconed = {
+      ...playbackDeck,
+      nodes: playbackDeck.nodes.map((n) => (n.id === 'c' ? { ...n, icon: 'lucide:search' } : n)),
+    };
+    const view = renderFlows(iconed);
+    act(() => {
+      openFlow(view.editor(), 'order', 'o5');
+    });
+    const from = within(inspector()).getByRole('img', { name: 'From: Order Service' });
+    expect(from.querySelector('[data-icon="lucide:search"]')).not.toBeNull();
+    const to = within(inspector()).getByRole('img', { name: 'To: Payment Service' });
+    expect(to.querySelector('[data-icon="lucide:search"]')).toBeNull();
+  });
+
   it('says "No decision table" and "No SLA target" when empty, and keeps fields editable', async () => {
     const { user, doc } = setup('order', 'o4');
     expect(

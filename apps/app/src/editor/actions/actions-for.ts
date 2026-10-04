@@ -41,11 +41,15 @@ function offered(action: Action, ctx: ActionContext, surface?: Surface): boolean
 function resolve(action: Action, ctx: ActionContext, surface: Surface): ResolvedAction {
   const children = action.children?.(ctx).map((child) => resolve(child, ctx, surface));
   const swatch = swatchOf(action, ctx);
+  const glyph = action.glyph?.(ctx);
+  const note = action.note?.(ctx) ?? undefined;
   return {
     id: action.id,
     label: labelOf(action, ctx, surface),
     ...(action.icon === undefined ? {} : { icon: action.icon }),
     ...(swatch === undefined ? {} : { swatch }),
+    ...(glyph === undefined ? {} : { glyph }),
+    ...(note === undefined ? {} : { note }),
     ...(action.shortcut === undefined ? {} : { shortcut: action.shortcut }),
     ...(action.hint === undefined ? {} : { hint: action.hint }),
     ...(action.description === undefined ? {} : { description: action.description }),

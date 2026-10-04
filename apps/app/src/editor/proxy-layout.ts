@@ -1,5 +1,6 @@
 import type { SododeckFile } from '@sododeck/schema';
 
+import { cardIconRef } from './card-icon';
 import { cardBox, type Rect } from './canvas-geometry';
 import type { Level } from './levels';
 import { scopeBounds, type VisibleGraph } from './visible-graph';
@@ -10,6 +11,11 @@ export const PROXY_SIZE = { width: 150, height: 52 } as const;
 export const PROXY_OFFSET = 72;
 export const PROXY_GAP = 16;
 
+function iconField(node: SododeckFile['nodes'][number]): { icon?: string } {
+  const icon = cardIconRef(node);
+  return icon === undefined ? {} : { icon };
+}
+
 export interface OutsideProxy {
   /** `port:<outside node id>`: the prefix is kept from the old port pill. */
   id: string;
@@ -17,6 +23,8 @@ export interface OutsideProxy {
   title: string;
   /** The outside card's kind, for its icon. */
   kind: string;
+  /** The outside card's stored icon (038); none for a node drawn as a shape. */
+  icon?: string;
   /** Left when every connection comes in from outside. */
   side: 'left' | 'right';
   rect: Rect;
@@ -83,6 +91,7 @@ export function proxyLayout(
         outsideNodeId: entry.port.outsideNodeId,
         title: entry.outside.title,
         kind: entry.outside.type,
+        ...iconField(entry.outside),
         side,
         rect: { x, y, ...PROXY_SIZE },
         edgeIds: entry.port.edgeIds,

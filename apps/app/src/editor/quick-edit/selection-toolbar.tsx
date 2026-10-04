@@ -15,7 +15,9 @@ import {
   DropdownMenuTrigger,
 } from '@sododeck/ui/components/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
-import { ChevronDown } from 'lucide-react';
+import { IconGlyph } from '@sododeck/ui/components/icon-glyph';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
+import { ChevronDown, Layers } from 'lucide-react';
 import { useStore } from '@xyflow/react';
 import {
   Fragment,
@@ -76,7 +78,8 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
 
 const tooltipText = (action: ResolvedAction) => {
   const keys = action.shortcut === undefined ? '' : shortcutLabel(action.shortcut);
-  return keys === '' ? action.label : `${action.label} · ${keys}`;
+  const text = keys === '' ? action.label : `${action.label} · ${keys}`;
+  return action.note === undefined ? text : `${text} · ${action.note}`;
 };
 
 function withTooltip(action: ResolvedAction, button: ReactElement) {
@@ -102,6 +105,10 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
     <>
       {action.swatch !== undefined && (
         <Swatch swatch={action.swatch ?? 'var(--color-border)'} className="size-4" />
+      )}
+      {action.glyph === 'mixed' && <Layers aria-hidden />}
+      {action.glyph !== undefined && action.glyph !== 'mixed' && (
+        <IconGlyph icon={action.glyph} size={16} strokeWidth={ICON_STROKE_WIDTH} />
       )}
       {action.swatch === undefined && Icon !== undefined && <Icon aria-hidden />}
       {value !== null && <span className="max-w-28 truncate">{value}</span>}

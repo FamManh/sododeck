@@ -1088,4 +1088,23 @@ describe('shapes and forms (031)', () => {
     expect(toJSON(fromJSON(file))).toEqual(file);
     expect(serializeDeck(file)).toContain('"type": "database",\n      "display": "shape",');
   });
+
+  it('keeps every icon reference byte for byte, readable or not (038)', () => {
+    const icons = [
+      'lucide:server',
+      'server',
+      'Server',
+      'simple:kafka',
+      'lucide:no-such-icon',
+      'mdi:database',
+      'a b',
+    ];
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes: icons.map((icon, i) => ({ id: `n${String(i)}`, type: 'service', title: icon, icon })),
+    };
+    const back = toJSON(fromJSON(file));
+    expect(back.nodes.map((n) => n.icon)).toEqual(icons);
+    expect(serializeDeck(back)).toBe(serializeDeck(file));
+  });
 });

@@ -90,6 +90,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Links',
       'Rules',
       'Colour: none',
+      'Icon',
       'More actions',
     ]);
     expect(screen.getByRole('button', { name: 'Owner: Checkout' })).toHaveAttribute(
@@ -124,6 +125,35 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(screen.getByRole('button', { name: 'Colour: Blue' })).toBeInTheDocument();
   });
 
+  it('opens the icon picker from the Icon button and writes the pick (038 T022)', async () => {
+    const { user, doc } = setup();
+    select(['a']);
+    const button = screen.getByRole('button', { name: 'Icon' });
+    expect(button).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(button.querySelector('[data-slot="icon-glyph"]')).not.toBeNull();
+    await user.click(button);
+    const dialog = await screen.findByRole('dialog', { name: 'Choose icon' });
+    expect(within(dialog).getByRole('searchbox', { name: 'Search icons' })).toHaveFocus();
+    await user.click(within(dialog).getByRole('button', { name: 'Zap' }));
+    expect(toJSON(doc).nodes.find((n) => n.id === 'a')?.icon).toBe('lucide:zap');
+    expect(screen.queryByRole('dialog', { name: 'Choose icon' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Icon' }).querySelector('[data-icon="lucide:zap"]'),
+    ).not.toBeNull();
+  });
+
+  it('says in the Icon tooltip when the stored icon is not available (038 T042)', async () => {
+    const { user, editor } = setup();
+    select(['a']);
+    act(() => {
+      editor().setNodeIcon(['a'], 'simple:kafka');
+    });
+    await user.hover(screen.getByRole('button', { name: 'Icon' }));
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('simple:kafka');
+    expect(tip).toHaveTextContent('Icon not available in this version');
+  });
+
   it("shows the group toolbar's Colour button after Collapse (020 T054)", () => {
     const groupDeck = deckOf({
       nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core' }],
@@ -151,6 +181,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Tags',
       'Technology: none',
       'Colour: none',
+      'Icon',
       'Group',
       'Align',
       'More actions',

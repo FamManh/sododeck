@@ -100,6 +100,8 @@ export const ICON_STROKE_WIDTH = 1.5;
 
 export interface TypeStyle {
   icon: LucideIcon;
+  /** The same icon's lucide name, a key of the icon-set table (038: `nodeIcon` resolves it). */
+  iconName: string;
   /** Soft fill + ink foreground token classes (DESIGN.md "Type & Semantic Tints"). */
   tone: string;
 }
@@ -111,19 +113,27 @@ export interface TypeStyle {
  * tells two types apart.
  */
 export const TYPE_STYLE: Readonly<Record<string, TypeStyle>> = {
-  service: { icon: Box, tone: 'bg-primary-soft text-primary-ink' },
-  database: { icon: Database, tone: 'bg-blue-soft text-blue-ink' },
-  gateway: { icon: Router, tone: 'bg-inverse text-on-inverse' },
-  client: { icon: MonitorSmartphone, tone: 'bg-surface-2 text-ink-secondary' },
-  queue: { icon: ArrowLeftRight, tone: 'bg-amber-soft text-amber-ink' },
-  external: { icon: Cloud, tone: 'bg-clay-soft text-clay-ink' },
-  component: { icon: Puzzle, tone: 'bg-surface-2 text-ink-secondary' },
-  task: { icon: SquareCheck, tone: 'bg-success-soft text-success-ink' },
-  decision: { icon: Diamond, tone: 'bg-amber-soft text-amber-ink' },
-  document: { icon: FileText, tone: 'bg-blue-soft text-blue-ink' },
-  warehouse: { icon: Warehouse, tone: 'bg-success-soft text-success-ink' },
-  'truck-route': { icon: Truck, tone: 'bg-amber-soft text-amber-ink' },
-  issue: { icon: Ticket, tone: 'bg-clay-soft text-clay-ink' },
+  service: { icon: Box, iconName: 'box', tone: 'bg-primary-soft text-primary-ink' },
+  database: { icon: Database, iconName: 'database', tone: 'bg-blue-soft text-blue-ink' },
+  gateway: { icon: Router, iconName: 'router', tone: 'bg-inverse text-on-inverse' },
+  client: {
+    icon: MonitorSmartphone,
+    iconName: 'monitor-smartphone',
+    tone: 'bg-surface-2 text-ink-secondary',
+  },
+  queue: {
+    icon: ArrowLeftRight,
+    iconName: 'arrow-left-right',
+    tone: 'bg-amber-soft text-amber-ink',
+  },
+  external: { icon: Cloud, iconName: 'cloud', tone: 'bg-clay-soft text-clay-ink' },
+  component: { icon: Puzzle, iconName: 'puzzle', tone: 'bg-surface-2 text-ink-secondary' },
+  task: { icon: SquareCheck, iconName: 'square-check', tone: 'bg-success-soft text-success-ink' },
+  decision: { icon: Diamond, iconName: 'diamond', tone: 'bg-amber-soft text-amber-ink' },
+  document: { icon: FileText, iconName: 'file-text', tone: 'bg-blue-soft text-blue-ink' },
+  warehouse: { icon: Warehouse, iconName: 'warehouse', tone: 'bg-success-soft text-success-ink' },
+  'truck-route': { icon: Truck, iconName: 'truck', tone: 'bg-amber-soft text-amber-ink' },
+  issue: { icon: Ticket, iconName: 'ticket', tone: 'bg-clay-soft text-clay-ink' },
 };
 
 /**
@@ -132,6 +142,7 @@ export const TYPE_STYLE: Readonly<Record<string, TypeStyle>> = {
  */
 export const TYPE_FALLBACK: TypeStyle = {
   icon: Shapes,
+  iconName: 'shapes',
   tone: 'bg-surface-2 text-ink-secondary',
 };
 

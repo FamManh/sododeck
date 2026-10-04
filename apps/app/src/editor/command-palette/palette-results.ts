@@ -10,6 +10,10 @@ import type { CommandDialogItem } from '@sododeck/ui/components/command-dialog';
 
 import { normalizeText } from '@sododeck/model';
 
+import { createElement, type ReactNode } from 'react';
+
+import { cardIconRef, iconProp } from '../card-icon';
+import { TypeGlyph } from '../shapes/type-glyph';
 import { typeName } from '../type-label';
 import { HIT_POLICIES } from '../rules/rule-text';
 
@@ -94,6 +98,15 @@ function metaFor(deck: SododeckFile, kind: SearchKind, id: string, flowId?: stri
   }
 }
 
+/** A component result's glyph: its own icon, else its type's (038); a shape draws its outline. */
+function nodeGlyph(deck: SododeckFile, id: string): { icon?: ReactNode } {
+  const node = deck.nodes.find((entry) => entry.id === id);
+  if (node === undefined) return {};
+  return {
+    icon: createElement(TypeGlyph, { kind: node.type, size: 16, ...iconProp(cardIconRef(node)) }),
+  };
+}
+
 function flowItems(deck: SododeckFile): readonly PaletteResult[] {
   return deck.flows.map((flow) => ({
     kind: 'flow',
@@ -151,6 +164,7 @@ export function buildPaletteResults({
             (result) => ({
               kind: result.kind,
               id: result.id,
+              ...(result.kind === 'node' ? nodeGlyph(deck, result.id) : {}),
               ...(result.flowId === undefined ? {} : { flowId: result.flowId }),
               title: result.title,
               meta:

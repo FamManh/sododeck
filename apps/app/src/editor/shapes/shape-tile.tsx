@@ -1,4 +1,5 @@
 import { cardType, typeName } from '@sododeck/model';
+import type { ResolvedIcon } from '@sododeck/ui/icon-sets';
 import { TypeTile } from '@sododeck/ui/components/type-tile';
 import { cn } from '@sododeck/ui/lib/utils';
 
@@ -23,6 +24,7 @@ export function NodeTypeTile({
   size = 30,
   decorative = false,
   label,
+  icon: custom,
   className,
 }: {
   /** A type id; null or unknown → the fallback tile. */
@@ -30,6 +32,8 @@ export function NodeTypeTile({
   size?: TileSize;
   decorative?: boolean;
   label?: string;
+  /** The node's resolved icon (038); a card type draws it, a shape type ignores it. */
+  icon?: ResolvedIcon;
   className?: string;
 }) {
   if (type === null || cardType(type)?.family !== 'shape') {
@@ -39,6 +43,7 @@ export function NodeTypeTile({
         size={size}
         decorative={decorative}
         className={className}
+        {...(custom === undefined ? {} : { icon: custom })}
         {...(label === undefined ? {} : { label })}
       />
     );

@@ -6,7 +6,7 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
 
-import { NodeTypeTile } from '../shapes/shape-tile';
+import { IconTileButton } from '../icons/icon-tile-button';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldEdit } from '../field-edit';
@@ -68,7 +68,7 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   return (
     <InspectorFrame
       plainIcon
-      icon={<NodeTypeTile type={node.type} size={40} decorative />}
+      icon={<IconTileButton node={node} />}
       heading={node.title}
       subtitle={`${typeName(node.type)} · ${groupName(deck, node.group)} · ${node.id}`}
       actions={

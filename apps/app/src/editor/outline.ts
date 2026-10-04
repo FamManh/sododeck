@@ -2,6 +2,7 @@
 import type { SododeckFile } from '@sododeck/schema';
 import { stickyLabel } from '@sododeck/model';
 
+import { cardIconRef } from './card-icon';
 import type { Scope } from './visible-graph';
 import { visibleGraph } from './visible-graph';
 import { resolveLook, type CardLook } from './style/card-style';
@@ -16,7 +17,15 @@ export type OutlineItem =
       children: OutlineItem[];
       look?: CardLook;
     }
-  | { type: 'node'; id: string; title: string; kind: string; children: []; look?: CardLook };
+  | {
+      type: 'node';
+      id: string;
+      title: string;
+      kind: string;
+      icon?: string;
+      children: [];
+      look?: CardLook;
+    };
 
 /** The group's parent when it exists and does not lead back into a cycle; else undefined. */
 function effectiveParents(deck: SododeckFile): Map<string, string | undefined> {
@@ -121,11 +130,13 @@ export function buildOutline(
   const loose: OutlineItem[] = [];
   for (const n of scopedDeck.nodes) {
     const look = resolveLook(n.style);
+    const icon = cardIconRef(n);
     const item: OutlineItem = {
       type: 'node',
       id: n.id,
       title: n.title,
       kind: n.type,
+      ...(icon === undefined ? {} : { icon }),
       children: [],
       ...(look === undefined ? {} : { look }),
     };

@@ -69,6 +69,7 @@ import {
   type OptionPatch,
 } from './ops/fields';
 import { setNodeDisplay, type NodeDisplay } from './ops/node-display';
+import { setNodeIcon } from './ops/node-icon';
 import { deleteTag, renameTag, setTagColor, type TagChange } from './ops/tags';
 import {
   addRule,
@@ -282,6 +283,11 @@ export interface DeckEditor {
    * family, removes `display`. Throws `invalid` / `not-found` before any write.
    */
   setNodeDisplay(nodeIds: readonly Id[], display: NodeDisplay | null): void;
+  /**
+   * Icon reference of every listed node (038): one undo step; `null` removes the key. Any
+   * non-empty text is stored as given. Throws `invalid` / `not-found` before any write.
+   */
+  setNodeIcon(nodeIds: readonly Id[], icon: string | null): void;
   /**
    * Merges `patch` into an edge's stored route (017), or clears it entirely (`null`). A `null`
    * key removes it, `offset: 0` is dropped, and `route` itself is removed once no key is left. One
@@ -660,6 +666,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     groupSelection: (selection) => groupSelection(ctx, selection),
     setNodeDisplay: (nodeIds, display) => {
       setNodeDisplay(ctx, nodeIds, display);
+    },
+    setNodeIcon: (nodeIds, icon) => {
+      setNodeIcon(ctx, nodeIds, icon);
     },
     setCardSize: (nodeId, size) => {
       setCardSize(ctx, nodeId, size);
