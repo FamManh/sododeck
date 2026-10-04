@@ -35,7 +35,7 @@ Make connector editing reliable and flexible, and let groups be connector ends. 
 - **Groups as endpoints (R6)**: `Edge.from/to` may name a group, with the same JSON shape and no version bump; ADR 0031 records the widening.
   - **Model**: refs, integrity, duplicate-id check, the delete cascade, clipboard, titles.
   - **App**: connection rules (new `'contains'` refusal), group frame handles, edge mapping through collapse and drill, inspector, export scene, ELK.
-- **Segment drag (R7)**: elbow runs move perpendicular. Inner runs move two bends; end runs slide the anchor. No new stored data.
+- **Segment drag (R7)**: elbow runs move perpendicular. Inner runs move two bends; end runs keep their anchor and jog off a stub (founder, 2026-10-04). No new stored data.
 - **Weight (R8)**: a selected connector is drawn at its own width with an Orange Soft halo. The weight slider drags on its whole track with a live preview and one write. Stops stay 1 / 1.5 / 2 / 3 / 4.
 - **Guides (R9)**:
   - Each gesture clears its guides on every exit.

@@ -6,13 +6,14 @@
  *   vertices become explicit bends (an automatic elbow or a 017 `offset` is materialised, as on
  *   the first bend edit: `offset` is removed and the model pins the elbow), and both sides are
  *   pinned so the stored bends draw the same line.
- * - A **start** or **end** run leaves its card perpendicular to the side, so moving it slides that
- *   end along the side: only `fromAt` / `toAt` change (side pinned, clamped to 0–1), plus the
- *   neighbouring bend on a connector that already has bends. An automatic route stays automatic.
+ * - A **start** or **end** run leaves its card perpendicular to the side. Moving it never moves the
+ *   end on the card: the end keeps a short stub along the side's normal and the line jogs from
+ *   there to the moved run (two new bends). A lone straight run jogs at both ends. Like an inner
+ *   run, the vertices become stored bends and both sides are pinned.
  *
  * Snapping: the neighbouring parallel runs' lines, then the 22 px grid, within 6 screen px; ⌘ off.
- * While the pointer is down the live line lives in the UI store (`bendPreview`, with `fromAt` /
- * `toAt` for end runs); release writes once, simplified (one undo step). Esc writes nothing.
+ * While the pointer is down the live line lives in the UI store (`bendPreview`); release writes
+ * once, simplified (one undo step). Esc writes nothing.
  */
 import type { DeckEditor, EdgeRoutePatch } from '@sododeck/model';
 import type { Side } from '@sododeck/schema';
@@ -20,7 +21,6 @@ import type { Side } from '@sododeck/schema';
 import { useUiStore, type BendPreview } from '../../state/ui-store';
 import { oneStep } from '../fields/one-step';
 import {
-  anchorPoint,
   elbowVertices,
   GRID_STEP,
   simplifyWaypoints,
@@ -28,7 +28,6 @@ import {
 } from '../routing/connector-geometry';
 import type { Run } from '../routing/elbow-runs';
 import { NORMAL, type Box, type Point } from '../routing/route-path';
-import { anchorReadout } from './anchor-drag';
 import { waypointsOf, type BendContext } from './bend-drag';
 import { setActiveGesture } from './drag-session';
 
@@ -36,6 +35,8 @@ import { setActiveGesture } from './drag-session';
 const SNAP_SCREEN_PX = 6;
 /** A vertex this close to the line between its neighbours is dropped on release. */
 const SIMPLIFY_TOLERANCE = 3;
+/** How far an end leaves its card before the jog of a moved end run: the elbow's own lead. */
+const STUB = 20;
 /** Two bends closer than this are the same bend. */
 const SAME_POINT = 0.5;
 /** Arrow keys move a focused segment by a grid step, or 1 px with Shift. */
@@ -68,8 +69,6 @@ export interface SegmentSession {
   initial: readonly Point[];
   /** The live vertices. */
   live: Point[];
-  fromAt: number;
-  toAt: number;
   /** Run position minus pointer position on the run axis at press, so the run never jumps. */
   grab: number;
   cancelled: boolean;
@@ -77,8 +76,6 @@ export interface SegmentSession {
 
 type Axis = 'x' | 'y';
 
-const r4 = (n: number): number => Math.round(n * 10000) / 10000;
-const clamp = (n: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, n));
 const withAxis = (p: Point, axis: Axis, value: number): Point =>
   axis === 'x' ? { x: value, y: p.y } : { x: p.x, y: value };
 /** The axis a side runs along: top and bottom run along x. */
@@ -103,15 +100,14 @@ export function segmentVertices(ctx: SegmentContext): Point[] {
   });
 }
 
-/** The extent of a side on its own axis. */
-function sideRange(box: Box, side: Side): [number, number] {
-  return alongAxis(side) === 'x' ? [box.x, box.x + box.width] : [box.y, box.y + box.height];
-}
-
-/** `value` on the side's axis as a fraction along the side, clamped to 0–1. */
-function atOf(box: Box, side: Side, value: number): number {
-  const [lo, hi] = sideRange(box, side);
-  return hi === lo ? 0.5 : r4(clamp((value - lo) / (hi - lo), 0, 1));
+/**
+ * The end of the stub an end keeps when its run moves: along the side's normal, at most half way
+ * to the run's other vertex so a short run still jogs inside itself.
+ */
+function stubPoint(end: Point, toward: Point, side: Side): Point {
+  const normal = NORMAL[side];
+  const length = Math.min(STUB, Math.hypot(toward.x - end.x, toward.y - end.y) / 2);
+  return { x: end.x + normal.x * length, y: end.y + normal.y * length };
 }
 
 function makeSession(ctx: SegmentContext, run: Run, pointer?: Point): SegmentSession {
@@ -130,7 +126,7 @@ function makeSession(ctx: SegmentContext, run: Run, pointer?: Point): SegmentSes
       mode = i === 0 && i === last ? 'both' : i === 0 ? 'start' : i === last ? 'end' : 'inner';
     }
   }
-  // An end run that does not leave its card along the side's normal can't slide along the side.
+  // An end run that does not leave its card along the side's normal can't jog off its stub.
   if ((mode === 'start' || mode === 'both') && alongAxis(ctx.fromSide) !== axis) mode = 'none';
   if ((mode === 'end' || mode === 'both') && alongAxis(ctx.toSide) !== axis) mode = 'none';
   const from = a ?? run.from;
@@ -147,8 +143,6 @@ function makeSession(ctx: SegmentContext, run: Run, pointer?: Point): SegmentSes
     mode,
     initial,
     live: initial.map((p) => ({ ...p })),
-    fromAt: ctx.fromAt,
-    toAt: ctx.toAt,
     grab: pointer === undefined ? 0 : from[axis] - pointer[axis],
     cancelled: false,
   };
@@ -162,10 +156,10 @@ function neighbourPoints(s: SegmentSession): Point[] {
     s.mode === 'inner'
       ? [s.initial[i - 1], s.initial[i + 2]]
       : s.mode === 'start'
-        ? [s.initial[2]]
+        ? [s.initial[0], s.initial[2]]
         : s.mode === 'end'
-          ? [s.initial[n - 3]]
-          : [];
+          ? [s.initial[n - 1], s.initial[n - 3]]
+          : [s.initial[0], s.initial[n - 1]];
   return picks.filter((p): p is Point => p !== undefined);
 }
 
@@ -203,95 +197,64 @@ function apply(s: SegmentSession, wanted: number, snap: { zoom: number } | null)
       setVertex(i + 1, withAxis(b, axis, value));
       break;
     }
-    case 'start': {
-      s.fromAt = atOf(ctx.fromBox, ctx.fromSide, value);
-      const point = anchorPoint(ctx.fromBox, ctx.fromSide, s.fromAt);
-      value = point[axis];
-      setVertex(0, point);
-      const next = vertex(1);
-      if (next !== undefined) setVertex(1, withAxis(next, axis, value));
-      break;
-    }
-    case 'end': {
-      s.toAt = atOf(ctx.toBox, ctx.toSide, value);
-      const point = anchorPoint(ctx.toBox, ctx.toSide, s.toAt);
-      value = point[axis];
-      setVertex(n - 1, point);
-      const prev = vertex(n - 2);
-      if (prev !== undefined) setVertex(n - 2, withAxis(prev, axis, value));
-      break;
-    }
+    case 'start':
+    case 'end':
     case 'both': {
-      // A lone straight run: both ends slide together, within the overlap of the two sides.
-      const [fromLo, fromHi] = sideRange(ctx.fromBox, ctx.fromSide);
-      const [toLo, toHi] = sideRange(ctx.toBox, ctx.toSide);
-      const lo = Math.max(fromLo, toLo);
-      const hi = Math.min(fromHi, toHi);
-      if (lo > hi) return null;
-      value = clamp(value, lo, hi);
-      s.fromAt = atOf(ctx.fromBox, ctx.fromSide, value);
-      s.toAt = atOf(ctx.toBox, ctx.toSide, value);
-      setVertex(0, anchorPoint(ctx.fromBox, ctx.fromSide, s.fromAt));
-      setVertex(n - 1, anchorPoint(ctx.toBox, ctx.toSide, s.toAt));
+      // The ends stay where they are; each moved end gets a stub and a jog to the run's new line.
+      const first = s.initial[0];
+      const last = s.initial[s.initial.length - 1];
+      if (first === undefined || last === undefined) return null;
+      const inner = s.initial.slice(1, -1).map((p) => ({ ...p }));
+      const head: Point[] = [first];
+      const tail: Point[] = [last];
+      if (s.mode !== 'end') {
+        const stub = stubPoint(first, s.initial[1] ?? last, ctx.fromSide);
+        head.push(stub, withAxis(stub, axis, value));
+      } else {
+        const prev = inner[inner.length - 1];
+        if (prev !== undefined) inner[inner.length - 1] = withAxis(prev, axis, value);
+      }
+      if (s.mode !== 'start') {
+        const stub = stubPoint(last, s.initial[s.initial.length - 2] ?? first, ctx.toSide);
+        tail.unshift(withAxis(stub, axis, value), stub);
+      } else {
+        const next = inner[0];
+        if (next !== undefined) inner[0] = withAxis(next, axis, value);
+      }
+      s.live = [...head, ...inner, ...tail];
       break;
     }
   }
   if (snappedTo === null || snappedTo !== value) return { value, guide: null };
   const other: Axis = axis === 'x' ? 'y' : 'x';
-  const span = [s.live[i], s.live[i + 1], ...neighbours]
-    .filter((p): p is Point => p !== undefined)
-    .map((p) => p[other]);
+  const span = [...s.live.filter((p) => p[axis] === value), ...neighbours].map((p) => p[other]);
   return {
     value,
     guide: { axis, at: value, from: Math.min(...span), to: Math.max(...span) },
   };
 }
 
-/** Whether the run's change has to store bends: inner runs, or a connector that already has some. */
-function storesBends(s: SegmentSession): boolean {
-  return s.mode === 'inner' || s.ctx.bends.length > 0;
-}
-
 function preview(s: SegmentSession): BendPreview {
-  return {
-    edgeId: s.ctx.edgeId,
-    bends: storesBends(s) ? s.live.slice(1, -1) : s.ctx.bends,
-    ...(s.mode === 'start' || s.mode === 'both' ? { fromAt: s.fromAt } : {}),
-    ...(s.mode === 'end' || s.mode === 'both' ? { toAt: s.toAt } : {}),
-  };
+  return { edgeId: s.ctx.edgeId, bends: s.live.slice(1, -1) };
 }
 
 function readout(s: SegmentSession, value: number): string {
-  if (s.mode === 'end') return anchorReadout(s.ctx.toSide, s.toAt);
-  if (s.mode === 'start' || s.mode === 'both') return anchorReadout(s.ctx.fromSide, s.fromAt);
   return `${s.run.axis} ${String(Math.round(value))}`;
 }
 
 /** The route change of the session, or null when nothing changed. */
 function patchOf(s: SegmentSession): EdgeRoutePatch | null {
   const { ctx } = s;
-  if (samePoints(s.live, s.initial) && s.fromAt === ctx.fromAt && s.toAt === ctx.toAt) {
-    return null;
-  }
-  const patch: EdgeRoutePatch = {};
-  if (storesBends(s)) {
-    const kept = simplifyWaypoints(s.live, SIMPLIFY_TOLERANCE).slice(1, -1);
-    patch.waypoints = kept.length === 0 ? null : waypointsOf(ctx, kept);
-    patch.offset = null;
-  }
-  if (s.mode === 'inner') {
-    patch.fromSide = ctx.fromSide;
-    patch.toSide = ctx.toSide;
-  }
-  if (s.mode === 'start' || s.mode === 'both') {
-    patch.fromSide = ctx.fromSide;
-    patch.fromAt = s.fromAt;
-  }
-  if (s.mode === 'end' || s.mode === 'both') {
-    patch.toSide = ctx.toSide;
-    patch.toAt = s.toAt;
-  }
-  return patch;
+  const simplified = simplifyWaypoints(s.live, SIMPLIFY_TOLERANCE);
+  // A run dragged back where it was leaves only an empty jog, which simplifies away.
+  if (samePoints(simplified, simplifyWaypoints(s.initial, SIMPLIFY_TOLERANCE))) return null;
+  const kept = simplified.slice(1, -1);
+  return {
+    waypoints: kept.length === 0 ? null : waypointsOf(ctx, kept),
+    offset: null,
+    fromSide: ctx.fromSide,
+    toSide: ctx.toSide,
+  };
 }
 
 function write(editor: DeckEditor, ctx: SegmentContext, patch: EdgeRoutePatch): void {

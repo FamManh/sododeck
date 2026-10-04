@@ -200,29 +200,57 @@ describe('inner runs', () => {
   });
 });
 
+/** The stored bends of the connector, decoded and rounded. */
+const storedBends = (route: EdgeRoute | undefined) =>
+  decodeWaypoints(route?.waypoints ?? [], fromCentre, toCentre).map((p) => ({
+    x: Math.round(p.x),
+    y: Math.round(p.y),
+  }));
+
 describe('start and end runs', () => {
-  it('a start run changes only fromAt, with the side pinned', () => {
+  it('a start run keeps its end on the card and jogs from a 20 px stub', () => {
     const { editor, route } = setup();
     const c = ctx();
     const session = startSegmentDrag(editor, c, runOf(c, 0));
     moveSegment(session, { x: 200, y: 40 }, { mod: true, zoom: 1 });
-    // An automatic route stays automatic: only the end moves, so the preview has no bends.
-    expect(useUiStore.getState().bendPreview).toEqual({ edgeId: 'e', bends: [], fromAt: 0.8 });
-    expect(useUiStore.getState().connectorReadout).toBe('right side · 80 %');
+    // The end stays at the side's middle; the line leaves it, jogs at x 180, then runs at y 40.
+    expect(useUiStore.getState().bendPreview).toEqual({
+      edgeId: 'e',
+      bends: [
+        { x: 180, y: 25 },
+        { x: 180, y: 40 },
+        { x: 280, y: 40 },
+        { x: 280, y: 225 },
+      ],
+    });
+    expect(useUiStore.getState().connectorReadout).toBe('y 40');
     endSegmentDrag(editor, session);
-    expect(route()).toEqual({ fromSide: 'right', fromAt: 0.8 });
+    const stored = route();
+    expect(stored?.fromSide).toBe('right');
+    expect(stored?.toSide).toBe('left');
+    expect(stored?.fromAt).toBeUndefined();
+    expect(storedBends(stored)).toEqual([
+      { x: 180, y: 25 },
+      { x: 180, y: 40 },
+      { x: 280, y: 40 },
+      { x: 280, y: 225 },
+    ]);
   });
 
-  it('an end run changes only toAt, clamped to 0–1', () => {
+  it('an end run keeps its end on the card too, past the card if dragged there', () => {
     const { editor, route } = setup();
     const c = ctx();
     const session = startSegmentDrag(editor, c, runOf(c, 2));
     moveSegment(session, { x: 380, y: 999 }, { mod: true, zoom: 1 });
-    expect(useUiStore.getState().bendPreview?.toAt).toBe(1);
-    moveSegment(session, { x: 380, y: -50 }, { mod: true, zoom: 1 });
-    expect(useUiStore.getState().bendPreview?.toAt).toBe(0);
     endSegmentDrag(editor, session);
-    expect(route()).toEqual({ toSide: 'left', toAt: 0 });
+    const stored = route();
+    expect(stored?.toAt).toBeUndefined();
+    expect(storedBends(stored)).toEqual([
+      { x: 280, y: 25 },
+      { x: 280, y: 999 },
+      { x: 380, y: 999 },
+      { x: 380, y: 225 },
+    ]);
   });
 
   it('on a bent connector, the next bend follows so the right angle stays', () => {
@@ -237,22 +265,61 @@ describe('start and end runs', () => {
     endSegmentDrag(editor, session);
     const stored = route();
     expect(stored?.fromSide).toBe('right');
-    expect(stored?.fromAt).toBe(0.2);
-    const drawn = decodeWaypoints(stored?.waypoints ?? [], fromCentre, toCentre);
-    expect(drawn.map((p) => ({ x: Math.round(p.x), y: Math.round(p.y) }))).toEqual([
+    expect(stored?.fromAt).toBeUndefined();
+    expect(storedBends(stored)).toEqual([
+      { x: 180, y: 25 },
+      { x: 180, y: 10 },
       { x: 330, y: 10 },
       { x: 330, y: 225 },
     ]);
   });
 
-  it('snaps along the side to the grid, ⌘ off', () => {
-    const { editor } = setup();
+  it('a short run jogs half way along it', () => {
+    const bends = [
+      { x: 170, y: 25 },
+      { x: 170, y: 225 },
+    ];
+    const { editor, route } = setup({ waypoints: encoded(bends) });
+    const c = ctx(bends);
+    const session = startSegmentDrag(editor, c, runOf(c, 0));
+    moveSegment(session, { x: 165, y: 60 }, { mod: true, zoom: 1 });
+    endSegmentDrag(editor, session);
+    expect(storedBends(route())[0]).toEqual({ x: 165, y: 25 });
+  });
+
+  it('a lone straight run jogs at both ends', () => {
+    // B straight across from A: one run from side to side.
+    const c: SegmentContext = {
+      ...ctx(),
+      end: { x: 400, y: 25 },
+      toBox: { x: 400, y: 0, width: 160, height: 50 },
+    };
+    const { editor, route } = setup();
+    const session = startSegmentDrag(editor, c, runOf(c, 0));
+    moveSegment(session, { x: 280, y: 100 }, { mod: true, zoom: 1 });
+    expect(useUiStore.getState().bendPreview?.bends).toEqual([
+      { x: 180, y: 25 },
+      { x: 180, y: 100 },
+      { x: 380, y: 100 },
+      { x: 380, y: 25 },
+    ]);
+    endSegmentDrag(editor, session);
+    expect(route()?.fromSide).toBe('right');
+    expect(route()?.toSide).toBe('left');
+  });
+
+  it('snaps back in line with its end (then the jog is dropped), ⌘ off', () => {
+    const { editor, route } = setup();
     const c = ctx();
     const session = startSegmentDrag(editor, c, runOf(c, 0));
-    moveSegment(session, { x: 200, y: 30 }, { mod: false, zoom: 1 });
-    expect(useUiStore.getState().bendPreview?.fromAt).toBe(0.44);
-    moveSegment(session, { x: 200, y: 30 }, { mod: true, zoom: 1 });
-    expect(useUiStore.getState().bendPreview?.fromAt).toBe(0.6);
+    moveSegment(session, { x: 200, y: 29 }, { mod: false, zoom: 1 });
+    expect(useUiStore.getState().bendPreview?.bends[1]).toEqual({ x: 180, y: 25 });
+    moveSegment(session, { x: 200, y: 29 }, { mod: true, zoom: 1 });
+    expect(useUiStore.getState().bendPreview?.bends[1]).toEqual({ x: 180, y: 29 });
+    moveSegment(session, { x: 200, y: 25 }, { mod: true, zoom: 1 });
+    endSegmentDrag(editor, session);
+    // Back where it was: nothing to write.
+    expect(route()).toBeUndefined();
   });
 });
 

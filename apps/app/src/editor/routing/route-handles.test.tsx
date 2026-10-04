@@ -593,13 +593,19 @@ describe('RouteHandles segment handles (050 US5)', () => {
     expect(ui().canvasGesture).toBeNull();
   });
 
-  it('dragging an end run slides that end along its side, without storing bends', () => {
+  it('dragging an end run keeps the end on its card and jogs the line to the run', () => {
     const { doc } = withSegments();
     down(segment(1), 220, 25);
     move(220, 40);
-    expect(ui().bendPreview).toMatchObject({ edgeId: 'e', bends: [], fromAt: 0.8 });
+    expect(ui().bendPreview?.bends.slice(0, 2)).toEqual([
+      { x: 180, y: 25 },
+      { x: 180, y: 40 },
+    ]);
     up(220, 40);
-    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0.8 });
+    const route = toJSON(doc).edges[0]?.route;
+    expect(route).toMatchObject({ fromSide: 'right', toSide: 'left' });
+    expect(route).not.toHaveProperty('fromAt');
+    expect(route?.waypoints).toHaveLength(4);
   });
 
   it.each([
@@ -629,12 +635,17 @@ describe('RouteHandles segment handles (050 US5)', () => {
     expect(editor().canUndo()).toBe(false);
   });
 
-  it('↓ on the first run slides the source end 22 px down its side', async () => {
+  it('↓ on the first run jogs it 22 px down, the end staying on its card', async () => {
     const { doc } = withSegments();
     segment(1).focus();
     await userEvent.setup().keyboard('{ArrowDown}');
-    // 25 + 22 = 47 of 50.
-    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0.94 });
+    const route = toJSON(doc).edges[0]?.route;
+    expect(route).not.toHaveProperty('fromAt');
+    const ys = decodeWaypoints(route?.waypoints ?? [], { x: 80, y: 25 }, { x: 480, y: 225 }).map(
+      (p) => Math.round(p.y),
+    );
+    // Stub at the end's height (25), then the run at 25 + 22.
+    expect(ys.slice(0, 3)).toEqual([25, 47, 47]);
   });
 
   it('⌫ and double-click reset the run', async () => {
