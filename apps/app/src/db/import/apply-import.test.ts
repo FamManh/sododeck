@@ -65,6 +65,27 @@ describe('applyImport (research R6, FR-021)', () => {
     expect(editor.canUndo()).toBe(false);
   });
 
+  it('renames a table the deck already has once, with the copy rule paste also uses (043)', async () => {
+    const plan = await runImport(
+      {
+        text: 'CREATE TABLE orders (id int);',
+        format: 'sql',
+        dialect: 'postgres',
+        detectFk: false,
+      },
+      { ...TARGET, deckHasTables: true, tableNames: [{ name: 'orders' }] },
+      createParsers(),
+    ).then((r) => r.plan);
+    const { doc, editor } = deckWith([
+      { id: 'old', type: 'db-table', title: 'orders', columns: [] },
+    ]);
+    applyImport(editor, plan, NOWHERE);
+    expect(toJSON(doc).nodes.map((n) => n.title)).toEqual(['orders', 'orders_copy']);
+    expect(plan.report.changed.map((c) => c.detail)).toEqual([
+      'a table named orders already exists, imported as orders_copy',
+    ]);
+  });
+
   it('puts the tables inside a database card', async () => {
     const plan = await planOf('mysql-dump.sql');
     const { doc, editor } = deckWith([{ id: 'card.db', type: 'database', title: 'Orders DB' }]);

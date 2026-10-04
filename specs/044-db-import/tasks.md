@@ -21,7 +21,7 @@
 - Tokens only; lucide icons; English copy exactly as in contracts/import-dialog-ui.md.
 - Do not name other diagram or database tools anywhere (code, comments, copy, ADR, fixtures).
 
-**Approvals**: two **runtime** dependencies, `@dbml/parse` 10.2.0 and `node-sql-parser` 5.4.0, exact versions (founder approved 2026-10-04, option D; ADR 0032).
+**Approvals**: two **runtime** dependencies, `@dbml/parse` 10.2.0 and `node-sql-parser` 5.4.0, exact versions (founder approved 2026-10-04, option D; ADR 0033).
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -40,7 +40,7 @@
 **Purpose**: dependencies, ADR, folders, fixture corpus.
 
 - [ ] T001 Add `@dbml/parse@10.2.0` and `node-sql-parser@5.4.0` as exact runtime dependencies of `apps/app/package.json` (`pnpm --filter @sododeck/app add -E …`); run `pnpm build` and record the entry-chunk size before and after (must be unchanged until T020 wires the worker) in `specs/044-db-import/quickstart-results.md`.
-- [ ] T002 [P] Write `docs/decisions/0032-schema-import-parsers.md` (context: DB6 and the 2.68 MB gzip / 15.8 MB bundle, precache limit, missing SQLite; decision: research R1–R3; consequences: our splitter, R3 rewrites with corpus tests, per-dialect lazy chunks; sizes 108 / 72 / 67 / 54 KB gzip; no tool named) and add "→ revised by ADR 0032 (044)" to row DB6 in `docs/backlog-database.md`.
+- [ ] T002 [P] Write `docs/decisions/0033-schema-import-parsers.md` (context: DB6 and the 2.68 MB gzip / 15.8 MB bundle, precache limit, missing SQLite; decision: research R1–R3; consequences: our splitter, R3 rewrites with corpus tests, per-dialect lazy chunks; sizes 108 / 72 / 67 / 54 KB gzip; no tool named) and add "→ revised by ADR 0033 (044)" to row DB6 in `docs/backlog-database.md`.
 - [ ] T003 [P] Create `apps/app/src/db/import/` with a boundary header comment in each new file, and add a `db/import` bullet to `apps/app/CLAUDE.md` (pure stages, parsers only in the worker, apply through `@sododeck/model` ops).
 - [ ] T004 [P] Create the corpus in `apps/app/src/db/fixtures/import/` (research R12): `pg-30-tables.sql` (30 tables in `public`, composite PK and FK, inline / table / `ALTER TABLE ONLY … ADD CONSTRAINT` FKs with actions, two `CREATE TYPE … AS ENUM` used by columns with `DEFAULT 'x'::type`, `GENERATED ALWAYS AS IDENTITY`, `bigserial`, `COMMENT ON TABLE / COLUMN`, a unique index on an expression, a `CREATE VIEW` on a known line, a `$$` function, a trigger, `GRANT`s, a `COPY … FROM stdin` block, `SET` / `SELECT pg_catalog.set_config` preamble, `OWNER TO`), `pg-schemas.sql` (tables in `public` and `billing`, cross-schema FK), `mysql-dump.sql` (backticks, `ENGINE=… COMMENT='…'`, `AUTO_INCREMENT`, `UNSIGNED`, inline `ENUM` twice with the same values, `KEY` / `UNIQUE KEY`, column `COMMENT`, `/*!40101 … */`, `DELIMITER ;;` procedure, `LOCK TABLES` / `INSERT`), `sqlite.sql` (`PRAGMA`, `BEGIN TRANSACTION`, `AUTOINCREMENT`, untyped column, `WITHOUT ROWID`, inline `REFERENCES`, `CREATE INDEX IF NOT EXISTS`, `COMMIT`), `no-fk.sql` (MySQL, no constraints: `customer_id`, `order_id`, `category_id` → `categories`, `companyId` → `company`, a `text` `user_id` vs an `int` key that must not match, a `status_id` with no target), `edge-cases.sql` (Postgres: quoted mixed-case and spaced names, mutual FK cycle, self-reference, two FKs between one pair, duplicate table name, FK to a missing table, `ALTER TABLE … ADD COLUMN`, `ALTER TABLE … DROP COLUMN`, `ALTER TABLE … RENAME`, collation, generated column), `syntax-error.sql` (error on line 12), `shop.dbml` and `extras.dbml` (`TableGroup` with color and note, `headercolor`, sticky `Note`, `Project` with `database_type` and note, all ref forms incl. `<>` and `?`, enum value notes, `checks` block, composite `pk` index).
 - [ ] T005 [P] Create the 300-table generator in `apps/app/src/db/fixtures/import/large.ts` (`largeSql(tables = 300, columns = 12)`, `largeDbml(…)`) with FKs to earlier tables, used by the perf test.
@@ -156,7 +156,7 @@
 - [ ] T041 [P] Accessibility pass on dialog and report (FR-030): Tab order, names, live region, focus return; fix findings; assert with Testing Library in the existing component tests.
 - [ ] T042 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; confirm the smoke suite's no-third-party-requests check passes and the parsers load as same-origin chunks (each < 5 MB, precached); record bundle numbers (R16) in `quickstart-results.md`.
 - [ ] T043 Run quickstart.md manual steps 1–7 on `pnpm dev`; save light and dark screenshots of the dialog, the report and an imported deck in `specs/044-db-import/screenshots/`; note results in `quickstart-results.md`.
-- [ ] T044 [P] Update docs: `apps/app/CLAUDE.md` (db/import boundary, worker, entry points), `docs/backlog-database.md` §044 status line ("built, `specs/044-db-import`, ADR 0032"), and the 045 round-trip status (SC-002 now covered).
+- [ ] T044 [P] Update docs: `apps/app/CLAUDE.md` (db/import boundary, worker, entry points), `docs/backlog-database.md` §044 status line ("built, `specs/044-db-import`, ADR 0033"), and the 045 round-trip status (SC-002 now covered).
 
 ---
 

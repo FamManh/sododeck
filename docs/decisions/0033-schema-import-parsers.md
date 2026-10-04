@@ -1,4 +1,4 @@
-# 0032. Schema import parsers
+# 0033. Schema import parsers
 
 - **Status:** Accepted
 - **Date:** 2026-10-04

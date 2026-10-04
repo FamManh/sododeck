@@ -57,3 +57,21 @@ same rule instead of its first spec ("add a new table with the same name"):
    changes `hoverFocus`, re-check the suggestion hover in `import-report-panel.tsx`.
 9. Re-run the full DoD set after the merge: `pnpm lint && pnpm typecheck && pnpm test &&
 pnpm build && pnpm e2e`.
+
+## Status after merging 043 (2026-10-04, merge `39fab6d`)
+
+1. Done: `build-plan.ts` uses `copyName` from `@sododeck/model`; the local helper is gone.
+2. Done: `apply-import.test.ts` "renames a table the deck already has once…" checks one
+   `orders_copy` and no second rename by paste.
+3. Done: `applyImport` type-checks against the new `PastedIds` (`droppedRelationships` is unused:
+   an import fragment has no `external` relationships).
+4. Kept: import enums still go through `addEnum` (a same-named deck enum is not linked).
+5. Done: a locked database card is not offered as a target (`import-target.ts`, test in
+   `import-target.test.ts`); the import goes to the deck instead.
+6. Resolved: `canvas.tsx` and `empty-canvas-card.tsx` keep both "Add table" (043) and "Import SQL
+   or DBML" (044); `empty-canvas-card.test.tsx` has both suites; `ui-store.ts` keeps 043's
+   `exportDialog.seed` and 044's `importDialog` / `importReport`.
+7. Open: the deck-wide dialect switch (the later drawer feature) should reuse `convert-types.ts`.
+8. Checked: `setHoverFocus({ source: 'column' })` unchanged by 043.
+9. ADR number: `main` took 0032 (manual-test polish, 051), so this feature's ADR is now
+   `docs/decisions/0033-schema-import-parsers.md`.

@@ -3,7 +3,7 @@
  * the `ImportTarget` sent to the worker, and the boxes the imported cluster must stay clear of.
  * Pure.
  */
-import { deckDialect, isDbTable } from '@sododeck/model';
+import { deckDialect, isDbTable, isLocked } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { availableSchemaScopes } from '../../db/export/scope';
@@ -27,7 +27,10 @@ export function targetContext(
   deck: SododeckFile,
   ui: { selection: readonly Id[]; drill: readonly { kind: string; id: Id }[] },
 ): TargetContext {
-  const card = availableSchemaScopes(deck, ui).database;
+  const found = availableSchemaScopes(deck, ui).database;
+  // A locked card (043 R11) takes no new tables: the import goes to the deck instead.
+  const node = found === null ? undefined : deck.nodes.find((n) => n.id === found.cardId);
+  const card = node !== undefined && isLocked(node) ? null : found;
   const first: TargetOption =
     card === null
       ? { kind: 'deck', label: 'Import into this deck' }

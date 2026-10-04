@@ -5,7 +5,7 @@
  * the dialect outcome and type conversions, and a report entry for everything not mapped as is.
  * Deterministic for the same input. Pure.
  */
-import type { Fragment } from '@sododeck/model';
+import { copyName, type Fragment } from '@sododeck/model';
 import {
   emptySododeckFile,
   type Cardinality,
@@ -21,7 +21,7 @@ import {
 } from '@sododeck/schema';
 
 import { convertType } from './convert-types';
-import { copyName, nameKey } from './names';
+import { nameKey } from './names';
 import { plural } from './report-text';
 import type {
   ChangedEntry,
@@ -241,9 +241,12 @@ export function buildPlan(
   for (const table of raw.tables) {
     let title = table.name;
     const original = nameKey(table.name, table.schema);
-    const isTaken = (candidate: string) => taken.has(nameKey(candidate, table.schema));
+    // The names taken in this table's schema, for 043's copy rule.
+    const prefix = nameKey('', table.schema);
+    const inSchema = () =>
+      new Set([...taken].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length)));
     if (seenInImport.has(original)) {
-      title = copyName(table.name, isTaken);
+      title = copyName(table.name, inSchema());
       changed.push({
         line: table.line,
         target: displayName(table),
@@ -251,7 +254,7 @@ export function buildPlan(
         detail: `${displayName(table)} appears twice in this import; the second is imported as ${title}`,
       });
     } else if (taken.has(original)) {
-      title = copyName(table.name, isTaken);
+      title = copyName(table.name, inSchema());
       changed.push({
         line: table.line,
         target: displayName(table),
