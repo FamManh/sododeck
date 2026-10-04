@@ -1,4 +1,4 @@
-# 0030. Groups are connector ends
+# 0031. Groups are connector ends
 
 - **Status:** Accepted
 - **Date:** 2026-10-04

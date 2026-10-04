@@ -19,7 +19,7 @@ const collapsed = (ctx: ActionContext) => {
 function ungroup(ctx: ActionContext) {
   const group = groupOf(ctx);
   if (group === undefined) return;
-  // The model deletes the group's own connectors with it (050, ADR 0030); say so, since they vanish.
+  // The model deletes the group's own connectors with it (050, ADR 0031); say so, since they vanish.
   const connectors = ctx.deck.edges.filter((e) => e.from === group.id || e.to === group.id).length;
   oneStep(ctx.editor, () => {
     ctx.editor.remove('groups', group.id);
