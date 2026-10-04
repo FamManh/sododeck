@@ -4,16 +4,33 @@
  */
 export type JsonTab = 'selection' | 'deck';
 
+/** Code panel format tab (046): JSON stays read-only, DBML is editable, SQL is a preview. */
+export type CodeFormat = 'json' | 'dbml' | 'sql';
+/** Scope of the DBML and SQL tabs: the selected tables or the whole schema. */
+export type SchemaScope = 'selection' | 'schema';
+/** SQL preview dialect of a Generic deck. */
+export type SqlPreviewDialect = 'postgres' | 'mysql' | 'sqlite';
+
 export interface JsonPanelPrefs {
   open: boolean;
   /** px; clamped to the main area when rendered (`clampPanelHeight`). */
   height: number;
   tab: JsonTab;
+  format: CodeFormat;
+  schemaScope: SchemaScope;
+  sqlPreviewDialect: SqlPreviewDialect;
 }
 
 export const JSON_PANEL_KEY = 'sododeck.jsonPanel';
 
-export const DEFAULT_JSON_PANEL: JsonPanelPrefs = { open: true, height: 212, tab: 'deck' };
+export const DEFAULT_JSON_PANEL: JsonPanelPrefs = {
+  open: true,
+  height: 212,
+  tab: 'deck',
+  format: 'json',
+  schemaScope: 'selection',
+  sqlPreviewDialect: 'postgres',
+};
 
 function parse(raw: string): unknown {
   try {
@@ -29,12 +46,26 @@ export function readJsonPanelPrefs(raw: string | null): JsonPanelPrefs {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return DEFAULT_JSON_PANEL;
   }
-  const { open, height, tab } = value as Record<string, unknown>;
+  const { open, height, tab, format, schemaScope, sqlPreviewDialect } = value as Record<
+    string,
+    unknown
+  >;
   return {
     open: typeof open === 'boolean' ? open : DEFAULT_JSON_PANEL.open,
     height:
       typeof height === 'number' && Number.isFinite(height) ? height : DEFAULT_JSON_PANEL.height,
     tab: tab === 'deck' || tab === 'selection' ? tab : DEFAULT_JSON_PANEL.tab,
+    format: format === 'json' || format === 'dbml' || format === 'sql' ? format : 'json',
+    schemaScope:
+      schemaScope === 'selection' || schemaScope === 'schema'
+        ? schemaScope
+        : DEFAULT_JSON_PANEL.schemaScope,
+    sqlPreviewDialect:
+      sqlPreviewDialect === 'postgres' ||
+      sqlPreviewDialect === 'mysql' ||
+      sqlPreviewDialect === 'sqlite'
+        ? sqlPreviewDialect
+        : DEFAULT_JSON_PANEL.sqlPreviewDialect,
   };
 }
 

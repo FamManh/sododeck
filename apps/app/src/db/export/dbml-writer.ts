@@ -38,7 +38,7 @@ const OPERATORS = { 'n-1': '>', '1-n': '<', '1-1': '-', 'n-n': '<>' } as const;
 /** Types DBML reads bare: a name with an optional `(…)` size. */
 const PLAIN_TYPE = /^[A-Za-z_][A-Za-z0-9_]*(\([^()]*\))?$/;
 
-const DBML_METHODS = new Set(['btree', 'hash']);
+export const DBML_METHODS = new Set(['btree', 'hash']);
 
 function qualifiedName(schema: string | null, name: string): string {
   return schema === null ? dbmlIdent(name) : `${dbmlIdent(schema)}.${dbmlIdent(name)}`;

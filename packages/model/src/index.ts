@@ -53,7 +53,7 @@ export {
   type PackId,
   type TypeId,
 } from './card-types';
-export { createEditor, type DeckEditor, type EditorOptions } from './editor';
+export { createEditor, type BatchOptions, type DeckEditor, type EditorOptions } from './editor';
 export { observeDeck, type DeckChange, type ObjectChange } from './observe';
 export { checkIntegrity, type IntegrityProblem } from './integrity';
 export { endpointOf, endpointTitle, type Endpoint, type EndpointKind } from './endpoint';

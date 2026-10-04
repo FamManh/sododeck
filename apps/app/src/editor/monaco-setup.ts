@@ -21,12 +21,27 @@ import * as monaco from 'monaco-editor/editor/editor.api';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import JsonWorker from 'monaco-editor/language/json/json.worker?worker';
 import { jsonDefaults } from 'monaco-editor/languages/features/json/register';
+// Basic SQL tokenizer for the SQL preview tab (046); loads its grammar lazily on first use.
+import 'monaco-editor/languages/definitions/sql/register';
+import 'monaco-editor/languages/definitions/pgsql/register';
+import 'monaco-editor/languages/definitions/mysql/register';
+
+import { registerDbml } from './code/dbml-language';
 
 import { buildMonacoTheme, readThemeTokens } from './monaco-theme';
 
 export const DECK_MODEL_PATH = 'sododeck://deck/current.sododeck.json';
 /** Does not match the schema's `*.sododeck.json` fileMatch: partial objects are not a deck file. */
 export const SELECTION_MODEL_PATH = 'sododeck://selection/current.json';
+/** DBML and SQL models of the code panel (046): one per format and scope, so each keeps its view. */
+export const DBML_MODEL_PATH = {
+  selection: 'sododeck://dbml/selection.dbml',
+  schema: 'sododeck://dbml/schema.dbml',
+} as const;
+export const SQL_MODEL_PATH = {
+  selection: 'sododeck://sql/selection.sql',
+  schema: 'sododeck://sql/schema.sql',
+} as const;
 
 /**
  * Defines `sododeck-light` and `sododeck-dark` from the current CSS tokens. The tokens follow the
@@ -47,5 +62,7 @@ jsonDefaults.setDiagnosticsOptions({
   enableSchemaRequest: false, // never fetch schemas over the network
   schemas: [{ uri: SCHEMA_URL, fileMatch: ['*.sododeck.json'], schema: jsonSchema }],
 });
+
+registerDbml(monaco);
 
 loader.config({ monaco });

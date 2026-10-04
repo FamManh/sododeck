@@ -6,9 +6,12 @@
 import type * as Dbml from '@dbml/parse';
 import type { Cardinality, DbAction } from '@sododeck/schema';
 
+import { suggestDbmlSetting } from '../sync/suggest-setting';
+import type { TextProblem } from '../sync/types';
 import { excerpt } from './report-text';
 import type {
   ParseError,
+  RawNonInput,
   RawColumn,
   RawDefault,
   RawRef,
@@ -39,8 +42,60 @@ const DATABASE_TYPES: Record<string, SqlDialect> = {
 
 export interface DbmlReadResult {
   raw: RawSchema;
+  /** The first problem, for the import dialog (044). */
   error?: ParseError;
+  /** Every compiler diagnostic with a range (046); empty when the text is clean. */
+  problems: TextProblem[];
 }
+
+/** The import dialog's limit (044); text over it is not parsed. Kept here so `db` needs no `editor`. */
+const MAX_TEXT_BYTES = 5 * 1024 * 1024;
+
+type Pos = { line: number; column: number };
+type Range = { start: Pos; end: Pos };
+
+/** The compiler's 0-based `startPos` / `endPos` of a diagnostic's node or token, as a 1-based range. */
+function rangeOf(nodeOrToken: unknown): {
+  line: number;
+  column: number;
+  endLine: number;
+  endColumn: number;
+} {
+  const node = nodeOrToken as { startPos?: Pos; endPos?: Pos } | undefined;
+  const start = node?.startPos ?? { line: 0, column: 0 };
+  const end = node?.endPos ?? start;
+  return {
+    line: start.line + 1,
+    column: start.column + 1,
+    endLine: end.line + 1,
+    endColumn: Math.max(end.column + 1, start.line === end.line ? start.column + 2 : 1),
+  };
+}
+
+const UNKNOWN_SETTING = /^Custom setting '([^']*)'/;
+
+function problemOf(diagnostic: string, nodeOrToken: unknown): TextProblem {
+  const unknown = UNKNOWN_SETTING.exec(diagnostic);
+  const suggestion = unknown === null ? undefined : suggestDbmlSetting(unknown[1] ?? '');
+  return {
+    ...rangeOf(nodeOrToken),
+    severity: 'error',
+    message:
+      unknown === null
+        ? diagnostic
+        : `Unknown setting '${unknown[1] ?? ''}'${suggestion === undefined ? '' : `, did you mean ${suggestion}?`}`,
+    ...(suggestion === undefined ? {} : { suggestion }),
+    code: unknown === null ? 'syntax' : 'unknown-setting',
+  };
+}
+
+const rangeInput = (kind: RawNonInput['kind'], token: Range | undefined): RawNonInput => ({
+  kind,
+  line: lineOf(token),
+  ...(token === undefined
+    ? {}
+    : { column: token.start.column, endLine: token.end.line, endColumn: token.end.column }),
+});
 
 const lineOf = (token: { start: { line: number } } | undefined) => token?.start.line ?? 1;
 
@@ -146,6 +201,7 @@ function tableOf(table: Dbml.Table): RawTable {
 
 function emptySchema(): RawSchema {
   return {
+    inputs: [],
     format: 'dbml',
     tables: [],
     refs: [],
@@ -160,23 +216,57 @@ function emptySchema(): RawSchema {
 /** Reads DBML `text` with the compiler module `dbml`. */
 export function readDbml(text: string, dbml: DbmlModule): DbmlReadResult {
   const entry = dbml.DEFAULT_ENTRY;
-  const compiler = new dbml.Compiler(new dbml.MemoryProjectLayout({ [entry.absolute]: text }));
-  const [first] = compiler.parse.errors(entry);
-  if (first !== undefined) {
-    const start = (first.nodeOrToken as { startPos?: { line: number; column: number } } | undefined)
-      ?.startPos;
+  if (new Blob([text]).size > MAX_TEXT_BYTES) {
+    const message = 'The text is over 5 MB, which is too large to read.';
     return {
       raw: emptySchema(),
-      error: {
-        line: (start?.line ?? 0) + 1,
-        ...(start === undefined ? {} : { column: start.column + 1 }),
-        message: first.diagnostic,
-      },
+      error: { line: 1, column: 1, message },
+      problems: [
+        {
+          line: 1,
+          column: 1,
+          endLine: 1,
+          endColumn: 2,
+          severity: 'error',
+          message,
+          code: 'syntax',
+        },
+      ],
+    };
+  }
+  const compiler = new dbml.Compiler(new dbml.MemoryProjectLayout({ [entry.absolute]: text }));
+  const errors = compiler.parse.errors(entry);
+  if (errors.length > 0) {
+    const problems = errors.map((e) => problemOf(e.diagnostic, e.nodeOrToken));
+    const [first] = problems;
+    return {
+      raw: emptySchema(),
+      ...(first === undefined
+        ? {}
+        : {
+            error: { line: first.line, column: first.column, message: errors[0]?.diagnostic ?? '' },
+          }),
+      problems,
     };
   }
   const db = compiler.parse.rawDb(entry);
-  if (db === undefined)
-    return { raw: emptySchema(), error: { line: 1, message: 'could not be read' } };
+  if (db === undefined) {
+    return {
+      raw: emptySchema(),
+      error: { line: 1, message: 'could not be read' },
+      problems: [
+        {
+          line: 1,
+          column: 1,
+          endLine: 1,
+          endColumn: 2,
+          severity: 'error',
+          message: 'could not be read',
+          code: 'syntax',
+        },
+      ],
+    };
+  }
   const lines = text.split('\n');
   const raw = emptySchema();
   raw.tables = db.tables.map(tableOf);
@@ -252,6 +342,22 @@ export function readDbml(text: string, dbml: DbmlModule): DbmlReadResult {
   }));
   raw.notes = db.notes.map((n) => ({ text: n.content, line: lineOf(n.token) }));
 
+  // Blocks the code panel does not read as input (046 R15): the planner warns on each.
+  const inputs: RawNonInput[] = [];
+  for (const group of db.tableGroups) inputs.push(rangeInput('table-group', group.token));
+  for (const note of db.notes) inputs.push(rangeInput('note', note.token));
+  for (const table of db.tables) {
+    if (table.headerColor !== undefined && table.headerColor !== 'none')
+      inputs.push({ kind: 'header-color', line: lineOf(table.token) });
+  }
+  for (const ref of db.refs) {
+    if (ref.color !== undefined) inputs.push(rangeInput('ref-color', ref.token));
+  }
+  for (const record of db.records) inputs.push(rangeInput('records', record.token));
+  if (db.project !== undefined && 'token' in db.project)
+    inputs.push(rangeInput('project', db.project.token));
+  raw.inputs = inputs.sort((a, b) => a.line - b.line);
+
   const project = db.project;
   if (project !== undefined && 'token' in project) {
     if (project.note !== undefined) raw.projectNote = project.note.value;
@@ -280,5 +386,5 @@ export function readDbml(text: string, dbml: DbmlModule): DbmlReadResult {
     })),
   ];
   raw.skipped = skipped.sort((x, y) => x.line - y.line);
-  return { raw };
+  return { raw, problems: [] };
 }

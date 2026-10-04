@@ -15,13 +15,49 @@ afterEach(() => {
 
 describe('readJsonPanelPrefs', () => {
   it('returns the defaults when nothing is stored', () => {
-    expect(readJsonPanelPrefs(null)).toEqual({ open: true, height: 212, tab: 'deck' });
-    expect(DEFAULT_JSON_PANEL).toEqual({ open: true, height: 212, tab: 'deck' });
+    expect(readJsonPanelPrefs(null)).toEqual({
+      open: true,
+      height: 212,
+      tab: 'deck',
+      format: 'json',
+      schemaScope: 'selection',
+      sqlPreviewDialect: 'postgres',
+    });
+    expect(DEFAULT_JSON_PANEL).toEqual({
+      open: true,
+      height: 212,
+      tab: 'deck',
+      format: 'json',
+      schemaScope: 'selection',
+      sqlPreviewDialect: 'postgres',
+    });
   });
 
   it('reads a valid value', () => {
     const raw = JSON.stringify({ open: false, height: 300, tab: 'selection' });
-    expect(readJsonPanelPrefs(raw)).toEqual({ open: false, height: 300, tab: 'selection' });
+    expect(readJsonPanelPrefs(raw)).toEqual({
+      ...DEFAULT_JSON_PANEL,
+      open: false,
+      height: 300,
+      tab: 'selection',
+    });
+  });
+
+  it('reads the 046 fields and falls back field by field', () => {
+    const raw = JSON.stringify({
+      format: 'dbml',
+      schemaScope: 'schema',
+      sqlPreviewDialect: 'mysql',
+    });
+    expect(readJsonPanelPrefs(raw)).toEqual({
+      ...DEFAULT_JSON_PANEL,
+      format: 'dbml',
+      schemaScope: 'schema',
+      sqlPreviewDialect: 'mysql',
+    });
+    const bad = JSON.stringify({ format: 'yaml', schemaScope: 3, sqlPreviewDialect: 'oracle' });
+    expect(readJsonPanelPrefs(bad)).toEqual(DEFAULT_JSON_PANEL);
+    expect(readJsonPanelPrefs(JSON.stringify({ format: 'sql' })).format).toBe('sql');
   });
 
   it.each([
@@ -35,19 +71,16 @@ describe('readJsonPanelPrefs', () => {
 
   it('validates field by field', () => {
     expect(readJsonPanelPrefs(JSON.stringify({ open: 'no', height: 300, tab: 'nope' }))).toEqual({
-      open: true,
+      ...DEFAULT_JSON_PANEL,
       height: 300,
-      tab: 'deck',
     });
     expect(readJsonPanelPrefs(JSON.stringify({ open: false, height: '300' }))).toEqual({
+      ...DEFAULT_JSON_PANEL,
       open: false,
-      height: 212,
-      tab: 'deck',
     });
     // JSON cannot hold Infinity or NaN; they arrive as null.
     expect(readJsonPanelPrefs('{"height": null, "tab": "selection"}')).toEqual({
-      open: true,
-      height: 212,
+      ...DEFAULT_JSON_PANEL,
       tab: 'selection',
     });
   });
@@ -62,11 +95,10 @@ describe('readJsonPanelPrefs', () => {
 
 describe('load and save', () => {
   it('round-trips through localStorage', () => {
-    saveJsonPanelPrefs({ open: false, height: 150, tab: 'selection' });
-    expect(localStorage.getItem(JSON_PANEL_KEY)).toBe(
-      JSON.stringify({ open: false, height: 150, tab: 'selection' }),
-    );
-    expect(loadJsonPanelPrefs()).toEqual({ open: false, height: 150, tab: 'selection' });
+    const prefs = { ...DEFAULT_JSON_PANEL, open: false, height: 150, tab: 'selection' as const };
+    saveJsonPanelPrefs(prefs);
+    expect(localStorage.getItem(JSON_PANEL_KEY)).toBe(JSON.stringify(prefs));
+    expect(loadJsonPanelPrefs()).toEqual(prefs);
   });
 
   it('uses the defaults and ignores writes when storage is blocked', () => {

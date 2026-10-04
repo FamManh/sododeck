@@ -64,6 +64,12 @@ describe.each([
       expect(scopes).toContain(scope);
   });
 
+  it('colors the DBML and SQL token kinds (046)', () => {
+    const scopes = built.rules.map((rule) => rule.token);
+    for (const scope of ['string', 'type', 'comment', 'predefined', 'operator'])
+      expect(scopes).toContain(scope);
+  });
+
   it('gives every syntax foreground at least 4.5:1 on the code surface', () => {
     const foregrounds = [
       ...built.rules.flatMap((rule) => (rule.foreground ? [`#${rule.foreground}`] : [])),

@@ -4,6 +4,7 @@
  */
 import { createParsers } from './load-parsers';
 import { runImport } from './pipeline';
+import { readDbml } from './read-dbml';
 import type { ImportRequest } from './import-client';
 
 const parsers = createParsers();
@@ -11,6 +12,11 @@ const parsers = createParsers();
 self.onmessage = async (event: MessageEvent<{ id: number; request: ImportRequest }>) => {
   const { id, request } = event.data;
   try {
+    if (request.kind === 'read-dbml') {
+      const { raw, problems } = readDbml(request.text, await parsers.dbml());
+      self.postMessage({ id, ok: true, result: { schema: raw, problems } });
+      return;
+    }
     const { plan, preview } = await runImport(request.source, request.target, parsers);
     self.postMessage({ id, ok: true, result: request.kind === 'plan' ? plan : preview });
   } catch (error) {

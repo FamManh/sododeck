@@ -417,7 +417,7 @@ values: { id, name, note? }[] }`;
 
 ## 046-db-code-panel
 
-- **Status:** specified (`specs/046-db-code-panel`).
+- **Status:** built (`specs/046-db-code-panel`, ADR 0034); DBML and SQL tabs in the code overlay.
 - **Milestone:** after 045 · **Depends on:** 044, 045 · **Estimate:** 5 d
 - **026 dependency removed (founder, 2026-10-04):** the JSON tab stays read-only (026 makes it
   editable later, only if users ask); 046 builds the editing it needs for the DBML tab itself and

@@ -143,6 +143,11 @@ import {
   type ViewSettingsPatch,
 } from './ops/views';
 
+export interface BatchOptions {
+  /** A merge run: batches with the same key are one undo step (see `DeckEditor.batch`). */
+  merge?: string;
+}
+
 export interface EditorOptions {
   /** Typing-burst window in ms: edits to one object closer than this are one undo step. */
   captureTimeout?: number;
@@ -489,8 +494,13 @@ export interface DeckEditor {
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
    * Nested batches flatten. Each operation inside still validates before it writes, but Yjs cannot
    * roll back: if `fn` throws halfway, the edits made before the throw stay applied.
+   *
+   * With `options.merge` (046), batches that repeat the same key join one undo step however far
+   * apart they are, until another tracked write, `undo`, `redo` or `stopCapturing` ends the run.
    */
-  batch<T>(fn: () => T): T;
+  batch<T>(fn: () => T, options?: BatchOptions): T;
+  /** Ends the current undo step: the next edit (or merged batch) starts a new one. */
+  stopCapturing(): void;
   /**
    * Marks the start of a gesture (a drag, a multi-step form change): every edit until the
    * matching `endGesture` is one undo step, however long it takes. Calls nest and are counted.
@@ -534,6 +544,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
   // `stopCapturing()` forces the next one into a new step.
   let lastKey: string | undefined;
   let gestureDepth = 0;
+  let transactDepth = 0;
   let savedTimeout = undoManager.captureTimeout;
 
   // A gesture holds back the redo stack instead of clearing it (Yjs clears it on the first new
@@ -592,15 +603,29 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
 
   const ctx: EditContext = {
     doc,
-    transact: (fn, key) => {
+    transact: (fn, key, merge = false) => {
+      // An operation inside a batch joins the batch's transaction: only the outermost call decides
+      // the undo step (046: a nested call must not end a merge run).
+      if (transactDepth > 0) return fn();
       // Inside a gesture everything merges; outside, a new object or a structural edit starts a
       // new step. Yjs flattens nested transactions into the outermost one (batches).
-      if (gestureDepth === 0 && (key === undefined || key !== lastKey)) undoManager.stopCapturing();
+      const continuing = key !== undefined && key === lastKey;
+      if (gestureDepth === 0 && !continuing) undoManager.stopCapturing();
       lastKey = key;
+      // A merge run ignores the capture window for this transaction only (046 R2): applies are
+      // further apart than `captureTimeout`, yet one typing burst is one undo step.
+      const held = undoManager.captureTimeout;
+      if (merge && continuing && gestureDepth === 0) undoManager.captureTimeout = Infinity;
       let result: ReturnType<typeof fn> | undefined;
-      doc.transact(() => {
-        result = fn();
-      }, origin);
+      transactDepth++;
+      try {
+        doc.transact(() => {
+          result = fn();
+        }, origin);
+      } finally {
+        transactDepth--;
+        undoManager.captureTimeout = held;
+      }
       return result as ReturnType<typeof fn>;
     },
     transactUntracked: (fn) => {
@@ -880,7 +905,14 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       moveEnumValue(ctx, enumId, valueId, toIndex);
     },
     removeEnumValue: (enumId, valueId) => removeEnumValue(ctx, enumId, valueId),
-    batch: (fn) => ctx.transact(fn),
+    batch: (fn, options) =>
+      options?.merge === undefined
+        ? ctx.transact(fn)
+        : ctx.transact(fn, `merge:${options.merge}`, true),
+    stopCapturing: () => {
+      undoManager.stopCapturing();
+      lastKey = undefined;
+    },
     beginGesture: () => {
       if (gestureDepth++ === 0) {
         undoManager.stopCapturing();
@@ -912,8 +944,16 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       heldRedo = [];
       checkHistoryChange();
     },
-    undo: () => undoManager.undo() !== null,
-    redo: () => undoManager.redo() !== null,
+    undo: () => {
+      lastKey = undefined;
+      undoManager.stopCapturing();
+      return undoManager.undo() !== null;
+    },
+    redo: () => {
+      lastKey = undefined;
+      undoManager.stopCapturing();
+      return undoManager.redo() !== null;
+    },
     canUndo: () => undoManager.canUndo(),
     canRedo: () => undoManager.canRedo(),
     onHistoryChange: (listener) => {
