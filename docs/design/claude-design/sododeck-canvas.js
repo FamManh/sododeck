@@ -27,7 +27,7 @@ function cell(o){o=o||{};const t=o.t==null?'':String(o.t);return {st:Object.assi
  hasTile:!!o.tile,tileSt:o.tileSt||{},tileIcon:o.tile||'',tileIst:ic(o.tsz||15),icon:o.icon||'',ist:o.ist||ic(o.isz||16),
  t,tst:Object.assign({whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',minWidth:0},o.tst||{}),t2:o.t2||'',t2st:Object.assign({fontSize:11.5,color:'var(--mu)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'},o.t2st||{}),
  wst:Object.assign({display:'flex',flexDirection:'column',gap:2,minWidth:0,flex:1},o.wst||{}),one:!o.t2&&t!=='',two:!!o.t2,
- segs:(o.segs||[]).map(g=>({t:g.t||'',icon:g.icon||'',ist:g.ist||ic(14),st:g.st||{}})),kbd:o.kbd||'',kst:Object.assign({},KBD,o.kst||{}),chev:o.chev||'',cst:o.cst||ic(14,{color:'var(--mu)'})};}
+ segs:(o.segs||[]).map(g=>({t:g.t||'',icon:g.icon||'',ist:g.ist||ic(14),st:g.st||{}})),el:o.el||null,pre:o.pre||null,kbd:o.kbd||'',kst:Object.assign({},KBD,o.kst||{}),chev:o.chev||'',cst:o.cst||ic(14,{color:'var(--mu)'})};}
 const row=(cells,st)=>({st:Object.assign({display:'flex',alignItems:'center',gap:2},st||{}),cells:(cells||[]).map(cell)});
 const panel=(st,rows)=>({st:Object.assign({position:'absolute',background:'var(--s)',border:'1px solid var(--bd)',borderRadius:12,boxShadow:'0 1px 2px var(--sh)',color:'var(--tx)',zIndex:20},st),rows:rows||[]});
 const tw=(t,px)=>Math.round(String(t||'').length*(px||7));
@@ -428,7 +428,8 @@ N('114','endpoint-targets','D','Endpoint side targets','Dragged the end of charg
 N('115','keyboard','D','Keyboard: regions and context menu','Pressed F6 through the regions, then ⇧F10 on Order Service.','Numbered badges show the F6 order (deck, tools, rail, undo, canvas, zoom). The canvas region has an inset focus ring, the card a focus frame, and the keyboard-opened menu focuses its first item.','F6 / ⇧F6 cycle regions · Tab within a region · ⇧F10 context menu · Esc close.','Regions that are hidden (Hide UI) are skipped.'),
 N('116','narrow','D','Narrow window 1024×768','Resized the window to 1024×768 with the drawer open.','The rail stays. Top islands collapse text into icons: the view switcher becomes a dropdown, Jump to, Labels and Focus become icons, Export is icon-only. The drawer covers about 35% of the canvas.','Same shortcuts.','Below 1024 the editor is view-only (DESIGN.md).',{vw:1024,vh:768})];
 function build(id,th){const f=ST_[id]||ST_['86'];return f(th||'light');}
-window.SODO_CV={build,LIST,CARDS,CUSTOM};
+// lib: chrome primitives for other boards (sododeck-db.js renders these descriptors unchanged)
+window.SODO_CV={build,LIST,CARDS,CUSTOM,lib:{TH,CARDS,CUSTOM,ic,cell,row,panel,ib,dv,PRIM,SEC,LAB,TXT,inp,chip,addChip,HR,tip,pill,kp,base,chrome,island,railTop,minimap,tbar,SW,popP,menu,flyout,search,microRow,drawer,dHead,secR,colourPop,VIEWS,FLOAT,KBD,FOC,mono,geist}};
 return true;}
 if(!init()){const t=setInterval(()=>{if(init())clearInterval(t);},50);}
 })();
