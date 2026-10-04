@@ -178,10 +178,10 @@
 
 ## Phase 10: Polish & Cross-Cutting
 
-- [ ] T048 [P] Accessibility pass: button names, `aria-expanded`, filter live region, palette result labels, 4.5:1 contrast in light and dark with DESIGN.md tokens, reduced-motion pan; checks in the component tests above
-- [ ] T049 [P] Docs: update `apps/app/CLAUDE.md` (table layout / row limit, schema-groups, palette kinds, views filter, focus), `packages/model/CLAUDE.md` (grouping op, view keys, search kinds), `packages/schema/CLAUDE.md` (three additive keys), `DESIGN.md` only if a token changed; mark 048 built in `docs/backlog-database.md`
-- [ ] T050 Write `specs/048-db-scale/quickstart-results.md` with the manual run of quickstart 1–8 and screenshots against frames 158, 162, 163
-- [ ] T051 Full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` (smoke < 30 s, no-third-party check green); fix anything the new code broke
+- [x] T048 [P] Accessibility pass: button names, `aria-expanded`, filter live region, palette result labels, 4.5:1 contrast in light and dark with DESIGN.md tokens, reduced-motion pan; checks in the component tests above
+- [x] T049 [P] Docs: update `apps/app/CLAUDE.md` (table layout / row limit, schema-groups, palette kinds, views filter, focus), `packages/model/CLAUDE.md` (grouping op, view keys, search kinds), `packages/schema/CLAUDE.md` (three additive keys), `DESIGN.md` only if a token changed; mark 048 built in `docs/backlog-database.md`
+- [x] T050 Write `specs/048-db-scale/quickstart-results.md` with the manual run of quickstart 1–8 and screenshots against frames 158, 162, 163
+- [x] T051 Full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` (smoke < 30 s, no-third-party check green); fix anything the new code broke
 - [ ] T052 Final report: what changed, what was skipped, what is uncertain (including bench numbers); then stop (do not start 049 or 047)
 
 ---
