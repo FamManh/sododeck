@@ -1,9 +1,11 @@
+import { readFile } from 'node:fs/promises';
+
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { createDeck, createEditor, fromJSON, serializeDeck, toJSON } from '../src';
-import { largeDeck, readExample } from './helpers';
+import { largeDeck, readExample, shopDeck } from './helpers';
 
 const minimal = await readExample('minimal.sododeck.json');
 const flowAndRule = await readExample('flow-and-rule.sododeck.json');
@@ -593,7 +595,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
   it('createDeck() produces an empty valid file', () => {
     expect(toJSON(createDeck())).toEqual({
       ...emptySododeckFile(),
-      packs: ['architecture', 'process', 'logistics', 'data', 'shapes'],
+      packs: ['architecture', 'process', 'logistics', 'data', 'database', 'shapes'],
     });
   });
 
@@ -1106,5 +1108,153 @@ describe('shapes and forms (031)', () => {
     const back = toJSON(fromJSON(file));
     expect(back.nodes.map((n) => n.icon)).toEqual(icons);
     expect(serializeDeck(back)).toBe(serializeDeck(file));
+  });
+});
+
+describe('database schema (040)', () => {
+  const table = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    type: 'db-table',
+    title: id,
+    ...extra,
+  });
+
+  const dbCases: [string, SododeckFile][] = [
+    ['shop schema', shopDeck()],
+    ['table with no columns', { ...empty, nodes: [table('t', { columns: [] })] }],
+    ['deck with empty enums', { ...empty, enums: [] }],
+    ['explicit generic dialect', { ...empty, dialect: 'generic' }],
+    [
+      'column flags written false',
+      {
+        ...empty,
+        nodes: [
+          table('t', {
+            columns: [{ id: 'c', name: 'c', type: 'int', pk: false, notNull: false, default: '0' }],
+          }),
+        ],
+      },
+    ],
+    [
+      'index mixing a column id and an expression',
+      {
+        ...empty,
+        nodes: [
+          table('t', {
+            columns: [{ id: 'c', name: 'c', type: 'text' }],
+            indexes: [{ id: 'i', columns: [{ expr: 'lower(c)' }, 'c'], unique: true }],
+          }),
+        ],
+      },
+    ],
+    [
+      'two relationships between the same tables, an n-n and a self-reference',
+      {
+        ...empty,
+        nodes: [
+          table('a', { columns: [{ id: 'a1', name: 'id', type: 'int' }] }),
+          table('b', { columns: [{ id: 'b1', name: 'a_id', type: 'int' }] }),
+        ],
+        edges: [
+          { id: 'r1', from: 'b', to: 'a', fromColumns: ['b1'], toColumns: ['a1'] },
+          { id: 'r2', from: 'b', to: 'a', cardinality: 'n-n', toOptional: true },
+          { id: 'r3', from: 'a', to: 'a', fromColumns: ['a1'], toColumns: ['a1'] },
+        ],
+      },
+    ],
+    [
+      'table keys on a service card and column keys between services (kept)',
+      {
+        ...empty,
+        nodes: [
+          {
+            id: 's',
+            type: 'service',
+            title: 'S',
+            schema: 'billing',
+            columns: [{ id: 'c', name: 'c', type: 'int' }],
+            expanded: true,
+          },
+          { id: 't', type: 'service', title: 'T' },
+        ],
+        edges: [{ id: 'e', from: 's', to: 't', fromColumns: ['c'], toColumns: ['nope'] }],
+      },
+    ],
+  ];
+
+  it.each(dbCases)('round-trips the %s losslessly, keys in order', (_name, file) => {
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(`${JSON.stringify(out, null, 2)}\n`).toBe(serializeDeck(file));
+  });
+
+  it.each(dbCases)('serializes a replica of the %s identically', (_name, file) => {
+    const replica = new Y.Doc();
+    Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(file)));
+    expect(serializeDeck(toJSON(replica))).toBe(serializeDeck(file));
+  });
+
+  it('writes dialect and enums right after fieldDefaults, table keys after style', () => {
+    const out = toJSON(fromJSON(shuffleKeys(shopDeck())));
+    expect(`${JSON.stringify(out, null, 2)}\n`).toBe(serializeDeck(shopDeck()));
+    const keys = Object.keys(toJSON(fromJSON(full)));
+    expect(keys.indexOf('dialect')).toBe(keys.indexOf('fieldDefaults') + 1);
+    expect(keys.indexOf('enums')).toBe(keys.indexOf('dialect') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('enums') + 1);
+    const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
+    expect(Object.keys(orders)).toEqual([
+      'id',
+      'type',
+      'title',
+      'parent',
+      'columns',
+      'indexes',
+      'checks',
+    ]);
+  });
+});
+
+/** A deck saved before 040 (008's logistics screens). */
+const logistics = JSON.parse(
+  await readFile(
+    new URL('../../../specs/008-inspector-rules/screens/logistics.sododeck.json', import.meta.url),
+    'utf8',
+  ),
+) as SododeckFile;
+
+describe('decks saved before 040 stay unchanged (US3)', () => {
+  const decks: [string, SododeckFile][] = [
+    ['minimal example', minimal],
+    ['flow-and-rule example', flowAndRule],
+    ['008 logistics deck', logistics],
+    ['generated 500-node deck', largeDeck()],
+  ];
+  const DB_NODE_KEYS = ['schema', 'columns', 'indexes', 'checks', 'expanded', 'detail'];
+  const DB_EDGE_KEYS = [
+    'fromColumns',
+    'toColumns',
+    'cardinality',
+    'fromOptional',
+    'toOptional',
+    'onDelete',
+    'onUpdate',
+  ];
+
+  it.each(decks)('moves a card of the %s and adds no database key', (_name, file) => {
+    const doc = fromJSON(file);
+    const [first] = file.nodes;
+    if (first === undefined) throw new Error('deck has no node');
+    createEditor(doc).update('nodes', first.id, { position: { x: 7, y: 9 } });
+    const out = toJSON(doc);
+    expect(out).not.toHaveProperty('dialect');
+    expect(out).not.toHaveProperty('enums');
+    for (const node of out.nodes)
+      for (const key of DB_NODE_KEYS) expect(node).not.toHaveProperty(key);
+    for (const edge of out.edges)
+      for (const key of DB_EDGE_KEYS) expect(edge).not.toHaveProperty(key);
+    const expected = structuredClone(file);
+    const moved = expected.nodes[0];
+    if (moved !== undefined) moved.position = { x: 7, y: 9 };
+    expect(serializeDeck(out)).toBe(serializeDeck(expected));
   });
 });

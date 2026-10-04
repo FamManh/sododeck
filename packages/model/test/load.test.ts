@@ -192,6 +192,69 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
     expect(toJSON(fromJSON(file))).toEqual(file);
   });
 
+  describe('database parts share one id scope (040)', () => {
+    const table = (id: string, extra: Record<string, unknown>) => ({
+      id,
+      type: 'db-table',
+      title: id,
+      ...extra,
+    });
+    const col = (id: string) => ({ id, name: id, type: 'int' });
+
+    it('refuses a column id used in two tables, naming both paths', () => {
+      const error = loadError({
+        ...emptySododeckFile(),
+        nodes: [table('a', { columns: [col('x')] }), table('b', { columns: [col('y'), col('x')] })],
+      });
+      expect(error.issues).toEqual([
+        {
+          path: 'nodes.1.columns.1.id',
+          message: 'Id "x" is used more than once (nodes.0.columns.0.id, nodes.1.columns.1.id).',
+        },
+      ]);
+    });
+
+    it('refuses a column id equal to an enum value id', () => {
+      const error = loadError({
+        ...emptySododeckFile(),
+        enums: [{ id: 'e', name: 'e', values: [{ id: 'v', name: 'v' }] }],
+        nodes: [table('a', { columns: [col('v')] })],
+      });
+      expect(error.issues.map((i) => i.message)).toEqual([
+        'Id "v" is used more than once (nodes.0.columns.0.id, enums.0.values.0.id).',
+      ]);
+    });
+
+    it('refuses a duplicate index id inside one table, and a check reusing a column id', () => {
+      const error = loadError({
+        ...emptySododeckFile(),
+        nodes: [
+          table('a', {
+            columns: [col('c')],
+            indexes: [
+              { id: 'i', columns: ['c'] },
+              { id: 'i', columns: ['c'] },
+            ],
+            checks: [{ id: 'c', expr: 'true' }],
+          }),
+        ],
+      });
+      // In order of first use: the check reuses column "c", then index "i" repeats.
+      expect(error.issues.map((i) => i.path)).toEqual([
+        'nodes.0.checks.0.id',
+        'nodes.0.indexes.1.id',
+      ]);
+    });
+
+    it('accepts a column id equal to a node id', () => {
+      const file: SododeckFile = {
+        ...emptySododeckFile(),
+        nodes: [table('a', { columns: [col('a')] })],
+      };
+      expect(toJSON(fromJSON(file))).toEqual(file);
+    });
+  });
+
   it('loads a file with dangling references (US2 AS5)', () => {
     const file: SododeckFile = {
       ...emptySododeckFile(),

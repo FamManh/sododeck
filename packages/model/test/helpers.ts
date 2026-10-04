@@ -224,3 +224,164 @@ export function bothOrders(
     check(a, b);
   }
 }
+
+/**
+ * A small database schema (040): customers, orders, order items (composite key), shipments (a
+ * composite reference to items) and categories (a self-reference), one enum, indexes and a check.
+ */
+export function shopDeck(): SododeckFile {
+  return {
+    ...emptySododeckFile(),
+    dialect: 'postgres',
+    enums: [
+      {
+        id: 'e-status',
+        name: 'customer_status',
+        values: [
+          { id: 'ev-active', name: 'active' },
+          { id: 'ev-blocked', name: 'blocked', note: 'No orders.' },
+        ],
+      },
+    ],
+    nodes: [
+      { id: 'db', type: 'database', title: 'Shop' },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        parent: 'db',
+        columns: [
+          { id: 'c-id', name: 'id', type: 'bigint', pk: true },
+          { id: 'c-email', name: 'email', type: 'varchar', size: '255', notNull: true },
+          { id: 'c-status', name: 'status', type: 'customer_status', enumRef: 'e-status' },
+        ],
+      },
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        parent: 'db',
+        columns: [
+          { id: 'o-id', name: 'id', type: 'bigint', pk: true },
+          { id: 'o-customer', name: 'customer_id', type: 'bigint', notNull: true },
+          { id: 'o-total', name: 'total', type: 'numeric', size: '10,2' },
+        ],
+        indexes: [
+          { id: 'ix-customer', columns: ['o-customer'] },
+          { id: 'ix-mixed', name: 'orders_mixed', columns: ['o-customer', 'o-total'] },
+          { id: 'ix-expr', columns: [{ expr: 'lower(note)' }] },
+        ],
+        checks: [{ id: 'ck-total', name: 'total_positive', expr: 'total >= 0' }],
+      },
+      {
+        id: 'items',
+        type: 'db-table',
+        title: 'order_items',
+        columns: [
+          { id: 'i-order', name: 'order_id', type: 'bigint', pk: true },
+          { id: 'i-line', name: 'line_no', type: 'integer', pk: true },
+          { id: 'i-qty', name: 'quantity', type: 'integer' },
+        ],
+      },
+      {
+        id: 'shipments',
+        type: 'db-table',
+        title: 'shipments',
+        columns: [
+          { id: 's-id', name: 'id', type: 'bigint', pk: true },
+          { id: 's-order', name: 'order_id', type: 'bigint' },
+          { id: 's-line', name: 'line_no', type: 'integer' },
+        ],
+      },
+      {
+        id: 'categories',
+        type: 'db-table',
+        title: 'categories',
+        columns: [
+          { id: 'cat-id', name: 'id', type: 'bigint', pk: true },
+          { id: 'cat-parent', name: 'parent_id', type: 'bigint', enumRef: 'e-status' },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: 'r-orders-customer',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['o-customer'],
+        toColumns: ['c-id'],
+        cardinality: 'n-1',
+        onDelete: 'cascade',
+      },
+      {
+        id: 'r-ship-item',
+        from: 'shipments',
+        to: 'items',
+        fromColumns: ['s-order', 's-line'],
+        toColumns: ['i-order', 'i-line'],
+        cardinality: 'n-1',
+      },
+      {
+        id: 'r-cat-parent',
+        from: 'categories',
+        to: 'categories',
+        fromColumns: ['cat-parent'],
+        toColumns: ['cat-id'],
+        fromOptional: true,
+      },
+    ],
+  };
+}
+
+/**
+ * A database schema of `tables` tables × `columns` columns with `relationships` foreign keys
+ * (040 SC-005), fixed ids: table `t<i>`, column `t<i>c<j>`, relationship `r<k>`. Column 0 is the
+ * key; each relationship joins column 1 of one table to the key of another.
+ */
+export function largeSchemaDeck(tables = 150, columns = 12, relationships = 200): SododeckFile {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    dialect: 'postgres',
+    enums: [
+      {
+        id: 'status',
+        name: 'status',
+        values: [
+          { id: 'status-a', name: 'active' },
+          { id: 'status-b', name: 'blocked' },
+        ],
+      },
+    ],
+  };
+  for (let t = 0; t < tables; t++) {
+    const id = `t${String(t)}`;
+    file.nodes.push({
+      id,
+      type: 'db-table',
+      title: `table_${String(t)}`,
+      position: { x: (t % 15) * 300, y: Math.floor(t / 15) * 400 },
+      columns: Array.from({ length: columns }, (_, c) => ({
+        id: `${id}c${String(c)}`,
+        name: c === 0 ? 'id' : `column_${String(c)}`,
+        type: c === 0 ? 'bigint' : c === 2 ? 'status' : 'text',
+        ...(c === 0 ? { pk: true } : {}),
+        ...(c === 2 ? { enumRef: 'status' } : {}),
+      })),
+      indexes: [{ id: `${id}i0`, columns: [`${id}c1`, `${id}c2`] }],
+      checks: [{ id: `${id}k0`, expr: 'id > 0' }],
+    });
+  }
+  for (let r = 0; r < relationships; r++) {
+    const from = r % tables;
+    const to = (r * 7 + 1) % tables;
+    file.edges.push({
+      id: `r${String(r)}`,
+      from: `t${String(from)}`,
+      to: `t${String(to)}`,
+      fromColumns: [`t${String(from)}c1`],
+      toColumns: [`t${String(to)}c0`],
+      cardinality: 'n-1',
+    });
+  }
+  return file;
+}

@@ -3,11 +3,11 @@
  * from plain objects and writes single fields, so order keys, blank markers, long text and child
  * lists are handled in one place. Ops never call `toY` on a deck object.
  */
-import type { FieldDef, FieldOption, Id, Rule } from '@sododeck/schema';
+import type { DbEnum, FieldDef, FieldOption, Id, Rule } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { fromY, isRecord, jsonEqual, toY, type YObject, type YValue } from './convert';
-import { ORDER_KEY, type ListMap } from './layout';
+import { isTableList, ORDER_KEY, TABLE_LISTS, type ListMap } from './layout';
 import { keysBetween } from './order-key';
 import { blankKey, VALUE_PREFIX, valueKey, writeText } from './text';
 import { isRequiredText, isTextField, TEXT_FIELDS, type TextKind } from './text-fields';
@@ -20,7 +20,7 @@ function newList(): ListMap {
 }
 
 /** Fills a new child list with `items` (plain objects with an `id`) in array order. */
-function fillList(
+export function fillList(
   list: ListMap,
   kind: ObjectKind,
   items: readonly Record<string, unknown>[],
@@ -40,9 +40,19 @@ function createTexts(map: YObject, kind: TextKind, plain: Record<string, unknown
   }
 }
 
+const records = (value: unknown) => (Array.isArray(value) ? value.filter(isRecord) : []);
+
+/** A new child list holding `items` (plain objects with an `id`) as `kind`, in array order. */
+export function createList(kind: ObjectKind, items: unknown): ListMap {
+  const list = newList();
+  fillList(list, kind, records(items));
+  return list;
+}
+
 /**
  * A new stored map for a plain object of `kind` (validated by the caller), not yet attached. The
- * id is the list key, so it is not stored inside. Flows get their `steps` and `branches` lists.
+ * id is the list key, so it is not stored inside. Flows get their `steps` and `branches` lists;
+ * a node's `columns`, `indexes` and `checks` (040) are child lists when present, even empty.
  */
 export function createObject(
   kind: ObjectKind,
@@ -58,13 +68,16 @@ export function createObject(
       writeValues(map, value);
       continue;
     }
+    if (kind === 'nodes' && isTableList(key)) {
+      map.set(key, createList(TABLE_LISTS[key], value) as unknown as YValue);
+      continue;
+    }
     map.set(key, toY(value));
   }
   createTexts(map, kind, plain);
   if (kind === 'flows') {
     const steps = newList();
     const branches = newList();
-    const records = (value: unknown) => (Array.isArray(value) ? value.filter(isRecord) : []);
     fillList(steps, 'step', records(plain.steps));
     fillList(branches, 'branch', records(plain.branches));
     map.set('steps', steps as unknown as YValue);
@@ -225,5 +238,20 @@ export function createField(field: FieldDef, order: string): YObject {
   if (field.options !== undefined) {
     map.set('options', createOptionList(field.options) as unknown as YValue);
   }
+  return map;
+}
+
+/**
+ * A new stored database enum (040, research R5): plain keys, `values` as a child list (always
+ * present). The id is the list key.
+ */
+export function createEnum(plain: DbEnum, order: string): YObject {
+  const map = new Y.Map<YValue>();
+  map.set(ORDER_KEY, order);
+  for (const [key, value] of Object.entries(plain)) {
+    if (key === 'id' || key === 'values' || value === undefined) continue;
+    map.set(key, toY(value));
+  }
+  map.set('values', createList('enumValue', plain.values) as unknown as YValue);
   return map;
 }

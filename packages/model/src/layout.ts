@@ -29,12 +29,20 @@ export type ObjectOf<C extends Collection> = SododeckFile[C][number];
 /** Where an object lives: deck metadata, a collection, or the rules map. */
 export type Scope = 'meta' | Collection | 'rules';
 
-/** Identifies an object; `child` names a step or branch of a flow, or a column or row of a rule. */
+/**
+ * Kinds of child items: a flow's `step` / `branch`, a rule's `column` / `row`, and the database
+ * parts of 040: a table's `column` / `index` / `check` (scope `nodes`) and the deck's `enum` /
+ * `enum-value` (scope `meta`; a value's id is the enum's id, the child its value).
+ */
+export type ChildKind =
+  'step' | 'branch' | 'column' | 'row' | 'index' | 'check' | 'enum' | 'enum-value';
+
+/** Identifies an object; `child` names a step or branch of a flow, a part of a rule or a table. */
 export interface ObjectRef {
   scope: Scope;
   /** Object id (`''` for meta). */
   id: Id;
-  child?: { kind: 'step' | 'branch' | 'column' | 'row'; id: Id };
+  child?: { kind: ChildKind; id: Id };
 }
 
 /** A list stored by id: item id → item map. Read in order with `orderedEntries`. */
@@ -97,6 +105,28 @@ export function packsMap(doc: DeckDoc): Y.Map<YValue> | undefined {
 export function fieldsList(doc: DeckDoc): ListMap | undefined {
   const existing = metaMap(doc).get('fields');
   return existing instanceof Y.Map ? (existing as unknown as ListMap) : undefined;
+}
+
+/**
+ * The deck's database enums (040, research R5): a layout-2 list in `meta.enums`, each enum with a
+ * `values` child list. Present only once the file has `enums` or the first enum is added.
+ */
+export function enumsList(doc: DeckDoc): ListMap | undefined {
+  const existing = metaMap(doc).get('enums');
+  return existing instanceof Y.Map ? (existing as unknown as ListMap) : undefined;
+}
+
+/** A table's child lists (040, research R7) and the kind of item each holds. */
+export const TABLE_LISTS = {
+  columns: 'dbColumn',
+  indexes: 'dbIndex',
+  checks: 'dbCheck',
+} as const;
+
+export type TableList = keyof typeof TABLE_LISTS;
+
+export function isTableList(key: string): key is TableList {
+  return Object.hasOwn(TABLE_LISTS, key);
 }
 
 /** Types whose default fields are materialised (032): `Y.Map<true>` in `meta.fieldDefaults`, lazy. */

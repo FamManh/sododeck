@@ -10,14 +10,15 @@ import { PacksPanel } from './packs-panel';
 const newDeck = () => deckOf({ packs: [...NEW_DECK_PACKS] });
 
 describe('PacksPanel (030)', () => {
-  it('lists the four packs with type counts and a switch each', () => {
+  it('lists the packs with type counts and a switch each', () => {
     renderWithEditor(<PacksPanel />, newDeck());
     expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
-    for (const name of ['Architecture', 'Process', 'Logistics', 'Data cards']) {
+    for (const name of ['Architecture', 'Process', 'Logistics', 'Data cards', 'Database']) {
       expect(screen.getByRole('switch', { name })).toBeChecked();
     }
     expect(screen.getByText('7 types')).toBeInTheDocument();
-    expect(screen.getByText('1 type')).toBeInTheDocument();
+    // Data cards and Database (040) each have one type.
+    expect(screen.getAllByText('1 type')).toHaveLength(2);
     expect(screen.getByText(/Turning a pack off hides its types from Add/)).toBeInTheDocument();
   });
 
@@ -31,12 +32,19 @@ describe('PacksPanel (030)', () => {
     const user = userEvent.setup();
     const { doc, editor } = renderWithEditor(<PacksPanel />, newDeck());
     await user.click(screen.getByRole('switch', { name: 'Logistics' }));
-    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data', 'shapes']);
+    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data', 'database', 'shapes']);
     expect(useUiStore.getState().announcement.text).toBe('Logistics off');
     act(() => {
       editor().undo();
     });
-    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'logistics', 'data', 'shapes']);
+    expect(toJSON(doc).packs).toEqual([
+      'architecture',
+      'process',
+      'logistics',
+      'data',
+      'database',
+      'shapes',
+    ]);
     await user.click(screen.getByRole('switch', { name: 'Process' }));
     await user.click(screen.getByRole('switch', { name: 'Process' }));
     expect(useUiStore.getState().announcement.text).toBe('Process on');

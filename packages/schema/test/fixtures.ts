@@ -58,6 +58,9 @@ const STEP = 'flows.0.steps.0';
 const BRANCH = 'flows.2.branches.1';
 const GROUP = 'groups.1';
 const FRAMES = 'views.2.groupFrames';
+const CUSTOMERS = 'nodes.12';
+const ORDERS = 'nodes.13';
+const RELATION = 'edges.7';
 
 export const invalidFixtures: InvalidFixture[] = [
   // Envelope
@@ -601,5 +604,82 @@ export const invalidFixtures: InvalidFixture[] = [
     name: 'edge route offset is a string',
     input: set('edges.0.route.offset', '10'),
     path: 'edges.0.route.offset',
+  },
+
+  // Database schema (040): nodes 12–15 are tables, edges 7–11 relationships.
+  {
+    name: 'column without a type',
+    input: remove(`${CUSTOMERS}.columns.0.type`),
+    path: `${CUSTOMERS}.columns.0.type`,
+  },
+  {
+    name: 'column flag with a typo (notnull)',
+    input: set(`${CUSTOMERS}.columns.0.notnull`, true),
+    path: `${CUSTOMERS}.columns.0`,
+  },
+  {
+    name: 'column size with a dot (10.2)',
+    input: set(`${ORDERS}.columns.2.size`, '10.2'),
+    path: `${ORDERS}.columns.2.size`,
+  },
+  {
+    name: 'column with both default and defaultExpr (S14)',
+    input: set(`${CUSTOMERS}.columns.3.default`, 'today'),
+    path: `${CUSTOMERS}.columns.3.defaultExpr`,
+  },
+  {
+    name: 'index without columns',
+    input: set(`${CUSTOMERS}.indexes.0.columns`, []),
+    path: `${CUSTOMERS}.indexes.0.columns`,
+  },
+  {
+    name: 'index part with an empty expression',
+    input: set(`${CUSTOMERS}.indexes.0.columns.0.expr`, ''),
+    path: `${CUSTOMERS}.indexes.0.columns.0.expr`,
+  },
+  {
+    name: 'index part that is neither an id nor { expr }',
+    input: set(`${ORDERS}.indexes.0.columns.0`, { column: 'x' }),
+    path: `${ORDERS}.indexes.0.columns.0`,
+  },
+  {
+    name: 'index method in upper case',
+    input: set(`${CUSTOMERS}.indexes.0.method`, 'BTREE'),
+    path: `${CUSTOMERS}.indexes.0.method`,
+  },
+  {
+    name: 'table detail is not a level',
+    input: set(`${CUSTOMERS}.detail`, 'full'),
+    path: `${CUSTOMERS}.detail`,
+  },
+  {
+    name: 'unknown cardinality',
+    input: set(`${RELATION}.cardinality`, 'many'),
+    path: `${RELATION}.cardinality`,
+  },
+  {
+    name: 'unknown referential action',
+    input: set(`${RELATION}.onDelete`, 'set null'),
+    path: `${RELATION}.onDelete`,
+  },
+  {
+    name: 'empty fromColumns',
+    input: set(`${RELATION}.fromColumns`, []),
+    path: `${RELATION}.fromColumns`,
+  },
+  {
+    name: 'a column twice in toColumns',
+    input: set(`${RELATION}.toColumns`, ['cust-id', 'cust-id']),
+    path: `${RELATION}.toColumns`,
+  },
+  {
+    name: 'unknown dialect',
+    input: set('dialect', 'oracle'),
+    path: 'dialect',
+  },
+  {
+    name: 'enum without values',
+    input: remove('enums.0.values'),
+    path: 'enums.0.values',
   },
 ];

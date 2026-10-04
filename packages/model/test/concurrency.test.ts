@@ -10,7 +10,7 @@ import {
   getRule,
   toJSON,
 } from '../src';
-import { bothOrders, expectConverged, sync, twoDocs, type Side } from './helpers';
+import { bothOrders, expectConverged, shopDeck, sync, twoDocs, type Side } from './helpers';
 
 /**
  * Two documents edited separately, then synced in both delivery orders (036 contract
@@ -731,6 +731,123 @@ describe('typed fields (032)', () => {
           { id: 's', label: 'Small', color: 'green' },
           { id: 'm', label: 'Medium' },
         ]);
+      },
+    );
+  });
+});
+
+describe('database schema (040 US4)', () => {
+  const shop = shopDeck();
+  const columnsOf = (side: Side, tableId: string) =>
+    toJSON(side.doc).nodes.find((n) => n.id === tableId)?.columns ?? [];
+
+  it('keeps two tabs editing different columns of one table', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.updateColumn('orders', 'o-total', { type: 'decimal' });
+      },
+      ({ editor }) => {
+        editor.updateColumn('orders', 'o-customer', { name: 'buyer_id' });
+      },
+      (a) => {
+        expect(columnsOf(a, 'orders').map((c) => [c.name, c.type])).toEqual([
+          ['id', 'bigint'],
+          ['buyer_id', 'bigint'],
+          ['total', 'decimal'],
+        ]);
+      },
+    );
+  });
+
+  it('keeps two tabs editing different keys of one column', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.updateColumn('orders', 'o-total', { notNull: true });
+      },
+      ({ editor }) => {
+        editor.updateColumn('orders', 'o-total', { name: 'amount' });
+      },
+      (a) => {
+        expect(columnsOf(a, 'orders')[2]).toEqual({
+          id: 'o-total',
+          name: 'amount',
+          type: 'numeric',
+          size: '10,2',
+          notNull: true,
+        });
+      },
+    );
+  });
+
+  it('keeps a column one tab added while the other reordered two columns', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.addColumn('orders', { id: 'o-note', name: 'note', type: 'text' });
+      },
+      ({ editor }) => {
+        editor.moveColumn('orders', 'o-total', 0);
+      },
+      (a) => {
+        const ids = columnsOf(a, 'orders').map((c) => c.id);
+        expect(ids).toHaveLength(4);
+        expect(new Set(ids)).toEqual(new Set(['o-id', 'o-customer', 'o-total', 'o-note']));
+        expect(ids.indexOf('o-total')).toBeLessThan(ids.indexOf('o-id'));
+      },
+    );
+  });
+
+  it('removes a column one tab deleted while the other renamed it, leaving no reference', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.removeColumn('orders', 'o-customer');
+      },
+      ({ editor }) => {
+        editor.updateColumn('orders', 'o-customer', { name: 'buyer_id' });
+      },
+      (a) => {
+        const deck = toJSON(a.doc);
+        expect(columnsOf(a, 'orders').map((c) => c.id)).toEqual(['o-id', 'o-total']);
+        expect(JSON.stringify(deck)).not.toContain('o-customer');
+        expect(checkDeck(deck).list.filter((p) => p.kind.startsWith('db-'))).toEqual([]);
+      },
+    );
+  });
+
+  it('keeps two tabs editing two values of one enum', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.updateEnumValue('e-status', 'ev-active', { name: 'enabled' });
+      },
+      ({ editor }) => {
+        editor.updateEnumValue('e-status', 'ev-blocked', { note: null });
+        editor.addEnumValue('e-status', { id: 'ev-new', name: 'pending' });
+      },
+      (a) => {
+        expect(toJSON(a.doc).enums?.[0]?.values).toEqual([
+          { id: 'ev-active', name: 'enabled' },
+          { id: 'ev-blocked', name: 'blocked' },
+          { id: 'ev-new', name: 'pending' },
+        ]);
+      },
+    );
+  });
+
+  it('lets the later write win per relationship key and keeps the other keys', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.update('edges', 'r-ship-item', { cardinality: '1-1' });
+      },
+      ({ editor }) => {
+        editor.update('edges', 'r-ship-item', { onDelete: 'restrict' });
+      },
+      (a) => {
+        expect(toJSON(a.doc).edges[1]).toMatchObject({ cardinality: '1-1', onDelete: 'restrict' });
       },
     );
   });

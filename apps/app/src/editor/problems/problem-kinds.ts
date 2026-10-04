@@ -1,6 +1,8 @@
 import type { ProblemKind } from '@sododeck/model';
 import {
+  Columns3,
   Copy,
+  KeyRound,
   Link2Off,
   ListX,
   Maximize2,
@@ -31,4 +33,6 @@ export const PROBLEM_ICONS: Record<ProblemKind, LucideIcon> = {
   'unknown-card-type': Shapes,
   'unknown-pack': Package,
   'field-value-dangling': ListX,
+  'db-dangling-reference': Columns3,
+  'db-composite-mismatch': KeyRound,
 };

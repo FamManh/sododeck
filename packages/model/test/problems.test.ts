@@ -4,7 +4,7 @@ import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { checkDeck, type Problem } from '../src';
-import { readExample } from './helpers';
+import { readExample, shopDeck } from './helpers';
 
 type NodeData = SododeckFile['nodes'][number];
 const node = (id: string, extra: Partial<NodeData> = {}): NodeData => ({
@@ -482,5 +482,90 @@ describe('field-value-dangling (032 FR-017)', () => {
       'field-value-dangling',
       'field-value-dangling',
     ]);
+  });
+});
+
+describe('database schema problems (040 FR-021)', () => {
+  const shop = shopDeck();
+  const dbProblems = (file: SododeckFile) =>
+    checkDeck(file).list.filter((p) => p.kind.startsWith('db-'));
+
+  it('reports nothing for a consistent schema', () => {
+    expect(dbProblems(shop)).toEqual([]);
+  });
+
+  it('reports an index part, a column end and an enumRef that name nothing', () => {
+    const file = structuredClone(shop);
+    const [, customers, orders] = file.nodes;
+    const [relation] = file.edges;
+    if (customers?.columns?.[2] === undefined || orders?.indexes?.[0] === undefined) {
+      throw new Error('fixture changed');
+    }
+    customers.columns[2].enumRef = 'e-gone';
+    orders.indexes[0].columns = ['o-gone'];
+    if (relation !== undefined) relation.fromColumns = ['o-missing'];
+    const problems = dbProblems(file);
+    expect(problems.map((p) => [p.kind, p.title, p.target, p.detail])).toEqual([
+      [
+        'db-dangling-reference',
+        'Missing enum',
+        { type: 'node', id: 'customers' },
+        'customers.status uses an enum this deck does not have (e-gone)',
+      ],
+      [
+        'db-dangling-reference',
+        'Missing column',
+        { type: 'node', id: 'orders' },
+        'orders · index ix-customer names a column the table does not have (o-gone)',
+      ],
+      [
+        'db-dangling-reference',
+        'Missing column',
+        { type: 'edges', ids: ['r-orders-customer'] },
+        'orders → customers · names a column orders does not have (o-missing)',
+      ],
+    ]);
+    expect(
+      checkDeck(file)
+        .byObject.get('orders')
+        ?.map((p) => p.key),
+    ).toEqual([
+      'db-dangling-reference:orders:ix-customer:o-gone',
+      'db-dangling-reference:r-orders-customer:from:o-missing',
+    ]);
+    // Stable keys across recomputation.
+    expect(dbProblems(file).map((p) => p.key)).toEqual(problems.map((p) => p.key));
+  });
+
+  it('reports composite ends of different lengths', () => {
+    const file = structuredClone(shop);
+    const composite = file.edges[1];
+    if (composite !== undefined) composite.toColumns = ['i-order'];
+    expect(dbProblems(file).map((p) => [p.kind, p.title, p.target, p.detail])).toEqual([
+      [
+        'db-composite-mismatch',
+        "Key columns don't match",
+        { type: 'edges', ids: ['r-ship-item'] },
+        'shipments → order_items · 2 key columns on one end, 1 on the other',
+      ],
+    ]);
+  });
+
+  it('ignores column ends and table keys on cards that are not tables', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes: [
+        {
+          id: 'a',
+          type: 'service',
+          title: 'A',
+          columns: [{ id: 'c', name: 'c', type: 'int', enumRef: 'nope' }],
+          indexes: [{ id: 'i', columns: ['gone'] }],
+        },
+        { id: 'b', type: 'service', title: 'B' },
+      ],
+      edges: [{ id: 'e', from: 'a', to: 'b', fromColumns: ['x', 'y'], toColumns: ['z'] }],
+    };
+    expect(dbProblems(file)).toEqual([]);
   });
 });

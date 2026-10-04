@@ -68,6 +68,7 @@ describe('default fields per type (032 founder table)', () => {
         ['issue.dates', 'Dates', 'dateRange', null],
         ['issue.estimate', 'Estimate', 'number', 'pts'],
       ],
+      'db-table': [],
     });
   });
 

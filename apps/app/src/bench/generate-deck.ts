@@ -7,7 +7,7 @@ const BENCH_ICONS = lucide.icons;
 const KINDS = ['service', 'service', 'database', 'client', 'external'] as const;
 
 /** 030 SC-007: every built-in card type, one after the other. */
-/** The 13 card-family types (030); shapes come with `BENCH_SHAPES` (031). */
+/** Every card-family type (030, 040's `db-table` included); shapes come with `BENCH_SHAPES` (031). */
 const ALL_TYPES = CARD_TYPES.filter((type) => type.family === 'card').map((type) => type.id);
 
 /** 020 R13: the 13 named card colours plus two custom hex colours, cycled across nodes. */

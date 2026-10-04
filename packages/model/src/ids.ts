@@ -10,8 +10,10 @@ import {
   childList,
   collectionMap,
   COLLECTIONS,
+  enumsList,
   fieldsList,
   rulesMap,
+  TABLE_LISTS,
   type DeckDoc,
   type ListMap,
 } from './layout';
@@ -30,7 +32,12 @@ export type IdPrefix =
   | 'row'
   | 'sticky'
   | 'field'
-  | 'option';
+  | 'option'
+  | 'dbcol'
+  | 'dbidx'
+  | 'dbchk'
+  | 'enum'
+  | 'enumval';
 
 const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
 const RANDOM_LENGTH = 10;
@@ -53,8 +60,34 @@ function listIds(list: ListMap | undefined, visit: (id: string) => boolean): boo
 }
 
 /**
+ * Calls `visit` with every id of the database parts (040, research R8): each table's columns,
+ * indexes and checks (on any node that stores them), then each enum and its values. Stops early
+ * when `visit` returns true, and then returns true.
+ */
+function forEachDbPartId(doc: DeckDoc, visit: (id: string) => boolean): boolean {
+  for (const map of collectionMap(doc, 'nodes').values()) {
+    for (const field of Object.keys(TABLE_LISTS)) {
+      if (listIds(childList(map, field), visit)) return true;
+    }
+  }
+  for (const [id, item] of enumsList(doc)?.entries() ?? []) {
+    if (visit(id)) return true;
+    if (listIds(childList(item, 'values'), visit)) return true;
+  }
+  return false;
+}
+
+/** Ids of the database-parts scope: an explicit id given to a database op must not be one. */
+export function dbPartIds(doc: DeckDoc): Set<Id> {
+  const ids = new Set<Id>();
+  forEachDbPartId(doc, (id) => (ids.add(id), false));
+  return ids;
+}
+
+/**
  * Calls `visit` with every id in the deck: collection objects, steps, branches, rules, rule
- * columns and rows, field definitions and their options (032). Stops early when `visit` returns true, and then returns true.
+ * columns and rows, field definitions and their options (032), and the database parts (040).
+ * Stops early when `visit` returns true, and then returns true.
  */
 export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boolean {
   for (const c of COLLECTIONS) {
@@ -64,6 +97,7 @@ export function forEachDeckId(doc: DeckDoc, visit: (id: string) => boolean): boo
       if (c === 'flows' && listIds(childList(map, 'branches'), visit)) return true;
     }
   }
+  if (forEachDbPartId(doc, visit)) return true;
   for (const [id, rule] of rulesMap(doc).entries()) {
     if (visit(id)) return true;
     for (const part of ['inputs', 'outputs', 'rows']) {

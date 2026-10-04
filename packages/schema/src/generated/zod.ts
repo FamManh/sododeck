@@ -68,7 +68,7 @@ export const sododeckFileSchema = z
           .string()
           .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
           .describe(
-            'Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`. Same pattern as a type id. An id the app does not know is kept on save and reported.',
+            'Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`, `database`. Same pattern as a type id. An id the app does not know is kept on save and reported.',
           ),
       )
       .min(1)
@@ -115,7 +115,7 @@ export const sododeckFileSchema = z
                   .string()
                   .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
                   .describe(
-                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`, `db-table`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
                   ),
               )
               .refine(
@@ -222,12 +222,74 @@ export const sododeckFileSchema = z
           .string()
           .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
           .describe(
-            'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+            'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`, `db-table`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
           ),
       )
       .refine((arr) => arr.every((item, i) => arr.indexOf(item) == i), 'All items must be unique!')
       .describe(
         "Card types whose default fields now live in `fields` (032): for these types the app no longer adds its own default fields, so a deleted default stays deleted. Absent means every type uses the app's default fields.",
+      )
+      .optional(),
+    dialect: z
+      .enum(['generic', 'postgres', 'mysql', 'sqlite'])
+      .describe(
+        "SQL dialect of the deck's database schema (040): one per deck. Absent means `generic`.",
+      )
+      .optional(),
+    enums: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Unique among every column, index, check, enum and enum value of the deck.',
+              ),
+            name: z
+              .string()
+              .regex(new RegExp('^[^\\n\\r]+$'))
+              .min(1)
+              .max(128)
+              .describe('Enum name, written as given.'),
+            schema: z
+              .string()
+              .regex(new RegExp('^[^\\n\\r]+$'))
+              .min(1)
+              .max(128)
+              .describe('Namespace, e.g. `public`. Absent means the default one.')
+              .optional(),
+            note: z.string().describe('Note on the enum (plain text).').optional(),
+            values: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Unique among every column, index, check, enum and enum value of the deck.',
+                      ),
+                    name: z
+                      .string()
+                      .regex(new RegExp('^[^\\n\\r]+$'))
+                      .min(1)
+                      .max(128)
+                      .describe('The value, written as given.'),
+                    note: z.string().describe('Note on the value (plain text).').optional(),
+                  })
+                  .strict()
+                  .describe('One value of an enum. Renaming it never changes its id.'),
+              )
+              .describe('The values, in order. May be empty.'),
+          })
+          .strict()
+          .describe(
+            'An enum type of the database schema (040). Columns name it by id; it is not drawn.',
+          ),
+      )
+      .describe(
+        "Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.",
       )
       .optional(),
     nodes: z
@@ -244,7 +306,7 @@ export const sododeckFileSchema = z
               .string()
               .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
               .describe(
-                'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+                'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`, `db-table`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
               ),
             display: z
               .enum(['card', 'shape'])
@@ -424,6 +486,197 @@ export const sododeckFileSchema = z
               })
               .strict()
               .describe('Fill and/or stroke colour. Absent means no colour.')
+              .optional(),
+            schema: z
+              .string()
+              .regex(new RegExp('^[^\\n\\r]+$'))
+              .min(1)
+              .max(128)
+              .describe(
+                'Tables (`db-table`, 040): namespace, e.g. `public` or `billing`. Absent means the default one. On other types it is kept and ignored.',
+              )
+              .optional(),
+            columns: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Unique among every column, index, check, enum and enum value of the deck.',
+                      ),
+                    name: z
+                      .string()
+                      .regex(new RegExp('^[^\\n\\r]+$'))
+                      .min(1)
+                      .max(128)
+                      .describe('Column name, written as given.'),
+                    type: z
+                      .string()
+                      .regex(new RegExp('^[^\\n\\r]+$'))
+                      .min(1)
+                      .max(128)
+                      .describe(
+                        "Data type as written, e.g. `varchar`, `timestamptz` or an enum's name.",
+                      ),
+                    size: z
+                      .string()
+                      .regex(new RegExp('^[0-9]{1,6}(,[0-9]{1,6})?$'))
+                      .describe(
+                        'Length, or precision and scale, e.g. `255` or `10,2`. Absent means none.',
+                      )
+                      .optional(),
+                    pk: z
+                      .boolean()
+                      .describe(
+                        '`true` when the column is part of the primary key; several columns make a composite key, in column order. Absent means false.',
+                      )
+                      .optional(),
+                    notNull: z
+                      .boolean()
+                      .describe('`true` when the column may not be null. Absent means false.')
+                      .optional(),
+                    unique: z
+                      .boolean()
+                      .describe('`true` when values must be unique. Absent means false.')
+                      .optional(),
+                    increment: z
+                      .boolean()
+                      .describe(
+                        '`true` for an auto-increment (identity) column. Absent means false.',
+                      )
+                      .optional(),
+                    default: z
+                      .union([z.string(), z.number(), z.boolean()])
+                      .describe(
+                        'Default value as data (text, number or boolean). Never set together with `defaultExpr`. Absent means none.',
+                      )
+                      .optional(),
+                    defaultExpr: z
+                      .string()
+                      .min(1)
+                      .describe(
+                        'Default as an SQL expression, e.g. `now()`. Never set together with `default`.',
+                      )
+                      .optional(),
+                    check: z.string().min(1).describe('Column check expression.').optional(),
+                    enumRef: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Id of an enum in `enums` whose values the column takes. One that names nothing is kept and reported.',
+                      )
+                      .optional(),
+                    note: z.string().describe('Note on the column (plain text).').optional(),
+                  })
+                  .strict()
+                  .describe(
+                    'A column of a table (040). Renaming it never changes its id or the indexes and relationships that name it.',
+                  ),
+              )
+              .describe(
+                'Tables (`db-table`, 040): the columns, in order. May be empty (a sketch). On other types it is kept and ignored.',
+              )
+              .optional(),
+            indexes: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Unique among every column, index, check, enum and enum value of the deck.',
+                      ),
+                    name: z
+                      .string()
+                      .regex(new RegExp('^[^\\n\\r]+$'))
+                      .min(1)
+                      .max(128)
+                      .describe('Index name. Absent means unnamed.')
+                      .optional(),
+                    columns: z
+                      .array(
+                        z
+                          .union([
+                            z
+                              .string()
+                              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                              .describe(
+                                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                              ),
+                            z
+                              .object({
+                                expr: z.string().min(1).describe('Indexed SQL expression.'),
+                              })
+                              .strict(),
+                          ])
+                          .describe(
+                            'One part of an index: the id of a column of the same table, or an expression.',
+                          ),
+                      )
+                      .min(1)
+                      .describe(
+                        'Indexed parts in order: column ids of the same table or `{ expr }`. At least one.',
+                      ),
+                    unique: z
+                      .boolean()
+                      .describe('`true` for a unique index. Absent means false.')
+                      .optional(),
+                    method: z
+                      .string()
+                      .regex(new RegExp('^[a-z][a-z0-9_]{0,31}$'))
+                      .describe(
+                        "Index method in lower case, e.g. `btree`, `hash` or `gin`. Absent means the dialect's default.",
+                      )
+                      .optional(),
+                    note: z.string().describe('Note on the index (plain text).').optional(),
+                  })
+                  .strict()
+                  .describe('An index of a table (040).'),
+              )
+              .describe(
+                'Tables (`db-table`, 040): the indexes. On other types it is kept and ignored.',
+              )
+              .optional(),
+            checks: z
+              .array(
+                z
+                  .object({
+                    id: z
+                      .string()
+                      .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                      .describe(
+                        'Unique among every column, index, check, enum and enum value of the deck.',
+                      ),
+                    name: z
+                      .string()
+                      .regex(new RegExp('^[^\\n\\r]+$'))
+                      .min(1)
+                      .max(128)
+                      .describe('Constraint name. Absent means unnamed.')
+                      .optional(),
+                    expr: z.string().min(1).describe('The check expression.'),
+                  })
+                  .strict()
+                  .describe('A table-level check constraint (040).'),
+              )
+              .describe(
+                'Tables (`db-table`, 040): table-level check constraints. On other types it is kept and ignored.',
+              )
+              .optional(),
+            expanded: z
+              .boolean()
+              .describe(
+                'Tables (`db-table`, 040): `true` shows every column instead of the first few. Absent means collapsed to the limit.',
+              )
+              .optional(),
+            detail: z
+              .enum(['names', 'keys', 'all'])
+              .describe(
+                "Tables (`db-table`, 040): how much of the table is shown. Absent means the deck's default for the zoom level.",
+              )
               .optional(),
           })
           .strict()
@@ -722,6 +975,72 @@ export const sododeckFileSchema = z
                 'Line style of the connector, shared by every view. When absent, the default look.',
               )
               .optional(),
+            fromColumns: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .min(1)
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe(
+                'Relationships (040): ids of columns of the `from` table, in key order. Paired by position with `toColumns`. On an end that is not a table it is kept and ignored.',
+              )
+              .optional(),
+            toColumns: z
+              .array(
+                z
+                  .string()
+                  .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                  .describe(
+                    'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+                  ),
+              )
+              .min(1)
+              .refine(
+                (arr) => arr.every((item, i) => arr.indexOf(item) == i),
+                'All items must be unique!',
+              )
+              .describe(
+                'Relationships (040): ids of columns of the `to` table, paired by position with `fromColumns`.',
+              )
+              .optional(),
+            cardinality: z
+              .enum(['1-1', '1-n', 'n-1', 'n-n'])
+              .describe(
+                'Relationships (040): rows on each side, read from → to. Absent means not stated.',
+              )
+              .optional(),
+            fromOptional: z
+              .boolean()
+              .describe(
+                'Relationships (040): `true` when the `from` side may be absent (zero or …). Absent means false.',
+              )
+              .optional(),
+            toOptional: z
+              .boolean()
+              .describe(
+                'Relationships (040): `true` when the `to` side may be absent (zero or …). Absent means false.',
+              )
+              .optional(),
+            onDelete: z
+              .enum(['cascade', 'restrict', 'set-null', 'set-default', 'no-action'])
+              .describe(
+                'Relationships (040): what happens when the referenced row is deleted. Absent means not stated.',
+              )
+              .optional(),
+            onUpdate: z
+              .enum(['cascade', 'restrict', 'set-null', 'set-default', 'no-action'])
+              .describe(
+                'Relationships (040): what happens when the referenced key changes. Absent means not stated.',
+              )
+              .optional(),
           })
           .strict()
           .describe('A connection between two nodes.'),
@@ -786,7 +1105,7 @@ export const sododeckFileSchema = z
                   .string()
                   .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
                   .describe(
-                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`, `db-table`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
                   ),
               )
               .refine(
@@ -811,7 +1130,7 @@ export const sododeckFileSchema = z
                   .string()
                   .regex(new RegExp('^[a-z][a-z0-9-]{0,47}$'))
                   .describe(
-                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
+                    'Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`, `db-table`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.',
                   ),
               )
               .refine(

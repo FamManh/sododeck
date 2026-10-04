@@ -4,7 +4,7 @@
  * rebuilds rule rows' `when` / `then` from their keyed cells. Results are not in canonical key
  * order; callers canonicalize as before. Ops never call `fromY` on a deck object.
  */
-import type { FieldDef, Id, Rule, RuleRow, SododeckFile } from '@sododeck/schema';
+import type { DbEnum, FieldDef, Id, Rule, RuleRow, SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { sortPacks, sortTypes } from './card-types';
@@ -13,14 +13,17 @@ import { fromY, type YObject } from './convert';
 import {
   childList,
   collectionMap,
+  enumsList,
   fieldDefaultsMap,
   fieldsList,
   isInternalKey,
+  isTableList,
   metaMap,
   orderedEntries,
   packsMap,
   rulesMap,
   swatchesArray,
+  TABLE_LISTS,
   tagColorsMap,
   type Collection,
   type DeckDoc,
@@ -42,6 +45,8 @@ function readStoredFields(kind: TextKind, map: YObject, out: Record<string, unkn
     if (isInternalKey(key) || (kind === 'flows' && (key === 'steps' || key === 'branches'))) {
       continue;
     }
+    // A table's child lists (040) are read in order by `readObject`.
+    if (kind === 'nodes' && isTableList(key) && value instanceof Y.Map) continue;
     if (isTextField(kind, key)) {
       const text = readText(map as Y.Map<unknown>, key, isRequiredText(kind, key));
       if (text !== undefined) out[key] = text;
@@ -98,12 +103,36 @@ function readList(kind: ObjectKind, list: Y.Map<YObject> | undefined): Record<st
 export function readObject(kind: ObjectKind, id: Id, map: YObject): Record<string, unknown> {
   const out: Record<string, unknown> = { id };
   readStoredFields(kind, map, out);
+  if (kind === 'nodes') {
+    // Emitted whenever stored, even empty, so a sketch table's `columns: []` round-trips.
+    for (const [field, itemKind] of Object.entries(TABLE_LISTS)) {
+      const list = childList(map, field);
+      if (list !== undefined) out[field] = readList(itemKind, list);
+    }
+  }
   if (kind === 'flows') {
     out.steps = readList('step', childList(map, 'steps'));
     const branches = readList('branch', childList(map, 'branches'));
     if (branches.length > 0 || map.get(blankKey('branches')) === true) out.branches = branches;
   }
   return out;
+}
+
+/** One stored database enum as plain data (its values in order, 040). */
+export function readEnum(id: Id, map: YObject): DbEnum {
+  const out: Record<string, unknown> = { id };
+  for (const [key, value] of map.entries()) {
+    if (isInternalKey(key) || key === 'values') continue;
+    out[key] = fromY(value);
+  }
+  out.values = readList('enumValue', childList(map, 'values'));
+  return out as unknown as DbEnum;
+}
+
+/** The deck's enums in order, or undefined when the deck stores none (040). */
+export function readEnums(doc: DeckDoc): DbEnum[] | undefined {
+  const list = enumsList(doc);
+  return list === undefined ? undefined : orderedEntries(list).map(([id, m]) => readEnum(id, m));
 }
 
 /** Column ids of one side of a stored rule, in order. */
@@ -189,5 +218,10 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   if (fields !== undefined) out.fields = fields;
   const fieldDefaults = readFieldDefaults(doc);
   if (fieldDefaults !== undefined) out.fieldDefaults = fieldDefaults;
+  // `dialect` / `enums` (040): emitted whenever stored (`enums` even empty), like `fields`.
+  const dialect = meta.get('dialect');
+  if (dialect !== undefined) out.dialect = dialect;
+  const enums = readEnums(doc);
+  if (enums !== undefined) out.enums = enums;
   return out;
 }

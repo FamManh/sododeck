@@ -48,7 +48,7 @@ export type CardColor =
   | 'pink'
   | 'slate';
 /**
- * Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`. Same pattern as a type id. An id the app does not know is kept on save and reported.
+ * Id of a card-type pack. Built-in ids: `architecture`, `process`, `logistics`, `data`, `database`. Same pattern as a type id. An id the app does not know is kept on save and reported.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "PackId".
@@ -70,7 +70,7 @@ export type Id = string;
 export type FieldKind =
   'text' | 'number' | 'select' | 'status' | 'person' | 'date' | 'dateRange' | 'link' | 'progress';
 /**
- * Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.
+ * Id of a card type. Built-in ids: `service`, `database`, `gateway`, `client`, `queue`, `external`, `component`, `task`, `decision`, `document`, `warehouse`, `truck-route`, `issue`, `db-table`. Lowercase letters, digits and hyphens, starting with a letter, at most 48 characters. An id the app does not know is still valid: it is kept on save and drawn as a generic card.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "TypeId".
@@ -84,6 +84,27 @@ export type TypeId = string;
  */
 export type StatusIcon =
   'circle' | 'circle-dashed' | 'circle-dot' | 'circle-check' | 'eye' | 'door-open';
+/**
+ * SQL dialect of a database schema: `generic`, `postgres`, `mysql` or `sqlite`.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Dialect".
+ */
+export type Dialect = 'generic' | 'postgres' | 'mysql' | 'sqlite';
+/**
+ * A name in a database schema (table, column, index, enum, schema): 1–128 characters on one line, written as given.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbName".
+ */
+export type DbName = string;
+/**
+ * A short note in plain text (not markdown).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbNote".
+ */
+export type DbNote = string;
 /**
  * Semantic zoom level, from widest to narrowest: `landscape`, `system`, `container`, `component`.
  *
@@ -113,6 +134,31 @@ export type Links = Link[];
  */
 export type IdList = Id[];
 /**
+ * An SQL expression, written as given (e.g. `now()` or `price >= 0`).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbExpr".
+ */
+export type DbExpr = string;
+/**
+ * One part of an index: the id of a column of the same table, or an expression.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbIndexPart".
+ */
+export type DbIndexPart =
+  | Id
+  | {
+      expr: DbExpr;
+    };
+/**
+ * How much of a table is shown: `names` (name only), `keys` (key columns) or `all` (every column).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbDetail".
+ */
+export type DbDetail = 'names' | 'keys' | 'all';
+/**
  * Protocol family: `http` (incl. HTTPS, REST, GraphQL), `grpc`, `event` (message brokers such as Kafka), `sql`, `websocket`, `other`. Put specifics ("Kafka", "HTTPS") in the edge label.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -140,6 +186,29 @@ export type Side = 'top' | 'right' | 'bottom' | 'left';
  * via the `definition` "EdgeShape".
  */
 export type EdgeShape = 'curved' | 'elbow' | 'straight';
+/**
+ * Ids of columns, in key order: at least one, no repeats.
+ *
+ * @minItems 1
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "ColumnIdList".
+ */
+export type ColumnIdList = Id[];
+/**
+ * How many rows on each side of a relationship, read from → to: `1-1`, `1-n`, `n-1` or `n-n`.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Cardinality".
+ */
+export type Cardinality = '1-1' | '1-n' | 'n-1' | 'n-n';
+/**
+ * What happens to referencing rows when the referenced row is deleted or its key changes: `cascade`, `restrict`, `set-null`, `set-default` or `no-action`.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbAction".
+ */
+export type DbAction = 'cascade' | 'restrict' | 'set-null' | 'set-default' | 'no-action';
 /**
  * Kind of view: `system`, `feature`, `infra` or `custom`.
  *
@@ -211,6 +280,11 @@ export interface SododeckFile {
    * Card types whose default fields now live in `fields` (032): for these types the app no longer adds its own default fields, so a deleted default stays deleted. Absent means every type uses the app's default fields.
    */
   fieldDefaults?: TypeId[];
+  dialect?: Dialect;
+  /**
+   * Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.
+   */
+  enums?: DbEnum[];
   /**
    * Components of the system.
    */
@@ -292,6 +366,33 @@ export interface FieldOption {
   icon?: StatusIcon;
 }
 /**
+ * An enum type of the database schema (040). Columns name it by id; it is not drawn.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbEnum".
+ */
+export interface DbEnum {
+  id: Id;
+  name: DbName;
+  schema?: DbName;
+  note?: DbNote;
+  /**
+   * The values, in order. May be empty.
+   */
+  values: DbEnumValue[];
+}
+/**
+ * One value of an enum. Renaming it never changes its id.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbEnumValue".
+ */
+export interface DbEnumValue {
+  id: Id;
+  name: DbName;
+  note?: DbNote;
+}
+/**
  * A component of the system: a card of any type (service, database, queue, warehouse and so on).
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -337,6 +438,24 @@ export interface Node {
   position?: Position;
   size?: Size;
   style?: Style;
+  schema?: DbName;
+  /**
+   * Tables (`db-table`, 040): the columns, in order. May be empty (a sketch). On other types it is kept and ignored.
+   */
+  columns?: DbColumn[];
+  /**
+   * Tables (`db-table`, 040): the indexes. On other types it is kept and ignored.
+   */
+  indexes?: DbIndex[];
+  /**
+   * Tables (`db-table`, 040): table-level check constraints. On other types it is kept and ignored.
+   */
+  checks?: DbCheck[];
+  /**
+   * Tables (`db-table`, 040): `true` shows every column instead of the first few. Absent means collapsed to the limit.
+   */
+  expanded?: boolean;
+  detail?: DbDetail;
 }
 /**
  * A date range value: start and end as `YYYY-MM-DD`, the end on or after the start (checked by the app).
@@ -426,6 +545,81 @@ export interface Style {
   stroke?: ColorRef;
 }
 /**
+ * A column of a table (040). Renaming it never changes its id or the indexes and relationships that name it.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbColumn".
+ */
+export interface DbColumn {
+  id: Id;
+  name: DbName;
+  type: DbName;
+  /**
+   * Length, or precision and scale, e.g. `255` or `10,2`. Absent means none.
+   */
+  size?: string;
+  /**
+   * `true` when the column is part of the primary key; several columns make a composite key, in column order. Absent means false.
+   */
+  pk?: boolean;
+  /**
+   * `true` when the column may not be null. Absent means false.
+   */
+  notNull?: boolean;
+  /**
+   * `true` when values must be unique. Absent means false.
+   */
+  unique?: boolean;
+  /**
+   * `true` for an auto-increment (identity) column. Absent means false.
+   */
+  increment?: boolean;
+  /**
+   * Default value as data (text, number or boolean). Never set together with `defaultExpr`. Absent means none.
+   */
+  default?: string | number | boolean;
+  defaultExpr?: DbExpr;
+  check?: DbExpr;
+  enumRef?: Id;
+  note?: DbNote;
+}
+/**
+ * An index of a table (040).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbIndex".
+ */
+export interface DbIndex {
+  id: Id;
+  name?: DbName;
+  /**
+   * Indexed parts in order: column ids of the same table or `{ expr }`. At least one.
+   *
+   * @minItems 1
+   */
+  columns: DbIndexPart[];
+  /**
+   * `true` for a unique index. Absent means false.
+   */
+  unique?: boolean;
+  /**
+   * Index method in lower case, e.g. `btree`, `hash` or `gin`. Absent means the dialect's default.
+   */
+  method?: string;
+  note?: DbNote;
+}
+/**
+ * A table-level check constraint (040).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbCheck".
+ */
+export interface DbCheck {
+  id: Id;
+  name?: DbName;
+  expr: DbExpr;
+}
+/**
  * A named frame that holds nodes and nested groups (domain, bounded context, VPC). Membership is stored on the members (`node.group`, `group.parent`). `position` and `size` place the frame. Older files may omit them, and the app then fits a frame around the members.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -475,6 +669,19 @@ export interface Edge {
   links?: Links;
   route?: EdgeRoute;
   style?: EdgeStyle;
+  fromColumns?: ColumnIdList;
+  toColumns?: ColumnIdList;
+  cardinality?: Cardinality;
+  /**
+   * Relationships (040): `true` when the `from` side may be absent (zero or …). Absent means false.
+   */
+  fromOptional?: boolean;
+  /**
+   * Relationships (040): `true` when the `to` side may be absent (zero or …). Absent means false.
+   */
+  toOptional?: boolean;
+  onDelete?: DbAction;
+  onUpdate?: DbAction;
 }
 /**
  * How a connector is drawn between its two cards. All fields optional; an empty object is valid. `offset` and `waypoints` are never both set.

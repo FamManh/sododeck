@@ -13,8 +13,13 @@
  *                                               pack choice, 030), fields (Y.Map<id, Y.Map> list of
  *                                               field definitions, each with an `options` list, 032)
  *                                               and fieldDefaults (Y.Map typeId → true, 032), both
- *                                               only once the file has them or a field changed
- *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component
+ *                                               only once the file has them or a field changed;
+ *                                               dialect (plain) and enums (Y.Map<id, Y.Map> list,
+ *                                               each with a `values` list), both only once the
+ *                                               file has them or an op wrote them (040)
+ *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component; a table's columns, indexes
+ *                                               and checks → Y.Map<id, Y.Map> (only when stored,
+ *                                               even empty; 040); index `columns` a whole value
  *   doc.getMap('groups')     Y.Map<id, Y.Map>  one map per group
  *   doc.getMap('edges')      Y.Map<id, Y.Map>  one map per connection
  *   doc.getMap('views')      Y.Map<id, Y.Map>  includes, filters, pinned, collapsed → Y.Array;
@@ -59,7 +64,7 @@ import { checkDuplicateIds } from './load-checks';
 import { keysBetween } from './order-key';
 import { readCollection, readMeta, readObject, readRule, readRules } from './read';
 import { blankKey } from './text';
-import { createField, createObject, createRule } from './write';
+import { createEnum, createField, createObject, createRule } from './write';
 
 /** Creates a new, empty deck document. */
 export function createDeck(): DeckDoc {
@@ -123,6 +128,16 @@ export function fromJSON(input: unknown): DeckDoc {
         'fieldDefaults',
         toY(Object.fromEntries(file.fieldDefaults.map((id) => [id, true]))),
       );
+    }
+    // Database schema (040, R5–R6): lazy like `fields`, so an older deck stays without them.
+    if (file.dialect !== undefined) meta.set('dialect', file.dialect);
+    if (file.enums !== undefined) {
+      const enums = new Y.Map<YObject>();
+      const enumKeys = keysBetween(null, null, file.enums.length);
+      file.enums.forEach((item, i) => {
+        enums.set(item.id, createEnum(item, enumKeys[i] ?? ''));
+      });
+      meta.set('enums', enums as unknown as YValue);
     }
 
     for (const name of COLLECTIONS) {

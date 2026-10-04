@@ -6,9 +6,13 @@ export {
   type Collection,
   type DeckDoc,
   type ObjectOf,
+  type ChildKind,
   type ObjectRef,
   type Scope,
 } from './layout';
+export { deckDialect } from './dialect';
+export type { NewDbCheck, NewDbColumn, NewDbIndex } from './ops/db-tables';
+export type { EnumPatch, EnumValuePatch, NewDbEnum, NewDbEnumValue } from './ops/db-enums';
 export { DeckEditError, DeckValidationError, type DeckEditErrorCode } from './errors';
 export {
   CARD_TYPES,
@@ -18,6 +22,7 @@ export {
   drawnShapeType,
   effectiveFamily,
   hasTwoForms,
+  isDbTable,
   isKnownPack,
   isKnownType,
   LEGACY_PACKS,

@@ -5,6 +5,9 @@
  *
  * The file stores only `node.type` (any `TypeId`) and the deck's `packs`; everything here is app
  * data, so a type or pack this version does not know still loads and is kept on save.
+ *
+ * 040 adds the Database pack with one type, `db-table` ("Table"): a node whose schema keys
+ * (`columns`, `indexes`, `checks`, …) the model edits; tables draw as generic cards until 041.
  */
 import type {
   FieldDef,
@@ -19,7 +22,7 @@ import type {
 export type { PackId, TypeId };
 
 /** Groups types in the Add flyout and the type pickers. */
-export type Category = 'architecture' | 'process' | 'logistics' | 'data' | 'shapes';
+export type Category = 'architecture' | 'process' | 'logistics' | 'data' | 'database' | 'shapes';
 /** A card (header, fields) or a shape (031). */
 export type Family = 'card' | 'shape';
 /**
@@ -81,6 +84,7 @@ const PACK_LIST: readonly Omit<Pack, 'order'>[] = [
   { id: 'process', name: 'Process' },
   { id: 'logistics', name: 'Logistics' },
   { id: 'data', name: 'Data cards' },
+  { id: 'database', name: 'Database' },
   { id: 'shapes', name: 'Basic shapes', tools: ['sticky', 'frame'] },
 ];
 
@@ -90,6 +94,7 @@ export const CATEGORIES: readonly CategoryInfo[] = [
   { id: 'process', name: 'Process' },
   { id: 'logistics', name: 'Logistics' },
   { id: 'data', name: 'Data' },
+  { id: 'database', name: 'Database' },
   { id: 'shapes', name: 'Shapes' },
 ];
 
@@ -107,6 +112,7 @@ const TYPE_LIST: readonly (readonly [TypeId, string, PackId, Category])[] = [
   ['warehouse', 'Warehouse', 'logistics', 'logistics'],
   ['truck-route', 'Truck route', 'logistics', 'logistics'],
   ['issue', 'Issue', 'data', 'data'],
+  ['db-table', 'Table', 'database', 'database'],
 ];
 
 /** The options a new status field starts with (032 clarify): To do, In progress, Done. */
@@ -288,4 +294,9 @@ export function drawnShapeType(node: FormNode): CardType | undefined {
 /** The geometry a node draws, or `null` when it draws as a card. */
 export function shapeGeometryOf(node: FormNode): Geometry | null {
   return drawnShapeType(node)?.geometry ?? null;
+}
+
+/** A database table (040): the only type whose schema keys the model checks and edits. */
+export function isDbTable(node: Pick<Node, 'type'>): boolean {
+  return node.type === 'db-table';
 }

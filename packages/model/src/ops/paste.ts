@@ -2,8 +2,12 @@
  * Paste a clipboard fragment (016 research R10, ADR 0017). Every object gets a new id and every
  * reference inside the fragment is remapped; references that leave it go to `parent` (groups and
  * members) or are dropped (rules the deck does not have). One transaction: one undo step.
+ *
+ * Tables (040, research R10): every column, index and check gets a new id too, and index parts
+ * and the pasted edges' `fromColumns` / `toColumns` follow the same map. `enumRef` is kept: enums
+ * are deck-level, so it still resolves in the same deck (and is reported dangling in another).
  */
-import type { Edge, Group, Id, Node } from '@sododeck/schema';
+import type { DbIndexPart, Edge, Group, Id, Node } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { toY } from '../convert';
@@ -33,6 +37,36 @@ export interface PastedIds {
 }
 
 const shift = (point: Point, by: Point): Point => ({ x: point.x + by.x, y: point.y + by.y });
+
+/** New ids for every column, index and check of the fragment's nodes (040). */
+function partIdMap(ctx: EditContext, nodes: readonly Node[]): Map<Id, Id> {
+  const ids = new Map<Id, Id>();
+  for (const node of nodes) {
+    for (const column of node.columns ?? []) ids.set(column.id, ctx.allocate('dbcol'));
+    for (const index of node.indexes ?? []) ids.set(index.id, ctx.allocate('dbidx'));
+    for (const check of node.checks ?? []) ids.set(check.id, ctx.allocate('dbchk'));
+  }
+  return ids;
+}
+
+/** A node's table lists with new part ids and remapped index parts (absent lists stay absent). */
+function remapTableParts(node: Node, ids: ReadonlyMap<Id, Id>): Partial<Node> {
+  const to = (id: Id) => ids.get(id) ?? id;
+  const part = (item: DbIndexPart): DbIndexPart => (typeof item === 'string' ? to(item) : item);
+  return {
+    ...(node.columns === undefined
+      ? {}
+      : { columns: node.columns.map((c) => ({ ...c, id: to(c.id) })) }),
+    ...(node.indexes === undefined
+      ? {}
+      : {
+          indexes: node.indexes.map((i) => ({ ...i, id: to(i.id), columns: i.columns.map(part) })),
+        }),
+    ...(node.checks === undefined
+      ? {}
+      : { checks: node.checks.map((c) => ({ ...c, id: to(c.id) })) }),
+  };
+}
 
 /** Parents before children, so the order reads naturally in the file; cycles keep file order. */
 function parentsFirst(groups: readonly Group[]): Group[] {
@@ -74,6 +108,8 @@ export function pasteFragment(
   const nodeIds = new Map(deck.nodes.map((n) => [n.id, ctx.allocate('node')]));
   const groupIds = new Map(deck.groups.map((g) => [g.id, ctx.allocate('group')]));
   const knownRules = new Set(rulesMap(ctx.doc).keys());
+  const partIds = partIdMap(ctx, deck.nodes);
+  const toPart = (id: Id) => partIds.get(id) ?? id;
 
   const groups: Group[] = parentsFirst(deck.groups).map((group) => {
     const { id, parent: from, position, size, ...rest } = group;
@@ -99,14 +135,24 @@ export function pasteFragment(
       ...(inside === undefined ? {} : { parent: inside }),
       ...(kept.length === 0 ? {} : { rules: kept }),
       ...(position === undefined ? {} : { position: shift(position, offset) }),
+      ...remapTableParts(node, partIds),
     };
   });
   const edges: Edge[] = deck.edges.flatMap((edge) => {
     const from = nodeIds.get(edge.from);
     const to = nodeIds.get(edge.to);
-    return from === undefined || to === undefined
-      ? []
-      : [{ ...edge, id: ctx.allocate('edge'), from, to }];
+    if (from === undefined || to === undefined) return [];
+    const { fromColumns, toColumns } = edge;
+    return [
+      {
+        ...edge,
+        id: ctx.allocate('edge'),
+        from,
+        to,
+        ...(fromColumns === undefined ? {} : { fromColumns: fromColumns.map(toPart) }),
+        ...(toColumns === undefined ? {} : { toColumns: toColumns.map(toPart) }),
+      },
+    ];
   });
 
   assertValid([

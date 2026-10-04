@@ -1,4 +1,11 @@
-import { analyzeFlow, checkDeck, fieldsOfType, hasValue, SHAPE_TYPE_IDS, valueOf } from '@sododeck/model';
+import {
+  analyzeFlow,
+  checkDeck,
+  fieldsOfType,
+  hasValue,
+  SHAPE_TYPE_IDS,
+  valueOf,
+} from '@sododeck/model';
 import { parseSododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -156,11 +163,18 @@ describe('generateBenchDeck', () => {
     );
   });
 
-  it('cycles the 13 card types with every pack on, and changes nothing else (030)', () => {
+  it('cycles every card type with every pack on, and changes nothing else (030)', () => {
     const { deck } = generateBenchDeck(40, 80, 42, { types: true });
     expect(parseSododeckFile(deck).success).toBe(true);
-    expect(new Set(deck.nodes.map((n) => n.type)).size).toBe(13);
-    expect(deck.packs).toEqual(['architecture', 'process', 'logistics', 'data', 'shapes']);
+    expect(new Set(deck.nodes.map((n) => n.type)).size).toBe(14);
+    expect(deck.packs).toEqual([
+      'architecture',
+      'process',
+      'logistics',
+      'data',
+      'database',
+      'shapes',
+    ]);
     expect(generateBenchDeck(40, 80, 42).deck.packs).toBeUndefined();
     expect(generateBenchDeck(40, 80, 42, { types: true }).deck.edges).toEqual(
       generateBenchDeck(40, 80, 42).deck.edges,

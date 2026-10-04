@@ -360,4 +360,40 @@ describe('checkSemanticRules', () => {
       ).toEqual([]);
     });
   });
+
+  describe('S14: a column has at most one default (040)', () => {
+    const table = (columns: unknown[]) =>
+      ({
+        ...emptySododeckFile(),
+        nodes: [{ id: 't', type: 'db-table', title: 't', columns }],
+      }) as SododeckFile;
+
+    it('accepts a value default, an expression default or none', () => {
+      expect(
+        checkSemanticRules(
+          table([
+            { id: 'a', name: 'a', type: 'int', default: 0 },
+            { id: 'b', name: 'b', type: 'timestamptz', defaultExpr: 'now()' },
+            { id: 'c', name: 'c', type: 'text' },
+          ]),
+        ),
+      ).toEqual([]);
+    });
+
+    it('reports a column with both default and defaultExpr', () => {
+      expect(
+        checkSemanticRules(
+          table([
+            { id: 'a', name: 'a', type: 'int' },
+            { id: 'b', name: 'b', type: 'int', default: false, defaultExpr: 'now()' },
+          ]),
+        ),
+      ).toEqual([
+        {
+          path: 'nodes.0.columns.1.defaultExpr',
+          message: 'Column "b" has both a default value and a default expression; keep one.',
+        },
+      ]);
+    });
+  });
 });

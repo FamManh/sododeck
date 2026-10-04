@@ -29,6 +29,9 @@
  *   owner keep their own node keys, so one value is never stored twice. `propertyNames` would
  *   state it, but json-schema-to-zod drops it. A value whose field or option is missing, or whose
  *   shape does not fit its field, stays valid: the model keeps and reports it.
+ * - S14 (column default, 040): a table column holds at most one of `default` (a value) and
+ *   `defaultExpr` (an SQL expression). `not` / `oneOf` would state it, but the generators
+ *   mishandle both.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -66,7 +69,7 @@ const BUILT_IN_FIELD_KINDS: Readonly<Record<string, string>> = {
   owner: 'person',
 };
 
-/** Returns every S1–S13 violation in a structurally valid file (empty when there are none). */
+/** Returns every S1–S14 violation in a structurally valid file (empty when there are none). */
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
@@ -280,6 +283,17 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
         });
       }
     }
+  });
+
+  file.nodes.forEach((node, index) => {
+    node.columns?.forEach((column, columnIndex) => {
+      if (column.default !== undefined && column.defaultExpr !== undefined) {
+        issues.push({
+          path: `nodes.${String(index)}.columns.${String(columnIndex)}.defaultExpr`,
+          message: `Column "${column.id}" has both a default value and a default expression; keep one.`,
+        });
+      }
+    });
   });
 
   file.stickies.forEach((sticky, index) => {

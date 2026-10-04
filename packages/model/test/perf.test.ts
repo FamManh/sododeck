@@ -12,7 +12,7 @@ import {
   serializeDeck,
   toJSON,
 } from '../src';
-import { largeDeck } from './helpers';
+import { largeDeck, largeSchemaDeck } from './helpers';
 
 // SC-003/004 on 500 nodes / 1,000 edges / 20 flows × 10 steps / 10 rules. Shared CI runners are
 // slower and noisier than a laptop, so budgets are multiplied by 3 there. If a budget fails,
@@ -29,6 +29,8 @@ const CHECK_DECK_BUDGET_MS = 30 * SLACK;
 // 036 SC-005: lookups by id, so a field edit does not grow with the deck; a move is one key.
 const BIG_EDIT_BUDGET_MS = 1 * SLACK;
 const BIG_MOVE_BUDGET_MS = 10 * SLACK;
+// 040 SC-005: a 150-table schema (12 columns each, 200 relationships) loads and saves in < 1 s.
+const SCHEMA_LOAD_BUDGET_MS = 1000 * SLACK;
 
 function cpuMs(run: () => void): number {
   const start = process.cpuUsage();
@@ -167,5 +169,44 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
     timings.checkDeck = times[2] ?? Infinity;
     expect(checkDeck(searchFile).total).toBeGreaterThan(0);
     expect(timings.checkDeck).toBeLessThan(CHECK_DECK_BUDGET_MS);
+  });
+
+  it(`loads and saves a 150-table schema in < ${String(SCHEMA_LOAD_BUDGET_MS)} ms each, edits a column in < ${String(BIG_EDIT_BUDGET_MS)} ms (040 SC-005)`, () => {
+    const schema = largeSchemaDeck(150, 12, 200);
+    let loaded = fromJSON(schema);
+    timings['schema fromJSON'] = median(() => {
+      loaded = fromJSON(schema);
+    });
+    timings['schema toJSON'] = median(() => {
+      toJSON(loaded);
+    });
+    const editor = createEditor(loaded);
+    let i = 0;
+    timings['schema column edit'] = median(() => {
+      editor.updateColumn('t149', 't149c5', { name: `renamed_${String(i++)}` });
+    });
+    editor.destroy();
+    const plain = toJSON(loaded);
+    checkDeck(structuredClone(plain)); // warm-up on a fresh object identity
+    const times: number[] = [];
+    for (let k = 0; k < 5; k++) {
+      const fresh = structuredClone(plain);
+      times.push(cpuMs(() => checkDeck(fresh)));
+    }
+    times.sort((a, b) => a - b);
+    timings['schema checkDeck'] = times[2] ?? Infinity;
+    console.info(
+      'schema perf (median ms):',
+      Object.fromEntries(
+        Object.entries(timings)
+          .filter(([k]) => k.startsWith('schema'))
+          .map(([k, v]) => [k, Number(v.toFixed(2))]),
+      ),
+    );
+    expect(checkDeck(plain).list.filter((p) => p.kind.startsWith('db-'))).toEqual([]);
+    expect(timings['schema fromJSON']).toBeLessThan(SCHEMA_LOAD_BUDGET_MS);
+    expect(timings['schema toJSON']).toBeLessThan(SCHEMA_LOAD_BUDGET_MS);
+    expect(timings['schema column edit']).toBeLessThan(BIG_EDIT_BUDGET_MS);
+    expect(timings['schema checkDeck']).toBeLessThan(CHECK_DECK_BUDGET_MS);
   });
 });

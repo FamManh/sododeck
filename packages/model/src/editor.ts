@@ -3,7 +3,18 @@
  * I): a transaction origin, a Y.UndoManager, the gesture depth, the last edited object and the id
  * generator. Undo covers only this editor's own transactions (research R5).
  */
-import type { ColorRef, EdgeShape, FieldKind, Id, PackId, TypeId } from '@sododeck/schema';
+import type {
+  ColorRef,
+  DbCheck,
+  DbColumn,
+  DbIndex,
+  Dialect,
+  EdgeShape,
+  FieldKind,
+  Id,
+  PackId,
+  TypeId,
+} from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import type {
@@ -34,11 +45,36 @@ import {
 } from './ops/branches';
 import {
   removeBranch,
+  removeColumn,
+  removeEnum,
+  removeEnumValue,
   removeObject,
   removeRule,
   removeStep,
+  removeTablePart,
   type RemovalResult,
 } from './ops/cascade';
+import {
+  addPart,
+  movePart,
+  updatePart,
+  type NewDbCheck,
+  type NewDbColumn,
+  type NewDbIndex,
+} from './ops/db-tables';
+import {
+  addEnum,
+  addEnumValue,
+  moveEnum,
+  moveEnumValue,
+  setDialect,
+  updateEnum,
+  updateEnumValue,
+  type EnumPatch,
+  type EnumValuePatch,
+  type NewDbEnum,
+  type NewDbEnumValue,
+} from './ops/db-enums';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
@@ -385,6 +421,48 @@ export interface DeckEditor {
    */
   setValues(nodeIds: readonly Id[], fieldId: Id, value: unknown): void;
 
+  /** Sets the deck's SQL dialect (040); `null` or `'generic'` removes the key (absent = Generic). */
+  setDialect(dialect: Dialect | null): void;
+  /**
+   * Adds a column at `index` of a table (default: last) and returns its id (generated unless
+   * given; a given id must be free among the deck's columns, indexes, checks, enums and values).
+   * Flags are written `true` or left out. `invalid` for a node that is not a `db-table`.
+   */
+  addColumn(tableId: Id, data: NewDbColumn, index?: number): Id;
+  /**
+   * Changes a column; `null` clears an optional key and `false` removes a flag. `enumRef` must
+   * name an enum; `default` and `defaultExpr` are never both set (switch with `null` for the old).
+   */
+  updateColumn(tableId: Id, columnId: Id, patch: Patch<DbColumn>): void;
+  /** Moves a column to `toIndex` of its table (clamped): one order key change. */
+  moveColumn(tableId: Id, columnId: Id, toIndex: number): void;
+  /**
+   * Removes a column with its cascade: dropped from its table's indexes (an emptied index goes),
+   * and from relationships (an end of one column removes the edge; a composite end loses the pair).
+   */
+  removeColumn(tableId: Id, columnId: Id): RemovalResult;
+  /** Adds an index (parts: column ids of the table or `{ expr }`) and returns its id. */
+  addIndex(tableId: Id, data: NewDbIndex, index?: number): Id;
+  updateIndex(tableId: Id, indexId: Id, patch: Patch<DbIndex>): void;
+  moveIndex(tableId: Id, indexId: Id, toIndex: number): void;
+  removeIndex(tableId: Id, indexId: Id): RemovalResult;
+  /** Adds a table-level check constraint and returns its id. */
+  addCheck(tableId: Id, data: NewDbCheck, index?: number): Id;
+  updateCheck(tableId: Id, checkId: Id, patch: Patch<DbCheck>): void;
+  moveCheck(tableId: Id, checkId: Id, toIndex: number): void;
+  removeCheck(tableId: Id, checkId: Id): RemovalResult;
+  /** Adds an enum (values optional, ids generated where missing) and returns its id. */
+  addEnum(data: NewDbEnum, index?: number): Id;
+  /** Renames an enum or sets its schema or note; its values change through the value ops. */
+  updateEnum(enumId: Id, patch: EnumPatch): void;
+  moveEnum(enumId: Id, toIndex: number): void;
+  /** Removes an enum and clears `enumRef` on every column naming it (types are kept). */
+  removeEnum(enumId: Id): RemovalResult;
+  addEnumValue(enumId: Id, data: NewDbEnumValue, index?: number): Id;
+  updateEnumValue(enumId: Id, valueId: Id, patch: EnumValuePatch): void;
+  moveEnumValue(enumId: Id, valueId: Id, toIndex: number): void;
+  removeEnumValue(enumId: Id, valueId: Id): RemovalResult;
+
   /**
    * Runs `fn` as one transaction: one change event, one undo step (never merged with typing).
    * Nested batches flatten. Each operation inside still validates before it writes, but Yjs cannot
@@ -728,6 +806,49 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     setValues: (nodeIds, fieldId, value) => {
       setValues(ctx, nodeIds, fieldId, value);
     },
+    setDialect: (dialect) => {
+      setDialect(ctx, dialect);
+    },
+    addColumn: (tableId, data, index) => addPart(ctx, tableId, 'columns', data, index),
+    updateColumn: (tableId, columnId, patch) => {
+      updatePart(ctx, tableId, 'columns', columnId, patch);
+    },
+    moveColumn: (tableId, columnId, toIndex) => {
+      movePart(ctx, tableId, 'columns', columnId, toIndex);
+    },
+    removeColumn: (tableId, columnId) => removeColumn(ctx, tableId, columnId),
+    addIndex: (tableId, data, index) => addPart(ctx, tableId, 'indexes', data, index),
+    updateIndex: (tableId, indexId, patch) => {
+      updatePart(ctx, tableId, 'indexes', indexId, patch);
+    },
+    moveIndex: (tableId, indexId, toIndex) => {
+      movePart(ctx, tableId, 'indexes', indexId, toIndex);
+    },
+    removeIndex: (tableId, indexId) => removeTablePart(ctx, tableId, 'indexes', indexId),
+    addCheck: (tableId, data, index) => addPart(ctx, tableId, 'checks', data, index),
+    updateCheck: (tableId, checkId, patch) => {
+      updatePart(ctx, tableId, 'checks', checkId, patch);
+    },
+    moveCheck: (tableId, checkId, toIndex) => {
+      movePart(ctx, tableId, 'checks', checkId, toIndex);
+    },
+    removeCheck: (tableId, checkId) => removeTablePart(ctx, tableId, 'checks', checkId),
+    addEnum: (data, index) => addEnum(ctx, data, index),
+    updateEnum: (enumId, patch) => {
+      updateEnum(ctx, enumId, patch);
+    },
+    moveEnum: (enumId, toIndex) => {
+      moveEnum(ctx, enumId, toIndex);
+    },
+    removeEnum: (enumId) => removeEnum(ctx, enumId),
+    addEnumValue: (enumId, data, index) => addEnumValue(ctx, enumId, data, index),
+    updateEnumValue: (enumId, valueId, patch) => {
+      updateEnumValue(ctx, enumId, valueId, patch);
+    },
+    moveEnumValue: (enumId, valueId, toIndex) => {
+      moveEnumValue(ctx, enumId, valueId, toIndex);
+    },
+    removeEnumValue: (enumId, valueId) => removeEnumValue(ctx, enumId, valueId),
     batch: (fn) => ctx.transact(fn),
     beginGesture: () => {
       if (gestureDepth++ === 0) {

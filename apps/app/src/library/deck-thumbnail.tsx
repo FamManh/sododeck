@@ -15,6 +15,7 @@ const TYPE_FILL: Readonly<Record<string, string>> = {
   warehouse: 'fill-success-soft',
   'truck-route': 'fill-amber-soft',
   issue: 'fill-clay-soft',
+  'db-table': 'fill-blue-soft',
 };
 
 /** A type this version has no tint for (an unknown id) draws neutral. */

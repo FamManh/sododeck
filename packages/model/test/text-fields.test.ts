@@ -23,6 +23,11 @@ const DEFS: Record<Exclude<TextKind, 'meta'>, string> = {
   rule: 'Rule',
   column: 'RuleColumn',
   row: 'RuleRow',
+  dbColumn: 'DbColumn',
+  dbIndex: 'DbIndex',
+  dbCheck: 'DbCheck',
+  enum: 'DbEnum',
+  enumValue: 'DbEnumValue',
 };
 
 function propertiesOf(kind: TextKind): Record<string, unknown> {
@@ -54,6 +59,14 @@ describe('TEXT_FIELDS', () => {
         expect(Object.hasOwn(propertiesOf(kind), key), `${kind}.${key}`).toBe(true);
       }
     }
+  });
+
+  it('keeps database notes plain text, never Y.Text (040)', () => {
+    for (const kind of ['dbColumn', 'dbIndex', 'dbCheck', 'enum', 'enumValue'] as const) {
+      expect(TEXT_FIELDS[kind]).toEqual([]);
+    }
+    expect(isTextField('dbColumn', 'note')).toBe(false);
+    expect(isTextField('enumValue', 'note')).toBe(false);
   });
 
   it('answers false for short fields', () => {
