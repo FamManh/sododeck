@@ -1,60 +1,45 @@
-import { RefreshCw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import type { Animated } from '../../../lib/landing/timeline';
-import { C, FLOAT_SHADOW, FONT_MONO } from '../../../lib/landing/tokens';
+import { C, FLOAT_SHADOW } from '../../../lib/landing/tokens';
+import { CodeLines, type CodePanelData } from './code-lines';
+import { CodeTabs } from './code-tabs';
 import { Segmented } from './segmented';
 
 interface CodePaneProps {
+  /** Prefix for the tab and panel ids; unique on the page. */
+  id: string;
   width: number | string;
   height: number;
-  tabs: readonly string[];
-  active: number;
-  lines: readonly string[];
-  /** 0-based line indexes drawn as selected. */
-  highlight?: readonly number[];
-  /** Footer text; `false` hides the footer. */
-  foot?: string | false;
+  /** One panel per tab. With more than one, the tabs switch (`landing-controls.ts`). */
+  panels: readonly CodePanelData[];
+  /** The tab shown first (and without JS). */
+  active?: number;
+  /** The picked card whose lines are highlighted (Code section), see `CodePanelData.refs`. */
+  selected?: string;
   /** Hides the file name in the footer. */
   narrow?: boolean;
   chip?: ReactNode;
-  lineMotion?: (index: number) => Partial<Animated>;
   /** Takes the free width of a flex row instead of `width`. */
   grow?: boolean;
 }
 
-const KEYWORD = /^(\s*)(Table|Enum|indexes)\b/;
-
-/** Code panel line with DBML keywords tinted. */
-function syntax(line: string): ReactNode {
-  const match = KEYWORD.exec(line);
-  if (match === null) return line;
-  const [whole, indent = '', keyword = ''] = match;
-  return (
-    <>
-      {indent}
-      <span style={{ color: C.primaryInk, fontWeight: 500 }}>{keyword}</span>
-      {line.slice(whole.length)}
-    </>
-  );
-}
-
 /** The code panel (004, 046): tabs, line-numbered code, a sync footer. */
 export function CodePane({
+  id,
   width,
   height,
-  tabs,
-  active,
-  lines,
-  highlight = [],
-  foot,
+  panels,
+  active = 0,
+  selected,
   narrow = false,
   chip,
-  lineMotion,
   grow = false,
 }: CodePaneProps) {
+  const tabs = panels.map((p) => p.tab);
+  const switching = panels.length > 1;
   return (
     <div
+      data-tabs={switching ? '' : undefined}
       style={{
         position: 'relative',
         width,
@@ -84,71 +69,34 @@ export function CodePane({
           flex: 'none',
         }}
       >
-        <Segmented items={tabs} active={active} />
+        {switching ? (
+          <CodeTabs id={id} items={tabs} active={active} />
+        ) : (
+          <Segmented items={tabs} active={active} />
+        )}
         <span style={{ flex: 1 }} />
         {chip}
       </div>
-      <div style={{ flex: 1, padding: '8px 0', overflow: 'hidden', background: C.code }}>
-        {lines.map((line, i) => {
-          const motion = lineMotion?.(i) ?? {};
-          return (
-            <div
-              // Lines repeat (blank lines, braces), so the index is the identity.
-              key={i}
-              className={motion.className}
-              style={{
-                display: 'flex',
-                height: 19,
-                fontFamily: FONT_MONO,
-                fontSize: 11.5,
-                lineHeight: '19px',
-                background: highlight.includes(i) ? C.primarySoft : 'transparent',
-                whiteSpace: 'pre',
-                ...motion.style,
-              }}
-            >
-              <span
-                style={{
-                  width: 34,
-                  flex: 'none',
-                  textAlign: 'right',
-                  paddingRight: 10,
-                  color: C.muted,
-                  boxSizing: 'border-box',
-                }}
-              >
-                {i + 1}
-              </span>
-              <span style={{ color: C.ink, flex: 1, overflow: 'hidden' }}>{syntax(line)}</span>
-            </div>
-          );
-        })}
-      </div>
-      {foot !== false && foot !== undefined && (
+      {panels.map((panel, i) => (
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            height: 44,
-            padding: '0 12px',
-            borderTop: `1px solid ${C.border}`,
-            flex: 'none',
-            fontSize: 12,
-            color: C.inkSecondary,
-            whiteSpace: 'nowrap',
-          }}
+          key={panel.tab}
+          {...(switching
+            ? {
+                role: 'tabpanel',
+                id: `${id}-panel-${String(i)}`,
+                'aria-labelledby': `${id}-tab-${String(i)}`,
+                hidden: i !== active,
+              }
+            : {})}
+          className="ld-code-panel"
         >
-          <RefreshCw aria-hidden size={13} strokeWidth={2} />
-          {foot}
-          <span style={{ flex: 1 }} />
-          {!narrow && (
-            <span style={{ fontFamily: FONT_MONO, fontSize: 11, color: C.muted }}>
-              checkout.sododeck.json
-            </span>
-          )}
+          <CodeLines
+            panel={panel}
+            narrow={narrow}
+            {...(selected === undefined ? {} : { selected })}
+          />
         </div>
-      )}
+      ))}
     </div>
   );
 }

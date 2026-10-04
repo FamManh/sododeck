@@ -81,4 +81,35 @@ describe('LandingPage', () => {
       .filter((url) => /^https?:/.test(url));
     expect(urls.every((url) => url === APP_URL)).toBe(true);
   });
+
+  it('gives every Flows player real controls', () => {
+    render(<LandingPage />);
+    // Three breakpoint views; only one shows at a time.
+    expect(screen.getAllByRole('button', { name: 'Previous step', hidden: true })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Next step', hidden: true })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Play', hidden: true })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Step 8', hidden: true })).toHaveLength(2);
+  });
+
+  it('switches the Database code panel between JSON, DBML and SQL, DBML first', () => {
+    render(<LandingPage />);
+    const desktop = document.getElementById('db-code-desktop-tab-1');
+    expect(desktop).toHaveAttribute('aria-selected', 'true');
+    expect(desktop).toHaveTextContent('DBML');
+    expect(document.getElementById('db-code-desktop-panel-0')).not.toBeVisible();
+    expect(document.getElementById('db-code-desktop-panel-2')).toHaveTextContent(
+      'CREATE TABLE orders (',
+    );
+  });
+
+  it('lets the Code section pick Order Service or Orders DB, Order Service first', () => {
+    const { container } = render(<LandingPage />);
+    const view = container.querySelector('#code [data-pick-root]');
+    expect(view).not.toBeNull();
+    if (view === null) return;
+    expect(view.querySelector('[data-pick="svc"]')).toHaveAttribute('aria-pressed', 'true');
+    expect(view.querySelector('[data-pick="odb"]')).toHaveAttribute('aria-pressed', 'false');
+    expect(view.querySelectorAll('[data-ref="svc"][data-on]')).toHaveLength(7);
+    expect(view.querySelectorAll('[data-ref="odb"]')).toHaveLength(5);
+  });
 });

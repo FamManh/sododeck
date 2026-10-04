@@ -1,7 +1,14 @@
 import { Database } from 'lucide-react';
 
 import type { Breakpoint } from '../../lib/landing/breakpoint';
-import { DBML } from '../../lib/landing/checkout-deck';
+import {
+  DBML,
+  DBML_SELECTED,
+  SCHEMA_JSON,
+  SCHEMA_JSON_SELECTED,
+  SCHEMA_SQL,
+  SCHEMA_SQL_SELECTED,
+} from '../../lib/landing/checkout-deck';
 import { NARROW, WIDE } from '../../lib/landing/schema-worlds';
 import { Timeline } from '../../lib/landing/timeline';
 import { CodePane } from './deck/code-pane';
@@ -15,7 +22,8 @@ const LABEL =
 
 /**
  * Step 5 · Database (L3): the Orders DB card opens into its tables; playing Checkout lights up
- * the two tables it writes; the code pane shows the same schema as DBML for a Postgres deck.
+ * the two tables it writes; the code pane shows the same schema as JSON, DBML (first) or SQL for
+ * a Postgres deck, with `orders.status` highlighted in each.
  */
 export function DatabaseVisual({ breakpoint }: { breakpoint: Breakpoint }) {
   const tl = new Timeline(2.4, false);
@@ -41,13 +49,26 @@ export function DatabaseVisual({ breakpoint }: { breakpoint: Breakpoint }) {
   );
   const pane = (
     <CodePane
+      id={`db-code-${breakpoint}`}
       width={breakpoint === 'desktop' ? 360 : '100%'}
       height={breakpoint === 'desktop' ? 600 : 590}
-      tabs={['JSON', 'DBML', 'SQL']}
+      panels={[
+        {
+          tab: 'JSON',
+          lines: SCHEMA_JSON,
+          highlight: SCHEMA_JSON_SELECTED,
+          foot: 'Edits apply as you type',
+        },
+        { tab: 'DBML', lines: DBML, highlight: DBML_SELECTED, foot: 'Edits apply as you type' },
+        // The SQL tab is a read-only preview (backlog-database, 046 out of scope).
+        {
+          tab: 'SQL',
+          lines: SCHEMA_SQL,
+          highlight: SCHEMA_SQL_SELECTED,
+          foot: 'Read-only preview',
+        },
+      ]}
       active={1}
-      lines={DBML}
-      highlight={[3]}
-      foot="Edits apply as you type"
       narrow={phone}
       chip={
         <NeutralChip icon={<Database aria-hidden size={13} strokeWidth={2} />}>
