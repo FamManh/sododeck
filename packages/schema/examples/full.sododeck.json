@@ -59,6 +59,7 @@
   ],
   "fieldDefaults": ["warehouse"],
   "dialect": "postgres",
+  "blockSqlExport": true,
   "enums": [
     {
       "id": "enum-customer-status",

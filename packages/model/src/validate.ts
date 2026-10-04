@@ -48,6 +48,7 @@ const ELEMENT_SCHEMAS = {
       tagColors: true,
       packs: true,
       dialect: true,
+      blockSqlExport: true,
       tableDisplay: true,
       relationshipDisplay: true,
     })

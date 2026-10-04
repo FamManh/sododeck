@@ -44,6 +44,16 @@ export function setDialect(ctx: EditContext, dialect: Dialect | null): void {
   });
 }
 
+/** Turns "block SQL export with errors" (052) on or off; off removes the key (`false` is invalid). */
+export function setBlockSqlExport(ctx: EditContext, on: boolean): void {
+  const meta = metaMap(ctx.doc);
+  if ((meta.get('blockSqlExport') === true) === on) return;
+  ctx.transact(() => {
+    if (on) meta.set('blockSqlExport', true);
+    else meta.delete('blockSqlExport');
+  });
+}
+
 /** `meta.enums`, created on the first enum. Call inside a transaction. */
 export function attachedEnums(ctx: EditContext): ListMap {
   const existing = enumsList(ctx.doc);

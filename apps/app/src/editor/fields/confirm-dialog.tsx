@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@sododeck/ui/components/dialog';
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 
 /**
  * A confirmation before a field change that clears values (032 FR-014, FR-014a): an
@@ -20,6 +20,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   onCancel,
+  children,
 }: {
   open: boolean;
   title: string;
@@ -27,6 +28,8 @@ export function ConfirmDialog({
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Detail under the body (052: the dialect change lists its conversions). */
+  children?: ReactNode;
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   return (
@@ -48,6 +51,7 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{body}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter>
           <Button ref={cancelRef} onClick={onCancel}>
             Cancel

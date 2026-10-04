@@ -1,3 +1,4 @@
+import { isDbTable } from '@sododeck/model';
 import { Layers, PanelRight, Pencil } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -31,6 +32,12 @@ export const TITLE_ACTIONS: readonly Action[] = [
       if (ctx.mode === 'edit') ui.select(ctx.selection);
       const [node] = ctx.selection.nodes;
       if (node !== undefined && ctx.selection.nodes.length === 1) ui.focus(node);
+      const table = ctx.deck.nodes.find((n) => n.id === node);
+      // A table opens on its General tab (052); the drawer shows what is selected in flow mode.
+      if (ctx.mode === 'edit' && ctx.selection.nodes.length === 1 && table && isDbTable(table)) {
+        ui.openTableDrawer(table.id, { tab: 'general' });
+        return;
+      }
       ui.openDrawer();
     },
   },

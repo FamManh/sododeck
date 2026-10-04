@@ -223,6 +223,8 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   // `dialect` / `enums` (040): emitted whenever stored (`enums` even empty), like `fields`.
   const dialect = meta.get('dialect');
   if (dialect !== undefined) out.dialect = dialect;
+  // `blockSqlExport` (052): stored only while on, so older decks stay unchanged.
+  if (meta.get('blockSqlExport') === true) out.blockSqlExport = true;
   const enums = readEnums(doc);
   if (enums !== undefined) out.enums = enums;
   // `tableDisplay` (041): stored always, emitted only with entries, like `tagColors`.

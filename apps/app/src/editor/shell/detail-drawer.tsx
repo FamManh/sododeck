@@ -3,10 +3,11 @@ import { useReactFlow } from '@xyflow/react';
 import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 
 import { isTextTarget } from '../../lib/is-text-target';
-import { useUiStore } from '../../state/ui-store';
+import { hasDetailsTarget, useUiStore } from '../../state/ui-store';
 import { canvasElement } from '../canvas-actions';
 import { Inspector } from '../inspector';
 import { DeckInspector } from '../inspector/deck-inspector';
+import { EnumInspector } from '../inspector/enum/enum-inspector';
 import { DrawerCloseContext } from './drawer-close-context';
 import { DrawerGrip } from './drawer-grip';
 import { clampDrawerWidth, EDGE, panToClear } from './shell-geometry';
@@ -45,6 +46,12 @@ export function DetailDrawer({
     typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth,
     compact,
   );
+
+  // The enum drawer closes when its enum is removed (undo, another tab) (052 FR-005).
+  const enumGone =
+    drawer.open &&
+    drawer.mode === 'enum' &&
+    !hasDetailsTarget({ ...useUiStore.getState(), drawer }, deck);
 
   const close = useCallback(() => {
     const ui = useUiStore.getState();
@@ -85,6 +92,29 @@ export function DetailDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawer.open]);
 
+  useEffect(() => {
+    if (enumGone) close();
+  }, [enumGone, close]);
+
+  // The drawer also closes without `close()` when its table or relationship is removed (undo,
+  // another tab). Focus was inside it or on the removed card, so it would drop to the page: hand
+  // it to the canvas, once the removed element is gone.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const closed = wasOpen.current && !drawer.open;
+    wasOpen.current = drawer.open;
+    if (!closed) return;
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active === null || active === document.body || !active.isConnected) {
+        canvasElement()?.focus();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [drawer.open]);
+
   if (!drawer.open) return null;
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -118,6 +148,8 @@ export function DetailDrawer({
         <DrawerCloseContext value={close}>
           {drawer.mode === 'deck' ? (
             <DeckInspector deck={deck} {...(onOpenRules === undefined ? {} : { onOpenRules })} />
+          ) : drawer.mode === 'enum' ? (
+            <EnumInspector deck={deck} enumId={drawer.enumId} />
           ) : (
             <Inspector deck={deck} {...(onOpenRules === undefined ? {} : { onOpenRules })} />
           )}

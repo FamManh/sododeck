@@ -69,6 +69,7 @@ import {
   addEnumValue,
   moveEnum,
   moveEnumValue,
+  setBlockSqlExport,
   setDialect,
   updateEnum,
   updateEnumValue,
@@ -438,6 +439,8 @@ export interface DeckEditor {
 
   /** Sets the deck's SQL dialect (040); `null` or `'generic'` removes the key (absent = Generic). */
   setDialect(dialect: Dialect | null): void;
+  /** Turns "block SQL export with errors" (052) on or off; off removes the key. */
+  setBlockSqlExport(on: boolean): void;
   /**
    * Patches the deck's table display (041): `detail` (`null` = Auto) and the hide flags (`true`
    * hides; `false` or `null` removes the flag). One undo step; nothing happens when nothing changes.
@@ -858,6 +861,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setDialect: (dialect) => {
       setDialect(ctx, dialect);
+    },
+    setBlockSqlExport: (on) => {
+      setBlockSqlExport(ctx, on);
     },
     setTableDisplay: (patch) => {
       setTableDisplay(ctx, patch);

@@ -1,6 +1,6 @@
 /**
  * Table, row and lock actions (043 R8, contracts/editing-ui.md): Add column, Export this table as
- * SQL and Lock for cards; Edit, the key / not null / unique toggles, Add index, Add relationship…,
+ * SQL and Lock for cards; Edit, Edit details (the drawer, 052), the key / not null / unique toggles, Add index, Add relationship…,
  * Move up / down and Delete column for a column row. Every write is one undo step. The keys (C,
  * R, ⌥↑ / ⌥↓, ⌫, ⇧⌘L) call the same exported functions, so a key works exactly when its item does.
  */
@@ -16,6 +16,7 @@ import {
   ListOrdered,
   Lock,
   Pencil,
+  PanelRight,
   Plus,
   Trash2,
 } from 'lucide-react';
@@ -98,6 +99,8 @@ export function deleteColumn(
   deck: SododeckFile,
   row: ColumnRef,
   undoToast?: (message: string) => void,
+  /** The details drawer keeps keyboard focus where it is (052); the canvas moves it to a row. */
+  options: { moveFocus?: boolean } = {},
 ): boolean {
   const table = tableOf(deck, row.tableId);
   const columns = table?.columns ?? [];
@@ -115,6 +118,7 @@ export function deleteColumn(
   }`;
   if (undoToast === undefined) useUiStore.getState().announce(message);
   else undoToast(message);
+  if (options.moveFocus === false) return true;
   const next = columns[index + 1] ?? columns[index - 1];
   const ui = useUiStore.getState();
   if (ui.focusedRow?.columnId === row.columnId || ui.focusedRow === null) {
@@ -259,6 +263,20 @@ export const TABLE_ACTIONS: readonly Action[] = [
     run: (ctx) => {
       const row = rowOf(ctx);
       if (row !== undefined) startRowEdit(ctx.deck, row);
+    },
+  },
+  {
+    id: 'row.details',
+    label: 'Edit details',
+    icon: PanelRight,
+    section: 'open',
+    where: { menu: ['row'] },
+    run: (ctx) => {
+      const row = rowOf(ctx);
+      if (row === undefined || columnOf(ctx.deck, row) === undefined) return;
+      useUiStore
+        .getState()
+        .openTableDrawer(row.tableId, { tab: 'columns', columnId: row.columnId });
     },
   },
   flagAction('row.pk', 'Set as primary key', 'pk', KeyRound),

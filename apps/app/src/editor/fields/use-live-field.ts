@@ -19,6 +19,12 @@ interface LiveFieldOptions {
   onWrite: (text: string) => void;
   /** An empty value is never written; on blur it reverts with an error. */
   required?: boolean;
+  /**
+   * A message for a draft that must not be saved (a duplicate name). While it returns one, nothing
+   * is written and `error` shows it; on blur the field reverts to its value from before focus.
+   * Receives the trimmed text.
+   */
+  validate?: (text: string) => string | undefined;
   /** Textareas: Enter types a newline, ⌘↵ / Ctrl+↵ ends the edit. */
   multiline?: boolean;
 }
@@ -64,15 +70,17 @@ export function useLiveField({
   value,
   onWrite,
   required = false,
+  validate,
   multiline = false,
 }: LiveFieldOptions): LiveField {
   const editor = useEditor();
   const [draft, setDraft] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
+  const [message, setMessage] = useState<string | undefined>(undefined);
   // Latest options for writes that run after render (frames, blur, unmount).
-  const latest = useRef({ onWrite, required });
+  const latest = useRef({ onWrite, required, validate });
   useLayoutEffect(() => {
-    latest.current = { onWrite, required };
+    latest.current = { onWrite, required, validate };
   });
   const session = useRef<{
     initial: string;
@@ -109,6 +117,7 @@ export function useLiveField({
     const text = s.pending.trim();
     s.pending = null;
     if (latest.current.required && text === '') return;
+    if (latest.current.validate?.(text) !== undefined) return;
     s.basis = text;
     s.writes.add(text);
     latest.current.onWrite(text);
@@ -171,7 +180,7 @@ export function useLiveField({
 
   return {
     value: draft ?? value,
-    error: invalid ? `${label} can’t be empty.` : undefined,
+    error: message ?? (invalid ? `${label} can’t be empty.` : undefined),
     onFocus: () => {
       const s = session.current;
       s.initial = value;
@@ -183,6 +192,15 @@ export function useLiveField({
       const s = session.current;
       setDraft(text);
       setInvalid(false);
+      const problem = validate?.(text.trim());
+      setMessage(problem);
+      if (problem !== undefined) {
+        // Nothing invalid goes out; a write queued from an earlier valid draft is dropped too.
+        s.pending = null;
+        s.cancel?.();
+        s.cancel = null;
+        return;
+      }
       if (!s.gesture) {
         s.gesture = true;
         editor.beginGesture();
@@ -199,6 +217,10 @@ export function useLiveField({
         revert();
         return;
       }
+      if (draft !== null && validate?.(draft.trim()) !== undefined) {
+        revert();
+        return;
+      }
       end();
       setDraft(null);
     },
@@ -210,12 +232,14 @@ export function useLiveField({
           setInvalid(true);
           return;
         }
+        if (draft !== null && validate?.(draft.trim()) !== undefined) return;
         end();
         setDraft(null);
       } else if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
         setInvalid(false);
+        setMessage(undefined);
         revert();
       }
     },
