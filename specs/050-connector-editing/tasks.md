@@ -62,7 +62,7 @@
   - `startPointerDrag(event, handlers)` with window `pointermove/pointerup/pointercancel/blur` listeners, best-effort `setPointerCapture`, the threshold measured in screen px, rAF-throttled moves, and a single `finish()`.
   - Make T003 pass.
 - [x] T005 [P] Write a failing test in `apps/app/src/editor/editing/drag-session.test.ts`: `hasActiveGesture()` is true between `setActiveGesture(x)` and `setActiveGesture(null)`, and false after `DragController` ends. Then add the export `hasActiveGesture()` to `apps/app/src/editor/editing/drag-session.ts`.
-- [ ] T006 Add a CSS rule in `apps/app/src/index.css` that gives `.react-flow__viewport-portal` a z-index above `.react-flow__nodes`, with `pointer-events: none` on the portal and `pointer-events: auto` on `.sd-route-handle`. Check that `selection-frame.tsx` and `guides-overlay.tsx`, which already use the portal, look unchanged.
+- [x] T006 Add a CSS rule in `apps/app/src/index.css` that gives `.react-flow__viewport-portal` a z-index above `.react-flow__nodes`, with `pointer-events: none` on the portal and `pointer-events: auto` on `.sd-route-handle`. Check that `selection-frame.tsx` and `guides-overlay.tsx`, which already use the portal, look unchanged.
 
 **Checkpoint**: the suite is green, and no behaviour has changed.
 

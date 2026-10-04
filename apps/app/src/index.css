@@ -529,6 +529,14 @@
   background: var(--color-primary);
 }
 
+/* The viewport portal (selection frame, guides, connector handles) sits above every card (050 R1):
+   React Flow renders it after the nodes, but a selected card is raised to z-index 1001. The
+   portal lets the pointer through; only the handles inside it take it back. */
+.react-flow__viewport-portal {
+  z-index: 2000;
+  pointer-events: none;
+}
+
 /* Connector route handles (022, frame 129): light round handles with a 24 px round hit area.
    Bends are filled 8 px dots, midpoints 8 px rings, ends 10 px rings; hover grows them with a
    halo. Focusable buttons, so keyboard and pointer both work. */
