@@ -371,6 +371,8 @@ values: { id, name, note? }[] }`;
 
 ## 044-db-import
 
+- **Status:** built (`specs/044-db-import`, ADR 0033); closes 045's DBML round-trip (SC-002).
+
 - **Milestone:** after 042 · **Depends on:** 040, 042; DB6 (parser) · **Estimate:** 5 d
 - **Goal:** An existing schema becomes a laid-out diagram in seconds.
 - **In scope:**
