@@ -2,7 +2,7 @@ import type { Node } from '@xyflow/react';
 import { useCallback, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
-import { useUiStore, type UiState } from '../../state/ui-store';
+import { useUiStore, type HoverFocus, type UiState } from '../../state/ui-store';
 import { useConnecting } from '../use-connection-role';
 
 /** The pointer must rest this long on a card before its connections light up (034 R3). */
@@ -32,6 +32,26 @@ function suspendedBy(s: UiState): boolean {
   );
 }
 
+/**
+ * Column and relationship highlights (042 FR-024) stay on in focus mode and flows, where they add
+ * only the row highlight; gestures, menus and drags still turn them off.
+ */
+function rowsSuspendedBy(s: UiState): boolean {
+  return (
+    s.flowSession !== null ||
+    s.canvasGesture !== null ||
+    s.reconnectingEdgeId !== null ||
+    s.columnConnect !== null ||
+    s.tool === 'hand' ||
+    s.popover !== null ||
+    s.contextMenu !== null ||
+    s.toolbarField !== null
+  );
+}
+
+const isRowFocus = (focus: HoverFocus | null) =>
+  focus?.source === 'column' || focus?.source === 'edge';
+
 export interface HoverFocusHandlers {
   onNodeMouseEnter: (event: ReactMouseEvent, node: Node) => void;
   onNodeMouseLeave: (event: ReactMouseEvent, node: Node) => void;
@@ -40,6 +60,16 @@ export interface HoverFocusHandlers {
   onCardBlur: () => void;
   /** The last pointer type seen on the canvas; touch has no hover, so it is ignored. */
   notePointerType: (type: string) => void;
+  /**
+   * The pointer moved between column rows (042 R14): `row` is the row now under it, or null
+   * when it left the rows of `tableId` for the rest of the card (back to the card's own focus).
+   */
+  onRowHover: (tableId: string, row: string | null) => void;
+  /** Keyboard focus landed on a column row (042 FR-022). */
+  onRowFocus: (tableId: string, columnId: string) => void;
+  /** The pointer is over a relationship (042 FR-023): its end rows light, nothing dims. */
+  onRelationshipEnter: (edgeId: string) => void;
+  onRelationshipLeave: (edgeId: string) => void;
 }
 
 /**
@@ -51,6 +81,8 @@ export function useHoverFocus(): HoverFocusHandlers {
   const connecting = useConnecting();
   const suspended = useUiStore(suspendedBy) || connecting;
   const suspendedRef = useRef(suspended);
+  const rowsSuspended = useUiStore(rowsSuspendedBy) || connecting;
+  const rowsSuspendedRef = useRef(rowsSuspended);
   const rest = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const grace = useRef<ReturnType<typeof globalThis.setTimeout> | null>(null);
   const pointerType = useRef('mouse');
@@ -62,13 +94,18 @@ export function useHoverFocus(): HoverFocusHandlers {
     grace.current = null;
   }, []);
 
-  // A suspension (a drag, a menu, pinned focus…) ends any hover at once.
+  // A suspension (a drag, a menu, pinned focus…) ends any hover at once; column and
+  // relationship highlights only end with the narrower one (FR-024).
   useEffect(() => {
     suspendedRef.current = suspended;
-    if (!suspended) return;
-    stopTimers();
-    useUiStore.getState().clearHoverFocus();
-  }, [suspended, stopTimers]);
+    rowsSuspendedRef.current = rowsSuspended;
+    if (!suspended && !rowsSuspended) return;
+    const focus = useUiStore.getState().hoverFocus;
+    if (rowsSuspended || (focus !== null && !isRowFocus(focus))) {
+      stopTimers();
+      useUiStore.getState().clearHoverFocus();
+    }
+  }, [suspended, rowsSuspended, stopTimers]);
 
   useEffect(() => stopTimers, [stopTimers]);
 
@@ -114,12 +151,89 @@ export function useHoverFocus(): HoverFocusHandlers {
 
   const onCardBlur = useCallback(() => {
     const ui = useUiStore.getState();
-    if (ui.hoverFocus?.source === 'keyboard') ui.clearHoverFocus();
+    // A focused row's highlight is keyboard focus too (042); the pointer's stays.
+    if (
+      ui.hoverFocus?.source === 'keyboard' ||
+      (ui.hoverFocus?.source === 'column' && ui.focusedRow !== null)
+    )
+      ui.clearHoverFocus();
   }, []);
 
   const notePointerType = useCallback((type: string) => {
     pointerType.current = type;
   }, []);
 
-  return { onNodeMouseEnter, onNodeMouseLeave, onCardFocus, onCardBlur, notePointerType };
+  /** Shows `focus` after the rest, or at once while another hover already shows. */
+  const schedule = useCallback((focus: HoverFocus) => {
+    if (grace.current !== null) globalThis.clearTimeout(grace.current);
+    grace.current = null;
+    if (rest.current !== null) globalThis.clearTimeout(rest.current);
+    rest.current = null;
+    const blocked = () => (isRowFocus(focus) ? rowsSuspendedRef.current : suspendedRef.current);
+    if (blocked() || pointerType.current === 'touch') return;
+    if (useUiStore.getState().hoverFocus !== null) {
+      useUiStore.getState().setHoverFocus(focus);
+      return;
+    }
+    rest.current = globalThis.setTimeout(() => {
+      rest.current = null;
+      if (!blocked()) useUiStore.getState().setHoverFocus(focus);
+    }, REST_MS);
+  }, []);
+
+  const onRowHover = useCallback(
+    (tableId: string, row: string | null) => {
+      if (row === null) {
+        const current = useUiStore.getState().hoverFocus;
+        if (current?.source !== 'column') return;
+        // Back on the card's header or body: the card's own focus (034), or nothing in focus
+        // mode and flows, where card hover is off.
+        if (suspendedRef.current) useUiStore.getState().clearHoverFocus();
+        else schedule({ id: tableId, source: 'pointer' });
+        return;
+      }
+      const columnId = row.slice(tableId.length + 1);
+      schedule({ id: tableId, source: 'column', column: { tableId, columnId } });
+    },
+    [schedule],
+  );
+
+  const onRowFocus = useCallback(
+    (tableId: string, columnId: string) => {
+      if (rowsSuspendedRef.current) return;
+      stopTimers();
+      useUiStore.getState().setHoverFocus({
+        id: tableId,
+        source: 'column',
+        column: { tableId, columnId },
+      });
+    },
+    [stopTimers],
+  );
+
+  const onRelationshipEnter = useCallback(
+    (edgeId: string) => {
+      if (rowsSuspendedRef.current || pointerType.current === 'touch') return;
+      stopTimers();
+      useUiStore.getState().setHoverFocus({ id: edgeId, source: 'edge' });
+    },
+    [stopTimers],
+  );
+
+  const onRelationshipLeave = useCallback((edgeId: string) => {
+    const ui = useUiStore.getState();
+    if (ui.hoverFocus?.source === 'edge' && ui.hoverFocus.id === edgeId) ui.clearHoverFocus();
+  }, []);
+
+  return {
+    onNodeMouseEnter,
+    onNodeMouseLeave,
+    onCardFocus,
+    onCardBlur,
+    notePointerType,
+    onRowHover,
+    onRowFocus,
+    onRelationshipEnter,
+    onRelationshipLeave,
+  };
 }

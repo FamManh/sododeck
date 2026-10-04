@@ -1,6 +1,7 @@
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Bundle, BundleResult } from './bundles';
+import { rowKey } from './relationships/row-key';
 import type { VisibleGraph } from './visible-graph';
 
 type DeckEdge = SododeckFile['edges'][number];
@@ -9,6 +10,8 @@ export interface FocusSet {
   focusId: string;
   members: ReadonlySet<string>;
   edges: ReadonlySet<string>;
+  /** Column rows to light (042): `tableId:columnId` at both ends of the lit relationships. */
+  rows?: ReadonlySet<string>;
 }
 
 export function focusSet(
@@ -104,4 +107,43 @@ export function connectionCount(
   let count = 0;
   for (const id of set.edges) count += folded.get(id) ?? 1;
   return count;
+}
+
+/** Every row a relationship ends on, both sides, composite members included. */
+function endRows(edge: DeckEdge): string[] {
+  return [
+    ...(edge.fromColumns ?? []).map((column) => rowKey(edge.from, column)),
+    ...(edge.toColumns ?? []).map((column) => rowKey(edge.to, column)),
+  ];
+}
+
+/**
+ * A column's focus (042 R14, FR-022): the relationships that end on it, the tables at their
+ * other ends, and the rows at both ends of each. Undefined when no relationship uses the column.
+ */
+export function columnFocusSet(
+  deck: SododeckFile,
+  tableId: string,
+  columnId: string,
+): FocusSet | undefined {
+  const members = new Set<string>([tableId]);
+  const edges = new Set<string>();
+  const rows = new Set<string>();
+  for (const edge of deck.edges) {
+    const uses =
+      (edge.from === tableId && edge.fromColumns?.includes(columnId) === true) ||
+      (edge.to === tableId && edge.toColumns?.includes(columnId) === true);
+    if (!uses) continue;
+    edges.add(edge.id);
+    members.add(edge.from);
+    members.add(edge.to);
+    for (const row of endRows(edge)) rows.add(row);
+  }
+  return edges.size === 0 ? undefined : { focusId: tableId, members, edges, rows };
+}
+
+/** A relationship's own focus (042 FR-023): its end rows only; nothing dims. */
+export function relationshipRows(deck: SododeckFile, edgeId: string): ReadonlySet<string> {
+  const edge = edgeLookup(deck).get(edgeId);
+  return new Set(edge === undefined ? [] : endRows(edge));
 }

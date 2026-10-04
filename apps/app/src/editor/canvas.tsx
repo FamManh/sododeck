@@ -38,6 +38,7 @@ import {
   toLeaderEdges,
   toStickyNodes,
   type CanvasFlowNode,
+  type DeckEdgeData,
 } from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
 import { EnumPopover } from './table/enum-popover';
@@ -50,6 +51,7 @@ import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
 import { connectionCount, connectionsText, focusSet } from './focus-set';
 import { HoverFocusStyle } from './hover-focus/hover-focus-style';
+import { SelectedRelationshipStyle } from './hover-focus/selected-relationship-style';
 import { setColumnDragEnv } from './editing/column-connect-drag';
 import { ColumnConnectLine } from './editing/column-connect-line';
 import { targetTablesOf, type TargetTable } from './relationships/column-target';
@@ -314,6 +316,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const { setCenter, setViewport, getZoom, getViewport, screenToFlowPosition } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
   const wrapper = useRef<HTMLDivElement>(null);
+  // The column row under the pointer (042), so moving inside one row does nothing.
+  const hoveredRow = useRef<string | null>(null);
   // Set by a pointer press: focus that lands on the wrapper from a click must not move focus to a
   // card (and pan to it); only Tab into the canvas does.
   const pointerFocus = useRef(false);
@@ -688,6 +692,18 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       aria-label={hasFocusedNode ? undefined : 'Diagram'}
       onPointerOverCapture={(event) => {
         hover.notePointerType(event.pointerType);
+        // Column rows (042 R14): delegated here, rows are plain elements with `data-row`.
+        const target = event.target instanceof Element ? event.target : null;
+        const card = target?.closest<HTMLElement>('[data-node-id]');
+        const tableId = card?.dataset.nodeId;
+        const row = target?.closest<HTMLElement>('[data-row]')?.dataset.row ?? null;
+        if (tableId === undefined) {
+          hoveredRow.current = null;
+          return;
+        }
+        if (row === hoveredRow.current) return;
+        hoveredRow.current = row;
+        hover.onRowHover(tableId, row);
       }}
       onPointerDownCapture={(event) => {
         hover.notePointerType(event.pointerType);
@@ -697,6 +713,13 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         }, 0);
       }}
       onFocus={(event) => {
+        const focusedRow = (event.target as HTMLElement).dataset.row;
+        if (focusedRow !== undefined && event.target !== event.currentTarget) {
+          // A focused column row lights its relationships (042 FR-022).
+          const { focusedRow: row } = useUiStore.getState();
+          if (row !== null) hover.onRowFocus(row.tableId, row.columnId);
+          return;
+        }
         if (event.target !== event.currentTarget) {
           // Roving keyboard focus on a card lights its connections at once (034 R3).
           const cardId = (event.target as HTMLElement)
@@ -792,6 +815,17 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         onNodeMouseEnter={hover.onNodeMouseEnter}
         onNodeMouseLeave={hover.onNodeMouseLeave}
         {...handlers}
+        // A hovered relationship lights its end rows (042 FR-023), on top of the session hover.
+        onEdgeMouseEnter={(event, edge) => {
+          handlers.onEdgeMouseEnter(event, edge);
+          if ((edge.data as DeckEdgeData | undefined)?.rel !== undefined) {
+            hover.onRelationshipEnter(edge.id);
+          }
+        }}
+        onEdgeMouseLeave={(_event, edge) => {
+          handlers.onEdgeMouseLeave();
+          hover.onRelationshipLeave(edge.id);
+        }}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} />
         {/* The minimap (018 FR-033): off by default, above the zoom island (M). */}
@@ -833,6 +867,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         />
       )}
       <HoverFocusStyle deck={deck} graph={graph} bundles={bundles} wrapper={wrapper} />
+      <SelectedRelationshipStyle deck={deck} />
       <EdgePopover deck={fullDeck} />
       {/* The one enum values popover (041): renders nothing until a chip opens it. */}
       <EnumPopover deck={fullDeck} />
