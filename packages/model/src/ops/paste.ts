@@ -4,20 +4,33 @@
  * members) or are dropped (rules the deck does not have). One transaction: one undo step.
  *
  * Tables (040, research R10): every column, index and check gets a new id too, and index parts
- * and the pasted edges' `fromColumns` / `toColumns` follow the same map. `enumRef` is kept: enums
- * are deck-level, so it still resolves in the same deck (and is reported dangling in another).
+ * and the pasted edges' `fromColumns` / `toColumns` follow the same map.
+ *
+ * Duplicate and paste of tables (043, research R10), all in the same transaction:
+ * - `external` relationships (from a copied table to one outside the copy) are kept, remapped on
+ *   the from side only, when the target deck has their `to` table and its `toColumns`; the others
+ *   are dropped and counted in `droppedRelationships`. So a duplicate keeps its foreign keys and
+ *   a paste into a deck without the target does not leave dangling ones.
+ * - `enums` are linked to a target enum of the same name and schema (case-insensitive), else
+ *   copied with new enum and value ids; `enumRef` follows. An `enumRef` the fragment carries no
+ *   enum for (pre-043 fragments) is kept, as before: it resolves in the same deck.
+ * - A `db-table` whose name is taken in its schema (case-insensitive) is renamed `name_copy`,
+ *   `name_copy_2`… (`copyName`). Other cards keep their titles.
  */
-import type { DbIndexPart, Edge, Group, Id, Node } from '@sododeck/schema';
+import type { DbEnum, DbIndexPart, Edge, Group, Id, Node } from '@sododeck/schema';
 import * as Y from 'yjs';
 
+import { isDbTable } from '../card-types';
 import { toY } from '../convert';
 import type { Fragment } from '../fragment';
 import type { Point } from '../geometry';
 import { anchorableIds } from '../ids';
 import { appendAll, collectionMap, rulesMap } from '../layout';
-import { createObject } from '../write';
+import { readEnums, readObject } from '../read';
+import { createEnum, createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import type { EditContext } from './context';
+import { attachedEnums } from './db-enums';
 import { materializeFrames } from './frames';
 import { resolveView, viewMap } from './views';
 
@@ -34,9 +47,88 @@ export interface PastedIds {
   nodes: Id[];
   edges: Id[];
   groups: Id[];
+  /**
+   * External relationships of the fragment not pasted because the target deck lacks their target
+   * table or its columns (043 FR-019). 0 when none were dropped.
+   */
+  droppedRelationships: number;
 }
 
 const shift = (point: Point, by: Point): Point => ({ x: point.x + by.x, y: point.y + by.y });
+
+/** Name lookup key: case-insensitive name within a case-insensitive schema (absent = default). */
+const nameKey = (name: string, schema: string | undefined) =>
+  `${(schema ?? '').toLowerCase()}\u0000${name.toLowerCase()}`;
+
+function freeCopyName(name: string, isTaken: (candidate: string) => boolean): string {
+  let candidate = `${name}_copy`;
+  for (let n = 2; isTaken(candidate); n++) candidate = `${name}_copy_${String(n)}`;
+  return candidate;
+}
+
+/**
+ * The name for a copy of `name` when `name` is taken (043 FR-020): `name_copy`, then
+ * `name_copy_2`, `name_copy_3`… the first one not in `taken`, compared case-insensitively.
+ */
+export function copyName(name: string, taken: ReadonlySet<string>): string {
+  const lower = new Set([...taken].map((t) => t.toLowerCase()));
+  return freeCopyName(name, (candidate) => lower.has(candidate.toLowerCase()));
+}
+
+/** Name keys of the target deck's tables. */
+function tableNameKeys(ctx: EditContext): Set<string> {
+  const keys = new Set<string>();
+  for (const [id, map] of collectionMap(ctx.doc, 'nodes')) {
+    const node = readObject('nodes', id, map) as unknown as Node;
+    if (isDbTable(node)) keys.add(nameKey(node.title, node.schema));
+  }
+  return keys;
+}
+
+/**
+ * Fragment enum id → target enum id: a same-named enum of the target in the same schema, or a
+ * copy with new enum and value ids (returned in `created`, to be written with the paste).
+ */
+function linkEnums(
+  ctx: EditContext,
+  enums: readonly DbEnum[],
+): { ids: Map<Id, Id>; created: DbEnum[] } {
+  const ids = new Map<Id, Id>();
+  const created: DbEnum[] = [];
+  if (enums.length === 0) return { ids, created };
+  const byName = new Map<string, Id>();
+  for (const item of readEnums(ctx.doc) ?? []) {
+    const key = nameKey(item.name, item.schema);
+    if (!byName.has(key)) byName.set(key, item.id);
+  }
+  for (const item of enums) {
+    const key = nameKey(item.name, item.schema);
+    const linked = byName.get(key);
+    if (linked !== undefined) {
+      ids.set(item.id, linked);
+      continue;
+    }
+    const copy: DbEnum = {
+      ...item,
+      id: ctx.allocate('enum'),
+      values: item.values.map((value) => ({ ...value, id: ctx.allocate('enumval') })),
+    };
+    ids.set(item.id, copy.id);
+    // A second fragment enum of the same name links to this copy rather than copying again.
+    byName.set(key, copy.id);
+    created.push(copy);
+  }
+  return { ids, created };
+}
+
+/** Column ids of the target deck's table `id`, or undefined when it is not a table there. */
+function targetColumns(ctx: EditContext, id: Id): Set<Id> | undefined {
+  const map = collectionMap(ctx.doc, 'nodes').get(id);
+  if (map === undefined) return undefined;
+  const node = readObject('nodes', id, map) as unknown as Node;
+  if (!isDbTable(node)) return undefined;
+  return new Set((node.columns ?? []).map((c) => c.id));
+}
 
 /** New ids for every column, index and check of the fragment's nodes (040). */
 function partIdMap(ctx: EditContext, nodes: readonly Node[]): Map<Id, Id> {
@@ -49,14 +141,27 @@ function partIdMap(ctx: EditContext, nodes: readonly Node[]): Map<Id, Id> {
   return ids;
 }
 
-/** A node's table lists with new part ids and remapped index parts (absent lists stay absent). */
-function remapTableParts(node: Node, ids: ReadonlyMap<Id, Id>): Partial<Node> {
+/**
+ * A node's table lists with new part ids, remapped index parts and linked or copied enums (absent
+ * lists stay absent).
+ */
+function remapTableParts(
+  node: Node,
+  ids: ReadonlyMap<Id, Id>,
+  enumIds: ReadonlyMap<Id, Id>,
+): Partial<Node> {
   const to = (id: Id) => ids.get(id) ?? id;
   const part = (item: DbIndexPart): DbIndexPart => (typeof item === 'string' ? to(item) : item);
   return {
     ...(node.columns === undefined
       ? {}
-      : { columns: node.columns.map((c) => ({ ...c, id: to(c.id) })) }),
+      : {
+          columns: node.columns.map(({ enumRef, ...c }) => ({
+            ...c,
+            id: to(c.id),
+            ...(enumRef === undefined ? {} : { enumRef: enumIds.get(enumRef) ?? enumRef }),
+          })),
+        }),
     ...(node.indexes === undefined
       ? {}
       : {
@@ -103,13 +208,25 @@ export function pasteFragment(
     );
   }
   const view = options.viewId === undefined ? undefined : resolveView(ctx, options.viewId);
-  if (deck.nodes.length + deck.groups.length === 0) return { nodes: [], edges: [], groups: [] };
+  if (deck.nodes.length + deck.groups.length === 0) {
+    return { nodes: [], edges: [], groups: [], droppedRelationships: 0 };
+  }
 
   const nodeIds = new Map(deck.nodes.map((n) => [n.id, ctx.allocate('node')]));
   const groupIds = new Map(deck.groups.map((g) => [g.id, ctx.allocate('group')]));
   const knownRules = new Set(rulesMap(ctx.doc).keys());
   const partIds = partIdMap(ctx, deck.nodes);
   const toPart = (id: Id) => partIds.get(id) ?? id;
+  const enums = linkEnums(ctx, fragment.enums ?? []);
+  const takenNames = deck.nodes.some(isDbTable) ? tableNameKeys(ctx) : new Set<string>();
+  /** The pasted title: a taken table name gets `_copy…`, and every pasted table name is taken. */
+  const titleOf = (node: Node): string => {
+    if (!isDbTable(node)) return node.title;
+    const taken = (name: string) => takenNames.has(nameKey(name, node.schema));
+    const title = taken(node.title) ? freeCopyName(node.title, taken) : node.title;
+    takenNames.add(nameKey(title, node.schema));
+    return title;
+  };
 
   const groups: Group[] = parentsFirst(deck.groups).map((group) => {
     const { id, parent: from, position, size, ...rest } = group;
@@ -131,11 +248,12 @@ export function pasteFragment(
     return {
       ...rest,
       id: nodeIds.get(id) ?? id,
+      title: titleOf(node),
       ...(into === undefined ? {} : { group: into }),
       ...(inside === undefined ? {} : { parent: inside }),
       ...(kept.length === 0 ? {} : { rules: kept }),
       ...(position === undefined ? {} : { position: shift(position, offset) }),
-      ...remapTableParts(node, partIds),
+      ...remapTableParts(node, partIds, enums.ids),
     };
   });
   const edges: Edge[] = deck.edges.flatMap((edge) => {
@@ -155,8 +273,29 @@ export function pasteFragment(
       },
     ];
   });
+  let droppedRelationships = 0;
+  for (const edge of fragment.external ?? []) {
+    const from = nodeIds.get(edge.from);
+    const columns = from === undefined ? undefined : targetColumns(ctx, edge.to);
+    if (from === undefined || columns === undefined) {
+      droppedRelationships++;
+      continue;
+    }
+    const { fromColumns, toColumns } = edge;
+    if (toColumns !== undefined && !toColumns.every((c) => columns.has(c))) {
+      droppedRelationships++;
+      continue;
+    }
+    edges.push({
+      ...edge,
+      id: ctx.allocate('edge'),
+      from,
+      ...(fromColumns === undefined ? {} : { fromColumns: fromColumns.map(toPart) }),
+    });
+  }
 
   assertValid([
+    ...enums.created.flatMap((e) => validateObject('enum', e)),
     ...groups.flatMap((g) => validateObject('groups', g)),
     ...nodes.flatMap((n) => validateObject('nodes', n)),
     ...edges.flatMap((e) => validateObject('edges', e)),
@@ -176,6 +315,12 @@ export function pasteFragment(
     appendAll(collectionMap(ctx.doc, 'groups'), created('groups', groups));
     appendAll(collectionMap(ctx.doc, 'nodes'), created('nodes', nodes));
     appendAll(collectionMap(ctx.doc, 'edges'), created('edges', edges));
+    if (enums.created.length > 0) {
+      appendAll(
+        attachedEnums(ctx),
+        enums.created.map((item) => [item.id, createEnum(item, '')] as const),
+      );
+    }
     if (viewTarget === undefined) return;
     let positions = viewTarget.get('positions');
     if (!(positions instanceof Y.Map)) {
@@ -196,5 +341,6 @@ export function pasteFragment(
     nodes: nodes.map((n) => n.id),
     edges: edges.map((e) => e.id),
     groups: groups.map((g) => g.id),
+    droppedRelationships,
   };
 }

@@ -91,3 +91,19 @@ default?, defaultExpr?, check?, enumRef?, note? }`; `size` is text (`255`, `10,2
   in `apps/app/src/editor/relationships/` and `routing/relationship-path.ts`.
 - **Duplicates:** the `duplicate-connection` problem now compares column ends too, so two
   relationships between the same tables on different columns are not reported.
+
+## Amendment (043, 2026-10-04): lock
+
+- **`Node.locked`** (after `detail`): `const: true`, optional, on **any** node type, not only
+  tables. Absent means unlocked; `false` is invalid, so unlocking removes the key and decks that
+  never lock anything stay byte-identical. Yjs: a plain node key; the editor op is
+  `setLocked(ids, locked)`, one undo step.
+- **What it means is the app's rule, not the model's:** a locked node is not moved (drag, nudge,
+  align, tidy), resized, renamed, edited (rows, line editor) or deleted from the canvas; it stays
+  selectable, highlightable and a valid connector or relationship end. Undo is not an edit
+  gesture, so undoing changes made before the lock still works.
+- **Why generic:** the founder chose a lock for any card (clarify 2026-10-04). One flag on the
+  node keeps the format small and lets later card features reuse it.
+- **Paste** (same feature): the clipboard fragment, which is not the file format, gains optional
+  `external` (outgoing relationships of copied tables, kept on paste only when the target table
+  and columns exist) and `enums` (linked by name in the target deck, else copied with new ids).

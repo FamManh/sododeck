@@ -504,6 +504,10 @@ export interface Node {
    */
   expanded?: boolean;
   detail?: DbDetail;
+  /**
+   * Any node type (043): `true` pins the node, so it cannot be moved, resized, edited or deleted until unlocked. Connectors to and from it can still be drawn. Absent means unlocked; `false` is not valid, so unlocking removes the key.
+   */
+  locked?: true;
 }
 /**
  * A date range value: start and end as `YYYY-MM-DD`, the end on or after the start (checked by the app).

@@ -3,7 +3,7 @@
  * step; it ends after 1 s without a nudge, on any other key or on a pointer down, and then says
  * how far the selection moved. Selected groups move with their whole subtree.
  */
-import { viewNodePosition, type DeckEditor } from '@sododeck/model';
+import { isLocked, viewNodePosition, type DeckEditor } from '@sododeck/model';
 import type { Frame, Id } from '@sododeck/schema';
 import { useEffect, useMemo } from 'react';
 
@@ -39,7 +39,9 @@ function moveSelection(editor: DeckEditor, delta: Point): number {
   const deck = readDeck(editor.doc);
   const view = readViewState(editor.doc);
   const tree = groupSubtree(deck, selection.groups);
-  const ids = new Set([...selection.nodes, ...tree.nodes]);
+  // Locked cards never move (043 FR-024); a group still carries its members.
+  const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
+  const ids = new Set([...selection.nodes.filter((id) => !locked.has(id)), ...tree.nodes]);
   const positions: Record<Id, Point> = {};
   deck.nodes.forEach((node, index) => {
     if (!ids.has(node.id)) return;

@@ -57,7 +57,7 @@ export const CLIPBOARD_ACTIONS: readonly Action[] = [
           : ctx.canvas.screenToFlowPosition(ctx.point);
       navigator.clipboard.readText().then(
         (text) => {
-          if (!pasteText(ctx.editor, text, point, ctx.canvas)) {
+          if (!pasteText(ctx.editor, text, point, ctx.canvas, ctx.undoToast)) {
             useUiStore.getState().announce('Nothing to paste');
           }
         },

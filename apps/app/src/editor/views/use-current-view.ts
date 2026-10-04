@@ -15,20 +15,29 @@ import { useMemo } from 'react';
 
 import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
-import { useUiStore } from '../../state/ui-store';
-import { viewStateOf, type ViewState } from './view-state';
+import { newRowAt, rowEditTableId, useUiStore, type UiState } from '../../state/ui-store';
+import { viewStateOf, type RowEditView, type ViewState } from './view-state';
 import { viewCrumbTitle } from './view-title';
+
+function rowEditView(tableId: string | null, at: number | null): RowEditView | null {
+  return tableId === null ? null : { tableId, newRowAt: at };
+}
+
+/** The table in row editing (043 R4) as the view projection takes it. */
+function rowEditOf(state: UiState): RowEditView | null {
+  return rowEditView(rowEditTableId(state), newRowAt(state));
+}
 
 /** The current view state without subscribing (event handlers). */
 export function readViewState(doc: DeckDoc): ViewState {
-  const { currentViewId, revealed } = useUiStore.getState();
-  return viewStateOf(readDeck(doc), currentViewId, revealed);
+  const state = useUiStore.getState();
+  return viewStateOf(readDeck(doc), state.currentViewId, state.revealed, rowEditOf(state));
 }
 
 /** `file` as the current view draws it (see `ViewState.deck`); for pure helpers given a snapshot. */
 export function canvasDeckOf(file: SododeckFile): SododeckFile {
-  const { currentViewId, revealed } = useUiStore.getState();
-  return viewStateOf(file, currentViewId, revealed).deck;
+  const state = useUiStore.getState();
+  return viewStateOf(file, state.currentViewId, state.revealed, rowEditOf(state)).deck;
 }
 
 /** The id the view ops write to: the current view (the first one when none is chosen). */
@@ -42,7 +51,10 @@ export function useViewState(): ViewState {
   const deck = useDeckSnapshot(editor.doc);
   const currentViewId = useUiStore((s) => s.currentViewId);
   const revealed = useUiStore((s) => s.revealed);
-  return viewStateOf(deck, currentViewId, revealed);
+  const editTable = useUiStore(rowEditTableId);
+  const at = useUiStore(newRowAt);
+  const rowEdit = useMemo(() => rowEditView(editTable, at), [editTable, at]);
+  return viewStateOf(deck, currentViewId, revealed, rowEdit);
 }
 
 /** Stored views, or the presets while the deck has none. */

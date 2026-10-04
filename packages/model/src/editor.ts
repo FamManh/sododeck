@@ -109,6 +109,7 @@ import {
 } from './ops/fields';
 import { setNodeDisplay, type NodeDisplay } from './ops/node-display';
 import { setNodeIcon } from './ops/node-icon';
+import { setLocked } from './ops/node-lock';
 import { deleteTag, renameTag, setTagColor, type TagChange } from './ops/tags';
 import {
   addRule,
@@ -322,6 +323,12 @@ export interface DeckEditor {
    * family, removes `display`. Throws `invalid` / `not-found` before any write.
    */
   setNodeDisplay(nodeIds: readonly Id[], display: NodeDisplay | null): void;
+  /**
+   * Locks (`true`) or unlocks every listed node (043, R11): one undo step. Locking writes
+   * `locked: true`; unlocking removes the key (`false` is not valid in the file). Unknown ids are
+   * ignored, and nothing changing writes nothing. The app enforces what a lock blocks.
+   */
+  setLocked(nodeIds: readonly Id[], locked: boolean): void;
   /**
    * Icon reference of every listed node (038): one undo step; `null` removes the key. Any
    * non-empty text is stored as given. Throws `invalid` / `not-found` before any write.
@@ -759,6 +766,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     groupSelection: (selection) => groupSelection(ctx, selection),
     setNodeDisplay: (nodeIds, display) => {
       setNodeDisplay(ctx, nodeIds, display);
+    },
+    setLocked: (nodeIds, locked) => {
+      setLocked(ctx, nodeIds, locked);
     },
     setNodeIcon: (nodeIds, icon) => {
       setNodeIcon(ctx, nodeIds, icon);

@@ -64,7 +64,7 @@ export function PacksPanel() {
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="text-body text-ink">{pack.name}</span>
                 <span className="text-caption text-ink-secondary">
-                  {count} {count === 1 ? 'type' : 'types'}
+                  {pack.description ?? `${String(count)} ${count === 1 ? 'type' : 'types'}`}
                 </span>
                 {lastOn && (
                   <span id={hintId} className="text-caption text-ink-secondary">

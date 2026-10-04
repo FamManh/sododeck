@@ -34,8 +34,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `043-db-editing` from `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline.
-- [ ] T002 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` before any change. Save the summary as `specs/043-db-editing/bench-before.md`.
+- [x] T001 Create branch `043-db-editing` from `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline.
+- [x] T002 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` before any change. Save the summary as `specs/043-db-editing/bench-before.md`.
 
 ---
 
@@ -45,18 +45,18 @@
 
 ### Format and model
 
-- [ ] T003 [P] Add parity fixtures to `packages/schema/test/fixtures.ts`:
+- [x] T003 [P] Add parity fixtures to `packages/schema/test/fixtures.ts`:
   - valid: `locked: true` on a card, a shape and a `db-table`
   - invalid: `locked: false` and `locked: "yes"`
 
   Watch the invalid ones fail to be refused.
 
-- [ ] T004 Add `locked` (`const: true`, with a description) to Node in `packages/schema/schema/v1.json`, after `detail`. Run `pnpm schema:generate`. Add `"locked": true` to one node in `packages/schema/examples/full.sododeck.json`. `pnpm --filter @sododeck/schema test` is green.
-- [ ] T005 [P] Write model tests:
+- [x] T004 Add `locked` (`const: true`, with a description) to Node in `packages/schema/schema/v1.json`, after `detail`. Run `pnpm schema:generate`. Add `"locked": true` to one node in `packages/schema/examples/full.sododeck.json`. `pnpm --filter @sododeck/schema test` is green.
+- [x] T005 [P] Write model tests:
   - `packages/model/test/round-trip.test.ts`: a locked card, shape and table round-trip; a deck without `locked` stays byte-identical after an unrelated edit.
   - `packages/model/test/node-lock.test.ts`: `setLocked(ids, true)` writes `true`; `false` removes the key; unknown ids are ignored; it is one undo step.
-- [ ] T006 Implement `setLocked` in the new `packages/model/src/ops/node-lock.ts`. Wire it into `packages/model/src/editor.ts` (interface, with a doc comment) and `index.ts`. T005 is green.
-- [ ] T007 [P] Write paste tests in `packages/model/test/paste.test.ts`, per research R10:
+- [x] T006 Implement `setLocked` in the new `packages/model/src/ops/node-lock.ts`. Wire it into `packages/model/src/editor.ts` (interface, with a doc comment) and `index.ts`. T005 is green.
+- [x] T007 [P] Write paste tests in `packages/model/test/paste.test.ts`, per research R10:
   - `toFragment(…, { keepOutgoing: true })` puts relationships from a copied table to an outside table in `external`, and the enums the copied columns reference in `enums`.
   - Paste into the same deck keeps the external edges, remapped on the from side.
   - Paste into a deck without the target drops them and returns `droppedRelationships`.
@@ -68,11 +68,11 @@
   - 20 tables share 0 ids with the originals.
   - An old fragment without `external` / `enums` pastes as before.
   - The whole paste is one undo step.
-- [ ] T008 Implement the paste changes in `packages/model/src/fragment.ts` (`keepOutgoing`, `external`, `enums`, parse and validation of the new optional keys) and `packages/model/src/ops/paste.ts` (keep or drop external edges, link or copy enums, `copyName`, `droppedRelationships` in the result). Update the header comments. T007 is green.
+- [x] T008 Implement the paste changes in `packages/model/src/fragment.ts` (`keepOutgoing`, `external`, `enums`, parse and validation of the new optional keys) and `packages/model/src/ops/paste.ts` (keep or drop external edges, link or copy enums, `copyName`, `droppedRelationships` in the result). Update the header comments. T007 is green.
 
 ### Pure layer (apps/app)
 
-- [ ] T009 [P] Write `apps/app/src/db/column-line.test.ts`:
+- [x] T009 [P] Write `apps/app/src/db/column-line.test.ts`:
   - every row of the examples table in contracts/column-line.md
   - quoted names; `numeric(10,2)` → size `'10,2'`; an invalid size goes to ignored
   - last-wins for `null` / `not null`; `default` alone gives a hint
@@ -82,12 +82,12 @@
   - `columnLinePatch` writes `null` for removed parts and switches between `default` and `defaultExpr`, and never touches `note`, `check` or `id`
   - `lineError` returns `empty` / `taken` (case-insensitive, edited column excluded)
   - a 200-character line parses in < 1 ms
-- [ ] T010 Implement `apps/app/src/db/column-line.ts` (`parseColumnLine`, `formatColumnLine`, `columnLinePatch`, `lineError`, token ranges) per contracts/column-line.md. Reuse the `type(size)` split from `db/export/common-types.ts`. T009 is green.
-- [ ] T011 [P] Add tests:
+- [x] T010 Implement `apps/app/src/db/column-line.ts` (`parseColumnLine`, `formatColumnLine`, `columnLinePatch`, `lineError`, token ranges) per contracts/column-line.md. Reuse the `type(size)` split from `db/export/common-types.ts`. T009 is green.
+- [x] T011 [P] Add tests:
   - `apps/app/src/editor/table-keys.test.ts`: `mismatchedColumns(deck)` gives both rows of a mismatched pair the message "int → uuid · orders.customer_id"; composite pairs are compared by position; matching types and enum-to-same-enum give no entry; the result is cached by `edges` and `nodes` identity.
   - `apps/app/src/editor/canvas-actions.test.ts`: `nextTableName` (first free `table_n`).
-- [ ] T012 Implement `mismatchedColumns` in `apps/app/src/editor/table-keys.ts` using 042's `typeMismatch` (`relationships/type-mismatch.ts`), and `nextTableName` in `apps/app/src/editor/canvas-actions.ts`. T011 is green.
-- [ ] T013 Extend `apps/app/src/state/ui-store.ts` per contracts/editing-ui.md:
+- [x] T012 Implement `mismatchedColumns` in `apps/app/src/editor/table-keys.ts` using 042's `typeMismatch` (`relationships/type-mismatch.ts`), and `nextTableName` in `apps/app/src/editor/canvas-actions.ts`. T011 is green.
+- [x] T013 Extend `apps/app/src/state/ui-store.ts` per contracts/editing-ui.md:
   - `columnEdit` with `startColumnEdit` / `endColumnEdit`
   - `rowDrag`
   - the `rowEditTableId` selector
@@ -97,8 +97,8 @@
 
   Add store tests in `apps/app/src/state/ui-store.test.ts`.
 
-- [ ] T014 [P] Add a case to `apps/app/src/views/view-state.test.ts`: with `rowEditTableId` set, the projected table's `detail` is `'all'`; the document's `detail` and the other tables are unchanged; clearing the id restores the projection.
-- [ ] T015 Apply the override in `apps/app/src/views/view-state.ts` `projectNodes` (patch `detail: 'all'` on that one node, no write). T014 is green.
+- [x] T014 [P] Add a case to `apps/app/src/views/view-state.test.ts`: with `rowEditTableId` set, the projected table's `detail` is `'all'`; the document's `detail` and the other tables are unchanged; clearing the id restores the projection.
+- [x] T015 Apply the override in `apps/app/src/views/view-state.ts` `projectNodes` (patch `detail: 'all'` on that one node, no write). T014 is green.
 
 **Checkpoint**: format, model and pure helpers are ready, and all package tests are green.
 
@@ -112,7 +112,7 @@
 
 ### Tests for User Story 1 (write first)
 
-- [ ] T016 [P] [US1] Write `apps/app/src/editor/table/column-line-editor.test.tsx` (new-row mode):
+- [x] T016 [P] [US1] Write `apps/app/src/editor/table/column-line-editor.test.tsx` (new-row mode):
   - an input named "New column" renders at the row's position
   - chips named "name · email", "type · text", "unique", "not null" update while typing
   - an enum type shows the enum chip
@@ -122,19 +122,19 @@
   - Tab moves the caret to the type token
   - an empty name and a taken name show inline messages and write nothing
   - each save is undone by one ⌘Z
-- [ ] T017 [P] [US1] Add `apps/app/src/editor/table-layout.test.ts` cases: with a new-row edit open, the table is one row taller, and the rows below the insertion index (and their relationship anchors) shift by 24.
+- [x] T017 [P] [US1] Add `apps/app/src/editor/table-layout.test.ts` cases: with a new-row edit open, the table is one row taller, and the rows below the insertion index (and their relationship anchors) shift by 24.
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Create `apps/app/src/editor/table/column-line-editor.tsx`:
+- [x] T018 [US1] Create `apps/app/src/editor/table/column-line-editor.tsx`:
   - a 24 px input that matches the row's font and slots, with the chips overlay under the card (tokens, `pointer-events: none`, Deck chip styles)
   - save via `oneStep` + `editor.addColumn(tableId, data, index)` (index = after the focused row, else the end; FR-006a)
   - error text, ⏎ / Esc / Tab handling, and an announce on save
 
   T016 is green.
 
-- [ ] T019 [US1] Render the editor row from `apps/app/src/editor/table/table-body.tsx` when `columnEdit` targets this table with `columnId: null`. Add `extraRow` to `tableLayout` in `apps/app/src/editor/table-layout.ts`, fed from the projected deck / table context so anchors follow. T017 is green.
-- [ ] T020 [US1] Add a `table.addColumn` action (menu "Add column", toolbar plus button, key C on a focused or selected `db-table`) in the new `apps/app/src/editor/actions/table-actions.ts`, and register it in `actions/index.ts`. In `apps/app/src/editor/use-canvas-shortcuts.ts`, make C on a `db-table` open the new-row editor and R open the connect popover (moved from C). Update `shell/shortcuts.ts`. Add cases to `use-canvas-shortcuts.test.ts`.
+- [x] T019 [US1] Render the editor row from `apps/app/src/editor/table/table-body.tsx` when `columnEdit` targets this table with `columnId: null`. Add `extraRow` to `tableLayout` in `apps/app/src/editor/table-layout.ts`, fed from the projected deck / table context so anchors follow. T017 is green.
+- [x] T020 [US1] Add a `table.addColumn` action (menu "Add column", toolbar plus button, key C on a focused or selected `db-table`) in the new `apps/app/src/editor/actions/table-actions.ts`, and register it in `actions/index.ts`. In `apps/app/src/editor/use-canvas-shortcuts.ts`, make C on a `db-table` open the new-row editor and R open the connect popover (moved from C). Update `shell/shortcuts.ts`. Add cases to `use-canvas-shortcuts.test.ts`.
 
 **Checkpoint**: columns can be added by typing (SC-002).
 
@@ -148,21 +148,21 @@
 
 ### Tests for User Story 2 (write first)
 
-- [ ] T021 [P] [US2] Extend `apps/app/src/editor/table/column-line-editor.test.tsx` (edit mode):
+- [x] T021 [P] [US2] Extend `apps/app/src/editor/table/column-line-editor.test.tsx` (edit mode):
   - pre-fills `formatColumnLine(column)` with the name selected
   - ⏎ calls `updateColumn` with `columnLinePatch`; removing `not null` writes `notNull: null`; removing `pk` removes the key; the id is unchanged
   - Esc restores the row
   - one ⌘Z undoes name, type and flags together
   - the relationship and index still reference the column id
-- [ ] T022 [P] [US2] Add cases to `apps/app/src/editor/table/table-body.test.tsx`:
+- [x] T022 [P] [US2] Add cases to `apps/app/src/editor/table/table-body.test.tsx`:
   - double-click on a row name starts the edit
   - a mismatched row shows an image named "Type differs: int → uuid (orders.customer_id)"
   - the icon disappears once the types match
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Add edit mode to `apps/app/src/editor/table/column-line-editor.tsx` (`columnId` set): pre-fill, select the name (`select: 'name'`), save through `updateColumn` + `columnLinePatch` in `oneStep`, close on ⏎. T021 is green.
-- [ ] T024 [US2] In `apps/app/src/editor/table/table-body.tsx`, swap the row for the editor while it is edited, add double-click to edit, and draw the `TriangleAlert` 12 px icon (clay ink, accessible name, tooltip) from `mismatchedColumns` via the table context in `table-keys.ts`. T022 is green.
+- [x] T023 [US2] Add edit mode to `apps/app/src/editor/table/column-line-editor.tsx` (`columnId` set): pre-fill, select the name (`select: 'name'`), save through `updateColumn` + `columnLinePatch` in `oneStep`, close on ⏎. T021 is green.
+- [x] T024 [US2] In `apps/app/src/editor/table/table-body.tsx`, swap the row for the editor while it is edited, add double-click to edit, and draw the `TriangleAlert` 12 px icon (clay ink, accessible name, tooltip) from `mismatchedColumns` via the table context in `table-keys.ts`. T022 is green.
 
 **Checkpoint**: renames keep every reference (SC-003); type mismatches are visible.
 
@@ -176,7 +176,7 @@
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T025 [P] [US3] Add cases to `apps/app/src/editor/use-canvas-shortcuts.test.ts` for a focused row:
+- [x] T025 [P] [US3] Add cases to `apps/app/src/editor/use-canvas-shortcuts.test.ts` for a focused row:
   - ⏎ / F2 open the editor
   - ⌫ and Delete remove the column
   - ⌥↑ / ⌥↓ call `moveColumn` ±1 (clamped)
@@ -185,24 +185,24 @@
   - Esc returns to the table
   - ⏎ on the table still opens details and ↓ enters the rows
   - keys are ignored in text fields
-- [ ] T026 [P] [US3] Write `apps/app/src/editor/table/row-grip.test.tsx`:
+- [x] T026 [P] [US3] Write `apps/app/src/editor/table/row-grip.test.tsx`:
   - the grip button is named "Reorder {column}"
   - the pointer drag drop index is computed from `rowsTop` and 24 px rows
   - the drop line shows at the target index
   - release calls `moveColumn` once
   - Esc cancels
   - no grip on a locked table or below 90 % zoom
-- [ ] T027 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx` (or a new `row-delete.test.ts`):
+- [x] T027 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx` (or a new `row-delete.test.ts`):
   - deleting `tracking` with one relationship shows the toast "Deleted column tracking · 1 relationship removed" with Undo
   - Undo restores the column, its position, its relationship and its index parts
   - focus moves to the next row
-- [ ] T028 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx`: a table at Keys with row focus renders All rows. Esc returns it to Keys. The deck JSON is unchanged.
+- [x] T028 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx`: a table at Keys with row focus renders All rows. Esc returns it to Keys. The deck JSON is unchanged.
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Extend `apps/app/src/editor/use-canvas-shortcuts.ts` and `apps/app/src/editor/table/row-focus.ts` with the row key map (R5). Delete runs through a `deleteColumn(editor, row)` helper in `apps/app/src/editor/actions/table-actions.ts` (`removeColumn` in `oneStep`, then `showUndoToast` from `editor/undo-toast.ts` with the edge count from `RemovalResult.removed`, then refocus). Update `shell/shortcuts.ts` and the keyboard help. Make row focus and the editor announce name, type and position (FR-011). T025 and T027 are green.
-- [ ] T030 [US3] Create `apps/app/src/editor/table/row-grip.tsx` (a `GripVertical` button with `nodrag`, a pointer session in `rowDrag`, a 2 px drop line with a ring) and mount it from `table-body.tsx`. T026 is green.
-- [ ] T031 [US3] Feed `rowEditTableId` (from `focusedRow`, `columnEdit`, `rowDrag`) into the view projection, so the All override applies and clears on Esc or deselect. T028 is green.
+- [x] T029 [US3] Extend `apps/app/src/editor/use-canvas-shortcuts.ts` and `apps/app/src/editor/table/row-focus.ts` with the row key map (R5). Delete runs through a `deleteColumn(editor, row)` helper in `apps/app/src/editor/actions/table-actions.ts` (`removeColumn` in `oneStep`, then `showUndoToast` from `editor/undo-toast.ts` with the edge count from `RemovalResult.removed`, then refocus). Update `shell/shortcuts.ts` and the keyboard help. Make row focus and the editor announce name, type and position (FR-011). T025 and T027 are green.
+- [x] T030 [US3] Create `apps/app/src/editor/table/row-grip.tsx` (a `GripVertical` button with `nodrag`, a pointer session in `rowDrag`, a 2 px drop line with a ring) and mount it from `table-body.tsx`. T026 is green.
+- [x] T031 [US3] Feed `rowEditTableId` (from `focusedRow`, `columnEdit`, `rowDrag`) into the view projection, so the All override applies and clears on Esc or deselect. T028 is green.
 
 **Checkpoint**: P1 complete. A schema can be built and edited with the keyboard (SC-001, SC-004).
 
@@ -216,7 +216,7 @@
 
 ### Tests for User Story 4 (write first)
 
-- [ ] T032 [P] [US4] Write `apps/app/src/editor/actions/table-actions.test.ts`:
+- [x] T032 [P] [US4] Write `apps/app/src/editor/actions/table-actions.test.ts`:
   - `row.pk`, `row.notNull` and `row.unique` toggle with check state
   - `row.pk` on a second column makes a composite key
   - `row.addIndex` adds `{ columns: [id] }`
@@ -224,20 +224,20 @@
   - `row.addRelationship` starts the column connect
   - `table.exportSql` selects the table and calls `openExport` with `{ format: 'sql', scope: 'selection' }`
   - every item is one undo step
-- [ ] T033 [P] [US4] Write `apps/app/src/editor/actions/relationship-actions.test.ts`:
+- [x] T033 [P] [US4] Write `apps/app/src/editor/actions/relationship-actions.test.ts`:
   - cardinality radio (1–1, 1–n, n–1, n–n) writes `cardinality`
   - the optional checks write `true` / `null`, never `false`
   - on delete writes the action, and "None" clears it
   - the actions apply only to edges with column ends
   - they show on the `connection` toolbar and menu
-- [ ] T034 [P] [US4] Add a case to `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`: right-click on a row opens the row menu with "Edit", "Set as primary key", "Not null", "Unique", "Add index", "Add relationship…", "Move up", "Move down", "Delete column". The canvas menu lists "Add table" and "Add note".
+- [x] T034 [P] [US4] Add a case to `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`: right-click on a row opens the row menu with "Edit", "Set as primary key", "Not null", "Unique", "Add index", "Add relationship…", "Move up", "Move down", "Delete column". The canvas menu lists "Add table" and "Add note".
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Implement the row and table actions in `apps/app/src/editor/actions/table-actions.ts` (ids per contracts/editing-ui.md, `where`, `applies`, `checked`, shortcuts), and register them. T032 is green.
-- [ ] T036 [US4] Create `apps/app/src/editor/actions/relationship-actions.ts` (cardinality with crow glyph icons reused from `edge-end-marks.ts`, optional sides, on delete) and register them. T033 is green.
-- [ ] T037 [US4] Support the `row` `MenuTarget` in `apps/app/src/editor/quick-edit/canvas-menu.tsx` and the right-click handler on rows in `table/table-body.tsx` (`onContextMenu` → `ui.openContextMenu({ kind: 'row', row }, point)`). T034 is green.
-- [ ] T038 [US4] Seed the export dialog: accept `{ format, scope }` in `exportDialog` and pass it to `initialExportState` in `apps/app/src/editor/export/export-dialog.tsx` / `export-dialog-state.ts`. Add a test in `export-dialog-state.test.ts`.
+- [x] T035 [US4] Implement the row and table actions in `apps/app/src/editor/actions/table-actions.ts` (ids per contracts/editing-ui.md, `where`, `applies`, `checked`, shortcuts), and register them. T032 is green.
+- [x] T036 [US4] Create `apps/app/src/editor/actions/relationship-actions.ts` (cardinality with crow glyph icons reused from `edge-end-marks.ts`, optional sides, on delete) and register them. T033 is green.
+- [x] T037 [US4] Support the `row` `MenuTarget` in `apps/app/src/editor/quick-edit/canvas-menu.tsx` and the right-click handler on rows in `table/table-body.tsx` (`onContextMenu` → `ui.openContextMenu({ kind: 'row', row }, point)`). T034 is green.
+- [x] T038 [US4] Seed the export dialog: accept `{ format, scope }` in `exportDialog` and pass it to `initialExportState` in `apps/app/src/editor/export/export-dialog.tsx` / `export-dialog-state.ts`. Add a test in `export-dialog-state.test.ts`.
 
 **Checkpoint**: every action is reachable by menu.
 
@@ -251,8 +251,8 @@
 
 ### Tests for User Story 5 (write first)
 
-- [ ] T039 [P] [US5] Add `addTable` cases to `apps/app/src/editor/canvas-actions.test.ts`: it writes a `db-table` named `table_n` at the given point with one column `{ name: 'id', type: 'integer', pk: true, notNull: true }`, starts the title edit, and is one undo step. Add a case to `use-canvas-shortcuts.test.ts` for T, and one to `empty-canvas-card.test.tsx` for "Add table" (shown only when the Database pack is on).
-- [ ] T040 [P] [US5] Add cases to `apps/app/src/editor/editing/clipboard-ops.test.ts`:
+- [x] T039 [P] [US5] Add `addTable` cases to `apps/app/src/editor/canvas-actions.test.ts`: it writes a `db-table` named `table_n` at the given point with one column `{ name: 'id', type: 'integer', pk: true, notNull: true }`, starts the title edit, and is one undo step. Add a case to `use-canvas-shortcuts.test.ts` for T, and one to `empty-canvas-card.test.tsx` for "Add table" (shown only when the Database pack is on).
+- [x] T040 [P] [US5] Add cases to `apps/app/src/editor/editing/clipboard-ops.test.ts`:
   - duplicate and copy pass `keepOutgoing`
   - a paste with `droppedRelationships > 0` shows the toast "Pasted orders · 3 relationships dropped" with Undo
   - a single pasted or duplicated table starts the title edit with all text selected
@@ -260,8 +260,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T041 [US5] Implement `addTable(editor, point)` in `apps/app/src/editor/canvas-actions.ts`. Wire it to T in `use-canvas-shortcuts.ts`, the canvas menu "Add table", the palette Table tile (`palette.tsx` calls `addTable` for `db-table`), and an "Add table" action in `apps/app/src/editor/empty-canvas-card.tsx`. T039 is green.
-- [ ] T042 [US5] Update `apps/app/src/editor/editing/clipboard-ops.ts` (`keepOutgoing`, the drop toast via `showUndoToast`, the rename after a single-table paste or duplicate). T040 is green.
+- [x] T041 [US5] Implement `addTable(editor, point)` in `apps/app/src/editor/canvas-actions.ts`. Wire it to T in `use-canvas-shortcuts.ts`, the canvas menu "Add table", the palette Table tile (`palette.tsx` calls `addTable` for `db-table`), and an "Add table" action in `apps/app/src/editor/empty-canvas-card.tsx`. T039 is green.
+- [x] T042 [US5] Update `apps/app/src/editor/editing/clipboard-ops.ts` (`keepOutgoing`, the drop toast via `showUndoToast`, the rename after a single-table paste or duplicate). T040 is green.
 
 **Checkpoint**: tables can be started and reused (SC-006).
 
@@ -275,13 +275,13 @@
 
 ### Tests for User Story 6 (write first)
 
-- [ ] T043 [P] [US6] Write `apps/app/src/editor/actions/lock.test.ts`:
+- [x] T043 [P] [US6] Write `apps/app/src/editor/actions/lock.test.ts`:
   - `node.lock` toggles via `setLocked` with the label Lock / Unlock
   - ⇧⌘L locks and unlocks the selection
   - `toFlowNode` sets `draggable: false` for locked nodes (cache invalidated on change)
   - nudge, resize keys, align and tidy skip locked nodes
   - multi-drag moves only unlocked nodes
-- [ ] T044 [P] [US6] Add cases to `apps/app/src/editor/confirm-delete-dialog.test.tsx` and `deck-node.test.tsx`:
+- [x] T044 [P] [US6] Add cases to `apps/app/src/editor/confirm-delete-dialog.test.tsx` and `deck-node.test.tsx`:
   - deleting a selection with one locked card removes the others and announces "Skipped 1 locked"
   - a locked card alone is not deleted
   - a locked card shows a button named "Unlock {title}" and no resize controls
@@ -290,8 +290,8 @@
 
 ### Implementation for User Story 6
 
-- [ ] T045 [US6] Add the `node.lock` action (menu, toolbar, ⇧⌘L) in `apps/app/src/editor/actions/table-actions.ts`, available for any card type. Bind ⇧⌘L in `use-canvas-shortcuts.ts` and add it to `shell/shortcuts.ts`.
-- [ ] T046 [US6] Block gestures for locked nodes:
+- [x] T045 [US6] Add the `node.lock` action (menu, toolbar, ⇧⌘L) in `apps/app/src/editor/actions/table-actions.ts`, available for any card type. Bind ⇧⌘L in `use-canvas-shortcuts.ts` and add it to `shell/shortcuts.ts`.
+- [x] T046 [US6] Block gestures for locked nodes:
   - `apps/app/src/editor/deck-to-flow.ts` (`draggable`, cache compare)
   - `editing/drag-session.ts` (filter multi-drag)
   - `editing/use-nudge.ts`, `use-resize-key.ts`, align / tidy actions
@@ -300,7 +300,7 @@
 
   T043 is green.
 
-- [ ] T047 [US6] Filter locked nodes in `selectionTargets` / `useRunDelete` (`apps/app/src/state/ui-store.ts`, `apps/app/src/editor/confirm-delete-dialog.tsx`) and add "Skipped n locked" to the announcement. T044 is green.
+- [x] T047 [US6] Filter locked nodes in `selectionTargets` / `useRunDelete` (`apps/app/src/state/ui-store.ts`, `apps/app/src/editor/confirm-delete-dialog.tsx`) and add "Skipped n locked" to the announcement. T044 is green.
 
 **Checkpoint**: lock works for every card type (SC-007).
 
@@ -314,18 +314,18 @@
 
 ### Tests for User Story 7 (write first)
 
-- [ ] T048 [P] [US7] Add cases to `apps/app/src/editor/palette.test.tsx` and `packs-panel.test.tsx`:
+- [x] T048 [P] [US7] Add cases to `apps/app/src/editor/palette.test.tsx` and `packs-panel.test.tsx`:
   - the Database tab lists "Table", "Note" and "Table group" with the T / S / G badges
   - Table calls `addTable`
   - Table group groups the selected tables, or places a frame at the centre when nothing is selected
   - Packs shows "Table, note, table group" for Database
   - turning Database off hides the tab, and tables on the board still render
-- [ ] T049 [P] [US7] Add cases to `apps/app/src/editor/quick-edit/selection-toolbar.test.tsx`: with 3 tables selected, colour, detail, group and align each apply to all and are undone by one ⌘Z; align skips a locked table.
+- [x] T049 [P] [US7] Add cases to `apps/app/src/editor/quick-edit/selection-toolbar.test.tsx`: with 3 tables selected, colour, detail, group and align each apply to all and are undone by one ⌘Z; align skips a locked table.
 
 ### Implementation for User Story 7
 
-- [ ] T050 [US7] In `packages/model/src/card-types.ts`, give the Database pack `tools: ['sticky', 'frame']` and `description: 'Table, note, table group'`. In `apps/app/src/editor/palette.tsx`, label the frame tile "Table group" inside the Database section and show the letter badges. Bind G in `use-shell-shortcuts.ts` (group the selection, or `placeFrameAtCentre`). Show `description` in `apps/app/src/editor/packs-panel.tsx`. T048 is green.
-- [ ] T051 [US7] Fix any bulk action that is not a single `oneStep`, as found by T049. T049 is green.
+- [x] T050 [US7] In `packages/model/src/card-types.ts`, give the Database pack `tools: ['sticky', 'frame']` and `description: 'Table, note, table group'`. In `apps/app/src/editor/palette.tsx`, label the frame tile "Table group" inside the Database section and show the letter badges. Bind G in `use-shell-shortcuts.ts` (group the selection, or `placeFrameAtCentre`). Show `description` in `apps/app/src/editor/packs-panel.tsx`. T048 is green.
+- [x] T051 [US7] Fix any bulk action that is not a single `oneStep`, as found by T049. T049 is green.
 
 **Checkpoint**: all stories are done.
 
@@ -333,14 +333,14 @@
 
 ## Phase 10: Polish & Cross-Cutting
 
-- [ ] T052 [P] Compare the screens against frames 160, 149, 136, 168 and 161 (editing and locked states) in light and dark at 100 %. Save screenshots for the report. Fix any token or spacing drift.
-- [ ] T053 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` and save `specs/043-db-editing/bench-after.md`. The result must stay within 5 % of bench-before.
-- [ ] T054 [P] Docs:
+- [x] T052 [P] Compare the screens against frames 160, 149, 136, 168 and 161 (editing and locked states) in light and dark at 100 %. Save screenshots for the report. Fix any token or spacing drift.
+- [x] T053 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` and save `specs/043-db-editing/bench-after.md`. The result must stay within 5 % of bench-before.
+- [x] T054 [P] Docs:
   - Amend `docs/decisions/0029-database-pack-model.md` with a "Lock" section (a generic node flag, `true` only).
   - Update `packages/schema/CLAUDE.md`, `packages/model/CLAUDE.md` (`setLocked`, the paste result) and `apps/app/CLAUDE.md` (the column line module, row editing state).
   - Update `DESIGN.md` "Database pack" if the grip or the (!) icon values changed.
-- [ ] T055 [P] Update `docs/backlog-database.md`: mark 043 as split. Its status is "canvas editing built (spec `specs/043-db-editing`)". Add a new drawer feature entry (table tabs, relationship drawer, enum editor with the Enum tile and "Add enum", dialect type lists and conversion, Deck settings Database section) with dependencies and a `/speckit.specify` prompt. Update the dependency graph.
-- [ ] T056 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Walk through quickstart.md steps 1–12. Commit in small conventional commits (`feat(schema)`, `feat(model)`, `feat(app)`, `docs`). Open the PR with the report (what changed, what was skipped, uncertainties, bench numbers).
+- [x] T055 [P] Update `docs/backlog-database.md`: mark 043 as split. Its status is "canvas editing built (spec `specs/043-db-editing`)". Add a new drawer feature entry (table tabs, relationship drawer, enum editor with the Enum tile and "Add enum", dialect type lists and conversion, Deck settings Database section) with dependencies and a `/speckit.specify` prompt. Update the dependency graph.
+- [x] T056 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Walk through quickstart.md steps 1–12. Commit in small conventional commits (`feat(schema)`, `feat(model)`, `feat(app)`, `docs`). Open the PR with the report (what changed, what was skipped, uncertainties, bench numbers).
 
 ---
 

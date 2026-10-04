@@ -3,7 +3,7 @@ import { emptySododeckFile, type SododeckFile, type View } from '@sododeck/schem
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../../test/render-canvas';
-import { groupBounds } from '../canvas-geometry';
+import { groupBounds, tableLayoutOf } from '../canvas-geometry';
 import { visibleGraph } from '../visible-graph';
 import { subtitleOf, viewDeck, viewStateOf } from './view-state';
 
@@ -217,5 +217,49 @@ describe('empty groups and hidden members (031)', () => {
     expect(graph.groups).toEqual(['empty']);
     const all = visibleGraph(file, { node: null, group: null }, new Set());
     expect(all.groups).toEqual(['full', 'empty']);
+  });
+});
+
+describe('row editing shows its table at All (043 R4, FR-010a)', () => {
+  const tables: SododeckFile = deckOf({
+    nodes: [
+      {
+        id: 't1',
+        type: 'db-table',
+        title: 'orders',
+        detail: 'keys',
+        columns: [{ id: 'c1', name: 'id', type: 'int', pk: true }],
+      },
+      { id: 't2', type: 'db-table', title: 'items', detail: 'keys', columns: [] },
+    ],
+  });
+
+  it('patches detail: all on the row-editing table only, and never the document', () => {
+    const editing = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null });
+    expect(editing.deck.nodes[0]?.detail).toBe('all');
+    expect(editing.deck.nodes[1]).toBe(tables.nodes[1]);
+    expect(tables.nodes[0]?.detail).toBe('keys');
+  });
+
+  it('restores the projection when row editing ends', () => {
+    viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null });
+    const after = viewStateOf(tables, null, none, null);
+    expect(after.deck.nodes[0]).toBe(tables.nodes[0]);
+    expect(after.deck.nodes[0]?.detail).toBe('keys');
+  });
+
+  it('gives the canvas layout the new-row slot, so the card grows by one row', () => {
+    const before = tableLayoutOf(tables.nodes[0] ?? { title: '' });
+    const node = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: 1 }).deck.nodes[0];
+    if (node === undefined) throw new Error('no table');
+    const after = tableLayoutOf(node);
+    expect(after.newRowIndex).toBe(1);
+    expect(after.height).toBe(before.height + 24);
+  });
+
+  it('keeps the same projected deck for the same row-editing state', () => {
+    const a = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null });
+    const b = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null });
+    expect(b.deck).toBe(a.deck);
   });
 });

@@ -603,6 +603,28 @@ describe('DragController always clears its guides (050 R9)', () => {
   });
 });
 
+describe('locked cards in a multi-drag (043 FR-024)', () => {
+  it('moves only the unlocked cards of the selection', () => {
+    const { h, doc } = setup(
+      deckOf({
+        nodes: [
+          { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+          { id: 'l', type: 'service', title: 'L', locked: true, position: { x: 0, y: 1000 } },
+        ],
+      }),
+    );
+    act(() => {
+      ui().select({ nodes: ['a', 'l'] });
+      h().onNodeDragStart({}, flowNode('a'));
+      h().onNodesChange(move('a', 200, 100));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    const file = toJSON(doc);
+    expect(position(file, 'a')).toEqual({ x: 200, y: 100 });
+    expect(position(file, 'l')).toEqual({ x: 0, y: 1000 });
+  });
+});
+
 describe('⌥ duplicate-drag keeps the original in place (051 US2, R2)', () => {
   /** Three loose cards in a row with two connectors between them, far from everything. */
   const row: SododeckFile = deckOf({

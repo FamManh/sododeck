@@ -6,7 +6,7 @@ import type { NodeProps } from '@xyflow/react';
 import { CornerDownLeft, Layers, TriangleAlert } from 'lucide-react';
 import { memo, useMemo, type CSSProperties } from 'react';
 
-import { NodeNotes, ResizeControls, SideHandles } from '../component-node-parts';
+import { LockBadge, NodeNotes, ResizeControls, SideHandles } from '../component-node-parts';
 import type { DeckFlowNode, HandleSide } from '../deck-to-flow';
 import { deckStateClasses } from '../deck-states';
 import { oneStep } from '../fields/one-step';
@@ -44,7 +44,7 @@ export const ShapeNode = memo(function ShapeNode({
     titleEdit,
     target,
     refusal,
-  } = useComponentNodeState(id, selected);
+  } = useComponentNodeState(id, selected, data.locked === true);
   const geometry = data.geometry ?? 'rect';
   const layout = data.layout;
   const w = width ?? layout.width;
@@ -281,6 +281,15 @@ export const ShapeNode = memo(function ShapeNode({
       )}
 
       {resizable && <ResizeControls id={id} level={data.level} />}
+      {data.locked === true && (
+        // A shape has no header: the lock sits on its top-right corner (043 R11).
+        <LockBadge
+          id={id}
+          title={data.title}
+          focused={data.focused}
+          className="absolute -top-2.5 -right-2.5 bg-surface shadow-rest"
+        />
+      )}
       <SideHandles
         title={data.title}
         tabIndex={tabIndex}

@@ -1,7 +1,7 @@
 import { deckPacks, typesOfPacks } from '@sododeck/model';
-import { CirclePlus, Maximize, SquareDashedMousePointer, StickyNote } from 'lucide-react';
+import { CirclePlus, Maximize, SquareDashedMousePointer, StickyNote, Table2 } from 'lucide-react';
 
-import { addComponent, centredOn, selectAllComponents } from '../canvas-actions';
+import { addComponent, addTable, centredOn, selectAllComponents } from '../canvas-actions';
 import { typeName } from '../type-label';
 import { addNoteAt } from '../stickies/sticky-actions';
 import type { Action, ActionContext } from './types';
@@ -12,7 +12,7 @@ function flowPoint(ctx: ActionContext) {
   return ctx.canvas.screenToFlowPosition(ctx.point);
 }
 
-/** The empty-canvas menu: Add component ▸, Add sticky, Select all, Fit (019 FR-033). */
+/** The empty-canvas menu: Add component ▸, Add table, Add note, Select all, Fit (019 FR-033). */
 export const CANVAS_ACTIONS: readonly Action[] = [
   {
     id: 'canvas.add',
@@ -36,8 +36,22 @@ export const CANVAS_ACTIONS: readonly Action[] = [
       })),
   },
   {
+    id: 'canvas.addTable',
+    label: 'Add table',
+    icon: Table2,
+    shortcut: 'add-table',
+    section: 'edit',
+    // With the Database pack on (043 R12), like the Add flyout's Table tile.
+    where: { menu: ['canvas'] },
+    applies: (ctx) => deckPacks(ctx.deck).includes('database'),
+    run: (ctx) => {
+      const point = flowPoint(ctx);
+      if (point !== null) addTable(ctx.editor, point);
+    },
+  },
+  {
     id: 'canvas.addSticky',
-    label: 'Add sticky',
+    label: 'Add note',
     icon: StickyNote,
     shortcut: 'note-here',
     section: 'edit',
