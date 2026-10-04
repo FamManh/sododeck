@@ -199,8 +199,8 @@ Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 →
   4 d
 - **Goal:** The file format and the Yjs model can hold a database schema losslessly.
 - **In scope:**
-  - Database pack in the registry: types `db.table`, `db.enum` (and `db.database` = today's
-    `database` kind) and a deck-level `dialect` (`generic | postgres | mysql | sqlite`, default
+  - Database pack in the registry: type `db-table` (040 clarify: no dots in type ids; today's `database`
+    type stays and holds the tables) and a deck-level `dialect` (`generic | postgres | mysql | sqlite`, default
     `generic`, DB11).
   - Schema v1 additions, all **optional and additive** (ADR "Database pack model"):
     - on a table node: `schema?`, `columns[]`, `indexes[]`, `checks[]`, `expanded?` (DB9),
@@ -209,7 +209,7 @@ Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 →
 increment?, check?, note?, enumRef? }`;
     - index: `{ id, name?, columns: (columnId | { expr })[], unique?, method?, note? }`;
     - check: `{ id, name?, expr }`;
-    - enum (node or deck-level, decide in ADR): `{ id, name, schema?, values: { id, name,
+    - enum (deck-level list, not a card; 040 clarify 2026-10-04): `{ id, name, schema?, values: { id, name,
 note? }[] }`;
     - edge: `fromPort?`, `toPort?` (column ids; arrays for composite keys),
       `cardinality?: '1-1' | '1-n' | 'n-1' | 'n-n'`, `fromOptional?`, `toOptional?`,
@@ -251,7 +251,8 @@ note? }[] }`;
     Component all).
   - Display toggles in deck settings: data types, nullable, cardinality ends, relationship
     labels, notes.
-  - Enum card (small card with value chips).
+  - Enum columns: hovering the type chip shows the enum's values (enums are a deck-level list, not
+    cards; 040 clarify 2026-10-04).
   - Export (012) draws table cards in PNG / SVG / PDF.
 - **Out of scope:** connectors to columns (042), editing (043), the row limit for long tables
   (048).
