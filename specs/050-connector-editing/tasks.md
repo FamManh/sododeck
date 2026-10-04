@@ -223,15 +223,15 @@
 
 **Independent Test**: quickstart 9.
 
-- [X] T035 [P] [US3] Write failing tests:
+- [x] T035 [P] [US3] Write failing tests:
   - `apps/app/src/editor/deck-edge.test.tsx`: a selected edge with `style.width: 4` has stroke width 4 and an `edge-selection-halo`.
   - `apps/app/src/editor/line-style/line-style-popover.test.tsx`: a pointer drag on the slider track from the 1 to the 4 position sets `lineStylePreview` at each stop, writes once on release (one undo step), and Esc mid-drag writes nothing. A click on the track picks the nearest stop. Keys are unchanged. Several selected connectors take the value in one undo step.
-- [X] T036 [US3] In `apps/app/src/editor/deck-edge.tsx`:
+- [x] T036 [US3] In `apps/app/src/editor/deck-edge.tsx`:
   - replace `selected ? 2.5` with the connector's own width;
   - add the halo path under the line (`var(--color-primary-soft)`, width + 6, `pointerEvents="none"`, `data-testid="edge-selection-halo"`);
   - read `lineStylePreview` with a per-edge selector before the stored width.
   - Add `lineStylePreview` to `apps/app/src/state/ui-store.ts`.
-- [X] T037 [US3] Make `WeightSlider` in `apps/app/src/editor/line-style/line-style-controls.tsx` pointer-draggable via `startPointerDrag` (track x maps to the nearest of `WIDTHS`). Preview on move, `applyLineStyle` once on release, Esc cancels. Make T035 pass.
+- [x] T037 [US3] Make `WeightSlider` in `apps/app/src/editor/line-style/line-style-controls.tsx` pointer-draggable via `startPointerDrag` (track x maps to the nearest of `WIDTHS`). Preview on move, `applyLineStyle` once on release, Esc cancels. Make T035 pass.
 
 **Checkpoint**: quickstart 9 passes.
 
@@ -279,7 +279,7 @@
   - `resetSegment` drops that run's bends, or clears `at`;
   - Esc writes nothing.
 - [x] T043 [US5] Implement `apps/app/src/editor/editing/segment-drag.ts`, reusing `snapBend`, `simplifyWaypoints` and `encodeWaypoint` from `routing/connector-geometry.ts`. Add `canvasGesture: 'segment'` to `state/ui-store.ts`. Make T042 pass.
-- [ ] T044 [US5] In `apps/app/src/editor/routing/route-handles.tsx`, render segment handles instead of midpoints on elbow connectors: `button` "Move segment N", drag via `startPointerDrag`, double-click resets, arrows move 22 px on its axis (Shift 1 px), ⌫ resets. Extend `route-handles.test.tsx`. Add the segment handle look to `index.css` (a short pill on the run, tokens only).
+- [x] T044 [US5] In `apps/app/src/editor/routing/route-handles.tsx`, render segment handles instead of midpoints on elbow connectors: `button` "Move segment N", drag via `startPointerDrag`, double-click resets, arrows move 22 px on its axis (Shift 1 px), ⌫ resets. Extend `route-handles.test.tsx`. Add the segment handle look to `index.css` (a short pill on the run, tokens only).
 
 **Checkpoint**: quickstart 15 passes.
 

@@ -8,6 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { BendContext } from '../editing/bend-drag';
+import type { SegmentContext } from '../editing/segment-drag';
+import { decodeWaypoints } from './connector-geometry';
 import { RouteHandles } from './route-handles';
 
 /** The handles portal into the React Flow viewport, so they render inside a real canvas. */
@@ -400,5 +402,210 @@ describe('RouteHandles end drags (050 US2)', () => {
       editor().undo();
     });
     expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+  });
+});
+
+describe('RouteHandles segment handles (050 US5)', () => {
+  const ui = () => useUiStore.getState();
+  const down = (el: HTMLElement, x: number, y: number) =>
+    fireEvent.pointerDown(el, { button: 0, pointerId: 1, clientX: x, clientY: y });
+  // ⌘ held: no snapping, so the run lands exactly under the pointer.
+  const move = (x: number, y: number) =>
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: x, clientY: y, metaKey: true });
+  const up = (x: number, y: number) =>
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: x, clientY: y });
+
+  // A (0,0 160×50) right side → B (400,200 160×50) left side. With no bends the elbow is
+  // (160,25) → (280,25) → (280,225) → (400,225): segment 1 and 3 are the end runs, 2 the middle.
+  const segCtx = (bends: SegmentContext['bends'] = []): SegmentContext => ({
+    ...ctx(bends),
+    fromBox: { x: 0, y: 0, width: 160, height: 50 },
+    toBox: { x: 400, y: 200, width: 160, height: 50 },
+    fromSide: 'right',
+    toSide: 'left',
+    fromAt: 0.5,
+    toAt: 0.5,
+  });
+
+  function withSegments(bends: SegmentContext['bends'] = []) {
+    const segment = segCtx(bends);
+    return renderWithEditor(
+      inCanvas(
+        <RouteHandles
+          context={ctx(bends)}
+          segment={segment}
+          anchors={{ fromSide: 'right', fromAt: 0.5, toSide: 'left', toAt: 0.5 }}
+        />,
+      ),
+      deck,
+    );
+  }
+
+  const segment = (n: number) => screen.getByRole('button', { name: `Move segment ${String(n)}` });
+
+  it('replaces the midpoints with one "Move segment N" handle per run', () => {
+    withSegments();
+    expect(screen.queryAllByRole('button', { name: /^Add bend/ })).toHaveLength(0);
+    expect(
+      screen.getAllByRole('button', { name: /^Move segment/ }).map((b) => b.ariaLabel),
+    ).toEqual(['Move segment 1', 'Move segment 2', 'Move segment 3']);
+    expect(segment(2).closest('.react-flow__viewport-portal')).not.toBeNull();
+    expect(segment(2)).toHaveAttribute('data-axis', 'x');
+    expect(segment(1)).toHaveAttribute('data-axis', 'y');
+  });
+
+  it('shows no segment handle on a run shorter than 24 screen px (FR-004)', () => {
+    // The first run (160,25) → (170,25) is 10 px long.
+    withSegments([
+      { x: 170, y: 25 },
+      { x: 170, y: 225 },
+    ]);
+    expect(
+      screen.getAllByRole('button', { name: /^Move segment/ }).map((b) => b.ariaLabel),
+    ).toEqual(['Move segment 2', 'Move segment 3']);
+  });
+
+  it('drags the middle run along x across re-renders, then writes once (one undo step)', () => {
+    const { doc, editor } = withSegments();
+    down(segment(2), 280, 125);
+    move(300, 140);
+    move(320, 150);
+    expect(ui().bendPreview).toEqual({
+      edgeId: 'e',
+      bends: [
+        { x: 320, y: 25 },
+        { x: 320, y: 225 },
+      ],
+    });
+    expect(ui().canvasGesture).toBe('segment');
+    expect(screen.getByTestId('route-readout')).toHaveTextContent('x 320');
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    up(320, 150);
+    const route = toJSON(doc).edges[0]?.route;
+    expect(route?.waypoints).toHaveLength(2);
+    expect(route).toMatchObject({ fromSide: 'right', toSide: 'left' });
+    expect(ui().bendPreview).toBeNull();
+    expect(ui().canvasGesture).toBeNull();
+    expect(ui().announcement.text).toBe('Segment moved');
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+  });
+
+  it('a press and release under 4 px writes nothing and leaves no undo step', () => {
+    const { doc, editor } = withSegments();
+    down(segment(2), 280, 125);
+    move(282, 126);
+    expect(ui().bendPreview).toBeNull();
+    up(282, 126);
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('keeps the other handles mounted but inert during a segment drag', () => {
+    withSegments();
+    down(segment(2), 280, 125);
+    move(320, 150);
+    const dragged = document.querySelector('[data-kind="segment"][data-active]');
+    expect(dragged).not.toBeNull();
+    expect(dragged).not.toHaveAttribute('inert');
+    const others = [...document.querySelectorAll('.sd-route-handle')].filter(
+      (el) => el !== dragged,
+    );
+    expect(others.length).toBeGreaterThan(0);
+    for (const el of others) {
+      expect(el).toHaveAttribute('aria-hidden', 'true');
+      expect(el).toHaveAttribute('inert');
+    }
+    up(320, 150);
+  });
+
+  it('unmounting mid-drag cancels it', () => {
+    const { unmount } = withSegments();
+    down(segment(2), 280, 125);
+    move(320, 150);
+    unmount();
+    expect(ui().bendPreview).toBeNull();
+    expect(ui().canvasGesture).toBeNull();
+  });
+
+  it('dragging an end run slides that end along its side, without storing bends', () => {
+    const { doc } = withSegments();
+    down(segment(1), 220, 25);
+    move(220, 40);
+    expect(ui().bendPreview).toMatchObject({ edgeId: 'e', bends: [], fromAt: 0.8 });
+    up(220, 40);
+    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0.8 });
+  });
+
+  it.each([
+    ['{ArrowRight}', 22],
+    ['{ArrowLeft}', -22],
+    ['{Shift>}{ArrowRight}{/Shift}', 1],
+  ])('%s moves the middle run by %s px on its axis, one undo step', async (keys, px) => {
+    const { doc, editor } = withSegments();
+    segment(2).focus();
+    await userEvent.setup().keyboard(keys);
+    const waypoints = toJSON(doc).edges[0]?.route?.waypoints ?? [];
+    const xs = decodeWaypoints(waypoints, { x: 80, y: 25 }, { x: 480, y: 225 }).map((p) => p.x);
+    expect(xs).toHaveLength(2);
+    for (const x of xs) expect(x).toBeCloseTo(280 + px, 3);
+    expect(ui().announcement.text).toBe('Segment moved');
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+  });
+
+  it('arrows across the run axis do nothing', async () => {
+    const { doc, editor } = withSegments();
+    segment(2).focus();
+    await userEvent.setup().keyboard('{ArrowUp}{ArrowDown}');
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('route');
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('↓ on the first run slides the source end 22 px down its side', async () => {
+    const { doc } = withSegments();
+    segment(1).focus();
+    await userEvent.setup().keyboard('{ArrowDown}');
+    // 25 + 22 = 47 of 50.
+    expect(toJSON(doc).edges[0]?.route).toEqual({ fromSide: 'right', fromAt: 0.94 });
+  });
+
+  it('⌫ and double-click reset the run', async () => {
+    const bends = [
+      { x: 320, y: 25 },
+      { x: 320, y: 225 },
+    ];
+    const { doc, editor } = withSegments(bends);
+    const stored = () => {
+      act(() => {
+        editor().setEdgeRoute('e', {
+          fromSide: 'right',
+          toSide: 'left',
+          waypoints: [
+            { x: 0.6, y: 0 },
+            { x: 0.6, y: 1 },
+          ],
+        });
+      });
+    };
+    stored();
+    segment(2).focus();
+    await userEvent.setup().keyboard('{Backspace}');
+    expect(toJSON(doc).edges[0]?.route).not.toHaveProperty('waypoints');
+    expect(toJSON(doc).edges).toHaveLength(1);
+    expect(ui().announcement.text).toBe('Segment reset');
+    stored();
+    fireEvent.doubleClick(segment(2));
+    expect(toJSON(doc).edges[0]?.route).not.toHaveProperty('waypoints');
+  });
+
+  it('a curved or straight connector (no segment context) keeps its midpoints', () => {
+    setup();
+    expect(screen.queryAllByRole('button', { name: /^Move segment/ })).toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: /^Add bend/ })).toHaveLength(1);
   });
 });

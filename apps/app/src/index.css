@@ -571,6 +571,32 @@
 .sd-route-handle[data-active] {
   cursor: grabbing;
 }
+/* Segment handle (050 R7): a short pill lying along its run; the cursor shows the one axis the
+   run moves on. A horizontal run (moves on y) gets a wide pill, a vertical one a tall pill. */
+.sd-route-handle[data-kind='segment'][data-axis='y'] {
+  cursor: ns-resize;
+}
+.sd-route-handle[data-kind='segment'][data-axis='x'] {
+  cursor: ew-resize;
+}
+.sd-route-handle[data-kind='segment'][data-axis='y']::before {
+  width: 16px;
+  height: 6px;
+}
+.sd-route-handle[data-kind='segment'][data-axis='x']::before {
+  width: 6px;
+  height: 16px;
+}
+.sd-route-handle[data-kind='segment'][data-axis='y']:hover::before,
+.sd-route-handle[data-kind='segment'][data-axis='y'][data-active]::before {
+  width: 20px;
+  height: 8px;
+}
+.sd-route-handle[data-kind='segment'][data-axis='x']:hover::before,
+.sd-route-handle[data-kind='segment'][data-axis='x'][data-active]::before {
+  width: 8px;
+  height: 20px;
+}
 .sd-route-readout {
   position: absolute;
   pointer-events: none;

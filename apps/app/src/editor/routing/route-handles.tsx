@@ -14,6 +14,10 @@
  * 050 R3: the two end handles sit at the drawn ends and drag them along the card outline or onto
  * another card (`editing/endpoint-drag.ts`); arrows step an end to the next stop, Shift + arrow
  * nudges it 1 %. A straight connector shows only its ends.
+ *
+ * 050 R7: on an elbow connector (a `segment` context is given) a segment handle sits in the
+ * middle of every straight run instead of the midpoints. Dragging it moves the whole run along
+ * its normal (`editing/segment-drag.ts`); arrows move it on that axis, ⌫ / double-click reset it.
  */
 import type { Id, Side } from '@sododeck/schema';
 import { useReactFlow, useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
@@ -46,6 +50,20 @@ import {
   type BendTarget,
 } from '../editing/bend-drag';
 import { startPointerDrag, type PointerDrag } from '../editing/pointer-drag';
+import {
+  cancelSegmentDrag,
+  endSegmentDrag,
+  moveSegment,
+  nudgeSegment,
+  resetSegment,
+  SEGMENT_STEP,
+  SEGMENT_STEP_FINE,
+  segmentVertices,
+  startSegmentDrag,
+  type SegmentContext,
+  type SegmentSession,
+} from '../editing/segment-drag';
+import { elbowRuns, runMidpoint, type Run } from './elbow-runs';
 import { targetScene } from './endpoint-target';
 import { nudgeAnchor } from './outline-attach';
 import type { Point } from './route-path';
@@ -76,14 +94,28 @@ export interface RouteHandlesProps {
   ends?: EndTargets;
   /** Bends and midpoints: false for a straight connector, which shows only its ends. */
   bendable?: boolean;
+  /**
+   * An elbow connector's ends as drawn (boxes, sides, `at`) on top of `context`: segment handles
+   * then replace the midpoints. `start` / `end` / `fromAt` / `toAt` follow a live drag.
+   */
+  segment?: SegmentContext;
 }
 
-/** FR-004: runs shorter than this on screen get no midpoint handle, so handles never overlap. */
+/** FR-004: runs shorter than this on screen get no midpoint or segment handle. */
 export const MIN_HANDLE_RUN = 24;
 
 const zoomSelector = (s: ReactFlowState) => s.transform[2];
 
 const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+
+/** Where a moving run's readout sits: the middle of that run, or the line end if it merged away. */
+function segmentReadoutAt(vertices: readonly Point[], index: number): Point {
+  const from = vertices[index];
+  const to = vertices[index + 1];
+  return from === undefined || to === undefined
+    ? (vertices.at(-1) ?? { x: 0, y: 0 })
+    : mid(from, to);
+}
 
 /** Moves keyboard focus back to the connector itself (Esc on a handle). */
 function focusConnector(edgeId: string): void {
@@ -92,13 +124,20 @@ function focusConnector(edgeId: string): void {
     ?.focus();
 }
 
-export function RouteHandles({ context, anchors, ends, bendable = true }: RouteHandlesProps) {
+export function RouteHandles({
+  context,
+  anchors,
+  ends,
+  bendable = true,
+  segment,
+}: RouteHandlesProps) {
   const editor = useEditor();
   const { getNodes, getZoom, screenToFlowPosition } = useReactFlow();
   // Only the selected connector draws handles, so following the zoom here is cheap.
   const zoom = useStore(zoomSelector);
   const session = useRef<BendSession | null>(null);
   const endSession = useRef<EndpointSession | null>(null);
+  const segSession = useRef<SegmentSession | null>(null);
   const drag = useRef<PointerDrag | null>(null);
   const [active, setActive] = useState<{ key: string; index: number } | null>(null);
   const preview = useUiStore((s) =>
@@ -111,10 +150,27 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
     preview === null && endPreview === null ? null : s.connectorReadout,
   );
 
-  const bends = bendable ? (preview?.bends ?? context.bends) : [];
-  const points = bendable ? [context.start, ...bends, context.end] : [];
+  // The segment handles sit on the drawn elbow, live during any drag of this connector.
+  const liveSegment: SegmentContext | null =
+    segment === undefined ? null : { ...segment, bends: preview?.bends ?? segment.bends };
+  const vertices = liveSegment === null ? [] : segmentVertices(liveSegment);
+  const runs = liveSegment === null ? [] : elbowRuns(vertices, MIN_HANDLE_RUN, zoom);
+  const segmentDrag = active?.key.startsWith('seg-') === true;
+  // While a run moves, the bend dots follow the drawn corners (an end-run drag stores none).
+  const bends = !bendable
+    ? []
+    : segmentDrag
+      ? vertices.slice(1, -1)
+      : (preview?.bends ?? context.bends);
+  // Elbow connectors get segment handles instead of midpoints (050 contract UI).
+  const points = bendable && segment === undefined ? [context.start, ...bends, context.end] : [];
   const live: BendContext = { ...context, bends };
   const dragging = active !== null;
+  /** During a drag every other handle stays mounted but out of reach (and of the a11y tree). */
+  const inertUnless = (key: string) =>
+    dragging && active.key !== key
+      ? { 'aria-hidden': true as const, inert: true, tabIndex: -1 }
+      : {};
 
   // A drag outlives re-renders (window listeners), but not the handles: unmount cancels it.
   useEffect(
@@ -163,7 +219,67 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
     drag.current = null;
     session.current = null;
     endSession.current = null;
+    segSession.current = null;
     setActive(null);
+  }
+
+  /**
+   * Press on a segment handle (050 R7). The run starts moving after the threshold and keeps its
+   * distance to the press point, so it never jumps; a click writes nothing.
+   */
+  function beginSegment(event: PointerEvent<HTMLElement>, run: Run) {
+    if (event.button !== 0 || segment === undefined) return;
+    event.stopPropagation();
+    drag.current?.cancel();
+    const ctx = segment;
+    const pressed = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    drag.current = startPointerDrag(event, {
+      onStart: () => {
+        segSession.current = startSegmentDrag(editor, ctx, run, pressed);
+        setActive({ key: `seg-${String(run.index)}`, index: run.index });
+      },
+      onMove: (e) => {
+        if (segSession.current === null) return;
+        moveSegment(segSession.current, screenToFlowPosition({ x: e.clientX, y: e.clientY }), {
+          mod: e.metaKey || e.ctrlKey,
+          zoom: getZoom(),
+        });
+      },
+      onEnd: () => {
+        const s = segSession.current;
+        finish();
+        if (s !== null) endSegmentDrag(editor, s);
+      },
+      onCancel: () => {
+        const s = segSession.current;
+        finish();
+        if (s === null || s.cancelled) return;
+        cancelSegmentDrag(s);
+        useUiStore.getState().announce('Cancelled');
+      },
+    });
+  }
+
+  /** Arrows on the run's own axis move it (Shift: 1 px); ⌫ / Delete reset it. */
+  function segmentKeys(event: KeyboardEvent<HTMLElement>, run: Run) {
+    if (segment === undefined) return;
+    const step = event.shiftKey ? SEGMENT_STEP_FINE : SEGMENT_STEP;
+    const along: Record<string, ['x' | 'y', number]> = {
+      ArrowLeft: ['x', -step],
+      ArrowRight: ['x', step],
+      ArrowUp: ['y', -step],
+      ArrowDown: ['y', step],
+    };
+    const arrow = along[event.key];
+    if (arrow !== undefined) {
+      // An arrow across the run would bend it: ignored, but kept from the canvas.
+      if (arrow[0] === run.axis) nudgeSegment(editor, segment, run, arrow[1]);
+    } else if (event.key === 'Backspace' || event.key === 'Delete') {
+      resetSegment(editor, segment, run);
+    } else if (event.key === 'Escape') focusConnector(context.edgeId);
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   /**
@@ -271,6 +387,8 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
     transform: 'translate(-50%, -50%)',
   });
 
+  const segmentSpot = segmentDrag ? segmentReadoutAt(vertices, active.index) : null;
+
   return (
     <ViewportPortal>
       {(anchors === undefined ? [] : (['source', 'target'] as const)).map((end) => (
@@ -281,6 +399,7 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
           data-kind="end"
           data-testid={`route-end-${end}`}
           {...(active?.key === `end-${end}` ? { 'data-active': '' } : {})}
+          {...inertUnless(`end-${end}`)}
           className="sd-route-handle nodrag nopan absolute"
           // Above the cards and pointer-active (`.sd-route-handle` in index.css, 050 R1).
           style={placed(end === 'source' ? context.start : context.end)}
@@ -304,8 +423,7 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
             aria-label={`Add bend between points ${String(i + 1)} and ${String(i + 2)}`}
             data-kind="midpoint"
             data-testid="route-midpoint"
-            // During a drag the others stay mounted but out of reach (and of the a11y tree).
-            {...(dragging ? { 'aria-hidden': true, inert: true, tabIndex: -1 } : {})}
+            {...inertUnless(`mid-${String(i)}`)}
             className="sd-route-handle nodrag nopan absolute"
             style={placed(at)}
             onPointerDown={(event) => {
@@ -324,6 +442,32 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
           />
         );
       })}
+      {runs.map((run) => {
+        const key = `seg-${String(run.index)}`;
+        return (
+          <button
+            key={key}
+            type="button"
+            aria-label={`Move segment ${String(run.index + 1)}`}
+            data-kind="segment"
+            data-axis={run.axis}
+            data-testid="route-segment"
+            {...(active?.key === key ? { 'data-active': '' } : {})}
+            {...inertUnless(key)}
+            className="sd-route-handle nodrag nopan absolute"
+            style={placed(runMidpoint(run))}
+            onPointerDown={(event) => {
+              beginSegment(event, run);
+            }}
+            onDoubleClick={() => {
+              if (segment !== undefined) resetSegment(editor, segment, run);
+            }}
+            onKeyDown={(event) => {
+              segmentKeys(event, run);
+            }}
+          />
+        );
+      })}
       {bends.map((bend, i) => (
         <button
           key={`bend-${String(i)}`}
@@ -332,6 +476,7 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
           data-kind="bend"
           data-testid="route-bend"
           {...(active?.key === `bend-${String(i)}` ? { 'data-active': '' } : {})}
+          {...inertUnless(`bend-${String(i)}`)}
           className="sd-route-handle nodrag nopan absolute"
           style={placed(bend)}
           onPointerDown={(event) => {
@@ -355,7 +500,17 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
           {readout}
         </span>
       )}
-      {readout !== null && preview !== null && active !== null && (
+      {readout !== null && preview !== null && segmentSpot !== null && (
+        <span
+          className="sd-route-readout"
+          data-testid="route-readout"
+          aria-hidden
+          style={{ left: segmentSpot.x + 14, top: segmentSpot.y + 14 }}
+        >
+          {readout}
+        </span>
+      )}
+      {readout !== null && preview !== null && active !== null && !segmentDrag && (
         <span
           className="sd-route-readout"
           data-testid="route-readout"

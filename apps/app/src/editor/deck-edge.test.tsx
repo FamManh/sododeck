@@ -22,8 +22,12 @@ vi.mock('./routing/label-handle', () => ({
 }));
 
 vi.mock('./routing/route-handles', () => ({
-  RouteHandles: ({ bendable }: { bendable?: boolean }) => (
-    <div data-testid="route-handles" data-bendable={String(bendable ?? true)} />
+  RouteHandles: ({ bendable, segment }: { bendable?: boolean; segment?: unknown }) => (
+    <div
+      data-testid="route-handles"
+      data-bendable={String(bendable ?? true)}
+      data-segment={segment === undefined ? undefined : JSON.stringify(segment)}
+    />
   ),
 }));
 
@@ -694,6 +698,83 @@ describe('DeckEdge end drag preview (050 R3)', () => {
     });
     renderEdge({ shape: 'straight', ...sizes, routable: true }, true, geometry);
     expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
+  });
+});
+
+describe('DeckEdge segment drag (050 US5)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+  // A (0,0 160×50) right side → B (400,0 160×50) left side.
+  const geometry = { sourceX: 160, sourceY: 25, targetX: 400, targetY: 25 };
+  const pathOf = (container: HTMLElement) =>
+    container.querySelector('.react-flow__edge-path')?.getAttribute('d') ?? '';
+  const segmentOf = () => {
+    const raw = screen.getByTestId('route-handles').getAttribute('data-segment');
+    return raw === null ? null : (JSON.parse(raw) as Record<string, unknown>);
+  };
+
+  afterEach(() => {
+    useUiStore.setState({ bendPreview: null, selection: EMPTY_SELECTION });
+  });
+
+  it('hands an elbow connector its segment context: real boxes, sides, at', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'elbow', ...sizes, routable: true }, true, geometry);
+    expect(segmentOf()).toMatchObject({
+      edgeId: 'e1',
+      fromBox: { x: 0, y: 0, width: 160, height: 50 },
+      toBox: { x: 400, y: 0, width: 160, height: 50 },
+      fromSide: 'right',
+      toSide: 'left',
+      fromAt: 0.5,
+      toAt: 0.5,
+      start: { x: 160, y: 25 },
+      end: { x: 400, y: 25 },
+      bends: [],
+    });
+  });
+
+  it('uses the stored at and bends of an anchored, bent elbow', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge(
+      {
+        shape: 'elbow',
+        ...sizes,
+        routable: true,
+        route: { fromSide: 'right', fromAt: 0.2, waypoints: [{ x: 0.5, dy: -80 }] },
+      },
+      true,
+      geometry,
+    );
+    expect(segmentOf()).toMatchObject({ fromAt: 0.2, toAt: 0.5, start: { x: 160, y: 10 } });
+    expect(segmentOf()?.bends).toHaveLength(1);
+  });
+
+  it('gives curved and straight connectors no segment context', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'curved', ...sizes, routable: true }, true, geometry);
+    expect(segmentOf()).toBeNull();
+  });
+
+  it("draws an automatic end-run drag at the preview's fromAt, over a ghost", () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      bendPreview: { edgeId: 'e1', bends: [], fromAt: 0.9 },
+    });
+    const { container } = renderEdge({ shape: 'elbow', ...sizes, routable: true }, true, geometry);
+    // 0.9 of the source's right side (0 → 50) is y 45.
+    expect(pathOf(container)).toMatch(/^M ?160[ ,]45(?!\d)/);
+    expect(screen.getByTestId('edge-route-ghost').getAttribute('d')).toMatch(/^M ?160[ ,]25(?!\d)/);
+    expect(segmentOf()).toMatchObject({ fromAt: 0.9, start: { x: 160, y: 45 } });
+  });
+
+  it("draws the preview's toAt at the target end", () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      bendPreview: { edgeId: 'e1', bends: [], toAt: 0.1 },
+    });
+    const { container } = renderEdge({ shape: 'elbow', ...sizes, routable: true }, true, geometry);
+    // The line stops an arrow short of (400, 5), arriving horizontally.
+    expect(pathOf(container)).toMatch(/[ ,]5$/);
   });
 });
 

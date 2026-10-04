@@ -16,6 +16,7 @@ import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
 import type { BendContext } from './editing/bend-drag';
+import type { SegmentContext } from './editing/segment-drag';
 import {
   anchorPoint,
   cardCentre,
@@ -140,8 +141,20 @@ export const DeckEdge = memo(function DeckEdge({
   // the handle points, so a connector without them draws exactly as before.
   const needsBoxes =
     (route?.waypoints?.length ?? 0) > 0 || route?.fromAt !== undefined || route?.toAt !== undefined;
+  // A segment drag of an end run slides that end along its side (050 R7): the preview carries the
+  // live `at`, drawn on top of the stored route, on the real boxes.
+  const previewFromAt = preview?.fromAt;
+  const previewToAt = preview?.toAt;
+  const previewSlides = previewFromAt !== undefined || previewToAt !== undefined;
+  const liveRoute = previewSlides
+    ? {
+        ...route,
+        ...(previewFromAt === undefined ? {} : { fromAt: previewFromAt }),
+        ...(previewToAt === undefined ? {} : { toAt: previewToAt }),
+      }
+    : route;
   const sized =
-    (needsBoxes || endPreview !== null) &&
+    (needsBoxes || endPreview !== null || previewSlides) &&
     data?.fromSize !== undefined &&
     data.toSize !== undefined;
   const fromBox =
@@ -164,6 +177,11 @@ export const DeckEdge = memo(function DeckEdge({
     arrowAtEnd: direction !== 'none' && !errorEnd,
   };
   const shape = data?.shape ?? 'curved';
+  // The fan-out shift of a bundled connector (034 R6), none while an end is dragged.
+  const spread =
+    endPreview !== null || data?.fan === undefined
+      ? 0
+      : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING;
   // The connector with its dragged end swapped in (FR-013); null outside an end drag.
   const drawn =
     endPreview === null || !sized
@@ -193,16 +211,13 @@ export const DeckEdge = memo(function DeckEdge({
     fromBox: drawnFrom,
     toBox: drawnTo,
     sides: drawn?.sides ?? sides,
-    route: drawn === null ? route : drawn.route,
+    route: drawn === null ? liveRoute : drawn.route,
     bends: preview?.bends,
     options: arrows,
     ...(drawn === null
       ? endShapes
       : { fromGeometry: drawn.fromGeometry, toGeometry: drawn.toGeometry }),
-    spread:
-      drawn !== null || data?.fan === undefined
-        ? 0
-        : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
+    spread: drawn === null ? spread : 0,
   });
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
@@ -240,6 +255,31 @@ export const DeckEdge = memo(function DeckEdge({
     end: ends.end,
     bends,
   };
+  // An elbow's segment handles (050 R7) need both real boxes and the ends as drawn. An automatic
+  // route hands over no bends, so sliding an end keeps it automatic; a fanned one hands over its
+  // drawn corners, so the handles sit on the line it shows.
+  const segmentContext: SegmentContext | undefined =
+    shape === 'elbow' &&
+    showHandle &&
+    data?.routable === true &&
+    data.fromSize !== undefined &&
+    data.toSize !== undefined
+      ? {
+          ...bendContext,
+          bends:
+            route?.waypoints !== undefined || (route?.offset ?? 0) !== 0 || spread !== 0
+              ? bends
+              : [],
+          fromBox: sized
+            ? drawnFrom
+            : boxAt(sourceX, sourceY, sides[0], data.fromSize, data.fromGeometry),
+          toBox: sized ? drawnTo : boxAt(targetX, targetY, sides[1], data.toSize, data.toGeometry),
+          fromSide: sides[0],
+          toSide: sides[1],
+          fromAt: liveRoute?.fromAt ?? 0.5,
+          toAt: liveRoute?.toAt ?? 0.5,
+        }
+      : undefined;
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
@@ -503,6 +543,7 @@ export const DeckEdge = memo(function DeckEdge({
           }}
           // A straight line has no bends: only its two ends (050 contract UI).
           bendable={shape !== 'straight'}
+          {...(segmentContext === undefined ? {} : { segment: segmentContext })}
         />
       )}
     </>
