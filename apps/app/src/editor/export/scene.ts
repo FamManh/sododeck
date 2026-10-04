@@ -2,6 +2,8 @@ import {
   analyzeFlow,
   edgeLineStyle,
   edgeShape,
+  isDbTable,
+  relationshipDisplayOf,
   type Geometry,
   stickyCanvasPosition,
   stickyLabel,
@@ -50,7 +52,15 @@ import { SHAPE_TITLE_FONT, titleBox } from '../shapes/shape-geometry';
 import { shapeTitleLines } from '../shapes/shape-layout';
 import { tableContextOf } from '../table-keys';
 import { TABLE_CARD, type TableLayout } from '../table-layout';
-import { edgePath } from './edge-geometry';
+import { edgePath, relationshipEdgePath } from './edge-geometry';
+import type { EndMark } from '../edge-end-marks';
+import { tableLayoutOf } from '../canvas-geometry';
+import {
+  hasColumnEnds,
+  isRelationship,
+  relationshipEnds,
+} from '../relationships/relationship-ends';
+import { relationshipLabel } from '../relationships/relationship-label';
 import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
 import type { ImageScope } from './types';
@@ -179,6 +189,8 @@ export interface SceneEdge {
   /** The label is a folded count ("×n"): drawn as the Ink pill, like the canvas (034). */
   count?: true;
   badges: SceneBadge[];
+  /** A relationship (042): composite brackets and crow's foot or 1 / n ends instead of knob / arrow. */
+  rel?: { bracket: string; marks: EndMark[] };
 }
 export interface SceneSticky {
   id: string;
@@ -204,6 +216,8 @@ export interface SceneInput {
     drill: readonly DrillFrame[];
     activeFlowId: string | null;
     notesDisplay: NotesDisplay;
+    /** The Labels tool (042): relationship labels in "Follow Labels tool" mode export when on. */
+    labelsOn?: boolean;
   };
 }
 
@@ -483,7 +497,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       card.geometry === undefined ? [] : [[card.id, card.geometry] as const],
     ),
   );
-  const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds);
+  const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds, ui.labelsOn === true);
 
   // Notes as the canvas draws them: free notes and notes on non-components (edges, flows,
   // steps) at their own point, notes pinned to a component only when that card is drawn. The
@@ -615,10 +629,79 @@ function sceneEdges(
   overlay: FlowOverlay | null,
   bundles: BundleResult,
   shapeEnds: ReadonlyMap<string, Geometry>,
+  labelsOn: boolean,
 ): SceneEdge[] {
   const drawnAlone = new Set(bundles.plain.map((entry) => entry.edgeId));
   const byId = new Map(deck.edges.map((edge) => [edge.id, edge]));
   const edges: SceneEdge[] = [];
+  const tableContext = tableContextOf(deck);
+  const nodesById = new Map(deck.nodes.map((node) => [node.id, node]));
+  const isTable = (id: string) => {
+    const node = nodesById.get(id);
+    return node !== undefined && isDbTable(node);
+  };
+  const display = relationshipDisplayOf(deck);
+  /**
+   * A relationship drawn by itself (042 R17): export draws rows (Component level), so its ends
+   * sit on them; the label exports when its mode shows it without a hover.
+   */
+  const addRelationship = (edge: SododeckFile['edges'][number]) => {
+    const a = rects.get(edge.from);
+    const b = rects.get(edge.to);
+    const fromNode = nodesById.get(edge.from);
+    const toNode = nodesById.get(edge.to);
+    if (a === undefined || b === undefined || fromNode === undefined || toNode === undefined) {
+      return;
+    }
+    const marks = overlay?.edges.get(edge.id);
+    if (overlay !== null && marks === undefined) return;
+    const shape = edgeShape(edge);
+    const geometry = relationshipEdgePath(
+      a,
+      b,
+      {
+        ends: relationshipEnds(
+          edge,
+          tableLayoutOf(fromNode, tableContext),
+          tableLayoutOf(toNode, tableContext),
+        ),
+        rows: hasColumnEnds(edge),
+        self: edge.from === edge.to,
+        notation: display.notation,
+        hideEnds: display.hideEnds,
+      },
+      shape,
+      edge.route,
+    );
+    const shown = display.labels === 'always' || (display.labels === 'follow' && labelsOn);
+    const text = relationshipLabel(edge, (id) => nodesById.get(id));
+    const label = shown && text !== undefined ? text : null;
+    const badgeCount = marks?.badges.length ?? 0;
+    const spot =
+      edge.labelAt === undefined
+        ? { x: geometry.labelX, y: geometry.labelY }
+        : labelPoint(samplePath(geometry.path), edge.labelAt, labelClamp(label, badgeCount));
+    const style = sceneStyle(edge.style);
+    edges.push({
+      id: edge.id,
+      path: geometry.path,
+      shape,
+      direction: 'none',
+      source: geometry.source,
+      target: geometry.target,
+      ends: geometry.ends,
+      extent: geometry.extent,
+      labelPoint: spot,
+      stroke: strokeOf(marks === undefined ? [] : [marks]),
+      ...(style === undefined ? {} : { style }),
+      label,
+      badges: (marks?.badges ?? []).map((badge) => ({
+        label: badge.label,
+        errorPath: badge.errorPath,
+      })),
+      rel: { bracket: geometry.bracket, marks: geometry.marks },
+    });
+  };
   const add = (
     id: string,
     from: string,
@@ -669,6 +752,10 @@ function sceneEdges(
   for (const id of graph.edges) {
     const edge = byId.get(id);
     if (edge === undefined || !drawnAlone.has(id)) continue;
+    if (isRelationship(edge, isTable)) {
+      addRelationship(edge);
+      continue;
+    }
     const direction = edge.direction ?? 'forward';
     add(
       id,

@@ -62,7 +62,9 @@ export function exportRequestKey(request: ExportRequest, deck: SododeckFile, ui:
   return JSON.stringify([
     snapshotId(deck),
     format,
-    format === 'json' ? request.json : [imageScope, request.transparent, scopeUi],
+    format === 'json'
+      ? request.json
+      : [imageScope, request.transparent, scopeUi, ui.labelsOn === true],
     request.retryCount,
   ]);
 }

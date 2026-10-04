@@ -94,9 +94,10 @@ export function ExportDialog() {
   const drill = useUiStore((s) => s.drill);
   const activeFlowId = useUiStore((s) => s.activeFlow?.flowId ?? null);
   const notesDisplay = useUiStore((s) => s.notesDisplay);
+  const labelsOn = useUiStore((s) => s.labelsOn);
   const ui = useMemo(
-    () => ({ currentViewId, revealed, drill, activeFlowId, notesDisplay }),
-    [currentViewId, revealed, drill, activeFlowId, notesDisplay],
+    () => ({ currentViewId, revealed, drill, activeFlowId, notesDisplay, labelsOn }),
+    [currentViewId, revealed, drill, activeFlowId, notesDisplay, labelsOn],
   );
   const request = exportRequest(state);
   useExportResult(request, dispatch, deck, ui);

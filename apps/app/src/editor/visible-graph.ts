@@ -374,6 +374,15 @@ export function visibleGraph(
     const toRep = representative.get(edge.to);
     if (fromRep === undefined || toRep === undefined) continue;
     if (fromRep === toRep) {
+      // A table referencing itself draws as a loop between its rows (042 FR-011); other
+      // self-loops (refused on the canvas, possible in a file) stay hidden as before.
+      if (
+        !fromRep.startsWith(COLLAPSED_NODE_PREFIX) &&
+        ((edge.fromColumns?.length ?? 0) > 0 || (edge.toColumns?.length ?? 0) > 0)
+      ) {
+        plainEdges.push(edge.id);
+        continue;
+      }
       if (fromRep.startsWith(COLLAPSED_NODE_PREFIX)) {
         const groupId = fromRep.slice(COLLAPSED_NODE_PREFIX.length);
         const card = cardsByGroup.get(groupId);

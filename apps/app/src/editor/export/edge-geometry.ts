@@ -3,6 +3,11 @@ import type { Direction, Side } from '@sododeck/schema';
 
 import type { Point, Rect } from '../canvas-geometry';
 import { ARROW_WIDTH } from '../edge-constants';
+import type { EndMark } from '../edge-end-marks';
+import {
+  relationshipGeometry,
+  type RelationshipGeometryInput,
+} from '../relationships/relationship-geometry';
 import {
   autoSides,
   cardCentre,
@@ -121,4 +126,54 @@ export function edgePath(
       : // Room for the arrow's tip and the knob.
         pathExtent(path, ends, ARROW_WIDTH);
   return { path, source: ends.start, target: ends.end, ends, labelX, labelY, extent };
+}
+
+/** A relationship's export geometry (042 R17): the canvas's line plus its bracket and marks. */
+export interface RelationshipEdgeGeometry extends EdgeGeometry {
+  bracket: string;
+  marks: EndMark[];
+}
+
+/**
+ * A relationship between two table rects, through the canvas's own `relationshipGeometry` (row
+ * anchors, sides, stubs, loops, marks), so the export draws what `DeckEdge` draws (SC-007).
+ */
+export function relationshipEdgePath(
+  from: Rect,
+  to: Rect,
+  rel: Omit<RelationshipGeometryInput, 'fromBox' | 'toBox' | 'sides' | 'bends' | 'shape'>,
+  shape: PathShape,
+  route?: ConnectorRoute & { fromSide?: Side; toSide?: Side },
+): RelationshipEdgeGeometry {
+  const bends =
+    route?.waypoints === undefined
+      ? []
+      : decodeWaypoints(route.waypoints, cardCentre(from), cardCentre(to));
+  const geometry = relationshipGeometry({
+    ...rel,
+    fromBox: from,
+    toBox: to,
+    shape,
+    sides: bends.length === 0 ? resolveSides(from, to, route) : autoSides(from, to, bends, route),
+    route,
+    bends,
+  });
+  const ends: PathEnds = {
+    start: geometry.start,
+    end: geometry.end,
+    startDir: { x: 1, y: 0 },
+    endDir: { x: 1, y: 0 },
+  };
+  return {
+    path: geometry.path,
+    source: geometry.start,
+    target: geometry.end,
+    ends,
+    labelX: geometry.label.x,
+    labelY: geometry.label.y,
+    // Room for the toes, rings and 1 / n text past the line.
+    extent: pathExtent(`${geometry.path} ${geometry.bracket}`, ends, 24),
+    bracket: geometry.bracket,
+    marks: geometry.marks,
+  };
 }
