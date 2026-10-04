@@ -1289,3 +1289,128 @@ describe('flow playback through shapes (031 US5)', () => {
     expect(byId('db')).toMatchObject({ type: 'shape', data: { step: { state: 'upcoming' } } });
   });
 });
+
+describe('relationships (042 US1)', () => {
+  const table = (id: string, x: number, columns: string[]) => ({
+    id,
+    type: 'db-table',
+    title: id,
+    position: { x, y: 0 },
+    columns: columns.map((c, i) => ({
+      id: `${id}.${c}`,
+      name: c,
+      type: 'uuid',
+      notNull: true,
+      ...(i === 0 ? { pk: true } : {}),
+    })),
+  });
+  const shop: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      table('orders', 0, ['id', 'customer_id']),
+      table('customers', 500, ['id', 'email']),
+      { id: 'svc', type: 'service', title: 'Svc', position: { x: 0, y: 600 } },
+    ],
+    edges: [
+      {
+        id: 'fk',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['orders.customer_id'],
+        toColumns: ['customers.id'],
+        cardinality: 'n-1',
+        fromOptional: true,
+        onDelete: 'restrict',
+      },
+      { id: 'plain', from: 'svc', to: 'orders' },
+      { id: 'card', from: 'orders', to: 'customers', cardinality: '1-1' },
+    ],
+  };
+  const edgesAt = (file: SododeckFile, partial: Partial<CanvasView> = {}) =>
+    toFlowEdges(file, topLevelGraph(file), view({ level: 'container', ...partial }));
+  const byId = (file: SododeckFile, id: string, partial: Partial<CanvasView> = {}) =>
+    edgesAt(file, partial).find((edge) => edge.id === id) as ReturnType<
+      typeof toFlowEdges
+    >[number] & { data: { rel?: unknown } };
+
+  it('gives a relationship row anchors, marks and side handles', () => {
+    const edge = byId(shop, 'fk');
+    // 12 + 24 + 8 + 18 + 8 = 70, then 24 per row; centre at +12.
+    expect(edge.data.rel).toEqual({
+      ends: {
+        from: { offsets: [106], kind: 'row', mark: 'zero-many' },
+        to: { offsets: [82], kind: 'row', mark: 'one' },
+      },
+      rows: true,
+      self: false,
+      notation: 'crow',
+      hideEnds: false,
+    });
+    expect([edge.sourceHandle, edge.targetHandle]).toEqual(['right', 'left']);
+    expect(edge.reconnectable).toBe(false);
+    expect(edge.ariaLabel).toBe(
+      'Relationship orders.customer_id to customers.id, many to one, on delete restrict',
+    );
+    expect((edge.data as { label?: string }).label).toBe('ON DELETE RESTRICT');
+  });
+
+  it('leaves card-to-card connectors unchanged', () => {
+    const edge = byId(shop, 'plain');
+    expect(edge.data.rel).toBeUndefined();
+    expect(edge.reconnectable).toBeUndefined();
+    expect(edge.ariaLabel).toBe('Svc to orders');
+  });
+
+  it('gives a table connector with a cardinality but no columns marks on the outline', () => {
+    const edge = byId(shop, 'card');
+    expect(edge.data.rel).toMatchObject({
+      rows: false,
+      ends: { from: { kind: 'outline', mark: 'one' }, to: { kind: 'outline', mark: 'one' } },
+    });
+  });
+
+  it('runs on the outline below 90 %', () => {
+    expect(byId(shop, 'fk', { level: 'system' }).data.rel).toMatchObject({ rows: false });
+  });
+
+  it('keeps the cached edge until the edge or an end table changes', () => {
+    const first = byId(shop, 'fk');
+    expect(byId(shop, 'fk')).toBe(first);
+    const [orders, ...rest] = shop.nodes;
+    if (orders === undefined) throw new Error('fixture');
+    const moved: SododeckFile = {
+      ...shop,
+      nodes: [{ ...orders, detail: 'names' }, ...rest],
+    };
+    const next = byId(moved, 'fk');
+    expect(next).not.toBe(first);
+    expect(next.data.rel).toMatchObject({ ends: { from: { offsets: [53], kind: 'title' } } });
+  });
+
+  it('shows labels per the deck label mode', () => {
+    const label = (file: SododeckFile, partial: Partial<CanvasView> = {}) => {
+      const data = byId(file, 'fk', partial).data as { showLabel: boolean; hoverLabel?: boolean };
+      return [data.showLabel, data.hoverLabel === true];
+    };
+    expect(label(shop)).toEqual([false, true]);
+    expect(label(shop, { labelsOn: true })).toEqual([true, false]);
+    expect(label({ ...shop, relationshipDisplay: { labels: 'always' } })).toEqual([true, false]);
+    expect(label({ ...shop, relationshipDisplay: { labels: 'off' } }, { labelsOn: true })).toEqual([
+      false,
+      false,
+    ]);
+    expect(
+      label({ ...shop, relationshipDisplay: { labels: 'hover' } }, { labelsOn: true }),
+    ).toEqual([false, true]);
+    const selected = { selection: { ...EMPTY_SELECTION, edges: ['fk'] } };
+    expect(label({ ...shop, relationshipDisplay: { labels: 'hover' } }, selected)).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it('applies hidden ends and 1 / n notation', () => {
+    const file = { ...shop, relationshipDisplay: { hideEnds: true, notation: 'numeric' as const } };
+    expect(byId(file, 'fk').data.rel).toMatchObject({ hideEnds: true, notation: 'numeric' });
+  });
+});

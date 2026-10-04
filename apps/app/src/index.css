@@ -424,6 +424,12 @@
   opacity: 0.4;
 }
 
+/* Hover-only relationship labels (042 R10): drawn but hidden until a hover focus lights the
+   relationship (its rule comes from hover-focus-css.ts), so a hover changes no React Flow object. */
+.sd-rel-hover-label {
+  visibility: hidden;
+}
+
 /* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */
 .sd-segment-error {
   background-image: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);

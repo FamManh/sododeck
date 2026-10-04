@@ -11,7 +11,8 @@ import { isFlowMode, useUiStore } from '../state/ui-store';
 import { labelClamp, labelHalfWidth } from './editing/label-drag';
 import { useThemeStore } from '../theme/theme-store';
 import type { DeckFlowEdge } from './deck-to-flow';
-import { EdgeEnds } from './edge-ends';
+import { EdgeEnds, RelationshipEndMarks } from './edge-ends';
+import { relationshipGeometry } from './relationships/relationship-geometry';
 import { FlowToken } from './flow-token';
 import { StepBadge } from './flow-badges';
 import { FLOW_STROKES, flowStrokeKey } from './flow-strokes';
@@ -128,8 +129,13 @@ export const DeckEdge = memo(function DeckEdge({
   const route = data?.route;
   // Bends and anchors need the real cards (their centres and sides); everything else only needs
   // the handle points, so a connector without them draws exactly as before.
+  // A relationship (042) always needs them: its ends sit on rows of the live boxes.
+  const rel = data?.rel;
   const needsBoxes =
-    (route?.waypoints?.length ?? 0) > 0 || route?.fromAt !== undefined || route?.toAt !== undefined;
+    rel !== undefined ||
+    (route?.waypoints?.length ?? 0) > 0 ||
+    route?.fromAt !== undefined ||
+    route?.toAt !== undefined;
   const sized = needsBoxes && data?.fromSize !== undefined && data.toSize !== undefined;
   const fromBox =
     sized && data.fromSize !== undefined
@@ -151,23 +157,57 @@ export const DeckEdge = memo(function DeckEdge({
     arrowAtEnd: direction !== 'none' && !errorEnd,
   };
   const shape = data?.shape ?? 'curved';
+  const spread =
+    data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING;
+  // A relationship (042) draws from its row anchors with stubs and crow's feet, sides chosen
+  // live from the boxes so they follow a dragged table (R3).
+  const relGeometry =
+    rel === undefined
+      ? null
+      : relationshipGeometry({
+          ...rel,
+          fromBox,
+          toBox,
+          shape,
+          sides,
+          route,
+          spread,
+          bends:
+            preview?.bends ??
+            (route?.waypoints === undefined
+              ? []
+              : decodeWaypoints(route.waypoints, cardCentre(fromBox), cardCentre(toBox))),
+        });
   const {
     path,
     labelX: pathLabelX,
     labelY: pathLabelY,
     segment,
     ends,
-  } = connectorPath({
-    shape,
-    fromBox,
-    toBox,
-    sides,
-    route,
-    bends: preview?.bends,
-    options: arrows,
-    ...endShapes,
-    spread: data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
-  });
+  } = relGeometry === null
+    ? connectorPath({
+        shape,
+        fromBox,
+        toBox,
+        sides,
+        route,
+        bends: preview?.bends,
+        options: arrows,
+        ...endShapes,
+        spread,
+      })
+    : {
+        path: relGeometry.path,
+        labelX: relGeometry.label.x,
+        labelY: relGeometry.label.y,
+        segment: null,
+        ends: {
+          start: relGeometry.start,
+          end: relGeometry.end,
+          startDir: { x: 1, y: 0 },
+          endDir: { x: 1, y: 0 },
+        },
+      };
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
   // colour, dash and weight > the defaults. A colour never carries a state alone. A plain
@@ -183,9 +223,10 @@ export const DeckEdge = memo(function DeckEdge({
         : lineColour(own.color, theme)));
   const hasBadges = (flow?.badges.length ?? 0) > 0;
   // The route as it was before this bend gesture, computed only while dragging, for the ghost.
-  const ghostPath = dragging
-    ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows, ...endShapes }).path
-    : null;
+  const ghostPath =
+    dragging && relGeometry === null
+      ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows, ...endShapes }).path
+      : null;
   // The bends the handles sit on: the stored ones, or a 017 offset's two corners (R3).
   const bends: Point[] =
     route?.waypoints !== undefined && sized
@@ -203,6 +244,8 @@ export const DeckEdge = memo(function DeckEdge({
   };
   // A recorded step shows its connection label next to its number, as in designs 42–46.
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
+  // A hover-only relationship label (042 R10): drawn, but hidden by CSS until the line is lit.
+  const hoverLabel = !showLabel && data?.hoverLabel === true && Boolean(data.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
   const showFlowLabel = hasBadges || flowIcon !== null;
   // Problems (015 FR-022) show on the label pill, even with labels off.
@@ -338,13 +381,31 @@ export const DeckEdge = memo(function DeckEdge({
             data-testid="edge-run"
           />
         ))}
-      <EdgeEnds
-        {...ends}
-        direction={direction}
-        color={stroke}
-        errorEnd={errorEnd}
-        scale={markScale(own.width)}
-      />
+      {relGeometry === null ? (
+        <EdgeEnds
+          {...ends}
+          direction={direction}
+          color={stroke}
+          errorEnd={errorEnd}
+          scale={markScale(own.width)}
+        />
+      ) : (
+        <>
+          {relGeometry.bracket !== '' && (
+            <path
+              d={relGeometry.bracket}
+              fill="none"
+              stroke={stroke}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ strokeWidth: width }}
+              pointerEvents="none"
+              data-testid="relationship-bracket"
+            />
+          )}
+          <RelationshipEndMarks marks={relGeometry.marks} color={stroke} width={width} />
+        </>
+      )}
       {current !== null && (
         <FlowToken
           path={path}
@@ -354,7 +415,7 @@ export const DeckEdge = memo(function DeckEdge({
           number={current.number}
         />
       )}
-      {(showLabel || selected || flow !== undefined || problems !== undefined) && (
+      {(showLabel || hoverLabel || selected || flow !== undefined || problems !== undefined) && (
         <EdgeLabelRenderer>
           {/* Anchor for the edge and invalid-click popovers, at the label point. */}
           <div
@@ -362,7 +423,7 @@ export const DeckEdge = memo(function DeckEdge({
             className="pointer-events-none absolute size-px"
             style={{ transform: `translate(${String(labelX)}px, ${String(labelY)}px)` }}
           />
-          {(showLabel || showFlowLabel || problems !== undefined) && (
+          {(showLabel || hoverLabel || showFlowLabel || problems !== undefined) && (
             <span
               data-testid="edge-label"
               data-edge-label-for={id}
@@ -380,8 +441,9 @@ export const DeckEdge = memo(function DeckEdge({
                   : 'border py-0.5 text-edge-label',
                 // A flow mark lets clicks through to the edge, so recording works on the label.
                 flow === undefined ? 'pointer-events-auto' : 'pointer-events-none',
-                isPill ? 'px-2' : showLabel ? 'pr-2 pl-2' : 'pr-0.5 pl-2',
+                isPill ? 'px-2' : showLabel || hoverLabel ? 'pr-2 pl-2' : 'pr-0.5 pl-2',
                 labelLook(),
+                hoverLabel && 'sd-rel-hover-label',
               )}
               style={{
                 transform: `translate(-50%, -50%) translate(${String(labelX)}px, ${String(labelY)}px)`,
@@ -415,7 +477,7 @@ export const DeckEdge = memo(function DeckEdge({
                   <TriangleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
                 </span>
               )}
-              {showLabel && data?.label}
+              {(showLabel || hoverLabel) && data?.label}
             </span>
           )}
         </EdgeLabelRenderer>
@@ -431,7 +493,7 @@ export const DeckEdge = memo(function DeckEdge({
           rest={{ x: labelX, y: labelY }}
         />
       )}
-      {showHandle && shape !== 'straight' && data?.routable === true && (
+      {showHandle && shape !== 'straight' && data?.routable === true && rel?.rows !== true && (
         <RouteHandles
           context={bendContext}
           anchors={{

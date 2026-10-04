@@ -5,6 +5,9 @@
  */
 import {
   edgeShape,
+  isDbTable,
+  relationshipDisplayOf,
+  type ResolvedRelationshipDisplay,
   type Geometry,
   stickyCanvasPosition,
   stickyLabel,
@@ -20,8 +23,19 @@ import {
   geometryOf,
   groupBounds,
   NODE_SIZE,
+  tableLayoutOf,
   type Point,
 } from './canvas-geometry';
+import {
+  hasColumnEnds,
+  isRelationship,
+  relationshipEnds,
+  relationshipSides,
+  sameEnds,
+  type RelationshipEnds,
+} from './relationships/relationship-ends';
+import { relationshipLabel, relationshipName } from './relationships/relationship-label';
+import { tableContextOf, type TableContext } from './table-keys';
 import { autoSides, cardCentre, decodeWaypoints } from './routing/connector-geometry';
 import { resolveSides, type Box } from './routing/route-path';
 import { stickyFlowState, type NotesDisplay, type StickyFlowState } from './stickies/sticky-flow';
@@ -145,6 +159,61 @@ export interface DeckEdgeData extends Record<string, unknown> {
   routable: boolean;
   /** This connector's slot among the fanned-out members of a bundle (034 R6). */
   fan?: { index: number; count: number };
+  /** A relationship between tables (042): row anchors, marks and how they show. */
+  rel?: RelationshipData;
+  /**
+   * The label is drawn but hidden until the connector is hovered or lit (042 R10: "hover" mode,
+   * and "follow" with the Labels tool off), so hovering changes no React Flow object.
+   */
+  hoverLabel?: boolean;
+}
+
+/** What a relationship edge draws besides an ordinary connector (042). */
+export interface RelationshipData {
+  ends: RelationshipEnds;
+  /** Ends sit on rows (≥ 90 % and a column end); otherwise on the outline as a connector. */
+  rows: boolean;
+  /** Both ends on one table: a loop on its right side. */
+  self: boolean;
+  notation: ResolvedRelationshipDisplay['notation'];
+  hideEnds: boolean;
+}
+
+function sameRel(a: RelationshipData | undefined, b: RelationshipData | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return (
+    a.rows === b.rows &&
+    a.self === b.self &&
+    a.notation === b.notation &&
+    a.hideEnds === b.hideEnds &&
+    sameEnds(a.ends, b.ends)
+  );
+}
+
+/** Levels at which table rows are drawn (≥ 90 %, DESIGN.md "Table zoom levels"). */
+export function rowsDrawn(level: Level): boolean {
+  return level === 'container' || level === 'component';
+}
+
+/**
+ * Whether a relationship's label shows, per the deck's label mode (042 R10). `lit` is a focus or
+ * a selection; `hover` says the label is drawn hidden until the pointer lights it.
+ */
+export function relationshipLabelShown(
+  mode: ResolvedRelationshipDisplay['labels'],
+  labelsOn: boolean,
+  lit: boolean,
+): { show: boolean; hover: boolean } {
+  switch (mode) {
+    case 'off':
+      return { show: false, hover: false };
+    case 'always':
+      return { show: true, hover: false };
+    case 'hover':
+      return { show: lit, hover: !lit };
+    case 'follow':
+      return { show: labelsOn || lit, hover: !labelsOn && !lit };
+  }
 }
 
 export interface CollapsedGroupData extends Record<string, unknown> {
@@ -1039,13 +1108,42 @@ export function toFlowEdges(
     const node = lookups.nodesById.get(id);
     const index = lookups.nodeIndexById.get(id);
     if (node === undefined || index === undefined) return undefined;
-    return cardBox(node, index, view.level, { fields: cardFieldView(deck, node) });
+    return cardBox(node, index, view.level, {
+      fields: cardFieldView(deck, node),
+      table: tableContext,
+    });
   }
   /** A plain end's shape geometry (031); collapsed cards and port pills are boxes. */
   function endGeometry(id: string): Geometry | undefined {
     if (id.startsWith(COLLAPSED_NODE_PREFIX) || portsById.has(id)) return undefined;
     const node = lookups.nodesById.get(id);
     return node === undefined ? undefined : (geometryOf(node) ?? undefined);
+  }
+  // Relationships (042): read the table layouts the cards are drawn with.
+  const tableContext: TableContext = tableContextOf(deck);
+  let display: ResolvedRelationshipDisplay | undefined;
+  const relDisplay = () => (display ??= relationshipDisplayOf(deck));
+  const isTable = (id: string) => {
+    const node = lookups.nodesById.get(id);
+    return node !== undefined && isDbTable(node);
+  };
+  function relationshipOf(edge: DeckEdgeObject): RelationshipData | undefined {
+    if (!isRelationship(edge, isTable)) return undefined;
+    const fromNode = lookups.nodesById.get(edge.from);
+    const toNode = lookups.nodesById.get(edge.to);
+    if (fromNode === undefined || toNode === undefined) return undefined;
+    const { notation, hideEnds } = relDisplay();
+    return {
+      ends: relationshipEnds(
+        edge,
+        tableLayoutOf(fromNode, tableContext),
+        tableLayoutOf(toNode, tableContext),
+      ),
+      rows: hasColumnEnds(edge) && rowsDrawn(view.level),
+      self: edge.from === edge.to,
+      notation,
+      hideEnds,
+    };
   }
   const plainEdges = graph.edges.flatMap((edgeId) => {
     const edge = lookups.edgesById.get(edgeId);
@@ -1060,7 +1158,7 @@ export function toFlowEdges(
     if (!from || !to || fromBox === undefined || toBox === undefined) return [];
     // With free bends the automatic sides face the first and last bend (022 R4).
     const waypoints = edge.route?.waypoints;
-    const [sourceHandle, targetHandle] =
+    const autoHandles =
       waypoints === undefined
         ? resolveSides(fromBox, toBox, edge.route)
         : autoSides(
@@ -1073,18 +1171,41 @@ export function toFlowEdges(
     const focused = edge.id === view.focusedEdgeId;
     const dimmed = view.focus !== null && !view.focus.edges.has(edge.id);
     const inFocus = view.focus?.edges.has(edge.id) === true;
+    const rel = relationshipOf(edge);
+    const label =
+      rel === undefined ? edge.label : relationshipLabel(edge, (id) => lookups.nodesById.get(id));
+    const relLabel =
+      rel === undefined
+        ? undefined
+        : relationshipLabelShown(relDisplay().labels, view.labelsOn, inFocus || isSelected);
+    const hasLabel = label !== undefined && label !== '';
     const showLabel =
-      (view.labelsOn && edge.label !== undefined && edge.label !== '') ||
-      view.focus?.edges.has(edge.id) === true ||
-      (fan !== undefined && edge.label !== undefined && edge.label !== '');
+      relLabel === undefined
+        ? (view.labelsOn && hasLabel) ||
+          view.focus?.edges.has(edge.id) === true ||
+          (fan !== undefined && hasLabel)
+        : hasLabel && relLabel.show;
+    const hoverLabel = hasLabel && relLabel?.hover === true;
     const mark = overlay.edges.get(edge.id);
     const problems = view.problems?.get(edge.id);
     const shape = edgeShape(edge);
     const fromGeometry = endGeometry(edge.from);
     const toGeometry = endGeometry(edge.to);
+    // Column ends sit on the left / right side facing the other table (R3); the handles only
+    // keep React Flow's bookkeeping, `DeckEdge` draws from the row anchors.
+    const [sourceHandle, targetHandle] =
+      rel?.rows === true
+        ? (() => {
+            const sides = relationshipSides(fromBox, toBox, rel.self);
+            return [sides.from, sides.to] as const;
+          })()
+        : autoHandles;
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
+      sameRel(cached.data?.rel, rel) &&
+      cached.data?.label === label &&
+      (cached.data?.hoverLabel === true) === hoverLabel &&
       cached.data?.shape === shape &&
       cached.data.fromGeometry === fromGeometry &&
       cached.data.toGeometry === toGeometry &&
@@ -1121,13 +1242,19 @@ export function toFlowEdges(
           }
         : {}),
       ...(dimmed ? { domAttributes: { 'aria-hidden': true } } : {}),
+      // Row ends are moved by 042's column drag, not React Flow's handle-based reconnect.
+      ...(rel?.rows === true ? { reconnectable: false } : {}),
       interactionWidth: 12,
-      ariaLabel:
-        problems === undefined
+      ariaLabel: [
+        rel === undefined
           ? edgeName(from.title, to.title, edge.label)
-          : `${edgeName(from.title, to.title, edge.label)}, ${problems.label}`,
+          : relationshipName(edge, (id) => lookups.nodesById.get(id)),
+        problems?.label,
+      ]
+        .filter(Boolean)
+        .join(', '),
       data: {
-        label: edge.label,
+        label,
         protocol: edge.protocol,
         direction: edge.direction ?? 'forward',
         showLabel,
@@ -1149,6 +1276,8 @@ export function toFlowEdges(
         ...(edge.route === undefined ? {} : { route: edge.route }),
         ...(edge.style === undefined ? {} : { style: edge.style }),
         ...(edge.labelAt === undefined ? {} : { labelAt: edge.labelAt }),
+        ...(rel === undefined ? {} : { rel }),
+        ...(hoverLabel ? { hoverLabel } : {}),
       },
     };
     edgeCache.set(edge, flowEdge);
