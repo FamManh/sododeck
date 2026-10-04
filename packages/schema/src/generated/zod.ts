@@ -749,6 +749,12 @@ export const sododeckFileSchema = z
                 "Tables (`db-table`, 040): how much of the table is shown. Absent means the deck's default for the zoom level.",
               )
               .optional(),
+            locked: z
+              .literal(true)
+              .describe(
+                'Any node type (043): `true` pins the node, so it cannot be moved, resized, edited or deleted until unlocked. Connectors to and from it can still be drawn. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
+              )
+              .optional(),
           })
           .strict()
           .describe(

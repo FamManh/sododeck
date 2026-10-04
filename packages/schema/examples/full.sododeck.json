@@ -117,7 +117,8 @@
       "description": "Everything the delivery team runs.",
       "owner": "Delivery",
       "position": { "x": 460, "y": -120 },
-      "style": { "fill": "orange", "stroke": "indigo" }
+      "style": { "fill": "orange", "stroke": "indigo" },
+      "locked": true
     },
     {
       "id": "customer-app",
