@@ -50,6 +50,9 @@ import { StepPlayer } from './flows/step-player';
 import { useFlowViewport } from './flows/use-flow-viewport';
 import { connectionCount, connectionsText, focusSet } from './focus-set';
 import { HoverFocusStyle } from './hover-focus/hover-focus-style';
+import { setColumnDragEnv } from './editing/column-connect-drag';
+import { ColumnConnectLine } from './editing/column-connect-line';
+import { targetTablesOf, type TargetTable } from './relationships/column-target';
 import { useHoverFocus } from './hover-focus/use-hover-focus';
 import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelSelector, type Level } from './levels';
@@ -414,6 +417,18 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const scope = useMemo(() => scopeOf(drill), [drill]);
   const graph = useMemo(() => visibleGraph(deck, scope, collapsed), [deck, scope, collapsed]);
   const level = useMemo(() => effectiveLevel(zoomLevel, scope), [zoomLevel, scope]);
+  // Relationship drags (042) read the drawn tables' boxes and rows, computed once per drag frame.
+  useEffect(() => {
+    let tables: readonly TargetTable[] | null = null;
+    setColumnDragEnv({
+      toFlow: (point) => screenToFlowPosition(point),
+      tables: () => (tables ??= targetTablesOf(deck, new Set(graph.nodes), level)),
+      editor,
+    });
+    return () => {
+      setColumnDragEnv(null);
+    };
+  }, [deck, graph, level, editor, screenToFlowPosition]);
   const focusId = useMemo(() => {
     if (!focusMode) return null;
     if (selection.nodes.length === 1) return selection.nodes[0] ?? null;
@@ -807,6 +822,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         )}
         <SelectionFrame deck={deck} level={level} />
         <GuidesOverlay />
+        <ColumnConnectLine />
       </ReactFlow>
       {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && <EmptyCanvasCard />}
       {drilledEmpty && (

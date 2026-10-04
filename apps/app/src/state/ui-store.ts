@@ -37,10 +37,37 @@ export interface Selection {
   readonly stickies: readonly Id[];
 }
 
-/** Hover or keyboard focus on a card (034): who is lit and how it started. */
+/** A column of a table (042): `tableId:columnId` on the canvas rows. */
+export interface ColumnRef {
+  readonly tableId: string;
+  readonly columnId: string;
+}
+
+/**
+ * Hover or keyboard focus on a card (034): who is lit and how it started. A `column` source (042)
+ * lights a column's relationships; an `edge` source a hovered relationship's end rows, nothing
+ * dimmed.
+ */
 export interface HoverFocus {
   readonly id: string;
-  readonly source: 'pointer' | 'keyboard';
+  readonly source: 'pointer' | 'keyboard' | 'column' | 'edge';
+  readonly column?: ColumnRef;
+}
+
+/** A relationship drag in progress (042 R9), in flow coordinates. UI only, never in the deck. */
+export interface ColumnConnect {
+  readonly source: ColumnRef;
+  /** `create` draws a new relationship; `reconnect` moves one end of `edgeId`. */
+  readonly mode: 'create' | 'reconnect';
+  readonly edgeId?: string;
+  readonly end?: 'from' | 'to';
+  /** Where the ghost line starts (the port, or the fixed end). */
+  readonly from: { x: number; y: number };
+  readonly point: { x: number; y: number };
+  readonly target?: ColumnRef;
+  /** The target row's right edge and centre, where the warning chip sits. */
+  readonly targetAt?: { x: number; y: number };
+  readonly mismatch?: string;
 }
 
 /** Derived ids (034) that `pruneSelection` checks against sets it is given. */
@@ -50,6 +77,8 @@ const BUNDLE_ID_PREFIX = 'bundle:';
 export type Popover =
   | { kind: 'edge'; edgeId: string }
   | { kind: 'connect'; fromId: string }
+  /** Keyboard relationship from a focused column row (042 R9). */
+  | { kind: 'connect-column'; tableId: string; columnId: string }
   | { kind: 'merged'; edgeId: string }
   | null;
 
@@ -330,6 +359,10 @@ export interface UiState {
   flowSession: FlowSession | null;
   /** Edge under the pointer during a session (the dotted preview). */
   hoverEdgeId: string | null;
+  /** A relationship drag in progress (042). */
+  columnConnect: ColumnConnect | null;
+  /** Keyboard focus on a column row inside a table (042); the card keeps `focusedId`. */
+  focusedRow: ColumnRef | null;
   /** Flow list filter text (FR-034). */
   flowFilter: string;
   /** Live-region text; `seq` changes on every call so repeats are announced again. */
@@ -501,6 +534,9 @@ export interface UiState {
   checkBranch: () => void;
   endSession: () => void;
   setHoverEdge: (edgeId: string | null) => void;
+  setColumnConnect: (drag: ColumnConnect | null) => void;
+  setFocusedRow: (row: ColumnRef | null) => void;
+  openColumnConnectPopover: (row: ColumnRef) => void;
   setFlowFilter: (text: string) => void;
   announce: (text: string) => void;
   setDescriptionMode: (key: string, mode: DescriptionMode) => void;
@@ -719,6 +755,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     lastPlayedFlowId: null,
     flowSession: null,
     hoverEdgeId: null,
+    columnConnect: null,
+    focusedRow: null,
     flowFilter: '',
     announcement: { text: '', seq: 0 },
     jsonPanel: loadJsonPanelPrefs(),
@@ -855,6 +893,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         focusedEdgeId: null,
         hoverFocus: null,
         fannedBundles: NO_IDS,
+        focusedRow: null,
         popover: null,
         enumPopover: null,
         revealed: NO_IDS,
@@ -1142,6 +1181,18 @@ export const useUiStore = create<UiState>()((set, get) => {
     setHoverEdge: (hoverEdgeId) => {
       set({ hoverEdgeId });
     },
+    setColumnConnect: (columnConnect) => {
+      set({ columnConnect });
+    },
+    setFocusedRow: (focusedRow) => {
+      const current = get().focusedRow;
+      if (current?.tableId === focusedRow?.tableId && current?.columnId === focusedRow?.columnId)
+        return;
+      set({ focusedRow });
+    },
+    openColumnConnectPopover: ({ tableId, columnId }) => {
+      set({ popover: { kind: 'connect-column', tableId, columnId } });
+    },
     setFlowFilter: (flowFilter) => {
       set({ flowFilter });
     },
@@ -1386,6 +1437,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         lastPlayedFlowId: null,
         flowSession: null,
         hoverEdgeId: null,
+        columnConnect: null,
+        focusedRow: null,
         flowFilter: '',
         descriptionMode: NO_MODES,
         canvasViewport: null,

@@ -1,7 +1,7 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { connectionCheck, connectTargets } from './connection-rules';
+import { columnConnectionCheck, connectionCheck, connectTargets } from './connection-rules';
 
 const deck: SododeckFile = {
   ...emptySododeckFile(),
@@ -61,5 +61,46 @@ describe('connectTargets', () => {
   it('filters case-insensitively by title', () => {
     expect(connectTargets(deck, 'svc', 'ORD').map((t) => t.id)).toEqual(['db']);
     expect(connectTargets(deck, 'svc', 'zzz')).toEqual([]);
+  });
+});
+
+describe('columnConnectionCheck (042 R12)', () => {
+  const end = (tableId: string, columnId: string) => ({ tableId, columnId });
+  const edges: SododeckFile['edges'] = [
+    { id: 'r1', from: 'o', to: 'c', fromColumns: ['o.cid'], toColumns: ['c.id'] },
+  ];
+
+  it('allows a self-reference and a second relationship between the same tables', () => {
+    expect(columnConnectionCheck({ edges }, end('t', 't.parent'), end('t', 't.id'))).toEqual({
+      ok: true,
+    });
+    expect(columnConnectionCheck({ edges }, end('o', 'o.bid'), end('c', 'c.id'))).toEqual({
+      ok: true,
+    });
+    expect(columnConnectionCheck({ edges }, end('c', 'c.id'), end('o', 'o.cid'))).toEqual({
+      ok: true,
+    });
+  });
+
+  it('returns the existing relationship for the same pair and direction', () => {
+    expect(columnConnectionCheck({ edges }, end('o', 'o.cid'), end('c', 'c.id'))).toEqual({
+      ok: false,
+      existing: 'r1',
+    });
+    expect(columnConnectionCheck({ edges }, end('o', 'o.cid'), end('c', 'c.id'), 'r1')).toEqual({
+      ok: true,
+    });
+  });
+
+  it('refuses the source row itself', () => {
+    expect(columnConnectionCheck({ edges }, end('o', 'o.cid'), end('o', 'o.cid'))).toEqual({
+      ok: false,
+    });
+  });
+
+  it('leaves card connections refusing self and duplicates', () => {
+    const deck = { ...emptySododeckFile(), edges };
+    expect(connectionCheck(deck, 'o', 'o')).toBe('self');
+    expect(connectionCheck(deck, 'c', 'o')).toBe('duplicate');
   });
 });
