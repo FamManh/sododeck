@@ -600,6 +600,45 @@ describe('ExportDialog: schema formats (045)', () => {
     expect(downloadText).toHaveBeenCalledWith(file, expect.stringContaining(text), 'text/plain');
   });
 
+  it('works from the keyboard across both format groups', async () => {
+    const { user } = setup(shop, { ui: selection(['orders']) });
+    await waitFor(() => {
+      expect(radio('JSON')).toHaveFocus();
+    });
+    // Held arrows, as in the keyboard test above: Radix selects on focus while a key is down.
+    const press = async (key: string, next: HTMLElement) => {
+      await user.keyboard(`{${key}>}`);
+      await waitFor(() => {
+        expect(next).toHaveFocus();
+      });
+      await user.keyboard(`{/${key}}`);
+    };
+    await press('ArrowUp', radio('Data dictionary'));
+    expect(radio('Data dictionary')).toBeChecked();
+    await press('ArrowUp', radio('Mermaid ER'));
+    await press('ArrowUp', radio('DBML'));
+    await press('ArrowUp', radio('SQL'));
+    expect(radio('SQL')).toBeChecked();
+    await footerName('shop-selection.sql');
+    await user.tab();
+    expect(scopeRadio('Selection')).toHaveFocus();
+    await press('ArrowRight', scopeRadio('Whole deck'));
+    expect(scopeRadio('Whole deck')).toBeChecked();
+    await footerName('shop.sql');
+    await user.tab();
+    expect(screen.getByRole('switch', { name: 'Include enums and indexes' })).toHaveFocus();
+    await user.tab();
+    await user.tab();
+    expect(screen.getByRole('switch', { name: 'IF NOT EXISTS' })).toHaveFocus();
+    await user.keyboard(' ');
+    expect(screen.getByRole('switch', { name: 'IF NOT EXISTS' })).toBeChecked();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
+    });
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Copy' })).toHaveFocus();
+  });
+
   describe('scope (US2)', () => {
     it('opens on Selection when tables are selected', async () => {
       const { user } = setup(shop, { ui: selection(['orders', 'customers']) });

@@ -114,14 +114,22 @@ export function SchemaExportPanel({
             <DisabledReason
               reason={scopes.selection.length === 0 ? 'Select one or more tables' : null}
             >
-              <SegmentedControlItem value="selection" disabled={scopes.selection.length === 0}>
+              <SegmentedControlItem
+                value="selection"
+                className="whitespace-nowrap"
+                disabled={scopes.selection.length === 0}
+              >
                 Selection
               </SegmentedControlItem>
             </DisabledReason>
             {card !== null && (
-              <SegmentedControlItem value="database">{card.title}</SegmentedControlItem>
+              <SegmentedControlItem value="database" className="whitespace-nowrap">
+                {card.title}
+              </SegmentedControlItem>
             )}
-            <SegmentedControlItem value="deck">Whole deck</SegmentedControlItem>
+            <SegmentedControlItem value="deck" className="whitespace-nowrap">
+              Whole deck
+            </SegmentedControlItem>
           </SegmentedControl>
         </div>
         {isSql &&
