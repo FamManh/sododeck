@@ -71,6 +71,25 @@ function middleOf(d: string): Point {
   return labelPoint(samplePath(d), 0.5, 0);
 }
 
+/** Reach of the curve's end controls, as `pointsToPath` draws a curve without bends. */
+const curveReach = (hop: number) => (hop < 1 ? 0 : Math.max(12, 0.4 * hop));
+
+/**
+ * The label point between the stub tips without sampling the path (it runs for every
+ * relationship on every frame of a drag): the curve's t = 0.5 point, or the middle of an elbow's
+ * symmetric Z.
+ */
+function stubMiddle(q1: Point, q2: Point, n1: Point, n2: Point, shape: PathShape): Point {
+  if (shape === 'elbow') return { x: (q1.x + q2.x) / 2, y: (q1.y + q2.y) / 2 };
+  const reach = curveReach(Math.hypot(q2.x - q1.x, q2.y - q1.y));
+  const c1 = { x: q1.x + n1.x * reach, y: q1.y };
+  const c2 = { x: q2.x + n2.x * reach, y: q2.y };
+  return {
+    x: (q1.x + 3 * c1.x + 3 * c2.x + q2.x) / 8,
+    y: (q1.y + 3 * c1.y + 3 * c2.y + q2.y) / 8,
+  };
+}
+
 /**
  * The line between two row-anchored ends. Curved and elbow leave each end on a 24 stub along the
  * side normal and pass `bends` (user bends, absolute) between the stubs; straight is the direct
@@ -118,7 +137,8 @@ export function relationshipPath(
     bracket,
     from: { at: a.p, u: n1 },
     to: { at: b.p, u: n2v },
-    label: middleOf(d),
+    label:
+      middle === bends && bends.length === 0 ? stubMiddle(q1, q2, n1, n2v, shape) : middleOf(d),
   };
 }
 
