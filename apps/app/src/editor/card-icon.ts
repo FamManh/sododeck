@@ -16,3 +16,9 @@ export function cardIconRef(node: FormNode & { icon?: string }): string | undefi
 export function customIcon(ref: string | undefined): ResolvedIcon | undefined {
   return ref === undefined ? undefined : (resolveIcon(ref) ?? undefined);
 }
+
+/** Spread form of `customIcon` for an optional `icon` prop (the repo omits absent optionals). */
+export function iconProp(ref: string | undefined): { icon?: ResolvedIcon } {
+  const icon = customIcon(ref);
+  return icon === undefined ? {} : { icon };
+}

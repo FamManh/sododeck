@@ -7,19 +7,13 @@ import { memo, useEffect, type CSSProperties } from 'react';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
-import { customIcon } from './card-icon';
+import { iconProp } from './card-icon';
 import { TypeGlyph } from './shapes/type-glyph';
 import { StepSticker } from './step-sticker';
 import { describeChannel } from './style/card-style';
 
 /** Member tiles per hand, the last slot becoming "+n" when there are more. */
 const MAX_TILES = 5;
-
-/** Spread form so an absent icon is omitted, not passed as `undefined`. */
-function iconProp(ref: string | undefined) {
-  const icon = customIcon(ref);
-  return icon === undefined ? {} : { icon };
-}
 
 function MemberTile({ kind, icon }: { kind: string; icon: string | undefined }) {
   return (

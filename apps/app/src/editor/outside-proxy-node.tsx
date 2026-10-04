@@ -5,7 +5,7 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
-import { customIcon } from './card-icon';
+import { iconProp } from './card-icon';
 import { TypeGlyph } from './shapes/type-glyph';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
@@ -14,12 +14,6 @@ import { cardBox } from './canvas-geometry';
 import { COLLAPSED_NODE_PREFIX, type PortFlowNode } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, readViewState } from './views/use-current-view';
-
-/** Spread form so an absent icon is omitted, not passed as `undefined`. */
-function iconProp(ref: string | undefined) {
-  const icon = customIcon(ref);
-  return icon === undefined ? {} : { icon };
-}
 
 const SIDES = [
   { id: 'top', position: Position.Top },
