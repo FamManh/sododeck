@@ -33,6 +33,8 @@ export type ViewSettingsPatch = {
       | 'excludeKinds'
       | 'excludeTags'
       | 'dimKinds'
+      | 'schemas'
+      | 'detail'
   ]?: View[K] | undefined;
 };
 
@@ -44,6 +46,8 @@ const SETTINGS_KEYS = [
   'excludeKinds',
   'excludeTags',
   'dimKinds',
+  'schemas',
+  'detail',
 ] as const satisfies readonly (keyof ViewSettingsPatch)[];
 
 /** The views the deck shows now (stored, else presets), as plain data. */

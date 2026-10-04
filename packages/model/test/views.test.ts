@@ -285,6 +285,51 @@ describe('updateView (FR-041, FR-043)', () => {
     expectValid(doc);
   });
 
+  it('writes schemas and detail (048); an empty list, undefined and a default remove them', () => {
+    const { doc, editor } = setup({ ...base, views: stored });
+    editor.updateView('v1', { schemas: ['billing', 'public'], detail: 'keys' });
+    expect(view(doc, 'v1')).toMatchObject({ schemas: ['billing', 'public'], detail: 'keys' });
+    expectValid(doc);
+    editor.updateView('v1', { detail: 'all' });
+    expect(view(doc, 'v1')?.detail).toBe('all');
+    editor.updateView('v1', { schemas: [], detail: undefined });
+    expect(view(doc, 'v1')?.schemas).toBeUndefined();
+    expect(view(doc, 'v1')?.detail).toBeUndefined();
+    expect(Object.keys(view(doc, 'v1') ?? {})).toEqual(['id', 'type', 'title']);
+    expectValid(doc);
+  });
+
+  it('refuses a bad detail, a blank schema name and a non-list, and writes nothing', () => {
+    const { doc, editor } = setup({ ...base, views: stored });
+    const before = JSON.stringify(view(doc, 'v1'));
+    for (const patch of [
+      { detail: 'auto' },
+      { schemas: [''] },
+      { schemas: 'billing' },
+      { schemas: [3] },
+    ]) {
+      expect(
+        code(() => {
+          editor.updateView('v1', patch as never);
+        }),
+      ).toBe('invalid');
+    }
+    expect(JSON.stringify(view(doc, 'v1'))).toBe(before);
+  });
+
+  it('schemas and detail edits are one undo step each, on the first view of a preset deck too', () => {
+    const { doc, editor } = setup();
+    editor.updateView('feature', { schemas: ['billing'] });
+    expect(view(doc, 'feature')?.schemas).toEqual(['billing']);
+    editor.undo();
+    expect(view(doc, 'feature')?.schemas).toBeUndefined();
+    editor.redo();
+    editor.updateView('feature', { detail: 'names' });
+    editor.undo();
+    expect(view(doc, 'feature')?.detail).toBeUndefined();
+    expect(view(doc, 'feature')?.schemas).toEqual(['billing']);
+  });
+
   it('a title typing burst is one undo step', () => {
     const { doc, editor } = setup({ ...base, views: stored });
     for (const title of ['O', 'Or', 'Ord']) editor.updateView('v1', { title });

@@ -52,10 +52,10 @@
 **Purpose**: the three additive format keys and their model ops, done once so one `pnpm schema:generate` covers them. `expanded` already exists (040).
 
 - [x] T005 Write failing tests then edit `packages/schema/schema/v1.json`: deck `groupingMode` (enum `["schema"]`), view `schemas` (string array, minItems 1) and view `detail` (`names` | `keys` | `all`); run `pnpm schema:generate`; add cases to `packages/schema/test/fixtures.ts` and `packages/schema/examples/full.sododeck.json`; Ajv / Zod parity stays green
-- [ ] T006 [P] Write failing tests `packages/model/test/db-grouping.test.ts` then implement `packages/model/src/ops/deck-grouping.ts` (`setGroupingMode`: writes `meta.groupingMode` for `'schema'`, deletes the key for the default), `groupingModeOf` reader in `packages/model/src/read.ts`, whitelist in `packages/model/src/validate.ts`, `DeckEditor.setGroupingMode` in `packages/model/src/editor.ts`; round-trip, undo and two-replica convergence cases
-- [ ] T007 [P] Write failing tests then edit `packages/model/src/ops/views.ts`: add `schemas` and `detail` to `SETTINGS_KEYS` and `ViewSettingsPatch` (empty list removes the key, default removes the key); cases in `packages/model/test/views.test.ts` and `round-trip.test.ts`
-- [ ] T008 [P] Guard test in `packages/model/test/db-grouping.test.ts`: a stored group id never starts with `schema:` (reader skips such a stored group and reports it), so virtual ids cannot collide
-- [ ] T009 [P] `expanded` model test in `packages/model/test/db-schema.test.ts`: set true → round-trips; set false removes the key; undo restores; applying it on a locked node through the model succeeds (lock is an app rule)
+- [x] T006 [P] Write failing tests `packages/model/test/db-grouping.test.ts` then implement `packages/model/src/ops/deck-grouping.ts` (`setGroupingMode`: writes `meta.groupingMode` for `'schema'`, deletes the key for the default), `groupingModeOf` reader in `packages/model/src/read.ts`, whitelist in `packages/model/src/validate.ts`, `DeckEditor.setGroupingMode` in `packages/model/src/editor.ts`; round-trip, undo and two-replica convergence cases
+- [x] T007 [P] Write failing tests then edit `packages/model/src/ops/views.ts`: add `schemas` and `detail` to `SETTINGS_KEYS` and `ViewSettingsPatch` (empty list removes the key, default removes the key); cases in `packages/model/test/views.test.ts` and `round-trip.test.ts`
+- [x] T008 [P] Guard test in `packages/model/test/db-grouping.test.ts`: a stored group id never starts with `schema:` (reader skips such a stored group and reports it), so virtual ids cannot collide
+- [x] T009 [P] `expanded` model test in `packages/model/test/db-schema.test.ts`: set true → round-trips; set false removes the key; undo restores; applying it on a locked node through the model succeeds (lock is an app rule)
 
 **Checkpoint**: the file format and model carry every saved choice; no UI yet.
 

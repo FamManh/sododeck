@@ -129,6 +129,27 @@ const perType: [string, SododeckFile][] = [
       ],
     },
   ],
+  // 048: grouping mode, view schemas and view detail (and a collapsed schema group id).
+  [
+    'grouping mode and view filters',
+    {
+      $schema,
+      version,
+      groupingMode: 'schema',
+      ...collections,
+      views: [
+        { id: 'v1', type: 'system', title: 'One' },
+        {
+          id: 'v2',
+          type: 'custom',
+          title: 'Billing',
+          schemas: ['billing', 'public'],
+          collapsed: ['schema:billing'],
+          detail: 'keys',
+        },
+      ],
+    },
+  ],
   [
     'edge',
     {
@@ -1241,7 +1262,9 @@ describe('database schema (040)', () => {
       'relationshipDisplay',
     );
     expect(keys.indexOf('relationshipDisplay')).toBe(keys.indexOf('tableDisplay') + 1);
-    expect(keys.indexOf('nodes')).toBe(keys.indexOf('relationshipDisplay') + 1);
+    // 048: the grouping mode follows the relationship display.
+    expect(keys.indexOf('groupingMode')).toBe(keys.indexOf('relationshipDisplay') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('groupingMode') + 1);
     const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
     expect(Object.keys(orders)).toEqual([
       'id',

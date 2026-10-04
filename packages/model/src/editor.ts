@@ -77,7 +77,9 @@ import {
   type NewDbEnum,
   type NewDbEnumValue,
 } from './ops/db-enums';
+import { setGroupingMode } from './ops/deck-grouping';
 import { setRelationshipDisplay, setTableDisplay } from './ops/table-display';
+import type { GroupingMode } from './read';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
@@ -438,6 +440,11 @@ export interface DeckEditor {
 
   /** Sets the deck's SQL dialect (040); `null` or `'generic'` removes the key (absent = Generic). */
   setDialect(dialect: Dialect | null): void;
+  /**
+   * Sets how the deck groups its tables (048): `'schema'` groups by schema name, `'group'` or
+   * `null` removes the key (By group). One undo step; `invalid` for any other value.
+   */
+  setGroupingMode(mode: GroupingMode | null): void;
   /**
    * Patches the deck's table display (041): `detail` (`null` = Auto) and the hide flags (`true`
    * hides; `false` or `null` removes the flag). One undo step; nothing happens when nothing changes.
@@ -855,6 +862,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setValues: (nodeIds, fieldId, value) => {
       setValues(ctx, nodeIds, fieldId, value);
+    },
+    setGroupingMode: (mode) => {
+      setGroupingMode(ctx, mode);
     },
     setDialect: (dialect) => {
       setDialect(ctx, dialect);
