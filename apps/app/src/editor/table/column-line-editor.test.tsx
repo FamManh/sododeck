@@ -82,6 +82,9 @@ describe('column line editor, new rows (043 US1)', () => {
     await user.clear(input);
     await user.type(input, 'status order_status sparkly');
     expect(chips()).toEqual(['name · status', 'enum · order_status', 'ignored · sparkly']);
+    await user.clear(input);
+    await user.type(input, 'price numeric(10,2) default 0');
+    expect(chips()).toEqual(['name · price', 'type · numeric(10,2)', 'default · 0']);
   });
 
   it('adds the column at its index on ⏎ and opens an empty row below it', async () => {

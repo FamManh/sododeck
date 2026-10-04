@@ -131,6 +131,12 @@ export function withNewRow<T extends TableNode>(node: T, at: number): T {
   return node;
 }
 
+/** `copy` with the new-row mark of `node`, if it has one (a projection copied for a helper). */
+export function withNewRowOf<T extends TableNode>(node: object, copy: T): T {
+  const at = newRows.get(node as TableNode);
+  return at === undefined ? copy : withNewRow(copy, at);
+}
+
 /** A table's detail: its own choice, else the deck's; Auto draws every column (R2). */
 export function effectiveDetail(own: DbDetail | undefined, deck: DeckTableDetail): DbDetail {
   return own ?? (deck === 'auto' ? 'all' : deck);

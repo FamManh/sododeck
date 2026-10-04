@@ -3,7 +3,7 @@ import { emptySododeckFile, type SododeckFile, type View } from '@sododeck/schem
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../../test/render-canvas';
-import { groupBounds } from '../canvas-geometry';
+import { groupBounds, tableLayoutOf } from '../canvas-geometry';
 import { visibleGraph } from '../visible-graph';
 import { subtitleOf, viewDeck, viewStateOf } from './view-state';
 
@@ -246,6 +246,15 @@ describe('row editing shows its table at All (043 R4, FR-010a)', () => {
     const after = viewStateOf(tables, null, none, null);
     expect(after.deck.nodes[0]).toBe(tables.nodes[0]);
     expect(after.deck.nodes[0]?.detail).toBe('keys');
+  });
+
+  it('gives the canvas layout the new-row slot, so the card grows by one row', () => {
+    const before = tableLayoutOf(tables.nodes[0] ?? { title: '' });
+    const node = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: 1 }).deck.nodes[0];
+    if (node === undefined) throw new Error('no table');
+    const after = tableLayoutOf(node);
+    expect(after.newRowIndex).toBe(1);
+    expect(after.height).toBe(before.height + 24);
   });
 
   it('keeps the same projected deck for the same row-editing state', () => {

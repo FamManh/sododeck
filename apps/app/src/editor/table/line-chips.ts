@@ -27,7 +27,11 @@ export function lineChips(parsed: ParsedColumnLine, enums: readonly DbEnum[]): L
   if (parsed.unique === true) chips.push({ label: 'unique', tone: 'part' });
   if (parsed.increment === true) chips.push({ label: 'increment', tone: 'part' });
   const value = parsed.tokens.find((token) => token.kind === 'default');
-  if (value !== undefined) chips.push({ label: `default · ${value.text}`, tone: 'part' });
+  if (value !== undefined) {
+    // The token spans the keyword and its value; the chip names the value only.
+    const shown = value.text.replace(/^default\s+/i, '');
+    chips.push({ label: `default · ${shown}`, tone: 'part' });
+  }
   for (const word of parsed.ignored) chips.push({ label: `ignored · ${word}`, tone: 'ignored' });
   return chips;
 }
