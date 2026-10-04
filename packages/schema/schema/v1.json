@@ -1096,6 +1096,29 @@
             "propertyNames": { "$ref": "#/$defs/Id" },
             "additionalProperties": { "type": "string" }
           }
+        },
+        "touches": {
+          "description": "Tables, and optionally columns, this step reads or writes (049). Absent means none. No two entries share the same table and column.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/Touch" }
+        }
+      }
+    },
+    "Touch": {
+      "title": "Touch",
+      "description": "A table, or one column of it, that a flow step reads or writes (049).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["table", "access"],
+      "properties": {
+        "table": { "$ref": "#/$defs/Id", "description": "Id of the table node." },
+        "column": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of one column of that table. Absent: the whole table."
+        },
+        "access": {
+          "description": "Whether the step reads or writes it.",
+          "enum": ["read", "write"]
         }
       }
     },

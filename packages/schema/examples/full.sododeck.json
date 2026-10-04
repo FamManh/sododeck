@@ -602,7 +602,16 @@
       ],
       "steps": [
         { "id": "p1", "edge": "e1" },
-        { "id": "p2", "edge": "e2", "title": "Create order" },
+        {
+          "id": "p2",
+          "edge": "e2",
+          "title": "Create order",
+          "touches": [
+            { "table": "orders", "access": "write" },
+            { "table": "order-items", "access": "write" },
+            { "table": "customers", "column": "cust-email", "access": "read" }
+          ]
+        },
         { "id": "p3a", "edge": "e7", "branch": "payment-ok", "title": "Capture payment" },
         { "id": "p3b", "edge": "e4", "branch": "payment-failed" },
         { "id": "p4b", "edge": "e5", "branch": "payment-failed" }
