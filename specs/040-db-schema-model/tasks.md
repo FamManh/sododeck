@@ -195,10 +195,10 @@
 - [x] T050 [P] Write `docs/decisions/0029-database-pack-model.md` (context, decisions R1–R14 condensed: type and pack ids, table keys on the node, column / index / check shapes, notes as plain text, `fromColumns` / `toColumns`, enums as a root list, dialect, Yjs child lists, one id scope, cascades, paste, problems, no revision; alternatives rejected; consequences for 041–049)
 - [x] T051 [P] Update `packages/schema/CLAUDE.md` (040 status paragraph: new `$defs`, root keys, node and edge keys, S14/S15, examples, fixtures) and `packages/model/CLAUDE.md` ("Added by 040": ops, cascades, id scope, problem kinds, layout additions; `ops/` list gains `db-tables`, `db-enums`)
 - [x] T052 [P] Update `docs/backlog-database.md`: 040 status (built, spec path, ADR 0029); in 040 scope replace `fromPort` / `toPort` with `fromColumns` / `toColumns` and `enumRef`-to-root-list wording; in 041 and 042 note column ends are `fromColumns` / `toColumns`; check `docs/spec.md` and `docs/design/design-analysis.md` §a for wording that names `db.table` and align it
-- [ ] T053 Run `pnpm bench` and save the "after" numbers next to T002's in `specs/040-db-schema-model/quickstart-results.md` (expected unchanged)
-- [ ] T054 Run quickstart §3 in the app (`pnpm dev`): import `full.sododeck.json`, screenshot the JSON panel showing `dialect`, `enums`, a table's `columns` and an edge's `fromColumns`; confirm Packs and Add; export and diff; note results in `quickstart-results.md`
-- [ ] T055 Run the definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; fix anything red; confirm no `.only` / `.skip` and no tool names added (grep the diff)
-- [ ] T056 Final report in `quickstart-results.md` and the PR description: what changed, what was skipped, what is uncertain (e.g. S15 needed or not, key-order handling of `DbIndexPart`), and the proposed next step (041)
+- [x] T053 Run `pnpm bench` and save the "after" numbers next to T002's in `specs/040-db-schema-model/quickstart-results.md` (expected unchanged)
+- [x] T054 Run quickstart §3 in the app (`pnpm dev`): import `full.sododeck.json`, screenshot the JSON panel showing `dialect`, `enums`, a table's `columns` and an edge's `fromColumns`; confirm Packs and Add; export and diff; note results in `quickstart-results.md`
+- [x] T055 Run the definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; fix anything red; confirm no `.only` / `.skip` and no tool names added (grep the diff)
+- [x] T056 Final report in `quickstart-results.md` and the PR description: what changed, what was skipped, what is uncertain (e.g. S15 needed or not, key-order handling of `DbIndexPart`), and the proposed next step (041)
 
 ---
 
