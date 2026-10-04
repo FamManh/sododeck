@@ -14,6 +14,7 @@ import { NODE_GRID, resolveViews, viewNodePosition } from '@sododeck/model';
 import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sododeck/schema';
 
 import { setCardFieldDeck } from '../card-fields';
+import { setTableDeck } from '../table-keys';
 import { flowCountByNode, viewFilter } from '../view-filter';
 
 export interface ViewRender {
@@ -261,6 +262,8 @@ export function viewStateOf(
 ): ViewState {
   // Card heights follow the typed fields this deck shows (032); every geometry helper reads them.
   setCardFieldDeck(file);
+  // Table heights follow the deck's display settings, keys and enums (041), read the same way.
+  setTableDeck(file);
   let byView = states.get(file);
   const cached = byView?.get(currentViewId);
   if (cached?.revealed === revealed) return cached.state;

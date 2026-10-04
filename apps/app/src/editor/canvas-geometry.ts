@@ -14,6 +14,8 @@ import {
   type CardFieldView,
 } from './card-fields';
 import { SHAPE_MAX, shapeLayout } from './shapes/shape-layout';
+import { currentTableContext, type TableContext } from './table-keys';
+import { cachedTableLayout, TABLE_CARD, type TableLayout } from './table-layout';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -109,7 +111,22 @@ export function nodeSize(_level?: Level): NodeSize {
 export type SizedNode = Partial<
   Pick<
     Node,
-    'size' | 'title' | 'tech' | 'tags' | 'type' | 'display' | 'id' | 'host' | 'owner' | 'values'
+    | 'size'
+    | 'title'
+    | 'tech'
+    | 'tags'
+    | 'type'
+    | 'display'
+    | 'id'
+    | 'host'
+    | 'owner'
+    | 'values'
+    // A table's body (041).
+    | 'description'
+    | 'schema'
+    | 'columns'
+    | 'indexes'
+    | 'detail'
   >
 >;
 
@@ -126,8 +143,19 @@ export type SizeLimits = {
   readonly step: number;
 };
 
-/** Resize limits of a node: a shape's own minimum (031 R1), else the card limits. */
+/**
+ * A table's width range (041): its height always follows its content, so the height limits only
+ * keep a resize gesture from refusing; the stored height is ignored when drawing.
+ */
+export const TABLE_SIZE_LIMITS: SizeLimits = {
+  min: { width: 160, height: CARD_SIZE_LIMITS.min.height },
+  max: { width: CARD_SIZE_LIMITS.max.width, height: 4000 },
+  step: CARD_SIZE_LIMITS.step,
+};
+
+/** Resize limits of a node: a shape's own minimum (031 R1), a table's, else the card limits. */
 export function sizeLimitsOf(node: SizedNode): SizeLimits {
+  if (node.type === 'db-table') return TABLE_SIZE_LIMITS;
   const min =
     node.type === undefined
       ? undefined
@@ -144,6 +172,8 @@ export function sizeLimitsOf(node: SizedNode): SizeLimits {
  * same box. The same at every zoom level.
  */
 export function cardLayoutOf(node: SizedNode, extra: CardExtra = {}): CardLayout {
+  // A table's box comes from its rows (041): its detail and the deck's toggles, never the zoom.
+  if (node.type === 'db-table') return tableCardLayout(node, extra.table);
   // A shape keeps its own box and draws only its title (031).
   const geometry = geometryOf(node);
   if (geometry !== null) return shapeLayout(geometry, node);
@@ -168,8 +198,39 @@ export function cardLayoutOf(node: SizedNode, extra: CardExtra = {}): CardLayout
   });
 }
 
+/** A table node's layout (041), from the deck set by `setTableDeck` unless a context is given. */
+export function tableLayoutOf(node: SizedNode, context?: TableContext): TableLayout {
+  const width = clamp(
+    node.size?.width ?? TABLE_CARD.width,
+    TABLE_SIZE_LIMITS.min.width,
+    TABLE_SIZE_LIMITS.max.width,
+  );
+  return cachedTableLayout(
+    { ...node, title: node.title ?? '' },
+    context ?? currentTableContext(),
+    width,
+  );
+}
+
+function tableCardLayout(node: SizedNode, context: TableContext | undefined): CardLayout {
+  const table = tableLayoutOf(node, context);
+  return {
+    width: table.width,
+    height: table.height,
+    titleLines: 1,
+    titleCut: table.titleCut,
+    descriptionLines: table.noteLines.length,
+    tagRows: 0,
+    fieldsHeight: 0,
+    hasChildrenRow: false,
+    table,
+  };
+}
+
 /** What a view adds to a card's content: its own subtitle field, the "n inside" row, its fields. */
 export interface CardExtra {
+  /** The deck context of a table (041); defaults to the deck set by `setTableDeck`. */
+  table?: TableContext | undefined;
   description?: string | undefined;
   childCount?: number | undefined;
   /** The card's typed fields (032); defaults to `currentFieldView(node)`. */

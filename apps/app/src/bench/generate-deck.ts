@@ -192,6 +192,8 @@ export function generateBenchDeck(
     shapes?: boolean;
     /** 038: every card gets a catalog icon, round-robin over the lucide set. */
     icons?: boolean;
+    /** 041: the first n nodes become 12-column tables with foreign keys and one enum. */
+    tables?: number;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -259,6 +261,7 @@ export function generateBenchDeck(
       ...(shape ? { style: { shape } } : {}),
     });
   }
+  if ((options.tables ?? 0) > 0) addBenchTables(nodes, edges, options.tables ?? 0);
   if (options.routes === true) addBenchRoutes(edges);
   if (options.animated === true) addBenchAnimated(edges);
   if (options.bends === true) addBenchBends(edges);
@@ -270,6 +273,7 @@ export function generateBenchDeck(
       ? { packs: [...NEW_DECK_PACKS] }
       : {}),
     ...(options.fields === true ? BENCH_FIELD_DEFS : {}),
+    ...((options.tables ?? 0) > 0 ? { packs: [...NEW_DECK_PACKS], enums: [BENCH_ENUM] } : {}),
     nodes,
     edges,
   };
@@ -278,6 +282,73 @@ export function generateBenchDeck(
   if (options.flows === true) addBenchFlows(deck, random);
   if (options.views === true) addBenchViews(deck, random);
   return { deck };
+}
+
+/** 041: the one deck enum every bench table's `status` column names. */
+const BENCH_ENUM = {
+  id: 'bench-status',
+  name: 'bench_status',
+  color: 'violet' as const,
+  values: ['pending', 'paid', 'shipped', 'cancelled'].map((name) => ({
+    id: `bench-status-${name}`,
+    name,
+  })),
+};
+
+/** 041 R14: the eight plain columns after `id`, two foreign keys and `status`. */
+const BENCH_PLAIN_COLUMNS = [
+  ['number', 'text'],
+  ['total_cents', 'int'],
+  ['currency', 'char'],
+  ['note', 'text'],
+  ['paid_at', 'timestamptz'],
+  ['shipped_at', 'timestamptz'],
+  ['created_at', 'timestamptz'],
+  ['updated_at', 'timestamptz'],
+] as const;
+
+/**
+ * 041 R14: the first `count` nodes become `db-table` cards with 12 columns (1 PK, 2 FK, 1 enum, 8
+ * plain), spaced for their height. The first two edges leaving a table for another table carry its
+ * foreign keys (`n-1`, FK column → the other table's PK).
+ */
+function addBenchTables(
+  nodes: SododeckFile['nodes'],
+  edges: SododeckFile['edges'],
+  count: number,
+): void {
+  const tables = new Set<string>();
+  const columns = Math.max(1, Math.ceil(Math.sqrt(nodes.length * 1.25)));
+  nodes.slice(0, count).forEach((node, i) => {
+    tables.add(node.id);
+    node.type = 'db-table';
+    node.title = `table_${String(i)}`;
+    node.position = { x: (i % columns) * 300, y: Math.floor(i / columns) * 420 };
+    node.columns = [
+      { id: `${node.id}-id`, name: 'id', type: 'uuid', pk: true },
+      { id: `${node.id}-fk0`, name: 'owner_id', type: 'uuid', notNull: true },
+      { id: `${node.id}-fk1`, name: 'parent_id', type: 'uuid' },
+      { id: `${node.id}-status`, name: 'status', type: 'bench_status', enumRef: BENCH_ENUM.id },
+      ...BENCH_PLAIN_COLUMNS.map(([name, type], k) => ({
+        id: `${node.id}-c${String(k)}`,
+        name,
+        type,
+        ...(k % 3 === 0 ? {} : { notNull: true }),
+        ...(k === 0 ? { unique: true } : {}),
+      })),
+    ];
+    node.indexes = [{ id: `${node.id}-ix`, columns: [`${node.id}-fk0`] }];
+  });
+  const used = new Map<string, number>();
+  for (const edge of edges) {
+    if (!tables.has(edge.from) || !tables.has(edge.to)) continue;
+    const k = used.get(edge.from) ?? 0;
+    if (k >= 2) continue;
+    used.set(edge.from, k + 1);
+    edge.fromColumns = [`${edge.from}-fk${String(k)}`];
+    edge.toColumns = [`${edge.to}-id`];
+    edge.cardinality = 'n-1';
+  }
 }
 
 /** 022 R11: the first 200 edges run moving dashes, every other one dashed. */

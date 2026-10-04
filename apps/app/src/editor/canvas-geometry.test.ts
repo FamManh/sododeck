@@ -19,7 +19,11 @@ import {
   nodeSize,
   rectInView,
   selectionFrame,
+  sizeLimitsOf,
+  TABLE_SIZE_LIMITS,
 } from './canvas-geometry';
+import { setTableDeck, tableContextOf } from './table-keys';
+import { TABLE_CARD } from './table-layout';
 
 const deck = (patch: Partial<SododeckFile>): SododeckFile => ({ ...emptySododeckFile(), ...patch });
 
@@ -104,6 +108,50 @@ describe('cardSize (017 R2/R3)', () => {
       width: CARD_SIZE_LIMITS.min.width,
       height: CARD_SIZE_LIMITS.max.height,
     });
+  });
+});
+
+describe('table cards (041 R1, R2)', () => {
+  const columns = Array.from({ length: 12 }, (_, i) => ({
+    id: `c${String(i)}`,
+    name: `col_${String(i)}`,
+    type: 'int',
+    ...(i === 0 ? { pk: true } : {}),
+  }));
+  const table = { id: 't', type: 'db-table', title: 'orders', columns };
+  const file = deck({ nodes: [table] });
+
+  it('keeps one size at every zoom level, 240 wide, height from the rows', () => {
+    const ctx = tableContextOf(file);
+    const sizes = (['landscape', 'system', 'container', 'component'] as const).map((level) =>
+      cardSize(table, level, { table: ctx }),
+    );
+    for (const size of sizes) expect(size).toEqual(sizes[0]);
+    expect(sizes[0]?.width).toBe(TABLE_CARD.width);
+    expect(sizes[0]?.height).toBe(62 + 8 + 12 * 24 + 8);
+  });
+
+  it('follows the table detail and the deck toggles, not the stored height', () => {
+    const ctx = tableContextOf(file);
+    const all = cardSize(table, 'system', { table: ctx }).height;
+    expect(cardSize({ ...table, detail: 'keys' }, 'system', { table: ctx }).height).toBeLessThan(
+      all,
+    );
+    const keysDeck = tableContextOf(deck({ nodes: [table], tableDisplay: { detail: 'keys' } }));
+    expect(cardSize(table, 'system', { table: keysDeck }).height).toBeLessThan(all);
+    const sized = { ...table, size: { width: 320, height: 48 } };
+    expect(cardSize(sized, 'system', { table: ctx })).toEqual({ width: 320, height: all });
+  });
+
+  it('reads the deck set by setTableDeck when no context is given', () => {
+    setTableDeck(deck({ nodes: [table], tableDisplay: { detail: 'names' } }));
+    expect(cardSize(table).height).toBe(62 + 8 + 24 + 8);
+    setTableDeck(file);
+    expect(cardSize(table).height).toBe(62 + 8 + 12 * 24 + 8);
+  });
+
+  it('resizes in width only', () => {
+    expect(sizeLimitsOf(table)).toBe(TABLE_SIZE_LIMITS);
   });
 });
 

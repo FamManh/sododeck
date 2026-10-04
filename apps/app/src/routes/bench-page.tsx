@@ -497,6 +497,7 @@ export function BenchPage() {
   const bends = params.get('bends') === '1';
   const shapes = params.get('shapes') === '1';
   const icons = params.get('icons') === '1';
+  const tables = Math.max(0, Number(params.get('tables') ?? 0) || 0);
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -527,6 +528,7 @@ export function BenchPage() {
         bends,
         shapes,
         icons,
+        tables,
       }).deck,
     );
   });

@@ -236,3 +236,26 @@ describe('generateBenchDeck shapes option (031)', () => {
     );
   });
 });
+
+describe('generateBenchDeck 041 tables', () => {
+  it('turns the first n nodes into 12-column tables with foreign keys and one enum', () => {
+    const { deck } = generateBenchDeck(150, 300, 42, { tables: 150 });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.nodes.every((n) => n.type === 'db-table' && n.columns?.length === 12)).toBe(true);
+    const first = deck.nodes[0];
+    expect(first?.columns?.filter((c) => c.pk === true)).toHaveLength(1);
+    expect(first?.columns?.filter((c) => c.enumRef === 'bench-status')).toHaveLength(1);
+    expect(deck.enums?.map((e) => e.id)).toEqual(['bench-status']);
+    const relationships = deck.edges.filter((e) => e.cardinality === 'n-1');
+    expect(relationships.length).toBeGreaterThan(100);
+    const byTable = new Map<string, number>();
+    for (const e of relationships) byTable.set(e.from, (byTable.get(e.from) ?? 0) + 1);
+    expect(Math.max(...byTable.values())).toBeLessThanOrEqual(2);
+  });
+
+  it('keeps the other nodes as cards when n is smaller', () => {
+    const { deck } = generateBenchDeck(20, 30, 42, { tables: 5 });
+    expect(deck.nodes.filter((n) => n.type === 'db-table')).toHaveLength(5);
+    expect(deck.edges.length).toBe(generateBenchDeck(20, 30, 42).deck.edges.length);
+  });
+});
