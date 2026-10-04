@@ -1,14 +1,5 @@
+import { slug } from '../../lib/slug';
 import type { ExportFormat } from './types';
-
-function slug(value: string | undefined): string {
-  return (value ?? '')
-    .normalize('NFC')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 80)
-    .replace(/-$/g, '');
-}
 
 export function exportFileName(
   deckName: string | undefined,

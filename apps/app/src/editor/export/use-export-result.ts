@@ -2,6 +2,8 @@ import type { SododeckFile } from '@sododeck/schema';
 import { EMBEDDED_FONT_CSS } from '@sododeck/ui/lib/embedded-fonts';
 import { useEffect, type Dispatch } from 'react';
 
+import { schemaExport, schemaFileName } from '../../db/export/schema-export';
+import type { SchemaExportRequest } from '../../db/export/types';
 import type { ExportAction, ExportDialogState, ExportResult } from './export-dialog-state';
 import { exportFileName, formatBytes } from './export-file-name';
 import { ensureFontsLoaded } from './export-fonts';
@@ -11,7 +13,7 @@ import { largestScale, pngSize } from './png-size';
 import { renderSvg } from './render-svg';
 import { buildScene, type SceneInput } from './scene';
 import { canvasMeasurer, fixedWidthMeasurer } from './text-measure';
-import type { PngScale } from './types';
+import { isSchemaFormat, type PngScale } from './types';
 
 type ExportUi = SceneInput['ui'];
 
@@ -28,6 +30,17 @@ function snapshotId(deck: SododeckFile): number {
   return id;
 }
 
+/**
+ * A schema format's request as the dialog resolved it (045): table ids of the scope, the dialect
+ * and the SQL options; `dialect: null` with `needsDialect` is SQL of a Generic deck still waiting.
+ */
+export interface SchemaRequest {
+  request: SchemaExportRequest;
+  /** The database card's title, for the file name. */
+  scopeTitle: string | null;
+  needsDialect: boolean;
+}
+
 /** What one generation depends on, besides the deck and the UI values. */
 export interface ExportRequest {
   format: ExportDialogState['format'];
@@ -35,9 +48,14 @@ export interface ExportRequest {
   json: ExportDialogState['options']['json'];
   transparent: boolean;
   retryCount: number;
+  /** Set for schema formats only. */
+  schema: SchemaRequest | null;
 }
 
-export function exportRequest(state: ExportDialogState): ExportRequest {
+export function exportRequest(
+  state: ExportDialogState,
+  schema: SchemaRequest | null = null,
+): ExportRequest {
   const { format, imageScope, options, retryCount } = state;
   return {
     format,
@@ -45,6 +63,7 @@ export function exportRequest(state: ExportDialogState): ExportRequest {
     json: options.json,
     transparent: format === 'png' ? options.png.transparent : options.svg.transparent,
     retryCount,
+    schema: isSchemaFormat(format) ? schema : null,
   };
 }
 
@@ -59,14 +78,12 @@ export function exportRequestKey(request: ExportRequest, deck: SododeckFile, ui:
     imageScope === 'deck'
       ? null
       : [ui.currentViewId, [...ui.revealed].sort(), ui.drill, ui.activeFlowId, ui.notesDisplay];
-  return JSON.stringify([
-    snapshotId(deck),
-    format,
-    format === 'json'
+  const settings = isSchemaFormat(format)
+    ? request.schema
+    : format === 'json'
       ? request.json
-      : [imageScope, request.transparent, scopeUi, ui.labelsOn === true],
-    request.retryCount,
-  ]);
+      : [imageScope, request.transparent, scopeUi, ui.labelsOn === true];
+  return JSON.stringify([snapshotId(deck), format, settings, request.retryCount]);
 }
 
 export function pngSizeHint(bounds: { width: number; height: number }, scale: PngScale): string {
@@ -82,7 +99,21 @@ function jsonResult(deck: SododeckFile, options: ExportDialogState['options']['j
     text,
     svg: null,
     bounds: null,
+    notes: [],
   } satisfies ExportResult;
+}
+
+function schemaResult(deck: SododeckFile, schema: SchemaRequest): ExportResult | 'empty' {
+  const { text, notes, tableCount } = schemaExport(deck, schema.request);
+  if (tableCount === 0) return 'empty';
+  return {
+    fileName: schemaFileName(deck, schema.request, schema.scopeTitle),
+    sizeHint: formatBytes(new TextEncoder().encode(text).byteLength),
+    text,
+    svg: null,
+    bounds: null,
+    notes,
+  };
 }
 
 /**
@@ -95,13 +126,23 @@ export function useExportResult(
   deck: SododeckFile,
   ui: ExportUi,
 ): void {
-  const { format, imageScope, json, transparent, retryCount } = request;
+  const { format, imageScope, json, transparent, retryCount, schema } = request;
   useEffect(() => {
-    const key = exportRequestKey({ format, imageScope, json, transparent, retryCount }, deck, ui);
+    const key = exportRequestKey(
+      { format, imageScope, json, transparent, retryCount, schema },
+      deck,
+      ui,
+    );
     let cancelled = false;
     dispatch({ type: 'preparing', key });
+    if (schema?.needsDialect === true) {
+      dispatch({ type: 'settled', key, result: 'needs-dialect' });
+      return;
+    }
     const generate = async (): Promise<ExportResult | 'empty'> => {
       if (format === 'json') return jsonResult(deck, json);
+      // Text built on the main thread: < 50 ms for 150 tables (045 research R2, perf test).
+      if (schema !== null) return schemaResult(deck, schema);
       await ensureFontsLoaded();
       const scene = buildScene({ deck, scope: imageScope, ui });
       if (scene.bounds.width === 0 || scene.bounds.height === 0) return 'empty';
@@ -123,6 +164,7 @@ export function useExportResult(
         text: format === 'svg' ? svg : null,
         svg,
         bounds: { width: scene.bounds.width, height: scene.bounds.height },
+        notes: [],
       };
     };
     const timer = window.setTimeout(() => {
@@ -144,5 +186,5 @@ export function useExportResult(
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [deck, ui, format, imageScope, json, transparent, retryCount, dispatch]);
+  }, [deck, ui, format, imageScope, json, transparent, retryCount, schema, dispatch]);
 }

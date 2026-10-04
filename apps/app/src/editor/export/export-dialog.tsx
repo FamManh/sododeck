@@ -7,14 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@sododeck/ui/components/dialog';
-import { RadioGroup, RadioGroupItem } from '@sododeck/ui/components/radio-group';
+import { RadioGroup } from '@sododeck/ui/components/radio-group';
+import { deckDialect } from '@sododeck/model';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
-import { Switch } from '@sododeck/ui/components/switch';
 import { useToast } from '@sododeck/ui/components/toast';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Download, FileText } from 'lucide-react';
-import { useEffect, useId, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { copyText } from '../../lib/clipboard';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
@@ -23,60 +22,45 @@ import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { downloadBlob, downloadText } from '../../storage/download';
 import { focusCanvas } from '../canvas-actions';
 import { useSaveControls } from '../save-context';
+import {
+  availableSchemaScopes,
+  defaultSchemaScope,
+  tablesInScope,
+  type SchemaScopes,
+} from '../../db/export/scope';
+import { dialectName, isSqlDialect } from '../../db/export/schema-slice';
+import type { SchemaScopeRequest } from '../../db/export/types';
+import { DisabledReason } from './disabled-reason';
+import { FormatGroup } from './format-group';
 import { exportReducer, initialExportState, type ExportResult } from './export-dialog-state';
-import { FORMATS } from './formats';
+import { IMAGE_AND_DATA_FORMATS, SCHEMA_FORMATS, sqlSubtitle } from './formats';
+import { OptionSwitch } from './option-switch';
 import { scaleAllowed } from './png-size';
 import { rasterize } from './rasterize';
-import type { ExportFormat, ImageScope, PngScale } from './types';
-import { exportRequest, exportRequestKey, pngSizeHint, useExportResult } from './use-export-result';
+import { SchemaExportPanel } from './schema-export-panel';
+import {
+  isSchemaFormat,
+  type ExportFormat,
+  type ImageScope,
+  type PngScale,
+  type SchemaScope,
+} from './types';
+import {
+  exportRequest,
+  exportRequestKey,
+  pngSizeHint,
+  useExportResult,
+  type SchemaRequest,
+} from './use-export-result';
 
 const JSON_PREVIEW_LINES = 400;
 const FLOW_DELETED = 'The flow was deleted, so the whole deck is shown.';
 const FAILED = "Couldn't create this export";
 
 /**
- * A disabled segmented item with the reason as a tooltip (hover) and as its description
- * (screen readers). Disabled radios cannot take focus, so the reason is not keyboard-reachable
- * as a tooltip; the description carries it instead.
- */
-function DisabledReason({ reason, children }: { reason: string | null; children: ReactNode }) {
-  const id = useId();
-  if (reason === null) return children;
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex h-full w-full" aria-describedby={id}>
-          {children}
-          <span id={id} className="sr-only">
-            {reason}
-          </span>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{reason}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function OptionSwitch({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-3 text-body-sm text-ink">
-      <Switch checked={checked} onCheckedChange={onChange} />
-      {label}
-    </label>
-  );
-}
-
-/**
  * The Export dialog (012, ADR 0016): JSON of the whole deck, or a PNG / SVG picture of the
- * whole deck, the current view or the shown flow. It only reads the deck; nothing is uploaded.
+ * whole deck, the current view or the shown flow; and, when the deck has tables, its schema as
+ * SQL, DBML, Mermaid ER or a data dictionary (045). It only reads the deck; nothing is uploaded.
  */
 export function ExportDialog() {
   const editor = useEditor();
@@ -86,12 +70,20 @@ export function ExportDialog() {
   const announceLive = useUiStore((s) => s.announce);
   const { markExported } = useSaveControls();
   const { toast } = useToast();
+  const selectedNodes = useUiStore((s) => s.selection.nodes);
+  const drill = useUiStore((s) => s.drill);
+  const scopes: SchemaScopes = useMemo(
+    () => availableSchemaScopes(deck, { selection: selectedNodes, drill }),
+    [deck, selectedNodes, drill],
+  );
   const [state, dispatch] = useReducer(exportReducer, undefined, () =>
-    initialExportState({ flowMode: isFlowMode(useUiStore.getState()) }),
+    initialExportState({
+      flowMode: isFlowMode(useUiStore.getState()),
+      schemaScope: defaultSchemaScope(scopes),
+    }),
   );
   const currentViewId = useUiStore((s) => s.currentViewId);
   const revealed = useUiStore((s) => s.revealed);
-  const drill = useUiStore((s) => s.drill);
   const activeFlowId = useUiStore((s) => s.activeFlow?.flowId ?? null);
   const notesDisplay = useUiStore((s) => s.notesDisplay);
   const labelsOn = useUiStore((s) => s.labelsOn);
@@ -99,7 +91,35 @@ export function ExportDialog() {
     () => ({ currentViewId, revealed, drill, activeFlowId, notesDisplay, labelsOn }),
     [currentViewId, revealed, drill, activeFlowId, notesDisplay, labelsOn],
   );
-  const request = exportRequest(state);
+  const dialect = deckDialect(deck);
+  // The chosen schema scope, or the first available one when it no longer is (FR-002).
+  const schemaScope: SchemaScope =
+    (state.schemaScope === 'selection' && scopes.selection.length === 0) ||
+    (state.schemaScope === 'database' && scopes.database === null)
+      ? defaultSchemaScope(scopes)
+      : state.schemaScope;
+  const schemaFormat = isSchemaFormat(state.format) ? state.format : null;
+  const schema: SchemaRequest | null = useMemo(() => {
+    if (schemaFormat === null) return null;
+    const scope: SchemaScopeRequest =
+      schemaScope === 'selection'
+        ? { kind: 'selection', tableIds: scopes.selection }
+        : schemaScope === 'database' && scopes.database !== null
+          ? { kind: 'database', cardId: scopes.database.cardId }
+          : { kind: 'deck' };
+    const generic = !isSqlDialect(dialect);
+    return {
+      request: {
+        format: schemaFormat,
+        scope,
+        dialect: generic ? state.sqlDialect : null,
+        sql: state.options.sql,
+      },
+      scopeTitle: scope.kind === 'database' ? (scopes.database?.title ?? null) : null,
+      needsDialect: schemaFormat === 'sql' && generic && state.sqlDialect === null,
+    };
+  }, [schemaFormat, schemaScope, scopes, dialect, state.sqlDialect, state.options.sql]);
+  const request = exportRequest(state, schema);
   useExportResult(request, dispatch, deck, ui);
   const key = exportRequestKey(request, deck, ui);
   const ready: ExportResult | null =
@@ -176,7 +196,11 @@ export function ExportDialog() {
       downloadText(
         ready.fileName,
         ready.text,
-        state.format === 'svg' ? 'image/svg+xml' : 'application/json',
+        state.format === 'svg'
+          ? 'image/svg+xml'
+          : schemaFormat !== null
+            ? 'text/plain'
+            : 'application/json',
       );
       // Only a JSON file is a backup (005's "last export").
       if (state.format === 'json') markExported();
@@ -185,6 +209,12 @@ export function ExportDialog() {
   };
 
   const isJson = state.format === 'json';
+  const scopeName =
+    schemaScope === 'selection'
+      ? 'the selection'
+      : schemaScope === 'database'
+        ? (scopes.database?.title ?? 'the database')
+        : 'the deck';
   const flowReason = state.flowAvailable ? null : 'Open a flow to export it';
 
   return (
@@ -215,194 +245,209 @@ export function ExportDialog() {
             <RadioGroup
               aria-label="Format"
               value={state.format}
-              className="gap-2"
+              className="gap-4"
               onValueChange={(value) => {
                 dispatch({ type: 'format', format: value as ExportFormat });
               }}
             >
-              {FORMATS.map(({ id, label, subtitle, icon: Icon }) => (
-                <div
-                  key={id}
-                  className={cn(
-                    'rounded-row border p-3',
-                    state.format === id ? 'border-primary bg-primary-soft' : 'border-border',
+              {scopes.deckHasTables && (
+                <FormatGroup
+                  label="Schema"
+                  formats={SCHEMA_FORMATS.map((f) =>
+                    f.id === 'sql'
+                      ? {
+                          ...f,
+                          subtitle: sqlSubtitle(
+                            isSqlDialect(dialect) ? dialectName(dialect) : null,
+                          ),
+                        }
+                      : f,
                   )}
-                >
-                  <RadioGroupItem
-                    ref={state.format === id ? checkedFormat : undefined}
-                    value={id}
-                    aria-label={label}
-                    aria-describedby={`export-format-${id}`}
-                    label={
-                      <span className="flex items-center gap-2 font-medium">
-                        <Icon aria-hidden className="size-4 text-ink-secondary" />
-                        {label}
-                      </span>
-                    }
-                  />
-                  <p
-                    id={`export-format-${id}`}
-                    className="mt-1 pl-6 text-caption text-ink-secondary"
-                  >
-                    {subtitle}
-                  </p>
-                </div>
-              ))}
+                  checked={state.format}
+                  checkedRef={checkedFormat}
+                />
+              )}
+              <FormatGroup
+                label="Image and data"
+                formats={IMAGE_AND_DATA_FORMATS}
+                checked={state.format}
+                checkedRef={checkedFormat}
+              />
             </RadioGroup>
           </div>
           <div className="flex min-w-0 flex-col gap-4 p-5">
-            <section className="flex flex-col gap-2">
-              <h3
-                id="export-scope-heading"
-                className="text-micro font-medium tracking-[0.07em] text-ink-muted uppercase"
-              >
-                Scope
-              </h3>
-              <SegmentedControl
-                aria-labelledby="export-scope-heading"
-                aria-describedby={isJson ? 'export-scope-note' : undefined}
-                value={isJson ? 'deck' : state.imageScope}
-                disabled={isJson}
-                className="grid h-9 w-full grid-cols-3"
-                onValueChange={(value) => {
-                  dispatch({ type: 'scope', scope: value as ImageScope });
-                }}
-              >
-                <SegmentedControlItem value="deck" className="w-full">
-                  Whole deck
-                </SegmentedControlItem>
-                <SegmentedControlItem value="view" className="w-full">
-                  Current view
-                </SegmentedControlItem>
-                <DisabledReason reason={isJson ? null : flowReason}>
-                  <SegmentedControlItem
-                    value="flow"
-                    className="w-full"
-                    disabled={!state.flowAvailable}
+            {schemaFormat !== null ? (
+              <SchemaExportPanel
+                deck={deck}
+                state={state}
+                dispatch={dispatch}
+                scopes={scopes}
+                scope={schemaScope}
+                scopeName={scopeName}
+                tableIds={schema === null ? [] : tablesInScope(deck, schema.request.scope)}
+                dialect={dialect}
+                status={status}
+                ready={ready}
+              />
+            ) : (
+              <>
+                <section className="flex flex-col gap-2">
+                  <h3
+                    id="export-scope-heading"
+                    className="text-micro font-medium tracking-[0.07em] text-ink-muted uppercase"
                   >
-                    Selected flow
-                  </SegmentedControlItem>
-                </DisabledReason>
-              </SegmentedControl>
-              {isJson && (
-                <p id="export-scope-note" className="text-caption text-ink-secondary">
-                  JSON always contains the whole deck
-                </p>
-              )}
-              {!isJson && state.scopeNote === 'flow-deleted' && (
-                <p className="text-caption text-ink-secondary">{FLOW_DELETED}</p>
-              )}
-            </section>
-            <div
-              role="region"
-              aria-label="Preview"
-              className="flex h-62.5 min-w-0 flex-col overflow-auto rounded-row border border-hairline bg-canvas"
-            >
-              {status === 'error' && (
-                <div className="m-auto flex flex-col items-center gap-2 text-body-sm text-ink-secondary">
-                  <p>{FAILED}</p>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      dispatch({ type: 'retry' });
-                    }}
-                  >
-                    Retry
-                  </Button>
-                </div>
-              )}
-              {status === 'empty' && (
-                <p className="m-auto text-body-sm text-ink-secondary">Nothing to export yet</p>
-              )}
-              {jsonPreview !== null && (
-                <pre className="p-3 font-mono text-caption whitespace-pre text-ink">
-                  {jsonPreview}
-                </pre>
-              )}
-              {!isJson && previewSrc !== null && ready !== null && (
-                <img
-                  src={previewSrc}
-                  alt={`Preview of ${ready.fileName}`}
-                  className="size-full object-contain p-3"
-                />
-              )}
-              <p
-                role="status"
-                aria-live="polite"
-                className={cn(busy ? 'm-auto text-body-sm text-ink-secondary' : 'sr-only')}
-              >
-                {busy ? 'Preparing…' : ''}
-              </p>
-            </div>
-            <section className="flex flex-col gap-3" aria-label="Options">
-              {isJson && (
-                <>
-                  <OptionSwitch
-                    label="Include descriptions, links and rules"
-                    checked={state.options.json.includeKnowledge}
-                    onChange={(value) => {
-                      dispatch({ type: 'option', options: { json: { includeKnowledge: value } } });
-                    }}
-                  />
-                  <OptionSwitch
-                    label="Pretty-print"
-                    checked={state.options.json.pretty}
-                    onChange={(value) => {
-                      dispatch({ type: 'option', options: { json: { pretty: value } } });
-                    }}
-                  />
-                </>
-              )}
-              {state.format === 'png' && (
-                <div className="flex items-center justify-between gap-3 text-body-sm text-ink">
-                  <span id="export-scale-label">Scale</span>
+                    Scope
+                  </h3>
                   <SegmentedControl
-                    aria-labelledby="export-scale-label"
-                    value={String(scale)}
+                    aria-labelledby="export-scope-heading"
+                    aria-describedby={isJson ? 'export-scope-note' : undefined}
+                    value={isJson ? 'deck' : state.imageScope}
+                    disabled={isJson}
+                    className="grid h-9 w-full grid-cols-3"
                     onValueChange={(value) => {
-                      dispatch({
-                        type: 'option',
-                        options: { png: { scale: Number(value) as PngScale } },
-                      });
+                      dispatch({ type: 'scope', scope: value as ImageScope });
                     }}
                   >
-                    {([1, 2, 3] as const).map((option) => {
-                      const tooLarge = bounds !== null && !scaleAllowed(bounds, option);
-                      return (
-                        <DisabledReason
-                          key={option}
-                          reason={tooLarge ? 'Too large for this browser' : null}
-                        >
-                          <SegmentedControlItem value={String(option)} disabled={tooLarge}>
-                            {option}×
-                          </SegmentedControlItem>
-                        </DisabledReason>
-                      );
-                    })}
+                    <SegmentedControlItem value="deck" className="w-full">
+                      Whole deck
+                    </SegmentedControlItem>
+                    <SegmentedControlItem value="view" className="w-full">
+                      Current view
+                    </SegmentedControlItem>
+                    <DisabledReason reason={isJson ? null : flowReason}>
+                      <SegmentedControlItem
+                        value="flow"
+                        className="w-full"
+                        disabled={!state.flowAvailable}
+                      >
+                        Selected flow
+                      </SegmentedControlItem>
+                    </DisabledReason>
                   </SegmentedControl>
+                  {isJson && (
+                    <p id="export-scope-note" className="text-caption text-ink-secondary">
+                      JSON always contains the whole deck
+                    </p>
+                  )}
+                  {!isJson && state.scopeNote === 'flow-deleted' && (
+                    <p className="text-caption text-ink-secondary">{FLOW_DELETED}</p>
+                  )}
+                </section>
+                <div
+                  role="region"
+                  aria-label="Preview"
+                  className="flex h-62.5 min-w-0 flex-col overflow-auto rounded-row border border-hairline bg-canvas"
+                >
+                  {status === 'error' && (
+                    <div className="m-auto flex flex-col items-center gap-2 text-body-sm text-ink-secondary">
+                      <p>{FAILED}</p>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          dispatch({ type: 'retry' });
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  )}
+                  {status === 'empty' && (
+                    <p className="m-auto text-body-sm text-ink-secondary">Nothing to export yet</p>
+                  )}
+                  {jsonPreview !== null && (
+                    <pre className="p-3 font-mono text-caption whitespace-pre text-ink">
+                      {jsonPreview}
+                    </pre>
+                  )}
+                  {!isJson && previewSrc !== null && ready !== null && (
+                    <img
+                      src={previewSrc}
+                      alt={`Preview of ${ready.fileName}`}
+                      className="size-full object-contain p-3"
+                    />
+                  )}
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className={cn(busy ? 'm-auto text-body-sm text-ink-secondary' : 'sr-only')}
+                  >
+                    {busy ? 'Preparing…' : ''}
+                  </p>
                 </div>
-              )}
-              {!isJson && (
-                <OptionSwitch
-                  label="Transparent background"
-                  checked={
-                    state.format === 'png'
-                      ? state.options.png.transparent
-                      : state.options.svg.transparent
-                  }
-                  onChange={(value) => {
-                    dispatch({
-                      type: 'option',
-                      options:
+                <section className="flex flex-col gap-3" aria-label="Options">
+                  {isJson && (
+                    <>
+                      <OptionSwitch
+                        label="Include descriptions, links and rules"
+                        checked={state.options.json.includeKnowledge}
+                        onChange={(value) => {
+                          dispatch({
+                            type: 'option',
+                            options: { json: { includeKnowledge: value } },
+                          });
+                        }}
+                      />
+                      <OptionSwitch
+                        label="Pretty-print"
+                        checked={state.options.json.pretty}
+                        onChange={(value) => {
+                          dispatch({ type: 'option', options: { json: { pretty: value } } });
+                        }}
+                      />
+                    </>
+                  )}
+                  {state.format === 'png' && (
+                    <div className="flex items-center justify-between gap-3 text-body-sm text-ink">
+                      <span id="export-scale-label">Scale</span>
+                      <SegmentedControl
+                        aria-labelledby="export-scale-label"
+                        value={String(scale)}
+                        onValueChange={(value) => {
+                          dispatch({
+                            type: 'option',
+                            options: { png: { scale: Number(value) as PngScale } },
+                          });
+                        }}
+                      >
+                        {([1, 2, 3] as const).map((option) => {
+                          const tooLarge = bounds !== null && !scaleAllowed(bounds, option);
+                          return (
+                            <DisabledReason
+                              key={option}
+                              reason={tooLarge ? 'Too large for this browser' : null}
+                            >
+                              <SegmentedControlItem value={String(option)} disabled={tooLarge}>
+                                {option}×
+                              </SegmentedControlItem>
+                            </DisabledReason>
+                          );
+                        })}
+                      </SegmentedControl>
+                    </div>
+                  )}
+                  {!isJson && (
+                    <OptionSwitch
+                      label="Transparent background"
+                      checked={
                         state.format === 'png'
-                          ? { png: { transparent: value } }
-                          : { svg: { transparent: value } },
-                    });
-                  }}
-                />
-              )}
-            </section>
+                          ? state.options.png.transparent
+                          : state.options.svg.transparent
+                      }
+                      onChange={(value) => {
+                        dispatch({
+                          type: 'option',
+                          options:
+                            state.format === 'png'
+                              ? { png: { transparent: value } }
+                              : { svg: { transparent: value } },
+                        });
+                      }}
+                    />
+                  )}
+                </section>
+              </>
+            )}
           </div>
         </div>
         <DialogFooter className="flex-nowrap border-t border-hairline px-6 py-4">

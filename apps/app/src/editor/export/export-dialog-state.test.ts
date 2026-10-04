@@ -8,6 +8,7 @@ const result: ExportResult = {
   text: '<svg/>',
   svg: '<svg/>',
   bounds: { width: 100, height: 50 },
+  notes: [],
 };
 
 describe('export dialog state', () => {
@@ -19,7 +20,13 @@ describe('export dialog state', () => {
       json: { includeKnowledge: true, pretty: true },
       png: { scale: 2, transparent: false },
       svg: { transparent: false },
+      sql: { enumsAndIndexes: true, junctionTables: true, ifNotExists: false },
     });
+    expect(ordinary.schemaScope).toBe('deck');
+    expect(ordinary.sqlDialect).toBeNull();
+    expect(initialExportState({ flowMode: false, schemaScope: 'database' }).schemaScope).toBe(
+      'database',
+    );
     const flow = initialExportState({ flowMode: true });
     expect(flow.format).toBe('png');
     expect(flow.imageScope).toBe('flow');
@@ -57,5 +64,41 @@ describe('export dialog state', () => {
     });
     state = exportReducer(state, { type: 'clampScale', max: 1 });
     expect(state.options.png).toEqual({ scale: 1, transparent: true });
+  });
+
+  it('merges SQL options without touching the other formats (045)', () => {
+    const before = initialExportState({ flowMode: false });
+    const after = exportReducer(before, {
+      type: 'option',
+      options: { sql: { ifNotExists: true } },
+    });
+    expect(after.options.sql).toEqual({
+      enumsAndIndexes: true,
+      junctionTables: true,
+      ifNotExists: true,
+    });
+    expect(after.options.json).toBe(before.options.json);
+    expect(after.options.png).toBe(before.options.png);
+  });
+
+  it('keeps the schema scope and the picked dialect across format switches (045)', () => {
+    let state = initialExportState({ flowMode: false });
+    state = exportReducer(state, { type: 'format', format: 'sql' });
+    state = exportReducer(state, { type: 'sqlDialect', dialect: 'mysql' });
+    state = exportReducer(state, { type: 'schemaScope', scope: 'selection' });
+    state = exportReducer(state, { type: 'format', format: 'png' });
+    state = exportReducer(state, { type: 'format', format: 'sql' });
+    expect(state.sqlDialect).toBe('mysql');
+    expect(state.schemaScope).toBe('selection');
+    expect(state.imageScope).toBe('deck');
+  });
+
+  it('settles a SQL request that waits for a dialect', () => {
+    let state = exportReducer(initialExportState({ flowMode: false }), {
+      type: 'preparing',
+      key: 'k',
+    });
+    state = exportReducer(state, { type: 'settled', key: 'k', result: 'needs-dialect' });
+    expect(state.result).toEqual({ status: 'needs-dialect', key: 'k' });
   });
 });
