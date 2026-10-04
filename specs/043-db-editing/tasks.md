@@ -333,14 +333,14 @@
 
 ## Phase 10: Polish & Cross-Cutting
 
-- [ ] T052 [P] Compare the screens against frames 160, 149, 136, 168 and 161 (editing and locked states) in light and dark at 100 %. Save screenshots for the report. Fix any token or spacing drift.
-- [ ] T053 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` and save `specs/043-db-editing/bench-after.md`. The result must stay within 5 % of bench-before.
-- [ ] T054 [P] Docs:
+- [x] T052 [P] Compare the screens against frames 160, 149, 136, 168 and 161 (editing and locked states) in light and dark at 100 %. Save screenshots for the report. Fix any token or spacing drift.
+- [x] T053 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` and save `specs/043-db-editing/bench-after.md`. The result must stay within 5 % of bench-before.
+- [x] T054 [P] Docs:
   - Amend `docs/decisions/0029-database-pack-model.md` with a "Lock" section (a generic node flag, `true` only).
   - Update `packages/schema/CLAUDE.md`, `packages/model/CLAUDE.md` (`setLocked`, the paste result) and `apps/app/CLAUDE.md` (the column line module, row editing state).
   - Update `DESIGN.md` "Database pack" if the grip or the (!) icon values changed.
-- [ ] T055 [P] Update `docs/backlog-database.md`: mark 043 as split. Its status is "canvas editing built (spec `specs/043-db-editing`)". Add a new drawer feature entry (table tabs, relationship drawer, enum editor with the Enum tile and "Add enum", dialect type lists and conversion, Deck settings Database section) with dependencies and a `/speckit.specify` prompt. Update the dependency graph.
-- [ ] T056 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Walk through quickstart.md steps 1–12. Commit in small conventional commits (`feat(schema)`, `feat(model)`, `feat(app)`, `docs`). Open the PR with the report (what changed, what was skipped, uncertainties, bench numbers).
+- [x] T055 [P] Update `docs/backlog-database.md`: mark 043 as split. Its status is "canvas editing built (spec `specs/043-db-editing`)". Add a new drawer feature entry (table tabs, relationship drawer, enum editor with the Enum tile and "Add enum", dialect type lists and conversion, Deck settings Database section) with dependencies and a `/speckit.specify` prompt. Update the dependency graph.
+- [x] T056 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Walk through quickstart.md steps 1–12. Commit in small conventional commits (`feat(schema)`, `feat(model)`, `feat(app)`, `docs`). Open the PR with the report (what changed, what was skipped, uncertainties, bench numbers).
 
 ---
 
