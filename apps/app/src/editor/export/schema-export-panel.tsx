@@ -1,4 +1,3 @@
-import type { Problem } from '@sododeck/model';
 import type { Dialect } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
@@ -9,7 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sododeck/ui/components/select';
-import { CircleX, Database } from 'lucide-react';
+import { cn } from '@sododeck/ui/lib/utils';
+import { CircleX, Database, TriangleAlert } from 'lucide-react';
 import { useId, useMemo, useState, type Dispatch } from 'react';
 
 import type { SchemaScopes } from '../../db/export/scope';
@@ -19,6 +19,7 @@ import { useUiStore } from '../../state/ui-store';
 import { DisabledReason } from './disabled-reason';
 import type { ExportAction, ExportDialogState, ExportResult } from './export-dialog-state';
 import { OptionSwitch } from './option-switch';
+import type { SchemaProblems } from './schema-problems';
 import type { SchemaScope } from './types';
 
 const PREVIEW_LINES = 400;
@@ -53,6 +54,63 @@ function TextPreview({ text }: { text: string }) {
   );
 }
 
+/** "n errors · n warnings in <scope>", errors first; clay while any error, amber for warnings only. */
+function ProblemsBanner({
+  problems,
+  scopeName,
+  blocked,
+}: {
+  problems: SchemaProblems;
+  scopeName: string;
+  blocked: boolean;
+}) {
+  const closeExport = useUiStore((s) => s.closeExport);
+  const openFlyout = useUiStore((s) => s.openFlyout);
+  const { errors, warnings } = problems;
+  const hasErrors = errors.length > 0;
+  const counts = [
+    errors.length > 0 ? plural(errors.length, 'error') : null,
+    warnings.length > 0 ? plural(warnings.length, 'warning') : null,
+  ]
+    .filter((part) => part !== null)
+    .join(' · ');
+  const Icon = hasErrors ? CircleX : TriangleAlert;
+  return (
+    <div
+      id={SQL_BLOCKED_BANNER_ID}
+      role="alert"
+      className={cn(
+        'flex items-start gap-2.5 rounded-banner px-3.5 py-3 text-body-sm',
+        hasErrors ? 'bg-clay-soft text-clay-ink' : 'bg-amber-soft text-amber-ink',
+      )}
+    >
+      <Icon aria-hidden className="mt-0.5 size-4 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">
+          {`${counts} in ${scopeName}`}
+          {blocked ? ' · fix the errors to export SQL' : ''}
+        </p>
+        <p>
+          {[...errors, ...warnings]
+            .slice(0, 2)
+            .map((p) => p.detail)
+            .join(' · ')}
+        </p>
+      </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => {
+          closeExport();
+          openFlyout('problems');
+        }}
+      >
+        Show problems
+      </Button>
+    </div>
+  );
+}
+
 /**
  * The right column of the export dialog for schema formats (045, contracts/export-dialog-ui.md):
  * scope, dialect chip or picker, problems banner, line-numbered preview, export notes and the SQL
@@ -78,7 +136,7 @@ export function SchemaExportPanel({
   /** "the selection", the card's title or "the deck", for the banner. */
   scopeName: string;
   /** The database problems on the tables in scope (`schemaProblems`). */
-  problems: readonly Problem[];
+  problems: SchemaProblems;
   /** SQL Copy and Download are disabled by the deck's "Block SQL export with errors" (052). */
   blocked: boolean;
   dialect: Dialect;
@@ -88,8 +146,6 @@ export function SchemaExportPanel({
   const scopeHeading = useId();
   const notesHeading = useId();
   const [allNotes, setAllNotes] = useState(false);
-  const closeExport = useUiStore((s) => s.closeExport);
-  const openFlyout = useUiStore((s) => s.openFlyout);
   const isSql = state.format === 'sql';
   const notes = ready?.notes ?? [];
   const shownNotes = allNotes ? notes : notes.slice(0, NOTES_SHOWN);
@@ -162,37 +218,8 @@ export function SchemaExportPanel({
             </div>
           ))}
       </section>
-      {problems.length > 0 && (
-        <div
-          id={SQL_BLOCKED_BANNER_ID}
-          role="alert"
-          className="flex items-start gap-2.5 rounded-banner bg-clay-soft px-3.5 py-3 text-body-sm text-clay-ink"
-        >
-          <CircleX aria-hidden className="mt-0.5 size-4 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="font-medium">
-              {blocked
-                ? `${String(problems.length)} errors in ${scopeName} · fix them to export SQL`
-                : `${plural(problems.length, 'error')} in ${scopeName}`}
-            </p>
-            <p>
-              {problems
-                .slice(0, 2)
-                .map((p) => p.detail)
-                .join(' · ')}
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              closeExport();
-              openFlyout('problems');
-            }}
-          >
-            Show problems
-          </Button>
-        </div>
+      {problems.errors.length + problems.warnings.length > 0 && (
+        <ProblemsBanner problems={problems} scopeName={scopeName} blocked={blocked} />
       )}
       <div
         role="region"

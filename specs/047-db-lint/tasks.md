@@ -116,11 +116,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T029 [P] [US3] Extend `apps/app/src/editor/export/export-dialog.test.tsx` and the schema export panel test: banner "n errors · n warnings in <scope>" with errors listed first; with the block switch on, a warning-only scope exports SQL and an in-scope error disables Copy and Download; out-of-scope problems are not counted.
+- [x] T029 [P] [US3] Extend `apps/app/src/editor/export/export-dialog.test.tsx` and the schema export panel test: banner "n errors · n warnings in <scope>" with errors listed first; with the block switch on, a warning-only scope exports SQL and an in-scope error disables Copy and Download; out-of-scope problems are not counted.
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Make `apps/app/src/editor/export/schema-problems.ts` return `{ errors, warnings }` (remove `TODO(047)`), use `errors.length > 0` for `sqlBlocked` in `export-dialog.tsx`, and render both counts in `schema-export-panel.tsx`. T029 is green.
+- [x] T030 [US3] Make `apps/app/src/editor/export/schema-problems.ts` return `{ errors, warnings }` (remove `TODO(047)`), use `errors.length > 0` for `sqlBlocked` in `export-dialog.tsx`, and render both counts in `schema-export-panel.tsx`. T029 is green.
 
 **Checkpoint**: all stories work.
 

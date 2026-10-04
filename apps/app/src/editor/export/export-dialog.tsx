@@ -135,7 +135,8 @@ export function ExportDialog() {
   );
   const problems = schemaProblems(useProblems(), tableIds, deck);
   // 052: the deck's switch refuses SQL while the scope has database errors; other formats export.
-  const sqlBlocked = deck.blockSqlExport === true && schemaFormat === 'sql' && problems.length > 0;
+  const sqlBlocked =
+    deck.blockSqlExport === true && schemaFormat === 'sql' && problems.errors.length > 0;
   const request = exportRequest(state, schema);
   useExportResult(request, dispatch, deck, ui);
   const key = exportRequestKey(request, deck, ui);
