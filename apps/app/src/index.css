@@ -118,6 +118,19 @@
     var(--shadow-float);
 }
 
+/* ⌥ duplicate-drag (051 R2): the original rests at its start (React Flow still marks it
+   `.dragging`) and the copy, which moves, carries the lift. */
+[data-duplicating] .react-flow__node.dragging .sd-card {
+  --tw-shadow: 0 var(--sd-deck-lip) 0 0
+    var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+}
+
+.react-flow__node.sd-drag-copy .sd-card {
+  --tw-shadow:
+    0 var(--sd-deck-lip-drag) 0 0 var(--card-lip, var(--card-stroke, var(--color-border-strong))),
+    var(--shadow-float);
+}
+
 /* The highlighted neighbour in focus mode (not the focus card itself): Secondary border and lip,
    still at full opacity. */
 .react-flow__node.sd-focus-neighbour .sd-card {
@@ -216,6 +229,14 @@
 }
 
 .react-flow__node.dragging .sd-shape-lip {
+  transform: translateY(var(--sd-deck-lip-drag));
+}
+
+[data-duplicating] .react-flow__node.dragging .sd-shape-lip {
+  transform: translateY(var(--sd-deck-lip));
+}
+
+.react-flow__node.sd-drag-copy .sd-shape-lip {
   transform: translateY(var(--sd-deck-lip-drag));
 }
 

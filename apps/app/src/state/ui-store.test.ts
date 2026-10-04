@@ -189,6 +189,20 @@ describe('ui store', () => {
       expect(state().fannedBundles.size).toBe(0);
     });
 
+    it('holds the duplicate-drag copies until cleared or a view switch (051)', () => {
+      expect(state().dragCopyIds.size).toBe(0);
+      state().setDragCopyIds(['n9', 'g9']);
+      expect([...state().dragCopyIds]).toEqual(['n9', 'g9']);
+      state().clearDragCopyIds();
+      expect(state().dragCopyIds.size).toBe(0);
+      const empty = state().dragCopyIds;
+      state().clearDragCopyIds();
+      expect(state().dragCopyIds).toBe(empty);
+      state().setDragCopyIds(['n9']);
+      state().switchView('v2');
+      expect(state().dragCopyIds.size).toBe(0);
+    });
+
     it('keeps the same set when pruning or folding removes nothing', () => {
       state().toggleBundleFan('bundle:a|b');
       const before = state().fannedBundles;

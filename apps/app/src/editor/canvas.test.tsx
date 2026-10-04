@@ -838,6 +838,8 @@ describe('canvas handlers', () => {
       });
       act(() => {
         h().onNodeDragStart({}, flowNode('a'));
+        // ⌥ is held while dragging: the copy appears during the drag (051 US2).
+        h().onNodeDrag(click({ altKey: true, clientX: 0, clientY: 0 }));
         h().onNodesChange([
           { type: 'position', id: 'a', position: { x: 2000, y: 1400 }, dragging: true },
           { type: 'position', id: 'b', position: { x: 2300, y: 1400 }, dragging: true },
@@ -862,6 +864,27 @@ describe('canvas handlers', () => {
       expect(toJSON(doc).nodes).toHaveLength(4);
       expect(toJSON(doc).nodes[0]?.position).toEqual({ x: 0, y: 0 });
       expect(editor().canUndo()).toBe(false);
+    });
+
+    it('lifts the copy, not the original, while duplicating (051 C2)', () => {
+      const { container } = renderWithEditor(<Canvas />, deck);
+      const wrapper = container.querySelector('[data-canvas]');
+      expect(wrapper).not.toHaveAttribute('data-duplicating');
+      act(() => {
+        ui().setDragCopyIds(['b']);
+      });
+      expect(wrapper).toHaveAttribute('data-duplicating');
+      expect(container.querySelector('.react-flow__node[data-id="b"]')).toHaveClass('sd-drag-copy');
+      expect(container.querySelector('.react-flow__node[data-id="a"]')).not.toHaveClass(
+        'sd-drag-copy',
+      );
+      act(() => {
+        ui().clearDragCopyIds();
+      });
+      expect(wrapper).not.toHaveAttribute('data-duplicating');
+      expect(container.querySelector('.react-flow__node[data-id="b"]')).not.toHaveClass(
+        'sd-drag-copy',
+      );
     });
 
     it('moves as usual without ⌥', () => {

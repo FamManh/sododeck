@@ -477,9 +477,9 @@ export function useCanvasHandlers() {
         );
       },
       onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
-        // ⌥ copies, otherwise the pointer decides membership (016 FR-009, FR-018).
+        // Copies made with ⌥ stay (051), otherwise the pointer decides membership (016 FR-018).
         if (controller.dragging) {
-          controller.stop(event);
+          controller.stop(event !== undefined && 'clientX' in event ? event : undefined);
         }
         if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
         endGesture();

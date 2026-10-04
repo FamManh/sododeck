@@ -111,7 +111,7 @@
 
 ### Tests for User Story 2 (write first, watch them fail)
 
-- [ ] T013 [P] [US2] In `apps/app/src/editor/canvas.test.tsx`, describe "⌥-drag duplicates (016 FR-009)" (:773-840), add failing cases from C2:
+- [x] T013 [P] [US2] In `apps/app/src/editor/canvas.test.tsx`, describe "⌥-drag duplicates (016 FR-009)" (:773-840), add failing cases from C2:
   - **(a)** past the threshold with ⌥, before release, the original's doc position equals its start and a second node with the same title exists;
   - **(b)** the canvas wrapper has `data-duplicating` during the drag;
   - **(c)** after drop, one `undo` leaves exactly the original at its start;
@@ -120,7 +120,7 @@
   - **(f)** pressing ⌥ during a plain drag snaps the original back and creates the copy, and releasing ⌥ before drop removes it, leaving a plain move;
   - **(g)** three selected cards give three copies, and the edges between them are copied;
   - **(h)** a group frame ⌥-drag copies the group with its members.
-- [ ] T014 [P] [US2] Add unit tests for the session mode switch in `apps/app/src/editor/editing/drag-session.test.ts` (create it if absent; use a fake `editor` that records calls). Cover:
+- [x] T014 [P] [US2] Add unit tests for the session mode switch in `apps/app/src/editor/editing/drag-session.test.ts` (create it if absent; use a fake `editor` that records calls). Cover:
   - `move → duplicate` calls `pasteFragment` once and resets the originals;
   - `duplicate → move` removes exactly the copy ids;
   - repeated `pointer()` frames in duplicate mode never paste again;
@@ -128,8 +128,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add `dragCopyIds: ReadonlySet<string>` (default empty) with `setDragCopyIds` / `clearDragCopyIds` to `apps/app/src/state/ui-store.ts`, cleared in the same places `hoverFocus` is reset (deck, view and drill switches). Add store tests in `apps/app/src/state/ui-store.test.ts`.
-- [ ] T016 [US2] In `apps/app/src/editor/editing/drag-session.ts`, add `mode: 'move' | 'duplicate'` and `copies: { ids: string[]; map: Map<string, string> } | null` to the session (data-model.md).
+- [x] T015 [US2] Add `dragCopyIds: ReadonlySet<string>` (default empty) with `setDragCopyIds` / `clearDragCopyIds` to `apps/app/src/state/ui-store.ts`, cleared in the same places `hoverFocus` is reset (deck, view and drill switches). Add store tests in `apps/app/src/state/ui-store.test.ts`.
+- [x] T016 [US2] In `apps/app/src/editor/editing/drag-session.ts`, add `mode: 'move' | 'duplicate'` and `copies: { ids: string[]; map: Map<string, string> } | null` to the session (data-model.md).
   - **Enter duplicate**: when the threshold is passed with ⌥ held, or ⌥ goes down mid-drag (`onKey`, `pointer()`):
     - write the originals back to `session.start` and their frames;
     - `editor.pasteFragment(selectionFragment(...), { offset: 0, parent: commonParent })` at the current dragged positions;
@@ -137,15 +137,15 @@
     - call `setDragCopyIds`.
   - **Leave duplicate** (⌥ up): remove the copies with the editor's delete op for those ids, switch `apply()` back to the originals at the current delta, and clear `dragCopyIds`.
   - Everything happens inside the already-open `beginGesture()`.
-- [ ] T017 [US2] In the same file:
+- [x] T017 [US2] In the same file:
   - **`stop()`**: in duplicate mode, `endGesture()`, select the copies and announce "Duplicated n components". Remove `duplicateOnDrop()` (:526-540) and the release-event ⌥ override (:440).
   - **`cancel()`** and a new window `blur` listener (added in `begin()`, removed on every exit): `cancelGesture()` and `clearDragCopyIds()`.
   - The ⌥ "no group" drop target is unchanged.
-- [ ] T018 [US2] In `apps/app/src/editor/deck-to-flow.ts`, add the class `sd-drag-copy` to nodes and group nodes whose id is in `view.dragCopyIds`. Thread it from `canvas.tsx` like the other view fields, and include it in the cache key. In `apps/app/src/editor/canvas.tsx`, set `data-duplicating` on the wrapper while `dragCopyIds.size > 0`.
-- [ ] T019 [US2] In `apps/app/src/index.css`, under `[data-duplicating]`:
+- [x] T018 [US2] In `apps/app/src/editor/deck-to-flow.ts`, add the class `sd-drag-copy` to nodes and group nodes whose id is in `view.dragCopyIds`. Thread it from `canvas.tsx` like the other view fields, and include it in the cache key. In `apps/app/src/editor/canvas.tsx`, set `data-duplicating` on the wrapper while `dragCopyIds.size > 0`.
+- [x] T019 [US2] In `apps/app/src/index.css`, under `[data-duplicating]`:
   - remove the lift from `.react-flow__node.dragging .sd-card` / `.sd-shape-art` (the original sits at rest);
   - apply the drag lift (lip `--sd-deck-lip-drag` and the Float shadow) to `.react-flow__node.sd-drag-copy .sd-card` / `.sd-shape-art`.
-- [ ] T020 [US2] Check `apps/app/src/editor/editing/gesture-hints.ts` (:13-24). The hint text ("⌥ Duplicate / No group") still matches; adjust only if a test shows otherwise.
+- [x] T020 [US2] Check `apps/app/src/editor/editing/gesture-hints.ts` (:13-24). The hint text ("⌥ Duplicate / No group") still matches; adjust only if a test shows otherwise.
 
 **Checkpoint**: T013–T014 are green, and the existing 016 duplicate tests still pass.
 

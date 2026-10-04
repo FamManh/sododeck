@@ -483,6 +483,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const collapsedMarks = useMemo(() => collapseFlowMarks(overlay, graph), [overlay, graph]);
   const problems = problemMarks(useProblems());
   const stylePreview = useUiStore((s) => s.stylePreview);
+  // The copies of an ⌥ duplicate-drag carry the drag lift (051 R2).
+  const dragCopyIds = useUiStore((s) => s.dragCopyIds);
   const scopeTitle = useMemo(
     () => (drill.length === 0 ? undefined : drillScopeTitle(deck, drill, '')),
     [deck, drill],
@@ -500,6 +502,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       render,
       problems,
       stylePreview,
+      dragCopyIds,
     }),
     [
       scopeTitle,
@@ -513,6 +516,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       render,
       problems,
       stylePreview,
+      dragCopyIds,
     ],
   );
 
@@ -669,6 +673,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       {...(hideUi ? { 'data-hide-ui': '' } : {})}
       {...(hand ? { 'data-tool-hand': '' } : {})}
       {...(dragging ? { 'data-dragging': '' } : {})}
+      {...(dragCopyIds.size > 0 ? { 'data-duplicating': '' } : {})}
       {...(tinyCards ? { 'data-tiny-cards': '' } : {})}
       {...(lipless ? { 'data-lipless': '' } : {})}
       data-level={level}
