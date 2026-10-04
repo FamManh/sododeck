@@ -2,10 +2,12 @@ import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import {
+  createDeckSnapshot,
   createEditor,
   DeckEditError,
   deckDialect,
   fromJSON,
+  observeDeck,
   serializeDeck,
   toJSON,
   type DeckEditor,
@@ -418,5 +420,56 @@ describe('enums (040 US6)', () => {
     refused(deck, 'not-found', () => {
       editor.updateEnumValue('e-status', 'gone', { name: 'x' });
     });
+  });
+});
+
+describe('change events and the snapshot (040)', () => {
+  it('keeps the incremental snapshot equal to toJSON through every database op', () => {
+    const { editor, doc } = setup();
+    const snapshot = createDeckSnapshot(doc);
+    const steps: (() => unknown)[] = [
+      () => editor.addColumn('orders', { name: 'note', type: 'text' }),
+      () => {
+        editor.updateColumn('orders', 'o-total', { name: 'amount', notNull: true });
+      },
+      () => {
+        editor.moveColumn('orders', 'o-total', 0);
+      },
+      () => editor.addIndex('orders', { columns: ['o-id'] }),
+      () => editor.removeColumn('items', 'i-order'),
+      () => editor.addEnum({ name: 'mood', values: [{ name: 'ok' }] }),
+      () => {
+        editor.updateEnumValue('e-status', 'ev-active', { name: 'enabled' });
+      },
+      () => editor.removeEnum('e-status'),
+      () => {
+        editor.setDialect(null);
+      },
+      () => {
+        editor.update('edges', 'r-cat-parent', { cardinality: 'n-1' });
+      },
+    ];
+    for (const step of steps) {
+      step();
+      expect(snapshot.get()).toEqual(toJSON(doc));
+    }
+    snapshot.destroy();
+  });
+
+  it('reports a column edit as an update of the table, and enum edits as meta', () => {
+    const { editor, doc } = setup();
+    const seen: string[] = [];
+    const stop = observeDeck(doc, ({ changes }) => {
+      for (const c of changes) seen.push(`${c.scope}:${c.id}:${c.kind}:${c.keys.join(',')}`);
+    });
+    editor.updateColumn('orders', 'o-total', { name: 'amount' });
+    editor.updateEnumValue('e-status', 'ev-active', { name: 'enabled' });
+    editor.setDialect('mysql');
+    stop();
+    expect(seen).toEqual([
+      'nodes:orders:updated:columns',
+      'meta::updated:enums',
+      'meta::updated:dialect',
+    ]);
   });
 });
