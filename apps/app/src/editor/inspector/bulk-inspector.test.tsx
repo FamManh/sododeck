@@ -1,9 +1,14 @@
 import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { inspectorDeck } from '../../test/inspector-fixtures';
+import { useUiStore } from '../../state/ui-store';
+import { InspectorView } from '../../test/inspector-view';
 import { renderInspector } from '../../test/render-inspector';
+import { renderWithEditor } from '../../test/render-canvas';
+import { SelectionToolbar } from '../quick-edit/selection-toolbar';
 
 /** Pricing (Orders, critical+pci, core), Payment (Payments, critical), Dispatch (Dispatch, core). */
 const setup = (edges: string[] = []) =>
@@ -236,5 +241,37 @@ describe('BulkInspector typed fields (032 FR-016)', () => {
     expect(within(list).queryByRole('combobox', { name: 'Zone' })).not.toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Owner on card' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add field' })).not.toBeInTheDocument();
+  });
+});
+
+describe('BulkInspector and icons (038 T030)', () => {
+  it('has no icon entry: multi-select icon changes go through the toolbar and menu', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: 'Change icon' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Icon')).not.toBeInTheDocument();
+  });
+
+  it('the toolbar picker with the bulk drawer open applies to every selected card in one step', async () => {
+    const env = renderWithEditor(
+      <>
+        <InspectorView />
+        <SelectionToolbar />
+      </>,
+      inspectorDeck,
+    );
+    const user = userEvent.setup();
+    act(() => {
+      useUiStore.getState().select({ nodes: ['p', 'y', 'd'] });
+    });
+    expect(screen.getByRole('heading', { name: '3 components selected' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Icon' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Choose icon' });
+    expect(within(dialog).getByText('Changes 3 cards')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Zap' }));
+    expect(nodes(env.doc).map((n) => n.icon)).toEqual(['lucide:zap', 'lucide:zap', 'lucide:zap']);
+    act(() => {
+      env.editor().undo();
+    });
+    expect(nodes(env.doc).map((n) => n.icon)).toEqual([undefined, undefined, undefined]);
   });
 });
