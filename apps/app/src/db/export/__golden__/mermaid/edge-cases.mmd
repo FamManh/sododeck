@@ -1,0 +1,77 @@
+erDiagram
+  a {
+    int id PK
+    int b_id FK
+  }
+  b {
+    int id PK
+    int a_id FK
+  }
+  categories {
+    int id PK
+  }
+  keyless {
+    int v
+  }
+  misc {
+    int id PK
+    text blank
+    empty_choice empty_choice
+    text code
+    json data
+    money price
+    varchar label
+    bool flag
+  }
+  notes {
+    int id PK
+  }
+  order {
+    int id PK
+    int UserId
+  }
+  order_items["order items"] {
+    int id PK
+    int order_id FK
+    text line_note "line note; Quotes ' and ' and -- dashes"
+  }
+  pair_refs {
+    int id PK
+    int x FK
+    int a_id FK
+  }
+  pairs {
+    int x PK
+    int y PK
+  }
+  products {
+    int id PK
+  }
+  products_categories {
+    int id PK
+  }
+  stale {
+    int id PK
+    text mood
+  }
+  table_9 {
+    int id PK
+  }
+  tags {
+    int id PK
+    varchar(40) name
+  }
+  billing_ledgers["billing.ledgers"] {
+    int id PK
+    uuid account_id
+  }
+  a }|--|| b : "b_id"
+  b }|--|| a : "a_id"
+  order_items }|--|| order : "order_id"
+  pair_refs }|--|| pairs : "x"
+  pair_refs }o--|| a : "a_id"
+  pair_refs }|--|| misc : "mentions"
+  products }|--|{ categories : "id"
+  products }|--|{ keyless : "id"
+  stale }|--|| a : ""
+  tags }|--|{ tags : "related"

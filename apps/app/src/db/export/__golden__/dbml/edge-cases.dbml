@@ -1,0 +1,113 @@
+Enum empty_choice {
+}
+
+Table a {
+  id int [pk]
+  b_id int
+}
+
+Table b {
+  id int [pk]
+  a_id int
+}
+
+Table categories {
+  id int [pk]
+}
+
+Table keyless {
+  v int
+}
+
+// misc.blank has no type; written as text
+// Index method gin is not supported by DBML; misc_data_idx written without it
+Table misc {
+  id int [pk]
+  blank text
+  empty_choice empty_choice
+  code text [increment]
+  data json
+  price money
+  label varchar
+  flag bool [not null, default: false]
+
+  indexes {
+    data [name: 'misc_data_idx']
+  }
+}
+
+Table notes {
+  id int [pk]
+}
+
+Table order {
+  id int [pk]
+  UserId int
+}
+
+Table "order items" {
+  id int [pk]
+  order_id int [not null]
+  "line note" text [note: 'Quotes \' and " and -- dashes']
+}
+
+// Relationship pair_refs → pairs has 1 and 2 columns; not written
+// Relationship pair_refs → misc names no columns; not a foreign key
+Table pair_refs {
+  id int [pk]
+  x int
+  a_id int
+}
+
+Table pairs {
+  x int
+  y int
+
+  indexes {
+    (x, y) [pk]
+  }
+}
+
+// products ↔ keyless (n–n) not written: keyless has no primary key
+Table products {
+  id int [pk]
+}
+
+Table products_categories {
+  id int [pk]
+}
+
+// stale.mood uses an enum that no longer exists; written as text
+// Index stale_idx on stale names a column that no longer exists; part skipped
+// Relationship stale → a names a column that no longer exists; not written
+Table stale {
+  id int [pk]
+  mood text
+
+  indexes {
+    id [name: 'stale_idx']
+  }
+}
+
+// A table has no name; written as table_9
+Table table_9 {
+  id int [pk]
+}
+
+Table tags {
+  id int [pk]
+  name varchar(40)
+}
+
+// billing.ledgers.account_id → billing.accounts.id not written: billing.accounts not in this export
+Table billing.ledgers {
+  id int [pk]
+  account_id uuid
+}
+
+Ref: a.b_id > b.id
+Ref: b.a_id > a.id
+Ref: "order items".order_id > order.id [delete: cascade]
+Ref: pair_refs.a_id > a.id
+Ref: products.id <> categories.id
+Ref related: tags.id <> tags.id
