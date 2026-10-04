@@ -184,8 +184,12 @@ function tidy(points: readonly Point[]): Point[] {
   return merged;
 }
 
-/** Axis-aligned legs through the points; the first leg leaves along `start`, the last enters along `end`. */
-function elbowVertices(points: readonly Point[], dirs: EndDirections): Point[] {
+/**
+ * Axis-aligned legs through the points; the first leg leaves along `start`, the last enters along
+ * `end`. Exported for segment handles (050 R7), which must sit on the vertices the line is drawn
+ * through.
+ */
+export function elbowVertices(points: readonly Point[], dirs: EndDirections): Point[] {
   const first = points[0];
   if (first === undefined) return [];
   const horizontalStart = Math.abs(dirs.start.x) >= Math.abs(dirs.start.y);
