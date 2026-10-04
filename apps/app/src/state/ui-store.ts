@@ -220,6 +220,30 @@ export interface TitleEdit {
   kind?: string;
 }
 
+/**
+ * The open column line editor (043 R3): `columnId: null` is a new row inserted at `at` (a column
+ * index); otherwise that column's row is edited in place. The typed text lives in the editor.
+ */
+export interface ColumnEdit {
+  tableId: Id;
+  columnId: Id | null;
+  at?: number;
+  select: 'name' | 'all';
+}
+
+/** A row reorder by its grip (043 R6): `overIndex` is where the column would land. UI only. */
+export interface RowDrag {
+  tableId: Id;
+  columnId: Id;
+  overIndex: number;
+}
+
+/** The export dialog's first format and schema scope when an action opens it (043 R15). */
+export interface ExportSeed {
+  format: 'sql';
+  scope: 'selection';
+}
+
 /** The Add flyout's own state (030 R5): never saved, reset when the flyout closes. */
 export interface PaletteState {
   /** The search text. */
@@ -241,6 +265,8 @@ export type MenuTarget =
         'component' | 'components' | 'connection' | 'connections' | 'group' | 'sticky' | 'mixed';
       ids: Selection;
     }
+  /** A table's column row (043 R8); `ids` holds the table so table-level checks still read it. */
+  | { kind: 'row'; ids: Selection; row: ColumnRef }
   | { kind: 'canvas' };
 
 /** The open canvas menu: where it is anchored, how it was opened and who gets focus back. */
@@ -374,7 +400,7 @@ export interface UiState {
   stickyDraft: Id | null;
   canvasPointer: { x: number; y: number } | null;
   palette: { open: boolean; returnFocus: HTMLElement | null };
-  exportDialog: { open: boolean; returnFocus: HTMLElement | null };
+  exportDialog: { open: boolean; returnFocus: HTMLElement | null; seed?: ExportSeed };
   /** Roving-tabindex target on the canvas (US6). */
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
@@ -445,6 +471,10 @@ export interface UiState {
   tool: Tool;
   helpOpen: boolean;
   titleEdit: TitleEdit | null;
+  /** The open column line editor (043). */
+  columnEdit: ColumnEdit | null;
+  /** A row reorder in progress (043). */
+  rowDrag: RowDrag | null;
   contextMenu: ContextMenuState | null;
   toolbarField: ToolbarFieldId | null;
   /** The active tab in the fill/stroke picker (020). */
@@ -517,7 +547,8 @@ export interface UiState {
   setCanvasPointer: (point: { x: number; y: number } | null) => void;
   openPalette: (returnFocus?: HTMLElement | null) => void;
   closePalette: () => void;
-  openExport: (returnFocus?: HTMLElement | null) => void;
+  /** Opens the export dialog; `seed` picks its first format and scope (043 R15). */
+  openExport: (returnFocus?: HTMLElement | null, seed?: ExportSeed) => void;
   closeExport: () => void;
   focus: (id: string | null) => void;
   focusEdge: (id: string | null) => void;
@@ -619,6 +650,10 @@ export interface UiState {
   startTitleEdit: (edit: TitleEdit) => boolean;
   /** Ends the title edit; the caller has already committed or cancelled. */
   endTitleEdit: () => void;
+  /** Opens the column line editor (043), closing the menu and any toolbar popover. */
+  startColumnEdit: (edit: ColumnEdit) => boolean;
+  endColumnEdit: () => void;
+  setRowDrag: (drag: RowDrag | null) => void;
   openContextMenu: (
     menu: Omit<ContextMenuState, 'returnFocus'> & { returnFocus?: HTMLElement | null },
   ) => void;
@@ -672,6 +707,23 @@ export function isFlowMode(state: Pick<UiState, 'activeFlow' | 'flowSession'>): 
 }
 
 export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], groups: [], stickies: [] };
+
+/**
+ * The table in row editing (043 R4, FR-010a): row focus, an open line editor or a row drag. The
+ * view projection shows it at All until this goes back to null; nothing is written.
+ */
+export function rowEditTableId(
+  state: Pick<UiState, 'focusedRow' | 'columnEdit' | 'rowDrag'>,
+): Id | null {
+  return state.columnEdit?.tableId ?? state.rowDrag?.tableId ?? state.focusedRow?.tableId ?? null;
+}
+
+/** Where a new-row editor inserts its extra row (043 R3), or null. */
+export function newRowAt(state: Pick<UiState, 'columnEdit'>): number | null {
+  const edit = state.columnEdit;
+  // No `at` means the end: the layout clamps the index to the row count.
+  return edit === null || edit.columnId !== null ? null : (edit.at ?? Number.MAX_SAFE_INTEGER);
+}
 
 const NO_MODES: Readonly<Record<string, DescriptionMode>> = {};
 const NO_IDS: ReadonlySet<Id> = new Set();
@@ -810,6 +862,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     tool: 'select',
     helpOpen: false,
     titleEdit: null,
+    columnEdit: null,
+    rowDrag: null,
     contextMenu: null,
     toolbarField: null,
     stylePickerTab: 'fill',
@@ -901,6 +955,10 @@ export const useUiStore = create<UiState>()((set, get) => {
           !(edit.target === 'node' ? existing.nodes : existing.groups).has(edit.id)
         )
           patch.titleEdit = null;
+        if (state.columnEdit !== null && !existing.nodes.has(state.columnEdit.tableId))
+          patch.columnEdit = null;
+        if (state.rowDrag !== null && !existing.nodes.has(state.rowDrag.tableId))
+          patch.rowDrag = null;
         const menu = state.contextMenu?.target;
         if (
           menu !== undefined &&
@@ -918,6 +976,8 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({
         currentViewId: id,
         titleEdit: null,
+        columnEdit: null,
+        rowDrag: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1009,8 +1069,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     closePalette: () => {
       set({ palette: { open: false, returnFocus: null } });
     },
-    openExport: (returnFocus = null) => {
-      set({ exportDialog: { open: true, returnFocus } });
+    openExport: (returnFocus = null, seed) => {
+      set({ exportDialog: { open: true, returnFocus, ...(seed === undefined ? {} : { seed }) } });
     },
     closeExport: () => {
       set({ exportDialog: { open: false, returnFocus: null } });
@@ -1076,6 +1136,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         activeFlow: openedFlow(flowId, stepId, alternativeId),
         lastPlayedFlowId: null,
         titleEdit: null,
+        columnEdit: null,
+        rowDrag: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1140,6 +1202,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         activeFlow: null,
         titleEdit: null,
+        columnEdit: null,
+        rowDrag: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1169,6 +1233,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         activeFlow: openedFlow(flowId),
         focusMode: false,
         titleEdit: null,
+        columnEdit: null,
+        rowDrag: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1368,6 +1434,18 @@ export const useUiStore = create<UiState>()((set, get) => {
     endTitleEdit: () => {
       set({ titleEdit: null });
     },
+    startColumnEdit: (columnEdit) => {
+      const state = get();
+      if (isFlowMode(state) || state.flowSession !== null) return false;
+      set({ columnEdit, contextMenu: null, toolbarField: null });
+      return true;
+    },
+    endColumnEdit: () => {
+      if (get().columnEdit !== null) set({ columnEdit: null });
+    },
+    setRowDrag: (rowDrag) => {
+      set({ rowDrag });
+    },
     openContextMenu: ({ returnFocus = null, ...menu }) => {
       set({ contextMenu: { ...menu, returnFocus }, toolbarField: null });
     },
@@ -1478,6 +1556,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         palette: { open: false, returnFocus: null },
         exportDialog: { open: false, returnFocus: null },
         titleEdit: null,
+        columnEdit: null,
+        rowDrag: null,
         contextMenu: null,
         toolbarField: null,
         canvasGesture: null,

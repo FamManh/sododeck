@@ -88,6 +88,8 @@ export interface TableLayout {
   rows: readonly TableRow[];
   /** Columns not drawn as rows: "+n columns" at Keys, "n columns" at Names. */
   hidden: { count: number; kind: 'more' | 'all' } | undefined;
+  /** Where the new-row editor is drawn (043): its index among `rows`; later rows sit one lower. */
+  newRowIndex: number | undefined;
   /** Ids of the columns not drawn as rows (042: their relationship ends anchor on the pill). */
   hiddenIds: ReadonlySet<Id>;
   /** "1 index" / "n indexes", absent without indexes or when hidden. */
@@ -110,6 +112,18 @@ type Node = SododeckFile['nodes'][number];
 /** What `tableLayout` reads of a table node. */
 export type TableNode = Pick<Node, 'title'> &
   Partial<Pick<Node, 'id' | 'description' | 'schema' | 'columns' | 'indexes' | 'detail' | 'size'>>;
+
+const newRows = new WeakMap<TableNode, number>();
+
+/**
+ * Marks a projected table node as drawing the new-row editor before column `at` (043 R3): the
+ * card grows by one row and the rows below shift, so connectors follow. `node` must be a fresh
+ * object owned by the projection, never a document snapshot node.
+ */
+export function withNewRow<T extends TableNode>(node: T, at: number): T {
+  newRows.set(node, at);
+  return node;
+}
 
 /** A table's detail: its own choice, else the deck's; Auto draws every column (R2). */
 export function effectiveDetail(own: DbDetail | undefined, deck: DeckTableDetail): DbDetail {
@@ -212,6 +226,10 @@ export function tableLayout(
     ];
   });
 
+  const pendingAt = newRows.get(node);
+  const newRowIndex =
+    pendingAt === undefined ? undefined : Math.max(0, Math.min(rows.length, pendingAt));
+  const slots = rows.length + (newRowIndex === undefined ? 0 : 1);
   const hiddenCount = columns.length - rows.length;
   const drawn = new Set(rows.map((row) => row.columnId));
   const hiddenIds: ReadonlySet<Id> = new Set(
@@ -222,7 +240,7 @@ export function tableLayout(
       ? undefined
       : { count: hiddenCount, kind: detail === 'names' ? 'all' : 'more' };
   const indexCount = node.indexes?.length ?? 0;
-  const hasBody = columns.length > 0;
+  const hasBody = columns.length > 0 || newRowIndex !== undefined;
   const footer =
     !hasBody || display.hideIndexes || indexCount === 0
       ? undefined
@@ -243,8 +261,8 @@ export function tableLayout(
   const morePill = hidden?.kind === 'more';
   const body = hasBody
     ? t.bodyGap +
-      rows.length * t.rowHeight +
-      (morePill ? (rows.length > 0 ? t.pillGap : 0) + t.pillHeight : 0) +
+      slots * t.rowHeight +
+      (morePill ? (slots > 0 ? t.pillGap : 0) + t.pillHeight : 0) +
       (footerRow ? t.footerHeight : 0) +
       t.bottom
     : t.paddingY;
@@ -263,7 +281,7 @@ export function tableLayout(
     (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
     t.bodyGap;
   const pillTop = morePill
-    ? rowsTop + rows.length * t.rowHeight + (rows.length > 0 ? t.pillGap : 0)
+    ? rowsTop + slots * t.rowHeight + (slots > 0 ? t.pillGap : 0)
     : undefined;
 
   const schema = node.schema;
@@ -280,6 +298,7 @@ export function tableLayout(
     keySlot,
     showNullable: !display.hideNullable,
     rows,
+    newRowIndex,
     hidden,
     hiddenIds,
     footer,
@@ -296,6 +315,13 @@ export function tableLayout(
   };
 }
 
+/** The row drawn in 24 px slot `slot` under `rowsTop`, skipping the new-row editor (043). */
+export function rowAtSlot(layout: TableLayout, slot: number): TableRow | undefined {
+  if (slot < 0 || slot === layout.newRowIndex) return undefined;
+  const shifted = layout.newRowIndex !== undefined && slot > layout.newRowIndex;
+  return layout.rows[shifted ? slot - 1 : slot];
+}
+
 /** Where a relationship end meets a table: a drawn row, the "+n columns" pill, or the title. */
 export interface RowAnchor {
   /** From the card's top. */
@@ -309,8 +335,10 @@ export interface RowAnchor {
  * Pure layout arithmetic, never measured, so canvas, drag hit test and export agree.
  */
 export function rowAnchorY(layout: TableLayout, columnId: Id): RowAnchor {
-  const index = layout.rows.findIndex((row) => row.columnId === columnId);
-  if (index >= 0) {
+  const found = layout.rows.findIndex((row) => row.columnId === columnId);
+  const shifted = layout.newRowIndex !== undefined && found >= layout.newRowIndex;
+  const index = shifted ? found + 1 : found;
+  if (found >= 0) {
     return {
       y: layout.rowsTop + index * TABLE_CARD.rowHeight + TABLE_CARD.rowHeight / 2,
       kind: 'row',

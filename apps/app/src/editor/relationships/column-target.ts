@@ -10,7 +10,7 @@ import { cardBox, tableLayoutOf } from '../canvas-geometry';
 import type { Level } from '../levels';
 import type { Box, Point } from '../routing/route-path';
 import { tableContextOf } from '../table-keys';
-import { TABLE_CARD, type TableLayout } from '../table-layout';
+import { rowAtSlot, TABLE_CARD, type TableLayout } from '../table-layout';
 
 export interface TargetTable {
   id: Id;
@@ -36,7 +36,7 @@ export function columnTargetAt(
     const table = tables[i];
     if (table === undefined || !inside(table.box, point)) continue;
     const row = Math.floor((point.y - table.box.y - table.layout.rowsTop) / TABLE_CARD.rowHeight);
-    const hit = row >= 0 ? table.layout.rows[row] : undefined;
+    const hit = rowAtSlot(table.layout, row);
     if (hit !== undefined) return { tableId: table.id, columnId: hit.columnId };
     const keys = table.columns.filter((column) => column.pk === true);
     const [key] = keys;

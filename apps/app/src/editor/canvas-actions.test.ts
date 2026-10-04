@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
-import { connectColumns, connectComponents, reconnectColumnEnd } from './canvas-actions';
+import {
+  connectColumns,
+  connectComponents,
+  nextTableName,
+  reconnectColumnEnd,
+} from './canvas-actions';
 
 const deck = deckOf({
   nodes: [
@@ -233,5 +238,18 @@ describe('reconnectColumnEnd (042 FR-020, FR-021)', () => {
     expect(edge(doc, 'r')).toBeUndefined();
     editor.undo();
     expect(edge(doc, 'r')).toEqual(before);
+  });
+});
+
+describe('nextTableName (043 R12)', () => {
+  const tables = (...titles: string[]) =>
+    deckOf({
+      nodes: titles.map((title, i) => ({ id: `t${String(i)}`, type: 'db-table', title })),
+    });
+
+  it('gives the first free table_n', () => {
+    expect(nextTableName(tables())).toBe('table_1');
+    expect(nextTableName(tables('table_1', 'table_3'))).toBe('table_2');
+    expect(nextTableName(tables('TABLE_1', 'table_2'))).toBe('table_3');
   });
 });

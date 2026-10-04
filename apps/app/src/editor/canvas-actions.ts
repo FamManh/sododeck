@@ -60,6 +60,16 @@ export function addComponent(
   return id;
 }
 
+/** The first free `table_n` title among the deck's tables (043 R12), ignoring case. */
+export function nextTableName(deck: Pick<SododeckFile, 'nodes'>): string {
+  const taken = new Set(
+    deck.nodes.filter((node) => node.type === 'db-table').map((node) => node.title.toLowerCase()),
+  );
+  let n = 1;
+  while (taken.has(`table_${String(n)}`)) n += 1;
+  return `table_${String(n)}`;
+}
+
 /** Selects every component the current view shows (⌘A and the canvas menu's Select all). */
 export function selectAllComponents(editor: DeckEditor): void {
   const deck = readViewState(editor.doc).deck;

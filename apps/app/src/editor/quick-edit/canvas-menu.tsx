@@ -45,6 +45,12 @@ function menuName(ctx: ActionContext): string {
         : `Actions for ${String(stickies.length)} notes`;
     case 'mixed':
       return `Actions for ${String(nodes.length + edges.length + groups.length + stickies.length)} items`;
+    case 'row': {
+      const { tableId, columnId } = ctx.target.row;
+      const table = ctx.deck.nodes.find((n) => n.id === tableId);
+      const column = table?.columns?.find((c) => c.id === columnId);
+      return `Actions for column ${column?.name ?? ''}`;
+    }
   }
 }
 
@@ -166,7 +172,13 @@ function MenuBody({ menu }: { menu: ContextMenuState }) {
             if (!ui.titleEdit.isNew) field?.select();
             return;
           }
-          if (ui.popover !== null || ui.pendingDelete !== null || ui.stickyEditing !== null) return;
+          if (
+            ui.popover !== null ||
+            ui.pendingDelete !== null ||
+            ui.stickyEditing !== null ||
+            ui.columnEdit !== null
+          )
+            return;
           // Back to the card, connection, group or button the menu was opened from.
           const back = menu.returnFocus;
           if (back?.isConnected === true) back.focus({ preventScroll: true });

@@ -6,6 +6,8 @@ import { JSON_PANEL_KEY } from './json-panel-prefs';
 import {
   isFlowMode,
   LABELS_KEY,
+  newRowAt,
+  rowEditTableId,
   NOTES_KEY,
   readLabelsOn,
   readNotesDisplay,
@@ -45,6 +47,80 @@ describe('ui store', () => {
       expect(state().enumPopover).toBe(open);
       state().resetForDeck('other');
       expect(state().enumPopover).toBeNull();
+    });
+  });
+
+  describe('schema editing (043)', () => {
+    it('opens and closes the column line editor, closing the menu', () => {
+      state().openContextMenu({
+        target: { kind: 'canvas' },
+        point: { x: 0, y: 0 },
+        via: 'pointer',
+      });
+      expect(state().startColumnEdit({ tableId: 't', columnId: null, at: 2, select: 'name' })).toBe(
+        true,
+      );
+      expect(state().columnEdit).toEqual({ tableId: 't', columnId: null, at: 2, select: 'name' });
+      expect(state().contextMenu).toBeNull();
+      state().endColumnEdit();
+      expect(state().columnEdit).toBeNull();
+    });
+
+    it('refuses the line editor in flow mode', () => {
+      state().openFlow('f1');
+      expect(state().startColumnEdit({ tableId: 't', columnId: 'c', select: 'name' })).toBe(false);
+      expect(state().columnEdit).toBeNull();
+    });
+
+    it('derives the row-editing table from row focus, the editor or a row drag', () => {
+      expect(rowEditTableId(state())).toBeNull();
+      state().setFocusedRow({ tableId: 'a', columnId: 'c1' });
+      expect(rowEditTableId(state())).toBe('a');
+      state().setRowDrag({ tableId: 'b', columnId: 'c2', overIndex: 0 });
+      expect(rowEditTableId(state())).toBe('b');
+      state().startColumnEdit({ tableId: 'c', columnId: 'c3', select: 'name' });
+      expect(rowEditTableId(state())).toBe('c');
+      state().endColumnEdit();
+      state().setRowDrag(null);
+      state().setFocusedRow(null);
+      expect(rowEditTableId(state())).toBeNull();
+    });
+
+    it('gives the new-row index only for a new row, the end when none is given', () => {
+      state().startColumnEdit({ tableId: 't', columnId: 'c', select: 'name' });
+      expect(newRowAt(state())).toBeNull();
+      state().startColumnEdit({ tableId: 't', columnId: null, at: 1, select: 'name' });
+      expect(newRowAt(state())).toBe(1);
+      state().startColumnEdit({ tableId: 't', columnId: null, select: 'name' });
+      expect(newRowAt(state())).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it('clears the editor and the row drag with the other edits', () => {
+      state().startColumnEdit({ tableId: 't', columnId: null, at: 0, select: 'name' });
+      state().setRowDrag({ tableId: 't', columnId: 'c', overIndex: 1 });
+      state().resetForDeck('other');
+      expect(state().columnEdit).toBeNull();
+      expect(state().rowDrag).toBeNull();
+    });
+
+    it('drops the editor when its table is removed', () => {
+      state().startColumnEdit({ tableId: 't', columnId: 'c', select: 'name' });
+      state().pruneSelection({
+        nodes: new Set(),
+        edges: new Set(),
+        groups: new Set(),
+        stickies: new Set(),
+      });
+      expect(state().columnEdit).toBeNull();
+    });
+
+    it('seeds the export dialog with a format and scope', () => {
+      state().openExport(null, { format: 'sql', scope: 'selection' });
+      expect(state().exportDialog).toEqual({
+        open: true,
+        returnFocus: null,
+        seed: { format: 'sql', scope: 'selection' },
+      });
     });
   });
 

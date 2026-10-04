@@ -6,6 +6,9 @@
 import { isDbTable, tableDisplayOf, type ResolvedTableDisplay } from '@sododeck/model';
 import type { DbEnum, Id, SododeckFile } from '@sododeck/schema';
 
+import { rowKey } from './relationships/row-key';
+import { typeMismatch } from './relationships/type-mismatch';
+
 type Deck = Pick<SododeckFile, 'nodes' | 'edges'>;
 type Edge = SododeckFile['edges'][number];
 
@@ -80,6 +83,51 @@ export function connectedColumns(deck: Deck): ReadonlyMap<Id, ReadonlySet<Id>> {
   return map;
 }
 
+const EMPTY_MISMATCH: ReadonlyMap<string, string> = new Map();
+const mismatchCache = new WeakMap<
+  readonly Edge[],
+  WeakMap<Deck['nodes'], ReadonlyMap<string, string>>
+>();
+
+/**
+ * Rows at relationship ends whose types differ (043 R14, FR-010b), keyed by `rowKey`: both rows
+ * of a pair get "int → uuid · orders.customer_id" (from type → to type · the from column). Uses
+ * 042's `typeMismatch`, so the row icon and the drop warning never disagree. Composite ends are
+ * compared by position; the first relationship to flag a row wins.
+ */
+export function mismatchedColumns(deck: Deck): ReadonlyMap<string, string> {
+  const byNodes = mismatchCache.get(deck.edges);
+  const known = byNodes?.get(deck.nodes);
+  if (known !== undefined) return known;
+  const tables = new Map(deck.nodes.filter(isDbTable).map((node) => [node.id, node]));
+  let map: Map<string, string> | undefined;
+  for (const edge of deck.edges) {
+    const from = tables.get(edge.from);
+    const to = tables.get(edge.to);
+    if (from === undefined || to === undefined) continue;
+    const fromColumns = edge.fromColumns ?? [];
+    const toColumns = edge.toColumns ?? [];
+    fromColumns.forEach((fromId, i) => {
+      const toId = toColumns[i];
+      const source = from.columns?.find((column) => column.id === fromId);
+      const target = to.columns?.find((column) => column.id === toId);
+      if (toId === undefined || source === undefined || target === undefined) return;
+      const text = typeMismatch(source, target);
+      if (text === undefined) return;
+      const message = `${text} · ${from.title}.${source.name}`;
+      map ??= new Map();
+      for (const key of [rowKey(from.id, fromId), rowKey(to.id, toId)]) {
+        if (!map.has(key)) map.set(key, message);
+      }
+    });
+  }
+  const result = map ?? EMPTY_MISMATCH;
+  const next = byNodes ?? new WeakMap();
+  next.set(deck.nodes, result);
+  mismatchCache.set(deck.edges, next);
+  return result;
+}
+
 /** One table's foreign-key columns (empty when it has none). */
 export function fkColumnsOf(deck: Deck, tableId: Id): ReadonlySet<Id> {
   return fkColumns(deck).get(tableId) ?? EMPTY_SET;
@@ -121,6 +169,8 @@ export interface TableContext {
   showSchema: boolean;
   enums: ReadonlyMap<Id, DbEnum>;
   display: ResolvedTableDisplay;
+  /** Rows whose relationship types differ (043), by `rowKey`; absent means none. */
+  mismatched?: ReadonlyMap<string, string>;
 }
 
 function sameDisplay(a: ResolvedTableDisplay, b: ResolvedTableDisplay): boolean {
@@ -148,6 +198,7 @@ export function tableContextOf(
     showSchema: schemaCount(deck) >= 2,
     enums: enumById(deck),
     display: tableDisplayOf(deck),
+    mismatched: mismatchedColumns(deck),
   };
   const last = lastContext;
   if (
@@ -155,6 +206,7 @@ export function tableContextOf(
     last.connected === next.connected &&
     last.showSchema === next.showSchema &&
     last.enums === next.enums &&
+    last.mismatched === next.mismatched &&
     sameDisplay(last.display, next.display)
   ) {
     return last;
