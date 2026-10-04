@@ -48,6 +48,7 @@ const ELEMENT_SCHEMAS = {
       tagColors: true,
       packs: true,
       dialect: true,
+      tableDisplay: true,
     })
     .strict(),
   field: shape.fields.unwrap().element,

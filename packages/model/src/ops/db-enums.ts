@@ -29,7 +29,7 @@ import type { Patch } from './types';
 export type NewDbEnumValue = Omit<DbEnumValue, 'id'> & { id?: Id };
 /** A new enum: values are optional (none by default) and may come without ids. */
 export type NewDbEnum = Omit<DbEnum, 'id' | 'values'> & { id?: Id; values?: NewDbEnumValue[] };
-export type EnumPatch = Patch<Pick<DbEnum, 'name' | 'schema' | 'note'>>;
+export type EnumPatch = Patch<Pick<DbEnum, 'name' | 'schema' | 'note' | 'color'>>;
 export type EnumValuePatch = Patch<DbEnumValue>;
 
 /** Sets the dialect; `null` or `generic` removes the key (absent reads as Generic). */
@@ -105,7 +105,7 @@ export function addEnum(ctx: EditContext, data: NewDbEnum, index?: number): Id {
   return id;
 }
 
-/** Renames an enum or sets its schema or note (`null` clears them). */
+/** Renames an enum or sets its schema, note or chip colour (041) (`null` clears them). */
 export function updateEnum(ctx: EditContext, id: Id, patch: EnumPatch): void {
   const item = requireEnum(ctx.doc, id);
   const current = readEnum(id, item) as unknown as Record<string, unknown>;

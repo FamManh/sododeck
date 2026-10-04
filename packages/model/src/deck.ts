@@ -16,7 +16,9 @@
  *                                               only once the file has them or a field changed;
  *                                               dialect (plain) and enums (Y.Map<id, Y.Map> list,
  *                                               each with a `values` list), both only once the
- *                                               file has them or an op wrote them (040)
+ *                                               file has them or an op wrote them (040);
+                                               tableDisplay (Y.Map, always present, written
+                                               only with entries, 041)
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component; a table's columns, indexes
  *                                               and checks → Y.Map<id, Y.Map> (only when stored,
  *                                               even empty; 040); index `columns` a whole value
@@ -139,6 +141,8 @@ export function fromJSON(input: unknown): DeckDoc {
       });
       meta.set('enums', enums as unknown as YValue);
     }
+    // Table display (041, R4): always present like `tagColors`, emitted only with entries.
+    meta.set('tableDisplay', toY(file.tableDisplay ?? {}));
 
     for (const name of COLLECTIONS) {
       const list = collectionMap(doc, name);

@@ -817,6 +817,25 @@ describe('database schema (040 US4)', () => {
     );
   });
 
+  it('keeps two tabs setting different table display flags on a fresh deck (041)', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.setTableDisplay({ hideTypes: true });
+      },
+      ({ editor }) => {
+        editor.setTableDisplay({ hideNotes: true, detail: 'keys' });
+      },
+      (a) => {
+        expect(toJSON(a.doc).tableDisplay).toEqual({
+          detail: 'keys',
+          hideTypes: true,
+          hideNotes: true,
+        });
+      },
+    );
+  });
+
   it('keeps two tabs editing two values of one enum', () => {
     bothOrders(
       shop,

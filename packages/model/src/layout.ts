@@ -89,6 +89,16 @@ export function tagColorsMap(doc: DeckDoc): Y.Map<string> {
 }
 
 /**
+ * How tables draw (041, research R4): always a `Y.Map` of the `TableDisplay` keys, created empty by
+ * `fromJSON` like `tagColors`, so two tabs setting their first flag share one map. A stored
+ * document that predates it gets a detached empty map here; a writer attaches one on first write.
+ */
+export function tableDisplayMap(doc: DeckDoc): Y.Map<YValue> {
+  const existing = metaMap(doc).get('tableDisplay');
+  return existing instanceof Y.Map ? existing : new Y.Map<YValue>();
+}
+
+/**
  * The packs that are on (030, R4): a `Y.Map<true>` keyed by pack id, present only once a deck has
  * a pack choice (a new deck, a file with `packs`, or the first toggle). Absent means Architecture
  * only, so a deck saved before 030 is written back byte-identical until its packs change.

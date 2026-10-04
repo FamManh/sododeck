@@ -11,6 +11,7 @@ export {
   type Scope,
 } from './layout';
 export { deckDialect } from './dialect';
+export { tableDisplayOf, type DeckTableDetail, type ResolvedTableDisplay } from './table-display';
 export type { NewDbCheck, NewDbColumn, NewDbIndex } from './ops/db-tables';
 export type { EnumPatch, EnumValuePatch, NewDbEnum, NewDbEnumValue } from './ops/db-enums';
 export { DeckEditError, DeckValidationError, type DeckEditErrorCode } from './errors';

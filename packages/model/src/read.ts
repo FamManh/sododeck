@@ -24,6 +24,7 @@ import {
   rulesMap,
   swatchesArray,
   TABLE_LISTS,
+  tableDisplayMap,
   tagColorsMap,
   type Collection,
   type DeckDoc,
@@ -223,5 +224,8 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   if (dialect !== undefined) out.dialect = dialect;
   const enums = readEnums(doc);
   if (enums !== undefined) out.enums = enums;
+  // `tableDisplay` (041): stored always, emitted only with entries, like `tagColors`.
+  const tableDisplay = tableDisplayMap(doc);
+  if (tableDisplay.size > 0) out.tableDisplay = fromY(tableDisplay);
   return out;
 }

@@ -1124,6 +1124,30 @@ describe('database schema (040)', () => {
     ['table with no columns', { ...empty, nodes: [table('t', { columns: [] })] }],
     ['deck with empty enums', { ...empty, enums: [] }],
     ['explicit generic dialect', { ...empty, dialect: 'generic' }],
+    // 041: table display (every key, flags both ways, and empty) and enum colours.
+    [
+      'table display with every key',
+      {
+        ...empty,
+        tableDisplay: {
+          detail: 'keys',
+          hideTypes: true,
+          hideNullable: false,
+          hideNotes: true,
+          hideIndexes: true,
+        },
+      },
+    ],
+    [
+      'enum colours, a palette name and a hex',
+      {
+        ...empty,
+        enums: [
+          { id: 'e1', name: 'mood', color: 'violet', values: [] },
+          { id: 'e2', name: 'size', note: 'T-shirt.', color: '#d97706', values: [] },
+        ],
+      },
+    ],
     [
       'column flags written false',
       {
@@ -1200,7 +1224,10 @@ describe('database schema (040)', () => {
     const keys = Object.keys(toJSON(fromJSON(full)));
     expect(keys.indexOf('dialect')).toBe(keys.indexOf('fieldDefaults') + 1);
     expect(keys.indexOf('enums')).toBe(keys.indexOf('dialect') + 1);
-    expect(keys.indexOf('nodes')).toBe(keys.indexOf('enums') + 1);
+    // Stored always (like tagColors), written only with entries (041).
+    expect(toJSON(fromJSON({ ...empty, tableDisplay: {} }))).not.toHaveProperty('tableDisplay');
+    expect(keys.indexOf('tableDisplay')).toBe(keys.indexOf('enums') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('tableDisplay') + 1);
     const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
     expect(Object.keys(orders)).toEqual([
       'id',
@@ -1248,6 +1275,7 @@ describe('decks saved before 040 stay unchanged (US3)', () => {
     const out = toJSON(doc);
     expect(out).not.toHaveProperty('dialect');
     expect(out).not.toHaveProperty('enums');
+    expect(out).not.toHaveProperty('tableDisplay');
     for (const node of out.nodes)
       for (const key of DB_NODE_KEYS) expect(node).not.toHaveProperty(key);
     for (const edge of out.edges)
