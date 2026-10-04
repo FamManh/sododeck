@@ -102,6 +102,61 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
     ]);
   });
 
+  it('step touch → missing table, a node that is not a table, a column of another table (049)', () => {
+    const step = { kind: 'step', id: 's' } as const;
+    expect(
+      problems({
+        nodes: [
+          node('a'),
+          { id: 't', type: 'db-table', title: 't', columns: [{ id: 'c', name: 'c', type: 'int' }] },
+          { id: 'u', type: 'db-table', title: 'u', columns: [{ id: 'd', name: 'd', type: 'int' }] },
+        ],
+        edges: [{ id: 'e', from: 'a', to: 'a' }],
+        flows: [
+          {
+            id: 'f',
+            title: 'F',
+            steps: [
+              {
+                id: 's',
+                edge: 'e',
+                touches: [
+                  { table: 't', access: 'write' },
+                  { table: 't', column: 'c', access: 'read' },
+                  { table: 'gone', access: 'read' },
+                  { table: 'a', access: 'read' },
+                  { table: 't', column: 'd', access: 'read' },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        kind: 'missing-reference',
+        object: { scope: 'flows', id: 'f', child: step },
+        field: 'touches.2.table',
+        target: 'gone',
+        targetType: 'table',
+      },
+      {
+        kind: 'missing-reference',
+        object: { scope: 'flows', id: 'f', child: step },
+        field: 'touches.3.table',
+        target: 'a',
+        targetType: 'table',
+      },
+      {
+        kind: 'missing-reference',
+        object: { scope: 'flows', id: 'f', child: step },
+        field: 'touches.4.column',
+        target: 'd',
+        targetType: 'column',
+      },
+    ]);
+  });
+
   it('sample input for an unknown input column', () => {
     expect(
       problems({

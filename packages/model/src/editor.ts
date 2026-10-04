@@ -27,6 +27,7 @@ import type {
   Size,
   Step,
   Sticky,
+  Touch,
   ViewType,
 } from '@sododeck/schema';
 
@@ -110,6 +111,14 @@ import {
 import { setNodeDisplay, type NodeDisplay } from './ops/node-display';
 import { setNodeIcon } from './ops/node-icon';
 import { setLocked } from './ops/node-lock';
+import { setTableOwner } from './ops/db-owner';
+import {
+  addTouch,
+  removeTouch,
+  setTouchAccess,
+  type TouchAccess,
+  type TouchKey,
+} from './ops/touches';
 import { deleteTag, renameTag, setTagColor, type TagChange } from './ops/tags';
 import {
   addRule,
@@ -334,6 +343,21 @@ export interface DeckEditor {
    * ignored, and nothing changing writes nothing. The app enforces what a lock blocks.
    */
   setLocked(nodeIds: readonly Id[], locked: boolean): void;
+  /**
+   * Moves a table into a database card, or out of any card with `null` (049): sets or clears
+   * `node.parent` in one undo step. `invalid` when the node is not a table or the card is not a
+   * `database` card; `not-found` for unknown ids. Columns, relationships and touches are kept.
+   */
+  setTableOwner(tableId: Id, cardId: Id | null): void;
+  /**
+   * Appends a table or column touch to a step (049). `invalid` for a pair the step already lists
+   * or a bad access, `missing-reference` for a column not in that table. One undo step.
+   */
+  addTouch(flowId: Id, stepId: Id, touch: Touch): void;
+  /** Sets one touch of a step to read or write; `not-found` when the step does not list it. */
+  setTouchAccess(flowId: Id, stepId: Id, key: TouchKey, access: TouchAccess): void;
+  /** Removes one touch of a step (the field goes when empty); `not-found` when not listed. */
+  removeTouch(flowId: Id, stepId: Id, key: TouchKey): void;
   /**
    * Icon reference of every listed node (038): one undo step; `null` removes the key. Any
    * non-empty text is stored as given. Throws `invalid` / `not-found` before any write.
@@ -794,6 +818,18 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setLocked: (nodeIds, locked) => {
       setLocked(ctx, nodeIds, locked);
+    },
+    setTableOwner: (tableId, cardId) => {
+      setTableOwner(ctx, tableId, cardId);
+    },
+    addTouch: (flowId, stepId, touch) => {
+      addTouch(ctx, flowId, stepId, touch);
+    },
+    setTouchAccess: (flowId, stepId, key, access) => {
+      setTouchAccess(ctx, flowId, stepId, key, access);
+    },
+    removeTouch: (flowId, stepId, key) => {
+      removeTouch(ctx, flowId, stepId, key);
     },
     setNodeIcon: (nodeIds, icon) => {
       setNodeIcon(ctx, nodeIds, icon);

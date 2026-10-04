@@ -9,6 +9,9 @@
  * composite end loses the pair at that position on both ends (the edge goes when none is left);
  * a self-reference checks both ends. Removing an enum clears `enumRef` on every column naming it
  * (the column keeps its `type`). Removing an index, a check or an enum value changes nothing else.
+ *
+ * Step touches (049): removing a table drops every touch naming it, removing a column the touches
+ * naming that column. The steps are kept, updated and never reported broken.
  */
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
@@ -121,6 +124,29 @@ const stepRef = (flowId: Id, stepId: Id): ObjectRef => ({
   child: { kind: 'step', id: stepId },
 });
 
+/**
+ * Drops the step touches `match` selects (049): a removed table takes its table and column
+ * touches, a removed column its own. The steps stay and are not broken: a touch is optional.
+ */
+function dropTouches(
+  cascade: Cascade,
+  doc: DeckDoc,
+  match: (touch: Record<string, unknown>) => boolean,
+): void {
+  const matches = (item: unknown) => {
+    const touch = fromY(item);
+    return touch !== null && typeof touch === 'object' && match(touch as Record<string, unknown>);
+  };
+  forEachStep(doc, (step, flowId, stepId) => {
+    const list = step.get('touches');
+    if (!(list instanceof Y.Array) || !list.toArray().some(matches)) return;
+    cascade.update(stepRef(flowId, stepId), () => {
+      for (let i = list.length - 1; i >= 0; i--) if (matches(list.get(i))) list.delete(i, 1);
+      if (list.length === 0) step.delete('touches');
+    });
+  });
+}
+
 /** Removes every edge with an end at `id` (a node, or a group since 050). */
 function removeEdgesAt(cascade: Cascade, doc: DeckDoc, id: Id): void {
   const edges = collectionMap(doc, 'edges');
@@ -135,6 +161,7 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
   const file = toJSON(doc);
   const base = nodeCanvasPosition(file, id);
   removeEdgesAt(cascade, doc, id);
+  dropTouches(cascade, doc, (touch) => touch.table === id);
   for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
     if (node.get('parent') === id && nodeId !== id) {
       cascade.update({ scope: 'nodes', id: nodeId }, () => {
@@ -408,6 +435,7 @@ export function removeColumn(ctx: EditContext, tableId: Id, columnId: Id): Remov
       if (nextTo !== undefined) edge.set('toColumns', toY(nextTo));
     });
   }
+  dropTouches(cascade, doc, (touch) => touch.column === columnId);
   return cascade.commit();
 }
 

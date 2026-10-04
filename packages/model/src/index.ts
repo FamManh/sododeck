@@ -84,6 +84,7 @@ export type { EdgeStylePatch } from './ops/edge-style';
 export type { EdgeRoutePatch } from './ops/shape';
 export type { NodeDisplay } from './ops/node-display';
 export { isLocked } from './ops/node-lock';
+export { isTouch, type TouchAccess, type TouchKey } from './ops/touches';
 export { iconUsage, type IconUsage } from './icons';
 export { copyName } from './ops/paste';
 export type { PastedIds, PasteOptions } from './ops/paste';

@@ -11,6 +11,7 @@ import {
 } from '../src';
 import { mergeRemovals } from '../src/preview';
 import { cascadeDeck } from './cascade-deck';
+import { shopDeck } from './helpers';
 
 /** What the editor really does for `targets`: one batch, skipping targets already cascaded away. */
 function actualRemoval(targets: RemovalTarget[]): RemovalResult {
@@ -107,6 +108,16 @@ describe('previewRemoval', () => {
       freed: [],
       broken: [],
     });
+  });
+
+  it('keeps the tables of a database card: un-parented, not removed (049)', () => {
+    const deck = shopDeck();
+    const owned = deck.nodes.filter((n) => n.parent === 'db').map((n) => n.id);
+    expect(owned.length).toBeGreaterThan(0);
+    const result = previewRemoval(deck, [{ scope: 'nodes', id: 'db' }]);
+    expect(result.removed).toEqual([{ scope: 'nodes', id: 'db' }]);
+    expect(result.updated).toEqual(owned.map((id) => ({ scope: 'nodes', id })));
+    expect(result.broken).toEqual([]);
   });
 
   it('skips a target that does not exist', () => {
