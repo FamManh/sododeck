@@ -22,10 +22,19 @@ vi.mock('./routing/label-handle', () => ({
 }));
 
 vi.mock('./routing/route-handles', () => ({
-  RouteHandles: ({ bendable, segment }: { bendable?: boolean; segment?: unknown }) => (
+  RouteHandles: ({
+    bendable,
+    segment,
+    context,
+  }: {
+    bendable?: boolean;
+    segment?: unknown;
+    context?: unknown;
+  }) => (
     <div
       data-testid="route-handles"
       data-bendable={String(bendable ?? true)}
+      data-context={JSON.stringify(context)}
       data-segment={segment === undefined ? undefined : JSON.stringify(segment)}
     />
   ),
@@ -399,6 +408,27 @@ describe('DeckEdge route handles gating (022)', () => {
     });
     renderEdge({ routable: true }, true);
     expect(screen.queryByTestId('route-handles')).toBeNull();
+  });
+
+  it('hands the handles both real card centres before the connector has bends or pins (050 US1)', () => {
+    // A new bend is stored relative to the card centres; handle points instead of centres made it
+    // land away from the release point once written.
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge(
+      {
+        routable: true,
+        shape: 'curved',
+        fromSize: { width: 184, height: 76 },
+        toSize: { width: 184, height: 76 },
+      },
+      true,
+      { sourceX: 184, sourceY: 38, targetX: 420, targetY: 38 },
+    );
+    const context = JSON.parse(
+      screen.getByTestId('route-handles').getAttribute('data-context') ?? 'null',
+    ) as { fromCentre: unknown; toCentre: unknown };
+    expect(context.fromCentre).toEqual({ x: 92, y: 38 });
+    expect(context.toCentre).toEqual({ x: 512, y: 38 });
   });
 
   it('hides the handles for a non-routable edge (a port or merged edge)', () => {

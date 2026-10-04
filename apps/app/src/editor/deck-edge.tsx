@@ -247,10 +247,21 @@ export const DeckEdge = memo(function DeckEdge({
       : shape === 'elbow' && segment !== null && data?.routable === true
         ? offsetBends(segment, ends.start)
         : [];
+  // Bends are stored relative to the card centres, so a connector still drawn between its handle
+  // points (no bends or pins yet) hands over its real boxes' centres too; the handle points would
+  // make a new bend land away from where it was released (050 US1).
+  const centreFrom =
+    sized || data?.fromSize === undefined
+      ? drawnFrom
+      : boxAt(sourceX, sourceY, sides[0], data.fromSize, data.fromGeometry);
+  const centreTo =
+    sized || data?.toSize === undefined
+      ? drawnTo
+      : boxAt(targetX, targetY, sides[1], data.toSize, data.toGeometry);
   const bendContext: BendContext = {
     edgeId: id,
-    fromCentre: cardCentre(drawnFrom),
-    toCentre: cardCentre(drawnTo),
+    fromCentre: cardCentre(centreFrom),
+    toCentre: cardCentre(centreTo),
     start: ends.start,
     end: ends.end,
     bends,
