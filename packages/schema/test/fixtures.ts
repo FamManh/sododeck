@@ -725,6 +725,30 @@ export const invalidFixtures: InvalidFixture[] = [
     input: set('relationshipDisplay.showLabels', true),
     path: 'relationshipDisplay',
   },
+  // 048: grouping mode, view schemas and view detail.
+  {
+    name: 'grouping mode "group" (By group is the absent key)',
+    input: set('groupingMode', 'group'),
+    path: 'groupingMode',
+  },
+  { name: 'grouping mode is not a string', input: set('groupingMode', true), path: 'groupingMode' },
+  { name: 'view schemas is empty', input: set('views.4.schemas', []), path: 'views.4.schemas' },
+  {
+    name: 'view schema name is empty',
+    input: set('views.4.schemas', ['']),
+    path: 'views.4.schemas.0',
+  },
+  {
+    name: 'view schemas is not a list',
+    input: set('views.4.schemas', 'sales'),
+    path: 'views.4.schemas',
+  },
+  {
+    name: 'view detail "auto" (absent means the deck or table setting)',
+    input: set('views.4.detail', 'auto'),
+    path: 'views.4.detail',
+  },
+  { name: 'view detail is not a string', input: set('views.4.detail', 3), path: 'views.4.detail' },
   // 043: node lock. Only `true` is valid; unlocking removes the key.
   {
     name: 'locked false (unlocked is the absent key)',
@@ -743,6 +767,11 @@ export const validFixtures: { name: string; input: unknown }[] = [
   { name: 'locked card', input: set('nodes.2.locked', true) },
   { name: 'locked shape', input: set('nodes.8.locked', true) },
   { name: 'locked table', input: set(`${CUSTOMERS}.locked`, true) },
+  // 048: the only grouping mode that is stored, and a view with one schema and every detail level.
+  { name: 'grouping mode schema', input: set('groupingMode', 'schema') },
+  { name: 'view detail names', input: set('views.4.detail', 'names') },
+  { name: 'view detail keys', input: set('views.4.detail', 'keys') },
+  { name: 'view with several schemas', input: set('views.4.schemas', ['sales', 'billing']) },
   // 042: relationship display, empty and with every key.
   { name: 'empty relationship display', input: set('relationshipDisplay', {}) },
   {

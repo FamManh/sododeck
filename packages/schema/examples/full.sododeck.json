@@ -91,6 +91,7 @@
     "hideIndexes": false
   },
   "relationshipDisplay": { "hideEnds": false, "labels": "always", "notation": "numeric" },
+  "groupingMode": "schema",
   "nodes": [
     {
       "id": "payments-provider",
@@ -525,9 +526,11 @@
       "type": "custom",
       "title": "Custom 1",
       "subtitleField": "none",
+      "schemas": ["public"],
       "excludeGroups": ["clients"],
       "excludeKinds": ["external"],
-      "excludeTags": ["pci"]
+      "excludeTags": ["pci"],
+      "detail": "keys"
     }
   ],
   "features": [
