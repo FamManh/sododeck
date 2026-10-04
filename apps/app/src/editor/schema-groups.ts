@@ -1,0 +1,64 @@
+/**
+ * By schema grouping (048, ADR 0034): the deck as the canvas draws it when the deck's grouping
+ * mode is `schema`. Every table with a schema moves into the derived group `schema:<name>`;
+ * nothing is stored, so By group is one switch away and the JSON never sees these groups.
+ * Frames are not stored either: `groupBounds` derives them from the members.
+ */
+import { isDbTable, schemaGroupId } from '@sododeck/model';
+import type { Group, Node, SododeckFile } from '@sododeck/schema';
+
+type Deck = SododeckFile;
+
+type Lists = Pick<Deck, 'nodes' | 'groups'>;
+
+/** Derived lists per source lists, so an edit to edges or fields keeps the node objects. */
+const listCache = new WeakMap<Deck['nodes'], WeakMap<Deck['groups'], Lists | null>>();
+const deckCache = new WeakMap<Deck, Deck>();
+
+function build(deck: Deck): Lists | null {
+  const titles = new Map<string, Group>();
+  const nodes = deck.nodes.map((node): Node => {
+    if (!isDbTable(node) || node.schema === undefined || node.schema === '') return node;
+    const id = schemaGroupId(node.schema);
+    if (!titles.has(id)) titles.set(id, { id, title: node.schema });
+    return node.group === id ? node : { ...node, group: id };
+  });
+  if (titles.size === 0) return null;
+
+  // A stored group that only this mode emptied would draw as an empty frame; leave it out.
+  const parents = new Map(deck.groups.map((group) => [group.id, group.parent]));
+  const filled = (list: readonly Node[]) => {
+    const out = new Set<string>();
+    for (const node of list) {
+      let current = node.group;
+      while (current !== undefined && !out.has(current) && parents.has(current)) {
+        out.add(current);
+        current = parents.get(current);
+      }
+    }
+    return out;
+  };
+  const before = filled(deck.nodes);
+  const after = filled(nodes);
+  const real = deck.groups.filter((group) => !before.has(group.id) || after.has(group.id));
+  return { nodes, groups: [...real, ...titles.values()] };
+}
+
+/** `deck` with its tables grouped by schema; `deck` itself when no table has a schema. */
+export function schemaGroupedDeck(deck: Deck): Deck {
+  const known = deckCache.get(deck);
+  if (known !== undefined) return known;
+  let byGroups = listCache.get(deck.nodes);
+  if (byGroups === undefined) {
+    byGroups = new WeakMap();
+    listCache.set(deck.nodes, byGroups);
+  }
+  let lists = byGroups.get(deck.groups);
+  if (lists === undefined) {
+    lists = build(deck);
+    byGroups.set(deck.groups, lists);
+  }
+  const out = lists === null ? deck : { ...deck, ...lists };
+  deckCache.set(deck, out);
+  return out;
+}
