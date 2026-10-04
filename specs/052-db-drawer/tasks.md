@@ -204,7 +204,7 @@
 - [ ] T052 [P] Removed objects: the drawer closes and returns focus to the canvas when its table, relationship or enum is removed (undo, another tab); add cases to `inspector.test.tsx` and `enum-inspector.test.tsx`.
 - [ ] T053 [P] Accessibility pass: every field labelled, tab and conversion announcements through `announcer.tsx`, keyboard reorder announced; run the axe check used by existing component tests where present.
 - [ ] T054 Compare against frames 135, 136, 151–154, 164, 165 in light and dark at 100 %; fix spacing and tokens; capture screenshots for the report.
-- [ ] T055 [P] Docs: amend `docs/decisions/0029-database-pack-model.md` ("Block SQL export" and "Enum rename rules"); update `apps/app/CLAUDE.md` (052 paragraph: drawer routing, `tableDrawer`, `enum` mode, `db/dialect-types.ts`, `db/dialect-change.ts`, `db/enum-edits.ts`, `useLiveField` `validate`), `packages/schema/CLAUDE.md` and `packages/model/CLAUDE.md` (`blockSqlExport`, `setBlockSqlExport`); mark 052 in `docs/backlog-database.md`.
+- [x] T055 [P] Docs: amend `docs/decisions/0029-database-pack-model.md` ("Block SQL export" and "Enum rename rules"); update `apps/app/CLAUDE.md` (052 paragraph: drawer routing, `tableDrawer`, `enum` mode, `db/dialect-types.ts`, `db/dialect-change.ts`, `db/enum-edits.ts`, `useLiveField` `validate`), `packages/schema/CLAUDE.md` and `packages/model/CLAUDE.md` (`blockSqlExport`, `setBlockSqlExport`); mark 052 in `docs/backlog-database.md`.
 - [ ] T056 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass; no skipped or `.only` tests; walk through `quickstart.md`; final report (what changed, skipped, uncertain).
 
 ---
