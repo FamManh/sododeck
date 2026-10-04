@@ -682,4 +682,25 @@ export const invalidFixtures: InvalidFixture[] = [
     input: remove('enums.0.values'),
     path: 'enums.0.values',
   },
+  // 041: table display and enum colour.
+  {
+    name: 'table detail "auto" (Auto is the absent key)',
+    input: set('tableDisplay.detail', 'auto'),
+    path: 'tableDisplay.detail',
+  },
+  {
+    name: 'unknown table display key',
+    input: set('tableDisplay.showTypes', true),
+    path: 'tableDisplay',
+  },
+  {
+    name: 'table display flag is not a boolean',
+    input: set('tableDisplay.hideNotes', 'yes'),
+    path: 'tableDisplay.hideNotes',
+  },
+  {
+    name: 'enum colour is not a palette name or hex',
+    input: set('enums.0.color', 'purple-ish'),
+    path: 'enums.0.color',
+  },
 ];

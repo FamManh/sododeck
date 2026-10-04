@@ -78,6 +78,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/DbEnum" }
     },
+    "tableDisplay": {
+      "$ref": "#/$defs/TableDisplay",
+      "description": "How tables draw in this deck (041). Absent means Auto detail with every part shown."
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
@@ -683,6 +687,28 @@
         "note": { "$ref": "#/$defs/DbNote", "description": "Note on the value (plain text)." }
       }
     },
+    "TableDisplay": {
+      "title": "TableDisplay",
+      "description": "How tables draw in this deck (041). Absent keys mean Auto detail and every part shown; the editor writes a hide flag as `true` or removes it.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "detail": {
+          "$ref": "#/$defs/DbDetail",
+          "description": "Detail of every table without its own `detail`. Absent means Auto (every column from 90 % zoom)."
+        },
+        "hideTypes": {
+          "type": "boolean",
+          "description": "Hides data types and enum chips on table rows."
+        },
+        "hideNullable": {
+          "type": "boolean",
+          "description": "Hides the nullable marker on table rows."
+        },
+        "hideNotes": { "type": "boolean", "description": "Hides table notes." },
+        "hideIndexes": { "type": "boolean", "description": "Hides the index count footer." }
+      }
+    },
     "DbEnum": {
       "title": "DbEnum",
       "description": "An enum type of the database schema (040). Columns name it by id; it is not drawn.",
@@ -700,6 +726,10 @@
           "description": "Namespace, e.g. `public`. Absent means the default one."
         },
         "note": { "$ref": "#/$defs/DbNote", "description": "Note on the enum (plain text)." },
+        "color": {
+          "$ref": "#/$defs/ColorRef",
+          "description": "Chip colour on table rows (041): a named colour or a custom hex value. Absent means a neutral chip."
+        },
         "values": {
           "description": "The values, in order. May be empty.",
           "type": "array",
