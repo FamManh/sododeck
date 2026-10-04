@@ -1094,6 +1094,7 @@ describe('schema lint rules (047)', () => {
             pk('o'),
             col('q', 'qty', 'integer', { default: 'many' }),
             col('q2', 'qty2', 'integer', { default: '12' }),
+            col('q3', 'active', 'integer', { default: 'true' }),
             col('b', 'flag', 'boolean', { default: 'maybe' }),
             col('b2', 'flag2', 'boolean', { default: true }),
             col('s', 'state', 'st', { enumRef: 'e', default: 'closed' }),

@@ -279,17 +279,20 @@ function checkDefault(ctx: Context, table: Node, column: DbColumn, base: Base): 
     if (values !== undefined) fits = values.some((v) => v.name === String(value));
   } else {
     const kind = typeEntry(ctx.dialect, column.type)?.kind;
+    // MySQL and SQLite keep booleans in integer columns, so a number takes true / false too.
+    const isBoolean =
+      typeof value === 'boolean' ||
+      value === 0 ||
+      value === 1 ||
+      value === 'true' ||
+      value === 'false';
     if (kind === 'number') {
       fits =
+        isBoolean ||
         typeof value === 'number' ||
         (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value)));
     } else if (kind === 'boolean') {
-      fits =
-        typeof value === 'boolean' ||
-        value === 0 ||
-        value === 1 ||
-        value === 'true' ||
-        value === 'false';
+      fits = isBoolean;
     }
   }
   if (fits) return;
