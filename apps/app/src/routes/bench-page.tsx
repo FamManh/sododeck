@@ -466,6 +466,7 @@ function BenchShell() {
  * the connectors each curved, elbow and straight, 029; `tags=1`: every card has 3 to 10 tags from a
  * pool of 24, 033; `types=1`: the 13 built-in card types round-robin and every pack on, 030;
  * `animated=1`: 200 connectors with moving dashes, `bends=1`: 200 connectors with three bends, 022;
+ * `icons=1`: every card a catalog icon, 038;
  * `shapes=1`: every third node a shape of the eleven geometries, 031;
  * `fields=1`: Task / Warehouse / Issue cards with four on-card field values each, 032)
  * Goes through the real read and write path: model document, editor, incremental snapshot and
@@ -495,6 +496,7 @@ export function BenchPage() {
   const animated = params.get('animated') === '1';
   const bends = params.get('bends') === '1';
   const shapes = params.get('shapes') === '1';
+  const icons = params.get('icons') === '1';
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -524,6 +526,7 @@ export function BenchPage() {
         animated,
         bends,
         shapes,
+        icons,
       }).deck,
     );
   });

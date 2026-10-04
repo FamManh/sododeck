@@ -13,6 +13,7 @@
  *   BENCH_FIELDS=1 pnpm bench           # Task / Warehouse / Issue cards, four on-card values each (032)
  *   BENCH_ANIMATED=1 pnpm bench         # 200 connectors with moving dashes, half of them dashed (022)
  *   BENCH_BENDS=1 pnpm bench            # 200 connectors with three free bends each, mixed shapes (022)
+ *   BENCH_ICONS=1 pnpm bench            # every card a custom catalog icon (038)
  *   BENCH_SHAPES=1 pnpm bench           # every third node a shape, the eleven geometries (031)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
@@ -46,6 +47,7 @@ const TAGS_QUERY = process.env.BENCH_TAGS === '1' ? '&tags=1' : '';
 const TYPES_QUERY = process.env.BENCH_TYPES === '1' ? '&types=1' : '';
 /** 032 R10: 500 cards with four on-card typed field values each. */
 const FIELDS_QUERY = process.env.BENCH_FIELDS === '1' ? '&fields=1' : '';
+const ICONS_QUERY = process.env.BENCH_ICONS === '1' ? '&icons=1' : '';
 const SHAPES_QUERY = process.env.BENCH_SHAPES === '1' ? '&shapes=1' : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
@@ -245,7 +247,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
