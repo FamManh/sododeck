@@ -158,6 +158,41 @@ describe('DeckInspector › Database (041 US4)', () => {
     expect(toJSON(doc)).not.toHaveProperty('tableDisplay');
   });
 
+  it('shows the relationship controls at their defaults (042 FR-025)', () => {
+    setupWith(tableDeck);
+    expect(screen.getByText('Show on relationships')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Cardinality ends' })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: 'Labels' })).toHaveTextContent(
+      'Follow Labels tool',
+    );
+    const notation = screen.getByRole('radiogroup', { name: 'Notation' });
+    expect(within(notation).getByRole('radio', { name: "Crow's foot" })).toBeChecked();
+  });
+
+  it('writes each relationship setting in one undo step', async () => {
+    const { doc, editor, user } = setupWith(tableDeck);
+    await user.click(screen.getByRole('switch', { name: 'Cardinality ends' }));
+    expect(toJSON(doc).relationshipDisplay).toEqual({ hideEnds: true });
+    await user.click(screen.getByRole('radio', { name: '1 / n' }));
+    expect(toJSON(doc).relationshipDisplay).toEqual({ hideEnds: true, notation: 'numeric' });
+    await user.click(screen.getByRole('combobox', { name: 'Labels' }));
+    await user.click(await screen.findByRole('option', { name: 'Always' }));
+    expect(toJSON(doc).relationshipDisplay).toEqual({
+      hideEnds: true,
+      notation: 'numeric',
+      labels: 'always',
+    });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).relationshipDisplay).toEqual({ hideEnds: true, notation: 'numeric' });
+    act(() => {
+      editor().undo();
+      editor().undo();
+    });
+    expect(toJSON(doc)).not.toHaveProperty('relationshipDisplay');
+  });
+
   it('is absent with no table and the Database pack off', () => {
     setupWith({ ...inspectorDeck, packs: ['architecture'] });
     expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
