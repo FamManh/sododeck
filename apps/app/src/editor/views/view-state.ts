@@ -10,14 +10,16 @@
  *
  * Never written anywhere: the document stays the snapshot; writes go through the editor ops.
  */
-import { NODE_GRID, resolveViews, viewNodePosition } from '@sododeck/model';
+import { isDbTable, NODE_GRID, resolveViews, viewNodePosition } from '@sododeck/model';
 import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sododeck/schema';
 
+import { cardIconRef } from '../card-icon';
 import { setCardFieldDeck } from '../card-fields';
 import { setTableDeck } from '../table-keys';
 import { withFilter, withNewRow } from '../table-layout';
 import { schemaGroupedDeck } from '../schema-groups';
 import { flowCountByNode, viewFilter } from '../view-filter';
+import type { OutsideTable } from '../visible-graph';
 
 export interface ViewRender {
   subtitleField: SubtitleField;
@@ -36,6 +38,8 @@ export interface ViewState {
   /** The deck as this view draws it (see the module comment). */
   deck: SododeckFile;
   hidden: ReadonlySet<Id>;
+  /** The tables this view hides, for the Outside proxies of their connectors (048). */
+  outside: ReadonlyMap<Id, OutsideTable>;
   collapsed: ReadonlySet<Id>;
   render: ViewRender;
 }
@@ -56,6 +60,23 @@ export interface TableFilterView {
 }
 
 const EMPTY: ReadonlySet<Id> = new Set();
+const NO_OUTSIDE: ReadonlyMap<Id, OutsideTable> = new Map();
+
+/** The hidden tables as proxy sources (048); the shared empty map when the view hides none. */
+function outsideTables(file: SododeckFile, hidden: ReadonlySet<Id>): ReadonlyMap<Id, OutsideTable> {
+  if (hidden.size === 0) return NO_OUTSIDE;
+  const out = new Map<Id, OutsideTable>();
+  for (const node of file.nodes) {
+    if (!hidden.has(node.id) || !isDbTable(node)) continue;
+    const icon = cardIconRef(node);
+    out.set(node.id, {
+      title: node.title,
+      kind: node.type,
+      ...(icon === undefined ? {} : { icon }),
+    });
+  }
+  return out.size === 0 ? NO_OUTSIDE : out;
+}
 const NO_POSITIONS: NonNullable<View['positions']> = {};
 const NO_FRAMES: NonNullable<View['groupFrames']> = {};
 
@@ -367,8 +388,6 @@ export function viewStateOf(
 ): ViewState {
   // Card heights follow the typed fields this deck shows (032); every geometry helper reads them.
   setCardFieldDeck(file);
-  // Table heights follow the deck's display settings, keys and enums (041), read the same way.
-  setTableDeck(file);
   let byView = states.get(file);
   const cached = byView?.get(currentViewId);
   if (
@@ -376,6 +395,8 @@ export function viewStateOf(
     sameRowEdit(cached.rowEdit, rowEdit) &&
     sameFilter(cached.filter, filter)
   ) {
+    // The table context is module state, so it is set again for whichever view is asked for.
+    setTableDeck(file, cached.state.view.detail);
     return cached.state;
   }
 
@@ -383,6 +404,9 @@ export function viewStateOf(
   const view = views.find((v) => v.id === currentViewId) ?? views[0];
   // `resolveViews` falls back to the presets, so there is always a first view.
   if (view === undefined) throw new Error('A deck always has at least one view.');
+  // Table heights follow the deck's display settings, keys and enums (041), read the same way;
+  // the view's own detail (048) replaces the deck's.
+  setTableDeck(file, view.detail);
   const { hidden, dimmed } = viewFilter(file, view, revealed);
   const revealedHidden =
     revealed.size === 0
@@ -397,6 +421,7 @@ export function viewStateOf(
       filter,
     ),
     hidden,
+    outside: outsideTables(file, hidden),
     collapsed: setOf(view.collapsed),
     render: {
       subtitleField: view.subtitleField ?? 'tech',

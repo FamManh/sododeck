@@ -59,7 +59,14 @@ export function proxyLayout(
         ? { title: node.title, kind: node.type, ...iconField(node) }
         : group !== undefined
           ? { title: group.title, kind: 'group' }
-          : undefined;
+          : port.outsideKind === undefined
+            ? undefined
+            : {
+                // A table the view hides (048): not in this deck, so the port carries what it needs.
+                title: port.outsideTitle,
+                kind: port.outsideKind,
+                ...(port.outsideIcon === undefined ? {} : { icon: port.outsideIcon }),
+              };
     if (outside === undefined) return [];
     const centres = port.insideNodeIds.flatMap((id) => {
       const found = nodesById.get(id);

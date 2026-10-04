@@ -424,7 +424,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   useFlowViewport(deck, playback, wrapper);
   const scope = useMemo(() => scopeOf(drill), [drill]);
-  const graph = useMemo(() => visibleGraph(deck, scope, collapsed), [deck, scope, collapsed]);
+  const outside = viewState.outside;
+  const graph = useMemo(
+    () => visibleGraph(deck, scope, collapsed, outside),
+    [deck, scope, collapsed, outside],
+  );
   const level = useMemo(() => effectiveLevel(zoomLevel, scope), [zoomLevel, scope]);
   // Relationship drags (042) read the drawn tables' boxes and rows, computed once per drag frame.
   useEffect(() => {

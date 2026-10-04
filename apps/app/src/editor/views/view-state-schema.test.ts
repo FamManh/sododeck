@@ -2,6 +2,7 @@ import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../../test/render-canvas';
+import { tableLayoutOf } from '../canvas-geometry';
 import { visibleGraph } from '../visible-graph';
 import { viewStateOf } from './view-state';
 
@@ -53,5 +54,51 @@ describe('viewStateOf grouping mode (048)', () => {
         (c) => c.groupId,
       ),
     ).toEqual(['g']);
+  });
+});
+
+describe('per-view table detail (048 US5)', () => {
+  const file = deckOf({
+    nodes: [
+      {
+        id: 't',
+        type: 'db-table',
+        title: 't',
+        columns: [
+          { id: 'a', name: 'id', type: 'int', pk: true },
+          { id: 'b', name: 'name', type: 'text' },
+        ],
+      },
+      {
+        id: 'own',
+        type: 'db-table',
+        title: 'own',
+        detail: 'all',
+        columns: [
+          { id: 'c', name: 'id', type: 'int', pk: true },
+          { id: 'd', name: 'name', type: 'text' },
+        ],
+      },
+    ],
+    views: [
+      { id: 'v1', type: 'custom', title: 'Keys', detail: 'keys' },
+      { id: 'v2', type: 'custom', title: 'Plain' },
+    ],
+  });
+  const detailOf = (viewId: string, id: string) => {
+    const state = viewStateOf(file, viewId);
+    const node = state.deck.nodes.find((n) => n.id === id);
+    if (node === undefined) throw new Error('missing node');
+    return tableLayoutOf(node).detail;
+  };
+
+  it('overrides the deck detail in that view only', () => {
+    expect(detailOf('v1', 't')).toBe('keys');
+    expect(detailOf('v2', 't')).toBe('all');
+    expect(detailOf('v1', 't')).toBe('keys');
+  });
+
+  it('a table with its own detail keeps it', () => {
+    expect(detailOf('v1', 'own')).toBe('all');
   });
 });

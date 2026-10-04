@@ -1,3 +1,4 @@
+import { useToast } from '@sododeck/ui/components/toast';
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
@@ -15,7 +16,9 @@ import { focusCanvas } from './canvas-actions';
 import { cardBox, groupBounds } from './canvas-geometry';
 import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX, type PortFlowNode } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
-import { collapsedOf, readViewState } from './views/use-current-view';
+import { readDeck } from '../model/use-deck-snapshot';
+import { firstViewShowing } from './view-filter';
+import { collapsedOf, readViewState, selectView } from './views/use-current-view';
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -38,8 +41,36 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
   const editor = useEditor();
   const { setCenter, getZoom } = useReactFlow();
   const { dimMs } = resolveMotion(useReducedMotion());
+  const { toast } = useToast();
+
+  /**
+   * A table the current view hides (048): there is no card to go to, so the proxy offers the
+   * first view that shows it. Returns whether it handled the press.
+   */
+  const offerShowInView = (): boolean => {
+    const state = readViewState(editor.doc);
+    if (!state.hidden.has(data.outsideNodeId)) return false;
+    const view = firstViewShowing(readDeck(editor.doc), state.views, data.outsideNodeId);
+    if (view === null) {
+      toast({ message: `${data.outsideTitle} is hidden in every view` });
+      return true;
+    }
+    toast({
+      message: `${data.outsideTitle} is hidden in this view`,
+      action: {
+        label: `Show in ${view.title}`,
+        onAction: () => {
+          selectView(view);
+          useUiStore.getState().select({ nodes: [data.outsideNodeId] });
+          useUiStore.getState().focus(data.outsideNodeId);
+        },
+      },
+    });
+    return true;
+  };
 
   const goToOutside = () => {
+    if (offerShowInView()) return;
     // Up until the real card (or the collapsed group holding it) is on screen.
     let representative = data.outsideNodeId;
     for (;;) {
@@ -106,6 +137,7 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
         onClick={(event) => {
           event.stopPropagation();
           useUiStore.getState().focus(id);
+          offerShowInView();
         }}
         onDoubleClick={(event) => {
           event.stopPropagation();
