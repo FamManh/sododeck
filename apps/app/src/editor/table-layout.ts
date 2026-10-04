@@ -422,6 +422,11 @@ export function tableLayout(
   };
 }
 
+/** The columns whose name matches the open filter (048), in drawn (stored) order. */
+export function matchOrder(layout: TableLayout): string[] {
+  return layout.rows.filter((row) => layout.matchIds.has(row.columnId)).map((row) => row.columnId);
+}
+
 /** The row drawn in 24 px slot `slot` under `rowsTop`, skipping the new-row editor (043). */
 export function rowAtSlot(layout: TableLayout, slot: number): TableRow | undefined {
   if (slot < 0 || slot === layout.newRowIndex) return undefined;

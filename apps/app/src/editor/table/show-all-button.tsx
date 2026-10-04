@@ -1,6 +1,7 @@
 import { cn } from '@sododeck/ui/lib/utils';
 
 import { useEditor } from '../../model/use-editor';
+import { useUiStore } from '../../state/ui-store';
 import { oneStep } from '../fields/one-step';
 
 /**
@@ -36,6 +37,9 @@ export function ShowAllButton({
       }}
       onClick={(event) => {
         event.stopPropagation();
+        // The button also stands for the rows a filter folded: opening shows them, so it ends it.
+        const ui = useUiStore.getState();
+        if (ui.tableFilter?.tableId === nodeId) ui.closeTableFilter();
         oneStep(editor, () => {
           editor.update('nodes', nodeId, { expanded: !expanded });
         });

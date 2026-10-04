@@ -8,7 +8,7 @@ import { refuseLocked } from '../lock';
 import { rowKey } from '../relationships/row-key';
 import { startColumnDrag } from '../editing/column-connect-drag';
 import type { RelSide } from '../relationships/relationship-ends';
-import { TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
+import { matchOrder, TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
 import { ColumnLineEditor } from './column-line-editor';
 import { EnumChip } from './enum-chip';
 import { RowGrip } from './row-grip';
@@ -125,7 +125,13 @@ export const TableBody = memo(function TableBody({
   // This table's line editor and row drag only: other tables never re-render for them.
   const columnEdit = useUiStore((s) => (s.columnEdit?.tableId === nodeId ? s.columnEdit : null));
   const rowDrag = useUiStore((s) => (s.rowDrag?.tableId === nodeId ? s.rowDrag : null));
+  const filterIndex = useUiStore((s) =>
+    s.tableFilter?.tableId === nodeId ? s.tableFilter.index : -1,
+  );
   if (!layout.hasBody) return null;
+  // The filter's matches (048): the current one is the one Enter stepped to.
+  const matches = layout.matchIds.size === 0 ? [] : matchOrder(layout);
+  const currentMatch = matches[Math.min(filterIndex, matches.length - 1)];
   const tabIndex = focused ? 0 : -1;
   const muted = tinted ? 'text-ink-secondary' : 'text-ink-muted group-hover/row:text-ink-secondary';
   const footerParts = [
@@ -168,6 +174,8 @@ export const TableBody = memo(function TableBody({
         title={row.nameCut || row.typeCut ? rowLabel(row) : undefined}
         data-column-id={row.columnId}
         data-row={rowKey(nodeId, row.columnId)}
+        data-match={layout.matchIds.has(row.columnId) ? 'true' : undefined}
+        aria-current={filterIndex >= 0 && currentMatch === row.columnId ? 'true' : undefined}
         // Roving row focus (042 R9): ↓ / ↑ from the focused table, never a Tab stop.
         tabIndex={-1}
         onFocus={() => {
@@ -196,6 +204,8 @@ export const TableBody = memo(function TableBody({
         className={cn(
           'group/row relative -mx-[9px] flex h-6 shrink-0 items-center rounded-row px-[9px] outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-primary',
           rowDrag?.columnId === row.columnId && 'bg-surface-2 opacity-60',
+          layout.matchIds.has(row.columnId) && 'bg-deck-orange-soft',
+          filterIndex >= 0 && currentMatch === row.columnId && 'ring-1 ring-deck-orange-ink',
         )}
       >
         <RowPort nodeId={nodeId} columnId={row.columnId} name={row.name} side="left" />
@@ -220,6 +230,7 @@ export const TableBody = memo(function TableBody({
           className={cn(
             'min-w-0 flex-1 truncate text-[12px] leading-6 text-ink',
             row.glyphs.includes('pk') ? 'font-semibold' : 'font-medium',
+            layout.matchIds.has(row.columnId) && 'font-semibold text-deck-orange-ink',
           )}
         >
           {row.name}
