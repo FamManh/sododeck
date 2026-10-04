@@ -138,8 +138,8 @@ No values.
 - b.a_id → a.id · many to one
 - order items.order_id → order.id · many to one · on delete cascade
 - pair_refs.x → pairs.(x, y) · many to one
-- pair_refs.a_id → a.id
 - pair_refs → misc · many to one · "mentions"
+- pair_refs.a_id → a.id
 - products.id → categories.id · many to many
 - products.id → keyless · many to many
 - stale → a.id · many to one

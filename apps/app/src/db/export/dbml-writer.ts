@@ -143,6 +143,13 @@ export function writeDbml(slice: SchemaSlice): WriterOutput {
     const from = tableById.get(rel.from);
     const to = tableById.get(rel.to);
     if (from === undefined || to === undefined || rel.unwritable !== null) return null;
+    // DBML has no reference from a column to itself (044 R13): the compiler rejects one.
+    if (rel.from === rel.to && rel.fromColumns.join() === rel.toColumns.join()) {
+      const label = rel.label === undefined ? '' : ` (${rel.label})`;
+      const message = `Relationship ${displayName(from)} ↔ ${displayName(to)}${label} links a column to itself; not written`;
+      notes.push(note('same-column-ref', message, { tableId: from.id }));
+      return `// ${message}`;
+    }
     const op = OPERATORS[rel.cardinality ?? 'n-1'];
     const marked = `${rel.fromOptional ? '?' : ''}${op}${rel.toOptional ? '?' : ''}`;
     const settings = [
@@ -166,6 +173,13 @@ export function writeDbml(slice: SchemaSlice): WriterOutput {
   const general = slice.notes.filter((n) => n.tableId === undefined);
   if (general.length > 0) blocks.push(general.flatMap((n) => comments(n.message)));
   for (const e of slice.enums) {
+    // DBML has no empty enum (044 R13): the compiler rejects one.
+    if (e.values.length === 0) {
+      const message = `Enum ${enumRef(e)} has no values; not written`;
+      notes.push(note('empty-enum', message));
+      blocks.push(comments(message));
+      continue;
+    }
     blocks.push([
       ...(e.note === undefined ? [] : comments(e.note)),
       `Enum ${enumRef(e)} {`,

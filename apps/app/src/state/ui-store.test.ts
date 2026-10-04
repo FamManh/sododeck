@@ -870,3 +870,62 @@ describe('ui store', () => {
     });
   });
 });
+
+describe('ui store: schema import (044)', () => {
+  const report = (deckId: string | null, open?: boolean) => ({
+    deckId,
+    ...(open === undefined ? {} : { open }),
+    source: { format: 'sql' as const, dialect: null },
+    mapped: {
+      tables: 1,
+      relationships: 0,
+      enums: 0,
+      indexes: 0,
+      checks: 0,
+      groups: 0,
+      stickies: 0,
+    },
+    skipped: [],
+    changed: [],
+    suggestions: [
+      {
+        fromTable: 'a',
+        fromColumn: 'a.b_id',
+        toTable: 'b',
+        toColumn: 'b.id',
+        label: 'a.b_id → b.id',
+        cardinality: 'n-1' as const,
+        fromOptional: false,
+        state: 'open' as const,
+      },
+    ],
+  });
+
+  it('opens and closes the dialog with its return focus', () => {
+    const button = document.createElement('button');
+    useUiStore.getState().openImport(button);
+    expect(useUiStore.getState().importDialog).toEqual({ open: true, returnFocus: button });
+    useUiStore.getState().closeImport();
+    expect(useUiStore.getState().importDialog).toEqual({ open: false, returnFocus: null });
+  });
+
+  it('updates a suggestion and keeps its edge id', () => {
+    useUiStore.getState().setImportReport(report('d1'));
+    useUiStore.getState().updateSuggestion(0, 'accepted', 'e1');
+    expect(useUiStore.getState().importReport?.suggestions?.[0]).toMatchObject({
+      state: 'accepted',
+      edgeId: 'e1',
+    });
+    useUiStore.getState().updateSuggestion(0, 'dismissed');
+    expect(useUiStore.getState().importReport?.suggestions?.[0]?.edgeId).toBeUndefined();
+  });
+
+  it('keeps the report for its own deck, opening it once, and drops it for another', () => {
+    useUiStore.getState().setImportReport(report('d1', true));
+    useUiStore.getState().resetForDeck('d1');
+    expect(useUiStore.getState().flyout).toBe('import-report');
+    expect(useUiStore.getState().importReport?.open).toBe(false);
+    useUiStore.getState().resetForDeck('d2');
+    expect(useUiStore.getState().importReport).toBeNull();
+  });
+});

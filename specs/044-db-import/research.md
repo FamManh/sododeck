@@ -32,7 +32,7 @@ the three dialects (B: ~2 more days, more grammar to maintain); DBML first and S
 leaves the main use case, a SQL dump, out of 044).
 
 **Dependency approval**: founder chose D on 2026-10-04 (this conversation's plan session). ADR
-0032 records both packages, versions and measured sizes; `docs/backlog-database.md` DB6 gets a
+0033 records both packages, versions and measured sizes; `docs/backlog-database.md` DB6 gets a
 pointer to it.
 
 ## R2 — Statement splitter (our code)

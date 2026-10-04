@@ -13,7 +13,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
-import { ChevronRight, Frame, Package, StickyNote } from 'lucide-react';
+import { ChevronRight, FileCode2, Frame, Package, StickyNote } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { NodeTypeTile } from './shapes/shape-tile';
@@ -418,6 +418,25 @@ export function Palette() {
         Drag Note onto a node to pin it, or onto empty canvas for a free note. N adds one at the
         pointer.
       </p>
+      {packs.includes('database') && (
+        <button
+          type="button"
+          onClick={(event) => {
+            useUiStore.getState().openImport(event.currentTarget);
+          }}
+          className={cn(
+            'flex w-full items-center gap-2 rounded-row border-t border-hairline px-1 py-2.5 text-body-sm text-ink hover:text-primary-ink',
+            focusRing,
+          )}
+        >
+          <FileCode2
+            aria-hidden
+            strokeWidth={ICON_STROKE_WIDTH}
+            className="size-4 text-ink-secondary"
+          />
+          <span className="flex-1 text-left">Import SQL or DBML…</span>
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {

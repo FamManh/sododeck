@@ -10,6 +10,7 @@ import {
   type FlyoutId,
   type ShellPrefs,
 } from '../editor/shell/shell-prefs';
+import type { ImportReport, SuggestionState } from '../db/import/types';
 import type { ConnectionCheck } from '../editor/connection-rules';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
 import {
@@ -401,6 +402,14 @@ export interface UiState {
   canvasPointer: { x: number; y: number } | null;
   palette: { open: boolean; returnFocus: HTMLElement | null };
   exportDialog: { open: boolean; returnFocus: HTMLElement | null; seed?: ExportSeed };
+  /** The Import SQL or DBML dialog (044). */
+  importDialog: { open: boolean; returnFocus: HTMLElement | null };
+  /**
+   * The last import report (044 FR-023, research R14) and the deck it belongs to: UI-only, never
+   * in the deck; dropped when another deck opens. `open` shows it when that deck opens (a new
+   * deck made by the import).
+   */
+  importReport: (ImportReport & { deckId: string | null; open?: boolean }) | null;
   /** Roving-tabindex target on the canvas (US6). */
   focusedId: string | null;
   /** Connection reached with E from the focused node. */
@@ -557,6 +566,13 @@ export interface UiState {
   /** Opens the export dialog; `seed` picks its first format and scope (043 R15). */
   openExport: (returnFocus?: HTMLElement | null, seed?: ExportSeed) => void;
   closeExport: () => void;
+  openImport: (returnFocus?: HTMLElement | null) => void;
+  closeImport: () => void;
+  setImportReport: (
+    report: (ImportReport & { deckId: string | null; open?: boolean }) | null,
+  ) => void;
+  /** Sets a suggestion's state (Accept, Dismiss, or back to open on Undo). */
+  updateSuggestion: (index: number, state: SuggestionState, edgeId?: Id) => void;
   focus: (id: string | null) => void;
   focusEdge: (id: string | null) => void;
   toggleOutlineGroup: (groupId: string) => void;
@@ -833,6 +849,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     canvasPointer: null,
     palette: { open: false, returnFocus: null },
     exportDialog: { open: false, returnFocus: null },
+    importDialog: { open: false, returnFocus: null },
+    importReport: null,
     focusedId: null,
     focusedEdgeId: null,
     hoverFocus: null,
@@ -1095,6 +1113,26 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     closeExport: () => {
       set({ exportDialog: { open: false, returnFocus: null } });
+    },
+    openImport: (returnFocus = null) => {
+      set({ importDialog: { open: true, returnFocus } });
+    },
+    closeImport: () => {
+      set({ importDialog: { open: false, returnFocus: null } });
+    },
+    setImportReport: (report) => {
+      set({ importReport: report });
+    },
+    updateSuggestion: (index, state, edgeId) => {
+      const report = get().importReport;
+      const suggestions = report?.suggestions;
+      const current = suggestions?.[index];
+      if (report === null || suggestions == null || current === undefined) return;
+      const { edgeId: _old, ...rest } = current;
+      const next = suggestions.map((s, i) =>
+        i === index ? { ...rest, state, ...(edgeId === undefined ? {} : { edgeId }) } : s,
+      );
+      set({ importReport: { ...report, suggestions: next } });
     },
     focus: (id) => {
       set({ focusedId: id, focusedEdgeId: null });
@@ -1534,6 +1572,10 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     resetForDeck: (deckId = null) => {
       const prefs = loadShellPrefs(deckId);
+      const report = get().importReport;
+      const ownReport = report !== null && report.deckId === deckId;
+      const keptReport = ownReport ? { ...report, open: false } : null;
+      const showReport = ownReport && report.open === true;
       set({
         shellDeckId: deckId,
         enumPopover: null,
@@ -1577,6 +1619,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         canvasPointer: null,
         palette: { open: false, returnFocus: null },
         exportDialog: { open: false, returnFocus: null },
+        importDialog: { open: false, returnFocus: null },
+        importReport: keptReport,
+        ...(showReport ? { flyout: 'import-report' as const } : {}),
         titleEdit: null,
         columnEdit: null,
         rowDrag: null,

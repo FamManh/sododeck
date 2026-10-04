@@ -167,6 +167,13 @@ describe('Palette: Add flyout (030)', () => {
     expect(screen.getByText('No types match')).toBeInTheDocument();
   });
 
+  it('offers Import SQL or DBML in the footer when the Database pack is on (044)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('button', { name: 'Import SQL or DBML…' }));
+    expect(useUiStore.getState().importDialog.open).toBe(true);
+  });
+
   it('a deck from before packs lists only Architecture', () => {
     renderWithEditor(<Palette />);
     expect(
@@ -184,6 +191,7 @@ describe('Palette: Add flyout (030)', () => {
       'Component',
     ]);
     expect(screen.getByRole('button', { name: 'Packs · 1 on' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Import SQL or DBML…' })).not.toBeInTheDocument();
   });
 
   it('offers the Note card and its help text', () => {

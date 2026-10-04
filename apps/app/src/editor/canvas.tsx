@@ -851,6 +851,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       </ReactFlow>
       {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && (
         <EmptyCanvasCard
+          showImport={deckPacks(fullDeck).includes('database')}
           {...(deckPacks(fullDeck).includes('database')
             ? {
                 onAddTable: () => {

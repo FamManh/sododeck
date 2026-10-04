@@ -1,0 +1,271 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": "mysql",
+    "dialect": "mysql",
+    "counts": {
+      "tables": 6,
+      "relationships": 0,
+      "enums": 0
+    },
+    "skippedCount": 0,
+    "conversions": [],
+    "dialectOutcome": "set"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "customers",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "notNull": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "name",
+                "type": "varchar",
+                "size": "100",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "company",
+            "columns": [
+              {
+                "id": "dbcol.3",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.4",
+                "name": "name",
+                "type": "varchar",
+                "size": "100"
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "categories",
+            "columns": [
+              {
+                "id": "dbcol.5",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.6",
+                "name": "name",
+                "type": "varchar",
+                "size": "100"
+              }
+            ]
+          },
+          {
+            "id": "node.4",
+            "type": "db-table",
+            "title": "users",
+            "columns": [
+              {
+                "id": "dbcol.7",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.5",
+            "type": "db-table",
+            "title": "orders",
+            "columns": [
+              {
+                "id": "dbcol.8",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "notNull": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.9",
+                "name": "customer_id",
+                "type": "int",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.10",
+                "name": "companyId",
+                "type": "int"
+              },
+              {
+                "id": "dbcol.11",
+                "name": "status_id",
+                "type": "int"
+              }
+            ]
+          },
+          {
+            "id": "node.6",
+            "type": "db-table",
+            "title": "order_lines",
+            "columns": [
+              {
+                "id": "dbcol.12",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.13",
+                "name": "order_id",
+                "type": "int",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.14",
+                "name": "category_id",
+                "type": "int",
+                "unique": true
+              },
+              {
+                "id": "dbcol.15",
+                "name": "user_id",
+                "type": "text"
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [],
+    "stickies": [],
+    "setDialect": "mysql",
+    "dialectOutcome": "set",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "no-fk.sql",
+        "format": "sql",
+        "dialect": "mysql"
+      },
+      "mapped": {
+        "tables": 6,
+        "relationships": 0,
+        "enums": 0,
+        "indexes": 0,
+        "checks": 0,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [],
+      "changed": [
+        {
+          "line": 1,
+          "target": "customers",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE"
+        },
+        {
+          "line": 7,
+          "target": "company",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE"
+        },
+        {
+          "line": 13,
+          "target": "categories",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE"
+        },
+        {
+          "line": 19,
+          "target": "users",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE"
+        },
+        {
+          "line": 24,
+          "target": "orders",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE"
+        },
+        {
+          "line": 32,
+          "target": "order_lines",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE"
+        }
+      ],
+      "suggestions": null
+    },
+    "suggestions": [
+      {
+        "fromTable": "node.5",
+        "fromColumn": "dbcol.9",
+        "toTable": "node.1",
+        "toColumn": "dbcol.1",
+        "label": "orders.customer_id → customers.id",
+        "cardinality": "n-1",
+        "fromOptional": false
+      },
+      {
+        "fromTable": "node.5",
+        "fromColumn": "dbcol.10",
+        "toTable": "node.2",
+        "toColumn": "dbcol.3",
+        "label": "orders.companyId → company.id",
+        "cardinality": "n-1",
+        "fromOptional": true
+      },
+      {
+        "fromTable": "node.6",
+        "fromColumn": "dbcol.13",
+        "toTable": "node.5",
+        "toColumn": "dbcol.8",
+        "label": "order_lines.order_id → orders.id",
+        "cardinality": "n-1",
+        "fromOptional": false
+      },
+      {
+        "fromTable": "node.6",
+        "fromColumn": "dbcol.14",
+        "toTable": "node.3",
+        "toColumn": "dbcol.5",
+        "label": "order_lines.category_id → categories.id",
+        "cardinality": "1-1",
+        "fromOptional": true
+      }
+    ]
+  }
+}

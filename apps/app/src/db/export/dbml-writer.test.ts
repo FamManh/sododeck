@@ -1,3 +1,4 @@
+import * as dbmlParse from '@dbml/parse';
 import type { SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -85,5 +86,22 @@ describe('writeDbml', () => {
     expect(text).toContain('// billing.ledgers.account_id → billing.accounts.id not written');
     expect(text).not.toContain('pair_refs.x >');
     expect(notes.map((n) => n.kind)).toContain('method-dropped');
+  });
+
+  it('writes DBML the DBML compiler reads back (044 research R13)', () => {
+    const { text, notes } = schemaExport(edgeCaseDeck(), edgeCaseRequest('dbml', null));
+    const { Compiler, MemoryProjectLayout, DEFAULT_ENTRY } = dbmlParse;
+    const compiler = new Compiler(new MemoryProjectLayout({ [DEFAULT_ENTRY.absolute]: text }));
+    expect(compiler.parse.errors(DEFAULT_ENTRY).map((e) => e.diagnostic)).toEqual([]);
+    // An enum with no values and a same-column n–n are left out, with a note each.
+    expect(text).not.toContain('Enum empty_choice {');
+    expect(text).toContain('// Enum empty_choice has no values; not written');
+    expect(text).not.toContain('Ref related: tags.id <> tags.id');
+    expect(text).toContain(
+      '// Relationship tags ↔ tags (related) links a column to itself; not written',
+    );
+    expect(notes.map((n) => n.kind)).toEqual(
+      expect.arrayContaining(['empty-enum', 'same-column-ref']),
+    );
   });
 });

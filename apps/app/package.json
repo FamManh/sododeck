@@ -14,6 +14,7 @@
     "bench": "playwright test -c playwright.bench.config.ts"
   },
   "dependencies": {
+    "@dbml/parse": "10.2.0",
     "@monaco-editor/react": "^4.7.0",
     "@sentry/react": "^11.0.0",
     "@sododeck/model": "workspace:*",
@@ -24,6 +25,7 @@
     "elkjs": "^0.12.0",
     "lucide-react": "^1.48.0",
     "monaco-editor": "^0.57.0",
+    "node-sql-parser": "5.4.0",
     "posthog-js": "^1.434.15",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

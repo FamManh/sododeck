@@ -23,7 +23,7 @@ offered as report suggestions highlighted on hover. Decisions: [research.md](res
 
 **Primary Dependencies**: **new runtime** (lazy, worker-only): `@dbml/parse` 10.2.0 (Apache-2.0,
 108 KB gzip) and `node-sql-parser` 5.4.0 (Apache-2.0; per-dialect builds 54–72 KB gzip), approved
-by the founder 2026-10-04 (ADR 0032). Existing: `@sododeck/model` (`pasteFragment`, `addEnum`,
+by the founder 2026-10-04 (ADR 0033). Existing: `@sododeck/model` (`pasteFragment`, `addEnum`,
 `setDialect`, `batch`), layout client (elkjs), `packages/ui` (Dialog, SegmentedControl, Select,
 RadioGroup, Checkbox, Button, toast), lucide-react, Zustand UI store, 045's `common-types.ts`
 and `schemaExport` (round-trip tests).
@@ -64,7 +64,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | V. Off the main thread    | ✅     | Split, detect, parse, map and suggest in the import worker; layout in the ELK worker; the main thread applies one batch. Inline fallback only without worker support.                                                                                                     |
 | VI. Strict types, tested  | ✅     | Pure stages with corpus tests and expected JSON; round-trip; perf; undo; component tests. Bug fix R13 starts with failing tests. No new e2e (TODO(e2e)).                                                                                                                  |
 | VII. Accessible           | ✅     | Dialog controls labelled and in Tab order, live region for preview and errors, report as headed lists, Accept / Dismiss named; hover highlight also on keyboard focus.                                                                                                    |
-| VIII. Simplicity, deps    | ✅     | Two runtime deps, each solving one format no platform API parses; chosen over a 2.7 MB alternative and over writing our own grammar; lazy, worker-only; founder-approved 2026-10-04; ADR 0032. Reuses paste, layout client, toast, flyout, 045 type data; no new package. |
+| VIII. Simplicity, deps    | ✅     | Two runtime deps, each solving one format no platform API parses; chosen over a 2.7 MB alternative and over writing our own grammar; lazy, worker-only; founder-approved 2026-10-04; ADR 0033. Reuses paste, layout client, toast, flyout, 045 type data; no new package. |
 
 **Post-design re-check (after Phase 1)**: still ✅. New app folders `apps/app/src/db/import/` and
 `apps/app/src/editor/import/`; one new flyout id; no model or schema change.
@@ -125,8 +125,8 @@ apps/app/src/state/ui-store.ts            # importDialog, importReports[deckId],
 apps/app/src/editor/shell/{deck-menu,flyouts,shell-prefs,shell-chrome}.tsx/ts   # entries + flyout
 apps/app/src/editor/{empty-canvas-card,palette}.tsx                            # entries
 apps/app/package.json                     # @dbml/parse, node-sql-parser (exact versions)
-docs/decisions/0032-schema-import-parsers.md
-docs/backlog-database.md                  # DB6 → see ADR 0032
+docs/decisions/0033-schema-import-parsers.md
+docs/backlog-database.md                  # DB6 → see ADR 0033
 apps/app/CLAUDE.md                        # db/import boundary note
 ```
 
@@ -137,4 +137,4 @@ only Yjs ↔ JSON layer. 046 (DBML code panel) reuses `readDbml` / `buildPlan` f
 
 ## Complexity Tracking
 
-No violations. Two runtime dependencies justified in the Constitution Check (VIII) and ADR 0032.
+No violations. Two runtime dependencies justified in the Constitution Check (VIII) and ADR 0033.
