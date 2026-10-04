@@ -17,6 +17,7 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { isKnownType } from '@sododeck/model';
+import type { Side } from '@sododeck/schema';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
@@ -69,6 +70,11 @@ const groupIdOf = (id: string) =>
     : id.startsWith(COLLAPSED_NODE_PREFIX)
       ? id.slice(COLLAPSED_NODE_PREFIX.length)
       : null;
+
+/** The side a connection was dragged from: card handles are ids by side (`component-node-parts.tsx`). */
+function sideOfHandle(id: string | null | undefined): Side | null {
+  return id === 'top' || id === 'right' || id === 'bottom' || id === 'left' ? id : null;
+}
 
 /** Shift, ⌘ or Ctrl held: add to / remove from the selection instead of replacing it. */
 const isMultiSelect = (event: ReactMouseEvent) => event.shiftKey || event.metaKey || event.ctrlKey;
@@ -489,17 +495,15 @@ export function useCanvasHandlers() {
       isValidConnection: ((c: Connection | Edge) =>
         connectionCheck(readDeck(editor.doc), endpointIdOf(c.source), endpointIdOf(c.target)) ===
         'ok') satisfies IsValidConnection,
-      onConnect: (c: Connection) => {
-        if (viewOnly()) return;
-        connectComponents(editor, endpointIdOf(c.source), endpointIdOf(c.target));
-      },
       /**
-       * A new connection dropped off every handle (050 T021): near a card's outline (within the
-       * attach reach), or inside or near a group frame (050 T030), it still connects, with the drop side and position pinned on the dropped
-       * end, in one undo step. A handle drop was already made by `onConnect`.
+       * Every new connection is made here, on release, not in `onConnect` (050 T021): the drop is
+       * resolved with the same hit test the live line draws (`connectTarget`), so the connector
+       * attaches where the line showed. The side it was dragged from is pinned on its start and the
+       * drop side and position on the dropped end, in one undo step. The drop may be on a card's
+       * body or a handle (a valid React Flow connection) or near an outline or group frame.
        */
       onConnectEnd: (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
-        if (viewOnly() || state.isValid === true || state.fromNode === null) return;
+        if (viewOnly() || state.fromNode === null) return;
         const pointer = 'changedTouches' in event ? event.changedTouches[0] : event;
         if (pointer === undefined) return;
         const hit = connectTarget(
@@ -511,19 +515,36 @@ export function useCanvasHandlers() {
             mod: 'metaKey' in event && (event.metaKey || event.ctrlKey),
           },
         );
-        if (hit === null) return;
         const fromId = endpointIdOf(state.fromNode.id);
+        const startSide = sideOfHandle(state.fromHandle.id);
         // Started from a target handle, the drop is the source (as React Flow's `onConnect`).
         const reversed = state.fromHandle.type === 'target';
+        if (hit === null) {
+          // A valid drop the hit test missed (a handle at the edge of its reach): connect plainly.
+          if (state.isValid !== true || state.toNode === null) return;
+          const toId = endpointIdOf(state.toNode.id);
+          oneStep(editor, () => {
+            const id = reversed
+              ? connectComponents(editor, toId, fromId)
+              : connectComponents(editor, fromId, toId);
+            if (id === null || startSide === null) return;
+            editor.setEdgeRoute(id, reversed ? { toSide: startSide } : { fromSide: startSide });
+          });
+          return;
+        }
         const { side, at } = hit.attach;
         oneStep(editor, () => {
           const id = reversed
             ? connectComponents(editor, hit.target.id, fromId)
             : connectComponents(editor, fromId, hit.target.id);
           if (id === null) return;
+          const start =
+            startSide === null ? {} : reversed ? { toSide: startSide } : { fromSide: startSide };
           editor.setEdgeRoute(
             id,
-            reversed ? { fromSide: side, fromAt: at } : { toSide: side, toAt: at },
+            reversed
+              ? { fromSide: side, fromAt: at, ...start }
+              : { toSide: side, toAt: at, ...start },
           );
         });
       },

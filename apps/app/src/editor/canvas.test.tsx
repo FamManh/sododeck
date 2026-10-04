@@ -1000,17 +1000,25 @@ describe('canvas handlers', () => {
 
   it('connects, selects the new edge, opens its popover and announces it', () => {
     const { h, doc } = handlers();
+    // A drop on d's body: React Flow reports a valid connection; the drop makes it (050 T021).
+    const dropOn = (from: string, to: string) =>
+      ({
+        isValid: true,
+        fromNode: { id: from },
+        fromHandle: { id: 'right', type: 'source' },
+        toNode: { id: to },
+      }) as unknown as FinalConnectionState;
     act(() => {
-      h().onConnect({ source: 'a', target: 'd', sourceHandle: 'right', targetHandle: 'body' });
+      h().onConnectEnd({ clientX: 0, clientY: 0 } as MouseEvent, dropOn('a', 'd'));
     });
     const edge = toJSON(doc).edges.at(-1);
     expect(edge).toMatchObject({ from: 'a', to: 'd' });
     expect(ui().selection.edges).toEqual([edge?.id]);
     expect(ui().popover).toEqual({ kind: 'edge', edgeId: edge?.id });
     expect(ui().announcement.text).toBe('Connected A to D');
-    // A duplicate reaching onConnect anyway is still refused.
+    // A duplicate reaching the drop anyway is still refused.
     act(() => {
-      h().onConnect({ source: 'd', target: 'a', sourceHandle: null, targetHandle: null });
+      h().onConnectEnd({ clientX: 0, clientY: 0 } as MouseEvent, dropOn('d', 'a'));
     });
     expect(toJSON(doc).edges).toHaveLength(4);
   });
@@ -1160,7 +1168,15 @@ describe('canvas in flow mode (007)', () => {
         { id: 'a', type: 'position', position: { x: 999, y: 999 } },
       ] as NodeChange[]);
       h().onNodeDragStop();
-      h().onConnect({ source: 'a', target: 'z', sourceHandle: null, targetHandle: null });
+      h().onConnectEnd(
+        { clientX: 0, clientY: 0 } as MouseEvent,
+        {
+          isValid: true,
+          fromNode: { id: 'a' },
+          fromHandle: { id: 'right', type: 'source' },
+          toNode: { id: 'z' },
+        } as unknown as FinalConnectionState,
+      );
       h().onConnectEnd(
         { clientX: 0, clientY: 0 } as MouseEvent,
         {
