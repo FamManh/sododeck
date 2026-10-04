@@ -1,5 +1,7 @@
 import type * as React from 'react';
 
+import { IconGlyph } from '@sododeck/ui/components/icon-glyph';
+import type { ResolvedIcon } from '@sododeck/ui/icon-sets';
 import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 
@@ -21,6 +23,8 @@ type TypeTileProps = Omit<React.ComponentProps<'span'>, 'children'> & {
   size?: TypeTileSize;
   /** Hide from assistive technology when a visible label names the type already. */
   decorative?: boolean;
+  /** A resolved icon (038) drawn instead of the type's own; the tone still comes from `type`. */
+  icon?: ResolvedIcon;
 };
 
 /** Colored icon tile for a card type (canvas cards, Add flyout, inspector, search). */
@@ -29,12 +33,13 @@ function TypeTile({
   label,
   size = 30,
   decorative = false,
+  icon: custom,
   className,
   style,
   ...props
 }: TypeTileProps) {
   const { icon: Icon, tone } = typeStyle(type ?? '');
-  const { radius, icon } = SIZE_MAP[size];
+  const { radius, icon: iconSize } = SIZE_MAP[size];
 
   return (
     <span
@@ -49,7 +54,11 @@ function TypeTile({
       style={{ width: size, height: size, borderRadius: radius, ...style }}
       {...props}
     >
-      <Icon aria-hidden size={icon} strokeWidth={ICON_STROKE_WIDTH} />
+      {custom ? (
+        <IconGlyph icon={custom} size={iconSize} strokeWidth={ICON_STROKE_WIDTH} />
+      ) : (
+        <Icon aria-hidden size={iconSize} strokeWidth={ICON_STROKE_WIDTH} />
+      )}
     </span>
   );
 }

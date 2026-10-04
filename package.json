@@ -16,6 +16,7 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "schema:generate": "pnpm --filter @sododeck/schema generate",
+    "icons:generate": "pnpm --filter @sododeck/ui generate:icons",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -61,18 +61,24 @@ describe('card type styles (030)', () => {
   });
 
   it('keeps today’s icon and tone for the six legacy types', () => {
-    expect(TYPE_STYLE.client).toEqual({
+    expect(TYPE_STYLE.client).toMatchObject({
       icon: MonitorSmartphone,
       tone: 'bg-surface-2 text-ink-secondary',
     });
-    expect(TYPE_STYLE.gateway).toEqual({ icon: Router, tone: 'bg-inverse text-on-inverse' });
-    expect(TYPE_STYLE.service).toEqual({ icon: Box, tone: 'bg-primary-soft text-primary-ink' });
-    expect(TYPE_STYLE.queue).toEqual({
+    expect(TYPE_STYLE.gateway).toMatchObject({ icon: Router, tone: 'bg-inverse text-on-inverse' });
+    expect(TYPE_STYLE.service).toMatchObject({
+      icon: Box,
+      tone: 'bg-primary-soft text-primary-ink',
+    });
+    expect(TYPE_STYLE.queue).toMatchObject({
       icon: ArrowLeftRight,
       tone: 'bg-amber-soft text-amber-ink',
     });
-    expect(TYPE_STYLE.database).toEqual({ icon: Database, tone: 'bg-blue-soft text-blue-ink' });
-    expect(TYPE_STYLE.external).toEqual({ icon: Cloud, tone: 'bg-clay-soft text-clay-ink' });
+    expect(TYPE_STYLE.database).toMatchObject({
+      icon: Database,
+      tone: 'bg-blue-soft text-blue-ink',
+    });
+    expect(TYPE_STYLE.external).toMatchObject({ icon: Cloud, tone: 'bg-clay-soft text-clay-ink' });
   });
 
   it('gives the new types the icons of research R3', () => {

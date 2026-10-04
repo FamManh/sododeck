@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { TypeTile } from '../src/components/type-tile';
+import { resolveIcon } from '../src/icon-sets';
 import { TYPE_STYLE } from '../src/lib/icons';
 
 describe('TypeTile', () => {
@@ -53,5 +54,14 @@ describe('TypeTile', () => {
     const { container } = render(<TypeTile type="client" decorative />);
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('draws a given icon and keeps the type tone', () => {
+    const icon = resolveIcon('lucide:search');
+    if (!icon) throw new Error('missing icon');
+    render(<TypeTile type="database" label="Database" icon={icon} />);
+    const tile = screen.getByRole('img', { name: 'Database' });
+    expect(tile).toHaveClass(...(TYPE_STYLE['database']?.tone.split(' ') ?? []));
+    expect(tile.querySelector('svg')).toHaveAttribute('data-icon', 'lucide:search');
   });
 });
