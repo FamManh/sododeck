@@ -154,7 +154,7 @@
 
 **Independent Test**: focus a table on the 150-table deck and count strong tables (quickstart 7).
 
-- [ ] T042 [US6] Failing tests in `apps/app/src/editor/focus-set.test.ts`: a table with 4 related tables gives 5 strong tables on the 150-table fixture; either direction counts; self-reference adds none; a neighbour inside a collapsed group keeps the group card strong; edges among kept tables are in the highlighted set
+- [x] T042 [US6] Failing tests in `apps/app/src/editor/focus-set.test.ts`: a table with 4 related tables gives 5 strong tables on the 150-table fixture; either direction counts; self-reference adds none; a neighbour inside a collapsed group keeps the group card strong; edges among kept tables are in the highlighted set
 - [ ] T043 [US6] Implement the second pass in `apps/app/src/editor/focus-set.ts` (edges where both ends are in the kept set); verify `hover-focus/hover-focus-style.tsx` and `canvas.tsx` style them; Esc ends focus and keeps the selection; focus follows a new selection; test
 
 **Checkpoint**: SC-008 holds.
