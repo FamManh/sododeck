@@ -24,6 +24,7 @@ import {
   rulesMap,
   swatchesArray,
   TABLE_LISTS,
+  relationshipDisplayMap,
   tableDisplayMap,
   tagColorsMap,
   type Collection,
@@ -227,5 +228,8 @@ export function readMeta(doc: DeckDoc): Partial<SododeckFile> {
   // `tableDisplay` (041): stored always, emitted only with entries, like `tagColors`.
   const tableDisplay = tableDisplayMap(doc);
   if (tableDisplay.size > 0) out.tableDisplay = fromY(tableDisplay);
+  // `relationshipDisplay` (042): the same.
+  const relationshipDisplay = relationshipDisplayMap(doc);
+  if (relationshipDisplay.size > 0) out.relationshipDisplay = fromY(relationshipDisplay);
   return out;
 }

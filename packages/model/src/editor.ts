@@ -13,6 +13,7 @@ import type {
   FieldKind,
   Id,
   PackId,
+  RelationshipDisplay,
   TableDisplay,
   TypeId,
 } from '@sododeck/schema';
@@ -76,7 +77,7 @@ import {
   type NewDbEnum,
   type NewDbEnumValue,
 } from './ops/db-enums';
-import { setTableDisplay } from './ops/table-display';
+import { setRelationshipDisplay, setTableDisplay } from './ops/table-display';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
@@ -430,6 +431,13 @@ export interface DeckEditor {
    * hides; `false` or `null` removes the flag). One undo step; nothing happens when nothing changes.
    */
   setTableDisplay(patch: Patch<TableDisplay>): void;
+  /**
+   * Patches the deck's relationship display (042): `hideEnds` (`true` draws plain ends; `false` or
+   * `null` removes it), `labels` (`null` = follow the Labels tool), `notation` (`null` = crow's
+   * foot). The object leaves the file when empty. One undo step; nothing happens when nothing
+   * changes; bad keys or values are `invalid` with nothing written.
+   */
+  setRelationshipDisplay(patch: Patch<RelationshipDisplay>): void;
   /**
    * Adds a column at `index` of a table (default: last) and returns its id (generated unless
    * given; a given id must be free among the deck's columns, indexes, checks, enums and values).
@@ -818,6 +826,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setTableDisplay: (patch) => {
       setTableDisplay(ctx, patch);
+    },
+    setRelationshipDisplay: (patch) => {
+      setRelationshipDisplay(ctx, patch);
     },
     addColumn: (tableId, data, index) => addPart(ctx, tableId, 'columns', data, index),
     updateColumn: (tableId, columnId, patch) => {

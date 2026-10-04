@@ -49,6 +49,7 @@ const ELEMENT_SCHEMAS = {
       packs: true,
       dialect: true,
       tableDisplay: true,
+      relationshipDisplay: true,
     })
     .strict(),
   field: shape.fields.unwrap().element,

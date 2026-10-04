@@ -8,6 +8,7 @@ import {
   deckDialect,
   fromJSON,
   observeDeck,
+  relationshipDisplayOf,
   serializeDeck,
   tableDisplayOf,
   toJSON,
@@ -494,6 +495,77 @@ describe('table display (041)', () => {
   });
 });
 
+describe('relationship display (042)', () => {
+  it('reads defaults when absent, and the stored keys otherwise', () => {
+    expect(relationshipDisplayOf(shopDeck())).toEqual({
+      hideEnds: false,
+      labels: 'follow',
+      notation: 'crow',
+    });
+    expect(
+      relationshipDisplayOf({
+        ...shopDeck(),
+        relationshipDisplay: { hideEnds: true, labels: 'hover', notation: 'numeric' },
+      }),
+    ).toEqual({ hideEnds: true, labels: 'hover', notation: 'numeric' });
+  });
+
+  it('writes keys in one undo step and creates the object on the first write', () => {
+    const { doc, editor, deck } = setup();
+    expect(deck()).not.toHaveProperty('relationshipDisplay');
+    oneStep(editor, deck, () => {
+      editor.setRelationshipDisplay({ hideEnds: true, labels: 'always' });
+    });
+    expect(deck().relationshipDisplay).toEqual({ hideEnds: true, labels: 'always' });
+    expectValid(doc);
+  });
+
+  it('changes a key and leaves the others', () => {
+    const { editor, deck } = setup({
+      ...shopDeck(),
+      relationshipDisplay: { labels: 'hover', notation: 'numeric' },
+    });
+    oneStep(editor, deck, () => {
+      editor.setRelationshipDisplay({ labels: 'off' });
+    });
+    expect(deck().relationshipDisplay).toEqual({ labels: 'off', notation: 'numeric' });
+  });
+
+  it('removes hideEnds written false, keys written null, and the emptied object', () => {
+    const { editor, deck } = setup({
+      ...shopDeck(),
+      relationshipDisplay: { hideEnds: true, labels: 'always', notation: 'numeric' },
+    });
+    oneStep(editor, deck, () => {
+      editor.setRelationshipDisplay({ hideEnds: false });
+    });
+    expect(deck().relationshipDisplay).toEqual({ labels: 'always', notation: 'numeric' });
+    editor.setRelationshipDisplay({ labels: null, notation: null });
+    expect(deck()).not.toHaveProperty('relationshipDisplay');
+  });
+
+  it('does nothing when only defaults are written, and refuses bad values', () => {
+    const { editor, deck } = setup();
+    const before = serializeDeck(deck());
+    editor.setRelationshipDisplay({ hideEnds: false, labels: null, notation: null });
+    expect(serializeDeck(deck())).toBe(before);
+    expect(editor.canUndo()).toBe(false);
+    refused(deck, 'invalid', () => {
+      editor.setRelationshipDisplay({ labels: 'sometimes' as never });
+    });
+    refused(deck, 'invalid', () => {
+      editor.setRelationshipDisplay({ notation: 'crow' as never });
+    });
+    refused(deck, 'invalid', () => {
+      editor.setRelationshipDisplay({ hideEnds: 'yes' as never });
+    });
+    refused(deck, 'invalid', () => {
+      editor.setRelationshipDisplay({ labels: 'always', showLabels: true } as never);
+    });
+    expect(editor.canUndo()).toBe(false);
+  });
+});
+
 describe('change events and the snapshot (040)', () => {
   it('keeps the incremental snapshot equal to toJSON through every database op', () => {
     const { editor, doc } = setup();
@@ -524,6 +596,12 @@ describe('change events and the snapshot (040)', () => {
       },
       () => {
         editor.setTableDisplay({ detail: null, hideNotes: false });
+      },
+      () => {
+        editor.setRelationshipDisplay({ labels: 'always', hideEnds: true });
+      },
+      () => {
+        editor.setRelationshipDisplay({ labels: null, hideEnds: false });
       },
     ];
     for (const step of steps) {

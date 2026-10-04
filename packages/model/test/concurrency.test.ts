@@ -836,6 +836,24 @@ describe('database schema (040 US4)', () => {
     );
   });
 
+  it('keeps two tabs setting different relationship display keys on a fresh deck (042)', () => {
+    bothOrders(
+      shop,
+      ({ editor }) => {
+        editor.setRelationshipDisplay({ labels: 'always' });
+      },
+      ({ editor }) => {
+        editor.setRelationshipDisplay({ notation: 'numeric' });
+      },
+      (a) => {
+        expect(toJSON(a.doc).relationshipDisplay).toEqual({
+          labels: 'always',
+          notation: 'numeric',
+        });
+      },
+    );
+  });
+
   it('keeps two tabs editing two values of one enum', () => {
     bothOrders(
       shop,

@@ -99,6 +99,16 @@ export function tableDisplayMap(doc: DeckDoc): Y.Map<YValue> {
 }
 
 /**
+ * How relationships draw (042): a `Y.Map` of the `RelationshipDisplay` keys, kept like
+ * `tableDisplay` (created empty by `fromJSON`, so two tabs setting their first key share one map;
+ * a detached empty map for older stored documents, attached by the first write).
+ */
+export function relationshipDisplayMap(doc: DeckDoc): Y.Map<YValue> {
+  const existing = metaMap(doc).get('relationshipDisplay');
+  return existing instanceof Y.Map ? existing : new Y.Map<YValue>();
+}
+
+/**
  * The packs that are on (030, R4): a `Y.Map<true>` keyed by pack id, present only once a deck has
  * a pack choice (a new deck, a file with `packs`, or the first toggle). Absent means Architecture
  * only, so a deck saved before 030 is written back byte-identical until its packs change.
