@@ -189,11 +189,45 @@ describe('DeckEdge Deck look (029 US1)', () => {
     );
   });
 
-  it('gives a selected connector 2.5 px in Deck Orange', () => {
+  it('draws a selected connector at its own weight in Deck Orange, over a halo (050 US3)', () => {
     const { container } = renderEdge({}, true);
     expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
       stroke: 'var(--color-deck-orange)',
-      strokeWidth: '2.5',
+      strokeWidth: '2',
+    });
+    const halo = screen.getByTestId('edge-selection-halo');
+    expect(halo).toHaveAttribute('stroke', 'var(--color-primary-soft)');
+    expect(halo).toHaveAttribute('stroke-width', '8');
+    expect(halo).toHaveAttribute('pointer-events', 'none');
+  });
+
+  it('draws a selected 4 px connector at 4 px with a 10 px halo (050 US3)', () => {
+    const { container } = renderEdge({ style: { width: 4 } }, true);
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '4' });
+    expect(screen.getByTestId('edge-selection-halo')).toHaveAttribute('stroke-width', '10');
+  });
+
+  it('has no selection halo when not selected', () => {
+    renderEdge({});
+    expect(screen.queryByTestId('edge-selection-halo')).toBeNull();
+  });
+
+  describe('weight preview (050 US3)', () => {
+    afterEach(() => {
+      useUiStore.getState().setLineStylePreview(null);
+    });
+
+    it('draws the previewed weight of a dragged weight slider before the stored one', () => {
+      useUiStore.getState().setLineStylePreview({ edgeIds: ['e1'], width: 3 });
+      const { container } = renderEdge({ style: { width: 1 } }, true);
+      expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '3' });
+      expect(screen.getByTestId('edge-selection-halo')).toHaveAttribute('stroke-width', '9');
+    });
+
+    it("ignores another connector's preview", () => {
+      useUiStore.getState().setLineStylePreview({ edgeIds: ['other'], width: 4 });
+      const { container } = renderEdge({ style: { width: 1 } }, true);
+      expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '1' });
     });
   });
 
@@ -943,11 +977,11 @@ describe('DeckEdge own style (022 US1)', () => {
     expect(el.style.stroke).toBe('rgb(122, 60, 255)');
   });
 
-  it('keeps selection orange and 2.5 px over the own colour and weight', () => {
+  it('keeps selection orange over the own colour, at the own weight (050 US3)', () => {
     const el = edgePath(
       renderEdge({ style: { color: 'blue', width: 4 } }, true).container,
     ) as HTMLElement;
-    expect(el).toHaveStyle({ stroke: 'var(--color-deck-orange)', strokeWidth: '2.5' });
+    expect(el).toHaveStyle({ stroke: 'var(--color-deck-orange)', strokeWidth: '4' });
   });
 
   it('lets a flow stroke replace the own colour and dash', () => {

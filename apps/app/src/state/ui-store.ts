@@ -1,4 +1,4 @@
-import type { FlowCheckpoint, Geometry, RemovalTarget } from '@sododeck/model';
+import type { FlowCheckpoint, Geometry, RemovalTarget, Width } from '@sododeck/model';
 import type { ColorRef, EdgeShape, Id, Side } from '@sododeck/schema';
 import { create } from 'zustand';
 
@@ -298,6 +298,15 @@ export interface EndpointPreview {
   valid: EndpointDrop;
 }
 
+/**
+ * The weight a dragged weight slider previews on its connectors (050 R8, data-model). UI-only
+ * until release, then one write.
+ */
+export interface LineStylePreview {
+  edgeIds: readonly Id[];
+  width: Width;
+}
+
 /** A snapping guide during a drag (016 R7), in canvas px. UI-only, never saved. */
 export interface Guide {
   axis: 'x' | 'y';
@@ -432,6 +441,8 @@ export interface UiState {
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
   /** The connector end being dragged (050 R3); null outside an end drag. */
   endpointPreview: EndpointPreview | null;
+  /** The weight the slider shows on these connectors while it is dragged (050 R8); null otherwise. */
+  lineStylePreview: LineStylePreview | null;
   /** Cards a running marquee selects. */
   marqueeCount: number | null;
   pasteSerial: PasteSerial | null;
@@ -594,6 +605,7 @@ export interface UiState {
     readout: { width: number; height: number; x: number; y: number } | null,
   ) => void;
   setEndpointPreview: (preview: EndpointPreview | null) => void;
+  setLineStylePreview: (preview: LineStylePreview | null) => void;
   setMarqueeCount: (count: number | null) => void;
   setPasteSerial: (serial: PasteSerial | null) => void;
   /**
@@ -775,6 +787,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     labelPreview: null,
     resizeReadout: null,
     endpointPreview: null,
+    lineStylePreview: null,
     marqueeCount: null,
     pasteSerial: null,
 
@@ -1360,6 +1373,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     setEndpointPreview: (endpointPreview) => {
       set({ endpointPreview });
     },
+    setLineStylePreview: (lineStylePreview) => {
+      set({ lineStylePreview });
+    },
     setMarqueeCount: (marqueeCount) => {
       if (get().marqueeCount !== marqueeCount) set({ marqueeCount });
     },
@@ -1420,6 +1436,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         labelPreview: null,
         resizeReadout: null,
         endpointPreview: null,
+        lineStylePreview: null,
         marqueeCount: null,
         pasteSerial: null,
       });

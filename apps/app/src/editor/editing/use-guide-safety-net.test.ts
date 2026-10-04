@@ -28,6 +28,7 @@ function leaveLeftovers(gesture: 'bend' | 'card-resize' | 'pan' = 'bend') {
     automatic: false,
     valid: 'none',
   });
+  ui().setLineStylePreview({ edgeIds: ['e'], width: 3 });
 }
 
 const flushMicrotasks = () =>
@@ -64,6 +65,7 @@ describe('useGuideSafetyNet (050 R9)', () => {
     expect(ui().bendPreview).toBeNull();
     expect(ui().labelPreview).toBeNull();
     expect(ui().endpointPreview).toBeNull();
+    expect(ui().lineStylePreview).toBeNull();
     expect(ui().connectorReadout).toBeNull();
     expect(ui().resizeReadout).toBeNull();
     expect(ui().canvasGesture).toBeNull();
@@ -82,6 +84,7 @@ describe('useGuideSafetyNet (050 R9)', () => {
     expect(ui().guides).toHaveLength(1);
     expect(ui().bendPreview).not.toBeNull();
     expect(ui().endpointPreview).not.toBeNull();
+    expect(ui().lineStylePreview).not.toBeNull();
     expect(ui().resizeReadout).not.toBeNull();
     expect(ui().canvasGesture).toBe('card-resize');
   });

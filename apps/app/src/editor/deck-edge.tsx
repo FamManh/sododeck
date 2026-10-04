@@ -129,6 +129,11 @@ export const DeckEdge = memo(function DeckEdge({
   const endPreview = useUiStore((s) =>
     s.endpointPreview?.edgeId === id ? s.endpointPreview : null,
   );
+  // The weight a dragged weight slider previews on this connector (050 R8). A number or null, so
+  // other connectors do not re-render while it moves.
+  const previewWidth = useUiStore((s) =>
+    s.lineStylePreview?.edgeIds.includes(id) === true ? s.lineStylePreview.width : null,
+  );
   const direction = data?.direction ?? 'forward';
   const route = data?.route;
   // Bends and anchors need the real cards (their centres and sides); everything else only needs
@@ -205,7 +210,8 @@ export const DeckEdge = memo(function DeckEdge({
   // connector reads its colour and width through the highlight variables (034 R2), so a focus rule
   // can light it without a React Flow update; one with its own colour keeps it (022 FR-024) and
   // only takes the highlight weight.
-  const own = edgeLineStyle({ style: data?.style });
+  const stored = edgeLineStyle({ style: data?.style });
+  const own = previewWidth === null ? stored : { ...stored, width: previewWidth };
   const stroke = selected
     ? 'var(--color-deck-orange)'
     : (flowStroke?.stroke ??
@@ -241,8 +247,10 @@ export const DeckEdge = memo(function DeckEdge({
   // Problems (015 FR-022) show on the label pill, even with labels off.
   const problems = data?.problems;
   const current = flow?.current ?? null;
+  // A selected connector keeps its own weight (050 FR-015): the colour and the halo show the
+  // selection, so a weight change is visible while it is edited.
   const width = selected
-    ? 2.5
+    ? own.width
     : (flowStroke?.width ?? `var(--sd-edge-hl-width, ${String(own.width)})`);
   const ownDash = flowStroke === undefined ? lineDash(own.dash, own.width) : undefined;
   // Moving dashes (022 R11): only when asked for, not under reduced motion, not while a flow is
@@ -332,6 +340,19 @@ export const DeckEdge = memo(function DeckEdge({
           aria-hidden
           pointerEvents="none"
           data-testid="edge-halo"
+        />
+      )}
+      {selected === true && (
+        <path
+          d={path}
+          fill="none"
+          stroke="var(--color-primary-soft)"
+          strokeWidth={own.width + 6}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+          pointerEvents="none"
+          data-testid="edge-selection-halo"
         />
       )}
       <BaseEdge
