@@ -13,10 +13,13 @@ import {
   useReactFlow,
   type ResizeDragEvent,
 } from '@xyflow/react';
-import { Ban, CornerDownRight, EyeOff, Plus } from 'lucide-react';
+import { Ban, CornerDownRight, EyeOff, Lock, Plus } from 'lucide-react';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
+import { readDeck } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
+import { toggleLock } from './actions/table-actions';
+import { LOCKED_HINT } from './lock';
 import type { ConnectionCheck } from './connection-rules';
 import type { DeckNodeData, HandleSide } from './deck-to-flow';
 import {
@@ -55,6 +58,49 @@ const modsOf = (event: ResizeDragEvent) => {
     mod: source?.metaKey === true || source?.ctrlKey === true,
   };
 };
+
+/**
+ * The lock badge of a locked card (043 R11, frames 160 J and 161): an icon that is also the unlock
+ * button, with the tooltip saying why nothing moves. One undo step per press; a press never
+ * selects or drags the card.
+ */
+export function LockBadge({
+  id,
+  title,
+  focused,
+  className,
+}: {
+  id: string;
+  title: string;
+  focused: boolean;
+  className?: string;
+}) {
+  const editor = useEditor();
+  return (
+    <button
+      type="button"
+      aria-label={`Unlock ${title}`}
+      title={LOCKED_HINT}
+      tabIndex={focused ? 0 : -1}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+      }}
+      onMouseDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        toggleLock(editor, readDeck(editor.doc), [id]);
+      }}
+      className={cn(
+        'nodrag nopan inline-flex size-5 shrink-0 items-center justify-center rounded-[6px] text-ink-secondary hover:bg-surface-2',
+        className,
+      )}
+    >
+      <Lock aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+    </button>
+  );
+}
 
 /** The eight resize handles of the single selected node (017 R4); the limits come from the node. */
 export function ResizeControls({ id, level }: { id: string; level: Level }) {

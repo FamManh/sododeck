@@ -6,7 +6,13 @@
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
  *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
-import { endpointOf, endpointTitle, isDbTable, stickyCanvasPosition } from '@sododeck/model';
+import {
+  endpointOf,
+  endpointTitle,
+  isDbTable,
+  isLocked,
+  stickyCanvasPosition,
+} from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
@@ -64,6 +70,7 @@ import { drillScopeTitle } from './outline';
 import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './editing/drag-session';
 import { enterRows, leaveRows, moveRowFocus } from './table/row-focus';
 import { useUndoToast } from './undo-toast';
+import { isNodeLocked, refuseLocked } from './lock';
 
 export { isTextTarget };
 
@@ -251,6 +258,12 @@ export function useCanvasKeyDown() {
           const id = singleComponentId(ui);
           const index = id === null ? -1 : deck.nodes.findIndex((n) => n.id === id);
           const node = index === -1 ? undefined : deck.nodes[index];
+          // A locked card is never resized (043 FR-023).
+          if (node !== undefined && isLocked(node)) {
+            event.preventDefault();
+            refuseLocked();
+            return;
+          }
           if (node !== undefined) {
             const level = effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill));
             const size = cardSize(node, level);
@@ -705,6 +718,11 @@ export function useCanvasKeyDown() {
             if (ui.startTitleEdit({ target: 'group', id: groupId, isNew: false }))
               event.preventDefault();
           } else if (current !== null && deck.nodes.some((node) => node.id === current)) {
+            if (isNodeLocked(deck, current)) {
+              event.preventDefault();
+              refuseLocked();
+              return;
+            }
             if (ui.startTitleEdit({ target: 'node', id: current, isNew: false })) {
               event.preventDefault();
               ui.select({ nodes: [current] });

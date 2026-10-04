@@ -2,7 +2,7 @@
  * Locked cards (043 R11, FR-023): what the canvas refuses for a node with `locked: true`, and the
  * one sentence it says when it does. The flag is document data (`editor.setLocked`).
  */
-import { isLocked } from '@sododeck/model';
+import { isLocked, type RemovalTarget } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { useUiStore } from '../state/ui-store';
@@ -30,4 +30,17 @@ export function unlockedOf(
 export function refuseLocked(): true {
   useUiStore.getState().announce(LOCKED_HINT);
   return true;
+}
+
+/**
+ * Locked cards are never deleted (043 FR-024): the targets without them, and how many were
+ * skipped. The single choke point for the Delete key, the menu and Cut.
+ */
+export function withoutLocked(
+  deck: Pick<SododeckFile, 'nodes'>,
+  targets: readonly RemovalTarget[],
+): { targets: RemovalTarget[]; skipped: number } {
+  const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
+  const kept = targets.filter((target) => target.scope !== 'nodes' || !locked.has(target.id));
+  return { targets: kept, skipped: targets.length - kept.length };
 }

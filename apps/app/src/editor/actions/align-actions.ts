@@ -1,3 +1,4 @@
+import { isLocked } from '@sododeck/model';
 import {
   AlignCenterHorizontal,
   AlignCenterVertical,
@@ -35,8 +36,9 @@ function selectedRects(ctx: ActionContext): IdRect[] {
       ? 'component'
       : effectiveLevel(levelForZoom(zoom), scopeOf(useUiStore.getState().drill));
   const ids = new Set(ctx.selection.nodes);
+  // A locked card never moves (043 FR-024): align and distribute leave it out.
   return ctx.view.deck.nodes.flatMap((node, index) =>
-    ids.has(node.id)
+    ids.has(node.id) && !isLocked(node)
       ? [{ id: node.id, ...displayPosition(node, index), ...cardSize(node, level) }]
       : [],
   );

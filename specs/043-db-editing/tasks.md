@@ -275,13 +275,13 @@
 
 ### Tests for User Story 6 (write first)
 
-- [ ] T043 [P] [US6] Write `apps/app/src/editor/actions/lock.test.ts`:
+- [x] T043 [P] [US6] Write `apps/app/src/editor/actions/lock.test.ts`:
   - `node.lock` toggles via `setLocked` with the label Lock / Unlock
   - ⇧⌘L locks and unlocks the selection
   - `toFlowNode` sets `draggable: false` for locked nodes (cache invalidated on change)
   - nudge, resize keys, align and tidy skip locked nodes
   - multi-drag moves only unlocked nodes
-- [ ] T044 [P] [US6] Add cases to `apps/app/src/editor/confirm-delete-dialog.test.tsx` and `deck-node.test.tsx`:
+- [x] T044 [P] [US6] Add cases to `apps/app/src/editor/confirm-delete-dialog.test.tsx` and `deck-node.test.tsx`:
   - deleting a selection with one locked card removes the others and announces "Skipped 1 locked"
   - a locked card alone is not deleted
   - a locked card shows a button named "Unlock {title}" and no resize controls
@@ -290,8 +290,8 @@
 
 ### Implementation for User Story 6
 
-- [ ] T045 [US6] Add the `node.lock` action (menu, toolbar, ⇧⌘L) in `apps/app/src/editor/actions/table-actions.ts`, available for any card type. Bind ⇧⌘L in `use-canvas-shortcuts.ts` and add it to `shell/shortcuts.ts`.
-- [ ] T046 [US6] Block gestures for locked nodes:
+- [x] T045 [US6] Add the `node.lock` action (menu, toolbar, ⇧⌘L) in `apps/app/src/editor/actions/table-actions.ts`, available for any card type. Bind ⇧⌘L in `use-canvas-shortcuts.ts` and add it to `shell/shortcuts.ts`.
+- [x] T046 [US6] Block gestures for locked nodes:
   - `apps/app/src/editor/deck-to-flow.ts` (`draggable`, cache compare)
   - `editing/drag-session.ts` (filter multi-drag)
   - `editing/use-nudge.ts`, `use-resize-key.ts`, align / tidy actions
@@ -300,7 +300,7 @@
 
   T043 is green.
 
-- [ ] T047 [US6] Filter locked nodes in `selectionTargets` / `useRunDelete` (`apps/app/src/state/ui-store.ts`, `apps/app/src/editor/confirm-delete-dialog.tsx`) and add "Skipped n locked" to the announcement. T044 is green.
+- [x] T047 [US6] Filter locked nodes in `selectionTargets` / `useRunDelete` (`apps/app/src/state/ui-store.ts`, `apps/app/src/editor/confirm-delete-dialog.tsx`) and add "Skipped n locked" to the announcement. T044 is green.
 
 **Checkpoint**: lock works for every card type (SC-007).
 
@@ -320,12 +320,12 @@
   - Table group groups the selected tables, or places a frame at the centre when nothing is selected
   - Packs shows "Table, note, table group" for Database
   - turning Database off hides the tab, and tables on the board still render
-- [ ] T049 [P] [US7] Add cases to `apps/app/src/editor/quick-edit/selection-toolbar.test.tsx`: with 3 tables selected, colour, detail, group and align each apply to all and are undone by one ⌘Z; align skips a locked table.
+- [x] T049 [P] [US7] Add cases to `apps/app/src/editor/quick-edit/selection-toolbar.test.tsx`: with 3 tables selected, colour, detail, group and align each apply to all and are undone by one ⌘Z; align skips a locked table.
 
 ### Implementation for User Story 7
 
 - [x] T050 [US7] In `packages/model/src/card-types.ts`, give the Database pack `tools: ['sticky', 'frame']` and `description: 'Table, note, table group'`. In `apps/app/src/editor/palette.tsx`, label the frame tile "Table group" inside the Database section and show the letter badges. Bind G in `use-shell-shortcuts.ts` (group the selection, or `placeFrameAtCentre`). Show `description` in `apps/app/src/editor/packs-panel.tsx`. T048 is green.
-- [ ] T051 [US7] Fix any bulk action that is not a single `oneStep`, as found by T049. T049 is green.
+- [x] T051 [US7] Fix any bulk action that is not a single `oneStep`, as found by T049. T049 is green.
 
 **Checkpoint**: all stories are done.
 
