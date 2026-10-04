@@ -3,17 +3,26 @@ import type { View } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, type Selection, type UiState, useUiStore } from '../../state/ui-store';
-import { cardSize, groupBounds } from '../canvas-geometry';
+import { cardSize, groupBounds, tableLayoutOf } from '../canvas-geometry';
 import { levelForZoom } from '../levels';
-import { selectView } from '../views/use-current-view';
+import { oneStep } from '../fields/one-step';
+import { rowsDrawn } from '../deck-to-flow';
+import { rowAnchorY } from '../table-layout';
+import { readViewState, selectView } from '../views/use-current-view';
 
 import type { PaletteResult } from './palette-results';
 
-type CanvasKind = 'node' | 'edge' | 'flow' | 'step' | 'sticky';
+type CanvasKind = 'node' | 'table' | 'column' | 'edge' | 'flow' | 'step' | 'sticky';
 
 function isCanvasKind(kind: PaletteResult['kind']): kind is CanvasKind {
   return (
-    kind === 'node' || kind === 'edge' || kind === 'flow' || kind === 'step' || kind === 'sticky'
+    kind === 'node' ||
+    kind === 'table' ||
+    kind === 'column' ||
+    kind === 'edge' ||
+    kind === 'flow' ||
+    kind === 'step' ||
+    kind === 'sticky'
   );
 }
 
@@ -41,7 +50,10 @@ export interface OpenResultContext {
 function selectionFor(result: PaletteResult): Partial<Selection> {
   switch (result.kind) {
     case 'node':
+    case 'table':
       return { nodes: [result.id] };
+    case 'column':
+      return result.tableId === undefined ? {} : { nodes: [result.tableId] };
     case 'edge':
       return { edges: [result.id] };
     case 'sticky':
@@ -88,33 +100,75 @@ export function edgeCenter(
   return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
 }
 
+/**
+ * A component the current view hides (011 FR-016): stays in the view (clarification Q7) and offers
+ * the first view that shows it instead. Returns whether it handled the result.
+ */
+function offerShowInView(node: { id: string; title: string }, context: OpenResultContext): boolean {
+  if (context.isHidden?.(node.id) !== true) return false;
+  const view = context.firstViewShowing?.(node.id) ?? null;
+  if (view === null) {
+    context.showToast?.(`${node.title} is hidden in every view`);
+  } else {
+    context.showToast?.(`${node.title} is hidden in this view`, {
+      label: `Show in ${view.title}`,
+      onAction: () => {
+        selectView(view);
+        context.select({ nodes: [node.id] });
+        context.focus(node.id);
+      },
+    });
+  }
+  return true;
+}
+
+/**
+ * Jump to a column (048 FR-021): a row the limit cut opens the table as Show all (saved, one undo
+ * step, also when locked), the table and row are selected, and the canvas centres on the row. Rows
+ * are not drawn at System and Landscape zoom, so those go to 100 %.
+ */
+function jumpToColumn(tableId: string, columnId: string, context: OpenResultContext): boolean {
+  const table = readDeck(context.editor.doc).nodes.find((entry) => entry.id === tableId);
+  if (table?.columns?.some((entry) => entry.id === columnId) !== true) return false;
+  if (offerShowInView(table, context)) return true;
+  const state = useUiStore.getState();
+  const drawn = readViewState(context.editor.doc).deck.nodes.find((entry) => entry.id === tableId);
+  const cut = drawn === undefined ? undefined : tableLayoutOf(drawn);
+  if (cut?.hidden?.kind === 'limit' && cut.hiddenIds.has(columnId)) {
+    oneStep(context.editor, () => {
+      context.editor.update('nodes', tableId, { expanded: true });
+    });
+  }
+  context.select({ nodes: [tableId] });
+  context.focus(tableId);
+  state.setFocusedRow({ tableId, columnId });
+  // One frame, so the opened table is the one measured.
+  requestAnimationFrame(() => {
+    const view = readViewState(context.editor.doc).deck;
+    const node = view.nodes.find((entry) => entry.id === tableId);
+    const at = nodeCanvasPosition(view, tableId);
+    if (node === undefined || at === null) return;
+    const layout = tableLayoutOf(node);
+    const zoom = context.getZoom();
+    context.setCenter(at.x + layout.width / 2, at.y + rowAnchorY(layout, columnId).y, {
+      zoom: rowsDrawn(levelForZoom(zoom)) ? zoom : 1,
+    });
+  });
+  return true;
+}
+
 export function openResult(result: PaletteResult, context: OpenResultContext): boolean {
   const deck = readDeck(context.editor.doc);
   switch (result.kind) {
     case 'command':
       result.run?.();
       return result.run !== undefined;
-    case 'node': {
+    case 'node':
+    case 'table': {
       const node = deck.nodes.find((entry) => entry.id === result.id);
       if (node === undefined) break;
       ensureCanvasReady(result, context);
-      if (context.isHidden?.(node.id) === true) {
-        // Stay in the view (clarification Q7): offer the first view that shows it instead.
-        const view = context.firstViewShowing?.(node.id) ?? null;
-        if (view === null) {
-          context.showToast?.(`${node.title} is hidden in every view`);
-        } else {
-          context.showToast?.(`${node.title} is hidden in this view`, {
-            label: `Show in ${view.title}`,
-            onAction: () => {
-              selectView(view);
-              context.select({ nodes: [node.id] });
-              context.focus(node.id);
-            },
-          });
-        }
-        return true;
-      }
+      if (offerShowInView(node, context)) return true;
       context.select(selectionFor(result));
       context.focus(result.id);
       context.fitView({
@@ -122,6 +176,12 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
         duration: 0,
         maxZoom: Math.max(context.getZoom(), 1),
       });
+      return true;
+    }
+    case 'column': {
+      if (result.tableId === undefined) break;
+      ensureCanvasReady(result, context);
+      if (!jumpToColumn(result.tableId, result.id, context)) break;
       return true;
     }
     case 'edge': {
