@@ -89,9 +89,10 @@ describe('EnumInspector (052 US4)', () => {
     const view = render();
     const schema = screen.getByRole('textbox', { name: 'Schema' });
     await view.user.type(schema, 'other');
-    // order_status also exists in "other": the schema write is refused.
+    // order_status also exists in "other": the schema write is refused. Earlier keystrokes ("o",
+    // "ot"…) are valid and may have been saved while typing, so only the final text is checked.
     expect(screen.getByText('An enum named order_status already exists in other')).toBeVisible();
-    expect(view.dbEnum()?.schema).toBeUndefined();
+    expect(view.dbEnum()?.schema).not.toBe('other');
   });
 
   it('writes the note and the colour', async () => {

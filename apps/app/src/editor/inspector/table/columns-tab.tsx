@@ -59,14 +59,13 @@ export function ColumnsTab({ deck, node }: { deck: SododeckFile; node: Node }) {
 
   const add = () => {
     let id = '';
+    const nextName = nextColumnName(node);
     oneStep(editor, () => {
-      id = editor.addColumn(
-        node.id,
-        newColumnData(parseColumnLine(nextColumnName(node), { enums: [] })),
-      );
+      id = editor.addColumn(node.id, newColumnData(parseColumnLine(nextName, { enums: [] })));
     });
     setFilter('');
     useUiStore.getState().openTableDrawer(node.id, { tab: 'columns', columnId: id });
+    useUiStore.getState().announce(`Column ${nextName} added`);
   };
 
   return (

@@ -96,6 +96,25 @@ export function DetailDrawer({
     if (enumGone) close();
   }, [enumGone, close]);
 
+  // The drawer also closes without `close()` when its table or relationship is removed (undo,
+  // another tab). Focus was inside it or on the removed card, so it would drop to the page: hand
+  // it to the canvas, once the removed element is gone.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const closed = wasOpen.current && !drawer.open;
+    wasOpen.current = drawer.open;
+    if (!closed) return;
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active === null || active === document.body || !active.isConnected) {
+        canvasElement()?.focus();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [drawer.open]);
+
   if (!drawer.open) return null;
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {

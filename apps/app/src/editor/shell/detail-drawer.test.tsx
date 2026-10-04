@@ -8,6 +8,7 @@ import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { Canvas } from '../canvas';
+import { canvasElement } from '../canvas-actions';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
 import { CanvasShell } from './canvas-shell';
 import { DetailDrawer } from './detail-drawer';
@@ -220,6 +221,61 @@ describe('Drawer grip (FR-025)', () => {
       env.editor().removeEnum('e1');
     });
     expect(drawer()).not.toBeInTheDocument();
+    expect(ui().drawer.open).toBe(false);
+  });
+  it('closes when its table or relationship is removed, and focus goes back to the canvas (052)', async () => {
+    const db = deckOf({
+      name: 'Shop',
+      nodes: [
+        {
+          id: 'orders',
+          type: 'db-table',
+          title: 'orders',
+          position: { x: 0, y: 0 },
+          columns: [{ id: 'o-id', name: 'id', type: 'uuid' }],
+        },
+        {
+          id: 'customers',
+          type: 'db-table',
+          title: 'customers',
+          position: { x: 300, y: 0 },
+          columns: [{ id: 'c-id', name: 'id', type: 'uuid' }],
+        },
+      ] as never,
+      edges: [
+        {
+          id: 'rel',
+          from: 'orders',
+          to: 'customers',
+          fromColumns: ['o-id'],
+          toColumns: ['c-id'],
+          cardinality: 'n-1',
+        },
+      ] as never,
+    });
+    const env = renderWithEditor(<Shell />, db);
+    act(() => {
+      ui().select({ edges: ['rel'] });
+      ui().openDrawer();
+    });
+    expect(drawer()).toBeInTheDocument();
+    act(() => {
+      env.editor().remove('edges', 'rel');
+    });
+    expect(drawer()).not.toBeInTheDocument();
+
+    act(() => {
+      ui().select({ nodes: ['orders'] });
+      ui().openDrawer();
+    });
+    expect(screen.getByRole('tablist')).toBeInTheDocument();
+    act(() => {
+      env.editor().remove('nodes', 'orders');
+    });
+    expect(drawer()).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(canvasElement()?.contains(document.activeElement)).toBe(true);
+    });
     expect(ui().drawer.open).toBe(false);
   });
 });

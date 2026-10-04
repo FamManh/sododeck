@@ -40,6 +40,7 @@ describe('ColumnsTab rows (052 US1)', () => {
     const view = render();
     await view.user.click(screen.getByRole('button', { name: 'Column' }));
     expect(names(view)).toEqual(['id', 'email', 'name', 'created_at', 'column_1']);
+    expect(useUiStore.getState().announcement.text).toBe('Column column_1 added');
     const name = screen.getByRole('textbox', { name: 'Name' });
     expect(name).toHaveValue('column_1');
     expect(name).toHaveFocus();
@@ -197,6 +198,11 @@ describe('ColumnsTab fields (052 US1)', () => {
     await view.user.click(screen.getByRole('button', { name: 'Delete column' }));
     expect(names(view)).toEqual(['id', 'email', 'created_at']);
     expect(await screen.findByText('Deleted column name')).toBeInTheDocument();
+    // The delete button moves focus to the next row on the next frame; wait for it so that it
+    // cannot land after (and undo) the focus this test sets.
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^created_at\b/ })).toHaveFocus();
+    });
     screen.getByRole('button', { name: /^email\b/ }).focus();
     await view.user.keyboard('{Backspace}');
     expect(names(view)).toEqual(['id', 'created_at']);
