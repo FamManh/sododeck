@@ -145,7 +145,8 @@ export function assertValid(issues: Issue[]): void {
   if (issues.length > 0) throw new DeckEditError('invalid', issues);
 }
 
-export type RefTarget = Collection | 'rule' | 'any';
+/** `'nodes|groups'`: a connector end, which names a node or a group (050). */
+export type RefTarget = Collection | 'nodes|groups' | 'rule' | 'any';
 
 export interface Ref {
   /** Field holding the reference, e.g. `from` or `includes.2`. */
@@ -160,10 +161,14 @@ function exists(doc: DeckDoc, ref: Ref, anyIds: () => ReadonlySet<Id>): boolean 
       return rulesMap(doc).has(ref.id);
     case 'any':
       return anyIds().has(ref.id);
+    case 'nodes|groups':
+      return collectionMap(doc, 'nodes').has(ref.id) || collectionMap(doc, 'groups').has(ref.id);
     default:
       return collectionMap(doc, ref.target).has(ref.id);
   }
 }
+
+const targetName = (target: RefTarget) => (target === 'nodes|groups' ? 'nodes or groups' : target);
 
 /** Throws `DeckEditError('missing-reference')` naming every reference that does not resolve. */
 export function assertRefsExist(
@@ -175,7 +180,7 @@ export function assertRefsExist(
     .filter((ref) => !exists(doc, ref, anyIds))
     .map((ref) => ({
       path: ref.path,
-      message: `"${ref.id}" does not exist${ref.target === 'any' ? '' : ` (${ref.target})`}.`,
+      message: `"${ref.id}" does not exist${ref.target === 'any' ? '' : ` (${targetName(ref.target)})`}.`,
     }));
   if (issues.length > 0) throw new DeckEditError('missing-reference', issues);
 }

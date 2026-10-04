@@ -19,6 +19,8 @@ export function refsOf(c: Collection, field: string, value: unknown): Ref[] {
   switch (`${c}.${field}`) {
     case 'edges.from':
     case 'edges.to':
+      // A connector end is a node or a group (050).
+      return one('nodes|groups');
     case 'nodes.parent':
       return one('nodes');
     case 'nodes.group':
