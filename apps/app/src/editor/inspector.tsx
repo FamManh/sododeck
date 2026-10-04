@@ -5,6 +5,7 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { Layers, Trash2 } from 'lucide-react';
 
 import { useUiStore } from '../state/ui-store';
+import { isRelationship } from './relationships/relationship-ends';
 import { FlowInspector } from './flows/flow-inspector';
 import { BulkInspector } from './inspector/bulk-inspector';
 import { DeckInspector } from './inspector/deck-inspector';
@@ -13,7 +14,9 @@ import { GroupInspector } from './inspector/group-inspector';
 import { ConnectorsInspector } from './inspector/connectors-inspector';
 import { InspectorFrame } from './inspector/inspector-frame';
 import { NodeInspector } from './inspector/node-inspector';
+import { RelationshipInspector } from './inspector/relationship/relationship-inspector';
 import { StickyInspector } from './inspector/sticky-inspector';
+import { TableInspector } from './inspector/table/table-inspector';
 
 /**
  * The inspector (FR-001): the shown or recorded flow's inspectors (006), else one per canvas
@@ -50,8 +53,19 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
   if (group !== undefined && groups.length === 1 && nodes.length === 0 && edges.length === 0) {
     return <GroupInspector deck={deck} group={group} />;
   }
+  if (node?.type === 'db-table' && nodes.length === 1 && edges.length === 0) {
+    return <TableInspector deck={deck} node={node} />;
+  }
   if (node !== undefined && nodes.length === 1 && edges.length === 0) {
     return <NodeInspector deck={deck} node={node} />;
+  }
+  if (
+    edge !== undefined &&
+    edges.length === 1 &&
+    nodes.length === 0 &&
+    isRelationship(edge, (id) => deck.nodes.some((n) => n.id === id && n.type === 'db-table'))
+  ) {
+    return <RelationshipInspector deck={deck} edge={edge} />;
   }
   if (edge !== undefined && edges.length === 1 && nodes.length === 0) {
     return <EdgeInspector deck={deck} edge={edge} />;
