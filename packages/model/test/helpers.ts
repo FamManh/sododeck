@@ -224,3 +224,111 @@ export function bothOrders(
     check(a, b);
   }
 }
+
+/**
+ * A small database schema (040): customers, orders, order items (composite key), shipments (a
+ * composite reference to items) and categories (a self-reference), one enum, indexes and a check.
+ */
+export function shopDeck(): SododeckFile {
+  return {
+    ...emptySododeckFile(),
+    dialect: 'postgres',
+    enums: [
+      {
+        id: 'e-status',
+        name: 'customer_status',
+        values: [
+          { id: 'ev-active', name: 'active' },
+          { id: 'ev-blocked', name: 'blocked', note: 'No orders.' },
+        ],
+      },
+    ],
+    nodes: [
+      { id: 'db', type: 'database', title: 'Shop' },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        parent: 'db',
+        columns: [
+          { id: 'c-id', name: 'id', type: 'bigint', pk: true },
+          { id: 'c-email', name: 'email', type: 'varchar', size: '255', notNull: true },
+          { id: 'c-status', name: 'status', type: 'customer_status', enumRef: 'e-status' },
+        ],
+      },
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        parent: 'db',
+        columns: [
+          { id: 'o-id', name: 'id', type: 'bigint', pk: true },
+          { id: 'o-customer', name: 'customer_id', type: 'bigint', notNull: true },
+          { id: 'o-total', name: 'total', type: 'numeric', size: '10,2' },
+        ],
+        indexes: [
+          { id: 'ix-customer', columns: ['o-customer'] },
+          { id: 'ix-mixed', name: 'orders_mixed', columns: ['o-customer', 'o-total'] },
+          { id: 'ix-expr', columns: [{ expr: 'lower(note)' }] },
+        ],
+        checks: [{ id: 'ck-total', name: 'total_positive', expr: 'total >= 0' }],
+      },
+      {
+        id: 'items',
+        type: 'db-table',
+        title: 'order_items',
+        columns: [
+          { id: 'i-order', name: 'order_id', type: 'bigint', pk: true },
+          { id: 'i-line', name: 'line_no', type: 'integer', pk: true },
+          { id: 'i-qty', name: 'quantity', type: 'integer' },
+        ],
+      },
+      {
+        id: 'shipments',
+        type: 'db-table',
+        title: 'shipments',
+        columns: [
+          { id: 's-id', name: 'id', type: 'bigint', pk: true },
+          { id: 's-order', name: 'order_id', type: 'bigint' },
+          { id: 's-line', name: 'line_no', type: 'integer' },
+        ],
+      },
+      {
+        id: 'categories',
+        type: 'db-table',
+        title: 'categories',
+        columns: [
+          { id: 'cat-id', name: 'id', type: 'bigint', pk: true },
+          { id: 'cat-parent', name: 'parent_id', type: 'bigint', enumRef: 'e-status' },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: 'r-orders-customer',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['o-customer'],
+        toColumns: ['c-id'],
+        cardinality: 'n-1',
+        onDelete: 'cascade',
+      },
+      {
+        id: 'r-ship-item',
+        from: 'shipments',
+        to: 'items',
+        fromColumns: ['s-order', 's-line'],
+        toColumns: ['i-order', 'i-line'],
+        cardinality: 'n-1',
+      },
+      {
+        id: 'r-cat-parent',
+        from: 'categories',
+        to: 'categories',
+        fromColumns: ['cat-parent'],
+        toColumns: ['cat-id'],
+        fromOptional: true,
+      },
+    ],
+  };
+}

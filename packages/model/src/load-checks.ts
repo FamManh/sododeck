@@ -1,8 +1,10 @@
 /**
  * Identity checks on load (research R7, spec FR-020). A duplicated id makes every reference to it
  * ambiguous, so such a file is refused and never auto-fixed. Scopes: each collection, the steps
- * of one flow, the branches of one flow, the columns (inputs and outputs together) of one rule, and the rows of one rule.
- * The same id in two different scopes is allowed by the format.
+ * of one flow, the branches of one flow, the columns (inputs and outputs together) of one rule, the
+ * rows of one rule, and the database parts (040, research R8): every table's columns, indexes and
+ * checks plus the enums and their values, together across the deck. The same id in two different
+ * scopes is allowed by the format.
  */
 import type { Issue, SododeckFile } from '@sododeck/schema';
 
@@ -28,6 +30,22 @@ function checkScope(items: readonly { id: string; path: string }[], issues: Issu
 const withPaths = (items: readonly { id: string }[], prefix: string) =>
   items.map((item, i) => ({ id: item.id, path: `${prefix}.${String(i)}.id` }));
 
+/** Every column, index and check of every node, then every enum and enum value, with paths. */
+function databaseParts(file: SododeckFile): { id: string; path: string }[] {
+  const parts: { id: string; path: string }[] = [];
+  file.nodes.forEach((node, i) => {
+    const prefix = `nodes.${String(i)}`;
+    parts.push(...withPaths(node.columns ?? [], `${prefix}.columns`));
+    parts.push(...withPaths(node.indexes ?? [], `${prefix}.indexes`));
+    parts.push(...withPaths(node.checks ?? [], `${prefix}.checks`));
+  });
+  (file.enums ?? []).forEach((item, i) => {
+    parts.push({ id: item.id, path: `enums.${String(i)}.id` });
+    parts.push(...withPaths(item.values, `enums.${String(i)}.values`));
+  });
+  return parts;
+}
+
 /** One issue per duplicated id per scope, naming every location. Empty when ids are unique. */
 export function checkDuplicateIds(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
@@ -47,5 +65,6 @@ export function checkDuplicateIds(file: SododeckFile): Issue[] {
     );
     checkScope(withPaths(rule.rows, `${prefix}.rows`), issues);
   }
+  checkScope(databaseParts(file), issues);
   return issues;
 }
