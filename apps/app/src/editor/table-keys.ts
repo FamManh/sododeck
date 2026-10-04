@@ -4,7 +4,7 @@
  * per edit, not once per card.
  */
 import { isDbTable, tableDisplayOf, type ResolvedTableDisplay } from '@sododeck/model';
-import type { DbEnum, Id, SododeckFile } from '@sododeck/schema';
+import type { DbDetail, DbEnum, Id, SododeckFile } from '@sododeck/schema';
 
 import { rowKey } from './relationships/row-key';
 import { typeMismatch } from './relationships/type-mismatch';
@@ -183,6 +183,13 @@ function sameDisplay(a: ResolvedTableDisplay, b: ResolvedTableDisplay): boolean 
   );
 }
 
+function withViewDetail(
+  display: ResolvedTableDisplay,
+  detail: DbDetail | undefined,
+): ResolvedTableDisplay {
+  return detail === undefined || detail === display.detail ? display : { ...display, detail };
+}
+
 let lastContext: TableContext | undefined;
 
 /**
@@ -191,13 +198,15 @@ let lastContext: TableContext | undefined;
  */
 export function tableContextOf(
   deck: Pick<SododeckFile, 'nodes' | 'edges' | 'enums' | 'tableDisplay'>,
+  /** The current view's detail (048): it replaces the deck's, a table's own choice still wins. */
+  viewDetail?: DbDetail,
 ): TableContext {
   const next: TableContext = {
     fk: fkColumns(deck),
     connected: connectedColumns(deck),
     showSchema: schemaCount(deck) >= 2,
     enums: enumById(deck),
-    display: tableDisplayOf(deck),
+    display: withViewDetail(tableDisplayOf(deck), viewDetail),
     mismatched: mismatchedColumns(deck),
   };
   const last = lastContext;
@@ -223,8 +232,9 @@ let currentContext: TableContext = tableContextOf({ nodes: [], edges: [] });
  */
 export function setTableDeck(
   deck: Pick<SododeckFile, 'nodes' | 'edges' | 'enums' | 'tableDisplay'>,
+  viewDetail?: DbDetail,
 ): void {
-  currentContext = tableContextOf(deck);
+  currentContext = tableContextOf(deck, viewDetail);
 }
 
 /** The context set by `setTableDeck`. */

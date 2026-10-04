@@ -11,6 +11,8 @@ export {
   type Scope,
 } from './layout';
 export { deckDialect } from './dialect';
+export { groupingModeOf, type GroupingMode } from './read';
+export { isSchemaGroupId, schemaGroupId, splitStoredGroups } from './schema-groups';
 export {
   relationshipDisplayOf,
   tableDisplayOf,

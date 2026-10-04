@@ -10,13 +10,22 @@
  *
  * Never written anywhere: the document stays the snapshot; writes go through the editor ops.
  */
-import { NODE_GRID, resolveViews, viewNodePosition } from '@sododeck/model';
+import { isDbTable, NODE_GRID, resolveViews, viewNodePosition } from '@sododeck/model';
 import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sododeck/schema';
 
+import { cardIconRef } from '../card-icon';
 import { setCardFieldDeck } from '../card-fields';
 import { setTableDeck } from '../table-keys';
-import { withForcedRows, withNewRow } from '../table-layout';
+import {
+  withFilter,
+  withFilterOf,
+  withForcedRows,
+  withNewRow,
+  withNewRowOf,
+} from '../table-layout';
+import { schemaGroupedDeck } from '../schema-groups';
 import { flowCountByNode, viewFilter } from '../view-filter';
+import type { OutsideTable } from '../visible-graph';
 
 export interface ViewRender {
   subtitleField: SubtitleField;
@@ -25,6 +34,8 @@ export interface ViewRender {
   pinned: ReadonlySet<Id>;
   /** Revealed components this view would otherwise hide: they carry "Hidden in this view". */
   revealedHidden: ReadonlySet<Id>;
+  /** The view filters tables by schema or by name (048): a revealed table is outside that filter. */
+  tableFilter: boolean;
 }
 
 export interface ViewState {
@@ -35,6 +46,8 @@ export interface ViewState {
   /** The deck as this view draws it (see the module comment). */
   deck: SododeckFile;
   hidden: ReadonlySet<Id>;
+  /** The tables this view hides, for the Outside proxies of their connectors (048). */
+  outside: ReadonlyMap<Id, OutsideTable>;
   collapsed: ReadonlySet<Id>;
   render: ViewRender;
 }
@@ -48,7 +61,30 @@ export interface RowEditView {
   newRowAt: number | null;
 }
 
+/** The table whose columns the ⌘F filter folds (048): UI state, projected here, never written. */
+export interface TableFilterView {
+  tableId: Id;
+  text: string;
+}
+
 const EMPTY: ReadonlySet<Id> = new Set();
+const NO_OUTSIDE: ReadonlyMap<Id, OutsideTable> = new Map();
+
+/** The hidden tables as proxy sources (048); the shared empty map when the view hides none. */
+function outsideTables(file: SododeckFile, hidden: ReadonlySet<Id>): ReadonlyMap<Id, OutsideTable> {
+  if (hidden.size === 0) return NO_OUTSIDE;
+  const out = new Map<Id, OutsideTable>();
+  for (const node of file.nodes) {
+    if (!hidden.has(node.id) || !isDbTable(node)) continue;
+    const icon = cardIconRef(node);
+    out.set(node.id, {
+      title: node.title,
+      kind: node.type,
+      ...(icon === undefined ? {} : { icon }),
+    });
+  }
+  return out.size === 0 ? NO_OUTSIDE : out;
+}
 const NO_POSITIONS: NonNullable<View['positions']> = {};
 const NO_FRAMES: NonNullable<View['groupFrames']> = {};
 
@@ -259,11 +295,23 @@ export function viewDeck(deck: SododeckFile, view: View, hidden: ReadonlySet<Id>
   return projected;
 }
 
+/**
+ * By schema (048): the projected deck with derived schema groups. By group returns `projected`
+ * untouched, so the default path is exactly what it was.
+ */
+function grouped(file: SododeckFile, projected: SododeckFile): SododeckFile {
+  return file.groupingMode === 'schema' ? schemaGroupedDeck(projected) : projected;
+}
+
 const rowEditNodes = new WeakMap<Node, { at: number | null; node: Node }>();
 function showAll(node: Node, at: number | null): Node {
   const cached = rowEditNodes.get(node);
   if (cached?.at === at) return cached.node;
-  const all = node.detail === 'all' ? node : { ...node, detail: 'all' as const };
+  // Opened too (048): the edited row may lie beyond the row limit. Nothing is written.
+  const all =
+    node.detail === 'all' && node.expanded === true
+      ? node
+      : { ...node, detail: 'all' as const, expanded: true };
   const next = at === null ? all : withNewRow(all === node ? { ...node } : all, at);
   rowEditNodes.set(node, { at, node: next });
   return next;
@@ -289,6 +337,35 @@ function withRowEdit(deck: SododeckFile, rowEdit: RowEditView | null): SododeckF
   return next;
 }
 
+const filteredNodes = new WeakMap<Node, { text: string; node: Node }>();
+const filteredDecks = new WeakMap<
+  SododeckFile,
+  { tableId: Id; text: string; deck: SododeckFile }
+>();
+
+/** `deck` with one table marked as filtered (048); `deck` itself for no filter or blank text. */
+function withTableFilter(deck: SododeckFile, filter: TableFilterView | null): SododeckFile {
+  if (filter === null || filter.text.trim() === '') return deck;
+  const index = deck.nodes.findIndex((node) => node.id === filter.tableId);
+  const node = deck.nodes[index];
+  if (node === undefined) return deck;
+  const cached = filteredDecks.get(deck);
+  if (cached?.tableId === filter.tableId && cached.text === filter.text) return cached.deck;
+  let marked = filteredNodes.get(node);
+  if (marked?.text !== filter.text) {
+    marked = { text: filter.text, node: withFilter({ ...node }, filter.text) };
+    filteredNodes.set(node, marked);
+  }
+  const nodes = deck.nodes.slice();
+  nodes[index] = marked.node;
+  const next = { ...deck, nodes };
+  filteredDecks.set(deck, { tableId: filter.tableId, text: filter.text, deck: next });
+  return next;
+}
+
+const sameFilter = (a: TableFilterView | null, b: TableFilterView | null) =>
+  a?.tableId === b?.tableId && a?.text === b?.text;
+
 /** Columns the current flow step touches, by table (049): rows that always draw. */
 export type TouchedRows = ReadonlyMap<Id, ReadonlySet<Id>>;
 
@@ -308,7 +385,8 @@ function withTouchedRows(deck: SododeckFile, rows: TouchedRows | null): Sododeck
     if (ids === undefined) return node;
     const known = touchedNodes.get(node);
     if (known?.ids === ids) return known.node;
-    const next = withForcedRows({ ...node }, ids);
+    // Keep the marks a projection made earlier (new row, column filter) on the copy.
+    const next = withForcedRows(withFilterOf(node, withNewRowOf(node, { ...node })), ids);
     touchedNodes.set(node, { ids, node: next });
     return next;
   });
@@ -327,6 +405,7 @@ const states = new WeakMap<
     {
       revealed: ReadonlySet<Id>;
       rowEdit: RowEditView | null;
+      filter: TableFilterView | null;
       touched: TouchedRows | null;
       state: ViewState;
     }
@@ -335,27 +414,30 @@ const states = new WeakMap<
 
 /**
  * The view `currentViewId` (the first one when null or gone) of `file`, as the canvas uses it.
- * `rowEdit`: the table in row editing (043), shown at All in `deck` only. `touched`: the columns the
- * current flow step touches (049), whose rows `deck` always draws.
+ * `rowEdit`: the table in row editing (043), shown at All in `deck` only. `filter`: the table the
+ * column filter folds (048), in `deck` only. `touched`: the columns the current flow step touches
+ * (049), whose rows `deck` always draws.
  */
 export function viewStateOf(
   file: SododeckFile,
   currentViewId: Id | null,
   revealed: ReadonlySet<Id> = EMPTY,
   rowEdit: RowEditView | null = null,
+  filter: TableFilterView | null = null,
   touched: TouchedRows | null = null,
 ): ViewState {
   // Card heights follow the typed fields this deck shows (032); every geometry helper reads them.
   setCardFieldDeck(file);
-  // Table heights follow the deck's display settings, keys and enums (041), read the same way.
-  setTableDeck(file);
   let byView = states.get(file);
   const cached = byView?.get(currentViewId);
   if (
     cached?.revealed === revealed &&
     sameRowEdit(cached.rowEdit, rowEdit) &&
+    sameFilter(cached.filter, filter) &&
     cached.touched === touched
   ) {
+    // The table context is module state, so it is set again for whichever view is asked for.
+    setTableDeck(file, cached.state.view.detail);
     return cached.state;
   }
 
@@ -363,6 +445,9 @@ export function viewStateOf(
   const view = views.find((v) => v.id === currentViewId) ?? views[0];
   // `resolveViews` falls back to the presets, so there is always a first view.
   if (view === undefined) throw new Error('A deck always has at least one view.');
+  // Table heights follow the deck's display settings, keys and enums (041), read the same way;
+  // the view's own detail (048) replaces the deck's.
+  setTableDeck(file, view.detail);
   const { hidden, dimmed } = viewFilter(file, view, revealed);
   const revealedHidden =
     revealed.size === 0
@@ -372,8 +457,12 @@ export function viewStateOf(
     views,
     view,
     isBase: view === views[0],
-    deck: withTouchedRows(withRowEdit(viewDeck(file, view, hidden), rowEdit), touched),
+    deck: withTouchedRows(
+      withTableFilter(withRowEdit(grouped(file, viewDeck(file, view, hidden)), rowEdit), filter),
+      touched,
+    ),
     hidden,
+    outside: outsideTables(file, hidden),
     collapsed: setOf(view.collapsed),
     render: {
       subtitleField: view.subtitleField ?? 'tech',
@@ -381,13 +470,14 @@ export function viewStateOf(
       dimmed,
       pinned: setOf(view.pinned),
       revealedHidden,
+      tableFilter: view.schemas !== undefined || view.includes !== undefined,
     },
   };
   if (byView === undefined) {
     byView = new Map();
     states.set(file, byView);
   }
-  byView.set(currentViewId, { revealed, rowEdit, touched, state });
+  byView.set(currentViewId, { revealed, rowEdit, filter, touched, state });
   return state;
 }
 

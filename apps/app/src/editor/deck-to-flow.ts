@@ -98,6 +98,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   pinned?: boolean;
   /** Created here while the view hides it (011): shown until the view is left, with a note. */
   hiddenInView?: boolean;
+  /** A table created outside the view's schema / table filter (048): note and "Add to this view". */
+  outsideFilter?: boolean;
   /** The component's problems (015): an amber glyph and a count in its accessible name. */
   problems?: ProblemMark;
   /** Resolved fill/stroke colour (020); absent when the card has no colour. */
@@ -563,6 +565,7 @@ function toFlowNode(
   const viewDimmed = render?.dimmed.has(node.id) === true;
   const pinned = render?.pinned.has(node.id) === true;
   const hiddenInView = render?.revealedHidden.has(node.id) === true;
+  const outsideFilter = hiddenInView && render.tableFilter && isDbTable(node);
   const problems = view.problems?.get(node.id);
   const look = resolveLook(node.style, selected ? (view.stylePreview ?? undefined) : undefined);
   const className = [
@@ -594,6 +597,7 @@ function toFlowNode(
     (cached.data.viewDimmed === true) === viewDimmed &&
     (cached.data.pinned === true) === pinned &&
     (cached.data.hiddenInView === true) === hiddenInView &&
+    (cached.data.outsideFilter === true) === outsideFilter &&
     sameProblemMark(cached.data.problems, problems) &&
     sameLook(cached.data.look, look) &&
     sameTagLooks(cached.data.tagLooks, tagLooks) &&
@@ -651,6 +655,7 @@ function toFlowNode(
       ...(viewDimmed ? { viewDimmed } : {}),
       ...(pinned ? { pinned } : {}),
       ...(hiddenInView ? { hiddenInView } : {}),
+      ...(outsideFilter ? { outsideFilter } : {}),
       ...(problems === undefined ? {} : { problems }),
       ...(look === undefined ? {} : { look }),
       ...(geometry === undefined ? {} : { geometry }),

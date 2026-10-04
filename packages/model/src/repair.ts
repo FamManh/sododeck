@@ -10,6 +10,7 @@ import * as Y from 'yjs';
 
 import type { YObject } from './convert';
 import { collectionMap, type DeckDoc } from './layout';
+import { isSchemaGroupId } from './schema-groups';
 
 type Exists = (id: string) => boolean;
 
@@ -59,7 +60,8 @@ function viewFixes(doc: DeckDoc): (() => void)[] {
     ...listFix(view, 'pinned', node, true),
     ...mapFix(view, 'positions', node, false),
     ...listFix(view, 'excludeGroups', group, true),
-    ...listFix(view, 'collapsed', group, true),
+    // A derived schema group (048) has no stored object, so it is never dangling.
+    ...listFix(view, 'collapsed', (id) => isSchemaGroupId(id) || group(id), true),
     ...mapFix(view, 'groupFrames', group, true),
   ]);
 }

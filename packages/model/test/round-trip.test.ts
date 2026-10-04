@@ -129,6 +129,27 @@ const perType: [string, SododeckFile][] = [
       ],
     },
   ],
+  // 048: grouping mode, view schemas and view detail (and a collapsed schema group id).
+  [
+    'grouping mode and view filters',
+    {
+      $schema,
+      version,
+      groupingMode: 'schema',
+      ...collections,
+      views: [
+        { id: 'v1', type: 'system', title: 'One' },
+        {
+          id: 'v2',
+          type: 'custom',
+          title: 'Billing',
+          schemas: ['billing', 'public'],
+          collapsed: ['schema:billing'],
+          detail: 'keys',
+        },
+      ],
+    },
+  ],
   [
     'edge',
     {
@@ -1299,7 +1320,9 @@ describe('database schema (040)', () => {
     expect(`${JSON.stringify(out, null, 2)}\n`).toBe(serializeDeck(shopDeck()));
     const keys = Object.keys(toJSON(fromJSON(full)));
     expect(keys.indexOf('dialect')).toBe(keys.indexOf('fieldDefaults') + 1);
-    expect(keys.indexOf('enums')).toBe(keys.indexOf('dialect') + 1);
+    // `blockSqlExport` (052) sits between them.
+    expect(keys.indexOf('blockSqlExport')).toBe(keys.indexOf('dialect') + 1);
+    expect(keys.indexOf('enums')).toBe(keys.indexOf('blockSqlExport') + 1);
     // Stored always (like tagColors), written only with entries (041).
     expect(toJSON(fromJSON({ ...empty, tableDisplay: {} }))).not.toHaveProperty('tableDisplay');
     expect(keys.indexOf('tableDisplay')).toBe(keys.indexOf('enums') + 1);
@@ -1308,7 +1331,9 @@ describe('database schema (040)', () => {
       'relationshipDisplay',
     );
     expect(keys.indexOf('relationshipDisplay')).toBe(keys.indexOf('tableDisplay') + 1);
-    expect(keys.indexOf('nodes')).toBe(keys.indexOf('relationshipDisplay') + 1);
+    // 048: the grouping mode follows the relationship display.
+    expect(keys.indexOf('groupingMode')).toBe(keys.indexOf('relationshipDisplay') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('groupingMode') + 1);
     const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
     expect(Object.keys(orders)).toEqual([
       'id',

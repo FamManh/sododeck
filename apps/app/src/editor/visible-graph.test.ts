@@ -472,3 +472,52 @@ describe('foreign keys across database cards (049 US2)', () => {
     expect(inside(deck, 'odb').edges).not.toContain('orders-customers');
   });
 });
+
+describe('outside proxies for tables a view hides (048 US5)', () => {
+  const tables = deckOf({
+    nodes: [
+      { id: 'a', type: 'db-table', title: 'orders', group: 'g' },
+      { id: 'a2', type: 'db-table', title: 'items', group: 'g' },
+    ],
+    groups: [{ id: 'g', title: 'G' }],
+    edges: [
+      { id: 'e1', from: 'a', to: 'h1' },
+      { id: 'e2', from: 'a2', to: 'h1' },
+      { id: 'e3', from: 'a', to: 'h2' },
+    ],
+  });
+  const outside = new Map([
+    ['h1', { title: 'customers', kind: 'db-table' }],
+    ['h2', { title: 'products', kind: 'db-table', icon: 'box' }],
+  ]);
+  const top = { node: null, group: null };
+
+  it('draws one proxy per hidden table, never merged', () => {
+    const graph = visibleGraph(tables, top, new Set(), outside);
+    expect(graph.ports.map((p) => [p.outsideNodeId, p.outsideTitle, p.edgeIds])).toEqual([
+      ['h1', 'customers', ['e1', 'e2']],
+      ['h2', 'products', ['e3']],
+    ]);
+    expect(graph.ports[1]?.outsideIcon).toBe('box');
+    expect(graph.merged).toEqual([]);
+  });
+
+  it('a collapsed group does not change the proxies', () => {
+    const graph = visibleGraph(tables, top, new Set(['g']), outside);
+    expect(graph.ports.map((p) => p.outsideNodeId)).toEqual(['h1', 'h2']);
+    expect(graph.cards).toHaveLength(1);
+  });
+
+  it('draws nothing for a hidden end that is not in the outside map', () => {
+    expect(visibleGraph(tables, top, new Set()).ports).toEqual([]);
+  });
+
+  it('keeps the graph per outside map', () => {
+    expect(visibleGraph(tables, top, new Set(), outside)).toBe(
+      visibleGraph(tables, top, new Set(), outside),
+    );
+    expect(visibleGraph(tables, top, new Set(), outside)).not.toBe(
+      visibleGraph(tables, top, new Set()),
+    );
+  });
+});

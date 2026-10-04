@@ -169,6 +169,86 @@ describe('useLiveField (research R4)', () => {
   });
 });
 
+function NameField({ validate }: { validate?: (text: string) => string | undefined }) {
+  const editor = useEditor();
+  const file = useDeckSnapshot(editor.doc);
+  const field = useLiveField({
+    label: 'Name',
+    value: file.nodes[0]?.title ?? '',
+    ...(validate === undefined ? {} : { validate }),
+    onWrite: (title) => {
+      editor.update('nodes', 'a', { title });
+    },
+  });
+  return (
+    <>
+      <input
+        aria-label="Name"
+        value={field.value}
+        onChange={(e) => {
+          field.onChange(e.target.value);
+        }}
+        onFocus={field.onFocus}
+        onBlur={field.onBlur}
+        onKeyDown={field.onKeyDown}
+      />
+      {field.error !== undefined && <span role="alert">{field.error}</span>}
+    </>
+  );
+}
+
+describe('useLiveField validate (052 research R3)', () => {
+  // Empty is refused too, so clearing the input never reaches the model (titles are non-empty).
+  const taken = (text: string) =>
+    text === 'Payments' ? 'Payments is taken' : text === '' ? 'Required' : undefined;
+
+  it('writes nothing while the draft is invalid and shows the message', async () => {
+    const view = renderWithEditor(<NameField validate={taken} />, deck);
+    const user = userEvent.setup();
+    const field = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(field);
+    await user.type(field, 'Payments');
+    expect(screen.getByRole('alert')).toHaveTextContent('Payments is taken');
+    expect(toJSON(view.doc).nodes[0]?.title).not.toBe('Payments');
+  });
+
+  it('reverts to the value from before focus on blur and keeps the message', async () => {
+    const view = renderWithEditor(<NameField validate={taken} />, deck);
+    const user = userEvent.setup();
+    const field = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(field);
+    await user.type(field, 'Payments');
+    await user.tab();
+    expect(field).toHaveValue('Orders');
+    expect(toJSON(view.doc).nodes[0]?.title).toBe('Orders');
+    expect(screen.getByRole('alert')).toHaveTextContent('Payments is taken');
+  });
+
+  it('writes a valid draft as before, and clears the message once it is valid', async () => {
+    const view = renderWithEditor(<NameField validate={taken} />, deck);
+    const user = userEvent.setup();
+    const field = screen.getByRole('textbox', { name: 'Name' });
+    await user.clear(field);
+    await user.type(field, 'Payments');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    await user.clear(field);
+    await user.type(field, 'Billing');
+    expect(screen.queryByRole('alert')).toBeNull();
+    await user.tab();
+    expect(toJSON(view.doc).nodes[0]?.title).toBe('Billing');
+  });
+
+  it('changes nothing without validate', async () => {
+    const view = renderWithEditor(<NameField />, deck);
+    const user = userEvent.setup();
+    const field = screen.getByRole('textbox', { name: 'Name' });
+    await user.type(field, 'Payments');
+    await user.tab();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(toJSON(view.doc).nodes[0]?.title).toBe('OrdersPayments');
+  });
+});
+
 function DescriptionField({ id }: { id: string }) {
   const editor = useEditor();
   const file = useDeckSnapshot(editor.doc);

@@ -237,6 +237,9 @@ describe('row editing shows its table at All (043 R4, FR-010a)', () => {
   it('patches detail: all on the row-editing table only, and never the document', () => {
     const editing = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null });
     expect(editing.deck.nodes[0]?.detail).toBe('all');
+    // Opened too (048), so the edited row is never behind the row limit.
+    expect(editing.deck.nodes[0]?.expanded).toBe(true);
+    expect(tables.nodes[0]?.expanded).toBeUndefined();
     expect(editing.deck.nodes[1]).toBe(tables.nodes[1]);
     expect(tables.nodes[0]?.detail).toBe('keys');
   });
@@ -284,13 +287,60 @@ describe('touched rows of the current flow step (049 R3)', () => {
 
   it('marks only the touched tables, keeps the rest, and reuses the projection', () => {
     const rows = new Map([['orders', new Set(['o-total'])]]);
-    const state = viewStateOf(file, null, none, null, rows);
+    const state = viewStateOf(file, null, none, null, null, rows);
     const [orders, svc] = state.deck.nodes;
     if (orders === undefined) throw new Error('orders expected');
     expect(orders).not.toBe(file.nodes[0]);
     expect(svc).toBe(file.nodes[1]);
     expect(tableLayoutOf(orders).rows.map((r) => r.columnId)).toEqual(['o-id', 'o-total']);
-    expect(viewStateOf(file, null, none, null, rows)).toBe(state);
+    expect(viewStateOf(file, null, none, null, null, rows)).toBe(state);
     expect(viewStateOf(file, null, none).deck.nodes[0]).toBe(file.nodes[0]);
+  });
+});
+
+describe('column filter projection (048 R4)', () => {
+  const tables: SododeckFile = deckOf({
+    nodes: [
+      {
+        id: 't1',
+        type: 'db-table',
+        title: 'orders',
+        columns: [
+          { id: 'c1', name: 'id', type: 'int', pk: true },
+          { id: 'c2', name: 'invoice_id', type: 'int' },
+        ],
+      },
+      { id: 't2', type: 'db-table', title: 'items', columns: [] },
+    ],
+  });
+  const filter = (text: string) => ({ tableId: 't1', text });
+
+  it('marks only the filtered table so its layout folds, and never writes the document', () => {
+    const state = viewStateOf(tables, null, none, null, filter('invoice'));
+    const node = state.deck.nodes[0];
+    if (node === undefined) throw new Error('no table');
+    expect(tableLayoutOf(node).rows.map((r) => r.columnId)).toEqual(['c2']);
+    expect(state.deck.nodes[1]).toBe(tables.nodes[1]);
+    expect(tables.nodes[0]).not.toBe(node);
+  });
+
+  it('is the same deck for blank text and after the filter closes', () => {
+    expect(viewStateOf(tables, null, none, null, filter('  ')).deck).toBe(tables);
+    viewStateOf(tables, null, none, null, filter('id'));
+    expect(viewStateOf(tables, null, none, null, null).deck.nodes[0]).toBe(tables.nodes[0]);
+  });
+
+  it('keeps node identity for the same text so the layout cache holds', () => {
+    const a = viewStateOf(tables, null, none, null, filter('id')).deck.nodes[0];
+    viewStateOf(tables, null, none, null, null);
+    const b = viewStateOf(tables, null, none, null, filter('id')).deck.nodes[0];
+    expect(b).toBe(a);
+  });
+
+  it('combines with row editing on the same table', () => {
+    const state = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null }, filter('inv'));
+    const node = state.deck.nodes[0];
+    if (node === undefined) throw new Error('no table');
+    expect(tableLayoutOf(node).rows.map((r) => r.columnId)).toEqual(['c2']);
   });
 });

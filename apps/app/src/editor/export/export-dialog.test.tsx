@@ -743,4 +743,65 @@ describe('ExportDialog: schema formats (045)', () => {
       expect(useUiStore.getState().flyout).toBe('problems');
     });
   });
+
+  describe('block SQL export (052 US6)', () => {
+    function brokenShop(block: boolean) {
+      const broken = shopDeck('postgres');
+      const status = broken.nodes
+        .find((n) => n.id === 'orders')
+        ?.columns?.find((c) => c.name === 'status');
+      if (status === undefined) throw new Error('fixture changed');
+      status.enumRef = 'enum.gone';
+      if (block) broken.blockSqlExport = true;
+      return broken;
+    }
+    const copy = () => screen.getByRole('button', { name: 'Copy' });
+    const download = () => screen.getByRole('button', { name: 'Download' });
+
+    it('disables SQL Copy and Download while the scope has errors, with the reason', async () => {
+      const { user } = setup(brokenShop(true));
+      await pick(user, 'SQL');
+      const banner = await screen.findByRole('alert');
+      expect(banner).toHaveTextContent('1 errors in the deck · fix them to export SQL');
+      await footerName('shop.sql');
+      expect(copy()).toBeDisabled();
+      expect(download()).toBeDisabled();
+      expect(download()).toHaveAccessibleDescription(/fix them to export SQL/);
+    });
+
+    it('lets DBML and the data dictionary export while SQL is blocked', async () => {
+      const { user } = setup(brokenShop(true));
+      await pick(user, 'DBML');
+      await footerName('shop.dbml');
+      expect(copy()).toBeEnabled();
+      expect(download()).toBeEnabled();
+      await pick(user, 'Data dictionary');
+      await waitFor(() => {
+        expect(download()).toBeEnabled();
+      });
+    });
+
+    it('does not block when the flag is off', async () => {
+      const { user } = setup(brokenShop(false));
+      await pick(user, 'SQL');
+      await screen.findByRole('alert');
+      await footerName('shop.sql');
+      expect(copy()).toBeEnabled();
+      expect(download()).toBeEnabled();
+    });
+
+    it('does not block for an error outside the export scope', async () => {
+      const { user } = setup(brokenShop(true), {
+        ui: selection(['customers']),
+      });
+      await pick(user, 'SQL');
+      await waitFor(() => {
+        expect(scopeRadio('Selection')).toBeChecked();
+      });
+      await footerName('shop-selection.sql');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(copy()).toBeEnabled();
+      expect(download()).toBeEnabled();
+    });
+  });
 });

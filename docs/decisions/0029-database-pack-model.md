@@ -107,3 +107,20 @@ default?, defaultExpr?, check?, enumRef?, note? }`; `size` is text (`255`, `10,2
 - **Paste** (same feature): the clipboard fragment, which is not the file format, gains optional
   `external` (outgoing relationships of copied tables, kept on paste only when the target table
   and columns exist) and `enums` (linked by name in the target deck, else copied with new ids).
+
+## Amendment (052, 2026-10-04): block SQL export, enum rename rules
+
+- **`blockSqlExport`** (root, after `dialect`): `const: true`, optional. Absent means off; `false`
+  is invalid, so turning it off removes the key and decks that never use it stay byte-identical.
+  Yjs `meta.blockSqlExport`; the editor op is `setBlockSqlExport`. Only the export dialog reads it:
+  SQL Copy and Download are disabled while the export scope has database problems. DBML, Mermaid,
+  the data dictionary and JSON still export. The SQL writer ignores it.
+- **What counts as an error:** problems have no severity yet, so every `db-*` problem on a table
+  in the export scope counts (`TODO(047)`: filter by severity in `schemaProblems`).
+- **Enum rename rules** are app helpers over editor ops (`db/enum-edits.ts`), each one undo step:
+  renaming an enum rewrites the `type` text of its linked columns; renaming a value renames
+  defaults that equal the old value on linked columns. Deleting a used enum unlinks the columns
+  (`enumRef` cleared) and keeps their `type` text. The model ops (`updateEnum`, `removeEnum`)
+  are unchanged, so DBML sync (046) is unaffected.
+- **Dialect change** converts column types in the same batch as `setDialect` (one undo step);
+  enum-linked columns are not converted.

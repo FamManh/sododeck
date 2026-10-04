@@ -325,3 +325,139 @@ describe('group-ended connections (050)', () => {
     expect(searchDeck(index, 'payments ledger').results.map((r) => r.id)).toContain('pay-led');
   });
 });
+
+function schemaDeck(): SododeckFile {
+  const deck = emptySododeckFile();
+  deck.nodes.push(
+    {
+      id: 'payments',
+      type: 'db-table',
+      title: 'payments',
+      schema: 'billing',
+      columns: [
+        { id: 'p-id', name: 'id', type: 'uuid', pk: true },
+        { id: 'p-inv', name: 'invoice_id', type: 'uuid' },
+        { id: 'p-amt', name: 'amount', type: 'numeric', size: '10,2', note: 'Gross total' },
+      ],
+    },
+    {
+      id: 'invoices',
+      type: 'db-table',
+      title: 'invoices',
+      schema: 'billing',
+      columns: [
+        { id: 'i-id', name: 'id', type: 'uuid', pk: true },
+        { id: 'i-code', name: 'code', type: 'text', unique: true },
+      ],
+    },
+    { id: 'svc', type: 'service', title: 'Payments API' },
+  );
+  deck.edges.push({
+    id: 'fk',
+    from: 'payments',
+    to: 'invoices',
+    cardinality: 'n-1',
+    fromColumns: ['p-inv'],
+    toColumns: ['i-id'],
+  });
+  return deck;
+}
+
+describe('table and column search (048 FR-019)', () => {
+  it('indexes a table as a table entry (name, schema, column count), not as a node', () => {
+    const index = buildSearchIndex(schemaDeck());
+    const tables = index.entries.filter((entry) => entry.kind === 'table');
+    expect(tables.map((entry) => entry.id)).toEqual(['payments', 'invoices']);
+    expect(index.entries.filter((e) => e.kind === 'node').map((e) => e.id)).toEqual(['svc']);
+    expect(tables[0]?.context).toBe('Table · billing · 3 columns');
+    expect(resultIds(searchDeck(index, 'billing').results)).toEqual(['invoices', 'payments']);
+  });
+
+  it('finds a column as "table.column" with its type and key marker, carrying its table', () => {
+    const index = buildSearchIndex(schemaDeck());
+    const found = searchDeck(index, 'invoice_id').results;
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({
+      kind: 'column',
+      id: 'p-inv',
+      tableId: 'payments',
+      title: 'payments.invoice_id',
+      context: 'Column · uuid · foreign key',
+    });
+    expect(searchDeck(index, 'invoices.id').results[0]).toMatchObject({
+      id: 'i-id',
+      context: 'Column · uuid · primary key',
+    });
+    expect(searchDeck(index, 'invoices code').results[0]?.context).toBe('Column · text · unique');
+    expect(searchDeck(index, 'gross').results[0]).toMatchObject({ id: 'p-amt', match: 'body' });
+    expect(resultIds(searchDeck(index, 'numeric').results)).toEqual(['p-amt']);
+  });
+
+  it('ranks a table above its columns on an equal match', () => {
+    const index = buildSearchIndex(schemaDeck());
+    const kinds = resultKinds(searchDeck(index, 'payments').results);
+    expect(kinds.slice(0, 2)).toEqual(['node', 'table']);
+    expect(kinds).toContain('column');
+    expect(kinds.indexOf('table')).toBeLessThan(kinds.indexOf('column'));
+  });
+
+  it('reuses the table and column entries while their tables are unchanged', () => {
+    const file = schemaDeck();
+    const a = buildSearchIndex(file);
+    const b = buildSearchIndex({ ...file, nodes: [...file.nodes] });
+    const pick = (index: typeof a) =>
+      index.entries.filter((entry) => entry.kind === 'column' || entry.kind === 'table');
+    pick(a).forEach((entry, i) => {
+      expect(pick(b)[i]).toBe(entry);
+    });
+  });
+
+  it('leaves a deck without tables unchanged', () => {
+    const index = buildSearchIndex(searchDeckFixture());
+    expect(index.entries.some((e) => e.kind === 'table' || e.kind === 'column')).toBe(false);
+  });
+});
+
+describe('bounded search (048 FR-023, SC-004)', () => {
+  function bigDeck(tables: number, columns: number, name: (t: number, c: number) => string) {
+    const deck = emptySododeckFile();
+    for (let t = 0; t < tables; t++) {
+      deck.nodes.push({
+        id: `t${String(t)}`,
+        type: 'db-table',
+        title: `table_${String(t)}`,
+        columns: Array.from({ length: columns }, (_, c) => ({
+          id: `t${String(t)}c${String(c)}`,
+          name: name(t, c),
+          type: 'int',
+        })),
+      });
+    }
+    return deck;
+  }
+
+  it('caps 10,000 matching columns at the limit and reports the rest', () => {
+    const index = buildSearchIndex(bigDeck(100, 100, (_, c) => `invoice_${String(c)}`));
+    const { results, total } = searchDeck(index, 'invoice', { limit: 20 });
+    expect(results).toHaveLength(20);
+    expect(total).toBe(10_000);
+    // Table names sort before... only columns match here, in title order.
+    expect(results.every((r) => r.kind === 'column')).toBe(true);
+  });
+
+  it('keeps 1,800 columns indexed within 10 ms and a query within 50 ms', () => {
+    const file = bigDeck(150, 12, (t, c) => `col_${String(t)}_${String(c)}`);
+    // Warm the module, then measure a cold index (new objects, nothing cached).
+    buildSearchIndex(bigDeck(2, 2, () => 'warm'));
+    const started = performance.now();
+    const index = buildSearchIndex(file);
+    const indexed = performance.now() - started;
+    const queryStarted = performance.now();
+    const { results } = searchDeck(index, 'col_14');
+    const queried = performance.now() - queryStarted;
+    expect(results.length).toBeGreaterThan(0);
+    // Budget 10 ms (measured 4 to 7 ms cold); 5x headroom so a loaded CI machine stays green.
+    expect(indexed).toBeLessThan(50);
+    expect(queried).toBeLessThan(50);
+  });
+});

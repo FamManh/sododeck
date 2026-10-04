@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { generateBenchDeck } from '../bench/generate-deck';
+import { EMPTY_SELECTION } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
+import { toFlowEdges, type CanvasView } from './deck-to-flow';
 import { bundleEdges } from './bundles';
 import {
   columnFocusSet,
@@ -203,5 +206,125 @@ describe('columnFocusSet (042 R14)', () => {
   it('gives a relationship its end rows', () => {
     expect(relationshipRows(deck, 'r1')).toEqual(new Set(['orders:o.cid', 'customers:c.id']));
     expect(relationshipRows(deck, 'gone')).toEqual(new Set());
+  });
+});
+
+describe('focusSet on tables (048 US6)', () => {
+  const top = { node: null, group: null };
+  const table = (id: string, group?: string) => ({
+    id,
+    type: 'db-table' as const,
+    title: id,
+    ...(group === undefined ? {} : { group }),
+  });
+  // t has four related tables (n1, n2 outgoing; n3, n4 incoming), n1 and n3 also relate to each
+  // other, x is only related to n2, and t references itself.
+  const nodes = ['t', 'n1', 'n2', 'n3', 'n4', 'x', 'far'].map((id) =>
+    id === 't'
+      ? {
+          ...table(id),
+          columns: [
+            { id: 'c1', name: 'id', type: 'int' },
+            { id: 'c2', name: 'parent', type: 'int' },
+          ],
+        }
+      : table(id),
+  );
+  const edges = [
+    { id: 'tn1', from: 't', to: 'n1' },
+    { id: 'tn2', from: 't', to: 'n2' },
+    { id: 'n3t', from: 'n3', to: 't' },
+    { id: 'n4t', from: 'n4', to: 't' },
+    { id: 'self', from: 't', to: 't', fromColumns: ['c2'], toColumns: ['c1'] },
+    { id: 'n1n3', from: 'n1', to: 'n3' },
+    { id: 'n2x', from: 'n2', to: 'x' },
+    { id: 'xfar', from: 'x', to: 'far' },
+  ];
+
+  it('keeps the table and its four neighbours, either direction, a self-reference adding none', () => {
+    const deck = deckOf({ nodes, edges });
+    const set = focusSet(deck, visibleGraph(deck, top, new Set()), 't');
+    expect([...(set?.members ?? [])].sort()).toEqual(['n1', 'n2', 'n3', 'n4', 't']);
+  });
+
+  it('highlights the relationships among the kept tables, and only those', () => {
+    const deck = deckOf({ nodes, edges });
+    const set = focusSet(deck, visibleGraph(deck, top, new Set()), 't');
+    expect([...(set?.edges ?? [])].sort()).toEqual(['n1n3', 'n3t', 'n4t', 'self', 'tn1', 'tn2']);
+  });
+
+  it('keeps the card of a collapsed group strong, and lights the merged connector among kept', () => {
+    const deck = deckOf({
+      nodes: [table('t'), table('n1', 'g'), table('n2', 'g'), table('n3')],
+      groups: [{ id: 'g', title: 'G' }],
+      edges: [
+        { id: 'tn1', from: 't', to: 'n1' },
+        { id: 'tn2', from: 't', to: 'n2' },
+        { id: 'tn3', from: 't', to: 'n3' },
+        { id: 'n2n3', from: 'n2', to: 'n3' },
+      ],
+    });
+    const set = focusSet(deck, visibleGraph(deck, top, new Set(['g'])), 't');
+    expect([...(set?.members ?? [])].sort()).toEqual(['collapsed:g', 'n3', 't']);
+    expect(set?.edges.has('merged:collapsed:g|n3')).toBe(true);
+    expect(set?.edges.has('merged:collapsed:g|t')).toBe(true);
+    expect(set?.edges.has('tn3')).toBe(true);
+  });
+
+  it('counts the neighbours of a table on the 150-table deck', () => {
+    const { deck } = generateBenchDeck(150, 250, 42, { tables: 150, rel: true });
+    const ids = new Set(deck.nodes.filter((n) => n.type === 'db-table').map((n) => n.id));
+    const related = (id: string) =>
+      new Set(
+        deck.edges.flatMap((e) =>
+          e.from === id && e.to !== id && ids.has(e.to)
+            ? [e.to]
+            : e.to === id && e.from !== id && ids.has(e.from)
+              ? [e.from]
+              : [],
+        ),
+      );
+    const focus = [...ids].find((id) => related(id).size >= 3);
+    if (focus === undefined) throw new Error('The fixture has no connected table');
+    const set = focusSet(deck, visibleGraph(deck, top, new Set()), focus);
+    expect(set?.members).toEqual(new Set([focus, ...related(focus)]));
+    // Every highlighted relationship has both ends among the kept tables.
+    for (const id of set?.edges ?? []) {
+      const edge = deck.edges.find((e) => e.id === id);
+      expect(set?.members.has(edge?.from ?? '')).toBe(true);
+      expect(set?.members.has(edge?.to ?? '')).toBe(true);
+    }
+  });
+});
+
+describe('pinned focus draws the lit relationships (048 US6)', () => {
+  it('lights an edge among the kept tables and dims the others', () => {
+    const table = (id: string) => ({ id, type: 'db-table' as const, title: id });
+    const deck = deckOf({
+      nodes: ['t', 'a', 'b', 'x'].map(table),
+      edges: [
+        { id: 'ta', from: 't', to: 'a' },
+        { id: 'tb', from: 't', to: 'b' },
+        { id: 'ab', from: 'a', to: 'b' },
+        { id: 'ax', from: 'a', to: 'x' },
+      ],
+    });
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set());
+    const view: CanvasView = {
+      selection: EMPTY_SELECTION,
+      focusedId: null,
+      focusedEdgeId: null,
+      labelsOn: false,
+      level: 'component',
+      focus: focusSet(deck, graph, 't'),
+      marks: { merged: new Map(), cards: new Map(), cardNumbers: new Map() },
+    };
+    const edges = toFlowEdges(deck, graph, view);
+    const lit = (id: string) => {
+      const edge = edges.find((e) => e.id === id);
+      return edge?.data?.dimmed === false && edge.className?.includes('in-focus') === true;
+    };
+    expect(['ta', 'tb', 'ab'].map(lit)).toEqual([true, true, true]);
+    expect(edges.find((e) => e.id === 'ax')?.data?.dimmed).toBe(true);
   });
 });

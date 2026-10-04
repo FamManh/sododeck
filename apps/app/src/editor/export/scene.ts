@@ -377,6 +377,7 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     source,
     scopeOf(view === null ? [] : ui.drill),
     view?.collapsed ?? new Set(),
+    view?.outside,
   );
   const level = effectiveLevel('container', graph.scope);
   const flow =

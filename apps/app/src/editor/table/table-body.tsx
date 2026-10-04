@@ -1,3 +1,4 @@
+import type { TouchAccess } from '@sododeck/model';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { KeyRound, Link2, ListOrdered, TriangleAlert } from 'lucide-react';
@@ -8,13 +9,12 @@ import { refuseLocked } from '../lock';
 import { rowKey } from '../relationships/row-key';
 import { startColumnDrag } from '../editing/column-connect-drag';
 import type { RelSide } from '../relationships/relationship-ends';
-import { TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
-import type { TouchAccess } from '@sododeck/model';
-
+import { matchOrder, TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
 import { AccessMarker } from './access-marker';
 import { ColumnLineEditor } from './column-line-editor';
 import { EnumChip } from './enum-chip';
 import { RowGrip } from './row-grip';
+import { ShowAllButton } from './show-all-button';
 import { GLYPH_NAMES, mismatchLabel, rowLabel } from './table-text';
 
 /** The key glyphs (DESIGN.md "Glyphs"): distinct shapes, so they read without colour (FR-010). */
@@ -134,7 +134,13 @@ export const TableBody = memo(function TableBody({
   // This table's line editor and row drag only: other tables never re-render for them.
   const columnEdit = useUiStore((s) => (s.columnEdit?.tableId === nodeId ? s.columnEdit : null));
   const rowDrag = useUiStore((s) => (s.rowDrag?.tableId === nodeId ? s.rowDrag : null));
+  const filterIndex = useUiStore((s) =>
+    s.tableFilter?.tableId === nodeId ? s.tableFilter.index : -1,
+  );
   if (!layout.hasBody) return null;
+  // The filter's matches (048): the current one is the one Enter stepped to.
+  const matches = layout.matchIds.size === 0 ? [] : matchOrder(layout);
+  const currentMatch = matches[Math.min(filterIndex, matches.length - 1)];
   const tabIndex = focused ? 0 : -1;
   const muted = tinted ? 'text-ink-secondary' : 'text-ink-muted group-hover/row:text-ink-secondary';
   const footerParts = [
@@ -183,6 +189,8 @@ export const TableBody = memo(function TableBody({
         title={row.nameCut || row.typeCut ? rowLabel(row) : undefined}
         data-column-id={row.columnId}
         data-row={rowKey(nodeId, row.columnId)}
+        data-match={layout.matchIds.has(row.columnId) ? 'true' : undefined}
+        aria-current={filterIndex >= 0 && currentMatch === row.columnId ? 'true' : undefined}
         // Roving row focus (042 R9): ↓ / ↑ from the focused table, never a Tab stop.
         tabIndex={-1}
         onFocus={() => {
@@ -212,6 +220,8 @@ export const TableBody = memo(function TableBody({
           'group/row relative -mx-[9px] flex h-6 shrink-0 items-center rounded-row px-[9px] outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-primary',
           rowDrag?.columnId === row.columnId && 'bg-surface-2 opacity-60',
           access !== undefined && 'bg-deck-orange-soft hover:bg-deck-orange-soft',
+          layout.matchIds.has(row.columnId) && 'bg-deck-orange-soft',
+          filterIndex >= 0 && currentMatch === row.columnId && 'ring-1 ring-deck-orange-ink',
         )}
       >
         {access !== undefined && (
@@ -242,6 +252,7 @@ export const TableBody = memo(function TableBody({
           className={cn(
             'min-w-0 flex-1 truncate text-[12px] leading-6 text-ink',
             row.glyphs.includes('pk') ? 'font-semibold' : 'font-medium',
+            layout.matchIds.has(row.columnId) && 'font-semibold text-deck-orange-ink',
           )}
         >
           {row.name}
@@ -317,6 +328,15 @@ export const TableBody = memo(function TableBody({
         >
           +{layout.hidden.count} columns
         </span>
+      )}
+      {layout.button !== undefined && (
+        <ShowAllButton
+          nodeId={nodeId}
+          label={layout.button.label}
+          expanded={layout.button.expanded}
+          tabIndex={tabIndex}
+          withGap={items.length > 0}
+        />
       )}
       {footerParts.length > 0 && (
         <span className={cn('flex h-6 shrink-0 items-center gap-3 text-[11.5px]', muted)}>

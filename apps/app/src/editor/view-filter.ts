@@ -2,7 +2,7 @@
  * What a saved view shows (011 research R7, FR-012–FR-014): pure, linear in the deck, and the
  * same for every view type (FR-002a). Presets differ only in the settings they carry.
  */
-import { tagKey } from '@sododeck/model';
+import { isDbTable, tagKey } from '@sododeck/model';
 import type { Id, SododeckFile, View } from '@sododeck/schema';
 
 export interface ViewFilterResult {
@@ -79,6 +79,8 @@ export function viewFilter(
   revealed: ReadonlySet<Id>,
 ): ViewFilterResult {
   const includes = view.includes === undefined ? null : new Set(view.includes);
+  // Schemas (048): a table shows when its schema is listed or its id is in `includes`.
+  const schemas = view.schemas === undefined ? null : new Set(view.schemas);
   const excludeGroups = new Set(view.excludeGroups ?? []);
   const excludeKinds = new Set<string>(view.excludeKinds ?? []);
   // Tags match by key (033): hiding "pci" hides a card tagged "PCI".
@@ -95,8 +97,12 @@ export function viewFilter(
   const dimmed = new Set<Id>();
   const lineage = new Set<Id>();
   for (const node of deck.nodes) {
+    const notIncluded =
+      schemas !== null && isDbTable(node)
+        ? !(includes?.has(node.id) === true || schemas.has(node.schema ?? ''))
+        : includes !== null && !includes.has(node.id);
     let hide =
-      (includes !== null && !includes.has(node.id)) ||
+      notIncluded ||
       excludeKinds.has(node.type) ||
       (feature !== null && !feature.has(node.id)) ||
       (node.tags ?? []).some((tag) => excludeTags.has(tagKey(tag)));

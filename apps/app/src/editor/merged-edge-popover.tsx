@@ -5,7 +5,9 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { useUiStore } from '../state/ui-store';
 import { anchorRect, focusCanvas } from './canvas-actions';
 import type { Bundle, BundleResult } from './bundles';
-import { endpointTitle } from '@sododeck/model';
+import { endpointTitle, isDbTable } from '@sododeck/model';
+import { isRelationship } from './relationships/relationship-ends';
+import { relationshipSummary, type TableLookup } from './relationships/relationship-label';
 
 import { COLLAPSED_NODE_PREFIX, endpointIdOf, PORT_NODE_PREFIX } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
@@ -71,6 +73,21 @@ function MergedEdgePopoverContent({ deck, merged }: { deck: SododeckFile; merged
       deck,
       id.startsWith(PORT_NODE_PREFIX) ? id.slice(PORT_NODE_PREFIX.length) : endpointIdOf(id),
     );
+  const tables: TableLookup = (id) => {
+    const node = deck.nodes.find((candidate) => candidate.id === id);
+    return node !== undefined && isDbTable(node) ? node : undefined;
+  };
+  const isTable = (id: string) => {
+    const node = deck.nodes.find((candidate) => candidate.id === id);
+    return node !== undefined && isDbTable(node);
+  };
+  // A relationship reads as its columns and cardinality (048); a plain connector by its label.
+  const rowName = (row: SododeckFile['edges'][number]) =>
+    isRelationship(row, isTable)
+      ? relationshipSummary(row, tables)
+      : row.label === undefined || row.label === ''
+        ? `${titleOf(row.from)} → ${titleOf(row.to)}`
+        : row.label;
   const ends = [merged.a, merged.b]
     .filter((id) => id.startsWith(COLLAPSED_NODE_PREFIX))
     .map((id) => id.slice(COLLAPSED_NODE_PREFIX.length));
@@ -136,10 +153,7 @@ function MergedEdgePopoverContent({ deck, merged }: { deck: SododeckFile; merged
           {merged.bundle !== undefined ? (
             <ul aria-label="Bundled connections" className="flex flex-col gap-1">
               {rows.map((row) => {
-                const name =
-                  row.label === undefined || row.label === ''
-                    ? `${titleOf(row.from)} → ${titleOf(row.to)}`
-                    : row.label;
+                const name = rowName(row);
                 return (
                   <li key={row.id} className="flex items-center gap-2 px-2 py-1 text-body-sm">
                     <span className="flex-1">{name}</span>
@@ -192,11 +206,7 @@ function MergedEdgePopoverContent({ deck, merged }: { deck: SododeckFile; merged
                       setActive(index);
                     }}
                   >
-                    <span>
-                      {row.label === undefined || row.label === ''
-                        ? `${titleOf(row.from)} → ${titleOf(row.to)}`
-                        : row.label}
-                    </span>
+                    <span>{rowName(row)}</span>
                     <span className="text-caption text-ink-secondary">
                       {directionLabel(row.direction)}
                     </span>

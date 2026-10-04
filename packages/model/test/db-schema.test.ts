@@ -14,7 +14,7 @@ import {
   toJSON,
   type DeckEditor,
 } from '../src';
-import { expectValid, seqIds, shopDeck } from './helpers';
+import { expectConverged, expectValid, seqIds, shopDeck, sync, twoDocs } from './helpers';
 
 function setup(file: SododeckFile = shopDeck()) {
   const doc = fromJSON(file);
@@ -168,6 +168,57 @@ describe('columns (040 US2)', () => {
     });
     editor.update('nodes', 'orders', { expanded: false });
     expect(table(deck(), 'orders')).not.toHaveProperty('expanded');
+  });
+});
+
+describe('expanded, the saved Show all choice (048 T009)', () => {
+  it('round-trips true, and false removes the key, each one undo step', () => {
+    const { editor, deck, doc } = setup();
+    expect(table(deck(), 'orders')).not.toHaveProperty('expanded');
+    oneStep(editor, deck, () => {
+      editor.update('nodes', 'orders', { expanded: true });
+    });
+    expect(table(deck(), 'orders').expanded).toBe(true);
+    expect(serializeDeck(toJSON(fromJSON(deck())))).toBe(serializeDeck(deck()));
+    expectValid(doc);
+    oneStep(editor, deck, () => {
+      editor.update('nodes', 'orders', { expanded: false });
+    });
+    expect(table(deck(), 'orders')).not.toHaveProperty('expanded');
+  });
+
+  it('undo restores the previous state, and a repeat of the same value writes nothing', () => {
+    const { editor, deck } = setup();
+    editor.update('nodes', 'orders', { expanded: true });
+    const opened = serializeDeck(deck());
+    editor.update('nodes', 'orders', { expanded: true });
+    expect(serializeDeck(deck())).toBe(opened);
+    editor.undo();
+    expect(table(deck(), 'orders')).not.toHaveProperty('expanded');
+    // The repeat added no undo step: nothing is left to undo.
+    expect(editor.undo()).toBe(false);
+  });
+
+  it('applies on a locked table: the lock is an app rule, not a model rule', () => {
+    const { editor, deck } = setup();
+    editor.setLocked(['orders'], true);
+    editor.update('nodes', 'orders', { expanded: true });
+    expect(table(deck(), 'orders')).toMatchObject({ locked: true, expanded: true });
+    editor.update('nodes', 'orders', { expanded: false });
+    expect(table(deck(), 'orders')).toMatchObject({ locked: true });
+    expect(table(deck(), 'orders')).not.toHaveProperty('expanded');
+  });
+
+  it('two replicas that open different tables both keep their choice', () => {
+    for (const order of ['ab', 'ba'] as const) {
+      const { a, b } = twoDocs(shopDeck());
+      a.editor.update('nodes', 'orders', { expanded: true });
+      b.editor.update('nodes', 'customers', { expanded: true });
+      sync(a, b, order);
+      expectConverged(a, b);
+      expect(table(toJSON(a.doc), 'orders').expanded).toBe(true);
+      expect(table(toJSON(a.doc), 'customers').expanded).toBe(true);
+    }
   });
 });
 

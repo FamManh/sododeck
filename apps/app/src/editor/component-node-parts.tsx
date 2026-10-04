@@ -20,6 +20,7 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { toggleLock } from './actions/table-actions';
 import { LOCKED_HINT } from './lock';
+import { addToCurrentView } from './views/add-to-view';
 import type { ConnectionCheck } from './connection-rules';
 import type { DeckNodeData, HandleSide } from './deck-to-flow';
 import {
@@ -217,21 +218,52 @@ export function SideHandles({
 }
 
 /**
+ * A table made outside the current view's filter (048): the note says why it is only shown for
+ * now, and the button adds it to the view's tables in one undo step. The filter changes in no
+ * other way.
+ */
+function OutsideFilterNote({ nodeId }: { nodeId: string }) {
+  const editor = useEditor();
+  return (
+    <span className="absolute bottom-full left-0 z-10 mb-1.5 flex w-max items-center gap-1.5 rounded-full bg-surface-2 py-0.5 ps-2 pe-0.5 text-caption text-ink-secondary shadow-rest">
+      <EyeOff aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
+      <span role="note">Outside this view's filter</span>
+      <button
+        type="button"
+        className="nodrag rounded-full bg-surface px-2 py-0.5 text-caption font-medium text-ink hover:bg-surface-3"
+        onMouseDownCapture={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+          addToCurrentView(editor, nodeId);
+        }}
+      >
+        Add to this view
+      </button>
+    </span>
+  );
+}
+
+/**
  * The notes around a node: "Hidden in this view" above, the connect-target "+", the flow start
  * tag and a refused connection's reason below.
  */
 export function NodeNotes({
+  nodeId,
   data,
   target,
   refusal,
 }: {
-  data: Pick<DeckNodeData, 'hiddenInView' | 'flowStart'>;
+  nodeId: string;
+  data: Pick<DeckNodeData, 'hiddenInView' | 'outsideFilter' | 'flowStart'>;
   target: ConnectionCheck | null;
   refusal: string | null;
 }) {
   return (
     <>
-      {data.hiddenInView === true && (
+      {data.outsideFilter === true && <OutsideFilterNote nodeId={nodeId} />}
+      {data.hiddenInView === true && data.outsideFilter !== true && (
         <span
           role="note"
           className="pointer-events-none absolute bottom-full left-0 z-10 mb-1.5 flex w-max items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-caption text-ink-secondary shadow-rest"

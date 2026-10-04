@@ -307,7 +307,7 @@ export const ShapeNode = memo(function ShapeNode({
       {titleEdit === null && !data.dimmed && (
         <DetailsButton id={id} title={data.title} focused={data.focused} />
       )}
-      <NodeNotes data={data} target={target} refusal={refusal} />
+      <NodeNotes nodeId={id} data={data} target={target} refusal={refusal} />
     </div>
   );
 });

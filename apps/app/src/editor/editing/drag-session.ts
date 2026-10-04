@@ -14,7 +14,7 @@
  * The session lives in a handler ref for the length of one drag; guides, the drop target and the
  * offset readout are UI-only store fields. Nothing here is document state.
  */
-import { isLocked, viewNodePosition, type DeckEditor } from '@sododeck/model';
+import { isLocked, isSchemaGroupId, viewNodePosition, type DeckEditor } from '@sododeck/model';
 import type { Frame, Id } from '@sododeck/schema';
 import type { NodeChange } from '@xyflow/react';
 
@@ -170,6 +170,9 @@ export function setActiveGesture(handlers: typeof active): void {
   setActive(handlers);
 }
 
+const pointOf = (rect: Rect | undefined): Point | undefined =>
+  rect === undefined ? undefined : { x: rect.x, y: rect.y };
+
 export class DragController {
   private session: Session | null = null;
   private readonly onKey = (event: KeyboardEvent) => {
@@ -246,9 +249,18 @@ export class DragController {
     const bounds = groupBounds(view.deck, level);
 
     const tree = groupSubtree(deck, groups);
+    // A derived schema frame (048) stores nothing: dragging it moves its tables, never a frame.
+    const schemaIds = new Set(groups.filter(isSchemaGroupId));
+    const schemaMembers = view.deck.nodes
+      .filter((node) => node.group !== undefined && schemaIds.has(node.group))
+      .map((node) => node.id);
     // Locked cards stay put in a multi-drag (043 FR-024); a group still carries its members.
     const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
-    const moving = new Set([...nodes.filter((id) => !locked.has(id)), ...tree.nodes]);
+    const moving = new Set([
+      ...nodes.filter((id) => !locked.has(id)),
+      ...tree.nodes,
+      ...schemaMembers,
+    ]);
     const start: Record<Id, Point> = {};
     const movingBoxes: Rect[] = [];
     deck.nodes.forEach((node, index) => {
@@ -270,7 +282,9 @@ export class DragController {
     const anchorId = group?.groupId ?? anchor;
     const anchorStart =
       kind === 'group'
-        ? (group?.position ?? frames[anchorId]?.position ?? { x: 0, y: 0 })
+        ? (group?.position ??
+          frames[anchorId]?.position ??
+          pointOf(bounds.get(anchorId)) ?? { x: 0, y: 0 })
         : start[anchorId];
     if (anchorStart === undefined) return;
 
@@ -318,7 +332,12 @@ export class DragController {
       candidates: snapCandidates(others),
       others,
       threshold: SNAP_SCREEN_PX / (zoom > 0 ? zoom : 1),
-      targets: frameEntries(view.deck, bounds, graph.groups),
+      // A derived schema frame (048) is not a group a card can be dropped into.
+      targets: frameEntries(
+        view.deck,
+        bounds,
+        graph.groups.filter((id) => !isSchemaGroupId(id)),
+      ),
       excluded,
       scope: scope.group ?? undefined,
       home:

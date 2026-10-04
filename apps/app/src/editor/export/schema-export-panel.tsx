@@ -1,4 +1,5 @@
-import type { Dialect, SododeckFile } from '@sododeck/schema';
+import type { Problem } from '@sododeck/model';
+import type { Dialect } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import {
@@ -15,16 +16,16 @@ import type { SchemaScopes } from '../../db/export/scope';
 import { dialectName, isSqlDialect } from '../../db/export/schema-slice';
 import type { SqlDialect } from '../../db/export/types';
 import { useUiStore } from '../../state/ui-store';
-import { useProblems } from '../problems/use-problems';
 import { DisabledReason } from './disabled-reason';
 import type { ExportAction, ExportDialogState, ExportResult } from './export-dialog-state';
 import { OptionSwitch } from './option-switch';
-import { schemaProblems } from './schema-problems';
 import type { SchemaScope } from './types';
 
 const PREVIEW_LINES = 400;
 const NOTES_SHOWN = 3;
 const FAILED = "Couldn't create this export";
+/** The banner is the reason SQL Copy and Download give while blocked (`aria-describedby`). */
+export const SQL_BLOCKED_BANNER_ID = 'export-sql-blocked';
 const DIALECTS: readonly SqlDialect[] = ['postgres', 'mysql', 'sqlite'];
 
 export type PreviewStatus = 'ready' | ExportDialogState['result']['status'];
@@ -58,18 +59,17 @@ function TextPreview({ text }: { text: string }) {
  * options. It only reads the deck; the dialect pick lives in the dialog's reducer.
  */
 export function SchemaExportPanel({
-  deck,
   state,
   dispatch,
   scopes,
   scope,
   scopeName,
-  tableIds,
+  problems,
+  blocked,
   dialect,
   status,
   ready,
 }: {
-  deck: SododeckFile;
   state: ExportDialogState;
   dispatch: Dispatch<ExportAction>;
   scopes: SchemaScopes;
@@ -77,7 +77,10 @@ export function SchemaExportPanel({
   scope: SchemaScope;
   /** "the selection", the card's title or "the deck", for the banner. */
   scopeName: string;
-  tableIds: readonly string[];
+  /** The database problems on the tables in scope (`schemaProblems`). */
+  problems: readonly Problem[];
+  /** SQL Copy and Download are disabled by the deck's "Block SQL export with errors" (052). */
+  blocked: boolean;
   dialect: Dialect;
   status: PreviewStatus;
   ready: ExportResult | null;
@@ -85,7 +88,6 @@ export function SchemaExportPanel({
   const scopeHeading = useId();
   const notesHeading = useId();
   const [allNotes, setAllNotes] = useState(false);
-  const problems = schemaProblems(useProblems(), tableIds, deck);
   const closeExport = useUiStore((s) => s.closeExport);
   const openFlyout = useUiStore((s) => s.openFlyout);
   const isSql = state.format === 'sql';
@@ -162,13 +164,16 @@ export function SchemaExportPanel({
       </section>
       {problems.length > 0 && (
         <div
+          id={SQL_BLOCKED_BANNER_ID}
           role="alert"
           className="flex items-start gap-2.5 rounded-banner bg-clay-soft px-3.5 py-3 text-body-sm text-clay-ink"
         >
           <CircleX aria-hidden className="mt-0.5 size-4 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-medium">
-              {plural(problems.length, 'error')} in {scopeName}
+              {blocked
+                ? `${String(problems.length)} errors in ${scopeName} · fix them to export SQL`
+                : `${plural(problems.length, 'error')} in ${scopeName}`}
             </p>
             <p>
               {problems

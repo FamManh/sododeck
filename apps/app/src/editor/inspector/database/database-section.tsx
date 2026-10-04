@@ -1,5 +1,6 @@
 import {
   deckPacks,
+  groupingModeOf,
   isDbTable,
   relationshipDisplayOf,
   tableDisplayOf,
@@ -18,8 +19,11 @@ import {
 import { Switch } from '@sododeck/ui/components/switch';
 import { useId } from 'react';
 
-import { useEditor } from '../../model/use-editor';
-import { oneStep } from '../fields/one-step';
+import { useEditor } from '../../../model/use-editor';
+import { oneStep } from '../../fields/one-step';
+import { DialectConfirmDialog } from './dialect-confirm-dialog';
+import { DialectSelect } from './dialect-select';
+import { EnumList } from './enum-list';
 
 type HideFlag = 'hideTypes' | 'hideNullable' | 'hideNotes' | 'hideIndexes';
 
@@ -43,17 +47,23 @@ function showsDatabaseSection(deck: SododeckFile): boolean {
 }
 
 /**
- * Deck settings › Database (041 FR-019, FR-020, frame 152): "Show on tables" and four switches,
- * all on by default; each writes one hide flag of `tableDisplay` in one undo step. 042 adds
- * "Show on relationships"; 043 adds the dialect and the rest of the section.
+ * Deck settings › Database (041 FR-019, FR-020, 052, frame 152): the deck dialect, "Show on
+ * tables" and four switches, all on by default; each writes one hide flag of `tableDisplay` in
+ * one undo step. 042 adds "Show on relationships"; 052 adds the dialect, the enums list and the
+ * block-SQL-export switch.
  */
-export function TableDisplaySection({ deck }: { deck: SododeckFile }) {
+export function DatabaseSection({ deck }: { deck: SododeckFile }) {
   const editor = useEditor();
   const id = useId();
   if (!showsDatabaseSection(deck)) return null;
   const display = tableDisplayOf(deck);
   return (
     <PanelSection label="Database">
+      <DialectSelect deck={deck} />
+      <p className="text-caption text-ink-secondary">
+        One dialect for every table and database card in this deck.
+      </p>
+      <DialectConfirmDialog />
       <span id={`${id}-heading`} className="text-caption font-medium text-ink-secondary">
         Show on tables
       </span>
@@ -76,7 +86,10 @@ export function TableDisplaySection({ deck }: { deck: SododeckFile }) {
           </li>
         ))}
       </ul>
+      <GroupingControl deck={deck} />
       <RelationshipDisplayControls deck={deck} />
+      <EnumList deck={deck} />
+      <BlockSqlExportSwitch deck={deck} />
     </PanelSection>
   );
 }
@@ -152,5 +165,58 @@ function RelationshipDisplayControls({ deck }: { deck: SododeckFile }) {
         </div>
       </div>
     </>
+  );
+}
+
+/** "Group tables" (048, ADR 0034): the deck-wide grouping mode, one undo step per change. */
+function GroupingControl({ deck }: { deck: SododeckFile }) {
+  const editor = useEditor();
+  const id = useId();
+  return (
+    <div className="flex h-8 items-center justify-between gap-3 pt-2">
+      <span id={`${id}-grouping`} className="text-body-sm text-ink">
+        Group tables
+      </span>
+      <SegmentedControl
+        aria-labelledby={`${id}-grouping`}
+        value={groupingModeOf(deck)}
+        onValueChange={(value) => {
+          oneStep(editor, () => {
+            editor.setGroupingMode(value === 'schema' ? 'schema' : null);
+          });
+        }}
+      >
+        <SegmentedControlItem value="group">By group</SegmentedControlItem>
+        <SegmentedControlItem value="schema">By schema</SegmentedControlItem>
+      </SegmentedControl>
+    </div>
+  );
+}
+
+/** "Block SQL export with errors" (052 US6): the export dialog reads it; DBML and the rest export. */
+function BlockSqlExportSwitch({ deck }: { deck: SododeckFile }) {
+  const editor = useEditor();
+  const id = useId();
+  return (
+    <div className="flex items-center justify-between gap-3 pt-2">
+      <div className="flex min-w-0 flex-col">
+        <label htmlFor={id} className="text-body-sm text-ink">
+          Block SQL export with errors
+        </label>
+        <span id={`${id}-help`} className="text-caption text-ink-secondary">
+          DBML, Mermaid and JSON still export
+        </span>
+      </div>
+      <Switch
+        id={id}
+        aria-describedby={`${id}-help`}
+        checked={deck.blockSqlExport === true}
+        onCheckedChange={(checked) => {
+          oneStep(editor, () => {
+            editor.setBlockSqlExport(checked);
+          });
+        }}
+      />
+    </div>
   );
 }
