@@ -316,6 +316,24 @@ describe('updateView (FR-041, FR-043)', () => {
     expectValid(doc);
   });
 
+  it('writes includes, refusing a node that does not exist, in one undo step (048)', () => {
+    const { doc, editor } = setup({ ...base, views: stored });
+    editor.updateView('v1', { includes: ['a', 'b'] });
+    expect(view(doc, 'v1')?.includes).toEqual(['a', 'b']);
+    expect(
+      code(() => {
+        editor.updateView('v1', { includes: ['a', 'nope'] });
+      }),
+    ).toBe('missing-reference');
+    expect(view(doc, 'v1')?.includes).toEqual(['a', 'b']);
+    editor.undo();
+    expect(view(doc, 'v1')?.includes).toBeUndefined();
+    editor.redo();
+    editor.updateView('v1', { includes: [] });
+    expect(view(doc, 'v1')?.includes).toBeUndefined();
+    expectValid(doc);
+  });
+
   it('refuses a bad detail, a blank schema name and a non-list, and writes nothing', () => {
     const { doc, editor } = setup({ ...base, views: stored });
     const before = JSON.stringify(view(doc, 'v1'));

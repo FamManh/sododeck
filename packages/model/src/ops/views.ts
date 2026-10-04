@@ -34,6 +34,7 @@ export type ViewSettingsPatch = {
       | 'excludeKinds'
       | 'excludeTags'
       | 'dimKinds'
+      | 'includes'
       | 'schemas'
       | 'detail'
   ]?: View[K] | undefined;
@@ -47,6 +48,7 @@ const SETTINGS_KEYS = [
   'excludeKinds',
   'excludeTags',
   'dimKinds',
+  'includes',
   'schemas',
   'detail',
 ] as const satisfies readonly (keyof ViewSettingsPatch)[];
@@ -272,6 +274,11 @@ export function updateView(ctx: EditContext, viewId: Id, patch: ViewSettingsPatc
   if (changed.includes('excludeGroups')) {
     for (const [i, id] of (candidate.excludeGroups as Id[] | undefined)?.entries() ?? []) {
       refs.push({ path: `excludeGroups.${String(i)}`, id, target: 'groups' });
+    }
+  }
+  if (changed.includes('includes')) {
+    for (const [i, id] of (candidate.includes as Id[] | undefined)?.entries() ?? []) {
+      refs.push({ path: `includes.${String(i)}`, id, target: 'nodes' });
     }
   }
   assertRefsExist(ctx.doc, refs, () => anchorableIds(ctx.doc));
