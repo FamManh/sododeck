@@ -27,6 +27,7 @@ import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canva
 import { collapseFlowMarks } from './collapse-flow-marks';
 import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
+import { focusTargetId } from './focus-target';
 import { DeckEdge } from './deck-edge';
 import { DeckNode } from './deck-node';
 import {
@@ -437,19 +438,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       setColumnDragEnv(null);
     };
   }, [deck, graph, level, editor, screenToFlowPosition]);
-  const focusId = useMemo(() => {
-    if (!focusMode) return null;
-    if (selection.nodes.length === 1) return selection.nodes[0] ?? null;
-    if (selection.groups.length === 1) {
-      const groupId = selection.groups[0];
-      return groupId === undefined
-        ? null
-        : collapsed.has(groupId)
-          ? `${COLLAPSED_NODE_PREFIX}${groupId}`
-          : `${GROUP_NODE_PREFIX}${groupId}`;
-    }
-    return null;
-  }, [focusMode, selection, collapsed]);
+  const focusId = useMemo(
+    () => (focusMode ? focusTargetId(selection, collapsed) : null),
+    [focusMode, selection, collapsed],
+  );
   // Parallel automatic connectors fold into bundles (034). A shown flow draws its own connectors
   // on their own; recording a flow turns bundles off so every connector is a candidate step.
   const fannedBundles = useUiStore((s) => s.fannedBundles);
@@ -598,18 +590,6 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       stickies: selection.stickies,
     });
   }, [deck.edges, graph, selection]);
-
-  useEffect(() => {
-    if (
-      focusMode &&
-      selection.nodes.length === 0 &&
-      selection.edges.length === 0 &&
-      selection.groups.length === 0 &&
-      selection.stickies.length === 0
-    ) {
-      useUiStore.getState().setFocusMode(false);
-    }
-  }, [focusMode, selection]);
 
   useEffect(() => {
     if (announcedZoomLevel.current === zoomLevel) return;

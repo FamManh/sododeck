@@ -264,8 +264,12 @@ function HoverBenchHooks() {
       ui.setHoverFocus({ id: nodeId, source: 'pointer' });
       return paintedAfter(start, () => document.querySelector('[data-hover-focus]') !== null);
     };
+    // Hover focus runs only in Focus mode with nothing pinned (051): set that up before timing.
     const clearHover = () => {
-      useUiStore.getState().clearHoverFocus();
+      const ui = useUiStore.getState();
+      ui.clearHoverFocus();
+      if (ui.selection.nodes.length > 0 || ui.selection.groups.length > 0) ui.clearSelection();
+      if (!ui.focusMode) ui.setFocusMode(true);
     };
     window.__sododeckBench = {
       ...(window.__sododeckBench ?? { readyAt: 0, nodes: 0, edges: 0 }),

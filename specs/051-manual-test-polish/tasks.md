@@ -49,7 +49,7 @@
 
 **Purpose**: the one shared helper. US1 depends on it; no other story does.
 
-- [ ] T003 [P] Write failing tests in `apps/app/src/editor/focus-target.test.ts` for `focusTargetId(selection, collapsed)`. Cases:
+- [x] T003 [P] Write failing tests in `apps/app/src/editor/focus-target.test.ts` for `focusTargetId(selection, collapsed)`. Cases:
   - one node → its id;
   - one expanded group → `group:<id>`;
   - one collapsed group → `collapsed:<id>`;
@@ -57,7 +57,7 @@
 
   Use `GROUP_NODE_PREFIX` / `COLLAPSED_NODE_PREFIX` from their current module.
 
-- [ ] T004 Implement `apps/app/src/editor/focus-target.ts` (pure, named export). Replace the inline `focusId` logic in `apps/app/src/editor/canvas.tsx:416-428` with `focusMode ? focusTargetId(selection, collapsed) : null`. Existing `canvas.test.tsx` focus-mode tests must stay green.
+- [x] T004 Implement `apps/app/src/editor/focus-target.ts` (pure, named export). Replace the inline `focusId` logic in `apps/app/src/editor/canvas.tsx:416-428` with `focusMode ? focusTargetId(selection, collapsed) : null`. Existing `canvas.test.tsx` focus-mode tests must stay green.
 
 **Checkpoint**: no visible change yet.
 
@@ -71,16 +71,16 @@
 
 ### Tests for User Story 1 (write first, watch them fail)
 
-- [ ] T005 [P] [US1] In `apps/app/src/editor/hover-focus/use-hover-focus.test.ts`:
+- [x] T005 [P] [US1] In `apps/app/src/editor/hover-focus/use-hover-focus.test.ts`:
   - flip the suspension table at ~:140 so that `{ focusMode: false }` suspends and `{ focusMode: true }` with an empty selection does not;
   - add a case where `focusMode: true` with one selected node suspends (pinned);
   - update the tests that expect hover to light with Focus mode off.
-- [ ] T006 [P] [US1] In `apps/app/src/editor/canvas.test.tsx`, "hover focus (034)" describe (~:112-200), cover C1:
+- [x] T006 [P] [US1] In `apps/app/src/editor/canvas.test.tsx`, "hover focus (034)" describe (~:112-200), cover C1:
   - Focus mode off → no `data-hover-focus` after a 200 ms rest, and no dimmed node after selecting a card;
   - Focus mode on with nothing selected → `data-hover-focus` set after the rest;
   - one card selected → hover does not set it;
   - emptying the selection keeps Focus mode on (replaces the old auto-exit expectation near :630-675).
-- [ ] T007 [P] [US1] In `apps/app/src/editor/use-canvas-shortcuts.test.tsx` (~:286-294, :866):
+- [x] T007 [P] [US1] In `apps/app/src/editor/use-canvas-shortcuts.test.tsx` (~:286-294, :866):
   - pressing F with nothing selected turns `focusMode` on and does not announce "Select a component to focus";
   - F with one node selected still calls `ui.focus(id)` and turns it on;
   - F while on turns it off;
@@ -88,16 +88,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] In `apps/app/src/editor/hover-focus/use-hover-focus.ts` `suspendedBy()` (:21-33), replace the `s.focusMode` condition with `!s.focusMode || focusTargetId(s.selection, <collapsed set>) !== null`. Read the collapsed set from the store the same way `canvas.tsx` does. Keep every other suspension (flows, gestures, hand tool, popovers, connecting).
-- [ ] T009 [US1] In `apps/app/src/editor/use-canvas-shortcuts.ts` (:498-517), F turns Focus mode on with any selection:
+- [x] T008 [US1] In `apps/app/src/editor/hover-focus/use-hover-focus.ts` `suspendedBy()` (:21-33), replace the `s.focusMode` condition with `!s.focusMode || focusTargetId(s.selection, <collapsed set>) !== null`. Read the collapsed set from the store the same way `canvas.tsx` does. Keep every other suspension (flows, gestures, hand tool, popovers, connecting).
+- [x] T009 [US1] In `apps/app/src/editor/use-canvas-shortcuts.ts` (:498-517), F turns Focus mode on with any selection:
   - with exactly one node or group, focus it as today;
   - otherwise call `ui.setFocusMode(true)` without the announcement.
 
   Keep the flow refusal and the toggle-off branch, and announce "Focus mode on" / "Focus mode off".
 
-- [ ] T010 [US1] In `apps/app/src/editor/canvas.tsx`, remove the effect that turns Focus mode off when the selection empties (:577-587).
-- [ ] T011 [US1] In `apps/app/src/editor/shell/tools-island.tsx` (:68-110), make sure the Focus toggle is enabled without a selection: it is disabled only while a flow is shown. Its pressed state (`aria-pressed`) must reflect `focusMode`. Add or adjust the case in its test file, if one exists next to it.
-- [ ] T012 [US1] Update the bench hover scenario so it turns Focus mode on (with no selection) before hovering: `apps/app/src/routes/bench-page.tsx` (:257-340) and `apps/app/bench/perf.bench.ts` (:778-816).
+- [x] T010 [US1] In `apps/app/src/editor/canvas.tsx`, remove the effect that turns Focus mode off when the selection empties (:577-587).
+- [x] T011 [US1] In `apps/app/src/editor/shell/tools-island.tsx` (:68-110), make sure the Focus toggle is enabled without a selection: it is disabled only while a flow is shown. Its pressed state (`aria-pressed`) must reflect `focusMode`. Add or adjust the case in its test file, if one exists next to it.
+- [x] T012 [US1] Update the bench hover scenario so it turns Focus mode on (with no selection) before hovering: `apps/app/src/routes/bench-page.tsx` (:257-340) and `apps/app/bench/perf.bench.ts` (:778-816).
 
 **Checkpoint**: US1 works on its own. T005–T007 are green.
 

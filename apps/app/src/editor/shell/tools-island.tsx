@@ -98,7 +98,7 @@ export function ToolsIsland() {
         tip={
           focusDisabled
             ? 'Focus: not available while a flow is shown'
-            : 'Focus: dim all but the selection and its neighbours · F'
+            : 'Focus: dim all but the hovered or selected card and its neighbours · F'
         }
         pressed={focusMode}
         disabled={focusDisabled}

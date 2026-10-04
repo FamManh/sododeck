@@ -109,12 +109,40 @@ describe('Canvas', () => {
     expect(screen.getByLabelText('Minimap')).toBeInTheDocument();
   });
 
-  describe('hover focus (034)', () => {
+  describe('hover focus (034, only in Focus mode since 051)', () => {
     const lit = (container: HTMLElement) => container.querySelector('style')?.textContent ?? '';
+    const rest = () =>
+      act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      });
+
+    it('lights nothing and dims nothing outside Focus mode (051 C1)', async () => {
+      const { container } = renderWithEditor(<Canvas />, deck);
+      const root = screen.getByLabelText('Diagram canvas').closest('[data-region="canvas"]');
+      const target = container.querySelector('.react-flow__node[data-id="b"]');
+      if (target === null) throw new Error('no node b');
+      fireEvent.mouseEnter(target);
+      await rest();
+      expect(ui().hoverFocus).toBeNull();
+      expect(root).not.toHaveAttribute('data-hover-focus');
+      act(() => {
+        ui().select({ nodes: ['b'] });
+      });
+      expect(container.querySelector('[data-canvas]')).not.toHaveAttribute('data-focus-mode');
+      expect(container.querySelector('[aria-hidden="true"][data-testid="deck-node"]')).toBeNull();
+      act(() => {
+        ui().focus('a');
+        document.querySelector<HTMLElement>('[data-node-id="a"]')?.focus();
+      });
+      expect(root).not.toHaveAttribute('data-hover-focus');
+    });
 
     it('lights a resting card, its neighbours and connectors without changing any object', async () => {
       const before = structuredClone(deck);
       const { container, doc, editor } = renderWithEditor(<Canvas />, deck);
+      act(() => {
+        ui().setFocusMode(true);
+      });
       const root = screen.getByLabelText('Diagram canvas').closest('[data-region="canvas"]');
       const wrapperNode = container.querySelector('.react-flow__node[data-id="b"]');
       expect(wrapperNode).not.toBeNull();
@@ -157,6 +185,7 @@ describe('Canvas', () => {
       const { container } = renderWithEditor(<Canvas />, drilled);
       act(() => {
         ui().drillInto({ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } });
+        ui().setFocusMode(true);
       });
       const target = container.querySelector('.react-flow__node[data-id="in"]');
       if (target === null) throw new Error('no node in');
@@ -173,13 +202,20 @@ describe('Canvas', () => {
       const { container } = renderWithEditor(<Canvas />, deck);
       const root = screen.getByLabelText('Diagram canvas').closest('[data-region="canvas"]');
       act(() => {
+        ui().setFocusMode(true);
+      });
+      act(() => {
         ui().focus('a');
         document.querySelector<HTMLElement>('[data-node-id="a"]')?.focus();
       });
       expect(root).toHaveAttribute('data-hover-focus');
-      await user.keyboard('{ArrowRight}');
       expect(ui().hoverFocus?.source).toBe('keyboard');
       expect(lit(container)).toContain('[data-id="e1"]');
+      // Arrows select the next card, and a selection pins the focus instead (051 C1).
+      await user.keyboard('{ArrowRight}');
+      expect(ui().selection.nodes).toEqual(['b']);
+      expect(ui().hoverFocus).toBeNull();
+      expect(container.querySelector('[data-canvas]')).toHaveAttribute('data-focus-mode');
     });
 
     it('does not light anything while pinned focus is on', async () => {
@@ -192,11 +228,19 @@ describe('Canvas', () => {
       const target = container.querySelector('.react-flow__node[data-id="b"]');
       if (target === null) throw new Error('no node b');
       fireEvent.mouseEnter(target);
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      });
+      await rest();
       expect(ui().hoverFocus).toBeNull();
       expect(root).not.toHaveAttribute('data-hover-focus');
+      // Emptying the selection keeps Focus mode on, and hover drives it again (051 C1).
+      act(() => {
+        ui().clearSelection();
+      });
+      expect(ui().focusMode).toBe(true);
+      fireEvent.mouseLeave(target);
+      fireEvent.mouseEnter(target);
+      await waitFor(() => {
+        expect(root).toHaveAttribute('data-hover-focus');
+      });
     });
   });
 
@@ -673,6 +717,22 @@ describe('Canvas', () => {
     });
     expect(canvas).not.toHaveAttribute('data-focus-mode');
     expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('keeps Focus mode on when the selection empties, with nothing dimmed (051 C1)', () => {
+    const { container } = renderWithEditor(<Canvas />, deck);
+    act(() => {
+      ui().select({ nodes: ['b'] });
+      ui().setFocusMode(true);
+    });
+    const canvas = container.querySelector('[data-canvas]');
+    expect(canvas).toHaveAttribute('data-focus-mode');
+    act(() => {
+      ui().clearSelection();
+    });
+    expect(ui().focusMode).toBe(true);
+    expect(canvas).not.toHaveAttribute('data-focus-mode');
+    expect(container.querySelector('[aria-hidden="true"][data-testid="deck-node"]')).toBeNull();
   });
 });
 
