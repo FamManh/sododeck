@@ -13,6 +13,7 @@ import { Canvas } from '../canvas';
 import { nextStep, openFlow, play } from './flow-mode';
 import { recordClick, startEditing, startNewFlow } from './flow-session';
 import { useUiStore } from '../../state/ui-store';
+import { AccessMarker } from '../table/access-marker';
 
 const unnamed = (root: HTMLElement) =>
   within(root)
@@ -225,5 +226,73 @@ describe('flow playback marks accessibility (035 FR-018, FR-019)', () => {
       if (state === 'played') expect(sticker.querySelector('svg')).not.toBeNull();
       else expect(sticker.textContent).toMatch(/^\d+[a-z]?$/);
     }
+  });
+});
+
+describe('database link accessibility (049)', () => {
+  const touchDeck = {
+    ...flowDeck,
+    nodes: [
+      ...flowDeck.nodes,
+      { id: 'odb', type: 'database', title: 'Orders DB' },
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        parent: 'odb',
+        columns: [{ id: 'o-total', name: 'total', type: 'int' }],
+      },
+    ],
+    flows: flowDeck.flows.map((flow, index) =>
+      index === 0
+        ? {
+            ...flow,
+            steps: flow.steps.map((step, i) =>
+              i === 0
+                ? {
+                    ...step,
+                    touches: [
+                      { table: 'orders', access: 'write' as const },
+                      { table: 'orders', column: 'o-total', access: 'read' as const },
+                    ],
+                  }
+                : step,
+            ),
+          }
+        : flow,
+    ),
+  };
+
+  it('names every control of the Touches section, and tells read from write by text', async () => {
+    const { editor, ui, user } = renderFlows(touchDeck);
+    act(() => {
+      startEditing(editor(), touchDeck.flows[0]?.id ?? '');
+      ui().setActiveStep(touchDeck.flows[0]?.steps[0]?.id ?? null);
+    });
+    const section = screen.getByRole('region', { name: 'Touches' });
+    expect(unnamed(section)).toEqual([]);
+    expect(
+      within(section).getByRole('button', { name: 'Access for orders: write' }),
+    ).toHaveTextContent('Write');
+    expect(
+      within(section).getByRole('button', { name: 'Access for orders · total: read' }),
+    ).toHaveTextContent('Read');
+    // Keyboard path: Tab reaches the toggles, the remove buttons and the add button.
+    await user.click(within(section).getByRole('button', { name: 'Access for orders: write' }));
+    expect(within(section).getByRole('button', { name: 'Access for orders: read' })).toHaveFocus();
+  });
+
+  it('draws read and write markers in different shapes, not only colours', () => {
+    const { container } = renderWithEditor(
+      <>
+        <AccessMarker access="read" />
+        <AccessMarker access="write" />
+      </>,
+    );
+    const [read, write] = [...container.querySelectorAll('[data-access]')];
+    expect(read).toHaveTextContent('R');
+    expect(write).toHaveTextContent('W');
+    expect(read?.className).toContain('rounded-full');
+    expect(write?.className).not.toContain('rounded-full');
   });
 });

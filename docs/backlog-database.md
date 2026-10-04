@@ -117,7 +117,7 @@ Sododeck (reuse), 🆕 new in this backlog (feature id), ⏳ later (not schedule
 | Export a data dictionary (Markdown: tables, columns, types, notes, relationships) | 🆕 045                                               |
 | Export PNG / SVG / PDF, copy as image, deck JSON                                  | ✅ 012                                               |
 | Two-way DBML code panel (edit text ↔ canvas)                                      | 🆕 046                                               |
-| Starter samples / templates ("Shop", "SaaS auth", "Blog")                         | 🆕 049 (+✅ 013)                                     |
+| Starter samples / templates ("Shop", "SaaS auth", "Blog")                         | ✅ 049 (gallery: 013)                                |
 | AI-generated schema                                                               | ✅ via 027 skill (user's own AI, imported as a file) |
 | Migrations: diff two versions and write `ALTER` SQL                               | ⏳ later                                             |
 | Import from a live database connection                                            | ✖ backend B4; ⏳ a local CLI that writes SQL / DBML  |
@@ -471,6 +471,10 @@ values: { id, name, note? }[] }`;
 
 ## 049-db-architecture-link
 
+- **Status:** built (`specs/049-db-architecture-link`, ADR 0035). `Step.touches`, table ownership
+  through `node.parent`, the database card face, Move to database / Remove from card, Export SQL
+  from a card, lit tables and R / W rows in playback, and the Shop, SaaS auth and Blog samples
+  (`apps/app/src/samples/`).
 - **Milestone:** after 043 · **Depends on:** 034 (drill-in, outside proxies), 043, 007 (flows) ·
   **Estimate:** 4 d
 - **Goal:** The schema and the architecture are one model.

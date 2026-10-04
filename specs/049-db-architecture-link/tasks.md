@@ -129,9 +129,9 @@
 
 ## Phase 7: Polish & cross-cutting
 
-- [ ] T034 [P] Accessibility pass: `apps/app/src/editor/flows/a11y.test.tsx` (extend) for the Touches section, the card face and the R / W markers; check in greyscale that read and write differ
-- [ ] T035 [P] Check light and dark themes and tokens: no hard-coded colours in the new files (`pnpm lint`)
-- [ ] T036 [P] Docs: update `packages/schema/CLAUDE.md`, `packages/model/CLAUDE.md` and `apps/app/CLAUDE.md` if boundaries or APIs changed; mark 049 done in `docs/backlog-database.md`; no mention of other tools
+- [x] T034 [P] Accessibility pass: `apps/app/src/editor/flows/a11y.test.tsx` (extend) for the Touches section, the card face and the R / W markers; check in greyscale that read and write differ
+- [x] T035 [P] Check light and dark themes and tokens: no hard-coded colours in the new files (`pnpm lint`)
+- [x] T036 [P] Docs: update `packages/schema/CLAUDE.md`, `packages/model/CLAUDE.md` and `apps/app/CLAUDE.md` if boundaries or APIs changed; mark 049 done in `docs/backlog-database.md`; no mention of other tools
 - [ ] T037 Run the "after" bench and save to `specs/049-db-architecture-link/bench-after.md` next to the before numbers; the 500-card target must hold
 - [ ] T038 Run `pnpm schema:generate` clean, then `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; walk `quickstart.md` steps 1–11 and note any gap in the final report (what changed, what was skipped, what is uncertain)
 
