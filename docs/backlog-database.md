@@ -131,7 +131,6 @@ flowchart LR
   F030[030 card-types-and-packs]
   F029[029 card-look-deck]
   F015[015 model-validation]
-  F026[026 diagram-as-code]
   F034[034 connection-focus-and-drill]
   F039[039 db-design-sync]
   F040[040 db-schema-model]
@@ -154,7 +153,6 @@ flowchart LR
   F042 --> F044
   F044 --> F046
   F045 --> F046
-  F026 --> F046
   F015 --> F047
   F042 --> F047
   F043 --> F048
@@ -163,8 +161,8 @@ flowchart LR
   F043 --> F049
 ```
 
-Order: **039 → 040 → 041 → 042 → 043 → 052 → 044 → 045 → 047 → 048 → 049 → 046** (046 waits for
-026).
+Order: **039 → 040 → 041 → 042 → 043 → 052 → 044 → 045 → 046 → 047 → 048 → 049** (046 no
+longer waits for 026: founder, 2026-10-04).
 
 ---
 
@@ -419,7 +417,11 @@ values: { id, name, note? }[] }`;
 
 ## 046-db-code-panel
 
-- **Milestone:** after 026 · **Depends on:** 026 (editable code panel), 044, 045 · **Estimate:** 5 d
+- **Status:** specified (`specs/046-db-code-panel`).
+- **Milestone:** after 045 · **Depends on:** 044, 045 · **Estimate:** 5 d
+- **026 dependency removed (founder, 2026-10-04):** the JSON tab stays read-only (026 makes it
+  editable later, only if users ask); 046 builds the editing it needs for the DBML tab itself and
+  records apply-on-pause in its own ADR.
 - **Goal:** Developers write the schema as DBML and see the diagram follow, or edit the diagram and
   see the text follow.
 - **In scope:** a **DBML** tab in the code overlay (selection / whole schema); edits apply after a
