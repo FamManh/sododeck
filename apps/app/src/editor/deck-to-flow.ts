@@ -970,8 +970,14 @@ function representativeTitles(
   graph: VisibleGraph,
 ): ReadonlyMap<string, string> {
   const { nodeTitleById } = deckLookups(deck);
-  if (graph.cards.length === 0 && graph.ports.length === 0) return nodeTitleById;
+  if (graph.cards.length === 0 && graph.ports.length === 0 && graph.groups.length === 0)
+    return nodeTitleById;
   const titles = new Map(nodeTitleById);
+  const groupsById = groupLookup(deck.groups);
+  for (const groupId of graph.groups) {
+    const group = groupsById.get(groupId);
+    if (group !== undefined) titles.set(`${GROUP_NODE_PREFIX}${groupId}`, group.title);
+  }
   for (const card of graph.cards) titles.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, card.title);
   for (const port of graph.ports) titles.set(port.id, port.outsideTitle);
   return titles;
@@ -1004,11 +1010,23 @@ export function toFlowEdges(
       ? undefined
       : new Map(bundles.plain.map((entry) => [entry.edgeId, entry]));
   const ports = portNodes(deck, graph, view.level);
+  // Group frames are connector ends (050 R6); their boxes are only needed when one is drawn.
+  const frames = graph.groups.length === 0 ? undefined : groupBounds(deck, view.level);
   const nodes =
-    graph.cards.length === 0 && ports.length === 0
+    graph.cards.length === 0 && ports.length === 0 && frames === undefined
       ? lookups.edgeNodeViews
       : new Map(lookups.edgeNodeViews);
   if (nodes instanceof Map) {
+    const groupsById = groupLookup(deck.groups);
+    for (const groupId of graph.groups) {
+      const group = groupsById.get(groupId);
+      const rect = frames?.get(groupId);
+      if (group === undefined || rect === undefined) continue;
+      nodes.set(`${GROUP_NODE_PREFIX}${groupId}`, {
+        position: { x: rect.x, y: rect.y },
+        title: group.title,
+      });
+    }
     for (const card of graph.cards) {
       nodes.set(`${COLLAPSED_NODE_PREFIX}${card.groupId}`, {
         position: { x: card.rect.x, y: card.rect.y },
@@ -1023,8 +1041,12 @@ export function toFlowEdges(
   const selected = new Set(view.selection.edges);
   const cardsByGroupId = new Map(graph.cards.map((card) => [card.groupId, card]));
   const portsById = new Map(ports.map((port) => [port.id, port]));
-  /** A representative id's box (017 R6): a plain node, a collapsed group card, or a port pill. */
+  /**
+   * A representative id's box (017 R6): a plain node, a group frame (050), a collapsed group card,
+   * or a port pill.
+   */
   function boxFor(id: string): Box | undefined {
+    if (id.startsWith(GROUP_NODE_PREFIX)) return frames?.get(id.slice(GROUP_NODE_PREFIX.length));
     if (id.startsWith(COLLAPSED_NODE_PREFIX)) {
       return cardsByGroupId.get(id.slice(COLLAPSED_NODE_PREFIX.length))?.rect;
     }
@@ -1041,9 +1063,10 @@ export function toFlowEdges(
     if (node === undefined || index === undefined) return undefined;
     return cardBox(node, index, view.level, { fields: cardFieldView(deck, node) });
   }
-  /** A plain end's shape geometry (031); collapsed cards and port pills are boxes. */
+  /** A plain end's shape geometry (031); frames, collapsed cards and port pills are boxes. */
   function endGeometry(id: string): Geometry | undefined {
-    if (id.startsWith(COLLAPSED_NODE_PREFIX) || portsById.has(id)) return undefined;
+    if (id.startsWith(GROUP_NODE_PREFIX) || id.startsWith(COLLAPSED_NODE_PREFIX)) return undefined;
+    if (portsById.has(id)) return undefined;
     const node = lookups.nodesById.get(id);
     return node === undefined ? undefined : (geometryOf(node) ?? undefined);
   }
@@ -1052,10 +1075,13 @@ export function toFlowEdges(
     if (edge === undefined) return [];
     if (plainInfo !== undefined && !plainInfo.has(edgeId)) return [];
     const fan = fanOf(plainInfo?.get(edgeId));
-    const from = nodes.get(edge.from);
-    const to = nodes.get(edge.to);
-    const fromBox = boxFor(edge.from);
-    const toBox = boxFor(edge.to);
+    // A card draws as itself; a group end draws on its frame (`group:<id>`, 050 R6).
+    const fromId = graph.representative.get(edge.from) ?? edge.from;
+    const toId = graph.representative.get(edge.to) ?? edge.to;
+    const from = nodes.get(fromId);
+    const to = nodes.get(toId);
+    const fromBox = boxFor(fromId);
+    const toBox = boxFor(toId);
     // The schema does not check references; a file may still point at missing nodes.
     if (!from || !to || fromBox === undefined || toBox === undefined) return [];
     // With free bends the automatic sides face the first and last bend (022 R4).
@@ -1080,11 +1106,13 @@ export function toFlowEdges(
     const mark = overlay.edges.get(edge.id);
     const problems = view.problems?.get(edge.id);
     const shape = edgeShape(edge);
-    const fromGeometry = endGeometry(edge.from);
-    const toGeometry = endGeometry(edge.to);
+    const fromGeometry = endGeometry(fromId);
+    const toGeometry = endGeometry(toId);
     const cached = edgeCache.get(edge);
     if (
       cached?.selected === isSelected &&
+      cached.source === fromId &&
+      cached.target === toId &&
       cached.data?.shape === shape &&
       cached.data.fromGeometry === fromGeometry &&
       cached.data.toGeometry === toGeometry &&
@@ -1108,8 +1136,8 @@ export function toFlowEdges(
     const flowEdge: DeckFlowEdge = {
       id: edge.id,
       type: 'deck',
-      source: edge.from,
-      target: edge.to,
+      source: fromId,
+      target: toId,
       sourceHandle,
       targetHandle,
       selected: isSelected,

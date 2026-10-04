@@ -1,7 +1,7 @@
 import type { SododeckFile } from '@sododeck/schema';
 
 import { cardIconRef } from './card-icon';
-import { cardBox, type Rect } from './canvas-geometry';
+import { cardBox, groupBounds, type Rect } from './canvas-geometry';
 import type { Level } from './levels';
 import { scopeBounds, type VisibleGraph } from './visible-graph';
 
@@ -19,9 +19,10 @@ function iconField(node: SododeckFile['nodes'][number]): { icon?: string } {
 export interface OutsideProxy {
   /** `port:<outside node id>`: the prefix is kept from the old port pill. */
   id: string;
+  /** The outside node, or group (050 R6). */
   outsideNodeId: string;
   title: string;
-  /** The outside card's kind, for its icon. */
+  /** The outside card's kind, for its icon; `'group'` for a group. */
   kind: string;
   /** The outside card's stored icon (038); none for a node drawn as a shape. */
   icon?: string;
@@ -46,14 +47,24 @@ export function proxyLayout(
   if (bounds === null) return [];
   const edgesById = new Map(deck.edges.map((edge) => [edge.id, edge]));
   const nodesById = new Map(deck.nodes.map((node, index) => [node.id, { node, index }]));
+  const groupsById = new Map(deck.groups.map((group) => [group.id, group]));
+  const frames = deck.groups.length === 0 ? undefined : groupBounds(deck, level);
 
   const entries = graph.ports.flatMap((port) => {
-    const outside = nodesById.get(port.outsideNodeId)?.node;
+    // Either end may be a group (050 R6): a group proxy shows the group's title and glyph.
+    const node = nodesById.get(port.outsideNodeId)?.node;
+    const group = node === undefined ? groupsById.get(port.outsideNodeId) : undefined;
+    const outside =
+      node !== undefined
+        ? { title: node.title, kind: node.type, ...iconField(node) }
+        : group !== undefined
+          ? { title: group.title, kind: 'group' }
+          : undefined;
     if (outside === undefined) return [];
     const centres = port.insideNodeIds.flatMap((id) => {
       const found = nodesById.get(id);
-      if (found === undefined) return [];
-      const box = cardBox(found.node, found.index, level);
+      const box = found === undefined ? frames?.get(id) : cardBox(found.node, found.index, level);
+      if (box === undefined) return [];
       return [box.y + box.height / 2];
     });
     if (centres.length === 0) return [];
@@ -89,9 +100,7 @@ export function proxyLayout(
       placed.set(entry.port.id, {
         id: entry.port.id,
         outsideNodeId: entry.port.outsideNodeId,
-        title: entry.outside.title,
-        kind: entry.outside.type,
-        ...iconField(entry.outside),
+        ...entry.outside,
         side,
         rect: { x, y, ...PROXY_SIZE },
         edgeIds: entry.port.edgeIds,

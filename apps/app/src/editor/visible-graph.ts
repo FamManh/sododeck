@@ -62,6 +62,8 @@ export interface VisibleGraph {
 }
 
 const COLLAPSED_NODE_PREFIX = 'collapsed:';
+/** Same as `deck-to-flow`'s; kept here so this pure module doesn't import the flow mapping. */
+const GROUP_NODE_PREFIX = 'group:';
 const MERGED_EDGE_PREFIX = 'merged:';
 const PORT_NODE_PREFIX = 'port:';
 
@@ -253,7 +255,6 @@ export function visibleGraph(
     if (scopeGroups === null) return true;
     return lineage(node.group, groupParents).some((groupId) => scopeGroups.has(groupId));
   });
-  const memberIds = new Set(members.map((node) => node.id));
 
   const visibleGroups = new Set<string>();
   const nodeLineages = new Map<string, string[]>();
@@ -335,6 +336,15 @@ export function visibleGraph(
     if (hidden !== undefined) hiddenBy.set(groupId, `${COLLAPSED_NODE_PREFIX}${hidden}`);
   }
 
+  // Groups are connector ends too (050 R6): a group stands for itself as its frame, as the
+  // collapsed card hiding it, or (not drawn in this scope) as its nearest drawn ancestor. A group
+  // with no drawn ancestor is outside, so its connectors end on a proxy like a card's.
+  for (const group of deck.groups) {
+    const shown = lineage(group.id, groupParents).find((id) => visibleGroups.has(id));
+    if (shown !== undefined)
+      representative.set(group.id, hiddenBy.get(shown) ?? `${GROUP_NODE_PREFIX}${shown}`);
+  }
+
   const plainEdges: string[] = [];
   const mergedAcc = new Map<
     string,
@@ -346,13 +356,14 @@ export function visibleGraph(
   >();
 
   for (const edge of deck.edges) {
-    const fromInside = memberIds.has(edge.from);
-    const toInside = memberIds.has(edge.to);
+    // Members and drawn groups (or their stand-ins) have a representative; nothing else does.
+    const fromInside = representative.has(edge.from);
+    const toInside = representative.has(edge.to);
     if (!fromInside && !toInside) continue;
 
     if (fromInside !== toInside) {
       const outsideNodeId = fromInside ? edge.to : edge.from;
-      const outside = nodesById.get(outsideNodeId);
+      const outside = nodesById.get(outsideNodeId) ?? groupsById.get(outsideNodeId);
       if (outside === undefined) continue;
       const insideNodeId = fromInside ? edge.from : edge.to;
       const existing = portsAcc.get(outsideNodeId);

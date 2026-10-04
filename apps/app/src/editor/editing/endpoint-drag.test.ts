@@ -253,7 +253,13 @@ describe('endpoint drag (050 US2)', () => {
 
   it('with group ends allowed, dropping on a group frame connects to the group', () => {
     const { editor, edge, ui } = setup();
-    const session = startEndpointDrag(editor, ctx({ allowGroups: true }), { x: 400, y: 250 });
+    // The source end of `e`, drawn on A's right side middle, moved onto the frame of g: g → b.
+    const start = { x: 200, y: 50 };
+    const session = startEndpointDrag(
+      editor,
+      ctx({ allowGroups: true, end: 'source', ownId: 'a', otherId: 'b', start }),
+      start,
+    );
     moveEndpoint(session, { x: 240, y: 300 }, free);
     expect(ui().endpointPreview).toMatchObject({
       targetId: 'g',
@@ -262,8 +268,24 @@ describe('endpoint drag (050 US2)', () => {
     });
     expect(ui().connectorReadout).toBe('→ Data layer (group)');
     endEndpointDrag(editor, session);
-    expect(edge()).toMatchObject({ to: 'g', route: { toSide: 'right' } });
-    expect(ui().announcement.text).toBe('Connection now enters Data layer');
+    expect(edge()).toMatchObject({ from: 'g', to: 'b', route: { fromSide: 'right' } });
+    expect(ui().announcement.text).toBe('Connection now leaves Data layer');
+    expect(editor.canUndo()).toBe(true);
+    editor.undo();
+    expect(edge()).toEqual({ id: 'e', from: 'a', to: 'b' });
+  });
+
+  it("refuses reconnecting to a group that holds the other end ('contains')", () => {
+    const { editor, edge, ui } = setup();
+    // e is a → b and a sits in g: the target end can't go onto g.
+    const session = startEndpointDrag(editor, ctx({ allowGroups: true }), { x: 400, y: 250 });
+    moveEndpoint(session, { x: 240, y: 300 }, free);
+    expect(ui().endpointPreview).toMatchObject({ targetId: 'g', valid: 'contains' });
+    expect(ui().connectorReadout).toBe("Can't connect a group to something inside it");
+    endEndpointDrag(editor, session);
+    expect(ui().announcement.text).toBe("Can't connect a group to something inside it");
+    expect(edge()).toEqual({ id: 'e', from: 'a', to: 'b' });
+    expect(editor.canUndo()).toBe(false);
   });
 
   it('Esc (the gesture cancel) and blur (cancelEndpointDrag) clear the preview, no write', () => {
