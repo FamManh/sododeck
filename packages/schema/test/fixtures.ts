@@ -725,6 +725,13 @@ export const invalidFixtures: InvalidFixture[] = [
     input: set('relationshipDisplay.showLabels', true),
     path: 'relationshipDisplay',
   },
+  // 043: node lock. Only `true` is valid; unlocking removes the key.
+  {
+    name: 'locked false (unlocked is the absent key)',
+    input: set('nodes.2.locked', false),
+    path: 'nodes.2.locked',
+  },
+  { name: 'locked is not a boolean', input: set('nodes.2.locked', 'yes'), path: 'nodes.2.locked' },
 ];
 
 /**
@@ -732,6 +739,10 @@ export const invalidFixtures: InvalidFixture[] = [
  * group → card and group → group, each with a route and a style, read against the group frame.
  */
 export const validFixtures: { name: string; input: unknown }[] = [
+  // 043: `locked` on any node type.
+  { name: 'locked card', input: set('nodes.2.locked', true) },
+  { name: 'locked shape', input: set('nodes.8.locked', true) },
+  { name: 'locked table', input: set(`${CUSTOMERS}.locked`, true) },
   // 042: relationship display, empty and with every key.
   { name: 'empty relationship display', input: set('relationshipDisplay', {}) },
   {

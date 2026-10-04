@@ -250,7 +250,7 @@ export const expectedNoteKinds: Record<
   'sql-postgres': SQL,
   'sql-mysql': [...SQL, 'default-size', 'method-dropped', 'empty-enum'],
   'sql-sqlite': [...SQL, 'schema-dropped', 'method-dropped', 'empty-enum'],
-  dbml: [...COMMON, ...REFERENCES, 'method-dropped'],
+  dbml: [...COMMON, ...REFERENCES, 'method-dropped', 'empty-enum', 'same-column-ref'],
   'mermaid-er': [...COMMON, 'no-cardinality', 'name-changed'],
   dictionary: COMMON,
 };

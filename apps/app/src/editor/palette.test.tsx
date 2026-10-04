@@ -16,8 +16,47 @@ const tileNames = () =>
     .getAllByRole('button')
     .map((b) => b.textContent.replace(/\d+$/, ''));
 
+describe('Palette: Database tab (043 US7, R13)', () => {
+  it('lists Table, Note and Table group with their letter keys', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    const tiles = within(screen.getByRole('grid', { name: 'Types' })).getAllByRole('button');
+    expect(tiles.map((b) => b.textContent)).toEqual(['TableT', 'NoteS', 'Table groupG']);
+  });
+
+  it('adds a table with an id key column from the Table tile, its title in edit', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    await user.click(screen.getByRole('button', { name: 'Table' }));
+    const table = toJSON(doc).nodes[0];
+    expect(table).toMatchObject({ type: 'db-table', title: 'table_1' });
+    expect(table?.columns).toEqual([
+      { id: expect.any(String) as string, name: 'id', type: 'integer', pk: true, notNull: true },
+    ]);
+    expect(useUiStore.getState().titleEdit?.id).toBe(table?.id);
+  });
+
+  it('places a frame from Table group with nothing selected', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    await user.click(screen.getByRole('button', { name: 'Table group' }));
+    expect(toJSON(doc).groups).toHaveLength(1);
+  });
+
+  it('hides the tab when the Database pack is off', () => {
+    renderWithEditor(
+      <Palette />,
+      deckOf({ packs: NEW_DECK_PACKS.filter((pack) => pack !== 'database') }),
+    );
+    expect(screen.queryByRole('tab', { name: 'Database' })).toBeNull();
+  });
+});
+
 describe('Palette: Add flyout (030)', () => {
-  it('a new deck shows six tabs, five sections in display order with counts 13 / 3 / 1 / 1 / 7 and the packs footer (051 US7)', () => {
+  it('a new deck shows six tabs, five sections in display order with counts 13 / 3 / 1 / 3 / 7 and the packs footer (051 US7)', () => {
     renderWithEditor(<Palette />, newDeck());
     expect(
       within(screen.getByRole('tablist', { name: 'Categories' }))
@@ -29,12 +68,13 @@ describe('Palette: Add flyout (030)', () => {
       'Basic shapes13',
       'Process3',
       'Data1',
-      'Database1',
+      'Database3',
       'Architecture7',
     ]);
     expect(screen.getByRole('button', { name: 'Packs · 5 on' })).toBeInTheDocument();
-    expect(tileNames()).toHaveLength(25);
-    expect(tileNames()).toContain('Table');
+    expect(tileNames()).toHaveLength(27);
+    // The Database tiles show their letter key (043).
+    expect(tileNames()).toContain('TableT');
     expect(tileNames()).not.toContain('Warehouse');
   });
 
@@ -127,6 +167,13 @@ describe('Palette: Add flyout (030)', () => {
     expect(screen.getByText('No types match')).toBeInTheDocument();
   });
 
+  it('offers Import SQL or DBML in the footer when the Database pack is on (044)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('button', { name: 'Import SQL or DBML…' }));
+    expect(useUiStore.getState().importDialog.open).toBe(true);
+  });
+
   it('a deck from before packs lists only Architecture', () => {
     renderWithEditor(<Palette />);
     expect(
@@ -144,6 +191,7 @@ describe('Palette: Add flyout (030)', () => {
       'Component',
     ]);
     expect(screen.getByRole('button', { name: 'Packs · 1 on' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Import SQL or DBML…' })).not.toBeInTheDocument();
   });
 
   it('offers the Note card and its help text', () => {

@@ -6,6 +6,8 @@ import { JSON_PANEL_KEY } from './json-panel-prefs';
 import {
   isFlowMode,
   LABELS_KEY,
+  newRowAt,
+  rowEditTableId,
   NOTES_KEY,
   readLabelsOn,
   readNotesDisplay,
@@ -45,6 +47,80 @@ describe('ui store', () => {
       expect(state().enumPopover).toBe(open);
       state().resetForDeck('other');
       expect(state().enumPopover).toBeNull();
+    });
+  });
+
+  describe('schema editing (043)', () => {
+    it('opens and closes the column line editor, closing the menu', () => {
+      state().openContextMenu({
+        target: { kind: 'canvas' },
+        point: { x: 0, y: 0 },
+        via: 'pointer',
+      });
+      expect(state().startColumnEdit({ tableId: 't', columnId: null, at: 2, select: 'name' })).toBe(
+        true,
+      );
+      expect(state().columnEdit).toEqual({ tableId: 't', columnId: null, at: 2, select: 'name' });
+      expect(state().contextMenu).toBeNull();
+      state().endColumnEdit();
+      expect(state().columnEdit).toBeNull();
+    });
+
+    it('refuses the line editor in flow mode', () => {
+      state().openFlow('f1');
+      expect(state().startColumnEdit({ tableId: 't', columnId: 'c', select: 'name' })).toBe(false);
+      expect(state().columnEdit).toBeNull();
+    });
+
+    it('derives the row-editing table from row focus, the editor or a row drag', () => {
+      expect(rowEditTableId(state())).toBeNull();
+      state().setFocusedRow({ tableId: 'a', columnId: 'c1' });
+      expect(rowEditTableId(state())).toBe('a');
+      state().setRowDrag({ tableId: 'b', columnId: 'c2', overIndex: 0 });
+      expect(rowEditTableId(state())).toBe('b');
+      state().startColumnEdit({ tableId: 'c', columnId: 'c3', select: 'name' });
+      expect(rowEditTableId(state())).toBe('c');
+      state().endColumnEdit();
+      state().setRowDrag(null);
+      state().setFocusedRow(null);
+      expect(rowEditTableId(state())).toBeNull();
+    });
+
+    it('gives the new-row index only for a new row, the end when none is given', () => {
+      state().startColumnEdit({ tableId: 't', columnId: 'c', select: 'name' });
+      expect(newRowAt(state())).toBeNull();
+      state().startColumnEdit({ tableId: 't', columnId: null, at: 1, select: 'name' });
+      expect(newRowAt(state())).toBe(1);
+      state().startColumnEdit({ tableId: 't', columnId: null, select: 'name' });
+      expect(newRowAt(state())).toBe(Number.MAX_SAFE_INTEGER);
+    });
+
+    it('clears the editor and the row drag with the other edits', () => {
+      state().startColumnEdit({ tableId: 't', columnId: null, at: 0, select: 'name' });
+      state().setRowDrag({ tableId: 't', columnId: 'c', overIndex: 1 });
+      state().resetForDeck('other');
+      expect(state().columnEdit).toBeNull();
+      expect(state().rowDrag).toBeNull();
+    });
+
+    it('drops the editor when its table is removed', () => {
+      state().startColumnEdit({ tableId: 't', columnId: 'c', select: 'name' });
+      state().pruneSelection({
+        nodes: new Set(),
+        edges: new Set(),
+        groups: new Set(),
+        stickies: new Set(),
+      });
+      expect(state().columnEdit).toBeNull();
+    });
+
+    it('seeds the export dialog with a format and scope', () => {
+      state().openExport(null, { format: 'sql', scope: 'selection' });
+      expect(state().exportDialog).toEqual({
+        open: true,
+        returnFocus: null,
+        seed: { format: 'sql', scope: 'selection' },
+      });
     });
   });
 
@@ -792,5 +868,64 @@ describe('ui store', () => {
       canvasPointer: null,
       palette: { open: false, returnFocus: null },
     });
+  });
+});
+
+describe('ui store: schema import (044)', () => {
+  const report = (deckId: string | null, open?: boolean) => ({
+    deckId,
+    ...(open === undefined ? {} : { open }),
+    source: { format: 'sql' as const, dialect: null },
+    mapped: {
+      tables: 1,
+      relationships: 0,
+      enums: 0,
+      indexes: 0,
+      checks: 0,
+      groups: 0,
+      stickies: 0,
+    },
+    skipped: [],
+    changed: [],
+    suggestions: [
+      {
+        fromTable: 'a',
+        fromColumn: 'a.b_id',
+        toTable: 'b',
+        toColumn: 'b.id',
+        label: 'a.b_id → b.id',
+        cardinality: 'n-1' as const,
+        fromOptional: false,
+        state: 'open' as const,
+      },
+    ],
+  });
+
+  it('opens and closes the dialog with its return focus', () => {
+    const button = document.createElement('button');
+    useUiStore.getState().openImport(button);
+    expect(useUiStore.getState().importDialog).toEqual({ open: true, returnFocus: button });
+    useUiStore.getState().closeImport();
+    expect(useUiStore.getState().importDialog).toEqual({ open: false, returnFocus: null });
+  });
+
+  it('updates a suggestion and keeps its edge id', () => {
+    useUiStore.getState().setImportReport(report('d1'));
+    useUiStore.getState().updateSuggestion(0, 'accepted', 'e1');
+    expect(useUiStore.getState().importReport?.suggestions?.[0]).toMatchObject({
+      state: 'accepted',
+      edgeId: 'e1',
+    });
+    useUiStore.getState().updateSuggestion(0, 'dismissed');
+    expect(useUiStore.getState().importReport?.suggestions?.[0]?.edgeId).toBeUndefined();
+  });
+
+  it('keeps the report for its own deck, opening it once, and drops it for another', () => {
+    useUiStore.getState().setImportReport(report('d1', true));
+    useUiStore.getState().resetForDeck('d1');
+    expect(useUiStore.getState().flyout).toBe('import-report');
+    expect(useUiStore.getState().importReport?.open).toBe(false);
+    useUiStore.getState().resetForDeck('d2');
+    expect(useUiStore.getState().importReport).toBeNull();
   });
 });

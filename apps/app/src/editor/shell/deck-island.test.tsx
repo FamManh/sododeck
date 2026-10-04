@@ -106,6 +106,36 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     });
   });
 
+  it('opens Import SQL or DBML from the menu, and the last report once there is one (044)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Island />, shop);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    expect(screen.queryByRole('menuitem', { name: 'Last import report' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: 'Import SQL or DBML…' }));
+    expect(useUiStore.getState().importDialog.open).toBe(true);
+    act(() => {
+      useUiStore.getState().setImportReport({
+        deckId: null,
+        source: { format: 'sql', dialect: null },
+        mapped: {
+          tables: 1,
+          relationships: 0,
+          enums: 0,
+          indexes: 0,
+          checks: 0,
+          groups: 0,
+          stickies: 0,
+        },
+        skipped: [],
+        changed: [],
+        suggestions: null,
+      });
+    });
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Last import report' }));
+    expect(useUiStore.getState().flyout).toBe('import-report');
+  });
+
   it('switches views and replaces them with the session chip while recording (011)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);

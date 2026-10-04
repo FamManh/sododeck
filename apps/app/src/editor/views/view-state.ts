@@ -15,6 +15,7 @@ import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sodode
 
 import { setCardFieldDeck } from '../card-fields';
 import { setTableDeck } from '../table-keys';
+import { withNewRow } from '../table-layout';
 import { flowCountByNode, viewFilter } from '../view-filter';
 
 export interface ViewRender {
@@ -36,6 +37,15 @@ export interface ViewState {
   hidden: ReadonlySet<Id>;
   collapsed: ReadonlySet<Id>;
   render: ViewRender;
+}
+
+/**
+ * The table in row editing (043 R4): drawn at All, and with a new-row editor at `newRowAt` (a
+ * column index) when one is open. UI state, projected here so every geometry reader agrees.
+ */
+export interface RowEditView {
+  tableId: Id;
+  newRowAt: number | null;
 }
 
 const EMPTY: ReadonlySet<Id> = new Set();
@@ -249,16 +259,53 @@ export function viewDeck(deck: SododeckFile, view: View, hidden: ReadonlySet<Id>
   return projected;
 }
 
-const states = new WeakMap<
+const rowEditNodes = new WeakMap<Node, { at: number | null; node: Node }>();
+function showAll(node: Node, at: number | null): Node {
+  const cached = rowEditNodes.get(node);
+  if (cached?.at === at) return cached.node;
+  const all = node.detail === 'all' ? node : { ...node, detail: 'all' as const };
+  const next = at === null ? all : withNewRow(all === node ? { ...node } : all, at);
+  rowEditNodes.set(node, { at, node: next });
+  return next;
+}
+
+const rowEditDecks = new WeakMap<
   SododeckFile,
-  Map<Id | null, { revealed: ReadonlySet<Id>; state: ViewState }>
+  { tableId: Id; at: number | null; deck: SododeckFile }
 >();
 
-/** The view `currentViewId` (the first one when null or gone) of `file`, as the canvas uses it. */
+/** `deck` with the row-editing table at All (and its new row), the rest unchanged (FR-010a). */
+function withRowEdit(deck: SododeckFile, rowEdit: RowEditView | null): SododeckFile {
+  if (rowEdit === null) return deck;
+  const index = deck.nodes.findIndex((node) => node.id === rowEdit.tableId);
+  const node = deck.nodes[index];
+  if (node === undefined) return deck;
+  const cached = rowEditDecks.get(deck);
+  if (cached?.tableId === rowEdit.tableId && cached.at === rowEdit.newRowAt) return cached.deck;
+  const nodes = deck.nodes.slice();
+  nodes[index] = showAll(node, rowEdit.newRowAt);
+  const next = { ...deck, nodes };
+  rowEditDecks.set(deck, { tableId: rowEdit.tableId, at: rowEdit.newRowAt, deck: next });
+  return next;
+}
+
+const sameRowEdit = (a: RowEditView | null, b: RowEditView | null) =>
+  a?.tableId === b?.tableId && a?.newRowAt === b?.newRowAt;
+
+const states = new WeakMap<
+  SododeckFile,
+  Map<Id | null, { revealed: ReadonlySet<Id>; rowEdit: RowEditView | null; state: ViewState }>
+>();
+
+/**
+ * The view `currentViewId` (the first one when null or gone) of `file`, as the canvas uses it.
+ * `rowEdit`: the table in row editing (043), shown at All in `deck` only.
+ */
 export function viewStateOf(
   file: SododeckFile,
   currentViewId: Id | null,
   revealed: ReadonlySet<Id> = EMPTY,
+  rowEdit: RowEditView | null = null,
 ): ViewState {
   // Card heights follow the typed fields this deck shows (032); every geometry helper reads them.
   setCardFieldDeck(file);
@@ -266,7 +313,7 @@ export function viewStateOf(
   setTableDeck(file);
   let byView = states.get(file);
   const cached = byView?.get(currentViewId);
-  if (cached?.revealed === revealed) return cached.state;
+  if (cached?.revealed === revealed && sameRowEdit(cached.rowEdit, rowEdit)) return cached.state;
 
   const views = resolveViews(file);
   const view = views.find((v) => v.id === currentViewId) ?? views[0];
@@ -281,7 +328,7 @@ export function viewStateOf(
     views,
     view,
     isBase: view === views[0],
-    deck: viewDeck(file, view, hidden),
+    deck: withRowEdit(viewDeck(file, view, hidden), rowEdit),
     hidden,
     collapsed: setOf(view.collapsed),
     render: {
@@ -296,7 +343,7 @@ export function viewStateOf(
     byView = new Map();
     states.set(file, byView);
   }
-  byView.set(currentViewId, { revealed, state });
+  byView.set(currentViewId, { revealed, rowEdit, state });
   return state;
 }
 

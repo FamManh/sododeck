@@ -6,6 +6,7 @@
  */
 import {
   fragmentOrigin,
+  isDbTable,
   parseFragment,
   serializeFragment,
   toFragment,
@@ -70,7 +71,8 @@ export function selectionFragment(
   const tree = groupSubtree(deck, selection.groups);
   const nodes = [...new Set([...selection.nodes, ...tree.nodes])];
   if (nodes.length === 0 && tree.groups.length === 0) return null;
-  return toFragment(deck, { nodes, groups: tree.groups }, viewId);
+  // Tables keep their outgoing foreign keys (043 R10): paste keeps them when the target exists.
+  return toFragment(deck, { nodes, groups: tree.groups }, { viewId, keepOutgoing: true });
 }
 
 /** The group a paste at `point` goes into: the innermost frame there, else the drilled group. */
@@ -102,8 +104,25 @@ export function visibleRect(canvas: CanvasPoints): Rect {
   };
 }
 
-function selectPasted(ids: PastedIds): void {
-  useUiStore.getState().select({ nodes: ids.nodes, groups: ids.groups });
+function selectPasted(editor: DeckEditor, ids: PastedIds): void {
+  const ui = useUiStore.getState();
+  ui.select({ nodes: ids.nodes, groups: ids.groups });
+  // One pasted or duplicated table opens its title for renaming, all text selected (043 R10).
+  const [only, ...rest] = ids.nodes;
+  const node =
+    only === undefined || rest.length > 0 || ids.groups.length > 0
+      ? undefined
+      : readDeck(editor.doc).nodes.find((n) => n.id === only);
+  if (node !== undefined && isDbTable(node)) {
+    ui.focus(node.id);
+    ui.startTitleEdit({ target: 'node', id: node.id, isNew: false });
+  }
+}
+
+/** "orders" for one card, else "3 components and 2 connections". */
+function pastedName(fragment: Pick<Fragment, 'deck'>): string {
+  const [only, ...rest] = fragment.deck.nodes;
+  return only !== undefined && rest.length === 0 ? only.title : countText(fragment);
 }
 
 /**
@@ -116,6 +135,7 @@ export function pasteText(
   text: string,
   pointer: Point | null,
   canvas: CanvasPoints | null,
+  undoToast?: (message: string) => void,
 ): boolean {
   const fragment = parseFragment(text);
   if (fragment === null || fragment.deck.nodes.length + fragment.deck.groups.length === 0) {
@@ -136,8 +156,16 @@ export function pasteText(
     viewId,
   });
   ui.setPasteSerial(serial);
-  selectPasted(ids);
-  ui.announce(`Pasted ${countText(fragment)}`);
+  selectPasted(editor, ids);
+  const dropped = ids.droppedRelationships;
+  if (dropped > 0) {
+    // Relationships whose other table is not in this deck (043 FR-019): said, with Undo.
+    const message = `Pasted ${pastedName(fragment)} · ${plural(dropped, 'relationship')} dropped`;
+    if (undoToast === undefined) ui.announce(message);
+    else undoToast(message);
+  } else {
+    ui.announce(`Pasted ${countText(fragment)}`);
+  }
   return true;
 }
 
@@ -188,7 +216,7 @@ export function duplicateSelection(editor: DeckEditor, selection: Selection): bo
     parent: commonParent(deck, selection),
     viewId,
   });
-  selectPasted(ids);
+  selectPasted(editor, ids);
   useUiStore.getState().announce(`Duplicated ${plural(ids.nodes.length, 'component')}`);
   return true;
 }

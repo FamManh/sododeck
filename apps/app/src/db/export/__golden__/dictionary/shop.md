@@ -169,14 +169,14 @@ Where an order is in its life
 - categories.parent_id → categories.id · zero or many to zero or one
 - order_items.order_id → orders.id · many to one · on delete cascade
 - order_items.product_id → products.id · many to one · on delete restrict
-- orders.billing_address_id → addresses.id · zero or many to zero or one · "bills to"
 - orders.customer_id → customers.id · many to one · on delete cascade · "places"
 - orders.shipping_address_id → addresses.id · zero or many to zero or one · "ships to"
+- orders.billing_address_id → addresses.id · zero or many to zero or one · "bills to"
 - payments.order_id → orders.id · many to one
 - products.id → categories.id · many to many · "listed in"
-- reviews.customer_id → customers.id · zero or many to zero or one · on delete set null
 - reviews.product_id → products.id · many to one · on delete cascade
+- reviews.customer_id → customers.id · zero or many to zero or one · on delete set null
 - sessions.user_id → users.id · many to one · on delete cascade
-- shipment_items.(order_id, product_id) → order_items.(order_id, product_id) · many to one
 - shipment_items.shipment_id → shipments.id · many to one · on delete cascade
+- shipment_items.(order_id, product_id) → order_items.(order_id, product_id) · many to one
 - shipments.order_id → orders.id · many to one

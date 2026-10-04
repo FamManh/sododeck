@@ -102,6 +102,8 @@ export interface DeckNodeData extends Record<string, unknown> {
   layout: CardLayout;
   /** Drawn as a shape (031): its geometry; the node type is then `shape`. */
   geometry?: Geometry;
+  /** Locked (043): not draggable or resizable, a lock badge in the header. */
+  locked?: boolean;
 }
 
 export interface GroupBoundaryData extends Record<string, unknown> {
@@ -551,9 +553,11 @@ function toFlowNode(
   const layout = cardLayoutOf(node, { description: subtitle, childCount, fields });
   const size = { width: layout.width, height: layout.height };
   const geometry = geometryOf(node) ?? undefined;
+  const locked = node.locked === true;
   if (
     cached?.data.geometry === geometry &&
     cached?.selected === selected &&
+    (cached.data.locked === true) === locked &&
     // A table's rows (041) follow its deck too (keys, enums, display): same object while unchanged.
     cached.data.layout.table === layout.table &&
     cached.data.icon === node.icon &&
@@ -592,6 +596,8 @@ function toFlowNode(
     selected,
     ...(className === '' ? {} : { className }),
     ...(dimmed ? { domAttributes: { 'aria-hidden': true, inert: true } } : {}),
+    // A locked card never starts a drag, nor moves with a multi-drag (043 FR-023).
+    ...(locked ? { draggable: false } : {}),
     data: {
       title: node.title,
       kind: node.type,
@@ -614,6 +620,7 @@ function toFlowNode(
       ...(problems === undefined ? {} : { problems }),
       ...(look === undefined ? {} : { look }),
       ...(geometry === undefined ? {} : { geometry }),
+      ...(locked ? { locked } : {}),
       layout,
     },
   };

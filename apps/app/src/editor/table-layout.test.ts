@@ -6,6 +6,8 @@ import type { TableContext } from './table-keys';
 import {
   effectiveDetail,
   rowAnchorY,
+  rowAtSlot,
+  withNewRow,
   tableLayout,
   TABLE_CARD,
   type TableNode,
@@ -270,5 +272,38 @@ describe('rowAnchorY and connected rows (042 R2, R15)', () => {
     expect(keys.rows.map((r) => r.columnId)).toEqual(['id', 'customer_id', 'number']);
     expect(keys.hidden).toEqual({ count: 4, kind: 'more' });
     expect(rowAnchorY(keys, 'number')).toEqual({ y: ROWS + 2 * 24 + 12, kind: 'row' });
+  });
+});
+
+describe('new-row editor slot (043 R3)', () => {
+  it('makes the table one row taller and shifts the rows below the insertion index', () => {
+    const before = tableLayout(orders, context(), 240, measure);
+    const after = tableLayout(withNewRow({ ...orders }, 2), context(), 240, measure);
+    expect(after.newRowIndex).toBe(2);
+    expect(after.height).toBe(before.height + TABLE_CARD.rowHeight);
+    expect(rowAnchorY(after, 'customer_id')).toEqual(rowAnchorY(before, 'customer_id'));
+    expect(rowAnchorY(after, 'number').y).toBe(
+      rowAnchorY(before, 'number').y + TABLE_CARD.rowHeight,
+    );
+    expect(rowAnchorY(after, 'created_at').y).toBe(
+      rowAnchorY(before, 'created_at').y + TABLE_CARD.rowHeight,
+    );
+  });
+
+  it('clamps the index to the end and finds rows by slot around it', () => {
+    const layout = tableLayout(withNewRow({ ...orders }, 99), context(), 240, measure);
+    expect(layout.newRowIndex).toBe(7);
+    const mid = tableLayout(withNewRow({ ...orders }, 1), context(), 240, measure);
+    expect(rowAtSlot(mid, 0)?.columnId).toBe('id');
+    expect(rowAtSlot(mid, 1)).toBeUndefined();
+    expect(rowAtSlot(mid, 2)?.columnId).toBe('customer_id');
+  });
+
+  it('draws a body for a table without columns while a new row is open', () => {
+    const empty: TableNode = { id: 'e', title: 'e', columns: [] };
+    expect(tableLayout(empty, context(), 240, measure).hasBody).toBe(false);
+    const open = tableLayout(withNewRow({ ...empty }, 0), context(), 240, measure);
+    expect(open.hasBody).toBe(true);
+    expect(open.newRowIndex).toBe(0);
   });
 });

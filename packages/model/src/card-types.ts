@@ -75,6 +75,8 @@ export interface Pack {
   onByDefault: boolean;
   /** Tool tiles shown after the pack's types in Add (031). */
   tools?: readonly PackTool[];
+  /** What the pack adds, in a few words, shown in "Packs in this deck" (043). */
+  description?: string;
 }
 
 export interface CategoryInfo {
@@ -91,7 +93,14 @@ const PACK_LIST: readonly Omit<Pack, 'order'>[] = [
   { id: 'process', name: 'Process', onByDefault: true },
   { id: 'logistics', name: 'Logistics', onByDefault: false },
   { id: 'data', name: 'Data cards', onByDefault: true },
-  { id: 'database', name: 'Database', onByDefault: true },
+  // Database's tools read "Note" and "Table group" in its Add section (043 R13).
+  {
+    id: 'database',
+    name: 'Database',
+    onByDefault: true,
+    tools: ['sticky', 'frame'],
+    description: 'Table, note, table group',
+  },
   { id: 'shapes', name: 'Basic shapes', onByDefault: true, tools: ['sticky', 'frame'] },
 ];
 

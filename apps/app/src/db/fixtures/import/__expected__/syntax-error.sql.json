@@ -1,0 +1,84 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": null,
+    "dialect": "postgres",
+    "counts": {
+      "tables": 1,
+      "relationships": 0,
+      "enums": 0
+    },
+    "skippedCount": 1,
+    "conversions": [],
+    "dialectOutcome": "same",
+    "error": {
+      "line": 12,
+      "column": 26,
+      "message": "unexpected \",\""
+    }
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "ok",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [],
+    "stickies": [],
+    "setDialect": null,
+    "dialectOutcome": "same",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "syntax-error.sql",
+        "format": "sql",
+        "dialect": null
+      },
+      "mapped": {
+        "tables": 1,
+        "relationships": 0,
+        "enums": 0,
+        "indexes": 0,
+        "checks": 0,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [
+        {
+          "line": 10,
+          "excerpt": "CREATE TABLE broken (",
+          "reason": "parse-error",
+          "detail": "unexpected \",\""
+        }
+      ],
+      "changed": [],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

@@ -14,7 +14,7 @@
  * The session lives in a handler ref for the length of one drag; guides, the drop target and the
  * offset readout are UI-only store fields. Nothing here is document state.
  */
-import { viewNodePosition, type DeckEditor } from '@sododeck/model';
+import { isLocked, viewNodePosition, type DeckEditor } from '@sododeck/model';
 import type { Frame, Id } from '@sododeck/schema';
 import type { NodeChange } from '@xyflow/react';
 
@@ -246,7 +246,9 @@ export class DragController {
     const bounds = groupBounds(view.deck, level);
 
     const tree = groupSubtree(deck, groups);
-    const moving = new Set([...nodes, ...tree.nodes]);
+    // Locked cards stay put in a multi-drag (043 FR-024); a group still carries its members.
+    const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
+    const moving = new Set([...nodes.filter((id) => !locked.has(id)), ...tree.nodes]);
     const start: Record<Id, Point> = {};
     const movingBoxes: Rect[] = [];
     deck.nodes.forEach((node, index) => {

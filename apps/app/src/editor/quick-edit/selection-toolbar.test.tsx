@@ -91,6 +91,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Rules',
       'Colour: none',
       'Icon',
+      'Lock',
       'Spread ends evenly',
       'More actions',
     ]);
@@ -184,6 +185,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Colour: none',
       'Icon',
       'Group',
+      'Lock',
       'Align',
       'Spread ends evenly',
       'More actions',

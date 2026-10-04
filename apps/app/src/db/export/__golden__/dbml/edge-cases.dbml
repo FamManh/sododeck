@@ -1,5 +1,4 @@
-Enum empty_choice {
-}
+// Enum empty_choice has no values; not written
 
 Table a {
   id int [pk]
@@ -110,4 +109,4 @@ Ref: b.a_id > a.id
 Ref: "order items".order_id > order.id [delete: cascade]
 Ref: pair_refs.a_id > a.id
 Ref: products.id <> categories.id
-Ref related: tags.id <> tags.id
+// Relationship tags ↔ tags (related) links a column to itself; not written

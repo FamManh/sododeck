@@ -12,6 +12,13 @@ const result: ExportResult = {
 };
 
 describe('export dialog state', () => {
+  it('opens on a seeded format and scope (043 R15)', () => {
+    const seeded = initialExportState({ flowMode: false, schemaScope: 'selection', format: 'sql' });
+    expect(seeded.format).toBe('sql');
+    expect(seeded.schemaScope).toBe('selection');
+    expect(initialExportState({ flowMode: true, format: 'sql' }).format).toBe('sql');
+  });
+
   it('defaults based on flow mode', () => {
     const ordinary = initialExportState({ flowMode: false });
     expect(ordinary.format).toBe('json');

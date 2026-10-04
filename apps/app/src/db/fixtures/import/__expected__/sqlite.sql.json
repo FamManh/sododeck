@@ -1,0 +1,190 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": "sqlite",
+    "dialect": "sqlite",
+    "counts": {
+      "tables": 3,
+      "relationships": 1,
+      "enums": 0
+    },
+    "skippedCount": 4,
+    "conversions": [],
+    "dialectOutcome": "set"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "users",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "email",
+                "type": "text",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.3",
+                "name": "nickname",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "notes",
+            "columns": [
+              {
+                "id": "dbcol.4",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.5",
+                "name": "user_id",
+                "type": "integer",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.6",
+                "name": "body",
+                "type": "text"
+              },
+              {
+                "id": "dbcol.7",
+                "name": "created_at",
+                "type": "text",
+                "defaultExpr": "CURRENT_TIMESTAMP"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.1",
+                "name": "notes_user_idx",
+                "columns": [
+                  "dbcol.5"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "settings",
+            "columns": [
+              {
+                "id": "dbcol.8",
+                "name": "key",
+                "type": "text",
+                "pk": true
+              },
+              {
+                "id": "dbcol.9",
+                "name": "value",
+                "type": "text"
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.2",
+            "to": "node.1",
+            "fromColumns": [
+              "dbcol.5"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [],
+    "stickies": [],
+    "setDialect": "sqlite",
+    "dialectOutcome": "set",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "sqlite.sql",
+        "format": "sql",
+        "dialect": "sqlite"
+      },
+      "mapped": {
+        "tables": 3,
+        "relationships": 1,
+        "enums": 0,
+        "indexes": 1,
+        "checks": 0,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [
+        {
+          "line": 1,
+          "excerpt": "PRAGMA foreign_keys=OFF",
+          "reason": "session"
+        },
+        {
+          "line": 2,
+          "excerpt": "BEGIN TRANSACTION",
+          "reason": "session"
+        },
+        {
+          "line": 19,
+          "excerpt": "INSERT INTO users VALUES(1,'a@example.com',NULL)",
+          "reason": "data"
+        },
+        {
+          "line": 20,
+          "excerpt": "COMMIT",
+          "reason": "session"
+        }
+      ],
+      "changed": [
+        {
+          "line": 6,
+          "target": "users.nickname",
+          "kind": "option-dropped",
+          "detail": "users.nickname has no type; stored as text"
+        },
+        {
+          "line": 14,
+          "target": "settings",
+          "kind": "option-dropped",
+          "detail": "table options not stored: WITHOUT ROWID"
+        }
+      ],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

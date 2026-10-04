@@ -4,7 +4,7 @@
  * never enters the main bundle; the result is one `moveInView` + `setGroupFrames` batch (one undo
  * step, FR-033; frames since 016).
  */
-import { fitGroupFrames, type Point } from '@sododeck/model';
+import { fitGroupFrames, isLocked, type Point } from '@sododeck/model';
 import type { Frame, Id, SododeckFile } from '@sododeck/schema';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useEffect, useRef } from 'react';
@@ -187,6 +187,12 @@ export function movedCount(positions: Readonly<Record<Id, Point>>, deck: Sododec
   return moved;
 }
 
+/** Pinned ids plus every locked card: Tidy layout leaves both in place. */
+function withLocked(pinned: ReadonlySet<Id>, deck: Pick<SododeckFile, 'nodes'>): ReadonlySet<Id> {
+  const locked = deck.nodes.filter(isLocked).map((node) => node.id);
+  return locked.length === 0 ? pinned : new Set([...pinned, ...locked]);
+}
+
 export type TidyBlock =
   'Not available while a flow is open' | 'Nothing to arrange' | 'All components are pinned';
 
@@ -234,7 +240,9 @@ export function useTidyLayout(): { run: () => Promise<void>; cancel: () => void 
     const scope = scopeOf(ui.drill);
     const graph = visibleGraph(start.deck, scope, start.collapsed);
     const level = effectiveLevel(levelForZoom(getZoom()), scope);
-    const request = buildLayoutRequest(start.deck, graph, start.render.pinned, level);
+    // Locked cards stay where they are, like pinned ones (043 FR-023).
+    const held = withLocked(start.render.pinned, start.deck);
+    const request = buildLayoutRequest(start.deck, graph, held, level);
     const viewId = start.view.id;
     ui.setLayoutRun({ status: 'running', viewId });
     ui.announce('Tidying layout');
@@ -252,8 +260,8 @@ export function useTidyLayout(): { run: () => Promise<void>; cancel: () => void 
         useUiStore.getState().announce('Layout not applied: the view was deleted');
         return;
       }
-      const pinnedNow = new Set(view.pinned ?? []);
-      const positions = expandResult(result, start.deck, graph, start.render.pinned);
+      const pinnedNow = withLocked(new Set(view.pinned ?? []), now.deck);
+      const positions = expandResult(result, start.deck, graph, held);
       const existing = new Set(now.deck.nodes.map((n) => n.id));
       for (const id of Object.keys(positions)) {
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- plain record

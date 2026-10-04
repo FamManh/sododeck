@@ -1,0 +1,171 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": null,
+    "dialect": "postgres",
+    "counts": {
+      "tables": 3,
+      "relationships": 2,
+      "enums": 0
+    },
+    "skippedCount": 1,
+    "conversions": [],
+    "dialectOutcome": "same"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "accounts",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "name",
+                "type": "text",
+                "notNull": true
+              }
+            ],
+            "group": "group.1"
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "invoices",
+            "schema": "billing",
+            "columns": [
+              {
+                "id": "dbcol.3",
+                "name": "id",
+                "type": "bigint",
+                "pk": true
+              },
+              {
+                "id": "dbcol.4",
+                "name": "account_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.5",
+                "name": "total",
+                "type": "numeric",
+                "size": "12,2",
+                "notNull": true
+              }
+            ],
+            "group": "group.2"
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "payments",
+            "schema": "billing",
+            "columns": [
+              {
+                "id": "dbcol.6",
+                "name": "id",
+                "type": "bigint",
+                "pk": true
+              },
+              {
+                "id": "dbcol.7",
+                "name": "invoice_id",
+                "type": "bigint",
+                "notNull": true
+              }
+            ],
+            "group": "group.2"
+          }
+        ],
+        "groups": [
+          {
+            "id": "group.1",
+            "title": "public"
+          },
+          {
+            "id": "group.2",
+            "title": "billing"
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.2",
+            "to": "node.1",
+            "fromColumns": [
+              "dbcol.4"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.2",
+            "from": "node.3",
+            "to": "node.2",
+            "label": "payments_invoice_fk",
+            "fromColumns": [
+              "dbcol.7"
+            ],
+            "toColumns": [
+              "dbcol.3"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [],
+    "stickies": [],
+    "setDialect": null,
+    "dialectOutcome": "same",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "pg-schemas.sql",
+        "format": "sql",
+        "dialect": null
+      },
+      "mapped": {
+        "tables": 3,
+        "relationships": 2,
+        "enums": 0,
+        "indexes": 0,
+        "checks": 0,
+        "groups": 2,
+        "stickies": 0
+      },
+      "skipped": [
+        {
+          "line": 1,
+          "excerpt": "CREATE SCHEMA billing",
+          "reason": "schema"
+        }
+      ],
+      "changed": [],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

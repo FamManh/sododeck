@@ -3,10 +3,16 @@
  * `.sododeck.json` file inside a small envelope, `{ "sododeckFragment": 1, "deck": … }`. Built and
  * parsed here so the app never converts deck data itself (constitution II), and validated with
  * the file parser, so a fragment is valid by construction and plain text is ignored.
+ *
+ * 043 (research R10) adds two optional envelope keys, with no version bump: `external`, the
+ * relationships from a copied table to a table outside the copy (kept on paste only when the
+ * target deck has that table and its columns), and `enums`, the enums the copied columns name
+ * (linked by name or copied on paste). A fragment without them still parses and pastes.
  */
 import {
   emptySododeckFile,
   parseSododeckFile,
+  type DbEnum,
   type Edge,
   type Group,
   type Id,
@@ -14,14 +20,32 @@ import {
   type SododeckFile,
 } from '@sododeck/schema';
 
+import { isDbTable } from './card-types';
 import { frameOf, NODE_GRID, viewNodePosition, type Point } from './geometry';
-import { canonicalize } from './key-order';
+import { canonicalize, canonicalizeEntry } from './key-order';
 import { checkDuplicateIds } from './load-checks';
 
 export interface Fragment {
   sododeckFragment: 1;
   /** Only nodes, edges and groups; every other collection is empty. */
   deck: SododeckFile;
+  /**
+   * Relationships from a copied table to a table outside the copy, ids as in the source deck
+   * (043). Present only with `keepOutgoing` and when there is at least one.
+   */
+  external?: Edge[];
+  /** The source deck's enums that the copied columns name (043). Absent when there are none. */
+  enums?: DbEnum[];
+}
+
+export interface FragmentOptions {
+  /** The view whose positions and frames are copied; the base view's when absent. */
+  viewId?: Id;
+  /**
+   * Also carry relationships that leave the copy from a copied table (043 FR-018), for duplicate
+   * and copy. Incoming relationships are never carried.
+   */
+  keepOutgoing?: boolean;
 }
 
 export interface FragmentSelection {
@@ -34,17 +58,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * A relationship (as the app draws one): an edge between two tables with column ends on either
+ * side, or with a cardinality.
+ */
+function isRelationship(edge: Edge, isTable: (id: Id) => boolean): boolean {
+  if (!isTable(edge.from) || !isTable(edge.to)) return false;
+  return (
+    (edge.fromColumns?.length ?? 0) > 0 ||
+    (edge.toColumns?.length ?? 0) > 0 ||
+    edge.cardinality !== undefined
+  );
+}
+
+/**
  * The fragment of `selection` in `file` (R10): the selected nodes, the edges with both ends (nodes,
- * or kept groups since 050) in it, and the selected groups whose whole subtree (members and nested groups) is selected,
- * with their frames. References that leave the fragment (`group`, `parent`) are dropped; rule ids
- * stay and are resolved on paste. Positions and frames are the ones `viewId` draws (the base
- * view's when absent); a node without a position gets its grid slot.
+ * or kept groups since 050) in it, and the selected groups whose whole subtree (members and nested
+ * groups) is selected, with their frames. References that leave the fragment (`group`, `parent`)
+ * are dropped; rule ids stay and are resolved on paste. Positions and frames are the ones the view
+ * draws (the base view's when absent); a node without a position gets its grid slot. The enums
+ * the copied columns name, and with `keepOutgoing` the relationships leaving a copied table, go
+ * into `enums` and `external` (043). `options` may be a bare view id (the pre-043 form).
  */
 export function toFragment(
   file: SododeckFile,
   selection: FragmentSelection,
-  viewId?: Id,
+  options: Id | FragmentOptions = {},
 ): Fragment {
+  const { viewId, keepOutgoing = false } =
+    typeof options === 'string' ? { viewId: options } : options;
   const view = viewId === undefined ? undefined : file.views.find((v) => v.id === viewId);
   const nodeIds = new Set(selection.nodes);
   const named = new Set(selection.groups);
@@ -102,20 +143,60 @@ export function toFragment(
   const inside = (id: Id) => nodeIds.has(id) || groupIds.has(id);
   const edges: Edge[] = file.edges.filter((e) => inside(e.from) && inside(e.to));
 
+  const tables = new Set(file.nodes.filter(isDbTable).map((n) => n.id));
+  const isTable = (id: Id) => tables.has(id);
+  const external = keepOutgoing
+    ? file.edges.filter((e) => nodeIds.has(e.from) && !inside(e.to) && isRelationship(e, isTable))
+    : [];
+  const enumRefs = new Set(nodes.flatMap((n) => (n.columns ?? []).map((c) => c.enumRef)));
+  const enums = (file.enums ?? []).filter((e) => enumRefs.has(e.id));
+
   return {
     sododeckFragment: 1,
     deck: canonicalize({ ...emptySododeckFile(), name: 'Fragment', nodes, groups, edges }),
+    ...(external.length === 0
+      ? {}
+      : { external: external.map((e) => canonicalizeEntry('edges', e)) }),
+    ...(enums.length === 0 ? {} : { enums: enums.map((e) => canonicalizeEntry('enums', e)) }),
   };
 }
 
 /** The clipboard text of a fragment (canonical key order, like the file). */
 export function serializeFragment(fragment: Fragment): string {
-  return JSON.stringify({ sododeckFragment: 1, deck: canonicalize(fragment.deck) });
+  const { external, enums } = fragment;
+  return JSON.stringify({
+    sododeckFragment: 1,
+    deck: canonicalize(fragment.deck),
+    ...(external === undefined
+      ? {}
+      : { external: external.map((e) => canonicalizeEntry('edges', e)) }),
+    ...(enums === undefined ? {} : { enums: enums.map((e) => canonicalizeEntry('enums', e)) }),
+  });
+}
+
+/**
+ * The optional 043 keys checked with the file parser (an edge or an enum is valid exactly as in a
+ * deck), or null when either is malformed or reuses an id. Dangling `to` ids are expected here:
+ * paste resolves them against the target deck.
+ */
+function parseExtras(value: Record<string, unknown>): Pick<Fragment, 'external' | 'enums'> | null {
+  const { external, enums } = value;
+  if (external === undefined && enums === undefined) return {};
+  const parsed = parseSododeckFile({
+    ...emptySododeckFile(),
+    ...(external === undefined ? {} : { edges: external }),
+    ...(enums === undefined ? {} : { enums }),
+  });
+  if (!parsed.success || checkDuplicateIds(parsed.data).length > 0) return null;
+  return {
+    ...(external === undefined ? {} : { external: parsed.data.edges }),
+    ...(parsed.data.enums === undefined ? {} : { enums: parsed.data.enums }),
+  };
 }
 
 /**
  * The fragment in clipboard `text`, or null for plain text, other JSON, an invalid deck or a
- * deck with duplicate ids (FR-007).
+ * deck with duplicate ids (FR-007), or malformed `external` / `enums` (043).
  */
 export function parseFragment(text: string): Fragment | null {
   let value: unknown;
@@ -127,7 +208,9 @@ export function parseFragment(text: string): Fragment | null {
   if (!isRecord(value) || value.sododeckFragment !== 1) return null;
   const parsed = parseSododeckFile(value.deck);
   if (!parsed.success || checkDuplicateIds(parsed.data).length > 0) return null;
-  return { sododeckFragment: 1, deck: parsed.data };
+  const extras = parseExtras(value);
+  if (extras === null) return null;
+  return { sododeckFragment: 1, deck: parsed.data, ...extras };
 }
 
 /** Top-left corner of the fragment's nodes and frames (computed, never stored). */

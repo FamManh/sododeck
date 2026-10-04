@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useUiStore } from '../../state/ui-store';
 import { FlowList } from '../flows/flow-list';
 import { FlowPanel } from '../flows/flow-panel';
+import { ImportReportPanel } from '../import/import-report-panel';
 import { NotesOutline } from '../notes-outline';
 import { OutlineTree } from '../outline-tree';
 import { Palette } from '../palette';
@@ -49,6 +50,7 @@ const FLYOUT_TITLES: Readonly<Record<FlyoutId, string>> = {
   flows: 'Flows & features',
   rules: 'Rules',
   problems: 'Problems',
+  'import-report': 'Import report',
 };
 
 /**
@@ -86,6 +88,7 @@ export function Flyouts({ deck }: { deck: SododeckFile }) {
         ))}
       {flyout === 'rules' && <RulesList deck={deck} />}
       {flyout === 'problems' && <ProblemsFlyout />}
+      {flyout === 'import-report' && <ImportReportPanel deck={deck} />}
     </Flyout>
   );
 }

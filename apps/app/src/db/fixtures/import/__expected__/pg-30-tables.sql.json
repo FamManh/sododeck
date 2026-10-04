@@ -1,0 +1,1711 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": "postgres",
+    "dialect": "postgres",
+    "counts": {
+      "tables": 30,
+      "relationships": 35,
+      "enums": 2
+    },
+    "skippedCount": 17,
+    "conversions": [],
+    "dialectOutcome": "set"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "customers",
+            "schema": "public",
+            "description": "One row per buyer",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.2",
+                "name": "email",
+                "type": "character varying",
+                "size": "255",
+                "notNull": true,
+                "unique": true,
+                "note": "Login and receipts"
+              },
+              {
+                "id": "dbcol.3",
+                "name": "full_name",
+                "type": "text",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.4",
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpr": "now()"
+              },
+              {
+                "id": "dbcol.5",
+                "name": "updated_at",
+                "type": "timestamp with time zone"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.1",
+                "name": "customers_email_lower_idx",
+                "columns": [
+                  {
+                    "expr": "lower((email))"
+                  }
+                ],
+                "unique": true,
+                "method": "btree"
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "addresses",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.6",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.7",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.8",
+                "name": "street",
+                "type": "character varying",
+                "size": "200",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.9",
+                "name": "city",
+                "type": "character varying",
+                "size": "100",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.10",
+                "name": "country",
+                "type": "character",
+                "size": "2",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "categories",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.11",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.12",
+                "name": "parent_id",
+                "type": "integer"
+              },
+              {
+                "id": "dbcol.13",
+                "name": "name",
+                "type": "character varying",
+                "size": "100",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.4",
+            "type": "db-table",
+            "title": "products",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.14",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.15",
+                "name": "category_id",
+                "type": "integer"
+              },
+              {
+                "id": "dbcol.16",
+                "name": "sku",
+                "type": "character varying",
+                "size": "40",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.17",
+                "name": "name",
+                "type": "character varying",
+                "size": "200",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.18",
+                "name": "price",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.19",
+                "name": "active",
+                "type": "boolean",
+                "notNull": true,
+                "default": true
+              }
+            ],
+            "checks": [
+              {
+                "id": "dbchk.1",
+                "name": "products_price_check",
+                "expr": "price >= (0)"
+              }
+            ]
+          },
+          {
+            "id": "node.5",
+            "type": "db-table",
+            "title": "product_images",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.20",
+                "name": "id",
+                "type": "bigint",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.21",
+                "name": "product_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.22",
+                "name": "url",
+                "type": "text",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.23",
+                "name": "position",
+                "type": "smallint",
+                "notNull": true,
+                "default": 0
+              }
+            ]
+          },
+          {
+            "id": "node.6",
+            "type": "db-table",
+            "title": "warehouses",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.24",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.25",
+                "name": "name",
+                "type": "text",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.26",
+                "name": "city",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.7",
+            "type": "db-table",
+            "title": "inventory",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.27",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.28",
+                "name": "warehouse_id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.29",
+                "name": "quantity",
+                "type": "integer",
+                "notNull": true,
+                "default": 0
+              }
+            ]
+          },
+          {
+            "id": "node.8",
+            "type": "db-table",
+            "title": "suppliers",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.30",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.31",
+                "name": "name",
+                "type": "text",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.32",
+                "name": "contact_email",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.9",
+            "type": "db-table",
+            "title": "product_suppliers",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.33",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.34",
+                "name": "supplier_id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.35",
+                "name": "cost",
+                "type": "numeric",
+                "size": "10,2"
+              }
+            ]
+          },
+          {
+            "id": "node.10",
+            "type": "db-table",
+            "title": "orders",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.36",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.37",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.38",
+                "name": "shipping_address_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.39",
+                "name": "status",
+                "type": "order_status",
+                "notNull": true,
+                "default": "pending",
+                "enumRef": "enum.1"
+              },
+              {
+                "id": "dbcol.40",
+                "name": "total",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true,
+                "default": 0,
+                "note": "Sum of the order items"
+              },
+              {
+                "id": "dbcol.41",
+                "name": "placed_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpr": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.2",
+                "name": "orders_customer_placed_idx",
+                "columns": [
+                  "dbcol.37",
+                  "dbcol.41"
+                ],
+                "method": "btree"
+              }
+            ]
+          },
+          {
+            "id": "node.11",
+            "type": "db-table",
+            "title": "order_items",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.42",
+                "name": "order_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.43",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.44",
+                "name": "quantity",
+                "type": "integer",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.45",
+                "name": "unit_price",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              }
+            ],
+            "checks": [
+              {
+                "id": "dbchk.2",
+                "name": "order_items_quantity_check",
+                "expr": "quantity > 0"
+              }
+            ]
+          },
+          {
+            "id": "node.12",
+            "type": "db-table",
+            "title": "shipments",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.46",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.47",
+                "name": "order_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.48",
+                "name": "carrier",
+                "type": "character varying",
+                "size": "80"
+              },
+              {
+                "id": "dbcol.49",
+                "name": "shipped_at",
+                "type": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "id": "node.13",
+            "type": "db-table",
+            "title": "shipment_items",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.50",
+                "name": "shipment_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.51",
+                "name": "order_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.52",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.53",
+                "name": "quantity",
+                "type": "integer",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.14",
+            "type": "db-table",
+            "title": "payments",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.54",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.55",
+                "name": "order_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.56",
+                "name": "method",
+                "type": "payment_method",
+                "notNull": true,
+                "enumRef": "enum.2"
+              },
+              {
+                "id": "dbcol.57",
+                "name": "amount",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.58",
+                "name": "paid_at",
+                "type": "timestamp with time zone"
+              }
+            ]
+          },
+          {
+            "id": "node.15",
+            "type": "db-table",
+            "title": "refunds",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.59",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.60",
+                "name": "payment_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.61",
+                "name": "amount",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.62",
+                "name": "reason",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.16",
+            "type": "db-table",
+            "title": "coupons",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.63",
+                "name": "code",
+                "type": "character varying",
+                "size": "32",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.64",
+                "name": "percent_off",
+                "type": "smallint",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.65",
+                "name": "expires_at",
+                "type": "date"
+              }
+            ]
+          },
+          {
+            "id": "node.17",
+            "type": "db-table",
+            "title": "order_coupons",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.66",
+                "name": "order_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.67",
+                "name": "coupon_code",
+                "type": "character varying",
+                "size": "32",
+                "pk": true,
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.18",
+            "type": "db-table",
+            "title": "carts",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.68",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.69",
+                "name": "customer_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.70",
+                "name": "created_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpr": "CURRENT_TIMESTAMP"
+              }
+            ]
+          },
+          {
+            "id": "node.19",
+            "type": "db-table",
+            "title": "cart_items",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.71",
+                "name": "cart_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.72",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.73",
+                "name": "quantity",
+                "type": "integer",
+                "notNull": true,
+                "default": 1
+              }
+            ]
+          },
+          {
+            "id": "node.20",
+            "type": "db-table",
+            "title": "reviews",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.74",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.75",
+                "name": "product_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.76",
+                "name": "customer_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.77",
+                "name": "rating",
+                "type": "smallint",
+                "notNull": true,
+                "check": "rating BETWEEN 1 AND 5"
+              },
+              {
+                "id": "dbcol.78",
+                "name": "body",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.21",
+            "type": "db-table",
+            "title": "wishlists",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.79",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.80",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.81",
+                "name": "name",
+                "type": "text",
+                "notNull": true,
+                "default": "Wishlist"
+              }
+            ]
+          },
+          {
+            "id": "node.22",
+            "type": "db-table",
+            "title": "wishlist_items",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.82",
+                "name": "wishlist_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.83",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.84",
+                "name": "added_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpr": "now()"
+              }
+            ]
+          },
+          {
+            "id": "node.23",
+            "type": "db-table",
+            "title": "departments",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.85",
+                "name": "id",
+                "type": "smallint",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.86",
+                "name": "name",
+                "type": "text",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.24",
+            "type": "db-table",
+            "title": "employees",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.87",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.88",
+                "name": "department_id",
+                "type": "smallint"
+              },
+              {
+                "id": "dbcol.89",
+                "name": "manager_id",
+                "type": "integer"
+              },
+              {
+                "id": "dbcol.90",
+                "name": "email",
+                "type": "text",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.91",
+                "name": "hired_on",
+                "type": "date"
+              }
+            ]
+          },
+          {
+            "id": "node.25",
+            "type": "db-table",
+            "title": "audit_log",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.92",
+                "name": "id",
+                "type": "bigint",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.93",
+                "name": "actor_id",
+                "type": "integer"
+              },
+              {
+                "id": "dbcol.94",
+                "name": "action",
+                "type": "character varying",
+                "size": "40",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.95",
+                "name": "payload",
+                "type": "jsonb"
+              },
+              {
+                "id": "dbcol.96",
+                "name": "logged_at",
+                "type": "timestamp with time zone",
+                "notNull": true,
+                "defaultExpr": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.3",
+                "name": "audit_log_payload_idx",
+                "columns": [
+                  "dbcol.95"
+                ],
+                "method": "gin"
+              }
+            ]
+          },
+          {
+            "id": "node.26",
+            "type": "db-table",
+            "title": "sessions",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.97",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.98",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.99",
+                "name": "token",
+                "type": "character varying",
+                "size": "64",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.100",
+                "name": "expires_at",
+                "type": "timestamp with time zone",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.27",
+            "type": "db-table",
+            "title": "tags",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.101",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.102",
+                "name": "name",
+                "type": "character varying",
+                "size": "40",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.28",
+            "type": "db-table",
+            "title": "product_tags",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.103",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.104",
+                "name": "tag_id",
+                "type": "integer",
+                "pk": true,
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.29",
+            "type": "db-table",
+            "title": "price_history",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.105",
+                "name": "id",
+                "type": "bigint",
+                "pk": true,
+                "notNull": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.106",
+                "name": "product_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.107",
+                "name": "price",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.108",
+                "name": "valid_from",
+                "type": "timestamp with time zone",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.30",
+            "type": "db-table",
+            "title": "notifications",
+            "schema": "public",
+            "columns": [
+              {
+                "id": "dbcol.109",
+                "name": "id",
+                "type": "uuid",
+                "pk": true,
+                "notNull": true,
+                "defaultExpr": "gen_random_uuid()"
+              },
+              {
+                "id": "dbcol.110",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.111",
+                "name": "kind",
+                "type": "text",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.112",
+                "name": "read",
+                "type": "boolean",
+                "notNull": true,
+                "default": false
+              },
+              {
+                "id": "dbcol.113",
+                "name": "sent_at",
+                "type": "timestamp with time zone"
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.2",
+            "to": "node.1",
+            "fromColumns": [
+              "dbcol.7"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.2",
+            "from": "node.7",
+            "to": "node.4",
+            "label": "inventory_product_fk",
+            "fromColumns": [
+              "dbcol.27"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.3",
+            "from": "node.3",
+            "to": "node.3",
+            "label": "categories_parent_id_fkey",
+            "fromColumns": [
+              "dbcol.12"
+            ],
+            "toColumns": [
+              "dbcol.11"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "onDelete": "set-null"
+          },
+          {
+            "id": "edge.4",
+            "from": "node.4",
+            "to": "node.3",
+            "label": "products_category_id_fkey",
+            "fromColumns": [
+              "dbcol.15"
+            ],
+            "toColumns": [
+              "dbcol.11"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.5",
+            "from": "node.5",
+            "to": "node.4",
+            "label": "product_images_product_id_fkey",
+            "fromColumns": [
+              "dbcol.21"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.6",
+            "from": "node.7",
+            "to": "node.6",
+            "label": "inventory_warehouse_id_fkey",
+            "fromColumns": [
+              "dbcol.28"
+            ],
+            "toColumns": [
+              "dbcol.24"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.7",
+            "from": "node.9",
+            "to": "node.4",
+            "label": "product_suppliers_product_id_fkey",
+            "fromColumns": [
+              "dbcol.33"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.8",
+            "from": "node.9",
+            "to": "node.8",
+            "label": "product_suppliers_supplier_id_fkey",
+            "fromColumns": [
+              "dbcol.34"
+            ],
+            "toColumns": [
+              "dbcol.30"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "restrict"
+          },
+          {
+            "id": "edge.9",
+            "from": "node.10",
+            "to": "node.1",
+            "label": "orders_customer_id_fkey",
+            "fromColumns": [
+              "dbcol.37"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.10",
+            "from": "node.10",
+            "to": "node.2",
+            "label": "orders_shipping_address_id_fkey",
+            "fromColumns": [
+              "dbcol.38"
+            ],
+            "toColumns": [
+              "dbcol.6"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "onDelete": "set-null",
+            "onUpdate": "cascade"
+          },
+          {
+            "id": "edge.11",
+            "from": "node.11",
+            "to": "node.10",
+            "label": "order_items_order_id_fkey",
+            "fromColumns": [
+              "dbcol.42"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.12",
+            "from": "node.11",
+            "to": "node.4",
+            "label": "order_items_product_id_fkey",
+            "fromColumns": [
+              "dbcol.43"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "restrict"
+          },
+          {
+            "id": "edge.13",
+            "from": "node.12",
+            "to": "node.10",
+            "label": "shipments_order_id_fkey",
+            "fromColumns": [
+              "dbcol.47"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.14",
+            "from": "node.13",
+            "to": "node.12",
+            "label": "shipment_items_shipment_id_fkey",
+            "fromColumns": [
+              "dbcol.50"
+            ],
+            "toColumns": [
+              "dbcol.46"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.15",
+            "from": "node.13",
+            "to": "node.11",
+            "label": "shipment_items_order_item_fkey",
+            "fromColumns": [
+              "dbcol.51",
+              "dbcol.52"
+            ],
+            "toColumns": [
+              "dbcol.42",
+              "dbcol.43"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.16",
+            "from": "node.14",
+            "to": "node.10",
+            "label": "payments_order_id_fkey",
+            "fromColumns": [
+              "dbcol.55"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.17",
+            "from": "node.15",
+            "to": "node.14",
+            "label": "refunds_payment_id_fkey",
+            "fromColumns": [
+              "dbcol.60"
+            ],
+            "toColumns": [
+              "dbcol.54"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.18",
+            "from": "node.17",
+            "to": "node.10",
+            "label": "order_coupons_order_id_fkey",
+            "fromColumns": [
+              "dbcol.66"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.19",
+            "from": "node.17",
+            "to": "node.16",
+            "label": "order_coupons_coupon_code_fkey",
+            "fromColumns": [
+              "dbcol.67"
+            ],
+            "toColumns": [
+              "dbcol.63"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.20",
+            "from": "node.18",
+            "to": "node.1",
+            "label": "carts_customer_id_fkey",
+            "fromColumns": [
+              "dbcol.69"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "onDelete": "set-null"
+          },
+          {
+            "id": "edge.21",
+            "from": "node.19",
+            "to": "node.18",
+            "label": "cart_items_cart_id_fkey",
+            "fromColumns": [
+              "dbcol.71"
+            ],
+            "toColumns": [
+              "dbcol.68"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.22",
+            "from": "node.19",
+            "to": "node.4",
+            "label": "cart_items_product_id_fkey",
+            "fromColumns": [
+              "dbcol.72"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.23",
+            "from": "node.20",
+            "to": "node.4",
+            "label": "reviews_product_id_fkey",
+            "fromColumns": [
+              "dbcol.75"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.24",
+            "from": "node.20",
+            "to": "node.1",
+            "label": "reviews_customer_id_fkey",
+            "fromColumns": [
+              "dbcol.76"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "onDelete": "set-null"
+          },
+          {
+            "id": "edge.25",
+            "from": "node.21",
+            "to": "node.1",
+            "label": "wishlists_customer_id_fkey",
+            "fromColumns": [
+              "dbcol.80"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "1-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.26",
+            "from": "node.22",
+            "to": "node.21",
+            "label": "wishlist_items_wishlist_id_fkey",
+            "fromColumns": [
+              "dbcol.82"
+            ],
+            "toColumns": [
+              "dbcol.79"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.27",
+            "from": "node.22",
+            "to": "node.4",
+            "label": "wishlist_items_product_id_fkey",
+            "fromColumns": [
+              "dbcol.83"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.28",
+            "from": "node.24",
+            "to": "node.23",
+            "label": "employees_department_id_fkey",
+            "fromColumns": [
+              "dbcol.88"
+            ],
+            "toColumns": [
+              "dbcol.85"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.29",
+            "from": "node.24",
+            "to": "node.24",
+            "label": "employees_manager_id_fkey",
+            "fromColumns": [
+              "dbcol.89"
+            ],
+            "toColumns": [
+              "dbcol.87"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.30",
+            "from": "node.25",
+            "to": "node.24",
+            "label": "audit_log_actor_id_fkey",
+            "fromColumns": [
+              "dbcol.93"
+            ],
+            "toColumns": [
+              "dbcol.87"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.31",
+            "from": "node.26",
+            "to": "node.1",
+            "label": "sessions_customer_id_fkey",
+            "fromColumns": [
+              "dbcol.98"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.32",
+            "from": "node.28",
+            "to": "node.4",
+            "label": "product_tags_product_id_fkey",
+            "fromColumns": [
+              "dbcol.103"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.33",
+            "from": "node.28",
+            "to": "node.27",
+            "label": "product_tags_tag_id_fkey",
+            "fromColumns": [
+              "dbcol.104"
+            ],
+            "toColumns": [
+              "dbcol.101"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.34",
+            "from": "node.29",
+            "to": "node.4",
+            "label": "price_history_product_id_fkey",
+            "fromColumns": [
+              "dbcol.106"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.35",
+            "from": "node.30",
+            "to": "node.1",
+            "label": "notifications_customer_id_fkey",
+            "fromColumns": [
+              "dbcol.110"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [
+      {
+        "planId": "enum.1",
+        "name": "order_status",
+        "schema": "public",
+        "values": [
+          {
+            "name": "pending"
+          },
+          {
+            "name": "paid"
+          },
+          {
+            "name": "shipped"
+          },
+          {
+            "name": "cancelled"
+          }
+        ]
+      },
+      {
+        "planId": "enum.2",
+        "name": "payment_method",
+        "schema": "public",
+        "values": [
+          {
+            "name": "card"
+          },
+          {
+            "name": "transfer"
+          },
+          {
+            "name": "cash"
+          }
+        ]
+      }
+    ],
+    "stickies": [],
+    "setDialect": "postgres",
+    "dialectOutcome": "set",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "pg-30-tables.sql",
+        "format": "sql",
+        "dialect": "postgres"
+      },
+      "mapped": {
+        "tables": 30,
+        "relationships": 35,
+        "enums": 2,
+        "indexes": 3,
+        "checks": 3,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [
+        {
+          "line": 5,
+          "excerpt": "SET statement_timeout = 0",
+          "reason": "session"
+        },
+        {
+          "line": 6,
+          "excerpt": "SET lock_timeout = 0",
+          "reason": "session"
+        },
+        {
+          "line": 7,
+          "excerpt": "SET client_encoding = 'UTF8'",
+          "reason": "session"
+        },
+        {
+          "line": 8,
+          "excerpt": "SET standard_conforming_strings = on",
+          "reason": "session"
+        },
+        {
+          "line": 9,
+          "excerpt": "SELECT pg_catalog.set_config('search_path', '', false)",
+          "reason": "session"
+        },
+        {
+          "line": 10,
+          "excerpt": "SET check_function_bodies = false",
+          "reason": "session"
+        },
+        {
+          "line": 12,
+          "excerpt": "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public",
+          "reason": "extension"
+        },
+        {
+          "line": 21,
+          "excerpt": "ALTER TYPE public.order_status OWNER TO shop",
+          "reason": "grant"
+        },
+        {
+          "line": 25,
+          "excerpt": "CREATE FUNCTION public.touch_updated_at() RETURNS trigger",
+          "reason": "function"
+        },
+        {
+          "line": 42,
+          "excerpt": "ALTER TABLE public.customers OWNER TO shop",
+          "reason": "grant"
+        },
+        {
+          "line": 184,
+          "excerpt": "CREATE SEQUENCE public.reviews_id_seq",
+          "reason": "sequence"
+        },
+        {
+          "line": 192,
+          "excerpt": "ALTER SEQUENCE public.reviews_id_seq OWNED BY public.review…",
+          "reason": "sequence"
+        },
+        {
+          "line": 261,
+          "excerpt": "CREATE VIEW public.order_totals AS",
+          "reason": "view"
+        },
+        {
+          "line": 268,
+          "excerpt": "COPY public.categories (id, parent_id, name) FROM stdin;",
+          "reason": "data"
+        },
+        {
+          "line": 369,
+          "excerpt": "CREATE TRIGGER customers_touch BEFORE UPDATE ON public.cust…",
+          "reason": "trigger"
+        },
+        {
+          "line": 470,
+          "excerpt": "GRANT SELECT ON TABLE public.orders TO reporting",
+          "reason": "grant"
+        },
+        {
+          "line": 471,
+          "excerpt": "GRANT SELECT ON TABLE public.order_items TO reporting",
+          "reason": "grant"
+        }
+      ],
+      "changed": [],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

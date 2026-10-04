@@ -3,6 +3,7 @@
  * enters its rows, ↓ / ↑ move between them, Esc returns to the card. Rows are plain elements
  * with `data-row`; the focused one is mirrored in `ui.focusedRow` (UI only).
  */
+import { isTextTarget } from '../../lib/is-text-target';
 import { useUiStore, type ColumnRef } from '../../state/ui-store';
 import { canvasElement, nodeElement } from '../canvas-actions';
 
@@ -37,4 +38,19 @@ export function moveRowFocus(row: ColumnRef, step: 1 | -1): void {
 export function leaveRows(row: ColumnRef): void {
   useUiStore.getState().setFocusedRow(null);
   nodeElement(row.tableId)?.focus({ preventScroll: true });
+}
+
+/**
+ * Focuses a row once it is drawn again (043): after the line editor closes, the row replaces the
+ * input on the next render, so focus waits a frame.
+ */
+export function focusRowSoon(row: ColumnRef): void {
+  const expected = useUiStore.getState().focusedRow;
+  requestAnimationFrame(() => {
+    // Focus already moved on (another row, a new line editor, a field): leave it there.
+    if (useUiStore.getState().focusedRow !== expected) return;
+    if (isTextTarget(document.activeElement)) return;
+    const element = rows(row.tableId).find((item) => item.dataset.columnId === row.columnId);
+    if (!focusRow(row.tableId, element)) nodeElement(row.tableId)?.focus({ preventScroll: true });
+  });
 }

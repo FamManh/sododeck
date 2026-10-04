@@ -4,6 +4,7 @@ import { supportsIdleCallback } from '../../lib/features';
 import { useUiStore } from '../../state/ui-store';
 import { preloadExportDialog } from '../export/export-dialog-loader';
 import { ExportDialogMount } from '../export/export-dialog-mount';
+import { ImportDialogMount } from '../import/import-dialog-mount';
 import { PANEL_COLLAPSED } from '../panel-height';
 import { DeckIsland } from './deck-island';
 import { DetailDrawer } from './detail-drawer';
@@ -39,6 +40,7 @@ export function ShellChrome({
   const jsonHeight = useUiStore((s) => (s.jsonPanel.open ? s.jsonPanel.height : PANEL_COLLAPSED));
   const compact = useCompactShell();
   const exportOpen = useUiStore((s) => s.exportDialog.open);
+  const importOpen = useUiStore((s) => s.importDialog.open);
   useShellShortcuts();
   useEffect(() => {
     const preload = () => {
@@ -98,6 +100,7 @@ export function ShellChrome({
       <CanvasMenu />
       <ShortcutHelpDialog />
       {exportOpen && <ExportDialogMount />}
+      {importOpen && <ImportDialogMount />}
     </>
   );
 }

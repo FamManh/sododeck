@@ -9,7 +9,9 @@ import {
 import { useToast } from '@sododeck/ui/components/toast';
 import {
   Braces,
+  ClipboardList,
   Download,
+  FileCode2,
   FileUp,
   Keyboard,
   LibraryBig,
@@ -30,13 +32,16 @@ import { getLibraryDb } from '../../storage/library-db-instance';
 import { shortcutLabel } from './shortcuts';
 
 /**
- * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, export,
- * deck settings (the drawer on the deck) and the JSON overlay. Import adds the file to the
+ * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, schema
+ * import (044) and its last report, export, deck settings (the drawer on the deck) and the JSON
+ * overlay. Import adds the file to the
  * library as a new deck, as the library's own Import does; the open deck is not replaced.
  */
 export function DeckMenu() {
   const navigate = useNavigate();
   const openExport = useUiStore((s) => s.openExport);
+  const openImport = useUiStore((s) => s.openImport);
+  const hasReport = useUiStore((s) => s.importReport !== null);
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const menuTrigger = useRef<HTMLButtonElement>(null);
@@ -119,6 +124,24 @@ export function DeckMenu() {
             <FileUp />
             Import…
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              openImport(menuTrigger.current);
+            }}
+          >
+            <FileCode2 />
+            Import SQL or DBML…
+          </DropdownMenuItem>
+          {hasReport && (
+            <DropdownMenuItem
+              onSelect={() => {
+                useUiStore.getState().openFlyout('import-report');
+              }}
+            >
+              <ClipboardList />
+              Last import report
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onSelect={() => {
               openExport(menuTrigger.current);

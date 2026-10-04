@@ -52,6 +52,8 @@ export interface ActionContext {
   canvas: CanvasApi | null;
   /** Shows a toast (Copy JSON). */
   toast: (message: string) => void;
+  /** Shows the Undo toast (043: a deleted column); absent in pure tests, which then announce. */
+  undoToast?: (message: string) => void;
 }
 
 type Dynamic<T> = T | ((ctx: ActionContext) => T);

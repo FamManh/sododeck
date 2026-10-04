@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { EXPORT_NOTE_KINDS, mergeNotes, note } from './notes';
 
 describe('notes', () => {
-  it('lists the 20 kinds of data-model §3', () => {
-    expect(EXPORT_NOTE_KINDS).toHaveLength(20);
-    expect(new Set(EXPORT_NOTE_KINDS).size).toBe(20);
+  it('lists the 20 kinds of data-model §3 and the one 044 adds', () => {
+    expect(EXPORT_NOTE_KINDS).toHaveLength(21);
+    expect(new Set(EXPORT_NOTE_KINDS).size).toBe(21);
   });
 
   it('merges identical notes and sorts by table order, then kind, then creation', () => {

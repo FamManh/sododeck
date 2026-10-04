@@ -21,6 +21,7 @@ import {
   type UiState,
 } from '../../state/ui-store';
 import { scopeOf, visibleGraph } from '../visible-graph';
+import { useUndoToast } from '../undo-toast';
 import { readViewState, useViewState } from '../views/use-current-view';
 import type { ViewState } from '../views/view-state';
 import { ACTIONS } from './index';
@@ -63,9 +64,11 @@ function contextOf(
   toast: (message: string) => void,
   target: MenuTarget = targetOf(ui.selection),
   point: { x: number; y: number } | null = null,
+  undoToast?: (message: string) => void,
 ): ActionContext {
   const graph = visibleGraph(view.deck, scopeOf(ui.drill), view.collapsed);
   return {
+    ...(undoToast === undefined ? {} : { undoToast }),
     editor,
     deck,
     view,
@@ -86,6 +89,7 @@ export function readActionContext(
   toast: (message: string) => void,
   target?: MenuTarget,
   point?: { x: number; y: number } | null,
+  undoToast?: (message: string) => void,
 ): ActionContext {
   return contextOf(
     editor,
@@ -96,6 +100,7 @@ export function readActionContext(
     toast,
     target,
     point ?? null,
+    undoToast,
   );
 }
 
@@ -113,6 +118,7 @@ export function useActionContext(
   const flowSession = useUiStore((s) => s.flowSession);
   const { fitView, screenToFlowPosition, getViewport, getNodes, getEdges } = useReactFlow();
   const toast = useToastMessage();
+  const undoToast = useUndoToast();
   return useMemo(
     () =>
       contextOf(
@@ -124,6 +130,7 @@ export function useActionContext(
         toast,
         target,
         point ?? null,
+        undoToast,
       ),
     [
       editor,
@@ -141,6 +148,7 @@ export function useActionContext(
       toast,
       target,
       point,
+      undoToast,
     ],
   );
 }
@@ -161,6 +169,7 @@ export function useRunAction(): (id: string, target?: MenuTarget) => boolean {
   const editor = useEditor();
   const { fitView, screenToFlowPosition, getViewport, getNodes, getEdges } = useReactFlow();
   const toast = useToastMessage();
+  const undoToast = useUndoToast();
   return useCallback(
     (id, target) =>
       runAction(
@@ -171,8 +180,10 @@ export function useRunAction(): (id: string, target?: MenuTarget) => boolean {
           { fitView, screenToFlowPosition, getViewport, getNodes, getEdges },
           toast,
           target,
+          null,
+          undoToast,
         ),
       ),
-    [editor, fitView, screenToFlowPosition, getViewport, getNodes, getEdges, toast],
+    [editor, fitView, screenToFlowPosition, getViewport, getNodes, getEdges, toast, undoToast],
   );
 }

@@ -19,8 +19,9 @@ describe('PacksPanel (030)', () => {
     // A new deck has Logistics off (051 US7).
     expect(screen.getByRole('switch', { name: 'Logistics' })).not.toBeChecked();
     expect(screen.getByText('7 types')).toBeInTheDocument();
-    // Data cards and Database (040) each have one type.
-    expect(screen.getAllByText('1 type')).toHaveLength(2);
+    // Data cards has one type; Database says what it adds (043).
+    expect(screen.getAllByText('1 type')).toHaveLength(1);
+    expect(screen.getByText('Table, note, table group')).toBeInTheDocument();
     expect(screen.getByText(/Turning a pack off hides its types from Add/)).toBeInTheDocument();
   });
 

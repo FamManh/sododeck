@@ -1625,3 +1625,21 @@ describe('group connector ends (050 US4)', () => {
     });
   });
 });
+
+describe('locked cards (043 R11)', () => {
+  it('are not draggable and carry the flag, and drag again once unlocked', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes: [{ id: 'p', type: 'service', title: 'P', locked: true, position: { x: 0, y: 0 } }],
+    };
+    const [locked] = toFlowNodes(file, topLevelGraph(file), view());
+    expect(locked?.draggable).toBe(false);
+    expect(locked?.data).toMatchObject({ locked: true });
+    const open: SododeckFile = {
+      ...file,
+      nodes: [{ id: 'p', type: 'service', title: 'P', position: { x: 0, y: 0 } }],
+    };
+    const [unlocked] = toFlowNodes(open, topLevelGraph(open), view());
+    expect(unlocked?.draggable).toBeUndefined();
+  });
+});

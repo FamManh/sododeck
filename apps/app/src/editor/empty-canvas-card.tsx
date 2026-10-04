@@ -1,11 +1,14 @@
 import { Button } from '@sododeck/ui/components/button';
-import { Shapes } from 'lucide-react';
+import { FileCode2, Shapes } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { useUiStore } from '../state/ui-store';
 import { focusPalette } from './canvas-actions';
 
-/** Shown on an empty deck (design 37): how to start, and a way to the palette. */
+/**
+ * Shown on an empty deck (design 37): how to start, and a way to the palette. With the Database
+ * pack on it also offers Import SQL or DBML (044, frame 134).
+ */
 export function EmptyCanvasCard({
   title = 'Start your diagram',
   description = 'Open the palette (C) and drag a component onto the canvas, or press Enter on one to add it here. Then drag from a component’s edge to another to connect them.',
@@ -21,10 +24,16 @@ export function EmptyCanvasCard({
       Add component
     </Button>
   ),
+  onAddTable,
+  showImport = false,
 }: {
   title?: string;
   description?: string;
   action?: ReactNode;
+  /** With the Database pack on (043 R12): a second way to start, a table with an `id` key. */
+  onAddTable?: () => void;
+  /** Adds "Import SQL or DBML" under the action (Database pack on). */
+  showImport?: boolean;
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -39,7 +48,27 @@ export function EmptyCanvasCard({
           {title}
         </h2>
         <p className="text-body-sm text-ink-secondary">{description}</p>
-        {action}
+        {onAddTable === undefined ? (
+          action
+        ) : (
+          <span className="flex flex-wrap justify-center gap-2">
+            {action}
+            <Button variant="secondary" onClick={onAddTable}>
+              Add table
+            </Button>
+          </span>
+        )}
+        {showImport && (
+          <Button
+            variant="secondary"
+            onClick={(event) => {
+              useUiStore.getState().openImport(event.currentTarget);
+            }}
+          >
+            <FileCode2 aria-hidden />
+            Import SQL or DBML
+          </Button>
+        )}
       </section>
     </div>
   );

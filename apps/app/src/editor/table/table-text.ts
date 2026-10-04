@@ -33,3 +33,11 @@ export function nextDetail(own: DbDetail | undefined): DbDetail | undefined {
   if (own === 'keys') return 'all';
   return undefined;
 }
+
+/** "Type differs: int → uuid (orders.customer_id)" from the mismatch message (043 FR-010b). */
+export function mismatchLabel(message: string): string {
+  const [types, where] = message.split(' · ');
+  return where === undefined
+    ? `Type differs: ${message}`
+    : `Type differs: ${types ?? ''} (${where})`;
+}

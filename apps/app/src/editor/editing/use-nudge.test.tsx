@@ -182,3 +182,24 @@ describe('createBurst (017 R9)', () => {
     expect(onEnd).toHaveBeenCalledOnce();
   });
 });
+
+describe('locked cards (043 FR-024)', () => {
+  it('nudges only the unlocked cards of a selection', () => {
+    const env = editorWrapper(
+      deckOf({
+        nodes: [
+          { id: 'a', type: 'service', title: 'A', locked: true, position: { x: 0, y: 0 } },
+          { id: 'b', type: 'service', title: 'B', position: { x: 300, y: 0 } },
+        ],
+      }),
+    );
+    const { result } = renderHook(() => useNudge(), { wrapper: env.wrapper });
+    act(() => {
+      ui().select({ nodes: ['a', 'b'] });
+      result.current.key(arrow('ArrowRight'));
+    });
+    const nodes = toJSON(env.doc).nodes;
+    expect(nodes[0]?.position).toEqual({ x: 0, y: 0 });
+    expect(nodes[1]?.position).toEqual({ x: 301, y: 0 });
+  });
+});

@@ -11,7 +11,7 @@ import { memo, type CSSProperties } from 'react';
 import { CardFieldsBlock, HeaderStatus } from './card-fields-block';
 import { fieldBlock } from './card-fields';
 import { MAX_CARD_TAGS } from './card-tags';
-import { NodeNotes, ResizeControls, SideHandles } from './component-node-parts';
+import { LockBadge, NodeNotes, ResizeControls, SideHandles } from './component-node-parts';
 import { useComponentNodeState } from './use-component-node-state';
 import { oneStep } from './fields/one-step';
 import { typeName } from './type-label';
@@ -47,7 +47,8 @@ export const DeckNode = memo(function DeckNode({
     titleEdit,
     target,
     refusal,
-  } = useComponentNodeState(id, selected);
+  } = useComponentNodeState(id, selected, data.locked === true);
+  const locked = data.locked === true;
 
   // A table card (041): the same frame, header and states, with a column list for a body.
   const table = data.layout.table;
@@ -58,6 +59,7 @@ export const DeckNode = memo(function DeckNode({
       : `Table ${data.title}, ${String(table.columnCount)} columns`,
     data.viewDimmed === true ? 'dimmed in this view' : null,
     data.pinned === true ? 'pinned' : null,
+    locked ? 'locked' : null,
     data.problems?.label ?? null,
   ]
     .filter(Boolean)
@@ -258,7 +260,16 @@ export const DeckNode = memo(function DeckNode({
                 {data.problems.count}
               </span>
             )}
-            {table !== undefined && isContainer && (
+            {/* A locked card's badge takes the detail toggle's place (043 R11). */}
+            {locked && isContainer && (
+              <LockBadge
+                id={id}
+                title={data.title}
+                focused={data.focused}
+                className={textRoleClass ?? undefined}
+              />
+            )}
+            {table !== undefined && isContainer && !locked && (
               <TableDetailToggle
                 nodeId={id}
                 own={table.ownDetail}
@@ -315,6 +326,7 @@ export const DeckNode = memo(function DeckNode({
                 nodeId={id}
                 layout={table}
                 focused={data.focused}
+                locked={data.locked === true}
                 tinted={look?.namedFill === true || customText !== undefined}
               />
             ) : (

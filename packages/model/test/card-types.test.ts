@@ -204,6 +204,14 @@ describe('card type registry (030)', () => {
       }
     });
 
+    it('gives the Database pack its note and table group tools and a description (043)', () => {
+      expect(PACKS.find((p) => p.id === 'database')).toMatchObject({
+        name: 'Database',
+        tools: ['sticky', 'frame'],
+        description: 'Table, note, table group',
+      });
+    });
+
     it('gives decision, database and document a shape form', () => {
       expect(cardType('decision')?.shapeForm).toBe('diamond');
       expect(cardType('database')?.shapeForm).toBe('cylinder');

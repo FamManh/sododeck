@@ -1,0 +1,776 @@
+{
+  "preview": {
+    "format": "dbml",
+    "detectedDialect": null,
+    "dialect": "postgres",
+    "counts": {
+      "tables": 13,
+      "relationships": 15,
+      "enums": 1
+    },
+    "skippedCount": 0,
+    "conversions": [],
+    "dialectOutcome": "set"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "addresses",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.3",
+                "name": "street",
+                "type": "varchar",
+                "size": "200",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.4",
+                "name": "city",
+                "type": "varchar",
+                "size": "100",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.5",
+                "name": "country",
+                "type": "char",
+                "size": "2",
+                "notNull": true,
+                "note": "ISO 3166-1 alpha-2"
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "audit_log",
+            "columns": [
+              {
+                "id": "dbcol.6",
+                "name": "id",
+                "type": "bigint",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.7",
+                "name": "action",
+                "type": "varchar",
+                "size": "40",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.8",
+                "name": "payload",
+                "type": "jsonb"
+              },
+              {
+                "id": "dbcol.9",
+                "name": "logged_at",
+                "type": "timestamptz",
+                "notNull": true,
+                "defaultExpr": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.1",
+                "columns": [
+                  "dbcol.9"
+                ],
+                "method": "btree"
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "categories",
+            "columns": [
+              {
+                "id": "dbcol.10",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.11",
+                "name": "parent_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.12",
+                "name": "name",
+                "type": "varchar",
+                "size": "100",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.4",
+            "type": "db-table",
+            "title": "customers",
+            "description": "One row per buyer",
+            "columns": [
+              {
+                "id": "dbcol.13",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.14",
+                "name": "email",
+                "type": "varchar",
+                "size": "255",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.15",
+                "name": "name",
+                "type": "varchar",
+                "size": "120",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.16",
+                "name": "created_at",
+                "type": "timestamptz",
+                "notNull": true,
+                "defaultExpr": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.2",
+                "name": "customers_email_lower_idx",
+                "columns": [
+                  {
+                    "expr": "lower(email)"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "node.5",
+            "type": "db-table",
+            "title": "order_items",
+            "columns": [
+              {
+                "id": "dbcol.17",
+                "name": "order_id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.18",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.19",
+                "name": "quantity",
+                "type": "integer",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.20",
+                "name": "unit_price",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              }
+            ],
+            "checks": [
+              {
+                "id": "dbchk.1",
+                "expr": "quantity > 0"
+              }
+            ]
+          },
+          {
+            "id": "node.6",
+            "type": "db-table",
+            "title": "orders",
+            "description": "One row per checkout",
+            "columns": [
+              {
+                "id": "dbcol.21",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.22",
+                "name": "customer_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.23",
+                "name": "shipping_address_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.24",
+                "name": "billing_address_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.25",
+                "name": "status",
+                "type": "order_status",
+                "notNull": true,
+                "default": "pending",
+                "enumRef": "enum.1"
+              },
+              {
+                "id": "dbcol.26",
+                "name": "total",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true,
+                "default": 0,
+                "note": "Sum of the order items"
+              },
+              {
+                "id": "dbcol.27",
+                "name": "created_at",
+                "type": "timestamptz",
+                "notNull": true,
+                "defaultExpr": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.3",
+                "columns": [
+                  "dbcol.22",
+                  "dbcol.27"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "node.7",
+            "type": "db-table",
+            "title": "payments",
+            "columns": [
+              {
+                "id": "dbcol.28",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.29",
+                "name": "order_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.30",
+                "name": "amount",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.31",
+                "name": "paid_at",
+                "type": "timestamptz"
+              }
+            ]
+          },
+          {
+            "id": "node.8",
+            "type": "db-table",
+            "title": "products",
+            "description": "Things we sell; 'active' hides them\nfrom the store",
+            "columns": [
+              {
+                "id": "dbcol.32",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.33",
+                "name": "sku",
+                "type": "varchar",
+                "size": "40",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.34",
+                "name": "name",
+                "type": "varchar",
+                "size": "200",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.35",
+                "name": "price",
+                "type": "numeric",
+                "size": "10,2",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.36",
+                "name": "active",
+                "type": "boolean",
+                "notNull": true,
+                "default": true
+              }
+            ],
+            "checks": [
+              {
+                "id": "dbchk.2",
+                "name": "products_price_check",
+                "expr": "price >= 0"
+              }
+            ]
+          },
+          {
+            "id": "node.9",
+            "type": "db-table",
+            "title": "reviews",
+            "columns": [
+              {
+                "id": "dbcol.37",
+                "name": "id",
+                "type": "integer",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.38",
+                "name": "product_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.39",
+                "name": "customer_id",
+                "type": "uuid"
+              },
+              {
+                "id": "dbcol.40",
+                "name": "rating",
+                "type": "smallint",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.41",
+                "name": "body",
+                "type": "text"
+              }
+            ],
+            "checks": [
+              {
+                "id": "dbchk.3",
+                "expr": "rating BETWEEN 1 AND 5"
+              }
+            ]
+          },
+          {
+            "id": "node.10",
+            "type": "db-table",
+            "title": "sessions",
+            "columns": [
+              {
+                "id": "dbcol.42",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.43",
+                "name": "user_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.44",
+                "name": "token",
+                "type": "varchar",
+                "size": "64",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.45",
+                "name": "expires_at",
+                "type": "timestamptz",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.11",
+            "type": "db-table",
+            "title": "shipment_items",
+            "columns": [
+              {
+                "id": "dbcol.46",
+                "name": "shipment_id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.47",
+                "name": "order_id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.48",
+                "name": "product_id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.49",
+                "name": "quantity",
+                "type": "integer",
+                "notNull": true
+              }
+            ]
+          },
+          {
+            "id": "node.12",
+            "type": "db-table",
+            "title": "shipments",
+            "columns": [
+              {
+                "id": "dbcol.50",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.51",
+                "name": "order_id",
+                "type": "uuid",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.52",
+                "name": "carrier",
+                "type": "varchar",
+                "size": "80"
+              },
+              {
+                "id": "dbcol.53",
+                "name": "shipped_at",
+                "type": "timestamptz"
+              }
+            ]
+          },
+          {
+            "id": "node.13",
+            "type": "db-table",
+            "title": "users",
+            "columns": [
+              {
+                "id": "dbcol.54",
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "id": "dbcol.55",
+                "name": "email",
+                "type": "varchar",
+                "size": "255",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.56",
+                "name": "display_name",
+                "type": "varchar",
+                "size": "80"
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.1",
+            "to": "node.4",
+            "fromColumns": [
+              "dbcol.2"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.2",
+            "from": "node.3",
+            "to": "node.3",
+            "fromColumns": [
+              "dbcol.11"
+            ],
+            "toColumns": [
+              "dbcol.10"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "toOptional": true
+          },
+          {
+            "id": "edge.3",
+            "from": "node.5",
+            "to": "node.6",
+            "fromColumns": [
+              "dbcol.17"
+            ],
+            "toColumns": [
+              "dbcol.21"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.4",
+            "from": "node.5",
+            "to": "node.8",
+            "fromColumns": [
+              "dbcol.18"
+            ],
+            "toColumns": [
+              "dbcol.32"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "restrict"
+          },
+          {
+            "id": "edge.5",
+            "from": "node.6",
+            "to": "node.4",
+            "label": "places",
+            "fromColumns": [
+              "dbcol.22"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.6",
+            "from": "node.6",
+            "to": "node.1",
+            "label": "ships to",
+            "fromColumns": [
+              "dbcol.23"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "toOptional": true
+          },
+          {
+            "id": "edge.7",
+            "from": "node.6",
+            "to": "node.1",
+            "label": "bills to",
+            "fromColumns": [
+              "dbcol.24"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "toOptional": true
+          },
+          {
+            "id": "edge.8",
+            "from": "node.7",
+            "to": "node.6",
+            "fromColumns": [
+              "dbcol.29"
+            ],
+            "toColumns": [
+              "dbcol.21"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.9",
+            "from": "node.8",
+            "to": "node.3",
+            "label": "listed in",
+            "cardinality": "n-n"
+          },
+          {
+            "id": "edge.10",
+            "from": "node.9",
+            "to": "node.8",
+            "fromColumns": [
+              "dbcol.38"
+            ],
+            "toColumns": [
+              "dbcol.32"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.11",
+            "from": "node.9",
+            "to": "node.4",
+            "fromColumns": [
+              "dbcol.39"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "toOptional": true,
+            "onDelete": "set-null"
+          },
+          {
+            "id": "edge.12",
+            "from": "node.10",
+            "to": "node.13",
+            "fromColumns": [
+              "dbcol.43"
+            ],
+            "toColumns": [
+              "dbcol.54"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.13",
+            "from": "node.11",
+            "to": "node.12",
+            "fromColumns": [
+              "dbcol.46"
+            ],
+            "toColumns": [
+              "dbcol.50"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.14",
+            "from": "node.11",
+            "to": "node.5",
+            "fromColumns": [
+              "dbcol.47",
+              "dbcol.48"
+            ],
+            "toColumns": [
+              "dbcol.17",
+              "dbcol.18"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.15",
+            "from": "node.12",
+            "to": "node.6",
+            "fromColumns": [
+              "dbcol.51"
+            ],
+            "toColumns": [
+              "dbcol.21"
+            ],
+            "cardinality": "n-1"
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [
+      {
+        "planId": "enum.1",
+        "name": "order_status",
+        "note": "Where an order is in its life",
+        "values": [
+          {
+            "name": "pending"
+          },
+          {
+            "name": "paid",
+            "note": "Payment captured"
+          },
+          {
+            "name": "shipped"
+          },
+          {
+            "name": "cancelled"
+          }
+        ]
+      }
+    ],
+    "stickies": [],
+    "setDialect": "postgres",
+    "dialectOutcome": "set",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "shop.dbml",
+        "format": "dbml",
+        "dialect": "postgres"
+      },
+      "mapped": {
+        "tables": 13,
+        "relationships": 15,
+        "enums": 1,
+        "indexes": 3,
+        "checks": 3,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [],
+      "changed": [],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

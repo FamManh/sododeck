@@ -1,0 +1,311 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": null,
+    "dialect": "postgres",
+    "counts": {
+      "tables": 7,
+      "relationships": 5,
+      "enums": 0
+    },
+    "skippedCount": 3,
+    "conversions": [],
+    "dialectOutcome": "same"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "Order Items",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "Line Id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "orderId",
+                "type": "integer",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.3",
+                "name": "label",
+                "type": "text"
+              },
+              {
+                "id": "dbcol.4",
+                "name": "doubled",
+                "type": "integer"
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "a",
+            "columns": [
+              {
+                "id": "dbcol.5",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.6",
+                "name": "b_id",
+                "type": "integer"
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "b",
+            "columns": [
+              {
+                "id": "dbcol.7",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.8",
+                "name": "a_id",
+                "type": "integer"
+              }
+            ]
+          },
+          {
+            "id": "node.4",
+            "type": "db-table",
+            "title": "people",
+            "columns": [
+              {
+                "id": "dbcol.9",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.10",
+                "name": "mentor_id",
+                "type": "integer"
+              },
+              {
+                "id": "dbcol.11",
+                "name": "home_id",
+                "type": "integer"
+              },
+              {
+                "id": "dbcol.12",
+                "name": "work_id",
+                "type": "integer"
+              }
+            ]
+          },
+          {
+            "id": "node.5",
+            "type": "db-table",
+            "title": "places",
+            "columns": [
+              {
+                "id": "dbcol.13",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.14",
+                "name": "note",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.6",
+            "type": "db-table",
+            "title": "places_copy",
+            "columns": [
+              {
+                "id": "dbcol.15",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.16",
+                "name": "name",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.7",
+            "type": "db-table",
+            "title": "orphans",
+            "columns": [
+              {
+                "id": "dbcol.17",
+                "name": "id",
+                "type": "integer",
+                "pk": true
+              },
+              {
+                "id": "dbcol.18",
+                "name": "account_id",
+                "type": "integer"
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.3",
+            "to": "node.2",
+            "fromColumns": [
+              "dbcol.8"
+            ],
+            "toColumns": [
+              "dbcol.5"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.2",
+            "from": "node.2",
+            "to": "node.3",
+            "label": "a_b_fk",
+            "fromColumns": [
+              "dbcol.6"
+            ],
+            "toColumns": [
+              "dbcol.7"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.3",
+            "from": "node.4",
+            "to": "node.4",
+            "fromColumns": [
+              "dbcol.10"
+            ],
+            "toColumns": [
+              "dbcol.9"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.4",
+            "from": "node.4",
+            "to": "node.5",
+            "label": "people_home_fk",
+            "fromColumns": [
+              "dbcol.11"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.5",
+            "from": "node.4",
+            "to": "node.5",
+            "label": "people_work_fk",
+            "fromColumns": [
+              "dbcol.12"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [],
+    "stickies": [],
+    "setDialect": null,
+    "dialectOutcome": "same",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "edge-cases.sql",
+        "format": "sql",
+        "dialect": null
+      },
+      "mapped": {
+        "tables": 7,
+        "relationships": 5,
+        "enums": 0,
+        "indexes": 0,
+        "checks": 0,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [
+        {
+          "line": 39,
+          "excerpt": "CREATE TABLE orphans (",
+          "reason": "dangling-fk",
+          "detail": "references accounts, not in this import"
+        },
+        {
+          "line": 45,
+          "excerpt": "ALTER TABLE people DROP COLUMN work_id",
+          "reason": "drop-or-rename"
+        },
+        {
+          "line": 46,
+          "excerpt": "ALTER TABLE people RENAME TO persons",
+          "reason": "drop-or-rename"
+        }
+      ],
+      "changed": [
+        {
+          "line": 4,
+          "target": "Order Items.label",
+          "kind": "option-dropped",
+          "detail": "Order Items.label: collation is not stored"
+        },
+        {
+          "line": 5,
+          "target": "Order Items.doubled",
+          "kind": "option-dropped",
+          "detail": "Order Items.doubled: generated expression is not stored"
+        },
+        {
+          "line": 34,
+          "target": "places",
+          "kind": "renamed-duplicate",
+          "detail": "places appears twice in this import; the second is imported as places_copy"
+        }
+      ],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

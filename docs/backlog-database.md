@@ -44,7 +44,7 @@ file exports runnable SQL.
 | DB3  | Look: card system direction **B · Deck** only (DESIGN.md "Card system (Deck)"); no new visual direction.                                                                                                                                                                                                                                                                                                                                                               |
 | DB4  | Draw the **whole feature at once** in Claude Design (editor screens + components) before splitting the work.                                                                                                                                                                                                                                                                                                                                                           |
 | DB5  | Copyright: no code, assets or copy from other tools; we build from the platform, our own design and permissive libraries only.                                                                                                                                                                                                                                                                                                                                         |
-| DB6  | Parser (Q1, 2026-10-03): **`@dbml/core`** (Apache-2.0) for DBML and SQL, lazy-loaded inside a Web Worker only when importing, exporting or opening the DBML tab. Needs the dependency approval recorded in 044's ADR.                                                                                                                                                                                                                                                  |
+| DB6  | Parser (Q1, 2026-10-03): **`@dbml/core`** (Apache-2.0) for DBML and SQL, lazy-loaded inside a Web Worker only when importing, exporting or opening the DBML tab. Needs the dependency approval recorded in 044's ADR. → revised by ADR 0033 (044): `@dbml/parse` for DBML, `node-sql-parser` per dialect for SQL.                                                                                                                                                      |
 | DB7  | Storage (Q2): a table is a **node** of type `db.table` (stored as `db-table`, 040) with `columns[]`, so groups, colours, search, views, export, drill-in and flows work for tables as they do for cards.                                                                                                                                                                                                                                                               |
 | DB8  | Relationship ends (Q3): a foreign key connector attaches to the **exact column row** at both ends (`edge.fromPort` / `edge.toPort` = column ids; built in 040 as `fromColumns` / `toColumns`, since 022 stores side anchors in `route`).                                                                                                                                                                                                                               |
 | DB9  | Long tables (Q5): a table shows up to a limit (**12**, from the design: DESIGN.md [Database pack](../DESIGN.md#database-pack), frame 158) with keys first, then a **"Show all n columns" / "Show fewer"** button at the bottom of the card. The choice is **per table and saved in the deck** (`node.expanded`), so a user can keep some tables fully open. Detail levels (names / keys / all) and semantic zoom still apply on top.                                   |
@@ -138,6 +138,7 @@ flowchart LR
   F041[041 db-table-card]
   F042[042 db-relationships]
   F043[043 db-editing]
+  F052[052 db-drawer]
   F044[044 db-import]
   F045[045 db-export]
   F046[046 db-code-panel]
@@ -157,11 +158,13 @@ flowchart LR
   F015 --> F047
   F042 --> F047
   F043 --> F048
+  F043 --> F052
   F034 --> F049
   F043 --> F049
 ```
 
-Order: **039 → 040 → 041 → 042 → 043 → 044 → 045 → 047 → 048 → 049 → 046** (046 waits for 026).
+Order: **039 → 040 → 041 → 042 → 043 → 052 → 044 → 045 → 047 → 048 → 049 → 046** (046 waits for
+026).
 
 ---
 
@@ -303,6 +306,11 @@ values: { id, name, note? }[] }`;
 
 ## 043-db-editing
 
+- **Status:** split at `/speckit.specify` (2026-10-04). **Canvas editing built** (spec
+  `specs/043-db-editing`): column line editor, row keys, reorder, delete with Undo, row / table /
+  relationship menus and quick settings, add / duplicate / paste tables, lock (`Node.locked`, ADR
+  0029 amendment), multi-select, Add flyout Database tab. The drawer half moved to
+  [052-db-drawer](#052-db-drawer).
 - **Milestone:** after 042 · **Depends on:** 042, 019 (quick edit), 016 · **Estimate:** 6 d (split
   at `/speckit.specify`: canvas editing, then drawer)
 - **Goal:** Users build and change a schema on the canvas without touching code.
@@ -329,7 +337,41 @@ values: { id, name, note? }[] }`;
   not-null `email` column; renaming a column keeps its relationships and indexes; every change is
   one ⌘Z.
 
+## 052-db-drawer
+
+- **Milestone:** after 043 · **Depends on:** 043, 018 (details drawer) · **Estimate:** 4 d
+- **Goal:** Every table, relationship and enum setting has an editing surface, and column types
+  follow the deck's dialect.
+- **In scope:**
+  - Drawer tabs for a table: **General** (name, schema, colour, note, owner, tags, links),
+    **Columns** (all column settings, type picker for the deck's dialect with size / precision,
+    enum picker), **Indexes** (columns as chips, expression, unique, method, name), **Checks**.
+  - **Relationship** drawer: from / to columns as lists (composite ends), cardinality drawn with
+    the ends, optional sides, on delete / on update, name, colour.
+  - **Enum** editor (values with notes, reorder, used-by list), the Add flyout's **Enum** tile and
+    the canvas menu's "Add enum".
+  - Type lists per dialect (Generic, Postgres, MySQL, SQLite) as data in the app, and the type
+    conversion table used when the deck's dialect changes (toast with the conversions + Undo).
+  - Deck settings **Database** section: dialect select, block SQL export with errors.
+- **Out of scope:** SQL / DBML text (044–046), lint (047), custom types, views.
+- **Acceptance criteria (draft):** "Edit details" on a table opens its General tab; changing a
+  column's type in the Columns tab is one ⌘Z; switching the dialect from Postgres to MySQL shows
+  the converted types in a toast with Undo; an enum value added in the editor shows on the enum
+  chip's popover.
+- **Prompt:**
+
+  ```text
+  /speckit.specify 052 from docs/backlog-database.md: the details drawer for the Database pack.
+  Table tabs (General, Columns with the dialect type picker and enum picker, Indexes, Checks), the
+  relationship drawer (composite column ends, cardinality, optional sides, on delete / on update,
+  name, colour), the enum editor with the Enum tile and "Add enum", dialect type lists and
+  conversion with an Undo toast, and the Deck settings Database section (dialect, block SQL export
+  with errors). Builds on 043's canvas editing (specs/043-db-editing); every edit is one undo step.
+  ```
+
 ## 044-db-import
+
+- **Status:** built (`specs/044-db-import`, ADR 0033); closes 045's DBML round-trip (SC-002).
 
 - **Milestone:** after 042 · **Depends on:** 040, 042; DB6 (parser) · **Estimate:** 5 d
 - **Goal:** An existing schema becomes a laid-out diagram in seconds.
