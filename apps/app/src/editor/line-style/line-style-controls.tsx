@@ -129,6 +129,9 @@ function WeightSlider({
 
   const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (disabled || event.button !== 0 || drag.current !== null) return;
+    // The popover is selectable text: without this, dragging along the track selects the stop
+    // numbers. Focus is given by hand instead.
+    event.preventDefault();
     const track = event.currentTarget;
     track.focus();
     const ids = [...edgeIds];

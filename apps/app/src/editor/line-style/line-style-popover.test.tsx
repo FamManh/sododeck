@@ -163,6 +163,15 @@ describe('Weight slider pointer drag (050 US3)', () => {
     expect(slider).toHaveAttribute('aria-valuenow', '2');
   });
 
+  it('keeps the press from selecting the stop numbers as text, and focuses the slider', () => {
+    setup();
+    const slider = track();
+    // fireEvent returns false when the handler prevented the default (text selection) action.
+    expect(down(slider, 10)).toBe(false);
+    expect(slider).toHaveFocus();
+    up(10);
+  });
+
   it('picks the nearest stop on a click on the track', () => {
     const { doc } = setup();
     const slider = track();
