@@ -28,12 +28,23 @@ const objectTypes = [
   ['SododeckFile', root] as const,
   ...Object.entries(defs).filter(([, schema]) => schema.properties !== undefined),
 ];
-const enumTypes = Object.entries(defs).filter(([, schema]) => schema.enum !== undefined);
+/**
+ * Enums a file holds at most once (the root `dialect`, 040): the example uses one value and
+ * `schema.test.ts` accepts each of the others.
+ */
+const ONE_PER_FILE = new Set(['Dialect']);
+const enumTypes = Object.entries(defs).filter(
+  ([type, schema]) => schema.enum !== undefined && !ONE_PER_FILE.has(type),
+);
 
 describe('full example covers the whole format', () => {
   it.each(objectTypes)('uses every property of %s', (type, schema) => {
     const expected = Object.keys(schema.properties ?? {});
     expect([...(usedProperties.get(type) ?? [])].sort()).toEqual(expected.sort());
+  });
+
+  it.each([...ONE_PER_FILE])('uses one value of %s', (type) => {
+    expect(usedEnumValues.get(type)?.size).toBe(1);
   });
 
   it.each(enumTypes)('uses every value of %s', (type, schema) => {

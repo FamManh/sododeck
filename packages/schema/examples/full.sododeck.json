@@ -6,7 +6,7 @@
   "tags": ["logistics", "example"],
   "swatches": ["#7a3cff", "#1f2a44"],
   "tagColors": { "Lan": "#7a3cff", "PCI": "violet" },
-  "packs": ["architecture", "process", "logistics", "data"],
+  "packs": ["architecture", "process", "logistics", "data", "database"],
   "fields": [
     {
       "id": "warehouse.capacity",
@@ -58,6 +58,19 @@
     { "id": "owner", "name": "Owner", "kind": "person", "onCard": true }
   ],
   "fieldDefaults": ["warehouse"],
+  "dialect": "postgres",
+  "enums": [
+    {
+      "id": "enum-customer-status",
+      "name": "customer_status",
+      "schema": "public",
+      "note": "Account state of a customer.",
+      "values": [
+        { "id": "enumval-active", "name": "active", "note": "Can place orders." },
+        { "id": "enumval-blocked", "name": "blocked" }
+      ]
+    }
+  ],
   "nodes": [
     {
       "id": "payments-provider",
@@ -197,6 +210,106 @@
       "title": "Payment OK?",
       "position": { "x": 1240, "y": 80 },
       "size": { "width": 176, "height": 112 }
+    },
+    {
+      "id": "shop-db",
+      "type": "database",
+      "title": "Shop DB",
+      "description": "Orders, customers and the catalogue.",
+      "position": { "x": 1200, "y": 600 }
+    },
+    {
+      "id": "customers",
+      "type": "db-table",
+      "title": "customers",
+      "description": "People who buy from the shop.",
+      "parent": "shop-db",
+      "position": { "x": 1200, "y": 680 },
+      "schema": "public",
+      "columns": [
+        { "id": "cust-id", "name": "id", "type": "bigint", "pk": true, "increment": true },
+        {
+          "id": "cust-email",
+          "name": "email",
+          "type": "varchar",
+          "size": "255",
+          "notNull": true,
+          "unique": true,
+          "check": "email <> ''",
+          "note": "Login name."
+        },
+        {
+          "id": "cust-status",
+          "name": "status",
+          "type": "customer_status",
+          "default": "active",
+          "enumRef": "enum-customer-status"
+        },
+        {
+          "id": "cust-created",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "defaultExpr": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "id": "idx-customers-email",
+          "name": "customers_email_lower",
+          "columns": [{ "expr": "lower(email)" }],
+          "unique": true,
+          "method": "btree",
+          "note": "Case-insensitive login."
+        }
+      ],
+      "detail": "names"
+    },
+    {
+      "id": "orders",
+      "type": "db-table",
+      "title": "orders",
+      "parent": "shop-db",
+      "position": { "x": 1480, "y": 680 },
+      "columns": [
+        { "id": "order-id", "name": "id", "type": "bigint", "pk": true, "increment": true },
+        { "id": "order-customer", "name": "customer_id", "type": "bigint", "notNull": true },
+        { "id": "order-total", "name": "total", "type": "numeric", "size": "10,2", "default": 0 },
+        { "id": "order-paid", "name": "paid", "type": "boolean", "default": false }
+      ],
+      "indexes": [
+        { "id": "idx-orders-customer", "columns": ["order-customer", { "expr": "total desc" }] }
+      ],
+      "checks": [
+        { "id": "chk-orders-total", "name": "orders_total_positive", "expr": "total >= 0" }
+      ],
+      "expanded": true,
+      "detail": "keys"
+    },
+    {
+      "id": "order-items",
+      "type": "db-table",
+      "title": "order_items",
+      "parent": "shop-db",
+      "position": { "x": 1760, "y": 680 },
+      "columns": [
+        { "id": "item-order", "name": "order_id", "type": "bigint", "pk": true },
+        { "id": "item-line", "name": "line_no", "type": "integer", "pk": true },
+        { "id": "item-qty", "name": "quantity", "type": "integer", "notNull": true }
+      ],
+      "checks": [{ "id": "chk-items-qty", "expr": "quantity > 0" }],
+      "detail": "all"
+    },
+    {
+      "id": "categories",
+      "type": "db-table",
+      "title": "categories",
+      "parent": "shop-db",
+      "position": { "x": 1480, "y": 880 },
+      "columns": [
+        { "id": "cat-id", "name": "id", "type": "bigint", "pk": true },
+        { "id": "cat-parent", "name": "parent_id", "type": "bigint" }
+      ]
     }
   ],
   "groups": [
@@ -296,6 +409,57 @@
       "protocol": "other",
       "label": "nightly settlement file (SFTP)",
       "direction": "none"
+    },
+    {
+      "id": "rel-orders-customer",
+      "from": "orders",
+      "to": "customers",
+      "label": "placed by",
+      "fromColumns": ["order-customer"],
+      "toColumns": ["cust-id"],
+      "cardinality": "n-1",
+      "onDelete": "cascade",
+      "onUpdate": "restrict"
+    },
+    {
+      "id": "rel-order-items",
+      "from": "orders",
+      "to": "order-items",
+      "fromColumns": ["order-id"],
+      "toColumns": ["item-order"],
+      "cardinality": "1-n",
+      "onDelete": "set-null",
+      "onUpdate": "no-action"
+    },
+    {
+      "id": "rel-category-parent",
+      "from": "categories",
+      "to": "categories",
+      "label": "parent",
+      "style": { "color": "teal" },
+      "fromColumns": ["cat-id"],
+      "toColumns": ["cat-parent"],
+      "cardinality": "1-n",
+      "toOptional": true,
+      "onDelete": "set-default"
+    },
+    {
+      "id": "rel-items-categories",
+      "from": "order-items",
+      "to": "categories",
+      "label": "tagged with",
+      "cardinality": "n-n",
+      "fromOptional": true
+    },
+    {
+      "id": "rel-customer-latest",
+      "from": "customers",
+      "to": "orders",
+      "label": "latest order",
+      "fromColumns": ["cust-id"],
+      "toColumns": ["order-customer"],
+      "cardinality": "1-1",
+      "toOptional": true
     }
   ],
   "views": [

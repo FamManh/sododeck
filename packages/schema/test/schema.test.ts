@@ -98,9 +98,34 @@ describe('schema v1', () => {
     'warehouse',
     'truck-route',
     'issue',
+    'db-table',
     'robot',
   ])('accepts the type id %s (030)', (type) => {
     expectBothValidators({ ...emptySododeckFile(), nodes: [{ id: 'n1', type, title: 'A' }] }, true);
+  });
+
+  it.each(['generic', 'postgres', 'mysql', 'sqlite'])('accepts the dialect %s (040)', (dialect) => {
+    expectBothValidators({ ...emptySododeckFile(), dialect }, true);
+  });
+
+  it('accepts a sketch table, empty enums and column keys on any card (040)', () => {
+    const base = emptySododeckFile();
+    expectBothValidators({ ...base, enums: [] }, true);
+    expectBothValidators(
+      { ...base, nodes: [{ id: 't', type: 'db-table', title: 't', columns: [] }] },
+      true,
+    );
+    expectBothValidators(
+      {
+        ...base,
+        nodes: [
+          { id: 'a', type: 'service', title: 'A', columns: [{ id: 'c', name: 'c', type: 'int' }] },
+          { id: 'b', type: 'service', title: 'B' },
+        ],
+        edges: [{ id: 'e', from: 'a', to: 'b', fromColumns: ['c'], toColumns: ['x'] }],
+      },
+      true,
+    );
   });
 
   it('accepts packs: one, four and an unknown id (030)', () => {
