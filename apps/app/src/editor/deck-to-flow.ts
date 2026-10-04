@@ -463,6 +463,8 @@ function toFlowNode(
   if (
     cached?.data.geometry === geometry &&
     cached?.selected === selected &&
+    // A table's rows (041) follow its deck too (keys, enums, display): same object while unchanged.
+    cached.data.layout.table === layout.table &&
     cached.data.icon === node.icon &&
     cached.data.subtitle === subtitle &&
     (cached.data.viewDimmed === true) === viewDimmed &&

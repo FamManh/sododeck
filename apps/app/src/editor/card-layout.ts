@@ -6,6 +6,7 @@
  */
 import { tagBlockHeight, textMeasurer, TAG_CHIP } from './card-tags';
 import { graphemes, type TextMeasurer } from './export/text-measure';
+import type { TableLayout } from './table-layout';
 
 /** Sizes snap to 4 px, as in a resize (017). */
 const SIZE_STEP = 4;
@@ -54,6 +55,8 @@ export interface CardLayout {
   /** Height of the fields block between the description and the tags (032); 0 for none. */
   fieldsHeight: number;
   hasChildrenRow: boolean;
+  /** A table card's body (041): set only for `db-table` nodes, see `table-layout.ts`. */
+  table?: TableLayout;
 }
 
 const lineCache = new Map<string, readonly string[]>();

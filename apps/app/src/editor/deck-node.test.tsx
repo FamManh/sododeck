@@ -9,7 +9,10 @@ import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { EMPTY_FIELD_VIEW, fieldBlock, type CardFieldView } from './card-fields';
 import { cardLayout, type CardLayout } from './card-layout';
+import { cardLayoutOf } from './canvas-geometry';
 import { DeckNode } from './deck-node';
+import { tableContextOf } from './table-keys';
+import { toJSON as deckFile } from '@sododeck/model';
 import { tagColours } from './tags/tag-colours';
 import type { DeckFlowNode } from './deck-to-flow';
 
@@ -828,5 +831,109 @@ describe('DeckNode typed fields (032)', () => {
     unmount();
     renderNode(props({ level: 'container' }));
     expect(screen.queryByTestId('card-fields')).not.toBeInTheDocument();
+  });
+});
+
+describe('DeckNode as a table card (041)', () => {
+  const columns = [
+    { id: 'o-id', name: 'id', type: 'uuid', pk: true },
+    { id: 'o-customer', name: 'customer_id', type: 'uuid', notNull: true },
+    { id: 'o-number', name: 'number', type: 'text', unique: true },
+    { id: 'o-coupon', name: 'coupon_code', type: 'text' },
+    { id: 'o-total', name: 'total_cents', type: 'int', notNull: true },
+    { id: 'o-created', name: 'created_at', type: 'timestamptz', notNull: true },
+    { id: 'o-paid', name: 'paid', type: 'boolean', notNull: true },
+  ];
+  const ordersNode = {
+    id: 'orders',
+    type: 'db-table',
+    title: 'orders',
+    schema: 'public',
+    description: 'One row per checkout.',
+    columns,
+    indexes: [{ id: 'ix', columns: ['o-customer'] }],
+  };
+  const tables = (extra: Record<string, unknown>[] = []) =>
+    deckOf({
+      nodes: [
+        ordersNode,
+        { id: 'customers', type: 'db-table', title: 'customers', columns: [] },
+        ...extra,
+      ] as never,
+      edges: [
+        {
+          id: 'r',
+          from: 'orders',
+          to: 'customers',
+          fromColumns: ['o-customer'],
+          toColumns: ['o-id'],
+          cardinality: 'n-1',
+        },
+      ],
+    });
+
+  function tableProps(file = tables(), patch: PropsPatch = {}, node = ordersNode) {
+    const layout = cardLayoutOf(node, { table: tableContextOf(file) });
+    return props({ title: node.title, kind: 'db-table', ...patch }, false, node.id, layout);
+  }
+
+  it('is named "Table <title>, <n> columns" with the table role description', () => {
+    renderWithEditor(<DeckNode {...tableProps()} />, tables());
+    const card = screen.getByRole('group', { name: 'Table orders, 7 columns' });
+    expect(card).toHaveAttribute('aria-roledescription', 'table');
+    expect(within(card).getByRole('list', { name: 'Columns' })).toBeInTheDocument();
+    expect(within(card).getByText('One row per checkout.')).toBeInTheDocument();
+  });
+
+  it('reads "Table" with one schema and "Table · <schema>" with two', () => {
+    const { unmount } = renderWithEditor(<DeckNode {...tableProps()} />, tables());
+    expect(screen.getByTestId('card-header')).toHaveTextContent(/^Table$/);
+    unmount();
+    const two = tables([{ id: 'users', type: 'db-table', title: 'users', schema: 'auth' }]);
+    renderWithEditor(<DeckNode {...tableProps(two)} />, two);
+    expect(screen.getByTestId('card-header')).toHaveTextContent('Table · public');
+  });
+
+  it('keeps a long title in its name, cut to one line', () => {
+    const long = { ...ordersNode, title: 'order_line_items_with_a_much_longer_name_than_fits' };
+    renderWithEditor(<DeckNode {...tableProps(tables(), {}, long)} />, tables());
+    expect(
+      screen.getByRole('group', { name: `Table ${long.title}, 7 columns` }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows the title, key dots and column count at System level', () => {
+    renderWithEditor(<DeckNode {...tableProps(tables(), { level: 'system' })} />, tables());
+    expect(screen.getByText('orders')).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { name: '1 primary key, 1 foreign key, 7 columns' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Columns' })).not.toBeInTheDocument();
+  });
+
+  it('shows the icon plate at Landscape level, in the same box', () => {
+    const p = tableProps(tables(), { level: 'landscape' });
+    renderWithEditor(<DeckNode {...p} />, tables());
+    expect(screen.getByTestId('card-plate-icon')).toBeInTheDocument();
+    expect(screen.queryByText('orders')).not.toBeInTheDocument();
+    const box = screen.getByRole('group', { name: 'Table orders, 7 columns' });
+    expect(box.style.height).toBe(`${String(p.data.layout.height)}px`);
+  });
+
+  it('cycles its own detail from the header toggle: deck → Keys → All → deck', async () => {
+    const user = userEvent.setup();
+    const file = tables();
+    const { editor, doc } = renderWithEditor(<DeckNode {...tableProps(file)} />, file);
+    await user.click(screen.getByRole('button', { name: 'Detail: Use deck setting' }));
+    expect(deckFile(doc).nodes.find((n) => n.id === 'orders')?.detail).toBe('keys');
+    editor().undo();
+    expect(deckFile(doc).nodes.find((n) => n.id === 'orders')?.detail).toBeUndefined();
+  });
+
+  it('labels the toggle with the table’s own choice', () => {
+    const file = tables();
+    const node = { ...ordersNode, detail: 'all' as const };
+    renderWithEditor(<DeckNode {...tableProps(file, {}, node)} />, file);
+    expect(screen.getByRole('button', { name: 'Detail: All' })).toBeInTheDocument();
   });
 });

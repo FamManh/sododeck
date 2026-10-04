@@ -75,9 +75,28 @@ const PLAYBACK_PAIRS: Pair[] = [
   ['clay-ink', 'clay-soft'],
 ];
 
+/**
+ * Table rows (041, SC-006, §g-90): names and the primary-key glyph in Ink, type text, "?" and the
+ * index footer in Muted on Surface, raised to Secondary on a hovered row and on a coloured card;
+ * the foreign-key glyph and "U" in Secondary; enum chips use the Deck chip pairs.
+ */
+const TABLE_ROW_PAIRS: Pair[] = [
+  ['ink', 'surface'],
+  ['ink', 'surface-2'],
+  ['muted', 'surface'],
+  ['text-secondary', 'surface'],
+  ['text-secondary', 'surface-2'],
+  ...CARD_COLOR_NAMES.flatMap((name): Pair[] => [
+    ['ink', `card-${name}-fill`],
+    ['text-secondary', `card-${name}-fill`],
+    [`card-${name}-ink`, `card-${name}-chip`],
+  ]),
+];
+
 /** Text and meaningful icons: WCAG 2.1 AA 4.5:1. */
 const TEXT_PAIRS: Pair[] = [
   ...PLAYBACK_PAIRS,
+  ...TABLE_ROW_PAIRS,
   ['ink', 'surface'],
   ['ink', 'surface-2'],
   ['text-secondary', 'surface'],

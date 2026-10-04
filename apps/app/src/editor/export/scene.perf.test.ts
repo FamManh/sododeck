@@ -43,4 +43,31 @@ describe('export scene performance', () => {
     expect(scene.cards.length).toBeGreaterThan(0);
     expect(elapsed).toBeLessThan(CEILING_MS);
   });
+
+  it('builds and renders 150 tables × 12 columns under the same ceiling (041)', () => {
+    const { deck } = generateBenchDeck(150, 300, 42, { tables: 150 });
+    const ui = {
+      currentViewId: null,
+      revealed: new Set<string>(),
+      drill: [],
+      activeFlowId: null,
+      notesDisplay: 'dimmed' as const,
+    };
+    buildScene({ deck, scope: 'deck', ui });
+    const fresh = structuredClone(deck);
+    const start = performance.now();
+    const scene = buildScene({ deck: fresh, scope: 'deck', ui });
+    const svg = renderSvg(scene, {
+      transparent: false,
+      palette: LIGHT_PALETTE,
+      fonts: '',
+      measure: fixedWidthMeasurer(),
+      title: 'Bench',
+    });
+    const elapsed = performance.now() - start;
+    console.info(`export scene + svg (150 tables): ${elapsed.toFixed(1)} ms`);
+    expect(scene.cards.every((card) => card.table?.rows.length === 12)).toBe(true);
+    expect(svg).toContain('data-part="row"');
+    expect(elapsed).toBeLessThan(CEILING_MS);
+  });
 });

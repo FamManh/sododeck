@@ -16,13 +16,14 @@ import { useRuleNav } from '../rules/rule-nav';
 import { TagsField } from '../fields/tags-field';
 import { deckStats } from './derive';
 import { InspectorFrame } from './inspector-frame';
+import { TableDisplaySection } from './table-display-section';
 
 const noop = () => undefined;
 
 /**
  * Deck inspector, shown when nothing is selected (FR-012, design 10): the deck's problems first
  * (015, design 60), name (required), markdown description, tags, counts with a way into the rule
- * editor, and 005's storage.
+ * editor, the tables' display switches (041), and 005's storage.
  */
 export function DeckInspector({
   deck,
@@ -117,6 +118,7 @@ export function DeckInspector({
           </li>
         </ul>
       </PanelSection>
+      <TableDisplaySection deck={deck} />
       <DeckInspectorStorage />
     </InspectorFrame>
   );

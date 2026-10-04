@@ -65,12 +65,31 @@
       "name": "customer_status",
       "schema": "public",
       "note": "Account state of a customer.",
+      "color": "violet",
       "values": [
         { "id": "enumval-active", "name": "active", "note": "Can place orders." },
         { "id": "enumval-blocked", "name": "blocked" }
       ]
+    },
+    {
+      "id": "enum-order-status",
+      "name": "order_status",
+      "color": "#d97706",
+      "values": [
+        { "id": "enumval-pending", "name": "pending", "note": "Awaiting payment." },
+        { "id": "enumval-paid", "name": "paid" },
+        { "id": "enumval-shipped", "name": "shipped" },
+        { "id": "enumval-cancelled", "name": "cancelled" }
+      ]
     }
   ],
+  "tableDisplay": {
+    "detail": "all",
+    "hideTypes": false,
+    "hideNullable": false,
+    "hideNotes": false,
+    "hideIndexes": false
+  },
   "nodes": [
     {
       "id": "payments-provider",

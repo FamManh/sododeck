@@ -23,6 +23,13 @@ import {
  * that lives in the Yjs document (@sododeck/model). Ids here are references into the deck; they
  * are pruned when the objects disappear.
  */
+/** Where the enum values popover is anchored (041): one enum column of one table. */
+export interface EnumPopover {
+  nodeId: string;
+  columnId: string;
+  source: 'hover' | 'keyboard';
+}
+
 export interface Selection {
   readonly nodes: readonly Id[];
   readonly edges: readonly Id[];
@@ -310,6 +317,11 @@ export interface UiState {
   labelsOn: boolean;
   notesDisplay: NotesDisplay;
   popover: Popover;
+  /**
+   * The one open enum values popover (041 R7): the table and the enum column whose chip opened it.
+   * `keyboard` moves focus into it; a hover leaves focus where it is.
+   */
+  enumPopover: EnumPopover | null;
   /** What the delete confirmation is open for. */
   pendingDelete: PendingDelete | null;
   activeFlow: ActiveFlow;
@@ -449,6 +461,8 @@ export interface UiState {
   openMergedPopover: (edgeId: string) => void;
   openConnectPopover: (fromId: string) => void;
   closePopover: () => void;
+  openEnumPopover: (target: EnumPopover) => void;
+  closeEnumPopover: () => void;
   /** Opens the confirmation for a canvas selection (components first, then connections). */
   requestDelete: (selection: Partial<Selection>) => void;
   /** Opens the confirmation for any removal targets (features, flows, branches…). */
@@ -699,6 +713,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     labelsOn: readLabelsOn(),
     notesDisplay: readNotesDisplay(),
     popover: null,
+    enumPopover: null,
     pendingDelete: null,
     activeFlow: null,
     lastPlayedFlowId: null,
@@ -841,6 +856,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         hoverFocus: null,
         fannedBundles: NO_IDS,
         popover: null,
+        enumPopover: null,
         revealed: NO_IDS,
         descriptionMode: NO_MODES,
         stylePreview: null,
@@ -959,6 +975,19 @@ export const useUiStore = create<UiState>()((set, get) => {
     closePopover: () => {
       set({ popover: null });
     },
+    openEnumPopover: (target) => {
+      const open = get().enumPopover;
+      if (
+        open?.nodeId === target.nodeId &&
+        open.columnId === target.columnId &&
+        open.source === target.source
+      )
+        return;
+      set({ enumPopover: target });
+    },
+    closeEnumPopover: () => {
+      if (get().enumPopover !== null) set({ enumPopover: null });
+    },
     requestDelete: (selection) => {
       set({ pendingDelete: { targets: selectionTargets(selection) } });
     },
@@ -983,6 +1012,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         stickyDraft: null,
         focusedEdgeId: null,
         popover: null,
+        enumPopover: null,
         descriptionMode: NO_MODES,
       });
     },
@@ -1325,6 +1355,7 @@ export const useUiStore = create<UiState>()((set, get) => {
       const prefs = loadShellPrefs(deckId);
       set({
         shellDeckId: deckId,
+        enumPopover: null,
         flyout: prefs.pinnedFlyout,
         pinnedFlyout: prefs.pinnedFlyout,
         sessionPinReturn: null,

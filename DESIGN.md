@@ -395,7 +395,7 @@ Source frames: 156, 161, 147, 148.
 
 #### Table zoom levels (162)
 
-Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; only detail changes. No lip below 60 %.
+Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; only detail changes. No lip below 60 %. **Size rule (041, §g-93):** a table's box follows its effective detail (its own, else the deck's; Auto = All) and the display toggles, never the zoom; below 90 % the System or Landscape content draws inside that box, and Auto shows every row from 90 %.
 
 | Level | Zoom | Table shows |
 | --- | --- | --- |

@@ -13,6 +13,7 @@ import type {
   FieldKind,
   Id,
   PackId,
+  TableDisplay,
   TypeId,
 } from '@sododeck/schema';
 import * as Y from 'yjs';
@@ -75,6 +76,7 @@ import {
   type NewDbEnum,
   type NewDbEnumValue,
 } from './ops/db-enums';
+import { setTableDisplay } from './ops/table-display';
 import { addObject, reorderObject, updateObject } from './ops/collections';
 import { fillGroupFrames, setGroupFrames } from './ops/frames';
 import { pasteFragment, type PasteOptions, type PastedIds } from './ops/paste';
@@ -424,6 +426,11 @@ export interface DeckEditor {
   /** Sets the deck's SQL dialect (040); `null` or `'generic'` removes the key (absent = Generic). */
   setDialect(dialect: Dialect | null): void;
   /**
+   * Patches the deck's table display (041): `detail` (`null` = Auto) and the hide flags (`true`
+   * hides; `false` or `null` removes the flag). One undo step; nothing happens when nothing changes.
+   */
+  setTableDisplay(patch: Patch<TableDisplay>): void;
+  /**
    * Adds a column at `index` of a table (default: last) and returns its id (generated unless
    * given; a given id must be free among the deck's columns, indexes, checks, enums and values).
    * Flags are written `true` or left out. `invalid` for a node that is not a `db-table`.
@@ -453,7 +460,7 @@ export interface DeckEditor {
   removeCheck(tableId: Id, checkId: Id): RemovalResult;
   /** Adds an enum (values optional, ids generated where missing) and returns its id. */
   addEnum(data: NewDbEnum, index?: number): Id;
-  /** Renames an enum or sets its schema or note; its values change through the value ops. */
+  /** Renames an enum or sets its schema, note or colour (041); values change through value ops. */
   updateEnum(enumId: Id, patch: EnumPatch): void;
   moveEnum(enumId: Id, toIndex: number): void;
   /** Removes an enum and clears `enumRef` on every column naming it (types are kept). */
@@ -808,6 +815,9 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setDialect: (dialect) => {
       setDialect(ctx, dialect);
+    },
+    setTableDisplay: (patch) => {
+      setTableDisplay(ctx, patch);
     },
     addColumn: (tableId, data, index) => addPart(ctx, tableId, 'columns', data, index),
     updateColumn: (tableId, columnId, patch) => {

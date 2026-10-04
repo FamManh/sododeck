@@ -15,6 +15,7 @@
  *   BENCH_BENDS=1 pnpm bench            # 200 connectors with three free bends each, mixed shapes (022)
  *   BENCH_ICONS=1 pnpm bench            # every card a custom catalog icon (038)
  *   BENCH_SHAPES=1 pnpm bench           # every third node a shape, the eleven geometries (031)
+ *   BENCH_TABLES=150 pnpm bench         # the first n nodes are 12-column tables (041)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -49,6 +50,9 @@ const TYPES_QUERY = process.env.BENCH_TYPES === '1' ? '&types=1' : '';
 const FIELDS_QUERY = process.env.BENCH_FIELDS === '1' ? '&fields=1' : '';
 const ICONS_QUERY = process.env.BENCH_ICONS === '1' ? '&icons=1' : '';
 const SHAPES_QUERY = process.env.BENCH_SHAPES === '1' ? '&shapes=1' : '';
+/** 041 R14: the first n nodes are 12-column tables with foreign keys (`BENCH_TABLES=150`). */
+const TABLES = Math.max(0, Number(process.env.BENCH_TABLES ?? 0) || 0);
+const TABLES_QUERY = TABLES > 0 ? `&tables=${String(TABLES)}` : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -247,7 +251,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}${TABLES_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
@@ -1052,7 +1056,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. Tables: ${String(TABLES)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',

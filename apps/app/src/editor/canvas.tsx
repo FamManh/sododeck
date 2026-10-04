@@ -40,6 +40,7 @@ import {
   type CanvasFlowNode,
 } from './deck-to-flow';
 import { EdgePopover } from './edge-popover';
+import { EnumPopover } from './table/enum-popover';
 import { EmptyCanvasCard } from './empty-canvas-card';
 import { playbackOf } from './flows/flow-mode';
 import { EMPTY_OVERLAY, flowOverlay, type PlaybackMarks } from './flows/flow-overlay';
@@ -817,6 +818,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       )}
       <HoverFocusStyle deck={deck} graph={graph} bundles={bundles} wrapper={wrapper} />
       <EdgePopover deck={fullDeck} />
+      {/* The one enum values popover (041): renders nothing until a chip opens it. */}
+      <EnumPopover deck={fullDeck} />
       <MergedEdgePopover deck={deck} bundles={bundles} />
       <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />

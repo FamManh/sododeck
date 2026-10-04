@@ -24,6 +24,30 @@ describe('ui store', () => {
     localStorage.clear();
   });
 
+  describe('enum popover (041)', () => {
+    const target = { nodeId: 'orders', columnId: 'status', source: 'hover' as const };
+
+    it('opens one popover at a time and closes it', () => {
+      expect(state().enumPopover).toBeNull();
+      state().openEnumPopover(target);
+      expect(state().enumPopover).toEqual(target);
+      const other = { ...target, columnId: 'kind', source: 'keyboard' as const };
+      state().openEnumPopover(other);
+      expect(state().enumPopover).toEqual(other);
+      state().closeEnumPopover();
+      expect(state().enumPopover).toBeNull();
+    });
+
+    it('keeps the same object when the same chip asks again, and clears on a deck switch', () => {
+      state().openEnumPopover(target);
+      const open = state().enumPopover;
+      state().openEnumPopover({ ...target });
+      expect(state().enumPopover).toBe(open);
+      state().resetForDeck('other');
+      expect(state().enumPopover).toBeNull();
+    });
+  });
+
   describe('canvas editing (016)', () => {
     const guide = { axis: 'x' as const, at: 10, from: 0, to: 100 };
 

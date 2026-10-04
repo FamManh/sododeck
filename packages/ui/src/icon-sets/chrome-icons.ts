@@ -17,6 +17,10 @@ export const CHROME_ICONS = {
   date: 'calendar',
   'date-range': 'calendar-range',
   link: 'link',
+  // Table rows in the export (041).
+  'primary-key': 'key-round',
+  'foreign-key': 'link-2',
+  indexes: 'list-ordered',
 } as const;
 
 export type ChromeIconKey = keyof typeof CHROME_ICONS;

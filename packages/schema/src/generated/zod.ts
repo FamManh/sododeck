@@ -260,6 +260,34 @@ export const sododeckFileSchema = z
               .describe('Namespace, e.g. `public`. Absent means the default one.')
               .optional(),
             note: z.string().describe('Note on the enum (plain text).').optional(),
+            color: z
+              .union([
+                z
+                  .enum([
+                    'red',
+                    'orange',
+                    'amber',
+                    'yellow',
+                    'lime',
+                    'green',
+                    'teal',
+                    'cyan',
+                    'blue',
+                    'indigo',
+                    'violet',
+                    'pink',
+                    'slate',
+                  ])
+                  .describe('Named card colour, a design-system tint that follows the theme.'),
+                z
+                  .string()
+                  .regex(new RegExp('^#[0-9a-f]{6}$'))
+                  .describe('Custom colour as a lowercase 6-digit hex value, e.g. `#7a3cff`.'),
+              ])
+              .describe(
+                'Chip colour on table rows (041): a named colour or a custom hex value. Absent means a neutral chip.',
+              )
+              .optional(),
             values: z
               .array(
                 z
@@ -290,6 +318,27 @@ export const sododeckFileSchema = z
       )
       .describe(
         "Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.",
+      )
+      .optional(),
+    tableDisplay: z
+      .object({
+        detail: z
+          .enum(['names', 'keys', 'all'])
+          .describe(
+            'Detail of every table without its own `detail`. Absent means Auto (every column from 90 % zoom).',
+          )
+          .optional(),
+        hideTypes: z
+          .boolean()
+          .describe('Hides data types and enum chips on table rows.')
+          .optional(),
+        hideNullable: z.boolean().describe('Hides the nullable marker on table rows.').optional(),
+        hideNotes: z.boolean().describe('Hides table notes.').optional(),
+        hideIndexes: z.boolean().describe('Hides the index count footer.').optional(),
+      })
+      .strict()
+      .describe(
+        'How tables draw in this deck (041). Absent means Auto detail with every part shown.',
       )
       .optional(),
     nodes: z

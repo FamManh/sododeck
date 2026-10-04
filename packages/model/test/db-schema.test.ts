@@ -9,6 +9,7 @@ import {
   fromJSON,
   observeDeck,
   serializeDeck,
+  tableDisplayOf,
   toJSON,
   type DeckEditor,
 } from '../src';
@@ -423,6 +424,76 @@ describe('enums (040 US6)', () => {
   });
 });
 
+describe('table display (041)', () => {
+  it('reads defaults when absent, and the stored keys otherwise', () => {
+    expect(tableDisplayOf(shopDeck())).toEqual({
+      detail: 'auto',
+      hideTypes: false,
+      hideNullable: false,
+      hideNotes: false,
+      hideIndexes: false,
+    });
+    expect(
+      tableDisplayOf({ ...shopDeck(), tableDisplay: { detail: 'keys', hideNotes: true } }),
+    ).toEqual({
+      detail: 'keys',
+      hideTypes: false,
+      hideNullable: false,
+      hideNotes: true,
+      hideIndexes: false,
+    });
+  });
+
+  it('writes a key in one undo step and creates the object on the first write', () => {
+    const { editor, deck } = setup();
+    expect(deck()).not.toHaveProperty('tableDisplay');
+    oneStep(editor, deck, () => {
+      editor.setTableDisplay({ detail: 'keys', hideTypes: true });
+    });
+    expect(deck().tableDisplay).toEqual({ detail: 'keys', hideTypes: true });
+  });
+
+  it('removes a hide flag written false, detail written null, and the emptied object', () => {
+    const { editor, deck } = setup({
+      ...shopDeck(),
+      tableDisplay: { detail: 'names', hideNotes: true, hideIndexes: true },
+    });
+    editor.setTableDisplay({ hideNotes: false });
+    expect(deck().tableDisplay).toEqual({ detail: 'names', hideIndexes: true });
+    editor.setTableDisplay({ detail: null, hideIndexes: null });
+    expect(deck()).not.toHaveProperty('tableDisplay');
+  });
+
+  it('does nothing when nothing changes, and refuses bad values', () => {
+    const { editor, deck } = setup();
+    const before = serializeDeck(deck());
+    editor.setTableDisplay({ hideTypes: false, detail: null });
+    expect(serializeDeck(deck())).toBe(before);
+    expect(editor.canUndo()).toBe(false);
+    refused(deck, 'invalid', () => {
+      editor.setTableDisplay({ detail: 'auto' as never });
+    });
+    refused(deck, 'invalid', () => {
+      editor.setTableDisplay({ showTypes: true } as never);
+    });
+  });
+
+  it('sets and clears an enum colour (updateEnum)', () => {
+    const { editor, deck } = setup();
+    oneStep(editor, deck, () => {
+      editor.updateEnum('e-status', { color: 'teal' });
+    });
+    expect(deck().enums?.[0]?.color).toBe('teal');
+    editor.updateEnum('e-status', { color: '#112233' });
+    expect(deck().enums?.[0]?.color).toBe('#112233');
+    editor.updateEnum('e-status', { color: null });
+    expect(deck().enums?.[0]).not.toHaveProperty('color');
+    refused(deck, 'invalid', () => {
+      editor.updateEnum('e-status', { color: 'purple-ish' });
+    });
+  });
+});
+
 describe('change events and the snapshot (040)', () => {
   it('keeps the incremental snapshot equal to toJSON through every database op', () => {
     const { editor, doc } = setup();
@@ -447,6 +518,12 @@ describe('change events and the snapshot (040)', () => {
       },
       () => {
         editor.update('edges', 'r-cat-parent', { cardinality: 'n-1' });
+      },
+      () => {
+        editor.setTableDisplay({ detail: 'keys', hideNotes: true });
+      },
+      () => {
+        editor.setTableDisplay({ detail: null, hideNotes: false });
       },
     ];
     for (const step of steps) {

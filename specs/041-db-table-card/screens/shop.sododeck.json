@@ -1,0 +1,207 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "Shop schema",
+  "packs": ["architecture", "database"],
+  "enums": [
+    {
+      "id": "enum-order-status",
+      "name": "order_status",
+      "color": "violet",
+      "values": [
+        {
+          "id": "v-pending",
+          "name": "pending",
+          "note": "Awaiting payment."
+        },
+        {
+          "id": "v-paid",
+          "name": "paid"
+        },
+        {
+          "id": "v-shipped",
+          "name": "shipped"
+        },
+        {
+          "id": "v-cancelled",
+          "name": "cancelled"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "orders",
+      "type": "db-table",
+      "title": "orders",
+      "description": "One row per checkout. Totals are stored in cents, never floats.",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "schema": "public",
+      "columns": [
+        {
+          "id": "o-id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "o-customer",
+          "name": "customer_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "o-number",
+          "name": "number",
+          "type": "text",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "id": "o-status",
+          "name": "status",
+          "type": "order_status",
+          "notNull": true,
+          "enumRef": "enum-order-status"
+        },
+        {
+          "id": "o-coupon",
+          "name": "coupon_code",
+          "type": "text"
+        },
+        {
+          "id": "o-total",
+          "name": "total_cents",
+          "type": "int",
+          "notNull": true
+        },
+        {
+          "id": "o-created",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true
+        }
+      ],
+      "indexes": [
+        {
+          "id": "ix-1",
+          "columns": ["o-customer"]
+        },
+        {
+          "id": "ix-2",
+          "columns": ["o-number"],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "id": "customers",
+      "type": "db-table",
+      "title": "customers",
+      "position": {
+        "x": 320,
+        "y": 0
+      },
+      "schema": "auth",
+      "style": {
+        "fill": "blue"
+      },
+      "columns": [
+        {
+          "id": "c-id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "c-email",
+          "name": "email",
+          "type": "text",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "id": "c-name",
+          "name": "name",
+          "type": "text"
+        },
+        {
+          "id": "c-created",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true
+        }
+      ],
+      "indexes": [
+        {
+          "id": "ix-3",
+          "columns": ["c-email"]
+        }
+      ]
+    },
+    {
+      "id": "order-items",
+      "type": "db-table",
+      "title": "order_items",
+      "position": {
+        "x": 320,
+        "y": 260
+      },
+      "schema": "public",
+      "detail": "keys",
+      "columns": [
+        {
+          "id": "i-order",
+          "name": "order_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "i-line",
+          "name": "line_no",
+          "type": "int",
+          "pk": true
+        },
+        {
+          "id": "i-qty",
+          "name": "quantity",
+          "type": "int",
+          "notNull": true
+        },
+        {
+          "id": "i-price",
+          "name": "unit_price_cents",
+          "type": "int",
+          "notNull": true
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "r1",
+      "from": "orders",
+      "to": "customers",
+      "fromColumns": ["o-customer"],
+      "toColumns": ["c-id"],
+      "cardinality": "n-1"
+    },
+    {
+      "id": "r2",
+      "from": "orders",
+      "to": "order-items",
+      "fromColumns": ["o-id"],
+      "toColumns": ["i-order"],
+      "cardinality": "1-n"
+    }
+  ],
+  "groups": [],
+  "views": [],
+  "features": [],
+  "flows": [],
+  "rules": {},
+  "stickies": []
+}

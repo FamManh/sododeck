@@ -130,3 +130,7 @@ Feature 002 complete: editor API, delete cascade, rule tables, undo grouping and
   - `pasteFragment` gives pasted columns, indexes and checks new ids and remaps index parts and pasted edges' column ends; `enumRef` is kept. `deckDialect(file | doc)` reads `generic` when absent.
   - `problems.ts`: `db-dangling-reference` (index part, `enumRef` or relationship column end naming nothing; tables only) and `db-composite-mismatch` (ends of different lengths between two tables).
   - Known limit (as 032's first field): two tabs adding a deck's first enum at the same moment create two `meta.enums` lists and one wins.
+- **Added by 041** (table card, ADR 0030; contract: `specs/041-db-table-card/contracts/format-and-model.md`):
+  - `meta.tableDisplay`: a `Y.Map` always present (created by `fromJSON`, attached on first write for older stored documents, like `tagColors`), read back only with entries (`tableDisplayMap` in `layout.ts`). A hand-written `tableDisplay: {}` is not kept.
+  - `setTableDisplay(patch)` (`ops/table-display.ts`): per-key writes, one undo step; a value sets a key, `null` (and `false` on a hide flag) removes it; unknown keys and bad values are `invalid`; nothing happens when nothing changes.
+  - `tableDisplayOf(file)` (`table-display.ts`): `detail` (`'auto'` when absent) and the four hide flags as booleans. `updateEnum` accepts `color` (`null` clears).

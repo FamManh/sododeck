@@ -106,6 +106,13 @@ export type DbName = string;
  */
 export type DbNote = string;
 /**
+ * How much of a table is shown: `names` (name only), `keys` (key columns) or `all` (every column).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "DbDetail".
+ */
+export type DbDetail = 'names' | 'keys' | 'all';
+/**
  * Semantic zoom level, from widest to narrowest: `landscape`, `system`, `container`, `component`.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
@@ -151,13 +158,6 @@ export type DbIndexPart =
   | {
       expr: DbExpr;
     };
-/**
- * How much of a table is shown: `names` (name only), `keys` (key columns) or `all` (every column).
- *
- * This interface was referenced by `SododeckFile`'s JSON-Schema
- * via the `definition` "DbDetail".
- */
-export type DbDetail = 'names' | 'keys' | 'all';
 /**
  * Protocol family: `http` (incl. HTTPS, REST, GraphQL), `grpc`, `event` (message brokers such as Kafka), `sql`, `websocket`, `other`. Put specifics ("Kafka", "HTTPS") in the edge label.
  *
@@ -285,6 +285,7 @@ export interface SododeckFile {
    * Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.
    */
   enums?: DbEnum[];
+  tableDisplay?: TableDisplay;
   /**
    * Components of the system.
    */
@@ -376,6 +377,7 @@ export interface DbEnum {
   name: DbName;
   schema?: DbName;
   note?: DbNote;
+  color?: ColorRef;
   /**
    * The values, in order. May be empty.
    */
@@ -391,6 +393,31 @@ export interface DbEnumValue {
   id: Id;
   name: DbName;
   note?: DbNote;
+}
+/**
+ * How tables draw in this deck (041). Absent keys mean Auto detail and every part shown; the editor writes a hide flag as `true` or removes it.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "TableDisplay".
+ */
+export interface TableDisplay {
+  detail?: DbDetail;
+  /**
+   * Hides data types and enum chips on table rows.
+   */
+  hideTypes?: boolean;
+  /**
+   * Hides the nullable marker on table rows.
+   */
+  hideNullable?: boolean;
+  /**
+   * Hides table notes.
+   */
+  hideNotes?: boolean;
+  /**
+   * Hides the index count footer.
+   */
+  hideIndexes?: boolean;
 }
 /**
  * A component of the system: a card of any type (service, database, queue, warehouse and so on).
