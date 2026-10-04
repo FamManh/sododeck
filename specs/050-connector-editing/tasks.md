@@ -146,7 +146,7 @@
   - drag via `startPointerDrag` into `startEndpointDrag`.
   - Add Shift + arrow (`nudgeAnchor`, one undo step per press) to `endKeys`, keeping plain arrows on `stepAnchor`.
   - Extend `route-handles.test.tsx`: the end drags while it sits under a card; Shift + → moves 1 %.
-- [ ] T019 [US2] In `apps/app/src/editor/deck-edge.tsx`:
+- [x] T019 [US2] In `apps/app/src/editor/deck-edge.tsx`:
   - read `endpointPreview` with a per-edge selector;
   - when it is set, draw the connector with that end overridden (side/at, or a new target box) in its own `shape`, and draw the pre-drag route as the 022 ghost;
   - remove the `reconnecting` class and logic.

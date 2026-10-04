@@ -25,6 +25,7 @@ import {
   offsetBends,
   samplePath,
 } from './routing/connector-geometry';
+import { withEndPreview } from './routing/end-override';
 import { LabelHandle } from './routing/label-handle';
 import { RouteHandles } from './routing/route-handles';
 import { outlinePoint } from './shapes/shape-geometry';
@@ -92,6 +93,8 @@ const markScale = (width: number): number => (width > 2 ? 1 + (width - 2) * 0.25
  */
 export const DeckEdge = memo(function DeckEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -121,16 +124,21 @@ export const DeckEdge = memo(function DeckEdge({
   // connector, and other connectors' drags are null here.
   const preview = useUiStore((s) => (s.bendPreview?.edgeId === id ? s.bendPreview : null));
   const dragging = preview !== null && showHandle;
-  // This edge's own end is being dragged to reconnect it (017 R12): drawn as a 40 % ghost while
-  // the custom connection line shows the live path.
-  const reconnecting = useUiStore((s) => s.reconnectingEdgeId === id);
+  // One of this connector's ends while it is dragged (050 R3): drawn to the live attachment, over
+  // a ghost of the route it had. Per-edge, like the bend preview.
+  const endPreview = useUiStore((s) =>
+    s.endpointPreview?.edgeId === id ? s.endpointPreview : null,
+  );
   const direction = data?.direction ?? 'forward';
   const route = data?.route;
   // Bends and anchors need the real cards (their centres and sides); everything else only needs
   // the handle points, so a connector without them draws exactly as before.
   const needsBoxes =
     (route?.waypoints?.length ?? 0) > 0 || route?.fromAt !== undefined || route?.toAt !== undefined;
-  const sized = needsBoxes && data?.fromSize !== undefined && data.toSize !== undefined;
+  const sized =
+    (needsBoxes || endPreview !== null) &&
+    data?.fromSize !== undefined &&
+    data.toSize !== undefined;
   const fromBox =
     sized && data.fromSize !== undefined
       ? boxAt(sourceX, sourceY, sides[0], data.fromSize, data.fromGeometry)
@@ -151,6 +159,24 @@ export const DeckEdge = memo(function DeckEdge({
     arrowAtEnd: direction !== 'none' && !errorEnd,
   };
   const shape = data?.shape ?? 'curved';
+  // The connector with its dragged end swapped in (FR-013); null outside an end drag.
+  const drawn =
+    endPreview === null || !sized
+      ? null
+      : withEndPreview(
+          {
+            fromBox,
+            toBox,
+            sides,
+            route,
+            fromGeometry: data.fromGeometry,
+            toGeometry: data.toGeometry,
+          },
+          endPreview,
+          { source, target },
+        );
+  const drawnFrom = drawn?.fromBox ?? fromBox;
+  const drawnTo = drawn?.toBox ?? toBox;
   const {
     path,
     labelX: pathLabelX,
@@ -159,14 +185,19 @@ export const DeckEdge = memo(function DeckEdge({
     ends,
   } = connectorPath({
     shape,
-    fromBox,
-    toBox,
-    sides,
-    route,
+    fromBox: drawnFrom,
+    toBox: drawnTo,
+    sides: drawn?.sides ?? sides,
+    route: drawn === null ? route : drawn.route,
     bends: preview?.bends,
     options: arrows,
-    ...endShapes,
-    spread: data?.fan === undefined ? 0 : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
+    ...(drawn === null
+      ? endShapes
+      : { fromGeometry: drawn.fromGeometry, toGeometry: drawn.toGeometry }),
+    spread:
+      drawn !== null || data?.fan === undefined
+        ? 0
+        : (data.fan.index - (data.fan.count - 1) / 2) * FAN_SPACING,
   });
   const flowStroke = flow === undefined ? undefined : FLOW_STROKES[flowStrokeKey(flow)];
   // Precedence (022 R12): selected > flow / error / candidate strokes > the connector's own
@@ -182,21 +213,23 @@ export const DeckEdge = memo(function DeckEdge({
         ? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))'
         : lineColour(own.color, theme)));
   const hasBadges = (flow?.badges.length ?? 0) > 0;
-  // The route as it was before this bend gesture, computed only while dragging, for the ghost.
-  const ghostPath = dragging
-    ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows, ...endShapes }).path
-    : null;
+  // The route as it was before this bend or end gesture, computed only while dragging, for the
+  // ghost.
+  const ghostPath =
+    dragging || drawn !== null
+      ? connectorPath({ shape, fromBox, toBox, sides, route, options: arrows, ...endShapes }).path
+      : null;
   // The bends the handles sit on: the stored ones, or a 017 offset's two corners (R3).
   const bends: Point[] =
     route?.waypoints !== undefined && sized
-      ? decodeWaypoints(route.waypoints, cardCentre(fromBox), cardCentre(toBox))
+      ? decodeWaypoints(route.waypoints, cardCentre(drawnFrom), cardCentre(drawnTo))
       : shape === 'elbow' && segment !== null && data?.routable === true
         ? offsetBends(segment, ends.start)
         : [];
   const bendContext: BendContext = {
     edgeId: id,
-    fromCentre: cardCentre(fromBox),
-    toCentre: cardCentre(toBox),
+    fromCentre: cardCentre(drawnFrom),
+    toCentre: cardCentre(drawnTo),
     start: ends.start,
     end: ends.end,
     bends,
@@ -308,7 +341,6 @@ export const DeckEdge = memo(function DeckEdge({
         className={cn(
           animate && own.dash !== 'solid' && 'sd-edge-run',
           flow?.style === 'invalid' && !reducedMotion && 'sd-edge-flash',
-          reconnecting && 'sd-edge-reconnecting',
         )}
         style={{
           stroke,
@@ -431,7 +463,7 @@ export const DeckEdge = memo(function DeckEdge({
           rest={{ x: labelX, y: labelY }}
         />
       )}
-      {showHandle && shape !== 'straight' && data?.routable === true && (
+      {showHandle && data?.routable === true && (
         <RouteHandles
           context={bendContext}
           anchors={{
@@ -440,6 +472,16 @@ export const DeckEdge = memo(function DeckEdge({
             toSide: sides[1],
             toAt: route?.toAt ?? 0.5,
           }}
+          ends={{
+            source,
+            target,
+            fromSide: route?.fromSide,
+            fromAt: route?.fromAt,
+            toSide: route?.toSide,
+            toAt: route?.toAt,
+          }}
+          // A straight line has no bends: only its two ends (050 contract UI).
+          bendable={shape !== 'straight'}
         />
       )}
     </>
