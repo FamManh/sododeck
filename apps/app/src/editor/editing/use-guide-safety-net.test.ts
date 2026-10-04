@@ -15,6 +15,19 @@ function leaveLeftovers(gesture: 'bend' | 'card-resize' | 'pan' = 'bend') {
   ui().setLabelPreview({ edgeId: 'e', at: 0.3, snapped: false });
   ui().setConnectorReadout('x 1 · y 2');
   ui().setResizeReadout({ width: 200, height: 80, x: 0, y: 0 });
+  ui().setEndpointPreview({
+    edgeId: 'e',
+    end: 'target',
+    targetId: null,
+    targetKind: null,
+    box: null,
+    side: 'top',
+    at: 0.5,
+    point: { x: 1, y: 2 },
+    snapped: false,
+    automatic: false,
+    valid: 'none',
+  });
 }
 
 const flushMicrotasks = () =>
@@ -50,6 +63,7 @@ describe('useGuideSafetyNet (050 R9)', () => {
     expect(ui().guides).toHaveLength(0);
     expect(ui().bendPreview).toBeNull();
     expect(ui().labelPreview).toBeNull();
+    expect(ui().endpointPreview).toBeNull();
     expect(ui().connectorReadout).toBeNull();
     expect(ui().resizeReadout).toBeNull();
     expect(ui().canvasGesture).toBeNull();
@@ -67,6 +81,7 @@ describe('useGuideSafetyNet (050 R9)', () => {
     await flushMicrotasks();
     expect(ui().guides).toHaveLength(1);
     expect(ui().bendPreview).not.toBeNull();
+    expect(ui().endpointPreview).not.toBeNull();
     expect(ui().resizeReadout).not.toBeNull();
     expect(ui().canvasGesture).toBe('card-resize');
   });

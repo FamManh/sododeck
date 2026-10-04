@@ -1,4 +1,4 @@
-import type { FlowCheckpoint, RemovalTarget } from '@sododeck/model';
+import type { FlowCheckpoint, Geometry, RemovalTarget } from '@sododeck/model';
 import type { ColorRef, EdgeShape, Id, Side } from '@sododeck/schema';
 import { create } from 'zustand';
 
@@ -10,6 +10,7 @@ import {
   type FlyoutId,
   type ShellPrefs,
 } from '../editor/shell/shell-prefs';
+import type { ConnectionCheck } from '../editor/connection-rules';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
 import {
   loadJsonPanelPrefs,
@@ -263,6 +264,33 @@ export interface BendPreview {
   bends: readonly { x: number; y: number }[];
 }
 
+/**
+ * Whether releasing a dragged connector end would connect it (050 R3): `ok`, a refusal from the
+ * connection rules, or `none` (off every target; a group counts as none while group ends are off).
+ */
+export type EndpointDrop = ConnectionCheck | 'none';
+
+/**
+ * One connector end while it is dragged (050 R3, data-model): where it would attach. UI-only until
+ * release, then one write. `targetId` null means off every target: the end follows the pointer.
+ */
+export interface EndpointPreview {
+  edgeId: Id;
+  end: 'source' | 'target';
+  targetId: Id | null;
+  targetKind: 'node' | 'group' | null;
+  /** The target's box (canvas px) and shape outline, so the preview draws on it. */
+  box: { x: number; y: number; width: number; height: number } | null;
+  geometry?: Geometry;
+  side: Side;
+  at: number;
+  point: { x: number; y: number };
+  snapped: boolean;
+  /** In the centre zone of its own card: the end would go back to automatic. */
+  automatic: boolean;
+  valid: EndpointDrop;
+}
+
 /** A snapping guide during a drag (016 R7), in canvas px. UI-only, never saved. */
 export interface Guide {
   axis: 'x' | 'y';
@@ -395,6 +423,8 @@ export interface UiState {
   labelPreview: { edgeId: Id; at: number; snapped: boolean } | null;
   /** The `W × H` readout pill next to a dragged corner while resizing a card (017). */
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
+  /** The connector end being dragged (050 R3); null outside an end drag. */
+  endpointPreview: EndpointPreview | null;
   /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
   endpointHover: { nodeId: Id; side: Side } | null;
   /**
@@ -570,6 +600,7 @@ export interface UiState {
   setResizeReadout: (
     readout: { width: number; height: number; x: number; y: number } | null,
   ) => void;
+  setEndpointPreview: (preview: EndpointPreview | null) => void;
   setEndpointHover: (hover: { nodeId: Id; side: Side } | null) => void;
   setEndpointAnchor: (anchor: UiState['endpointAnchor']) => void;
   setReconnectingEdge: (edgeId: Id | null) => void;
@@ -753,6 +784,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     connectorReadout: null,
     labelPreview: null,
     resizeReadout: null,
+    endpointPreview: null,
     endpointHover: null,
     endpointAnchor: null,
     reconnectingEdgeId: null,
@@ -1336,6 +1368,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     setResizeReadout: (resizeReadout) => {
       set({ resizeReadout });
     },
+    setEndpointPreview: (endpointPreview) => {
+      set({ endpointPreview });
+    },
     setEndpointHover: (endpointHover) => {
       set({ endpointHover });
     },
@@ -1404,6 +1439,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         connectorReadout: null,
         labelPreview: null,
         resizeReadout: null,
+        endpointPreview: null,
         endpointHover: null,
         endpointAnchor: null,
         reconnectingEdgeId: null,

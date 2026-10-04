@@ -16,6 +16,7 @@ export function clearGestureLeftovers(): void {
   ui.setGuides([]);
   if (ui.bendPreview !== null) ui.setBendPreview(null);
   if (ui.labelPreview !== null) ui.setLabelPreview(null);
+  if (ui.endpointPreview !== null) ui.setEndpointPreview(null);
   if (ui.connectorReadout !== null) ui.setConnectorReadout(null);
   if (ui.resizeReadout !== null) ui.setResizeReadout(null);
   if (ui.dragReadout !== null) ui.setDragReadout(null);

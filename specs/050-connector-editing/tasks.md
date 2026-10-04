@@ -126,7 +126,7 @@
   - `TargetScene` built from the drawn flow nodes (card boxes, `group:` frame rects, `collapsed:` cards, plus shape geometry);
   - `hitTarget(point, scene, zoom)`.
   - Make T013 pass. Group targets stay disabled for writing until US4 (T030), but are already returned here.
-- [ ] T015 [P] [US2] Write failing tests in `apps/app/src/editor/editing/endpoint-drag.test.ts` with a real `DeckEditor`:
+- [x] T015 [P] [US2] Write failing tests in `apps/app/src/editor/editing/endpoint-drag.test.ts` with a real `DeckEditor`:
   - press without move writes nothing (FR-007);
   - the pointer offset is kept, so a drag by (dx, dy) moves the attachment from the original end, not from the pointer;
   - sliding on the same card writes `toSide/toAt` once (one undo step);
@@ -135,7 +135,7 @@
   - dropping on another card writes `to` plus `toSide/toAt` in one undo step;
   - `self` / `duplicate` refusals write nothing and announce the refusal;
   - Esc and blur clear `endpointPreview`.
-- [ ] T016 [US2] Implement `apps/app/src/editor/editing/endpoint-drag.ts`: `startEndpointDrag`, `moveEndpoint`, `endEndpointDrag`, `cancelEndpointDrag`, writing `endpointPreview` and `connectorReadout`. The readout reads "right side · 37 %", "… · snapped", "automatic" or "→ {title}". Register with `setActiveGesture`. Make T015 pass.
+- [x] T016 [US2] Implement `apps/app/src/editor/editing/endpoint-drag.ts`: `startEndpointDrag`, `moveEndpoint`, `endEndpointDrag`, `cancelEndpointDrag`, writing `endpointPreview` and `connectorReadout`. The readout reads "right side · 37 %", "… · snapped", "automatic" or "→ {title}". Register with `setActiveGesture`. Make T015 pass.
 - [ ] T017 [US2] In `apps/app/src/state/ui-store.ts`:
   - add `endpointPreview` with its setter and reset;
   - remove `endpointHover`, `endpointAnchor` and `reconnectingEdgeId`;
