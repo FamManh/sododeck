@@ -69,7 +69,7 @@
       "tags": ["pci"],
       "tech": "REST",
       "host": "SaaS",
-      "icon": "credit-card",
+      "icon": "lucide:credit-card",
       "links": [{ "label": "Status page", "url": "https://status.example.com" }],
       "group": "external",
       "position": { "x": 900, "y": 360 },

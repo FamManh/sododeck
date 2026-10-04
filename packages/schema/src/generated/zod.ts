@@ -313,7 +313,7 @@ export const sododeckFileSchema = z
               .string()
               .min(1)
               .describe(
-                "Icon key from the app's icon set. When absent, the icon of the node kind is used.",
+                'Icon reference `set:icon` (e.g. `lucide:server`); without a set it means lucide. A reference the app cannot show is kept and the node shows its type icon.',
               )
               .optional(),
             links: z
