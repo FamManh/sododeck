@@ -6,6 +6,7 @@ import { schemaExport } from '../export/schema-export';
 import { DEFAULT_SQL_OPTIONS } from '../export/types';
 import { edgeCaseDeck } from '../fixtures/export-edge-cases';
 import { shopDeck } from '../fixtures/shop';
+import { foldColumnChecks } from '../sync/normalise';
 import { applyImport } from './apply-import';
 import { createParsers } from './load-parsers';
 import { runImport } from './pipeline';
@@ -100,19 +101,22 @@ describe('DBML round-trip with the export (FR-029, SC-003, 045 SC-002)', () => {
     const first = dbml(source);
     const imported = await importInto(first, source.name ?? 'Shop');
     expect(imported.dialect).toBe('postgres');
-    // Column checks come back as table checks (DBML has only the table form); compare the rest.
-    const strip = (s: ReturnType<typeof schemaByName>) => ({
-      ...s,
-      tables: s.tables.map((t) => ({
-        ...t,
-        columns: t.columns.map(({ check: _check, ...c }) => c),
-        checks: [
-          ...t.checks,
-          ...t.columns.flatMap((c) => (c.check === undefined ? [] : [{ expr: c.check }])),
-        ],
-      })),
+    // Column checks come back as table checks (DBML has only the table form): fold both sides.
+    const fold = (deck: SododeckFile): SododeckFile => ({
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.type === 'db-table' ? foldColumnChecks(n) : n)),
     });
-    expect(strip(schemaByName(imported))).toEqual(strip(schemaByName(source)));
+    const strip = (deck: SododeckFile) => {
+      const s = schemaByName(fold(deck));
+      return {
+        ...s,
+        tables: s.tables.map((t) => ({
+          ...t,
+          checks: t.checks.map(({ name, expr }) => ({ name, expr })),
+        })),
+      };
+    };
+    expect(strip(imported)).toEqual(strip(source));
     expect(dbml(imported)).toBe(first);
   });
 

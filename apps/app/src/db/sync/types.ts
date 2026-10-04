@@ -63,9 +63,11 @@ export interface SyncContext {
   scope: SyncScope;
   memory: SessionMemory;
   /** Injected so tests are deterministic; real ids come from the model's generator. */
-  newId: (prefix: 'node' | 'edge' | 'dbcol' | 'dbidx' | 'dbchk' | 'enum' | 'enumval') => Id;
+  newId: (prefix: string) => Id;
   /** Placement in an empty deck. */
   viewport: Rect;
+  /** The size of a card, for placing new tables; a rough table estimate when absent. */
+  sizeOf?: (node: Node) => { width: number; height: number };
 }
 
 /** Fields of a table DBML expresses (the only ones a patch may hold). */
@@ -147,8 +149,11 @@ export interface EnumOps {
 
 export interface NewRelationship {
   id: Id;
+  /** A remembered edge restored with the table: its other fields (route, style) come back. */
+  base?: Edge;
   from: Id;
   to: Id;
+  /** Empty for a plain n-n between two keys. */
   fromColumns: Id[];
   toColumns: Id[];
   name?: string;
@@ -163,8 +168,9 @@ export interface RelationshipPatch {
   name?: string | null;
   from?: Id;
   to?: Id;
-  fromColumns?: Id[];
-  toColumns?: Id[];
+  /** `null` removes the column ends (a plain n-n). */
+  fromColumns?: Id[] | null;
+  toColumns?: Id[] | null;
   cardinality?: Cardinality;
   fromOptional?: boolean | null;
   toOptional?: boolean | null;
