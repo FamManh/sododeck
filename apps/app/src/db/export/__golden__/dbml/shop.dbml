@@ -148,14 +148,14 @@ Ref: addresses.customer_id > customers.id [delete: cascade]
 Ref: categories.parent_id ?>? categories.id
 Ref: order_items.order_id > orders.id [delete: cascade]
 Ref: order_items.product_id > products.id [delete: restrict]
-Ref "bills to": orders.billing_address_id ?>? addresses.id
 Ref places: orders.customer_id > customers.id [delete: cascade]
 Ref "ships to": orders.shipping_address_id ?>? addresses.id
+Ref "bills to": orders.billing_address_id ?>? addresses.id
 Ref: payments.order_id > orders.id
 Ref "listed in": products.id <> categories.id
-Ref: reviews.customer_id ?>? customers.id [delete: set null]
 Ref: reviews.product_id > products.id [delete: cascade]
+Ref: reviews.customer_id ?>? customers.id [delete: set null]
 Ref: sessions.user_id > users.id [delete: cascade]
-Ref: shipment_items.(order_id, product_id) > order_items.(order_id, product_id)
 Ref: shipment_items.shipment_id > shipments.id [delete: cascade]
+Ref: shipment_items.(order_id, product_id) > order_items.(order_id, product_id)
 Ref: shipments.order_id > orders.id

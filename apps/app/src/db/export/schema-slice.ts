@@ -295,9 +295,9 @@ export function buildSchemaSlice(deck: SododeckFile, request: SchemaExportReques
     if (from === undefined || to === undefined) continue;
     relationships.push(resolveRelationship(edge, from, to));
   }
-  relationships.sort(
-    (a, b) => (position.get(a.from) ?? 0) - (position.get(b.from) ?? 0) || cmp(a.id, b.id),
-  );
+  // By table, then in deck order (stable sort): ids are random, so they cannot order an import
+  // the way its file did (044 round-trip).
+  relationships.sort((a, b) => (position.get(a.from) ?? 0) - (position.get(b.from) ?? 0));
 
   function addOutside(edge: Edge, inside: Id): void {
     const n2n = edge.cardinality === 'n-n';

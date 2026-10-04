@@ -26,6 +26,8 @@ export const EXPORT_NOTE_KINDS = [
   'unnamed-table',
   'no-cardinality',
   'name-changed',
+  // 044 R13: DBML cannot hold a relationship from a column to itself.
+  'same-column-ref',
 ] as const;
 
 export type ExportNoteKind = (typeof EXPORT_NOTE_KINDS)[number];
