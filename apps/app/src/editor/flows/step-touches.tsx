@@ -17,6 +17,9 @@ import { contextOf, keyId, touchOptions, type TouchOption } from './touch-option
 
 const ACCESS_NAME: Record<TouchAccess, string> = { read: 'read', write: 'write' };
 
+/** `pendingFocus` value for the add button (ids never contain `+`). */
+const ADD = '+add';
+
 type Node = SododeckFile['nodes'][number];
 
 /** "orders" or "orders · email" for a stored touch (its ids when the table is gone). */
@@ -44,16 +47,19 @@ export function StepTouches({
   step: Step;
 }) {
   const editor = useEditor();
-  const listRef = useRef<HTMLUListElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const touches = step.touches ?? [];
   const byId = new Map(deck.nodes.map((node) => [node.id, node]));
   const hasTables = deck.nodes.some(isDbTable);
 
-  // The row to focus once React has drawn it: a new row, or the next one after a removal.
+  // What to focus once React has drawn it: a new row, the next one after a removal, or the add
+  // button when the last row goes (`ADD`).
   const pendingFocus = useRef<string | null>(null);
   const focusToggle = (id: string) => {
-    listRef.current
-      ?.querySelector<HTMLElement>(`[data-touch="${id}"] [data-access-toggle]`)
+    rootRef.current
+      ?.querySelector<HTMLElement>(
+        id === ADD ? '[data-add-touch]' : `[data-touch="${id}"] [data-access-toggle]`,
+      )
       ?.focus();
   };
   useEffect(() => {
@@ -84,79 +90,77 @@ export function StepTouches({
     // Keep the keyboard in the list: the next row, else the previous, else the add button.
     const next = touches[index + 1] ?? touches[index - 1];
     if (next !== undefined) focusRow(next);
+    else pendingFocus.current = ADD;
   };
 
   return (
     <PanelSection label="Touches" aria-label="Touches">
-      {touches.length === 0 ? (
-        <p className="text-body-sm text-ink-secondary">This step touches no tables.</p>
-      ) : (
-        <ul
-          ref={listRef}
-          role="list"
-          aria-label="Tables this step touches"
-          className="flex flex-col gap-1"
-        >
-          {touches.map((touch, index) => {
-            const label = touchLabel(byId, touch);
-            const table = byId.get(touch.table);
-            const context = table === undefined ? 'Missing table' : contextOf(byId, table);
-            const RowIcon = touch.column === undefined ? Table : Columns3;
-            return (
-              <li
-                key={keyId(touch)}
-                data-touch={keyId(touch)}
-                className="flex h-9 items-center gap-2 rounded-row bg-surface-2 pr-1 pl-1.5"
-                onKeyDown={(event) => {
-                  if (event.key === 'Delete' || event.key === 'Backspace') {
-                    event.preventDefault();
-                    remove(touch, index);
-                  }
-                }}
-              >
-                <button
-                  type="button"
-                  data-access-toggle
-                  aria-label={`Access for ${label}: ${ACCESS_NAME[touch.access]}`}
-                  title="Switch read / write"
-                  className={cn(
-                    'flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-row px-1.5 text-caption font-medium text-ink hover:bg-surface-3',
-                    focusRing,
-                  )}
-                  onClick={() => {
-                    const access = touch.access === 'read' ? 'write' : 'read';
-                    editor.setTouchAccess(flowId, step.id, touch, access);
-                    useUiStore.getState().announce(`${label}: ${access}`);
+      <div ref={rootRef} className="contents">
+        {touches.length === 0 ? (
+          <p className="text-body-sm text-ink-secondary">This step touches no tables.</p>
+        ) : (
+          <ul role="list" aria-label="Tables this step touches" className="flex flex-col gap-1">
+            {touches.map((touch, index) => {
+              const label = touchLabel(byId, touch);
+              const table = byId.get(touch.table);
+              const context = table === undefined ? 'Missing table' : contextOf(byId, table);
+              const RowIcon = touch.column === undefined ? Table : Columns3;
+              return (
+                <li
+                  key={keyId(touch)}
+                  data-touch={keyId(touch)}
+                  className="flex h-9 items-center gap-2 rounded-row bg-surface-2 pr-1 pl-1.5"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Delete' || event.key === 'Backspace') {
+                      event.preventDefault();
+                      remove(touch, index);
+                    }
                   }}
                 >
-                  <AccessMarker access={touch.access} />
-                  {touch.access === 'read' ? 'Read' : 'Write'}
-                </button>
-                <RowIcon
-                  aria-hidden
-                  strokeWidth={ICON_STROKE_WIDTH}
-                  className="size-3.5 shrink-0 text-ink-secondary"
-                />
-                <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                  <span className="truncate text-body-sm">{label}</span>
-                  <span className="truncate text-caption text-ink-secondary">{context}</span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove ${label}`}
-                  onClick={() => {
-                    remove(touch, index);
-                  }}
-                >
-                  <X />
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <AddTouchPopover deck={deck} disabled={!hasTables} onPick={add} />
+                  <button
+                    type="button"
+                    data-access-toggle
+                    aria-label={`Access for ${label}: ${ACCESS_NAME[touch.access]}`}
+                    title="Switch read / write"
+                    className={cn(
+                      'flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-row px-1.5 text-caption font-medium text-ink hover:bg-surface-3',
+                      focusRing,
+                    )}
+                    onClick={() => {
+                      const access = touch.access === 'read' ? 'write' : 'read';
+                      editor.setTouchAccess(flowId, step.id, touch, access);
+                      useUiStore.getState().announce(`${label}: ${access}`);
+                    }}
+                  >
+                    <AccessMarker access={touch.access} />
+                    {touch.access === 'read' ? 'Read' : 'Write'}
+                  </button>
+                  <RowIcon
+                    aria-hidden
+                    strokeWidth={ICON_STROKE_WIDTH}
+                    className="size-3.5 shrink-0 text-ink-secondary"
+                  />
+                  <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span className="truncate text-body-sm">{label}</span>
+                    <span className="truncate text-caption text-ink-secondary">{context}</span>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${label}`}
+                    onClick={() => {
+                      remove(touch, index);
+                    }}
+                  >
+                    <X />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <AddTouchPopover deck={deck} disabled={!hasTables} onPick={add} />
+      </div>
     </PanelSection>
   );
 }
@@ -197,7 +201,7 @@ function AddTouchPopover({
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" disabled={disabled} className="self-start">
+        <Button data-add-touch variant="ghost" size="sm" disabled={disabled} className="self-start">
           <Plus />
           Add table or column…
         </Button>

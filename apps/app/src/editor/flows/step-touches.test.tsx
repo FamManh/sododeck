@@ -91,6 +91,7 @@ describe('StepTouches (049 US3)', () => {
     await user.keyboard('{Delete}');
     expect(touches()).toBeUndefined();
     expect(screen.getByText('This step touches no tables.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add table or column…' })).toHaveFocus();
   });
 
   it('does not add a pair twice; it focuses the existing row', async () => {
