@@ -186,11 +186,11 @@
 
 ### App
 
-- [ ] T026 [P] [US4] Write failing tests in `apps/app/src/editor/connection-rules.test.ts`:
+- [x] T026 [P] [US4] Write failing tests in `apps/app/src/editor/connection-rules.test.ts`:
   - `'contains'` for a group ↔ a member card, a nested group, or a card two levels down, in either direction;
   - duplicate and self rules for groups;
   - `connectTargets` lists groups with kind `group`.
-- [ ] T027 [US4] Implement this in `apps/app/src/editor/connection-rules.ts`, add the refusal text "Can't connect a group to something inside it" to the existing refusal map, and make T026 pass.
+- [x] T027 [US4] Implement this in `apps/app/src/editor/connection-rules.ts`, add the refusal text "Can't connect a group to something inside it" to the existing refusal map, and make T026 pass.
 - [ ] T028 [P] [US4] Write failing tests in `apps/app/src/editor/visible-graph.test.ts` and `deck-to-flow.test.ts`:
   - an edge to a shown group maps to `group:<id>` with the frame box;
   - to a collapsed group, it maps to `collapsed:<id>`;
@@ -265,12 +265,12 @@
 
 **Independent Test**: quickstart 15.
 
-- [X] T040 [P] [US5] Write failing tests in `apps/app/src/editor/routing/elbow-runs.test.ts`:
+- [x] T040 [P] [US5] Write failing tests in `apps/app/src/editor/routing/elbow-runs.test.ts`:
   - runs from `elbowVertices` output, with the exact axis;
   - `kind` is start / inner / end;
   - runs under 24 screen px are omitted at zooms 0.5, 1 and 2.
-- [X] T041 [US5] Implement `apps/app/src/editor/routing/elbow-runs.ts` (`elbowRuns`). Make T040 pass.
-- [X] T042 [P] [US5] Write failing tests in `apps/app/src/editor/editing/segment-drag.test.ts`:
+- [x] T041 [US5] Implement `apps/app/src/editor/routing/elbow-runs.ts` (`elbowRuns`). Make T040 pass.
+- [x] T042 [P] [US5] Write failing tests in `apps/app/src/editor/editing/segment-drag.test.ts`:
   - an inner run moves both bends on one axis only;
   - a start or end run changes only `fromAt` / `toAt` (side pinned, clamped to 0–1);
   - an automatic elbow is materialised into bends on drag start (022 rule: `offset` removed, `elbow` pinned);
@@ -278,7 +278,7 @@
   - release simplifies and writes once;
   - `resetSegment` drops that run's bends, or clears `at`;
   - Esc writes nothing.
-- [X] T043 [US5] Implement `apps/app/src/editor/editing/segment-drag.ts`, reusing `snapBend`, `simplifyWaypoints` and `encodeWaypoint` from `routing/connector-geometry.ts`. Add `canvasGesture: 'segment'` to `state/ui-store.ts`. Make T042 pass.
+- [x] T043 [US5] Implement `apps/app/src/editor/editing/segment-drag.ts`, reusing `snapBend`, `simplifyWaypoints` and `encodeWaypoint` from `routing/connector-geometry.ts`. Add `canvasGesture: 'segment'` to `state/ui-store.ts`. Make T042 pass.
 - [ ] T044 [US5] In `apps/app/src/editor/routing/route-handles.tsx`, render segment handles instead of midpoints on elbow connectors: `button` "Move segment N", drag via `startPointerDrag`, double-click resets, arrows move 22 px on its axis (Shift 1 px), ⌫ resets. Extend `route-handles.test.tsx`. Add the segment handle look to `index.css` (a short pill on the run, tokens only).
 
 **Checkpoint**: quickstart 15 passes.
@@ -291,7 +291,7 @@
 
 **Independent Test**: quickstart 17.
 
-- [X] T045 [P] [US7] Write failing tests in `apps/app/src/editor/editing/spread-ends.test.ts`:
+- [x] T045 [P] [US7] Write failing tests in `apps/app/src/editor/editing/spread-ends.test.ts`:
   - 10 ends on one side give `at = (i+1)/11`, ordered by the other end's y;
   - ties are broken by edge id;
   - automatic ends are included at their resolved side;
@@ -300,7 +300,7 @@
   - hidden connectors are skipped;
   - group ends work (US4);
   - same input gives the same output.
-- [X] T046 [US7] Implement `apps/app/src/editor/editing/spread-ends.ts` (`spreadEnds`). Make T045 pass.
+- [x] T046 [US7] Implement `apps/app/src/editor/editing/spread-ends.ts` (`spreadEnds`). Make T045 pass.
 - [ ] T047 [US7] Add the action `node.spreadEnds` to `apps/app/src/editor/actions/connection-actions.ts` (`where: { menu: ['node'], toolbar: ['node'] }`, label "Spread ends evenly", `disabledReason` "No side has two or more connector ends"). `run` writes every patch in one `oneStep` and announces "Spread N ends on M sides". Add a palette command "Spread connector ends evenly" (alias "distribute ends") in `apps/app/src/editor/command-palette/commands.ts`. Extend `connection-actions.test.ts` and the palette tests.
 
 **Checkpoint**: quickstart 17 passes.
