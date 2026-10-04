@@ -34,6 +34,27 @@ export type ProblemKind =
   | 'db-dangling-reference'
   | 'db-composite-mismatch';
 
+export type Severity = 'error' | 'warning';
+
+/** Severity is a property of the kind (047 R1): one table to review. */
+export const SEVERITY: Readonly<Record<ProblemKind, Severity>> = {
+  'duplicate-connection': 'warning',
+  'step-without-connection': 'error',
+  'broken-chain': 'error',
+  'incomplete-flow': 'warning',
+  'overlapping-conditions': 'warning',
+  'missing-rule': 'warning',
+  'rule-without-catch-all': 'warning',
+  'invalid-rule-cells': 'error',
+  'broken-reference': 'error',
+  'card-size-out-of-range': 'warning',
+  'unknown-card-type': 'warning',
+  'unknown-pack': 'warning',
+  'field-value-dangling': 'warning',
+  'db-dangling-reference': 'error',
+  'db-composite-mismatch': 'error',
+};
+
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
   'duplicate-connection',
@@ -76,22 +97,46 @@ export interface Problem {
   objectTitle: string;
   /** Step position within a flow, else 0. */
   order: number;
-  /** A one-click fix the Problems panel offers (032: remove a dangling value). */
-  fix?: ProblemFix;
+  /** From `SEVERITY[kind]`, unless a draft overrides it. */
+  severity: Severity;
+  /** The faulty table row, when the problem is about one column (047). */
+  column?: { tableId: Id; columnId: Id };
+  /** One-click fixes the Problems panel and popover offer; the first is primary. */
+  fixes?: readonly ProblemFix[];
 }
 
-/** Fixes a problem row can offer. */
-export interface ProblemFix {
-  kind: 'remove-value';
-  nodeId: Id;
-  fieldId: Id;
-  label: string;
-}
+/** What a `rename` fix edits. */
+export type RenameTarget =
+  | { type: 'table'; tableId: Id }
+  | { type: 'column'; tableId: Id; columnId: Id }
+  | { type: 'index'; tableId: Id; indexId: Id }
+  | { type: 'enum'; enumId: Id };
+
+/**
+ * Fixes as plain data (047 R5), so `checkDeck` stays pure and JSON crosses the worker boundary.
+ * The app applies them; `label` is the button text.
+ */
+export type ProblemFix = { label: string } & (
+  | { kind: 'remove-value'; nodeId: Id; fieldId: Id }
+  | { kind: 'make-pk'; tableId: Id; columnId: Id }
+  | { kind: 'add-id-pk'; tableId: Id; type: string }
+  | { kind: 'match-type'; tableId: Id; columnId: Id; type: string; size?: string }
+  | { kind: 'create-junction'; edgeId: Id }
+  | { kind: 'remove-default'; tableId: Id; columnId: Id }
+  | { kind: 'allow-null'; tableId: Id; columnId: Id }
+  | { kind: 'delete-edge'; edgeId: Id }
+  | { kind: 'rename'; target: RenameTarget }
+  | { kind: 'pick-column'; edgeId: Id }
+  | { kind: 'add-values'; enumId: Id }
+  | { kind: 'pick-type'; tableId: Id; columnId: Id }
+);
 
 export interface DeckProblems {
-  /** Sorted by kind, object title, step order, then key. */
+  /** Errors first, then kind, object title, step order, then key. */
   list: readonly Problem[];
   total: number;
+  errors: number;
+  warnings: number;
   /** Node, edge, flow and rule ids (and other holders) → their problems, for glyphs. */
   byObject: ReadonlyMap<Id, readonly Problem[]>;
 }
@@ -113,7 +158,9 @@ interface Draft {
   order?: number;
   /** Object ids to show the problem on (defaults to the target's ids). */
   on: readonly Id[];
-  fix?: ProblemFix;
+  severity?: Severity;
+  column?: { tableId: Id; columnId: Id };
+  fixes?: readonly ProblemFix[];
 }
 
 const TITLES: Record<ProblemKind, string> = {
@@ -286,7 +333,7 @@ function checkFieldValues(file: SododeckFile, add: Add): void {
         on: [node.id],
         detail,
         objectTitle: node.title,
-        fix: { kind: 'remove-value', nodeId: node.id, fieldId, label: 'Remove value' },
+        fixes: [{ kind: 'remove-value', nodeId: node.id, fieldId, label: 'Remove value' }],
       });
     }
   }
@@ -639,6 +686,7 @@ function targetIds(target: ProblemTarget): readonly Id[] {
   }
 }
 
+const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1 };
 const KIND_RANK = new Map(PROBLEM_KINDS.map((k, i) => [k, i]));
 
 function finish(drafts: readonly Draft[]): DeckProblems {
@@ -656,12 +704,15 @@ function finish(drafts: readonly Draft[]): DeckProblems {
       detail: d.detail,
       objectTitle: d.objectTitle,
       order: d.order ?? 0,
-      ...(d.fix === undefined ? {} : { fix: d.fix }),
+      severity: d.severity ?? SEVERITY[d.kind],
+      ...(d.column === undefined ? {} : { column: d.column }),
+      ...(d.fixes === undefined ? {} : { fixes: d.fixes }),
     });
   }
   const on = new Map(drafts.map((d) => [`${d.kind}:${d.ids.join(':')}`, d.on]));
   list.sort(
     (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       (KIND_RANK.get(a.kind) ?? 0) - (KIND_RANK.get(b.kind) ?? 0) ||
       a.objectTitle.localeCompare(b.objectTitle, undefined, { sensitivity: 'base' }) ||
       a.order - b.order ||
@@ -675,5 +726,6 @@ function finish(drafts: readonly Draft[]): DeckProblems {
       else bucket.push(problem);
     }
   }
-  return { list, total: list.length, byObject };
+  const errors = list.filter((p) => p.severity === 'error').length;
+  return { list, total: list.length, errors, warnings: list.length - errors, byObject };
 }

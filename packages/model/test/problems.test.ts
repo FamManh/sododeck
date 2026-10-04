@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { checkDeck, type Problem } from '../src';
+import { checkDeck, PROBLEM_KINDS, SEVERITY, type Problem, type ProblemKind } from '../src';
 import { readExample, shopDeck } from './helpers';
 
 type NodeData = SododeckFile['nodes'][number];
@@ -46,7 +46,13 @@ describe('checkDeck (015)', () => {
   describe('bundled decks (SC-001)', () => {
     it('finds nothing in the minimal example or an empty deck', async () => {
       expect(checkDeck(await readExample('minimal.sododeck.json')).total).toBe(0);
-      expect(checkDeck(emptySododeckFile())).toEqual({ list: [], total: 0, byObject: new Map() });
+      expect(checkDeck(emptySododeckFile())).toEqual({
+        list: [],
+        total: 0,
+        errors: 0,
+        warnings: 0,
+        byObject: new Map(),
+      });
     });
 
     // These examples contain real problems (a request that returns to the gateway breaks the
@@ -72,9 +78,9 @@ describe('checkDeck (015)', () => {
       expect(checkDeck(file).list.map((p) => p.detail)).toEqual([
         "Place order · step 4 doesn't continue from step 3",
         "Place order · step 5 doesn't continue from step 4",
+        "Reattempt policy · 1 cell can't be read",
         'Delivery tier · some inputs match no row',
         'Reattempt policy · some inputs match no row',
-        "Reattempt policy · 1 cell can't be read",
       ]);
     });
   });
@@ -326,12 +332,12 @@ describe('checkDeck (015)', () => {
         },
       });
       expect(checkDeck(file).list.map((p) => [p.kind, p.detail, p.target])).toEqual([
+        ['invalid-rule-cells', "Sizes · 1 cell can't be read", { type: 'rule', ruleId: 'S' }],
         [
           'rule-without-catch-all',
           'Delivery tier · some inputs match no row',
           { type: 'rule', ruleId: 'R' },
         ],
-        ['invalid-rule-cells', "Sizes · 1 cell can't be read", { type: 'rule', ruleId: 'S' }],
       ]);
     });
   });
@@ -372,10 +378,10 @@ describe('checkDeck (015)', () => {
         rules: { R: rule('R', []) },
       });
 
-    it('sorts by kind, then object title', () => {
+    it('sorts errors first, then by kind, then object title', () => {
       expect(checkDeck(messy()).list.map((p) => `${p.kind}/${p.objectTitle}`)).toEqual([
-        'duplicate-connection/A',
         'step-without-connection/F',
+        'duplicate-connection/A',
         'rule-without-catch-all/R',
       ]);
     });
@@ -476,12 +482,9 @@ describe('field-value-dangling (032 FR-017)', () => {
     expect(problem.title).toBe('Value without a field');
     expect(problem.detail).toBe(detail);
     expect(problem.target).toEqual({ type: 'node', id: 'w' });
-    expect(problem.fix).toEqual({
-      kind: 'remove-value',
-      nodeId: 'w',
-      fieldId,
-      label: 'Remove value',
-    });
+    expect(problem.fixes).toEqual([
+      { kind: 'remove-value', nodeId: 'w', fieldId, label: 'Remove value' },
+    ]);
     expect(problem.key).toBe(`field-value-dangling:w:${fieldId}`);
   });
 
@@ -621,5 +624,62 @@ describe('groups as connector ends (050)', () => {
     expect(problem.kind).toBe('broken-reference');
     expect(problem.target).toEqual({ type: 'object', ref: { scope: 'groups', id: 'g' } });
     expect(problem.detail).toBe('Group "Payments" has the same id as a card');
+  });
+});
+
+describe('severity (047 R1)', () => {
+  const ERRORS: readonly ProblemKind[] = [
+    'broken-reference',
+    'step-without-connection',
+    'broken-chain',
+    'invalid-rule-cells',
+    'db-dangling-reference',
+    'db-composite-mismatch',
+  ];
+
+  it('gives every kind the severity of contracts/lint-rules.md', () => {
+    for (const kind of PROBLEM_KINDS) {
+      expect(SEVERITY[kind], kind).toBe(ERRORS.includes(kind) ? 'error' : 'warning');
+    }
+    expect(Object.keys(SEVERITY).sort()).toEqual([...PROBLEM_KINDS].sort());
+  });
+
+  it('marks the missing-enum problem as an error', () => {
+    const file = structuredClone(shopDeck());
+    const customers = file.nodes.find((n) => n.id === 'customers');
+    const column = customers?.columns?.[2];
+    if (column === undefined) throw new Error('fixture changed');
+    column.enumRef = 'e-gone';
+    const problem = checkDeck(file).list.find((p) => p.title === 'Missing enum');
+    expect(problem?.severity).toBe('error');
+  });
+
+  it('counts errors and warnings and lists errors first', () => {
+    const file = deck({
+      nodes: [node('a'), node('b'), node('c')],
+      edges: [edge('e1', 'a', 'b'), edge('e2', 'a', 'b')],
+      flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'gone' }] }],
+      rules: { R: rule('R', []) },
+    });
+    const result = checkDeck(file);
+    expect(result.errors).toBe(1);
+    expect(result.warnings).toBe(2);
+    expect(result.errors + result.warnings).toBe(result.total);
+    expect(result.list.map((p) => p.severity)).toEqual(['error', 'warning', 'warning']);
+  });
+
+  it('sorts within a severity by kind rank, object title, order, key', () => {
+    const file = deck({
+      nodes: [node('a'), node('b'), node('z', { title: 'Zeta' })],
+      edges: [
+        edge('e1', 'a', 'b'),
+        edge('e2', 'a', 'b'),
+        edge('e3', 'z', 'b'),
+        edge('e4', 'z', 'b'),
+      ],
+    });
+    const list = checkDeck(file).list;
+    expect(list.map((p) => p.objectTitle)).toEqual(['A', 'Zeta']);
+    expect(list.every((p) => p.severity === 'warning')).toBe(true);
   });
 });

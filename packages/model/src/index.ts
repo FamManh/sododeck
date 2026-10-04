@@ -76,11 +76,14 @@ export { endpointOf, endpointTitle, type Endpoint, type EndpointKind } from './e
 export {
   checkDeck,
   PROBLEM_KINDS,
+  SEVERITY,
   type DeckProblems,
   type Problem,
   type ProblemFix,
   type ProblemKind,
   type ProblemTarget,
+  type RenameTarget,
+  type Severity,
 } from './problems';
 export type { RemovalResult } from './ops/cascade';
 export type { StyleChannel, StyleTargets } from './ops/style';

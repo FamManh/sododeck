@@ -48,8 +48,8 @@
 
 ### Severity and problem shape
 
-- [ ] T006 [P] Write severity tests in `packages/model/test/problems.test.ts`: every `ProblemKind` has a severity matching contracts/lint-rules.md; the missing-enum `db-dangling-reference` is an error; `DeckProblems.errors` / `warnings` counts; the list sorts errors before warnings, then by kind rank, object title, order, key; an existing `field-value-dangling` problem carries `fixes: [{ kind: 'remove-value', … }]` instead of `fix`.
-- [ ] T007 Implement in `packages/model/src/problems.ts`: `Severity`, `SEVERITY: Record<ProblemKind, Severity>`, `Problem.severity`, `Problem.column?`, `Problem.fixes?` (replacing `fix`; migrate the 032 `remove-value` fix), the `ProblemFix` union from research R5 (all kinds declared now), `DeckProblems.errors` / `warnings`, and the severity-first sort in `finish`. Export the new types. T006 is green.
+- [x] T006 [P] Write severity tests in `packages/model/test/problems.test.ts`: every `ProblemKind` has a severity matching contracts/lint-rules.md; the missing-enum `db-dangling-reference` is an error; `DeckProblems.errors` / `warnings` counts; the list sorts errors before warnings, then by kind rank, object title, order, key; an existing `field-value-dangling` problem carries `fixes: [{ kind: 'remove-value', … }]` instead of `fix`.
+- [x] T007 Implement in `packages/model/src/problems.ts`: `Severity`, `SEVERITY: Record<ProblemKind, Severity>`, `Problem.severity`, `Problem.column?`, `Problem.fixes?` (replacing `fix`; migrate the 032 `remove-value` fix), the `ProblemFix` union from research R5 (all kinds declared now), `DeckProblems.errors` / `warnings`, and the severity-first sort in `finish`. Export the new types. T006 is green.
 - [ ] T008 Update the app for `fixes`: `apps/app/src/editor/problems/problems-panel.tsx` reads `problem.fixes` (only `remove-value` so far, behaviour unchanged) and every other use of `problem.fix` (`grep -rn "\.fix\b" apps/app/src`). Tests stay green.
 
 **Checkpoint**: type data lives in the model, every problem has a severity, and the app still behaves as before.
