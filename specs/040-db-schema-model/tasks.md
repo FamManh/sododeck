@@ -183,9 +183,9 @@
 
 ## Phase 9: Problems (FR-021, cross-story)
 
-- [ ] T046 [P] Add to `packages/model/test/problems.test.ts`: `db-dangling-reference` for an index part, a `fromColumns` item and an `enumRef` naming nothing (target and `byObject` ids as in the contract); `db-composite-mismatch` for ends of length 2 and 1; no problem for column ends on a `service` card; problems keys stable across recomputation
-- [ ] T047 Implement both kinds in `packages/model/src/problems.ts` (add to `ProblemKind`, sort order, titles "Missing column" / "Key columns don't match" with details naming table and column ids or names), keeping the computation linear in columns
-- [ ] T048 [P] Add both kinds to `apps/app/src/editor/problems/problem-kinds.ts` (title, lucide icon) and update `go-to-problem.test.ts` or the kinds test if it enumerates kinds
+- [x] T046 [P] Add to `packages/model/test/problems.test.ts`: `db-dangling-reference` for an index part, a `fromColumns` item and an `enumRef` naming nothing (target and `byObject` ids as in the contract); `db-composite-mismatch` for ends of length 2 and 1; no problem for column ends on a `service` card; problems keys stable across recomputation
+- [x] T047 Implement both kinds in `packages/model/src/problems.ts` (add to `ProblemKind`, sort order, titles "Missing column" / "Key columns don't match" with details naming table and column ids or names), keeping the computation linear in columns
+- [x] T048 [P] Add both kinds to `apps/app/src/editor/problems/problem-kinds.ts` (title, lucide icon) and update `go-to-problem.test.ts` or the kinds test if it enumerates kinds
 
 ---
 

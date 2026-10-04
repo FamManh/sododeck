@@ -2,11 +2,12 @@
  * Deck-wide problems (feature 015, ADR 0013): duplicate connections, flow and
  * rule problems and broken references, gathered from the existing checks (`analyzeFlow`,
  * `ruleChecks`, `checkIntegrity`) plus three new ones. Pure and JSON-based so it runs in a worker.
- * Problems are derived for display and never stored in the deck (§g-23).
+ * Problems are derived for display and never stored in the deck (§g-23). 040 adds the database
+ * schema's kept-but-broken references and mismatched composite keys (research R11).
  */
 import type { Edge, Flow, Id, Node, SododeckFile } from '@sododeck/schema';
 
-import { drawnShapeType, isKnownPack, isKnownType, typeName } from './card-types';
+import { drawnShapeType, isDbTable, isKnownPack, isKnownType, typeName } from './card-types';
 import { validateValue } from './field-values';
 import { appliesTo, findField } from './fields';
 import { analyzeFlow, type FlowAnalysis, type PathStep } from './flow-paths';
@@ -28,7 +29,9 @@ export type ProblemKind =
   | 'card-size-out-of-range'
   | 'unknown-card-type'
   | 'unknown-pack'
-  | 'field-value-dangling';
+  | 'field-value-dangling'
+  | 'db-dangling-reference'
+  | 'db-composite-mismatch';
 
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
@@ -45,6 +48,8 @@ export const PROBLEM_KINDS: readonly ProblemKind[] = [
   'unknown-card-type',
   'unknown-pack',
   'field-value-dangling',
+  'db-dangling-reference',
+  'db-composite-mismatch',
 ];
 
 /** Where a problem is fixed. */
@@ -124,6 +129,8 @@ const TITLES: Record<ProblemKind, string> = {
   'unknown-card-type': 'Unknown card type',
   'unknown-pack': 'Unknown pack',
   'field-value-dangling': 'Value without a field',
+  'db-dangling-reference': 'Missing column',
+  'db-composite-mismatch': "Key columns don't match",
 };
 
 /**
@@ -180,6 +187,7 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   checkCardSizes(file.nodes, add);
   checkCardTypes(file, add);
   checkFieldValues(file, add);
+  checkDatabase(file, nodeById, add);
   return finish(drafts);
 }
 
@@ -278,6 +286,82 @@ function checkFieldValues(file: SododeckFile, add: Add): void {
         fix: { kind: 'remove-value', nodeId: node.id, fieldId, label: 'Remove value' },
       });
     }
+  }
+}
+
+/**
+ * Database schema references the deck keeps but that name nothing (040, research R11): an index
+ * part or an `enumRef` of a table, a column end of a relationship whose end card is a table; and
+ * composite ends of different lengths between two tables. Keys on other cards are ignored
+ * (FR-018). Linear in columns: each table's column ids are collected once.
+ */
+function checkDatabase(file: SododeckFile, nodeById: ReadonlyMap<Id, Node>, add: Add): void {
+  const enums = new Set((file.enums ?? []).map((e) => e.id));
+  const columnsOf = new Map<Id, Set<Id>>();
+  for (const node of file.nodes) {
+    if (!isDbTable(node)) continue;
+    const columns = new Set((node.columns ?? []).map((c) => c.id));
+    columnsOf.set(node.id, columns);
+    for (const column of node.columns ?? []) {
+      if (column.enumRef === undefined || enums.has(column.enumRef)) continue;
+      add({
+        kind: 'db-dangling-reference',
+        ids: [node.id, column.id, column.enumRef],
+        target: { type: 'node', id: node.id },
+        on: [node.id],
+        title: 'Missing enum',
+        detail: `${node.title}.${column.name} uses an enum this deck does not have (${column.enumRef})`,
+        objectTitle: node.title,
+      });
+    }
+    for (const index of node.indexes ?? []) {
+      for (const part of index.columns) {
+        if (typeof part !== 'string' || columns.has(part)) continue;
+        add({
+          kind: 'db-dangling-reference',
+          ids: [node.id, index.id, part],
+          target: { type: 'node', id: node.id },
+          on: [node.id],
+          detail: `${node.title} · index ${index.name ?? index.id} names a column the table does not have (${part})`,
+          objectTitle: node.title,
+        });
+      }
+    }
+  }
+  for (const edge of file.edges) {
+    const from = nodeById.get(edge.from);
+    const to = nodeById.get(edge.to);
+    const route = `${from?.title ?? edge.from} → ${to?.title ?? edge.to}`;
+    for (const [side, ids, table] of [
+      ['from', edge.fromColumns, from],
+      ['to', edge.toColumns, to],
+    ] as const) {
+      const columns = table === undefined ? undefined : columnsOf.get(table.id);
+      if (ids === undefined || table === undefined || columns === undefined) continue;
+      for (const id of ids) {
+        if (columns.has(id)) continue;
+        add({
+          kind: 'db-dangling-reference',
+          ids: [edge.id, side, id],
+          target: { type: 'edges', ids: [edge.id] },
+          on: [edge.id, table.id],
+          detail: `${route} · names a column ${table.title} does not have (${id})`,
+          objectTitle: from?.title ?? edge.from,
+        });
+      }
+    }
+    const { fromColumns, toColumns } = edge;
+    if (fromColumns === undefined || toColumns === undefined) continue;
+    if (!columnsOf.has(edge.from) || !columnsOf.has(edge.to)) continue;
+    if (fromColumns.length === toColumns.length) continue;
+    add({
+      kind: 'db-composite-mismatch',
+      ids: [edge.id],
+      target: { type: 'edges', ids: [edge.id] },
+      on: [edge.id],
+      detail: `${route} · ${String(fromColumns.length)} key columns on one end, ${String(toColumns.length)} on the other`,
+      objectTitle: from?.title ?? edge.from,
+    });
   }
 }
 
