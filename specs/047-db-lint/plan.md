@@ -39,7 +39,7 @@ Decisions are in [research.md](research.md).
 
 **Scale/Scope**: about 6 new files, about 25 changed (12 of them import updates for the moved type data); ADR 0013 and 0029 amendments.
 
-**Blocked by**: nothing. 048 (row limit) is not merged; the reveal override is written so 048 can honour it.
+**Blocked by**: nothing. 048 (row limit) merged on 2026-10-04 (#102); the reveal override projects the table at All and expanded, as 048's row-edit override does.
 
 ## Constitution Check
 

@@ -8,7 +8,7 @@ Phase 0 of [plan.md](plan.md). The clarify answers (2026-10-04) are settled:
 - "Change type" changes the referencing (foreign key) column.
 - One "type not in the list" warning per type name.
 
-The code facts come from a survey of `main` on 2026-10-04 after 052 merged (#101). 048 is not merged.
+The code facts come from a survey of `main` on 2026-10-04 after 052 (#101) and 048 (#102) merged.
 
 ## R1. Severity lives on the problem, fixed per kind, in the model
 
@@ -106,9 +106,9 @@ The code facts come from a survey of `main` on 2026-10-04 after 052 merged (#101
 ## R7. Go to a problem: row focus, temporary All, fix popover
 
 - **Decision:**
-  - `goToProblem` (node / edges branches) also, when `problem.column` is set: `setFocusedRow({ tableId, columnId })`, and sets a new UI-only `ui.problemReveal = { tableId }` that `view-state.ts` applies like 043's `withRowEdit` (the table shows detail All). It clears when the selection leaves the table. Nothing is written.
+  - `goToProblem` (node / edges branches) also, when `problem.column` is set: `setFocusedRow({ tableId, columnId })`, and sets a new UI-only `ui.problemReveal = { tableId }` that `editor/views/view-state.ts` applies like `withRowEdit` (the table shows detail All, expanded). It clears when the selection leaves the table. Nothing is written.
   - Then it opens `ui.problemPopover = { key }`. `editor/problems/problem-fix-popover.tsx` is anchored to the row (or the table header, or the edge midpoint), shows the severity icon, title, detail and the fix buttons (primary first), and closes on Esc, outside click or when the problem disappears.
-  - 048's row limit is not merged. When it lands, its "kept rows" must include a revealed row; this is noted for 048 in the ADR amendment.
+  - 048's row limit (merged, #102) hides rows past 12 unless the table is expanded. The reveal projects the table like 048's `withRowEdit` (`editor/views/view-state.ts`): `detail: 'all'` and `expanded: true` in the projected deck only, so a cut row shows.
 - **Rationale:** FR-011; 043 and 042 already provide row focus and the All override pattern.
 
 ## R8. Problems list: filter, icons, fixes, badge

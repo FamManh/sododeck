@@ -101,7 +101,7 @@
 
 - [ ] T025 [P] [US2] Implement `apps/app/src/db/junction-table.ts` (`planJunction`, `applyJunction`) per research R6, reusing `editor/canvas-actions.ts` table creation and `copyName`. T021 is green.
 - [ ] T026 [US2] Implement `apps/app/src/editor/problems/apply-fix.ts` per research R5 and contracts/lint-ui.md (one `oneStep` / `editor.batch` per write fix, announcements, `refuseLocked`), and use it for the fix buttons in `problems-panel.tsx` (labels from the contract). T022 is green.
-- [ ] T027 [US2] Add `problemPopover` and `problemReveal` to `apps/app/src/state/ui-store.ts` (cleared on deck switch; reveal cleared when the selection leaves the table); apply the reveal in `apps/app/src/views/view-state.ts` like `withRowEdit`; extend `apps/app/src/editor/problems/go-to-problem.ts` and `use-go-to-problem.ts` for row focus (`setFocusedRow`, `focusRowSoon`), reveal and popover. T023 is green.
+- [ ] T027 [US2] Add `problemPopover` and `problemReveal` to `apps/app/src/state/ui-store.ts` (cleared on deck switch; reveal cleared when the selection leaves the table); apply the reveal in `apps/app/src/editor/views/view-state.ts` like `withRowEdit`; extend `apps/app/src/editor/problems/go-to-problem.ts` and `use-go-to-problem.ts` for row focus (`setFocusedRow`, `focusRowSoon`), reveal and popover. T023 is green.
 - [ ] T028 [US2] Implement `apps/app/src/editor/problems/problem-fix-popover.tsx` (anchored to the row, header or edge midpoint) and mount it in the canvas overlay next to the other canvas popovers. T024 is green.
 
 **Checkpoint**: every problem can be reached and the obvious ones fixed in one click.
@@ -130,7 +130,7 @@
 
 - [ ] T031 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` after the change; save `specs/047-db-lint/bench-after.md`; stay within 5 % of `bench-before.md`.
 - [ ] T032 [P] Compare frames 144, 161 (problem state) and 167 in light and dark at 100 %; fix spacing and tokens; capture screenshots for the report.
-- [ ] T033 [P] Docs: amend `docs/decisions/0013-derived-problems.md` (severity, `column`, `fixes`, sort) and `docs/decisions/0029-database-pack-model.md` (lint kinds, type data in the model, note for 048: the row limit must keep a revealed row); update `packages/model/CLAUDE.md` (`db-types.ts`, severity, fixes), `apps/app/CLAUDE.md` (problems UI, marks, apply-fix, junction table; 043's mismatch replaced); mark 047 in `docs/backlog-database.md` (drop "Block SQL export with errors" from §047, which 052 built) and fix the feature inventory rows that still name 043 for the drawer and type picker.
+- [ ] T033 [P] Docs: amend `docs/decisions/0013-derived-problems.md` (severity, `column`, `fixes`, sort) and `docs/decisions/0029-database-pack-model.md` (lint kinds, type data in the model, the reveal override and 048's row limit); update `packages/model/CLAUDE.md` (`db-types.ts`, severity, fixes), `apps/app/CLAUDE.md` (problems UI, marks, apply-fix, junction table; 043's mismatch replaced); mark 047 in `docs/backlog-database.md` (drop "Block SQL export with errors" from §047, which 052 built) and fix the feature inventory rows that still name 043 for the drawer and type picker.
 - [ ] T034 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass; no skipped or `.only` tests; walk through `quickstart.md`; final report (what changed, skipped, uncertain).
 
 ---
