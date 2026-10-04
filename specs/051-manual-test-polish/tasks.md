@@ -315,22 +315,22 @@
 
 ## Phase 11: Polish & Cross-Cutting Concerns
 
-- [ ] T046 [P] Write `docs/decisions/0031-manual-test-polish.md` (use the next free number if 0031 is taken). It records:
+- [x] T046 [P] Write `docs/decisions/0031-manual-test-polish.md` (use the next free number if 0031 is taken). It records:
   - hover focus only inside Focus mode, and Focus mode without a selection (redefines 034);
   - level thresholds 30 / 50 / 150 (redefines frame 123);
   - pack display order split from file order, and Logistics off by default (amends ADR 0025);
   - G-4 retired.
-- [ ] T047 [P] Update `DESIGN.md`:
+- [x] T047 [P] Update `DESIGN.md`:
   - the "Zoom levels (123)" table (:292-302): ≤ 30 %, 31–50 %, 51–150 %, > 150 %;
   - the `--sd-deck-tilt` token row (:201): removed, or "none";
   - the "Being dragged" state (:255) and :260: lift only, no tilt; under ⌥ the original stays in place and the copy carries the lift; drop the never-built origin ghost.
-- [ ] T048 [P] Update `docs/spec.md`:
+- [x] T048 [P] Update `docs/spec.md`:
   - V-3 (:185): Focus mode toggles a mode; hover or selection drives the focus inside it;
   - G-4 (:285): retired by founder decision on 2026-10-04.
 
   Add an amendment note to `docs/decisions/0025-card-type-registry.md` (:27, "all four packs on").
 
-- [ ] T049 [P] Update the package docs:
+- [x] T049 [P] Update the package docs:
   - `packages/model/CLAUDE.md` (:109-125): `NEW_DECK_PACKS`, `PACK_DISPLAY_ORDER`, `onByDefault`;
   - `apps/app/CLAUDE.md`: remove the storage card (:35-36), fix "cycles the 13 types with every pack on" (:105), note `focus-target.ts` and the duplicate-drag mode.
 - [ ] T050 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix anything red, and update the smoke suite only if a change breaks it.
