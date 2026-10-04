@@ -117,3 +117,49 @@ describe('DeckInspector (story 2, FR-012)', () => {
     }
   });
 });
+
+describe('DeckInspector › Database (041 US4)', () => {
+  const tableDeck = {
+    ...inspectorDeck,
+    nodes: [
+      ...inspectorDeck.nodes,
+      { id: 'orders', type: 'db-table', title: 'orders', columns: [] },
+    ],
+  };
+
+  function setupWith(file: typeof inspectorDeck) {
+    const { wrapper, doc, editor } = editorWrapper(file);
+    render(<Harness />, { wrapper });
+    return { doc, editor, user: userEvent.setup() };
+  }
+
+  it('shows four switches, all on, under "Show on tables"', () => {
+    setupWith(tableDeck);
+    expect(screen.getByText('Database')).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: 'Show on tables' });
+    const names = within(list)
+      .getAllByRole('switch')
+      .map((s) => (s as HTMLButtonElement).labels[0]?.textContent);
+    expect(names).toEqual(['Data types', 'Nullable marker', 'Notes', 'Index footer']);
+    for (const toggle of within(list).getAllByRole('switch')) expect(toggle).toBeChecked();
+  });
+
+  it('writes the hide flag in one undo step, and removes it when turned back on', async () => {
+    const { doc, editor, user } = setupWith(tableDeck);
+    await user.click(screen.getByRole('switch', { name: 'Notes' }));
+    expect(toJSON(doc).tableDisplay).toEqual({ hideNotes: true });
+    expect(screen.getByRole('switch', { name: 'Notes' })).not.toBeChecked();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).not.toHaveProperty('tableDisplay');
+    await user.click(screen.getByRole('switch', { name: 'Data types' }));
+    await user.click(screen.getByRole('switch', { name: 'Data types' }));
+    expect(toJSON(doc)).not.toHaveProperty('tableDisplay');
+  });
+
+  it('is absent with no table and the Database pack off', () => {
+    setupWith({ ...inspectorDeck, packs: ['architecture'] });
+    expect(screen.queryByRole('list', { name: 'Show on tables' })).not.toBeInTheDocument();
+  });
+});
