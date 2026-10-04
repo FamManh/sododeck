@@ -1,4 +1,4 @@
-import type { Problem } from '@sododeck/model';
+import type { Problem, ProblemFix } from '@sododeck/model';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -20,10 +20,9 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
   const problems = useProblems();
   const editor = useEditor();
   const announce = useUiStore((s) => s.announce);
-  /** A row's one-click fix (032: remove a dangling value), one undo step. */
-  const applyFix = (problem: Problem) => {
-    const { fix } = problem;
-    if (fix === undefined) return;
+  /** A row's one-click fix, one undo step. Only `remove-value` (032) exists so far. */
+  const applyFix = (fix: ProblemFix) => {
+    if (fix.kind !== 'remove-value') return;
     oneStep(editor, () => {
       editor.setValues([fix.nodeId], fix.fieldId, null);
     });
@@ -122,21 +121,22 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                       className="mt-0.5 size-4 shrink-0 text-ink-secondary"
                     />
                   </button>
-                  {problem.fix !== undefined && (
+                  {problem.fixes?.map((fix) => (
                     <button
+                      key={fix.kind}
                       type="button"
                       aria-describedby={`${problem.key}-detail`}
                       onClick={() => {
-                        applyFix(problem);
+                        applyFix(fix);
                       }}
                       className={cn(
                         'mt-1 ml-7 cursor-pointer rounded-button px-2 py-1 text-body-sm text-ink hover:bg-surface-2',
                         focusRing,
                       )}
                     >
-                      {problem.fix.label}
+                      {fix.label}
                     </button>
-                  )}
+                  ))}
                 </li>
               );
             })}

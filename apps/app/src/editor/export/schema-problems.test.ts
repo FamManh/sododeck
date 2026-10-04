@@ -4,7 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { schemaProblems } from './schema-problems';
 
 function problem(key: string, kind: Problem['kind'], target: Problem['target']): Problem {
-  return { key, kind, target, title: key, detail: key, objectTitle: key, order: 0 };
+  return {
+    key,
+    kind,
+    target,
+    title: key,
+    detail: key,
+    objectTitle: key,
+    order: 0,
+    severity: 'error',
+  };
 }
 
 const list = [
@@ -14,7 +23,13 @@ const list = [
   problem('d', 'broken-reference', { type: 'node', id: 'orders' }),
   problem('e', 'db-dangling-reference', { type: 'nodes', ids: ['x', 'orders'] }),
 ];
-const problems: DeckProblems = { list, total: list.length, byObject: new Map() };
+const problems: DeckProblems = {
+  list,
+  total: list.length,
+  errors: list.length,
+  warnings: 0,
+  byObject: new Map(),
+};
 const deck = { edges: [{ id: 'e1', from: 'items', to: 'orders' }] };
 
 describe('schemaProblems', () => {

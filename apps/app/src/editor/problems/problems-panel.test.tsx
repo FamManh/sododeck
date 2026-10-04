@@ -35,13 +35,13 @@ const rowNames = () =>
     .map((b) => b.textContent);
 
 describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
-  it('lists every problem in order, with its count and the help line', async () => {
+  it('lists every problem, errors first, with its count and the help line', async () => {
     setup();
     const heading = await screen.findByRole('heading', { name: /Problems/ });
     expect(heading).toHaveTextContent('3');
     expect(rowNames()).toEqual([
-      'Duplicate connectionAPI Gateway → Tracking Service appears twice',
       'Step without connectionProof of delivery · step 1 used a deleted connection',
+      'Duplicate connectionAPI Gateway → Tracking Service appears twice',
       'Rule without catch-allDelivery tier · some inputs match no row',
     ]);
     expect(screen.getByText(/Click a problem, or press ↵ on it/)).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     expect(onActivate).not.toHaveBeenCalled();
     await user.keyboard('{ArrowDown}{Enter}');
     expect(onActivate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: 'step-without-connection' }),
+      expect.objectContaining({ kind: 'duplicate-connection' }),
     );
     await user.keyboard(' ');
     expect(onActivate).toHaveBeenCalledTimes(2);
