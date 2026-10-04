@@ -72,6 +72,7 @@ import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './edit
 import { enterRows, leaveRows, moveRowFocus } from './table/row-focus';
 import { useUndoToast } from './undo-toast';
 import { isNodeLocked, refuseLocked } from './lock';
+import { groupTitleOf } from './schema-groups';
 
 export { isTextTarget };
 
@@ -564,7 +565,7 @@ export function useCanvasKeyDown() {
                 ? `${COLLAPSED_NODE_PREFIX}${groupId}`
                 : `${GROUP_NODE_PREFIX}${groupId}`,
             );
-            const title = deck.groups.find((group) => group.id === groupId)?.title ?? groupId;
+            const title = groupTitleOf(deck, groupId) ?? groupId;
             now.announce(`${title} ${nextCollapsed ? 'collapsed' : 'expanded'}`);
           };
           document.addEventListener('pointerdown', onPointer, true);
@@ -701,7 +702,7 @@ export function useCanvasKeyDown() {
           } else if (current !== null && groupIdOf(current) !== null) {
             const groupId = groupIdOf(current);
             if (groupId === null) return;
-            const title = deck.groups.find((group) => group.id === groupId)?.title;
+            const title = groupTitleOf(deck, groupId);
             if (title === undefined) return;
             event.preventDefault();
             ui.drillInto({ kind: 'group', id: groupId, viewport: getViewport() });

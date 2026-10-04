@@ -4,7 +4,7 @@
  * nothing is stored, so By group is one switch away and the JSON never sees these groups.
  * Frames are not stored either: `groupBounds` derives them from the members.
  */
-import { isDbTable, schemaGroupId } from '@sododeck/model';
+import { isDbTable, isSchemaGroupId, schemaGroupId } from '@sododeck/model';
 import type { Group, Node, SododeckFile } from '@sododeck/schema';
 
 type Deck = SododeckFile;
@@ -61,4 +61,14 @@ export function schemaGroupedDeck(deck: Deck): Deck {
   const out = lists === null ? deck : { ...deck, ...lists };
   deckCache.set(deck, out);
   return out;
+}
+
+/**
+ * The name of a group in `deck`'s stored groups, or the schema name of a derived `schema:<name>`
+ * id (stored decks do not hold the derived groups); undefined for an unknown id.
+ */
+export function groupTitleOf(deck: Pick<SododeckFile, 'groups'>, id: string): string | undefined {
+  const stored = deck.groups.find((group) => group.id === id);
+  if (stored !== undefined) return stored.title;
+  return isSchemaGroupId(id) ? id.slice(schemaGroupId('').length) : undefined;
 }

@@ -1,4 +1,10 @@
-import type { FlowCheckpoint, Geometry, RemovalTarget, Width } from '@sododeck/model';
+import {
+  isSchemaGroupId,
+  type FlowCheckpoint,
+  type Geometry,
+  type RemovalTarget,
+  type Width,
+} from '@sododeck/model';
 import type { ColorRef, EdgeShape, Id, Side } from '@sododeck/schema';
 import { create } from 'zustand';
 
@@ -1536,6 +1542,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     startTitleEdit: (titleEdit) => {
       const state = get();
       if (isFlowMode(state) || state.flowSession !== null) return false;
+      // A derived schema group (048) has no stored title to rename.
+      if (titleEdit.target === 'group' && isSchemaGroupId(titleEdit.id)) return false;
       set({ titleEdit, contextMenu: null, toolbarField: null });
       return true;
     },

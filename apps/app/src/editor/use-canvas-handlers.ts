@@ -49,6 +49,7 @@ import { addNoteAt } from './stickies/sticky-actions';
 import { isNodeLocked, refuseLocked } from './lock';
 import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
+import { groupTitleOf } from './schema-groups';
 import { scopeOf, visibleGraph } from './visible-graph';
 import {
   collapsedOf,
@@ -296,7 +297,7 @@ export function useCanvasHandlers() {
         const deck = readDeck(editor.doc);
         const groupId = groupIdOf(node.id);
         if (groupId !== null) {
-          const title = deck.groups.find((group) => group.id === groupId)?.title;
+          const title = groupTitleOf(deck, groupId);
           if (title === undefined) return;
           if (isCollapsedNode(node.id)) {
             // A collapsed card opens back into its frame; Enter still drills in.
