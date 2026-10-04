@@ -1,5 +1,6 @@
 import type { SododeckFile } from '@sododeck/schema';
 
+import { mergeChips, type TouchChip } from '../db/touches';
 import type { EdgeFlowMark, FlowOverlay } from './flows/flow-overlay';
 import type { PlayedPath } from './flows/played-path';
 import type { StepState } from './flows/step-marks';
@@ -11,7 +12,12 @@ export interface CollapsedFlowMarks {
   cards: ReadonlyMap<string, StepState>;
   /** The number the folded sticker prints (current and upcoming only; played shows a check). */
   cardNumbers: ReadonlyMap<string, string>;
+  /** The database cards' step chips (049) merged onto their collapsed group's card. */
+  chips?: ReadonlyMap<string, TouchChip>;
 }
+
+/** Same as `visible-graph`'s collapsed card prefix. */
+const COLLAPSED_PREFIX = 'collapsed:';
 
 const EMPTY_COLLAPSED_FLOW_MARKS: CollapsedFlowMarks = {
   merged: new Map(),
@@ -24,6 +30,7 @@ export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): Co
     return EMPTY_COLLAPSED_FLOW_MARKS;
   }
   if (overlay.edges.size === 0) return EMPTY_COLLAPSED_FLOW_MARKS;
+  const chips = collapsedChips(overlay, graph);
 
   const merged = new Map<string, EdgeFlowMark>();
   const cards = new Map<string, StepState>();
@@ -55,7 +62,25 @@ export function collapseFlowMarks(overlay: FlowOverlay, graph: VisibleGraph): Co
     if (number !== undefined) cardNumbers.set(card.groupId, number);
   }
 
-  return { merged, cards, cardNumbers };
+  return { merged, cards, cardNumbers, ...(chips.size === 0 ? {} : { chips }) };
+}
+
+/** Chips of database cards hidden in a collapsed group, merged per group in deck order (049). */
+function collapsedChips(overlay: FlowOverlay, graph: VisibleGraph): Map<string, TouchChip> {
+  const byGroup = new Map<string, TouchChip[]>();
+  for (const [nodeId, drawn] of graph.representative) {
+    if (!drawn.startsWith(COLLAPSED_PREFIX)) continue;
+    const chip = overlay.nodes.get(nodeId)?.chip;
+    if (chip === undefined) continue;
+    const groupId = drawn.slice(COLLAPSED_PREFIX.length);
+    byGroup.set(groupId, [...(byGroup.get(groupId) ?? []), chip]);
+  }
+  const out = new Map<string, TouchChip>();
+  for (const [groupId, chips] of byGroup) {
+    const merged = mergeChips(chips);
+    if (merged !== null) out.set(groupId, merged);
+  }
+  return out;
 }
 
 /** current > played > upcoming over the marks on the path; `undefined` when none is. */

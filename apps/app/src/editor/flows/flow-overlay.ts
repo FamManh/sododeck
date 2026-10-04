@@ -6,7 +6,8 @@
 import type { FlowAnalysis, PathStep, TouchAccess } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
-import type { TouchChip } from '../../db/touches';
+import { cardChip, type TouchChip } from '../../db/touches';
+import { isDatabaseCard } from '../../db/owner';
 import type { FlowSession } from '../../state/ui-store';
 import { sessionPath } from './session-path';
 import { edgeStateOf, stepMarks, type NodeStepMark, type StepState } from './step-marks';
@@ -110,7 +111,10 @@ export function flowOverlay(
   }
 
   const nodes = new Map<string, NodeFlowMark>();
-  if (playback !== null && analysis !== null) markPlayback(analysis, playback, edges, nodes);
+  if (playback !== null && analysis !== null) {
+    markPlayback(analysis, playback, edges, nodes);
+    markTouches(deck, analysis, playback, nodes);
+  }
   if (session === null) return { edges, nodes };
 
   const path = sessionPath(analysis, session.target);
@@ -160,6 +164,49 @@ function markPlayback(
   }
   for (const [nodeId, step] of stepMarks(steps, currentIndex)) {
     nodes.set(nodeId, { inPath: true, currentStep: step.state === 'current', step });
+  }
+}
+
+/**
+ * What the current step reads or writes (049): each touched table gets its access and touched
+ * columns (its `current` sticker comes from `stepMarks`), and each database card owning a touched
+ * table its chip ("writes orders +1"). Whichever is drawn at the current level shows.
+ */
+function markTouches(
+  deck: SododeckFile,
+  analysis: FlowAnalysis,
+  playback: PlaybackMarks,
+  nodes: Map<string, NodeFlowMark>,
+): void {
+  const step =
+    playback.currentStepId === null
+      ? undefined
+      : analysis.byStepId.get(playback.currentStepId)?.step;
+  const touches = step?.touches;
+  if (step === undefined || touches === undefined || touches.length === 0) return;
+  const columns = new Map<string, Map<string, TouchAccess>>();
+  const tables = new Map<string, TouchAccess>();
+  for (const touch of touches) {
+    if (tables.get(touch.table) !== 'write') tables.set(touch.table, touch.access);
+    if (touch.column === undefined) continue;
+    const own = columns.get(touch.table) ?? new Map<string, TouchAccess>();
+    own.set(touch.column, touch.access);
+    columns.set(touch.table, own);
+  }
+  for (const [tableId, access] of tables) {
+    const mark = nodes.get(tableId) ?? { inPath: true, currentStep: true, step: null };
+    const own = columns.get(tableId);
+    nodes.set(tableId, { ...mark, touch: access, ...(own === undefined ? {} : { columns: own }) });
+  }
+  for (const card of deck.nodes) {
+    if (!isDatabaseCard(card)) continue;
+    const chip = cardChip(deck, card.id, step);
+    if (chip === null) continue;
+    nodes.set(card.id, {
+      ...(nodes.get(card.id) ?? { currentStep: false, step: null }),
+      inPath: true,
+      chip,
+    });
   }
 }
 

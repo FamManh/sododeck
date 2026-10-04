@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   cardChip,
   mergedChip,
+  mergeChips,
   playerNotes,
   playerNoteText,
   touchSets,
@@ -69,8 +70,11 @@ describe('touched sets (049)', () => {
 
 describe('card chips (049)', () => {
   it('names the first touched table of the card with its verb and counts the rest', () => {
-    expect(cardChip(deck, 'odb', step)).toEqual({ text: 'writes orders +1', access: 'write' });
-    expect(cardChip(deck, 'cdb', step)).toEqual({ text: 'reads customers', access: 'read' });
+    expect(cardChip(deck, 'odb', step)).toMatchObject({
+      text: 'writes orders +1',
+      access: 'write',
+    });
+    expect(cardChip(deck, 'cdb', step)).toMatchObject({ text: 'reads customers', access: 'read' });
   });
 
   it('is null for a card the step does not touch, or a step with no touches', () => {
@@ -115,5 +119,16 @@ describe('player notes (049)', () => {
 
   it('has no text when there is nothing to name', () => {
     expect(playerNoteText([])).toBeNull();
+  });
+});
+
+describe('mergeChips (049)', () => {
+  it('keeps one chip as it is and merges several in order', () => {
+    const odb = cardChip(deck, 'odb', step);
+    const cdb = cardChip(deck, 'cdb', step);
+    if (odb === null || cdb === null) throw new Error('chips expected');
+    expect(mergeChips([odb])).toBe(odb);
+    expect(mergeChips([cdb, odb])?.text).toBe('reads customers +2');
+    expect(mergeChips([])).toBeNull();
   });
 });

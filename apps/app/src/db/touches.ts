@@ -50,24 +50,35 @@ export function touchedColumns(step: Pick<Step, 'touches'> | null | undefined) {
 
 const VERB: Record<TouchAccess, string> = { read: 'reads', write: 'writes' };
 
+export interface ChipTable {
+  title: string;
+  access: TouchAccess;
+}
+
 export interface TouchChip {
   /** "writes orders +1": the verb keeps read and write apart without colour. */
   text: string;
   /** Access of the first named table. */
   access: TouchAccess;
+  /** Every touched table the chip stands for, in step order (so chips can be merged). */
+  tables: readonly ChipTable[];
 }
 
 /** Chip text for touched tables in step order: the first one by name, "+n" for the rest. */
-export function chipOf(
-  tables: readonly { title: string; access: TouchAccess }[],
-): TouchChip | null {
+export function chipOf(tables: readonly ChipTable[]): TouchChip | null {
   const first = tables[0];
   if (first === undefined) return null;
   const more = tables.length - 1;
   return {
     text: `${VERB[first.access]} ${first.title}${more > 0 ? ` +${String(more)}` : ''}`,
     access: first.access,
+    tables,
   };
+}
+
+/** One chip for several cards' chips, in the order given (a collapsed group's cards). */
+export function mergeChips(chips: readonly TouchChip[]): TouchChip | null {
+  return chips.length === 1 ? (chips[0] ?? null) : chipOf(chips.flatMap((chip) => chip.tables));
 }
 
 /** The touched tables of `step` owned by any of `cardIds`, in step order. */
@@ -75,11 +86,11 @@ function ownedTouches(
   deck: Pick<SododeckFile, 'nodes'>,
   cardIds: ReadonlySet<Id>,
   step: Pick<Step, 'touches'> | null | undefined,
-): { title: string; access: TouchAccess }[] {
+): ChipTable[] {
   const tables = touchedTables(step);
   if (tables.size === 0) return [];
   const byId = new Map(deck.nodes.map((node) => [node.id, node]));
-  const out: { title: string; access: TouchAccess }[] = [];
+  const out: ChipTable[] = [];
   for (const [tableId, access] of tables) {
     const table = byId.get(tableId);
     if (table?.parent !== undefined && cardIds.has(table.parent)) {

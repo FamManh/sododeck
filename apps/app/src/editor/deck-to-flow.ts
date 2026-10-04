@@ -256,6 +256,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   flowInside?: StepState;
   /** The number the folded sticker prints; absent when played (✓). */
   flowNumber?: string;
+  /** Flow mode (049): the chip of the database cards inside, merged ("writes orders +2"). */
+  touchChip?: TouchChip;
   /** Resolved fill/stroke colour (020); absent when the group has no colour. */
   look?: CardLook;
 }
@@ -784,13 +786,13 @@ function collapsedNodes(
     const dimmed = view.focus !== null && !inFocus;
     const flowInside = view.marks.cards.get(card.groupId);
     const flowNumber = view.marks.cardNumbers.get(card.groupId);
+    const touchChip = view.marks.chips?.get(card.groupId);
     const look = resolveLook(
       groupsById.get(card.groupId)?.style,
       selected ? (view.stylePreview ?? undefined) : undefined,
     );
-    const className = [flowInside !== undefined ? 'in-flow' : null, focusClass(view, id)]
-      .filter(Boolean)
-      .join(' ');
+    const lit = flowInside !== undefined || touchChip !== undefined;
+    const className = [lit ? 'in-flow' : null, focusClass(view, id)].filter(Boolean).join(' ');
     const cached = collapsedCache.get(id);
     if (
       cached?.selected === selected &&
@@ -798,6 +800,7 @@ function collapsedNodes(
       cached.data.dimmed === dimmed &&
       cached.data.flowInside === flowInside &&
       cached.data.flowNumber === flowNumber &&
+      cached.data.touchChip?.text === touchChip?.text &&
       sameLook(cached.data.look, look) &&
       sameClassName(cached.className, className) &&
       Boolean(cached.domAttributes?.['aria-hidden']) === dimmed &&
@@ -831,6 +834,7 @@ function collapsedNodes(
         dimmed,
         ...(flowInside === undefined ? {} : { flowInside }),
         ...(flowNumber === undefined ? {} : { flowNumber }),
+        ...(touchChip === undefined ? {} : { touchChip }),
         ...(look === undefined ? {} : { look }),
       },
     };

@@ -99,6 +99,24 @@ describe('stepMarks', () => {
     expect(plain(stepMarks(path, 1))).toEqual({ a: 'played:✓', b: 'played:✓', c: 'upcoming:3' });
   });
 
+  it('marks the tables the current step touches as current (049), not those of other steps', () => {
+    const touch = (table: string, access: 'read' | 'write') => ({ table, access });
+    const withTouches = [step('1', 'a', 'b'), step('2', 'b', 'c'), step('3', 'c', 'd')].map(
+      (s, i) =>
+        i === 0
+          ? { ...s, step: { ...s.step, touches: [touch('t0', 'read')] } }
+          : i === 1
+            ? {
+                ...s,
+                step: { ...s.step, touches: [touch('orders', 'write'), touch('items', 'read')] },
+              }
+            : s,
+    );
+    const marks = plain(stepMarks(withTouches, 1));
+    expect(marks).toMatchObject({ orders: 'current:2', items: 'current:2' });
+    expect(marks).not.toHaveProperty('t0');
+  });
+
   it('marks nothing for an empty path or an out-of-range index', () => {
     expect(stepMarks([], 0).size).toBe(0);
     expect(stepMarks(linear(), 9).size).toBe(0);

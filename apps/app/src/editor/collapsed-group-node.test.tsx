@@ -44,6 +44,22 @@ describe('CollapsedGroupNode', () => {
     expect(screen.queryByTestId('collapsed-flow-dot')).toBeNull();
   });
 
+  it('shows the merged database chip of the cards inside and says it (049)', () => {
+    const chip = {
+      text: 'writes orders +2',
+      access: 'write' as const,
+      tables: [
+        { title: 'orders', access: 'write' as const },
+        { title: 'items', access: 'write' as const },
+        { title: 'customers', access: 'read' as const },
+      ],
+    };
+    renderWithEditor(<CollapsedGroupNode {...props({ touchChip: chip })} />, deckOf({}));
+    const front = screen.getByRole('button', { name: /^Core services, collapsed group/ });
+    expect(front).toHaveAccessibleName(/, current step writes orders \+2$/);
+    expect(within(front).getByTestId('touch-chip')).toHaveTextContent('writes orders +2');
+  });
+
   it('has no sticker when no flow step is inside', () => {
     renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
     expect(screen.queryByTestId('step-sticker')).toBeNull();

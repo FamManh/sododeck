@@ -175,7 +175,14 @@ describe('DeckNode', () => {
       renderNode(
         dbProps({
           database: { count: 2, dialect: 'Generic' },
-          touchChip: { text: 'writes orders +1', access: 'write' },
+          touchChip: {
+            text: 'writes orders +1',
+            access: 'write',
+            tables: [
+              { title: 'orders', access: 'write' },
+              { title: 'items', access: 'read' },
+            ],
+          },
         }),
       );
       expect(screen.getByTestId('touch-chip')).toHaveTextContent('writes orders +1');
