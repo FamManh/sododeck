@@ -104,3 +104,38 @@ describe('ConnectPopover', () => {
     expect(useUiStore.getState().popover).toBeNull();
   });
 });
+
+describe('ConnectPopover with groups (050 US4)', () => {
+  const grouped = deckOf({
+    nodes: [
+      { id: 'svc', type: 'service', title: 'Order Service' },
+      { id: 'db', type: 'database', title: 'Orders DB', group: 'data' },
+    ],
+    groups: [{ id: 'data', title: 'Data layer' }],
+  });
+
+  it('lists groups with the group icon and "(group)"', async () => {
+    renderWithEditor(<Harness />, grouped);
+    act(() => {
+      useUiStore.getState().openConnectPopover('svc');
+    });
+    const group = screen.getByRole('option', { name: /Data layer/ });
+    expect(group).toHaveTextContent('Data layer(group)');
+    expect(group.querySelector('[data-group-icon]')).not.toBeNull();
+    await userEvent.setup().click(group);
+    expect(useUiStore.getState().selection.edges).toHaveLength(1);
+  });
+
+  it('opens from a group and marks what is inside it as refused', async () => {
+    const { doc } = renderWithEditor(<Harness />, grouped);
+    act(() => {
+      useUiStore.getState().openConnectPopover('data');
+    });
+    expect(screen.getByRole('dialog', { name: 'Connect Data layer to…' })).toBeInTheDocument();
+    const inside = screen.getByRole('option', { name: /Orders DB/ });
+    expect(inside).toHaveAttribute('aria-disabled', 'true');
+    expect(inside).toHaveTextContent('inside');
+    await userEvent.setup().keyboard('{Enter}');
+    expect(toJSON(doc).edges).toEqual([expect.objectContaining({ from: 'data', to: 'svc' })]);
+  });
+});

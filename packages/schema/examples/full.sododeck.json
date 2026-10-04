@@ -479,6 +479,13 @@
       "toColumns": ["order-customer"],
       "cardinality": "1-1",
       "toOptional": true
+    },
+    {
+      "id": "e-clients-platform",
+      "from": "clients",
+      "to": "api-gateway",
+      "label": "All client traffic",
+      "route": { "fromSide": "right", "toSide": "left" }
     }
   ],
   "views": [

@@ -91,6 +91,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Rules',
       'Colour: none',
       'Icon',
+      'Spread ends evenly',
       'More actions',
     ]);
     expect(screen.getByRole('button', { name: 'Owner: Checkout' })).toHaveAttribute(
@@ -184,6 +185,7 @@ describe('SelectionToolbar (019 US3)', () => {
       'Icon',
       'Group',
       'Align',
+      'Spread ends evenly',
       'More actions',
     ]);
   });

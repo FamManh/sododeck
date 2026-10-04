@@ -111,4 +111,26 @@ describe('buildCommands', () => {
     ).toBe('Open rule editor');
     expect(commands[1]?.shortcut).toBe('⇧⌘L');
   });
+
+  it('offers "Spread connector ends evenly" only when it can run, found by "distribute ends"', () => {
+    const shell = {
+      canOpenDetails: false,
+      openDetails: vi.fn(),
+      jsonShown: false,
+      toggleJson: vi.fn(),
+      hideUi: vi.fn(),
+    };
+    const title = 'Spread connector ends evenly';
+    expect(buildCommands({ ...context(), shell }).map((c) => c.title)).not.toContain(title);
+
+    const spreadEnds = vi.fn();
+    const commands = buildCommands({ ...context(), shell: { ...shell, spreadEnds } });
+    const deck = emptySododeckFile();
+    const searchIndex = buildSearchIndex(deck);
+    const found = buildPaletteResults({ deck, searchIndex, query: 'distribute ends', commands })
+      .items[0];
+    expect(found?.title).toBe(title);
+    commands.find((c) => c.title === title)?.run();
+    expect(spreadEnds).toHaveBeenCalledOnce();
+  });
 });

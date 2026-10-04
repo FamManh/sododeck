@@ -34,8 +34,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * The fragment of `selection` in `file` (R10): the selected nodes, the edges with both ends
- * selected, and the selected groups whose whole subtree (members and nested groups) is selected,
+ * The fragment of `selection` in `file` (R10): the selected nodes, the edges with both ends (nodes,
+ * or kept groups since 050) in it, and the selected groups whose whole subtree (members and nested groups) is selected,
  * with their frames. References that leave the fragment (`group`, `parent`) are dropped; rule ids
  * stay and are resolved on paste. Positions and frames are the ones `viewId` draws (the base
  * view's when absent); a node without a position gets its grid slot.
@@ -98,7 +98,9 @@ export function toFragment(
       position: { x: at.x, y: at.y },
     });
   });
-  const edges: Edge[] = file.edges.filter((e) => nodeIds.has(e.from) && nodeIds.has(e.to));
+  // An end is a node or a group (050): keep an edge when both ends are in the fragment.
+  const inside = (id: Id) => nodeIds.has(id) || groupIds.has(id);
+  const edges: Edge[] = file.edges.filter((e) => inside(e.from) && inside(e.to));
 
   return {
     sododeckFragment: 1,

@@ -7,7 +7,7 @@ import type { FlowAnalysis } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { SessionTarget } from '../../state/ui-store';
-import { displayPosition, type Point } from '../canvas-geometry';
+import { displayPosition, groupBounds, type Point } from '../canvas-geometry';
 import { sessionPath } from './session-path';
 
 const byReading = (a: Point, b: Point) => a.y - b.y || a.x - b.x;
@@ -18,6 +18,12 @@ export function candidateEdges(
   target: SessionTarget,
 ): string[] {
   const positions = new Map(deck.nodes.map((n, i) => [n.id, displayPosition(n, i)]));
+  // A group end reads from its frame's top-left corner (050 R6).
+  if (deck.groups.length > 0) {
+    for (const [id, frame] of groupBounds(deck)) {
+      if (!positions.has(id)) positions.set(id, { x: frame.x, y: frame.y });
+    }
+  }
   const { nextStart } = sessionPath(analysis, target);
   return deck.edges
     .filter(

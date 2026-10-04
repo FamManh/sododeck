@@ -1,3 +1,4 @@
+import { endpointTitle } from '@sododeck/model';
 import type { ColorRef, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
@@ -58,7 +59,8 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   const removeNodeColour = (hex: string) => {
     removeDeckColour(editor, hex);
   };
-  const titleOf = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+  // The other end may be a group (050 R6).
+  const titleOf = (id: string) => endpointTitle(deck, id);
   const level = nodeLevel(deck, node.id);
   const levelText =
     level === undefined

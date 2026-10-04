@@ -111,7 +111,7 @@ export function useActionContext(
   const drill = useUiStore((s) => s.drill);
   const activeFlow = useUiStore((s) => s.activeFlow);
   const flowSession = useUiStore((s) => s.flowSession);
-  const { fitView, screenToFlowPosition, getViewport } = useReactFlow();
+  const { fitView, screenToFlowPosition, getViewport, getNodes, getEdges } = useReactFlow();
   const toast = useToastMessage();
   return useMemo(
     () =>
@@ -120,7 +120,7 @@ export function useActionContext(
         deck,
         view,
         { activeFlow, flowSession, selection, drill },
-        { fitView, screenToFlowPosition, getViewport },
+        { fitView, screenToFlowPosition, getViewport, getNodes, getEdges },
         toast,
         target,
         point ?? null,
@@ -136,6 +136,8 @@ export function useActionContext(
       fitView,
       screenToFlowPosition,
       getViewport,
+      getNodes,
+      getEdges,
       toast,
       target,
       point,
@@ -157,15 +159,20 @@ function useToastMessage(): (message: string) => void {
 /** Runs an action by id for the current selection (or `target`), if it applies. */
 export function useRunAction(): (id: string, target?: MenuTarget) => boolean {
   const editor = useEditor();
-  const { fitView, screenToFlowPosition, getViewport } = useReactFlow();
+  const { fitView, screenToFlowPosition, getViewport, getNodes, getEdges } = useReactFlow();
   const toast = useToastMessage();
   return useCallback(
     (id, target) =>
       runAction(
         ACTIONS,
         id,
-        readActionContext(editor, { fitView, screenToFlowPosition, getViewport }, toast, target),
+        readActionContext(
+          editor,
+          { fitView, screenToFlowPosition, getViewport, getNodes, getEdges },
+          toast,
+          target,
+        ),
       ),
-    [editor, fitView, screenToFlowPosition, getViewport, toast],
+    [editor, fitView, screenToFlowPosition, getViewport, getNodes, getEdges, toast],
   );
 }

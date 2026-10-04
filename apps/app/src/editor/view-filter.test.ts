@@ -252,3 +252,21 @@ describe('shape types in views (031 US5)', () => {
     expect([...result.dimmed]).toEqual(['go']);
   });
 });
+
+describe('viewFilter group ends (050 US4)', () => {
+  it("keeps a feature flow's group end drawn by keeping the cards inside it", () => {
+    const grouped: SododeckFile = {
+      ...deck,
+      edges: [...deck.edges, { id: 'eg', from: 'pay', to: 'core' }],
+      flows: [
+        { id: 'fg', title: 'Into core', feature: 'billing', steps: [{ id: 'g1', edge: 'eg' }] },
+      ],
+    };
+    // core holds svc and (through data) db.
+    expect(sorted(viewFilter(grouped, view({ feature: 'billing' }), none).hidden)).toEqual([
+      'api',
+      'app',
+      'web',
+    ]);
+  });
+});

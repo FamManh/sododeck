@@ -1,3 +1,4 @@
+import { endpointTitle } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Input } from '@sododeck/ui/components/input';
@@ -42,7 +43,8 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
   const directionId = useId();
   const virtualRef = useRef({ getBoundingClientRect: () => anchorRect(edge.id) });
 
-  const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+  // Either end may be a group (050 R6).
+  const title = (id: string) => endpointTitle(deck, id);
 
   /** One update, only when the label really changed; an empty label clears the field. */
   const commitLabel = () => {

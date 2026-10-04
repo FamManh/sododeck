@@ -280,3 +280,40 @@ describe('EdgeInspector Route fields with bends (022 US2)', () => {
     expect(edge(doc)).not.toHaveProperty('route');
   });
 });
+
+describe('EdgeInspector group ends (050 US4)', () => {
+  it('lists groups as ends, reattaches to one and refuses a group holding the other end', async () => {
+    const { user, doc } = setup('dp');
+    const to = screen.getByRole('combobox', { name: 'To' });
+    await user.clear(to);
+    await user.type(to, 'Core');
+    expect(screen.getByRole('option', { name: 'Core (group)' })).toBeInTheDocument();
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(toJSON(doc).edges.find((e) => e.id === 'dp')).toMatchObject({ from: 'd', to: 'core' });
+    expect(screen.getByRole('heading', { name: 'Dispatch Service → Core' })).toBeInTheDocument();
+
+    // Pricing Service sits in Core: it can't connect to Core.
+    const from = screen.getByRole('combobox', { name: 'From' });
+    await user.clear(from);
+    await user.type(from, 'Pricing');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "Can't connect a group to something inside it",
+    );
+    expect(toJSON(doc).edges.find((e) => e.id === 'dp')?.from).toBe('d');
+  });
+});
+
+describe('EdgeInspector route of a group connector (050 US4)', () => {
+  it('shows Route fields for an elbow connector that ends on a group', () => {
+    renderInspector(
+      {
+        ...inspectorDeck,
+        edges: [{ id: 'dg', from: 'd', to: 'core', style: { shape: 'elbow' } }],
+      },
+      { edges: ['dg'] },
+    );
+    expect(screen.getByRole('heading', { name: 'Dispatch Service → Core' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'From side' })).toBeInTheDocument();
+  });
+});

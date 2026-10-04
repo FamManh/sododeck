@@ -2,7 +2,7 @@ import { fromJSON, parseFragment, toJSON } from '@sododeck/model';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
-import { actionContext, sel, TARGETS } from '../../test/action-fixtures';
+import { actionContext, actionDeck, sel, TARGETS } from '../../test/action-fixtures';
 import { deckOf } from '../../test/render-canvas';
 import { FRAGMENT_HINT_KEY } from '../editing/clipboard-ops';
 import { shortcutLabel } from '../shell/shortcuts';
@@ -111,6 +111,25 @@ describe('running actions (019 R8)', () => {
         .map((n) => n.id),
     ).toEqual(['a', 'b']);
     expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('says how many connectors go with an ungrouped group, one undo restoring them (050 FR-022)', () => {
+    const file = toJSON(fromJSON(actionDeck));
+    file.edges.push(
+      { id: 'pg', from: 'p', to: 'g', protocol: 'http', direction: 'forward' },
+      { id: 'gc', from: 'g', to: 'child', protocol: 'http', direction: 'forward' },
+    );
+    const ctx = actionContext(TARGETS.group, 'edit', file);
+    runAction(ACTIONS, 'group.ungroup', ctx);
+    expect(toJSON(ctx.doc).edges.map((e) => e.id)).toEqual(['e']);
+    expect(ui().announcement.text).toBe('Ungrouped Core · also deleted 2 connections');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).edges.map((e) => e.id)).toEqual(['e', 'pg', 'gc']);
+  });
+
+  it('announces a plain ungroup when the group has no connectors', () => {
+    runAction(ACTIONS, 'group.ungroup', actionContext(TARGETS.group));
+    expect(ui().announcement.text).toBe('Ungrouped Core');
   });
 
   it('selects a group’s direct members', () => {

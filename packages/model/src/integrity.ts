@@ -8,7 +8,11 @@ import type { Id, SododeckFile } from '@sododeck/schema';
 import type { ObjectRef } from './layout';
 
 export interface IntegrityProblem {
-  kind: 'missing-reference' | 'ambiguous-anchor' | 'cycle' | 'detached-rule-input';
+  /**
+   * `duplicate-id` (050): a group whose id is also a node's, so a connector end naming it is
+   * ambiguous. Reported on the group, `field: 'id'`, `targetType: 'node'`.
+   */
+  kind: 'missing-reference' | 'ambiguous-anchor' | 'cycle' | 'detached-rule-input' | 'duplicate-id';
   /** The object holding the reference. */
   object: ObjectRef;
   /** The field, e.g. `from`, `edge`, `rules`, `ruleInputs.R-1.in2`, `anchor`, `parent`. */
@@ -42,7 +46,10 @@ function findCycles(entries: readonly { id: Id; parent?: Id }[]): Id[][] {
   return cycles;
 }
 
-/** Every broken reference and parent cycle in `file`. Empty for a consistent deck. */
+/**
+ * Every broken reference, parent cycle and node / group id collision (050) in `file`. Empty for a
+ * consistent deck.
+ */
 export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
   const problems: IntegrityProblem[] = [];
   const ids = (items: readonly { id: Id }[]) => new Set(items.map((item) => item.id));
@@ -87,13 +94,21 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
     check(object, 'parent', node.parent, nodes, 'node');
     checkRules(object, node.rules);
   }
+  const reportedIds = new Set<Id>();
   for (const group of file.groups) {
-    check({ scope: 'groups', id: group.id }, 'parent', group.parent, groups, 'group');
+    const object: ObjectRef = { scope: 'groups', id: group.id };
+    check(object, 'parent', group.parent, groups, 'group');
+    if (nodes.has(group.id) && !reportedIds.has(group.id)) {
+      reportedIds.add(group.id);
+      report(object, 'id', group.id, 'node', 'duplicate-id');
+    }
   }
+  // A connector end names a node or a group (050). `targetType` stays `node` for a broken end.
+  const ends: ReadonlySet<Id> = new Set([...nodes, ...groups]);
   for (const edge of file.edges) {
     const object: ObjectRef = { scope: 'edges', id: edge.id };
-    check(object, 'from', edge.from, nodes, 'node');
-    check(object, 'to', edge.to, nodes, 'node');
+    check(object, 'from', edge.from, ends, 'node');
+    check(object, 'to', edge.to, ends, 'node');
   }
   for (const view of file.views) {
     const object: ObjectRef = { scope: 'views', id: view.id };

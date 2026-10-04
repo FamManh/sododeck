@@ -4,15 +4,19 @@
  * start with its offset readout, and the dashed slot a card lands in. All from UI-only store
  * fields, in canvas coordinates (a `ViewportPortal`); labels keep their screen size at any zoom.
  * Decorative (`aria-hidden`): the hint bar and the announcements carry the same information.
+ * Guides draw only while a gesture is registered (050 R9), so a leftover is never visible.
  */
 import { cn } from '@sododeck/ui/lib/utils';
 import { useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
-import type { CSSProperties, ReactNode } from 'react';
+import { useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 
 import { useUiStore, type Guide } from '../../state/ui-store';
 import { displayPosition, groupBounds, cardSize, type Point, type Rect } from '../canvas-geometry';
 import { levelForZoom } from '../levels';
 import { useViewState } from '../views/use-current-view';
+import { hasActiveGesture, subscribeActiveGesture } from './drag-session';
+
+const NO_GUIDES: readonly Guide[] = [];
 
 const zoomSelector = (s: ReactFlowState) => s.transform[2];
 
@@ -63,7 +67,12 @@ function GuideLine({ guide, zoom }: { guide: Guide; zoom: number }) {
         };
   return (
     <>
-      <span data-guide={guide.axis} className="absolute bg-primary" style={style} />
+      <span
+        data-guide={guide.axis}
+        data-testid="snap-guide"
+        className="absolute bg-primary"
+        style={style}
+      />
       {guide.distance !== undefined && (
         <Label at={guide.distance.at} zoom={zoom}>
           {String(guide.distance.value)}
@@ -100,7 +109,9 @@ function DashedBox({ rect, zoom, testId }: { rect: Rect; zoom: number; testId: s
 }
 
 export function GuidesOverlay() {
-  const guides = useUiStore((s) => s.guides);
+  const stored = useUiStore((s) => s.guides);
+  const running = useSyncExternalStore(subscribeActiveGesture, hasActiveGesture);
+  const guides = running ? stored : NO_GUIDES;
   const readout = useUiStore((s) => s.dragReadout);
   const resizeReadout = useUiStore((s) => s.resizeReadout);
   const gesture = useUiStore((s) => s.canvasGesture);

@@ -279,6 +279,28 @@ describe('canvas keyboard', () => {
     expect(screen.getByRole('dialog', { name: 'Connect N00 to…' })).toBeInTheDocument();
   });
 
+  it('opens "Connect … to…" with C on a group, and E cycles its connectors (050 US4)', async () => {
+    const { user } = setup(
+      deckOf({
+        ...groupedDeck,
+        edges: [...groupedDeck.edges, { id: 'toCore', from: 'outside', to: 'core' }],
+      }),
+    );
+    focusNode('group:core');
+    await user.keyboard('c');
+    expect(ui().popover).toEqual({ kind: 'connect', fromId: 'core' });
+    expect(screen.getByRole('dialog', { name: 'Connect Core to…' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    focusNode('group:core');
+    await user.keyboard('e');
+    expect(ui().focusedEdgeId).toBe('toCore');
+    expect(ui().announcement.text).toBe('Outside to Core');
+    focusNode('outside');
+    await user.keyboard('e');
+    await user.keyboard('e');
+    expect(ui().focusedEdgeId).toBe('toCore');
+  });
+
   it('toggles focus mode with F and announces when nothing is selected', async () => {
     const { user } = setup();
     focusNode('n11');

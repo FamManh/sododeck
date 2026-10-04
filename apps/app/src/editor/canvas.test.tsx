@@ -10,7 +10,7 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Edge, Node, NodeChange } from '@xyflow/react';
+import type { Edge, FinalConnectionState, Node, NodeChange } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -940,38 +940,6 @@ describe('canvas handlers', () => {
     expect(ui().popover).toEqual({ kind: 'edge', edgeId: 'e2' });
     expect(ui().selection.edges).toEqual(['e2']);
   });
-
-  it('reconnects an endpoint, keeping id and fields; refuses invalid targets', () => {
-    const { h, doc } = handlers();
-    const old = { id: 'e1', source: 'a', target: 'b' } as Edge;
-    const to = (target: string) => ({
-      source: 'a',
-      target,
-      sourceHandle: null,
-      targetHandle: null,
-    });
-    act(() => {
-      h().onReconnect(old, to('a'));
-    });
-    expect(ui().announcement.text).toBe("Can't connect to itself");
-    act(() => {
-      h().onReconnect(old, to('c'));
-    });
-    expect(toJSON(doc).edges[0]).toEqual({
-      id: 'e1',
-      from: 'a',
-      to: 'c',
-      protocol: 'http',
-      label: 'calls',
-      direction: 'both',
-    });
-    act(() => {
-      h().onReconnect({ ...old, target: 'c' }, { ...to('c'), source: 'b' });
-    });
-    // b–c is already connected by e2: refused, unchanged.
-    expect(toJSON(doc).edges[0]).toMatchObject({ from: 'a', to: 'c' });
-    expect(ui().announcement.text).toBe('Already connected');
-  });
 });
 
 describe('canvas during a flow session (006 FR-017)', () => {
@@ -1091,7 +1059,7 @@ describe('canvas in flow mode (007)', () => {
     expect(container.querySelectorAll('.sd-card.current-step')).toHaveLength(0);
   });
 
-  it('refuses drags, drops, connections, reconnects and edge popovers', () => {
+  it('refuses drags, drops, connections and edge popovers', () => {
     const { h, doc, editor } = handlers(playbackDeck);
     open(editor);
     const before = toJSON(doc);
@@ -1110,12 +1078,13 @@ describe('canvas in flow mode (007)', () => {
       ] as NodeChange[]);
       h().onNodeDragStop();
       h().onConnect({ source: 'a', target: 'z', sourceHandle: null, targetHandle: null });
-      h().onReconnect(flowEdge('ab'), {
-        source: 'a',
-        target: 'z',
-        sourceHandle: null,
-        targetHandle: null,
-      });
+      h().onConnectEnd(
+        { clientX: 0, clientY: 0 } as MouseEvent,
+        {
+          isValid: false,
+          fromNode: { id: 'a' },
+        } as unknown as FinalConnectionState,
+      );
       h().onEdgeDoubleClick(click(), flowEdge('ab'));
     });
     expect(toJSON(doc)).toEqual(before);

@@ -50,6 +50,19 @@ describe('ui store', () => {
 
   describe('canvas editing (016)', () => {
     const guide = { axis: 'x' as const, at: 10, from: 0, to: 100 };
+    const endPreview = {
+      edgeId: 'e',
+      end: 'target' as const,
+      targetId: 'n1',
+      targetKind: 'node' as const,
+      box: null,
+      side: 'top' as const,
+      at: 0.5,
+      point: { x: 0, y: 0 },
+      snapped: false,
+      automatic: false,
+      valid: 'ok' as const,
+    };
 
     it('holds the gesture state, UI-only', () => {
       state().setCanvasGesture('group-drag');
@@ -57,7 +70,7 @@ describe('ui store', () => {
       state().setGuides([guide]);
       state().setDragReadout({ dx: 100, dy: -40 });
       state().setResizeReadout({ width: 200, height: 120, x: 10, y: 20 });
-      state().setEndpointHover({ nodeId: 'n1', side: 'top' });
+      state().setEndpointPreview(endPreview);
       state().setMarqueeCount(3);
       state().setPasteSerial({ at: { x: 1, y: 2 }, count: 2 });
       expect(state()).toMatchObject({
@@ -66,7 +79,7 @@ describe('ui store', () => {
         guides: [guide],
         dragReadout: { dx: 100, dy: -40 },
         resizeReadout: { width: 200, height: 120, x: 10, y: 20 },
-        endpointHover: { nodeId: 'n1', side: 'top' },
+        endpointPreview: endPreview,
         marqueeCount: 3,
         pasteSerial: { at: { x: 1, y: 2 }, count: 2 },
       });
@@ -81,7 +94,7 @@ describe('ui store', () => {
       state().setGuides([guide]);
       state().setDragReadout({ dx: 1, dy: 1 });
       state().setResizeReadout({ width: 200, height: 120, x: 10, y: 20 });
-      state().setEndpointHover({ nodeId: 'n1', side: 'top' });
+      state().setEndpointPreview(endPreview);
       state().setMarqueeCount(3);
       state().setPasteSerial({ at: { x: 1, y: 2 }, count: 2 });
       state().resetForDeck(null);
@@ -90,7 +103,7 @@ describe('ui store', () => {
         guides: [],
         dragReadout: null,
         resizeReadout: null,
-        endpointHover: null,
+        endpointPreview: null,
         marqueeCount: null,
         pasteSerial: null,
       });
@@ -103,6 +116,15 @@ describe('ui store', () => {
       expect(state().dropTarget).toBe('g');
       state().pruneSelection({ nodes: none, edges: none, groups: none, stickies: none });
       expect(state().dropTarget).toBeNull();
+    });
+
+    it("keeps a group's connect popover while the group exists (050 US4)", () => {
+      state().openConnectPopover('g');
+      const none = new Set<string>();
+      state().pruneSelection({ nodes: none, edges: none, groups: new Set(['g']), stickies: none });
+      expect(state().popover).toEqual({ kind: 'connect', fromId: 'g' });
+      state().pruneSelection({ nodes: none, edges: none, groups: none, stickies: none });
+      expect(state().popover).toBeNull();
     });
 
     it('keeps the same guides array when nothing changed', () => {

@@ -364,4 +364,51 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
       },
     ]);
   });
+
+  describe('groups as connector ends (050)', () => {
+    const groups = [
+      { id: 'g1', title: 'Edge' },
+      { id: 'g2', title: 'Core' },
+    ];
+
+    it('accepts card → group, group → card and group → group', () => {
+      expect(
+        problems({
+          nodes: [node('a')],
+          groups,
+          edges: [
+            { id: 'e1', from: 'a', to: 'g1' },
+            { id: 'e2', from: 'g2', to: 'a' },
+            { id: 'e3', from: 'g1', to: 'g2' },
+          ],
+        }),
+      ).toEqual([]);
+    });
+
+    it('still reports an end that names neither a node nor a group', () => {
+      expect(
+        problems({ nodes: [node('a')], groups, edges: [{ id: 'e', from: 'g1', to: 'zz' }] }),
+      ).toEqual([
+        {
+          kind: 'missing-reference',
+          object: { scope: 'edges', id: 'e' },
+          field: 'to',
+          target: 'zz',
+          targetType: 'node',
+        },
+      ]);
+    });
+
+    it('reports a node and a group sharing an id as duplicate-id', () => {
+      expect(problems({ nodes: [node('g1')], groups })).toEqual([
+        {
+          kind: 'duplicate-id',
+          object: { scope: 'groups', id: 'g1' },
+          field: 'id',
+          target: 'g1',
+          targetType: 'node',
+        },
+      ]);
+    });
+  });
 });

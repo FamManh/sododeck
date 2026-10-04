@@ -71,6 +71,7 @@ describe('CanvasMenu (019 US5)', () => {
       'GroupCtrl+G',
       'Align',
       'Arrange',
+      'Spread ends evenly',
       'Pin',
       'DeleteDelete',
     ]);
@@ -218,6 +219,7 @@ describe('CanvasMenu (019 US5)', () => {
       'CopyCtrl+C',
       'CutCtrl+X',
       'DuplicateCtrl+D',
+      'Spread ends evenly',
       'Delete group',
     ]);
     const item = within(menu()).getByRole('menuitem', { name: 'Delete group' });

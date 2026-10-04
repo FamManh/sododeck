@@ -77,11 +77,7 @@ export function startCardResize(
   setActiveGesture({
     cancel: () => {
       if (session.cancelled) return false;
-      session.cancelled = true;
-      editor.cancelGesture();
-      ui.setCanvasGesture(null);
-      ui.setResizeReadout(null);
-      ui.setGuides([]);
+      revert(editor, session);
       ui.announce('Cancelled');
       return true;
     },
@@ -126,6 +122,26 @@ export function applyCardResize(
   });
   session.last = box;
   ui.setResizeReadout({ width: box.width, height: box.height, x: box.x, y: box.y });
+}
+
+/** Puts the card back as it was and drops the readout and guides; the gesture stays registered
+ * until React Flow ends the drag (Esc mid-drag). */
+function revert(editor: DeckEditor, session: CardResizeSession): void {
+  session.cancelled = true;
+  editor.cancelGesture();
+  const ui = useUiStore.getState();
+  if (ui.canvasGesture === 'card-resize') ui.setCanvasGesture(null);
+  ui.setResizeReadout(null);
+  ui.setGuides([]);
+}
+
+/**
+ * Ends a resize that React Flow will never end (the node unmounted mid-drag, 050 R9): the card
+ * goes back to its size before the drag, nothing is written, and the gesture is unregistered.
+ */
+export function cancelCardResize(editor: DeckEditor, session: CardResizeSession): void {
+  if (!session.cancelled) revert(editor, session);
+  setActiveGesture(null);
 }
 
 export function endCardResize(editor: DeckEditor, session: CardResizeSession): void {

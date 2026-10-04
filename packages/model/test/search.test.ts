@@ -299,3 +299,29 @@ describe('shapes in search (031)', () => {
     expect(resultIds(searchDeck(index, 'diamond').results)).toEqual(['ok']);
   });
 });
+
+describe('group-ended connections (050)', () => {
+  function groupDeck(): SododeckFile {
+    const deck = emptySododeckFile();
+    deck.groups.push({ id: 'pay', title: 'Payments zone' }, { id: 'led', title: 'Ledger zone' });
+    deck.nodes.push({ id: 'web', type: 'client', title: 'Web shop' });
+    deck.edges.push(
+      { id: 'web-pay', from: 'web', to: 'pay' },
+      { id: 'pay-led', from: 'pay', to: 'led' },
+    );
+    deck.flows.push({ id: 'f', title: 'Checkout', steps: [{ id: 's', edge: 'web-pay' }] });
+    return deck;
+  }
+
+  it('titles a connection and a step by the group at either end', () => {
+    const { entries } = buildSearchIndex(groupDeck());
+    expect(entries.find((e) => e.id === 'web-pay')?.title).toBe('Web shop → Payments zone');
+    expect(entries.find((e) => e.id === 'pay-led')?.title).toBe('Payments zone → Ledger zone');
+    expect(entries.find((e) => e.id === 's')?.title).toBe('Web shop → Payments zone');
+  });
+
+  it('finds a group connection by the group titles', () => {
+    const index = buildSearchIndex(groupDeck());
+    expect(searchDeck(index, 'payments ledger').results.map((r) => r.id)).toContain('pay-led');
+  });
+});

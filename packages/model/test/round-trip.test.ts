@@ -1286,3 +1286,51 @@ describe('decks saved before 040 stay unchanged (US3)', () => {
     expect(serializeDeck(out)).toBe(serializeDeck(expected));
   });
 });
+
+describe('groups as connector ends (050)', () => {
+  const grouped: SododeckFile = {
+    ...empty,
+    nodes: [{ id: 'web', type: 'client', title: 'Web', group: 'edge' }],
+    groups: [
+      { id: 'edge', title: 'Edge', position: { x: 0, y: 0 }, size: { width: 240, height: 160 } },
+      { id: 'core', title: 'Core' },
+    ],
+    edges: [
+      {
+        id: 'card-to-group',
+        from: 'web',
+        to: 'core',
+        route: { fromSide: 'right', toSide: 'left', toAt: 0.25 },
+        style: { shape: 'elbow', color: 'blue' },
+      },
+      {
+        id: 'group-to-card',
+        from: 'core',
+        to: 'web',
+        label: 'reply',
+        route: { waypoints: [{ x: 0.5, dy: 40 }] },
+        style: { dash: 'dashed' },
+      },
+      {
+        id: 'group-to-group',
+        from: 'edge',
+        to: 'core',
+        route: { offset: 24 },
+        style: { width: 3 },
+      },
+    ],
+    flows: [{ id: 'f', title: 'F', steps: [{ id: 's', edge: 'card-to-group' }] }],
+  };
+
+  it('round-trips card → group, group → card and group → group with route and style', () => {
+    const out = toJSON(fromJSON(grouped));
+    expect(out).toEqual(grouped);
+    expect(serializeDeck(out)).toBe(`${JSON.stringify(grouped, null, 2)}\n`);
+  });
+
+  it('keeps a file without group edges byte-identical', () => {
+    for (const file of [minimal, flowAndRule]) {
+      expect(serializeDeck(toJSON(fromJSON(file)))).toBe(`${JSON.stringify(file, null, 2)}\n`);
+    }
+  });
+});

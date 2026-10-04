@@ -99,7 +99,7 @@ A workspace holds decks; each deck is one model with many views over it.
 | Deck | One architecture model (a system or product) | name, description, tags |
 | Node | A thing: actor, service, component, database, queue, external partner, cloud resource | id, type, title, level, parent, owner, tags, description |
 | Group | Collapsible set of nodes (domain, bounded context, VPC) | id, title, children |
-| Edge | A relationship between two nodes | from, to, protocol (HTTP, gRPC, event), label, contract |
+| Edge | A relationship between two ends, each a node or a group | from, to, protocol (HTTP, gRPC, event), label, contract |
 | View | A saved lens: filter, level, layout and positions | type (infra, feature, system, custom), includes, pinned positions |
 | Feature | A business capability grouping flows | title, description, owner |
 | Flow | Ordered steps over existing edges | feature, title, steps, trigger, outcome |

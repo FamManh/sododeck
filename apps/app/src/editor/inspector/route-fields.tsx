@@ -6,7 +6,7 @@ import { useId, useState } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { cardBox } from '../canvas-geometry';
+import { cardBox, groupBounds, type Rect } from '../canvas-geometry';
 import { oneStep } from '../fields/one-step';
 import { PickField } from '../fields/pick-field';
 import { middleSegment, resolveSides } from '../routing/route-path';
@@ -30,14 +30,18 @@ export function RouteFields({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
   const editor = useEditor();
   const id = useId();
   const editable = useUiStore((s) => !isFlowMode(s) && s.flowSession === null);
-  const fromIndex = deck.nodes.findIndex((n) => n.id === edge.from);
-  const toIndex = deck.nodes.findIndex((n) => n.id === edge.to);
-  const fromNode = deck.nodes[fromIndex];
-  const toNode = deck.nodes[toIndex];
-  if (fromNode === undefined || toNode === undefined) return null;
+  // An end is a card or a group's frame (050 R6).
+  const boxOf = (id: string): Rect | undefined => {
+    const index = deck.nodes.findIndex((n) => n.id === id);
+    const node = deck.nodes[index];
+    return node === undefined
+      ? groupBounds(deck, 'component').get(id)
+      : cardBox(node, index, 'component');
+  };
+  const fromBox = boxOf(edge.from);
+  const toBox = boxOf(edge.to);
+  if (fromBox === undefined || toBox === undefined) return null;
 
-  const fromBox = cardBox(fromNode, fromIndex, 'component');
-  const toBox = cardBox(toNode, toIndex, 'component');
   const sides = resolveSides(fromBox, toBox, edge.route);
   const hasSegment = middleSegment(sides) !== null;
   const offset = edge.route?.offset ?? 0;

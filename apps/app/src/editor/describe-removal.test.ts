@@ -205,3 +205,33 @@ describe('withNewProblems (015 FR-026)', () => {
     expect(withNewProblems('Deleted A', 0, 1)).toBe('Deleted A · 1 new problem');
   });
 });
+
+describe('describeRemoval with group connectors (050 US4)', () => {
+  const grouped = deckOf({
+    nodes: [
+      { id: 'web', type: 'client', title: 'Web' },
+      { id: 'db', type: 'database', title: 'Orders DB', group: 'data' },
+    ],
+    groups: [
+      { id: 'data', title: 'Data layer' },
+      { id: 'edge', title: 'Edge' },
+    ],
+    edges: [
+      { id: 'g1', from: 'web', to: 'data' },
+      { id: 'g2', from: 'edge', to: 'data' },
+    ],
+  });
+
+  it('counts the connectors a group delete takes with it', () => {
+    const targets: RemovalTarget[] = [{ scope: 'groups', id: 'data' }];
+    const result = previewRemoval(grouped, targets);
+    expect(describeRemoval(grouped, targets, result).body).toContain('Also removes 2 connections.');
+    expect(removalToast(grouped, targets, result, true)).toContain('and 2 connections');
+  });
+
+  it('names a group end by its title', () => {
+    const targets: RemovalTarget[] = [{ scope: 'edges', id: 'g2' }];
+    const result = previewRemoval(grouped, targets);
+    expect(describeRemoval(grouped, targets, result).title).toBe('Delete Edge → Data layer?');
+  });
+});

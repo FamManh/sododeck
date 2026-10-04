@@ -1,7 +1,10 @@
+import { endpointOf } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { Popover, PopoverAnchor, PopoverContent } from '@sododeck/ui/components/popover';
 import { SearchField } from '@sododeck/ui/components/search-field';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
+import { SquareDashed } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
 
 import { iconProp } from './card-icon';
@@ -10,9 +13,15 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { canvasElement, connectComponents, focusCanvas, nodeElement } from './canvas-actions';
 import { connectTargets, type ConnectTarget } from './connection-rules';
+import { GROUP_NODE_PREFIX } from './deck-to-flow';
 
 function anchorRect(nodeId: string): DOMRect {
-  const rect = (nodeElement(nodeId) ?? canvasElement())?.getBoundingClientRect();
+  // A group is drawn as its `group:` frame (050 R6).
+  const rect = (
+    nodeElement(nodeId) ??
+    nodeElement(`${GROUP_NODE_PREFIX}${nodeId}`) ??
+    canvasElement()
+  )?.getBoundingClientRect();
   return rect ?? new DOMRect(0, 0, 0, 0);
 }
 
@@ -28,9 +37,10 @@ function nextEnabled(options: readonly ConnectTarget[], index: number, step: 1 |
 export function ConnectPopover({ deck }: { deck: SododeckFile }) {
   const popover = useUiStore((s) => s.popover);
   const fromId = popover?.kind === 'connect' ? popover.fromId : null;
-  const from = fromId === null ? undefined : deck.nodes.find((n) => n.id === fromId);
-  if (!from) return null;
-  return <ConnectPopoverContent key={from.id} deck={deck} fromId={from.id} title={from.title} />;
+  // From a card or a group (050 R6).
+  const from = fromId === null ? null : endpointOf(deck, fromId);
+  if (fromId === null || from === null) return null;
+  return <ConnectPopoverContent key={fromId} deck={deck} fromId={fromId} title={from.title} />;
 }
 
 function ConnectPopoverContent({
@@ -134,9 +144,25 @@ function ConnectPopoverContent({
                 index === activeIndex && 'bg-primary-soft font-medium text-primary-ink',
               )}
             >
-              <NodeTypeTile type={option.kind} size={22} decorative {...iconProp(option.icon)} />
-              <span className="min-w-0 flex-1 truncate">{option.title}</span>
-              {option.disabled && <span className="text-caption">already connected</span>}
+              {option.kind === 'group' ? (
+                <span
+                  data-group-icon
+                  className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-surface-2 text-ink-secondary"
+                >
+                  <SquareDashed aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                </span>
+              ) : (
+                <NodeTypeTile type={option.kind} size={22} decorative {...iconProp(option.icon)} />
+              )}
+              <span className="min-w-0 flex-1 truncate">
+                {option.title}
+                {option.kind === 'group' && (
+                  <span className="ml-1 text-caption text-ink-muted">(group)</span>
+                )}
+              </span>
+              {option.disabled && (
+                <span className="text-caption">{option.reason ?? 'already connected'}</span>
+              )}
             </li>
           ))}
         </ul>

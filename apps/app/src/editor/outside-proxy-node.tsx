@@ -2,7 +2,9 @@ import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { cn } from '@sododeck/ui/lib/utils';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
+import { SquareDashed } from 'lucide-react';
 import { memo } from 'react';
 
 import { iconProp } from './card-icon';
@@ -10,8 +12,8 @@ import { TypeGlyph } from './shapes/type-glyph';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { focusCanvas } from './canvas-actions';
-import { cardBox } from './canvas-geometry';
-import { COLLAPSED_NODE_PREFIX, type PortFlowNode } from './deck-to-flow';
+import { cardBox, groupBounds } from './canvas-geometry';
+import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX, type PortFlowNode } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, readViewState } from './views/use-current-view';
 
@@ -50,6 +52,7 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
       representative = graph.representative.get(data.outsideNodeId) ?? data.outsideNodeId;
       if (
         graph.nodes.includes(representative) ||
+        graph.groups.some((g) => `${GROUP_NODE_PREFIX}${g}` === representative) ||
         graph.cards.some((c) => `${COLLAPSED_NODE_PREFIX}${c.groupId}` === representative)
       )
         break;
@@ -57,6 +60,9 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
     const ui = useUiStore.getState();
     if (representative.startsWith(COLLAPSED_NODE_PREFIX)) {
       ui.select({ groups: [representative.slice(COLLAPSED_NODE_PREFIX.length)] });
+    } else if (representative.startsWith(GROUP_NODE_PREFIX)) {
+      // The outside end is a group (050 R6), shown as its frame.
+      ui.select({ groups: [representative.slice(GROUP_NODE_PREFIX.length)] });
     } else {
       ui.select({ nodes: [data.outsideNodeId] });
     }
@@ -71,7 +77,11 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
       );
       const index = deck.nodes.findIndex((node) => node.id === data.outsideNodeId);
       const node = deck.nodes[index];
-      const box = card?.rect ?? (node === undefined ? undefined : cardBox(node, index, 'system'));
+      const frame = representative.startsWith(GROUP_NODE_PREFIX)
+        ? groupBounds(deck).get(representative.slice(GROUP_NODE_PREFIX.length))
+        : undefined;
+      const box =
+        card?.rect ?? frame ?? (node === undefined ? undefined : cardBox(node, index, 'system'));
       if (box === undefined) return;
       void setCenter(box.x + box.width / 2, box.y + box.height / 2, {
         zoom: getZoom(),
@@ -114,7 +124,11 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
         )}
       >
         <span className="flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-surface-2 text-ink-secondary">
-          <TypeGlyph kind={data.kind} size={14} {...iconProp(data.icon)} />
+          {data.kind === 'group' ? (
+            <SquareDashed aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+          ) : (
+            <TypeGlyph kind={data.kind} size={14} {...iconProp(data.icon)} />
+          )}
         </span>
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[12.5px] leading-tight font-semibold text-ink">

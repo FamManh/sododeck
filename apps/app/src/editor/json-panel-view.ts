@@ -4,10 +4,11 @@
  */
 import {
   analyzeFlow,
+  endpointTitle,
+  type Entry,
   serializeEntries,
   serializeEntry,
   stickyLabel,
-  type Entry,
 } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
@@ -92,8 +93,8 @@ export function selectionView(
   if (entries.length > 1) label = `${String(entries.length)} selected`;
   else if (node) label = node.title;
   else if (edge) {
-    const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
-    label = edge.label ?? `${title(edge.from)} → ${title(edge.to)}`;
+    // Either end may be a group (050 R6).
+    label = edge.label ?? `${endpointTitle(deck, edge.from)} → ${endpointTitle(deck, edge.to)}`;
   } else if (group) label = group.title;
   else if (sticky) label = stickyLabel(sticky.text) ?? 'Empty note';
   return { label, fullLabel: label, entries };
