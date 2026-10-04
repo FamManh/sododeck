@@ -181,3 +181,23 @@ describe('buildPaletteResults icons (038)', () => {
     for (const item of items) expect(item.kind === 'node' || item.icon === undefined).toBe(true);
   });
 });
+
+describe('palette results group ends (050 US4)', () => {
+  it('names a connector to a group by the group title', () => {
+    const deck: SododeckFile = {
+      ...emptySododeckFile(),
+      nodes: [{ id: 'w', type: 'client', title: 'Web' }],
+      groups: [{ id: 'g', title: 'Data layer' }],
+      edges: [{ id: 'wg', from: 'w', to: 'g' }],
+    };
+    const results = buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query: 'web data',
+      commands: [],
+    });
+    expect(results.items.find((item) => item.id === 'wg')?.meta).toBe(
+      'Connection · Web → Data layer',
+    );
+  });
+});
