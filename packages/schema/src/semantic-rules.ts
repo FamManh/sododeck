@@ -20,6 +20,8 @@
  *   one of `y` / `dy`. `minItems` makes json-schema-to-typescript emit a tuple type that nothing
  *   can build from a plain array, and `oneOf` per axis is mishandled by the generators (as is
  *   `anyOf`).
+ *   S9–S11 hold the same for every connector end, a card or a group (050): sides and bends are
+ *   read against the end's card or group frame.
  * - S12 (field definitions, 032): a field id appears once in `fields`; the built-in ids `tech`,
  *   `host` and `owner` keep their kinds (`text`, `text`, `person`); `unit` only on number fields;
  *   `options` only on select and status fields; option ids unique within a field; `icon` only on

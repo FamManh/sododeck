@@ -8,7 +8,7 @@ import {
   parseSododeckFile,
   type SododeckFile,
 } from '../src';
-import { invalidFixtures } from './fixtures';
+import { invalidFixtures, validFixtures } from './fixtures';
 import { examples } from './schema-walk';
 
 const ajvValidate = new Ajv2020({ strict: true, allErrors: true }).compile<SododeckFile>(
@@ -67,6 +67,10 @@ describe('schema v1', () => {
       { ...emptySododeckFile(), nodes: [{ id: 'n1', type: 'service', title: 'Orders' }] },
       true,
     );
+  });
+
+  it.each(validFixtures)('accepts: $name', ({ input }) => {
+    expectBothValidators(input, true);
   });
 
   it.each(invalidFixtures)('rejects: $name', ({ input, path }) => {
