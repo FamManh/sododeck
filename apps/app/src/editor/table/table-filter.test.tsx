@@ -1,7 +1,10 @@
+import { toJSON } from '@sododeck/model';
 import type { DbColumn } from '@sododeck/schema';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { useDeckSnapshot } from '../../model/use-deck-snapshot';
+import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { editorWrapper, deckOf } from '../../test/render-canvas';
 import { fixedWidthMeasurer } from '../export/text-measure';
@@ -122,5 +125,76 @@ describe('TableFilter (048 contracts/scale-ui.md)', () => {
     fireEvent.change(input, { target: { value: 'i' } });
     fireEvent.change(input, { target: { value: '' } });
     expect(useUiStore.getState().tableFilter).toBeNull();
+  });
+});
+
+describe('TableFilter against the document (048)', () => {
+  /** Draws the table from the document like the canvas, so edits redraw the counter. */
+  function Live({ locked }: { locked: boolean }) {
+    const deck = useDeckSnapshot(useEditor().doc);
+    const filter = useUiStore((s) => s.tableFilter);
+    const stored = deck.nodes.find((n) => n.id === 'orders');
+    if (stored === undefined) return null;
+    const projected = withFilter({ ...stored }, filter?.text ?? '');
+    const layout = tableLayout(projected, ctx, undefined, fixedWidthMeasurer(0.6));
+    return (
+      <>
+        {filter !== null && <TableFilter nodeId="orders" title="orders" layout={layout} />}
+        <TableBody nodeId="orders" layout={layout} focused={false} locked={locked} />
+      </>
+    );
+  }
+
+  function start(locked: boolean) {
+    const env = editorWrapper(
+      deckOf({
+        nodes: [
+          {
+            id: 'orders',
+            type: 'db-table',
+            title: 'orders',
+            ...(locked ? { locked: true } : {}),
+            columns: [col('c1', 'id'), col('c2', 'invoice_id')],
+          },
+        ],
+      }),
+    );
+    act(() => {
+      useUiStore.getState().select({ nodes: ['orders'] });
+      useUiStore.getState().openTableFilter('orders');
+    });
+    render(<Live locked={locked} />, { wrapper: env.wrapper });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Find a column in orders' }), {
+      target: { value: 'inv' },
+    });
+    return env;
+  }
+
+  it('changes nothing in the document and works on a locked table', () => {
+    const locked = start(true);
+    const before = JSON.stringify(toJSON(locked.doc));
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Find a column in orders' }), {
+      key: 'Enter',
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('1/1');
+    expect(JSON.stringify(toJSON(locked.doc))).toBe(before);
+    expect(locked.editor().canUndo()).toBe(false);
+  });
+
+  it('updates the counter when a column is added, renamed or deleted while open', () => {
+    const { editor } = start(false);
+    expect(screen.getByRole('status')).toHaveTextContent('1/1');
+    act(() => {
+      editor().addColumn('orders', { name: 'inv_total', type: 'int' });
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('1/2');
+    act(() => {
+      editor().updateColumn('orders', 'c1', { name: 'invoice_no' });
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('1/3');
+    act(() => {
+      editor().removeColumn('orders', 'c2');
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('1/2');
   });
 });
