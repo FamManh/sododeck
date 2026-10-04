@@ -32,7 +32,7 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `052-db-drawer` from `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline. Commit the spec folder `specs/052-db-drawer/` as `docs: database drawer spec, plan and tasks (052)`.
+- [x] T001 Create branch `052-db-drawer` from `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline. Commit the spec folder `specs/052-db-drawer/` as `docs: database drawer spec, plan and tasks (052)`.
 
 ---
 
