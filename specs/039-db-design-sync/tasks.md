@@ -40,9 +40,9 @@ story checkpoint.
 
 **Purpose:** an isolated workspace that does not disturb the 038 work in the main checkout.
 
-- [ ] T001 Create branch `039-db-design-sync` from `main` in a separate git worktree. Another session owns `.specify/feature.json`, which points at `specs/038-card-icons`; do not edit that file in the main checkout. In the worktree, set `.specify/feature.json` to `{"feature_directory": "specs/039-db-design-sync"}` only if a spec-kit script is needed there.
-- [ ] T002 Carry `specs/039-db-design-sync/` (spec, plan, research, data-model, contracts, quickstart, checklists, this file) into the worktree. Commit it as `docs(spec): database design sync spec, plan and tasks (039)`.
-- [ ] T003 [P] Check the capture tooling: Playwright Chromium is installed (`pnpm --filter @sododeck/app exec playwright --version`) and `python3 -m http.server` is available. Install nothing new.
+- [x] T001 Create branch `039-db-design-sync` from `main` in a separate git worktree. Another session owns `.specify/feature.json`, which points at `specs/038-card-icons`; do not edit that file in the main checkout. In the worktree, set `.specify/feature.json` to `{"feature_directory": "specs/039-db-design-sync"}` only if a spec-kit script is needed there.
+- [x] T002 Carry `specs/039-db-design-sync/` (spec, plan, research, data-model, contracts, quickstart, checklists, this file) into the worktree. Commit it as `docs(spec): database design sync spec, plan and tasks (039)`.
+- [x] T003 [P] Check the capture tooling: Playwright Chromium is installed (`pnpm --filter @sododeck/app exec playwright --version`) and `python3 -m http.server` is available. Install nothing new.
 
 ---
 
@@ -50,12 +50,12 @@ story checkpoint.
 
 **Purpose:** the prototype files are in the repo and still render earlier frames unchanged.
 
-- [ ] T004 Use `mcp__claude_design__list_files` to compare current etags with the plan-time etags above. If any differ, note it and use the new version; list the change in the final report.
-- [ ] T005 Fetch `Sododeck Database.dc.html` and save it byte-for-byte (decoded, injected block stripped) as `docs/design/claude-design/Sododeck Database.dc.html`. Check that the byte size is 7,637, or matches the size reported by `list_files`.
-- [ ] T006 Fetch `sododeck-db.js` (140,260 B; read it in line windows if one read is capped) and save it byte-for-byte as `docs/design/claude-design/sododeck-db.js`. Check the size against `list_files`.
-- [ ] T007 Fetch `sododeck-canvas.js` and replace `docs/design/claude-design/sododeck-canvas.js` with it (78,636 B). Check with `grep -c "SODO_CV={build,LIST,CARDS,CUSTOM,lib:"` that it returns 1.
-- [ ] T008 Byte-compare `sododeck-cards.js`, `sododeck-states.js`, `sododeck-data.js` and `support.js` in the project against `docs/design/claude-design/`. Replace only those that differ, and record each replaced file for T012. Expected: none differ (research R2).
-- [ ] T009 Write a throwaway capture script in the scratchpad, `capture-db.mjs`, using Playwright Chromium:
+- [x] T004 Use `mcp__claude_design__list_files` to compare current etags with the plan-time etags above. If any differ, note it and use the new version; list the change in the final report.
+- [x] T005 Fetch `Sododeck Database.dc.html` and save it byte-for-byte (decoded, injected block stripped) as `docs/design/claude-design/Sododeck Database.dc.html`. Check that the byte size is 7,637, or matches the size reported by `list_files`.
+- [x] T006 Fetch `sododeck-db.js` (140,260 B; read it in line windows if one read is capped) and save it byte-for-byte as `docs/design/claude-design/sododeck-db.js`. Check the size against `list_files`.
+- [x] T007 Fetch `sododeck-canvas.js` and replace `docs/design/claude-design/sododeck-canvas.js` with it (78,636 B). Check with `grep -c "SODO_CV={build,LIST,CARDS,CUSTOM,lib:"` that it returns 1.
+- [x] T008 Byte-compare `sododeck-cards.js`, `sododeck-states.js`, `sododeck-data.js` and `support.js` in the project against `docs/design/claude-design/`. Replace only those that differ, and record each replaced file for T012. Expected: none differ (research R2).
+- [x] T009 Write a throwaway capture script in the scratchpad, `capture-db.mjs`, using Playwright Chromium:
   - Copy `docs/design/claude-design/` to a temp folder and serve it with `python3 -m http.server`.
   - For each `(key, theme)`, open `Sododeck%20Database.dc.html#only=<key>|<theme>` as a fresh page, with `deviceScaleFactor: 2` and a 1440×900 viewport.
   - Wait until all of these hold: `window.SDDB` and `window.lucide` exist; one `#scr-<key>` or `#row-<key>` exists; `document.fonts.ready` has resolved. Then wait 1.5 s.
@@ -63,8 +63,8 @@ story checkpoint.
   - Take an element screenshot of the element right after the label div inside `#scr-<key>` / `#row-<key>`.
   - Save it as `<id>-<slug>-<theme>.png`, using the id and slug from data-model.md.
   - Also support the 86–116 recipe from `docs/design/README.md` ("States 86–116") for T010.
-- [ ] T010 Re-render frames 86 and 105 (light and dark) from the updated `sododeck-canvas.js` with the 86–116 recipe into the scratchpad. Compare them with `docs/design/screens/86-*` and `105-*` (pixel diff or visual check). If anything differs beyond antialiasing, stop and report to the founder instead of continuing (plan Risks).
-- [ ] T011 Commit as `docs(design): import database board and refresh canvas prototype (039)`. The commit contains only the files from T005–T008.
+- [x] T010 Re-render frames 86 and 105 (light and dark) from the updated `sododeck-canvas.js` with the 86–116 recipe into the scratchpad. Compare them with `docs/design/screens/86-*` and `105-*` (pixel diff or visual check). If anything differs beyond antialiasing, stop and report to the founder instead of continuing (plan Risks).
+- [x] T011 Commit as `docs(design): import database board and refresh canvas prototype (039)`. The commit contains only the files from T005–T008.
 
 **Checkpoint:** the board files are in the repo and earlier frames are unchanged. Stories can start.
 
@@ -78,11 +78,11 @@ story checkpoint.
 has a light and a dark image. A1 measures 2880×1800 px, A10 1800×1800 px and Part B rows 2360 px
 wide. No existing screenshot is modified.
 
-- [ ] T012 [US1] Update `docs/design/README.md`:
+- [x] T012 [US1] Update `docs/design/README.md`:
   - In the `claude-design/` table row, append the Database board import (2026-10-04, Part A 134–154, Part B 155–168), the `sododeck-canvas.js` refresh (adds `SODO_CV.lib`) and any file replaced in T008.
   - In the `screens/` row, add the sizes for 134–168.
   - In the Landing section, remove "`sododeck-db.js` is not copied here yet (feature 039 imports the Database board)".
-- [ ] T013 [US1] Add `### Database board 134–168 (Sododeck Database.dc.html)` to `docs/design/README.md`, following [contracts/docs-contract.md](contracts/docs-contract.md) §3. It covers:
+- [x] T013 [US1] Add `### Database board 134–168 (Sododeck Database.dc.html)` to `docs/design/README.md`, following [contracts/docs-contract.md](contracts/docs-contract.md) §3. It covers:
   - the `part` (`all | A | B`) and `themes` props;
   - single-plate mode `#only=<key>|<theme>`;
   - the script load order;
@@ -90,10 +90,10 @@ wide. No existing screenshot is modified.
   - the wait conditions and sizes;
   - the full-board fallback: 21 `[id^="scr-"]` + 14 `[id^="row-"]` + `#note`, located by the label text `"<key> · <theme> · 1440 × 900"` or `"B · <theme>"`;
   - the etags captured in T004.
-- [ ] T014 [P] [US1] Capture the Part A screens 134–154 (21 keys: A1, A2, A3, A4, A5a, A5b, A6, A7a, A7b, A7c, A8, A9, A10, A11a, A11b, M, S1, S2, S2b, S3, S4) in light and dark with the T009 script into `docs/design/screens/`. That is 42 PNGs at 1440×900 @2x; A10 is 900×900. Before saving, check each slug against the board title; when a title gives a better slug than data-model.md, use it and update the data-model.md catalogue and the T013 list.
-- [ ] T015 [P] [US1] Capture the Part B rows 155–168 (14 keys: sig, anat, set, large, rel, auth, states, zoom, groups, drawer, enums, code, prob, palette) in light and dark into `docs/design/screens/`. That is 28 PNGs, 1180 wide @2x at natural height. Record the tallest heights in the T013 section.
-- [ ] T016 [US1] Open one light and one dark image from each part and check that it shows the named screen, with icons drawn and Geist loaded. Re-capture any image with an empty icon or a fallback font.
-- [ ] T017 [US1] Run [quickstart.md](quickstart.md) §1–§3, then commit as `docs(design): database board screenshots 134-168 (039)`.
+- [x] T014 [P] [US1] Capture the Part A screens 134–154 (21 keys: A1, A2, A3, A4, A5a, A5b, A6, A7a, A7b, A7c, A8, A9, A10, A11a, A11b, M, S1, S2, S2b, S3, S4) in light and dark with the T009 script into `docs/design/screens/`. That is 42 PNGs at 1440×900 @2x; A10 is 900×900. Before saving, check each slug against the board title; when a title gives a better slug than data-model.md, use it and update the data-model.md catalogue and the T013 list.
+- [x] T015 [P] [US1] Capture the Part B rows 155–168 (14 keys: sig, anat, set, large, rel, auth, states, zoom, groups, drawer, enums, code, prob, palette) in light and dark into `docs/design/screens/`. That is 28 PNGs, 1180 wide @2x at natural height. Record the tallest heights in the T013 section.
+- [x] T016 [US1] Open one light and one dark image from each part and check that it shows the named screen, with icons drawn and Geist loaded. Re-capture any image with an empty icon or a fallback font.
+- [x] T017 [US1] Run [quickstart.md](quickstart.md) §1–§3, then commit as `docs(design): database board screenshots 134-168 (039)`.
 
 **Checkpoint:** US1 is complete and can be shown on its own.
 
@@ -107,11 +107,11 @@ wide. No existing screenshot is modified.
 height, row limit, key glyphs, crow's foot geometry, row separator) and the look items in
 §041–§043; find each one, with its value, in DESIGN.md `#database-pack` or design-analysis.md.
 
-- [ ] T018 [US2] In `DESIGN.md`, add `### Database pack` under `## Components`, after `### Card system (Deck)`. Start with an intro that says:
+- [x] T018 [US2] In `DESIGN.md`, add `### Database pack` under `## Components`, after `### Card system (Deck)`. Start with an intro that says:
   - a table is a Deck card (DB3) and a node of type `db.table` (DB7);
   - frame, lip, palette, states and zoom thresholds come from [Card system (Deck)](#card-system-deck) and are not repeated (FR-011);
   - the reference frames are 155–168.
-- [ ] T019 [US2] Add the tokens table to the `### Database pack` section in `DESIGN.md`, with columns: name, value, maps to (existing token or "new"), source frame. Include every row of research.md R5:
+- [x] T019 [US2] Add the tokens table to the `### Database pack` section in `DESIGN.md`, with columns: name, value, maps to (existing token or "new"), source frame. Include every row of research.md R5:
   - `tblW` 240;
   - card geometry: bw 1.5, pad 12, hdr 24, gap 8, ttl 18, noteL 17, pill 30, foot 24, bot 8;
   - `colH` 24, anchor y = top + 24 i + 12;
@@ -127,12 +127,12 @@ height, row limit, key glyphs, crow's foot geometry, row separator) and the look
 
   Before writing each value, check it against frames 156 (anatomy) and 158 (large).
 
-- [ ] T020 [US2] In the same `DESIGN.md` section, add a glyph table and a crow's foot table.
+- [x] T020 [US2] In the same `DESIGN.md` section, add a glyph table and a crow's foot table.
   - Glyphs: PK `key-round`, FK `link-2`, unique "U" square, nullable "?", R / W markers (16×16, radius 5, Mono 9.5 / 600; W Deck Orange fill, R 1.5px orange outline, row Orange Soft; playback only).
   - Crow's foot: `crowLen` 12, `crowSpread` 6, `crowBar` 16, `crowRing` 4; bar at 10 (one), 8 (zero-or-one), 16 (one-or-many); ring r4 filled with Canvas; composite key as a 6px stub per member row plus one joining segment; the toe construction p+6v → p+12u → p−6v.
   - Ports: anchor on both card sides at the row centre; a hidden column anchors at the Show all button centre.
   - Source frames: 159 and 156.
-- [ ] T021 [US2] In the same `DESIGN.md` section, add zoom behaviour for tables, from frame 162:
+- [x] T021 [US2] In the same `DESIGN.md` section, add zoom behaviour for tables, from frame 162:
   - Landscape ≤ 45 %: table icon on the colour fill;
   - System 45–90 %: name, PK / FK dots and the column count;
   - Container 90–150 %: keys only and "+n columns";
@@ -141,7 +141,7 @@ height, row limit, key glyphs, crow's foot geometry, row separator) and the look
 
   Then add the line "**Row limit: 12** (DB9, frame 158): cut order PK, FK, rest; rows with a connector always stay".
 
-- [ ] T022 [US2] In the same `DESIGN.md` section, compute and record the contrast in light and dark for every new text pair (FR-013):
+- [x] T022 [US2] In the same `DESIGN.md` section, compute and record the contrast in light and dark for every new text pair (FR-013):
   - type text (Muted Mono 11) on Surface;
   - Orange Ink on Orange Soft (R marker, highlighted row);
   - Ink on Deck Orange (W marker);
@@ -150,7 +150,7 @@ height, row limit, key glyphs, crow's foot geometry, row separator) and the look
 
   Reuse ratios already recorded in DESIGN.md. Note every pair below 4.5:1 for T029.
 
-- [ ] T023 [US2] Update `DESIGN.md` `## Known Gaps` for anything the board closes (database / ER notation) or opens. Run `pnpm exec prettier --write DESIGN.md`, then commit as `docs(design): database pack tokens in DESIGN.md (039)`.
+- [x] T023 [US2] Update `DESIGN.md` `## Known Gaps` for anything the board closes (database / ER notation) or opens. Run `pnpm exec prettier --write DESIGN.md`, then commit as `docs(design): database pack tokens in DESIGN.md (039)`.
 
 **Checkpoint:** US2 is complete. An agent can plan 041 and 042 from DESIGN.md.
 
@@ -165,7 +165,7 @@ height, row limit, key glyphs, crow's foot geometry, row separator) and the look
 §g entry with "Decision (founder, 2026-10-03)", and every other difference has a numbered entry
 with a default.
 
-- [ ] T024 [US3] In `docs/design/design-analysis.md` §b, add `### Components added by the Database pack (134–168)` after `### Components added by board B (117–127)`. Write one bullet per component spec in data-model.md: name, frames, sizes, spacing, tokens, states, owning feature. Cover:
+- [x] T024 [US3] In `docs/design/design-analysis.md` §b, add `### Components added by the Database pack (134–168)` after `### Components added by board B (117–127)`. Write one bullet per component spec in data-model.md: name, frames, sizes, spacing, tokens, states, owning feature. Cover:
   - table card, column row, key glyphs, nullable marker, type text, row separator, indexes footer;
   - Show all / Show fewer, in-table column search;
   - enum card and value chips;
@@ -173,7 +173,7 @@ with a default.
   - Names · Keys · All control (zoom island; a dropdown on A10), dialect chip, Deck settings Database section;
   - R / W markers and the "writes" chip, outside proxies, breadcrumb island;
   - the table states from frame 161 (default, hover, selected, row selected, editing, problem, current step, dimmed, dragged, connection target, collapsed to keys, locked).
-- [ ] T025 [US3] In `docs/design/design-analysis.md` §b, add `### Chrome reused unchanged (Database board)` listing what the board draws from `sododeck-canvas.js` / `sododeck-states.js` without restyling. Cover:
+- [x] T025 [US3] In `docs/design/design-analysis.md` §b, add `### Chrome reused unchanged (Database board)` listing what the board draws from `sododeck-canvas.js` / `sododeck-states.js` without restyling. Cover:
   - shell islands and the rail, including the Problems badge;
   - flyout, drawer + `dHead`, section label, toolbar, menu, popover, tooltip, pill;
   - PRIM / SEC buttons, input, chips;
@@ -182,18 +182,18 @@ with a default.
 
   State that 041–049 must use the app's existing components for these.
 
-- [ ] T026 [US3] In `docs/design/design-analysis.md` §c, add `### Tokens introduced by the Database pack (134–168)`: one paragraph that links DESIGN.md `#database-pack` and names the new token families.
-- [ ] T027 [US3] In `docs/design/design-analysis.md` §g, add `### Mismatches found in the Database board (2026-10-04)` after the last entry (82). Write §g-83 to §g-86 as **Decision (founder, 2026-10-03):** entries, with frame links:
+- [x] T026 [US3] In `docs/design/design-analysis.md` §c, add `### Tokens introduced by the Database pack (134–168)`: one paragraph that links DESIGN.md `#database-pack` and names the new token families.
+- [x] T027 [US3] In `docs/design/design-analysis.md` §g, add `### Mismatches found in the Database board (2026-10-04)` after the last entry (82). Write §g-83 to §g-86 as **Decision (founder, 2026-10-03):** entries, with frame links:
   - 83: ≡ menu (frame 150): `apps/app/src/editor/shell/deck-menu.tsx` wins, with Show JSON ⌘J, Keyboard shortcuts ? and the app's icons;
   - 84: dialect convert confirm (frame 153): the `packages/ui` `dialog.tsx` confirm with one standard overlay, no second dim layer;
   - 85: Deck drawer sections (frames 151, 152): Problems, Summary and Storage stay as `apps/app/src/editor/inspector/deck-inspector.tsx` draws them; only Database is new (043);
   - 86: local control copies (`ctog` with a `#fff` knob and `rgba(0,0,0,.2)` shadow, `check`, `seg` / `SEGI`, `dlgP`, `rgba(0,0,0,.08)` window shadows; frames 138, 145, 151–153): use `packages/ui` `switch`, `checkbox`, `segmented-control` and `dialog` plus the elevation tokens.
-- [ ] T028 [US3] In the same §g subsection, write §g-87 to §g-89 as **Default:** entries:
+- [x] T028 [US3] In the same §g subsection, write §g-87 to §g-89 as **Default:** entries:
   - 87: table width 240 vs the card default 184 (§g-67); `db.table` defaults to 240 and the size stays computed;
   - 88: the board's export list (frame 145) and the DBML row subtitle (frame 166) name another tool; repo docs say "DBML" only, and the prototype file is kept byte-for-byte;
   - 89: A2 drawn at 80 % instead of 100 % (frame 135); accepted as the content reference.
-- [ ] T029 [US3] Go through all 35 frames against DESIGN.md, DB1–DB11 and §g-58–§g-82. Add every further mismatch as §g-90 onward in `docs/design/design-analysis.md`, including each contrast pair below 4.5:1 from T022. Include a §g entry for any Part A or Part B item the board lacks (spec edge cases); none are expected.
-- [ ] T030 [US3] Run `pnpm exec prettier --write docs/design/design-analysis.md`, then commit as `docs(design): database board components and decisions (039)`.
+- [x] T029 [US3] Go through all 35 frames against DESIGN.md, DB1–DB11 and §g-58–§g-82. Add every further mismatch as §g-90 onward in `docs/design/design-analysis.md`, including each contrast pair below 4.5:1 from T022. Include a §g entry for any Part A or Part B item the board lacks (spec edge cases); none are expected.
+- [x] T030 [US3] Run `pnpm exec prettier --write docs/design/design-analysis.md`, then commit as `docs(design): database board components and decisions (039)`.
 
 **Checkpoint:** US3 is complete. The founder can review §g-83 onward.
 
@@ -206,13 +206,13 @@ with a default.
 **Independent test:** [quickstart.md](quickstart.md) §4. Every inventory link resolves, every id
 from 134 to 168 has a row, and each of 041–049 appears in the Feature column.
 
-- [ ] T031 [US4] In `docs/design/design-analysis.md` §a, add `### Database board 134–168 (Sododeck Database.dc.html, added 2026-10-04)` before `### Not designed at all`. Start with one intro paragraph: the board, its Part A / Part B split, the sample "Shop", and that board B rules apply (DB3). Then add the table `# | Screen / Row | Screenshots | Feature | Notes`:
+- [x] T031 [US4] In `docs/design/design-analysis.md` §a, add `### Database board 134–168 (Sododeck Database.dc.html, added 2026-10-04)` before `### Not designed at all`. Start with one intro paragraph: the board, its Part A / Part B split, the sample "Shop", and that board B rules apply (DB3). Then add the table `# | Screen / Row | Screenshots | Feature | Notes`:
   - one row per frame 134–168, in id order;
   - `[light](screens/<id>-<slug>-light.png) · [dark](screens/<id>-<slug>-dark.png)` links;
   - the primary feature first, then the others, from the data-model.md catalogue;
   - one or two sentences on what each frame shows, written by looking at the screenshot.
-- [ ] T032 [US4] In `docs/design/design-analysis.md` §a `### Not designed at all`, update any line the board now covers (for example database or ER notation, if listed).
-- [ ] T033 [US4] Run [quickstart.md](quickstart.md) §4 (link check and per-feature coverage), then commit as `docs(design): database board inventory 134-168 (039)`.
+- [x] T032 [US4] In `docs/design/design-analysis.md` §a `### Not designed at all`, update any line the board now covers (for example database or ER notation, if listed).
+- [x] T033 [US4] Run [quickstart.md](quickstart.md) §4 (link check and per-feature coverage), then commit as `docs(design): database board inventory 134-168 (039)`.
 
 **Checkpoint:** all four stories are complete.
 
@@ -220,17 +220,17 @@ from 134 to 168 has a row, and each of 041–049 appears in the Feature column.
 
 ## Phase 7: Polish and cross-cutting
 
-- [ ] T034 [P] Update `docs/backlog-database.md`:
+- [x] T034 [P] Update `docs/backlog-database.md`:
   - DB9 and §048 point at DESIGN.md `#database-pack` for the row limit (12);
   - the "Design" bullet at the top says the frames are 134–168;
   - any value in §040–§049 the board changed is corrected with a pointer to its §g entry.
 
   Do not mark 039 done until it is merged.
 
-- [ ] T035 [P] Read the added lines of the full diff (`git diff main -- docs DESIGN.md`, prototype files excluded) and confirm no other diagram or database tool is named (FR-015).
-- [ ] T036 Run all of [quickstart.md](quickstart.md) §1–§7. Fix anything that fails.
-- [ ] T037 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and confirm everything passes unchanged. Run `git diff --stat main -- apps packages` and confirm it is empty.
-- [ ] T038 Commit the remaining changes as `docs(backlog): point database backlog at the imported board (039)`. Push the branch and open a PR to `main`. The PR body lists:
+- [x] T035 [P] Read the added lines of the full diff (`git diff main -- docs DESIGN.md`, prototype files excluded) and confirm no other diagram or database tool is named (FR-015).
+- [x] T036 Run all of [quickstart.md](quickstart.md) §1–§7. Fix anything that fails.
+- [x] T037 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` and confirm everything passes unchanged. Run `git diff --stat main -- apps packages` and confirm it is empty.
+- [x] T038 Commit the remaining changes as `docs(backlog): point database backlog at the imported board (039)`. Push the branch and open a PR to `main`. The PR body lists:
   - frames 134–168;
   - the canvas file refresh;
   - the new §g entries for founder review;

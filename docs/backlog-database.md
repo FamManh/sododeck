@@ -14,7 +14,9 @@ is the only Yjs ↔ JSON path, stable ids, heavy work in workers, no network wit
 - **Status:** draft for founder review (2026-10-03). Not scheduled; picked up after 030.
 - **Design:** prompt for the Claude Design board in
   [`design/claude-design-prompt-database-pack.md`](design/claude-design-prompt-database-pack.md).
-  Frames will be imported by 039.
+  Imported by 039 as frames 134–168 (Part A 134–154, Part B 155–168, light and dark) in
+  `docs/design/screens/`; inventory in design-analysis §a, tokens in DESIGN.md
+  [Database pack](../DESIGN.md#database-pack), decisions in §g-83 onward.
 - **Naming rule:** product docs, specs, code and UI copy describe features on their own terms.
   Do not name other diagram or database tools anywhere in the repo.
 
@@ -45,7 +47,7 @@ file exports runnable SQL.
 | DB6  | Parser (Q1, 2026-10-03): **`@dbml/core`** (Apache-2.0) for DBML and SQL, lazy-loaded inside a Web Worker only when importing, exporting or opening the DBML tab. Needs the dependency approval recorded in 044's ADR.                                                                                                                                                                                                                                                  |
 | DB7  | Storage (Q2): a table is a **node** of type `db.table` with `columns[]`, so groups, colours, search, views, export, drill-in and flows work for tables as they do for cards.                                                                                                                                                                                                                                                                                           |
 | DB8  | Relationship ends (Q3): a foreign key connector attaches to the **exact column row** at both ends (`edge.fromPort` / `edge.toPort` = column ids); 022 reuses the same fields for side anchors later.                                                                                                                                                                                                                                                                   |
-| DB9  | Long tables (Q5): a table shows up to a limit (about 12, final number from the design) with keys first, then a **"Show all n columns" / "Show fewer"** button at the bottom of the card. The choice is **per table and saved in the deck** (`node.expanded`), so a user can keep some tables fully open. Detail levels (names / keys / all) and semantic zoom still apply on top.                                                                                      |
+| DB9  | Long tables (Q5): a table shows up to a limit (**12**, from the design: DESIGN.md [Database pack](../DESIGN.md#database-pack), frame 158) with keys first, then a **"Show all n columns" / "Show fewer"** button at the bottom of the card. The choice is **per table and saved in the deck** (`node.expanded`), so a user can keep some tables fully open. Detail levels (names / keys / all) and semantic zoom still apply on top.                                   |
 | DB10 | Many-to-many (Q6): a real `n-n` cardinality can be drawn for quick sketching; SQL export writes the junction table; lint suggests creating one.                                                                                                                                                                                                                                                                                                                        |
 | DB11 | Dialect (Q4, revised 2026-10-03): **one dialect per deck**, chosen in **Deck settings** (≡ menu): Generic (default; a small common type list, SQL export asks which dialect), Postgres, MySQL or SQLite; an import sets it from the file. Every table and database card in the deck uses it; a database card only shows it as a chip. Changing it converts column types with a toast listing the conversions and Undo. A different database engine means another deck. |
 
@@ -387,7 +389,7 @@ note? }[] }`;
 - **Milestone:** after 043 · **Depends on:** 043, 011 (views), 037 (bench) · **Estimate:** 4 d
 - **Goal:** A 60-column table and a 150-table schema stay usable.
 - **In scope:**
-  - Row limit (DB9): keys first, then "Show all n columns" / "Show fewer" at the bottom of the
+  - Row limit (DB9, 12, see DESIGN.md [Database pack](../DESIGN.md#database-pack)): keys first, then "Show all n columns" / "Show fewer" at the bottom of the
     card, saved per table (`node.expanded`); rows with relationships always shown even when cut;
     no scrolling inside a card; in-table column filter.
   - Schemas as groups; group collapse with merged ×n connectors listing the FKs they carry.

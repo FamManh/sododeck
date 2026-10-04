@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+<script src="./sododeck-data.js"></script>
+<script src="./sododeck-states.js"></script>
+<script src="./sododeck-canvas.js"></script>
+<script src="./sododeck-cards.js"></script>
+<script src="./sododeck-db.js"></script>
+<style>html,body{margin:0;background:#dcdcd8;font-family:'Geist',system-ui,sans-serif;color:#1c1c1a}*{box-sizing:border-box}a{color:#d9560f}a:hover{color:#b3480c}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:48px;width:max-content">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1500px">
+    <div style="font-size:34px;font-weight:500;letter-spacing:-.02em">Sododeck · Database pack (backlog 039–049) · direction B · Deck</div>
+    <div style="font-size:16px;color:#55554f;line-height:1.5;text-wrap:pretty;max-width:1200px">The Database pack plugs into the type registry (030). A table is a B information card whose body is a list of column rows; connectors attach to rows and end in crow’s feet. The editor chrome (islands, rail, toolbars, menus, flyouts, drawer, tooltips, toasts) is the canvas-first editor from sododeck-canvas.js, drawn unchanged. One dialect per deck. Part A shows whole windows, Part B the components as 1180-wide plates. Light on the left, dark on the right.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <a href="#part-A" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">Part A · Editor screens</a>
+      <a href="#part-B" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#fff;text-decoration:none;color:#1c1c1a">Part B · Component rows</a>
+      <a href="#note" style="font-size:13px;padding:7px 13px;border-radius:999px;background:#1c1c1a;text-decoration:none;color:#fff">Note ↓</a>
+    </div>
+  </div>
+  <div id="part-A" style="display:flex;flex-direction:column;gap:48px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">Part A · Editor screens</div>
+    <sc-for list="{{ screens }}" as="r" hint-placeholder-count="1">
+      <div id="{{ r.anchor }}" style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;gap:14px"><span style="font:500 13px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:4px 9px">{{ r.id }}</span><span style="font-size:24px;font-weight:500;letter-spacing:-.02em">{{ r.title }}</span><span style="font-size:15px;color:#72726b;max-width:1400px">{{ r.sub }}</span></div>
+        <div style="display:flex;gap:40px;align-items:flex-start">
+          <sc-for list="{{ r.plates }}" as="p"><div style="display:flex;flex-direction:column;gap:8px"><div style="font:500 13px 'Geist Mono',monospace;color:#55554f">{{ p.label }}</div>{{ p.el }}</div></sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div id="part-B" style="display:flex;flex-direction:column;gap:48px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em;border-top:1px solid #c9c9c2;padding-top:24px">Part B · Component rows</div>
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="2">
+      <div id="{{ r.anchor }}" style="display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;gap:14px;border-top:1px solid #c9c9c2;padding-top:22px"><span style="font:500 13px 'Geist Mono',monospace;background:#1c1c1a;color:#fff;border-radius:6px;padding:4px 9px">{{ r.n }}</span><span style="font-size:26px;font-weight:500;letter-spacing:-.02em">{{ r.title }}</span><span style="font-size:15px;color:#72726b">{{ r.sub }}</span></div>
+        <div style="display:flex;gap:20px;align-items:stretch">
+          <sc-for list="{{ r.plates }}" as="p"><div style="display:flex;flex-direction:column;gap:8px"><div style="font:500 13px 'Geist Mono',monospace;color:#55554f">{{ p.label }}</div>{{ p.el }}</div></sc-for>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div id="note" style="display:flex;flex-direction:column;gap:20px;border-top:1px solid #c9c9c2;padding-top:24px;max-width:2400px">
+    <div style="font-size:30px;font-weight:500;letter-spacing:-.02em">Note · tokens, Canvas 2D, what stays, risks</div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px">
+      <sc-for list="{{ notes }}" as="n" hint-placeholder-count="4">
+        <div style="background:#fff;border-radius:16px;padding:24px 28px;display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:12px;letter-spacing:.07em;color:#72726b;font-weight:500;margin-bottom:8px">{{ n.title }}</div>
+          <sc-for list="{{ n.items }}" as="it"><div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding:8px 0;border-top:1px solid #ecece8;font-size:14.5px;line-height:1.5"><span style="font-weight:500">{{ it.k }}</span><span style="text-wrap:pretty;color:#33332f">{{ it.v }}</span></div></sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;part&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;A&quot;,&quot;B&quot;],&quot;default&quot;:&quot;all&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;themes&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;both&quot;,&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;both&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { ok: !!(window.SDDB && window.lucide) };
+  componentDidMount() { if (!this.state.ok) this.t = setInterval(() => { if (window.SDDB && window.lucide) { clearInterval(this.t); this.setState({ ok: true }); } }, 100); }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const S = window.SDDB;
+    if (!S || !this.state.ok) return { screens: [], rows: [], notes: [] };
+    let dbg = this.props.only || (location.hash.startsWith('#only=') ? decodeURIComponent(location.hash.slice(6)) : null);
+    if (dbg) { const [id, t] = dbg.split('|'); const isS = S.SCREENS.find(s => s.id === id); return { notes: [], rows: isS ? [] : S.ROWS.filter(r => r.id === id).map(r => ({ ...r, n: '', anchor: 'row-' + r.id, plates: [{ label: t, el: S.plate(React, r.id, t) }] })), screens: isS ? [{ ...isS, anchor: 'scr-' + id, plates: [{ label: t, el: S.screen(React, id, t) }] }] : [] }; }
+    const th = this.props.themes || 'both', part = this.props.part || 'all';
+    const themes = th === 'both' ? ['light', 'dark'] : [th];
+    const rows = part === 'A' ? [] : S.ROWS.map((r, i) => ({ ...r, n: String(i + 1).padStart(2, '0'), anchor: 'row-' + r.id, plates: themes.map(t => ({ label: 'B · ' + t, el: S.plate(React, r.id, t) })) }));
+    const screens = part === 'B' ? [] : S.SCREENS.map(r => ({ ...r, anchor: 'scr-' + r.id, plates: themes.map(t => ({ label: r.id + ' · ' + t + ' · ' + r.vw + ' × 900', el: S.screen(React, r.id, t) })) }));
+    const notes = (S.NOTES || []).map(n => ({ title: n.title, items: n.items.map(([k, v]) => ({ k, v })) }));
+    return { screens, rows, notes };
+  }
+}
+</script>
+</body>
+</html>
