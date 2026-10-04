@@ -70,4 +70,30 @@ describe('export scene performance', () => {
     expect(svg).toContain('data-part="row"');
     expect(elapsed).toBeLessThan(CEILING_MS);
   });
+
+  it('builds and renders 150 tables with ~200 relationships under the same ceiling (042)', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { tables: 150, rel: true });
+    const ui = {
+      currentViewId: null,
+      revealed: new Set<string>(),
+      drill: [],
+      activeFlowId: null,
+      notesDisplay: 'dimmed' as const,
+    };
+    buildScene({ deck, scope: 'deck', ui });
+    const fresh = structuredClone(deck);
+    const start = performance.now();
+    const scene = buildScene({ deck: fresh, scope: 'deck', ui });
+    renderSvg(scene, {
+      transparent: false,
+      palette: LIGHT_PALETTE,
+      fonts: '',
+      measure: fixedWidthMeasurer(),
+      title: 'Bench',
+    });
+    const elapsed = performance.now() - start;
+    console.info(`export scene + svg (150 tables, relationships): ${elapsed.toFixed(1)} ms`);
+    expect(scene.edges.filter((edge) => edge.rel !== undefined).length).toBeGreaterThan(150);
+    expect(elapsed).toBeLessThan(CEILING_MS);
+  });
 });

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
 import { bundleEdges } from './bundles';
-import { connectionCount, connectionsText, focusSet } from './focus-set';
+import {
+  columnFocusSet,
+  connectionCount,
+  connectionsText,
+  focusSet,
+  relationshipRows,
+} from './focus-set';
 import { visibleGraph } from './visible-graph';
 
 describe('focusSet', () => {
@@ -141,5 +147,61 @@ describe('focus sets with bundles and proxies (034 T020)', () => {
     });
     expect(focusSet(drilled, g, 'other', bundles)?.members).toEqual(new Set(['other']));
     expect(focusSet(drilled, g, 'in')?.edges).toEqual(new Set(['p1', 'p2']));
+  });
+});
+
+describe('columnFocusSet (042 R14)', () => {
+  const deck = deckOf({
+    nodes: [
+      { id: 'orders', type: 'db-table', title: 'orders' },
+      { id: 'customers', type: 'db-table', title: 'customers' },
+      { id: 'invoices', type: 'db-table', title: 'invoices' },
+      { id: 'lines', type: 'db-table', title: 'lines' },
+    ],
+    edges: [
+      { id: 'r1', from: 'orders', to: 'customers', fromColumns: ['o.cid'], toColumns: ['c.id'] },
+      { id: 'r2', from: 'invoices', to: 'customers', fromColumns: ['i.cid'], toColumns: ['c.id'] },
+      {
+        id: 'r3',
+        from: 'lines',
+        to: 'customers',
+        fromColumns: ['l.a', 'l.cid'],
+        toColumns: ['c.x', 'c.id'],
+      },
+    ],
+  });
+
+  it('lights one relationship, its other table and the rows at both ends', () => {
+    expect(columnFocusSet(deck, 'orders', 'o.cid')).toEqual({
+      focusId: 'orders',
+      members: new Set(['orders', 'customers']),
+      edges: new Set(['r1']),
+      rows: new Set(['orders:o.cid', 'customers:c.id']),
+    });
+  });
+
+  it('lights every relationship on a referenced key, composite members included', () => {
+    const set = columnFocusSet(deck, 'customers', 'c.id');
+    expect(set?.edges).toEqual(new Set(['r1', 'r2', 'r3']));
+    expect(set?.members).toEqual(new Set(['customers', 'orders', 'invoices', 'lines']));
+    expect(set?.rows).toEqual(
+      new Set([
+        'orders:o.cid',
+        'customers:c.id',
+        'invoices:i.cid',
+        'lines:l.a',
+        'lines:l.cid',
+        'customers:c.x',
+      ]),
+    );
+  });
+
+  it('is undefined for a column without relationships', () => {
+    expect(columnFocusSet(deck, 'orders', 'o.id')).toBeUndefined();
+  });
+
+  it('gives a relationship its end rows', () => {
+    expect(relationshipRows(deck, 'r1')).toEqual(new Set(['orders:o.cid', 'customers:c.id']));
+    expect(relationshipRows(deck, 'gone')).toEqual(new Set());
   });
 });

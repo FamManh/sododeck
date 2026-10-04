@@ -82,7 +82,7 @@ export function exportRequestKey(request: ExportRequest, deck: SododeckFile, ui:
     ? request.schema
     : format === 'json'
       ? request.json
-      : [imageScope, request.transparent, scopeUi];
+      : [imageScope, request.transparent, scopeUi, ui.labelsOn === true];
   return JSON.stringify([snapshotId(deck), format, settings, request.retryCount]);
 }
 

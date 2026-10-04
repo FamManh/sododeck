@@ -37,6 +37,7 @@ export function hoverFocusCss(set: FocusSet): string {
       `${scope} .react-flow__edge${lit} { --sd-edge-hl-width: 2.75px; }`,
     );
   }
+  lines.push(...relationshipRowsCss(set.rows ?? new Set(), set.edges, scope));
   const near = only('data-id', neighbours);
   if (near !== null) {
     lines.push(
@@ -44,4 +45,27 @@ export function hoverFocusCss(set: FocusSet): string {
     );
   }
   return lines.join('\n');
+}
+
+/**
+ * Lit column rows and revealed hover-only labels (042 R14): the rows take Orange Soft and a
+ * heavier name, so they read without colour too; a lit relationship's hover-only label shows.
+ * Used inside a hover focus, and alone for a hovered or selected relationship (no dimming).
+ */
+export function relationshipRowsCss(
+  rows: ReadonlySet<string>,
+  edges: Iterable<string>,
+  scope = '[data-canvas]',
+): string[] {
+  const lines: string[] = [];
+  const lit = only('data-row', rows);
+  if (lit !== null) {
+    lines.push(
+      `${scope} ${lit} { background: var(--color-deck-orange-soft); }`,
+      `${scope} ${lit} > span { font-weight: 600; }`,
+    );
+  }
+  const labels = only('data-edge-label-for', edges);
+  if (labels !== null) lines.push(`${scope} ${labels}.sd-rel-hover-label { visibility: visible; }`);
+  return lines;
 }

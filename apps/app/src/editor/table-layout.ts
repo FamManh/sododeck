@@ -88,8 +88,16 @@ export interface TableLayout {
   rows: readonly TableRow[];
   /** Columns not drawn as rows: "+n columns" at Keys, "n columns" at Names. */
   hidden: { count: number; kind: 'more' | 'all' } | undefined;
+  /** Ids of the columns not drawn as rows (042: their relationship ends anchor on the pill). */
+  hiddenIds: ReadonlySet<Id>;
   /** "1 index" / "n indexes", absent without indexes or when hidden. */
   footer: string | undefined;
+  /** Top of the first row, from the card's top (042 R2): rows are `rowHeight` apart from here. */
+  rowsTop: number;
+  /** Top of the "+n columns" pill, absent without one. */
+  pillTop: number | undefined;
+  /** Vertical centre of the title line, from the card's top. */
+  titleCenter: number;
   /** Whether the column body (hairline and what follows) is drawn. */
   hasBody: boolean;
   columnCount: number;
@@ -139,10 +147,14 @@ export function tableLayout(
   const inner = width - 2 * t.paddingX;
   const columns = node.columns ?? [];
   const fk = (node.id === undefined ? undefined : context.fk.get(node.id)) ?? EMPTY_FK;
+  const connected =
+    (node.id === undefined ? undefined : context.connected?.get(node.id)) ?? EMPTY_FK;
   const detail = effectiveDetail(node.detail, display.detail);
 
   const glyphs = columns.map((column) => glyphsOf(column, fk));
-  const isKey = (i: number) => glyphs[i]?.some((g) => g !== 'unique') === true;
+  // Keys draws PK, FK and every relationship-end row (042 R15), so no relationship loses its row.
+  const isKey = (i: number) =>
+    glyphs[i]?.some((g) => g !== 'unique') === true || connected.has(columns[i]?.id ?? '');
   const shownIndexes =
     detail === 'names' ? [] : columns.map((_, i) => i).filter((i) => detail === 'all' || isKey(i));
   const keySlot = shownIndexes.some((i) => (glyphs[i]?.length ?? 0) > 1)
@@ -201,6 +213,10 @@ export function tableLayout(
   });
 
   const hiddenCount = columns.length - rows.length;
+  const drawn = new Set(rows.map((row) => row.columnId));
+  const hiddenIds: ReadonlySet<Id> = new Set(
+    columns.map((column) => column.id).filter((id) => !drawn.has(id)),
+  );
   const hidden: TableLayout['hidden'] =
     hiddenCount === 0
       ? undefined
@@ -240,6 +256,16 @@ export function tableLayout(
     (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
     body;
 
+  const titleTop = t.paddingY + t.headerHeight + t.gap;
+  const rowsTop =
+    titleTop +
+    t.titleLineHeight +
+    (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
+    t.bodyGap;
+  const pillTop = morePill
+    ? rowsTop + rows.length * t.rowHeight + (rows.length > 0 ? t.pillGap : 0)
+    : undefined;
+
   const schema = node.schema;
   return {
     width,
@@ -255,7 +281,11 @@ export function tableLayout(
     showNullable: !display.hideNullable,
     rows,
     hidden,
+    hiddenIds,
     footer,
+    rowsTop,
+    pillTop,
+    titleCenter: titleTop + t.titleLineHeight / 2,
     hasBody,
     columnCount: columns.length,
     compact: {
@@ -264,6 +294,32 @@ export function tableLayout(
       columnCount: columns.length,
     },
   };
+}
+
+/** Where a relationship end meets a table: a drawn row, the "+n columns" pill, or the title. */
+export interface RowAnchor {
+  /** From the card's top. */
+  y: number;
+  kind: 'row' | 'pill' | 'title';
+}
+
+/**
+ * The vertical anchor of a column on a table card (042 R2): the row's centre when drawn, else the
+ * "+n columns" pill's centre, else the title's centre (Names, or a column id that does not exist).
+ * Pure layout arithmetic, never measured, so canvas, drag hit test and export agree.
+ */
+export function rowAnchorY(layout: TableLayout, columnId: Id): RowAnchor {
+  const index = layout.rows.findIndex((row) => row.columnId === columnId);
+  if (index >= 0) {
+    return {
+      y: layout.rowsTop + index * TABLE_CARD.rowHeight + TABLE_CARD.rowHeight / 2,
+      kind: 'row',
+    };
+  }
+  if (layout.pillTop !== undefined && layout.hiddenIds.has(columnId)) {
+    return { y: layout.pillTop + TABLE_CARD.pillHeight / 2, kind: 'pill' };
+  }
+  return { y: layout.titleCenter, kind: 'title' };
 }
 
 const layoutCache = new WeakMap<

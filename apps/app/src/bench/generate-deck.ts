@@ -194,6 +194,11 @@ export function generateBenchDeck(
     icons?: boolean;
     /** 041: the first n nodes become 12-column tables with foreign keys and one enum. */
     tables?: number;
+    /**
+     * 042: with `tables`, every table-to-table edge is a relationship with column ends (FK → PK,
+     * `n-1`, from side optional), 5 of them self-references and 5 a second FK between a pair.
+     */
+    rel?: boolean;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -262,6 +267,7 @@ export function generateBenchDeck(
     });
   }
   if ((options.tables ?? 0) > 0) addBenchTables(nodes, edges, options.tables ?? 0);
+  if ((options.tables ?? 0) > 0 && options.rel === true) addBenchRelationships(nodes, edges);
   if (options.routes === true) addBenchRoutes(edges);
   if (options.animated === true) addBenchAnimated(edges);
   if (options.bends === true) addBenchBends(edges);
@@ -348,6 +354,57 @@ function addBenchTables(
     edge.fromColumns = [`${edge.from}-fk${String(k)}`];
     edge.toColumns = [`${edge.to}-id`];
     edge.cardinality = 'n-1';
+  }
+}
+
+/** 042 R19: how many self-references and how many tables joined by a second FK. */
+const BENCH_SPECIAL_RELATIONSHIPS = 5;
+
+/**
+ * 042 R19: runs after `addBenchTables` and overrides its column ends. Every edge between two tables
+ * becomes a relationship: the k-th one leaving a table names its `fk(k mod 2)` column (a table has
+ * two FK columns, so busy tables reuse them), the other table's PK, `n-1`, from side optional.
+ * Edges are re-pointed rather than added so the edge count and ids match the plain tables deck:
+ * 5 become self-references (`parent_id` → own `id`) and 5 a second FK beside another edge's pair.
+ */
+function addBenchRelationships(nodes: SododeckFile['nodes'], edges: SododeckFile['edges']): void {
+  const tables = new Set(nodes.filter((n) => n.type === 'db-table').map((n) => n.id));
+  const between = edges.filter((e) => tables.has(e.from) && tables.has(e.to));
+  // Spread the picks over the list; one table, one loop; one pair, one extra FK.
+  const stride = Math.max(1, Math.floor(between.length / (BENCH_SPECIAL_RELATIONSHIPS * 4)));
+  const touched = new Set<string>();
+  const loops: SododeckFile['edges'] = [];
+  const pairs: [SododeckFile['edges'][number], SododeckFile['edges'][number]][] = [];
+  for (let i = 0; i + 1 < between.length; i += stride) {
+    const edge = between[i];
+    const next = between[i + 1];
+    if (edge === undefined || next === undefined) continue;
+    if (loops.length < BENCH_SPECIAL_RELATIONSHIPS) {
+      if (touched.has(edge.id) || loops.some((l) => l.from === edge.from)) continue;
+      edge.to = edge.from;
+      touched.add(edge.id);
+      loops.push(edge);
+    } else if (pairs.length < BENCH_SPECIAL_RELATIONSHIPS) {
+      if (touched.has(edge.id) || touched.has(next.id)) continue;
+      next.from = edge.from;
+      next.to = edge.to;
+      touched.add(edge.id).add(next.id);
+      pairs.push([edge, next]);
+    } else break;
+  }
+  const used = new Map<string, number>();
+  for (const edge of between) {
+    const k = used.get(edge.from) ?? 0;
+    used.set(edge.from, k + 1);
+    edge.fromColumns = [`${edge.from}-fk${String(k % 2)}`];
+    edge.toColumns = [`${edge.to}-id`];
+    edge.cardinality = 'n-1';
+    edge.fromOptional = true;
+  }
+  for (const loop of loops) loop.fromColumns = [`${loop.from}-fk1`];
+  for (const [first, second] of pairs) {
+    first.fromColumns = [`${first.from}-fk0`];
+    second.fromColumns = [`${second.from}-fk1`];
   }
 }
 

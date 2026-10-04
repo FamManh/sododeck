@@ -757,3 +757,55 @@ describe('renderSvg: table cards (041 US5)', () => {
     expect(doc.querySelectorAll('[data-part="hairline"]')).toHaveLength(2);
   });
 });
+
+describe('renderSvg relationships (042 FR-027)', () => {
+  const shop = deckOf({
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        position: { x: 0, y: 0 },
+        columns: [
+          { id: 'o.id', name: 'id', type: 'uuid', pk: true },
+          { id: 'o.cid', name: 'customer_id', type: 'uuid' },
+        ],
+      },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        position: { x: 500, y: 0 },
+        columns: [{ id: 'c.id', name: 'id', type: 'uuid', pk: true }],
+      },
+    ],
+    edges: [
+      {
+        id: 'fk',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['o.cid'],
+        toColumns: ['c.id'],
+        cardinality: 'n-1',
+        fromOptional: true,
+        toOptional: true,
+      },
+    ],
+  });
+
+  it('draws crow paths and canvas-filled rings, with no knob, arrow or foreignObject', () => {
+    const svg = svgOf(shop);
+    expect(svg).toContain('data-mark="zero-many"');
+    expect(svg).toContain('data-mark="ring"');
+    expect(svg).toContain(`fill="${LIGHT_PALETTE.canvas}"`);
+    expect(svg).not.toContain('data-mark="knob"');
+    expect(svg).not.toContain('data-mark="arrow"');
+    expect(svg).not.toContain('<foreignObject');
+  });
+
+  it('draws 1 / n text ends', () => {
+    const svg = svgOf({ ...shop, relationshipDisplay: { notation: 'numeric' } });
+    expect(svg).toContain('>0..n</text>');
+    expect(svg).toContain('>0..1</text>');
+  });
+});

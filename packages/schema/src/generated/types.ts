@@ -286,6 +286,7 @@ export interface SododeckFile {
    */
   enums?: DbEnum[];
   tableDisplay?: TableDisplay;
+  relationshipDisplay?: RelationshipDisplay;
   /**
    * Components of the system.
    */
@@ -418,6 +419,26 @@ export interface TableDisplay {
    * Hides the index count footer.
    */
   hideIndexes?: boolean;
+}
+/**
+ * How relationships between tables draw in this deck (042). Absent keys mean cardinality ends in crow's foot, labels following the Labels tool; the editor writes `hideEnds` as `true` or removes it, and removes the object when it is empty.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "RelationshipDisplay".
+ */
+export interface RelationshipDisplay {
+  /**
+   * Relationships (042): draw plain ends instead of cardinality marks.
+   */
+  hideEnds?: boolean;
+  /**
+   * Relationships (042): label visibility; absent follows the Labels tool.
+   */
+  labels?: 'hover' | 'always' | 'off';
+  /**
+   * Relationships (042): 1 / n text instead of crow's foot; absent is crow's foot.
+   */
+  notation?: 'numeric';
 }
 /**
  * A component of the system: a card of any type (service, database, queue, warehouse and so on).

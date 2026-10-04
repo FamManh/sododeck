@@ -3,6 +3,10 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { KeyRound, Link2, ListOrdered } from 'lucide-react';
 import { memo } from 'react';
 
+import { useUiStore } from '../../state/ui-store';
+import { rowKey } from '../relationships/row-key';
+import { startColumnDrag } from '../editing/column-connect-drag';
+import type { RelSide } from '../relationships/relationship-ends';
 import { TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
 import { EnumChip } from './enum-chip';
 import { GLYPH_NAMES, rowLabel } from './table-text';
@@ -33,6 +37,45 @@ function Glyph({ glyph }: { glyph: KeyGlyph }) {
 }
 
 const TYPE_MAX = `${String(TABLE_CARD.typeShare * 100)}%`;
+
+/**
+ * A row's connection port (042 R9, FR-001): an 8 px dot centred on the card side with a 24 px hit
+ * area, shown by CSS on row hover, during a relationship drag and for a selected relationship's
+ * rows. A press starts the drag; it is reached from the keyboard through row focus and C.
+ */
+function RowPort({
+  nodeId,
+  columnId,
+  name,
+  side,
+}: {
+  nodeId: string;
+  columnId: string;
+  name: string;
+  side: RelSide;
+}) {
+  return (
+    <button
+      type="button"
+      tabIndex={-1}
+      aria-label={`Connect ${name}`}
+      data-port-side={side}
+      className={cn(
+        'sd-row-port nodrag nopan absolute top-0 flex size-6 cursor-crosshair items-center justify-center opacity-0 group-hover/row:opacity-100',
+        side === 'left' ? '-left-4' : '-right-4',
+      )}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        // The port, not the card: no node drag, no selection change.
+        event.preventDefault();
+        event.stopPropagation();
+        startColumnDrag(event, { tableId: nodeId, columnId }, side);
+      }}
+    >
+      <span className="size-2 rounded-full border-[1.5px] border-deck-orange bg-surface" />
+    </button>
+  );
+}
 
 /**
  * A table card's column list (041, frame 156): the hairline, one fixed 24 px row per column, the
@@ -71,8 +114,20 @@ export const TableBody = memo(function TableBody({
               aria-label={rowLabel(row)}
               title={row.nameCut || row.typeCut ? rowLabel(row) : undefined}
               data-column-id={row.columnId}
-              className="group/row -mx-[9px] flex h-6 shrink-0 items-center rounded-row px-[9px] hover:bg-surface-2"
+              data-row={rowKey(nodeId, row.columnId)}
+              // Roving row focus (042 R9): ↓ / ↑ from the focused table, never a Tab stop.
+              tabIndex={-1}
+              onFocus={() => {
+                useUiStore.getState().setFocusedRow({ tableId: nodeId, columnId: row.columnId });
+              }}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                if (next instanceof Element && next.closest('[data-row]') !== null) return;
+                useUiStore.getState().setFocusedRow(null);
+              }}
+              className="group/row relative -mx-[9px] flex h-6 shrink-0 items-center rounded-row px-[9px] outline-none hover:bg-surface-2 focus-visible:ring-2 focus-visible:ring-primary"
             >
+              <RowPort nodeId={nodeId} columnId={row.columnId} name={row.name} side="left" />
               <span
                 className="flex shrink-0 items-center gap-0.5"
                 style={{ width: layout.keySlot, marginRight: TABLE_CARD.keyGap }}
@@ -115,6 +170,7 @@ export const TableBody = memo(function TableBody({
                   {row.nullable ? '?' : ''}
                 </span>
               )}
+              <RowPort nodeId={nodeId} columnId={row.columnId} name={row.name} side="right" />
             </li>
           ))}
         </ul>

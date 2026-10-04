@@ -36,6 +36,11 @@ export interface BundleOptions {
   fanned: ReadonlySet<string>;
   /** Nothing bundles (recording a flow: every connector is a candidate step). */
   off: boolean;
+  /**
+   * Table rows are drawn (≥ 90 %, 042 R6): a relationship with a column end keeps its own line
+   * then. Absent means rows are not drawn.
+   */
+  rows?: boolean;
 }
 
 interface Candidate {
@@ -51,7 +56,10 @@ const cache = new WeakMap<VisibleGraph, Map<string, BundleResult>>();
  * (a line type today; waypoints and anchors with 022) always draws on its own. Keep every such
  * rule here.
  */
-function foldable(edge: DeckEdgeObject): boolean {
+function foldable(edge: DeckEdgeObject, rows: boolean): boolean {
+  if (rows && ((edge.fromColumns?.length ?? 0) > 0 || (edge.toColumns?.length ?? 0) > 0)) {
+    return false;
+  }
   return edge.route === undefined && edge.style === undefined;
 }
 
@@ -99,7 +107,7 @@ export function bundleEdges(
   graph: VisibleGraph,
   options: BundleOptions,
 ): BundleResult {
-  const key = `${options.off ? '1' : '0'}|${[...options.exclude].sort().join(',')}|${[...options.fanned].sort().join(',')}`;
+  const key = `${options.off ? '1' : '0'}${options.rows === true ? 'r' : ''}|${[...options.exclude].sort().join(',')}|${[...options.fanned].sort().join(',')}`;
   let byKey = cache.get(graph);
   if (byKey === undefined) {
     byKey = new Map();
@@ -113,7 +121,11 @@ export function bundleEdges(
   if (!options.off) {
     for (const candidate of all) {
       if (candidate.from === candidate.to) continue;
-      if (!foldable(candidate.edge) || options.exclude.has(candidate.edge.id)) continue;
+      if (
+        !foldable(candidate.edge, options.rows === true) ||
+        options.exclude.has(candidate.edge.id)
+      )
+        continue;
       const [a, b] =
         candidate.from < candidate.to
           ? [candidate.from, candidate.to]
@@ -176,10 +188,12 @@ const NO_IDS: ReadonlySet<string> = new Set();
 export function bundleOptions(
   flow: { shown: boolean; recording: boolean; markedEdges: Iterable<string> },
   fanned: ReadonlySet<string>,
+  rows = false,
 ): BundleOptions {
   return {
     exclude: flow.shown && !flow.recording ? new Set(flow.markedEdges) : NO_IDS,
     fanned,
     off: flow.recording,
+    rows,
   };
 }

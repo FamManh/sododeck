@@ -164,3 +164,73 @@ describe('HoverFocusStyle (034 R1)', () => {
     expect(text).toContain(`[data-id="${CSS.escape('merged:c|collapsed:core')}"]`);
   });
 });
+
+describe('HoverFocusStyle columns and relationships (042 R14)', () => {
+  const tables = deckOf({
+    nodes: [
+      { id: 'orders', type: 'db-table', title: 'orders' },
+      { id: 'customers', type: 'db-table', title: 'customers' },
+      { id: 'other', type: 'db-table', title: 'other' },
+    ],
+    edges: [{ id: 'fk', from: 'orders', to: 'customers', fromColumns: ['o1'], toColumns: ['c1'] }],
+  });
+  const tableGraph = visibleGraph(tables, { node: null, group: null }, new Set());
+
+  function mountTables() {
+    const wrapper = createRef<HTMLDivElement>();
+    const view = render(
+      <div ref={wrapper} data-testid="canvas">
+        <HoverFocusStyle deck={tables} graph={tableGraph} wrapper={wrapper} />
+      </div>,
+    );
+    return { ...view, wrapper };
+  }
+
+  beforeEach(() => {
+    useUiStore.setState({ hoverFocus: null, focusMode: false, activeFlow: null });
+  });
+
+  const focusColumn = (tableId: string, columnId: string) => {
+    act(() => {
+      useUiStore
+        .getState()
+        .setHoverFocus({ id: tableId, source: 'column', column: { tableId, columnId } });
+    });
+  };
+
+  it('lights a column’s rows and dims everything else', () => {
+    const { container, getByTestId } = mountTables();
+    focusColumn('orders', 'o1');
+    expect(getByTestId('canvas')).toHaveAttribute('data-hover-focus');
+    expect(css(container)).toContain('[data-row="orders\\:o1"]');
+    expect(css(container)).toContain('[data-row="customers\\:c1"]');
+    expect(css(container)).toContain('opacity: var(--sd-deck-dim)');
+  });
+
+  it('dims nothing for a column without relationships', () => {
+    const { container, getByTestId } = mountTables();
+    focusColumn('orders', 'o2');
+    expect(container.querySelector('style')).toBeNull();
+    expect(getByTestId('canvas')).not.toHaveAttribute('data-hover-focus');
+  });
+
+  it('adds only the row highlight in focus mode', () => {
+    const { container, getByTestId } = mountTables();
+    useUiStore.setState({ focusMode: true });
+    focusColumn('orders', 'o1');
+    expect(getByTestId('canvas')).toHaveAttribute('data-hover-rows');
+    expect(getByTestId('canvas')).not.toHaveAttribute('data-hover-focus');
+    expect(css(container)).not.toContain('opacity');
+  });
+
+  it('lights a hovered relationship’s end rows without dimming', () => {
+    const { container, getByTestId } = mountTables();
+    act(() => {
+      useUiStore.getState().setHoverFocus({ id: 'fk', source: 'edge' });
+    });
+    expect(getByTestId('canvas')).toHaveAttribute('data-hover-rows');
+    expect(css(container)).toContain('[data-row="orders\\:o1"]');
+    expect(css(container)).toContain('.sd-rel-hover-label { visibility: visible; }');
+    expect(css(container)).not.toContain('opacity');
+  });
+});

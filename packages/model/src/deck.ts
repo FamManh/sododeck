@@ -19,6 +19,7 @@
  *                                               file has them or an op wrote them (040);
                                                tableDisplay (Y.Map, always present, written
                                                only with entries, 041)
+ *                                               relationshipDisplay (Y.Map, the same, 042)
  *   doc.getMap('nodes')      Y.Map<id, Y.Map>  one map per component; a table's columns, indexes
  *                                               and checks → Y.Map<id, Y.Map> (only when stored,
  *                                               even empty; 040); index `columns` a whole value
@@ -143,6 +144,8 @@ export function fromJSON(input: unknown): DeckDoc {
     }
     // Table display (041, R4): always present like `tagColors`, emitted only with entries.
     meta.set('tableDisplay', toY(file.tableDisplay ?? {}));
+    // Relationship display (042): the same, so a first write on two tabs shares one map.
+    meta.set('relationshipDisplay', toY(file.relationshipDisplay ?? {}));
 
     for (const name of COLLECTIONS) {
       const list = collectionMap(doc, name);

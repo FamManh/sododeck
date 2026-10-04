@@ -391,3 +391,26 @@ describe('visibleGraph', () => {
     expect(median).toBeLessThan(10);
   });
 });
+
+describe('visibleGraph self-references (042 FR-011)', () => {
+  const deck = deckOf({
+    nodes: [
+      { id: 'cat', type: 'db-table', title: 'categories', group: 'g' },
+      { id: 'svc', type: 'service', title: 'Svc' },
+    ],
+    groups: [{ id: 'g', title: 'G' }],
+    edges: [
+      { id: 'parent', from: 'cat', to: 'cat', fromColumns: ['p'], toColumns: ['id'] },
+      { id: 'loop', from: 'svc', to: 'svc' },
+    ],
+  });
+  const top = { node: null, group: null };
+
+  it('keeps a self-referencing relationship, not a card self-loop', () => {
+    expect(visibleGraph(deck, top, new Set()).edges).toEqual(['parent']);
+  });
+
+  it('hides it inside a collapsed group, as before', () => {
+    expect(visibleGraph(deck, top, new Set(['g'])).edges).toEqual([]);
+  });
+});

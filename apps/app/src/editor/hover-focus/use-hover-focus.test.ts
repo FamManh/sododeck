@@ -185,3 +185,76 @@ describe('useHoverFocus (034 R3)', () => {
     expect(useUiStore.getState().announcement.text).toBe('B: 3 connections');
   });
 });
+
+describe('useHoverFocus rows and relationships (042 R14)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const column = { id: 'orders', source: 'column', column: { tableId: 'orders', columnId: 'c1' } };
+
+  it('lights a hovered row after the rest, and goes back to the card off the rows', () => {
+    const { result } = setup();
+    act(() => {
+      result.current.onRowHover('orders', 'orders:c1');
+      vi.advanceTimersByTime(REST_MS - 1);
+    });
+    expect(hover()).toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(hover()).toEqual(column);
+    act(() => {
+      result.current.onRowHover('orders', null);
+    });
+    expect(hover()).toEqual({ id: 'orders', source: 'pointer' });
+  });
+
+  it('lights a focused row at once, and clears it with the focus', () => {
+    const { result } = setup();
+    act(() => {
+      useUiStore.getState().setFocusedRow({ tableId: 'orders', columnId: 'c1' });
+      result.current.onRowFocus('orders', 'c1');
+    });
+    expect(hover()).toEqual(column);
+    act(() => {
+      result.current.onCardBlur();
+    });
+    expect(hover()).toBeNull();
+  });
+
+  it('keeps row highlights in focus mode and flows, where card hover is off', () => {
+    const { result } = setup();
+    act(() => {
+      useUiStore.getState().setFocusMode(true);
+    });
+    act(() => {
+      result.current.onNodeMouseEnter(mouse, node('orders'));
+      vi.advanceTimersByTime(REST_MS);
+    });
+    expect(hover()).toBeNull();
+    act(() => {
+      result.current.onRowFocus('orders', 'c1');
+    });
+    expect(hover()).toEqual(column);
+  });
+
+  it('lights a hovered relationship at once and clears it on leave', () => {
+    const { result } = setup();
+    act(() => {
+      result.current.onRelationshipEnter('r1');
+    });
+    expect(hover()).toEqual({ id: 'r1', source: 'edge' });
+    act(() => {
+      result.current.onRelationshipLeave('other');
+    });
+    expect(hover()).toEqual({ id: 'r1', source: 'edge' });
+    act(() => {
+      result.current.onRelationshipLeave('r1');
+    });
+    expect(hover()).toBeNull();
+  });
+});

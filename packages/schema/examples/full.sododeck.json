@@ -90,6 +90,7 @@
     "hideNotes": false,
     "hideIndexes": false
   },
+  "relationshipDisplay": { "hideEnds": false, "labels": "always", "notation": "numeric" },
   "nodes": [
     {
       "id": "payments-provider",

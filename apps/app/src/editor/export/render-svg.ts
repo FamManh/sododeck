@@ -6,8 +6,8 @@ import { TABLE_CARD, type TableLayout } from '../table-layout';
 import { DECK_CARD } from '../card-layout';
 import { SHAPE_TITLE_FONT, SHAPE_TITLE_LINE, shapePath, titleBox } from '../shapes/shape-geometry';
 import { TAG_CHIP } from '../card-tags';
-import { KNOB_RADIUS } from '../edge-constants';
-import { ARROW_PATH, endMarks } from '../edge-end-marks';
+import { CROW_RING, KNOB_RADIUS } from '../edge-constants';
+import { ARROW_PATH, crowPath, endMarks, type EndMark } from '../edge-end-marks';
 import {
   exportTagColours,
   exportTextColour,
@@ -920,6 +920,44 @@ function edgeStroke(edge: SceneEdge, palette: ExportPalette): StrokeLook {
   }
 }
 
+/**
+ * A relationship's composite brackets and ends (042 R7, FR-027): the canvas's crow's foot paths
+ * with rings filled with the canvas colour, or 1 / n text, all in the line colour.
+ */
+function relationshipMarks(
+  rel: { bracket: string; marks: readonly EndMark[] },
+  colour: string,
+  width: number,
+  palette: ExportPalette,
+): string[] {
+  const out: string[] = [];
+  const stroke = {
+    fill: 'none',
+    stroke: colour,
+    'stroke-width': width,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+  };
+  if (rel.bracket !== '')
+    out.push(`<path ${attrs({ 'data-part': 'bracket', d: rel.bracket, ...stroke })}/>`);
+  for (const mark of rel.marks) {
+    if (mark.kind === 'crow') {
+      const crow = crowPath(mark.at, mark.u, mark.end);
+      if (crow.d !== '')
+        out.push(`<path ${attrs({ 'data-mark': mark.end, d: crow.d, ...stroke })}/>`);
+      if (crow.ring !== undefined) {
+        out.push(
+          `<circle ${attrs({ 'data-mark': 'ring', cx: crow.ring.cx, cy: crow.ring.cy, r: CROW_RING, fill: palette.canvas, stroke: colour, 'stroke-width': width })}/>`,
+        );
+      }
+    } else if (mark.kind === 'card-text') {
+      // The text's vertical centre sits on the mark point, as `dominant-baseline: middle` on canvas.
+      out.push(text('l', mark.at.x, mark.at.y + 3.5, colour, mark.text, mark.anchor));
+    }
+  }
+  return out;
+}
+
 function edge(item: SceneEdge, palette: ExportPalette, measure: TextMeasurer): string {
   const { colour, width, dash, cap } = edgeStroke(item, palette);
   // The knob and arrow grow a quarter per px above the default weight, as on the canvas.
@@ -935,8 +973,11 @@ function edge(item: SceneEdge, palette: ExportPalette, measure: TextMeasurer): s
       ...(cap === undefined ? {} : { 'stroke-linecap': cap }),
     })}/>`,
   );
-  // The canvas's own end marks (`endMarks`), in the line colour.
-  for (const mark of endMarks(item.ends, item.direction)) {
+  if (item.rel !== undefined) {
+    out.push(...relationshipMarks(item.rel, colour, width, palette));
+  }
+  // The canvas's own end marks (`endMarks`), in the line colour; a relationship has its own.
+  for (const mark of item.rel === undefined ? endMarks(item.ends, item.direction) : []) {
     out.push(
       mark.kind === 'knob'
         ? `<circle ${attrs({ 'data-mark': 'knob', cx: mark.at.x, cy: mark.at.y, r: KNOB_RADIUS * scale, fill: colour })}/>`

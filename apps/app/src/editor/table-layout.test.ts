@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 import { fixedWidthMeasurer } from './export/text-measure';
 import type { TableContext } from './table-keys';
-import { effectiveDetail, tableLayout, TABLE_CARD, type TableNode } from './table-layout';
+import {
+  effectiveDetail,
+  rowAnchorY,
+  tableLayout,
+  TABLE_CARD,
+  type TableNode,
+} from './table-layout';
 
 // 0.6 em per character: Geist 12 → 7.2 px, Mono 11 → 6.6 px; a 240 card has 214 inside.
 const measure = fixedWidthMeasurer(0.6);
@@ -213,5 +219,56 @@ describe('tableLayout rows (041 FR-005–FR-009)', () => {
 
   it('counts the System content: PK, FK (not PK) and columns', () => {
     expect(layout(orders).compact).toEqual({ pkCount: 1, fkCount: 1, columnCount: 7 });
+  });
+});
+
+describe('rowAnchorY and connected rows (042 R2, R15)', () => {
+  // Rows start below the title, the 8 px body gap: 62 + 8.
+  const ROWS = TOP + 8;
+
+  it('exposes the rows top, the title centre and the pill top', () => {
+    const all = layout(orders);
+    expect(all.rowsTop).toBe(ROWS);
+    expect(all.titleCenter).toBe(12 + 24 + 8 + 9);
+    expect(all.pillTop).toBeUndefined();
+    const keys = layout(orders, context({ detail: 'keys' }));
+    expect(keys.pillTop).toBe(ROWS + 2 * 24 + 6);
+    const plain = { ...orders, id: 'plain', columns: [col('a'), col('b')], indexes: [] };
+    expect(layout(plain, context({ detail: 'keys' })).pillTop).toBe(ROWS);
+  });
+
+  it('moves the rows down by the note', () => {
+    const noted = layout({ ...orders, description: 'Placed orders' });
+    expect(noted.rowsTop).toBe(ROWS + 8 + 17);
+  });
+
+  it('returns the row centre at All and Keys', () => {
+    const all = layout(orders);
+    expect(rowAnchorY(all, 'id')).toEqual({ y: ROWS + 12, kind: 'row' });
+    expect(rowAnchorY(all, 'total_cents')).toEqual({ y: ROWS + 5 * 24 + 12, kind: 'row' });
+    const keys = layout(orders, context({ detail: 'keys' }));
+    expect(rowAnchorY(keys, 'customer_id')).toEqual({ y: ROWS + 24 + 12, kind: 'row' });
+  });
+
+  it('falls back to the "+n" pill for a hidden column and the title at Names', () => {
+    const keys = layout(orders, context({ detail: 'keys' }));
+    expect(rowAnchorY(keys, 'total_cents')).toEqual({ y: ROWS + 2 * 24 + 6 + 12, kind: 'pill' });
+    const names = layout({ ...orders, detail: 'names' });
+    expect(rowAnchorY(names, 'id')).toEqual({ y: 12 + 24 + 8 + 9, kind: 'title' });
+  });
+
+  it('uses the title for a column id that does not exist', () => {
+    expect(rowAnchorY(layout(orders), 'gone')).toEqual({ y: 12 + 24 + 8 + 9, kind: 'title' });
+  });
+
+  it('keeps connected rows at Keys and leaves them out of the hidden count', () => {
+    const ctx = context(
+      { detail: 'keys' },
+      { connected: new Map([['orders', new Set(['customer_id', 'number'])]]) },
+    );
+    const keys = layout(orders, ctx);
+    expect(keys.rows.map((r) => r.columnId)).toEqual(['id', 'customer_id', 'number']);
+    expect(keys.hidden).toEqual({ count: 4, kind: 'more' });
+    expect(rowAnchorY(keys, 'number')).toEqual({ y: ROWS + 2 * 24 + 12, kind: 'row' });
   });
 });

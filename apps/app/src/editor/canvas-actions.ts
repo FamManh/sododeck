@@ -3,11 +3,17 @@
  * writes through the editor (one undo step) and then updates UI-only state.
  */
 import { endpointTitle, type DeckEditor } from '@sododeck/model';
+import type { SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 import { cardSize, freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
-import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
+import {
+  columnConnectionCheck,
+  connectionCheck,
+  REFUSAL_TEXT,
+  type ColumnEnd,
+} from './connection-rules';
 import { typeName } from './type-label';
 import { readViewState } from './views/use-current-view';
 
@@ -86,6 +92,93 @@ export function connectComponents(editor: DeckEditor, from: string, to: string):
   ui.announce(`Connected ${endpointTitle(deck, from)} to ${endpointTitle(deck, to)}`);
   return id;
 }
+
+function columnOf(deck: SododeckFile, end: ColumnEnd) {
+  return deck.nodes.find((n) => n.id === end.tableId)?.columns?.find((c) => c.id === end.columnId);
+}
+
+/**
+ * Draws a relationship from a column to a column (042 R9, FR-017) in one undo step: n–1 from
+ * the source table to the target's, the source (many) side optional, the target side optional
+ * only when the source column is nullable (a primary key counts as not null). An existing
+ * relationship on the same pair and direction is selected instead (FR-019). Returns the
+ * relationship's id, or null when nothing is drawn.
+ */
+export function connectColumns(
+  editor: DeckEditor,
+  source: ColumnEnd,
+  target: ColumnEnd,
+): string | null {
+  const deck = readDeck(editor.doc);
+  const ui = useUiStore.getState();
+  const check = columnConnectionCheck(deck, source, target);
+  if (!check.ok) {
+    if (check.existing !== undefined) {
+      ui.select({ edges: [check.existing] });
+      ui.announce('Already related');
+      return check.existing;
+    }
+    return null;
+  }
+  const column = columnOf(deck, source);
+  const nullable = column !== undefined && column.notNull !== true && column.pk !== true;
+  const { lastLineShape } = ui;
+  const id = editor.add('edges', {
+    from: source.tableId,
+    to: target.tableId,
+    fromColumns: [source.columnId],
+    toColumns: [target.columnId],
+    cardinality: 'n-1',
+    fromOptional: true,
+    ...(nullable ? { toOptional: true } : {}),
+    ...(lastLineShape === 'curved' ? {} : { style: { shape: lastLineShape } }),
+  });
+  ui.select({ edges: [id] });
+  ui.announce('Relationship created');
+  return id;
+}
+
+/**
+ * Moves one single-column end of a relationship onto another column row (042 R13, FR-020), in
+ * one undo step; every other field is kept. A composite end is never moved by dragging. Returns
+ * whether anything was written.
+ */
+export function reconnectColumnEnd(
+  editor: DeckEditor,
+  edgeId: string,
+  end: 'from' | 'to',
+  target: ColumnEnd,
+): boolean {
+  const deck = readDeck(editor.doc);
+  const ui = useUiStore.getState();
+  const edge = deck.edges.find((e) => e.id === edgeId);
+  const columns = end === 'from' ? edge?.fromColumns : edge?.toColumns;
+  if (edge === undefined || (columns?.length ?? 0) > 1) {
+    ui.announce(COMPOSITE_END_HINT);
+    return false;
+  }
+  const fixed: ColumnEnd = {
+    tableId: end === 'from' ? edge.to : edge.from,
+    columnId: (end === 'from' ? edge.toColumns : edge.fromColumns)?.[0] ?? '',
+  };
+  const [from, to] = end === 'from' ? [target, fixed] : [fixed, target];
+  const check = columnConnectionCheck(deck, from, to, edgeId);
+  const current = columns?.[0];
+  const table = end === 'from' ? edge.from : edge.to;
+  if (!check.ok || (current === target.columnId && table === target.tableId)) return false;
+  editor.update(
+    'edges',
+    edgeId,
+    end === 'from'
+      ? { from: target.tableId, fromColumns: [target.columnId] }
+      : { to: target.tableId, toColumns: [target.columnId] },
+  );
+  ui.announce('Relationship end moved');
+  return true;
+}
+
+/** Said when a composite end is dragged (042 FR-020): its columns are edited in the drawer. */
+export const COMPOSITE_END_HINT = 'Edit composite column ends in the details drawer';
 
 /** The canvas wrapper element, if the canvas is mounted. */
 export function canvasElement(): HTMLElement | null {

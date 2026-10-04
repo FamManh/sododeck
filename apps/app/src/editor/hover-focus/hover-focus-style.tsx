@@ -3,9 +3,9 @@ import { memo, useEffect, useRef, type RefObject } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
 import type { BundleResult } from '../bundles';
-import { focusSet } from '../focus-set';
+import { columnFocusSet, focusSet, relationshipRows } from '../focus-set';
 import type { VisibleGraph } from '../visible-graph';
-import { hoverFocusCss } from './hover-focus-css';
+import { hoverFocusCss, relationshipRowsCss } from './hover-focus-css';
 
 interface HoverFocusStyleProps {
   deck: SododeckFile;
@@ -39,18 +39,45 @@ export const HoverFocusStyle = memo(function HoverFocusStyle({
       style?.remove();
       style = null;
       root.removeAttribute('data-hover-focus');
+      root.removeAttribute('data-hover-rows');
+    };
+    const show = (text: string, attribute: 'data-hover-focus' | 'data-hover-rows') => {
+      style ??= root.appendChild(document.createElement('style'));
+      style.textContent = text;
+      root.removeAttribute(
+        attribute === 'data-hover-focus' ? 'data-hover-rows' : 'data-hover-focus',
+      );
+      root.setAttribute(attribute, '');
+    };
+    /** Rows only, nothing dimmed: a hovered relationship, or a column in focus mode / a flow. */
+    const showRows = (rows: ReadonlySet<string>, edges: Iterable<string>) => {
+      const lines = relationshipRowsCss(rows, edges, '[data-hover-rows]');
+      if (lines.length === 0) clear();
+      else show(lines.join('\n'), 'data-hover-rows');
     };
     const run = () => {
-      const id = useUiStore.getState().hoverFocus?.id ?? null;
+      const ui = useUiStore.getState();
+      const focus = ui.hoverFocus;
       const current = inputs.current;
-      const set = id === null ? null : focusSet(current.deck, current.graph, id, current.bundles);
-      if (set === null) {
+      if (focus === null) {
         clear();
         return;
       }
-      style ??= root.appendChild(document.createElement('style'));
-      style.textContent = hoverFocusCss(set);
-      root.setAttribute('data-hover-focus', '');
+      if (focus.source === 'edge') {
+        showRows(relationshipRows(current.deck, focus.id), [focus.id]);
+        return;
+      }
+      if (focus.source === 'column' && focus.column !== undefined) {
+        const set = columnFocusSet(current.deck, focus.column.tableId, focus.column.columnId);
+        if (set === undefined) clear();
+        // Pinned focus and flows keep their look; the row highlight is added (FR-024).
+        else if (ui.focusMode || ui.activeFlow !== null) showRows(set.rows ?? new Set(), set.edges);
+        else show(hoverFocusCss(set), 'data-hover-focus');
+        return;
+      }
+      const set = focusSet(current.deck, current.graph, focus.id, current.bundles);
+      if (set === null) clear();
+      else show(hoverFocusCss(set), 'data-hover-focus');
     };
     apply.current = run;
     run();

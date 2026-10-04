@@ -1138,6 +1138,15 @@ describe('database schema (040)', () => {
         },
       },
     ],
+    // 042: relationship display with every key.
+    [
+      'relationship display with every key',
+      {
+        ...empty,
+        tableDisplay: { detail: 'names' },
+        relationshipDisplay: { hideEnds: true, labels: 'off', notation: 'numeric' },
+      },
+    ],
     [
       'enum colours, a palette name and a hex',
       {
@@ -1227,7 +1236,12 @@ describe('database schema (040)', () => {
     // Stored always (like tagColors), written only with entries (041).
     expect(toJSON(fromJSON({ ...empty, tableDisplay: {} }))).not.toHaveProperty('tableDisplay');
     expect(keys.indexOf('tableDisplay')).toBe(keys.indexOf('enums') + 1);
-    expect(keys.indexOf('nodes')).toBe(keys.indexOf('tableDisplay') + 1);
+    // 042: like tableDisplay, a hand-written empty object is not kept.
+    expect(toJSON(fromJSON({ ...empty, relationshipDisplay: {} }))).not.toHaveProperty(
+      'relationshipDisplay',
+    );
+    expect(keys.indexOf('relationshipDisplay')).toBe(keys.indexOf('tableDisplay') + 1);
+    expect(keys.indexOf('nodes')).toBe(keys.indexOf('relationshipDisplay') + 1);
     const orders = out.nodes.find((n) => n.id === 'orders') ?? {};
     expect(Object.keys(orders)).toEqual([
       'id',
@@ -1276,6 +1290,7 @@ describe('decks saved before 040 stay unchanged (US3)', () => {
     expect(out).not.toHaveProperty('dialect');
     expect(out).not.toHaveProperty('enums');
     expect(out).not.toHaveProperty('tableDisplay');
+    expect(out).not.toHaveProperty('relationshipDisplay');
     for (const node of out.nodes)
       for (const key of DB_NODE_KEYS) expect(node).not.toHaveProperty(key);
     for (const edge of out.edges)

@@ -1,7 +1,15 @@
 import type { Direction } from '@sododeck/schema';
 
-import { KNOB_RADIUS } from './edge-constants';
-import { arrowPathAt, crossPathAt, endMarks, type EndMark } from './edge-end-marks';
+import { CROW_RING, KNOB_RADIUS } from './edge-constants';
+import {
+  arrowPathAt,
+  CROW_NAMES,
+  crossPathAt,
+  crowPath,
+  endMarks,
+  type ConnectorMark,
+  type EndMark,
+} from './edge-end-marks';
 import type { PathEnds } from './routing/route-path';
 
 interface EdgeEndsProps extends PathEnds {
@@ -15,7 +23,7 @@ interface EdgeEndsProps extends PathEnds {
   scale?: number | undefined;
 }
 
-function Mark({ mark, scale }: { mark: EndMark; scale: number }) {
+function Mark({ mark, scale }: { mark: ConnectorMark; scale: number }) {
   if (mark.kind === 'knob') {
     return (
       <circle
@@ -77,6 +85,73 @@ export function EdgeEnds({
           <Mark key={index} mark={mark} scale={scale} />
         ),
       )}
+    </g>
+  );
+}
+
+/**
+ * A relationship's end marks (042 R7): crow's feet with a ring filled with the canvas colour, or
+ * 1 / n text, in the line colour with round joins. Each is an `img` named by its meaning, so the
+ * ends read without their shape.
+ */
+export function RelationshipEndMarks({
+  marks,
+  color,
+  width,
+}: {
+  marks: readonly EndMark[];
+  color: string;
+  width: number | string;
+}) {
+  return (
+    <g style={{ color }} data-testid="relationship-ends">
+      {marks.map((mark, index) => {
+        if (mark.kind === 'crow') {
+          const crow = crowPath(mark.at, mark.u, mark.end);
+          return (
+            <g key={index} role="img" aria-label={CROW_NAMES[mark.end]} pointerEvents="none">
+              <title>{CROW_NAMES[mark.end]}</title>
+              {crow.d !== '' && (
+                <path
+                  d={crow.d}
+                  fill="none"
+                  stroke="currentColor"
+                  style={{ strokeWidth: width }}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              )}
+              {crow.ring !== undefined && (
+                <circle
+                  cx={crow.ring.cx}
+                  cy={crow.ring.cy}
+                  r={CROW_RING}
+                  fill="var(--color-canvas)"
+                  stroke="currentColor"
+                  style={{ strokeWidth: width }}
+                />
+              )}
+            </g>
+          );
+        }
+        if (mark.kind === 'card-text') {
+          return (
+            <text
+              key={index}
+              x={mark.at.x}
+              y={mark.at.y}
+              textAnchor={mark.anchor}
+              dominantBaseline="middle"
+              fill="currentColor"
+              pointerEvents="none"
+              className="font-mono text-[10.5px]"
+            >
+              {mark.text}
+            </text>
+          );
+        }
+        return null;
+      })}
     </g>
   );
 }

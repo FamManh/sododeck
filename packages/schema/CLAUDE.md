@@ -7,7 +7,7 @@
 - `src/index.ts` — public API: types, `sododeckFileSchema`, `parseSododeckFile()`, `checkSemanticRules()`, `Issue`, `emptySododeckFile()`, `jsonSchema`, `SCHEMA_URL`.
 - `src/semantic-rules.ts` — rules the generated Zod cannot check: S1 decision-table rows have one cell per column, S2 a sticky has an anchor or a position, S3 map keys are ids, S4 a group has both `position` and `size` or neither (016), S5 `view.groupFrames` keys are group ids of the file (016), S6 style has a colour, S7 edge style has a key, S8 `tagColors` keys (033: non-empty, none equal after trim, space-collapse and lower-casing; the key rule is inlined because this package imports neither model nor ui), S9–S11 connector routes (022), S12 field definitions and S13 card values (032), S14 a table column holds at most one of `default` / `defaultExpr` (040). `parseSododeckFile()` runs them after Zod; Ajv users call `checkSemanticRules()` themselves.
 - `examples/` — `minimal`, `flow-and-rule`, `full` (uses every field and enum value; a coverage test enforces it).
-- `test/` — Ajv/Zod parity over examples and 60 invalid fixtures (`fixtures.ts`), lossless parse, key order, generator guards.
+- `test/` — Ajv/Zod parity over examples, invalid fixtures and valid edge-case fixtures (`fixtures.ts`, `validFixtures` since 042), lossless parse, key order, generator guards.
 
 ## Boundaries
 
@@ -57,3 +57,5 @@ Keep the sticky property order `id, text, color, anchor, position, collapsed, sh
 041 adds two optional keys, no version bump (ADR 0030): `$defs/TableDisplay` (`detail` as `DbDetail`, `hideTypes`, `hideNullable`, `hideNotes`, `hideIndexes`; `additionalProperties: false`) as root `tableDisplay` after `enums`, and `DbEnum.color` (`ColorRef`) after `note`. `full.sododeck.json` gains a second enum (hex colour), a palette colour on the first and a `tableDisplay` with every key; four invalid fixtures cover them.
 
 050 widens connector ends with no shape change and no version bump (ADR 0031): `Edge.from` / `Edge.to` may name a node or a group (descriptions of root `edges`, `Edge`, `from`, `to`, `EdgeRoute` and `RouteWaypoint` say so; route sides and bends read against the group frame). Resolving ends and the node / group id collision check are `@sododeck/model`'s job. `full.sododeck.json` holds a group → card edge (`e-clients-platform`); `test/fixtures.ts` `validFixtures` holds card → group, group → card and group → group.
+
+042 adds one optional key, no version bump: `$defs/RelationshipDisplay` (`hideEnds` boolean, `labels` enum `hover` / `always` / `off`, `notation` enum `numeric`; `additionalProperties: false`, no defaults) as root `relationshipDisplay` after `tableDisplay`. Absent keys mean cardinality ends shown, labels following the Labels tool, crow's foot. `full.sododeck.json` sets every key; four invalid fixtures (bad `labels`, `notation: "crow"`, non-boolean `hideEnds`, unknown key) and two valid ones (empty object, every key) cover it.

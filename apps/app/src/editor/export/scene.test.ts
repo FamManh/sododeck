@@ -847,6 +847,97 @@ describe('buildScene: table cards (041 US5)', () => {
   });
 });
 
+describe('buildScene relationships (042 R17, FR-027)', () => {
+  const col = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    name: id.split('.')[1] ?? id,
+    type: 'uuid',
+    notNull: true,
+    ...extra,
+  });
+  const shop = deckOf({
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        position: { x: 0, y: 0 },
+        columns: [col('orders.id', { pk: true }), col('orders.customer_id'), col('orders.a')],
+      },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        position: { x: 500, y: 0 },
+        columns: [col('customers.id', { pk: true }), col('customers.parent_id')],
+      },
+    ],
+    edges: [
+      {
+        id: 'fk',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['orders.customer_id'],
+        toColumns: ['customers.id'],
+        cardinality: 'n-1',
+        fromOptional: true,
+        label: 'placed by',
+      },
+      {
+        id: 'self',
+        from: 'customers',
+        to: 'customers',
+        fromColumns: ['customers.parent_id'],
+        toColumns: ['customers.id'],
+        cardinality: 'n-1',
+      },
+      {
+        id: 'pair',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['orders.id', 'orders.a'],
+        toColumns: ['customers.id', 'customers.parent_id'],
+      },
+    ],
+  });
+  const edgeOf = (file: SododeckFile, id: string, patch = {}) =>
+    scene(file, 'deck', patch).edges.find((edge) => edge.id === id);
+
+  it('anchors on the rows with the canvas stubs and crow marks', () => {
+    const edge = edgeOf(shop, 'fk');
+    // customer_id is the second row: 70 + 24 + 12.
+    expect(edge?.path.startsWith('M 240 106 L 264 106')).toBe(true);
+    expect(edge?.rel?.marks.map((mark) => mark.kind === 'crow' && mark.end)).toEqual([
+      'zero-many',
+      'one',
+    ]);
+  });
+
+  it('loops a self-reference and brackets a composite end', () => {
+    expect(edgeOf(shop, 'self')?.labelPoint.x).toBe(500 + 240 + 56);
+    expect(edgeOf(shop, 'pair')?.rel?.bracket).toContain('M 240 82 L 246 82');
+  });
+
+  it('exports labels for Always, and for Follow with the Labels tool on only', () => {
+    expect(edgeOf(shop, 'fk')?.label).toBeNull();
+    expect(edgeOf(shop, 'fk', { labelsOn: true })?.label).toBe('placed by');
+    const always = { ...shop, relationshipDisplay: { labels: 'always' as const } };
+    expect(edgeOf(always, 'fk')?.label).toBe('placed by');
+    const hover = { ...shop, relationshipDisplay: { labels: 'hover' as const } };
+    expect(edgeOf(hover, 'fk', { labelsOn: true })?.label).toBeNull();
+  });
+
+  it('exports 1 / n text marks and plain ends as set', () => {
+    const numeric = { ...shop, relationshipDisplay: { notation: 'numeric' as const } };
+    expect(edgeOf(numeric, 'fk')?.rel?.marks.map((m) => m.kind === 'card-text' && m.text)).toEqual([
+      '0..n',
+      '1',
+    ]);
+    const plain = { ...shop, relationshipDisplay: { hideEnds: true } };
+    expect(edgeOf(plain, 'fk')?.rel?.marks).toEqual([]);
+  });
+});
+
 describe('buildScene group connectors (050 US4)', () => {
   const grouped = deckOf({
     nodes: [

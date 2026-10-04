@@ -394,6 +394,9 @@ Source frames: 156, 161, 147, 148.
 - **Construction:** u is the end tangent (the side normal for curved and elbow lines, the line angle for straight lines) and v is perpendicular to u. The toes are p + 6v → p + 12u → p − 6v. The bar crosses at a. Round joins and caps, drawn in the line colour.
 - **Composite key:** a 6px stub per member row, one vertical segment joining them, and the connector leaves its midpoint. Two-key pairs stay two lines.
 - **Ports:** a connector anchors on either card side at the row centre. A hidden column anchors at the centre of the Show all button, which therefore becomes a hot spot (kept rows with a connector avoid it).
+- **Stub:** on curved and elbow lines each end leaves its row on a 24px straight stub along the side normal (past the farthest ring: 20 + 4), so the marks sit on a straight piece; on straight lines the marks follow the line angle.
+- **1 / n notation:** "1", "0..1", "1..n" or "0..n" in Mono 10.5 in the line colour, 8 along the end and 8 above the line.
+- **Self-reference:** a loop on the right side bulging max(56, half the row distance) from the card edge.
 - **Where:** relationship ends are the same on curved, elbow and straight lines. Source frames: 159, 156, 158.
 
 #### Table zoom levels (162)

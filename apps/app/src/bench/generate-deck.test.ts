@@ -259,3 +259,70 @@ describe('generateBenchDeck 041 tables', () => {
     expect(deck.edges.length).toBe(generateBenchDeck(20, 30, 42).deck.edges.length);
   });
 });
+
+describe('generateBenchDeck 042 rel', () => {
+  const REL = { tables: 150, rel: true } as const;
+
+  it('gives every table-to-table edge column ends on real FK / PK columns, n-1, from optional', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, REL);
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.edges).toHaveLength(1000);
+    const tables = new Set(deck.nodes.filter((n) => n.type === 'db-table').map((n) => n.id));
+    const columnsOf = new Map(
+      deck.nodes.map((n) => [n.id, new Map((n.columns ?? []).map((c) => [c.id, c]))]),
+    );
+    const relationships = deck.edges.filter((e) => tables.has(e.from) && tables.has(e.to));
+    expect(relationships.length).toBeGreaterThanOrEqual(180);
+    expect(relationships.length).toBeLessThanOrEqual(240);
+    for (const edge of relationships) {
+      expect(edge.cardinality).toBe('n-1');
+      expect(edge.fromOptional).toBe(true);
+      expect(edge.fromColumns).toHaveLength(1);
+      expect(edge.toColumns).toEqual([`${edge.to}-id`]);
+      const fk = columnsOf.get(edge.from)?.get(edge.fromColumns?.[0] ?? '');
+      expect(fk?.name).toMatch(/_id$/);
+      expect(columnsOf.get(edge.to)?.get(`${edge.to}-id`)?.pk).toBe(true);
+    }
+    expect(checkDeck(deck).list.filter((p) => p.kind.startsWith('db-'))).toEqual([]);
+  });
+
+  it('includes 5 self-references and 5 pairs of tables joined twice on different FK columns', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, REL);
+    const loops = deck.edges.filter((e) => e.from === e.to);
+    expect(loops).toHaveLength(5);
+    expect(new Set(loops.map((e) => e.from)).size).toBe(5);
+    for (const loop of loops) {
+      expect(loop.fromColumns).toEqual([`${loop.from}-fk1`]);
+      expect(loop.toColumns).toEqual([`${loop.from}-id`]);
+    }
+    const byPair = new Map<string, typeof deck.edges>();
+    for (const edge of deck.edges) {
+      if (edge.from === edge.to) continue;
+      const key = [edge.from, edge.to].sort().join('|');
+      byPair.set(key, [...(byPair.get(key) ?? []), edge]);
+    }
+    const doubled = [...byPair.values()].filter((group) => group.length > 1);
+    expect(doubled).toHaveLength(5);
+    for (const group of doubled) {
+      expect(group).toHaveLength(2);
+      expect(new Set(group.map((e) => `${e.from}>${e.to}`)).size).toBe(1);
+      expect(new Set(group.map((e) => e.fromColumns?.[0])).size).toBe(2);
+    }
+  });
+
+  it('leaves the deck exactly as before without rel, and does nothing without tables', () => {
+    const plain = generateBenchDeck(500, 1000, 42, { tables: 150 }).deck;
+    expect(generateBenchDeck(500, 1000, 42, { tables: 150, rel: false }).deck).toEqual(plain);
+    expect(plain.edges.some((e) => e.fromOptional !== undefined || e.from === e.to)).toBe(false);
+    expect(generateBenchDeck(50, 100, 42, { rel: true }).deck).toEqual(
+      generateBenchDeck(50, 100, 42).deck,
+    );
+  });
+
+  it('keeps the nodes and the edge ids of the plain tables deck', () => {
+    const plain = generateBenchDeck(500, 1000, 42, { tables: 150 }).deck;
+    const rel = generateBenchDeck(500, 1000, 42, REL).deck;
+    expect(rel.nodes).toEqual(plain.nodes);
+    expect(rel.edges.map((e) => e.id)).toEqual(plain.edges.map((e) => e.id));
+  });
+});

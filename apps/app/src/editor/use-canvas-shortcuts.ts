@@ -6,7 +6,7 @@
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
  *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
-import { endpointOf, endpointTitle, stickyCanvasPosition } from '@sododeck/model';
+import { endpointOf, endpointTitle, isDbTable, stickyCanvasPosition } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
@@ -43,6 +43,7 @@ import {
   GROUP_NODE_PREFIX,
   MERGED_EDGE_PREFIX,
   PORT_NODE_PREFIX,
+  rowsDrawn,
 } from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
@@ -60,6 +61,7 @@ import {
 import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
 import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './editing/drag-session';
+import { enterRows, leaveRows, moveRowFocus } from './table/row-focus';
 
 export { isTextTarget };
 
@@ -346,6 +348,33 @@ export function useCanvasKeyDown() {
       }
       if (altKey) return;
 
+      // Column rows (042 R9): ↓ enters a focused table's rows, ↓ / ↑ move between them and C
+      // starts a relationship from the focused row.
+      const row = ui.focusedRow;
+      if (row !== null && !isMod(event)) {
+        if (key === 'ArrowDown' || key === 'ArrowUp') {
+          event.preventDefault();
+          moveRowFocus(row, key === 'ArrowDown' ? 1 : -1);
+          return;
+        }
+        if (key.toLowerCase() === 'c') {
+          if (session !== null || flowMode) return;
+          event.preventDefault();
+          ui.openColumnConnectPopover(row);
+          return;
+        }
+      } else if (
+        key === 'ArrowDown' &&
+        !event.shiftKey &&
+        !isMod(event) &&
+        current !== null &&
+        deck.nodes.some((n) => n.id === current && isDbTable(n)) &&
+        enterRows(current)
+      ) {
+        event.preventDefault();
+        return;
+      }
+
       const direction = ARROWS[key];
       if (selectedSticky !== null && direction !== undefined) {
         event.preventDefault();
@@ -553,6 +582,7 @@ export function useCanvasKeyDown() {
             exclude: new Set(),
             fanned: ui.fannedBundles,
             off: ui.flowSession !== null,
+            rows: rowsDrawn(effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill))),
           }).bundles.filter((bundle) => !bundle.fanned);
           const hidden = new Set(bundles.flatMap((bundle) => bundle.edgeIds));
           const own = deck.edges.filter(
@@ -815,6 +845,12 @@ export function useEditorShortcuts({
           if (ui.flowSession.invalid !== null) ui.setInvalid(null);
           else if (!ui.flowSession.confirmingCancel) requestCancel(editor);
         }
+        return;
+      }
+      // Esc leaves a table's rows (042) before it clears anything else.
+      if (key === 'escape' && ui.popover === null && ui.focusedRow !== null) {
+        event.preventDefault();
+        leaveRows(ui.focusedRow);
         return;
       }
       // Esc folds fanned-out bundles (034) once any popover has closed.

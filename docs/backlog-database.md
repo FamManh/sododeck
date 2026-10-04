@@ -275,6 +275,9 @@ values: { id, name, note? }[] }`;
 
 ## 042-db-relationships
 
+- **Status:** built (spec `specs/042-db-relationships`, ADR 0029 amendment). Owns the relationship
+  display settings (root `relationshipDisplay`: cardinality ends, labels, notation; clarify
+  2026-10-04). Reconnect plugs into today's route handles; 050 should keep the column-end drag.
 - **Milestone:** after 041 · **Depends on:** 041, 017 (routing), 029 (line types) · **Estimate:**
   5 d
 - **Goal:** Relationships connect columns, show cardinality in crow's foot notation, and are created
@@ -315,9 +318,9 @@ values: { id, name, note? }[] }`;
     used-by list).
   - Type lists per dialect (Generic, Postgres, MySQL, SQLite) as data in the app, plus the type
     conversion table used when the deck's dialect changes (toast with the conversions + Undo).
-  - Deck settings (≡ menu → the details drawer in deck mode, `DeckInspector`, frame 10) gains a **Database** section: dialect, notation (crow's foot
-    or 1 / n), show data types, nullable, notes, index footer, cardinality ends, relationship
-    labels (hover / always / off), block SQL export with errors.
+  - Deck settings (≡ menu → the details drawer in deck mode, `DeckInspector`, frame 10) gains a **Database** section: dialect and block SQL export
+    with errors. (041 built the table switches and 042 the relationship ones: cardinality ends,
+    labels, notation; clarify 2026-10-04.)
   - Duplicate a table, copy / paste across decks (new ids, relationships to tables outside the
     paste dropped with a toast), lock a table, multi-selection edits in one undo step.
   - Add flyout: Database tab (Table T, Enum, Note, Table group); packs list shows Database.
@@ -408,6 +411,8 @@ values: { id, name, note? }[] }`;
 - **In scope:**
   - Row limit (DB9, 12, see DESIGN.md [Database pack](../DESIGN.md#database-pack)): keys first, then "Show all n columns" / "Show fewer" at the bottom of the
     card, saved per table (`node.expanded`); rows with relationships always shown even when cut;
+    a relationship end on a hidden column moves its anchor from 042's "+n columns" pill to the
+    "Show all" button;
     no scrolling inside a card; in-table column filter.
   - Schemas as groups; group collapse with merged ×n connectors listing the FKs they carry.
   - Saved views filtered by schema / group / table, keeping positions, collapse state and
