@@ -24,6 +24,10 @@ import { StepSticker } from './step-sticker';
 import { TableBody } from './table/table-body';
 import { TableCompact } from './table/table-compact';
 import { TableDetailToggle } from './table/table-detail-toggle';
+import { DatabaseRow } from './database-row';
+import { TouchChipBadge } from './touch-chip';
+
+const ACCESS_TEXT = { read: 'reads', write: 'writes' } as const;
 
 /** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.28;
@@ -57,6 +61,8 @@ export const DeckNode = memo(function DeckNode({
     table === undefined
       ? `${typeName(data.kind)}: ${data.title}`
       : `Table ${data.title}, ${String(table.columnCount)} columns`,
+    data.touch === undefined ? null : `current step, ${ACCESS_TEXT[data.touch]}`,
+    data.touchChip === undefined ? null : `current step ${data.touchChip.text}`,
     data.viewDimmed === true ? 'dimmed in this view' : null,
     data.pinned === true ? 'pinned' : null,
     locked ? 'locked' : null,
@@ -398,7 +404,9 @@ export const DeckNode = memo(function DeckNode({
           )}
         </>
       )}
-      {data.childCount > 0 && table === undefined && (
+      {data.database !== undefined && table === undefined && <DatabaseRow face={data.database} />}
+      {data.touchChip !== undefined && <TouchChipBadge chip={data.touchChip} />}
+      {data.childCount > 0 && table === undefined && data.database === undefined && (
         <span
           role="img"
           aria-label={`${String(data.childCount)} components inside, press Enter to open`}

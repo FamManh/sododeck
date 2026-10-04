@@ -155,6 +155,42 @@ describe('DeckNode', () => {
     expect(screen.queryByTestId('problem-outline')).not.toBeInTheDocument();
   });
 
+  describe('database card face (049)', () => {
+    const dbProps = (patch: PropsPatch) =>
+      props({ title: 'Orders DB', kind: 'database', childCount: 1, ...patch }, false, 'db');
+
+    it.each([
+      [12, '12 tables inside'],
+      [1, '1 table inside'],
+      [0, 'No tables yet'],
+    ])('shows %i tables as "%s" with the dialect chip', (count, text) => {
+      renderNode(dbProps({ database: { count, dialect: 'Postgres' } }));
+      const row = screen.getByRole('img', { name: `${text}, Postgres, press Enter to open` });
+      expect(row).toHaveTextContent(text);
+      expect(within(row).getByTestId('dialect-chip')).toHaveTextContent('Postgres');
+      expect(screen.queryByText(/components inside/)).toBeNull();
+    });
+
+    it('shows the step chip with its verb and says it in the card name', () => {
+      renderNode(
+        dbProps({
+          database: { count: 2, dialect: 'Generic' },
+          touchChip: { text: 'writes orders +1', access: 'write' },
+        }),
+      );
+      expect(screen.getByTestId('touch-chip')).toHaveTextContent('writes orders +1');
+      expect(
+        screen.getByRole('group', { name: 'Database: Orders DB, current step writes orders +1' }),
+      ).toBeInTheDocument();
+    });
+
+    it('draws no face on other cards', () => {
+      renderNode();
+      expect(screen.queryByTestId('dialect-chip')).toBeNull();
+      expect(screen.queryByTestId('touch-chip')).toBeNull();
+    });
+  });
+
   it('reads "n inside" in the last row, keeping its label', () => {
     renderNode(props({ childCount: 4 }));
     const pill = screen.getByRole('img', { name: '4 components inside, press Enter to open' });

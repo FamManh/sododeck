@@ -3,7 +3,9 @@
  * to. Pure lookups over a deck snapshot; nothing here is stored.
  */
 import { isDbTable } from '@sododeck/model';
-import type { Id, SododeckFile } from '@sododeck/schema';
+import type { Dialect, Id, SododeckFile } from '@sododeck/schema';
+
+import { dialectName, isSqlDialect } from './export/schema-slice';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -50,4 +52,9 @@ export function databaseCards(deck: Pick<SododeckFile, 'nodes'>): Node[] {
 export function tableCountText(count: number): string {
   if (count === 0) return 'No tables yet';
   return count === 1 ? '1 table inside' : `${String(count)} tables inside`;
+}
+
+/** The dialect chip on every database card: "Generic", "Postgres", "MySQL" or "SQLite". */
+export function dialectLabel(dialect: Dialect): string {
+  return isSqlDialect(dialect) ? dialectName(dialect) : 'Generic';
 }

@@ -3,9 +3,10 @@
  * candidate, preview and invalid styles on edges, and the "Step n starts here" ring on the next
  * start node; in flow mode (007) the played path, the current edge and its nodes. Pure; `toFlowEdges` / `toFlowNodes` read it through their per-object cache.
  */
-import type { FlowAnalysis, PathStep } from '@sododeck/model';
+import type { FlowAnalysis, PathStep, TouchAccess } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
+import type { TouchChip } from '../../db/touches';
 import type { FlowSession } from '../../state/ui-store';
 import { sessionPath } from './session-path';
 import { edgeStateOf, stepMarks, type NodeStepMark, type StepState } from './step-marks';
@@ -45,6 +46,12 @@ export interface NodeFlowMark {
   currentStep?: boolean;
   /** Flow mode: the card's sticker (035); absent for cards the played path does not touch. */
   step?: NodeStepMark | null;
+  /** Flow mode (049): a table the current step reads or writes (write beats read). */
+  touch?: TouchAccess;
+  /** Flow mode (049): the columns of this table the current step touches. */
+  columns?: ReadonlyMap<string, TouchAccess>;
+  /** Flow mode (049): a database card owning touched tables, "writes orders +1". */
+  chip?: TouchChip;
 }
 
 /** Flow mode input (007 data-model §3). */

@@ -105,12 +105,8 @@
             "id": "edge.1",
             "from": "node.2",
             "to": "node.1",
-            "fromColumns": [
-              "dbcol.4"
-            ],
-            "toColumns": [
-              "dbcol.1"
-            ],
+            "fromColumns": ["dbcol.4"],
+            "toColumns": ["dbcol.1"],
             "cardinality": "n-1"
           },
           {
@@ -118,12 +114,8 @@
             "from": "node.3",
             "to": "node.2",
             "label": "payments_invoice_fk",
-            "fromColumns": [
-              "dbcol.7"
-            ],
-            "toColumns": [
-              "dbcol.3"
-            ],
+            "fromColumns": ["dbcol.7"],
+            "toColumns": ["dbcol.3"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           }

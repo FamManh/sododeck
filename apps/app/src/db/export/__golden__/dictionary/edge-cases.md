@@ -2,42 +2,42 @@
 
 ## a
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| b_id | int | FK → b.id | yes |  |  |
+| Column | Type | Key       | Null | Default | Note |
+| ------ | ---- | --------- | ---- | ------- | ---- |
+| id     | int  | PK        | no   |         |      |
+| b_id   | int  | FK → b.id | yes  |         |      |
 
 ## b
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| a_id | int | FK → a.id | yes |  |  |
+| Column | Type | Key       | Null | Default | Note |
+| ------ | ---- | --------- | ---- | ------- | ---- |
+| id     | int  | PK        | no   |         |      |
+| a_id   | int  | FK → a.id | yes  |         |      |
 
 ## categories
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
 
 ## keyless
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| v | int |  | yes |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| v      | int  |     | yes  |         |      |
 
 ## misc
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| blank | text |  | yes |  |  |
-| empty_choice | empty_choice |  | yes |  |  |
-| code | text |  | yes |  |  |
-| data | json |  | yes |  |  |
-| price | money |  | yes |  |  |
-| label | varchar |  | yes |  |  |
-| flag | bool |  | no | false |  |
+| Column       | Type         | Key | Null | Default | Note |
+| ------------ | ------------ | --- | ---- | ------- | ---- |
+| id           | int          | PK  | no   |         |      |
+| blank        | text         |     | yes  |         |      |
+| empty_choice | empty_choice |     | yes  |         |      |
+| code         | text         |     | yes  |         |      |
+| data         | json         |     | yes  |         |      |
+| price        | money        |     | yes  |         |      |
+| label        | varchar      |     | yes  |         |      |
+| flag         | bool         |     | no   | false   |      |
 
 Indexes:
 
@@ -46,57 +46,57 @@ Indexes:
 ## notes
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
 
 ## order
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| UserId | int |  | yes |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
+| UserId | int  |     | yes  |         |      |
 
 ## order items
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| order_id | int | FK → order.id | no |  |  |
-| line note | text |  | yes |  | Quotes ' and " and -- dashes |
+| Column    | Type | Key           | Null | Default | Note                         |
+| --------- | ---- | ------------- | ---- | ------- | ---------------------------- |
+| id        | int  | PK            | no   |         |                              |
+| order_id  | int  | FK → order.id | no   |         |                              |
+| line note | text |               | yes  |         | Quotes ' and " and -- dashes |
 
 ## pair_refs
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| x | int |  | yes |  |  |
-| a_id | int | FK → a.id | yes |  |  |
+| Column | Type | Key       | Null | Default | Note |
+| ------ | ---- | --------- | ---- | ------- | ---- |
+| id     | int  | PK        | no   |         |      |
+| x      | int  |           | yes  |         |      |
+| a_id   | int  | FK → a.id | yes  |         |      |
 
 ## pairs
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| x | int | PK | no |  |  |
-| y | int | PK | no |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| x      | int  | PK  | no   |         |      |
+| y      | int  | PK  | no   |         |      |
 
 ## products
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
 
 ## products_categories
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
 
 ## stale
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| mood | text |  | yes |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
+| mood   | text |     | yes  |         |      |
 
 Indexes:
 
@@ -105,22 +105,22 @@ Indexes:
 ## table_9
 
 | Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
+| ------ | ---- | --- | ---- | ------- | ---- |
+| id     | int  | PK  | no   |         |      |
 
 ## tags
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| name | varchar(40) |  | yes |  |  |
+| Column | Type        | Key | Null | Default | Note |
+| ------ | ----------- | --- | ---- | ------- | ---- |
+| id     | int         | PK  | no   |         |      |
+| name   | varchar(40) |     | yes  |         |      |
 
 ## billing.ledgers
 
-| Column | Type | Key | Null | Default | Note |
-| --- | --- | --- | --- | --- | --- |
-| id | int | PK | no |  |  |
-| account_id | uuid |  | yes |  |  |
+| Column     | Type | Key | Null | Default | Note |
+| ---------- | ---- | --- | ---- | ------- | ---- |
+| id         | int  | PK  | no   |         |      |
+| account_id | uuid |     | yes  |         |      |
 
 References outside this export:
 

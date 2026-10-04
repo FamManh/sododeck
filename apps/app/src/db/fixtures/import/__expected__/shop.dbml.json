@@ -94,9 +94,7 @@
             "indexes": [
               {
                 "id": "dbidx.1",
-                "columns": [
-                  "dbcol.9"
-                ],
+                "columns": ["dbcol.9"],
                 "method": "btree"
               }
             ]
@@ -267,10 +265,7 @@
             "indexes": [
               {
                 "id": "dbidx.3",
-                "columns": [
-                  "dbcol.22",
-                  "dbcol.27"
-                ]
+                "columns": ["dbcol.22", "dbcol.27"]
               }
             ]
           },
@@ -525,12 +520,8 @@
             "id": "edge.1",
             "from": "node.1",
             "to": "node.4",
-            "fromColumns": [
-              "dbcol.2"
-            ],
-            "toColumns": [
-              "dbcol.13"
-            ],
+            "fromColumns": ["dbcol.2"],
+            "toColumns": ["dbcol.13"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -538,12 +529,8 @@
             "id": "edge.2",
             "from": "node.3",
             "to": "node.3",
-            "fromColumns": [
-              "dbcol.11"
-            ],
-            "toColumns": [
-              "dbcol.10"
-            ],
+            "fromColumns": ["dbcol.11"],
+            "toColumns": ["dbcol.10"],
             "cardinality": "n-1",
             "fromOptional": true,
             "toOptional": true
@@ -552,12 +539,8 @@
             "id": "edge.3",
             "from": "node.5",
             "to": "node.6",
-            "fromColumns": [
-              "dbcol.17"
-            ],
-            "toColumns": [
-              "dbcol.21"
-            ],
+            "fromColumns": ["dbcol.17"],
+            "toColumns": ["dbcol.21"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -565,12 +548,8 @@
             "id": "edge.4",
             "from": "node.5",
             "to": "node.8",
-            "fromColumns": [
-              "dbcol.18"
-            ],
-            "toColumns": [
-              "dbcol.32"
-            ],
+            "fromColumns": ["dbcol.18"],
+            "toColumns": ["dbcol.32"],
             "cardinality": "n-1",
             "onDelete": "restrict"
           },
@@ -579,12 +558,8 @@
             "from": "node.6",
             "to": "node.4",
             "label": "places",
-            "fromColumns": [
-              "dbcol.22"
-            ],
-            "toColumns": [
-              "dbcol.13"
-            ],
+            "fromColumns": ["dbcol.22"],
+            "toColumns": ["dbcol.13"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -593,12 +568,8 @@
             "from": "node.6",
             "to": "node.1",
             "label": "ships to",
-            "fromColumns": [
-              "dbcol.23"
-            ],
-            "toColumns": [
-              "dbcol.1"
-            ],
+            "fromColumns": ["dbcol.23"],
+            "toColumns": ["dbcol.1"],
             "cardinality": "n-1",
             "fromOptional": true,
             "toOptional": true
@@ -608,12 +579,8 @@
             "from": "node.6",
             "to": "node.1",
             "label": "bills to",
-            "fromColumns": [
-              "dbcol.24"
-            ],
-            "toColumns": [
-              "dbcol.1"
-            ],
+            "fromColumns": ["dbcol.24"],
+            "toColumns": ["dbcol.1"],
             "cardinality": "n-1",
             "fromOptional": true,
             "toOptional": true
@@ -622,12 +589,8 @@
             "id": "edge.8",
             "from": "node.7",
             "to": "node.6",
-            "fromColumns": [
-              "dbcol.29"
-            ],
-            "toColumns": [
-              "dbcol.21"
-            ],
+            "fromColumns": ["dbcol.29"],
+            "toColumns": ["dbcol.21"],
             "cardinality": "n-1"
           },
           {
@@ -641,12 +604,8 @@
             "id": "edge.10",
             "from": "node.9",
             "to": "node.8",
-            "fromColumns": [
-              "dbcol.38"
-            ],
-            "toColumns": [
-              "dbcol.32"
-            ],
+            "fromColumns": ["dbcol.38"],
+            "toColumns": ["dbcol.32"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -654,12 +613,8 @@
             "id": "edge.11",
             "from": "node.9",
             "to": "node.4",
-            "fromColumns": [
-              "dbcol.39"
-            ],
-            "toColumns": [
-              "dbcol.13"
-            ],
+            "fromColumns": ["dbcol.39"],
+            "toColumns": ["dbcol.13"],
             "cardinality": "n-1",
             "fromOptional": true,
             "toOptional": true,
@@ -669,12 +624,8 @@
             "id": "edge.12",
             "from": "node.10",
             "to": "node.13",
-            "fromColumns": [
-              "dbcol.43"
-            ],
-            "toColumns": [
-              "dbcol.54"
-            ],
+            "fromColumns": ["dbcol.43"],
+            "toColumns": ["dbcol.54"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -682,12 +633,8 @@
             "id": "edge.13",
             "from": "node.11",
             "to": "node.12",
-            "fromColumns": [
-              "dbcol.46"
-            ],
-            "toColumns": [
-              "dbcol.50"
-            ],
+            "fromColumns": ["dbcol.46"],
+            "toColumns": ["dbcol.50"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -695,26 +642,16 @@
             "id": "edge.14",
             "from": "node.11",
             "to": "node.5",
-            "fromColumns": [
-              "dbcol.47",
-              "dbcol.48"
-            ],
-            "toColumns": [
-              "dbcol.17",
-              "dbcol.18"
-            ],
+            "fromColumns": ["dbcol.47", "dbcol.48"],
+            "toColumns": ["dbcol.17", "dbcol.18"],
             "cardinality": "n-1"
           },
           {
             "id": "edge.15",
             "from": "node.12",
             "to": "node.6",
-            "fromColumns": [
-              "dbcol.51"
-            ],
-            "toColumns": [
-              "dbcol.21"
-            ],
+            "fromColumns": ["dbcol.51"],
+            "toColumns": ["dbcol.21"],
             "cardinality": "n-1"
           }
         ],

@@ -1643,3 +1643,49 @@ describe('locked cards (043 R11)', () => {
     expect(unlocked?.draggable).toBeUndefined();
   });
 });
+
+describe('database card face (049)', () => {
+  const dbDeck = (dialect?: SododeckFile['dialect']): SododeckFile => ({
+    ...emptySododeckFile(),
+    ...(dialect === undefined ? {} : { dialect }),
+    nodes: [
+      { id: 'odb', type: 'database', title: 'Orders DB' },
+      { id: 'cdb', type: 'database', title: 'Customers DB' },
+      { id: 'svc', type: 'service', title: 'Orders' },
+      { id: 't1', type: 'db-table', title: 'orders', parent: 'odb', columns: [] },
+      { id: 't2', type: 'db-table', title: 'items', parent: 'odb', columns: [] },
+    ],
+  });
+  const faces = (file: SododeckFile) =>
+    toFlowNodes(file, topLevelGraph(file), view()).flatMap((node) =>
+      node.type === 'deck' && 'database' in node.data ? [[node.id, node.data.database]] : [],
+    );
+
+  it('gives every database card its table count and the deck dialect', () => {
+    expect(faces(dbDeck('postgres'))).toEqual([
+      ['odb', { count: 2, dialect: 'Postgres' }],
+      ['cdb', { count: 0, dialect: 'Postgres' }],
+    ]);
+  });
+
+  it('follows a dialect change on every card, Generic when none is set', () => {
+    expect(faces(dbDeck()).map(([, face]) => face)).toEqual([
+      { count: 2, dialect: 'Generic' },
+      { count: 0, dialect: 'Generic' },
+    ]);
+    expect(faces(dbDeck('mysql')).map(([, face]) => (face as { dialect: string }).dialect)).toEqual(
+      ['MySQL', 'MySQL'],
+    );
+  });
+
+  it('reserves the row on an empty database card', () => {
+    const file = dbDeck('sqlite');
+    const [, empty] = toFlowNodes(file, topLevelGraph(file), view()).filter(
+      (n) => n.type === 'deck',
+    );
+    expect(empty?.data).toMatchObject({ database: { count: 0 } });
+    expect((empty?.data as { layout: { hasChildrenRow: boolean } }).layout.hasChildrenRow).toBe(
+      true,
+    );
+  });
+});
