@@ -224,6 +224,7 @@ describe('row pointer gestures (043 US2, US4)', () => {
     const items = screen.getAllByRole('menuitem').map((item) => item.textContent);
     expect(items).toEqual([
       'EditEnter',
+      'Edit details',
       'Set as primary key',
       'Not null',
       'Unique',
