@@ -234,7 +234,7 @@ export function CommandDialog({
               </li>
             ))}
             {total > items.length ? (
-              <li className="px-3 py-2 text-caption text-ink-secondary">{`Showing ${String(items.length)} of ${String(total)}`}</li>
+              <li className="px-3 py-2 text-caption text-ink-secondary">{`Showing ${String(items.length)} of ${String(total)} · ${String(total - items.length)} more`}</li>
             ) : null}
           </ul>
         )}
