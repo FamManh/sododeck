@@ -336,6 +336,94 @@ Each of the 13 named colours has five variants. `fill` and `stroke` are what 020
 
 Custom deck colours (106) have no `chip` / `ink` / `dot`: their chips use the hex as the fill with the flipped text colour (§g-79).
 
+### Database pack
+
+The Database pack (features 040–049, board 134–168) adds one card type. **A table is a Deck card** (DB3) and a node of type `db.table` (DB7); its body is a list of column rows. The frame, lip, palette, states and zoom thresholds come from [Card system (Deck)](#card-system-deck) and are not repeated here. The reference frames are 155–168 (board rows); frames 134–154 show the whole editor around them. Values come from the board's own notes and geometry (`sododeck-db.js`, `TB` in `sododeck-cards.js`).
+
+#### Database tokens
+
+"Maps to" names the existing token a value reuses; "new" means a Database-only value (041 adds them next to the Deck card tokens, in `packages/ui`).
+
+| Name | Value | Maps to | Frame |
+| --- | --- | --- | --- |
+| `tblW` | 240 default width. A 19-character name and an 11-character type fit at Geist 12 / Mono 11. Other cards keep 184 (§g-87). | new (`--sd-deck-card-width` stays 184) | 156 |
+| Card geometry | border 1.5, padding 12, header 24, gap 8, title 18, note line 17, Show-all pill 30, index footer 24, bottom 8 | `--sd-deck-card-border`, `--sd-deck-card-padding`, `--sd-deck-card-gap` | 156 |
+| `colH` | 24, fixed. Anchor y = top + 24 i + 12, where top = 1.5 + 12 + 24 + 8 + 18 + note + 8. | new | 156 |
+| `colInset` | 4 from the card edge, radius 8. Fill for hover (Surface 2), highlight and R / W rows (Orange Soft), problem (Clay soft), selected and editing (Surface, 2px Deck Orange inset ring). The anchor (card edge, row centre) never moves. | new | 156, 161 |
+| Row separator | one hairline above the column list. Rows are separated by spacing only, with no line between them. | Hairline | 156 |
+| `keyW` | 16 key slot, or 30 when any row of the table carries two markers (PK + FK) | new | 156 |
+| Column name | Geist 12 / 500, Ink; the primary-key name is 600. Cut with an ellipsis after the type is cut. | `--sd-deck-body` family | 156 |
+| Type text | Mono 11, Muted, right-aligned, at most 58 % of the row. Cut before the name. Enum columns draw the enum name as a chip in the enum's colour. | Muted; chip as `--sd-deck-chip` | 156 |
+| Nullable marker | "?" in a fixed 7px slot after the type, Muted, so types stay aligned. Defaults show in the drawer only. | Muted | 156 |
+| Row limit | **Row limit: 12** (DB9, frame 158) as `colMax`. Cut order PK, FK, then the rest. A row with a connector always stays, so a cut table can show more than 12. | new | 158 |
+| Show all / Show fewer | dashed 1.5px Border-strong button, full card width − 24, 24 tall, radius 8, Geist 11.5 / 500 Secondary, 6 above it. Text "Show all 60 columns" / "Show fewer". Saved per table in the deck. | Border-strong, Secondary | 158 |
+| In-table column search | typing in a selected table (⌘F, scoped to it) swaps the type tile for a search field with a match counter ("3/60"). Matching rows are highlighted (Orange Soft fill, Orange Ink name 600); the rest fold behind Show all. Required with the row limit (the board's risk note). | `inp` (input), Orange Soft | 158 |
+| Indexes footer | list icon + "2 indexes", 11.5 Muted, 24 tall. Count only; no "n inside" pill on tables. | Muted | 156 |
+| Header type name | "Table · public" (or "Table · auth"). "· schema" is drawn only when the deck has more than one schema; a one-schema deck shows "Table". | `--sd-deck-type-name` | 156 |
+| Dialect chip | neutral chip: 21 tall, Surface 2, database icon 12, Geist 11.5 / 500. Sits in the badge slot of a database card (the Deck-level card that holds a schema). Read-only: the dialect is set once per deck in Deck settings. | `--sd-deck-chip` | 141 |
+| R / W markers | see Glyphs below | new | 142, 147 |
+
+#### Glyphs
+
+| Glyph | Drawing | Notes |
+| --- | --- | --- |
+| Primary key | lucide `key-round`, Ink | The name is 600. Composite keys mark every member row. |
+| Foreign key | lucide `link-2`, Secondary | Each FK row has a connector anchor on both card sides. |
+| Unique | 12 × 12 rounded square, 1.25px stroke, Mono "U" | Reads without colour. |
+| PK + FK | both glyphs side by side | The key slot grows to 30 for the whole table. |
+| Nullable | "?" after the type | 7px slot. |
+| Row problem | lucide `triangle-alert` in Clay ink, replaces the key glyph | The row is filled with Clay soft. |
+| R marker | 16 × 16, radius 5, 1.5px orange outline, Mono 9.5 / 600 "R" in Orange Ink | The row gets Orange Soft. Flow playback only. |
+| W marker | 16 × 16, radius 5, Deck Orange fill, Mono 9.5 / 600 "W" in On Primary | Same row fill. The letter carries the meaning, not the colour. Flow playback only. |
+
+Source frames: 156, 161, 147, 148.
+
+#### Crow's foot and ports
+
+| Token | Value | Notes |
+| --- | --- | --- |
+| `crowLen` | 12 | Toes reach 12 out from the card edge |
+| `crowSpread` | 6 | Toes are ±6 from the edge point |
+| `crowBar` | 16 | Length of the bar across the line |
+| `crowRing` | 4 | Radius of the zero-or-one ring, filled with Canvas, then stroked |
+| Bar position | 10 (one), 8 (zero-or-one), 16 (one-or-many) | Measured out from the edge |
+
+- **Construction:** u is the end tangent (the side normal for curved and elbow lines, the line angle for straight lines) and v is perpendicular to u. The toes are p + 6v → p + 12u → p − 6v. The bar crosses at a. Round joins and caps, drawn in the line colour.
+- **Composite key:** a 6px stub per member row, one vertical segment joining them, and the connector leaves its midpoint. Two-key pairs stay two lines.
+- **Ports:** a connector anchors on either card side at the row centre. A hidden column anchors at the centre of the Show all button, which therefore becomes a hot spot (kept rows with a connector avoid it).
+- **Where:** relationship ends are the same on curved, elbow and straight lines. Source frames: 159, 156, 158.
+
+#### Table zoom levels (162)
+
+Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; only detail changes. No lip below 60 %.
+
+| Level | Zoom | Table shows |
+| --- | --- | --- |
+| Landscape | ≤ 45 % | the table icon on the colour fill; no text |
+| System | 45–90 % | name, PK / FK dots and the column count |
+| Container | 90–150 % | keys only and "+n columns" |
+| Component | > 150 % | all columns, up to the row limit |
+
+A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; at System and Landscape connectors run table to table from the title row and merge ×n.
+
+#### Contrast (FR-013)
+
+Ratios computed from the DESIGN.md hex values (WCAG 2.x), light / dark. Pairs already recorded above reuse their ratio.
+
+| Pair | Where | Light | Dark | Result |
+| --- | --- | --- | --- | --- |
+| Muted on Surface | type text, nullable "?", indexes footer | 4.84 | 5.58 | pass |
+| Muted on Surface 2 | type text on a hovered row | 4.40 | 5.02 | light below 4.5 (§g-90) |
+| Muted on Orange Soft | type text on an R / W or highlighted row | 4.27 | 4.61 | light below 4.5 (§g-90) |
+| Muted on Clay soft | type text on a problem row | 3.96 | 4.85 | light below 4.5 (§g-90) |
+| Orange Ink on Orange Soft | R marker letter | 4.81 | 8.43 | pass |
+| On Primary on Deck Orange | W marker letter | 5.44 | 6.44 | pass (recorded) |
+| Secondary on Surface 2 | dialect chip text | 6.81 | 8.08 | pass |
+| Secondary on Orange Soft | type text if raised to Secondary | 6.62 | 7.42 | pass |
+| Secondary on Surface | Show all text | 7.50 | 8.99 | pass |
+
+The R / W markers and key glyphs are readable without colour: the markers carry a letter and a shape, the glyphs have distinct shapes.
+
 ## Typography
 
 ### Font Family
@@ -536,4 +624,6 @@ Both themes share token names. Dark mode does **not** invert tints. Soft fills b
 - **Validation states:** only JSON and rule-match errors are defined. Field-level validation is not.
 - **Dynamic card attributes:** typed fields, their on-card display and the field editor are designed (124) and built by 032 (see Card system (Deck) item 4).
 - **Connector relationships:** the Deck design draws relationship line styles (calls, reads, writes, depends on), bundled connectors and ends that slide along a side (118); none has a schema or a decision yet (§g-76, backlog 022 / 034).
+- **Database pack contrast:** the board draws table type text in Muted on hovered, highlighted and problem rows, which is below 4.5:1 in the light theme (4.40, 4.27, 3.96). 041 raises it to Secondary on those fills (§g-90).
+- **Database ER notation:** tables, column rows, crow's feet, ports and the Show all control are designed (134–168) and specified in [Database pack](#database-pack); no gap remains in the design, only features 040–049 to build.
 - **Collaboration / sharing:** out of scope for the local-only MVP.
