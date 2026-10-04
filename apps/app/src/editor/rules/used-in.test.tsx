@@ -48,6 +48,16 @@ describe('UsedIn (story 6, FR-028)', () => {
     expect(again.ui().selection).toEqual({ nodes: ['p'], edges: [], groups: [], stickies: [] });
   });
 
+  it("draws the component's own icon in its row (038)", () => {
+    const iconed = {
+      ...ruleDeck,
+      nodes: ruleDeck.nodes.map((n) => (n.id === 'p' ? { ...n, icon: 'lucide:search' } : n)),
+    };
+    renderRules(iconed, '/deck/d/rules/T');
+    const row = within(usedIn()).getByRole('button', { name: 'Pricing Service' });
+    expect(row.querySelector('[data-icon="lucide:search"]')).not.toBeNull();
+  });
+
   it('says "Not used yet" without usage', () => {
     renderRules(
       deckOf({

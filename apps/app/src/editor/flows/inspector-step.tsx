@@ -19,6 +19,7 @@ import { useReactFlow } from '@xyflow/react';
 import { ArrowRight, CircleAlert, GitBranch, Spline, Unlink } from 'lucide-react';
 import { useMemo } from 'react';
 
+import { cardIconRef, iconProp } from '../card-icon';
 import { NodeTypeTile } from '../shapes/shape-tile';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
@@ -304,7 +305,12 @@ function PlaybackHeader({
   const branch = analysis.branches.find((b) => b.branch.id === step.branchId)?.branch;
   const edge = deck.edges.find((e) => e.id === step.step.edge);
   const protocol = protocolLabel(edge?.protocol);
-  const kindOf = (id: string | null) => deck.nodes.find((n) => n.id === id)?.type ?? null;
+  const nodeOf = (id: string | null) => deck.nodes.find((n) => n.id === id);
+  const kindOf = (id: string | null) => nodeOf(id)?.type ?? null;
+  const iconOf = (id: string | null) => {
+    const node = nodeOf(id);
+    return iconProp(node === undefined ? undefined : cardIconRef(node));
+  };
   return (
     <PanelHeader className="h-auto flex-col items-stretch gap-2.5 py-3.5">
       <PanelTitle
@@ -325,6 +331,7 @@ function PlaybackHeader({
               type={kindOf(step.from)}
               size={30}
               label={`From: ${nodeTitle(deck, step.from)}`}
+              {...iconOf(step.from)}
             />
             <ArrowRight
               aria-hidden
@@ -335,6 +342,7 @@ function PlaybackHeader({
               type={kindOf(step.to)}
               size={30}
               label={`To: ${nodeTitle(deck, step.to)}`}
+              {...iconOf(step.to)}
             />
             {protocol !== undefined && (
               <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 font-mono text-caption text-ink-secondary">

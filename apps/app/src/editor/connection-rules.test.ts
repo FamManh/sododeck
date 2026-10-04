@@ -13,6 +13,23 @@ const deck: SododeckFile = {
   edges: [{ id: 'e1', from: 'svc', to: 'db' }],
 };
 
+describe('connectTargets icons (038)', () => {
+  it('carries the stored icon of a card, not of a shape', () => {
+    const iconed: SododeckFile = {
+      ...deck,
+      nodes: [
+        ...deck.nodes,
+        { id: 'c', type: 'service', title: 'Card', icon: 'lucide:search' },
+        { id: 's', type: 'rectangle', title: 'Shape', icon: 'lucide:search' },
+      ],
+    };
+    const byId = new Map(connectTargets(iconed, 'svc', '').map((t) => [t.id, t]));
+    expect(byId.get('c')?.icon).toBe('lucide:search');
+    expect(byId.get('s')).not.toHaveProperty('icon');
+    expect(byId.get('q')).not.toHaveProperty('icon');
+  });
+});
+
 describe('connectionCheck', () => {
   it('refuses self and duplicate connections in either direction', () => {
     expect(connectionCheck(deck, 'svc', 'svc')).toBe('self');

@@ -5,6 +5,8 @@
  */
 import type { SododeckFile } from '@sododeck/schema';
 
+import { cardIconRef } from './card-icon';
+
 export type ConnectionCheck = 'ok' | 'self' | 'duplicate';
 
 export const REFUSAL_TEXT: Record<Exclude<ConnectionCheck, 'ok'>, string> = {
@@ -32,6 +34,8 @@ export interface ConnectTarget {
   id: string;
   title: string;
   kind: string;
+  /** The node's stored icon, when it draws as a card (038). */
+  icon?: string;
   disabled: boolean;
   reason?: 'already connected';
 }
@@ -43,9 +47,14 @@ export function connectTargets(deck: SododeckFile, fromId: string, query: string
     .filter((n) => n.id !== fromId && n.title.toLowerCase().includes(needle))
     .map((n): ConnectTarget => {
       const disabled = connectionCheck(deck, fromId, n.id) !== 'ok';
-      return disabled
-        ? { id: n.id, title: n.title, kind: n.type, disabled, reason: 'already connected' }
-        : { id: n.id, title: n.title, kind: n.type, disabled };
+      const icon = cardIconRef(n);
+      const base = {
+        id: n.id,
+        title: n.title,
+        kind: n.type,
+        ...(icon === undefined ? {} : { icon }),
+      };
+      return disabled ? { ...base, disabled, reason: 'already connected' } : { ...base, disabled };
     })
     .sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
 }
