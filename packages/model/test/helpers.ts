@@ -332,3 +332,56 @@ export function shopDeck(): SododeckFile {
     ],
   };
 }
+
+/**
+ * A database schema of `tables` tables × `columns` columns with `relationships` foreign keys
+ * (040 SC-005), fixed ids: table `t<i>`, column `t<i>c<j>`, relationship `r<k>`. Column 0 is the
+ * key; each relationship joins column 1 of one table to the key of another.
+ */
+export function largeSchemaDeck(tables = 150, columns = 12, relationships = 200): SododeckFile {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    dialect: 'postgres',
+    enums: [
+      {
+        id: 'status',
+        name: 'status',
+        values: [
+          { id: 'status-a', name: 'active' },
+          { id: 'status-b', name: 'blocked' },
+        ],
+      },
+    ],
+  };
+  for (let t = 0; t < tables; t++) {
+    const id = `t${String(t)}`;
+    file.nodes.push({
+      id,
+      type: 'db-table',
+      title: `table_${String(t)}`,
+      position: { x: (t % 15) * 300, y: Math.floor(t / 15) * 400 },
+      columns: Array.from({ length: columns }, (_, c) => ({
+        id: `${id}c${String(c)}`,
+        name: c === 0 ? 'id' : `column_${String(c)}`,
+        type: c === 0 ? 'bigint' : c === 2 ? 'status' : 'text',
+        ...(c === 0 ? { pk: true } : {}),
+        ...(c === 2 ? { enumRef: 'status' } : {}),
+      })),
+      indexes: [{ id: `${id}i0`, columns: [`${id}c1`, `${id}c2`] }],
+      checks: [{ id: `${id}k0`, expr: 'id > 0' }],
+    });
+  }
+  for (let r = 0; r < relationships; r++) {
+    const from = r % tables;
+    const to = (r * 7 + 1) % tables;
+    file.edges.push({
+      id: `r${String(r)}`,
+      from: `t${String(from)}`,
+      to: `t${String(to)}`,
+      fromColumns: [`t${String(from)}c1`],
+      toColumns: [`t${String(to)}c0`],
+      cardinality: 'n-1',
+    });
+  }
+  return file;
+}
