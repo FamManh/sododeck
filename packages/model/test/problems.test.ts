@@ -583,3 +583,43 @@ describe('database schema problems (040 FR-021)', () => {
     expect(dbProblems(file)).toEqual([]);
   });
 });
+
+describe('groups as connector ends (050)', () => {
+  const groups = [
+    { id: 'g', title: 'Payments' },
+    { id: 'h', title: 'Ledger' },
+  ];
+
+  it('raises nothing for a deck with card → group, group → card and group → group edges', () => {
+    expect(
+      kinds(
+        deck({
+          nodes: [node('a')],
+          groups,
+          edges: [edge('a-g', 'a', 'g'), edge('h-a', 'h', 'a'), edge('g-h', 'g', 'h')],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('names a group end by its title in a duplicate connection', () => {
+    const problem = only(
+      deck({ nodes: [node('a')], groups, edges: [edge('e1', 'a', 'g'), edge('e2', 'a', 'g')] }),
+    );
+    expect(problem.kind).toBe('duplicate-connection');
+    expect(problem.detail).toBe('A → Payments appears twice');
+  });
+
+  it('names a group end by its title on a connection with a broken end', () => {
+    const problem = only(deck({ groups, edges: [edge('e', 'g', 'gone')] }));
+    expect(problem.kind).toBe('broken-reference');
+    expect(problem.detail).toBe('Connection Payments → gone points to a node that was deleted');
+  });
+
+  it('reports a node and a group sharing an id', () => {
+    const problem = only(deck({ nodes: [node('g')], groups }));
+    expect(problem.kind).toBe('broken-reference');
+    expect(problem.target).toEqual({ type: 'object', ref: { scope: 'groups', id: 'g' } });
+    expect(problem.detail).toBe('Group "Payments" has the same id as a card');
+  });
+});

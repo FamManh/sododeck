@@ -3,7 +3,7 @@ import type { View } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, type Selection, type UiState, useUiStore } from '../../state/ui-store';
-import { cardSize } from '../canvas-geometry';
+import { cardSize, groupBounds } from '../canvas-geometry';
 import { levelForZoom } from '../levels';
 import { selectView } from '../views/use-current-view';
 
@@ -58,25 +58,34 @@ function ensureCanvasReady(result: PaletteResult, context: OpenResultContext): v
   }
 }
 
-/** The midpoint of an edge's two endpoint cards, each sized by its own stored size (017 R2). */
+/**
+ * The midpoint of an edge's two ends, each card sized by its own stored size (017 R2); a group end
+ * (050 R6) is its frame's centre.
+ */
 export function edgeCenter(
   deck: ReturnType<typeof readDeck>,
   fromId: string,
   toId: string,
   zoom: number,
 ): { x: number; y: number } | null {
-  const from = nodeCanvasPosition(deck, fromId);
-  const to = nodeCanvasPosition(deck, toId);
-  const fromNode = deck.nodes.find((n) => n.id === fromId);
-  const toNode = deck.nodes.find((n) => n.id === toId);
-  if (from === null || to === null || fromNode === undefined || toNode === undefined) return null;
   const level = levelForZoom(zoom);
-  const fromSize = cardSize(fromNode, level);
-  const toSize = cardSize(toNode, level);
-  return {
-    x: (from.x + fromSize.width / 2 + (to.x + toSize.width / 2)) / 2,
-    y: (from.y + fromSize.height / 2 + (to.y + toSize.height / 2)) / 2,
+  const centre = (id: string): { x: number; y: number } | null => {
+    const node = deck.nodes.find((n) => n.id === id);
+    if (node === undefined) {
+      const frame = groupBounds(deck, level).get(id);
+      return frame === undefined
+        ? null
+        : { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+    }
+    const at = nodeCanvasPosition(deck, id);
+    if (at === null) return null;
+    const size = cardSize(node, level);
+    return { x: at.x + size.width / 2, y: at.y + size.height / 2 };
   };
+  const from = centre(fromId);
+  const to = centre(toId);
+  if (from === null || to === null) return null;
+  return { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
 }
 
 export function openResult(result: PaletteResult, context: OpenResultContext): boolean {

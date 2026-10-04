@@ -1,8 +1,10 @@
 import type { Edge } from '@sododeck/schema';
 import { edgeLineStyle } from '@sododeck/model';
-import { ArrowRightLeft, Cable, Spline, Type } from 'lucide-react';
+import { AlignHorizontalDistributeCenter, ArrowRightLeft, Cable, Spline, Type } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { spreadEndsPlan, type SpreadPlan } from '../editing/spread-ends';
+import { spreadTargets, spreadViewOf } from '../editing/spread-view';
 import { DIRECTIONS, PROTOCOLS, protocolLabel } from '../fields/edge-choices';
 import { applyLineType, LINE_TYPES, sharedLineShape } from '../fields/line-type';
 import { oneStep } from '../fields/one-step';
@@ -30,6 +32,18 @@ function setEdge(
 /** The selected connections (one or several), in selection order, skipping stale ids. */
 const selectedEdges = (ctx: ActionContext): Edge[] =>
   ctx.selection.edges.flatMap((id) => ctx.deck.edges.filter((edge) => edge.id === id));
+
+/**
+ * The spread-ends plan for the selected cards and groups (050 US7), from what the canvas draws.
+ * Empty without a live canvas (nothing is drawn, so nothing can be spread).
+ */
+function spreadPlan(ctx: ActionContext): SpreadPlan {
+  const nodes = ctx.canvas?.getNodes?.() ?? [];
+  const edges = ctx.canvas?.getEdges?.() ?? [];
+  return spreadEndsPlan(spreadViewOf(nodes, edges, ctx.deck.edges), spreadTargets(ctx.selection));
+}
+
+const count = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
 
 /** Edit label, Protocol ▸ and Direction ▸ on one connection (019 FR-022, FR-031). */
 export const CONNECTION_ACTIONS: readonly Action[] = [
@@ -215,3 +229,32 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
     },
   },
 ];
+
+/**
+ * Spread ends evenly on the selected cards and groups (050 US7, R10). Listed after Align and
+ * Arrange in `ACTIONS`, so it sits at the end of the arrange section.
+ */
+export const SPREAD_ENDS_ACTION: Action = {
+  id: 'node.spreadEnds',
+  label: 'Spread ends evenly',
+  icon: AlignHorizontalDistributeCenter,
+  section: 'arrange',
+  where: {
+    menu: ['component', 'components', 'group', 'mixed'],
+    toolbar: ['component', 'components', 'group', 'mixed'],
+  },
+  disabledReason: (ctx) =>
+    spreadPlan(ctx).patches.length === 0 ? 'No side has two or more connector ends' : null,
+  run: (ctx) => {
+    const plan = spreadPlan(ctx);
+    if (plan.patches.length === 0) return;
+    oneStep(ctx.editor, () => {
+      for (const { edgeId, patch } of plan.patches) ctx.editor.setEdgeRoute(edgeId, patch);
+    });
+    useUiStore
+      .getState()
+      .announce(
+        `Spread ${count(plan.ends, 'end', 'ends')} on ${count(plan.sides, 'side', 'sides')}`,
+      );
+  },
+};

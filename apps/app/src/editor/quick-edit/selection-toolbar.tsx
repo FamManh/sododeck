@@ -1,3 +1,4 @@
+import { endpointOf } from '@sododeck/model';
 import { Swatch } from '@sododeck/ui/components/swatch-grid';
 import {
   Toolbar,
@@ -63,7 +64,9 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
       return `Selection: ${String(nodes.length)} components`;
     case 'connection': {
       const edge = ctx.deck.edges.find((e) => e.id === edges[0]);
-      const title = (id: string | undefined) => ctx.deck.nodes.find((n) => n.id === id)?.title;
+      // Either end may be a group (050 R6).
+      const title = (id: string | undefined) =>
+        id === undefined ? undefined : endpointOf(ctx.deck, id)?.title;
       const label = edge?.label ?? `${title(edge?.from) ?? ''} → ${title(edge?.to) ?? ''}`;
       return `Selection: connection ${label}`;
     }

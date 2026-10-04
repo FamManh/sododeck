@@ -2,7 +2,7 @@
  * Canvas edits shared by the palette, drag-and-drop, `onConnect` and keyboard connect. Each one
  * writes through the editor (one undo step) and then updates UI-only state.
  */
-import type { DeckEditor } from '@sododeck/model';
+import { endpointTitle, type DeckEditor } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../model/use-deck-snapshot';
@@ -68,12 +68,9 @@ export function selectAllComponents(editor: DeckEditor): void {
   ui.announce(`${String(deck.nodes.length)} selected`);
 }
 
-function titleOf(deck: SododeckFile, id: string): string {
-  return deck.nodes.find((n) => n.id === id)?.title ?? id;
-}
-
 /**
- * Draws a connection if the canvas rules allow it, then selects it and opens its popover.
+ * Draws a connection if the canvas rules allow it, then selects it and opens its popover. Either
+ * end may be a card or a group (050 R6); pass deck ids, not drawn (`group:`) ids.
  * Returns the new edge id, or null (and announces why) when refused.
  */
 export function connectComponents(editor: DeckEditor, from: string, to: string): string | null {
@@ -92,7 +89,7 @@ export function connectComponents(editor: DeckEditor, from: string, to: string):
   );
   ui.select({ edges: [id] });
   ui.openEdgePopover(id);
-  ui.announce(`Connected ${titleOf(deck, from)} to ${titleOf(deck, to)}`);
+  ui.announce(`Connected ${endpointTitle(deck, from)} to ${endpointTitle(deck, to)}`);
   return id;
 }
 

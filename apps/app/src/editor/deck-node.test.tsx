@@ -4,7 +4,7 @@ import type { NodeProps } from '@xyflow/react';
 import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useUiStore } from '../state/ui-store';
+import { useUiStore, type EndpointPreview } from '../state/ui-store';
 import { resolveLook } from './style/card-style';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { EMPTY_FIELD_VIEW, fieldBlock, type CardFieldView } from './card-fields';
@@ -15,6 +15,21 @@ import { tableContextOf } from './table-keys';
 import { toJSON as deckFile } from '@sododeck/model';
 import { tagColours } from './tags/tag-colours';
 import type { DeckFlowNode } from './deck-to-flow';
+
+/** A connector end dragged over a card (050 R3): the end preview the hot side follows. */
+const endOver = (targetId: string, side: 'left' | 'right'): EndpointPreview => ({
+  edgeId: 'e1',
+  end: 'target',
+  targetId,
+  targetKind: 'node',
+  box: { x: 0, y: 0, width: 240, height: 128 },
+  side,
+  at: 0.4,
+  point: { x: 0, y: 51 },
+  snapped: false,
+  automatic: false,
+  valid: 'ok',
+});
 
 const connection = vi.hoisted(() => ({ role: null as string | null, connecting: false }));
 
@@ -152,7 +167,7 @@ describe('DeckNode', () => {
     renderNode();
     act(() => {
       useUiStore.getState().setCanvasGesture('endpoint');
-      useUiStore.getState().setEndpointHover({ nodeId: 'svc', side: 'left' });
+      useUiStore.getState().setEndpointPreview(endOver('svc', 'left'));
     });
     expect(screen.getByTestId('deck-node')).toHaveClass('connect-target');
     const handles = screen.getAllByRole('button', { name: 'Connect from Order Service' });
@@ -254,17 +269,17 @@ describe('DeckNode', () => {
     expect(screen.getAllByRole('button', { name: 'Connect from Order Service' })).toHaveLength(4);
   });
 
-  it('shows its side targets, with the hot side marked, during a reconnect drag (017 R12)', () => {
+  it('shows its side targets, with the hot side marked, during a connector end drag (017 R12, 050 R3)', () => {
     renderNode();
     act(() => {
       useUiStore.getState().setCanvasGesture('endpoint');
-      useUiStore.getState().setEndpointHover({ nodeId: 'svc', side: 'right' });
+      useUiStore.getState().setEndpointPreview(endOver('svc', 'right'));
     });
     const handles = screen.getAllByRole('button', { name: 'Connect from Order Service' });
     expect(handles.every((handle) => handle.hasAttribute('data-endpoint-target'))).toBe(true);
     expect(handles.filter((handle) => handle.hasAttribute('data-endpoint-hot'))).toHaveLength(1);
     act(() => {
-      useUiStore.getState().setEndpointHover({ nodeId: 'other', side: 'right' });
+      useUiStore.getState().setEndpointPreview(endOver('other', 'right'));
     });
     expect(
       screen

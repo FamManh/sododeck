@@ -1,5 +1,5 @@
 /** Confirmation and toast wording for a delete (FR-017/018). Pure. */
-import type { RemovalResult, RemovalTarget } from '@sododeck/model';
+import { endpointTitle, type RemovalResult, type RemovalTarget } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import { selectionTargets, type Selection } from '../state/ui-store';
@@ -30,7 +30,7 @@ function knowledgeName(deck: SododeckFile, target: RemovalTarget): string | unde
 
 /** What the user asked to delete, e.g. "Order Service", "3 components", "4 items". */
 function subject(deck: SododeckFile, targets: readonly RemovalTarget[]): string {
-  const title = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
+  const title = (id: string) => endpointTitle(deck, id);
   const [only] = targets;
   if (targets.length === 1 && only) {
     const name = knowledgeName(deck, only);

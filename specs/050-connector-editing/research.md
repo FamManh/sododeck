@@ -58,7 +58,7 @@ Decisions for [plan.md](plan.md). Each has the decision, why, and what else was 
 
 ## R6. Groups as connector endpoints
 
-- **Decision (file format):** `Edge.from` / `Edge.to` may name a **node or a group**. The JSON Schema shape doesn't change (both are `Id`); descriptions change, and model checks accept either collection. Ids are already unique across the deck when generated (`deckHasId`). A load check is added: a node and a group sharing one id is an integrity error (the endpoint would be ambiguous). **No version bump:** every existing file stays valid with the same meaning, and the widening is recorded in ADR 0030. Older app builds would show such an edge as a broken reference, which is acceptable for a single-deploy app before 1.0, and is noted in the ADR.
+- **Decision (file format):** `Edge.from` / `Edge.to` may name a **node or a group**. The JSON Schema shape doesn't change (both are `Id`); descriptions change, and model checks accept either collection. Ids are already unique across the deck when generated (`deckHasId`). A load check is added: a node and a group sharing one id is an integrity error (the endpoint would be ambiguous). **No version bump:** every existing file stays valid with the same meaning, and the widening is recorded in ADR 0031. Older app builds would show such an edge as a broken reference, which is acceptable for a single-deploy app before 1.0, and is noted in the ADR.
 - **Model:**
   - `refsOf` gets a new ref target `'nodes|groups'`, accepted by `validate.ts` `exists`, and `integrity.ts` checks `from/to` against both.
   - `endpointOf(deck, id)` returns `{ kind: 'node' | 'group', title }` and replaces node-only title lookups (`problems.ts`, `search/index.ts`, app labels).

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { EMPTY_SELECTION, type MenuTarget } from '../../state/ui-store';
 import { viewStateOf } from '../views/view-state';
-import { actionsFor, findAction, runAction } from './actions-for';
+import { actionsFor, canRunAction, findAction, runAction } from './actions-for';
 import type { Action, ActionContext, Mode } from './types';
 
 const deck = emptySododeckFile();
@@ -135,6 +135,26 @@ describe('runAction', () => {
     expect(runAction(list, 'b', ctx(one))).toBe(false);
     expect(runAction(list, 'missing', ctx(one))).toBe(false);
     expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells whether an action would run, without running it (050: palette commands)', () => {
+    const run = vi.fn();
+    const list: Action[] = [
+      { id: 'a', label: 'A', section: 'edit', where: { menu: ['component'] }, run },
+      {
+        id: 'b',
+        label: 'B',
+        section: 'edit',
+        where: { menu: ['component'] },
+        disabledReason: () => 'No',
+        run,
+      },
+    ];
+    expect(canRunAction(list, 'a', ctx(one))).toBe(true);
+    expect(canRunAction(list, 'a', ctx(canvas))).toBe(false);
+    expect(canRunAction(list, 'b', ctx(one))).toBe(false);
+    expect(canRunAction(list, 'missing', ctx(one))).toBe(false);
+    expect(run).not.toHaveBeenCalled();
   });
 
   it('finds an action by id', () => {

@@ -102,7 +102,9 @@ describe('GroupBoundaryNode Deck frame (029 US5)', () => {
   it('has a label pill on the top edge with the name and the count', () => {
     renderWithEditor(<GroupBoundaryNode {...props} />);
     const pill = screen.getByRole('button', { name: 'Core services group, 8 nodes' });
-    expect(pill).toHaveClass('rounded-full', '-top-3.5', 'left-4', 'h-7');
+    expect(pill).toHaveClass('rounded-full', 'h-7');
+    // The pill and its connect handle sit in one row on the top edge.
+    expect(pill.parentElement).toHaveClass('-top-3.5', 'left-4');
     expect(within(pill).getByText('Core services')).toBeInTheDocument();
     expect(within(pill).getByText('8')).toHaveClass('rounded-full', 'bg-ink');
   });
@@ -218,5 +220,66 @@ describe('GroupBoundaryNode colour (020 T052)', () => {
     const look = resolveLook({ fill: '#1c1c1a' });
     renderWithEditor(<GroupBoundaryNode {...props({ look })} />);
     expect(screen.getByTestId('group-boundary')).toHaveAttribute('data-text', 'light');
+  });
+});
+
+describe('GroupBoundaryNode as a connector end (050 US4)', () => {
+  const props = {
+    id: 'group:core',
+    data: { title: 'Core services', count: 2, focused: false },
+    width: 300,
+    height: 200,
+  } as unknown as NodeProps<GroupFlowNode>;
+  const file = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
+
+  it('has four hidden side handles that React Flow draws connectors to', () => {
+    renderWithEditor(<GroupBoundaryNode {...props} />, file);
+    const sides = screen
+      .getByTestId('group-boundary')
+      .querySelectorAll('.react-flow__handle[aria-hidden="true"]');
+    expect(sides).toHaveLength(4);
+    expect([...sides].map((h) => h.getAttribute('data-handleid'))).toEqual([
+      'top',
+      'right',
+      'bottom',
+      'left',
+    ]);
+  });
+
+  it('starts a connection from the label handle; Enter opens the connect popover', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<GroupBoundaryNode {...props} />, file);
+    const handle = screen.getByRole('button', { name: 'Connect from Core services' });
+    expect(handle).toHaveClass('react-flow__handle', 'source');
+    handle.focus();
+    await user.keyboard('{Enter}');
+    expect(useUiStore.getState().popover).toEqual({ kind: 'connect', fromId: 'core' });
+  });
+
+  it('highlights the frame while a dragged connector end would attach to it', () => {
+    renderWithEditor(<GroupBoundaryNode {...props} />, file);
+    const boundary = screen.getByTestId('group-boundary');
+    expect(boundary).not.toHaveAttribute('data-endpoint-target');
+    act(() => {
+      useUiStore.getState().setEndpointPreview({
+        edgeId: 'e1',
+        end: 'target',
+        targetId: 'core',
+        targetKind: 'group',
+        box: { x: 0, y: 0, width: 300, height: 200 },
+        side: 'right',
+        at: 0.5,
+        point: { x: 300, y: 100 },
+        snapped: true,
+        automatic: false,
+        valid: 'ok',
+      });
+    });
+    expect(boundary).toHaveAttribute('data-endpoint-target', 'ok');
+    expect(boundary).toHaveClass('border-primary');
+    act(() => {
+      useUiStore.getState().setEndpointPreview(null);
+    });
+    expect(boundary).not.toHaveAttribute('data-endpoint-target');
   });
 });

@@ -9,7 +9,7 @@ import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { Selection } from '../../state/ui-store';
 import { useUiStore } from '../../state/ui-store';
 import type { PaletteResult } from './palette-results';
-import { openResult } from './open-result';
+import { edgeCenter, openResult } from './open-result';
 
 function fixtureDeck(): SododeckFile {
   const deck = emptySododeckFile();
@@ -189,5 +189,23 @@ describe('openResult', () => {
 
     expect(openResult(result('node', 'gone'), ctx)).toBe(false);
     expect(ctx.announce).toHaveBeenCalledWith('This item no longer exists');
+  });
+});
+
+describe('edgeCenter group ends (050 US4)', () => {
+  it("uses a group end's frame centre", () => {
+    const deck = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+      groups: [
+        { id: 'g', title: 'G', position: { x: 400, y: 0 }, size: { width: 200, height: 100 } },
+      ],
+      edges: [{ id: 'ag', from: 'a', to: 'g' }],
+    });
+    const centre = edgeCenter(deck, 'a', 'g', 1);
+    expect(centre).not.toBeNull();
+    // A's centre is left of 400; the frame's is (500, 50).
+    expect(centre?.x).toBeGreaterThan(250);
+    expect(centre?.x).toBeLessThan(500);
+    expect(edgeCenter(deck, 'a', 'missing', 1)).toBeNull();
   });
 });

@@ -75,6 +75,7 @@ import { GuidesOverlay } from './editing/guides-overlay';
 import { MarqueeChip } from './editing/marquee-chip';
 import { FrameDrawLayer } from './frame-tool/frame-draw-layer';
 import { useClipboardEvents } from './editing/use-clipboard-events';
+import { useGuideSafetyNet } from './editing/use-guide-safety-net';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
@@ -352,6 +353,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   useStickyDraftLifecycle();
   // ⌘C / ⌘X / ⌘V through the platform clipboard events (016 R9).
   useClipboardEvents();
+  // No guide or connector preview outlives its gesture (050 R9).
+  useGuideSafetyNet();
   // ⌥ held during a marquee switches it to "touch" selection (016 R13). Only while a marquee
   // runs, so the prop (which re-renders React Flow) does not change for other ⌥ keys.
   const marqueeRunning = useUiStore((s) => s.canvasGesture === 'marquee');
@@ -809,11 +812,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
         nodesDraggable={!recording}
         nodesConnectable={!recording}
-        // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
+        // Connections: any handle starts or ends one, drawn with a dashed line. Existing ends are
+        // dragged by the selected connector's own handles (050 R3), not React Flow's reconnect.
         connectionMode={ConnectionMode.Loose}
         connectionLineStyle={connectionLineStyle}
         connectionLineComponent={EndpointConnectionLine}
-        edgesReconnectable={!recording}
+        edgesReconnectable={false}
         onNodeMouseEnter={hover.onNodeMouseEnter}
         onNodeMouseLeave={hover.onNodeMouseLeave}
         {...handlers}

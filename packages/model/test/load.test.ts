@@ -192,6 +192,22 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
     expect(toJSON(fromJSON(file))).toEqual(file);
   });
 
+  it('refuses a connector end naming an id held by both a node and a group (050)', () => {
+    const error = loadError({
+      ...emptySododeckFile(),
+      nodes: [node('x'), node('y')],
+      groups: [{ id: 'x', title: 'G' }],
+      edges: [{ id: 'e', from: 'y', to: 'x' }],
+    });
+    expect(error.issues).toEqual([
+      {
+        path: 'groups.0.id',
+        message:
+          'Id "x" names both a node and a group, so connector ends naming it are ambiguous (nodes.0.id, groups.0.id).',
+      },
+    ]);
+  });
+
   describe('database parts share one id scope (040)', () => {
     const table = (id: string, extra: Record<string, unknown>) => ({
       id,

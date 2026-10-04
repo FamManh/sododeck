@@ -67,13 +67,22 @@ API (full contract: `specs/002-yjs-model/contracts/model-api.md`):
   - Editor ops (`src/ops/fields.ts`, one undo step each, validated first): `addField`, `updateField`, `moveField(id, beforeId, typeId)`, `deleteField`, `addOption`, `updateOption`, `moveOption`, `deleteOption`, `changeFieldKind`, `setValues(nodeIds, fieldId, value | null)`. Changing a code default materialises its type's defaults first; a built-in gets an entry only for `onCard` or a move. `setValues` never materialises; `null` also clears a value whose field is gone.
   - `problems.ts` gains `field-value-dangling` (field or option gone, wrong shape, or a field that no longer applies to the type) with `Problem.fix` `{ kind: 'remove-value', nodeId, fieldId, label }`. Search indexes values as `SearchField` `'field'` ("<field>: <value>"). Ids of fields and options join `forEachDeckId` (`IdPrefix` `field`, `option`).
 
+- **Added by 050** (connector editing, groups as connector ends; contract: `specs/050-connector-editing/contracts/connector-editing-api.md`):
+  - `src/endpoint.ts` (pure): `endpointOf(deck, id)` → `{ kind: 'node' | 'group'; title } | null` and `endpointTitle(deck, id)` (the id when it names nothing). A node wins when a hand-edited file gives a node and a group one id (pre-050 meaning). Indexed per `(nodes, groups)` array identity.
+  - `RefTarget` gains `'nodes|groups'`, used by `refsOf` for `edges.from` / `edges.to`, so `add('edges')` / `update('edges')` accept a group end (`missing-reference` when it names neither).
+  - `checkIntegrity` resolves edge ends against nodes ∪ groups (a broken end keeps `targetType: 'node'`) and adds kind `'duplicate-id'`: a group whose id is also a node's, on `{ scope: 'groups', id }`, `field: 'id'`; `checkDeck` shows it as `broken-reference` ("… has the same id as a card"). `checkDuplicateIds` (load, `parseFragment`) refuses only a node / group collision that a connector end names; an unnamed collision stays loadable (the format always allowed it).
+  - Cascade: `remove('groups', id)` removes every edge with an end at the group in the same transaction (one undo step); `previewRemoval` lists them under `removed`; steps using them are reported in `broken`.
+  - Clipboard: `toFragment` keeps an edge when both ends are selected nodes or kept (whole) groups; `pasteFragment` remaps group ends through its group id map.
+  - `checkDeck` and the search index title connections and steps by `endpointTitle`. `analyzeFlow` is unchanged: a group id is an ordinary end id (into G, then out of a card inside G, is a chain break).
+
 ## Rules
 
 - Round-trip must be lossless: `toJSON(fromJSON(x))` deep-equals `x` for every valid file. Every new field or object type gets a round-trip test case (`test/round-trip.test.ts`).
 - Ids are stable. Never derive ids from titles; never rewrite ids on rename.
 - The Yjs layout is documented at the top of `src/deck.ts` and in ADR 0021 (layout 2, amending ADR 0005). Changing it needs an ADR; decks stored before 036 are refused, not migrated (founder, §g-81 / §g-82).
 - Validate before writing (Yjs cannot roll back). Validity comes from the generated Zod in `@sododeck/schema`; never redefine it here.
-- Delete policy (ADR 0005): edges and owned steps are removed; steps and stickies are kept and reported broken; groups re-parent their contents. A branch owns its steps (ADR 0008).
+- Delete policy (ADR 0005): edges and owned steps are removed; steps and stickies are kept and reported broken; groups re-parent their contents and remove their own edges (050). A branch owns its steps (ADR 0008).
+- Edge ends (050): `from` / `to` name a node **or a group**. Label an end with `endpointOf` / `endpointTitle`, never a node-only lookup; check an end with the `'nodes|groups'` ref target.
 - ADR 0010 amends node deletes only: stickies pinned to a removed node become free at the same screen point, reported in `RemovalResult.freed`, and restored by one undo.
 - Flow steps stay in normal order (main path first, then each branch's steps in `branches` order); branch ops keep it. Concurrent edits from two clients may interleave paths in the flat order; `analyzeFlow` partitions by path, so that is harmless (036 R4).
 - Rule links (008): attach, detach and sample inputs go through `attachRule` / `detachRule` / `setRuleInputs`, never raw `rules` / `ruleInputs` patches. `step.ruleInputs` keys stay a subset of the step's rules and their input columns; detaching from a step drops its sample inputs in the same transaction.

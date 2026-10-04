@@ -5,7 +5,9 @@ import { useId, useMemo, useRef, useState } from 'react';
 import { useUiStore } from '../state/ui-store';
 import { anchorRect, focusCanvas } from './canvas-actions';
 import type { Bundle, BundleResult } from './bundles';
-import { COLLAPSED_NODE_PREFIX } from './deck-to-flow';
+import { endpointTitle } from '@sododeck/model';
+
+import { COLLAPSED_NODE_PREFIX, endpointIdOf, PORT_NODE_PREFIX } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { useEditor } from '../model/use-editor';
 import { setGroupCollapsed, useCollapsed } from './views/use-current-view';
@@ -63,11 +65,12 @@ function MergedEdgePopoverContent({ deck, merged }: { deck: SododeckFile; merged
     .map((edgeId) => deck.edges.find((edge) => edge.id === edgeId))
     .filter((edge): edge is SododeckFile['edges'][number] => edge !== undefined);
 
+  // A drawn end: a card, a group frame or collapsed card, or a proxy of either (050 R6).
   const titleOf = (id: string) =>
-    id.startsWith(COLLAPSED_NODE_PREFIX)
-      ? (deck.groups.find((group) => group.id === id.slice(COLLAPSED_NODE_PREFIX.length))?.title ??
-        id)
-      : (deck.nodes.find((node) => node.id === id || `port:${node.id}` === id)?.title ?? id);
+    endpointTitle(
+      deck,
+      id.startsWith(PORT_NODE_PREFIX) ? id.slice(PORT_NODE_PREFIX.length) : endpointIdOf(id),
+    );
   const ends = [merged.a, merged.b]
     .filter((id) => id.startsWith(COLLAPSED_NODE_PREFIX))
     .map((id) => id.slice(COLLAPSED_NODE_PREFIX.length));

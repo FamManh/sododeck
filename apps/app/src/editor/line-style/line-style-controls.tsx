@@ -13,11 +13,19 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 
-import { useId, type ReactNode } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { setActiveGesture } from '../editing/drag-session';
+import { startPointerDrag, type PointerDrag } from '../editing/pointer-drag';
 import { applyLineType, LINE_TYPES, lineTypeLabel } from '../fields/line-type';
 import { CARD_COLORS, colourName } from '../style/card-style';
 import { applyLineStyle } from './apply-line-style';
@@ -66,26 +74,102 @@ function Section({
 const sharedValue = <T,>(view: KeyView<T>): T | null =>
   view.shared.mixed ? null : view.shared.value;
 
-/** Slider with the five weight stops. Keys: ← → one stop, Home / End thinnest / thickest. */
+/**
+ * The stop under a pointer x on the track (050 R8). The stops share the track equally, so the
+ * nearest stop is the one whose share holds the x; beyond either end, the end stop.
+ */
+function stopAt(track: Element, clientX: number): Width {
+  const rect = track.getBoundingClientRect();
+  const ratio = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
+  const index = Math.max(0, Math.min(WIDTHS.length - 1, Math.floor(ratio * WIDTHS.length)));
+  return WIDTHS[index] ?? DEFAULT_WIDTH;
+}
+
+const sameIds = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((id, i) => id === b[i]);
+
+/**
+ * Slider with the five weight stops. Keys: ← → one stop, Home / End thinnest / thickest. A press
+ * anywhere on the track and a drag (050 R8) previews the nearest stop on the canvas
+ * (`lineStylePreview`) and writes once on release; Esc cancels; a click picks the nearest stop.
+ */
 function WeightSlider({
   labelledBy,
+  edgeIds,
   value,
+  preview,
   used,
   disabled,
   onPick,
 }: {
   labelledBy: string;
+  edgeIds: readonly string[];
   value: Width | null;
+  /** The stop a running drag shows, or null. */
+  preview: Width | null;
   used: readonly Width[];
   disabled: boolean;
   onPick: (width: Width) => void;
 }) {
-  const index = value === null ? -1 : WIDTHS.indexOf(value);
+  const drag = useRef<PointerDrag | null>(null);
+  // A drag must not outlive the slider (the popover closes, the selection changes).
+  useEffect(
+    () => () => {
+      drag.current?.cancel();
+    },
+    [],
+  );
+  const shown = preview ?? value;
+  const index = shown === null ? -1 : WIDTHS.indexOf(shown);
   const move = (to: number) => {
     const next = WIDTHS[Math.max(0, Math.min(WIDTHS.length - 1, to))];
     if (next !== undefined && next !== value) onPick(next);
   };
-  const current = value ?? DEFAULT_WIDTH;
+  const current = shown ?? DEFAULT_WIDTH;
+
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (disabled || event.button !== 0 || drag.current !== null) return;
+    // The popover is selectable text: without this, dragging along the track selects the stop
+    // numbers. Focus is given by hand instead.
+    event.preventDefault();
+    const track = event.currentTarget;
+    track.focus();
+    const ids = [...edgeIds];
+    let last: Width | null = null;
+    const show = (e: PointerEvent) => {
+      const width = stopAt(track, e.clientX);
+      if (width === last) return;
+      last = width;
+      useUiStore.getState().setLineStylePreview({ edgeIds: ids, width });
+    };
+    const finish = () => {
+      drag.current = null;
+      setActiveGesture(null);
+      useUiStore.getState().setLineStylePreview(null);
+    };
+    const started = startPointerDrag(event, {
+      onStart: show,
+      onMove: show,
+      onEnd: (e, committed) => {
+        // A click (below the drag threshold) picks the stop under the pointer.
+        const width = committed ? last : stopAt(track, e.clientX);
+        // Write before the preview goes, so the line never flashes its old weight.
+        if (width !== null && width !== value) onPick(width);
+        finish();
+      },
+      onCancel: finish,
+    });
+    drag.current = started;
+    // Registered like any other gesture, so the safety net leaves the preview alone meanwhile.
+    setActiveGesture({
+      cancel: () => {
+        started.cancel();
+        return true;
+      },
+      arrow: () => false,
+    });
+  };
+
   return (
     <div className="px-2 pb-4 pt-1">
       <div
@@ -96,9 +180,9 @@ function WeightSlider({
         aria-valuemax={WIDTHS[WIDTHS.length - 1]}
         aria-valuenow={current}
         aria-valuetext={
-          value === null
+          shown === null
             ? 'Mixed'
-            : `${widthText(value)}${value === DEFAULT_WIDTH ? ', default' : ''}`
+            : `${widthText(shown)}${shown === DEFAULT_WIDTH ? ', default' : ''}`
         }
         aria-disabled={disabled || undefined}
         onKeyDown={(event) => {
@@ -111,20 +195,19 @@ function WeightSlider({
           else return;
           event.preventDefault();
         }}
-        className={cn('relative flex h-6 items-center rounded-full', focusRing)}
+        onPointerDown={onPointerDown}
+        className={cn(
+          'relative flex h-6 touch-none items-center rounded-full',
+          !disabled && 'cursor-pointer',
+          focusRing,
+        )}
       >
         <div aria-hidden className="absolute inset-x-1 h-0.5 rounded-full bg-surface-3" />
         {WIDTHS.map((stop, i) => (
-          <button
+          <span
             key={stop}
-            type="button"
-            tabIndex={-1}
-            disabled={disabled}
             aria-hidden
             data-used={used.length > 1 && used.includes(stop) ? '' : undefined}
-            onClick={() => {
-              onPick(stop);
-            }}
             className="relative flex flex-1 flex-col items-center"
           >
             <span
@@ -138,7 +221,7 @@ function WeightSlider({
               )}
             />
             <span className="absolute top-5 text-caption text-ink-secondary">{stop}</span>
-          </button>
+          </span>
         ))}
       </div>
     </div>
@@ -163,6 +246,13 @@ export function LineStyleControls({
   const shape = sharedValue(view.shape);
   const dash = sharedValue(view.dash);
   const width = sharedValue(view.width);
+  // The weight a running slider drag shows on these connectors (050 R8).
+  const widthPreview = useUiStore((s) =>
+    s.lineStylePreview !== null && sameIds(s.lineStylePreview.edgeIds, ids)
+      ? s.lineStylePreview.width
+      : null,
+  );
+  const shownWidth = widthPreview ?? width;
   const color = view.color.shared.mixed ? undefined : view.color.shared.value;
   const animated = sharedValue(view.animated);
   const mixedGroup = (v: KeyView<unknown>) => v.shared.mixed;
@@ -262,12 +352,14 @@ export function LineStyleControls({
       <Section
         label="Weight"
         id={`${base}-weight`}
-        value={width === null ? '' : widthText(width)}
-        mixed={mixedGroup(view.width)}
+        value={shownWidth === null ? '' : widthText(shownWidth)}
+        mixed={widthPreview === null && mixedGroup(view.width)}
       >
         <WeightSlider
           labelledBy={`${base}-weight`}
+          edgeIds={ids}
           value={width}
+          preview={widthPreview}
           used={view.width.used}
           disabled={!editable}
           onPick={(next) => {

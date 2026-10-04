@@ -99,3 +99,20 @@ describe('EdgePopover', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
+
+describe('EdgePopover group ends (050 US4)', () => {
+  it('names a group end by its title', () => {
+    renderWithEditor(
+      <Harness />,
+      deckOf({
+        nodes: [{ id: 'a', type: 'service', title: 'Order Service' }],
+        groups: [{ id: 'g', title: 'Data layer' }],
+        edges: [{ id: 'e1', from: 'a', to: 'g' }],
+      }),
+    );
+    act(() => {
+      useUiStore.getState().openEdgePopover('e1');
+    });
+    expect(screen.getByText('Order Service → Data layer')).toBeInTheDocument();
+  });
+});

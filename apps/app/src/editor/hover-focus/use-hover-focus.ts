@@ -24,7 +24,7 @@ function suspendedBy(s: UiState): boolean {
     s.activeFlow !== null ||
     s.flowSession !== null ||
     s.canvasGesture !== null ||
-    s.reconnectingEdgeId !== null ||
+    s.endpointPreview !== null ||
     s.tool === 'hand' ||
     s.popover !== null ||
     s.contextMenu !== null ||
@@ -40,7 +40,7 @@ function rowsSuspendedBy(s: UiState): boolean {
   return (
     s.flowSession !== null ||
     s.canvasGesture !== null ||
-    s.reconnectingEdgeId !== null ||
+    s.endpointPreview !== null ||
     s.columnConnect !== null ||
     s.tool === 'hand' ||
     s.popover !== null ||

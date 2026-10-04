@@ -239,8 +239,9 @@
   border: 2px solid var(--color-ink-secondary);
 }
 
-/* Reconnect drag (017 R12): the hovered card's four side targets render as handles; the nearest
-   side is the hot one, larger, filled Deck Orange with a 4 px soft halo, not colour only. */
+/* Connector end drag (017 R12, 050 R3): the hovered card's four side targets render as handles;
+   the side the end attaches to is the hot one, larger, filled Deck Orange with a 4 px soft halo,
+   not colour only. */
 .react-flow__handle.sd-handle[data-endpoint-target] {
   width: 12px;
   height: 12px;
@@ -325,7 +326,6 @@
 [data-tool-hand] .react-flow__handle,
 [data-tool-hand] .react-flow__edge-path,
 [data-tool-hand] .react-flow__edge-interaction,
-[data-tool-hand] .react-flow__edgeupdater,
 [data-tool-hand] .sd-route-handle,
 [data-tool-hand] .sd-resize-handle {
   /* React Flow sets pointer-events inline on each node, and on these parts in its CSS. Named
@@ -338,10 +338,9 @@
   cursor: default;
 }
 
-/* View-only (007): no connection handles or reconnect grips, no grab cursor. Hidden, not
-   `display: none`: React Flow measures handle bounds to draw edges. */
-[data-flow-mode] .react-flow__handle.sd-handle,
-[data-flow-mode] .react-flow__edgeupdater {
+/* View-only (007): no connection handles, no grab cursor. Hidden, not `display: none`: React
+   Flow measures handle bounds to draw edges. */
+[data-flow-mode] .react-flow__handle.sd-handle {
   visibility: hidden;
   pointer-events: none;
 }
@@ -416,12 +415,6 @@
 
 [data-level='landscape'] .react-flow__edge {
   opacity: 0.35;
-}
-
-/* Reconnect drag (017 R12): the edge being moved is a 40 % ghost while the connection line shows
-   the live path. */
-.sd-edge-reconnecting {
-  opacity: 0.4;
 }
 
 /* Hover-only relationship labels (042 R10): drawn but hidden until a hover focus lights the
@@ -535,6 +528,14 @@
   background: var(--color-primary);
 }
 
+/* The viewport portal (selection frame, guides, connector handles) sits above every card (050 R1):
+   React Flow renders it after the nodes, but a selected card is raised to z-index 1001. The
+   portal lets the pointer through; only the handles inside it take it back. */
+.react-flow__viewport-portal {
+  z-index: 2000;
+  pointer-events: none;
+}
+
 /* Connector route handles (022, frame 129): light round handles with a 24 px round hit area.
    Bends are filled 8 px dots, midpoints 8 px rings, ends 10 px rings; hover grows them with a
    halo. Focusable buttons, so keyboard and pointer both work. */
@@ -575,6 +576,32 @@
 }
 .sd-route-handle[data-active] {
   cursor: grabbing;
+}
+/* Segment handle (050 R7): a short pill lying along its run; the cursor shows the one axis the
+   run moves on. A horizontal run (moves on y) gets a wide pill, a vertical one a tall pill. */
+.sd-route-handle[data-kind='segment'][data-axis='y'] {
+  cursor: ns-resize;
+}
+.sd-route-handle[data-kind='segment'][data-axis='x'] {
+  cursor: ew-resize;
+}
+.sd-route-handle[data-kind='segment'][data-axis='y']::before {
+  width: 16px;
+  height: 6px;
+}
+.sd-route-handle[data-kind='segment'][data-axis='x']::before {
+  width: 6px;
+  height: 16px;
+}
+.sd-route-handle[data-kind='segment'][data-axis='y']:hover::before,
+.sd-route-handle[data-kind='segment'][data-axis='y'][data-active]::before {
+  width: 20px;
+  height: 8px;
+}
+.sd-route-handle[data-kind='segment'][data-axis='x']:hover::before,
+.sd-route-handle[data-kind='segment'][data-axis='x'][data-active]::before {
+  width: 8px;
+  height: 20px;
 }
 .sd-route-readout {
   position: absolute;

@@ -131,7 +131,15 @@ describe('quick edit from the keyboard (019 US7)', () => {
       within(bar())
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label')),
-    ).toEqual(['Rename', 'Ungroup', 'Collapse', 'Select members', 'Colour: none', 'More actions']);
+    ).toEqual([
+      'Rename',
+      'Ungroup',
+      'Collapse',
+      'Select members',
+      'Colour: none',
+      'Spread ends evenly',
+      'More actions',
+    ]);
     await user.keyboard(' ');
     expect(within(bar()).getByRole('button', { name: 'Expand' })).toBeInTheDocument();
     await user.keyboard('{Shift>}{Control>}g{/Control}{/Shift}');

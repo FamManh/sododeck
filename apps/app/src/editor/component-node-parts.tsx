@@ -14,13 +14,14 @@ import {
   type ResizeDragEvent,
 } from '@xyflow/react';
 import { Ban, CornerDownRight, EyeOff, Plus } from 'lucide-react';
-import { useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { useEditor } from '../model/use-editor';
 import type { ConnectionCheck } from './connection-rules';
 import type { DeckNodeData, HandleSide } from './deck-to-flow';
 import {
   applyCardResize,
+  cancelCardResize,
   endCardResize,
   startCardResize,
   type CardResizeSession,
@@ -61,6 +62,15 @@ export function ResizeControls({ id, level }: { id: string; level: Level }) {
   const { getZoom } = useReactFlow();
   const resize = useRef<CardResizeSession | null>(null);
   const [activeHandle, setActiveHandle] = useState<ResizeHandleName | null>(null);
+  // React Flow never ends a resize whose node unmounts (a zoom-level switch): cancel it here, so
+  // no guide or half-written size is left behind (050 R9).
+  useEffect(
+    () => () => {
+      if (resize.current !== null) cancelCardResize(editor, resize.current);
+      resize.current = null;
+    },
+    [editor],
+  );
   return RESIZE_HANDLES.map((handle) => (
     <NodeResizeControl
       key={handle}

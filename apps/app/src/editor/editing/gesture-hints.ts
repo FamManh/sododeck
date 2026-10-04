@@ -38,6 +38,11 @@ const HINTS: Partial<Record<CanvasGesture, readonly HintBarItem[]>> = {
     { keys: 'R', label: 'Reset route' },
     { keys: 'Esc', label: 'Cancel' },
   ],
+  segment: [
+    { keys: '⌘', label: 'No snap' },
+    { keys: 'R', label: 'Reset segment' },
+    { keys: 'Esc', label: 'Cancel' },
+  ],
   anchor: [
     { keys: '⌘', label: 'No snap' },
     { keys: 'Esc', label: 'Cancel' },

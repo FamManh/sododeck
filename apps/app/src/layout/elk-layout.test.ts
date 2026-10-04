@@ -179,3 +179,28 @@ describe('applyPins', () => {
     expect(applyPins(laidOut, { ...request, pinned: {} })).toEqual(laidOut);
   });
 });
+
+describe('computeLayout group ends (050 US4)', () => {
+  it('lays out connectors to a group compound; one to its own member is left out', async () => {
+    const request: LayoutRequest = {
+      nodes: [
+        { id: 'a', ...size },
+        { id: 'm', ...size, parent: 'g' },
+        { id: 'n', ...size, parent: 'g' },
+      ],
+      groups: [{ id: 'g' }],
+      edges: [
+        { id: 'ag', source: 'a', target: 'group:g' },
+        { id: 'own', source: 'group:g', target: 'm' },
+      ],
+      pinned: {},
+    };
+    const result = await computeLayout(request);
+    const placed = boxes(request, result);
+    const a = placed.get('a');
+    const m = placed.get('m');
+    // Left to right: the source sits left of the group it feeds.
+    expect(a !== undefined && m !== undefined && a.x + a.width <= m.x).toBe(true);
+    expectNoOverlap(request, result);
+  });
+});

@@ -6,7 +6,7 @@
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
  *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
-import { isDbTable, stickyCanvasPosition } from '@sododeck/model';
+import { endpointOf, endpointTitle, isDbTable, stickyCanvasPosition } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
@@ -39,6 +39,7 @@ import {
 import {
   COLLAPSED_NODE_PREFIX,
   edgeName,
+  endpointIdOf,
   GROUP_NODE_PREFIX,
   MERGED_EDGE_PREFIX,
   PORT_NODE_PREFIX,
@@ -518,12 +519,15 @@ export function useCanvasKeyDown() {
           document.addEventListener('keyup', onRelease, true);
           return;
         }
-        case 'c':
-          if (current !== null && deck.nodes.some((n) => n.id === current)) {
+        case 'c': {
+          // From a card or a group (frame or collapsed card), 050 R6.
+          const fromId = current === null ? null : (groupIdOf(current) ?? current);
+          if (fromId !== null && endpointOf(deck, fromId) !== null) {
             event.preventDefault();
-            ui.openConnectPopover(current);
+            ui.openConnectPopover(fromId);
           }
           return;
+        }
         case 'f':
           if (session !== null || flowMode) return;
           event.preventDefault();
@@ -546,7 +550,8 @@ export function useCanvasKeyDown() {
           return;
         case 'e': {
           if (current === null) return;
-          const groupId = groupIdOf(current);
+          // A collapsed card cycles its merged connectors; a frame cycles its own (050 R6).
+          const groupId = current.startsWith(COLLAPSED_NODE_PREFIX) ? groupIdOf(current) : null;
           if (groupId !== null) {
             const ownMerged = graph.merged.filter(
               (edge) =>
@@ -570,7 +575,8 @@ export function useCanvasKeyDown() {
             );
             return;
           }
-          const titles = new Map(deck.nodes.map((n) => [n.id, n.title]));
+          const endId = groupIdOf(current) ?? current;
+          const titleOf = (id: string) => endpointTitle(deck, id);
           // Folded bundles (034) stand in for the connectors they hide; the cycle visits each.
           const bundles = bundleEdges(deck, graph, {
             exclude: new Set(),
@@ -581,9 +587,9 @@ export function useCanvasKeyDown() {
           const hidden = new Set(bundles.flatMap((bundle) => bundle.edgeIds));
           const own = deck.edges.filter(
             (e) =>
-              (e.from === current || e.to === current) &&
-              titles.has(e.from) &&
-              titles.has(e.to) &&
+              (e.from === endId || e.to === endId) &&
+              endpointOf(deck, e.from) !== null &&
+              endpointOf(deck, e.to) !== null &&
               !hidden.has(e.id),
           );
           const ownBundles = bundles.filter(
@@ -602,7 +608,7 @@ export function useCanvasKeyDown() {
             ui.select({});
             const other = bundle.a === current ? bundle.b : bundle.a;
             ui.announce(
-              `${String(bundle.edgeIds.length)} connections between ${titles.get(current) ?? current} and ${titles.get(other) ?? deck.nodes.find((n) => `port:${n.id}` === other)?.title ?? other}`,
+              `${String(bundle.edgeIds.length)} connections between ${titleOf(endId)} and ${titleOf(endpointIdOf(other.startsWith(PORT_NODE_PREFIX) ? other.slice(PORT_NODE_PREFIX.length) : other))}`,
             );
             return;
           }
@@ -610,7 +616,7 @@ export function useCanvasKeyDown() {
           if (!edge) return;
           useUiStore.getState().focusEdge(edge.id);
           ui.select({ edges: [edge.id] });
-          ui.announce(edgeName(titles.get(edge.from) ?? '', titles.get(edge.to) ?? '', edge.label));
+          ui.announce(edgeName(titleOf(edge.from), titleOf(edge.to), edge.label));
           return;
         }
         case 'enter':

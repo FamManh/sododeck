@@ -225,6 +225,108 @@ describe('visibleGraph', () => {
     expect(visibleGraph(deck, { node: null, group: null }, new Set()).edges).toEqual(['kept']);
   });
 
+  describe('groups as connector ends (050 US4)', () => {
+    const grouped = deckOf({
+      nodes: [
+        { id: 'free', type: 'service', title: 'Free' },
+        { id: 'a', type: 'service', title: 'A', group: 'core' },
+        { id: 'deep', type: 'service', title: 'Deep', group: 'inner' },
+        { id: 'o', type: 'service', title: 'O', group: 'other' },
+      ],
+      groups: [
+        { id: 'core', title: 'Core' },
+        { id: 'inner', title: 'Inner', parent: 'core' },
+        { id: 'other', title: 'Other' },
+      ],
+      edges: [
+        { id: 'toCore', from: 'free', to: 'core' },
+        { id: 'toInner', from: 'free', to: 'inner' },
+        { id: 'groups', from: 'core', to: 'other' },
+        { id: 'own', from: 'core', to: 'a' },
+      ],
+    });
+    const top = { node: null, group: null };
+
+    it('maps a shown group to its frame and draws its connectors', () => {
+      const graph = visibleGraph(grouped, top, new Set());
+      expect(graph.representative.get('core')).toBe('group:core');
+      expect(graph.representative.get('inner')).toBe('group:inner');
+      expect(graph.edges).toEqual(['toCore', 'toInner', 'groups', 'own']);
+      expect(graph.ports).toEqual([]);
+    });
+
+    it('draws a connector between a group and its own member (file-level allowed)', () => {
+      expect(visibleGraph(grouped, top, new Set()).edges).toContain('own');
+    });
+
+    it('maps a collapsed group, and groups inside it, to the collapsed card', () => {
+      const graph = visibleGraph(grouped, top, new Set(['core']));
+      expect(graph.representative.get('core')).toBe('collapsed:core');
+      expect(graph.representative.get('inner')).toBe('collapsed:core');
+      expect(graph.edges).toEqual([]);
+      expect(graph.merged).toEqual([
+        {
+          id: 'merged:collapsed:core|free',
+          a: 'collapsed:core',
+          b: 'free',
+          edgeIds: ['toCore', 'toInner'],
+          direction: 'b-to-a',
+        },
+        {
+          id: 'merged:collapsed:core|group:other',
+          a: 'collapsed:core',
+          b: 'group:other',
+          edgeIds: ['groups'],
+          direction: 'a-to-b',
+        },
+      ]);
+      // Inside the card: counted like any internal connector.
+      expect(graph.cards[0]?.hiddenEdges).toEqual(['own']);
+    });
+
+    it('ends on a proxy for a group out of the drill scope, the scope group included', () => {
+      const graph = visibleGraph(grouped, { node: null, group: 'core' }, new Set());
+      expect(graph.representative.get('inner')).toBe('group:inner');
+      expect(graph.representative.has('core')).toBe(false);
+      expect(graph.ports).toEqual([
+        {
+          id: 'port:free',
+          outsideNodeId: 'free',
+          outsideTitle: 'Free',
+          edgeIds: ['toInner'],
+          insideNodeIds: ['inner'],
+        },
+        {
+          id: 'port:core',
+          outsideNodeId: 'core',
+          outsideTitle: 'Core',
+          edgeIds: ['own'],
+          insideNodeIds: ['a'],
+        },
+      ]);
+    });
+
+    it("maps a group not drawn in the scope to its nearest drawn ancestor's representative", () => {
+      // Drilled into a card: `inner` has no member at this level, so its frame is not drawn.
+      const deck = deckOf({
+        nodes: [
+          { id: 'p', type: 'service', title: 'P' },
+          { id: 'c', type: 'service', title: 'C', parent: 'p', group: 'outer' },
+          { id: 'x', type: 'service', title: 'X', parent: 'p' },
+        ],
+        groups: [
+          { id: 'outer', title: 'Outer' },
+          { id: 'inner', title: 'Inner', parent: 'outer' },
+        ],
+        edges: [{ id: 'xi', from: 'x', to: 'inner' }],
+      });
+      const graph = visibleGraph(deck, { node: 'p', group: null }, new Set());
+      expect(graph.groups).toEqual(['outer']);
+      expect(graph.representative.get('inner')).toBe('group:outer');
+      expect(graph.edges).toEqual(['xi']);
+    });
+  });
+
   it('caches by deck arrays plus scope and collapsed ids', () => {
     const deck = deckOf({
       nodes: [{ id: 'a', type: 'service', title: 'A' }],

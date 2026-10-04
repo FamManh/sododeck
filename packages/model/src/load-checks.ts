@@ -4,7 +4,8 @@
  * of one flow, the branches of one flow, the columns (inputs and outputs together) of one rule, the
  * rows of one rule, and the database parts (040, research R8): every table's columns, indexes and
  * checks plus the enums and their values, together across the deck. The same id in two different
- * scopes is allowed by the format.
+ * scopes is allowed by the format, except a node and a group sharing an id that a connector end
+ * names (050).
  */
 import type { Issue, SododeckFile } from '@sododeck/schema';
 
@@ -46,6 +47,30 @@ function databaseParts(file: SododeckFile): { id: string; path: string }[] {
   return parts;
 }
 
+/**
+ * A connector end naming an id that is both a node's and a group's is ambiguous (050), so such a
+ * file is refused. A node and a group sharing an id that no end names stays loadable (the format
+ * always allowed it); the integrity report flags it.
+ */
+function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
+  const ends = new Set(file.edges.flatMap((edge) => [edge.from, edge.to]));
+  const nodePaths = new Map<string, string>();
+  file.nodes.forEach((node, i) => {
+    if (!nodePaths.has(node.id)) nodePaths.set(node.id, `nodes.${String(i)}.id`);
+  });
+  const reported = new Set<string>();
+  file.groups.forEach((group, i) => {
+    const nodePath = nodePaths.get(group.id);
+    if (nodePath === undefined || !ends.has(group.id) || reported.has(group.id)) return;
+    reported.add(group.id);
+    const path = `groups.${String(i)}.id`;
+    issues.push({
+      path,
+      message: `Id "${group.id}" names both a node and a group, so connector ends naming it are ambiguous (${nodePath}, ${path}).`,
+    });
+  });
+}
+
 /** One issue per duplicated id per scope, naming every location. Empty when ids are unique. */
 export function checkDuplicateIds(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
@@ -66,5 +91,6 @@ export function checkDuplicateIds(file: SododeckFile): Issue[] {
     checkScope(withPaths(rule.rows, `${prefix}.rows`), issues);
   }
   checkScope(databaseParts(file), issues);
+  checkAmbiguousEnds(file, issues);
   return issues;
 }

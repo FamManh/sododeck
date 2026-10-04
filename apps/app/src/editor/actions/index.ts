@@ -3,7 +3,7 @@ import { ARRANGE_ACTIONS } from './arrange-actions';
 import { CANVAS_ACTIONS } from './canvas-actions';
 import { CLIPBOARD_ACTIONS } from './clipboard-actions';
 import { COMMON_ACTIONS } from './common-actions';
-import { CONNECTION_ACTIONS } from './connection-actions';
+import { CONNECTION_ACTIONS, SPREAD_ENDS_ACTION } from './connection-actions';
 import { FIELD_ACTIONS } from './field-actions';
 import { GROUP_ACTIONS } from './group-actions';
 import { SHAPE_ACTIONS } from './shape-actions';
@@ -32,4 +32,5 @@ export const ACTIONS: readonly Action[] = [
   ...COMMON_ACTIONS,
   ...ALIGN_ACTIONS,
   ...ARRANGE_ACTIONS,
+  SPREAD_ENDS_ACTION,
 ];

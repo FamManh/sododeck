@@ -296,7 +296,7 @@ export interface SododeckFile {
    */
   groups: Group[];
   /**
-   * Connections between nodes.
+   * Connections between nodes or groups. Either end of a connection may be a node or a group.
    */
   edges: Edge[];
   /**
@@ -686,7 +686,7 @@ export interface Group {
   style?: Style;
 }
 /**
- * A connection between two nodes.
+ * A connection between two ends, each a node or a group.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Edge".
@@ -732,7 +732,7 @@ export interface Edge {
   onUpdate?: DbAction;
 }
 /**
- * How a connector is drawn between its two cards. All fields optional; an empty object is valid. `offset` and `waypoints` are never both set.
+ * How a connector is drawn between its two ends (each a card or a group frame). All fields optional; an empty object is valid. `offset` and `waypoints` are never both set.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "EdgeRoute".
@@ -753,12 +753,12 @@ export interface EdgeRoute {
    */
   toAt?: number;
   /**
-   * Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.
+   * Bend points from the source to the target, relative to the two ends (cards or groups) so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.
    */
   waypoints?: RouteWaypoint[];
 }
 /**
- * One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source card centre and T the target card centre in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.
+ * One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source centre and T the target centre (a card, or a group frame) in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "RouteWaypoint".

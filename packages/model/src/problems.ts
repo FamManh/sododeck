@@ -12,6 +12,7 @@ import { validateValue } from './field-values';
 import { appliesTo, findField } from './fields';
 import { analyzeFlow, type FlowAnalysis, type PathStep } from './flow-paths';
 import { stickyLabel } from './geometry';
+import { endpointTitle } from './endpoint';
 import { checkIntegrity, type IntegrityProblem } from './integrity';
 import type { ObjectRef } from './layout';
 import { ruleChecks } from './rules/evaluate';
@@ -146,8 +147,10 @@ export function checkDeck(file: SododeckFile): DeckProblems {
 
   const nodeById = new Map<Id, Node>(file.nodes.map((n) => [n.id, n]));
   const nodeTitle = (id: Id) => nodeById.get(id)?.title ?? id;
+  // A connector end is a node or a group (050).
+  const endTitle = (id: Id) => endpointTitle(file, id);
 
-  checkDuplicates(file.edges, nodeTitle, add);
+  checkDuplicates(file.edges, endTitle, add);
 
   const analyses = new Map<Id, FlowAnalysis>();
   for (const flow of file.flows) {
@@ -183,7 +186,7 @@ export function checkDeck(file: SododeckFile): DeckProblems {
     }
   }
 
-  checkReferences(file, analyses, nodeTitle, add);
+  checkReferences(file, analyses, nodeTitle, endTitle, add);
   checkCardSizes(file.nodes, add);
   checkCardTypes(file, add);
   checkFieldValues(file, add);
@@ -331,7 +334,8 @@ function checkDatabase(file: SododeckFile, nodeById: ReadonlyMap<Id, Node>, add:
   for (const edge of file.edges) {
     const from = nodeById.get(edge.from);
     const to = nodeById.get(edge.to);
-    const route = `${from?.title ?? edge.from} → ${to?.title ?? edge.to}`;
+    const fromTitle = endpointTitle(file, edge.from);
+    const route = `${fromTitle} → ${endpointTitle(file, edge.to)}`;
     for (const [side, ids, table] of [
       ['from', edge.fromColumns, from],
       ['to', edge.toColumns, to],
@@ -346,7 +350,7 @@ function checkDatabase(file: SododeckFile, nodeById: ReadonlyMap<Id, Node>, add:
           target: { type: 'edges', ids: [edge.id] },
           on: [edge.id, table.id],
           detail: `${route} · names a column ${table.title} does not have (${id})`,
-          objectTitle: from?.title ?? edge.from,
+          objectTitle: fromTitle,
         });
       }
     }
@@ -360,12 +364,12 @@ function checkDatabase(file: SododeckFile, nodeById: ReadonlyMap<Id, Node>, add:
       target: { type: 'edges', ids: [edge.id] },
       on: [edge.id],
       detail: `${route} · ${String(fromColumns.length)} key columns on one end, ${String(toColumns.length)} on the other`,
-      objectTitle: from?.title ?? edge.from,
+      objectTitle: fromTitle,
     });
   }
 }
 
-function checkDuplicates(edges: readonly Edge[], nodeTitle: (id: Id) => string, add: Add): void {
+function checkDuplicates(edges: readonly Edge[], endTitle: (id: Id) => string, add: Add): void {
   const groups = new Map<string, Edge[]>();
   for (const edge of edges) {
     if (edge.from === edge.to) continue;
@@ -385,13 +389,13 @@ function checkDuplicates(edges: readonly Edge[], nodeTitle: (id: Id) => string, 
     const first = group[0];
     if (first === undefined || group.length < 2) continue;
     const ids = group.map((e) => e.id);
-    const from = nodeTitle(first.from);
+    const from = endTitle(first.from);
     add({
       kind: 'duplicate-connection',
       ids,
       target: { type: 'edges', ids },
       on: ids,
-      detail: `${from} → ${nodeTitle(first.to)} appears ${times(group.length)}`,
+      detail: `${from} → ${endTitle(first.to)} appears ${times(group.length)}`,
       objectTitle: from,
     });
   }
@@ -513,6 +517,7 @@ function checkReferences(
   file: SododeckFile,
   analyses: ReadonlyMap<Id, FlowAnalysis>,
   nodeTitle: (id: Id) => string,
+  endTitle: (id: Id) => string,
   add: Add,
 ): void {
   const byId = <T extends { id: Id }>(items: readonly T[]) => new Map(items.map((i) => [i.id, i]));
@@ -537,7 +542,7 @@ function checkReferences(
       }
       case 'edges': {
         const e = edges.get(ref.id);
-        const label = e ? `Connection ${nodeTitle(e.from)} → ${nodeTitle(e.to)}` : ref.id;
+        const label = e ? `Connection ${endTitle(e.from)} → ${endTitle(e.to)}` : ref.id;
         return { label, title: label, target: { type: 'edges', ids: [ref.id] }, on: [ref.id] };
       }
       case 'flows': {
@@ -608,6 +613,8 @@ function referenceDetail(p: IntegrityProblem, label: string): string {
       return `${label} is attached to an id used by several objects`;
     case 'detached-rule-input':
       return `${label} has inputs for a rule it doesn't use`;
+    case 'duplicate-id':
+      return `${label} has the same id as a card`;
     case 'missing-reference': {
       const what = p.targetType === 'object' ? 'something' : `a ${p.targetType.replace('-', ' ')}`;
       return `${label} points to ${what} that was deleted`;
