@@ -3,8 +3,9 @@
  * kinds starting with `db-` (040's today, 047's later) whose target is one of those tables, or a
  * relationship with an end there. Pure.
  *
- * TODO(047): filter by severity. `Problem` has no severity yet, so every `db-*` problem counts as an
- * error for 052's "Block SQL export with errors".
+ * Only errors count for now, so the warnings 047 adds (a table without a key, an n–n) neither block
+ * 052's "Block SQL export with errors" nor show in the banner.
+ * TODO(047): T030 returns `{ errors, warnings }` and the banner lists both.
  */
 import type { DeckProblems, Problem } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
@@ -32,5 +33,7 @@ export function schemaProblems(
         return false;
     }
   };
-  return problems.list.filter((p) => p.kind.startsWith('db-') && touches(p));
+  return problems.list.filter(
+    (p) => p.kind.startsWith('db-') && p.severity === 'error' && touches(p),
+  );
 }
