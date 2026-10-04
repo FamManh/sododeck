@@ -82,6 +82,10 @@
       "$ref": "#/$defs/TableDisplay",
       "description": "How tables draw in this deck (041). Absent means Auto detail with every part shown."
     },
+    "relationshipDisplay": {
+      "$ref": "#/$defs/RelationshipDisplay",
+      "description": "How relationships between tables draw in this deck (042). Absent means cardinality ends in crow's foot, labels following the Labels tool."
+    },
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
@@ -707,6 +711,26 @@
         },
         "hideNotes": { "type": "boolean", "description": "Hides table notes." },
         "hideIndexes": { "type": "boolean", "description": "Hides the index count footer." }
+      }
+    },
+    "RelationshipDisplay": {
+      "title": "RelationshipDisplay",
+      "description": "How relationships between tables draw in this deck (042). Absent keys mean cardinality ends in crow's foot, labels following the Labels tool; the editor writes `hideEnds` as `true` or removes it, and removes the object when it is empty.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hideEnds": {
+          "type": "boolean",
+          "description": "Relationships (042): draw plain ends instead of cardinality marks."
+        },
+        "labels": {
+          "enum": ["hover", "always", "off"],
+          "description": "Relationships (042): label visibility; absent follows the Labels tool."
+        },
+        "notation": {
+          "enum": ["numeric"],
+          "description": "Relationships (042): 1 / n text instead of crow's foot; absent is crow's foot."
+        }
       }
     },
     "DbEnum": {

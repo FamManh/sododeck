@@ -341,6 +341,28 @@ export const sododeckFileSchema = z
         'How tables draw in this deck (041). Absent means Auto detail with every part shown.',
       )
       .optional(),
+    relationshipDisplay: z
+      .object({
+        hideEnds: z
+          .boolean()
+          .describe('Relationships (042): draw plain ends instead of cardinality marks.')
+          .optional(),
+        labels: z
+          .enum(['hover', 'always', 'off'])
+          .describe('Relationships (042): label visibility; absent follows the Labels tool.')
+          .optional(),
+        notation: z
+          .literal('numeric')
+          .describe(
+            "Relationships (042): 1 / n text instead of crow's foot; absent is crow's foot.",
+          )
+          .optional(),
+      })
+      .strict()
+      .describe(
+        "How relationships between tables draw in this deck (042). Absent means cardinality ends in crow's foot, labels following the Labels tool.",
+      )
+      .optional(),
     nodes: z
       .array(
         z

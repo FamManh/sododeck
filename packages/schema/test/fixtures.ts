@@ -703,4 +703,40 @@ export const invalidFixtures: InvalidFixture[] = [
     input: set('enums.0.color', 'purple-ish'),
     path: 'enums.0.color',
   },
+  // 042: relationship display.
+  {
+    name: 'relationship labels "sometimes"',
+    input: set('relationshipDisplay.labels', 'sometimes'),
+    path: 'relationshipDisplay.labels',
+  },
+  {
+    name: 'relationship notation "crow" (crow\'s foot is the absent key)',
+    input: set('relationshipDisplay.notation', 'crow'),
+    path: 'relationshipDisplay.notation',
+  },
+  {
+    name: 'relationship hideEnds is not a boolean',
+    input: set('relationshipDisplay.hideEnds', 'yes'),
+    path: 'relationshipDisplay.hideEnds',
+  },
+  {
+    name: 'unknown relationship display key',
+    input: set('relationshipDisplay.showLabels', true),
+    path: 'relationshipDisplay',
+  },
+];
+
+/** Valid fixtures: edge cases the examples do not show, accepted by both validators. */
+export interface ValidFixture {
+  name: string;
+  input: unknown;
+}
+
+export const validFixtures: ValidFixture[] = [
+  // 042: relationship display, empty and with every key.
+  { name: 'empty relationship display', input: set('relationshipDisplay', {}) },
+  {
+    name: 'relationship display with every key',
+    input: set('relationshipDisplay', { hideEnds: true, labels: 'off', notation: 'numeric' }),
+  },
 ];
