@@ -78,9 +78,8 @@ export function useViewState(): ViewState {
   const editTable = useUiStore(rowEditTableId);
   const at = useUiStore(newRowAt);
   const rowEdit = useMemo(() => rowEditView(editTable, at), [editTable, at]);
-  const activeFlow = useUiStore((s) => s.activeFlow);
-  const flowSession = useUiStore((s) => s.flowSession);
-  const touched = touchedRowsOf(deck, { activeFlow, flowSession });
+  // The rows object is cached per step, so a step change without touches re-renders nothing.
+  const touched = useUiStore((s) => touchedRowsOf(deck, s));
   return viewStateOf(deck, currentViewId, revealed, rowEdit, touched);
 }
 

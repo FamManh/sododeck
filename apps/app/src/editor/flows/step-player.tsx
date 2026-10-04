@@ -61,12 +61,14 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
     currentId === null ? undefined : playback?.analysis.byStepId.get(currentId)?.step;
   const touchNote = useMemo(
     () =>
-      playerNoteText(
-        playerNotes(fullDeck, currentStep, {
-          drawn: new Set(graph.representative.keys()),
-          inView: new Set(deck.nodes.map((node) => node.id)),
-        }),
-      ),
+      (currentStep?.touches?.length ?? 0) === 0
+        ? null
+        : playerNoteText(
+            playerNotes(fullDeck, currentStep, {
+              drawn: new Set(graph.representative.keys()),
+              inView: new Set(deck.nodes.map((node) => node.id)),
+            }),
+          ),
     [fullDeck, currentStep, graph, deck.nodes],
   );
 
