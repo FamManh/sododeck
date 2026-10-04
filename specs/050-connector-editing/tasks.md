@@ -313,7 +313,7 @@
 - [x] T049 Run `pnpm bench` and save the result in `specs/050-connector-editing/bench-after.md` with the before/after table. It must be within 5 % (SC-008).
 - [x] T050 Run `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix anything red, and update the smoke test only if a change broke it.
 - [x] T051 Walk through [quickstart.md](quickstart.md) scenarios 1–17 in `pnpm dev`. Record the results and screenshots (1, 5, 9, 10, 15, 17) in `specs/050-connector-editing/quickstart-results.md`.
-- [ ] T052 Open the PR to `main`. In the report, list what changed, what was skipped and what is uncertain, including the flow continuity limit and older builds versus group edges.
+- [x] T052 Open the PR to `main`. In the report, list what changed, what was skipped and what is uncertain, including the flow continuity limit and older builds versus group edges.
 
 ---
 
