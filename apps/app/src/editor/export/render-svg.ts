@@ -2,12 +2,18 @@ import { chromeIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
 import { FIELD_BLOCK, FIELD_CHIP, fieldChipWidth, hiddenLabel } from '../card-fields';
+import { TABLE_CARD, type TableLayout } from '../table-layout';
 import { DECK_CARD } from '../card-layout';
 import { SHAPE_TITLE_FONT, SHAPE_TITLE_LINE, shapePath, titleBox } from '../shapes/shape-geometry';
 import { TAG_CHIP } from '../card-tags';
 import { KNOB_RADIUS } from '../edge-constants';
 import { ARROW_PATH, endMarks } from '../edge-end-marks';
-import { exportTextColour, stickyColours, type ExportPalette } from './export-palette';
+import {
+  exportTagColours,
+  exportTextColour,
+  stickyColours,
+  type ExportPalette,
+} from './export-palette';
 import type {
   ExportScene,
   SceneCard,
@@ -59,6 +65,11 @@ export const FONTS = {
   /** The bundle's "×n" pill (DESIGN.md "Bundle count"). */
   bundle: `700 11.5px ${SANS}`,
   outside: `500 10px ${SANS}`,
+  /** Table rows (041): column names, primary-key names, types, the "U" glyph. */
+  column: TABLE_CARD.nameFont,
+  keyColumn: TABLE_CARD.keyNameFont,
+  columnType: TABLE_CARD.typeFont,
+  unique: `600 7.5px ${MONO}`,
 } as const;
 
 const STYLE = [
@@ -82,6 +93,10 @@ const STYLE = [
   `.b{font:${FONTS.badge}}`,
   `.bn{font:${FONTS.bundle}}`,
   `.o{font:${FONTS.outside}}`,
+  `.cn{font:${FONTS.column}}`,
+  `.ck{font:${FONTS.keyColumn}}`,
+  `.ct{font:${FONTS.columnType}}`,
+  `.cu{font:${FONTS.unique}}`,
 ].join('');
 
 /** The Deck card's corner radius and lip (DESIGN.md `--sd-deck-card-radius`, `--sd-deck-lip`). */
@@ -365,6 +380,169 @@ function fieldsBlock(
   return out.join('');
 }
 
+/**
+ * A table card's note and column body (041 R11), from the canvas's `tableLayout`: the hairline,
+ * one 24 px row per column (glyph paths, name, type or enum chip, "?"), the "+n columns" pill and
+ * the footer. Every text stays `<text>`. `top` is the bottom of the title line.
+ */
+function tableBody(
+  table: TableLayout,
+  left: number,
+  titleBottom: number,
+  inner: number,
+  noteInk: string,
+  ink: string,
+  custom: boolean,
+  palette: ExportPalette,
+  measure: TextMeasurer,
+): string {
+  const t = TABLE_CARD;
+  const out: string[] = [];
+  let top = titleBottom;
+  if (table.noteLines.length > 0) {
+    top += t.gap;
+    for (const [index, line] of table.noteLines.entries()) {
+      out.push(
+        text(
+          'd',
+          left,
+          baseline(top + index * t.noteLineHeight, t.noteLineHeight, 12),
+          noteInk,
+          line,
+        ),
+      );
+    }
+    top += table.noteLines.length * t.noteLineHeight;
+  }
+  if (!table.hasBody) return out.join('');
+  top += t.bodyGap;
+  // Type text reads Secondary on a coloured card (§g-90); the export has no hover.
+  const muted = custom ? ink : palette.inkMuted;
+  const secondary = custom ? ink : palette.inkSecondary;
+  out.push(
+    box(
+      left,
+      top - t.bodyGap / 2 - 0.5,
+      inner,
+      1,
+      0,
+      palette.hairline,
+      undefined,
+      undefined,
+      'hairline',
+    ),
+  );
+  const typeRight = left + inner - (table.showNullable ? t.nullableGap + t.nullableSlot : 0);
+  for (const [i, row] of table.rows.entries()) {
+    const rowTop = top + i * t.rowHeight;
+    const middle = rowTop + t.rowHeight / 2;
+    const parts: string[] = [];
+    for (const [j, glyph] of row.glyphs.entries()) {
+      const gx = left + j * 16;
+      if (glyph === 'unique') {
+        parts.push(
+          `<rect ${attrs({ 'data-part': 'unique', x: gx + 1, y: middle - 6, width: 12, height: 12, rx: 3, fill: 'none', stroke: secondary, 'stroke-width': 1.25 })}/>`,
+        );
+        parts.push(text('cu', gx + 7, middle + 2.6, secondary, 'U', 'middle'));
+      } else {
+        const key = glyph === 'pk' ? 'primary-key' : 'foreign-key';
+        parts.push(icon(chromeIcon(key), gx, middle - 7, 14, glyph === 'pk' ? ink : secondary));
+      }
+    }
+    const isPk = row.glyphs.includes('pk');
+    parts.push(
+      text(
+        isPk ? 'ck' : 'cn',
+        left + table.keySlot + t.keyGap,
+        baseline(rowTop, t.rowHeight, 12),
+        ink,
+        row.nameText,
+      ),
+    );
+    if (row.enum !== undefined) {
+      const colours =
+        row.enum.color === undefined
+          ? { chip: palette.surface2, ink: palette.inkSecondary }
+          : exportTagColours(row.enum.color);
+      const chipX = typeRight - row.typeWidth;
+      parts.push(
+        box(
+          chipX,
+          middle - t.chipHeight / 2,
+          row.typeWidth,
+          t.chipHeight,
+          9,
+          colours.chip,
+          undefined,
+          undefined,
+          'enum',
+        ),
+      );
+      parts.push(
+        text(
+          'ct',
+          chipX + t.chipPaddingX,
+          baseline(middle - t.chipHeight / 2, t.chipHeight, 11),
+          colours.ink,
+          row.enum.text,
+        ),
+      );
+    } else if (row.typeText !== undefined) {
+      parts.push(
+        text('ct', typeRight, baseline(rowTop, t.rowHeight, 11), muted, row.typeText, 'end'),
+      );
+    }
+    if (row.nullable) {
+      parts.push(
+        text('ct', left + inner - t.nullableSlot, baseline(rowTop, t.rowHeight, 11), muted, '?'),
+      );
+    }
+    out.push(`<g data-part="row" data-column="${escapeXml(row.columnId)}">${parts.join('')}</g>`);
+  }
+  top += table.rows.length * t.rowHeight;
+  if (table.hidden?.kind === 'more') {
+    if (table.rows.length > 0) top += t.pillGap;
+    out.push(
+      box(
+        left + 0.75,
+        top + 0.75,
+        inner - 1.5,
+        t.pillHeight - 1.5,
+        8,
+        'none',
+        palette.borderStrong,
+        '4 3',
+        'more',
+      ),
+    );
+    out.push(
+      text(
+        'ty',
+        left + inner / 2,
+        baseline(top, t.pillHeight, 11.5),
+        palette.inkSecondary,
+        `+${String(table.hidden.count)} columns`,
+        'middle',
+      ),
+    );
+    top += t.pillHeight;
+  }
+  const footer = [
+    table.hidden?.kind === 'all' ? `${String(table.hidden.count)} columns` : undefined,
+    table.footer,
+  ].filter((part) => part !== undefined);
+  let x = left;
+  for (const part of footer) {
+    if (part === table.footer) {
+      out.push(icon(chromeIcon('indexes'), x, top + t.footerHeight / 2 - 7, 14, muted));
+      x += 14 + 6;
+    }
+    out.push(text('c', x, baseline(top, t.footerHeight, 11.5), muted, part));
+    x += measure(part, FONTS.caption) + 12;
+  }
+  return out.join('');
+}
+
 function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): string {
   const { x, y, width, height } = item.rect;
   const c = DECK_CARD;
@@ -432,6 +610,12 @@ function card(item: SceneCard, palette: ExportPalette, measure: TextMeasurer): s
     );
   }
   top += item.titleLines.length * c.titleLineHeight;
+
+  if (item.table !== undefined) {
+    out.push(tableBody(item.table, left, top, inner, bodyInk, ink, custom, palette, measure));
+    out.push('</g>');
+    return out.join('');
+  }
 
   if (item.descriptionLines.length > 0) {
     top += c.gap;

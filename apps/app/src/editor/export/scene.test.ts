@@ -8,6 +8,8 @@ import { cardLayout } from '../card-layout';
 import { NODE_SIZE } from '../canvas-geometry';
 import { LIGHT_PALETTE } from './export-palette';
 import { buildScene, EXPORT_MARGIN, type SceneInput } from './scene';
+import { tableContextOf } from '../table-keys';
+import { tableLayout } from '../table-layout';
 
 const ui: SceneInput['ui'] = {
   currentViewId: null,
@@ -774,5 +776,73 @@ describe('buildScene card icons (038)', () => {
     expect(result.collapsed[0]?.memberIcons.map((icon) => icon.name)).toEqual(['zap']);
     const drilled = scene(iconed, 'view', { drill: [{ kind: 'group', id: 'g' }] });
     expect(drilled.ports[0]?.icon.name).toBe('cloud');
+  });
+});
+
+describe('buildScene: table cards (041 US5)', () => {
+  const shop = deckOf({
+    enums: [{ id: 'e', name: 'order_status', color: 'violet', values: [] }],
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        description: 'One row per checkout.',
+        position: { x: 0, y: 0 },
+        columns: [
+          { id: 'o-id', name: 'id', type: 'uuid', pk: true },
+          { id: 'o-c', name: 'customer_id', type: 'uuid', notNull: true },
+          { id: 'o-s', name: 'status', type: 'order_status', enumRef: 'e' },
+          { id: 'o-t', name: 'total', type: 'int', notNull: true },
+        ],
+        indexes: [{ id: 'ix', columns: ['o-c'] }],
+      },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        position: { x: 400, y: 0 },
+        detail: 'keys',
+        columns: [
+          { id: 'c-id', name: 'id', type: 'uuid', pk: true },
+          { id: 'c-n', name: 'name', type: 'text' },
+        ],
+      },
+    ],
+    edges: [
+      {
+        id: 'r',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['o-c'],
+        toColumns: ['c-id'],
+        cardinality: 'n-1',
+      },
+    ],
+  });
+  const tableOf = (file: SododeckFile, id: string) =>
+    scene(file).cards.find((card) => card.id === id)?.table;
+  const expected = (file: SododeckFile, id: string) => {
+    const node = file.nodes.find((n) => n.id === id);
+    if (node === undefined) throw new Error(id);
+    return tableLayout(node, tableContextOf(file));
+  };
+
+  it('carries the canvas layout of each table, its own detail included', () => {
+    expect(tableOf(shop, 'orders')).toEqual(expected(shop, 'orders'));
+    expect(tableOf(shop, 'customers')?.hidden).toEqual({ count: 1, kind: 'more' });
+    const card = scene(shop).cards.find((c) => c.id === 'orders');
+    expect(card?.rect.height).toBe(expected(shop, 'orders').height);
+    expect(card?.typeName).toBe('Table');
+    expect(card?.tags).toEqual([]);
+  });
+
+  it('applies the deck detail and toggles', () => {
+    const keys = { ...shop, tableDisplay: { detail: 'keys' as const, hideNotes: true } };
+    expect(tableOf(keys, 'orders')?.rows.map((r) => r.columnId)).toEqual(['o-id', 'o-c']);
+    expect(tableOf(keys, 'orders')?.noteLines).toEqual([]);
+    const noTypes = { ...shop, tableDisplay: { hideTypes: true, hideIndexes: true } };
+    expect(tableOf(noTypes, 'orders')?.rows.every((r) => r.type === undefined)).toBe(true);
+    expect(tableOf(noTypes, 'orders')?.footer).toBeUndefined();
   });
 });

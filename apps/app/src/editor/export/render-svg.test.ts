@@ -696,3 +696,64 @@ describe('shapes in the export (031 FR-016)', () => {
     }
   });
 });
+
+describe('renderSvg: table cards (041 US5)', () => {
+  const shop = deckOf({
+    enums: [{ id: 'e', name: 'order_status', color: 'violet', values: [] }],
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        position: { x: 0, y: 0 },
+        columns: [
+          { id: 'o-id', name: 'id', type: 'uuid', pk: true },
+          { id: 'o-n', name: 'number', type: 'text', notNull: true, unique: true },
+          { id: 'o-s', name: 'status', type: 'order_status', enumRef: 'e', notNull: true },
+          { id: 'o-q', name: 'coupon', type: 'text' },
+        ],
+        indexes: [
+          { id: 'ix', columns: ['o-n'] },
+          { id: 'ix2', columns: ['o-q'] },
+        ],
+      },
+      {
+        id: 'keys',
+        type: 'db-table',
+        title: 'keys_only',
+        position: { x: 400, y: 0 },
+        detail: 'keys',
+        columns: [
+          { id: 'k-id', name: 'id', type: 'int', pk: true },
+          { id: 'k-x', name: 'x', type: 'int' },
+        ],
+      },
+    ],
+  });
+
+  it('draws rows as text with glyph paths, the enum chip, the pill and the footer', () => {
+    const svg = svgOf(shop);
+    const doc = parse(svg);
+    expect(svg).not.toContain('foreignObject');
+    const rows = [...doc.querySelectorAll('[data-part="row"]')];
+    expect(rows.map((row) => row.getAttribute('data-column'))).toEqual([
+      'o-id',
+      'o-n',
+      'o-s',
+      'o-q',
+      'k-id',
+    ]);
+    const texts = (row: Element | undefined) =>
+      [...(row?.querySelectorAll('text') ?? [])].map((t) => t.textContent);
+    expect(texts(rows[0])).toEqual(['id', 'uuid']);
+    expect(rows[0]?.querySelector('g path, g circle')).not.toBeNull();
+    expect(texts(rows[1])).toEqual(['U', 'number', 'text']);
+    expect(rows[2]?.querySelector('[data-part="enum"]')).not.toBeNull();
+    expect(texts(rows[2])).toEqual(['status', 'order_status']);
+    expect(texts(rows[3])).toEqual(['coupon', 'text', '?']);
+    const all = [...doc.querySelectorAll('text')].map((t) => t.textContent);
+    expect(all).toContain('2 indexes');
+    expect(all).toContain('+1 columns');
+    expect(doc.querySelectorAll('[data-part="hairline"]')).toHaveLength(2);
+  });
+});

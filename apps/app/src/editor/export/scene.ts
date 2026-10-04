@@ -48,6 +48,8 @@ import {
 } from '../card-fields';
 import { SHAPE_TITLE_FONT, titleBox } from '../shapes/shape-geometry';
 import { shapeTitleLines } from '../shapes/shape-layout';
+import { tableContextOf } from '../table-keys';
+import { TABLE_CARD, type TableLayout } from '../table-layout';
 import { edgePath } from './edge-geometry';
 import { exportLineColour, exportLook, exportTagColours, type ExportLook } from './export-palette';
 import { truncate, type TextMeasurer } from './text-measure';
@@ -88,6 +90,8 @@ export interface SceneCard {
   layout: CardLayout;
   /** Drawn as a shape (031): its geometry; `titleLines` then wrap in its title box. */
   geometry?: Geometry;
+  /** A table card's body (041): the same `tableLayout` the canvas draws (`layout.table`). */
+  table?: TableLayout;
   fill?: string;
   stroke?: string;
   /** Tile and pill colours that follow the card colour; absent means the neutral ones. */
@@ -221,6 +225,39 @@ function clampLines(
   return shown;
 }
 
+/**
+ * A table card (041 R11): header, one title line, the note lines and the column body, all from
+ * the table's layout; no tags, fields or "n inside" row.
+ */
+function tableCard(
+  node: SododeckFile['nodes'][number],
+  index: number,
+  layout: CardLayout,
+  table: TableLayout,
+  level: Level,
+): SceneCard {
+  const inner = layout.width - 2 * TABLE_CARD.paddingX;
+  return {
+    id: node.id,
+    rect: { ...displayPosition(node, index), width: layout.width, height: layout.height },
+    icon: iconOf(node),
+    typeName: table.typeName,
+    title: node.title,
+    titleLines: [truncate(node.title, TABLE_CARD.titleFont, inner, textMeasurer())],
+    description: table.noteLines.length === 0 ? null : table.noteLines.join(' '),
+    descriptionLines: table.noteLines,
+    tags: [],
+    tagChips: [],
+    fields: sceneFields(EMPTY_FIELD_VIEW, layout.width, inner, textMeasurer()),
+    hasRules: false,
+    childCount: 0,
+    level,
+    layout,
+    table,
+    ...(exportLook(node.style) ?? EMPTY_LOOK),
+  };
+}
+
 /** Estimated label pill width; the renderer measures the real one (R6). */
 function labelPill(edge: SceneEdge): Rect | null {
   if (edge.label === null && edge.badges.length === 0) return null;
@@ -336,6 +373,8 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const nodes = new Map(source.nodes.map((node, index) => [node.id, { node, index }]));
   const tagColours = tagColourMap(source.tagColors);
   const measure = textMeasurer();
+  // Tables read their deck (keys, enums, display), from the whole deck as the canvas does (041).
+  const tableContext = tableContextOf(deck);
   const cards: SceneCard[] = graph.nodes.flatMap((id) => {
     const entry = nodes.get(id);
     if (entry === undefined || !keep(id)) return [];
@@ -349,9 +388,11 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       description: subtitle ?? undefined,
       childCount,
       fields: fieldView,
+      table: tableContext,
     });
     const geometry = geometryOf(node);
     if (geometry !== null) return [shapeCard(node, index, geometry, layout, childCount, level)];
+    if (layout.table !== undefined) return [tableCard(node, index, layout, layout.table, level)];
     const inner = layout.width - 2 * DECK_CARD.paddingX;
     const description = subtitle?.trim() ?? '';
     const tags = cardTags(node.tags);
