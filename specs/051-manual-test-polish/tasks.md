@@ -40,7 +40,7 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Create branch `051-manual-test-polish` from the latest `main`, carrying over only `specs/051-manual-test-polish/` (leave the untracked `specs/042-db-relationships/` and `apps/app/src/samples/` on their own branch). Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green start.
+- [x] T001 Create branch `051-manual-test-polish` from the latest `main`, carrying over only `specs/051-manual-test-polish/` (leave the untracked `specs/042-db-relationships/` and `apps/app/src/samples/` on their own branch). Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green start.
 - [ ] T002 Take the bench baseline on unchanged code with `pnpm bench`, and save the summary table in `specs/051-manual-test-polish/bench-before.md`.
 
 ---
@@ -301,9 +301,9 @@
 
 **Independent Test**: on the library page there is no storage card, and the button says "Import" and still imports.
 
-- [ ] T043 [P] [US8] Add a test to `apps/app/src/library/import-button.test.tsx`: the button's visible text is exactly "Import", and its accessible name is "Import deck file (.sododeck.json)". Add a library page or sidebar test, next to `apps/app/src/library/library-sidebar.tsx` or `routes/library-page.tsx` tests, that asserts `queryByText('Persistent storage')` is null.
-- [ ] T044 [US8] In `apps/app/src/library/import-button.tsx` (:38), set the visible text to "Import" and add `aria-label="Import deck file (.sododeck.json)"` on the control that carries the name.
-- [ ] T045 [US8] Remove the storage card:
+- [x] T043 [P] [US8] Add a test to `apps/app/src/library/import-button.test.tsx`: the button's visible text is exactly "Import", and its accessible name is "Import deck file (.sododeck.json)". Add a library page or sidebar test, next to `apps/app/src/library/library-sidebar.tsx` or `routes/library-page.tsx` tests, that asserts `queryByText('Persistent storage')` is null.
+- [x] T044 [US8] In `apps/app/src/library/import-button.tsx` (:38), set the visible text to "Import" and add `aria-label="Import deck file (.sododeck.json)"` on the control that carries the name.
+- [x] T045 [US8] Remove the storage card:
   - delete `apps/app/src/library/storage-card.tsx`, `storage-card.test.tsx`, `apps/app/src/storage/storage-estimate.ts` and `storage-estimate.test.ts`;
   - remove the `storageCard` prop and slot from `apps/app/src/library/library-sidebar.tsx` (:155, :163, :234) and its use in `apps/app/src/routes/library-page.tsx` (:27, :168);
   - remove `supportsPersistentStorage` and `supportsStorageEstimate` from `apps/app/src/lib/features.ts` (:9, :55) and their cases in `lib/features.test.ts`;

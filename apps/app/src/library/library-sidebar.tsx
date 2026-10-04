@@ -144,7 +144,7 @@ function FolderItem({
   );
 }
 
-/** The library sidebar (design 01, 74–79): sections, folders, recent decks, storage card. */
+/** The library sidebar (design 01, 74–79): sections, folders, recent decks. */
 export function LibrarySidebar({
   decks,
   recent,
@@ -152,7 +152,6 @@ export function LibrarySidebar({
   section,
   commands,
   onNewFolder,
-  storageCard,
 }: {
   decks: readonly DeckRecord[];
   recent: readonly DeckRecord[];
@@ -160,7 +159,6 @@ export function LibrarySidebar({
   section: LibrarySection;
   commands: LibraryCommands | null;
   onNewFolder: () => void;
-  storageCard: ReactNode;
 }) {
   const setSection = useLibraryStore((s) => s.setSection);
   const counts = new Map<string, number>();
@@ -231,7 +229,6 @@ export function LibrarySidebar({
         </ul>
       </section>
       <RecentList decks={recent} />
-      <div className="mt-auto">{storageCard}</div>
     </nav>
   );
 }

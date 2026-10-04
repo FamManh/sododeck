@@ -136,6 +136,14 @@ describe('LibraryPage', () => {
     expect(screen.getByText('Editor for b')).toBeInTheDocument();
   });
 
+  it('has no persistent storage card (051 US8)', async () => {
+    const { db } = await threeDecks();
+    await renderLibrary({ db });
+    expect(await screen.findByText('3 decks · stored in this browser')).toBeInTheDocument();
+    expect(screen.queryByText('Persistent storage')).toBeNull();
+    expect(screen.queryByRole('button', { name: /persistent storage/i })).toBeNull();
+  });
+
   it('explains when storage is blocked', async () => {
     await renderLibrary({ db: null });
     expect(screen.getByRole('alert')).toHaveTextContent(
