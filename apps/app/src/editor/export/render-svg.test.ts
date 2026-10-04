@@ -537,6 +537,57 @@ describe('renderSvg card types (030)', () => {
   });
 });
 
+describe('renderSvg card icons (038)', () => {
+  const iconed = deckOf({
+    nodes: [
+      {
+        id: 'c',
+        type: 'service',
+        title: 'Custom',
+        icon: 'lucide:search',
+        position: { x: 0, y: 0 },
+      },
+      {
+        id: 'k',
+        type: 'service',
+        title: 'Kafka',
+        icon: 'simple:kafka',
+        position: { x: 300, y: 0 },
+      },
+    ],
+  });
+
+  it("draws the card's custom icon in the header tile, and the type icon for one it cannot show", () => {
+    const doc = parse(renderSvg(buildScene({ deck: iconed, scope: 'deck', ui }), options));
+    const custom = doc.querySelector('[data-export="card"][data-id="c"]')?.innerHTML ?? '';
+    const kafka = doc.querySelector('[data-export="card"][data-id="k"]')?.innerHTML ?? '';
+    expect(custom).toContain('<circle cx="11" cy="11" r="8"');
+    expect(custom).not.toContain('M21 8a2 2 0 0 0-1-1.73');
+    expect(kafka).toContain('M21 8a2 2 0 0 0-1-1.73');
+  });
+
+  it('draws a filled icon of a solid set with fill and no stroke', () => {
+    const built = buildScene({ deck: iconed, scope: 'deck', ui });
+    const solid = {
+      set: 'solid-test',
+      name: 'dot',
+      label: 'Dot',
+      style: 'solid' as const,
+      node: [['circle', { cx: 12, cy: 12, r: 5 }]] as const,
+    };
+    const svg = renderSvg(
+      { ...built, cards: built.cards.map((card) => ({ ...card, icon: solid })) },
+      options,
+    );
+    const doc = parse(svg);
+    const group = doc
+      .querySelector('[data-export="card"][data-id="c"]')
+      ?.querySelector('circle[r="5"]')?.parentElement;
+    expect(group?.getAttribute('fill')).not.toBe('none');
+    expect(group?.hasAttribute('stroke')).toBe(false);
+  });
+});
+
 describe('renderSvg: typed fields (032)', () => {
   const typed = deckOf({
     nodes: [

@@ -390,7 +390,10 @@ describe('buildScene: current view', () => {
         title: 'Core',
         nodeCount: 2,
         edgeCount: 1,
-        memberIcons: [expect.objectContaining({ name: 'box' }), expect.objectContaining({ name: 'box' })],
+        memberIcons: [
+          expect.objectContaining({ name: 'box' }),
+          expect.objectContaining({ name: 'box' }),
+        ],
       }),
     ]);
     // Curved like the canvas's merged connector; a-db is two-way, so the bundle is too.
@@ -717,9 +720,27 @@ describe('shapes in the scene (031)', () => {
 describe('buildScene card icons (038)', () => {
   const iconed = deckOf({
     nodes: [
-      { id: 'c', type: 'service', title: 'Custom', icon: 'lucide:search', position: { x: 0, y: 0 } },
-      { id: 'k', type: 'service', title: 'Kafka', icon: 'simple:kafka', position: { x: 300, y: 0 } },
-      { id: 's', type: 'rectangle', title: 'Shape', icon: 'lucide:search', position: { x: 600, y: 0 } },
+      {
+        id: 'c',
+        type: 'service',
+        title: 'Custom',
+        icon: 'lucide:search',
+        position: { x: 0, y: 0 },
+      },
+      {
+        id: 'k',
+        type: 'service',
+        title: 'Kafka',
+        icon: 'simple:kafka',
+        position: { x: 300, y: 0 },
+      },
+      {
+        id: 's',
+        type: 'rectangle',
+        title: 'Shape',
+        icon: 'lucide:search',
+        position: { x: 600, y: 0 },
+      },
       {
         id: 'm',
         type: 'database',
@@ -728,7 +749,13 @@ describe('buildScene card icons (038)', () => {
         group: 'g',
         position: { x: 900, y: 0 },
       },
-      { id: 'o', type: 'queue', title: 'Outside', icon: 'lucide:cloud', position: { x: 1500, y: 0 } },
+      {
+        id: 'o',
+        type: 'queue',
+        title: 'Outside',
+        icon: 'lucide:cloud',
+        position: { x: 1500, y: 0 },
+      },
     ],
     groups: [{ id: 'g', title: 'G' }],
     edges: [{ id: 'e', from: 'm', to: 'o' }],
