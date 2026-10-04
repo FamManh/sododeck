@@ -22,6 +22,7 @@ import { useEditor } from '../model/use-editor';
 import { PALETTE_INITIAL, useUiStore } from '../state/ui-store';
 import { addComponent, canvasElement, centredOn, PALETTE_ID } from './canvas-actions';
 import { armFrameTool, placeFrameAtCentre } from './frame-tool/frame-actions';
+import { neighbour } from './grid-nav';
 import { PacksPanel } from './packs-panel';
 import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
 import { NOTE_MIME, TYPE_MIME } from './use-canvas-handlers';
@@ -46,34 +47,6 @@ const tileIds = (section: Section): string[] => [
   ...section.types.map((t) => t.id),
   ...section.tools.map(toolTileId),
 ];
-
-/** The tile that arrow `key` moves to, by section row and column (a short last row is clamped). */
-function neighbour(sections: readonly Section[], from: string, key: string): string | null {
-  const rows = sections.map(tileIds);
-  const flat = rows.flat();
-  const at = flat.indexOf(from);
-  if (at < 0) return null;
-  if (key === 'ArrowRight') return flat[at + 1] ?? null;
-  if (key === 'ArrowLeft') return flat[at - 1] ?? null;
-  const si = rows.findIndex((ids) => ids.includes(from));
-  const section = rows[si];
-  if (section === undefined) return null;
-  const i = section.indexOf(from);
-  const col = i % COLUMNS;
-  if (key === 'ArrowDown') {
-    if (i + COLUMNS < section.length) return section[i + COLUMNS] ?? null;
-    const next = rows[si + 1];
-    return next === undefined ? null : (next[Math.min(col, next.length - 1)] ?? null);
-  }
-  if (key === 'ArrowUp') {
-    if (i - COLUMNS >= 0) return section[i - COLUMNS] ?? null;
-    const prev = rows[si - 1];
-    if (prev === undefined) return null;
-    const lastRow = Math.floor((prev.length - 1) / COLUMNS) * COLUMNS;
-    return prev[Math.min(lastRow + col, prev.length - 1)] ?? null;
-  }
-  return null;
-}
 
 /**
  * The Add flyout (030, frame 127): search, category tabs, sections of type tiles, the Note card
@@ -178,7 +151,7 @@ export function Palette() {
   };
   const onTileKey = (event: KeyboardEvent<HTMLButtonElement>, id: string) => {
     if (!event.key.startsWith('Arrow')) return;
-    const next = neighbour(sections, id, event.key);
+    const next = neighbour(sections.map(tileIds), id, event.key, COLUMNS);
     event.preventDefault();
     if (next === null) return;
     setActive(next);
