@@ -21,6 +21,9 @@ import { describeChannel } from './style/card-style';
 import type { DeckFlowNode } from './deck-to-flow';
 import { deckStateClasses } from './deck-states';
 import { StepSticker } from './step-sticker';
+import { TableBody } from './table/table-body';
+import { TableCompact } from './table/table-compact';
+import { TableDetailToggle } from './table/table-detail-toggle';
 
 /** The title's line height in em (DESIGN.md `--sd-deck-title`), so an edited title shows as many lines as the card. */
 const TITLE_LINE_EM = 1.28;
@@ -46,9 +49,13 @@ export const DeckNode = memo(function DeckNode({
     refusal,
   } = useComponentNodeState(id, selected);
 
+  // A table card (041): the same frame, header and states, with a column list for a body.
+  const table = data.layout.table;
   // Dimmed and pinned are said in the name too, never shown by opacity or a glyph alone (011).
   const name = [
-    `${typeName(data.kind)}: ${data.title}`,
+    table === undefined
+      ? `${typeName(data.kind)}: ${data.title}`
+      : `Table ${data.title}, ${String(table.columnCount)} columns`,
     data.viewDimmed === true ? 'dimmed in this view' : null,
     data.pinned === true ? 'pinned' : null,
     data.problems?.label ?? null,
@@ -65,8 +72,9 @@ export const DeckNode = memo(function DeckNode({
   const layout = data.layout;
   const box = { width: width ?? layout.width, height: height ?? layout.height };
   // `toFlowNodes` already keeps ten; the card never draws more than its layout reserved room for.
-  const tags = data.tagLooks.slice(0, MAX_CARD_TAGS);
-  // Typed fields (032): measured by the same `fieldBlock` the layout reserved room with.
+  const tags = table === undefined ? data.tagLooks.slice(0, MAX_CARD_TAGS) : [];
+  // Typed fields (032): measured by the same `fieldBlock` the layout reserved room with. Tables
+  // draw columns instead (041).
   const fields = data.fields;
   const block = fieldBlock(fields, layout.width);
   const headerStatus = isLandscape ? undefined : fields.header;
@@ -145,7 +153,7 @@ export const DeckNode = memo(function DeckNode({
       data-testid="deck-node"
       data-node-id={id}
       role="group"
-      aria-roledescription="component"
+      aria-roledescription={table === undefined ? 'component' : 'table'}
       aria-label={name}
       aria-selected={selected}
       aria-description={description === '' ? undefined : description}
@@ -183,6 +191,8 @@ export const DeckNode = memo(function DeckNode({
         // padding is 12 / 13 less the border, so the text area matches what `cardLayout` measured.
         'sd-card group/node relative rounded-card border-[1.5px] bg-surface',
         'flex flex-col gap-2 px-[11.5px] py-[10.5px]',
+        // A table with columns ends 8 below its body, not 12 (DESIGN.md "Database tokens").
+        table?.hasBody === true && !isLandscape && 'pb-[6.5px]',
         isLandscape && 'items-center justify-center',
         focusRing,
         // The state classes (deck-states.ts) are styled in index.css: selected is a 2 px frame 2 px
@@ -227,7 +237,7 @@ export const DeckNode = memo(function DeckNode({
                 data-text={subtitleDataText}
                 className={cn('min-w-0 flex-1 truncate text-caption font-medium', subtitleClass)}
               >
-                {typeName(data.kind)}
+                {table?.typeName ?? typeName(data.kind)}
               </span>
             ) : (
               // System: the tile alone (§g-58); the slot keeps the badges on the right.
@@ -247,6 +257,14 @@ export const DeckNode = memo(function DeckNode({
                 <TriangleAlert strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
                 {data.problems.count}
               </span>
+            )}
+            {table !== undefined && isContainer && (
+              <TableDetailToggle
+                nodeId={id}
+                own={table.ownDetail}
+                focused={data.focused}
+                textClass={textRoleClass}
+              />
             )}
             {((data.hasRules && isContainer) || data.pinned === true) && (
               <span className="flex shrink-0 items-center gap-1.5">
@@ -278,20 +296,47 @@ export const DeckNode = memo(function DeckNode({
             ) : (
               titleText
             ))}
-          {isContainer && data.subtitle?.trim() && layout.descriptionLines > 0 && (
+          {table !== undefined && isContainer && table.noteLines.length > 0 && (
             <span
-              data-testid="card-description"
+              data-testid="table-note"
               data-text={subtitleDataText}
               className={cn(
-                'text-[12px] leading-[1.4] break-words',
+                'shrink-0 text-[12px] leading-[17px] break-words',
                 textRoleClass ?? 'text-ink-secondary',
               )}
-              style={clampStyle(layout.descriptionLines)}
+              style={clampStyle(table.noteLines.length)}
             >
-              {data.subtitle.trim()}
+              {table.noteLines.join(' ')}
             </span>
           )}
-          {block.height > 0 && (
+          {table !== undefined &&
+            (isContainer ? (
+              <TableBody
+                nodeId={id}
+                layout={table}
+                focused={data.focused}
+                tinted={look?.namedFill === true || customText !== undefined}
+              />
+            ) : (
+              <TableCompact layout={table} textClass={textRoleClass} />
+            ))}
+          {table === undefined &&
+            isContainer &&
+            data.subtitle?.trim() &&
+            layout.descriptionLines > 0 && (
+              <span
+                data-testid="card-description"
+                data-text={subtitleDataText}
+                className={cn(
+                  'text-[12px] leading-[1.4] break-words',
+                  textRoleClass ?? 'text-ink-secondary',
+                )}
+                style={clampStyle(layout.descriptionLines)}
+              >
+                {data.subtitle.trim()}
+              </span>
+            )}
+          {table === undefined && block.height > 0 && (
             <CardFieldsBlock
               nodeId={id}
               view={fields}
@@ -341,7 +386,7 @@ export const DeckNode = memo(function DeckNode({
           )}
         </>
       )}
-      {data.childCount > 0 && (
+      {data.childCount > 0 && table === undefined && (
         <span
           role="img"
           aria-label={`${String(data.childCount)} components inside, press Enter to open`}

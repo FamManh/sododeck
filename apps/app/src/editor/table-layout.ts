@@ -80,7 +80,11 @@ export interface TableLayout {
   noteLines: readonly string[];
   noteCut: boolean;
   detail: DbDetail;
+  /** The table's own detail choice; absent means it follows the deck. */
+  ownDetail: DbDetail | undefined;
   keySlot: number;
+  /** The fixed "?" slot after the type (absent when the deck hides the nullable marker). */
+  showNullable: boolean;
   rows: readonly TableRow[];
   /** Columns not drawn as rows: "+n columns" at Keys, "n columns" at Names. */
   hidden: { count: number; kind: 'more' | 'all' } | undefined;
@@ -246,7 +250,9 @@ export function tableLayout(
     noteLines,
     noteCut,
     detail,
+    ownDetail: node.detail,
     keySlot,
+    showNullable: !display.hideNullable,
     rows,
     hidden,
     footer,
