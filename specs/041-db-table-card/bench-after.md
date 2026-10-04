@@ -20,7 +20,7 @@ BENCH_NODES=150 BENCH_EDGES=300 pnpm bench -g "default:"                    # 15
 for cards (+3.8 %); p95 is the same 16.8 ms. The bench's own 60 fps target (≥ 57 fps average)
 is missed by tables by under 1 fps.
 
-**Watch item:** the long frames (worst 133–150 ms) come from crossing into System / Container
-while zooming: every table swaps its compact content for its 12 rows in that frame (1,800 row
-elements). Panning at one level has no long frames. 048's row limit (12) and a lighter compact
-swap are the levers if a larger deck shows it.
+**Watch item:** tables show more long frames (1.8 % vs 0.6–0.9 %, worst 133–150 ms). Not
+profiled yet; the likely cause is the zoom crossing into Container, where every table swaps its
+compact content for its 12 rows in one frame (1,800 row elements). 048's row limit and a cheaper
+level swap are the levers if a larger deck shows it.

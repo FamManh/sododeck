@@ -242,6 +242,8 @@ values: { id, name, note? }[] }`;
 
 ## 041-db-table-card
 
+- **Status:** built (spec `specs/041-db-table-card`, ADR 0030). PDF export does not exist yet; the
+  relationship display toggles are 042's.
 - **Milestone:** after 040 · **Depends on:** 039, 040, 029 · **Estimate:** 5 d
 - **Goal:** Tables draw as B-style table cards that stay readable from one table to a dense board.
 - **In scope:**
@@ -406,7 +408,10 @@ values: { id, name, note? }[] }`;
   - Saved views filtered by schema / group / table, keeping positions, collapse state and
     detail level.
   - Jump to (⌘K) by table and column; focus a table and its one-hop neighbours.
-  - Bench: 150 tables / 1,800 columns / 250 relationships added to `pnpm bench`.
+  - Bench: 150 tables / 1,800 columns / 250 relationships added to `pnpm bench`
+    (`BENCH_TABLES` from 041 builds the tables).
+  - The row limit plugs into 041's `tableLayout` (`table-layout.ts`): it decides the kept rows,
+    the cut count and the height for the canvas, connectors and export at once.
 - **Acceptance criteria (draft):** the 150-table fixture pans at the same FPS target as 500
   cards; Jump to "invoice_id" selects the column row and pans to it.
 
