@@ -13,13 +13,27 @@ describe('PacksPanel (030)', () => {
   it('lists the packs with type counts and a switch each', () => {
     renderWithEditor(<PacksPanel />, newDeck());
     expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
-    for (const name of ['Architecture', 'Process', 'Logistics', 'Data cards', 'Database']) {
+    for (const name of ['Architecture', 'Process', 'Data cards', 'Database']) {
       expect(screen.getByRole('switch', { name })).toBeChecked();
     }
+    // A new deck has Logistics off (051 US7).
+    expect(screen.getByRole('switch', { name: 'Logistics' })).not.toBeChecked();
     expect(screen.getByText('7 types')).toBeInTheDocument();
     // Data cards and Database (040) each have one type.
     expect(screen.getAllByText('1 type')).toHaveLength(2);
     expect(screen.getByText(/Turning a pack off hides its types from Add/)).toBeInTheDocument();
+  });
+
+  it('lists the packs in display order (051 US7)', () => {
+    renderWithEditor(<PacksPanel />, newDeck());
+    expect(screen.getAllByRole('switch').map((s) => s.getAttribute('aria-label'))).toEqual([
+      'Basic shapes',
+      'Process',
+      'Data cards',
+      'Database',
+      'Architecture',
+      'Logistics',
+    ]);
   });
 
   it('shows a deck from before packs as Architecture only', () => {
@@ -32,11 +46,6 @@ describe('PacksPanel (030)', () => {
     const user = userEvent.setup();
     const { doc, editor } = renderWithEditor(<PacksPanel />, newDeck());
     await user.click(screen.getByRole('switch', { name: 'Logistics' }));
-    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data', 'database', 'shapes']);
-    expect(useUiStore.getState().announcement.text).toBe('Logistics off');
-    act(() => {
-      editor().undo();
-    });
     expect(toJSON(doc).packs).toEqual([
       'architecture',
       'process',
@@ -45,6 +54,11 @@ describe('PacksPanel (030)', () => {
       'database',
       'shapes',
     ]);
+    expect(useUiStore.getState().announcement.text).toBe('Logistics on');
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).packs).toEqual(['architecture', 'process', 'data', 'database', 'shapes']);
     await user.click(screen.getByRole('switch', { name: 'Process' }));
     await user.click(screen.getByRole('switch', { name: 'Process' }));
     expect(useUiStore.getState().announcement.text).toBe('Process on');

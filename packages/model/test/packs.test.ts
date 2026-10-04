@@ -84,8 +84,19 @@ describe('setPackOn (030)', () => {
 });
 
 describe('packs in the document (030)', () => {
-  it('createDeck() holds the four 030 packs', () => {
+  it('createDeck() holds every pack but Logistics (051 US7)', () => {
     expect(toJSON(createDeck()).packs).toEqual(NEW_DECK_PACKS);
+    expect(toJSON(createDeck()).packs).not.toContain('logistics');
+  });
+
+  it('keeps a stored pack list, Logistics included, in file order (051 US7)', () => {
+    const file: SododeckFile = {
+      ...empty,
+      packs: ['architecture', 'process', 'logistics', 'shapes'],
+    };
+    const out = toJSON(fromJSON(file));
+    expect(out.packs).toEqual(['architecture', 'process', 'logistics', 'shapes']);
+    expect(serializeDeck(out)).toBe(serializeDeck(file));
   });
 
   it('a file without packs reads and writes byte-identical, with no packs key', () => {

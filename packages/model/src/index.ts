@@ -34,6 +34,7 @@ export {
   isKnownType,
   LEGACY_PACKS,
   NEW_DECK_PACKS,
+  PACK_DISPLAY_ORDER,
   PACKS,
   packTypeCount,
   SHAPE_TYPE_IDS,

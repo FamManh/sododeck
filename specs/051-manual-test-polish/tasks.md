@@ -265,7 +265,7 @@
 
 ### Tests for User Story 7 (write first, watch them fail)
 
-- [ ] T038 [P] [US7] In `packages/model/test/card-types.test.ts`:
+- [x] T038 [P] [US7] In `packages/model/test/card-types.test.ts`:
   - `PACK_DISPLAY_ORDER` lists every `PackId` once;
   - `PACKS` sorted by `order` gives the new order;
   - `onByDefault` is false only for `logistics`;
@@ -274,8 +274,8 @@
 
   Update `:48`, `:95`, `:128`, `:157` (`packTypeCount`) and `:230` only where they assert display order or `NEW_DECK_PACKS`; keep file-order assertions as they are.
 
-- [ ] T039 [P] [US7] In `packages/model/test/packs.test.ts` (:88), `createDeck().packs` has no `logistics`. Add a round-trip case: a deck with `packs: ['architecture', 'process', 'logistics', 'shapes']` gives `toJSON` with the identical array.
-- [ ] T040 [P] [US7] In `apps/app/src/editor/packs-panel.test.tsx` and `apps/app/src/editor/palette.test.tsx`:
+- [x] T039 [P] [US7] In `packages/model/test/packs.test.ts` (:88), `createDeck().packs` has no `logistics`. Add a round-trip case: a deck with `packs: ['architecture', 'process', 'logistics', 'shapes']` gives `toJSON` with the identical array.
+- [x] T040 [P] [US7] In `apps/app/src/editor/packs-panel.test.tsx` and `apps/app/src/editor/palette.test.tsx`:
   - the panel rows follow the new order;
   - a new deck shows "Packs · 5 on" (was 6, `:290`);
   - Add tabs follow the new `CATEGORIES` order;
@@ -283,13 +283,13 @@
 
 ### Implementation for User Story 7
 
-- [ ] T041 [US7] In `packages/model/src/card-types.ts`:
+- [x] T041 [US7] In `packages/model/src/card-types.ts`:
   - add `onByDefault: boolean` to `Pack`, and an exported `PACK_DISPLAY_ORDER: readonly PackId[] = ['shapes', 'process', 'data', 'database', 'architecture', 'logistics']`;
   - set `Pack.order` from `PACK_DISPLAY_ORDER.indexOf(id)` (keep `PACK_LIST` order as is);
   - reorder `CATEGORIES` to the display order;
   - set `NEW_DECK_PACKS = PACKS.filter((p) => p.onByDefault).map((p) => p.id)`;
   - update the doc comments, and export the new names from `packages/model/src/index.ts`.
-- [ ] T042 [US7] In `apps/app/src/editor/packs-panel.tsx` (:25-26, :54) and `apps/app/src/editor/palette.tsx` (:68-83), render packs sorted by `order` (not array order). `apps/app/src/storage/library-ops.ts:66-68` and `apps/app/src/bench/generate-deck.ts:270` keep using `NEW_DECK_PACKS`. Check that the bench deck does not rely on Logistics types; if it does, give it an explicit pack list.
+- [x] T042 [US7] In `apps/app/src/editor/packs-panel.tsx` (:25-26, :54) and `apps/app/src/editor/palette.tsx` (:68-83), render packs sorted by `order` (not array order). `apps/app/src/storage/library-ops.ts:66-68` and `apps/app/src/bench/generate-deck.ts:270` keep using `NEW_DECK_PACKS`. Check that the bench deck does not rely on Logistics types; if it does, give it an explicit pack list.
 
 **Checkpoint**: T038–T040 are green, and the model round-trip suite is green.
 
