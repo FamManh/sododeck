@@ -174,6 +174,9 @@ export interface CanvasViewport {
   zoom: number;
 }
 
+/** Problems list filter (047). */
+export type ProblemFilter = 'all' | 'error' | 'warning';
+
 export interface DrillFrame {
   kind: 'group' | 'node';
   id: string;
@@ -439,6 +442,9 @@ export interface UiState {
   layoutRun: LayoutRun;
   /** Key of the last problem visited by ⌘. / ⇧⌘. or the list (015 FR-021). */
   problemCursor: string | null;
+  /** Which severities the Problems list shows (047); reset when another deck opens. */
+  problemFilter: ProblemFilter;
+  setProblemFilter: (filter: ProblemFilter) => void;
   drill: readonly DrillFrame[];
   focusMode: boolean;
   stickyEditing: Id | null;
@@ -921,6 +927,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     revealed: NO_IDS,
     layoutRun: IDLE_LAYOUT,
     problemCursor: null,
+    problemFilter: 'all',
     drill: [],
     focusMode: false,
     stickyEditing: null,
@@ -1122,6 +1129,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     setProblemCursor: (problemCursor) => {
       set({ problemCursor });
+    },
+    setProblemFilter: (problemFilter) => {
+      set({ problemFilter });
     },
     setLayoutRun: (layoutRun) => {
       set({ layoutRun });
@@ -1756,6 +1766,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         revealed: NO_IDS,
         layoutRun: IDLE_LAYOUT,
         problemCursor: null,
+        problemFilter: 'all',
         stickyEditing: null,
         stickyDraft: null,
         focusedId: null,

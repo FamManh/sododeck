@@ -71,6 +71,7 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     await screen.findByRole('list', { name: 'Problems' });
     const rows = within(screen.getByRole('list', { name: 'Problems' })).getAllByRole('button');
     expect(rows.map((r) => r.tabIndex)).toEqual([0, -1, -1]);
+    await user.tab(); // the severity filter is the first stop (047)
     await user.tab();
     expect(rows[0]).toHaveFocus();
     await user.keyboard('{ArrowDown}');
@@ -153,5 +154,57 @@ describe('ProblemsPanel typed field values (032 FR-017)', () => {
       editor().undo();
     });
     expect(toJSON(editor().doc).nodes[0]?.values).toEqual({ gone: 'Cold' });
+  });
+});
+
+describe('ProblemsPanel severity (047 US1)', () => {
+  it('names each row icon Error or Warning, errors first', async () => {
+    setup();
+    const list = await screen.findByRole('list', { name: 'Problems' });
+    expect(
+      within(list)
+        .getAllByRole('img')
+        .map((i) => i.getAttribute('aria-label')),
+    ).toEqual(['Error', 'Warning', 'Warning']);
+  });
+
+  it('filters by severity with counts, All by default', async () => {
+    const { user } = setup();
+    await screen.findByRole('list', { name: 'Problems' });
+    const all = screen.getByRole('radio', { name: /All/ });
+    expect(all).toBeChecked();
+    expect(all).toHaveTextContent('3');
+    expect(screen.getByRole('radio', { name: /Errors/ })).toHaveTextContent('1');
+    expect(screen.getByRole('radio', { name: /Warnings/ })).toHaveTextContent('2');
+
+    await user.click(screen.getByRole('radio', { name: /Errors/ }));
+    expect(rowNames()).toEqual([
+      'Step without connectionProof of delivery · step 1 used a deleted connection',
+    ]);
+    await user.click(screen.getByRole('radio', { name: /Warnings/ }));
+    expect(rowNames()).toEqual([
+      'Duplicate connectionAPI Gateway → Tracking Service appears twice',
+      'Rule without catch-allDelivery tier · some inputs match no row',
+    ]);
+    await user.click(screen.getByRole('radio', { name: /All/ }));
+    expect(rowNames()).toHaveLength(3);
+  });
+
+  it('says so when the chosen severity has no problems', async () => {
+    const { user } = setup(
+      deckOf({
+        nodes: [
+          { id: 'a', type: 'service', title: 'A' },
+          { id: 'b', type: 'service', title: 'B' },
+        ],
+        edges: [
+          { id: 'e1', from: 'a', to: 'b' },
+          { id: 'e2', from: 'a', to: 'b' },
+        ],
+      }),
+    );
+    await screen.findByRole('list', { name: 'Problems' });
+    await user.click(screen.getByRole('radio', { name: /Errors/ }));
+    expect(screen.getByText('No errors')).toBeInTheDocument();
   });
 });

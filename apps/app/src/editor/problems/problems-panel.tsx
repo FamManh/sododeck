@@ -1,4 +1,5 @@
 import type { Problem, ProblemFix } from '@sododeck/model';
+import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
@@ -6,10 +7,10 @@ import { ChevronRight, CircleCheck } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
-import { useUiStore } from '../../state/ui-store';
+import { useUiStore, type ProblemFilter } from '../../state/ui-store';
 import { oneStep } from '../fields/one-step';
-import { PROBLEM_ICONS } from './problem-kinds';
 import { PROBLEM_ROW_CAP } from './problems-dom';
+import { SeverityIcon } from './severity-icon';
 import { useProblems } from './use-problems';
 
 /**
@@ -28,12 +29,16 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
     });
     announce('Value removed');
   };
+  const filter = useUiStore((s) => s.problemFilter);
+  const setFilter = useUiStore((s) => s.setProblemFilter);
   const [showAll, setShowAll] = useState<{ total: number } | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   if (problems === null) return null;
 
+  const shown =
+    filter === 'all' ? problems.list : problems.list.filter((p) => p.severity === filter);
   const expanded = showAll !== null && showAll.total === problems.total;
-  const rows = expanded ? problems.list : problems.list.slice(0, PROBLEM_ROW_CAP);
+  const rows = expanded ? shown : shown.slice(0, PROBLEM_ROW_CAP);
   const active = rows.find((p) => p.key === activeKey) ?? rows[0];
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -79,9 +84,31 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
         </p>
       ) : (
         <>
+          <SegmentedControl
+            aria-label="Show"
+            value={filter}
+            onValueChange={(value) => {
+              if (isFilter(value)) setFilter(value);
+            }}
+            className="self-start"
+          >
+            <SegmentedControlItem value="all">All {problems.total}</SegmentedControlItem>
+            <SegmentedControlItem value="error">
+              <SeverityIcon severity="error" label="" className="[&_svg]:size-3.5" />
+              Errors {problems.errors}
+            </SegmentedControlItem>
+            <SegmentedControlItem value="warning">
+              <SeverityIcon severity="warning" label="" className="[&_svg]:size-3.5" />
+              Warnings {problems.warnings}
+            </SegmentedControlItem>
+          </SegmentedControl>
+          {shown.length === 0 && (
+            <p className="rounded-card bg-surface-2 px-3 py-2 text-body-sm text-ink">
+              {filter === 'error' ? 'No errors' : 'No warnings'}
+            </p>
+          )}
           <ul aria-label="Problems" className="flex flex-col gap-2">
             {rows.map((problem, index) => {
-              const Icon = PROBLEM_ICONS[problem.kind];
               return (
                 <li key={problem.key}>
                   <button
@@ -101,11 +128,7 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                       focusRing,
                     )}
                   >
-                    <Icon
-                      aria-hidden
-                      strokeWidth={ICON_STROKE_WIDTH}
-                      className="mt-0.5 size-4 shrink-0 text-ink-secondary"
-                    />
+                    <SeverityIcon severity={problem.severity} className="mt-0.5" />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="text-title-sm text-ink">{problem.title}</span>
                       <span
@@ -141,7 +164,7 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
               );
             })}
           </ul>
-          {!expanded && problems.total > PROBLEM_ROW_CAP && (
+          {!expanded && shown.length > PROBLEM_ROW_CAP && (
             <button
               type="button"
               onClick={() => {
@@ -152,7 +175,7 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                 focusRing,
               )}
             >
-              Show all {problems.total}
+              Show all {shown.length}
             </button>
           )}
           <p className="text-body-sm text-ink-secondary">
@@ -163,3 +186,6 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
     </section>
   );
 }
+
+const isFilter = (value: string): value is ProblemFilter =>
+  value === 'all' || value === 'error' || value === 'warning';
