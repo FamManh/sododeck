@@ -9,6 +9,7 @@ import { GROUP_ACTIONS } from './group-actions';
 import { SHAPE_ACTIONS } from './shape-actions';
 import { SHAPE_FORM_ACTIONS } from './shape-form-actions';
 import { STYLE_ACTIONS } from './style-actions';
+import { TABLE_DETAIL_ACTIONS } from './table-detail-actions';
 import { TITLE_ACTIONS } from './title-actions';
 import type { Action } from './types';
 
@@ -23,6 +24,7 @@ export const ACTIONS: readonly Action[] = [
   ...GROUP_ACTIONS,
   ...SHAPE_ACTIONS,
   ...SHAPE_FORM_ACTIONS,
+  ...TABLE_DETAIL_ACTIONS,
   ...FIELD_ACTIONS,
   ...STYLE_ACTIONS,
   ...CANVAS_ACTIONS,
