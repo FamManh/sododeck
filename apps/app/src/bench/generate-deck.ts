@@ -199,6 +199,10 @@ export function generateBenchDeck(
      * `n-1`, from side optional), 5 of them self-references and 5 a second FK between a pair.
      */
     rel?: boolean;
+    /** 048: with `tables`, every 10th table has 60 columns (the rest 12), so the row limit bites. */
+    wide?: boolean;
+    /** 048: with `tables`, `schema_0` … `schema_n-1` assigned to the tables round-robin. */
+    schemas?: number;
   } = {},
 ) {
   const random = mulberry32(seed);
@@ -266,7 +270,11 @@ export function generateBenchDeck(
       ...(shape ? { style: { shape } } : {}),
     });
   }
-  if ((options.tables ?? 0) > 0) addBenchTables(nodes, edges, options.tables ?? 0);
+  if ((options.tables ?? 0) > 0) {
+    addBenchTables(nodes, edges, options.tables ?? 0);
+    if (options.wide === true) widenBenchTables(nodes, options.tables ?? 0);
+    if ((options.schemas ?? 0) > 0) assignBenchSchemas(nodes, options.tables ?? 0, options.schemas ?? 0);
+  }
   if ((options.tables ?? 0) > 0 && options.rel === true) addBenchRelationships(nodes, edges);
   if (options.routes === true) addBenchRoutes(edges);
   if (options.animated === true) addBenchAnimated(edges);
@@ -357,6 +365,29 @@ function addBenchTables(
     edge.toColumns = [`${edge.to}-id`];
     edge.cardinality = 'n-1';
   }
+}
+
+/** 048: a wide table's column count; the others keep their 12. */
+const BENCH_WIDE_COLUMNS = 60;
+
+/**
+ * 048: every 10th table gets extra plain columns after the 12 (so `fk0`, `fk1` and `id`, the ends
+ * of the relationships, keep their ids and place) up to 60, which is where the row limit bites.
+ */
+function widenBenchTables(nodes: SododeckFile['nodes'], count: number): void {
+  nodes.slice(0, count).forEach((node, i) => {
+    if (i % 10 !== 0 || node.columns === undefined) return;
+    for (let k = node.columns.length; k < BENCH_WIDE_COLUMNS; k++) {
+      node.columns.push({ id: `${node.id}-w${String(k)}`, name: `extra_${String(k)}`, type: 'text' });
+    }
+  });
+}
+
+/** 048: round-robin schema names, so grouping by schema has `names` groups of the same size. */
+function assignBenchSchemas(nodes: SododeckFile['nodes'], count: number, names: number): void {
+  nodes.slice(0, count).forEach((node, i) => {
+    node.schema = `schema_${String(i % names)}`;
+  });
 }
 
 /** 042 R19: how many self-references and how many tables joined by a second FK. */

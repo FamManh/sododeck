@@ -503,6 +503,8 @@ export function BenchPage() {
   const icons = params.get('icons') === '1';
   const tables = Math.max(0, Number(params.get('tables') ?? 0) || 0);
   const rel = params.get('rel') === '1';
+  const wide = params.get('wide') === '1';
+  const schemas = Math.max(0, Number(params.get('schemas') ?? 0) || 0);
 
   const [doc] = useState(() => {
     useUiStore.getState().resetForDeck(null);
@@ -535,6 +537,8 @@ export function BenchPage() {
         icons,
         tables,
         rel,
+        wide,
+        schemas,
       }).deck,
     );
   });

@@ -40,9 +40,9 @@
 
 **Purpose**: ADR, bench fixtures and the "before" numbers (taken before any code change).
 
-- [X] T001 Write ADR `docs/decisions/0034-db-scale.md` (Status, Date, Feature, Builds on 0029 / 0030 / 0033): row limit inside `tableLayout`, `expanded` as the saved choice, `groupingMode` as a deck-level scalar with virtual `schema:` groups, view `schemas` and `detail`, `table` / `column` search kinds, per-mode collapse by id prefix, unknown-key policy for older builds
-- [ ] T002 [P] Extend `apps/app/src/bench/generate-deck.ts` (+ `generate-deck.test.ts`): options `wide` (every 10th table has 60 columns) and `schemas` (n schema names assigned round-robin), keeping `tables` and `rel`; 150 nodes / 1,800 columns / 250 relationships reachable; deterministic by seed; read `wide` and `schemas` from the query string in `apps/app/src/routes/bench-page.tsx`
-- [ ] T003 Per-scenario node / edge count override in `apps/app/bench/perf.bench.ts` (today global constants) and env flags `BENCH_WIDE`, `BENCH_SCHEMAS`; keep every existing scenario unchanged
+- [x] T001 Write ADR `docs/decisions/0034-db-scale.md` (Status, Date, Feature, Builds on 0029 / 0030 / 0033): row limit inside `tableLayout`, `expanded` as the saved choice, `groupingMode` as a deck-level scalar with virtual `schema:` groups, view `schemas` and `detail`, `table` / `column` search kinds, per-mode collapse by id prefix, unknown-key policy for older builds
+- [x] T002 [P] Extend `apps/app/src/bench/generate-deck.ts` (+ `generate-deck.test.ts`): options `wide` (every 10th table has 60 columns) and `schemas` (n schema names assigned round-robin), keeping `tables` and `rel`; 150 nodes / 1,800 columns / 250 relationships reachable; deterministic by seed; read `wide` and `schemas` from the query string in `apps/app/src/routes/bench-page.tsx`
+- [x] T003 Per-scenario node / edge count override in `apps/app/bench/perf.bench.ts` (today global constants) and env flags `BENCH_WIDE`, `BENCH_SCHEMAS`; keep every existing scenario unchanged
 - [ ] T004 Run the baseline **before any feature change** and save to `specs/048-db-scale/bench-before.md` (machine, settings, 500-card default, 150 tables with `wide` and `schemas`, ⌘K type-to-results): `BENCH_NODES=150 BENCH_EDGES=250 BENCH_TABLES=150 BENCH_REL=1 BENCH_WIDE=1 BENCH_SCHEMAS=3 pnpm bench` and `pnpm bench`
 
 ---
