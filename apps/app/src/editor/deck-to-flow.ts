@@ -54,6 +54,8 @@ type StickyObject = SododeckFile['stickies'][number];
 export interface DeckNodeData extends Record<string, unknown> {
   title: string;
   kind: string;
+  /** The node's stored icon reference (038), as written; the card resolves it with `nodeIcon`. */
+  icon?: string;
   subtitle: string | undefined;
   owner: string | undefined;
   /** The first ten tags with their own colours (033); empty without tags. */
@@ -449,6 +451,7 @@ function toFlowNode(
   if (
     cached?.data.geometry === geometry &&
     cached?.selected === selected &&
+    cached.data.icon === node.icon &&
     cached.data.subtitle === subtitle &&
     (cached.data.viewDimmed === true) === viewDimmed &&
     (cached.data.pinned === true) === pinned &&
@@ -487,6 +490,7 @@ function toFlowNode(
     data: {
       title: node.title,
       kind: node.type,
+      ...(node.icon === undefined ? {} : { icon: node.icon }),
       subtitle,
       owner: node.owner,
       tagLooks,

@@ -358,6 +358,25 @@ describe('toFlowNodes', () => {
     expect(e1?.ariaLabel).toMatch(/, 1 problem$/);
   });
 
+  it('carries the node icon and rebuilds only the node whose icon changed (038)', () => {
+    const graph = topLevelGraph(deck);
+    const first = toFlowNodes(deck, graph, view());
+    expect((first.find((n) => n.id === 'a') as DeckFlowNode).data.icon).toBeUndefined();
+    const iconed: SododeckFile = {
+      ...deck,
+      nodes: [
+        { ...deck.nodes[0], icon: 'lucide:search' } as SododeckFile['nodes'][number],
+        deck.nodes[1] as SododeckFile['nodes'][number],
+      ],
+    };
+    const second = toFlowNodes(iconed, topLevelGraph(iconed), view());
+    const a = second.find((n) => n.id === 'a') as DeckFlowNode;
+    expect(a.data.icon).toBe('lucide:search');
+    expect(a).not.toBe(first.find((n) => n.id === 'a'));
+    expect(second.find((n) => n.id === 'b')).toBe(first.find((n) => n.id === 'b'));
+    expect(toFlowNodes(iconed, topLevelGraph(iconed), view()).find((n) => n.id === 'a')).toBe(a);
+  });
+
   it('returns the same object for a node whose source did not change', () => {
     const graph = topLevelGraph(deck);
     const first = toFlowNodes(deck, graph, view());

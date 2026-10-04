@@ -559,6 +559,34 @@ describe('DeckNode per level (029 US4, R8)', () => {
     expect(screen.queryByText('Service')).not.toBeInTheDocument();
   });
 
+  describe('card icon (038)', () => {
+    it('draws the custom icon in the header tile and keeps the type name', () => {
+      renderNode(props({ level: 'component', icon: 'lucide:search' }));
+      const header = screen.getByTestId('card-header');
+      expect(header.querySelector('[data-icon="lucide:search"]')).not.toBeNull();
+      expect(within(header).getByText('Service')).toBeInTheDocument();
+    });
+
+    it('draws the type icon without a custom one, or with one it cannot show', () => {
+      const { unmount } = renderNode(props({ level: 'component' }));
+      expect(
+        screen.getByTestId('card-header').querySelector('[data-icon="lucide:box"]'),
+      ).not.toBeNull();
+      unmount();
+      renderNode(props({ level: 'component', icon: 'simple:kafka' }));
+      expect(
+        screen.getByTestId('card-header').querySelector('[data-icon="lucide:box"]'),
+      ).not.toBeNull();
+    });
+
+    it('draws it on the Landscape plate and keeps the ink class', () => {
+      renderNode(props({ level: 'landscape', icon: 'lucide:search' }));
+      const plate = screen.getByTestId('card-plate-icon');
+      expect(plate).toHaveAttribute('data-icon', 'lucide:search');
+      expect(plate.getAttribute('class')).toContain('--card-ink');
+    });
+  });
+
   it('paints the type name, description and tag pills at Container and Component', () => {
     for (const level of ['container', 'component'] as const) {
       const { unmount } = renderNode(props({ level, subtitle: 'Go', tags: ['critical'] }));
@@ -685,7 +713,7 @@ describe('DeckNode card types (030)', () => {
       deck,
     );
     expect(screen.getByRole('group', { name: /^robot: Rover/ })).toBeInTheDocument();
-    expect(container.querySelector('svg.lucide-shapes')).not.toBeNull();
+    expect(container.querySelector('[data-icon="lucide:shapes"]')).not.toBeNull();
   });
 
   it('keeps the six legacy types drawing the icon they always had', () => {
@@ -699,7 +727,7 @@ describe('DeckNode card types (030)', () => {
     };
     for (const [kind, icon] of Object.entries(icons)) {
       const { container, unmount } = renderWithEditor(<DeckNode {...props({ kind })} />, deck);
-      expect(container.querySelector(`svg.lucide-${icon}`), kind).not.toBeNull();
+      expect(container.querySelector(`[data-icon="lucide:${icon}"]`), kind).not.toBeNull();
       unmount();
     }
   });

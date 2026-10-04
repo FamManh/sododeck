@@ -1,6 +1,8 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { focusRing } from '@sododeck/ui/lib/focus';
-import { ICON_STROKE_WIDTH, typeStyle } from '@sododeck/ui/lib/icons';
+import { IconGlyph } from '@sododeck/ui/components/icon-glyph';
+import { nodeIcon } from '@sododeck/ui/icon-sets';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { type NodeProps } from '@xyflow/react';
 import { CornerDownLeft, Layers, Pin, Table, TriangleAlert } from 'lucide-react';
@@ -114,7 +116,7 @@ export const DeckNode = memo(function DeckNode({
         style={{ maxHeight: `${String(layout.titleLines * TITLE_LINE_EM)}em` }}
       />
     );
-  const TypeIcon = typeStyle(data.kind).icon;
+  const { icon: cardIcon } = nodeIcon({ icon: data.icon, type: data.kind });
   const subtitleClass =
     textRoleClass ?? (look?.namedFill === true ? 'text-ink-secondary' : 'text-ink-muted');
   const subtitleDataText = customText ?? (look?.namedFill === true ? 'secondary' : undefined);
@@ -202,8 +204,8 @@ export const DeckNode = memo(function DeckNode({
       {isLandscape ? (
         // The plate (frame 123): the type icon on the card fill, no text.
         (titleInput ?? (
-          <TypeIcon
-            aria-hidden
+          <IconGlyph
+            icon={cardIcon}
             data-testid="card-plate-icon"
             size={30}
             strokeWidth={2}
@@ -218,7 +220,7 @@ export const DeckNode = memo(function DeckNode({
               aria-hidden
               className="inline-flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-(--card-chip,var(--color-surface-2)) text-(--card-ink,var(--color-ink-secondary))"
             >
-              <TypeIcon aria-hidden size={14} strokeWidth={2} />
+              <IconGlyph icon={cardIcon} size={14} strokeWidth={2} />
             </span>
             {isContainer ? (
               <span
