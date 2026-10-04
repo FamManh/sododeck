@@ -57,3 +57,26 @@ moves to a worker (constitution V) before it is micro-optimised.
 3. Add the CI budget (§3), warn-only.
 4. Decide on backlog 023 with the numbers: if React Flow with culling meets the targets at the
    sizes users need, 023 is not built.
+
+## 5. Table decks: 150 tables (048)
+
+Baseline taken 2026-10-04 on an Apple M5 / macOS 26.1 / Node 26.8.1, headless Chromium, CPU
+throttle 1x, no row limit change. Full tables: `specs/048-db-scale/bench-before.md` and
+`bench-after.md`. Scenario: `tables-150-wide` in `pnpm bench` (150 tables, 250 relationships, every
+10th table 60 columns, 3 schemas). Command for a whole run on this deck:
+`BENCH_NODES=150 BENCH_EDGES=250 BENCH_TABLES=150 BENCH_REL=1 BENCH_WIDE=1 BENCH_SCHEMAS=3 pnpm bench`.
+
+| Metric                        | Before 048 | After 048  | Target   | Met |
+| ----------------------------- | ---------- | ---------- | -------- | --- |
+| Avg FPS, 150 tables, fit view | 55.8       | 56.3       | >= 57    | no  |
+| p95 frame                     | 16.8 ms    | 16.8 ms    | <= 20 ms | yes |
+| Open (render) vs 500 cards    | 224 vs 191 | 197 vs 204 | <= 1.5x  | yes |
+| Cmd+K type to results (2,000) | 56-62 ms   | 60-64 ms   | 50 ms    | no  |
+| Select flow to marks (150)    | 91.5 ms    | 83.0 ms    | 100 ms   | yes |
+
+The 500-card deck reads 55.6 fps in the same run, so about 56 fps is this harness's ceiling and the
+57 fps criterion is missed by noise-sized margin; p95 and open time are met. Cmd+K is measured on a
+2,000-node deck without tables, so it does not yet cover table and column search; follow-up: add a
+Cmd+K scenario on the 150-table deck and per-stage index timing. Three scenarios (inspector title
+edit, view-switch, export preview) cannot run on a table deck because they use cards and views of
+the default deck.

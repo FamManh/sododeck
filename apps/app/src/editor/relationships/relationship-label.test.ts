@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { relationshipLabel, relationshipName, type TableLookup } from './relationship-label';
+import {
+  relationshipLabel,
+  relationshipName,
+  relationshipSummary,
+  type TableLookup,
+} from './relationship-label';
 
 const col = (id: string) => ({ id, name: id.replace(/^c-/, '') });
 const tables: TableLookup = (id) =>
@@ -76,5 +81,16 @@ describe('relationshipName (042 R18)', () => {
         tables,
       ),
     ).toBe('Relationship orders to customers, placed by');
+  });
+});
+
+describe('relationshipSummary (048)', () => {
+  it('reads table.column → table.column · cardinality', () => {
+    expect(relationshipSummary(fk, tables)).toBe('orders.customer_id → customers.id · n-1');
+  });
+
+  it('leaves the cardinality out when there is none', () => {
+    const { cardinality: _unused, ...plain } = fk;
+    expect(relationshipSummary(plain, tables)).toBe('orders.customer_id → customers.id');
   });
 });

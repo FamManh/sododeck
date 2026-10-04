@@ -500,7 +500,14 @@ function tableBody(
     out.push(`<g data-part="row" data-column="${escapeXml(row.columnId)}">${parts.join('')}</g>`);
   }
   top += table.rows.length * t.rowHeight;
-  if (table.hidden?.kind === 'more') {
+  // The "+n columns" pill (Keys) and the "Show all" / "Show fewer" button (All) share one slot.
+  const standIn =
+    table.hidden?.kind === 'more'
+      ? { part: 'more', label: `+${String(table.hidden.count)} columns` }
+      : table.button === undefined
+        ? undefined
+        : { part: 'show-all', label: table.button.label };
+  if (standIn !== undefined) {
     if (table.rows.length > 0) top += t.pillGap;
     out.push(
       box(
@@ -512,7 +519,7 @@ function tableBody(
         'none',
         palette.borderStrong,
         '4 3',
-        'more',
+        standIn.part,
       ),
     );
     out.push(
@@ -521,7 +528,7 @@ function tableBody(
         left + inner / 2,
         baseline(top, t.pillHeight, 11.5),
         palette.inkSecondary,
-        `+${String(table.hidden.count)} columns`,
+        standIn.label,
         'middle',
       ),
     );

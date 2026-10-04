@@ -1,7 +1,15 @@
 import { deckPacks, typesOfPacks } from '@sododeck/model';
-import { CirclePlus, Maximize, SquareDashedMousePointer, StickyNote, Table2 } from 'lucide-react';
+import {
+  CirclePlus,
+  List,
+  Maximize,
+  SquareDashedMousePointer,
+  StickyNote,
+  Table2,
+} from 'lucide-react';
 
 import { addComponent, addTable, centredOn, selectAllComponents } from '../canvas-actions';
+import { addEnumAndOpen } from '../inspector/enum/add-enum-and-open';
 import { typeName } from '../type-label';
 import { addNoteAt } from '../stickies/sticky-actions';
 import type { Action, ActionContext } from './types';
@@ -47,6 +55,18 @@ export const CANVAS_ACTIONS: readonly Action[] = [
     run: (ctx) => {
       const point = flowPoint(ctx);
       if (point !== null) addTable(ctx.editor, point);
+    },
+  },
+  {
+    id: 'canvas.addEnum',
+    label: 'Add enum',
+    icon: List,
+    section: 'edit',
+    // An enum has no place on the canvas, so the menu point is not used (052).
+    where: { menu: ['canvas'] },
+    applies: (ctx) => deckPacks(ctx.deck).includes('database'),
+    run: (ctx) => {
+      addEnumAndOpen(ctx.editor, ctx.deck);
     },
   },
   {

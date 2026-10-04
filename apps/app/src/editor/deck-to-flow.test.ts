@@ -1357,6 +1357,38 @@ describe('relationships (042 US1)', () => {
     expect((edge.data as { label?: string }).label).toBe('ON DELETE RESTRICT');
   });
 
+  it('anchors an end on a column beyond the row limit at its row, before and after Show all (048)', () => {
+    const cols = Array.from({ length: 20 }, (_, i) => `c${String(i)}`);
+    const long = (expanded?: boolean): SododeckFile => ({
+      ...shop,
+      nodes: [
+        { ...table('orders', 0, cols), ...(expanded === true ? { expanded } : {}) },
+        ...shop.nodes.slice(1),
+      ],
+      edges: [
+        {
+          id: 'fk',
+          from: 'orders',
+          to: 'customers',
+          fromColumns: ['orders.c18'],
+          toColumns: ['customers.id'],
+          cardinality: 'n-1',
+        },
+      ],
+    });
+    const offset = (file: SododeckFile) =>
+      (byId(file, 'fk').data.rel as { ends: { from: { offsets: number[]; kind: string } } }).ends
+        .from;
+    // 70 + 24 per drawn row + 12: the foreign key is drawn while the table is limited (after the
+    // primary key and the first ten columns) and keeps its own row once opened.
+    expect(offset(long())).toEqual({ offsets: [70 + 11 * 24 + 12], kind: 'row', mark: 'one-many' });
+    expect(offset(long(true))).toEqual({
+      offsets: [70 + 18 * 24 + 12],
+      kind: 'row',
+      mark: 'one-many',
+    });
+  });
+
   it('leaves card-to-card connectors unchanged', () => {
     const edge = byId(shop, 'plain');
     expect(edge.data.rel).toBeUndefined();

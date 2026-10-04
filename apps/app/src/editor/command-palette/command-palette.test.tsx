@@ -333,3 +333,80 @@ describe('CommandPalette', () => {
     });
   });
 });
+
+describe('CommandPalette tables and columns (048 FR-020, FR-021, FR-023)', () => {
+  function tablesDeck() {
+    const deck = emptySododeckFile();
+    deck.nodes.push(
+      {
+        id: 'payments',
+        type: 'db-table',
+        title: 'payments',
+        schema: 'billing',
+        position: { x: 0, y: 0 },
+        columns: [
+          { id: 'p-id', name: 'id', type: 'uuid', pk: true },
+          { id: 'p-inv', name: 'invoice_id', type: 'uuid' },
+        ],
+      },
+      {
+        id: 'bulk',
+        type: 'db-table',
+        title: 'bulk',
+        position: { x: 400, y: 0 },
+        columns: Array.from({ length: 80 }, (_, i) => ({
+          id: `b${String(i)}`,
+          name: `line_${String(i)}`,
+          type: 'int',
+        })),
+      },
+    );
+    deck.edges.push({
+      id: 'fk',
+      from: 'payments',
+      to: 'bulk',
+      cardinality: 'n-1',
+      fromColumns: ['p-inv'],
+    });
+    return deck;
+  }
+
+  it('labels a column with its table and type, and Enter selects its row', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Harness />, tablesDeck());
+    await user.keyboard(shortcutKeys());
+    await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'invoice_id');
+    const option = within(screen.getByRole('listbox', { name: 'Results' })).getAllByRole(
+      'option',
+    )[0];
+    expect(option).toHaveTextContent('payments.invoice_id');
+    expect(option).toHaveTextContent('Column · uuid · foreign key');
+    await user.keyboard('{Enter}');
+    expect(useUiStore.getState().selection.nodes).toEqual(['payments']);
+    expect(useUiStore.getState().focusedRow).toEqual({ tableId: 'payments', columnId: 'p-inv' });
+    expect(screen.queryByRole('dialog', { name: 'Jump to' })).not.toBeInTheDocument();
+  });
+
+  it('lists a table first, with schema and column count', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Harness />, tablesDeck());
+    await user.keyboard(shortcutKeys());
+    await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'payments');
+    const [first] = within(screen.getByRole('listbox', { name: 'Results' })).getAllByRole('option');
+    expect(first).toHaveTextContent('Table · billing · 2 columns');
+  });
+
+  it('caps a very common name with an "n more" line, and Esc returns focus', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Harness />, tablesDeck());
+    const scratch = screen.getByRole('textbox', { name: 'Scratch' });
+    scratch.focus();
+    await user.keyboard(shortcutKeys());
+    await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'line_');
+    const list = screen.getByRole('listbox', { name: 'Results' });
+    expect(within(list).getAllByRole('option')).toHaveLength(50);
+    expect(list).toHaveTextContent('Showing 50 of 80 · 30 more');
+    await user.keyboard('{Escape}');
+    expect(scratch).toHaveFocus();
+  });
+});

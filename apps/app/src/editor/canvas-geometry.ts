@@ -15,7 +15,13 @@ import {
 } from './card-fields';
 import { SHAPE_MAX, shapeLayout } from './shapes/shape-layout';
 import { currentTableContext, type TableContext } from './table-keys';
-import { cachedTableLayout, TABLE_CARD, withNewRowOf, type TableLayout } from './table-layout';
+import {
+  cachedTableLayout,
+  TABLE_CARD,
+  withFilterOf,
+  withNewRowOf,
+  type TableLayout,
+} from './table-layout';
 
 type Node = SododeckFile['nodes'][number];
 
@@ -210,7 +216,9 @@ export function tableLayoutOf(node: SizedNode, context?: TableContext): TableLay
   );
   // The node itself when it has a title, so the per-node layout cache and a projected new-row
   // mark (043) both reach the layout; a copy only for the title-less nodes some helpers pass.
-  const table = hasTitle(node) ? node : withNewRowOf(node, { ...node, title: '' });
+  const table = hasTitle(node)
+    ? node
+    : withFilterOf(node, withNewRowOf(node, { ...node, title: '' }));
   return cachedTableLayout(table, context ?? currentTableContext(), width);
 }
 

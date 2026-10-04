@@ -148,4 +148,19 @@ describe('repairViewRefs (036 R9)', () => {
     expect(toJSON(b.doc).views.find((v) => v.id === 'v')?.pinned).toEqual(['n2']);
     quiet.destroy();
   });
+
+  it('keeps a collapsed derived schema group (048)', () => {
+    const file: SododeckFile = {
+      ...deck,
+      views: [
+        { id: 'base', type: 'system', title: 'Base' },
+        { id: 'v', type: 'custom', title: 'Custom', collapsed: ['schema:billing', 'g2', 'gone'] },
+      ],
+    };
+    const doc = fromJSON(file);
+    doc.transact(() => {
+      repairViewRefs(doc);
+    });
+    expect(toJSON(doc).views[1]?.collapsed).toEqual(['schema:billing', 'g2']);
+  });
 });

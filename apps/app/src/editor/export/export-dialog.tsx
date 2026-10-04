@@ -30,6 +30,7 @@ import {
 } from '../../db/export/scope';
 import { dialectName, isSqlDialect } from '../../db/export/schema-slice';
 import type { SchemaScopeRequest } from '../../db/export/types';
+import { useProblems } from '../problems/use-problems';
 import { DisabledReason } from './disabled-reason';
 import { FormatGroup } from './format-group';
 import { exportReducer, initialExportState, type ExportResult } from './export-dialog-state';
@@ -37,7 +38,8 @@ import { IMAGE_AND_DATA_FORMATS, SCHEMA_FORMATS, sqlSubtitle } from './formats';
 import { OptionSwitch } from './option-switch';
 import { scaleAllowed } from './png-size';
 import { rasterize } from './rasterize';
-import { SchemaExportPanel } from './schema-export-panel';
+import { schemaProblems } from './schema-problems';
+import { SQL_BLOCKED_BANNER_ID, SchemaExportPanel } from './schema-export-panel';
 import {
   isSchemaFormat,
   type ExportFormat,
@@ -125,6 +127,13 @@ export function ExportDialog() {
       needsDialect: schemaFormat === 'sql' && generic && state.sqlDialect === null,
     };
   }, [schemaFormat, schemaScope, scopes, dialect, state.sqlDialect, state.options.sql]);
+  const tableIds = useMemo(
+    () => (schema === null ? [] : tablesInScope(deck, schema.request.scope)),
+    [deck, schema],
+  );
+  const problems = schemaProblems(useProblems(), tableIds, deck);
+  // 052: the deck's switch refuses SQL while the scope has database errors; other formats export.
+  const sqlBlocked = deck.blockSqlExport === true && schemaFormat === 'sql' && problems.length > 0;
   const request = exportRequest(state, schema);
   useExportResult(request, dispatch, deck, ui);
   const key = exportRequestKey(request, deck, ui);
@@ -284,13 +293,13 @@ export function ExportDialog() {
           <div className="flex min-w-0 flex-col gap-4 p-5">
             {schemaFormat !== null ? (
               <SchemaExportPanel
-                deck={deck}
                 state={state}
                 dispatch={dispatch}
                 scopes={scopes}
                 scope={schemaScope}
                 scopeName={scopeName}
-                tableIds={schema === null ? [] : tablesInScope(deck, schema.request.scope)}
+                problems={problems}
+                blocked={sqlBlocked}
                 dialect={dialect}
                 status={status}
                 ready={ready}
@@ -467,7 +476,8 @@ export function ExportDialog() {
           {state.format !== 'png' && (
             <Button
               variant="secondary"
-              disabled={ready === null || ready.text === null}
+              disabled={ready === null || ready.text === null || sqlBlocked}
+              aria-describedby={sqlBlocked ? SQL_BLOCKED_BANNER_ID : undefined}
               onClick={() => {
                 void copy();
               }}
@@ -477,7 +487,8 @@ export function ExportDialog() {
           )}
           <Button
             variant="primary"
-            disabled={ready === null || rasterizing || pngBlocked}
+            disabled={ready === null || rasterizing || pngBlocked || sqlBlocked}
+            aria-describedby={sqlBlocked ? SQL_BLOCKED_BANNER_ID : undefined}
             aria-busy={rasterizing}
             onClick={() => {
               void download();

@@ -256,6 +256,15 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
     ]);
   });
 
+  it('a collapsed derived schema group is not a missing reference (048)', () => {
+    expect(
+      problems({
+        nodes: [node('a')],
+        views: [{ id: 'v', type: 'custom', title: 'V', collapsed: ['schema:billing'] }],
+      }),
+    ).toEqual([]);
+  });
+
   it('step → branch that is not a branch of its flow (006)', () => {
     expect(
       problems({

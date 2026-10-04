@@ -103,3 +103,41 @@ describe('OutsideProxyNode icons (030)', () => {
     expect(other.proxy.querySelector('svg[data-icon="lucide:database"]')).not.toBeNull();
   });
 });
+
+describe('OutsideProxyNode for a table the view hides (048 US5)', () => {
+  const tables = deckOf({
+    nodes: [
+      { id: 'p', type: 'db-table', title: 'payments', schema: 'billing' },
+      { id: 'c', type: 'db-table', title: 'customers', schema: 'crm' },
+    ],
+    edges: [{ id: 'pc', from: 'p', to: 'c' }],
+    views: [
+      { id: 'base', type: 'system', title: 'All tables' },
+      { id: 'v', type: 'custom', title: 'Billing', schemas: ['billing'] },
+    ],
+  });
+
+  function open() {
+    const props = {
+      id: 'port:c',
+      data: { outsideNodeId: 'c', outsideTitle: 'customers', kind: 'db-table', side: 'right' },
+      width: 150,
+      height: 52,
+    } as unknown as NodeProps<PortFlowNode>;
+    const env = editorWrapper(tables);
+    act(() => {
+      useUiStore.getState().switchView('v');
+    });
+    render(<OutsideProxyNode {...props} />, { wrapper: env.wrapper });
+    return userEvent.setup();
+  }
+
+  it('offers "Show in {view}" instead of going to the table, and switches to it', async () => {
+    const user = open();
+    await user.click(screen.getByRole('button', { name: /^customers, outside/ }));
+    expect(await screen.findByText('customers is hidden in this view')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show in All tables' }));
+    expect(ui().currentViewId).toBe('base');
+    expect(ui().selection.nodes).toEqual(['c']);
+  });
+});

@@ -1,6 +1,8 @@
+import { isDbTable, isSchemaGroupId } from '@sododeck/model';
 import { Layers, PanelRight, Pencil } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { groupTitleOf } from '../schema-groups';
 import { isNodeLocked, LOCKED_HINT } from '../lock';
 import type { Action, ActionContext } from './types';
 
@@ -31,6 +33,12 @@ export const TITLE_ACTIONS: readonly Action[] = [
       if (ctx.mode === 'edit') ui.select(ctx.selection);
       const [node] = ctx.selection.nodes;
       if (node !== undefined && ctx.selection.nodes.length === 1) ui.focus(node);
+      const table = ctx.deck.nodes.find((n) => n.id === node);
+      // A table opens on its General tab (052); the drawer shows what is selected in flow mode.
+      if (ctx.mode === 'edit' && ctx.selection.nodes.length === 1 && table && isDbTable(table)) {
+        ui.openTableDrawer(table.id, { tab: 'general' });
+        return;
+      }
       ui.openDrawer();
     },
   },
@@ -50,7 +58,7 @@ export const TITLE_ACTIONS: readonly Action[] = [
     run: (ctx) => {
       const group = onlyGroup(ctx);
       if (group !== undefined) {
-        const title = ctx.deck.groups.find((g) => g.id === group)?.title;
+        const title = groupTitleOf(ctx.deck, group);
         if (title === undefined || ctx.canvas === null) return;
         const ui = useUiStore.getState();
         ui.drillInto({ kind: 'group', id: group, viewport: ctx.canvas.getViewport() });
@@ -72,6 +80,8 @@ export const TITLE_ACTIONS: readonly Action[] = [
     shortcut: 'rename',
     section: 'open',
     where: { menu: ['component', 'group'], toolbar: ['group'] },
+    // A derived schema group (048) is named by its schema: nothing to rename.
+    applies: (ctx) => !isSchemaGroupId(onlyGroup(ctx) ?? ''),
     // A locked card keeps its title (043 FR-023).
     disabledReason: (ctx) => {
       const node = onlyNode(ctx);

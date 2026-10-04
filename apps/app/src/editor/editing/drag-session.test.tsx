@@ -11,6 +11,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
+import { groupBounds } from '../canvas-geometry';
+import { schemaGroupedDeck } from '../schema-groups';
 import { useCanvasHandlers } from '../use-canvas-handlers';
 import {
   cancelActiveGesture,
@@ -311,6 +313,57 @@ describe('dropping components into and out of groups (016 US4, R6)', () => {
     expect(file.nodes.find((n) => n.id === 'c')).not.toHaveProperty('group');
     expect(file.nodes.find((n) => n.id === 'c')?.position).toEqual({ x: 0, y: 3000 });
     expect(file.nodes.at(-1)).not.toHaveProperty('group');
+  });
+});
+
+describe('dragging in By schema mode (048)', () => {
+  const schemaDeck: SododeckFile = deckOf({
+    groupingMode: 'schema',
+    nodes: [
+      { id: 't1', type: 'db-table', title: 'a', schema: 'billing', position: { x: 0, y: 0 } },
+      { id: 't2', type: 'db-table', title: 'b', schema: 'billing', position: { x: 400, y: 0 } },
+      { id: 'c', type: 'service', title: 'Loose', position: { x: 0, y: 3000 } },
+    ],
+  });
+
+  it('never offers a derived schema frame as a drop target and writes no group id', () => {
+    const { h, doc } = setup(schemaDeck);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 100, 50));
+      h().onNodeDrag(pointer(150, 80));
+    });
+    expect(ui().dropTarget).toBeNull();
+    act(() => {
+      h().onNodeDragStop(pointer(150, 80));
+    });
+    expect(toJSON(doc).nodes.find((n) => n.id === 'c')).not.toHaveProperty('group');
+    expect(toJSON(doc).groups).toEqual([]);
+  });
+
+  it('dragging a derived schema frame moves its tables and stores no frame', () => {
+    const { h, doc } = setup(schemaDeck);
+    const rect = groupBounds(schemaGroupedDeck(schemaDeck)).get('schema:billing');
+    if (rect === undefined) throw new Error('Expected a derived frame');
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:schema:billing'));
+      h().onNodesChange(move('group:schema:billing', rect.x + 50, rect.y + 20));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    const file = toJSON(doc);
+    expect(position(file, 't1')).toEqual({ x: 50, y: 20 });
+    expect(position(file, 't2')).toEqual({ x: 450, y: 20 });
+    expect(file.groups).toEqual([]);
+  });
+
+  it('a table dragged within its schema frame keeps its stored group untouched', () => {
+    const { h, doc } = setup(schemaDeck);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('t1'));
+      h().onNodesChange(move('t1', 20, 20));
+      h().onNodeDragStop(pointer(40, 40));
+    });
+    expect(toJSON(doc).nodes.find((n) => n.id === 't1')).not.toHaveProperty('group');
   });
 });
 

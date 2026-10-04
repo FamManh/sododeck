@@ -17,6 +17,8 @@
  *   BENCH_SHAPES=1 pnpm bench           # every third node a shape, the eleven geometries (031)
  *   BENCH_TABLES=150 pnpm bench         # the first n nodes are 12-column tables (041)
  *   BENCH_TABLES=150 BENCH_REL=1 pnpm bench  # table edges are relationships with column ends (042)
+ *   BENCH_TABLES=150 BENCH_WIDE=1 pnpm bench # every 10th table has 60 columns (048)
+ *   BENCH_TABLES=150 BENCH_SCHEMAS=3 pnpm bench # tables spread over 3 schema names (048)
  *
  * Writes bench/results/report-<timestamp>.{json,md}. Headless numbers are
  * indicative only; compare runs on the same machine.
@@ -57,6 +59,11 @@ const TABLES_QUERY = TABLES > 0 ? `&tables=${String(TABLES)}` : '';
 /** 042 R19: with BENCH_TABLES, every table edge carries FK / PK column ends (`BENCH_REL=1`). */
 const REL = process.env.BENCH_REL === '1';
 const REL_QUERY = REL ? '&rel=1' : '';
+/** 048: with BENCH_TABLES, every 10th table has 60 columns (`BENCH_WIDE=1`). */
+const WIDE_QUERY = process.env.BENCH_WIDE === '1' ? '&wide=1' : '';
+/** 048: with BENCH_TABLES, the tables are spread over n schema names (`BENCH_SCHEMAS=3`). */
+const SCHEMAS = Math.max(0, Number(process.env.BENCH_SCHEMAS ?? 0) || 0);
+const SCHEMAS_QUERY = SCHEMAS > 0 ? `&schemas=${String(SCHEMAS)}` : '';
 /** 006 SC-002: a step or a flow's marks are painted within this. */
 const FLOW_TARGET_MS = 100;
 /** 009 SC-008: command palette search should paint results within this. */
@@ -255,7 +262,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}${TABLES_QUERY}${REL_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}${TABLES_QUERY}${REL_QUERY}${WIDE_QUERY}${SCHEMAS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
@@ -305,6 +312,30 @@ for (const scenario of [
     });
   });
 }
+
+/**
+ * 048 FR-025: the database scale deck, 150 tables / 250 relationships with every 10th table 60
+ * columns wide and three schemas, panned like the 500-card default. Its own node and edge counts
+ * (the first query keys win over any `BENCH_*` flags), so it runs whatever `BENCH_NODES` is.
+ */
+test('tables-150-wide: 150 nodes / 250 edges', async ({ page }) => {
+  const counts = { nodes: 150, edges: 250 };
+  const opened = await openBench(page, '&tables=150&rel=1&wide=1&schemas=3', counts);
+  await startRecording(page);
+  const startZoom = await viewportZoom(page);
+  const { maxZoom, renderedNodesZoomedIn } = await panAndZoom(page);
+  expect(maxZoom).toBeGreaterThan(startZoom * 2);
+  const stats = summarize(await stopRecording(page));
+  results.push({
+    scenario: 'tables-150-wide',
+    ...counts,
+    ...opened,
+    renderedNodesZoomedIn,
+    maxZoom,
+    ...stats,
+    meetsTarget: meetsTarget(stats),
+  });
+});
 
 /**
  * 017 research R15, FR-031, SC-006: every node has a stored `size` (200 × 72) and 200 edges have
@@ -1061,7 +1092,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. Tables: ${String(TABLES)}. Relationships: ${String(REL)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. Tables: ${String(TABLES)}. Relationships: ${String(REL)}. Wide: ${String(WIDE_QUERY !== '')}. Schemas: ${String(SCHEMAS)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',

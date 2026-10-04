@@ -18,6 +18,7 @@ import { readObject } from '../read';
 import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject, type Ref } from '../validate';
 import { anchorableIds } from '../ids';
+import { isSchemaGroupId } from '../schema-groups';
 import { CUSTOM_VIEW_DEFAULTS, nextCustomTitle, VIEW_PRESETS } from '../views';
 import { removeObject, type RemovalResult } from './cascade';
 import type { EditContext } from './context';
@@ -33,6 +34,9 @@ export type ViewSettingsPatch = {
       | 'excludeKinds'
       | 'excludeTags'
       | 'dimKinds'
+      | 'includes'
+      | 'schemas'
+      | 'detail'
   ]?: View[K] | undefined;
 };
 
@@ -44,6 +48,9 @@ const SETTINGS_KEYS = [
   'excludeKinds',
   'excludeTags',
   'dimKinds',
+  'includes',
+  'schemas',
+  'detail',
 ] as const satisfies readonly (keyof ViewSettingsPatch)[];
 
 /** The views the deck shows now (stored, else presets), as plain data. */
@@ -220,7 +227,8 @@ export function setPinned(
  */
 export function setCollapsed(ctx: EditContext, viewId: Id, groupId: Id, collapsed: boolean): void {
   const { view } = resolveView(ctx, viewId);
-  if (collapsed) {
+  // A derived schema group (048) has no stored object to check.
+  if (collapsed && !isSchemaGroupId(groupId)) {
     assertRefsExist(ctx.doc, [{ path: 'collapsed', id: groupId, target: 'groups' }], () =>
       anchorableIds(ctx.doc),
     );
@@ -266,6 +274,11 @@ export function updateView(ctx: EditContext, viewId: Id, patch: ViewSettingsPatc
   if (changed.includes('excludeGroups')) {
     for (const [i, id] of (candidate.excludeGroups as Id[] | undefined)?.entries() ?? []) {
       refs.push({ path: `excludeGroups.${String(i)}`, id, target: 'groups' });
+    }
+  }
+  if (changed.includes('includes')) {
+    for (const [i, id] of (candidate.includes as Id[] | undefined)?.entries() ?? []) {
+      refs.push({ path: `includes.${String(i)}`, id, target: 'nodes' });
     }
   }
   assertRefsExist(ctx.doc, refs, () => anchorableIds(ctx.doc));

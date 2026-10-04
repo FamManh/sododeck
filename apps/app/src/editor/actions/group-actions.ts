@@ -1,3 +1,4 @@
+import { isSchemaGroupId } from '@sododeck/model';
 import { ChevronsDownUp, Group, SquareDashedMousePointer, Trash2, Ungroup } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -7,8 +8,12 @@ import { oneStep } from '../fields/one-step';
 import { toggleGroupCollapsed } from '../views/use-current-view';
 import type { Action, ActionContext } from './types';
 
+// The canvas deck, so a derived schema group (048) is found too.
 const groupOf = (ctx: ActionContext) =>
-  ctx.deck.groups.find((group) => group.id === ctx.selection.groups[0]);
+  ctx.view.deck.groups.find((group) => group.id === ctx.selection.groups[0]);
+
+/** A derived schema group is not stored: it collapses and selects, but never ungroups. */
+const storedGroup = (ctx: ActionContext) => !isSchemaGroupId(ctx.selection.groups[0] ?? '');
 
 const collapsed = (ctx: ActionContext) => {
   const id = ctx.selection.groups[0];
@@ -59,6 +64,7 @@ export const GROUP_ACTIONS: readonly Action[] = [
     shortcut: 'ungroup',
     section: 'edit',
     where: { toolbar: ['group'] },
+    applies: storedGroup,
     run: ungroup,
   },
   {
@@ -84,10 +90,12 @@ export const GROUP_ACTIONS: readonly Action[] = [
     icon: SquareDashedMousePointer,
     section: 'edit',
     where: { menu: ['group'], toolbar: ['group'] },
-    applies: (ctx) => ctx.deck.nodes.some((node) => node.group === ctx.selection.groups[0]),
+    applies: (ctx) => ctx.view.deck.nodes.some((node) => node.group === ctx.selection.groups[0]),
     run: (ctx) => {
       const id = ctx.selection.groups[0];
-      const members = ctx.deck.nodes.filter((node) => node.group === id).map((node) => node.id);
+      const members = ctx.view.deck.nodes
+        .filter((node) => node.group === id)
+        .map((node) => node.id);
       const ui = useUiStore.getState();
       ui.select({ nodes: members });
       ui.announce(`${String(members.length)} selected`);
@@ -101,6 +109,7 @@ export const GROUP_ACTIONS: readonly Action[] = [
     destructive: true,
     description: 'Members move to the parent level',
     where: { menu: ['group'] },
+    applies: storedGroup,
     run: ungroup,
   },
 ];

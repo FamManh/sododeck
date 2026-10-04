@@ -31,6 +31,8 @@ export type PaletteResultKind = SearchKind | 'command';
 export interface PaletteResult extends CommandDialogItem {
   kind: PaletteResultKind;
   flowId?: string;
+  /** A column result's table (048); `id` is the column id. */
+  tableId?: string;
   run?: () => void;
 }
 
@@ -63,8 +65,18 @@ function rulePolicyLabel(hitPolicy: string): string {
   return HIT_POLICIES.find((policy) => policy.value === hitPolicy)?.label ?? hitPolicy;
 }
 
-function metaFor(deck: SododeckFile, kind: SearchKind, id: string, flowId?: string): string {
+function metaFor(
+  deck: SododeckFile,
+  kind: SearchKind,
+  id: string,
+  flowId: string | undefined,
+  context: string,
+): string {
   switch (kind) {
+    // Schema, column count, type and key marker are already in the index's context line (048).
+    case 'table':
+    case 'column':
+      return context;
     case 'node': {
       const node = deck.nodes.find((entry) => entry.id === id);
       const group = deck.groups.find((entry) => entry.id === node?.group)?.title;
@@ -109,6 +121,25 @@ function nodeGlyph(deck: SododeckFile, id: string): { icon?: ReactNode } {
   };
 }
 
+/** The id whose view / schema state a result follows: a column goes with its table. */
+function markedId(result: { kind: SearchKind; id: string; tableId?: string }): string | undefined {
+  if (result.kind === 'column') return result.tableId;
+  return result.kind === 'node' || result.kind === 'table' ? result.id : undefined;
+}
+
+/** Hidden-in-view and collapsed-schema notes (011 FR-016, 048 FR-022), said in text. */
+function withMarks(
+  meta: string,
+  id: string | undefined,
+  hidden: ReadonlySet<string> | undefined,
+  collapsed: ReadonlySet<string> | undefined,
+): string {
+  if (id === undefined) return meta;
+  if (hidden?.has(id) === true) return `${meta} · Hidden in this view`;
+  if (collapsed?.has(id) === true) return `${meta} · In collapsed schema`;
+  return meta;
+}
+
 function flowItems(deck: SododeckFile): readonly PaletteResult[] {
   return deck.flows.map((flow) => ({
     kind: 'flow',
@@ -126,6 +157,7 @@ export function buildPaletteResults({
   commands,
   limit = 50,
   hidden,
+  inCollapsedSchema,
 }: {
   deck: SododeckFile;
   searchIndex: SearchIndex;
@@ -134,8 +166,15 @@ export function buildPaletteResults({
   limit?: number;
   /** Components the current view hides: still listed, marked in text (011 FR-016). */
   hidden?: ReadonlySet<string>;
+  /** Tables inside a collapsed schema group (048, By schema mode): listed, marked in text. */
+  inCollapsedSchema?: ReadonlySet<string>;
 }): { items: readonly PaletteResult[]; total: number; overflowText?: string } {
   const words = queryWords(query);
+  const matchedCommands =
+    words.length === 0 ? [] : commands.filter((command) => commandMatches(command, words));
+  // At most `limit` rows are shown, so the search never ranks more than that; `total` still counts all.
+  const search =
+    words.length === 0 ? { results: [], total: 0 } : searchDeck(searchIndex, query, { limit });
   const items =
     words.length === 0
       ? [
@@ -151,40 +190,45 @@ export function buildPaletteResults({
           ...flowItems(deck),
         ]
       : [
-          ...commands
-            .filter((command) => commandMatches(command, words))
-            .map<PaletteResult>((command) => ({
-              kind: 'command',
-              id: command.id,
-              title: command.title,
-              meta: 'Command',
-              titleRanges: titleRanges(command.title, words),
-              ...(command.shortcut === undefined ? {} : { shortcut: command.shortcut }),
-              run: command.run,
-            })),
-          ...searchDeck(searchIndex, query, { limit: Number.MAX_SAFE_INTEGER }).results.map(
-            (result) => ({
-              kind: result.kind,
-              id: result.id,
-              ...(result.kind === 'node' ? nodeGlyph(deck, result.id) : {}),
-              ...(result.flowId === undefined ? {} : { flowId: result.flowId }),
-              title: result.title,
-              meta:
-                result.kind === 'node' && hidden?.has(result.id) === true
-                  ? `${metaFor(deck, result.kind, result.id, result.flowId)} · Hidden in this view`
-                  : metaFor(deck, result.kind, result.id, result.flowId),
-              titleRanges: result.titleRanges,
-              ...(result.snippet === undefined
-                ? {}
-                : { snippet: { text: result.snippet.text, ranges: result.snippet.ranges } }),
-            }),
-          ),
+          ...matchedCommands.map<PaletteResult>((command) => ({
+            kind: 'command',
+            id: command.id,
+            title: command.title,
+            meta: 'Command',
+            titleRanges: titleRanges(command.title, words),
+            ...(command.shortcut === undefined ? {} : { shortcut: command.shortcut }),
+            run: command.run,
+          })),
+          ...search.results.map((result) => ({
+            kind: result.kind,
+            id: result.id,
+            ...(result.kind === 'node' || result.kind === 'table'
+              ? nodeGlyph(deck, result.id)
+              : {}),
+            ...(result.flowId === undefined ? {} : { flowId: result.flowId }),
+            ...(result.tableId === undefined ? {} : { tableId: result.tableId }),
+            title: result.title,
+            meta: withMarks(
+              metaFor(deck, result.kind, result.id, result.flowId, result.context),
+              markedId(result),
+              hidden,
+              inCollapsedSchema,
+            ),
+            titleRanges: result.titleRanges,
+            ...(result.snippet === undefined
+              ? {}
+              : { snippet: { text: result.snippet.text, ranges: result.snippet.ranges } }),
+          })),
         ];
-  const total = items.length;
+  const total = words.length === 0 ? items.length : matchedCommands.length + search.total;
   const limited = items.slice(0, limit);
   return {
     items: limited,
     total,
-    ...(total > limit ? { overflowText: `Showing ${String(limit)} of ${String(total)}` } : {}),
+    ...(total > limit
+      ? {
+          overflowText: `Showing ${String(limit)} of ${String(total)} · ${String(total - limit)} more`,
+        }
+      : {}),
   };
 }

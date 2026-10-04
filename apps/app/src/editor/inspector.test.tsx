@@ -171,3 +171,77 @@ describe('Inspector', () => {
     downloadText.mockRestore();
   });
 });
+
+describe('Inspector database routing (052)', () => {
+  const dbDeck = deckOf({
+    name: 'Shop',
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        columns: [
+          { id: 'o-id', name: 'id', type: 'uuid' },
+          { id: 'o-customer', name: 'customer_id', type: 'uuid' },
+        ],
+        indexes: [{ id: 'ix', columns: ['o-customer'] }],
+      },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        columns: [{ id: 'c-id', name: 'id', type: 'uuid' }],
+      },
+      { id: 'svc', type: 'service', title: 'Order Service' },
+    ] as never,
+    edges: [
+      {
+        id: 'rel',
+        from: 'orders',
+        to: 'customers',
+        fromColumns: ['o-customer'],
+        toColumns: ['c-id'],
+        cardinality: 'n-1',
+      },
+      { id: 'plain', from: 'svc', to: 'orders' },
+    ] as never,
+  });
+
+  function setupDb(selection: { nodes?: string[]; edges?: string[] }) {
+    const view = renderWithEditor(<Harness />, dbDeck);
+    act(() => {
+      useUiStore.getState().select(selection);
+    });
+    return { ...view, user: userEvent.setup() };
+  }
+
+  it('shows the tabbed table drawer for a table', () => {
+    setupDb({ nodes: ['orders'] });
+    expect(screen.getByRole('heading', { name: 'orders' })).toBeInTheDocument();
+    expect(screen.getByText('Table · 2 columns · 1 index')).toBeInTheDocument();
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'General',
+      'Columns',
+      'Indexes',
+      'Checks',
+    ]);
+  });
+
+  it('keeps the generic inspector for other cards', () => {
+    setupDb({ nodes: ['svc'] });
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Title' })).toBeInTheDocument();
+  });
+
+  it('shows the relationship drawer for a relationship and the edge inspector for a plain edge', () => {
+    const { unmount } = setupDb({ edges: ['rel'] });
+    expect(
+      screen.getByRole('heading', { name: 'orders.customer_id → customers.id' }),
+    ).toBeInTheDocument();
+    unmount();
+    setupDb({ edges: ['plain'] });
+    // Generic edge inspector (a relationship drawer would show the cardinality as its subtitle).
+    expect(screen.queryByText('Relationship')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete connection' })).toBeInTheDocument();
+  });
+});

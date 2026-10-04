@@ -73,6 +73,10 @@
       "$ref": "#/$defs/Dialect",
       "description": "SQL dialect of the deck's database schema (040): one per deck. Absent means `generic`."
     },
+    "blockSqlExport": {
+      "const": true,
+      "description": "Database pack (052): SQL export is refused while the export scope has database errors. Absent means off."
+    },
     "enums": {
       "description": "Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.",
       "type": "array",
@@ -85,6 +89,11 @@
     "relationshipDisplay": {
       "$ref": "#/$defs/RelationshipDisplay",
       "description": "How relationships between tables draw in this deck (042). Absent means cardinality ends in crow's foot, labels following the Labels tool."
+    },
+    "groupingMode": {
+      "description": "How the deck's tables are grouped on the canvas (048): `schema` groups tables that share a schema name (shown as derived groups; stored groups and `group` / `parent` are untouched). Absent means By group, the groups stored in the file.",
+      "type": "string",
+      "enum": ["schema"]
     },
     "nodes": {
       "description": "Components of the system.",
@@ -963,6 +972,12 @@
           "$ref": "#/$defs/IdList",
           "description": "Ids of the nodes shown in this view. Absent means all nodes."
         },
+        "schemas": {
+          "description": "Schema names whose tables are shown in this view, in addition to the nodes listed in `includes` (048). Non-empty; absent means no schema filter. A name no table uses is kept and shows nothing.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/DbName" },
+          "minItems": 1
+        },
         "excludeGroups": {
           "description": "Ids of groups whose members (nested groups included) are hidden in this view. Absent means none.",
           "type": "array",
@@ -1006,10 +1021,14 @@
           "uniqueItems": true
         },
         "collapsed": {
-          "description": "Ids of the groups shown collapsed in this view. Absent means none.",
+          "description": "Ids of the groups shown collapsed in this view, and of the derived schema groups (`schema:<name>`, 048). Absent means none.",
           "type": "array",
           "items": { "$ref": "#/$defs/Id" },
           "uniqueItems": true
+        },
+        "detail": {
+          "$ref": "#/$defs/DbDetail",
+          "description": "How much of each table this view shows (048). Absent means the deck's or the table's own setting."
         }
       }
     },

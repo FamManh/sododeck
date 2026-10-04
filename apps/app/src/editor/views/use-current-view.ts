@@ -16,7 +16,7 @@ import { useMemo } from 'react';
 import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { newRowAt, rowEditTableId, useUiStore, type UiState } from '../../state/ui-store';
-import { viewStateOf, type RowEditView, type ViewState } from './view-state';
+import { viewStateOf, type RowEditView, type TableFilterView, type ViewState } from './view-state';
 import { viewCrumbTitle } from './view-title';
 
 function rowEditView(tableId: string | null, at: number | null): RowEditView | null {
@@ -28,16 +28,32 @@ function rowEditOf(state: UiState): RowEditView | null {
   return rowEditView(rowEditTableId(state), newRowAt(state));
 }
 
+function tableFilterOf(state: UiState): TableFilterView | null {
+  return state.tableFilter;
+}
+
 /** The current view state without subscribing (event handlers). */
 export function readViewState(doc: DeckDoc): ViewState {
   const state = useUiStore.getState();
-  return viewStateOf(readDeck(doc), state.currentViewId, state.revealed, rowEditOf(state));
+  return viewStateOf(
+    readDeck(doc),
+    state.currentViewId,
+    state.revealed,
+    rowEditOf(state),
+    tableFilterOf(state),
+  );
 }
 
 /** `file` as the current view draws it (see `ViewState.deck`); for pure helpers given a snapshot. */
 export function canvasDeckOf(file: SododeckFile): SododeckFile {
   const state = useUiStore.getState();
-  return viewStateOf(file, state.currentViewId, state.revealed, rowEditOf(state)).deck;
+  return viewStateOf(
+    file,
+    state.currentViewId,
+    state.revealed,
+    rowEditOf(state),
+    tableFilterOf(state),
+  ).deck;
 }
 
 /** The id the view ops write to: the current view (the first one when none is chosen). */
@@ -54,7 +70,8 @@ export function useViewState(): ViewState {
   const editTable = useUiStore(rowEditTableId);
   const at = useUiStore(newRowAt);
   const rowEdit = useMemo(() => rowEditView(editTable, at), [editTable, at]);
-  return viewStateOf(deck, currentViewId, revealed, rowEdit);
+  const filter = useUiStore(tableFilterOf);
+  return viewStateOf(deck, currentViewId, revealed, rowEdit, filter);
 }
 
 /** Stored views, or the presets while the deck has none. */

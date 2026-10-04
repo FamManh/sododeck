@@ -76,3 +76,15 @@ export function relationshipName(
   if (edge.label !== undefined && edge.label !== '') parts.push(edge.label);
   return parts.join(', ');
 }
+
+/**
+ * One line for a list of relationships (048): "orders.customer_id → customers.id · n-1". Without
+ * a cardinality the part after the dot is left out.
+ */
+export function relationshipSummary(
+  edge: Pick<Edge, 'from' | 'to' | 'fromColumns' | 'toColumns' | 'cardinality'>,
+  tables: TableLookup,
+): string {
+  const ends = `${endName(tables(edge.from), edge.from, edge.fromColumns)} → ${endName(tables(edge.to), edge.to, edge.toColumns)}`;
+  return edge.cardinality === undefined ? ends : `${ends} · ${edge.cardinality}`;
+}

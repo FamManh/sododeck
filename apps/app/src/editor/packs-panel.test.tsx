@@ -21,7 +21,7 @@ describe('PacksPanel (030)', () => {
     expect(screen.getByText('7 types')).toBeInTheDocument();
     // Data cards has one type; Database says what it adds (043).
     expect(screen.getAllByText('1 type')).toHaveLength(1);
-    expect(screen.getByText('Table, note, table group')).toBeInTheDocument();
+    expect(screen.getByText('Table, enum, note, table group')).toBeInTheDocument();
     expect(screen.getByText(/Turning a pack off hides its types from Add/)).toBeInTheDocument();
   });
 

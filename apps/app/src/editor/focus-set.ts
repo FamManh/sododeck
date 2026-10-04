@@ -36,14 +36,17 @@ export function focusSet(
   for (const bundle of bundles?.bundles ?? []) {
     for (const edgeId of bundle.edgeIds) bundleOf.set(edgeId, bundle);
   }
-  const touch = (edgeId: string, other: string) => {
-    members.add(other);
+  const light = (edgeId: string) => {
     const bundle = bundleOf.get(edgeId);
     if (bundle?.fanned === false) edges.add(bundle.id);
     else {
       edges.add(edgeId);
       if (bundle !== undefined) edges.add(bundle.id);
     }
+  };
+  const touch = (edgeId: string, other: string) => {
+    members.add(other);
+    light(edgeId);
   };
 
   for (const edgeId of graph.edges) {
@@ -72,6 +75,19 @@ export function focusSet(
       members.add(merged.a === id ? merged.b : merged.a);
       edges.add(merged.id);
     }
+  }
+
+  // Second pass (048 FR-023): a relationship between two kept tables is lit too, so the cluster
+  // reads as a whole. Proxies are not kept tables, and nothing here adds a member.
+  for (const edgeId of graph.edges) {
+    const edge = edgesById.get(edgeId);
+    if (edge === undefined) continue;
+    const from = graph.representative.get(edge.from) ?? edge.from;
+    const to = graph.representative.get(edge.to) ?? edge.to;
+    if (members.has(from) && members.has(to)) light(edgeId);
+  }
+  for (const merged of graph.merged) {
+    if (members.has(merged.a) && members.has(merged.b)) edges.add(merged.id);
   }
 
   return { focusId: id, members, edges };

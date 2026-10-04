@@ -1,5 +1,6 @@
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
+import { isSchemaGroupId } from '@sododeck/model';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
 import { Layers } from 'lucide-react';
 import { memo, useEffect, type CSSProperties } from 'react';
@@ -25,6 +26,8 @@ function MemberTile({ kind, icon }: { kind: string; icon: string | undefined }) 
     </span>
   );
 }
+
+const countLabel = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -166,19 +169,25 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         >
           {data.title}
         </span>
-        <span aria-hidden className="flex shrink-0 gap-1">
-          {shown.map((member, index) => (
-            <MemberTile key={index} kind={member.kind} icon={member.icon} />
-          ))}
-          {extra > 0 && (
-            <span
-              data-testid="member-more"
-              className="flex h-[22px] min-w-[22px] items-center justify-center rounded-[7px] border-[1.5px] border-border-strong px-1 text-[10.5px] font-semibold text-ink-secondary"
-            >
-              +{extra}
-            </span>
-          )}
-        </span>
+        {isSchemaGroupId(data.groupId) ? (
+          <span className="truncate text-[11.5px] leading-none font-medium text-ink-secondary">
+            {countLabel(data.nodeCount, 'table')} · {countLabel(data.edgeCount, 'relationship')}
+          </span>
+        ) : (
+          <span aria-hidden className="flex shrink-0 gap-1">
+            {shown.map((member, index) => (
+              <MemberTile key={index} kind={member.kind} icon={member.icon} />
+            ))}
+            {extra > 0 && (
+              <span
+                data-testid="member-more"
+                className="flex h-[22px] min-w-[22px] items-center justify-center rounded-[7px] border-[1.5px] border-border-strong px-1 text-[10.5px] font-semibold text-ink-secondary"
+              >
+                +{extra}
+              </span>
+            )}
+          </span>
+        )}
       </button>
       {titleEdit !== null && (
         // Over the name line; a field can't sit inside the card's button.

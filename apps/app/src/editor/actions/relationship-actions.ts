@@ -38,7 +38,7 @@ export const cardinalityLabel = (value: Cardinality) => value.replace('-', '–'
 
 const CARDINALITIES: readonly Cardinality[] = ['1-1', '1-n', 'n-1', 'n-n'];
 
-const ON_DELETE: readonly { value: DbAction | 'none'; label: string }[] = [
+export const ON_DELETE: readonly { value: DbAction | 'none'; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'cascade', label: 'Cascade' },
   { value: 'restrict', label: 'Restrict' },
