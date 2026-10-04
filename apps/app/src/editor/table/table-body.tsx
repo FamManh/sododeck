@@ -12,6 +12,7 @@ import { TABLE_CARD, type KeyGlyph, type TableLayout } from '../table-layout';
 import { ColumnLineEditor } from './column-line-editor';
 import { EnumChip } from './enum-chip';
 import { RowGrip } from './row-grip';
+import { ShowAllButton } from './show-all-button';
 import { GLYPH_NAMES, mismatchLabel, rowLabel } from './table-text';
 
 /** The key glyphs (DESIGN.md "Glyphs"): distinct shapes, so they read without colour (FR-010). */
@@ -294,6 +295,15 @@ export const TableBody = memo(function TableBody({
         >
           +{layout.hidden.count} columns
         </span>
+      )}
+      {layout.button !== undefined && (
+        <ShowAllButton
+          nodeId={nodeId}
+          label={layout.button.label}
+          expanded={layout.button.expanded}
+          tabIndex={tabIndex}
+          withGap={items.length > 0}
+        />
       )}
       {footerParts.length > 0 && (
         <span className={cn('flex h-6 shrink-0 items-center gap-3 text-[11.5px]', muted)}>

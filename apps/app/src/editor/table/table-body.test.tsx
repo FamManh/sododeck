@@ -1,7 +1,10 @@
+import { fromJSON, toJSON, type DeckDoc } from '@sododeck/model';
 import type { DbColumn } from '@sododeck/schema';
-import { render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
+import { useDeckSnapshot } from '../../model/use-deck-snapshot';
+import { deckOf, editorWrapper } from '../../test/render-canvas';
 import { fixedWidthMeasurer } from '../export/text-measure';
 import type { TableContext } from '../table-keys';
 import { tableLayout, type TableNode } from '../table-layout';
@@ -134,5 +137,79 @@ describe('TableBody editing marks (043)', () => {
     const layout = tableLayout(orders, context(), undefined, fixedWidthMeasurer(0.6));
     rerender(<TableBody nodeId="orders" layout={layout} focused={false} locked />);
     expect(screen.queryByRole('button', { name: /^Reorder/ })).toBeNull();
+  });
+});
+
+describe('Show all / Show fewer (048 contracts/scale-ui.md)', () => {
+  const wideNode = {
+    id: 'orders',
+    type: 'db-table' as const,
+    title: 'orders',
+    columns: Array.from({ length: 60 }, (_, i) => col(`c${String(i + 1)}`)),
+  };
+
+  /** A body drawn from the document, so a write redraws it like the canvas does. */
+  function Live({ doc, locked = false }: { doc: DeckDoc; locked?: boolean }) {
+    const deck = useDeckSnapshot(doc);
+    const node = deck.nodes.find((n) => n.id === 'orders');
+    if (node === undefined) return null;
+    const layout = tableLayout(node, context(), undefined, fixedWidthMeasurer(0.6));
+    return <TableBody nodeId="orders" layout={layout} focused={false} locked={locked} />;
+  }
+
+  function setup(extra: Partial<typeof wideNode> & { locked?: boolean } = {}) {
+    const { locked, ...node } = extra;
+    const { wrapper, doc, editor } = editorWrapper(deckOf({ nodes: [{ ...wideNode, ...node }] }));
+    render(<Live doc={doc} locked={locked ?? false} />, { wrapper });
+    return { doc, editor };
+  }
+
+  it('draws 12 rows and a dashed button named "Show all 60 columns", collapsed', () => {
+    setup();
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
+    const button = screen.getByRole('button', { name: 'Show all 60 columns' });
+    expect(button).toHaveAttribute('type', 'button');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('opens on click, saves expanded, and Show fewer closes it', () => {
+    const { doc } = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 60 columns' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(60);
+    expect(toJSON(doc).nodes[0]?.expanded).toBe(true);
+    const fewer = screen.getByRole('button', { name: 'Show fewer' });
+    expect(fewer).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(fewer);
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
+    expect(toJSON(doc).nodes[0]?.expanded).toBeUndefined();
+  });
+
+  it('is one undo step, and undo returns the previous state', () => {
+    const { doc, editor } = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 60 columns' }));
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).nodes[0]?.expanded).toBeUndefined();
+    expect(screen.getAllByRole('listitem')).toHaveLength(12);
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it('keeps an opened table opened after a reload', () => {
+    const { doc } = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 60 columns' }));
+    const reloaded = fromJSON(toJSON(doc));
+    expect(toJSON(reloaded).nodes[0]?.expanded).toBe(true);
+  });
+
+  it('works on a locked table', () => {
+    const { doc } = setup({ locked: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Show all 60 columns' }));
+    expect(toJSON(doc).nodes[0]?.expanded).toBe(true);
+  });
+
+  it('draws no button for a table within the limit', () => {
+    renderBody();
+    expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
   });
 });
