@@ -228,6 +228,19 @@ export interface TitleEdit {
  * The open column line editor (043 R3): `columnId: null` is a new row inserted at `at` (a column
  * index); otherwise that column's row is edited in place. The typed text lives in the editor.
  */
+/** The in-table column filter (048 R4): UI state only, never written to the deck. */
+export interface TableFilter {
+  tableId: Id;
+  text: string;
+  /** The current match, for Enter / Shift+Enter. */
+  index: number;
+}
+
+/** The filter stays only while exactly its table is the selection. */
+function filterFor(filter: TableFilter | null, nodes: readonly Id[]): TableFilter | null {
+  return filter !== null && nodes.length === 1 && nodes[0] === filter.tableId ? filter : null;
+}
+
 export interface ColumnEdit {
   tableId: Id;
   columnId: Id | null;
@@ -492,6 +505,8 @@ export interface UiState {
   columnEdit: ColumnEdit | null;
   /** A row reorder in progress (043). */
   rowDrag: RowDrag | null;
+  /** The open column filter of the selected table (048); closed on any selection change. */
+  tableFilter: TableFilter | null;
   contextMenu: ContextMenuState | null;
   toolbarField: ToolbarFieldId | null;
   /** The active tab in the fill/stroke picker (020). */
@@ -683,6 +698,12 @@ export interface UiState {
   startColumnEdit: (edit: ColumnEdit) => boolean;
   endColumnEdit: () => void;
   setRowDrag: (drag: RowDrag | null) => void;
+  /** Opens the column filter on a table (048); the text starts empty. */
+  openTableFilter: (tableId: Id) => void;
+  setTableFilterText: (text: string) => void;
+  /** Moves the current match by `direction`, wrapping around `count` matches. */
+  stepTableFilter: (direction: 1 | -1, count: number) => void;
+  closeTableFilter: () => void;
   openContextMenu: (
     menu: Omit<ContextMenuState, 'returnFocus'> & { returnFocus?: HTMLElement | null },
   ) => void;
@@ -896,6 +917,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     titleEdit: null,
     columnEdit: null,
     rowDrag: null,
+    tableFilter: null,
     contextMenu: null,
     toolbarField: null,
     stylePickerTab: 'fill',
@@ -918,30 +940,36 @@ export const useUiStore = create<UiState>()((set, get) => {
     select: ({ nodes = [], edges = [], groups = [], stickies = [] }) => {
       const empty =
         nodes.length === 0 && edges.length === 0 && groups.length === 0 && stickies.length === 0;
-      set({
+      set((state) => ({
         selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
+        tableFilter: filterFor(state.tableFilter, nodes),
         descriptionMode: NO_MODES,
         stylePreview: null,
         // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
         ...(empty || get().flowSession !== null ? {} : { activeFlow: null }),
-      });
+      }));
     },
     toggle: (id, type) => {
-      set(({ selection }) => {
+      set((state) => {
+        const { selection } = state;
         const key = type === 'node' ? 'nodes' : type === 'edge' ? 'edges' : 'stickies';
         const list = selection[key];
+        const next = { ...selection, [key]: list.includes(id) ? without(list, id) : [...list, id] };
         return {
-          selection: {
-            ...selection,
-            [key]: list.includes(id) ? without(list, id) : [...list, id],
-          },
+          selection: next,
+          tableFilter: filterFor(state.tableFilter, next.nodes),
           descriptionMode: NO_MODES,
           stylePreview: null,
         };
       });
     },
     clearSelection: () => {
-      set({ selection: EMPTY_SELECTION, descriptionMode: NO_MODES, stylePreview: null });
+      set({
+        selection: EMPTY_SELECTION,
+        tableFilter: null,
+        descriptionMode: NO_MODES,
+        stylePreview: null,
+      });
     },
     pruneSelection: (existing) => {
       set((state) => {
@@ -991,6 +1019,8 @@ export const useUiStore = create<UiState>()((set, get) => {
           patch.columnEdit = null;
         if (state.rowDrag !== null && !existing.nodes.has(state.rowDrag.tableId))
           patch.rowDrag = null;
+        if (state.tableFilter !== null && !existing.nodes.has(state.tableFilter.tableId))
+          patch.tableFilter = null;
         const menu = state.contextMenu?.target;
         if (
           menu !== undefined &&
@@ -1010,6 +1040,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         titleEdit: null,
         columnEdit: null,
         rowDrag: null,
+        tableFilter: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1203,6 +1234,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         titleEdit: null,
         columnEdit: null,
         rowDrag: null,
+        tableFilter: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1269,6 +1301,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         titleEdit: null,
         columnEdit: null,
         rowDrag: null,
+        tableFilter: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1300,6 +1333,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         titleEdit: null,
         columnEdit: null,
         rowDrag: null,
+        tableFilter: null,
         contextMenu: null,
         toolbarField: null,
         selection: EMPTY_SELECTION,
@@ -1520,6 +1554,25 @@ export const useUiStore = create<UiState>()((set, get) => {
     setRowDrag: (rowDrag) => {
       set({ rowDrag });
     },
+    openTableFilter: (tableId) => {
+      set({ tableFilter: { tableId, text: '', index: 0 } });
+    },
+    setTableFilterText: (text) => {
+      set((state) =>
+        state.tableFilter === null ? {} : { tableFilter: { ...state.tableFilter, text, index: 0 } },
+      );
+    },
+    stepTableFilter: (direction, count) => {
+      set((state) => {
+        if (state.tableFilter === null) return {};
+        const index =
+          count <= 0 ? 0 : (((state.tableFilter.index + direction) % count) + count) % count;
+        return { tableFilter: { ...state.tableFilter, index } };
+      });
+    },
+    closeTableFilter: () => {
+      if (get().tableFilter !== null) set({ tableFilter: null });
+    },
     openContextMenu: ({ returnFocus = null, ...menu }) => {
       set({ contextMenu: { ...menu, returnFocus }, toolbarField: null });
     },
@@ -1640,6 +1693,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         titleEdit: null,
         columnEdit: null,
         rowDrag: null,
+        tableFilter: null,
         contextMenu: null,
         toolbarField: null,
         canvasGesture: null,

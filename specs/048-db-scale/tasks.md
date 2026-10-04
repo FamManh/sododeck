@@ -86,7 +86,7 @@
 
 **Independent Test**: filter a 60-column table for a name that exists only past row 12 (quickstart 3).
 
-- [ ] T018 [US2] Failing tests then add `tableFilter` state (`{ tableId, text, index } | null`, `openTableFilter`, `setTableFilterText`, `stepTableFilter`, `closeTableFilter`) in `apps/app/src/state/ui-store.ts`; closed on selection change and deck close; never persisted
+- [x] T018 [US2] Failing tests then add `tableFilter` state (`{ tableId, text, index } | null`, `openTableFilter`, `setTableFilterText`, `stepTableFilter`, `closeTableFilter`) in `apps/app/src/state/ui-store.ts`; closed on selection change and deck close; never persisted
 - [ ] T019 [US2] Failing tests in `apps/app/src/editor/table-layout.test.ts` then project the filter into `tableLayout` (like `withNewRow`): matching rows (case-insensitive) shown beyond the limit, `matchIds`, non-matches folded behind the button, connected rows still shown; only the filtered table's cache key changes; closing restores the exact saved layout
 - [ ] T020 [P] [US2] Component tests then implement `apps/app/src/editor/table/table-filter.tsx`: labelled input "Find a column in {table}", counter "k/n" or "0" in a live region, Enter / Shift+Enter step matches and scroll them into view, Esc / clear closes; match rows styled (Orange Soft fill, name 600 Orange Ink); wire into `table-body.tsx` header slot
 - [ ] T021 [US2] ⌘F in `apps/app/src/editor/use-canvas-shortcuts.ts` beside ⌘K / ⌘S: exactly one table selected and the target not a text field → `preventDefault`, open the filter; test that browser find is not triggered and that ⌘F does nothing with no or several tables selected; add `table-find` to `apps/app/src/editor/shell/shortcuts.ts` (section Tables) and its test
