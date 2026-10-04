@@ -167,10 +167,10 @@
 
 **Independent Test**: run `pnpm bench` before and after (quickstart bench commands).
 
-- [ ] T044 [US7] Add the scenario "150 tables" to `apps/app/bench/perf.bench.ts` reports (`report-*.md` table row) with pass criteria avg ≥ 57 fps and p95 ≤ 20 ms; include open time and ⌘K type-to-results
-- [ ] T045 [US7] Run after the feature: `specs/048-db-scale/bench-after.md` (same flags as T004) and compare with before and with the 500-card deck; note SC-005 (open ≤ 1.5× the 500-card deck)
-- [ ] T046 [US7] Update `docs/performance.md` (new 150-table row, baseline and target, machine and settings)
-- [ ] T047 [US7] If the 150-table scenario misses the target, stop and report the numbers with the slowest part (layout cache, derived groups, search index) instead of tuning silently; propose the fix as a follow-up
+- [x] T044 [US7] Add the scenario "150 tables" to `apps/app/bench/perf.bench.ts` reports (`report-*.md` table row) with pass criteria avg ≥ 57 fps and p95 ≤ 20 ms; include open time and ⌘K type-to-results
+- [x] T045 [US7] Run after the feature: `specs/048-db-scale/bench-after.md` (same flags as T004) and compare with before and with the 500-card deck; note SC-005 (open ≤ 1.5× the 500-card deck)
+- [x] T046 [US7] Update `docs/performance.md` (new 150-table row, baseline and target, machine and settings)
+- [x] T047 [US7] If the 150-table scenario misses the target, stop and report the numbers with the slowest part (layout cache, derived groups, search index) instead of tuning silently; propose the fix as a follow-up
 
 **Checkpoint**: SC-005 recorded.
 
