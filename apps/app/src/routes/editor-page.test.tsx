@@ -344,11 +344,13 @@ describe('EditorPage', () => {
     act(() => {
       opened.editor?.add('nodes', { type: 'service', title: 'Saved node' });
     });
-    expect(screen.getByText('Saving…')).toBeInTheDocument();
-    expect(
-      await screen.findByText('Saved in this browser', {}, { timeout: 2000 }),
-    ).toBeInTheDocument();
-    expect((await record())?.nodeCount).toBe(1);
+    // A quick write never shows "Saving…" (051 US6): the status stays saved.
+    expect(screen.queryByText('Saving…')).toBeNull();
+    expect(screen.getByText('Saved in this browser')).toBeInTheDocument();
+    await waitFor(async () => {
+      expect((await record())?.nodeCount).toBe(1);
+    });
+    expect(screen.queryByText('Saving…')).toBeNull();
   });
 
   it('saves at once on ⌘S without the browser dialog', async () => {

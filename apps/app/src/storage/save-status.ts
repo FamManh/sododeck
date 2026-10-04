@@ -8,25 +8,31 @@ export type SaveEvent =
 
 export type SaveStatus =
   | { kind: 'saved' }
+  // A write is queued; shown exactly like `saved` until it has waited SAVING_SHOW_DELAY_MS (051).
+  | { kind: 'pending'; since: number }
   | { kind: 'saving'; since: number }
   | { kind: 'error'; firstUnsavedAt: number; errorName: string };
 
+/**
+ * "Saving…" shows only once a write has been pending this long. Writes land ~100 ms after an edit,
+ * so typing never spins the indicator (051 US6); a slow or stuck write still shows it.
+ */
+export const SAVING_SHOW_DELAY_MS = 1000;
 /** "Saving…" stays at least this long, so a fast save does not flicker (research R3). */
 export const SAVING_MIN_MS = 200;
-/** "Saved" shows at most this long after the write resolved (§g-25). */
-export const SAVED_MAX_HOLD_MS = 300;
 
 const SAVED: SaveStatus = { kind: 'saved' };
 
 /**
- * The status state machine (data-model.md). Pure: a `saved` that arrives before "Saving…" was
- * shown for `SAVING_MIN_MS` leaves the state unchanged; the store applies it when that time is up.
+ * The status state machine (data-model.md). Pure: a change goes `pending` (the store turns it into
+ * `saving` after `SAVING_SHOW_DELAY_MS`); a `saved` that arrives before "Saving…" was shown for
+ * `SAVING_MIN_MS` leaves the state unchanged, and the store applies it when that time is up.
  * An error clears only on `saved`, and keeps the time of the first unsaved change.
  */
 export function reduceSaveStatus(state: SaveStatus, event: SaveEvent, now: number): SaveStatus {
   switch (event.type) {
     case 'pending':
-      return state.kind === 'saved' ? { kind: 'saving', since: now } : state;
+      return state.kind === 'saved' ? { kind: 'pending', since: now } : state;
     case 'saved':
       if (state.kind === 'saved') return state;
       if (state.kind === 'saving' && now - state.since < SAVING_MIN_MS) return state;
@@ -48,12 +54,19 @@ interface SaveStatusStore {
 
 /** UI-only: the save status of the open deck. `now` is injectable for tests. */
 export function createSaveStatusStore(now: () => number = Date.now) {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  // Holds "Saving…" for its minimum time before a `saved` applies.
+  let holdTimer: ReturnType<typeof setTimeout> | undefined;
+  // Turns a write still pending after SAVING_SHOW_DELAY_MS into "Saving…".
+  let showTimer: ReturnType<typeof setTimeout> | undefined;
   // A newer change waits for its own write: a delayed "saved" must not claim it.
   let waiting = false;
-  const clear = () => {
-    if (timer !== undefined) clearTimeout(timer);
-    timer = undefined;
+  const clearHold = () => {
+    if (holdTimer !== undefined) clearTimeout(holdTimer);
+    holdTimer = undefined;
+  };
+  const clearShow = () => {
+    if (showTimer !== undefined) clearTimeout(showTimer);
+    showTimer = undefined;
   };
 
   return create<SaveStatusStore>()((set, get) => ({
@@ -62,17 +75,26 @@ export function createSaveStatusStore(now: () => number = Date.now) {
       const status = get().status;
       if (event.type !== 'saved') {
         waiting = true;
-        clear();
-        set({ status: reduceSaveStatus(status, event, now()) });
+        clearHold();
+        const next = reduceSaveStatus(status, event, now());
+        if (next.kind !== 'pending') clearShow();
+        else if (status.kind !== 'pending') {
+          showTimer = setTimeout(() => {
+            showTimer = undefined;
+            if (get().status.kind === 'pending') set({ status: { kind: 'saving', since: now() } });
+          }, SAVING_SHOW_DELAY_MS);
+        }
+        set({ status: next });
         return;
       }
       waiting = false;
+      clearShow();
       if (status.kind === 'saving') {
         const left = SAVING_MIN_MS - (now() - status.since);
         if (left > 0) {
-          clear();
-          timer = setTimeout(() => {
-            timer = undefined;
+          clearHold();
+          holdTimer = setTimeout(() => {
+            holdTimer = undefined;
             if (!waiting) set({ status: SAVED });
           }, left);
           return;
@@ -81,7 +103,8 @@ export function createSaveStatusStore(now: () => number = Date.now) {
       set({ status: reduceSaveStatus(status, event, now()) });
     },
     reset: () => {
-      clear();
+      clearHold();
+      clearShow();
       waiting = false;
       set({ status: SAVED });
     },

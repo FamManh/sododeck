@@ -232,7 +232,7 @@
 
 ### Tests for User Story 6 (write first, watch them fail)
 
-- [ ] T033 [P] [US6] In `apps/app/src/storage/save-status.test.ts`, use fake timers to cover data-model "Save status":
+- [x] T033 [P] [US6] In `apps/app/src/storage/save-status.test.ts`, use fake timers to cover data-model "Save status":
   - `pending` then `saved` at +100 ms → never `saving`;
   - 30 cycles 80 ms apart → never `saving`;
   - `pending` with no `saved` for 1,000 ms → `saving`, then the 200 ms hold applies on `saved`;
@@ -240,18 +240,18 @@
 
   Rewrite the old cases (`:8`, `:46`, `:59`, `:67`, `:80`, `:96`) that expect `saving` straight after `pending`.
 
-- [ ] T034 [P] [US6] In `apps/app/src/editor/save-status.test.tsx` (`:40`, `:88`), after a `pending` dispatch the indicator still reads "Saved" with no spinner, and after advancing 1,000 ms it reads "Saving…". Also check `editor/shell/deck-island.test.tsx:54` and `shell-chrome.test.tsx:150-154` still pass.
+- [x] T034 [P] [US6] In `apps/app/src/editor/save-status.test.tsx` (`:40`, `:88`), after a `pending` dispatch the indicator still reads "Saved" with no spinner, and after advancing 1,000 ms it reads "Saving…". Also check `editor/shell/deck-island.test.tsx:54` and `shell-chrome.test.tsx:150-154` still pass.
 
 ### Implementation for User Story 6
 
-- [ ] T035 [US6] In `apps/app/src/storage/save-status.ts`:
+- [x] T035 [US6] In `apps/app/src/storage/save-status.ts`:
   - add `{ kind: 'pending'; since: number }` to the state and `SAVING_SHOW_DELAY_MS = 1000`;
   - in `reduceSaveStatus`, `pending` from `saved` gives `pending`;
   - in `createSaveStatusStore`, start the show-delay timer on entering `pending`; on firing, if still `pending`, set `saving`; on `saved` while `pending`, clear the timer and set `saved`;
   - keep the `waiting` guard and the 200 ms hold for `saving`, and `failed` immediate;
   - delete the unused `SAVED_MAX_HOLD_MS`.
-- [ ] T036 [US6] In `apps/app/src/editor/save-status.tsx`, render `pending` exactly like `saved` (icon and text variants), so no spinner. `show-ui-pill.tsx` is unaffected (it reads only `error`).
-- [ ] T037 [P] [US6] Confirm `apps/app/src/storage/deck-persistence.test.ts` still shows the write 100 ms after the first update and the flush on `pagehide` (no code change expected).
+- [x] T036 [US6] In `apps/app/src/editor/save-status.tsx`, render `pending` exactly like `saved` (icon and text variants), so no spinner. `show-ui-pill.tsx` is unaffected (it reads only `error`).
+- [x] T037 [P] [US6] Confirm `apps/app/src/storage/deck-persistence.test.ts` still shows the write 100 ms after the first update and the flush on `pagehide` (no code change expected).
 
 **Checkpoint**: T033–T034 are green.
 

@@ -202,7 +202,8 @@ export function SaveStatus({ variant = 'text' }: { variant?: 'text' | 'icon' }) 
           {SAVING_TEXT}
         </span>
       )}
-      {status.kind === 'saved' && (
+      {/* A queued write looks saved until it has waited 1 s (051 US6): no spinner while typing. */}
+      {(status.kind === 'saved' || status.kind === 'pending') && (
         <span className="flex items-center gap-1.5 text-ink-secondary">
           <Check aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4 text-success-ink" />
           {SAVED_TEXT}
