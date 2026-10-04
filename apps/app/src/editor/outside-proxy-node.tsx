@@ -5,6 +5,7 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 
+import { customIcon } from './card-icon';
 import { TypeGlyph } from './shapes/type-glyph';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
@@ -13,6 +14,12 @@ import { cardBox } from './canvas-geometry';
 import { COLLAPSED_NODE_PREFIX, type PortFlowNode } from './deck-to-flow';
 import { scopeOf, visibleGraph } from './visible-graph';
 import { collapsedOf, readViewState } from './views/use-current-view';
+
+/** Spread form so an absent icon is omitted, not passed as `undefined`. */
+function iconProp(ref: string | undefined) {
+  const icon = customIcon(ref);
+  return icon === undefined ? {} : { icon };
+}
 
 const SIDES = [
   { id: 'top', position: Position.Top },
@@ -113,7 +120,7 @@ export const OutsideProxyNode = memo(function OutsideProxyNode({
         )}
       >
         <span className="flex size-6 shrink-0 items-center justify-center rounded-[8px] bg-surface-2 text-ink-secondary">
-          <TypeGlyph kind={data.kind} size={14} />
+          <TypeGlyph kind={data.kind} size={14} {...iconProp(data.icon)} />
         </span>
         <span className="flex min-w-0 flex-col">
           <span className="truncate text-[12.5px] leading-tight font-semibold text-ink">

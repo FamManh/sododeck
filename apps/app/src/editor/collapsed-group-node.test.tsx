@@ -21,7 +21,7 @@ describe('CollapsedGroupNode', () => {
         edgeCount: 12,
         focused: true,
         dimmed: false,
-        memberKinds: [],
+        members: [],
         ...patch,
       },
       selected: false,
@@ -68,7 +68,10 @@ describe('CollapsedGroupNode', () => {
   it('is the front card of a fanned hand: Group, count, name and one tile per member', () => {
     renderWithEditor(
       <CollapsedGroupNode
-        {...props({ nodeCount: 3, memberKinds: ['service', 'service', 'database'] })}
+        {...props({
+          nodeCount: 3,
+          members: [{ kind: 'service' }, { kind: 'service' }, { kind: 'database' }],
+        })}
       />,
       deckOf({}),
     );
@@ -81,8 +84,8 @@ describe('CollapsedGroupNode', () => {
   });
 
   it('shows the members that fit and the rest as "+n"', () => {
-    const memberKinds = Array.from({ length: 9 }, () => 'service');
-    renderWithEditor(<CollapsedGroupNode {...props({ nodeCount: 9, memberKinds })} />, deckOf({}));
+    const members = Array.from({ length: 9 }, () => ({ kind: 'service' }));
+    renderWithEditor(<CollapsedGroupNode {...props({ nodeCount: 9, members })} />, deckOf({}));
     const front = screen.getByRole('button', { name: /^Core services, collapsed group/ });
     expect(front.querySelectorAll('[data-testid="member-tile"]')).toHaveLength(4);
     expect(within(front).getByText('+5')).toBeInTheDocument();
@@ -150,7 +153,7 @@ describe('CollapsedGroupNode colour (020 T052)', () => {
         edgeCount: 12,
         focused: true,
         dimmed: false,
-        memberKinds: [],
+        members: [],
         ...patch,
       },
       selected: false,
@@ -184,7 +187,7 @@ describe('CollapsedGroupNode member tiles (030)', () => {
               edgeCount: 0,
               focused: true,
               dimmed: false,
-              memberKinds: ['warehouse', 'truck-route', 'robot'],
+              members: [{ kind: 'warehouse' }, { kind: 'truck-route' }, { kind: 'robot' }],
             },
             selected: false,
             width: 180,
@@ -196,10 +199,43 @@ describe('CollapsedGroupNode member tiles (030)', () => {
       deckOf({}),
     );
     const tiles = [...container.querySelectorAll('[data-testid="member-tile"] svg')];
-    expect(tiles.map((svg) => svg.getAttribute('class')?.match(/lucide-([\w-]+)/)?.[1])).toEqual([
-      'warehouse',
-      'truck',
-      'shapes',
+    expect(tiles.map((svg) => svg.getAttribute('data-icon'))).toEqual([
+      'lucide:warehouse',
+      'lucide:truck',
+      'lucide:shapes',
+    ]);
+  });
+
+  it("draws each member's own icon, and the type icon for one it cannot show (038)", () => {
+    const { container } = renderWithEditor(
+      <CollapsedGroupNode
+        {...({
+          id: 'collapsed:core',
+          data: {
+            groupId: 'core',
+            title: 'Core',
+            nodeCount: 3,
+            edgeCount: 0,
+            focused: true,
+            dimmed: false,
+            members: [
+              { kind: 'service', icon: 'lucide:search' },
+              { kind: 'service' },
+              { kind: 'database', icon: 'simple:kafka' },
+            ],
+          },
+          selected: false,
+          width: 180,
+          height: 64,
+        } as unknown as NodeProps<CollapsedFlowNode>)}
+      />,
+      deckOf({}),
+    );
+    const tiles = [...container.querySelectorAll('[data-testid="member-tile"] svg')];
+    expect(tiles.map((svg) => svg.getAttribute('data-icon'))).toEqual([
+      'lucide:search',
+      'lucide:box',
+      'lucide:database',
     ]);
   });
 });

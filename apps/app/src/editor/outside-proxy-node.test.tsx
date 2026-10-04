@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NodeProps } from '@xyflow/react';
 import { describe, expect, it } from 'vitest';
@@ -21,10 +21,10 @@ const deck = deckOf({
   edges: [{ id: 'edge', from: 'inside', to: 'outside' }],
 });
 
-function setup(outsideNodeId = 'outside', title = 'Orders DB', kind = 'database') {
+function setup(outsideNodeId = 'outside', title = 'Orders DB', kind = 'database', icon?: string) {
   const props = {
     id: `port:${outsideNodeId}`,
-    data: { outsideNodeId, outsideTitle: title, kind, side: 'right' },
+    data: { outsideNodeId, outsideTitle: title, kind, side: 'right', ...(icon ? { icon } : {}) },
     width: 150,
     height: 52,
   } as unknown as NodeProps<PortFlowNode>;
@@ -88,10 +88,18 @@ describe('OutsideProxyNode (034 US3)', () => {
 
 describe('OutsideProxyNode icons (030)', () => {
   it.each([
-    ['warehouse', 'lucide-warehouse'],
-    ['robot', 'lucide-shapes'],
-  ])('draws the %s icon', (kind, className) => {
+    ['warehouse', 'lucide:warehouse'],
+    ['robot', 'lucide:shapes'],
+  ])('draws the %s icon', (kind, ref) => {
     const { proxy } = setup('outside', 'Orders DB', kind);
-    expect(proxy.querySelector(`svg.${className}`)).not.toBeNull();
+    expect(proxy.querySelector(`svg[data-icon="${ref}"]`)).not.toBeNull();
+  });
+
+  it("draws the outside card's own icon (038), or the type icon when it cannot be shown", () => {
+    const { proxy } = setup('outside', 'Orders DB', 'database', 'lucide:search');
+    expect(proxy.querySelector('svg[data-icon="lucide:search"]')).not.toBeNull();
+    cleanup();
+    const other = setup('outside', 'Orders DB', 'database', 'simple:kafka');
+    expect(other.proxy.querySelector('svg[data-icon="lucide:database"]')).not.toBeNull();
   });
 });

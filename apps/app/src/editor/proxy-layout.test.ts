@@ -19,7 +19,7 @@ const outside = (id: string, type: 'database' | 'queue' | 'service' = 'service')
 });
 
 function layout(
-  nodes: ReturnType<typeof inside | typeof outside>[],
+  nodes: NonNullable<Parameters<typeof deckOf>[0]['nodes']>,
   edges: { id: string; from: string; to: string; direction?: 'both' | 'none' | 'forward' }[],
 ) {
   const deck = deckOf({ nodes, groups: [{ id: 'core', title: 'Core' }], edges });
@@ -78,6 +78,22 @@ describe('proxyLayout (034 R7)', () => {
       kind: 'database',
       edgeIds: ['a', 'b'],
     });
+  });
+
+  it("carries the outside card's icon when it draws as a card (038)", () => {
+    const { proxies } = layout(
+      [
+        inside('in1', 0),
+        { ...outside('a', 'database'), icon: 'lucide:search' },
+        { ...outside('b'), type: 'rectangle' as const, icon: 'lucide:search' },
+        outside('c'),
+      ],
+      ['a', 'b', 'c'].map((to) => ({ id: `e-${to}`, from: 'in1', to })),
+    );
+    const byId = new Map(proxies.map((p) => [p.id, p]));
+    expect(byId.get('port:a')?.icon).toBe('lucide:search');
+    expect(byId.get('port:b')?.icon).toBeUndefined();
+    expect(byId.get('port:c')).not.toHaveProperty('icon');
   });
 
   it('sorts a column by the mean height of the inside anchors', () => {

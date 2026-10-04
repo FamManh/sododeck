@@ -7,6 +7,7 @@ import { memo, useEffect, type CSSProperties } from 'react';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import type { CollapsedFlowNode } from './deck-to-flow';
 import { CardTitleInput } from './quick-edit/card-title-input';
+import { customIcon } from './card-icon';
 import { TypeGlyph } from './shapes/type-glyph';
 import { StepSticker } from './step-sticker';
 import { describeChannel } from './style/card-style';
@@ -14,13 +15,19 @@ import { describeChannel } from './style/card-style';
 /** Member tiles per hand, the last slot becoming "+n" when there are more. */
 const MAX_TILES = 5;
 
-function MemberTile({ kind }: { kind: string }) {
+/** Spread form so an absent icon is omitted, not passed as `undefined`. */
+function iconProp(ref: string | undefined) {
+  const icon = customIcon(ref);
+  return icon === undefined ? {} : { icon };
+}
+
+function MemberTile({ kind, icon }: { kind: string; icon: string | undefined }) {
   return (
     <span
       data-testid="member-tile"
       className="flex size-[22px] items-center justify-center rounded-[7px] border-[1.5px] border-border-strong text-ink-secondary"
     >
-      <TypeGlyph kind={kind} size={12} />
+      <TypeGlyph kind={kind} size={12} {...iconProp(icon)} />
     </span>
   );
 }
@@ -78,7 +85,7 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
     updateNodeInternals(id);
   }, [id, updateNodeInternals]);
 
-  const kinds = data.memberKinds;
+  const kinds = data.members;
   // 22 px tiles with a 4 px gap across the 160 px text area: five fit; past that the last slot
   // reads "+n" (frame 119).
   const shown = kinds.length > MAX_TILES ? kinds.slice(0, MAX_TILES - 1) : kinds;
@@ -172,8 +179,8 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
           {data.title}
         </span>
         <span aria-hidden className="flex shrink-0 gap-1">
-          {shown.map((kind, index) => (
-            <MemberTile key={index} kind={kind} />
+          {shown.map((member, index) => (
+            <MemberTile key={index} kind={member.kind} icon={member.icon} />
           ))}
           {extra > 0 && (
             <span
