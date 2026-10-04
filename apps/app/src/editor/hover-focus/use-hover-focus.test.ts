@@ -142,7 +142,7 @@ describe('useHoverFocus (034 R3)', () => {
     ['a flow session', { flowSession: { flowId: 'f' } }],
     ['a drag', { canvasGesture: 'drag' }],
     ['a resize', { canvasGesture: 'card-resize' }],
-    ['a reconnect', { reconnectingEdgeId: 'e1' }],
+    ['a connector end drag', { endpointPreview: { edgeId: 'e1' } }],
     ['the hand tool', { tool: 'hand' }],
     ['an open popover', { popover: { kind: 'edge', edgeId: 'e1' } }],
     ['an open menu', { contextMenu: { target: { kind: 'canvas' } } }],

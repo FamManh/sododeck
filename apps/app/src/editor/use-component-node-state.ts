@@ -1,6 +1,6 @@
 /**
  * The UI state a component node reads (card `deck-node.tsx`, shape `shapes/shape-node.tsx`):
- * connection role, reconnect target, resize, title edit and a refused connection's reason.
+ * connection role, end-drag target, resize, title edit and a refused connection's reason.
  */
 import { useEffect } from 'react';
 
@@ -16,11 +16,16 @@ export function useComponentNodeState(id: string, selected: boolean) {
   const announce = useUiStore((s) => s.announce);
   const connecting = useConnecting();
   const role = useConnectionRole(id);
-  // Reconnect drag (017 R12): while dragging an endpoint, this node's four side targets show as
-  // rings when the pointer is over it, with the nearest side "hot" (filled and larger).
+  // A connector end dragged over this card (017 R12, 050 R3): its four side targets show as
+  // rings, with the side the end attaches to "hot" (filled and larger); none in the centre zone.
   // A primitive per node: selecting the whole gesture re-rendered every card on each pan / zoom.
   const hotSide = useUiStore((s) =>
-    s.canvasGesture === 'endpoint' && s.endpointHover?.nodeId === id ? s.endpointHover.side : null,
+    s.canvasGesture === 'endpoint' &&
+    s.endpointPreview?.targetId === id &&
+    s.endpointPreview.targetKind === 'node' &&
+    !s.endpointPreview.automatic
+      ? s.endpointPreview.side
+      : null,
   );
   // Resizing (017 R4): pointer only, and only the single selected node, never in flow mode,
   // recording, view-only or inside a collapsed group (those never render a component at all).

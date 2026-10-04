@@ -136,7 +136,7 @@
   - `self` / `duplicate` refusals write nothing and announce the refusal;
   - Esc and blur clear `endpointPreview`.
 - [x] T016 [US2] Implement `apps/app/src/editor/editing/endpoint-drag.ts`: `startEndpointDrag`, `moveEndpoint`, `endEndpointDrag`, `cancelEndpointDrag`, writing `endpointPreview` and `connectorReadout`. The readout reads "right side · 37 %", "… · snapped", "automatic" or "→ {title}". Register with `setActiveGesture`. Make T015 pass.
-- [ ] T017 [US2] In `apps/app/src/state/ui-store.ts`:
+- [x] T017 [US2] In `apps/app/src/state/ui-store.ts`:
   - add `endpointPreview` with its setter and reset;
   - remove `endpointHover`, `endpointAnchor` and `reconnectingEdgeId`;
   - update every reader. Grep for them in `routing/endpoint-connection-line.tsx`, `component-node-parts.tsx` (hot side), `deck-edge.tsx` and tests.
@@ -150,7 +150,7 @@
   - read `endpointPreview` with a per-edge selector;
   - when it is set, draw the connector with that end overridden (side/at, or a new target box) in its own `shape`, and draw the pre-drag route as the 022 ghost;
   - remove the `reconnecting` class and logic.
-- [ ] T020 [US2] Remove React Flow reconnect:
+- [x] T020 [US2] Remove React Flow reconnect:
   - in `apps/app/src/editor/canvas.tsx`: `edgesReconnectable={false}`;
   - in `apps/app/src/editor/use-canvas-handlers.ts`: delete `onReconnectStart`, `onReconnectEnd`, `onReconnect`, `reconnectEnd`, `endpointMoveHandler`;
   - in `apps/app/src/index.css`: delete the `.react-flow__edgeupdater` and `.sd-edge-reconnecting` rules;

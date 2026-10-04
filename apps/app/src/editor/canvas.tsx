@@ -772,11 +772,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         // ~40 ms on the 500 / 1,000 deck, against 007 SC-001's 100 ms.
         nodesDraggable={!recording}
         nodesConnectable={!recording}
-        // Connections: any handle starts or ends one; drawn and reconnected with a dashed ghost.
+        // Connections: any handle starts or ends one, drawn with a dashed line. Existing ends are
+        // dragged by the selected connector's own handles (050 R3), not React Flow's reconnect.
         connectionMode={ConnectionMode.Loose}
         connectionLineStyle={connectionLineStyle}
         connectionLineComponent={EndpointConnectionLine}
-        edgesReconnectable={!recording}
+        edgesReconnectable={false}
         onNodeMouseEnter={hover.onNodeMouseEnter}
         onNodeMouseLeave={hover.onNodeMouseLeave}
         {...handlers}

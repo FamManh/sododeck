@@ -1,60 +1,12 @@
 /**
- * Sliding a connector's end along a card side (022 R4, frame 118 c). Pure: the pointer is
- * projected onto the nearest side of the card, snaps within 4 % to 0 / 25 / 50 / 75 / 100 %
- * (⌘ turns that off) and a drop deeper than 12 px inside every side means "automatic" again.
- * The canvas handler feeds it from the reconnect drag; keyboard steps use `stepAnchor`.
+ * Connector end positions along a card side (022 R4, frame 118 c): the keyboard stops
+ * (0 / 25 / 50 / 75 / 100 %) that arrows step through, and the readout. Pointer drags attach ends
+ * continuously along the outline instead (`routing/outline-attach.ts`, 050 R5).
  */
 import type { Side } from '@sododeck/schema';
 
-import { anchorPoint } from '../routing/connector-geometry';
-import { nearestSide, type Box, type Point } from '../routing/route-path';
-
-/** The positions an end snaps to along a side. */
+/** The positions an arrow key steps an end to along a side. */
 export const ANCHOR_STOPS = [0, 0.25, 0.5, 0.75, 1] as const;
-/** Snapping reach, as a fraction of the side's length. */
-export const ANCHOR_SNAP = 0.04;
-/** A drop deeper than this inside every side clears the pinned side (back to automatic). */
-export const BODY_DEPTH = 12;
-
-export interface AnchorHit {
-  side: Side;
-  /** 0 to 1 along the side (left → right, top → bottom), after snapping. */
-  at: number;
-  /** Landed on one of the five stops. */
-  snapped: boolean;
-  /** Deeper than `BODY_DEPTH` inside the card: the end becomes automatic. */
-  automatic: boolean;
-  /** The anchor point on the card side, for the preview line. */
-  point: Point;
-}
-
-/** How far a point is inside a box, to its nearest side (negative outside, 0 on a side). */
-function depthIn(box: Box, p: Point): number {
-  return Math.min(p.x - box.x, box.x + box.width - p.x, p.y - box.y, box.y + box.height - p.y);
-}
-
-export function anchorFromPoint(box: Box, pointer: Point, options: { mod: boolean }): AnchorHit {
-  const side = nearestSide(box, pointer);
-  const horizontal = side === 'top' || side === 'bottom';
-  const raw = horizontal
-    ? box.width === 0
-      ? 0.5
-      : (pointer.x - box.x) / box.width
-    : box.height === 0
-      ? 0.5
-      : (pointer.y - box.y) / box.height;
-  const clamped = Math.max(0, Math.min(1, raw));
-  const stop = ANCHOR_STOPS.find((s) => Math.abs(s - clamped) <= ANCHOR_SNAP);
-  const snapped = !options.mod && stop !== undefined;
-  const at = snapped ? stop : Math.round(clamped * 1000) / 1000;
-  return {
-    side,
-    at,
-    snapped,
-    automatic: depthIn(box, pointer) > BODY_DEPTH,
-    point: anchorPoint(box, side, at),
-  };
-}
 
 /** "left side · 78 %" (frame 118 c). */
 export function anchorReadout(side: Side, at: number, snapped = false): string {

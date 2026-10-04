@@ -239,8 +239,9 @@
   border: 2px solid var(--color-ink-secondary);
 }
 
-/* Reconnect drag (017 R12): the hovered card's four side targets render as handles; the nearest
-   side is the hot one, larger, filled Deck Orange with a 4 px soft halo, not colour only. */
+/* Connector end drag (017 R12, 050 R3): the hovered card's four side targets render as handles;
+   the side the end attaches to is the hot one, larger, filled Deck Orange with a 4 px soft halo,
+   not colour only. */
 .react-flow__handle.sd-handle[data-endpoint-target] {
   width: 12px;
   height: 12px;
@@ -325,7 +326,6 @@
 [data-tool-hand] .react-flow__handle,
 [data-tool-hand] .react-flow__edge-path,
 [data-tool-hand] .react-flow__edge-interaction,
-[data-tool-hand] .react-flow__edgeupdater,
 [data-tool-hand] .sd-route-handle,
 [data-tool-hand] .sd-resize-handle {
   /* React Flow sets pointer-events inline on each node, and on these parts in its CSS. Named
@@ -338,10 +338,9 @@
   cursor: default;
 }
 
-/* View-only (007): no connection handles or reconnect grips, no grab cursor. Hidden, not
-   `display: none`: React Flow measures handle bounds to draw edges. */
-[data-flow-mode] .react-flow__handle.sd-handle,
-[data-flow-mode] .react-flow__edgeupdater {
+/* View-only (007): no connection handles, no grab cursor. Hidden, not `display: none`: React
+   Flow measures handle bounds to draw edges. */
+[data-flow-mode] .react-flow__handle.sd-handle {
   visibility: hidden;
   pointer-events: none;
 }
@@ -416,12 +415,6 @@
 
 [data-level='landscape'] .react-flow__edge {
   opacity: 0.35;
-}
-
-/* Reconnect drag (017 R12): the edge being moved is a 40 % ghost while the connection line shows
-   the live path. */
-.sd-edge-reconnecting {
-  opacity: 0.4;
 }
 
 /* Step player progress (007 FR-012): error and broken segments carry a pattern, not only color. */

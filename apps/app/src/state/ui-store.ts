@@ -425,20 +425,6 @@ export interface UiState {
   resizeReadout: { width: number; height: number; x: number; y: number } | null;
   /** The connector end being dragged (050 R3); null outside an end drag. */
   endpointPreview: EndpointPreview | null;
-  /** The hot side target while an edge's end is dragged to reconnect it (017 R12). */
-  endpointHover: { nodeId: Id; side: Side } | null;
-  /**
-   * Where along the hot side the dragged end would attach (022 R4): the position after snapping,
-   * whether a drop would clear the pinned side (deep in the card body), and the anchor point.
-   */
-  endpointAnchor: {
-    at: number;
-    snapped: boolean;
-    automatic: boolean;
-    point: { x: number; y: number };
-  } | null;
-  /** The edge whose end is being dragged to reconnect it (017 R12); drawn as a 40 % ghost. */
-  reconnectingEdgeId: Id | null;
   /** Cards a running marquee selects. */
   marqueeCount: number | null;
   pasteSerial: PasteSerial | null;
@@ -601,9 +587,6 @@ export interface UiState {
     readout: { width: number; height: number; x: number; y: number } | null,
   ) => void;
   setEndpointPreview: (preview: EndpointPreview | null) => void;
-  setEndpointHover: (hover: { nodeId: Id; side: Side } | null) => void;
-  setEndpointAnchor: (anchor: UiState['endpointAnchor']) => void;
-  setReconnectingEdge: (edgeId: Id | null) => void;
   setMarqueeCount: (count: number | null) => void;
   setPasteSerial: (serial: PasteSerial | null) => void;
   /**
@@ -785,9 +768,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     labelPreview: null,
     resizeReadout: null,
     endpointPreview: null,
-    endpointHover: null,
-    endpointAnchor: null,
-    reconnectingEdgeId: null,
     marqueeCount: null,
     pasteSerial: null,
 
@@ -1371,15 +1351,6 @@ export const useUiStore = create<UiState>()((set, get) => {
     setEndpointPreview: (endpointPreview) => {
       set({ endpointPreview });
     },
-    setEndpointHover: (endpointHover) => {
-      set({ endpointHover });
-    },
-    setEndpointAnchor: (endpointAnchor) => {
-      set({ endpointAnchor });
-    },
-    setReconnectingEdge: (reconnectingEdgeId) => {
-      set({ reconnectingEdgeId });
-    },
     setMarqueeCount: (marqueeCount) => {
       if (get().marqueeCount !== marqueeCount) set({ marqueeCount });
     },
@@ -1440,9 +1411,6 @@ export const useUiStore = create<UiState>()((set, get) => {
         labelPreview: null,
         resizeReadout: null,
         endpointPreview: null,
-        endpointHover: null,
-        endpointAnchor: null,
-        reconnectingEdgeId: null,
         marqueeCount: null,
         pasteSerial: null,
       });
