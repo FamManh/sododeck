@@ -1,4 +1,5 @@
-import { analyzeFlow, deckPacks, observeDeck } from '@sododeck/model';
+import { analyzeFlow, deckPacks, isDbTable, observeDeck } from '@sododeck/model';
+import { Button } from '@sododeck/ui/components/button';
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -542,6 +543,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const recording = session !== null;
   const hasFocusedNode = focusedId !== null && deck.nodes.some((n) => n.id === focusedId);
+  // A view whose filter shows no table (048): say so, and lead back to the filter.
+  const emptyView =
+    drill.length === 0 &&
+    viewState.deck.nodes.length === 0 &&
+    fullDeck.nodes.some(isDbTable) &&
+    (viewState.view.schemas !== undefined || viewState.view.includes !== undefined);
   const drilledEmpty =
     drill.length > 0 &&
     graph.nodes.length === 0 &&
@@ -870,6 +877,22 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
                 },
               }
             : {})}
+        />
+      )}
+      {emptyView && (
+        <EmptyCanvasCard
+          title="No tables match this view"
+          description="This view's schemas and tables filter hides every table. Change the filter to bring some back."
+          action={
+            <Button
+              variant="primary"
+              onClick={() => {
+                useUiStore.getState().requestViewSettings(viewState.view.id);
+              }}
+            >
+              Edit filter
+            </Button>
+          }
         />
       )}
       {drilledEmpty && (

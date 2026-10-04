@@ -409,6 +409,9 @@ export interface UiState {
   selection: Selection;
   /** The view this tab shows (011, FR-005); `null` = the first view. Never written to the deck. */
   currentViewId: Id | null;
+  /** A view whose settings should open (048: the empty-view card's "Edit filter"); UI only. */
+  viewSettingsFor: Id | null;
+  requestViewSettings: (viewId: Id | null) => void;
   /**
    * Components created in this view while its filters hide them: kept visible until the view is
    * left, so a new component never vanishes under the pointer (011 spec edge case).
@@ -872,6 +875,10 @@ export const useUiStore = create<UiState>()((set, get) => {
   return {
     selection: EMPTY_SELECTION,
     currentViewId: null,
+    viewSettingsFor: null,
+    requestViewSettings: (viewSettingsFor) => {
+      set({ viewSettingsFor });
+    },
     revealed: NO_IDS,
     layoutRun: IDLE_LAYOUT,
     problemCursor: null,
@@ -1667,6 +1674,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         jsonShown: prefs.jsonOpen,
         selection: EMPTY_SELECTION,
         currentViewId: null,
+        viewSettingsFor: null,
         revealed: NO_IDS,
         layoutRun: IDLE_LAYOUT,
         problemCursor: null,

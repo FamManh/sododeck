@@ -1,5 +1,5 @@
-import { tagKey, type ViewSettingsPatch } from '@sododeck/model';
-import type { SododeckFile, SubtitleField, View } from '@sododeck/schema';
+import { isDbTable, tagKey, type ViewSettingsPatch } from '@sododeck/model';
+import type { DbDetail, SododeckFile, SubtitleField, View } from '@sododeck/schema';
 import { Checkbox } from '@sododeck/ui/components/checkbox';
 import { PopoverContent } from '@sododeck/ui/components/popover';
 import { RadioGroup, RadioGroupItem } from '@sododeck/ui/components/radio-group';
@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sododeck/ui/components/select';
-import { useId, type ReactNode } from 'react';
+import { SearchField } from '@sododeck/ui/components/search-field';
+import { useId, useState, type ReactNode } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { oneStep } from '../fields/one-step';
@@ -23,6 +24,16 @@ const SUBTITLES: { value: SubtitleField; label: string }[] = [
   { value: 'owner', label: 'Owner' },
   { value: 'none', label: 'None' },
 ];
+
+const DETAILS: { value: DbDetail | 'deck'; label: string }[] = [
+  { value: 'names', label: 'Names' },
+  { value: 'keys', label: 'Keys' },
+  { value: 'all', label: 'All' },
+  { value: 'deck', label: 'Deck default' },
+];
+
+/** Most tables the picker lists at once; the search narrows the rest. */
+const PICKER_LIMIT = 50;
 
 const ALL_FEATURES = '__all__';
 /** Nesting of "Hide groups" rows, by depth. */
@@ -58,6 +69,102 @@ function groupRows(deck: SododeckFile): { id: string; title: string; depth: numb
     if (!seen.has(group.id)) rows.push({ id: group.id, title: group.title, depth: 0 });
   }
   return rows;
+}
+
+/**
+ * Schemas, Tables and Detail (048): shown with a table in the deck. Schemas and Tables are the
+ * view's filter (a table shows when its schema is ticked or it is picked), Detail is how much of
+ * each table the view draws.
+ */
+function TableSettings({
+  deck,
+  view,
+  update,
+}: {
+  deck: SododeckFile;
+  view: View;
+  update: (patch: ViewSettingsPatch) => void;
+}) {
+  const detailId = useId();
+  const [query, setQuery] = useState('');
+  const tables = deck.nodes.filter(isDbTable);
+  // A schema in the filter that no table has now stays listed, so it can be unticked.
+  const names = [
+    ...new Set([
+      ...tables.flatMap((t) => (t.schema === undefined || t.schema === '' ? [] : [t.schema])),
+      ...(view.schemas ?? []),
+    ]),
+  ].sort();
+  const needle = query.trim().toLowerCase();
+  const matches = tables.filter((t) => needle === '' || t.title.toLowerCase().includes(needle));
+  const picked = new Set(view.includes ?? []);
+  return (
+    <>
+      {names.length > 0 && (
+        <Fieldset label="Schemas">
+          {names.map((name) => (
+            <Checkbox
+              key={name}
+              label={name}
+              checked={view.schemas?.includes(name) === true}
+              onCheckedChange={(on) => {
+                update({ schemas: toggled(view.schemas, name, on === true) });
+              }}
+            />
+          ))}
+        </Fieldset>
+      )}
+      <Fieldset label="Tables">
+        <SearchField
+          label="Find a table"
+          placeholder="Find a table"
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+          }}
+          onClear={() => {
+            setQuery('');
+          }}
+        />
+        {matches.slice(0, PICKER_LIMIT).map((table) => (
+          <Checkbox
+            key={table.id}
+            label={table.title}
+            checked={picked.has(table.id)}
+            onCheckedChange={(on) => {
+              update({ includes: toggled(view.includes, table.id, on === true) });
+            }}
+          />
+        ))}
+        {matches.length > PICKER_LIMIT && (
+          <span className="text-caption text-ink-muted">
+            {matches.length - PICKER_LIMIT} more, type to narrow
+          </span>
+        )}
+      </Fieldset>
+      <div className="flex flex-col gap-1.5">
+        <span
+          id={detailId}
+          className="text-micro font-medium tracking-wide text-ink-secondary uppercase"
+        >
+          Detail
+        </span>
+        <RadioGroup
+          aria-labelledby={detailId}
+          value={view.detail ?? 'deck'}
+          onValueChange={(value) => {
+            const next = DETAILS.find((d) => d.value === value)?.value;
+            if (next === undefined) return;
+            update({ detail: next === 'deck' ? undefined : next });
+          }}
+        >
+          {DETAILS.map((d) => (
+            <RadioGroupItem key={d.value} value={d.value} label={d.label} />
+          ))}
+        </RadioGroup>
+      </div>
+    </>
+  );
 }
 
 function toggled<T>(list: readonly T[] | undefined, value: T, on: boolean): T[] {
@@ -185,6 +292,8 @@ export function ViewSettingsPopover({
           </SelectContent>
         </Select>
       </div>
+
+      {deck.nodes.some(isDbTable) && <TableSettings deck={deck} view={view} update={update} />}
 
       {groups.length > 0 && (
         <Fieldset label="Hide groups">
