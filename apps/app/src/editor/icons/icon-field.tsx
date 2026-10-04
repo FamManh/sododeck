@@ -3,8 +3,9 @@
  * drawer's header tile. It reads the selected cards from the document, shows their shared icon
  * (or Mixed) and writes a pick or Reset to all of them through `applyIcon`, one undo step.
  */
-import { effectiveFamily } from '@sododeck/model';
+import { effectiveFamily, iconUsage } from '@sododeck/model';
 import { resolveIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
+import { useMemo } from 'react';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
@@ -30,6 +31,8 @@ export function IconField({
 }) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
+  // Per document snapshot: the snapshot object only changes when the deck does.
+  const usage = useMemo(() => iconUsage(deck), [deck]);
   const selected = new Set(selection.nodes);
   const nodes = deck.nodes.filter((node) => selected.has(node.id));
   const cards = nodes.filter((node) => effectiveFamily(node) === 'card');
@@ -67,7 +70,7 @@ export function IconField({
       showScope={cards.length > 1 || others > 0}
       canReset={cards.some((card) => card.icon !== undefined)}
       unavailable={unavailable}
-      usage={[]}
+      usage={usage}
       onPick={(ref) => {
         applyIcon(editor, selection, ref);
         done(`Icon set to ${resolveIcon(ref)?.label ?? ref} on ${count}`);

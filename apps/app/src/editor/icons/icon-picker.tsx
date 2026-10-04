@@ -19,9 +19,10 @@ import {
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
 import { Check } from 'lucide-react';
-import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { neighbour } from '../grid-nav';
+import { usedIcons } from './used-icons';
 
 const COLUMNS = 8;
 /** Stroke of the glyphs in the picker (as the type icon elsewhere). */
@@ -38,7 +39,7 @@ export interface IconPickerProps {
   canReset: boolean;
   /** A stored reference this version cannot show (it stays until a pick or Reset). */
   unavailable?: string | null;
-  /** `iconUsage` of the deck; hidden for now, listed by the "Used in this deck" section. */
+  /** `iconUsage` of the deck: the "Used in this deck" section, most used first. */
   usage: readonly { ref: string; count: number }[];
   sets?: readonly IconSet[];
   onPick: (ref: string) => void;
@@ -71,12 +72,22 @@ function sectionsOf(set: IconSet | undefined, sets: readonly IconSet[]): Section
   });
 }
 
+/** The deck's own icons as a leading section; none, none shown. */
+function usedSection(
+  usage: readonly { ref: string; count: number }[],
+  sets: readonly IconSet[],
+): Section[] {
+  const icons = usedIcons(usage, sets);
+  return icons.length === 0 ? [] : [{ id: 'used', name: 'Used in this deck', icons }];
+}
+
 export function IconPicker({
   current,
   cardCount,
   showScope,
   canReset,
   unavailable = null,
+  usage,
   sets = ICON_SETS,
   onPick,
   onReset,
@@ -86,7 +97,7 @@ export function IconPicker({
   const [active, setActive] = useState<string | null>(null);
   const [peek, setPeek] = useState<ResolvedIcon | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const cells = useRef(new Map<string, HTMLButtonElement>());
+  const idBase = useId();
 
   const set = sets.find((s) => s.id === setId) ?? sets[0];
   const searching = query.trim() !== '';
@@ -100,8 +111,8 @@ export function IconPicker({
         ? results.length === 0
           ? []
           : [{ id: 'results', name: 'Results', icons: results }]
-        : sectionsOf(set, sets),
-    [searching, results, set, sets],
+        : [...usedSection(usage, sets), ...sectionsOf(set, sets)],
+    [searching, results, set, sets, usage],
   );
 
   const cellId = (section: Section, icon: ResolvedIcon) => `${section.id}|${iconRef(icon)}`;
@@ -111,7 +122,7 @@ export function IconPicker({
 
   const focusCell = (id: string) => {
     setActive(id);
-    cells.current.get(id)?.focus();
+    document.getElementById(`${idBase}-${id}`)?.focus();
   };
 
   const onCellKey = (event: KeyboardEvent<HTMLButtonElement>, id: string) => {
@@ -243,10 +254,7 @@ export function IconPicker({
                               <button
                                 type="button"
                                 aria-label={icon.label}
-                                ref={(el) => {
-                                  if (el === null) cells.current.delete(id);
-                                  else cells.current.set(id, el);
-                                }}
+                                id={`${idBase}-${id}`}
                                 tabIndex={id === focusId ? 0 : -1}
                                 onFocus={() => {
                                   setActive(id);

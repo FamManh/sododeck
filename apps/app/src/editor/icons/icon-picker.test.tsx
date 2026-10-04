@@ -176,4 +176,39 @@ describe('IconPicker (038 T019)', () => {
     expect(screen.queryByRole('grid', { name: 'Compute' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Square' })).toBeInTheDocument();
   });
+
+  describe('Used in this deck (038 T043)', () => {
+    const usage = [
+      { ref: 'lucide:zap', count: 2 },
+      { ref: 'simple:kafka', count: 9 },
+      { ref: 'server', count: 2 },
+      { ref: 'lucide:server', count: 1 },
+    ];
+    const names = (grid: HTMLElement) =>
+      within(grid)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label'));
+
+    it('lists the deck icons first, most used first, merging two spellings of one icon', () => {
+      setup({ usage });
+      const grids = screen.getAllByRole('grid');
+      expect(grids[0]).toHaveAccessibleName('Used in this deck');
+      // server: 2 + 1 = 3 beats zap: 2; the unreadable reference is not shown.
+      expect(names(screen.getByRole('grid', { name: 'Used in this deck' }))).toEqual([
+        'Server',
+        'Zap',
+      ]);
+    });
+
+    it('is hidden when the deck has no custom icons', () => {
+      setup({ usage: [] });
+      expect(screen.queryByRole('grid', { name: 'Used in this deck' })).not.toBeInTheDocument();
+    });
+
+    it('is hidden while searching', async () => {
+      const { user } = setup({ usage });
+      await user.type(screen.getByRole('searchbox', { name: 'Search icons' }), 'zap');
+      expect(screen.queryByRole('grid', { name: 'Used in this deck' })).not.toBeInTheDocument();
+    });
+  });
 });

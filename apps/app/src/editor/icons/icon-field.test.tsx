@@ -61,7 +61,8 @@ describe('IconField (038 T029)', () => {
   it('selects the shared icon when every card agrees', () => {
     setup(['a', 'e']);
     const selected = screen.getAllByRole('gridcell', { selected: true });
-    expect(selected).toHaveLength(1);
+    // Once in "Used in this deck" and once in its category.
+    expect(selected).toHaveLength(2);
     expect(
       within(selected[0] as HTMLElement).getByRole('button', { name: 'Server' }),
     ).toBeVisible();
@@ -89,5 +90,30 @@ describe('IconField (038 T029)', () => {
   it('disables Reset when no selected card has an icon', () => {
     setup(['c']);
     expect(screen.getByRole('button', { name: 'Reset to type icon' })).toBeDisabled();
+  });
+
+  it('lists the icons of this deck only (038 T043)', () => {
+    const { unmount } = setup(['c']);
+    // lucide:server (a, e), lucide:database (b); the unreadable and shape icons are not listed.
+    const used = screen.getByRole('grid', { name: 'Used in this deck' });
+    expect(
+      within(used)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Server', 'Database']);
+    unmount();
+    renderWithEditor(
+      <IconField
+        selection={{ nodes: ['x'], edges: [], groups: [], stickies: [] }}
+        onDone={() => undefined}
+      />,
+      deckOf({ nodes: [{ id: 'x', type: 'service', title: 'X', icon: 'lucide:zap' }] }),
+    );
+    const other = screen.getByRole('grid', { name: 'Used in this deck' });
+    expect(
+      within(other)
+        .getAllByRole('button')
+        .map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Zap']);
   });
 });
