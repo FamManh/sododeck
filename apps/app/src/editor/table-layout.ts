@@ -12,6 +12,7 @@ import type { DbColumn, DbDetail, Id, SododeckFile } from '@sododeck/schema';
 import { textMeasurer } from './card-tags';
 import { wrapText } from './card-layout';
 import { truncate, type TextMeasurer } from './export/text-measure';
+import { rowKey } from './relationships/row-key';
 import type { TableContext } from './table-keys';
 import type { DeckTableDetail } from '@sododeck/model';
 
@@ -37,6 +38,9 @@ export const TABLE_CARD = {
   typeGap: 8,
   nullableGap: 3,
   nullableSlot: 7,
+  /** The type mismatch icon (043): 12 px after a 4 px gap. */
+  mismatchGap: 4,
+  mismatchSlot: 12,
   chipPaddingX: 6,
   chipHeight: 18,
   pillGap: 6,
@@ -68,6 +72,8 @@ export interface TableRow {
   enum?: { id: Id; name: string; text: string; color?: string };
   /** Width the type text or chip takes at the right of the row. */
   typeWidth: number;
+  /** "int → uuid · orders.customer_id" when a relationship end's types differ (043 FR-010b). */
+  mismatch?: string;
 }
 
 export interface TableLayout {
@@ -206,9 +212,18 @@ export function tableLayout(
       typeWidth = Math.min(typeMax, measure(shownType, t.typeFont));
     }
     const rowGlyphs = glyphs[i] ?? [];
+    const mismatch =
+      node.id === undefined ? undefined : context.mismatched?.get(rowKey(node.id, column.id));
+    // The (!) icon takes room at the right of the row, like the nullable slot.
+    const mismatchRoom = mismatch === undefined ? 0 : t.mismatchGap + t.mismatchSlot;
     const font = column.pk === true ? t.keyNameFont : t.nameFont;
     const nameMax =
-      inner - keySlot - t.keyGap - (typeWidth > 0 ? typeWidth + t.typeGap : 0) - nullableRoom;
+      inner -
+      keySlot -
+      t.keyGap -
+      (typeWidth > 0 ? typeWidth + t.typeGap : 0) -
+      nullableRoom -
+      mismatchRoom;
     const nameText = truncate(column.name, font, Math.max(0, nameMax), measure);
     return [
       {
@@ -222,6 +237,7 @@ export function tableLayout(
         nullable: !display.hideNullable && column.notNull !== true && column.pk !== true,
         ...(chip === undefined ? {} : { enum: chip }),
         typeWidth,
+        ...(mismatch === undefined ? {} : { mismatch }),
       },
     ];
   });

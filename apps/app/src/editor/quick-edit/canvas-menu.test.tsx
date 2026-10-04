@@ -69,6 +69,7 @@ describe('CanvasMenu (019 US5)', () => {
       'CutCtrl+X',
       'DuplicateCtrl+D',
       'GroupCtrl+G',
+      'LockCtrl+Shift+L',
       'Align',
       'Arrange',
       'Spread ends evenly',
@@ -112,7 +113,7 @@ describe('CanvasMenu (019 US5)', () => {
     expect(items()).toEqual([
       'PasteCtrl+V',
       'Add component',
-      'Add stickyN',
+      'Add noteN',
       'Select allCtrl+A',
       'FitCtrl+0',
     ]);

@@ -80,6 +80,7 @@ describe('Editing section (016, 017)', () => {
       'resize-no-snap',
       'resize-ratio',
       'resize-centre',
+      'lock',
     ]);
     expect(SHORTCUT_SECTIONS).toContain('Editing');
   });

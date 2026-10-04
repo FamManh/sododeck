@@ -76,12 +76,18 @@ export function ExportDialog() {
     () => availableSchemaScopes(deck, { selection: selectedNodes, drill }),
     [deck, selectedNodes, drill],
   );
-  const [state, dispatch] = useReducer(exportReducer, undefined, () =>
-    initialExportState({
+  const [state, dispatch] = useReducer(exportReducer, undefined, () => {
+    const seed = useUiStore.getState().exportDialog.seed;
+    return initialExportState({
       flowMode: isFlowMode(useUiStore.getState()),
-      schemaScope: defaultSchemaScope(scopes),
-    }),
-  );
+      // A seed (043) picks its scope when that scope has something to export.
+      schemaScope:
+        seed?.scope === 'selection' && scopes.selection.length > 0
+          ? 'selection'
+          : defaultSchemaScope(scopes),
+      ...(seed === undefined ? {} : { format: seed.format }),
+    });
+  });
   const currentViewId = useUiStore((s) => s.currentViewId);
   const revealed = useUiStore((s) => s.revealed);
   const activeFlowId = useUiStore((s) => s.activeFlow?.flowId ?? null);

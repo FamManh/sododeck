@@ -1,10 +1,14 @@
+import { deckPacks } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import { useEffect } from 'react';
 
 import { isTextTarget } from '../../lib/is-text-target';
+import { readDeck } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
-import { addComponent, canvasElement, centredOn, nodeElement } from '../canvas-actions';
+import { addComponent, addTable, canvasElement, centredOn, nodeElement } from '../canvas-actions';
+import { groupableCount, groupFromSelection } from '../editing/group-from-selection';
+import { placeFrameAtCentre } from '../frame-tool/frame-actions';
 import { PALETTE_SEARCH_ID } from '../palette';
 import { focusSelectionToolbar, toolbarShown } from '../quick-edit/toolbar-focus';
 import { useFitSelection } from './fit-selection';
@@ -170,6 +174,20 @@ export function useShellShortcuts(): void {
       if (key === '/' && ui.flyout === 'palette' && ui.addFlyout.view === 'types') {
         handle(() => {
           document.getElementById(PALETTE_SEARCH_ID)?.focus();
+        });
+        return;
+      }
+      // T and G (043 R5, frame 168): Table and Table group, while the Database pack is on.
+      if ((key === 't' || key === 'g') && deckPacks(readDeck(editor.doc)).includes('database')) {
+        handle(() => {
+          const rect = canvasElement()?.getBoundingClientRect();
+          const centre = screenToFlowPosition({
+            x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+            y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+          });
+          if (key === 't') addTable(editor, centre);
+          else if (groupableCount(ui.selection) >= 2) groupFromSelection(editor, ui.selection);
+          else placeFrameAtCentre(editor, centre);
         });
         return;
       }

@@ -112,7 +112,7 @@
 
 ### Tests for User Story 1 (write first)
 
-- [ ] T016 [P] [US1] Write `apps/app/src/editor/table/column-line-editor.test.tsx` (new-row mode):
+- [x] T016 [P] [US1] Write `apps/app/src/editor/table/column-line-editor.test.tsx` (new-row mode):
   - an input named "New column" renders at the row's position
   - chips named "name · email", "type · text", "unique", "not null" update while typing
   - an enum type shows the enum chip
@@ -126,15 +126,15 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Create `apps/app/src/editor/table/column-line-editor.tsx`:
+- [x] T018 [US1] Create `apps/app/src/editor/table/column-line-editor.tsx`:
   - a 24 px input that matches the row's font and slots, with the chips overlay under the card (tokens, `pointer-events: none`, Deck chip styles)
   - save via `oneStep` + `editor.addColumn(tableId, data, index)` (index = after the focused row, else the end; FR-006a)
   - error text, ⏎ / Esc / Tab handling, and an announce on save
 
   T016 is green.
 
-- [ ] T019 [US1] Render the editor row from `apps/app/src/editor/table/table-body.tsx` when `columnEdit` targets this table with `columnId: null`. Add `extraRow` to `tableLayout` in `apps/app/src/editor/table-layout.ts`, fed from the projected deck / table context so anchors follow. T017 is green.
-- [ ] T020 [US1] Add a `table.addColumn` action (menu "Add column", toolbar plus button, key C on a focused or selected `db-table`) in the new `apps/app/src/editor/actions/table-actions.ts`, and register it in `actions/index.ts`. In `apps/app/src/editor/use-canvas-shortcuts.ts`, make C on a `db-table` open the new-row editor and R open the connect popover (moved from C). Update `shell/shortcuts.ts`. Add cases to `use-canvas-shortcuts.test.ts`.
+- [x] T019 [US1] Render the editor row from `apps/app/src/editor/table/table-body.tsx` when `columnEdit` targets this table with `columnId: null`. Add `extraRow` to `tableLayout` in `apps/app/src/editor/table-layout.ts`, fed from the projected deck / table context so anchors follow. T017 is green.
+- [x] T020 [US1] Add a `table.addColumn` action (menu "Add column", toolbar plus button, key C on a focused or selected `db-table`) in the new `apps/app/src/editor/actions/table-actions.ts`, and register it in `actions/index.ts`. In `apps/app/src/editor/use-canvas-shortcuts.ts`, make C on a `db-table` open the new-row editor and R open the connect popover (moved from C). Update `shell/shortcuts.ts`. Add cases to `use-canvas-shortcuts.test.ts`.
 
 **Checkpoint**: columns can be added by typing (SC-002).
 
@@ -148,21 +148,21 @@
 
 ### Tests for User Story 2 (write first)
 
-- [ ] T021 [P] [US2] Extend `apps/app/src/editor/table/column-line-editor.test.tsx` (edit mode):
+- [x] T021 [P] [US2] Extend `apps/app/src/editor/table/column-line-editor.test.tsx` (edit mode):
   - pre-fills `formatColumnLine(column)` with the name selected
   - ⏎ calls `updateColumn` with `columnLinePatch`; removing `not null` writes `notNull: null`; removing `pk` removes the key; the id is unchanged
   - Esc restores the row
   - one ⌘Z undoes name, type and flags together
   - the relationship and index still reference the column id
-- [ ] T022 [P] [US2] Add cases to `apps/app/src/editor/table/table-body.test.tsx`:
+- [x] T022 [P] [US2] Add cases to `apps/app/src/editor/table/table-body.test.tsx`:
   - double-click on a row name starts the edit
   - a mismatched row shows an image named "Type differs: int → uuid (orders.customer_id)"
   - the icon disappears once the types match
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Add edit mode to `apps/app/src/editor/table/column-line-editor.tsx` (`columnId` set): pre-fill, select the name (`select: 'name'`), save through `updateColumn` + `columnLinePatch` in `oneStep`, close on ⏎. T021 is green.
-- [ ] T024 [US2] In `apps/app/src/editor/table/table-body.tsx`, swap the row for the editor while it is edited, add double-click to edit, and draw the `TriangleAlert` 12 px icon (clay ink, accessible name, tooltip) from `mismatchedColumns` via the table context in `table-keys.ts`. T022 is green.
+- [x] T023 [US2] Add edit mode to `apps/app/src/editor/table/column-line-editor.tsx` (`columnId` set): pre-fill, select the name (`select: 'name'`), save through `updateColumn` + `columnLinePatch` in `oneStep`, close on ⏎. T021 is green.
+- [x] T024 [US2] In `apps/app/src/editor/table/table-body.tsx`, swap the row for the editor while it is edited, add double-click to edit, and draw the `TriangleAlert` 12 px icon (clay ink, accessible name, tooltip) from `mismatchedColumns` via the table context in `table-keys.ts`. T022 is green.
 
 **Checkpoint**: renames keep every reference (SC-003); type mismatches are visible.
 
@@ -176,7 +176,7 @@
 
 ### Tests for User Story 3 (write first)
 
-- [ ] T025 [P] [US3] Add cases to `apps/app/src/editor/use-canvas-shortcuts.test.ts` for a focused row:
+- [x] T025 [P] [US3] Add cases to `apps/app/src/editor/use-canvas-shortcuts.test.ts` for a focused row:
   - ⏎ / F2 open the editor
   - ⌫ and Delete remove the column
   - ⌥↑ / ⌥↓ call `moveColumn` ±1 (clamped)
@@ -185,24 +185,24 @@
   - Esc returns to the table
   - ⏎ on the table still opens details and ↓ enters the rows
   - keys are ignored in text fields
-- [ ] T026 [P] [US3] Write `apps/app/src/editor/table/row-grip.test.tsx`:
+- [x] T026 [P] [US3] Write `apps/app/src/editor/table/row-grip.test.tsx`:
   - the grip button is named "Reorder {column}"
   - the pointer drag drop index is computed from `rowsTop` and 24 px rows
   - the drop line shows at the target index
   - release calls `moveColumn` once
   - Esc cancels
   - no grip on a locked table or below 90 % zoom
-- [ ] T027 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx` (or a new `row-delete.test.ts`):
+- [x] T027 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx` (or a new `row-delete.test.ts`):
   - deleting `tracking` with one relationship shows the toast "Deleted column tracking · 1 relationship removed" with Undo
   - Undo restores the column, its position, its relationship and its index parts
   - focus moves to the next row
-- [ ] T028 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx`: a table at Keys with row focus renders All rows. Esc returns it to Keys. The deck JSON is unchanged.
+- [x] T028 [P] [US3] Add a case to `apps/app/src/editor/table/table-body.test.tsx`: a table at Keys with row focus renders All rows. Esc returns it to Keys. The deck JSON is unchanged.
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Extend `apps/app/src/editor/use-canvas-shortcuts.ts` and `apps/app/src/editor/table/row-focus.ts` with the row key map (R5). Delete runs through a `deleteColumn(editor, row)` helper in `apps/app/src/editor/actions/table-actions.ts` (`removeColumn` in `oneStep`, then `showUndoToast` from `editor/undo-toast.ts` with the edge count from `RemovalResult.removed`, then refocus). Update `shell/shortcuts.ts` and the keyboard help. Make row focus and the editor announce name, type and position (FR-011). T025 and T027 are green.
-- [ ] T030 [US3] Create `apps/app/src/editor/table/row-grip.tsx` (a `GripVertical` button with `nodrag`, a pointer session in `rowDrag`, a 2 px drop line with a ring) and mount it from `table-body.tsx`. T026 is green.
-- [ ] T031 [US3] Feed `rowEditTableId` (from `focusedRow`, `columnEdit`, `rowDrag`) into the view projection, so the All override applies and clears on Esc or deselect. T028 is green.
+- [x] T029 [US3] Extend `apps/app/src/editor/use-canvas-shortcuts.ts` and `apps/app/src/editor/table/row-focus.ts` with the row key map (R5). Delete runs through a `deleteColumn(editor, row)` helper in `apps/app/src/editor/actions/table-actions.ts` (`removeColumn` in `oneStep`, then `showUndoToast` from `editor/undo-toast.ts` with the edge count from `RemovalResult.removed`, then refocus). Update `shell/shortcuts.ts` and the keyboard help. Make row focus and the editor announce name, type and position (FR-011). T025 and T027 are green.
+- [x] T030 [US3] Create `apps/app/src/editor/table/row-grip.tsx` (a `GripVertical` button with `nodrag`, a pointer session in `rowDrag`, a 2 px drop line with a ring) and mount it from `table-body.tsx`. T026 is green.
+- [x] T031 [US3] Feed `rowEditTableId` (from `focusedRow`, `columnEdit`, `rowDrag`) into the view projection, so the All override applies and clears on Esc or deselect. T028 is green.
 
 **Checkpoint**: P1 complete. A schema can be built and edited with the keyboard (SC-001, SC-004).
 
@@ -216,7 +216,7 @@
 
 ### Tests for User Story 4 (write first)
 
-- [ ] T032 [P] [US4] Write `apps/app/src/editor/actions/table-actions.test.ts`:
+- [x] T032 [P] [US4] Write `apps/app/src/editor/actions/table-actions.test.ts`:
   - `row.pk`, `row.notNull` and `row.unique` toggle with check state
   - `row.pk` on a second column makes a composite key
   - `row.addIndex` adds `{ columns: [id] }`
@@ -224,20 +224,20 @@
   - `row.addRelationship` starts the column connect
   - `table.exportSql` selects the table and calls `openExport` with `{ format: 'sql', scope: 'selection' }`
   - every item is one undo step
-- [ ] T033 [P] [US4] Write `apps/app/src/editor/actions/relationship-actions.test.ts`:
+- [x] T033 [P] [US4] Write `apps/app/src/editor/actions/relationship-actions.test.ts`:
   - cardinality radio (1–1, 1–n, n–1, n–n) writes `cardinality`
   - the optional checks write `true` / `null`, never `false`
   - on delete writes the action, and "None" clears it
   - the actions apply only to edges with column ends
   - they show on the `connection` toolbar and menu
-- [ ] T034 [P] [US4] Add a case to `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`: right-click on a row opens the row menu with "Edit", "Set as primary key", "Not null", "Unique", "Add index", "Add relationship…", "Move up", "Move down", "Delete column". The canvas menu lists "Add table" and "Add note".
+- [x] T034 [P] [US4] Add a case to `apps/app/src/editor/quick-edit/canvas-menu.test.tsx`: right-click on a row opens the row menu with "Edit", "Set as primary key", "Not null", "Unique", "Add index", "Add relationship…", "Move up", "Move down", "Delete column". The canvas menu lists "Add table" and "Add note".
 
 ### Implementation for User Story 4
 
-- [ ] T035 [US4] Implement the row and table actions in `apps/app/src/editor/actions/table-actions.ts` (ids per contracts/editing-ui.md, `where`, `applies`, `checked`, shortcuts), and register them. T032 is green.
-- [ ] T036 [US4] Create `apps/app/src/editor/actions/relationship-actions.ts` (cardinality with crow glyph icons reused from `edge-end-marks.ts`, optional sides, on delete) and register them. T033 is green.
-- [ ] T037 [US4] Support the `row` `MenuTarget` in `apps/app/src/editor/quick-edit/canvas-menu.tsx` and the right-click handler on rows in `table/table-body.tsx` (`onContextMenu` → `ui.openContextMenu({ kind: 'row', row }, point)`). T034 is green.
-- [ ] T038 [US4] Seed the export dialog: accept `{ format, scope }` in `exportDialog` and pass it to `initialExportState` in `apps/app/src/editor/export/export-dialog.tsx` / `export-dialog-state.ts`. Add a test in `export-dialog-state.test.ts`.
+- [x] T035 [US4] Implement the row and table actions in `apps/app/src/editor/actions/table-actions.ts` (ids per contracts/editing-ui.md, `where`, `applies`, `checked`, shortcuts), and register them. T032 is green.
+- [x] T036 [US4] Create `apps/app/src/editor/actions/relationship-actions.ts` (cardinality with crow glyph icons reused from `edge-end-marks.ts`, optional sides, on delete) and register them. T033 is green.
+- [x] T037 [US4] Support the `row` `MenuTarget` in `apps/app/src/editor/quick-edit/canvas-menu.tsx` and the right-click handler on rows in `table/table-body.tsx` (`onContextMenu` → `ui.openContextMenu({ kind: 'row', row }, point)`). T034 is green.
+- [x] T038 [US4] Seed the export dialog: accept `{ format, scope }` in `exportDialog` and pass it to `initialExportState` in `apps/app/src/editor/export/export-dialog.tsx` / `export-dialog-state.ts`. Add a test in `export-dialog-state.test.ts`.
 
 **Checkpoint**: every action is reachable by menu.
 

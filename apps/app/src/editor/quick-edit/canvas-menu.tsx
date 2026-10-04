@@ -165,7 +165,7 @@ function MenuBody({ menu }: { menu: ContextMenuState }) {
           event.preventDefault();
           const ui = useUiStore.getState();
           // The chosen action opened a title field (Rename, Add component), a popover (Edit
-          // label), a note (Add sticky) or the delete dialog: focus belongs there.
+          // label), a note (Add note) or the delete dialog: focus belongs there.
           if (ui.titleEdit !== null) {
             const field = document.querySelector<HTMLInputElement>('[data-slot="inline-edit"]');
             field?.focus();

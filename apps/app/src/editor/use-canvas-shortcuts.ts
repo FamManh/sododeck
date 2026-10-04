@@ -16,6 +16,7 @@ import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
 import { alignSelection } from './actions/align-actions';
+import { deleteColumn, moveRow, startNewRow, startRowEdit } from './actions/table-actions';
 import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
 import type { AlignMode } from './editing/align';
 import { useNudge } from './editing/use-nudge';
@@ -62,6 +63,7 @@ import { viewCrumbTitle } from './views/view-title';
 import { drillScopeTitle } from './outline';
 import { cancelActiveGesture, nudgeActiveDrag, resetActiveGesture } from './editing/drag-session';
 import { enterRows, leaveRows, moveRowFocus } from './table/row-focus';
+import { useUndoToast } from './undo-toast';
 
 export { isTextTarget };
 
@@ -288,6 +290,19 @@ export function useCanvasKeyDown() {
         if (handled) event.preventDefault();
         return;
       }
+      // ⌥↑ / ⌥↓ on a focused row move its column (043 R5), before ⌥ arrows nudge the card.
+      if (
+        event.altKey &&
+        !event.shiftKey &&
+        ui.focusedRow !== null &&
+        (key === 'ArrowUp' || key === 'ArrowDown')
+      ) {
+        event.preventDefault();
+        if (session === null) {
+          moveRow(editor, readDeck(editor.doc), ui.focusedRow, key === 'ArrowDown' ? 1 : -1);
+        }
+        return;
+      }
       // ⌥(⇧) arrows nudge the selection (016 FR-024); ⌥A / ⌥D / ⌥W / ⌥S align it (R12), by `code` because ⌥
       // changes `key` on macOS.
       if (event.altKey) {
@@ -348,8 +363,9 @@ export function useCanvasKeyDown() {
       }
       if (altKey) return;
 
-      // Column rows (042 R9): ↓ enters a focused table's rows, ↓ / ↑ move between them and C
-      // starts a relationship from the focused row.
+      // Column rows (042 R9, 043 R5): ↓ enters a focused table's rows, ↓ / ↑ move between them,
+      // ⏎ / F2 edit the row, C opens a new row below it and R starts a relationship from it.
+      // ⌫ (document keys) deletes it and ⌥↑ / ⌥↓ (above) move it.
       const row = ui.focusedRow;
       if (row !== null && !isMod(event)) {
         if (key === 'ArrowDown' || key === 'ArrowUp') {
@@ -357,10 +373,14 @@ export function useCanvasKeyDown() {
           moveRowFocus(row, key === 'ArrowDown' ? 1 : -1);
           return;
         }
-        if (key.toLowerCase() === 'c') {
+        const lower = key.toLowerCase();
+        if (['c', 'r', 'enter', 'f2'].includes(lower) && !event.shiftKey) {
           if (session !== null || flowMode) return;
           event.preventDefault();
-          ui.openColumnConnectPopover(row);
+          const real = readDeck(editor.doc);
+          if (lower === 'r') ui.openColumnConnectPopover(row);
+          else if (lower === 'c') startNewRow(real, row.tableId, row.columnId);
+          else startRowEdit(real, row);
           return;
         }
       } else if (
@@ -520,6 +540,18 @@ export function useCanvasKeyDown() {
           return;
         }
         case 'c': {
+          // On a table, C adds a column (043 R5); R connects it instead (below).
+          if (current !== null && deck.nodes.some((n) => n.id === current && isDbTable(n))) {
+            if (session !== null) return;
+            event.preventDefault();
+            const level = effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill));
+            if (!rowsDrawn(level)) {
+              ui.announce('Zoom in to edit columns');
+              return;
+            }
+            startNewRow(readDeck(editor.doc), current);
+            return;
+          }
           // From a card or a group (frame or collapsed card), 050 R6.
           const fromId = current === null ? null : (groupIdOf(current) ?? current);
           if (fromId !== null && endpointOf(deck, fromId) !== null) {
@@ -528,6 +560,13 @@ export function useCanvasKeyDown() {
           }
           return;
         }
+        case 'r':
+          // A table's connect popover (043 R5: moved from C, which now adds a column).
+          if (current !== null && deck.nodes.some((n) => n.id === current && isDbTable(n))) {
+            event.preventDefault();
+            ui.openConnectPopover(current);
+          }
+          return;
         case 'f':
           if (session !== null || flowMode) return;
           event.preventDefault();
@@ -704,8 +743,11 @@ export function useEditorShortcuts({
   const { flush } = useSaveControls();
   const runAction = useRunAction();
   const runRef = useRef(runAction);
+  const undoToast = useUndoToast();
+  const toastRef = useRef(undoToast);
   useEffect(() => {
     runRef.current = runAction;
+    toastRef.current = undoToast;
   });
   // The latest handler, without re-installing the listener on every render.
   const problemRef = useRef(onProblem);
@@ -787,6 +829,12 @@ export function useEditorShortcuts({
         runRef.current('clipboard.duplicate');
         return;
       }
+      // ⇧⌘L locks or unlocks the selection (043 R5), the menu's action.
+      if (isMod(event) && event.shiftKey && !event.altKey && event.code === 'KeyL' && canvas) {
+        event.preventDefault();
+        runRef.current('node.lock');
+        return;
+      }
       // ⌘G groups the selection (016 FR-010), never the browser's "find next".
       if (isMod(event) && !event.shiftKey && !event.altKey && event.code === 'KeyG' && canvas) {
         event.preventDefault();
@@ -862,6 +910,13 @@ export function useEditorShortcuts({
       ) {
         event.preventDefault();
         ui.foldBundles();
+        return;
+      }
+      // ⌫ on a focused row deletes its column (043 R7), never the table around it.
+      if ((key === 'delete' || key === 'backspace') && ui.focusedRow !== null) {
+        if (ui.pendingDelete !== null) return;
+        event.preventDefault();
+        deleteColumn(editor, readDeck(editor.doc), ui.focusedRow, toastRef.current);
         return;
       }
       if (key === 'delete' || key === 'backspace') {

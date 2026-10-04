@@ -315,6 +315,7 @@ export const DeckNode = memo(function DeckNode({
                 nodeId={id}
                 layout={table}
                 focused={data.focused}
+                locked={data.locked === true}
                 tinted={look?.namedFill === true || customText !== undefined}
               />
             ) : (
