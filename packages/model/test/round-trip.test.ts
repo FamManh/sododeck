@@ -1349,3 +1349,41 @@ describe('groups as connector ends (050)', () => {
     }
   });
 });
+
+describe('node lock (043)', () => {
+  const locked: SododeckFile = {
+    ...empty,
+    nodes: [
+      { id: 'svc', type: 'service', title: 'Svc', position: { x: 0, y: 0 }, locked: true },
+      { id: 'dia', type: 'diamond', title: 'OK?', size: { width: 96, height: 96 }, locked: true },
+      {
+        id: 'tbl',
+        type: 'db-table',
+        title: 'orders',
+        columns: [{ id: 'o-id', name: 'id', type: 'bigint', pk: true }],
+        detail: 'keys',
+        locked: true,
+      },
+    ],
+  };
+
+  it('round-trips a locked card, shape and table, locked last', () => {
+    const out = toJSON(fromJSON(locked));
+    expect(out).toEqual(locked);
+    expect(serializeDeck(out)).toBe(serializeDeck(locked));
+    expect(Object.keys(out.nodes[2] ?? {}).at(-1)).toBe('locked');
+  });
+
+  it('keeps a deck without locked byte-identical after an unrelated edit', () => {
+    const doc = fromJSON(minimal);
+    const [first] = minimal.nodes;
+    if (first === undefined) throw new Error('deck has no node');
+    createEditor(doc).update('nodes', first.id, { title: 'Renamed' });
+    const out = toJSON(doc);
+    for (const node of out.nodes) expect(node).not.toHaveProperty('locked');
+    const expected = structuredClone(minimal);
+    const renamed = expected.nodes[0];
+    if (renamed !== undefined) renamed.title = 'Renamed';
+    expect(serializeDeck(out)).toBe(serializeDeck(expected));
+  });
+});
