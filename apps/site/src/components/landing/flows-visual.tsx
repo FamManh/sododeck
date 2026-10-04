@@ -47,7 +47,8 @@ const LAYOUT: Record<
 
 /**
  * Step 3 · Flows: Checkout plays once from Order Service (steps 3–8 here, 3–5 on phones), the deck
- * dealing each step while the player follows; the failed-payment branch stays in clay.
+ * dealing each step while the player follows; the failed-payment branch stays in clay. The player
+ * seeks: previous / next step, a step's segment, play / pause.
  */
 export function FlowsVisual({ breakpoint }: { breakpoint: Breakpoint }) {
   const phone = breakpoint === 'phone';
@@ -56,7 +57,7 @@ export function FlowsVisual({ breakpoint }: { breakpoint: Breakpoint }) {
   const world = phone ? ORDERS_CROP : { ...FLOW_CROP, width: WORLD.w, height: WORLD.h };
   const times = phone ? [null, null, 0, 1.5, 2.4] : [null, null, 0, 1.5, 2.4, 3.3, 4.2, 5.1];
   return (
-    <Stage timeline={tl} replay={phone ? 'top' : 'bottom'}>
+    <Stage timeline={tl} replay={phone ? 'top' : 'bottom'} steps={times}>
       <Viewport
         width={layout.w}
         height={layout.h}

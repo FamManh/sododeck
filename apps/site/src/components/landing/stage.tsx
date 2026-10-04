@@ -9,6 +9,11 @@ interface StageProps {
   timeline: Timeline | null;
   /** Where the Replay button sits (plays that run once only). */
   replay?: 'top' | 'bottom';
+  /**
+   * Seekable steps of a flow player inside the stage: when each step (0-based index) becomes
+   * current, in seconds. The page script seeks the timeline to them (prev / next / segments).
+   */
+  steps?: readonly (number | null)[];
   className?: string;
   children: ReactNode;
 }
@@ -18,12 +23,18 @@ interface StageProps {
  * when it may play: a loop starts at once, a play-once stage when 35 % of it is in view. Until
  * then, and always under reduced motion or without JS, the visual shows its final frame.
  */
-export function Stage({ timeline, replay, className, children }: StageProps) {
+export function Stage({ timeline, replay, steps, className, children }: StageProps) {
   if (timeline === null) return <div className={className}>{children}</div>;
   return (
     <div
       className={['sdl-stage', className].filter(Boolean).join(' ')}
       data-motion={timeline.loop ? 'loop' : 'once'}
+      data-end={timeline.duration}
+      data-steps={
+        steps === undefined
+          ? undefined
+          : steps.flatMap((t, i) => (t === null ? [] : [`${String(i)}:${String(t)}`])).join(' ')
+      }
       style={{ position: 'relative' }}
     >
       {children}

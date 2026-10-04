@@ -12,7 +12,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <script>
+  import { startLandingControls } from '../scripts/landing-controls';
   import { startLandingMotion } from '../scripts/landing-motion';
 
   startLandingMotion();
+  startLandingControls();
 </script>

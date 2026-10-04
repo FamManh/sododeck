@@ -334,7 +334,7 @@ export const GENERATED_JSON: readonly string[] = [
   '}',
 ];
 
-/** The Code section's whole-deck JSON (format v1); lines 7–13 are the selected Order Service. */
+/** The Code section's whole-deck JSON (format v1); `DECK_JSON_REFS` maps its cards to lines. */
 export const DECK_JSON: readonly string[] = [
   '{',
   '  "$schema":',
@@ -362,8 +362,6 @@ export const DECK_JSON: readonly string[] = [
   '  "flows": [{ "id": "checkout", … }]',
   '}',
 ];
-
-export const DECK_JSON_SELECTED: readonly number[] = [7, 8, 9, 10, 11, 12, 13];
 
 export const DBML: readonly string[] = [
   'Table orders {',
@@ -393,3 +391,75 @@ export const DBML: readonly string[] = [
   '  cancelled',
   '}',
 ];
+
+/**
+ * Orders DB as format v1 JSON (Database pack DB7 / DB8: a table is a `db.table` node with
+ * `columns`, a foreign key an edge between column ports), cut short. Lines 12–13 are `status`.
+ */
+export const SCHEMA_JSON: readonly string[] = [
+  '{',
+  '  "nodes": [',
+  '    {',
+  '      "id": "orders",',
+  '      "type": "db.table",',
+  '      "title": "orders",',
+  '      "parent": "orders-db",',
+  '      "columns": [',
+  '        { "id": "c1", "name": "id",',
+  '          "type": "uuid", "pk": true },',
+  '        { "id": "c2", "name": "customer_id",',
+  '          "type": "uuid" },',
+  '        { "id": "c3", "name": "status",',
+  '          "type": "order_status" },',
+  '        …',
+  '      ]',
+  '    },',
+  '    { "id": "payments", … }',
+  '  ],',
+  '  "edges": [',
+  '    { "id": "fk-payments-order",',
+  '      "from": "payments", "fromPort": "c7",',
+  '      "to": "orders", "toPort": "c1" }',
+  '  ]',
+  '}',
+];
+
+export const SCHEMA_JSON_SELECTED: readonly number[] = [12, 13];
+
+/** The same schema as Postgres DDL (the SQL tab is a read-only preview); line 8 is `status`. */
+export const SCHEMA_SQL: readonly string[] = [
+  'CREATE TYPE order_status AS ENUM (',
+  "  'pending', 'paid', 'shipped', 'cancelled'",
+  ');',
+  '',
+  'CREATE TABLE orders (',
+  '  id uuid PRIMARY KEY,',
+  '  customer_id uuid',
+  '    REFERENCES customers (id),',
+  '  status order_status NOT NULL,',
+  '  total_cents int NOT NULL,',
+  '  created_at timestamptz NOT NULL',
+  ');',
+  'CREATE INDEX ON orders (customer_id);',
+  'CREATE INDEX ON orders (created_at);',
+  '',
+  'CREATE TABLE payments (',
+  '  id uuid PRIMARY KEY,',
+  '  order_id uuid',
+  '    REFERENCES orders (id),',
+  '  provider text,',
+  '  amount_cents int,',
+  '  status text',
+  ');',
+];
+
+export const SCHEMA_SQL_SELECTED: readonly number[] = [8];
+
+/** DBML line of `orders.status`. */
+export const DBML_SELECTED: readonly number[] = [3];
+
+/** The Code section's JSON lines per pickable card: Order Service, then Orders DB. */
+export const DECK_JSON_REFS: Readonly<Record<string, readonly number[]>> = {
+  svc: [7, 8, 9, 10, 11, 12, 13],
+  odb: [14, 15, 16, 17, 18],
+};

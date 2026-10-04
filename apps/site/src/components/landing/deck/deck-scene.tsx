@@ -30,6 +30,12 @@ interface DeckSceneProps {
   nodeMotion?: (node: SceneNode, index: number) => Partial<Animated>;
   frameMotion?: (index: number) => Partial<Animated>;
   edgeMotion?: (edge: SceneEdge, index: number) => Partial<Animated>;
+  /**
+   * Cards a visitor can pick (key → card title): each becomes a toggle button; the picked one
+   * (`picked`, then `landing-controls.ts`) shows the selection ring.
+   */
+  pickable?: Readonly<Record<string, string>>;
+  picked?: string;
   children?: ReactNode;
 }
 
@@ -63,6 +69,8 @@ export function DeckScene({
   nodeMotion,
   frameMotion,
   edgeMotion,
+  pickable = {},
+  picked,
   children,
 }: DeckSceneProps) {
   const scene = layoutScene(nodes, edges);
@@ -144,7 +152,20 @@ export function DeckScene({
               ...motion.style,
             }}
           >
-            {node.kind === 'card' && <DeckCard card={node.card} zoom={zoom} state={state} />}
+            {node.kind === 'card' &&
+              (pickable[node.key] === undefined ? (
+                <DeckCard card={node.card} zoom={zoom} state={state} />
+              ) : (
+                <button
+                  type="button"
+                  className="ld-pick"
+                  data-pick={node.key}
+                  aria-pressed={node.key === picked}
+                  aria-label={pickable[node.key]}
+                >
+                  <DeckCard card={node.card} zoom={zoom} state={state} />
+                </button>
+              ))}
             {node.kind === 'shape' && <ShapeNode shape={node.shape} />}
             {node.kind === 'proxy' && <OutsideProxy proxy={node.proxy} />}
           </div>

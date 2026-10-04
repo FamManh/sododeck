@@ -1,8 +1,7 @@
-import { Pause, SkipBack, SkipForward } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 
 import { STEPS } from '../../../lib/landing/checkout-deck';
-import { animate, type Timeline } from '../../../lib/landing/timeline';
+import { animate, type Key, type Timeline } from '../../../lib/landing/timeline';
 import { C, FONT_MONO } from '../../../lib/landing/tokens';
 import { FloatingPanel } from './floating-panel';
 
@@ -17,28 +16,30 @@ interface StepPlayerProps {
   shown: readonly number[];
   /** When each step becomes current, by step index; `null` for steps played before. */
   times: readonly (number | null)[];
+  /** Phones: no speed chip, two-line step text. */
   compact?: boolean;
   timeline: Timeline | null;
 }
 
-const iconButton = (icon: ReactNode) => (
-  <span
-    style={{
-      width: 28,
-      height: 28,
-      borderRadius: 99,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: C.inkSecondary,
-      flex: 'none',
-    }}
-  >
-    {icon}
-  </span>
-);
+/** Visible while `a ≤ t < b` (or from `a` on for the last step). */
+const during = (a: number, b: number | null | undefined): Key[] =>
+  b === undefined || b === null
+    ? [
+        [a, { opacity: 0 }],
+        [a + 0.05, { opacity: 1 }],
+      ]
+    : [
+        [a, { opacity: 0 }],
+        [a + 0.05, { opacity: 1 }],
+        [b, { opacity: 1 }],
+        [b + 0.05, { opacity: 0 }],
+      ];
 
-/** The flow step player (007, 035): controls, the current step and an 8-segment progress bar. */
+/**
+ * The flow step player (007, 035): previous, play / pause, next, the current step and one
+ * segment per step. Buttons are real: `landing-motion.ts` seeks the stage's timeline to a step
+ * (steps with a time only; earlier steps were played before the visual starts).
+ */
 export function StepPlayer({
   x,
   y,
@@ -51,6 +52,7 @@ export function StepPlayer({
 }: StepPlayerProps) {
   return (
     <FloatingPanel
+      className="ld-player"
       style={{
         position: 'absolute',
         left: x,
@@ -63,50 +65,43 @@ export function StepPlayer({
         zIndex: 8,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: compact ? 10 : 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none' }}>
-          {!compact && iconButton(<SkipBack aria-hidden size={15} strokeWidth={2} />)}
-          <span
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 99,
-              background: C.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: `0 3px 0 0 ${C.primaryInk}`,
-            }}
+          <button
+            type="button"
+            className="ld-player-skip"
+            data-player="prev"
+            aria-label="Previous step"
           >
-            <Pause aria-hidden size={18} strokeWidth={2.25} color={C.onPrimary} />
-          </span>
-          {!compact && iconButton(<SkipForward aria-hidden size={15} strokeWidth={2} />)}
+            <SkipBack aria-hidden size={15} strokeWidth={2} />
+          </button>
+          <button type="button" className="ld-player-toggle" data-player="toggle" aria-label="Play">
+            <Play aria-hidden className="ld-icon-play" size={18} strokeWidth={2.25} />
+            <Pause aria-hidden className="ld-icon-pause" size={18} strokeWidth={2.25} />
+          </button>
+          <button
+            type="button"
+            className="ld-player-skip"
+            data-player="next"
+            aria-label="Next step"
+          >
+            <SkipForward aria-hidden size={15} strokeWidth={2} />
+          </button>
         </div>
-        <div style={{ position: 'relative', flex: 1, minWidth: 0, height: compact ? 54 : 38 }}>
+        <div
+          aria-live="polite"
+          style={{ position: 'relative', flex: 1, minWidth: 0, height: compact ? 54 : 38 }}
+        >
           {shown.map((i) => {
             const a = times[i];
-            const b = times[i + 1];
             const motion =
-              a === undefined || a === null
-                ? {}
-                : animate(
-                    timeline,
-                    b === undefined || b === null
-                      ? [
-                          [a, { opacity: 0 }],
-                          [a + 0.05, { opacity: 1 }],
-                        ]
-                      : [
-                          [a, { opacity: 0 }],
-                          [a + 0.05, { opacity: 1 }],
-                          [b, { opacity: 1 }],
-                          [b + 0.05, { opacity: 0 }],
-                        ],
-                  );
+              a === undefined || a === null ? {} : animate(timeline, during(a, times[i + 1]));
             const step = STEPS[i];
             return (
               <div
                 key={i}
+                data-step-row={i}
+                aria-hidden={i === current ? undefined : true}
                 className={motion.className}
                 style={{
                   position: 'absolute',
@@ -138,21 +133,28 @@ export function StepPlayer({
             );
           })}
         </div>
-        <span
-          style={{
-            fontFamily: FONT_MONO,
-            fontSize: 11,
-            padding: '2px 7px',
-            borderRadius: 99,
-            background: C.surface2,
-            color: C.inkSecondary,
-            flex: 'none',
-          }}
-        >
-          1×
-        </span>
+        {!compact && (
+          <span
+            style={{
+              fontFamily: FONT_MONO,
+              fontSize: 11,
+              padding: '2px 7px',
+              borderRadius: 99,
+              background: C.surface2,
+              color: C.inkSecondary,
+              flex: 'none',
+            }}
+          >
+            1×
+          </span>
+        )}
       </div>
-      <div style={{ display: 'flex', gap: 4 }} aria-hidden>
+      <div
+        // The 6px padding makes each segment an easier target without moving the bar.
+        style={{ display: 'flex', gap: 4, margin: '-6px 0' }}
+        role="group"
+        aria-label="Steps"
+      >
         {STEPS.map((_, i) => {
           const a = times[i];
           const b = times[i + 1];
@@ -174,18 +176,34 @@ export function StepPlayer({
                       ],
                 );
           const rest = i < current ? C.inkSecondary : i === current ? C.primary : C.surface3;
-          return (
+          const bar = (
             <span
-              key={i}
               className={motion.className}
               style={{
-                flex: 1,
+                display: 'block',
                 height: 8,
                 borderRadius: 4,
                 backgroundColor: rest,
                 ...motion.style,
               }}
             />
+          );
+          // Steps played before the visual starts have no time on its timeline: not seekable.
+          return a === undefined || a === null ? (
+            <span key={i} aria-hidden style={{ flex: 1, padding: '6px 0' }}>
+              {bar}
+            </span>
+          ) : (
+            <button
+              key={i}
+              type="button"
+              className="ld-player-segment"
+              data-seek-step={i}
+              aria-label={`Step ${String(i + 1)}`}
+              aria-current={i === current ? 'step' : undefined}
+            >
+              {bar}
+            </button>
           );
         })}
       </div>

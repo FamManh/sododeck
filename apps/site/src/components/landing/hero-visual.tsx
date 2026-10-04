@@ -244,18 +244,21 @@ export function HeroVisual({ breakpoint }: { breakpoint: Breakpoint }) {
       )}
     >
       <CodePane
+        id={`hero-code-${breakpoint}`}
         width={cw}
         height={ch}
-        tabs={['JSON']}
-        active={0}
-        lines={GENERATED_JSON}
-        foot={false}
-        lineMotion={(i) =>
-          animate(tl, [
-            [2.9 + i * 0.09, { opacity: 0 }],
-            [3.0 + i * 0.09, { opacity: 1 }],
-          ])
-        }
+        panels={[
+          {
+            tab: 'JSON',
+            lines: GENERATED_JSON,
+            foot: false,
+            lineMotion: (i) =>
+              animate(tl, [
+                [2.9 + i * 0.09, { opacity: 0 }],
+                [3.0 + i * 0.09, { opacity: 1 }],
+              ]),
+          },
+        ]}
         chip={
           <span
             {...withAnimation(

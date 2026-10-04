@@ -67,6 +67,11 @@
 /* ── Animation stages (see components/landing/stage.tsx and scripts/landing-motion.ts) ── */
 .sdl-stage[data-play] .sdl-a {
   animation: var(--sdl-a);
+  /* A negative delay starts the timeline at --sdl-seek seconds (the Flows player seeks). */
+  animation-delay: calc(var(--sdl-seek, 0) * -1s);
+}
+.sdl-stage[data-paused] .sdl-a {
+  animation-play-state: paused;
 }
 
 .sdl-replay {
@@ -101,10 +106,149 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sdl-stage .sdl-a {
+  /* Nothing moves; a held frame the visitor stepped to (data-paused) still shows. */
+  .sdl-stage:not([data-paused]) .sdl-a {
     animation: none !important;
   }
   .ld-btn {
+    transition: none;
+  }
+}
+
+/* ── Flows player ── */
+.ld-player-skip,
+.ld-player-toggle,
+.ld-player-segment,
+.ld-tab,
+.ld-pick {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+.ld-player-skip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 99px;
+  color: var(--sd-text-secondary);
+}
+.ld-player-skip:hover {
+  background: var(--sd-surface-2);
+  color: var(--sd-ink);
+}
+.ld-player-toggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 99px;
+  background: var(--sd-primary);
+  color: var(--sd-on-primary);
+  box-shadow: 0 3px 0 0 var(--sd-primary-ink);
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s;
+}
+.ld-player-toggle:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 0 var(--sd-primary-ink);
+}
+/* Play at rest (the flow is complete); Pause only while it plays. */
+.ld-icon-pause,
+.sdl-stage[data-play]:not([data-paused]) .ld-icon-play {
+  display: none;
+}
+.sdl-stage[data-play]:not([data-paused]) .ld-icon-pause {
+  display: block;
+}
+.ld-player-segment {
+  flex: 1;
+  padding: 6px 0;
+}
+.ld-player-segment:hover > span {
+  opacity: 0.75;
+}
+
+/* ── Code panel tabs ── */
+.ld-tabs {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--sd-surface-2);
+}
+.ld-tab {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--sd-text-secondary);
+}
+.ld-tab:hover {
+  color: var(--sd-ink);
+}
+.ld-tab[aria-selected='true'] {
+  background: var(--sd-surface);
+  box-shadow: 0 1px 2px var(--sd-shadow);
+  font-weight: 500;
+  color: var(--sd-ink);
+}
+.ld-code-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.ld-code-panel[hidden] {
+  display: none;
+}
+.ld-code-line[data-on] {
+  background: var(--sd-primary-soft);
+}
+
+/* ── Pickable cards (Code section) ── */
+.ld-pick {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+  text-align: left;
+  transition: transform 0.12s;
+}
+.ld-pick:hover {
+  transform: translateY(-2px);
+}
+.ld-pick[aria-pressed='true'] > div {
+  outline: 2px solid var(--sd-primary);
+  outline-offset: 2px;
+}
+
+.ld-player-skip:focus-visible,
+.ld-player-toggle:focus-visible,
+.ld-player-segment:focus-visible,
+.ld-tab:focus-visible {
+  outline: 2px solid var(--sd-primary);
+  outline-offset: 2px;
+}
+.ld-pick:focus-visible {
+  outline: 2px solid var(--sd-ink);
+  outline-offset: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ld-player-toggle,
+  .ld-pick {
     transition: none;
   }
 }
