@@ -10,7 +10,7 @@
 
 **Sources**: `docs/backlog-database.md` §044 (scope, draft acceptance criteria, risks, "From 045" note), §045 (the export partner and its round-trip criterion), §043 (dialect type lists, Deck settings Database section, not built), §046 (re-import matching by name, code panel); founder decisions DB2 (SQL DDL and DBML both ways), DB5 (no code, assets or copy from other tools), DB6 (one parser for DBML and SQL, Apache-2.0, lazy-loaded in a worker, dependency approval recorded in this feature's ADR), DB7 (a table is a node of the table type), DB8 (relationship ends are column rows), DB11 (one dialect per deck; an import sets it from the file); `specs/040-db-schema-model/` (what the deck stores: dialect, enums, tables, columns, indexes, checks, relationship fields, problems); `specs/041-db-table-card/` and `specs/042-db-relationships/` (what an imported table and relationship look like); `specs/045-db-export/` and ADR 0031 (writers, "Shop" fixture, the common type list, the DBML `?` optional markers and `checks` block the parser must read); `specs/005-local-library-autosave/` (deck import into the library, new decks); `specs/011-views-autolayout/` (auto-layout worker); design-analysis §a frames 134 (empty schema deck with Import), 138 (import dialog), 139 (after import: report, foreign keys by name, Undo toast), §g-86 (use `packages/ui` controls), §g-91 (dialog from 138 / 139, not 166); constitution v1.0.0 (principles I–VIII).
 
-**Dependency note (2026-10-04)**: 040 (model), 041 (table card), 042 (relationships) and 045 (export) are merged. **043 (editing: type picker, Deck settings Database section with the dialect switch and its conversion) and 047 (lint) are not built.** 044 sets the deck dialect directly when it imports into a deck without tables, and converts only the imported types (never the deck's existing tables) when the dialects differ; see Assumptions.
+**Dependency note (2026-10-04)**: 043 is being built in parallel; integration points to resolve after it merges are in [integration-043.md](integration-043.md). 040 (model), 041 (table card), 042 (relationships) and 045 (export) are merged. **043 (editing: type picker, Deck settings Database section with the dialect switch and its conversion) and 047 (lint) are not built.** 044 sets the deck dialect directly when it imports into a deck without tables, and converts only the imported types (never the deck's existing tables) when the dialects differ; see Assumptions.
 
 ## Scope
 
@@ -31,7 +31,7 @@
 **Out of scope**
 
 - MariaDB, SQL Server, Oracle and other dialects; a live database connection; reading views, functions, procedures, triggers, grants, partitions, sequences as objects, sample rows (all reported as skipped).
-- **Re-import that matches by name** and updates existing tables (046). Importing into a deck that already holds a table of the same name adds a new table (see FR-015).
+- **Re-import that matches by name** and updates existing tables (046). Importing into a deck that already holds a table of the same name adds a new table named `<name>_copy` (see FR-015).
 - Changing the dialect of an existing deck and converting its tables (043's Deck settings).
 - An enum card on the canvas (not built, 040 / 041); enums go to the deck's enum list.
 - Lint rules on the imported schema (047); the existing Problems list shows 040's kinds as today.
@@ -42,7 +42,7 @@
 
 ### Session 2026-10-04
 
-- Q: When importing into a deck that already holds a table of the same name, what happens? → A: Always add a new table with the same name and list it in the report; matching by name stays with 046.
+- Q: When importing into a deck that already holds a table of the same name, what happens? → A: Always add a new table and list it in the report; matching by name stays with 046. **Revised 2026-10-04 (founder)**: the new table follows 043's paste rule and is named `<name>_copy`, `<name>_copy_2`, … (see [integration-043.md](integration-043.md)).
 - Q: When the import's dialect differs from the deck's, what happens? → A: Show a notice before import, convert types in the common type list (045's) to the deck's dialect keeping their size, keep other types as written, and list every conversion and kept type in the report.
 - Q: Where are the foreign-key-by-name suggestions shown for review? → A: Only in the import report; hovering or focusing a suggestion highlights the two tables and the two column rows on the canvas; no line is drawn until accepted.
 - Q: Should schemas in the file become groups on the canvas? → A: One group per schema only when the import holds two or more schemas; a single schema adds no group. Imported groups are ordinary groups the user can Ungroup (⇧⌘G) in one undo step; tables keep their stored schema, so nothing is lost.
@@ -166,8 +166,8 @@ A legacy MySQL schema has no foreign key constraints. With "Detect foreign keys 
 - **User does not want the schema groups**: selecting an imported group and pressing Ungroup removes it in one undo step; its tables stay where they are and keep their schema.
 - **Foreign key to a table that is not in the file**: the relationship is skipped and listed in the report ("references accounts, not in this import"); 044 does not link to existing deck tables by name (046).
 - **Self-reference and several foreign keys between the same two tables**: each becomes its own relationship.
-- **Duplicate table name in the import** (same schema): the second is imported with a numeric suffix and listed under "Changed".
-- **Table name already in the deck**: the imported table is added as a new table with the same name and the report lists it under "Changed" ("a table named orders already exists").
+- **Duplicate table name in the import** (same schema): the second is imported as `<name>_copy` (then `_copy_2`, …, 043's rule) and listed under "Changed".
+- **Table name already in the deck** (same schema, case-insensitive): the imported table is added as a new table named `<name>_copy` (then `_copy_2`, …, 043's rule) and the report lists it under "Changed" ("a table named orders already exists, imported as orders_copy").
 - **`ALTER TABLE` adding a column, a unique or a check** after the `CREATE TABLE`: applied to the table; `ALTER TABLE` that drops or renames is skipped with a reason.
 - **Enum used by no column**: imported into the deck's enum list.
 - **MySQL inline `ENUM(…)`**: becomes a deck enum named `<table>_<column>`; two columns with the same value list share one enum.
@@ -205,7 +205,7 @@ A legacy MySQL schema has no foreign key constraints. With "Detect foreign keys 
 - **FR-012**: A default MUST be stored as a value when it is a string, number or boolean literal, and otherwise as an expression; never both.
 - **FR-013**: A relationship's cardinality MUST be one-to-one when the referencing columns are unique (column flag, unique index or primary key on exactly those columns) and many-to-one otherwise, except DBML refs, which keep their written cardinality; a nullable referencing column MUST mark that end optional.
 - **FR-014**: Every imported object (table, column, index, check, enum, enum value, relationship, group, sticky) MUST get a new stable id generated once at import; ids MUST NOT be derived from names (constitution III).
-- **FR-015**: Names MUST be stored without quotes and as written. A table name repeated in the import (same schema) MUST be given a numeric suffix; a table name that already exists in the target deck MUST be added as a new table with the same name. Both MUST be listed in the report.
+- **FR-015**: Names MUST be stored without quotes and as written. A table name repeated in the import (same schema), or one that already exists in the target deck (same schema, case-insensitive), MUST be added as a new table renamed `<name>_copy`, `<name>_copy_2`, … (the paste rule of 043, founder decision 2026-10-04). Both MUST be listed in the report.
 - **FR-016**: A foreign key whose referenced table or column is not in the import MUST be skipped and listed in the report; 044 MUST NOT link imported tables to tables already in the deck.
 
 **Skipped and changed**
