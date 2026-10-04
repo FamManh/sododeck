@@ -5,10 +5,15 @@
  * (Tab order: midpoints and bends along the line); arrows move a bend by a grid step (Shift: 1 px).
  * Straight lines have no bends, so they show none. Live positions live in the UI store; the
  * document is written once, on release (`editing/bend-drag.ts`).
+ *
+ * 050 R1/R2: the handles render in the viewport portal, above every card, and each drag runs
+ * through `startPointerDrag`, so it keeps following the pointer while handles re-render and a
+ * press below the drag threshold changes nothing. Midpoints are left out on runs shorter than
+ * 24 screen px (FR-004).
  */
 import type { Side } from '@sododeck/schema';
-import { EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useReactFlow, useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
@@ -18,6 +23,7 @@ import {
   addBendAt,
   BEND_STEP,
   BEND_STEP_FINE,
+  cancelBendDrag,
   endBendDrag,
   moveBend,
   nudgeBend,
@@ -27,6 +33,7 @@ import {
   type BendSession,
   type BendTarget,
 } from '../editing/bend-drag';
+import { startPointerDrag, type PointerDrag } from '../editing/pointer-drag';
 import type { Point } from './route-path';
 
 /** Where each end sits on its card, for the keyboard (the pointer slides ends through React Flow). */
@@ -42,6 +49,11 @@ export interface RouteHandlesProps {
   anchors?: EndAnchors;
 }
 
+/** FR-004: runs shorter than this on screen get no midpoint handle, so handles never overlap. */
+export const MIN_HANDLE_RUN = 24;
+
+const zoomSelector = (s: ReactFlowState) => s.transform[2];
+
 const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
 /** Moves keyboard focus back to the connector itself (Esc on a handle). */
@@ -54,7 +66,10 @@ function focusConnector(edgeId: string): void {
 export function RouteHandles({ context, anchors }: RouteHandlesProps) {
   const editor = useEditor();
   const { getZoom, screenToFlowPosition } = useReactFlow();
+  // Only the selected connector draws handles, so following the zoom here is cheap.
+  const zoom = useStore(zoomSelector);
   const session = useRef<BendSession | null>(null);
+  const drag = useRef<PointerDrag | null>(null);
   const [active, setActive] = useState<{ key: string; index: number } | null>(null);
   const preview = useUiStore((s) =>
     s.bendPreview?.edgeId === context.edgeId ? s.bendPreview : null,
@@ -66,23 +81,51 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
   const live: BendContext = { ...context, bends };
   const dragging = active !== null;
 
+  // A drag outlives re-renders (window listeners), but not the handles: unmount cancels it.
+  useEffect(
+    () => () => {
+      drag.current?.cancel();
+    },
+    [],
+  );
+
+  /**
+   * Press on a bend or midpoint. Nothing changes until the pointer passes the drag threshold, so
+   * a click adds no bend (FR-003); then the bend follows the pointer wherever it goes (FR-002).
+   */
   function begin(event: PointerEvent<HTMLElement>, key: string, target: BendTarget) {
     if (event.button !== 0) return;
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    session.current = startBendDrag(editor, context, target);
-    setActive({ key, index: target.index });
-  }
-  function drag(event: PointerEvent<HTMLElement>) {
-    if (session.current === null) return;
-    moveBend(session.current, screenToFlowPosition({ x: event.clientX, y: event.clientY }), {
-      mod: event.metaKey || event.ctrlKey,
-      zoom: getZoom(),
+    drag.current?.cancel();
+    const start = context;
+    drag.current = startPointerDrag(event, {
+      onStart: () => {
+        session.current = startBendDrag(editor, start, target);
+        setActive({ key, index: target.index });
+      },
+      onMove: (e) => {
+        if (session.current === null) return;
+        moveBend(session.current, screenToFlowPosition({ x: e.clientX, y: e.clientY }), {
+          mod: e.metaKey || e.ctrlKey,
+          zoom: getZoom(),
+        });
+      },
+      onEnd: () => {
+        const s = session.current;
+        finish();
+        if (s !== null) endBendDrag(editor, s);
+      },
+      onCancel: () => {
+        const s = session.current;
+        finish();
+        if (s === null || s.cancelled) return;
+        cancelBendDrag(s);
+        useUiStore.getState().announce('Cancelled');
+      },
     });
   }
-  function end() {
-    if (session.current === null) return;
-    endBendDrag(editor, session.current);
+  function finish() {
+    drag.current = null;
     session.current = null;
     setActive(null);
   }
@@ -136,7 +179,7 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
   });
 
   return (
-    <EdgeLabelRenderer>
+    <ViewportPortal>
       {anchors !== undefined &&
         (['source', 'target'] as const).map((end) => (
           <button
@@ -158,7 +201,8 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
         ))}
       {points.slice(0, -1).map((from, i) => {
         const to = points[i + 1];
-        if (to === undefined || dragging) return null;
+        if (to === undefined) return null;
+        if (Math.hypot(to.x - from.x, to.y - from.y) * zoom < MIN_HANDLE_RUN) return null;
         const at = mid(from, to);
         return (
           <button
@@ -167,13 +211,13 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
             aria-label={`Add bend between points ${String(i + 1)} and ${String(i + 2)}`}
             data-kind="midpoint"
             data-testid="route-midpoint"
+            // During a drag the others stay mounted but out of reach (and of the a11y tree).
+            {...(dragging ? { 'aria-hidden': true, inert: true, tabIndex: -1 } : {})}
             className="sd-route-handle nodrag nopan absolute"
             style={placed(at)}
             onPointerDown={(event) => {
               begin(event, `mid-${String(i)}`, { kind: 'add', index: i, at });
             }}
-            onPointerMove={drag}
-            onPointerUp={end}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
                 addBendAt(editor, live, i, at);
@@ -200,8 +244,6 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
           onPointerDown={(event) => {
             begin(event, `bend-${String(i)}`, { kind: 'move', index: i });
           }}
-          onPointerMove={drag}
-          onPointerUp={end}
           onDoubleClick={() => {
             removeBend(editor, live, i);
           }}
@@ -223,6 +265,6 @@ export function RouteHandles({ context, anchors }: RouteHandlesProps) {
           {readout} · {String(bends.length)} {bends.length === 1 ? 'bend' : 'bends'}
         </span>
       )}
-    </EdgeLabelRenderer>
+    </ViewportPortal>
   );
 }

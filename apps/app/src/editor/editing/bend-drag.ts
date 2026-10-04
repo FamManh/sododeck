@@ -179,8 +179,9 @@ export function moveBend(
 
 /** Releases the pointer: writes the bends once (simplified), or nothing when nothing changed. */
 export function endBendDrag(editor: DeckEditor, session: BendSession): void {
-  if (session.cancelled) return;
+  // Every exit clears the gesture's UI state, even after a cancel or reset (050 R9).
   clearGesture();
+  if (session.cancelled) return;
   const kept = simplifyWaypoints(
     [session.start, ...session.live, session.end],
     SIMPLIFY_TOLERANCE,
@@ -193,7 +194,8 @@ export function endBendDrag(editor: DeckEditor, session: BendSession): void {
   else ui.announce(kept.length === 0 ? 'Bend removed' : 'Bend moved');
 }
 
-/** Esc: nothing was written, so dropping the preview is the whole cancel. */
+/** Esc, blur, `pointercancel` or unmount: nothing was written, so dropping the preview is the
+ * whole cancel. */
 export function cancelBendDrag(session: BendSession): void {
   session.cancelled = true;
   clearGesture();

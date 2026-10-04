@@ -74,19 +74,19 @@
 
 **Independent Test**: quickstart 1–3.
 
-- [ ] T007 [P] [US1] Write failing tests in `apps/app/src/editor/routing/route-handles.test.tsx`:
+- [x] T007 [P] [US1] Write failing tests in `apps/app/src/editor/routing/route-handles.test.tsx`:
   - a midpoint drag across 3 re-renders keeps updating `bendPreview` (this reproduces the unmount bug);
   - press and release under 4 px on a midpoint writes nothing and leaves no undo step;
   - midpoint handles are absent on runs shorter than 24 screen px (FR-004);
   - handles render inside `.react-flow__viewport-portal`;
   - Esc mid-drag restores the shape without a write;
   - `pointercancel` clears `bendPreview`, guides and `canvasGesture`.
-- [ ] T008 [US1] Rewrite pointer handling in `apps/app/src/editor/routing/route-handles.tsx`:
+- [x] T008 [US1] Rewrite pointer handling in `apps/app/src/editor/routing/route-handles.tsx`:
   - portal through `ViewportPortal` instead of `EdgeLabelRenderer`;
   - drive midpoint and bend drags through `startPointerDrag`, calling `startBendDrag` only in `onStart`, so a click adds nothing;
   - keep the other midpoint buttons mounted during a drag, but `aria-hidden` and inert;
   - hide midpoint handles on runs under 24 screen px (use `getZoom()`).
-- [ ] T009 [US1] Update `apps/app/src/editor/editing/bend-drag.ts` so that `clearGesture()` runs from every exit: `endBendDrag`, `cancelBendDrag`, and the pointer-drag `onCancel`. Make T007 pass.
+- [x] T009 [US1] Update `apps/app/src/editor/editing/bend-drag.ts` so that `clearGesture()` runs from every exit: `endBendDrag`, `cancelBendDrag`, and the pointer-drag `onCancel`. Make T007 pass.
 - [ ] T010 [P] [US1] Move `apps/app/src/editor/routing/label-handle.tsx` to `ViewportPortal` and `startPointerDrag`. Update `label-handle.test.tsx` so the label drag keeps working over a card and a click doesn't move it.
 
 **Checkpoint**: quickstart 1–3 pass. Bends and midpoints are reliable.

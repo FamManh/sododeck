@@ -14,7 +14,7 @@ import {
   startBendDrag,
   type BendContext,
 } from './bend-drag';
-import { cancelActiveGesture, resetActiveGesture } from './drag-session';
+import { cancelActiveGesture, hasActiveGesture, resetActiveGesture } from './drag-session';
 
 const file = (route?: NonNullable<SododeckFile['edges'][number]['route']>): SododeckFile => ({
   ...emptySododeckFile(),
@@ -151,6 +151,27 @@ describe('startBendDrag / moveBend / endBendDrag', () => {
     const session = startBendDrag(editor, ctx(), { kind: 'add', index: 0, at: { x: 1, y: 1 } });
     cancelBendDrag(session);
     expect(useUiStore.getState().bendPreview).toBeNull();
+  });
+
+  it.each([
+    ['release', 'end'],
+    ['cancel', 'cancel'],
+    ['release after a cancel', 'cancel-then-end'],
+  ] as const)('clears guides, preview, readout and the gesture on %s (050 R9)', (_name, exit) => {
+    const { editor } = setup();
+    const session = startBendDrag(editor, ctx(), { kind: 'add', index: 0, at: { x: 280, y: 125 } });
+    moveBend(session, { x: 300, y: 130 }, { mod: false, zoom: 1 });
+    if (exit === 'cancel' || exit === 'cancel-then-end') cancelBendDrag(session);
+    // Something left a guide behind after the cancel: the release must still clear it.
+    useUiStore.getState().setGuides([{ axis: 'x', at: 1, from: 0, to: 1 }]);
+    if (exit === 'end' || exit === 'cancel-then-end') endBendDrag(editor, session);
+    if (exit === 'cancel') cancelBendDrag(session);
+    const ui = useUiStore.getState();
+    expect(ui.guides).toHaveLength(0);
+    expect(ui.bendPreview).toBeNull();
+    expect(ui.connectorReadout).toBeNull();
+    expect(ui.canvasGesture).toBeNull();
+    expect(hasActiveGesture()).toBe(false);
   });
 });
 
