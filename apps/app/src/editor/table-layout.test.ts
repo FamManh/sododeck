@@ -7,6 +7,7 @@ import {
   effectiveDetail,
   rowAnchorY,
   rowAtSlot,
+  withForcedRows,
   withNewRow,
   tableLayout,
   TABLE_CARD,
@@ -305,5 +306,51 @@ describe('new-row editor slot (043 R3)', () => {
     const open = tableLayout(withNewRow({ ...empty }, 0), context(), 240, measure);
     expect(open.hasBody).toBe(true);
     expect(open.newRowIndex).toBe(0);
+  });
+});
+
+describe('forced rows: columns the current step touches (049 R3, FR-011)', () => {
+  const ROWS = TOP + 8;
+
+  it('keeps a touched column at Keys, in stored order, and counts only the truly hidden', () => {
+    const keys = tableLayout(
+      orders,
+      context({ detail: 'keys' }),
+      undefined,
+      measure,
+      new Set(['total_cents']),
+    );
+    expect(keys.rows.map((r) => r.columnId)).toEqual(['id', 'customer_id', 'total_cents']);
+    expect(keys.hidden).toEqual({ count: 4, kind: 'more' });
+    expect(keys.hiddenIds.has('total_cents')).toBe(false);
+    expect(keys.height).toBe(TOP + 8 + 3 * 24 + 6 + 24 + 24 + 8);
+    expect(rowAnchorY(keys, 'total_cents')).toEqual({ y: ROWS + 2 * 24 + 12, kind: 'row' });
+  });
+
+  it('draws touched rows at Names, the rest as "+n columns"', () => {
+    const names = tableLayout(
+      { ...orders, detail: 'names' },
+      context(),
+      undefined,
+      measure,
+      new Set(['status']),
+    );
+    expect(names.rows.map((r) => r.columnId)).toEqual(['status']);
+    expect(names.hidden).toEqual({ count: 6, kind: 'more' });
+  });
+
+  it('reads the mark a projection put on the node', () => {
+    const node = withForcedRows({ ...orders }, new Set(['created_at']));
+    const keys = layout(node, context({ detail: 'keys' }));
+    expect(keys.rows.map((r) => r.columnId)).toContain('created_at');
+    expect(layout(orders, context({ detail: 'keys' })).rows.map((r) => r.columnId)).not.toContain(
+      'created_at',
+    );
+  });
+
+  it('changes nothing at All', () => {
+    expect(tableLayout(orders, context(), undefined, measure, new Set(['id'])).rows).toHaveLength(
+      7,
+    );
   });
 });

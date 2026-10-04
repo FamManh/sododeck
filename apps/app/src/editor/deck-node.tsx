@@ -334,6 +334,7 @@ export const DeckNode = memo(function DeckNode({
                 focused={data.focused}
                 locked={data.locked === true}
                 tinted={look?.namedFill === true || customText !== undefined}
+                touched={data.touchedColumns}
               />
             ) : (
               <TableCompact layout={table} textClass={textRoleClass} />

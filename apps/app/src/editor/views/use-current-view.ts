@@ -16,7 +16,9 @@ import { useMemo } from 'react';
 import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { newRowAt, rowEditTableId, useUiStore, type UiState } from '../../state/ui-store';
-import { viewStateOf, type RowEditView, type ViewState } from './view-state';
+import { touchSets } from '../../db/touches';
+import { currentFlowStep } from '../flows/current-step';
+import { viewStateOf, type RowEditView, type TouchedRows, type ViewState } from './view-state';
 import { viewCrumbTitle } from './view-title';
 
 function rowEditView(tableId: string | null, at: number | null): RowEditView | null {
@@ -28,16 +30,38 @@ function rowEditOf(state: UiState): RowEditView | null {
   return rowEditView(rowEditTableId(state), newRowAt(state));
 }
 
+/** The rows the current flow step touches (049), the same object while the step is unchanged. */
+function touchedRowsOf(
+  file: SododeckFile,
+  state: Pick<UiState, 'activeFlow' | 'flowSession'>,
+): TouchedRows | null {
+  const rows = touchSets(currentFlowStep(file, state)).rows;
+  return rows.size === 0 ? null : rows;
+}
+
 /** The current view state without subscribing (event handlers). */
 export function readViewState(doc: DeckDoc): ViewState {
   const state = useUiStore.getState();
-  return viewStateOf(readDeck(doc), state.currentViewId, state.revealed, rowEditOf(state));
+  const file = readDeck(doc);
+  return viewStateOf(
+    file,
+    state.currentViewId,
+    state.revealed,
+    rowEditOf(state),
+    touchedRowsOf(file, state),
+  );
 }
 
 /** `file` as the current view draws it (see `ViewState.deck`); for pure helpers given a snapshot. */
 export function canvasDeckOf(file: SododeckFile): SododeckFile {
   const state = useUiStore.getState();
-  return viewStateOf(file, state.currentViewId, state.revealed, rowEditOf(state)).deck;
+  return viewStateOf(
+    file,
+    state.currentViewId,
+    state.revealed,
+    rowEditOf(state),
+    touchedRowsOf(file, state),
+  ).deck;
 }
 
 /** The id the view ops write to: the current view (the first one when none is chosen). */
@@ -54,7 +78,10 @@ export function useViewState(): ViewState {
   const editTable = useUiStore(rowEditTableId);
   const at = useUiStore(newRowAt);
   const rowEdit = useMemo(() => rowEditView(editTable, at), [editTable, at]);
-  return viewStateOf(deck, currentViewId, revealed, rowEdit);
+  const activeFlow = useUiStore((s) => s.activeFlow);
+  const flowSession = useUiStore((s) => s.flowSession);
+  const touched = touchedRowsOf(deck, { activeFlow, flowSession });
+  return viewStateOf(deck, currentViewId, revealed, rowEdit, touched);
 }
 
 /** Stored views, or the presets while the deck has none. */

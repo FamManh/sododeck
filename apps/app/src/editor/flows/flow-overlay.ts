@@ -6,7 +6,7 @@
 import type { FlowAnalysis, PathStep, TouchAccess } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
-import { cardChip, type TouchChip } from '../../db/touches';
+import { cardChip, touchSets, type TouchChip } from '../../db/touches';
 import { isDatabaseCard } from '../../db/owner';
 import type { FlowSession } from '../../state/ui-store';
 import { sessionPath } from './session-path';
@@ -182,20 +182,11 @@ function markTouches(
     playback.currentStepId === null
       ? undefined
       : analysis.byStepId.get(playback.currentStepId)?.step;
-  const touches = step?.touches;
-  if (step === undefined || touches === undefined || touches.length === 0) return;
-  const columns = new Map<string, Map<string, TouchAccess>>();
-  const tables = new Map<string, TouchAccess>();
-  for (const touch of touches) {
-    if (tables.get(touch.table) !== 'write') tables.set(touch.table, touch.access);
-    if (touch.column === undefined) continue;
-    const own = columns.get(touch.table) ?? new Map<string, TouchAccess>();
-    own.set(touch.column, touch.access);
-    columns.set(touch.table, own);
-  }
+  const { tables, byTable } = touchSets(step);
+  if (step === undefined || tables.size === 0) return;
   for (const [tableId, access] of tables) {
     const mark = nodes.get(tableId) ?? { inPath: true, currentStep: true, step: null };
-    const own = columns.get(tableId);
+    const own = byTable.get(tableId);
     nodes.set(tableId, { ...mark, touch: access, ...(own === undefined ? {} : { columns: own }) });
   }
   for (const card of deck.nodes) {

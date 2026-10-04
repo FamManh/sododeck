@@ -6,6 +6,8 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 
+import { playerNotes, playerNoteText } from '../../db/touches';
+import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { groupAtStep } from '../collapse-flow-marks';
@@ -52,6 +54,21 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
   const progress = useRef<HTMLOListElement>(null);
   usePlayback();
   const currentId = playback?.currentStepId ?? null;
+  // Tables the step touches that this level cannot light (049): other cards, no card, or left
+  // out by the view's filter. The full deck names them; `deck` is the view's.
+  const fullDeck = useDeckSnapshot(editor.doc);
+  const currentStep =
+    currentId === null ? undefined : playback?.analysis.byStepId.get(currentId)?.step;
+  const touchNote = useMemo(
+    () =>
+      playerNoteText(
+        playerNotes(fullDeck, currentStep, {
+          drawn: new Set(graph.representative.keys()),
+          inView: new Set(deck.nodes.map((node) => node.id)),
+        }),
+      ),
+    [fullDeck, currentStep, graph, deck.nodes],
+  );
 
   // Long flows scroll horizontally; keep the current segment in view. Only the list scrolls:
   // scrollIntoView would also scroll the canvas's ancestors.
@@ -148,6 +165,15 @@ export function StepPlayer({ deck }: { deck: SododeckFile }) {
         </Button>
         <NotesDisplayMenu />
       </div>
+      {touchNote !== null && (
+        <p
+          data-testid="touch-note"
+          className="truncate text-body-sm text-ink-secondary"
+          title={touchNote}
+        >
+          {touchNote}
+        </p>
+      )}
       {view !== null && (
         <ol
           ref={progress}

@@ -13,9 +13,18 @@ export interface TouchSets {
   tables: ReadonlyMap<Id, TouchAccess>;
   /** Touched columns with their access. */
   columns: ReadonlyMap<Id, TouchAccess>;
+  /** Touched columns per table: the rows a table must draw and mark (R / W). */
+  byTable: ReadonlyMap<Id, ReadonlyMap<Id, TouchAccess>>;
+  /** The same as sets of column ids, the forced rows `tableLayout` takes. */
+  rows: ReadonlyMap<Id, ReadonlySet<Id>>;
 }
 
-const EMPTY_SETS: TouchSets = { tables: new Map(), columns: new Map() };
+const EMPTY_SETS: TouchSets = {
+  tables: new Map(),
+  columns: new Map(),
+  byTable: new Map(),
+  rows: new Map(),
+};
 const setsCache = new WeakMap<Step, TouchSets>();
 
 /**
@@ -29,11 +38,19 @@ export function touchSets(step: Pick<Step, 'touches'> | null | undefined): Touch
   if (cached !== undefined) return cached;
   const tables = new Map<Id, TouchAccess>();
   const columns = new Map<Id, TouchAccess>();
+  const byTable = new Map<Id, Map<Id, TouchAccess>>();
   for (const touch of step.touches) {
     if (tables.get(touch.table) !== 'write') tables.set(touch.table, touch.access);
-    if (touch.column !== undefined) columns.set(touch.column, touch.access);
+    if (touch.column === undefined) continue;
+    columns.set(touch.column, touch.access);
+    const own = byTable.get(touch.table) ?? new Map<Id, TouchAccess>();
+    own.set(touch.column, touch.access);
+    byTable.set(touch.table, own);
   }
-  const sets = { tables, columns };
+  const rows = new Map<Id, ReadonlySet<Id>>(
+    [...byTable].map(([tableId, own]) => [tableId, new Set(own.keys())]),
+  );
+  const sets = { tables, columns, byTable, rows };
   setsCache.set(step as Step, sets);
   return sets;
 }
