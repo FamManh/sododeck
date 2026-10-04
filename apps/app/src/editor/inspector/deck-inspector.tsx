@@ -16,7 +16,7 @@ import { useRuleNav } from '../rules/rule-nav';
 import { TagsField } from '../fields/tags-field';
 import { deckStats } from './derive';
 import { InspectorFrame } from './inspector-frame';
-import { TableDisplaySection } from './table-display-section';
+import { DatabaseSection } from './database/database-section';
 
 const noop = () => undefined;
 
@@ -118,7 +118,7 @@ export function DeckInspector({
           </li>
         </ul>
       </PanelSection>
-      <TableDisplaySection deck={deck} />
+      <DatabaseSection deck={deck} />
       <DeckInspectorStorage />
     </InspectorFrame>
   );

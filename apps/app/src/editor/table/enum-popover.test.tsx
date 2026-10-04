@@ -86,6 +86,21 @@ describe('enum values popover (041 US2)', () => {
     expect(chip).toHaveFocus();
   });
 
+  it('"Edit enum" opens the enum drawer and closes the popover (052 US4)', async () => {
+    const user = userEvent.setup();
+    renderTable();
+    await user.click(screen.getByRole('button', { name: 'order_status values' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit enum' }));
+    expect(useUiStore.getState().drawer).toMatchObject({
+      open: true,
+      mode: 'enum',
+      enumId: 'e-status',
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
   it('says "No values" for an empty enum, and keeps one popover open at a time', async () => {
     const user = userEvent.setup();
     renderTable();

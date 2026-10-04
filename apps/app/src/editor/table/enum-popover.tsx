@@ -1,4 +1,5 @@
 import type { DbEnum, SododeckFile } from '@sododeck/schema';
+import { Button } from '@sododeck/ui/components/button';
 import { Popover, PopoverAnchor, PopoverContent } from '@sododeck/ui/components/popover';
 import { useRef } from 'react';
 
@@ -21,8 +22,8 @@ function enumOf(deck: SododeckFile, target: Target): DbEnum | undefined {
 
 /**
  * The one enum values popover of the canvas (041 FR-011, research R7): the enum's name and its
- * values in order with their notes, anchored to the chip that opened it. Mounted once; renders
- * nothing while closed.
+ * values in order with their notes and an "Edit enum" button (052), anchored to the chip that
+ * opened it. Mounted once; renders nothing while closed.
  */
 export function EnumPopover({ deck }: { deck: SododeckFile }) {
   const target = useUiStore((s) => s.enumPopover);
@@ -36,6 +37,7 @@ export function EnumPopover({ deck }: { deck: SododeckFile }) {
 
 function EnumPopoverContent({ target, item }: { target: Target; item: DbEnum }) {
   const close = useUiStore((s) => s.closeEnumPopover);
+  const openEnumDrawer = useUiStore((s) => s.openEnumDrawer);
   const virtualRef = useRef({
     getBoundingClientRect: () => chipElement(target)?.getBoundingClientRect() ?? new DOMRect(),
   });
@@ -83,6 +85,17 @@ function EnumPopoverContent({ target, item }: { target: Target; item: DbEnum }) 
             ))}
           </ul>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start"
+          onClick={() => {
+            close();
+            openEnumDrawer(item.id);
+          }}
+        >
+          Edit enum
+        </Button>
       </PopoverContent>
     </Popover>
   );

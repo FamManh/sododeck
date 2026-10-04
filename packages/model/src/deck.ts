@@ -135,6 +135,7 @@ export function fromJSON(input: unknown): DeckDoc {
     }
     // Database schema (040, R5–R6): lazy like `fields`, so an older deck stays without them.
     if (file.dialect !== undefined) meta.set('dialect', file.dialect);
+    if (file.blockSqlExport !== undefined) meta.set('blockSqlExport', file.blockSqlExport);
     if (file.enums !== undefined) {
       const enums = new Y.Map<YObject>();
       const enumKeys = keysBetween(null, null, file.enums.length);

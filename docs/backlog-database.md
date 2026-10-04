@@ -337,6 +337,7 @@ values: { id, name, note? }[] }`;
 
 ## 052-db-drawer
 
+- **Status:** built (`specs/052-db-drawer`, ADR 0029 amendment).
 - **Milestone:** after 043 · **Depends on:** 043, 018 (details drawer) · **Estimate:** 4 d
 - **Goal:** Every table, relationship and enum setting has an editing surface, and column types
   follow the deck's dialect.

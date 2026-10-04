@@ -49,6 +49,7 @@ const ELEMENT_SCHEMAS = {
       packs: true,
       dialect: true,
       groupingMode: true,
+      blockSqlExport: true,
       tableDisplay: true,
       relationshipDisplay: true,
     })

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_JSON_PANEL, JSON_PANEL_KEY } from './json-panel-prefs';
 import {
+  hasDetailsTarget,
   isFlowMode,
   LABELS_KEY,
   newRowAt,
@@ -994,6 +995,67 @@ describe('ui store: schema import (044)', () => {
       state().openTableFilter('t1');
       state().resetForDeck('d2');
       expect(state().tableFilter).toBeNull();
+    });
+  });
+
+  describe('database drawer routing (052)', () => {
+    it('openTableDrawer selects the table, sets the tab and opens the drawer', () => {
+      state().openTableDrawer('orders', { tab: 'columns', columnId: 'c1' });
+      expect(state().selection.nodes).toEqual(['orders']);
+      expect(state().tableDrawer).toEqual({
+        tab: 'columns',
+        expandedColumnId: 'c1',
+        focusColumnId: 'c1',
+      });
+      expect(state().drawer.open).toBe(true);
+      expect(state().drawer.mode).toBe('selection');
+    });
+
+    it('openTableDrawer defaults to General with no row', () => {
+      state().openTableDrawer('orders');
+      expect(state().tableDrawer).toEqual({
+        tab: 'general',
+        expandedColumnId: null,
+        focusColumnId: null,
+      });
+    });
+
+    it('openEnumDrawer opens the enum mode', () => {
+      state().openEnumDrawer('e1');
+      expect(state().drawer).toMatchObject({ open: true, mode: 'enum', enumId: 'e1' });
+      state().closeDrawer();
+      expect(state().drawer.open).toBe(false);
+      expect(state().drawer.mode).toBe('selection');
+    });
+
+    it('resets the table drawer when the selection changes', () => {
+      state().openTableDrawer('orders', { tab: 'indexes' });
+      state().setTableDrawerTab('checks');
+      expect(state().tableDrawer.tab).toBe('checks');
+      state().select({ nodes: ['customers'] });
+      expect(state().tableDrawer.tab).toBe('general');
+      state().expandColumn('c2');
+      expect(state().tableDrawer.expandedColumnId).toBe('c2');
+      state().expandColumn(null);
+      expect(state().tableDrawer.expandedColumnId).toBeNull();
+      state().clearSelection();
+      expect(state().tableDrawer.tab).toBe('general');
+    });
+
+    it('finds the enum target only while the enum exists', () => {
+      state().openEnumDrawer('e1');
+      const withEnum = { enums: [{ id: 'e1' }] };
+      expect(hasDetailsTarget(state(), withEnum)).toBe(true);
+      expect(hasDetailsTarget(state(), { enums: [] })).toBe(false);
+      expect(hasDetailsTarget(state(), {})).toBe(false);
+    });
+
+    it('holds and clears the dialect confirm', () => {
+      const plan = { from: 'postgres', to: 'mysql', changes: [], kept: [] } as const;
+      state().setDialectConfirm({ ...plan, changes: [], kept: [] });
+      expect(state().dialectConfirm?.to).toBe('mysql');
+      state().setDialectConfirm(null);
+      expect(state().dialectConfirm).toBeNull();
     });
   });
 });

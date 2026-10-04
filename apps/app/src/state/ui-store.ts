@@ -16,6 +16,7 @@ import {
   type FlyoutId,
   type ShellPrefs,
 } from '../editor/shell/shell-prefs';
+import type { DialectPlan } from '../db/dialect-change';
 import type { ImportReport, SuggestionState } from '../db/import/types';
 import type { ConnectionCheck } from '../editor/connection-rules';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
@@ -205,12 +206,27 @@ export interface LayoutRun {
  * The details drawer (018): `selection` shows the inspector of the current selection and closes
  * when there is nothing left to show; `deck` shows the deck (Deck settings) whatever is selected.
  */
-export interface DrawerState {
+export type DrawerState = {
   open: boolean;
   /** px, 320–560 (`clampDrawerWidth`). */
   width: number;
-  mode: 'selection' | 'deck';
+} & ({ mode: 'selection' | 'deck' } | { mode: 'enum'; enumId: Id });
+
+/** The table drawer's tabs (052). */
+export type TableTab = 'general' | 'columns' | 'indexes' | 'checks';
+
+/** The table drawer's tab and expanded row (052 R1); UI only, reset on selection change. */
+export interface TableDrawerState {
+  tab: TableTab;
+  expandedColumnId: Id | null;
+  focusColumnId: Id | null;
 }
+
+export const DEFAULT_TABLE_DRAWER: TableDrawerState = {
+  tab: 'general',
+  expandedColumnId: null,
+  focusColumnId: null,
+};
 
 /**
  * Rail tools (018 R8). Select drags a marquee and Hand pans (§g-57); both stay on. Sticky and
@@ -492,6 +508,12 @@ export interface UiState {
   sessionPinReturn: { pinned: FlyoutId | null; shown: FlyoutId | null } | null;
   addFlyout: PaletteState;
   drawer: DrawerState;
+  /** Table drawer tab and expanded row (052); never saved. */
+  tableDrawer: TableDrawerState;
+  /** The planned dialect change awaiting confirmation (052); null when none. */
+  dialectConfirm: DialectPlan | null;
+  /** The enum whose name field selects itself once it mounts (a new enum, 052); then null. */
+  enumNameSelect: Id | null;
   /**
    * A drawer section to bring into view once (032: the card's "+N fields" pill asks for
    * `'fields'`); the section clears it after scrolling to itself. UI-only.
@@ -684,9 +706,17 @@ export interface UiState {
   pinForSession: () => void;
   restoreAfterSession: () => void;
   /** Opens the drawer; without a selection it shows the deck. */
-  openDrawer: (mode?: DrawerState['mode']) => void;
+  openDrawer: (mode?: 'selection' | 'deck') => void;
   /** Opens the details drawer on the selection and scrolls to `section` (032). */
   openDrawerAt: (section: 'fields') => void;
+  /** Selects the table and opens its drawer on `tab` (General by default) (052). */
+  openTableDrawer: (tableId: Id, options?: { tab?: TableTab; columnId?: Id }) => void;
+  /** Opens the enum drawer for an enum (052); `selectName` asks the name field to select itself. */
+  openEnumDrawer: (enumId: Id, options?: { selectName?: boolean }) => void;
+  setTableDrawerTab: (tab: TableTab) => void;
+  /** Expands one column row of the Columns tab, or collapses all with null. */
+  expandColumn: (columnId: Id | null) => void;
+  setDialectConfirm: (plan: DialectPlan | null) => void;
   clearDrawerSection: () => void;
   closeDrawer: () => void;
   toggleDrawer: () => void;
@@ -750,8 +780,14 @@ export interface UiState {
  * or recorded flow (its inspector needs no canvas selection).
  */
 export function hasDetailsTarget(
-  state: Pick<UiState, 'selection' | 'activeFlow' | 'flowSession'>,
+  state: Pick<UiState, 'selection' | 'activeFlow' | 'flowSession' | 'drawer'>,
+  deck?: { enums?: readonly { id: Id }[] },
 ): boolean {
+  // The enum drawer has no canvas selection: it stays while its enum exists (052 FR-005).
+  if (state.drawer.mode === 'enum') {
+    const { enumId } = state.drawer;
+    return deck === undefined || (deck.enums?.some((e) => e.id === enumId) ?? false);
+  }
   const { nodes, edges, groups, stickies } = state.selection;
   return (
     nodes.length + edges.length + groups.length + stickies.length > 0 ||
@@ -920,6 +956,9 @@ export const useUiStore = create<UiState>()((set, get) => {
     addFlyout: PALETTE_INITIAL,
     sessionPinReturn: null,
     drawer: { open: false, width: DEFAULT_SHELL_PREFS.drawerWidth, mode: 'selection' },
+    tableDrawer: DEFAULT_TABLE_DRAWER,
+    dialectConfirm: null,
+    enumNameSelect: null,
     drawerSection: null,
     drawerReturn: null,
     jsonShown: false,
@@ -956,6 +995,7 @@ export const useUiStore = create<UiState>()((set, get) => {
       set((state) => ({
         selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
         tableFilter: filterFor(state.tableFilter, nodes),
+        tableDrawer: DEFAULT_TABLE_DRAWER,
         descriptionMode: NO_MODES,
         stylePreview: null,
         // Selecting on the canvas leaves the flow (outside a session, which keeps its flow).
@@ -971,6 +1011,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         return {
           selection: next,
           tableFilter: filterFor(state.tableFilter, next.nodes),
+          tableDrawer: DEFAULT_TABLE_DRAWER,
           descriptionMode: NO_MODES,
           stylePreview: null,
         };
@@ -980,6 +1021,7 @@ export const useUiStore = create<UiState>()((set, get) => {
       set({
         selection: EMPTY_SELECTION,
         tableFilter: null,
+        tableDrawer: DEFAULT_TABLE_DRAWER,
         descriptionMode: NO_MODES,
         stylePreview: null,
       });
@@ -1515,6 +1557,36 @@ export const useUiStore = create<UiState>()((set, get) => {
         drawerReturn: state.focusedId,
       });
     },
+    openTableDrawer: (tableId, options) => {
+      get().select({ nodes: [tableId] });
+      set({
+        tableDrawer: {
+          tab: options?.tab ?? (options?.columnId === undefined ? 'general' : 'columns'),
+          expandedColumnId: options?.columnId ?? null,
+          focusColumnId: options?.columnId ?? null,
+        },
+      });
+      get().openDrawer('selection');
+    },
+    openEnumDrawer: (enumId, options) => {
+      const state = get();
+      set({
+        enumNameSelect: options?.selectName === true ? enumId : null,
+        drawer: { ...state.drawer, open: true, mode: 'enum', enumId },
+        drawerReturn: state.focusedId,
+      });
+    },
+    setTableDrawerTab: (tab) => {
+      set(({ tableDrawer }) => ({ tableDrawer: { ...tableDrawer, tab } }));
+    },
+    expandColumn: (columnId) => {
+      set(({ tableDrawer }) => ({
+        tableDrawer: { ...tableDrawer, expandedColumnId: columnId, focusColumnId: null },
+      }));
+    },
+    setDialectConfirm: (plan) => {
+      set({ dialectConfirm: plan });
+    },
     openDrawerAt: (section) => {
       get().openDrawer('selection');
       set({ drawerSection: section });
@@ -1666,6 +1738,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         pinnedFlyout: prefs.pinnedFlyout,
         sessionPinReturn: null,
         drawer: { open: false, width: prefs.drawerWidth, mode: 'selection' },
+        tableDrawer: DEFAULT_TABLE_DRAWER,
+        dialectConfirm: null,
+        enumNameSelect: null,
         drawerReturn: null,
         hideUi: false,
         minimap: false,

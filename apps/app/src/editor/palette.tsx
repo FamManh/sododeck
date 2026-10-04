@@ -13,7 +13,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
-import { ChevronRight, FileCode2, Frame, Package, StickyNote } from 'lucide-react';
+import { ChevronRight, FileCode2, Frame, List, Package, StickyNote } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { NodeTypeTile } from './shapes/shape-tile';
@@ -24,6 +24,7 @@ import { addComponent, addTable, canvasElement, centredOn, PALETTE_ID } from './
 import { groupableCount, groupFromSelection } from './editing/group-from-selection';
 import { armFrameTool, placeFrameAtCentre } from './frame-tool/frame-actions';
 import { neighbour } from './grid-nav';
+import { addEnumAndOpen } from './inspector/enum/add-enum-and-open';
 import { PacksPanel } from './packs-panel';
 import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
 import { NOTE_MIME, TYPE_MIME } from './use-canvas-handlers';
@@ -42,10 +43,14 @@ interface Section {
 
 /** Tool tiles' ids in the roving focus; never type ids, so keys 1–9 never add one. */
 const toolTileId = (tool: PackTool) => `tool:${tool}`;
-const TOOL_NAMES: Record<PackTool, string> = { sticky: 'Sticky', frame: 'Frame' };
+const TOOL_NAMES: Record<PackTool, string> = { sticky: 'Sticky', frame: 'Frame', enum: 'Enum' };
 
 /** The Database section names its tools after what they make (043 R13, frame 168). */
-const DATABASE_TOOL_NAMES: Record<PackTool, string> = { sticky: 'Note', frame: 'Table group' };
+const DATABASE_TOOL_NAMES: Record<PackTool, string> = {
+  sticky: 'Note',
+  frame: 'Table group',
+  enum: 'Enum',
+};
 
 /** Letter keys shown on the Database tiles (frame 168): T, S and G. */
 const DATABASE_KEYS: Readonly<Record<string, string>> = {
@@ -304,7 +309,7 @@ export function Palette() {
                 })}
                 {section.tools.map((tool) => {
                   const tileId = toolTileId(tool);
-                  const Icon = tool === 'sticky' ? StickyNote : Frame;
+                  const Icon = tool === 'sticky' ? StickyNote : tool === 'enum' ? List : Frame;
                   const name = toolName(section.id, tool);
                   const letter = section.id === 'database' ? DATABASE_KEYS[tool] : undefined;
                   const button = (
@@ -325,6 +330,11 @@ export function Palette() {
                       onClick={(event) => {
                         if (tool === 'sticky') {
                           if (!readOnly) addNoteAt(editor, centrePoint());
+                          return;
+                        }
+                        // An enum has no place on the canvas: it opens its drawer (052).
+                        if (tool === 'enum') {
+                          addEnumAndOpen(editor, deck);
                           return;
                         }
                         // Table group (043 R13): groups the selection, else a frame at the centre.

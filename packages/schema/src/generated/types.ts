@@ -282,6 +282,10 @@ export interface SododeckFile {
   fieldDefaults?: TypeId[];
   dialect?: Dialect;
   /**
+   * Database pack (052): SQL export is refused while the export scope has database errors. Absent means off.
+   */
+  blockSqlExport?: true;
+  /**
    * Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.
    */
   enums?: DbEnum[];

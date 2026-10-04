@@ -57,10 +57,35 @@ beforeEach(() => {
 });
 
 describe('row actions (043 US4, R8)', () => {
+  it('"Edit details" opens the drawer on Columns with the row expanded (052 R4)', () => {
+    run(undefined, rowTarget('c2'), 'row.details');
+    expect(ui().drawer.open).toBe(true);
+    expect(ui().selection.nodes).toEqual(['t']);
+    expect(ui().tableDrawer).toEqual({
+      tab: 'columns',
+      expandedColumnId: 'c2',
+      focusColumnId: 'c2',
+    });
+    expect(ui().columnEdit).toBeNull();
+  });
+
+  it('keeps "Edit" as the line editor', () => {
+    run(undefined, rowTarget('c2'), 'row.edit');
+    expect(ui().columnEdit).toMatchObject({ tableId: 't', columnId: 'c2' });
+    expect(ui().drawer.open).toBe(false);
+  });
+
+  it('"Open details" on a table opens the drawer on General', () => {
+    run(undefined, { kind: 'component', ids: sel({ nodes: ['t'] }) }, 'details.open');
+    expect(ui().drawer.open).toBe(true);
+    expect(ui().tableDrawer.tab).toBe('general');
+  });
+
   it('lists the row menu of frame 149, with checks showing the flags', () => {
     const items = menuOf(rowTarget('c1'));
     expect(items.map((a) => a.label)).toEqual([
       'Edit',
+      'Edit details',
       'Set as primary key',
       'Not null',
       'Unique',
