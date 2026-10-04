@@ -83,7 +83,11 @@ function neighbours(session: BendContext & { live: readonly Point[]; index: numb
   return [before, after].filter((p): p is Point => p !== undefined);
 }
 
-function waypointsOf(ctx: BendContext, bends: readonly Point[]): RouteWaypoint[] {
+/** The bends as stored waypoints, relative to both card centres, with short numbers. */
+export function waypointsOf(
+  ctx: Pick<BendContext, 'fromCentre' | 'toCentre'>,
+  bends: readonly Point[],
+): RouteWaypoint[] {
   return bends.map((p) => tidyWaypoint(encodeWaypoint(p, ctx.fromCentre, ctx.toCentre)));
 }
 

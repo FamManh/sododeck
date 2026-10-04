@@ -256,12 +256,19 @@ export type CanvasGesture =
   | 'bend'
   | 'anchor'
   | 'label'
-  | 'endpoint';
+  | 'endpoint'
+  | 'segment';
 
-/** The bends of a connector while one is dragged (022): UI-only until release, then one op. */
+/**
+ * The bends of a connector while one is dragged (022): UI-only until release, then one op. A
+ * segment drag (050 R7) uses it too; dragging a start or end run also moves that end along its
+ * side, so `fromAt` / `toAt` (when set) override the route's own while drawing the preview.
+ */
 export interface BendPreview {
   edgeId: Id;
   bends: readonly { x: number; y: number }[];
+  fromAt?: number;
+  toAt?: number;
 }
 
 /**
