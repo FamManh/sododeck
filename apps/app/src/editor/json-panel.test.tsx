@@ -47,6 +47,17 @@ vi.mock('./json-viewer', () => ({
   ),
 }));
 
+vi.mock('./code/dbml-tab', () => ({
+  DbmlTab: ({ scope }: { scope: string }) => (
+    <section role="region" aria-label="DBML schema" data-scope={scope} />
+  ),
+}));
+vi.mock('./code/sql-tab', () => ({
+  SqlTab: ({ scope }: { scope: string }) => (
+    <section role="region" aria-label="SQL schema" data-scope={scope} />
+  ),
+}));
+
 function setup() {
   const { wrapper, editor, doc } = editorWrapper(demoDeck);
   const view = render(<JsonPanel />, { wrapper });
@@ -440,5 +451,44 @@ describe('tag colours in the Deck tab (033, US5)', () => {
     const swatches = text.indexOf('"swatches"');
     const tagColors = text.indexOf('"tagColors"');
     if (swatches !== -1) expect(tagColors).toBeGreaterThan(swatches);
+  });
+});
+
+describe('JsonPanel — code formats (046)', () => {
+  it('opens on JSON and switches to DBML and SQL, remembering the choice', async () => {
+    const { user } = setup();
+    const tabs = screen.getByRole('tablist', { name: 'Code format' });
+    expect(within(tabs).getByRole('tab', { name: 'JSON' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.queryByRole('region', { name: 'DBML schema' })).not.toBeInTheDocument();
+
+    await user.click(within(tabs).getByRole('tab', { name: 'DBML' }));
+    expect(await screen.findByRole('region', { name: 'DBML schema' })).toBeInTheDocument();
+    expect(useUiStore.getState().jsonPanel.format).toBe('dbml');
+    expect(loadJsonPanelPrefs().format).toBe('dbml');
+    expect(screen.queryByText('Read-only · synced with canvas')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy JSON' })).not.toBeInTheDocument();
+
+    await user.click(within(tabs).getByRole('tab', { name: 'SQL' }));
+    expect(await screen.findByRole('region', { name: 'SQL schema' })).toBeInTheDocument();
+
+    await user.click(within(tabs).getByRole('tab', { name: 'JSON' }));
+    expect(await deckPre()).toBeInTheDocument();
+  });
+
+  it('switches the scope of DBML and SQL between Selection and Whole schema', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('tab', { name: 'DBML' }));
+    const scope = screen.getByRole('radiogroup', { name: 'Schema scope' });
+    expect(within(scope).getByRole('radio', { name: 'Selection' })).toBeChecked();
+    await user.click(within(scope).getByRole('radio', { name: 'Whole schema' }));
+    expect(useUiStore.getState().jsonPanel.schemaScope).toBe('schema');
+    expect(await screen.findByRole('region', { name: 'DBML schema' })).toHaveAttribute(
+      'data-scope',
+      'schema',
+    );
+    expect(screen.queryByRole('radiogroup', { name: 'JSON view' })).not.toBeInTheDocument();
   });
 });
