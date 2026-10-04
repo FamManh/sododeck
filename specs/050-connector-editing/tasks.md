@@ -301,7 +301,7 @@
   - group ends work (US4);
   - same input gives the same output.
 - [x] T046 [US7] Implement `apps/app/src/editor/editing/spread-ends.ts` (`spreadEnds`). Make T045 pass.
-- [ ] T047 [US7] Add the action `node.spreadEnds` to `apps/app/src/editor/actions/connection-actions.ts` (`where: { menu: ['node'], toolbar: ['node'] }`, label "Spread ends evenly", `disabledReason` "No side has two or more connector ends"). `run` writes every patch in one `oneStep` and announces "Spread N ends on M sides". Add a palette command "Spread connector ends evenly" (alias "distribute ends") in `apps/app/src/editor/command-palette/commands.ts`. Extend `connection-actions.test.ts` and the palette tests.
+- [X] T047 [US7] Add the action `node.spreadEnds` to `apps/app/src/editor/actions/connection-actions.ts` (`where: { menu: ['node'], toolbar: ['node'] }`, label "Spread ends evenly", `disabledReason` "No side has two or more connector ends"). `run` writes every patch in one `oneStep` and announces "Spread N ends on M sides". Add a palette command "Spread connector ends evenly" (alias "distribute ends") in `apps/app/src/editor/command-palette/commands.ts`. Extend `connection-actions.test.ts` and the palette tests.
 
 **Checkpoint**: quickstart 17 passes.
 
