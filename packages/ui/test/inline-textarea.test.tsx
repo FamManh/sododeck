@@ -21,6 +21,42 @@ describe('InlineTextarea', () => {
     expect(field.style.height).toBe('54px');
   });
 
+  it('with fitWidth, is one line as wide as its text, or its placeholder when empty', () => {
+    const { rerender } = render(
+      <InlineTextarea aria-label="Title" value="Core" fitWidth onChange={() => {}} />,
+    );
+    const field = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Title' });
+    expect(field).toHaveClass('whitespace-nowrap', 'overflow-hidden');
+    // jsdom has no layout: the width is the measured scroll width, +2 for the caret.
+    const widthOf = (text: string) => text.length * 7;
+    Object.defineProperty(field, 'scrollWidth', {
+      configurable: true,
+      get: () => widthOf(field.value),
+    });
+    rerender(
+      <InlineTextarea aria-label="Title" value="Core services" fitWidth onChange={() => {}} />,
+    );
+    expect(field.style.width).toBe(`${String(13 * 7 + 2)}px`);
+    rerender(
+      <InlineTextarea
+        aria-label="Title"
+        value=""
+        placeholder="Name this group"
+        fitWidth
+        onChange={() => {}}
+      />,
+    );
+    expect(field.style.width).toBe(`${String(15 * 7 + 2)}px`);
+    expect(field).toHaveValue('');
+  });
+
+  it('without fitWidth, leaves the width to its classes', () => {
+    render(<InlineTextarea aria-label="Title" value="Core" onChange={() => {}} />);
+    const field = screen.getByRole('textbox', { name: 'Title' });
+    expect(field.style.width).toBe('');
+    expect(field).toHaveClass('w-full');
+  });
+
   it('forwards its ref to the textarea', () => {
     let node: HTMLTextAreaElement | null = null;
     render(
