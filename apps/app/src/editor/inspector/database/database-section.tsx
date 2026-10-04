@@ -86,7 +86,7 @@ export function DatabaseSection({ deck }: { deck: SododeckFile }) {
       </ul>
       <RelationshipDisplayControls deck={deck} />
       {/* TODO(052 T039): <EnumList deck={deck} /> goes here. */}
-      {/* TODO(052 T050): the "Block SQL export with errors" switch goes here. */}
+      <BlockSqlExportSwitch deck={deck} />
     </PanelSection>
   );
 }
@@ -162,5 +162,33 @@ function RelationshipDisplayControls({ deck }: { deck: SododeckFile }) {
         </div>
       </div>
     </>
+  );
+}
+
+/** "Block SQL export with errors" (052 US6): the export dialog reads it; DBML and the rest export. */
+function BlockSqlExportSwitch({ deck }: { deck: SododeckFile }) {
+  const editor = useEditor();
+  const id = useId();
+  return (
+    <div className="flex items-center justify-between gap-3 pt-2">
+      <div className="flex min-w-0 flex-col">
+        <label htmlFor={id} className="text-body-sm text-ink">
+          Block SQL export with errors
+        </label>
+        <span id={`${id}-help`} className="text-caption text-ink-secondary">
+          DBML, Mermaid and JSON still export
+        </span>
+      </div>
+      <Switch
+        id={id}
+        aria-describedby={`${id}-help`}
+        checked={deck.blockSqlExport === true}
+        onCheckedChange={(checked) => {
+          oneStep(editor, () => {
+            editor.setBlockSqlExport(checked);
+          });
+        }}
+      />
+    </div>
   );
 }

@@ -186,13 +186,13 @@
 
 ### Tests for User Story 6
 
-- [ ] T047 [P] [US6] Extend `apps/app/src/editor/export/export-dialog.test.tsx`: with `blockSqlExport` and an in-scope `db-*` problem, SQL Copy and Download are disabled and the banner reads "n errors in <scope> · fix them to export SQL"; with only an out-of-scope problem, or with DBML / Mermaid / dictionary chosen, or with the flag off, they are enabled.
-- [ ] T048 [P] [US6] Extend `apps/app/src/editor/inspector/database/database-section.test.tsx`: the switch "Block SQL export with errors" with help "DBML, Mermaid and JSON still export" calls `setBlockSqlExport` and is one undo step.
+- [x] T047 [P] [US6] Extend `apps/app/src/editor/export/export-dialog.test.tsx`: with `blockSqlExport` and an in-scope `db-*` problem, SQL Copy and Download are disabled and the banner reads "n errors in <scope> · fix them to export SQL"; with only an out-of-scope problem, or with DBML / Mermaid / dictionary chosen, or with the flag off, they are enabled.
+- [x] T048 [P] [US6] Extend `apps/app/src/editor/inspector/database/database-section.test.tsx`: the switch "Block SQL export with errors" with help "DBML, Mermaid and JSON still export" calls `setBlockSqlExport` and is one undo step.
 
 ### Implementation for User Story 6
 
-- [ ] T049 [US6] Add `sqlBlocked` in `apps/app/src/editor/export/export-dialog.tsx` (disable Copy and Download with `aria-describedby` on the banner) and the blocked banner text in `apps/app/src/editor/export/schema-export-panel.tsx`; note in `schema-problems.ts` that all `db-*` kinds count as errors until 047 (`TODO(047): filter by severity`). T047 is green.
-- [ ] T050 [US6] Add the block switch to `apps/app/src/editor/inspector/database/database-section.tsx`. T048 is green.
+- [x] T049 [US6] Add `sqlBlocked` in `apps/app/src/editor/export/export-dialog.tsx` (disable Copy and Download with `aria-describedby` on the banner) and the blocked banner text in `apps/app/src/editor/export/schema-export-panel.tsx`; note in `schema-problems.ts` that all `db-*` kinds count as errors until 047 (`TODO(047): filter by severity`). T047 is green.
+- [x] T050 [US6] Add the block switch to `apps/app/src/editor/inspector/database/database-section.tsx`. T048 is green.
 
 **Checkpoint**: all stories work.
 

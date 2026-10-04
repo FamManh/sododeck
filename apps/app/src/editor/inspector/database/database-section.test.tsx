@@ -90,4 +90,24 @@ describe('DatabaseSection (052 US3)', () => {
     expect(toJSON(doc).dialect).toBe('sqlite');
     expect(await screen.findByText('Dialect set to SQLite')).toBeVisible();
   });
+
+  it('has a "Block SQL export with errors" switch, one undo step per change (052 US6)', async () => {
+    const { doc, editor, user } = setup();
+    const block = screen.getByRole('switch', { name: 'Block SQL export with errors' });
+    expect(block).not.toBeChecked();
+    expect(screen.getByText('DBML, Mermaid and JSON still export')).toBeVisible();
+    await user.click(block);
+    expect(toJSON(doc).blockSqlExport).toBe(true);
+    expect(block).toBeChecked();
+    await user.click(block);
+    expect(toJSON(doc).blockSqlExport).toBeUndefined();
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).blockSqlExport).toBe(true);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).blockSqlExport).toBeUndefined();
+  });
 });
