@@ -1,24 +1,14 @@
 import { toJSON } from '@sododeck/model';
 import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type * as XYFlow from '@xyflow/react';
-import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ReactFlow } from '@xyflow/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
+import { hasActiveGesture } from '../editing/drag-session';
 import { samplePath } from './connector-geometry';
 import { LabelHandle } from './label-handle';
-
-vi.mock('@xyflow/react', async (importOriginal) => {
-  const actual = await importOriginal<typeof XYFlow>();
-  // Inline the portal, and an identity screen → canvas mapping.
-  return {
-    ...actual,
-    EdgeLabelRenderer: ({ children }: { children: ReactNode }) => children,
-    useReactFlow: () => ({ screenToFlowPosition: (p: { x: number; y: number }) => p }),
-  };
-});
 
 const deck = deckOf({
   nodes: [
@@ -29,25 +19,43 @@ const deck = deckOf({
 });
 const samples = samplePath('M 0 0 L 400 0');
 
+/** Inside a real canvas: the handle portals into its viewport (screen = canvas px in jsdom). */
 function setup(at = 0.5) {
-  Element.prototype.setPointerCapture = () => undefined;
   return renderWithEditor(
-    <LabelHandle
-      edgeId="e"
-      text="call"
-      at={at}
-      samples={samples}
-      clamp={28.6}
-      width={60}
-      rest={{ x: 200, y: 0 }}
-    />,
+    <ReactFlow nodes={[]} edges={[]}>
+      <LabelHandle
+        edgeId="e"
+        text="call"
+        at={at}
+        samples={samples}
+        clamp={28.6}
+        width={60}
+        rest={{ x: 200, y: 0 }}
+      />
+    </ReactFlow>,
     deck,
   );
 }
 
 beforeEach(() => {
   useUiStore.getState().resetForDeck();
+  // Drag frames run at once (the helper throttles moves to animation frames).
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    cb(0);
+    return 0;
+  });
 });
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+const down = (el: HTMLElement, x = 200, y = 0) =>
+  fireEvent.pointerDown(el, { button: 0, pointerId: 1, clientX: x, clientY: y });
+/** Moves land on the window: the pointer may be over a card, not over the handle. */
+const move = (x: number, y: number, init: Record<string, unknown> = {}) =>
+  fireEvent.pointerMove(window, { pointerId: 1, clientX: x, clientY: y, ...init });
+const up = (x = 0, y = 0) => fireEvent.pointerUp(window, { pointerId: 1, clientX: x, clientY: y });
 
 const labelAt = (doc: Parameters<typeof toJSON>[0]) => toJSON(doc).edges[0]?.labelAt;
 
@@ -57,13 +65,24 @@ describe('LabelHandle (022 US4)', () => {
     expect(screen.getByRole('button', { name: 'Label call, 20 % along' })).toBeInTheDocument();
   });
 
-  it('drags along the line: ticks and readout while down, one write on release', () => {
+  it('renders in the viewport portal, above the cards', () => {
+    setup();
+    expect(
+      screen.getByTestId('label-handle').closest('.react-flow__viewport-portal'),
+    ).not.toBeNull();
+  });
+
+  it('drags along the line: ticks and readout while dragging, one write on release', () => {
     const { doc, editor } = setup();
     const handle = screen.getByTestId('label-handle');
-    fireEvent.pointerDown(handle, { button: 0, pointerId: 1 });
+    down(handle);
+    // A press alone is not a drag yet (050 FR-003).
+    expect(useUiStore.getState().canvasGesture).toBeNull();
+    expect(screen.queryAllByTestId('label-tick')).toHaveLength(0);
+    move(100, 20);
     expect(useUiStore.getState().canvasGesture).toBe('label');
+    expect(hasActiveGesture()).toBe(true);
     expect(screen.getAllByTestId('label-tick')).toHaveLength(3);
-    fireEvent.pointerMove(handle, { clientX: 100, clientY: 20, pointerId: 1 });
     expect(useUiStore.getState().labelPreview).toMatchObject({
       edgeId: 'e',
       at: 0.25,
@@ -71,10 +90,11 @@ describe('LabelHandle (022 US4)', () => {
     });
     expect(screen.getByTestId('label-readout')).toHaveTextContent('label 25 % · snapped');
     expect(labelAt(doc)).toBeUndefined();
-    fireEvent.pointerUp(handle, { pointerId: 1 });
+    up(100, 20);
     expect(labelAt(doc)).toBe(0.25);
     expect(useUiStore.getState().labelPreview).toBeNull();
     expect(useUiStore.getState().canvasGesture).toBeNull();
+    expect(hasActiveGesture()).toBe(false);
     act(() => {
       editor().undo();
     });
@@ -83,18 +103,43 @@ describe('LabelHandle (022 US4)', () => {
 
   it('⌘ turns snapping off', () => {
     setup();
-    const handle = screen.getByTestId('label-handle');
-    fireEvent.pointerDown(handle, { button: 0, pointerId: 1 });
-    fireEvent.pointerMove(handle, { clientX: 108, clientY: 0, metaKey: true, pointerId: 1 });
+    down(screen.getByTestId('label-handle'));
+    move(108, 0, { metaKey: true });
     expect(useUiStore.getState().labelPreview).toMatchObject({ at: 0.27, snapped: false });
   });
 
-  it('a release where it started writes nothing', () => {
-    const { editor } = setup();
-    const handle = screen.getByTestId('label-handle');
-    fireEvent.pointerDown(handle, { button: 0, pointerId: 1 });
-    fireEvent.pointerUp(handle, { pointerId: 1 });
+  it('a click (under 4 px) does not move it and writes nothing', () => {
+    const { editor, doc } = setup();
+    down(screen.getByTestId('label-handle'), 200, 0);
+    move(202, 2);
+    expect(useUiStore.getState().labelPreview).toBeNull();
+    up(202, 2);
+    expect(labelAt(doc)).toBeUndefined();
     expect(editor().canUndo()).toBe(false);
+  });
+
+  it('keeps following the pointer over a card, away from the handle', () => {
+    const { doc } = setup();
+    const card = document.createElement('div');
+    card.className = 'react-flow__node';
+    document.body.append(card);
+    down(screen.getByTestId('label-handle'));
+    fireEvent.pointerMove(card, { pointerId: 1, clientX: 300, clientY: 40, metaKey: true });
+    expect(useUiStore.getState().labelPreview).toMatchObject({ at: 0.75 });
+    fireEvent.pointerUp(card, { pointerId: 1, clientX: 300, clientY: 40 });
+    expect(labelAt(doc)).toBe(0.75);
+    card.remove();
+  });
+
+  it('Esc mid-drag puts it back and writes nothing', () => {
+    const { doc } = setup();
+    down(screen.getByTestId('label-handle'));
+    move(100, 0);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(useUiStore.getState().labelPreview).toBeNull();
+    expect(useUiStore.getState().canvasGesture).toBeNull();
+    up(100, 0);
+    expect(labelAt(doc)).toBeUndefined();
   });
 
   it('← → move 5 %, Shift jumps ticks, Home / End clamp, each one undo step', async () => {

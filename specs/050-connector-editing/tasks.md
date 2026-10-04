@@ -87,7 +87,7 @@
   - keep the other midpoint buttons mounted during a drag, but `aria-hidden` and inert;
   - hide midpoint handles on runs under 24 screen px (use `getZoom()`).
 - [x] T009 [US1] Update `apps/app/src/editor/editing/bend-drag.ts` so that `clearGesture()` runs from every exit: `endBendDrag`, `cancelBendDrag`, and the pointer-drag `onCancel`. Make T007 pass.
-- [ ] T010 [P] [US1] Move `apps/app/src/editor/routing/label-handle.tsx` to `ViewportPortal` and `startPointerDrag`. Update `label-handle.test.tsx` so the label drag keeps working over a card and a click doesn't move it.
+- [x] T010 [P] [US1] Move `apps/app/src/editor/routing/label-handle.tsx` to `ViewportPortal` and `startPointerDrag`. Update `label-handle.test.tsx` so the label drag keeps working over a card and a click doesn't move it.
 
 **Checkpoint**: quickstart 1–3 pass. Bends and midpoints are reliable.
 
