@@ -1,4 +1,4 @@
-import type { Problem, ProblemFix } from '@sododeck/model';
+import type { Problem } from '@sododeck/model';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
@@ -6,9 +6,10 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { ChevronRight, CircleCheck } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
+import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore, type ProblemFilter } from '../../state/ui-store';
-import { oneStep } from '../fields/one-step';
+import { fixLockedReason, useApplyFix } from './apply-fix';
 import { PROBLEM_ROW_CAP } from './problems-dom';
 import { SeverityIcon } from './severity-icon';
 import { useProblems } from './use-problems';
@@ -20,15 +21,8 @@ import { useProblems } from './use-problems';
 export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) => void }) {
   const problems = useProblems();
   const editor = useEditor();
-  const announce = useUiStore((s) => s.announce);
-  /** A row's one-click fix, one undo step. Only `remove-value` (032) exists so far. */
-  const applyFix = (fix: ProblemFix) => {
-    if (fix.kind !== 'remove-value') return;
-    oneStep(editor, () => {
-      editor.setValues([fix.nodeId], fix.fieldId, null);
-    });
-    announce('Value removed');
-  };
+  const deck = useDeckSnapshot(editor.doc);
+  const applyFix = useApplyFix();
   const filter = useUiStore((s) => s.problemFilter);
   const setFilter = useUiStore((s) => s.setProblemFilter);
   const [showAll, setShowAll] = useState<{ total: number } | null>(null);
@@ -144,22 +138,26 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                       className="mt-0.5 size-4 shrink-0 text-ink-secondary"
                     />
                   </button>
-                  {problem.fixes?.map((fix) => (
-                    <button
-                      key={fix.kind}
-                      type="button"
-                      aria-describedby={`${problem.key}-detail`}
-                      onClick={() => {
-                        applyFix(fix);
-                      }}
-                      className={cn(
-                        'mt-1 ml-7 cursor-pointer rounded-button px-2 py-1 text-body-sm text-ink hover:bg-surface-2',
-                        focusRing,
-                      )}
-                    >
-                      {fix.label}
-                    </button>
-                  ))}
+                  {problem.fixes?.map((fix) => {
+                    const locked = fixLockedReason(deck, fix) !== null;
+                    return (
+                      <button
+                        key={fix.kind}
+                        type="button"
+                        disabled={locked}
+                        aria-describedby={`${problem.key}-detail`}
+                        onClick={() => {
+                          applyFix(problem, fix);
+                        }}
+                        className={cn(
+                          'mt-1 ml-7 cursor-pointer rounded-button px-2 py-1 text-body-sm text-ink hover:bg-surface-2 disabled:cursor-not-allowed disabled:text-ink-muted disabled:hover:bg-transparent',
+                          focusRing,
+                        )}
+                      >
+                        {locked ? 'Locked · unlock to fix' : fix.label}
+                      </button>
+                    );
+                  })}
                 </li>
               );
             })}

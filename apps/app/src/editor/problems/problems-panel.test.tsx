@@ -208,3 +208,34 @@ describe('ProblemsPanel severity (047 US1)', () => {
     expect(screen.getByText('No errors')).toBeInTheDocument();
   });
 });
+
+describe('ProblemsPanel schema fixes (047 US2)', () => {
+  const noKey = deckOf({
+    nodes: [
+      {
+        id: 'log',
+        type: 'db-table',
+        title: 'audit_log',
+        columns: [{ id: 'c1', name: 'id', type: 'integer' }],
+      },
+    ],
+  });
+
+  it('applies a fix in one undo step and the problem goes', async () => {
+    const { user, editor } = setup(noKey);
+    await screen.findByRole('list', { name: 'Problems' });
+    await user.click(screen.getByRole('button', { name: 'Make id the PK' }));
+    expect(toJSON(editor().doc).nodes[0]?.columns?.[0]?.pk).toBe(true);
+    editor().undo();
+    expect(toJSON(editor().doc).nodes[0]?.columns?.[0]?.pk).toBeUndefined();
+  });
+
+  it('disables the fix on a locked table', async () => {
+    const locked = deckOf({
+      nodes: [{ ...(noKey.nodes[0] ?? { id: 'log', type: 'db-table', title: 'x' }), locked: true }],
+    });
+    setup(locked);
+    await screen.findByRole('list', { name: 'Problems' });
+    expect(screen.getByRole('button', { name: 'Locked · unlock to fix' })).toBeDisabled();
+  });
+});
