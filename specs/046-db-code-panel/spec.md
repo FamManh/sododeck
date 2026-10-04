@@ -17,6 +17,9 @@
 ### Session 2026-10-04
 
 - Q: Does 046 wait for 026 (editable JSON)? → A: No. The JSON tab stays read-only; 046 makes only the DBML tab editable (founder).
+- Q: Is each apply its own undo step, or are consecutive applies merged? → A: Merged: consecutive applies form one undo step until the user stops typing for about 2 seconds or the editor loses focus.
+- Q: Are the DBML and SQL tabs shown in every deck or only in decks with tables? → A: Every deck, including architecture-only and empty decks.
+- Q: What happens when an apply removes tables? → A: Remove at once and show a toast "Removed n tables · Undo"; adding a table back with the same name while the panel is open still restores the same table.
 
 ## Scope
 
@@ -24,7 +27,7 @@
 
 - The code overlay gains format tabs **JSON | DBML | SQL**. JSON keeps today's behaviour (read-only, Selection / Deck).
 - **DBML tab, editable**: shows the schema as DBML (the same text 045's DBML export writes) for the **Selection** or the **Whole schema**. Edits apply to the deck after a short pause in typing.
-- **Apply pipeline**: read the text; if it has errors, show them inline and change nothing; otherwise match parsed tables, columns, enums and relationships to existing ones, work out the additions, updates and removals, and apply them as **one undo step**.
+- **Apply pipeline**: read the text; if it has errors, show them inline and change nothing; otherwise match parsed tables, columns, enums and relationships to existing ones, work out the additions, updates and removals, and apply them together; applies made during one burst of typing form **one undo step**.
 - **Matching that keeps identity**: same name, then same name ignoring case, then a likely rename. A matched object keeps its id, so its position, colour, size, group, relationships, flow references, notes and stickies stay attached.
 - What DBML can express is edited from the text: tables (name, schema, note), columns (name, type, primary key, unique, not null, default, increment, note), composite keys, indexes, checks, enums and their values, relationships (columns at both ends, cardinality, optional ends, on delete / on update, name). Everything else on a table (position, colour, size, tags, owner, links, lock, group, fields) is kept as is.
 - **Status line**: "Applied" / "Applying…" / "Can't apply: fix n errors" with "Canvas keeps the last valid schema", and **Copy**.
@@ -59,8 +62,8 @@ A developer opens the code overlay on a schema deck, picks **DBML** and **Whole 
 2. **Given** the DBML tab, **When** the user renames `Table customers` to `Table clients`, **Then** the same card (same id) is renamed in place, keeps its position, colour and size, and every relationship and flow step that pointed at it still does.
 3. **Given** the DBML tab, **When** the user renames the column `email` to `email_address` in one edit, **Then** the column keeps its id, its unique index and the relationships that use it.
 4. **Given** the DBML tab, **When** the user adds a new `Table coupons { id int [pk] }` and a ref to it, **Then** a new table card appears near the other tables without overlapping any card, and the relationship is drawn between the exact column rows.
-5. **Given** an applied change, **When** the user presses ⌘Z (in the panel or on the canvas), **Then** the whole applied change is undone in one step and the DBML text shows the restored schema.
-6. **Given** the user deletes a whole `Table shipments { … }` block, **When** it applies, **Then** the table and its relationships are removed in one undo step.
+5. **Given** an applied change, **When** the user presses ⌘Z (in the panel or on the canvas), **Then** everything applied during that burst of typing (until a pause of about 2 seconds or focus left the editor) is undone in one step and the DBML text shows the restored schema.
+6. **Given** the user deletes a whole `Table shipments { … }` block, **When** it applies, **Then** the table and its relationships are removed, and a toast reads "Removed shipments · Undo"; Undo restores them.
 
 ---
 
@@ -156,7 +159,7 @@ The user switches to the **SQL** tab to see the DDL for the selection or the who
 
 - **FR-001**: The code overlay MUST offer format tabs **JSON**, **DBML** and **SQL**. The JSON tab MUST keep its current read-only behaviour and its Selection / Deck switch.
 - **FR-002**: DBML and SQL tabs MUST have a **Selection / Whole schema** switch. The chosen format tab and scope MUST be remembered per browser (UI preference, never in the deck).
-- **FR-003**: The DBML and SQL tabs MUST be available in every deck (a schema can be typed from nothing); with no tables they show an empty text and a hint.
+- **FR-003**: The DBML and SQL tabs MUST be available in every deck, including architecture-only and empty decks (a schema can be typed from nothing); with no tables they show an empty text and a hint.
 
 **DBML text**
 
@@ -172,10 +175,11 @@ The user switches to the **SQL** tab to see the DDL for the selection or the who
 - **FR-010**: Parsed tables MUST be matched to existing tables in this order: same schema and name; same name ignoring case; a likely rename (one table gone and one new table in the same apply whose columns mostly match); a table removed earlier in the same panel session with the same name. Unmatched parsed tables are new; unmatched existing tables in scope are removed.
 - **FR-011**: Columns, indexes, checks and enum values MUST be matched within their table or enum by the same rules (name, name ignoring case, likely rename by position and type). Enums MUST be matched like tables. Relationships MUST be matched by their two ends (tables and columns), then by name.
 - **FR-012**: A matched object MUST keep its id. Everything the text does not express (position, size, colour, tags, owner, links, lock, group, fields, flow references, stickies, notes on the canvas) MUST be kept.
-- **FR-013**: Each successful apply MUST be one undo step, covering all its additions, updates and removals.
+- **FR-013**: Consecutive successful applies MUST be merged into one undo step until the user stops typing for about 2 seconds or the editor loses focus; the next apply after that starts a new undo step. An apply MUST never be split across undo steps.
 - **FR-014**: New tables MUST be placed near the existing tables of the scope without overlapping any card; new tables in Selection join the selection.
 - **FR-015**: In Selection, an apply MUST only add, change or remove tables that were in the text or are new in it, plus relationships whose ends are in those tables. Tables outside the selection MUST NOT be changed.
 - **FR-016**: When an apply would remove every table of a non-empty Whole schema, the panel MUST ask for an explicit Apply instead of applying on pause.
+- **FR-016a**: When an apply removes one or more tables, a toast MUST name them ("Removed shipments · Undo", or "Removed n tables · Undo" for more than one) with an Undo action.
 
 **Text following the deck**
 
@@ -199,7 +203,7 @@ The user switches to the **SQL** tab to see the DDL for the selection or the who
 
 - **Code tab state** (UI only): format (JSON / DBML / SQL), scope (Selection / Whole schema), SQL preview dialect for Generic decks; remembered per browser.
 - **Edit session** (UI only, until the panel closes): the user's unapplied text, its errors and warnings, and the tables removed by earlier applies (to restore them on cut and paste).
-- **Schema plan**: the additions, updates and removals one apply makes, keyed by existing ids; applied as one undo step.
+- **Schema plan**: the additions, updates and removals one apply makes, keyed by existing ids; applied atomically and merged into the current burst's undo step.
 - **Problem in text**: line, column, severity (error / warning), message, optional suggestion.
 
 ## Success Criteria _(mandatory)_
@@ -212,7 +216,7 @@ The user switches to the **SQL** tab to see the DDL for the selection or the who
 - **SC-004**: For every fixture in the import corpus that the DBML writer can express, writing the deck to DBML and applying that text back to the same deck makes no change (no added, removed or modified object).
 - **SC-005**: On a 150-table schema in Whole schema, an edit is visible on the canvas within 1 second after the user stops typing, and typing latency in the editor stays under 50 ms.
 - **SC-006**: Opening the editor without the DBML tab downloads nothing more than today; the parser is fetched only on first opening of the DBML tab.
-- **SC-007**: Each applied edit is undone by exactly one ⌘Z.
+- **SC-007**: Typing a new column name letter by letter (several applies) and pausing is undone by exactly one ⌘Z; two edits separated by a pause of more than 2 seconds take two ⌘Z.
 
 ## Assumptions
 

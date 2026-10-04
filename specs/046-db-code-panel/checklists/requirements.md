@@ -36,5 +36,5 @@
   implementation choices, so they stay.
 - No [NEEDS CLARIFICATION] markers: open choices were settled by the design (frames 137, 166:
   apply as you type, read-only SQL tab) and recorded in Assumptions. Candidates for
-  `/speckit.clarify`: DBML/SQL tabs shown in every deck vs only decks with tables; pause length;
-  how conservative "likely rename" is.
+  `/speckit.clarify` (asked 2026-10-04: undo merging, tabs in every deck, removal toast); left as
+  assumptions: pause length, how conservative "likely rename" is.
