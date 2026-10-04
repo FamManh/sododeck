@@ -4,7 +4,7 @@
  * 4 px threshold, the target from the pure `columnTargetAt` on the drawn tables' layouts, Esc
  * cancels, release commits in one undo step. The live state is `ui.columnConnect` (UI only).
  */
-import type { DeckEditor } from '@sododeck/model';
+import { deckDialect, type DeckEditor } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
@@ -62,6 +62,7 @@ export function dragAt(
   deck: SododeckFile,
 ): ColumnConnect {
   const hit = columnTargetAt(point, tables);
+  const dialect = deckDialect(deck);
   const sameRow =
     hit !== undefined &&
     hit.tableId === drag.source.tableId &&
@@ -83,8 +84,8 @@ export function dragAt(
     fixed === undefined || other === undefined
       ? undefined
       : drag.end === 'from'
-        ? typeMismatch(other, fixed)
-        : typeMismatch(fixed, other);
+        ? typeMismatch(other, fixed, dialect)
+        : typeMismatch(fixed, other, dialect);
   return {
     ...rest,
     target: hit,
