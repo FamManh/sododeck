@@ -31,8 +31,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 On branch `047-db-lint` (already rebased on `main` with 052), run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline. Commit `specs/047-db-lint/` as `docs: schema lint spec, plan and tasks (047)`.
-- [ ] T002 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` before any change; save the summary as `specs/047-db-lint/bench-before.md`.
+- [x] T001 On branch `047-db-lint` (already rebased on `main` with 052), run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green baseline. Commit `specs/047-db-lint/` as `docs: schema lint spec, plan and tasks (047)`.
+- [x] T002 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` before any change; save the summary as `specs/047-db-lint/bench-before.md`.
 
 ---
 
