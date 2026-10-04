@@ -1,10 +1,10 @@
+import { DIALECT_TYPES, typeEntry, type TypeKind } from '@sododeck/model';
 import type { DbColumn, Dialect, Id, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Combobox, type ComboboxOption } from '@sododeck/ui/components/combobox';
 import { useId, useMemo, useState } from 'react';
 
 import { createEnum } from '../../../db/enum-edits';
-import { DIALECT_TYPES, typeEntry, type TypeKind } from '../../../db/dialect-types';
 import { useEditor } from '../../../model/use-editor';
 import { useUiStore } from '../../../state/ui-store';
 import { FieldLabel } from '../../fields/field-label';

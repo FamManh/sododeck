@@ -1,4 +1,4 @@
-import { isLocked } from '@sododeck/model';
+import { isLocked, typeEntry } from '@sododeck/model';
 import type { DbColumn, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
@@ -6,7 +6,6 @@ import { Switch } from '@sododeck/ui/components/switch';
 import { Trash2 } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { typeEntry } from '../../../db/dialect-types';
 import { useEditor } from '../../../model/use-editor';
 import { useUiStore } from '../../../state/ui-store';
 import { deleteColumn } from '../../actions/table-actions';

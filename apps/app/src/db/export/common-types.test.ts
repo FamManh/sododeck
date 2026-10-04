@@ -1,6 +1,7 @@
+import { COMMON_TYPES } from '@sododeck/model';
 import { describe, expect, it } from 'vitest';
 
-import { COMMON_TYPES, translateType } from './common-types';
+import { translateType } from './common-types';
 
 describe('translateType', () => {
   it('maps every canonical type and alias for each dialect', () => {

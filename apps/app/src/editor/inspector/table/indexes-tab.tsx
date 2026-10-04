@@ -1,3 +1,4 @@
+import { INDEX_METHODS } from '@sododeck/model';
 import type { DbIndex, Node, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import type { ComboboxOption } from '@sododeck/ui/components/combobox';
@@ -9,7 +10,6 @@ import { useId } from 'react';
 
 import { useEditor } from '../../../model/use-editor';
 import { useUiStore } from '../../../state/ui-store';
-import { INDEX_METHODS } from '../../../db/dialect-types';
 import { oneStep } from '../../fields/one-step';
 import { PickField } from '../../fields/pick-field';
 import { IndexParts } from './index-parts';

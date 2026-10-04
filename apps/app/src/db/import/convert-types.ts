@@ -5,7 +5,8 @@
  * where that dialect keeps one. Types outside the list are kept as written. Pure; 045's
  * `translateType` (Generic → dialect) is unchanged.
  */
-import { COMMON_TYPES, type CommonType } from '../export/common-types';
+import { commonTypeOf } from '@sododeck/model';
+
 import type { SqlDialect } from './types';
 
 export interface ConvertedType {
@@ -15,20 +16,6 @@ export interface ConvertedType {
   mapped: boolean;
 }
 
-const normalise = (type: string) => type.trim().toLowerCase().replace(/\s+/g, ' ');
-
-/** `char(36)` → `char`; `jsonb` → `jsonb`. */
-const baseOf = (spelling: string) => normalise(spelling.replace(/\(.*\)$/, ''));
-
-/** Common type of `type` as written in `from`: its spelling there first, then any of its names. */
-function commonOf(type: string, from: SqlDialect): CommonType | undefined {
-  const base = normalise(type);
-  return (
-    COMMON_TYPES.find((entry) => baseOf(entry[from]) === base && !/\(/.test(entry[from])) ??
-    COMMON_TYPES.find((entry) => entry.canonical === base || entry.aliases.includes(base))
-  );
-}
-
 /** `type` (without size) and `size` written in `from`, converted to `to`. */
 export function convertType(
   type: string,
@@ -36,7 +23,7 @@ export function convertType(
   from: SqlDialect,
   to: SqlDialect,
 ): ConvertedType {
-  const entry = commonOf(type, from);
+  const entry = commonTypeOf(type, from);
   if (entry === undefined) return { type, ...(size === undefined ? {} : { size }), mapped: false };
   const target = entry[to];
   const fixed = /^(.*)\((.*)\)$/.exec(target);
