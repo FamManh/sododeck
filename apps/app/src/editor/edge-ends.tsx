@@ -1,7 +1,7 @@
 import type { Direction } from '@sododeck/schema';
 
 import { KNOB_RADIUS } from './edge-constants';
-import { arrowPathAt, crossPathAt, endMarks, type EndMark } from './edge-end-marks';
+import { arrowPathAt, crossPathAt, endMarks, type ConnectorMark } from './edge-end-marks';
 import type { PathEnds } from './routing/route-path';
 
 interface EdgeEndsProps extends PathEnds {
@@ -15,7 +15,7 @@ interface EdgeEndsProps extends PathEnds {
   scale?: number | undefined;
 }
 
-function Mark({ mark, scale }: { mark: EndMark; scale: number }) {
+function Mark({ mark, scale }: { mark: ConnectorMark; scale: number }) {
   if (mark.kind === 'knob') {
     return (
       <circle

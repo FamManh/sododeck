@@ -46,6 +46,40 @@ export function fkColumns(deck: Deck): ReadonlyMap<Id, ReadonlySet<Id>> {
   return map;
 }
 
+const connectedCache = new WeakMap<
+  readonly Edge[],
+  WeakMap<Deck['nodes'], ReadonlyMap<Id, ReadonlySet<Id>>>
+>();
+
+/**
+ * Every column that is a relationship end, on either side, per table (042 R15): Keys detail keeps
+ * these rows so a relationship never loses its row. Ends on cards that are not tables are ignored.
+ */
+export function connectedColumns(deck: Deck): ReadonlyMap<Id, ReadonlySet<Id>> {
+  const byNodes = connectedCache.get(deck.edges);
+  const known = byNodes?.get(deck.nodes);
+  if (known !== undefined) return known;
+  const tables = new Set(deck.nodes.filter(isDbTable).map((node) => node.id));
+  const map = new Map<Id, Set<Id>>();
+  const add = (table: Id, columns: readonly Id[] | undefined) => {
+    if (columns === undefined || columns.length === 0 || !tables.has(table)) return;
+    let set = map.get(table);
+    if (set === undefined) {
+      set = new Set();
+      map.set(table, set);
+    }
+    for (const column of columns) set.add(column);
+  };
+  for (const edge of deck.edges) {
+    add(edge.from, edge.fromColumns);
+    add(edge.to, edge.toColumns);
+  }
+  const next = byNodes ?? new WeakMap();
+  next.set(deck.nodes, map);
+  connectedCache.set(deck.edges, next);
+  return map;
+}
+
 /** One table's foreign-key columns (empty when it has none). */
 export function fkColumnsOf(deck: Deck, tableId: Id): ReadonlySet<Id> {
   return fkColumns(deck).get(tableId) ?? EMPTY_SET;
@@ -81,6 +115,8 @@ export function enumById(deck: Pick<SododeckFile, 'enums'>): ReadonlyMap<Id, DbE
 /** What a table card reads of its deck besides its own node. */
 export interface TableContext {
   fk: ReadonlyMap<Id, ReadonlySet<Id>>;
+  /** Relationship-end columns per table (042); absent means none. */
+  connected?: ReadonlyMap<Id, ReadonlySet<Id>>;
   /** Two or more schemas: headers read "Table · <schema>". */
   showSchema: boolean;
   enums: ReadonlyMap<Id, DbEnum>;
@@ -108,6 +144,7 @@ export function tableContextOf(
 ): TableContext {
   const next: TableContext = {
     fk: fkColumns(deck),
+    connected: connectedColumns(deck),
     showSchema: schemaCount(deck) >= 2,
     enums: enumById(deck),
     display: tableDisplayOf(deck),
@@ -115,6 +152,7 @@ export function tableContextOf(
   const last = lastContext;
   if (
     last?.fk === next.fk &&
+    last.connected === next.connected &&
     last.showSchema === next.showSchema &&
     last.enums === next.enums &&
     sameDisplay(last.display, next.display)

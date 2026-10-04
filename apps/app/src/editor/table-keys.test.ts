@@ -1,7 +1,7 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { enumById, fkColumns, schemaCount, tableContextOf } from './table-keys';
+import { connectedColumns, enumById, fkColumns, schemaCount, tableContextOf } from './table-keys';
 
 const table = (id: string, columns: string[], schema?: string) => ({
   id,
@@ -61,6 +61,42 @@ describe('fkColumns (041 R3)', () => {
     const file = deck([{ id: 'r', from: 'a', to: 'b', fromColumns: ['a1'], toColumns: ['b1'] }]);
     expect(fkColumns({ ...file })).toBe(fkColumns(file));
     expect(fkColumns({ ...file, edges: [...file.edges] })).not.toBe(fkColumns(file));
+  });
+});
+
+const connected = (file: SododeckFile, id: string) =>
+  [...(connectedColumns(file).get(id) ?? [])].sort();
+
+describe('connectedColumns (042 R15)', () => {
+  it('collects column ends on both sides, composite ends included', () => {
+    const file = deck([
+      { id: 'r1', from: 'a', to: 'b', fromColumns: ['a1'], toColumns: ['b1'], cardinality: 'n-1' },
+      { id: 'r2', from: 'b', to: 'a', fromColumns: ['b2', 'b3'], toColumns: ['a1', 'a2'] },
+    ]);
+    expect(connected(file, 'a')).toEqual(['a1', 'a2']);
+    expect(connected(file, 'b')).toEqual(['b1', 'b2', 'b3']);
+  });
+
+  it('handles a self-reference and ignores ends on cards that are not tables', () => {
+    const file = deck([
+      { id: 'r1', from: 'a', to: 'a', fromColumns: ['a2'], toColumns: ['a1'] },
+      { id: 'r2', from: 's', to: 'b', fromColumns: ['s1'], toColumns: ['b1'] },
+      { id: 'r3', from: 'a', to: 'b' },
+    ]);
+    expect(connected(file, 'a')).toEqual(['a1', 'a2']);
+    expect(connected(file, 'b')).toEqual(['b1']);
+    expect(connectedColumns(file).has('s')).toBe(false);
+  });
+
+  it('returns the same map for the same edges and nodes', () => {
+    const file = deck([{ id: 'r', from: 'a', to: 'b', fromColumns: ['a1'], toColumns: ['b1'] }]);
+    expect(connectedColumns({ ...file })).toBe(connectedColumns(file));
+    expect(connectedColumns({ ...file, edges: [...file.edges] })).not.toBe(connectedColumns(file));
+  });
+
+  it('is part of the table context', () => {
+    const file = deck([{ id: 'r', from: 'a', to: 'b', fromColumns: ['a1'], toColumns: ['b1'] }]);
+    expect(tableContextOf(file).connected).toBe(connectedColumns(file));
   });
 });
 
