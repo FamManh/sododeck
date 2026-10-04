@@ -31,9 +31,13 @@ const card = (id: string, x: number, y: number): Node => ({
 });
 
 /** The line renders inside a real canvas: it reads the drawn cards from React Flow's store. */
-function renderLine(nodes: Node[], pointer: { x: number; y: number }) {
+function renderLine(
+  nodes: Node[],
+  pointer: { x: number; y: number },
+  viewport = { x: 0, y: 0, zoom: 1 },
+) {
   return render(
-    <ReactFlow nodes={nodes} edges={[]} nodeTypes={nodeTypes}>
+    <ReactFlow nodes={nodes} edges={[]} nodeTypes={nodeTypes} defaultViewport={viewport}>
       <svg>
         <EndpointConnectionLine {...props(pointer)} />
       </svg>
@@ -92,5 +96,28 @@ describe('EndpointConnectionLine (050 R3: new connections)', () => {
     );
     // Nearest outline point: the frame's left side, at 50 % → snapped.
     expect(screen.getByTestId('endpoint-readout')).toHaveTextContent('left side · 50 % · snapped');
+  });
+
+  describe('on a panned and zoomed canvas', () => {
+    // React Flow's `pointer` is in container px: flow point p sits at p * zoom + pan.
+    const viewport = { x: 100, y: 50, zoom: 2 };
+    const onScreen = (p: { x: number; y: number }) => ({
+      x: p.x * viewport.zoom + viewport.x,
+      y: p.y * viewport.zoom + viewport.y,
+    });
+
+    it('ends under the pointer off every target', () => {
+      renderLine([card('a', 0, 0)], onScreen({ x: 300, y: 25 }), viewport);
+      expect(screen.getByTestId('endpoint-connection-line')).toHaveAttribute(
+        'd',
+        'M164 25L184 25L227.5 25L227.5 25L271 25L291 25',
+      );
+    });
+
+    it('attaches to the card under the pointer', () => {
+      renderLine([card('a', 0, 0), card('b', 300, 0)], onScreen({ x: 305, y: 35 }), viewport);
+      expect(lastPoint()).toEqual({ x: 291, y: 35 });
+      expect(screen.getByTestId('endpoint-readout')).toHaveTextContent('left side · 70 %');
+    });
   });
 });
