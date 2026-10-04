@@ -184,6 +184,12 @@ export const SHORTCUTS = [
     section: 'Tables',
     keys: mod('⌥↓', 'Alt+↓'),
   },
+  {
+    id: 'table-find',
+    label: 'Find a column in the table',
+    section: 'Tables',
+    keys: mod('⌘F', 'Ctrl+F'),
+  },
   { id: 'row-delete', label: 'Delete the column', section: 'Tables', keys: same('Delete') },
   { id: 'row-leave', label: 'Back to the table', section: 'Tables', keys: same('Esc') },
   // Flows

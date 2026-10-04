@@ -992,3 +992,57 @@ describe('⌥ arrows (016 nudge)', () => {
     expect(toJSON(doc)).toEqual(before);
   });
 });
+
+describe('⌘F column filter (048)', () => {
+  const tables = deckOf({
+    nodes: [
+      {
+        id: 't1',
+        type: 'db-table',
+        title: 'orders',
+        position: { x: 0, y: 0 },
+        columns: [{ id: 'c1', name: 'id', type: 'int', pk: true }],
+      },
+      { id: 't2', type: 'db-table', title: 'items', position: { x: 400, y: 0 }, columns: [] },
+      { id: 's', type: 'service', title: 'Svc', position: { x: 800, y: 0 } },
+    ],
+  });
+  const mod = (target: Element | null) =>
+    fireEvent.keyDown(target ?? document.body, { key: 'f', metaKey: true });
+
+  it('opens the filter on the one selected table and blocks the browser find', () => {
+    setup(tables);
+    focusNode('t1');
+    expect(mod(document.activeElement)).toBe(false);
+    expect(ui().tableFilter).toEqual({ tableId: 't1', text: '', index: 0 });
+    // Ctrl+F too.
+    act(() => {
+      ui().closeTableFilter();
+    });
+    focusNode('t1');
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'f', ctrlKey: true });
+    expect(ui().tableFilter?.tableId).toBe('t1');
+  });
+
+  it('does nothing with no table, a non-table card or several tables selected', () => {
+    setup(tables);
+    expect(mod(document.body)).toBe(true);
+    expect(ui().tableFilter).toBeNull();
+    focusNode('s');
+    mod(document.activeElement);
+    expect(ui().tableFilter).toBeNull();
+    act(() => {
+      ui().select({ nodes: ['t1', 't2'] });
+    });
+    mod(document.activeElement);
+    expect(ui().tableFilter).toBeNull();
+  });
+
+  it('leaves a text field alone', () => {
+    setup(tables);
+    focusNode('t1');
+    const input = screen.getByLabelText('Notes');
+    expect(mod(input)).toBe(true);
+    expect(ui().tableFilter).toBeNull();
+  });
+});

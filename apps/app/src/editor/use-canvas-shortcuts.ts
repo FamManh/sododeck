@@ -287,6 +287,24 @@ export function useCanvasKeyDown() {
             case 'a':
               selectAllComponents(editor);
               return true;
+            case 'f': {
+              // ⌘F on one selected table finds a column in it (048); never the browser's find.
+              const only = ui.selection.nodes.length === 1 ? ui.selection.nodes[0] : undefined;
+              const alone =
+                ui.selection.edges.length +
+                ui.selection.groups.length +
+                ui.selection.stickies.length;
+              if (
+                event.shiftKey ||
+                only === undefined ||
+                alone > 0 ||
+                !deck.nodes.some((n) => n.id === only && isDbTable(n))
+              ) {
+                return false;
+              }
+              ui.openTableFilter(only);
+              return true;
+            }
             case '=':
             case '+':
               void zoomIn();
