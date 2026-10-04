@@ -9,7 +9,7 @@ import { oneStep } from '../fields/one-step';
 import { rowsDrawn } from '../deck-to-flow';
 import { focusRowSoon } from '../table/row-focus';
 import { rowAnchorY } from '../table-layout';
-import { readViewState, selectView } from '../views/use-current-view';
+import { readViewState, selectView, setGroupCollapsed } from '../views/use-current-view';
 
 import type { PaletteResult } from './palette-results';
 
@@ -44,6 +44,8 @@ export interface OpenResultContext {
   isHidden?: (nodeId: string) => boolean;
   /** The first view that shows this component, if any. */
   firstViewShowing?: (nodeId: string) => Pick<View, 'id' | 'title'> | null;
+  /** The collapsed schema group (048) hiding this table in the current view, if any. */
+  collapsedSchemaOf?: (nodeId: string) => { groupId: string; title: string } | null;
   /** Shows a toast, with an optional action that takes focus. */
   showToast?: (message: string, action?: { label: string; onAction: () => void }) => void;
 }
@@ -124,14 +126,40 @@ function offerShowInView(node: { id: string; title: string }, context: OpenResul
 }
 
 /**
+ * A table inside a collapsed schema group (048 FR-022): stays collapsed and offers "Expand schema",
+ * which expands the group and then opens the result. Returns whether it handled the result.
+ */
+function offerExpandSchema(
+  node: { id: string; title: string },
+  result: PaletteResult,
+  context: OpenResultContext,
+): boolean {
+  const schema = context.collapsedSchemaOf?.(node.id) ?? null;
+  if (schema === null) return false;
+  context.showToast?.(`${node.title} is in the collapsed schema ${schema.title}`, {
+    label: 'Expand schema',
+    onAction: () => {
+      setGroupCollapsed(context.editor, schema.groupId, false);
+      openResult(result, context);
+    },
+  });
+  return true;
+}
+
+/**
  * Jump to a column (048 FR-021): a row the limit cut opens the table as Show all (saved, one undo
  * step, also when locked), the table and row are selected, and the canvas centres on the row. Rows
  * are not drawn at System and Landscape zoom, so those go to 100 %.
  */
-function jumpToColumn(tableId: string, columnId: string, context: OpenResultContext): boolean {
+function jumpToColumn(
+  result: PaletteResult,
+  tableId: string,
+  columnId: string,
+  context: OpenResultContext,
+): boolean {
   const table = readDeck(context.editor.doc).nodes.find((entry) => entry.id === tableId);
   if (table?.columns?.some((entry) => entry.id === columnId) !== true) return false;
-  if (offerShowInView(table, context)) return true;
+  if (offerShowInView(table, context) || offerExpandSchema(table, result, context)) return true;
   const state = useUiStore.getState();
   const drawn = readViewState(context.editor.doc).deck.nodes.find((entry) => entry.id === tableId);
   const cut = drawn === undefined ? undefined : tableLayoutOf(drawn);
@@ -171,7 +199,7 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
       const node = deck.nodes.find((entry) => entry.id === result.id);
       if (node === undefined) break;
       ensureCanvasReady(result, context);
-      if (offerShowInView(node, context)) return true;
+      if (offerShowInView(node, context) || offerExpandSchema(node, result, context)) return true;
       context.select(selectionFor(result));
       context.focus(result.id);
       context.fitView({
@@ -184,7 +212,7 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
     case 'column': {
       if (result.tableId === undefined) break;
       ensureCanvasReady(result, context);
-      if (!jumpToColumn(result.tableId, result.id, context)) break;
+      if (!jumpToColumn(result, result.tableId, result.id, context)) break;
       return true;
     }
     case 'edge': {

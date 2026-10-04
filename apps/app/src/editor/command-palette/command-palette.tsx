@@ -18,6 +18,7 @@ import { openFlow } from '../flows/flow-mode';
 import { buildCommands } from './commands';
 import { openResult } from './open-result';
 import { buildPaletteResults, type PaletteCommand } from './palette-results';
+import { collapsedSchemaTables, groupTitleOf } from '../schema-groups';
 import { firstViewShowing } from '../view-filter';
 import { viewStateOf } from '../views/view-state';
 
@@ -130,9 +131,11 @@ function CommandPaletteSession({
   const revealed = useUiStore((state) => state.revealed);
   const viewState = viewStateOf(deck, currentViewId, revealed);
   const hidden = viewState.hidden;
+  const inSchema = collapsedSchemaTables(viewState.deck, viewState.collapsed);
+  const inCollapsedSchema = useMemo(() => new Set(inSchema.keys()), [inSchema]);
   const results = useMemo(
-    () => buildPaletteResults({ deck, searchIndex, query, commands, hidden }),
-    [commands, deck, query, searchIndex, hidden],
+    () => buildPaletteResults({ deck, searchIndex, query, commands, hidden, inCollapsedSchema }),
+    [commands, deck, query, searchIndex, hidden, inCollapsedSchema],
   );
 
   const close = (restoreFocus: boolean) => {
@@ -167,6 +170,11 @@ function CommandPaletteSession({
           exitFlow: useUiStore.getState().exitFlow,
           openFlow,
           isHidden: (id) => hidden.has(id),
+          collapsedSchemaOf: (id) => {
+            const groupId = inSchema.get(id);
+            const title = groupId === undefined ? undefined : groupTitleOf(deck, groupId);
+            return groupId === undefined || title === undefined ? null : { groupId, title };
+          },
           firstViewShowing: (id) => firstViewShowing(deck, viewState.views, id),
           showToast: (message, action) => {
             toast(action === undefined ? { message } : { message, action });

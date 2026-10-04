@@ -72,3 +72,33 @@ export function groupTitleOf(deck: Pick<SododeckFile, 'groups'>, id: string): st
   if (stored !== undefined) return stored.title;
   return isSchemaGroupId(id) ? id.slice(schemaGroupId('').length) : undefined;
 }
+
+const collapsedCache = new WeakMap<
+  Deck['nodes'],
+  WeakMap<ReadonlySet<string>, ReadonlyMap<string, string>>
+>();
+
+/**
+ * Tables hidden inside a collapsed schema group, as table id → group id. `canvas` is the deck as
+ * the canvas draws it (`ViewState.deck`); By group has no derived groups, so the map is empty.
+ */
+export function collapsedSchemaTables(
+  canvas: Pick<Deck, 'nodes'>,
+  collapsed: ReadonlySet<string>,
+): ReadonlyMap<string, string> {
+  let byCollapsed = collapsedCache.get(canvas.nodes);
+  if (byCollapsed === undefined) {
+    byCollapsed = new WeakMap();
+    collapsedCache.set(canvas.nodes, byCollapsed);
+  }
+  const known = byCollapsed.get(collapsed);
+  if (known !== undefined) return known;
+  const out = new Map<string, string>();
+  for (const node of canvas.nodes) {
+    if (node.group !== undefined && isSchemaGroupId(node.group) && collapsed.has(node.group)) {
+      out.set(node.id, node.group);
+    }
+  }
+  byCollapsed.set(collapsed, out);
+  return out;
+}

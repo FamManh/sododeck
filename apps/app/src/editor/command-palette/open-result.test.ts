@@ -320,6 +320,32 @@ describe('table and column results (048 FR-021, FR-022)', () => {
     expect(ctx.setCenter).not.toHaveBeenCalled();
   });
 
+  it('offers "Expand schema" for a table in a collapsed schema group, then opens it (048)', () => {
+    frames();
+    const deck = tablesDeck();
+    const env = renderWithEditor(null, deckOf(deck));
+    env.editor().setCollapsed('system', 'schema:billing', true);
+    const showToast = vi.fn();
+    const ctx = {
+      ...context(deck, env.editor()),
+      collapsedSchemaOf: () =>
+        readViewState(env.doc).collapsed.has('schema:billing')
+          ? { groupId: 'schema:billing', title: 'billing' }
+          : null,
+      showToast,
+    };
+    expect(openResult(column('c50'), ctx)).toBe(true);
+    expect(showToast.mock.calls[0]?.[0]).toBe('events is in the collapsed schema billing');
+    expect(showToast.mock.calls[0]?.[1]).toMatchObject({ label: 'Expand schema' });
+    expect(useUiStore.getState().selection.nodes).toEqual([]);
+    const action = showToast.mock.calls[0]?.[1] as { onAction: () => void };
+    act(() => {
+      action.onAction();
+    });
+    expect(toJSON(env.doc).views.find((v) => v.id === 'system')?.collapsed).toBeUndefined();
+    expect(useUiStore.getState().selection.nodes).toEqual(['t']);
+  });
+
   it('says so when the table or the column is gone', () => {
     const deck = tablesDeck();
     const env = renderWithEditor(null, deckOf(deck));

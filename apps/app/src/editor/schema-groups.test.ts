@@ -2,7 +2,7 @@ import { schemaGroupId } from '@sododeck/model';
 import { emptySododeckFile, type Node, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { schemaGroupedDeck } from './schema-groups';
+import { collapsedSchemaTables, groupTitleOf, schemaGroupedDeck } from './schema-groups';
 
 const table = (id: string, schema?: string, group?: string): Node => ({
   id,
@@ -83,5 +83,21 @@ describe('schemaGroupedDeck', () => {
     const edited = { ...input, edges: [] };
     expect(schemaGroupedDeck(edited).nodes).toBe(schemaGroupedDeck(input).nodes);
     expect(schemaGroupedDeck(edited).groups).toBe(schemaGroupedDeck(input).groups);
+  });
+});
+
+describe('collapsedSchemaTables and groupTitleOf', () => {
+  it('maps tables of collapsed schema groups to their group', () => {
+    const grouped = schemaGroupedDeck(deck([table('a', 'billing'), table('b', 'auth')]));
+    const map = collapsedSchemaTables(grouped, new Set(['schema:billing', 'g']));
+    expect([...map]).toEqual([['a', 'schema:billing']]);
+    expect(collapsedSchemaTables(grouped, new Set()).size).toBe(0);
+  });
+
+  it('names a derived group by its schema and a stored one by its title', () => {
+    const input = deck([], [{ id: 'g', title: 'G' }]);
+    expect(groupTitleOf(input, 'schema:billing')).toBe('billing');
+    expect(groupTitleOf(input, 'g')).toBe('G');
+    expect(groupTitleOf(input, 'nope')).toBeUndefined();
   });
 });
