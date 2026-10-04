@@ -166,3 +166,116 @@ describe('connection.lineStyle and the style menu items (022 US1)', () => {
     expect(ui().toolbarField).toBe('lineStyle');
   });
 });
+
+describe('node.spreadEnds (050 US7)', () => {
+  // Three connectors end on the hub's right side; the other ends sit at y 200, -200 and 0.
+  const spreadDeck = deckOf({
+    nodes: [
+      { id: 'hub', type: 'service', title: 'Hub', group: 'g', position: { x: 300, y: 0 } },
+      { id: 'r1', type: 'service', title: 'R1', position: { x: 700, y: 200 } },
+      { id: 'r2', type: 'service', title: 'R2', position: { x: 700, y: -200 } },
+      { id: 'r3', type: 'service', title: 'R3', position: { x: 700, y: 0 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'hub', to: 'r1' },
+      { id: 'e2', from: 'hub', to: 'r2', route: { fromSide: 'right', fromAt: 0.5 } },
+      { id: 'e3', from: 'r3', to: 'hub' },
+      { id: 'e4', from: 'r1', to: 'r2' },
+    ],
+    groups: [{ id: 'g', title: 'Core' }],
+  });
+  const box = (id: string, x: number, y: number, width = 100, height = 50) => ({
+    id,
+    position: { x, y },
+    width,
+    height,
+  });
+  const drawn = (id: string, source: string, target: string, sides: [string, string]) => ({
+    id,
+    type: 'deck',
+    source,
+    target,
+    sourceHandle: sides[0],
+    targetHandle: sides[1],
+  });
+  const nodes = [
+    box('hub', 300, 0),
+    box('r1', 700, 200),
+    box('r2', 700, -200),
+    box('r3', 700, 0),
+    box('group:g', 280, -20, 140, 90),
+  ];
+  const edges = [
+    drawn('e1', 'hub', 'r1', ['right', 'left']),
+    drawn('e2', 'hub', 'r2', ['right', 'left']),
+    drawn('e3', 'r3', 'hub', ['left', 'right']),
+    drawn('e4', 'r1', 'r2', ['top', 'bottom']),
+  ];
+  function spreadContext(
+    target: MenuTarget,
+    drawnEdges: readonly (ReturnType<typeof drawn> & { hidden?: boolean })[] = edges,
+  ) {
+    const ctx = actionContext(target, 'edit', spreadDeck);
+    const canvas = ctx.canvas;
+    if (canvas === null) throw new Error('the fixture has a canvas');
+    return { ...ctx, canvas: { ...canvas, getNodes: () => nodes, getEdges: () => drawnEdges } };
+  }
+  const hub: MenuTarget = { kind: 'component', ids: sel({ nodes: ['hub'] }) };
+  const spread = (ctx: ActionContext, surface: 'menu' | 'toolbar' = 'menu') =>
+    byId(ctx, 'node.spreadEnds', surface);
+
+  it('is offered on the menu and toolbar for cards and groups, not for connections', () => {
+    for (const target of [TARGETS.component, TARGETS.components, TARGETS.group, TARGETS.mixed]) {
+      expect(spread(actionContext(target))?.label).toBe('Spread ends evenly');
+      expect(spread(actionContext(target), 'toolbar')?.label).toBe('Spread ends evenly');
+    }
+    expect(spread(actionContext(TARGETS.connection))).toBeUndefined();
+    expect(spread(actionContext(TARGETS.canvas))).toBeUndefined();
+  });
+
+  it('is disabled when no side of the selection has two or more ends', () => {
+    const r3: MenuTarget = { kind: 'component', ids: sel({ nodes: ['r3'] }) };
+    expect(spread(spreadContext(r3))?.disabled).toBe('No side has two or more connector ends');
+    expect(spread(actionContext(hub, 'edit', spreadDeck))?.disabled).toBe(
+      'No side has two or more connector ends',
+    );
+    expect(spread(spreadContext(hub))?.disabled).toBeNull();
+  });
+
+  it('pins the ends at equal spacing, ordered by the other end, in one undo step', () => {
+    const ctx = spreadContext(hub);
+    spread(ctx)?.run();
+    const route = (id: string) => toJSON(ctx.doc).edges.find((e) => e.id === id)?.route;
+    expect(route('e2')).toMatchObject({ fromSide: 'right', fromAt: 0.25 });
+    // The middle (0.5) is the default, so only the pinned side is stored.
+    expect(route('e3')).toEqual({ toSide: 'right' });
+    expect(route('e1')).toMatchObject({ fromSide: 'right', fromAt: 0.75 });
+    expect(route('e4')).toBeUndefined();
+    expect(ui().announcement.text).toBe('Spread 3 ends on 1 side');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).edges.map((e) => e.route)).toEqual(spreadDeck.edges.map((e) => e.route));
+  });
+
+  it('skips connectors hidden in the view', () => {
+    const ctx = spreadContext(
+      hub,
+      edges.map((e) => (e.id === 'e3' ? { ...e, hidden: true } : e)),
+    );
+    spread(ctx)?.run();
+    expect(toJSON(ctx.doc).edges.find((e) => e.id === 'e3')?.route).toBeUndefined();
+    expect(ui().announcement.text).toBe('Spread 2 ends on 1 side');
+  });
+
+  it('spreads the ends drawn on a selected group frame', () => {
+    const ctx = spreadContext(TARGETS.group, [
+      drawn('e1', 'group:g', 'r1', ['right', 'left']),
+      drawn('e2', 'group:g', 'r2', ['right', 'left']),
+    ]);
+    expect(spread(ctx)?.disabled).toBeNull();
+    spread(ctx)?.run();
+    const routes = toJSON(ctx.doc).edges.map((e) => e.route);
+    expect(routes[1]).toMatchObject({ fromSide: 'right', fromAt: 0.3333 });
+    expect(routes[0]).toMatchObject({ fromSide: 'right', fromAt: 0.6667 });
+    expect(ui().announcement.text).toBe('Spread 2 ends on 1 side');
+  });
+});

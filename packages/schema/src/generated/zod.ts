@@ -849,11 +849,11 @@ export const sododeckFileSchema = z
             from: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
-              .describe('Id of the source node.'),
+              .describe('Id of the source node or group.'),
             to: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
-              .describe('Id of the target node.'),
+              .describe('Id of the target node or group.'),
             protocol: z
               .enum(['http', 'grpc', 'event', 'sql', 'websocket', 'other'])
               .describe(
@@ -899,13 +899,13 @@ export const sododeckFileSchema = z
                 fromSide: z
                   .enum(['top', 'right', 'bottom', 'left'])
                   .describe(
-                    'Side of the source card the connector leaves from. When absent, it is picked automatically.',
+                    'Side of the source card or group the connector leaves from. When absent, it is picked automatically.',
                   )
                   .optional(),
                 toSide: z
                   .enum(['top', 'right', 'bottom', 'left'])
                   .describe(
-                    'Side of the target card the connector enters. When absent, it is picked automatically.',
+                    'Side of the target card or group the connector enters. When absent, it is picked automatically.',
                   )
                   .optional(),
                 offset: z
@@ -957,11 +957,11 @@ export const sododeckFileSchema = z
                       })
                       .strict()
                       .describe(
-                        'One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source card centre and T the target card centre in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.',
+                        'One bend of a connector. Exactly one key per axis: `x` or `dx`, and `y` or `dy`. With S the source centre and T the target centre (a card, or a group frame) in the view being drawn, `x` and `y` are fractions of the S to T span (`P.x = S.x + x * (T.x - S.x)`), and `dx` and `dy` are pixel offsets from the midpoint, used when that span was under 22 px at placing.',
                       ),
                   )
                   .describe(
-                    'Bend points from the source to the target, relative to the two cards so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.',
+                    'Bend points from the source to the target, relative to the two ends (cards or groups) so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.',
                   )
                   .optional(),
               })
@@ -1092,9 +1092,11 @@ export const sododeckFileSchema = z
               .optional(),
           })
           .strict()
-          .describe('A connection between two nodes.'),
+          .describe('A connection between two ends, each a node or a group.'),
       )
-      .describe('Connections between nodes.'),
+      .describe(
+        'Connections between nodes or groups. Either end of a connection may be a node or a group.',
+      ),
     views: z
       .array(
         z

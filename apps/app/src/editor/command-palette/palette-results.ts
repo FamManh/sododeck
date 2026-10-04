@@ -1,7 +1,8 @@
 import {
   analyzeFlow,
-  searchDeck,
+  endpointTitle,
   type Range,
+  searchDeck,
   type SearchIndex,
   type SearchKind,
 } from '@sododeck/model';
@@ -73,8 +74,9 @@ function metaFor(deck: SododeckFile, kind: SearchKind, id: string, flowId?: stri
     }
     case 'edge': {
       const edge = deck.edges.find((entry) => entry.id === id);
-      const from = deck.nodes.find((entry) => entry.id === edge?.from)?.title ?? edge?.from ?? '?';
-      const to = deck.nodes.find((entry) => entry.id === edge?.to)?.title ?? edge?.to ?? '?';
+      // Either end may be a group (050 R6).
+      const from = edge === undefined ? '?' : endpointTitle(deck, edge.from);
+      const to = edge === undefined ? '?' : endpointTitle(deck, edge.to);
       return `Connection · ${from} → ${to}`;
     }
     case 'flow': {

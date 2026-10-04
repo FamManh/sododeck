@@ -1,7 +1,9 @@
+import { toJSON } from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useStoreApi, type Edge, type Node } from '@xyflow/react';
+import { useLayoutEffect, useState } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -9,7 +11,7 @@ import { isApplePlatform } from '../../lib/features';
 import { useEditor } from '../../model/use-editor';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useUiStore } from '../../state/ui-store';
-import { renderWithEditor } from '../../test/render-canvas';
+import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import { useThemeStore } from '../../theme/theme-store';
 import { TopBar } from '../top-bar';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
@@ -241,6 +243,93 @@ describe('CommandPalette', () => {
       await user.keyboard('{Enter}');
       expect(screen.getByText('Order Service is hidden in every view')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Show in/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Spread connector ends evenly (050 US7)', () => {
+    const spreadDeck = () =>
+      deckOf({
+        nodes: [
+          { id: 'hub', type: 'service', title: 'Hub', position: { x: 300, y: 0 } },
+          { id: 'up', type: 'service', title: 'Up', position: { x: 700, y: -200 } },
+          { id: 'down', type: 'service', title: 'Down', position: { x: 700, y: 200 } },
+        ],
+        edges: [
+          { id: 'e1', from: 'hub', to: 'down' },
+          { id: 'e2', from: 'hub', to: 'up' },
+        ],
+      });
+    const box = (id: string, x: number, y: number): Node => ({
+      id,
+      position: { x, y },
+      width: 100,
+      height: 50,
+      data: {},
+    });
+    const drawn = (id: string, target: string): Edge => ({
+      id,
+      type: 'deck',
+      source: 'hub',
+      target,
+      sourceHandle: 'right',
+      targetHandle: 'left',
+    });
+
+    /** Puts what the canvas would draw into the React Flow store. */
+    function Drawn() {
+      const store = useStoreApi();
+      useLayoutEffect(() => {
+        store
+          .getState()
+          .setNodes([box('hub', 300, 0), box('up', 700, -200), box('down', 700, 200)]);
+        store.getState().setEdges([drawn('e1', 'down'), drawn('e2', 'up')]);
+      }, [store]);
+      return null;
+    }
+
+    it('spreads the selected card’s ends in one undo step', async () => {
+      const user = userEvent.setup();
+      const view = renderWithEditor(
+        <>
+          <Drawn />
+          <Harness />
+        </>,
+        spreadDeck(),
+      );
+      act(() => {
+        useUiStore.getState().select({ nodes: ['hub'] });
+      });
+      await user.keyboard(shortcutKeys());
+      await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'distribute ends');
+      expect(screen.getAllByRole('option')[0]).toHaveTextContent('Spread connector ends evenly');
+      await user.keyboard('{Enter}');
+
+      const routes = () => toJSON(view.doc).edges.map((e) => e.route);
+      expect(routes()).toEqual([
+        { fromSide: 'right', fromAt: 0.6667 },
+        { fromSide: 'right', fromAt: 0.3333 },
+      ]);
+      expect(useUiStore.getState().announcement.text).toBe('Spread 2 ends on 1 side');
+      act(() => {
+        view.editor().undo();
+      });
+      expect(routes()).toEqual([undefined, undefined]);
+    });
+
+    it('is not offered when nothing is selected', async () => {
+      const user = userEvent.setup();
+      renderWithEditor(
+        <>
+          <Drawn />
+          <Harness />
+        </>,
+        spreadDeck(),
+      );
+      await user.keyboard(shortcutKeys());
+      await user.type(screen.getByRole('combobox', { name: 'Search the deck' }), 'distribute ends');
+      expect(
+        screen.queryByRole('option', { name: /Spread connector ends evenly/ }),
+      ).not.toBeInTheDocument();
     });
   });
 });

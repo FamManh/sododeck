@@ -49,6 +49,7 @@ export {
 export { createEditor, type DeckEditor, type EditorOptions } from './editor';
 export { observeDeck, type DeckChange, type ObjectChange } from './observe';
 export { checkIntegrity, type IntegrityProblem } from './integrity';
+export { endpointOf, endpointTitle, type Endpoint, type EndpointKind } from './endpoint';
 export {
   checkDeck,
   PROBLEM_KINDS,

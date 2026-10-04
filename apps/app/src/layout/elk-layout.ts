@@ -81,8 +81,33 @@ export async function computeLayout(request: LayoutRequest, elk: ElkEngine): Pro
     nodeIds.add(node.id);
     childrenOf(parentOf(node.parent)).push({ id: node.id, width: node.width, height: node.height });
   }
+  // An end may be a group's compound, `group:<id>` (050 R6). A connector between a group and
+  // something inside it has no layer order to give, so it is left out.
+  const nodeParent = new Map(request.nodes.map((n) => [n.id, parentOf(n.parent)]));
+  const enclosing = (end: string): Set<string> => {
+    const out = new Set<string>();
+    let group = end.startsWith('group:')
+      ? groupParent.get(end.slice('group:'.length))
+      : nodeParent.get(end);
+    while (group !== undefined && !out.has(group)) {
+      out.add(group);
+      group = groupParent.get(group);
+    }
+    return out;
+  };
+  const isEnd = (id: string) =>
+    nodeIds.has(id) || (id.startsWith('group:') && compounds.has(id.slice('group:'.length)));
+  const inside = (outer: string, end: string) =>
+    outer.startsWith('group:') && enclosing(end).has(outer.slice('group:'.length));
   root.edges = request.edges
-    .filter((e) => e.source !== e.target && nodeIds.has(e.source) && nodeIds.has(e.target))
+    .filter(
+      (e) =>
+        e.source !== e.target &&
+        isEnd(e.source) &&
+        isEnd(e.target) &&
+        !inside(e.source, e.target) &&
+        !inside(e.target, e.source),
+    )
     .map((e) => ({ id: e.id, sources: [e.source], targets: [e.target] }));
 
   const graph = await elk.layout(root);

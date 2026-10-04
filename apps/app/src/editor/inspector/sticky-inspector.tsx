@@ -1,4 +1,4 @@
-import { stickyCanvasPosition, stickyLabel } from '@sododeck/model';
+import { endpointTitle, stickyCanvasPosition, stickyLabel } from '@sododeck/model';
 import type { Id, SododeckFile, Sticky } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Combobox } from '@sododeck/ui/components/combobox';
@@ -19,8 +19,8 @@ import { notesAreReadOnly } from '../stickies/sticky-actions';
 function edgeTitle(deck: SododeckFile, id: Id): string | null {
   const edge = deck.edges.find((entry) => entry.id === id);
   if (edge === undefined) return null;
-  const from = deck.nodes.find((node) => node.id === edge.from)?.title ?? edge.from;
-  const to = deck.nodes.find((node) => node.id === edge.to)?.title ?? edge.to;
+  const from = endpointTitle(deck, edge.from);
+  const to = endpointTitle(deck, edge.to);
   return `${from} → ${to}`;
 }
 

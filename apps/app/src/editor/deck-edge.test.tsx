@@ -22,7 +22,22 @@ vi.mock('./routing/label-handle', () => ({
 }));
 
 vi.mock('./routing/route-handles', () => ({
-  RouteHandles: () => <div data-testid="route-handles" />,
+  RouteHandles: ({
+    bendable,
+    segment,
+    context,
+  }: {
+    bendable?: boolean;
+    segment?: unknown;
+    context?: unknown;
+  }) => (
+    <div
+      data-testid="route-handles"
+      data-bendable={String(bendable ?? true)}
+      data-context={JSON.stringify(context)}
+      data-segment={segment === undefined ? undefined : JSON.stringify(segment)}
+    />
+  ),
 }));
 
 function renderEdge(
@@ -187,11 +202,45 @@ describe('DeckEdge Deck look (029 US1)', () => {
     );
   });
 
-  it('gives a selected connector 2.5 px in Deck Orange', () => {
+  it('draws a selected connector at its own weight in Deck Orange, over a halo (050 US3)', () => {
     const { container } = renderEdge({}, true);
     expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({
       stroke: 'var(--color-deck-orange)',
-      strokeWidth: '2.5',
+      strokeWidth: '2',
+    });
+    const halo = screen.getByTestId('edge-selection-halo');
+    expect(halo).toHaveAttribute('stroke', 'var(--color-primary-soft)');
+    expect(halo).toHaveAttribute('stroke-width', '8');
+    expect(halo).toHaveAttribute('pointer-events', 'none');
+  });
+
+  it('draws a selected 4 px connector at 4 px with a 10 px halo (050 US3)', () => {
+    const { container } = renderEdge({ style: { width: 4 } }, true);
+    expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '4' });
+    expect(screen.getByTestId('edge-selection-halo')).toHaveAttribute('stroke-width', '10');
+  });
+
+  it('has no selection halo when not selected', () => {
+    renderEdge({});
+    expect(screen.queryByTestId('edge-selection-halo')).toBeNull();
+  });
+
+  describe('weight preview (050 US3)', () => {
+    afterEach(() => {
+      useUiStore.getState().setLineStylePreview(null);
+    });
+
+    it('draws the previewed weight of a dragged weight slider before the stored one', () => {
+      useUiStore.getState().setLineStylePreview({ edgeIds: ['e1'], width: 3 });
+      const { container } = renderEdge({ style: { width: 1 } }, true);
+      expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '3' });
+      expect(screen.getByTestId('edge-selection-halo')).toHaveAttribute('stroke-width', '9');
+    });
+
+    it("ignores another connector's preview", () => {
+      useUiStore.getState().setLineStylePreview({ edgeIds: ['other'], width: 4 });
+      const { container } = renderEdge({ style: { width: 1 } }, true);
+      expect(container.querySelector('.react-flow__edge-path')).toHaveStyle({ strokeWidth: '1' });
     });
   });
 
@@ -309,15 +358,15 @@ describe('DeckEdge line type (029 T044)', () => {
     expect(container.querySelector('.react-flow__edge-path')?.getAttribute('d')).toContain('C');
   });
 
-  it('shows the route handles for curved and elbow lines, not for a straight one (022)', () => {
+  it('shows bend handles for curved and elbow lines, only the ends for a straight one (050)', () => {
     useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
     for (const shape of ['curved', 'elbow'] as const) {
       const { unmount } = renderEdge({ routable: true, shape }, true);
-      expect(screen.getByTestId('route-handles')).toBeInTheDocument();
+      expect(screen.getByTestId('route-handles')).toHaveAttribute('data-bendable', 'true');
       unmount();
     }
     renderEdge({ routable: true, shape: 'straight' }, true);
-    expect(screen.queryByTestId('route-handles')).toBeNull();
+    expect(screen.getByTestId('route-handles')).toHaveAttribute('data-bendable', 'false');
     useUiStore.setState({ selection: EMPTY_SELECTION });
   });
 });
@@ -359,6 +408,27 @@ describe('DeckEdge route handles gating (022)', () => {
     });
     renderEdge({ routable: true }, true);
     expect(screen.queryByTestId('route-handles')).toBeNull();
+  });
+
+  it('hands the handles both real card centres before the connector has bends or pins (050 US1)', () => {
+    // A new bend is stored relative to the card centres; handle points instead of centres made it
+    // land away from the release point once written.
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge(
+      {
+        routable: true,
+        shape: 'curved',
+        fromSize: { width: 184, height: 76 },
+        toSize: { width: 184, height: 76 },
+      },
+      true,
+      { sourceX: 184, sourceY: 38, targetX: 420, targetY: 38 },
+    );
+    const context = JSON.parse(
+      screen.getByTestId('route-handles').getAttribute('data-context') ?? 'null',
+    ) as { fromCentre: unknown; toCentre: unknown };
+    expect(context.fromCentre).toEqual({ x: 92, y: 38 });
+    expect(context.toCentre).toEqual({ x: 512, y: 38 });
   });
 
   it('hides the handles for a non-routable edge (a port or merged edge)', () => {
@@ -583,6 +653,158 @@ describe('DeckEdge bends (022 US2)', () => {
     useUiStore.setState({ bendPreview: { edgeId: 'other', bends: [] } });
     renderEdge({ routable: true, route: { offset: 40 } }, true);
     expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
+  });
+});
+
+describe('DeckEdge end drag preview (050 R3)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+  const geometry = { sourceX: 160, sourceY: 25, targetX: 400, targetY: 25 };
+  const pathOf = (container: HTMLElement) =>
+    container.querySelector('.react-flow__edge-path')?.getAttribute('d') ?? '';
+  const preview = {
+    edgeId: 'e1',
+    end: 'target' as const,
+    targetId: 'b',
+    targetKind: 'node' as const,
+    box: { x: 400, y: 0, width: 160, height: 50 },
+    side: 'top' as const,
+    at: 0.25,
+    point: { x: 440, y: 0 },
+    snapped: false,
+    automatic: false,
+    valid: 'ok' as const,
+  };
+
+  afterEach(() => {
+    useUiStore.setState({ endpointPreview: null, selection: EMPTY_SELECTION });
+  });
+
+  it('draws the connector to the live end in its own type, over a ghost of the old route', () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      endpointPreview: preview,
+    });
+    const { container } = renderEdge(
+      { shape: 'straight', ...sizes, routable: true },
+      true,
+      geometry,
+    );
+    // A straight line from the source side midpoint towards (440, 0), stopping an arrow short.
+    expect(pathOf(container)).toMatch(/^M ?160[ ,]25 /);
+    expect(screen.getByTestId('edge-route-ghost').getAttribute('d')).toMatch(/391[ ,]25$/);
+    expect(pathOf(container)).not.toBe(screen.getByTestId('edge-route-ghost').getAttribute('d'));
+  });
+
+  it('follows the free point off every target', () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      endpointPreview: {
+        ...preview,
+        targetId: null,
+        targetKind: null,
+        box: null,
+        point: { x: 300, y: 300 },
+        valid: 'none',
+      },
+    });
+    const { container } = renderEdge(
+      { shape: 'straight', ...sizes, routable: true },
+      true,
+      geometry,
+    );
+    const numbers =
+      pathOf(container)
+        .match(/-?\d*\.?\d+/g)
+        ?.map(Number) ?? [];
+    // ends one arrow length (9 px) short of (300, 300), on the line from (160, 25)
+    const [x, y] = numbers.slice(-2);
+    expect(Math.hypot((x ?? 0) - 300, (y ?? 0) - 300)).toBeCloseTo(9, 0);
+  });
+
+  it("ignores another connector's end drag", () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      endpointPreview: { ...preview, edgeId: 'other' },
+    });
+    renderEdge({ shape: 'straight', ...sizes, routable: true }, true, geometry);
+    expect(screen.queryByTestId('edge-route-ghost')).toBeNull();
+  });
+});
+
+describe('DeckEdge segment drag (050 US5)', () => {
+  const sizes = { fromSize: { width: 160, height: 50 }, toSize: { width: 160, height: 50 } };
+  // A (0,0 160×50) right side → B (400,0 160×50) left side.
+  const geometry = { sourceX: 160, sourceY: 25, targetX: 400, targetY: 25 };
+  const pathOf = (container: HTMLElement) =>
+    container.querySelector('.react-flow__edge-path')?.getAttribute('d') ?? '';
+  const segmentOf = () => {
+    const raw = screen.getByTestId('route-handles').getAttribute('data-segment');
+    return raw === null ? null : (JSON.parse(raw) as Record<string, unknown>);
+  };
+
+  afterEach(() => {
+    useUiStore.setState({ bendPreview: null, selection: EMPTY_SELECTION });
+  });
+
+  it('hands an elbow connector its segment context: real boxes, sides, at', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'elbow', ...sizes, routable: true }, true, geometry);
+    expect(segmentOf()).toMatchObject({
+      edgeId: 'e1',
+      fromBox: { x: 0, y: 0, width: 160, height: 50 },
+      toBox: { x: 400, y: 0, width: 160, height: 50 },
+      fromSide: 'right',
+      toSide: 'left',
+      fromAt: 0.5,
+      toAt: 0.5,
+      start: { x: 160, y: 25 },
+      end: { x: 400, y: 25 },
+      bends: [],
+    });
+  });
+
+  it('uses the stored at and bends of an anchored, bent elbow', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge(
+      {
+        shape: 'elbow',
+        ...sizes,
+        routable: true,
+        route: { fromSide: 'right', fromAt: 0.2, waypoints: [{ x: 0.5, dy: -80 }] },
+      },
+      true,
+      geometry,
+    );
+    expect(segmentOf()).toMatchObject({ fromAt: 0.2, toAt: 0.5, start: { x: 160, y: 10 } });
+    expect(segmentOf()?.bends).toHaveLength(1);
+  });
+
+  it('gives curved and straight connectors no segment context', () => {
+    useUiStore.setState({ selection: { ...EMPTY_SELECTION, edges: ['e1'] } });
+    renderEdge({ shape: 'curved', ...sizes, routable: true }, true, geometry);
+    expect(segmentOf()).toBeNull();
+  });
+
+  it("draws an automatic end-run drag at the preview's fromAt, over a ghost", () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      bendPreview: { edgeId: 'e1', bends: [], fromAt: 0.9 },
+    });
+    const { container } = renderEdge({ shape: 'elbow', ...sizes, routable: true }, true, geometry);
+    // 0.9 of the source's right side (0 → 50) is y 45.
+    expect(pathOf(container)).toMatch(/^M ?160[ ,]45(?!\d)/);
+    expect(screen.getByTestId('edge-route-ghost').getAttribute('d')).toMatch(/^M ?160[ ,]25(?!\d)/);
+    expect(segmentOf()).toMatchObject({ fromAt: 0.9, start: { x: 160, y: 45 } });
+  });
+
+  it("draws the preview's toAt at the target end", () => {
+    useUiStore.setState({
+      selection: { ...EMPTY_SELECTION, edges: ['e1'] },
+      bendPreview: { edgeId: 'e1', bends: [], toAt: 0.1 },
+    });
+    const { container } = renderEdge({ shape: 'elbow', ...sizes, routable: true }, true, geometry);
+    // The line stops an arrow short of (400, 5), arriving horizontally.
+    expect(pathOf(container)).toMatch(/[ ,]5$/);
   });
 });
 
@@ -866,11 +1088,11 @@ describe('DeckEdge own style (022 US1)', () => {
     expect(el.style.stroke).toBe('rgb(122, 60, 255)');
   });
 
-  it('keeps selection orange and 2.5 px over the own colour and weight', () => {
+  it('keeps selection orange over the own colour, at the own weight (050 US3)', () => {
     const el = edgePath(
       renderEdge({ style: { color: 'blue', width: 4 } }, true).container,
     ) as HTMLElement;
-    expect(el).toHaveStyle({ stroke: 'var(--color-deck-orange)', strokeWidth: '2.5' });
+    expect(el).toHaveStyle({ stroke: 'var(--color-deck-orange)', strokeWidth: '4' });
   });
 
   it('lets a flow stroke replace the own colour and dash', () => {

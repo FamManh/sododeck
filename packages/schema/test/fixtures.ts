@@ -1,3 +1,4 @@
+import { emptySododeckFile } from '../src';
 import { readExample } from './schema-walk';
 
 /**
@@ -702,5 +703,41 @@ export const invalidFixtures: InvalidFixture[] = [
     name: 'enum colour is not a palette name or hex',
     input: set('enums.0.color', 'purple-ish'),
     path: 'enums.0.color',
+  },
+];
+
+/**
+ * Valid decks beyond the examples. 050 lets a connector end name a group: card → group,
+ * group → card and group → group, each with a route and a style, read against the group frame.
+ */
+export const validFixtures: { name: string; input: unknown }[] = [
+  {
+    name: 'connectors with group ends (050)',
+    input: {
+      ...emptySododeckFile(),
+      name: 'Group ends',
+      nodes: [{ id: 'web', type: 'client', title: 'Web', group: 'edge' }],
+      groups: [
+        { id: 'edge', title: 'Edge', position: { x: 0, y: 0 }, size: { width: 240, height: 160 } },
+        { id: 'core', title: 'Core' },
+      ],
+      edges: [
+        {
+          id: 'card-to-group',
+          from: 'web',
+          to: 'core',
+          route: { fromSide: 'right', toSide: 'left', toAt: 0.25 },
+          style: { shape: 'elbow' },
+        },
+        {
+          id: 'group-to-card',
+          from: 'core',
+          to: 'web',
+          route: { waypoints: [{ x: 0.5, y: 0.5 }] },
+          style: { dash: 'dashed' },
+        },
+        { id: 'group-to-group', from: 'edge', to: 'core', style: { width: 3 } },
+      ],
+    },
   },
 ];

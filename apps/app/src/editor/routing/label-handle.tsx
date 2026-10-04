@@ -4,10 +4,13 @@
  * 25 / 50 / 75 % and snapping (⌘ turns that off); ← / → 5 %, Shift + ← / → ticks, Home / End the
  * clamped ends, ⏎ edits the text. The live position is UI state; the document is written once,
  * on release (`setEdgeLabelAt`).
+ *
+ * 050 R1/R2: the handle renders in the viewport portal, above the cards, and the drag runs through
+ * `startPointerDrag`: it follows the pointer over cards and a click (under 4 px) moves nothing.
  */
 import type { Id } from '@sododeck/schema';
-import { EdgeLabelRenderer, useReactFlow } from '@xyflow/react';
-import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { useReactFlow, ViewportPortal } from '@xyflow/react';
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
@@ -18,6 +21,8 @@ import {
   LABEL_TICKS,
   stepLabel,
 } from '../editing/label-drag';
+import { setActiveGesture } from '../editing/drag-session';
+import { startPointerDrag, type PointerDrag } from '../editing/pointer-drag';
 import { oneStep } from '../fields/one-step';
 import { labelPoint, type PathSamples } from './connector-geometry';
 
@@ -43,10 +48,19 @@ export function LabelHandle({ edgeId, text, at, samples, clamp, width, rest }: L
   const { screenToFlowPosition } = useReactFlow();
   const [dragging, setDragging] = useState(false);
   const live = useRef<{ at: number; snapped: boolean } | null>(null);
+  const drag = useRef<PointerDrag | null>(null);
   const preview = useUiStore((s) => (s.labelPreview?.edgeId === edgeId ? s.labelPreview : null));
   const current = preview?.at ?? at;
   const point = preview === null ? rest : labelPoint(samples, preview.at, clamp);
   const range = labelRange(samples.total, clamp);
+
+  // Unmounting mid-drag (the connector is deselected) drops the preview.
+  useEffect(
+    () => () => {
+      drag.current?.cancel();
+    },
+    [],
+  );
 
   function write(next: number) {
     oneStep(editor, () => {
@@ -56,39 +70,55 @@ export function LabelHandle({ edgeId, text, at, samples, clamp, width, rest }: L
   }
 
   function finish() {
-    useUiStore.getState().setLabelPreview(null);
-    useUiStore.getState().setConnectorReadout(null);
-    if (useUiStore.getState().canvasGesture === 'label')
-      useUiStore.getState().setCanvasGesture(null);
+    const ui = useUiStore.getState();
+    ui.setLabelPreview(null);
+    ui.setConnectorReadout(null);
+    if (ui.canvasGesture === 'label') ui.setCanvasGesture(null);
+    if (live.current !== null) setActiveGesture(null);
     live.current = null;
+    drag.current = null;
     setDragging(false);
   }
 
   function onPointerDown(event: PointerEvent<HTMLElement>) {
     if (event.button !== 0) return;
     event.stopPropagation();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    useUiStore.getState().setCanvasGesture('label');
-    live.current = { at: current, snapped: false };
-    setDragging(true);
-  }
-  function onPointerMove(event: PointerEvent<HTMLElement>) {
-    if (live.current === null) return;
-    const hit = labelFromPoint(
-      samples,
-      screenToFlowPosition({ x: event.clientX, y: event.clientY }),
-      clamp,
-      { mod: event.metaKey || event.ctrlKey },
-    );
-    live.current = hit;
-    const ui = useUiStore.getState();
-    ui.setLabelPreview({ edgeId, ...hit });
-    ui.setConnectorReadout(labelReadout(hit.at, hit.snapped));
-  }
-  function onPointerUp() {
-    const hit = live.current;
-    finish();
-    if (hit !== null && hit.at !== at) write(hit.at);
+    drag.current?.cancel();
+    const from = current;
+    drag.current = startPointerDrag(event, {
+      onStart: () => {
+        useUiStore.getState().setCanvasGesture('label');
+        live.current = { at: from, snapped: false };
+        // Registered so the guide safety net knows a gesture is running.
+        setActiveGesture({
+          cancel: () => {
+            drag.current?.cancel();
+            return true;
+          },
+          arrow: () => false,
+        });
+        setDragging(true);
+      },
+      onMove: (e) => {
+        if (live.current === null) return;
+        const hit = labelFromPoint(
+          samples,
+          screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+          clamp,
+          { mod: e.metaKey || e.ctrlKey },
+        );
+        live.current = hit;
+        const ui = useUiStore.getState();
+        ui.setLabelPreview({ edgeId, ...hit });
+        ui.setConnectorReadout(labelReadout(hit.at, hit.snapped));
+      },
+      onEnd: () => {
+        const hit = live.current;
+        finish();
+        if (hit !== null && hit.at !== at) write(hit.at);
+      },
+      onCancel: finish,
+    });
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
@@ -97,7 +127,7 @@ export function LabelHandle({ edgeId, text, at, samples, clamp, width, rest }: L
       ui.select({ edges: [edgeId] });
       ui.openEdgePopover(edgeId);
     } else if (event.key === 'Escape' && dragging) {
-      finish();
+      drag.current?.cancel();
     } else {
       const next = stepLabel(at, event.key, event.shiftKey, range);
       if (next === null) return;
@@ -108,7 +138,7 @@ export function LabelHandle({ edgeId, text, at, samples, clamp, width, rest }: L
   }
 
   return (
-    <EdgeLabelRenderer>
+    <ViewportPortal>
       <button
         type="button"
         aria-label={`Label ${text}, ${pct(current)} % along`}
@@ -123,8 +153,6 @@ export function LabelHandle({ edgeId, text, at, samples, clamp, width, rest }: L
           pointerEvents: 'all',
         }}
         onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
         onKeyDown={onKeyDown}
       />
       {dragging &&
@@ -150,6 +178,6 @@ export function LabelHandle({ edgeId, text, at, samples, clamp, width, rest }: L
           {labelReadout(preview.at, preview.snapped)}
         </span>
       )}
-    </EdgeLabelRenderer>
+    </ViewportPortal>
   );
 }

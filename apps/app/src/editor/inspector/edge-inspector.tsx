@@ -1,4 +1,4 @@
-import { edgeShape } from '@sododeck/model';
+import { edgeShape, endpointTitle } from '@sododeck/model';
 import type { Edge, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
@@ -50,8 +50,12 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
     });
   };
   const text = (value: string) => (value === '' ? null : value);
-  const titleOf = (id: string) => deck.nodes.find((n) => n.id === id)?.title ?? id;
-  const nodeOptions = deck.nodes.map((n) => ({ value: n.id, label: n.title }));
+  const titleOf = (id: string) => endpointTitle(deck, id);
+  // Either end may be a card or a group (050 R6).
+  const endpointOptions = [
+    ...deck.nodes.map((n) => ({ value: n.id, label: n.title })),
+    ...deck.groups.map((g) => ({ value: g.id, label: `${g.title} (group)` })),
+  ];
   const uses = edgeUsage(deck, edge.id);
 
   /**
@@ -111,7 +115,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
             label="From"
             listLabel="Components"
             value={edge.from}
-            options={nodeOptions}
+            options={endpointOptions}
             onPick={(from) => {
               reattach(from, edge.to);
             }}
@@ -120,7 +124,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
             label="To"
             listLabel="Components"
             value={edge.to}
-            options={nodeOptions}
+            options={endpointOptions}
             onPick={(to) => {
               reattach(edge.from, to);
             }}

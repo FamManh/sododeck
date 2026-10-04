@@ -15,7 +15,7 @@ import {
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
 import { bundleEdges } from './bundles';
 import { cardLayout } from './card-layout';
-import { cardSize } from './canvas-geometry';
+import { cardSize, groupBounds } from './canvas-geometry';
 import { focusSet } from './focus-set';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
@@ -1287,5 +1287,104 @@ describe('flow playback through shapes (031 US5)', () => {
     });
     expect(byId('start').data.step?.state).toBe('played');
     expect(byId('db')).toMatchObject({ type: 'shape', data: { step: { state: 'upcoming' } } });
+  });
+});
+
+describe('group connector ends (050 US4)', () => {
+  const grouped: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'free', type: 'service', title: 'Free', position: { x: 600, y: 0 } },
+      { id: 'a', type: 'service', title: 'A', group: 'core', position: { x: 40, y: 60 } },
+      { id: 'o', type: 'service', title: 'O', group: 'other', position: { x: 40, y: 600 } },
+    ],
+    groups: [
+      { id: 'core', title: 'Core', position: { x: 0, y: 0 }, size: { width: 400, height: 300 } },
+      { id: 'other', title: 'Other' },
+    ],
+    edges: [
+      { id: 'toCore', from: 'free', to: 'core', label: 'reads' },
+      { id: 'own', from: 'core', to: 'a' },
+      { id: 'groups', from: 'core', to: 'other' },
+    ],
+  };
+
+  it('draws a connector to a shown group from its frame box', () => {
+    const graph = topLevelGraph(grouped);
+    const edges = toFlowEdges(grouped, graph, view());
+    const toCore = edges.find((e) => e.id === 'toCore');
+    expect(toCore).toMatchObject({
+      source: 'free',
+      target: 'group:core',
+      ariaLabel: 'Free to Core: reads',
+      data: { toTitle: 'Core', toSize: { width: 400, height: 300 }, routable: true },
+    });
+    const frame = groupBounds(grouped).get('other');
+    expect(edges.find((e) => e.id === 'groups')).toMatchObject({
+      source: 'group:core',
+      target: 'group:other',
+      data: { toSize: { width: frame?.width, height: frame?.height } },
+    });
+    // A group and its own member: allowed in a file, so it is drawn.
+    expect(edges.find((e) => e.id === 'own')).toMatchObject({
+      source: 'group:core',
+      target: 'a',
+    });
+  });
+
+  it('ends a connector to a collapsed group on its card', () => {
+    const graph = visibleGraph(grouped, { node: null, group: null }, new Set(['core']));
+    const edges = toFlowEdges(grouped, graph, view());
+    expect(edges.find((e) => e.id === 'merged:collapsed:core|free')).toMatchObject({
+      source: 'collapsed:core',
+      target: 'free',
+    });
+    expect(edges.find((e) => e.id === 'merged:collapsed:core|group:other')).toMatchObject({
+      source: 'collapsed:core',
+      target: 'group:other',
+      ariaLabel: '1 connections between Core and Other',
+    });
+  });
+
+  it('ends a connector to a group out of the drill scope on a proxy', () => {
+    const graph = visibleGraph(grouped, { node: null, group: 'core' }, new Set());
+    const nodes = toFlowNodes(grouped, graph, view());
+    expect(nodes.find((n) => n.id === 'port:core')).toMatchObject({
+      type: 'port',
+      data: { outsideNodeId: 'core', outsideTitle: 'Core', kind: 'group' },
+    });
+    const edges = toFlowEdges(grouped, graph, view());
+    expect(edges.find((e) => e.id === 'own')).toMatchObject({
+      source: 'port:core',
+      target: 'a',
+    });
+  });
+
+  it('bundles parallel group connectors between the frames they are drawn on', () => {
+    const deck: SododeckFile = {
+      ...grouped,
+      edges: [
+        { id: 'g1', from: 'core', to: 'other' },
+        { id: 'g2', from: 'other', to: 'core' },
+      ],
+    };
+    const graph = topLevelGraph(deck);
+    const bundles = bundleEdges(deck, graph, { exclude: new Set(), fanned: new Set(), off: false });
+    expect(bundles.bundles).toMatchObject([{ a: 'group:core', b: 'group:other' }]);
+    const edges = toFlowEdges(deck, graph, view(), undefined, bundles);
+    expect(edges).toHaveLength(1);
+    expect(edges[0]).toMatchObject({
+      source: 'group:core',
+      target: 'group:other',
+      ariaLabel: '2 connections between Core and Other',
+    });
+  });
+
+  it("puts a card's group connector and the frame in the card's focus set", () => {
+    const graph = topLevelGraph(grouped);
+    expect(focusSet(grouped, graph, 'free')).toMatchObject({
+      members: new Set(['free', 'group:core']),
+      edges: new Set(['toCore']),
+    });
   });
 });

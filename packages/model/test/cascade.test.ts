@@ -5,6 +5,7 @@ import {
   checkIntegrity,
   createEditor,
   fromJSON,
+  previewRemoval,
   STICKY_DEFAULT_OFFSET,
   toJSON,
   type RemovalResult,
@@ -454,6 +455,77 @@ describe('view references (011, FR-061)', () => {
           { id: 'x', type: 'custom', title: 'X', groupFrames: { inner: frame } },
         ],
       },
+    );
+  });
+});
+
+describe('groups as connector ends (050)', () => {
+  const groupEdgeDeck: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', group: 'g' },
+      { id: 'b', type: 'service', title: 'B' },
+    ],
+    groups: [
+      { id: 'g', title: 'G' },
+      { id: 'h', title: 'H' },
+    ],
+    edges: [
+      { id: 'a-b', from: 'a', to: 'b' },
+      { id: 'b-g', from: 'b', to: 'g', route: { toSide: 'left' } },
+      { id: 'g-h', from: 'g', to: 'h', style: { dash: 'dashed' } },
+      { id: 'h-b', from: 'h', to: 'b' },
+    ],
+    flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'b-g' }] }],
+  };
+
+  it('removing a group removes every edge touching it, in one undo step', () => {
+    removeAndUndo(
+      (editor) => editor.remove('groups', 'g'),
+      (out, result) => {
+        expect(out.edges.map((e) => e.id)).toEqual(['a-b', 'h-b']);
+        expect(out.nodes.find((n) => n.id === 'a')).not.toHaveProperty('group');
+        expect(result.removed).toEqual([
+          { scope: 'groups', id: 'g' },
+          { scope: 'edges', id: 'b-g' },
+          { scope: 'edges', id: 'g-h' },
+        ]);
+        expect(result.updated).toEqual([{ scope: 'nodes', id: 'a' }]);
+        // The step that used a removed group edge is kept and reported broken, as for cards.
+        expect(result.broken.map((p) => [p.object.child?.id ?? p.object.id, p.field])).toEqual([
+          ['s1', 'edge'],
+        ]);
+      },
+      groupEdgeDeck,
+    );
+  });
+
+  it('previewRemoval lists the group edges a group delete would remove', () => {
+    const preview = previewRemoval(groupEdgeDeck, [{ scope: 'groups', id: 'g' }]);
+    expect(preview.removed).toEqual([
+      { scope: 'groups', id: 'g' },
+      { scope: 'edges', id: 'b-g' },
+      { scope: 'edges', id: 'g-h' },
+    ]);
+  });
+
+  it('renaming a group keeps its edges (ids are stable)', () => {
+    const { doc, editor } = setup(groupEdgeDeck);
+    editor.update('groups', 'g', { title: 'Renamed' });
+    const out = toJSON(doc);
+    expect(out.edges).toEqual(groupEdgeDeck.edges);
+    expect(checkIntegrity(out)).toEqual([]);
+  });
+
+  it('accepts a new edge to a group and an end moved onto a group', () => {
+    const { doc, editor } = setup(groupEdgeDeck);
+    editor.add('edges', { id: 'a-h', from: 'a', to: 'h' });
+    editor.update('edges', 'a-b', { to: 'g' });
+    const out = toJSON(doc);
+    expect(out.edges.find((e) => e.id === 'a-h')).toEqual({ id: 'a-h', from: 'a', to: 'h' });
+    expect(out.edges.find((e) => e.id === 'a-b')?.to).toBe('g');
+    expect(() => editor.add('edges', { from: 'a', to: 'nothing' })).toThrow(
+      expect.objectContaining({ code: 'missing-reference' }),
     );
   });
 });

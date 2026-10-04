@@ -213,3 +213,16 @@ describe('selectionView in flow mode (007 FR-022)', () => {
     expect(selectionView(playbackDeck, none, openedFlow('empty'), true).label).toBe('Flow');
   });
 });
+
+describe('selectionView group ends (050 US4)', () => {
+  it('names a connector to a group by the group title', () => {
+    const grouped = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A' }],
+      groups: [{ id: 'g', title: 'Data layer' }],
+      edges: [{ id: 'ag', from: 'a', to: 'g' }],
+    });
+    expect(
+      selectionView(grouped, { nodes: [], edges: ['ag'], groups: [], stickies: [] }).label,
+    ).toBe('A → Data layer');
+  });
+});

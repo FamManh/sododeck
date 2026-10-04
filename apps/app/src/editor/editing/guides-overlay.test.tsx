@@ -1,10 +1,17 @@
 import { act, render, screen } from '@testing-library/react';
 import { ReactFlow } from '@xyflow/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
+import { setActiveGesture } from './drag-session';
 import { GuidesOverlay } from './guides-overlay';
+
+const aGesture = { cancel: () => true, arrow: () => false };
+
+afterEach(() => {
+  setActiveGesture(null);
+});
 
 const ui = () => useUiStore.getState();
 
@@ -33,6 +40,7 @@ describe('GuidesOverlay (016 US3 / US2 / US4)', () => {
   it('draws guides with distance and equal-gap labels, hidden from assistive tech', () => {
     const { container } = setup();
     act(() => {
+      setActiveGesture(aGesture);
       ui().setGuides([
         {
           axis: 'x',
@@ -50,6 +58,28 @@ describe('GuidesOverlay (016 US3 / US2 / US4)', () => {
     expect(screen.getByText('40')).toBeInTheDocument();
     expect(screen.getByText('24')).toBeInTheDocument();
     expect(container.querySelector('[data-guide]')?.closest('[aria-hidden]')).not.toBeNull();
+    expect(screen.getAllByTestId('snap-guide')).toHaveLength(2);
+  });
+
+  it('draws no guide when no gesture is running, even if guides were left behind (050 R9)', () => {
+    setup();
+    act(() => {
+      ui().setGuides([{ axis: 'x', at: 50, from: 0, to: 300 }]);
+    });
+    expect(screen.queryAllByTestId('snap-guide')).toHaveLength(0);
+  });
+
+  it('hides guides as soon as the gesture ends', () => {
+    setup();
+    act(() => {
+      setActiveGesture(aGesture);
+      ui().setGuides([{ axis: 'x', at: 50, from: 0, to: 300 }]);
+    });
+    expect(screen.getAllByTestId('snap-guide')).toHaveLength(1);
+    act(() => {
+      setActiveGesture(null);
+    });
+    expect(screen.queryAllByTestId('snap-guide')).toHaveLength(0);
   });
 
   it('shows the start ghost and the signed offset readout during a group drag', () => {

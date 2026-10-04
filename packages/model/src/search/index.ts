@@ -1,4 +1,5 @@
 import { analyzeFlow } from '../flow-paths';
+import { endpointTitle } from '../endpoint';
 import { stickyLabel } from '../geometry';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
@@ -20,8 +21,9 @@ function field(field: SearchField, raw: string | undefined): SearchFieldValue | 
   return { field, raw, norm: normalizeText(raw) };
 }
 
-function titleOfNode(deck: SododeckFile, id: Id): string {
-  return deck.nodes.find((node) => node.id === id)?.title ?? id;
+/** A connector end's title: a node or a group (050), else the id itself. */
+function titleOfEnd(deck: SododeckFile, id: Id): string {
+  return endpointTitle(deck, id);
 }
 
 function kindLabel(kind: SearchKind): string {
@@ -151,8 +153,8 @@ function nodeEntries(deck: SododeckFile): SearchEntry[] {
 
 function edgeEntries(deck: SododeckFile): SearchEntry[] {
   return deck.edges.map((edge) => {
-    const from = titleOfNode(deck, edge.from);
-    const to = titleOfNode(deck, edge.to);
+    const from = titleOfEnd(deck, edge.from);
+    const to = titleOfEnd(deck, edge.to);
     const title = edge.label ?? `${from} → ${to}`;
     return entryOf(edgeCache, edge, {
       kind: 'edge',
@@ -183,8 +185,8 @@ function flowEntries(deck: SododeckFile): SearchEntry[] {
     for (const path of [analysis.main, ...analysis.branches.map((branch) => branch.steps)]) {
       for (const pathStep of path) {
         const step = pathStep.step;
-        const from = pathStep.from === null ? '?' : titleOfNode(deck, pathStep.from);
-        const to = pathStep.to === null ? '?' : titleOfNode(deck, pathStep.to);
+        const from = pathStep.from === null ? '?' : titleOfEnd(deck, pathStep.from);
+        const to = pathStep.to === null ? '?' : titleOfEnd(deck, pathStep.to);
         entries.push(
           entryOf(stepCache, step, {
             kind: 'step',
@@ -229,7 +231,7 @@ function ruleEntries(deck: SododeckFile): SearchEntry[] {
 
 function stickyEntries(deck: SododeckFile): SearchEntry[] {
   return deck.stickies.map((sticky) => {
-    const placement = sticky.anchor === undefined ? null : titleOfNode(deck, sticky.anchor);
+    const placement = sticky.anchor === undefined ? null : titleOfEnd(deck, sticky.anchor);
     return entryOf(stickyCache, sticky, {
       kind: 'sticky',
       id: sticky.id,

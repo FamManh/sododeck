@@ -2,7 +2,7 @@
  * Delete with cascade (data-model "References and delete cascade", spec FR-011–017).
  * Structural objects that cannot exist without their target are removed (edges of a node, steps
  * of a flow); knowledge objects (steps, stickies) are kept and reported broken; groups re-parent
- * their contents. Each delete with its whole cascade is one transaction: one change, one undo step.
+ * their contents and take their own edges with them (050: a connector end may be a group). Each delete with its whole cascade is one transaction: one change, one undo step.
  *
  * Database parts (040, research R9): removing a column drops it from its table's index parts (an
  * index left empty goes too) and from relationships: an end of one column removes the edge, a
@@ -121,15 +121,20 @@ const stepRef = (flowId: Id, stepId: Id): ObjectRef => ({
   child: { kind: 'step', id: stepId },
 });
 
-function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
-  const file = toJSON(doc);
-  const base = nodeCanvasPosition(file, id);
+/** Removes every edge with an end at `id` (a node, or a group since 050). */
+function removeEdgesAt(cascade: Cascade, doc: DeckDoc, id: Id): void {
   const edges = collectionMap(doc, 'edges');
   for (const [edgeId, edge] of entriesOf(doc, 'edges')) {
     if (edge.get('from') === id || edge.get('to') === id) {
       cascade.remove({ scope: 'edges', id: edgeId }, deleteById(edges, edgeId));
     }
   }
+}
+
+function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
+  const file = toJSON(doc);
+  const base = nodeCanvasPosition(file, id);
+  removeEdgesAt(cascade, doc, id);
   for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
     if (node.get('parent') === id && nodeId !== id) {
       cascade.update({ scope: 'nodes', id: nodeId }, () => {
@@ -169,6 +174,8 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
 }
 
 function removeGroup(cascade: Cascade, doc: DeckDoc, id: Id, group: YObject): void {
+  // Connectors to the group go with it, as a card's do (050, FR-022); its members stay.
+  removeEdgesAt(cascade, doc, id);
   const parent = group.get('parent');
   const repoint = (map: YObject, field: string) => () => {
     if (typeof parent === 'string') map.set(field, parent);

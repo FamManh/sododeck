@@ -10,6 +10,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import type { MenuTarget, Selection, ToolbarFieldId } from '../../state/ui-store';
 import type { ShortcutId } from '../shell/shortcuts';
+import type { DrawnEdge, DrawnNode } from '../editing/spread-view';
 import type { ViewState } from '../views/view-state';
 
 /** `keys`: offered only through its shortcut, never listed in a menu or toolbar. */
@@ -29,6 +30,9 @@ export interface CanvasApi {
   fitView: (options?: { padding?: number }) => unknown;
   screenToFlowPosition: (point: { x: number; y: number }) => { x: number; y: number };
   getViewport: () => { x: number; y: number; zoom: number };
+  /** What the canvas draws now (050 US7: spread ends reads the drawn boxes and sides). */
+  getNodes?: () => readonly DrawnNode[];
+  getEdges?: () => readonly DrawnEdge[];
 }
 
 export interface ActionContext {
