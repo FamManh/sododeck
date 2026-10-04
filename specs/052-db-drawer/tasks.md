@@ -101,13 +101,13 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Write `apps/app/src/editor/inspector/relationship/relationship-inspector.test.tsx`: header "from.col → to.col" and cardinality subline; From / To pair selects list each table's columns; add, remove and reorder pairs write both lists in one `update('edges', …)`; unequal lengths show "From has 2 columns, To has 1"; removing the last pair opens the confirm and Confirm deletes via `requestDelete`; cardinality choice writes `cardinality` and shows the n–n hint "SQL export writes a junction table"; optional switches write `true` / remove; On delete and On update selects include "Not set" (removes the key) and the five `DbAction`s; name writes `label`; line type uses `applyLineType`; colour uses `setEdgeStyle`; a pair with differing types shows the (!) from `typeMismatch`; a self-reference lists one table on both sides.
+- [x] T026 [P] [US2] Write `apps/app/src/editor/inspector/relationship/relationship-inspector.test.tsx`: header "from.col → to.col" and cardinality subline; From / To pair selects list each table's columns; add, remove and reorder pairs write both lists in one `update('edges', …)`; unequal lengths show "From has 2 columns, To has 1"; removing the last pair opens the confirm and Confirm deletes via `requestDelete`; cardinality choice writes `cardinality` and shows the n–n hint "SQL export writes a junction table"; optional switches write `true` / remove; On delete and On update selects include "Not set" (removes the key) and the five `DbAction`s; name writes `label`; line type uses `applyLineType`; colour uses `setEdgeStyle`; a pair with differing types shows the (!) from `typeMismatch`; a self-reference lists one table on both sides.
 
 ### Implementation for User Story 2
 
-- [ ] T027 [P] [US2] Implement `apps/app/src/editor/inspector/relationship/column-pairs.tsx` (pair rows, add / remove / reorder, mismatch icon, length warning, last-pair confirm via `fields/confirm-dialog.tsx`).
-- [ ] T028 [P] [US2] Implement `apps/app/src/editor/inspector/relationship/cardinality-choice.tsx` (four buttons drawn with 042's crow marks from `edge-end-marks.ts`, `role="radiogroup"`, n–n hint).
-- [ ] T029 [US2] Fill `apps/app/src/editor/inspector/relationship/relationship-inspector.tsx`: From / To, cardinality, optional sides, Referential actions (reuse `ON_DELETE` from `actions/relationship-actions.ts`, add `onUpdate`), Name · Line · Colour (frame 164 bottom). T026 is green.
+- [x] T027 [P] [US2] Implement `apps/app/src/editor/inspector/relationship/column-pairs.tsx` (pair rows, add / remove / reorder, mismatch icon, length warning, last-pair confirm via `fields/confirm-dialog.tsx`).
+- [x] T028 [P] [US2] Implement `apps/app/src/editor/inspector/relationship/cardinality-choice.tsx` (four buttons drawn with 042's crow marks from `edge-end-marks.ts`, `role="radiogroup"`, n–n hint).
+- [x] T029 [US2] Fill `apps/app/src/editor/inspector/relationship/relationship-inspector.tsx`: From / To, cardinality, optional sides, Referential actions (reuse `ON_DELETE` from `actions/relationship-actions.ts`, add `onUpdate`), Name · Line · Colour (frame 164 bottom). T026 is green.
 
 **Checkpoint**: relationships are fully editable.
 
