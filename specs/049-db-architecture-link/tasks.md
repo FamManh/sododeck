@@ -109,8 +109,8 @@
 
 **Independent test**: export from a card in a Postgres deck and in a Generic deck.
 
-- [ ] T028 [P] [US4] Write failing tests then add the action `database.exportSql` in `apps/app/src/editor/actions/db-actions.ts` (+ test): label "Export this database as SQL", shown for `database` cards in the card context menu and inspector, disabled with reason "This database has no tables" when empty, runs `openExport(null, { format: 'sql', scope: 'database' })` after selecting the card
-- [ ] T029 [P] [US4] Tests in `apps/app/src/db/export/schema-export.test.ts` (extend): output has exactly the card's tables and none of another card's; a foreign key to another card's table is written as a comment; a Generic deck with no picked dialect returns `null` from `sqlDialectOf` so the dialog asks first; cancelling writes nothing. Fix `apps/app/src/db/export/` only if a test fails
+- [x] T028 [P] [US4] Write failing tests then add the action `database.exportSql` in `apps/app/src/editor/actions/db-actions.ts` (+ test): label "Export this database as SQL", shown for `database` cards in the card context menu and inspector, disabled with reason "This database has no tables" when empty, runs `openExport(null, { format: 'sql', scope: 'database' })` after selecting the card
+- [x] T029 [P] [US4] Tests in `apps/app/src/db/export/schema-export.test.ts` (extend): output has exactly the card's tables and none of another card's; a foreign key to another card's table is written as a comment; a Generic deck with no picked dialect returns `null` from `sqlDialectOf` so the dialog asks first; cancelling writes nothing. Fix `apps/app/src/db/export/` only if a test fails
 
 ---
 

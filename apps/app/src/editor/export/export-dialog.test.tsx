@@ -684,6 +684,19 @@ describe('ExportDialog: schema formats (045)', () => {
       expect(screen.queryByRole('radio', { name: 'Orders DB' })).not.toBeInTheDocument();
     });
 
+    it('opens on SQL and the selected database card from "Export this database as SQL" (049)', async () => {
+      setup(shop, { ui: selection(['card.orders-db']) });
+      act(() => {
+        useUiStore.getState().closeExport();
+      });
+      act(() => {
+        useUiStore.getState().openExport(null, { format: 'sql', scope: 'database' });
+      });
+      expect(scopeRadio('Orders DB')).toBeChecked();
+      await footerName('shop-orders-db.sql');
+      expect(preview()).not.toHaveTextContent('CREATE TABLE users');
+    });
+
     it('leaves the image scope control as it was', async () => {
       const { user } = setup(shop, { ui: selection(['orders']) });
       await pick(user, 'PNG');

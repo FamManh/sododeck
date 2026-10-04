@@ -146,3 +146,47 @@ describe('schemaFileName', () => {
     ).toBe('untitled-deck-orders-db-dictionary.md');
   });
 });
+
+describe('Export SQL from a database card (049 US4)', () => {
+  const created = (text: string) => [...text.matchAll(/^CREATE TABLE (\S+) \(/gm)].map((m) => m[1]);
+  const owned = (deck: SododeckFile, cardId: string) =>
+    deck.nodes.filter((n) => n.type === 'db-table' && n.parent === cardId).map((n) => n.title);
+
+  it('writes exactly the card’s tables and none of another card’s', () => {
+    const shop = shopDeck('postgres');
+    const { text, tableCount } = schemaExport(
+      shop,
+      request('sql', { kind: 'database', cardId: 'card.orders-db' }),
+    );
+    const mine = owned(shop, 'card.orders-db');
+    expect(tableCount).toBe(mine.length);
+    // Every owned table (an n–n relationship inside the card adds its junction table too).
+    expect(created(text)).toEqual(expect.arrayContaining(mine));
+    for (const other of owned(shop, 'card.users-db')) expect(created(text)).not.toContain(other);
+  });
+
+  it('writes a foreign key to another card’s table as a comment', () => {
+    // Move `sessions` into Orders DB: its key to `users` now leaves the card.
+    const shop = shopDeck('postgres');
+    const moved: SododeckFile = {
+      ...shop,
+      nodes: shop.nodes.map((n) => (n.id === 'sessions' ? { ...n, parent: 'card.orders-db' } : n)),
+    };
+    const { text, notes } = schemaExport(
+      moved,
+      request('sql', { kind: 'database', cardId: 'card.orders-db' }),
+    );
+    expect(created(text)).toContain('sessions');
+    expect(created(text)).not.toContain('users');
+    expect(text).toContain('-- sessions.user_id → users.id not written: users not in this export');
+    expect(notes.map((n) => n.kind)).toContain('fk-out-of-scope');
+  });
+
+  it('waits for a dialect on a Generic deck, so nothing is written until one is picked', () => {
+    const scope = { kind: 'database', cardId: 'card.orders-db' } as const;
+    expect(schemaExport(shopDeck('generic'), request('sql', scope)).text).toBe('');
+    expect(schemaExport(shopDeck('generic'), request('sql', scope, 'sqlite')).text).toContain(
+      'CREATE TABLE',
+    );
+  });
+});
