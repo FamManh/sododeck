@@ -139,8 +139,9 @@ export function pasteFragment(
     };
   });
   const edges: Edge[] = deck.edges.flatMap((edge) => {
-    const from = nodeIds.get(edge.from);
-    const to = nodeIds.get(edge.to);
+    // An end is a node or a group (050); remap either through its map.
+    const from = nodeIds.get(edge.from) ?? groupIds.get(edge.from);
+    const to = nodeIds.get(edge.to) ?? groupIds.get(edge.to);
     if (from === undefined || to === undefined) return [];
     const { fromColumns, toColumns } = edge;
     return [

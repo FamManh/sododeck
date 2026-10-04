@@ -178,3 +178,37 @@ describe('paste a hex fill (020 T049, R12)', () => {
     expect(toJSON(doc).swatches).toEqual(['#111111']);
   });
 });
+
+describe('group-ended edges on the clipboard (050)', () => {
+  const grouped: SododeckFile = {
+    ...deck,
+    edges: [
+      ...deck.edges,
+      { id: 'a-inner', from: 'a', to: 'inner', route: { toSide: 'top' } },
+      { id: 'inner-outer', from: 'inner', to: 'outer' },
+      { id: 'inner-out', from: 'inner', to: 'out' },
+    ],
+  };
+
+  it('keeps an edge whose ends (cards or groups) are all in the fragment', () => {
+    const out = toFragment(grouped, { nodes: ['a', 'b'], groups: ['inner'] }).deck;
+    expect(out.edges.map((e) => e.id)).toEqual(['ab', 'a-inner']);
+    expect(out.edges[1]).toEqual({
+      id: 'a-inner',
+      from: 'a',
+      to: 'inner',
+      route: { toSide: 'top' },
+    });
+  });
+
+  it('keeps a group → group edge when both groups are whole in the fragment', () => {
+    const out = toFragment(grouped, { nodes: ['a', 'b', 'c'], groups: ['outer', 'inner'] }).deck;
+    expect(out.edges.map((e) => e.id)).toEqual(['ab', 'bc', 'a-inner', 'inner-outer']);
+  });
+
+  it('drops an edge to a group that is not whole in the fragment', () => {
+    // Outer is named, but c is not selected, so outer is left out with its edge.
+    const out = toFragment(grouped, { nodes: ['a', 'b'], groups: ['outer', 'inner'] }).deck;
+    expect(out.edges.map((e) => e.id)).toEqual(['ab', 'a-inner']);
+  });
+});

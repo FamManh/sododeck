@@ -300,3 +300,32 @@ describe('pasting tables (040 FR-022a)', () => {
     expect(pasted?.columns?.[2]?.enumRef).toBe('e-status');
   });
 });
+
+describe('pasting group-ended edges (050)', () => {
+  const grouped: SododeckFile = {
+    ...source,
+    edges: [
+      ...source.edges,
+      { id: 'a-inner', from: 'a', to: 'inner', style: { dash: 'dotted' } },
+      { id: 'inner-outer', from: 'inner', to: 'outer', route: { fromSide: 'right' } },
+    ],
+  };
+
+  it('remaps group ends to the pasted groups', () => {
+    const { doc, editor } = setup(grouped);
+    const fragment = toFragment(grouped, { nodes: ['a', 'b', 'c'], groups: ['outer', 'inner'] });
+    const ids = editor.pasteFragment(fragment, { offset });
+    const [a] = ids.nodes.map((id) => getObject(doc, 'nodes', id));
+    const [outer, inner] = ids.groups.map((id) => getObject(doc, 'groups', id));
+    const edges = ids.edges.map((id) => getObject(doc, 'edges', id));
+    expect(edges).toHaveLength(4);
+    expect(edges[2]).toMatchObject({ from: a?.id, to: inner?.id, style: { dash: 'dotted' } });
+    expect(edges[3]).toMatchObject({
+      from: inner?.id,
+      to: outer?.id,
+      route: { fromSide: 'right' },
+    });
+    expectValid(doc);
+    expect(checkDeck(toJSON(doc)).list.filter((p) => p.kind === 'broken-reference')).toEqual([]);
+  });
+});
