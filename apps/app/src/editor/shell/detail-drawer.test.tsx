@@ -204,4 +204,22 @@ describe('Drawer grip (FR-025)', () => {
     expect(loadShellPrefs('deck-2').drawerWidth).toBe(460);
     localStorage.clear();
   });
+  it('shows the enum drawer and closes it when the enum is removed (052)', () => {
+    const withEnum = deckOf({
+      name: 'Shop',
+      nodes: [],
+      enums: [{ id: 'e1', name: 'order_status', values: [{ id: 'v1', name: 'new' }] }],
+    });
+    const env = renderWithEditor(<Shell />, withEnum);
+    act(() => {
+      ui().openEnumDrawer('e1');
+    });
+    expect(screen.getByRole('heading', { name: 'order_status' })).toBeInTheDocument();
+    expect(screen.getByText('Enum · 1 value')).toBeInTheDocument();
+    act(() => {
+      env.editor().removeEnum('e1');
+    });
+    expect(drawer()).not.toBeInTheDocument();
+    expect(ui().drawer.open).toBe(false);
+  });
 });

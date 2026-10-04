@@ -48,7 +48,10 @@ export function DetailDrawer({
   );
 
   // The enum drawer closes when its enum is removed (undo, another tab) (052 FR-005).
-  const enumGone = drawer.open && !hasDetailsTarget({ ...useUiStore.getState(), drawer }, deck);
+  const enumGone =
+    drawer.open &&
+    drawer.mode === 'enum' &&
+    !hasDetailsTarget({ ...useUiStore.getState(), drawer }, deck);
 
   const close = useCallback(() => {
     const ui = useUiStore.getState();
@@ -90,8 +93,8 @@ export function DetailDrawer({
   }, [drawer.open]);
 
   useEffect(() => {
-    if (enumGone && drawer.mode === 'enum') close();
-  }, [enumGone, drawer.mode, close]);
+    if (enumGone) close();
+  }, [enumGone, close]);
 
   if (!drawer.open) return null;
 
