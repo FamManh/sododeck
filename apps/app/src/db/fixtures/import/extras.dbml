@@ -1,0 +1,74 @@
+Project crm {
+  database_type: 'PostgreSQL'
+  Note: 'Customer relationship schema'
+}
+
+Enum crm.deal_stage {
+  lead [note: 'Not qualified yet']
+  won
+  lost
+}
+
+Table crm.companies [headercolor: #3498DB] {
+  id int [pk, increment]
+  name varchar(120) [not null, unique]
+  website text [null]
+  Note: 'A company we sell to'
+}
+
+Table crm.contacts {
+  id int [pk, increment]
+  company_id int [ref: > crm.companies.id]
+  email varchar(255) [not null]
+  manager_id int
+}
+
+Table crm.deals {
+  id int [pk]
+  company_id int [not null]
+  stage crm.deal_stage [not null, default: 'lead']
+  amount decimal(12,2) [default: 0]
+  closed_at timestamp [default: `now()`]
+
+  indexes {
+    (company_id, stage) [name: 'deals_company_stage_idx']
+    `lower(stage::text)` [type: hash]
+  }
+
+  checks {
+    `amount >= 0` [name: 'deals_amount_check']
+  }
+}
+
+Table crm.deal_contacts {
+  deal_id int
+  contact_id int
+
+  indexes {
+    (deal_id, contact_id) [pk]
+  }
+}
+
+Table crm.tags {
+  id int [pk]
+  label varchar(40)
+}
+
+Ref: crm.deals.company_id > crm.companies.id [delete: cascade, update: no action]
+Ref deal_link {
+  crm.deal_contacts.deal_id > crm.deals.id
+}
+Ref: crm.deal_contacts.contact_id ?> crm.contacts.id
+Ref: crm.contacts.manager_id ?>? crm.contacts.id
+Ref: crm.contacts.id - crm.companies.id
+Ref: crm.tags.id <> crm.deals.id
+
+TableGroup sales [color: #E67E22] {
+  crm.deals
+  crm.deal_contacts
+  Note: 'Pipeline tables'
+}
+
+Note welcome {
+  'Imported from the CRM repository'
+}

@@ -1,0 +1,349 @@
+{
+  "preview": {
+    "format": "dbml",
+    "detectedDialect": null,
+    "dialect": "postgres",
+    "counts": {
+      "tables": 5,
+      "relationships": 7,
+      "enums": 1
+    },
+    "skippedCount": 0,
+    "conversions": [],
+    "dialectOutcome": "set"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "companies",
+            "schema": "crm",
+            "description": "A company we sell to",
+            "style": {
+              "fill": "#3498db"
+            },
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "name",
+                "type": "varchar",
+                "size": "120",
+                "notNull": true,
+                "unique": true
+              },
+              {
+                "id": "dbcol.3",
+                "name": "website",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "contacts",
+            "schema": "crm",
+            "columns": [
+              {
+                "id": "dbcol.4",
+                "name": "id",
+                "type": "int",
+                "pk": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.5",
+                "name": "company_id",
+                "type": "int"
+              },
+              {
+                "id": "dbcol.6",
+                "name": "email",
+                "type": "varchar",
+                "size": "255",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.7",
+                "name": "manager_id",
+                "type": "int"
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "deals",
+            "schema": "crm",
+            "columns": [
+              {
+                "id": "dbcol.8",
+                "name": "id",
+                "type": "int",
+                "pk": true
+              },
+              {
+                "id": "dbcol.9",
+                "name": "company_id",
+                "type": "int",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.10",
+                "name": "stage",
+                "type": "deal_stage",
+                "notNull": true,
+                "default": "lead",
+                "enumRef": "enum.1"
+              },
+              {
+                "id": "dbcol.11",
+                "name": "amount",
+                "type": "decimal",
+                "size": "12,2",
+                "default": 0
+              },
+              {
+                "id": "dbcol.12",
+                "name": "closed_at",
+                "type": "timestamp",
+                "defaultExpr": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.1",
+                "name": "deals_company_stage_idx",
+                "columns": [
+                  "dbcol.9",
+                  "dbcol.10"
+                ]
+              },
+              {
+                "id": "dbidx.2",
+                "columns": [
+                  {
+                    "expr": "lower(stage::text)"
+                  }
+                ],
+                "method": "hash"
+              }
+            ],
+            "checks": [
+              {
+                "id": "dbchk.1",
+                "name": "deals_amount_check",
+                "expr": "amount >= 0"
+              }
+            ],
+            "group": "group.1"
+          },
+          {
+            "id": "node.4",
+            "type": "db-table",
+            "title": "deal_contacts",
+            "schema": "crm",
+            "columns": [
+              {
+                "id": "dbcol.13",
+                "name": "deal_id",
+                "type": "int",
+                "pk": true
+              },
+              {
+                "id": "dbcol.14",
+                "name": "contact_id",
+                "type": "int",
+                "pk": true
+              }
+            ],
+            "group": "group.1"
+          },
+          {
+            "id": "node.5",
+            "type": "db-table",
+            "title": "tags",
+            "schema": "crm",
+            "columns": [
+              {
+                "id": "dbcol.15",
+                "name": "id",
+                "type": "int",
+                "pk": true
+              },
+              {
+                "id": "dbcol.16",
+                "name": "label",
+                "type": "varchar",
+                "size": "40"
+              }
+            ]
+          }
+        ],
+        "groups": [
+          {
+            "id": "group.1",
+            "title": "sales",
+            "description": "Pipeline tables",
+            "style": {
+              "fill": "#e67e22"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.2",
+            "to": "node.1",
+            "fromColumns": [
+              "dbcol.5"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.2",
+            "from": "node.3",
+            "to": "node.1",
+            "fromColumns": [
+              "dbcol.9"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade",
+            "onUpdate": "no-action"
+          },
+          {
+            "id": "edge.3",
+            "from": "node.4",
+            "to": "node.3",
+            "label": "deal_link",
+            "fromColumns": [
+              "dbcol.13"
+            ],
+            "toColumns": [
+              "dbcol.8"
+            ],
+            "cardinality": "n-1"
+          },
+          {
+            "id": "edge.4",
+            "from": "node.4",
+            "to": "node.2",
+            "fromColumns": [
+              "dbcol.14"
+            ],
+            "toColumns": [
+              "dbcol.4"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true
+          },
+          {
+            "id": "edge.5",
+            "from": "node.2",
+            "to": "node.2",
+            "fromColumns": [
+              "dbcol.7"
+            ],
+            "toColumns": [
+              "dbcol.4"
+            ],
+            "cardinality": "n-1",
+            "fromOptional": true,
+            "toOptional": true
+          },
+          {
+            "id": "edge.6",
+            "from": "node.2",
+            "to": "node.1",
+            "fromColumns": [
+              "dbcol.4"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "1-1"
+          },
+          {
+            "id": "edge.7",
+            "from": "node.5",
+            "to": "node.3",
+            "cardinality": "n-n"
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [
+      {
+        "planId": "enum.1",
+        "name": "deal_stage",
+        "schema": "crm",
+        "values": [
+          {
+            "name": "lead",
+            "note": "Not qualified yet"
+          },
+          {
+            "name": "won"
+          },
+          {
+            "name": "lost"
+          }
+        ]
+      }
+    ],
+    "stickies": [
+      {
+        "text": "Imported from the CRM repository"
+      }
+    ],
+    "description": "Customer relationship schema",
+    "setDialect": "postgres",
+    "dialectOutcome": "set",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "extras.dbml",
+        "format": "dbml",
+        "dialect": "postgres"
+      },
+      "mapped": {
+        "tables": 5,
+        "relationships": 7,
+        "enums": 1,
+        "indexes": 2,
+        "checks": 1,
+        "groups": 1,
+        "stickies": 1
+      },
+      "skipped": [],
+      "changed": [],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

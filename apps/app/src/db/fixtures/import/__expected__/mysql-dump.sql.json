@@ -1,0 +1,322 @@
+{
+  "preview": {
+    "format": "sql",
+    "detectedDialect": "mysql",
+    "dialect": "mysql",
+    "counts": {
+      "tables": 3,
+      "relationships": 2,
+      "enums": 2
+    },
+    "skippedCount": 7,
+    "conversions": [],
+    "dialectOutcome": "set"
+  },
+  "plan": {
+    "fragment": {
+      "sododeckFragment": 1,
+      "deck": {
+        "$schema": "https://sododeck.com/schema/v1.json",
+        "version": 1,
+        "nodes": [
+          {
+            "id": "node.1",
+            "type": "db-table",
+            "title": "customers",
+            "description": "One row per buyer",
+            "columns": [
+              {
+                "id": "dbcol.1",
+                "name": "id",
+                "type": "int unsigned",
+                "pk": true,
+                "notNull": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.2",
+                "name": "email",
+                "type": "varchar",
+                "size": "255",
+                "notNull": true,
+                "unique": true,
+                "note": "Login and receipts"
+              },
+              {
+                "id": "dbcol.3",
+                "name": "tier",
+                "type": "customers_tier",
+                "notNull": true,
+                "default": "free",
+                "enumRef": "enum.1"
+              },
+              {
+                "id": "dbcol.4",
+                "name": "created_at",
+                "type": "datetime",
+                "notNull": true,
+                "defaultExpr": "CURRENT_TIMESTAMP"
+              },
+              {
+                "id": "dbcol.5",
+                "name": "updated_at",
+                "type": "datetime"
+              }
+            ]
+          },
+          {
+            "id": "node.2",
+            "type": "db-table",
+            "title": "orders",
+            "columns": [
+              {
+                "id": "dbcol.6",
+                "name": "id",
+                "type": "bigint unsigned",
+                "pk": true,
+                "notNull": true,
+                "increment": true
+              },
+              {
+                "id": "dbcol.7",
+                "name": "customer_id",
+                "type": "int unsigned",
+                "notNull": true
+              },
+              {
+                "id": "dbcol.8",
+                "name": "status",
+                "type": "orders_status",
+                "notNull": true,
+                "default": "pending",
+                "enumRef": "enum.2"
+              },
+              {
+                "id": "dbcol.9",
+                "name": "total",
+                "type": "decimal",
+                "size": "10,2",
+                "notNull": true,
+                "default": "0.00"
+              },
+              {
+                "id": "dbcol.10",
+                "name": "note",
+                "type": "text"
+              }
+            ],
+            "indexes": [
+              {
+                "id": "dbidx.1",
+                "name": "orders_customer_idx",
+                "columns": [
+                  "dbcol.7"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "node.3",
+            "type": "db-table",
+            "title": "order_items",
+            "columns": [
+              {
+                "id": "dbcol.11",
+                "name": "order_id",
+                "type": "bigint unsigned",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.12",
+                "name": "sku",
+                "type": "varchar",
+                "size": "40",
+                "pk": true,
+                "notNull": true
+              },
+              {
+                "id": "dbcol.13",
+                "name": "quantity",
+                "type": "int",
+                "notNull": true,
+                "default": "1"
+              },
+              {
+                "id": "dbcol.14",
+                "name": "fulfilment",
+                "type": "orders_status",
+                "enumRef": "enum.2"
+              }
+            ]
+          }
+        ],
+        "groups": [],
+        "edges": [
+          {
+            "id": "edge.1",
+            "from": "node.2",
+            "to": "node.1",
+            "label": "orders_customer_fk",
+            "fromColumns": [
+              "dbcol.7"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
+            "cardinality": "n-1",
+            "onDelete": "cascade"
+          },
+          {
+            "id": "edge.2",
+            "from": "node.3",
+            "to": "node.2",
+            "label": "order_items_order_fk",
+            "fromColumns": [
+              "dbcol.11"
+            ],
+            "toColumns": [
+              "dbcol.6"
+            ],
+            "cardinality": "n-1"
+          }
+        ],
+        "views": [],
+        "features": [],
+        "flows": [],
+        "rules": {},
+        "stickies": [],
+        "name": "Fragment"
+      }
+    },
+    "enums": [
+      {
+        "planId": "enum.1",
+        "name": "customers_tier",
+        "values": [
+          {
+            "name": "free"
+          },
+          {
+            "name": "pro"
+          },
+          {
+            "name": "team"
+          }
+        ]
+      },
+      {
+        "planId": "enum.2",
+        "name": "orders_status",
+        "values": [
+          {
+            "name": "pending"
+          },
+          {
+            "name": "paid"
+          },
+          {
+            "name": "shipped"
+          }
+        ]
+      }
+    ],
+    "stickies": [],
+    "setDialect": "mysql",
+    "dialectOutcome": "set",
+    "conversions": [],
+    "report": {
+      "source": {
+        "fileName": "mysql-dump.sql",
+        "format": "sql",
+        "dialect": "mysql"
+      },
+      "mapped": {
+        "tables": 3,
+        "relationships": 2,
+        "enums": 2,
+        "indexes": 1,
+        "checks": 0,
+        "groups": 0,
+        "stickies": 0
+      },
+      "skipped": [
+        {
+          "line": 11,
+          "excerpt": "DROP TABLE IF EXISTS `customers`",
+          "reason": "drop-or-rename"
+        },
+        {
+          "line": 42,
+          "excerpt": "LOCK TABLES `customers` WRITE",
+          "reason": "session"
+        },
+        {
+          "line": 43,
+          "excerpt": "INSERT INTO `customers` VALUES (1,'a@example.com','free','2…",
+          "reason": "data"
+        },
+        {
+          "line": 44,
+          "excerpt": "UNLOCK TABLES",
+          "reason": "session"
+        },
+        {
+          "line": 46,
+          "excerpt": "DELIMITER ;;",
+          "reason": "session"
+        },
+        {
+          "line": 47,
+          "excerpt": "CREATE PROCEDURE `touch_order`(IN oid BIGINT)",
+          "reason": "procedure"
+        },
+        {
+          "line": 51,
+          "excerpt": "DELIMITER ;",
+          "reason": "session"
+        }
+      ],
+      "changed": [
+        {
+          "line": 12,
+          "target": "customers",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE, DEFAULT CHARSET"
+        },
+        {
+          "line": 17,
+          "target": "customers.updated_at",
+          "kind": "option-dropped",
+          "detail": "ON UPDATE CURRENT_TIMESTAMP is not stored"
+        },
+        {
+          "line": 22,
+          "target": "orders",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE, AUTO_INCREMENT, DEFAULT CHARSET"
+        },
+        {
+          "line": 27,
+          "target": "orders.note",
+          "kind": "option-dropped",
+          "detail": "collation is not stored"
+        },
+        {
+          "line": 27,
+          "target": "orders.note",
+          "kind": "option-dropped",
+          "detail": "character set is not stored"
+        },
+        {
+          "line": 33,
+          "target": "order_items",
+          "kind": "option-dropped",
+          "detail": "table options not stored: ENGINE, DEFAULT CHARSET"
+        }
+      ],
+      "suggestions": null
+    },
+    "suggestions": []
+  }
+}

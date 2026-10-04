@@ -1,0 +1,161 @@
+Project Shop {
+  database_type: 'PostgreSQL'
+}
+
+// Where an order is in its life
+Enum order_status {
+  pending
+  paid [note: 'Payment captured']
+  shipped
+  cancelled
+}
+
+Table addresses {
+  id uuid [pk]
+  customer_id uuid [not null]
+  street varchar(200) [not null]
+  city varchar(100) [not null]
+  country char(2) [not null, note: 'ISO 3166-1 alpha-2']
+}
+
+Table audit_log {
+  id bigint [not null]
+  action varchar(40) [not null]
+  payload jsonb
+  logged_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    logged_at [type: btree]
+  }
+}
+
+Table categories {
+  id uuid [pk]
+  parent_id uuid
+  name varchar(100) [not null]
+}
+
+Table customers {
+  id uuid [pk]
+  email varchar(255) [not null, unique]
+  name varchar(120) [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (`lower(email)`) [name: 'customers_email_lower_idx']
+  }
+
+  Note: 'One row per buyer'
+}
+
+Table order_items {
+  order_id uuid
+  product_id uuid
+  quantity integer [not null]
+  unit_price numeric(10,2) [not null]
+
+  indexes {
+    (order_id, product_id) [pk]
+  }
+
+  checks {
+    `quantity > 0`
+  }
+}
+
+Table orders {
+  id uuid [pk]
+  customer_id uuid [not null]
+  shipping_address_id uuid
+  billing_address_id uuid
+  status order_status [not null, default: 'pending']
+  total numeric(10,2) [not null, default: 0, note: 'Sum of the order items']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (customer_id, created_at)
+  }
+
+  Note: 'One row per checkout'
+}
+
+Table payments {
+  id uuid [pk]
+  order_id uuid [not null]
+  amount numeric(10,2) [not null]
+  paid_at timestamptz
+}
+
+Table products {
+  id uuid [pk]
+  sku varchar(40) [not null, unique]
+  name varchar(200) [not null]
+  price numeric(10,2) [not null]
+  active boolean [not null, default: true]
+
+  checks {
+    `price >= 0` [name: 'products_price_check']
+  }
+
+  Note: '''Things we sell; \'active\' hides them
+from the store'''
+}
+
+Table reviews {
+  id integer [pk, increment]
+  product_id uuid [not null]
+  customer_id uuid
+  rating smallint [not null]
+  body text
+
+  checks {
+    `rating BETWEEN 1 AND 5`
+  }
+}
+
+Table sessions {
+  id uuid [pk]
+  user_id uuid [not null]
+  token varchar(64) [not null, unique]
+  expires_at timestamptz [not null]
+}
+
+Table shipment_items {
+  shipment_id uuid
+  order_id uuid
+  product_id uuid
+  quantity integer [not null]
+
+  indexes {
+    (shipment_id, order_id, product_id) [pk]
+  }
+}
+
+Table shipments {
+  id uuid [pk]
+  order_id uuid [not null]
+  carrier varchar(80)
+  shipped_at timestamptz
+}
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [not null, unique]
+  display_name varchar(80)
+}
+
+Ref: addresses.customer_id > customers.id [delete: cascade]
+Ref: categories.parent_id ?>? categories.id
+Ref: order_items.order_id > orders.id [delete: cascade]
+Ref: order_items.product_id > products.id [delete: restrict]
+Ref places: orders.customer_id > customers.id [delete: cascade]
+Ref "ships to": orders.shipping_address_id ?>? addresses.id
+Ref "bills to": orders.billing_address_id ?>? addresses.id
+Ref: payments.order_id > orders.id
+Ref "listed in": products.id <> categories.id
+Ref: reviews.product_id > products.id [delete: cascade]
+Ref: reviews.customer_id ?>? customers.id [delete: set null]
+Ref: sessions.user_id > users.id [delete: cascade]
+Ref: shipment_items.shipment_id > shipments.id [delete: cascade]
+Ref: shipment_items.(order_id, product_id) > order_items.(order_id, product_id)
+Ref: shipments.order_id > orders.id

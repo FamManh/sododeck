@@ -18,3 +18,4 @@ docs/video/
 DESIGN.md
 docs/design/claude-design/
 **/__golden__/
+**/__expected__/
