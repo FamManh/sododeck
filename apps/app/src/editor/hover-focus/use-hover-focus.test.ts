@@ -250,10 +250,17 @@ describe('useHoverFocus rows and relationships (042 R14)', () => {
     expect(hover()).toBeNull();
   });
 
-  it('keeps row highlights in focus mode and flows, where card hover is off', () => {
+  it.each([
+    ['outside Focus mode (051)', { focusMode: false }],
+    [
+      'with a pinned focus',
+      { focusMode: true, selection: { nodes: ['x'], edges: [], groups: [], stickies: [] } },
+    ],
+    ['in a shown flow', { activeFlow: { flowId: 'f' } }],
+  ])('keeps row highlights %s, where card hover is off', (_name, patch) => {
     const { result } = setup();
     act(() => {
-      useUiStore.getState().setFocusMode(true);
+      useUiStore.setState(patch as never);
     });
     act(() => {
       result.current.onNodeMouseEnter(mouse, node('orders'));
