@@ -41,8 +41,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 On branch `050-connector-editing`, rebase on the latest `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green start.
-- [ ] T002 Take the bench baseline on unchanged code with `pnpm bench`. Save the summary table in `specs/050-connector-editing/bench-before.md`.
+- [x] T001 On branch `050-connector-editing`, rebase on the latest `main`. Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green start.
+- [x] T002 Take the bench baseline on unchanged code with `pnpm bench`. Save the summary table in `specs/050-connector-editing/bench-before.md`.
 
 ---
 
