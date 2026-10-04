@@ -40,6 +40,7 @@ const TYPE_MAX = `${String(TABLE_CARD.typeShare * 100)}%`;
  * elements with a CSS hover and a native `title` when cut (R8): no per-row component state.
  */
 export const TableBody = memo(function TableBody({
+  nodeId,
   layout,
   focused,
   tinted = false,
@@ -89,7 +90,13 @@ export const TableBody = memo(function TableBody({
                 {row.name}
               </span>
               {row.enum !== undefined ? (
-                <EnumChip chip={row.enum} tabIndex={tabIndex} maxWidth={TYPE_MAX} />
+                <EnumChip
+                  chip={row.enum}
+                  nodeId={nodeId}
+                  columnId={row.columnId}
+                  tabIndex={tabIndex}
+                  maxWidth={TYPE_MAX}
+                />
               ) : (
                 row.type !== undefined && (
                   <span
