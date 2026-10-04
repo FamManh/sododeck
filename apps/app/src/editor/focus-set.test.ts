@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { generateBenchDeck } from '../bench/generate-deck';
+import { EMPTY_SELECTION } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
+import { toFlowEdges, type CanvasView } from './deck-to-flow';
 import { bundleEdges } from './bundles';
 import {
   columnFocusSet,
@@ -292,5 +294,37 @@ describe('focusSet on tables (048 US6)', () => {
       expect(set?.members.has(edge?.from ?? '')).toBe(true);
       expect(set?.members.has(edge?.to ?? '')).toBe(true);
     }
+  });
+});
+
+describe('pinned focus draws the lit relationships (048 US6)', () => {
+  it('lights an edge among the kept tables and dims the others', () => {
+    const table = (id: string) => ({ id, type: 'db-table' as const, title: id });
+    const deck = deckOf({
+      nodes: ['t', 'a', 'b', 'x'].map(table),
+      edges: [
+        { id: 'ta', from: 't', to: 'a' },
+        { id: 'tb', from: 't', to: 'b' },
+        { id: 'ab', from: 'a', to: 'b' },
+        { id: 'ax', from: 'a', to: 'x' },
+      ],
+    });
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set());
+    const view: CanvasView = {
+      selection: EMPTY_SELECTION,
+      focusedId: null,
+      focusedEdgeId: null,
+      labelsOn: false,
+      level: 'component',
+      focus: focusSet(deck, graph, 't'),
+      marks: { merged: new Map(), cards: new Map(), cardNumbers: new Map() },
+    };
+    const edges = toFlowEdges(deck, graph, view);
+    const lit = (id: string) => {
+      const edge = edges.find((e) => e.id === id);
+      return edge?.data?.dimmed === false && edge.className?.includes('in-focus') === true;
+    };
+    expect(['ta', 'tb', 'ab'].map(lit)).toEqual([true, true, true]);
+    expect(edges.find((e) => e.id === 'ax')?.data?.dimmed).toBe(true);
   });
 });

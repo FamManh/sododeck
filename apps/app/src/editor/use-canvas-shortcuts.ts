@@ -981,6 +981,13 @@ export function useEditorShortcuts({
         ui.requestDelete({ nodes, edges, stickies });
         return;
       }
+      // Esc ends Focus mode first and keeps the selection (048 US6); the next one clears it.
+      if (key === 'escape' && ui.popover === null && ui.pendingDelete === null && ui.focusMode) {
+        event.preventDefault();
+        ui.setFocusMode(false);
+        ui.announce('Focus mode off');
+        return;
+      }
       if (key === 'escape' && ui.popover === null && ui.pendingDelete === null) {
         if (
           ui.selection.nodes.length === 0 &&

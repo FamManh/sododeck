@@ -9,6 +9,7 @@ import { playbackDeck } from '../test/flow-fixtures';
 import { deckOf, editorWrapper } from '../test/render-canvas';
 import { Canvas } from './canvas';
 import { canvasElement } from './canvas-actions';
+import { focusTargetId } from './focus-target';
 import { openFlow } from './flows/flow-mode';
 import { DetailDrawer } from './shell/detail-drawer';
 import { SaveContext } from './save-context';
@@ -319,6 +320,30 @@ describe('canvas keyboard', () => {
     expect(ui().selection.nodes).toEqual([]);
     await user.keyboard('f');
     expect(ui().focusMode).toBe(false);
+  });
+
+  it('Esc ends focus mode and keeps the selection; the next Esc clears it (048 US6)', async () => {
+    const { user } = setup();
+    focusNode('n11');
+    await user.keyboard('f');
+    expect(ui().focusMode).toBe(true);
+    await user.keyboard('{Escape}');
+    expect(ui().focusMode).toBe(false);
+    expect(ui().announcement.text).toBe('Focus mode off');
+    expect(ui().selection.nodes).toEqual(['n11']);
+    await user.keyboard('{Escape}');
+    expect(ui().selection.nodes).toEqual([]);
+  });
+
+  it('focus follows a new selection while focus mode is on (048 US6)', async () => {
+    const { user } = setup();
+    focusNode('n11');
+    await user.keyboard('f');
+    act(() => {
+      ui().select({ nodes: ['n01'] });
+    });
+    expect(ui().focusMode).toBe(true);
+    expect(focusTargetId(ui().selection, new Set())).toBe('n01');
   });
 
   it('cycles through the focused component’s connections with E; Enter opens the popover', async () => {
