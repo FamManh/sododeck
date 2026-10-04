@@ -293,6 +293,31 @@ describe('RouteHandles pointer drags (050 US1)', () => {
   });
 });
 
+describe('RouteHandles clicks (050 US1)', () => {
+  it("keeps a handle's click (⌘ held for no snap) from reaching the connector's own click", () => {
+    // Through the portal, React bubbles a handle click to the edge, where ⌘-click toggles the
+    // selection: a ⌘ drag of a handle would end with the connector deselected.
+    const onEdgeClick = vi.fn();
+    renderWithEditor(
+      inCanvas(
+        <div onClick={onEdgeClick}>
+          <RouteHandles
+            context={ctx([{ x: 280, y: 25 }])}
+            anchors={{ fromSide: 'right', fromAt: 0.5, toSide: 'left', toAt: 0.5 }}
+          />
+        </div>,
+      ),
+      deck,
+    );
+    for (const name of ['Source end', 'Target end', 'Bend 1 of 1', /^Add bend/]) {
+      for (const handle of screen.getAllByRole('button', { name })) {
+        fireEvent.click(handle, { metaKey: true });
+      }
+    }
+    expect(onEdgeClick).not.toHaveBeenCalled();
+  });
+});
+
 describe('RouteHandles end drags (050 US2)', () => {
   const ui = () => useUiStore.getState();
   const down = (el: HTMLElement, x: number, y: number) =>

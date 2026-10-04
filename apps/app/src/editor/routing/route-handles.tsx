@@ -21,7 +21,14 @@
  */
 import type { Id, Side } from '@sododeck/schema';
 import { useReactFlow, useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
@@ -381,6 +388,12 @@ export function RouteHandles({
     event.stopPropagation();
   }
 
+  // A handle is not a click on its connector: through the portal React would bubble it to the
+  // edge, where ⌘-click (⌘ = no snap during a drag) toggles the selection away.
+  const stopClick = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
   const placed = (point: Point) => ({
     left: point.x,
     top: point.y,
@@ -403,6 +416,7 @@ export function RouteHandles({
           className="sd-route-handle nodrag nopan absolute"
           // Above the cards and pointer-active (`.sd-route-handle` in index.css, 050 R1).
           style={placed(end === 'source' ? context.start : context.end)}
+          onClick={stopClick}
           onPointerDown={(event) => {
             beginEnd(event, end);
           }}
@@ -426,6 +440,7 @@ export function RouteHandles({
             {...inertUnless(`mid-${String(i)}`)}
             className="sd-route-handle nodrag nopan absolute"
             style={placed(at)}
+            onClick={stopClick}
             onPointerDown={(event) => {
               begin(event, `mid-${String(i)}`, { kind: 'add', index: i, at });
             }}
@@ -456,6 +471,7 @@ export function RouteHandles({
             {...inertUnless(key)}
             className="sd-route-handle nodrag nopan absolute"
             style={placed(runMidpoint(run))}
+            onClick={stopClick}
             onPointerDown={(event) => {
               beginSegment(event, run);
             }}
@@ -479,6 +495,7 @@ export function RouteHandles({
           {...inertUnless(`bend-${String(i)}`)}
           className="sd-route-handle nodrag nopan absolute"
           style={placed(bend)}
+          onClick={stopClick}
           onPointerDown={(event) => {
             begin(event, `bend-${String(i)}`, { kind: 'move', index: i });
           }}
