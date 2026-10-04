@@ -19,7 +19,7 @@
 - **Previews are UI-only; one write per gesture.** No Yjs write during a drag. A click below 4 screen px writes nothing.
 - **One route model.** Segment drag, spread ends and nudge write only 022 data (`fromSide/fromAt/toSide/toAt/waypoints`). There is no new route field.
 - **Weight stops stay 1 / 1.5 / 2 / 3 / 4** and stored values don't change.
-- **Files without group edges round-trip byte-identically.** No version bump (ADR 0029).
+- **Files without group edges round-trip byte-identically.** No version bump (ADR 0030).
 - **Out of scope:** connector type changes, a text-diagram export (none exists), obstacle-avoiding routing, new e2e tests.
 - Do not name other diagram or whiteboard tools anywhere: docs, code, comments, UI copy.
 
@@ -211,7 +211,7 @@
   - `apps/app/src/editor/export/scene.ts`: add group frame rects to `rects` so `sceneEdges` draws group edges;
   - `layout/tidy-layout.ts` and `layout/elk-layout.ts`: include group ids in the endpoint set.
   - Add a test for each.
-- [ ] T034 [US4] Write `docs/decisions/0029-groups-as-connector-ends.md`. It covers the widening, why there is no version bump, older builds showing a broken reference, the cascade, the `'contains'` rule and the flow continuity limit. Update the "edges" wording in `docs/spec.md`.
+- [ ] T034 [US4] Write `docs/decisions/0030-groups-as-connector-ends.md`. It covers the widening, why there is no version bump, older builds showing a broken reference, the cascade, the `'contains'` rule and the flow continuity limit. Update the "edges" wording in `docs/spec.md`.
 
 **Checkpoint**: quickstart 10–14 pass.
 

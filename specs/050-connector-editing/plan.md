@@ -32,7 +32,7 @@ Make connector editing reliable and flexible, and let groups be connector ends. 
   - The end attaches to the nearest point of the outline, continuously, with a midpoint-only snap of 6 px (⌘ off).
   - The 022 automatic zone is kept as the middle 40 % with a 24 px margin.
   - Shift + arrow nudges the end by 1 %.
-- **Groups as endpoints (R6)**: `Edge.from/to` may name a group, with the same JSON shape and no version bump; ADR 0029 records the widening.
+- **Groups as endpoints (R6)**: `Edge.from/to` may name a group, with the same JSON shape and no version bump; ADR 0030 records the widening.
   - **Model**: refs, integrity, duplicate-id check, the delete cascade, clipboard, titles.
   - **App**: connection rules (new `'contains'` refusal), group frame handles, edge mapping through collapse and drill, inspector, export scene, ELK.
 - **Segment drag (R7)**: elbow runs move perpendicular. Inner runs move two bends; end runs slide the anchor. No new stored data.
@@ -79,7 +79,7 @@ Make connector editing reliable and flexible, and let groups be connector ends. 
 
 - Schema: ~3 files. Model: ~9 files.
 - App: ~30 files, in `routing/`, `editing/`, connection rules, `deck-to-flow`, `visible-graph`, inspector, export scene, layout, actions and palette.
-- Docs: ADR 0029, DESIGN.md Connectors, package `CLAUDE.md` files, spec.md "edges".
+- Docs: ADR 0030, DESIGN.md Connectors, package `CLAUDE.md` files, spec.md "edges".
 - Estimate **7–8 d**: US1+US2 3 d, US4 3 d, US3/US5/US6/US7 2 d.
 
 ## Constitution Check
@@ -89,7 +89,7 @@ _GATE: passes before Phase 0. Re-checked after Phase 1 design: still passes; no 
 | Principle                                    | Status | How                                                                                                                                                                                                                                                                                                                                                       |
 | -------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | I. Single source of truth                    | ✅     | Ends, bends, anchors and weight are read only from the edge in Yjs. Live drag state (`endpointPreview`, `bendPreview`, `lineStylePreview`) is UI-store state cleared on finish, and each gesture writes once on release.                                                                                                                                  |
-| II. Schema-owned format, lossless round-trip | ✅     | The widening of `Edge.from/to` is documented in `v1.json` and generated code, and only `packages/model` reads and writes edges. Round-trip cases cover card→group, group→card and group→group with route and style. Old files are unchanged. No version bump: the change is additive in meaning (no valid file changes meaning), and ADR 0029 records it. |
+| II. Schema-owned format, lossless round-trip | ✅     | The widening of `Edge.from/to` is documented in `v1.json` and generated code, and only `packages/model` reads and writes edges. Round-trip cases cover card→group, group→card and group→group with route and style. Old files are unchanged. No version bump: the change is additive in meaning (no valid file changes meaning), and ADR 0030 records it. |
 | III. Stable identity                         | ✅     | Group ends reference group ids, never titles. A new check catches a node and a group sharing an id. Renaming a group keeps its connectors; a test covers it.                                                                                                                                                                                              |
 | IV. Local-first, private                     | ✅     | No network and no new asset. Pointer events, `blur` and `visibilitychange` are standard and need no feature detection.                                                                                                                                                                                                                                    |
 | V. Performance                               | ✅     | Work happens per selected connector or per active drag, is rAF-throttled, and never writes per frame. Bench runs before and after (SC-008). Nothing is heavy enough for a worker.                                                                                                                                                                         |
@@ -162,7 +162,7 @@ apps/app/src/
 ├── state/ui-store.ts                    # endpointPreview, lineStylePreview; removed reconnect state
 └── index.css                            # viewport-portal z-index; edgeupdater rules removed; halo
 
-docs/decisions/0029-groups-as-connector-ends.md  # NEW
+docs/decisions/0030-groups-as-connector-ends.md  # NEW
 DESIGN.md (Connectors: halo, handles, segment handle) · packages/model/CLAUDE.md · docs/spec.md
 ```
 
