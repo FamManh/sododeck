@@ -15,6 +15,7 @@ import type { Geometry } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
 import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX } from '../deck-to-flow';
+import { attachToOutline, type Attachment } from './outline-attach';
 import type { Box, Point } from './route-path';
 
 /** Attach reach around a target's outline, in screen px (FR-009). */
@@ -166,4 +167,26 @@ export function hitTarget(point: Point, scene: TargetScene, zoom: number): Endpo
       group = target;
   }
   return group;
+}
+
+/**
+ * Where a **new** connection dragged from `fromId` would land at `point` (050 T021): the target
+ * under the pointer, skipping the card it starts from (and groups while `GROUP_ENDS` is off),
+ * and the attachment on its outline. Shared by the live connection line and the drop.
+ */
+export function connectTarget(
+  scene: TargetScene,
+  fromId: string,
+  point: Point,
+  opts: { zoom: number; mod: boolean; allowGroups?: boolean },
+): { target: EndpointTarget; attach: Attachment } | null {
+  const target = hitTarget(point, scene, opts.zoom);
+  if (target === null || target.flowId === fromId) return null;
+  if (target.kind === 'group' && !(opts.allowGroups ?? GROUP_ENDS)) return null;
+  const attach = attachToOutline(target.box, target.geometry, point, {
+    zoom: opts.zoom,
+    mod: opts.mod,
+    allowAutomatic: false,
+  });
+  return { target, attach };
 }

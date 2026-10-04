@@ -155,7 +155,7 @@
   - in `apps/app/src/editor/use-canvas-handlers.ts`: delete `onReconnectStart`, `onReconnectEnd`, `onReconnect`, `reconnectEnd`, `endpointMoveHandler`;
   - in `apps/app/src/index.css`: delete the `.react-flow__edgeupdater` and `.sd-edge-reconnecting` rules;
   - in `apps/app/src/editor/editing/anchor-drag.ts`: delete `anchorFromPoint`, `BODY_DEPTH` and `ANCHOR_SNAP` (keep `ANCHOR_STOPS`, `stepAnchor` and `anchorReadout`), and update `anchor-drag.test.ts`.
-- [ ] T021 [US2] Make `apps/app/src/editor/routing/endpoint-connection-line.tsx` (new connections only) use `hitTarget` + `attachToOutline` through the existing connect gesture. Add `onConnectEnd` in `use-canvas-handlers.ts` so dropping on a target that isn't a handle creates the edge through `connectComponents`, with the drop side and `at` pinned. Keep `onConnect` for handle drops. Update `endpoint-connection-line.test.tsx`.
+- [x] T021 [US2] Make `apps/app/src/editor/routing/endpoint-connection-line.tsx` (new connections only) use `hitTarget` + `attachToOutline` through the existing connect gesture. Add `onConnectEnd` in `use-canvas-handlers.ts` so dropping on a target that isn't a handle creates the edge through `connectComponents`, with the drop side and `at` pinned. Keep `onConnect` for handle drops. Update `endpoint-connection-line.test.tsx`.
 
 **Checkpoint**: quickstart 4–8 pass. The founder's jumping issue is gone.
 

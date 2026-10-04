@@ -7,13 +7,12 @@ import type {
   Connection,
   Edge,
   EdgeChange,
-  HandleType,
+  FinalConnectionState,
   IsValidConnection,
   Node,
   NodeChange,
-  OnReconnect,
 } from '@xyflow/react';
-import { useReactFlow, useStore } from '@xyflow/react';
+import { useReactFlow } from '@xyflow/react';
 import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -30,8 +29,7 @@ import {
   nodeElement,
 } from './canvas-actions';
 import { BUNDLE_EDGE_PREFIX } from './bundles';
-import { cardBox, type Rect } from './canvas-geometry';
-import { connectionCheck, REFUSAL_TEXT } from './connection-rules';
+import { connectionCheck } from './connection-rules';
 import {
   COLLAPSED_NODE_PREFIX,
   GROUP_NODE_PREFIX,
@@ -44,9 +42,7 @@ import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
 import { stepForEdge, stepForNode } from './flows/played-path';
 import { oneStep } from './fields/one-step';
-import { effectiveLevel, levelSelector } from './levels';
-import { nearestSide } from './routing/route-path';
-import { anchorFromPoint, anchorReadout } from './editing/anchor-drag';
+import { connectTarget, targetScene } from './routing/endpoint-target';
 import { addNoteAt } from './stickies/sticky-actions';
 import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
@@ -78,7 +74,7 @@ const isMultiSelect = (event: ReactMouseEvent) => event.shiftKey || event.metaKe
 
 export function useCanvasHandlers() {
   const editor = useEditor();
-  const { getViewport, screenToFlowPosition } = useReactFlow();
+  const { getNodes, getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   const undoToast = useUndoToast();
   // Component and group drags (016): one controller for the canvas's lifetime, so a re-render
@@ -103,12 +99,6 @@ export function useCanvasHandlers() {
 
   // True between React Flow's onSelectionStart and onSelectionEnd (marquee).
   const marquee = useRef(false);
-
-  // An endpoint reconnect (R12): which end is moving, and the window listener tracking it while
-  // the gesture runs (both outlive a `useMemo` re-creation, unlike a plain closure variable).
-  const reconnectEnd = useRef<HandleType | null>(null);
-  const endpointMoveHandler = useRef<((event: MouseEvent) => void) | null>(null);
-  const zoomLevel = useStore(levelSelector);
 
   return useMemo(() => {
     const ui = () => useUiStore.getState();
@@ -502,120 +492,39 @@ export function useCanvasHandlers() {
         connectComponents(editor, c.source, c.target);
       },
       /**
-       * A reconnect drag (R12): the hovered card's nearest side is "hot" throughout (own
-       * `mousemove` listener, since xyflow reports only the final connection on drop).
+       * A new connection dropped off every handle (050 T021): near a card's outline (within the
+       * attach reach) it still connects, with the drop side and position pinned on the dropped
+       * end, in one undo step. A handle drop was already made by `onConnect`.
        */
-      onReconnectStart: (_event: ReactMouseEvent, edge: Edge, handleType: HandleType) => {
-        if (viewOnly()) return;
-        ui().setCanvasGesture('endpoint');
-        ui().setReconnectingEdge(edge.id);
-        reconnectEnd.current = handleType;
-        const ownNodeId = handleType === 'source' ? edge.source : edge.target;
-        const level = effectiveLevel(zoomLevel, scopeOf(ui().drill));
-        const onMove = (event: MouseEvent) => {
-          const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-          const { deck } = readViewState(editor.doc);
-          const hovered = deck.nodes.reduce<{ nodeId: string; box: Rect } | null>(
-            (acc, node, index) => {
-              const box = cardBox(node, index, level);
-              return point.x >= box.x &&
-                point.x <= box.x + box.width &&
-                point.y >= box.y &&
-                point.y <= box.y + box.height
-                ? { nodeId: node.id, box }
-                : acc;
-            },
-            null,
-          );
-          ui().setEndpointHover(
-            hovered === null
-              ? null
-              : { nodeId: hovered.nodeId, side: nearestSide(hovered.box, point) },
-          );
-          // Where along that side the end would attach (022 R4); deep in the card it would clear.
-          const hit =
-            hovered === null
-              ? null
-              : anchorFromPoint(hovered.box, point, { mod: event.metaKey || event.ctrlKey });
-          ui().setEndpointAnchor(
-            hit === null || hovered === null
-              ? null
-              : {
-                  at: hit.at,
-                  snapped: hit.snapped,
-                  automatic: hit.automatic,
-                  point: hit.point,
-                },
-          );
-          ui().setConnectorReadout(
-            hit === null
-              ? null
-              : hit.automatic && hovered?.nodeId === ownNodeId
-                ? 'automatic'
-                : anchorReadout(hit.side, hit.at, hit.snapped),
-          );
-        };
-        endpointMoveHandler.current = onMove;
-        window.addEventListener('mousemove', onMove);
-      },
-      onReconnectEnd: () => {
-        if (endpointMoveHandler.current !== null) {
-          window.removeEventListener('mousemove', endpointMoveHandler.current);
-          endpointMoveHandler.current = null;
-        }
-        if (ui().canvasGesture === 'endpoint') ui().setCanvasGesture(null);
-        ui().setEndpointHover(null);
-        ui().setEndpointAnchor(null);
-        ui().setConnectorReadout(null);
-        ui().setReconnectingEdge(null);
-        reconnectEnd.current = null;
-      },
-      /**
-       * Moves one end of an edge; the edge keeps its id and fields (FR-013). The moved end's side
-       * comes from `endpointHover` (nearest side of the drop point, R12), so dropping on the
-       * body target still pins a side; another card also clears the offset (old geometry).
-       */
-      onReconnect: ((oldEdge, c) => {
-        if (viewOnly()) return;
-        const check = connectionCheck(readDeck(editor.doc), c.source, c.target, oldEdge.id);
-        if (check !== 'ok') {
-          ui().announce(REFUSAL_TEXT[check]);
-          return;
-        }
-        const end = reconnectEnd.current ?? 'target';
-        const movedNodeId = end === 'source' ? c.source : c.target;
-        const hover = ui().endpointHover;
-        const anchor = ui().endpointAnchor;
-        const hot = hover !== null && hover.nodeId === movedNodeId;
-        const sameCard = oldEdge.source === c.source && oldEdge.target === c.target;
-        // Dropped deep in its own card (022 R4): the end goes back to automatic.
-        const toAutomatic = sameCard && hot && anchor?.automatic === true;
-        const side = hot && !toAutomatic ? hover.side : null;
-        const at = side !== null && anchor !== null && !anchor.automatic ? anchor.at : null;
-        if (sameCard && side === null && !toAutomatic) return;
+      onConnectEnd: (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+        if (viewOnly() || state.isValid === true || state.fromNode === null) return;
+        const pointer = 'changedTouches' in event ? event.changedTouches[0] : event;
+        if (pointer === undefined) return;
+        const fromId = state.fromNode.id;
+        const hit = connectTarget(
+          targetScene(getNodes()),
+          fromId,
+          screenToFlowPosition({ x: pointer.clientX, y: pointer.clientY }),
+          {
+            zoom: getViewport().zoom,
+            mod: 'metaKey' in event && (event.metaKey || event.ctrlKey),
+          },
+        );
+        if (hit === null) return;
+        // Started from a target handle, the drop is the source (as React Flow's `onConnect`).
+        const reversed = state.fromHandle.type === 'target';
+        const { side, at } = hit.attach;
         oneStep(editor, () => {
-          if (!sameCard) editor.update('edges', oldEdge.id, { from: c.source, to: c.target });
-          if (toAutomatic) {
-            editor.setEdgeRoute(
-              oldEdge.id,
-              end === 'source' ? { fromSide: null } : { toSide: null },
-            );
-          } else if (side !== null) {
-            editor.setEdgeRoute(oldEdge.id, {
-              ...(end === 'source' ? { fromSide: side, fromAt: at } : { toSide: side, toAt: at }),
-              ...(sameCard ? {} : { offset: null }),
-            });
-          } else if (!sameCard) {
-            editor.setEdgeRoute(oldEdge.id, { offset: null });
-          }
-        });
-        ui().select({ edges: [oldEdge.id] });
-        if (side !== null) {
-          ui().announce(
-            `Connection now ${end === 'source' ? 'leaves from' : 'enters from'} the ${side}`,
+          const id = reversed
+            ? connectComponents(editor, hit.target.id, fromId)
+            : connectComponents(editor, fromId, hit.target.id);
+          if (id === null) return;
+          editor.setEdgeRoute(
+            id,
+            reversed ? { fromSide: side, fromAt: at } : { toSide: side, toAt: at },
           );
-        }
-      }) satisfies OnReconnect,
+        });
+      },
 
       onDragOver: (event: DragEvent) => {
         const types = event.dataTransfer.types;
@@ -639,5 +548,5 @@ export function useCanvasHandlers() {
         addComponent(editor, type, centredOn(point, type), { edit: true });
       },
     };
-  }, [editor, getViewport, screenToFlowPosition, controller, zoomLevel]);
+  }, [editor, getNodes, getViewport, screenToFlowPosition, controller]);
 }

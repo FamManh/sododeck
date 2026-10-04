@@ -1,8 +1,15 @@
 import type { Side } from '@sododeck/schema';
-import { Position, type ConnectionLineComponentProps } from '@xyflow/react';
+import {
+  Position,
+  useStore,
+  type ConnectionLineComponentProps,
+  type ReactFlowState,
+} from '@xyflow/react';
+import { useMemo } from 'react';
 
-import { useUiStore } from '../../state/ui-store';
+import { anchorReadout } from '../editing/anchor-drag';
 import { EdgeEnds } from '../edge-ends';
+import { connectTarget, targetScene } from './endpoint-target';
 import { routedPath } from './route-path';
 
 /** The reverse of `deck-node.tsx`'s fixed handle positions (017 R12, mirrors `deck-edge.tsx`). */
@@ -13,26 +20,31 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
   [Position.Left]: 'left',
 };
 
+const nodesSelector = (s: ReactFlowState) => s.nodes;
+const zoomSelector = (s: ReactFlowState) => s.transform[2];
+
 /**
- * The live connection/reconnect line (017 R12): a dashed path drawn through `routedPath` (elbow,
- * like the edges until 034 stores a line type) with the Deck end marks, instead of xyflow's bezier, with the hot side (`endpointHover`) applied to the end
- * under the pointer, so it previews where the connector will actually route.
+ * The live line of a **new** connection (017 R12, 050 R3): a dashed path drawn through
+ * `routedPath` with the Deck end marks. Over a card it ends where the drop would attach: the
+ * nearest point of the card's outline (`connectTarget`, the same hit test and attachment the drop
+ * uses), with a readout of the side and position. Existing connector ends are dragged by their
+ * own handles (`editing/endpoint-drag.ts`), not through this line.
  */
 export function EndpointConnectionLine({
   fromX,
   fromY,
-  toX,
-  toY,
-  fromPosition,
   toPosition,
+  fromPosition,
+  fromNode,
+  pointer,
 }: ConnectionLineComponentProps) {
-  const hover = useUiStore((s) => s.endpointHover);
-  const anchor = useUiStore((s) => s.endpointAnchor);
-  const readout = useUiStore((s) => s.connectorReadout);
-  const toSide = hover?.side ?? SIDE_OF_POSITION[toPosition];
-  // Over a card side the preview ends on the anchor the drop would make (022 R4).
-  const end =
-    anchor !== null && !anchor.automatic && hover !== null ? anchor.point : { x: toX, y: toY };
+  const nodes = useStore(nodesSelector);
+  const zoom = useStore(zoomSelector);
+  // The drawn targets change only with the nodes, not with every pointer move.
+  const scene = useMemo(() => targetScene(nodes), [nodes]);
+  const hit = connectTarget(scene, fromNode.id, pointer, { zoom, mod: false });
+  const end = hit?.attach.point ?? pointer;
+  const toSide = hit?.attach.side ?? SIDE_OF_POSITION[toPosition];
   const { path, ends } = routedPath(
     'elbow',
     { x: fromX, y: fromY, width: 0, height: 0 },
@@ -50,7 +62,7 @@ export function EndpointConnectionLine({
         data-testid="endpoint-connection-line"
       />
       <EdgeEnds {...ends} direction="forward" color="var(--color-deck-orange)" />
-      {readout !== null && (
+      {hit !== null && (
         <text
           x={end.x + 12}
           y={end.y + 16}
@@ -60,7 +72,7 @@ export function EndpointConnectionLine({
           aria-hidden
           data-testid="endpoint-readout"
         >
-          {readout}
+          {anchorReadout(hit.attach.side, hit.attach.at, hit.attach.snapped)}
         </text>
       )}
     </g>
