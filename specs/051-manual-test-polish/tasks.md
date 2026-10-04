@@ -335,7 +335,7 @@
   - `apps/app/CLAUDE.md`: remove the storage card (:35-36), fix "cycles the 13 types with every pack on" (:105), note `focus-target.ts` and the duplicate-drag mode.
 - [x] T050 Run the full definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`. Fix anything red, and update the smoke suite only if a change breaks it.
 - [x] T051 Walk through `specs/051-manual-test-polish/quickstart.md` steps 1–8 in `pnpm dev`, and take a screenshot per step for the PR.
-- [ ] T052 Open the PR with the bench before/after numbers, the screenshots, and the report: what changed, what was skipped (sticky duplicate-drag, automatic persist request), and what is uncertain (the duplicate-drag interaction with React Flow's internal drag, and the bench at 51–90 %). No AI attribution lines.
+- [x] T052 Open the PR with the bench before/after numbers, the screenshots, and the report: what changed, what was skipped (sticky duplicate-drag, automatic persist request), and what is uncertain (the duplicate-drag interaction with React Flow's internal drag, and the bench at 51–90 %). No AI attribution lines.
 
 ---
 
