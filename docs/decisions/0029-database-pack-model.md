@@ -77,3 +77,17 @@ default?, defaultExpr?, check?, enumRef?, note? }`; `size` is text (`255`, `10,2
   same limit as 032's first field definition); edits to existing enums merge per value.
 - 044–046 (SQL / DBML) map `default` vs `defaultExpr`, `size` and the dialect; 047 adds schema
   lint on top of the two problem kinds.
+
+## Amendment (042, 2026-10-04): relationship display and row anchors
+
+- **`relationshipDisplay`** (root, after `tableDisplay`): `{ hideEnds?: boolean, labels?:
+"hover" | "always" | "off", notation?: "numeric" }`, `additionalProperties: false`. Absent keys
+  are the defaults (ends shown, labels follow the Labels tool, crow's foot), so untouched decks
+  stay byte-identical. Yjs `meta.relationshipDisplay`, a plain map written per key, like
+  `tableDisplay`; the editor op is `setRelationshipDisplay`, read through `relationshipDisplayOf`.
+- **Row anchors are computed, not handles.** A relationship's ends sit on the column rows at
+  `rowAnchorY(tableLayout, columnId)` (row, else the "+n columns" pill, else the title); there is
+  no React Flow handle per row. Canvas, the drag hit test and the export share the pure helpers
+  in `apps/app/src/editor/relationships/` and `routing/relationship-path.ts`.
+- **Duplicates:** the `duplicate-connection` problem now compares column ends too, so two
+  relationships between the same tables on different columns are not reported.
