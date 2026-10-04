@@ -1014,6 +1014,24 @@ export interface Step {
       [k: string]: string;
     };
   };
+  /**
+   * Tables, and optionally columns, this step reads or writes (049). Absent means none. No two entries share the same table and column.
+   */
+  touches?: Touch[];
+}
+/**
+ * A table, or one column of it, that a flow step reads or writes (049).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Touch".
+ */
+export interface Touch {
+  table: Id;
+  column?: Id;
+  /**
+   * Whether the step reads or writes it.
+   */
+  access: 'read' | 'write';
 }
 /**
  * A business rule as a decision table. Its id is its key in `rules`.

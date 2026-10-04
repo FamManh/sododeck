@@ -19,3 +19,5 @@ DESIGN.md
 docs/design/claude-design/
 **/__golden__/
 **/__expected__/
+# Sample decks are written by the model serializer (`serializeDeck`); the samples test compares bytes.
+apps/app/src/samples/*.sododeck.json

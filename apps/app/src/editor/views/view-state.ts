@@ -16,7 +16,13 @@ import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sodode
 import { cardIconRef } from '../card-icon';
 import { setCardFieldDeck } from '../card-fields';
 import { setTableDeck } from '../table-keys';
-import { withFilter, withNewRow } from '../table-layout';
+import {
+  withFilter,
+  withFilterOf,
+  withForcedRows,
+  withNewRow,
+  withNewRowOf,
+} from '../table-layout';
 import { schemaGroupedDeck } from '../schema-groups';
 import { flowCountByNode, viewFilter } from '../view-filter';
 import type { OutsideTable } from '../visible-graph';
@@ -360,6 +366,35 @@ function withTableFilter(deck: SododeckFile, filter: TableFilterView | null): So
 const sameFilter = (a: TableFilterView | null, b: TableFilterView | null) =>
   a?.tableId === b?.tableId && a?.text === b?.text;
 
+/** Columns the current flow step touches, by table (049): rows that always draw. */
+export type TouchedRows = ReadonlyMap<Id, ReadonlySet<Id>>;
+
+const touchedNodes = new WeakMap<Node, { ids: ReadonlySet<Id>; node: Node }>();
+const touchedDecks = new WeakMap<SododeckFile, { rows: TouchedRows; deck: SododeckFile }>();
+
+/**
+ * `deck` with the touched tables marked so their touched rows draw whatever their detail (049 R3).
+ * Copies only those tables; the rest keep their identity. Nothing is written.
+ */
+function withTouchedRows(deck: SododeckFile, rows: TouchedRows | null): SododeckFile {
+  if (rows === null || rows.size === 0) return deck;
+  const cached = touchedDecks.get(deck);
+  if (cached?.rows === rows) return cached.deck;
+  const nodes = deck.nodes.map((node) => {
+    const ids = rows.get(node.id);
+    if (ids === undefined) return node;
+    const known = touchedNodes.get(node);
+    if (known?.ids === ids) return known.node;
+    // Keep the marks a projection made earlier (new row, column filter) on the copy.
+    const next = withForcedRows(withFilterOf(node, withNewRowOf(node, { ...node })), ids);
+    touchedNodes.set(node, { ids, node: next });
+    return next;
+  });
+  const next = { ...deck, nodes };
+  touchedDecks.set(deck, { rows, deck: next });
+  return next;
+}
+
 const sameRowEdit = (a: RowEditView | null, b: RowEditView | null) =>
   a?.tableId === b?.tableId && a?.newRowAt === b?.newRowAt;
 
@@ -371,6 +406,7 @@ const states = new WeakMap<
       revealed: ReadonlySet<Id>;
       rowEdit: RowEditView | null;
       filter: TableFilterView | null;
+      touched: TouchedRows | null;
       state: ViewState;
     }
   >
@@ -379,7 +415,8 @@ const states = new WeakMap<
 /**
  * The view `currentViewId` (the first one when null or gone) of `file`, as the canvas uses it.
  * `rowEdit`: the table in row editing (043), shown at All in `deck` only. `filter`: the table the
- * column filter folds (048), in `deck` only.
+ * column filter folds (048), in `deck` only. `touched`: the columns the current flow step touches
+ * (049), whose rows `deck` always draws.
  */
 export function viewStateOf(
   file: SododeckFile,
@@ -387,6 +424,7 @@ export function viewStateOf(
   revealed: ReadonlySet<Id> = EMPTY,
   rowEdit: RowEditView | null = null,
   filter: TableFilterView | null = null,
+  touched: TouchedRows | null = null,
 ): ViewState {
   // Card heights follow the typed fields this deck shows (032); every geometry helper reads them.
   setCardFieldDeck(file);
@@ -395,7 +433,8 @@ export function viewStateOf(
   if (
     cached?.revealed === revealed &&
     sameRowEdit(cached.rowEdit, rowEdit) &&
-    sameFilter(cached.filter, filter)
+    sameFilter(cached.filter, filter) &&
+    cached.touched === touched
   ) {
     // The table context is module state, so it is set again for whichever view is asked for.
     setTableDeck(file, cached.state.view.detail);
@@ -418,9 +457,9 @@ export function viewStateOf(
     views,
     view,
     isBase: view === views[0],
-    deck: withTableFilter(
-      withRowEdit(grouped(file, viewDeck(file, view, hidden)), rowEdit),
-      filter,
+    deck: withTouchedRows(
+      withTableFilter(withRowEdit(grouped(file, viewDeck(file, view, hidden)), rowEdit), filter),
+      touched,
     ),
     hidden,
     outside: outsideTables(file, hidden),
@@ -438,7 +477,7 @@ export function viewStateOf(
     byView = new Map();
     states.set(file, byView);
   }
-  byView.set(currentViewId, { revealed, rowEdit, filter, state });
+  byView.set(currentViewId, { revealed, rowEdit, filter, touched, state });
   return state;
 }
 

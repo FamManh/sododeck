@@ -267,6 +267,37 @@ describe('row editing shows its table at All (043 R4, FR-010a)', () => {
   });
 });
 
+describe('touched rows of the current flow step (049 R3)', () => {
+  const file: SododeckFile = {
+    ...emptySododeckFile(),
+    tableDisplay: { detail: 'keys' },
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        columns: [
+          { id: 'o-id', name: 'id', type: 'int', pk: true },
+          { id: 'o-total', name: 'total', type: 'int' },
+        ],
+      },
+      { id: 'svc', type: 'service', title: 'Svc' },
+    ],
+  };
+
+  it('marks only the touched tables, keeps the rest, and reuses the projection', () => {
+    const rows = new Map([['orders', new Set(['o-total'])]]);
+    const state = viewStateOf(file, null, none, null, null, rows);
+    const [orders, svc] = state.deck.nodes;
+    if (orders === undefined) throw new Error('orders expected');
+    expect(orders).not.toBe(file.nodes[0]);
+    expect(svc).toBe(file.nodes[1]);
+    expect(tableLayoutOf(orders).rows.map((r) => r.columnId)).toEqual(['o-id', 'o-total']);
+    expect(viewStateOf(file, null, none, null, null, rows)).toBe(state);
+    expect(viewStateOf(file, null, none).deck.nodes[0]).toBe(file.nodes[0]);
+  });
+});
+
 describe('column filter projection (048 R4)', () => {
   const tables: SododeckFile = deckOf({
     nodes: [

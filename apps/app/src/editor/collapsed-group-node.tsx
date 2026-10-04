@@ -11,6 +11,7 @@ import { CardTitleInput } from './quick-edit/card-title-input';
 import { iconProp } from './card-icon';
 import { TypeGlyph } from './shapes/type-glyph';
 import { StepSticker } from './step-sticker';
+import { TouchChipBadge } from './touch-chip';
 import { describeChannel } from './style/card-style';
 
 /** Member tiles per hand, the last slot becoming "+n" when there are more. */
@@ -111,7 +112,7 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         type="button"
         data-testid="collapsed-group-node"
         data-node-id={id}
-        aria-label={`${data.title}, collapsed group, ${String(data.nodeCount)} nodes, ${String(data.edgeCount)} edges${hasFlowInside ? ', flow step inside' : ''}`}
+        aria-label={`${data.title}, collapsed group, ${String(data.nodeCount)} nodes, ${String(data.edgeCount)} edges${hasFlowInside ? ', flow step inside' : ''}${data.touchChip === undefined ? '' : `, current step ${data.touchChip.text}`}`}
         aria-description={colourDescription === '' ? undefined : colourDescription}
         aria-expanded="false"
         {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
@@ -138,6 +139,7 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         {data.flowInside !== undefined && (
           <StepSticker state={data.flowInside} number={data.flowNumber ?? null} />
         )}
+        {data.touchChip !== undefined && <TouchChipBadge chip={data.touchChip} />}
         <span className="flex h-6 shrink-0 items-center gap-2">
           <span
             aria-hidden

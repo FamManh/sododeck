@@ -123,3 +123,65 @@ describe('removing other parts (040 US5)', () => {
     expect(refs(result.removed)).toEqual(['nodes:items', 'edges:r-ship-item']);
   });
 });
+
+describe('step touches on delete and rename (049 R7)', () => {
+  function withTouches(): SododeckFile {
+    const file = shopDeck();
+    file.nodes.push({ id: 'svc', type: 'service', title: 'Orders' });
+    file.edges.push({ id: 'e-svc', from: 'svc', to: 'svc' });
+    file.flows = [
+      {
+        id: 'fl',
+        title: 'Checkout',
+        steps: [
+          {
+            id: 's1',
+            edge: 'e-svc',
+            touches: [
+              { table: 'orders', access: 'write' },
+              { table: 'orders', column: 'o-total', access: 'write' },
+              { table: 'customers', column: 'c-email', access: 'read' },
+            ],
+          },
+          { id: 's2', edge: 'e-svc', touches: [{ table: 'orders', access: 'read' }] },
+        ],
+      },
+    ];
+    return file;
+  }
+  const touchesOf = (deck: SododeckFile, stepId: string) =>
+    deck.flows[0]?.steps.find((s) => s.id === stepId)?.touches;
+
+  it('deleting a table removes its table and column touches and keeps the steps', () => {
+    const { result, after } = removeAndUndo(withTouches(), (e) => e.remove('nodes', 'orders'));
+    expect(touchesOf(after, 's1')).toEqual([
+      { table: 'customers', column: 'c-email', access: 'read' },
+    ]);
+    expect(after.flows[0]?.steps.map((s) => s.id)).toEqual(['s1', 's2']);
+    expect(touchesOf(after, 's2')).toBeUndefined();
+    expect(refs(result.updated)).toEqual(expect.arrayContaining(['step:s1', 'step:s2']));
+    expect(result.broken).toEqual([]);
+  });
+
+  it('deleting a column removes only the touches naming it', () => {
+    const { result, after } = removeAndUndo(withTouches(), (e) =>
+      e.removeColumn('customers', 'c-email'),
+    );
+    expect(touchesOf(after, 's1')).toEqual([
+      { table: 'orders', access: 'write' },
+      { table: 'orders', column: 'o-total', access: 'write' },
+    ]);
+    expect(touchesOf(after, 's2')).toEqual([{ table: 'orders', access: 'read' }]);
+    expect(refs(result.updated)).toContain('step:s1');
+    expect(result.broken).toEqual([]);
+  });
+
+  it('renaming a table and a column leaves touches as they are', () => {
+    const { editor, deck } = setup(withTouches());
+    const before = deck().flows;
+    editor.update('nodes', 'orders', { title: 'purchase_orders' });
+    editor.updateColumn('orders', 'o-total', { name: 'amount' });
+    expect(deck().flows).toEqual(before);
+    expectValid(editor.doc);
+  });
+});

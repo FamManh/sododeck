@@ -1502,6 +1502,32 @@ export const sododeckFileSchema = z
                         'Sample inputs per attached rule: rule id → input column id → value. Keys must be valid ids.',
                       )
                       .optional(),
+                    touches: z
+                      .array(
+                        z
+                          .object({
+                            table: z
+                              .string()
+                              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                              .describe('Id of the table node.'),
+                            column: z
+                              .string()
+                              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+                              .describe('Id of one column of that table. Absent: the whole table.')
+                              .optional(),
+                            access: z
+                              .enum(['read', 'write'])
+                              .describe('Whether the step reads or writes it.'),
+                          })
+                          .strict()
+                          .describe(
+                            'A table, or one column of it, that a flow step reads or writes (049).',
+                          ),
+                      )
+                      .describe(
+                        'Tables, and optionally columns, this step reads or writes (049). Absent means none. No two entries share the same table and column.',
+                      )
+                      .optional(),
                   })
                   .strict()
                   .describe('One hop of a flow over an existing edge.'),

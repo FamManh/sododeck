@@ -415,6 +415,64 @@ describe('visibleGraph self-references (042 FR-011)', () => {
   });
 });
 
+describe('foreign keys across database cards (049 US2)', () => {
+  const table = (id: string, parent?: string) => ({
+    id,
+    type: 'db-table' as const,
+    title: id,
+    columns: [{ id: `${id}-id`, name: 'id', type: 'int' }],
+    ...(parent === undefined ? {} : { parent }),
+  });
+  const fk = (id: string, from: string, to: string) => ({
+    id,
+    from,
+    to,
+    fromColumns: [`${from}-id`],
+    toColumns: [`${to}-id`],
+  });
+  const deck = deckOf({
+    nodes: [
+      { id: 'odb', type: 'database', title: 'Orders DB' },
+      { id: 'cdb', type: 'database', title: 'Customers DB' },
+      table('orders', 'odb'),
+      table('items', 'odb'),
+      table('customers', 'cdb'),
+      table('invoices'),
+    ],
+    edges: [
+      fk('items-orders', 'items', 'orders'),
+      fk('orders-customers', 'orders', 'customers'),
+      fk('invoices-orders', 'invoices', 'orders'),
+    ],
+  });
+  const inside = (file: typeof deck, card: string) =>
+    visibleGraph(file, { node: card, group: null }, new Set());
+
+  it('draws one outside proxy per table of another card, or with no card, in either direction', () => {
+    const graph = inside(deck, 'odb');
+    expect(graph.nodes).toEqual(['orders', 'items']);
+    expect(graph.edges).toContain('items-orders');
+    expect(graph.ports.map((port) => [port.outsideNodeId, port.edgeIds])).toEqual([
+      ['customers', ['orders-customers']],
+      ['invoices', ['invoices-orders']],
+    ]);
+    expect(inside(deck, 'cdb').ports).toMatchObject([
+      { outsideNodeId: 'orders', outsideTitle: 'orders', edgeIds: ['orders-customers'] },
+    ]);
+  });
+
+  it('turns the proxy into a plain connector when the table moves in, and back', () => {
+    const moved = deckOf({
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.id === 'customers' ? { ...n, parent: 'odb' } : n)),
+    });
+    const graph = inside(moved, 'odb');
+    expect(graph.edges).toContain('orders-customers');
+    expect(graph.ports.map((port) => port.outsideNodeId)).toEqual(['invoices']);
+    expect(inside(deck, 'odb').edges).not.toContain('orders-customers');
+  });
+});
+
 describe('outside proxies for tables a view hides (048 US5)', () => {
   const tables = deckOf({
     nodes: [

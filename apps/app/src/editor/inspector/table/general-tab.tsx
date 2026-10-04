@@ -13,6 +13,7 @@ import { DETAIL_NAMES } from '../../table/table-text';
 import { CardTagsField } from '../../tags/card-tags-field';
 import { AppearanceSection } from '../appearance-section';
 import { styleView } from '../derive';
+import { TableOwnerField } from '../table-owner-field';
 import { LiveTextField } from './live-text-field';
 
 type NodePatch = Parameters<ReturnType<typeof useEditor>['update']>[2];
@@ -100,6 +101,7 @@ export function GeneralTab({ deck, node }: { deck: SododeckFile; node: Node }) {
           }}
         />
       </PanelSection>
+      <TableOwnerField deck={deck} node={node} />
       <AppearanceSection
         value={styleView([node])}
         deckColours={(deck.swatches ?? []).map((hex) => ({ hex }))}

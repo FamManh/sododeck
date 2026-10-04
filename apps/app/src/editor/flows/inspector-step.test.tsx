@@ -249,3 +249,39 @@ describe('InspectorStep in flow mode (007 FR-019–021)', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('InspectorStep Touches section (049 US3)', () => {
+  it('shows the step’s touches with their access, in and out of flow mode', () => {
+    const deck = {
+      ...flowDeck,
+      nodes: [
+        ...flowDeck.nodes,
+        {
+          id: 'orders',
+          type: 'db-table',
+          title: 'orders',
+          columns: [{ id: 'o-id', name: 'id', type: 'int' }],
+        },
+      ],
+      flows: flowDeck.flows.map((flow, index) =>
+        index === 0
+          ? {
+              ...flow,
+              steps: flow.steps.map((step, i) =>
+                i === 1
+                  ? { ...step, touches: [{ table: 'orders', access: 'write' as const }] }
+                  : step,
+              ),
+            }
+          : flow,
+      ),
+    };
+    const { ui, editor } = renderFlows(deck);
+    act(() => {
+      startEditing(editor(), 'place');
+      ui().setActiveStep('s2');
+    });
+    const section = screen.getByRole('region', { name: 'Touches' });
+    expect(within(section).getByRole('button', { name: 'Access for orders: write' })).toBeVisible();
+  });
+});

@@ -702,6 +702,73 @@ describe('rule links made through the editor (008)', () => {
   });
 });
 
+describe('step touches and table owners (049)', () => {
+  const file: SododeckFile = {
+    ...empty,
+    nodes: [
+      { id: 'svc', type: 'service', title: 'Orders' },
+      { id: 'db', type: 'database', title: 'Orders DB' },
+      { id: 'db2', type: 'database', title: 'Customers DB' },
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        parent: 'db',
+        columns: [{ id: 'o-id', name: 'id', type: 'bigint', pk: true }],
+      },
+      {
+        id: 'customers',
+        type: 'db-table',
+        title: 'customers',
+        parent: 'db2',
+        columns: [{ id: 'c-email', name: 'email', type: 'text' }],
+      },
+      { id: 'loose', type: 'db-table', title: 'loose', columns: [] },
+    ],
+    edges: [{ id: 'e', from: 'svc', to: 'db' }],
+    flows: [
+      {
+        id: 'fl',
+        title: 'Checkout',
+        steps: [
+          {
+            id: 's1',
+            edge: 'e',
+            title: 'Create order',
+            touches: [
+              { table: 'orders', access: 'write' },
+              { table: 'orders', column: 'o-id', access: 'read' },
+              { table: 'customers', column: 'c-email', access: 'read' },
+              { table: 'loose', access: 'write' },
+            ],
+          },
+          { id: 's2', edge: 'e', touches: [] },
+        ],
+      },
+    ],
+  };
+
+  it('round-trips touches (table and column, read and write) and owners losslessly', () => {
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(serializeDeck(out)).toBe(`${JSON.stringify(file, null, 2)}\n`);
+  });
+
+  it('writes touches made through the editor last in the step, keys in schema order', () => {
+    const doc = fromJSON({
+      ...file,
+      flows: [{ id: 'fl', title: 'F', steps: [{ id: 's', edge: 'e' }] }],
+    });
+    const editor = createEditor(doc);
+    editor.addTouch('fl', 's', { access: 'read', column: 'o-id', table: 'orders' } as never);
+    editor.updateStep('fl', 's', { title: 'Read order' });
+    const step = toJSON(doc).flows[0]?.steps[0];
+    expect(Object.keys(step ?? {})).toEqual(['id', 'edge', 'title', 'touches']);
+    expect(Object.keys(step?.touches?.[0] ?? {})).toEqual(['table', 'column', 'access']);
+    expect(toJSON(fromJSON(toJSON(doc)))).toEqual(toJSON(doc));
+  });
+});
+
 describe('canonical key order (FR-022, research R2)', () => {
   it('writes every object in schema order whatever the input order', () => {
     const shuffled = shuffleKeys(full) as SododeckFile;

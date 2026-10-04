@@ -146,9 +146,23 @@ export function withNewRow<T extends TableNode>(node: T, at: number): T {
   return node;
 }
 
-/** `copy` with the new-row mark of `node`, if it has one (a projection copied for a helper). */
+const forcedRows = new WeakMap<TableNode, ReadonlySet<Id>>();
+
+/**
+ * Marks a projected table node so the columns `ids` always draw as rows (049 R3: the columns the
+ * current flow step touches), whatever its detail would fold. Like `withNewRow`, `node` must be a
+ * fresh object owned by the projection.
+ */
+export function withForcedRows<T extends TableNode>(node: T, ids: ReadonlySet<Id>): T {
+  forcedRows.set(node, ids);
+  return node;
+}
+
+/** `copy` with the marks of `node` (new row, forced rows), if any (a projection copied for a helper). */
 export function withNewRowOf<T extends TableNode>(node: object, copy: T): T {
   const at = newRows.get(node as TableNode);
+  const forced = forcedRows.get(node as TableNode);
+  if (forced !== undefined) withForcedRows(copy, forced);
   return at === undefined ? copy : withNewRow(copy, at);
 }
 
@@ -217,12 +231,17 @@ function limitedIndexes(
   return all.filter((i) => picked.has(i) || connected.has(columns[i]?.id ?? ''));
 }
 
-/** Lays out a table card `width` px wide (default 240, or the stored width). */
+/**
+ * Lays out a table card `width` px wide (default 240, or the stored width). `forcedColumnIds`
+ * (default: the node's `withForcedRows` mark) always draw as rows, even when the detail folds
+ * them (049); the hidden count, the height and the row anchors follow.
+ */
 export function tableLayout(
   node: TableNode,
   context: TableContext,
   width: number = node.size?.width ?? TABLE_CARD.width,
   measure: TextMeasurer = textMeasurer(),
+  forcedColumnIds: ReadonlySet<Id> = forcedRows.get(node) ?? EMPTY_FK,
 ): TableLayout {
   const t = TABLE_CARD;
   const { display } = context;
@@ -244,7 +263,7 @@ export function tableLayout(
   // Keys draws PK, FK and every relationship-end row (042 R15), so no relationship loses its row.
   const isKey = (i: number) =>
     glyphs[i]?.some((g) => g !== 'unique') === true || connected.has(columns[i]?.id ?? '');
-  const shownIndexes = filtering
+  const baseIndexes = filtering
     ? columns
         .map((_, i) => i)
         .filter((i) => matchIds.has(columns[i]?.id ?? '') || connected.has(columns[i]?.id ?? ''))
@@ -253,6 +272,14 @@ export function tableLayout(
       : limited
         ? limitedIndexes(columns, glyphs, connected, t.rowLimit)
         : columns.map((_, i) => i).filter((i) => detail === 'all' || isKey(i));
+  // Rows the current flow step touches always draw (049), whatever the detail, limit or filter.
+  const kept = new Set(baseIndexes);
+  const shownIndexes =
+    forcedColumnIds.size === 0
+      ? baseIndexes
+      : columns
+          .map((_, i) => i)
+          .filter((i) => kept.has(i) || forcedColumnIds.has(columns[i]?.id ?? ''));
   const keySlot = shownIndexes.some((i) => (glyphs[i]?.length ?? 0) > 1)
     ? t.keySlotDouble
     : t.keySlot;
@@ -332,7 +359,15 @@ export function tableLayout(
       ? undefined
       : {
           count: hiddenCount,
-          kind: filtering ? 'limit' : detail === 'names' ? 'all' : limited ? 'limit' : 'more',
+          kind: filtering
+            ? 'limit'
+            : detail === 'names'
+              ? rows.length === 0
+                ? 'all'
+                : 'more'
+              : limited
+                ? 'limit'
+                : 'more',
         };
   // At All the button shows while rows are cut, and ("Show fewer") once a long table is opened.
   const buttonLabel =

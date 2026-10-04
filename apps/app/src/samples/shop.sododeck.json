@@ -1,0 +1,858 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "Shop",
+  "description": "A storefront, an orders service and two databases, with a Checkout flow.",
+  "packs": [
+    "architecture",
+    "database"
+  ],
+  "dialect": "postgres",
+  "enums": [
+    {
+      "id": "enum.order_status",
+      "name": "order_status",
+      "note": "Where an order is in its life",
+      "values": [
+        {
+          "id": "enum.order_status.pending",
+          "name": "pending"
+        },
+        {
+          "id": "enum.order_status.paid",
+          "name": "paid",
+          "note": "Payment captured"
+        },
+        {
+          "id": "enum.order_status.shipped",
+          "name": "shipped"
+        },
+        {
+          "id": "enum.order_status.cancelled",
+          "name": "cancelled"
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "storefront",
+      "type": "client",
+      "title": "Storefront",
+      "tech": "Web",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "svc.orders",
+      "type": "service",
+      "title": "Orders service",
+      "description": "Takes checkouts, stores orders and payments.",
+      "tech": "Go",
+      "position": {
+        "x": 320,
+        "y": 0
+      }
+    },
+    {
+      "id": "card.orders-db",
+      "type": "database",
+      "title": "Orders DB",
+      "description": "Orders, catalogue, payments and shipping.",
+      "position": {
+        "x": 640,
+        "y": -120
+      }
+    },
+    {
+      "id": "card.customers-db",
+      "type": "database",
+      "title": "Customers DB",
+      "description": "Who buys, and where to ship.",
+      "position": {
+        "x": 640,
+        "y": 160
+      }
+    },
+    {
+      "id": "customers",
+      "type": "db-table",
+      "title": "customers",
+      "description": "One row per buyer",
+      "parent": "card.customers-db",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "customers.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "customers.email",
+          "name": "email",
+          "type": "varchar",
+          "size": "255",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "id": "customers.name",
+          "name": "name",
+          "type": "varchar",
+          "size": "120",
+          "notNull": true
+        },
+        {
+          "id": "customers.created_at",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "defaultExpr": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "id": "customers.email-lower",
+          "name": "customers_email_lower_idx",
+          "columns": [
+            {
+              "expr": "lower(email)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "addresses",
+      "type": "db-table",
+      "title": "addresses",
+      "parent": "card.customers-db",
+      "position": {
+        "x": 300,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "addresses.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "addresses.customer_id",
+          "name": "customer_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "addresses.street",
+          "name": "street",
+          "type": "varchar",
+          "size": "200",
+          "notNull": true
+        },
+        {
+          "id": "addresses.city",
+          "name": "city",
+          "type": "varchar",
+          "size": "100",
+          "notNull": true
+        },
+        {
+          "id": "addresses.country",
+          "name": "country",
+          "type": "char",
+          "size": "2",
+          "notNull": true,
+          "note": "ISO 3166-1 alpha-2"
+        }
+      ]
+    },
+    {
+      "id": "orders",
+      "type": "db-table",
+      "title": "orders",
+      "description": "One row per checkout",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 0,
+        "y": 300
+      },
+      "columns": [
+        {
+          "id": "orders.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "orders.customer_id",
+          "name": "customer_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "orders.shipping_address_id",
+          "name": "shipping_address_id",
+          "type": "uuid"
+        },
+        {
+          "id": "orders.billing_address_id",
+          "name": "billing_address_id",
+          "type": "uuid"
+        },
+        {
+          "id": "orders.status",
+          "name": "status",
+          "type": "order_status",
+          "notNull": true,
+          "default": "pending",
+          "enumRef": "enum.order_status"
+        },
+        {
+          "id": "orders.total",
+          "name": "total",
+          "type": "numeric",
+          "size": "10,2",
+          "notNull": true,
+          "default": 0,
+          "note": "Sum of the order items"
+        },
+        {
+          "id": "orders.created_at",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "defaultExpr": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "id": "orders.customer-created",
+          "columns": [
+            "orders.customer_id",
+            "orders.created_at"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "products",
+      "type": "db-table",
+      "title": "products",
+      "description": "Things we sell; 'active' hides them\nfrom the store",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 300,
+        "y": 300
+      },
+      "columns": [
+        {
+          "id": "products.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "products.sku",
+          "name": "sku",
+          "type": "varchar",
+          "size": "40",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "id": "products.name",
+          "name": "name",
+          "type": "varchar",
+          "size": "200",
+          "notNull": true
+        },
+        {
+          "id": "products.price",
+          "name": "price",
+          "type": "numeric",
+          "size": "10,2",
+          "notNull": true
+        },
+        {
+          "id": "products.active",
+          "name": "active",
+          "type": "boolean",
+          "notNull": true,
+          "default": true
+        }
+      ],
+      "checks": [
+        {
+          "id": "products.price-check",
+          "name": "products_price_check",
+          "expr": "price >= 0"
+        }
+      ]
+    },
+    {
+      "id": "categories",
+      "type": "db-table",
+      "title": "categories",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 600,
+        "y": 300
+      },
+      "columns": [
+        {
+          "id": "categories.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "categories.parent_id",
+          "name": "parent_id",
+          "type": "uuid"
+        },
+        {
+          "id": "categories.name",
+          "name": "name",
+          "type": "varchar",
+          "size": "100",
+          "notNull": true
+        }
+      ]
+    },
+    {
+      "id": "order_items",
+      "type": "db-table",
+      "title": "order_items",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 0,
+        "y": 600
+      },
+      "columns": [
+        {
+          "id": "order_items.order_id",
+          "name": "order_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "order_items.product_id",
+          "name": "product_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "order_items.quantity",
+          "name": "quantity",
+          "type": "integer",
+          "notNull": true,
+          "check": "quantity > 0"
+        },
+        {
+          "id": "order_items.unit_price",
+          "name": "unit_price",
+          "type": "numeric",
+          "size": "10,2",
+          "notNull": true
+        }
+      ]
+    },
+    {
+      "id": "payments",
+      "type": "db-table",
+      "title": "payments",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 300,
+        "y": 600
+      },
+      "columns": [
+        {
+          "id": "payments.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "payments.order_id",
+          "name": "order_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "payments.amount",
+          "name": "amount",
+          "type": "numeric",
+          "size": "10,2",
+          "notNull": true
+        },
+        {
+          "id": "payments.paid_at",
+          "name": "paid_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "shipments",
+      "type": "db-table",
+      "title": "shipments",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 600,
+        "y": 600
+      },
+      "columns": [
+        {
+          "id": "shipments.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "shipments.order_id",
+          "name": "order_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "shipments.carrier",
+          "name": "carrier",
+          "type": "varchar",
+          "size": "80"
+        },
+        {
+          "id": "shipments.shipped_at",
+          "name": "shipped_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "shipment_items",
+      "type": "db-table",
+      "title": "shipment_items",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 0,
+        "y": 900
+      },
+      "columns": [
+        {
+          "id": "shipment_items.shipment_id",
+          "name": "shipment_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "shipment_items.order_id",
+          "name": "order_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "shipment_items.product_id",
+          "name": "product_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "shipment_items.quantity",
+          "name": "quantity",
+          "type": "integer",
+          "notNull": true
+        }
+      ]
+    },
+    {
+      "id": "reviews",
+      "type": "db-table",
+      "title": "reviews",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 300,
+        "y": 900
+      },
+      "columns": [
+        {
+          "id": "reviews.id",
+          "name": "id",
+          "type": "integer",
+          "pk": true,
+          "increment": true
+        },
+        {
+          "id": "reviews.product_id",
+          "name": "product_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "reviews.customer_id",
+          "name": "customer_id",
+          "type": "uuid"
+        },
+        {
+          "id": "reviews.rating",
+          "name": "rating",
+          "type": "smallint",
+          "notNull": true,
+          "check": "rating BETWEEN 1 AND 5"
+        },
+        {
+          "id": "reviews.body",
+          "name": "body",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "audit_log",
+      "type": "db-table",
+      "title": "audit_log",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 600,
+        "y": 900
+      },
+      "columns": [
+        {
+          "id": "audit_log.id",
+          "name": "id",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "id": "audit_log.action",
+          "name": "action",
+          "type": "varchar",
+          "size": "40",
+          "notNull": true
+        },
+        {
+          "id": "audit_log.payload",
+          "name": "payload",
+          "type": "jsonb"
+        },
+        {
+          "id": "audit_log.logged_at",
+          "name": "logged_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "defaultExpr": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "id": "audit_log.logged",
+          "columns": [
+            "audit_log.logged_at"
+          ],
+          "method": "btree"
+        }
+      ]
+    }
+  ],
+  "groups": [],
+  "edges": [
+    {
+      "id": "e.store-orders",
+      "from": "storefront",
+      "to": "svc.orders",
+      "protocol": "http",
+      "label": "POST /checkout"
+    },
+    {
+      "id": "e.orders-customers",
+      "from": "svc.orders",
+      "to": "card.customers-db",
+      "label": "read customer"
+    },
+    {
+      "id": "e.customers-orders",
+      "from": "card.customers-db",
+      "to": "svc.orders",
+      "label": "customer"
+    },
+    {
+      "id": "e.orders-db",
+      "from": "svc.orders",
+      "to": "card.orders-db",
+      "label": "write order"
+    },
+    {
+      "id": "e.db-orders",
+      "from": "card.orders-db",
+      "to": "svc.orders",
+      "label": "order id"
+    },
+    {
+      "id": "e.orders-store",
+      "from": "svc.orders",
+      "to": "storefront",
+      "protocol": "http",
+      "label": "order confirmed"
+    },
+    {
+      "id": "rel.addresses-customer",
+      "from": "addresses",
+      "to": "customers",
+      "fromColumns": [
+        "addresses.customer_id"
+      ],
+      "toColumns": [
+        "customers.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.orders-customer",
+      "from": "orders",
+      "to": "customers",
+      "label": "places",
+      "fromColumns": [
+        "orders.customer_id"
+      ],
+      "toColumns": [
+        "customers.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.orders-shipping",
+      "from": "orders",
+      "to": "addresses",
+      "label": "ships to",
+      "fromColumns": [
+        "orders.shipping_address_id"
+      ],
+      "toColumns": [
+        "addresses.id"
+      ],
+      "cardinality": "n-1",
+      "fromOptional": true,
+      "toOptional": true
+    },
+    {
+      "id": "rel.orders-billing",
+      "from": "orders",
+      "to": "addresses",
+      "label": "bills to",
+      "fromColumns": [
+        "orders.billing_address_id"
+      ],
+      "toColumns": [
+        "addresses.id"
+      ],
+      "cardinality": "n-1",
+      "fromOptional": true,
+      "toOptional": true
+    },
+    {
+      "id": "rel.categories-parent",
+      "from": "categories",
+      "to": "categories",
+      "fromColumns": [
+        "categories.parent_id"
+      ],
+      "toColumns": [
+        "categories.id"
+      ],
+      "cardinality": "n-1",
+      "fromOptional": true,
+      "toOptional": true
+    },
+    {
+      "id": "rel.items-order",
+      "from": "order_items",
+      "to": "orders",
+      "fromColumns": [
+        "order_items.order_id"
+      ],
+      "toColumns": [
+        "orders.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.items-product",
+      "from": "order_items",
+      "to": "products",
+      "fromColumns": [
+        "order_items.product_id"
+      ],
+      "toColumns": [
+        "products.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "restrict"
+    },
+    {
+      "id": "rel.payments-order",
+      "from": "payments",
+      "to": "orders",
+      "fromColumns": [
+        "payments.order_id"
+      ],
+      "toColumns": [
+        "orders.id"
+      ],
+      "cardinality": "n-1"
+    },
+    {
+      "id": "rel.shipments-order",
+      "from": "shipments",
+      "to": "orders",
+      "fromColumns": [
+        "shipments.order_id"
+      ],
+      "toColumns": [
+        "orders.id"
+      ],
+      "cardinality": "n-1"
+    },
+    {
+      "id": "rel.shipment-items-shipment",
+      "from": "shipment_items",
+      "to": "shipments",
+      "fromColumns": [
+        "shipment_items.shipment_id"
+      ],
+      "toColumns": [
+        "shipments.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.shipment-items-item",
+      "from": "shipment_items",
+      "to": "order_items",
+      "fromColumns": [
+        "shipment_items.order_id",
+        "shipment_items.product_id"
+      ],
+      "toColumns": [
+        "order_items.order_id",
+        "order_items.product_id"
+      ],
+      "cardinality": "n-1"
+    },
+    {
+      "id": "rel.reviews-product",
+      "from": "reviews",
+      "to": "products",
+      "fromColumns": [
+        "reviews.product_id"
+      ],
+      "toColumns": [
+        "products.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.reviews-customer",
+      "from": "reviews",
+      "to": "customers",
+      "fromColumns": [
+        "reviews.customer_id"
+      ],
+      "toColumns": [
+        "customers.id"
+      ],
+      "cardinality": "n-1",
+      "fromOptional": true,
+      "toOptional": true,
+      "onDelete": "set-null"
+    },
+    {
+      "id": "rel.products-categories",
+      "from": "products",
+      "to": "categories",
+      "label": "listed in",
+      "cardinality": "n-n"
+    }
+  ],
+  "views": [],
+  "features": [],
+  "flows": [
+    {
+      "id": "flow.checkout",
+      "title": "Checkout",
+      "description": "From the cart to a stored, paid order.",
+      "trigger": "Customer taps Place order",
+      "outcome": "Order stored and confirmed",
+      "steps": [
+        {
+          "id": "checkout.submit",
+          "edge": "e.store-orders",
+          "title": "Submit checkout"
+        },
+        {
+          "id": "checkout.customer",
+          "edge": "e.orders-customers",
+          "title": "Look up customer",
+          "touches": [
+            {
+              "table": "customers",
+              "access": "read"
+            },
+            {
+              "table": "addresses",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "checkout.customer-found",
+          "edge": "e.customers-orders",
+          "title": "Customer found"
+        },
+        {
+          "id": "checkout.create",
+          "edge": "e.orders-db",
+          "title": "Create order",
+          "touches": [
+            {
+              "table": "orders",
+              "access": "write"
+            },
+            {
+              "table": "order_items",
+              "access": "write"
+            },
+            {
+              "table": "customers",
+              "column": "customers.email",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "checkout.stored",
+          "edge": "e.db-orders",
+          "title": "Order stored"
+        },
+        {
+          "id": "checkout.confirm",
+          "edge": "e.orders-store",
+          "title": "Confirm order"
+        }
+      ]
+    }
+  ],
+  "rules": {},
+  "stickies": []
+}
