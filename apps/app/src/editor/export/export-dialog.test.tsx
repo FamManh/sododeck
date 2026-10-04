@@ -146,6 +146,18 @@ describe('ExportDialog: shell', () => {
     await footerName('logistics-delivery.sododeck.json');
   });
 
+  it('selects a format by clicking its subtitle (051 US5)', async () => {
+    const { user } = setup();
+    await user.click(within(dialog()).getByText('Raster image for docs and slides'));
+    await waitFor(() => {
+      expect(radio('PNG')).toBeChecked();
+    });
+    await user.click(within(dialog()).getByText('Vector, editable in Figma'));
+    await waitFor(() => {
+      expect(radio('SVG')).toBeChecked();
+    });
+  });
+
   it('closes with the Close button and returns focus to the opener', async () => {
     const { user, button } = setup();
     await user.click(screen.getByRole('button', { name: 'Close' }));

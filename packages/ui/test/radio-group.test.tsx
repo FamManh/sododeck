@@ -47,4 +47,28 @@ describe('RadioGroup', () => {
     await userEvent.click(screen.getByText('None'));
     expect(screen.getByRole('radio', { name: 'None' })).toHaveAttribute('aria-checked', 'true');
   });
+
+  it('selects by clicking the description or the row around the label (051 US5)', async () => {
+    render(
+      <RadioGroup aria-label="Format" defaultValue="json">
+        <RadioGroupItem value="json" label="JSON" description="Re-importable" />
+        <RadioGroupItem value="png" label="PNG" description="Raster image" className="p-3" />
+      </RadioGroup>,
+    );
+    await userEvent.click(screen.getByText('Raster image'));
+    expect(screen.getByRole('radio', { name: 'PNG' })).toHaveAttribute('aria-checked', 'true');
+    const row = screen.getByText('Re-importable').closest('[data-slot="radio-field"]');
+    expect(row).not.toBeNull();
+    if (row instanceof HTMLElement) await userEvent.click(row);
+    expect(screen.getByRole('radio', { name: 'JSON' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('keeps the accessible name to the label, not the description', () => {
+    render(
+      <RadioGroup aria-label="Format">
+        <RadioGroupItem value="json" label="JSON" description="Re-importable" />
+      </RadioGroup>,
+    );
+    expect(screen.getByRole('radio', { name: 'JSON' })).toBeInTheDocument();
+  });
 });

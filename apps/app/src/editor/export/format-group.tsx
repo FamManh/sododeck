@@ -30,29 +30,23 @@ export function FormatGroup({
         {label}
       </h3>
       {formats.map(({ id, label: name, subtitle, icon: Icon }) => (
-        <div
+        <RadioGroupItem
           key={id}
+          ref={checked === id ? checkedRef : undefined}
+          value={id}
+          aria-label={name}
           className={cn(
             'rounded-row border p-3',
             checked === id ? 'border-primary bg-primary-soft' : 'border-border',
           )}
-        >
-          <RadioGroupItem
-            ref={checked === id ? checkedRef : undefined}
-            value={id}
-            aria-label={name}
-            aria-describedby={`export-format-${id}`}
-            label={
-              <span className="flex items-center gap-2 font-medium">
-                <Icon aria-hidden className="size-4 text-ink-secondary" />
-                {name}
-              </span>
-            }
-          />
-          <p id={`export-format-${id}`} className="mt-1 pl-6 text-caption text-ink-secondary">
-            {subtitle}
-          </p>
-        </div>
+          label={
+            <span className="flex items-center gap-2 font-medium">
+              <Icon aria-hidden className="size-4 text-ink-secondary" />
+              {name}
+            </span>
+          }
+          description={subtitle}
+        />
       ))}
     </div>
   );

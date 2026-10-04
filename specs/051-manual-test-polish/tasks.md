@@ -41,7 +41,7 @@
 ## Phase 1: Setup
 
 - [x] T001 Create branch `051-manual-test-polish` from the latest `main`, carrying over only `specs/051-manual-test-polish/` (leave the untracked `specs/042-db-relationships/` and `apps/app/src/samples/` on their own branch). Run `pnpm install && pnpm lint && pnpm typecheck && pnpm test` for a green start.
-- [ ] T002 Take the bench baseline on unchanged code with `pnpm bench`, and save the summary table in `specs/051-manual-test-polish/bench-before.md`.
+- [x] T002 Take the bench baseline on unchanged code with `pnpm bench`, and save the summary table in `specs/051-manual-test-polish/bench-before.md`.
 
 ---
 
@@ -203,22 +203,22 @@
 
 ### Tests for User Story 5 (write first, watch them fail)
 
-- [ ] T028 [P] [US5] In `packages/ui/test/radio-group.test.tsx`:
+- [x] T028 [P] [US5] In `packages/ui/test/radio-group.test.tsx`:
   - clicking the `description` text of an item checks it;
   - clicking the item's outer element checks it;
   - arrow keys still move selection;
   - `getByRole('radio', { name })` still resolves from `label` / `aria-label`.
-- [ ] T029 [P] [US5] In `apps/app/src/editor/export/export-dialog.test.tsx`, add a case: clicking a format's subtitle text (`getByText(subtitle)`) checks that radio. Existing cases (`:84-89`, `:129-135`, `:154`, `:239-265`, `:340`) stay green.
+- [x] T029 [P] [US5] In `apps/app/src/editor/export/export-dialog.test.tsx`, add a case: clicking a format's subtitle text (`getByText(subtitle)`) checks that radio. Existing cases (`:84-89`, `:129-135`, `:154`, `:239-265`, `:340`) stay green.
 
 ### Implementation for User Story 5
 
-- [ ] T030 [US5] In `packages/ui/src/components/radio-group.tsx`, make the outer element of `RadioGroupItem` a `<label htmlFor={itemId}>` (it was a `<span>`) that receives `className`.
+- [x] T030 [US5] In `packages/ui/src/components/radio-group.tsx`, make the outer element of `RadioGroupItem` a `<label htmlFor={itemId}>` (it was a `<span>`) that receives `className`.
   - Render the `label` content in a `<span>` with `min-w-0 flex-1 truncate`.
   - Add an optional `description?: ReactNode` rendered inside the outer label, below the text.
   - Keep `cursor-pointer` and the disabled styles on the outer label (`has-[:disabled]` or `peer` equivalents).
   - Update the JSDoc.
-- [ ] T031 [US5] In `apps/app/src/editor/export/export-dialog.tsx` (:222-248), drop the wrapper `<div>`. Pass its row classes (`rounded-row border p-3`, plus the checked/unchecked classes) as `className`, and the subtitle as `description` with `id={export-format-${id}}`. Keep `aria-label` and `aria-describedby`, so the name stays the format name.
-- [ ] T032 [P] [US5] Check the other `RadioGroupItem` users still render and behave: `apps/app/src/editor/views/view-settings-popover.tsx` and `apps/app/src/design-gallery/fields-section.tsx`, plus their tests if present.
+- [x] T031 [US5] In `apps/app/src/editor/export/export-dialog.tsx` (:222-248), drop the wrapper `<div>`. Pass its row classes (`rounded-row border p-3`, plus the checked/unchecked classes) as `className`, and the subtitle as `description` with `id={export-format-${id}}`. Keep `aria-label` and `aria-describedby`, so the name stays the format name.
+- [x] T032 [P] [US5] Check the other `RadioGroupItem` users still render and behave: `apps/app/src/editor/views/view-settings-popover.tsx` and `apps/app/src/design-gallery/fields-section.tsx`, plus their tests if present.
 
 **Checkpoint**: T028–T029 are green.
 
