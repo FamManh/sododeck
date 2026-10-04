@@ -120,10 +120,10 @@
 
 **Independent test**: `samples.test.ts` validates all of them; their flows play.
 
-- [ ] T030 [P] [US5] Author `apps/app/src/samples/shop.sododeck.json` from `apps/app/src/db/fixtures/shop.ts` plus an architecture board (Storefront, Orders service, Orders DB, Customers DB), tables with `parent` set to their card, at least one cross-database foreign key, and a "Checkout" flow whose "Create order" step has `touches` (writes `orders` and `order_items`, reads `customers.email`)
-- [ ] T031 [P] [US5] Author `apps/app/src/samples/saas-auth.sododeck.json` (one database card, about 5 tables: users, sessions, orgs, memberships, invites; a sign-up flow whose steps carry `touches`)
-- [ ] T032 [P] [US5] Author `apps/app/src/samples/blog.sododeck.json` (one database card, about 5 tables: authors, posts, comments, tags, post_tags)
-- [ ] T033 [US5] Extend `apps/app/src/samples/samples.test.ts` (it globs the folder): each of the three loads, passes `checkIntegrity` and `checkDeck`, round-trips losslessly, has database cards with owned tables, Shop has the cross-database foreign key and a touching step, and no sample text names another diagram or database product
+- [x] T030 [P] [US5] Author `apps/app/src/samples/shop.sododeck.json` from `apps/app/src/db/fixtures/shop.ts` plus an architecture board (Storefront, Orders service, Orders DB, Customers DB), tables with `parent` set to their card, at least one cross-database foreign key, and a "Checkout" flow whose "Create order" step has `touches` (writes `orders` and `order_items`, reads `customers.email`)
+- [x] T031 [P] [US5] Author `apps/app/src/samples/saas-auth.sododeck.json` (one database card, about 5 tables: users, sessions, orgs, memberships, invites; a sign-up flow whose steps carry `touches`)
+- [x] T032 [P] [US5] Author `apps/app/src/samples/blog.sododeck.json` (one database card, about 5 tables: authors, posts, comments, tags, post_tags)
+- [x] T033 [US5] Extend `apps/app/src/samples/samples.test.ts` (it globs the folder): each of the three loads, passes `checkIntegrity` and `checkDeck`, round-trips losslessly, has database cards with owned tables, Shop has the cross-database foreign key and a touching step, and no sample text names another diagram or database product
 
 ---
 

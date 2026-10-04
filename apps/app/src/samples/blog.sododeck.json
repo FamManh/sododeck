@@ -1,0 +1,339 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "Blog",
+  "description": "Authors, posts, comments and tags.",
+  "packs": [
+    "architecture",
+    "database"
+  ],
+  "dialect": "postgres",
+  "nodes": [
+    {
+      "id": "reader",
+      "type": "client",
+      "title": "Reader",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "svc.blog",
+      "type": "service",
+      "title": "Blog app",
+      "position": {
+        "x": 320,
+        "y": 0
+      }
+    },
+    {
+      "id": "card.blog-db",
+      "type": "database",
+      "title": "Blog DB",
+      "position": {
+        "x": 640,
+        "y": 0
+      }
+    },
+    {
+      "id": "authors",
+      "type": "db-table",
+      "title": "authors",
+      "parent": "card.blog-db",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "authors.id",
+          "name": "id",
+          "type": "bigint",
+          "pk": true,
+          "increment": true
+        },
+        {
+          "id": "authors.name",
+          "name": "name",
+          "type": "varchar",
+          "size": "80",
+          "notNull": true
+        },
+        {
+          "id": "authors.bio",
+          "name": "bio",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "posts",
+      "type": "db-table",
+      "title": "posts",
+      "description": "Articles, drafts until published",
+      "parent": "card.blog-db",
+      "position": {
+        "x": 320,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "posts.id",
+          "name": "id",
+          "type": "bigint",
+          "pk": true,
+          "increment": true
+        },
+        {
+          "id": "posts.author_id",
+          "name": "author_id",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "id": "posts.title",
+          "name": "title",
+          "type": "varchar",
+          "size": "200",
+          "notNull": true
+        },
+        {
+          "id": "posts.slug",
+          "name": "slug",
+          "type": "varchar",
+          "size": "200",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "id": "posts.body",
+          "name": "body",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "id": "posts.published_at",
+          "name": "published_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "comments",
+      "type": "db-table",
+      "title": "comments",
+      "parent": "card.blog-db",
+      "position": {
+        "x": 640,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "comments.id",
+          "name": "id",
+          "type": "bigint",
+          "pk": true,
+          "increment": true
+        },
+        {
+          "id": "comments.post_id",
+          "name": "post_id",
+          "type": "bigint",
+          "notNull": true
+        },
+        {
+          "id": "comments.author_name",
+          "name": "author_name",
+          "type": "varchar",
+          "size": "80",
+          "notNull": true
+        },
+        {
+          "id": "comments.body",
+          "name": "body",
+          "type": "text",
+          "notNull": true
+        }
+      ]
+    },
+    {
+      "id": "tags",
+      "type": "db-table",
+      "title": "tags",
+      "parent": "card.blog-db",
+      "position": {
+        "x": 0,
+        "y": 320
+      },
+      "columns": [
+        {
+          "id": "tags.id",
+          "name": "id",
+          "type": "bigint",
+          "pk": true,
+          "increment": true
+        },
+        {
+          "id": "tags.name",
+          "name": "name",
+          "type": "varchar",
+          "size": "40",
+          "notNull": true,
+          "unique": true
+        }
+      ]
+    },
+    {
+      "id": "post_tags",
+      "type": "db-table",
+      "title": "post_tags",
+      "parent": "card.blog-db",
+      "position": {
+        "x": 320,
+        "y": 320
+      },
+      "columns": [
+        {
+          "id": "post_tags.post_id",
+          "name": "post_id",
+          "type": "bigint",
+          "pk": true
+        },
+        {
+          "id": "post_tags.tag_id",
+          "name": "tag_id",
+          "type": "bigint",
+          "pk": true
+        }
+      ]
+    }
+  ],
+  "groups": [],
+  "edges": [
+    {
+      "id": "e.reader-blog",
+      "from": "reader",
+      "to": "svc.blog",
+      "protocol": "http",
+      "label": "GET /posts/:slug"
+    },
+    {
+      "id": "e.blog-db",
+      "from": "svc.blog",
+      "to": "card.blog-db",
+      "label": "SQL"
+    },
+    {
+      "id": "e.db-blog",
+      "from": "card.blog-db",
+      "to": "svc.blog",
+      "label": "rows"
+    },
+    {
+      "id": "e.blog-reader",
+      "from": "svc.blog",
+      "to": "reader",
+      "protocol": "http",
+      "label": "HTML"
+    },
+    {
+      "id": "rel.posts-author",
+      "from": "posts",
+      "to": "authors",
+      "fromColumns": [
+        "posts.author_id"
+      ],
+      "toColumns": [
+        "authors.id"
+      ],
+      "cardinality": "n-1"
+    },
+    {
+      "id": "rel.comments-post",
+      "from": "comments",
+      "to": "posts",
+      "fromColumns": [
+        "comments.post_id"
+      ],
+      "toColumns": [
+        "posts.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.post-tags-post",
+      "from": "post_tags",
+      "to": "posts",
+      "fromColumns": [
+        "post_tags.post_id"
+      ],
+      "toColumns": [
+        "posts.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.post-tags-tag",
+      "from": "post_tags",
+      "to": "tags",
+      "fromColumns": [
+        "post_tags.tag_id"
+      ],
+      "toColumns": [
+        "tags.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    }
+  ],
+  "views": [],
+  "features": [],
+  "flows": [
+    {
+      "id": "flow.read-post",
+      "title": "Read a post",
+      "steps": [
+        {
+          "id": "read.request",
+          "edge": "e.reader-blog",
+          "title": "Open a post"
+        },
+        {
+          "id": "read.load",
+          "edge": "e.blog-db",
+          "title": "Load post and comments",
+          "touches": [
+            {
+              "table": "posts",
+              "column": "posts.slug",
+              "access": "read"
+            },
+            {
+              "table": "comments",
+              "access": "read"
+            },
+            {
+              "table": "authors",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "read.rows",
+          "edge": "e.db-blog",
+          "title": "Rows back"
+        },
+        {
+          "id": "read.render",
+          "edge": "e.blog-reader",
+          "title": "Render the page"
+        }
+      ]
+    }
+  ],
+  "rules": {},
+  "stickies": []
+}

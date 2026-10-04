@@ -1,0 +1,397 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "SaaS auth",
+  "description": "Users, sessions and workspaces behind a sign-up flow.",
+  "packs": [
+    "architecture",
+    "database"
+  ],
+  "dialect": "postgres",
+  "nodes": [
+    {
+      "id": "web",
+      "type": "client",
+      "title": "Web app",
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "svc.auth",
+      "type": "service",
+      "title": "Auth service",
+      "position": {
+        "x": 320,
+        "y": 0
+      }
+    },
+    {
+      "id": "card.auth-db",
+      "type": "database",
+      "title": "Auth DB",
+      "position": {
+        "x": 640,
+        "y": 0
+      }
+    },
+    {
+      "id": "email",
+      "type": "external",
+      "title": "Email provider",
+      "position": {
+        "x": 320,
+        "y": 240
+      }
+    },
+    {
+      "id": "users",
+      "type": "db-table",
+      "title": "users",
+      "description": "People who can sign in",
+      "parent": "card.auth-db",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "users.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "users.email",
+          "name": "email",
+          "type": "varchar",
+          "size": "255",
+          "notNull": true,
+          "unique": true
+        },
+        {
+          "id": "users.password_hash",
+          "name": "password_hash",
+          "type": "text",
+          "notNull": true
+        },
+        {
+          "id": "users.verified_at",
+          "name": "verified_at",
+          "type": "timestamptz"
+        },
+        {
+          "id": "users.created_at",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "defaultExpr": "now()"
+        }
+      ]
+    },
+    {
+      "id": "sessions",
+      "type": "db-table",
+      "title": "sessions",
+      "parent": "card.auth-db",
+      "position": {
+        "x": 320,
+        "y": 0
+      },
+      "columns": [
+        {
+          "id": "sessions.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "sessions.user_id",
+          "name": "user_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "sessions.expires_at",
+          "name": "expires_at",
+          "type": "timestamptz",
+          "notNull": true
+        }
+      ]
+    },
+    {
+      "id": "orgs",
+      "type": "db-table",
+      "title": "orgs",
+      "description": "Workspaces that own data",
+      "parent": "card.auth-db",
+      "position": {
+        "x": 0,
+        "y": 320
+      },
+      "columns": [
+        {
+          "id": "orgs.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "orgs.name",
+          "name": "name",
+          "type": "varchar",
+          "size": "120",
+          "notNull": true
+        },
+        {
+          "id": "orgs.created_at",
+          "name": "created_at",
+          "type": "timestamptz",
+          "notNull": true,
+          "defaultExpr": "now()"
+        }
+      ]
+    },
+    {
+      "id": "memberships",
+      "type": "db-table",
+      "title": "memberships",
+      "parent": "card.auth-db",
+      "position": {
+        "x": 320,
+        "y": 320
+      },
+      "columns": [
+        {
+          "id": "memberships.org_id",
+          "name": "org_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "memberships.user_id",
+          "name": "user_id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "memberships.role",
+          "name": "role",
+          "type": "varchar",
+          "size": "20",
+          "notNull": true,
+          "default": "member"
+        }
+      ]
+    },
+    {
+      "id": "invites",
+      "type": "db-table",
+      "title": "invites",
+      "parent": "card.auth-db",
+      "position": {
+        "x": 640,
+        "y": 320
+      },
+      "columns": [
+        {
+          "id": "invites.id",
+          "name": "id",
+          "type": "uuid",
+          "pk": true
+        },
+        {
+          "id": "invites.org_id",
+          "name": "org_id",
+          "type": "uuid",
+          "notNull": true
+        },
+        {
+          "id": "invites.email",
+          "name": "email",
+          "type": "varchar",
+          "size": "255",
+          "notNull": true
+        },
+        {
+          "id": "invites.accepted_at",
+          "name": "accepted_at",
+          "type": "timestamptz"
+        }
+      ]
+    }
+  ],
+  "groups": [],
+  "edges": [
+    {
+      "id": "e.web-auth",
+      "from": "web",
+      "to": "svc.auth",
+      "protocol": "http",
+      "label": "POST /signup"
+    },
+    {
+      "id": "e.auth-db",
+      "from": "svc.auth",
+      "to": "card.auth-db",
+      "label": "SQL"
+    },
+    {
+      "id": "e.db-auth",
+      "from": "card.auth-db",
+      "to": "svc.auth",
+      "label": "rows"
+    },
+    {
+      "id": "e.auth-email",
+      "from": "svc.auth",
+      "to": "email",
+      "label": "send email"
+    },
+    {
+      "id": "e.email-auth",
+      "from": "email",
+      "to": "svc.auth",
+      "label": "queued"
+    },
+    {
+      "id": "e.auth-web",
+      "from": "svc.auth",
+      "to": "web",
+      "protocol": "http",
+      "label": "session cookie"
+    },
+    {
+      "id": "rel.sessions-user",
+      "from": "sessions",
+      "to": "users",
+      "fromColumns": [
+        "sessions.user_id"
+      ],
+      "toColumns": [
+        "users.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.memberships-org",
+      "from": "memberships",
+      "to": "orgs",
+      "fromColumns": [
+        "memberships.org_id"
+      ],
+      "toColumns": [
+        "orgs.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.memberships-user",
+      "from": "memberships",
+      "to": "users",
+      "fromColumns": [
+        "memberships.user_id"
+      ],
+      "toColumns": [
+        "users.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.invites-org",
+      "from": "invites",
+      "to": "orgs",
+      "fromColumns": [
+        "invites.org_id"
+      ],
+      "toColumns": [
+        "orgs.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    }
+  ],
+  "views": [],
+  "features": [],
+  "flows": [
+    {
+      "id": "flow.signup",
+      "title": "Sign up",
+      "trigger": "Visitor submits the sign-up form",
+      "outcome": "Signed in to a new workspace",
+      "steps": [
+        {
+          "id": "signup.submit",
+          "edge": "e.web-auth",
+          "title": "Submit sign-up"
+        },
+        {
+          "id": "signup.check",
+          "edge": "e.auth-db",
+          "title": "Check email is free",
+          "touches": [
+            {
+              "table": "users",
+              "column": "users.email",
+              "access": "read"
+            }
+          ]
+        },
+        {
+          "id": "signup.free",
+          "edge": "e.db-auth",
+          "title": "Email is free"
+        },
+        {
+          "id": "signup.create",
+          "edge": "e.auth-db",
+          "title": "Create user, workspace and session",
+          "touches": [
+            {
+              "table": "users",
+              "access": "write"
+            },
+            {
+              "table": "orgs",
+              "access": "write"
+            },
+            {
+              "table": "memberships",
+              "access": "write"
+            },
+            {
+              "table": "sessions",
+              "access": "write"
+            }
+          ]
+        },
+        {
+          "id": "signup.created",
+          "edge": "e.db-auth",
+          "title": "Created"
+        },
+        {
+          "id": "signup.verify",
+          "edge": "e.auth-email",
+          "title": "Send verification email"
+        },
+        {
+          "id": "signup.queued",
+          "edge": "e.email-auth",
+          "title": "Email queued"
+        },
+        {
+          "id": "signup.done",
+          "edge": "e.auth-web",
+          "title": "Return session"
+        }
+      ]
+    }
+  ],
+  "rules": {},
+  "stickies": []
+}
