@@ -12,7 +12,12 @@ import { describe, expect, it } from 'vitest';
 import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
 import { useCanvasHandlers } from '../use-canvas-handlers';
-import { cancelActiveGesture, nudgeActiveDrag } from './drag-session';
+import {
+  cancelActiveGesture,
+  hasActiveGesture,
+  nudgeActiveDrag,
+  setActiveGesture,
+} from './drag-session';
 import { applyResize, endResize, startResize } from './frame-resize';
 
 const ui = () => useUiStore.getState();
@@ -514,5 +519,28 @@ describe('dragging a card with the Deck tilt (029 FR-016)', () => {
         expect(target, `transform on ${target}`).toMatch(/\.sd-card|\.sd-shape-(art|lip)/);
       }
     }
+  });
+});
+
+describe('hasActiveGesture (050 R9)', () => {
+  it('is true between setActiveGesture(x) and setActiveGesture(null)', () => {
+    expect(hasActiveGesture()).toBe(false);
+    setActiveGesture({ cancel: () => true, arrow: () => false });
+    expect(hasActiveGesture()).toBe(true);
+    setActiveGesture(null);
+    expect(hasActiveGesture()).toBe(false);
+  });
+
+  it('is true during a component drag and false after the DragController ends', () => {
+    const { h } = setup();
+    act(() => {
+      h().onNodeDragStart({}, flowNode('c'));
+      h().onNodesChange(move('c', 40, 3020));
+    });
+    expect(hasActiveGesture()).toBe(true);
+    act(() => {
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(hasActiveGesture()).toBe(false);
   });
 });

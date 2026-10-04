@@ -126,6 +126,14 @@ export function resetActiveGesture(): boolean {
   return active?.reset?.() ?? false;
 }
 
+/**
+ * Whether a pointer gesture (drag, resize, bend, label, end or segment drag) is registered.
+ * The guide safety net (050 R9) clears leftover previews only when this is false.
+ */
+export function hasActiveGesture(): boolean {
+  return active !== null;
+}
+
 /** Registers the cancel of a resize, which is not a drag session (see `frame-resize.ts`). */
 export function setActiveGesture(handlers: typeof active): void {
   active = handlers;
