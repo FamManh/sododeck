@@ -84,6 +84,7 @@ export function CardTitleInput({
   title,
   className,
   style,
+  fitWidth = false,
 }: {
   edit: TitleEdit;
   /** The committed title, from the document. */
@@ -92,6 +93,8 @@ export function CardTitleInput({
   className?: string;
   /** E.g. a `maxHeight` of the lines the card shows; longer titles scroll. */
   style?: CSSProperties;
+  /** One line as wide as the text (a group's label pill), not the wrapping card title. */
+  fitWidth?: boolean;
 }) {
   const editor = useEditor();
   const [draft, setDraft] = useState(edit.isNew ? '' : title);
@@ -150,6 +153,7 @@ export function CardTitleInput({
   return (
     <InlineTextarea
       ref={field}
+      fitWidth={fitWidth}
       aria-label={edit.target === 'node' ? 'Component title' : 'Group title'}
       value={draft}
       {...(edit.isNew

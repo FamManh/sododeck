@@ -115,12 +115,6 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         {...(showStroke ? { 'data-stroke': '' } : {})}
         {...(customText === undefined ? {} : { 'data-text': customText })}
         tabIndex={data.focused ? 0 : -1}
-        onMouseDownCapture={(event) => {
-          event.stopPropagation();
-        }}
-        onMouseDown={(event) => {
-          event.stopPropagation();
-        }}
         onClick={(event) => {
           if (flowMode) return;
           event.stopPropagation();

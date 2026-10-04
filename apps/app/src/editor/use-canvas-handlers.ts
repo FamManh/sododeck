@@ -49,7 +49,12 @@ import { addNoteAt } from './stickies/sticky-actions';
 import { DragController, setActiveGesture } from './editing/drag-session';
 import { useUndoToast } from './undo-toast';
 import { scopeOf, visibleGraph } from './visible-graph';
-import { collapsedOf, moveStickyInView, readViewState } from './views/use-current-view';
+import {
+  collapsedOf,
+  moveStickyInView,
+  readViewState,
+  setGroupCollapsed,
+} from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
@@ -115,11 +120,6 @@ export function useCanvasHandlers() {
         gestureOpen.current = false;
         editor.endGesture();
       }
-    };
-
-    const openScope = (frame: { kind: 'group' | 'node'; id: string }, title: string) => {
-      ui().drillInto({ ...frame, viewport: getViewport() });
-      ui().announce(`Opened ${title}`);
     };
 
     /** Applies React Flow's selection deltas; only the marquee is taken from React Flow. */
@@ -296,7 +296,19 @@ export function useCanvasHandlers() {
         const groupId = groupIdOf(node.id);
         if (groupId !== null) {
           const title = deck.groups.find((group) => group.id === groupId)?.title;
-          if (title !== undefined) openScope({ kind: 'group', id: groupId }, title);
+          if (title === undefined) return;
+          if (isCollapsedNode(node.id)) {
+            // A collapsed card opens back into its frame; Enter still drills in.
+            setGroupCollapsed(editor, groupId, false);
+            ui().select({ groups: [groupId] });
+            ui().focus(`${GROUP_NODE_PREFIX}${groupId}`);
+            ui().announce(`${title} expanded`);
+            return;
+          }
+          // A frame renames in place, like a card (019 FR-001); Enter still drills in.
+          ui().select({ groups: [groupId] });
+          ui().focus(node.id);
+          ui().startTitleEdit({ target: 'group', id: groupId, isNew: false });
           return;
         }
         if (stickyIdOf(node.id) !== null || isPortNode(node.id) || isScopeLabel(node.id)) return;
@@ -412,6 +424,14 @@ export function useCanvasHandlers() {
         if (isGroupNode(node.id)) {
           // A frame dragged by its label or edge (016 R5): the whole subtree moves.
           controller.startGroup(node.id.slice(GROUP_NODE_PREFIX.length));
+          return;
+        }
+        if (isCollapsedNode(node.id)) {
+          // A collapsed group moves as a whole: its frame and members follow the card.
+          controller.startGroup(node.id.slice(COLLAPSED_NODE_PREFIX.length), {
+            id: node.id,
+            position: node.position,
+          });
           return;
         }
         if (isCollapsedNode(node.id) || isPortNode(node.id) || isScopeLabel(node.id)) return;

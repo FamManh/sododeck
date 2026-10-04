@@ -39,16 +39,6 @@ const SIDES = [
   { id: 'left', position: Position.Left },
 ] as const;
 
-/** The label connect handle sits in the label row, not on a side (React Flow's default). */
-const IN_ROW = {
-  position: 'relative',
-  top: 'auto',
-  right: 'auto',
-  bottom: 'auto',
-  left: 'auto',
-  transform: 'none',
-} as const;
-
 /** The 8 px band along each edge that drags the frame (016 R5); the label drags it too. */
 const EDGE_BANDS = [
   'inset-x-0 top-0 h-2',
@@ -56,6 +46,18 @@ const EDGE_BANDS = [
   'inset-y-0 left-0 w-2',
   'inset-y-0 right-0 w-2',
 ] as const;
+
+/**
+ * The label pill on the top edge (left 16, top -14): 28 tall, Surface, 1.5 px border and a 2 px
+ * lip that goes with the others below 60 % zoom. Shared by the label and its rename field.
+ */
+const PILL_CLASS =
+  'pointer-events-auto flex h-7 items-center gap-1.5 rounded-full whitespace-nowrap border-[1.5px] border-border-strong bg-surface pr-1.5 pl-2 text-[12.5px] font-semibold text-ink shadow-[0_calc(var(--sd-deck-lip)*2/3)_0_0_var(--color-border-strong)]';
+/** The widest a label pill gets (288 px), and the least it keeps on a narrow frame. */
+const LABEL_MAX = 288;
+const LABEL_MIN = 96;
+const COUNT_CLASS =
+  'flex size-[18px] shrink-0 items-center justify-center rounded-full bg-ink text-[10.5px] leading-none font-bold text-surface';
 
 const modsOf = (event: ResizeDragEvent) => {
   const source = event.sourceEvent as Partial<MouseEvent> | null | undefined;
@@ -94,6 +96,8 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
       : null,
   );
   const resize = useRef<ResizeSession | null>(null);
+  // The label never runs past its frame: 16 px in from each side.
+  const labelMax = Math.min(LABEL_MAX, Math.max(LABEL_MIN, (width ?? 0) - 32));
 
   // Colour (020 US5): mirrors DeckNode's rule (R5); the group label follows the text rule.
   const look = data.look;
@@ -133,17 +137,6 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         endTarget === 'ok' && 'border-primary',
       )}
     >
-      {SIDES.map(({ id: side, position }) => (
-        <FlowHandle
-          key={side}
-          id={side}
-          type="source"
-          position={position}
-          isConnectable={false}
-          aria-hidden
-          className="pointer-events-none opacity-0"
-        />
-      ))}
       {editable &&
         EDGE_BANDS.map((band) => (
           <div
@@ -178,30 +171,65 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
             }}
           />
         ))}
-      {titleEdit !== null ? (
-        <div
-          data-node-id={id}
-          tabIndex={-1}
-          // Where the label sits, in its type, so renaming moves nothing (founder, 2026-10-02).
+      {/* 050 R6: a frame connects like a card, from the middle of any side; ⏎ picks the other
+          end from a list. Shown on hover (the label or an edge band) or while selected; drawn after the resize
+          handles, so the middle of a side connects, as on a card. */}
+      {SIDES.map(({ id: side, position }) => (
+        <FlowHandle
+          key={side}
+          id={side}
+          type="source"
+          position={position}
+          isConnectable={editable}
+          role="button"
+          aria-label={`Connect from ${data.title}`}
+          tabIndex={data.focused ? 0 : -1}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (editable) openConnectPopover(groupId);
+          }}
           className={cn(
-            'pointer-events-auto absolute -top-3.5 left-4 w-56 px-1',
-            data.level === 'landscape' && 'top-4 left-4 w-72 rounded-full bg-surface px-2 py-1',
+            'sd-handle opacity-0 transition-opacity focus-visible:opacity-100',
+            editable
+              ? 'pointer-events-auto group-hover:opacity-100 group-focus-within:opacity-100'
+              : 'pointer-events-none',
+            editable && selected && 'opacity-100',
+            focusRing,
+          )}
+        />
+      ))}
+      {titleEdit !== null ? (
+        // Renaming keeps the pill: the field takes the title's place, nothing else moves.
+        <div
+          className={cn(
+            'pointer-events-none absolute -top-3.5 left-4 flex items-center gap-1.5',
+            data.level === 'landscape' && 'top-4 left-4',
           )}
         >
-          <CardTitleInput
-            edit={titleEdit}
-            title={data.title}
-            className={
-              data.level === 'landscape'
-                ? 'text-body font-medium text-ink'
-                : 'text-[12.5px] font-semibold text-ink'
-            }
-          />
+          <div
+            data-node-id={id}
+            tabIndex={-1}
+            style={{ maxWidth: labelMax }}
+            className={cn(PILL_CLASS, data.level === 'landscape' && 'text-body')}
+          >
+            <ChevronDown aria-hidden className="size-3.5 shrink-0" />
+            <CardTitleInput
+              edit={titleEdit}
+              title={data.title}
+              fitWidth
+              className="h-5 max-w-72 min-w-4 shrink text-left leading-5 font-semibold text-ink"
+            />
+            <span aria-hidden className={COUNT_CLASS}>
+              {data.count}
+            </span>
+          </div>
         </div>
       ) : (
         <div
           className={cn(
-            // The label row on the top edge (left 16, top -14): the pill, then its connect handle.
+            // The label row on the top edge (left 16, top -14).
             'pointer-events-none absolute -top-3.5 left-4 flex items-center gap-1.5',
             data.level === 'landscape' && 'top-4 left-4',
           )}
@@ -213,7 +241,8 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
             aria-description={colourDescription === '' ? undefined : colourDescription}
             aria-expanded="true"
             tabIndex={data.focused ? 0 : -1}
-            title="Double-click or ↵ to open"
+            title="Double-click to rename, ↵ to open"
+            style={{ maxWidth: labelMax }}
             onClick={(event) => {
               if (flowMode) return;
               event.stopPropagation();
@@ -223,64 +252,39 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
             className={cn(
               // The label drags the frame (016 R5); a click still selects it.
               GROUP_HANDLE_CLASS,
-              // The pill sits on the top edge (left 16, top -14): 28 tall, Surface, 1.5 px border and
-              // a 2 px lip that goes with the others below 60 % zoom.
-              'pointer-events-auto flex h-7 items-center gap-1.5 rounded-full border-[1.5px] border-border-strong bg-surface pr-1.5 pl-2 text-[12.5px] font-semibold text-ink shadow-[0_calc(var(--sd-deck-lip)*2/3)_0_0_var(--color-border-strong)]',
+              PILL_CLASS,
               data.level === 'landscape' && 'text-body',
               focusRing,
             )}
           >
-            <ChevronDown aria-hidden className="size-3.5" />
-            <span>{data.title}</span>
+            {/* The chevron collapses the group; the rest of the pill selects and drags it. */}
             <span
               aria-hidden
-              className="flex size-[18px] items-center justify-center rounded-full bg-ink text-[10.5px] leading-none font-bold text-surface"
+              data-testid="group-collapse"
+              className="nodrag -my-1 -ml-1 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full hover:bg-surface-2"
+              onMouseDownCapture={(event) => {
+                event.stopPropagation();
+              }}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                setGroupCollapsed(editor, groupId, true);
+                if (!flowMode) select({ groups: [groupId] });
+                focus(`collapsed:${groupId}`);
+                announce(`${data.title} collapsed`);
+              }}
             >
+              <ChevronDown className="size-3.5" />
+            </span>
+            <span className="min-w-0 truncate">{data.title}</span>
+            <span aria-hidden className={COUNT_CLASS}>
               {data.count}
             </span>
           </button>
-          {/* 050 R6: drag to connect from the group; ⏎ picks the other end from a list. */}
-          <FlowHandle
-            id="connect"
-            type="source"
-            position={Position.Right}
-            role="button"
-            aria-label={`Connect from ${data.title}`}
-            tabIndex={data.focused ? 0 : -1}
-            style={IN_ROW}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              event.preventDefault();
-              event.stopPropagation();
-              if (editable) openConnectPopover(groupId);
-            }}
-            className={cn(
-              'sd-handle pointer-events-auto opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100',
-              focusRing,
-            )}
-          />
         </div>
       )}
-      <button
-        type="button"
-        aria-label={`Collapse ${data.title}`}
-        onMouseDownCapture={(event) => {
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.stopPropagation();
-          setGroupCollapsed(editor, groupId, true);
-          if (!flowMode) select({ groups: [groupId] });
-          focus(`collapsed:${groupId}`);
-          announce(`${data.title} collapsed`);
-        }}
-        className={cn(
-          'pointer-events-auto absolute top-2 right-3 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 group-focus-within:opacity-100',
-          focusRing,
-        )}
-      >
-        <ChevronDown className="size-4" />
-      </button>
     </div>
   );
 });

@@ -6,6 +6,11 @@ import type { Action, ActionContext } from './types';
 const onlyNode = (ctx: ActionContext) =>
   ctx.target.kind === 'component' ? ctx.selection.nodes[0] : undefined;
 
+const onlyGroup = (ctx: ActionContext) =>
+  ctx.target.kind === 'group' && ctx.selection.groups.length === 1
+    ? ctx.selection.groups[0]
+    : undefined;
+
 /** Open details, Open inside, Rename (019 R8). */
 export const TITLE_ACTIONS: readonly Action[] = [
   {
@@ -34,12 +39,23 @@ export const TITLE_ACTIONS: readonly Action[] = [
     icon: Layers,
     shortcut: 'open-details',
     section: 'open',
-    where: { menu: ['component'] },
+    // Double-click renames a group frame, so the menu is the pointer's way into a group.
+    where: { menu: ['component', 'group'] },
     applies: (ctx) => {
+      if (onlyGroup(ctx) !== undefined) return true;
       const id = onlyNode(ctx);
       return id !== undefined && (ctx.childCount.get(id) ?? 0) > 0;
     },
     run: (ctx) => {
+      const group = onlyGroup(ctx);
+      if (group !== undefined) {
+        const title = ctx.deck.groups.find((g) => g.id === group)?.title;
+        if (title === undefined || ctx.canvas === null) return;
+        const ui = useUiStore.getState();
+        ui.drillInto({ kind: 'group', id: group, viewport: ctx.canvas.getViewport() });
+        ui.announce(`Opened ${title}`);
+        return;
+      }
       const id = onlyNode(ctx);
       const title = ctx.deck.nodes.find((node) => node.id === id)?.title;
       if (id === undefined || title === undefined || ctx.canvas === null) return;
