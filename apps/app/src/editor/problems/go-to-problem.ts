@@ -6,6 +6,7 @@ import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { openResult, edgeCenter, type OpenResultContext } from '../command-palette/open-result';
 import type { PaletteResult } from '../command-palette/palette-results';
 import { visibleGraph, scopeOf } from '../visible-graph';
+import { focusRowSoon } from '../table/row-focus';
 import { readViewState, selectView, setGroupCollapsed } from '../views/use-current-view';
 
 export type ProblemNavContext = OpenResultContext;
@@ -103,6 +104,34 @@ function goToFlow(
 }
 
 /**
+ * After arriving at a schema problem (047 R7): focuses its row, draws its table at All until the
+ * selection leaves (nothing is written) and opens the fix popover. Only when the object really was
+ * selected: a card the view hides stays a toast. Problems without a fix open no popover.
+ */
+function withFix(problem: Problem, arrived: boolean, edgeIds: readonly Id[]): boolean {
+  if (!arrived) return false;
+  const ui = useUiStore.getState();
+  const { column } = problem;
+  const { selection } = ui;
+  const selected =
+    column === undefined
+      ? selection.nodes.length > 0 || selection.edges.length > 0
+      : selection.nodes.includes(column.tableId) ||
+        edgeIds.some((id) => selection.edges.includes(id));
+  if (!selected) return true;
+  if (column !== undefined) {
+    ui.setProblemReveal({
+      tableId: column.tableId,
+      ...(edgeIds.length > 0 ? { edges: edgeIds } : {}),
+    });
+    ui.setFocusedRow(column);
+    focusRowSoon(column);
+  }
+  if ((problem.fixes?.length ?? 0) > 0) ui.setProblemPopover({ key: problem.key });
+  return true;
+}
+
+/**
  * Takes the user to a problem (015 FR-017–019): selects the object and brings it into view, opens
  * the flow at the step, or opens the rule; reuses the command palette's opening so hidden-in-view
  * and deleted targets behave the same. Records the problem as the ⌘. position.
@@ -112,11 +141,11 @@ export function goToProblem(problem: Problem, context: ProblemNavContext): boole
   const { target } = problem;
   switch (target.type) {
     case 'node':
-      return goToNode(context, target.id);
+      return withFix(problem, goToNode(context, target.id), []);
     case 'nodes':
-      return goToNodes(context, target.ids);
+      return withFix(problem, goToNodes(context, target.ids), []);
     case 'edges':
-      return goToEdges(context, target.ids);
+      return withFix(problem, goToEdges(context, target.ids), target.ids);
     case 'flow':
       return goToFlow(context, target.flowId, target.stepId, target.branchIds);
     case 'rule':
@@ -144,6 +173,13 @@ export function goToProblem(problem: Problem, context: ProblemNavContext): boole
           return true;
         }
         case 'meta':
+          // A schema enum (047): the enum drawer is where its name and values are edited.
+          if (ref.child?.kind === 'enum') {
+            if (!deck.enums?.some((e) => e.id === ref.child?.id)) break;
+            if (context.screen === 'rules') context.navigateToCanvas();
+            useUiStore.getState().openEnumDrawer(ref.child.id);
+            return true;
+          }
           // Deck-level (an unknown pack id): nothing to select; the deck's settings are the place.
           if (context.screen === 'rules') context.navigateToCanvas();
           context.select({});

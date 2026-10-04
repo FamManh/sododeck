@@ -177,6 +177,25 @@ export interface CanvasViewport {
 /** Problems list filter (047). */
 export type ProblemFilter = 'all' | 'error' | 'warning';
 
+export interface ProblemPopover {
+  key: string;
+}
+
+export interface ProblemReveal {
+  tableId: Id;
+  /** Relationships the problem sits on: selecting one of them keeps the table revealed. */
+  edges?: readonly Id[];
+}
+
+/** Whether `reveal` survives a selection: the table, or one of its problem's relationships. */
+function keepReveal(reveal: ProblemReveal | null, selection: Selection): ProblemReveal | null {
+  if (reveal === null) return null;
+  const kept =
+    selection.nodes.includes(reveal.tableId) ||
+    (reveal.edges?.some((id) => selection.edges.includes(id)) ?? false);
+  return kept ? reveal : null;
+}
+
 export interface DrillFrame {
   kind: 'group' | 'node';
   id: string;
@@ -445,6 +464,15 @@ export interface UiState {
   /** Which severities the Problems list shows (047); reset when another deck opens. */
   problemFilter: ProblemFilter;
   setProblemFilter: (filter: ProblemFilter) => void;
+  /** The problem whose fix popover is open (047); it closes when the problem is gone. */
+  problemPopover: ProblemPopover | null;
+  setProblemPopover: (popover: ProblemPopover | null) => void;
+  /**
+   * The table a visited problem shows at All (047 R7), drawn that way until the selection leaves
+   * it (or, for a relationship problem, its relationships). Nothing is written.
+   */
+  problemReveal: ProblemReveal | null;
+  setProblemReveal: (reveal: ProblemReveal | null) => void;
   drill: readonly DrillFrame[];
   focusMode: boolean;
   stickyEditing: Id | null;
@@ -817,9 +845,16 @@ export const EMPTY_SELECTION: Selection = { nodes: [], edges: [], groups: [], st
  * view projection shows it at All until this goes back to null; nothing is written.
  */
 export function rowEditTableId(
-  state: Pick<UiState, 'focusedRow' | 'columnEdit' | 'rowDrag'>,
+  state: Pick<UiState, 'focusedRow' | 'columnEdit' | 'rowDrag' | 'problemReveal'>,
 ): Id | null {
-  return state.columnEdit?.tableId ?? state.rowDrag?.tableId ?? state.focusedRow?.tableId ?? null;
+  return (
+    state.columnEdit?.tableId ??
+    state.rowDrag?.tableId ??
+    state.focusedRow?.tableId ??
+    // A visited problem's table (047): shown the same way, so its faulty row is drawn.
+    state.problemReveal?.tableId ??
+    null
+  );
 }
 
 /** Where a new-row editor inserts its extra row (043 R3), or null. */
@@ -928,6 +963,8 @@ export const useUiStore = create<UiState>()((set, get) => {
     layoutRun: IDLE_LAYOUT,
     problemCursor: null,
     problemFilter: 'all',
+    problemPopover: null,
+    problemReveal: null,
     drill: [],
     focusMode: false,
     stickyEditing: null,
@@ -1004,6 +1041,10 @@ export const useUiStore = create<UiState>()((set, get) => {
         nodes.length === 0 && edges.length === 0 && groups.length === 0 && stickies.length === 0;
       set((state) => ({
         selection: empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
+        problemReveal: keepReveal(
+          state.problemReveal,
+          empty ? EMPTY_SELECTION : { nodes, edges, groups, stickies },
+        ),
         tableFilter: filterFor(state.tableFilter, nodes),
         tableDrawer: DEFAULT_TABLE_DRAWER,
         descriptionMode: NO_MODES,
@@ -1020,6 +1061,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         const next = { ...selection, [key]: list.includes(id) ? without(list, id) : [...list, id] };
         return {
           selection: next,
+          problemReveal: keepReveal(state.problemReveal, next),
           tableFilter: filterFor(state.tableFilter, next.nodes),
           tableDrawer: DEFAULT_TABLE_DRAWER,
           descriptionMode: NO_MODES,
@@ -1030,6 +1072,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     clearSelection: () => {
       set({
         selection: EMPTY_SELECTION,
+        problemReveal: null,
         tableFilter: null,
         tableDrawer: DEFAULT_TABLE_DRAWER,
         descriptionMode: NO_MODES,
@@ -1132,6 +1175,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     setProblemFilter: (problemFilter) => {
       set({ problemFilter });
+    },
+    setProblemPopover: (problemPopover) => {
+      set({ problemPopover });
+    },
+    setProblemReveal: (problemReveal) => {
+      set({ problemReveal });
     },
     setLayoutRun: (layoutRun) => {
       set({ layoutRun });
@@ -1767,6 +1816,8 @@ export const useUiStore = create<UiState>()((set, get) => {
         layoutRun: IDLE_LAYOUT,
         problemCursor: null,
         problemFilter: 'all',
+        problemPopover: null,
+        problemReveal: null,
         stickyEditing: null,
         stickyDraft: null,
         focusedId: null,
