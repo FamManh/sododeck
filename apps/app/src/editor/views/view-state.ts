@@ -15,7 +15,7 @@ import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sodode
 
 import { setCardFieldDeck } from '../card-fields';
 import { setTableDeck } from '../table-keys';
-import { withNewRow } from '../table-layout';
+import { withFilter, withNewRow } from '../table-layout';
 import { flowCountByNode, viewFilter } from '../view-filter';
 
 export interface ViewRender {
@@ -46,6 +46,12 @@ export interface ViewState {
 export interface RowEditView {
   tableId: Id;
   newRowAt: number | null;
+}
+
+/** The table whose columns the ⌘F filter folds (048): UI state, projected here, never written. */
+export interface TableFilterView {
+  tableId: Id;
+  text: string;
 }
 
 const EMPTY: ReadonlySet<Id> = new Set();
@@ -293,23 +299,62 @@ function withRowEdit(deck: SododeckFile, rowEdit: RowEditView | null): SododeckF
   return next;
 }
 
+const filteredNodes = new WeakMap<Node, { text: string; node: Node }>();
+const filteredDecks = new WeakMap<
+  SododeckFile,
+  { tableId: Id; text: string; deck: SododeckFile }
+>();
+
+/** `deck` with one table marked as filtered (048); `deck` itself for no filter or blank text. */
+function withTableFilter(deck: SododeckFile, filter: TableFilterView | null): SododeckFile {
+  if (filter === null || filter.text.trim() === '') return deck;
+  const index = deck.nodes.findIndex((node) => node.id === filter.tableId);
+  const node = deck.nodes[index];
+  if (node === undefined) return deck;
+  const cached = filteredDecks.get(deck);
+  if (cached?.tableId === filter.tableId && cached.text === filter.text) return cached.deck;
+  let marked = filteredNodes.get(node);
+  if (marked?.text !== filter.text) {
+    marked = { text: filter.text, node: withFilter({ ...node }, filter.text) };
+    filteredNodes.set(node, marked);
+  }
+  const nodes = deck.nodes.slice();
+  nodes[index] = marked.node;
+  const next = { ...deck, nodes };
+  filteredDecks.set(deck, { tableId: filter.tableId, text: filter.text, deck: next });
+  return next;
+}
+
+const sameFilter = (a: TableFilterView | null, b: TableFilterView | null) =>
+  a?.tableId === b?.tableId && a?.text === b?.text;
+
 const sameRowEdit = (a: RowEditView | null, b: RowEditView | null) =>
   a?.tableId === b?.tableId && a?.newRowAt === b?.newRowAt;
 
 const states = new WeakMap<
   SododeckFile,
-  Map<Id | null, { revealed: ReadonlySet<Id>; rowEdit: RowEditView | null; state: ViewState }>
+  Map<
+    Id | null,
+    {
+      revealed: ReadonlySet<Id>;
+      rowEdit: RowEditView | null;
+      filter: TableFilterView | null;
+      state: ViewState;
+    }
+  >
 >();
 
 /**
  * The view `currentViewId` (the first one when null or gone) of `file`, as the canvas uses it.
- * `rowEdit`: the table in row editing (043), shown at All in `deck` only.
+ * `rowEdit`: the table in row editing (043), shown at All in `deck` only. `filter`: the table the
+ * column filter folds (048), in `deck` only.
  */
 export function viewStateOf(
   file: SododeckFile,
   currentViewId: Id | null,
   revealed: ReadonlySet<Id> = EMPTY,
   rowEdit: RowEditView | null = null,
+  filter: TableFilterView | null = null,
 ): ViewState {
   // Card heights follow the typed fields this deck shows (032); every geometry helper reads them.
   setCardFieldDeck(file);
@@ -317,7 +362,13 @@ export function viewStateOf(
   setTableDeck(file);
   let byView = states.get(file);
   const cached = byView?.get(currentViewId);
-  if (cached?.revealed === revealed && sameRowEdit(cached.rowEdit, rowEdit)) return cached.state;
+  if (
+    cached?.revealed === revealed &&
+    sameRowEdit(cached.rowEdit, rowEdit) &&
+    sameFilter(cached.filter, filter)
+  ) {
+    return cached.state;
+  }
 
   const views = resolveViews(file);
   const view = views.find((v) => v.id === currentViewId) ?? views[0];
@@ -332,7 +383,7 @@ export function viewStateOf(
     views,
     view,
     isBase: view === views[0],
-    deck: withRowEdit(viewDeck(file, view, hidden), rowEdit),
+    deck: withTableFilter(withRowEdit(viewDeck(file, view, hidden), rowEdit), filter),
     hidden,
     collapsed: setOf(view.collapsed),
     render: {
@@ -347,7 +398,7 @@ export function viewStateOf(
     byView = new Map();
     states.set(file, byView);
   }
-  byView.set(currentViewId, { revealed, rowEdit, state });
+  byView.set(currentViewId, { revealed, rowEdit, filter, state });
   return state;
 }
 

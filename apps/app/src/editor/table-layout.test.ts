@@ -8,6 +8,9 @@ import {
   rowAnchorY,
   rowAtSlot,
   withNewRow,
+  withFilter,
+  withFilterOf,
+  cachedTableLayout,
   tableLayout,
   TABLE_CARD,
   type TableNode,
@@ -396,5 +399,70 @@ describe('row limit at All (048 FR-001, FR-002, FR-003)', () => {
     expect(rowAnchorY(open, 'c40')).toEqual({ y: open.rowsTop + 39 * 24 + 12, kind: 'row' });
     // A column that was drawn keeps its row position before and after opening.
     expect(rowAnchorY(l, 'c3').y).toBe(rowAnchorY(open, 'c3').y);
+  });
+});
+
+describe('column filter projection (048 FR-010, R4)', () => {
+  const names = (n: number): TableNode => ({
+    id: 'wide',
+    title: 'wide',
+    columns: Array.from({ length: n }, (_, i) =>
+      col(`c${String(i + 1)}`, { name: i === 44 ? 'Invoice_ID' : `field_${String(i + 1)}` }),
+    ),
+  });
+  const ctx = (connected: string[] = []) =>
+    context(
+      { detail: 'all' },
+      { fk: new Map(), connected: new Map([['wide', new Set(connected)]]) },
+    );
+  const ids = (l: ReturnType<typeof tableLayout>) => l.rows.map((r) => r.columnId);
+  const filtered = (node: TableNode, text: string, c = ctx()) =>
+    tableLayout(withFilter({ ...node }, text), c, 240, measure);
+
+  it('shows a match beyond the limit, case-insensitive, and folds the rest behind the button', () => {
+    const l = filtered(names(60), 'invoice');
+    expect(ids(l)).toEqual(['c45']);
+    expect([...l.matchIds]).toEqual(['c45']);
+    expect(l.hidden).toEqual({ count: 59, kind: 'limit' });
+    expect(l.button).toMatchObject({ label: 'Show all 60 columns' });
+  });
+
+  it('keeps relationship ends visible among the matches', () => {
+    const l = filtered(names(60), 'invoice', ctx(['c3']));
+    expect(ids(l)).toEqual(['c3', 'c45']);
+    expect([...l.matchIds]).toEqual(['c45']);
+  });
+
+  it('no match shows only connected rows; matches are not capped at 12', () => {
+    expect(filtered(names(60), 'zzz').rows).toHaveLength(0);
+    expect(filtered(names(60), 'field_').rows).toHaveLength(59);
+  });
+
+  it('works at Keys and Names details too, and ignores blank text', () => {
+    const keys = tableLayout(
+      withFilter({ ...names(60) }, 'invoice'),
+      context({ detail: 'keys' }),
+      240,
+      measure,
+    );
+    expect(ids(keys)).toEqual(['c45']);
+    const blank = filtered(names(60), '  ');
+    expect(blank.rows).toHaveLength(12);
+    expect(blank.matchIds.size).toBe(0);
+  });
+
+  it('height follows the folded rows; the unfiltered layout is restored exactly', () => {
+    const node = names(60);
+    const shared = ctx();
+    const plain = cachedTableLayout(node, shared);
+    const l = filtered(node, 'invoice', shared);
+    expect(l.height).toBe(TOP + 8 + 24 + 6 + 24 + 8);
+    expect(cachedTableLayout(node, shared)).toBe(plain);
+  });
+
+  it('withFilterOf carries the mark to a copy', () => {
+    const marked = withFilter({ ...names(60) }, 'invoice');
+    const copy = withFilterOf(marked, { ...marked, title: '' });
+    expect(tableLayout(copy, ctx(), 240, measure).rows).toHaveLength(1);
   });
 });

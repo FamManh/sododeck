@@ -102,6 +102,8 @@ export interface TableLayout {
   hidden: { count: number; kind: 'more' | 'all' | 'limit' } | undefined;
   /** The "Show all n columns" / "Show fewer" button (048): only at All on a table over the limit. */
   button: { label: string; expanded: boolean; top: number } | undefined;
+  /** Columns whose name matches the open filter (048), drawn or not; empty without a filter. */
+  matchIds: ReadonlySet<Id>;
   /** Where the new-row editor is drawn (043): its index among `rows`; later rows sit one lower. */
   newRowIndex: number | undefined;
   /** Ids of the columns not drawn as rows (042: their relationship ends anchor on the pill). */
@@ -148,6 +150,24 @@ export function withNewRow<T extends TableNode>(node: T, at: number): T {
 export function withNewRowOf<T extends TableNode>(node: object, copy: T): T {
   const at = newRows.get(node as TableNode);
   return at === undefined ? copy : withNewRow(copy, at);
+}
+
+const filters = new WeakMap<TableNode, string>();
+
+/**
+ * Marks a projected table node as filtered by column name (048 R4): only the columns whose name
+ * contains `text` (case-insensitive) and the relationship ends are drawn, the rest fold behind the
+ * button. Like `withNewRow`, `node` must be a fresh object owned by the projection.
+ */
+export function withFilter<T extends TableNode>(node: T, text: string): T {
+  filters.set(node, text);
+  return node;
+}
+
+/** `copy` with the filter mark of `node`, if it has one (a projection copied for a helper). */
+export function withFilterOf<T extends TableNode>(node: object, copy: T): T {
+  const text = filters.get(node as TableNode);
+  return text === undefined ? copy : withFilter(copy, text);
 }
 
 /** A table's detail: its own choice, else the deck's; Auto draws every column (R2). */
@@ -211,15 +231,24 @@ export function tableLayout(
   const fk = (node.id === undefined ? undefined : context.fk.get(node.id)) ?? EMPTY_FK;
   const connected =
     (node.id === undefined ? undefined : context.connected?.get(node.id)) ?? EMPTY_FK;
-  const detail = effectiveDetail(node.detail, display.detail);
+  const filterText = (filters.get(node) ?? '').trim().toLowerCase();
+  const filtering = filterText !== '';
+  // A filter looks through every column, so it draws at All whatever the table's detail.
+  const detail = filtering ? 'all' : effectiveDetail(node.detail, display.detail);
+  const matchIds: ReadonlySet<Id> = filtering
+    ? new Set(columns.filter((c) => c.name.toLowerCase().includes(filterText)).map((c) => c.id))
+    : EMPTY_FK;
 
   const glyphs = columns.map((column) => glyphsOf(column, fk));
   const limited = detail === 'all' && node.expanded !== true && columns.length > t.rowLimit;
   // Keys draws PK, FK and every relationship-end row (042 R15), so no relationship loses its row.
   const isKey = (i: number) =>
     glyphs[i]?.some((g) => g !== 'unique') === true || connected.has(columns[i]?.id ?? '');
-  const shownIndexes =
-    detail === 'names'
+  const shownIndexes = filtering
+    ? columns
+        .map((_, i) => i)
+        .filter((i) => matchIds.has(columns[i]?.id ?? '') || connected.has(columns[i]?.id ?? ''))
+    : detail === 'names'
       ? []
       : limited
         ? limitedIndexes(columns, glyphs, connected, t.rowLimit)
@@ -301,7 +330,10 @@ export function tableLayout(
   const hidden: TableLayout['hidden'] =
     hiddenCount === 0
       ? undefined
-      : { count: hiddenCount, kind: detail === 'names' ? 'all' : limited ? 'limit' : 'more' };
+      : {
+          count: hiddenCount,
+          kind: filtering ? 'limit' : detail === 'names' ? 'all' : limited ? 'limit' : 'more',
+        };
   // At All the button shows while rows are cut, and ("Show fewer") once a long table is opened.
   const buttonLabel =
     hidden?.kind === 'limit'
@@ -371,6 +403,7 @@ export function tableLayout(
     keySlot,
     showNullable: !display.hideNullable,
     rows,
+    matchIds,
     newRowIndex,
     hidden,
     button,
