@@ -49,6 +49,16 @@ describe('CollapsedGroupNode', () => {
     expect(screen.queryByTestId('step-sticker')).toBeNull();
   });
 
+  it('a schema group reads "n tables · m relationships" (048)', () => {
+    renderWithEditor(
+      <CollapsedGroupNode
+        {...props({ groupId: 'schema:billing', title: 'billing', nodeCount: 3, edgeCount: 1 })}
+      />,
+      deckOf({}),
+    );
+    expect(screen.getByText('3 tables · 1 relationship')).toBeInTheDocument();
+  });
+
   it('renders a button with its counts', () => {
     renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
     expect(

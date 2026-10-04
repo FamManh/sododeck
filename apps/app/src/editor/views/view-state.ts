@@ -16,6 +16,7 @@ import type { Group, Id, Node, SododeckFile, SubtitleField, View } from '@sodode
 import { setCardFieldDeck } from '../card-fields';
 import { setTableDeck } from '../table-keys';
 import { withFilter, withNewRow } from '../table-layout';
+import { schemaGroupedDeck } from '../schema-groups';
 import { flowCountByNode, viewFilter } from '../view-filter';
 
 export interface ViewRender {
@@ -265,6 +266,14 @@ export function viewDeck(deck: SododeckFile, view: View, hidden: ReadonlySet<Id>
   return projected;
 }
 
+/**
+ * By schema (048): the projected deck with derived schema groups. By group returns `projected`
+ * untouched, so the default path is exactly what it was.
+ */
+function grouped(file: SododeckFile, projected: SododeckFile): SododeckFile {
+  return file.groupingMode === 'schema' ? schemaGroupedDeck(projected) : projected;
+}
+
 const rowEditNodes = new WeakMap<Node, { at: number | null; node: Node }>();
 function showAll(node: Node, at: number | null): Node {
   const cached = rowEditNodes.get(node);
@@ -383,7 +392,10 @@ export function viewStateOf(
     views,
     view,
     isBase: view === views[0],
-    deck: withTableFilter(withRowEdit(viewDeck(file, view, hidden), rowEdit), filter),
+    deck: withTableFilter(
+      withRowEdit(grouped(file, viewDeck(file, view, hidden)), rowEdit),
+      filter,
+    ),
     hidden,
     collapsed: setOf(view.collapsed),
     render: {
