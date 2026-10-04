@@ -9,31 +9,45 @@ import { Palette } from './palette';
 import { NOTE_MIME, TYPE_MIME } from './use-canvas-handlers';
 
 const newDeck = () => deckOf({ packs: [...NEW_DECK_PACKS] });
+/** Every pack on, Logistics included (off in a new deck since 051). */
+const allPacksDeck = () => deckOf({ packs: [...NEW_DECK_PACKS, 'logistics'] });
 const tileNames = () =>
   within(screen.getByRole('grid', { name: 'Types' }))
     .getAllByRole('button')
     .map((b) => b.textContent.replace(/\d+$/, ''));
 
 describe('Palette: Add flyout (030)', () => {
-  it('a new deck shows seven tabs, six sections with counts 7 / 3 / 2 / 1 / 1 / 13 and the packs footer', () => {
+  it('a new deck shows six tabs, five sections in display order with counts 13 / 3 / 1 / 1 / 7 and the packs footer (051 US7)', () => {
     renderWithEditor(<Palette />, newDeck());
     expect(
       within(screen.getByRole('tablist', { name: 'Categories' }))
         .getAllByRole('tab')
         .map((t) => t.textContent),
-    ).toEqual(['All', 'Architecture', 'Process', 'Logistics', 'Data', 'Database', 'Shapes']);
+    ).toEqual(['All', 'Shapes', 'Process', 'Data', 'Database', 'Architecture']);
     const sections = screen.getAllByRole('group');
     expect(sections.map((s) => within(s).getByRole('heading').textContent)).toEqual([
-      'Architecture7',
+      'Basic shapes13',
       'Process3',
-      'Logistics2',
       'Data1',
       'Database1',
-      'Basic shapes13',
+      'Architecture7',
     ]);
-    expect(screen.getByRole('button', { name: 'Packs · 6 on' })).toBeInTheDocument();
-    expect(tileNames()).toHaveLength(27);
+    expect(screen.getByRole('button', { name: 'Packs · 5 on' })).toBeInTheDocument();
+    expect(tileNames()).toHaveLength(25);
     expect(tileNames()).toContain('Table');
+    expect(tileNames()).not.toContain('Warehouse');
+  });
+
+  it('turning Logistics on shows its tiles last (051 US7)', () => {
+    const { editor } = renderWithEditor(<Palette />, newDeck());
+    act(() => {
+      editor().setPackOn('logistics', true);
+    });
+    const sections = screen.getAllByRole('group');
+    expect(within(sections.at(-1) ?? document.body).getByRole('heading').textContent).toBe(
+      'Logistics2',
+    );
+    expect(tileNames().slice(-2)).toEqual(['Warehouse', 'Truck route']);
   });
 
   it('the Shapes tab lists the eleven shapes with mini outlines, then Sticky and Frame (031)', async () => {
@@ -140,7 +154,7 @@ describe('Palette: Add flyout (030)', () => {
 
   it('filters by name, hides empty sections, says when nothing matches', async () => {
     const user = userEvent.setup();
-    renderWithEditor(<Palette />, newDeck());
+    renderWithEditor(<Palette />, allPacksDeck());
     const search = screen.getByRole('searchbox', { name: 'Search types' });
     await user.type(search, 'TRUCK');
     expect(tileNames()).toEqual(['Truck route']);
@@ -153,7 +167,7 @@ describe('Palette: Add flyout (030)', () => {
 
   it('Enter in the search adds the first match', async () => {
     const user = userEvent.setup();
-    const { doc } = renderWithEditor(<Palette />, newDeck());
+    const { doc } = renderWithEditor(<Palette />, allPacksDeck());
     await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'ware{Enter}');
     expect(toJSON(doc).nodes).toMatchObject([{ type: 'warehouse', title: 'Untitled warehouse' }]);
   });
@@ -166,13 +180,14 @@ describe('Palette: Add flyout (030)', () => {
     expect(screen.getByRole('tab', { name: 'Process' })).toHaveAttribute('aria-selected', 'true');
     screen.getByRole('tab', { name: 'Process' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Logistics' })).toHaveAttribute('aria-selected', 'true');
-    expect(tileNames()).toEqual(['Warehouse', 'Truck route']);
+    expect(screen.getByRole('tab', { name: 'Data' })).toHaveAttribute('aria-selected', 'true');
+    expect(tileNames()).toEqual(['Issue']);
   });
 
   it('arrow keys move through the grid in three columns', async () => {
     const user = userEvent.setup();
-    renderWithEditor(<Palette />, newDeck());
+    // Architecture then Logistics in display order: Down from a short last row enters the next section.
+    renderWithEditor(<Palette />, deckOf({ packs: ['architecture', 'logistics'] }));
     const tile = (name: string) => screen.getByRole('button', { name });
     act(() => {
       tile('Service').focus();
@@ -182,7 +197,7 @@ describe('Palette: Add flyout (030)', () => {
     await user.keyboard('{ArrowDown}');
     expect(tile('Queue')).toHaveFocus();
     await user.keyboard('{ArrowDown}');
-    expect(tile('Decision')).toHaveFocus();
+    expect(tile('Truck route')).toHaveFocus();
     await user.keyboard('{ArrowUp}');
     expect(tile('Component')).toHaveFocus();
     await user.keyboard('{ArrowLeft}{ArrowLeft}');
@@ -219,7 +234,7 @@ describe('Palette: Add flyout (030)', () => {
   });
 
   it('is a drag source for the type id', () => {
-    renderWithEditor(<Palette />, newDeck());
+    renderWithEditor(<Palette />, allPacksDeck());
     const card = screen.getByRole('button', { name: 'Truck route' });
     expect(card).toHaveAttribute('draggable', 'true');
     const data = new Map<string, string>();
@@ -233,20 +248,21 @@ describe('Palette: Add flyout (030)', () => {
     const user = userEvent.setup();
     renderWithEditor(<Palette />, newDeck());
     const numbers = screen.getAllByRole('button').filter((b) => /\d$/.test(b.textContent));
+    // Display order (051): Basic shapes first.
     expect(numbers.map((b) => b.textContent)).toEqual([
-      'Service1',
-      'Database2',
-      'Gateway3',
-      'Client4',
-      'Queue5',
-      'External6',
-      'Component7',
-      'Task8',
-      'Decision9',
+      'Rectangle1',
+      'Rounded rectangle2',
+      'Ellipse3',
+      'Diamond4',
+      'Pill5',
+      'Cylinder6',
+      'Document7',
+      'Parallelogram8',
+      'Hexagon9',
     ]);
     // Types only: the Sticky and Frame tiles are never a number key (031).
-    expect(useUiStore.getState().addFlyout.visible).toHaveLength(25);
-    await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'e');
+    expect(useUiStore.getState().addFlyout.visible).toHaveLength(23);
+    await user.type(screen.getByRole('searchbox', { name: 'Search types' }), 'serv');
     expect(useUiStore.getState().addFlyout.visible[0]).toBe('service');
   });
 
@@ -269,7 +285,7 @@ describe('Palette: Add flyout (030)', () => {
 
   it('turning a pack off removes its tiles and leaves board cards alone', () => {
     const file = deckOf({
-      packs: [...NEW_DECK_PACKS],
+      packs: [...NEW_DECK_PACKS, 'logistics'],
       nodes: [{ id: 'w', type: 'warehouse', title: 'Hub', position: { x: 0, y: 0 } }],
     });
     const { editor, doc } = renderWithEditor(<Palette />, file);
@@ -285,7 +301,7 @@ describe('Palette: Add flyout (030)', () => {
   it('opens the packs view from the footer and Back returns to Add', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Palette />, newDeck());
-    await user.click(screen.getByRole('button', { name: 'Packs · 6 on' }));
+    await user.click(screen.getByRole('button', { name: 'Packs · 5 on' }));
     expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back to Add' }));
     expect(screen.getByRole('searchbox', { name: 'Search types' })).toBeInTheDocument();

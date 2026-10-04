@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { useUiStore, type HoverFocus, type UiState } from '../../state/ui-store';
+import { focusTargetId } from '../focus-target';
 import { useConnecting } from '../use-connection-role';
 
 /** The pointer must rest this long on a card before its connections light up (034 R3). */
@@ -17,10 +18,17 @@ export function isHoverTarget(id: string): boolean {
   return !NOT_CARD_PREFIXES.some((prefix) => id.startsWith(prefix));
 }
 
-/** Pinned focus, flows, gestures, the hand tool and open menus own the canvas: no hover focus. */
+// Collapse does not change whether a target exists, only its id: an empty set is enough here.
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
+
+/**
+ * Hover focus runs only inside Focus mode with nothing pinned (051 R1): outside it nothing dims.
+ * A pinned focus, flows, gestures, the hand tool and open menus own the canvas.
+ */
 function suspendedBy(s: UiState): boolean {
   return (
-    s.focusMode ||
+    !s.focusMode ||
+    focusTargetId(s.selection, NO_COLLAPSED) !== null ||
     s.activeFlow !== null ||
     s.flowSession !== null ||
     s.canvasGesture !== null ||

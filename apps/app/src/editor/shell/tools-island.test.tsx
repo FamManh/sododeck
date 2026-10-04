@@ -51,7 +51,7 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
     expect(button('Labels')).not.toHaveTextContent('Labels');
     await user.hover(button('Focus'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      /Focus: dim all but the selection/,
+      /Focus: dim all but the hovered or selected card/,
     );
   });
 });

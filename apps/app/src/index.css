@@ -111,9 +111,21 @@
   border-color: var(--color-deck-orange);
 }
 
-/* Being dragged: tilted, a deeper lip and the Float shadow. */
+/* Being dragged: lifted, never tilted (051): a deeper lip and the Float shadow. */
 .react-flow__node.dragging .sd-card {
-  transform: rotate(-2.5deg);
+  --tw-shadow:
+    0 var(--sd-deck-lip-drag) 0 0 var(--card-lip, var(--card-stroke, var(--color-border-strong))),
+    var(--shadow-float);
+}
+
+/* ⌥ duplicate-drag (051 R2): the original rests at its start (React Flow still marks it
+   `.dragging`) and the copy, which moves, carries the lift. */
+[data-duplicating] .react-flow__node.dragging .sd-card {
+  --tw-shadow: 0 var(--sd-deck-lip) 0 0
+    var(--card-lip, var(--card-stroke, var(--color-border-strong)));
+}
+
+.react-flow__node.sd-drag-copy .sd-card {
   --tw-shadow:
     0 var(--sd-deck-lip-drag) 0 0 var(--card-lip, var(--card-stroke, var(--color-border-strong))),
     var(--shadow-float);
@@ -135,8 +147,8 @@
 
 /* Shapes (031, DESIGN.md "Card system (Deck)", Shape column of the States table). The SVG in
    `shapes/shape-node.tsx` takes the card colour variables; every transform lives on
-   `.sd-shape-art`, never on the node, so tilt and lift stay paint-only (§g-74). Each state keeps a
-   cue that is not colour: a ring, a dashed ring, a halo, a sticker, a tilt. */
+   `.sd-shape-art`, never on the node, so the lift stays paint-only (§g-74). Each state keeps a cue
+   that is not colour: a ring, a dashed ring, a halo, a sticker, a lift. */
 .sd-shape-art {
   transform-origin: 50% 50%;
   transition: transform var(--sd-dur-hover) var(--sd-ease);
@@ -216,11 +228,15 @@
   stroke-dasharray: 5 3;
 }
 
-.react-flow__node.dragging .sd-shape-art {
-  transform: rotate(-3deg);
+.react-flow__node.dragging .sd-shape-lip {
+  transform: translateY(var(--sd-deck-lip-drag));
 }
 
-.react-flow__node.dragging .sd-shape-lip {
+[data-duplicating] .react-flow__node.dragging .sd-shape-lip {
+  transform: translateY(var(--sd-deck-lip));
+}
+
+.react-flow__node.sd-drag-copy .sd-shape-lip {
   transform: translateY(var(--sd-deck-lip-drag));
 }
 

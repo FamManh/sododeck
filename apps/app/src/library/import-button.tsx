@@ -29,13 +29,14 @@ export function ImportButton({
         }}
       />
       <Button
+        aria-label="Import deck file (.sododeck.json)"
         disabled={!commands}
         onClick={() => {
           input.current?.click();
         }}
       >
         <FileUp />
-        Import .sododeck.json
+        Import
       </Button>
     </>
   );

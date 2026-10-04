@@ -178,7 +178,7 @@ describe('view settings: tags by key (033)', () => {
         .getAllByRole('group')
         .map((g) => g.getAttribute('aria-labelledby'))
         .map((id) => document.getElementById(id ?? '')?.textContent),
-    ).toEqual(['Architecture', 'Process', 'Logistics']);
+    ).toEqual(['Process', 'Architecture', 'Logistics']);
     expect(within(hide).getByRole('checkbox', { name: 'Warehouse' })).toBeChecked();
     expect(within(hide).queryByRole('checkbox', { name: 'Truck route' })).toBeNull();
   });

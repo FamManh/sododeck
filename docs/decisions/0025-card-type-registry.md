@@ -25,7 +25,8 @@ place reads, and a way to store the choice without changing any older file.
    No version bump: every older file stays valid and is written back byte-identical.
 3. **Legacy and new decks.** A file without `packs` reads as `["architecture"]` and is written
    without it until the user changes packs. A new deck (`createDeck()`) starts with all four packs
-   on. `meta.packs` is a lazily created `Y.Map<true>` keyed by pack id (two tabs toggling
+   on (amended by ADR 0032: every pack but Logistics, and packs are shown in a display order
+   separate from this file order). `meta.packs` is a lazily created `Y.Map<true>` keyed by pack id (two tabs toggling
    different packs both keep their change); it is read in registry order, unknown ids sorted
    after, so every replica writes the same bytes. `setPackOn` refuses to turn off the last pack.
 4. **Unknown ids are valid.** A type or pack id this version does not know loads, is kept on save

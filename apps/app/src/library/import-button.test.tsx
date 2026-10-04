@@ -28,6 +28,15 @@ const deckFile = (name: string) =>
 const input = () => screen.getByTestId('import-input');
 
 describe('import', () => {
+  it('reads "Import" and names the file type for assistive tech (051 US8)', async () => {
+    const db = await freshLibraryDb();
+    await renderLibrary({ db });
+    const button = await screen.findByRole('button', {
+      name: 'Import deck file (.sododeck.json)',
+    });
+    expect(button).toHaveTextContent(/^Import$/);
+  });
+
   it('adds a valid file to the current folder with its counts', async () => {
     const db = await freshLibraryDb();
     const folder = await createFolder(db, 'Payments');
