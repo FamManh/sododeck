@@ -18,6 +18,7 @@ import { readObject } from '../read';
 import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject, type Ref } from '../validate';
 import { anchorableIds } from '../ids';
+import { isSchemaGroupId } from '../schema-groups';
 import { CUSTOM_VIEW_DEFAULTS, nextCustomTitle, VIEW_PRESETS } from '../views';
 import { removeObject, type RemovalResult } from './cascade';
 import type { EditContext } from './context';
@@ -224,7 +225,8 @@ export function setPinned(
  */
 export function setCollapsed(ctx: EditContext, viewId: Id, groupId: Id, collapsed: boolean): void {
   const { view } = resolveView(ctx, viewId);
-  if (collapsed) {
+  // A derived schema group (048) has no stored object to check.
+  if (collapsed && !isSchemaGroupId(groupId)) {
     assertRefsExist(ctx.doc, [{ path: 'collapsed', id: groupId, target: 'groups' }], () =>
       anchorableIds(ctx.doc),
     );

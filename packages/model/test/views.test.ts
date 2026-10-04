@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 
 import {
   baseViewId,
+  checkIntegrity,
   createEditor,
   DeckEditError,
   fromJSON,
@@ -128,6 +129,22 @@ describe('view ops: presets are materialized outside undo history (FR-001)', () 
     expect(view(doc, 'infra')?.positions).toBeUndefined();
     expect(view(doc, 'infra')?.collapsed).toEqual(['core']);
     expect(views(doc)).toHaveLength(3);
+  });
+
+  it('collapses a derived schema group without a stored group (048)', () => {
+    const { doc, editor } = setup();
+    editor.setCollapsed('infra', 'schema:billing', true);
+    expect(view(doc, 'infra')?.collapsed).toEqual(['schema:billing']);
+    expect(checkIntegrity(toJSON(doc))).toEqual([]);
+    editor.setCollapsed('infra', 'schema:billing', false);
+    expect(view(doc, 'infra')?.collapsed).toBeUndefined();
+  });
+
+  it('still refuses a collapse of an unknown stored group', () => {
+    const { editor } = setup();
+    expect(() => {
+      editor.setCollapsed('infra', 'nope', true);
+    }).toThrow(DeckEditError);
   });
 
   it('opening a deck and reading views never writes', () => {

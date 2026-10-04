@@ -6,6 +6,7 @@
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import type { ObjectRef } from './layout';
+import { isSchemaGroupId } from './schema-groups';
 
 export interface IntegrityProblem {
   /**
@@ -118,7 +119,10 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
     for (const id of Object.keys(view.positions ?? {}))
       check(object, 'positions', id, nodes, 'node');
     for (const id of view.pinned ?? []) check(object, 'pinned', id, nodes, 'node');
-    for (const id of view.collapsed ?? []) check(object, 'collapsed', id, groups, 'group');
+    // Derived schema groups (048) are not stored, so their ids name nothing to check.
+    for (const id of view.collapsed ?? []) {
+      if (!isSchemaGroupId(id)) check(object, 'collapsed', id, groups, 'group');
+    }
   }
   for (const flow of file.flows) {
     check({ scope: 'flows', id: flow.id }, 'feature', flow.feature, features, 'feature');
