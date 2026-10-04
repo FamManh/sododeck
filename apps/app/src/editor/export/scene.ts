@@ -466,6 +466,8 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     exclude: overlay === null ? new Set() : new Set(overlay.edges.keys()),
     fanned: new Set(),
     off: false,
+    // Export draws table rows (Component level): relationships keep their own lines (042).
+    rows: true,
   });
 
   const rects = new Map<string, Rect>([

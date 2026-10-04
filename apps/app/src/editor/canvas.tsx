@@ -37,6 +37,7 @@ import {
   toFlowNodes,
   toLeaderEdges,
   toStickyNodes,
+  rowsDrawn,
   type CanvasFlowNode,
   type DeckEdgeData,
 } from './deck-to-flow';
@@ -459,9 +460,10 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         bundleOptions(
           { shown: flowShown, recording: recordingFlow, markedEdges: overlay.edges.keys() },
           fannedBundles,
+          rowsDrawn(level),
         ),
       ),
-    [deck, graph, flowShown, recordingFlow, overlay, fannedBundles],
+    [deck, graph, flowShown, recordingFlow, overlay, fannedBundles, level],
   );
   useEffect(() => {
     const ui = useUiStore.getState();

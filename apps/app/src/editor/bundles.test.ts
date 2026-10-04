@@ -291,3 +291,33 @@ describe('bundleOptions (034 R5)', () => {
     expect(bundleEdges(deck, graph, recording).bundles).toEqual([]);
   });
 });
+
+describe('relationships and bundles (042 R6, FR-004, FR-012)', () => {
+  const tables = deckOf({
+    nodes: [
+      { id: 'orders', type: 'db-table', title: 'orders' },
+      { id: 'addresses', type: 'db-table', title: 'addresses' },
+    ],
+    edges: [
+      { id: 'ship', from: 'orders', to: 'addresses', fromColumns: ['o.s'], toColumns: ['a.id'] },
+      { id: 'bill', from: 'orders', to: 'addresses', fromColumns: ['o.b'], toColumns: ['a.id'] },
+    ],
+  });
+
+  it('keeps two relationships on their own lines while rows are drawn', () => {
+    const result = bundleEdges(tables, graphOf(tables), { ...options, rows: true });
+    expect(result.bundles).toEqual([]);
+    expect(result.plain.map((p) => p.edgeId)).toEqual(['ship', 'bill']);
+  });
+
+  it('folds them into one "×2" bundle below 90 %', () => {
+    const result = bundleEdges(tables, graphOf(tables), { ...options, rows: false });
+    expect(result.bundles.map((b) => b.edgeIds)).toEqual([['ship', 'bill']]);
+  });
+
+  it('passes the level through bundleOptions', () => {
+    expect(
+      bundleOptions({ shown: false, recording: false, markedEdges: [] }, NONE, true).rows,
+    ).toBe(true);
+  });
+});

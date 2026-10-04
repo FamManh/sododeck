@@ -6,6 +6,7 @@ import { EMPTY_SELECTION, useUiStore } from '../state/ui-store';
 import {
   type CanvasView,
   type DeckFlowNode,
+  type RelationshipData,
   facingSides,
   toFlowEdges,
   toFlowNodes,
@@ -15,7 +16,8 @@ import {
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
 import { bundleEdges } from './bundles';
 import { cardLayout } from './card-layout';
-import { cardSize } from './canvas-geometry';
+import { cardSize, tableLayoutOf } from './canvas-geometry';
+import { tableContextOf } from './table-keys';
 import { focusSet } from './focus-set';
 import { visibleGraph } from './visible-graph';
 import { viewStateOf } from './views/view-state';
@@ -1412,5 +1414,114 @@ describe('relationships (042 US1)', () => {
   it('applies hidden ends and 1 / n notation', () => {
     const file = { ...shop, relationshipDisplay: { hideEnds: true, notation: 'numeric' as const } };
     expect(byId(file, 'fk').data.rel).toMatchObject({ hideEnds: true, notation: 'numeric' });
+  });
+});
+
+describe('relationships at every detail level and zoom (042 US5)', () => {
+  const columns = (table: string, names: string[]) =>
+    names.map((name, i) => ({
+      id: `${table}.${name}`,
+      name,
+      type: 'uuid',
+      ...(i === 0 ? { pk: true } : {}),
+    }));
+  const shop: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      {
+        id: 'orders',
+        type: 'db-table',
+        title: 'orders',
+        position: { x: 0, y: 0 },
+        columns: columns('orders', ['id', 'note', 'shipping_id', 'billing_id', 'total']),
+      },
+      {
+        id: 'addresses',
+        type: 'db-table',
+        title: 'addresses',
+        group: 'geo',
+        position: { x: 600, y: 0 },
+        columns: columns('addresses', ['id', 'code', 'street']),
+      },
+    ],
+    groups: [{ id: 'geo', title: 'Geo' }],
+    edges: [
+      {
+        id: 'ship',
+        from: 'orders',
+        to: 'addresses',
+        fromColumns: ['orders.shipping_id'],
+        toColumns: ['addresses.code'],
+        cardinality: 'n-1',
+      },
+      {
+        id: 'bill',
+        from: 'orders',
+        to: 'addresses',
+        fromColumns: ['orders.billing_id'],
+        toColumns: ['addresses.street'],
+        cardinality: 'n-1',
+      },
+    ],
+  };
+  type RelEdge = { id: string; data: { rel?: RelationshipData } };
+  const relOf = (file: SododeckFile, id: string, level: CanvasView['level'] = 'container') =>
+    (
+      toFlowEdges(file, topLevelGraph(file), view({ level })).find((edge) => edge.id === id) as
+        RelEdge | undefined
+    )?.data.rel;
+  const withDetail = (detail: 'keys' | 'names') => ({ ...shop, tableDisplay: { detail } });
+
+  it('keeps connected rows at Keys, each relationship on its own row', () => {
+    const file = withDetail('keys');
+    // Keys: id (PK), shipping_id, billing_id (FK) on orders; id, code, street (connected).
+    expect(relOf(file, 'ship')?.ends).toEqual({
+      from: { offsets: [70 + 24 + 12], kind: 'row', mark: 'one-many' },
+      to: { offsets: [70 + 24 + 12], kind: 'row', mark: 'one' },
+    });
+    expect(relOf(file, 'bill')?.ends.from.offsets).toEqual([70 + 2 * 24 + 12]);
+  });
+
+  it('anchors on the title at Names', () => {
+    expect(relOf(withDetail('names'), 'ship')?.ends.from).toEqual({
+      offsets: [53],
+      kind: 'title',
+      mark: 'one-many',
+    });
+  });
+
+  it('never leaves an end on a row that is not drawn when the detail changes', () => {
+    for (const detail of ['all', 'keys', 'names'] as const) {
+      const file: SododeckFile = {
+        ...shop,
+        nodes: shop.nodes.map((n) => (n.id === 'orders' ? { ...n, detail } : n)),
+      };
+      const ends = relOf(file, 'bill')?.ends;
+      const layout = tableLayoutOf(file.nodes[0] ?? { title: '' }, tableContextOf(file));
+      const drawn = layout.rows.map((_, i) => layout.rowsTop + 24 * i + 12);
+      const from = ends?.from;
+      if (from?.kind === 'row') expect(drawn).toContain(from.offsets[0]);
+      else expect(from?.kind).toBe('title');
+    }
+  });
+
+  it('runs table to table below 90 % and bundles parallel relationships', () => {
+    expect(relOf(shop, 'ship', 'system')?.rows).toBe(false);
+    const graph = topLevelGraph(shop);
+    const bundles = bundleEdges(shop, graph, {
+      exclude: new Set(),
+      fanned: new Set(),
+      off: false,
+      rows: false,
+    });
+    const edges = toFlowEdges(shop, graph, view({ level: 'system' }), undefined, bundles);
+    expect(edges.map((edge) => edge.id)).toEqual(['bundle:addresses|orders']);
+    expect(edges[0]?.data).toMatchObject({ count: 2 });
+  });
+
+  it('joins a collapsed group’s merged connector like any connector', () => {
+    const graph = visibleGraph(shop, { node: null, group: null }, new Set(['geo']));
+    const edges = toFlowEdges(shop, graph, view({ level: 'container' }));
+    expect(edges.map((edge) => edge.type)).toEqual(['merged']);
   });
 });

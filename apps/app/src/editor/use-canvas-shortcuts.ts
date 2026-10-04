@@ -42,6 +42,7 @@ import {
   GROUP_NODE_PREFIX,
   MERGED_EDGE_PREFIX,
   PORT_NODE_PREFIX,
+  rowsDrawn,
 } from './deck-to-flow';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
@@ -575,6 +576,7 @@ export function useCanvasKeyDown() {
             exclude: new Set(),
             fanned: ui.fannedBundles,
             off: ui.flowSession !== null,
+            rows: rowsDrawn(effectiveLevel(levelForZoom(getZoom()), scopeOf(ui.drill))),
           }).bundles.filter((bundle) => !bundle.fanned);
           const hidden = new Set(bundles.flatMap((bundle) => bundle.edgeIds));
           const own = deck.edges.filter(

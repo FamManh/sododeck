@@ -124,3 +124,66 @@ describe('DeckEdge relationship (042 US1)', () => {
     expect(screen.getByTestId('edge-label')).toHaveTextContent('placed by');
   });
 });
+
+describe('DeckEdge special shapes (042 US4)', () => {
+  it('loops a self-reference on the right side', () => {
+    const { container } = renderRel(
+      {
+        rel: rel({
+          self: true,
+          ends: {
+            from: { offsets: [106], kind: 'row', mark: 'zero-many' },
+            to: { offsets: [82], kind: 'row', mark: 'one' },
+          },
+        }),
+      },
+      // One table: both handles on its right side.
+      { targetX: 240, targetY: 100, targetPosition: Position.Right },
+    );
+    const d = linePath(container);
+    expect(d.startsWith('M 240 106 L 264 106 C')).toBe(true);
+    expect(d.endsWith('L 240 82')).toBe(true);
+  });
+
+  it('draws composite member stubs joined by one bracket', () => {
+    renderRel({
+      rel: rel({
+        ends: {
+          from: { offsets: [82, 106], kind: 'row', mark: 'zero-many' },
+          to: { offsets: [82, 106], kind: 'row', mark: 'one' },
+        },
+      }),
+    });
+    expect(screen.getByTestId('relationship-bracket').getAttribute('d')).toBe(
+      'M 240 82 L 246 82 M 240 106 L 246 106 M 246 82 L 246 106 M 400 182 L 394 182 M 400 206 L 394 206 M 394 182 L 394 206',
+    );
+  });
+
+  it('draws many marks at both ends of n–n with the label', () => {
+    renderRel({
+      label: 'n–n',
+      showLabel: true,
+      rel: rel({
+        ends: {
+          from: { offsets: [94], kind: 'row', mark: 'zero-many' },
+          to: { offsets: [82], kind: 'row', mark: 'one-many' },
+        },
+      }),
+    });
+    expect(screen.getByRole('img', { name: 'zero or many' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'one or many' })).toBeInTheDocument();
+    expect(screen.getByTestId('edge-label')).toHaveTextContent('n–n');
+  });
+
+  it('draws mismatched composite lengths without errors', () => {
+    renderRel({
+      rel: rel({
+        ends: {
+          from: { offsets: [82, 106, 130], kind: 'row' },
+          to: { offsets: [82], kind: 'row' },
+        },
+      }),
+    });
+    expect(screen.getByTestId('relationship-bracket')).toBeInTheDocument();
+  });
+});
