@@ -412,6 +412,11 @@ export interface UiState {
   hoverFocus: HoverFocus | null;
   /** Bundles (034) the user fanned out into their connectors; ids are `bundle:a|b`. */
   fannedBundles: ReadonlySet<string>;
+  /**
+   * Node and group ids of the copies an ⌥ duplicate-drag created (051 R2): they carry the drag
+   * lift while the originals rest. Set by the drag controller, cleared on drop, cancel and switches.
+   */
+  dragCopyIds: ReadonlySet<Id>;
   outlineCollapsed: ReadonlySet<string>;
   labelsOn: boolean;
   notesDisplay: NotesDisplay;
@@ -539,6 +544,8 @@ export interface UiState {
   clearHoverFocus: () => void;
   toggleBundleFan: (id: string) => void;
   foldBundles: () => void;
+  setDragCopyIds: (ids: Iterable<Id>) => void;
+  clearDragCopyIds: () => void;
   /** Drops fanned ids whose bundle is gone (a connector deleted, adjusted or a flow shown). */
   pruneFannedBundles: (existing: ReadonlySet<string>) => void;
   pruneView: (existing: { nodes: ReadonlySet<Id>; groups: ReadonlySet<Id> }) => void;
@@ -830,6 +837,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     focusedEdgeId: null,
     hoverFocus: null,
     fannedBundles: NO_IDS,
+    dragCopyIds: NO_IDS,
     outlineCollapsed: new Set(),
     labelsOn: readLabelsOn(),
     notesDisplay: readNotesDisplay(),
@@ -988,6 +996,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         hoverFocus: null,
         fannedBundles: NO_IDS,
         focusedRow: null,
+        dragCopyIds: NO_IDS,
         popover: null,
         enumPopover: null,
         revealed: NO_IDS,
@@ -1010,6 +1019,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         selection: EMPTY_SELECTION,
         hoverFocus: null,
         fannedBundles: NO_IDS,
+        dragCopyIds: NO_IDS,
         focusMode: false,
         descriptionMode: NO_MODES,
       }));
@@ -1018,7 +1028,12 @@ export const useUiStore = create<UiState>()((set, get) => {
       const drill = get().drill;
       const nextDepth = depth ?? Math.max(0, drill.length - 1);
       const popped = drill.slice(nextDepth);
-      set({ drill: drill.slice(0, nextDepth), hoverFocus: null, fannedBundles: NO_IDS });
+      set({
+        drill: drill.slice(0, nextDepth),
+        hoverFocus: null,
+        fannedBundles: NO_IDS,
+        dragCopyIds: NO_IDS,
+      });
       return popped;
     },
     setFocusMode: (focusMode) => {
@@ -1041,6 +1056,12 @@ export const useUiStore = create<UiState>()((set, get) => {
     },
     foldBundles: () => {
       if (get().fannedBundles.size > 0) set({ fannedBundles: NO_IDS });
+    },
+    setDragCopyIds: (ids) => {
+      set({ dragCopyIds: new Set(ids) });
+    },
+    clearDragCopyIds: () => {
+      if (get().dragCopyIds.size > 0) set({ dragCopyIds: NO_IDS });
     },
     pruneFannedBundles: (existing) => {
       const { fannedBundles } = get();
@@ -1537,6 +1558,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         focusedEdgeId: null,
         hoverFocus: null,
         fannedBundles: NO_IDS,
+        dragCopyIds: NO_IDS,
         outlineCollapsed: new Set(),
         drill: [],
         focusMode: false,

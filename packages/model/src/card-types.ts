@@ -69,7 +69,10 @@ export interface CardType {
 export interface Pack {
   id: PackId;
   name: string;
+  /** Display position (Add tabs, the Packs panel): the index in `PACK_DISPLAY_ORDER`. */
   order: number;
+  /** On in a new deck (`NEW_DECK_PACKS`). Logistics is off by default (051). */
+  onByDefault: boolean;
   /** Tool tiles shown after the pack's types in Add (031). */
   tools?: readonly PackTool[];
   /** What the pack adds, in a few words, shown in "Packs in this deck" (043). */
@@ -81,29 +84,44 @@ export interface CategoryInfo {
   name: string;
 }
 
+/**
+ * The file order: `sortPacks` writes `packs` in this order, so it never changes (files stay
+ * byte-identical). The order people see is `PACK_DISPLAY_ORDER` (051).
+ */
 const PACK_LIST: readonly Omit<Pack, 'order'>[] = [
-  { id: 'architecture', name: 'Architecture' },
-  { id: 'process', name: 'Process' },
-  { id: 'logistics', name: 'Logistics' },
-  { id: 'data', name: 'Data cards' },
+  { id: 'architecture', name: 'Architecture', onByDefault: true },
+  { id: 'process', name: 'Process', onByDefault: true },
+  { id: 'logistics', name: 'Logistics', onByDefault: false },
+  { id: 'data', name: 'Data cards', onByDefault: true },
   // Database's tools read "Note" and "Table group" in its Add section (043 R13).
   {
     id: 'database',
     name: 'Database',
+    onByDefault: true,
     tools: ['sticky', 'frame'],
     description: 'Table, note, table group',
   },
-  { id: 'shapes', name: 'Basic shapes', tools: ['sticky', 'frame'] },
+  { id: 'shapes', name: 'Basic shapes', onByDefault: true, tools: ['sticky', 'frame'] },
 ];
 
-/** In 030 each pack has one category of the same id. */
+/** The order packs are shown in (Add tabs and sections, the Packs panel), apart from file order. */
+export const PACK_DISPLAY_ORDER: readonly PackId[] = [
+  'shapes',
+  'process',
+  'data',
+  'database',
+  'architecture',
+  'logistics',
+];
+
+/** In 030 each pack has one category of the same id; listed in display order (051). */
 export const CATEGORIES: readonly CategoryInfo[] = [
-  { id: 'architecture', name: 'Architecture' },
+  { id: 'shapes', name: 'Shapes' },
   { id: 'process', name: 'Process' },
-  { id: 'logistics', name: 'Logistics' },
   { id: 'data', name: 'Data' },
   { id: 'database', name: 'Database' },
-  { id: 'shapes', name: 'Shapes' },
+  { id: 'architecture', name: 'Architecture' },
+  { id: 'logistics', name: 'Logistics' },
 ];
 
 const TYPE_LIST: readonly (readonly [TypeId, string, PackId, Category])[] = [
@@ -184,7 +202,11 @@ const SHAPE_LIST: readonly (readonly [TypeId, string, Geometry, Size, Size])[] =
   ['text', 'Text', 'none', size(160, 40), size(40, 24)],
 ];
 
-export const PACKS: readonly Pack[] = PACK_LIST.map((pack, order) => ({ ...pack, order }));
+/** Every pack, in file order; sort by `order` to show them. */
+export const PACKS: readonly Pack[] = PACK_LIST.map((pack) => ({
+  ...pack,
+  order: PACK_DISPLAY_ORDER.indexOf(pack.id),
+}));
 
 export const CARD_TYPES: readonly CardType[] = [
   ...TYPE_LIST.map(([id, name, pack, category]) => {
@@ -218,8 +240,10 @@ export const SHAPE_TYPE_IDS: readonly TypeId[] = SHAPE_LIST.map(([id]) => id);
 /** Decks saved before packs existed: Architecture only (the six original types plus Component). */
 export const LEGACY_PACKS: readonly PackId[] = ['architecture'];
 
-/** A new deck starts with every pack of this version on. */
-export const NEW_DECK_PACKS: readonly PackId[] = PACKS.map((pack) => pack.id);
+/** A new deck starts with every `onByDefault` pack on (all but Logistics, 051), in file order. */
+export const NEW_DECK_PACKS: readonly PackId[] = PACKS.filter((pack) => pack.onByDefault).map(
+  (pack) => pack.id,
+);
 
 const TYPE_BY_ID = new Map(CARD_TYPES.map((type) => [type.id, type]));
 const PACK_BY_ID = new Map(PACKS.map((pack) => [pack.id, pack]));
@@ -241,7 +265,7 @@ export function typeName(id: TypeId): string {
   return TYPE_BY_ID.get(id)?.name ?? id;
 }
 
-/** Known packs in registry order, then unknown ids sorted: one order for every reader and writer. */
+/** Known packs in file order, then unknown ids sorted: one order for every reader and writer. */
 export function sortPacks(ids: Iterable<PackId>): PackId[] {
   const set = new Set(ids);
   const known = PACKS.filter((pack) => set.has(pack.id)).map((pack) => pack.id);

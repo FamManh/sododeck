@@ -24,7 +24,6 @@ import {
   selectDecks,
 } from '../library/library-view';
 import { NewFolderDialog } from '../library/new-folder-dialog';
-import { StorageCard } from '../library/storage-card';
 import { useLibraryCommands } from '../library/use-library-commands';
 import { liveDecks, liveFolders } from '../storage/library-db';
 import { LibraryDbProvider } from '../storage/library-db-context';
@@ -165,7 +164,6 @@ function Library() {
           onNewFolder={() => {
             setNewFolderOpen(true);
           }}
-          storageCard={db ? <StorageCard refreshKey={allDecks.length} /> : null}
         />
         <main {...drop} className="flex min-h-0 flex-col gap-6 overflow-y-auto px-10 py-8">
           {!db && (

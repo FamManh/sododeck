@@ -198,7 +198,6 @@ Light / dark values; "Border-strong" is `#cfcfc7` / `#45453f`, "Surface 2" `#f4f
 | `--sd-deck-edge-arrow` | filled triangle 9 long × 10 wide, 2px round-joined stroke, line colour | Connector end |
 | `--sd-deck-edge-knob` | circle r 3.5, line colour | Connector start |
 | `--sd-deck-lift` | `translateY(-2px)` | Hover and current flow step |
-| `--sd-deck-tilt` | −2.5° (cards), −3° (shapes) | While dragging |
 | `--sd-deck-grid` | 1.6px dots every 26px | Canvas dot grid |
 
 #### Card anatomy
@@ -252,12 +251,12 @@ Every state has a cue that does not rely on colour.
 | Has a problem | 1.5px dashed Clay outline, offset 4, plus a Clay Soft badge (20 tall pill, ⚠ 12 + count, 11 / 600) in the header | the geometry at offset 7 (clear of the selection ring), badge top-right |
 | Current flow step | Deck Orange border and lip (5px), lifted 2px, step sticker | orange stroke, 9px Orange Soft halo, sticker |
 | Dimmed | 22 % opacity | same |
-| Being dragged | tilted −2.5°, lip 6px, Float shadow; a dashed Muted ghost stays at the origin | tilted −3° |
+| Being dragged | lifted: lip 6px and Float shadow, never tilted. With ⌥ the original rests at its start and the moving copy carries the lift | lip 6px, never tilted; same ⌥ rule |
 | Connection target | Deck Orange border, the hovered side's handle active | same |
 | Has child components | "n inside ⏎" pill as the last row | pill below the shape |
 | Highlighted neighbour | border and lip in Secondary; stays at 100 % while the rest dims | Secondary stroke |
 
-Tilt and lift are paint-only: they never move the card's box for snapping, hit tests, edge anchors or export (§g-74).
+The lift is paint-only: it never moves the card's box for snapping, hit tests, edge anchors or export (§g-74). There is no drag tilt (051).
 
 #### Groups (119)
 
@@ -297,9 +296,9 @@ Same thresholds as the app (`levels.ts`). The card keeps one size; only detail c
 
 | Level | Zoom | Card shows |
 | --- | --- | --- |
-| Landscape | ≤ 45 % | the type icon (30px, colour `ink` or Secondary) centred on the colour fill or Surface 2; no text. Shapes show only their geometry |
-| System | 45–90 % | tile + title; chips (tags, field chips) as 6px dots (§g-63) |
-| Container | 90–150 % | + type name, description, status |
+| Landscape | ≤ 30 % | the type icon (30px, colour `ink` or Secondary) centred on the colour fill or Surface 2; no text. Shapes show only their geometry |
+| System | 31–50 % | tile + title; chips (tags, field chips) as 6px dots (§g-63) |
+| Container | 51–150 % | + type name, description, status |
 | Component | > 150 % | everything |
 
 No lip below 60 % (§g-63), whatever the level. Tags follow §g-59 (§g-70).
@@ -409,9 +408,9 @@ Same thresholds as [Zoom levels](#zoom-levels-123). The card keeps one size; onl
 
 | Level | Zoom | Table shows |
 | --- | --- | --- |
-| Landscape | ≤ 45 % | the table icon on the colour fill; no text |
-| System | 45–90 % | name, PK / FK dots and the column count |
-| Container | 90–150 % | keys only and "+n columns" |
+| Landscape | ≤ 30 % | the table icon on the colour fill; no text |
+| System | 31–50 % | name, PK / FK dots and the column count |
+| Container | 51–150 % | keys only and "+n columns" |
 | Component | > 150 % | all columns, up to the row limit |
 
 A separate Names · Keys · All control (segmented cells inside the zoom island; a dropdown at 900 px) pins the detail level for the deck or a view: Names draws the title and Show all only, Keys draws PK, FK and connected rows, All draws the first 12 rows. Zoom then only decides whether rows are drawn (from 90 %). A table set to Show all always wins. A table collapsed to keys keeps its top-left, and every connector still has a row at Keys; at System and Landscape connectors run table to table from the title row and merge ×n.

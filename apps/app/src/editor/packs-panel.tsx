@@ -24,6 +24,8 @@ export function PacksPanel() {
   const noteId = useId();
   const on = new Set(deckPacks(deck));
   const onKnown = PACKS.filter((pack) => on.has(pack.id));
+  // Display order (051), not the file order `PACKS` is in.
+  const shown = [...PACKS].sort((a, b) => a.order - b.order);
 
   const back = () => {
     setPalette({ view: 'types' });
@@ -51,7 +53,7 @@ export function PacksPanel() {
         </h3>
       </div>
       <ul className="flex flex-col gap-1">
-        {PACKS.map((pack) => {
+        {shown.map((pack) => {
           const isOn = on.has(pack.id);
           const lastOn = isOn && onKnown.length === 1 && on.size === 1;
           // Tool tiles (031: Sticky, Frame) count as tiles of the pack, as Add shows them.

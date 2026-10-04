@@ -52,6 +52,7 @@ import {
   PORT_NODE_PREFIX,
   rowsDrawn,
 } from './deck-to-flow';
+import { focusTargetId } from './focus-target';
 import { candidateEdges } from './flows/candidate-edges';
 import { exitFlow } from './flows/flow-mode';
 import { analysisOf, recordClick, requestCancel, undoLastStep } from './flows/flow-session';
@@ -585,20 +586,18 @@ export function useCanvasKeyDown() {
           event.preventDefault();
           if (ui.focusMode) {
             ui.setFocusMode(false);
+            ui.announce('Focus mode off');
             return;
           }
-          if (ui.selection.nodes.length + ui.selection.groups.length !== 1) {
-            ui.announce('Select a component to focus');
-            return;
-          }
-          if (ui.selection.nodes.length === 1) {
+          // One component pins the focus; with anything else, hover drives it (051 R1).
+          if (focusTargetId(ui.selection, collapsed) !== null) {
             const nodeId = ui.selection.nodes[0];
-            if (nodeId !== undefined) ui.focus(nodeId);
-          } else {
             const groupId = ui.selection.groups[0];
-            if (groupId !== undefined) ui.focus(selectionForFocusedGroup(collapsed, groupId));
+            if (nodeId !== undefined) ui.focus(nodeId);
+            else if (groupId !== undefined) ui.focus(selectionForFocusedGroup(collapsed, groupId));
           }
           ui.setFocusMode(true);
+          ui.announce('Focus mode on');
           return;
         case 'e': {
           if (current === null) return;

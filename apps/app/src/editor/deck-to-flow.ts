@@ -314,6 +314,8 @@ export const GROUP_NODE_PREFIX = 'group:';
 /** What a group frame is dragged by: its label and an 8 px edge band (016 R5). */
 export const GROUP_HANDLE_CLASS = 'sd-group-handle';
 export const COLLAPSED_NODE_PREFIX = 'collapsed:';
+/** The class of an ⌥ duplicate-drag's copies (051): the drag lift moves from the original to them. */
+export const DRAG_COPY_CLASS = 'sd-drag-copy';
 export const PORT_NODE_PREFIX = 'port:';
 export const SCOPE_LABEL_PREFIX = 'scope-label:';
 /** How far the "Inside <name>" label floats above the scope's top edge. */
@@ -470,6 +472,8 @@ export interface CanvasView {
   stylePreview?: StylePreview | null;
   /** The drilled-in group or card's name (034): drives the "Inside <name>" label; none at the top. */
   scopeTitle?: string | undefined;
+  /** Node and group ids of an ⌥ duplicate-drag's copies (051): they get `sd-drag-copy`. */
+  dragCopyIds?: ReadonlySet<string>;
 }
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
@@ -541,6 +545,7 @@ function toFlowNode(
     inFlow ? 'in-flow' : null,
     focusClass(view, node.id),
     viewDimmed ? 'view-dimmed' : null,
+    view.dragCopyIds?.has(node.id) === true ? DRAG_COPY_CLASS : null,
   ]
     .filter(Boolean)
     .join(' ');
@@ -672,6 +677,12 @@ function groupNodes(
     const inFocus = view.focus?.members.has(id) === true;
     const selected = view.selection.groups.includes(groupId);
     const look = resolveLook(group.style, selected ? (view.stylePreview ?? undefined) : undefined);
+    const groupClass = [
+      inFocus ? 'in-focus' : null,
+      view.dragCopyIds?.has(groupId) === true ? DRAG_COPY_CLASS : null,
+    ]
+      .filter(Boolean)
+      .join(' ');
     const cached = groupCache.get(id);
     if (
       (cached?.data.selected === true) === selected &&
@@ -680,7 +691,7 @@ function groupNodes(
       cached.data.level === level &&
       cached.data.focused === focused &&
       sameLook(cached.data.look, look) &&
-      sameClassName(cached.className, inFocus ? 'in-focus' : '') &&
+      sameClassName(cached.className, groupClass) &&
       cached.position.x === rect.x &&
       cached.position.y === rect.y &&
       cached.width === rect.width &&
@@ -704,7 +715,7 @@ function groupNodes(
       focusable: false,
       // The label's connect handle starts connections (050 R6); the side handles opt out.
       connectable: true,
-      ...(inFocus ? { className: 'in-focus' } : {}),
+      ...(groupClass === '' ? {} : { className: groupClass }),
       ...(view.focus !== null && !inFocus
         ? { domAttributes: { 'aria-hidden': true, inert: true } }
         : {}),

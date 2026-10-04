@@ -37,7 +37,7 @@ describe('library ops', () => {
     expect(toJSON(docOf([bytes]))).toEqual({
       ...emptySododeckFile(),
       name: 'Untitled deck',
-      packs: ['architecture', 'process', 'logistics', 'data', 'database', 'shapes'],
+      packs: ['architecture', 'process', 'data', 'database', 'shapes'],
     });
     expect(summary).toMatchObject({ name: 'Untitled deck', nodeCount: 0, thumb: null });
   });

@@ -24,7 +24,17 @@ describe('LevelIndicator', () => {
       'true',
     );
     await user.click(within(menu).getByRole('menuitemradio', { name: 'Landscape' }));
-    expect(zoomTo).toHaveBeenCalledWith(0.375);
+    expect(zoomTo).toHaveBeenCalledWith(0.2);
+    await user.click(trigger);
+    await user.click(
+      within(screen.getByRole('menu')).getByRole('menuitemradio', { name: 'System' }),
+    );
+    expect(zoomTo).toHaveBeenLastCalledWith(0.4);
+    await user.click(trigger);
+    await user.click(
+      within(screen.getByRole('menu')).getByRole('menuitemradio', { name: 'Container' }),
+    );
+    expect(zoomTo).toHaveBeenLastCalledWith(1.0);
   });
 
   it('locks to Component while drilled into a node', async () => {

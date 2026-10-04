@@ -6,14 +6,6 @@ export function supportsFileSystemAccess(): boolean {
   return typeof window !== 'undefined' && 'showSaveFilePicker' in window;
 }
 
-export function supportsPersistentStorage(): boolean {
-  return (
-    typeof navigator !== 'undefined' &&
-    'storage' in navigator &&
-    typeof navigator.storage.persist === 'function'
-  );
-}
-
 export function supportsBroadcastChannel(): boolean {
   return typeof BroadcastChannel !== 'undefined';
 }
@@ -50,14 +42,6 @@ export function supportsResizeObserver(): boolean {
 /** `matchMedia` (compact islands in narrow windows, 018). Missing in some test environments. */
 export function supportsMatchMedia(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function';
-}
-
-export function supportsStorageEstimate(): boolean {
-  return (
-    typeof navigator !== 'undefined' &&
-    'storage' in navigator &&
-    typeof navigator.storage.estimate === 'function'
-  );
 }
 
 /**

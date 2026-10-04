@@ -55,7 +55,11 @@ describe('type picker (030)', () => {
     await user.click(screen.getByRole('button', { name: 'Type: Warehouse' }));
     const list = screen.getByRole('listbox', { name: 'Type options' });
     const options = within(list).getAllByRole('option');
+    // Groups in display order (051): Process, Architecture, then Logistics.
     expect(options.map((o) => o.textContent)).toEqual([
+      'Task',
+      'Decision',
+      'Document',
       'Service',
       'Database',
       'Gateway',
@@ -63,9 +67,6 @@ describe('type picker (030)', () => {
       'Queue',
       'External',
       'Component',
-      'Task',
-      'Decision',
-      'Document',
       'Warehouse',
     ]);
     expect(within(list).getByRole('option', { name: 'Warehouse' })).toHaveAttribute(

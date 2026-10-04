@@ -22,37 +22,40 @@ describe('levels', () => {
       component: 'Component',
     });
     expect(LEVEL_MID_ZOOM).toEqual({
-      landscape: 0.375,
-      system: 0.68,
-      container: 1.2,
+      landscape: 0.2,
+      system: 0.4,
+      container: 1.0,
       component: 1.75,
     });
+    // Each level's zoom target lies inside its own band.
+    for (const level of LEVELS) expect(levelForZoom(LEVEL_MID_ZOOM[level])).toBe(level);
   });
 
   it('maps whole-percent zoom bands exactly', () => {
+    // 051: Landscape ≤ 30 %, System 31–50 %, Container 51–150 %.
+    expect(levelForZoom(0.2)).toBe('landscape');
     expect(levelForZoom(0.3)).toBe('landscape');
-    expect(levelForZoom(0.45)).toBe('landscape');
-    expect(levelForZoom(0.46)).toBe('system');
-    expect(levelForZoom(0.9)).toBe('system');
-    expect(levelForZoom(0.91)).toBe('container');
+    expect(levelForZoom(0.31)).toBe('system');
+    expect(levelForZoom(0.5)).toBe('system');
+    expect(levelForZoom(0.51)).toBe('container');
     expect(levelForZoom(1.5)).toBe('container');
     expect(levelForZoom(1.51)).toBe('component');
     expect(levelForZoom(2)).toBe('component');
   });
 
   it('holds the current level until zoom is two points past a threshold', () => {
-    expect(levelWithHysteresis(0.46, 'landscape')).toBe('landscape');
-    expect(levelWithHysteresis(0.47, 'landscape')).toBe('landscape');
-    expect(levelWithHysteresis(0.48, 'landscape')).toBe('system');
-    expect(levelWithHysteresis(0.44, 'system')).toBe('system');
-    expect(levelWithHysteresis(0.43, 'system')).toBe('landscape');
+    expect(levelWithHysteresis(0.31, 'landscape')).toBe('landscape');
+    expect(levelWithHysteresis(0.32, 'landscape')).toBe('landscape');
+    expect(levelWithHysteresis(0.33, 'landscape')).toBe('system');
+    expect(levelWithHysteresis(0.29, 'system')).toBe('system');
+    expect(levelWithHysteresis(0.28, 'system')).toBe('landscape');
 
-    expect(levelWithHysteresis(0.91, 'system')).toBe('system');
-    expect(levelWithHysteresis(0.92, 'system')).toBe('system');
-    expect(levelWithHysteresis(0.93, 'system')).toBe('container');
-    expect(levelWithHysteresis(0.89, 'container')).toBe('container');
-    expect(levelWithHysteresis(0.88, 'container')).toBe('container');
-    expect(levelWithHysteresis(0.87, 'container')).toBe('system');
+    expect(levelWithHysteresis(0.51, 'system')).toBe('system');
+    expect(levelWithHysteresis(0.52, 'system')).toBe('system');
+    expect(levelWithHysteresis(0.53, 'system')).toBe('container');
+    expect(levelWithHysteresis(0.49, 'container')).toBe('container');
+    expect(levelWithHysteresis(0.48, 'container')).toBe('container');
+    expect(levelWithHysteresis(0.47, 'container')).toBe('system');
 
     expect(levelWithHysteresis(1.51, 'container')).toBe('container');
     expect(levelWithHysteresis(1.52, 'container')).toBe('container');

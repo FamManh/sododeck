@@ -154,11 +154,23 @@ describe('dragging a group frame (016 US2, R5)', () => {
     expect(position(toJSON(doc), 'm1')).toEqual({ x: 101, y: 10 });
   });
 
-  it('duplicates the whole group with ⌥ on release', () => {
+  it('duplicates the whole group with ⌥, the original frame staying put', () => {
     const { h, doc, editor } = setup();
     act(() => {
       h().onNodeDragStart({}, flowNode('group:pay'));
+      // ⌥ held while dragging (051: the copy appears during the drag, not on release).
+      h().onNodeDrag(pointer(0, 0, { altKey: true }));
       h().onNodesChange(move('group:pay', -48 + 1000, -48 + 1000));
+    });
+    // Mid-drag: the original frame and its members stay, the copied group follows.
+    const during = toJSON(doc);
+    expect(frameOf(during, 'pay')).toEqual(frame(-48, -48, 560, 540));
+    expect(position(during, 'm1')).toEqual({ x: 0, y: 0 });
+    expect(during.groups.find((g) => g.title === 'Payments' && g.id !== 'pay')?.position).toEqual({
+      x: 952,
+      y: 952,
+    });
+    act(() => {
       h().onNodeDragStop(pointer(0, 0, { altKey: true }));
     });
     const file = toJSON(doc);
@@ -262,8 +274,8 @@ describe('dropping components into and out of groups (016 US4, R6)', () => {
     const { h, doc } = setup();
     act(() => {
       h().onNodeDragStart({}, flowNode('c'));
-      h().onNodesChange(move('c', 3100, 300));
       h().onNodeDrag(pointer(3180, 350, { altKey: true }));
+      h().onNodesChange(move('c', 3100, 300));
     });
     expect(ui().dropTarget).toBeNull();
     act(() => {
@@ -610,5 +622,158 @@ describe('locked cards in a multi-drag (043 FR-024)', () => {
     const file = toJSON(doc);
     expect(position(file, 'a')).toEqual({ x: 200, y: 100 });
     expect(position(file, 'l')).toEqual({ x: 0, y: 1000 });
+  });
+});
+
+describe('⌥ duplicate-drag keeps the original in place (051 US2, R2)', () => {
+  /** Three loose cards in a row with two connectors between them, far from everything. */
+  const row: SododeckFile = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 300, y: 0 } },
+      { id: 'c', type: 'service', title: 'C', position: { x: 600, y: 0 } },
+    ],
+    edges: [
+      { id: 'ab', from: 'a', to: 'b' },
+      { id: 'bc', from: 'b', to: 'c' },
+    ],
+  });
+  const alt = (x: number, y: number) => pointer(x, y, { altKey: true });
+  const copiesOf = (file: SododeckFile) =>
+    file.nodes.filter((n) => !['a', 'b', 'c'].includes(n.id));
+
+  it('creates the copy as soon as the drag starts with ⌥: the original stays at its start', () => {
+    const { h, doc, editor } = setup(row);
+    const paste = vi.spyOn(editor(), 'pasteFragment');
+    act(() => {
+      h().onNodeDragStart({}, flowNode('a'));
+      h().onNodeDrag(alt(100, 100));
+      h().onNodesChange(move('a', 40, 900));
+    });
+    const file = toJSON(doc);
+    expect(position(file, 'a')).toEqual({ x: 0, y: 0 });
+    const [copy] = copiesOf(file);
+    expect(copy).toMatchObject({ title: 'A', position: { x: 40, y: 900 } });
+    expect([...ui().dragCopyIds]).toEqual([copy?.id]);
+    // More frames move the copy; they never paste again.
+    act(() => {
+      h().onNodeDrag(alt(120, 120));
+      h().onNodesChange(move('a', 80, 960));
+      h().onNodesChange(move('a', 90, 970));
+    });
+    expect(paste).toHaveBeenCalledOnce();
+    expect(position(toJSON(doc), 'a')).toEqual({ x: 0, y: 0 });
+    expect(copiesOf(toJSON(doc))[0]?.position).toEqual({ x: 90, y: 970 });
+    act(() => {
+      h().onNodeDragStop(alt(120, 120));
+    });
+    expect(paste).toHaveBeenCalledOnce();
+  });
+
+  it('drops as one undo step, selects and announces the copy', () => {
+    const { h, doc, editor } = setup(row);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('a'));
+      h().onNodeDrag(alt(100, 100));
+      h().onNodesChange(move('a', 40, 900));
+      h().onNodeDragStop(alt(100, 100));
+    });
+    const file = toJSON(doc);
+    const [copy] = copiesOf(file);
+    expect(file.nodes).toHaveLength(4);
+    expect(ui().selection.nodes).toEqual([copy?.id]);
+    expect(ui().announcement.text).toBe('Duplicated 1 component');
+    expect(ui().dragCopyIds.size).toBe(0);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(row);
+    expect(editor().canUndo()).toBe(false);
+  });
+
+  it.each([
+    ['Esc', () => cancelActiveGesture()],
+    ['a window blur', () => window.dispatchEvent(new Event('blur'))],
+  ])('leaves nothing behind on %s', (_name, cancel) => {
+    const { h, doc, editor } = setup(row);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('a'));
+      h().onNodeDrag(alt(100, 100));
+      h().onNodesChange(move('a', 40, 900));
+    });
+    expect(toJSON(doc).nodes).toHaveLength(4);
+    act(() => {
+      cancel();
+    });
+    act(() => {
+      h().onNodeDragStop(alt(100, 100));
+    });
+    expect(toJSON(doc)).toEqual(row);
+    expect(editor().canUndo()).toBe(false);
+    expect(ui().dragCopyIds.size).toBe(0);
+  });
+
+  it('switches between move and copy when ⌥ goes down and up mid-drag', () => {
+    const { h, doc, editor } = setup(row);
+    const paste = vi.spyOn(editor(), 'pasteFragment');
+    const remove = vi.spyOn(editor(), 'remove');
+    act(() => {
+      h().onNodeDragStart({}, flowNode('a'));
+      h().onNodeDrag(pointer(100, 100));
+      h().onNodesChange(move('a', 40, 900));
+    });
+    expect(position(toJSON(doc), 'a')).toEqual({ x: 40, y: 900 });
+    // ⌥ down: the original snaps back and a copy follows the pointer.
+    act(() => {
+      h().onNodeDrag(alt(100, 100));
+    });
+    expect(paste).toHaveBeenCalledOnce();
+    expect(position(toJSON(doc), 'a')).toEqual({ x: 0, y: 0 });
+    const [copy] = copiesOf(toJSON(doc));
+    expect(copy?.position).toEqual({ x: 40, y: 900 });
+    // ⌥ up: exactly the copy goes, the original moves again.
+    act(() => {
+      h().onNodeDrag(pointer(100, 100));
+    });
+    expect(remove.mock.calls.map(([, id]) => id)).toEqual([copy?.id]);
+    expect(toJSON(doc).nodes).toHaveLength(3);
+    expect(position(toJSON(doc), 'a')).toEqual({ x: 40, y: 900 });
+    expect(ui().dragCopyIds.size).toBe(0);
+    act(() => {
+      h().onNodesChange(move('a', 50, 950));
+      h().onNodeDragStop(pointer(100, 100));
+    });
+    expect(toJSON(doc).nodes).toHaveLength(3);
+    expect(position(toJSON(doc), 'a')).toEqual({ x: 50, y: 950 });
+  });
+
+  it('copies every selected card and the connectors between them', () => {
+    const { h, doc } = setup(row);
+    act(() => {
+      ui().select({ nodes: ['a', 'b', 'c'] });
+    });
+    act(() => {
+      h().onNodeDragStart({}, flowNode('b'));
+      h().onNodeDrag(alt(100, 100));
+      h().onNodesChange(move('b', 300, 900));
+    });
+    const during = toJSON(doc);
+    expect(['a', 'b', 'c'].map((id) => position(during, id))).toEqual([
+      { x: 0, y: 0 },
+      { x: 300, y: 0 },
+      { x: 600, y: 0 },
+    ]);
+    expect(copiesOf(during).map((n) => n.position)).toEqual([
+      { x: 0, y: 900 },
+      { x: 300, y: 900 },
+      { x: 600, y: 900 },
+    ]);
+    act(() => {
+      h().onNodeDragStop(alt(100, 100));
+    });
+    const file = toJSON(doc);
+    expect(file.nodes).toHaveLength(6);
+    expect(file.edges).toHaveLength(4);
+    expect(ui().announcement.text).toBe('Duplicated 3 components');
   });
 });

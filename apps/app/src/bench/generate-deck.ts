@@ -1,4 +1,4 @@
-import { CARD_TYPES, NEW_DECK_PACKS, SHAPE_TYPE_IDS } from '@sododeck/model';
+import { CARD_TYPES, PACKS, SHAPE_TYPE_IDS } from '@sododeck/model';
 import { lucide } from '@sododeck/ui/icon-sets';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
 
@@ -272,14 +272,16 @@ export function generateBenchDeck(
   if (options.animated === true) addBenchAnimated(edges);
   if (options.bends === true) addBenchBends(edges);
 
+  // Every pack on, Logistics included (a new deck has it off since 051): the bench uses Warehouse.
+  const allPacks = PACKS.map((pack) => pack.id);
   const deck: SododeckFile = {
     ...emptySododeckFile(),
     // BENCH_TYPES: every pack on, so the Add flyout and pickers list all 13 types too.
     ...(options.types === true || options.fields === true || options.shapes === true
-      ? { packs: [...NEW_DECK_PACKS] }
+      ? { packs: allPacks }
       : {}),
     ...(options.fields === true ? BENCH_FIELD_DEFS : {}),
-    ...((options.tables ?? 0) > 0 ? { packs: [...NEW_DECK_PACKS], enums: [BENCH_ENUM] } : {}),
+    ...((options.tables ?? 0) > 0 ? { packs: allPacks, enums: [BENCH_ENUM] } : {}),
     nodes,
     edges,
   };

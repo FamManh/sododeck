@@ -301,18 +301,23 @@ describe('canvas keyboard', () => {
     expect(ui().focusedEdgeId).toBe('toCore');
   });
 
-  it('toggles focus mode with F and announces when nothing is selected', async () => {
+  it('toggles focus mode with F, with or without a selection (051 US1)', async () => {
     const { user } = setup();
     focusNode('n11');
     await user.keyboard('f');
     expect(ui().focusMode).toBe(true);
+    expect(ui().announcement.text).toBe('Focus mode on');
     await user.keyboard('f');
     expect(ui().focusMode).toBe(false);
+    expect(ui().announcement.text).toBe('Focus mode off');
     act(() => {
       ui().clearSelection();
     });
     await user.keyboard('f');
-    expect(ui().announcement.text).toBe('Select a component to focus');
+    expect(ui().focusMode).toBe(true);
+    expect(ui().announcement.text).toBe('Focus mode on');
+    expect(ui().selection.nodes).toEqual([]);
+    await user.keyboard('f');
     expect(ui().focusMode).toBe(false);
   });
 
