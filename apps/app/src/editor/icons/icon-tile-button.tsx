@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components
 import { nodeIcon } from '@sododeck/ui/icon-sets';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { cn } from '@sododeck/ui/lib/utils';
-import { Pencil } from 'lucide-react';
+import { Pencil, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import { useUiStore } from '../../state/ui-store';
@@ -45,6 +45,15 @@ export function IconTileButton({ node }: { node: Node }) {
               className={cn('group relative shrink-0 rounded-card', focusRing)}
             >
               {tile}
+              {resolved.unavailable && (
+                <span
+                  data-unavailable
+                  aria-hidden
+                  className="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-amber-soft text-amber-ink"
+                >
+                  <TriangleAlert className="size-2.5" />
+                </span>
+              )}
               <span
                 aria-hidden
                 className="absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full border border-hairline bg-surface text-ink-secondary opacity-0 shadow-rest transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
@@ -55,7 +64,15 @@ export function IconTileButton({ node }: { node: Node }) {
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent>
-          {resolved.source === 'custom' ? resolved.icon.label : 'Type icon'}
+          {resolved.unavailable && node.icon !== undefined ? (
+            <>
+              <code className="font-mono">{node.icon}</code> · Icon not available in this version
+            </>
+          ) : resolved.source === 'custom' ? (
+            resolved.icon.label
+          ) : (
+            'Type icon'
+          )}
         </TooltipContent>
       </Tooltip>
       <PopoverContent aria-label="Choose icon" align="start" className="w-[320px] shadow-menu">

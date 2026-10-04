@@ -36,6 +36,8 @@ export interface IconPickerProps {
   showScope: boolean;
   /** Whether any selected card has an icon of its own (enables Reset). */
   canReset: boolean;
+  /** A stored reference this version cannot show (it stays until a pick or Reset). */
+  unavailable?: string | null;
   /** `iconUsage` of the deck; hidden for now, listed by the "Used in this deck" section. */
   usage: readonly { ref: string; count: number }[];
   sets?: readonly IconSet[];
@@ -74,6 +76,7 @@ export function IconPicker({
   cardCount,
   showScope,
   canReset,
+  unavailable = null,
   sets = ICON_SETS,
   onPick,
   onReset,
@@ -156,6 +159,12 @@ export function IconPicker({
           )}
           {current === 'mixed' && <span className="font-medium text-ink">Mixed</span>}
         </div>
+      )}
+      {unavailable !== null && (
+        <p className="flex flex-col gap-0.5 rounded-button bg-surface-2 px-2 py-1.5 text-caption text-ink-secondary">
+          <code className="font-mono text-code-sm break-all text-ink">{unavailable}</code>
+          <span>Icon not available in this version</span>
+        </p>
       )}
       <SearchField
         ref={searchRef}

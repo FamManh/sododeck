@@ -45,6 +45,15 @@ export function IconField({
     return resolved === null ? card.icon : `${resolved.set}:${resolved.name}`;
   });
 
+  // One shared reference the app cannot read: say so; with differing icons the header says Mixed.
+  const storedFirst = cards[0]?.icon;
+  const unavailable =
+    storedFirst !== undefined &&
+    keyed.every((key) => key === keyed[0]) &&
+    resolveIcon(storedFirst) === null
+      ? storedFirst
+      : null;
+
   const done = (message: string) => {
     useUiStore.getState().announce(message);
     onDone();
@@ -57,6 +66,7 @@ export function IconField({
       cardCount={cards.length}
       showScope={cards.length > 1 || others > 0}
       canReset={cards.some((card) => card.icon !== undefined)}
+      unavailable={unavailable}
       usage={[]}
       onPick={(ref) => {
         applyIcon(editor, selection, ref);

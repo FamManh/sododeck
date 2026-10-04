@@ -86,6 +86,16 @@ function sharedIcon(ctx: ActionContext): ResolvedIcon | 'mixed' {
   return icons.every((icon) => icon === first) ? first : 'mixed';
 }
 
+/** Names the one stored reference every selected card shares when this version cannot show it. */
+function unavailableNote(ctx: ActionContext): string | null {
+  const cards = selectedCards(ctx);
+  const [first] = cards;
+  if (first?.icon === undefined || cards.some((card) => card.icon !== first.icon)) return null;
+  return nodeIcon({ icon: first.icon, type: first.type }).unavailable
+    ? `${first.icon} · Icon not available in this version`
+    : null;
+}
+
 /**
  * The icon action (038): offered when at least one selected node is drawn as a card. Shapes draw
  * their outline, so they are never offered an icon and keep whatever is stored.
@@ -96,6 +106,7 @@ const ICON_ACTIONS: readonly Action[] = [
     label: 'Icon…',
     toolbarLabel: 'Icon',
     glyph: sharedIcon,
+    note: unavailableNote,
     section: 'edit',
     field: 'icon',
     where: {

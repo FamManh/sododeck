@@ -51,6 +51,26 @@ describe('library ops', () => {
     expect(exported).toEqual({ json: text, name: 'Bench' });
   });
 
+  it('keeps every icon value as written through import and export (038 T041)', () => {
+    const icons = ['lucide:server', 'server', 'Server', 'simple:kafka', 'mdi:database', 'a b'];
+    const file = {
+      ...emptySododeckFile(),
+      name: 'Icons',
+      nodes: icons.map((icon, index) => ({
+        id: `n${String(index)}`,
+        type: 'service',
+        title: `Node ${String(index)}`,
+        icon,
+        position: { x: index * 200, y: 0 },
+      })),
+    };
+    const text = serializeDeck(file);
+    const exported = exportDeck([importFile(text).bytes]);
+    expect(exported.json).toBe(text);
+    const back = JSON.parse(exported.json) as SododeckFile;
+    expect(back.nodes.map((n) => n.icon)).toEqual(icons);
+  });
+
   it('names a nameless import "Imported deck"', () => {
     const { bytes, summary } = importFile(serializeDeck(emptySododeckFile()));
     expect(summary.name).toBe('Imported deck');

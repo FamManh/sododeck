@@ -78,7 +78,8 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
 
 const tooltipText = (action: ResolvedAction) => {
   const keys = action.shortcut === undefined ? '' : shortcutLabel(action.shortcut);
-  return keys === '' ? action.label : `${action.label} · ${keys}`;
+  const text = keys === '' ? action.label : `${action.label} · ${keys}`;
+  return action.note === undefined ? text : `${text} · ${action.note}`;
 };
 
 function withTooltip(action: ResolvedAction, button: ReactElement) {

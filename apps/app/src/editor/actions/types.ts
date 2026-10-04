@@ -63,6 +63,8 @@ export interface Action {
   swatch?: Dynamic<string | null>;
   /** The icon the toolbar button draws (038): the icon the selected cards share, or `'mixed'`. */
   glyph?: (ctx: ActionContext) => ResolvedIcon | 'mixed';
+  /** A sentence added to the toolbar button's tooltip when it applies (038: unavailable icon). */
+  note?: (ctx: ActionContext) => string | null;
   /** A key from `SHORTCUTS` shown as the hint (menu) or in the tooltip (toolbar). */
   shortcut?: ShortcutId;
   /** A literal key hint when no `SHORTCUTS` entry fits one item (e.g. "2" in Add component ▸). */
@@ -99,6 +101,7 @@ export interface ResolvedAction {
   icon?: LucideIcon;
   swatch?: string | null;
   glyph?: ResolvedIcon | 'mixed';
+  note?: string;
   shortcut?: ShortcutId;
   hint?: string;
   description?: string;

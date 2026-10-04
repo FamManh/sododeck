@@ -282,3 +282,51 @@ describe('NodeInspector icon tile (038 T022)', () => {
     expect(screen.queryByRole('button', { name: 'Change icon' })).not.toBeInTheDocument();
   });
 });
+
+describe('NodeInspector unavailable icon (038 T041)', () => {
+  const unavailable = () => {
+    const env = setup();
+    act(() => {
+      env.editor().setNodeIcon(['p'], 'simple:kafka');
+    });
+    return env;
+  };
+  const tile = () => screen.getByRole('button', { name: 'Change icon' });
+
+  it('shows the type icon with a warning badge and says why in the tooltip', async () => {
+    const { user } = unavailable();
+    expect(tile().querySelector('[data-icon="lucide:box"]')).not.toBeNull();
+    expect(tile().querySelector('[data-unavailable]')).not.toBeNull();
+    await user.hover(tile());
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('simple:kafka');
+    expect(tip).toHaveTextContent('Icon not available in this version');
+  });
+
+  it('keeps the stored value in the picker header; a pick replaces it, Reset removes it', async () => {
+    const { user, doc } = unavailable();
+    await user.click(tile());
+    let dialog = await screen.findByRole('dialog', { name: 'Choose icon' });
+    expect(within(dialog).getByText('simple:kafka')).toHaveClass('font-mono');
+    expect(within(dialog).getByText('Icon not available in this version')).toBeInTheDocument();
+    expect(within(dialog).queryAllByRole('gridcell', { selected: true })).toHaveLength(0);
+    // Nothing is rewritten until the user picks.
+    expect(node(doc)?.icon).toBe('simple:kafka');
+    await user.click(within(dialog).getByRole('button', { name: 'Zap' }));
+    expect(node(doc)?.icon).toBe('lucide:zap');
+
+    await user.click(tile());
+    dialog = await screen.findByRole('dialog', { name: 'Choose icon' });
+    expect(
+      within(dialog).queryByText('Icon not available in this version'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('Reset removes an unavailable reference', async () => {
+    const { user, doc } = unavailable();
+    await user.click(tile());
+    const dialog = await screen.findByRole('dialog', { name: 'Choose icon' });
+    await user.click(within(dialog).getByRole('button', { name: 'Reset to type icon' }));
+    expect(node(doc)?.icon).toBeUndefined();
+  });
+});

@@ -142,6 +142,18 @@ describe('SelectionToolbar (019 US3)', () => {
     ).not.toBeNull();
   });
 
+  it('says in the Icon tooltip when the stored icon is not available (038 T042)', async () => {
+    const { user, editor } = setup();
+    select(['a']);
+    act(() => {
+      editor().setNodeIcon(['a'], 'simple:kafka');
+    });
+    await user.hover(screen.getByRole('button', { name: 'Icon' }));
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('simple:kafka');
+    expect(tip).toHaveTextContent('Icon not available in this version');
+  });
+
   it("shows the group toolbar's Colour button after Collapse (020 T054)", () => {
     const groupDeck = deckOf({
       nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core' }],

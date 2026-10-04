@@ -1,5 +1,7 @@
 import { buildSearchIndex } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
+import { render } from '@testing-library/react';
+import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildPaletteResults, type PaletteCommand } from './palette-results';
@@ -143,5 +145,39 @@ describe('type names in results (030)', () => {
       buildPaletteResults({ deck, searchIndex: buildSearchIndex(deck), query, commands: [] });
     expect(run('truck route').items.find((r) => r.id === 'a')?.meta).toBe('Truck route');
     expect(run('robot').items.find((r) => r.id === 'b')?.meta).toBe('robot');
+  });
+});
+
+describe('buildPaletteResults icons (038)', () => {
+  function results(deck: SododeckFile, query: string) {
+    return buildPaletteResults({
+      deck,
+      searchIndex: buildSearchIndex(deck),
+      query,
+      commands: [],
+    }).items;
+  }
+
+  it("gives a component result its own icon, or its type's", () => {
+    const deck = emptySododeckFile();
+    deck.nodes.push(
+      { id: 'a', type: 'service', title: 'Zeta custom', icon: 'lucide:search' },
+      { id: 'b', type: 'service', title: 'Zeta plain' },
+    );
+    const items = results(deck, 'zeta');
+    const iconOf = (title: string) => {
+      const item = items.find((entry) => entry.title === title);
+      expect(item?.icon).toBeDefined();
+      return render(createElement('div', null, item?.icon)).container;
+    };
+    expect(iconOf('Zeta custom').querySelector('[data-icon="lucide:search"]')).not.toBeNull();
+    expect(iconOf('Zeta plain').querySelector('[data-icon="lucide:box"]')).not.toBeNull();
+  });
+
+  it('leaves other result kinds without an icon', () => {
+    const deck = searchDeckFixture();
+    const items = results(deck, 'retry');
+    expect(items.some((item) => item.kind === 'rule')).toBe(true);
+    for (const item of items) expect(item.kind === 'node' || item.icon === undefined).toBe(true);
   });
 });
