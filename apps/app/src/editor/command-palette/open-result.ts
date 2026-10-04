@@ -7,6 +7,7 @@ import { cardSize, groupBounds, tableLayoutOf } from '../canvas-geometry';
 import { levelForZoom } from '../levels';
 import { oneStep } from '../fields/one-step';
 import { rowsDrawn } from '../deck-to-flow';
+import { focusRowSoon } from '../table/row-focus';
 import { rowAnchorY } from '../table-layout';
 import { readViewState, selectView } from '../views/use-current-view';
 
@@ -153,6 +154,8 @@ function jumpToColumn(tableId: string, columnId: string, context: OpenResultCont
     context.setCenter(at.x + layout.width / 2, at.y + rowAnchorY(layout, columnId).y, {
       zoom: rowsDrawn(levelForZoom(zoom)) ? zoom : 1,
     });
+    // The row is the selection: it takes keyboard focus once it is drawn, so ↓ ↑ ⏎ work from it.
+    focusRowSoon({ tableId, columnId });
   });
   return true;
 }

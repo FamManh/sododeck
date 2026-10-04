@@ -107,7 +107,7 @@
 - [x] T025 [US3] Failing tests then `apps/app/src/editor/command-palette/palette-results.ts`: kinds `table` / `column`, meta text (schema, columns, type, key), hidden marks "Hidden in this view" and "In collapsed schema" (the latter only when grouping mode is By schema; wired fully in US4)
 - [x] T026 [US3] Failing tests then add the `table` and `column` cases to `apps/app/src/editor/command-palette/open-result.ts`: column cut by the limit → `expanded = true` through `oneStep` (permanent, works on locked tables), select the table and set `ui.focusedRow`, after one frame `setCenter` on `box.y + rowAnchorY(...)` (`duration: 0` for reduced motion); the target row is inside the viewport; hidden-in-view results use the existing "Show in {view}" toast and never change state silently
 - [x] T027 [P] [US3] Component tests in `apps/app/src/editor/command-palette/command-palette.test.tsx`: type "invoice_id" → columns labelled with their table, Enter on `payments.invoice_id` selects the row (drawer / inspector shows that column, US3.5), "n more" line, Esc returns focus
-- [ ] T028 [P] [US3] Check the drawer / inspector reads `ui.focusedRow` for a jumped column (`apps/app/src/editor/inspector/node-inspector.tsx`, `table-actions.ts`); fix and test if the column does not show
+- [x] T028 [P] [US3] Check the drawer / inspector reads `ui.focusedRow` for a jumped column (`apps/app/src/editor/inspector/node-inspector.tsx`, `table-actions.ts`); fix and test if the column does not show
 
 **Checkpoint**: P1 stories done; SC-002 holds.
 
