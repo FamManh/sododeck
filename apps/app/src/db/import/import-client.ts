@@ -5,12 +5,21 @@
  * worker is kept, so the next preview reuses the loaded parser.
  */
 import type { Parsers } from './load-parsers';
-import type { ImportPlan, ImportPreview, ImportSource, ImportTarget } from './types';
+import type { TextProblem } from '../sync/types';
+import type { DbmlModule } from './read-dbml';
+import type { ImportPlan, ImportPreview, ImportSource, ImportTarget, RawSchema } from './types';
 
-export interface ImportRequest {
-  kind: 'preview' | 'plan';
-  source: ImportSource;
-  target: ImportTarget;
+export type ImportRequest =
+  | { kind: 'preview' | 'plan'; source: ImportSource; target: ImportTarget }
+  /** 046: reads DBML text only (loads `@dbml/parse`, never the SQL parsers). */
+  | { kind: 'read-dbml'; text: string };
+
+/** What the code panel gets back for a DBML text (046). */
+export interface ReadDbmlResult {
+  /** Empty when there are syntax errors. */
+  schema: RawSchema;
+  /** Every compiler diagnostic with a range. */
+  problems: TextProblem[];
 }
 
 type WorkerResponse =
@@ -24,7 +33,19 @@ export class ImportCancelled extends Error {
   }
 }
 
+/**
+ * Rejection of a `readDbml` call that a newer `readDbml` call overtook (046, latest wins): the
+ * caller ignores it. Its late worker reply is dropped by id.
+ */
+export class StaleRead extends Error {
+  constructor() {
+    super('Superseded by a newer read');
+    this.name = 'StaleRead';
+  }
+}
+
 export interface ImportClient {
+  readDbml(text: string): Promise<ReadDbmlResult>;
   preview(source: ImportSource, target: ImportTarget): Promise<ImportPreview>;
   plan(source: ImportSource, target: ImportTarget): Promise<ImportPlan>;
   cancel(): void;
@@ -38,6 +59,7 @@ export function createImportClient(
   let worker: Worker | null = null;
   const pending = new Map<number, { resolve: (r: unknown) => void; reject: (e: Error) => void }>();
   let nextId = 0;
+  let pendingRead: number | null = null;
 
   const rejectAll = (reason: () => Error) => {
     for (const entry of pending.values()) entry.reject(reason());
@@ -52,6 +74,7 @@ export function createImportClient(
       const entry = pending.get(response.id);
       if (!entry) return;
       pending.delete(response.id);
+      if (pendingRead === response.id) pendingRead = null;
       if (response.ok) entry.resolve(response.result);
       else entry.reject(new Error(response.error));
     };
@@ -67,6 +90,14 @@ export function createImportClient(
 
   const call = <T>(request: ImportRequest) => {
     const id = nextId++;
+    if (request.kind === 'read-dbml') {
+      // Latest wins: an older read still waiting is stale now.
+      if (pendingRead !== null) {
+        pending.get(pendingRead)?.reject(new StaleRead());
+        pending.delete(pendingRead);
+      }
+      pendingRead = id;
+    }
     const target = start();
     return new Promise<T>((resolve, reject) => {
       pending.set(id, { resolve: resolve as (r: unknown) => void, reject });
@@ -75,6 +106,7 @@ export function createImportClient(
   };
 
   return {
+    readDbml: (text) => call<ReadDbmlResult>({ kind: 'read-dbml', text }),
     preview: (source, target) => call<ImportPreview>({ kind: 'preview', source, target }),
     plan: (source, target) => call<ImportPlan>({ kind: 'plan', source, target }),
     cancel: () => {
@@ -91,6 +123,7 @@ export function createImportClient(
 /** Same contract on the main thread: for tests and browsers without module workers. */
 export function createInlineImportClient(): ImportClient {
   let generation = 0;
+  let readSeq = 0;
   let parsers: Promise<Parsers> | null = null;
   const run = async (source: ImportSource, target: ImportTarget) => {
     const mine = generation;
@@ -101,6 +134,17 @@ export function createInlineImportClient(): ImportClient {
     return result;
   };
   return {
+    readDbml: async (text) => {
+      const mine = ++readSeq;
+      const gen = generation;
+      parsers ??= import('./load-parsers').then((m) => m.createParsers());
+      const [{ readDbml }, loaded] = await Promise.all([import('./read-dbml'), parsers]);
+      const dbml: DbmlModule = await loaded.dbml();
+      const { raw, problems } = readDbml(text, dbml);
+      if (mine !== readSeq) throw new StaleRead();
+      if (gen !== generation) throw new ImportCancelled();
+      return { schema: raw, problems };
+    },
     preview: async (source, target) => (await run(source, target)).preview,
     plan: async (source, target) => (await run(source, target)).plan,
     cancel: () => {

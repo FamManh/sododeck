@@ -115,3 +115,61 @@ describe('readDbml', () => {
     expect(raw.tables).toEqual([]);
   });
 });
+
+describe('readDbml problems (046)', () => {
+  it('returns every diagnostic with a 1-based range and keeps error as the first', async () => {
+    const result = await read('Table a {\n id int [not nul]\n name text [pkk, unique]\n}');
+    expect(result.problems).toHaveLength(2);
+    expect(result.problems[0]).toMatchObject({
+      severity: 'error',
+      code: 'unknown-setting',
+      line: 2,
+      column: 10,
+      endLine: 2,
+      endColumn: 17,
+      suggestion: 'not null',
+    });
+    expect(result.problems[1]).toMatchObject({
+      code: 'unknown-setting',
+      line: 3,
+      suggestion: 'pk',
+    });
+    expect(result.error).toMatchObject({ line: 2, column: 10 });
+  });
+
+  it('reports other compile errors as syntax', async () => {
+    const result = await read('Table a {\n id int [pk\n}');
+    expect(result.problems[0]).toMatchObject({ code: 'syntax', severity: 'error', line: 3 });
+    expect(result.problems[0]?.suggestion).toBeUndefined();
+  });
+
+  it('has no problems for clean text', async () => {
+    expect((await read(DBML_CORPUS['extras.dbml'])).problems).toEqual([]);
+  });
+
+  it('records the blocks that are not inputs', async () => {
+    const { raw } = await read(
+      [
+        'Project p { database_type: "PostgreSQL" }',
+        'Table a [headercolor: #fff] { id int }',
+        'Table b { id int }',
+        'TableGroup g { a }',
+        'Note n { "x" }',
+        'Ref: a.id > b.id [color: #ff0000]',
+      ].join('\n'),
+    );
+    const kinds = (raw.inputs ?? []).map((i) => `${i.kind}@${String(i.line)}`).sort();
+    expect(kinds).toEqual(
+      ['project@1', 'header-color@2', 'table-group@4', 'note@5', 'ref-color@6'].sort(),
+    );
+    expect(raw.inputs?.find((i) => i.kind === 'table-group')?.endLine).toBe(4);
+  });
+
+  it('refuses text over the limit with one problem at 1:1', async () => {
+    const result = await read(`// ${'x'.repeat(5 * 1024 * 1024)}`);
+    expect(result.problems).toEqual([
+      expect.objectContaining({ code: 'syntax', line: 1, column: 1 }),
+    ]);
+    expect(result.error?.line).toBe(1);
+  });
+});
