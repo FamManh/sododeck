@@ -29,7 +29,8 @@ conversion (`toFlowNodes` / `toFlowEdges`) keeps single-slot caches for array id
 4. **PNG from the SVG, on the main thread (R5).** Workers cannot decode SVG images, so the SVG is
    drawn onto a `<canvas>` at 1× / 2× / 3× and encoded with `toBlob`. Scales beyond 16,384 px per
    side or 16,777,216 px in area (Safari's cap) are disabled ("Too large for this browser").
-5. **Icons copied from lucide (R7).** `icon-paths.ts` holds the lucide geometry of the icons the
+5. **Icons copied from lucide (R7). Superseded by ADR 0028:** the export now draws the shared generated geometry of `@sododeck/ui/icon-sets` and `icon-paths.ts` is gone.
+   Original decision: `icon-paths.ts` holds the lucide geometry of the icons the
    export draws; a drift test renders the lucide-react components and compares, so an upgrade
    that redraws an icon fails a test instead of diverging.
 6. **Main-thread generation with a budget (R8).** `buildScene` + `renderSvg` run on the main

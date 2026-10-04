@@ -37,6 +37,7 @@ For e2e tests, install Chromium once: `pnpm --filter @sododeck/app exec playwrig
 | `pnpm format`          | Format with Prettier                                   |
 | `pnpm bench`           | Canvas performance benchmark (500 nodes / 1,000 edges) |
 | `pnpm schema:generate` | Regenerate TS types + Zod from the JSON Schema         |
+| `pnpm icons:generate`  | Regenerate the icon geometry + third-party notice      |
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org/). A pre-commit hook runs ESLint + Prettier on staged files, and commitlint checks the message.
 
