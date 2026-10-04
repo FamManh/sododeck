@@ -307,3 +307,94 @@ describe('new-row editor slot (043 R3)', () => {
     expect(open.newRowIndex).toBe(0);
   });
 });
+
+describe('row limit at All (048 FR-001, FR-002, FR-003)', () => {
+  const wide = (n: number, extra: Partial<TableNode> = {}): TableNode => ({
+    id: 'wide',
+    title: 'wide',
+    columns: [
+      ...Array.from({ length: n }, (_, i) =>
+        col(`c${String(i + 1)}`, i === 40 ? { pk: true } : {}),
+      ),
+    ],
+    ...extra,
+  });
+  const ctx = (fk: string[] = [], connected: string[] = []) =>
+    context(
+      { detail: 'all' },
+      { fk: new Map([['wide', new Set(fk)]]), connected: new Map([['wide', new Set(connected)]]) },
+    );
+  const ids = (l: ReturnType<typeof layout>) => l.rows.map((r) => r.columnId);
+
+  it('shows keys first (PK, then FK), then the rest, up to 12, drawn in stored order', () => {
+    const l = layout(wide(60), ctx(['c30', 'c50']));
+    expect(l.rows).toHaveLength(12);
+    expect(ids(l)).toEqual([
+      'c1',
+      'c2',
+      'c3',
+      'c4',
+      'c5',
+      'c6',
+      'c7',
+      'c8',
+      'c9',
+      'c30',
+      'c41',
+      'c50',
+    ]);
+    expect(l.hidden).toEqual({ count: 48, kind: 'limit' });
+    expect(l.button).toMatchObject({ label: 'Show all 60 columns', expanded: false });
+  });
+
+  it('never cuts a relationship end: the card may show more than 12 rows', () => {
+    const l = layout(wide(60), ctx([], ['c55']));
+    expect(l.rows).toHaveLength(13);
+    expect(ids(l)).toContain('c55');
+    expect(l.hidden).toEqual({ count: 47, kind: 'limit' });
+  });
+
+  it('draws no button for exactly 12 rows, or 13 columns with one connected', () => {
+    expect(layout(wide(12), ctx()).button).toBeUndefined();
+    expect(layout(wide(12), ctx()).hidden).toBeUndefined();
+    const thirteen = layout(wide(13), ctx([], ['c13']));
+    expect(thirteen.rows).toHaveLength(13);
+    expect(thirteen.button).toBeUndefined();
+    expect(thirteen.hidden).toBeUndefined();
+  });
+
+  it('shows every row and "Show fewer" when the table is opened', () => {
+    const l = layout(wide(60, { expanded: true }), ctx());
+    expect(l.rows).toHaveLength(60);
+    expect(l.hidden).toBeUndefined();
+    expect(l.button).toMatchObject({ label: 'Show fewer', expanded: true });
+  });
+
+  it('adds the button slot (6 above, 24 tall) to the height', () => {
+    const l = layout(wide(60), ctx());
+    expect(l.height).toBe(TOP + 8 + 12 * 24 + 6 + 24 + 8);
+    expect(l.button?.top).toBe(TOP + 8 + 12 * 24 + 6);
+    const open = layout(wide(60, { expanded: true }), ctx());
+    expect(open.height).toBe(TOP + 8 + 60 * 24 + 6 + 24 + 8);
+  });
+
+  it('leaves Names and Keys unchanged and lets the own detail win', () => {
+    const keys = layout(wide(60), context({ detail: 'keys' }));
+    expect(keys.hidden?.kind).toBe('more');
+    expect(keys.button).toBeUndefined();
+    const names = layout(wide(60, { detail: 'names' }));
+    expect(names.hidden?.kind).toBe('all');
+    expect(names.button).toBeUndefined();
+    const own = layout(wide(60, { detail: 'all' }), context({ detail: 'keys' }));
+    expect(own.hidden?.kind).toBe('limit');
+  });
+
+  it('anchors a hidden column at the button centre and a drawn one at its row', () => {
+    const l = layout(wide(60), ctx());
+    expect(rowAnchorY(l, 'c40')).toEqual({ y: (l.button?.top ?? 0) + 12, kind: 'pill' });
+    const open = layout(wide(60, { expanded: true }), ctx());
+    expect(rowAnchorY(open, 'c40')).toEqual({ y: open.rowsTop + 39 * 24 + 12, kind: 'row' });
+    // A column that was drawn keeps its row position before and after opening.
+    expect(rowAnchorY(l, 'c3').y).toBe(rowAnchorY(open, 'c3').y);
+  });
+});

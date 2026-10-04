@@ -263,7 +263,11 @@ const rowEditNodes = new WeakMap<Node, { at: number | null; node: Node }>();
 function showAll(node: Node, at: number | null): Node {
   const cached = rowEditNodes.get(node);
   if (cached?.at === at) return cached.node;
-  const all = node.detail === 'all' ? node : { ...node, detail: 'all' as const };
+  // Opened too (048): the edited row may lie beyond the row limit. Nothing is written.
+  const all =
+    node.detail === 'all' && node.expanded === true
+      ? node
+      : { ...node, detail: 'all' as const, expanded: true };
   const next = at === null ? all : withNewRow(all === node ? { ...node } : all, at);
   rowEditNodes.set(node, { at, node: next });
   return next;

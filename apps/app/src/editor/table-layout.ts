@@ -4,7 +4,8 @@
  * canvas geometry, `DeckNode` and the export all read it, so boxes, rows and connectors agree.
  *
  * Height = 12 + header 24 + 8 + title 18 + (8 + note lines × 17) + body, where the body (only when
- * the table has columns) is 8 + rows × 24 + ("+n columns" pill: 6 + 24) + (footer 24) + 8, and a
+ * the table has columns) is 8 + rows × 24 + ("+n columns" pill or "Show all" button: 6 + 24) +
+ * (footer 24) + 8, and a
  * table without columns ends with the card's own 12.
  */
 import type { DbColumn, DbDetail, Id, SododeckFile } from '@sododeck/schema';
@@ -29,6 +30,8 @@ export const TABLE_CARD = {
   /** Space between the title (or note) and the first row; the hairline sits in its middle. */
   bodyGap: 8,
   rowHeight: 24,
+  /** Rows drawn at All before "Show all n columns" (048 FR-001); relationship ends are extra. */
+  rowLimit: 12,
   /** Hover fill inset from the card edge. */
   rowInset: 4,
   keySlot: 16,
@@ -92,8 +95,13 @@ export interface TableLayout {
   /** The fixed "?" slot after the type (absent when the deck hides the nullable marker). */
   showNullable: boolean;
   rows: readonly TableRow[];
-  /** Columns not drawn as rows: "+n columns" at Keys, "n columns" at Names. */
-  hidden: { count: number; kind: 'more' | 'all' } | undefined;
+  /**
+   * Columns not drawn as rows: "+n columns" at Keys, "n columns" at Names, and at All the ones the
+   * row limit cut (`limit`, behind the "Show all" button, 048).
+   */
+  hidden: { count: number; kind: 'more' | 'all' | 'limit' } | undefined;
+  /** The "Show all n columns" / "Show fewer" button (048): only at All on a table over the limit. */
+  button: { label: string; expanded: boolean; top: number } | undefined;
   /** Where the new-row editor is drawn (043): its index among `rows`; later rows sit one lower. */
   newRowIndex: number | undefined;
   /** Ids of the columns not drawn as rows (042: their relationship ends anchor on the pill). */
@@ -117,7 +125,12 @@ type Node = SododeckFile['nodes'][number];
 
 /** What `tableLayout` reads of a table node. */
 export type TableNode = Pick<Node, 'title'> &
-  Partial<Pick<Node, 'id' | 'description' | 'schema' | 'columns' | 'indexes' | 'detail' | 'size'>>;
+  Partial<
+    Pick<
+      Node,
+      'id' | 'description' | 'schema' | 'columns' | 'indexes' | 'detail' | 'size' | 'expanded'
+    >
+  >;
 
 const newRows = new WeakMap<TableNode, number>();
 
@@ -161,6 +174,29 @@ function glyphsOf(column: DbColumn, fk: ReadonlySet<Id>): KeyGlyph[] {
 
 const EMPTY_FK: ReadonlySet<Id> = new Set();
 
+/**
+ * The columns a limited table draws (048 R1): primary keys, then foreign keys, then the rest in
+ * stored order, up to `limit`, plus every relationship end; returned in stored order. This is the
+ * one place that decides which rows a long table draws.
+ */
+function limitedIndexes(
+  columns: readonly DbColumn[],
+  glyphs: readonly (readonly KeyGlyph[])[],
+  connected: ReadonlySet<Id>,
+  limit: number,
+): number[] {
+  const all = columns.map((_, i) => i);
+  const has = (i: number, glyph: KeyGlyph) => glyphs[i]?.includes(glyph) === true;
+  const picked = new Set(
+    [
+      ...all.filter((i) => has(i, 'pk')),
+      ...all.filter((i) => !has(i, 'pk') && has(i, 'fk')),
+      ...all.filter((i) => !has(i, 'pk') && !has(i, 'fk')),
+    ].slice(0, limit),
+  );
+  return all.filter((i) => picked.has(i) || connected.has(columns[i]?.id ?? ''));
+}
+
 /** Lays out a table card `width` px wide (default 240, or the stored width). */
 export function tableLayout(
   node: TableNode,
@@ -178,11 +214,16 @@ export function tableLayout(
   const detail = effectiveDetail(node.detail, display.detail);
 
   const glyphs = columns.map((column) => glyphsOf(column, fk));
+  const limited = detail === 'all' && node.expanded !== true && columns.length > t.rowLimit;
   // Keys draws PK, FK and every relationship-end row (042 R15), so no relationship loses its row.
   const isKey = (i: number) =>
     glyphs[i]?.some((g) => g !== 'unique') === true || connected.has(columns[i]?.id ?? '');
   const shownIndexes =
-    detail === 'names' ? [] : columns.map((_, i) => i).filter((i) => detail === 'all' || isKey(i));
+    detail === 'names'
+      ? []
+      : limited
+        ? limitedIndexes(columns, glyphs, connected, t.rowLimit)
+        : columns.map((_, i) => i).filter((i) => detail === 'all' || isKey(i));
   const keySlot = shownIndexes.some((i) => (glyphs[i]?.length ?? 0) > 1)
     ? t.keySlotDouble
     : t.keySlot;
@@ -260,7 +301,14 @@ export function tableLayout(
   const hidden: TableLayout['hidden'] =
     hiddenCount === 0
       ? undefined
-      : { count: hiddenCount, kind: detail === 'names' ? 'all' : 'more' };
+      : { count: hiddenCount, kind: detail === 'names' ? 'all' : limited ? 'limit' : 'more' };
+  // At All the button shows while rows are cut, and ("Show fewer") once a long table is opened.
+  const buttonLabel =
+    hidden?.kind === 'limit'
+      ? `Show all ${String(columns.length)} columns`
+      : detail === 'all' && node.expanded === true && columns.length > t.rowLimit
+        ? 'Show fewer'
+        : undefined;
   const indexCount = node.indexes?.length ?? 0;
   const hasBody = columns.length > 0 || newRowIndex !== undefined;
   const footer =
@@ -280,7 +328,7 @@ export function tableLayout(
 
   // The footer row holds the index count, and at Names also "n columns".
   const footerRow = hasBody && (footer !== undefined || hidden?.kind === 'all');
-  const morePill = hidden?.kind === 'more';
+  const morePill = hidden?.kind === 'more' || buttonLabel !== undefined;
   const body = hasBody
     ? t.bodyGap +
       slots * t.rowHeight +
@@ -302,9 +350,12 @@ export function tableLayout(
     t.titleLineHeight +
     (noteLines.length > 0 ? t.gap + noteLines.length * t.noteLineHeight : 0) +
     t.bodyGap;
-  const pillTop = morePill
-    ? rowsTop + slots * t.rowHeight + (slots > 0 ? t.pillGap : 0)
-    : undefined;
+  const slotTop = rowsTop + slots * t.rowHeight + (slots > 0 ? t.pillGap : 0);
+  const pillTop = hidden?.kind === 'more' ? slotTop : undefined;
+  const button: TableLayout['button'] =
+    buttonLabel === undefined
+      ? undefined
+      : { label: buttonLabel, expanded: buttonLabel === 'Show fewer', top: slotTop };
 
   const schema = node.schema;
   return {
@@ -322,6 +373,7 @@ export function tableLayout(
     rows,
     newRowIndex,
     hidden,
+    button,
     hiddenIds,
     footer,
     rowsTop,
@@ -344,7 +396,7 @@ export function rowAtSlot(layout: TableLayout, slot: number): TableRow | undefin
   return layout.rows[shifted ? slot - 1 : slot];
 }
 
-/** Where a relationship end meets a table: a drawn row, the "+n columns" pill, or the title. */
+/** Where a relationship end meets a table: a drawn row, the "+n columns" pill / button, or the title. */
 export interface RowAnchor {
   /** From the card's top. */
   y: number;
@@ -366,8 +418,9 @@ export function rowAnchorY(layout: TableLayout, columnId: Id): RowAnchor {
       kind: 'row',
     };
   }
-  if (layout.pillTop !== undefined && layout.hiddenIds.has(columnId)) {
-    return { y: layout.pillTop + TABLE_CARD.pillHeight / 2, kind: 'pill' };
+  const standIn = layout.button?.top ?? layout.pillTop;
+  if (standIn !== undefined && layout.hiddenIds.has(columnId)) {
+    return { y: standIn + TABLE_CARD.pillHeight / 2, kind: 'pill' };
   }
   return { y: layout.titleCenter, kind: 'title' };
 }

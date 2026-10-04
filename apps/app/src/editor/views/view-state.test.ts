@@ -237,6 +237,9 @@ describe('row editing shows its table at All (043 R4, FR-010a)', () => {
   it('patches detail: all on the row-editing table only, and never the document', () => {
     const editing = viewStateOf(tables, null, none, { tableId: 't1', newRowAt: null });
     expect(editing.deck.nodes[0]?.detail).toBe('all');
+    // Opened too (048), so the edited row is never behind the row limit.
+    expect(editing.deck.nodes[0]?.expanded).toBe(true);
+    expect(tables.nodes[0]?.expanded).toBeUndefined();
     expect(editing.deck.nodes[1]).toBe(tables.nodes[1]);
     expect(tables.nodes[0]?.detail).toBe('keys');
   });
