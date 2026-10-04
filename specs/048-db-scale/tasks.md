@@ -137,7 +137,7 @@
 
 **Independent Test**: view "Billing" = schema `billing` + `customers`, detail Keys; switch away and back (quickstart 6). Needs T005, T007.
 
-- [ ] T036 [US5] Failing tests then extend `apps/app/src/editor/view-filter.ts`: a table shows if its schema is in `view.schemas` or its id is in `includes`; non-table nodes follow existing rules; `excludeGroups` still applies; a filter matching nothing returns an empty visible set; stable identity of the returned sets
+- [x] T036 [US5] Failing tests then extend `apps/app/src/editor/view-filter.ts`: a table shows if its schema is in `view.schemas` or its id is in `includes`; non-table nodes follow existing rules; `excludeGroups` still applies; a filter matching nothing returns an empty visible set; stable identity of the returned sets
 - [ ] T037 [US5] Per-view detail in `apps/app/src/editor/views/view-state.ts`: `view.detail` overrides `display.detail` via `setTableDeck`; test that a table set to `expanded` or `detail: all` still wins, and other views are unchanged
 - [ ] T038 [US5] Failing tests then outside proxies for hidden tables: reuse `PortPill` / `port:` in `apps/app/src/editor/visible-graph.ts` and `deck-to-flow.ts` so every relationship from a visible table to a hidden table draws one dashed proxy per hidden table (not merged, group collapse does not change it); click offers "Show in {view}" via `firstViewShowing`
 - [ ] T039 [P] [US5] View settings UI in `apps/app/src/editor/views/view-settings-popover.tsx`: Schemas (checkbox list from the deck's schema names), Tables (picker writing `includes`), Detail (Names · Keys · All · Deck default); component tests by role and name; empty state "No tables match this view" with "Edit filter"
