@@ -211,7 +211,7 @@
   - `apps/app/src/editor/export/scene.ts`: add group frame rects to `rects` so `sceneEdges` draws group edges;
   - `layout/tidy-layout.ts` and `layout/elk-layout.ts`: include group ids in the endpoint set.
   - Add a test for each.
-- [ ] T034 [US4] Write `docs/decisions/0030-groups-as-connector-ends.md`. It covers the widening, why there is no version bump, older builds showing a broken reference, the cascade, the `'contains'` rule and the flow continuity limit. Update the "edges" wording in `docs/spec.md`.
+- [x] T034 [US4] Write `docs/decisions/0030-groups-as-connector-ends.md`. It covers the widening, why there is no version bump, older builds showing a broken reference, the cascade, the `'contains'` rule and the flow continuity limit. Update the "edges" wording in `docs/spec.md`.
 
 **Checkpoint**: quickstart 10–14 pass.
 
