@@ -113,7 +113,7 @@
   - `attachToOutline`: exact rectangle projection; for shapes, 48 samples per side through `outlinePoint`, then refine;
   - `nudgeAnchor`.
   - Make T011 pass.
-- [ ] T013 [P] [US2] Write failing tests in `apps/app/src/editor/routing/endpoint-target.test.ts`:
+- [x] T013 [P] [US2] Write failing tests in `apps/app/src/editor/routing/endpoint-target.test.ts`:
   - the topmost card in paint order wins;
   - 16 screen px reach, scaled by zoom;
   - a card over a group wins;
@@ -122,7 +122,7 @@
   - near the frame edge from outside returns the group;
   - hidden and out-of-scope objects are never returned;
   - collapsed-group cards return `kind: 'group'` with the collapsed box.
-- [ ] T014 [US2] Implement `apps/app/src/editor/routing/endpoint-target.ts`:
+- [x] T014 [US2] Implement `apps/app/src/editor/routing/endpoint-target.ts`:
   - `TargetScene` built from the drawn flow nodes (card boxes, `group:` frame rects, `collapsed:` cards, plus shape geometry);
   - `hitTarget(point, scene, zoom)`.
   - Make T013 pass. Group targets stay disabled for writing until US4 (T030), but are already returned here.
