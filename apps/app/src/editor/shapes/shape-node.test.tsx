@@ -81,6 +81,18 @@ describe('ShapeNode (031)', () => {
     expect(screen.getByTestId('shape-title')).toHaveClass('text-center');
   });
 
+  it('draws an unnamed shape blank; its name and the text shape keep the placeholder', () => {
+    const { unmount } = renderWithEditor(
+      <ShapeNode {...props({ title: 'Untitled diamond' })} />,
+      deck,
+    );
+    expect(screen.getByTestId('shape-title')).toHaveTextContent(/^$/);
+    expect(node()).toHaveAccessibleName(/^Untitled diamond, /);
+    unmount();
+    renderWithEditor(<ShapeNode {...props({ type: 'text', title: 'Untitled text' })} />, deck);
+    expect(screen.getByTestId('shape-title')).toHaveTextContent('Untitled text');
+  });
+
   it('is a group named "<title>, <shape name>"', () => {
     renderWithEditor(<ShapeNode {...props()} />, deck);
     expect(screen.getByRole('group', { name: 'Payment OK?, diamond' })).toBeInTheDocument();

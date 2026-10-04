@@ -15,6 +15,7 @@ import { DetailsButton } from '../quick-edit/details-button';
 import { StepSticker } from '../step-sticker';
 import { describeChannel } from '../style/card-style';
 import { typeName } from '../type-label';
+import { shownShapeTitle } from '../placeholder-title';
 import { useComponentNodeState } from '../use-component-node-state';
 import { outlinePoint, SHAPE_TITLE_LINE, shapePath, titleBox } from './shape-geometry';
 import { Ring } from './shape-ring';
@@ -139,7 +140,7 @@ export const ShapeNode = memo(function ShapeNode({
   };
   const titleText = (
     <span data-testid="shape-title" className={titleClasses} style={clamp}>
-      {data.title}
+      {shownShapeTitle({ type: data.kind, title: data.title }, geometry)}
     </span>
   );
 
