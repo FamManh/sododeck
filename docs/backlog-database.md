@@ -245,7 +245,10 @@ note? }[] }`;
   - Table card (design rows 2, 3, 7): header (table tile, schema name, badges), one-line title,
     optional note, **fixed-height column rows** (key marker, name, type in Mono, nullable),
     indexes footer; colour from the palette; height computed, never measured (§g-58).
-  - Column order on the card: PK, FK, then the rest, unless the user reordered.
+  - Column order on the card: the stored order (041 clarify 2026-10-04); import and new columns
+    put keys first.
+  - Format additions (041 clarify): optional enum colour; deck-level detail and display toggles
+    stored in the deck.
   - Detail levels: names only / keys only / all, per table (header toggle, context menu) and per
     deck; semantic zoom maps on top (Landscape icon, System names + key dots, Container keys,
     Component all).
