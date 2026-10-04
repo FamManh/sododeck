@@ -55,7 +55,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Delete'],
     ]);
     expect(labels(TARGETS.group, 'menu')).toEqual([
-      ['Open details', 'Rename'],
+      ['Open details', 'Open inside', 'Rename'],
       ['Collapse', 'Select members', 'Colour: none'],
       ['Copy', 'Cut', 'Duplicate'],
       ['Spread ends evenly'],

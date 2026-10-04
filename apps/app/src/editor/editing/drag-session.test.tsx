@@ -102,6 +102,32 @@ describe('dragging a group frame (016 US2, R5)', () => {
     expect(editor().canUndo()).toBe(false);
   });
 
+  it('a collapsed group drags by its card: frame, nested frames and members follow', () => {
+    const { h, doc, editor } = setup();
+    // The collapsed card sits wherever it is drawn; the drag moves by the card's own delta.
+    const card = { id: 'collapsed:pay', position: { x: 100, y: 100 } } as Node;
+    act(() => {
+      h().onNodeDragStart({}, card);
+      // ⌘ turns snapping off: this is about what moves, not where it lands.
+      h().onNodeDrag(pointer(0, 0, { metaKey: true }));
+      h().onNodesChange(move('collapsed:pay', 150, 120));
+    });
+    expect(ui().canvasGesture).toBe('group-drag');
+    expect(ui().selection.groups).toEqual(['pay']);
+    act(() => {
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    const file = toJSON(doc);
+    expect(frameOf(file, 'pay')).toEqual(frame(2, -28, 560, 540));
+    expect(frameOf(file, 'fraud')).toEqual(frame(26, 296, 212, 152));
+    expect(position(file, 'm1')).toEqual({ x: 50, y: 20 });
+    expect(position(file, 's1')).toEqual({ x: 3000, y: 0 });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(deck);
+  });
+
   it('locks the axis with ⇧', () => {
     const { h, doc } = setup();
     act(() => {

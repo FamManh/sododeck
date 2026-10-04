@@ -712,6 +712,15 @@ describe('shapes in the scene (031)', () => {
     expect(scene(shapes).cards.find((c) => c.id === 'db')?.geometry).toBeUndefined();
   });
 
+  it('draws an unnamed shape without its placeholder title, as the canvas does', () => {
+    const unnamed = deckOf({
+      nodes: [{ id: 'q', type: 'diamond', title: 'Untitled diamond', position: { x: 0, y: 0 } }],
+    });
+    const card = scene(unnamed).cards.find((c) => c.id === 'q');
+    expect(card?.title).toBe('Untitled diamond');
+    expect(card?.titleLines.join('')).toBe('');
+  });
+
   it('ends connectors on the outline: a parallelogram’s slanted side', () => {
     const edge = scene(shapes).edges.find((e) => e.id === 'e2');
     expect(edge?.source.x).toBeCloseTo(168 - (168 * 0.16) / 2, 6);

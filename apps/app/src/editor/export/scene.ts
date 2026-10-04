@@ -33,6 +33,7 @@ import {
   groupCounts,
 } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
+import { shownShapeTitle } from '../placeholder-title';
 import { typeName } from '../type-label';
 import { effectiveLevel, type Level } from '../levels';
 import type { PathEnds, PathShape } from '../routing/route-path';
@@ -348,7 +349,7 @@ function shapeCard(
     typeName: typeName(node.type),
     title: node.title,
     titleLines: clampLines(
-      shapeTitleLines(geometry, size, node.title, measure),
+      shapeTitleLines(geometry, size, shownShapeTitle(node, geometry), measure),
       layout.titleLines,
       width,
       SHAPE_TITLE_FONT,

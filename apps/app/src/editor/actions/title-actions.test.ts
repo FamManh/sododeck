@@ -9,10 +9,11 @@ const openSection = (target: (typeof TARGETS)[keyof typeof TARGETS], mode = 'edi
   labels(target, 'menu', mode)[0] ?? [];
 
 describe('title actions (019 R8)', () => {
-  it('offers Open details and Rename on a component, Open inside only with children', () => {
+  it('offers Open details and Rename; Open inside on a group or a component with children', () => {
     expect(openSection(TARGETS.component)).toEqual(['Open details', 'Rename']);
     expect(openSection(TARGETS.parent)).toEqual(['Open details', 'Open inside', 'Rename']);
-    expect(openSection(TARGETS.group)).toEqual(['Open details', 'Rename']);
+    // Double-click renames a frame, so the menu is the pointer's way into a group.
+    expect(openSection(TARGETS.group)).toEqual(['Open details', 'Open inside', 'Rename']);
     expect(openSection(TARGETS.connection)).toContain('Open details');
     expect(openSection(TARGETS.canvas)).not.toContain('Open details');
   });
@@ -34,6 +35,9 @@ describe('title actions (019 R8)', () => {
     expect(runAction(ACTIONS, 'node.openInside', actionContext(TARGETS.parent))).toBe(true);
     expect(useUiStore.getState().drill.map((f) => f.id)).toEqual(['p']);
     expect(runAction(ACTIONS, 'node.openInside', actionContext(TARGETS.component))).toBe(false);
+    useUiStore.getState().resetForDeck();
+    expect(runAction(ACTIONS, 'node.openInside', actionContext(TARGETS.group))).toBe(true);
+    expect(useUiStore.getState().drill).toMatchObject([{ kind: 'group', id: 'g' }]);
     useUiStore.getState().resetForDeck();
     runAction(ACTIONS, 'details.open', actionContext(TARGETS.component));
     expect(useUiStore.getState().drawer.open).toBe(true);

@@ -21,7 +21,7 @@ const SIDE_OF_POSITION: Record<Position, Side> = {
 };
 
 const nodesSelector = (s: ReactFlowState) => s.nodes;
-const zoomSelector = (s: ReactFlowState) => s.transform[2];
+const transformSelector = (s: ReactFlowState) => s.transform;
 
 /**
  * The live line of a **new** connection (017 R12, 050 R3): a dashed path drawn through
@@ -39,11 +39,14 @@ export function EndpointConnectionLine({
   pointer,
 }: ConnectionLineComponentProps) {
   const nodes = useStore(nodesSelector);
-  const zoom = useStore(zoomSelector);
+  const [tx, ty, zoom] = useStore(transformSelector);
   // The drawn targets change only with the nodes, not with every pointer move.
   const scene = useMemo(() => targetScene(nodes), [nodes]);
-  const hit = connectTarget(scene, fromNode.id, pointer, { zoom, mod: false });
-  const end = hit?.attach.point ?? pointer;
+  // `pointer` is in container pixels (not panned or zoomed), unlike `toX`/`toY`; `toX`/`toY` would
+  // also snap to a nearby handle, so the raw pointer is converted to canvas coordinates instead.
+  const flowPointer = { x: (pointer.x - tx) / zoom, y: (pointer.y - ty) / zoom };
+  const hit = connectTarget(scene, fromNode.id, flowPointer, { zoom, mod: false });
+  const end = hit?.attach.point ?? flowPointer;
   const toSide = hit?.attach.side ?? SIDE_OF_POSITION[toPosition];
   const { path, ends } = routedPath(
     'elbow',

@@ -21,7 +21,7 @@ describe('GroupBoundaryNode', () => {
     renderWithEditor(<GroupBoundaryNode {...props} />);
     const boundary = screen.getByRole('button', { name: 'Core services group, 8 nodes' });
     expect(boundary).toHaveAttribute('aria-expanded', 'true');
-    expect(boundary).toHaveAttribute('title', 'Double-click or ↵ to open');
+    expect(boundary).toHaveAttribute('title', 'Double-click to rename, ↵ to open');
     expect(screen.getByTestId('group-boundary')).toHaveTextContent('Core services8');
   });
 
@@ -54,7 +54,7 @@ describe('GroupBoundaryNode', () => {
     );
   });
 
-  it('edits the group label in place and keeps double-click drilling in (019 FR-008)', async () => {
+  it('edits the group label in place, inside the same pill (019 FR-008)', async () => {
     const user = userEvent.setup();
     const props = {
       id: 'group:core',
@@ -72,6 +72,12 @@ describe('GroupBoundaryNode', () => {
     expect(screen.queryByRole('button', { name: 'Core services group, 8 nodes' })).toBeNull();
     const field = screen.getByRole('textbox', { name: 'Group title' });
     expect(field).toHaveFocus();
+    // The pill stays while renaming: same frame, chevron and count; the field takes the title's
+    // place on one line, as wide as its text.
+    const pill = field.parentElement;
+    expect(pill).toHaveClass('rounded-full', 'h-7', 'border-[1.5px]');
+    expect(pill).toHaveTextContent('8');
+    expect(field).toHaveClass('whitespace-nowrap');
     await user.keyboard('Billing{Escape}');
     expect(toJSON(doc).groups[0]?.title).toBe('Core services');
     expect(editor().canUndo()).toBe(false);
@@ -232,28 +238,48 @@ describe('GroupBoundaryNode as a connector end (050 US4)', () => {
   } as unknown as NodeProps<GroupFlowNode>;
   const file = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
 
-  it('has four hidden side handles that React Flow draws connectors to', () => {
+  it('connects from the middle of any side, like a card; Enter opens the connect popover', async () => {
+    const user = userEvent.setup();
     renderWithEditor(<GroupBoundaryNode {...props} />, file);
-    const sides = screen
-      .getByTestId('group-boundary')
-      .querySelectorAll('.react-flow__handle[aria-hidden="true"]');
-    expect(sides).toHaveLength(4);
-    expect([...sides].map((h) => h.getAttribute('data-handleid'))).toEqual([
+    const handles = screen.getAllByRole('button', { name: 'Connect from Core services' });
+    expect(handles.map((h) => h.getAttribute('data-handleid'))).toEqual([
       'top',
       'right',
       'bottom',
       'left',
     ]);
-  });
-
-  it('starts a connection from the label handle; Enter opens the connect popover', async () => {
-    const user = userEvent.setup();
-    renderWithEditor(<GroupBoundaryNode {...props} />, file);
-    const handle = screen.getByRole('button', { name: 'Connect from Core services' });
-    expect(handle).toHaveClass('react-flow__handle', 'source');
-    handle.focus();
+    for (const handle of handles) {
+      expect(handle).toHaveClass('react-flow__handle', 'source', 'connectable');
+    }
+    const right = handles[1];
+    right?.focus();
     await user.keyboard('{Enter}');
     expect(useUiStore.getState().popover).toEqual({ kind: 'connect', fromId: 'core' });
+  });
+
+  it('shows the side handles while selected, and takes none in flow mode', () => {
+    renderWithEditor(
+      <GroupBoundaryNode {...props} data={{ ...props.data, selected: true }} />,
+      file,
+    );
+    const handles = () => screen.getAllByRole('button', { name: 'Connect from Core services' });
+    for (const handle of handles()) expect(handle).toHaveClass('opacity-100');
+    act(() => {
+      useUiStore.setState({
+        activeFlow: {
+          flowId: 'f',
+          stepId: null,
+          branchId: null,
+          alternativeId: null,
+          playing: false,
+          speed: 1,
+        },
+      });
+    });
+    for (const handle of handles()) {
+      expect(handle).not.toHaveClass('connectable');
+      expect(handle).toHaveClass('pointer-events-none');
+    }
   });
 
   it('highlights the frame while a dragged connector end would attach to it', () => {
@@ -281,5 +307,47 @@ describe('GroupBoundaryNode as a connector end (050 US4)', () => {
       useUiStore.getState().setEndpointPreview(null);
     });
     expect(boundary).not.toHaveAttribute('data-endpoint-target');
+  });
+});
+
+describe('GroupBoundaryNode label pill (051 follow-up)', () => {
+  const props = (width = 300) =>
+    ({
+      id: 'group:core',
+      data: { title: 'Core services', count: 8, focused: false },
+      width,
+      height: 200,
+    }) as unknown as NodeProps<GroupFlowNode>;
+  const file = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
+
+  it('the chevron collapses the group; there is no other collapse button', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<GroupBoundaryNode {...props()} />, file);
+    expect(screen.queryByRole('button', { name: 'Collapse Core services' })).toBeNull();
+    await user.click(screen.getByTestId('group-collapse'));
+    expect(toJSON(doc).views[0]?.collapsed).toEqual(['core']);
+    expect(useUiStore.getState().selection.groups).toEqual(['core']);
+    expect(useUiStore.getState().focusedId).toBe('collapsed:core');
+    expect(useUiStore.getState().announcement.text).toBe('Core services collapsed');
+  });
+
+  it('never runs past its frame: 16 px in from each side, at most 288 px', () => {
+    const { unmount } = renderWithEditor(<GroupBoundaryNode {...props(200)} />, file);
+    const pill = () => screen.getByRole('button', { name: 'Core services group, 8 nodes' });
+    expect(pill()).toHaveStyle({ maxWidth: '168px' });
+    expect(within(pill()).getByText('Core services')).toHaveClass('truncate');
+    expect(within(pill()).getByText('8')).toHaveClass('shrink-0');
+    unmount();
+    renderWithEditor(<GroupBoundaryNode {...props(900)} />, file);
+    expect(pill()).toHaveStyle({ maxWidth: '288px' });
+  });
+
+  it('keeps the same width limit while renaming', () => {
+    renderWithEditor(<GroupBoundaryNode {...props(200)} />, file);
+    act(() => {
+      useUiStore.getState().startTitleEdit({ target: 'group', id: 'core', isNew: false });
+    });
+    const pill = screen.getByRole('textbox', { name: 'Group title' }).parentElement;
+    expect(pill).toHaveStyle({ maxWidth: '168px' });
   });
 });

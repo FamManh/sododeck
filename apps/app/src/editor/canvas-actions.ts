@@ -15,7 +15,7 @@ import {
   type ColumnEnd,
 } from './connection-rules';
 import { oneStep } from './fields/one-step';
-import { typeName } from './type-label';
+import { placeholderTitle } from './placeholder-title';
 import { readViewState } from './views/use-current-view';
 
 /** Marks the canvas wrapper, so focus helpers and the palette can find it. */
@@ -45,7 +45,7 @@ export function addComponent(
   position: Point,
   { edit = false }: { edit?: boolean } = {},
 ): string {
-  const title = `Untitled ${typeName(type).toLowerCase()}`;
+  const title = placeholderTitle(type);
   const id = editor.add('nodes', {
     type,
     title,

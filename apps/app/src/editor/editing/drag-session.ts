@@ -210,12 +210,21 @@ export class DragController {
     this.begin(anchor, 'nodes', selection.nodes, selection.groups);
   }
 
-  /** A drag of a group by its label or edge: the selected groups, or just this one. */
-  startGroup(groupId: Id): void {
+  /**
+   * A drag of a group by its label or edge, or by its collapsed card (`via`: the card's flow id
+   * and position, which then lead the drag): the selected groups, or just this one.
+   */
+  startGroup(groupId: Id, via?: { id: string; position: Point }): void {
     const ui = useUiStore.getState();
     if (!ui.selection.groups.includes(groupId)) ui.select({ groups: [groupId] });
     const { selection } = useUiStore.getState();
-    this.begin(`${GROUP_NODE_PREFIX}${groupId}`, 'group', selection.nodes, selection.groups);
+    this.begin(
+      via?.id ?? `${GROUP_NODE_PREFIX}${groupId}`,
+      'group',
+      selection.nodes,
+      selection.groups,
+      { groupId, ...(via === undefined ? {} : { position: via.position }) },
+    );
   }
 
   private begin(
@@ -223,6 +232,7 @@ export class DragController {
     kind: Session['kind'],
     nodes: readonly Id[],
     groups: readonly Id[],
+    group?: { groupId: Id; position?: Point },
   ) {
     // React Flow skips the stop of an aborted drag: never leave its gesture open.
     if (this.session !== null) this.stop();
@@ -257,9 +267,11 @@ export class DragController {
         };
       }
     }
-    const anchorId = kind === 'group' ? anchor.slice(GROUP_NODE_PREFIX.length) : anchor;
+    const anchorId = group?.groupId ?? anchor;
     const anchorStart =
-      kind === 'group' ? (frames[anchorId]?.position ?? { x: 0, y: 0 }) : start[anchorId];
+      kind === 'group'
+        ? (group?.position ?? frames[anchorId]?.position ?? { x: 0, y: 0 })
+        : start[anchorId];
     if (anchorStart === undefined) return;
 
     // Snapping looks at the components on screen that are not moving (R7).

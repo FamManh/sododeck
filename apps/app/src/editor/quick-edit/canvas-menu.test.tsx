@@ -213,6 +213,7 @@ describe('CanvasMenu (019 US5)', () => {
     });
     expect(items()).toEqual([
       'Open detailsEnter',
+      'Open insideEnter',
       'RenameF2',
       'CollapseSpace',
       'Select members',

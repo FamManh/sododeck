@@ -503,7 +503,18 @@ describe('Canvas', () => {
     const before = structuredClone(drillDeck);
     const { doc, editor } = renderWithEditor(<DrillHarness />, drillDeck);
 
+    // Double-click renames a frame in place (it no longer drills in); Enter drills in.
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Core services group, 2 nodes' }));
+    expect(ui().drill).toEqual([]);
+    expect(ui().titleEdit).toMatchObject({ target: 'group', id: 'core' });
+    expect(screen.getByRole('textbox', { name: 'Group title' })).toHaveValue('Core services');
+    await user.keyboard('{Escape}');
+    expect(ui().titleEdit).toBeNull();
+    act(() => {
+      ui().focus('group:core');
+      document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
+    });
+    await user.keyboard('{Enter}');
     expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
       'System view/Core services',
@@ -607,7 +618,9 @@ describe('Canvas', () => {
       setGroupCollapsed(editor(), 'left', false);
       ui().select({ nodes: ['a1'] });
     });
-    fireEvent.doubleClick(screen.getByRole('button', { name: 'Left group, 2 nodes' }));
+    act(() => {
+      ui().drillInto({ kind: 'group', id: 'left', viewport: { x: 0, y: 0, zoom: 1 } });
+    });
     expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
   });
 
@@ -1000,19 +1013,48 @@ describe('canvas handlers', () => {
 
   it('connects, selects the new edge, opens its popover and announces it', () => {
     const { h, doc } = handlers();
+    // A drop on d's body: React Flow reports a valid connection; the drop makes it (050 T021).
+    const dropOn = (from: string, to: string) =>
+      ({
+        isValid: true,
+        fromNode: { id: from },
+        fromHandle: { id: 'right', type: 'source' },
+        toNode: { id: to },
+      }) as unknown as FinalConnectionState;
     act(() => {
-      h().onConnect({ source: 'a', target: 'd', sourceHandle: 'right', targetHandle: 'body' });
+      h().onConnectEnd({ clientX: 0, clientY: 0 } as MouseEvent, dropOn('a', 'd'));
     });
     const edge = toJSON(doc).edges.at(-1);
     expect(edge).toMatchObject({ from: 'a', to: 'd' });
     expect(ui().selection.edges).toEqual([edge?.id]);
     expect(ui().popover).toEqual({ kind: 'edge', edgeId: edge?.id });
     expect(ui().announcement.text).toBe('Connected A to D');
-    // A duplicate reaching onConnect anyway is still refused.
+    // A duplicate reaching the drop anyway is still refused.
     act(() => {
-      h().onConnect({ source: 'd', target: 'a', sourceHandle: null, targetHandle: null });
+      h().onConnectEnd({ clientX: 0, clientY: 0 } as MouseEvent, dropOn('d', 'a'));
     });
     expect(toJSON(doc).edges).toHaveLength(4);
+  });
+
+  it('double-click renames a group frame in place and expands a collapsed group', () => {
+    const { h, doc, editor } = handlers(collapsedGroupsDeck);
+    act(() => {
+      h().onNodeDoubleClick(click(), flowNode('group:left'));
+    });
+    expect(ui().drill).toEqual([]);
+    expect(ui().titleEdit).toEqual({ target: 'group', id: 'left', isNew: false });
+    expect(ui().selection.groups).toEqual(['left']);
+    act(() => {
+      ui().endTitleEdit();
+      setGroupCollapsed(editor(), 'right', true);
+    });
+    act(() => {
+      h().onNodeDoubleClick(click(), flowNode('collapsed:right'));
+    });
+    expect(collapsedOf(doc).has('right')).toBe(false);
+    expect(ui().drill).toEqual([]);
+    expect(ui().focusedId).toBe('group:right');
+    expect(ui().announcement.text).toBe('Right expanded');
   });
 
   it('opens the popover on double-click of an edge', () => {
@@ -1160,7 +1202,15 @@ describe('canvas in flow mode (007)', () => {
         { id: 'a', type: 'position', position: { x: 999, y: 999 } },
       ] as NodeChange[]);
       h().onNodeDragStop();
-      h().onConnect({ source: 'a', target: 'z', sourceHandle: null, targetHandle: null });
+      h().onConnectEnd(
+        { clientX: 0, clientY: 0 } as MouseEvent,
+        {
+          isValid: true,
+          fromNode: { id: 'a' },
+          fromHandle: { id: 'right', type: 'source' },
+          toNode: { id: 'z' },
+        } as unknown as FinalConnectionState,
+      );
       h().onConnectEnd(
         { clientX: 0, clientY: 0 } as MouseEvent,
         {

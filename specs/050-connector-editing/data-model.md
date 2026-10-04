@@ -36,11 +36,11 @@ Everything else on `Edge` (`route`, `style`, `label`, `labelAt`, `direction`, â€
 
 ### Route data used by this feature (unchanged, from 022)
 
-| Field                                  | Used by                                                                            |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| `fromSide`, `fromAt`, `toSide`, `toAt` | end drag (US2), end-run segment drag (US5), spread ends (US7), Shift + arrow nudge |
-| `waypoints`                            | bend / midpoint drag (US1), inner-run segment drag (US5)                           |
-| `offset` (017)                         | read only; converted to bends on the first bend or segment edit (022 rule)         |
+| Field                                  | Used by                                                                                                                                   |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `fromSide`, `fromAt`, `toSide`, `toAt` | end drag (US2), spread ends (US7), Shift + arrow nudge; a new connection pins the side it was dragged from and the drop side and position |
+| `waypoints`                            | bend / midpoint drag (US1), segment drag (US5), inner or end run                                                                          |
+| `offset` (017)                         | read only; converted to bends on the first bend or segment edit (022 rule)                                                                |
 
 Weight values stay `1 | 1.5 | 2 | 3 | 4` (`style.width`, default 2 not stored).
 

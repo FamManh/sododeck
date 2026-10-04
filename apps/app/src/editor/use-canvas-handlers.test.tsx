@@ -61,13 +61,20 @@ const card = (id: string, x: number, y: number): Node => ({
 });
 const drawn = [card('a', 0, 0), card('b', 300, 0), card('c', 0, 200), card('d', 300, 200)];
 
-/** React Flow's final state of a connection dragged from `from` and dropped off every handle. */
-function dropped(from: string, handleType: 'source' | 'target' = 'source') {
+/**
+ * React Flow's final state of a connection dragged from `from` (its `handleId` side handle) and
+ * dropped off every handle.
+ */
+function dropped(
+  from: string,
+  handleType: 'source' | 'target' = 'source',
+  handleId: string | null = null,
+) {
   return {
     isValid: false,
     from: { x: 0, y: 0 },
     fromHandle: {
-      id: null,
+      id: handleId,
       nodeId: from,
       type: handleType,
       position: Position.Right,
@@ -116,11 +123,53 @@ describe('use-canvas-handlers: a new connection dropped off a handle (050 T021)'
     });
   });
 
-  it('does nothing after a handle drop (onConnect made it), or off every card', () => {
+  it('pins the side it was dragged from on the start (top to top stays top to top)', () => {
+    const { h, doc } = handlersOver(drawn);
+    act(() => {
+      // From a's top handle onto d's top edge, 4 px above it.
+      h().onConnectEnd(at(380, 196), dropped('a', 'source', 'top'));
+    });
+    const route = toJSON(doc).edges.find((e) => e.from === 'a' && e.to === 'd')?.route;
+    expect(route).toMatchObject({ fromSide: 'top', toSide: 'top' });
+  });
+
+  it('a drop on a card body (a valid connection) attaches where the live line showed', () => {
+    const { h, doc, editor } = handlersOver(drawn);
+    act(() => {
+      h().onConnectEnd(at(380, 205), {
+        ...dropped('a', 'source', 'top'),
+        isValid: true,
+        toNode: { id: 'd' },
+      } as FinalConnectionState);
+    });
+    const created = toJSON(doc).edges.filter((e) => e.from === 'a' && e.to === 'd');
+    // One connector, not one from `onConnect` and one from the drop.
+    expect(created).toHaveLength(1);
+    expect(created[0]?.route).toMatchObject({ fromSide: 'top', toSide: 'top' });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).edges.some((e) => e.from === 'a' && e.to === 'd')).toBe(false);
+  });
+
+  it('a valid drop the hit test misses still connects, with the start side pinned', () => {
+    const { h, doc } = handlersOver(drawn);
+    act(() => {
+      h().onConnectEnd(at(900, 900), {
+        ...dropped('a', 'source', 'bottom'),
+        isValid: true,
+        toNode: { id: 'd' },
+      } as FinalConnectionState);
+    });
+    expect(toJSON(doc).edges.find((e) => e.from === 'a' && e.to === 'd')?.route).toEqual({
+      fromSide: 'bottom',
+    });
+  });
+
+  it('does nothing off every card', () => {
     const { h, doc } = handlersOver(drawn);
     const before = toJSON(doc);
     act(() => {
-      h().onConnectEnd(at(472, 215), { ...dropped('a'), isValid: true } as FinalConnectionState);
       h().onConnectEnd(at(900, 900), dropped('a'));
       // the card it starts from is no target
       h().onConnectEnd(at(80, 25), dropped('a'));
@@ -200,13 +249,16 @@ describe('use-canvas-handlers: a new connection dropped off a handle (050 T021)'
         }),
       ).toBe(false);
       act(() => {
-        h().onConnect({ source: 'a', target: 'group:h', sourceHandle: null, targetHandle: null });
-        h().onConnect({
-          source: 'collapsed:g',
-          target: 'b',
-          sourceHandle: null,
-          targetHandle: null,
-        });
+        h().onConnectEnd(at(9999, 9999), {
+          ...dropped('a'),
+          isValid: true,
+          toNode: { id: 'group:h' },
+        } as FinalConnectionState);
+        h().onConnectEnd(at(9999, 9999), {
+          ...dropped('collapsed:g'),
+          isValid: true,
+          toNode: { id: 'b' },
+        } as FinalConnectionState);
       });
       const edges = toJSON(doc).edges;
       expect(edges.some((e) => e.from === 'a' && e.to === 'h')).toBe(true);
