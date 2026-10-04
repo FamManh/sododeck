@@ -583,7 +583,7 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 
 ### Overlays
 
-- **`export-dialog`**: 820px wide, 20px radius. A 280px format list (JSON, PNG, SVG, PDF, Mermaid) sits beside a preview panel with scope segmented control, a 250px preview, and options. The footer shows the Mono filename, size, Copy and Download.
+- **`export-dialog`**: 820px wide, 20px radius. A 280px format list in labelled groups (Schema: SQL, DBML, Mermaid ER, Data dictionary, shown only when the deck has a table · Image and data: JSON, PNG, SVG) sits beside a preview panel with scope segmented control, a 250px preview, and options. The footer shows the Mono filename, size, Copy and Download.
 - **`command-palette`**: 580px wide, 16px radius, 54px input row, 42px result rows (icon · title · kind) and a keyboard-hint footer.
 - **`tour-tooltip`**: 300px Inverse card with a 14px radius, a 12px rotated-square arrow, "n of 3", title, body, step dots, and Skip / Back / Next buttons.
 - **`toast`**: Inverse pill, bottom-centre, auto-dismisses after 2.6s.

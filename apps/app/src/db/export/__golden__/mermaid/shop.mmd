@@ -1,0 +1,98 @@
+erDiagram
+  addresses {
+    uuid id PK
+    uuid customer_id FK
+    varchar(200) street
+    varchar(100) city
+    char(2) country "ISO 3166-1 alpha-2"
+  }
+  audit_log {
+    bigint id
+    varchar(40) action
+    jsonb payload
+    timestamptz logged_at
+  }
+  categories {
+    uuid id PK
+    uuid parent_id FK
+    varchar(100) name
+  }
+  customers {
+    uuid id PK
+    varchar(255) email UK
+    varchar(120) name
+    timestamptz created_at
+  }
+  order_items {
+    uuid order_id PK, FK
+    uuid product_id PK, FK
+    integer quantity
+    numeric(10-2) unit_price "numeric(10,2)"
+  }
+  orders {
+    uuid id PK
+    uuid customer_id FK
+    uuid shipping_address_id FK
+    uuid billing_address_id FK
+    order_status status
+    numeric(10-2) total "numeric(10,2); Sum of the order items"
+    timestamptz created_at
+  }
+  payments {
+    uuid id PK
+    uuid order_id FK
+    numeric(10-2) amount "numeric(10,2)"
+    timestamptz paid_at
+  }
+  products {
+    uuid id PK
+    varchar(40) sku UK
+    varchar(200) name
+    numeric(10-2) price "numeric(10,2)"
+    boolean active
+  }
+  reviews {
+    integer id PK
+    uuid product_id FK
+    uuid customer_id FK
+    smallint rating
+    text body
+  }
+  sessions {
+    uuid id PK
+    uuid user_id FK
+    varchar(64) token UK
+    timestamptz expires_at
+  }
+  shipment_items {
+    uuid shipment_id PK, FK
+    uuid order_id PK, FK
+    uuid product_id PK, FK
+    integer quantity
+  }
+  shipments {
+    uuid id PK
+    uuid order_id FK
+    varchar(80) carrier
+    timestamptz shipped_at
+  }
+  users {
+    uuid id PK
+    varchar(255) email UK
+    varchar(80) display_name
+  }
+  addresses }|--|| customers : "customer_id"
+  categories }o--o| categories : "parent_id"
+  order_items }|--|| orders : "order_id"
+  order_items }|--|| products : "product_id"
+  orders }o--o| addresses : "bills to"
+  orders }|--|| customers : "places"
+  orders }o--o| addresses : "ships to"
+  payments }|--|| orders : "order_id"
+  products }|--|{ categories : "listed in"
+  reviews }o--o| customers : "customer_id"
+  reviews }|--|| products : "product_id"
+  sessions }|--|| users : "user_id"
+  shipment_items }|--|| order_items : "order_id, product_id"
+  shipment_items }|--|| shipments : "shipment_id"
+  shipments }|--|| orders : "order_id"

@@ -352,9 +352,14 @@ values: { id, name, note? }[] }`;
   network request is made (e2e no-third-party check stays green).
 - **Risks:** parser bundle size (lazy chunk, measured in the report); dialect edge cases (quoted
   identifiers, schemas, comments) need a fixture corpus in `apps/app/src/db/fixtures`.
+- **From 045:** pin a DBML parser that reads `?` optional markers and `checks`; add the DBML
+  round-trip test using 045's writer (`schemaExport`, "Shop" fixture in
+  `apps/app/src/db/fixtures/shop.ts`).
 
 ## 045-db-export
 
+- **Status:** built (`specs/045-db-export`, ADR 0031). Writers in `apps/app/src/db/export`; the
+  Postgres and SQLite output runs on in-process engines in tests; MySQL by golden file.
 - **Milestone:** after 044 · **Depends on:** 040 · **Estimate:** 4 d
 - **Goal:** The schema leaves Sododeck as runnable SQL and as text other tools read.
 - **In scope:** export menu entries and a preview with Copy / Download for: SQL DDL (Postgres,
