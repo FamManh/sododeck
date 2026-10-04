@@ -1232,7 +1232,9 @@ describe('database schema (040)', () => {
     expect(`${JSON.stringify(out, null, 2)}\n`).toBe(serializeDeck(shopDeck()));
     const keys = Object.keys(toJSON(fromJSON(full)));
     expect(keys.indexOf('dialect')).toBe(keys.indexOf('fieldDefaults') + 1);
-    expect(keys.indexOf('enums')).toBe(keys.indexOf('dialect') + 1);
+    // `blockSqlExport` (052) sits between them.
+    expect(keys.indexOf('blockSqlExport')).toBe(keys.indexOf('dialect') + 1);
+    expect(keys.indexOf('enums')).toBe(keys.indexOf('blockSqlExport') + 1);
     // Stored always (like tagColors), written only with entries (041).
     expect(toJSON(fromJSON({ ...empty, tableDisplay: {} }))).not.toHaveProperty('tableDisplay');
     expect(keys.indexOf('tableDisplay')).toBe(keys.indexOf('enums') + 1);

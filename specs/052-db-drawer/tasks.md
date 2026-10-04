@@ -42,10 +42,10 @@
 
 ### Format and model
 
-- [ ] T002 [P] Add parity fixtures to `packages/schema/test/fixtures.ts`: valid deck with `blockSqlExport: true`; invalid `blockSqlExport: false` and `blockSqlExport: "yes"`. Watch the invalid ones fail to be refused.
-- [ ] T003 Add root `blockSqlExport` (`const: true`, description "Database pack (052): SQL export is refused while the export scope has database errors. Absent means off.") after `dialect` in `packages/schema/schema/v1.json`. Run `pnpm schema:generate`. Add `"blockSqlExport": true` to `packages/schema/examples/full.sododeck.json`. `pnpm --filter @sododeck/schema test` is green.
-- [ ] T004 [P] Write model tests: `packages/model/test/round-trip.test.ts` (a deck with `blockSqlExport` round-trips; a deck without it is unchanged after an unrelated edit) and a new `packages/model/test/block-sql-export.test.ts` (`setBlockSqlExport(true)` writes `true`, `false` removes the key, each one undo step, `readDeck` returns it).
-- [ ] T005 Implement `setBlockSqlExport(ctx, on)` next to `setDialect` in `packages/model/src/ops/db-enums.ts` (meta map, `true` or delete), read it in `packages/model/src/read.ts` (next to `dialect`), load it in `packages/model/src/deck.ts`, accept it in `validateObject('meta')` in `packages/model/src/validate.ts`, expose `DeckEditor.setBlockSqlExport` in `packages/model/src/editor.ts` with a doc comment, export from `index.ts`. T004 is green.
+- [x] T002 [P] Add parity fixtures to `packages/schema/test/fixtures.ts`: valid deck with `blockSqlExport: true`; invalid `blockSqlExport: false` and `blockSqlExport: "yes"`. Watch the invalid ones fail to be refused.
+- [x] T003 Add root `blockSqlExport` (`const: true`, description "Database pack (052): SQL export is refused while the export scope has database errors. Absent means off.") after `dialect` in `packages/schema/schema/v1.json`. Run `pnpm schema:generate`. Add `"blockSqlExport": true` to `packages/schema/examples/full.sododeck.json`. `pnpm --filter @sododeck/schema test` is green.
+- [x] T004 [P] Write model tests: `packages/model/test/round-trip.test.ts` (a deck with `blockSqlExport` round-trips; a deck without it is unchanged after an unrelated edit) and a new `packages/model/test/block-sql-export.test.ts` (`setBlockSqlExport(true)` writes `true`, `false` removes the key, each one undo step, `readDeck` returns it).
+- [x] T005 Implement `setBlockSqlExport(ctx, on)` next to `setDialect` in `packages/model/src/ops/db-enums.ts` (meta map, `true` or delete), read it in `packages/model/src/read.ts` (next to `dialect`), load it in `packages/model/src/deck.ts`, accept it in `validateObject('meta')` in `packages/model/src/validate.ts`, expose `DeckEditor.setBlockSqlExport` in `packages/model/src/editor.ts` with a doc comment, export from `index.ts`. T004 is green.
 
 ### Pure layer
 
