@@ -8,6 +8,7 @@ import { readDeck } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from './connection-rules';
+import { endpointIdOf } from './deck-to-flow';
 import { useConnecting, useConnectionRole } from './use-connection-role';
 
 export function useComponentNodeState(id: string, selected: boolean) {
@@ -46,7 +47,8 @@ export function useComponentNodeState(id: string, selected: boolean) {
 
   let target: ConnectionCheck | null = null;
   if (role?.startsWith('target:')) {
-    target = connectionCheck(readDeck(editor.doc), role.slice('target:'.length), id);
+    // The role carries the drawn id of where the connection starts: maybe a group frame (050).
+    target = connectionCheck(readDeck(editor.doc), endpointIdOf(role.slice('target:'.length)), id);
   }
   const refusal = target === null || target === 'ok' ? null : REFUSAL_TEXT[target];
 

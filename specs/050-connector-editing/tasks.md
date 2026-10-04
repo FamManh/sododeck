@@ -197,7 +197,7 @@
   - out of the drill scope, it maps to the ancestor's representative or a port;
   - an edge between a group and its own member is drawn (file-level allowed).
 - [x] T029 [US4] Implement group representatives in `apps/app/src/editor/visible-graph.ts`, `group:` boxes and geometry in `deck-to-flow.ts` (`boxFor`, `endGeometry`, `toFlowEdges`), and the follow-ups in `bundles.ts`, `focus-set.ts` and `proxy-layout.ts`. Make T028 pass.
-- [ ] T030 [US4] In `apps/app/src/editor/group-boundary-node.tsx`:
+- [x] T030 [US4] In `apps/app/src/editor/group-boundary-node.tsx`:
   - add four hidden `<Handle>`s, which React Flow needs to draw edges;
   - add a label connect handle: `button` "Connect from {title}", which starts a new connection on drag and opens `connect-popover.tsx` on ⏎.
   - Enable group targets in `endpoint-drag.ts` and `onConnectEnd`.

@@ -820,7 +820,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         const popoverGone =
           (state.popover?.kind === 'edge' && !existing.edges.has(state.popover.edgeId)) ||
           (state.popover?.kind === 'merged' && !existing.edges.has(state.popover.edgeId)) ||
-          (state.popover?.kind === 'connect' && !existing.nodes.has(state.popover.fromId));
+          (state.popover?.kind === 'connect' &&
+            !existing.nodes.has(state.popover.fromId) &&
+            !existing.groups.has(state.popover.fromId));
         const patch: Partial<UiState> = {};
         if (selectionChanged) patch.selection = { nodes, edges, groups, stickies };
         if (state.focusedId !== null) {

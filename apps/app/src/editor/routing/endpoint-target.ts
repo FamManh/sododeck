@@ -8,8 +8,7 @@
  * - Otherwise the innermost group frame that contains the point or whose frame edge is within
  *   reach. A card always wins over the group it sits in (spec edge case).
  *
- * Groups are returned here already; whether a connector end may be written onto one is the
- * caller's call (`GROUP_ENDS`, flipped on by 050 T030 once the canvas draws group connectors).
+ * Groups are connector ends (050 R6); a caller can still leave them out (`allowGroups`).
  */
 import type { Geometry } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
@@ -21,11 +20,8 @@ import type { Box, Point } from './route-path';
 /** Attach reach around a target's outline, in screen px (FR-009). */
 export const TARGET_REACH = 16;
 
-/**
- * Whether a connector end may be dropped on a group. Off until the canvas can draw and connect
- * group ends (050 T026–T030); T030 flips it. `hitTarget` returns groups either way.
- */
-export const GROUP_ENDS = false;
+/** Whether a connector end may be dropped on a group by default (on since 050 T030). */
+export const GROUP_ENDS = true;
 
 export interface EndpointTarget {
   /** The card's node id, or the group id (for a frame or a collapsed-group card). */
@@ -171,7 +167,7 @@ export function hitTarget(point: Point, scene: TargetScene, zoom: number): Endpo
 
 /**
  * Where a **new** connection dragged from `fromId` would land at `point` (050 T021): the target
- * under the pointer, skipping the card it starts from (and groups while `GROUP_ENDS` is off),
+ * under the pointer, skipping the card or frame it starts from (and groups with `allowGroups` off),
  * and the attachment on its outline. Shared by the live connection line and the drop.
  */
 export function connectTarget(

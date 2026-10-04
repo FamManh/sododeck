@@ -139,23 +139,79 @@ describe('use-canvas-handlers: a new connection dropped off a handle (050 T021)'
     expect(toJSON(doc)).toEqual(before);
   });
 
-  it('a group frame is no target while group ends are off', () => {
-    const { h, doc } = handlersOver([
-      ...drawn,
-      {
-        id: 'group:g',
-        type: 'group-boundary',
-        position: { x: 600, y: 0 },
-        width: 300,
-        height: 300,
-        data: {},
-      },
-    ]);
-    const before = toJSON(doc);
-    act(() => {
-      h().onConnectEnd(at(750, 150), dropped('a'));
+  describe('group ends (050 US4)', () => {
+    const frame = (id: string, x: number, y: number, size = 300): Node => ({
+      id: `group:${id}`,
+      type: 'group-boundary',
+      position: { x, y },
+      width: size,
+      height: size,
+      data: {},
     });
-    expect(toJSON(doc)).toEqual(before);
+    const grouped = deckOf({
+      ...deck,
+      nodes: [
+        ...deck.nodes,
+        { id: 'm', type: 'service', title: 'M', group: 'g', position: { x: 650, y: 50 } },
+      ],
+      groups: [
+        { id: 'g', title: 'Data layer' },
+        { id: 'h', title: 'Edge' },
+      ],
+    });
+    const scene = [...drawn, frame('g', 600, 0), card('m', 650, 50), frame('h', 1000, 0)];
+
+    it('a drop inside a group frame (not on a card) connects to the group', () => {
+      const { h, doc } = handlersOver(scene, grouped);
+      act(() => {
+        h().onConnectEnd(at(750, 250), dropped('a'));
+      });
+      const created = toJSON(doc).edges.find((e) => e.from === 'a' && e.to === 'g');
+      expect(created).toBeDefined();
+      expect(ui().announcement.text).toBe('Connected A to Data layer');
+    });
+
+    it('a connection started on a group frame leaves the group', () => {
+      const { h, doc } = handlersOver(scene, grouped);
+      act(() => {
+        h().onConnectEnd(at(1150, 150), dropped('group:g'));
+      });
+      expect(toJSON(doc).edges.some((e) => e.from === 'g' && e.to === 'h')).toBe(true);
+    });
+
+    it("refuses a card inside the group it starts from ('contains')", () => {
+      const { h, doc } = handlersOver(scene, grouped);
+      const before = toJSON(doc);
+      act(() => {
+        h().onConnectEnd(at(700, 70), dropped('group:g'));
+      });
+      expect(ui().announcement.text).toBe("Can't connect a group to something inside it");
+      expect(toJSON(doc)).toEqual(before);
+    });
+
+    it('a handle drop on a frame or a collapsed card writes the group id', () => {
+      const { h, doc } = handlersOver(scene, grouped);
+      expect(
+        h().isValidConnection({
+          source: 'group:g',
+          target: 'm',
+          sourceHandle: null,
+          targetHandle: null,
+        }),
+      ).toBe(false);
+      act(() => {
+        h().onConnect({ source: 'a', target: 'group:h', sourceHandle: null, targetHandle: null });
+        h().onConnect({
+          source: 'collapsed:g',
+          target: 'b',
+          sourceHandle: null,
+          targetHandle: null,
+        });
+      });
+      const edges = toJSON(doc).edges;
+      expect(edges.some((e) => e.from === 'a' && e.to === 'h')).toBe(true);
+      expect(edges.some((e) => e.from === 'g' && e.to === 'b')).toBe(true);
+    });
   });
 
   it('is refused in flow mode', () => {

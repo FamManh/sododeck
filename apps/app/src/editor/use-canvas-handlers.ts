@@ -31,6 +31,7 @@ import {
 import { BUNDLE_EDGE_PREFIX } from './bundles';
 import { connectionCheck } from './connection-rules';
 import {
+  endpointIdOf,
   COLLAPSED_NODE_PREFIX,
   GROUP_NODE_PREFIX,
   MERGED_EDGE_PREFIX,
@@ -484,26 +485,26 @@ export function useCanvasHandlers() {
         endGesture();
       },
 
+      // React Flow reports drawn ids; a group frame or collapsed card stands for its group (050).
       isValidConnection: ((c: Connection | Edge) =>
-        connectionCheck(readDeck(editor.doc), c.source, c.target) ===
+        connectionCheck(readDeck(editor.doc), endpointIdOf(c.source), endpointIdOf(c.target)) ===
         'ok') satisfies IsValidConnection,
       onConnect: (c: Connection) => {
         if (viewOnly()) return;
-        connectComponents(editor, c.source, c.target);
+        connectComponents(editor, endpointIdOf(c.source), endpointIdOf(c.target));
       },
       /**
        * A new connection dropped off every handle (050 T021): near a card's outline (within the
-       * attach reach) it still connects, with the drop side and position pinned on the dropped
+       * attach reach), or inside or near a group frame (050 T030), it still connects, with the drop side and position pinned on the dropped
        * end, in one undo step. A handle drop was already made by `onConnect`.
        */
       onConnectEnd: (event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
         if (viewOnly() || state.isValid === true || state.fromNode === null) return;
         const pointer = 'changedTouches' in event ? event.changedTouches[0] : event;
         if (pointer === undefined) return;
-        const fromId = state.fromNode.id;
         const hit = connectTarget(
           targetScene(getNodes()),
-          fromId,
+          state.fromNode.id,
           screenToFlowPosition({ x: pointer.clientX, y: pointer.clientY }),
           {
             zoom: getViewport().zoom,
@@ -511,6 +512,7 @@ export function useCanvasHandlers() {
           },
         );
         if (hit === null) return;
+        const fromId = endpointIdOf(state.fromNode.id);
         // Started from a target handle, the drop is the source (as React Flow's `onConnect`).
         const reversed = state.fromHandle.type === 'target';
         const { side, at } = hit.attach;

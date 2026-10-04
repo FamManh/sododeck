@@ -29,6 +29,7 @@ import {
   startEndpointDrag,
   type EndpointSession,
 } from '../editing/endpoint-drag';
+import { endpointIdOf } from '../deck-to-flow';
 import { oneStep } from '../fields/one-step';
 import {
   addBendAt,
@@ -59,6 +60,7 @@ export interface EndAnchors {
 
 /** What the two ends are attached to, and their stored pins (no side = automatic), for drags. */
 export interface EndTargets {
+  /** The drawn node ids (`group:` prefixed for a group end). */
   source: Id;
   target: Id;
   fromSide?: Side | undefined;
@@ -177,8 +179,9 @@ export function RouteHandles({ context, anchors, ends, bendable = true }: RouteH
     const ctx = {
       edgeId: context.edgeId,
       end,
-      ownId: source ? ends.source : ends.target,
-      otherId: source ? ends.target : ends.source,
+      // The drawn ids: a group end is drawn on its `group:` frame (050 R6).
+      ownId: endpointIdOf(source ? ends.source : ends.target),
+      otherId: endpointIdOf(source ? ends.target : ends.source),
       start: source ? context.start : context.end,
       side: source ? ends.fromSide : ends.toSide,
       at: source ? ends.fromAt : ends.toAt,

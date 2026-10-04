@@ -12,8 +12,8 @@
  *    release off every target writes nothing and says why. Esc, blur and `pointercancel` drop the
  *    preview.
  *
- * Groups: `hitTarget` returns them, but an end lands on one only with `allowGroups` (default
- * `GROUP_ENDS`, off until 050 T030); otherwise a group counts as no target.
+ * Groups take ends like cards (050 R6), refused when they hold the other end (`'contains'`).
+ * `allowGroups: false` makes a group count as no target.
  */
 import { endpointOf, type DeckEditor } from '@sododeck/model';
 import type { Id, Side, SododeckFile } from '@sododeck/schema';

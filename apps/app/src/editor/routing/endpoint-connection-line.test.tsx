@@ -76,7 +76,7 @@ describe('EndpointConnectionLine (050 R3: new connections)', () => {
     expect(screen.queryByTestId('endpoint-readout')).toBeNull();
   });
 
-  it('a group frame is not a target while group ends are off', () => {
+  it('attaches to a group frame the pointer is inside (050 US4)', () => {
     renderLine(
       [
         {
@@ -88,8 +88,9 @@ describe('EndpointConnectionLine (050 R3: new connections)', () => {
           data: {},
         },
       ],
-      { x: 400, y: 100 },
+      { x: 260, y: 100 },
     );
-    expect(screen.queryByTestId('endpoint-readout')).toBeNull();
+    // Nearest outline point: the frame's left side, at 50 % → snapped.
+    expect(screen.getByTestId('endpoint-readout')).toHaveTextContent('left side · 50 % · snapped');
   });
 });

@@ -118,6 +118,15 @@ describe('ui store', () => {
       expect(state().dropTarget).toBeNull();
     });
 
+    it("keeps a group's connect popover while the group exists (050 US4)", () => {
+      state().openConnectPopover('g');
+      const none = new Set<string>();
+      state().pruneSelection({ nodes: none, edges: none, groups: new Set(['g']), stickies: none });
+      expect(state().popover).toEqual({ kind: 'connect', fromId: 'g' });
+      state().pruneSelection({ nodes: none, edges: none, groups: none, stickies: none });
+      expect(state().popover).toBeNull();
+    });
+
     it('keeps the same guides array when nothing changed', () => {
       state().setGuides([]);
       const before = state().guides;

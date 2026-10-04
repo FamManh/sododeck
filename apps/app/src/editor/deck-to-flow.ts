@@ -244,6 +244,16 @@ export const MERGED_EDGE_PREFIX = 'merged:';
 export const STICKY_NODE_PREFIX = 'sticky:';
 export const STICKY_LEADER_PREFIX = 'sticky-leader:';
 
+/**
+ * The deck id a drawn node stands for as a connector end (050 R6): a card's own id, or the group
+ * behind a `group:` frame or a `collapsed:` card. React Flow reports flow ids; edges store these.
+ */
+export function endpointIdOf(flowId: string): string {
+  if (flowId.startsWith(GROUP_NODE_PREFIX)) return flowId.slice(GROUP_NODE_PREFIX.length);
+  if (flowId.startsWith(COLLAPSED_NODE_PREFIX)) return flowId.slice(COLLAPSED_NODE_PREFIX.length);
+  return flowId;
+}
+
 export type HandleSide = 'top' | 'right' | 'bottom' | 'left';
 
 const nodeCache = new WeakMap<DeckNodeObject, DeckFlowNode>();
@@ -609,7 +619,8 @@ function groupNodes(
       dragHandle: `.${GROUP_HANDLE_CLASS}`,
       style: { pointerEvents: 'none' },
       focusable: false,
-      connectable: false,
+      // The label's connect handle starts connections (050 R6); the side handles opt out.
+      connectable: true,
       ...(inFocus ? { className: 'in-focus' } : {}),
       ...(view.focus !== null && !inFocus
         ? { domAttributes: { 'aria-hidden': true, inert: true } }

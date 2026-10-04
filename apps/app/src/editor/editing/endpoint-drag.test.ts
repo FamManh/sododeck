@@ -240,9 +240,9 @@ describe('endpoint drag (050 US2)', () => {
     expect(editor.canUndo()).toBe(false);
   });
 
-  it('a group is not a drop target while group ends are off', () => {
+  it('a group is not a drop target when group ends are off for the drag', () => {
     const { editor, edge, ui } = setup();
-    const session = startEndpointDrag(editor, ctx(), { x: 400, y: 250 });
+    const session = startEndpointDrag(editor, ctx({ allowGroups: false }), { x: 400, y: 250 });
     // inside the frame of g, below card A
     moveEndpoint(session, { x: 100, y: 300 }, free);
     expect(ui().endpointPreview).toMatchObject({ targetId: null, valid: 'none' });
@@ -278,7 +278,8 @@ describe('endpoint drag (050 US2)', () => {
   it("refuses reconnecting to a group that holds the other end ('contains')", () => {
     const { editor, edge, ui } = setup();
     // e is a → b and a sits in g: the target end can't go onto g.
-    const session = startEndpointDrag(editor, ctx({ allowGroups: true }), { x: 400, y: 250 });
+    // Group ends are on by default (050 T030).
+    const session = startEndpointDrag(editor, ctx(), { x: 400, y: 250 });
     moveEndpoint(session, { x: 240, y: 300 }, free);
     expect(ui().endpointPreview).toMatchObject({ targetId: 'g', valid: 'contains' });
     expect(ui().connectorReadout).toBe("Can't connect a group to something inside it");
