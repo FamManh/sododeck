@@ -41,8 +41,8 @@ export type Geometry =
   | 'hexagon'
   | 'actor'
   | 'none';
-/** Tiles of a pack that add something other than a node: today's sticky, and a group frame. */
-export type PackTool = 'sticky' | 'frame';
+/** Tiles of a pack that add something other than a node: a sticky, a group frame, an enum (052). */
+export type PackTool = 'sticky' | 'frame' | 'enum';
 
 export interface CardType {
   id: TypeId;
@@ -98,8 +98,8 @@ const PACK_LIST: readonly Omit<Pack, 'order'>[] = [
     id: 'database',
     name: 'Database',
     onByDefault: true,
-    tools: ['sticky', 'frame'],
-    description: 'Table, note, table group',
+    tools: ['sticky', 'frame', 'enum'],
+    description: 'Table, enum, note, table group',
   },
   { id: 'shapes', name: 'Basic shapes', onByDefault: true, tools: ['sticky', 'frame'] },
 ];

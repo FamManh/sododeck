@@ -490,6 +490,8 @@ export interface UiState {
   tableDrawer: TableDrawerState;
   /** The planned dialect change awaiting confirmation (052); null when none. */
   dialectConfirm: DialectPlan | null;
+  /** The enum whose name field selects itself once it mounts (a new enum, 052); then null. */
+  enumNameSelect: Id | null;
   /**
    * A drawer section to bring into view once (032: the card's "+N fields" pill asks for
    * `'fields'`); the section clears it after scrolling to itself. UI-only.
@@ -922,6 +924,7 @@ export const useUiStore = create<UiState>()((set, get) => {
     drawer: { open: false, width: DEFAULT_SHELL_PREFS.drawerWidth, mode: 'selection' },
     tableDrawer: DEFAULT_TABLE_DRAWER,
     dialectConfirm: null,
+    enumNameSelect: null,
     drawerSection: null,
     drawerReturn: null,
     jsonShown: false,
@@ -1522,9 +1525,10 @@ export const useUiStore = create<UiState>()((set, get) => {
       });
       get().openDrawer('selection');
     },
-    openEnumDrawer: (enumId) => {
+    openEnumDrawer: (enumId, options) => {
       const state = get();
       set({
+        enumNameSelect: options?.selectName === true ? enumId : null,
         drawer: { ...state.drawer, open: true, mode: 'enum', enumId },
         drawerReturn: state.focusedId,
       });
@@ -1672,6 +1676,7 @@ export const useUiStore = create<UiState>()((set, get) => {
         drawer: { open: false, width: prefs.drawerWidth, mode: 'selection' },
         tableDrawer: DEFAULT_TABLE_DRAWER,
         dialectConfirm: null,
+        enumNameSelect: null,
         drawerReturn: null,
         hideUi: false,
         minimap: false,

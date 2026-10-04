@@ -1,7 +1,7 @@
 import { Input } from '@sododeck/ui/components/input';
 import { Textarea } from '@sododeck/ui/components/textarea';
 import { cn } from '@sododeck/ui/lib/utils';
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 
 import { FieldError } from '../../field-edit';
 import { FieldLabel } from '../../fields/field-label';
@@ -23,6 +23,7 @@ export function LiveTextField({
   multiline = false,
   hideLabel = false,
   disabled = false,
+  autoSelect = false,
 }: {
   label: string;
   value: string;
@@ -35,9 +36,19 @@ export function LiveTextField({
   multiline?: boolean;
   hideLabel?: boolean;
   disabled?: boolean;
+  /** Focuses the field and selects its text once it mounts (a new enum, a new value). */
+  autoSelect?: boolean;
 }) {
   const id = useId();
   const field = useLiveField({ label, value, onWrite, required, validate, multiline });
+  useEffect(() => {
+    if (!autoSelect) return;
+    const input = document.getElementById(id);
+    if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+      input.focus();
+      input.select();
+    }
+  }, [autoSelect, id]);
   const message = field.error;
   const shared = {
     id,

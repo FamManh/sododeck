@@ -22,6 +22,7 @@ import { useEditor } from '../../../model/use-editor';
 import { oneStep } from '../../fields/one-step';
 import { DialectConfirmDialog } from './dialect-confirm-dialog';
 import { DialectSelect } from './dialect-select';
+import { EnumList } from './enum-list';
 
 type HideFlag = 'hideTypes' | 'hideNullable' | 'hideNotes' | 'hideIndexes';
 
@@ -85,7 +86,7 @@ export function DatabaseSection({ deck }: { deck: SododeckFile }) {
         ))}
       </ul>
       <RelationshipDisplayControls deck={deck} />
-      {/* TODO(052 T039): <EnumList deck={deck} /> goes here. */}
+      <EnumList deck={deck} />
       <BlockSqlExportSwitch deck={deck} />
     </PanelSection>
   );

@@ -204,11 +204,11 @@ describe('card type registry (030)', () => {
       }
     });
 
-    it('gives the Database pack its note and table group tools and a description (043)', () => {
+    it('gives the Database pack its note, table group and enum tools and a description (043)', () => {
       expect(PACKS.find((p) => p.id === 'database')).toMatchObject({
         name: 'Database',
-        tools: ['sticky', 'frame'],
-        description: 'Table, note, table group',
+        tools: ['sticky', 'frame', 'enum'],
+        description: 'Table, enum, note, table group',
       });
     });
 
