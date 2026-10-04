@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { useUiStore } from '../state/ui-store';
 import { deckOf } from '../test/render-canvas';
 import {
+  addTable,
   connectColumns,
   connectComponents,
   nextTableName,
@@ -251,5 +252,23 @@ describe('nextTableName (043 R12)', () => {
     expect(nextTableName(tables())).toBe('table_1');
     expect(nextTableName(tables('table_1', 'table_3'))).toBe('table_2');
     expect(nextTableName(tables('TABLE_1', 'table_2'))).toBe('table_3');
+  });
+});
+
+describe('addTable (043 R12, FR-012)', () => {
+  it('adds table_n with an id integer key column in one undo step, title in edit', () => {
+    const doc = fromJSON(deckOf({ nodes: [{ id: 't', type: 'db-table', title: 'table_1' }] }));
+    const editor = createEditor(doc);
+    const id = addTable(editor, { x: 500, y: 300 });
+    const table = toJSON(doc).nodes.find((n) => n.id === id);
+    expect(table).toMatchObject({ type: 'db-table', title: 'table_2' });
+    expect(
+      table?.columns?.map(({ name, type, pk, notNull }) => ({ name, type, pk, notNull })),
+    ).toEqual([{ name: 'id', type: 'integer', pk: true, notNull: true }]);
+    const ui = useUiStore.getState();
+    expect(ui.selection.nodes).toEqual([id]);
+    expect(ui.titleEdit).toEqual({ target: 'node', id, isNew: false, kind: 'db-table' });
+    editor.undo();
+    expect(toJSON(doc).nodes.map((n) => n.id)).toEqual(['t']);
   });
 });

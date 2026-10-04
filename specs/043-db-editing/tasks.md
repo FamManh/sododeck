@@ -251,8 +251,8 @@
 
 ### Tests for User Story 5 (write first)
 
-- [ ] T039 [P] [US5] Add `addTable` cases to `apps/app/src/editor/canvas-actions.test.ts`: it writes a `db-table` named `table_n` at the given point with one column `{ name: 'id', type: 'integer', pk: true, notNull: true }`, starts the title edit, and is one undo step. Add a case to `use-canvas-shortcuts.test.ts` for T, and one to `empty-canvas-card.test.tsx` for "Add table" (shown only when the Database pack is on).
-- [ ] T040 [P] [US5] Add cases to `apps/app/src/editor/editing/clipboard-ops.test.ts`:
+- [x] T039 [P] [US5] Add `addTable` cases to `apps/app/src/editor/canvas-actions.test.ts`: it writes a `db-table` named `table_n` at the given point with one column `{ name: 'id', type: 'integer', pk: true, notNull: true }`, starts the title edit, and is one undo step. Add a case to `use-canvas-shortcuts.test.ts` for T, and one to `empty-canvas-card.test.tsx` for "Add table" (shown only when the Database pack is on).
+- [x] T040 [P] [US5] Add cases to `apps/app/src/editor/editing/clipboard-ops.test.ts`:
   - duplicate and copy pass `keepOutgoing`
   - a paste with `droppedRelationships > 0` shows the toast "Pasted orders · 3 relationships dropped" with Undo
   - a single pasted or duplicated table starts the title edit with all text selected
@@ -260,8 +260,8 @@
 
 ### Implementation for User Story 5
 
-- [ ] T041 [US5] Implement `addTable(editor, point)` in `apps/app/src/editor/canvas-actions.ts`. Wire it to T in `use-canvas-shortcuts.ts`, the canvas menu "Add table", the palette Table tile (`palette.tsx` calls `addTable` for `db-table`), and an "Add table" action in `apps/app/src/editor/empty-canvas-card.tsx`. T039 is green.
-- [ ] T042 [US5] Update `apps/app/src/editor/editing/clipboard-ops.ts` (`keepOutgoing`, the drop toast via `showUndoToast`, the rename after a single-table paste or duplicate). T040 is green.
+- [x] T041 [US5] Implement `addTable(editor, point)` in `apps/app/src/editor/canvas-actions.ts`. Wire it to T in `use-canvas-shortcuts.ts`, the canvas menu "Add table", the palette Table tile (`palette.tsx` calls `addTable` for `db-table`), and an "Add table" action in `apps/app/src/editor/empty-canvas-card.tsx`. T039 is green.
+- [x] T042 [US5] Update `apps/app/src/editor/editing/clipboard-ops.ts` (`keepOutgoing`, the drop toast via `showUndoToast`, the rename after a single-table paste or duplicate). T040 is green.
 
 **Checkpoint**: tables can be started and reused (SC-006).
 
@@ -314,7 +314,7 @@
 
 ### Tests for User Story 7 (write first)
 
-- [ ] T048 [P] [US7] Add cases to `apps/app/src/editor/palette.test.tsx` and `packs-panel.test.tsx`:
+- [x] T048 [P] [US7] Add cases to `apps/app/src/editor/palette.test.tsx` and `packs-panel.test.tsx`:
   - the Database tab lists "Table", "Note" and "Table group" with the T / S / G badges
   - Table calls `addTable`
   - Table group groups the selected tables, or places a frame at the centre when nothing is selected
@@ -324,7 +324,7 @@
 
 ### Implementation for User Story 7
 
-- [ ] T050 [US7] In `packages/model/src/card-types.ts`, give the Database pack `tools: ['sticky', 'frame']` and `description: 'Table, note, table group'`. In `apps/app/src/editor/palette.tsx`, label the frame tile "Table group" inside the Database section and show the letter badges. Bind G in `use-shell-shortcuts.ts` (group the selection, or `placeFrameAtCentre`). Show `description` in `apps/app/src/editor/packs-panel.tsx`. T048 is green.
+- [x] T050 [US7] In `packages/model/src/card-types.ts`, give the Database pack `tools: ['sticky', 'frame']` and `description: 'Table, note, table group'`. In `apps/app/src/editor/palette.tsx`, label the frame tile "Table group" inside the Database section and show the letter badges. Bind G in `use-shell-shortcuts.ts` (group the selection, or `placeFrameAtCentre`). Show `description` in `apps/app/src/editor/packs-panel.tsx`. T048 is green.
 - [ ] T051 [US7] Fix any bulk action that is not a single `oneStep`, as found by T049. T049 is green.
 
 **Checkpoint**: all stories are done.

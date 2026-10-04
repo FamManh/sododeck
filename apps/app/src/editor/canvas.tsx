@@ -1,4 +1,4 @@
-import { analyzeFlow, observeDeck } from '@sododeck/model';
+import { analyzeFlow, deckPacks, observeDeck } from '@sododeck/model';
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { resolveMotion } from '@sododeck/ui/lib/motion';
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../state/ui-store';
-import { CANVAS_ATTR, nodeElement } from './canvas-actions';
+import { addTable, CANVAS_ATTR, canvasElement, nodeElement } from './canvas-actions';
 import { bundleEdges, bundleOptions } from './bundles';
 import { cardBox, groupBounds, CARD_SIZE_LIMITS, nearestToCentre } from './canvas-geometry';
 import { collapseFlowMarks } from './collapse-flow-marks';
@@ -864,7 +864,24 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <GuidesOverlay />
         <ColumnConnectLine />
       </ReactFlow>
-      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && <EmptyCanvasCard />}
+      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && (
+        <EmptyCanvasCard
+          {...(deckPacks(fullDeck).includes('database')
+            ? {
+                onAddTable: () => {
+                  const rect = canvasElement()?.getBoundingClientRect();
+                  addTable(
+                    editor,
+                    screenToFlowPosition({
+                      x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+                      y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+                    }),
+                  );
+                },
+              }
+            : {})}
+        />
+      )}
       {drilledEmpty && (
         <EmptyCanvasCard
           title="No components in this group"

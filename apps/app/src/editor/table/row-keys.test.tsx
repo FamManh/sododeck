@@ -8,6 +8,7 @@ import { useUiStore } from '../../state/ui-store';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
 import { Canvas } from '../canvas';
 import { CanvasMenu } from '../quick-edit/canvas-menu';
+import { useShellShortcuts } from '../shell/use-shell-shortcuts';
 import { useEditorShortcuts } from '../use-canvas-shortcuts';
 
 const col = (id: string, extra: Record<string, unknown> = {}) => ({
@@ -58,6 +59,7 @@ const ui = () => useUiStore.getState();
 
 function Editor() {
   useEditorShortcuts();
+  useShellShortcuts();
   return (
     <>
       <Canvas />
@@ -231,5 +233,36 @@ describe('row pointer gestures (043 US2, US4)', () => {
       'Move downAlt+↓',
       'Delete columnDelete',
     ]);
+  });
+});
+
+describe('T and G with the Database pack (043 R5)', () => {
+  const withPacks = { ...shipments, packs: ['architecture', 'database'] };
+
+  it('adds a table with T, and a table group with G', async () => {
+    const { user, doc } = setup(withPacks);
+    act(() => {
+      ui().clearSelection();
+    });
+    act(() => {
+      document.body.focus();
+    });
+    await user.keyboard('t');
+    expect(toJSON(doc).nodes.map((n) => n.title)).toContain('table_1');
+    act(() => {
+      ui().endTitleEdit();
+      ui().select({ nodes: ['shipments', 'orders'] });
+    });
+    act(() => {
+      document.body.focus();
+    });
+    await user.keyboard('g');
+    expect(toJSON(doc).groups).toHaveLength(1);
+  });
+
+  it('does nothing on T without the Database pack', async () => {
+    const { user, doc } = setup({ ...shipments, packs: ['architecture'] });
+    await user.keyboard('t');
+    expect(toJSON(doc).nodes).toHaveLength(2);
   });
 });

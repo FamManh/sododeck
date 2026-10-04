@@ -21,10 +21,13 @@ export function EmptyCanvasCard({
       Add component
     </Button>
   ),
+  onAddTable,
 }: {
   title?: string;
   description?: string;
   action?: ReactNode;
+  /** With the Database pack on (043 R12): a second way to start, a table with an `id` key. */
+  onAddTable?: () => void;
 }) {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -39,7 +42,16 @@ export function EmptyCanvasCard({
           {title}
         </h2>
         <p className="text-body-sm text-ink-secondary">{description}</p>
-        {action}
+        {onAddTable === undefined ? (
+          action
+        ) : (
+          <span className="flex flex-wrap justify-center gap-2">
+            {action}
+            <Button variant="secondary" onClick={onAddTable}>
+              Add table
+            </Button>
+          </span>
+        )}
       </section>
     </div>
   );

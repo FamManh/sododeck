@@ -14,8 +14,47 @@ const tileNames = () =>
     .getAllByRole('button')
     .map((b) => b.textContent.replace(/\d+$/, ''));
 
+describe('Palette: Database tab (043 US7, R13)', () => {
+  it('lists Table, Note and Table group with their letter keys', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    const tiles = within(screen.getByRole('grid', { name: 'Types' })).getAllByRole('button');
+    expect(tiles.map((b) => b.textContent)).toEqual(['TableT', 'NoteS', 'Table groupG']);
+  });
+
+  it('adds a table with an id key column from the Table tile, its title in edit', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    await user.click(screen.getByRole('button', { name: 'Table' }));
+    const table = toJSON(doc).nodes[0];
+    expect(table).toMatchObject({ type: 'db-table', title: 'table_1' });
+    expect(table?.columns).toEqual([
+      { id: expect.any(String) as string, name: 'id', type: 'integer', pk: true, notNull: true },
+    ]);
+    expect(useUiStore.getState().titleEdit?.id).toBe(table?.id);
+  });
+
+  it('places a frame from Table group with nothing selected', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Database' }));
+    await user.click(screen.getByRole('button', { name: 'Table group' }));
+    expect(toJSON(doc).groups).toHaveLength(1);
+  });
+
+  it('hides the tab when the Database pack is off', () => {
+    renderWithEditor(
+      <Palette />,
+      deckOf({ packs: NEW_DECK_PACKS.filter((pack) => pack !== 'database') }),
+    );
+    expect(screen.queryByRole('tab', { name: 'Database' })).toBeNull();
+  });
+});
+
 describe('Palette: Add flyout (030)', () => {
-  it('a new deck shows seven tabs, six sections with counts 7 / 3 / 2 / 1 / 1 / 13 and the packs footer', () => {
+  it('a new deck shows seven tabs, six sections with counts 7 / 3 / 2 / 1 / 3 / 13 and the packs footer', () => {
     renderWithEditor(<Palette />, newDeck());
     expect(
       within(screen.getByRole('tablist', { name: 'Categories' }))
@@ -28,12 +67,13 @@ describe('Palette: Add flyout (030)', () => {
       'Process3',
       'Logistics2',
       'Data1',
-      'Database1',
+      'Database3',
       'Basic shapes13',
     ]);
     expect(screen.getByRole('button', { name: 'Packs · 6 on' })).toBeInTheDocument();
-    expect(tileNames()).toHaveLength(27);
-    expect(tileNames()).toContain('Table');
+    expect(tileNames()).toHaveLength(29);
+    // The Database tiles show their letter key (043).
+    expect(tileNames()).toContain('TableT');
   });
 
   it('the Shapes tab lists the eleven shapes with mini outlines, then Sticky and Frame (031)', async () => {
