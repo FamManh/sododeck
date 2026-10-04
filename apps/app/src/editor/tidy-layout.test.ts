@@ -170,3 +170,23 @@ describe('laidOutFrames (016 FR-045)', () => {
     expect(frames.side?.position).toEqual({ x: -GROUP_PADDING, y: -GROUP_PADDING });
   });
 });
+
+describe('buildLayoutRequest group ends (050 US4)', () => {
+  it('sends a group-ended connector to the group compound', () => {
+    const grouped = deckOf({
+      ...deck,
+      edges: [
+        ...deck.edges,
+        { id: 'aCore', from: 'a', to: 'core' },
+        { id: 'sc', from: 'side', to: 'core' },
+      ],
+      views: [],
+    });
+    const graph = visibleGraph(grouped, top, new Set());
+    const request = buildLayoutRequest(grouped, graph, new Set(), 'system');
+    expect(request.edges.filter((e) => e.id === 'aCore' || e.id === 'sc')).toEqual([
+      { id: 'aCore', source: 'a', target: 'group:core' },
+      { id: 'sc', source: 'group:side', target: 'group:core' },
+    ]);
+  });
+});

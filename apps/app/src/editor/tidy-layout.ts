@@ -87,9 +87,12 @@ export function buildLayoutRequest(
     request.groups.push({ id: groupId, ...(parent === undefined ? {} : { parent }) });
   }
   const edgesById = new Map(deck.edges.map((e) => [e.id, e]));
+  // A group end is drawn on its frame, `group:<id>`: the id ELK gives the group's compound (050).
+  const drawnAs = (id: string) => graph.representative.get(id) ?? id;
   for (const id of graph.edges) {
     const edge = edgesById.get(id);
-    if (edge !== undefined) request.edges.push({ id, source: edge.from, target: edge.to });
+    if (edge !== undefined)
+      request.edges.push({ id, source: drawnAs(edge.from), target: drawnAs(edge.to) });
   }
   for (const merged of graph.merged) {
     request.edges.push({ id: merged.id, source: merged.a, target: merged.b });

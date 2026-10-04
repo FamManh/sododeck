@@ -207,7 +207,7 @@
   - `flows/candidate-edges.ts`, `flows/use-flow-viewport.ts` and `canvas-geometry.ts` `boundsOf` accept group ends and frame boxes;
   - `view-filter.ts` stops treating `edge.from/to` as node-only.
   - Add tests: record a step through a group edge and play it; into G then out of a member of G is reported as a break.
-- [ ] T033 [P] [US4] Export and layout:
+- [x] T033 [P] [US4] Export and layout:
   - `apps/app/src/editor/export/scene.ts`: add group frame rects to `rects` so `sceneEdges` draws group edges;
   - `layout/tidy-layout.ts` and `layout/elk-layout.ts`: include group ids in the endpoint set.
   - Add a test for each.

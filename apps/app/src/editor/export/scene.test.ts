@@ -846,3 +846,33 @@ describe('buildScene: table cards (041 US5)', () => {
     expect(tableOf(noTypes, 'orders')?.footer).toBeUndefined();
   });
 });
+
+describe('buildScene group connectors (050 US4)', () => {
+  const grouped = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'm', type: 'service', title: 'M', group: 'g', position: { x: 450, y: 50 } },
+    ],
+    groups: [
+      { id: 'g', title: 'G', position: { x: 400, y: 0 }, size: { width: 300, height: 200 } },
+    ],
+    edges: [{ id: 'ag', from: 'a', to: 'g', label: 'reads' }],
+    flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'ag' }] }],
+  });
+
+  it('draws a connector to a group frame, ending on the frame', () => {
+    const result = scene(grouped);
+    const edge = result.edges.find((e) => e.id === 'ag');
+    expect(edge).toBeDefined();
+    expect(edge?.label).toBe('reads');
+    // The arrow end sits on the frame's left side (x 400), not on the card inside it.
+    expect(edge?.target.x).toBeGreaterThanOrEqual(390);
+    expect(edge?.target.x).toBeLessThanOrEqual(400);
+  });
+
+  it("keeps a flow step's group frame in the flow scope", () => {
+    const result = scene(grouped, 'flow', { activeFlowId: 'f' });
+    expect(result.edges.map((e) => e.id)).toEqual(['ag']);
+    expect(result.groups.map((g) => g.id)).toEqual(['g']);
+  });
+});

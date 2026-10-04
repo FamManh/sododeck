@@ -24,7 +24,12 @@ import { DECK_CARD, wrapText, type CardLayout } from '../card-layout';
 import { cardTags, tagChips, textMeasurer, type TagChip } from '../card-tags';
 import { tagColourMap } from '../tags/card-tag-looks';
 import { collapseFlowMarks } from '../collapse-flow-marks';
-import { COLLAPSED_NODE_PREFIX, exportPortRects, groupCounts } from '../deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  exportPortRects,
+  GROUP_NODE_PREFIX,
+  groupCounts,
+} from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
 import { typeName } from '../type-label';
 import { effectiveLevel, type Level } from '../levels';
@@ -474,7 +479,9 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     ...ports.map((port) => [port.id, port.rect] as const),
   ]);
 
-  const groups = sceneGroups(source, graph, level, cards, inFlow !== null);
+  const groups = sceneGroups(source, graph, level, cards, inFlow);
+  // Group frames are connector ends too (050 R6).
+  for (const group of groups) rects.set(`${GROUP_NODE_PREFIX}${group.id}`, group.rect);
   // Shape ends meet the outline (031), as on the canvas.
   const shapeEnds = new Map(
     cards.flatMap((card) =>
@@ -559,21 +566,28 @@ function sceneGroups(
   graph: VisibleGraph,
   level: Level,
   cards: readonly SceneCard[],
-  flowOnly: boolean,
+  /** Flow scope: the drawn ids the flow travels through; null outside it. */
+  inFlow: ReadonlySet<string> | null,
 ): SceneGroup[] {
   const frames = groupBounds(deck, level);
   const counts = groupCounts(deck);
   const byId = new Map(deck.groups.map((group) => [group.id, group]));
   const nodeGroup = new Map(deck.nodes.map((node) => [node.id, node.group]));
-  // Flow scope: only the frames around a kept card (and their ancestors).
+  // Flow scope: only the frames around a kept card, the frames a step ends on (050 R6), and their
+  // ancestors.
   const withCard = new Set<string>();
-  for (const card of cards) {
-    let group = nodeGroup.get(card.id);
+  const keepWithAncestors = (start: string | undefined) => {
+    let group = start;
     while (group !== undefined && !withCard.has(group)) {
       withCard.add(group);
       group = byId.get(group)?.parent;
     }
+  };
+  for (const card of cards) keepWithAncestors(nodeGroup.get(card.id));
+  for (const id of inFlow ?? []) {
+    if (id.startsWith(GROUP_NODE_PREFIX)) keepWithAncestors(id.slice(GROUP_NODE_PREFIX.length));
   }
+  const flowOnly = inFlow !== null;
   return graph.groups.flatMap((id) => {
     const rect = frames.get(id);
     const group = byId.get(id);
@@ -668,10 +682,11 @@ function sceneEdges(
     const edge = byId.get(id);
     if (edge === undefined || !drawnAlone.has(id)) continue;
     const direction = edge.direction ?? 'forward';
+    // A card draws as itself, a group end on its frame (`group:<id>`, 050 R6).
     add(
       id,
-      edge.from,
-      edge.to,
+      graph.representative.get(edge.from) ?? edge.from,
+      graph.representative.get(edge.to) ?? edge.to,
       edge.label || null,
       direction,
       edgeShape(edge),
