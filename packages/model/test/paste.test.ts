@@ -487,7 +487,7 @@ describe('duplicate and paste of tables (043 R10)', () => {
     expect(nodeOf(deck, pasted.nodes[0])?.columns?.[2]?.enumRef).toBe(copy?.id);
     expect(nodeOf(deck, pasted.nodes[1])?.columns?.[1]?.enumRef).toBe(copy?.id);
     expectValid(doc);
-    expect(checkDeck(deck).list.filter((p) => p.kind.includes('enum'))).toEqual([]);
+    expect(checkDeck(deck).list.filter((p) => p.kind === 'db-dangling-reference')).toEqual([]);
   });
 
   it('renames taken table names to _copy, then _copy_2, ignoring case, in the same schema', () => {

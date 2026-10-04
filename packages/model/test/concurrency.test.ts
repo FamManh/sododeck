@@ -812,7 +812,11 @@ describe('database schema (040 US4)', () => {
         const deck = toJSON(a.doc);
         expect(columnsOf(a, 'orders').map((c) => c.id)).toEqual(['o-id', 'o-total']);
         expect(JSON.stringify(deck)).not.toContain('o-customer');
-        expect(checkDeck(deck).list.filter((p) => p.kind.startsWith('db-'))).toEqual([]);
+        expect(
+          checkDeck(deck).list.filter(
+            (p) => p.kind === 'db-dangling-reference' || p.kind === 'db-composite-mismatch',
+          ),
+        ).toEqual([]);
       },
     );
   });

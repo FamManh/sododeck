@@ -209,4 +209,29 @@ describe('performance on a large deck (SC-003, SC-004)', () => {
     expect(timings['schema column edit']).toBeLessThan(BIG_EDIT_BUDGET_MS);
     expect(timings['schema checkDeck']).toBeLessThan(CHECK_DECK_BUDGET_MS);
   });
+
+  it(`lints a flawed 150-table schema in < ${String(CHECK_DECK_BUDGET_MS)} ms (047 R10)`, () => {
+    const flawed = largeSchemaDeck(150, 12, 200);
+    for (const [i, table] of flawed.nodes.entries()) {
+      const first = table.columns?.[0];
+      const second = table.columns?.[1];
+      if (first === undefined || second === undefined) continue;
+      if (i % 5 === 0) delete first.pk; // no primary key
+      if (i % 7 === 0) second.type = 'uuid'; // type mismatch on its relationships
+      if (i % 11 === 0) second.type = 'citext'; // unknown type
+    }
+    const problems = checkDeck(structuredClone(flawed)); // warm-up
+    const kinds = new Set(problems.list.map((p) => p.kind));
+    expect(kinds).toContain('db-no-primary-key');
+    expect(kinds).toContain('db-type-mismatch');
+    expect(kinds).toContain('db-unknown-type');
+    const times: number[] = [];
+    for (let k = 0; k < 5; k++) {
+      const fresh = structuredClone(flawed);
+      times.push(cpuMs(() => checkDeck(fresh)));
+    }
+    times.sort((a, b) => a - b);
+    timings['schema lint'] = times[2] ?? Infinity;
+    expect(timings['schema lint']).toBeLessThan(CHECK_DECK_BUDGET_MS);
+  });
 });
