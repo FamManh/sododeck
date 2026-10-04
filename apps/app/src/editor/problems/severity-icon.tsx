@@ -3,7 +3,7 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { CircleX, TriangleAlert } from 'lucide-react';
 
-export const SEVERITY_LABEL: Record<Severity, string> = { error: 'Error', warning: 'Warning' };
+import { SEVERITY_LABEL } from './problem-kinds';
 
 /**
  * Error (clay circle-x) or warning (amber triangle) glyph (047). The shape differs as well as the

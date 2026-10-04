@@ -1,7 +1,7 @@
 import { useReducedMotion } from '@sododeck/ui/hooks/use-reduced-motion';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { edgeLineStyle, type Geometry } from '@sododeck/model';
+import { edgeLineStyle, type Geometry, type Severity } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
 import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
@@ -93,6 +93,13 @@ const markScale = (width: number): number => (width > 2 ? 1 + (width - 2) * 0.25
  * A flow mark (006) draws step badges and the path, error, candidate, preview or invalid style;
  * in flow mode (007) the current step's edge is thicker, with a filled label and the token.
  */
+const LINT_DASH = '6 4';
+
+function lintStroke(severity: Severity | undefined): string | undefined {
+  if (severity === undefined) return undefined;
+  return severity === 'error' ? 'var(--color-clay-ink)' : 'var(--color-amber-ink)';
+}
+
 export const DeckEdge = memo(function DeckEdge({
   id,
   source,
@@ -142,6 +149,8 @@ export const DeckEdge = memo(function DeckEdge({
   // the handle points, so a connector without them draws exactly as before.
   // A relationship (042) always needs them: its ends sit on rows of the live boxes.
   const rel = data?.rel;
+  // Problems (015 FR-022) show on the label pill, even with labels off.
+  const problems = data?.problems;
   const needsBoxes =
     rel !== undefined ||
     (route?.waypoints?.length ?? 0) > 0 ||
@@ -265,9 +274,13 @@ export const DeckEdge = memo(function DeckEdge({
   // only takes the highlight weight.
   const stored = edgeLineStyle({ style: data?.style });
   const own = previewWidth === null ? stored : { ...stored, width: previewWidth };
+  // A relationship with a lint problem (047) is dashed in its severity colour, unless a flow or the
+  // selection owns the stroke; the pill then names the problem in a few characters.
+  const lint = rel !== undefined && problems !== undefined && flow === undefined ? problems : null;
   const stroke = selected
     ? 'var(--color-deck-orange)'
-    : (flowStroke?.stroke ??
+    : (lintStroke(lint?.severity) ??
+      flowStroke?.stroke ??
       (own.color === null
         ? 'var(--sd-edge-hl-stroke, var(--color-deck-edge))'
         : lineColour(own.color, theme)));
@@ -335,15 +348,18 @@ export const DeckEdge = memo(function DeckEdge({
   const hoverLabel = !showLabel && data?.hoverLabel === true && Boolean(data.label);
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
   const showFlowLabel = hasBadges || flowIcon !== null;
-  // Problems (015 FR-022) show on the label pill, even with labels off.
-  const problems = data?.problems;
   const current = flow?.current ?? null;
   // A selected connector keeps its own weight (050 FR-015): the colour and the halo show the
   // selection, so a weight change is visible while it is edited.
   const width = selected
     ? own.width
     : (flowStroke?.width ?? `var(--sd-edge-hl-width, ${String(own.width)})`);
-  const ownDash = flowStroke === undefined ? lineDash(own.dash, own.width) : undefined;
+  const ownDash =
+    lint !== null && selected !== true
+      ? LINT_DASH
+      : flowStroke === undefined
+        ? lineDash(own.dash, own.width)
+        : undefined;
   // Moving dashes (022 R11): only when asked for, not under reduced motion, not while a flow is
   // shown or recorded, and not on the selected connector, whose look is the selection's.
   const flowActive = useUiStore((s) => isFlowMode(s) || s.flowSession !== null);
@@ -569,14 +585,33 @@ export const DeckEdge = memo(function DeckEdge({
                   className="size-3.5"
                 />
               )}
-              {problems !== undefined && (
+              {lint?.short !== undefined ? (
                 <span
-                  data-testid="problem-glyph"
-                  title={problems.titles}
-                  className={cn('inline-flex text-amber-ink', !showLabel && !hasBadges && 'pl-1')}
+                  data-testid="problem-short"
+                  data-severity={lint.severity}
+                  title={lint.titles}
+                  className={cn(
+                    'inline-flex font-mono text-[11px] leading-none font-semibold',
+                    lint.severity === 'error' ? 'text-clay-ink' : 'text-amber-ink',
+                    !showLabel && !hasBadges && 'pl-1',
+                  )}
                 >
-                  <TriangleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                  {lint.short}
                 </span>
+              ) : (
+                problems !== undefined && (
+                  <span
+                    data-testid="problem-glyph"
+                    title={problems.titles}
+                    className={cn('inline-flex text-amber-ink', !showLabel && !hasBadges && 'pl-1')}
+                  >
+                    <TriangleAlert
+                      aria-hidden
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className="size-3.5"
+                    />
+                  </span>
+                )
               )}
               {(showLabel || hoverLabel) && data?.label}
             </span>

@@ -188,3 +188,39 @@ describe('DeckEdge special shapes (042 US4)', () => {
     expect(screen.getByTestId('relationship-bracket')).toBeInTheDocument();
   });
 });
+
+describe('DeckEdge relationship problems (047 US1)', () => {
+  const mark = (severity: 'error' | 'warning', short?: string) => ({
+    count: 1,
+    titles: 'Type mismatch',
+    label: '1 problem',
+    severity,
+    rows: new Map(),
+    rowText: new Map(),
+    ...(short === undefined ? {} : { short }),
+  });
+  const line = (container: HTMLElement) => container.querySelector('path.react-flow__edge-path');
+
+  it('dashes the line in the severity colour and writes the short text in the pill', () => {
+    const { container } = renderRel({ problems: mark('error', 'int → uuid') });
+    expect(line(container)).toHaveStyle({
+      stroke: 'var(--color-clay-ink)',
+      strokeDasharray: '6 4',
+    });
+    expect(screen.getByTestId('problem-short')).toHaveTextContent('int → uuid');
+    expect(screen.getByTestId('problem-short')).toHaveAttribute('data-severity', 'error');
+    expect(screen.queryByTestId('problem-glyph')).toBeNull();
+  });
+
+  it('uses amber for a warning and keeps the glyph when there is no short text', () => {
+    const { container } = renderRel({ problems: mark('warning') });
+    expect(line(container)).toHaveStyle({ stroke: 'var(--color-amber-ink)' });
+    expect(screen.getByTestId('problem-glyph')).toBeInTheDocument();
+  });
+
+  it('draws a relationship without problems as before', () => {
+    const { container } = renderRel({});
+    expect(line(container)).not.toHaveStyle({ strokeDasharray: '6 4' });
+    expect(screen.queryByTestId('problem-short')).toBeNull();
+  });
+});

@@ -1,4 +1,4 @@
-import type { ProblemKind } from '@sododeck/model';
+import type { ProblemKind, Severity } from '@sododeck/model';
 import {
   Ban,
   Columns3,
@@ -22,6 +22,9 @@ import {
   Waypoints,
   type LucideIcon,
 } from 'lucide-react';
+
+/** Accessible name of a severity glyph (047). */
+export const SEVERITY_LABEL: Record<Severity, string> = { error: 'Error', warning: 'Warning' };
 
 export const problemCountLabel = (count: number) =>
   count === 1 ? '1 problem' : `${String(count)} problems`;

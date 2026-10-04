@@ -27,6 +27,7 @@ describe('problemMarks (015 FR-022)', () => {
       label: '1 problem',
       severity: 'warning',
       rows: new Map(),
+      rowText: new Map(),
     });
     expect(marks.has('a')).toBe(false);
   });
@@ -95,6 +96,9 @@ describe('problemMarks (015 FR-022)', () => {
       expect(table?.rows.get('c-ref')).toBe('error');
       expect(table?.rows.get('c-qty')).toBe('warning');
       expect(table?.rows.has('c-id')).toBe(false);
+      expect(table?.rowText.get('c-qty')).toBe(
+        "Default does not fit the type: loyalty.qty is integer with default 'many'",
+      );
     });
 
     it('gives a relationship its short text', () => {

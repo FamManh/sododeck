@@ -14,6 +14,8 @@ export interface ProblemMark {
   severity: Severity;
   /** Table cards: column id → its worst severity, for the row glyphs. Empty for other objects. */
   rows: ReadonlyMap<Id, Severity>;
+  /** Table cards: column id → the text of its problems, the row glyph's name and tooltip. */
+  rowText: ReadonlyMap<Id, string>;
   /** Relationships: the pill text of the first problem that has one (`int → uuid`, `n–n`). */
   short?: string;
 }
@@ -24,11 +26,18 @@ const worse = (a: Severity | undefined, b: Severity): Severity =>
 function markOf(id: Id, list: readonly Problem[]): ProblemMark {
   let severity: Severity = 'warning';
   const rows = new Map<Id, Severity>();
+  const rowText = new Map<Id, string[]>();
   let short: string | undefined;
   for (const problem of list) {
     severity = worse(severity, problem.severity);
     if (problem.column?.tableId === id) {
       rows.set(problem.column.columnId, worse(rows.get(problem.column.columnId), problem.severity));
+    }
+    if (problem.column?.tableId === id) {
+      const text = `${problem.title}: ${problem.detail}`;
+      const known = rowText.get(problem.column.columnId);
+      if (known === undefined) rowText.set(problem.column.columnId, [text]);
+      else known.push(text);
     }
     short ??= problem.short;
   }
@@ -38,6 +47,7 @@ function markOf(id: Id, list: readonly Problem[]): ProblemMark {
     label: problemCountLabel(list.length),
     severity,
     rows,
+    rowText: new Map([...rowText].map(([column, texts]) => [column, texts.join('; ')])),
     ...(short === undefined ? {} : { short }),
   };
 }
@@ -72,13 +82,14 @@ export function sameProblemMark(a: ProblemMark | undefined, b: ProblemMark | und
     a.titles === b.titles &&
     a.severity === b.severity &&
     a.short === b.short &&
-    sameRows(a.rows, b.rows)
+    sameRows(a.rows, b.rows) &&
+    sameRows(a.rowText, b.rowText)
   );
 }
 
-function sameRows(a: ProblemMark['rows'], b: ProblemMark['rows']): boolean {
+function sameRows<T>(a: ReadonlyMap<Id, T>, b: ReadonlyMap<Id, T>): boolean {
   if (a === b) return true;
   if (a.size !== b.size) return false;
-  for (const [id, severity] of a) if (b.get(id) !== severity) return false;
+  for (const [id, value] of a) if (b.get(id) !== value) return false;
   return true;
 }

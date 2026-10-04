@@ -152,7 +152,16 @@ describe('ShapeNode (031)', () => {
     it('problem: a dashed ring and a counted badge top-right, named', () => {
       renderWithEditor(
         <ShapeNode
-          {...props({ problems: { count: 2, label: '2 problems', titles: 'Broken chain' } })}
+          {...props({
+            problems: {
+              count: 2,
+              label: '2 problems',
+              titles: 'Broken chain',
+              severity: 'warning',
+              rows: new Map(),
+              rowText: new Map(),
+            },
+          })}
         />,
         deck,
       );

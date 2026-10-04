@@ -131,7 +131,14 @@ function StyleSamplesInner() {
               title="Problem"
               subtitle="orders.svc"
               look={resolveLook({ fill: 'violet' })}
-              problems={{ count: 1, titles: 'Duplicate connection', label: '1 problem' }}
+              problems={{
+                count: 1,
+                titles: 'Duplicate connection',
+                label: '1 problem',
+                severity: 'warning',
+                rows: new Map(),
+                rowText: new Map(),
+              }}
             />
             <Sample
               id="state-dimmed"

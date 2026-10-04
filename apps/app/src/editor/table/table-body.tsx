@@ -1,7 +1,7 @@
-import type { TouchAccess } from '@sododeck/model';
+import type { Severity, TouchAccess } from '@sododeck/model';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { KeyRound, Link2, ListOrdered, TriangleAlert } from 'lucide-react';
+import { CircleX, KeyRound, Link2, ListOrdered, TriangleAlert } from 'lucide-react';
 import { memo, type MouseEvent as ReactMouseEvent } from 'react';
 
 import { EMPTY_SELECTION, useUiStore } from '../../state/ui-store';
@@ -15,7 +15,8 @@ import { ColumnLineEditor } from './column-line-editor';
 import { EnumChip } from './enum-chip';
 import { RowGrip } from './row-grip';
 import { ShowAllButton } from './show-all-button';
-import { GLYPH_NAMES, mismatchLabel, rowLabel } from './table-text';
+import type { ProblemMark } from '../problems/problem-marks';
+import { GLYPH_NAMES, rowLabel } from './table-text';
 
 /** The key glyphs (DESIGN.md "Glyphs"): distinct shapes, so they read without colour (FR-010). */
 function Glyph({ glyph }: { glyph: KeyGlyph }) {
@@ -39,6 +40,28 @@ function Glyph({ glyph }: { glyph: KeyGlyph }) {
       strokeWidth={ICON_STROKE_WIDTH}
       className={cn('size-3.5 shrink-0', glyph === 'pk' ? 'text-ink' : 'text-ink-secondary')}
     />
+  );
+}
+
+/**
+ * A problem on a row (047): the alert glyph takes the key glyph's place. Shape (circle-x or
+ * triangle) and name carry the severity as well as colour; the native title is the tooltip.
+ */
+function ProblemRowGlyph({ severity, text }: { severity: Severity; text: string | undefined }) {
+  const Icon = severity === 'error' ? CircleX : TriangleAlert;
+  const name = text ?? (severity === 'error' ? 'Error' : 'Warning');
+  return (
+    <span
+      role="img"
+      aria-label={name}
+      title={name}
+      className={cn(
+        'flex size-3.5 shrink-0 items-center justify-center',
+        severity === 'error' ? 'text-clay-ink' : 'text-amber-ink',
+      )}
+    >
+      <Icon aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+    </span>
   );
 }
 
@@ -105,8 +128,7 @@ function RowPort({
  * elements with a CSS hover and a native `title` when cut (R8): no per-row component state.
  *
  * Editing (043): the open line editor takes an edited row's place or the new-row slot the layout
- * reserved (`newRowIndex`); a row drag draws its drop line; rows at mismatched relationship ends
- * show the (!) icon. Double-click edits a row, right-click opens the row menu.
+ * reserved (`newRowIndex`); a row drag draws its drop line. Double-click edits a row, right-click opens the row menu.
  *
  * Playback (049): rows the current flow step touches are tinted and carry an R / W marker just
  * outside the card's left edge (a letter in a shape, so read and write differ without colour);
@@ -119,6 +141,7 @@ export const TableBody = memo(function TableBody({
   tinted = false,
   locked = false,
   touched,
+  problems,
 }: {
   nodeId: string;
   layout: TableLayout;
@@ -130,6 +153,12 @@ export const TableBody = memo(function TableBody({
   locked?: boolean;
   /** Flow mode (049): the columns the current step reads or writes. */
   touched?: ReadonlyMap<string, TouchAccess> | undefined;
+  /**
+   * The table's problem mark (047): a row with a problem draws its severity glyph in place of the
+   * key glyphs. It rides on the node's data, not on the layout, so a problem change never
+   * re-measures every table.
+   */
+  problems?: ProblemMark | undefined;
 }) {
   // This table's line editor and row drag only: other tables never re-render for them.
   const columnEdit = useUiStore((s) => (s.columnEdit?.tableId === nodeId ? s.columnEdit : null));
@@ -174,6 +203,7 @@ export const TableBody = memo(function TableBody({
       return [...before, editor(columnEdit, `edit:${row.columnId}`)];
     }
     const access = touched?.get(row.columnId);
+    const severity = problems?.rows.get(row.columnId);
     return [
       ...before,
       <li
@@ -244,9 +274,11 @@ export const TableBody = memo(function TableBody({
           className="flex shrink-0 items-center gap-0.5"
           style={{ width: layout.keySlot, marginRight: TABLE_CARD.keyGap }}
         >
-          {row.glyphs.map((glyph) => (
-            <Glyph key={glyph} glyph={glyph} />
-          ))}
+          {severity === undefined ? (
+            row.glyphs.map((glyph) => <Glyph key={glyph} glyph={glyph} />)
+          ) : (
+            <ProblemRowGlyph severity={severity} text={problems?.rowText.get(row.columnId)} />
+          )}
         </span>
         <span
           className={cn(
@@ -281,17 +313,6 @@ export const TableBody = memo(function TableBody({
             className={cn('ml-[3px] w-[7px] shrink-0 font-mono text-[11px]', muted)}
           >
             {row.nullable ? '?' : ''}
-          </span>
-        )}
-        {row.mismatch !== undefined && (
-          // Icon and text, never colour alone (constitution VII); the native title is the tooltip.
-          <span
-            role="img"
-            aria-label={mismatchLabel(row.mismatch)}
-            title={mismatchLabel(row.mismatch)}
-            className="ml-1 flex size-3 shrink-0 items-center justify-center text-clay-ink"
-          >
-            <TriangleAlert aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3" />
           </span>
         )}
         <RowPort nodeId={nodeId} columnId={row.columnId} name={row.name} side="right" />
