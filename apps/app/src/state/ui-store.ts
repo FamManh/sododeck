@@ -225,7 +225,8 @@ export type ToolbarFieldId =
   | 'protocol'
   | 'direction'
   | 'style'
-  | 'lineStyle';
+  | 'lineStyle'
+  | 'icon';
 
 /** A live, unsaved colour choice shown on canvas before it is applied (020 R9). */
 export interface StylePreview {

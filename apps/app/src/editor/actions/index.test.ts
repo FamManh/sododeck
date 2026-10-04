@@ -34,7 +34,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
   it('lists each target’s menu, in sections', () => {
     expect(labels(TARGETS.component, 'menu')).toEqual([
       ['Open details', 'Rename'],
-      ['Reset size', 'Colour: none'],
+      ['Reset size', 'Colour: none', 'Icon…'],
       ['Copy', 'Cut', 'Duplicate'],
       ['Group', 'Align', 'Arrange'],
       ['Pin'],
@@ -43,7 +43,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.parent, 'menu')[0]).toEqual(['Open details', 'Open inside', 'Rename']);
     expect(labels(TARGETS.components, 'menu')).toEqual([
       ['Open details'],
-      ['Colour: none'],
+      ['Colour: none', 'Icon…'],
       ['Copy', 'Cut', 'Duplicate'],
       ['Group', 'Align', 'Arrange'],
       ['Pin all'],
@@ -66,7 +66,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Select all', 'Fit'],
     ]);
     expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Delete']]);
-    expect(labels(TARGETS.mixed, 'menu')).toEqual([['Colour: none'], ['Delete']]);
+    expect(labels(TARGETS.mixed, 'menu')).toEqual([['Colour: none', 'Icon…'], ['Delete']]);
   });
 
   it('keeps only Open details, Copy and Fit in flow mode and sessions', () => {
@@ -88,6 +88,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Links',
       'Rules',
       'Colour: none',
+      'Icon',
       'More actions',
     ]);
     expect(labels(TARGETS.components, 'toolbar').flat()).toEqual([
@@ -96,6 +97,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Tags',
       'Technology: none',
       'Colour: none',
+      'Icon',
       'Group',
       'Align',
       'More actions',
@@ -115,7 +117,11 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Colour: none',
       'More actions',
     ]);
-    expect(labels(TARGETS.mixed, 'toolbar').flat()).toEqual(['Colour: none', 'More actions']);
+    expect(labels(TARGETS.mixed, 'toolbar').flat()).toEqual([
+      'Colour: none',
+      'Icon',
+      'More actions',
+    ]);
   });
 
   it('has a runnable action behind every item it shows (SC-006)', () => {

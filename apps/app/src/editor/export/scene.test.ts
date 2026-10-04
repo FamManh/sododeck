@@ -73,7 +73,7 @@ describe('buildScene: whole deck', () => {
   it('describes cards like the canvas at 100 %', () => {
     const cards = new Map(scene(grouped).cards.map((card) => [card.id, card]));
     expect(cards.get('a')).toMatchObject({
-      kind: 'service',
+      icon: { set: 'lucide', name: 'box' },
       title: 'Orders',
       description: 'Go',
       hasRules: false,
@@ -85,7 +85,11 @@ describe('buildScene: whole deck', () => {
         height: cardLayout({ title: 'Orders', description: 'Go' }).height,
       },
     });
-    expect(cards.get('db')).toMatchObject({ kind: 'database', description: null, hasRules: true });
+    expect(cards.get('db')).toMatchObject({
+      icon: { name: 'database' },
+      description: null,
+      hasRules: true,
+    });
   });
 
   it('carries edge directions and keeps labels', () => {
@@ -386,7 +390,7 @@ describe('buildScene: current view', () => {
         title: 'Core',
         nodeCount: 2,
         edgeCount: 1,
-        memberKinds: ['service', 'service'],
+        memberIcons: [expect.objectContaining({ name: 'box' }), expect.objectContaining({ name: 'box' })],
       }),
     ]);
     // Curved like the canvas's merged connector; a-db is two-way, so the bundle is too.
@@ -588,7 +592,11 @@ describe('buildScene: bundles and proxies (034 R9)', () => {
   it('places drill-in proxies as the canvas does: 150 × 52, outside the scope', () => {
     const result = scene(grouped, 'view', { drill: [{ kind: 'group', id: 'g' }] });
     const [port] = result.ports;
-    expect(port).toMatchObject({ id: 'port:db', label: 'Orders DB', kind: 'database' });
+    expect(port).toMatchObject({
+      id: 'port:db',
+      label: 'Orders DB',
+      icon: { name: 'database' },
+    });
     expect(port?.rect).toMatchObject({ width: 150, height: 52 });
     const cards = result.cards.map((c) => c.rect.x + c.rect.width);
     expect(port?.rect.x ?? 0).toBeGreaterThan(Math.max(...cards));
@@ -617,9 +625,18 @@ describe('buildScene card types (030)', () => {
       ],
     });
     const cards = new Map(scene(typed).cards.map((card) => [card.id, card]));
-    expect(cards.get('w')).toMatchObject({ kind: 'warehouse', typeName: 'Warehouse' });
-    expect(cards.get('t')).toMatchObject({ kind: 'truck-route', typeName: 'Truck route' });
-    expect(cards.get('r')).toMatchObject({ kind: 'fallback', typeName: 'robot' });
+    expect(cards.get('w')).toMatchObject({
+      icon: { name: 'warehouse' },
+      typeName: 'Warehouse',
+    });
+    expect(cards.get('t')).toMatchObject({
+      icon: { name: 'truck' },
+      typeName: 'Truck route',
+    });
+    expect(cards.get('r')).toMatchObject({
+      icon: { name: 'shapes' },
+      typeName: 'robot',
+    });
   });
 });
 
@@ -694,5 +711,41 @@ describe('shapes in the scene (031)', () => {
     const edge = scene(shapes).edges.find((e) => e.id === 'e2');
     expect(edge?.source.x).toBeCloseTo(168 - (168 * 0.16) / 2, 6);
     expect(edge?.source.y).toBeCloseTo(400 + 36, 6);
+  });
+});
+
+describe('buildScene card icons (038)', () => {
+  const iconed = deckOf({
+    nodes: [
+      { id: 'c', type: 'service', title: 'Custom', icon: 'lucide:search', position: { x: 0, y: 0 } },
+      { id: 'k', type: 'service', title: 'Kafka', icon: 'simple:kafka', position: { x: 300, y: 0 } },
+      { id: 's', type: 'rectangle', title: 'Shape', icon: 'lucide:search', position: { x: 600, y: 0 } },
+      {
+        id: 'm',
+        type: 'database',
+        title: 'Member',
+        icon: 'lucide:zap',
+        group: 'g',
+        position: { x: 900, y: 0 },
+      },
+      { id: 'o', type: 'queue', title: 'Outside', icon: 'lucide:cloud', position: { x: 1500, y: 0 } },
+    ],
+    groups: [{ id: 'g', title: 'G' }],
+    edges: [{ id: 'e', from: 'm', to: 'o' }],
+  });
+
+  it('carries the custom icon, the type icon for one it cannot show, and none for a shape', () => {
+    const cards = new Map(scene(iconed).cards.map((card) => [card.id, card]));
+    expect(cards.get('c')?.icon).toMatchObject({ set: 'lucide', name: 'search' });
+    expect(cards.get('k')?.icon).toMatchObject({ name: 'box' });
+    expect(cards.get('s')?.icon).toMatchObject({ name: 'shapes' });
+  });
+
+  it('gives collapsed members and drill-in ports their own icons', () => {
+    const collapsing = { ...iconed, views: [view({ collapsed: ['g'] })] };
+    const result = scene(collapsing, 'view', { currentViewId: 'v' });
+    expect(result.collapsed[0]?.memberIcons.map((icon) => icon.name)).toEqual(['zap']);
+    const drilled = scene(iconed, 'view', { drill: [{ kind: 'group', id: 'g' }] });
+    expect(drilled.ports[0]?.icon.name).toBe('cloud');
   });
 });

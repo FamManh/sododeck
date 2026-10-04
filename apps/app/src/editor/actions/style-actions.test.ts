@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
-import { actionContext, TARGETS } from '../../test/action-fixtures';
+import { actionContext, actionDeck, sel, TARGETS } from '../../test/action-fixtures';
+import { deckOf } from '../../test/render-canvas';
 import { actionsFor, runAction } from './actions-for';
 import { ACTIONS } from './index';
 
@@ -57,5 +58,75 @@ describe('style actions (020 T031)', () => {
       .flatMap((s) => s.actions)
       .find((a) => a.id === 'style.colour')?.swatch;
     expect(swatch).toBe(null);
+  });
+});
+
+describe('icon action (038 T022)', () => {
+  const iconAction = (
+    target: (typeof TARGETS)[keyof typeof TARGETS],
+    surface: 'menu' | 'toolbar',
+    mode: 'edit' | 'flow' | 'session' | 'viewOnly' = 'edit',
+    file = actionDeck,
+  ) =>
+    actionsFor(ACTIONS, actionContext(target, mode, file), surface)
+      .flatMap((section) => section.actions)
+      .find((action) => action.id === 'style.icon');
+
+  it('is "Icon" in the toolbar and "Icon…" in the menu for one or several components', () => {
+    for (const target of [TARGETS.component, TARGETS.components, TARGETS.mixed]) {
+      expect(iconAction(target, 'toolbar')?.label).toBe('Icon');
+      expect(iconAction(target, 'menu')?.label).toBe('Icon…');
+    }
+    expect(iconAction(TARGETS.component, 'toolbar')?.field).toBe('icon');
+  });
+
+  it('is not offered for a group, sticky, connection or the canvas alone', () => {
+    for (const target of [TARGETS.group, TARGETS.sticky, TARGETS.connection, TARGETS.canvas]) {
+      expect(iconAction(target, 'toolbar')).toBeUndefined();
+      expect(iconAction(target, 'menu')).toBeUndefined();
+    }
+  });
+
+  it('is not offered when every selected node is drawn as a shape', () => {
+    const shapes = deckOf({
+      nodes: [
+        { id: 'a', type: 'rectangle', title: 'A', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'rectangle', title: 'B', position: { x: 0, y: 0 } },
+      ],
+    });
+    expect(iconAction(TARGETS.component, 'toolbar', 'edit', shapes)).toBeUndefined();
+    expect(iconAction(TARGETS.components, 'menu', 'edit', shapes)).toBeUndefined();
+  });
+
+  it('is not offered in flow mode, a recording or the view-only editor', () => {
+    for (const mode of ['flow', 'session', 'viewOnly'] as const) {
+      expect(iconAction(TARGETS.component, 'menu', mode)).toBeUndefined();
+      expect(iconAction(TARGETS.component, 'toolbar', mode)).toBeUndefined();
+    }
+  });
+
+  it('running it opens the icon toolbar field', () => {
+    useUiStore.getState().resetForDeck();
+    expect(runAction(ACTIONS, 'style.icon', actionContext(TARGETS.component))).toBe(true);
+    expect(useUiStore.getState().toolbarField).toBe('icon');
+  });
+
+  it('carries the icon the selected cards draw as the button glyph, or "mixed"', () => {
+    const file = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A', icon: 'lucide:zap', position: { x: 0, y: 0 } },
+        { id: 'b', type: 'database', title: 'B', icon: 'lucide:zap', position: { x: 0, y: 0 } },
+        { id: 'p', type: 'service', title: 'P', position: { x: 0, y: 0 } },
+      ],
+    });
+    const glyph = (target: (typeof TARGETS)[keyof typeof TARGETS]) =>
+      iconAction(target, 'toolbar', 'edit', file)?.glyph;
+    expect(glyph(TARGETS.component)).toMatchObject({ name: 'zap' });
+    expect(glyph(TARGETS.components)).toMatchObject({ name: 'zap' });
+    expect(glyph({ kind: 'components', ids: sel({ nodes: ['a', 'p'] }) })).toBe('mixed');
+    // No icon of its own: the button shows the type icon the card draws.
+    expect(glyph({ kind: 'component', ids: sel({ nodes: ['p'] }) })).toMatchObject({
+      set: 'lucide',
+    });
   });
 });

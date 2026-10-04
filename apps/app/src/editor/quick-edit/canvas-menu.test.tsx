@@ -64,6 +64,7 @@ describe('CanvasMenu (019 US5)', () => {
       'RenameF2',
       'Reset size',
       'Colour: none',
+      'Icon…',
       'CopyCtrl+C',
       'CutCtrl+X',
       'DuplicateCtrl+D',

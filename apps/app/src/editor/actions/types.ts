@@ -5,6 +5,7 @@
  */
 import type { DeckEditor } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
+import type { ResolvedIcon } from '@sododeck/ui/icon-sets';
 import type { LucideIcon } from 'lucide-react';
 
 import type { MenuTarget, Selection, ToolbarFieldId } from '../../state/ui-store';
@@ -60,6 +61,8 @@ export interface Action {
   icon?: LucideIcon;
   /** A CSS colour value shown as a mini swatch instead of `icon` (`null` = no colour; 020). */
   swatch?: Dynamic<string | null>;
+  /** The icon the toolbar button draws (038): the icon the selected cards share, or `'mixed'`. */
+  glyph?: (ctx: ActionContext) => ResolvedIcon | 'mixed';
   /** A key from `SHORTCUTS` shown as the hint (menu) or in the tooltip (toolbar). */
   shortcut?: ShortcutId;
   /** A literal key hint when no `SHORTCUTS` entry fits one item (e.g. "2" in Add component ▸). */
@@ -95,6 +98,7 @@ export interface ResolvedAction {
   label: string;
   icon?: LucideIcon;
   swatch?: string | null;
+  glyph?: ResolvedIcon | 'mixed';
   shortcut?: ShortcutId;
   hint?: string;
   description?: string;
