@@ -17,6 +17,7 @@ import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
 import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
+import { assertNewTableParts, columnEndIssues, tablePatch } from './db-tables';
 import { applyPatch } from './patch';
 import { allRefsOf, refsOf, stepBranchIssues, stepRefs } from './refs';
 import type { NewObject, Patch } from './types';
@@ -63,6 +64,16 @@ export function assertFreeIds(doc: DeckDoc, ids: readonly { path: string; id: Id
   if (issues.length > 0) throw new DeckEditError('duplicate-id', issues);
 }
 
+/** Relationship ends (040) must name columns of their end table when it is a table. */
+function assertColumnEnds(
+  doc: DeckDoc,
+  edge: Record<string, unknown>,
+  keys: readonly string[],
+): void {
+  const issues = columnEndIssues(doc, edge, keys);
+  if (issues.length > 0) throw new DeckEditError('missing-reference', issues);
+}
+
 export function addObject<C extends Collection>(
   ctx: EditContext,
   c: C,
@@ -86,6 +97,7 @@ export function addObject<C extends Collection>(
   ];
   const branchIds = new Set(branches.map((b) => b.id as Id));
   assertFreeIds(doc, explicitIds);
+  if (c === 'nodes') assertNewTableParts(ctx, object);
   const refs = allRefsOf(c, object);
   const inputColumns = inputColumnsOf(doc);
   for (const [i, step] of steps.entries()) {
@@ -95,6 +107,7 @@ export function addObject<C extends Collection>(
     refs.push(...checked.refs);
   }
   assertRefsExist(doc, refs, () => anchorableIds(doc));
+  if (c === 'edges') assertColumnEnds(doc, object, Object.keys(object));
 
   ctx.transact(() => {
     insertAt(collectionMap(doc, c), id, createObject(c, object, ''));
@@ -111,7 +124,11 @@ export function updateObject<C extends Collection>(
 ): void {
   const { doc } = ctx;
   const map = requireEntry(collectionMap(doc, c), id, LABELS[c]);
-  const { candidate, changed } = applyPatch(readObject(c, id, map), patch, ['steps', 'branches']);
+  const { candidate, changed } = applyPatch(
+    readObject(c, id, map),
+    c === 'nodes' ? tablePatch(patch) : patch,
+    ['steps', 'branches'],
+  );
   if (changed.length === 0) return;
 
   assertValid(validateObject(c, candidate));
@@ -121,6 +138,7 @@ export function updateObject<C extends Collection>(
     changed.flatMap((key) => refsOf(c, key, candidate[key])),
     () => anchorableIds(doc),
   );
+  if (c === 'edges') assertColumnEnds(doc, candidate, changed);
 
   ctx.transact(() => {
     writeFields(map, c, candidate, changed);

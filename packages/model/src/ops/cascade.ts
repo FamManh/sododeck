@@ -3,16 +3,23 @@
  * Structural objects that cannot exist without their target are removed (edges of a node, steps
  * of a flow); knowledge objects (steps, stickies) are kept and reported broken; groups re-parent
  * their contents. Each delete with its whole cascade is one transaction: one change, one undo step.
+ *
+ * Database parts (040, research R9): removing a column drops it from its table's index parts (an
+ * index left empty goes too) and from relationships: an end of one column removes the edge, a
+ * composite end loses the pair at that position on both ends (the edge goes when none is left);
+ * a self-reference checks both ends. Removing an enum clears `enumRef` on every column naming it
+ * (the column keeps its `type`). Removing an index, a check or an enum value changes nothing else.
  */
 import type { Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
-import { toY, type YObject } from '../convert';
+import { fromY, toY, type YObject } from '../convert';
 import { toJSON } from '../deck';
 import { nodeCanvasPosition, STICKY_DEFAULT_OFFSET } from '../geometry';
 import {
   childList,
   collectionMap,
+  enumsList,
   orderedEntries,
   rulesMap,
   type Collection,
@@ -25,6 +32,8 @@ import { DeckEditError } from '../errors';
 import { checkIntegrity, type IntegrityProblem } from '../integrity';
 import { LABELS } from './collections';
 import { branchListOf } from './branches';
+import { requireEnum, requireEnumValue } from './db-enums';
+import { requirePart, requireTable } from './db-tables';
 import { stepsOf } from './steps';
 
 export interface RemovalResult {
@@ -334,5 +343,111 @@ export function removeRuleColumn(
       }
     });
   }
+  return cascade.commit();
+}
+
+const tablePart = (tableId: Id, kind: 'column' | 'index' | 'check', id: Id): ObjectRef => ({
+  scope: 'nodes',
+  id: tableId,
+  child: { kind, id },
+});
+
+/** A stored list value (index parts, column ends) as plain items. */
+const idsOf = (value: unknown): unknown[] => {
+  const plain = fromY(value);
+  return Array.isArray(plain) ? plain : [];
+};
+
+/** Removes a column of a table with its index parts and relationship ends (R9). */
+export function removeColumn(ctx: EditContext, tableId: Id, columnId: Id): RemovalResult {
+  const { doc } = ctx;
+  const node = requireTable(ctx, tableId);
+  requirePart(node, tableId, 'columns', columnId);
+  const cascade = new Cascade(ctx);
+  const columns = childList(node, 'columns');
+  if (columns !== undefined) {
+    cascade.remove(tablePart(tableId, 'column', columnId), deleteById(columns, columnId));
+  }
+  const indexes = childList(node, 'indexes');
+  for (const [indexId, index] of indexes === undefined ? [] : orderedEntries(indexes)) {
+    const parts = idsOf(index.get('columns'));
+    if (!parts.includes(columnId)) continue;
+    const kept = parts.filter((part) => part !== columnId);
+    if (kept.length === 0 && indexes !== undefined) {
+      cascade.remove(tablePart(tableId, 'index', indexId), deleteById(indexes, indexId));
+    } else {
+      cascade.update(tablePart(tableId, 'index', indexId), () => {
+        index.set('columns', toY(kept));
+      });
+    }
+  }
+  const edges = collectionMap(doc, 'edges');
+  for (const [edgeId, edge] of entriesOf(doc, 'edges')) {
+    const from = edge.has('fromColumns') ? idsOf(edge.get('fromColumns')) : undefined;
+    const to = edge.has('toColumns') ? idsOf(edge.get('toColumns')) : undefined;
+    // Positions to drop: the column on either end of this table, paired by position (R9).
+    const drop = new Set<number>();
+    if (edge.get('from') === tableId) from?.forEach((id, i) => id === columnId && drop.add(i));
+    if (edge.get('to') === tableId) to?.forEach((id, i) => id === columnId && drop.add(i));
+    if (drop.size === 0) continue;
+    const nextFrom = from?.filter((_, i) => !drop.has(i));
+    const nextTo = to?.filter((_, i) => !drop.has(i));
+    if (nextFrom?.length === 0 || nextTo?.length === 0) {
+      cascade.remove({ scope: 'edges', id: edgeId }, deleteById(edges, edgeId));
+      continue;
+    }
+    cascade.update({ scope: 'edges', id: edgeId }, () => {
+      if (nextFrom !== undefined) edge.set('fromColumns', toY(nextFrom));
+      if (nextTo !== undefined) edge.set('toColumns', toY(nextTo));
+    });
+  }
+  return cascade.commit();
+}
+
+/** Removes an index or a check of a table; nothing else refers to them. */
+export function removeTablePart(
+  ctx: EditContext,
+  tableId: Id,
+  list: 'indexes' | 'checks',
+  partId: Id,
+): RemovalResult {
+  const node = requireTable(ctx, tableId);
+  requirePart(node, tableId, list, partId);
+  const parts = childList(node, list);
+  const cascade = new Cascade(ctx);
+  if (parts !== undefined) {
+    const kind = list === 'indexes' ? 'index' : 'check';
+    cascade.remove(tablePart(tableId, kind, partId), deleteById(parts, partId));
+  }
+  return cascade.commit();
+}
+
+/** Removes an enum and clears `enumRef` on every column naming it, in one step (R9). */
+export function removeEnum(ctx: EditContext, enumId: Id): RemovalResult {
+  const { doc } = ctx;
+  requireEnum(doc, enumId);
+  const cascade = new Cascade(ctx);
+  cascade.remove({ scope: 'meta', id: '', child: { kind: 'enum', id: enumId } }, () => {
+    enumsList(doc)?.delete(enumId);
+  });
+  for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
+    const columns = childList(node, 'columns');
+    const naming = [...(columns?.values() ?? [])].filter((c) => c.get('enumRef') === enumId);
+    if (naming.length === 0) continue;
+    cascade.update({ scope: 'nodes', id: nodeId }, () => {
+      for (const column of naming) column.delete('enumRef');
+    });
+  }
+  return cascade.commit();
+}
+
+/** Removes one value of an enum; columns name the enum, not its values, so nothing else changes. */
+export function removeEnumValue(ctx: EditContext, enumId: Id, valueId: Id): RemovalResult {
+  const item = requireEnum(ctx.doc, enumId);
+  requireEnumValue(item, enumId, valueId);
+  const cascade = new Cascade(ctx);
+  cascade.remove({ scope: 'meta', id: enumId, child: { kind: 'enum-value', id: valueId } }, () => {
+    childList(item, 'values')?.delete(valueId);
+  });
   return cascade.commit();
 }

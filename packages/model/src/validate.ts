@@ -47,11 +47,17 @@ const ELEMENT_SCHEMAS = {
       swatches: true,
       tagColors: true,
       packs: true,
+      dialect: true,
     })
     .strict(),
   field: shape.fields.unwrap().element,
   style: shape.nodes.element.shape.style.unwrap(),
   edgeStyle: shape.edges.element.shape.style.unwrap(),
+  dbColumn: shape.nodes.element.shape.columns.unwrap().element,
+  dbIndex: shape.nodes.element.shape.indexes.unwrap().element,
+  dbCheck: shape.nodes.element.shape.checks.unwrap().element,
+  enum: shape.enums.unwrap().element,
+  enumValue: shape.enums.unwrap().element.shape.values.element,
 } satisfies Record<
   | Collection
   | 'step'
@@ -62,7 +68,12 @@ const ELEMENT_SCHEMAS = {
   | 'meta'
   | 'field'
   | 'style'
-  | 'edgeStyle',
+  | 'edgeStyle'
+  | 'dbColumn'
+  | 'dbIndex'
+  | 'dbCheck'
+  | 'enum'
+  | 'enumValue',
   Schema
 >;
 
@@ -105,6 +116,18 @@ function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | unde
 export function validateObject(kind: ValidationKind, candidate: unknown): Issue[] {
   const result = (ELEMENT_SCHEMAS[kind] as Schema).safeParse(candidate);
   if (!result.success) return zodIssues(result.error.issues);
+  if (kind === 'dbColumn') {
+    // S14 (040) on one column, inside a one-table file; paths name the column's own keys.
+    const file = {
+      ...emptySododeckFile(),
+      nodes: [{ id: 't', type: 'db-table', title: 't', columns: [candidate] }],
+    } as SododeckFile;
+    const prefix = 'nodes.0.columns.0.';
+    return checkSemanticRules(file).map((issue) => ({
+      ...issue,
+      path: issue.path.startsWith(prefix) ? issue.path.slice(prefix.length) : issue.path,
+    }));
+  }
   const file = fileWith(kind, candidate);
   return file === undefined ? [] : checkSemanticRules(file);
 }
