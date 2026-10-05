@@ -2,14 +2,17 @@ import { analyzeFlow, type Problem } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
-import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { isFlowMode, useUiStore, type CanvasViewport } from '../../state/ui-store';
 import { openResult, edgeCenter, type OpenResultContext } from '../command-palette/open-result';
 import type { PaletteResult } from '../command-palette/palette-results';
 import { visibleGraph, scopeOf } from '../visible-graph';
 import { focusRowSoon } from '../table/row-focus';
 import { readViewState, selectView, setGroupCollapsed } from '../views/use-current-view';
 
-export type ProblemNavContext = OpenResultContext;
+export type ProblemNavContext = OpenResultContext & {
+  /** The canvas viewport, saved in a drill frame so going back up restores it. */
+  getViewport?: () => CanvasViewport;
+};
 
 const result = (kind: PaletteResult['kind'], id: Id, flowId?: Id): PaletteResult => ({
   kind,
@@ -27,6 +30,17 @@ function ancestorGroups(deck: SododeckFile, nodeId: Id): Id[] {
   while (group !== undefined && !chain.includes(group)) {
     chain.push(group);
     group = parentOf.get(group);
+  }
+  return chain;
+}
+
+/** Card ids containing `nodeId` (a table's database card), outermost first. */
+function ancestorCards(deck: SododeckFile, nodeId: Id): Id[] {
+  const chain: Id[] = [];
+  let parent = deck.nodes.find((n) => n.id === nodeId)?.parent;
+  while (parent !== undefined && !chain.includes(parent)) {
+    chain.unshift(parent);
+    parent = deck.nodes.find((n) => n.id === parent)?.parent;
   }
   return chain;
 }
@@ -50,6 +64,14 @@ function reveal(context: ProblemNavContext, nodeId: Id): void {
     depth--;
   }
   if (depth < ui.drill.length) ui.drillUp(depth);
+  // A table inside a database card is drawn only once that card is opened.
+  const viewport = context.getViewport?.() ?? { x: 0, y: 0, zoom: context.getZoom() };
+  for (const cardId of ancestorCards(view.deck, nodeId)) {
+    const { drill } = useUiStore.getState();
+    if (visibleGraph(view.deck, scopeOf(drill), new Set()).nodes.includes(nodeId)) break;
+    if (drill.some((frame) => frame.kind === 'node' && frame.id === cardId)) continue;
+    useUiStore.getState().drillInto({ kind: 'node', id: cardId, viewport });
+  }
 }
 
 function goToNode(context: ProblemNavContext, nodeId: Id): boolean {

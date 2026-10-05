@@ -271,6 +271,20 @@ describe('goToProblem on a schema row (047 US2, R7)', () => {
     expect(s.editor.canUndo()).toBe(false);
   });
 
+  it('opens the database card that holds the table before selecting it', () => {
+    const file = schemaDeck();
+    const s = setup({
+      ...file,
+      nodes: [
+        { id: 'db', type: 'database', title: 'Orders DB', position: { x: 0, y: 0 } },
+        ...file.nodes.map((n) => (n.id === 'ord' ? { ...n, parent: 'db' } : n)),
+      ],
+    });
+    expect(goToProblem(nullDefault(s), s.ctx)).toBe(true);
+    expect(state().drill.map((f) => f.id)).toEqual(['db']);
+    expect(state().selection.nodes).toEqual(['ord']);
+  });
+
   it('drops the reveal when the selection leaves the table', () => {
     const s = setup(schemaDeck());
     goToProblem(nullDefault(s), s.ctx);
