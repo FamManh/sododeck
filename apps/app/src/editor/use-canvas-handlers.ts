@@ -20,6 +20,7 @@ import { isKnownType } from '@sododeck/model';
 import type { Side } from '@sododeck/schema';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
+import { selectionSize, type SelectionKind } from '../state/selection-kinds';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
 import { targetOf } from './actions/use-action-context';
 import {
@@ -83,6 +84,27 @@ const groupIdOf = (id: string) =>
       ? id.slice(COLLAPSED_NODE_PREFIX.length)
       : null;
 
+/**
+ * The deck object a drawn React Flow node or edge stands for, or null for drawn helpers that are
+ * no deck object (proxies, scope labels, merged and bundled connectors).
+ */
+export function selectionEntryOf(
+  id: string,
+  type: 'node' | 'edge',
+): { kind: SelectionKind; id: string } | null {
+  if (type === 'edge') {
+    return isMergedEdge(id) || isBundleEdge(id) ? null : { kind: 'edges', id };
+  }
+  if (isPortNode(id) || isScopeLabel(id)) return null;
+  const group = groupIdOf(id);
+  if (group !== null) return { kind: 'groups', id: group };
+  const sticky = stickyIdOf(id);
+  if (sticky !== null) return { kind: 'stickies', id: sticky };
+  const image = imageIdOf(id);
+  if (image !== null) return { kind: 'images', id: image };
+  return { kind: 'nodes', id };
+}
+
 /** The side a connection was dragged from: card handles are ids by side (`component-node-parts.tsx`). */
 function sideOfHandle(id: string | null | undefined): Side | null {
   return id === 'top' || id === 'right' || id === 'bottom' || id === 'left' ? id : null;
@@ -94,7 +116,6 @@ const isMultiSelect = (event: ReactMouseEvent) => event.shiftKey || event.metaKe
 export function useCanvasHandlers() {
   const editor = useEditor();
   const { getNodes, getViewport, screenToFlowPosition } = useReactFlow();
-  const gestureOpen = useRef(false);
   const undoToast = useUndoToast();
   const addImagesNow = useAddImages();
   // A ref, not a dependency: `addImagesNow` changes whenever a toast or the viewport helpers do,
@@ -129,48 +150,41 @@ export function useCanvasHandlers() {
   return useMemo(() => {
     const ui = () => useUiStore.getState();
 
-    const endGesture = () => {
-      if (gestureOpen.current) {
-        gestureOpen.current = false;
-        editor.endGesture();
-      }
-    };
-
-    /** Applies React Flow's selection deltas; only the marquee is taken from React Flow. */
+    /**
+     * Applies React Flow's selection deltas; only the marquee is taken from React Flow. Every
+     * kind is taken: a frame or collapsed card stands for its group (a group selected this way
+     * moves with a drag and is ungrouped by Delete).
+     */
     const applySelectChanges = (changes: { id: string; selected: boolean }[]) => {
       if (!marquee.current || changes.length === 0 || isFlowMode(ui())) return;
       const { selection } = ui();
-      const nodes = new Set(selection.nodes);
-      const edges = new Set(selection.edges);
-      const stickies = new Set(selection.stickies);
-      const images = new Set(selection.images);
+      const sets: Record<SelectionKind, Set<string>> = {
+        nodes: new Set(selection.nodes),
+        edges: new Set(selection.edges),
+        groups: new Set(selection.groups),
+        stickies: new Set(selection.stickies),
+        images: new Set(selection.images),
+      };
       for (const { id, selected, type } of changes as {
         id: string;
         selected: boolean;
         type: 'node' | 'edge';
       }[]) {
-        if (type === 'node' && isGroupNode(id)) continue;
-        const stickyId = type === 'node' ? stickyIdOf(id) : null;
-        const imageId = type === 'node' ? imageIdOf(id) : null;
-        const set =
-          type === 'edge'
-            ? edges
-            : imageId !== null
-              ? images
-              : stickyId === null
-                ? nodes
-                : stickies;
-        const value = imageId ?? stickyId ?? id;
-        if (selected) set.add(value);
-        else set.delete(value);
+        const entry = selectionEntryOf(id, type);
+        if (entry === null) continue;
+        if (selected) sets[entry.kind].add(entry.id);
+        else sets[entry.kind].delete(entry.id);
       }
-      ui().select({
-        nodes: [...nodes],
-        edges: [...edges],
-        stickies: [...stickies],
-        images: [...images],
-      });
-      ui().setMarqueeCount(nodes.size + stickies.size + images.size);
+      const next: Selection = {
+        nodes: [...sets.nodes],
+        edges: [...sets.edges],
+        groups: [...sets.groups],
+        stickies: [...sets.stickies],
+        images: [...sets.images],
+      };
+      ui().select(next);
+      // The chip counts the items on the canvas, not the connectors between them.
+      ui().setMarqueeCount(selectionSize(next) - next.edges.length);
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -496,9 +510,6 @@ export function useCanvasHandlers() {
           if (!ui().selection.images.includes(imageId)) ui().select({ images: [imageId] });
           ui().focus(null);
           ui().focusEdge(null);
-          // Snapping, drop into groups, ⌥ copies and Esc live in the controller, as for cards.
-          controller.startNodes(node.id);
-          return;
         } else if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
           ui().focus(null);
@@ -506,16 +517,10 @@ export function useCanvasHandlers() {
         } else {
           if (!ui().selection.nodes.includes(node.id)) ui().select({ nodes: [node.id] });
           ui().focus(node.id);
-          // One drag, however many frames and nodes, is one undo step (research R2); snapping,
-          // drop into groups, ⌥ copies and Esc live in the controller (016).
-          controller.startNodes(node.id);
-          return;
         }
-        if (!gestureOpen.current) {
-          gestureOpen.current = true;
-          // One drag, however many frames and nodes, is one undo step (research R2).
-          editor.beginGesture();
-        }
+        // One drag, however many frames, cards, notes and images, is one undo step (research
+        // R2); snapping, drop into groups, ⌥ copies and Esc live in the controller (016).
+        controller.startNodes(node.id);
       },
       /**
        * Writes dragged positions straight to the document, all moved nodes in one batch, through
@@ -578,7 +583,6 @@ export function useCanvasHandlers() {
           controller.stop(event !== undefined && 'clientX' in event ? event : undefined);
         }
         if (ui().canvasGesture === 'drag') ui().setCanvasGesture(null);
-        endGesture();
       },
 
       // React Flow reports drawn ids; a group frame or collapsed card stands for its group (050).

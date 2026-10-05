@@ -7,6 +7,7 @@ import type { SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
+import { selectionSize } from '../state/selection-kinds';
 import { cardSize, freeSpot, NODE_SIZE, type Point } from './canvas-geometry';
 import {
   columnConnectionCheck,
@@ -110,12 +111,21 @@ export function addTable(editor: DeckEditor, point: Point): string {
   return id;
 }
 
-/** Selects every component the current view shows (⌘A and the canvas menu's Select all). */
+/**
+ * Selects every item the current view shows (⌘A and the canvas menu's Select all): cards, groups,
+ * notes and images, so a drag moves group frames along and Delete / duplicate act on everything.
+ */
 export function selectAllComponents(editor: DeckEditor): void {
   const deck = readViewState(editor.doc).deck;
   const ui = useUiStore.getState();
-  ui.select({ nodes: deck.nodes.map((n) => n.id) });
-  ui.announce(`${String(deck.nodes.length)} selected`);
+  const selection = {
+    nodes: deck.nodes.map((n) => n.id),
+    groups: deck.groups.map((g) => g.id),
+    stickies: deck.stickies.map((s) => s.id),
+    images: (deck.images ?? []).map((i) => i.id),
+  };
+  ui.select(selection);
+  ui.announce(`${String(selectionSize(selection))} selected`);
 }
 
 /**

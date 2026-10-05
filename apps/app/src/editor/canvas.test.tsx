@@ -872,24 +872,31 @@ describe('canvas handlers', () => {
     expect(toJSON(doc).stickies[0]?.position).toEqual({ x: 72, y: 96 });
   });
 
-  it('takes the marquee selection from React Flow, ignoring group boundaries', () => {
+  it('takes the marquee selection from React Flow, groups and every other kind included', () => {
     const { h } = handlers();
     act(() => {
       h().onSelectionStart();
       h().onNodesChange([
         { type: 'select', id: 'a', selected: true },
         { type: 'select', id: 'group:g', selected: true },
+        { type: 'select', id: 'collapsed:k', selected: true },
+        { type: 'select', id: 'sticky:st1', selected: true },
+        { type: 'select', id: 'image:i1', selected: true },
         { type: 'select', id: 'c', selected: true },
       ]);
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
+    });
+    // The count chip counts every item the marquee holds, groups included.
+    expect(ui().marqueeCount).toBe(6);
+    act(() => {
       h().onSelectionEnd();
     });
     expect(ui().selection).toEqual({
       nodes: ['a', 'c'],
       edges: ['e1'],
-      groups: [],
-      stickies: [],
-      images: [],
+      groups: ['g', 'k'],
+      stickies: ['st1'],
+      images: ['i1'],
     });
     // Outside a marquee, React Flow's own selection changes are ignored.
     act(() => {

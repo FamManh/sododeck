@@ -913,3 +913,92 @@ describe('⌥ duplicate-drag keeps the original in place (051 US2, R2)', () => {
     expect(ui().announcement.text).toBe('Duplicated 3 components');
   });
 });
+
+describe('dragging and duplicating every selected kind', () => {
+  /** A group with a card, a loose card, a free note and a note pinned to the loose card. */
+  const board: SododeckFile = deckOf({
+    nodes: [
+      { id: 'in', type: 'service', title: 'In', group: 'g', position: { x: 0, y: 0 } },
+      { id: 'out', type: 'service', title: 'Out', position: { x: 600, y: 0 } },
+    ],
+    groups: [{ id: 'g', title: 'G', ...frame(-40, -40, 320, 200) }],
+    stickies: [
+      { id: 'n1', text: 'Free', position: { x: 0, y: 600 } },
+      { id: 'n2', text: 'Pinned', anchor: 'out', position: { x: 10, y: -80 } },
+    ],
+    edges: [{ id: 'e', from: 'out', to: 'n1' }],
+  });
+  const note = (file: SododeckFile, id: string) => file.stickies.find((s) => s.id === id);
+
+  it('moves the group frame when the whole board is selected and a card is dragged', () => {
+    const { h, doc, editor } = setup(board);
+    act(() => {
+      ui().select({ nodes: ['in', 'out'], groups: ['g'], stickies: ['n1', 'n2'] });
+    });
+    act(() => {
+      h().onNodeDragStart({}, flowNode('out'));
+      h().onNodesChange(move('out', 700, 50));
+      h().onNodeDragStop(pointer(5000, 5000));
+    });
+    const file = toJSON(doc);
+    expect(frameOf(file, 'g')).toEqual(frame(60, 10, 320, 200));
+    expect(position(file, 'in')).toEqual({ x: 100, y: 50 });
+    expect(position(file, 'out')).toEqual({ x: 700, y: 50 });
+    // The free note moves by the delta; the pinned one keeps its offset (it follows its card).
+    expect(note(file, 'n1')?.position).toEqual({ x: 100, y: 650 });
+    expect(note(file, 'n2')?.position).toEqual({ x: 10, y: -80 });
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(board);
+  });
+
+  it('drags a note with the controller, so the cards selected with it move too', () => {
+    const { h, doc } = setup(board);
+    act(() => {
+      ui().select({ nodes: ['in'], stickies: ['n1'] });
+    });
+    act(() => {
+      h().onNodeDragStart({}, flowNode('sticky:n1'));
+      h().onNodesChange(move('sticky:n1', 130, 750));
+      h().onNodeDragStop(pointer(5000, 5000));
+    });
+    const file = toJSON(doc);
+    expect(note(file, 'n1')?.position).toEqual({ x: 130, y: 750 });
+    expect(position(file, 'in')).toEqual({ x: 130, y: 150 });
+  });
+
+  it('duplicates cards, groups, notes and the connectors between them with ⌥', () => {
+    const { h, doc, editor } = setup(board);
+    act(() => {
+      ui().select({ nodes: ['in', 'out'], groups: ['g'], stickies: ['n1', 'n2'] });
+    });
+    act(() => {
+      h().onNodeDragStart({}, flowNode('sticky:n1'));
+      h().onNodeDrag(pointer(0, 0, { altKey: true }));
+      h().onNodesChange(move('sticky:n1', 0, 1600));
+      h().onNodeDragStop(pointer(0, 0, { altKey: true }));
+    });
+    const file = toJSON(doc);
+    // Originals stay put.
+    expect(note(file, 'n1')?.position).toEqual({ x: 0, y: 600 });
+    expect(frameOf(file, 'g')).toEqual(frame(-40, -40, 320, 200));
+    expect(file.nodes).toHaveLength(4);
+    expect(file.groups).toHaveLength(2);
+    const copies = file.stickies.filter((s) => !['n1', 'n2'].includes(s.id));
+    expect(copies.map((s) => [s.text, s.position, s.anchor])).toEqual([
+      ['Free', { x: 0, y: 1600 }, undefined],
+      ['Pinned', { x: 610, y: 920 }, undefined],
+    ]);
+    const copyOfE = file.edges.filter((e) => e.id !== 'e');
+    expect(copyOfE).toHaveLength(1);
+    expect(copies.map((s) => s.id)).toContain(copyOfE[0]?.to);
+    expect(ui().selection.stickies).toEqual(copies.map((s) => s.id));
+    expect(ui().selection.groups).toHaveLength(1);
+    expect(ui().announcement.text).toBe('Duplicated 2 components and 2 notes');
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(board);
+  });
+});
