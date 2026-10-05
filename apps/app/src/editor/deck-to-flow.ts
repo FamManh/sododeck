@@ -13,6 +13,7 @@ import {
   STICKY_DEFAULT_SIZE,
   stackOrder,
   stickyBox,
+  endpointOf,
   imageBox,
   stickyCanvasPosition,
   stickyLabel,
@@ -1180,6 +1181,8 @@ export function toStickyNodes(
   });
 }
 
+const NO_IMAGES: ReadonlySet<string> = new Set();
+
 /** The z-index of an image that sits below every card: under the connectors (055 R2). */
 const IMAGE_BELOW_CARDS_Z = -1;
 
@@ -1192,8 +1195,10 @@ export function toImageNodes(
   deck: SododeckFile,
   selection: Selection,
   flowMode = false,
+  /** Images inside a collapsed group: hidden with it (055). */
+  hidden: ReadonlySet<string> = NO_IMAGES,
 ): ImageFlowNode[] {
-  const images = deck.images ?? [];
+  const images = (deck.images ?? []).filter((image) => !hidden.has(image.id));
   if (images.length === 0) return [];
   const selected = new Set(selection.images);
   const order = stackOrder(deck);
@@ -1351,6 +1356,18 @@ export function toFlowEdges(
       notes.set(`${STICKY_NODE_PREFIX}${stickyId}`, {
         box: stickyBox(sticky, stickyCanvasPosition(deck, sticky).point),
         title: stickyLabel(sticky.text) ?? 'Empty note',
+      });
+    }
+  }
+  // Images that end a connector (055) are boxed like notes, by their stored box.
+  if (graph.images.length > 0) {
+    const imagesById = new Map((deck.images ?? []).map((image) => [image.id, image]));
+    for (const imageId of graph.images) {
+      const image = imagesById.get(imageId);
+      if (image === undefined) continue;
+      notes.set(`${IMAGE_NODE_PREFIX}${imageId}`, {
+        box: imageBox(image),
+        title: endpointOf(deck, imageId)?.title ?? 'Image',
       });
     }
   }

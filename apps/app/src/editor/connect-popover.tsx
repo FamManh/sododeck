@@ -4,7 +4,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@sododeck/ui/components/
 import { SearchField } from '@sododeck/ui/components/search-field';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { SquareDashed, StickyNote } from 'lucide-react';
+import { Image as ImageIcon, SquareDashed, StickyNote } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { iconProp } from './card-icon';
@@ -20,7 +20,7 @@ import {
 } from './canvas-actions';
 import { columnConnectTargets, connectTargets, type ConnectTarget } from './connection-rules';
 import { rowKey } from './relationships/row-key';
-import { GROUP_NODE_PREFIX, STICKY_NODE_PREFIX } from './deck-to-flow';
+import { GROUP_NODE_PREFIX, IMAGE_NODE_PREFIX, STICKY_NODE_PREFIX } from './deck-to-flow';
 
 function anchorRect(nodeId: string): DOMRect {
   // A group is drawn as its `group:` frame (050 R6), a note as its `sticky:` node (053).
@@ -28,6 +28,7 @@ function anchorRect(nodeId: string): DOMRect {
     nodeElement(nodeId) ??
     nodeElement(`${GROUP_NODE_PREFIX}${nodeId}`) ??
     nodeElement(`${STICKY_NODE_PREFIX}${nodeId}`) ??
+    nodeElement(`${IMAGE_NODE_PREFIX}${nodeId}`) ??
     canvasElement()
   )?.getBoundingClientRect();
   return rect ?? new DOMRect(0, 0, 0, 0);
@@ -207,6 +208,13 @@ function ConnectPopoverContent({
                 >
                   <StickyNote aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
                 </span>
+              ) : option.kind === 'image' ? (
+                <span
+                  data-image-icon
+                  className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-surface-2 text-ink-secondary"
+                >
+                  <ImageIcon aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                </span>
               ) : option.kind === 'group' ? (
                 <span
                   data-group-icon
@@ -224,6 +232,9 @@ function ConnectPopoverContent({
                 )}
                 {option.kind === 'note' && (
                   <span className="ml-1 text-caption text-ink-muted">(note)</span>
+                )}
+                {option.kind === 'image' && (
+                  <span className="ml-1 text-caption text-ink-muted">(image)</span>
                 )}
               </span>
               {option.disabled && (

@@ -215,3 +215,48 @@ describe('stickies as connector ends (053 US1)', () => {
     expect(connectTargets(withNotes, 'svc', 'second').map((t) => t.id)).toEqual(['n2']);
   });
 });
+
+describe('images as connector ends (055 US3)', () => {
+  const withImages: SododeckFile = {
+    ...deck,
+    images: [
+      {
+        id: 'i1',
+        asset: 'a'.repeat(64),
+        position: { x: 0, y: 0 },
+        size: { width: 80, height: 60 },
+        alt: 'Logo',
+      },
+      {
+        id: 'i2',
+        asset: 'a'.repeat(64),
+        position: { x: 200, y: 0 },
+        size: { width: 80, height: 60 },
+      },
+    ],
+    edges: [...deck.edges, { id: 'e2', from: 'i1', to: 'svc' }],
+  };
+
+  it('accepts image to card and image to image, refuses self and duplicates', () => {
+    expect(connectionCheck(withImages, 'i1', 'q')).toBe('ok');
+    expect(connectionCheck(withImages, 'i1', 'i2')).toBe('ok');
+    expect(connectionCheck(withImages, 'i1', 'i1')).toBe('self');
+    expect(connectionCheck(withImages, 'svc', 'i1')).toBe('duplicate');
+  });
+
+  it('lists images for the keyboard connect popover, titled by alt text', () => {
+    const targets = connectTargets(withImages, 'svc', '');
+    expect(targets.find((t) => t.id === 'i2')).toEqual({
+      id: 'i2',
+      title: 'Image',
+      kind: 'image',
+      disabled: false,
+    });
+    expect(targets.find((t) => t.id === 'i1')).toMatchObject({
+      title: 'Logo',
+      kind: 'image',
+      disabled: true,
+    });
+    expect(connectTargets(withImages, 'svc', 'logo').map((t) => t.id)).toEqual(['i1']);
+  });
+});

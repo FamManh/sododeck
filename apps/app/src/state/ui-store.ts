@@ -408,7 +408,7 @@ export interface EndpointPreview {
   edgeId: Id;
   end: 'source' | 'target';
   targetId: Id | null;
-  targetKind: 'node' | 'group' | 'sticky' | null;
+  targetKind: 'node' | 'group' | 'sticky' | 'image' | null;
   /** The target's box (canvas px) and shape outline, so the preview draws on it. */
   box: { x: number; y: number; width: number; height: number } | null;
   geometry?: Geometry;

@@ -12,7 +12,7 @@ export const REST_MS = 150;
 export const GRACE_MS = 100;
 
 /** Stickies, proxies and the scope label are not cards: resting on them lights nothing. */
-const NOT_CARD_PREFIXES = ['sticky:', 'sticky-leader:', 'port:', 'scope-label:'];
+const NOT_CARD_PREFIXES = ['sticky:', 'image:', 'sticky-leader:', 'port:', 'scope-label:'];
 
 export function isHoverTarget(id: string): boolean {
   return !NOT_CARD_PREFIXES.some((prefix) => id.startsWith(prefix));

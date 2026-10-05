@@ -540,7 +540,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
     () => [
       ...stackImages(
         toFlowNodes(deck, graph, view, overlay),
-        toImageNodes(deck, selection, flowMode),
+        toImageNodes(deck, selection, flowMode, graph.hiddenImages),
         deck,
       ),
       ...toStickyNodes(deck, selection, overlay, {
