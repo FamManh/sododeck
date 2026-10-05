@@ -179,7 +179,7 @@ export function ImportReportPanel({ deck }: { deck: SododeckFile }) {
             <Copy />
             Copy report
           </Button>
-          <FidelityGroups
+          <FidelityGroups<Row>
             entries={[
               ...report.skipped.map((entry) => ({
                 group: SKIP_MAPPING[entry.reason].group,
