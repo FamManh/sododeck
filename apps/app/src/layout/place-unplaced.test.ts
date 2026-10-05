@@ -5,13 +5,17 @@ import { emptySododeckFile, type Node, type SododeckFile } from '@sododeck/schem
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { describe, expect, it } from 'vitest';
 
-import { defaultSize } from '../import-mermaid/shape-map';
 import { computeLayout } from './elk-layout';
+import { STICKY_DEFAULT_SIZE } from '@sododeck/model';
+
+import { cardSize } from '../editor/canvas-geometry';
 import {
   applyPlacement,
   hasUnplacedCards,
+  NOTE_GAP,
   placementRequests,
   placeUnplaced,
+  viewPlacementRequests,
 } from './place-unplaced';
 
 const elk = new ELK();
@@ -29,7 +33,7 @@ type Box = { x: number; y: number; width: number; height: number };
 const boxOf = (node: Node): Box => ({
   x: node.position?.x ?? 0,
   y: node.position?.y ?? 0,
-  ...(node.size ?? defaultSize(node.type)),
+  ...cardSize(node),
 });
 const overlap = (a: Box, b: Box) =>
   a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
@@ -156,5 +160,96 @@ describe('placing unplaced cards (027 FR-024)', () => {
     const placed = await placeUnplaced(file, layout);
     expect(placed.nodes[0]?.position).toEqual({ x: 0, y: 0 });
     expect(overlaps(placed.nodes)).toEqual([]);
+  });
+
+  it('measures cards as the canvas draws them, so two-line titles get room (auto-wo regression)', () => {
+    const tall = card('q', { title: 'Candidate Generation Queue Worker Pool', tech: 'Postgres' });
+    const file = deck({ nodes: [tall, card('b')] });
+    const request = placementRequests(file)[0];
+    const measured = request?.nodes.find((n) => n.id === 'q');
+    expect(measured).toMatchObject(cardSize(tall));
+    expect(measured?.height).toBeGreaterThan(72);
+    expect(measured?.width).toBeGreaterThan(160);
+  });
+
+  it('gives a note anchored to an unplaced card a slot under that card', async () => {
+    const file = deck({
+      nodes: [card('a'), card('b')],
+      edges: [{ id: 'e', from: 'a', to: 'b' }],
+      stickies: [
+        { id: 'n1', text: 'First caveat', anchor: 'a' },
+        { id: 'n2', text: 'Second caveat', anchor: 'a', size: { width: 160, height: 120 } },
+        { id: 'kept', text: 'Has its own offset', anchor: 'b', position: { x: 5, y: 5 } },
+      ],
+    });
+    const box = placementRequests(file)[0]?.nodes.find((n) => n.id === 'a');
+    const cardHeight = cardSize(card('a')).height;
+    expect(box?.height).toBe(cardHeight + NOTE_GAP + STICKY_DEFAULT_SIZE.height + NOTE_GAP + 120);
+    const placed = await placeUnplaced(file, layout);
+    expect(placed.stickies.map((s) => s.position)).toEqual([
+      { x: 0, y: cardHeight + NOTE_GAP },
+      { x: 0, y: cardHeight + NOTE_GAP + STICKY_DEFAULT_SIZE.height + NOTE_GAP },
+      { x: 5, y: 5 },
+    ]);
+    // Note boxes stay clear of every other card.
+    const a = placed.nodes[0];
+    const b = placed.nodes[1];
+    if (a?.position === undefined || b?.position === undefined) throw new Error('placed');
+    for (const sticky of placed.stickies.slice(0, 2)) {
+      const note = {
+        x: a.position.x + (sticky.position?.x ?? 0),
+        y: a.position.y + (sticky.position?.y ?? 0),
+        ...(sticky.size ?? STICKY_DEFAULT_SIZE),
+      };
+      expect(overlap(note, boxOf(b))).toBe(false);
+    }
+  });
+
+  it('lays out each feature view that lists its cards, with its own group frames', async () => {
+    const file = deck({
+      nodes: [
+        card('web'),
+        card('api', { group: 'core' }),
+        card('price', { group: 'core' }),
+        card('db', { type: 'database' }),
+        card('mail'),
+      ],
+      groups: [{ id: 'core', title: 'Core' }],
+      edges: [
+        { id: 'e1', from: 'web', to: 'api' },
+        { id: 'e2', from: 'api', to: 'price' },
+        { id: 'e3', from: 'price', to: 'db' },
+        { id: 'e4', from: 'api', to: 'mail' },
+      ],
+      features: [{ id: 'pricing', title: 'Pricing' }],
+      views: [
+        { id: 'overview', type: 'system', title: 'Overview' },
+        {
+          id: 'pricing',
+          type: 'feature',
+          title: 'Pricing',
+          feature: 'pricing',
+          includes: ['api', 'price', 'db'],
+        },
+        {
+          id: 'kept',
+          type: 'custom',
+          title: 'Kept',
+          includes: ['web'],
+          positions: { web: { x: 1, y: 2 } },
+        },
+      ],
+    });
+    expect(viewPlacementRequests(file).map((v) => v.viewId)).toEqual(['pricing']);
+    const placed = await placeUnplaced(file, layout);
+    const view = placed.views[1];
+    expect(Object.keys(view?.positions ?? {}).sort()).toEqual(['api', 'db', 'price']);
+    expect(Object.keys(view?.groupFrames ?? {})).toEqual(['core']);
+    expect(placed.views[0]?.positions).toBeUndefined();
+    expect(placed.views[2]?.positions).toEqual({ web: { x: 1, y: 2 } });
+    const inView = placed.nodes
+      .filter((n) => view?.positions?.[n.id] !== undefined)
+      .map((n) => ({ ...n, position: view?.positions?.[n.id] }));
+    expect(overlaps(inView)).toEqual([]);
   });
 });
