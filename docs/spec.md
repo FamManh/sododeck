@@ -106,7 +106,7 @@ A workspace holds decks; each deck is one model with many views over it.
 | Step | One hop in a flow | edge, order, condition, branch, SLA, rule refs, payload |
 | Rule | Business rule or decision table | title, table (conditions → actions), notes |
 | Entity state machine | Lifecycle of a business entity | states, transitions (linked to flows) |
-| Note / Comment / Sticky | Knowledge attached to any object or free on the canvas | body (markdown), anchor, author, resolved |
+| Note / Comment / Sticky | Knowledge placed freely on the canvas; a connector can link it to a card (ADR 0041) | body (markdown), position, author, resolved |
 | ADR | Architecture decision record | context, decision, consequences, status |
 
 **Storage format (example: delivery.sododeck; older `.sododeck.json` and `.json` files also open)**
@@ -145,7 +145,7 @@ A workspace holds decks; each deck is one model with many views over it.
       "rows": [{ "id": "r1", "when": [">= 3", "true"], "then": ["Return, cancel COD, notify shipper"] }]
     }
   },
-  "stickies": [{ "id": "n1", "text": "Confirm warehouse SLA with ops", "anchor": "routing-svc" }]
+  "stickies": [{ "id": "n1", "text": "Confirm warehouse SLA with ops", "position": { "x": 40, "y": 400 } }]
 }
 ```
 
@@ -206,7 +206,7 @@ Priority: **P0** = MVP, **P1** = V2, **P2** = V3.
 | --- | --- | --- |
 | K-1 | Title, markdown description, owner, tags and links on every node, edge, flow and step | P0 |
 | K-2 | Business rules as decision tables, reusable across steps | P0 |
-| K-3 | Sticky notes on the canvas, free or anchored to a node (moves with it) | P0 |
+| K-3 | Sticky notes on the canvas, placed freely; link one to a card with a connector (pinning removed, ADR 0041) | P0 |
 | K-4 | Global search across titles, notes and rules | P0 |
 | K-5 | Comment threads with resolve and @mention (signed-in) | P1 |
 | K-6 | ADRs attached to nodes and edges | P1 |

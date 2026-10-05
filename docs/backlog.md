@@ -231,7 +231,7 @@ and **027** ai-deck-skill are not scheduled.
 | 036 | collab-ready-document          | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
 | 037 | scale-bench                    | before 023 | 036           | 2 d  | —                                                             |
 | 038 | card-icons                     | after 036  | 036, (029)    | 4 d  | built; lucide now, icon sets later (ADR 0028)                 |
-| 053 | sticky-notes-and-connectors    | after 052  | 009, 050      | 4 d  | founder feedback 2026-10-05                                   |
+| 053 | sticky-notes-and-connectors    | after 052  | 009, 050      | 4 d  | founder feedback 2026-10-05; note pinning removed (ADR 0041)  |
 | 054 | editor-chrome-polish           | after 053  | 018, 052      | 4 d  | built (2026-10-05); see `specs/054-editor-chrome-polish/`     |
 | 055 | image-support                  | after 054  | 036           | 6 d  | founder feedback; ADR needed (schema, storage)                |
 | 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 6 d  | founder feedback; Mermaid flowchart + sequence (ER later)     |
@@ -922,6 +922,8 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
   > docs/design/screens/60-problems-light.png and 60-problems-dark.png pixel-close.
 
 ## 009-stickies-search
+
+> Note pinning (anchor, leader, "moves with the node") was removed by [ADR 0041](decisions/0041-remove-note-pinning.md); notes are always free.
 
 - **Milestone:** M3 · **Depends on:** 008 · **Estimate:** 4 d
 - **Goal:** Users leave reminders on the diagram and find anything — components, flows, rules,
@@ -2397,6 +2399,8 @@ Source: founder's manual testing. Split into four features; small fixes are bund
 ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 → 055.
 
 ## 053-sticky-notes-and-connectors
+
+> Note pinning was removed afterwards by [ADR 0041](decisions/0041-remove-note-pinning.md): notes are always free; link one to a card with a connector.
 
 - **Status:** implemented on `feat-sticky-note-and-connections` (spec `specs/053-sticky-notes-and-connectors/`, ADR 0036); screenshots, quickstart run and the PR (T055, T056) are open.
 - **Goal:** A sticky note looks like a sticky note, can be resized, takes part in connections and
