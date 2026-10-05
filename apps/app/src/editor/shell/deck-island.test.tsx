@@ -82,6 +82,18 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
   });
 
+  it('opens and closes the DBML / SQL drawer from its menu (054)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Island />, shop);
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Show DBML / SQL' }));
+    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Deck menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Hide DBML / SQL' }));
+    expect(useUiStore.getState().jsonPanel.codeDrawer.open).toBe(false);
+  });
+
   it('switches the theme from its menu (§g-60)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);
@@ -139,8 +151,8 @@ describe('DeckIsland (018 contract "Deck island")', () => {
   it('switches views and replaces them with the session chip while recording (011)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);
-    await user.click(screen.getByRole('tab', { name: 'Infra, infra view' }));
-    expect(screen.getByRole('tab', { name: 'Infra, infra view' })).toHaveAttribute(
+    await user.click(screen.getByRole('tab', { name: 'Flows view' }));
+    expect(screen.getByRole('tab', { name: 'Flows view' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -153,7 +165,7 @@ describe('DeckIsland (018 contract "Deck island")', () => {
   it('offers Tidy layout in the current view’s menu (§g-46)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Island />, shop);
-    await user.click(screen.getByRole('button', { name: 'View options for System' }));
+    await user.click(screen.getByRole('button', { name: 'View options for Overview' }));
     expect(screen.getByRole('menuitem', { name: /Tidy layout/ })).toBeInTheDocument();
   });
 
@@ -178,7 +190,7 @@ describe('DeckIsland (018 contract "Deck island")', () => {
         .drillInto({ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } });
     });
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'System view/Core',
+      'Overview view/Core',
     );
   });
 
@@ -194,8 +206,8 @@ describe('DeckIsland (018 contract "Deck island")', () => {
     }
     renderWithEditor(<Compact />, shop);
     expect(screen.queryByRole('tablist', { name: 'Views' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'View: System' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Infra' }));
-    expect(screen.getByRole('button', { name: 'View: Infra' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'View: Overview' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Flows' }));
+    expect(screen.getByRole('button', { name: 'View: Flows' })).toBeInTheDocument();
   });
 });

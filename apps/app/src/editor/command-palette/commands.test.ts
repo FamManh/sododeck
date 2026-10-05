@@ -53,23 +53,29 @@ describe('buildCommands', () => {
       openDetails: vi.fn(),
       jsonShown: false,
       toggleJson: vi.fn(),
+      codeOpen: false,
+      toggleCode: vi.fn(),
       hideUi: vi.fn(),
     };
     const commands = buildCommands({ ...context(), shell });
     const byTitle = (title: string) => commands.find((command) => command.title === title);
     byTitle('Open details')?.run();
     byTitle('Show JSON')?.run();
+    byTitle('Open DBML / SQL')?.run();
     byTitle('Hide UI')?.run();
     expect(shell.openDetails).toHaveBeenCalledOnce();
     expect(shell.toggleJson).toHaveBeenCalledOnce();
+    expect(shell.toggleCode).toHaveBeenCalledOnce();
     expect(shell.hideUi).toHaveBeenCalledOnce();
 
     const idle = buildCommands({
       ...context(),
-      shell: { ...shell, canOpenDetails: false, jsonShown: true },
+      shell: { ...shell, canOpenDetails: false, jsonShown: true, codeOpen: true },
     });
     expect(idle.map((command) => command.title)).not.toContain('Open details');
     expect(idle.map((command) => command.title)).toContain('Hide JSON');
+    expect(idle.map((command) => command.title)).toContain('Close DBML / SQL');
+    expect(idle.map((command) => command.title)).not.toContain('Open DBML / SQL');
   });
 
   it('toggles the resolved theme, including from system mode', () => {
@@ -118,6 +124,8 @@ describe('buildCommands', () => {
       openDetails: vi.fn(),
       jsonShown: false,
       toggleJson: vi.fn(),
+      codeOpen: false,
+      toggleCode: vi.fn(),
       hideUi: vi.fn(),
     };
     const title = 'Spread connector ends evenly';

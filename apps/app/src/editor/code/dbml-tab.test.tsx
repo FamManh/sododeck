@@ -3,8 +3,6 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useEffect, useRef } from 'react';
 
-import { schemaExport } from '../../db/export/schema-export';
-import { DEFAULT_SQL_OPTIONS } from '../../db/export/types';
 import { shopDeck } from '../../db/fixtures/shop';
 import { edits, shopText } from '../../db/fixtures/sync/shop-edits';
 import type { TextProblem } from '../../db/sync/types';
@@ -60,10 +58,10 @@ vi.mock('./dbml-editor', () => ({
 
 const deck = shopDeck('postgres');
 
-function setup(scope: 'schema' | 'selection' = 'schema', selection: string[] = []) {
+function setup(selection: string[] = []) {
   const { wrapper, doc, editor } = editorWrapper(deck);
   if (selection.length > 0) useUiStore.getState().select({ nodes: selection });
-  render(<DbmlTab scope={scope} />, { wrapper });
+  render(<DbmlTab />, { wrapper });
   const area = () => screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'DBML schema' });
   const type = (text: string) => {
     fireEvent.focus(area());
@@ -260,55 +258,38 @@ describe('DbmlTab (Whole schema)', () => {
 
   it('hints at what to type in an empty deck', async () => {
     const { wrapper } = editorWrapper({ ...deck, nodes: [], edges: [], enums: [] });
-    render(<DbmlTab scope="schema" />, { wrapper });
+    render(<DbmlTab />, { wrapper });
     expect(await screen.findByText('Type a table to start your schema.')).toBeInTheDocument();
   });
 });
 
-describe('DbmlTab (Selection)', () => {
-  const ids = ['orders', 'order_items'];
-
-  it('holds only the selected tables and hints when nothing is selected', async () => {
-    const { area } = setup('selection', ids);
+describe('DbmlTab always shows the whole schema (054)', () => {
+  it.each([
+    ['nothing selected', []],
+    ['a table selected', ['orders']],
+    ['two tables selected', ['orders', 'order_items']],
+  ])('holds every table with %s', async (_, selection) => {
+    const { area } = setup(selection);
     await waitFor(() => {
-      expect(area().value).toContain('Table orders {');
+      expect(area().value).toBe(shopText());
     });
-    expect(area().value).toContain('Table order_items {');
-    expect(area().value).not.toContain('Table customers {');
-    expect(area().value).toBe(
-      schemaExport(deck, {
-        format: 'dbml',
-        scope: { kind: 'selection', tableIds: ids },
-        dialect: null,
-        sql: DEFAULT_SQL_OPTIONS,
-      }).text,
-    );
+    expect(area().value).toContain('Table customers {');
   });
 
-  it('shows the empty-selection hint', async () => {
-    setup('selection', []);
-    expect(
-      await screen.findByText(
-        'Select tables, or switch to Whole schema. You can also type a new table here.',
-      ),
-    ).toBeInTheDocument();
+  it('never mentions the Selection / Whole schema switch', async () => {
+    const { area } = setup([]);
+    await waitFor(() => {
+      expect(area().value).toBe(shopText());
+    });
+    expect(screen.queryByText(/Select tables/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Whole schema/)).not.toBeInTheDocument();
   });
 
-  it('deleting a block removes only that table', async () => {
-    const { doc, area, type, pause } = setup('selection', ids);
+  it('ignores an older stored Selection scope', async () => {
+    localStorage.setItem('sododeck.jsonPanel', JSON.stringify({ schemaScope: 'selection' }));
+    const { area } = setup(['orders']);
     await waitFor(() => {
-      expect(area().value).toContain('Table orders {');
+      expect(area().value).toBe(shopText());
     });
-    const text = area()
-      .value.replace(/Table order_items \{[\s\S]*?\n\}\n\n?/, '')
-      .replace(/Ref: order_items[^\n]*\n/g, '');
-    type(text);
-    await pause();
-    await waitFor(() => {
-      expect(nodeNamed(doc, 'order_items')).toBeUndefined();
-    });
-    expect(nodeNamed(doc, 'orders')).toBeDefined();
-    expect(nodeNamed(doc, 'customers')).toBeDefined();
-    expect(nodeNamed(doc, 'shipments')).toBeDefined();
   });
 });

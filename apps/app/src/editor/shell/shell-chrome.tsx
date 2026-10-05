@@ -6,26 +6,28 @@ import { preloadExportDialog } from '../export/export-dialog-loader';
 import { ExportDialogMount } from '../export/export-dialog-mount';
 import { ImportDialogMount } from '../import/import-dialog-mount';
 import { PANEL_COLLAPSED } from '../panel-height';
+import { CodeDrawer } from './code-drawer';
 import { DeckIsland } from './deck-island';
 import { DetailDrawer } from './detail-drawer';
 import { Flyouts } from './flyouts';
 import { HistoryIsland } from './history-island';
 import { JsonOverlay } from './json-overlay';
 import { Rail } from './rail';
-import { clampDrawerWidth, EDGE, zoomIslandBottom } from './shell-geometry';
+import { EDGE, zoomIslandBottom } from './shell-geometry';
 import { CanvasMenu } from '../quick-edit/canvas-menu';
 import { SelectionToolbar } from '../quick-edit/selection-toolbar';
 import { ShortcutHelpDialog } from './shortcut-help-dialog';
 import { ShowUiPill } from './show-ui-pill';
 import { ToolsIsland } from './tools-island';
 import { useCompactShell } from './use-compact-shell';
+import { useDrawerWidths } from './use-drawer-widths';
 import { useShellShortcuts } from './use-shell-shortcuts';
 import { ZoomIsland } from './zoom-island';
 
 /**
  * Everything that floats over the canvas (018, ADR 0014): the deck and tools islands, the rail
- * with Undo / Redo under it, the flyout, the details drawer, the JSON overlay and the zoom
- * island. Hide UI leaves only the "Show UI" pill; the state of each part is kept.
+ * with Undo / Redo under it, the flyout, the details drawer, the code drawer (DBML / SQL, 054), the JSON overlay and the
+ * zoom island. Hide UI leaves only the "Show UI" pill; the state of each part is kept.
  */
 export function ShellChrome({
   deck,
@@ -35,7 +37,6 @@ export function ShellChrome({
   onOpenRules?: () => void;
 }) {
   const hideUi = useUiStore((s) => s.hideUi);
-  const drawer = useUiStore((s) => s.drawer);
   const jsonShown = useUiStore((s) => s.jsonShown);
   const jsonHeight = useUiStore((s) => (s.jsonPanel.open ? s.jsonPanel.height : PANEL_COLLAPSED));
   const compact = useCompactShell();
@@ -66,9 +67,9 @@ export function ShellChrome({
     [],
   );
 
-  const viewportWidth =
-    typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth;
-  const drawerWidth = drawer.open ? clampDrawerWidth(drawer.width, viewportWidth, compact) : null;
+  // The open drawers as one stack on the right edge: the zoom island and the JSON overlay stop
+  // at its left edge.
+  const { stack: drawerWidth } = useDrawerWidths();
 
   return (
     <>
@@ -89,6 +90,7 @@ export function ShellChrome({
             compact={compact}
             {...(onOpenRules === undefined ? {} : { onOpenRules })}
           />
+          <CodeDrawer />
           <SelectionToolbar />
           <ZoomIsland
             bottom={zoomIslandBottom(jsonShown, jsonHeight)}

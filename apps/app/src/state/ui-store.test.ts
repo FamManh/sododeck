@@ -623,6 +623,73 @@ describe('ui store', () => {
     expect(state().jsonPanel).toEqual(DEFAULT_JSON_PANEL);
   });
 
+  describe('code drawer (054)', () => {
+    const saved = () => JSON.parse(localStorage.getItem(JSON_PANEL_KEY) ?? 'null') as unknown;
+    const setWindow = (width: number) => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
+    };
+    afterEach(() => {
+      setWindow(1024);
+    });
+
+    it('starts closed on DBML at 560 px', () => {
+      expect(state().jsonPanel.codeDrawer).toEqual({ open: false, width: 560, format: 'dbml' });
+    });
+
+    it('opens on a tab, closes, and saves each change', () => {
+      state().openCodeDrawer('sql');
+      expect(state().jsonPanel.codeDrawer).toMatchObject({ open: true, format: 'sql' });
+      expect(saved()).toMatchObject({ codeDrawer: { open: true, format: 'sql' } });
+      state().setCodeDrawerFormat('dbml');
+      expect(state().jsonPanel.codeDrawer.format).toBe('dbml');
+      state().closeCodeDrawer();
+      expect(state().jsonPanel.codeDrawer.open).toBe(false);
+      state().toggleCodeDrawer();
+      expect(state().jsonPanel.codeDrawer.open).toBe(true);
+      expect(state().jsonPanel.codeDrawer.format).toBe('dbml');
+    });
+
+    it('keeps the JSON panel prefs when the drawer changes', () => {
+      state().setJsonPanelHeight(300);
+      state().openCodeDrawer();
+      expect(state().jsonPanel.height).toBe(300);
+      expect(state().jsonPanel.format).toBe('json');
+    });
+
+    it('moves the width live and saves it only on commit; never under 320', () => {
+      state().setCodeDrawerWidth(700);
+      expect(state().jsonPanel.codeDrawer.width).toBe(700);
+      expect(saved()).toBeNull();
+      state().setCodeDrawerWidth(100, { commit: true });
+      expect(state().jsonPanel.codeDrawer.width).toBe(320);
+      expect(saved()).toMatchObject({ codeDrawer: { width: 320 } });
+    });
+
+    it('opening it closes the details drawer when there is no room for both', () => {
+      setWindow(900);
+      state().openDrawer('deck');
+      state().openCodeDrawer();
+      expect(state().drawer.open).toBe(false);
+      expect(state().jsonPanel.codeDrawer.open).toBe(true);
+    });
+
+    it('opening the details drawer closes the code drawer when there is no room for both', () => {
+      setWindow(900);
+      state().openCodeDrawer();
+      state().openDrawer('deck');
+      expect(state().jsonPanel.codeDrawer.open).toBe(false);
+      expect(state().drawer.open).toBe(true);
+    });
+
+    it('keeps both drawers open when the window has room', () => {
+      setWindow(1600);
+      state().openDrawer('deck');
+      state().openCodeDrawer();
+      expect(state().drawer.open).toBe(true);
+      expect(state().jsonPanel.codeDrawer.open).toBe(true);
+    });
+  });
+
   it('updates and saves each JSON panel preference', () => {
     const saved = () => JSON.parse(localStorage.getItem(JSON_PANEL_KEY) ?? 'null') as unknown;
     state().setJsonPanelOpen(false);
@@ -637,15 +704,14 @@ describe('ui store', () => {
     state().toggleJsonPanel();
     expect(state().jsonPanel.open).toBe(true);
     expect(saved()).toEqual({ ...DEFAULT_JSON_PANEL, open: true, height: 320, tab: 'selection' });
-    state().setCodeFormat('dbml');
     state().setSchemaScope('schema');
     state().setSqlPreviewDialect('sqlite');
     expect(state().jsonPanel).toMatchObject({
-      format: 'dbml',
+      format: 'json',
       schemaScope: 'schema',
       sqlPreviewDialect: 'sqlite',
     });
-    expect(saved()).toMatchObject({ format: 'dbml', schemaScope: 'schema' });
+    expect(saved()).toMatchObject({ format: 'json', schemaScope: 'schema' });
   });
 
   it('never switches the JSON tab when the selection changes (clarification Q2)', () => {

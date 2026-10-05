@@ -35,6 +35,8 @@ import { readViewState } from '../views/use-current-view';
 import { selectionFragment } from './clipboard-ops';
 import { commonParent } from './common-parent';
 import { dropTarget, frameEntries, type FrameEntry } from './drop-target';
+import { lockedGroupIds } from '../group-lock';
+import { refuseLocked } from '../lock';
 import { equalGaps, nearestGap } from './gaps';
 import { membershipChanges, type MembershipChange } from './membership-changes';
 import { snap, snapCandidates, type SnapCandidates } from './snap';
@@ -242,15 +244,24 @@ export class DragController {
     const { editor, getViewport } = this.deps;
     const view = readViewState(editor.doc);
     const deck = readDeck(editor.doc);
+    // A locked group refuses to move (054); the frame is not draggable either, this is the
+    // backstop for a selection drag that still carries one.
+    const lockedGroups = lockedGroupIds(deck);
+    if (group !== undefined && lockedGroups.has(group.groupId)) {
+      useUiStore.getState().setCanvasGesture(null);
+      refuseLocked();
+      return;
+    }
+    const movable = groups.filter((id) => !lockedGroups.has(id));
     const ui = useUiStore.getState();
     const scope = scopeOf(ui.drill);
     const zoom = getViewport().zoom;
     const level = effectiveLevel(levelForZoom(zoom), scope);
     const bounds = groupBounds(view.deck, level);
 
-    const tree = groupSubtree(deck, groups);
+    const tree = groupSubtree(deck, movable);
     // A derived schema frame (048) stores nothing: dragging it moves its tables, never a frame.
-    const schemaIds = new Set(groups.filter(isSchemaGroupId));
+    const schemaIds = new Set(movable.filter(isSchemaGroupId));
     const schemaMembers = view.deck.nodes
       .filter((node) => node.group !== undefined && schemaIds.has(node.group))
       .map((node) => node.id);
@@ -324,7 +335,7 @@ export class DragController {
       level,
       copies: null,
       nodes,
-      groups,
+      groups: movable,
       start,
       frames,
       anchorStart,

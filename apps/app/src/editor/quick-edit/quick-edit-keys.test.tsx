@@ -144,6 +144,7 @@ describe('quick edit from the keyboard (019 US7)', () => {
       'Collapse',
       'Select members',
       'Colour: none',
+      'Lock',
       'Spread ends evenly',
       'More actions',
     ]);

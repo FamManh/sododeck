@@ -10,7 +10,7 @@ import { DeckInspector } from '../inspector/deck-inspector';
 import { EnumInspector } from '../inspector/enum/enum-inspector';
 import { DrawerCloseContext } from './drawer-close-context';
 import { DrawerGrip } from './drawer-grip';
-import { clampDrawerWidth, EDGE, panToClear } from './shell-geometry';
+import { clampDrawerWidth, DRAWER_MAX, DRAWER_MIN, EDGE, panToClear } from './shell-geometry';
 
 /** Where focus lands when the drawer opens: the title, else the first field or control. */
 const TITLE_FIELD = 'input[aria-label="Title"]';
@@ -39,6 +39,7 @@ export function DetailDrawer({
 }) {
   const drawer = useUiStore((s) => s.drawer);
   const announce = useUiStore((s) => s.announce);
+  const setDrawerWidth = useUiStore((s) => s.setDrawerWidth);
   const { getViewport, setViewport } = useReactFlow();
   const ref = useRef<HTMLElement>(null);
   const width = clampDrawerWidth(
@@ -143,7 +144,18 @@ export function DetailDrawer({
       style={{ width, right: EDGE }}
       className="sd-overlay-in-right pointer-events-auto absolute top-17 bottom-3 flex flex-col rounded-card border border-hairline bg-surface shadow-float outline-none"
     >
-      <DrawerGrip width={width} />
+      <DrawerGrip
+        width={width}
+        min={DRAWER_MIN}
+        max={DRAWER_MAX}
+        label="Resize details"
+        onChange={(px) => {
+          setDrawerWidth(px);
+        }}
+        onCommit={(px) => {
+          setDrawerWidth(px, { commit: true });
+        }}
+      />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-card">
         <DrawerCloseContext value={close}>
           {drawer.mode === 'deck' ? (

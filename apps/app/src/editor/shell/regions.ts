@@ -11,6 +11,7 @@ export const REGION_ORDER = [
   'canvas',
   'zoom',
   'drawer',
+  'code',
 ] as const;
 
 export type RegionId = (typeof REGION_ORDER)[number] | 'show-ui';
@@ -18,12 +19,17 @@ export type RegionId = (typeof REGION_ORDER)[number] | 'show-ui';
 export function visibleRegions({
   hideUi,
   drawerOpen,
+  codeOpen = false,
 }: {
   hideUi: boolean;
   drawerOpen: boolean;
+  /** The DBML / SQL drawer (054). */
+  codeOpen?: boolean;
 }): readonly RegionId[] {
   if (hideUi) return ['canvas', 'show-ui'];
-  return REGION_ORDER.filter((region) => region !== 'drawer' || drawerOpen);
+  return REGION_ORDER.filter(
+    (region) => (region !== 'drawer' || drawerOpen) && (region !== 'code' || codeOpen),
+  );
 }
 
 /**

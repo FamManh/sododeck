@@ -250,6 +250,63 @@ describe('dragging a group frame (016 US2, R5)', () => {
   });
 });
 
+describe('a locked group refuses move and resize (054 FR-013)', () => {
+  const lockedDeck: SododeckFile = {
+    ...deck,
+    nodes: deck.nodes.map((n) =>
+      n.group === 'pay' || n.group === 'fraud' ? { ...n, locked: true } : n,
+    ),
+  };
+
+  it('refuses a frame drag and says why, changing nothing', () => {
+    const { h, doc, editor } = setup(lockedDeck);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodesChange(move('group:pay', -48 + 100, -48 + 40));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(toJSON(doc)).toEqual(lockedDeck);
+    expect(editor().canUndo()).toBe(false);
+    expect(ui().announcement.text).toBe('Locked · unlock to move or edit');
+    expect(ui().canvasGesture).toBeNull();
+  });
+
+  it('refuses a collapsed group card drag the same way', () => {
+    const { h, doc } = setup(lockedDeck);
+    act(() => {
+      h().onNodeDragStart({}, { id: 'collapsed:pay', position: { x: 100, y: 100 } } as Node);
+      h().onNodesChange(move('collapsed:pay', 150, 120));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(toJSON(doc)).toEqual(lockedDeck);
+  });
+
+  it('refuses to resize the frame', () => {
+    const { doc, editor } = setup(lockedDeck);
+    let session: ReturnType<typeof startResize> = null;
+    act(() => {
+      session = startResize(editor(), 'pay', 'bottom-right');
+    });
+    expect(session).toBeNull();
+    expect(toJSON(doc)).toEqual(lockedDeck);
+    expect(ui().announcement.text).toBe('Locked · unlock to move or edit');
+  });
+
+  it('still moves a group that has one unlocked card', () => {
+    const partly: SododeckFile = {
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.id === 'm1' ? { ...n, locked: true } : n)),
+    };
+    const { h, doc } = setup(partly);
+    act(() => {
+      h().onNodeDragStart({}, flowNode('group:pay'));
+      h().onNodesChange(move('group:pay', -48 + 100, -48 + 40));
+      h().onNodeDragStop(pointer(0, 0));
+    });
+    expect(frameOf(toJSON(doc), 'pay')).toEqual(frame(52, -8, 560, 540));
+  });
+});
+
 describe('dropping components into and out of groups (016 US4, R6)', () => {
   it('drops a card into the frame under the pointer, and the frame does not grow', () => {
     const { h, doc, editor } = setup();

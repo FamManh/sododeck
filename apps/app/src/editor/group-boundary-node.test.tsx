@@ -180,6 +180,34 @@ describe('GroupBoundaryNode as a frame (016)', () => {
     expect(document.querySelectorAll('.sd-group-handle[aria-hidden]')).toHaveLength(0);
   });
 
+  it('shows a lock glyph, says "locked" and draws no handles on a locked group (054)', () => {
+    renderWithEditor(
+      <GroupBoundaryNode
+        {...props({
+          data: {
+            title: 'Core services',
+            count: 2,
+            focused: false,
+            level: 'system',
+            selected: true,
+            locked: true,
+          },
+        })}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Core services group, 2 nodes, locked' }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('group-lock')).toBeInTheDocument();
+    expect(document.querySelectorAll('.react-flow__resize-control')).toHaveLength(0);
+    expect(document.querySelectorAll('.sd-group-handle[aria-hidden]')).toHaveLength(0);
+  });
+
+  it('shows no lock glyph on an unlocked group', () => {
+    renderWithEditor(<GroupBoundaryNode {...props()} />);
+    expect(screen.queryByTestId('group-lock')).not.toBeInTheDocument();
+  });
+
   it('highlights a drop target with a dashed border and a chip (screen 110)', () => {
     renderWithEditor(<GroupBoundaryNode {...props()} />);
     expect(screen.queryByText('Drop into Core services')).toBeNull();

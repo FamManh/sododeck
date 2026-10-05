@@ -12,6 +12,7 @@ import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { displayPosition, groupBounds, type Point } from '../canvas-geometry';
 import { readViewState } from '../views/use-current-view';
+import { lockedGroupIds } from '../group-lock';
 import { groupSubtree } from './subtree';
 
 /** How long a burst stays open after the last nudge. */
@@ -38,7 +39,12 @@ function moveSelection(editor: DeckEditor, delta: Point): number {
   const { selection } = useUiStore.getState();
   const deck = readDeck(editor.doc);
   const view = readViewState(editor.doc);
-  const tree = groupSubtree(deck, selection.groups);
+  // A locked group never moves either (054).
+  const lockedGroups = lockedGroupIds(deck);
+  const tree = groupSubtree(
+    deck,
+    selection.groups.filter((id) => !lockedGroups.has(id)),
+  );
   // Locked cards never move (043 FR-024); a group still carries its members.
   const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
   const ids = new Set([...selection.nodes.filter((id) => !locked.has(id)), ...tree.nodes]);

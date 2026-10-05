@@ -37,6 +37,26 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe('⌥ arrow nudges skip a locked group (054)', () => {
+  it('does not move a locked group, its frame or its cards', () => {
+    const env = editorWrapper(
+      deckOf({
+        ...deck,
+        nodes: deck.nodes.map((n) => (n.id === 'a' ? { ...n, locked: true } : n)),
+      }),
+    );
+    const { result } = renderHook(() => useNudge(), { wrapper: env.wrapper });
+    act(() => {
+      ui().select({ groups: ['g'] });
+      result.current.key(arrow('ArrowRight'));
+      vi.advanceTimersByTime(NUDGE_IDLE_MS + 10);
+    });
+    const file = toJSON(env.doc);
+    expect(file.nodes[0]?.position).toEqual({ x: 0, y: 0 });
+    expect(file.groups[0]?.position).toEqual({ x: -24, y: -24 });
+  });
+});
+
 describe('⌥ arrow nudges (016 US5, R8)', () => {
   it('moves 1 px, or 10 px with ⇧', () => {
     const { doc, nudger } = setup();

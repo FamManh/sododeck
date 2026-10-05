@@ -97,8 +97,8 @@ describe('OutlineTree', () => {
         drill: [{ kind: 'group', id: 'core', viewport: { x: 0, y: 0, zoom: 1 } }],
       });
     });
-    const up = screen.getByRole('treeitem', { name: 'Up to System view' });
-    expect(names()).toEqual(['Up to System view', 'Order Service', 'Orders DB']);
+    const up = screen.getByRole('treeitem', { name: 'Up to Overview view' });
+    expect(names()).toEqual(['Up to Overview view', 'Order Service', 'Orders DB']);
     await user.click(up);
     expect(useUiStore.getState().drill).toEqual([]);
   });

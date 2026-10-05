@@ -10,6 +10,7 @@ import { useToast } from '@sododeck/ui/components/toast';
 import {
   Braces,
   ClipboardList,
+  Database,
   Download,
   FileCode2,
   FileUp,
@@ -34,7 +35,7 @@ import { shortcutLabel } from './shortcuts';
 /**
  * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, schema
  * import (044) and its last report, export, deck settings (the drawer on the deck) and the JSON
- * overlay. Import adds the file to the
+ * overlay, and the DBML / SQL drawer (054). Import adds the file to the
  * library as a new deck, as the library's own Import does; the open deck is not replaced.
  */
 export function DeckMenu() {
@@ -46,6 +47,7 @@ export function DeckMenu() {
   const setTheme = useThemeStore((state) => state.setTheme);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const jsonShown = useUiStore((s) => s.jsonShown);
+  const codeOpen = useUiStore((s) => s.jsonPanel.codeDrawer.open);
   const { toast } = useToast();
   const input = useRef<HTMLInputElement>(null);
 
@@ -167,6 +169,14 @@ export function DeckMenu() {
           >
             <Braces />
             {jsonShown ? 'Hide JSON' : 'Show JSON'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              useUiStore.getState().toggleCodeDrawer();
+            }}
+          >
+            <Database />
+            {codeOpen ? 'Hide DBML / SQL' : 'Show DBML / SQL'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {/* Set once and forgotten, so they live here rather than in the tools (§g-60). */}

@@ -8,7 +8,8 @@ import {
 import type { ColorRef, EdgeShape, Id, Side, StickyColor } from '@sododeck/schema';
 import { create } from 'zustand';
 
-import { clampDrawerWidth } from '../editor/shell/shell-geometry';
+import { isCompactNow } from '../editor/shell/use-compact-shell';
+import { clampDrawerWidth, drawersFitTogether } from '../editor/shell/shell-geometry';
 import {
   DEFAULT_SHELL_PREFS,
   loadShellPrefs,
@@ -22,6 +23,7 @@ import type { ConnectionCheck } from '../editor/connection-rules';
 import type { NotesDisplay } from '../editor/stickies/sticky-flow';
 import {
   loadJsonPanelPrefs,
+  CODE_DRAWER_MIN_WIDTH,
   type CodeFormat,
   type SchemaScope,
   type SqlPreviewDialect,
@@ -726,8 +728,17 @@ export interface UiState {
   setJsonPanelOpen: (open: boolean) => void;
   setJsonPanelHeight: (height: number) => void;
   setJsonTab: (tab: JsonTab) => void;
-  setCodeFormat: (format: CodeFormat) => void;
   setSchemaScope: (scope: SchemaScope) => void;
+  /**
+   * The DBML / SQL drawer (054). Opening it on a window with no room for both drawers closes the
+   * details drawer, and the other way round. `format` picks the tab.
+   */
+  openCodeDrawer: (format?: CodeFormat) => void;
+  closeCodeDrawer: () => void;
+  toggleCodeDrawer: () => void;
+  setCodeDrawerFormat: (format: CodeFormat) => void;
+  /** Resizes the code drawer; `commit` (end of a drag, a key) also saves the width. */
+  setCodeDrawerWidth: (px: number, options?: { commit?: boolean }) => void;
   setSqlPreviewDialect: (dialect: SqlPreviewDialect) => void;
   toggleJsonPanel: () => void;
   /** Shows or hides the JSON overlay (⌘J), saved for this deck. */
@@ -944,6 +955,13 @@ export const useUiStore = create<UiState>()((set, get) => {
   const saveShell = () => {
     saveShellPrefs(get().shellDeckId, shellPrefs());
   };
+  /** Whether the code drawer can stay open next to a details drawer of `detailsWidth` (054). */
+  const drawersFitNow = (detailsWidth: number) =>
+    drawersFitTogether(
+      typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerWidth,
+      clampDrawerWidth(detailsWidth, Number.POSITIVE_INFINITY),
+      isCompactNow(),
+    );
   const setJsonPanel = (patch: Partial<JsonPanelPrefs>) => {
     const jsonPanel = { ...get().jsonPanel, ...patch };
     saveJsonPanelPrefs(jsonPanel);
@@ -1549,14 +1567,40 @@ export const useUiStore = create<UiState>()((set, get) => {
     setJsonTab: (tab) => {
       setJsonPanel({ tab });
     },
-    setCodeFormat: (format) => {
-      setJsonPanel({ format });
-    },
     setSchemaScope: (schemaScope) => {
       setJsonPanel({ schemaScope });
     },
     setSqlPreviewDialect: (sqlPreviewDialect) => {
       setJsonPanel({ sqlPreviewDialect });
+    },
+    openCodeDrawer: (format) => {
+      const { codeDrawer } = get().jsonPanel;
+      setJsonPanel({
+        codeDrawer: { ...codeDrawer, open: true, ...(format === undefined ? {} : { format }) },
+      });
+      // Both drawers only stay open when the code drawer keeps its minimum and the canvas a strip.
+      const { drawer } = get();
+      if (drawer.open && !drawersFitNow(drawer.width)) get().closeDrawer();
+    },
+    closeCodeDrawer: () => {
+      const { codeDrawer } = get().jsonPanel;
+      if (codeDrawer.open) setJsonPanel({ codeDrawer: { ...codeDrawer, open: false } });
+    },
+    toggleCodeDrawer: () => {
+      if (get().jsonPanel.codeDrawer.open) get().closeCodeDrawer();
+      else get().openCodeDrawer();
+    },
+    setCodeDrawerFormat: (format) => {
+      const { codeDrawer } = get().jsonPanel;
+      if (codeDrawer.format !== format) setJsonPanel({ codeDrawer: { ...codeDrawer, format } });
+    },
+    setCodeDrawerWidth: (px, options) => {
+      const { codeDrawer } = get().jsonPanel;
+      const width = Math.max(Number.isFinite(px) ? px : codeDrawer.width, CODE_DRAWER_MIN_WIDTH);
+      const next = { ...get().jsonPanel, codeDrawer: { ...codeDrawer, width } };
+      // A drag only moves the drawer; the width is written once, when it ends.
+      if (options?.commit === true) saveJsonPanelPrefs(next);
+      set({ jsonPanel: next });
     },
     toggleJsonPanel: () => {
       setJsonPanel({ open: !get().jsonPanel.open });
@@ -1626,6 +1670,9 @@ export const useUiStore = create<UiState>()((set, get) => {
         },
         drawerReturn: state.focusedId,
       });
+      if (state.jsonPanel.codeDrawer.open && !drawersFitNow(state.drawer.width)) {
+        get().closeCodeDrawer();
+      }
     },
     openTableDrawer: (tableId, options) => {
       get().select({ nodes: [tableId] });

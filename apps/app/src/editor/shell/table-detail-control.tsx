@@ -7,18 +7,19 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@sododeck/ui/components/dropdown-menu';
-import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
+import { Rows3 } from 'lucide-react';
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { readDeck, subscribeDeck } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { oneStep } from '../fields/one-step';
 
-const OPTIONS: readonly { value: DeckTableDetail; label: string }[] = [
-  { value: 'auto', label: 'Auto' },
-  { value: 'names', label: 'Names' },
-  { value: 'keys', label: 'Keys' },
-  { value: 'all', label: 'All' },
+/** What each choice draws, matching `effectiveDetail` and `table-layout.ts`. */
+const OPTIONS: readonly { value: DeckTableDetail; label: string; description: string }[] = [
+  { value: 'auto', label: 'Auto', description: 'Every column, shortened for long tables' },
+  { value: 'names', label: 'Names', description: 'Table names only, no columns' },
+  { value: 'keys', label: 'Keys', description: 'Key columns and columns with a relationship' },
+  { value: 'all', label: 'All', description: 'Every column with its type' },
 ];
 
 function isDetail(value: string): value is DeckTableDetail {
@@ -36,10 +37,10 @@ function useDeckTableDetail(): DeckTableDetail | null {
 }
 
 /**
- * Deck detail of tables (041 FR-014, research R9): Auto · Names · Keys · All in the zoom island,
- * a dropdown in the compact shell (frame 146). Only in a deck with a table. One undo step.
+ * Deck detail of tables (041 FR-014, research R9; one compact menu since 054): the trigger shows
+ * the current choice, each option says what it draws. Only in a deck with a table. One undo step.
  */
-export function TableDetailControl({ compact }: { compact: boolean }) {
+export function TableDetailControl() {
   const editor = useEditor();
   const detail = useDeckTableDetail();
   if (detail === null) return null;
@@ -50,33 +51,32 @@ export function TableDetailControl({ compact }: { compact: boolean }) {
     });
   };
   const label = OPTIONS.find((option) => option.value === detail)?.label ?? 'Auto';
-  if (compact) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" aria-haspopup="menu">
-            Table detail: {label}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent aria-label="Table detail" align="end">
-          <DropdownMenuRadioGroup value={detail} onValueChange={choose}>
-            {OPTIONS.map((option) => (
-              <DropdownMenuRadioItem key={option.value} value={option.value}>
-                {option.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
   return (
-    <SegmentedControl aria-label="Table detail" value={detail} onValueChange={choose}>
-      {OPTIONS.map((option) => (
-        <SegmentedControlItem key={option.value} value={option.value} className="px-2">
-          {option.label}
-        </SegmentedControlItem>
-      ))}
-    </SegmentedControl>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" aria-haspopup="menu">
+          <Rows3 aria-hidden />
+          Detail: {label}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent aria-label="Table detail" align="end">
+        <DropdownMenuRadioGroup value={detail} onValueChange={choose}>
+          {OPTIONS.map((option) => (
+            <DropdownMenuRadioItem
+              key={option.value}
+              value={option.value}
+              aria-label={option.label}
+              aria-describedby={`table-detail-${option.value}`}
+              className="flex-col items-start gap-0"
+            >
+              <span>{option.label}</span>
+              <span id={`table-detail-${option.value}`} className="text-ink-secondary text-body-sm">
+                {option.description}
+              </span>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -59,7 +59,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       ['Open details', 'Open inside', 'Rename'],
       ['Collapse', 'Select members', 'Colour: none'],
       ['Copy', 'Cut', 'Duplicate'],
-      ['Spread ends evenly'],
+      ['Lock', 'Spread ends evenly'],
       ['Delete group'],
     ]);
     expect(labels(TARGETS.canvas, 'menu')).toEqual([
@@ -70,7 +70,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Delete']]);
     expect(labels(TARGETS.mixed, 'menu')).toEqual([
       ['Colour: none', 'Icon…'],
-      ['Spread ends evenly'],
+      ['Lock', 'Spread ends evenly'],
       ['Delete'],
     ]);
   });
@@ -126,12 +126,14 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
       'Collapse',
       'Select members',
       'Colour: none',
+      'Lock',
       'Spread ends evenly',
       'More actions',
     ]);
     expect(labels(TARGETS.mixed, 'toolbar').flat()).toEqual([
       'Colour: none',
       'Icon',
+      'Lock',
       'Spread ends evenly',
       'More actions',
     ]);

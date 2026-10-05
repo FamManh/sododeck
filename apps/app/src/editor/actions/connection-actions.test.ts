@@ -370,11 +370,23 @@ describe('node.spreadEnds (050 US7)', () => {
     expect(spread(actionContext(TARGETS.canvas))).toBeUndefined();
   });
 
+  it('explains itself: a description when enabled, what is needed when disabled (054)', () => {
+    const description = 'Space the connector ends evenly along each side of the selected cards';
+    const enabled = spread(spreadContext(hub));
+    expect(enabled?.description).toBe(description);
+    expect(enabled?.disabled).toBeNull();
+    const r3: MenuTarget = { kind: 'component', ids: sel({ nodes: ['r3'] }) };
+    const disabled = spread(spreadContext(r3), 'toolbar');
+    expect(disabled?.disabled).toBe('Needs a side with two or more connector ends');
+  });
+
   it('is disabled when no side of the selection has two or more ends', () => {
     const r3: MenuTarget = { kind: 'component', ids: sel({ nodes: ['r3'] }) };
-    expect(spread(spreadContext(r3))?.disabled).toBe('No side has two or more connector ends');
+    expect(spread(spreadContext(r3))?.disabled).toBe(
+      'Needs a side with two or more connector ends',
+    );
     expect(spread(actionContext(hub, 'edit', spreadDeck))?.disabled).toBe(
-      'No side has two or more connector ends',
+      'Needs a side with two or more connector ends',
     );
     expect(spread(spreadContext(hub))?.disabled).toBeNull();
   });

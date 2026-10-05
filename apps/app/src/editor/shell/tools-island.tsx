@@ -1,10 +1,10 @@
 import { Button } from '@sododeck/ui/components/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { cn } from '@sododeck/ui/lib/utils';
-import { Focus, Search, Tag } from 'lucide-react';
+import { Search, Settings2, Tag } from 'lucide-react';
 import { useRef, type ReactNode } from 'react';
 
-import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { useUiStore } from '../../state/ui-store';
 import { Island } from './island';
 import { shortcutLabel } from './shortcuts';
 
@@ -13,7 +13,6 @@ function ToolButton({
   label,
   tip,
   pressed,
-  disabled,
   buttonRef,
   children,
   onClick,
@@ -22,7 +21,6 @@ function ToolButton({
   label: string;
   tip: string;
   pressed?: boolean;
-  disabled?: boolean;
   buttonRef?: React.Ref<HTMLButtonElement>;
   children: ReactNode;
   onClick: () => void;
@@ -37,14 +35,10 @@ function ToolButton({
           size="icon"
           aria-label={label}
           {...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
-          {...(disabled === true ? { 'aria-disabled': true } : {})}
           className={cn(
             pressed === true && 'bg-primary-soft text-primary-ink hover:bg-primary-soft',
-            disabled === true && 'opacity-50',
           )}
-          onClick={() => {
-            if (disabled !== true) onClick();
-          }}
+          onClick={onClick}
           {...props}
         >
           {children}
@@ -56,22 +50,34 @@ function ToolButton({
 }
 
 /**
- * The tools island, top-right (018 FR-011, design 86; trimmed in §g-60): Jump to (⌘K), Labels
- * and Focus, icon-only with tooltips. Export, theme and keyboard shortcuts live in the deck menu;
+ * The tools island, top-right (018 FR-011, design 86; trimmed in §g-60): Deck settings, Jump to
+ * (⌘K) and Labels, icon-only with tooltips (054: Deck settings added, Focus moved to the rail).
+ * Export, theme and keyboard shortcuts live in the deck menu, which keeps its Deck settings entry;
  * the flow-notes display lives in the step player.
  */
 export function ToolsIsland() {
   const openPalette = useUiStore((s) => s.openPalette);
   const labelsOn = useUiStore((s) => s.labelsOn);
   const setLabelsOn = useUiStore((s) => s.setLabelsOn);
-  const focusMode = useUiStore((s) => s.focusMode);
-  const setFocusMode = useUiStore((s) => s.setFocusMode);
-  const focusDisabled = useUiStore((s) => s.flowSession !== null || isFlowMode(s));
+  const deckSettingsOpen = useUiStore((s) => s.drawer.open && s.drawer.mode === 'deck');
+  const openDrawer = useUiStore((s) => s.openDrawer);
+  const closeDrawer = useUiStore((s) => s.closeDrawer);
   const jumpRef = useRef<HTMLButtonElement>(null);
   const jumpShortcut = shortcutLabel('search');
 
   return (
     <Island region="tools" label="Tools" className="top-3 right-3">
+      <ToolButton
+        label="Deck settings"
+        tip="Deck settings"
+        pressed={deckSettingsOpen}
+        onClick={() => {
+          if (deckSettingsOpen) closeDrawer();
+          else openDrawer('deck');
+        }}
+      >
+        <Settings2 />
+      </ToolButton>
       <ToolButton
         buttonRef={jumpRef}
         label={`Jump to… (${jumpShortcut})`}
@@ -92,21 +98,6 @@ export function ToolsIsland() {
         }}
       >
         <Tag />
-      </ToolButton>
-      <ToolButton
-        label="Focus"
-        tip={
-          focusDisabled
-            ? 'Focus: not available while a flow is shown'
-            : 'Focus: dim all but the hovered or selected card and its neighbours · F'
-        }
-        pressed={focusMode}
-        disabled={focusDisabled}
-        onClick={() => {
-          setFocusMode(!focusMode);
-        }}
-      >
-        <Focus />
       </ToolButton>
     </Island>
   );

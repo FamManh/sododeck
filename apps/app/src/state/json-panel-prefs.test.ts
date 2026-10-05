@@ -22,6 +22,7 @@ describe('readJsonPanelPrefs', () => {
       format: 'json',
       schemaScope: 'selection',
       sqlPreviewDialect: 'postgres',
+      codeDrawer: { open: false, width: 560, format: 'dbml' },
     });
     expect(DEFAULT_JSON_PANEL).toEqual({
       open: true,
@@ -30,6 +31,7 @@ describe('readJsonPanelPrefs', () => {
       format: 'json',
       schemaScope: 'selection',
       sqlPreviewDialect: 'postgres',
+      codeDrawer: { open: false, width: 560, format: 'dbml' },
     });
   });
 
@@ -45,19 +47,47 @@ describe('readJsonPanelPrefs', () => {
 
   it('reads the 046 fields and falls back field by field', () => {
     const raw = JSON.stringify({
-      format: 'dbml',
       schemaScope: 'schema',
       sqlPreviewDialect: 'mysql',
     });
     expect(readJsonPanelPrefs(raw)).toEqual({
       ...DEFAULT_JSON_PANEL,
-      format: 'dbml',
       schemaScope: 'schema',
       sqlPreviewDialect: 'mysql',
     });
     const bad = JSON.stringify({ format: 'yaml', schemaScope: 3, sqlPreviewDialect: 'oracle' });
     expect(readJsonPanelPrefs(bad)).toEqual(DEFAULT_JSON_PANEL);
-    expect(readJsonPanelPrefs(JSON.stringify({ format: 'sql' })).format).toBe('sql');
+  });
+
+  it.each(['dbml', 'sql', 'yaml'])('reads a stored format %s as json (054)', (format) => {
+    expect(readJsonPanelPrefs(JSON.stringify({ format })).format).toBe('json');
+  });
+
+  it('keeps a stored schema scope as read (054: the switch is hidden, not removed)', () => {
+    expect(readJsonPanelPrefs(JSON.stringify({ schemaScope: 'schema' })).schemaScope).toBe(
+      'schema',
+    );
+    expect(readJsonPanelPrefs(JSON.stringify({ schemaScope: 'selection' })).schemaScope).toBe(
+      'selection',
+    );
+  });
+
+  it('reads the code drawer field by field (054)', () => {
+    const read = (codeDrawer: unknown) =>
+      readJsonPanelPrefs(JSON.stringify({ codeDrawer })).codeDrawer;
+    expect(read({ open: true, width: 900, format: 'sql' })).toEqual({
+      open: true,
+      width: 900,
+      format: 'sql',
+    });
+    expect(read({ open: 'yes', width: '900', format: 'json' })).toEqual({
+      open: false,
+      width: 560,
+      format: 'dbml',
+    });
+    expect(read({ width: 100 }).width).toBe(320);
+    expect(read({ width: Number.NaN }).width).toBe(560);
+    for (const bad of [null, 5, 'x', [1]]) expect(read(bad)).toEqual(DEFAULT_JSON_PANEL.codeDrawer);
   });
 
   it.each([
