@@ -1,0 +1,70 @@
+---
+layout: ../../layouts/ProseLayout.astro
+title: AI deck skill
+description: Let your own AI agent write Sododeck decks you can import. Install the skill, prompt it, import the file.
+---
+
+# AI deck skill
+
+Describe a system to your own AI agent, or point it at a codebase, and get a `.sododeck` file you
+simply import. The skill teaches the agent the deck model (cards, connectors, groups, levels,
+flows and rules) and gives it offline scripts that check the file the same way Sododeck does, so
+what it hands you opens cleanly.
+
+Your agent runs on your side. Sododeck never sees your prompt, your code or the deck until you
+import it, and even then it stays in your browser.
+
+[Download the skill (sododeck-deck.zip)](/downloads/sododeck-deck.zip)
+
+## Install
+
+The download is a folder named `sododeck-deck` with a `SKILL.md`, references, examples and
+scripts. The scripts need Node.js 20 or newer and no network.
+
+- **Agents with skills support**: unzip it into the agent's skills folder (for example
+  `~/.claude/skills/` or a project's `.claude/skills/`), or upload the zip where the agent's app
+  asks for a skill.
+- **Any other agent**: unzip it into your project and add one line to your `AGENTS.md` (or the
+  agent's instructions file): "To write or edit a Sododeck deck, follow `sododeck-deck/SKILL.md`."
+
+Update by downloading again: the skill names the file-format version it was built for, and this
+page always offers the latest build.
+
+## Prompts that work
+
+**From a description**
+
+> Make a Sododeck deck of our checkout: web shop, API gateway, order service, a payment provider,
+> Kafka and Postgres, plus the checkout flow from pressing Pay to the confirmation email.
+
+**Update an existing deck**
+
+> Here's checkout.sododeck. Add a refund flow: support asks the order service for a refund, it asks
+> the payment provider, then records it. Don't change anything else.
+
+The agent keeps every existing card and id, and shows you a diff (added, changed, removed) before
+it hands the file over.
+
+**From a codebase**
+
+> Map this repository as a Sododeck deck, balanced detail, for engineers.
+
+Every card and connector gets a link to the code it came from, and the agent ends with a fidelity
+report: what it merged, collapsed, left out or could not map.
+
+**From another format**
+
+> Turn this Mermaid sequence diagram into a Sododeck deck with a flow.
+
+Mermaid, C4 text and OpenAPI work the same way.
+
+Dials you can name in the prompt: detail (`simplified`, `balanced`, `faithful`) and audience
+(`engineer`, `mixed`, `executive`).
+
+## Import
+
+Open Sododeck, then **Library → Import**, or drop the file on the library. Cards come without
+positions, so Sododeck lays them out on import; flows play step by step right away.
+
+If the import reports problems, press **Copy problems** and paste the result back to your agent.
+The skill reads the same problem codes, paths and fix hints, and fixes the file.

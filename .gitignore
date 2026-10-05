@@ -32,3 +32,6 @@ __pycache__/
 
 # Third-party reference screenshots (kept locally, never pushed: copyright)
 specs/*/reference/
+
+# AI deck skill archive, copied in by apps/site/scripts/copy-skill.mjs (027)
+apps/site/public/downloads/

@@ -1,8 +1,8 @@
 /** Public URL of the editor app. Override with PUBLIC_APP_URL (e.g. for previews). */
 export const APP_URL: string = import.meta.env.PUBLIC_APP_URL ?? 'https://app.sododeck.com';
 
-/** Where "Get the AI skill" leads. TODO(027): the skill's own docs page once it is published. */
-export const SKILL_URL = '/docs';
+/** Where "Get the AI skill" leads: the skill's docs page (027). */
+export const SKILL_URL = '/docs/ai-skill';
 
 export const NAV = [
   { href: '/#explore', label: 'Features' },
