@@ -21,9 +21,9 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import { useUiStore, type ColumnRef } from '../../state/ui-store';
+import { useUiStore, type ColumnRef, type Selection } from '../../state/ui-store';
 import { oneStep } from '../fields/one-step';
-import { LOCKED_HINT, refuseLocked } from '../lock';
+import { LOCKED_HINT, lockableIds, refuseLocked } from '../lock';
 import { focusRowSoon, leaveRows } from '../table/row-focus';
 import type { Action, ActionContext } from './types';
 
@@ -147,9 +147,18 @@ export function moveRow(editor: DeckEditor, deck: SododeckFile, row: ColumnRef, 
   return true;
 }
 
-/** Locks (or unlocks) the selected cards: all of them lock unless all are locked already. */
-export function toggleLock(editor: DeckEditor, deck: SododeckFile, ids: readonly Id[]): void {
-  const nodes = deck.nodes.filter((node) => ids.includes(node.id));
+/**
+ * Locks (or unlocks) a selection (043, 054): the selected cards and every card inside a selected
+ * group. All of them lock unless all are locked already. Notes and connectors are left to their
+ * own Lock (053). One transaction, so one undo step.
+ */
+export function toggleLockSelection(
+  editor: DeckEditor,
+  deck: SododeckFile,
+  selection: Pick<Selection, 'nodes' | 'groups'>,
+): void {
+  const ids = new Set(lockableIds(deck, selection));
+  const nodes = deck.nodes.filter((node) => ids.has(node.id));
   if (nodes.length === 0) return;
   const lock = !nodes.every(isLocked);
   editor.setLocked(
@@ -164,8 +173,13 @@ export function toggleLock(editor: DeckEditor, deck: SododeckFile, ids: readonly
   ui.announce(`${lock ? 'Locked' : 'Unlocked'} ${name}`);
 }
 
+/** Locks (or unlocks) the cards `ids`. */
+export function toggleLock(editor: DeckEditor, deck: SododeckFile, ids: readonly Id[]): void {
+  toggleLockSelection(editor, deck, { nodes: ids, groups: [] });
+}
+
 const allLocked = (ctx: ActionContext) => {
-  const ids = new Set(ctx.selection.nodes);
+  const ids = new Set(lockableIds(ctx.deck, ctx.selection));
   const nodes = ctx.deck.nodes.filter((node) => ids.has(node.id));
   return nodes.length > 0 && nodes.every(isLocked);
 };
@@ -246,10 +260,15 @@ export const TABLE_ACTIONS: readonly Action[] = [
     icon: Lock,
     shortcut: 'lock',
     section: 'arrange',
-    where: { menu: ['component', 'components'], toolbar: ['component', 'components'] },
+    where: {
+      menu: ['component', 'components', 'group', 'mixed'],
+      toolbar: ['component', 'components', 'group', 'mixed'],
+    },
+    // Nothing to lock (a group with no cards, only notes and connectors): not offered.
+    applies: (ctx) => lockableIds(ctx.deck, ctx.selection).length > 0,
     checked: allLocked,
     run: (ctx) => {
-      toggleLock(ctx.editor, ctx.deck, ctx.selection.nodes);
+      toggleLockSelection(ctx.editor, ctx.deck, ctx.selection);
     },
   },
   {

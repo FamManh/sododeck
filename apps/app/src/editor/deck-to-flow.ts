@@ -47,6 +47,7 @@ import type { Selection } from '../state/ui-store';
 import type { CollapsedFlowMarks } from './collapse-flow-marks';
 import type { BundleResult, PlainEdge } from './bundles';
 import type { FocusSet } from './focus-set';
+import { lockedGroupIds } from './group-lock';
 import {
   EMPTY_OVERLAY,
   type EdgeFlowMark,
@@ -140,6 +141,8 @@ export interface GroupBoundaryData extends Record<string, unknown> {
   selected?: boolean;
   /** Resolved fill/stroke colour (020); absent when the group has no colour. */
   look?: CardLook;
+  /** Every card inside is locked (054): the frame refuses move, resize and delete. */
+  locked?: boolean;
 }
 
 const sameSize = (a: { width: number; height: number } | undefined, b: Box): boolean =>
@@ -266,6 +269,8 @@ export interface CollapsedGroupData extends Record<string, unknown> {
   touchChip?: TouchChip;
   /** Resolved fill/stroke colour (020); absent when the group has no colour. */
   look?: CardLook;
+  /** Every card inside is locked (054): the card refuses move and delete. */
+  locked?: boolean;
 }
 
 export interface PortNodeData extends Record<string, unknown> {
@@ -725,6 +730,7 @@ function groupNodes(
   const groupsById = groupLookup(deck.groups);
   const bounds = groupBounds(deck, level);
   const counts = groupCounts(deck);
+  const lockedGroups = lockedGroupIds(deck);
   return graph.groups.flatMap((groupId) => {
     const group = groupsById.get(groupId);
     const rect = bounds.get(groupId);
@@ -735,6 +741,7 @@ function groupNodes(
     const focused = view.focusedId === id;
     const inFocus = view.focus?.members.has(id) === true;
     const selected = view.selection.groups.includes(groupId);
+    const locked = lockedGroups.has(groupId);
     const look = resolveLook(group.style, selected ? (view.stylePreview ?? undefined) : undefined);
     const groupClass = [
       inFocus ? 'in-focus' : null,
@@ -746,6 +753,7 @@ function groupNodes(
     if (
       (cached?.data.selected === true) === selected &&
       cached?.data.title === group.title &&
+      (cached.data.locked === true) === locked &&
       cached.data.count === count &&
       cached.data.level === level &&
       cached.data.focused === focused &&
@@ -768,7 +776,8 @@ function groupNodes(
       // The wrapper lets the pointer through, so empty space inside still pans and marquees
       // (FR-017); the handles opt back in.
       selectable: true,
-      draggable: true,
+      // A locked group never starts a drag (054), like a locked card (043).
+      draggable: !locked,
       dragHandle: `.${GROUP_HANDLE_CLASS}`,
       style: { pointerEvents: 'none' },
       focusable: false,
@@ -786,6 +795,7 @@ function groupNodes(
         focused,
         ...(selected ? { selected } : {}),
         ...(look === undefined ? {} : { look }),
+        ...(locked ? { locked } : {}),
       },
     };
     groupCache.set(id, flowNode);
@@ -799,6 +809,7 @@ function collapsedNodes(
   graph: VisibleGraph,
 ): CollapsedFlowNode[] {
   const groupsById = groupLookup(deck.groups);
+  const lockedGroups = lockedGroupIds(deck);
   return graph.cards.map((card) => {
     const id = `${COLLAPSED_NODE_PREFIX}${card.groupId}`;
     const focused = view.focusedId === id;
@@ -812,11 +823,13 @@ function collapsedNodes(
       groupsById.get(card.groupId)?.style,
       selected ? (view.stylePreview ?? undefined) : undefined,
     );
+    const locked = lockedGroups.has(card.groupId);
     const lit = flowInside !== undefined || touchChip !== undefined;
     const className = [lit ? 'in-flow' : null, focusClass(view, id)].filter(Boolean).join(' ');
     const cached = collapsedCache.get(id);
     if (
       cached?.selected === selected &&
+      (cached.data.locked === true) === locked &&
       cached.data.focused === focused &&
       cached.data.dimmed === dimmed &&
       cached.data.flowInside === flowInside &&
@@ -843,6 +856,7 @@ function collapsedNodes(
       width: card.rect.width,
       height: card.rect.height,
       selected,
+      ...(locked ? { draggable: false } : {}),
       ...(className === '' ? {} : { className }),
       ...(dimmed ? { domAttributes: { 'aria-hidden': true, inert: true } } : {}),
       data: {
@@ -857,6 +871,7 @@ function collapsedNodes(
         ...(flowNumber === undefined ? {} : { flowNumber }),
         ...(touchChip === undefined ? {} : { touchChip }),
         ...(look === undefined ? {} : { look }),
+        ...(locked ? { locked } : {}),
       },
     };
     collapsedCache.set(id, flowNode);

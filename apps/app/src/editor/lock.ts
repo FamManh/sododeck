@@ -8,7 +8,16 @@ import { isLocked, type DeckEditor, type RemovalTarget } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../model/use-deck-snapshot';
+import { lockedGroupIds } from './group-lock';
 import { useUiStore } from '../state/ui-store';
+
+export {
+  groupLockState,
+  isGroupLocked,
+  lockableIds,
+  lockedGroupIds,
+  type GroupLockState,
+} from './group-lock';
 
 /** The tooltip and announcement for a refused gesture on a locked card. */
 export const LOCKED_HINT = 'Locked · unlock to move or edit';
@@ -75,21 +84,26 @@ export function editableEdges(
 }
 
 /**
- * Locked cards, notes and connectors are never deleted (043 FR-024, 053): the targets without
+ * Locked cards, notes, connectors and groups are never deleted (043 FR-024, 053, 054): the targets without
  * them, and how many were skipped. The single choke point for the Delete key, the menu and Cut.
  */
 export function withoutLocked(
-  deck: Pick<SododeckFile, 'nodes' | 'edges' | 'stickies'>,
+  deck: Pick<SododeckFile, 'nodes' | 'edges' | 'stickies'> & Partial<Pick<SododeckFile, 'groups'>>,
   targets: readonly RemovalTarget[],
 ): { targets: RemovalTarget[]; skipped: number } {
   const locked = {
     nodes: new Set(deck.nodes.filter(isLocked).map((o) => o.id)),
     edges: new Set(deck.edges.filter(isLocked).map((o) => o.id)),
     stickies: new Set(deck.stickies.filter(isLocked).map((o) => o.id)),
+    // A group is locked when all its cards are (054); a deck without `groups` has none.
+    groups: lockedGroupIds({ nodes: deck.nodes, groups: deck.groups ?? [] }),
   };
   const kept = targets.filter(
     (target) =>
-      (target.scope !== 'nodes' && target.scope !== 'edges' && target.scope !== 'stickies') ||
+      (target.scope !== 'nodes' &&
+        target.scope !== 'edges' &&
+        target.scope !== 'stickies' &&
+        target.scope !== 'groups') ||
       !locked[target.scope].has(target.id),
   );
   return { targets: kept, skipped: targets.length - kept.length };
