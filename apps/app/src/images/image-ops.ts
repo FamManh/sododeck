@@ -45,8 +45,10 @@ async function load(
   return { source: image, close: () => undefined };
 }
 
-const sizeOf = (source: Source): PixelSize =>
-  source instanceof HTMLImageElement
+// Duck-typed, not `instanceof`: a worker has no `HTMLImageElement` or `HTMLCanvasElement`, and
+// naming them there throws a ReferenceError.
+export const sourceSize = (source: Source): PixelSize =>
+  'naturalWidth' in source
     ? { width: source.naturalWidth, height: source.naturalHeight }
     : { width: source.width, height: source.height };
 
@@ -58,8 +60,8 @@ function makeCanvas({ width, height }: PixelSize): AnyCanvas {
   return canvas;
 }
 
-function toBlob(canvas: AnyCanvas, type: string, quality: number): Promise<Blob> {
-  if (canvas instanceof HTMLCanvasElement) {
+export function canvasToBlob(canvas: AnyCanvas, type: string, quality: number): Promise<Blob> {
+  if ('toBlob' in canvas) {
     return new Promise((resolve, reject) => {
       canvas.toBlob(
         (blob) => {
@@ -79,7 +81,7 @@ export function createBrowserOps(): IngestPorts {
     async decode(bytes, type) {
       try {
         const { source, close } = await load(bytes, type);
-        const size = sizeOf(source);
+        const size = sourceSize(source);
         close();
         return size.width > 0 && size.height > 0 ? size : null;
       } catch {
@@ -96,7 +98,7 @@ export function createBrowserOps(): IngestPorts {
         if (context === null) throw new Error('No 2D canvas context');
         context.imageSmoothingQuality = 'high';
         context.drawImage(source, 0, 0, size.width, size.height);
-        const blob = await toBlob(canvas, outputType ?? type, ENCODE_QUALITY);
+        const blob = await canvasToBlob(canvas, outputType ?? type, ENCODE_QUALITY);
         return { bytes: new Uint8Array(await blob.arrayBuffer()), type: blob.type };
       } finally {
         close();
