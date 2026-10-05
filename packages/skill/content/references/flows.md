@@ -74,6 +74,17 @@ Steps without `branch` are the main path. Every branch starts where the last mai
 its own steps chain like the main path. Each branch needs a non-empty `label` and `condition`;
 mark failure paths with `errorPath: true`. Conditions of two branches should not overlap.
 
+## Things a single chain can't say
+
+- **Two things at once** (a worker emits a per-item event and, after the batch, a summary event):
+  keep the main story as the flow; give the second effect its own short flow that starts at the
+  card where it forks ("Batch completed"), in the same feature, and say so in both flows'
+  `description`.
+- **A path that ends nowhere** (a guard stops, a flag drops the message, retries run out): there is
+  no connector to walk, so it is not a step. Put it in the rule that decides it (an output such as
+  "stop: flag off") and in the step's `notes`. If it does end somewhere real (a dead-letter table,
+  a FAILED status the UI shows), draw that card and make it a branch.
+
 ## Good flows
 
 - One flow per user-visible journey ("Checkout", "Refund", "Courier assignment"), 3–10 steps.

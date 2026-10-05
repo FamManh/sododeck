@@ -205,7 +205,7 @@ describe('placing unplaced cards (027 FR-024)', () => {
     }
   });
 
-  it('lays out each feature view that lists its cards, with its own group frames', async () => {
+  it('lays out each view that shows only some cards, with its own group frames', async () => {
     const file = deck({
       nodes: [
         card('web'),
@@ -226,9 +226,8 @@ describe('placing unplaced cards (027 FR-024)', () => {
         { id: 'overview', type: 'system', title: 'Overview' },
         {
           id: 'pricing',
-          type: 'feature',
+          type: 'custom',
           title: 'Pricing',
-          feature: 'pricing',
           includes: ['api', 'price', 'db'],
         },
         {
@@ -251,5 +250,41 @@ describe('placing unplaced cards (027 FR-024)', () => {
       .filter((n) => view?.positions?.[n.id] !== undefined)
       .map((n) => ({ ...n, position: view?.positions?.[n.id] }));
     expect(overlaps(inView)).toEqual([]);
+  });
+
+  it('lays out a feature view with the cards its flows walk through, as the canvas shows it', async () => {
+    const file = deck({
+      nodes: [card('web'), card('api'), card('db', { type: 'database' }), card('audit')],
+      edges: [
+        { id: 'e1', from: 'web', to: 'api' },
+        { id: 'e2', from: 'api', to: 'db' },
+        { id: 'e3', from: 'api', to: 'audit' },
+      ],
+      features: [{ id: 'buy', title: 'Buy' }],
+      flows: [
+        {
+          id: 'f',
+          title: 'Buy',
+          feature: 'buy',
+          steps: [
+            { id: 's1', edge: 'e1' },
+            { id: 's2', edge: 'e2' },
+          ],
+        },
+      ],
+      views: [
+        { id: 'overview', type: 'system', title: 'Overview' },
+        // `audit` is listed but not on a flow of the feature: the canvas hides it, so does placement.
+        {
+          id: 'v-buy',
+          type: 'feature',
+          title: 'Buy',
+          feature: 'buy',
+          includes: ['web', 'api', 'db', 'audit'],
+        },
+      ],
+    });
+    const placed = await placeUnplaced(file, layout);
+    expect(Object.keys(placed.views[1]?.positions ?? {}).sort()).toEqual(['api', 'db', 'web']);
   });
 });

@@ -75,8 +75,23 @@ find it in the code. Ids are short slugs made once from those names (`gen-queue-
 4. Flows: one per entry point, row or numbered path, each in its feature; add reply connectors
    the chain needs.
 5. Rules: every diamond, guard list and matrix; attach each to the step that applies it.
-6. Views: Overview first, then one view per feature listing the cards its flows use.
+6. Views: Overview first, then one view per feature (`modeling.md` §8): a feature view when its
+   flows walk through every card it needs, a listed view when it also needs stores or listeners
+   that only step notes mention.
 7. Validate, lint, deliver as usual. Don't pass `--detail`: the drawing's detail is the detail.
+
+**Big decks.** Past about 40 cards, write a small script that builds the deck JSON (cards, then
+connectors, then flows from lists of connector ids) instead of typing it: it keeps ids consistent
+and lets you compute each listed view's `includes` from the flows plus the stores their notes name.
+Run it, then validate and lint the file it writes.
+
+**Sources that disagree** (two boards, a board and a doc): follow the one closest to the code and
+the most recently changed, write the other version in the `description` of the rule or card it
+affects ("Poster says only GENERATE reaches APM; code board adds REFRESH, REASSIGN_VENDOR"), and
+list the conflict in the fidelity report.
+
+**Long outlines.** A dense board can outline to tens of kilobytes. Add `--min-text 16` to drop
+small print, or take `--format json` and filter it with a short script.
 
 ## 4. Fidelity report
 

@@ -19,8 +19,8 @@ makes a reader understand the system in a minute.
 
 - **Features**: one per business capability the user names ("Setup", "Pricing", "Cancellation",
   "Interface to APM"…), each flow tagged with its feature.
-- **Views**: after an `Overview` view, one feature view per feature listing only the cards its
-  flows use (`modeling.md` §8). Opening a view shows that part of the system laid out on its own.
+- **Views**: after an `Overview` view, one view per feature (`modeling.md` §8). Opening a view
+  shows that part of the system laid out on its own.
 - **Groups** for teams, services and data stores; **levels** (`parent`) only when a reader really
   drills into something (a service whose internals are a separate conversation).
 - **Rules** carry decision logic; **notes** (`description`, step `notes`) carry explanations. Keep

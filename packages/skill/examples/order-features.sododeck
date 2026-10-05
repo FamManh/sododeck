@@ -183,22 +183,19 @@
       "id": "view-checkout",
       "type": "feature",
       "title": "Checkout",
-      "feature": "checkout",
-      "includes": ["web", "gateway", "orders", "pricing", "payments", "events", "notify", "email"]
+      "feature": "checkout"
     },
     {
       "id": "view-refunds",
       "type": "feature",
       "title": "Refunds",
-      "feature": "refunds",
-      "includes": ["support", "gateway", "orders", "payments", "events", "notify", "email"]
+      "feature": "refunds"
     },
     {
       "id": "view-fulfilment",
       "type": "feature",
       "title": "Fulfilment",
-      "feature": "fulfilment",
-      "includes": ["orders", "events", "warehouse", "notify", "email"]
+      "feature": "fulfilment"
     }
   ],
   "features": [

@@ -9,9 +9,9 @@
  *   fields), so laid-out cards never overlap once drawn.
  * - A note anchored to an unplaced card, with no offset of its own, gets a slot right under its
  *   card: the card's layout box grows by the note, and the note's offset points into that slot.
- * - A saved view other than the first that lists its cards (`includes`) and has no positions of
- *   its own is laid out on its own too, so a feature view opens as a compact diagram instead of
- *   its cards scattered at their base positions.
+ * - A saved view other than the first that shows only some cards (its `includes`, its feature's
+ *   flows, …) and has no positions of its own is laid out on its own too, so a feature view opens
+ *   as a compact diagram instead of its cards scattered at their base positions.
  *
  * Main thread; the layout itself runs in the layout worker.
  */
@@ -26,6 +26,7 @@ import type { Frame, Id, Node, Size, SododeckFile, Sticky, View } from '@sododec
 import { cardFieldView } from '../editor/card-fields';
 import { cardSize, GROUP_PADDING } from '../editor/canvas-geometry';
 import { tableContextOf } from '../editor/table-keys';
+import { viewFilter } from '../editor/view-filter';
 import type { LayoutRequest, LayoutResult } from './elk-layout';
 
 /** Gap between a card and the note placed under it, and between stacked notes. */
@@ -213,29 +214,32 @@ export function applyPlacement(file: SododeckFile, result: LayoutResult): Sodode
   };
 }
 
-/** Views laid out on their own: not the first (base) view, listing cards, no positions yet. */
-function viewsToPlace(file: SododeckFile): View[] {
-  return file.views
-    .slice(1)
-    .filter((view) => (view.includes?.length ?? 0) > 0 && view.positions === undefined);
+/**
+ * Views laid out on their own: not the first (base) view, no positions yet, and showing fewer
+ * cards than the whole deck. The cards are exactly the ones the canvas shows in that view
+ * (`viewFilter`: `includes`, the feature's flows, hidden groups, kinds and tags).
+ */
+function viewsToPlace(file: SododeckFile): { view: View; cards: Node[] }[] {
+  const none = new Set<Id>();
+  return file.views.slice(1).flatMap((view) => {
+    if (view.positions !== undefined) return [];
+    const { hidden } = viewFilter(file, view, none);
+    if (hidden.size === 0) return [];
+    const cards = file.nodes.filter((node) => !hidden.has(node.id));
+    return cards.length === 0 ? [] : [{ view, cards }];
+  });
 }
 
-/** Per view to place, one layout request per level of its listed cards. */
+/** Per view to place, one layout request per level of the cards it shows. */
 export function viewPlacementRequests(
   file: SododeckFile,
   direction?: LayoutRequest['direction'],
 ): { viewId: Id; requests: LayoutRequest[] }[] {
   const measures = measuresOf(file);
-  return viewsToPlace(file).map((view) => {
-    const listed = new Set(view.includes);
-    const cards = file.nodes.filter((node) => listed.has(node.id));
-    return {
-      viewId: view.id,
-      requests: levelsOf(cards).map((level) =>
-        cardsRequest(file, level, measures, false, direction),
-      ),
-    };
-  });
+  return viewsToPlace(file).map(({ view, cards }) => ({
+    viewId: view.id,
+    requests: levelsOf(cards).map((level) => cardsRequest(file, level, measures, false, direction)),
+  }));
 }
 
 /** Writes each placed view's positions and the frames of the groups its cards sit in. */
@@ -251,9 +255,9 @@ export function applyViewPlacement(
       const result = results.get(view.id);
       if (result === undefined) return view;
       const positions: Record<Id, Point> = {};
-      for (const id of view.includes ?? []) {
-        const at = result[id];
-        if (at !== undefined) positions[id] = at;
+      for (const node of file.nodes) {
+        const at = result[node.id];
+        if (at !== undefined) positions[node.id] = at;
       }
       const placed = file.nodes
         .filter((node) => positions[node.id] !== undefined)

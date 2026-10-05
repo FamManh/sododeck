@@ -137,23 +137,35 @@ A big system stays readable through features and views, not through fewer cards.
 - `features`: one per business capability, `[{ "id": "pricing", "title": "Pricing" }]`. Every
   flow names its feature (`"feature": "pricing"`).
 - `views`: saved views the user switches between. The **first view is the base view** and shows
-  every card; write `{ "id": "overview", "type": "system", "title": "Overview" }` first. Then add
-  one feature view per feature, listing the cards that feature's flows touch:
+  every card; write `{ "id": "overview", "type": "system", "title": "Overview" }` first. Then one
+  view per feature, in one of two shapes:
+
+```json
+{ "id": "view-pricing", "type": "feature", "title": "Pricing", "feature": "pricing" }
+```
+
+A **feature view** shows exactly the cards the feature's flows walk through (both ends of every
+step's connector). Prefer it: it stays right when flows change. Don't add `includes` to it: the
+view shows only cards that are in both, so a listed card off the flows stays hidden.
 
 ```json
 {
   "id": "view-pricing",
-  "type": "feature",
+  "type": "custom",
   "title": "Pricing",
-  "feature": "pricing",
-  "includes": ["worker", "pricing", "agreements-db", "candidates-db"]
+  "includes": ["worker", "pricing-engine", "agreements-db", "candidates-db"]
 }
 ```
 
-Leave `positions` out of every view: on import the app lays each feature view out on its own, so it
-opens as a compact diagram of that feature. Cards shared by several features (a queue, a worker)
-appear in each view that needs them. When the deck has no `views` at all, the app shows its
-standard Overview and Flows views instead.
+A **listed view** shows the cards you list. Use it when the feature's picture needs cards its
+flows don't walk through: a store a step writes (mentioned in its `notes`), a listener, a config
+table.
+
+Leave `positions` out of every view: on import the app lays each view out on its own, so it opens
+as a compact diagram of that feature. Cards shared by several features (a queue, a worker) appear
+in each view that needs them. A feature with no flows yet shows nothing in a feature view: give it
+a listed view. When the deck has no `views` at all, the app shows its standard Overview and Flows
+views.
 
 ## 9. Notes, tags and links
 

@@ -87,8 +87,8 @@ Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the rig
   previous one ended. A reply needs its own connector back (see `flows.md`).
 - **Leave positions out** of new decks. The app lays the deck out on import. In update mode, keep
   the positions that exist and give new cards none.
-- **Several features? Give each its flows and a view.** Overview first, then one feature view per
-  feature listing its cards (`modeling.md` §8). That, not fewer cards, is what makes a big deck
+- **Several features? Give each its flows and a view.** Overview first, then one view per feature
+  (`modeling.md` §8). That, not fewer cards, is what makes a big deck
   readable.
 - **Explanations go in descriptions and step notes**, not sticky notes: notes on the canvas are
   for a few one-line warnings.
