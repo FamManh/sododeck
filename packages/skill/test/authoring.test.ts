@@ -12,6 +12,8 @@ const card = (id: string, extra: Partial<Node> = {}): Node => ({
 });
 
 const codes = (entries: { code: string }[]) => entries.map((e) => e.code);
+const levelCodes = (entries: { code: string }[]) =>
+  codes(entries).filter((code) => code === 'level-over-budget');
 
 describe('authoring checks (027 research R5)', () => {
   it('reports nothing for a small connected deck', () => {
@@ -116,12 +118,12 @@ describe('authoring checks (027 research R5)', () => {
       nodes: Array.from({ length: 40 }, (_, i) => card(`m${String(i)}`, { group: 'g' })),
       groups: [{ id: 'g', title: 'G' }],
     });
-    expect(codes(authoringChecks(big))).toEqual([]);
-    expect(codes(authoringChecks(big, { detail: 'faithful' }))).toEqual([]);
-    expect(codes(authoringChecks(big, { detail: 'balanced' }))).toEqual(['level-over-budget']);
-    expect(codes(authoringChecks(file))).toEqual([]);
+    expect(levelCodes(authoringChecks(big))).toEqual([]);
+    expect(levelCodes(authoringChecks(big, { detail: 'faithful' }))).toEqual([]);
+    expect(levelCodes(authoringChecks(big, { detail: 'balanced' }))).toEqual(['level-over-budget']);
+    expect(levelCodes(authoringChecks(file))).toEqual([]);
     const over = authoringChecks(file, { detail: 'simplified' });
-    expect(codes(over)).toEqual(['level-over-budget']);
+    expect(levelCodes(over)).toEqual(['level-over-budget']);
     expect(over[0]?.message).toMatch(
       /8 cards on the top level; the simplified detail level allows 7/,
     );

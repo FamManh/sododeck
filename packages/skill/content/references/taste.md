@@ -17,14 +17,25 @@ makes a reader understand the system in a minute.
 
 ## Make a big deck readable
 
-- **Features**: one per business capability the user names ("Setup", "Pricing", "Cancellation",
-  "Interface to APM"…), each flow tagged with its feature.
-- **Views**: after an `Overview` view, one view per feature (`modeling.md` §8). Opening a view
-  shows that part of the system laid out on its own.
-- **Groups** for teams, services and data stores; **levels** (`parent`) only when a reader really
-  drills into something (a service whose internals are a separate conversation).
-- **Rules** carry decision logic; **notes** (`description`, step `notes`) carry explanations. Keep
-  sticky notes for a few short warnings.
+What makes a large deck look tangled is almost never the number of cards; it is how they are
+tied together. Measured on a real 56-card, 112-connector deck: 771 crossing connectors as first
+drawn, 220 after removing groups of one kind, 25 after also trimming connectors to shared stores.
+
+- **Groups are boundaries, not categories.** Use a group for another company's systems, the UI,
+  or one deployable whose insides you draw. Never group cards because they share a type ("Sync
+  use cases", "Event listeners", "Data stores"): the layout keeps a group together, so its members
+  leave their flows and every connector to them crosses the canvas. No groups at all is better
+  than groups by kind (lint: `group-by-kind`).
+- **Hubs get few connectors.** A store, event bus, job table or worker that everything touches
+  becomes a hub whose connectors cut through the whole picture. Draw its connectors only where a
+  flow walks through it, plus its one owner; list the other readers and writers in its
+  `description` (lint: `hub-card`, more than 8 connectors).
+- **Left to right is the story.** Entry points (users, upstream systems, topics) come first,
+  outputs (external systems, notifications) last; the app lays out along connector direction, so
+  draw each connector the way the request or message travels. Replies only where a flow needs them.
+- **Every card is connected.** A card with no connector floats wherever space is left.
+- **Explanations live in descriptions and step notes.** Sticky notes are for a handful of
+  one-line warnings that must be seen on the canvas.
 
 ## Budgets
 
@@ -42,7 +53,8 @@ makes a reader understand the system in a minute.
 - A sequence is a **flow**, not a chain of numbered cards.
 - A decision or policy is a **rule** on the step that applies it, not a diamond card.
 - One service fanning out to many is one card with many connectors, or a **group** of the targets.
-- A team, zone or bounded context is a **group**.
+- Another company, the UI, or one deployable you draw the inside of is a **group**; a set of cards
+  that merely share a type is not.
 - A detail that only some readers need is a **level** below, not more cards on top.
 
 ## Words

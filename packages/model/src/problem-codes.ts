@@ -79,6 +79,8 @@ export const AUTHORING_CODES = [
   'label-too-long',
   'level-over-budget',
   'connector-without-source',
+  'group-by-kind',
+  'hub-card',
 ] as const;
 
 export type AuthoringCode = (typeof AUTHORING_CODES)[number];
@@ -603,6 +605,14 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
   'connector-without-source': authoring(
     'No source link',
     'Add a link to the file and lines the connector or card was built from, or remove it.',
+  ),
+  'group-by-kind': authoring(
+    'Group of one kind',
+    'Ungroup it: a group of all the use cases, listeners or stores pulls cards out of their flow and crosses every connector.',
+  ),
+  'hub-card': authoring(
+    'Too many connectors',
+    'Keep only the connectors a flow walks or that tell the story; name the other readers and writers in the description.',
   ),
 };
 

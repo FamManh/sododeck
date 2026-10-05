@@ -159,3 +159,5 @@ Reported only by the AI deck skill's `lint`, never by the app: advice for decks 
 | `label-too-long` | warning | Label over budget | Shorten the label; put details in the note or in fields. |
 | `level-over-budget` | warning | Too many cards on one level | Split the level: move related cards under a parent card one level down, or merge minor ones. |
 | `connector-without-source` | warning | No source link | Add a link to the file and lines the connector or card was built from, or remove it. |
+| `group-by-kind` | warning | Group of one kind | Ungroup it: a group of all the use cases, listeners or stores pulls cards out of their flow and crosses every connector. |
+| `hub-card` | warning | Too many connectors | Keep only the connectors a flow walks or that tell the story; name the other readers and writers in the description. |

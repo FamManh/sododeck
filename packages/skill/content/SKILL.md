@@ -49,7 +49,6 @@ All scripts need Node 20 or newer, work offline and read only the files you name
 | The user wants…                                                 | Mode             | Read                                                                                                                                               |
 | --------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | a deck from a description (the default)                         | `new`            | `references/modeling.md`, plus `flows.md` when they mention a sequence, `rules.md` when they mention a decision or policy                          |
-| a system with several features or many entry points             | `new`            | `references/modeling.md` §8 (features and views), `flows.md`, `examples/order-features.sododeck`                                                   |
 | to change an existing deck                                      | `update`         | run `summary.mjs` on it first, then the reference for what they ask about (`flows.md` for a new flow, `modeling.md` for new cards and their types) |
 | a deck of a code repository                                     | `codebase`       | `references/from-codebase.md`                                                                                                                      |
 | a deck from Mermaid, C4 text or OpenAPI                         | `text`           | `references/from-text-formats.md`                                                                                                                  |
@@ -87,11 +86,19 @@ Pass the mode to lint (`--mode update`, `--mode codebase`) so it applies the rig
   previous one ended. A reply needs its own connector back (see `flows.md`).
 - **Leave positions out** of new decks. The app lays the deck out on import. In update mode, keep
   the positions that exist and give new cards none.
-- **Several features? Give each its flows and a view.** Overview first, then one view per feature
-  (`modeling.md` §8). That, not fewer cards, is what makes a big deck
-  readable.
+
+- **Draw it so it reads.** A big deck stays tidy when (1) groups are only real boundaries
+  (another company, the UI, one deployable), never "all use cases", "all listeners", "all
+  stores": a group of one kind pulls its cards out of their flow and every connector crosses the
+  canvas; (2) a shared store, bus or job table gets connectors only where a flow walks through it
+  or where it is the point, never one from every reader and writer; name the others in its
+  `description`; (3) every card has at least one connector. Measured on a 56-card deck, these two
+  habits were the difference between 771 crossing connectors and 25. Lint warns `group-by-kind`
+  and `hub-card`; clear both.
 - **Explanations go in descriptions and step notes**, not sticky notes: notes on the canvas are
   for a few one-line warnings.
+- **Features, views and rules are optional.** Add them only when the user asks for them; spend
+  the effort on cards, connectors and flows first.
 
 ## Update mode
 

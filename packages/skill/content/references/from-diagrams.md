@@ -68,17 +68,17 @@ find it in the code. Ids are short slugs made once from those names (`gen-queue-
 
 ## 3. Build order
 
-1. Cards: every distinct box once, with type, group (team, service, data) and a description that
-   gathers the constants and notes drawn next to it.
-2. Connectors: every arrow, deduplicated by (from, to, what travels).
-3. Features: one per section or capability the drawing names.
-4. Flows: one per entry point, row or numbered path, each in its feature; add reply connectors
-   the chain needs.
-5. Rules: every diamond, guard list and matrix; attach each to the step that applies it.
-6. Views: Overview first, then one view per feature (`modeling.md` §8): a feature view when its
-   flows walk through every card it needs, a listed view when it also needs stores or listeners
-   that only step notes mention.
-7. Validate, lint, deliver as usual. Don't pass `--detail`: the drawing's detail is the detail.
+1. Cards: every distinct box once, with type and a description that gathers the constants and
+   notes drawn next to it. Group only real boundaries (another company, the UI, one deployable);
+   a drawing's colour bands or "all use cases" columns are not groups (`taste.md`).
+2. Connectors: every arrow, deduplicated by (from, to, what travels). For a shared store, bus or
+   job table drawn with arrows from everywhere, keep the arrows a flow walks and its owner; name
+   the rest in its description.
+3. Flows: one per entry point, row or numbered path; add reply connectors only where the chain
+   needs them.
+4. Features, views and rules only if the user asked for them.
+5. Validate, lint (clear `group-by-kind` and `hub-card`), deliver. Don't pass `--detail`: the
+   drawing's detail is the detail.
 
 **Big decks.** Past about 40 cards, write a small script that builds the deck JSON (cards, then
 connectors, then flows from lists of connector ids) instead of typing it: it keeps ids consistent
