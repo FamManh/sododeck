@@ -139,9 +139,9 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                     />
                   </button>
                   {(isSchemaProblem(problem) || (problem.fixes?.length ?? 0) > 0) && (
-                    <div className="mt-1 ml-7 flex items-center justify-between gap-2">
+                    <div className="mt-1 ml-7 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                       {isSchemaProblem(problem) && (
-                        <span className="inline-flex min-w-0 items-center gap-1 rounded-row bg-surface-3 px-2 py-0.5 font-mono text-caption text-ink">
+                        <span className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-row bg-surface-3 px-2 py-0.5 font-mono text-caption text-ink">
                           <Table
                             aria-hidden
                             strokeWidth={ICON_STROKE_WIDTH}
