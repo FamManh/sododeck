@@ -34,7 +34,8 @@ would fall behind within weeks.
   clash.
 - **Until the format revision (025) exists, the skill names the schema by fingerprint** (first 12
   hex characters of the SHA-256 of `v1.json`) next to `formatVersion`.
-- **The app lays out unplaced cards on import.** Decks from the skill leave positions out; the
+- **The app lays out unplaced cards on import.** (Amended by 0042: the skill now places every
+  card; the import layout remains for files without positions.) Decks from the skill leave positions out; the
   library worker returns such a file as `ImportedDeck.unplaced`, and `importDeckFile` places it
   level by level with the layout worker (placed cards pinned) before storing it.
 
