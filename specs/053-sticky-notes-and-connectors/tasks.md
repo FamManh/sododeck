@@ -26,8 +26,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm branch `053-sticky-notes-and-connectors` and a green baseline: `pnpm install && pnpm lint && pnpm typecheck && pnpm test`. Run `pnpm bench` and save the output as `specs/053-sticky-notes-and-connectors/bench-before.md` (500 nodes / 1,000 edges numbers).
-- [ ] T002 Commit the spec folder (spec, plan, research, data-model, contracts, quickstart, tasks, checklists; not `reference/`) plus the `docs/backlog.md` and `.gitignore` changes as `docs: sticky notes and connector multi-select spec, plan and tasks (053)`. Check `git status` shows no file under `reference/`.
+- [x] T001 Confirm branch `053-sticky-notes-and-connectors` and a green baseline: `pnpm install && pnpm lint && pnpm typecheck && pnpm test`. Run `pnpm bench` and save the output as `specs/053-sticky-notes-and-connectors/bench-before.md` (500 nodes / 1,000 edges numbers).
+- [x] T002 Commit the spec folder (spec, plan, research, data-model, contracts, quickstart, tasks, checklists; not `reference/`) plus the `docs/backlog.md` and `.gitignore` changes as `docs: sticky notes and connector multi-select spec, plan and tasks (053)`. Check `git status` shows no file under `reference/`.
 
 ---
 
