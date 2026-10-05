@@ -13,7 +13,7 @@ import { CATALOGUE } from './problem-codes';
 import {
   issueEntry,
   pictureEntry,
-  problemEntry,
+  problemEntries,
   sortEntries,
   type ProblemEntry,
 } from './problem-entry';
@@ -123,10 +123,13 @@ export function inspectDeckText(text: string): DeckTextResult {
   // point into the file they will fix. Damaged pictures were repaired into placeholders, which
   // `checkDeck` does not see; they come from the load itself (062 R6). Every problems-list kind is
   // an error or a warning today; an `info` kind added later must be left out here (062 Q2).
-  const problems = checkDeck(input as SododeckFile).list;
+  const file = input as SododeckFile;
   return {
     ok: true,
     loaded,
-    entries: sortEntries([...loaded.problems.map(pictureEntry), ...problems.map(problemEntry)]),
+    entries: sortEntries([
+      ...loaded.problems.map(pictureEntry),
+      ...problemEntries(checkDeck(file).list, file),
+    ]),
   };
 }

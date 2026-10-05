@@ -1,11 +1,16 @@
-import type { Problem } from '@sododeck/model';
+import { problemEntries, problemReport, stringifyReport, type Problem } from '@sododeck/model';
+import { Button } from '@sododeck/ui/components/button';
+import { Popover, PopoverAnchor, PopoverContent } from '@sododeck/ui/components/popover';
 import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/segmented-control';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ChevronRight, CircleCheck, Table } from 'lucide-react';
-import { useState, type KeyboardEvent } from 'react';
+import { ChevronRight, CircleCheck, Copy, Table } from 'lucide-react';
+import { useCallback, useState, type KeyboardEvent } from 'react';
 
+import { APP_VERSION } from '../../lib/app-version';
+import { CopyFallback } from '../../lib/copy-fallback';
+import { useCopyReport } from '../../lib/copy-report';
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore, type ProblemFilter } from '../../state/ui-store';
@@ -27,6 +32,22 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
   const setFilter = useUiStore((s) => s.setProblemFilter);
   const [showAll, setShowAll] = useState<{ total: number } | null>(null);
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  // The report is built on click from the list the worker already computed (062 R8), in file
+  // order, so the same deck copies to the same text.
+  const list = problems?.list;
+  const build = useCallback(
+    () =>
+      stringifyReport(
+        problemReport({
+          source: { kind: 'deck', name: deck.name ?? 'Untitled deck' },
+          status: 'opened',
+          app: APP_VERSION,
+          entries: problemEntries(list ?? [], deck),
+        }),
+      ),
+    [list, deck],
+  );
+  const copy = useCopyReport(build, 'Copied problems');
   if (problems === null) return null;
 
   const shown =
@@ -63,10 +84,39 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
       aria-labelledby="problems-heading"
       className="flex flex-col gap-2 border-b border-hairline px-4 py-3.5"
     >
-      <h3 id="problems-heading" className="flex items-center text-micro text-ink-muted uppercase">
-        <span className="flex-1">Problems</span>
-        <span aria-label={`${String(problems.total)} total`}>{problems.total}</span>
-      </h3>
+      <div className="flex items-center gap-2">
+        <h3
+          id="problems-heading"
+          className="flex flex-1 items-center text-micro text-ink-muted uppercase"
+        >
+          <span className="flex-1">Problems</span>
+          <span aria-label={`${String(problems.total)} total`}>{problems.total}</span>
+        </h3>
+        <Popover
+          open={copy.text !== null}
+          onOpenChange={(open) => {
+            if (!open) copy.reset();
+          }}
+        >
+          <PopoverAnchor asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Copy problems"
+              disabled={problems.total === 0}
+              onClick={() => {
+                void copy.copy();
+              }}
+              className="size-7"
+            >
+              <Copy />
+            </Button>
+          </PopoverAnchor>
+          <PopoverContent align="end" className="w-80">
+            {copy.text !== null && <CopyFallback text={copy.text} label="Problems as JSON" />}
+          </PopoverContent>
+        </Popover>
+      </div>
       {problems.total === 0 ? (
         <p className="flex items-center gap-2 rounded-card bg-surface-2 px-3 py-2 text-body-sm text-ink">
           <CircleCheck

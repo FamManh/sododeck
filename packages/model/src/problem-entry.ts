@@ -14,11 +14,12 @@ import {
   toPointer,
   valueAt,
   type Issue,
+  type SododeckFile,
 } from '@sododeck/schema';
 
 import type { AssetProblem, AssetProblemReason } from './assets';
 import { CATALOGUE, isCode } from './problem-codes';
-import type { Problem } from './problems';
+import { problemLocator, type Problem, type ProblemLocation } from './problems';
 import type { EntrySeverity, ProblemEntry, ProblemReport } from './report-json';
 
 export {
@@ -61,17 +62,23 @@ const trimmed = (text: string) =>
 
 const sentence = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`);
 
-/** A problems-list entry (ADR 0013) as an entry: its kind is its code. */
-export function problemEntry(problem: Problem): ProblemEntry {
+/** A problems-list entry (ADR 0013) as an entry at `where` in the file: its kind is its code. */
+export function problemEntry(problem: Problem, where: ProblemLocation): ProblemEntry {
   return {
     code: problem.kind,
     severity: problem.severity,
-    path: problem.path,
-    ...(problem.subject === undefined ? {} : { subject: problem.subject }),
+    path: where.path,
+    ...(where.subject === undefined ? {} : { subject: where.subject }),
     message: sentence(`${problem.title}: ${problem.detail}`),
     evidence: trimmed(problem.detail),
     fix: defaultFix(problem.kind),
   };
+}
+
+/** Every problem of `file`'s list as an entry, located in `file` (one locator for all), sorted. */
+export function problemEntries(problems: readonly Problem[], file: SododeckFile): ProblemEntry[] {
+  const locate = problemLocator(file);
+  return sortEntries(problems.map((problem) => problemEntry(problem, locate(problem))));
 }
 
 const PICTURE_REASON: Readonly<Record<AssetProblemReason, string>> = {

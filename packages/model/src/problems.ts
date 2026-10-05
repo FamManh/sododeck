@@ -158,10 +158,6 @@ export interface Problem {
   fixes?: readonly ProblemFix[];
   /** Short pill text for a relationship on the canvas: `int → uuid`, `n–n`, `not key`, `loop`. */
   short?: string;
-  /** JSON Pointer to the main object of `target` in the file (062 R8): `/flows/1/steps/2`. */
-  path: string;
-  /** Id of that object (the first one for a multi-id target); absent for the deck itself. */
-  subject?: Id;
 }
 
 /** What a `rename` fix edits. */
@@ -321,7 +317,7 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   checkFieldValues(file, add);
   checkDatabase(file, nodeById, add);
   checkSchema(file, nodeById, add);
-  return finish(drafts, locator(file));
+  return finish(drafts);
 }
 
 /** `title` overrides the kind's title when the id belongs in it (030: "Unknown pack x"). */
@@ -799,9 +795,19 @@ function indexer(items: () => readonly { id: Id }[] | undefined) {
 }
 
 /** Where a problem sits in the file: a JSON Pointer and the id of the object there (062 R8). */
-type Locate = (draft: Draft) => { path: string; subject?: Id };
+export interface ProblemLocation {
+  /** JSON Pointer to the main object of the problem's target: `/flows/1/steps/2`. */
+  path: string;
+  /** Id of that object (the first one for a multi-id target); absent for the deck itself. */
+  subject?: Id;
+}
 
-function locator(file: SododeckFile): Locate {
+/**
+ * Locates problems of `file` in it (062 R8). Built on demand, when a list is copied or an import
+ * is reported, never inside `checkDeck`, which runs on every edit: the index maps are built once
+ * per locator and only for the collections asked about.
+ */
+export function problemLocator(file: SododeckFile): (problem: Problem) => ProblemLocation {
   const collections = {
     nodes: indexer(() => file.nodes),
     groups: indexer(() => file.groups),
@@ -842,15 +848,15 @@ function locator(file: SododeckFile): Locate {
     check: 'checks',
   };
 
-  return (draft) => {
-    const { target } = draft;
+  return (problem) => {
+    const { target } = problem;
     let segments: Segments;
     let subject: Id | undefined;
     switch (target.type) {
       case 'node':
-        if (draft.column !== undefined && draft.column.tableId === target.id) {
-          segments = at('nodes', target.id, 'columns', draft.column.columnId);
-          subject = draft.column.columnId;
+        if (problem.column !== undefined && problem.column.tableId === target.id) {
+          segments = at('nodes', target.id, 'columns', problem.column.columnId);
+          subject = problem.column.columnId;
         } else {
           segments = at('nodes', target.id);
           subject = target.id;
@@ -881,8 +887,9 @@ function locator(file: SododeckFile): Locate {
       case 'object': {
         const { ref } = target;
         if (ref.scope === 'meta') {
-          if (draft.kind === 'unknown-pack') {
-            const pack = draft.ids[0] ?? '';
+          if (problem.kind === 'unknown-pack') {
+            // The key is `unknown-pack:<pack id>`.
+            const pack = problem.key.slice('unknown-pack:'.length);
             const index = file.packs?.indexOf(pack) ?? -1;
             segments = index === -1 ? ['packs'] : ['packs', index];
           } else if (ref.child?.kind === 'enum' || ref.child?.kind === 'enum-value') {
@@ -910,7 +917,7 @@ function locator(file: SododeckFile): Locate {
 const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1 };
 const KIND_RANK = new Map(PROBLEM_KINDS.map((k, i) => [k, i]));
 
-function finish(drafts: readonly Draft[], locate: Locate): DeckProblems {
+function finish(drafts: readonly Draft[]): DeckProblems {
   const seen = new Set<string>();
   const list: Problem[] = [];
   for (const d of drafts) {
@@ -929,7 +936,6 @@ function finish(drafts: readonly Draft[], locate: Locate): DeckProblems {
       ...(d.column === undefined ? {} : { column: d.column }),
       ...(d.fixes === undefined ? {} : { fixes: d.fixes }),
       ...(d.short === undefined ? {} : { short: d.short }),
-      ...locate(d),
     });
   }
   const on = new Map(drafts.map((d) => [`${d.kind}:${d.ids.join(':')}`, d.on]));

@@ -110,11 +110,13 @@ export { endpointOf, endpointTitle, type Endpoint, type EndpointKind } from './e
 export {
   checkDeck,
   PROBLEM_KINDS,
+  problemLocator,
   SEVERITY,
   type DeckProblems,
   type Problem,
   type ProblemFix,
   type ProblemKind,
+  type ProblemLocation,
   type ProblemTarget,
   type RenameTarget,
   type Severity,
@@ -138,6 +140,7 @@ export { inspectDeckText, type DeckTextResult } from './import-check';
 export {
   issueEntry,
   pictureEntry,
+  problemEntries,
   problemEntry,
   problemReport,
   REPORT_LIMIT,

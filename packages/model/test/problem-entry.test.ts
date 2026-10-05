@@ -1,10 +1,12 @@
-import { FORMAT_VERSION, SCHEMA_URL, type Issue } from '@sododeck/schema';
+import { emptySododeckFile, FORMAT_VERSION, SCHEMA_URL, type Issue } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
 import {
   CATALOGUE,
+  checkDeck,
   issueEntry,
   pictureEntry,
+  problemEntries,
   problemEntry,
   problemReport,
   REPORT_LIMIT,
@@ -24,8 +26,6 @@ const problem = (patch: Partial<Problem> = {}): Problem => ({
   objectTitle: 'Checkout',
   order: 2,
   severity: 'error',
-  path: '/flows/0/steps/1',
-  subject: 's2',
   ...patch,
 });
 
@@ -78,7 +78,7 @@ describe('issueEntry', () => {
 
 describe('problemEntry', () => {
   it('uses the kind as code, title + detail as message and the catalogue fix', () => {
-    expect(problemEntry(problem())).toEqual({
+    expect(problemEntry(problem(), { path: '/flows/0/steps/1', subject: 's2' })).toEqual({
       code: 'step-without-connection',
       severity: 'error',
       path: '/flows/0/steps/1',
@@ -87,6 +87,29 @@ describe('problemEntry', () => {
       evidence: 'Checkout · step 2 used a deleted connection',
       fix: CATALOGUE['step-without-connection'].fix,
     });
+  });
+});
+
+describe('problemEntries', () => {
+  it('locates every problem in the file and sorts them in file order', () => {
+    const file = {
+      ...emptySododeckFile(),
+      nodes: [
+        { id: 'a', type: 'service', title: 'A' },
+        { id: 'b', type: 'service', title: 'B' },
+      ],
+      edges: [
+        { id: 'e1', from: 'a', to: 'b' },
+        { id: 'e2', from: 'a', to: 'b' },
+      ],
+      flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'gone' }] }],
+    };
+    expect(
+      problemEntries(checkDeck(file).list, file).map((e) => [e.code, e.path, e.subject]),
+    ).toEqual([
+      ['duplicate-connection', '/edges/0', 'e1'],
+      ['step-without-connection', '/flows/0/steps/0', 's1'],
+    ]);
   });
 });
 

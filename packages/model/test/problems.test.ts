@@ -3,7 +3,14 @@ import { readFile } from 'node:fs/promises';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { checkDeck, PROBLEM_KINDS, SEVERITY, type Problem, type ProblemKind } from '../src';
+import {
+  checkDeck,
+  PROBLEM_KINDS,
+  problemLocator,
+  SEVERITY,
+  type Problem,
+  type ProblemKind,
+} from '../src';
 import { readExample, shopDeck } from './helpers';
 
 type NodeData = SododeckFile['nodes'][number];
@@ -1160,8 +1167,10 @@ describe('schema lint rules (047)', () => {
 });
 
 describe('problem locations (062 R8)', () => {
-  const locate = (file: SododeckFile) =>
-    checkDeck(file).list.map((p) => [p.kind, p.path, p.subject ?? null]);
+  const locate = (file: SododeckFile) => {
+    const where = problemLocator(file);
+    return checkDeck(file).list.map((p) => [p.kind, where(p).path, where(p).subject ?? null]);
+  };
 
   it('points a step problem at the step and names the step', () => {
     const file = deck({
