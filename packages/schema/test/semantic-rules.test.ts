@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   checkSemanticRules,
   emptySododeckFile,
+  FORMAT_RULE_CODES,
   jsonSchema,
   type Rule,
   type SododeckFile,
@@ -60,9 +61,9 @@ describe('checkSemanticRules', () => {
       const rows = [tier.rows[0], { id: 'r2', when: ['> 5'], then: ['Van'] }].filter(
         (row) => row !== undefined,
       );
-      expect(checkSemanticRules(deckWithRule({ ...tier, rows }))).toEqual([
+      expect(checkSemanticRules(deckWithRule({ ...tier, rows }))).toMatchObject([
         {
-          path: 'rules.R-1.rows.1.when',
+          path: '/rules/R-1/rows/1/when',
           message: 'Rule "R-1" row "r2" has 1 "when" cell but 2 input columns.',
         },
       ]);
@@ -70,9 +71,9 @@ describe('checkSemanticRules', () => {
 
     it('reports a row with too many then cells', () => {
       const rows = [{ id: 'r1', when: ['≤ 5', '≤ 10'], then: ['Bike', '45 min'] }];
-      expect(checkSemanticRules(deckWithRule({ ...tier, rows }))).toEqual([
+      expect(checkSemanticRules(deckWithRule({ ...tier, rows }))).toMatchObject([
         {
-          path: 'rules.R-1.rows.0.then',
+          path: '/rules/R-1/rows/0/then',
           message: 'Rule "R-1" row "r1" has 2 "then" cells but 1 output column.',
         },
       ]);
@@ -95,9 +96,31 @@ describe('checkSemanticRules', () => {
     it('reports a sticky with neither', () => {
       const file: SododeckFile = { ...emptySododeckFile(), stickies: [{ id: 'a', text: 'lost' }] };
       expect(checkSemanticRules(file)).toEqual([
-        { path: 'stickies.0', message: 'Sticky "a" needs an anchor, a position, or both.' },
+        {
+          code: 'sticky-placement',
+          path: '/stickies/0',
+          message: 'Sticky "a" needs an anchor, a position, or both.',
+          subject: 'a',
+        },
       ]);
     });
+  });
+
+  it('gives every issue a format-rule code (062)', () => {
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      rules: { 'not an id': tier },
+      stickies: [{ id: 'a', text: 'lost' }],
+      tagColors: { '': 'red' },
+    };
+    expect(checkSemanticRules(file).map((issue) => issue.code)).toEqual([
+      'map-key-id',
+      'tag-color-key',
+      'sticky-placement',
+    ]);
+    for (const issue of checkSemanticRules(file)) {
+      expect(FORMAT_RULE_CODES).toContain(issue.code);
+    }
   });
 
   describe('S3: map keys are valid ids', () => {
@@ -105,7 +128,7 @@ describe('checkSemanticRules', () => {
 
     it('reports a bad key in rules', () => {
       const file: SododeckFile = { ...emptySododeckFile(), rules: { [badKey]: tier } };
-      expect(checkSemanticRules(file).map((issue) => issue.path)).toEqual([`rules.${badKey}`]);
+      expect(checkSemanticRules(file).map((issue) => issue.path)).toEqual([`/rules/${badKey}`]);
     });
 
     it('reports a bad key in view positions', () => {
@@ -114,7 +137,7 @@ describe('checkSemanticRules', () => {
         views: [{ id: 'v', type: 'custom', title: 'V', positions: { [badKey]: { x: 0, y: 0 } } }],
       };
       expect(checkSemanticRules(file).map((issue) => issue.path)).toEqual([
-        `views.0.positions.${badKey}`,
+        `/views/0/positions/${badKey}`,
       ]);
     });
 
@@ -130,8 +153,8 @@ describe('checkSemanticRules', () => {
         ],
       };
       expect(checkSemanticRules(file).map((issue) => issue.path)).toEqual([
-        `flows.0.steps.0.ruleInputs.${badKey}`,
-        `flows.0.steps.0.ruleInputs.R-1.${badKey}`,
+        `/flows/0/steps/0/ruleInputs/${badKey}`,
+        `/flows/0/steps/0/ruleInputs/R-1/${badKey}`,
       ]);
     });
 
@@ -155,18 +178,18 @@ describe('checkSemanticRules', () => {
     });
 
     it('reports an empty key and a key of spaces', () => {
-      expect(checkSemanticRules(withColors({ '': 'red' }))).toEqual([
-        { path: 'tagColors.', message: 'Tag colour key "" is empty.' },
+      expect(checkSemanticRules(withColors({ '': 'red' }))).toMatchObject([
+        { path: '/tagColors/', message: 'Tag colour key "" is empty.' },
       ]);
-      expect(checkSemanticRules(withColors({ '  ': 'red' }))).toEqual([
-        { path: 'tagColors.  ', message: 'Tag colour key "  " is empty.' },
+      expect(checkSemanticRules(withColors({ '  ': 'red' }))).toMatchObject([
+        { path: '/tagColors/  ', message: 'Tag colour key "  " is empty.' },
       ]);
     });
 
     it('reports the second of two keys equal ignoring case, spacing and edges', () => {
-      expect(checkSemanticRules(withColors({ PCI: 'violet', pci: 'red' }))).toEqual([
+      expect(checkSemanticRules(withColors({ PCI: 'violet', pci: 'red' }))).toMatchObject([
         {
-          path: 'tagColors.pci',
+          path: '/tagColors/pci',
           message: 'Tag colour key "pci" is the same tag as "PCI" (case and spacing are ignored).',
         },
       ]);
@@ -174,7 +197,7 @@ describe('checkSemanticRules', () => {
         checkSemanticRules(withColors({ 'Pci dss': 'violet', ' pci   DSS ': 'red' })).map(
           (issue) => issue.path,
         ),
-      ).toEqual(['tagColors. pci   DSS ']);
+      ).toEqual(['/tagColors/ pci   DSS ']);
     });
   });
 
@@ -206,24 +229,26 @@ describe('checkSemanticRules', () => {
     });
 
     it('S9 reports an anchor without its side', () => {
-      expect(checkSemanticRules(withRoute({ fromAt: 0.2, toSide: 'top', toAt: 0.2 }))).toEqual([
+      expect(
+        checkSemanticRules(withRoute({ fromAt: 0.2, toSide: 'top', toAt: 0.2 })),
+      ).toMatchObject([
         {
-          path: 'edges.0.route.fromAt',
+          path: '/edges/0/route/fromAt',
           message: 'Connector "e2" has a "fromAt" position but no "fromSide".',
         },
       ]);
-      expect(checkSemanticRules(withRoute({ toAt: 0.2 }))[0]?.path).toBe('edges.0.route.toAt');
+      expect(checkSemanticRules(withRoute({ toAt: 0.2 }))[0]?.path).toBe('/edges/0/route/toAt');
     });
 
     it('S10 reports offset together with waypoints', () => {
-      expect(checkSemanticRules(withRoute({ offset: 4, waypoints: [{ x: 0.5, y: 0.5 }] }))).toEqual(
-        [
-          {
-            path: 'edges.0.route',
-            message: 'Connector "e2" route has both "offset" and "waypoints"; use one.',
-          },
-        ],
-      );
+      expect(
+        checkSemanticRules(withRoute({ offset: 4, waypoints: [{ x: 0.5, y: 0.5 }] })),
+      ).toMatchObject([
+        {
+          path: '/edges/0/route',
+          message: 'Connector "e2" route has both "offset" and "waypoints"; use one.',
+        },
+      ]);
     });
 
     it('S11 reports a waypoint with two keys or none on an axis', () => {
@@ -231,9 +256,11 @@ describe('checkSemanticRules', () => {
         checkSemanticRules(withRoute({ waypoints: [{ x: 0.5, dx: 1, y: 0.5 }, { y: 0.5 }] })).map(
           (issue) => issue.path,
         ),
-      ).toEqual(['edges.0.route.waypoints.0', 'edges.0.route.waypoints.1']);
-      expect(checkSemanticRules(withRoute({ waypoints: [{ x: 0.5, y: 1, dy: 2 }] }))[0]).toEqual({
-        path: 'edges.0.route.waypoints.0',
+      ).toEqual(['/edges/0/route/waypoints/0', '/edges/0/route/waypoints/1']);
+      expect(
+        checkSemanticRules(withRoute({ waypoints: [{ x: 0.5, y: 1, dy: 2 }] }))[0],
+      ).toMatchObject({
+        path: '/edges/0/route/waypoints/0',
         message: 'Bend 1 of "e2" needs exactly one of "y" and "dy".',
       });
     });
@@ -278,18 +305,20 @@ describe('checkSemanticRules', () => {
             { id: 'f', name: 'B', kind: 'text' },
           ]),
         ),
-      ).toEqual([{ path: 'fields.1.id', message: 'Field id "f" is used by more than one field.' }]);
+      ).toMatchObject([
+        { path: '/fields/1/id', message: 'Field id "f" is used by more than one field.' },
+      ]);
     });
 
     it('S12 reports a built-in field with another kind', () => {
       expect(
         checkSemanticRules(withFields([{ id: 'owner', name: 'Owner', kind: 'text' }])),
-      ).toEqual([
-        { path: 'fields.0.kind', message: 'Built-in field "owner" must have kind "person".' },
+      ).toMatchObject([
+        { path: '/fields/0/kind', message: 'Built-in field "owner" must have kind "person".' },
       ]);
       expect(
         checkSemanticRules(withFields([{ id: 'tech', name: 'Tech', kind: 'select' }]))[0]?.path,
-      ).toBe('fields.0.kind');
+      ).toBe('/fields/0/kind');
     });
 
     it('S12 reports a unit outside number fields and options outside select / status', () => {
@@ -300,13 +329,13 @@ describe('checkSemanticRules', () => {
             { id: 'b', name: 'B', kind: 'text', options: [] },
           ]),
         ),
-      ).toEqual([
+      ).toMatchObject([
         {
-          path: 'fields.0.unit',
+          path: '/fields/0/unit',
           message: 'Field "a" has a unit, but only number fields have one.',
         },
         {
-          path: 'fields.1.options',
+          path: '/fields/1/options',
           message: 'Field "b" has options, but only select and status fields have them.',
         },
       ]);
@@ -327,26 +356,26 @@ describe('checkSemanticRules', () => {
             },
           ]),
         ),
-      ).toEqual([
+      ).toMatchObject([
         {
-          path: 'fields.0.options.0.icon',
+          path: '/fields/0/options/0/icon',
           message: 'Option "a" of field "f" has an icon, but only status options have one.',
         },
         {
-          path: 'fields.0.options.1.id',
+          path: '/fields/0/options/1/id',
           message: 'Option id "a" is used twice in field "f".',
         },
       ]);
     });
 
     it('S13 reports built-in ids in values and keys that are not ids', () => {
-      expect(checkSemanticRules(withFields([], { tech: 'Go', 'a b': 'x', ok: 1 }))).toEqual([
+      expect(checkSemanticRules(withFields([], { tech: 'Go', 'a b': 'x', ok: 1 }))).toMatchObject([
         {
-          path: 'nodes.0.values.a b',
+          path: '/nodes/0/values/a b',
           message: 'Key "a b" is not a valid id (1–64 letters, digits, "-", "_", "." or ":").',
         },
         {
-          path: 'nodes.0.values.tech',
+          path: '/nodes/0/values/tech',
           message: 'Card "n1" stores built-in field "tech" in values; use its own key.',
         },
       ]);
@@ -388,9 +417,9 @@ describe('checkSemanticRules', () => {
             { id: 'b', name: 'b', type: 'int', default: false, defaultExpr: 'now()' },
           ]),
         ),
-      ).toEqual([
+      ).toMatchObject([
         {
-          path: 'nodes.0.columns.1.defaultExpr',
+          path: '/nodes/0/columns/1/defaultExpr',
           message: 'Column "b" has both a default value and a default expression; keep one.',
         },
       ]);
@@ -425,13 +454,13 @@ describe('checkSemanticRules', () => {
             { table: 't', column: 'c', access: 'write' },
           ]),
         ),
-      ).toEqual([
+      ).toMatchObject([
         {
-          path: 'flows.0.steps.0.touches.2',
+          path: '/flows/0/steps/0/touches/2',
           message: 'Step "s" touches table "t" twice; keep one entry.',
         },
         {
-          path: 'flows.0.steps.0.touches.3',
+          path: '/flows/0/steps/0/touches/3',
           message: 'Step "s" touches column "c" of table "t" twice; keep one entry.',
         },
       ]);
@@ -474,20 +503,20 @@ describe('checkSemanticRules', () => {
     });
 
     it('reports an asset that is missing (I1)', () => {
-      expect(checkSemanticRules(deckWith([image()], {}))[0]?.path).toBe('images.0.asset');
+      expect(checkSemanticRules(deckWith([image()], {}))[0]?.path).toBe('/images/0/asset');
     });
 
     it('reports a group that is missing (I3) and an id that clashes (I5)', () => {
       const assets = { [ID]: asset(3, 'AAAA') };
       expect(checkSemanticRules(deckWith([image({ group: 'x' })], assets))[0]?.path).toBe(
-        'images.0.group',
+        '/images/0/group',
       );
       for (const id of ['n1', 'g1', 's1']) {
-        expect(checkSemanticRules(deckWith([image({ id })], assets))[0]?.path).toBe('images.0.id');
+        expect(checkSemanticRules(deckWith([image({ id })], assets))[0]?.path).toBe('/images/0/id');
       }
       expect(
         checkSemanticRules(deckWith([image(), image()], assets)).map((issue) => issue.path),
-      ).toEqual(['images.1.id']);
+      ).toEqual(['/images/1/id']);
     });
 
     it('reports a size below 32 px on each side (I6)', () => {
@@ -495,15 +524,15 @@ describe('checkSemanticRules', () => {
       const paths = checkSemanticRules(
         deckWith([image({ size: { width: 31, height: 10 } })], assets),
       ).map((issue) => issue.path);
-      expect(paths).toEqual(['images.0.size.width', 'images.0.size.height']);
+      expect(paths).toEqual(['/images/0/size/width', '/images/0/size/height']);
     });
 
     it('reports data that does not decode to the stated bytes, or is not padded (I4)', () => {
       expect(checkSemanticRules(deckWith([], { [ID]: asset(4, 'AAAA') }))[0]?.path).toBe(
-        `assets.${ID}.data`,
+        `/assets/${ID}/data`,
       );
       expect(checkSemanticRules(deckWith([], { [ID]: asset(2, 'AAA') }))[0]?.path).toBe(
-        `assets.${ID}.data`,
+        `/assets/${ID}/data`,
       );
       expect(checkSemanticRules(deckWith([], { [ID]: asset(1, 'AA==') }))).toEqual([]);
       expect(checkSemanticRules(deckWith([], { [ID]: asset(2, 'AAA=') }))).toEqual([]);
@@ -511,7 +540,7 @@ describe('checkSemanticRules', () => {
 
     it('reports an assets key that is not a picture id', () => {
       expect(checkSemanticRules(deckWith([], { Big: asset(3, 'AAAA') }))[0]?.path).toBe(
-        'assets.Big',
+        '/assets/Big',
       );
     });
   });
