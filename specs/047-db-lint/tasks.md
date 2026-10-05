@@ -129,7 +129,7 @@
 ## Phase 6: Polish & Cross-Cutting
 
 - [x] T031 Run `BENCH_TABLES=150 BENCH_REL=1 pnpm bench` after the change; save `specs/047-db-lint/bench-after.md`; stay within 5 % of `bench-before.md`.
-- [ ] T032 [P] Compare frames 144, 161 (problem state) and 167 in light and dark at 100 %; fix spacing and tokens; capture screenshots for the report.
+- [x] T032 [P] Compare frames 144, 161 (problem state) and 167 in light and dark at 100 %; fix spacing and tokens; capture screenshots for the report.
 - [x] T033 [P] Docs: amend `docs/decisions/0013-derived-problems.md` (severity, `column`, `fixes`, sort) and `docs/decisions/0029-database-pack-model.md` (lint kinds, type data in the model, the reveal override and 048's row limit); update `packages/model/CLAUDE.md` (`db-types.ts`, severity, fixes), `apps/app/CLAUDE.md` (problems UI, marks, apply-fix, junction table; 043's mismatch replaced); mark 047 in `docs/backlog-database.md` (drop "Block SQL export with errors" from §047, which 052 built) and fix the feature inventory rows that still name 043 for the drawer and type picker.
 - [ ] T034 Definition of done: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e` all pass; no skipped or `.only` tests; walk through `quickstart.md`; final report (what changed, skipped, uncertain).
 
