@@ -102,6 +102,34 @@ export function clampDrawerWidth(px: number, viewportWidth: number, compact = fa
   return Math.min(Math.max(requested, DRAWER_MIN), max);
 }
 
+export const CODE_DRAWER_MIN = 320;
+export const CODE_DRAWER_DEFAULT = 560;
+/** Canvas kept visible to the right of the rail when both drawers are open. */
+export const CANVAS_STRIP = 240;
+/** The code drawer covers at most this share of a regular window. */
+const CODE_DRAWER_SHARE = 0.7;
+
+/**
+ * Width of the code drawer (054): at least 320, at most 70 % of the window (35 % when compact),
+ * and with the details drawer open also leaving `CANVAS_STRIP` px of canvas. When the maximum
+ * falls under the minimum the minimum wins; the caller then closes the other drawer.
+ */
+export function clampCodeDrawerWidth(
+  px: number,
+  viewportWidth: number,
+  detailsWidth: number | null,
+  compact: boolean,
+): number {
+  const requested = Number.isFinite(px) ? px : CODE_DRAWER_DEFAULT;
+  const share = Math.floor(viewportWidth * (compact ? DRAWER_COMPACT_SHARE : CODE_DRAWER_SHARE));
+  const strip =
+    detailsWidth === null
+      ? Infinity
+      : viewportWidth - FLYOUT_LEFT - detailsWidth - 2 * EDGE - CANVAS_STRIP;
+  const max = Math.max(CODE_DRAWER_MIN, Math.min(share, strip));
+  return Math.min(Math.max(requested, CODE_DRAWER_MIN), max);
+}
+
 /** The detail drawer: right 12, top 68, bottom 12. */
 export function drawerRect(viewport: Size, width: number): Rect {
   return {

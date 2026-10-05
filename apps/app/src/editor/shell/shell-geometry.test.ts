@@ -5,7 +5,9 @@ import {
   chromeInsets,
   fitRectInFreeArea,
   PLAYER_CLEARANCE,
+  clampCodeDrawerWidth,
   clampDrawerWidth,
+  CODE_DRAWER_DEFAULT,
   DRAWER_DEFAULT,
   drawerRect,
   FLYOUT_LEFT,
@@ -78,6 +80,34 @@ describe('clampDrawerWidth', () => {
     expect(clampDrawerWidth(560, 1279, true)).toBe(447);
     expect(clampDrawerWidth(560, 1024, true)).toBe(358);
     expect(clampDrawerWidth(400, 800, true)).toBe(320);
+  });
+});
+
+describe('clampCodeDrawerWidth', () => {
+  it('stays between 320 and 70 % of the viewport with no details drawer', () => {
+    expect(clampCodeDrawerWidth(100, 1440, null, false)).toBe(320);
+    expect(clampCodeDrawerWidth(700, 1440, null, false)).toBe(700);
+    expect(clampCodeDrawerWidth(5000, 1440, null, false)).toBe(1007);
+  });
+
+  it('leaves a 240 px canvas strip when the details drawer is open', () => {
+    // 1440 - 68 (flyout left) - 360 (details) - 24 (two gaps) - 240 = 748
+    expect(clampCodeDrawerWidth(5000, 1440, 360, false)).toBe(748);
+    expect(clampCodeDrawerWidth(600, 1440, 360, false)).toBe(600);
+  });
+
+  it('uses the 35 % share in a compact window', () => {
+    expect(clampCodeDrawerWidth(5000, 1200, null, true)).toBe(420);
+  });
+
+  it('never goes below 320, even when there is no room', () => {
+    expect(clampCodeDrawerWidth(400, 900, 560, false)).toBe(320);
+    expect(clampCodeDrawerWidth(400, 800, null, true)).toBe(320);
+  });
+
+  it('falls back to the default for a non-finite width', () => {
+    expect(clampCodeDrawerWidth(Number.NaN, 1440, null, false)).toBe(CODE_DRAWER_DEFAULT);
+    expect(CODE_DRAWER_DEFAULT).toBe(560);
   });
 });
 
