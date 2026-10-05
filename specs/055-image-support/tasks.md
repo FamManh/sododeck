@@ -143,7 +143,7 @@
 - [x] T048 [P] [US3] Image toolbar and inspector: `apps/app/src/editor/images/image-toolbar.tsx` (alt text, caption, bring / send, lock, delete), `inspector/image-inspector.tsx` (alt, caption, read-only file name, type, stored size, pixel size), `inspector.tsx` dispatch, `quick-edit/toolbar-variant.ts`; component tests by role and label; no "Replace picture".
 - [x] T049 [P] [US3] Outline, search results and delete confirmation: `outline.ts`, `notes-outline.tsx` (or a new images list), `command-palette/palette-results.ts`, `open-result.ts`, `describe-removal.ts`; tests that an image is listed, found by alt and caption, and that deleting names its connectors.
 - [x] T050 [US3] Copy / paste of images inside a deck in `editing/clipboard-ops.ts` using the fragment from T017; test: copies share the same blob, are placed on top, keep group relations.
-- [ ] T051 [US3] Accessibility pass for the image node and toolbar: keyboard-only move, resize with arrow keys + modifier, focus ring, announced lock and missing states (role / label tests).
+- [x] T051 [US3] Accessibility pass for the image node and toolbar: keyboard-only move, resize with arrow keys + modifier, focus ring, announced lock and missing states (role / label tests).
 
 **Checkpoint**: quickstart steps 6 and 7 pass manually.
 

@@ -104,4 +104,56 @@ describe('images on the canvas (055)', () => {
     expect(toJSON(doc).images?.[0]?.position).toEqual({ x: 308, y: 0 });
     expect(useUiStore.getState().announcement.text).toMatch(/Locked/);
   });
+
+  it('resizes from the keyboard with Alt + arrow (⇧ for a bigger step), keeping the ratio', async () => {
+    const { doc } = await mount();
+    const node = screen.getByTestId('image-node');
+    fireEvent.keyDown(node, { key: 'ArrowRight', altKey: true });
+    expect(toJSON(doc).images?.[0]?.size).toEqual({ width: 128, height: 85 });
+    expect(useUiStore.getState().announcement.text).toBe('Resized image to 128 × 85');
+    fireEvent.keyDown(node, { key: 'ArrowLeft', altKey: true, shiftKey: true });
+    expect(toJSON(doc).images?.[0]?.size).toEqual({ width: 96, height: 64 });
+  });
+
+  it('refuses keyboard resize and connect on a locked image, saying why', async () => {
+    const { editor } = await mount();
+    act(() => {
+      editor().setLocked(['i1'], true, 'images');
+    });
+    const node = screen.getByTestId('image-node');
+    fireEvent.keyDown(node, { key: 'ArrowRight', altKey: true });
+    expect(useUiStore.getState().announcement.text).toMatch(/Locked/);
+    fireEvent.keyDown(node, { key: 'c' });
+    expect(useUiStore.getState().popover).toBeNull();
+    expect(node).toHaveAccessibleName('Image: Logo, locked');
+  });
+
+  it('opens the keyboard connect list with C and is focusable with a focus ring', async () => {
+    await mount();
+    const node = screen.getByTestId('image-node');
+    expect(node).toHaveAttribute('tabindex', '0');
+    expect(node.className).toMatch(/focus-visible/);
+    fireEvent.keyDown(node, { key: 'c' });
+    expect(useUiStore.getState().popover).toEqual({ kind: 'connect', fromId: 'i1' });
+  });
+
+  it('announces a missing picture in its name, by text and not by colour', async () => {
+    const lost = deckOf({
+      images: [
+        {
+          id: 'i9',
+          asset: 'f'.repeat(64),
+          position: { x: 0, y: 0 },
+          size: { width: 120, height: 80 },
+          alt: 'Gone',
+        },
+      ],
+      assets: {
+        ['f'.repeat(64)]: { ...deck.assets?.[ASSET], name: 'gone.png', data: '' } as never,
+      },
+    });
+    renderWithEditor(<Harness />, lost);
+    expect(await screen.findByText('Picture missing', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.getByTestId('image-node')).toHaveAccessibleName('Image: Gone, picture missing');
+  });
 });
