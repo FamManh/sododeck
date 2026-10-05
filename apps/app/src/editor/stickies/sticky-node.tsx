@@ -30,7 +30,7 @@ import {
 } from '../editing/sticky-resize';
 import type { Handle as ResizeHandleName } from '../editing/resize-limits';
 import { refuseLocked } from '../lock';
-import { TAG_ROW_HEIGHT } from './fit-font-size';
+import { NOTE_INSET, TAG_ROW_HEIGHT } from './fit-font-size';
 import { finishDraft, notesAreReadOnly } from './sticky-actions';
 import { StickyPaper } from './sticky-paper';
 import { hiddenTagsLabel, noteTags } from './sticky-tags';
@@ -54,9 +54,6 @@ const RESIZE_HANDLES: readonly ResizeHandleName[] = [
   'bottom-left',
   'left',
 ];
-
-/** The paper's padding (12) and border (1) on each side: what the text has less than the box. */
-const INSET = 2 * (12 + 1);
 
 const modsOf = (event: ResizeDragEvent) => {
   const source = event.sourceEvent as Partial<MouseEvent> | null | undefined;
@@ -138,13 +135,13 @@ export const StickyNode = memo(function StickyNode({
 
   // Text and its room (053 R3): what is typed shows live, so the size follows the keystrokes.
   const text = editing ? field.value : data.text;
-  const innerWidth = Math.max(0, data.size.width - INSET);
+  const innerWidth = Math.max(0, data.size.width - NOTE_INSET);
   const tags = noteTags(data.tagLooks, innerWidth);
   const rows = tags.rows + (pinned || locked ? 1 : 0);
   const { fit, measureRef } = useFitFontSize({
     text,
     width: innerWidth,
-    height: Math.max(0, data.size.height - INSET),
+    height: Math.max(0, data.size.height - NOTE_INSET),
     align: data.align,
     fontSize: data.fontSize,
     rows,
@@ -286,7 +283,7 @@ export const StickyNode = memo(function StickyNode({
                   style={{
                     maxHeight: Math.max(
                       TAG_ROW_HEIGHT,
-                      data.size.height - INSET - rows * TAG_ROW_HEIGHT,
+                      data.size.height - NOTE_INSET - rows * TAG_ROW_HEIGHT,
                     ),
                     fontSize: 'inherit',
                     textAlign: 'inherit',

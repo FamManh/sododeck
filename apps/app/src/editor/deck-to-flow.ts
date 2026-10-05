@@ -190,6 +190,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
    * and "follow" with the Labels tool off), so hovering changes no React Flow object.
    */
   hoverLabel?: boolean;
+  /** Locked (053): it cannot be rerouted, reattached or deleted; a small lock mark shows it. */
+  locked?: boolean;
 }
 
 /** What a relationship edge draws besides an ordinary connector (042). */
@@ -1444,6 +1446,7 @@ export function toFlowEdges(
         ...(edge.labelAt === undefined ? {} : { labelAt: edge.labelAt }),
         ...(rel === undefined ? {} : { rel }),
         ...(hoverLabel ? { hoverLabel } : {}),
+        ...(edge.locked === true ? { locked: true } : {}),
       },
     };
     edgeCache.set(edge, flowEdge);

@@ -1,4 +1,4 @@
-import { edgeShape, endpointTitle } from '@sododeck/model';
+import { edgeShape, endpointTitle, isLocked } from '@sododeck/model';
 import type { Edge, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
@@ -11,6 +11,7 @@ import { useState } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
+import { LOCKED_HINT } from '../lock';
 import { connectionCheck, REFUSAL_TEXT } from '../connection-rules';
 import { FieldEdit } from '../field-edit';
 import { DIRECTIONS, PROTOCOLS, type Direction } from '../fields/edge-choices';
@@ -41,6 +42,8 @@ const NO_PROTOCOL = 'none';
 export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }) {
   const editor = useEditor();
   const [refusal, setRefusal] = useState<string | undefined>(undefined);
+  // The model refuses writes on a locked connector (053): the form is read-only, not an error.
+  const locked = isLocked(edge);
   const write = (patch: EdgePatch) => {
     editor.update('edges', edge.id, patch);
   };
@@ -98,7 +101,14 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
         </Button>
       }
     >
-      <div key={edge.id} className="contents">
+      <fieldset key={edge.id} disabled={locked} className="contents">
+        {locked && (
+          <PanelSection>
+            <p role="note" className="text-body-sm text-ink-secondary">
+              {LOCKED_HINT}
+            </p>
+          </PanelSection>
+        )}
         <PanelSection>
           <FieldEdit
             label="Title"
@@ -250,7 +260,7 @@ export function EdgeInspector({ deck, edge }: { deck: SododeckFile; edge: Edge }
             </ul>
           )}
         </PanelSection>
-      </div>
+      </fieldset>
     </InspectorFrame>
   );
 }

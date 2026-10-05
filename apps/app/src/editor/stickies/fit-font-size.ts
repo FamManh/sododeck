@@ -16,6 +16,9 @@ export const MIN_FIT_FONT_SIZE = 9;
 /** Height of one tag row (px), subtracted from the box before measuring the text. */
 export const TAG_ROW_HEIGHT = 24;
 
+/** The paper's padding (12) and border (1) on each side: what the text has less than the box. */
+export const NOTE_INSET = 2 * (12 + 1);
+
 export type FitAlign = 'left' | 'center' | 'right';
 
 export interface FitBox {

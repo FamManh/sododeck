@@ -1152,4 +1152,14 @@ describe('DeckEdge own style (022 US1)', () => {
     );
     expect(small?.getAttribute('d')).not.toBe(big?.getAttribute('d'));
   });
+
+  it('draws a lock mark on a locked connector, with or without a label', () => {
+    renderEdge({ locked: true, label: undefined });
+    expect(screen.getByRole('img', { name: 'Locked' })).toBeInTheDocument();
+  });
+
+  it('draws no lock mark on an unlocked connector', () => {
+    renderEdge({});
+    expect(screen.queryByRole('img', { name: 'Locked' })).not.toBeInTheDocument();
+  });
 });

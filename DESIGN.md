@@ -532,6 +532,19 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 - **Selection frame** (2px Deck Orange outline, 2px **outside** the card border): selected node. It sits outside the card so it reads on any card colour. A multi-selection also gets a 1px orange rounded frame 10px outside the union.
 - **Flow halo** (`0 0 0 3px {colors.primary-soft}` + 1.5px primary border): the node on the current flow step, and the chosen export format.
 
+### Sticky notes (053)
+
+A note is paper, not a card: it has no header, icon or lip, so it reads as a note at a glance.
+
+- **Sheet:** 6px radius, 1px border in the tint's border, the tint fill with a lighter top (a vertical gradient from 35 % `{colors.surface}` to clear), a folded bottom-right corner (a 16px triangle in a darker tint of the ink) and the **Note** shadow, lifted when selected or dragged. Five tints (amber, blue, clay, green, grey), all from tokens, so both themes work. Default size 200 × 200, minimum 96 × 96; a collapsed note is one 40px line.
+- **Text:** markdown in Geist, **Auto** size picks the largest step of 32, 28, 24, 20, 18, 16, 14, 12, 11, 10, 9px that fits the sheet less its 12px padding, the tag rows and the pinned / lock line; below 9px it is clipped with an ellipsis cue ("Text is cut off"). A pinned size (12, 14, 16, 20, 24, 32) skips the fit. Alignment left, centre (default) or right. The fit is display-only and never stored.
+- **Tags:** 18px chips along the bottom in the deck's tag colours, at most two rows, then a "+N" chip.
+- **Resize:** eight handles while the note is selected, expanded and unlocked (the same handles as a group frame); a drag shows the size guides.
+- **Ends:** four connection handles, one per side, like a group frame; a dragged connector end that would land on a note lights it with a 2px primary ring.
+- **Note toolbar** (floating above the selection): text size, bold, alignment, link, colour (five swatches), expand / collapse, pin, lock, delete. A lock is conveyed by a lock glyph and the word "locked" in the name, never by colour alone.
+- **Pad tile:** in the Add flyout the Sticky tile is a stack of three offset sheets (the note's own paper at a small size, the back two rotated 6 and -3 degrees); click adds a note, dragging places one.
+- **Connections toolbar:** with two or more connectors selected, a floating toolbar edits all of them as one undo step: arrow ends, line type, colour, weight and lock. A connector that is locked draws a 12px lock glyph at its label point, with or without a label.
+
 ## Components
 
 ### Buttons

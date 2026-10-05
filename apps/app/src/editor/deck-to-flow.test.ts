@@ -1430,6 +1430,15 @@ describe('relationships (042 US1)', () => {
     expect(next.data.rel).toMatchObject({ ends: { from: { offsets: [53], kind: 'title' } } });
   });
 
+  it('marks a locked connector so it can draw its lock', () => {
+    const locked: SododeckFile = {
+      ...shop,
+      edges: shop.edges.map((edge) => (edge.id === 'fk' ? { ...edge, locked: true } : edge)),
+    };
+    expect(byId(locked, 'fk').data).toMatchObject({ locked: true });
+    expect((byId(shop, 'fk').data as { locked?: boolean }).locked).toBeUndefined();
+  });
+
   it('shows labels per the deck label mode', () => {
     const label = (file: SododeckFile, partial: Partial<CanvasView> = {}) => {
       const data = byId(file, 'fk', partial).data as { showLabel: boolean; hoverLabel?: boolean };

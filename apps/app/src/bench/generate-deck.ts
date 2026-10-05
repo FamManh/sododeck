@@ -540,8 +540,12 @@ function walk(
 
 function addBenchFlows(deck: SododeckFile, random: () => number): void {
   const outgoing = new Map<string, SododeckFile['edges']>();
-  for (const edge of deck.edges)
+  // A flow's steps are components: a note's connector (053) is never one.
+  const cards = new Set(deck.nodes.map((node) => node.id));
+  for (const edge of deck.edges) {
+    if (!cards.has(edge.from) || !cards.has(edge.to)) continue;
     outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), edge]);
+  }
   const starts = [...outgoing.keys()];
   /** The longest of a few random walks, so almost every flow has its 10 steps. */
   const longWalk = () => {
@@ -602,7 +606,22 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
           x: Math.round(random() * 180 + (i % 8) * (STICKY_DEFAULT_SIZE.width + 20)),
           y: Math.round(random() * 120 + Math.floor(i / 8) * (STICKY_DEFAULT_SIZE.height + 20)),
         },
+        // Every third note carries tags, so the fit and the chips are part of the load (053).
+        ...(i % 3 === 0 ? { tags: ['bench', `group-${String(i % 4)}`] } : {}),
       });
+      // Connector ends (053): every other free note links to a card, every fourth also to the next
+      // free note. No `random()` here, so the seeded positions above stay as they were.
+      const target = deck.nodes[(i * 7) % Math.max(1, deck.nodes.length)];
+      if (i % 2 === 0 && target !== undefined) {
+        deck.edges.push({ id: `sticky-edge${String(i)}`, from: `sticky${String(i)}`, to: target.id });
+      }
+      if (i % 4 === 1 && i + 1 < freeCount) {
+        deck.edges.push({
+          id: `sticky-link${String(i)}`,
+          from: `sticky${String(i)}`,
+          to: `sticky${String(i + 1)}`,
+        });
+      }
       continue;
     }
 

@@ -1,4 +1,4 @@
-import { endpointTitle } from '@sododeck/model';
+import { endpointTitle, isLocked } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { Input } from '@sododeck/ui/components/input';
@@ -18,6 +18,7 @@ import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
 import { anchorRect, focusCanvas } from './canvas-actions';
 import { DIRECTIONS, PROTOCOLS, type Direction } from './fields/edge-choices';
+import { LOCKED_HINT } from './lock';
 
 type Edge = SododeckFile['edges'][number];
 
@@ -37,6 +38,8 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
   const editor = useEditor();
   const closePopover = useUiStore((s) => s.closePopover);
   const requestDelete = useUiStore((s) => s.requestDelete);
+  // The model refuses writes on a locked connector (053): the fields are read-only instead.
+  const locked = isLocked(edge);
   const [draft, setDraft] = useState(edge.label ?? '');
   const labelId = useId();
   const protocolId = useId();
@@ -49,7 +52,7 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
   /** One update, only when the label really changed; an empty label clears the field. */
   const commitLabel = () => {
     const next = draft.trim();
-    if (next === (edge.label ?? '')) return;
+    if (locked || next === (edge.label ?? '')) return;
     editor.update('edges', edge.id, { label: next === '' ? null : next });
   };
 
@@ -90,6 +93,12 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
           </div>
         </div>
 
+        {locked && (
+          <p role="note" className="text-caption text-ink-secondary">
+            {LOCKED_HINT}
+          </p>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <label htmlFor={labelId} className="text-micro text-ink-muted uppercase">
             Label
@@ -97,6 +106,7 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
           <Input
             id={labelId}
             value={draft}
+            disabled={locked}
             placeholder="e.g. POST /orders"
             onChange={(event) => {
               setDraft(event.target.value);
@@ -117,6 +127,7 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
           </span>
           <Select
             value={edge.protocol ?? NO_PROTOCOL}
+            disabled={locked}
             onValueChange={(value) => {
               editor.update('edges', edge.id, {
                 protocol: value === NO_PROTOCOL ? null : (value as NonNullable<Edge['protocol']>),
@@ -144,6 +155,7 @@ function EdgePopoverContent({ deck, edge }: { deck: SododeckFile; edge: Edge }) 
           <SegmentedControl
             aria-labelledby={directionId}
             value={edge.direction ?? 'forward'}
+            disabled={locked}
             onValueChange={(value) => {
               editor.update('edges', edge.id, {
                 direction: value as Direction,
