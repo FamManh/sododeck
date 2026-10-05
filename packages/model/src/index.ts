@@ -122,6 +122,7 @@ export {
   type Severity,
 } from './problems';
 export {
+  AUTHORING_CODES,
   CATALOGUE,
   catalogueEntry,
   DB_FIDELITY_CODES,
@@ -130,6 +131,7 @@ export {
   isCode,
   MERMAID_FIDELITY_CODES,
   renderCatalogueMarkdown,
+  type AuthoringCode,
   type CatalogueEntry,
   type Code,
   type CodeFamily,

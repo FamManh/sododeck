@@ -2,6 +2,7 @@ import { FORMAT_RULE_CODES, LOAD_ISSUE_CODES, SCHEMA_ISSUE_CODES } from '@sodode
 import { describe, expect, it } from 'vitest';
 
 import {
+  AUTHORING_CODES,
   CATALOGUE,
   FIDELITY_CODES,
   isCode,
@@ -59,6 +60,13 @@ describe('problem code catalogue (062 FR-019)', () => {
       expect(CATALOGUE[code].family).toBe('import');
       expect(CATALOGUE[code].severity).toBe('info');
       expect(CATALOGUE[code].group).toBeDefined();
+    }
+  });
+
+  it('gives every authoring code its own family and warning severity (027)', () => {
+    for (const code of AUTHORING_CODES) {
+      expect(CATALOGUE[code].family).toBe('authoring');
+      expect(CATALOGUE[code].severity).toBe('warning');
     }
   });
 

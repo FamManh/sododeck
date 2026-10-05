@@ -66,6 +66,23 @@ export const FIDELITY_CODES: readonly FidelityCode[] = [
   ...DB_FIDELITY_CODES,
 ];
 
+/**
+ * Authoring checks of the AI deck skill's `lint` (027 research R5): taste and modelling advice for
+ * AI-written decks. The app never reports them; they live here so their codes never clash with
+ * the app's.
+ */
+export const AUTHORING_CODES = [
+  'id-style',
+  'positions-mixed',
+  'orphan-card',
+  'duplicate-title',
+  'label-too-long',
+  'level-over-budget',
+  'connector-without-source',
+] as const;
+
+export type AuthoringCode = (typeof AUTHORING_CODES)[number];
+
 /** Every code in the catalogue. */
 export type Code =
   | IssueCode
@@ -74,9 +91,10 @@ export type Code =
   | 'picture-damaged'
   | ProblemKind
   | 'orphan'
-  | FidelityCode;
+  | FidelityCode
+  | AuthoringCode;
 
-export type CodeFamily = 'file' | 'format-rule' | 'load' | 'deck' | 'import';
+export type CodeFamily = 'file' | 'format-rule' | 'load' | 'deck' | 'import' | 'authoring';
 
 export interface CatalogueEntry {
   family: CodeFamily;
@@ -117,6 +135,12 @@ const imported = (group: FidelityGroup, title: string, fix: string): CatalogueEn
   group,
 });
 
+const authoring = (title: string, fix: string): CatalogueEntry => ({
+  family: 'authoring',
+  severity: 'warning',
+  title,
+  fix,
+});
 const NOTHING_TO_FIX = (what: string) => `Nothing to fix: ${what}.`;
 
 export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
@@ -544,6 +568,35 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
     'Schema dropped',
     NOTHING_TO_FIX("the deck's dialect has no schemas"),
   ),
+  // Authoring checks: the AI deck skill's lint only (027).
+  'id-style': authoring(
+    'Id is not a short slug',
+    'Use a short lower-case slug (at most 32 characters) chosen once; never rebuild it from the title.',
+  ),
+  'positions-mixed': authoring(
+    'Some cards placed, some not',
+    'Give every card a position or none; without positions the app lays the deck out on import.',
+  ),
+  'orphan-card': authoring(
+    'Card without connections',
+    'Connect the card, put it in a group, or delete it if it does not earn its place.',
+  ),
+  'duplicate-title': authoring(
+    'Same title twice',
+    'Give each card in the same group and level its own title.',
+  ),
+  'label-too-long': authoring(
+    'Label over budget',
+    'Shorten the label; put details in the note or in fields.',
+  ),
+  'level-over-budget': authoring(
+    'Too many cards on one level',
+    'Split the level: move related cards under a parent card one level down, or merge minor ones.',
+  ),
+  'connector-without-source': authoring(
+    'No source link',
+    'Add a link to the file and lines the connector or card was built from, or remove it.',
+  ),
 };
 
 /** Whether `code` is in the catalogue (retired codes included). */
@@ -585,6 +638,12 @@ const FAMILIES: readonly { family: CodeFamily; heading: string; intro: string }[
     heading: 'Import from other formats',
     intro:
       'What a Mermaid, SQL or DBML import could not bring across one-to-one, by group: merged, collapsed, left out, not supported. Never an error.',
+  },
+  {
+    family: 'authoring',
+    heading: 'Authoring checks (AI deck skill)',
+    intro:
+      "Reported only by the AI deck skill's `lint`, never by the app: advice for decks written by an AI agent. Always warnings.",
   },
 ];
 

@@ -144,3 +144,17 @@ What a Mermaid, SQL or DBML import could not bring across one-to-one, by group: 
 | `import-db-name-exists` | merged | Name already in the deck | Rename the table in the input, or import into a new deck. |
 | `import-db-enum-name-exists` | merged | Enum name already in the deck | Rename the enum in the input, or import into a new deck. |
 | `import-db-schema-dropped` | left-out | Schema dropped | Nothing to fix: the deck's dialect has no schemas. |
+
+## Authoring checks (AI deck skill)
+
+Reported only by the AI deck skill's `lint`, never by the app: advice for decks written by an AI agent. Always warnings.
+
+| Code | Severity | Title | Fix |
+| --- | --- | --- | --- |
+| `id-style` | warning | Id is not a short slug | Use a short lower-case slug (at most 32 characters) chosen once; never rebuild it from the title. |
+| `positions-mixed` | warning | Some cards placed, some not | Give every card a position or none; without positions the app lays the deck out on import. |
+| `orphan-card` | warning | Card without connections | Connect the card, put it in a group, or delete it if it does not earn its place. |
+| `duplicate-title` | warning | Same title twice | Give each card in the same group and level its own title. |
+| `label-too-long` | warning | Label over budget | Shorten the label; put details in the note or in fields. |
+| `level-over-budget` | warning | Too many cards on one level | Split the level: move related cards under a parent card one level down, or merge minor ones. |
+| `connector-without-source` | warning | No source link | Add a link to the file and lines the connector or card was built from, or remove it. |
