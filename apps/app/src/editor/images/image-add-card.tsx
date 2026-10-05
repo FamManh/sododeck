@@ -5,15 +5,9 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { ImagePlus } from 'lucide-react';
 import { useRef } from 'react';
 
-import { IMAGE_TYPES } from '../../images/limits';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { IMAGE_ACCEPT, IMAGE_DISABLED_REASON, IMAGE_TILE_HINT } from './image-add-text';
 import { useAddImages } from './use-add-images';
-
-/** What the file picker lists: the six types the app takes (contracts/ui.md). */
-export const IMAGE_ACCEPT = IMAGE_TYPES.join(',');
-
-export const IMAGE_TILE_HINT = 'Add an image (or paste with ⌘V)';
-const DISABLED_REASON = 'Images cannot be added in flow mode or while recording';
 
 /**
  * The Image tile of the Add flyout (055 US2): opens the file picker (several files allowed); the
@@ -57,11 +51,11 @@ export function ImageAddCard() {
             </span>
           </button>
         </TooltipTrigger>
-        <TooltipContent>{editable ? IMAGE_TILE_HINT : DISABLED_REASON}</TooltipContent>
+        <TooltipContent>{editable ? IMAGE_TILE_HINT : IMAGE_DISABLED_REASON}</TooltipContent>
       </Tooltip>
       {!editable && (
         <span id="image-add-disabled" className="sr-only">
-          {DISABLED_REASON}
+          {IMAGE_DISABLED_REASON}
         </span>
       )}
       <input

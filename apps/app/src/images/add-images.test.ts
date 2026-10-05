@@ -2,7 +2,12 @@ import { assetId, createEditor, fromJSON, toJSON } from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { addImages, type AddImagesInput } from './add-images';
+import {
+  addImages,
+  pictureBytesOf,
+  resetSoftLimitWarning,
+  type AddImagesInput,
+} from './add-images';
 import type { IngestPorts } from './ingest';
 import { MAX_INPUT_BYTES } from './limits';
 import { memoryPictureStore, type PictureStore } from './picture-store';
@@ -119,5 +124,58 @@ describe('addImages (055)', () => {
     const frames = new Uint8Array([...GIF_1X1.slice(0, 13), ...gce, ...gce, 0x3b]);
     const result = await addImages(input, [file('spin.gif', frames)]);
     expect(result.messages).toContain('spin.gif: animated GIFs show only the first frame.');
+  });
+
+  describe('the soft deck limit', () => {
+    // A deck whose existing pictures already weigh 100 MB, and one more small picture on top.
+    const heavy = (): ReturnType<typeof setup> => {
+      const base = setup();
+      const big = 'd'.repeat(64);
+      base.editor.addImages([
+        {
+          asset: big,
+          meta: { type: 'image/png', bytes: 5_000_000, width: 100, height: 100, name: 'big.png' },
+          position: { x: 0, y: 0 },
+          size: { width: 64, height: 64 },
+        },
+        ...Array.from({ length: 20 }, (_, i) => ({
+          asset: String(i).padStart(64, 'a'),
+          meta: {
+            type: 'image/png' as const,
+            bytes: 5_242_880,
+            width: 10,
+            height: 10,
+            name: 'x.png',
+          },
+          position: { x: i, y: 0 },
+          size: { width: 64, height: 64 },
+        })),
+      ]);
+      return base;
+    };
+
+    it('counts each picture once, whatever number of images use it', () => {
+      expect(
+        pictureBytesOf({
+          images: [
+            { id: 'a', asset: 'p', position: { x: 0, y: 0 }, size: { width: 40, height: 40 } },
+            { id: 'b', asset: 'p', position: { x: 0, y: 0 }, size: { width: 40, height: 40 } },
+          ],
+          assets: { p: { type: 'image/png', bytes: 10, width: 1, height: 1, name: 'p', data: '' } },
+        }),
+      ).toBe(10);
+    });
+
+    it('warns once per session when the pictures pass 100 MB, after the add', async () => {
+      resetSoftLimitWarning();
+      const { input } = heavy();
+      const first = await addImages(input, [file('a.png', PNG_1X1)]);
+      expect(first.messages.at(-1)).toBe('Added 1 image.');
+      expect(
+        first.messages.some((m) => /^Pictures in this deck use \d+ MB\. Large decks/.test(m)),
+      ).toBe(true);
+      const second = await addImages(input, [file('b.png', PNG_1X1)]);
+      expect(second.messages).toEqual(['Added 1 image.']);
+    });
   });
 });

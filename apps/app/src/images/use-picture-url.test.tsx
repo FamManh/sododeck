@@ -2,7 +2,13 @@ import { act, render, renderHook, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { memoryPictureStore, PictureStoreContext, type PictureStore } from './picture-store';
+import { freshLibraryDb } from '../test/library-fixtures';
+import {
+  dbPictureStore,
+  memoryPictureStore,
+  PictureStoreContext,
+  type PictureStore,
+} from './picture-store';
 import { RETRY_MS } from './picture-url-cache';
 import { PNG_1X1 } from './test-pictures';
 import { usePictureUrl } from './use-picture-url';
@@ -129,5 +135,34 @@ describe('usePictureUrl (055)', () => {
       expect(b.result.current.status).toBe('ready');
     });
     expect(created).toHaveLength(2);
+  });
+
+  it('shows in a second tab a picture the first tab stored before adding the image (055 US4)', async () => {
+    const db = await freshLibraryDb();
+    // Two tabs: two store objects over the same library database and deck.
+    const tabA = dbPictureStore(db, 'deck-1');
+    const tabB = dbPictureStore(db, 'deck-1');
+    await tabA.put('p1', { type: 'image/png', bytes: PNG_1X1 });
+    const { result } = renderHook(() => usePictureUrl('p1'), { wrapper: wrapperFor(tabB) });
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready');
+    });
+  });
+
+  it('resolves the placeholder after the retry when the other tab is a moment late', async () => {
+    const db = await freshLibraryDb();
+    const tabA = dbPictureStore(db, 'deck-1');
+    const tabB = dbPictureStore(db, 'deck-1');
+    const { result } = renderHook(() => usePictureUrl('late'), { wrapper: wrapperFor(tabB) });
+    // The first look finds nothing; the row arrives before the single retry a second later.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(result.current.status).toBe('loading');
+    await tabA.put('late', { type: 'image/png', bytes: PNG_1X1 });
+    await waitFor(
+      () => {
+        expect(result.current.status).toBe('ready');
+      },
+      { timeout: 3000 },
+    );
   });
 });

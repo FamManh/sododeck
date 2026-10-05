@@ -123,8 +123,8 @@
 - [x] T039 [P] [US4] Write `apps/app/src/library/use-import-files.test.ts` cases first: a file with `assets` imports and shows its images; a file with one missing or hash-mismatched asset opens with a "Picture missing" placeholder and one notice; an over-5 MB or disallowed-type asset is treated as missing; a pre-055 file opens unchanged and re-exports without `images` / `assets`; importing the same file twice stores no duplicate blob rows. Map new import messages in `use-import-files.ts`.
 - [x] T040 [P] [US4] Update `apps/app/src/editor/export/json-export.ts` and `deck-menu.tsx` export so the JSON file embeds assets ("without notes" keeps pictures); test byte-identical re-export and that a deck with 20 MB of pictures keeps the JSON panel free of picture data.
 - [x] T041 [US4] JSON panel and viewer: `json-viewer.tsx` / `json-panel-view.ts` show image records and `meta.assets` entries without `data`; test that no base64 appears and the panel stays responsive (a few hundred bytes per image).
-- [ ] T042 [US4] Multi-tab: with two decks views on one deck in tests (fake channel), an image added in tab A appears in tab B because the blob is written before the Yjs add; if the row is late the placeholder resolves after the retry. Test in `use-picture-url.test.tsx`.
-- [ ] T043 [US4] Quota and soft limit: a quota error on write reports "Could not save the picture" and adds nothing; a deck whose pictures exceed 100 MB shows the one-per-session warning; tests with a stubbed blob store.
+- [x] T042 [US4] Multi-tab: with two decks views on one deck in tests (fake channel), an image added in tab A appears in tab B because the blob is written before the Yjs add; if the row is late the placeholder resolves after the retry. Test in `use-picture-url.test.tsx`.
+- [x] T043 [US4] Quota and soft limit: a quota error on write reports "Could not save the picture" and adds nothing; a deck whose pictures exceed 100 MB shows the one-per-session warning; tests with a stubbed blob store.
 
 **Checkpoint**: quickstart steps 8 and 12 pass; `pnpm test` green.
 

@@ -1,8 +1,11 @@
 import { defaultImageSize, type DeckEditor, type NewImage } from '@sododeck/model';
+import type { SododeckFile } from '@sododeck/schema';
 
 import { isQuotaError } from '../lib/features';
+import { readDeck } from '../model/use-deck-snapshot';
 import { describeRefusal, ingestImage, type IngestedPicture, type IngestPorts } from './ingest';
 import { blockSize, layoutRow } from './layout-row';
+import { SOFT_DECK_BYTES } from './limits';
 import type { PictureStore } from './picture-store';
 
 export interface AddImagesInput {
@@ -38,6 +41,21 @@ export async function readFileBytes(file: Blob): Promise<Uint8Array> {
     };
     reader.readAsArrayBuffer(file);
   });
+}
+
+let softLimitWarned = false;
+
+/** Tests: the warning shows once per session, so a test that wants it again resets it. */
+export function resetSoftLimitWarning(): void {
+  softLimitWarned = false;
+}
+
+/** The bytes of the pictures the deck's images use, each counted once. */
+export function pictureBytesOf(deck: Pick<SododeckFile, 'images' | 'assets'>): number {
+  const used = new Set((deck.images ?? []).map((image) => image.asset));
+  let total = 0;
+  for (const id of used) total += deck.assets?.[id]?.bytes ?? 0;
+  return total;
 }
 
 const plural = (n: number) => (n === 1 ? '1 image' : `${String(n)} images`);
@@ -107,5 +125,13 @@ export async function addImages(
     ...(group === undefined ? {} : { group }),
   }));
   const ids = editor.addImages(items);
-  return { ids, messages: [...messages, `Added ${plural(ids.length)}.`] };
+  const summary = `Added ${plural(ids.length)}.`;
+  // One quiet warning per session once the pictures pass the soft limit (the add itself is fine).
+  const total = pictureBytesOf(readDeck(editor.doc));
+  if (total > SOFT_DECK_BYTES && !softLimitWarned) {
+    softLimitWarned = true;
+    const warning = `Pictures in this deck use ${String(Math.round(total / 1024 / 1024))} MB. Large decks may be slow to open.`;
+    return { ids, messages: [...messages, warning, summary] };
+  }
+  return { ids, messages: [...messages, summary] };
 }

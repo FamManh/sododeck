@@ -91,8 +91,8 @@ export function createBrowserOps(): IngestPorts {
       const { source, close } = await load(bytes, type);
       try {
         const canvas = makeCanvas(size);
-        const context = canvas.getContext('2d') as
-          CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+        const context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null =
+          canvas.getContext('2d');
         if (context === null) throw new Error('No 2D canvas context');
         context.imageSmoothingQuality = 'high';
         context.drawImage(source, 0, 0, size.width, size.height);
