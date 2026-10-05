@@ -132,10 +132,10 @@
 - [x] T035 [P] Add an addendum section "057: crop and flip" to `docs/decisions/0037-image-support.md` (fields and units, unflipped crop coordinates, nested-SVG export, one-write crop session, soft trim C2, rejected alternatives from research R1–R4, R10).
 - [x] T036 [P] Update `DESIGN.md` (Image object: crop mode look, crop bar, flip toggle buttons, handle sizes; tokens only) and `apps/app/CLAUDE.md` if it lists editor modules or UI state (crop session).
 - [x] T037 [P] Update `docs/backlog.md` §057 status to "implemented on `057-image-editing`" with the spec path and the ADR addendum.
-- [ ] T038 Run `pnpm bench` and save as `specs/057-image-editing/bench-after.md`; compare with `bench-before.md` and note any regression in the report.
-- [ ] T039 Run the full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; fix anything red (the smoke suite, incl. the no-third-party-requests check, must pass unchanged).
-- [ ] T040 Run the manual scenarios in `specs/057-image-editing/quickstart.md` (`pnpm dev`), record results in `specs/057-image-editing/quickstart-results.md`, take screenshots of scenarios 1, 6, 9, 11 in light and dark into `specs/057-image-editing/screenshots/`.
-- [ ] T041 Open the PR (Conventional Commits title `feat: image crop and flip (057)`), with the final report: what changed, bench numbers, what was skipped, what is uncertain.
+- [x] T038 Run `pnpm bench` and save as `specs/057-image-editing/bench-after.md`; compare with `bench-before.md` and note any regression in the report.
+- [x] T039 Run the full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; fix anything red (the smoke suite, incl. the no-third-party-requests check, must pass unchanged).
+- [x] T040 Run the manual scenarios in `specs/057-image-editing/quickstart.md` (`pnpm dev`), record results in `specs/057-image-editing/quickstart-results.md`, take screenshots of scenarios 1, 6, 9, 11 in light and dark into `specs/057-image-editing/screenshots/`.
+- [x] T041 Open the PR (Conventional Commits title `feat: image crop and flip (057)`), with the final report: what changed, bench numbers, what was skipped, what is uncertain.
 
 ---
 
