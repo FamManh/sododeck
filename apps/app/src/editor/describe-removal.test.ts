@@ -259,3 +259,37 @@ describe('describeRemoval for a database card (049)', () => {
     );
   });
 });
+
+describe('describeRemoval for notes with connectors (053)', () => {
+  const noted = deckOf({
+    nodes: [
+      { id: 'svc', type: 'service', title: 'Order Service' },
+      { id: 'db', type: 'database', title: 'Orders DB' },
+    ],
+    stickies: [
+      { id: 'n1', text: 'Why retry?', position: { x: 0, y: 0 } },
+      { id: 'n2', text: 'Other', position: { x: 300, y: 0 } },
+    ],
+    edges: [
+      { id: 'c1', from: 'svc', to: 'n1' },
+      { id: 'c2', from: 'n1', to: 'n2' },
+      { id: 'keep', from: 'svc', to: 'db' },
+    ],
+  });
+
+  it('lists the connectors that go with a deleted note', () => {
+    const targets: RemovalTarget[] = [{ scope: 'stickies', id: 'n1' }];
+    const result = previewRemoval(noted, targets);
+    expect(describeRemoval(noted, targets, result)).toEqual({
+      title: 'Delete this note?',
+      body: 'Also removes 2 connections. You can undo this.',
+    });
+  });
+
+  it('names a connector to a note by the note text', () => {
+    const targets: RemovalTarget[] = [{ scope: 'edges', id: 'c1' }];
+    expect(describeRemoval(noted, targets, previewRemoval(noted, targets)).title).toBe(
+      'Delete Order Service → Why retry??',
+    );
+  });
+});

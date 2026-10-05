@@ -3,6 +3,7 @@ import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
+import { LOCKED_HINT } from '../lock';
 import { targetScene, type SceneNode } from '../routing/endpoint-target';
 import { cancelActiveGesture, hasActiveGesture } from './drag-session';
 import {
@@ -78,6 +79,26 @@ function setup(route?: Route, extraEdges?: SododeckFile['edges']) {
   const ui = () => useUiStore.getState();
   return { doc, editor, edge, ui };
 }
+
+describe('endpoint drag on a locked connector (053 US4)', () => {
+  it('writes nothing on release and says why, for a slide and for a reconnect', () => {
+    for (const to of [
+      { x: 390, y: 230 },
+      { x: 600, y: -150 },
+    ]) {
+      const doc = fromJSON(file(undefined, []));
+      createEditor(doc, { captureTimeout: 0 }).setLocked(['e'], true, 'edges');
+      const editor = createEditor(doc, { captureTimeout: 0 });
+      const before = JSON.stringify(toJSON(doc));
+      const session = startEndpointDrag(editor, ctx(), { x: 400, y: 250 });
+      moveEndpoint(session, to, free);
+      endEndpointDrag(editor, session);
+      expect(JSON.stringify(toJSON(doc))).toBe(before);
+      expect(useUiStore.getState().announcement.text).toBe(LOCKED_HINT);
+      expect(useUiStore.getState().canvasGesture).toBeNull();
+    }
+  });
+});
 
 describe('endpoint drag (050 US2)', () => {
   it('press and release without a move writes nothing (FR-007)', () => {

@@ -509,6 +509,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       problems,
       stylePreview,
       dragCopyIds,
+      notesHidden: flowMode && notesDisplay === 'hidden',
     }),
     [
       scopeTitle,
@@ -523,6 +524,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       problems,
       stylePreview,
       dragCopyIds,
+      flowMode,
+      notesDisplay,
     ],
   );
 

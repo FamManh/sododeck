@@ -1729,3 +1729,155 @@ describe('database card face (049)', () => {
     );
   });
 });
+
+describe('sticky connector ends (053 US1)', () => {
+  const noted: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 600, y: 0 } },
+    ],
+    stickies: [
+      { id: 'n1', text: 'Why retry?', position: { x: 0, y: 300 } },
+      { id: 'n2', text: 'Sized', position: { x: 300, y: 300 }, size: { width: 240, height: 160 } },
+      { id: 'n3', text: 'Folded', position: { x: 600, y: 300 }, collapsed: true },
+      { id: 'n4', text: 'Pinned to B', anchor: 'b' },
+    ],
+    edges: [
+      { id: 'e-card', from: 'a', to: 'n1' },
+      { id: 'e-sized', from: 'n2', to: 'b' },
+      { id: 'e-folded', from: 'n3', to: 'n1' },
+      { id: 'e-pinned', from: 'a', to: 'n4' },
+    ],
+  };
+  const edgeById = (edges: ReturnType<typeof toFlowEdges>, id: string) =>
+    edges.find((e) => e.id === id);
+
+  it('draws a connector to a note from the note box: default, stored size and collapsed height', () => {
+    const edges = toFlowEdges(noted, topLevelGraph(noted), view());
+    expect(edgeById(edges, 'e-card')).toMatchObject({
+      source: 'a',
+      target: 'sticky:n1',
+      ariaLabel: 'A to Why retry?',
+      data: { toTitle: 'Why retry?', toSize: { width: 200, height: 200 } },
+    });
+    expect(edgeById(edges, 'e-sized')).toMatchObject({
+      source: 'sticky:n2',
+      target: 'b',
+      data: { fromSize: { width: 240, height: 160 } },
+    });
+    expect(edgeById(edges, 'e-folded')).toMatchObject({
+      source: 'sticky:n3',
+      target: 'sticky:n1',
+      data: { fromSize: { width: 200, height: 40 } },
+    });
+  });
+
+  it('draws a connector to a pinned note', () => {
+    const edges = toFlowEdges(noted, topLevelGraph(noted), view());
+    expect(edgeById(edges, 'e-pinned')).toMatchObject({ source: 'a', target: 'sticky:n4' });
+  });
+
+  it('follows the note when it moves: a new edge object with the new size, others kept', () => {
+    const first = toFlowEdges(noted, topLevelGraph(noted), view());
+    const resized: SododeckFile = {
+      ...noted,
+      stickies: noted.stickies.map((s) =>
+        s.id === 'n1' ? { ...s, size: { width: 300, height: 120 } } : s,
+      ),
+    };
+    const second = toFlowEdges(resized, topLevelGraph(resized), view());
+    expect(edgeById(second, 'e-card')?.data?.toSize).toEqual({ width: 300, height: 120 });
+    expect(edgeById(second, 'e-card')).not.toBe(edgeById(first, 'e-card'));
+    expect(edgeById(second, 'e-sized')).toBe(edgeById(first, 'e-sized'));
+  });
+
+  it('drops connectors of notes that are hidden', () => {
+    const edges = toFlowEdges(noted, topLevelGraph(noted), view({ notesHidden: true }));
+    expect(edges).toEqual([]);
+  });
+
+  it('drops connectors of a note a view leaves out with its anchor', () => {
+    const withView: SododeckFile = {
+      ...noted,
+      views: [{ id: 'v', type: 'system', title: 'V', includes: ['a'] }],
+    };
+    const state = viewStateOf(withView, 'v');
+    const edges = toFlowEdges(
+      state.deck,
+      topLevelGraph(state.deck),
+      view({ render: state.render }),
+    );
+    expect(edgeById(edges, 'e-pinned')).toBeUndefined();
+    expect(edgeById(edges, 'e-card')).toBeDefined();
+  });
+
+  it('ends a connector between a note and a collapsed group on the group card', () => {
+    const grouped: SododeckFile = {
+      ...noted,
+      nodes: [{ id: 'a', type: 'service', title: 'A', group: 'g', position: { x: 40, y: 40 } }],
+      groups: [
+        { id: 'g', title: 'G', position: { x: 0, y: 0 }, size: { width: 400, height: 300 } },
+      ],
+      edges: [{ id: 'e-card', from: 'a', to: 'n1' }],
+    };
+    const graph = visibleGraph(grouped, { node: null, group: null }, new Set(['g']));
+    const edges = toFlowEdges(grouped, graph, view());
+    expect(edges.find((e) => e.id === 'merged:collapsed:g|sticky:n1')).toMatchObject({
+      source: 'collapsed:g',
+      target: 'sticky:n1',
+    });
+  });
+
+  it('carries size, tags, lock, font size and alignment on the note node and re-derives on change', () => {
+    const tagged: SododeckFile = {
+      ...noted,
+      tagColors: { ops: 'blue' },
+      stickies: [
+        {
+          id: 'n1',
+          text: 'Tagged',
+          position: { x: 0, y: 0 },
+          size: { width: 240, height: 160 },
+          tags: ['Ops'],
+          locked: true,
+          fontSize: 20,
+          align: 'left',
+        },
+        { id: 'plain', text: 'Plain', position: { x: 300, y: 0 } },
+      ],
+    };
+    const [tagged1, plain] = toStickyNodes(tagged, EMPTY_SELECTION);
+    expect(tagged1).toMatchObject({
+      width: 240,
+      height: 160,
+      draggable: false,
+      data: {
+        size: { width: 240, height: 160 },
+        locked: true,
+        fontSize: 20,
+        align: 'left',
+        tagLooks: [{ text: 'Ops' }],
+      },
+    });
+    expect(plain).toMatchObject({
+      width: 200,
+      height: 200,
+      data: { size: { width: 200, height: 200 }, locked: false, align: 'center', tagLooks: [] },
+    });
+    expect(plain?.data.fontSize).toBeUndefined();
+    const changed: SododeckFile = {
+      ...tagged,
+      stickies: tagged.stickies.map((s) => (s.id === 'plain' ? { ...s, align: 'right' } : s)),
+    };
+    const second = toStickyNodes(changed, EMPTY_SELECTION);
+    expect(second[0]).toBe(toStickyNodes(tagged, EMPTY_SELECTION)[0]);
+    expect(second[1]?.data.align).toBe('right');
+  });
+
+  it('is a connectable node, with a collapsed height of one line', () => {
+    const nodes = toStickyNodes(noted, EMPTY_SELECTION);
+    expect(nodes.find((n) => n.id === 'sticky:n3')).toMatchObject({ width: 200, height: 40 });
+    expect(nodes.every((n) => n.connectable !== false)).toBe(true);
+  });
+});

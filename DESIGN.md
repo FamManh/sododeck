@@ -528,6 +528,7 @@ Three tiers plus flat. All tiers use `{colors.shadow}` so they work in both them
 - **Rest** (`0 1px 2px {colors.shadow}`): nodes, active segmented items, editor islands and the rail.
 - **Float** (`0 8px 28px {colors.shadow}`): flyouts, detail drawer, JSON overlay, step player, empty-state card, hovered deck cards (hover uses `0 4px 16px`, as does the selection toolbar). Context menus and toolbar popovers use `0 12px 32px`.
 - **Modal** (`0 24px 60px rgba(0,0,0,.25)`): Export dialog and ⌘K palette, over `{colors.scrim}`.
+- **Note** (`0 1px 1px, 0 6px 14px {colors.shadow}`; lifted when selected or dragged: `0 2px 3px, 0 14px 28px`): a sticky note, paper on the canvas (053). Tokens `shadow-note` and `shadow-note-lift`.
 - **Selection frame** (2px Deck Orange outline, 2px **outside** the card border): selected node. It sits outside the card so it reads on any card colour. A multi-selection also gets a 1px orange rounded frame 10px outside the union.
 - **Flow halo** (`0 0 0 3px {colors.primary-soft}` + 1.5px primary border): the node on the current flow step, and the chosen export format.
 

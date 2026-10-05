@@ -1,3 +1,4 @@
+import type { StickyFontSize } from '@sododeck/model';
 import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
@@ -8,7 +9,7 @@ import { MarkdownView } from '@sododeck/ui/components/markdown-view';
 export const FIT_STEPS: readonly number[] = [32, 28, 24, 20, 18, 16, 14, 12, 11, 10, 9];
 
 /** Sizes offered when the user pins a font size instead of auto-fit. */
-export const FIXED_FONT_SIZES: readonly number[] = [12, 14, 16, 20, 24, 32];
+export const FIXED_FONT_SIZES: readonly StickyFontSize[] = [12, 14, 16, 20, 24, 32];
 
 export const MIN_FIT_FONT_SIZE = 9;
 
@@ -50,10 +51,23 @@ export function clearFitCache(): void {
   cache.clear();
 }
 
+const keyOf = (box: FitBox, tagRows: number): string =>
+  JSON.stringify([box.text, box.width, box.height, tagRows, box.align]);
+
+/**
+ * The result for `box` when it is already known (a pinned size, or measured before), else
+ * undefined. A note reads this while rendering, so a note that was fitted once never draws at a
+ * stale size for a frame.
+ */
+export function cachedFit(box: FitBox, tagRows: number): FitResult | undefined {
+  if (box.fontSize !== undefined) return { fontSize: box.fontSize, clipped: false };
+  return cache.get(keyOf(box, tagRows));
+}
+
 export function fitFontSize(measure: Measure, box: FitBox, tagRows: number): FitResult {
   if (box.fontSize !== undefined) return { fontSize: box.fontSize, clipped: false };
 
-  const key = JSON.stringify([box.text, box.width, box.height, tagRows, box.align]);
+  const key = keyOf(box, tagRows);
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
 

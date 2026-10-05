@@ -1097,9 +1097,12 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
     const colours = stickyColours(sticky.tint, palette);
     out.push(`<g data-export="sticky" data-id="${escapeXml(sticky.id)}">`);
     out.push(box(x, y, width, height, 12, colours.fill, colours.border));
-    out.push(icon(chromeIcon('sticky'), x + 12, y + (height - 16) / 2, 16, colours.ink));
+    // The first line only, however tall the note is: a note's own text is not drawn yet
+    // (TODO(053): wrapped text and tags in the export).
+    const line = Math.min(height, 40);
+    out.push(icon(chromeIcon('sticky'), x + 12, y + (line - 16) / 2, 16, colours.ink));
     const label = truncate(sticky.label, FONTS.title, width - 48, measure);
-    out.push(text('t', x + 36, y + height / 2 + 4.5, colours.ink, label));
+    out.push(text('t', x + 36, y + line / 2 + 4.5, colours.ink, label));
     out.push('</g>');
   }
   out.push('</svg>');

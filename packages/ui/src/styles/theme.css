@@ -170,6 +170,10 @@
   --shadow-tour: 0 12px 32px var(--sd-shadow-tour);
   /* Menus and toolbar popovers (DESIGN.md Float, 019). */
   --shadow-menu: 0 12px 32px var(--sd-shadow);
+  /* A note of paper on the canvas (053): a tight contact shadow under a soft spread; selected or
+     dragged it lifts. Same tint as every tier, so it shows in both themes. */
+  --shadow-note: 0 1px 1px var(--sd-shadow), 0 6px 14px var(--sd-shadow);
+  --shadow-note-lift: 0 2px 3px var(--sd-shadow), 0 14px 28px var(--sd-shadow);
 }
 
 /*

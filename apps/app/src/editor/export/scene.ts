@@ -5,6 +5,7 @@ import {
   isDbTable,
   relationshipDisplayOf,
   type Geometry,
+  stickyBox,
   stickyCanvasPosition,
   stickyLabel,
   tagKey,
@@ -77,8 +78,6 @@ function iconOf(node: SododeckFile['nodes'][number]): ResolvedIcon {
 }
 
 export const EXPORT_MARGIN = 32;
-/** A sticky note in its one-line form (the canvas's collapsed note). */
-export const STICKY_SIZE = { width: 180, height: 40 } as const;
 
 export interface SceneCard {
   id: string;
@@ -533,7 +532,8 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     return [
       {
         id: sticky.id,
-        rect: { ...placement.point, ...STICKY_SIZE },
+        // The box the canvas draws (053): its stored size, or the default; one line while collapsed.
+        rect: stickyBox(sticky, placement.point),
         tint: sticky.color,
         label: stickyLabel(sticky.text) ?? 'Empty note',
       },

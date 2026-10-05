@@ -60,3 +60,18 @@ describe('recordEdge', () => {
     expect(recordEdge(flowDeck, session(), 'nope')).toBeNull();
   });
 });
+
+describe('recordEdge with notes (053)', () => {
+  const withNote = {
+    ...flowDeck,
+    stickies: [{ id: 'note', text: 'Why', position: { x: 0, y: 0 } }],
+    edges: [...flowDeck.edges, { id: 'to-note', from: 'a', to: 'note' }],
+  };
+
+  it('never records a connector that ends on a note, on the first click or later', () => {
+    expect(
+      recordEdge(withNote, session({ pendingTitle: 'X', featureId: null }), 'to-note'),
+    ).toBeNull();
+    expect(recordEdge(withNote, session({ flowId: 'place' }), 'to-note')).toBeNull();
+  });
+});

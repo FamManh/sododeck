@@ -1,4 +1,4 @@
-import { CARD_TYPES, PACKS, SHAPE_TYPE_IDS } from '@sododeck/model';
+import { CARD_TYPES, PACKS, SHAPE_TYPE_IDS, STICKY_DEFAULT_SIZE } from '@sododeck/model';
 import { lucide } from '@sododeck/ui/icon-sets';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
 
@@ -273,7 +273,8 @@ export function generateBenchDeck(
   if ((options.tables ?? 0) > 0) {
     addBenchTables(nodes, edges, options.tables ?? 0);
     if (options.wide === true) widenBenchTables(nodes, options.tables ?? 0);
-    if ((options.schemas ?? 0) > 0) assignBenchSchemas(nodes, options.tables ?? 0, options.schemas ?? 0);
+    if ((options.schemas ?? 0) > 0)
+      assignBenchSchemas(nodes, options.tables ?? 0, options.schemas ?? 0);
   }
   if ((options.tables ?? 0) > 0 && options.rel === true) addBenchRelationships(nodes, edges);
   if (options.routes === true) addBenchRoutes(edges);
@@ -378,7 +379,11 @@ function widenBenchTables(nodes: SododeckFile['nodes'], count: number): void {
   nodes.slice(0, count).forEach((node, i) => {
     if (i % 10 !== 0 || node.columns === undefined) return;
     for (let k = node.columns.length; k < BENCH_WIDE_COLUMNS; k++) {
-      node.columns.push({ id: `${node.id}-w${String(k)}`, name: `extra_${String(k)}`, type: 'text' });
+      node.columns.push({
+        id: `${node.id}-w${String(k)}`,
+        name: `extra_${String(k)}`,
+        type: 'text',
+      });
     }
   });
 }
@@ -593,8 +598,9 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
         text: `Bench note ${String(i)}`,
         color,
         position: {
-          x: Math.round(random() * 180 + (i % 8) * 220),
-          y: Math.round(random() * 120 + Math.floor(i / 8) * 160),
+          // A grid of default-size notes with a 20 px gap, jittered a little.
+          x: Math.round(random() * 180 + (i % 8) * (STICKY_DEFAULT_SIZE.width + 20)),
+          y: Math.round(random() * 120 + Math.floor(i / 8) * (STICKY_DEFAULT_SIZE.height + 20)),
         },
       });
       continue;

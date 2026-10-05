@@ -102,12 +102,16 @@ const byId = (ctx: ActionContext, id: string, surface: 'menu' | 'toolbar' = 'men
     .find((a) => a.id === id);
 
 describe('connection.lineStyle and the style menu items (022 US1)', () => {
-  it('puts "Line style" on the toolbar for one and several connections', () => {
-    for (const target of [one('e1'), many]) {
-      const action = byId(actionContext(target, 'edit', deck), 'connection.lineStyle', 'toolbar');
-      expect(action?.label).toBe('Line style');
-      expect(action?.field).toBe('lineStyle');
-    }
+  it('puts "Line style" on the toolbar for one connection, and the Colour button for several', () => {
+    const action = byId(actionContext(one('e1'), 'edit', deck), 'connection.lineStyle', 'toolbar');
+    expect(action?.label).toBe('Line style');
+    expect(action?.field).toBe('lineStyle');
+    expect(byId(actionContext(many, 'edit', deck), 'connection.lineStyle', 'toolbar')).toBe(
+      undefined,
+    );
+    expect(
+      byId(actionContext(many, 'edit', deck), 'connection.colourField', 'toolbar')?.field,
+    ).toBe('lineStyle');
     expect(
       byId(actionContext(TARGETS.component), 'connection.lineStyle', 'toolbar'),
     ).toBeUndefined();
@@ -164,6 +168,139 @@ describe('connection.lineStyle and the style menu items (022 US1)', () => {
   it('"Colour…" opens the Line style popover', () => {
     byId(actionContext(one('e1'), 'edit', deck), 'connection.colour')?.run();
     expect(ui().toolbarField).toBe('lineStyle');
+  });
+});
+
+describe('connections toolbar (053 US4)', () => {
+  const colourDeck = deckOf({
+    nodes: deck.nodes,
+    edges: [
+      { id: 'e1', from: 'a', to: 'b', direction: 'forward', style: { color: 'blue', width: 3 } },
+      { id: 'e2', from: 'a', to: 'b', direction: 'both', style: { color: 'blue', width: 3 } },
+      { id: 'e3', from: 'b', to: 'a', style: { color: 'blue', width: 3, shape: 'straight' } },
+    ],
+  });
+  const toolbarIds = (ctx: ActionContext) =>
+    actionsFor(ACTIONS, ctx, 'toolbar').flatMap((s) => s.actions.map((a) => a.id));
+
+  it('lists arrow ends, line type, colour, weight, lock and more, in that order', () => {
+    expect(toolbarIds(actionContext(many, 'edit', deck))).toEqual([
+      'connection.direction',
+      'connection.lineType',
+      'connection.colourField',
+      'connection.weight',
+      'connection.lock',
+      'more',
+    ]);
+  });
+
+  it('keeps the single-connector toolbar, and adds Lock to it', () => {
+    expect(toolbarIds(actionContext(one('e1'), 'edit', deck))).toEqual([
+      'edge.label',
+      'edge.protocol',
+      'edge.direction',
+      'connection.lineStyle',
+      'connection.lock',
+      'more',
+    ]);
+  });
+
+  it('shows Mixed for differing values and checks nothing', () => {
+    const ctx = actionContext(many, 'edit', colourDeck);
+    const direction = byId(ctx, 'connection.direction', 'toolbar');
+    expect(direction?.label).toBe('Arrow ends: Mixed');
+    expect(direction?.children?.some((c) => c.checked)).toBe(false);
+    expect(byId(ctx, 'connection.lineType', 'toolbar')?.label).toBe('Line type: Mixed');
+    // Shared values read through.
+    expect(byId(ctx, 'connection.weight', 'toolbar')?.label).toBe('Weight: 3 px');
+    expect(byId(ctx, 'connection.colourField', 'toolbar')?.label).toBe('Colour: Blue');
+  });
+
+  it('changes nothing until a value is picked', () => {
+    const ctx = actionContext(many, 'edit', colourDeck);
+    const before = JSON.stringify(toJSON(ctx.doc));
+    byId(ctx, 'connection.direction', 'toolbar');
+    expect(JSON.stringify(toJSON(ctx.doc))).toBe(before);
+  });
+
+  it('sets the arrow ends of every selected connector in one undo step', () => {
+    const ctx = actionContext(many, 'edit', colourDeck);
+    byId(ctx, 'connection.direction', 'toolbar')
+      ?.children?.find((c) => c.label === 'None')
+      ?.run();
+    expect(toJSON(ctx.doc).edges.map((e) => e.direction)).toEqual(['none', 'none', 'none']);
+    expect(ui().announcement.text).toBe('Arrow ends set to None for 3 connectors');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).edges.map((e) => e.direction)).toEqual(['forward', 'both', undefined]);
+  });
+
+  it('sets the weight of every selected connector in one undo step', () => {
+    const ctx = actionContext(many, 'edit', deck);
+    byId(ctx, 'connection.weight', 'toolbar')
+      ?.children?.find((c) => c.label === '4 px')
+      ?.run();
+    expect(toJSON(ctx.doc).edges.map((e) => e.style?.width)).toEqual([4, 4, 4]);
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).edges.map((e) => e.style?.width)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it('opens the Line style popover from the Colour button', () => {
+    byId(actionContext(many, 'edit', deck), 'connection.colourField', 'toolbar')?.run();
+    expect(ui().toolbarField).toBe('lineStyle');
+  });
+
+  it('applies only what each type supports on a mixed selection', () => {
+    const target: MenuTarget = { kind: 'mixed', ids: sel({ nodes: ['a'], edges: ['e1'] }) };
+    expect(byId(actionContext(target, 'edit', deck), 'connection.direction', 'toolbar')).toBe(
+      undefined,
+    );
+    expect(byId(actionContext(target, 'edit', deck), 'connection.weight', 'toolbar')).toBe(
+      undefined,
+    );
+  });
+
+  describe('locked connectors', () => {
+    const lockedDeck = deckOf({
+      nodes: deck.nodes,
+      edges: [
+        { id: 'e1', from: 'a', to: 'b' },
+        { id: 'e2', from: 'a', to: 'b', locked: true },
+      ],
+    });
+    const two: MenuTarget = { kind: 'connections', ids: sel({ edges: ['e1', 'e2'] }) };
+
+    it('skips them in style writes, saying how many, and still changes the others', () => {
+      const ctx = actionContext(two, 'edit', lockedDeck);
+      byId(ctx, 'connection.weight', 'toolbar')
+        ?.children?.find((c) => c.label === '4 px')
+        ?.run();
+      expect(toJSON(ctx.doc).edges.map((e) => e.style?.width)).toEqual([4, undefined]);
+      expect(ui().announcement.text).toBe('Weight set to 4 px · skipped 1 locked');
+    });
+
+    it('skips them in arrow ends and line type, and refuses when all are locked', () => {
+      const ctx = actionContext(two, 'edit', lockedDeck);
+      byId(ctx, 'connection.direction', 'toolbar')
+        ?.children?.find((c) => c.label === 'None')
+        ?.run();
+      expect(toJSON(ctx.doc).edges.map((e) => e.direction)).toEqual(['none', undefined]);
+      byId(ctx, 'connection.lineType', 'toolbar')
+        ?.children?.find((c) => c.label === 'Elbow')
+        ?.run();
+      expect(toJSON(ctx.doc).edges.map((e) => e.style?.shape)).toEqual(['elbow', undefined]);
+      const only: MenuTarget = { kind: 'connection', ids: sel({ edges: ['e2'] }) };
+      const lockedCtx = actionContext(only, 'edit', lockedDeck);
+      byId(lockedCtx, 'connection.lineStyle', 'toolbar');
+      byId(lockedCtx, 'connection.dash')
+        ?.children?.find((c) => c.label === 'Dotted')
+        ?.run();
+      expect(toJSON(lockedCtx.doc).edges[1]?.style).toBeUndefined();
+      expect(ui().announcement.text).toBe('Locked · unlock to move or edit');
+    });
   });
 });
 

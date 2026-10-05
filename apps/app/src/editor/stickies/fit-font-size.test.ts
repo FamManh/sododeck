@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  cachedFit,
   clearFitCache,
   FIT_STEPS,
   FIXED_FONT_SIZES,
@@ -90,5 +91,13 @@ describe('fitFontSize', () => {
       fitFontSize(measure, next[0], next[1]);
       expect(measure.mock.calls.length).toBeGreaterThan(before);
     }
+  });
+
+  it('cachedFit knows a measured box and a pinned size, and nothing else', () => {
+    expect(cachedFit(box(), 0)).toBeUndefined();
+    fitFontSize(linear, box(), 0);
+    expect(cachedFit(box(), 0)).toEqual({ fontSize: 32, clipped: false });
+    expect(cachedFit(box({ text: 'other' }), 0)).toBeUndefined();
+    expect(cachedFit(box({ fontSize: 14 }), 0)).toEqual({ fontSize: 14, clipped: false });
   });
 });

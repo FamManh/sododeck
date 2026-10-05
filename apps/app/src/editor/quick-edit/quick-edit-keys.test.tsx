@@ -107,7 +107,14 @@ describe('quick edit from the keyboard (019 US7)', () => {
       within(bar())
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label')),
-    ).toEqual(['Label', 'Protocol: HTTP', 'Direction: Forward', 'Line style', 'More actions']);
+    ).toEqual([
+      'Label',
+      'Protocol: HTTP',
+      'Direction: Forward',
+      'Line style',
+      'Lock',
+      'More actions',
+    ]);
     await user.keyboard('p');
     const dialog = await screen.findByRole('dialog', { name: 'Protocol' });
     await user.click(within(dialog).getByRole('option', { name: 'gRPC' }));

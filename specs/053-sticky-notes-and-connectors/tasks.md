@@ -73,20 +73,20 @@
 
 ### Tests (write first)
 
-- [ ] T017 [P] [US1] `apps/app/src/editor/connection-rules.test.ts`: `connectionCheck` accepts sticky ↔ card, sticky ↔ group, sticky ↔ sticky; refuses sticky → itself (`self`) and a duplicate; `connectTargets` lists stickies for the keyboard connect popover.
-- [ ] T018 [P] [US1] `apps/app/src/editor/routing/endpoint-target.test.ts`: `targetScene` has a `'sticky'` target; `hitTarget` returns a sticky under the pointer (cards first, then stickies, then the innermost group); `connectTarget` returns it; a sticky is never chosen as the pointer's own end.
-- [ ] T019 [P] [US1] `apps/app/src/editor/deck-to-flow.test.ts`: an edge with a sticky end gets a box from `stickyBox` (default and stored size, collapsed height), is drawn, follows when the sticky moves, is dropped when stickies are hidden or the sticky is anchored to a hidden node, and the sticky RF node cache equality includes the new fields.
-- [ ] T020 [P] [US1] `apps/app/src/editor/stickies/sticky-node.test.tsx` (extend): a sticky shows four connection handles when selected or hovered; Enter on a focused sticky opens the connect popover; a locked sticky shows no handles for reconnecting but can still be a target.
-- [ ] T021 [P] [US1] `apps/app/src/editor/describe-removal.test.ts` and `confirm-delete-dialog.test.tsx`: deleting a sticky with connectors lists them; one undo restores all. `apps/app/src/editor/flows/*.test.ts`: a connector with a sticky end is never offered as a flow step and is dimmed in flow mode.
+- [x] T017 [P] [US1] `apps/app/src/editor/connection-rules.test.ts`: `connectionCheck` accepts sticky ↔ card, sticky ↔ group, sticky ↔ sticky; refuses sticky → itself (`self`) and a duplicate; `connectTargets` lists stickies for the keyboard connect popover.
+- [x] T018 [P] [US1] `apps/app/src/editor/routing/endpoint-target.test.ts`: `targetScene` has a `'sticky'` target; `hitTarget` returns a sticky under the pointer (cards first, then stickies, then the innermost group); `connectTarget` returns it; a sticky is never chosen as the pointer's own end.
+- [x] T019 [P] [US1] `apps/app/src/editor/deck-to-flow.test.ts`: an edge with a sticky end gets a box from `stickyBox` (default and stored size, collapsed height), is drawn, follows when the sticky moves, is dropped when stickies are hidden or the sticky is anchored to a hidden node, and the sticky RF node cache equality includes the new fields.
+- [x] T020 [P] [US1] `apps/app/src/editor/stickies/sticky-node.test.tsx` (extend): a sticky shows four connection handles when selected or hovered; Enter on a focused sticky opens the connect popover; a locked sticky shows no handles for reconnecting but can still be a target.
+- [x] T021 [P] [US1] `apps/app/src/editor/describe-removal.test.ts` and `confirm-delete-dialog.test.tsx`: deleting a sticky with connectors lists them; one undo restores all. `apps/app/src/editor/flows/*.test.ts`: a connector with a sticky end is never offered as a flow step and is dimmed in flow mode.
 
 ### Implementation
 
-- [ ] T022 [US1] Teach the visible graph about stickies: representative map in `apps/app/src/editor/visible-graph.ts`, `view-filter.ts`, `focus-set.ts`; hidden stickies hide their connectors.
-- [ ] T023 [US1] In `apps/app/src/editor/deck-to-flow.ts`: add `size`, `tags`, `locked`, `fontSize`, `align` to `StickyNodeData` and to the field-by-field cache equality; `boxFor` and `endGeometry` get a sticky branch using `stickyBox`; the RF node uses the stored size instead of `width: 180`; the sticky node is `connectable: true`.
-- [ ] T024 [US1] `apps/app/src/editor/connection-rules.ts`: the `Ends` type and `connectTargets` include stickies.
-- [ ] T025 [US1] `apps/app/src/editor/routing/endpoint-target.ts`: add the `'sticky'` case to `targetScene` and `EndpointTarget.kind`; `apps/app/src/editor/use-canvas-handlers.ts`: `endpointIdOf` handles the `sticky:` prefix; `onConnectEnd` and the end-drag in `editing/endpoint-drag.ts` accept a sticky target.
-- [ ] T026 [US1] Add four side-named `FlowHandle`s to `apps/app/src/editor/stickies/sticky-node.tsx` (copy the pattern in `group-boundary-node.tsx`: visible on hover or selected, `isConnectable={editable}`, Enter opens the connect popover).
-- [ ] T027 [P] [US1] Update `describe-removal.ts` if the sticky delete path needs the connector count; check flow code (`flows/session-path.ts`, step pickers) so sticky-ended connectors are skipped. T017 to T021 are green.
+- [x] T022 [US1] Teach the visible graph about stickies: representative map in `apps/app/src/editor/visible-graph.ts`, `view-filter.ts`, `focus-set.ts`; hidden stickies hide their connectors.
+- [x] T023 [US1] In `apps/app/src/editor/deck-to-flow.ts`: add `size`, `tags`, `locked`, `fontSize`, `align` to `StickyNodeData` and to the field-by-field cache equality; `boxFor` and `endGeometry` get a sticky branch using `stickyBox`; the RF node uses the stored size instead of `width: 180`; the sticky node is `connectable: true`.
+- [x] T024 [US1] `apps/app/src/editor/connection-rules.ts`: the `Ends` type and `connectTargets` include stickies.
+- [x] T025 [US1] `apps/app/src/editor/routing/endpoint-target.ts`: add the `'sticky'` case to `targetScene` and `EndpointTarget.kind`; `apps/app/src/editor/use-canvas-handlers.ts`: `endpointIdOf` handles the `sticky:` prefix; `onConnectEnd` and the end-drag in `editing/endpoint-drag.ts` accept a sticky target.
+- [x] T026 [US1] Add four side-named `FlowHandle`s to `apps/app/src/editor/stickies/sticky-node.tsx` (copy the pattern in `group-boundary-node.tsx`: visible on hover or selected, `isConnectable={editable}`, Enter opens the connect popover).
+- [x] T027 [P] [US1] Update `describe-removal.ts` if the sticky delete path needs the connector count; check flow code (`flows/session-path.ts`, step pickers) so sticky-ended connectors are skipped. T017 to T021 are green.
 
 **Checkpoint**: quickstart scenario 1 passes by hand.
 
@@ -100,17 +100,17 @@
 
 ### Tests (write first)
 
-- [ ] T028 [P] [US2] `apps/app/src/editor/stickies/sticky-paper.test.tsx`: renders for all five colours in both themes with accessible text, no header, icon or lip, and reuses tokens only (no hard-coded colour).
-- [ ] T029 [P] [US2] `apps/app/src/editor/stickies/sticky-node.test.tsx` (extend): default size 200 × 200; stored size applied; Auto text uses the fitted size and updates when text is added or removed; a fixed `fontSize` is used as is; tags render as chips along the bottom and collapse to "+N"; clipped text shows the cue and the full text is still in the document; collapsed shows the one-line form and no resize handles; locked shows the lock glyph and no resize handles.
-- [ ] T030 [P] [US2] `apps/app/src/editor/stickies/sticky-resize.test.tsx`: corner and side handles resize live, stop at 96 × 96, snap like cards (⌘ turns it off), write `size` once on release in one undo step, Esc cancels, resizing one sticky in a multi-selection resizes only that sticky.
-- [ ] T031 [P] [US2] `apps/app/src/editor/inspector/sticky-inspector.test.tsx` (extend): rows for size, text size (Auto / fixed), alignment and lock; each is one undo step.
+- [x] T028 [P] [US2] `apps/app/src/editor/stickies/sticky-paper.test.tsx`: renders for all five colours in both themes with accessible text, no header, icon or lip, and reuses tokens only (no hard-coded colour).
+- [x] T029 [P] [US2] `apps/app/src/editor/stickies/sticky-node.test.tsx` (extend): default size 200 × 200; stored size applied; Auto text uses the fitted size and updates when text is added or removed; a fixed `fontSize` is used as is; tags render as chips along the bottom and collapse to "+N"; clipped text shows the cue and the full text is still in the document; collapsed shows the one-line form and no resize handles; locked shows the lock glyph and no resize handles.
+- [x] T030 [P] [US2] `apps/app/src/editor/stickies/sticky-resize.test.tsx`: corner and side handles resize live, stop at 96 × 96, snap like cards (⌘ turns it off), write `size` once on release in one undo step, Esc cancels, resizing one sticky in a multi-selection resizes only that sticky.
+- [x] T031 [P] [US2] `apps/app/src/editor/inspector/sticky-inspector.test.tsx` (extend): rows for size, text size (Auto / fixed), alignment and lock; each is one undo step.
 
 ### Implementation
 
-- [ ] T032 [US2] Create `apps/app/src/editor/stickies/sticky-paper.tsx` (soft shadow, light gradient, lifted corner; colours from `sticky-tint.ts`; add two neutral shadow tokens to `packages/ui` if none fit) and rebuild `apps/app/src/editor/stickies/sticky-node.tsx` on it: no header, no icon, markdown body with `fitFontSize`, alignment, tags row (reuse `tagChips` and `tagBlockHeight` from `apps/app/src/editor/card-tags.ts`, with a "+N" collapse), lock glyph, clipped-text cue.
-- [ ] T033 [US2] Add resize to the sticky node (corner and side handles, minimum `STICKY_MIN_SIZE`, snapping and guides as cards in `017-resize-edge-routing`, disabled when collapsed or locked), writing through `setStickySize` once on release.
-- [ ] T034 [US2] Replace hard-coded widths with `STICKY_DEFAULT_SIZE`: `apps/app/src/editor/export/scene.ts` (`STICKY_SIZE`), `apps/app/src/db/import/place-import.ts` (note width and step), `apps/app/src/bench/generate-deck.ts`; fix tests that assert 180.
-- [ ] T035 [US2] Extend `apps/app/src/editor/inspector/sticky-inspector.tsx` with size, text size, alignment, tags and lock rows. T028 to T031 are green.
+- [x] T032 [US2] Create `apps/app/src/editor/stickies/sticky-paper.tsx` (soft shadow, light gradient, lifted corner; colours from `sticky-tint.ts`; add two neutral shadow tokens to `packages/ui` if none fit) and rebuild `apps/app/src/editor/stickies/sticky-node.tsx` on it: no header, no icon, markdown body with `fitFontSize`, alignment, tags row (reuse `tagChips` and `tagBlockHeight` from `apps/app/src/editor/card-tags.ts`, with a "+N" collapse), lock glyph, clipped-text cue.
+- [x] T033 [US2] Add resize to the sticky node (corner and side handles, minimum `STICKY_MIN_SIZE`, snapping and guides as cards in `017-resize-edge-routing`, disabled when collapsed or locked), writing through `setStickySize` once on release.
+- [x] T034 [US2] Replace hard-coded widths with `STICKY_DEFAULT_SIZE`: `apps/app/src/editor/export/scene.ts` (`STICKY_SIZE`), `apps/app/src/db/import/place-import.ts` (note width and step), `apps/app/src/bench/generate-deck.ts`; fix tests that assert 180.
+- [x] T035 [US2] Extend `apps/app/src/editor/inspector/sticky-inspector.tsx` with size, text size, alignment, tags and lock rows. T028 to T031 are green.
 
 **Checkpoint**: quickstart scenario 2 passes by hand, light and dark.
 
@@ -148,14 +148,14 @@
 
 ### Tests (write first)
 
-- [ ] T044 [P] [US4] `apps/app/src/editor/actions/connection-actions.test.ts`: for the `connections` target, direction, weight and colour have toolbar surface (today menu-only or single-connector); each applies to all selected ids in one undo step; "mixed" is shown when values differ and nothing changes until a value is picked; mixed selections of connectors and other objects apply only what each type supports.
-- [ ] T045 [P] [US4] `apps/app/src/editor/quick-edit/selection-toolbar.test.tsx` (extend): the `connections` toolbar order (arrow ends, line type, colour, weight, lock, more), placed above the group of connectors, hidden while dragging, inside the viewport; per-connector bend and anchor handles are not shown for two or more connectors.
-- [ ] T046 [P] [US4] `apps/app/src/editor/lock.test.tsx` (extend): locked connectors refuse reshape, reconnect and delete; style stays editable only after unlock; lock and unlock over several connectors are one undo step.
+- [x] T044 [P] [US4] `apps/app/src/editor/actions/connection-actions.test.ts`: for the `connections` target, direction, weight and colour have toolbar surface (today menu-only or single-connector); each applies to all selected ids in one undo step; "mixed" is shown when values differ and nothing changes until a value is picked; mixed selections of connectors and other objects apply only what each type supports.
+- [x] T045 [P] [US4] `apps/app/src/editor/quick-edit/selection-toolbar.test.tsx` (extend): the `connections` toolbar order (arrow ends, line type, colour, weight, lock, more), placed above the group of connectors, hidden while dragging, inside the viewport; per-connector bend and anchor handles are not shown for two or more connectors.
+- [x] T046 [P] [US4] `apps/app/src/editor/lock.test.tsx` (extend): locked connectors refuse reshape, reconnect and delete; style stays editable only after unlock; lock and unlock over several connectors are one undo step.
 
 ### Implementation
 
-- [ ] T047 [US4] Edit `apps/app/src/editor/actions/connection-actions.ts`: make `connection.direction`, `connection.weight` and `connection.colour` toolbar actions for `connections` (reuse the `LineStyleControls` popovers in `apps/app/src/editor/line-style/`), and show "mixed" through `lineStyleView`.
-- [ ] T048 [US4] `apps/app/src/editor/lock.ts`: lock helpers for stickies and edges (`isEdgeLocked`, `isStickyLocked`, `withoutLocked` per collection); wire the lock action in `apps/app/src/editor/actions/common-actions.ts` for `connections`; refuse in `routing/route-handles.tsx`, `editing/endpoint-drag.ts` and delete. T044 to T046 are green.
+- [x] T047 [US4] Edit `apps/app/src/editor/actions/connection-actions.ts`: make `connection.direction`, `connection.weight` and `connection.colour` toolbar actions for `connections` (reuse the `LineStyleControls` popovers in `apps/app/src/editor/line-style/`), and show "mixed" through `lineStyleView`.
+- [x] T048 [US4] `apps/app/src/editor/lock.ts`: lock helpers for stickies and edges (`isEdgeLocked`, `isStickyLocked`, `withoutLocked` per collection); wire the lock action in `apps/app/src/editor/actions/common-actions.ts` for `connections`; refuse in `routing/route-handles.tsx`, `editing/endpoint-drag.ts` and delete. T044 to T046 are green.
 
 **Checkpoint**: quickstart scenario 4 passes by hand.
 

@@ -1,4 +1,4 @@
-import type { StickyPlacement } from '@sododeck/model';
+import { endpointOf, type StickyPlacement } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { NodeFlowMark } from '../flows/flow-overlay';
@@ -28,6 +28,19 @@ export function stickyFlowState(
   }
   if (options.brokenCurrentStep) return 'dimmed';
   return 'dimmed';
+}
+
+/**
+ * Whether a connector ends on a note (053). Such a connector is a comment, not a step: flows
+ * work on cards and groups, so it is never offered or recorded as one. A card or group that
+ * shares the id with a note wins, as `endpointOf` resolves it.
+ */
+export function endsOnNote(
+  deck: Pick<SododeckFile, 'nodes' | 'groups' | 'stickies'>,
+  edge: Pick<SododeckFile['edges'][number], 'from' | 'to'>,
+): boolean {
+  if (deck.stickies.length === 0) return false;
+  return [edge.from, edge.to].some((id) => endpointOf(deck, id)?.kind === 'sticky');
 }
 
 export function notesOnStep(

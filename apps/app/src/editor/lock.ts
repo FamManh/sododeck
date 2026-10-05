@@ -1,10 +1,13 @@
 /**
- * Locked cards (043 R11, FR-023): what the canvas refuses for a node with `locked: true`, and the
- * one sentence it says when it does. The flag is document data (`editor.setLocked`).
+ * Locks (043 cards, 053 notes and connectors): what the canvas refuses for an object with
+ * `locked: true`, and the one sentence it says when it does. The flag is document data
+ * (`editor.setLocked`). The model also refuses writes on a locked note or connector, so every
+ * app path filters locked ids first instead of letting a batch throw half way.
  */
-import { isLocked, type RemovalTarget } from '@sododeck/model';
+import { isLocked, type DeckEditor, type RemovalTarget } from '@sododeck/model';
 import type { Id, SododeckFile } from '@sododeck/schema';
 
+import { readDeck } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
 
 /** The tooltip and announcement for a refused gesture on a locked card. */
@@ -14,6 +17,29 @@ export const LOCKED_HINT = 'Locked · unlock to move or edit';
 export function isNodeLocked(deck: Pick<SododeckFile, 'nodes'>, id: Id): boolean {
   const node = deck.nodes.find((n) => n.id === id);
   return node !== undefined && isLocked(node);
+}
+
+/** Whether connector `id` of `deck` is locked (053). */
+export function isEdgeLocked(deck: Pick<SododeckFile, 'edges'>, id: Id): boolean {
+  const edge = deck.edges.find((e) => e.id === id);
+  return edge !== undefined && isLocked(edge);
+}
+
+/** Whether note `id` of `deck` is locked (053). */
+export function isStickyLocked(deck: Pick<SododeckFile, 'stickies'>, id: Id): boolean {
+  const sticky = deck.stickies.find((s) => s.id === id);
+  return sticky !== undefined && isLocked(sticky);
+}
+
+/** The ids of `ids` of one collection that are not locked, and how many were skipped. */
+export function unlockedIds(
+  deck: Pick<SododeckFile, 'nodes' | 'edges' | 'stickies'>,
+  collection: 'nodes' | 'edges' | 'stickies',
+  ids: readonly Id[],
+): { ids: Id[]; skipped: number } {
+  const locked = new Set(deck[collection].filter(isLocked).map((o) => o.id));
+  const kept = ids.filter((id) => !locked.has(id));
+  return { ids: kept, skipped: ids.length - kept.length };
 }
 
 /** The ids of `ids` that are not locked, and how many were skipped. */
@@ -33,14 +59,38 @@ export function refuseLocked(): true {
 }
 
 /**
- * Locked cards are never deleted (043 FR-024): the targets without them, and how many were
- * skipped. The single choke point for the Delete key, the menu and Cut.
+ * The connectors of `ids` a style write may touch (locked ones refuse it). When none is left it
+ * says why and returns `null`; otherwise `note` is the suffix for the announcement.
+ */
+export function editableEdges(
+  editor: DeckEditor,
+  ids: readonly Id[],
+): { ids: Id[]; note: string } | null {
+  const { ids: free, skipped } = unlockedIds(readDeck(editor.doc), 'edges', ids);
+  if (free.length === 0) {
+    if (skipped > 0) refuseLocked();
+    return null;
+  }
+  return { ids: free, note: skipped > 0 ? ` · skipped ${String(skipped)} locked` : '' };
+}
+
+/**
+ * Locked cards, notes and connectors are never deleted (043 FR-024, 053): the targets without
+ * them, and how many were skipped. The single choke point for the Delete key, the menu and Cut.
  */
 export function withoutLocked(
-  deck: Pick<SododeckFile, 'nodes'>,
+  deck: Pick<SododeckFile, 'nodes' | 'edges' | 'stickies'>,
   targets: readonly RemovalTarget[],
 ): { targets: RemovalTarget[]; skipped: number } {
-  const locked = new Set(deck.nodes.filter(isLocked).map((node) => node.id));
-  const kept = targets.filter((target) => target.scope !== 'nodes' || !locked.has(target.id));
+  const locked = {
+    nodes: new Set(deck.nodes.filter(isLocked).map((o) => o.id)),
+    edges: new Set(deck.edges.filter(isLocked).map((o) => o.id)),
+    stickies: new Set(deck.stickies.filter(isLocked).map((o) => o.id)),
+  };
+  const kept = targets.filter(
+    (target) =>
+      (target.scope !== 'nodes' && target.scope !== 'edges' && target.scope !== 'stickies') ||
+      !locked[target.scope].has(target.id),
+  );
   return { targets: kept, skipped: targets.length - kept.length };
 }

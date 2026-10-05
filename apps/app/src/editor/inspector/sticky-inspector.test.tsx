@@ -132,3 +132,85 @@ describe('StickyInspector', () => {
     expect(screen.getByRole('textbox', { name: 'Note text' })).toBeDisabled();
   });
 });
+
+describe('StickyInspector format rows (053 US2)', () => {
+  it('shows the default size, and writes a typed size in one undo step', async () => {
+    const { user, doc, editor } = setup('pinned');
+    const width = screen.getByRole('spinbutton', { name: 'Width' });
+    expect(width).toHaveValue(200);
+    expect(screen.getByRole('spinbutton', { name: 'Height' })).toHaveValue(200);
+    expect(screen.getByRole('button', { name: 'Reset size' })).toBeDisabled();
+
+    await user.clear(width);
+    await user.type(width, '320{Enter}');
+    expect(sticky('pinned', doc).size).toEqual({ width: 320, height: 200 });
+    expect(screen.getByRole('button', { name: 'Reset size' })).toBeEnabled();
+
+    await user.clear(width);
+    await user.type(width, '20{Enter}');
+    // Clamped to the 96 px minimum, like a handle drag.
+    expect(sticky('pinned', doc).size).toEqual({ width: 96, height: 200 });
+
+    act(() => {
+      editor().undo();
+    });
+    expect(sticky('pinned', doc).size).toEqual({ width: 320, height: 200 });
+    await user.click(screen.getByRole('button', { name: 'Reset size' }));
+    expect(sticky('pinned', doc).size).toBeUndefined();
+  });
+
+  it('sets a fixed text size or Auto, one undo step each', async () => {
+    const { user, doc, editor } = setup('pinned');
+    expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
+    for (const label of ['Auto', '12', '14', '16', '20', '24', '32']) {
+      expect(screen.getByRole('radio', { name: label })).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole('radio', { name: '24' }));
+    expect(sticky('pinned', doc).fontSize).toBe(24);
+    expect(useUiStore.getState().announcement.text).toBe('Text size 24');
+    await user.click(screen.getByRole('radio', { name: 'Auto' }));
+    expect(sticky('pinned', doc).fontSize).toBeUndefined();
+    act(() => {
+      editor().undo();
+    });
+    expect(sticky('pinned', doc).fontSize).toBe(24);
+  });
+
+  it('aligns the text, and never stores the default', async () => {
+    const { user, doc, editor } = setup('pinned');
+    expect(screen.getByRole('radio', { name: 'Align centre' })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: 'Align right' }));
+    expect(sticky('pinned', doc).align).toBe('right');
+    await user.click(screen.getByRole('radio', { name: 'Align centre' }));
+    expect(sticky('pinned', doc).align).toBeUndefined();
+    act(() => {
+      editor().undo();
+    });
+    expect(sticky('pinned', doc).align).toBe('right');
+  });
+
+  it('locks and unlocks, and a locked note cannot be resized from here', async () => {
+    const { user, doc, editor } = setup('pinned');
+    const lock = screen.getByRole('switch', { name: 'Lock' });
+    expect(lock).not.toBeChecked();
+    await user.click(lock);
+    expect(sticky('pinned', doc).locked).toBe(true);
+    expect(useUiStore.getState().announcement.text).toBe('Note locked');
+    expect(screen.getByRole('spinbutton', { name: 'Width' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Reset size' })).toBeDisabled();
+    await user.click(lock);
+    expect(sticky('pinned', doc).locked).toBeUndefined();
+    act(() => {
+      editor().undo();
+    });
+    expect(sticky('pinned', doc).locked).toBe(true);
+  });
+
+  it('disables the format rows in a read-only deck', () => {
+    setup('pinned', true);
+    expect(screen.getByRole('spinbutton', { name: 'Width' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: '24' })).toBeDisabled();
+    expect(screen.getByRole('radio', { name: 'Align left' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Lock' })).toBeDisabled();
+  });
+});

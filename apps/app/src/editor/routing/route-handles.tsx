@@ -20,6 +20,7 @@
  * its normal (`editing/segment-drag.ts`); arrows move it on that axis, ⌫ / double-click reset it.
  */
 import type { Id, Side } from '@sododeck/schema';
+import { Lock } from 'lucide-react';
 import { useReactFlow, useStore, ViewportPortal, type ReactFlowState } from '@xyflow/react';
 import {
   useEffect,
@@ -30,6 +31,7 @@ import {
   type PointerEvent,
 } from 'react';
 
+import { readDeck, useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { anchorReadout, stepAnchor } from '../editing/anchor-drag';
@@ -43,7 +45,9 @@ import {
   type EndpointSession,
 } from '../editing/endpoint-drag';
 import { endpointIdOf } from '../deck-to-flow';
+import { toggleEdgeLock } from '../actions/common-actions';
 import { oneStep } from '../fields/one-step';
+import { LOCKED_HINT } from '../lock';
 import {
   addBendAt,
   BEND_STEP,
@@ -141,6 +145,10 @@ export function RouteHandles({
   segment,
 }: RouteHandlesProps) {
   const editor = useEditor();
+  // Only the selected connector draws handles, so reading the deck here is cheap.
+  const locked = useDeckSnapshot(editor.doc).edges.some(
+    (edge) => edge.id === context.edgeId && edge.locked === true,
+  );
   const { getNodes, getZoom, screenToFlowPosition } = useReactFlow();
   // Only the selected connector draws handles, so following the zoom here is cheap.
   const zoom = useStore(zoomSelector);
@@ -403,6 +411,28 @@ export function RouteHandles({
   });
 
   const segmentSpot = segmentDrag ? segmentReadoutAt(vertices, active.index) : null;
+
+  // A locked connector refuses reshape and reconnect (053 US4): no handles, only the way out.
+  if (locked) {
+    return (
+      <ViewportPortal>
+        <button
+          type="button"
+          aria-label="Unlock connector"
+          title={LOCKED_HINT}
+          data-kind="lock"
+          className="sd-route-handle nodrag nopan absolute flex items-center justify-center"
+          style={placed(mid(context.start, context.end))}
+          onClick={(event) => {
+            event.stopPropagation();
+            toggleEdgeLock(editor, readDeck(editor.doc), [context.edgeId]);
+          }}
+        >
+          <Lock aria-hidden className="size-3" />
+        </button>
+      </ViewportPortal>
+    );
+  }
 
   return (
     <ViewportPortal>

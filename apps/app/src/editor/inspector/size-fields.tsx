@@ -66,7 +66,7 @@ export function SizeFields({ node }: { node: Node }) {
   );
 }
 
-function SizeField({
+export function SizeField({
   id,
   label,
   value,

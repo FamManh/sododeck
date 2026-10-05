@@ -4,7 +4,7 @@
  * target's existing content so nothing existing moves and nothing overlaps. Main thread, before
  * anything is written; the layout runs elsewhere.
  */
-import { fitGroupFrames, type Point } from '@sododeck/model';
+import { fitGroupFrames, STICKY_DEFAULT_SIZE, type Point } from '@sododeck/model';
 import type { Frame, Id, Node } from '@sododeck/schema';
 
 import { cardSize, GROUP_PADDING, type Rect } from '../../editor/canvas-geometry';
@@ -16,8 +16,8 @@ import type { ImportPlan } from './types';
 export const CLUSTER_GAP = 160;
 /** Gap between the cluster and the stickies under it. */
 const STICKY_GAP = 48;
-/** Horizontal step between stickies (a note is 200 wide). */
-const STICKY_STEP = 224;
+/** Horizontal step between stickies: a note's default width and a 24 px gap. */
+const STICKY_STEP = STICKY_DEFAULT_SIZE.width + 24;
 
 export interface Placement {
   /** Top-left of every imported table, by plan id. */

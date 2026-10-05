@@ -7,6 +7,7 @@ import { analyzeFlow } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { FlowSession } from '../../state/ui-store';
+import { endsOnNote } from '../stickies/sticky-flow';
 import { findFlow, sessionPath } from './session-path';
 
 export type RecordResult =
@@ -35,7 +36,7 @@ export function recordEdge(
   edgeId: string,
 ): RecordResult | null {
   const edge = deck.edges.find((e) => e.id === edgeId);
-  if (edge === undefined) return null;
+  if (edge === undefined || endsOnNote(deck, edge)) return null;
   const flow = findFlow(deck, session.flowId);
   if (flow === undefined) {
     return {
