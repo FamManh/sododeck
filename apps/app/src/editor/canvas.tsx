@@ -30,6 +30,7 @@ import { ConnectPopover } from './connect-popover';
 import { CollapsedGroupNode } from './collapsed-group-node';
 import { focusTargetId } from './focus-target';
 import { DeckEdge } from './deck-edge';
+import { minimapFill, minimapStroke } from './minimap-colors';
 import { DeckNode } from './deck-node';
 import {
   COLLAPSED_NODE_PREFIX,
@@ -69,7 +70,6 @@ import { proxyLayout } from './proxy-layout';
 import { ScopeLabelNode } from './scope-label-node';
 import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
-import type { CardLook } from './style/card-style';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { StickyNode } from './stickies/sticky-node';
@@ -840,12 +840,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
             ariaLabel="Minimap"
             position="bottom-right"
             pannable
-            nodeColor={(n) =>
-              (n.data.look as CardLook | undefined)?.fill ?? 'var(--color-surface-3)'
-            }
-            nodeStrokeColor={(n) =>
-              (n.data.look as CardLook | undefined)?.stroke ?? 'var(--color-border-strong)'
-            }
+            nodeColor={minimapFill}
+            nodeStrokeColor={minimapStroke}
             maskColor="var(--xy-minimap-mask-background-color)"
             onClick={(_, position) => {
               void setCenter(position.x, position.y, { zoom: getZoom() });

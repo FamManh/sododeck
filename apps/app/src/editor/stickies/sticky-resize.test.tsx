@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useUiStore } from '../../state/ui-store';
 import { cancelActiveGesture } from '../editing/drag-session';
-import { applyStickyResize, endStickyResize, startStickyResize } from '../editing/sticky-resize';
+import {
+  applyStickyResize,
+  endStickyResize,
+  resizeStickyByKey,
+  startStickyResize,
+} from '../editing/sticky-resize';
 
 const file = (): SododeckFile => ({
   ...emptySododeckFile(),
@@ -136,5 +141,35 @@ describe('sticky resize (053 US2)', () => {
     expect(startStickyResize(editor, 'folded', 'bottom-right')).toBeNull();
     expect(startStickyResize(editor, 'locked', 'bottom-right')).toBeNull();
     expect(startStickyResize(editor, 'nope', 'bottom-right')).toBeNull();
+  });
+});
+
+describe('sticky resize from the keyboard (053 a11y)', () => {
+  it('grows from the bottom-right by 8, or 32 with a larger step, and can be undone', () => {
+    const { doc, editor } = setup();
+    expect(resizeStickyByKey(editor, 'a', 'ArrowRight', false)).toBe(true);
+    expect(stickyOf(doc, 'a')?.size).toEqual({ width: 208, height: 200 });
+    expect(resizeStickyByKey(editor, 'a', 'ArrowDown', true)).toBe(true);
+    expect(stickyOf(doc, 'a')?.size).toEqual({ width: 208, height: 232 });
+    expect(useUiStore.getState().announcement.text).toContain('Resized note to 208 × 232');
+    // Quick presses fold into one undo step, like typing.
+    expect(editor.undo()).toBe(true);
+    expect(stickyOf(doc, 'a')?.size).not.toEqual({ width: 208, height: 232 });
+  });
+
+  it('shrinks with the opposite arrows and stops at 96 × 96', () => {
+    const { doc, editor } = setup();
+    resizeStickyByKey(editor, 'a', 'ArrowLeft', true);
+    expect(stickyOf(doc, 'a')?.size).toEqual({ width: 168, height: 200 });
+    for (let i = 0; i < 5; i++) resizeStickyByKey(editor, 'a', 'ArrowUp', true);
+    expect(stickyOf(doc, 'a')?.size).toEqual({ width: 168, height: 96 });
+  });
+
+  it('refuses a locked, a collapsed and a missing note', () => {
+    const { doc, editor } = setup();
+    expect(resizeStickyByKey(editor, 'locked', 'ArrowRight', false)).toBe(false);
+    expect(resizeStickyByKey(editor, 'folded', 'ArrowRight', false)).toBe(false);
+    expect(resizeStickyByKey(editor, 'nope', 'ArrowRight', false)).toBe(false);
+    expect(stickyOf(doc, 'locked')?.size).toBeUndefined();
   });
 });

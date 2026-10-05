@@ -291,6 +291,7 @@ export const STICKY_ACTIONS: readonly Action[] = [
     id: 'sticky.lock',
     label: (ctx) => (allLocked(ctx) ? 'Unlock' : 'Lock'),
     icon: Lock,
+    shortcut: 'lock',
     section: 'view',
     where: { toolbar: ['sticky'] },
     checked: allLocked,

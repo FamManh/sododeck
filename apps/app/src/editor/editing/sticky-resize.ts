@@ -5,7 +5,12 @@
  * inside one gesture, so the whole drag is one undo step and Esc puts the note back. Connectors
  * stay attached because they are drawn from the note's live box.
  */
-import { STICKY_MIN_SIZE, stickyBox, stickyCanvasPosition } from '@sododeck/model';
+import {
+  STICKY_DEFAULT_SIZE,
+  STICKY_MIN_SIZE,
+  stickyBox,
+  stickyCanvasPosition,
+} from '@sododeck/model';
 import type { DeckEditor } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
@@ -148,4 +153,34 @@ export function endStickyResize(editor: DeckEditor, session: StickyResizeSession
   if (session.cancelled) return;
   editor.endGesture();
   ui.announce(`Resized note to ${String(session.last.width)} × ${String(session.last.height)}`);
+}
+
+const KEY_STEP = 8;
+const KEY_STEP_LARGE = 32;
+
+/**
+ * The keyboard way to resize a note (Alt + arrow, ⇧ for a larger step): the bottom-right corner
+ * moves, so → and ↓ grow it and ← and ↑ shrink it. Pointer-only resizing left keyboard users no
+ * way to fit a note to its text. Returns false when nothing changed (missing, locked, collapsed).
+ */
+export function resizeStickyByKey(
+  editor: DeckEditor,
+  stickyId: Id,
+  key: string,
+  large: boolean,
+): boolean {
+  const sticky = readViewState(editor.doc).deck.stickies.find((s) => s.id === stickyId);
+  if (sticky === undefined || sticky.locked === true || sticky.collapsed === true) return false;
+  const step = large ? KEY_STEP_LARGE : KEY_STEP;
+  const dx = key === 'ArrowRight' ? step : key === 'ArrowLeft' ? -step : 0;
+  const dy = key === 'ArrowDown' ? step : key === 'ArrowUp' ? -step : 0;
+  if (dx === 0 && dy === 0) return false;
+  const { min, max } = STICKY_SIZE_LIMITS;
+  const current = sticky.size ?? STICKY_DEFAULT_SIZE;
+  const width = Math.min(max.width, Math.max(min.width, current.width + dx));
+  const height = Math.min(max.height, Math.max(min.height, current.height + dy));
+  if (width === current.width && height === current.height) return false;
+  editor.setStickySize(stickyId, { width, height });
+  useUiStore.getState().announce(`Resized note to ${String(width)} × ${String(height)}`);
+  return true;
 }

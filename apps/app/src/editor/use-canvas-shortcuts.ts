@@ -865,10 +865,13 @@ export function useEditorShortcuts({
         runRef.current('clipboard.duplicate');
         return;
       }
-      // ⇧⌘L locks or unlocks the selection (043 R5), the menu's action.
+      // ⇧⌘L locks or unlocks the selection (043 R5, 053), the menu's action: the one that fits
+      // the selection runs, so a keyboard user can lock a note or a connector too.
       if (isMod(event) && event.shiftKey && !event.altKey && event.code === 'KeyL' && canvas) {
         event.preventDefault();
-        runRef.current('node.lock');
+        if (!runRef.current('node.lock') && !runRef.current('sticky.lock')) {
+          runRef.current('connection.lock');
+        }
         return;
       }
       // ⌘G groups the selection (016 FR-010), never the browser's "find next".

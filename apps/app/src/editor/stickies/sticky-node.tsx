@@ -25,6 +25,7 @@ import {
   applyStickyResize,
   cancelStickyResize,
   endStickyResize,
+  resizeStickyByKey,
   startStickyResize,
   type StickyResizeSession,
 } from '../editing/sticky-resize';
@@ -189,6 +190,7 @@ export const StickyNode = memo(function StickyNode({
       aria-roledescription="note"
       aria-label={stickyName(data)}
       aria-selected={selected}
+      aria-keyshortcuts="Enter C Alt+C Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight"
       tabIndex={0}
       style={{ width: boxWidth, height: boxHeight }}
       onDoubleClick={openEditing}
@@ -199,6 +201,16 @@ export const StickyNode = memo(function StickyNode({
         if (event.altKey && event.code === 'KeyC') {
           event.preventDefault();
           toggleCollapsed();
+          return;
+        }
+        if (event.altKey && event.key.startsWith('Arrow')) {
+          // Alt + arrow resizes (⇧ for a larger step): the keyboard twin of the corner handles.
+          event.preventDefault();
+          if (locked) refuseLocked();
+          else if (!resizeStickyByKey(editor, data.stickyId, event.key, event.shiftKey))
+            useUiStore
+              .getState()
+              .announce(collapsed ? 'Expand the note to resize it' : 'Note size unchanged');
           return;
         }
         if (event.key.toLowerCase() === 'c' && !event.metaKey && !event.ctrlKey && !event.altKey) {

@@ -5,7 +5,7 @@ import { SearchField } from '@sododeck/ui/components/search-field';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { SquareDashed, StickyNote } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { iconProp } from './card-icon';
 import { NodeTypeTile } from './shapes/shape-tile';
@@ -50,6 +50,22 @@ function nextEnabled(
     if (!options[i]?.disabled) return i;
   }
   return index;
+}
+
+/** Home / End target for the listbox: the first or last enabled option, else the current one. */
+function edgeEnabled(options: readonly { disabled: boolean }[], key: 'Home' | 'End'): number {
+  const order = options.map((_, index) => index);
+  const found = (key === 'Home' ? order : order.reverse()).find((i) => !options[i]?.disabled);
+  return found ?? -1;
+}
+
+/** Keeps the keyboard's option on screen: arrows move it past the end of a scrolling list. */
+function useScrollActiveIntoView(listId: string, activeIndex: number) {
+  useEffect(() => {
+    const option: Element | null = document.getElementById(`${listId}-${String(activeIndex)}`);
+    // Test DOMs have no scrollIntoView.
+    if (option !== null && 'scrollIntoView' in option) option.scrollIntoView({ block: 'nearest' });
+  }, [listId, activeIndex]);
 }
 
 /** "Connect <title> to…": type-ahead keyboard connect (FR-012, design 56). */
@@ -104,6 +120,7 @@ function ConnectPopoverContent({
   };
 
   const optionId = (index: number) => `${listId}-${String(index)}`;
+  useScrollActiveIntoView(listId, activeIndex);
 
   return (
     <Popover
@@ -141,6 +158,11 @@ function ConnectPopoverContent({
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               event.preventDefault();
               setActive(nextEnabled(options, activeIndex, event.key === 'ArrowDown' ? 1 : -1));
+            } else if (event.key === 'Home' || event.key === 'End') {
+              // The field has no use for them while a list is on offer; the list does.
+              if (options.length === 0) return;
+              event.preventDefault();
+              setActive(edgeEnabled(options, event.key));
             } else if (event.key === 'Enter') {
               event.preventDefault();
               choose(options[activeIndex]);
@@ -240,6 +262,7 @@ function ColumnConnectContent({
   const listId = useId();
   const virtualRef = useRef({ getBoundingClientRect: () => rowRect(tableId, columnId) });
   const optionId = (index: number) => `${listId}-${String(index)}`;
+  useScrollActiveIntoView(listId, activeIndex);
   const choose = (index: number) => {
     const option = options[index];
     if (option === undefined || option.disabled) return;
@@ -282,6 +305,11 @@ function ColumnConnectContent({
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               event.preventDefault();
               setActive(nextEnabled(options, activeIndex, event.key === 'ArrowDown' ? 1 : -1));
+            } else if (event.key === 'Home' || event.key === 'End') {
+              // The field has no use for them while a list is on offer; the list does.
+              if (options.length === 0) return;
+              event.preventDefault();
+              setActive(edgeEnabled(options, event.key));
             } else if (event.key === 'Enter') {
               event.preventDefault();
               choose(activeIndex);

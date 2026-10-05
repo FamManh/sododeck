@@ -32,6 +32,7 @@ import { StickyPad } from './stickies/sticky-pad';
 import { NOTE_MIME, TYPE_MIME } from './use-canvas-handlers';
 
 const COLUMNS = 3;
+const STICKY_TILE_HINT = 'Add a note: click or press Enter to place it, drag to drop it · S';
 /** The search field of the flyout, found by `/` (see `use-shell-shortcuts`). */
 export const PALETTE_SEARCH_ID = 'palette-search';
 
@@ -320,6 +321,7 @@ export function Palette() {
                       type="button"
                       draggable={tool === 'sticky'}
                       aria-label={name}
+                      {...(tool === 'sticky' ? { 'aria-keyshortcuts': 'S' } : {})}
                       aria-disabled={tool === 'sticky' && readOnly ? true : undefined}
                       {...(tool === 'frame' && frameToolOn ? { 'aria-pressed': true } : {})}
                       ref={(el) => {
@@ -396,6 +398,13 @@ export function Palette() {
                         <Tooltip>
                           <TooltipTrigger asChild>{button}</TooltipTrigger>
                           <TooltipContent>Draw a group frame</TooltipContent>
+                        </Tooltip>
+                      ) : tool === 'sticky' ? (
+                        // The pad is a picture; this says what the tile does, for a pointer and a
+                        // keyboard (the tile takes focus) alike.
+                        <Tooltip>
+                          <TooltipTrigger asChild>{button}</TooltipTrigger>
+                          <TooltipContent>{STICKY_TILE_HINT}</TooltipContent>
                         </Tooltip>
                       ) : (
                         button

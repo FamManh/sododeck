@@ -162,6 +162,14 @@ describe('Palette: Add flyout (030)', () => {
     expect(drag.get(NOTE_MIME)).toBe('note');
   });
 
+  it('says what the Sticky tile does when it takes focus', async () => {
+    renderWithEditor(<Palette />, newDeck());
+    act(() => {
+      screen.getByRole('button', { name: 'Sticky' }).focus();
+    });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/drag to drop/);
+  });
+
   it('draws the Sticky tile as a pad of three notes in the last colour (053 US3)', async () => {
     const user = userEvent.setup();
     renderWithEditor(<Palette />, newDeck());

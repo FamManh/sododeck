@@ -455,4 +455,41 @@ describe('StickyNode paper, size and text fit (053 US2)', () => {
     });
     expect(document.querySelectorAll('.react-flow__resize-control')).toHaveLength(0);
   });
+
+  it('Alt + arrow resizes the focused note, and a locked note refuses', () => {
+    const file = noted([
+      { id: 'n', text: 'Resizable', position: { x: 0, y: 0 } },
+      { id: 'l', text: 'Pinned', position: { x: 0, y: 300 }, locked: true },
+    ]);
+    const { doc } = renderNote(file, 'n');
+    fireEvent.keyDown(screen.getByRole('group', { name: 'Note: Resizable' }), {
+      key: 'ArrowRight',
+      altKey: true,
+    });
+    expect(readDeck(doc).stickies[0]?.size).toEqual({ width: 208, height: 200 });
+    // The plain arrow still moves it, and does not resize.
+    fireEvent.keyDown(screen.getByRole('group', { name: 'Note: Resizable' }), {
+      key: 'ArrowDown',
+    });
+    expect(readDeck(doc).stickies[0]?.size).toEqual({ width: 208, height: 200 });
+  });
+
+  it('a locked note does not resize from the keyboard and says why', () => {
+    const file = noted([{ id: 'l', text: 'Pinned', position: { x: 0, y: 0 }, locked: true }]);
+    const { doc } = renderNote(file, 'l');
+    fireEvent.keyDown(screen.getByRole('group', { name: 'Note: Pinned, locked' }), {
+      key: 'ArrowRight',
+      altKey: true,
+    });
+    expect(readDeck(doc).stickies[0]?.size).toBeUndefined();
+    expect(useUiStore.getState().announcement.text).toContain('Locked');
+  });
+
+  it('names the shortcuts that work on the note', () => {
+    renderNote(noted([{ id: 'n', text: 'Keys', position: { x: 0, y: 0 } }]), 'n');
+    expect(screen.getByRole('group', { name: 'Note: Keys' })).toHaveAttribute(
+      'aria-keyshortcuts',
+      expect.stringContaining('Alt+ArrowRight'),
+    );
+  });
 });

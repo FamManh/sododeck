@@ -75,7 +75,7 @@ export const COMMON_ACTIONS: readonly Action[] = [
     id: 'connection.lock',
     label: (ctx) => (allEdgesLocked(ctx) ? 'Unlock' : 'Lock'),
     icon: Lock,
-    // No ⇧⌘L: that key is the cards' (`use-canvas-shortcuts.ts`) and is not taught about connectors.
+    shortcut: 'lock',
     section: 'arrange',
     where: {
       menu: ['connection', 'connections'],
