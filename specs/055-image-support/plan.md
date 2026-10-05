@@ -69,7 +69,7 @@ _GATE: passed before Phase 0, re-checked after Phase 1._
 | Picture bytes live outside the Yjs document (principle I, "no duplication") | Up to 5 MB per picture in a document that is replicated, diffed, undone and shown in the JSON panel would make every update, tab sync and snapshot slow or huge. | Base64 inside Yjs: breaks the 500 ms autosave and 100 ms flush targets, inflates update logs, and floods the JSON panel. The blob is immutable and addressed by hash, so it cannot diverge from the document. |
 | A shared stacking rank for cards and images (new mechanism)                 | Founder asked for whiteboard-style interleaving.                                                                                                                 | Fixed layer for images: simpler but contradicts the founder's requirement (research R2).                                                                                                                      |
 
-**Needs founder approval** before implementation: the principle I deviation above (constitution
+**Approved by the founder (2026-10-05):** the principle I deviation above (constitution
 requires written approval for deviations).
 
 ## Project Structure

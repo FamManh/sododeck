@@ -28,8 +28,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm branch `055-image-support` and a green baseline: `pnpm install && pnpm lint && pnpm typecheck && pnpm test`. On `main`'s code (before any change) run `pnpm bench` and save the output as `specs/055-image-support/bench-before.md` (500 nodes / 1,000 edges numbers).
-- [ ] T002 Commit the spec folder (spec, plan, research, data-model, contracts, quickstart, tasks, checklists), `docs/decisions/0037-image-support.md` (status Proposed) and the `docs/backlog.md` changes (055 decisions, new 057) as `docs: image support spec, plan and tasks (055)`.
+- [x] T001 Confirm branch `055-image-support` and a green baseline: `pnpm install && pnpm lint && pnpm typecheck && pnpm test`. On `main`'s code (before any change) run `pnpm bench` and save the output as `specs/055-image-support/bench-before.md` (500 nodes / 1,000 edges numbers).
+- [x] T002 Commit the spec folder (spec, plan, research, data-model, contracts, quickstart, tasks, checklists), `docs/decisions/0037-image-support.md` (status Proposed) and the `docs/backlog.md` changes (055 decisions, new 057) as `docs: image support spec, plan and tasks (055)`.
 
 ---
 
