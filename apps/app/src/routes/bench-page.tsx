@@ -1,10 +1,11 @@
-import { fromJSON } from '@sododeck/model';
+import { loadDeck } from '@sododeck/model';
 import { ToastProvider } from '@sododeck/ui/components/toast';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { generateBenchDeck } from '../bench/generate-deck';
+import { memoryPictureStore, PictureStoreContext } from '../images/picture-store';
 import { Canvas } from '../editor/canvas';
 import { CommandPalette } from '../editor/command-palette/command-palette';
 import { preloadExportDialog } from '../editor/export/export-dialog-loader';
@@ -488,6 +489,7 @@ export function BenchPage() {
   const groups = params.get('groups') === '1';
   const inspector = params.get('inspector') === '1';
   const stickies = Math.max(0, Number(params.get('stickies') ?? 0) || 0);
+  const images = Math.max(0, Number(params.get('images') ?? 0) || 0);
   const views = params.get('views') === '1';
   const drawer = params.get('drawer') === '1';
   const exporting = params.get('export') === '1';
@@ -507,7 +509,7 @@ export function BenchPage() {
   const wide = params.get('wide') === '1';
   const schemas = Math.max(0, Number(params.get('schemas') ?? 0) || 0);
 
-  const [doc] = useState(() => {
+  const [{ doc, pictures }] = useState(() => {
     useUiStore.getState().resetForDeck(null);
     if (jsonDeck) {
       const { jsonPanel } = useUiStore.getState();
@@ -520,11 +522,12 @@ export function BenchPage() {
       useUiStore.getState().select({ nodes: ['n0'] });
       useUiStore.getState().openDrawer();
     }
-    return fromJSON(
+    const loaded = loadDeck(
       generateBenchDeck(nodeCount, edgeCount, 42, {
         flows,
         groups,
         stickies,
+        images,
         views,
         routes,
         colours,
@@ -542,65 +545,71 @@ export function BenchPage() {
         schemas,
       }).deck,
     );
+    // The bench pictures are served from memory, so images draw as pictures, not placeholders.
+    const pictures = memoryPictureStore();
+    for (const [id, bytes] of loaded.bytes) void pictures.put(id, { type: 'image/png', bytes });
+    return { doc: loaded.doc, pictures };
   });
 
   return (
     <main className="flex h-dvh flex-col bg-canvas">
       <EditorProvider doc={doc}>
-        <ToastProvider>
-          <FlowBenchHooks />
-          {groups && <GroupsBenchHooks />}
-          {inspector && <InspectorBenchHooks />}
-          <PaletteBenchHooks />
-          <HoverBenchHooks />
-          <ReactFlowProvider>
-            <ViewsBenchHooks />
-            <div className="relative flex min-h-0 flex-1">
-              <div className="min-w-0 flex-1">
-                <Canvas
-                  onlyRenderVisibleElements={visibleOnly}
-                  onReady={() => {
-                    // Two frames after init ≈ first painted frame with nodes.
-                    requestAnimationFrame(() =>
-                      requestAnimationFrame(() => {
-                        const deck = readDeck(doc);
-                        window.__sododeckBench = {
-                          ...(window.__sododeckBench ?? {}),
-                          readyAt: performance.now(),
-                          nodes: deck.nodes.length,
-                          edges: deck.edges.length,
-                          shell: drawer,
-                          toolbar,
-                          selectNodes: (nodeIds: string[]) => {
-                            useUiStore.getState().select({ nodes: nodeIds });
-                          },
-                        };
-                      }),
-                    );
-                  }}
-                />
+        <PictureStoreContext.Provider value={pictures}>
+          <ToastProvider>
+            <FlowBenchHooks />
+            {groups && <GroupsBenchHooks />}
+            {inspector && <InspectorBenchHooks />}
+            <PaletteBenchHooks />
+            <HoverBenchHooks />
+            <ReactFlowProvider>
+              <ViewsBenchHooks />
+              <div className="relative flex min-h-0 flex-1">
+                <div className="min-w-0 flex-1">
+                  <Canvas
+                    onlyRenderVisibleElements={visibleOnly}
+                    onReady={() => {
+                      // Two frames after init ≈ first painted frame with nodes.
+                      requestAnimationFrame(() =>
+                        requestAnimationFrame(() => {
+                          const deck = readDeck(doc);
+                          window.__sododeckBench = {
+                            ...(window.__sododeckBench ?? {}),
+                            readyAt: performance.now(),
+                            nodes: deck.nodes.length,
+                            edges: deck.edges.length,
+                            shell: drawer,
+                            toolbar,
+                            selectNodes: (nodeIds: string[]) => {
+                              useUiStore.getState().select({ nodes: nodeIds });
+                            },
+                          };
+                        }),
+                      );
+                    }}
+                  />
+                </div>
+                {exporting && <ExportBench />}
+                {(drawer || inspector) && (
+                  <div className="pointer-events-none absolute inset-0">
+                    <BenchShell />
+                  </div>
+                )}
+                {toolbar && (
+                  <div className="pointer-events-none absolute inset-0">
+                    <ToolbarBenchHooks />
+                    <SelectionToolbar />
+                  </div>
+                )}
               </div>
-              {exporting && <ExportBench />}
-              {(drawer || inspector) && (
-                <div className="pointer-events-none absolute inset-0">
-                  <BenchShell />
-                </div>
-              )}
-              {toolbar && (
-                <div className="pointer-events-none absolute inset-0">
-                  <ToolbarBenchHooks />
-                  <SelectionToolbar />
-                </div>
-              )}
-            </div>
-            {jsonDeck && !drawer && <JsonPanel />}
-            <CommandPalette
-              screen="canvas"
-              openRules={() => undefined}
-              navigateToCanvas={() => undefined}
-            />
-          </ReactFlowProvider>
-        </ToastProvider>
+              {jsonDeck && !drawer && <JsonPanel />}
+              <CommandPalette
+                screen="canvas"
+                openRules={() => undefined}
+                navigateToCanvas={() => undefined}
+              />
+            </ReactFlowProvider>
+          </ToastProvider>
+        </PictureStoreContext.Provider>
       </EditorProvider>
     </main>
   );
