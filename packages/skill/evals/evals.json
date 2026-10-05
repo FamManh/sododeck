@@ -1,0 +1,23 @@
+{
+  "skill_name": "sododeck-deck",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Make me a Sododeck deck of our e-commerce checkout: web shop, API gateway, order service, a payment provider, Kafka and Postgres, plus the checkout flow from pressing Pay to the confirmation email. Save it as checkout.sododeck.",
+      "expected_output": "checkout.sododeck passes validate and lint (exit 0), has no positions, and its checkout flow chains along existing connectors from the web shop to the notification step.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Here's our deck (examples/checkout.sododeck). Add a refund flow: support agent asks the order service for a refund, order service asks the payment provider to refund, then records it. Don't touch anything else.",
+      "expected_output": "diff shows only additions (a support card, refund connectors, a refund flow); every existing id and object is unchanged; validate and lint pass.",
+      "files": ["examples/checkout.sododeck"]
+    },
+    {
+      "id": 3,
+      "prompt": "Sododeck refused my file and gave me this when I pressed Copy problems: {\"report\":\"sododeck-problems\",\"problems\":[{\"code\":\"step-without-connection\",\"severity\":\"error\",\"path\":\"/flows/0/steps/1/edge\",\"subject\":\"create\",\"message\":\"Step without connection\",\"fix\":\"Point the step's \\\"edge\\\" to an existing connector, or remove the step.\"}]}. Fix broken.sododeck please.",
+      "expected_output": "The agent edits only the step's edge (or adds the missing connector), lint exits 0, and the handover names the change.",
+      "files": ["broken.sododeck"]
+    }
+  ]
+}

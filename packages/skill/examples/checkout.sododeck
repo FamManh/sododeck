@@ -1,0 +1,58 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "E-commerce checkout",
+  "description": "How an order is placed and paid for.",
+  "nodes": [
+    { "id": "web", "type": "client", "title": "Web Shop", "tech": "React" },
+    { "id": "gateway", "type": "gateway", "title": "API Gateway" },
+    {
+      "id": "orders",
+      "type": "service",
+      "title": "Order Service",
+      "description": "Creates orders, asks the payment provider to charge, and publishes order events.",
+      "tech": "Node.js"
+    },
+    { "id": "payments", "type": "external", "title": "Payment Provider" },
+    { "id": "events", "type": "queue", "title": "Order Events", "tech": "Kafka" },
+    { "id": "orders-db", "type": "database", "title": "Orders DB", "tech": "Postgres" },
+    { "id": "notify", "type": "service", "title": "Notification Service" }
+  ],
+  "groups": [],
+  "edges": [
+    { "id": "web-gateway", "from": "web", "to": "gateway", "protocol": "http", "label": "POST /checkout" },
+    { "id": "gateway-orders", "from": "gateway", "to": "orders", "protocol": "http", "label": "create order" },
+    { "id": "orders-db-write", "from": "orders", "to": "orders-db", "protocol": "sql", "label": "insert order" },
+    { "id": "orders-payments", "from": "orders", "to": "payments", "protocol": "http", "label": "charge card" },
+    { "id": "payments-orders", "from": "payments", "to": "orders", "protocol": "http", "label": "charge result" },
+    { "id": "orders-events", "from": "orders", "to": "events", "protocol": "event", "label": "OrderPaid" },
+    { "id": "events-notify", "from": "events", "to": "notify", "protocol": "event", "label": "OrderPaid" }
+  ],
+  "views": [],
+  "features": [{ "id": "checkout", "title": "Checkout" }],
+  "flows": [
+    {
+      "id": "checkout",
+      "title": "Checkout",
+      "feature": "checkout",
+      "trigger": "Customer presses Pay",
+      "outcome": "Order is paid and the customer gets a confirmation",
+      "steps": [
+        { "id": "submit", "edge": "web-gateway", "title": "Submit cart", "sla": "< 300 ms" },
+        { "id": "create", "edge": "gateway-orders", "title": "Create order" },
+        {
+          "id": "charge",
+          "edge": "orders-payments",
+          "title": "Charge card",
+          "sla": "< 2 s",
+          "payload": "{ \"orderId\": \"o_123\", \"amount\": 4990, \"currency\": \"EUR\" }"
+        },
+        { "id": "charged", "edge": "payments-orders", "title": "Card charged" },
+        { "id": "publish", "edge": "orders-events", "title": "Publish OrderPaid" },
+        { "id": "confirm", "edge": "events-notify", "title": "Send confirmation email" }
+      ]
+    }
+  ],
+  "rules": {},
+  "stickies": []
+}
