@@ -130,14 +130,16 @@ export function fromJSON(input: unknown): DeckDoc {
 }
 
 /**
- * Validates `input` in as few rounds as possible (062 R5): every structural issue at once; when
- * the structure holds, the format rules and the duplicate / ambiguous id checks together, so a
- * structurally valid file reports everything wrong with it in one error.
+ * Validates `input` in as few rounds as possible (062 R5): every structural issue and every
+ * duplicate or ambiguous id at once; the format rules S1–S15 / I1–I6 need typed data, so they run
+ * (with the id checks) only when the structure holds.
  * @throws DeckValidationError when the input is not a valid v1 file.
  */
 export function validateDeckFile(input: unknown): SododeckFile {
   const parsed = sododeckFileSchema.safeParse(input);
-  if (!parsed.success) throw new DeckValidationError(toIssues(parsed.error, input));
+  if (!parsed.success) {
+    throw new DeckValidationError([...toIssues(parsed.error, input), ...checkDuplicateIds(input)]);
+  }
   const file = parsed.data;
   const issues = [...checkSemanticRules(file), ...checkDuplicateIds(file)];
   if (issues.length > 0) throw new DeckValidationError(issues);

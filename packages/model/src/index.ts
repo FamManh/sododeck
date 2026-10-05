@@ -134,6 +134,7 @@ export {
   type FidelityCode,
   type FidelityGroup,
 } from './problem-codes';
+export { inspectDeckText, type DeckTextResult } from './import-check';
 export {
   issueEntry,
   pictureEntry,
