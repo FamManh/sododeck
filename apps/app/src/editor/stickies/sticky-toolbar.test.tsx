@@ -16,7 +16,7 @@ const deck = deckOf({
   stickies: [
     { id: 's1', text: 'hello world', position: { x: 600, y: 0 }, color: 'blue' },
     { id: 's2', text: 'second', position: { x: 600, y: 300 } },
-    // Sits over the card, so "Pin" has a card to pin to.
+    // Sits over the card: notes are never pinned to it (ADR 0041).
     { id: 's3', text: 'over card', position: { x: 20, y: 20 } },
   ],
 });
@@ -62,7 +62,6 @@ describe('sticky toolbar (053 US3)', () => {
       'Note colour: Blue',
       'Tags',
       'Collapse',
-      'Pin',
       'Lock',
       'Delete',
     ]);
@@ -300,19 +299,10 @@ describe('sticky toolbar (053 US3)', () => {
       expect(sticky(doc, 's1')?.collapsed).toBeUndefined();
     });
 
-    it('disables Pin with a reason when no card is under the note', () => {
+    it('offers no Pin, even for a note over a card (ADR 0041)', () => {
       setup();
-      select('s1');
-      expect(button('Pin')).toBeDisabled();
-    });
-
-    it('pins to the card under the note, then unpins', async () => {
-      const { user, doc } = setup();
       select('s3');
-      await user.click(button('Pin'));
-      expect(sticky(doc, 's3')?.anchor).toBe('svc');
-      await user.click(button('Unpin'));
-      expect(sticky(doc, 's3')?.anchor).toBeUndefined();
+      expect(screen.queryByRole('button', { name: /^(Pin|Unpin)$/ })).not.toBeInTheDocument();
     });
 
     it('locks and unlocks every selected note in one undo step', async () => {
@@ -331,7 +321,7 @@ describe('sticky toolbar (053 US3)', () => {
       expect(sticky(doc, 's1')?.locked).toBe(true);
     });
 
-    it('leaves locked notes out of Pin and still lets Lock toggle them', async () => {
+    it('lets Lock toggle a locked note', async () => {
       const { user, doc } = setup(
         deckOf({
           nodes: [{ id: 'svc', type: 'service', title: 'S', position: { x: 0, y: 0 } }],
@@ -340,7 +330,6 @@ describe('sticky toolbar (053 US3)', () => {
         }),
       );
       select('a');
-      expect(button('Pin')).toBeDisabled();
       await user.click(button('Unlock'));
       expect(sticky(doc, 'a')?.locked).toBeUndefined();
     });

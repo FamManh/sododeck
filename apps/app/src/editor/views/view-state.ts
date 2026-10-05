@@ -179,27 +179,6 @@ function projectNodes(
   return out;
 }
 
-const stickyLists = new WeakMap<
-  SododeckFile['stickies'],
-  WeakMap<ReadonlySet<Id>, SododeckFile['stickies']>
->();
-function projectStickies(
-  stickies: SododeckFile['stickies'],
-  hidden: ReadonlySet<Id>,
-): SododeckFile['stickies'] {
-  if (hidden.size === 0) return stickies;
-  let byHidden = stickyLists.get(stickies);
-  if (byHidden === undefined) {
-    byHidden = new WeakMap();
-    stickyLists.set(stickies, byHidden);
-  }
-  const cached = byHidden.get(hidden);
-  if (cached !== undefined) return cached;
-  const out = stickies.filter((s) => s.anchor === undefined || !hidden.has(s.anchor));
-  byHidden.set(hidden, out);
-  return out;
-}
-
 const groupLists = new WeakMap<
   readonly Group[],
   WeakMap<NonNullable<View['groupFrames']>, Group[]>
@@ -268,7 +247,6 @@ const projectedDecks = new WeakMap<
   {
     nodes: Node[];
     groups: SododeckFile['groups'];
-    stickies: SododeckFile['stickies'];
     deck: SododeckFile;
   }
 >();
@@ -285,13 +263,10 @@ export function viewDeck(deck: SododeckFile, view: View, hidden: ReadonlySet<Id>
   const nodes = projectNodes(deck.nodes, positions, hidden);
   const framed = noFrames ? deck.groups : projectGroups(deck.groups, frames);
   const groups = hidden.size === 0 ? framed : withoutHiddenGroups(framed, deck.nodes, nodes);
-  const stickies = projectStickies(deck.stickies, hidden);
   const cached = projectedDecks.get(deck);
-  if (cached?.nodes === nodes && cached.groups === groups && cached.stickies === stickies) {
-    return cached.deck;
-  }
-  const projected = { ...deck, nodes, groups, stickies };
-  projectedDecks.set(deck, { nodes, groups, stickies, deck: projected });
+  if (cached?.nodes === nodes && cached.groups === groups) return cached.deck;
+  const projected = { ...deck, nodes, groups };
+  projectedDecks.set(deck, { nodes, groups, deck: projected });
   return projected;
 }
 

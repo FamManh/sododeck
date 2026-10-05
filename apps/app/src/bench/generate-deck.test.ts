@@ -45,16 +45,13 @@ describe('generateBenchDeck', () => {
     expect(generateBenchDeck(20, 30)).toEqual(generateBenchDeck(20, 30));
   });
 
-  it('adds seeded stickies, half pinned and half free', () => {
+  it('adds seeded free stickies, half in a grid and half next to cards', () => {
     const { deck } = generateBenchDeck(40, 80, 42, { stickies: 10 });
     expect(parseSododeckFile(deck).success).toBe(true);
     expect(deck.stickies).toHaveLength(10);
-    expect(deck.stickies.filter((sticky) => sticky.anchor != null)).toHaveLength(5);
-    expect(deck.stickies.filter((sticky) => sticky.anchor == null)).toHaveLength(5);
+    expect(deck.stickies.every((sticky) => sticky.anchor === undefined)).toBe(true);
     expect(deck.stickies.every((sticky) => sticky.text.length > 0)).toBe(true);
-    expect(deck.stickies.every((sticky) => sticky.anchor != null || sticky.position != null)).toBe(
-      true,
-    );
+    expect(deck.stickies.every((sticky) => sticky.position !== undefined)).toBe(true);
     // Free notes are connector ends too (053): to a card, and to the next free note.
     const noteIds = new Set(deck.stickies.map((sticky) => sticky.id));
     const noteEdges = deck.edges.filter((edge) => noteIds.has(edge.from));

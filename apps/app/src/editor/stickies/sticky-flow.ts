@@ -1,32 +1,22 @@
-import { endpointOf, type StickyPlacement } from '@sododeck/model';
+import { endpointOf } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
-
-import type { NodeFlowMark } from '../flows/flow-overlay';
 
 export type NotesDisplay = 'dimmed' | 'shown' | 'hidden';
 export type StickyFlowState = 'normal' | 'dimmed' | 'hidden';
 
+/**
+ * How a note looks while a flow plays: hidden or shown by the Notes setting, else at full strength
+ * when it asks to stay visible (`showInFlows`) or the flow has no steps yet, dimmed otherwise.
+ * Notes are never pinned to a card (ADR 0041), so the current step does not change this.
+ */
 export function stickyFlowState(
-  sticky: SododeckFile['stickies'][number],
-  placement: StickyPlacement,
-  options: {
-    flowMode: boolean;
-    display: NotesDisplay;
-    currentStepNodes: ReadonlyMap<string, NodeFlowMark>;
-    emptyFlow: boolean;
-    brokenCurrentStep: boolean;
-  },
+  sticky: Pick<SododeckFile['stickies'][number], 'showInFlows'>,
+  options: { flowMode: boolean; display: NotesDisplay; emptyFlow: boolean },
 ): StickyFlowState {
   if (!options.flowMode) return 'normal';
   if (options.display === 'hidden') return 'hidden';
   if (options.display === 'shown' || sticky.showInFlows === true) return 'normal';
   if (options.emptyFlow) return 'normal';
-  if (placement.status === 'pinned') {
-    return options.currentStepNodes.get(placement.pinnedTo)?.currentStep === true
-      ? 'normal'
-      : 'dimmed';
-  }
-  if (options.brokenCurrentStep) return 'dimmed';
   return 'dimmed';
 }
 
@@ -41,12 +31,4 @@ export function endsOnNote(
 ): boolean {
   if (deck.stickies.length === 0) return false;
   return [edge.from, edge.to].some((id) => endpointOf(deck, id)?.kind === 'sticky');
-}
-
-export function notesOnStep(
-  deck: SododeckFile,
-  fromId: string,
-  toId: string,
-): readonly SododeckFile['stickies'][number][] {
-  return deck.stickies.filter((sticky) => sticky.anchor === fromId || sticky.anchor === toId);
 }
