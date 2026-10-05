@@ -1,10 +1,14 @@
 const FALLBACK_NAME = 'Untitled deck';
 const MAX_NAME_LENGTH = 100;
 
+/** The extension of a saved deck file. Older `.sododeck.json` and plain `.json` files still open. */
+export const DECK_EXTENSION = '.sododeck';
+const LEGACY_EXTENSION = '.sododeck.json';
+
 /**
  * A deck name made safe for a download file name (research R14): characters that file systems
  * refuse (`/\:*?"<>|`) and control characters become `-`, runs of spaces collapse, and the result
- * is trimmed to 100 characters. The caller adds `.sododeck.json`.
+ * is trimmed to 100 characters. The caller adds `.sododeck` (use `deckFileName`).
  */
 export function safeFileName(name: string): string {
   const cleaned = name
@@ -15,6 +19,21 @@ export function safeFileName(name: string): string {
     .slice(0, MAX_NAME_LENGTH)
     .trim();
   return cleaned === '' ? FALLBACK_NAME : cleaned;
+}
+
+/**
+ * The file name for saving a deck: `<safe name>.sododeck`. A deck named after a file
+ * (`Shop.sododeck`, `Shop.sododeck.json`) is not given the extension twice.
+ */
+export function deckFileName(name: string): string {
+  const safe = safeFileName(name);
+  const lower = safe.toLowerCase();
+  const stem = lower.endsWith(LEGACY_EXTENSION)
+    ? safe.slice(0, -LEGACY_EXTENSION.length)
+    : lower.endsWith(DECK_EXTENSION)
+      ? safe.slice(0, -DECK_EXTENSION.length)
+      : safe;
+  return `${stem.trim() === '' ? FALLBACK_NAME : stem}${DECK_EXTENSION}`;
 }
 
 /** Saves `text` as a local file through a temporary `<a download>` (no network, FR-041). */

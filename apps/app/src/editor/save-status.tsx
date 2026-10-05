@@ -66,7 +66,7 @@ function ErrorDetails({
       <div className="flex gap-2">
         <Button variant="primary" onClick={exportDeck}>
           <Download />
-          Export .sododeck.json
+          Export .sododeck
         </Button>
         <Button
           onClick={() => {

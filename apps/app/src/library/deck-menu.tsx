@@ -101,7 +101,7 @@ function DeckMenuItems({ deck, folders, commands, kit }: DeckMenuProps & { kit: 
         }}
       >
         <Download />
-        Export .sododeck.json
+        Export .sododeck
       </Item>
       <Separator />
       <Item

@@ -100,7 +100,7 @@ export function OverlaysSection() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="json">JSON · .sododeck.json</SelectItem>
+                    <SelectItem value="json">JSON · .sododeck</SelectItem>
                     <SelectItem value="png">PNG</SelectItem>
                     <SelectItem value="svg">SVG</SelectItem>
                   </SelectContent>
@@ -209,7 +209,7 @@ export function OverlaysSection() {
             </DropdownMenuSub>
             <DropdownMenuItem>
               <Download />
-              Export .sododeck.json
+              Export .sododeck
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem destructive>

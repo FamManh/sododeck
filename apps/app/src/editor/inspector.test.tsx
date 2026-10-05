@@ -166,8 +166,8 @@ describe('Inspector', () => {
     expect(screen.getByRole('heading', { name: 'Storage' })).toBeInTheDocument();
     // The component tests run without a stored deck: the demo wording.
     expect(screen.getByText('Demo deck · not stored')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Export .sododeck.json' }));
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(deck));
+    await user.click(screen.getByRole('button', { name: 'Export .sododeck' }));
+    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck', serializeDeck(deck));
     downloadText.mockRestore();
   });
 });

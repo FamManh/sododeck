@@ -19,6 +19,7 @@ import {
   duplicateDeck,
   exportDeckFile,
   importDeckFile,
+  importMermaidDeck,
   moveDeckTo,
   renameDeck,
   renameFolderInline,
@@ -113,7 +114,7 @@ describe('library actions', () => {
   it('exports the stored deck and records the export', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     await exportDeckFile(ctx, 'd1');
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(file));
+    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck', serializeDeck(file));
     expect((await db.decks.get('d1'))?.exportedAt).toBe(42);
   });
 
@@ -122,5 +123,57 @@ describe('library actions', () => {
     expect(name).toBe('Imported shop');
     const decks = await liveDecks(db);
     expect(decks.map((d) => d.name).sort()).toEqual(['Imported shop', 'Shop']);
+  });
+
+  describe('importMermaidDeck', () => {
+    const gridLayout = {
+      layout: vi.fn((request: { nodes: { id: string }[] }) =>
+        Promise.resolve(
+          Object.fromEntries(request.nodes.map((n, i) => [n.id, { x: i * 300, y: 0 }])),
+        ),
+      ),
+    };
+    beforeEach(() => {
+      gridLayout.layout.mockClear();
+      ctx = { ...ctx, layout: gridLayout };
+    });
+
+    it('lays out a flowchart and stores it as a new deck', async () => {
+      const result = await importMermaidDeck(ctx, 'flowchart LR\nA[Web] --> B(API)', null);
+      expect(result.report.counts).toMatchObject({ components: 2, connections: 1 });
+      expect(gridLayout.layout).toHaveBeenCalledOnce();
+      const stored = await contentOf(result.deckId);
+      expect(stored.name).toBe('Imported diagram');
+      expect(stored.nodes.map((n) => [n.title, n.position?.x])).toEqual([
+        ['Web', 0],
+        ['API', 300],
+      ]);
+      expect((await liveDecks(db)).map((d) => d.id)).toContain(result.deckId);
+    });
+
+    it('skips the layout for a sequence diagram', async () => {
+      const result = await importMermaidDeck(ctx, 'sequenceDiagram\nA->>B: hi\nB-->>A: ok', 'f1');
+      expect(gridLayout.layout).not.toHaveBeenCalled();
+      const stored = await contentOf(result.deckId);
+      expect(stored.flows[0]?.steps).toHaveLength(2);
+      expect((await db.decks.get(result.deckId))?.folderId).toBe('f1');
+    });
+
+    it('creates nothing when the text is refused', async () => {
+      await expect(importMermaidDeck(ctx, 'erDiagram\nA ||--o{ B : x', null)).rejects.toMatchObject(
+        {
+          code: 'mermaid-unsupported-type',
+        },
+      );
+      expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Shop']);
+    });
+
+    it('creates nothing when the layout fails or is cancelled', async () => {
+      gridLayout.layout.mockRejectedValueOnce(new Error('layout cancelled'));
+      await expect(importMermaidDeck(ctx, 'flowchart LR\nA --> B', null)).rejects.toThrow(
+        'layout cancelled',
+      );
+      expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Shop']);
+    });
   });
 });
