@@ -78,9 +78,7 @@
               {
                 "id": "dbidx.1",
                 "name": "notes_user_idx",
-                "columns": [
-                  "dbcol.5"
-                ]
+                "columns": ["dbcol.5"]
               }
             ]
           },
@@ -109,12 +107,8 @@
             "id": "edge.1",
             "from": "node.2",
             "to": "node.1",
-            "fromColumns": [
-              "dbcol.5"
-            ],
-            "toColumns": [
-              "dbcol.1"
-            ],
+            "fromColumns": ["dbcol.5"],
+            "toColumns": ["dbcol.1"],
             "cardinality": "n-1",
             "onDelete": "cascade"
           }

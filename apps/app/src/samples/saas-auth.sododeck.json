@@ -3,10 +3,7 @@
   "version": 1,
   "name": "SaaS auth",
   "description": "Users, sessions and workspaces behind a sign-up flow.",
-  "packs": [
-    "architecture",
-    "database"
-  ],
+  "packs": ["architecture", "database"],
   "dialect": "postgres",
   "nodes": [
     {
@@ -266,12 +263,8 @@
       "id": "rel.sessions-user",
       "from": "sessions",
       "to": "users",
-      "fromColumns": [
-        "sessions.user_id"
-      ],
-      "toColumns": [
-        "users.id"
-      ],
+      "fromColumns": ["sessions.user_id"],
+      "toColumns": ["users.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -279,12 +272,8 @@
       "id": "rel.memberships-org",
       "from": "memberships",
       "to": "orgs",
-      "fromColumns": [
-        "memberships.org_id"
-      ],
-      "toColumns": [
-        "orgs.id"
-      ],
+      "fromColumns": ["memberships.org_id"],
+      "toColumns": ["orgs.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -292,12 +281,8 @@
       "id": "rel.memberships-user",
       "from": "memberships",
       "to": "users",
-      "fromColumns": [
-        "memberships.user_id"
-      ],
-      "toColumns": [
-        "users.id"
-      ],
+      "fromColumns": ["memberships.user_id"],
+      "toColumns": ["users.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -305,12 +290,8 @@
       "id": "rel.invites-org",
       "from": "invites",
       "to": "orgs",
-      "fromColumns": [
-        "invites.org_id"
-      ],
-      "toColumns": [
-        "orgs.id"
-      ],
+      "fromColumns": ["invites.org_id"],
+      "toColumns": ["orgs.id"],
       "cardinality": "n-1",
       "onDelete": "cascade"
     }
