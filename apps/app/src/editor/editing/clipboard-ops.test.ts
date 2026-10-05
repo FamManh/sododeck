@@ -106,3 +106,77 @@ describe('duplicate and paste of tables (043 US5, R10)', () => {
     expect(ui().titleEdit).toBeNull();
   });
 });
+
+describe('copy, duplicate and paste of images (055)', () => {
+  const asset = 'a'.repeat(64);
+  const picture = (id: string, x: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    asset,
+    position: { x, y: 100 },
+    size: { width: 80, height: 60 },
+    ...extra,
+  });
+  const gallery = deckOf({
+    nodes: [{ id: 'card', type: 'service', title: 'Card', position: { x: 0, y: 0 }, group: 'g' }],
+    groups: [{ id: 'g', title: 'Group' }],
+    images: [picture('i1', 200, { group: 'g', alt: 'Logo' }), picture('i2', 400)],
+    assets: {
+      [asset]: { type: 'image/png', bytes: 1, width: 1, height: 1, name: 'a.png', data: '' },
+    },
+  });
+  const selection = { ...EMPTY_SELECTION, nodes: ['card'], images: ['i1', 'i2'] };
+
+  it('duplicates images with a card: new ids, same picture, kept group, on top, selected', () => {
+    const { doc, editor } = setup(gallery);
+    // The card and the first image share group g, so the copies go into it (016 R11).
+    const inGroup = { ...EMPTY_SELECTION, nodes: ['card'], images: ['i1'] };
+    expect(duplicateSelection(editor, inGroup)).toBe(true);
+    const deck = toJSON(doc);
+    expect(deck.images).toHaveLength(3);
+    const copy = (deck.images ?? []).find((i) => i.id !== 'i1' && i.id !== 'i2');
+    expect(copy).toMatchObject({ asset, alt: 'Logo', group: 'g', position: { x: 224, y: 124 } });
+    expect(ui().selection.images).toEqual([copy?.id]);
+    expect(ui().announcement.text).toBe('Duplicated 1 component');
+    editor.undo();
+    expect(toJSON(doc).images).toHaveLength(2);
+  });
+
+  it('duplicates images that share no group at the top level', () => {
+    const { doc, editor } = setup(gallery);
+    expect(duplicateSelection(editor, selection)).toBe(true);
+    const copies = (toJSON(doc).images ?? []).filter((i) => i.id !== 'i1' && i.id !== 'i2');
+    expect(copies.map((i) => i.asset)).toEqual([asset, asset]);
+    expect(copies.every((i) => i.group === undefined)).toBe(true);
+    expect(copies.map((i) => i.position).sort((a, b) => a.x - b.x)).toEqual([
+      { x: 224, y: 124 },
+      { x: 424, y: 124 },
+    ]);
+  });
+
+  it('copies an image alone and pastes it at the pointer, announcing "1 image"', () => {
+    const { doc, editor } = setup(gallery);
+    const copy = copySelectionText(editor, { ...EMPTY_SELECTION, images: ['i2'] });
+    expect(copy).not.toBeNull();
+    if (copy === null) return;
+    expect(pasteText(editor, copy.text, { x: 1000, y: 1000 }, null)).toBe(true);
+    const deck = toJSON(doc);
+    expect(deck.images).toHaveLength(3);
+    const pasted = deck.images?.find((i) => !['i1', 'i2'].includes(i.id));
+    expect(pasted).toMatchObject({ asset, position: { x: 1000, y: 1000 } });
+    expect(ui().announcement.text).toBe('Pasted 1 image');
+    expect(ui().selection.images).toEqual([pasted?.id]);
+  });
+
+  it('leaves the original where it was and stacks the pasted copy on top', () => {
+    const { doc, editor } = setup(gallery);
+    const copy = copySelectionText(editor, { ...EMPTY_SELECTION, images: ['i1'] });
+    if (copy === null) throw new Error('nothing copied');
+    pasteText(editor, copy.text, { x: 5000, y: 5000 }, null);
+    const deck = toJSON(doc);
+    expect(deck.images).toHaveLength(3);
+    expect(deck.images?.find((i) => i.id === 'i1')?.position).toEqual({ x: 200, y: 100 });
+    const pasted = deck.images?.find((i) => !['i1', 'i2'].includes(i.id));
+    const ranks = (deck.images ?? []).map((i) => i.z ?? 0);
+    expect(pasted?.z).toBe(Math.max(...ranks));
+  });
+});
