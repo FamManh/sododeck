@@ -190,47 +190,51 @@ and **027** ai-deck-skill are not scheduled.
 
 ## Feature list
 
-| ID  | Name                     | Milestone  | Depends on    | Est. | Needs design?                                                 |
-| --- | ------------------------ | ---------- | ------------- | ---- | ------------------------------------------------------------- |
-| 000 | design-foundation        | M1         | —             | 4 d  | —                                                             |
-| 001 | json-schema-v1           | M1         | —             | 3 d  | ⚠ decision (§g-4)                                             |
-| 002 | yjs-model                | M1         | 001           | 4 d  | —                                                             |
-| 003 | canvas-basic             | M1         | 000, 002      | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                          |
-| 004 | json-panel-sync          | M1         | 003           | 2 d  | decided (§g-3): read-only                                     |
-| 005 | local-library-autosave   | M1         | 000, 002      | 4 d  | designed (72–85); decided §g-33–§g-35                         |
-| 006 | flow-authoring           | M2         | 003           | 5 d  | designed (41–48); ⚠ §g-18                                     |
-| 007 | flow-playback            | M2         | 006           | 4 d  | — (branch picker in 46)                                       |
-| 008 | inspector-rules          | M3         | 006           | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                          |
-| 015 | model-validation         | M3         | 006           | 2 d  | designed (60); ⚠ §g-23                                        |
-| 009 | stickies-search          | M3         | 008           | 4 d  | designed (62, 63); ⚠ §g-21                                    |
-| 010 | zoom-groups-focus        | M4         | 003           | 5 d  | designed (64–71); ⚠ §g-22                                     |
-| 011 | views-autolayout         | M4         | 010           | 5 d  | custom view config, layout button (default ok)                |
-| 012 | export                   | M5         | 007, 011      | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                       |
-| 013 | samples-onboarding       | M5         | 005, 009      | 3 d  | —                                                             |
-| 014 | analytics-feedback       | M5         | 005           | 2 d  | feedback button (small)                                       |
-| 021 | design-sync-canvas-first | after M4   | 011           | 1 d  | docs only; designed (86–116)                                  |
-| 018 | canvas-first-layout      | after M4   | 021           | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                    |
-| 019 | card-quick-edit          | after M4   | 018           | 3 d  | designed (95–104)                                             |
-| 016 | canvas-editing           | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change     |
-| 017 | resize-edge-routing      | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                    |
-| 020 | card-style               | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change                |
-| 022 | connector-style          | after M4   | 017, 020, 029 | 8 d  | implemented (ADR 0024, frames 128–133); schema change         |
-| 023 | hybrid-canvas-renderer   | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design     |
-| 024 | domain-kind-packs        | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR          |
-| 025 | format-compatibility     | pre-launch | 005           | 2 d  | deferred (§g-81); re-confirm ADR 0020 before launch           |
-| 026 | diagram-as-code          | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps               |
-| 027 | ai-deck-skill            | later      | 001, 025      | 3 d  | — (skill package + docs page)                                 |
-| 028 | design-sync-card-system  | after M4   | —             | 1 d  | docs only; designed (Cards board B)                           |
-| 029 | card-look-deck           | after M4   | 028, 036      | 6 d  | implemented (2026-10-03); visual check and quickstart partial |
-| 030 | card-types-and-packs     | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR                |
-| 031 | shapes                   | after M4   | 030           | 6 d  | built (2026-10-03); see `specs/031-shapes/`, ADR 0026         |
-| 032 | typed-fields             | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
-| 033 | deck-tag-colours         | after M4   | 029           | 3 d  | implemented (2026-10-03); visual check and quickstart partial |
-| 034 | connection-focus-drill   | after M4   | 029           | 4 d  | implemented (2026-10-03)                                      |
-| 035 | flow-playback-deck       | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
-| 036 | collab-ready-document    | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
-| 037 | scale-bench              | before 023 | 036           | 2 d  | —                                                             |
-| 038 | card-icons               | after 036  | 036, (029)    | 4 d  | built; lucide now, icon sets later (ADR 0028)                 |
+| ID  | Name                           | Milestone  | Depends on    | Est. | Needs design?                                                 |
+| --- | ------------------------------ | ---------- | ------------- | ---- | ------------------------------------------------------------- |
+| 000 | design-foundation              | M1         | —             | 4 d  | —                                                             |
+| 001 | json-schema-v1                 | M1         | —             | 3 d  | ⚠ decision (§g-4)                                             |
+| 002 | yjs-model                      | M1         | 001           | 4 d  | —                                                             |
+| 003 | canvas-basic                   | M1         | 000, 002      | 5 d  | designed (52–59, 61); ⚠ §g-19, §g-28                          |
+| 004 | json-panel-sync                | M1         | 003           | 2 d  | decided (§g-3): read-only                                     |
+| 005 | local-library-autosave         | M1         | 000, 002      | 4 d  | designed (72–85); decided §g-33–§g-35                         |
+| 006 | flow-authoring                 | M2         | 003           | 5 d  | designed (41–48); ⚠ §g-18                                     |
+| 007 | flow-playback                  | M2         | 006           | 4 d  | — (branch picker in 46)                                       |
+| 008 | inspector-rules                | M3         | 006           | 5 d  | designed (49–51, 58); ⚠ §g-24, §g-26                          |
+| 015 | model-validation               | M3         | 006           | 2 d  | designed (60); ⚠ §g-23                                        |
+| 009 | stickies-search                | M3         | 008           | 4 d  | designed (62, 63); ⚠ §g-21                                    |
+| 010 | zoom-groups-focus              | M4         | 003           | 5 d  | designed (64–71); ⚠ §g-22                                     |
+| 011 | views-autolayout               | M4         | 010           | 5 d  | custom view config, layout button (default ok)                |
+| 012 | export                         | M5         | 007, 011      | 3 d  | JSON + PNG/SVG only; PDF, Mermaid later                       |
+| 013 | samples-onboarding             | M5         | 005, 009      | 3 d  | —                                                             |
+| 014 | analytics-feedback             | M5         | 005           | 2 d  | feedback button (small)                                       |
+| 021 | design-sync-canvas-first       | after M4   | 011           | 1 d  | docs only; designed (86–116)                                  |
+| 018 | canvas-first-layout            | after M4   | 021           | 5 d  | designed (86–94, 115, 116); ⚠ §g-42, §g-46                    |
+| 019 | card-quick-edit                | after M4   | 018           | 3 d  | designed (95–104)                                             |
+| 016 | canvas-editing                 | after M4   | 019           | 6 d  | designed (92, 99, 102–104, 108–111); §g-55; schema change     |
+| 017 | resize-edge-routing            | after M4   | 003 (016)     | 4 d  | designed (112–114); ⚠ §g-44; schema change                    |
+| 020 | card-style                     | after M4   | 019           | 3 d  | designed (91, 105–107); ⚠ §g-43; schema change                |
+| 022 | connector-style                | after M4   | 017, 020, 029 | 8 d  | implemented (ADR 0024, frames 128–133); schema change         |
+| 023 | hybrid-canvas-renderer         | later      | 010, 012      | 8 d  | ⚠ gated by a large-deck bench; far-zoom look needs design     |
+| 024 | domain-kind-packs              | later      | 001, 020      | 6 d  | ⚠ founder decision (open kinds); schema change + ADR          |
+| 025 | format-compatibility           | pre-launch | 005           | 2 d  | deferred (§g-81); re-confirm ADR 0020 before launch           |
+| 026 | diagram-as-code                | later      | 004, 018, 025 | 8 d  | ⚠ apply-on-pause vs Apply button; importer deps               |
+| 027 | ai-deck-skill                  | later      | 001, 025      | 3 d  | — (skill package + docs page)                                 |
+| 028 | design-sync-card-system        | after M4   | —             | 1 d  | docs only; designed (Cards board B)                           |
+| 029 | card-look-deck                 | after M4   | 028, 036      | 6 d  | implemented (2026-10-03); visual check and quickstart partial |
+| 030 | card-types-and-packs           | after M4   | 029           | 5 d  | designed (B type palette); schema change + ADR                |
+| 031 | shapes                         | after M4   | 030           | 6 d  | built (2026-10-03); see `specs/031-shapes/`, ADR 0026         |
+| 032 | typed-fields                   | after M4   | 030           | 5 d  | designed (B typed fields); schema change + ADR                |
+| 033 | deck-tag-colours               | after M4   | 029           | 3 d  | implemented (2026-10-03); visual check and quickstart partial |
+| 034 | connection-focus-drill         | after M4   | 029           | 4 d  | implemented (2026-10-03)                                      |
+| 035 | flow-playback-deck             | after M4   | 029           | 3 d  | built, see `specs/035-flow-playback-deck/`                    |
+| 036 | collab-ready-document          | before 029 | —             | 6 d  | implemented (ADR 0021, 0022); SC-006 open                     |
+| 037 | scale-bench                    | before 023 | 036           | 2 d  | —                                                             |
+| 038 | card-icons                     | after 036  | 036, (029)    | 4 d  | built; lucide now, icon sets later (ADR 0028)                 |
+| 053 | sticky-notes-and-connectors    | after 052  | 009, 050      | 4 d  | founder feedback 2026-10-05                                   |
+| 054 | editor-chrome-polish           | after 053  | 018, 052      | 4 d  | founder feedback 2026-10-05                                   |
+| 055 | image-support                  | after 054  | 036           | 6 d  | founder feedback; ADR needed (schema, storage)                |
+| 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 4 d  | founder feedback; ⚠ scope of Mermaid import                   |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -2293,6 +2297,63 @@ accent, defaultFields, fieldsOnCard }`. Built-in packs: Architecture (service, d
 - **Risks:** bundle size if the whole lucide set is loaded up front; lucide renaming icons between
   versions (aliases needed); solid icons (later packs) must not render as a filled blob in a
   line-drawing renderer.
+
+## Founder feedback batch (2026-10-05, 053–056)
+
+Source: founder's manual testing. Split into four features; small fixes are bundled, the large
+ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 → 055.
+
+## 053-sticky-notes-and-connectors
+
+- **Status:** not started.
+- **Goal:** A sticky note looks like a sticky note, can be resized, takes part in connections and
+  has its own toolbar; several connectors can be selected and edited together.
+- **In scope:**
+  - Sticky look distinct from a card (shape and paper feel) so it reads as a note at a glance.
+  - Resize a sticky.
+  - Drag a connector from a sticky to any other item (e.g. comment on a card by linking a sticky
+    to it).
+  - Sticky stack in the Add flyout (click or drag a note from the pad onto the canvas).
+  - Auto-fit text: size follows note size and text length, never cut off (readable minimum);
+    optional fixed size.
+  - Sticky toolbar: text size, bold, alignment, link, 16-colour palette, expand / collapse,
+    pin, lock, delete.
+  - Multi-select connectors (shift / marquee) with a floating toolbar (arrow ends, type, colour,
+    weight, lock); changes apply to all in one undo step.
+- **Out of scope:** new sticky types, sticky templates, comments or threads, convert-to, owner / tags / reactions on stickies.
+- **Prompt:** `/speckit.specify 053 from docs/backlog.md: sticky notes and connector multi-select.`
+
+## 054-editor-chrome-polish
+
+- **Status:** not started.
+- **Goal:** Fix the editor chrome issues found in manual testing.
+- **In scope:**
+  - Board settings out of the hamburger menu into a visible place.
+  - Views: one "General" and one "Feature" view (names that fit any kind of deck, not only
+    architecture).
+  - Focus moves into the toolbar, below the Select tool.
+  - Auto / Names / Keys / All control: explain it or make it smaller (it takes too much space).
+  - "Spread ends evenly": explain it in the UI (label or tooltip).
+  - Lock: select all then lock, and lock a group, not only one card at a time.
+  - DBML editor in its own right-side drawer, separate from the JSON panel.
+- **Out of scope:** new settings, redesigning the toolbar.
+- **Prompt:** `/speckit.specify 054 from docs/backlog.md: editor chrome polish.`
+
+## 055-image-support
+
+- **Status:** not started. **Needs an ADR** (file format, storage size, no network with content).
+- **Goal:** Upload images, and paste them with Ctrl+V.
+- **Open questions:** is an image its own canvas object, or also usable inside cards? Size limits,
+  how images are stored in IndexedDB and in the `.sododeck` file, export (PNG / SVG).
+- **Prompt:** `/speckit.specify 055 from docs/backlog.md: image support.`
+
+## 056-file-format-and-mermaid-import
+
+- **Status:** not started.
+- **Goal:** File extension `.sododeck` (drop the trailing `.json`; old `.sododeck.json` files
+  still open) and import of Mermaid text.
+- **Open questions:** which Mermaid diagram types (flowchart only, or also ER and sequence).
+- **Prompt:** `/speckit.specify 056 from docs/backlog.md: file extension and Mermaid import.`
 
 ### Later: user-defined card attributes (not scheduled, §g-40)
 
