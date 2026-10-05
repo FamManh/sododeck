@@ -48,8 +48,8 @@ export function useImportFiles(
           onMermaid(text);
           return;
         }
-        const { name, missingPictures } = await importDeckFile(commands.ctx, text, folderId);
-        toast({ message: importedMessage(name, missingPictures) });
+        const { name, ...notes } = await importDeckFile(commands.ctx, text, folderId);
+        toast({ message: importedMessage(name, notes) });
       } catch (error) {
         toast({ message: importMessage(error) });
       }

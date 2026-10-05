@@ -28,6 +28,7 @@ import {
   duplicateDeck,
   exportDeckFile,
   importDeckFile,
+  importedMessage,
   importMermaidDeck,
   moveDeckTo,
   renameDeck,
@@ -180,6 +181,17 @@ describe('library actions', () => {
       expect(await listBlobIds(db, ids[0] ?? '')).toEqual([]);
     });
 
+    it('counts image crops trimmed to the picture edge (057)', async () => {
+      const text = imageDeckJson().replace(
+        /("size": \{[^}]*\})/,
+        '$1,\n"crop": { "x": 0.6, "y": 0, "width": 0.6, "height": 1 }',
+      );
+      expect(text).toContain('"crop"');
+      const result = await importDeckFile(ctx, text, null);
+      expect(result).toMatchObject({ missingPictures: 0, trimmedCrops: 1 });
+      expect((await importDeckFile(ctx, imageDeckJson(), null)).trimmedCrops).toBe(0);
+    });
+
     it('exports the pictures its images use, byte for byte', async () => {
       const stored = fromJSON(JSON.parse(imageDeckJson(false)));
       await insertDeck(db, deckRecord('d2', { name: 'Pics' }), Y.encodeStateAsUpdate(stored));
@@ -254,5 +266,24 @@ describe('library actions', () => {
       );
       expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Shop']);
     });
+  });
+});
+
+describe('importedMessage (055, 057)', () => {
+  it('names the deck, then missing pictures and trimmed crops, singular or plural', () => {
+    expect(importedMessage('Shop', { missingPictures: 0, trimmedCrops: 0 })).toBe(
+      'Imported "Shop"',
+    );
+    expect(importedMessage('Shop', { missingPictures: 2, trimmedCrops: 0 })).toBe(
+      'Imported "Shop". 2 pictures are missing from the file.',
+    );
+    expect(importedMessage('Shop', { missingPictures: 0, trimmedCrops: 1 })).toBe(
+      'Imported "Shop". 1 image crop was trimmed to the picture edge.',
+    );
+    expect(
+      importedMessage('Shop', { missingPictures: 1, trimmedCrops: 3 }, ' into the library'),
+    ).toBe(
+      'Imported "Shop" into the library. 1 picture is missing from the file. 3 image crops were trimmed to the picture edge.',
+    );
   });
 });

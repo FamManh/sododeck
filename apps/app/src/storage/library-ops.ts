@@ -13,6 +13,7 @@ import {
   serializeDeck,
   toJSON,
   type AssetProblem,
+  type TrimmedCrop,
   type DeckDoc,
 } from '@sododeck/model';
 import { emptySododeckFile, FORMAT_VERSION, type SododeckFile } from '@sododeck/schema';
@@ -61,6 +62,8 @@ export interface PictureBytes {
 export interface ImportedDeck extends DeckBytes {
   pictures: PictureBytes[];
   problems: AssetProblem[];
+  /** Images whose crop ran past the picture edge and was cut back on load (057). */
+  trimmedCrops: TrimmedCrop[];
 }
 
 const IMPORTED_NAME = 'Imported deck';
@@ -140,6 +143,7 @@ export function importFile(text: string): ImportedDeck {
     summary: summarizeDeck(toJSON(doc)),
     pictures: picturesOf(doc, loaded.bytes),
     problems: loaded.problems,
+    trimmedCrops: loaded.trimmedCrops,
   };
 }
 

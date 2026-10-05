@@ -1,5 +1,5 @@
 import type { DeckSummary } from './deck-summary';
-import type { AssetProblem } from '@sododeck/model';
+import type { AssetProblem, TrimmedCrop } from '@sododeck/model';
 
 import type { MermaidImport } from '../import-mermaid/import-mermaid';
 import type { LibraryOpErrorCode, PictureBytes } from './library-ops';
@@ -21,6 +21,7 @@ export type LibraryResult =
       summary: DeckSummary;
       pictures: PictureBytes[];
       problems: AssetProblem[];
+      trimmedCrops: TrimmedCrop[];
     }
   | { op: 'rename'; delta: Uint8Array; summary: DeckSummary }
   | { op: 'export'; json: string; name: string }

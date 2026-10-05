@@ -64,13 +64,13 @@ export function DeckMenu() {
       return;
     }
     try {
-      const { name, missingPictures } = await importDeckFile(
+      const { name, ...notes } = await importDeckFile(
         { db, client: getLibraryClient() },
         await file.text(),
         null,
       );
       toast({
-        message: importedMessage(name, missingPictures, ' into the library'),
+        message: importedMessage(name, notes, ' into the library'),
         action: {
           label: 'Open library',
           onAction: () => {

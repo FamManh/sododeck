@@ -191,26 +191,45 @@ export async function exportDeckFile(ctx: LibraryActionContext, deckId: string):
   await markExported(ctx.db, deckId, clock(ctx));
 }
 
+/** What an import could not keep as written: pictures without bytes, crops cut back (055, 057). */
+export interface ImportNotes {
+  missingPictures: number;
+  trimmedCrops: number;
+}
+
 /**
- * Imports one file as a new deck (FR-023); returns its name and how many pictures the file could
- * not supply (they open as "Picture missing", 055). Worker errors propagate.
+ * Imports one file as a new deck (FR-023); returns its name, how many pictures the file could not
+ * supply (they open as "Picture missing", 055) and how many image crops ran past the picture and
+ * were trimmed (057). Worker errors propagate.
  */
 export async function importDeckFile(
   ctx: LibraryActionContext,
   text: string,
   folderId: string | null,
-): Promise<{ name: string; missingPictures: number }> {
+): Promise<{ name: string } & ImportNotes> {
   const imported = await ctx.client.importFile(text);
   await addDeck(ctx, imported, folderId);
-  return { name: imported.summary.name, missingPictures: imported.problems.length };
+  return {
+    name: imported.summary.name,
+    missingPictures: imported.problems.length,
+    trimmedCrops: imported.trimmedCrops.length,
+  };
 }
 
-/** The import toast: names the deck and, once, how many pictures are missing (055). */
-export function importedMessage(name: string, missingPictures: number, suffix = ''): string {
-  const base = `Imported "${name}"${suffix}`;
-  if (missingPictures === 0) return base;
-  const noun = missingPictures === 1 ? 'picture is' : 'pictures are';
-  return `${base}. ${String(missingPictures)} ${noun} missing from the file.`;
+/** The import toast: the deck's name, then what the file could not keep, each said once. */
+export function importedMessage(name: string, notes: ImportNotes, suffix = ''): string {
+  const parts = [`Imported "${name}"${suffix}.`];
+  const { missingPictures, trimmedCrops } = notes;
+  if (missingPictures > 0) {
+    const noun = missingPictures === 1 ? 'picture is' : 'pictures are';
+    parts.push(`${String(missingPictures)} ${noun} missing from the file.`);
+  }
+  if (trimmedCrops > 0) {
+    const noun = trimmedCrops === 1 ? 'image crop was' : 'image crops were';
+    parts.push(`${String(trimmedCrops)} ${noun} trimmed to the picture edge.`);
+  }
+  // A bare name keeps its old form, without the full stop.
+  return parts.length === 1 ? `Imported "${name}"${suffix}` : parts.join(' ');
 }
 
 export interface MermaidImportResult {

@@ -267,3 +267,39 @@ describe('crop and flip in the file (057)', () => {
     expect(loadDeck(emptySododeckFile()).trimmedCrops).toEqual([]);
   });
 });
+
+describe('undoing crop and flip (057 US3)', () => {
+  it('undoes crop, flip, reset and flip one at a time, in reverse order', () => {
+    const { doc, editor } = setupDeck();
+    const [id = ''] = editor.addImages([wide(1)]);
+    const state = () => {
+      const image = getObject(doc, 'images', id);
+      return [image?.crop?.x, image?.flipX, image?.flipY, image?.size.width];
+    };
+    editor.setImageCrop(id, RIGHT);
+    editor.setImageFlip([id], 'x', true);
+    editor.setImageCrop(id, null);
+    editor.setImageFlip([id], 'y', true);
+    expect(state()).toEqual([undefined, true, true, 400]);
+    editor.undo();
+    expect(state()).toEqual([undefined, true, undefined, 400]);
+    editor.undo();
+    expect(state()).toEqual([0.5, true, undefined, 200]);
+    editor.undo();
+    expect(state()).toEqual([0.5, undefined, undefined, 200]);
+    editor.undo();
+    expect(state()).toEqual([undefined, undefined, undefined, 400]);
+  });
+
+  it('edits two images that share one picture independently', () => {
+    const { doc, editor } = setupDeck();
+    const [a = '', b = ''] = editor.addImages([wide(1), wide(1, { position: { x: 600, y: 0 } })]);
+    editor.setImageCrop(a, RIGHT);
+    editor.setImageFlip([a], 'x', true);
+    const other = getObject(doc, 'images', b);
+    expect(other?.asset).toBe(getObject(doc, 'images', a)?.asset);
+    expect(other).not.toHaveProperty('crop');
+    expect(other).not.toHaveProperty('flipX');
+    expect(other?.size).toEqual({ width: 400, height: 200 });
+  });
+});
