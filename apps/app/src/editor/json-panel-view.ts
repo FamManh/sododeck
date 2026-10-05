@@ -21,7 +21,7 @@ export interface SelectionView {
   label: string;
   /** Accessible name and tooltip. */
   fullLabel: string;
-  /** Selected nodes, then selected edges, then selected notes, each in deck order. */
+  /** Selected nodes, edges, groups, notes, then images, each in deck order. */
   entries: Entry[];
 }
 
@@ -74,15 +74,18 @@ export function selectionView(
   const edgeIds = new Set(selection.edges);
   const groupIds = new Set(selection.groups);
   const stickyIds = new Set(selection.stickies);
+  const imageIds = new Set(selection.images);
   const nodes = deck.nodes.filter((node) => nodeIds.has(node.id));
   const edges = deck.edges.filter((edge) => edgeIds.has(edge.id));
   const groups = deck.groups.filter((group) => groupIds.has(group.id));
   const stickies = deck.stickies.filter((sticky) => stickyIds.has(sticky.id));
+  const images = (deck.images ?? []).filter((image) => imageIds.has(image.id));
   const entries: Entry[] = [
     ...nodes.map((value) => ({ collection: 'nodes' as const, value })),
     ...edges.map((value) => ({ collection: 'edges' as const, value })),
     ...groups.map((value) => ({ collection: 'groups' as const, value })),
     ...stickies.map((value) => ({ collection: 'stickies' as const, value })),
+    ...images.map((value) => ({ collection: 'images' as const, value })),
   ];
 
   let label = 'Selection';
@@ -90,6 +93,7 @@ export function selectionView(
   const [edge] = edges;
   const [group] = groups;
   const [sticky] = stickies;
+  const [image] = images;
   if (entries.length > 1) label = `${String(entries.length)} selected`;
   else if (node) label = node.title;
   else if (edge) {
@@ -97,6 +101,12 @@ export function selectionView(
     label = edge.label ?? `${endpointTitle(deck, edge.from)} → ${endpointTitle(deck, edge.to)}`;
   } else if (group) label = group.title;
   else if (sticky) label = stickyLabel(sticky.text) ?? 'Empty note';
+  else if (image) {
+    label =
+      image.alt !== undefined && image.alt !== ''
+        ? image.alt
+        : (deck.assets?.[image.asset]?.name ?? 'Image');
+  }
   return { label, fullLabel: label, entries };
 }
 

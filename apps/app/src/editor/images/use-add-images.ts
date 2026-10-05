@@ -44,9 +44,10 @@ export function useAddImages(): (files: readonly File[], at?: { x: number; y: nu
             ui.focus(null);
           }
           const added = result.ids.length > 0 ? result.messages.at(-1) : undefined;
+          // The Undo toast first: it replaces the previous Undo toast, so it must not dismiss ours.
+          if (added !== undefined) undoToast(added);
           for (const message of result.messages) {
-            if (message === added) undoToast(message);
-            else toast({ message });
+            if (message !== added) toast({ message });
           }
           ui.announce(result.messages.join(' '));
         },

@@ -37,7 +37,11 @@ async function load(store: PictureStore, id: string, entry: Entry): Promise<void
   if (blob !== null) {
     if (entry.timer !== undefined) clearTimeout(entry.timer);
     entry.timer = undefined;
-    setState(entry, { status: 'ready', url: URL.createObjectURL(blob) });
+    try {
+      setState(entry, { status: 'ready', url: URL.createObjectURL(blob) });
+    } catch {
+      setState(entry, MISSING);
+    }
     return;
   }
   if (entry.retried) {

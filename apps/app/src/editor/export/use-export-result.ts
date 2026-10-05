@@ -2,6 +2,8 @@ import type { SododeckFile } from '@sododeck/schema';
 import { EMBEDDED_FONT_CSS } from '@sododeck/ui/lib/embedded-fonts';
 import { useEffect, type Dispatch } from 'react';
 
+import { usePictureStore } from '../../images/picture-store';
+import { readPictureBytes } from '../../images/read-pictures';
 import { schemaExport, schemaFileName } from '../../db/export/schema-export';
 import type { SchemaExportRequest } from '../../db/export/types';
 import type { ExportAction, ExportDialogState, ExportResult } from './export-dialog-state';
@@ -91,8 +93,12 @@ export function pngSizeHint(bounds: { width: number; height: number }, scale: Pn
   return `${width} × ${height} px`;
 }
 
-function jsonResult(deck: SododeckFile, options: ExportDialogState['options']['json']) {
-  const { text, bytes } = jsonExport(deck, options);
+function jsonResult(
+  deck: SododeckFile,
+  options: ExportDialogState['options']['json'],
+  pictures: ReadonlyMap<string, Uint8Array>,
+) {
+  const { text, bytes } = jsonExport(deck, options, pictures);
   return {
     fileName: exportFileName(deck.name, null, 'json'),
     sizeHint: formatBytes(bytes),
@@ -127,6 +133,7 @@ export function useExportResult(
   ui: ExportUi,
 ): void {
   const { format, imageScope, json, transparent, retryCount, schema } = request;
+  const store = usePictureStore();
   useEffect(() => {
     const key = exportRequestKey(
       { format, imageScope, json, transparent, retryCount, schema },
@@ -140,7 +147,7 @@ export function useExportResult(
       return;
     }
     const generate = async (): Promise<ExportResult | 'empty'> => {
-      if (format === 'json') return jsonResult(deck, json);
+      if (format === 'json') return jsonResult(deck, json, await readPictureBytes(store, deck));
       // Text built on the main thread: < 50 ms for 150 tables (045 research R2, perf test).
       if (schema !== null) return schemaResult(deck, schema);
       await ensureFontsLoaded();
@@ -186,5 +193,5 @@ export function useExportResult(
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [deck, ui, format, imageScope, json, transparent, retryCount, schema, dispatch]);
+  }, [deck, ui, format, imageScope, json, transparent, retryCount, schema, dispatch, store]);
 }

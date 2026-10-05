@@ -30,6 +30,12 @@ if (typeof window !== 'undefined') {
     globalThis.CSS = { escape: (value: string) => value.replace(/["\\]/g, '\\$&') } as typeof CSS;
   }
 
+  // Object URLs of pictures (055): jsdom's Blob is not the one vitest's URL polyfill expects.
+  // Tests that look at the URL replace these.
+  let objectUrls = 0;
+  URL.createObjectURL = () => `blob:sododeck-test/${String(objectUrls++)}`;
+  URL.revokeObjectURL = () => undefined;
+
   Element.prototype.hasPointerCapture = () => false;
   Element.prototype.setPointerCapture = () => undefined;
   Element.prototype.releasePointerCapture = () => undefined;

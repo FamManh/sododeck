@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { demoDeck } from './demo-deck';
-import { useThrottledDeckText } from './use-throttled-deck-text';
+import { deckPanelText, useThrottledDeckText } from './use-throttled-deck-text';
 
 vi.mock('@sododeck/model', async (importOriginal) => {
   const actual = await importOriginal<typeof model>();
@@ -90,5 +90,57 @@ describe('useThrottledDeckText', () => {
     hook.rerender({ on: true });
     expect(hook.result.current).toBe(exported());
     expect(hook.result.current).toContain('"While hidden"');
+  });
+});
+
+describe('deckPanelText (055)', () => {
+  const asset = 'c'.repeat(64);
+  const withImages = {
+    ...demoDeck,
+    images: [{ id: 'i1', asset, position: { x: 0, y: 0 }, size: { width: 80, height: 40 } }],
+    assets: {
+      [asset]: {
+        type: 'image/png' as const,
+        bytes: 90,
+        width: 8,
+        height: 4,
+        name: 'a.png',
+        data: '',
+      },
+    },
+  };
+
+  it('shows image records and picture facts, never picture data, and stays valid JSON', () => {
+    const text = deckPanelText(withImages);
+    expect(text).not.toContain('"data"');
+    expect(text).not.toMatch(/[A-Za-z0-9+/]{100,}/);
+    const parsed = JSON.parse(text) as { images: unknown[]; assets: Record<string, unknown> };
+    expect(parsed.images).toHaveLength(1);
+    expect(parsed.assets[asset]).toEqual({
+      type: 'image/png',
+      bytes: 90,
+      width: 8,
+      height: 4,
+      name: 'a.png',
+    });
+  });
+
+  it('is exactly the exported file for a deck without images', () => {
+    expect(deckPanelText(demoDeck)).toBe(model.serializeDeck(demoDeck));
+  });
+
+  it('stays small for many images: a few hundred bytes each', () => {
+    const many = {
+      ...withImages,
+      images: Array.from({ length: 50 }, (_, i) => ({
+        id: `i${String(i)}`,
+        asset,
+        position: { x: i, y: 0 },
+        size: { width: 80, height: 40 },
+      })),
+    };
+    expect(deckPanelText(many).length - deckPanelText(demoDeck).length).toBeLessThan(
+      50 * 400 + 400,
+    );
   });
 });

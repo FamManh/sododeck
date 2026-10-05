@@ -299,3 +299,32 @@ describe('selectionView group ends (050 US4)', () => {
     ).toBe('A → Data layer');
   });
 });
+
+describe('images in the JSON panel (055)', () => {
+  const asset = 'b'.repeat(64);
+  const withImages: SododeckFile = {
+    ...emptySododeckFile(),
+    images: [
+      { id: 'i1', asset, position: { x: 0, y: 0 }, size: { width: 80, height: 40 }, alt: 'Logo' },
+      { id: 'i2', asset, position: { x: 100, y: 0 }, size: { width: 80, height: 40 } },
+    ],
+    assets: {
+      [asset]: { type: 'image/png', bytes: 90, width: 8, height: 4, name: 'logo.png', data: '' },
+    },
+  };
+
+  it('selects an image by its alt text, else its file name', () => {
+    expect(selectionView(withImages, { ...none, images: ['i1'] }).label).toBe('Logo');
+    expect(selectionView(withImages, { ...none, images: ['i2'] }).label).toBe('logo.png');
+    const both = selectionView(withImages, { ...none, images: ['i1', 'i2'] });
+    expect(both.label).toBe('2 selected');
+    expect(both.entries.map((entry) => entry.collection)).toEqual(['images', 'images']);
+  });
+
+  it('shows the record of a selected image, without picture data', () => {
+    const view = selectionView(withImages, { ...none, images: ['i1'] });
+    const text = selectionText(view.entries);
+    expect(JSON.parse(text)).toMatchObject({ id: 'i1', asset, alt: 'Logo' });
+    expect(text).not.toContain('"data"');
+  });
+});
