@@ -104,6 +104,8 @@ describe('arrange over cards and images (055)', () => {
     expect(toolbar).toEqual([
       'Alt text',
       'Caption',
+      'Flip horizontal',
+      'Flip vertical',
       'Lock',
       'Bring forward',
       'Send backward',

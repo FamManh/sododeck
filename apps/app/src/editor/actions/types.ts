@@ -95,6 +95,11 @@ export interface Action {
   children?: (ctx: ActionContext) => readonly Action[];
   radio?: boolean;
   checked?: (ctx: ActionContext) => boolean;
+  /**
+   * A toggle button (057: Flip horizontal): the toolbar renders `aria-pressed`, the menu a check
+   * mark. Absent for an action that is not a toggle.
+   */
+  pressed?: (ctx: ActionContext) => boolean;
   /** The toolbar popover this action opens (toolbar field buttons). */
   field?: ToolbarFieldId;
   /**
@@ -123,6 +128,8 @@ export interface ResolvedAction {
   keepFocus: boolean;
   radio: boolean;
   checked: boolean;
+  /** Present only for a toggle: whether it is on. */
+  pressed?: boolean;
   separatorBefore: boolean;
   toolbarText: boolean;
   children?: readonly ResolvedAction[];
