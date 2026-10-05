@@ -80,6 +80,7 @@ import { MarqueeChip } from './editing/marquee-chip';
 import { FrameDrawLayer } from './frame-tool/frame-draw-layer';
 import { useClipboardEvents } from './editing/use-clipboard-events';
 import { useGuideSafetyNet } from './editing/use-guide-safety-net';
+import { useMarqueeEdges } from './editing/use-marquee-edges';
 import { drillScopeTitle } from './outline';
 import { useCanvasKeyDown } from './use-canvas-shortcuts';
 import { scopeBounds, scopeOf, validDrillDepth, visibleGraph } from './visible-graph';
@@ -379,6 +380,8 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       setTouchSelect(false);
     };
   }, [marqueeRunning]);
+  // React Flow's marquee catches cards only; connectors it catches are added here.
+  useMarqueeEdges(marqueeRunning, touchSelect);
 
   // The shown or recorded flow's marks (006): badges, candidates, preview, invalid, start ring.
   const flow = findFlow(deck, session?.flowId ?? activeFlow?.flowId ?? null);

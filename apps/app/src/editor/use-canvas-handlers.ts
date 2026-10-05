@@ -170,7 +170,7 @@ export function useCanvasHandlers() {
         stickies: [...stickies],
         images: [...images],
       });
-      ui().setMarqueeCount(nodes.size + stickies.size + images.size);
+      ui().setMarqueeCount(nodes.size + stickies.size + images.size + edges.size);
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -567,11 +567,9 @@ export function useCanvasHandlers() {
           changes.flatMap((c) => (c.type === 'select' ? [{ ...c, type: 'node' as const }] : [])),
         );
       },
-      onEdgesChange: (changes: EdgeChange[]) => {
-        applySelectChanges(
-          changes.flatMap((c) => (c.type === 'select' ? [{ ...c, type: 'edge' as const }] : [])),
-        );
-      },
+      // A marquee's connectors are the ones it catches (`editing/use-marquee-edges.ts`), not React
+      // Flow's "touches a caught card", so its edge selection changes are not taken.
+      onEdgesChange: (_changes: EdgeChange[]) => undefined,
       onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
         // Copies made with ⌥ stay (051), otherwise the pointer decides membership (016 FR-018).
         if (controller.dragging) {
