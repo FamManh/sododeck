@@ -15,3 +15,6 @@ declare module '*?url' {
   const url: string;
   export default url;
 }
+
+/** `apps/app/package.json` version, set by Vite `define` (062 R11). */
+declare const __APP_VERSION__: string;

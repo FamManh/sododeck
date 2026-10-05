@@ -28,6 +28,7 @@ import {
   duplicateDeck,
   exportDeckFile,
   importDeckFile,
+  importedMessage,
   importMermaidDeck,
   moveDeckTo,
   renameDeck,
@@ -164,7 +165,9 @@ describe('library actions', () => {
 
     it('imports a file with pictures: the bytes reach the blob store of the new deck', async () => {
       const result = await importDeckFile(ctx, imageDeckJson(), null);
-      expect(result.missingPictures).toBe(0);
+      expect(result.report?.problems.some((p) => p.code === 'picture-damaged') ?? false).toBe(
+        false,
+      );
       const deck = (await liveDecks(db)).find((d) => d.name === 'Shop' && d.id !== 'd1');
       expect(deck).toBeDefined();
       const row = await getBlobRow(db, deck?.id ?? '', pictureId);
@@ -174,8 +177,9 @@ describe('library actions', () => {
 
     it('imports a file whose picture data is damaged: opens, counts it, stores nothing', async () => {
       const damaged = imageDeckJson().replace(/"data": ?"[^"]*"/, `"data":"${MISSING_DATA}"`);
-      const result = await importDeckFile(ctx, damaged, null);
-      expect(result.missingPictures).toBe(1);
+      const result = await importDeckFile(ctx, damaged, null, 'damaged.sododeck');
+      expect(result.report?.problems.filter((p) => p.code === 'picture-damaged')).toHaveLength(1);
+      expect(result.report?.source).toEqual({ kind: 'file', name: 'damaged.sododeck' });
       const ids = (await liveDecks(db)).map((d) => d.id).filter((id) => id !== 'd1');
       expect(await listBlobIds(db, ids[0] ?? '')).toEqual([]);
     });
@@ -254,5 +258,15 @@ describe('library actions', () => {
       );
       expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Shop']);
     });
+  });
+});
+
+describe('importedMessage (062 FR-011)', () => {
+  it('names the deck and counts the problems it opened with', () => {
+    expect(importedMessage('Shop', 0)).toBe('Imported "Shop"');
+    expect(importedMessage('Shop', 1)).toBe('Imported "Shop" with 1 problem');
+    expect(importedMessage('Shop', 2, ' into the library')).toBe(
+      'Imported "Shop" into the library with 2 problems',
+    );
   });
 });

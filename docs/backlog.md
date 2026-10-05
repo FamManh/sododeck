@@ -240,7 +240,7 @@ and **027** ai-deck-skill are not scheduled.
 | 059 | reach-and-route                | later      | 034           | 4 d  | highlight style for reach (reuse focus dim)                   |
 | 060 | deck-diff                      | later      | 025           | 5 d  | added/changed/removed marks need design                       |
 | 061 | share-cards                    | later      | 012, 059      | 3 d  | card layout needs design                                      |
-| 062 | fixable-import-errors          | later      | 005, 056      | 4 d  | spec, plan, tasks in `specs/062-fixable-import-errors/`       |
+| 062 | fixable-import-errors          | later      | 005, 056      | 4 d  | implemented (2026-10-05, ADR 0039)                            |
 | 063 | accessible-export              | later      | 012           | 1 d  | —                                                             |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
@@ -2050,7 +2050,10 @@ bench` before/after (flow highlight < 100 ms). Match docs/design/screens/03-flow
     download or repo while the app stays closed source.
   - **App side:** import already exists (005). Make sure a deck without positions is laid out on
     import (check; add if missing) and that the import error lists schema issues with paths and
-    fixes (062), so the user can paste them back to their AI.
+    fixes (062), so the user can paste them back to their AI. 062 is done: the skill's `validate`
+    / `lint` reuse its codes and fix hints (`docs/file-format/problem-codes.md`, generated from
+    `@sododeck/model`) and its report shape
+    (`specs/062-fixable-import-errors/contracts/problem-report.md`).
   - **Docs page** on sododeck.com: install the skill, prompt examples per mode, import.
 - **Phases:** (1) core: description + update modes, `validate`, `lint`, `summary`, `diff`, three
   examples, taste rules; (2) codebase and text-format modes with source links and fidelity
@@ -2441,7 +2444,7 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 057-image-editing
 
-- **Status:** not started. Split from 055 (2026-10-05).
+- **Status:** spec, plan and tasks in `specs/057-image-editing/` (2026-10-05); not implemented. Split from 055. Founder decisions: free crop only, double-click opens crop mode, flip on a mixed selection makes all images the same, no flip shortcut.
 - **Goal:** Light editing of an image object on the canvas without leaving the editor.
 - **In scope:** crop (drag handles, reset), flip horizontal / vertical. Edits are non-destructive
   (the stored picture is unchanged; the object keeps crop and flip values) and appear in export.
@@ -2518,9 +2521,11 @@ All run in the browser only (constitution IV: no backend, no network with conten
 
 ## 062-fixable-import-errors
 
-- **Status:** spec, plan and tasks written (`specs/062-fixable-import-errors/`, handoff in its
-  `README.md`); not implemented. **Milestone:** later · **Depends on:** 005, 056 · **Estimate:** 4 d
-  (re-estimated from 2 d: 41 tasks across schema, model and app)
+- **Status:** implemented (2026-10-05) — see [`tasks.md`](../specs/062-fixable-import-errors/tasks.md),
+  [ADR 0039](decisions/0039-problem-codes.md) and the code catalogue
+  [`docs/file-format/problem-codes.md`](file-format/problem-codes.md). **Milestone:** later ·
+  **Depends on:** 005, 056 · **Estimate:** 4 d (re-estimated from 2 d: 41 tasks across schema,
+  model and app)
 - **Decided (2026-10-05):** broken references still load unchanged and are reported as problems
   (no format change); the "opened with problems" notice fires for error / warning only; schema
   violations use generic `schema-*` codes with a JSON Pointer path; copy is plain JSON only.

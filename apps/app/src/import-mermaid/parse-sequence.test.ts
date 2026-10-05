@@ -191,3 +191,18 @@ describe('limits', () => {
     expect(() => parse(...lines)).toThrow(/too-large/);
   });
 });
+
+describe('participants declared again (062 T032: never silent)', () => {
+  it('keeps the last declaration and reports the repeat', () => {
+    const parsed = parse(
+      'participant A as Web',
+      'A->>B: hi',
+      'participant A as Web app',
+      'participant A as Web app',
+    );
+    expect(parsed.participants[0]).toMatchObject({ key: 'A', label: 'Web app' });
+    expect(parsed.skipped.filter((s) => s.reason === 'merged')).toEqual([
+      { line: 4, text: 'participant A as Web app', reason: 'merged', key: 'A', lines: [2, 4] },
+    ]);
+  });
+});

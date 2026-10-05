@@ -3,7 +3,14 @@ import { readFile } from 'node:fs/promises';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { checkDeck, PROBLEM_KINDS, SEVERITY, type Problem, type ProblemKind } from '../src';
+import {
+  checkDeck,
+  PROBLEM_KINDS,
+  problemLocator,
+  SEVERITY,
+  type Problem,
+  type ProblemKind,
+} from '../src';
 import { readExample, shopDeck } from './helpers';
 
 type NodeData = SododeckFile['nodes'][number];
@@ -1156,5 +1163,69 @@ describe('schema lint rules (047)', () => {
       nodes: [node('svc', { columns: [col('c', '', '')] }), table('t', 't', [pk('t')])],
     });
     expect(lint(file)).toEqual([]);
+  });
+});
+
+describe('problem locations (062 R8)', () => {
+  const locate = (file: SododeckFile) => {
+    const where = problemLocator(file);
+    return checkDeck(file).list.map((p) => [p.kind, where(p).path, where(p).subject ?? null]);
+  };
+
+  it('points a step problem at the step and names the step', () => {
+    const file = deck({
+      nodes: [node('a'), node('b')],
+      edges: [edge('e1', 'a', 'b')],
+      flows: [
+        { id: 'f1', title: 'F', steps: [{ id: 's1', edge: 'e1' }] },
+        {
+          id: 'f2',
+          title: 'G',
+          steps: [
+            { id: 's1', edge: 'e1' },
+            { id: 's2', edge: 'gone' },
+          ],
+        },
+      ],
+    });
+    expect(locate(file)).toEqual([['step-without-connection', '/flows/1/steps/1', 's2']]);
+  });
+
+  it('points card, connector, rule and object problems at their object', () => {
+    const file = deck({
+      nodes: [node('a'), node('b', { size: { width: 2000, height: 50 } })],
+      edges: [edge('e1', 'a', 'b'), edge('e2', 'a', 'b')],
+      rules: { 'r/1': rule('R', [{ id: 'r1', when: ['>= x'], then: ['y'] }]) },
+      groups: [{ id: 'g', title: 'G', parent: 'missing' }],
+    });
+    expect(locate(file)).toEqual(
+      expect.arrayContaining([
+        ['duplicate-connection', '/edges/0', 'e1'],
+        ['card-size-out-of-range', '/nodes/1', 'b'],
+        ['invalid-rule-cells', '/rules/r~11', 'r/1'],
+        ['broken-reference', '/groups/0', 'g'],
+      ]),
+    );
+  });
+
+  it('points a column problem at the column and an unknown pack at its entry', () => {
+    const file = deck({
+      packs: ['architecture', 'nope'],
+      nodes: [
+        node('t', {
+          type: 'db-table',
+          columns: [
+            { id: 'c1', name: 'id', type: 'int', pk: true },
+            { id: 'c2', name: '', type: 'int' },
+          ],
+        }),
+      ],
+    });
+    expect(locate(file)).toEqual(
+      expect.arrayContaining([
+        ['db-empty-column', '/nodes/0/columns/1', 'c2'],
+        ['unknown-pack', '/packs/1', null],
+      ]),
+    );
   });
 });

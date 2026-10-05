@@ -3,7 +3,9 @@
  * derived group `schema:<name>`. Stored group ids never start with `schema:`, so a collapse list
  * can hold both kinds of id and a derived group cannot collide with a stored one.
  */
-import type { Group, Issue } from '@sododeck/schema';
+import { toPointer, type Group } from '@sododeck/schema';
+
+import type { EditIssue } from './errors';
 
 const PREFIX = 'schema:';
 
@@ -25,9 +27,9 @@ export function isSchemaGroupId(id: string): boolean {
  */
 export function splitStoredGroups<T extends Pick<Group, 'id'>>(
   groups: readonly T[],
-): { groups: readonly T[]; skipped: Issue[] } {
+): { groups: readonly T[]; skipped: EditIssue[] } {
   if (!groups.some((group) => isSchemaGroupId(group.id))) return { groups, skipped: [] };
-  const skipped: Issue[] = [];
+  const skipped: EditIssue[] = [];
   const kept: T[] = [];
   groups.forEach((group, i) => {
     if (!isSchemaGroupId(group.id)) {
@@ -35,7 +37,7 @@ export function splitStoredGroups<T extends Pick<Group, 'id'>>(
       return;
     }
     skipped.push({
-      path: `groups.${String(i)}.id`,
+      path: toPointer(['groups', i, 'id']),
       message: `Group id "${group.id}" is reserved for schema groups and is not used.`,
     });
   });

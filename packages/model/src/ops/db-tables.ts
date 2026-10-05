@@ -8,10 +8,10 @@
  * removed; a file's `false` stays valid and is kept until changed. Removing a part and its
  * cascade live in `cascade.ts` with the rest of the delete policy.
  */
-import type { DbCheck, DbColumn, DbIndex, Id, Issue } from '@sododeck/schema';
+import type { DbCheck, DbColumn, DbIndex, Id } from '@sododeck/schema';
 
 import type { YObject, YValue } from '../convert';
-import { DeckEditError } from '../errors';
+import { DeckEditError, type EditIssue } from '../errors';
 import { dbPartIds, type IdPrefix } from '../ids';
 import {
   childList,
@@ -112,8 +112,8 @@ function refIssues(
   list: TableList,
   part: Record<string, unknown>,
   keys: readonly string[],
-): Issue[] {
-  const issues: Issue[] = [];
+): EditIssue[] {
+  const issues: EditIssue[] = [];
   if (list === 'columns' && keys.includes('enumRef') && typeof part.enumRef === 'string') {
     if (enumsList(doc)?.has(part.enumRef) !== true) {
       issues.push({ path: 'enumRef', message: `Enum "${part.enumRef}" does not exist.` });
@@ -133,7 +133,7 @@ function refIssues(
   return issues;
 }
 
-function assertRefs(issues: Issue[]): void {
+function assertRefs(issues: EditIssue[]): void {
   if (issues.length > 0) throw new DeckEditError('missing-reference', issues);
 }
 
@@ -141,7 +141,7 @@ function assertRefs(issues: Issue[]): void {
 function assertFreePartIds(doc: DeckDoc, ids: readonly { path: string; id: Id }[]): void {
   if (ids.length === 0) return;
   const taken = dbPartIds(doc);
-  const issues: Issue[] = [];
+  const issues: EditIssue[] = [];
   for (const { path, id } of ids) {
     if (taken.has(id)) issues.push({ path, message: `Id "${id}" is already used in this deck.` });
     taken.add(id);
@@ -249,7 +249,7 @@ export function assertNewTableParts(ctx: EditContext, node: Record<string, unkno
     (Array.isArray(node.columns) ? node.columns : []).map((c: unknown) => (c as { id: Id }).id),
   );
   const enums = enumsList(ctx.doc);
-  const issues: Issue[] = [];
+  const issues: EditIssue[] = [];
   (Array.isArray(node.columns) ? node.columns : []).forEach((c: unknown, i) => {
     const ref = (c as { enumRef?: unknown }).enumRef;
     if (typeof ref === 'string' && enums?.has(ref) !== true) {
@@ -283,8 +283,8 @@ export function columnEndIssues(
   doc: DeckDoc,
   edge: Record<string, unknown>,
   keys: readonly string[],
-): Issue[] {
-  const issues: Issue[] = [];
+): EditIssue[] {
+  const issues: EditIssue[] = [];
   const nodes = collectionMap(doc, 'nodes');
   for (const side of ['from', 'to'] as const) {
     const key = `${side}Columns`;

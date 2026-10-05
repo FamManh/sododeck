@@ -1,5 +1,5 @@
 import type { DeckSummary } from './deck-summary';
-import type { AssetProblem } from '@sododeck/model';
+import type { ProblemReport } from '@sododeck/model';
 
 import type { MermaidImport } from '../import-mermaid/import-mermaid';
 import type { LibraryOpErrorCode, PictureBytes } from './library-ops';
@@ -7,7 +7,7 @@ import type { LibraryOpErrorCode, PictureBytes } from './library-ops';
 /** Messages between `library-client.ts` and `library.worker.ts` (contracts/storage-api.md). */
 export type LibraryRequest =
   | { op: 'create'; name: string }
-  | { op: 'import'; text: string }
+  | { op: 'import'; text: string; name?: string }
   | { op: 'importMermaid'; text: string }
   | { op: 'export'; updates: Uint8Array[]; pictures?: Map<string, Uint8Array> }
   | { op: 'rename'; updates: Uint8Array[]; name: string }
@@ -20,7 +20,7 @@ export type LibraryResult =
       bytes: Uint8Array;
       summary: DeckSummary;
       pictures: PictureBytes[];
-      problems: AssetProblem[];
+      openReport: ProblemReport | null;
     }
   | { op: 'rename'; delta: Uint8Array; summary: DeckSummary }
   | { op: 'export'; json: string; name: string }
@@ -28,4 +28,8 @@ export type LibraryResult =
 
 export type LibraryWorkerResponse =
   | { id: number; ok: true; result: LibraryResult }
-  | { id: number; ok: false; error: { code: LibraryOpErrorCode | 'failed'; message: string } };
+  | {
+      id: number;
+      ok: false;
+      error: { code: LibraryOpErrorCode | 'failed'; message: string; report?: ProblemReport };
+    };

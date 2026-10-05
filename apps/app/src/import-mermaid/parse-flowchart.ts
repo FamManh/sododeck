@@ -5,7 +5,13 @@
  */
 import { cleanLabel } from './clean-text';
 import type { PreparedText, SourceLine } from './detect';
-import { LIMITS, MermaidImportError, skippedLine, type SkippedLine } from './import-report';
+import {
+  LIMITS,
+  mergedLine,
+  MermaidImportError,
+  skippedLine,
+  type SkippedLine,
+} from './import-report';
 import type { MermaidShape } from './shape-map';
 
 export type FlowDirection = 'TB' | 'BT' | 'LR' | 'RL';
@@ -267,7 +273,10 @@ function directionOf(header: string): FlowDirection {
 
 export function parseFlowchart(prepared: PreparedText): ParsedFlowchart {
   const [header, ...body] = prepared.lines;
-  const nodes = new Map<string, ParsedNode & { explicit: boolean }>();
+  /** `declared`: the line of the first mention with a shape, whose label and shape are kept. */
+  const nodes = new Map<string, ParsedNode & { explicit: boolean; declared?: number }>();
+  /** Line of each subgraph's first `subgraph` statement. */
+  const subgraphLines = new Map<string, number>();
   const links: ParsedLink[] = [];
   const subgraphs: ParsedSubgraph[] = [];
   const groupOf: Record<string, string> = {};
@@ -278,19 +287,22 @@ export function parseFlowchart(prepared: PreparedText): ParsedFlowchart {
     skipped.push(skippedLine(entry.line, entry.text, reason));
   };
 
-  const ensureNode = (ref: Ref, line: number) => {
+  const ensureNode = (ref: Ref, entry: SourceLine) => {
+    const { line } = entry;
     const known = nodes.get(ref.key);
     const explicit = ref.shape !== undefined;
+    const label = ref.label === undefined || ref.label === '' ? ref.key : ref.label;
     if (known === undefined) {
       if (nodes.size >= LIMITS.nodes) {
         throw new MermaidImportError('too-large', `more than ${LIMITS.nodes} components`);
       }
       nodes.set(ref.key, {
         key: ref.key,
-        label: ref.label === undefined || ref.label === '' ? ref.key : ref.label,
+        label,
         shape: ref.shape ?? 'bare',
         line,
         explicit,
+        ...(explicit ? { declared: line } : {}),
       });
       const inner = stack[stack.length - 1];
       if (inner !== undefined) {
@@ -302,6 +314,14 @@ export function parseFlowchart(prepared: PreparedText): ParsedFlowchart {
       known.label = ref.label === undefined || ref.label === '' ? known.label : ref.label;
       known.shape = ref.shape ?? known.shape;
       known.explicit = true;
+      known.declared = line;
+    } else if (explicit && (label !== known.label || ref.shape !== known.shape)) {
+      // Declared again differently: the first declaration is kept, and the user is told (062).
+      const already = skipped.some(
+        (s) => s.reason === 'merged' && s.key === ref.key && s.line === line,
+      );
+      if (!already)
+        skipped.push(mergedLine(line, entry.text, ref.key, known.declared ?? known.line));
     }
   };
 
@@ -332,10 +352,19 @@ export function parseFlowchart(prepared: PreparedText): ParsedFlowchart {
       const titled = /^([^\s[]+)\s*\[(.*)\]$/.exec(rest);
       const key = titled?.[1] ?? cleanLabel(rest);
       const label = cleanLabel(titled?.[2] ?? rest);
+      const again = subgraphs.find((g) => g.key === key);
+      if (again !== undefined) {
+        // A second block for the same id adds to the first group; two groups with one id could
+        // not be stored (062 T032).
+        skipped.push(mergedLine(entry.line, entry.text, key, subgraphLines.get(key) ?? entry.line));
+        stack.push(again);
+        return;
+      }
       const group: ParsedSubgraph = { key, label: label === '' ? key : label, members: [] };
       const parent = stack[stack.length - 1];
       if (parent !== undefined) group.parent = parent.key;
       subgraphs.push(group);
+      subgraphLines.set(key, entry.line);
       stack.push(group);
       return;
     }
@@ -367,7 +396,7 @@ export function parseFlowchart(prepared: PreparedText): ParsedFlowchart {
     let metadata = false;
     for (const { group } of refs) {
       for (const ref of group) {
-        ensureNode(ref, entry.line);
+        ensureNode(ref, entry);
         appearance ||= ref.appearance;
         metadata ||= ref.metadata;
       }
@@ -412,7 +441,7 @@ export function parseFlowchart(prepared: PreparedText): ParsedFlowchart {
 
   const result: ParsedFlowchart = {
     direction: directionOf(header?.text ?? ''),
-    nodes: [...nodes.values()].map(({ explicit: _explicit, ...node }) => node),
+    nodes: [...nodes.values()].map(({ explicit: _explicit, declared: _declared, ...node }) => node),
     links,
     subgraphs,
     groupOf,

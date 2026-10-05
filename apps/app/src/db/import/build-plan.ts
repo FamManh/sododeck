@@ -233,7 +233,8 @@ export function buildPlan(
 
   // --- tables -----------------------------------------------------------------------------------
   const taken = new Set(target.tableNames.map((t) => nameKey(t.name, t.schema)));
-  const seenInImport = new Set<string>();
+  /** Table name key → line of its first declaration in this import. */
+  const seenInImport = new Map<string, number>();
   const planned: PlannedTable[] = [];
   const conversions = new Map<string, TypeConversion>();
   const keptTypes = new Map<string, number>();
@@ -245,10 +246,12 @@ export function buildPlan(
     const prefix = nameKey('', table.schema);
     const inSchema = () =>
       new Set([...taken].filter((k) => k.startsWith(prefix)).map((k) => k.slice(prefix.length)));
-    if (seenInImport.has(original)) {
+    const firstLine = seenInImport.get(original);
+    if (firstLine !== undefined) {
       title = copyName(table.name, inSchema());
       changed.push({
         line: table.line,
+        firstLine,
         target: displayName(table),
         kind: 'renamed-duplicate',
         detail: `${displayName(table)} appears twice in this import; the second is imported as ${title}`,
@@ -262,7 +265,7 @@ export function buildPlan(
         detail: `a table named ${table.name} already exists, imported as ${title}`,
       });
     }
-    seenInImport.add(original);
+    if (firstLine === undefined) seenInImport.set(original, table.line);
     taken.add(nameKey(title, table.schema));
 
     const pkNames = new Set<string>();

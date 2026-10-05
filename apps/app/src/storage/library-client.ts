@@ -12,7 +12,8 @@ export { LibraryClientError };
 
 export interface LibraryClient {
   create(name: string): Promise<{ bytes: Uint8Array; summary: DeckSummary }>;
-  importFile(text: string): Promise<ImportedDeck>;
+  /** `name` is the file name the problem reports carry (062). */
+  importFile(text: string, name?: string): Promise<ImportedDeck>;
   /** Mermaid text → deck file and report (056); flowcharts still need a layout. */
   importMermaid(text: string): Promise<MermaidImport>;
   exportDeck(
@@ -47,7 +48,10 @@ export function createLibraryClient(): LibraryClient {
     if (!entry) return;
     pending.delete(response.id);
     if (response.ok) entry.resolve(response.result);
-    else entry.reject(new LibraryClientError(response.error.code, response.error.message));
+    else {
+      const { code, message, report } = response.error;
+      entry.reject(new LibraryClientError(code, message, report));
+    }
   };
 
   const send = <O extends LibraryResult['op']>(
@@ -62,7 +66,8 @@ export function createLibraryClient(): LibraryClient {
 
   return {
     create: (name) => send({ op: 'create', name }),
-    importFile: (text) => send({ op: 'import', text }),
+    importFile: (text, name) =>
+      send({ op: 'import', text, ...(name === undefined ? {} : { name }) }),
     importMermaid: (text) => send({ op: 'importMermaid', text }),
     exportDeck: (updates, pictures) => send({ op: 'export', updates, pictures }),
     rename: (updates, name) => send({ op: 'rename', updates, name }),
