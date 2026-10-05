@@ -198,6 +198,19 @@ export function metaOf(asset: Asset | AssetMeta): AssetMeta {
 const positiveInt = (value: unknown): number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 1 ? value : 1;
 
+/** An entry whose facts are all well formed, whatever its data. */
+function isSoundMeta(entry: Record<string, unknown>): boolean {
+  const whole = (value: unknown, max = Infinity) =>
+    typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= max;
+  return (
+    isAssetType(entry.type) &&
+    whole(entry.bytes, MAX_ASSET_BYTES) &&
+    whole(entry.width) &&
+    whole(entry.height) &&
+    typeof entry.name === 'string'
+  );
+}
+
 function isAssetType(value: unknown): value is AssetType {
   return typeof value === 'string' && (ASSET_TYPES as readonly string[]).includes(value);
 }
@@ -205,22 +218,32 @@ function isAssetType(value: unknown): value is AssetType {
 /**
  * Checks the data of every entry of a file's `assets` and returns the file with each damaged
  * entry replaced by a placeholder the schema accepts (one zero byte, `MISSING_DATA`), the bytes of
- * the sound ones, and one problem per damaged entry. Entries that are not even objects, and every
- * other part of the file, are left for the schema to judge. `input` is not changed.
+ * the sound ones, and one problem per damaged entry. An entry whose `data` is `''` is a picture
+ * that carries no bytes (what `toJSON` and the snapshot write): it is no problem, and its stored
+ * facts are kept as they are. `metas` is what the document stores for each entry. Entries that are
+ * not even objects, and every other part of the file, are left for the schema to judge. `input`
+ * is not changed.
  */
 export function repairAssets(input: unknown): {
   input: unknown;
   bytes: Map<AssetId, Uint8Array>;
+  metas: Map<AssetId, AssetMeta>;
   problems: AssetProblem[];
 } {
   const bytes = new Map<AssetId, Uint8Array>();
+  const metas = new Map<AssetId, AssetMeta>();
   const problems: AssetProblem[] = [];
-  if (!isRecord(input) || !isRecord(input.assets)) return { input, bytes, problems };
+  if (!isRecord(input) || !isRecord(input.assets)) return { input, bytes, metas, problems };
 
   const assets: Record<string, unknown> = {};
   for (const [id, entry] of Object.entries(input.assets)) {
     if (!isRecord(entry) || typeof entry.data !== 'string') {
       assets[id] = entry;
+      continue;
+    }
+    if (entry.data === '' && isSoundMeta(entry)) {
+      metas.set(id, metaOf(entry as unknown as Asset));
+      assets[id] = { ...entry, bytes: 1, data: MISSING_DATA };
       continue;
     }
     const reason = ((): AssetProblemReason | undefined => {
@@ -235,6 +258,7 @@ export function repairAssets(input: unknown): {
     })();
     if (reason === undefined) {
       assets[id] = entry;
+      metas.set(id, metaOf(entry as unknown as Asset));
       continue;
     }
     problems.push({
@@ -242,16 +266,17 @@ export function repairAssets(input: unknown): {
       ...(typeof entry.name === 'string' ? { name: entry.name } : {}),
       reason,
     });
-    assets[id] = {
+    const stub = {
       type: isAssetType(entry.type) ? entry.type : 'image/png',
       bytes: 1,
       width: positiveInt(entry.width),
       height: positiveInt(entry.height),
       name: typeof entry.name === 'string' ? entry.name : '',
-      data: MISSING_DATA,
     };
+    metas.set(id, stub);
+    assets[id] = { ...stub, data: MISSING_DATA };
   }
-  return { input: { ...input, assets }, bytes, problems };
+  return { input: { ...input, assets }, bytes, metas, problems };
 }
 
 /** Picture ids that the file's images use. */

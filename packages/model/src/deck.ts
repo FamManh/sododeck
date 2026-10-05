@@ -64,7 +64,14 @@ import {
   type DeckDoc,
   type ObjectOf,
 } from './layout';
-import { attachAssets, metaOf, repairAssets, type AssetBytes, type AssetProblem } from './assets';
+import {
+  attachAssets,
+  metaOf,
+  repairAssets,
+  type AssetBytes,
+  type AssetMeta,
+  type AssetProblem,
+} from './assets';
 import { checkDuplicateIds } from './load-checks';
 import { keysBetween } from './order-key';
 import { readAssets, readCollection, readMeta, readObject, readRule, readRules } from './read';
@@ -106,7 +113,11 @@ export interface LoadedDeck {
  */
 export function loadDeck(input: unknown): LoadedDeck {
   const repaired = repairAssets(input);
-  return { doc: buildDoc(repaired.input), bytes: repaired.bytes, problems: repaired.problems };
+  return {
+    doc: buildDoc(repaired.input, repaired.metas),
+    bytes: repaired.bytes,
+    problems: repaired.problems,
+  };
 }
 
 /**
@@ -118,7 +129,7 @@ export function fromJSON(input: unknown): DeckDoc {
   return loadDeck(input).doc;
 }
 
-function buildDoc(input: unknown): DeckDoc {
+function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Map()): DeckDoc {
   const parsed = parseSododeckFile(input);
   if (!parsed.success) throw new DeckValidationError(parsed.issues);
   const file = parsed.data;
@@ -177,7 +188,7 @@ function buildDoc(input: unknown): DeckDoc {
     if (file.assets !== undefined && Object.keys(file.assets).length > 0) {
       const assets = new Y.Map<YObject>();
       for (const [id, asset] of Object.entries(file.assets)) {
-        assets.set(id, toY(metaOf(asset)) as YObject);
+        assets.set(id, toY(metas.get(id) ?? metaOf(asset)) as YObject);
       }
       meta.set('assets', assets as unknown as YValue);
     }

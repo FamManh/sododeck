@@ -130,6 +130,20 @@ describe('loadDeck (055)', () => {
     expect(JSON.stringify(doc.getMap('meta').toJSON())).not.toContain(p.data);
   });
 
+  it('takes data "" as a picture that carries no bytes: no problem, facts kept as stored', () => {
+    const p = picture(1);
+    const { doc, bytes, problems } = loadDeck(deckWith(p, '', p.meta.bytes));
+    expect(problems).toEqual([]);
+    expect(bytes.size).toBe(0);
+    expect(toJSON(doc).assets?.[p.id]).toEqual({ ...p.meta, data: '' });
+  });
+
+  it('round-trips toJSON through fromJSON without changing the stored facts', () => {
+    const { doc, editor } = setupDeck();
+    editor.addImages([newImage(1)]);
+    expect(toJSON(fromJSON(toJSON(doc)))).toEqual(toJSON(doc));
+  });
+
   it('fromJSON still returns just the document', () => {
     expect(fromJSON(deckWith(picture(1))).getMap('images').size).toBe(1);
   });
