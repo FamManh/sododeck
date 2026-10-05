@@ -28,6 +28,7 @@ import {
 import type { Handle as ResizeHandleName } from '../editing/resize-limits';
 import { refuseLocked } from '../lock';
 import { imageName } from './image-name';
+import { PictureView } from './picture-view';
 
 /** One handle per side, like a note's (053). */
 const SIDES = [
@@ -165,6 +166,19 @@ export const ImageNode = memo(function ImageNode({
             <span className="max-w-full truncate text-caption">{data.fileName}</span>
           )}
         </div>
+      ) : picture.status === 'ready' &&
+        data.natural !== undefined &&
+        (data.crop !== undefined || data.flipX || data.flipY) ? (
+        <PictureView
+          url={picture.url}
+          alt={label === '' ? 'Image' : label}
+          width={boxWidth}
+          height={boxHeight}
+          natural={data.natural}
+          crop={data.crop}
+          flipX={data.flipX}
+          flipY={data.flipY}
+        />
       ) : picture.status === 'ready' ? (
         <img
           src={picture.url}

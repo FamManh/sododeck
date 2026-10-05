@@ -12,6 +12,14 @@ import {
   nodeCanvasPosition,
   stickyCanvasPosition,
   stickyLabel,
+  IMAGE_MAX_SIDE,
+  cropFrame,
+  isWholeCrop,
+  minCropFraction,
+  pictureLayout,
+  roundCrop,
+  trimCrop,
+  visibleRegion,
 } from '../src/geometry';
 
 function baseFile(): SododeckFile {
@@ -168,5 +176,142 @@ describe('sticky box (053)', () => {
     expect(clampStickySize({ width: 10, height: 50 })).toEqual({ width: 96, height: 96 });
     expect(clampStickySize({ width: 300, height: 96 })).toEqual({ width: 300, height: 96 });
     expect(clampStickySize({ width: 96.5, height: 400 })).toEqual({ width: 96.5, height: 400 });
+  });
+});
+
+describe('picture geometry: crop and flip (057)', () => {
+  const box = (x: number, y: number, width: number, height: number) => ({ x, y, width, height });
+
+  it('draws an unedited picture that fills a matching box', () => {
+    const layout = pictureLayout(box(10, 20, 200, 100), { width: 400, height: 200 });
+    expect(layout).toEqual({
+      view: box(10, 20, 200, 100),
+      picture: box(10, 20, 200, 100),
+      flipX: false,
+      flipY: false,
+    });
+  });
+
+  it('fits the picture in a letterboxed box, centred (contain)', () => {
+    const layout = pictureLayout(box(0, 0, 300, 100), { width: 200, height: 100 });
+    expect(layout.view).toEqual(box(50, 0, 200, 100));
+    expect(layout.picture).toEqual(box(50, 0, 200, 100));
+  });
+
+  it('draws the whole picture so the cropped region fills the view', () => {
+    const crop = { x: 0.5, y: 0, width: 0.5, height: 1 };
+    const layout = pictureLayout(box(0, 0, 100, 100), { width: 200, height: 100 }, crop);
+    expect(layout.view).toEqual(box(0, 0, 100, 100));
+    expect(layout.picture).toEqual(box(-100, 0, 200, 100));
+  });
+
+  it('mirrors the picture so the same region stays visible when flipped', () => {
+    const crop = { x: 0.5, y: 0, width: 0.5, height: 1 };
+    const natural = { width: 200, height: 100 };
+    const flippedX = pictureLayout(box(0, 0, 100, 100), natural, crop, { flipX: true });
+    expect(flippedX.view).toEqual(box(0, 0, 100, 100));
+    expect(flippedX.picture).toEqual(box(0, 0, 200, 100));
+    expect(flippedX.flipX).toBe(true);
+    expect(flippedX.flipY).toBe(false);
+
+    const top = { x: 0, y: 0, width: 1, height: 0.25 };
+    const flippedY = pictureLayout(box(0, 0, 200, 25), natural, top, { flipY: true });
+    expect(flippedY.picture).toEqual(box(0, -75, 200, 100));
+    expect(flippedY.flipY).toBe(true);
+  });
+
+  it('gives the visible region in natural pixels, mirrored with the picture', () => {
+    const natural = { width: 1280, height: 800 };
+    const crop = { x: 0.25, y: 0.1, width: 0.5, height: 0.5 };
+    expect(visibleRegion(natural, crop, { flipX: true })).toEqual(box(320, 80, 640, 400));
+    expect(visibleRegion(natural, crop, { flipY: true })).toEqual(box(320, 320, 640, 400));
+    expect(visibleRegion(natural)).toEqual(box(0, 0, 1280, 800));
+  });
+
+  describe('cropFrame', () => {
+    const natural = { width: 400, height: 200 };
+    const right = { x: 0.5, y: 0, width: 0.5, height: 1 };
+
+    it('keeps the scale and the still-visible part in place on a first crop', () => {
+      expect(cropFrame(box(0, 0, 400, 200), natural, undefined, right)).toEqual(
+        box(200, 0, 200, 200),
+      );
+    });
+
+    it('places the region where it is drawn when flipped', () => {
+      expect(cropFrame(box(0, 0, 400, 200), natural, undefined, right, { flipX: true })).toEqual(
+        box(0, 0, 200, 200),
+      );
+    });
+
+    it('grows back to the whole picture on reset', () => {
+      expect(cropFrame(box(200, 0, 200, 200), natural, right, undefined)).toEqual(
+        box(0, 0, 400, 200),
+      );
+      expect(cropFrame(box(0, 0, 200, 200), natural, right, undefined, { flipX: true })).toEqual(
+        box(0, 0, 400, 200),
+      );
+    });
+
+    it('scales a reset past the size limit down, keeping the old visible centre', () => {
+      const big = { width: 10000, height: 1000 };
+      const middle = { x: 0.45, y: 0, width: 0.1, height: 1 };
+      // The middle tenth drawn at scale 1: 1000 × 1000 at (0, 0); its centre is (500, 500).
+      const frame = cropFrame(box(0, 0, 1000, 1000), big, middle, undefined);
+      expect(frame.width).toBeCloseTo(IMAGE_MAX_SIDE);
+      expect(frame.height).toBeCloseTo(409.6);
+      expect(frame.x + frame.width / 2).toBeCloseTo(500);
+      expect(frame.y + frame.height / 2).toBeCloseTo(500);
+    });
+
+    it('collapses a letterboxed box to the fitted region', () => {
+      expect(cropFrame(box(0, 0, 600, 200), natural, undefined, undefined)).toEqual(
+        box(100, 0, 400, 200),
+      );
+    });
+  });
+
+  it('finds the smallest crop that stays 32 canvas px a side', () => {
+    const min = minCropFraction(box(0, 0, 200, 100), { width: 400, height: 200 });
+    expect(min).toEqual({ width: 32 / 200, height: 32 / 100 });
+    const cropped = minCropFraction(
+      box(0, 0, 100, 100),
+      { width: 400, height: 200 },
+      { x: 0, y: 0, width: 0.5, height: 1 },
+    );
+    // Scale 0.5: 32 canvas px is 64 natural px.
+    expect(cropped).toEqual({ width: 64 / 400, height: 64 / 200 });
+    expect(minCropFraction(box(0, 0, 32, 32), { width: 10, height: 10 })).toEqual({
+      width: 1,
+      height: 1,
+    });
+  });
+
+  it('rounds a crop to 6 decimals and knows the whole picture', () => {
+    expect(roundCrop({ x: 1 / 3, y: 0.1234564, width: 0.5, height: 2 / 3 })).toEqual({
+      x: 0.333333,
+      y: 0.123456,
+      width: 0.5,
+      height: 0.666667,
+    });
+    expect(isWholeCrop({ x: 0, y: 0, width: 1, height: 1 })).toBe(true);
+    expect(isWholeCrop({ x: 0.0000001, y: 0, width: 0.9999999, height: 1 })).toBe(true);
+    expect(isWholeCrop({ x: 0.1, y: 0, width: 0.9, height: 1 })).toBe(false);
+    expect(isWholeCrop(undefined)).toBe(true);
+  });
+
+  it('trims a crop that runs past the picture edge', () => {
+    expect(trimCrop({ x: 0.6, y: 0, width: 0.6, height: 1 })).toEqual({
+      x: 0.6,
+      y: 0,
+      width: 0.4,
+      height: 1,
+    });
+    expect(trimCrop({ x: 0.2, y: 0.2, width: 0.5, height: 0.5 })).toEqual({
+      x: 0.2,
+      y: 0.2,
+      width: 0.5,
+      height: 0.5,
+    });
   });
 });

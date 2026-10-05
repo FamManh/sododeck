@@ -1073,6 +1073,27 @@ describe('buildScene: images (055)', () => {
     expect(s.images.find((i) => i.id === 'lost')).toMatchObject({ placeholder: true, alt: null });
   });
 
+  it('carries crop, flips and the natural size of an edited image (057)', () => {
+    const crop = { x: 0.25, y: 0, width: 0.5, height: 1 };
+    const s = scene(
+      deckOf({
+        images: [picture('e', 0, { crop, flipX: true }), picture('plain', 200)],
+        assets: { [asset]: { ...facts, name: 'a.png' } },
+      }),
+    );
+    expect(s.images.find((i) => i.id === 'e')).toMatchObject({
+      crop,
+      flipX: true,
+      flipY: false,
+      natural: { width: 4, height: 3 },
+    });
+    expect(s.images.find((i) => i.id === 'plain')).toMatchObject({
+      crop: null,
+      flipX: false,
+      flipY: false,
+    });
+  });
+
   it('lists cards and images in one back-to-front order (stackOrder)', () => {
     // Ranks: c0 0, c1 1; images 0, 1, 2 → cards first on ties: c0, i0, c1, i1, lost.
     expect(scene(withImages).stack).toEqual([

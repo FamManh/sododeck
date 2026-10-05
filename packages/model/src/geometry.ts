@@ -114,6 +114,198 @@ export function imageBox(image: Pick<Image, 'position' | 'size'>): {
   };
 }
 
+/** The longest side an image is resized to, or grown to by a crop reset (055, 057). */
+export const IMAGE_MAX_SIDE = 4096;
+
+/** A rectangle on the canvas, in canvas pixels. */
+export interface CanvasRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The visible part of a picture (057): fractions of its natural size, in the picture's own,
+ * unflipped coordinates. Absent on an image means the whole picture.
+ */
+export interface CropRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Which way a picture is mirrored (057). Absent flags mean not flipped. */
+export interface PictureFlip {
+  flipX?: boolean;
+  flipY?: boolean;
+}
+
+/** Where to draw an image's picture: see `pictureLayout`. */
+export interface PictureLayout {
+  /** The visible region fitted in the box, centred: the area the picture is clipped to. */
+  view: CanvasRect;
+  /** Where the whole picture is drawn (already mirrored in place) so the region fills `view`. */
+  picture: CanvasRect;
+  flipX: boolean;
+  flipY: boolean;
+}
+
+const WHOLE: CropRect = { x: 0, y: 0, width: 1, height: 1 };
+
+/** Crop values are compared with this tolerance and written with 6 decimals (057 research R1). */
+const CROP_EPSILON = 1e-6;
+
+/**
+ * The visible region in natural pixels, in the mirrored picture's coordinates: the region the
+ * eye sees once the picture is flipped. An SVG export uses it as the `viewBox` of the mirrored
+ * picture (057 contracts/file-format.md).
+ */
+export function visibleRegion(natural: Size, crop?: CropRect, flip?: PictureFlip): CanvasRect {
+  const c = crop ?? WHOLE;
+  const x = flip?.flipX === true ? 1 - c.x - c.width : c.x;
+  const y = flip?.flipY === true ? 1 - c.y - c.height : c.y;
+  return {
+    x: x * natural.width,
+    y: y * natural.height,
+    width: c.width * natural.width,
+    height: c.height * natural.height,
+  };
+}
+
+/**
+ * How an image's picture is drawn in its box (057 research R2): the cropped region is fitted in the
+ * box (contain, centred, as an unedited picture is) and the whole picture is placed, mirrored, so
+ * only that region shows through `view`. The canvas and the SVG export both draw from this, so
+ * they cannot disagree.
+ */
+export function pictureLayout(
+  box: CanvasRect,
+  natural: Size,
+  crop?: CropRect,
+  flip?: PictureFlip,
+): PictureLayout {
+  const region = visibleRegion(natural, crop, flip);
+  const scale = Math.min(box.width / region.width, box.height / region.height);
+  const width = region.width * scale;
+  const height = region.height * scale;
+  const view = {
+    x: box.x + (box.width - width) / 2,
+    y: box.y + (box.height - height) / 2,
+    width,
+    height,
+  };
+  return {
+    view,
+    picture: {
+      x: view.x - region.x * scale,
+      y: view.y - region.y * scale,
+      width: natural.width * scale,
+      height: natural.height * scale,
+    },
+    flipX: flip?.flipX === true,
+    flipY: flip?.flipY === true,
+  };
+}
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * The image's new box when its crop changes from `from` to `to` (057 research R5): the picture keeps
+ * its on-canvas scale and the part that stays visible does not move. A box that would pass
+ * `IMAGE_MAX_SIDE` is scaled down about the centre of the old visible part. Values are rounded to
+ * hundredths of a pixel so files stay tidy.
+ */
+export function cropFrame(
+  box: CanvasRect,
+  natural: Size,
+  from: CropRect | undefined,
+  to: CropRect | undefined,
+  flip?: PictureFlip,
+): CanvasRect {
+  const { view, picture } = pictureLayout(box, natural, from, flip);
+  const scale = picture.width / natural.width;
+  const region = visibleRegion(natural, to, flip);
+  let next = {
+    x: picture.x + region.x * scale,
+    y: picture.y + region.y * scale,
+    width: region.width * scale,
+    height: region.height * scale,
+  };
+  const shrink = Math.min(1, IMAGE_MAX_SIDE / next.width, IMAGE_MAX_SIDE / next.height);
+  if (shrink < 1) {
+    const cx = view.x + view.width / 2;
+    const cy = view.y + view.height / 2;
+    next = {
+      x: cx + (next.x - cx) * shrink,
+      y: cy + (next.y - cy) * shrink,
+      width: next.width * shrink,
+      height: next.height * shrink,
+    };
+  }
+  return {
+    x: round2(next.x),
+    y: round2(next.y),
+    width: round2(next.width),
+    height: round2(next.height),
+  };
+}
+
+/**
+ * The smallest crop region, in fractions of the picture, that is still `IMAGE_MIN_SIZE` on the
+ * canvas at the scale the picture is drawn now (057 FR-005). Never more than the whole picture.
+ */
+export function minCropFraction(
+  box: CanvasRect,
+  natural: Size,
+  crop?: CropRect,
+): { width: number; height: number } {
+  const { picture } = pictureLayout(box, natural, crop);
+  return {
+    width: Math.min(1, IMAGE_MIN_SIZE.width / picture.width),
+    height: Math.min(1, IMAGE_MIN_SIZE.height / picture.height),
+  };
+}
+
+const round6 = (value: number) => Math.round(value * 1e6) / 1e6;
+
+/** A crop with every value rounded to 6 decimals, as it is written (057 research R1). */
+export function roundCrop(crop: CropRect): CropRect {
+  return {
+    x: round6(crop.x),
+    y: round6(crop.y),
+    width: round6(crop.width),
+    height: round6(crop.height),
+  };
+}
+
+/** True for no crop or a crop that shows the whole picture (never written, contract C3). */
+export function isWholeCrop(crop: CropRect | undefined): boolean {
+  if (crop === undefined) return true;
+  return (
+    Math.abs(crop.x) <= CROP_EPSILON &&
+    Math.abs(crop.y) <= CROP_EPSILON &&
+    Math.abs(crop.width - 1) <= CROP_EPSILON &&
+    Math.abs(crop.height - 1) <= CROP_EPSILON
+  );
+}
+
+/** True when the crop runs past the picture's right or bottom edge (contract C2). */
+export function cropOverflows(crop: CropRect): boolean {
+  return crop.x + crop.width > 1 + CROP_EPSILON || crop.y + crop.height > 1 + CROP_EPSILON;
+}
+
+/** The crop cut back to the picture's edges (contract C2), rounded. */
+export function trimCrop(crop: CropRect): CropRect {
+  return roundCrop({
+    x: crop.x,
+    y: crop.y,
+    width: Math.min(crop.width, 1 - crop.x),
+    height: Math.min(crop.height, 1 - crop.y),
+  });
+}
+
 /** The node's stored position, or its grid slot by index in `file.nodes`. Null when no such node. */
 export function nodeCanvasPosition(file: SododeckFile, nodeId: Id): Point | null {
   const index = file.nodes.findIndex((n) => n.id === nodeId);

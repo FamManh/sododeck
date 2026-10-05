@@ -1185,6 +1185,39 @@ export interface Image {
    * `true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
    */
   locked?: true;
+  crop?: Crop;
+  /**
+   * `true` mirrors the picture left to right (057). Absent means not flipped; `false` is not valid, so unflipping removes the key.
+   */
+  flipX?: true;
+  /**
+   * `true` mirrors the picture top to bottom (057). Absent means not flipped; `false` is not valid, so unflipping removes the key.
+   */
+  flipY?: true;
+}
+/**
+ * A rectangle of a picture as fractions of its natural size (0 to 1), in the picture's own, unflipped coordinates. `x + width` and `y + height` should not exceed 1; a crop past the picture edge is trimmed when the deck opens.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Crop".
+ */
+export interface Crop {
+  /**
+   * Left edge as a fraction of the picture width.
+   */
+  x: number;
+  /**
+   * Top edge as a fraction of the picture height.
+   */
+  y: number;
+  /**
+   * Width as a fraction of the picture width.
+   */
+  width: number;
+  /**
+   * Height as a fraction of the picture height.
+   */
+  height: number;
 }
 /**
  * A stored picture: what it is, and its bytes as base64 (at most 5 MiB decoded). The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.

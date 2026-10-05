@@ -1382,6 +1382,51 @@
         "locked": {
           "description": "`true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
           "const": true
+        },
+        "crop": {
+          "$ref": "#/$defs/Crop",
+          "description": "The visible part of the picture (057). Absent means the whole picture. `size` and `position` are the box of this visible part."
+        },
+        "flipX": {
+          "description": "`true` mirrors the picture left to right (057). Absent means not flipped; `false` is not valid, so unflipping removes the key.",
+          "const": true
+        },
+        "flipY": {
+          "description": "`true` mirrors the picture top to bottom (057). Absent means not flipped; `false` is not valid, so unflipping removes the key.",
+          "const": true
+        }
+      }
+    },
+    "Crop": {
+      "title": "Crop",
+      "description": "A rectangle of a picture as fractions of its natural size (0 to 1), in the picture's own, unflipped coordinates. `x + width` and `y + height` should not exceed 1; a crop past the picture edge is trimmed when the deck opens.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {
+          "description": "Left edge as a fraction of the picture width.",
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "y": {
+          "description": "Top edge as a fraction of the picture height.",
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 1
+        },
+        "width": {
+          "description": "Width as a fraction of the picture width.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "height": {
+          "description": "Height as a fraction of the picture height.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
         }
       }
     }

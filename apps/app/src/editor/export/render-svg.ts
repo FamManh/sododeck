@@ -1,3 +1,4 @@
+import { visibleRegion } from '@sododeck/model';
 import { chromeIcon, type ResolvedIcon } from '@sododeck/ui/icon-sets';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 
@@ -367,9 +368,12 @@ function picture(
     }
   } else {
     if (item.alt !== null) out.push(`<title>${escapeXml(item.alt)}</title>`);
-    out.push(
-      `<image ${attrs({ href: data, x, y, width, height, preserveAspectRatio: 'xMidYMid meet' })}/>`,
-    );
+    const edited = item.crop !== null || item.flipX || item.flipY;
+    if (edited && item.natural !== null) out.push(editedPicture(item, item.natural, data));
+    else
+      out.push(
+        `<image ${attrs({ href: data, x, y, width, height, preserveAspectRatio: 'xMidYMid meet' })}/>`,
+      );
   }
   if (item.caption !== null) {
     out.push(
@@ -385,6 +389,28 @@ function picture(
   }
   out.push('</g>');
   return out.join('');
+}
+
+/**
+ * A cropped or flipped picture (057 research R3): a nested `<svg>` at the box whose `viewBox` is
+ * the visible region in natural pixels, holding the whole original picture, mirrored about its own
+ * extent. A nested `<svg>` clips to its viewport, so no clip-path id is needed, and the fit is the
+ * same `xMidYMid meet` as an unedited picture. The region comes from `visibleRegion`, which the
+ * canvas draws from too.
+ */
+function editedPicture(
+  item: SceneImage,
+  natural: { width: number; height: number },
+  data: string,
+): string {
+  const { x, y, width, height } = item.rect;
+  const region = visibleRegion(natural, item.crop ?? undefined, item);
+  const viewBox = [region.x, region.y, region.width, region.height].map(n).join(' ');
+  const transform =
+    item.flipX || item.flipY
+      ? `translate(${n(item.flipX ? natural.width : 0)} ${n(item.flipY ? natural.height : 0)}) scale(${item.flipX ? '-1' : '1'} ${item.flipY ? '-1' : '1'})`
+      : undefined;
+  return `<svg ${attrs({ x, y, width, height, viewBox, preserveAspectRatio: 'xMidYMid meet' })}><image ${attrs({ href: data, width: natural.width, height: natural.height, transform })}/></svg>`;
 }
 
 /** Baseline of a line of `size` px text centred in a band of `height` px that starts at `top`. */
