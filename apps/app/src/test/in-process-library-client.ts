@@ -8,7 +8,7 @@ function run<T>(fn: () => T): Promise<T> {
   } catch (error) {
     return Promise.reject(
       error instanceof ops.LibraryOpError
-        ? new LibraryClientError(error.code, error.message)
+        ? new LibraryClientError(error.code, error.message, error.report)
         : (error as Error),
     );
   }
@@ -18,7 +18,7 @@ function run<T>(fn: () => T): Promise<T> {
 export function inProcessLibraryClient(): LibraryClient {
   return {
     create: (name) => run(() => ops.create(name)),
-    importFile: (text) => run(() => ops.importFile(text)),
+    importFile: (text, name) => run(() => ops.importFile(text, name)),
     importMermaid: (text) => run(() => ops.importMermaid(text)),
     exportDeck: (updates, pictures) => run(() => ops.exportDeck(updates, pictures)),
     rename: (updates, name) => run(() => ops.rename(updates, name)),

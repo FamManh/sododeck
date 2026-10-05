@@ -2,7 +2,7 @@ import { toJSON } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ImportReport } from '../../db/import/types';
 import { useUiStore } from '../../state/ui-store';
@@ -89,18 +89,42 @@ function setup(file: SododeckFile = deck, value: ReturnType<typeof report> | nul
 }
 
 describe('ImportReportPanel (044 T025)', () => {
-  it('lists mapped counts, skipped and changed rows', () => {
+  it('lists mapped counts, and skipped and changed rows under their fidelity group (062)', () => {
     setup();
     expect(
       within(screen.getByRole('list', { name: 'Mapped' }))
         .getAllByRole('listitem')
         .map((li) => li.textContent),
     ).toEqual(['3 tables', '0 relationships', '1 enum', '2 indexes']);
-    const skipped = within(screen.getByRole('list', { name: 'Skipped' })).getByRole('listitem');
-    expect(skipped).toHaveTextContent('L88CREATE VIEW order_totals ASviews are not modelled');
-    expect(screen.getByRole('list', { name: 'Changed' })).toHaveTextContent(
-      'L12table options not stored: ENGINE',
+    const group = screen.getByRole('region', { name: 'Left out (2)' });
+    const rows = within(within(group).getByRole('list', { name: 'Left out' })).getAllByRole(
+      'listitem',
     );
+    expect(rows[0]).toHaveTextContent('L88CREATE VIEW order_totals ASviews are not modelled');
+    expect(rows[1]).toHaveTextContent('L12table options not stored: ENGINE');
+  });
+
+  it('says everything was imported when nothing was skipped or changed (062 FR-015)', () => {
+    setup(deck, report({ skipped: [], changed: [] }));
+    expect(screen.getByText('Everything was imported.')).toBeInTheDocument();
+  });
+
+  it('copies the report as JSON (062 FR-016)', async () => {
+    const { user } = setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    await user.click(screen.getByRole('button', { name: 'Copy report' }));
+    const copied = JSON.parse(String(writeText.mock.calls[0]?.[0])) as {
+      report: string;
+      source: unknown;
+      items: { code: string; group: string }[];
+    };
+    expect(copied.report).toBe('sododeck-import');
+    expect(copied.source).toEqual({ format: 'sql', dialect: 'mysql' });
+    expect(copied.items.map((i) => [i.code, i.group])).toEqual([
+      ['import-db-option-dropped', 'left-out'],
+      ['import-db-view', 'left-out'],
+    ]);
   });
 
   it('collapses long runs of one reason', () => {
@@ -166,6 +190,8 @@ describe('ImportReportPanel suggestions (044 T039)', () => {
 
   it('focus on a row highlights its column row', async () => {
     const { user } = setup();
+    await user.tab(); // Copy report (062)
+    expect(screen.getByRole('button', { name: 'Copy report' })).toHaveFocus();
     await user.tab();
     expect(useUiStore.getState().hoverFocus).toEqual({
       id: 'orders',

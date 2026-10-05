@@ -9,7 +9,8 @@ export type SkipReason =
   | 'unsupported' // syntax outside the accepted subset
   | 'unreadable' // not understood
   | 'flattened' // sequence blocks, notes, activations
-  | 'extra-diagram'; // a second diagram in the same text
+  | 'extra-diagram' // a second diagram in the same text
+  | 'merged'; // a node, subgraph or participant declared again (062: never silent)
 
 export interface SkippedLine {
   /** 1-based, in the text as given. */
@@ -17,6 +18,10 @@ export interface SkippedLine {
   /** The line, trimmed to `EXCERPT_LENGTH` characters. */
   text: string;
   reason: SkipReason;
+  /** `merged` only: the Mermaid id declared again. */
+  key?: string;
+  /** `merged` only: the line of the declaration kept, then this line. */
+  lines?: number[];
 }
 
 export interface ImportReport {
@@ -46,6 +51,11 @@ export function skippedLine(line: number, text: string, reason: SkipReason): Ski
   };
 }
 
+/** A declaration of `key` met again at `line`, combined with the one at `first` (062 T032). */
+export function mergedLine(line: number, text: string, key: string, first: number): SkippedLine {
+  return { ...skippedLine(line, text, 'merged'), key, lines: [first, line] };
+}
+
 export type MermaidErrorCode = 'empty' | 'unsupported-type' | 'nothing-readable' | 'too-large';
 
 /**
@@ -69,6 +79,7 @@ const REASON_TEXT: Record<SkipReason, string> = {
   unreadable: 'This line could not be read.',
   flattened: 'Kept in reading order; the block, note or activation itself is not imported.',
   'extra-diagram': 'Only the first diagram is imported.',
+  merged: 'Declared again; the declarations were combined into one.',
 };
 
 /** A plain sentence for a skip reason. */

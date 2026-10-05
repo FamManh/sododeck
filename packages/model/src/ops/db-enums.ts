@@ -4,11 +4,11 @@
  * with a `values` list), so two tabs editing two values of one enum both keep their change. Each
  * op validates first and is one undo step. Removing an enum or a value is in `cascade.ts`.
  */
-import type { DbEnum, DbEnumValue, Dialect, Id, Issue } from '@sododeck/schema';
+import type { DbEnum, DbEnumValue, Dialect, Id } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import type { YObject, YValue } from '../convert';
-import { DeckEditError } from '../errors';
+import { DeckEditError, type EditIssue } from '../errors';
 import { dbPartIds } from '../ids';
 import {
   childList,
@@ -85,7 +85,7 @@ function valuesOf(item: YObject): ListMap {
 function assertFreeIds(doc: DeckDoc, ids: readonly { path: string; id: Id }[]): void {
   if (ids.length === 0) return;
   const taken = dbPartIds(doc);
-  const issues: Issue[] = [];
+  const issues: EditIssue[] = [];
   for (const { path, id } of ids) {
     if (taken.has(id)) issues.push({ path, message: `Id "${id}" is already used in this deck.` });
     taken.add(id);

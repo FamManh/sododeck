@@ -6,7 +6,7 @@ import { ToastProvider, Toaster } from '@sododeck/ui/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@sododeck/ui/components/tooltip';
 import { LayoutGrid, List, Moon, Plus, Sun } from 'lucide-react';
 import { Suspense, useState, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 
 import { Wordmark } from '../editor/wordmark';
 import { ConfirmLibraryDelete } from '../library/confirm-library-delete';
@@ -14,6 +14,10 @@ import { DeckGrid } from '../library/deck-grid';
 import { ImportButton } from '../library/import-button';
 import { ImportMermaidButton } from '../library/import-mermaid-button';
 import { ImportMermaidDialog, type MermaidDialogRequest } from '../library/import-mermaid-dialog';
+import {
+  ImportProblemsDialog,
+  type ImportProblemsRequest,
+} from '../library/import-problems-dialog';
 import { useFileDrop, useImportFiles } from '../library/use-import-files';
 import { LibrarySidebar } from '../library/library-sidebar';
 import { useLibraryStore } from '../library/library-store';
@@ -72,6 +76,8 @@ function Library() {
   const store = useLibraryStore.getState;
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [mermaid, setMermaid] = useState<MermaidDialogRequest | null>(null);
+  const [problems, setProblems] = useState<ImportProblemsRequest | null>(null);
+  const navigate = useNavigate();
   const openMermaid = (text: string, autoRun: boolean) => {
     const opener = document.activeElement;
     setMermaid((previous) => ({ key: (previous?.key ?? 0) + 1, text, autoRun, opener }));
@@ -91,8 +97,12 @@ function Library() {
   const inSection = selectDecks(allDecks, { section, search: '' });
   const recent = recentDecks(allDecks);
   const newDeckHref = currentFolder === null ? '/deck/new' : `/deck/new?folder=${currentFolder}`;
-  const importFiles = useImportFiles(commands, currentFolder, (text) => {
+  const onMermaid = (text: string) => {
     openMermaid(text, true);
+  };
+  const importFiles = useImportFiles(commands, currentFolder, {
+    onMermaid,
+    onProblems: setProblems,
   });
   const drop = useFileDrop((files) => {
     void importFiles(files);
@@ -164,9 +174,8 @@ function Library() {
         <ImportButton
           commands={commands}
           folderId={currentFolder}
-          onMermaid={(text) => {
-            openMermaid(text, true);
-          }}
+          onMermaid={onMermaid}
+          onProblems={setProblems}
         />
         <Button asChild variant="primary">
           <Link to={newDeckHref}>
@@ -232,6 +241,15 @@ function Library() {
         request={mermaid}
         onClose={() => {
           setMermaid(null);
+        }}
+      />
+      <ImportProblemsDialog
+        request={problems}
+        onClose={() => {
+          setProblems(null);
+        }}
+        onOpenDeck={(deckId) => {
+          void navigate(`/deck/${deckId}`);
         }}
       />
       {commands && <ConfirmLibraryDelete commands={commands} />}

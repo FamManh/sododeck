@@ -7,21 +7,20 @@ import {
   checkSemanticRules,
   emptySododeckFile,
   sododeckFileSchema,
+  toIssues,
   type Id,
   type Issue,
   type SododeckFile,
 } from '@sododeck/schema';
 import { isRecord } from './convert';
 import { collectionMap, rulesMap, type Collection, type DeckDoc } from './layout';
-import { DeckEditError } from './errors';
+import { DeckEditError, type EditIssue } from './errors';
 
 /** The part of a Zod schema used here, so this package needs no direct zod dependency. */
 interface Schema {
   safeParse(
     value: unknown,
-  ):
-    | { success: true }
-    | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
+  ): { success: true } | { success: false; error: Parameters<typeof toIssues>[0] };
 }
 
 const shape = sododeckFileSchema.shape;
@@ -86,13 +85,6 @@ const ELEMENT_SCHEMAS = {
 
 export type ValidationKind = keyof typeof ELEMENT_SCHEMAS;
 
-function zodIssues(issues: { path: PropertyKey[]; message: string }[]): Issue[] {
-  return issues.map((issue) => ({
-    path: issue.path.map(String).join('.'),
-    message: issue.message,
-  }));
-}
-
 /** A one-object file, so the schema's semantic checks (S1–S3) run on just that object. */
 function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | undefined {
   const file = emptySododeckFile();
@@ -147,14 +139,14 @@ function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | unde
 /** Format issues of one candidate object (structure, then the semantic rules that apply). */
 export function validateObject(kind: ValidationKind, candidate: unknown): Issue[] {
   const result = (ELEMENT_SCHEMAS[kind] as Schema).safeParse(candidate);
-  if (!result.success) return zodIssues(result.error.issues);
+  if (!result.success) return toIssues(result.error, candidate);
   if (kind === 'dbColumn') {
     // S14 (040) on one column, inside a one-table file; paths name the column's own keys.
     const file = {
       ...emptySododeckFile(),
       nodes: [{ id: 't', type: 'db-table', title: 't', columns: [candidate] }],
     } as SododeckFile;
-    const prefix = 'nodes.0.columns.0.';
+    const prefix = '/nodes/0/columns/0';
     return checkSemanticRules(file).map((issue) => ({
       ...issue,
       path: issue.path.startsWith(prefix) ? issue.path.slice(prefix.length) : issue.path,
@@ -172,7 +164,7 @@ export function validateRule(id: Id, rule: unknown): Issue[] {
 }
 
 /** Throws `DeckEditError('invalid')` when there are issues. */
-export function assertValid(issues: Issue[]): void {
+export function assertValid(issues: EditIssue[]): void {
   if (issues.length > 0) throw new DeckEditError('invalid', issues);
 }
 

@@ -71,7 +71,9 @@ describe('ProblemsPanel (015 US1, FR-012–016, FR-020)', () => {
     await screen.findByRole('list', { name: 'Problems' });
     const rows = within(screen.getByRole('list', { name: 'Problems' })).getAllByRole('button');
     expect(rows.map((r) => r.tabIndex)).toEqual([0, -1, -1]);
-    await user.tab(); // the severity filter is the first stop (047)
+    await user.tab(); // Copy problems in the header (062)
+    expect(screen.getByRole('button', { name: 'Copy problems' })).toHaveFocus();
+    await user.tab(); // the severity filter (047)
     await user.tab();
     expect(rows[0]).toHaveFocus();
     await user.keyboard('{ArrowDown}');
@@ -243,5 +245,53 @@ describe('ProblemsPanel schema fixes (047 US2)', () => {
     setup(locked);
     await screen.findByRole('list', { name: 'Problems' });
     expect(screen.getByRole('button', { name: 'Locked · unlock to fix' })).toBeDisabled();
+  });
+});
+
+describe('ProblemsPanel — Copy problems (062 US2)', () => {
+  function stubClipboard(writeText: ((text: string) => Promise<void>) | undefined) {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: writeText ? { writeText } : undefined,
+    });
+  }
+
+  it('copies every problem as the opened report, with file paths', async () => {
+    const { user } = setup(deckOf({ ...planted, name: 'Delivery' }));
+    await screen.findByRole('list', { name: 'Problems' });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    stubClipboard(writeText);
+    await user.click(screen.getByRole('button', { name: 'Copy problems' }));
+    const copied = JSON.parse(String(writeText.mock.calls[0]?.[0])) as {
+      source: unknown;
+      status: string;
+      counts: unknown;
+      problems: { code: string; path: string; subject?: string }[];
+    };
+    expect(copied.source).toEqual({ kind: 'deck', name: 'Delivery' });
+    expect(copied.status).toBe('opened');
+    expect(copied.counts).toEqual({ error: 1, warning: 2, info: 0 });
+    expect(copied.problems.map((p) => [p.code, p.path, p.subject])).toEqual([
+      ['duplicate-connection', '/edges/0', 'e1'],
+      ['step-without-connection', '/flows/0/steps/0', 's1'],
+      ['rule-without-catch-all', '/rules/R', 'R'],
+    ]);
+    expect(await screen.findByText('Copied problems')).toBeInTheDocument();
+  });
+
+  it('is disabled when there are no problems', async () => {
+    setup(deckOf({}));
+    await screen.findByText('No problems');
+    expect(screen.getByRole('button', { name: 'Copy problems' })).toBeDisabled();
+  });
+
+  it('shows the JSON in a selected text area when the clipboard refuses', async () => {
+    const { user } = setup();
+    await screen.findByRole('list', { name: 'Problems' });
+    stubClipboard(vi.fn().mockRejectedValue(new Error('denied')));
+    await user.click(screen.getByRole('button', { name: 'Copy problems' }));
+    const area = await screen.findByRole('textbox', { name: 'Problems as JSON' });
+    expect(area).toHaveFocus();
+    expect((area as HTMLTextAreaElement).value).toContain('"report": "sododeck-problems"');
   });
 });

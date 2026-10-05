@@ -1,0 +1,85 @@
+{
+  "$schema": "https://sododeck.com/schema/v1.json",
+  "version": 1,
+  "name": "Checkout",
+  "nodes": [
+    {
+      "id": "web",
+      "type": "client",
+      "title": "Web shop"
+    },
+    {
+      "id": "api",
+      "type": "gateway",
+      "title": "API gateway"
+    },
+    {
+      "id": "payments",
+      "type": "service",
+      "title": "Payments"
+    }
+  ],
+  "groups": [],
+  "edges": [
+    {
+      "id": "e-web-api",
+      "from": "web",
+      "to": "api",
+      "protocol": "http"
+    },
+    {
+      "id": "e-api-payments",
+      "from": "api",
+      "to": "payments",
+      "protocol": "grpc"
+    }
+  ],
+  "views": [],
+  "features": [],
+  "flows": [
+    {
+      "id": "pay",
+      "title": "Pay",
+      "steps": [
+        {
+          "id": "s1",
+          "edge": "e-web-api"
+        },
+        {
+          "id": "s2",
+          "edge": "e-api-payments"
+        },
+        {
+          "id": "s3",
+          "edge": "e-payments-bank"
+        }
+      ]
+    }
+  ],
+  "rules": {},
+  "stickies": [],
+  "images": [
+    {
+      "id": "logo",
+      "asset": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "position": {
+        "x": 0,
+        "y": -120
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      }
+    }
+  ],
+  "assets": {
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+      "type": "image/png",
+      "bytes": 4,
+      "width": 64,
+      "height": 64,
+      "name": "logo.png",
+      "data": "AAAA"
+    }
+  }
+}

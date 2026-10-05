@@ -244,3 +244,30 @@ describe('front matter and limits', () => {
     expect(() => body(lines)).toThrow(/too-large/);
   });
 });
+
+describe('declarations met again (062 T032: never silent)', () => {
+  const merged = (text: string[]) => body(text).skipped.filter((s) => s.reason === 'merged');
+
+  it('keeps the first label and reports a node declared again differently', () => {
+    const parsed = body(['api[Gateway] --> db[(Users)]', 'web --> api(API v2)']);
+    expect(parsed.nodes.find((n) => n.key === 'api')).toMatchObject({
+      label: 'Gateway',
+      shape: 'rect',
+    });
+    expect(merged(['api[Gateway] --> db[(Users)]', 'web --> api(API v2)'])).toEqual([
+      { line: 3, text: 'web --> api(API v2)', reason: 'merged', key: 'api', lines: [2, 3] },
+    ]);
+  });
+
+  it('does not report a bare mention or the same declaration repeated', () => {
+    expect(merged(['api[Gateway]', 'web --> api', 'api[Gateway] --> db'])).toEqual([]);
+  });
+
+  it('combines a subgraph declared twice into one group and reports it', () => {
+    const parsed = body(['subgraph G [Core]', 'A', 'end', 'subgraph G', 'B', 'end']);
+    expect(parsed.subgraphs).toEqual([{ key: 'G', label: 'Core', members: ['A', 'B'] }]);
+    expect(merged(['subgraph G [Core]', 'A', 'end', 'subgraph G', 'B', 'end'])).toEqual([
+      { line: 5, text: 'subgraph G', reason: 'merged', key: 'G', lines: [2, 5] },
+    ]);
+  });
+});

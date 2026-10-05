@@ -103,6 +103,36 @@ describe('library ops', () => {
     );
   });
 
+  it('carries every problem of a refused file, sorted (062)', () => {
+    const file = {
+      ...emptySododeckFile(),
+      nodes: [
+        { id: 'a', type: 'service' },
+        { id: 'a', type: 'service', title: 'A' },
+      ],
+    };
+    try {
+      importFile(JSON.stringify(file));
+      expect.unreachable();
+    } catch (error) {
+      if (!(error instanceof LibraryOpError)) throw error;
+      expect(error.code).toBe('invalid-deck');
+      expect(error.report).toMatchObject({ status: 'refused', source: { name: 'deck file' } });
+      expect(error.report?.problems.map((p) => [p.code, p.path])).toEqual([
+        ['schema-required', '/nodes/0/title'],
+        ['duplicate-id', '/nodes/1/id'],
+      ]);
+    }
+    try {
+      importFile('{ oops', 'broken.sododeck');
+      expect.unreachable();
+    } catch (error) {
+      if (!(error instanceof LibraryOpError)) throw error;
+      expect(error.report?.source.name).toBe('broken.sododeck');
+      expect(error.report?.problems[0]).toMatchObject({ code: 'invalid-json', line: 1 });
+    }
+  });
+
   it('renames with a delta that applies to the stored deck', () => {
     const { bytes } = create('Old');
     const { delta, summary } = rename([bytes], '  New name ');
@@ -200,9 +230,13 @@ describe('library ops: pictures (055)', () => {
     return JSON.stringify({ ...file, assets: { [id]: { ...assets[id], ...patch } } });
   };
 
+  /** The damaged pictures an import reports (062: they are entries of the opened report). */
+  const damaged = (imported: ReturnType<typeof importFile>) =>
+    imported.openReport?.problems.filter((p) => p.code === 'picture-damaged') ?? [];
+
   it('returns the pictures of an imported file with their stored type', () => {
     const imported = importFile(JSON.stringify(deckWithImage()));
-    expect(imported.problems).toEqual([]);
+    expect(damaged(imported)).toEqual([]);
     expect(imported.pictures).toHaveLength(1);
     expect(imported.pictures[0]).toMatchObject({ id, type: 'image/png' });
     expect([...(imported.pictures[0]?.bytes ?? [])]).toEqual([...PNG_1X1]);
@@ -223,7 +257,8 @@ describe('library ops: pictures (055)', () => {
         continue;
       }
       expect(imported.pictures).toEqual([]);
-      expect(imported.problems).toHaveLength(1);
+      expect(damaged(imported)).toHaveLength(1);
+      expect(imported.openReport).toMatchObject({ status: 'opened', counts: { warning: 1 } });
     }
   });
 
@@ -237,7 +272,7 @@ describe('library ops: pictures (055)', () => {
     const plain = { ...emptySododeckFile(), name: 'Old' };
     const imported = importFile(JSON.stringify(plain));
     expect(imported.pictures).toEqual([]);
-    expect(imported.problems).toEqual([]);
+    expect(imported.openReport).toBeNull();
     const { json } = exportDeck([imported.bytes]);
     expect(json).not.toContain('"images"');
     expect(json).not.toContain('"assets"');
