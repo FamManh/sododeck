@@ -170,7 +170,7 @@
 - [x] T057 [P] Finalise `docs/decisions/0037-image-support.md` (status Accepted once the founder approved the principle I deviation) and mark 055 implemented in `docs/backlog.md`.
 - [x] T058 Run `pnpm bench` after the change and save `specs/055-image-support/bench-after.md`; compare with `bench-before.md`: decks without images must show no regression; record a 50-image pan / zoom check. Report both sets of numbers.
 - [x] T059 Run the full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; confirm the no-third-party-requests check passes (DevTools shows no request for pictures); fix anything that fails; no skipped or `.only` tests.
-- [ ] T060 Run the quickstart end to end, record results in `specs/055-image-support/quickstart-results.md`, take screenshots into `specs/055-image-support/screenshots/` (paste, missing placeholder, stacking, export), and mark what was not verified.
+- [x] T060 Run the quickstart end to end, record results in `specs/055-image-support/quickstart-results.md`, take screenshots into `specs/055-image-support/screenshots/` (paste, missing placeholder, stacking, export), and mark what was not verified.
 - [ ] T061 Final report: what changed, what was skipped (cross-deck paste bytes TODO(M5), clipboard-menu image paste TODO(M5), crop and flip are 057), what is uncertain (compression quality and caps, AVIF decode support per browser), versions and decisions made, and a proposal for the next step. Stop; do not start 056 or 057.
 
 ---
