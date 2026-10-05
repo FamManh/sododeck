@@ -7,8 +7,11 @@
 import type { DeckEditor } from '@sododeck/model';
 import type { Frame, Id, SododeckFile } from '@sododeck/schema';
 
+import { readDeck } from '../../model/use-deck-snapshot';
 import { useUiStore } from '../../state/ui-store';
 import { cardBox, GROUP_PADDING, groupBounds, type Rect } from '../canvas-geometry';
+import { isGroupLocked } from '../group-lock';
+import { refuseLocked } from '../lock';
 import { readViewState } from '../views/use-current-view';
 import { setActiveGesture } from './drag-session';
 import { clampFrame, resizeFrame, type Handle } from './resize-limits';
@@ -59,6 +62,11 @@ export interface ResizeSession {
 
 /** Starts a resize from `handle`: one gesture until `endResize`. Null for a frame not drawn. */
 export function startResize(editor: DeckEditor, groupId: Id, handle: Handle): ResizeSession | null {
+  // A locked group keeps its frame (054); the handles are not drawn, this is the backstop.
+  if (isGroupLocked(readDeck(editor.doc), groupId)) {
+    refuseLocked();
+    return null;
+  }
   const view = readViewState(editor.doc);
   const start = groupBounds(view.deck, 'component').get(groupId);
   if (start === undefined) return null;

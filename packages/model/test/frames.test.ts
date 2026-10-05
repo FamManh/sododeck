@@ -229,10 +229,10 @@ describe('fillGroupFrames and setGroupFrames (R2, R4)', () => {
   it('materializes the preset views of a deck without stored views, outside history', () => {
     const { doc, editor } = setup({ ...withViews, views: [] });
     editor.setGroupFrames('feature', { inner: frame(0, 0, 400, 300) });
-    expect(toJSON(doc).views.map((v) => v.id)).toEqual(['system', 'feature', 'infra']);
+    expect(toJSON(doc).views.map((v) => v.id)).toEqual(['system', 'feature']);
     expect(getObject(doc, 'views', 'feature')?.groupFrames?.inner).toEqual(frame(0, 0, 400, 300));
     editor.undo();
-    expect(toJSON(doc).views).toHaveLength(3);
+    expect(toJSON(doc).views).toHaveLength(2);
     expect(editor.canUndo()).toBe(false);
   });
 

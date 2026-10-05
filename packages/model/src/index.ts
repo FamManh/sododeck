@@ -26,6 +26,7 @@ export {
   type TypeKind,
 } from './db-types';
 export { groupingModeOf, type GroupingMode } from './read';
+export { descendantNodeIds } from './group-members';
 export { isSchemaGroupId, schemaGroupId, splitStoredGroups } from './schema-groups';
 export {
   relationshipDisplayOf,

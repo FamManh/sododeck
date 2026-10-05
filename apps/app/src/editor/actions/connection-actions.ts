@@ -335,8 +335,9 @@ export const SPREAD_ENDS_ACTION: Action = {
     menu: ['component', 'components', 'group', 'mixed'],
     toolbar: ['component', 'components', 'group', 'mixed'],
   },
+  description: 'Space the connector ends evenly along each side of the selected cards',
   disabledReason: (ctx) =>
-    spreadPlan(ctx).patches.length === 0 ? 'No side has two or more connector ends' : null,
+    spreadPlan(ctx).patches.length === 0 ? 'Needs a side with two or more connector ends' : null,
   run: (ctx) => {
     const plan = spreadPlan(ctx);
     // A locked connector keeps its anchors (the model refuses the write).

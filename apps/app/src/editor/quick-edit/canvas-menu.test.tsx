@@ -221,6 +221,7 @@ describe('CanvasMenu (019 US5)', () => {
       'CopyCtrl+C',
       'CutCtrl+X',
       'DuplicateCtrl+D',
+      'LockCtrl+Shift+L',
       'Spread ends evenly',
       'Delete group',
     ]);

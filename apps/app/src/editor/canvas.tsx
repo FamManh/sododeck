@@ -89,6 +89,7 @@ import { useUndoAcrossViews } from './views/undo-context';
 import { PANEL_COLLAPSED as JSON_COLLAPSED } from './panel-height';
 import { MAX_ZOOM, MIN_ZOOM } from './zoom-limits';
 import { EDGE, ISLAND_HEIGHT, STACK_GAP, zoomIslandBottom } from './shell/shell-geometry';
+import { useDrawerWidths } from './shell/use-drawer-widths';
 import { problemMarks } from './problems/problem-marks';
 import { ShapeNode } from './shapes/shape-node';
 import { useProblems } from './problems/use-problems';
@@ -306,7 +307,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   const hideUi = useUiStore((s) => s.hideUi);
   const hand = useUiStore((s) => s.tool === 'hand');
   const frameTool = useUiStore((s) => s.tool === 'frame');
-  const drawerWidth = useUiStore((s) => (s.drawer.open ? s.drawer.width : null));
+  const { stack: drawerWidth } = useDrawerWidths();
   const minimapRight = drawerWidth === null ? EDGE : EDGE + drawerWidth + EDGE;
   const playerStyle = {
     ...(drawerWidth === null ? {} : { left: `calc(50% - ${String((drawerWidth + EDGE) / 2)}px)` }),

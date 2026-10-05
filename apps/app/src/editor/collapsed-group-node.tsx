@@ -1,8 +1,9 @@
 import { focusRing } from '@sododeck/ui/lib/focus';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { isSchemaGroupId } from '@sododeck/model';
 import { Handle, Position, type NodeProps, useUpdateNodeInternals } from '@xyflow/react';
-import { Layers } from 'lucide-react';
+import { Layers, Lock } from 'lucide-react';
 import { memo, useEffect, type CSSProperties } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
@@ -112,7 +113,7 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
         type="button"
         data-testid="collapsed-group-node"
         data-node-id={id}
-        aria-label={`${data.title}, collapsed group, ${String(data.nodeCount)} nodes, ${String(data.edgeCount)} edges${hasFlowInside ? ', flow step inside' : ''}${data.touchChip === undefined ? '' : `, current step ${data.touchChip.text}`}`}
+        aria-label={`${data.title}, collapsed group, ${String(data.nodeCount)} nodes, ${String(data.edgeCount)} edges${hasFlowInside ? ', flow step inside' : ''}${data.touchChip === undefined ? '' : `, current step ${data.touchChip.text}`}${data.locked === true ? ', locked' : ''}`}
         aria-description={colourDescription === '' ? undefined : colourDescription}
         aria-expanded="false"
         {...(data.dimmed ? { 'aria-hidden': true, inert: true } : {})}
@@ -155,6 +156,14 @@ export const CollapsedGroupNode = memo(function CollapsedGroupNode({
           >
             Group
           </span>
+          {data.locked === true && (
+            <Lock
+              aria-hidden
+              data-testid="group-lock"
+              strokeWidth={ICON_STROKE_WIDTH}
+              className="size-3.5 shrink-0 text-ink-secondary"
+            />
+          )}
           <span
             aria-hidden
             className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-ink text-[13px] leading-none font-bold text-surface"

@@ -4,6 +4,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import {
+  Focus,
   Group,
   Hand,
   ListTree,
@@ -19,7 +20,7 @@ import {
 } from 'lucide-react';
 import { forwardRef, type ComponentProps } from 'react';
 
-import { useUiStore, type Tool } from '../../state/ui-store';
+import { isFlowMode, useUiStore, type Tool } from '../../state/ui-store';
 import { modeOf, useRunAction } from '../actions/use-action-context';
 import { groupableCount } from '../editing/group-from-selection';
 import { useProblems } from '../problems/use-problems';
@@ -117,7 +118,7 @@ function RailDivider() {
 }
 
 /**
- * The left rail (018 FR-012–FR-020, contract "Rail"): tools (Select / Hand toggle, Add component, Sticky note,
+ * The left rail (018 FR-012–FR-020, contract "Rail"): tools (Select / Hand toggle, Focus (054), Add component, Sticky note,
  * Group, Connector), then the panels opened as flyouts (Outline, Flows & features, Rules),
  * Search and Problems. Group (016) groups the selection, like ⌘G; with fewer than two items it
  * stays visible, disabled, with the reason.
@@ -131,6 +132,10 @@ export function Rail() {
   const checked = useProblems();
   const problems = checked?.total ?? 0;
   const problemSeverity: Severity = (checked?.errors ?? 0) > 0 ? 'error' : 'warning';
+  const focusMode = useUiStore((s) => s.focusMode);
+  const setFocusMode = useUiStore((s) => s.setFocusMode);
+  // Focus dims the canvas, which a flow already does with its own highlight.
+  const focusDisabled = useUiStore((s) => s.flowSession !== null || isFlowMode(s));
   const runAction = useRunAction();
   const canGroup = useUiStore(
     (s) =>
@@ -193,9 +198,35 @@ export function Rail() {
     </RailTip>
   );
 
+  const focusButton = (
+    <RailTip
+      key="focus"
+      label="Focus"
+      {...(focusDisabled ? {} : { shortcut: 'focus-mode' as const })}
+      hint={
+        focusDisabled
+          ? 'Focus: not available while a flow is shown'
+          : 'Focus: dim all but the hovered or selected card and its neighbours'
+      }
+    >
+      <RailButton
+        id={railButtonId('focus')}
+        label="Focus"
+        icon={Focus}
+        active={focusMode}
+        aria-pressed={focusMode}
+        {...(focusDisabled ? { 'aria-disabled': true } : {})}
+        onClick={() => {
+          if (!focusDisabled) setFocusMode(!focusMode);
+        }}
+      />
+    </RailTip>
+  );
+
   return (
     <Island region="rail" label="Canvas tools" orientation="vertical" className="relative">
       {pointerButton}
+      {focusButton}
       {panelButton('palette', 'Add component', Plus, 'add-component')}
       {toolButton('sticky', 'Sticky note', StickyNote, 'sticky')}
       <RailTip label="Group" shortcut="group" {...(canGroup ? {} : { hint: GROUP_DISABLED })}>

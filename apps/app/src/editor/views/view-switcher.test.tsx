@@ -20,7 +20,7 @@ describe('views never write on open or switch (FR-001, FR-005)', () => {
   it('leaves a deck without views byte-identical after three switches', () => {
     const { doc, editor } = renderWithEditor(<Canvas />, deck);
     const before = serializeDeck(toJSON(doc));
-    for (const id of ['infra', 'feature', 'system']) {
+    for (const id of ['feature', 'system', 'feature']) {
       act(() => {
         useUiStore.getState().switchView(id);
       });
@@ -37,15 +37,14 @@ describe('ViewSwitcher (FR-002, FR-003)', () => {
     renderWithEditor(<ViewSwitcher />, deck);
     expect(screen.getByRole('tablist', { name: 'Views' })).toBeInTheDocument();
     expect(tabs().map((t) => t.getAttribute('aria-label'))).toEqual([
-      'System, system view',
-      'Feature, feature view',
-      'Infra, infra view',
+      'Overview view',
+      'Flows view',
     ]);
-    expect(screen.getByRole('tab', { name: 'System, system view' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Overview view' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    expect(tabs().map((t) => t.tabIndex)).toEqual([0, -1, -1]);
+    expect(tabs().map((t) => t.tabIndex)).toEqual([0, -1]);
   });
 
   it('switches on click, announces, and clears selection, drill-in and focus', async () => {
@@ -58,14 +57,14 @@ describe('ViewSwitcher (FR-002, FR-003)', () => {
         .getState()
         .drillInto({ kind: 'node', id: 'api', viewport: { x: 0, y: 0, zoom: 1 } });
     });
-    await user.click(screen.getByRole('tab', { name: 'Infra, infra view' }));
+    await user.click(screen.getByRole('tab', { name: 'Flows view' }));
     const ui = useUiStore.getState();
-    expect(ui.currentViewId).toBe('infra');
-    expect(ui.announcement.text).toBe('Infra view');
+    expect(ui.currentViewId).toBe('feature');
+    expect(ui.announcement.text).toBe('Flows view');
     expect(ui.selection.nodes).toEqual([]);
     expect(ui.drill).toEqual([]);
     expect(ui.focusMode).toBe(false);
-    expect(screen.getByRole('tab', { name: 'Infra, infra view' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: 'Flows view' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -81,14 +80,14 @@ describe('ViewSwitcher (FR-002, FR-003)', () => {
     expect(useUiStore.getState().currentViewId).toBeNull();
     await user.keyboard('{Enter}');
     expect(useUiStore.getState().currentViewId).toBe('feature');
-    await user.keyboard('{End}');
-    expect(tabs()[2]).toHaveFocus();
-    await user.keyboard(' ');
-    expect(useUiStore.getState().currentViewId).toBe('infra');
     await user.keyboard('{Home}');
     expect(tabs()[0]).toHaveFocus();
-    await user.keyboard('{ArrowLeft}');
-    expect(tabs()[2]).toHaveFocus();
+    await user.keyboard(' ');
+    expect(useUiStore.getState().currentViewId).toBe('system');
+    await user.keyboard('{End}');
+    expect(tabs()[1]).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(tabs()[0]).toHaveFocus();
   });
 });
 
@@ -101,12 +100,7 @@ describe('adding views and overflow (FR-040, edge case "Many views")', () => {
     const user = userEvent.setup();
     const { doc } = renderWithEditor(<ViewSwitcher />, deck);
     await user.click(screen.getByRole('button', { name: 'Add view' }));
-    expect(toJSON(doc).views.map((v) => v.title)).toEqual([
-      'System',
-      'Feature',
-      'Infra',
-      'Custom 1',
-    ]);
+    expect(toJSON(doc).views.map((v) => v.title)).toEqual(['Overview', 'Flows', 'Custom 1']);
     expect(screen.getByRole('tab', { name: 'Custom 1, custom view' })).toHaveAttribute(
       'aria-selected',
       'true',

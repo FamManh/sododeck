@@ -242,6 +242,23 @@ describe('toFlowNodes', () => {
     });
   });
 
+  it('marks a group locked when every card inside is, and stops it dragging (054)', () => {
+    const locked: SododeckFile = {
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.group === 'g' ? { ...n, locked: true } : n)),
+    };
+    const [frame] = toFlowNodes(locked, topLevelGraph(locked), view());
+    expect(frame).toMatchObject({ id: 'group:g', draggable: false, data: { locked: true } });
+    // Unlocking one card gives the frame back (the cache must not keep the old node).
+    const reopened: SododeckFile = {
+      ...locked,
+      nodes: locked.nodes.map((n) => (n.group === 'g' ? { ...n, locked: undefined } : n)),
+    };
+    const [again] = toFlowNodes(reopened, topLevelGraph(reopened), view());
+    expect(again).toMatchObject({ id: 'group:g', draggable: true });
+    expect((again?.data as { locked?: boolean }).locked).toBeUndefined();
+  });
+
   it('adds group frames below the components, dragged by their handles only (016 R5)', () => {
     const [group] = toFlowNodes(deck, topLevelGraph(deck), view());
     expect(group).toMatchObject({

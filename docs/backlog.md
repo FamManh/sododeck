@@ -232,7 +232,7 @@ and **027** ai-deck-skill are not scheduled.
 | 037 | scale-bench                    | before 023 | 036           | 2 d  | —                                                             |
 | 038 | card-icons                     | after 036  | 036, (029)    | 4 d  | built; lucide now, icon sets later (ADR 0028)                 |
 | 053 | sticky-notes-and-connectors    | after 052  | 009, 050      | 4 d  | founder feedback 2026-10-05                                   |
-| 054 | editor-chrome-polish           | after 053  | 018, 052      | 4 d  | founder feedback 2026-10-05                                   |
+| 054 | editor-chrome-polish           | after 053  | 018, 052      | 4 d  | built (2026-10-05); see `specs/054-editor-chrome-polish/`     |
 | 055 | image-support                  | after 054  | 036           | 6 d  | founder feedback; ADR needed (schema, storage)                |
 | 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 4 d  | founder feedback; ⚠ scope of Mermaid import                   |
 
@@ -2325,7 +2325,7 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 054-editor-chrome-polish
 
-- **Status:** not started.
+- **Status:** built (`specs/054-editor-chrome-polish`). Views are Overview and Flows (no Infra preset); the DBML / SQL drawer always shows the whole schema, and the Selection / Whole schema switch is parked (`TODO(selection-scope)`).
 - **Goal:** Fix the editor chrome issues found in manual testing.
 - **In scope:**
   - Board settings out of the hamburger menu into a visible place.

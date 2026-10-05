@@ -69,7 +69,11 @@ export function useShellShortcuts(): void {
       };
 
       if (event.key === 'F6' && !isMod(event) && !event.altKey) {
-        const visible = visibleRegions({ hideUi: ui.hideUi, drawerOpen: ui.drawer.open });
+        const visible = visibleRegions({
+          hideUi: ui.hideUi,
+          drawerOpen: ui.drawer.open,
+          codeOpen: ui.jsonPanel.codeDrawer.open,
+        });
         handle(() => {
           focusRegion(nextRegion(currentRegion(), visible, event.shiftKey ? -1 : 1));
         });

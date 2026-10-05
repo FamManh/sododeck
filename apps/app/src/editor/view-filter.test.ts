@@ -1,4 +1,3 @@
-import { VIEW_PRESETS } from '@sododeck/model';
 import type { SododeckFile, View } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -146,7 +145,14 @@ describe('viewFilter (FR-012–FR-014)', () => {
   });
 
   it('Infra dims clients and hides nothing', () => {
-    const infra = VIEW_PRESETS[2] as View;
+    // Infra is no longer a preset (054), but a deck can still store one.
+    const infra: View = {
+      id: 'infra',
+      type: 'infra',
+      title: 'Infra',
+      subtitleField: 'host',
+      dimKinds: ['client'],
+    };
     const result = viewFilter(deck, infra, none);
     expect(result.hidden.size).toBe(0);
     expect(sorted(result.dimmed)).toEqual(['app', 'web']);

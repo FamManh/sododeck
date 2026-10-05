@@ -7,6 +7,7 @@ import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { groupBounds } from '../canvas-geometry';
 import { frameRect } from '../editing/frame-resize';
+import { isGroupLocked } from '../group-lock';
 import { oneStep } from '../fields/one-step';
 import type { ViewState } from '../views/view-state';
 
@@ -25,7 +26,9 @@ const FIELDS = [
 export function FrameFields({ view, groupId }: { view: ViewState; groupId: Id }) {
   const editor = useEditor();
   const id = useId();
+  // A locked group (054) keeps its frame; the numbers stay readable.
   const editable = useUiStore((s) => !isFlowMode(s) && s.flowSession === null);
+  const locked = isGroupLocked(view.deck, groupId);
   const rect = groupBounds(view.deck, 'component').get(groupId);
   if (rect === undefined) return null;
   return (
@@ -37,7 +40,7 @@ export function FrameFields({ view, groupId }: { view: ViewState; groupId: Id })
             id={`${id}-${key}`}
             label={label}
             value={Math.round(rect[key])}
-            disabled={!editable}
+            disabled={!editable || locked}
             onCommit={(value) => {
               const frame = frameRect(view.deck, groupId, { ...rect, [key]: value });
               oneStep(editor, () => {
