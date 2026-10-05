@@ -592,6 +592,33 @@ describe('editor shortcuts', () => {
     expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'stickies', id: 'st1' }] });
   });
 
+  it('deletes a selected group with Delete or Backspace (it ungroups)', async () => {
+    const { user } = setup(groupedDeck);
+    act(() => {
+      ui().select({ groups: ['core'] });
+      ui().focus('group:core');
+      document.querySelector<HTMLElement>('[data-node-id="group:core"]')?.focus();
+    });
+    await user.keyboard('{Delete}');
+    expect(ui().pendingDelete).toEqual({ targets: [{ scope: 'groups', id: 'core' }] });
+    expect(ui().announcement.text).not.toMatch(/can't be deleted/);
+    act(() => {
+      ui().cancelDelete();
+    });
+    // After a marquee or ⌘A: the group and its cards are selected, so all of them go.
+    act(() => {
+      ui().select({ nodes: ['inside', 'outside'], groups: ['core'] });
+    });
+    await user.keyboard('{Backspace}');
+    expect(ui().pendingDelete).toEqual({
+      targets: [
+        { scope: 'nodes', id: 'inside' },
+        { scope: 'nodes', id: 'outside' },
+        { scope: 'groups', id: 'core' },
+      ],
+    });
+  });
+
   it('does nothing on Delete with an empty selection', async () => {
     const { user } = setup();
     focusNode('n00');

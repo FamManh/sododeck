@@ -21,6 +21,7 @@ import { isTextTarget } from '../lib/is-text-target';
 import { useEditor } from '../model/use-editor';
 import { readDeck } from '../model/use-deck-snapshot';
 import { EMPTY_SELECTION, isFlowMode, useUiStore, type Selection } from '../state/ui-store';
+import { isSelectionEmpty } from '../state/selection-kinds';
 import { alignSelection } from './actions/align-actions';
 import { deleteColumn, moveRow, startNewRow, startRowEdit } from './actions/table-actions';
 import { readActionContext, targetOf, useRunAction } from './actions/use-action-context';
@@ -988,14 +989,9 @@ export function useEditorShortcuts({
       }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
-        const { nodes, edges, groups, stickies, images } = ui.selection;
-        if (
-          nodes.length === 0 &&
-          edges.length === 0 &&
-          stickies.length === 0 &&
-          images.length === 0
-        ) {
-          if (groups.length === 0 && ui.drill.length > 0) {
+        // Every selected kind is deleted (`selectionTargets`); a group is ungrouped.
+        if (isSelectionEmpty(ui.selection)) {
+          if (ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
             ui.announce(
@@ -1005,16 +1001,11 @@ export function useEditorShortcuts({
                 viewCrumbTitle(readViewState(editor.doc).view),
               )}`,
             );
-            return;
-          }
-          if (groups.length > 0) {
-            event.preventDefault();
-            ui.announce("Groups can't be deleted from the canvas yet");
           }
           return;
         }
         event.preventDefault();
-        ui.requestDelete({ nodes, edges, stickies, images });
+        ui.requestDelete(ui.selection);
         return;
       }
       // Esc ends Focus mode first and keeps the selection (048 US6); the next one clears it.
