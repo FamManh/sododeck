@@ -93,6 +93,11 @@ function PopoverFor({ problem }: { problem: Problem }) {
         align="start"
         sideOffset={8}
         className="w-80 gap-2"
+        // Going to a problem focuses its canvas row as the popover opens; that must not dismiss
+        // it. An outside click or Esc still does.
+        onFocusOutside={(event) => {
+          event.preventDefault();
+        }}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (chose.current) return;

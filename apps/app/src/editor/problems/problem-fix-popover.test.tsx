@@ -83,6 +83,23 @@ describe('ProblemFixPopover (047 US2)', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('stays open when focus moves to the faulty row behind it', async () => {
+    // Going to a problem focuses its canvas row right after the popover opens (047 R7).
+    const { user } = await setup();
+    await screen.findByRole('dialog');
+    const row = document.createElement('div');
+    row.tabIndex = 0;
+    document.body.append(row);
+    act(() => {
+      row.focus();
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByRole('dialog', { name: 'No primary key' })).toBeInTheDocument();
+    row.remove();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('closes when the problem disappears', async () => {
     const { editor } = await setup();
     await screen.findByRole('dialog');
