@@ -45,7 +45,7 @@ describe('deck menu', () => {
       'Rename',
       'Duplicate',
       'Move to folder',
-      'Export .sododeck.json',
+      'Export .sododeck',
       'Delete…',
     ]) {
       expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
@@ -142,16 +142,16 @@ describe('deck menu', () => {
     expect(await names(db)).toEqual(['Store']);
   });
 
-  it('exports <name>.sododeck.json with the model export and records it', async () => {
+  it('exports <name>.sododeck with the model export and records it', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     const { user, db } = await setup();
     await user.click(screen.getByRole('button', { name: 'More actions for Shop' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Export .sododeck.json' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Export .sododeck' }));
     await waitFor(() => {
       expect(downloadText).toHaveBeenCalledOnce();
     });
     expect(downloadText).toHaveBeenCalledWith(
-      'Shop.sododeck.json',
+      'Shop.sododeck',
       serializeDeck({
         ...emptySododeckFile(),
         name: 'Shop',

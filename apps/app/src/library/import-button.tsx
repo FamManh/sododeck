@@ -8,18 +8,21 @@ import { useImportFiles } from './use-import-files';
 export function ImportButton({
   commands,
   folderId,
+  onMermaid,
 }: {
   commands: LibraryCommands | null;
   folderId: string | null;
+  /** Text of a chosen file that is Mermaid, not a deck. */
+  onMermaid?: (text: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  const importFiles = useImportFiles(commands, folderId);
+  const importFiles = useImportFiles(commands, folderId, onMermaid);
   return (
     <>
       <input
         ref={input}
         type="file"
-        accept=".json,.sododeck.json,application/json"
+        accept=".sododeck,.json,application/json"
         hidden
         data-testid="import-input"
         onChange={(event) => {
@@ -29,7 +32,7 @@ export function ImportButton({
         }}
       />
       <Button
-        aria-label="Import deck file (.sododeck.json)"
+        aria-label="Import deck file (.sododeck)"
         disabled={!commands}
         onClick={() => {
           input.current?.click();

@@ -44,7 +44,7 @@ describe('useExportDeck (055)', () => {
       expect(spy).toHaveBeenCalled();
     });
     const [name, text] = spy.mock.calls[0] ?? [];
-    expect(name).toBe('Pics.sododeck.json');
+    expect(name).toBe('Pics.sododeck');
     const file = JSON.parse(text ?? '{}') as ReturnType<typeof toJSON>;
     expect(file.assets?.[id]?.data.length).toBeGreaterThan(10);
   });

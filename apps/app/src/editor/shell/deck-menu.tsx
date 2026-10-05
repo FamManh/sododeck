@@ -88,7 +88,7 @@ export function DeckMenu() {
       <input
         ref={input}
         type="file"
-        accept=".json,.sododeck.json,application/json"
+        accept=".sododeck,.json,application/json"
         hidden
         data-testid="deck-menu-import"
         onChange={(event) => {

@@ -336,7 +336,7 @@ describe('EditorPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "This deck was saved by an earlier development build and can't be opened. Import its exported .sododeck.json file again.",
+        "This deck was saved by an earlier development build and can't be opened. Import its exported .sododeck file again.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/');
@@ -397,7 +397,7 @@ describe('EditorPage', () => {
     });
   });
 
-  it('exports <name>.sododeck.json from the deck menu dialog', async () => {
+  it('exports <name>.sododeck from the deck menu dialog', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     const file = { ...emptySododeckFile(), name: 'Shop' };
     const { user } = await openEditor(file);
@@ -409,7 +409,7 @@ describe('EditorPage', () => {
     });
     await user.click(screen.getByRole('button', { name: 'Download' }));
     expect(downloadText).toHaveBeenCalledWith(
-      'shop.sododeck.json',
+      'shop.sododeck',
       serializeDeck(file),
       'application/json',
     );

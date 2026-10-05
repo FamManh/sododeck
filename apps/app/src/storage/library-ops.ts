@@ -18,11 +18,22 @@ import {
 import { emptySododeckFile, FORMAT_VERSION, type SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
+import { importMermaidText, type MermaidImport } from '../import-mermaid/import-mermaid';
+import { MermaidImportError } from '../import-mermaid/import-report';
 import { summarizeDeck, type DeckSummary } from './deck-summary';
 import { UNSUPPORTED_DECK_MESSAGE } from './library-ops-messages';
 
 export type LibraryOpErrorCode =
-  'invalid-json' | 'invalid-deck' | 'unsupported-version' | 'invalid-name' | 'unsupported-deck';
+  | 'invalid-json'
+  | 'invalid-deck'
+  | 'unsupported-version'
+  | 'invalid-name'
+  | 'unsupported-deck'
+  // Mermaid import (056): the message carries the detail (keyword, first problem, limit).
+  | 'mermaid-empty'
+  | 'mermaid-unsupported-type'
+  | 'mermaid-nothing-readable'
+  | 'mermaid-too-large';
 
 export class LibraryOpError extends Error {
   constructor(
@@ -130,6 +141,22 @@ export function importFile(text: string): ImportedDeck {
     pictures: picturesOf(doc, loaded.bytes),
     problems: loaded.problems,
   };
+}
+
+/**
+ * Reads Mermaid text into a deck file plus a report (056). A flowchart comes back without
+ * positions (`direction` set); the caller lays it out and stores it through `importFile`. A
+ * refusal throws `LibraryOpError` (`mermaid-*`) and creates nothing.
+ */
+export function importMermaid(text: string): MermaidImport {
+  try {
+    return importMermaidText(text);
+  } catch (error) {
+    if (error instanceof MermaidImportError) {
+      throw new LibraryOpError(`mermaid-${error.code}`, error.detail);
+    }
+    throw error;
+  }
 }
 
 /**

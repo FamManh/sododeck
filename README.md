@@ -46,7 +46,7 @@ Commits follow [Conventional Commits](https://www.conventionalcommits.org/). A p
 ```
 apps/app          Vite + React editor (React Flow, Yjs, Monaco, Zustand, PWA)
 apps/site         Astro site (MDX docs/blog)
-packages/schema   .sododeck.json JSON Schema v1, generated types, Zod validators
+packages/schema   .sododeck JSON Schema v1, generated types, Zod validators
 packages/model    Yjs document model and JSON import/export
 packages/ui       Design tokens, Tailwind v4 theme, shared components
 packages/config   Shared tsconfig / ESLint / Prettier

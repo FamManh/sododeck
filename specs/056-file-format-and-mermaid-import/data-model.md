@@ -1,0 +1,76 @@
+# Data model: File format and Mermaid import
+
+No stored entity and no schema field is added. Types below are in-memory shapes of the importer.
+
+## Parsed flowchart (`parse-flowchart.ts`)
+
+| Field       | Type                                                                                                                                                                   | Notes                                             |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `direction` | `'TB' \| 'BT' \| 'LR' \| 'RL'`                                                                                                                                         | `TD` normalised to `TB`; default `TB`             |
+| `title`     | `string \| undefined`                                                                                                                                                  | from front matter                                 |
+| `nodes`     | `{ key: string; label: string; shape: MermaidShape; line: number }[]`                                                                                                  | `key` = Mermaid id, parser-only; first label wins |
+| `links`     | `{ from: string; to: string; label?: string; arrow: 'normal' \| 'none' \| 'both'; dash: 'solid' \| 'dashed' \| 'dotted'; width: 'normal' \| 'thick'; line: number }[]` | keys are node or subgraph keys                    |
+| `subgraphs` | `{ key: string; label: string; parent?: string; members: string[] }[]`                                                                                                 | members are node keys (direct children)           |
+| `skipped`   | `SkippedLine[]`                                                                                                                                                        | see report                                        |
+
+## Parsed sequence (`parse-sequence.ts`)
+
+| Field          | Type                                                                                           |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| `title`        | `string \| undefined`                                                                          |
+| `participants` | `{ key: string; label: string; actor: boolean }[]` in order of first appearance                |
+| `messages`     | `{ from: string; to: string; label: string; dashed: boolean; block?: string; line: number }[]` |
+| `skipped`      | `SkippedLine[]`                                                                                |
+
+`block` is the label of the innermost `alt/opt/loop/par/critical/break` containing the message,
+set only on the first message the block covers.
+
+## Import report (`import-report.ts`)
+
+```ts
+interface SkippedLine {
+  line: number; // 1-based, in the text as given
+  text: string; // the line, trimmed to 120 characters
+  reason:
+    | 'appearance' // style, classDef, class, linkStyle
+    | 'interaction' // click, callback
+    | 'unsupported' // syntax outside the subset
+    | 'unreadable' // not understood
+    | 'flattened' // sequence blocks, notes, activations
+    | 'extra-diagram'; // a second diagram in the same text
+}
+interface ImportReport {
+  kind: 'flowchart' | 'sequence';
+  counts: { components: number; connections: number; groups: number; steps: number };
+  skipped: SkippedLine[]; // all of them, no cap (the UI scrolls)
+  notes: string[]; // e.g. 'Branching in sequence blocks was flattened'
+}
+```
+
+## Result of the worker op
+
+`importMermaid(text) → { file: SododeckFile (no layout for flowcharts), report } | error`
+
+Errors: `empty`, `unsupported-type` (carries the detected keyword), `nothing-readable` (carries the
+first problem), `too-large`. An error creates nothing.
+
+## Produced deck objects
+
+| Source               | Deck object                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| Flowchart node       | `Node { id, type: <shape>, title, position, size }`; `id` generated (`n1`, `n2`, …)  |
+| Flowchart link       | `Edge { id, from, to, label?, direction?, style? }`                                  |
+| Subgraph             | `Group { id, title, parent?, position, size }`; members have `group` set             |
+| Sequence participant | `Node { id, type: 'component' \| 'actor', title, position }`                         |
+| Sequence message     | `Step { id, edge, title }` in `Flow { id, title, steps }`; `Edge` per ordered pair   |
+| Deck                 | `name` = diagram title or `Imported diagram`; `packs` = new-deck packs plus `shapes` |
+
+Ids: generated by the same helper the model uses for new objects, so they are stable and
+independent of titles; running the same text twice yields the same structure and titles, not the
+same ids.
+
+## Validation
+
+Every produced file goes through `fromJSON` (inside `importFile`) before it is stored; the builder
+tests also assert `fromJSON(file)` does not throw and `toJSON(fromJSON(file))` equals the file after
+key normalisation (round-trip).

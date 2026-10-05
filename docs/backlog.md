@@ -234,7 +234,7 @@ and **027** ai-deck-skill are not scheduled.
 | 053 | sticky-notes-and-connectors    | after 052  | 009, 050      | 4 d  | founder feedback 2026-10-05                                   |
 | 054 | editor-chrome-polish           | after 053  | 018, 052      | 4 d  | built (2026-10-05); see `specs/054-editor-chrome-polish/`     |
 | 055 | image-support                  | after 054  | 036           | 6 d  | founder feedback; ADR needed (schema, storage)                |
-| 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 4 d  | founder feedback; ⚠ scope of Mermaid import                   |
+| 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 6 d  | founder feedback; Mermaid flowchart + sequence (ER later)     |
 | 057 | image-editing                  | after 055  | 055           | 3 d  | crop and flip images; split from 055                          |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
@@ -2363,10 +2363,10 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 056-file-format-and-mermaid-import
 
-- **Status:** not started.
+- **Status:** implemented on `feat-file-format-and-mermaid-import` (spec `specs/056-file-format-and-mermaid-import/`, ADR 0038); screenshots, the manual quickstart run and the PR are open.
 - **Goal:** File extension `.sododeck` (drop the trailing `.json`; old `.sododeck.json` files
   still open) and import of Mermaid text.
-- **Open questions:** which Mermaid diagram types (flowchart only, or also ER and sequence).
+- **Decided (2026-10-05):** Mermaid flowchart and sequence diagram now; ER diagram later (database pack).
 - **Prompt:** `/speckit.specify 056 from docs/backlog.md: file extension and Mermaid import.`
 
 ### Later: user-defined card attributes (not scheduled, §g-40)

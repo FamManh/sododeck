@@ -38,6 +38,36 @@ function expectNoOverlap(request: LayoutRequest, result: LayoutResult): void {
   }
 }
 
+describe('computeLayout direction', () => {
+  const chain = (direction?: LayoutRequest['direction']): LayoutRequest => ({
+    nodes: [
+      { id: 'a', ...size },
+      { id: 'b', ...size },
+    ],
+    groups: [],
+    edges: [{ id: 'e', source: 'a', target: 'b' }],
+    pinned: {},
+    ...(direction === undefined ? {} : { direction }),
+  });
+
+  it('defaults to RIGHT', async () => {
+    const result = await computeLayout(chain());
+    expect(result['b']?.x).toBeGreaterThan(result['a']?.x ?? 0);
+    expect(result['b']?.y).toBe(result['a']?.y);
+  });
+
+  it.each([
+    ['RIGHT', 'x', 1],
+    ['LEFT', 'x', -1],
+    ['DOWN', 'y', 1],
+    ['UP', 'y', -1],
+  ] as const)('%s advances along %s', async (direction, axis, sign) => {
+    const result = await computeLayout(chain(direction));
+    const delta = (result['b']?.[axis] ?? 0) - (result['a']?.[axis] ?? 0);
+    expect(Math.sign(delta)).toBe(sign);
+  });
+});
+
 describe('computeLayout', () => {
   it('lays out a chain left to right', async () => {
     const result = await computeLayout({

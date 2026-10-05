@@ -5,9 +5,23 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PNG_1X1 } from '../images/test-pictures';
 import { listBlobIds } from '../storage/blob-store';
+import type * as LayoutClientModule from '../layout/layout-client';
 import { createFolder, liveDecks } from '../storage/library-db';
 import { freshLibraryDb } from '../test/library-fixtures';
 import { renderLibrary } from '../test/render-library';
+
+vi.mock('../layout/layout-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof LayoutClientModule>();
+  const client = {
+    layout: (request: { nodes: { id: string }[] }) =>
+      Promise.resolve(
+        Object.fromEntries(request.nodes.map((n, i) => [n.id, { x: i * 260, y: 0 }])),
+      ),
+    cancel: () => undefined,
+    terminate: () => undefined,
+  };
+  return { ...actual, getLayoutClient: () => client };
+});
 
 vi.mock('../storage/library-client', (importOriginal) =>
   import('../test/mock-library-client').then((m) => m.mockLibraryClient(importOriginal)),
@@ -23,7 +37,7 @@ const deckFile = (name: string) =>
         flows: [{ id: 'f', title: 'Checkout', steps: [] }],
       }),
     ],
-    `${name}.sododeck.json`,
+    `${name}.sododeck`,
     { type: 'application/json' },
   );
 
@@ -34,7 +48,7 @@ describe('import', () => {
     const db = await freshLibraryDb();
     await renderLibrary({ db });
     const button = await screen.findByRole('button', {
-      name: 'Import deck file (.sododeck.json)',
+      name: 'Import deck file (.sododeck)',
     });
     expect(button).toHaveTextContent(/^Import$/);
   });
@@ -46,7 +60,7 @@ describe('import', () => {
     const nav = screen.getByRole('navigation', { name: 'Library' });
     await user.click(await within(nav).findByRole('button', { name: /^Payments/ }));
     expect(input()).not.toHaveAttribute('multiple');
-    expect(input()).toHaveAttribute('accept', expect.stringContaining('.sododeck.json'));
+    expect(input()).toHaveAttribute('accept', expect.stringContaining('.sododeck'));
 
     await user.upload(input(), deckFile('Colleague deck'));
     expect(await screen.findByText('Imported "Colleague deck"')).toBeInTheDocument();
@@ -60,14 +74,35 @@ describe('import', () => {
     expect(await screen.findByText(/1 component · 1 flow/)).toBeInTheDocument();
   });
 
+  it.each(['a.sododeck', 'a.sododeck.json', 'a.json', 'no-extension'])(
+    'opens %s by content, whatever its name (FR-003)',
+    async (fileName) => {
+      const db = await freshLibraryDb();
+      await renderLibrary({ db });
+      const text = await deckFile('Same').text();
+      // fireEvent: user.upload honours `accept`, and a renamed file must open anyway.
+      fireEvent.change(input(), { target: { files: [new File([text], fileName)] } });
+      expect(await screen.findByText('Imported "Same"')).toBeInTheDocument();
+      expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Same']);
+    },
+  );
+
   it('refuses invalid files and adds nothing', async () => {
     const db = await freshLibraryDb();
     const { user } = await renderLibrary({ db });
     await user.upload(input(), new File(['not json'], 'x.sododeck.json'));
-    expect(await screen.findByText('That file is not a valid .sododeck.json.')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
+      ),
+    ).toBeInTheDocument();
     await user.upload(input(), new File(['{"nodes":1}'], 'y.json'));
     await waitFor(() => {
-      expect(screen.getAllByText('That file is not a valid .sododeck.json.')).toHaveLength(2);
+      expect(
+        screen.getAllByText(
+          'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
+        ),
+      ).toHaveLength(2);
     });
     await user.upload(
       input(),
@@ -143,6 +178,40 @@ describe('import', () => {
       ).toBeInTheDocument();
       const [deck] = await liveDecks(db);
       expect(await listBlobIds(db, deck?.id ?? '')).toEqual([]);
+    });
+  });
+
+  describe('Mermaid files (056)', () => {
+    it('imports a .mmd flowchart through the Mermaid dialog', async () => {
+      const db = await freshLibraryDb();
+      await renderLibrary({ db });
+      fireEvent.change(input(), {
+        target: { files: [new File(['flowchart LR\n  A --> B'], 'diagram.mmd')] },
+      });
+      expect(await screen.findByText('2 components, 1 connection, 0 groups')).toBeInTheDocument();
+      expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Imported diagram']);
+    });
+
+    it('still imports a deck file by its content, even named .mmd', async () => {
+      const db = await freshLibraryDb();
+      await renderLibrary({ db });
+      const text = await deckFile('Real deck').text();
+      fireEvent.change(input(), { target: { files: [new File([text], 'oops.mmd')] } });
+      expect(await screen.findByText('Imported "Real deck"')).toBeInTheDocument();
+    });
+
+    it('shows the invalid-file message for text that is neither', async () => {
+      const db = await freshLibraryDb();
+      await renderLibrary({ db });
+      fireEvent.change(input(), {
+        target: { files: [new File(['just some words'], 'notes.txt')] },
+      });
+      expect(
+        await screen.findByText(
+          'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
+        ),
+      ).toBeInTheDocument();
+      expect(await liveDecks(db)).toEqual([]);
     });
   });
 });

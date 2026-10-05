@@ -4,7 +4,7 @@
  * (research R6–R8). UI-free: callers show toasts and move focus.
  */
 import { postDeckUpdate } from '../storage/deck-channel-post';
-import { downloadText, safeFileName } from '../storage/download';
+import { deckFileName, downloadText } from '../storage/download';
 import {
   FolderNameError,
   insertDeck,
@@ -21,6 +21,9 @@ import {
 } from '../storage/library-db';
 import { getBlobRow, listBlobIds, putBlob } from '../storage/blob-store';
 import type { PictureBytes } from '../storage/library-ops';
+import { applyLayout, toLayoutRequest } from '../import-mermaid/layout-input';
+import type { ImportReport } from '../import-mermaid/import-report';
+import { getLayoutClient, type LayoutClient } from '../layout/layout-client';
 import type { LibraryClient } from '../storage/library-client';
 import type { DeckSummary } from '../storage/deck-summary';
 import type { FolderNameError as FolderNameCode } from '../storage/folder-names';
@@ -29,6 +32,8 @@ import { useLibraryStore, type UndoEntry } from './library-store';
 export interface LibraryActionContext {
   db: LibraryDb;
   client: LibraryClient;
+  /** The ELK layout worker; the shared one when absent (tests pass a fake). */
+  layout?: Pick<LayoutClient, 'layout'>;
   now?: () => number;
 }
 
@@ -173,7 +178,7 @@ export async function renameFolderInline(
   }
 }
 
-/** Downloads `<name>.sododeck.json`, the model's export of the stored deck (FR-025, FR-027). */
+/** Downloads `<name>.sododeck`, the model's export of the stored deck (FR-025, FR-027). */
 export async function exportDeckFile(ctx: LibraryActionContext, deckId: string): Promise<void> {
   const log = await logOf(ctx, deckId);
   const pictures = new Map<string, Uint8Array>();
@@ -182,7 +187,7 @@ export async function exportDeckFile(ctx: LibraryActionContext, deckId: string):
     if (row) pictures.set(row.id, row.bytes);
   }
   const { json, name } = await ctx.client.exportDeck(log.bytes, pictures);
-  downloadText(`${safeFileName(name)}.sododeck.json`, json);
+  downloadText(deckFileName(name), json);
   await markExported(ctx.db, deckId, clock(ctx));
 }
 
@@ -206,4 +211,34 @@ export function importedMessage(name: string, missingPictures: number, suffix = 
   if (missingPictures === 0) return base;
   const noun = missingPictures === 1 ? 'picture is' : 'pictures are';
   return `${base}. ${String(missingPictures)} ${noun} missing from the file.`;
+}
+
+export interface MermaidImportResult {
+  deckId: string;
+  name: string;
+  report: ImportReport;
+}
+
+/**
+ * Imports Mermaid text as a new deck (056): the worker reads it, the layout worker places a
+ * flowchart, and the result goes through the ordinary file import, so validation, ids and storage
+ * are the ones every import uses. Any failure (a refused text, a failed or cancelled layout)
+ * throws before anything is stored.
+ */
+export async function importMermaidDeck(
+  ctx: LibraryActionContext,
+  text: string,
+  folderId: string | null,
+): Promise<MermaidImportResult> {
+  const { file, report, direction } = await ctx.client.importMermaid(text);
+  const placed =
+    direction === null
+      ? file
+      : applyLayout(
+          file,
+          await (ctx.layout ?? getLayoutClient()).layout(toLayoutRequest(file, direction)),
+        );
+  const imported = await ctx.client.importFile(JSON.stringify(placed));
+  const deckId = await addDeck(ctx, imported, folderId);
+  return { deckId, name: imported.summary.name, report };
 }

@@ -8,7 +8,15 @@ import * as Y from 'yjs';
 import { generateBenchDeck } from '../bench/generate-deck';
 import { PNG_1X1 } from '../images/test-pictures';
 import { legacyDeckBytes } from '../test/legacy-deck';
-import { create, duplicate, exportDeck, importFile, LibraryOpError, rename } from './library-ops';
+import {
+  create,
+  duplicate,
+  exportDeck,
+  importFile,
+  importMermaid,
+  LibraryOpError,
+  rename,
+} from './library-ops';
 
 const docOf = (updates: Uint8Array[]) => {
   const doc = new Y.Doc();
@@ -243,5 +251,41 @@ describe('library ops: pictures (055)', () => {
     const secondBytes = new Map(second.pictures.map((p) => [p.id, p.bytes]));
     expect(exportDeck([second.bytes], secondBytes).json).toBe(json);
     expect([...(secondBytes.get(id) ?? [])]).toEqual([...PNG_1X1]);
+  });
+});
+
+describe('importMermaid', () => {
+  it('reads a flowchart without positions and says which way it runs', () => {
+    const { file, report, direction } = importMermaid('flowchart LR\nA[Web] --> B{ok?}');
+    expect(direction).toBe('LR');
+    expect(file.nodes.map((n) => n.position)).toEqual([undefined, undefined]);
+    expect(report).toMatchObject({ kind: 'flowchart', counts: { components: 2, connections: 1 } });
+  });
+
+  it('reads a sequence diagram already placed', () => {
+    const { file, report, direction } = importMermaid('sequenceDiagram\nA->>B: hi');
+    expect(direction).toBeNull();
+    expect(file.nodes.every((n) => n.position !== undefined)).toBe(true);
+    expect(report.counts.steps).toBe(1);
+  });
+
+  it('gives a file the ordinary import accepts', () => {
+    const { file } = importMermaid('sequenceDiagram\nA->>B: hi');
+    expect(importFile(JSON.stringify(file)).summary.nodeCount).toBe(2);
+  });
+
+  it.each([
+    ['', 'mermaid-empty', ''],
+    ['erDiagram\nA ||--o{ B : x', 'mermaid-unsupported-type', 'erDiagram'],
+    ['what\nis this', 'mermaid-nothing-readable', 'line 1: what'],
+    ['flowchart LR\n???', 'mermaid-nothing-readable', 'line 2: ???'],
+  ])('refuses %j with %s', (text, code, message) => {
+    try {
+      importMermaid(text);
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(LibraryOpError);
+      expect(error).toMatchObject({ code, message });
+    }
   });
 });

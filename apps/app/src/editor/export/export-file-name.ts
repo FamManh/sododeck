@@ -8,7 +8,7 @@ export function exportFileName(
 ): string {
   const deck = slug(deckName) || 'untitled-deck';
   const flow = flowName === null ? '' : slug(flowName);
-  const extension = format === 'json' ? 'sododeck.json' : format;
+  const extension = format === 'json' ? 'sododeck' : format;
   return `${deck}${flow ? `-${flow}` : ''}.${extension}`;
 }
 

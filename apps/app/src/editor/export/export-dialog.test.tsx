@@ -154,11 +154,11 @@ describe('ExportDialog: shell', () => {
       'radio',
     );
     expect(formats.map((item) => item.getAttribute('aria-label'))).toEqual(['JSON', 'PNG', 'SVG']);
-    expect(radio('JSON')).toHaveAccessibleDescription('.sododeck.json · re-importable');
+    expect(radio('JSON')).toHaveAccessibleDescription('.sododeck · re-importable');
     expect(radio('PNG')).toHaveAccessibleDescription('Raster image for docs and slides');
     expect(radio('SVG')).toHaveAccessibleDescription('Vector, editable in Figma');
     expect(screen.getByRole('region', { name: 'Preview' })).toBeInTheDocument();
-    await footerName('logistics-delivery.sododeck.json');
+    await footerName('logistics-delivery.sododeck');
   });
 
   it('selects a format by clicking its subtitle (051 US5)', async () => {
@@ -196,7 +196,7 @@ describe('ExportDialog: JSON (US1)', () => {
       screen.getByRole('switch', { name: 'Include descriptions, links and rules' }),
     ).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Pretty-print' })).toBeChecked();
-    await footerName('logistics-delivery.sododeck.json');
+    await footerName('logistics-delivery.sododeck');
     expect(within(dialog()).getByText(/^\d+(\.\d)? KB$|^\d+ B$/)).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Preview' })).toHaveTextContent(
       '"name": "Logistics Delivery"',
@@ -205,7 +205,7 @@ describe('ExportDialog: JSON (US1)', () => {
 
   it('turns Pretty-print off: smaller file, no indentation', async () => {
     const { user } = setup();
-    await footerName('logistics-delivery.sododeck.json');
+    await footerName('logistics-delivery.sododeck');
     const size = () => within(dialog()).getByText(/^\d+(\.\d)? KB$|^\d+ B$/).textContent;
     const before = size();
     await user.click(screen.getByRole('switch', { name: 'Pretty-print' }));
@@ -219,26 +219,22 @@ describe('ExportDialog: JSON (US1)', () => {
 
   it('downloads the backup text, records the export and says so', async () => {
     const { user, markExported } = setup();
-    await footerName('logistics-delivery.sododeck.json');
+    await footerName('logistics-delivery.sododeck');
     await user.click(screen.getByRole('button', { name: 'Download' }));
     expect(downloadText).toHaveBeenCalledWith(
-      'logistics-delivery.sododeck.json',
+      'logistics-delivery.sododeck',
       serializeDeck(deck),
       'application/json',
     );
     expect(markExported).toHaveBeenCalledTimes(1);
-    expect(
-      await screen.findByText('Downloaded logistics-delivery.sododeck.json'),
-    ).toBeInTheDocument();
-    expect(useUiStore.getState().announcement.text).toBe(
-      'Downloaded logistics-delivery.sododeck.json',
-    );
+    expect(await screen.findByText('Downloaded logistics-delivery.sododeck')).toBeInTheDocument();
+    expect(useUiStore.getState().announcement.text).toBe('Downloaded logistics-delivery.sododeck');
     expect(dialog()).toBeInTheDocument();
   });
 
   it('copies, and tells when copying failed', async () => {
     const { user } = setup();
-    await footerName('logistics-delivery.sododeck.json');
+    await footerName('logistics-delivery.sododeck');
     await user.click(screen.getByRole('button', { name: 'Copy' }));
     expect(copyText).toHaveBeenCalledWith(serializeDeck(deck));
     expect(await screen.findByText('Copied')).toBeInTheDocument();
@@ -255,7 +251,7 @@ describe('ExportDialog: JSON (US1)', () => {
     expect(await screen.findByText("Couldn't create this export")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
-    await footerName('logistics-delivery.sododeck.json');
+    await footerName('logistics-delivery.sododeck');
     expect(screen.queryByText("Couldn't create this export")).not.toBeInTheDocument();
   });
 
@@ -358,14 +354,14 @@ describe('ExportDialog: images (US2)', () => {
 
   it('shows "Nothing to export yet" for images of an empty deck; JSON still works', async () => {
     const { user } = setup(deckOf({ name: 'Empty' }));
-    await footerName('empty.sododeck.json');
+    await footerName('empty.sododeck');
     for (const format of ['PNG', 'SVG'] as const) {
       await choose(user, format);
       expect(await screen.findByText('Nothing to export yet')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
     }
     await choose(user, 'JSON');
-    await footerName('empty.sododeck.json');
+    await footerName('empty.sododeck');
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
   });
 });

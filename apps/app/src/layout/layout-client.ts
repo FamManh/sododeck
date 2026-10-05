@@ -77,3 +77,11 @@ export function createLayoutClient(
     },
   };
 }
+
+let shared: LayoutClient | undefined;
+
+/** The page's shared layout worker, started on first use (the library's Mermaid import uses it). */
+export function getLayoutClient(): LayoutClient {
+  shared ??= createLayoutClient();
+  return shared;
+}
