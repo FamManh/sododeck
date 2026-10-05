@@ -652,6 +652,7 @@ function checkReferences(
   const views = byId(file.views);
   const flows = byId(file.flows);
   const stickies = byId(file.stickies);
+  const images = byId(file.images ?? []);
 
   const stepNumber = (flowId: Id, stepId: Id) =>
     analyses.get(flowId)?.byStepId.get(stepId)?.number ??
@@ -692,6 +693,10 @@ function checkReferences(
       case 'stickies': {
         const title = stickyLabel(stickies.get(ref.id)?.text ?? '') ?? 'Untitled note';
         return { label: `Sticky "${title}"`, title, target: { type: 'object', ref }, on: [ref.id] };
+      }
+      case 'images': {
+        const title = images.get(ref.id)?.alt ?? 'Image';
+        return { label: `Image "${title}"`, title, target: { type: 'object', ref }, on: [ref.id] };
       }
       default:
         return { label: ref.id, title: ref.id, target: { type: 'object', ref }, on: [ref.id] };
@@ -740,8 +745,9 @@ function referenceDetail(p: IntegrityProblem, label: string): string {
     case 'detached-rule-input':
       return `${label} has inputs for a rule it doesn't use`;
     case 'duplicate-id':
-      return `${label} has the same id as ${p.targetType === 'group' ? 'a group' : 'a card'}`;
+      return `${label} has the same id as ${p.targetType === 'group' ? 'a group' : p.targetType === 'sticky' ? 'a note' : 'a card'}`;
     case 'missing-reference': {
+      if (p.targetType === 'asset') return `${label} uses a picture the deck does not hold`;
       const what = p.targetType === 'object' ? 'something' : `a ${p.targetType.replace('-', ' ')}`;
       return `${label} points to ${what} that was deleted`;
     }

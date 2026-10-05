@@ -13,6 +13,7 @@ import { fromY, type YObject } from './convert';
 import {
   childList,
   collectionMap,
+  assetsMap,
   enumsList,
   fieldDefaultsMap,
   fieldsList,
@@ -63,6 +64,29 @@ function readStoredFields(kind: TextKind, map: YObject, out: Record<string, unkn
   if (values !== undefined) out.values = values;
   // A long text field whose Y.Text is missing still reads by the text rule.
   if (kind === 'stickies' && out.text === undefined) out.text = '';
+}
+
+/**
+ * The pictures the deck stores, as file `assets` entries without bytes (`data` is `''`: the bytes
+ * are not in the document, `attachAssets` fills them on write). Sorted by picture id so every
+ * replica reads the same deck, and limited to the pictures an image uses (an entry no image uses
+ * is dropped on save, rule I2). Undefined when there is none.
+ */
+export function readAssets(
+  doc: DeckDoc,
+  images: readonly { asset: string }[],
+): SododeckFile['assets'] {
+  const stored = assetsMap(doc);
+  if (stored === undefined || images.length === 0) return undefined;
+  const used = new Set(images.map((image) => image.asset));
+  const out: NonNullable<SododeckFile['assets']> = {};
+  for (const id of [...stored.keys()].sort()) {
+    const map = stored.get(id);
+    if (map === undefined || !used.has(id)) continue;
+    const plain = fromY(map) as Record<string, unknown>;
+    out[id] = { ...plain, data: '' } as unknown as NonNullable<SododeckFile['assets']>[string];
+  }
+  return Object.keys(out).length === 0 ? undefined : out;
 }
 
 /** One stored field definition as plain data (its options in order). */

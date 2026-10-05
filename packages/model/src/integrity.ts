@@ -5,14 +5,15 @@
  */
 import type { Id, SododeckFile } from '@sododeck/schema';
 
-import type { ObjectRef } from './layout';
+import { COLLECTIONS, type ObjectRef } from './layout';
 import { isSchemaGroupId } from './schema-groups';
 
 export interface IntegrityProblem {
   /**
-   * `duplicate-id` (050, 053): a group whose id is also a node's, or a sticky whose id is also a
-   * node's or a group's, so a connector end naming it is ambiguous. Reported on the group (or the
-   * sticky), `field: 'id'`, `targetType` the kind it collides with (`node`, else `group`).
+   * `duplicate-id` (050, 053, 055): a group whose id is also a node's, a sticky whose id is also a
+   * node's or a group's, or an image whose id is also a node's, a group's or a sticky's, so a
+   * connector end naming it is ambiguous. Reported on the later object, `field: 'id'`,
+   * `targetType` the kind it collides with (`node`, else `group`, else `sticky`).
    */
   kind: 'missing-reference' | 'ambiguous-anchor' | 'cycle' | 'detached-rule-input' | 'duplicate-id';
   /** The object holding the reference. */
@@ -31,6 +32,8 @@ export interface IntegrityProblem {
     | 'rule-column'
     | 'table'
     | 'column'
+    | 'sticky'
+    | 'asset'
     | 'object';
 }
 
@@ -74,8 +77,8 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
   // How many objects each id names, for sticky anchors (which may point at any object).
   const anchors = new Map<Id, number>();
   const count = (id: Id) => anchors.set(id, (anchors.get(id) ?? 0) + 1);
-  for (const c of ['nodes', 'groups', 'edges', 'views', 'features', 'flows', 'stickies'] as const) {
-    for (const item of file[c]) count(item.id);
+  for (const c of COLLECTIONS) {
+    for (const item of file[c] ?? []) count(item.id);
   }
   for (const flow of file.flows) for (const step of flow.steps) count(step.id);
   for (const id of Object.keys(file.rules)) count(id);
@@ -118,7 +121,8 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
   // A connector end names a node, a group (050) or a sticky (053). `targetType` stays `node` for a
   // broken end.
   const stickies = ids(file.stickies);
-  const ends: ReadonlySet<Id> = new Set([...nodes, ...groups, ...stickies]);
+  const images = ids(file.images ?? []);
+  const ends: ReadonlySet<Id> = new Set([...nodes, ...groups, ...stickies, ...images]);
   // A sticky is ambiguous as an end only when a connector names its id.
   const named = new Set(file.edges.flatMap((edge) => [edge.from, edge.to]));
   for (const sticky of file.stickies) {
@@ -127,6 +131,25 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
     if (clash === null) continue;
     reportedIds.add(sticky.id);
     report({ scope: 'stickies', id: sticky.id }, 'id', sticky.id, clash, 'duplicate-id');
+  }
+  // An image names a picture of the file and may sit in a group (055). Its id may not equal an
+  // earlier kind's (the connector-end order is node, group, sticky, image).
+  const pictures = new Set(Object.keys(file.assets ?? {}));
+  for (const image of file.images ?? []) {
+    const object: ObjectRef = { scope: 'images', id: image.id };
+    check(object, 'asset', image.asset, pictures, 'asset');
+    check(object, 'group', image.group, groups, 'group');
+    const clash = nodes.has(image.id)
+      ? 'node'
+      : groups.has(image.id)
+        ? 'group'
+        : stickies.has(image.id)
+          ? 'sticky'
+          : null;
+    if (clash !== null && !reportedIds.has(image.id)) {
+      reportedIds.add(image.id);
+      report(object, 'id', image.id, clash, 'duplicate-id');
+    }
   }
   for (const edge of file.edges) {
     const object: ObjectRef = { scope: 'edges', id: edge.id };

@@ -26,7 +26,8 @@ export interface SearchIndex {
   readonly entries: readonly SearchEntry[];
 }
 
-export type SearchKind = 'node' | 'table' | 'column' | 'edge' | 'flow' | 'step' | 'rule' | 'sticky';
+export type SearchKind =
+  'node' | 'table' | 'column' | 'edge' | 'flow' | 'step' | 'rule' | 'sticky' | 'image';
 
 export type SearchField =
   | 'title'
@@ -39,6 +40,10 @@ export type SearchField =
   | 'column'
   /** A sticky note's tag (053). */
   | 'tag'
+  /** An image's alt text, caption and original file name (055). */
+  | 'alt'
+  | 'caption'
+  | 'file'
   /** A typed field value (032), indexed as "<field>: <value>". */
   | 'field';
 
@@ -66,6 +71,7 @@ const ORDER: Record<SearchKind, number> = {
   step: 5,
   rule: 6,
   sticky: 7,
+  image: 8,
 };
 
 function queryWords(query: string): string[] {

@@ -4,8 +4,8 @@ import { emptySododeckFile, type SododeckFile, type Sticky } from '@sododeck/sch
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
-import { createDeck, createEditor, fromJSON, serializeDeck, toJSON } from '../src';
-import { largeDeck, readExample, shopDeck } from './helpers';
+import { createDeck, createEditor, fromJSON, loadDeck, serializeDeck, toJSON } from '../src';
+import { largeDeck, readExample, reopen, shopDeck } from './helpers';
 
 const minimal = await readExample('minimal.sododeck.json');
 const flowAndRule = await readExample('flow-and-rule.sododeck.json');
@@ -621,7 +621,7 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
   });
 
   it.each(cases)('round-trips the %s losslessly', (_name, file) => {
-    const out = toJSON(fromJSON(file));
+    const out = reopen(file);
     expect(out).toEqual(file);
     expect(serializeDeck(out)).toBe(serializeDeck(file));
     expect(serializeDeck(out)).toBe(`${JSON.stringify(file, null, 2)}\n`);
@@ -640,10 +640,11 @@ describe('round-trip (US2 AS1, FR-022/023)', () => {
   it.each(cases)(
     'serializes a replica of the %s identically (persistence / sync)',
     (_name, file) => {
+      const { doc, bytes } = loadDeck(file);
       const replica = new Y.Doc();
-      Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(file)));
-      expect(toJSON(replica)).toEqual(file);
-      expect(serializeDeck(toJSON(replica))).toBe(serializeDeck(file));
+      Y.applyUpdate(replica, Y.encodeStateAsUpdate(doc));
+      expect(serializeDeck(replica, bytes)).toBe(serializeDeck(file));
+      expect(JSON.parse(serializeDeck(replica, bytes))).toEqual(file);
     },
   );
 });
@@ -774,7 +775,7 @@ describe('canonical key order (FR-022, research R2)', () => {
     const shuffled = shuffleKeys(full) as SododeckFile;
     expect(JSON.stringify(shuffled)).not.toBe(JSON.stringify(full));
 
-    const out = toJSON(fromJSON(shuffled));
+    const out = reopen(shuffled);
     expect(out).toEqual(full);
     expect(JSON.stringify(out)).toBe(JSON.stringify(full));
     expect(serializeDeck(shuffled)).toBe(serializeDeck(full));

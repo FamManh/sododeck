@@ -18,7 +18,7 @@ import {
   type DeckDoc,
 } from './layout';
 import { observeDeck, type ObjectChange } from './observe';
-import { readMeta, readObject, readRule } from './read';
+import { readAssets, readMeta, readObject, readRule } from './read';
 
 export interface DeckSnapshot {
   /** Current plain deck. A new top-level object after every change; untouched objects keep identity. */
@@ -98,8 +98,19 @@ function apply(doc: DeckDoc, previous: SododeckFile, changes: ObjectChange[]): S
     if ((COLLECTIONS as readonly string[]).includes(key)) {
       const c = key as Collection;
       const entry = touched.get(c);
-      parts[key] =
-        entry === undefined ? previous[c] : rebuildCollection(doc, c, previous[c], entry);
+      const before: readonly Item[] = previous[c] ?? [];
+      const items = entry === undefined ? before : rebuildCollection(doc, c, before, entry);
+      // `images` is optional in the file: absent until the deck holds one (055).
+      if (c !== 'images' || items.length > 0) parts[key] = items;
+    } else if (key === 'assets') {
+      // Derived from `meta.assets` and the images that use each picture (055).
+      if (touched.has('meta') || touched.has('images')) {
+        const assets = readAssets(doc, (parts.images ?? []) as { asset: string }[]);
+        if (assets !== undefined)
+          parts[key] = jsonEqual(previous.assets, assets) ? previous.assets : assets;
+      } else if (previous.assets !== undefined) {
+        parts[key] = previous.assets;
+      }
     } else if (key === 'rules') {
       const entry = touched.get('rules');
       parts[key] =

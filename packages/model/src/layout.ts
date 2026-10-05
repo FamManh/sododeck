@@ -20,11 +20,11 @@ export const ARRAY_COLLECTIONS = [
   'flows',
 ] as const satisfies readonly (keyof SododeckFile)[];
 
-/** Every id-keyed array collection of the file, stickies included. */
-export const COLLECTIONS = [...ARRAY_COLLECTIONS, 'stickies'] as const;
+/** Every id-keyed array collection of the file, stickies and images (055) included. */
+export const COLLECTIONS = [...ARRAY_COLLECTIONS, 'stickies', 'images'] as const;
 
 export type Collection = (typeof COLLECTIONS)[number];
-export type ObjectOf<C extends Collection> = SododeckFile[C][number];
+export type ObjectOf<C extends Collection> = NonNullable<SododeckFile[C]>[number];
 
 /** Where an object lives: deck metadata, a collection, or the rules map. */
 export type Scope = 'meta' | Collection | 'rules';
@@ -134,6 +134,17 @@ export function fieldsList(doc: DeckDoc): ListMap | undefined {
 export function enumsList(doc: DeckDoc): ListMap | undefined {
   const existing = metaMap(doc).get('enums');
   return existing instanceof Y.Map ? (existing as unknown as ListMap) : undefined;
+}
+
+/**
+ * What the document stores about each picture (055): a lazy `Y.Map<assetId, Y.Map>` in
+ * `meta.assets` (type, bytes, width, height, name; never the picture bytes, which live in the
+ * app's blob store). Present once a file has images or the first picture is added; a deck that
+ * never held one stays without it, so it is written back byte-identical.
+ */
+export function assetsMap(doc: DeckDoc): Y.Map<YObject> | undefined {
+  const existing = metaMap(doc).get('assets');
+  return existing instanceof Y.Map ? (existing as Y.Map<YObject>) : undefined;
 }
 
 /** A table's child lists (040, research R7) and the kind of item each holds. */

@@ -1,4 +1,28 @@
-export { createDeck, fromJSON, getObject, getRule, serializeDeck, toJSON } from './deck';
+export {
+  createDeck,
+  fromJSON,
+  getObject,
+  getRule,
+  loadDeck,
+  serializeDeck,
+  toJSON,
+  type LoadedDeck,
+} from './deck';
+export {
+  assetId,
+  ASSET_TYPES,
+  attachAssets,
+  decodeBase64,
+  encodeBase64,
+  MAX_ASSET_BYTES,
+  metaOf,
+  MISSING_DATA,
+  type AssetBytes,
+  type AssetId,
+  type AssetMeta,
+  type AssetProblem,
+  type AssetProblemReason,
+} from './assets';
 export {
   ARRAY_COLLECTIONS,
   COLLECTIONS,
@@ -26,7 +50,10 @@ export {
   type TypeKind,
 } from './db-types';
 export { groupingModeOf, type GroupingMode } from './read';
-export { descendantNodeIds } from './group-members';
+export { descendantImageIds, descendantNodeIds } from './group-members';
+export { stackOrder, topRank, type StackEntry, type StackKind } from './stack-order';
+export type { ArrangeMove, StackTargets } from './ops/stacking';
+export type { ImageText, NewImage } from './ops/images';
 export { isSchemaGroupId, schemaGroupId, splitStoredGroups } from './schema-groups';
 export {
   relationshipDisplayOf,
@@ -158,6 +185,12 @@ export {
   fitGroupFrames,
   frameOf,
   NODE_GRID,
+  clampImageSize,
+  defaultImageSize,
+  IMAGE_MAX_DEFAULT_WIDTH,
+  IMAGE_MAX_VIEWPORT_SHARE,
+  IMAGE_MIN_SIZE,
+  imageBox,
   STICKY_COLLAPSED_HEIGHT,
   STICKY_DEFAULT_OFFSET,
   STICKY_DEFAULT_SIZE,

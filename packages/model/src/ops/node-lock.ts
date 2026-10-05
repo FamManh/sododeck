@@ -19,7 +19,7 @@ import { writeField } from '../write';
 import type { EditContext } from './context';
 
 /** Collections whose objects can be locked. */
-export type LockCollection = 'nodes' | 'stickies' | 'edges';
+export type LockCollection = 'nodes' | 'stickies' | 'edges' | 'images';
 
 /** Whether an object is locked (absent means unlocked). */
 export function isLocked(object: { locked?: true | undefined }): boolean {

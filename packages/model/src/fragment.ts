@@ -8,6 +8,12 @@
  * relationships from a copied table to a table outside the copy (kept on paste only when the
  * target deck has that table and its columns), and `enums`, the enums the copied columns name
  * (linked by name or copied on paste). A fragment without them still parses and pastes.
+ *
+ * 055 adds two more optional envelope keys, with no version bump: `images`, the copied images
+ * (their own key, so the deck inside stays a file that needs no picture bytes), and `assets`, the
+ * stored facts about the pictures they use (type, size, name; never the bytes). Pasting into the
+ * same deck shows the pictures at once; into another deck the records are kept and the pictures
+ * show as missing (TODO(M5): carry the bytes across decks).
  */
 import {
   emptySododeckFile,
@@ -16,14 +22,17 @@ import {
   type Edge,
   type Group,
   type Id,
+  type Image,
   type Node,
   type SododeckFile,
 } from '@sododeck/schema';
 
+import { metaOf, type AssetMeta } from './assets';
 import { isDbTable } from './card-types';
 import { frameOf, NODE_GRID, viewNodePosition, type Point } from './geometry';
 import { canonicalize, canonicalizeEntry } from './key-order';
 import { checkDuplicateIds } from './load-checks';
+import { validateObject } from './validate';
 
 export interface Fragment {
   sododeckFragment: 1;
@@ -36,6 +45,10 @@ export interface Fragment {
   external?: Edge[];
   /** The source deck's enums that the copied columns name (043). Absent when there are none. */
   enums?: DbEnum[];
+  /** The copied images, ids and `z` as in the source deck (055). Absent when there are none. */
+  images?: Image[];
+  /** What the source deck stores about the pictures `images` use, no bytes (055). */
+  assets?: Record<Id, AssetMeta>;
 }
 
 export interface FragmentOptions {
@@ -51,6 +64,8 @@ export interface FragmentOptions {
 export interface FragmentSelection {
   nodes: readonly Id[];
   groups: readonly Id[];
+  /** Images to copy (055); absent means none. */
+  images?: readonly Id[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -88,12 +103,14 @@ export function toFragment(
     typeof options === 'string' ? { viewId: options } : options;
   const view = viewId === undefined ? undefined : file.views.find((v) => v.id === viewId);
   const nodeIds = new Set(selection.nodes);
+  const imageIds = new Set(selection.images ?? []);
   const named = new Set(selection.groups);
 
+  // Cards and images are both members of a group: a group is whole when all of them are selected.
   const members = new Map<Id, Id[]>();
-  for (const node of file.nodes) {
-    if (node.group === undefined) continue;
-    members.set(node.group, [...(members.get(node.group) ?? []), node.id]);
+  for (const member of [...file.nodes, ...(file.images ?? [])]) {
+    if (member.group === undefined) continue;
+    members.set(member.group, [...(members.get(member.group) ?? []), member.id]);
   }
   const children = new Map<Id, Id[]>();
   for (const group of file.groups) {
@@ -107,7 +124,7 @@ export function toFragment(
     if (!named.has(id) || seen.has(id)) return false;
     const next = new Set(seen).add(id);
     const ok =
-      (members.get(id) ?? []).every((n) => nodeIds.has(n)) &&
+      (members.get(id) ?? []).every((n) => nodeIds.has(n) || imageIds.has(n)) &&
       (children.get(id) ?? []).every((g) => isWhole(g, next));
     whole.set(id, ok);
     return ok;
@@ -139,8 +156,20 @@ export function toFragment(
       position: { x: at.x, y: at.y },
     });
   });
-  // An end is a node or a group (050): keep an edge when both ends are in the fragment.
-  const inside = (id: Id) => nodeIds.has(id) || groupIds.has(id);
+  const images: Image[] = (file.images ?? [])
+    .filter((image) => imageIds.has(image.id))
+    .map(({ group, ...image }) => ({
+      ...image,
+      ...(group !== undefined && groupIds.has(group) ? { group } : {}),
+    }));
+  const pictures = Object.fromEntries(
+    [...new Set(images.map((image) => image.asset))].flatMap((id) => {
+      const stored = file.assets?.[id];
+      return stored === undefined ? [] : [[id, metaOf(stored)] as const];
+    }),
+  );
+  // An end is a node, a group (050) or an image (055): keep an edge when both ends are in.
+  const inside = (id: Id) => nodeIds.has(id) || groupIds.has(id) || imageIds.has(id);
   const edges: Edge[] = file.edges.filter((e) => inside(e.from) && inside(e.to));
 
   const tables = new Set(file.nodes.filter(isDbTable).map((n) => n.id));
@@ -154,6 +183,12 @@ export function toFragment(
   return {
     sododeckFragment: 1,
     deck: canonicalize({ ...emptySododeckFile(), name: 'Fragment', nodes, groups, edges }),
+    ...(images.length === 0
+      ? {}
+      : {
+          images: images.map((image) => canonicalizeEntry('images', image)),
+          assets: pictures,
+        }),
     ...(external.length === 0
       ? {}
       : { external: external.map((e) => canonicalizeEntry('edges', e)) }),
@@ -163,15 +198,44 @@ export function toFragment(
 
 /** The clipboard text of a fragment (canonical key order, like the file). */
 export function serializeFragment(fragment: Fragment): string {
-  const { external, enums } = fragment;
+  const { external, enums, images, assets } = fragment;
   return JSON.stringify({
     sododeckFragment: 1,
     deck: canonicalize(fragment.deck),
+    ...(images === undefined || images.length === 0
+      ? {}
+      : {
+          images: images.map((image) => canonicalizeEntry('images', image)),
+          assets: assets ?? {},
+        }),
     ...(external === undefined
       ? {}
       : { external: external.map((e) => canonicalizeEntry('edges', e)) }),
     ...(enums === undefined ? {} : { enums: enums.map((e) => canonicalizeEntry('enums', e)) }),
   });
+}
+
+/**
+ * The optional 055 keys: `images` checked one by one like any edit (so the same rules apply),
+ * `assets` entries as pictures without bytes, every image naming one of them. Null when malformed.
+ */
+function parseImages(value: Record<string, unknown>): Pick<Fragment, 'images' | 'assets'> | null {
+  const { images, assets } = value;
+  if (images === undefined && assets === undefined) return {};
+  if (!Array.isArray(images) || !isRecord(assets)) return null;
+  const ids = new Set<string>();
+  for (const image of images) {
+    if (validateObject('images', image).length > 0 || !isRecord(image)) return null;
+    if (typeof image.id !== 'string' || ids.has(image.id)) return null;
+    ids.add(image.id);
+    if (typeof image.asset !== 'string' || !isRecord(assets[image.asset])) return null;
+  }
+  for (const entry of Object.values(assets)) {
+    if (!isRecord(entry) || validateObject('asset', { ...entry, data: 'AA==' }).length > 0) {
+      return null;
+    }
+  }
+  return { images: images as Image[], assets: assets as Record<Id, AssetMeta> };
 }
 
 /**
@@ -209,8 +273,9 @@ export function parseFragment(text: string): Fragment | null {
   const parsed = parseSododeckFile(value.deck);
   if (!parsed.success || checkDuplicateIds(parsed.data).length > 0) return null;
   const extras = parseExtras(value);
-  if (extras === null) return null;
-  return { sododeckFragment: 1, deck: parsed.data, ...extras };
+  const pictures = parseImages(value);
+  if (extras === null || pictures === null) return null;
+  return { sododeckFragment: 1, deck: parsed.data, ...extras, ...pictures };
 }
 
 /** Top-left corner of the fragment's nodes and frames (computed, never stored). */
@@ -224,5 +289,6 @@ export function fragmentOrigin(fragment: Fragment): Point {
   };
   for (const node of fragment.deck.nodes) take(node.position);
   for (const group of fragment.deck.groups) take(frameOf(group)?.position);
+  for (const image of fragment.images ?? []) take(image.position);
   return Number.isFinite(x) ? { x, y } : { x: 0, y: 0 };
 }

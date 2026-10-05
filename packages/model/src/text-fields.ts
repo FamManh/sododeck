@@ -14,6 +14,7 @@ export type TextKind =
   | 'features'
   | 'flows'
   | 'stickies'
+  | 'images'
   | 'step'
   | 'branch'
   | 'rule'
@@ -34,6 +35,8 @@ export const TEXT_FIELDS: Readonly<Record<TextKind, readonly string[]>> = {
   features: ['description'],
   flows: ['description'],
   stickies: ['text'],
+  // Alt text and caption are short plain text (055): last write wins, no Y.Text.
+  images: [],
   step: ['description', 'notes', 'payload'],
   branch: ['description'],
   rule: ['description'],

@@ -5,7 +5,7 @@
  * rows of one rule, and the database parts (040, research R8): every table's columns, indexes and
  * checks plus the enums and their values, together across the deck. The same id in two different
  * scopes is allowed by the format, except a node, a group and a sticky sharing an id that a
- * connector end names (050, 053).
+ * connector end names (050, 053, 055: images too).
  */
 import type { Issue, SododeckFile } from '@sododeck/schema';
 
@@ -60,6 +60,7 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
   });
   const reported = new Set<string>();
   const groupPaths = new Map<string, string>();
+  const stickyPaths = new Map<string, string>();
   file.groups.forEach((group, i) => {
     const path = `groups.${String(i)}.id`;
     if (!groupPaths.has(group.id)) groupPaths.set(group.id, path);
@@ -72,6 +73,7 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
     });
   });
   file.stickies.forEach((sticky, i) => {
+    if (!stickyPaths.has(sticky.id)) stickyPaths.set(sticky.id, `stickies.${String(i)}.id`);
     if (!ends.has(sticky.id) || reported.has(sticky.id)) return;
     const nodePath = nodePaths.get(sticky.id);
     const groupPath = groupPaths.get(sticky.id);
@@ -84,12 +86,28 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
       message: `Id "${sticky.id}" names both a ${nodePath === undefined ? 'group' : 'node'} and a sticky, so connector ends naming it are ambiguous (${other}, ${path}).`,
     });
   });
+  (file.images ?? []).forEach((image, i) => {
+    if (!ends.has(image.id) || reported.has(image.id)) return;
+    const found: [string, string | undefined][] = [
+      ['node', nodePaths.get(image.id)],
+      ['group', groupPaths.get(image.id)],
+      ['sticky', stickyPaths.get(image.id)],
+    ];
+    const clash = found.find(([, at]) => at !== undefined);
+    if (clash === undefined) return;
+    reported.add(image.id);
+    const path = `images.${String(i)}.id`;
+    issues.push({
+      path,
+      message: `Id "${image.id}" names both a ${clash[0]} and an image, so connector ends naming it are ambiguous (${clash[1] ?? ''}, ${path}).`,
+    });
+  });
 }
 
 /** One issue per duplicated id per scope, naming every location. Empty when ids are unique. */
 export function checkDuplicateIds(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
-  for (const c of COLLECTIONS) checkScope(withPaths(file[c], c), issues);
+  for (const c of COLLECTIONS) checkScope(withPaths(file[c] ?? [], c), issues);
   file.flows.forEach((flow, i) => {
     checkScope(withPaths(flow.steps, `flows.${String(i)}.steps`), issues);
     checkScope(withPaths(flow.branches ?? [], `flows.${String(i)}.branches`), issues);
