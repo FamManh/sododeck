@@ -1,4 +1,4 @@
-import { fromJSON, toJSON, type DeckEditor } from '@sododeck/model';
+import { fromJSON, toJSON, VIEW_PRESETS, type DeckEditor } from '@sododeck/model';
 import * as Y from 'yjs';
 import {
   act,
@@ -463,7 +463,7 @@ describe('Canvas', () => {
       editor().remove('groups', 'core');
     });
     expect(ui().drill).toEqual([]);
-    expect(ui().announcement.text).toBe('Went up to System view');
+    expect(ui().announcement.text).toBe('Went up to Overview view');
 
     let groupId = '';
     act(() => {
@@ -481,7 +481,7 @@ describe('Canvas', () => {
       editor().undo();
     });
     expect(ui().drill).toEqual([]);
-    expect(ui().announcement.text).toBe('Went up to System view');
+    expect(ui().announcement.text).toBe('Went up to Overview view');
   });
 
   it('drills into groups and child nodes, shows the breadcrumb, and keeps the deck unchanged', async () => {
@@ -536,7 +536,7 @@ describe('Canvas', () => {
     await user.keyboard('{Enter}');
     expect(ui().drill.map((frame) => frame.id)).toEqual(['core']);
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'System view/Core services',
+      'Overview view/Core services',
     );
     expect(screen.getAllByTestId('deck-node')).toHaveLength(2);
     expect(screen.queryByRole('group', { name: 'Service: Gateway' })).not.toBeInTheDocument();
@@ -964,16 +964,18 @@ describe('canvas handlers', () => {
     it('writes a view position in another view, and one undo removes it', () => {
       const { h, doc, editor } = handlers();
       act(() => {
-        ui().switchView('infra');
+        ui().switchView('feature');
       });
       drag(h, 'a', { x: 40, y: 50 });
       const file = toJSON(doc);
       expect(file.nodes[0]?.position).toEqual({ x: 0, y: 0 });
-      expect(file.views.find((v) => v.id === 'infra')?.positions).toEqual({ a: { x: 40, y: 50 } });
+      expect(file.views.find((v) => v.id === 'feature')?.positions).toEqual({
+        a: { x: 40, y: 50 },
+      });
       act(() => {
         editor().undo();
       });
-      expect(toJSON(doc).views.find((v) => v.id === 'infra')?.positions).toBeUndefined();
+      expect(toJSON(doc).views.find((v) => v.id === 'feature')?.positions).toBeUndefined();
       expect(editor().canUndo()).toBe(false);
     });
 
@@ -1342,8 +1344,24 @@ describe('canvas in flow mode (007)', () => {
   });
 
   describe('views on the canvas (011 US1)', () => {
-    it('dims clients in Infra with a non-colour cue, and not in System', () => {
-      renderWithEditor(<Canvas />, deck);
+    it('dims clients in a stored Infra view with a non-colour cue, and not in the base view', () => {
+      // Infra is no longer a preset (054); a deck can still store one.
+      renderWithEditor(
+        <Canvas />,
+        deckOf({
+          ...deck,
+          views: [
+            ...VIEW_PRESETS,
+            {
+              id: 'infra',
+              type: 'infra',
+              title: 'Infra',
+              subtitleField: 'host',
+              dimKinds: ['client'],
+            },
+          ],
+        }),
+      );
       expect(screen.getByRole('group', { name: 'Client: D' })).toBeInTheDocument();
       act(() => {
         ui().switchView('infra');
@@ -1354,10 +1372,10 @@ describe('canvas in flow mode (007)', () => {
       expect(screen.getByRole('group', { name: 'Service: A' })).toBeInTheDocument();
     });
 
-    it('shows an edit made in Infra in System too (FR-015)', () => {
+    it('shows an edit made in Flows in System too (FR-015)', () => {
       const { editor } = renderWithEditor(<Canvas />, deck);
       act(() => {
-        ui().switchView('infra');
+        ui().switchView('feature');
         editor().update('nodes', 'a', { title: 'Orders API' });
         ui().switchView('system');
       });
@@ -1405,11 +1423,11 @@ describe('canvas in flow mode (007)', () => {
     const flowNodeAt = (id: string) =>
       document.querySelector<HTMLElement>(`.react-flow__node[data-id="${id}"]`)?.style.transform;
 
-    it('a move in Infra leaves System alone; a node never moved in Infra sits at its base', () => {
+    it('a move in Flows leaves System alone; a node never moved in Flows sits at its base', () => {
       const { editor } = renderWithEditor(<Canvas />, deck);
       act(() => {
-        ui().switchView('infra');
-        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        ui().switchView('feature');
+        editor().moveInView('feature', { a: { x: 900, y: 40 } });
       });
       expect(flowNodeAt('a')).toContain('900px');
       expect(flowNodeAt('b')).toContain('300px');
@@ -1432,7 +1450,7 @@ describe('canvas in flow mode (007)', () => {
     it('keeps every view position after a reload from the saved file', () => {
       const first = renderWithEditor(<Canvas />, deck);
       act(() => {
-        first.editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        first.editor().moveInView('feature', { a: { x: 900, y: 40 } });
         first.editor().moveInView('system', { c: { x: 10, y: 400 } });
       });
       const saved = toJSON(first.doc);
@@ -1440,7 +1458,7 @@ describe('canvas in flow mode (007)', () => {
       renderWithEditor(<Canvas />, saved);
       expect(flowNodeAt('c')).toContain('400px');
       act(() => {
-        ui().switchView('infra');
+        ui().switchView('feature');
       });
       expect(flowNodeAt('a')).toContain('900px');
       expect(flowNodeAt('c')).toContain('400px');
@@ -1450,25 +1468,25 @@ describe('canvas in flow mode (007)', () => {
       const user = userEvent.setup();
       const { editor } = renderWithEditor(<Canvas />, deck);
       act(() => {
-        ui().switchView('infra');
-        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        ui().switchView('feature');
+        editor().moveInView('feature', { a: { x: 900, y: 40 } });
         ui().switchView('system');
       });
       act(() => {
         editor().undo();
       });
       expect(ui().currentViewId).toBe('system');
-      expect(ui().announcement.text).toBe('Undid move in Infra');
-      expect(screen.getByText('Undid move in Infra')).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: 'Go to Infra' }));
-      expect(ui().currentViewId).toBe('infra');
+      expect(ui().announcement.text).toBe('Undid move in Flows');
+      expect(screen.getByText('Undid move in Flows')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Go to Flows' }));
+      expect(ui().currentViewId).toBe('feature');
     });
 
     it('says nothing extra for an undo in the current view', () => {
       const { editor } = renderWithEditor(<Canvas />, deck);
       act(() => {
-        ui().switchView('infra');
-        editor().moveInView('infra', { a: { x: 900, y: 40 } });
+        ui().switchView('feature');
+        editor().moveInView('feature', { a: { x: 900, y: 40 } });
       });
       act(() => {
         editor().undo();
@@ -1513,7 +1531,7 @@ describe('canvas in flow mode (007)', () => {
       });
       expect(card(/^Left, collapsed group/)).toBeInTheDocument();
       act(() => {
-        ui().switchView('infra');
+        ui().switchView('feature');
       });
       expect(card(/^Left, collapsed group/)).not.toBeInTheDocument();
       act(() => {

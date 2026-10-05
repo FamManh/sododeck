@@ -29,13 +29,7 @@ describe('appends inside one transaction (036 R3, cached last key)', () => {
       editor.addView({ title: 'Mine' });
       editor.addView({ title: 'Second' });
     });
-    expect(toJSON(doc).views.map((v) => v.title)).toEqual([
-      'System',
-      'Feature',
-      'Infra',
-      'Mine',
-      'Second',
-    ]);
+    expect(toJSON(doc).views.map((v) => v.title)).toEqual(['Overview', 'Flows', 'Mine', 'Second']);
   });
 
   it('keeps 10,000 appends in one batch in order', () => {

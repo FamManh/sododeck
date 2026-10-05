@@ -5,17 +5,14 @@
  */
 import type { Id, View } from '@sododeck/schema';
 
-/** System, Feature and Infra, in switcher order. The first one is the base view. */
+/**
+ * Overview and Flows, in switcher order (054). The first one is the base view. The ids and types
+ * stay `system` and `feature` so a stored deck and every reference keep working; only the titles
+ * are new. A deck that already stores an Infra view keeps it as an ordinary view.
+ */
 export const VIEW_PRESETS: readonly View[] = Object.freeze([
-  Object.freeze({ id: 'system', type: 'system', title: 'System', subtitleField: 'tech' }),
-  Object.freeze({ id: 'feature', type: 'feature', title: 'Feature', subtitleField: 'flows' }),
-  Object.freeze({
-    id: 'infra',
-    type: 'infra',
-    title: 'Infra',
-    subtitleField: 'host',
-    dimKinds: Object.freeze(['client']) as View['dimKinds'],
-  }),
+  Object.freeze({ id: 'system', type: 'system', title: 'Overview', subtitleField: 'tech' }),
+  Object.freeze({ id: 'feature', type: 'feature', title: 'Flows', subtitleField: 'flows' }),
 ] satisfies View[]);
 
 export const PRESET_VIEW_IDS: ReadonlySet<Id> = new Set(VIEW_PRESETS.map((v) => v.id));
