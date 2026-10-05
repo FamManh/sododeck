@@ -40,6 +40,12 @@ import { resetLibraryStore } from './library-store';
 
 let db: LibraryDb;
 let ctx: LibraryActionContext;
+/** A layout worker stand-in: every card of the request on one row, 300 px apart. */
+const rowLayout = {
+  layout: vi.fn((request: { nodes: { id: string }[] }) =>
+    Promise.resolve(Object.fromEntries(request.nodes.map((n, i) => [n.id, { x: i * 300, y: 0 }]))),
+  ),
+};
 const file = {
   ...emptySododeckFile(),
   name: 'Shop',
@@ -56,7 +62,8 @@ async function contentOf(id: string) {
 beforeEach(async () => {
   resetLibraryStore();
   db = await freshLibraryDb();
-  ctx = { db, client: inProcessLibraryClient(), now: () => 42 };
+  rowLayout.layout.mockClear();
+  ctx = { db, client: inProcessLibraryClient(), now: () => 42, layout: rowLayout };
   await insertDeck(
     db,
     deckRecord('d1', { name: 'Shop', nodeCount: 1 }),
@@ -139,6 +146,67 @@ describe('library actions', () => {
     expect(decks.map((d) => d.name).sort()).toEqual(['Imported shop', 'Shop']);
   });
 
+  describe('cards without a position (027 FR-024)', () => {
+    const unplaced = {
+      ...emptySododeckFile(),
+      name: 'From an AI',
+      nodes: [
+        { id: 'web', type: 'client' as const, title: 'Web' },
+        { id: 'api', type: 'service' as const, title: 'API', position: { x: 1000, y: 500 } },
+        { id: 'db', type: 'database' as const, title: 'DB' },
+      ],
+      edges: [
+        { id: 'e1', from: 'web', to: 'api' },
+        { id: 'e2', from: 'api', to: 'db' },
+      ],
+    };
+
+    it('places the unplaced cards with the layout and keeps placed cards where they are', async () => {
+      const { deckId, report } = await importDeckFile(
+        ctx,
+        JSON.stringify(unplaced),
+        null,
+        'ai.sododeck',
+      );
+      expect(rowLayout.layout).toHaveBeenCalledOnce();
+      expect(rowLayout.layout.mock.calls[0]?.[0]).toMatchObject({
+        pinned: { api: { x: 1000, y: 500 } },
+      });
+      const stored = await contentOf(deckId);
+      expect(stored.nodes.map((n) => [n.id, n.position])).toEqual([
+        ['web', { x: 0, y: 0 }],
+        ['api', { x: 1000, y: 500 }],
+        ['db', { x: 600, y: 0 }],
+      ]);
+      expect(report).toBeNull();
+    });
+
+    it('does not call the layout for a deck whose cards are all placed', async () => {
+      const placed = {
+        ...unplaced,
+        nodes: unplaced.nodes.map((n, i) => ({ ...n, position: { x: i * 10, y: 0 } })),
+      };
+      const { deckId } = await importDeckFile(ctx, JSON.stringify(placed), null);
+      expect(rowLayout.layout).not.toHaveBeenCalled();
+      expect((await contentOf(deckId)).nodes.map((n) => n.position?.x)).toEqual([0, 10, 20]);
+    });
+
+    it('keeps the report of the user file and stores nothing when the layout fails', async () => {
+      rowLayout.layout.mockRejectedValueOnce(new Error('layout cancelled'));
+      await expect(importDeckFile(ctx, JSON.stringify(unplaced), null)).rejects.toThrow(
+        'layout cancelled',
+      );
+      expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Shop']);
+      const broken = {
+        ...unplaced,
+        flows: [{ id: 'f', title: 'F', steps: [{ id: 's', edge: 'nope' }] }],
+      };
+      const { report } = await importDeckFile(ctx, JSON.stringify(broken), null, 'ai.sododeck');
+      expect(report?.source).toEqual({ kind: 'file', name: 'ai.sododeck' });
+      expect(report?.problems.map((p) => p.path)).toContain('/flows/0/steps/0');
+    });
+  });
+
   describe('pictures (055)', () => {
     const pictureId = assetId(PNG_1X1);
     const meta = {
@@ -182,6 +250,17 @@ describe('library actions', () => {
       expect(result.report?.source).toEqual({ kind: 'file', name: 'damaged.sododeck' });
       const ids = (await liveDecks(db)).map((d) => d.id).filter((id) => id !== 'd1');
       expect(await listBlobIds(db, ids[0] ?? '')).toEqual([]);
+    });
+
+    it('reports image crops trimmed to the picture edge (057)', async () => {
+      const text = imageDeckJson().replace(
+        /("size": \{[^}]*\})/,
+        '$1,\n"crop": { "x": 0.6, "y": 0, "width": 0.6, "height": 1 }',
+      );
+      expect(text).toContain('"crop"');
+      const result = await importDeckFile(ctx, text, null);
+      expect(result.report?.problems.map((entry) => entry.code)).toEqual(['crop-trimmed']);
+      expect((await importDeckFile(ctx, imageDeckJson(), null)).report).toBeNull();
     });
 
     it('exports the pictures its images use, byte for byte', async () => {

@@ -128,4 +128,29 @@ describe('copy and paste of images (055)', () => {
     expect(fragment).not.toHaveProperty('assets');
     expect(serializeFragment(fragment)).not.toContain('"images"');
   });
+
+  it('keeps crop and flip on a copied image (057)', () => {
+    const { doc, editor } = setupDeck();
+    const [id = ''] = editor.addImages([
+      newImage(1, {
+        meta: { ...picture(1).meta, width: 400, height: 200 },
+        size: { width: 400, height: 200 },
+      }),
+    ]);
+    editor.setImageCrop(id, { x: 0.5, y: 0, width: 0.5, height: 1 });
+    editor.setImageFlip([id], 'x', true);
+    editor.setImageFlip([id], 'y', true);
+    const fragment = toFragment(toJSON(doc), { nodes: [], groups: [], images: [id] });
+    const pasted = editor.pasteFragment(parseFragment(serializeFragment(fragment)) ?? fragment, {
+      offset: { x: 500, y: 0 },
+    });
+    const copy = toJSON(doc).images?.find((i) => i.id === pasted.images[0]);
+    expect(copy).toMatchObject({
+      asset: picture(1).id,
+      crop: { x: 0.5, y: 0, width: 0.5, height: 1 },
+      flipX: true,
+      flipY: true,
+    });
+    expectValid(doc);
+  });
 });

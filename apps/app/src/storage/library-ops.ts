@@ -72,9 +72,19 @@ export interface ImportedDeck extends DeckBytes {
    * error or warning, as the copyable report. `null` for a clean deck.
    */
   openReport: ProblemReport | null;
+  /**
+   * The file as read, only when at least one card has no position (027 FR-024): the caller places
+   * those cards and imports the placed file instead. Pictures stay embedded in it.
+   */
+  unplaced?: SododeckFile;
 }
 
 const IMPORTED_NAME = 'Imported deck';
+
+/** The file `inspectDeckText` accepted, as a plain object (its byte order mark dropped). */
+function parseAccepted(text: string): SododeckFile {
+  return JSON.parse(text.startsWith('\uFEFF') ? text.slice(1) : text) as SododeckFile;
+}
 
 /**
  * The stored deck as a document. A deck in the layout used before 036 would read as an empty deck,
@@ -157,6 +167,10 @@ export function importFile(text: string, name = 'deck file'): ImportedDeck {
     summary: summarizeDeck(toJSON(doc)),
     pictures: picturesOf(doc, loaded.bytes),
     openReport: result.entries.length === 0 ? null : reportOf(name, 'opened', result.entries),
+    // Checked here, in the worker, so a fully placed deck never crosses back as a plain file.
+    ...(toJSON(doc).nodes.some((node) => node.position === undefined)
+      ? { unplaced: parseAccepted(text) }
+      : {}),
   };
 }
 

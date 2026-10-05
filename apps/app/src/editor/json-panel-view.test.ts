@@ -141,6 +141,34 @@ describe('selectionView', () => {
     });
   });
 
+  it('shows an edited image with its crop and flips and no picture bytes (057)', () => {
+    const asset = 'a'.repeat(64);
+    const pictures = deckOf({
+      images: [
+        {
+          id: 'img',
+          asset,
+          position: { x: 0, y: 0 },
+          size: { width: 100, height: 100 },
+          crop: { x: 0.5, y: 0, width: 0.5, height: 1 },
+          flipX: true,
+          flipY: true,
+        },
+      ],
+      assets: {
+        [asset]: { type: 'image/png', bytes: 1, width: 4, height: 2, name: 'a.png', data: 'AA==' },
+      },
+    });
+    const view = selectionView(pictures, { ...none, images: ['img'] });
+    const text = selectionText(view.entries);
+    expect(JSON.parse(text)).toMatchObject({
+      crop: { x: 0.5, y: 0, width: 0.5, height: 1 },
+      flipX: true,
+      flipY: true,
+    });
+    expect(text).not.toContain('AA==');
+  });
+
   it('labels one group with its title', () => {
     const groupDeck = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
     const view = selectionView(groupDeck, {

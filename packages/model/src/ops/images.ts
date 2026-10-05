@@ -4,12 +4,22 @@
  * them to its blob store before calling `addImages`, so a document never names a picture the store
  * lacks (another tab can show it at once).
  */
-import type { Id, Size } from '@sododeck/schema';
+import type { Id, Image, Size } from '@sododeck/schema';
 
 import { type AssetId, type AssetMeta, metaOf } from '../assets';
 import { jsonEqual, toY, type YObject, type YValue } from '../convert';
 import { DeckEditError } from '../errors';
-import { clampImageSize, type Point } from '../geometry';
+import {
+  clampImageSize,
+  cropFrame,
+  cropOverflows,
+  imageBox,
+  isWholeCrop,
+  minCropFraction,
+  roundCrop,
+  type CropRect,
+  type Point,
+} from '../geometry';
 import { appendAll, assetsMap, collectionMap, metaMap, type DeckDoc } from '../layout';
 import { readObject } from '../read';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
@@ -189,5 +199,90 @@ export function setImageGroup(ctx: EditContext, id: Id, group: Id | null): void 
   ctx.transact(() => {
     if (group === null) map.delete('group');
     else writeField(map, 'images', 'group', group);
+  });
+}
+
+/** Slack for comparing crop fractions with the minimum (they are written with 6 decimals). */
+const CROP_SLACK = 1e-6;
+
+function invalidCrop(message: string): DeckEditError {
+  return new DeckEditError('invalid', [{ path: 'crop', message }]);
+}
+
+/**
+ * Crops an image to `crop` (fractions of the picture, unflipped), or shows the whole picture
+ * again with `null` (057). Writes `crop`, `size` and `position` in one transaction (one undo
+ * step, never merged): the picture keeps its on-canvas scale and the part that stays visible does
+ * not move (`cropFrame`). A crop equal to the whole picture is stored as no crop; values are
+ * rounded to 6 decimals; an unchanged crop writes nothing. `locked` for a locked image (an image
+ * in a locked group is itself locked, 054); `invalid` for a crop past the picture or under 32
+ * canvas px a side at the current scale; `missing-reference` when the picture's facts are absent.
+ */
+export function setImageCrop(ctx: EditContext, id: Id, crop: CropRect | null): void {
+  const { doc } = ctx;
+  const map = requireEntry(collectionMap(doc, 'images'), id, 'Image');
+  assertUnlocked(map, 'Image', id, 'crop it');
+  const current = readObject('images', id, map) as unknown as Image;
+  const facts = assetsMap(doc)?.get(current.asset);
+  const width = facts?.get('width');
+  const height = facts?.get('height');
+  if (typeof width !== 'number' || typeof height !== 'number') {
+    throw new DeckEditError('missing-reference', [
+      { path: 'asset', message: `Picture "${current.asset}" has no stored size to crop by.` },
+    ]);
+  }
+  const natural = { width, height };
+  const next = crop === null || isWholeCrop(crop) ? undefined : roundCrop(crop);
+  if (next !== undefined) {
+    if (next.x < 0 || next.y < 0 || next.width <= 0 || next.height <= 0 || cropOverflows(next)) {
+      throw invalidCrop('The crop must lie inside the picture.');
+    }
+    const min = minCropFraction(imageBox(current), natural, current.crop);
+    if (next.width < min.width - CROP_SLACK || next.height < min.height - CROP_SLACK) {
+      throw invalidCrop('The crop must stay at least 32 px a side on the canvas.');
+    }
+  }
+  if (jsonEqual(current.crop, next)) return;
+  const box = cropFrame(imageBox(current), natural, current.crop, next, current);
+  const size = { width: box.width, height: box.height };
+  const position = { x: box.x, y: box.y };
+  const { crop: _old, ...rest } = current;
+  assertValid(
+    validateObject('images', { ...rest, size, position, ...(next ? { crop: next } : {}) }),
+  );
+  ctx.transact(() => {
+    if (next === undefined) map.delete('crop');
+    else writeField(map, 'images', 'crop', next);
+    writeField(map, 'images', 'size', size);
+    writeField(map, 'images', 'position', position);
+  });
+}
+
+/**
+ * Mirrors every listed image on one axis (`on`) or puts it back (057), in one transaction (one
+ * undo step). Unflipping removes the key, as unlocking does. Images already as asked are left
+ * alone; nothing changing writes nothing. `not-found` for an unknown id and `locked` for any
+ * locked image, before anything is written: the app passes only the unlocked ones.
+ */
+export function setImageFlip(
+  ctx: EditContext,
+  ids: readonly Id[],
+  axis: 'x' | 'y',
+  on: boolean,
+): void {
+  const key = axis === 'x' ? 'flipX' : 'flipY';
+  const list = collectionMap(ctx.doc, 'images');
+  const maps = [...new Set(ids)].map((id) => {
+    const map = requireEntry(list, id, 'Image');
+    assertUnlocked(map, 'Image', id, 'flip it');
+    return map;
+  });
+  const changing = maps.filter((map) => (map.get(key) === true) !== on);
+  if (changing.length === 0) return;
+  ctx.transact(() => {
+    for (const map of changing) {
+      if (on) writeField(map, 'images', key, true);
+      else map.delete(key);
+    }
   });
 }

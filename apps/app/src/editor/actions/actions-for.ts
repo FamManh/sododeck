@@ -43,6 +43,7 @@ function resolve(action: Action, ctx: ActionContext, surface: Surface): Resolved
   const swatch = swatchOf(action, ctx);
   const glyph = action.glyph?.(ctx);
   const note = action.note?.(ctx) ?? undefined;
+  const pressed = action.pressed?.(ctx);
   return {
     id: action.id,
     label: labelOf(action, ctx, surface),
@@ -61,7 +62,8 @@ function resolve(action: Action, ctx: ActionContext, surface: Surface): Resolved
     radio: action.radio === true,
     separatorBefore: action.separatorBefore === true,
     toolbarText: action.toolbarText === true,
-    checked: action.checked?.(ctx) ?? false,
+    checked: action.checked?.(ctx) ?? pressed ?? false,
+    ...(pressed === undefined ? {} : { pressed }),
     run: () => {
       action.run?.(ctx);
     },

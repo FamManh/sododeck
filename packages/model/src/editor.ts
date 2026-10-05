@@ -35,7 +35,7 @@ import type {
 import { defaultNewId, makeIdAllocator } from './ids';
 import { getObject } from './deck';
 import { DeckEditError } from './errors';
-import type { Point } from './geometry';
+import type { CropRect, Point } from './geometry';
 import { rootTypes, type Collection, type DeckDoc, type ObjectOf } from './layout';
 import { observeDeck, type DeckChange } from './observe';
 import { hasDanglingViewRefs, repairViewRefs } from './repair';
@@ -118,6 +118,8 @@ import { setLocked, type LockCollection } from './ops/node-lock';
 import {
   addImages,
   moveImage,
+  setImageCrop,
+  setImageFlip,
   setImageGroup,
   setImageSize,
   setImageText,
@@ -324,6 +326,19 @@ export interface DeckEditor {
   setImageText(id: Id, text: ImageText): void;
   /** Puts an image in a group, or takes it out with `null` (055). `locked` for a locked image. */
   setImageGroup(id: Id, group: Id | null): void;
+  /**
+   * Crops an image to `crop` (fractions of the picture, unflipped), or shows the whole picture with
+   * `null` (057). Writes crop, size and position in one undo step, keeping the picture's on-canvas
+   * scale and the still-visible part in place. A whole-picture crop is stored as none; nothing
+   * changing writes nothing. `locked` for a locked image; `invalid` for a crop past the picture
+   * or under 32 canvas px a side; `missing-reference` when the picture's size is not stored.
+   */
+  setImageCrop(id: Id, crop: CropRect | null): void;
+  /**
+   * Mirrors every listed image on `axis` (`on`) or puts it back (057), in one undo step; unflipping
+   * removes the key. `locked` when any is locked, `not-found` for an unknown id, nothing written.
+   */
+  setImageFlip(ids: readonly Id[], axis: 'x' | 'y', on: boolean): void;
   /**
    * Stacking over cards and images together (055): brings the listed items to the front or back,
    * or one step forward or backward past the next unlisted item. One undo step; unknown ids are
@@ -891,6 +906,12 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     setImageGroup: (id, group) => {
       setImageGroup(ctx, id, group);
+    },
+    setImageCrop: (id, crop) => {
+      setImageCrop(ctx, id, crop);
+    },
+    setImageFlip: (ids, axis, on) => {
+      setImageFlip(ctx, ids, axis, on);
     },
     bringToFront: (targets) => {
       restack(ctx, targets, 'front');

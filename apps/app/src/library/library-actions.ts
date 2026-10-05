@@ -26,6 +26,7 @@ import type { PictureBytes } from '../storage/library-ops';
 import { applyLayout, toLayoutRequest } from '../import-mermaid/layout-input';
 import type { ImportReport } from '../import-mermaid/import-report';
 import { getLayoutClient, type LayoutClient } from '../layout/layout-client';
+import { placeUnplaced } from '../layout/place-unplaced';
 import type { LibraryClient } from '../storage/library-client';
 import type { DeckSummary } from '../storage/deck-summary';
 import type { FolderNameError as FolderNameCode } from '../storage/folder-names';
@@ -206,8 +207,21 @@ export async function importDeckFile(
   fileName?: string,
 ): Promise<{ deckId: string; name: string; report: ProblemReport | null }> {
   const imported = await ctx.client.importFile(text, fileName);
-  const deckId = await addDeck(ctx, imported, folderId);
-  return { deckId, name: imported.summary.name, report: imported.openReport };
+  // Cards without a position (the AI deck skill leaves them out, 027 FR-024) are placed by the
+  // layout worker first, placed cards pinned; the report stays the one of the user's own file.
+  const stored =
+    imported.unplaced === undefined
+      ? imported
+      : await ctx.client.importFile(
+          JSON.stringify(
+            await placeUnplaced(imported.unplaced, (request) =>
+              (ctx.layout ?? getLayoutClient()).layout(request),
+            ),
+          ),
+          fileName,
+        );
+  const deckId = await addDeck(ctx, stored, folderId);
+  return { deckId, name: stored.summary.name, report: imported.openReport };
 }
 
 /** How many problems a report counts, omitted ones included. */

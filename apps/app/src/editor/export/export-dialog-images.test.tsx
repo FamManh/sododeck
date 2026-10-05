@@ -58,8 +58,8 @@ function Harness() {
   return open ? <ExportDialog /> : null;
 }
 
-async function setup() {
-  const { wrapper, store } = editorWrapper(deck);
+async function setup(file = deck) {
+  const { wrapper, store } = editorWrapper(file);
   await store.put(ASSET, { type: 'image/png', bytes: PNG_1X1 });
   render(
     <SaveContext value={{ mode: 'stored', flush: () => Promise.resolve(), markExported: vi.fn() }}>
@@ -115,6 +115,31 @@ describe('images in the export dialog (055)', () => {
         expect.any(Number),
       );
     });
+  });
+
+  it('PNG of a cropped, flipped image rasterises the same nested <svg viewBox> (057)', async () => {
+    const first = deck.images?.[0];
+    if (first === undefined) throw new Error('no image');
+    const edited = deckOf({
+      ...deck,
+      images: [{ ...first, crop: { x: 0, y: 0, width: 1, height: 0.5 }, flipX: true }],
+      assets: { [ASSET]: { ...meta('logo.png'), width: 4, height: 2 } },
+    });
+    const user = await setup(edited);
+    await user.click(screen.getByRole('radio', { name: 'PNG' }));
+    await within(screen.getByRole('dialog', { name: 'Export deck' })).findByText(
+      'pictures.png',
+      {},
+      { timeout: 3000 },
+    );
+    await user.click(screen.getByRole('button', { name: 'Download' }));
+    await waitFor(() => {
+      expect(rasterize).toHaveBeenCalled();
+    });
+    const svg = String(vi.mocked(rasterize).mock.calls[0]?.[0]);
+    expect(svg).toContain('viewBox="0 0 4 1"');
+    expect(svg).toContain('transform="translate(4 0) scale(-1 1)"');
+    expect(svg).toContain(DATA_URI);
   });
 
   it('shows the busy state while the pictures are read', async () => {

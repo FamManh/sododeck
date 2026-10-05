@@ -8,6 +8,7 @@ export {
   toJSON,
   type LoadedDeck,
 } from './deck';
+export { trimCrops, type TrimmedCrop } from './load-checks';
 export {
   assetId,
   ASSET_TYPES,
@@ -122,6 +123,7 @@ export {
   type Severity,
 } from './problems';
 export {
+  AUTHORING_CODES,
   CATALOGUE,
   catalogueEntry,
   DB_FIDELITY_CODES,
@@ -130,6 +132,7 @@ export {
   isCode,
   MERMAID_FIDELITY_CODES,
   renderCatalogueMarkdown,
+  type AuthoringCode,
   type CatalogueEntry,
   type Code,
   type CodeFamily,
@@ -244,6 +247,19 @@ export {
   type FitOptions,
   type Point,
   type StickyPlacement,
+  IMAGE_MAX_SIDE,
+  cropFrame,
+  cropOverflows,
+  isWholeCrop,
+  minCropFraction,
+  pictureLayout,
+  roundCrop,
+  trimCrop,
+  visibleRegion,
+  type CanvasRect,
+  type CropRect,
+  type PictureFlip,
+  type PictureLayout,
 } from './geometry';
 export { buildSearchIndex } from './search/index';
 export {

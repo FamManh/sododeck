@@ -24,7 +24,8 @@ function Toolbar({ className, ...props }: React.ComponentProps<typeof ToolbarPri
 
 /**
  * A 34 px toolbar button. `data-state="open"` (a popover or menu trigger with `asChild`) shows
- * the open state in Orange Soft, together with `aria-expanded`.
+ * the open state in Orange Soft, together with `aria-expanded`; a toggle (`aria-pressed`, 057
+ * flip) shows its on state the same way.
  */
 function ToolbarButton({
   className,
@@ -34,7 +35,7 @@ function ToolbarButton({
     <ToolbarPrimitive.Button
       data-slot="toolbar-button"
       className={cn(
-        'inline-flex h-[34px] min-w-[34px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-button px-2 text-body-sm text-ink transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-primary-soft data-[state=open]:text-primary-ink [&_svg]:size-4 [&_svg]:shrink-0',
+        'inline-flex h-[34px] min-w-[34px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-button px-2 text-body-sm text-ink transition-colors hover:bg-surface-2 disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-primary-soft data-[state=open]:text-primary-ink aria-pressed:bg-primary-soft aria-pressed:text-primary-ink [&_svg]:size-4 [&_svg]:shrink-0',
         focusRing,
         className,
       )}

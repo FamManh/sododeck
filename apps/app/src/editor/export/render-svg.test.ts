@@ -878,6 +878,74 @@ describe('renderSvg relationships (042 FR-027)', () => {
   });
 });
 
+describe('renderSvg: cropped and flipped images (057)', () => {
+  const asset = 'c'.repeat(64);
+  const DATA = 'data:image/png;base64,AAAA';
+  const facts = { type: 'image/png' as const, bytes: 1, width: 1280, height: 800, data: '' };
+  const edited = deckOf({
+    images: [
+      {
+        id: 'img-k3m9',
+        asset,
+        position: { x: 120, y: 80 },
+        size: { width: 240, height: 150 },
+        crop: { x: 0.25, y: 0.1, width: 0.5, height: 0.5 },
+        flipX: true,
+      },
+    ],
+    assets: { [asset]: { ...facts, name: 'shot.png' } },
+  });
+  const pictures = new Map([[asset, DATA]]);
+
+  it('draws the crop as a nested <svg viewBox>, mirrored inside it', () => {
+    const svg = svgOf(edited, { pictures });
+    const doc = parse(svg);
+    expect(doc.querySelector('parsererror')).toBeNull();
+    const group = doc.querySelector('[data-export="image"][data-id="img-k3m9"]');
+    const view = group?.querySelector('svg');
+    expect(view?.getAttribute('x')).toBe('120');
+    expect(view?.getAttribute('y')).toBe('80');
+    expect(view?.getAttribute('width')).toBe('240');
+    expect(view?.getAttribute('height')).toBe('150');
+    expect(view?.getAttribute('viewBox')).toBe('320 80 640 400');
+    expect(view?.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
+    const image = view?.querySelector('image');
+    expect(image?.getAttribute('href')).toBe(DATA);
+    expect(image?.getAttribute('width')).toBe('1280');
+    expect(image?.getAttribute('height')).toBe('800');
+    expect(image?.getAttribute('transform')).toBe('translate(1280 0) scale(-1 1)');
+    expect(svg).not.toMatch(/(?:href|src)="(?!data:|#)/);
+  });
+
+  it('mirrors on both axes, and draws a flip without a crop over the whole picture', () => {
+    const both = deckOf({
+      images: [
+        {
+          id: 'i',
+          asset,
+          position: { x: 0, y: 0 },
+          size: { width: 128, height: 80 },
+          flipX: true,
+          flipY: true,
+        },
+      ],
+      assets: { [asset]: { ...facts, name: 'shot.png' } },
+    });
+    const view = parse(svgOf(both, { pictures })).querySelector('[data-id="i"] svg');
+    expect(view?.getAttribute('viewBox')).toBe('0 0 1280 800');
+    expect(view?.querySelector('image')?.getAttribute('transform')).toBe(
+      'translate(1280 800) scale(-1 -1)',
+    );
+  });
+
+  it('keeps the placeholder of a missing picture unmirrored', () => {
+    const lost = parse(svgOf(edited)).querySelector('[data-id="img-k3m9"]');
+    expect(lost?.querySelector('svg')).toBeNull();
+    expect(lost?.querySelector('[transform]')).toBeNull();
+    expect(lost?.textContent).toContain('Picture missing');
+  });
+});
+
 describe('renderSvg: images (055)', () => {
   const asset = 'a'.repeat(64);
   const GONE = 'b'.repeat(64);
