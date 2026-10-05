@@ -23,6 +23,7 @@ import type {
   SceneFieldChip,
   SceneFields,
   SceneGroup,
+  SceneImage,
   SceneSticky,
 } from './scene';
 import { NOTE_FAMILY } from './scene';
@@ -36,6 +37,12 @@ export interface SvgOptions {
   measure: TextMeasurer;
   /** The document title (the deck name). */
   title: string;
+  /**
+   * The pictures' bytes as `data:` URIs by picture id (055): the only way an image reaches the
+   * file, so the SVG alone shows them and no outside URL is ever written. A picture that is not
+   * here draws as the "missing" placeholder.
+   */
+  pictures?: ReadonlyMap<string, string>;
 }
 
 const SANS = "'Geist Variable', system-ui, sans-serif";
@@ -291,6 +298,93 @@ function icon(
     'stroke-linecap': 'round',
     'stroke-linejoin': 'round',
   })}>${shapes}</g>`;
+}
+
+/**
+ * A picture (055): its bytes as an `<image>` fitted inside the box (the canvas's `object-fit:
+ * contain`), the alt text as its title, the caption under it as the canvas draws it; or, with no
+ * bytes, the same bordered placeholder with its text and the file name. Never an outside URL.
+ */
+function picture(
+  item: SceneImage,
+  data: string | undefined,
+  palette: ExportPalette,
+  measure: TextMeasurer,
+): string {
+  const { x, y, width, height } = item.rect;
+  const out: string[] = [`<g data-export="image" data-id="${escapeXml(item.id)}">`];
+  if (data === undefined || item.placeholder) {
+    out.push(
+      `<title>${escapeXml(`Image: ${item.alt ?? (item.fileName === '' ? 'picture' : item.fileName)}, picture missing`)}</title>`,
+    );
+    out.push(
+      box(
+        x + 0.5,
+        y + 0.5,
+        width - 1,
+        height - 1,
+        4,
+        palette.surface2,
+        palette.borderStrong,
+        '4 3',
+        'image-missing',
+      ),
+    );
+    // A broken-picture glyph from plain shapes: a frame with a slash.
+    const side = Math.min(20, Math.max(0, Math.min(width, height) - 8));
+    if (side >= 12) {
+      const gx = x + (width - side) / 2;
+      const gy = y + height / 2 - side / 2 - (height >= 56 ? 10 : 0);
+      out.push(
+        `<g ${attrs({ fill: 'none', stroke: palette.inkSecondary, 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })}><rect ${attrs({ x: gx, y: gy, width: side, height: side, rx: 3 })}/><path d="M${n(gx)} ${n(gy + side)}L${n(gx + side)} ${n(gy)}"/></g>`,
+      );
+    }
+    if (height >= 56 && width >= 72) {
+      const inner = width - 12;
+      const middle = x + width / 2;
+      out.push(
+        text(
+          'c',
+          middle,
+          y + height / 2 + 14,
+          palette.inkSecondary,
+          truncate('Picture missing', FONTS.caption, inner, measure),
+          'middle',
+        ),
+      );
+      if (item.fileName !== '') {
+        out.push(
+          text(
+            'c',
+            middle,
+            y + height / 2 + 28,
+            palette.inkMuted,
+            truncate(item.fileName, FONTS.caption, inner, measure),
+            'middle',
+          ),
+        );
+      }
+    }
+  } else {
+    if (item.alt !== null) out.push(`<title>${escapeXml(item.alt)}</title>`);
+    out.push(
+      `<image ${attrs({ href: data, x, y, width, height, preserveAspectRatio: 'xMidYMid meet' })}/>`,
+    );
+  }
+  if (item.caption !== null) {
+    out.push(
+      text(
+        'c',
+        x + width / 2,
+        y + height + 16,
+        palette.inkSecondary,
+        truncate(item.caption, FONTS.caption, width, measure),
+        'middle',
+      ),
+    );
+  }
+  out.push('</g>');
+  return out.join('');
 }
 
 /** Baseline of a line of `size` px text centred in a band of `height` px that starts at `top`. */
@@ -1118,7 +1212,7 @@ function edge(item: SceneEdge, palette: ExportPalette, measure: TextMeasurer): s
 /**
  * Writes the scene as one standalone SVG document (R1–R6): real `<text>`, lucide icon paths,
  * embedded fonts, light colours. Stacking order as on the canvas: groups, collapsed groups,
- * edges, ports, cards, notes.
+ * edges, ports, cards and pictures in one stack, notes.
  */
 export function renderSvg(scene: ExportScene, options: SvgOptions): string {
   const { transparent, palette, fonts, measure, title } = options;
@@ -1136,8 +1230,19 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
   if (!transparent) {
     out.push(box(bounds.x, bounds.y, bounds.width, bounds.height, 0, palette.canvas));
   }
+  const imagesById = new Map(scene.images.map((item) => [item.id, item]));
+  const cardsById = new Map(scene.cards.map((item) => [item.id, item]));
+  const drawImage = (item: SceneImage) =>
+    picture(item, options.pictures?.get(item.asset), palette, measure);
+  // An image below every card sits under the connectors too, as on the canvas (055 R2).
+  const firstCard = scene.stack.findIndex((entry) => entry.kind === 'card');
+  const below = firstCard === -1 ? 0 : firstCard;
   for (const group of scene.groups) out.push(groupFrame(group, palette, measure));
   for (const item of scene.collapsed) out.push(collapsedHand(item, palette, measure));
+  for (const entry of scene.stack.slice(0, below)) {
+    const item = imagesById.get(entry.id);
+    if (item !== undefined) out.push(drawImage(item));
+  }
   for (const item of scene.edges) out.push(edge(item, palette, measure));
   for (const port of scene.ports) {
     // The canvas proxy (outside-proxy-node.tsx): a dashed 1.5 px Secondary card on the canvas
@@ -1164,8 +1269,21 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
     out.push(text('o', x + 12 + 24 + 8, y + height / 2 + 11, palette.inkMuted, 'Outside'));
     out.push('</g>');
   }
-  for (const item of scene.cards) {
-    out.push(item.geometry === undefined ? card(item, palette, measure) : shape(item, palette));
+  const drawCard = (item: SceneCard) =>
+    item.geometry === undefined ? card(item, palette, measure) : shape(item, palette);
+  if (scene.stack.length === 0) {
+    for (const item of scene.cards) out.push(drawCard(item));
+  } else {
+    // Cards and images interleaved as stacked (055 R2); the ones below every card are done.
+    for (const entry of scene.stack.slice(below)) {
+      if (entry.kind === 'card') {
+        const item = cardsById.get(entry.id);
+        if (item !== undefined) out.push(drawCard(item));
+      } else {
+        const item = imagesById.get(entry.id);
+        if (item !== undefined) out.push(drawImage(item));
+      }
+    }
   }
   for (const sticky of scene.stickies) out.push(note(sticky, palette, measure));
   out.push('</svg>');

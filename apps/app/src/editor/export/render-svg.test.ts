@@ -877,3 +877,110 @@ describe('renderSvg relationships (042 FR-027)', () => {
     expect(svg).toContain('>0..1</text>');
   });
 });
+
+describe('renderSvg: images (055)', () => {
+  const asset = 'a'.repeat(64);
+  const GONE = 'b'.repeat(64);
+  const DATA = 'data:image/png;base64,AAAA';
+  const facts = { type: 'image/png' as const, bytes: 1, width: 4, height: 3, data: '' };
+  const picture = (id: string, x: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    asset,
+    position: { x, y: 300 },
+    size: { width: 80, height: 60 },
+    ...extra,
+  });
+  const file = deckOf({
+    nodes: [
+      { id: 'c0', type: 'service', title: 'C0', position: { x: 0, y: 0 } },
+      { id: 'c1', type: 'service', title: 'C1', position: { x: 400, y: 0 } },
+    ],
+    images: [
+      picture('i0', 0, { alt: 'Logo <1> & "co"', caption: 'Figure' }),
+      picture('lost', 200, { asset: GONE, size: { width: 240, height: 140 } }),
+    ],
+    assets: { [asset]: { ...facts, name: 'a.png' }, [GONE]: { ...facts, name: 'gone.png' } },
+    edges: [{ id: 'e', from: 'c0', to: 'c1' }],
+  });
+  const pictures = new Map([[asset, DATA]]);
+
+  it('draws an <image> with the data URI at its box, with its alt text as title', () => {
+    const svg = svgOf(file, { pictures });
+    const doc = parse(svg);
+    expect(doc.querySelector('parsererror')).toBeNull();
+    const group = doc.querySelector('[data-export="image"][data-id="i0"]');
+    const image = group?.querySelector('image');
+    expect(image?.getAttribute('href')).toBe(DATA);
+    expect(image?.getAttribute('x')).toBe('0');
+    expect(image?.getAttribute('y')).toBe('300');
+    expect(image?.getAttribute('width')).toBe('80');
+    expect(image?.getAttribute('height')).toBe('60');
+    expect(image?.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
+    expect(group?.querySelector('title')?.textContent).toBe('Logo <1> & "co"');
+    expect(svg).toContain('Figure');
+  });
+
+  it('draws the placeholder for a picture it has no bytes for, with file name and caption', () => {
+    const svg = svgOf(file, { pictures });
+    const lost = parse(svg).querySelector('[data-export="image"][data-id="lost"]');
+    expect(lost?.querySelector('image')).toBeNull();
+    expect(lost?.textContent).toContain('Picture missing');
+    expect(lost?.textContent).toContain('gone.png');
+    // Without any bytes at all, every image is a placeholder.
+    expect(parse(svgOf(file)).querySelectorAll('[data-export="image"] image')).toHaveLength(0);
+  });
+
+  it('writes no reference outside the file', () => {
+    const svg = svgOf(file, { pictures });
+    expect(svg).not.toMatch(/(?:href|src)="(?!data:|#)/);
+    expect(svg).not.toContain('http://www.w3.org/1999/xlink');
+  });
+
+  it('draws images and cards in stack order, over the connectors', () => {
+    const doc = parse(svgOf(file, { pictures }));
+    const order = [...doc.querySelectorAll('[data-export="image"], [data-export="card"]')].map(
+      (el) => el.getAttribute('data-id'),
+    );
+    // c0 and i0 tie at rank 0 (cards first), then c1 and the second image.
+    expect(order).toEqual(['c0', 'i0', 'c1', 'lost']);
+    const body = svgOf(file, { pictures });
+    expect(body.indexOf('data-id="i0"')).toBeGreaterThan(body.indexOf('data-export="edge"'));
+  });
+
+  it('draws an image below every card before the connectors', () => {
+    const below = deckOf({
+      nodes: [
+        { id: 'c0', type: 'service', title: 'C0', position: { x: 0, y: 0 }, z: 5 },
+        { id: 'c1', type: 'service', title: 'C1', position: { x: 400, y: 0 }, z: 6 },
+      ],
+      images: [picture('i0', 0, { z: -1 })],
+      assets: { [asset]: { ...facts, name: 'a.png' } },
+      edges: [{ id: 'e', from: 'c0', to: 'c1' }],
+    });
+    const svg = svgOf(below, { pictures });
+    expect(svg.indexOf('data-id="i0"')).toBeLessThan(svg.indexOf('data-id="e"'));
+  });
+
+  it('a deck without images renders exactly as before', async () => {
+    const { createHash } = await import('node:crypto');
+    const plain = deckOf({
+      nodes: [
+        { id: 'a', type: 'service', title: 'A <b> & "c"', tech: "it's", position: { x: 0, y: 0 } },
+        { id: 'b', type: 'database', title: 'B', position: { x: 300, y: 0 }, rules: ['r'] },
+        { id: 'c', type: 'service', title: 'C', position: { x: 0, y: 200 }, group: 'g' },
+      ],
+      groups: [{ id: 'g', title: 'Group' }],
+      edges: [{ id: 'ab', from: 'a', to: 'b', label: 'SQL' }],
+      rules: { r: { title: 'R', hitPolicy: 'first', inputs: [], outputs: [], rows: [] } },
+      stickies: [{ id: 's', text: 'Note', position: { x: 0, y: 400 } }],
+    });
+    const svg = renderSvg(buildScene({ deck: plain, scope: 'deck', ui }), {
+      ...options,
+      fonts: '',
+      title: 'Deck',
+    });
+    expect(createHash('sha256').update(svg).digest('hex')).toBe(
+      '74fce24cb9f31da6b5152384c4f03c2fe61becbb7a93eca0d3bdae4047ae63d9',
+    );
+  });
+});

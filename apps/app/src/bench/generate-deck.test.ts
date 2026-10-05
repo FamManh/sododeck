@@ -389,4 +389,19 @@ describe('generateBenchDeck 048 wide and schemas', () => {
       generateBenchDeck(50, 100, 42).deck,
     );
   });
+
+  it('adds the requested images over four tiny pictures, some grouped, some connected (055)', () => {
+    const { deck } = generateBenchDeck(60, 120, 42, { groups: true, images: 24 });
+    expect(parseSododeckFile(deck).success).toBe(true);
+    expect(deck.images).toHaveLength(24);
+    expect(Object.keys(deck.assets ?? {})).toHaveLength(4);
+    expect(deck.images?.some((image) => image.group !== undefined)).toBe(true);
+    const ends = new Set(deck.edges.flatMap((edge) => [edge.from, edge.to]));
+    expect(deck.images?.some((image) => ends.has(image.id))).toBe(true);
+    // Same seed, same deck; and the cards are unchanged by asking for images.
+    expect(generateBenchDeck(60, 120, 42, { groups: true, images: 24 }).deck).toEqual(deck);
+    const plain = generateBenchDeck(60, 120, 42, { groups: true }).deck;
+    expect(deck.nodes).toEqual(plain.nodes);
+    expect(generateBenchDeck(60, 120, 42).deck.images).toBeUndefined();
+  });
 });

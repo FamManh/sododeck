@@ -13,6 +13,7 @@ import { LIGHT_PALETTE } from './export-palette';
 import { jsonExport } from './json-export';
 import { largestScale, pngSize } from './png-size';
 import { renderSvg } from './render-svg';
+import { pictureDataUris } from './picture-data-uris';
 import { buildScene, type SceneInput } from './scene';
 import { canvasMeasurer, fixedWidthMeasurer } from './text-measure';
 import { isSchemaFormat, type PngScale } from './types';
@@ -153,7 +154,11 @@ export function useExportResult(
       await ensureFontsLoaded();
       const scene = buildScene({ deck, scope: imageScope, ui });
       if (scene.bounds.width === 0 || scene.bounds.height === 0) return 'empty';
+      // The pictures go in as `data:` URIs, read before rendering: the SVG alone shows them and the
+      // PNG rasteriser (an SVG drawn as an `<img>`) loads nothing else (055 R6).
+      const pictures = scene.images.length === 0 ? undefined : await pictureDataUris(store, deck);
       const svg = renderSvg(scene, {
+        ...(pictures === undefined ? {} : { pictures }),
         transparent,
         palette: LIGHT_PALETTE,
         fonts: EMBEDDED_FONT_CSS,

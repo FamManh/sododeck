@@ -1031,3 +1031,107 @@ describe('buildScene group connectors (050 US4)', () => {
     expect(result.groups.map((g) => g.id)).toEqual(['g']);
   });
 });
+
+describe('buildScene: images (055)', () => {
+  const asset = 'a'.repeat(64);
+  const GONE = 'b'.repeat(64);
+  const facts = { type: 'image/png' as const, bytes: 1, width: 4, height: 3, data: '' };
+  const picture = (id: string, x: number, extra: Record<string, unknown> = {}) => ({
+    id,
+    asset,
+    position: { x, y: 400 },
+    size: { width: 80, height: 60 },
+    ...extra,
+  });
+  const withImages = deckOf({
+    name: 'Pictures',
+    nodes: [
+      { id: 'c0', type: 'service', title: 'C0', position: { x: 0, y: 0 }, group: 'g' },
+      { id: 'c1', type: 'service', title: 'C1', position: { x: 400, y: 0 } },
+    ],
+    groups: [{ id: 'g', title: 'Core' }],
+    images: [
+      picture('i0', 0, { alt: 'Logo', caption: 'Figure' }),
+      picture('i1', 200, { group: 'g' }),
+      picture('lost', 400, { asset: GONE }),
+    ],
+    assets: { [asset]: { ...facts, name: 'a.png' } },
+    edges: [{ id: 'c0-i0', from: 'c0', to: 'i0' }],
+  });
+
+  it('draws each image at its stored box with its picture id, alt and placeholder flag', () => {
+    const s = scene(withImages);
+    expect(ids(s.images)).toEqual(['i0', 'i1', 'lost']);
+    expect(s.images.find((i) => i.id === 'i0')).toMatchObject({
+      asset,
+      rect: { x: 0, y: 400, width: 80, height: 60 },
+      alt: 'Logo',
+      caption: 'Figure',
+      fileName: 'a.png',
+      placeholder: false,
+    });
+    expect(s.images.find((i) => i.id === 'lost')).toMatchObject({ placeholder: true, alt: null });
+  });
+
+  it('lists cards and images in one back-to-front order (stackOrder)', () => {
+    // Ranks: c0 0, c1 1; images 0, 1, 2 → cards first on ties: c0, i0, c1, i1, lost.
+    expect(scene(withImages).stack).toEqual([
+      { kind: 'card', id: 'c0' },
+      { kind: 'image', id: 'i0' },
+      { kind: 'card', id: 'c1' },
+      { kind: 'image', id: 'i1' },
+      { kind: 'image', id: 'lost' },
+    ]);
+  });
+
+  it('keeps an image below every card first in the stack', () => {
+    const below = deckOf({
+      nodes: [
+        { id: 'c0', type: 'service', title: 'C0', position: { x: 0, y: 0 }, z: 5 },
+        { id: 'c1', type: 'service', title: 'C1', position: { x: 400, y: 0 }, z: 6 },
+      ],
+      images: [picture('i', 0, { z: -1 })],
+      assets: { [asset]: { ...facts, name: 'a.png' } },
+    });
+    expect(scene(below).stack.map((item) => item.id)).toEqual(['i', 'c0', 'c1']);
+  });
+
+  it('ends a connector on an image box and counts images in the bounds', () => {
+    const s = scene(withImages);
+    const edge = s.edges.find((e) => e.id === 'c0-i0');
+    expect(edge).toBeDefined();
+    expect(edge?.target.y).toBeGreaterThanOrEqual(400);
+    expect(s.bounds.y + s.bounds.height).toBeGreaterThanOrEqual(460 + EXPORT_MARGIN);
+  });
+
+  it('exports an images-only deck', () => {
+    const only = deckOf({
+      images: [picture('i', 0)],
+      assets: { [asset]: { ...facts, name: 'a.png' } },
+    });
+    const s = scene(only);
+    expect(ids(s.images)).toEqual(['i']);
+    expect(s.bounds.width).toBe(80 + 2 * EXPORT_MARGIN);
+  });
+
+  it('expands a collapsed group for the whole deck, hides its images in a view that collapses it', () => {
+    expect(ids(scene(withImages).images)).toContain('i1');
+    const collapsed = scene(
+      deckOf({ ...withImages, views: [view({ collapsed: ['g'] })] }),
+      'view',
+      { currentViewId: 'v' },
+    );
+    expect(ids(collapsed.images)).toEqual(['i0', 'lost']);
+    expect(ids(collapsed.collapsed)).toEqual(['g']);
+  });
+
+  it('leaves images out of a flow export', () => {
+    expect(scene(withImages, 'flow', { activeFlowId: 'nope' }).images).toEqual([]);
+  });
+
+  it('a deck without images has an empty image list and stack', () => {
+    const s = scene(grouped);
+    expect(s.images).toEqual([]);
+    expect(s.stack).toEqual([]);
+  });
+});

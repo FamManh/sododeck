@@ -1,6 +1,15 @@
-import { CARD_TYPES, PACKS, SHAPE_TYPE_IDS, STICKY_DEFAULT_SIZE } from '@sododeck/model';
+import {
+  assetId,
+  CARD_TYPES,
+  encodeBase64,
+  PACKS,
+  SHAPE_TYPE_IDS,
+  STICKY_DEFAULT_SIZE,
+} from '@sododeck/model';
 import { lucide } from '@sododeck/ui/icon-sets';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
+
+import { PNG_1X1 } from '../images/test-pictures';
 
 const BENCH_ICONS = lucide.icons;
 
@@ -176,6 +185,8 @@ export function generateBenchDeck(
     flows?: boolean;
     groups?: boolean;
     stickies?: number;
+    /** 055: n images over four tiny synthetic pictures, some in groups, some connected. */
+    images?: number;
     views?: boolean;
     routes?: boolean;
     colours?: boolean;
@@ -296,6 +307,7 @@ export function generateBenchDeck(
   };
   if (options.groups === true) addBenchGroups(deck);
   if ((options.stickies ?? 0) > 0) addBenchStickies(deck, options.stickies ?? 0, random);
+  if ((options.images ?? 0) > 0) addBenchImages(deck, options.images ?? 0);
   if (options.flows === true) addBenchFlows(deck, random);
   if (options.views === true) addBenchViews(deck, random);
   return { deck };
@@ -592,6 +604,59 @@ function addBenchFlows(deck: SododeckFile, random: () => number): void {
   });
 }
 
+/**
+ * Four tiny valid pictures (the 1 × 1 test PNG with a different trailing byte each, which every
+ * decoder ignores), so ids differ and the stored bytes stay a few dozen bytes (055).
+ */
+function benchPictures(): { id: string; bytes: number; data: string }[] {
+  return [0, 1, 2, 3].map((variant) => {
+    const bytes = new Uint8Array(PNG_1X1.length + 1);
+    bytes.set(PNG_1X1);
+    bytes[PNG_1X1.length] = variant;
+    return { id: assetId(bytes), bytes: bytes.length, data: encodeBase64(bytes) };
+  });
+}
+
+/**
+ * Images (055): a grid below the cards of mixed sizes. Every third sits in a group when the deck
+ * has some, every fourth is a connector end. No `random()`, so seeded positions stay as they were.
+ */
+function addBenchImages(deck: SododeckFile, count: number): void {
+  const pictures = benchPictures();
+  deck.assets = Object.fromEntries(
+    pictures.map((picture, index) => [
+      picture.id,
+      {
+        type: 'image/png' as const,
+        bytes: picture.bytes,
+        width: 64,
+        height: 48,
+        name: `bench-${String(index)}.png`,
+        data: picture.data,
+      },
+    ]),
+  );
+  const bottom = deck.nodes.reduce((max, node) => Math.max(max, node.position?.y ?? 0), 0);
+  deck.images = [];
+  for (let i = 0; i < count; i++) {
+    const picture = pictures[i % pictures.length];
+    if (picture === undefined) continue;
+    const group = deck.groups[i % Math.max(1, deck.groups.length)];
+    deck.images.push({
+      id: `image${String(i)}`,
+      asset: picture.id,
+      position: { x: (i % 10) * 160, y: bottom + 300 + Math.floor(i / 10) * 140 },
+      size: { width: 128, height: 96 },
+      ...(i % 3 === 0 && group !== undefined ? { group: group.id } : {}),
+      ...(i % 5 === 0 ? { alt: `Bench picture ${String(i)}` } : {}),
+    });
+    const target = deck.nodes[(i * 11) % Math.max(1, deck.nodes.length)];
+    if (i % 4 === 0 && target !== undefined) {
+      deck.edges.push({ id: `image-edge${String(i)}`, from: `image${String(i)}`, to: target.id });
+    }
+  }
+}
+
 function addBenchStickies(deck: SododeckFile, count: number, random: () => number): void {
   const freeCount = Math.floor(count / 2);
   for (let i = 0; i < count; i++) {
@@ -613,7 +678,11 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
       // free note. No `random()` here, so the seeded positions above stay as they were.
       const target = deck.nodes[(i * 7) % Math.max(1, deck.nodes.length)];
       if (i % 2 === 0 && target !== undefined) {
-        deck.edges.push({ id: `sticky-edge${String(i)}`, from: `sticky${String(i)}`, to: target.id });
+        deck.edges.push({
+          id: `sticky-edge${String(i)}`,
+          from: `sticky${String(i)}`,
+          to: target.id,
+        });
       }
       if (i % 4 === 1 && i + 1 < freeCount) {
         deck.edges.push({
