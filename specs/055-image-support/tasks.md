@@ -166,8 +166,8 @@
 
 ## Phase 8: Polish and cross-cutting
 
-- [ ] T056 [P] Update `DESIGN.md` (Image object, missing placeholder, Add tile, toast list), `apps/app/CLAUDE.md`, `packages/model/CLAUDE.md`, `packages/schema/CLAUDE.md` (boundaries and APIs: byte map, `images`, stacking), and `README` only if commands changed.
-- [ ] T057 [P] Finalise `docs/decisions/0037-image-support.md` (status Accepted once the founder approved the principle I deviation) and mark 055 implemented in `docs/backlog.md`.
+- [x] T056 [P] Update `DESIGN.md` (Image object, missing placeholder, Add tile, toast list), `apps/app/CLAUDE.md`, `packages/model/CLAUDE.md`, `packages/schema/CLAUDE.md` (boundaries and APIs: byte map, `images`, stacking), and `README` only if commands changed.
+- [x] T057 [P] Finalise `docs/decisions/0037-image-support.md` (status Accepted once the founder approved the principle I deviation) and mark 055 implemented in `docs/backlog.md`.
 - [ ] T058 Run `pnpm bench` after the change and save `specs/055-image-support/bench-after.md`; compare with `bench-before.md`: decks without images must show no regression; record a 50-image pan / zoom check. Report both sets of numbers.
 - [ ] T059 Run the full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; confirm the no-third-party-requests check passes (DevTools shows no request for pictures); fix anything that fails; no skipped or `.only` tests.
 - [ ] T060 Run the quickstart end to end, record results in `specs/055-image-support/quickstart-results.md`, take screenshots into `specs/055-image-support/screenshots/` (paste, missing placeholder, stacking, export), and mark what was not verified.
