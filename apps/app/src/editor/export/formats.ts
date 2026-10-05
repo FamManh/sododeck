@@ -24,7 +24,7 @@ export const SCHEMA_FORMATS: readonly FormatEntry<SchemaFormat>[] = [
 ];
 
 export const IMAGE_AND_DATA_FORMATS: readonly FormatEntry<ImageAndDataFormat>[] = [
-  { id: 'json', label: 'JSON', subtitle: '.sododeck.json · re-importable', icon: Braces },
+  { id: 'json', label: 'JSON', subtitle: '.sododeck · re-importable', icon: Braces },
   { id: 'png', label: 'PNG', subtitle: 'Raster image for docs and slides', icon: Image },
   { id: 'svg', label: 'SVG', subtitle: 'Vector, editable in Figma', icon: PenTool },
 ];

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { downloadBlob, downloadText, safeFileName } from './download';
+import { DECK_EXTENSION, deckFileName, downloadBlob, downloadText, safeFileName } from './download';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -20,6 +20,24 @@ describe('safeFileName', () => {
   it('falls back to "Untitled deck"', () => {
     expect(safeFileName('   ')).toBe('Untitled deck');
     expect(safeFileName('')).toBe('Untitled deck');
+  });
+});
+
+describe('deckFileName', () => {
+  it('names the file <name>.sododeck', () => {
+    expect(DECK_EXTENSION).toBe('.sododeck');
+    expect(deckFileName('Payments')).toBe('Payments.sododeck');
+  });
+
+  it('still replaces unsafe characters and falls back for an empty name', () => {
+    expect(deckFileName('a/b:c')).toBe('a-b-c.sododeck');
+    expect(deckFileName('')).toBe('Untitled deck.sododeck');
+    expect(deckFileName('.sododeck')).toBe('Untitled deck.sododeck');
+  });
+
+  it('does not add the extension twice', () => {
+    expect(deckFileName('Shop.sododeck')).toBe('Shop.sododeck');
+    expect(deckFileName('Shop.sododeck')).toBe('Shop.sododeck');
   });
 });
 
@@ -46,10 +64,10 @@ describe('downloadText', () => {
       clicks.push(this);
     });
 
-    downloadText('Shop.sododeck.json', '{}\n');
+    downloadText('Shop.sododeck', '{}\n');
 
     expect(clicks).toHaveLength(1);
-    expect(clicks[0]?.download).toBe('Shop.sododeck.json');
+    expect(clicks[0]?.download).toBe('Shop.sododeck');
     expect(clicks[0]?.getAttribute('href')).toBe('blob:test');
     expect(document.querySelector('a[download]')).toBeNull();
     const blob = (create.mock.calls[0] as unknown[] | undefined)?.[0];

@@ -109,7 +109,7 @@ A workspace holds decks; each deck is one model with many views over it.
 | Note / Comment / Sticky | Knowledge attached to any object or free on the canvas | body (markdown), anchor, author, resolved |
 | ADR | Architecture decision record | context, decision, consequences, status |
 
-**Storage format (example: .sododeck/delivery.sododeck.json)**
+**Storage format (example: delivery.sododeck; older `.sododeck.json` and `.json` files also open)**
 
 ```json
 {
@@ -155,7 +155,7 @@ Ids are stable across renames so views, flows and comments never break when a no
 
 - Strict JSON with `$schema` and `version` in every file.
 - Keys written in a fixed order, pretty-printed with one object per line, for readable git diffs.
-- One file per feature (e.g. `delivery.sododeck.json`, `returns.sododeck.json`) to limit merge conflicts.
+- One file per feature (e.g. `delivery.sododeck`, `returns.sododeck`) to limit merge conflicts.
 - Long markdown notes may live in sibling `.md` files referenced by path.
 - YAML is accepted on import and may be offered as an optional editor view (V2); storage stays JSON.
 
@@ -255,7 +255,7 @@ Priority: **P0** = MVP, **P1** = V2, **P2** = V3.
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | I-1 | Export: `.sododeck` JSON, PNG, SVG, PDF, Mermaid | P0 |
-| I-2 | Import: YAML, Mermaid, draw.io | P1 |
+| I-2 | Import: YAML, Mermaid (flowchart and sequence diagram: done in 056), draw.io | P1 |
 | I-3 | Import: OpenAPI, AsyncAPI, Terraform, Kubernetes manifests | P1 |
 | I-4 | Import from codebase via static analysis + AI | P1 |
 | I-5 | Import from EventCatalog and Backstage `catalog-info.yaml` | P2 |

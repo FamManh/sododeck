@@ -108,7 +108,7 @@ describe('DeckInspector (story 2, FR-012)', () => {
       screen.getByRole('textbox', { name: 'Description' }),
       screen.getByRole('combobox', { name: 'Add tag' }),
       screen.getByRole('button', { name: 'Rules 1' }),
-      screen.getByRole('button', { name: 'Export .sododeck.json' }),
+      screen.getByRole('button', { name: 'Export .sododeck' }),
     ];
     screen.getByRole('textbox', { name: 'Name' }).focus();
     for (const target of expected.slice(1)) {

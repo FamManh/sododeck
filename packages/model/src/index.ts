@@ -11,6 +11,7 @@ export {
   type Scope,
 } from './layout';
 export { deckDialect } from './dialect';
+export { defaultNewId, type IdPrefix } from './ids';
 export {
   COMMON_TYPES,
   commonTypeOf,

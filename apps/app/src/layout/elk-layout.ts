@@ -12,6 +12,8 @@ export interface LayoutRequest {
   groups: { id: string; parent?: string }[];
   edges: { id: string; source: string; target: string }[];
   pinned: Record<string, Point>;
+  /** Layer direction; `RIGHT` when absent, so Tidy is unchanged (056: Mermaid import sets it). */
+  direction?: 'RIGHT' | 'DOWN' | 'LEFT' | 'UP';
 }
 
 /** Top-left positions of every requested component, in canvas coordinates. */
@@ -29,7 +31,7 @@ const GAP = 24;
 
 /**
  * Pure layout function (constitution V: runs in the layout Web Worker, and directly in tests).
- * ELK `layered`, left to right, with groups as compound nodes (`INCLUDE_CHILDREN`) so members stay
+ * ELK `layered`, left to right unless `direction` says otherwise, with groups as compound nodes (`INCLUDE_CHILDREN`) so members stay
  * together; pinned components take part (their connections still shape the layers) and are then
  * put back by `applyPins`.
  */
@@ -62,7 +64,7 @@ export async function computeLayout(request: LayoutRequest, elk: ElkEngine): Pro
     id: 'root',
     layoutOptions: {
       'elk.algorithm': 'layered',
-      'elk.direction': 'RIGHT',
+      'elk.direction': request.direction ?? 'RIGHT',
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.spacing.nodeNode': String(SPACING),
       'elk.layered.spacing.nodeNodeBetweenLayers': String(SPACING * 2),

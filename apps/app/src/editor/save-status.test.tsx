@@ -75,7 +75,7 @@ describe('SaveStatus', () => {
     const region = status();
     if (!region) throw new Error('no status');
     await user.click(within(region).getByRole('button', { name: 'Export' }));
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(deck));
+    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck', serializeDeck(deck));
     expect(save.markExported).toHaveBeenCalledOnce();
 
     await user.click(
@@ -87,7 +87,7 @@ describe('SaveStatus', () => {
     expect(details).toHaveTextContent('QuotaExceededError');
     await user.click(within(details).getByRole('button', { name: 'Retry' }));
     expect(save.flush).toHaveBeenCalledOnce();
-    await user.click(within(details).getByRole('button', { name: 'Export .sododeck.json' }));
+    await user.click(within(details).getByRole('button', { name: 'Export .sododeck' }));
     expect(downloadText).toHaveBeenCalledTimes(2);
   });
 

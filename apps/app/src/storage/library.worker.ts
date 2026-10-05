@@ -1,4 +1,12 @@
-import { create, duplicate, exportDeck, importFile, LibraryOpError, rename } from './library-ops';
+import {
+  create,
+  duplicate,
+  exportDeck,
+  importFile,
+  importMermaid,
+  LibraryOpError,
+  rename,
+} from './library-ops';
 import type {
   LibraryRequest,
   LibraryResult,
@@ -11,6 +19,8 @@ function run(request: LibraryRequest): LibraryResult {
       return { op: 'create', ...create(request.name) };
     case 'import':
       return { op: 'import', ...importFile(request.text) };
+    case 'importMermaid':
+      return { op: 'importMermaid', ...importMermaid(request.text) };
     case 'export':
       return { op: 'export', ...exportDeck(request.updates) };
     case 'rename':

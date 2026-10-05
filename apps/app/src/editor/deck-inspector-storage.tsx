@@ -23,7 +23,7 @@ export function DeckInspectorStorage() {
       </p>
       <Button size="sm" className="self-start" onClick={exportDeck}>
         <Download />
-        Export .sododeck.json
+        Export .sododeck
       </Button>
     </PanelSection>
   );
