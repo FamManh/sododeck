@@ -3,14 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import type { TableTab } from '../../../state/ui-store';
-import { useUiStore } from '../../../state/ui-store';
+import type { TableTab } from '../../state/ui-store';
+import { useUiStore } from '../../state/ui-store';
 import { DrawerTabs } from './drawer-tabs';
+
+const TABS = [
+  { id: 'general', label: 'General' },
+  { id: 'columns', label: 'Columns' },
+  { id: 'indexes', label: 'Indexes' },
+  { id: 'checks', label: 'Checks' },
+] as const;
 
 function Harness({ initial = 'general' }: { initial?: TableTab }) {
   const [tab, setTab] = useState<TableTab>(initial);
   return (
-    <DrawerTabs tab={tab} onChange={setTab}>
+    <DrawerTabs tabs={TABS} tab={tab} onChange={setTab} label="Table sections" idPrefix="table">
       <p>{`panel ${tab}`}</p>
     </DrawerTabs>
   );
@@ -19,6 +26,7 @@ function Harness({ initial = 'general' }: { initial?: TableTab }) {
 describe('DrawerTabs', () => {
   it('shows a tablist with four tabs and the labelled panel', () => {
     render(<Harness />);
+    expect(screen.getByRole('tablist', { name: 'Table sections' })).toBeInTheDocument();
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map((t) => t.textContent)).toEqual(['General', 'Columns', 'Indexes', 'Checks']);
     expect(screen.getByRole('tab', { name: 'General' })).toHaveAttribute('aria-selected', 'true');

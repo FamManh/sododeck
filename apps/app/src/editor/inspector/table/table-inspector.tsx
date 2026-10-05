@@ -5,14 +5,21 @@ import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { Lock, Table2 } from 'lucide-react';
 
 import { useEditor } from '../../../model/use-editor';
-import { useUiStore } from '../../../state/ui-store';
+import { useUiStore, type TableTab } from '../../../state/ui-store';
 import { toggleLock } from '../../actions/table-actions';
+import { DrawerTabs, type DrawerTab } from '../drawer-tabs';
 import { InspectorFrame } from '../inspector-frame';
 import { ChecksTab } from './checks-tab';
 import { ColumnsTab } from './columns-tab';
-import { DrawerTabs } from './drawer-tabs';
 import { GeneralTab } from './general-tab';
 import { IndexesTab } from './indexes-tab';
+
+const TABLE_TABS: readonly DrawerTab<TableTab>[] = [
+  { id: 'general', label: 'General' },
+  { id: 'columns', label: 'Columns' },
+  { id: 'indexes', label: 'Indexes' },
+  { id: 'checks', label: 'Checks' },
+];
 
 const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 's'}`;
 
@@ -47,7 +54,13 @@ export function TableInspector({ deck, node }: { deck: SododeckFile; node: Node 
           </Button>
         </div>
       )}
-      <DrawerTabs tab={tab} onChange={setTab}>
+      <DrawerTabs
+        tabs={TABLE_TABS}
+        tab={tab}
+        onChange={setTab}
+        label="Table sections"
+        idPrefix="table"
+      >
         {/* A disabled fieldset disables every native control inside it, whichever tab owns it. */}
         <fieldset disabled={locked} className="m-0 min-w-0 border-0 p-0">
           {tab === 'general' && <GeneralTab deck={deck} node={node} />}

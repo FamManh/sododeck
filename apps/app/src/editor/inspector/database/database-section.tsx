@@ -1,7 +1,5 @@
 import {
-  deckPacks,
   groupingModeOf,
-  isDbTable,
   relationshipDisplayOf,
   tableDisplayOf,
   type ResolvedRelationshipDisplay,
@@ -24,6 +22,7 @@ import { oneStep } from '../../fields/one-step';
 import { DialectConfirmDialog } from './dialect-confirm-dialog';
 import { DialectSelect } from './dialect-select';
 import { EnumList } from './enum-list';
+import { showsDatabaseSection } from './shows-database-section';
 
 type HideFlag = 'hideTypes' | 'hideNullable' | 'hideNotes' | 'hideIndexes';
 
@@ -41,13 +40,8 @@ const LABEL_MODES: readonly { value: ResolvedRelationshipDisplay['labels']; labe
   { value: 'off', label: 'Off' },
 ];
 
-/** The section shows in a deck with a table, or with the Database pack on (041 R10). */
-function showsDatabaseSection(deck: SododeckFile): boolean {
-  return deck.nodes.some(isDbTable) || deckPacks(deck).includes('database');
-}
-
 /**
- * Deck settings › Database (041 FR-019, FR-020, 052, frame 152): the deck dialect, "Show on
+ * Deck settings › Database tab (041 FR-019, FR-020, 052, frame 152): the deck dialect, "Show on
  * tables" and four switches, all on by default; each writes one hide flag of `tableDisplay` in
  * one undo step. 042 adds "Show on relationships"; 052 adds the dialect, the enums list and the
  * block-SQL-export switch.
@@ -58,7 +52,7 @@ export function DatabaseSection({ deck }: { deck: SododeckFile }) {
   if (!showsDatabaseSection(deck)) return null;
   const display = tableDisplayOf(deck);
   return (
-    <PanelSection label="Database">
+    <PanelSection>
       <DialectSelect deck={deck} />
       <p className="text-caption text-ink-secondary">
         One dialect for every table and database card in this deck.
