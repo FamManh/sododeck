@@ -213,3 +213,47 @@ describe('TagEditor: delete (033)', () => {
     expect(screen.queryByText(/^Also on/)).not.toBeInTheDocument();
   });
 });
+
+describe('TagEditor: notes (053)', () => {
+  const withNotes = deckOf({
+    nodes: [{ id: 'a', type: 'service', title: 'A', tags: ['lan'] }],
+    stickies: [
+      { id: 'n1', text: 'one', position: { x: 0, y: 0 }, tags: ['LAN'] },
+      { id: 'n2', text: 'two', position: { x: 0, y: 0 }, tags: ['lan'] },
+    ],
+  });
+
+  it('says how many cards and notes use the tag', () => {
+    renderWithEditor(<TagEditor tag="lan" onBack={() => undefined} />, withNotes);
+    expect(
+      screen.getByRole('button', { name: 'Delete tag · used on 1 card and 2 notes' }),
+    ).toBeInTheDocument();
+  });
+
+  it('deletes the tag from notes too, in one undo step', async () => {
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(
+      <TagEditor tag="lan" onBack={() => undefined} />,
+      withNotes,
+    );
+    await user.click(screen.getByRole('button', { name: /Delete tag/ }));
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }));
+    expect(toJSON(doc).stickies.map((s) => s.tags)).toEqual([undefined, undefined]);
+    expect(useUiStore.getState().announcement.text).toBe(
+      'lan deleted, removed from 1 card and 2 notes',
+    );
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).stickies.map((s) => s.tags)).toEqual([['LAN'], ['lan']]);
+  });
+
+  it('renames across notes', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<TagEditor tag="lan" onBack={() => undefined} />, withNotes);
+    const name = screen.getByRole('textbox', { name: 'Tag name' });
+    await user.clear(name);
+    await user.type(name, 'net{Enter}');
+    expect(toJSON(doc).stickies.map((s) => s.tags)).toEqual([['net'], ['net']]);
+  });
+});

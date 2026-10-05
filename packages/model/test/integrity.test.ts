@@ -475,4 +475,76 @@ describe('checkIntegrity (FR-030/031, SC-008)', () => {
       ]);
     });
   });
+
+  describe('stickies as connector ends (053)', () => {
+    const note = (id: string) => ({ id, text: id, position: { x: 0, y: 0 } });
+
+    it('accepts card → sticky, sticky → card and sticky → sticky', () => {
+      expect(
+        problems({
+          nodes: [node('a')],
+          stickies: [note('s1'), note('s2')],
+          edges: [
+            { id: 'e1', from: 'a', to: 's1' },
+            { id: 'e2', from: 's1', to: 'a' },
+            { id: 'e3', from: 's1', to: 's2' },
+          ],
+        }),
+      ).toEqual([]);
+    });
+
+    it('reports a missing sticky end as missing-reference', () => {
+      expect(
+        problems({ stickies: [note('s1')], edges: [{ id: 'e', from: 's1', to: 'gone' }] }),
+      ).toEqual([
+        {
+          kind: 'missing-reference',
+          object: { scope: 'edges', id: 'e' },
+          field: 'to',
+          target: 'gone',
+          targetType: 'node',
+        },
+      ]);
+    });
+
+    it('reports a node and a sticky sharing an id that a connector names as duplicate-id', () => {
+      expect(
+        problems({
+          nodes: [node('x'), node('a')],
+          stickies: [note('x')],
+          edges: [{ id: 'e', from: 'a', to: 'x' }],
+        }),
+      ).toEqual([
+        {
+          kind: 'duplicate-id',
+          object: { scope: 'stickies', id: 'x' },
+          field: 'id',
+          target: 'x',
+          targetType: 'node',
+        },
+      ]);
+    });
+
+    it('lets a node and a sticky share an id when no connector names it', () => {
+      expect(problems({ nodes: [node('x')], stickies: [note('x')] })).toEqual([]);
+    });
+
+    it('reports a group and a sticky sharing an id that a connector names', () => {
+      expect(
+        problems({
+          groups: [{ id: 'x', title: 'X' }],
+          stickies: [note('x'), note('y')],
+          edges: [{ id: 'e', from: 'y', to: 'x' }],
+        }),
+      ).toEqual([
+        {
+          kind: 'duplicate-id',
+          object: { scope: 'stickies', id: 'x' },
+          field: 'id',
+          target: 'x',
+          targetType: 'group',
+        },
+      ]);
+    });
+  });
 });

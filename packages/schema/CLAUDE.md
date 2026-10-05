@@ -33,7 +33,9 @@ v1 complete (feature 001). 006 added flow branches as optional, additive fields 
 - `Sticky.collapsed?: boolean` — `true` means the note is shown as one line; the editor writes `true` or removes the key.
 - `Sticky.showInFlows?: boolean` — `true` keeps the note at full strength during flow playback; the editor writes `true` or removes the key.
 
-Keep the sticky property order `id, text, color, anchor, position, collapsed, showInFlows`, extend `examples/full.sododeck.json`, and cover invalid non-boolean values in fixtures when these fields change.
+Keep the sticky property order `id, text, color, anchor, position, collapsed, showInFlows, size, fontSize, align, tags, locked`, extend `examples/full.sododeck.json`, and cover invalid non-boolean values in fixtures when these fields change.
+
+053 adds sticky notes as connector ends and richer notes, additive with no version bump (ADR 0031 precedent): `Edge.from` / `to` may name a sticky (descriptions only), optional `Sticky.size` (`$defs/Size`), `fontSize` (integer enum 12, 14, 16, 20, 24, 32; absent = Auto), `align` (`left`, `center`, `right`; absent = centre), `tags` (`$defs/Tags`), `locked` (`const: true`, as 043), appended after `showInFlows` in that order, and optional `Edge.locked` (`const: true`, last key). Invalid fixtures cover bad values. An id shared by a node, a group and a sticky that a connector names is refused by `@sododeck/model` at load (as 050), not here. An older build shows a connector ending on a sticky as a broken reference.
 
 016 adds group frames with no version bump (ADR 0017): `$defs/Size` `{ width, height }` (both > 0; 017 reuses it for `node.size`), `$defs/Frame` `{ position, size }`, optional `Group.position` / `Group.size` (after `parent`, set together: `dependentRequired` in v1.json, S4 in `semantic-rules.ts`) and optional `View.groupFrames` (group id → `Frame`, after `positions`; S5). Per-object validation in `@sododeck/model` runs S4 on groups and supplies the named groups for S5 on a single view.
 

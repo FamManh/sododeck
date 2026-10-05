@@ -250,7 +250,7 @@ describe('renameTag (033)', () => {
       undefined,
     ]);
     expect(file.tagColors).toEqual({ 'PCI-DSS': 'violet', Lan: 'red' });
-    expect(change).toEqual({ cards: 2, others: 7 });
+    expect(change).toEqual({ cards: 2, others: 7, notes: 0 });
     expectValid(doc);
   });
 
@@ -310,9 +310,9 @@ describe('renameTag (033)', () => {
     observeDeck(doc, () => {
       events += 1;
     });
-    expect(editor.renameTag('absent', 'absent')).toEqual({ cards: 0, others: 0 });
-    expect(editor.renameTag('PCI', 'PCI')).toEqual({ cards: 0, others: 0 });
-    expect(editor.renameTag('pci', 'PCI')).toEqual({ cards: 0, others: 0 });
+    expect(editor.renameTag('absent', 'absent')).toEqual({ cards: 0, others: 0, notes: 0 });
+    expect(editor.renameTag('PCI', 'PCI')).toEqual({ cards: 0, others: 0, notes: 0 });
+    expect(editor.renameTag('pci', 'PCI')).toEqual({ cards: 0, others: 0, notes: 0 });
     expect(events).toBe(0);
     expect(editor.canUndo()).toBe(false);
   });
@@ -343,7 +343,7 @@ describe('deleteTag (033)', () => {
     expect(file.tags).toEqual(['deck']);
     expect(file.views.map((v) => v.excludeTags)).toEqual([['lan'], undefined, undefined]);
     expect(file.tagColors).toEqual({ Lan: 'red' });
-    expect(change).toEqual({ cards: 2, others: 7 });
+    expect(change).toEqual({ cards: 2, others: 7, notes: 0 });
     expectValid(doc);
   });
 
@@ -358,7 +358,7 @@ describe('deleteTag (033)', () => {
 
   it('deletes a coloured tag no card carries', () => {
     const { doc, editor } = setup({ ...emptySododeckFile(), tagColors: { Orphan: 'blue' } });
-    expect(editor.deleteTag('orphan')).toEqual({ cards: 0, others: 0 });
+    expect(editor.deleteTag('orphan')).toEqual({ cards: 0, others: 0, notes: 0 });
     expect(toJSON(doc)).not.toHaveProperty('tagColors');
   });
 
@@ -368,8 +368,8 @@ describe('deleteTag (033)', () => {
     observeDeck(doc, () => {
       events += 1;
     });
-    expect(editor.deleteTag('nothing')).toEqual({ cards: 0, others: 0 });
-    expect(editor.deleteTag('')).toEqual({ cards: 0, others: 0 });
+    expect(editor.deleteTag('nothing')).toEqual({ cards: 0, others: 0, notes: 0 });
+    expect(editor.deleteTag('')).toEqual({ cards: 0, others: 0, notes: 0 });
     expect(events).toBe(0);
     expect(editor.canUndo()).toBe(false);
   });
@@ -401,5 +401,99 @@ describe('tag ops on a large deck (033)', () => {
     const start = performance.now();
     run(editor);
     expect(performance.now() - start).toBeLessThan(100);
+  });
+});
+
+describe('sticky tags (053)', () => {
+  const withNotes = (): SododeckFile => ({
+    ...taggedDeck(),
+    stickies: [
+      { id: 'n1', text: 'one', position: { x: 0, y: 0 }, tags: ['PCI', 'Question'] },
+      { id: 'n2', text: 'two', position: { x: 0, y: 0 }, tags: ['pci'] },
+      { id: 'n3', text: 'three', position: { x: 0, y: 0 } },
+    ],
+  });
+
+  it('setStickyTags keeps case, drops repeats ignoring case and spacing, and trims', () => {
+    const { doc, editor } = setup(withNotes());
+    editor.setStickyTags('n3', ['  Risk ', 'risk', 'Open  Q', 'open q', 'Done']);
+    expect(toJSON(doc).stickies[2]?.tags).toEqual(['Risk', 'Open Q', 'Done']);
+    expectValid(doc);
+  });
+
+  it('setStickyTags caps the list at 10', () => {
+    const { doc, editor } = setup(withNotes());
+    editor.setStickyTags(
+      'n3',
+      Array.from({ length: 14 }, (_, i) => `t${String(i)}`),
+    );
+    expect(toJSON(doc).stickies[2]?.tags).toEqual(
+      Array.from({ length: 10 }, (_, i) => `t${String(i)}`),
+    );
+  });
+
+  it('setStickyTags removes the key for an empty list, in one undo step', () => {
+    const { doc, editor } = setup(withNotes());
+    const before = toJSON(doc);
+    editor.setStickyTags('n1', []);
+    expect(toJSON(doc).stickies[0]).not.toHaveProperty('tags');
+    editor.undo();
+    expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('setStickyTags refuses an unknown sticky and writes nothing when unchanged', () => {
+    const { editor } = setup(withNotes());
+    expect(
+      codeOf(() => {
+        editor.setStickyTags('nope', ['x']);
+      }),
+    ).toBe('not-found');
+    editor.setStickyTags('n1', ['PCI', 'Question']);
+    expect(editor.canUndo()).toBe(false);
+  });
+
+  it('renameTag reaches stickies in the same undo step and counts them', () => {
+    const { doc, editor } = setup(withNotes());
+    const before = toJSON(doc);
+    const change = editor.renameTag('pci', 'PCI-DSS');
+    const file = toJSON(doc);
+    expect(file.stickies.map((s) => s.tags)).toEqual([
+      ['PCI-DSS', 'Question'],
+      ['PCI-DSS'],
+      undefined,
+    ]);
+    expect(change).toEqual({ cards: 2, others: 7, notes: 2 });
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc)).toEqual(before);
+    expect(editor.canUndo()).toBe(false);
+  });
+
+  it('a tag only stickies carry can be renamed to merge onto a card tag', () => {
+    const { doc, editor } = setup(withNotes());
+    editor.renameTag('Question', 'lan');
+    expect(toJSON(doc).stickies[0]?.tags).toEqual(['PCI', 'Lan']);
+  });
+
+  it('deleteTag removes it from stickies and drops emptied lists', () => {
+    const { doc, editor } = setup(withNotes());
+    const before = toJSON(doc);
+    const change = editor.deleteTag('PCI');
+    const file = toJSON(doc);
+    expect(file.stickies.map((s) => s.tags)).toEqual([['Question'], undefined, undefined]);
+    expect(file.stickies[1]).not.toHaveProperty('tags');
+    expect(change.notes).toBe(2);
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc)).toEqual(before);
+  });
+
+  it('a spelling first met on a sticky is used when another tag merges onto it', () => {
+    const { doc, editor } = setup({
+      ...emptySododeckFile(),
+      nodes: [{ id: 'a', type: 'service', title: 'A', tags: ['x'] }],
+      stickies: [{ id: 'n', text: 't', position: { x: 0, y: 0 }, tags: ['Question'] }],
+    });
+    editor.renameTag('x', 'question');
+    expect(toJSON(doc).nodes[0]?.tags).toEqual(['Question']);
+    expect(toJSON(doc).stickies[0]?.tags).toEqual(['Question']);
   });
 });

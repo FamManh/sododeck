@@ -4,6 +4,11 @@ import { describe, expect, it } from 'vitest';
 import {
   NODE_GRID,
   STICKY_DEFAULT_OFFSET,
+  STICKY_COLLAPSED_HEIGHT,
+  STICKY_DEFAULT_SIZE,
+  STICKY_MIN_SIZE,
+  clampStickySize,
+  stickyBox,
   nodeCanvasPosition,
   stickyCanvasPosition,
   stickyLabel,
@@ -124,5 +129,44 @@ describe('stickyLabel', () => {
   it('is null for blank text', () => {
     expect(stickyLabel('')).toBeNull();
     expect(stickyLabel('   \n  \n')).toBeNull();
+  });
+});
+
+describe('sticky box (053)', () => {
+  it('has a 200 × 200 default and a 96 × 96 minimum', () => {
+    expect(STICKY_DEFAULT_SIZE).toEqual({ width: 200, height: 200 });
+    expect(STICKY_MIN_SIZE).toEqual({ width: 96, height: 96 });
+  });
+
+  it('uses the default size for a note with no stored size', () => {
+    expect(stickyBox({}, { x: 10, y: 20 })).toEqual({
+      x: 10,
+      y: 20,
+      width: 200,
+      height: 200,
+    });
+  });
+
+  it('uses the stored size', () => {
+    const sticky = { size: { width: 240, height: 120 } };
+    expect(stickyBox(sticky, { x: 0, y: 0 })).toEqual({ x: 0, y: 0, width: 240, height: 120 });
+  });
+
+  it('is one line high while collapsed, keeping the width', () => {
+    const sticky = { collapsed: true, size: { width: 240, height: 120 } };
+    expect(STICKY_COLLAPSED_HEIGHT).toBe(40);
+    expect(stickyBox(sticky, { x: 5, y: 6 })).toEqual({
+      x: 5,
+      y: 6,
+      width: 240,
+      height: 40,
+    });
+    expect(stickyBox({ collapsed: true }, { x: 0, y: 0 }).width).toBe(200);
+  });
+
+  it('clamps a size to the minimum and leaves larger sizes alone', () => {
+    expect(clampStickySize({ width: 10, height: 50 })).toEqual({ width: 96, height: 96 });
+    expect(clampStickySize({ width: 300, height: 96 })).toEqual({ width: 300, height: 96 });
+    expect(clampStickySize({ width: 96.5, height: 400 })).toEqual({ width: 96.5, height: 400 });
   });
 });

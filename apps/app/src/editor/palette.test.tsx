@@ -162,6 +162,44 @@ describe('Palette: Add flyout (030)', () => {
     expect(drag.get(NOTE_MIME)).toBe('note');
   });
 
+  it('says what the Sticky tile does when it takes focus', async () => {
+    renderWithEditor(<Palette />, newDeck());
+    act(() => {
+      screen.getByRole('button', { name: 'Sticky' }).focus();
+    });
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(/drag to drop/);
+  });
+
+  it('draws the Sticky tile as a pad of three notes in the last colour (053 US3)', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    await user.click(screen.getByRole('tab', { name: 'Shapes' }));
+    const pad = within(screen.getByRole('button', { name: 'Sticky' })).getByTestId('sticky-pad');
+    const sheets = pad.querySelectorAll('[data-slot="sticky-paper"]');
+    expect(sheets).toHaveLength(3);
+    expect([...sheets].every((sheet) => sheet.getAttribute('data-color') === 'amber')).toBe(true);
+    act(() => {
+      useUiStore.getState().setLastStickyColour('green');
+    });
+    expect(
+      within(screen.getByRole('button', { name: 'Sticky' }))
+        .getByTestId('sticky-pad')
+        .querySelector('[data-slot="sticky-paper"]'),
+    ).toHaveAttribute('data-color', 'green');
+  });
+
+  it('the Sticky tile places a note in the last colour, ready for typing (053 US3)', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<Palette />, newDeck());
+    act(() => {
+      useUiStore.getState().setLastStickyColour('clay');
+    });
+    await user.click(screen.getByRole('button', { name: 'Sticky' }));
+    const [sticky] = toJSON(doc).stickies;
+    expect(sticky).toMatchObject({ text: '', color: 'clay' });
+    expect(useUiStore.getState().stickyEditing).toBe(sticky?.id);
+  });
+
   it('the Frame tile arms the frame tool on click; Enter places a frame (031 US2)', async () => {
     const user = userEvent.setup();
     const { doc } = renderWithEditor(<Palette />, newDeck());
@@ -215,10 +253,11 @@ describe('Palette: Add flyout (030)', () => {
     expect(screen.queryByRole('button', { name: 'Import SQL or DBML…' })).not.toBeInTheDocument();
   });
 
-  it('offers the Note card and its help text', () => {
+  it('offers the Note card drawn as a pad, and its help text (053 US3)', () => {
     renderWithEditor(<Palette />);
-    expect(screen.getByRole('button', { name: 'Note' })).toBeInTheDocument();
-    expect(screen.getByText(/Drag Note onto a node to pin it/)).toBeInTheDocument();
+    const card = screen.getByRole('button', { name: 'Note' });
+    expect(within(card).getByTestId('sticky-pad')).toBeInTheDocument();
+    expect(screen.getByText(/Drag Note onto the canvas for a free note/)).toBeInTheDocument();
   });
 
   it('filters by name, hides empty sections, says when nothing matches', async () => {

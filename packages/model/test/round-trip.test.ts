@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
-import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
+import { emptySododeckFile, type SododeckFile, type Sticky } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
@@ -1477,5 +1477,95 @@ describe('node lock (043)', () => {
     const renamed = expected.nodes[0];
     if (renamed !== undefined) renamed.title = 'Renamed';
     expect(serializeDeck(out)).toBe(serializeDeck(expected));
+  });
+});
+
+describe('sticky fields, connector lock and sticky ends (053)', () => {
+  const rich: SododeckFile = {
+    ...empty,
+    nodes: [{ id: 'n', type: 'service', title: 'N' }],
+    stickies: [
+      {
+        id: 's',
+        text: 'Why two queues?',
+        color: 'blue',
+        position: { x: 40, y: -120 },
+        collapsed: true,
+        showInFlows: true,
+        size: { width: 220, height: 160 },
+        fontSize: 16,
+        align: 'left',
+        tags: ['Question'],
+        locked: true,
+      },
+    ],
+    edges: [
+      { id: 'e1', from: 's', to: 'n', label: 'see', locked: true },
+      { id: 'e2', from: 'n', to: 's' },
+    ],
+  };
+
+  it.each<[string, Partial<Sticky>]>([
+    ['size', { size: { width: 96, height: 300.5 } }],
+    ['fontSize 12', { fontSize: 12 }],
+    ['fontSize 32', { fontSize: 32 }],
+    ['align right', { align: 'right' }],
+    ['tags', { tags: ['A', 'b c'] }],
+    ['locked', { locked: true }],
+  ])('round-trips a sticky with %s', (_name, extra) => {
+    const file: SododeckFile = {
+      ...empty,
+      stickies: [{ id: 's', text: 't', position: { x: 1, y: 2 }, ...extra }],
+    };
+    const out = toJSON(fromJSON(file));
+    expect(out).toEqual(file);
+    expect(serializeDeck(out)).toBe(serializeDeck(file));
+  });
+
+  it('round-trips every new field together, in schema order, through a replica', () => {
+    const out = toJSON(fromJSON(rich));
+    expect(out).toEqual(rich);
+    expect(serializeDeck(out)).toBe(serializeDeck(rich));
+    expect(Object.keys(out.stickies[0] ?? {})).toEqual([
+      'id',
+      'text',
+      'color',
+      'position',
+      'collapsed',
+      'showInFlows',
+      'size',
+      'fontSize',
+      'align',
+      'tags',
+      'locked',
+    ]);
+    expect(Object.keys(out.edges[0] ?? {})).toEqual(['id', 'from', 'to', 'label', 'locked']);
+    const replica = new Y.Doc();
+    Y.applyUpdate(replica, Y.encodeStateAsUpdate(fromJSON(rich)));
+    expect(serializeDeck(toJSON(replica))).toBe(serializeDeck(rich));
+  });
+
+  it('writes shuffled sticky and edge keys in schema order', () => {
+    const shuffled = shuffleKeys(rich) as SododeckFile;
+    expect(serializeDeck(toJSON(fromJSON(shuffled)))).toBe(serializeDeck(rich));
+  });
+
+  it('keeps a deck without the new fields byte-identical after an unrelated edit', () => {
+    const plain: SododeckFile = {
+      ...empty,
+      nodes: [{ id: 'n', type: 'service', title: 'N' }],
+      stickies: [{ id: 's', text: 'Plain', color: 'green', position: { x: 1, y: 2 } }],
+      edges: [{ id: 'e', from: 'n', to: 'n' }],
+    };
+    const doc = fromJSON(plain);
+    createEditor(doc).update('stickies', 's', { text: 'Edited' });
+    const out = toJSON(doc);
+    for (const key of ['size', 'fontSize', 'align', 'tags', 'locked']) {
+      expect(out.stickies[0]).not.toHaveProperty(key);
+    }
+    expect(out.edges[0]).not.toHaveProperty('locked');
+    expect(serializeDeck(out)).toBe(
+      serializeDeck({ ...plain, stickies: [{ ...plain.stickies[0], text: 'Edited' } as never] }),
+    );
   });
 });

@@ -5,6 +5,7 @@ import {
   isDbTable,
   relationshipDisplayOf,
   type Geometry,
+  stickyBox,
   stickyCanvasPosition,
   stickyLabel,
   tagKey,
@@ -30,6 +31,7 @@ import {
   COLLAPSED_NODE_PREFIX,
   exportPortRects,
   GROUP_NODE_PREFIX,
+  STICKY_NODE_PREFIX,
   groupCounts,
 } from '../deck-to-flow';
 import { flowOverlay, type EdgeFlowMark, type FlowOverlay } from '../flows/flow-overlay';
@@ -40,7 +42,10 @@ import type { PathEnds, PathShape } from '../routing/route-path';
 import { labelClamp } from '../editing/label-drag';
 import { labelPoint, samplePath } from '../routing/connector-geometry';
 import { lineCap, lineDash } from '../style/line-colour';
+import { NOTE_INSET, TAG_ROW_HEIGHT } from '../stickies/fit-font-size';
 import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
+import { fitPlainNote } from '../stickies/sticky-plain-text';
+import { hiddenTagsLabel, noteTags } from '../stickies/sticky-tags';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
 import { subtitleOf, viewStateOf } from '../views/view-state';
 import {
@@ -77,8 +82,9 @@ function iconOf(node: SododeckFile['nodes'][number]): ResolvedIcon {
 }
 
 export const EXPORT_MARGIN = 32;
-/** A sticky note in its one-line form (the canvas's collapsed note). */
-export const STICKY_SIZE = { width: 180, height: 40 } as const;
+
+/** The note text's family, shared by the measurer here and the SVG's `.sn` class. */
+export const NOTE_FAMILY = "'Geist Variable', system-ui, sans-serif";
 
 export interface SceneCard {
   id: string;
@@ -203,6 +209,15 @@ export interface SceneSticky {
   rect: Rect;
   tint: SododeckFile['stickies'][number]['color'];
   label: string;
+  /** One line while collapsed: the label only. */
+  collapsed: boolean;
+  align: 'left' | 'center' | 'right';
+  /** The wrapped plain text at the size the canvas would fit (053); empty for an empty note. */
+  fontSize: number;
+  lineHeight: number;
+  lines: readonly string[];
+  /** The tag chips along the bottom, `x` from the text's left edge; the last may be the "+N" chip. */
+  tagChips: readonly (TagChip & { chip: string; ink: string })[];
 }
 export interface ExportScene {
   bounds: Rect;
@@ -500,14 +515,6 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const groups = sceneGroups(source, graph, level, cards, inFlow);
   // Group frames are connector ends too (050 R6).
   for (const group of groups) rects.set(`${GROUP_NODE_PREFIX}${group.id}`, group.rect);
-  // Shape ends meet the outline (031), as on the canvas.
-  const shapeEnds = new Map(
-    cards.flatMap((card) =>
-      card.geometry === undefined ? [] : [[card.id, card.geometry] as const],
-    ),
-  );
-  const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds, ui.labelsOn === true);
-
   // Notes as the canvas draws them: free notes and notes on non-components (edges, flows,
   // steps) at their own point, notes pinned to a component only when that card is drawn. The
   // flow scope keeps notes on its kept cards or on the flow and its steps.
@@ -531,14 +538,19 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
       if (!onFlow || state === 'hidden') return [];
     }
     return [
-      {
-        id: sticky.id,
-        rect: { ...placement.point, ...STICKY_SIZE },
-        tint: sticky.color,
-        label: stickyLabel(sticky.text) ?? 'Empty note',
-      },
+      sceneSticky(sticky, placement.point, placement.status === 'pinned', tagColours, measure),
     ];
   });
+
+  // Notes are connector ends too (053): `sticky:<id>`, as the visible graph names them.
+  for (const sticky of stickies) rects.set(`${STICKY_NODE_PREFIX}${sticky.id}`, sticky.rect);
+  // Shape ends meet the outline (031), as on the canvas.
+  const shapeEnds = new Map(
+    cards.flatMap((card) =>
+      card.geometry === undefined ? [] : [[card.id, card.geometry] as const],
+    ),
+  );
+  const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds, ui.labelsOn === true);
 
   if (cards.length + collapsed.length + ports.length === 0) return emptyScene();
   let extent: Rect | null = null;
@@ -635,6 +647,70 @@ function sceneStyle(style: SododeckFile['edges'][number]['style']): SceneEdgeSty
     colour,
     ...(dash === undefined ? {} : { dash }),
     ...(cap === undefined ? {} : { cap }),
+  };
+}
+
+/**
+ * A note as the canvas draws it (053): its stored box, the plain text wrapped at the size the fit
+ * picks (the same steps and rows as the canvas, measured with the text measurer), and its tag
+ * chips. The lock mark and the pinned line are not drawn, but they take the room they take there.
+ */
+function sceneSticky(
+  sticky: SododeckFile['stickies'][number],
+  point: { x: number; y: number },
+  pinned: boolean,
+  tagColours: ReturnType<typeof tagColourMap>,
+  measure: TextMeasurer,
+): SceneSticky {
+  const rect = stickyBox(sticky, point);
+  const collapsed = sticky.collapsed === true;
+  const base = {
+    id: sticky.id,
+    tint: sticky.color,
+    label: stickyLabel(sticky.text) ?? 'Empty note',
+    collapsed,
+    align: sticky.align ?? 'center',
+  } as const;
+  return { ...base, rect, ...noteBody(sticky, rect, collapsed, pinned, tagColours, measure) };
+}
+
+function noteBody(
+  sticky: SododeckFile['stickies'][number],
+  rect: Rect,
+  collapsed: boolean,
+  pinned: boolean,
+  tagColours: ReturnType<typeof tagColourMap>,
+  measure: TextMeasurer,
+): Pick<SceneSticky, 'fontSize' | 'lineHeight' | 'lines' | 'tagChips'> {
+  if (collapsed) return { fontSize: 0, lineHeight: 0, lines: [], tagChips: [] };
+  const innerWidth = Math.max(0, rect.width - NOTE_INSET);
+  const looks = cardTags(sticky.tags).map((text) => {
+    const { chip, ink } = exportTagColours(tagColours.get(tagKey(text)));
+    return { text, chip, ink, dot: chip };
+  });
+  const tags = noteTags(looks, innerWidth, measure);
+  const labels = tags.shown.map((look) => look.text);
+  if (tags.hidden > 0) labels.push(hiddenTagsLabel(tags.hidden));
+  const tagChipsOut = tagChips(labels, innerWidth, measure).map((chip) => ({
+    ...chip,
+    ...exportTagColours(tagColours.get(tagKey(chip.tag))),
+  }));
+  const rows = tags.rows + (pinned || sticky.locked === true ? 1 : 0);
+  const fit = fitPlainNote(
+    {
+      markdown: sticky.text,
+      width: innerWidth,
+      height: Math.max(0, rect.height - NOTE_INSET - rows * TAG_ROW_HEIGHT),
+      fontSize: sticky.fontSize,
+      family: NOTE_FAMILY,
+    },
+    measure,
+  );
+  return {
+    fontSize: fit.fontSize,
+    lineHeight: fit.lineHeight,
+    lines: fit.lines,
+    tagChips: tagChipsOut,
   };
 }
 

@@ -255,3 +255,25 @@ describe('deleting a database card that owns tables (049 US1)', () => {
     expect(toJSON(doc).nodes).toEqual([]);
   });
 });
+
+describe('deleting a note with connectors (053 US1)', () => {
+  const noted = deckOf({
+    nodes: [{ id: 'svc', type: 'service', title: 'Order Service' }],
+    stickies: [{ id: 'n', text: 'Why retry?', position: { x: 300, y: 0 } }],
+    edges: [{ id: 'c', from: 'svc', to: 'n' }],
+  });
+
+  it('removes its connectors with it, and one undo restores both', () => {
+    const { doc, editor } = renderWithEditor(<Harness />, noted);
+    act(() => {
+      useUiStore.getState().select({ stickies: ['n'] });
+      useUiStore.getState().requestDelete({ nodes: [], edges: [], stickies: ['n'] });
+    });
+    expect(toJSON(doc).stickies).toEqual([]);
+    expect(toJSON(doc).edges).toEqual([]);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc)).toEqual(noted);
+  });
+});

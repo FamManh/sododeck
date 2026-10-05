@@ -4,8 +4,8 @@ import { Popover, PopoverAnchor, PopoverContent } from '@sododeck/ui/components/
 import { SearchField } from '@sododeck/ui/components/search-field';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { SquareDashed } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { SquareDashed, StickyNote } from 'lucide-react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { iconProp } from './card-icon';
 import { NodeTypeTile } from './shapes/shape-tile';
@@ -20,13 +20,14 @@ import {
 } from './canvas-actions';
 import { columnConnectTargets, connectTargets, type ConnectTarget } from './connection-rules';
 import { rowKey } from './relationships/row-key';
-import { GROUP_NODE_PREFIX } from './deck-to-flow';
+import { GROUP_NODE_PREFIX, STICKY_NODE_PREFIX } from './deck-to-flow';
 
 function anchorRect(nodeId: string): DOMRect {
-  // A group is drawn as its `group:` frame (050 R6).
+  // A group is drawn as its `group:` frame (050 R6), a note as its `sticky:` node (053).
   const rect = (
     nodeElement(nodeId) ??
     nodeElement(`${GROUP_NODE_PREFIX}${nodeId}`) ??
+    nodeElement(`${STICKY_NODE_PREFIX}${nodeId}`) ??
     canvasElement()
   )?.getBoundingClientRect();
   return rect ?? new DOMRect(0, 0, 0, 0);
@@ -49,6 +50,22 @@ function nextEnabled(
     if (!options[i]?.disabled) return i;
   }
   return index;
+}
+
+/** Home / End target for the listbox: the first or last enabled option, else the current one. */
+function edgeEnabled(options: readonly { disabled: boolean }[], key: 'Home' | 'End'): number {
+  const order = options.map((_, index) => index);
+  const found = (key === 'Home' ? order : order.reverse()).find((i) => !options[i]?.disabled);
+  return found ?? -1;
+}
+
+/** Keeps the keyboard's option on screen: arrows move it past the end of a scrolling list. */
+function useScrollActiveIntoView(listId: string, activeIndex: number) {
+  useEffect(() => {
+    const option: Element | null = document.getElementById(`${listId}-${String(activeIndex)}`);
+    // Test DOMs have no scrollIntoView.
+    if (option !== null && 'scrollIntoView' in option) option.scrollIntoView({ block: 'nearest' });
+  }, [listId, activeIndex]);
 }
 
 /** "Connect <title> to…": type-ahead keyboard connect (FR-012, design 56). */
@@ -103,6 +120,7 @@ function ConnectPopoverContent({
   };
 
   const optionId = (index: number) => `${listId}-${String(index)}`;
+  useScrollActiveIntoView(listId, activeIndex);
 
   return (
     <Popover
@@ -140,6 +158,11 @@ function ConnectPopoverContent({
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               event.preventDefault();
               setActive(nextEnabled(options, activeIndex, event.key === 'ArrowDown' ? 1 : -1));
+            } else if (event.key === 'Home' || event.key === 'End') {
+              // The field has no use for them while a list is on offer; the list does.
+              if (options.length === 0) return;
+              event.preventDefault();
+              setActive(edgeEnabled(options, event.key));
             } else if (event.key === 'Enter') {
               event.preventDefault();
               choose(options[activeIndex]);
@@ -177,7 +200,14 @@ function ConnectPopoverContent({
                 index === activeIndex && 'bg-primary-soft font-medium text-primary-ink',
               )}
             >
-              {option.kind === 'group' ? (
+              {option.kind === 'note' ? (
+                <span
+                  data-note-icon
+                  className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-surface-2 text-ink-secondary"
+                >
+                  <StickyNote aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                </span>
+              ) : option.kind === 'group' ? (
                 <span
                   data-group-icon
                   className="flex size-[22px] shrink-0 items-center justify-center rounded-[7px] bg-surface-2 text-ink-secondary"
@@ -191,6 +221,9 @@ function ConnectPopoverContent({
                 {option.title}
                 {option.kind === 'group' && (
                   <span className="ml-1 text-caption text-ink-muted">(group)</span>
+                )}
+                {option.kind === 'note' && (
+                  <span className="ml-1 text-caption text-ink-muted">(note)</span>
                 )}
               </span>
               {option.disabled && (
@@ -229,6 +262,7 @@ function ColumnConnectContent({
   const listId = useId();
   const virtualRef = useRef({ getBoundingClientRect: () => rowRect(tableId, columnId) });
   const optionId = (index: number) => `${listId}-${String(index)}`;
+  useScrollActiveIntoView(listId, activeIndex);
   const choose = (index: number) => {
     const option = options[index];
     if (option === undefined || option.disabled) return;
@@ -271,6 +305,11 @@ function ColumnConnectContent({
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
               event.preventDefault();
               setActive(nextEnabled(options, activeIndex, event.key === 'ArrowDown' ? 1 : -1));
+            } else if (event.key === 'Home' || event.key === 'End') {
+              // The field has no use for them while a list is on offer; the list does.
+              if (options.length === 0) return;
+              event.preventDefault();
+              setActive(edgeEnabled(options, event.key));
             } else if (event.key === 'Enter') {
               event.preventDefault();
               choose(activeIndex);

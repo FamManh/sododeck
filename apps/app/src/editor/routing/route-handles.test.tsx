@@ -54,6 +54,29 @@ function setup(bends: BendContext['bends'] = []) {
   return view;
 }
 
+describe('RouteHandles on a locked connector (053 US4)', () => {
+  const lockedDeck = deckOf({
+    nodes: deck.nodes,
+    edges: [{ id: 'e', from: 'a', to: 'b', locked: true }],
+  });
+
+  it('draws no bend, midpoint or end handles, only the unlock button', () => {
+    renderWithEditor(inCanvas(<RouteHandles context={ctx()} />), lockedDeck);
+    expect(screen.queryByRole('button', { name: /bend/i })).toBeNull();
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Unlock connector' })).toBeInTheDocument();
+  });
+
+  it('unlocks from that button, then draws the handles', async () => {
+    const { doc } = renderWithEditor(inCanvas(<RouteHandles context={ctx()} />), lockedDeck);
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Unlock connector' }));
+    expect(toJSON(doc).edges[0]).not.toHaveProperty('locked');
+    expect(
+      screen.getByRole('button', { name: 'Add bend between points 1 and 2' }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('RouteHandles (022 US2)', () => {
   it('names the midpoints and the bends, and lists midpoints for each hop', () => {
     setup([

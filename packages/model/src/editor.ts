@@ -27,6 +27,7 @@ import type {
   Size,
   Step,
   Sticky,
+  StickyColor,
   Touch,
   ViewType,
 } from '@sododeck/schema';
@@ -113,7 +114,7 @@ import {
 } from './ops/fields';
 import { setNodeDisplay, type NodeDisplay } from './ops/node-display';
 import { setNodeIcon } from './ops/node-icon';
-import { setLocked } from './ops/node-lock';
+import { setLocked, type LockCollection } from './ops/node-lock';
 import { setTableOwner } from './ops/db-owner';
 import {
   addTouch,
@@ -142,7 +143,14 @@ import {
   deleteStickyIfPresent,
   moveSticky,
   pinSticky,
+  setStickyAlign,
+  setStickyColour,
+  setStickyFont,
+  setStickySize,
+  setStickyTags,
   unpinSticky,
+  type StickyAlign,
+  type StickyFontSize,
 } from './ops/stickies';
 import type { NewObject, NewRule, NewStep, Patch } from './ops/types';
 import {
@@ -273,6 +281,22 @@ export interface DeckEditor {
   unpinSticky(id: Id): void;
   /** Moves a note to a canvas point: an offset when pinned, an absolute point otherwise. */
   moveSticky(id: Id, point: Point): void;
+  /**
+   * Sets a note's size, clamped to `STICKY_MIN_SIZE` (053); `null` goes back to the default. One
+   * undo step, merged with an open gesture (a resize drag). `locked` for a locked note.
+   */
+  setStickySize(id: Id, size: Size | null): void;
+  /** Fixes the text size of every listed note; `null` is Auto (053). One undo step. */
+  setStickyFont(ids: readonly Id[], fontSize: StickyFontSize | null): void;
+  /** Aligns the text of every listed note; `null` is the default, centred (053). One undo step. */
+  setStickyAlign(ids: readonly Id[], align: StickyAlign | null): void;
+  /** Recolours every listed note (053). One undo step. */
+  setStickyColour(ids: readonly Id[], colour: StickyColor): void;
+  /**
+   * Sets a note's tags (053): trimmed, case kept, repeats dropped ignoring case, at most 10; an
+   * empty list removes the key. Tags are the deck's tags, so colours and renames reach them.
+   */
+  setStickyTags(id: Id, tags: readonly string[]): void;
 
   /**
    * Moves nodes in a view (011, FR-020/021). In the base view (the first) this writes
@@ -341,11 +365,13 @@ export interface DeckEditor {
    */
   setNodeDisplay(nodeIds: readonly Id[], display: NodeDisplay | null): void;
   /**
-   * Locks (`true`) or unlocks every listed node (043, R11): one undo step. Locking writes
-   * `locked: true`; unlocking removes the key (`false` is not valid in the file). Unknown ids are
-   * ignored, and nothing changing writes nothing. The app enforces what a lock blocks.
+   * Locks (`true`) or unlocks every listed object of `collection` (default `nodes`; 043, 053): one
+   * undo step. Locking writes `locked: true`; unlocking removes the key (`false` is not valid in
+   * the file). Unknown ids are ignored, and nothing changing writes nothing. The app enforces what
+   * a locked node blocks; the model itself refuses (`locked`) to move, resize, pin or delete a
+   * locked sticky and to reconnect, reshape, restyle or delete a locked connector.
    */
-  setLocked(nodeIds: readonly Id[], locked: boolean): void;
+  setLocked(ids: readonly Id[], locked: boolean, collection?: LockCollection): void;
   /**
    * Moves a table into a database card, or out of any card with `null` (049): sets or clears
    * `node.parent` in one undo step. `invalid` when the node is not a table or the card is not a
@@ -798,6 +824,21 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     unpinSticky: (id) => {
       unpinSticky(ctx, id);
     },
+    setStickySize: (id, size) => {
+      setStickySize(ctx, id, size);
+    },
+    setStickyFont: (ids, fontSize) => {
+      setStickyFont(ctx, ids, fontSize);
+    },
+    setStickyAlign: (ids, align) => {
+      setStickyAlign(ctx, ids, align);
+    },
+    setStickyColour: (ids, colour) => {
+      setStickyColour(ctx, ids, colour);
+    },
+    setStickyTags: (id, tags) => {
+      setStickyTags(ctx, id, tags);
+    },
     moveSticky: (id, point) => {
       moveSticky(ctx, id, point);
     },
@@ -826,8 +867,8 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     setNodeDisplay: (nodeIds, display) => {
       setNodeDisplay(ctx, nodeIds, display);
     },
-    setLocked: (nodeIds, locked) => {
-      setLocked(ctx, nodeIds, locked);
+    setLocked: (ids, locked, collection = 'nodes') => {
+      setLocked(ctx, collection, ids, locked);
     },
     setTableOwner: (tableId, cardId) => {
       setTableOwner(ctx, tableId, cardId);

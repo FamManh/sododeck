@@ -305,3 +305,17 @@ describe('flow overlay: step touches (049 US3)', () => {
     expect(nodes.get('odb')?.chip).toBeUndefined();
   });
 });
+
+describe('flowOverlay with notes (053)', () => {
+  it('does not mark a connector to a note as a candidate or a preview', () => {
+    const deck = {
+      ...flowDeck,
+      stickies: [{ id: 'note', text: 'Why', position: { x: 0, y: 0 } }],
+      edges: [...flowDeck.edges, { id: 'to-note', from: 'c', to: 'note' }],
+    };
+    const overlay = flowOverlay(deck, analysisOf(place), session({ flowId: 'place' }), 'to-note');
+    // c is where the recorded path ends, so its other connectors are candidates, not this one.
+    expect(overlay.edges.get('cd')?.style).toBe('candidate');
+    expect(overlay.edges.has('to-note')).toBe(false);
+  });
+});

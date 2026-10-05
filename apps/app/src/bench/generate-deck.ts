@@ -1,4 +1,4 @@
-import { CARD_TYPES, PACKS, SHAPE_TYPE_IDS } from '@sododeck/model';
+import { CARD_TYPES, PACKS, SHAPE_TYPE_IDS, STICKY_DEFAULT_SIZE } from '@sododeck/model';
 import { lucide } from '@sododeck/ui/icon-sets';
 import { emptySododeckFile, type CardColor, type SododeckFile } from '@sododeck/schema';
 
@@ -273,7 +273,8 @@ export function generateBenchDeck(
   if ((options.tables ?? 0) > 0) {
     addBenchTables(nodes, edges, options.tables ?? 0);
     if (options.wide === true) widenBenchTables(nodes, options.tables ?? 0);
-    if ((options.schemas ?? 0) > 0) assignBenchSchemas(nodes, options.tables ?? 0, options.schemas ?? 0);
+    if ((options.schemas ?? 0) > 0)
+      assignBenchSchemas(nodes, options.tables ?? 0, options.schemas ?? 0);
   }
   if ((options.tables ?? 0) > 0 && options.rel === true) addBenchRelationships(nodes, edges);
   if (options.routes === true) addBenchRoutes(edges);
@@ -378,7 +379,11 @@ function widenBenchTables(nodes: SododeckFile['nodes'], count: number): void {
   nodes.slice(0, count).forEach((node, i) => {
     if (i % 10 !== 0 || node.columns === undefined) return;
     for (let k = node.columns.length; k < BENCH_WIDE_COLUMNS; k++) {
-      node.columns.push({ id: `${node.id}-w${String(k)}`, name: `extra_${String(k)}`, type: 'text' });
+      node.columns.push({
+        id: `${node.id}-w${String(k)}`,
+        name: `extra_${String(k)}`,
+        type: 'text',
+      });
     }
   });
 }
@@ -535,8 +540,12 @@ function walk(
 
 function addBenchFlows(deck: SododeckFile, random: () => number): void {
   const outgoing = new Map<string, SododeckFile['edges']>();
-  for (const edge of deck.edges)
+  // A flow's steps are components: a note's connector (053) is never one.
+  const cards = new Set(deck.nodes.map((node) => node.id));
+  for (const edge of deck.edges) {
+    if (!cards.has(edge.from) || !cards.has(edge.to)) continue;
     outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), edge]);
+  }
   const starts = [...outgoing.keys()];
   /** The longest of a few random walks, so almost every flow has its 10 steps. */
   const longWalk = () => {
@@ -593,10 +602,26 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
         text: `Bench note ${String(i)}`,
         color,
         position: {
-          x: Math.round(random() * 180 + (i % 8) * 220),
-          y: Math.round(random() * 120 + Math.floor(i / 8) * 160),
+          // A grid of default-size notes with a 20 px gap, jittered a little.
+          x: Math.round(random() * 180 + (i % 8) * (STICKY_DEFAULT_SIZE.width + 20)),
+          y: Math.round(random() * 120 + Math.floor(i / 8) * (STICKY_DEFAULT_SIZE.height + 20)),
         },
+        // Every third note carries tags, so the fit and the chips are part of the load (053).
+        ...(i % 3 === 0 ? { tags: ['bench', `group-${String(i % 4)}`] } : {}),
       });
+      // Connector ends (053): every other free note links to a card, every fourth also to the next
+      // free note. No `random()` here, so the seeded positions above stay as they were.
+      const target = deck.nodes[(i * 7) % Math.max(1, deck.nodes.length)];
+      if (i % 2 === 0 && target !== undefined) {
+        deck.edges.push({ id: `sticky-edge${String(i)}`, from: `sticky${String(i)}`, to: target.id });
+      }
+      if (i % 4 === 1 && i + 1 < freeCount) {
+        deck.edges.push({
+          id: `sticky-link${String(i)}`,
+          from: `sticky${String(i)}`,
+          to: `sticky${String(i + 1)}`,
+        });
+      }
       continue;
     }
 

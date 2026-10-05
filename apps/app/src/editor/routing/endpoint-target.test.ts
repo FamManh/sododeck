@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { hitTarget, TARGET_REACH, targetScene, type SceneNode } from './endpoint-target';
+import {
+  connectTarget,
+  hitTarget,
+  TARGET_REACH,
+  targetScene,
+  type SceneNode,
+} from './endpoint-target';
 
 const card = (
   id: string,
@@ -107,10 +113,10 @@ describe('hitTarget (050 R4)', () => {
     expect(hitTarget({ x: 700, y: 500 }, scene, 1)?.id).toBe('outer');
   });
 
-  it('never returns hidden objects, stickies, ports or scope labels', () => {
+  it('never returns hidden objects, ports or scope labels', () => {
     const scene = targetScene([
       card('hidden', 0, 0, { hidden: true }),
-      { ...card('sticky:s', 0, 0), type: 'sticky' },
+      { ...card('sticky:s', 0, 0, { hidden: true }), type: 'sticky' },
       { ...card('port:x', 0, 0), type: 'port' },
       { ...card('scope-label:g', 0, 0), type: 'scope-label' },
     ]);
@@ -159,5 +165,60 @@ describe('hitTarget (050 R4)', () => {
       box: { x: 0, y: 0, width: 176, height: 112 },
       geometry: 'diamond',
     });
+  });
+});
+
+describe('stickies as targets (053 US1)', () => {
+  const note = (id: string, x: number, y: number, extra: Partial<SceneNode> = {}): SceneNode => ({
+    id: `sticky:${id}`,
+    type: 'sticky',
+    position: { x, y },
+    width: 200,
+    height: 200,
+    zIndex: 1,
+    data: {},
+    ...extra,
+  });
+
+  it('a note is a target with its bare id, flow id and box', () => {
+    const scene = targetScene([note('n', 10, 20)]);
+    expect(scene.stickies).toHaveLength(1);
+    expect(hitTarget({ x: 100, y: 100 }, scene, 1)).toEqual({
+      id: 'n',
+      kind: 'sticky',
+      flowId: 'sticky:n',
+      box: { x: 10, y: 20, width: 200, height: 200 },
+    });
+  });
+
+  it('a card under the pointer wins over a note nearby, a note wins over a group', () => {
+    const scene = targetScene([
+      frame('g', -100, -100, 900, 700),
+      card('a', 0, 0),
+      note('n', 400, 0),
+    ]);
+    expect(hitTarget({ x: 50, y: 50 }, scene, 1)?.id).toBe('a');
+    expect(hitTarget({ x: 500, y: 100 }, scene, 1)).toMatchObject({ id: 'n', kind: 'sticky' });
+    expect(hitTarget({ x: 700, y: 500 }, scene, 1)?.id).toBe('g');
+  });
+
+  it('a note the pointer is inside wins over a card only within reach', () => {
+    const scene = targetScene([card('a', 0, 0), note('n', 205, 0)]);
+    expect(hitTarget({ x: 300, y: 50 }, scene, 1)?.id).toBe('n');
+  });
+
+  it('reaches 16 screen px around a note', () => {
+    const scene = targetScene([note('n', 0, 0)]);
+    expect(hitTarget({ x: 215, y: 100 }, scene, 1)?.id).toBe('n');
+    expect(hitTarget({ x: 217, y: 100 }, scene, 1)).toBeNull();
+  });
+
+  it('connectTarget returns a note but never the one the drag starts from', () => {
+    const scene = targetScene([note('n', 0, 0), card('a', 400, 0)]);
+    const hit = connectTarget(scene, 'a', { x: 100, y: 100 }, { zoom: 1, mod: false });
+    expect(hit?.target).toMatchObject({ id: 'n', kind: 'sticky' });
+    expect(
+      connectTarget(scene, 'sticky:n', { x: 100, y: 100 }, { zoom: 1, mod: false }),
+    ).toBeNull();
   });
 });

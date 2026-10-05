@@ -676,6 +676,17 @@ describe('⌘D duplicate (016 FR-009)', () => {
   });
 });
 
+describe('⇧⌘L lock (053)', () => {
+  it('locks and unlocks the selected note', () => {
+    const { doc } = setup(stickyDeck);
+    focusSticky();
+    fireEvent.keyDown(document.body, { key: 'L', code: 'KeyL', metaKey: true, shiftKey: true });
+    expect(readDeck(doc).stickies.find((s) => s.id === 'st1')?.locked).toBe(true);
+    fireEvent.keyDown(document.body, { key: 'L', code: 'KeyL', metaKey: true, shiftKey: true });
+    expect(readDeck(doc).stickies.find((s) => s.id === 'st1')?.locked).toBeUndefined();
+  });
+});
+
 describe('⌘G group (016 FR-010)', () => {
   it('groups the selection, blocks the browser find and opens the new name', () => {
     const { doc } = setup();

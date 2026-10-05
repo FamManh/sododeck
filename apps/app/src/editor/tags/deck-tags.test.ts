@@ -1,7 +1,7 @@
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
-import { canonicalTag, deckTags, tagUsage } from './deck-tags';
+import { canonicalTag, deckTags, tagSpellings, tagUsage } from './deck-tags';
 
 function deck(partial: Partial<SododeckFile>): SododeckFile {
   return { ...emptySododeckFile(), ...partial };
@@ -11,6 +11,13 @@ const node = (id: string, tags?: string[]) => ({
   id,
   type: 'service' as const,
   title: id,
+  ...(tags ? { tags } : {}),
+});
+
+const sticky = (id: string, tags?: string[]) => ({
+  id,
+  text: id,
+  position: { x: 0, y: 0 },
   ...(tags ? { tags } : {}),
 });
 
@@ -104,6 +111,7 @@ describe('tagUsage', () => {
       flows: 1,
       steps: 2,
       deckTag: true,
+      notes: 0,
     });
     expect(tagUsage(file, 'nothing')).toEqual({
       cards: 0,
@@ -111,7 +119,35 @@ describe('tagUsage', () => {
       flows: 0,
       steps: 0,
       deckTag: false,
+      notes: 0,
     });
+  });
+
+  it('counts notes (053)', () => {
+    const file = deck({
+      nodes: [node('a', ['PCI'])],
+      stickies: [sticky('n1', ['pci']), sticky('n2', ['Pci', 'x']), sticky('n3')],
+    });
+    expect(tagUsage(file, 'pci')).toMatchObject({ cards: 1, notes: 2 });
+  });
+});
+
+describe('notes as tag carriers (053)', () => {
+  it('counts notes in deckTags and lists tags only notes carry', () => {
+    const file = deck({
+      nodes: [node('a', ['PCI'])],
+      stickies: [sticky('n1', ['pci', 'only-note']), sticky('n2', ['PCI'])],
+    });
+    expect(deckTags(file).map((t) => [t.tag, t.count])).toEqual([
+      ['PCI', 3],
+      ['only-note', 1],
+    ]);
+  });
+
+  it('takes the first spelling from a note when no card has one', () => {
+    const file = deck({ stickies: [sticky('n1', ['  Edge   Case '])] });
+    expect(tagSpellings(file).get('edge case')).toBe('Edge Case');
+    expect(canonicalTag(file, 'EDGE case')).toBe('Edge Case');
   });
 });
 

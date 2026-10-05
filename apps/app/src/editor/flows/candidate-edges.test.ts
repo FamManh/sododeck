@@ -50,3 +50,14 @@ describe('candidateEdges group ends (050 US4)', () => {
     expect(candidateEdges(deck, analyzeFlow(into, deck.edges), main)).toEqual(['gb']);
   });
 });
+
+describe('candidateEdges with notes (053)', () => {
+  it('leaves out connectors that end on a note', () => {
+    const deck = {
+      ...flowDeck,
+      stickies: [{ id: 'note', text: 'Why', position: { x: 0, y: 0 } }],
+      edges: [...flowDeck.edges, { id: 'to-note', from: 'a', to: 'note' }],
+    };
+    expect(candidateEdges(deck, null, main)).not.toContain('to-note');
+  });
+});

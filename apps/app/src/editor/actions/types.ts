@@ -97,6 +97,11 @@ export interface Action {
   checked?: (ctx: ActionContext) => boolean;
   /** The toolbar popover this action opens (toolbar field buttons). */
   field?: ToolbarFieldId;
+  /**
+   * A toolbar button that must not take focus from a text field being edited (053: Bold and Link
+   * act on the note's selection, which a blur would end together with the edit).
+   */
+  keepFocus?: boolean;
   /** Every document write is exactly one undo step (`oneStep` / `editor.batch`). */
   run?: (ctx: ActionContext) => void;
 }
@@ -115,6 +120,7 @@ export interface ResolvedAction {
   /** Why it can't run now, or `null` when it can. */
   disabled: string | null;
   field?: ToolbarFieldId;
+  keepFocus: boolean;
   radio: boolean;
   checked: boolean;
   separatorBefore: boolean;

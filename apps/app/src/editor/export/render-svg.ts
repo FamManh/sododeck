@@ -6,6 +6,7 @@ import { TABLE_CARD, type TableLayout } from '../table-layout';
 import { DECK_CARD } from '../card-layout';
 import { SHAPE_TITLE_FONT, SHAPE_TITLE_LINE, shapePath, titleBox } from '../shapes/shape-geometry';
 import { TAG_CHIP } from '../card-tags';
+import { NOTE_INSET } from '../stickies/fit-font-size';
 import { CROW_RING, KNOB_RADIUS } from '../edge-constants';
 import { ARROW_PATH, crowPath, endMarks, type EndMark } from '../edge-end-marks';
 import {
@@ -22,7 +23,9 @@ import type {
   SceneFieldChip,
   SceneFields,
   SceneGroup,
+  SceneSticky,
 } from './scene';
+import { NOTE_FAMILY } from './scene';
 import { truncate, type TextMeasurer } from './text-measure';
 
 export interface SvgOptions {
@@ -88,6 +91,7 @@ const STYLE = [
   `.gc{font:${FONTS.groupCount}}`,
   `.m{font:${FONTS.more}}`,
   `.t{font:${FONTS.name}}`,
+  `.sn{font-family:${NOTE_FAMILY}}`,
   `.c{font:${FONTS.caption}}`,
   `.l{font:${FONTS.label}}`,
   `.b{font:${FONTS.badge}}`,
@@ -191,6 +195,77 @@ function text(
   anchor?: string,
 ): string {
   return `<text ${attrs({ class: className, x, y, fill, 'text-anchor': anchor })}>${escapeXml(value)}</text>`;
+}
+
+/**
+ * A note (053): the sheet, then either its label on one line (collapsed) or its wrapped plain text
+ * and tag chips, laid out in the box the scene fitted. The lock mark is never drawn.
+ */
+function note(sticky: SceneSticky, palette: ExportPalette, measure: TextMeasurer): string {
+  const { x, y, width, height } = sticky.rect;
+  const colours = stickyColours(sticky.tint, palette);
+  const out = [`<g data-export="sticky" data-id="${escapeXml(sticky.id)}">`];
+  out.push(box(x, y, width, height, 12, colours.fill, colours.border));
+  if (sticky.collapsed) {
+    out.push(icon(chromeIcon('sticky'), x + 12, y + (height - 16) / 2, 16, colours.ink));
+    const label = truncate(sticky.label, FONTS.title, width - 48, measure);
+    out.push(text('t', x + 36, y + height / 2 + 4.5, colours.ink, label));
+    out.push('</g>');
+    return out.join('');
+  }
+  const left = x + NOTE_INSET / 2;
+  const inner = Math.max(0, width - NOTE_INSET);
+  const anchorX =
+    sticky.align === 'left' ? left : sticky.align === 'right' ? left + inner : left + inner / 2;
+  const anchor = sticky.align === 'left' ? undefined : sticky.align === 'right' ? 'end' : 'middle';
+  // The text starts at the top of the sheet's padding, as on the canvas; tags sit at the bottom.
+  sticky.lines.forEach((line, index) => {
+    const top = y + NOTE_INSET / 2 + index * sticky.lineHeight;
+    out.push(
+      `<text ${attrs({
+        class: 'sn',
+        x: anchorX,
+        y: top + sticky.lineHeight / 2 + sticky.fontSize * 0.35,
+        'font-size': sticky.fontSize,
+        fill: colours.ink,
+        'text-anchor': anchor,
+      })}>${escapeXml(line)}</text>`,
+    );
+  });
+  const rows = sticky.tagChips.reduce((most, chip) => Math.max(most, chip.row + 1), 0);
+  const blockTop =
+    y + height - NOTE_INSET / 2 - (rows * TAG_CHIP.height + (rows - 1) * TAG_CHIP.gap);
+  for (const chip of sticky.tagChips) {
+    const chipY = blockTop + chip.row * (TAG_CHIP.height + TAG_CHIP.gap);
+    out.push(
+      box(
+        left + chip.x,
+        chipY,
+        chip.width,
+        TAG_CHIP.height,
+        9,
+        chip.chip,
+        undefined,
+        undefined,
+        'tag',
+      ),
+    );
+    const label =
+      chip.width < inner
+        ? chip.tag
+        : truncate(chip.tag, FONTS.tag, chip.width - 2 * TAG_CHIP.paddingX, measure);
+    out.push(
+      text(
+        'tg',
+        left + chip.x + TAG_CHIP.paddingX,
+        baseline(chipY, TAG_CHIP.height, 10.5),
+        chip.ink,
+        label,
+      ),
+    );
+  }
+  out.push('</g>');
+  return out.join('');
 }
 
 /** An icon at `size` px, drawn like lucide-react (stroke 1.5, round caps and joins). */
@@ -1092,16 +1167,7 @@ export function renderSvg(scene: ExportScene, options: SvgOptions): string {
   for (const item of scene.cards) {
     out.push(item.geometry === undefined ? card(item, palette, measure) : shape(item, palette));
   }
-  for (const sticky of scene.stickies) {
-    const { x, y, width, height } = sticky.rect;
-    const colours = stickyColours(sticky.tint, palette);
-    out.push(`<g data-export="sticky" data-id="${escapeXml(sticky.id)}">`);
-    out.push(box(x, y, width, height, 12, colours.fill, colours.border));
-    out.push(icon(chromeIcon('sticky'), x + 12, y + (height - 16) / 2, 16, colours.ink));
-    const label = truncate(sticky.label, FONTS.title, width - 48, measure);
-    out.push(text('t', x + 36, y + height / 2 + 4.5, colours.ink, label));
-    out.push('</g>');
-  }
+  for (const sticky of scene.stickies) out.push(note(sticky, palette, measure));
   out.push('</svg>');
   return out.join('');
 }

@@ -40,6 +40,7 @@ const deck = deckOf({
   ],
   edges: [{ id: 'e', from: 'a', to: 'b', label: 'writes' }],
   groups: [],
+  stickies: [{ id: 's', text: 'Retry later', position: { x: 500, y: 0 } }],
 });
 
 const ui = () => useUiStore.getState();
@@ -219,7 +220,7 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(toolbar()).toBeNull();
   });
 
-  it('names the connection variant and shows nothing for stickies only', () => {
+  it('names the connection variant and the note variant', () => {
     setup();
     act(() => {
       ui().select({ edges: ['e'] });
@@ -230,7 +231,7 @@ describe('SelectionToolbar (019 US3)', () => {
     act(() => {
       ui().select({ stickies: ['s'] });
     });
-    expect(toolbar()).toBeNull();
+    expect(toolbar()).toHaveAccessibleName(/^Selection: note/);
   });
 
   it('picks a line type in the Line style popover and writes one key (022 US1)', async () => {
@@ -268,7 +269,7 @@ describe('SelectionToolbar (019 US3)', () => {
       ui().select({ edges: ['e', 'e2'] });
     });
     expect(screen.getByRole('toolbar', { name: 'Selection: 2 connections' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Line style' }));
+    await user.click(screen.getByRole('button', { name: 'Colour: none' }));
     const dialog = screen.getByRole('dialog', { name: 'Line style' });
     expect(
       within(dialog).getByText('2 connectors · one change applies to all'),
@@ -281,6 +282,63 @@ describe('SelectionToolbar (019 US3)', () => {
       { dash: 'dashed' },
       { shape: 'straight', dash: 'dashed' },
     ]);
+  });
+
+  describe('several connectors (053 US4)', () => {
+    const twoEdges = () => {
+      const env = setup();
+      act(() => {
+        env.editor().add('edges', { id: 'e2', from: 'b', to: 'c' });
+        ui().select({ edges: ['e', 'e2'] });
+      });
+      return env;
+    };
+
+    it('orders arrow ends, line type, colour, weight, lock, more', () => {
+      twoEdges();
+      expect(names()).toEqual([
+        'Arrow ends: Forward',
+        'Line type: Curved',
+        'Colour: none',
+        'Weight: 2 px',
+        'Lock',
+        'More actions',
+      ]);
+    });
+
+    it('shows Mixed and changes nothing until a value is picked, then writes all in one step', async () => {
+      const { user, doc, editor } = twoEdges();
+      act(() => {
+        editor().setEdgeStyle(['e2'], { width: 4 });
+      });
+      expect(screen.getByRole('button', { name: 'Weight: Mixed' })).toBeInTheDocument();
+      const before = JSON.stringify(toJSON(doc));
+      await user.click(screen.getByRole('button', { name: 'Weight: Mixed' }));
+      expect(JSON.stringify(toJSON(doc))).toBe(before);
+      await user.click(screen.getByRole('menuitemradio', { name: '3 px' }));
+      expect(toJSON(doc).edges.map((e) => e.style?.width)).toEqual([3, 3]);
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).edges.map((e) => e.style?.width)).toEqual([undefined, 4]);
+    });
+
+    it('locks both connectors and the button then offers Unlock', async () => {
+      const { user, doc } = twoEdges();
+      await user.click(screen.getByRole('button', { name: 'Lock' }));
+      expect(toJSON(doc).edges.map((e) => e.locked)).toEqual([true, true]);
+      expect(screen.getByRole('button', { name: 'Unlock' })).toBeInTheDocument();
+    });
+
+    it('hides while a drag runs and shows no per-connector handles', () => {
+      twoEdges();
+      expect(toolbar()).not.toBeNull();
+      expect(document.querySelector('.sd-route-handle')).toBeNull();
+      act(() => {
+        ui().setCanvasGesture('endpoint');
+      });
+      expect(toolbar()).toBeNull();
+    });
   });
 
   it('flips below the selection near the top of the window', () => {

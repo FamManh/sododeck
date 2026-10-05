@@ -85,6 +85,43 @@ describe('selectionView', () => {
     );
   });
 
+  it('labels a connector that ends on a note with both end labels', () => {
+    const noteDeck: SododeckFile = {
+      ...deck,
+      edges: [{ id: 'n1', from: 'a', to: 's1' }],
+    };
+    expect(
+      selectionView(noteDeck, { nodes: [], edges: ['n1'], groups: [], stickies: [] }).label,
+    ).toBe('Checkout → Follow up');
+  });
+
+  it('shows the 053 note fields in the selection JSON', () => {
+    const rich: SododeckFile = {
+      ...deck,
+      stickies: [
+        {
+          id: 's1',
+          text: 'Follow up',
+          position: { x: 24, y: 36 },
+          size: { width: 240, height: 160 },
+          fontSize: 16,
+          align: 'left',
+          tags: ['Question'],
+          locked: true,
+        },
+      ],
+    };
+    const view = selectionView(rich, { nodes: [], edges: [], groups: [], stickies: ['s1'] });
+    const parsed: unknown = JSON.parse(selectionText(view.entries));
+    expect(parsed).toMatchObject({
+      size: { width: 240, height: 160 },
+      fontSize: 16,
+      align: 'left',
+      tags: ['Question'],
+      locked: true,
+    });
+  });
+
   it('labels one group with its title', () => {
     const groupDeck = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
     const view = selectionView(groupDeck, { nodes: [], edges: [], groups: ['core'], stickies: [] });
