@@ -17,12 +17,14 @@ here runs in the app; the app never sends deck content anywhere (constitution IV
 
 **Layout**
 
-- `content/` Markdown sources: `SKILL.md` (router, < 500 lines) and `references/*.md`. Facts come
+- `content/` Markdown sources: `SKILL.md` (router, < 500 lines) and `references/*.md`
+  (`layout.md` teaches the hand layout the layout checks enforce). Facts come
   from `{{placeholders}}` filled by `src/generate.ts` (`cardTypes`, `deckCodes`, `authoringCodes`,
   `formatVersion`, `fingerprint`, `skillVersion`); an unknown placeholder fails the build.
-- `examples/*.sododeck`: hand-written decks; tests require zero lint entries, no positions and
-  playable flows.
-- `src/`: `authoring.ts`, `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
+- `examples/*.sododeck`: hand-written decks; tests require zero lint entries, a position on every
+  card and note (ADR 0042: skill decks are hand-laid) and playable flows.
+- `src/`: `authoring.ts` (incl. the layout checks: positions, connector over card, frames;
+  assumed card box `CARD_BOX` 184 × 96), `lint.ts` (validate / lint reports), `diff.ts`, `summary.ts`, `text.ts`
   (plain-text output), `cli/main.ts` (commands, exit codes, `deliver`), `version.ts` (schema
   fingerprint), `generate.ts`.
 - `scripts/build.ts` (esbuild bundle → `scripts/sododeck.mjs`, entry files, deterministic zip via

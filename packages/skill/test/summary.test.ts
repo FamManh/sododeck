@@ -17,17 +17,16 @@ function summary(name: string) {
 describe('deck summary (027 FR-017)', () => {
   it('lists groups, levels, flows with numbered steps and totals', () => {
     const { summary: s } = summary('platform.sododeck');
-    expect(s.totals).toMatchObject({ cards: 9, groups: 3, connectors: 8, flows: 1, rules: 0 });
+    expect(s.totals).toMatchObject({ cards: 8, groups: 3, connectors: 7, flows: 1, rules: 0 });
     expect(s.levels).toEqual([
       { parent: null, cards: 4 },
-      { parent: 'platform', cards: 5 },
+      { parent: 'platform', cards: 4 },
     ]);
-    expect(s.groups.find((g) => g.id === 'data')?.cards).toEqual(['jobs', 'deliveries-db']);
+    expect(s.groups.find((g) => g.id === 'data')?.cards).toEqual(['deliveries-db']);
     expect(s.flows[0]?.steps.map((step) => `${step.number}. ${step.from} → ${step.to}`)).toEqual([
       '1. api → dispatch',
-      '2. dispatch → jobs',
-      '3. jobs → tracking',
-      '4. tracking → deliveries-db',
+      '2. dispatch → tracking',
+      '3. tracking → deliveries-db',
     ]);
   });
 
@@ -43,7 +42,7 @@ describe('deck summary (027 FR-017)', () => {
     const { summary: s, titles } = summary('platform.sododeck');
     const outline = summaryText(s, titles);
     expect(outline).toContain('Deck: Delivery platform');
-    expect(outline).toContain('Levels: top 4 · under platform 5');
+    expect(outline).toContain('Levels: top 4 · under platform 4');
     expect(outline).toContain('Flow "Assign a courier" [assign-courier]:');
     expect(outline).not.toContain('Problems:');
     expect(outline.split('\n').length).toBeLessThan(40);

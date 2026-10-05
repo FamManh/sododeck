@@ -4,7 +4,7 @@
     {
       "id": 1,
       "prompt": "Make me a Sododeck deck of our e-commerce checkout: web shop, API gateway, order service, a payment provider, Kafka and Postgres, plus the checkout flow from pressing Pay to the confirmation email. Save it as checkout.sododeck.",
-      "expected_output": "checkout.sododeck passes validate and lint (exit 0), has no positions, and its checkout flow chains along existing connectors from the web shop to the notification step.",
+      "expected_output": "checkout.sododeck passes validate and lint with no layout warnings: every card has a position, Kafka is a connector label (no Kafka card), the Postgres write is a dashed connector outside the flow, and the checkout flow chains along solid connectors from the web shop to the notification step.",
       "files": []
     },
     {
@@ -18,6 +18,12 @@
       "prompt": "Sododeck opened my deck with a problem and gave me this when I pressed Copy problems: {\"report\":\"sododeck-problems\",\"problems\":[{\"code\":\"step-without-connection\",\"severity\":\"error\",\"path\":\"/flows/0/steps/1\",\"subject\":\"create\",\"message\":\"Step without connection\",\"fix\":\"Point the step's \\\"edge\\\" to an existing connector, or remove the step.\"}]}. Fix broken.sododeck please.",
       "expected_output": "The agent edits only the step's edge (or adds the missing connector), lint exits 0, and the handover names the change.",
       "files": ["broken.sododeck"]
+    },
+    {
+      "id": 4,
+      "prompt": "Draw a deck of how an agreement is created and approved in our backend, from the code in src/modules/agmt-creation, including the Kafka approval workflow round-trip. I want to play each flow.",
+      "expected_output": "lint --mode codebase --detail faithful exits 0 with no layout warnings; every card and connector has a source link; topics are connector labels; each flow is one walk along solid connectors from its trigger to its end state; decisions found in the code are rules on steps; anything that looks wrong in the code is a 'Gap' sticky note outside the group frames.",
+      "files": []
     }
   ]
 }

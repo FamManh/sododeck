@@ -20,9 +20,9 @@ file format (schema) and identity rules (unique ids). Default output is JSON.
 
 `lint.mjs <deck> [--detail faithful|balanced|simplified] [--mode new|update|codebase|text]
 [--format json|text]`: everything validate checks, plus the app's deck problems (broken flows,
-missing rules, broken references, …) and the authoring checks (taste and modelling warnings).
-`--mode update` skips the mixed-positions warning; `--mode codebase` asks for a source link on
-every card and connector.
+missing rules, broken references, …) and the authoring checks (taste, modelling and layout
+warnings: a card without a position, a connector over a card, a frame over another group's card,
+overlapping frames). `--mode codebase` also asks for a source link on every card and connector.
 
 ## 3. summary
 
