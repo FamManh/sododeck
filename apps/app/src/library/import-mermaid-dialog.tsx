@@ -207,6 +207,11 @@ export function ImportMermaidDialog({
     >
       <DialogContent
         className="max-w-xl"
+        // The form swaps for the report and the focused Import button leaves the page: that is
+        // not the user clicking away, so it must not close the dialog.
+        onFocusOutside={(event) => {
+          event.preventDefault();
+        }}
         onCloseAutoFocus={(event) => {
           // No trigger element: send focus back to whatever opened the dialog.
           const back = opener.current;

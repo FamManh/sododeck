@@ -127,7 +127,10 @@
               {
                 "id": "dbidx.1",
                 "name": "deals_company_stage_idx",
-                "columns": ["dbcol.9", "dbcol.10"]
+                "columns": [
+                  "dbcol.9",
+                  "dbcol.10"
+                ]
               },
               {
                 "id": "dbidx.2",
@@ -205,16 +208,24 @@
             "id": "edge.1",
             "from": "node.2",
             "to": "node.1",
-            "fromColumns": ["dbcol.5"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.5"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1"
           },
           {
             "id": "edge.2",
             "from": "node.3",
             "to": "node.1",
-            "fromColumns": ["dbcol.9"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.9"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade",
             "onUpdate": "no-action"
@@ -224,16 +235,24 @@
             "from": "node.4",
             "to": "node.3",
             "label": "deal_link",
-            "fromColumns": ["dbcol.13"],
-            "toColumns": ["dbcol.8"],
+            "fromColumns": [
+              "dbcol.13"
+            ],
+            "toColumns": [
+              "dbcol.8"
+            ],
             "cardinality": "n-1"
           },
           {
             "id": "edge.4",
             "from": "node.4",
             "to": "node.2",
-            "fromColumns": ["dbcol.14"],
-            "toColumns": ["dbcol.4"],
+            "fromColumns": [
+              "dbcol.14"
+            ],
+            "toColumns": [
+              "dbcol.4"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -241,8 +260,12 @@
             "id": "edge.5",
             "from": "node.2",
             "to": "node.2",
-            "fromColumns": ["dbcol.7"],
-            "toColumns": ["dbcol.4"],
+            "fromColumns": [
+              "dbcol.7"
+            ],
+            "toColumns": [
+              "dbcol.4"
+            ],
             "cardinality": "n-1",
             "fromOptional": true,
             "toOptional": true
@@ -251,8 +274,12 @@
             "id": "edge.6",
             "from": "node.2",
             "to": "node.1",
-            "fromColumns": ["dbcol.4"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.4"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "1-1"
           },
           {

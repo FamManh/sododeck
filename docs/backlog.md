@@ -2363,7 +2363,7 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 056-file-format-and-mermaid-import
 
-- **Status:** not started.
+- **Status:** implemented on `feat-file-format-and-mermaid-import` (spec `specs/056-file-format-and-mermaid-import/`, ADR 0038); screenshots, the manual quickstart run and the PR are open.
 - **Goal:** File extension `.sododeck` (drop the trailing `.json`; old `.sododeck.json` files
   still open) and import of Mermaid text.
 - **Decided (2026-10-05):** Mermaid flowchart and sequence diagram now; ER diagram later (database pack).

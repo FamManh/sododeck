@@ -255,7 +255,7 @@ Priority: **P0** = MVP, **P1** = V2, **P2** = V3.
 | ID | Requirement | Priority |
 | --- | --- | --- |
 | I-1 | Export: `.sododeck` JSON, PNG, SVG, PDF, Mermaid | P0 |
-| I-2 | Import: YAML, Mermaid, draw.io | P1 |
+| I-2 | Import: YAML, Mermaid (flowchart and sequence diagram: done in 056), draw.io | P1 |
 | I-3 | Import: OpenAPI, AsyncAPI, Terraform, Kubernetes manifests | P1 |
 | I-4 | Import from codebase via static analysis + AI | P1 |
 | I-5 | Import from EventCatalog and Backstage `catalog-info.yaml` | P2 |
