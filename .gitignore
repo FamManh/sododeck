@@ -29,3 +29,6 @@ dist/
 test-results/
 # Python caches (Spec Kit scripts)
 __pycache__/
+
+# Third-party reference screenshots (kept locally, never pushed: copyright)
+specs/*/reference/
