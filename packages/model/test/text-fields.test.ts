@@ -18,6 +18,7 @@ const DEFS: Record<Exclude<TextKind, 'meta'>, string> = {
   features: 'Feature',
   flows: 'Flow',
   stickies: 'Sticky',
+  images: 'Image',
   step: 'Step',
   branch: 'Branch',
   rule: 'Rule',

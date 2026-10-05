@@ -45,7 +45,13 @@ describe('UsedIn (story 6, FR-028)', () => {
         { name: 'Pricing Service' },
       ),
     );
-    expect(again.ui().selection).toEqual({ nodes: ['p'], edges: [], groups: [], stickies: [] });
+    expect(again.ui().selection).toEqual({
+      nodes: ['p'],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
   });
 
   it("draws the component's own icon in its row (038)", () => {

@@ -72,6 +72,13 @@ export interface VisibleGraph {
    * the drill scope, so it stands for itself (`sticky:<id>` in `representative`).
    */
   stickies: readonly string[];
+  /**
+   * Images hidden inside a collapsed group (055): not drawn, their connectors end on the
+   * collapsed card (`representative`). Every other image is drawn where it is.
+   */
+  hiddenImages: ReadonlySet<string>;
+  /** Drawn images that are the end of a connector (055), by id; their flow id is `image:<id>`. */
+  images: readonly string[];
   hiddenBy: ReadonlyMap<string, string>;
   childCount: ReadonlyMap<string, number>;
 }
@@ -82,6 +89,7 @@ const GROUP_NODE_PREFIX = 'group:';
 const MERGED_EDGE_PREFIX = 'merged:';
 const PORT_NODE_PREFIX = 'port:';
 const STICKY_NODE_PREFIX = 'sticky:';
+const IMAGE_NODE_PREFIX = 'image:';
 
 type GroupMap = ReadonlyMap<string, SododeckFile['groups'][number]>;
 
@@ -120,9 +128,15 @@ function cacheKey(
   collapsed: ReadonlySet<string>,
   outside: ReadonlyMap<string, OutsideTable> | undefined,
   stickies: SododeckFile['stickies'],
+  images: SododeckFile['images'],
 ): string {
   // The notes present (a view leaves some out), not their text or place: a drag must not rebuild.
   const stickyKey = stickies.length === 0 ? '' : `|n${stickies.map((s) => s.id).join(',')}`;
+  // Images by id and group, not by place: a drag must not rebuild, a regroup must.
+  const imageKey =
+    images === undefined || images.length === 0
+      ? ''
+      : `|i${images.map((i) => `${i.id}@${i.group ?? ''}`).join(',')}`;
   const collapsedIds = [...collapsed].sort().join(',');
   let outsideKey = '';
   if (outside !== undefined && outside.size > 0) {
@@ -133,7 +147,7 @@ function cacheKey(
     }
     outsideKey = `|o${String(id)}`;
   }
-  return `${scope.node ?? ''}|${scope.group ?? ''}|${collapsedIds}${outsideKey}${stickyKey}`;
+  return `${scope.node ?? ''}|${scope.group ?? ''}|${collapsedIds}${outsideKey}${stickyKey}${imageKey}`;
 }
 
 function effectiveGroupParents(deck: SododeckFile): Map<string, string | undefined> {
@@ -270,7 +284,9 @@ export function visibleGraph(
   /** Tables the current view hides (048): a connector to one ends on its own proxy. */
   outside?: ReadonlyMap<string, OutsideTable>,
 ): VisibleGraph {
-  const cached = graphCacheFor(deck).get(cacheKey(scope, collapsed, outside, deck.stickies));
+  const cached = graphCacheFor(deck).get(
+    cacheKey(scope, collapsed, outside, deck.stickies, deck.images),
+  );
   if (cached !== undefined) return cached;
 
   const nodesById = new Map(deck.nodes.map((node) => [node.id, node]));
@@ -391,6 +407,23 @@ export function visibleGraph(
     stickyEnds.add(sticky.id);
   }
 
+  // Images (055) are connector ends like notes, except that one inside a collapsed group is
+  // hidden with it and its connectors end on the collapsed card.
+  const hiddenImages = new Set<string>();
+  const imageEnds = new Set<string>();
+  for (const image of deck.images ?? []) {
+    if (nodesById.has(image.id) || groupsById.has(image.id) || stickyEnds.has(image.id)) continue;
+    const line = lineage(image.group, groupParents).filter((groupId) => groupId !== scope.group);
+    const outerCollapsed = [...line].reverse().find((groupId) => collapsedVisible.has(groupId));
+    if (outerCollapsed === undefined) {
+      representative.set(image.id, `${IMAGE_NODE_PREFIX}${image.id}`);
+      imageEnds.add(image.id);
+    } else {
+      representative.set(image.id, `${COLLAPSED_NODE_PREFIX}${outerCollapsed}`);
+      hiddenImages.add(image.id);
+    }
+  }
+
   const plainEdges: string[] = [];
   const mergedAcc = new Map<
     string,
@@ -416,7 +449,8 @@ export function visibleGraph(
     if (fromInside !== toInside) {
       // A note has no place among a drill scope's proxies: its connector to something out of
       // scope is simply not drawn there.
-      if (stickyEnds.has(fromInside ? edge.from : edge.to)) continue;
+      const looseEnd = fromInside ? edge.from : edge.to;
+      if (stickyEnds.has(looseEnd) || imageEnds.has(looseEnd)) continue;
       const outsideNodeId = fromInside ? edge.to : edge.from;
       const found = nodesById.get(outsideNodeId) ?? groupsById.get(outsideNodeId);
       const hiddenTable = found === undefined ? outside?.get(outsideNodeId) : undefined;
@@ -531,10 +565,16 @@ export function visibleGraph(
         deck.edges.flatMap((edge) => [edge.from, edge.to].filter((id) => stickyEnds.has(id))),
       ),
     ],
+    hiddenImages,
+    images: [
+      ...new Set(
+        deck.edges.flatMap((edge) => [edge.from, edge.to].filter((id) => imageEnds.has(id))),
+      ),
+    ],
     hiddenBy,
     childCount,
   };
-  graphCacheFor(deck).set(cacheKey(scope, collapsed, outside, deck.stickies), graph);
+  graphCacheFor(deck).set(cacheKey(scope, collapsed, outside, deck.stickies, deck.images), graph);
   return graph;
 }
 

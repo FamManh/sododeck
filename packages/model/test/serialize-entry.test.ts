@@ -46,7 +46,7 @@ function fileSlices(text: string, field: EntryCollection): string[] {
 
 function entriesOf(file: SododeckFile, field: EntryCollection): unknown[] {
   if (field === 'steps') return file.flows.flatMap((flow) => flow.steps);
-  return field === 'rules' ? Object.values(file.rules) : file[field];
+  return field === 'rules' ? Object.values(file.rules) : (file[field] ?? []);
 }
 
 describe('serializeEntry', () => {

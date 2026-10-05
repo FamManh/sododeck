@@ -135,6 +135,16 @@
       "description": "Sticky notes, free on the canvas or anchored to an object.",
       "type": "array",
       "items": { "$ref": "#/$defs/Sticky" }
+    },
+    "images": {
+      "description": "Pictures placed on the canvas (055). Each names a stored picture in `assets`. Written only when the deck holds at least one.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/Image" }
+    },
+    "assets": {
+      "description": "The pictures the images use (055), keyed by picture id: the lowercase SHA-256 of the stored bytes, 64 hex characters. Written only when the deck holds at least one image. An entry no image uses is allowed and dropped on the next save.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/Asset" }
     }
   },
   "$defs": {
@@ -854,6 +864,10 @@
         "locked": {
           "description": "Any node type (043): `true` pins the node, so it cannot be moved, resized, edited or deleted until unlocked. Connectors to and from it can still be drawn. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
           "const": true
+        },
+        "z": {
+          "description": "Stacking rank shared with images (055): a higher rank draws on top. Absent means the node's index in `nodes`. Written only when the deck holds images.",
+          "type": "number"
         }
       }
     },
@@ -888,14 +902,20 @@
     },
     "Edge": {
       "title": "Edge",
-      "description": "A connection between two ends, each a node, a group or a sticky.",
+      "description": "A connection between two ends, each a node, a group, a sticky or an image.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "from", "to"],
       "properties": {
         "id": { "$ref": "#/$defs/Id" },
-        "from": { "$ref": "#/$defs/Id", "description": "Id of the source node, group or sticky." },
-        "to": { "$ref": "#/$defs/Id", "description": "Id of the target node, group or sticky." },
+        "from": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the source node, group, sticky or image."
+        },
+        "to": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the target node, group, sticky or image."
+        },
         "protocol": { "$ref": "#/$defs/Protocol" },
         "label": {
           "description": "Short label, e.g. \"POST /orders\" or \"OrderPlaced · Kafka\".",
@@ -1279,6 +1299,91 @@
         { "properties": { "anchor": true }, "required": ["anchor"] },
         { "properties": { "position": true }, "required": ["position"] }
       ]
+    },
+    "AssetId": {
+      "title": "AssetId",
+      "description": "Picture id: the lowercase SHA-256 of the stored bytes, as 64 hex characters.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "AssetType": {
+      "title": "AssetType",
+      "description": "Media type of a stored picture, detected from its content.",
+      "enum": ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml", "image/avif"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "A stored picture: what it is, and its bytes as base64 (at most 5 MiB decoded). The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "bytes", "width", "height", "name", "data"],
+      "properties": {
+        "type": { "$ref": "#/$defs/AssetType" },
+        "bytes": {
+          "description": "Stored size in bytes.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5242880
+        },
+        "width": {
+          "description": "Natural width in pixels (an SVG: its width or viewBox, else 300).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "description": "Natural height in pixels (an SVG: its height or viewBox, else 150).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "description": "Original file name, shown to the person only. Never used as an id.",
+          "type": "string"
+        },
+        "data": {
+          "description": "The picture bytes, base64 without a `data:` prefix.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+        }
+      }
+    },
+    "Image": {
+      "title": "Image",
+      "description": "A picture on the canvas. A connector can end on it and it can belong to a group. It shares the stacking order (`z`) with cards.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "asset", "position", "size"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "asset": {
+          "$ref": "#/$defs/AssetId",
+          "description": "Picture id; must be a key of `assets`."
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "Top-left corner on the canvas. Relative to the group when `group` is set, as for cards."
+        },
+        "size": {
+          "$ref": "#/$defs/Size",
+          "description": "Size on the canvas in pixels, at least 32 × 32. The app keeps the picture's aspect ratio by default."
+        },
+        "z": {
+          "description": "Stacking rank shared with cards: a higher rank draws on top. Absent means the image's index in `images`. Ties draw cards before images.",
+          "type": "number"
+        },
+        "group": { "$ref": "#/$defs/Id", "description": "Id of the group this image belongs to." },
+        "alt": {
+          "description": "Alternative text: the image's accessible name. Plain text.",
+          "type": "string"
+        },
+        "caption": {
+          "description": "Plain text shown under the picture. Absent means no caption.",
+          "type": "string"
+        },
+        "locked": {
+          "description": "`true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
+          "const": true
+        }
+      }
     }
   }
 }

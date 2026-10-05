@@ -7,11 +7,21 @@ import * as Y from 'yjs';
 import {
   createEditor,
   fromJSON,
+  loadDeck,
   serializeDeck,
   toJSON,
   type DeckDoc,
   type DeckEditor,
 } from '../src';
+
+/**
+ * What a file becomes when it is opened and saved again: its bytes go through `loadDeck` and back
+ * into `serializeDeck`, as the app's library does. For files without images this is `toJSON`.
+ */
+export function reopen(file: SododeckFile): SododeckFile {
+  const { doc, bytes } = loadDeck(file);
+  return JSON.parse(serializeDeck(doc, bytes)) as SododeckFile;
+}
 
 export async function readExample(file: string): Promise<SododeckFile> {
   const url = new URL(import.meta.resolve(`@sododeck/schema/examples/${file}`));
@@ -24,9 +34,12 @@ export function seqIds(): (prefix: string) => string {
   return (prefix) => `${prefix}-${String(n++)}`;
 }
 
-/** The deck exports a file that passes format validation (SC-007). */
+/**
+ * The deck exports a file that passes format validation (SC-007). Pictures count as exported
+ * without their bytes (the document holds none), so each is written as a missing picture.
+ */
 export function expectValid(doc: DeckDoc): void {
-  const result = parseSododeckFile(toJSON(doc));
+  const result = parseSododeckFile(JSON.parse(serializeDeck(doc)));
   expect(result.success ? [] : result.issues).toEqual([]);
 }
 

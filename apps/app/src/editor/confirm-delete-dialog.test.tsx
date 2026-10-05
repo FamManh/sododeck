@@ -73,6 +73,7 @@ describe('ConfirmDeleteDialog', () => {
       edges: [],
       groups: [],
       stickies: [],
+      images: [],
     });
     expect(
       screen.getByText(/Deleted Order Service and 2 connections · 1 note unpinned/),

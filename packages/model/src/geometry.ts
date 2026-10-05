@@ -3,7 +3,18 @@
  * model's cascade and the app's canvas so a note's screen point never disagrees between them
  * (ADR 0010); group frames are fitted here for decks saved before frames were stored (016).
  */
-import type { Frame, Group, Id, Node, SododeckFile, Size, Sticky, View } from '@sododeck/schema';
+import { IMAGE_MIN_SIDE } from '@sododeck/schema';
+import type {
+  Frame,
+  Group,
+  Id,
+  Image,
+  Node,
+  SododeckFile,
+  Size,
+  Sticky,
+  View,
+} from '@sododeck/schema';
 
 export interface Point {
   x: number;
@@ -48,6 +59,58 @@ export function stickyBox(
     y: position.y,
     width,
     height: sticky.collapsed === true ? STICKY_COLLAPSED_HEIGHT : height,
+  };
+}
+
+/** Smallest on-canvas size of an image (055, rule I6): 32 px on each side. */
+export const IMAGE_MIN_SIZE: Size = { width: IMAGE_MIN_SIDE, height: IMAGE_MIN_SIDE };
+
+/** An image is never added wider than this (055 research R13), whatever the viewport. */
+export const IMAGE_MAX_DEFAULT_WIDTH = 480;
+
+/** The share of the visible canvas width a new image may take (055 research R13). */
+export const IMAGE_MAX_VIEWPORT_SHARE = 0.4;
+
+/** `size` raised to `IMAGE_MIN_SIZE` on each axis. */
+export function clampImageSize(size: Size): Size {
+  return {
+    width: Math.max(size.width, IMAGE_MIN_SIZE.width),
+    height: Math.max(size.height, IMAGE_MIN_SIZE.height),
+  };
+}
+
+/**
+ * The size a new image gets (055 R13, FR-001): its natural size, scaled down (never up), keeping the
+ * aspect ratio, to at most 480 px and 40% of the visible canvas width, and never below the
+ * minimum on either side. `viewportWidth` is the visible canvas width in canvas pixels.
+ */
+export function defaultImageSize(natural: Size, viewportWidth: number): Size {
+  const cap = Math.max(
+    IMAGE_MIN_SIZE.width,
+    Math.min(IMAGE_MAX_DEFAULT_WIDTH, viewportWidth * IMAGE_MAX_VIEWPORT_SHARE),
+  );
+  const scale = Math.min(1, cap / natural.width, cap / natural.height);
+  return clampImageSize({
+    width: Math.round(natural.width * scale),
+    height: Math.round(natural.height * scale),
+  });
+}
+
+/**
+ * The canvas rectangle of an image (055), for connector routing, hit tests and the export: the
+ * picture's own box. The caption is drawn below it and is not part of the box.
+ */
+export function imageBox(image: Pick<Image, 'position' | 'size'>): {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+} {
+  return {
+    x: image.position.x,
+    y: image.position.y,
+    width: image.size.width,
+    height: image.size.height,
   };
 }
 
@@ -183,7 +246,7 @@ const boxOfFrame = ({ position, size }: Frame): Box => ({
  * the view or the base has a frame. Linear in nodes + groups.
  */
 export function fitGroupFrames(
-  file: Pick<SododeckFile, 'nodes' | 'groups' | 'views'>,
+  file: Pick<SododeckFile, 'nodes' | 'groups' | 'views'> & Partial<Pick<SododeckFile, 'images'>>,
   options: FitOptions,
 ): Map<Id, Frame> {
   const { cardSize, padding, viewId, sizeOf } = options;
@@ -210,6 +273,16 @@ export function fitGroupFrames(
     };
     content.set(node.group, unionBox(content.get(node.group), card));
   });
+
+  // Images in a group count as members (055): their own box, whatever the card size.
+  for (const image of file.images ?? []) {
+    if (image.group === undefined) continue;
+    const { x, y, width, height } = imageBox(image);
+    content.set(
+      image.group,
+      unionBox(content.get(image.group), { left: x, top: y, right: x + width, bottom: y + height }),
+    );
+  }
 
   const children = new Map<Id, Id[]>();
   for (const group of file.groups) {

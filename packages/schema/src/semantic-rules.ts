@@ -37,6 +37,14 @@
  * - S15 (step touches, 049): no two touches of one step share the same table and column (a table
  *   entry and the entries of its own columns may coexist). `uniqueItems` compares whole objects,
  *   so it would miss two entries that differ only in `access`.
+ * - I1–I6 (images, 055): `images[].asset` has an `assets` entry (I1); an `assets` key is a 64-hex
+ *   picture id and `data` decodes to exactly `bytes` bytes (I4: the type allow-list and the 5 MiB
+ *   cap are `enum` / `maximum` in v1.json); `images[].group` names a group of the file (I3); an
+ *   image id never equals a node, group or sticky id (I5, the one place ids across collections
+ *   are compared, because the image takes the fourth place in the connector-end lookup); an image
+ *   is at least 32 × 32 (I6, `Size` is shared with cards so the minimum cannot live there). I2
+ *   (an `assets` entry no image uses) is allowed. I7 (the key is the SHA-256 of `data`) needs a
+ *   hash and runs in `@sododeck/model` when a file is imported.
  *
  * All checks are within one file and one object; unique ids and resolving references are
  * `@sododeck/model`'s job.
@@ -74,7 +82,20 @@ const BUILT_IN_FIELD_KINDS: Readonly<Record<string, string>> = {
   owner: 'person',
 };
 
-/** Returns every S1–S15 violation in a structurally valid file (empty when there are none). */
+/** Must match `$defs.AssetId.pattern` in schema/v1.json. */
+export const ASSET_ID_PATTERN = /^[0-9a-f]{64}$/;
+
+/** Smallest image side in canvas pixels (rule I6). The model and the app use the same number. */
+export const IMAGE_MIN_SIDE = 32;
+
+/** Decoded length of base64 data, or `undefined` when its length is not a multiple of 4. */
+function base64Length(data: string): number | undefined {
+  if (data.length % 4 !== 0) return undefined;
+  const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+  return (data.length / 4) * 3 - padding;
+}
+
+/** Returns every S1–S15 and I1–I6 violation in a structurally valid file (empty when there are none). */
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
@@ -327,6 +348,65 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
         path: `stickies.${String(index)}`,
         message: `Sticky "${sticky.id}" needs an anchor, a position, or both.`,
       });
+    }
+  });
+
+  const assets = file.assets ?? {};
+  for (const [key, asset] of Object.entries(assets)) {
+    const path = `assets.${key}`;
+    if (!ASSET_ID_PATTERN.test(key)) {
+      issues.push({
+        path,
+        message: `Key "${key}" is not a picture id (64 lowercase hex characters).`,
+      });
+    }
+    const decoded = base64Length(asset.data);
+    if (decoded === undefined) {
+      issues.push({
+        path: `${path}.data`,
+        message: `Picture "${key}" has base64 data whose length is not a multiple of 4.`,
+      });
+    } else if (decoded !== asset.bytes) {
+      issues.push({
+        path: `${path}.data`,
+        message: `Picture "${key}" says ${count(asset.bytes, 'byte')} but its data holds ${count(decoded, 'byte')}.`,
+      });
+    }
+  }
+
+  const takenIds = new Set<string>([
+    ...file.nodes.map((node) => node.id),
+    ...file.groups.map((group) => group.id),
+    ...file.stickies.map((sticky) => sticky.id),
+  ]);
+  file.images?.forEach((image, index) => {
+    const path = `images.${String(index)}`;
+    if (!Object.hasOwn(assets, image.asset)) {
+      issues.push({
+        path: `${path}.asset`,
+        message: `Image "${image.id}" uses picture "${image.asset}", which is not in "assets".`,
+      });
+    }
+    if (image.group !== undefined && !groupIds.has(image.group)) {
+      issues.push({
+        path: `${path}.group`,
+        message: `Image "${image.id}" belongs to group "${image.group}", which is not in this file.`,
+      });
+    }
+    if (takenIds.has(image.id)) {
+      issues.push({
+        path: `${path}.id`,
+        message: `Image id "${image.id}" is already the id of a card, group or sticky.`,
+      });
+    }
+    takenIds.add(image.id);
+    for (const side of ['width', 'height'] as const) {
+      if (image.size[side] < IMAGE_MIN_SIDE) {
+        issues.push({
+          path: `${path}.size.${side}`,
+          message: `Image "${image.id}" is ${String(image.size[side])} px ${side === 'width' ? 'wide' : 'tall'}; the minimum is ${String(IMAGE_MIN_SIDE)}.`,
+        });
+      }
     }
   });
 

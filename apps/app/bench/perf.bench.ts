@@ -36,6 +36,9 @@ const STICKIES = Math.max(0, Number(process.env.BENCH_STICKIES ?? 0) || 0);
 /** Adds 5 features × 4 flows × 10 steps and a fork to the deck of every scenario (006). */
 const FLOWS = process.env.BENCH_FLOWS === '1' ? '&flows=1' : '';
 const GROUPS_QUERY = GROUPS ? '&groups=1' : '';
+/** 055: this many pictures on the canvas (over four tiny synthetic PNGs). */
+const IMAGES = Math.max(0, Number(process.env.BENCH_IMAGES ?? 0) || 0);
+const IMAGES_QUERY = IMAGES > 0 ? `&images=${String(IMAGES)}` : '';
 const STICKIES_QUERY = STICKIES > 0 ? `&stickies=${String(STICKIES)}` : '';
 /** 020 T063 SC-005: the deck also has a fill (and every 5th node a stroke) on every node. */
 const COLOURS_QUERY = process.env.BENCH_COLOURS === '1' ? '&colours=1' : '';
@@ -262,7 +265,7 @@ async function openBench(
   }
   const start = Date.now();
   await page.goto(
-    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}${TABLES_QUERY}${REL_QUERY}${WIDE_QUERY}${SCHEMAS_QUERY}`,
+    `/bench?nodes=${counts.nodes}&edges=${counts.edges}${query}${FLOWS}${GROUPS_QUERY}${STICKIES_QUERY}${IMAGES_QUERY}${COLOURS_QUERY}${LINE_TYPES_QUERY}${TAGS_QUERY}${TYPES_QUERY}${FIELDS_QUERY}${SHAPES_QUERY}${ICONS_QUERY}${ANIMATED_QUERY}${BENDS_QUERY}${TABLES_QUERY}${REL_QUERY}${WIDE_QUERY}${SCHEMAS_QUERY}`,
   );
   await page.waitForFunction(() => window.__sododeckBench !== undefined, null, {
     timeout: 60_000,
@@ -1092,7 +1095,7 @@ test.afterAll(async () => {
   const md = [
     `# Canvas benchmark — ${new Date().toISOString()}`,
     '',
-    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Shapes: ${String(SHAPES_QUERY !== '')}. Tables: ${String(TABLES)}. Relationships: ${String(REL)}. Wide: ${String(WIDE_QUERY !== '')}. Schemas: ${String(SCHEMAS)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
+    `Target: ${TARGET_FPS} fps pan/zoom and drag at ${NODES} nodes / ${EDGES} edges. Groups: ${String(GROUPS)}. Stickies: ${String(STICKIES)}. Images: ${String(IMAGES)}. Shapes: ${String(SHAPES_QUERY !== '')}. Tables: ${String(TABLES)}. Relationships: ${String(REL)}. Wide: ${String(WIDE_QUERY !== '')}. Schemas: ${String(SCHEMAS)}. CPU throttle: ${CPU_THROTTLE}×. Headless Chromium; indicative only.`,
     '',
     '| Scenario | Nodes in DOM (fit / zoomed in) | Max zoom | Render (ms) | Ready in page (ms) | Avg FPS | p95 frame (ms) | Max frame (ms) | Long frames | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -1120,6 +1123,7 @@ test.afterAll(async () => {
         flows: FLOWS !== '',
         groups: GROUPS,
         stickies: STICKIES,
+        images: IMAGES,
         results,
         actionResults,
       },

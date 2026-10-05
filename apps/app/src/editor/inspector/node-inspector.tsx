@@ -51,10 +51,20 @@ export function NodeInspector({ deck, node }: { deck: SododeckFile; node: Node }
   const connections = nodeConnections(deck, node.id);
   const style = styleView([node]);
   const applyNodeStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {
-    applyStyle(editor, { nodes: [node.id], groups: [], edges: [], stickies: [] }, channel, value);
+    applyStyle(
+      editor,
+      { nodes: [node.id], groups: [], edges: [], stickies: [], images: [] },
+      channel,
+      value,
+    );
   };
   const addNodeColour = (channel: 'fill' | 'stroke', hex: string) => {
-    addDeckColour(editor, { nodes: [node.id], groups: [], edges: [], stickies: [] }, channel, hex);
+    addDeckColour(
+      editor,
+      { nodes: [node.id], groups: [], edges: [], stickies: [], images: [] },
+      channel,
+      hex,
+    );
   };
   const removeNodeColour = (hex: string) => {
     removeDeckColour(editor, hex);

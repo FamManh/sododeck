@@ -23,7 +23,7 @@ import { shortcutLabel } from '../shell/shortcuts';
 
 /** "Actions for <target>" (contract "Context menu"). */
 function menuName(ctx: ActionContext): string {
-  const { nodes, edges, groups, stickies } = ctx.selection;
+  const { nodes, edges, groups, stickies, images } = ctx.selection;
   switch (ctx.target.kind) {
     case 'canvas':
       return 'Actions for canvas';
@@ -43,8 +43,12 @@ function menuName(ctx: ActionContext): string {
       return stickies.length === 1
         ? 'Actions for note'
         : `Actions for ${String(stickies.length)} notes`;
+    case 'image':
+      return 'Actions for image';
+    case 'images':
+      return `Actions for ${String(images.length)} images`;
     case 'mixed':
-      return `Actions for ${String(nodes.length + edges.length + groups.length + stickies.length)} items`;
+      return `Actions for ${String(nodes.length + edges.length + groups.length + stickies.length + images.length)} items`;
     case 'row': {
       const { tableId, columnId } = ctx.target.row;
       const table = ctx.deck.nodes.find((n) => n.id === tableId);

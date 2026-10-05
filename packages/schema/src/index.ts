@@ -1,10 +1,10 @@
 import jsonSchemaV1 from '../schema/v1.json' with { type: 'json' };
 import type { SododeckFile } from './generated/types';
 import { sododeckFileSchema } from './generated/zod';
-import { checkSemanticRules, type Issue } from './semantic-rules';
+import { ASSET_ID_PATTERN, checkSemanticRules, IMAGE_MIN_SIDE, type Issue } from './semantic-rules';
 
 export type * from './generated/types';
-export { checkSemanticRules, sododeckFileSchema };
+export { ASSET_ID_PATTERN, checkSemanticRules, IMAGE_MIN_SIDE, sododeckFileSchema };
 export type { Issue };
 
 /** The v1 JSON Schema document (for Monaco, Ajv, publishing). */

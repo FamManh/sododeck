@@ -15,6 +15,7 @@ export {
   groupLockState,
   isGroupLocked,
   lockableIds,
+  lockableImageIds,
   lockedGroupIds,
   type GroupLockState,
 } from './group-lock';
@@ -88,21 +89,24 @@ export function editableEdges(
  * them, and how many were skipped. The single choke point for the Delete key, the menu and Cut.
  */
 export function withoutLocked(
-  deck: Pick<SododeckFile, 'nodes' | 'edges' | 'stickies'> & Partial<Pick<SododeckFile, 'groups'>>,
+  deck: Pick<SododeckFile, 'nodes' | 'edges' | 'stickies'> &
+    Partial<Pick<SododeckFile, 'groups' | 'images'>>,
   targets: readonly RemovalTarget[],
 ): { targets: RemovalTarget[]; skipped: number } {
   const locked = {
     nodes: new Set(deck.nodes.filter(isLocked).map((o) => o.id)),
     edges: new Set(deck.edges.filter(isLocked).map((o) => o.id)),
     stickies: new Set(deck.stickies.filter(isLocked).map((o) => o.id)),
+    images: new Set((deck.images ?? []).filter(isLocked).map((o) => o.id)),
     // A group is locked when all its cards are (054); a deck without `groups` has none.
-    groups: lockedGroupIds({ nodes: deck.nodes, groups: deck.groups ?? [] }),
+    groups: lockedGroupIds({ nodes: deck.nodes, groups: deck.groups ?? [], images: deck.images }),
   };
   const kept = targets.filter(
     (target) =>
       (target.scope !== 'nodes' &&
         target.scope !== 'edges' &&
         target.scope !== 'stickies' &&
+        target.scope !== 'images' &&
         target.scope !== 'groups') ||
       !locked[target.scope].has(target.id),
   );

@@ -222,3 +222,47 @@ describe('stickies as targets (053 US1)', () => {
     ).toBeNull();
   });
 });
+
+describe('images as targets (055 US3)', () => {
+  const picture = (
+    id: string,
+    x: number,
+    y: number,
+    extra: Partial<SceneNode> = {},
+  ): SceneNode => ({
+    id: `image:${id}`,
+    type: 'image',
+    position: { x, y },
+    width: 120,
+    height: 80,
+    data: {},
+    ...extra,
+  });
+
+  it('an image is a target with its bare id, flow id and box', () => {
+    expect(hitTarget({ x: 50, y: 50 }, targetScene([picture('i', 10, 20)]), 1)).toEqual({
+      id: 'i',
+      kind: 'image',
+      flowId: 'image:i',
+      box: { x: 10, y: 20, width: 120, height: 80 },
+    });
+  });
+
+  it('stacks with cards: the one painted on top wins where they overlap', () => {
+    const above = targetScene([card('a', 0, 0), picture('i', 50, 20)]);
+    expect(hitTarget({ x: 100, y: 50 }, above, 1)?.id).toBe('i');
+    const below = targetScene([picture('i', 50, 20), card('a', 0, 0)]);
+    expect(hitTarget({ x: 100, y: 50 }, below, 1)?.id).toBe('a');
+  });
+
+  it('an image wins over the group frame behind it', () => {
+    const scene = targetScene([frame('g', -100, -100, 900, 700), picture('i', 10, 20)]);
+    expect(hitTarget({ x: 50, y: 50 }, scene, 1)?.id).toBe('i');
+  });
+
+  it('ignores a hidden image', () => {
+    expect(
+      hitTarget({ x: 50, y: 50 }, targetScene([picture('i', 10, 20, { hidden: true })]), 1),
+    ).toBeNull();
+  });
+});

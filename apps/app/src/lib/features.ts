@@ -63,3 +63,46 @@ export function supportsWorkers(): boolean {
 export function supportsIdleCallback(): boolean {
   return typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function';
 }
+
+/** `createImageBitmap` (picture decode off the main thread, 055). */
+export function supportsCreateImageBitmap(): boolean {
+  return typeof createImageBitmap === 'function';
+}
+
+/** `OffscreenCanvas` with `convertToBlob` (picture scale and encode in a worker, 055). */
+export function supportsOffscreenCanvas(): boolean {
+  return (
+    typeof OffscreenCanvas !== 'undefined' &&
+    typeof OffscreenCanvas.prototype.convertToBlob === 'function'
+  );
+}
+
+/** `crypto.subtle` (SHA-256 of a picture, 055). Missing outside secure contexts. */
+export function supportsCryptoSubtle(): boolean {
+  return (
+    typeof crypto !== 'undefined' &&
+    typeof (crypto as Partial<Crypto>).subtle?.digest === 'function'
+  );
+}
+
+/** A 2 x 2 AVIF; decoding it proves the browser reads AVIF. */
+const AVIF_PROBE =
+  'AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQAMAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAAB9tZGF0EgAKCBgANogQEAwgMg8f8D///8WfhwB8+ErK42A=';
+
+let avifProbe: Promise<boolean> | null = null;
+
+/** Whether this browser decodes AVIF. Probed once with a tiny file; `false` when unsupported. */
+export function supportsAvifDecode(): Promise<boolean> {
+  if (!supportsCreateImageBitmap()) return Promise.resolve(false);
+  avifProbe ??= (async () => {
+    try {
+      const bytes = Uint8Array.from(atob(AVIF_PROBE), (char) => char.charCodeAt(0));
+      const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/avif' }));
+      bitmap.close();
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return avifProbe;
+}

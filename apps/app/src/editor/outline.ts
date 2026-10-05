@@ -183,6 +183,17 @@ export function visibleItems(
   return out;
 }
 
+/** Images outline rows (055), in file order: alt text, else caption, else the file name. */
+export function buildImagesOutline(deck: SododeckFile): NoteOutlineItem[] {
+  return (deck.images ?? []).map((image) => ({
+    id: image.id,
+    label:
+      [image.alt, image.caption, deck.assets?.[image.asset]?.name].find(
+        (text) => text !== undefined && text !== '',
+      ) ?? 'Image',
+  }));
+}
+
 /** Notes outline rows, in file order, using the first non-empty line as the label. */
 export function buildNotesOutline(deck: SododeckFile): NoteOutlineItem[] {
   return deck.stickies.map((sticky) => ({

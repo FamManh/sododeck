@@ -1,4 +1,4 @@
-import { fromJSON, serializeDeck, toJSON, type DeckEditor } from '@sododeck/model';
+import { assetId, fromJSON, serializeDeck, toJSON, type DeckEditor } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { TooltipProvider } from '@sododeck/ui/components/tooltip';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -7,8 +7,10 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
+import { PNG_1X1 } from '../images/test-pictures';
 import type * as EditorContextModule from '../model/editor-context';
 import { useUiStore } from '../state/ui-store';
+import { listBlobIds, putBlob } from '../storage/blob-store';
 import * as download from '../storage/download';
 import {
   createFolder,
@@ -133,6 +135,37 @@ describe('EditorPage', () => {
     expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Rename deck' })).toHaveTextContent('Untitled deck');
     expect(screen.getByText('Saved in this browser')).toBeInTheDocument();
+  });
+
+  it('keeps the pictures a deck uses and sweeps the others when it opens (055 FR-011)', async () => {
+    const used = assetId(PNG_1X1);
+    const orphan = 'e'.repeat(64);
+    const file: SododeckFile = {
+      ...emptySododeckFile(),
+      name: 'Pictures',
+      images: [
+        { id: 'i1', asset: used, position: { x: 0, y: 0 }, size: { width: 80, height: 40 } },
+      ],
+      assets: {
+        [used]: {
+          type: 'image/png',
+          bytes: PNG_1X1.length,
+          width: 1,
+          height: 1,
+          name: 'a.png',
+          data: '',
+        },
+      },
+    };
+    await putBlob(db, 'd1', used, { type: 'image/png', bytes: PNG_1X1 });
+    await putBlob(db, 'd1', orphan, { type: 'image/png', bytes: new Uint8Array([1, 2]) });
+    await putBlob(db, 'other', orphan, { type: 'image/png', bytes: new Uint8Array([1, 2]) });
+    await openEditor(file);
+    await waitFor(async () => {
+      expect(await listBlobIds(db, 'd1')).toEqual([used]);
+    });
+    // Another deck's pictures are not touched.
+    expect(await listBlobIds(db, 'other')).toEqual([orphan]);
   });
 
   it('undoes and redoes every canvas edit one user action at a time (SC-004)', async () => {
@@ -456,7 +489,13 @@ describe('EditorPage', () => {
       await user.click(screen.getByRole('link', { name: 'Back to canvas' }));
       expect(router.state.location.pathname).toBe('/deck/d1');
       expect(screen.getByRole('heading', { name: 'Pricing' })).toBeInTheDocument();
-      expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
+      expect(ui().selection).toEqual({
+        nodes: ['a'],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
       await openRulesFromRail(user);
       expect(ui().canvasViewport).toEqual(saved);
     });
@@ -484,7 +523,13 @@ describe('EditorPage', () => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
       expect(ui().pendingDelete).toBeNull();
       await user.keyboard('{Escape}');
-      expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
+      expect(ui().selection).toEqual({
+        nodes: ['a'],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
     });
 
     it("opens the rule editor from Deck settings' Rules count", async () => {

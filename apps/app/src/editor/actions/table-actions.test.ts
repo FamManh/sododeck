@@ -272,3 +272,54 @@ describe('table actions (043 US4, US6)', () => {
     );
   });
 });
+
+describe('locking images (055)', () => {
+  const picture = (id: string, group?: string) => ({
+    id,
+    asset: 'a'.repeat(64),
+    position: { x: 0, y: 0 },
+    size: { width: 80, height: 60 },
+    ...(group === undefined ? {} : { group }),
+  });
+  const withImages = {
+    ...actionDeck,
+    images: [picture('i1', 'g'), picture('i2')],
+    assets: {
+      ['a'.repeat(64)]: {
+        type: 'image/png' as const,
+        bytes: 1,
+        width: 1,
+        height: 1,
+        name: 'a.png',
+        data: '',
+      },
+    },
+  };
+  const lockedImages = (doc: DeckDoc) =>
+    (toJSON(doc).images ?? []).filter((i) => i.locked === true).map((i) => i.id);
+
+  it('locking a group locks its cards and its images in one undo step, and unlocking frees both', () => {
+    const target: MenuTarget = { kind: 'group', ids: sel({ groups: ['g'] }) };
+    const ctx = actionContext(target, 'edit', withImages);
+    expect(runAction(ACTIONS, 'node.lock', ctx)).toBe(true);
+    expect(lockedImages(ctx.doc)).toEqual(['i1']);
+    expect(
+      toJSON(ctx.doc)
+        .nodes.filter((n) => n.locked === true)
+        .map((n) => n.id),
+    ).toEqual(['a', 'b']);
+    ctx.editor.undo();
+    expect(lockedImages(ctx.doc)).toEqual([]);
+    expect(toJSON(ctx.doc).nodes.some((n) => n.locked === true)).toBe(false);
+  });
+
+  it('locks and unlocks a picture on its own', () => {
+    const target: MenuTarget = { kind: 'mixed', ids: sel({ images: ['i2'] }) };
+    const ctx = actionContext(target, 'edit', withImages);
+    expect(runAction(ACTIONS, 'node.lock', ctx)).toBe(true);
+    expect(lockedImages(ctx.doc)).toEqual(['i2']);
+    const again = actionContext(target, 'edit', ctx.doc);
+    expect(runAction(ACTIONS, 'node.lock', again)).toBe(true);
+    expect(lockedImages(ctx.doc)).toEqual([]);
+  });
+});

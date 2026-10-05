@@ -10,7 +10,9 @@ import {
   type RelationshipData,
   facingSides,
   toFlowEdges,
+  stackImages,
   toFlowNodes,
+  toImageNodes,
   toLeaderEdges,
   toStickyNodes,
 } from './deck-to-flow';
@@ -75,7 +77,10 @@ describe('toFlowNodes', () => {
     const nodes = toFlowNodes(
       deck,
       topLevelGraph(deck),
-      view({ selection: { nodes: ['b'], edges: [], groups: [], stickies: [] }, focusedId: 'a' }),
+      view({
+        selection: { nodes: ['b'], edges: [], groups: [], stickies: [], images: [] },
+        focusedId: 'a',
+      }),
     );
     const [a, b] = nodes.filter((n) => n.type === 'deck');
     expect(a).toMatchObject({
@@ -151,6 +156,7 @@ describe('toFlowNodes', () => {
         edges: [],
         groups: [],
         stickies: ['st-free'],
+        images: [],
       });
       const freeSticky = deck.stickies[0];
       if (freeSticky === undefined) throw new Error('Missing free sticky fixture');
@@ -611,7 +617,7 @@ describe('toFlowEdges', () => {
     const edges = toFlowEdges(
       deck,
       topLevelGraph(deck),
-      view({ selection: { nodes: [], edges: ['e1'], groups: [], stickies: [] } }),
+      view({ selection: { nodes: [], edges: ['e1'], groups: [], stickies: [], images: [] } }),
     );
     expect(edges.map((e) => e.id)).toEqual(['e1', 'e3']);
     expect(edges[0]).toMatchObject({
@@ -1769,6 +1775,7 @@ describe('sticky connector ends (053 US1)', () => {
       { id: 'n3', text: 'Folded', position: { x: 600, y: 300 }, collapsed: true },
       { id: 'n4', text: 'Pinned to B', anchor: 'b' },
     ],
+    images: [],
     edges: [
       { id: 'e-card', from: 'a', to: 'n1' },
       { id: 'e-sized', from: 'n2', to: 'b' },
@@ -1905,5 +1912,106 @@ describe('sticky connector ends (053 US1)', () => {
     const nodes = toStickyNodes(noted, EMPTY_SELECTION);
     expect(nodes.find((n) => n.id === 'sticky:n3')).toMatchObject({ width: 200, height: 40 });
     expect(nodes.every((n) => n.connectable !== false)).toBe(true);
+  });
+});
+
+describe('images in the stack (055)', () => {
+  const asset = 'a'.repeat(64);
+  const facts = { type: 'image/png' as const, bytes: 1, width: 10, height: 10, name: 'p.png' };
+  const image = (id: string, z?: number): NonNullable<SododeckFile['images']>[number] => ({
+    id,
+    asset,
+    position: { x: 0, y: 0 },
+    size: { width: 50, height: 40 },
+    ...(z === undefined ? {} : { z }),
+  });
+  const withImages = (
+    images: NonNullable<SododeckFile['images']>,
+    nodes?: SododeckFile['nodes'],
+  ) => ({
+    ...emptySododeckFile(),
+    nodes: nodes ?? [
+      { id: 'c0', type: 'service' as const, title: 'C0' },
+      { id: 'c1', type: 'service' as const, title: 'C1' },
+    ],
+    images,
+    assets: { [asset]: { ...facts, data: '' } },
+  });
+  const draw = (file: SododeckFile) =>
+    stackImages(
+      toFlowNodes(file, topLevelGraph(file), view()),
+      toImageNodes(file, EMPTY_SELECTION),
+      file,
+    ).map((node) => node.id);
+
+  it('keeps an image above a card it ranks above, among the cards', () => {
+    // Ranks: c0 = 0, c1 = 1; the image has rank 5: above both.
+    expect(draw(withImages([image('i', 5)]))).toEqual(['c0', 'c1', 'image:i']);
+    // Rank 0 ties with c0: cards before images, so c0, image, then c1.
+    expect(draw(withImages([image('i', 0)]))).toEqual(['c0', 'image:i', 'c1']);
+  });
+
+  it('draws no node for an image hidden inside a collapsed group, and a connector to it ends on the card', () => {
+    const file = {
+      ...withImages([{ ...image('i', 5), group: 'g' }]),
+      groups: [{ id: 'g', title: 'Core' }],
+      edges: [{ id: 'e', from: 'c0', to: 'i' }],
+    };
+    const graph = visibleGraph(file, { node: null, group: null }, new Set(['g']));
+    expect(toImageNodes(file, EMPTY_SELECTION, false, graph.hiddenImages)).toEqual([]);
+    expect(toImageNodes(file, EMPTY_SELECTION)).toHaveLength(1);
+    const edges = toFlowEdges(file, topLevelGraph(file), view());
+    expect(edges.map((edge) => [edge.source, edge.target])).toEqual([['c0', 'image:i']]);
+  });
+
+  it('puts an image below every card under the connectors (negative z-index)', () => {
+    const file = withImages([image('i', -1)]);
+    expect(draw(file)).toEqual(['image:i', 'c0', 'c1']);
+    const [node] = toImageNodes(file, EMPTY_SELECTION);
+    expect(node?.zIndex).toBe(-1);
+    const [above] = toImageNodes(withImages([image('i', 5)]), EMPTY_SELECTION);
+    expect(above?.zIndex).toBeUndefined();
+  });
+
+  it('draws a card added after an image above it', () => {
+    const file = withImages(
+      [image('i', 2)],
+      [
+        { id: 'c0', type: 'service', title: 'C0', z: 0 },
+        { id: 'c1', type: 'service', title: 'C1', z: 3 },
+      ],
+    );
+    expect(draw(file)).toEqual(['c0', 'image:i', 'c1']);
+  });
+
+  it('leaves a deck without images exactly as before', () => {
+    const graph = topLevelGraph(deck);
+    const nodes = toFlowNodes(deck, graph, view());
+    expect(toImageNodes(deck, EMPTY_SELECTION)).toEqual([]);
+    expect(stackImages(nodes, [], deck)).toBe(nodes);
+  });
+
+  it('reuses an image node until the image changes', () => {
+    const file = withImages([image('i', 5), image('j', 6)]);
+    const first = toImageNodes(file, EMPTY_SELECTION);
+    expect(toImageNodes(file, EMPTY_SELECTION)[0]).toBe(first[0]);
+    const selected = toImageNodes(file, { ...EMPTY_SELECTION, images: ['i'] });
+    expect(selected[0]).not.toBe(first[0]);
+    expect(selected[0]?.selected).toBe(true);
+    expect(selected[1]).toBe(first[1]);
+  });
+
+  it('carries the picture facts into the node data', () => {
+    const [node] = toImageNodes(withImages([{ ...image('i'), alt: 'Logo' }]), EMPTY_SELECTION);
+    expect(node?.id).toBe('image:i');
+    expect(node?.data).toMatchObject({
+      imageId: 'i',
+      asset,
+      alt: 'Logo',
+      fileName: 'p.png',
+      known: true,
+      locked: false,
+    });
+    expect(node).toMatchObject({ width: 50, height: 40, position: { x: 0, y: 0 } });
   });
 });

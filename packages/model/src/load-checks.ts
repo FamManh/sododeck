@@ -5,7 +5,8 @@
  * rows of one rule, and the database parts (040, research R8): every table's columns, indexes and
  * checks plus the enums and their values, together across the deck. The same id in two different
  * scopes is allowed by the format, except a node, a group and a sticky sharing an id that a
- * connector end names (050, 053).
+ * connector end names (050, 053). An image id that equals one of those is refused earlier, by the
+ * format's rule I5.
  */
 import type { Issue, SododeckFile } from '@sododeck/schema';
 
@@ -89,7 +90,7 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
 /** One issue per duplicated id per scope, naming every location. Empty when ids are unique. */
 export function checkDuplicateIds(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
-  for (const c of COLLECTIONS) checkScope(withPaths(file[c], c), issues);
+  for (const c of COLLECTIONS) checkScope(withPaths(file[c] ?? [], c), issues);
   file.flows.forEach((flow, i) => {
     checkScope(withPaths(flow.steps, `flows.${String(i)}.steps`), issues);
     checkScope(withPaths(flow.branches ?? [], `flows.${String(i)}.branches`), issues);

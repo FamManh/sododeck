@@ -578,3 +578,59 @@ describe('notes as connector ends (053)', () => {
     ).toBe('x');
   });
 });
+
+describe('images as connector ends (055)', () => {
+  const asset = 'a'.repeat(64);
+  const deck = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 300, y: 0 }, group: 'g' },
+    ],
+    groups: [{ id: 'g', title: 'Core' }],
+    images: [
+      { id: 'free', asset, position: { x: 0, y: 300 }, size: { width: 80, height: 60 } },
+      {
+        id: 'inside',
+        asset,
+        position: { x: 300, y: 300 },
+        size: { width: 80, height: 60 },
+        group: 'g',
+      },
+      { id: 'unused', asset, position: { x: 500, y: 300 }, size: { width: 80, height: 60 } },
+    ],
+    edges: [
+      { id: 'af', from: 'a', to: 'free' },
+      { id: 'ai', from: 'a', to: 'inside' },
+    ],
+  });
+  const top = { node: null, group: null };
+
+  it('draws a connector to an image as a plain edge; only ends are listed', () => {
+    const graph = visibleGraph(deck, top, new Set());
+    expect(graph.edges).toEqual(['af', 'ai']);
+    expect(graph.representative.get('free')).toBe('image:free');
+    expect(graph.images).toEqual(['free', 'inside']);
+    expect(graph.hiddenImages.size).toBe(0);
+  });
+
+  it('hides an image in a collapsed group and ends its connector on the collapsed card', () => {
+    const graph = visibleGraph(deck, top, new Set(['g']));
+    expect([...graph.hiddenImages]).toEqual(['inside']);
+    expect(graph.representative.get('inside')).toBe('collapsed:g');
+    expect(graph.edges).toEqual(['af']);
+    expect(graph.merged).toMatchObject([{ a: 'a', b: 'collapsed:g', edgeIds: ['ai'] }]);
+  });
+
+  it('is rebuilt when an image changes group', () => {
+    const regrouped = {
+      ...deck,
+      images: deck.images?.map((i) =>
+        i.id === 'inside' ? { id: i.id, asset, position: i.position, size: i.size } : i,
+      ),
+    };
+    const before = visibleGraph(deck, top, new Set(['g']));
+    const after = visibleGraph(regrouped, top, new Set(['g']));
+    expect(before.hiddenImages.has('inside')).toBe(true);
+    expect(after.hiddenImages.has('inside')).toBe(false);
+  });
+});

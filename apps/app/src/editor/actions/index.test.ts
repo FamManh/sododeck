@@ -70,7 +70,7 @@ describe('the menus and toolbars of the contract (019 contracts/quick-edit-ui.md
     expect(labels(TARGETS.sticky, 'menu')).toEqual([['Open details'], ['Delete']]);
     expect(labels(TARGETS.mixed, 'menu')).toEqual([
       ['Colour: none', 'Icon…'],
-      ['Lock', 'Spread ends evenly'],
+      ['Lock', 'Arrange', 'Spread ends evenly'],
       ['Delete'],
     ]);
   });

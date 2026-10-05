@@ -1,11 +1,12 @@
 // @vitest-environment node
-import { createEditor, fromJSON, serializeDeck, toJSON } from '@sododeck/model';
+import { assetId, createEditor, fromJSON, serializeDeck, toJSON } from '@sododeck/model';
 import full from '@sododeck/schema/examples/full.sododeck.json' with { type: 'json' };
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import { generateBenchDeck } from '../bench/generate-deck';
+import { PNG_1X1 } from '../images/test-pictures';
 import { legacyDeckBytes } from '../test/legacy-deck';
 import {
   create,
@@ -176,6 +177,80 @@ describe('library ops keep card size and connector route (017 US4)', () => {
     const { bytes, summary } = importFile(text);
     expect(summary.nodeCount).toBe(1);
     expect(toJSON(docOf([bytes])).nodes[0]?.size).toEqual({ width: 900, height: 40 });
+  });
+});
+
+describe('library ops: pictures (055)', () => {
+  const id = assetId(PNG_1X1);
+  const deckWithImage = (): SododeckFile => {
+    const doc = fromJSON(emptySododeckFile());
+    createEditor(doc).addImages([
+      {
+        asset: id,
+        meta: { type: 'image/png', bytes: PNG_1X1.length, width: 1, height: 1, name: 'dot.png' },
+        position: { x: 0, y: 0 },
+        size: { width: 64, height: 64 },
+      },
+    ]);
+    return JSON.parse(serializeDeck(doc, new Map([[id, PNG_1X1]]))) as SododeckFile;
+  };
+  const withAsset = (patch: Record<string, unknown>) => {
+    const file = deckWithImage();
+    const assets = file.assets ?? {};
+    return JSON.stringify({ ...file, assets: { [id]: { ...assets[id], ...patch } } });
+  };
+
+  it('returns the pictures of an imported file with their stored type', () => {
+    const imported = importFile(JSON.stringify(deckWithImage()));
+    expect(imported.problems).toEqual([]);
+    expect(imported.pictures).toHaveLength(1);
+    expect(imported.pictures[0]).toMatchObject({ id, type: 'image/png' });
+    expect([...(imported.pictures[0]?.bytes ?? [])]).toEqual([...PNG_1X1]);
+  });
+
+  it('opens a file whose picture data is wrong, listing it as a problem and storing nothing', () => {
+    for (const patch of [{ data: 'AA==' }, { bytes: 5_242_881 }, { type: 'application/pdf' }]) {
+      const imported = (() => {
+        try {
+          return importFile(withAsset(patch));
+        } catch (error) {
+          // A type outside the allow-list is a schema error, refused whole.
+          return error instanceof LibraryOpError ? error.code : 'other';
+        }
+      })();
+      if (typeof imported === 'string') {
+        expect(imported).toBe('invalid-deck');
+        continue;
+      }
+      expect(imported.pictures).toEqual([]);
+      expect(imported.problems).toHaveLength(1);
+    }
+  });
+
+  it('opens a file with a picture missing from `assets` as invalid, not half loaded', () => {
+    const file = deckWithImage();
+    const { assets: _assets, ...rest } = file;
+    expect(() => importFile(JSON.stringify(rest))).toThrow(LibraryOpError);
+  });
+
+  it('opens a file from before pictures unchanged and exports it without images or assets', () => {
+    const plain = { ...emptySododeckFile(), name: 'Old' };
+    const imported = importFile(JSON.stringify(plain));
+    expect(imported.pictures).toEqual([]);
+    expect(imported.problems).toEqual([]);
+    const { json } = exportDeck([imported.bytes]);
+    expect(json).not.toContain('"images"');
+    expect(json).not.toContain('"assets"');
+  });
+
+  it('exports a deck with its pictures byte-identical to what was imported', () => {
+    const first = importFile(JSON.stringify(deckWithImage()));
+    const firstBytes = new Map(first.pictures.map((p) => [p.id, p.bytes]));
+    const { json } = exportDeck([first.bytes], firstBytes);
+    const second = importFile(json);
+    const secondBytes = new Map(second.pictures.map((p) => [p.id, p.bytes]));
+    expect(exportDeck([second.bytes], secondBytes).json).toBe(json);
+    expect([...(secondBytes.get(id) ?? [])]).toEqual([...PNG_1X1]);
   });
 });
 

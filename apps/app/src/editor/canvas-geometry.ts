@@ -1,7 +1,14 @@
 /**
  * Pure canvas geometry (no React). Positions are flow coordinates of a node's top-left corner.
  */
-import { drawnShapeType, frameOf, NODE_GRID, shapeGeometryOf, type Point } from '@sododeck/model';
+import {
+  drawnShapeType,
+  frameOf,
+  imageBox,
+  NODE_GRID,
+  shapeGeometryOf,
+  type Point,
+} from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import type { Level } from './levels';
@@ -267,7 +274,10 @@ const groupBoundsCache = new WeakMap<
   ReadonlyArray<SododeckFile['nodes'][number]>,
   WeakMap<
     ReadonlyArray<SododeckFile['groups'][number]>,
-    Map<Level, { fields: unknown; fieldDefaults: unknown; rects: Map<string, Rect> }>
+    Map<
+      Level,
+      { fields: unknown; fieldDefaults: unknown; images: unknown; rects: Map<string, Rect> }
+    >
   >
 >();
 
@@ -293,7 +303,8 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
   if (
     cached !== undefined &&
     cached.fields === deck.fields &&
-    cached.fieldDefaults === deck.fieldDefaults
+    cached.fieldDefaults === deck.fieldDefaults &&
+    cached.images === deck.images
   ) {
     return cached.rects;
   }
@@ -304,6 +315,12 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
     const box = cardBox(node, index, level, { fields: cardFieldView(deck, node) });
     content.set(node.group, union(content.get(node.group), box));
   });
+
+  // An image in a group is a member (055): its own box counts, whatever the card size.
+  for (const image of deck.images ?? []) {
+    if (image.group === undefined) continue;
+    content.set(image.group, union(content.get(image.group), imageBox(image)));
+  }
 
   const children = new Map<string, string[]>();
   for (const group of deck.groups) {
@@ -335,7 +352,12 @@ export function groupBounds(deck: SododeckFile, level: Level = 'system'): Map<st
     return bounds;
   };
   for (const group of deck.groups) resolve(group.id);
-  byLevel.set(level, { fields: deck.fields, fieldDefaults: deck.fieldDefaults, rects: out });
+  byLevel.set(level, {
+    fields: deck.fields,
+    fieldDefaults: deck.fieldDefaults,
+    images: deck.images,
+    rects: out,
+  });
   return out;
 }
 

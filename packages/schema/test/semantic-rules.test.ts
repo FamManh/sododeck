@@ -437,4 +437,82 @@ describe('checkSemanticRules', () => {
       ]);
     });
   });
+
+  describe('images (055, I1 to I6)', () => {
+    const ID = 'a'.repeat(64);
+    const asset = (bytes: number, data: string) => ({
+      type: 'image/png' as const,
+      bytes,
+      width: 1,
+      height: 1,
+      name: 'a.png',
+      data,
+    });
+    function deckWith(images: SododeckFile['images'], assets: SododeckFile['assets']) {
+      return {
+        ...emptySododeckFile(),
+        nodes: [{ id: 'n1', type: 'service', title: 'A' }],
+        groups: [{ id: 'g1', title: 'G' }],
+        stickies: [{ id: 's1', text: 'x', position: { x: 0, y: 0 } }],
+        images,
+        assets,
+      };
+    }
+    const image = (over: object = {}) => ({
+      id: 'i1',
+      asset: ID,
+      position: { x: 0, y: 0 },
+      size: { width: 40, height: 40 },
+      ...over,
+    });
+
+    it('accepts an image, its asset, a group and an unused asset', () => {
+      expect(
+        checkSemanticRules(deckWith([image({ group: 'g1' })], { [ID]: asset(3, 'AAAA') })),
+      ).toEqual([]);
+      expect(checkSemanticRules(deckWith(undefined, { [ID]: asset(3, 'AAAA') }))).toEqual([]);
+    });
+
+    it('reports an asset that is missing (I1)', () => {
+      expect(checkSemanticRules(deckWith([image()], {}))[0]?.path).toBe('images.0.asset');
+    });
+
+    it('reports a group that is missing (I3) and an id that clashes (I5)', () => {
+      const assets = { [ID]: asset(3, 'AAAA') };
+      expect(checkSemanticRules(deckWith([image({ group: 'x' })], assets))[0]?.path).toBe(
+        'images.0.group',
+      );
+      for (const id of ['n1', 'g1', 's1']) {
+        expect(checkSemanticRules(deckWith([image({ id })], assets))[0]?.path).toBe('images.0.id');
+      }
+      expect(
+        checkSemanticRules(deckWith([image(), image()], assets)).map((issue) => issue.path),
+      ).toEqual(['images.1.id']);
+    });
+
+    it('reports a size below 32 px on each side (I6)', () => {
+      const assets = { [ID]: asset(3, 'AAAA') };
+      const paths = checkSemanticRules(
+        deckWith([image({ size: { width: 31, height: 10 } })], assets),
+      ).map((issue) => issue.path);
+      expect(paths).toEqual(['images.0.size.width', 'images.0.size.height']);
+    });
+
+    it('reports data that does not decode to the stated bytes, or is not padded (I4)', () => {
+      expect(checkSemanticRules(deckWith([], { [ID]: asset(4, 'AAAA') }))[0]?.path).toBe(
+        `assets.${ID}.data`,
+      );
+      expect(checkSemanticRules(deckWith([], { [ID]: asset(2, 'AAA') }))[0]?.path).toBe(
+        `assets.${ID}.data`,
+      );
+      expect(checkSemanticRules(deckWith([], { [ID]: asset(1, 'AA==') }))).toEqual([]);
+      expect(checkSemanticRules(deckWith([], { [ID]: asset(2, 'AAA=') }))).toEqual([]);
+    });
+
+    it('reports an assets key that is not a picture id', () => {
+      expect(checkSemanticRules(deckWith([], { Big: asset(3, 'AAAA') }))[0]?.path).toBe(
+        'assets.Big',
+      );
+    });
+  });
 });

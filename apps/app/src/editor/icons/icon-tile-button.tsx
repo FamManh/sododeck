@@ -77,7 +77,7 @@ export function IconTileButton({ node }: { node: Node }) {
       </Tooltip>
       <PopoverContent aria-label="Choose icon" align="start" className="w-[320px] shadow-menu">
         <IconField
-          selection={{ nodes: [node.id], edges: [], groups: [], stickies: [] }}
+          selection={{ nodes: [node.id], edges: [], groups: [], stickies: [], images: [] }}
           onDone={() => {
             setOpen(false);
           }}

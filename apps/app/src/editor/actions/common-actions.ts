@@ -59,7 +59,18 @@ export const COMMON_ACTIONS: readonly Action[] = [
     section: 'clipboard',
     // Only ⇧⌘C (founder, 2026-10-02): a developer tool, kept out of the menus; groups have none
     // (spec FR-032). The JSON panel has its own Copy button.
-    where: { keys: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'] },
+    where: {
+      keys: [
+        'component',
+        'components',
+        'connection',
+        'connections',
+        'sticky',
+        'image',
+        'images',
+        'mixed',
+      ],
+    },
     modes: ALL_MODES,
     applies: (ctx) => selectionView(ctx.deck, ctx.selection).entries.length > 0,
     run: (ctx) => {
@@ -112,17 +123,30 @@ export const COMMON_ACTIONS: readonly Action[] = [
     section: 'danger',
     destructive: true,
     where: {
-      menu: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'],
-      // The note toolbar ends with Delete (053 US3); other toolbars keep it in the menu.
-      toolbar: ['sticky'],
+      menu: [
+        'component',
+        'components',
+        'connection',
+        'connections',
+        'sticky',
+        'image',
+        'images',
+        'mixed',
+      ],
+      // The note and image toolbars end with Delete (053 US3, 055); other toolbars keep it in the menu.
+      toolbar: ['sticky', 'image', 'images'],
     },
     // Groups are never deleted this way (the Delete key refuses them too).
     applies: (ctx) =>
-      ctx.selection.nodes.length + ctx.selection.edges.length + ctx.selection.stickies.length > 0,
+      ctx.selection.nodes.length +
+        ctx.selection.edges.length +
+        ctx.selection.stickies.length +
+        ctx.selection.images.length >
+      0,
     run: (ctx) => {
       // The Delete key's path: the same confirmation and Undo toast (FR-038).
-      const { nodes, edges, stickies } = ctx.selection;
-      useUiStore.getState().requestDelete({ nodes, edges, stickies });
+      const { nodes, edges, stickies, images } = ctx.selection;
+      useUiStore.getState().requestDelete({ nodes, edges, stickies, images });
     },
   },
   {

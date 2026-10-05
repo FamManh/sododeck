@@ -1,6 +1,6 @@
 # 0037. Image support: separate picture store, embedded in the file, shared stacking
 
-- **Status:** Proposed (needs founder approval of the principle I deviation)
+- **Status:** Accepted (founder approved the principle I deviation, 2026-10-05)
 - **Date:** 2026-10-05
 - **Feature:** `specs/055-image-support` (research R1-R13)
 - **Builds on:** 0002 (file format), 0022 (schema roadmap), 0031, 0036 (connector ends), constitution I, II, IV

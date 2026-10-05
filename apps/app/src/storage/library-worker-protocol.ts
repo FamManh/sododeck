@@ -1,18 +1,27 @@
 import type { DeckSummary } from './deck-summary';
+import type { AssetProblem } from '@sododeck/model';
+
 import type { MermaidImport } from '../import-mermaid/import-mermaid';
-import type { LibraryOpErrorCode } from './library-ops';
+import type { LibraryOpErrorCode, PictureBytes } from './library-ops';
 
 /** Messages between `library-client.ts` and `library.worker.ts` (contracts/storage-api.md). */
 export type LibraryRequest =
   | { op: 'create'; name: string }
   | { op: 'import'; text: string }
   | { op: 'importMermaid'; text: string }
-  | { op: 'export'; updates: Uint8Array[] }
+  | { op: 'export'; updates: Uint8Array[]; pictures?: Map<string, Uint8Array> }
   | { op: 'rename'; updates: Uint8Array[]; name: string }
   | { op: 'duplicate'; updates: Uint8Array[]; name: string };
 
 export type LibraryResult =
-  | { op: 'create' | 'import' | 'duplicate'; bytes: Uint8Array; summary: DeckSummary }
+  | { op: 'create' | 'duplicate'; bytes: Uint8Array; summary: DeckSummary }
+  | {
+      op: 'import';
+      bytes: Uint8Array;
+      summary: DeckSummary;
+      pictures: PictureBytes[];
+      problems: AssetProblem[];
+    }
   | { op: 'rename'; delta: Uint8Array; summary: DeckSummary }
   | { op: 'export'; json: string; name: string }
   | ({ op: 'importMermaid' } & MermaidImport);

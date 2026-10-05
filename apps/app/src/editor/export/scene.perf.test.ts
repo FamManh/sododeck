@@ -96,4 +96,36 @@ describe('export scene performance', () => {
     expect(scene.edges.filter((edge) => edge.rel !== undefined).length).toBeGreaterThan(150);
     expect(elapsed).toBeLessThan(CEILING_MS);
   });
+
+  it('builds and renders 500 components / 1,000 connections with 50 images under the ceiling (055)', () => {
+    const { deck } = generateBenchDeck(500, 1000, 42, { groups: true, images: 50 });
+    const ui = {
+      currentViewId: null,
+      revealed: new Set<string>(),
+      drill: [],
+      activeFlowId: null,
+      notesDisplay: 'dimmed' as const,
+    };
+    buildScene({ deck, scope: 'deck', ui });
+    const fresh = structuredClone(deck);
+    const start = performance.now();
+    const scene = buildScene({ deck: fresh, scope: 'deck', ui });
+    const pictures = new Map(
+      Object.keys(fresh.assets ?? {}).map((id) => [id, 'data:image/png;base64,AAAA']),
+    );
+    const svg = renderSvg(scene, {
+      transparent: false,
+      palette: LIGHT_PALETTE,
+      fonts: '',
+      measure: fixedWidthMeasurer(),
+      title: 'Bench',
+      pictures,
+    });
+    const elapsed = performance.now() - start;
+    console.info(`export scene + svg (500 / 1000, 50 images): ${elapsed.toFixed(1)} ms`);
+    expect(scene.images).toHaveLength(50);
+    expect(scene.stack.length).toBe(scene.cards.length + 50);
+    expect(svg.match(/<image /g)).toHaveLength(50);
+    expect(elapsed).toBeLessThan(CEILING_MS);
+  });
 });

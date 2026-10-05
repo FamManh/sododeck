@@ -502,7 +502,7 @@ describe('ExportDialog: schema formats (045)', () => {
   const shop = quietShop();
   const preview = () => screen.getByRole('region', { name: 'Preview' });
   const selection = (nodes: string[]) => ({
-    selection: { nodes, edges: [], groups: [], stickies: [] },
+    selection: { nodes, edges: [], groups: [], stickies: [], images: [] },
   });
   const scopeRadio = (name: string) =>
     within(screen.getByRole('radiogroup', { name: 'Scope' })).getByRole('radio', { name });

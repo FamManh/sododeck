@@ -233,7 +233,7 @@ describe('InspectorStep in flow mode (007 FR-019–021)', () => {
     if (sticky === undefined) throw new Error('Missing sticky fixture');
     const point = stickyCanvasPosition(deck, sticky).point;
     expect(setCenter).toHaveBeenCalledWith(point.x, point.y, { zoom: 1 });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().activeFlow?.flowId).toBe('order');
 
     act(() => {

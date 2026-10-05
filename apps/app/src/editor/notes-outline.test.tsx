@@ -65,6 +65,7 @@ describe('NotesOutline', () => {
       edges: [],
       groups: [],
       stickies: ['note-2'],
+      images: [],
     });
     expect(setCenter).toHaveBeenCalledWith(180, 220, { zoom: 1 });
   });

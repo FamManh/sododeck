@@ -34,6 +34,8 @@ const ELEMENT_SCHEMAS = {
   features: shape.features.element,
   flows: shape.flows.element,
   stickies: shape.stickies.element,
+  images: shape.images.unwrap().element,
+  asset: shape.assets.unwrap().valueType,
   step: shape.flows.element.shape.steps.element,
   branch: shape.flows.element.shape.branches.unwrap().element,
   rule: shape.rules.valueType,
@@ -77,7 +79,8 @@ const ELEMENT_SCHEMAS = {
   | 'dbIndex'
   | 'dbCheck'
   | 'enum'
-  | 'enumValue',
+  | 'enumValue'
+  | 'asset',
   Schema
 >;
 
@@ -106,6 +109,31 @@ function fileWith(kind: ValidationKind, candidate: unknown): SododeckFile | unde
     case 'flows':
     case 'stickies':
       return { ...file, [kind]: [candidate] };
+    case 'images': {
+      // I6 on one image. Its picture and group exist as far as this check goes: whether they do
+      // is the model's job (`assertRefsExist`, the integrity report), not a format check.
+      const image = isRecord(candidate) ? candidate : {};
+      const group = typeof image.group === 'string' ? image.group : undefined;
+      const asset = typeof image.asset === 'string' ? image.asset : undefined;
+      return {
+        ...file,
+        groups: group === undefined ? [] : [{ id: group, title: group }],
+        images: [candidate],
+        assets:
+          asset === undefined
+            ? {}
+            : {
+                [asset]: {
+                  type: 'image/png',
+                  bytes: 1,
+                  width: 1,
+                  height: 1,
+                  name: '',
+                  data: 'AA==',
+                },
+              },
+      } as SododeckFile;
+    }
     case 'step':
       return { ...file, flows: [{ id: 'f', title: 'f', steps: [candidate] }] } as SododeckFile;
     case 'field':
@@ -148,8 +176,8 @@ export function assertValid(issues: Issue[]): void {
   if (issues.length > 0) throw new DeckEditError('invalid', issues);
 }
 
-/** `'nodes|groups|stickies'`: a connector end (050, 053). */
-export type RefTarget = Collection | 'nodes|groups|stickies' | 'rule' | 'any';
+/** `'nodes|groups|stickies|images'`: a connector end (050, 053, 055). */
+export type RefTarget = Collection | 'nodes|groups|stickies|images' | 'rule' | 'any';
 
 export interface Ref {
   /** Field holding the reference, e.g. `from` or `includes.2`. */
@@ -164,11 +192,12 @@ function exists(doc: DeckDoc, ref: Ref, anyIds: () => ReadonlySet<Id>): boolean 
       return rulesMap(doc).has(ref.id);
     case 'any':
       return anyIds().has(ref.id);
-    case 'nodes|groups|stickies':
+    case 'nodes|groups|stickies|images':
       return (
         collectionMap(doc, 'nodes').has(ref.id) ||
         collectionMap(doc, 'groups').has(ref.id) ||
-        collectionMap(doc, 'stickies').has(ref.id)
+        collectionMap(doc, 'stickies').has(ref.id) ||
+        collectionMap(doc, 'images').has(ref.id)
       );
     default:
       return collectionMap(doc, ref.target).has(ref.id);
@@ -176,7 +205,7 @@ function exists(doc: DeckDoc, ref: Ref, anyIds: () => ReadonlySet<Id>): boolean 
 }
 
 const targetName = (target: RefTarget) =>
-  target === 'nodes|groups|stickies' ? 'nodes, groups or stickies' : target;
+  target === 'nodes|groups|stickies|images' ? 'nodes, groups, stickies or images' : target;
 
 /** Throws `DeckEditError('missing-reference')` naming every reference that does not resolve. */
 export function assertRefsExist(

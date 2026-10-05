@@ -107,7 +107,13 @@ describe('NodeInspector (story 1, FR-008)', () => {
         .map((b) => b.getAttribute('aria-label')),
     ).toEqual(['← Order Service', '→ Payment Service', '← Dispatch Service']);
     await user.click(within(list).getByRole('button', { name: '→ Payment Service' }));
-    expect(ui().selection).toEqual({ nodes: [], edges: ['py'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: ['py'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(
       screen.getByRole('heading', { name: 'Pricing Service → Payment Service' }),
     ).toBeInTheDocument();

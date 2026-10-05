@@ -1,4 +1,4 @@
-import { fromJSON, toJSON, VIEW_PRESETS, type DeckEditor } from '@sododeck/model';
+import { assetId, fromJSON, toJSON, VIEW_PRESETS, type DeckEditor } from '@sododeck/model';
 import * as Y from 'yjs';
 import {
   act,
@@ -15,6 +15,8 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
+import type { IngestPorts } from '../images/ingest';
+import { PNG_1X1 } from '../images/test-pictures';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
@@ -293,6 +295,22 @@ describe('Canvas', () => {
     expect(screen.queryByRole('heading', { name: 'Start your diagram' })).not.toBeInTheDocument();
   });
 
+  it('hides the empty-canvas card once a picture is on the canvas (055)', () => {
+    const { editor } = renderWithEditor(<Canvas />, deckOf({}));
+    expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
+    act(() => {
+      editor().addImages([
+        {
+          asset: assetId(PNG_1X1),
+          meta: { type: 'image/png', bytes: PNG_1X1.length, width: 1, height: 1, name: 'dot.png' },
+          position: { x: 0, y: 0 },
+          size: { width: 64, height: 64 },
+        },
+      ]);
+    });
+    expect(screen.queryByRole('heading', { name: 'Start your diagram' })).not.toBeInTheDocument();
+  });
+
   it('adds the dropped kind at the drop point, and ignores other drops', () => {
     const { doc } = renderWithEditor(<Canvas />, deckOf({}));
     const canvas = screen.getByLabelText('Diagram canvas');
@@ -300,6 +318,7 @@ describe('Canvas', () => {
       dataTransfer: {
         types,
         getData: (type: string) => (types.includes(type) ? value : ''),
+        files: [] as File[],
         dropEffect: '',
       },
       clientX: 400,
@@ -383,7 +402,13 @@ describe('Canvas', () => {
     act(() => {
       editor().remove('nodes', 'a');
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: ['e3'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: ['e3'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(ui().popover).toBeNull();
   });
 
@@ -395,7 +420,13 @@ describe('Canvas', () => {
     act(() => {
       editor().undo();
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1', 'e2'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['b'],
+      edges: ['e1', 'e2'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
 
     let id = '';
     act(() => {
@@ -631,7 +662,13 @@ describe('Canvas', () => {
       ui().select({ nodes: ['a1'], edges: ['m0'] });
       setGroupCollapsed(editor(), 'left', true);
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: ['left'], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: ['left'],
+      stickies: [],
+      images: [],
+    });
 
     act(() => {
       setGroupCollapsed(editor(), 'left', false);
@@ -640,7 +677,7 @@ describe('Canvas', () => {
     act(() => {
       ui().drillInto({ kind: 'group', id: 'left', viewport: { x: 0, y: 0, zoom: 1 } });
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
   });
 
   it('flags the wrapper for the details button: drag, session, Hide UI, tiny cards (019 R4)', () => {
@@ -774,21 +811,39 @@ describe('canvas handlers', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['a'],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(ui().focusedId).toBe('a');
     act(() => {
       h().onNodeClick(click({ shiftKey: true }), flowNode('b'));
       h().onEdgeClick(click({ metaKey: true }), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['a', 'b'],
+      edges: ['e1'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     act(() => {
       h().onNodeClick(click({ ctrlKey: true }), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['b'],
+      edges: ['e1'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     act(() => {
       h().onPaneClick(click());
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
   });
 
   it('routes sticky selection and drag updates separately from components', () => {
@@ -801,7 +856,13 @@ describe('canvas handlers', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('sticky:st1'));
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: ['st1'] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: ['st1'],
+      images: [],
+    });
 
     act(() => {
       h().onNodeDragStart({}, flowNode('sticky:st1'));
@@ -823,7 +884,13 @@ describe('canvas handlers', () => {
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
       h().onSelectionEnd();
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'c'], edges: ['e1'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['a', 'c'],
+      edges: ['e1'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     // Outside a marquee, React Flow's own selection changes are ignored.
     act(() => {
       h().onNodesChange([{ type: 'select', id: 'b', selected: true }]);
@@ -1098,7 +1165,7 @@ describe('canvas during a flow session (006 FR-017)', () => {
       h().onNodeClick(click(), flowNode('a'));
       h().onEdgeMouseEnter(click(), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().hoverEdgeId).toBe('e1');
     act(() => {
       h().onEdgeClick(click(), flowEdge('e1'));
@@ -1254,7 +1321,7 @@ describe('canvas in flow mode (007)', () => {
       h().onNodeClick(click(), flowNode('c'));
     });
     expect(ui().activeFlow?.stepId).toBe('o2');
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
   });
 
   it('cycles through the steps of an edge used twice, wrapping around', () => {
@@ -1280,7 +1347,7 @@ describe('canvas in flow mode (007)', () => {
       h().onPaneClick(click());
     });
     expect(ui().activeFlow).toMatchObject({ flowId: 'order', stepId: 'o3' });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().announcement.seq).toBe(seq);
   });
 
@@ -1659,5 +1726,87 @@ describe('the Deck look leaves the file alone (029 SC-001)', () => {
     expect(screen.getAllByTestId('deck-node').length).toBeGreaterThan(0);
     // Drawing only reads the document: no default size or position is written back.
     expect(JSON.stringify(toJSON(doc))).toBe(before);
+  });
+});
+
+describe('dropping files on the canvas (055 US2)', () => {
+  const ports: IngestPorts = {
+    decode: () => Promise.resolve({ width: 80, height: 40 }),
+    encode: (bytes) => Promise.resolve({ bytes, type: 'image/png' }),
+    digest: (bytes) => Promise.resolve(assetId(bytes)),
+  };
+  const png = (name: string) => new File([PNG_1X1.slice().buffer], name, { type: 'image/png' });
+
+  function dropOf(files: File[], at = { x: 0, y: 0 }) {
+    return {
+      clientX: at.x,
+      clientY: at.y,
+      preventDefault: () => undefined,
+      dataTransfer: { types: ['Files'], getData: () => '', files, dropEffect: '' },
+    } as unknown as DragEvent;
+  }
+
+  function handlersWithPorts() {
+    const env = editorWrapper(deck, { imagePorts: ports });
+    const { result } = renderHook(() => useCanvasHandlers(), { wrapper: env.wrapper });
+    return { ...env, h: () => result.current };
+  }
+
+  it('accepts files over the canvas', () => {
+    const { h } = handlersWithPorts();
+    let prevented = 0;
+    const over = dropOf([]);
+    over.preventDefault = () => {
+      prevented += 1;
+    };
+    h().onDragOver(over);
+    expect(prevented).toBe(1);
+  });
+
+  it('adds dropped pictures as images, selected, in one undo step', async () => {
+    const { h, doc, editor } = handlersWithPorts();
+    act(() => {
+      h().onDrop(dropOf([png('a.png'), png('b.png')]));
+    });
+    await waitFor(() => {
+      expect(toJSON(doc).images).toHaveLength(2);
+    });
+    expect(ui().selection.images).toHaveLength(2);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).images).toBeUndefined();
+  });
+
+  it('lists a refusal for a file that is not a picture and adds nothing', async () => {
+    const { h, doc } = handlersWithPorts();
+    act(() => {
+      h().onDrop(dropOf([new File(['hi'], 'notes.txt', { type: 'text/plain' })]));
+    });
+    await waitFor(() => {
+      expect(ui().announcement.text).toContain('notes.txt: type not supported');
+    });
+    expect(toJSON(doc).images).toBeUndefined();
+  });
+
+  it('refuses drops in flow mode', async () => {
+    const { h, doc } = handlersWithPorts();
+    act(() => {
+      useUiStore.setState({
+        activeFlow: {
+          flowId: 'f',
+          stepId: null,
+          branchId: null,
+          alternativeId: null,
+          playing: false,
+          speed: 1,
+        },
+      });
+    });
+    act(() => {
+      h().onDrop(dropOf([png('a.png')]));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(toJSON(doc).images).toBeUndefined();
   });
 });

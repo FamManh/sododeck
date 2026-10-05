@@ -43,7 +43,7 @@ export function GroupInspector({
       edge.b === `${COLLAPSED_NODE_PREFIX}${group.id}`,
   );
   const style = styleView([group]);
-  const groupSelection = { nodes: [], groups: [group.id], edges: [], stickies: [] };
+  const groupSelection = { nodes: [], groups: [group.id], edges: [], stickies: [], images: [] };
   const applyGroupStyle = (channel: 'fill' | 'stroke', value: ColorRef | null) => {
     applyStyle(editor, groupSelection, channel, value);
   };

@@ -25,6 +25,7 @@ import { addComponent, addTable, canvasElement, centredOn, PALETTE_ID } from './
 import { groupableCount, groupFromSelection } from './editing/group-from-selection';
 import { armFrameTool, placeFrameAtCentre } from './frame-tool/frame-actions';
 import { neighbour } from './grid-nav';
+import { ImageAddCard } from './images/image-add-card';
 import { addEnumAndOpen } from './inspector/enum/add-enum-and-open';
 import { PacksPanel } from './packs-panel';
 import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
@@ -447,6 +448,7 @@ export function Palette() {
         Drag Note onto the canvas for a free note; pin it from its toolbar. N adds one at the
         pointer.
       </p>
+      <ImageAddCard />
       {packs.includes('database') && (
         <button
           type="button"
