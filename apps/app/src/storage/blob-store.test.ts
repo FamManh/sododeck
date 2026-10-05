@@ -1,5 +1,5 @@
 import { Dexie } from 'dexie';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { deleteBlobs, deleteDeckBlobs, getBlob, hasBlob, listBlobIds, putBlob } from './blob-store';
 import { insertDeck, openLibraryDb, purgeDeleted, softDeleteDeck } from './library-db';
@@ -43,10 +43,9 @@ describe('blob store', () => {
   it('lets a quota error through so callers can map it', async () => {
     const db = await freshLibraryDb();
     const quota = new DOMException('full', 'QuotaExceededError');
-    const add = db.blobs.add.bind(db.blobs);
-    db.blobs.add = (() => Promise.reject(quota)) as typeof db.blobs.add;
+    const spy = vi.spyOn(db.blobs, 'add').mockRejectedValue(quota);
     const error: unknown = await putBlob(db, 'd1', 'aa', picture(1)).catch((e: unknown) => e);
-    db.blobs.add = add;
+    spy.mockRestore();
     expect(isQuotaError(error)).toBe(true);
   });
 
