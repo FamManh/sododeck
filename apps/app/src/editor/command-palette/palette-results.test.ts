@@ -334,3 +334,48 @@ describe('table and column results (048 FR-019, FR-022)', () => {
     expect(results.overflowText).toBe('Showing 50 of 300 · 250 more');
   });
 });
+
+describe('palette results for images (055)', () => {
+  const asset = 'a'.repeat(64);
+  const deck: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [{ id: 'w', type: 'client', title: 'Web' }],
+    images: [
+      {
+        id: 'i1',
+        asset,
+        position: { x: 0, y: 0 },
+        size: { width: 80, height: 60 },
+        alt: 'Checkout flow sketch',
+        caption: 'Figure one',
+      },
+    ],
+    assets: {
+      [asset]: {
+        type: 'image/png',
+        bytes: 1,
+        width: 1,
+        height: 1,
+        name: 'whiteboard.png',
+        data: '',
+      },
+    },
+    edges: [{ id: 'wi', from: 'w', to: 'i1' }],
+  };
+  const run = (query: string) =>
+    buildPaletteResults({ deck, searchIndex: buildSearchIndex(deck), query, commands: [] }).items;
+
+  it('finds an image by alt text, caption and file name', () => {
+    for (const query of ['sketch', 'figure', 'whiteboard']) {
+      const hit = run(query).find((item) => item.kind === 'image');
+      expect(hit?.id, query).toBe('i1');
+      expect(hit?.meta).toBe('Image');
+    }
+  });
+
+  it('labels a connector that touches an image', () => {
+    expect(run('web checkout').find((item) => item.id === 'wi')?.meta).toBe(
+      'Connection · Web → Checkout flow sketch',
+    );
+  });
+});

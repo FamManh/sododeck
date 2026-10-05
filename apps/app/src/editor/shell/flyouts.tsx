@@ -6,6 +6,7 @@ import { useUiStore } from '../../state/ui-store';
 import { FlowList } from '../flows/flow-list';
 import { FlowPanel } from '../flows/flow-panel';
 import { ImportReportPanel } from '../import/import-report-panel';
+import { ImagesOutline } from '../images/images-outline';
 import { NotesOutline } from '../notes-outline';
 import { OutlineTree } from '../outline-tree';
 import { Palette } from '../palette';
@@ -76,6 +77,7 @@ export function Flyouts({ deck }: { deck: SododeckFile }) {
             <OutlineTree deck={deck} />
           </PanelSection>
           <NotesOutline deck={deck} />
+          <ImagesOutline deck={deck} />
         </>
       )}
       {flyout === 'flows' &&

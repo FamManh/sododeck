@@ -1,4 +1,9 @@
-import { nodeCanvasPosition, stickyCanvasPosition, type DeckEditor } from '@sododeck/model';
+import {
+  imageBox,
+  nodeCanvasPosition,
+  stickyCanvasPosition,
+  type DeckEditor,
+} from '@sododeck/model';
 import type { View } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
@@ -13,7 +18,7 @@ import { readViewState, selectView, setGroupCollapsed } from '../views/use-curre
 
 import type { PaletteResult } from './palette-results';
 
-type CanvasKind = 'node' | 'table' | 'column' | 'edge' | 'flow' | 'step' | 'sticky';
+type CanvasKind = 'node' | 'table' | 'column' | 'edge' | 'flow' | 'step' | 'sticky' | 'image';
 
 function isCanvasKind(kind: PaletteResult['kind']): kind is CanvasKind {
   return (
@@ -23,7 +28,8 @@ function isCanvasKind(kind: PaletteResult['kind']): kind is CanvasKind {
     kind === 'edge' ||
     kind === 'flow' ||
     kind === 'step' ||
-    kind === 'sticky'
+    kind === 'sticky' ||
+    kind === 'image'
   );
 }
 
@@ -61,6 +67,8 @@ function selectionFor(result: PaletteResult): Partial<Selection> {
       return { edges: [result.id] };
     case 'sticky':
       return { stickies: [result.id] };
+    case 'image':
+      return { images: [result.id] };
     default:
       return {};
   }
@@ -232,6 +240,17 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
       const point = stickyCanvasPosition(deck, sticky).point;
       context.select(selectionFor(result));
       context.setCenter(point.x, point.y, { zoom: context.getZoom() });
+      return true;
+    }
+    case 'image': {
+      const image = deck.images?.find((entry) => entry.id === result.id);
+      if (image === undefined) break;
+      ensureCanvasReady(result, context);
+      const box = imageBox(image);
+      context.select(selectionFor(result));
+      context.setCenter(box.x + box.width / 2, box.y + box.height / 2, {
+        zoom: context.getZoom(),
+      });
       return true;
     }
     case 'flow': {

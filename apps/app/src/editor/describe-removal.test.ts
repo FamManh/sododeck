@@ -293,3 +293,29 @@ describe('describeRemoval for notes with connectors (053)', () => {
     );
   });
 });
+
+describe('describeRemoval for images (055)', () => {
+  const asset = 'a'.repeat(64);
+  const withImage = deckOf({
+    nodes: [{ id: 'svc', type: 'service', title: 'Order Service' }],
+    images: [{ id: 'i1', asset, position: { x: 0, y: 0 }, size: { width: 80, height: 60 } }],
+    assets: {
+      [asset]: { type: 'image/png', bytes: 1, width: 1, height: 1, name: 'a.png', data: '' },
+    },
+    edges: [
+      { id: 'e1', from: 'svc', to: 'i1' },
+      { id: 'e2', from: 'i1', to: 'svc' },
+    ],
+  });
+
+  it('names the connectors a deleted image takes with it, and toasts the same', () => {
+    const targets: RemovalTarget[] = [{ scope: 'images', id: 'i1' }];
+    const result = previewRemoval(withImage, targets);
+    const text = describeRemoval(withImage, targets, result);
+    expect(text.title).toBe('Delete this image?');
+    expect(text.body).toContain('2 connections');
+    expect(removalToast(withImage, targets, result, true)).toBe(
+      'Image deleted and 2 connections · ⌘Z to undo',
+    );
+  });
+});

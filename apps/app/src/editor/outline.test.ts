@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { deckOf } from '../test/render-canvas';
-import { buildNotesOutline, buildOutline, visibleItems } from './outline';
+import { buildImagesOutline, buildNotesOutline, buildOutline, visibleItems } from './outline';
 
 const deck = deckOf({
   nodes: [
@@ -142,5 +142,33 @@ describe('buildOutline colour (020 T055)', () => {
     const plain = deckOf({ nodes: [{ id: 'a', type: 'service', title: 'A' }] });
     const node = buildOutline(plain).find((i) => i.id === 'a' && i.type === 'node');
     expect(node?.type === 'node' ? node.look : undefined).toBeUndefined();
+  });
+});
+
+describe('buildImagesOutline (055)', () => {
+  it('labels images by alt text, then caption, then file name, then "Image"', () => {
+    const asset = 'a'.repeat(64);
+    const deck = deckOf({
+      images: [
+        { id: 'a', asset, position: { x: 0, y: 0 }, size: { width: 80, height: 60 }, alt: 'Logo' },
+        {
+          id: 'b',
+          asset,
+          position: { x: 0, y: 0 },
+          size: { width: 80, height: 60 },
+          caption: 'Fig 1',
+        },
+        { id: 'c', asset, position: { x: 0, y: 0 }, size: { width: 80, height: 60 } },
+      ],
+      assets: {
+        [asset]: { type: 'image/png', bytes: 1, width: 1, height: 1, name: 'shot.png', data: '' },
+      },
+    });
+    expect(buildImagesOutline(deck)).toEqual([
+      { id: 'a', label: 'Logo' },
+      { id: 'b', label: 'Fig 1' },
+      { id: 'c', label: 'shot.png' },
+    ]);
+    expect(buildImagesOutline(deckOf({}))).toEqual([]);
   });
 });
