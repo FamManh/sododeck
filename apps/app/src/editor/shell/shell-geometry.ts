@@ -44,8 +44,8 @@ export const ISLAND_SIZES = {
   deckCompact: { width: 300, height: ISLAND_HEIGHT },
   tools: { width: 470, height: ISLAND_HEIGHT },
   toolsCompact: { width: 220, height: ISLAND_HEIGHT },
-  // 10 buttons of 38 with 2 px gaps, 2 dividers of 9, 4 px padding each end.
-  rail: { width: RAIL_WIDTH, height: 10 * 38 + 9 * 2 + 2 * 9 + 8 },
+  // 11 buttons of 38 with 2 px gaps, 2 dividers of 9, 4 px padding each end (Focus added in 054).
+  rail: { width: RAIL_WIDTH, height: 11 * 38 + 10 * 2 + 2 * 9 + 8 },
   history: { width: RAIL_WIDTH, height: 2 * 38 + 2 + 8 },
   zoom: { width: 290, height: ISLAND_HEIGHT },
 } as const;
@@ -100,6 +100,58 @@ export function clampDrawerWidth(px: number, viewportWidth: number, compact = fa
     ? Math.max(DRAWER_MIN, Math.min(DRAWER_MAX, Math.floor(viewportWidth * DRAWER_COMPACT_SHARE)))
     : DRAWER_MAX;
   return Math.min(Math.max(requested, DRAWER_MIN), max);
+}
+
+export const CODE_DRAWER_MIN = 320;
+export const CODE_DRAWER_DEFAULT = 560;
+/** Canvas kept visible to the right of the rail when both drawers are open. */
+export const CANVAS_STRIP = 240;
+/** The code drawer covers at most this share of a regular window. */
+const CODE_DRAWER_SHARE = 0.7;
+
+/**
+ * Width of the code drawer (054): at least 320, at most 70 % of the window (35 % when compact),
+ * and with the details drawer open also leaving `CANVAS_STRIP` px of canvas. When the maximum
+ * falls under the minimum the minimum wins; the caller then closes the other drawer.
+ */
+export function clampCodeDrawerWidth(
+  px: number,
+  viewportWidth: number,
+  detailsWidth: number | null,
+  compact: boolean,
+): number {
+  const requested = Number.isFinite(px) ? px : CODE_DRAWER_DEFAULT;
+  const share = Math.floor(viewportWidth * (compact ? DRAWER_COMPACT_SHARE : CODE_DRAWER_SHARE));
+  const strip =
+    detailsWidth === null
+      ? Infinity
+      : viewportWidth - FLYOUT_LEFT - detailsWidth - 2 * EDGE - CANVAS_STRIP;
+  const max = Math.max(CODE_DRAWER_MIN, Math.min(share, strip));
+  return Math.min(Math.max(requested, CODE_DRAWER_MIN), max);
+}
+
+/**
+ * Whether the details drawer and the code drawer can be open together: not in a compact window
+ * (one at a time there), and in a regular one only while the code drawer keeps its minimum width
+ * and the canvas keeps `CANVAS_STRIP` px. When they cannot, opening one closes the other.
+ */
+export function drawersFitTogether(
+  viewportWidth: number,
+  detailsWidth: number,
+  compact: boolean,
+): boolean {
+  if (compact) return false;
+  return viewportWidth - FLYOUT_LEFT - detailsWidth - 2 * EDGE - CANVAS_STRIP >= CODE_DRAWER_MIN;
+}
+
+/**
+ * Width of the stack of open drawers, gaps between them included (the details drawer on the far
+ * right, the code drawer to its left); `null` when none is open. Everything that keeps clear of
+ * the drawers (zoom island, JSON overlay, fits) takes `EDGE + stack + EDGE` from the right edge.
+ */
+export function drawerStackWidth(details: number | null, code: number | null): number | null {
+  if (details === null) return code;
+  return code === null ? details : details + EDGE + code;
 }
 
 /** The detail drawer: right 12, top 68, bottom 12. */

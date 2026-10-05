@@ -12,7 +12,7 @@ const deck = deckOf({
 });
 
 describe('DrillCrumbs', () => {
-  it('shows System view as the current page when not drilled', () => {
+  it('shows Overview view as the current page when not drilled', () => {
     act(() => {
       useUiStore.getState().resetForDeck();
     });
@@ -25,12 +25,12 @@ describe('DrillCrumbs', () => {
       </nav>,
     );
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent(
-      'Local/Shop/System view',
+      'Local/Shop/Overview view',
     );
-    expect(screen.getByText('System view')).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByText('Overview view')).toHaveAttribute('aria-current', 'page');
   });
 
-  it('marks the last frame current and lets System view go back to depth 0', async () => {
+  it('marks the last frame current and lets Overview view go back to depth 0', async () => {
     const user = userEvent.setup();
     act(() => {
       useUiStore.setState({
@@ -50,7 +50,7 @@ describe('DrillCrumbs', () => {
       </nav>,
     );
     expect(screen.getByText('Order Service')).toHaveAttribute('aria-current', 'page');
-    await user.click(screen.getByRole('button', { name: 'System view' }));
+    await user.click(screen.getByRole('button', { name: 'Overview view' }));
     expect(drillUp).toHaveBeenCalledWith(0);
     drillUp.mockRestore();
   });

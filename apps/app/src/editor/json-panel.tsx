@@ -15,9 +15,6 @@ import { clampPanelHeight, PANEL_COLLAPSED } from './panel-height';
 import { useThrottledDeckText } from './use-throttled-deck-text';
 
 const JsonViewer = lazy(() => import('./json-viewer'));
-// Loaded on first use, so the DBML parser and editor code never reach the JSON path (046 FR-006).
-const DbmlTab = lazy(() => import('./code/dbml-tab').then((m) => ({ default: m.DbmlTab })));
-const SqlTab = lazy(() => import('./code/sql-tab').then((m) => ({ default: m.SqlTab })));
 
 const READ_ONLY_MESSAGE = 'Read-only. Edit on the canvas or in the inspector.';
 /** Refused edits are announced at most this often, so screen readers are not flooded. */
@@ -54,7 +51,8 @@ function useAvailableHeight(ref: RefObject<HTMLElement | null>, enabled: boolean
 
 /**
  * Bottom JSON panel (004): a read-only view of the deck that is always in sync. It reads the
- * snapshot and gets every text from `@sododeck/model`; its only writes are deck undo/redo.
+ * snapshot and gets every text from `@sododeck/model`; its only writes are deck undo/redo. DBML
+ * and SQL live in their own drawer (054), so this panel is JSON only.
  */
 export function JsonPanel({
   onClose,
@@ -66,27 +64,25 @@ export function JsonPanel({
 } = {}) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
-  const { open, height, tab, format, schemaScope } = useUiStore((state) => state.jsonPanel);
+  const { open, height, tab } = useUiStore((state) => state.jsonPanel);
   const selection = useUiStore((state) => state.selection);
   const activeFlow = useUiStore((state) => state.activeFlow);
   const flowMode = useUiStore(isFlowMode);
   const setJsonTab = useUiStore((state) => state.setJsonTab);
-  const setCodeFormat = useUiStore((state) => state.setCodeFormat);
-  const setSchemaScope = useUiStore((state) => state.setSchemaScope);
   const setJsonPanelOpen = useUiStore((state) => state.setJsonPanelOpen);
   const setJsonPanelHeight = useUiStore((state) => state.setJsonPanelHeight);
   const announce = useUiStore((state) => state.announce);
   const readOnlyCooldown = useMemo(() => createCooldown(READ_ONLY_COOLDOWN_MS), []);
 
-  const deckText = useThrottledDeckText(deck, open && format === 'json' && tab === 'deck');
+  const deckText = useThrottledDeckText(deck, open && tab === 'deck');
   // The label follows the selection even on the Deck tab; the text is built only when shown.
   const view = useMemo(
     () => selectionView(deck, selection, activeFlow, flowMode),
     [deck, selection, activeFlow, flowMode],
   );
-  const showSelection = open && format === 'json' && tab === 'selection';
+  const showSelection = open && tab === 'selection';
   const text = showSelection ? selectionText(view.entries) : tab === 'deck' ? deckText : '';
-  const empty = format === 'json' && tab === 'selection' && view.entries.length === 0;
+  const empty = tab === 'selection' && view.entries.length === 0;
 
   const sectionRef = useRef<HTMLElement>(null);
   const available = useAvailableHeight(sectionRef, open);
@@ -149,10 +145,6 @@ export function JsonPanel({
         }}
       />
       <JsonPanelHeader
-        format={format}
-        onFormatChange={setCodeFormat}
-        schemaScope={schemaScope}
-        onSchemaScopeChange={setSchemaScope}
         tab={tab}
         onTabChange={setJsonTab}
         view={view}
@@ -163,11 +155,7 @@ export function JsonPanel({
         {...(onClose === undefined ? {} : { onClose })}
       />
       <div className="min-h-0 flex-1 bg-code">
-        {format !== 'json' ? (
-          <Suspense fallback={<p className="p-3 text-caption text-ink-muted">Loading editor…</p>}>
-            {format === 'dbml' ? <DbmlTab scope={schemaScope} /> : <SqlTab scope={schemaScope} />}
-          </Suspense>
-        ) : empty ? (
+        {empty ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
             <p className="text-body-sm text-ink-secondary">
               Select a component or connection to see its JSON.

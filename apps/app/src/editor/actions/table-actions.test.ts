@@ -1,4 +1,4 @@
-import { toJSON, type DeckDoc } from '@sododeck/model';
+import { fromJSON, toJSON, type DeckDoc } from '@sododeck/model';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useUiStore, type MenuTarget } from '../../state/ui-store';
@@ -201,6 +201,68 @@ describe('table actions (043 US4, US6)', () => {
     expect(tableOf(ctx.doc)).not.toHaveProperty('locked');
     unlock.editor.undo();
     expect(tableOf(ctx.doc)?.locked).toBe(true);
+  });
+
+  it('is offered for groups and mixed selections in the menu and the toolbar (054)', () => {
+    const targets: MenuTarget[] = [
+      { kind: 'group', ids: sel({ groups: ['g'] }) },
+      { kind: 'mixed', ids: sel({ nodes: ['a'], edges: ['e'] }) },
+      { kind: 'component', ids: sel({ nodes: ['a'] }) },
+      { kind: 'components', ids: sel({ nodes: ['a', 'b'] }) },
+    ];
+    for (const target of targets) {
+      for (const surface of ['menu', 'toolbar'] as const) {
+        const ctx = actionContext(target, 'edit', deck);
+        const ids = actionsFor(ACTIONS, ctx, surface).flatMap((s) => s.actions.map((a) => a.id));
+        expect(ids, `${target.kind} ${surface}`).toContain('node.lock');
+      }
+    }
+  });
+
+  it('is not offered when the selection holds no card (a note, a group with nothing in it)', () => {
+    const withEmpty = { ...deck, groups: [...deck.groups, { id: 'empty', title: 'Empty' }] };
+    for (const ids of [sel({ groups: ['empty'] }), sel({ stickies: ['s'], edges: ['e'] })]) {
+      const target: MenuTarget = { kind: 'mixed', ids };
+      expect(menuOf(target, fromJSON(withEmpty)).map((a) => a.id)).not.toContain('node.lock');
+    }
+  });
+
+  it('locks every card of a group, nested groups too, in one undo step (054)', () => {
+    const nested = {
+      ...deck,
+      nodes: deck.nodes.map((n) => (n.id === 'p' ? { ...n, group: 'inner' } : n)),
+      groups: [...deck.groups, { id: 'inner', title: 'Inner', parent: 'g' }],
+    };
+    const target: MenuTarget = { kind: 'group', ids: sel({ groups: ['g'] }) };
+    const ctx = run(fromJSON(nested), target, 'node.lock');
+    const lockedIds = () =>
+      toJSON(ctx.doc)
+        .nodes.filter((n) => n.locked === true)
+        .map((n) => n.id);
+    expect(lockedIds()).toEqual(['a', 'b', 'p', 'locked']);
+    expect(ui().announcement.text).toBe('Locked 3 cards');
+    expect(menuOf(target, ctx.doc).find((a) => a.id === 'node.lock')?.label).toBe('Unlock');
+    ctx.editor.undo();
+    expect(lockedIds()).toEqual(['locked']);
+    expect(ctx.editor.canUndo()).toBe(false);
+  });
+
+  it('select-all locks only the cards and says how many (054)', () => {
+    const everything = sel({
+      nodes: ['a', 'b', 'p', 'child', 't', 'locked'],
+      edges: ['e'],
+      groups: ['g'],
+      stickies: ['s'],
+    });
+    const target: MenuTarget = { kind: 'mixed', ids: everything };
+    const ctx = run(undefined, target, 'node.lock');
+    expect(toJSON(ctx.doc).nodes.every((n) => n.locked === true)).toBe(true);
+    expect(toJSON(ctx.doc).edges.every((e) => e.locked !== true)).toBe(true);
+    expect(toJSON(ctx.doc).stickies.every((s) => s.locked !== true)).toBe(true);
+    expect(ui().announcement.text).toBe('Locked 6 cards');
+    run(ctx.doc, target, 'node.lock');
+    expect(toJSON(ctx.doc).nodes.some((n) => n.locked === true)).toBe(false);
+    expect(ui().announcement.text).toBe('Unlocked 6 cards');
   });
 
   it('refuses Add column on a locked table', () => {

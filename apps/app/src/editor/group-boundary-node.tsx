@@ -8,8 +8,9 @@ import {
 import { memo, useRef } from 'react';
 
 import { focusRing } from '@sododeck/ui/lib/focus';
+import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Lock } from 'lucide-react';
 
 import { useEditor } from '../model/use-editor';
 import { isFlowMode, useUiStore } from '../state/ui-store';
@@ -87,6 +88,8 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
     state.titleEdit?.target === 'group' && state.titleEdit.id === groupId ? state.titleEdit : null,
   );
   const editable = useUiStore((state) => !isFlowMode(state) && state.flowSession === null);
+  // A locked group (054) keeps its frame: no edge bands to drag it by, no resize handles.
+  const frameEditable = editable && data.locked !== true;
   const dropTarget = useUiStore((state) => state.dropTarget === groupId);
   const openConnectPopover = useUiStore((state) => state.openConnectPopover);
   // A dragged connector end would land on this frame (050 R6): the frame is the hot outline.
@@ -137,7 +140,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         endTarget === 'ok' && 'border-primary',
       )}
     >
-      {editable &&
+      {frameEditable &&
         EDGE_BANDS.map((band) => (
           <div
             key={band}
@@ -151,7 +154,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
         </span>
       )}
       {selected &&
-        editable &&
+        frameEditable &&
         HANDLES.map((handle) => (
           <NodeResizeControl
             key={handle}
@@ -237,7 +240,7 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
           <button
             type="button"
             data-node-id={id}
-            aria-label={`${data.title} group, ${String(data.count)} nodes`}
+            aria-label={`${data.title} group, ${String(data.count)} nodes${data.locked === true ? ', locked' : ''}`}
             aria-description={colourDescription === '' ? undefined : colourDescription}
             aria-expanded="true"
             tabIndex={data.focused ? 0 : -1}
@@ -279,6 +282,14 @@ export const GroupBoundaryNode = memo(function GroupBoundaryNode({
               <ChevronDown className="size-3.5" />
             </span>
             <span className="min-w-0 truncate">{data.title}</span>
+            {data.locked === true && (
+              <Lock
+                aria-hidden
+                data-testid="group-lock"
+                strokeWidth={ICON_STROKE_WIDTH}
+                className="size-3.5 shrink-0 text-ink-secondary"
+              />
+            )}
             <span aria-hidden className={COUNT_CLASS}>
               {data.count}
             </span>

@@ -16,9 +16,12 @@ import { ConfirmDeleteDialog } from './confirm-delete-dialog';
 import { actionsFor } from './actions/actions-for';
 import { ACTIONS } from './actions/index';
 import {
+  groupLockState,
   isEdgeLocked,
+  isGroupLocked,
   isStickyLocked,
   LOCKED_HINT,
+  lockableIds,
   unlockedIds,
   unlockedOf,
   withoutLocked,
@@ -73,6 +76,99 @@ function focusCard(id: string) {
     document.querySelector<HTMLElement>(`[data-node-id="${id}"]`)?.focus();
   });
 }
+
+const groupedDeck = deckOf({
+  nodes: [
+    { id: 'a', type: 'service', title: 'A', group: 'outer', position: { x: 0, y: 0 } },
+    { id: 'b', type: 'service', title: 'B', group: 'inner', position: { x: 100, y: 0 } },
+    {
+      id: 'c',
+      type: 'service',
+      title: 'C',
+      group: 'inner',
+      locked: true,
+      position: { x: 200, y: 0 },
+    },
+    { id: 'd', type: 'service', title: 'D', position: { x: 300, y: 0 } },
+  ],
+  groups: [
+    { id: 'outer', title: 'Outer' },
+    { id: 'inner', title: 'Inner', parent: 'outer' },
+    { id: 'empty', title: 'Empty' },
+  ],
+  edges: [{ id: 'e', from: 'a', to: 'b' }],
+  stickies: [{ id: 's', text: 'Note', position: { x: 0, y: 400 } }],
+});
+
+describe('withoutLocked skips locked groups (054)', () => {
+  it('drops a fully locked group from the targets and counts it', () => {
+    const everyone = deckOf({
+      ...groupedDeck,
+      nodes: groupedDeck.nodes.map((n) => ({ ...n, locked: true as const })),
+    });
+    const result = withoutLocked(everyone, [
+      { scope: 'groups', id: 'inner' },
+      { scope: 'groups', id: 'empty' },
+    ]);
+    expect(result.targets).toEqual([{ scope: 'groups', id: 'empty' }]);
+    expect(result.skipped).toBe(1);
+    expect(withoutLocked(groupedDeck, [{ scope: 'groups', id: 'inner' }]).skipped).toBe(0);
+  });
+});
+
+describe('group lock helpers (054, research R5)', () => {
+  const none = { nodes: [], edges: [], groups: [], stickies: [] };
+
+  it('lockableIds is the selected cards plus the cards of selected groups, once each', () => {
+    expect(lockableIds(groupedDeck, { ...none, nodes: ['d'], groups: ['inner'] }).sort()).toEqual([
+      'b',
+      'c',
+      'd',
+    ]);
+    expect(
+      lockableIds(groupedDeck, { ...none, nodes: ['b'], groups: ['outer', 'inner'] }).sort(),
+    ).toEqual(['a', 'b', 'c']);
+  });
+
+  it('lockableIds ignores selected notes, connectors and unknown ids', () => {
+    const selection = {
+      nodes: ['d', 'ghost'],
+      edges: ['e'],
+      groups: ['empty'],
+      stickies: ['s'],
+    };
+    expect(lockableIds(groupedDeck, selection)).toEqual(['d']);
+  });
+
+  it('groupLockState: locked when every member is, unlocked when any is not, empty without cards', () => {
+    expect(groupLockState(groupedDeck, 'outer')).toBe('unlocked');
+    expect(groupLockState(groupedDeck, 'empty')).toBe('empty');
+    expect(groupLockState(groupedDeck, 'nope')).toBe('empty');
+    const allLocked = deckOf({
+      ...groupedDeck,
+      nodes: groupedDeck.nodes.map((n) => ({ ...n, locked: true as const })),
+    });
+    expect(groupLockState(allLocked, 'outer')).toBe('locked');
+    expect(groupLockState(allLocked, 'inner')).toBe('locked');
+  });
+
+  it('isGroupLocked is false for an empty group, and a card added later unlocks the reading', () => {
+    expect(isGroupLocked(groupedDeck, 'empty')).toBe(false);
+    const locked = deckOf({
+      ...groupedDeck,
+      nodes: groupedDeck.nodes.map((n) => ({ ...n, locked: true as const })),
+    });
+    expect(isGroupLocked(locked, 'inner')).toBe(true);
+    const grown = {
+      ...locked,
+      nodes: [
+        ...locked.nodes,
+        { id: 'new', type: 'service', title: 'New', group: 'inner', position: { x: 0, y: 0 } },
+      ],
+    } as SododeckFile;
+    expect(isGroupLocked(grown, 'inner')).toBe(false);
+  });
+});
 
 describe('lock helpers (043 R11)', () => {
   it('splits locked ids and delete targets from the others', () => {

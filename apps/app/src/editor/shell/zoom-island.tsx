@@ -16,7 +16,6 @@ import { Island, IslandDivider } from './island';
 import { EDGE } from './shell-geometry';
 import { shortcutLabel, type ShortcutId } from './shortcuts';
 import { TableDetailControl } from './table-detail-control';
-import { useCompactShell } from './use-compact-shell';
 
 function ZoomButton({
   label,
@@ -70,7 +69,6 @@ export function ZoomIsland({ bottom, right = EDGE }: { bottom: number; right?: n
   const minimap = useUiStore((s) => s.minimap);
   const setMinimap = useUiStore((s) => s.setMinimap);
   const fitSelection = useFitSelection();
-  const compact = useCompactShell();
   const scope = scopeOf(drill);
   const level = effectiveLevel(zoomLevel, scope);
   // Compare in whole percents: floating zoom never lands exactly on the limit.
@@ -121,7 +119,7 @@ export function ZoomIsland({ bottom, right = EDGE }: { bottom: number; right?: n
       </ZoomButton>
       <LevelIndicator level={level} scope={scope} onZoomTo={zoomTo} />
       {/* Deck detail of tables (041), only in a deck with a table. */}
-      <TableDetailControl compact={compact} />
+      <TableDetailControl />
       <IslandDivider />
       <ZoomButton
         label="Minimap"

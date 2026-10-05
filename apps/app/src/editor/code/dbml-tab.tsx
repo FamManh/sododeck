@@ -5,30 +5,28 @@ import { Check, Copy, LoaderCircle, TriangleAlert, XCircle } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef } from 'react';
 
 import { copyText, couldNotCopyText } from '../../lib/clipboard';
-import type { SchemaScope } from '../../state/json-panel-prefs';
 import { useUiStore } from '../../state/ui-store';
 import { pillOf, plural } from './dbml-pill';
 import { useDbmlSession } from './use-dbml-session';
 
 const DbmlEditor = lazy(() => import('./dbml-editor'));
 
-const EMPTY_HINT: Record<SchemaScope, string> = {
-  selection: 'Select tables, or switch to Whole schema. You can also type a new table here.',
-  schema: 'Type a table to start your schema.',
-};
+const EMPTY_HINT = 'Type a table to start your schema.';
 
 /**
- * DBML tab (046 US1–US4, contracts/code-panel-ui.md): the schema as editable DBML. Edits apply to
- * the canvas 500 ms after typing stops; errors stay in the text and the canvas keeps the last
- * valid schema.
+ * The tab always shows the whole schema (054). The writers and the session still take a scope, so
+ * the Selection / Whole schema switch can come back without touching them.
+ * TODO(selection-scope): restore the Selection / Whole schema switch (parked by 054).
  */
-export function DbmlTab({ scope }: { scope: SchemaScope }) {
-  // One session and one Monaco model per scope.
-  return <DbmlTabBody key={scope} scope={scope} />;
-}
+const SCOPE = 'schema';
 
-function DbmlTabBody({ scope }: { scope: SchemaScope }) {
-  const bindings = useDbmlSession(scope);
+/**
+ * DBML tab (046 US1–US4, contracts/code-panel-ui.md): the schema as editable DBML, in the code
+ * drawer. Edits apply to the canvas 500 ms after typing stops; errors stay in the text and the
+ * canvas keeps the last valid schema.
+ */
+export function DbmlTab() {
+  const bindings = useDbmlSession(SCOPE);
   const { view, editorProps } = bindings;
   const { toast } = useToast();
   const announce = useUiStore((s) => s.announce);
@@ -66,7 +64,7 @@ function DbmlTabBody({ scope }: { scope: SchemaScope }) {
       <div className="relative min-h-0 flex-1">
         <Suspense fallback={<p className="p-3 text-caption text-ink-muted">Loading editor…</p>}>
           <DbmlEditor
-            scope={scope}
+            scope={SCOPE}
             initialText={bindings.initialText}
             ariaLabel="DBML schema"
             problems={view.problems}
@@ -75,7 +73,7 @@ function DbmlTabBody({ scope }: { scope: SchemaScope }) {
         </Suspense>
         {showHint && (
           <p className="pointer-events-none absolute inset-x-12 top-3 text-body-sm text-ink-muted">
-            {EMPTY_HINT[scope]}
+            {EMPTY_HINT}
           </p>
         )}
       </div>

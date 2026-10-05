@@ -30,6 +30,17 @@ describe('CollapsedGroupNode', () => {
     } as unknown as NodeProps<CollapsedFlowNode>;
   }
 
+  it('shows a lock glyph and says "locked" when every card inside is (054)', () => {
+    renderWithEditor(<CollapsedGroupNode {...props({ locked: true })} />, deckOf({}));
+    expect(screen.getByRole('button', { name: /collapsed group.*, locked$/ })).toBeInTheDocument();
+    expect(screen.getByTestId('group-lock')).toBeInTheDocument();
+  });
+
+  it('shows no lock glyph when not locked', () => {
+    renderWithEditor(<CollapsedGroupNode {...props()} />, deckOf({}));
+    expect(screen.queryByTestId('group-lock')).not.toBeInTheDocument();
+  });
+
   it('folds the step state into a sticker on the front card, with no pulsing dot (035)', () => {
     renderWithEditor(
       <CollapsedGroupNode {...props({ flowInside: 'current', flowNumber: '3' })} />,

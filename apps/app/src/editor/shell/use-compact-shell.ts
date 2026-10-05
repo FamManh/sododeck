@@ -16,6 +16,9 @@ function subscribe(onChange: () => void): () => void {
 
 const snapshot = () => supportsMatchMedia() && window.matchMedia(COMPACT_QUERY).matches;
 
+/** The same answer outside React (store actions, fits). */
+export const isCompactNow = snapshot;
+
 /** True in a window narrower than 1280 px; false where `matchMedia` is missing. */
 export function useCompactShell(): boolean {
   return useSyncExternalStore(subscribe, snapshot, () => false);

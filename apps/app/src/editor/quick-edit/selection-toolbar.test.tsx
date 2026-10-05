@@ -157,6 +157,19 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(tip).toHaveTextContent('Icon not available in this version');
   });
 
+  it('explains a disabled Spread ends evenly in its tooltip (054 FR-012)', async () => {
+    const { user } = setup();
+    // 'c' has no connector, so there is nothing to spread.
+    select(['c']);
+    const button = screen.getByRole('button', { name: 'Spread ends evenly' });
+    expect(button).toBeDisabled();
+    await user.hover(button.parentElement ?? button);
+    expect(button).toHaveAccessibleDescription('Needs a side with two or more connector ends');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Needs a side with two or more connector ends',
+    );
+  });
+
   it("shows the group toolbar's Colour button after Collapse (020 T054)", () => {
     const groupDeck = deckOf({
       nodes: [{ id: 'a', type: 'service', title: 'A', group: 'core' }],

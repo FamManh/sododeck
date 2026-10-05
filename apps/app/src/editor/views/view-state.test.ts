@@ -162,11 +162,25 @@ describe('viewStateOf', () => {
   });
 
   it('Infra: host subtitles and dimmed clients; Feature: flow counts', () => {
-    const infra = viewStateOf(deck, 'infra');
+    // Infra is no longer a preset (054); a deck can still store one.
+    const withInfra = {
+      ...deck,
+      views: [
+        ...VIEW_PRESETS,
+        {
+          id: 'infra',
+          type: 'infra' as const,
+          title: 'Infra',
+          subtitleField: 'host' as const,
+          dimKinds: ['client' as const],
+        },
+      ],
+    };
+    const infra = viewStateOf(withInfra, 'infra');
     expect(infra.isBase).toBe(false);
     expect(infra.render.subtitleField).toBe('host');
     expect([...infra.render.dimmed]).toEqual(['a']);
-    const feature = viewStateOf(deck, 'feature');
+    const feature = viewStateOf(withInfra, 'feature');
     expect(feature.render.flowCounts.get('a')).toBe(2);
   });
 

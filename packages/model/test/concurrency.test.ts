@@ -318,10 +318,10 @@ describe('lists under concurrent edits (036 US2)', () => {
         editor.updateView('feature', { excludeKinds: ['database'] });
       },
       ({ editor }) => {
-        editor.updateView('infra', { excludeKinds: ['client'] });
+        editor.updateView('system', { excludeKinds: ['client'] });
       },
       (a) => {
-        expect(toJSON(a.doc).views.map((v) => v.id)).toEqual(['system', 'feature', 'infra']);
+        expect(toJSON(a.doc).views.map((v) => v.id)).toEqual(['system', 'feature']);
       },
     );
   });

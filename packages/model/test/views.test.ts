@@ -59,14 +59,26 @@ function code(fn: () => unknown): string | undefined {
 }
 
 describe('pure view helpers', () => {
-  it('presets have fixed ids, titles, subtitles and Infra dims clients', () => {
+  it('presets are Overview and Flows with fixed ids and no Infra (054)', () => {
     expect(VIEW_PRESETS.map((v) => [v.id, v.type, v.title, v.subtitleField])).toEqual([
-      ['system', 'system', 'System', 'tech'],
-      ['feature', 'feature', 'Feature', 'flows'],
-      ['infra', 'infra', 'Infra', 'host'],
+      ['system', 'system', 'Overview', 'tech'],
+      ['feature', 'feature', 'Flows', 'flows'],
     ]);
-    expect(VIEW_PRESETS[2]?.dimKinds).toEqual(['client']);
-    expect([...PRESET_VIEW_IDS]).toEqual(['system', 'feature', 'infra']);
+    expect([...PRESET_VIEW_IDS]).toEqual(['system', 'feature']);
+  });
+
+  it('keeps a stored Infra view untouched', () => {
+    const file = { ...base, views: stored };
+    expect(resolveViews(file)[1]).toMatchObject({ id: 'v2', type: 'infra', title: 'Two' });
+    const infra: View[] = [
+      { id: 'system', type: 'system', title: 'System', subtitleField: 'tech' },
+      { id: 'feature', type: 'feature', title: 'Feature', subtitleField: 'flows' },
+      { id: 'infra', type: 'infra', title: 'Infra', subtitleField: 'host', dimKinds: ['client'] },
+    ];
+    const deck = { ...base, views: infra };
+    expect(resolveViews(deck)).toBe(infra);
+    expect(toJSON(fromJSON(deck)).views).toEqual(infra);
+    expect(JSON.stringify(toJSON(fromJSON(deck)))).toBe(JSON.stringify(toJSON(fromJSON(deck))));
   });
 
   it('resolveViews returns stored views, else the presets, keeping identity', () => {
@@ -107,43 +119,43 @@ describe('pure view helpers', () => {
 });
 
 describe('view ops: presets are materialized outside undo history (FR-001)', () => {
-  it('the first move in Infra writes the 3 presets, then the change; undo keeps the views', () => {
+  it('the first move in Flows writes the 2 presets, then the change; undo keeps the views', () => {
     const { doc, editor } = setup();
-    editor.moveInView('infra', { a: { x: 50, y: 60 } });
-    expect(views(doc).map((v) => v.id)).toEqual(['system', 'feature', 'infra']);
-    expect(view(doc, 'infra')?.positions).toEqual({ a: { x: 50, y: 60 } });
+    editor.moveInView('feature', { a: { x: 50, y: 60 } });
+    expect(views(doc).map((v) => v.id)).toEqual(['system', 'feature']);
+    expect(view(doc, 'feature')?.positions).toEqual({ a: { x: 50, y: 60 } });
     expect(getObject(doc, 'nodes', 'a')?.position).toEqual({ x: 0, y: 0 });
     expectValid(doc);
 
     expect(editor.undo()).toBe(true);
-    expect(views(doc).map((v) => v.id)).toEqual(['system', 'feature', 'infra']);
-    expect(view(doc, 'infra')?.positions).toBeUndefined();
+    expect(views(doc).map((v) => v.id)).toEqual(['system', 'feature']);
+    expect(view(doc, 'feature')?.positions).toBeUndefined();
     expect(editor.canUndo()).toBe(false);
   });
 
-  it('move in Infra (materializes), collapse, undo: move undone, views and collapse stay', () => {
+  it('move in Flows (materializes), collapse, undo: move undone, views and collapse stay', () => {
     const { doc, editor } = setup();
-    editor.moveInView('infra', { a: { x: 50, y: 60 } });
-    editor.setCollapsed('infra', 'core', true);
+    editor.moveInView('feature', { a: { x: 50, y: 60 } });
+    editor.setCollapsed('feature', 'core', true);
     editor.undo();
-    expect(view(doc, 'infra')?.positions).toBeUndefined();
-    expect(view(doc, 'infra')?.collapsed).toEqual(['core']);
-    expect(views(doc)).toHaveLength(3);
+    expect(view(doc, 'feature')?.positions).toBeUndefined();
+    expect(view(doc, 'feature')?.collapsed).toEqual(['core']);
+    expect(views(doc)).toHaveLength(2);
   });
 
   it('collapses a derived schema group without a stored group (048)', () => {
     const { doc, editor } = setup();
-    editor.setCollapsed('infra', 'schema:billing', true);
-    expect(view(doc, 'infra')?.collapsed).toEqual(['schema:billing']);
+    editor.setCollapsed('feature', 'schema:billing', true);
+    expect(view(doc, 'feature')?.collapsed).toEqual(['schema:billing']);
     expect(checkIntegrity(toJSON(doc))).toEqual([]);
-    editor.setCollapsed('infra', 'schema:billing', false);
-    expect(view(doc, 'infra')?.collapsed).toBeUndefined();
+    editor.setCollapsed('feature', 'schema:billing', false);
+    expect(view(doc, 'feature')?.collapsed).toBeUndefined();
   });
 
   it('still refuses a collapse of an unknown stored group', () => {
     const { editor } = setup();
     expect(() => {
-      editor.setCollapsed('infra', 'nope', true);
+      editor.setCollapsed('feature', 'nope', true);
     }).toThrow(DeckEditError);
   });
 
@@ -176,8 +188,8 @@ describe('moveInView: the base-view rule (FR-020, FR-021)', () => {
     // A base-view move on a deck without views is not a view change.
     expect(views(doc)).toEqual([]);
 
-    editor.moveInView('infra', { b: { x: 1, y: 2 }, ghost: { x: 1, y: 1 } });
-    expect(view(doc, 'infra')?.positions).toEqual({ b: { x: 1, y: 2 } });
+    editor.moveInView('feature', { b: { x: 1, y: 2 }, ghost: { x: 1, y: 1 } });
+    expect(view(doc, 'feature')?.positions).toEqual({ b: { x: 1, y: 2 } });
     expect(getObject(doc, 'nodes', 'b')?.position).toEqual({ x: 100, y: 0 });
     expectValid(doc);
   });
@@ -375,9 +387,9 @@ describe('updateView (FR-041, FR-043)', () => {
   it('a settings change on a deck with no views materializes the presets first', () => {
     const { doc, editor } = setup();
     editor.updateView('feature', { title: 'Features' });
-    expect(views(doc).map((v) => v.title)).toEqual(['System', 'Features', 'Infra']);
+    expect(views(doc).map((v) => v.title)).toEqual(['Overview', 'Features']);
     editor.undo();
-    expect(views(doc).map((v) => v.title)).toEqual(['System', 'Feature', 'Infra']);
+    expect(views(doc).map((v) => v.title)).toEqual(['Overview', 'Flows']);
   });
 });
 
@@ -385,13 +397,13 @@ describe('addView and removeView (FR-040, FR-042)', () => {
   it('addView appends "Custom <n>" and returns its id', () => {
     const { doc, editor } = setup();
     const id = editor.addView();
-    expect(views(doc).map((v) => v.title)).toEqual(['System', 'Feature', 'Infra', 'Custom 1']);
+    expect(views(doc).map((v) => v.title)).toEqual(['Overview', 'Flows', 'Custom 1']);
     expect(view(doc, id)).toEqual({ id, type: 'custom', title: 'Custom 1', subtitleField: 'tech' });
     editor.addView();
     expect(views(doc).at(-1)?.title).toBe('Custom 2');
     editor.undo();
     editor.undo();
-    expect(views(doc).map((v) => v.id)).toEqual(['system', 'feature', 'infra']);
+    expect(views(doc).map((v) => v.id)).toEqual(['system', 'feature']);
   });
 
   it('refuses to remove the last view', () => {
@@ -444,9 +456,9 @@ describe('setCollapsed: saved and synced, never an undo step (FR-050, R5)', () =
 
   it('a collapse as the first view change materializes presets, with nothing undoable', () => {
     const { doc, editor } = setup();
-    editor.setCollapsed('infra', 'core', true);
-    expect(views(doc)).toHaveLength(3);
-    expect(view(doc, 'infra')?.collapsed).toEqual(['core']);
+    editor.setCollapsed('feature', 'core', true);
+    expect(views(doc)).toHaveLength(2);
+    expect(view(doc, 'feature')?.collapsed).toEqual(['core']);
     expect(editor.canUndo()).toBe(false);
   });
 

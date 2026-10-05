@@ -30,12 +30,15 @@ const LANGUAGE: Record<SqlDialect, string> = { postgres: 'pgsql', mysql: 'mysql'
 const isDialect = (value: string): value is SqlDialect =>
   value === 'postgres' || value === 'mysql' || value === 'sqlite';
 
+/** The whole schema, always (054); see the note in `dbml-tab.tsx`. TODO(selection-scope) */
+const SCOPE = 'schema';
+
 /**
  * SQL tab (046 US5, contracts/code-panel-ui.md): a read-only preview of the writer's SQL for the
- * scope, in the deck's dialect (a Generic deck picks a preview dialect). Writes nothing but undo
- * and redo.
+ * whole schema, in the deck's dialect (a Generic deck picks a preview dialect). Writes nothing
+ * but undo and redo.
  */
-export function SqlTab({ scope }: { scope: 'selection' | 'schema' }) {
+export function SqlTab() {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const { toast } = useToast();
@@ -50,7 +53,7 @@ export function SqlTab({ scope }: { scope: 'selection' | 'schema' }) {
   const dialect: SqlDialect = isSqlDialect(deckDialectValue) ? deckDialectValue : previewDialect;
   const { text, notes, tableCount } = useSchemaText(
     deck,
-    { format: 'sql', scope, dialect: generic ? previewDialect : null, selection },
+    { format: 'sql', scope: SCOPE, dialect: generic ? previewDialect : null, selection },
     true,
   );
 
@@ -63,14 +66,12 @@ export function SqlTab({ scope }: { scope: 'selection' | 'schema' }) {
       <div className="min-h-0 flex-1">
         {tableCount === 0 ? (
           <p className="flex h-full items-center justify-center p-4 text-center text-body-sm text-ink-secondary">
-            {scope === 'selection'
-              ? 'Select tables, or switch to Whole schema.'
-              : 'No tables yet. Add one on the canvas or in the DBML tab.'}
+            No tables yet. Add one on the canvas or in the DBML tab.
           </p>
         ) : (
           <Suspense fallback={<p className="p-3 text-caption text-ink-muted">Loading editor…</p>}>
             <SqlViewer
-              scope={scope}
+              scope={SCOPE}
               language={LANGUAGE[dialect]}
               text={text}
               ariaLabel="SQL schema"

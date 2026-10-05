@@ -4,9 +4,31 @@ import { isRegionId, nextRegion, REGION_ORDER, visibleRegions } from './regions'
 
 describe('visibleRegions', () => {
   it('follows frame 115 and adds the drawer only when it is open', () => {
-    expect(REGION_ORDER).toEqual(['deck', 'tools', 'rail', 'history', 'canvas', 'zoom', 'drawer']);
+    expect(REGION_ORDER).toEqual([
+      'deck',
+      'tools',
+      'rail',
+      'history',
+      'canvas',
+      'zoom',
+      'drawer',
+      'code',
+    ]);
     expect(visibleRegions({ hideUi: false, drawerOpen: false })).not.toContain('drawer');
     expect(visibleRegions({ hideUi: false, drawerOpen: true })).toContain('drawer');
+  });
+
+  it('adds the code drawer (054) only when it is open, after the details drawer', () => {
+    expect(visibleRegions({ hideUi: false, drawerOpen: false })).not.toContain('code');
+    expect(visibleRegions({ hideUi: false, drawerOpen: true, codeOpen: true }).slice(-2)).toEqual([
+      'drawer',
+      'code',
+    ]);
+    expect(visibleRegions({ hideUi: true, drawerOpen: true, codeOpen: true })).toEqual([
+      'canvas',
+      'show-ui',
+    ]);
+    expect(isRegionId('code')).toBe(true);
   });
 
   it('keeps only the canvas and the Show UI button under Hide UI', () => {

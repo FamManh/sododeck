@@ -17,6 +17,9 @@ import { loadShellPrefs } from './shell-prefs';
 
 // Monaco does not run in jsdom; the JSON panel has its own coverage (004).
 vi.mock('../json-viewer', () => ({ default: () => <p>viewer</p> }));
+// Same for the code drawer's tabs (046 has their coverage).
+vi.mock('../code/dbml-tab', () => ({ DbmlTab: () => <p>dbml</p> }));
+vi.mock('../code/sql-tab', () => ({ SqlTab: () => <p>sql</p> }));
 
 function Editor() {
   useEditorShortcuts();
@@ -61,6 +64,48 @@ function setup(stored = false) {
 
 const region = (name: string) => screen.queryByRole('toolbar', { name });
 const json = () => screen.queryByRole('region', { name: 'JSON' });
+
+describe('the code drawer in the chrome (054)', () => {
+  it('mounts beside the details drawer, and the zoom island and JSON overlay clear both', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+    try {
+      setup();
+      act(() => {
+        ui().setJsonShown(true);
+        ui().openDrawer('deck');
+        ui().openCodeDrawer();
+      });
+      const code = await screen.findByRole('complementary', { name: 'Code' });
+      const details = screen.getByRole('complementary', { name: 'Details' });
+      expect(details).toHaveStyle({ right: '12px', width: '360px' });
+      expect(code).toHaveStyle({ right: '384px', width: '560px' });
+      // 12 + 360 + 12 + 560 + 12 from the right edge.
+      const overlay = document.querySelector<HTMLElement>('[data-json-overlay]');
+      expect(overlay).toHaveStyle({ right: '956px' });
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
+    }
+  });
+
+  it('is part of the F6 cycle only while open', async () => {
+    const { user } = setup();
+    act(() => {
+      ui().openCodeDrawer();
+    });
+    await screen.findByRole('complementary', { name: 'Code' });
+    const regions = new Set<string>();
+    for (let i = 0; i < 12; i++) {
+      await user.keyboard('{F6}');
+      const current = document.activeElement?.closest('[data-region]')?.getAttribute('data-region');
+      if (current !== undefined && current !== null) regions.add(current);
+    }
+    expect(regions.has('code')).toBe(true);
+    act(() => {
+      ui().closeCodeDrawer();
+    });
+    expect(screen.queryByRole('complementary', { name: 'Code' })).not.toBeInTheDocument();
+  });
+});
 
 describe('JSON overlay (018 US4)', () => {
   it('is hidden by default; ⌘J shows it with focus inside, and remembers it per deck', async () => {
