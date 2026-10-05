@@ -30,8 +30,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 export function valueAt(input: unknown, path: readonly Segment[]): unknown {
   let value = input;
   for (const segment of path) {
-    if (Array.isArray(value) && typeof segment === 'number') value = value[segment];
-    else if (isObject(value) && typeof segment !== 'symbol') {
+    if (Array.isArray(value)) {
+      const index = typeof segment === 'number' ? segment : Number(String(segment));
+      value = Number.isInteger(index) ? value[index] : undefined;
+    } else if (isObject(value) && typeof segment !== 'symbol') {
       const key = String(segment);
       value = Object.hasOwn(value, key) ? value[key] : undefined;
     } else return undefined;

@@ -65,7 +65,12 @@ export {
 } from './table-display';
 export type { NewDbCheck, NewDbColumn, NewDbIndex } from './ops/db-tables';
 export type { EnumPatch, EnumValuePatch, NewDbEnum, NewDbEnumValue } from './ops/db-enums';
-export { DeckEditError, DeckValidationError, type DeckEditErrorCode } from './errors';
+export {
+  DeckEditError,
+  DeckValidationError,
+  type DeckEditErrorCode,
+  type EditIssue,
+} from './errors';
 export {
   CARD_TYPES,
   cardType,
@@ -114,6 +119,35 @@ export {
   type RenameTarget,
   type Severity,
 } from './problems';
+export {
+  CATALOGUE,
+  catalogueEntry,
+  DB_FIDELITY_CODES,
+  FIDELITY_CODES,
+  FIDELITY_GROUPS,
+  isCode,
+  MERMAID_FIDELITY_CODES,
+  renderCatalogueMarkdown,
+  type CatalogueEntry,
+  type Code,
+  type CodeFamily,
+  type FidelityCode,
+  type FidelityGroup,
+} from './problem-codes';
+export {
+  issueEntry,
+  pictureEntry,
+  problemEntry,
+  problemReport,
+  REPORT_LIMIT,
+  sortEntries,
+  stringifyReport,
+  type EntrySeverity,
+  type FidelityItem,
+  type FidelityReport,
+  type ProblemEntry,
+  type ProblemReport,
+} from './problem-entry';
 export type { RemovalResult } from './ops/cascade';
 export type { StyleChannel, StyleTargets } from './ops/style';
 export { MAX_SWATCHES } from './ops/swatches';

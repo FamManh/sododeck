@@ -14,6 +14,15 @@ export function toPointer(segments: readonly (string | number | symbol)[]): stri
   return pointer;
 }
 
+/** The segments of a pointer, unescaped. Array indexes stay strings. */
+export function fromPointer(pointer: string): string[] {
+  if (pointer === '') return [];
+  return pointer
+    .slice(1)
+    .split('/')
+    .map((segment) => segment.replaceAll('~1', '/').replaceAll('~0', '~'));
+}
+
 const INDEX = /^(0|[1-9][0-9]*)$/;
 
 function compareSegments(a: string, b: string): number {

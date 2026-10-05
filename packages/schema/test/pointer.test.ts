@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { comparePointers, toPointer } from '../src';
+import { comparePointers, fromPointer, toPointer } from '../src';
 
 describe('toPointer', () => {
   it('is empty for the root', () => {
@@ -48,5 +48,13 @@ describe('comparePointers', () => {
 
   it('is 0 for equal pointers', () => {
     expect(comparePointers('/a/0', '/a/0')).toBe(0);
+  });
+});
+
+describe('fromPointer', () => {
+  it('reverses toPointer', () => {
+    for (const segments of [[], ['a', '0', 'b'], ['tagColors', 'a/b~c'], ['x', '']]) {
+      expect(fromPointer(toPointer(segments))).toEqual(segments);
+    }
   });
 });

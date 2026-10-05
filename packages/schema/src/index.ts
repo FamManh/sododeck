@@ -16,7 +16,7 @@ export {
   type LoadIssueCode,
   type SchemaIssueCode,
 } from './issue-codes';
-export { comparePointers, toPointer } from './pointer';
+export { comparePointers, fromPointer, toPointer } from './pointer';
 export { EVIDENCE_MAX, evidenceOf, subjectAt, toIssues, valueAt } from './zod-issues';
 
 /** The v1 JSON Schema document (for Monaco, Ajv, publishing). */
