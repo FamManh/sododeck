@@ -95,7 +95,13 @@ export function useCanvasHandlers() {
   const { getNodes, getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   const undoToast = useUndoToast();
-  const addPictures = useAddImages();
+  const addImagesNow = useAddImages();
+  // A ref, not a dependency: `addImagesNow` changes whenever a toast or the viewport helpers do,
+  // and rebuilding every handler mid-drag costs frames (055 bench).
+  const addPictures = useRef(addImagesNow);
+  useEffect(() => {
+    addPictures.current = addImagesNow;
+  });
   // Component and group drags (016): one controller for the canvas's lifetime, so a re-render
   // mid-drag (a toast appearing changes `undoToast`) never drops the running session and leaves
   // its gesture open. It gets the latest inputs after each render.
@@ -647,7 +653,7 @@ export function useCanvasHandlers() {
         // is not a picture gets its refusal from the same path.
         if (note === '' && dragged === '' && event.dataTransfer.files.length > 0) {
           event.preventDefault();
-          addPictures(
+          addPictures.current(
             [...event.dataTransfer.files],
             screenToFlowPosition({ x: event.clientX, y: event.clientY }),
           );
@@ -666,5 +672,5 @@ export function useCanvasHandlers() {
         addComponent(editor, type, centredOn(point, type), { edit: true });
       },
     };
-  }, [editor, getNodes, getViewport, screenToFlowPosition, controller, addPictures]);
+  }, [editor, getNodes, getViewport, screenToFlowPosition, controller]);
 }
