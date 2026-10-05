@@ -1,4 +1,4 @@
-import { stickyCanvasPosition, toJSON } from '@sododeck/model';
+import { toJSON } from '@sododeck/model';
 import { act, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type * as ReactFlow from '@xyflow/react';
@@ -207,46 +207,16 @@ describe('InspectorStep in flow mode (007 FR-019–021)', () => {
     expect(within(inspector()).getByText('· Error path')).toBeInTheDocument();
   });
 
-  it('lists notes on this step as buttons that center the note without leaving flow mode', async () => {
+  it('lists no notes: a note is never tied to a step (ADR 0041)', () => {
     const deck = {
       ...playbackDeck,
-      stickies: [
-        { id: 'note-c', text: 'Retry later', anchor: 'c' },
-        { id: 'note-x', text: 'Card decline', anchor: 'x' },
-        { id: 'note-a', text: 'Customer copy', anchor: 'a' },
-      ],
+      stickies: [{ id: 'note-c', text: 'Retry later', position: { x: 0, y: 0 } }],
     };
-    const { user, ui, editor } = renderFlows(deck);
+    const { editor } = renderFlows(deck);
     act(() => {
       openFlow(editor(), 'order', 'o5');
     });
-    setCenter.mockClear();
-
-    const section = within(inspector()).getByRole('region', { name: 'NOTES ON THIS STEP' });
-    const buttons = within(section).getAllByRole('button');
-    expect(
-      buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent),
-    ).toEqual(['Retry later, pinned to Order Service', 'Card decline, pinned to Payment Service']);
-
-    await user.click(buttons[1] as HTMLElement);
-    const sticky = deck.stickies[1];
-    if (sticky === undefined) throw new Error('Missing sticky fixture');
-    const point = stickyCanvasPosition(deck, sticky).point;
-    expect(setCenter).toHaveBeenCalledWith(point.x, point.y, { zoom: 1 });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
-    expect(ui().activeFlow?.flowId).toBe('order');
-
-    act(() => {
-      ui().setActiveStep('o8');
-    });
     expect(within(inspector()).queryByRole('region', { name: 'NOTES ON THIS STEP' })).toBeNull();
-
-    act(() => {
-      ui().setActiveStep('o5');
-    });
-    expect(
-      within(inspector()).getByRole('region', { name: 'NOTES ON THIS STEP' }),
-    ).toBeInTheDocument();
   });
 });
 

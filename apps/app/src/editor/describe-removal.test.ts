@@ -17,7 +17,7 @@ const deck = deckOf({
   ],
   flows: [{ id: 'f', title: 'Checkout', steps: [{ id: 's1', edge: 'e1' }] }],
   stickies: [
-    { id: 'n1', text: 'Note', anchor: 'svc' },
+    { id: 'n1', text: 'Note', position: { x: 244, y: -96 } },
     { id: 'n2', text: 'Second note', position: { x: 20, y: 24 } },
     { id: 'n3', text: 'Third note', position: { x: 32, y: 36 } },
   ],
@@ -84,9 +84,9 @@ describe('describeRemoval', () => {
   it('names one component with its connections and what breaks', () => {
     expect(describe_([{ scope: 'nodes', id: 'svc' }])).toEqual({
       title: 'Delete Order Service?',
-      body: 'Also removes 2 connections. 1 pinned note will stay on the canvas, unpinned. 1 flow step will be flagged broken. You can undo this.',
-      toast: 'Deleted Order Service and 2 connections · 1 note unpinned · ⌘Z to undo',
-      toastPc: 'Deleted Order Service and 2 connections · 1 note unpinned · Ctrl+Z to undo',
+      body: 'Also removes 2 connections. 1 flow step will be flagged broken. You can undo this.',
+      toast: 'Deleted Order Service and 2 connections · ⌘Z to undo',
+      toastPc: 'Deleted Order Service and 2 connections · Ctrl+Z to undo',
     });
   });
 

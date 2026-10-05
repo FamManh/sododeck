@@ -15,7 +15,6 @@ const ui: SceneInput['ui'] = {
   revealed: new Set(),
   drill: [],
   activeFlowId: null,
-  notesDisplay: 'dimmed',
 };
 
 const options: SvgOptions = {

@@ -1,6 +1,7 @@
 # 0010. Sticky notes: display flags as document data, and freeing on node delete
 
-- **Status:** Accepted
+- **Status:** Accepted; decisions 2–3 superseded by [ADR 0041](0041-remove-note-pinning.md)
+  (notes are no longer pinned)
 - **Date:** 2026-09-28
 - **Feature:** `specs/009-stickies-search` (spec, research R1, R2, contracts/model-additions.md)
 

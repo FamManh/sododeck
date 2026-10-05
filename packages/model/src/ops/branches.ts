@@ -9,7 +9,6 @@ import * as Y from 'yjs';
 
 import type { YObject, YValue } from '../convert';
 import { DeckEditError } from '../errors';
-import { anchorableIds } from '../ids';
 import {
   appendAll,
   childList,
@@ -151,9 +150,7 @@ export function addBranch(
       : { id: allocate('step'), edge: data.firstEdge, branch: branch.id };
   if (first !== undefined) {
     assertValid(validateObject('step', first));
-    assertRefsExist(ctx.doc, [{ path: 'firstEdge', id: first.edge, target: 'edges' }], () =>
-      anchorableIds(ctx.doc),
-    );
+    assertRefsExist(ctx.doc, [{ path: 'firstEdge', id: first.edge, target: 'edges' }]);
   }
 
   ctx.transact(() => {

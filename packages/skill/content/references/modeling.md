@@ -131,9 +131,13 @@ meaning only when it is rare.
 
 ## 8. Notes, features, tags and links
 
-- `stickies`: `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "anchor": "orders-db" }`
-  pins a note to a card (colours `amber blue green clay grey`). Use for caveats and open questions,
-  not for things that belong in a description.
+- `stickies`: a note sits on the canvas at its own `position`, so it needs one:
+  `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "position": { "x": 924, "y": -16 } }`
+  (colours `amber blue green clay grey`). A new deck leaves positions out (section 7), so there put
+  caveats and open questions in the card's `description` and leave `stickies` empty. In update
+  mode, add a note next to a card that has a position (for example 24 px right of it and 96 px
+  above). To tie a note to a card, add a connector between them: a connector may end on a note.
+  Never write `anchor`: notes are no longer pinned, and the key is only read from older files.
 - `features`: `[{ "id": "checkout", "title": "Checkout" }]` groups flows by product feature
   (`"feature": "checkout"` on a flow).
 - `tags`: short labels shared across the deck (`"tags": ["pci"]`), for filtering views.

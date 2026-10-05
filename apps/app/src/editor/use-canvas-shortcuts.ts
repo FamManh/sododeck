@@ -6,13 +6,7 @@
  *    focus is in the editor, except in text fields (native text undo, typing) and dialogs.
  *    ⌘Z / ⇧⌘Z / ⌘S work on both screens; Delete and Esc only on the canvas screen (008).
  */
-import {
-  endpointOf,
-  endpointTitle,
-  isDbTable,
-  isLocked,
-  stickyCanvasPosition,
-} from '@sododeck/model';
+import { endpointOf, endpointTitle, isDbTable, isLocked, stickyPosition } from '@sododeck/model';
 import { useReactFlow } from '@xyflow/react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useCallback, useEffect, useRef } from 'react';
@@ -460,7 +454,7 @@ export function useCanvasKeyDown() {
         event.preventDefault();
         const sticky = deck.stickies.find((entry) => entry.id === selectedSticky);
         if (sticky === undefined) return;
-        const point = stickyCanvasPosition(deck, sticky).point;
+        const point = stickyPosition(sticky);
         const step = event.shiftKey ? 32 : 8;
         const delta =
           direction === 'up'

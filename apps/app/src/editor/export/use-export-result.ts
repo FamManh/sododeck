@@ -80,7 +80,7 @@ export function exportRequestKey(request: ExportRequest, deck: SododeckFile, ui:
   const scopeUi =
     imageScope === 'deck'
       ? null
-      : [ui.currentViewId, [...ui.revealed].sort(), ui.drill, ui.activeFlowId, ui.notesDisplay];
+      : [ui.currentViewId, [...ui.revealed].sort(), ui.drill, ui.activeFlowId];
   const settings = isSchemaFormat(format)
     ? request.schema
     : format === 'json'

@@ -198,7 +198,12 @@ export function exportDeck(
   updates: readonly Uint8Array[],
   pictures: ReadonlyMap<string, Uint8Array> = new Map(),
 ): { json: string; name: string } {
-  const file = toJSON(load(updates));
+  const doc = load(updates);
+  // A deck stored before ADR 0041 and not opened since may still pin notes: the file never does.
+  const editor = createEditor(doc);
+  editor.freeLegacyStickies();
+  editor.destroy();
+  const file = toJSON(doc);
   return { json: serializeDeck(file, pictures), name: file.name ?? 'Untitled deck' };
 }
 

@@ -37,9 +37,18 @@ const enumTypes = Object.entries(defs).filter(
   ([type, schema]) => schema.enum !== undefined && !ONE_PER_FILE.has(type),
 );
 
+/**
+ * Deprecated properties the format still reads for older files but no current deck writes
+ * (ADR 0041: `Sticky.anchor`). `fixtures.ts` keeps a valid file for each.
+ */
+const DEPRECATED: Record<string, readonly string[]> = { Sticky: ['anchor'] };
+
 describe('full example covers the whole format', () => {
   it.each(objectTypes)('uses every property of %s', (type, schema) => {
-    const expected = Object.keys(schema.properties ?? {});
+    const deprecated = DEPRECATED[type] ?? [];
+    const expected = Object.keys(schema.properties ?? {}).filter(
+      (key) => !deprecated.includes(key),
+    );
     expect([...(usedProperties.get(type) ?? [])].sort()).toEqual(expected.sort());
   });
 

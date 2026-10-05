@@ -45,9 +45,9 @@ function boxOf(node: DrawnNode): Box | null {
 }
 
 /**
- * Only plain connectors (`deck` edges) still in the deck count: bundles and sticky leaders are
- * not one connector. A hidden connector, or one drawn to a port pill (`routable: false`, where
- * the drawn side is not the real card's), is kept but marked hidden so `spreadEnds` skips it.
+ * Only plain connectors (`deck` edges) still in the deck count: a bundle is not one connector. A
+ * hidden connector, or one drawn to a port pill (`routable: false`, where the drawn side is not
+ * the real card's), is kept but marked hidden so `spreadEnds` skips it.
  */
 export function spreadViewOf(
   nodes: readonly DrawnNode[],

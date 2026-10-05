@@ -1,7 +1,8 @@
 /**
  * Id generation (research R3): `<type prefix>-<10 random base-36 chars>`, e.g. `node-k3j9x0q2ab`.
  * The prefix is the object type, never its title. Generated ids are unique across the whole deck
- * (not only per collection), so a sticky anchor, which may name any object, is unambiguous.
+ * (not only per collection), so a connector end, which may name a node, a group, a sticky or an image,
+ * is unambiguous.
  */
 import type { Id } from '@sododeck/schema';
 import type * as Y from 'yjs';
@@ -173,17 +174,4 @@ export function makeIdAllocator(
       doc.off('afterTransaction', invalidate);
     },
   };
-}
-
-/** Ids a sticky may anchor to: collection objects, steps and rules (not rule columns or rows). */
-export function anchorableIds(doc: DeckDoc): Set<Id> {
-  const ids = new Set<Id>();
-  for (const c of COLLECTIONS) {
-    for (const [id, map] of collectionMap(doc, c).entries()) {
-      ids.add(id);
-      if (c === 'flows') listIds(childList(map, 'steps'), (stepId) => (ids.add(stepId), false));
-    }
-  }
-  for (const id of rulesMap(doc).keys()) ids.add(id);
-  return ids;
 }

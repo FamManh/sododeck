@@ -1,13 +1,14 @@
 /**
- * Sticky note ops: pin, unpin and move keep the note's screen point (data-model "States and
- * transitions of a note", research R3). The add/discard draft dance lives in `editor.ts`, which
- * has the undo manager this needs; this module holds the plain, validated writes.
+ * Sticky note ops. Every note is free, placed by its absolute `position` (ADR 0041: pinning to a
+ * card was removed). The add/discard draft dance lives in `editor.ts`, which has the undo manager
+ * this needs; this module holds the plain, validated writes.
  */
 import type { Id, Size, Sticky, StickyColor } from '@sododeck/schema';
 
 import { jsonEqual, type YObject } from '../convert';
 import { toJSON } from '../deck';
-import { clampStickySize, nodeCanvasPosition, stickyCanvasPosition, type Point } from '../geometry';
+import { clampStickySize, type Point } from '../geometry';
+import { legacyStickyPoint } from '../legacy-stickies';
 import { collectionMap } from '../layout';
 import { readObject } from '../read';
 import { tagKey } from '../tags';
@@ -15,7 +16,6 @@ import { assertValid, validateObject } from '../validate';
 import { writeField } from '../write';
 import { addObject, updateObject } from './collections';
 import { requireEntry, type EditContext } from './context';
-import { DeckEditError } from '../errors';
 import { assertUnlocked } from './node-lock';
 import { tidy } from './tags';
 import type { NewObject } from './types';
@@ -42,57 +42,33 @@ export function deleteStickyIfPresent(ctx: EditContext, id: Id): void {
   }, `stickies:${id}`);
 }
 
-function requireSticky(ctx: EditContext, id: Id): Sticky {
-  const sticky = toJSON(ctx.doc).stickies.find((s) => s.id === id);
-  if (!sticky) {
-    throw new DeckEditError('not-found', [{ path: '', message: `Sticky "${id}" does not exist.` }]);
-  }
-  return sticky;
-}
-
-/** Pins a note to a node, keeping its current canvas point (writes `anchor` + an offset). */
-export function pinSticky(ctx: EditContext, id: Id, nodeId: Id): void {
-  const file = toJSON(ctx.doc);
-  const sticky = requireSticky(ctx, id);
-  assertUnlocked(sticky, 'Sticky', id, 'pin it');
-  const base = nodeCanvasPosition(file, nodeId);
-  if (base === null) {
-    throw new DeckEditError('missing-reference', [
-      { path: 'anchor', message: `Node "${nodeId}" does not exist.` },
-    ]);
-  }
-  const point = stickyCanvasPosition(file, sticky).point;
-  updateObject(ctx, 'stickies', id, {
-    anchor: nodeId,
-    position: { x: point.x - base.x, y: point.y - base.y },
-  });
-}
-
-/** Unpins a note, keeping its current canvas point (removes `anchor`, writes an absolute point). */
-export function unpinSticky(ctx: EditContext, id: Id): void {
-  const file = toJSON(ctx.doc);
-  const sticky = requireSticky(ctx, id);
-  assertUnlocked(sticky, 'Sticky', id, 'unpin it');
-  const point = stickyCanvasPosition(file, sticky).point;
-  updateObject(ctx, 'stickies', id, { anchor: null, position: point });
-}
-
-/** Moves a note to a canvas point: an offset when pinned to a node, an absolute point otherwise. */
+/** Moves a note to an absolute canvas point. A locked note is refused. */
 export function moveSticky(ctx: EditContext, id: Id, point: Point): void {
+  const map = requireEntry(collectionMap(ctx.doc, 'stickies'), id, 'Sticky');
+  assertUnlocked(map, 'Sticky', id, 'move it');
+  updateObject(ctx, 'stickies', id, { position: point });
+}
+
+/**
+ * Turns every note still pinned with the legacy `anchor` into a free note at the point it was
+ * shown at (ADR 0041): for a deck stored before pinning was removed, which never went through
+ * `fromJSON` again. Untracked, like other load-time fixes: never an undo step. Returns the ids
+ * changed, none when no note has an anchor (nothing is written).
+ */
+export function freeLegacyStickies(ctx: EditContext): Id[] {
   const file = toJSON(ctx.doc);
-  const sticky = requireSticky(ctx, id);
-  assertUnlocked(sticky, 'Sticky', id, 'move it');
-  const placement = stickyCanvasPosition(file, sticky);
-  if (placement.status === 'pinned') {
-    // The node always resolves: `placement.pinnedTo` came from `stickyCanvasPosition`, which only
-    // reports `pinned` when `nodeCanvasPosition` found the node.
-    const base = nodeCanvasPosition(file, placement.pinnedTo) as Point;
-    updateObject(ctx, 'stickies', id, {
-      position: { x: point.x - base.x, y: point.y - base.y },
-    });
-  } else {
-    updateObject(ctx, 'stickies', id, { position: point });
-  }
+  const anchored = file.stickies.filter((sticky) => sticky.anchor !== undefined);
+  if (anchored.length === 0) return [];
+  const list = collectionMap(ctx.doc, 'stickies');
+  ctx.transactUntracked(() => {
+    for (const sticky of anchored) {
+      const map = list.get(sticky.id);
+      if (map === undefined) continue;
+      writeField(map, 'stickies', 'position', legacyStickyPoint(file, sticky));
+      map.delete('anchor');
+    }
+  });
+  return anchored.map((sticky) => sticky.id);
 }
 
 /**

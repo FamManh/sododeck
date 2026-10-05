@@ -1,4 +1,4 @@
-import { stickyCanvasPosition } from '@sododeck/model';
+import { stickyPosition } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 import { PanelSection } from '@sododeck/ui/components/panel';
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -60,7 +60,7 @@ export function NotesOutline({
                 onClick={() => {
                   const sticky = deck.stickies.find((entry) => entry.id === row.id);
                   if (sticky === undefined) return;
-                  const point = stickyCanvasPosition(deck, sticky).point;
+                  const point = stickyPosition(sticky);
                   useUiStore.getState().select({ stickies: [row.id] });
                   void setCenter(point.x, point.y, { zoom: getZoom() });
                 }}

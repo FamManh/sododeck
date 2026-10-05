@@ -3,13 +3,7 @@
  * the document (`resolveViews`); which one this tab shows is UI state (`ui.currentViewId`,
  * FR-005). Every view write goes through the model's view ops, with the current view's id.
  */
-import {
-  nodeCanvasPosition,
-  type DeckDoc,
-  type DeckEditor,
-  type Point,
-  type ViewSettingsPatch,
-} from '@sododeck/model';
+import { type DeckDoc, type DeckEditor, type Point, type ViewSettingsPatch } from '@sododeck/model';
 import type { Id, SododeckFile, View } from '@sododeck/schema';
 import { useMemo } from 'react';
 
@@ -149,23 +143,9 @@ export function useViewActions(): ViewActions {
   return useMemo(() => viewActions(editor), [editor]);
 }
 
-/**
- * Moves a note to a point of the current view's canvas. A pinned note keeps an offset from its
- * component, which the model measures from the base position: in a view where the component sits
- * elsewhere, the point is shifted so the note lands where it was dropped.
- */
+/** Moves a note to a point of the canvas (notes are free, ADR 0041: the same in every view). */
 export function moveStickyInView(editor: DeckEditor, stickyId: Id, point: Point): void {
-  const file = readDeck(editor.doc);
-  const anchor = file.stickies.find((s) => s.id === stickyId)?.anchor;
-  const base = anchor === undefined ? null : nodeCanvasPosition(file, anchor);
-  const shown =
-    anchor === undefined ? null : nodeCanvasPosition(readViewState(editor.doc).deck, anchor);
-  editor.moveSticky(
-    stickyId,
-    base === null || shown === null
-      ? point
-      : { x: point.x - shown.x + base.x, y: point.y - shown.y + base.y },
-  );
+  editor.moveSticky(stickyId, point);
 }
 
 /** Shows `view` in this tab: clears selection, drill-in and focus, then announces it (FR-003). */

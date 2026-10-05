@@ -48,7 +48,8 @@ later feature and the files users commit to git.
 
 4. **Delete cascade.** Structural objects that cannot exist without their target are removed:
    edges of a deleted node, steps of a deleted flow. Knowledge objects are **kept and reported
-   broken**: steps whose edge is gone, stickies whose anchor is gone. Deleting a group **re-parents**
+   broken**: steps whose edge is gone, stickies whose anchor is gone (stickies no longer have
+   anchors since ADR 0041). Deleting a group **re-parents**
    its nodes and child groups to its own parent. Deleting a rule detaches it from nodes and steps
    and drops its sample inputs. Lists and optional references are cleaned (view `includes` and
    `positions`, node `parent`, `feature` on flows and views). The full table is in

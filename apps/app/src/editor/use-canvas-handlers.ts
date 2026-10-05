@@ -183,8 +183,8 @@ export function useCanvasHandlers() {
         images: [...sets.images],
       };
       ui().select(next);
-      // The chip counts the items on the canvas, not the connectors between them.
-      ui().setMarqueeCount(selectionSize(next) - next.edges.length);
+      // Connectors come from the marquee's own hit test (use-marquee-edges), so they count too.
+      ui().setMarqueeCount(selectionSize(next));
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -204,7 +204,7 @@ export function useCanvasHandlers() {
 
     /**
      * Rail tools (018 R8) act on the next click, then fall back to Select: Sticky adds a note
-     * where the click lands (pinned to a card under it), Connector opens a card's connect popover.
+     * where the click lands, Connector opens a card's connect popover.
      */
     const applyTool = (event: ReactMouseEvent, nodeId: string | null): boolean => {
       const tool = ui().tool;
@@ -572,11 +572,9 @@ export function useCanvasHandlers() {
           changes.flatMap((c) => (c.type === 'select' ? [{ ...c, type: 'node' as const }] : [])),
         );
       },
-      onEdgesChange: (changes: EdgeChange[]) => {
-        applySelectChanges(
-          changes.flatMap((c) => (c.type === 'select' ? [{ ...c, type: 'edge' as const }] : [])),
-        );
-      },
+      // A marquee's connectors are the ones it catches (`editing/use-marquee-edges.ts`), not React
+      // Flow's "touches a caught card", so its edge selection changes are not taken.
+      onEdgesChange: (_changes: EdgeChange[]) => undefined,
       onNodeDragStop: (event?: ReactMouseEvent | MouseEvent | TouchEvent) => {
         // Copies made with ⌥ stay (051), otherwise the pointer decides membership (016 FR-018).
         if (controller.dragging) {
@@ -673,8 +671,7 @@ export function useCanvasHandlers() {
         event.preventDefault();
         const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         if (note === 'note') {
-          // From the pad: always a free note, even over a card (053 R7).
-          addNoteAt(editor, point, { pin: false });
+          addNoteAt(editor, point);
           return;
         }
         if (type === null) return;

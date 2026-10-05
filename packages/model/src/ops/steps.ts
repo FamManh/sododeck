@@ -15,7 +15,6 @@ import { readObject } from '../read';
 import { createObject, writeFields } from '../write';
 import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
-import { anchorableIds } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import { assertFreeIds, inputColumnsOf } from './collections';
 import { applyPatch } from './patch';
@@ -53,7 +52,7 @@ function checkStepRefs(
   if (issues.length > 0) throw new DeckEditError('missing-reference', issues);
   const checked =
     fields === undefined ? refs : refs.filter((r) => fields.some((f) => r.path.startsWith(f)));
-  assertRefsExist(doc, checked, () => anchorableIds(doc));
+  assertRefsExist(doc, checked);
 }
 
 export function addStep(ctx: EditContext, flowId: Id, data: NewStep, index?: number): Id {

@@ -9,7 +9,7 @@ import {
   imageBox,
   stackOrder,
   stickyBox,
-  stickyCanvasPosition,
+  stickyPosition,
   stickyLabel,
   tagKey,
 } from '@sododeck/model';
@@ -47,7 +47,6 @@ import { labelClamp } from '../editing/label-drag';
 import { labelPoint, samplePath } from '../routing/connector-geometry';
 import { lineCap, lineDash } from '../style/line-colour';
 import { NOTE_INSET, TAG_ROW_HEIGHT } from '../stickies/fit-font-size';
-import { stickyFlowState, type NotesDisplay } from '../stickies/sticky-flow';
 import { fitPlainNote } from '../stickies/sticky-plain-text';
 import { hiddenTagsLabel, noteTags } from '../stickies/sticky-tags';
 import { scopeOf, visibleGraph, type VisibleGraph } from '../visible-graph';
@@ -270,7 +269,6 @@ export interface SceneInput {
     revealed: ReadonlySet<string>;
     drill: readonly DrillFrame[];
     activeFlowId: string | null;
-    notesDisplay: NotesDisplay;
     /** The Labels tool (042): relationship labels in "Follow Labels tool" mode export when on. */
     labelsOn?: boolean;
   };
@@ -549,32 +547,12 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   const groups = sceneGroups(source, graph, level, cards, inFlow);
   // Group frames are connector ends too (050 R6).
   for (const group of groups) rects.set(`${GROUP_NODE_PREFIX}${group.id}`, group.rect);
-  // Notes as the canvas draws them: free notes and notes on non-components (edges, flows,
-  // steps) at their own point, notes pinned to a component only when that card is drawn. The
-  // flow scope keeps notes on its kept cards or on the flow and its steps.
-  const flowIds = new Set(
-    flow === undefined ? [] : [flow.id, ...flow.steps.map((step) => step.id)],
-  );
-  const stickies: SceneSticky[] = source.stickies.flatMap((sticky) => {
-    const placement = stickyCanvasPosition(source, sticky);
-    if (placement.status === 'pinned' && !rects.has(placement.pinnedTo)) return [];
-    if (inFlow !== null) {
-      const onFlow =
-        placement.status === 'pinned' ||
-        (placement.status === 'foreign' && flowIds.has(placement.anchor));
-      const state = stickyFlowState(sticky, placement, {
-        flowMode: true,
-        display: ui.notesDisplay,
-        currentStepNodes: new Map(),
-        emptyFlow: false,
-        brokenCurrentStep: false,
-      });
-      if (!onFlow || state === 'hidden') return [];
-    }
-    return [
-      sceneSticky(sticky, placement.point, placement.status === 'pinned', tagColours, measure),
-    ];
-  });
+  // Notes as the canvas draws them, at their own point. A note belongs to no flow (ADR 0041:
+  // notes are never pinned), so a flow-scoped export draws none.
+  const stickies: SceneSticky[] =
+    inFlow !== null
+      ? []
+      : source.stickies.map((sticky) => sceneSticky(sticky, tagColours, measure));
 
   // Notes are connector ends too (053): `sticky:<id>`, as the visible graph names them.
   for (const sticky of stickies) rects.set(`${STICKY_NODE_PREFIX}${sticky.id}`, sticky.rect);
@@ -745,16 +723,14 @@ function sceneStyle(style: SododeckFile['edges'][number]['style']): SceneEdgeSty
 /**
  * A note as the canvas draws it (053): its stored box, the plain text wrapped at the size the fit
  * picks (the same steps and rows as the canvas, measured with the text measurer), and its tag
- * chips. The lock mark and the pinned line are not drawn, but they take the room they take there.
+ * chips. The lock mark is not drawn, but it takes the room it takes there.
  */
 function sceneSticky(
   sticky: SododeckFile['stickies'][number],
-  point: { x: number; y: number },
-  pinned: boolean,
   tagColours: ReturnType<typeof tagColourMap>,
   measure: TextMeasurer,
 ): SceneSticky {
-  const rect = stickyBox(sticky, point);
+  const rect = stickyBox(sticky, stickyPosition(sticky));
   const collapsed = sticky.collapsed === true;
   const base = {
     id: sticky.id,
@@ -763,14 +739,13 @@ function sceneSticky(
     collapsed,
     align: sticky.align ?? 'center',
   } as const;
-  return { ...base, rect, ...noteBody(sticky, rect, collapsed, pinned, tagColours, measure) };
+  return { ...base, rect, ...noteBody(sticky, rect, collapsed, tagColours, measure) };
 }
 
 function noteBody(
   sticky: SododeckFile['stickies'][number],
   rect: Rect,
   collapsed: boolean,
-  pinned: boolean,
   tagColours: ReturnType<typeof tagColourMap>,
   measure: TextMeasurer,
 ): Pick<SceneSticky, 'fontSize' | 'lineHeight' | 'lines' | 'tagChips'> {
@@ -787,7 +762,7 @@ function noteBody(
     ...chip,
     ...exportTagColours(tagColours.get(tagKey(chip.tag))),
   }));
-  const rows = tags.rows + (pinned || sticky.locked === true ? 1 : 0);
+  const rows = tags.rows + (sticky.locked === true ? 1 : 0);
   const fit = fitPlainNote(
     {
       markdown: sticky.text,

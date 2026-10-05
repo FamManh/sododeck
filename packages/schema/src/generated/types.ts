@@ -1120,7 +1120,7 @@ export interface RuleRow {
   then: string[];
 }
 /**
- * A sticky note. It needs an `anchor`, a `position`, or both. A connector can end on it.
+ * A sticky note, placed on the canvas by `position`. A connector can end on it. Older files may place it with the deprecated `anchor` instead; such files still open.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Sticky".
@@ -1139,7 +1139,7 @@ export interface Sticky {
    */
   collapsed?: boolean;
   /**
-   * True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step.
+   * True when the note stays at full strength during flow playback. Absent means it is dimmed while a flow plays.
    */
   showInFlows?: boolean;
   size?: Size;
@@ -1153,7 +1153,7 @@ export interface Sticky {
   align?: 'left' | 'center' | 'right';
   tags?: Tags;
   /**
-   * `true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
+   * `true` locks the note in place, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
    */
   locked?: true;
 }

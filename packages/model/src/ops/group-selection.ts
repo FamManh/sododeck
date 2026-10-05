@@ -8,7 +8,6 @@ import * as Y from 'yjs';
 
 import { toY } from '../convert';
 import { DeckEditError } from '../errors';
-import { anchorableIds } from '../ids';
 import { collectionMap, insertAt } from '../layout';
 import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject, type Ref } from '../validate';
@@ -57,7 +56,7 @@ export function groupSelection(ctx: EditContext, selection: GroupSelection): Id 
     ...groups.map((id, i): Ref => ({ path: `groups.${String(i)}`, id, target: 'groups' })),
     ...(parent === undefined ? [] : [{ path: 'parent', id: parent, target: 'groups' } as const]),
   ];
-  assertRefsExist(ctx.doc, refs, () => anchorableIds(ctx.doc));
+  assertRefsExist(ctx.doc, refs);
   if (parent !== undefined && subtreeOf(ctx, groups).has(parent)) {
     throw new DeckEditError('invalid', [
       { path: 'parent', message: 'A group cannot go inside a group it contains.' },

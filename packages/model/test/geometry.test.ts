@@ -3,14 +3,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   NODE_GRID,
-  STICKY_DEFAULT_OFFSET,
   STICKY_COLLAPSED_HEIGHT,
   STICKY_DEFAULT_SIZE,
   STICKY_MIN_SIZE,
   clampStickySize,
   stickyBox,
   nodeCanvasPosition,
-  stickyCanvasPosition,
+  stickyPosition,
   stickyLabel,
   IMAGE_MAX_SIDE,
   cropFrame,
@@ -54,73 +53,10 @@ describe('nodeCanvasPosition', () => {
   });
 });
 
-describe('stickyCanvasPosition', () => {
-  it('is free at its own position', () => {
-    const file = baseFile();
-    const sticky = { id: 'sticky-0', text: 'hi', position: { x: 10, y: 20 } };
-    expect(stickyCanvasPosition(file, sticky)).toEqual({
-      status: 'free',
-      point: { x: 10, y: 20 },
-    });
-  });
-
-  it('is pinned with an offset', () => {
-    const file = baseFile();
-    const sticky = { id: 'sticky-0', text: 'hi', anchor: 'n0', position: { x: 5, y: -5 } };
-    expect(stickyCanvasPosition(file, sticky)).toEqual({
-      status: 'pinned',
-      point: { x: 305, y: 35 },
-      pinnedTo: 'n0',
-    });
-  });
-
-  it('is pinned at the default offset without a stored position', () => {
-    const file = baseFile();
-    const sticky = { id: 'sticky-0', text: 'hi', anchor: 'n0' };
-    expect(stickyCanvasPosition(file, sticky)).toEqual({
-      status: 'pinned',
-      point: { x: 300 + STICKY_DEFAULT_OFFSET.x, y: 40 + STICKY_DEFAULT_OFFSET.y },
-      pinnedTo: 'n0',
-    });
-  });
-
-  it('is pinned to a grid-placed node', () => {
-    const file = baseFile();
-    const sticky = { id: 'sticky-0', text: 'hi', anchor: 'n1' };
-    expect(stickyCanvasPosition(file, sticky)).toEqual({
-      status: 'pinned',
-      point: {
-        x: NODE_GRID.dx + STICKY_DEFAULT_OFFSET.x,
-        y: STICKY_DEFAULT_OFFSET.y,
-      },
-      pinnedTo: 'n1',
-    });
-  });
-
-  it('is foreign when anchored to a non-node object (edge, then step)', () => {
-    const file = baseFile();
-    const edgeSticky = { id: 'sticky-0', text: 'hi', anchor: 'e0', position: { x: 1, y: 2 } };
-    expect(stickyCanvasPosition(file, edgeSticky)).toEqual({
-      status: 'foreign',
-      point: { x: 1, y: 2 },
-      anchor: 'e0',
-    });
-    const stepSticky = { id: 'sticky-1', text: 'hi', anchor: 's0', position: { x: 3, y: 4 } };
-    expect(stickyCanvasPosition(file, stepSticky)).toEqual({
-      status: 'foreign',
-      point: { x: 3, y: 4 },
-      anchor: 's0',
-    });
-  });
-
-  it('is missing when the anchor names nothing', () => {
-    const file = baseFile();
-    const sticky = { id: 'sticky-0', text: 'hi', anchor: 'nothing', position: { x: 7, y: 8 } };
-    expect(stickyCanvasPosition(file, sticky)).toEqual({
-      status: 'missing',
-      point: { x: 7, y: 8 },
-      anchor: 'nothing',
-    });
+describe('stickyPosition', () => {
+  it('is the stored position, the origin only for a note that has none', () => {
+    expect(stickyPosition({ position: { x: 10, y: 20 } })).toEqual({ x: 10, y: 20 });
+    expect(stickyPosition({})).toEqual({ x: 0, y: 0 });
   });
 });
 

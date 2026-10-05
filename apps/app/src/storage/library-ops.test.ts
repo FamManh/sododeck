@@ -14,7 +14,7 @@ import * as Y from 'yjs';
 
 import { generateBenchDeck } from '../bench/generate-deck';
 import { PNG_1X1 } from '../images/test-pictures';
-import { legacyDeckBytes } from '../test/legacy-deck';
+import { legacyDeckBytes, pinnedNoteDeckBytes } from '../test/legacy-deck';
 import {
   create,
   duplicate,
@@ -201,6 +201,30 @@ describe('library ops', () => {
 
     // A fresh history, not a copy of the original's: the two logs never share updates.
     expect(Y.decodeStateVector(Y.encodeStateVector(copy)).has(source.clientID)).toBe(false);
+  });
+});
+
+describe('library ops: legacy pinned notes (ADR 0041)', () => {
+  const pinned: SododeckFile = {
+    ...emptySododeckFile(),
+    name: 'Pinned',
+    nodes: [{ id: 'svc', type: 'service', title: 'Order Service', position: { x: 100, y: 200 } }],
+    stickies: [{ id: 'pinned', text: 'Owns PII.', anchor: 'svc', position: { x: 10, y: -20 } }],
+  };
+  const freed = [{ id: 'pinned', text: 'Owns PII.', position: { x: 110, y: 180 } }];
+
+  it('imports a file with a pinned note as a free note where it was shown', () => {
+    const imported = importFile(serializeDeck(pinned));
+    expect(toJSON(docOf([imported.bytes])).stickies).toEqual(freed);
+    expect(exportDeck([imported.bytes]).json).not.toContain('"anchor"');
+  });
+
+  it('exports a deck stored with a pinned note, never writing the anchor', () => {
+    const current = importFile(serializeDeck({ ...pinned, stickies: freed })).bytes;
+    const stored = [pinnedNoteDeckBytes(current)];
+    expect(toJSON(docOf(stored)).stickies[0]?.anchor).toBe('svc');
+    const exported = JSON.parse(exportDeck(stored).json) as SododeckFile;
+    expect(exported.stickies).toEqual(freed);
   });
 });
 

@@ -53,14 +53,13 @@ function cascadedEdges(targets: readonly RemovalTarget[], result: RemovalResult)
   return result.removed.filter((r) => r.scope === 'edges' && !asked.has(r.id)).length;
 }
 
-function brokenCounts(result: RemovalResult): { steps: number; notes: number } {
+/** Flow steps a delete leaves broken (a note never points at anything, ADR 0041). */
+function brokenSteps(result: RemovalResult): number {
   const steps = new Set<string>();
-  const notes = new Set<string>();
   for (const { object } of result.broken) {
     if (object.child?.kind === 'step') steps.add(`${object.id}/${object.child.id}`);
-    else if (object.scope === 'stickies') notes.add(object.id);
   }
-  return { steps: steps.size, notes: notes.size };
+  return steps.size;
 }
 
 /**
@@ -92,11 +91,6 @@ function keptTablesSentence(count: number): string | null {
   return count === 1
     ? '1 table is kept and becomes unowned.'
     : `${String(count)} tables are kept and become unowned.`;
-}
-
-function freedNoteSentence(count: number): string | null {
-  if (count === 0) return null;
-  return `${plural(count, 'pinned note')} will stay on the canvas, unpinned.`;
 }
 
 /** The single rule a removal is for, if it is one (008). */
@@ -131,7 +125,7 @@ export function describeRemoval(
     };
   }
   const edges = cascadedEdges(targets, result);
-  const { steps, notes } = brokenCounts(result);
+  const steps = brokenSteps(result);
   const sentences: string[] = [];
   const flowsMoved = result.updated.filter(
     (r) => r.scope === 'flows' && targets.some((t) => t.scope === 'features'),
@@ -144,15 +138,7 @@ export function describeRemoval(
   if (edges > 0) sentences.push(`Also removes ${plural(edges, 'connection')}.`);
   const kept = keptTablesSentence(keptTables(deck, targets, result).length);
   if (kept !== null) sentences.push(kept);
-  const freed = freedNoteSentence(result.freed.length);
-  if (freed !== null) sentences.push(freed);
-  const broken = [
-    ...(steps > 0 ? [plural(steps, 'flow step')] : []),
-    ...(notes > 0 ? [plural(notes, 'note')] : []),
-  ];
-  if (broken.length > 0) {
-    sentences.push(`${listPhrase(broken)} will be flagged broken.`);
-  }
+  if (steps > 0) sentences.push(`${plural(steps, 'flow step')} will be flagged broken.`);
   sentences.push('You can undo this.');
   const stickyOnly = targets.length > 0 && targets.every((t) => t.scope === 'stickies');
   const imageOnly = targets.length > 0 && targets.every((t) => t.scope === 'images');
@@ -198,10 +184,9 @@ export function removalToast(
     edges > 0
       ? `${subject(deck, targets)} and ${plural(edges, 'connection')}`
       : subject(deck, targets);
-  const freed = result.freed.length > 0 ? ` · ${plural(result.freed.length, 'note')} unpinned` : '';
   const keptCount = keptTables(deck, targets, result).length;
   const kept = keptCount > 0 ? ` · ${plural(keptCount, 'table')} kept` : '';
-  return `Deleted ${what}${freed}${kept} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  return `Deleted ${what}${kept} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
 }
 
 /**

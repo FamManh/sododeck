@@ -24,7 +24,6 @@ import { isDbTable } from '../card-types';
 import { toY } from '../convert';
 import type { Fragment } from '../fragment';
 import type { Point } from '../geometry';
-import { anchorableIds } from '../ids';
 import { appendAll, collectionMap, rulesMap } from '../layout';
 import { sortStack } from '../stack-order';
 import { readEnums, readObject } from '../read';
@@ -210,9 +209,7 @@ export function pasteFragment(
   const { deck } = fragment;
   const { offset, parent } = options;
   if (parent !== undefined) {
-    assertRefsExist(ctx.doc, [{ path: 'parent', id: parent, target: 'groups' }], () =>
-      anchorableIds(ctx.doc),
-    );
+    assertRefsExist(ctx.doc, [{ path: 'parent', id: parent, target: 'groups' }]);
   }
   const view = options.viewId === undefined ? undefined : resolveView(ctx, options.viewId);
   const fragmentImages = fragment.images ?? [];

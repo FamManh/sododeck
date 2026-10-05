@@ -40,7 +40,7 @@ const stickyDeck = deckOf({
   nodes: [{ id: 'svc', type: 'service', title: 'Order Service', position: { x: 240, y: 120 } }],
   stickies: [
     { id: 'st1', text: 'Remember retries', position: { x: 40, y: 60 } },
-    { id: 'st2', text: 'Pinned note', anchor: 'svc', position: { x: 12, y: -24 } },
+    { id: 'st2', text: 'Near the service', position: { x: 252, y: 96 } },
   ],
 });
 

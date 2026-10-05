@@ -5,6 +5,7 @@ import { useUiStore } from '../../state/ui-store';
 import { preloadExportDialog } from '../export/export-dialog-loader';
 import { ExportDialogMount } from '../export/export-dialog-mount';
 import { ImportDialogMount } from '../import/import-dialog-mount';
+import { MermaidImportDialog } from '../import/mermaid-import-dialog';
 import { PANEL_COLLAPSED } from '../panel-height';
 import { CodeDrawer } from './code-drawer';
 import { DeckIsland } from './deck-island';
@@ -42,6 +43,7 @@ export function ShellChrome({
   const compact = useCompactShell();
   const exportOpen = useUiStore((s) => s.exportDialog.open);
   const importOpen = useUiStore((s) => s.importDialog.open);
+  const mermaidOpen = useUiStore((s) => s.mermaidDialog.open);
   useShellShortcuts();
   useEffect(() => {
     const preload = () => {
@@ -103,6 +105,7 @@ export function ShellChrome({
       <ShortcutHelpDialog />
       {exportOpen && <ExportDialogMount />}
       {importOpen && <ImportDialogMount />}
+      {mermaidOpen && <MermaidImportDialog />}
     </>
   );
 }

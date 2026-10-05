@@ -72,6 +72,7 @@ import {
   type AssetMeta,
   type AssetProblem,
 } from './assets';
+import { freeAnchoredStickies } from './legacy-stickies';
 import { checkDuplicateIds, trimCrops, type TrimmedCrop } from './load-checks';
 import { keysBetween } from './order-key';
 import { readAssets, readCollection, readMeta, readObject, readRule, readRules } from './read';
@@ -111,7 +112,8 @@ export interface LoadedDeck {
  * bytes next to it (055). A picture whose data is damaged (bad base64, wrong size, hash that is
  * not its id, type outside the allow-list, over 5 MiB) does not refuse the file: it is listed in
  * `problems` and its images show a placeholder. The document never holds picture bytes. An image
- * crop past the picture edge is cut back and listed in `trimmedCrops` (057).
+ * crop past the picture edge is cut back and listed in `trimmedCrops` (057). A note pinned with the
+ * legacy `anchor` loads as a free note at the point it was shown at (ADR 0041).
  * @throws DeckValidationError when the input is not a valid v1 file.
  */
 export function loadDeck(input: unknown): LoadedDeck {
@@ -152,7 +154,8 @@ export function validateDeckFile(input: unknown): SododeckFile {
 }
 
 function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Map()): DeckDoc {
-  const file = validateDeckFile(input);
+  // A legacy anchored note becomes a free note at the point it was shown at (ADR 0041).
+  const file = freeAnchoredStickies(validateDeckFile(input));
 
   const doc = new Y.Doc();
   doc.transact(() => {
