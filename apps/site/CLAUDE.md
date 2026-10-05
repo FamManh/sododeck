@@ -15,7 +15,7 @@ Astro (static output) + Tailwind v4 + MDX. React islands allowed, but keep them 
 
 ## Boundaries
 
-- No dependency on `@sododeck/model` or the editor. Link to the app; don't embed it.
+- No dependency on `@sododeck/model` or the editor. Link to the app; don't embed it. `@sododeck/skill` is a devDependency only so turbo builds it first: `scripts/copy-skill.mjs` copies its `dist/sododeck-deck.zip` to `public/downloads/` (gitignored) before `astro build` (027). `/docs/ai-skill` is the skill's page (`SKILL_URL`).
 - No analytics or third-party scripts without an explicit decision (and an update to /privacy).
 - The landing page shows the Database pack (039–049), the AI skill (027) and the editable code panel (026) as shipped (decision L3): **do not deploy it before those are merged**.
 - Privacy and terms pages are placeholders. **Real legal text must be reviewed before launch.**

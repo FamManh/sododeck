@@ -16,6 +16,7 @@ apps/app/         Vite + React SPA, the editor → app.sododeck.com
 apps/site/        Astro marketing/docs/blog → sododeck.com
 packages/schema/  JSON Schema v1 for .sododeck files → generated TS types + Zod
 packages/model/   Yjs document model, the ONLY Yjs ↔ JSON conversion
+packages/skill/   AI deck skill (027): Markdown + bundled offline validate/lint → dist/sododeck-deck.zip
 packages/ui/      Design tokens, Tailwind v4 theme, shared React components (shadcn/ui, Radix, lucide)
 packages/config/  Shared tsconfig, ESLint, Prettier
 docs/             spec.md, decisions/ (ADRs), design/, deploy.md
@@ -24,7 +25,7 @@ docs/             spec.md, decisions/ (ADRs), design/, deploy.md
 
 Each app/package has its own `CLAUDE.md` with its responsibility and boundaries. **Read it before changing that package.**
 
-Dependency direction (never the reverse): `app → model → schema`, `app → ui`, `site → ui`, everything → `config`.
+Dependency direction (never the reverse): `app → model → schema`, `skill → model → schema`, `app → ui`, `site → ui`, everything → `config`. The site only copies the skill's built archive (no code import).
 
 ## Commands (repo root)
 

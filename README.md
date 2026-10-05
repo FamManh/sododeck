@@ -48,6 +48,7 @@ apps/app          Vite + React editor (React Flow, Yjs, Monaco, Zustand, PWA)
 apps/site         Astro site (MDX docs/blog)
 packages/schema   .sododeck JSON Schema v1, generated types, Zod validators
 packages/model    Yjs document model and JSON import/export
+packages/skill    AI deck skill for users' own agents (built to dist/sododeck-deck.zip)
 packages/ui       Design tokens, Tailwind v4 theme, shared components
 packages/config   Shared tsconfig / ESLint / Prettier
 docs/             Spec, ADRs (docs/decisions), deploy guide
