@@ -26,6 +26,8 @@ export interface JunctionPlan {
   schema?: string;
   columns: readonly JunctionColumn[];
   position: Point;
+  /** The database card of the tables, so the new table is drawn inside it (049). */
+  parent?: Id;
   links: readonly JunctionLink[];
 }
 
@@ -88,6 +90,7 @@ export function planJunction(deck: SododeckFile, edgeId: Id): JunctionPlan | nul
     ...(schema === undefined ? {} : { schema }),
     columns,
     position: freeSpot(deck, { x: Math.round((a.x + b.x) / 2), y: Math.round((a.y + b.y) / 2) }),
+    ...(from.parent === undefined ? {} : { parent: from.parent }),
     links,
   };
 }
@@ -100,6 +103,7 @@ export function applyJunction(editor: DeckEditor, plan: JunctionPlan, edgeId: Id
       type: 'db-table',
       title: plan.name,
       position: plan.position,
+      ...(plan.parent === undefined ? {} : { parent: plan.parent }),
       ...(plan.schema === undefined ? {} : { schema: plan.schema }),
     });
     const ids = plan.columns.map((column) =>

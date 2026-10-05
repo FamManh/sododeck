@@ -47,6 +47,20 @@ describe('planJunction (047 R6)', () => {
     expect(plan?.position).toEqual({ x: 200, y: 100 });
   });
 
+  it('belongs to the database card of its tables', () => {
+    const f = file();
+    f.nodes = f.nodes.map((n) => ({ ...n, parent: 'db' }));
+    f.nodes.push({ id: 'db', type: 'database', title: 'Shop DB' });
+    expect(planJunction(f, 'e')?.parent).toBe('db');
+    const doc = fromJSON(f);
+    const editor = createEditor(doc);
+    const plan = planJunction(f, 'e');
+    if (plan === null) throw new Error('plan');
+    const id = applyJunction(editor, plan, 'e');
+    expect(toJSON(doc).nodes.find((n) => n.id === id)?.parent).toBe('db');
+    editor.destroy();
+  });
+
   it('uses the ends the relationship names before the primary key', () => {
     const f = file();
     const edge = f.edges[0];
