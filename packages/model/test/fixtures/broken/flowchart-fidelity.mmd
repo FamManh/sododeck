@@ -1,0 +1,14 @@
+flowchart LR
+  subgraph platform [Platform]
+    subgraph core [Core]
+      api[Gateway]
+    end
+  end
+  web[Web shop] --> api
+  api --> pay(Payments)
+  web --> api(API v2)
+  style api fill:#f9f
+  click api callback
+  subgraph platform
+    db[(Orders DB)]
+  end

@@ -17,3 +17,7 @@ All start from the same small checkout deck (3 cards, 2 connectors, 1 flow).
 | `dangling-connector.sododeck`             | a connector ends at a card that does not exist        | opens: `broken-reference`                           |
 | `broken-rule-reference.sododeck`          | a card lists a rule that does not exist               | opens: `missing-rule`                               |
 | `dangling-step-and-bad-picture.sododeck`  | a step uses a missing connector; a picture is damaged | opens: `step-without-connection`, `picture-damaged` |
+
+`flowchart-fidelity.mmd` is a Mermaid flowchart for the fidelity report (quickstart step 8): a
+node declared twice with a different label and a subgraph declared twice (Merged), a style line
+and a click (Left out). Nested subgraphs come across as nested groups, so they are not reported.

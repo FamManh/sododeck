@@ -118,11 +118,11 @@
 
 ## Phase 6: Polish and cross-cutting
 
-- [ ] T037 [P] Update `packages/schema/CLAUDE.md` (Issue shape, pointer paths, issue codes, `toIssues`), `packages/model/CLAUDE.md` (catalogue, entries, `inspectDeckText`, `Problem.path/subject`, doc snapshot), `apps/app/CLAUDE.md` (import problems dialog, copy helper, fidelity adapters).
-- [ ] T038 [P] Finalise `docs/decisions/0039-problem-codes.md` (status Accepted) and mark 062 implemented in `docs/backlog.md`; note in §027 that the skill reuses `docs/file-format/problem-codes.md` and contracts/problem-report.md.
-- [ ] T039 Run the full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; the smoke suite and the no-third-party-requests check pass; no skipped or `.only` tests; `docs/file-format/problem-codes.md` not stale.
-- [ ] T040 Run the quickstart end to end (incl. step 9, the AI loop over the broken fixtures, step 10 keyboard + VoiceOver, step 11 large file); record results in `specs/062-fixable-import-errors/quickstart-results.md`; screenshots of the refused and opened dialogs, the panel copy button and both grouped reports, light and dark, in `specs/062-fixable-import-errors/screenshots/`.
-- [ ] T041 Final report: what changed, what was skipped (site docs page is 027; invalid paste stays silent, 026), what is uncertain (Zod union hints, Mermaid audit coverage, SC-002 AI results), bench numbers before/after, and the next step proposal (058). Stop.
+- [x] T037 [P] Update `packages/schema/CLAUDE.md` (Issue shape, pointer paths, issue codes, `toIssues`), `packages/model/CLAUDE.md` (catalogue, entries, `inspectDeckText`, `Problem.path/subject`, doc snapshot), `apps/app/CLAUDE.md` (import problems dialog, copy helper, fidelity adapters).
+- [x] T038 [P] Finalise `docs/decisions/0039-problem-codes.md` (status Accepted) and mark 062 implemented in `docs/backlog.md`; note in §027 that the skill reuses `docs/file-format/problem-codes.md` and contracts/problem-report.md.
+- [x] T039 Run the full gate: `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm e2e`; the smoke suite and the no-third-party-requests check pass; no skipped or `.only` tests; `docs/file-format/problem-codes.md` not stale.
+- [x] T040 Run the quickstart end to end (incl. step 9, the AI loop over the broken fixtures, step 10 keyboard + VoiceOver, step 11 large file); record results in `specs/062-fixable-import-errors/quickstart-results.md`; screenshots of the refused and opened dialogs, the panel copy button and both grouped reports, light and dark, in `specs/062-fixable-import-errors/screenshots/`.
+- [x] T041 Final report: what changed, what was skipped (site docs page is 027; invalid paste stays silent, 026), what is uncertain (Zod union hints, Mermaid audit coverage, SC-002 AI results), bench numbers before/after, and the next step proposal (058). Stop.
 
 ---
 
