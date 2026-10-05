@@ -4,7 +4,7 @@
  * (research R6–R8). UI-free: callers show toasts and move focus.
  */
 import { postDeckUpdate } from '../storage/deck-channel-post';
-import { downloadText, safeFileName } from '../storage/download';
+import { deckFileName, downloadText } from '../storage/download';
 import {
   FolderNameError,
   insertDeck,
@@ -158,11 +158,11 @@ export async function renameFolderInline(
   }
 }
 
-/** Downloads `<name>.sododeck.json`, the model's export of the stored deck (FR-025, FR-027). */
+/** Downloads `<name>.sododeck`, the model's export of the stored deck (FR-025, FR-027). */
 export async function exportDeckFile(ctx: LibraryActionContext, deckId: string): Promise<void> {
   const log = await logOf(ctx, deckId);
   const { json, name } = await ctx.client.exportDeck(log.bytes);
-  downloadText(`${safeFileName(name)}.sododeck.json`, json);
+  downloadText(deckFileName(name), json);
   await markExported(ctx.db, deckId, clock(ctx));
 }
 

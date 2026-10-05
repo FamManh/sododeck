@@ -23,8 +23,8 @@
 
 ## Phase 1: Setup
 
-- [ ] T001 Confirm branch `056-file-format-and-mermaid-import` and a green baseline: `pnpm install && pnpm lint && pnpm typecheck && pnpm test`. Record the result in the final report.
-- [ ] T002 Commit the spec folder (spec, plan, research, data-model, contracts, quickstart, tasks, checklists), `docs/decisions/0038-sododeck-extension.md` (status Proposed) and the `docs/backlog.md` change as `docs: file format and Mermaid import spec, plan and tasks (056)`. No AI attribution lines (AGENTS.md).
+- [x] T001 Confirm branch `056-file-format-and-mermaid-import` and a green baseline: `pnpm install && pnpm lint && pnpm typecheck && pnpm test`. Record the result in the final report.
+- [x] T002 Commit the spec folder (spec, plan, research, data-model, contracts, quickstart, tasks, checklists), `docs/decisions/0038-sododeck-extension.md` (status Proposed) and the `docs/backlog.md` change as `docs: file format and Mermaid import spec, plan and tasks (056)`. No AI attribution lines (AGENTS.md).
 
 ---
 
@@ -50,21 +50,21 @@
 
 ### Tests first (write, watch fail)
 
-- [ ] T008 [P] [US1] Extend `apps/app/src/storage/download.test.ts`: `deckFileName('Payments')` is `Payments.sododeck`; unsafe characters still become `-`; empty name is `Untitled deck.sododeck`; a name already ending `.sododeck` or `.sododeck.json` is not extended twice; `DECK_EXTENSION` is `.sododeck`.
-- [ ] T009 [P] [US1] Extend `apps/app/src/library/library-actions.test.ts`: `exportDeckFile` downloads a file named `<name>.sododeck` whose text equals the model export (byte-for-byte the previous content); importing that text gives a deck with the same summary (FR-002, FR-006).
-- [ ] T010 [P] [US1] Extend `apps/app/src/library/import-button.test.tsx`: the file input's `accept` is `.sododeck,.json,application/json`; the button's accessible name mentions `.sododeck`; files named `a.sododeck`, `a.sododeck.json`, `a.json` and a nameless valid deck all import with the same result; a non-deck file shows the updated message and adds nothing (FR-003, FR-004).
-- [ ] T011 [P] [US1] Extend `apps/app/src/library/library-error-message.test.ts` and `apps/app/src/editor/routes` tests that name the old extension (find them with `grep -rn "sododeck.json" apps/app/src --include='*.test.ts*'`): expected strings now use `.sododeck`, and the hint "Older .sododeck.json files also open." appears where specified.
+- [x] T008 [P] [US1] Extend `apps/app/src/storage/download.test.ts`: `deckFileName('Payments')` is `Payments.sododeck`; unsafe characters still become `-`; empty name is `Untitled deck.sododeck`; a name already ending `.sododeck` or `.sododeck.json` is not extended twice; `DECK_EXTENSION` is `.sododeck`.
+- [x] T009 [P] [US1] Extend `apps/app/src/library/library-actions.test.ts`: `exportDeckFile` downloads a file named `<name>.sododeck` whose text equals the model export (byte-for-byte the previous content); importing that text gives a deck with the same summary (FR-002, FR-006).
+- [x] T010 [P] [US1] Extend `apps/app/src/library/import-button.test.tsx`: the file input's `accept` is `.sododeck,.json,application/json`; the button's accessible name mentions `.sododeck`; files named `a.sododeck`, `a.sododeck.json`, `a.json` and a nameless valid deck all import with the same result; a non-deck file shows the updated message and adds nothing (FR-003, FR-004).
+- [x] T011 [P] [US1] Extend `apps/app/src/library/library-error-message.test.ts` and `apps/app/src/editor/routes` tests that name the old extension (find them with `grep -rn "sododeck.json" apps/app/src --include='*.test.ts*'`): expected strings now use `.sododeck`, and the hint "Older .sododeck.json files also open." appears where specified.
 
 ### Implementation
 
-- [ ] T012 [US1] In `apps/app/src/storage/download.ts` add `DECK_EXTENSION = '.sododeck'` and `deckFileName(name)` per contracts/file-naming.md; update the doc comment of `safeFileName` ("The caller adds `.sododeck`").
-- [ ] T013 [US1] Use `deckFileName` in `apps/app/src/library/library-actions.ts` (`exportDeckFile`, update its comment) and `apps/app/src/editor/use-export-deck.ts` (update its comment).
-- [ ] T014 [P] [US1] Update the file-input `accept` and labels in `apps/app/src/library/import-button.tsx` and `apps/app/src/editor/shell/deck-menu.tsx` (accept `.sododeck,.json,application/json`; aria-label "Import deck file (.sododeck)").
-- [ ] T015 [P] [US1] Update visible text: `apps/app/src/library/deck-menu.tsx`, `apps/app/src/editor/deck-inspector-storage.tsx`, `apps/app/src/editor/save-status.tsx` ("Export .sododeck"), `apps/app/src/editor/export/formats.ts` (subtitle `.sododeck · re-importable`), `apps/app/src/storage/library-ops-messages.ts` (the old-build message), `apps/app/src/design-gallery/overlays-section.tsx` if it shows the name.
-- [ ] T016 [US1] In `apps/app/src/library/use-import-files.ts` change the failure message to "That file is not a valid .sododeck file. Older .sododeck.json files also open." and update the doc comment; keep `unsupported-version` as is. The same text for the editor-shell import in `apps/app/src/editor/shell/deck-menu.tsx`.
-- [ ] T017 [US1] Run the T008–T011 tests green. Run `grep -rn "sododeck\.json" apps docs README.md AGENTS.md --include='*.ts' --include='*.tsx' --include='*.md' --include='*.mdx'` and review each remaining hit: keep only the intentionally unchanged ones from contracts/file-naming.md ("Not changed": Monaco model path and fileMatch, sample file names, historical docs/ADRs/specs) and the "older files also open" hints.
-- [ ] T018 [P] [US1] Docs: `docs/spec.md` (storage format example and §5 file naming → `.sododeck`, with a note that older `.sododeck.json` files open), `README.md` and `docs/deploy.md` if they name the extension, `apps/app/CLAUDE.md` (import/export wording). Do not edit past ADRs except to add nothing; ADR 0038 covers the change.
-- [ ] T019 [US1] Run `pnpm e2e`; if the smoke suite asserts the old export name or import accept list, update only those lines (AGENTS.md). Do not add tests.
+- [x] T012 [US1] In `apps/app/src/storage/download.ts` add `DECK_EXTENSION = '.sododeck'` and `deckFileName(name)` per contracts/file-naming.md; update the doc comment of `safeFileName` ("The caller adds `.sododeck`").
+- [x] T013 [US1] Use `deckFileName` in `apps/app/src/library/library-actions.ts` (`exportDeckFile`, update its comment) and `apps/app/src/editor/use-export-deck.ts` (update its comment).
+- [x] T014 [P] [US1] Update the file-input `accept` and labels in `apps/app/src/library/import-button.tsx` and `apps/app/src/editor/shell/deck-menu.tsx` (accept `.sododeck,.json,application/json`; aria-label "Import deck file (.sododeck)").
+- [x] T015 [P] [US1] Update visible text: `apps/app/src/library/deck-menu.tsx`, `apps/app/src/editor/deck-inspector-storage.tsx`, `apps/app/src/editor/save-status.tsx` ("Export .sododeck"), `apps/app/src/editor/export/formats.ts` (subtitle `.sododeck · re-importable`), `apps/app/src/storage/library-ops-messages.ts` (the old-build message), `apps/app/src/design-gallery/overlays-section.tsx` if it shows the name.
+- [x] T016 [US1] In `apps/app/src/library/use-import-files.ts` change the failure message to "That file is not a valid .sododeck file. Older .sododeck.json files also open." and update the doc comment; keep `unsupported-version` as is. The same text for the editor-shell import in `apps/app/src/editor/shell/deck-menu.tsx`.
+- [x] T017 [US1] Run the T008–T011 tests green. Run `grep -rn "sododeck\.json" apps docs README.md AGENTS.md --include='*.ts' --include='*.tsx' --include='*.md' --include='*.mdx'` and review each remaining hit: keep only the intentionally unchanged ones from contracts/file-naming.md ("Not changed": Monaco model path and fileMatch, sample file names, historical docs/ADRs/specs) and the "older files also open" hints.
+- [x] T018 [P] [US1] Docs: `docs/spec.md` (storage format example and §5 file naming → `.sododeck`, with a note that older `.sododeck.json` files open), `README.md` and `docs/deploy.md` if they name the extension, `apps/app/CLAUDE.md` (import/export wording). Do not edit past ADRs except to add nothing; ADR 0038 covers the change.
+- [x] T019 [US1] Run `pnpm e2e`; if the smoke suite asserts the old export name or import accept list, update only those lines (AGENTS.md). Do not add tests.
 
 **Checkpoint**: US1 complete and shippable alone. Quickstart "file extension" section passes by hand.
 

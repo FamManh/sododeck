@@ -19,7 +19,7 @@ export function ImportButton({
       <input
         ref={input}
         type="file"
-        accept=".json,.sododeck.json,application/json"
+        accept=".sododeck,.json,application/json"
         hidden
         data-testid="import-input"
         onChange={(event) => {
@@ -29,7 +29,7 @@ export function ImportButton({
         }}
       />
       <Button
-        aria-label="Import deck file (.sododeck.json)"
+        aria-label="Import deck file (.sododeck)"
         disabled={!commands}
         onClick={() => {
           input.current?.click();

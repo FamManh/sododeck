@@ -109,7 +109,7 @@ A workspace holds decks; each deck is one model with many views over it.
 | Note / Comment / Sticky | Knowledge attached to any object or free on the canvas | body (markdown), anchor, author, resolved |
 | ADR | Architecture decision record | context, decision, consequences, status |
 
-**Storage format (example: .sododeck/delivery.sododeck.json)**
+**Storage format (example: delivery.sododeck; older `.sododeck.json` and `.json` files also open)**
 
 ```json
 {
@@ -155,7 +155,7 @@ Ids are stable across renames so views, flows and comments never break when a no
 
 - Strict JSON with `$schema` and `version` in every file.
 - Keys written in a fixed order, pretty-printed with one object per line, for readable git diffs.
-- One file per feature (e.g. `delivery.sododeck.json`, `returns.sododeck.json`) to limit merge conflicts.
+- One file per feature (e.g. `delivery.sododeck`, `returns.sododeck`) to limit merge conflicts.
 - Long markdown notes may live in sibling `.md` files referenced by path.
 - YAML is accepted on import and may be offered as an optional editor view (V2); storage stays JSON.
 

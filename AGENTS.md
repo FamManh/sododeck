@@ -4,7 +4,7 @@ Rules for every AI agent working in this repo (Claude Code, Codex, others). `CLA
 
 Interactive, editable architecture & flow diagram workspace. One model (nodes, edges, flows, steps, rules, notes, stickies, views) rendered as a **canvas + a JSON code panel kept in sync** (the panel is read-only for now; editing from JSON comes later, see `docs/backlog.md` 004).
 
-- **MVP:** no login, no backend. Open the app and use it. Local-first: decks live in the browser (IndexedDB); export/import `.sododeck.json`.
+- **MVP:** no login, no backend. Open the app and use it. Local-first: decks live in the browser (IndexedDB); export/import `.sododeck` (older `.sododeck.json` also opens).
 - Global audience, English UI. Closed source (private repo).
 - Team: one founder + AI agents. Code must be **simple, typed, well-tested, well-documented**.
 - Product spec: `docs/spec.md`. Design system: `DESIGN.md`. Decisions: `docs/decisions/`. Deploy: `docs/deploy.md`.
@@ -14,7 +14,7 @@ Interactive, editable architecture & flow diagram workspace. One model (nodes, e
 ```
 apps/app/         Vite + React SPA, the editor → app.sododeck.com
 apps/site/        Astro marketing/docs/blog → sododeck.com
-packages/schema/  JSON Schema v1 for .sododeck.json → generated TS types + Zod
+packages/schema/  JSON Schema v1 for .sododeck files → generated TS types + Zod
 packages/model/   Yjs document model, the ONLY Yjs ↔ JSON conversion
 packages/ui/      Design tokens, Tailwind v4 theme, shared React components (shadcn/ui, Radix, lucide)
 packages/config/  Shared tsconfig, ESLint, Prettier

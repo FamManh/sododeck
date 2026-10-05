@@ -9,11 +9,11 @@ export function importMessage(error: unknown): string {
   if (error instanceof LibraryClientError && error.code === 'unsupported-version') {
     return 'That file was made with a newer version of Sododeck.';
   }
-  return 'That file is not a valid .sododeck.json.';
+  return 'That file is not a valid .sododeck file. Older .sododeck.json files also open.';
 }
 
 /**
- * Imports exactly one `.sododeck.json` (FR-023, FR-024): read here, parsed and validated in the
+ * Imports exactly one deck file (`.sododeck`, `.sododeck.json` or `.json`) (FR-023, FR-024): read here, parsed and validated in the
  * library worker, added to `folderId` (or Unfiled). Several files add nothing.
  */
 export function useImportFiles(commands: LibraryCommands | null, folderId: string | null) {

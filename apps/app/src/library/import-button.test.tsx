@@ -21,7 +21,7 @@ const deckFile = (name: string) =>
         flows: [{ id: 'f', title: 'Checkout', steps: [] }],
       }),
     ],
-    `${name}.sododeck.json`,
+    `${name}.sododeck`,
     { type: 'application/json' },
   );
 
@@ -32,7 +32,7 @@ describe('import', () => {
     const db = await freshLibraryDb();
     await renderLibrary({ db });
     const button = await screen.findByRole('button', {
-      name: 'Import deck file (.sododeck.json)',
+      name: 'Import deck file (.sododeck)',
     });
     expect(button).toHaveTextContent(/^Import$/);
   });
@@ -44,7 +44,7 @@ describe('import', () => {
     const nav = screen.getByRole('navigation', { name: 'Library' });
     await user.click(await within(nav).findByRole('button', { name: /^Payments/ }));
     expect(input()).not.toHaveAttribute('multiple');
-    expect(input()).toHaveAttribute('accept', expect.stringContaining('.sododeck.json'));
+    expect(input()).toHaveAttribute('accept', expect.stringContaining('.sododeck'));
 
     await user.upload(input(), deckFile('Colleague deck'));
     expect(await screen.findByText('Imported "Colleague deck"')).toBeInTheDocument();
@@ -58,14 +58,35 @@ describe('import', () => {
     expect(await screen.findByText(/1 component · 1 flow/)).toBeInTheDocument();
   });
 
+  it.each(['a.sododeck', 'a.sododeck.json', 'a.json', 'no-extension'])(
+    'opens %s by content, whatever its name (FR-003)',
+    async (fileName) => {
+      const db = await freshLibraryDb();
+      await renderLibrary({ db });
+      const text = await deckFile('Same').text();
+      // fireEvent: user.upload honours `accept`, and a renamed file must open anyway.
+      fireEvent.change(input(), { target: { files: [new File([text], fileName)] } });
+      expect(await screen.findByText('Imported "Same"')).toBeInTheDocument();
+      expect((await liveDecks(db)).map((d) => d.name)).toEqual(['Same']);
+    },
+  );
+
   it('refuses invalid files and adds nothing', async () => {
     const db = await freshLibraryDb();
     const { user } = await renderLibrary({ db });
     await user.upload(input(), new File(['not json'], 'x.sododeck.json'));
-    expect(await screen.findByText('That file is not a valid .sododeck.json.')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
+      ),
+    ).toBeInTheDocument();
     await user.upload(input(), new File(['{"nodes":1}'], 'y.json'));
     await waitFor(() => {
-      expect(screen.getAllByText('That file is not a valid .sododeck.json.')).toHaveLength(2);
+      expect(
+        screen.getAllByText(
+          'That file is not a valid .sododeck file. Older .sododeck.json files also open.',
+        ),
+      ).toHaveLength(2);
     });
     await user.upload(
       input(),

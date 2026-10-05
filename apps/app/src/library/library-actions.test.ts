@@ -113,7 +113,7 @@ describe('library actions', () => {
   it('exports the stored deck and records the export', async () => {
     const downloadText = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
     await exportDeckFile(ctx, 'd1');
-    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck.json', serializeDeck(file));
+    expect(downloadText).toHaveBeenCalledWith('Shop.sododeck', serializeDeck(file));
     expect((await db.decks.get('d1'))?.exportedAt).toBe(42);
   });
 

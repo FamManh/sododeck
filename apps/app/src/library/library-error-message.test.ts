@@ -6,7 +6,7 @@ import { libraryErrorMessage } from './library-error-message';
 describe('libraryErrorMessage', () => {
   it('explains a deck stored by an earlier build (036 FR-027)', () => {
     expect(libraryErrorMessage(new LibraryClientError('unsupported-deck', 'x'))).toBe(
-      "This deck was saved by an earlier development build and can't be opened. Import its exported .sododeck.json file again.",
+      "This deck was saved by an earlier development build and can't be opened. Import its exported .sododeck file again.",
     );
   });
 
