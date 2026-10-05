@@ -89,13 +89,20 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
 const tooltipText = (action: ResolvedAction) => {
   const keys = action.shortcut === undefined ? '' : shortcutLabel(action.shortcut);
   const text = keys === '' ? action.label : `${action.label} · ${keys}`;
-  return action.note === undefined ? text : `${text} · ${action.note}`;
+  const withNote = action.note === undefined ? text : `${text} · ${action.note}`;
+  // Why it can't run, or what it does (054: Spread ends evenly explains itself).
+  const detail = action.disabled ?? action.description;
+  return detail === undefined ? withNote : `${withNote} · ${detail}`;
 };
 
 function withTooltip(action: ResolvedAction, button: ReactElement) {
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      {/* A disabled button takes no pointer events, so its reason would never show: the tooltip
+          hangs on a wrapper instead (054). */}
+      <TooltipTrigger asChild>
+        {action.disabled === null ? button : <span className="inline-flex">{button}</span>}
+      </TooltipTrigger>
       <TooltipContent>{tooltipText(action)}</TooltipContent>
     </Tooltip>
   );
@@ -218,6 +225,7 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
     <ToolbarButton
       aria-label={action.label}
       disabled={action.disabled !== null}
+      {...(action.disabled === null ? {} : { 'aria-description': action.disabled })}
       {...(action.keepFocus
         ? {
             onMouseDown: (event: MouseEvent<HTMLButtonElement>) => {
