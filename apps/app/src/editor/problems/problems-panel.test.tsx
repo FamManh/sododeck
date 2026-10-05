@@ -230,6 +230,12 @@ describe('ProblemsPanel schema fixes (047 US2)', () => {
     expect(toJSON(editor().doc).nodes[0]?.columns?.[0]?.pk).toBeUndefined();
   });
 
+  it('names the table in a chip next to the fix', async () => {
+    setup(noKey);
+    const list = await screen.findByRole('list', { name: 'Problems' });
+    expect(within(list).getByText('audit_log', { selector: 'span.truncate' })).toBeInTheDocument();
+  });
+
   it('disables the fix on a locked table', async () => {
     const locked = deckOf({
       nodes: [{ ...(noKey.nodes[0] ?? { id: 'log', type: 'db-table', title: 'x' }), locked: true }],

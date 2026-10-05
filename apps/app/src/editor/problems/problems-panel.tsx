@@ -3,7 +3,7 @@ import { SegmentedControl, SegmentedControlItem } from '@sododeck/ui/components/
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
-import { ChevronRight, CircleCheck } from 'lucide-react';
+import { ChevronRight, CircleCheck, Table } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
 
 import { useDeckSnapshot } from '../../model/use-deck-snapshot';
@@ -138,26 +138,44 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
                       className="mt-0.5 size-4 shrink-0 text-ink-secondary"
                     />
                   </button>
-                  {problem.fixes?.map((fix) => {
-                    const locked = fixLockedReason(deck, fix) !== null;
-                    return (
-                      <button
-                        key={fix.kind}
-                        type="button"
-                        disabled={locked}
-                        aria-describedby={`${problem.key}-detail`}
-                        onClick={() => {
-                          applyFix(problem, fix);
-                        }}
-                        className={cn(
-                          'mt-1 ml-7 cursor-pointer rounded-button px-2 py-1 text-body-sm text-ink hover:bg-surface-2 disabled:cursor-not-allowed disabled:text-ink-muted disabled:hover:bg-transparent',
-                          focusRing,
-                        )}
-                      >
-                        {locked ? 'Locked · unlock to fix' : fix.label}
-                      </button>
-                    );
-                  })}
+                  {(isSchemaProblem(problem) || (problem.fixes?.length ?? 0) > 0) && (
+                    <div className="mt-1 ml-7 flex items-center justify-between gap-2">
+                      {isSchemaProblem(problem) && (
+                        <span className="inline-flex min-w-0 items-center gap-1 rounded-row bg-surface-3 px-2 py-0.5 font-mono text-caption text-ink">
+                          <Table
+                            aria-hidden
+                            strokeWidth={ICON_STROKE_WIDTH}
+                            className="size-3 shrink-0"
+                          />
+                          <span className="truncate">{problem.objectTitle}</span>
+                        </span>
+                      )}
+                      <span className="ml-auto flex shrink-0 flex-wrap justify-end gap-1">
+                        {problem.fixes?.map((fix, fixIndex) => {
+                          const locked = fixLockedReason(deck, fix) !== null;
+                          return (
+                            <button
+                              key={fix.kind}
+                              type="button"
+                              disabled={locked}
+                              aria-describedby={`${problem.key}-detail`}
+                              onClick={() => {
+                                applyFix(problem, fix);
+                              }}
+                              className={cn(
+                                'cursor-pointer rounded-button px-2 py-1 text-body-sm font-medium hover:bg-surface-2 disabled:cursor-not-allowed disabled:text-ink-muted disabled:hover:bg-transparent',
+                                fixIndex === 0 ? 'text-primary-ink' : 'text-ink',
+                                focusRing,
+                              )}
+                            >
+                              {locked ? 'Locked · unlock to fix' : fix.label}
+                              {!locked && <span aria-hidden> →</span>}
+                            </button>
+                          );
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -184,6 +202,9 @@ export function ProblemsPanel({ onActivate }: { onActivate?: (problem: Problem) 
     </section>
   );
 }
+
+/** Schema lint problems (047) name their table in a chip under the title. */
+const isSchemaProblem = (problem: Problem) => problem.kind.startsWith('db-');
 
 const isFilter = (value: string): value is ProblemFilter =>
   value === 'all' || value === 'error' || value === 'warning';
