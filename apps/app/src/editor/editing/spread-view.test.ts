@@ -79,7 +79,7 @@ describe('spreadViewOf (050 US7)', () => {
     expect(view.boxes.has('c')).toBe(false);
   });
 
-  it('skips bundles, sticky leaders, stale ids and handles that are not sides', () => {
+  it('skips bundles, other edge types, stale ids and handles that are not sides', () => {
     const view = spreadViewOf(
       [node('a', 0, 0), node('b', 300, 0)],
       [

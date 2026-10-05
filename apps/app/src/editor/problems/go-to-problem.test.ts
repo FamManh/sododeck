@@ -52,7 +52,7 @@ const deck = () =>
     rules: {
       R: { title: 'Tier', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
     },
-    stickies: [{ id: 'n1', text: 'Note', anchor: 'nowhere' }],
+    stickies: [{ id: 'n1', text: 'Note', position: { x: 0, y: 200 } }],
   });
 
 function setup(file: SododeckFile = deck()) {
@@ -156,9 +156,15 @@ describe('goToProblem (015 US2, FR-017–019)', () => {
   });
 
   it('selects the holder of a broken reference', () => {
-    const { ctx, problem } = setup();
-    goToProblem(problem('broken-reference'), ctx);
-    expect(ctx.select).toHaveBeenCalledWith({ stickies: ['n1'] });
+    const base = deck();
+    const orphan = { id: 'orphan', title: 'Orphan', parent: 'gone' };
+    const { ctx, editor } = setup({ ...base, groups: [...base.groups, orphan] });
+    const found = checkDeck(readDeck(editor.doc)).list.find(
+      (p) => p.kind === 'broken-reference' && p.target.type === 'object',
+    );
+    if (found === undefined) throw new Error('no broken reference on an object');
+    goToProblem(found, ctx);
+    expect(ctx.select).toHaveBeenCalledWith({ groups: ['orphan'] });
   });
 
   it('selects every card of an unknown type (030)', () => {

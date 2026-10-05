@@ -1,5 +1,7 @@
 # Feature Specification: Sticky notes and connector multi-select
 
+> **Note (2026-10-05):** pinning a note to a card was removed by [ADR 0041](../../docs/decisions/0041-remove-note-pinning.md). Notes are always free; a connector links a note to a card. The pin parts of this spec are kept as history.
+
 **Feature Branch**: `053-sticky-notes-and-connectors`
 
 **Created**: 2026-10-05

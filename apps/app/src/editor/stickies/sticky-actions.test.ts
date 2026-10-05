@@ -14,7 +14,7 @@ function expectNoteId(id: string | null): string {
 }
 
 describe('sticky actions', () => {
-  it('starts a free or pinned draft, selects it, edits it and announces it', () => {
+  it('starts a draft, selects it, edits it and announces it', () => {
     const free = editorWrapper(deckOf({}));
     renderHook(() => null, { wrapper: free.wrapper });
     let freeId: string | null = null;
@@ -37,37 +37,6 @@ describe('sticky actions', () => {
     expect(ui().stickyDraft).toBe(actualFreeId);
     expect(ui().stickyEditing).toBe(actualFreeId);
     expect(ui().announcement.text).toBe('Note added');
-
-    const pinned = editorWrapper(
-      deckOf({
-        nodes: [{ id: 'svc', type: 'service', title: 'Order Service', position: { x: 80, y: 60 } }],
-      }),
-    );
-    renderHook(() => null, { wrapper: pinned.wrapper });
-    let pinnedId: string | null = null;
-    act(() => {
-      pinnedId = addNoteAt(pinned.editor(), {
-        x: 80 + NODE_SIZE.width / 2,
-        y: 60 + NODE_SIZE.height / 2,
-      });
-    });
-    const actualPinnedId = expectNoteId(pinnedId);
-    expect(readDeck(pinned.doc).stickies).toContainEqual({
-      id: actualPinnedId,
-      text: '',
-      anchor: 'svc',
-      position: { x: NODE_SIZE.width / 2, y: NODE_SIZE.height / 2 },
-    });
-    expect(ui().selection).toEqual({
-      nodes: [],
-      edges: [],
-      groups: [],
-      stickies: [actualPinnedId],
-      images: [],
-    });
-    expect(ui().stickyDraft).toBe(actualPinnedId);
-    expect(ui().stickyEditing).toBe(actualPinnedId);
-    expect(ui().announcement.text).toBe('Note added, pinned to Order Service');
   });
 
   it('discards a blank draft with no undo entry and announces it', () => {
@@ -143,12 +112,12 @@ describe('sticky actions', () => {
       });
     const overCard = { x: 80 + NODE_SIZE.width / 2, y: 60 + NODE_SIZE.height / 2 };
 
-    it('with pin: false a note over a card stays free', () => {
+    it('a note added over a card stays free (ADR 0041)', () => {
       const env = editorWrapper(cardDeck());
       renderHook(() => null, { wrapper: env.wrapper });
       let id: string | null = null;
       act(() => {
-        id = addNoteAt(env.editor(), overCard, { pin: false });
+        id = addNoteAt(env.editor(), overCard);
       });
       const sticky = readDeck(env.doc).stickies.find((s) => s.id === id);
       expect(sticky?.anchor).toBeUndefined();

@@ -1251,7 +1251,7 @@
     },
     "Sticky": {
       "title": "Sticky",
-      "description": "A sticky note. It needs an `anchor`, a `position`, or both. A connector can end on it.",
+      "description": "A sticky note, placed on the canvas by `position`. A connector can end on it. Older files may place it with the deprecated `anchor` instead; such files still open.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "text"],
@@ -1261,11 +1261,11 @@
         "color": { "$ref": "#/$defs/StickyColor", "description": "Absent means `amber`." },
         "anchor": {
           "$ref": "#/$defs/Id",
-          "description": "Id of the object the note is attached to (node, edge, group, flow, step…). The note moves with it."
+          "description": "Deprecated: notes are no longer pinned to objects. Kept so older files open: on load the note becomes a free note at the point it was shown at, and the key is dropped. Never written by the app."
         },
         "position": {
           "$ref": "#/$defs/Position",
-          "description": "Absolute position for a free note; offset from the anchor for an anchored note."
+          "description": "Canvas position of the note. In an older file with the deprecated `anchor` on a node, the offset from that node."
         },
         "collapsed": {
           "type": "boolean",
@@ -1273,7 +1273,7 @@
         },
         "showInFlows": {
           "type": "boolean",
-          "description": "True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step."
+          "description": "True when the note stays at full strength during flow playback. Absent means it is dimmed while a flow plays."
         },
         "size": {
           "$ref": "#/$defs/Size",
@@ -1291,7 +1291,7 @@
         },
         "tags": { "$ref": "#/$defs/Tags" },
         "locked": {
-          "description": "`true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
+          "description": "`true` locks the note in place, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
           "const": true
         }
       },

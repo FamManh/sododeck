@@ -153,14 +153,13 @@ import { addStep, moveStep, updateStep } from './ops/steps';
 import {
   addSticky,
   deleteStickyIfPresent,
+  freeLegacyStickies,
   moveSticky,
-  pinSticky,
   setStickyAlign,
   setStickyColour,
   setStickyFont,
   setStickySize,
   setStickyTags,
-  unpinSticky,
   type StickyAlign,
   type StickyFontSize,
 } from './ops/stickies';
@@ -214,7 +213,7 @@ export interface DeckEditor {
   /** Adds a step at `index` (default: last). */
   addStep(flowId: Id, data: NewStep, index?: number): Id;
   updateStep(flowId: Id, stepId: Id, patch: Patch<Step>): void;
-  /** Deletes one step; stickies anchored to it are kept and reported. */
+  /** Deletes one step. */
   removeStep(flowId: Id, stepId: Id): RemovalResult;
   /**
    * Moves a step to `toIndex` in `flow.steps`. Refused (`invalid`) when it would leave the step's
@@ -287,12 +286,14 @@ export interface DeckEditor {
    * `'discarded'`. Throws `invalid` when `id` is not the open draft.
    */
   endStickyDraft(id: Id): 'kept' | 'discarded';
-  /** Pins a note to a node, keeping its canvas point. Throws `missing-reference` for an unknown node. */
-  pinSticky(id: Id, nodeId: Id): void;
-  /** Unpins a note, keeping its canvas point. */
-  unpinSticky(id: Id): void;
-  /** Moves a note to a canvas point: an offset when pinned, an absolute point otherwise. */
+  /** Moves a note to an absolute canvas point. `locked` for a locked note. */
   moveSticky(id: Id, point: Point): void;
+  /**
+   * Makes every note still pinned with the legacy `anchor` free at the point it was shown at
+   * (ADR 0041), for a deck stored before pinning was removed. Untracked: never an undo step.
+   * Returns the ids changed; writes nothing when there are none.
+   */
+  freeLegacyStickies(): Id[];
   /**
    * Sets a note's size, clamped to `STICKY_MIN_SIZE` (053); `null` goes back to the default. One
    * undo step, merged with an open gesture (a resize drag). `locked` for a locked note.
@@ -420,8 +421,8 @@ export interface DeckEditor {
    * Locks (`true`) or unlocks every listed object of `collection` (default `nodes`; 043, 053): one
    * undo step. Locking writes `locked: true`; unlocking removes the key (`false` is not valid in
    * the file). Unknown ids are ignored, and nothing changing writes nothing. The app enforces what
-   * a locked node blocks; the model itself refuses (`locked`) to move, resize, pin or delete a
-   * locked sticky and to reconnect, reshape, restyle or delete a locked connector.
+   * a locked node blocks; the model itself refuses (`locked`) to move, resize or delete a locked
+   * sticky and to reconnect, reshape, restyle or delete a locked connector.
    */
   setLocked(ids: readonly Id[], locked: boolean, collection?: LockCollection): void;
   /**
@@ -870,12 +871,7 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
       checkHistoryChange();
       return blank ? 'discarded' : 'kept';
     },
-    pinSticky: (id, nodeId) => {
-      pinSticky(ctx, id, nodeId);
-    },
-    unpinSticky: (id) => {
-      unpinSticky(ctx, id);
-    },
+    freeLegacyStickies: () => freeLegacyStickies(ctx),
     setStickySize: (id, size) => {
       setStickySize(ctx, id, size);
     },

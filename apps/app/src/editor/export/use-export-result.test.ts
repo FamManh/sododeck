@@ -15,7 +15,6 @@ const ui = {
   revealed: new Set<string>(),
   drill: [],
   activeFlowId: null,
-  notesDisplay: 'dimmed' as const,
 };
 
 function keyAfter(...actions: ExportAction[]) {

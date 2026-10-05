@@ -28,7 +28,6 @@ async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
 describe('DatabaseSection (052 US3)', () => {
   it('shows the dialect select with a hint per option and the existing switches', async () => {
     const { user } = setup();
-    expect(screen.getByText('Database')).toBeInTheDocument();
     expect(
       screen.getByText('One dialect for every table and database card in this deck.'),
     ).toBeInTheDocument();

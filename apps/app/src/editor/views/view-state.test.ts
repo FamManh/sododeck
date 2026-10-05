@@ -21,7 +21,7 @@ const deck: SododeckFile = deckOf({
     { id: 'db', from: 'd', to: 'c' },
   ],
   stickies: [
-    { id: 'on-c', text: 'On C', anchor: 'c' },
+    { id: 'near-c', text: 'Near C', position: { x: 300, y: -96 } },
     { id: 'free', text: 'Free', position: { x: 9, y: 9 } },
   ],
   flows: [
@@ -54,13 +54,13 @@ describe('viewDeck: the deck as a view draws it (ADR 0012 §6)', () => {
     expect(viewDeck({ ...deck }, v, none).nodes).toBe(projected.nodes);
   });
 
-  it('leaves hidden components and their notes out, keeping grid slots of the full list', () => {
+  it('leaves hidden components out, keeping grid slots of the full list and every note', () => {
     const hidden = new Set(['a', 'c']);
     const projected = viewDeck(deck, view(), hidden);
     expect(projected.nodes.map((n) => n.id)).toEqual(['b', 'd']);
     // b had no position: it keeps the grid slot of index 1, not 0.
     expect(projected.nodes[0]?.position).toEqual({ x: 220, y: 0 });
-    expect(projected.stickies.map((s) => s.id)).toEqual(['free']);
+    expect(projected.stickies).toBe(deck.stickies);
   });
 
   it('gives group bounds of the visible members only', () => {

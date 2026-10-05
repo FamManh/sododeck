@@ -17,7 +17,6 @@ import { keysBetween } from '../order-key';
 import { readObject } from '../read';
 import { createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject, type Ref } from '../validate';
-import { anchorableIds } from '../ids';
 import { isSchemaGroupId } from '../schema-groups';
 import { CUSTOM_VIEW_DEFAULTS, nextCustomTitle, VIEW_PRESETS } from '../views';
 import { removeObject, type RemovalResult } from './cascade';
@@ -229,9 +228,7 @@ export function setCollapsed(ctx: EditContext, viewId: Id, groupId: Id, collapse
   const { view } = resolveView(ctx, viewId);
   // A derived schema group (048) has no stored object to check.
   if (collapsed && !isSchemaGroupId(groupId)) {
-    assertRefsExist(ctx.doc, [{ path: 'collapsed', id: groupId, target: 'groups' }], () =>
-      anchorableIds(ctx.doc),
-    );
+    assertRefsExist(ctx.doc, [{ path: 'collapsed', id: groupId, target: 'groups' }]);
   }
   if (listOf(view, 'collapsed').includes(groupId) === collapsed) return;
   const map = viewMap(ctx, viewId);
@@ -281,7 +278,7 @@ export function updateView(ctx: EditContext, viewId: Id, patch: ViewSettingsPatc
       refs.push({ path: `includes.${String(i)}`, id, target: 'nodes' });
     }
   }
-  assertRefsExist(ctx.doc, refs, () => anchorableIds(ctx.doc));
+  assertRefsExist(ctx.doc, refs);
 
   const map = viewMap(ctx, viewId);
   ctx.transact(() => {

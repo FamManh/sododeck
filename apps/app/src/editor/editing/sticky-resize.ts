@@ -5,12 +5,7 @@
  * inside one gesture, so the whole drag is one undo step and Esc puts the note back. Connectors
  * stay attached because they are drawn from the note's live box.
  */
-import {
-  STICKY_DEFAULT_SIZE,
-  STICKY_MIN_SIZE,
-  stickyBox,
-  stickyCanvasPosition,
-} from '@sododeck/model';
+import { STICKY_DEFAULT_SIZE, STICKY_MIN_SIZE, stickyBox, stickyPosition } from '@sododeck/model';
 import type { DeckEditor } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
@@ -53,7 +48,7 @@ export function startStickyResize(
   const deck = readViewState(editor.doc).deck;
   const sticky = deck.stickies.find((s) => s.id === stickyId);
   if (sticky === undefined || sticky.locked === true || sticky.collapsed === true) return null;
-  const start = stickyBox(sticky, stickyCanvasPosition(deck, sticky).point);
+  const start = stickyBox(sticky, stickyPosition(sticky));
 
   // Snap candidates: every other drawn card and note, collected once (like a card resize).
   const ui = useUiStore.getState();
@@ -65,7 +60,7 @@ export function startStickyResize(
   });
   for (const other of deck.stickies) {
     if (other.id === stickyId) continue;
-    others.push(stickyBox(other, stickyCanvasPosition(deck, other).point));
+    others.push(stickyBox(other, stickyPosition(other)));
   }
 
   const session: StickyResizeSession = {

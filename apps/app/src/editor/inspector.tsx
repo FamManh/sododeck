@@ -74,7 +74,7 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
     return <EdgeInspector deck={deck} edge={edge} />;
   }
   if (sticky !== undefined && stickies.length === 1 && nodes.length === 0 && edges.length === 0) {
-    return <StickyInspector deck={deck} sticky={sticky} />;
+    return <StickyInspector sticky={sticky} />;
   }
   if (
     image !== undefined &&

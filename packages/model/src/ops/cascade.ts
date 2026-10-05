@@ -1,7 +1,7 @@
 /**
  * Delete with cascade (data-model "References and delete cascade", spec FR-011–017).
  * Structural objects that cannot exist without their target are removed (edges of a node, steps
- * of a flow); knowledge objects (steps, stickies) are kept and reported broken; groups re-parent
+ * of a flow); knowledge objects (steps) are kept and reported broken; groups re-parent
  * their contents and take their own edges with them (050: a connector end may be a group). Each delete with its whole cascade is one transaction: one change, one undo step.
  *
  * Database parts (040, research R9): removing a column drops it from its table's index parts (an
@@ -18,7 +18,6 @@ import * as Y from 'yjs';
 
 import { fromY, toY, type YObject } from '../convert';
 import { toJSON } from '../deck';
-import { nodeCanvasPosition, STICKY_DEFAULT_OFFSET } from '../geometry';
 import {
   childList,
   collectionMap,
@@ -45,9 +44,7 @@ export interface RemovalResult {
   removed: ObjectRef[];
   /** Objects whose references were cleared or re-pointed. */
   updated: ObjectRef[];
-  /** Stickies that lost a deleted node anchor and became free at the same canvas point. */
-  freed: readonly Id[];
-  /** Kept objects whose reference to a removed object is now broken (steps, stickies). */
+  /** Kept objects whose reference to a removed object is now broken (steps). */
   broken: IntegrityProblem[];
 }
 
@@ -55,7 +52,6 @@ export interface RemovalResult {
 class Cascade {
   readonly removed: ObjectRef[] = [];
   readonly updated: ObjectRef[] = [];
-  readonly freed: Id[] = [];
   private readonly writes: (() => void)[] = [];
 
   constructor(private readonly ctx: EditContext) {}
@@ -70,10 +66,6 @@ class Cascade {
     this.writes.push(write);
   }
 
-  freeSticky(id: Id): void {
-    this.freed.push(id);
-  }
-
   commit(): RemovalResult {
     this.ctx.transact(() => {
       for (const write of this.writes) write();
@@ -82,7 +74,6 @@ class Cascade {
     return {
       removed: this.removed,
       updated: this.updated,
-      freed: [...new Set(this.freed)],
       broken: checkIntegrity(toJSON(this.ctx.doc)).filter((p) => removedIds.has(p.target)),
     };
   }
@@ -159,8 +150,6 @@ function removeEdgesAt(cascade: Cascade, doc: DeckDoc, id: Id): void {
 }
 
 function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
-  const file = toJSON(doc);
-  const base = nodeCanvasPosition(file, id);
   removeEdgesAt(cascade, doc, id);
   dropTouches(cascade, doc, (touch) => touch.table === id);
   for (const [nodeId, node] of entriesOf(doc, 'nodes')) {
@@ -180,24 +169,6 @@ function removeNode(cascade: Cascade, doc: DeckDoc, id: Id): void {
         if (inPositions) positions.delete(id);
       });
     }
-  }
-  if (base === null) return;
-  for (const [stickyId, sticky] of entriesOf(doc, 'stickies')) {
-    if (sticky.get('anchor') !== id) continue;
-    const position = sticky.get('position');
-    const x =
-      position instanceof Y.Map && typeof position.get('x') === 'number'
-        ? (position.get('x') as number)
-        : STICKY_DEFAULT_OFFSET.x;
-    const y =
-      position instanceof Y.Map && typeof position.get('y') === 'number'
-        ? (position.get('y') as number)
-        : STICKY_DEFAULT_OFFSET.y;
-    cascade.update({ scope: 'stickies', id: stickyId }, () => {
-      sticky.set('position', toY({ x: base.x + x, y: base.y + y }));
-      sticky.delete('anchor');
-    });
-    cascade.freeSticky(stickyId);
   }
 }
 
@@ -289,14 +260,14 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
     }
     case 'stickies':
     case 'images':
-      // Connectors that end on the note (053) or the image (055) go with it, like a card's;
-      // stickies anchored to it are kept and reported (FR-017). The picture's `meta.assets` entry
+      // Connectors that end on the note (053) or the image (055) go with it, like a card's. The
+      // picture's `meta.assets` entry
       // stays until the next save, so undo brings the image back with its picture.
       removeEdgesAt(cascade, doc, id);
       break;
     case 'edges':
     case 'views':
-      // Steps on an edge and stickies on anything are kept and reported (FR-012, FR-017).
+      // Steps on an edge are kept and reported (FR-012).
       break;
   }
   return cascade.commit();

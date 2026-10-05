@@ -23,7 +23,7 @@ import { renameDeck } from '../library/library-actions';
 import { inProcessLibraryClient } from '../test/in-process-library-client';
 import { setLibraryDbForTests } from '../storage/library-db-instance';
 import { EditorProbe } from '../test/editor-probe';
-import { legacyDeckBytes } from '../test/legacy-deck';
+import { legacyDeckBytes, pinnedNoteDeckBytes } from '../test/legacy-deck';
 import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
 import { RulesPage } from '../editor/rules/rules-page';
 import { deckLoader } from './deck-loader';
@@ -340,6 +340,28 @@ describe('EditorPage', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to library' })).toHaveAttribute('href', '/');
+  });
+
+  it('frees a note a deck stored before ADR 0041 still pins, where it was shown', async () => {
+    const free: SododeckFile = {
+      ...emptySododeckFile(),
+      name: 'Pinned',
+      nodes: [{ id: 'svc', type: 'service', title: 'Orders', position: { x: 100, y: 200 } }],
+      stickies: [{ id: 'pinned', text: 'Owns PII.', position: { x: 0, y: 0 } }],
+    };
+    const bytes = pinnedNoteDeckBytes(Y.encodeStateAsUpdate(fromJSON(free)));
+    await insertDeck(db, deckRecord('pinned', { name: 'Pinned' }), bytes);
+    renderAt('/deck/pinned');
+    await screen.findByRole('toolbar', { name: 'Deck' });
+    const doc = opened.editor?.doc;
+    if (!doc) throw new Error('editor not mounted');
+    await waitFor(() => {
+      expect(toJSON(doc).stickies).toEqual([
+        { id: 'pinned', text: 'Owns PII.', position: { x: 110, y: 180 } },
+      ]);
+    });
+    // A load-time fix, not an edit: nothing to undo.
+    expect(opened.editor?.canUndo()).toBe(false);
   });
 
   it('keeps the demo deck in memory', async () => {

@@ -7,6 +7,7 @@ import { useRef, type ReactNode } from 'react';
 import { useUiStore } from '../../state/ui-store';
 import { Island } from './island';
 import { shortcutLabel } from './shortcuts';
+import { ToolsMoreMenu } from './tools-more-menu';
 
 /** An icon button with its name and shortcut in a tooltip (the island shows no labels, §g-60). */
 function ToolButton({
@@ -51,7 +52,8 @@ function ToolButton({
 
 /**
  * The tools island, top-right (018 FR-011, design 86; trimmed in §g-60): Deck settings, Jump to
- * (⌘K) and Labels, icon-only with tooltips (054: Deck settings added, Focus moved to the rail).
+ * (⌘K), Labels and ⋯ More (imports into this deck: Mermaid, SQL or DBML), icon-only with
+ * tooltips (054: Deck settings added, Focus moved to the rail).
  * Export, theme and keyboard shortcuts live in the deck menu, which keeps its Deck settings entry;
  * the flow-notes display lives in the step player.
  */
@@ -99,6 +101,7 @@ export function ToolsIsland() {
       >
         <Tag />
       </ToolButton>
+      <ToolsMoreMenu />
     </Island>
   );
 }

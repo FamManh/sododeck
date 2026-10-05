@@ -5,7 +5,7 @@
  */
 import type { Id, SododeckFile } from '@sododeck/schema';
 
-import { COLLECTIONS, type ObjectRef } from './layout';
+import type { ObjectRef } from './layout';
 import { isSchemaGroupId } from './schema-groups';
 
 export interface IntegrityProblem {
@@ -15,10 +15,10 @@ export interface IntegrityProblem {
    * connector end naming it is ambiguous. Reported on the later object, `field: 'id'`,
    * `targetType` the kind it collides with (`node`, else `group`, else `sticky`).
    */
-  kind: 'missing-reference' | 'ambiguous-anchor' | 'cycle' | 'detached-rule-input' | 'duplicate-id';
+  kind: 'missing-reference' | 'cycle' | 'detached-rule-input' | 'duplicate-id';
   /** The object holding the reference. */
   object: ObjectRef;
-  /** The field, e.g. `from`, `edge`, `rules`, `ruleInputs.R-1.in2`, `anchor`, `parent`. */
+  /** The field, e.g. `from`, `edge`, `rules`, `ruleInputs.R-1.in2`, `parent`. */
   field: string;
   /** The missing, ambiguous or cyclic id. */
   target: Id;
@@ -33,8 +33,7 @@ export interface IntegrityProblem {
     | 'table'
     | 'column'
     | 'sticky'
-    | 'asset'
-    | 'object';
+    | 'asset';
 }
 
 type TargetType = IntegrityProblem['targetType'];
@@ -73,15 +72,6 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
   const edges = ids(file.edges);
   const features = ids(file.features);
   const hasRule = (id: Id) => Object.hasOwn(file.rules, id);
-
-  // How many objects each id names, for sticky anchors (which may point at any object).
-  const anchors = new Map<Id, number>();
-  const count = (id: Id) => anchors.set(id, (anchors.get(id) ?? 0) + 1);
-  for (const c of COLLECTIONS) {
-    for (const item of file[c] ?? []) count(item.id);
-  }
-  for (const flow of file.flows) for (const step of flow.steps) count(step.id);
-  for (const id of Object.keys(file.rules)) count(id);
 
   const report = (
     object: ObjectRef,
@@ -207,20 +197,6 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
       });
     }
   }
-  for (const sticky of file.stickies) {
-    if (sticky.anchor === undefined) continue;
-    const matches = anchors.get(sticky.anchor) ?? 0;
-    if (matches !== 1) {
-      report(
-        { scope: 'stickies', id: sticky.id },
-        'anchor',
-        sticky.anchor,
-        'object',
-        matches === 0 ? 'missing-reference' : 'ambiguous-anchor',
-      );
-    }
-  }
-
   const reportCycles = (
     scope: 'groups' | 'nodes',
     entries: readonly { id: Id; parent?: Id }[],

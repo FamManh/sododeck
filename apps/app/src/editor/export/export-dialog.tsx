@@ -97,11 +97,10 @@ export function ExportDialog() {
   const currentViewId = useUiStore((s) => s.currentViewId);
   const revealed = useUiStore((s) => s.revealed);
   const activeFlowId = useUiStore((s) => s.activeFlow?.flowId ?? null);
-  const notesDisplay = useUiStore((s) => s.notesDisplay);
   const labelsOn = useUiStore((s) => s.labelsOn);
   const ui = useMemo(
-    () => ({ currentViewId, revealed, drill, activeFlowId, notesDisplay, labelsOn }),
-    [currentViewId, revealed, drill, activeFlowId, notesDisplay, labelsOn],
+    () => ({ currentViewId, revealed, drill, activeFlowId, labelsOn }),
+    [currentViewId, revealed, drill, activeFlowId, labelsOn],
   );
   const dialect = deckDialect(deck);
   // The chosen schema scope, or the first available one when it no longer is (FR-002).

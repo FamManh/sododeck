@@ -109,7 +109,6 @@ function expectedPng(file: SododeckFile, scale: 1 | 2 | 3, patch = {}) {
       revealed: new Set(),
       drill: [],
       activeFlowId: null,
-      notesDisplay: 'dimmed',
       ...patch,
     },
   });

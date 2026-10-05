@@ -56,6 +56,7 @@ describe('buildCommands', () => {
       codeOpen: false,
       toggleCode: vi.fn(),
       hideUi: vi.fn(),
+      importMermaid: vi.fn(),
     };
     const commands = buildCommands({ ...context(), shell });
     const byTitle = (title: string) => commands.find((command) => command.title === title);
@@ -63,6 +64,8 @@ describe('buildCommands', () => {
     byTitle('Show JSON')?.run();
     byTitle('Open DBML / SQL')?.run();
     byTitle('Hide UI')?.run();
+    byTitle('Import Mermaid…')?.run();
+    expect(shell.importMermaid).toHaveBeenCalledOnce();
     expect(shell.openDetails).toHaveBeenCalledOnce();
     expect(shell.toggleJson).toHaveBeenCalledOnce();
     expect(shell.toggleCode).toHaveBeenCalledOnce();
@@ -127,6 +130,7 @@ describe('buildCommands', () => {
       codeOpen: false,
       toggleCode: vi.fn(),
       hideUi: vi.fn(),
+      importMermaid: vi.fn(),
     };
     const title = 'Spread connector ends evenly';
     expect(buildCommands({ ...context(), shell }).map((c) => c.title)).not.toContain(title);

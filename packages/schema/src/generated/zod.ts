@@ -1647,7 +1647,7 @@ export const sododeckFileSchema = z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
               .describe(
-                'Id of the object the note is attached to (node, edge, group, flow, step…). The note moves with it.',
+                'Deprecated: notes are no longer pinned to objects. Kept so older files open: on load the note becomes a free note at the point it was shown at, and the key is dropped. Never written by the app.',
               )
               .optional(),
             position: z
@@ -1657,7 +1657,7 @@ export const sododeckFileSchema = z
               })
               .strict()
               .describe(
-                'Absolute position for a free note; offset from the anchor for an anchored note.',
+                'Canvas position of the note. In an older file with the deprecated `anchor` on a node, the offset from that node.',
               )
               .optional(),
             collapsed: z
@@ -1667,7 +1667,7 @@ export const sododeckFileSchema = z
             showInFlows: z
               .boolean()
               .describe(
-                'True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step.',
+                'True when the note stays at full strength during flow playback. Absent means it is dimmed while a flow plays.',
               )
               .optional(),
             size: z
@@ -1704,13 +1704,13 @@ export const sododeckFileSchema = z
             locked: z
               .literal(true)
               .describe(
-                '`true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
+                '`true` locks the note in place, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
               )
               .optional(),
           })
           .strict()
           .describe(
-            'A sticky note. It needs an `anchor`, a `position`, or both. A connector can end on it.',
+            'A sticky note, placed on the canvas by `position`. A connector can end on it. Older files may place it with the deprecated `anchor` instead; such files still open.',
           ),
       )
       .describe('Sticky notes, free on the canvas or anchored to an object.'),

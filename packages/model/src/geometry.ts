@@ -1,7 +1,7 @@
 /**
- * Canvas geometry: pure functions of a plain `SododeckFile`. Sticky placement is shared by the
- * model's cascade and the app's canvas so a note's screen point never disagrees between them
- * (ADR 0010); group frames are fitted here for decks saved before frames were stored (016).
+ * Canvas geometry: pure functions of a plain `SododeckFile`. A note's canvas point is read here so
+ * the model and the app's canvas never disagree (ADR 0010, ADR 0041); group frames are fitted here
+ * for decks saved before frames were stored (016).
  */
 import { IMAGE_MIN_SIDE } from '@sododeck/schema';
 import type {
@@ -23,9 +23,6 @@ export interface Point {
 
 /** Grid used for nodes without a stored position. Must equal `apps/app/canvas-geometry.ts` GRID. */
 export const NODE_GRID = { columns: 10, dx: 220, dy: 110 } as const;
-
-/** Offset of a pinned note that has no stored position. */
-export const STICKY_DEFAULT_OFFSET: Point = { x: 24, y: -96 };
 
 /** A note with no stored `size` is this big (053). */
 export const STICKY_DEFAULT_SIZE: Size = { width: 200, height: 200 };
@@ -320,39 +317,13 @@ export function nodeCanvasPosition(file: SododeckFile, nodeId: Id): Point | null
   );
 }
 
-export type StickyPlacement =
-  | { status: 'free'; point: Point }
-  | { status: 'pinned'; point: Point; pinnedTo: Id }
-  | { status: 'foreign'; point: Point; anchor: Id }
-  | { status: 'missing'; point: Point; anchor: Id };
-
-/** Where a note is drawn: free, pinned to a node, pinned to something else, or a missing anchor. */
-export function stickyCanvasPosition(file: SododeckFile, sticky: Sticky): StickyPlacement {
-  const anchor = sticky.anchor;
-  if (anchor === undefined) {
-    return { status: 'free', point: sticky.position ?? { x: 0, y: 0 } };
-  }
-  const base = nodeCanvasPosition(file, anchor);
-  if (base === null) {
-    // Not a node: either a foreign anchor (some other object exists) or a missing one.
-    const isNode = file.nodes.some((n) => n.id === anchor);
-    const exists =
-      isNode ||
-      file.edges.some((e) => e.id === anchor) ||
-      file.groups.some((g) => g.id === anchor) ||
-      file.views.some((v) => v.id === anchor) ||
-      file.features.some((f) => f.id === anchor) ||
-      file.flows.some((f) => f.id === anchor || f.steps.some((s) => s.id === anchor)) ||
-      anchor in file.rules;
-    const point = sticky.position ?? { x: 0, y: 0 };
-    return exists ? { status: 'foreign', point, anchor } : { status: 'missing', point, anchor };
-  }
-  const offset = sticky.position ?? STICKY_DEFAULT_OFFSET;
-  return {
-    status: 'pinned',
-    point: { x: base.x + offset.x, y: base.y + offset.y },
-    pinnedTo: anchor,
-  };
+/**
+ * A note's canvas point: its stored `position`. Every note in a loaded deck has one (notes are no
+ * longer pinned, ADR 0041: `fromJSON` turns a legacy anchored note into a free one); the origin is
+ * only a fallback for a plain file that was never loaded.
+ */
+export function stickyPosition(sticky: Pick<Sticky, 'position'>): Point {
+  return sticky.position ?? { x: 0, y: 0 };
 }
 
 const MARKDOWN_MARKERS = /(\*\*|__|\*|_)/g;

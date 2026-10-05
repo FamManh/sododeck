@@ -793,7 +793,7 @@ export const invalidFixtures: InvalidFixture[] = [
     code: 'rule-row-cells',
   },
   {
-    name: 'sticky with neither anchor nor position',
+    name: 'sticky without a position',
     input: remove('stickies.0.position'),
     path: 'stickies.0',
     code: 'sticky-placement',
@@ -1414,6 +1414,15 @@ export const invalidFixtures: InvalidFixture[] = [
  * group → card and group → group, each with a route and a style, read against the group frame.
  */
 export const validFixtures: { name: string; input: unknown }[] = [
+  // ADR 0041: the deprecated sticky `anchor` still validates, so older files open.
+  {
+    name: 'sticky with a legacy anchor only',
+    input: set('stickies.0', { id: 'old', text: 'Pinned', anchor: 'order-svc' }),
+  },
+  {
+    name: 'sticky with a legacy anchor and an offset',
+    input: set('stickies.0.anchor', 'order-svc'),
+  },
   // 055: images. An unused asset is allowed (I2), a z on a card, an image with every field,
   // a connector that ends on an image.
   { name: 'an unused asset (I2)', input: remove('images') },

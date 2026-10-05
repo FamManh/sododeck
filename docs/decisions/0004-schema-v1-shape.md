@@ -39,7 +39,7 @@ future CLI/MCP server and AI agents, so these choices are hard to change after l
    which `parseSododeckFile()` runs after Zod:
    - S1: each row has exactly one cell per column. JSON Schema cannot compare array lengths.
    - S2: a sticky has an anchor, a position or both. This is in `v1.json` as `anyOf`, but the
-     generators drop it.
+     generators drop it. (ADR 0041: `anchor` is deprecated; new notes carry a `position`.)
    - S3: keys of `rules`, `view.positions` and `step.ruleInputs` are valid ids. This is in
      `v1.json` as `propertyNames`, but json-schema-to-zod drops it.
 

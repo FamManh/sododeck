@@ -16,7 +16,6 @@ const ui: SceneInput['ui'] = {
   revealed: new Set(),
   drill: [],
   activeFlowId: null,
-  notesDisplay: 'dimmed',
 };
 
 function scene(deck: SododeckFile, scope: SceneInput['scope'] = 'deck', patch = {}) {
@@ -49,7 +48,7 @@ const grouped = deckOf({
   rules: { r1: { title: 'R', hitPolicy: 'first', inputs: [], outputs: [], rows: [] } },
   stickies: [
     { id: 'free', text: 'Free note', position: { x: 0, y: 300 } },
-    { id: 'on-db', text: 'On the DB', anchor: 'db', color: 'blue' },
+    { id: 'on-db', text: 'Near the DB', position: { x: 420, y: 0 }, color: 'blue' },
   ],
 });
 
@@ -314,11 +313,11 @@ describe('buildScene: whole deck', () => {
     expect(cards[0]?.childCount).toBe(2);
   });
 
-  it('draws notes on connections, flows and steps at their own point, as the canvas', () => {
+  it('draws every note at its own point, as the canvas', () => {
     const notes = {
       ...grouped,
       stickies: [
-        { id: 'on-edge', text: 'On an edge', anchor: 'a-db', position: { x: 5, y: 6 } },
+        { id: 'on-edge', text: 'About an edge', position: { x: 5, y: 6 } },
         { id: 'empty', text: '', position: { x: 0, y: 0 } },
       ],
     };
@@ -433,7 +432,8 @@ describe('buildScene: current view', () => {
     const result = scene(hiding, 'view', { currentViewId: 'v' });
     expect(ids(result.cards)).toEqual(['a', 'b']);
     expect(ids(result.edges)).toEqual(['a-b']);
-    expect(ids(result.stickies)).toEqual(['free']);
+    // Notes are never pinned (ADR 0041): hiding a card keeps the note next to it.
+    expect(ids(result.stickies)).toEqual(['free', 'on-db']);
   });
 
   it('draws a collapsed group as one card with counts and a merged edge', () => {
@@ -505,8 +505,7 @@ describe('buildScene: selected flow', () => {
   const withNotes: SododeckFile = {
     ...branchedDeck,
     stickies: [
-      { id: 'on-b', text: 'On the gateway', anchor: 'b' },
-      { id: 'on-y', text: 'Unrelated', anchor: 'y' },
+      { id: 'near-b', text: 'Near the gateway', position: { x: 300, y: -100 } },
       { id: 'free', text: 'Free', position: { x: 0, y: 400 } },
     ],
   };
@@ -532,26 +531,8 @@ describe('buildScene: selected flow', () => {
     });
   });
 
-  it('keeps notes on the shown flow and its steps, not on other flows', () => {
-    const notes: SododeckFile = {
-      ...branchedDeck,
-      stickies: [
-        { id: 'on-flow', text: 'Flow note', anchor: 'place' },
-        { id: 'on-step', text: 'Step note', anchor: 's2' },
-        { id: 'other', text: 'Other flow', anchor: 'pay' },
-      ],
-    };
-    expect(ids(scene(notes, 'flow', { activeFlowId: 'place' }).stickies)).toEqual([
-      'on-flow',
-      'on-step',
-    ]);
-  });
-
-  it('keeps notes on kept components unless notes are hidden', () => {
-    expect(ids(scene(withNotes, 'flow', { activeFlowId: 'place' }).stickies)).toEqual(['on-b']);
-    expect(
-      scene(withNotes, 'flow', { activeFlowId: 'place', notesDisplay: 'hidden' }).stickies,
-    ).toEqual([]);
+  it('draws no notes: a note belongs to no flow (ADR 0041)', () => {
+    expect(scene(withNotes, 'flow', { activeFlowId: 'place' }).stickies).toEqual([]);
   });
 
   it('is empty for a flow without steps or a missing flow', () => {

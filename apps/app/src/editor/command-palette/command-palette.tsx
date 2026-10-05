@@ -110,6 +110,9 @@ function CommandPaletteSession({
               hideUi: () => {
                 useUiStore.getState().setHideUi(true);
               },
+              importMermaid: () => {
+                useUiStore.getState().openMermaidImport(null);
+              },
               ...(spreadEnds === undefined ? {} : { spreadEnds }),
             },
           }

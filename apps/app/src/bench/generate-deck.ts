@@ -696,14 +696,15 @@ function addBenchStickies(deck: SododeckFile, count: number, random: () => numbe
 
     const node = deck.nodes[Math.floor(random() * deck.nodes.length)];
     if (node === undefined) continue;
+    // Next to a card, where a note about it would sit (notes are free, ADR 0041).
+    const at = node.position ?? { x: 0, y: 0 };
     deck.stickies.push({
       id: `sticky${String(i)}`,
       text: `Bench note ${String(i)}`,
       color,
-      anchor: node.id,
       position: {
-        x: Math.round(random() * 96) - 24,
-        y: -96 + Math.round(random() * 80),
+        x: at.x + Math.round(random() * 96) - 24,
+        y: at.y - 96 + Math.round(random() * 80),
       },
     });
   }
