@@ -20,6 +20,7 @@ import { AppearanceSection } from './appearance-section';
 import { groupOptions, NO_GROUP, typeOptions } from './choices';
 import { bulkView, styleView, type Shared } from './derive';
 import { InspectorFrame } from './inspector-frame';
+import { LineStyleControls } from '../line-style/line-style-controls';
 import { PinSwitch } from '../views/pin-controls';
 import { MAX_CARD_TAGS } from '../card-tags';
 import { tagColourMap } from '../tags/card-tag-looks';
@@ -33,7 +34,8 @@ const plural = (n: number, one: string) => `${String(n)} ${one}${n === 1 ? '' : 
  * Bulk edit of several components (FR-013–FR-017, design 58): type, owner, tech, group and tags.
  * A field whose values differ shows "Mixed" and changes nothing until the user types or picks;
  * each change applies to every selected component as one undo step. Connections in the
- * selection are counted but never changed.
+ * selection (a marquee catches them too) get the line style controls, the one thing they share
+ * with a connectors-only selection; every other field leaves them alone.
  */
 export function BulkInspector({
   deck,
@@ -77,6 +79,8 @@ export function BulkInspector({
     edgeIds.length === 0
       ? `${String(n)} components selected`
       : `${plural(n, 'component')}, ${plural(edgeIds.length, 'connection')} selected`;
+  const edgeSet = new Set(edgeIds);
+  const edges = deck.edges.filter((edge) => edgeSet.has(edge.id));
   const firstTitles = nodes
     .slice(0, 3)
     .map((node) => node.title)
@@ -93,7 +97,8 @@ export function BulkInspector({
           <PanelSection>
             <p className="flex items-center gap-2 text-body-sm text-ink-secondary">
               <Info aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4 shrink-0" />
-              Changes apply to components only.
+              Line style applies to the {edgeIds.length === 1 ? 'connection' : 'connections'}; other
+              fields to components only.
             </p>
           </PanelSection>
         )}
@@ -108,6 +113,11 @@ export function BulkInspector({
           onRemoveColour={removeBulkColour}
           skipped={styleSkipped > 0 ? { colored: n, total: n + styleSkipped } : undefined}
         />
+        {edges.length > 0 && (
+          <PanelSection label="Line" aria-label="Line">
+            <LineStyleControls edges={edges} />
+          </PanelSection>
+        )}
         <PanelSection className="grid grid-cols-2 gap-3">
           <PickField
             label="Type"
