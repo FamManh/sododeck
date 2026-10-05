@@ -1,4 +1,4 @@
-import { fromJSON, toJSON, VIEW_PRESETS, type DeckEditor } from '@sododeck/model';
+import { assetId, fromJSON, toJSON, VIEW_PRESETS, type DeckEditor } from '@sododeck/model';
 import * as Y from 'yjs';
 import {
   act,
@@ -15,6 +15,8 @@ import type { DragEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 
+import type { IngestPorts } from '../images/ingest';
+import { PNG_1X1 } from '../images/test-pictures';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { useUiStore } from '../state/ui-store';
@@ -300,6 +302,7 @@ describe('Canvas', () => {
       dataTransfer: {
         types,
         getData: (type: string) => (types.includes(type) ? value : ''),
+        files: [] as File[],
         dropEffect: '',
       },
       clientX: 400,
@@ -1707,5 +1710,87 @@ describe('the Deck look leaves the file alone (029 SC-001)', () => {
     expect(screen.getAllByTestId('deck-node').length).toBeGreaterThan(0);
     // Drawing only reads the document: no default size or position is written back.
     expect(JSON.stringify(toJSON(doc))).toBe(before);
+  });
+});
+
+describe('dropping files on the canvas (055 US2)', () => {
+  const ports: IngestPorts = {
+    decode: () => Promise.resolve({ width: 80, height: 40 }),
+    encode: (bytes) => Promise.resolve({ bytes, type: 'image/png' }),
+    digest: (bytes) => Promise.resolve(assetId(bytes)),
+  };
+  const png = (name: string) => new File([PNG_1X1.slice().buffer], name, { type: 'image/png' });
+
+  function dropOf(files: File[], at = { x: 0, y: 0 }) {
+    return {
+      clientX: at.x,
+      clientY: at.y,
+      preventDefault: () => undefined,
+      dataTransfer: { types: ['Files'], getData: () => '', files, dropEffect: '' },
+    } as unknown as DragEvent;
+  }
+
+  function handlersWithPorts() {
+    const env = editorWrapper(deck, { imagePorts: ports });
+    const { result } = renderHook(() => useCanvasHandlers(), { wrapper: env.wrapper });
+    return { ...env, h: () => result.current };
+  }
+
+  it('accepts files over the canvas', () => {
+    const { h } = handlersWithPorts();
+    let prevented = 0;
+    const over = dropOf([]);
+    over.preventDefault = () => {
+      prevented += 1;
+    };
+    h().onDragOver(over);
+    expect(prevented).toBe(1);
+  });
+
+  it('adds dropped pictures as images, selected, in one undo step', async () => {
+    const { h, doc, editor } = handlersWithPorts();
+    act(() => {
+      h().onDrop(dropOf([png('a.png'), png('b.png')]));
+    });
+    await waitFor(() => {
+      expect(toJSON(doc).images).toHaveLength(2);
+    });
+    expect(ui().selection.images).toHaveLength(2);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).images).toBeUndefined();
+  });
+
+  it('lists a refusal for a file that is not a picture and adds nothing', async () => {
+    const { h, doc } = handlersWithPorts();
+    act(() => {
+      h().onDrop(dropOf([new File(['hi'], 'notes.txt', { type: 'text/plain' })]));
+    });
+    await waitFor(() => {
+      expect(ui().announcement.text).toContain('notes.txt: type not supported');
+    });
+    expect(toJSON(doc).images).toBeUndefined();
+  });
+
+  it('refuses drops in flow mode', async () => {
+    const { h, doc } = handlersWithPorts();
+    act(() => {
+      useUiStore.setState({
+        activeFlow: {
+          flowId: 'f',
+          stepId: null,
+          branchId: null,
+          alternativeId: null,
+          playing: false,
+          speed: 1,
+        },
+      });
+    });
+    act(() => {
+      h().onDrop(dropOf([png('a.png')]));
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(toJSON(doc).images).toBeUndefined();
   });
 });

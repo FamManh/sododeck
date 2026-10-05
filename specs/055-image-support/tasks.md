@@ -104,10 +104,10 @@
 
 **Independent Test**: pick two PNGs: two objects in a row, both selected, one ⌘Z removes both; a `.txt` produces a refusal.
 
-- [ ] T034 [P] [US2] Write `apps/app/src/editor/palette.test.tsx` cases first: an Image tile is present, keyboard reachable with the name "Image", activating it opens a file input with `multiple` and `accept` listing the six types; disabled with a reason in view-only and flow modes. Implement the tile and hidden `<input type="file">` in `apps/app/src/editor/palette.tsx` (pattern of `shell/deck-menu.tsx:95`).
+- [x] T034 [P] [US2] Write `apps/app/src/editor/palette.test.tsx` cases first: an Image tile is present, keyboard reachable with the name "Image", activating it opens a file input with `multiple` and `accept` listing the six types; disabled with a reason in view-only and flow modes. Implement the tile and hidden `<input type="file">` in `apps/app/src/editor/palette.tsx` (pattern of `shell/deck-menu.tsx:95`).
 - [x] T035 [P] [US2] Write `apps/app/src/images/layout-row.test.ts` first and implement `layout-row.ts`: N images placed in a row with a 16 px gap from the insertion point, wrapping at the visible width, never overlapping; use it in `add-images.ts`.
-- [ ] T036 [US2] Write tests first in `apps/app/src/editor/use-canvas-handlers.test.tsx` and implement canvas drop of files: `onDragOver` accepts `Files` next to the existing custom MIME types, `onDrop` calls `addImages` at the drop point under the same view-only guard; locked or read-only area shows the usual hint and adds nothing; the library page file drop is unaffected.
-- [ ] T037 [US2] Mixed batches: valid files are added, each refused file is listed with its reason; the toast list is announced politely (`role="status"`); test in `add-images.test.ts` and a component test for the toast.
+- [x] T036 [US2] Write tests first in `apps/app/src/editor/use-canvas-handlers.test.tsx` and implement canvas drop of files: `onDragOver` accepts `Files` next to the existing custom MIME types, `onDrop` calls `addImages` at the drop point under the same view-only guard; locked or read-only area shows the usual hint and adds nothing; the library page file drop is unaffected.
+- [x] T037 [US2] Mixed batches: valid files are added, each refused file is listed with its reason; the toast list is announced politely (`role="status"`); test in `add-images.test.ts` and a component test for the toast.
 
 **Checkpoint**: quickstart steps 3 to 5 pass manually.
 

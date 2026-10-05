@@ -59,6 +59,7 @@ import {
   setGroupCollapsed,
 } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
+import { useAddImages } from './images/use-add-images';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
 export const TYPE_MIME = 'application/x-sododeck-type';
@@ -94,6 +95,7 @@ export function useCanvasHandlers() {
   const { getNodes, getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   const undoToast = useUndoToast();
+  const addPictures = useAddImages();
   // Component and group drags (016): one controller for the canvas's lifetime, so a re-render
   // mid-drag (a toast appearing changes `undoToast`) never drops the running session and leaves
   // its gesture open. It gets the latest inputs after each render.
@@ -620,7 +622,12 @@ export function useCanvasHandlers() {
 
       onDragOver: (event: DragEvent) => {
         const types = event.dataTransfer.types;
-        if (viewOnly() || (!types.includes(TYPE_MIME) && !types.includes(NOTE_MIME))) return;
+        const carriesFiles = types.includes('Files');
+        if (
+          viewOnly() ||
+          (!types.includes(TYPE_MIME) && !types.includes(NOTE_MIME) && !carriesFiles)
+        )
+          return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
       },
@@ -628,6 +635,16 @@ export function useCanvasHandlers() {
         if (viewOnly()) return;
         const note = event.dataTransfer.getData(NOTE_MIME);
         const dragged = event.dataTransfer.getData(TYPE_MIME);
+        // Files dropped from the desktop become images at the drop point (055 US2); a file that
+        // is not a picture gets its refusal from the same path.
+        if (note === '' && dragged === '' && event.dataTransfer.files.length > 0) {
+          event.preventDefault();
+          addPictures(
+            [...event.dataTransfer.files],
+            screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+          );
+          return;
+        }
         const type = isKnownType(dragged) ? dragged : null;
         if (type === null && note !== 'note') return;
         event.preventDefault();
@@ -641,5 +658,5 @@ export function useCanvasHandlers() {
         addComponent(editor, type, centredOn(point, type), { edit: true });
       },
     };
-  }, [editor, getNodes, getViewport, screenToFlowPosition, controller]);
+  }, [editor, getNodes, getViewport, screenToFlowPosition, controller, addPictures]);
 }

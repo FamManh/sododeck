@@ -1,8 +1,10 @@
-import { NEW_DECK_PACKS, toJSON } from '@sododeck/model';
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { assetId, NEW_DECK_PACKS, toJSON } from '@sododeck/model';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
+import type { IngestPorts } from '../images/ingest';
+import { PNG_1X1 } from '../images/test-pictures';
 import { useUiStore } from '../state/ui-store';
 import { deckOf, renderWithEditor } from '../test/render-canvas';
 import { Palette } from './palette';
@@ -419,5 +421,103 @@ describe('Palette: Add flyout (030)', () => {
     expect(screen.getByRole('heading', { name: 'Packs in this deck' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back to Add' }));
     expect(screen.getByRole('searchbox', { name: 'Search types' })).toBeInTheDocument();
+  });
+});
+
+describe('Palette: Image tile (055 US2)', () => {
+  const ports: IngestPorts = {
+    decode: () => Promise.resolve({ width: 80, height: 40 }),
+    encode: (bytes) => Promise.resolve({ bytes, type: 'image/png' }),
+    digest: (bytes) => Promise.resolve(assetId(bytes)),
+  };
+  const png = (name: string) => new File([PNG_1X1.slice().buffer], name, { type: 'image/png' });
+
+  it('offers an Image tile that opens a multi-file picker for the six types', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    const tile = screen.getByRole('button', { name: 'Image' });
+    const input = screen.getByTestId('image-add-input');
+    expect(input).toHaveAttribute('multiple');
+    expect(input.getAttribute('accept')).toBe(
+      'image/png,image/jpeg,image/webp,image/gif,image/svg+xml,image/avif',
+    );
+    let opened = 0;
+    input.addEventListener('click', () => {
+      opened += 1;
+    });
+    tile.focus();
+    await user.keyboard('{Enter}');
+    expect(opened).toBe(1);
+  });
+
+  it('adds the picked pictures in a row, selected, as one undo step', async () => {
+    const { doc, editor } = renderWithEditor(<Palette />, newDeck(), { imagePorts: ports });
+    fireEvent.change(screen.getByTestId('image-add-input'), {
+      target: { files: [png('a.png'), png('b.png')] },
+    });
+    await waitFor(() => {
+      expect(toJSON(doc).images).toHaveLength(2);
+    });
+    expect(useUiStore.getState().selection.images).toHaveLength(2);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).images).toBeUndefined();
+  });
+
+  it('says why a file that is not a picture was refused, and adds nothing', async () => {
+    const { doc } = renderWithEditor(<Palette />, newDeck(), { imagePorts: ports });
+    fireEvent.change(screen.getByTestId('image-add-input'), {
+      target: { files: [new File(['hello'], 'notes.txt', { type: 'text/plain' })] },
+    });
+    expect(
+      await screen.findByText(
+        'notes.txt: type not supported (use PNG, JPEG, WebP, GIF, SVG or AVIF).',
+      ),
+    ).toBeInTheDocument();
+    expect(toJSON(doc).images).toBeUndefined();
+  });
+
+  it('adds the good files of a mixed batch and lists the refusal, announced politely', async () => {
+    const { doc } = renderWithEditor(<Palette />, newDeck(), { imagePorts: ports });
+    fireEvent.change(screen.getByTestId('image-add-input'), {
+      target: { files: [png('ok.png'), new File(['hi'], 'notes.txt', { type: 'text/plain' })] },
+    });
+    await waitFor(() => {
+      expect(toJSON(doc).images).toHaveLength(1);
+    });
+    expect(
+      await screen.findByText(
+        'notes.txt: type not supported (use PNG, JPEG, WebP, GIF, SVG or AVIF).',
+      ),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('Added 1 image.')).toBeInTheDocument();
+    expect(useUiStore.getState().announcement.text).toContain('Added 1 image.');
+  });
+
+  it('is disabled with its reason in flow mode', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<Palette />, newDeck());
+    act(() => {
+      useUiStore.setState({
+        activeFlow: {
+          flowId: 'f',
+          stepId: null,
+          branchId: null,
+          alternativeId: null,
+          playing: false,
+          speed: 1,
+        },
+      });
+    });
+    const tile = screen.getByRole('button', { name: 'Image' });
+    expect(tile).toHaveAttribute('aria-disabled', 'true');
+    expect(tile).toHaveAccessibleDescription(/flow mode/);
+    let opened = 0;
+    screen.getByTestId('image-add-input').addEventListener('click', () => {
+      opened += 1;
+    });
+    await user.click(tile);
+    expect(opened).toBe(0);
   });
 });
