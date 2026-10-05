@@ -26,32 +26,38 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
     expect(useUiStore.getState().labelsOn).toBe(true);
   });
 
-  it('toggles Focus and disables it while a flow is shown', async () => {
+  it('toggles the deck drawer from Deck settings', async () => {
     const user = userEvent.setup();
     renderWithEditor(<ToolsIsland />);
-    await user.click(button('Focus'));
-    expect(useUiStore.getState().focusMode).toBe(true);
-    act(() => {
-      useUiStore.getState().openFlow('order', 'o1');
-    });
-    expect(button('Focus')).toHaveAttribute('aria-disabled', 'true');
-    const before = useUiStore.getState().focusMode;
-    await user.click(button('Focus'));
-    expect(useUiStore.getState().focusMode).toBe(before);
+    expect(button('Deck settings')).toHaveAttribute('aria-pressed', 'false');
+    await user.click(button('Deck settings'));
+    expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
+    expect(button('Deck settings')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(button('Deck settings'));
+    expect(useUiStore.getState().drawer.open).toBe(false);
   });
 
-  it('shows only Jump to, Labels and Focus, as icons with names (§g-60)', async () => {
+  it('switches an open details drawer to deck settings instead of closing it', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<ToolsIsland />);
+    act(() => {
+      useUiStore.getState().openDrawer('selection');
+    });
+    expect(button('Deck settings')).toHaveAttribute('aria-pressed', 'false');
+    await user.click(button('Deck settings'));
+    expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
+  });
+
+  it('shows Deck settings, Jump to and Labels as icons with names, and no Focus', async () => {
     const user = userEvent.setup();
     renderWithEditor(<ToolsIsland />, deckOf({ name: 'Shop' }));
     expect(
       within(tools())
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label')),
-    ).toEqual([expect.stringMatching(/^Jump to…/), 'Labels', 'Focus']);
+    ).toEqual(['Deck settings', expect.stringMatching(/^Jump to…/), 'Labels']);
     expect(button('Labels')).not.toHaveTextContent('Labels');
-    await user.hover(button('Focus'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      /Focus: dim all but the hovered or selected card/,
-    );
+    await user.hover(button('Deck settings'));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Deck settings');
   });
 });

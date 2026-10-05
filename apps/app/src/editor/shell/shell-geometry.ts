@@ -44,8 +44,8 @@ export const ISLAND_SIZES = {
   deckCompact: { width: 300, height: ISLAND_HEIGHT },
   tools: { width: 470, height: ISLAND_HEIGHT },
   toolsCompact: { width: 220, height: ISLAND_HEIGHT },
-  // 10 buttons of 38 with 2 px gaps, 2 dividers of 9, 4 px padding each end.
-  rail: { width: RAIL_WIDTH, height: 10 * 38 + 9 * 2 + 2 * 9 + 8 },
+  // 11 buttons of 38 with 2 px gaps, 2 dividers of 9, 4 px padding each end (Focus added in 054).
+  rail: { width: RAIL_WIDTH, height: 11 * 38 + 10 * 2 + 2 * 9 + 8 },
   history: { width: RAIL_WIDTH, height: 2 * 38 + 2 + 8 },
   zoom: { width: 290, height: ISLAND_HEIGHT },
 } as const;
