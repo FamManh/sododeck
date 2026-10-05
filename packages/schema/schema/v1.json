@@ -43,30 +43,40 @@
     "swatches": {
       "description": "Custom hex colours saved for reuse by this deck's cards and groups, in the order they were added. At most 12; the app enforces the cap when adding.",
       "type": "array",
-      "items": { "$ref": "#/$defs/HexColor" },
+      "items": {
+        "$ref": "#/$defs/HexColor"
+      },
       "uniqueItems": true
     },
     "tagColors": {
       "description": "One colour per tag for the whole deck: the tag as first typed (case kept) maps to a card colour name or a `#rrggbb` hex. A tag with no entry is slate. Keys are non-empty and no two keys are equal when case and spacing are ignored. Tags on nodes, connections, flows and steps stay plain text; this map only colours them.",
       "type": "object",
-      "additionalProperties": { "$ref": "#/$defs/ColorRef" }
+      "additionalProperties": {
+        "$ref": "#/$defs/ColorRef"
+      }
     },
     "packs": {
       "description": "Ids of the card-type packs that are on for this deck: the Add flyout and the type pickers list their types. Absent means `[\"architecture\"]` only. At least one id; unknown ids are kept.",
       "type": "array",
-      "items": { "$ref": "#/$defs/PackId" },
+      "items": {
+        "$ref": "#/$defs/PackId"
+      },
       "uniqueItems": true,
       "minItems": 1
     },
     "fields": {
       "description": "Typed field definitions of the deck (032), in deck order: user fields, plus any built-in (`tech`, `host`, `owner`) or default field (e.g. `task.status`) whose order, on-card choice or definition the user changed. A type's fields are this list filtered to that type. Absent means only the built-in fields and each type's default fields, as the app defines them.",
       "type": "array",
-      "items": { "$ref": "#/$defs/FieldDef" }
+      "items": {
+        "$ref": "#/$defs/FieldDef"
+      }
     },
     "fieldDefaults": {
       "description": "Card types whose default fields now live in `fields` (032): for these types the app no longer adds its own default fields, so a deleted default stays deleted. Absent means every type uses the app's default fields.",
       "type": "array",
-      "items": { "$ref": "#/$defs/TypeId" },
+      "items": {
+        "$ref": "#/$defs/TypeId"
+      },
       "uniqueItems": true
     },
     "dialect": {
@@ -80,7 +90,9 @@
     "enums": {
       "description": "Enum types of the deck's database schema (040), in order. Columns name one by id (`enumRef`). Absent means no enums.",
       "type": "array",
-      "items": { "$ref": "#/$defs/DbEnum" }
+      "items": {
+        "$ref": "#/$defs/DbEnum"
+      }
     },
     "tableDisplay": {
       "$ref": "#/$defs/TableDisplay",
@@ -98,43 +110,75 @@
     "nodes": {
       "description": "Components of the system.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Node" }
+      "items": {
+        "$ref": "#/$defs/Node"
+      }
     },
     "groups": {
       "description": "Named sets of nodes (domain, bounded context, VPC). Nodes join a group via `node.group`.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Group" }
+      "items": {
+        "$ref": "#/$defs/Group"
+      }
     },
     "edges": {
       "description": "Connections between nodes or groups. Either end of a connection may be a node or a group.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Edge" }
+      "items": {
+        "$ref": "#/$defs/Edge"
+      }
     },
     "views": {
       "description": "Saved lenses over the same model (system, feature, infra, custom).",
       "type": "array",
-      "items": { "$ref": "#/$defs/View" }
+      "items": {
+        "$ref": "#/$defs/View"
+      }
     },
     "features": {
       "description": "Business capabilities that group flows.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Feature" }
+      "items": {
+        "$ref": "#/$defs/Feature"
+      }
     },
     "flows": {
       "description": "Ordered paths over existing edges.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Flow" }
+      "items": {
+        "$ref": "#/$defs/Flow"
+      }
     },
     "rules": {
       "description": "Business rules as decision tables, keyed by stable rule id. Keys must be valid ids.",
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/Id" },
-      "additionalProperties": { "$ref": "#/$defs/Rule" }
+      "propertyNames": {
+        "$ref": "#/$defs/Id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Rule"
+      }
     },
     "stickies": {
       "description": "Sticky notes, free on the canvas or anchored to an object.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Sticky" }
+      "items": {
+        "$ref": "#/$defs/Sticky"
+      }
+    },
+    "images": {
+      "description": "Pictures placed on the canvas. Each names a stored picture in `assets`. Written only when the deck holds at least one.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Image"
+      }
+    },
+    "assets": {
+      "description": "The pictures the images use, keyed by picture id (the lowercase SHA-256 of the stored bytes, 64 hex characters). Written only when the deck holds at least one image. An entry no image uses is allowed and dropped on the next save.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/Asset"
+      }
     }
   },
   "$defs": {
@@ -154,7 +198,9 @@
       "title": "Tags",
       "description": "Free-form tags.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Text" }
+      "items": {
+        "$ref": "#/$defs/Text"
+      }
     },
     "Position": {
       "title": "Position",
@@ -163,8 +209,14 @@
       "additionalProperties": false,
       "required": ["x", "y"],
       "properties": {
-        "x": { "description": "Horizontal coordinate.", "type": "number" },
-        "y": { "description": "Vertical coordinate.", "type": "number" }
+        "x": {
+          "description": "Horizontal coordinate.",
+          "type": "number"
+        },
+        "y": {
+          "description": "Vertical coordinate.",
+          "type": "number"
+        }
       }
     },
     "Size": {
@@ -174,8 +226,16 @@
       "additionalProperties": false,
       "required": ["width", "height"],
       "properties": {
-        "width": { "description": "Width in pixels.", "type": "number", "exclusiveMinimum": 0 },
-        "height": { "description": "Height in pixels.", "type": "number", "exclusiveMinimum": 0 }
+        "width": {
+          "description": "Width in pixels.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "description": "Height in pixels.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
       }
     },
     "Frame": {
@@ -185,8 +245,12 @@
       "additionalProperties": false,
       "required": ["position", "size"],
       "properties": {
-        "position": { "$ref": "#/$defs/Position" },
-        "size": { "$ref": "#/$defs/Size" }
+        "position": {
+          "$ref": "#/$defs/Position"
+        },
+        "size": {
+          "$ref": "#/$defs/Size"
+        }
       }
     },
     "Side": {
@@ -265,7 +329,9 @@
         "waypoints": {
           "description": "Bend points from the source to the target, relative to the two ends (cards or groups) so they follow them. When absent, the connector has no free bends. At least one when present. Never together with `offset`.",
           "type": "array",
-          "items": { "$ref": "#/$defs/RouteWaypoint" }
+          "items": {
+            "$ref": "#/$defs/RouteWaypoint"
+          }
         }
       }
     },
@@ -275,12 +341,18 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "x": { "description": "Fraction of the source-to-target span on x.", "type": "number" },
+        "x": {
+          "description": "Fraction of the source-to-target span on x.",
+          "type": "number"
+        },
         "dx": {
           "description": "Pixels from the midpoint on x; used when the x span was under 22 px.",
           "type": "number"
         },
-        "y": { "description": "Fraction of the source-to-target span on y.", "type": "number" },
+        "y": {
+          "description": "Fraction of the source-to-target span on y.",
+          "type": "number"
+        },
         "dy": {
           "description": "Pixels from the midpoint on y; used when the y span was under 22 px.",
           "type": "number"
@@ -294,7 +366,10 @@
       "additionalProperties": false,
       "required": ["url"],
       "properties": {
-        "label": { "description": "Text shown for the link.", "type": "string" },
+        "label": {
+          "description": "Text shown for the link.",
+          "type": "string"
+        },
         "url": {
           "$ref": "#/$defs/Text",
           "description": "Absolute URL or relative path."
@@ -305,13 +380,17 @@
       "title": "Links",
       "description": "Links to related resources.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Link" }
+      "items": {
+        "$ref": "#/$defs/Link"
+      }
     },
     "IdList": {
       "title": "IdList",
       "description": "A list of object ids.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Id" }
+      "items": {
+        "$ref": "#/$defs/Id"
+      }
     },
     "TypeId": {
       "title": "TypeId",
@@ -396,7 +475,14 @@
     "ColorRef": {
       "title": "ColorRef",
       "description": "A card or group colour: a named colour or a custom hex value.",
-      "anyOf": [{ "$ref": "#/$defs/CardColor" }, { "$ref": "#/$defs/HexColor" }]
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CardColor"
+        },
+        {
+          "$ref": "#/$defs/HexColor"
+        }
+      ]
     },
     "Style": {
       "title": "Style",
@@ -405,8 +491,14 @@
       "additionalProperties": false,
       "minProperties": 1,
       "properties": {
-        "fill": { "$ref": "#/$defs/ColorRef", "description": "Background colour." },
-        "stroke": { "$ref": "#/$defs/ColorRef", "description": "Border colour." }
+        "fill": {
+          "$ref": "#/$defs/ColorRef",
+          "description": "Background colour."
+        },
+        "stroke": {
+          "$ref": "#/$defs/ColorRef",
+          "description": "Border colour."
+        }
       }
     },
     "FieldKind": {
@@ -438,14 +530,19 @@
       "additionalProperties": false,
       "required": ["id", "label"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
         "label": {
           "description": "Text shown on the chip, 1–48 characters.",
           "type": "string",
           "minLength": 1,
           "maxLength": 48
         },
-        "color": { "$ref": "#/$defs/ColorRef", "description": "Chip colour. Absent means slate." },
+        "color": {
+          "$ref": "#/$defs/ColorRef",
+          "description": "Chip colour. Absent means slate."
+        },
         "icon": {
           "$ref": "#/$defs/StatusIcon",
           "description": "Status options only: the icon drawn before the label. Absent means `circle`."
@@ -459,18 +556,24 @@
       "additionalProperties": false,
       "required": ["id", "name", "kind"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
         "name": {
           "description": "Field name, 1–64 characters. Unique within a card type ignoring case (checked by the app).",
           "type": "string",
           "minLength": 1,
           "maxLength": 64
         },
-        "kind": { "$ref": "#/$defs/FieldKind" },
+        "kind": {
+          "$ref": "#/$defs/FieldKind"
+        },
         "types": {
           "description": "Card types the field applies to. Absent means every type.",
           "type": "array",
-          "items": { "$ref": "#/$defs/TypeId" },
+          "items": {
+            "$ref": "#/$defs/TypeId"
+          },
           "uniqueItems": true
         },
         "onCard": {
@@ -486,7 +589,9 @@
         "options": {
           "description": "Select and status fields only: the choices, in order. Option ids are unique within the field.",
           "type": "array",
-          "items": { "$ref": "#/$defs/FieldOption" }
+          "items": {
+            "$ref": "#/$defs/FieldOption"
+          }
         }
       }
     },
@@ -497,8 +602,14 @@
       "additionalProperties": false,
       "required": ["from", "to"],
       "properties": {
-        "from": { "description": "Start date, `YYYY-MM-DD`.", "type": "string" },
-        "to": { "description": "End date, `YYYY-MM-DD`.", "type": "string" }
+        "from": {
+          "description": "Start date, `YYYY-MM-DD`.",
+          "type": "string"
+        },
+        "to": {
+          "description": "End date, `YYYY-MM-DD`.",
+          "type": "string"
+        }
       }
     },
     "LinkValue": {
@@ -508,18 +619,32 @@
       "additionalProperties": false,
       "required": ["url"],
       "properties": {
-        "url": { "description": "An `http:`, `https:` or `mailto:` address.", "type": "string" },
-        "label": { "description": "Text shown instead of the address.", "type": "string" }
+        "url": {
+          "description": "An `http:`, `https:` or `mailto:` address.",
+          "type": "string"
+        },
+        "label": {
+          "description": "Text shown instead of the address.",
+          "type": "string"
+        }
       }
     },
     "FieldValue": {
       "title": "FieldValue",
       "description": "A card's value for one typed field; its shape depends on the field's kind.",
       "anyOf": [
-        { "type": "string" },
-        { "type": "number" },
-        { "$ref": "#/$defs/DateRangeValue" },
-        { "$ref": "#/$defs/LinkValue" }
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "$ref": "#/$defs/DateRangeValue"
+        },
+        {
+          "$ref": "#/$defs/LinkValue"
+        }
       ]
     },
     "Dialect": {
@@ -565,7 +690,9 @@
       "title": "ColumnIdList",
       "description": "Ids of columns, in key order: at least one, no repeats.",
       "type": "array",
-      "items": { "$ref": "#/$defs/Id" },
+      "items": {
+        "$ref": "#/$defs/Id"
+      },
       "minItems": 1,
       "uniqueItems": true
     },
@@ -580,7 +707,10 @@
           "$ref": "#/$defs/Id",
           "description": "Unique among every column, index, check, enum and enum value of the deck."
         },
-        "name": { "$ref": "#/$defs/DbName", "description": "Column name, written as given." },
+        "name": {
+          "$ref": "#/$defs/DbName",
+          "description": "Column name, written as given."
+        },
         "type": {
           "$ref": "#/$defs/DbName",
           "description": "Data type as written, e.g. `varchar`, `timestamptz` or an enum's name."
@@ -608,31 +738,52 @@
         },
         "default": {
           "description": "Default value as data (text, number or boolean). Never set together with `defaultExpr`. Absent means none.",
-          "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }]
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
         },
         "defaultExpr": {
           "$ref": "#/$defs/DbExpr",
           "description": "Default as an SQL expression, e.g. `now()`. Never set together with `default`."
         },
-        "check": { "$ref": "#/$defs/DbExpr", "description": "Column check expression." },
+        "check": {
+          "$ref": "#/$defs/DbExpr",
+          "description": "Column check expression."
+        },
         "enumRef": {
           "$ref": "#/$defs/Id",
           "description": "Id of an enum in `enums` whose values the column takes. One that names nothing is kept and reported."
         },
-        "note": { "$ref": "#/$defs/DbNote", "description": "Note on the column (plain text)." }
+        "note": {
+          "$ref": "#/$defs/DbNote",
+          "description": "Note on the column (plain text)."
+        }
       }
     },
     "DbIndexPart": {
       "title": "DbIndexPart",
       "description": "One part of an index: the id of a column of the same table, or an expression.",
       "anyOf": [
-        { "$ref": "#/$defs/Id" },
+        {
+          "$ref": "#/$defs/Id"
+        },
         {
           "type": "object",
           "additionalProperties": false,
           "required": ["expr"],
           "properties": {
-            "expr": { "$ref": "#/$defs/DbExpr", "description": "Indexed SQL expression." }
+            "expr": {
+              "$ref": "#/$defs/DbExpr",
+              "description": "Indexed SQL expression."
+            }
           }
         }
       ]
@@ -648,11 +799,16 @@
           "$ref": "#/$defs/Id",
           "description": "Unique among every column, index, check, enum and enum value of the deck."
         },
-        "name": { "$ref": "#/$defs/DbName", "description": "Index name. Absent means unnamed." },
+        "name": {
+          "$ref": "#/$defs/DbName",
+          "description": "Index name. Absent means unnamed."
+        },
         "columns": {
           "description": "Indexed parts in order: column ids of the same table or `{ expr }`. At least one.",
           "type": "array",
-          "items": { "$ref": "#/$defs/DbIndexPart" },
+          "items": {
+            "$ref": "#/$defs/DbIndexPart"
+          },
           "minItems": 1
         },
         "unique": {
@@ -664,7 +820,10 @@
           "type": "string",
           "pattern": "^[a-z][a-z0-9_]{0,31}$"
         },
-        "note": { "$ref": "#/$defs/DbNote", "description": "Note on the index (plain text)." }
+        "note": {
+          "$ref": "#/$defs/DbNote",
+          "description": "Note on the index (plain text)."
+        }
       }
     },
     "DbCheck": {
@@ -682,7 +841,10 @@
           "$ref": "#/$defs/DbName",
           "description": "Constraint name. Absent means unnamed."
         },
-        "expr": { "$ref": "#/$defs/DbExpr", "description": "The check expression." }
+        "expr": {
+          "$ref": "#/$defs/DbExpr",
+          "description": "The check expression."
+        }
       }
     },
     "DbEnumValue": {
@@ -696,8 +858,14 @@
           "$ref": "#/$defs/Id",
           "description": "Unique among every column, index, check, enum and enum value of the deck."
         },
-        "name": { "$ref": "#/$defs/DbName", "description": "The value, written as given." },
-        "note": { "$ref": "#/$defs/DbNote", "description": "Note on the value (plain text)." }
+        "name": {
+          "$ref": "#/$defs/DbName",
+          "description": "The value, written as given."
+        },
+        "note": {
+          "$ref": "#/$defs/DbNote",
+          "description": "Note on the value (plain text)."
+        }
       }
     },
     "TableDisplay": {
@@ -718,8 +886,14 @@
           "type": "boolean",
           "description": "Hides the nullable marker on table rows."
         },
-        "hideNotes": { "type": "boolean", "description": "Hides table notes." },
-        "hideIndexes": { "type": "boolean", "description": "Hides the index count footer." }
+        "hideNotes": {
+          "type": "boolean",
+          "description": "Hides table notes."
+        },
+        "hideIndexes": {
+          "type": "boolean",
+          "description": "Hides the index count footer."
+        }
       }
     },
     "RelationshipDisplay": {
@@ -753,12 +927,18 @@
           "$ref": "#/$defs/Id",
           "description": "Unique among every column, index, check, enum and enum value of the deck."
         },
-        "name": { "$ref": "#/$defs/DbName", "description": "Enum name, written as given." },
+        "name": {
+          "$ref": "#/$defs/DbName",
+          "description": "Enum name, written as given."
+        },
         "schema": {
           "$ref": "#/$defs/DbName",
           "description": "Namespace, e.g. `public`. Absent means the default one."
         },
-        "note": { "$ref": "#/$defs/DbNote", "description": "Note on the enum (plain text)." },
+        "note": {
+          "$ref": "#/$defs/DbNote",
+          "description": "Note on the enum (plain text)."
+        },
         "color": {
           "$ref": "#/$defs/ColorRef",
           "description": "Chip colour on table rows (041): a named colour or a custom hex value. Absent means a neutral chip."
@@ -766,7 +946,9 @@
         "values": {
           "description": "The values, in order. May be empty.",
           "type": "array",
-          "items": { "$ref": "#/$defs/DbEnumValue" }
+          "items": {
+            "$ref": "#/$defs/DbEnumValue"
+          }
         }
       }
     },
@@ -777,17 +959,34 @@
       "additionalProperties": false,
       "required": ["id", "type", "title"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "type": { "$ref": "#/$defs/TypeId" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "type": {
+          "$ref": "#/$defs/TypeId"
+        },
         "display": {
           "description": "Whether the node draws as a card or a shape. Absent = the type's own family. Only types with two forms (decision, database, document) change look; on other types it is kept and ignored.",
           "enum": ["card", "shape"]
         },
-        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
-        "level": { "$ref": "#/$defs/Level" },
-        "description": { "description": "What the component does (markdown).", "type": "string" },
-        "owner": { "description": "Owning team or person (free text).", "type": "string" },
-        "tags": { "$ref": "#/$defs/Tags" },
+        "title": {
+          "$ref": "#/$defs/Text",
+          "description": "Display name."
+        },
+        "level": {
+          "$ref": "#/$defs/Level"
+        },
+        "description": {
+          "description": "What the component does (markdown).",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Owning team or person (free text).",
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/Tags"
+        },
         "tech": {
           "description": "Technology, e.g. \"Go · Postgres\". Shown as the subtitle in system views.",
           "type": "string"
@@ -799,19 +998,29 @@
         "values": {
           "description": "Values of typed fields (032): field id → value. Text, person, date (`YYYY-MM-DD`) and select / status (option id) values are strings; number and progress (0–100) values are numbers; a date range is `{ from, to }`; a link is `{ url, label? }`. Tech, host and owner keep their own keys and never appear here. A value whose field or option does not exist, or whose shape does not fit its field, is kept and reported. Absent means no values.",
           "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/FieldValue" }
+          "additionalProperties": {
+            "$ref": "#/$defs/FieldValue"
+          }
         },
         "icon": {
           "$ref": "#/$defs/Text",
           "description": "Icon reference `set:icon` (e.g. `lucide:server`); without a set it means lucide. A reference the app cannot show is kept and the node shows its type icon."
         },
-        "links": { "$ref": "#/$defs/Links" },
-        "group": { "$ref": "#/$defs/Id", "description": "Id of the group this node belongs to." },
+        "links": {
+          "$ref": "#/$defs/Links"
+        },
+        "group": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the group this node belongs to."
+        },
         "parent": {
           "$ref": "#/$defs/Id",
           "description": "Id of the parent node one level up (for drilling down across levels)."
         },
-        "rules": { "$ref": "#/$defs/IdList", "description": "Ids of rules attached to this node." },
+        "rules": {
+          "$ref": "#/$defs/IdList",
+          "description": "Ids of rules attached to this node."
+        },
         "position": {
           "$ref": "#/$defs/Position",
           "description": "Canvas position. Views may override it."
@@ -831,17 +1040,23 @@
         "columns": {
           "description": "Tables (`db-table`, 040): the columns, in order. May be empty (a sketch). On other types it is kept and ignored.",
           "type": "array",
-          "items": { "$ref": "#/$defs/DbColumn" }
+          "items": {
+            "$ref": "#/$defs/DbColumn"
+          }
         },
         "indexes": {
           "description": "Tables (`db-table`, 040): the indexes. On other types it is kept and ignored.",
           "type": "array",
-          "items": { "$ref": "#/$defs/DbIndex" }
+          "items": {
+            "$ref": "#/$defs/DbIndex"
+          }
         },
         "checks": {
           "description": "Tables (`db-table`, 040): table-level check constraints. On other types it is kept and ignored.",
           "type": "array",
-          "items": { "$ref": "#/$defs/DbCheck" }
+          "items": {
+            "$ref": "#/$defs/DbCheck"
+          }
         },
         "expanded": {
           "description": "Tables (`db-table`, 040): `true` shows every column instead of the first few. Absent means collapsed to the limit.",
@@ -854,6 +1069,10 @@
         "locked": {
           "description": "Any node type (043): `true` pins the node, so it cannot be moved, resized, edited or deleted until unlocked. Connectors to and from it can still be drawn. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
           "const": true
+        },
+        "z": {
+          "description": "Stacking rank shared with images: a higher rank draws on top. Absent means the node's index in `nodes`. Written only when the deck holds images.",
+          "type": "number"
         }
       }
     },
@@ -863,11 +1082,22 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "title"],
-      "dependentRequired": { "position": ["size"], "size": ["position"] },
+      "dependentRequired": {
+        "position": ["size"],
+        "size": ["position"]
+      },
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
-        "description": { "description": "What the group represents (markdown).", "type": "string" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/Text",
+          "description": "Display name."
+        },
+        "description": {
+          "description": "What the group represents (markdown).",
+          "type": "string"
+        },
         "parent": {
           "$ref": "#/$defs/Id",
           "description": "Id of the enclosing group, for nested groups."
@@ -888,15 +1118,25 @@
     },
     "Edge": {
       "title": "Edge",
-      "description": "A connection between two ends, each a node, a group or a sticky.",
+      "description": "A connection between two ends, each a node, a group, a sticky or an image.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "from", "to"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "from": { "$ref": "#/$defs/Id", "description": "Id of the source node, group or sticky." },
-        "to": { "$ref": "#/$defs/Id", "description": "Id of the target node, group or sticky." },
-        "protocol": { "$ref": "#/$defs/Protocol" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "from": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the source node, group, sticky or image."
+        },
+        "to": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the target node, group, sticky or image."
+        },
+        "protocol": {
+          "$ref": "#/$defs/Protocol"
+        },
         "label": {
           "description": "Short label, e.g. \"POST /orders\" or \"OrderPlaced · Kafka\".",
           "type": "string"
@@ -911,10 +1151,20 @@
           "$ref": "#/$defs/Direction",
           "description": "`forward` (from → to), `both` or `none`. Absent means `forward`."
         },
-        "description": { "description": "Details of the connection (markdown).", "type": "string" },
-        "owner": { "description": "Owning team or person (free text).", "type": "string" },
-        "tags": { "$ref": "#/$defs/Tags" },
-        "links": { "$ref": "#/$defs/Links" },
+        "description": {
+          "description": "Details of the connection (markdown).",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Owning team or person (free text).",
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/Tags"
+        },
+        "links": {
+          "$ref": "#/$defs/Links"
+        },
         "route": {
           "$ref": "#/$defs/EdgeRoute",
           "description": "Pinned sides and middle-segment offset, shared by every view. When absent, the connector is routed automatically."
@@ -964,10 +1214,19 @@
       "additionalProperties": false,
       "required": ["id", "type", "title"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "type": { "$ref": "#/$defs/ViewType" },
-        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
-        "subtitleField": { "$ref": "#/$defs/SubtitleField" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "type": {
+          "$ref": "#/$defs/ViewType"
+        },
+        "title": {
+          "$ref": "#/$defs/Text",
+          "description": "Display name."
+        },
+        "subtitleField": {
+          "$ref": "#/$defs/SubtitleField"
+        },
         "feature": {
           "$ref": "#/$defs/Id",
           "description": "Id of the feature this view focuses on (feature views)."
@@ -979,55 +1238,77 @@
         "schemas": {
           "description": "Schema names whose tables are shown in this view, in addition to the nodes listed in `includes` (048). Non-empty; absent means no schema filter. A name no table uses is kept and shows nothing.",
           "type": "array",
-          "items": { "$ref": "#/$defs/DbName" },
+          "items": {
+            "$ref": "#/$defs/DbName"
+          },
           "minItems": 1
         },
         "excludeGroups": {
           "description": "Ids of groups whose members (nested groups included) are hidden in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Id" },
+          "items": {
+            "$ref": "#/$defs/Id"
+          },
           "uniqueItems": true
         },
         "excludeKinds": {
           "description": "Card type ids hidden in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/TypeId" },
+          "items": {
+            "$ref": "#/$defs/TypeId"
+          },
           "uniqueItems": true
         },
         "excludeTags": {
           "description": "Tags that hide a node carrying any of them in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Text" },
+          "items": {
+            "$ref": "#/$defs/Text"
+          },
           "uniqueItems": true
         },
         "dimKinds": {
           "description": "Card type ids drawn dimmed in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/TypeId" },
+          "items": {
+            "$ref": "#/$defs/TypeId"
+          },
           "uniqueItems": true
         },
         "positions": {
           "description": "Per-node position overrides for this view, keyed by node id. Keys must be valid ids.",
           "type": "object",
-          "propertyNames": { "$ref": "#/$defs/Id" },
-          "additionalProperties": { "$ref": "#/$defs/Position" }
+          "propertyNames": {
+            "$ref": "#/$defs/Id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Position"
+          }
         },
         "groupFrames": {
           "description": "Per-group frame overrides for this view, keyed by group id. Keys must be ids of groups in the file. Absent means the base frames.",
           "type": "object",
-          "propertyNames": { "$ref": "#/$defs/Id" },
-          "additionalProperties": { "$ref": "#/$defs/Frame" }
+          "propertyNames": {
+            "$ref": "#/$defs/Id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/Frame"
+          }
         },
         "pinned": {
           "description": "Ids of the nodes that automatic layout must not move in this view. Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Id" },
+          "items": {
+            "$ref": "#/$defs/Id"
+          },
           "uniqueItems": true
         },
         "collapsed": {
           "description": "Ids of the groups shown collapsed in this view, and of the derived schema groups (`schema:<name>`, 048). Absent means none.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Id" },
+          "items": {
+            "$ref": "#/$defs/Id"
+          },
           "uniqueItems": true
         },
         "detail": {
@@ -1043,10 +1324,21 @@
       "additionalProperties": false,
       "required": ["id", "title"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
-        "description": { "description": "What the feature covers (markdown).", "type": "string" },
-        "owner": { "description": "Owning team or person (free text).", "type": "string" }
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/Text",
+          "description": "Display name."
+        },
+        "description": {
+          "description": "What the feature covers (markdown).",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Owning team or person (free text).",
+          "type": "string"
+        }
       }
     },
     "Flow": {
@@ -1056,27 +1348,52 @@
       "additionalProperties": false,
       "required": ["id", "title", "steps"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "title": {
+          "$ref": "#/$defs/Text",
+          "description": "Display name."
+        },
         "feature": {
           "$ref": "#/$defs/Id",
           "description": "Id of the feature this flow belongs to."
         },
-        "description": { "description": "What the flow does (markdown).", "type": "string" },
-        "trigger": { "description": "What starts the flow.", "type": "string" },
-        "outcome": { "description": "The result when the flow completes.", "type": "string" },
-        "owner": { "description": "Owning team or person (free text).", "type": "string" },
-        "tags": { "$ref": "#/$defs/Tags" },
-        "links": { "$ref": "#/$defs/Links" },
+        "description": {
+          "description": "What the flow does (markdown).",
+          "type": "string"
+        },
+        "trigger": {
+          "description": "What starts the flow.",
+          "type": "string"
+        },
+        "outcome": {
+          "description": "The result when the flow completes.",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Owning team or person (free text).",
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/Tags"
+        },
+        "links": {
+          "$ref": "#/$defs/Links"
+        },
         "branches": {
           "description": "Alternative paths after the branch step, in order (index 0 is alternative \"a\"). The branch step is derived: the last main-path step. One level only.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Branch" }
+          "items": {
+            "$ref": "#/$defs/Branch"
+          }
         },
         "steps": {
           "description": "Steps in order: main-path steps first, then each branch's steps grouped in `branches` order. The same edge may appear in several steps.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Step" }
+          "items": {
+            "$ref": "#/$defs/Step"
+          }
         }
       }
     },
@@ -1087,8 +1404,13 @@
       "additionalProperties": false,
       "required": ["id", "edge"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "edge": { "$ref": "#/$defs/Id", "description": "Id of the edge this step travels." },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "edge": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the edge this step travels."
+        },
         "branch": {
           "$ref": "#/$defs/Id",
           "description": "Id of the branch of this flow the step belongs to. Absent: main path."
@@ -1101,29 +1423,59 @@
           "description": "When this step happens, e.g. \"payment authorized\".",
           "type": "string"
         },
-        "sla": { "description": "Target time, e.g. \"< 300 ms\" or \"24h\".", "type": "string" },
-        "description": { "description": "What happens in this step (markdown).", "type": "string" },
-        "payload": { "description": "The data carried by this step.", "type": "string" },
-        "notes": { "description": "Extra notes (markdown).", "type": "string" },
-        "owner": { "description": "Owning team or person (free text).", "type": "string" },
-        "tags": { "$ref": "#/$defs/Tags" },
-        "links": { "$ref": "#/$defs/Links" },
-        "rules": { "$ref": "#/$defs/IdList", "description": "Ids of rules applied at this step." },
+        "sla": {
+          "description": "Target time, e.g. \"< 300 ms\" or \"24h\".",
+          "type": "string"
+        },
+        "description": {
+          "description": "What happens in this step (markdown).",
+          "type": "string"
+        },
+        "payload": {
+          "description": "The data carried by this step.",
+          "type": "string"
+        },
+        "notes": {
+          "description": "Extra notes (markdown).",
+          "type": "string"
+        },
+        "owner": {
+          "description": "Owning team or person (free text).",
+          "type": "string"
+        },
+        "tags": {
+          "$ref": "#/$defs/Tags"
+        },
+        "links": {
+          "$ref": "#/$defs/Links"
+        },
+        "rules": {
+          "$ref": "#/$defs/IdList",
+          "description": "Ids of rules applied at this step."
+        },
         "ruleInputs": {
           "description": "Sample inputs per attached rule: rule id → input column id → value. Keys must be valid ids.",
           "type": "object",
-          "propertyNames": { "$ref": "#/$defs/Id" },
+          "propertyNames": {
+            "$ref": "#/$defs/Id"
+          },
           "additionalProperties": {
             "description": "Sample values keyed by input column id.",
             "type": "object",
-            "propertyNames": { "$ref": "#/$defs/Id" },
-            "additionalProperties": { "type": "string" }
+            "propertyNames": {
+              "$ref": "#/$defs/Id"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "touches": {
           "description": "Tables, and optionally columns, this step reads or writes (049). Absent means none. No two entries share the same table and column.",
           "type": "array",
-          "items": { "$ref": "#/$defs/Touch" }
+          "items": {
+            "$ref": "#/$defs/Touch"
+          }
         }
       }
     },
@@ -1134,7 +1486,10 @@
       "additionalProperties": false,
       "required": ["table", "access"],
       "properties": {
-        "table": { "$ref": "#/$defs/Id", "description": "Id of the table node." },
+        "table": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the table node."
+        },
         "column": {
           "$ref": "#/$defs/Id",
           "description": "Id of one column of that table. Absent: the whole table."
@@ -1152,7 +1507,9 @@
       "additionalProperties": false,
       "required": ["id", "label", "condition"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
         "label": {
           "description": "Short name, e.g. \"payment failed\". May be empty while the branch is being authored.",
           "type": "string"
@@ -1178,8 +1535,13 @@
       "additionalProperties": false,
       "required": ["id", "label"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "label": { "$ref": "#/$defs/Text", "description": "Column header, e.g. \"Weight (kg)\"." }
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "label": {
+          "$ref": "#/$defs/Text",
+          "description": "Column header, e.g. \"Weight (kg)\"."
+        }
       }
     },
     "RuleRow": {
@@ -1189,16 +1551,22 @@
       "additionalProperties": false,
       "required": ["id", "when", "then"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
         "when": {
           "description": "Condition cells, one per input column, in column order. Text such as \"≤ 5\", \"= express\" or \"Any\"; empty means any value.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "then": {
           "description": "Result cells, one per output column, in column order.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
@@ -1209,23 +1577,37 @@
       "additionalProperties": false,
       "required": ["title", "hitPolicy", "inputs", "outputs", "rows"],
       "properties": {
-        "title": { "$ref": "#/$defs/Text", "description": "Display name." },
-        "description": { "description": "What the rule decides (markdown).", "type": "string" },
-        "hitPolicy": { "$ref": "#/$defs/HitPolicy" },
+        "title": {
+          "$ref": "#/$defs/Text",
+          "description": "Display name."
+        },
+        "description": {
+          "description": "What the rule decides (markdown).",
+          "type": "string"
+        },
+        "hitPolicy": {
+          "$ref": "#/$defs/HitPolicy"
+        },
         "inputs": {
           "description": "Input (condition) columns, in order.",
           "type": "array",
-          "items": { "$ref": "#/$defs/RuleColumn" }
+          "items": {
+            "$ref": "#/$defs/RuleColumn"
+          }
         },
         "outputs": {
           "description": "Output (result) columns, in order.",
           "type": "array",
-          "items": { "$ref": "#/$defs/RuleColumn" }
+          "items": {
+            "$ref": "#/$defs/RuleColumn"
+          }
         },
         "rows": {
           "description": "Rows, in evaluation order.",
           "type": "array",
-          "items": { "$ref": "#/$defs/RuleRow" }
+          "items": {
+            "$ref": "#/$defs/RuleRow"
+          }
         }
       }
     },
@@ -1236,9 +1618,17 @@
       "additionalProperties": false,
       "required": ["id", "text"],
       "properties": {
-        "id": { "$ref": "#/$defs/Id" },
-        "text": { "description": "Note text (markdown).", "type": "string" },
-        "color": { "$ref": "#/$defs/StickyColor", "description": "Absent means `amber`." },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "text": {
+          "description": "Note text (markdown).",
+          "type": "string"
+        },
+        "color": {
+          "$ref": "#/$defs/StickyColor",
+          "description": "Absent means `amber`."
+        },
         "anchor": {
           "$ref": "#/$defs/Id",
           "description": "Id of the object the note is attached to (node, edge, group, flow, step…). The note moves with it."
@@ -1269,16 +1659,120 @@
           "type": "string",
           "enum": ["left", "center", "right"]
         },
-        "tags": { "$ref": "#/$defs/Tags" },
+        "tags": {
+          "$ref": "#/$defs/Tags"
+        },
         "locked": {
           "description": "`true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
           "const": true
         }
       },
       "anyOf": [
-        { "properties": { "anchor": true }, "required": ["anchor"] },
-        { "properties": { "position": true }, "required": ["position"] }
+        {
+          "properties": {
+            "anchor": true
+          },
+          "required": ["anchor"]
+        },
+        {
+          "properties": {
+            "position": true
+          },
+          "required": ["position"]
+        }
       ]
+    },
+    "AssetId": {
+      "title": "AssetId",
+      "description": "Picture id: the lowercase SHA-256 of the stored bytes, as 64 hex characters.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "AssetType": {
+      "title": "AssetType",
+      "description": "Media type of a stored picture, detected from its content.",
+      "enum": ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml", "image/avif"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "A stored picture: what it is, and its bytes as base64. At most 5 MiB (5 242 880 bytes) once decoded. The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "bytes", "width", "height", "name", "data"],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/AssetType"
+        },
+        "bytes": {
+          "description": "Stored size in bytes.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5242880
+        },
+        "width": {
+          "description": "Natural width in pixels (an SVG: its width or viewBox, else 300).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "description": "Natural height in pixels (an SVG: its height or viewBox, else 150).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": {
+          "description": "Original file name, shown only to the person. Never used as an id.",
+          "type": "string"
+        },
+        "data": {
+          "description": "The picture bytes, base64 without a `data:` prefix.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]*={0,2}$"
+        }
+      }
+    },
+    "Image": {
+      "title": "Image",
+      "description": "A picture on the canvas. A connector can end on it, and it can belong to a group. It takes part in the same stacking order as cards (`z`).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "asset", "position", "size"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "asset": {
+          "$ref": "#/$defs/AssetId",
+          "description": "Picture id; must be a key of `assets`."
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "description": "Top-left corner on the canvas. Relative to the group when `group` is set, as for cards."
+        },
+        "size": {
+          "$ref": "#/$defs/Size",
+          "description": "Size on the canvas in pixels, at least 32 × 32. The app keeps the picture's aspect ratio by default."
+        },
+        "z": {
+          "description": "Stacking rank shared with cards: a higher rank draws on top. Absent means the image's index in `images`. Ties draw cards before images.",
+          "type": "number"
+        },
+        "group": {
+          "$ref": "#/$defs/Id",
+          "description": "Id of the group this image belongs to."
+        },
+        "alt": {
+          "description": "Alternative text: the image's accessible name. Plain text.",
+          "type": "string"
+        },
+        "caption": {
+          "description": "Plain text shown under the picture. Absent means no caption.",
+          "type": "string"
+        },
+        "locked": {
+          "description": "`true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
+          "const": true
+        }
+      }
     }
   }
 }

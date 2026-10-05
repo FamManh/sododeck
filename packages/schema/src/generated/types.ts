@@ -237,6 +237,21 @@ export type HitPolicy = 'first' | 'unique' | 'collect';
  * via the `definition` "StickyColor".
  */
 export type StickyColor = 'amber' | 'blue' | 'green' | 'clay' | 'grey';
+/**
+ * Picture id: the lowercase SHA-256 of the stored bytes, as 64 hex characters.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "AssetId".
+ */
+export type AssetId = string;
+/**
+ * Media type of a stored picture, detected from its content.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "AssetType".
+ */
+export type AssetType =
+  'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif' | 'image/svg+xml' | 'image/avif';
 
 /**
  * A Sododeck deck file (.sododeck.json), format version 1. Every object has a stable `id` that never changes on rename, and every reference between objects is by id. Ids are unique within their collection and references must resolve to existing objects; the app checks both when it loads a file (they cannot be expressed here). Keys are written in the order declared in this schema.
@@ -329,6 +344,16 @@ export interface SododeckFile {
    * Sticky notes, free on the canvas or anchored to an object.
    */
   stickies: Sticky[];
+  /**
+   * Pictures placed on the canvas. Each names a stored picture in `assets`. Written only when the deck holds at least one.
+   */
+  images?: Image[];
+  /**
+   * The pictures the images use, keyed by picture id (the lowercase SHA-256 of the stored bytes, 64 hex characters). Written only when the deck holds at least one image. An entry no image uses is allowed and dropped on the next save.
+   */
+  assets?: {
+    [k: string]: Asset;
+  };
 }
 /**
  * A typed field (032): a name and a kind, the card types it applies to and whether it shows on the card. The ids `tech`, `host` and `owner` are the built-in fields: their entry stores their order and on-card choice, and their kind is fixed (`text`, `text`, `person`).
@@ -516,6 +541,10 @@ export interface Node {
    * Any node type (043): `true` pins the node, so it cannot be moved, resized, edited or deleted until unlocked. Connectors to and from it can still be drawn. Absent means unlocked; `false` is not valid, so unlocking removes the key.
    */
   locked?: true;
+  /**
+   * Stacking rank shared with images: a higher rank draws on top. Absent means the node's index in `nodes`. Written only when the deck holds images.
+   */
+  z?: number;
 }
 /**
  * A date range value: start and end as `YYYY-MM-DD`, the end on or after the start (checked by the app).
@@ -698,7 +727,7 @@ export interface Group {
   style?: Style;
 }
 /**
- * A connection between two ends, each a node, a group or a sticky.
+ * A connection between two ends, each a node, a group, a sticky or an image.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Edge".
@@ -1127,4 +1156,62 @@ export interface Sticky {
    * `true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
    */
   locked?: true;
+}
+/**
+ * A picture on the canvas. A connector can end on it, and it can belong to a group. It takes part in the same stacking order as cards (`z`).
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Image".
+ */
+export interface Image {
+  id: Id;
+  asset: AssetId;
+  position: Position;
+  size: Size;
+  /**
+   * Stacking rank shared with cards: a higher rank draws on top. Absent means the image's index in `images`. Ties draw cards before images.
+   */
+  z?: number;
+  group?: Id;
+  /**
+   * Alternative text: the image's accessible name. Plain text.
+   */
+  alt?: string;
+  /**
+   * Plain text shown under the picture. Absent means no caption.
+   */
+  caption?: string;
+  /**
+   * `true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
+   */
+  locked?: true;
+}
+/**
+ * A stored picture: what it is, and its bytes as base64. At most 5 MiB (5 242 880 bytes) once decoded. The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.
+ *
+ * This interface was referenced by `SododeckFile`'s JSON-Schema
+ * via the `definition` "Asset".
+ */
+export interface Asset {
+  type: AssetType;
+  /**
+   * Stored size in bytes.
+   */
+  bytes: number;
+  /**
+   * Natural width in pixels (an SVG: its width or viewBox, else 300).
+   */
+  width: number;
+  /**
+   * Natural height in pixels (an SVG: its height or viewBox, else 150).
+   */
+  height: number;
+  /**
+   * Original file name, shown only to the person. Never used as an id.
+   */
+  name: string;
+  /**
+   * The picture bytes, base64 without a `data:` prefix.
+   */
+  data: string;
 }

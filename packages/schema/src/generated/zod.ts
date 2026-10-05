@@ -767,6 +767,12 @@ export const sododeckFileSchema = z
                 'Any node type (043): `true` pins the node, so it cannot be moved, resized, edited or deleted until unlocked. Connectors to and from it can still be drawn. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
               )
               .optional(),
+            z: z
+              .number()
+              .describe(
+                "Stacking rank shared with images: a higher rank draws on top. Absent means the node's index in `nodes`. Written only when the deck holds images.",
+              )
+              .optional(),
           })
           .strict()
           .describe(
@@ -889,11 +895,11 @@ export const sododeckFileSchema = z
             from: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
-              .describe('Id of the source node, group or sticky.'),
+              .describe('Id of the source node, group, sticky or image.'),
             to: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
-              .describe('Id of the target node, group or sticky.'),
+              .describe('Id of the target node, group, sticky or image.'),
             protocol: z
               .enum(['http', 'grpc', 'event', 'sql', 'websocket', 'other'])
               .describe(
@@ -1138,7 +1144,7 @@ export const sododeckFileSchema = z
               .optional(),
           })
           .strict()
-          .describe('A connection between two ends, each a node, a group or a sticky.'),
+          .describe('A connection between two ends, each a node, a group, a sticky or an image.'),
       )
       .describe(
         'Connections between nodes or groups. Either end of a connection may be a node or a group.',
@@ -1708,6 +1714,116 @@ export const sododeckFileSchema = z
           ),
       )
       .describe('Sticky notes, free on the canvas or anchored to an object.'),
+    images: z
+      .array(
+        z
+          .object({
+            id: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe(
+                'Stable, opaque identifier: 1–64 letters, digits, `-`, `_`, `.` or `:`. Never derived from a title and never changed on rename.',
+              ),
+            asset: z
+              .string()
+              .regex(new RegExp('^[0-9a-f]{64}$'))
+              .describe('Picture id; must be a key of `assets`.'),
+            position: z
+              .object({
+                x: z.number().describe('Horizontal coordinate.'),
+                y: z.number().describe('Vertical coordinate.'),
+              })
+              .strict()
+              .describe(
+                'Top-left corner on the canvas. Relative to the group when `group` is set, as for cards.',
+              ),
+            size: z
+              .object({
+                width: z.number().gt(0).describe('Width in pixels.'),
+                height: z.number().gt(0).describe('Height in pixels.'),
+              })
+              .strict()
+              .describe(
+                "Size on the canvas in pixels, at least 32 × 32. The app keeps the picture's aspect ratio by default.",
+              ),
+            z: z
+              .number()
+              .describe(
+                "Stacking rank shared with cards: a higher rank draws on top. Absent means the image's index in `images`. Ties draw cards before images.",
+              )
+              .optional(),
+            group: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
+              .describe('Id of the group this image belongs to.')
+              .optional(),
+            alt: z
+              .string()
+              .describe("Alternative text: the image's accessible name. Plain text.")
+              .optional(),
+            caption: z
+              .string()
+              .describe('Plain text shown under the picture. Absent means no caption.')
+              .optional(),
+            locked: z
+              .literal(true)
+              .describe(
+                '`true` pins the image, so it cannot be moved, resized, restacked or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
+              )
+              .optional(),
+          })
+          .strict()
+          .describe(
+            'A picture on the canvas. A connector can end on it, and it can belong to a group. It takes part in the same stacking order as cards (`z`).',
+          ),
+      )
+      .describe(
+        'Pictures placed on the canvas. Each names a stored picture in `assets`. Written only when the deck holds at least one.',
+      )
+      .optional(),
+    assets: z
+      .record(
+        z.string(),
+        z
+          .object({
+            type: z
+              .enum([
+                'image/png',
+                'image/jpeg',
+                'image/webp',
+                'image/gif',
+                'image/svg+xml',
+                'image/avif',
+              ])
+              .describe('Media type of a stored picture, detected from its content.'),
+            bytes: z.number().int().gte(1).lte(5242880).describe('Stored size in bytes.'),
+            width: z
+              .number()
+              .int()
+              .gte(1)
+              .describe('Natural width in pixels (an SVG: its width or viewBox, else 300).'),
+            height: z
+              .number()
+              .int()
+              .gte(1)
+              .describe('Natural height in pixels (an SVG: its height or viewBox, else 150).'),
+            name: z
+              .string()
+              .describe('Original file name, shown only to the person. Never used as an id.'),
+            data: z
+              .string()
+              .regex(new RegExp('^[A-Za-z0-9+/]*={0,2}$'))
+              .describe('The picture bytes, base64 without a `data:` prefix.'),
+          })
+          .strict()
+          .describe(
+            'A stored picture: what it is, and its bytes as base64. At most 5 MiB (5 242 880 bytes) once decoded. The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.',
+          ),
+      )
+      .describe(
+        'The pictures the images use, keyed by picture id (the lowercase SHA-256 of the stored bytes, 64 hex characters). Written only when the deck holds at least one image. An entry no image uses is allowed and dropped on the next save.',
+      )
+      .optional(),
   })
   .strict()
   .describe(
