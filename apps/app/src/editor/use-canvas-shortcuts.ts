@@ -161,7 +161,7 @@ function openMenuFromKeyboard(opener: HTMLElement | null): void {
 }
 
 const hasSelection = (s: Selection) =>
-  s.nodes.length + s.edges.length + s.groups.length + s.stickies.length > 0;
+  s.nodes.length + s.edges.length + s.groups.length + s.stickies.length + s.images.length > 0;
 
 const ALIGN_KEYS: Readonly<Record<string, AlignMode>> = {
   KeyA: 'left',
@@ -294,7 +294,8 @@ export function useCanvasKeyDown() {
               const alone =
                 ui.selection.edges.length +
                 ui.selection.groups.length +
-                ui.selection.stickies.length;
+                ui.selection.stickies.length +
+                ui.selection.images.length;
               if (
                 event.shiftKey ||
                 only === undefined ||
@@ -368,6 +369,8 @@ export function useCanvasKeyDown() {
         null;
       const selectedSticky =
         ui.selection.stickies.length === 1 ? (ui.selection.stickies[0] ?? null) : null;
+      const selectedImage =
+        ui.selection.images.length === 1 ? (ui.selection.images[0] ?? null) : null;
       const altKey = event.getModifierState('Alt');
 
       if (key.toLowerCase() === 'n') {
@@ -429,6 +432,29 @@ export function useCanvasKeyDown() {
       }
 
       const direction = ARROWS[key];
+      if (selectedImage !== null && selectedSticky === null && direction !== undefined) {
+        event.preventDefault();
+        const image = deck.images?.find((entry) => entry.id === selectedImage);
+        if (image === undefined) return;
+        if (isLocked(image)) {
+          refuseLocked();
+          return;
+        }
+        const step = event.shiftKey ? 32 : 8;
+        const delta =
+          direction === 'up'
+            ? { x: 0, y: -step }
+            : direction === 'down'
+              ? { x: 0, y: step }
+              : direction === 'left'
+                ? { x: -step, y: 0 }
+                : { x: step, y: 0 };
+        editor.moveImage(selectedImage, {
+          x: image.position.x + delta.x,
+          y: image.position.y + delta.y,
+        });
+        return;
+      }
       if (selectedSticky !== null && direction !== undefined) {
         event.preventDefault();
         const sticky = deck.stickies.find((entry) => entry.id === selectedSticky);
@@ -503,6 +529,7 @@ export function useCanvasKeyDown() {
                 ]),
               ],
               stickies: ui.selection.stickies,
+              images: ui.selection.images,
             });
           } else {
             ui.select({
@@ -516,6 +543,7 @@ export function useCanvasKeyDown() {
               edges: ui.selection.edges,
               groups: ui.selection.groups,
               stickies: ui.selection.stickies,
+              images: ui.selection.images,
             });
           }
         } else {
@@ -960,8 +988,13 @@ export function useEditorShortcuts({
       }
       if (key === 'delete' || key === 'backspace') {
         if (ui.pendingDelete !== null) return;
-        const { nodes, edges, groups, stickies } = ui.selection;
-        if (nodes.length === 0 && edges.length === 0 && stickies.length === 0) {
+        const { nodes, edges, groups, stickies, images } = ui.selection;
+        if (
+          nodes.length === 0 &&
+          edges.length === 0 &&
+          stickies.length === 0 &&
+          images.length === 0
+        ) {
           if (groups.length === 0 && ui.drill.length > 0) {
             event.preventDefault();
             ui.drillUp();
@@ -981,7 +1014,7 @@ export function useEditorShortcuts({
           return;
         }
         event.preventDefault();
-        ui.requestDelete({ nodes, edges, stickies });
+        ui.requestDelete({ nodes, edges, stickies, images });
         return;
       }
       // Esc ends Focus mode first and keeps the selection (048 US6); the next one clears it.
@@ -996,7 +1029,8 @@ export function useEditorShortcuts({
           ui.selection.nodes.length === 0 &&
           ui.selection.edges.length === 0 &&
           ui.selection.groups.length === 0 &&
-          ui.selection.stickies.length === 0
+          ui.selection.stickies.length === 0 &&
+          ui.selection.images.length === 0
         ) {
           if (ui.drill.length === 0) return;
           event.preventDefault();

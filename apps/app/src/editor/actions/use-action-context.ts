@@ -33,8 +33,8 @@ import type { ActionContext, CanvasApi, Mode } from './types';
  * more components; one connection; two or more connections; one group; anything else → `mixed`.
  */
 export function targetOf(selection: Selection): MenuTarget {
-  const { nodes, edges, groups, stickies } = selection;
-  const total = nodes.length + edges.length + groups.length + stickies.length;
+  const { nodes, edges, groups, stickies, images } = selection;
+  const total = nodes.length + edges.length + groups.length + stickies.length + images.length;
   if (total === 0) return { kind: 'canvas' };
   const ids = selection;
   if (stickies.length === total) return { kind: 'sticky', ids };

@@ -40,6 +40,8 @@ import {
   toFlowNodes,
   toLeaderEdges,
   toStickyNodes,
+  toImageNodes,
+  stackImages,
   rowsDrawn,
   type CanvasFlowNode,
   type DeckEdgeData,
@@ -72,6 +74,7 @@ import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
+import { ImageNode } from './images/image-node';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { GuidesOverlay } from './editing/guides-overlay';
@@ -102,6 +105,7 @@ const nodeTypes: NodeTypes = {
   'scope-label': ScopeLabelNode,
   shape: ShapeNode,
   sticky: StickyNode,
+  image: ImageNode,
 };
 const edgeTypes: EdgeTypes = {
   deck: DeckEdge,
@@ -534,7 +538,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
 
   const nodes = useMemo(
     () => [
-      ...toFlowNodes(deck, graph, view, overlay),
+      ...stackImages(
+        toFlowNodes(deck, graph, view, overlay),
+        toImageNodes(deck, selection, flowMode),
+        deck,
+      ),
       ...toStickyNodes(deck, selection, overlay, {
         flowMode,
         notesDisplay,

@@ -11,7 +11,9 @@ import {
   type ResolvedRelationshipDisplay,
   type Geometry,
   STICKY_DEFAULT_SIZE,
+  stackOrder,
   stickyBox,
+  imageBox,
   stickyCanvasPosition,
   stickyLabel,
   type StickyPlacement,
@@ -71,6 +73,7 @@ import { subtitleOf, type ViewRender } from './views/view-state';
 type DeckNodeObject = SododeckFile['nodes'][number];
 type DeckEdgeObject = SododeckFile['edges'][number];
 type StickyObject = SododeckFile['stickies'][number];
+type ImageObject = NonNullable<SododeckFile['images']>[number];
 
 export interface DeckNodeData extends Record<string, unknown> {
   title: string;
@@ -329,12 +332,28 @@ export interface StickyNodeData extends Record<string, unknown> {
   align: 'left' | 'center' | 'right';
 }
 
+export interface ImageNodeData extends Record<string, unknown> {
+  imageId: string;
+  /** The picture id (content hash): what `usePictureUrl` resolves. */
+  asset: string;
+  alt: string | undefined;
+  caption: string | undefined;
+  /** The picture's original file name, from `meta.assets`; empty when its facts are gone. */
+  fileName: string;
+  /** False when the deck has no stored facts for the picture: it shows as missing at once. */
+  known: boolean;
+  size: Size;
+  /** A locked image cannot be moved, resized, restacked, regrouped or deleted (055). */
+  locked: boolean;
+}
+
 /** A component: a card (`deck`) or a shape (`shape`, 031), from the same data. */
 export type DeckFlowNode = Node<DeckNodeData, 'deck' | 'shape'>;
 export type GroupFlowNode = Node<GroupBoundaryData, 'group-boundary'>;
 export type CollapsedFlowNode = Node<CollapsedGroupData, 'collapsed-group'>;
 export type PortFlowNode = Node<PortNodeData, 'port'>;
 export type StickyFlowNode = Node<StickyNodeData, 'sticky'>;
+export type ImageFlowNode = Node<ImageNodeData, 'image'>;
 export type ScopeLabelFlowNode = Node<ScopeLabelData, 'scope-label'>;
 export type CanvasFlowNode =
   | DeckFlowNode
@@ -342,7 +361,8 @@ export type CanvasFlowNode =
   | CollapsedFlowNode
   | PortFlowNode
   | ScopeLabelFlowNode
-  | StickyFlowNode;
+  | StickyFlowNode
+  | ImageFlowNode;
 export type DeckFlowEdge = Edge<DeckEdgeData, 'deck'>;
 export type MergedFlowEdge = Edge<MergedEdgeData, 'merged'>;
 export type StickyLeaderFlowEdge = Edge<Record<string, never>, 'sticky-leader'>;
@@ -363,6 +383,7 @@ const SCOPE_LABEL_LIFT = 44;
 export const MERGED_EDGE_PREFIX = 'merged:';
 export const STICKY_NODE_PREFIX = 'sticky:';
 export const STICKY_LEADER_PREFIX = 'sticky-leader:';
+export const IMAGE_NODE_PREFIX = 'image:';
 
 /**
  * The deck id a drawn node stands for as a connector end (050 R6): a card's own id, or the group
@@ -370,6 +391,7 @@ export const STICKY_LEADER_PREFIX = 'sticky-leader:';
  */
 export function endpointIdOf(flowId: string): string {
   if (flowId.startsWith(STICKY_NODE_PREFIX)) return flowId.slice(STICKY_NODE_PREFIX.length);
+  if (flowId.startsWith(IMAGE_NODE_PREFIX)) return flowId.slice(IMAGE_NODE_PREFIX.length);
   if (flowId.startsWith(GROUP_NODE_PREFIX)) return flowId.slice(GROUP_NODE_PREFIX.length);
   if (flowId.startsWith(COLLAPSED_NODE_PREFIX)) return flowId.slice(COLLAPSED_NODE_PREFIX.length);
   return flowId;
@@ -387,6 +409,8 @@ const mergedCache = new Map<string, MergedFlowEdge>();
 const bundleCache = new Map<string, MergedFlowEdge>();
 const stickyNodeCache = new WeakMap<StickyObject, StickyFlowNode>();
 const stickyLeaderCache = new WeakMap<StickyObject, StickyLeaderFlowEdge>();
+const imageNodeCache = new WeakMap<ImageObject, ImageFlowNode>();
+let lastStacked: CanvasFlowNode[] = [];
 let lastNodes: CanvasFlowNode[] = [];
 /** Last edge list: returned again when every element is the same, so React Flow skips a re-sync. */
 let lastEdges: (DeckFlowEdge | MergedFlowEdge)[] = [];
@@ -1154,6 +1178,106 @@ export function toStickyNodes(
     stickyNodeCache.set(sticky, flowNode);
     return flowNode;
   });
+}
+
+/** The z-index of an image that sits below every card: under the connectors (055 R2). */
+const IMAGE_BELOW_CARDS_Z = -1;
+
+/**
+ * One node per image (055). Images share the stacking order with cards; the ones below every card
+ * go under the connectors too (`zIndex` -1), all others are placed among the cards by
+ * `stackImages`. Cached per image object, like notes.
+ */
+export function toImageNodes(
+  deck: SododeckFile,
+  selection: Selection,
+  flowMode = false,
+): ImageFlowNode[] {
+  const images = deck.images ?? [];
+  if (images.length === 0) return [];
+  const selected = new Set(selection.images);
+  const order = stackOrder(deck);
+  const firstCard = order.findIndex((entry) => entry.kind === 'node');
+  const below = new Set(
+    firstCard === -1
+      ? []
+      : order.slice(0, firstCard).flatMap((entry) => (entry.kind === 'image' ? [entry.id] : [])),
+  );
+  return images.map((image) => {
+    const facts = deck.assets?.[image.asset];
+    const fileName = facts?.name ?? '';
+    const known = facts !== undefined;
+    const locked = image.locked === true;
+    const draggable = !flowMode && !locked;
+    const zIndex = below.has(image.id) ? IMAGE_BELOW_CARDS_Z : undefined;
+    const isSelected = selected.has(image.id);
+    const cached = imageNodeCache.get(image);
+    if (
+      cached?.selected === isSelected &&
+      cached.data.fileName === fileName &&
+      cached.data.known === known &&
+      cached.data.locked === locked &&
+      cached.draggable === draggable &&
+      cached.zIndex === zIndex
+    ) {
+      return cached;
+    }
+    const box = imageBox(image);
+    const flowNode: ImageFlowNode = {
+      id: `${IMAGE_NODE_PREFIX}${image.id}`,
+      type: 'image',
+      position: { x: box.x, y: box.y },
+      width: box.width,
+      height: box.height,
+      ...(zIndex === undefined ? {} : { zIndex }),
+      connectable: true,
+      draggable,
+      selected: isSelected,
+      data: {
+        imageId: image.id,
+        asset: image.asset,
+        alt: image.alt,
+        caption: image.caption,
+        fileName,
+        known,
+        size: image.size,
+        locked,
+      },
+    };
+    imageNodeCache.set(image, flowNode);
+    return flowNode;
+  });
+}
+
+/**
+ * Cards and images in one back-to-front list (055 R2): the nodes the canvas draws, with image
+ * nodes placed among the card nodes by `stackOrder`. React Flow paints equal `zIndex` in list
+ * order, so the order is the stacking. Without images the input comes back untouched.
+ */
+export function stackImages(
+  nodes: CanvasFlowNode[],
+  images: readonly ImageFlowNode[],
+  deck: Pick<SododeckFile, 'nodes' | 'images'>,
+): CanvasFlowNode[] {
+  if (images.length === 0) return nodes;
+  const cards = new Map<string, CanvasFlowNode>();
+  const rest: CanvasFlowNode[] = [];
+  for (const node of nodes) {
+    if (node.type === 'deck' || node.type === 'shape') cards.set(node.id, node);
+    else rest.push(node);
+  }
+  const drawn = new Map(images.map((node) => [node.data.imageId, node]));
+  const ordered: CanvasFlowNode[] = [];
+  for (const entry of stackOrder(deck)) {
+    const node = entry.kind === 'node' ? cards.get(entry.id) : drawn.get(entry.id);
+    if (node !== undefined) ordered.push(node);
+  }
+  const next = [...rest, ...ordered];
+  if (next.length === lastStacked.length && next.every((node, i) => node === lastStacked[i])) {
+    return lastStacked;
+  }
+  lastStacked = next;
+  return next;
 }
 
 /**
