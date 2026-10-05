@@ -1057,5 +1057,13 @@ describe('ui store: schema import (044)', () => {
       state().setDialectConfirm(null);
       expect(state().dialectConfirm).toBeNull();
     });
+
+    describe('last sticky colour (053)', () => {
+      it('defaults to amber and remembers the last choice', () => {
+        expect(state().lastStickyColour).toBe('amber');
+        state().setLastStickyColour('blue');
+        expect(state().lastStickyColour).toBe('blue');
+      });
+    });
   });
 });

@@ -12,7 +12,13 @@ export class DeckValidationError extends Error {
   }
 }
 
-export type DeckEditErrorCode = 'invalid' | 'not-found' | 'missing-reference' | 'duplicate-id';
+export type DeckEditErrorCode =
+  | 'invalid'
+  | 'not-found'
+  | 'missing-reference'
+  | 'duplicate-id'
+  /** The target is locked (053): a locked note or connector refuses move, resize, reshape, reconnect and delete. */
+  | 'locked';
 
 /** An edit that was refused. It is always thrown before anything is written. */
 export class DeckEditError extends Error {

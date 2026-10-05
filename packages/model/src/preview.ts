@@ -7,6 +7,7 @@ import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { fromJSON, getObject, getRule } from './deck';
 import { createEditor, type DeckEditor } from './editor';
+import { DeckEditError } from './errors';
 import type { IntegrityProblem } from './integrity';
 import type { DeckDoc, ObjectRef } from './layout';
 import type { RemovalResult } from './ops/cascade';
@@ -87,7 +88,18 @@ export function previewRemoval(file: SododeckFile, targets: RemovalTarget[]): Re
   const doc = fromJSON(file);
   const editor = createEditor(doc, { repair: false });
   try {
-    const results = editor.batch(() => targets.flatMap((t) => removeTarget(editor, doc, t) ?? []));
+    // A locked note or connector cannot be deleted (053), so it is not part of the preview; the
+    // app drops locked targets before it asks.
+    const results = editor.batch(() =>
+      targets.flatMap((t) => {
+        try {
+          return removeTarget(editor, doc, t) ?? [];
+        } catch (error) {
+          if (error instanceof DeckEditError && error.code === 'locked') return [];
+          throw error;
+        }
+      }),
+    );
     return mergeRemovals(results);
   } finally {
     editor.destroy();

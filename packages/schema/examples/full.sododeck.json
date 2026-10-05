@@ -490,6 +490,13 @@
       "to": "api-gateway",
       "label": "All client traffic",
       "route": { "fromSide": "right", "toSide": "left" }
+    },
+    {
+      "id": "e-note-gateway",
+      "from": "note-6",
+      "to": "api-gateway",
+      "label": "see also",
+      "locked": true
     }
   ],
   "views": [
@@ -697,6 +704,17 @@
       "color": "green",
       "anchor": "place-order"
     },
-    { "id": "note-5", "text": "Idempotency key?", "color": "grey", "anchor": "s1" }
+    { "id": "note-5", "text": "Idempotency key?", "color": "grey", "anchor": "s1" },
+    {
+      "id": "note-6",
+      "text": "Why two queues?",
+      "color": "blue",
+      "position": { "x": 360, "y": 400 },
+      "size": { "width": 220, "height": 160 },
+      "fontSize": 16,
+      "align": "left",
+      "tags": ["public"],
+      "locked": true
+    }
   ]
 }

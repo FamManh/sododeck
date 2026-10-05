@@ -5,7 +5,7 @@ import {
   type RemovalTarget,
   type Width,
 } from '@sododeck/model';
-import type { ColorRef, EdgeShape, Id, Side } from '@sododeck/schema';
+import type { ColorRef, EdgeShape, Id, Side, StickyColor } from '@sododeck/schema';
 import { create } from 'zustand';
 
 import { clampDrawerWidth } from '../editor/shell/shell-geometry';
@@ -448,6 +448,9 @@ export interface PasteSerial {
 
 export interface UiState {
   selection: Selection;
+  /** Colour of the last sticky the user created or recoloured, so the next one matches (053). */
+  lastStickyColour: StickyColor;
+  setLastStickyColour: (colour: StickyColor) => void;
   /** The view this tab shows (011, FR-005); `null` = the first view. Never written to the deck. */
   currentViewId: Id | null;
   /** A view whose settings should open (048: the empty-view card's "Edit filter"); UI only. */
@@ -1011,6 +1014,10 @@ export const useUiStore = create<UiState>()((set, get) => {
     jsonShown: false,
     hideUi: false,
     minimap: false,
+    lastStickyColour: 'amber',
+    setLastStickyColour: (colour) => {
+      set({ lastStickyColour: colour });
+    },
     tool: 'select',
     helpOpen: false,
     titleEdit: null,
