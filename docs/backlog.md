@@ -2441,7 +2441,7 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 057-image-editing
 
-- **Status:** not started. Split from 055 (2026-10-05).
+- **Status:** spec, plan and tasks in `specs/057-image-editing/` (2026-10-05); not implemented. Split from 055. Founder decisions: free crop only, double-click opens crop mode, flip on a mixed selection makes all images the same, no flip shortcut.
 - **Goal:** Light editing of an image object on the canvas without leaving the editor.
 - **In scope:** crop (drag handles, reset), flip horizontal / vertical. Edits are non-destructive
   (the stored picture is unchanged; the object keeps crop and flip values) and appear in export.
