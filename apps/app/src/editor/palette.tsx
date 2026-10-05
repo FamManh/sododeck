@@ -3,6 +3,7 @@ import {
   deckPacks,
   isKnownPack,
   PACKS,
+  STICKY_DEFAULT_SIZE,
   typesOfPacks,
   type CardType,
   type PackTool,
@@ -13,7 +14,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { useReactFlow } from '@xyflow/react';
-import { ChevronRight, FileCode2, Frame, List, Package, StickyNote } from 'lucide-react';
+import { ChevronRight, FileCode2, Frame, List, Package } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 import { NodeTypeTile } from './shapes/shape-tile';
@@ -27,6 +28,7 @@ import { neighbour } from './grid-nav';
 import { addEnumAndOpen } from './inspector/enum/add-enum-and-open';
 import { PacksPanel } from './packs-panel';
 import { addNoteAt, notesAreReadOnly } from './stickies/sticky-actions';
+import { StickyPad } from './stickies/sticky-pad';
 import { NOTE_MIME, TYPE_MIME } from './use-canvas-handlers';
 
 const COLUMNS = 3;
@@ -77,6 +79,7 @@ export function Palette() {
   const deck = useDeckSnapshot(editor.doc);
   const { screenToFlowPosition } = useReactFlow();
   const readOnly = notesAreReadOnly();
+  const stickyColour = useUiStore((s) => s.lastStickyColour);
   const { search, tab, view } = useUiStore((s) => s.addFlyout);
   const setPalette = useUiStore((s) => s.setPalette);
   const [active, setActive] = useState<string | null>(null);
@@ -309,7 +312,7 @@ export function Palette() {
                 })}
                 {section.tools.map((tool) => {
                   const tileId = toolTileId(tool);
-                  const Icon = tool === 'sticky' ? StickyNote : tool === 'enum' ? List : Frame;
+                  const Icon = tool === 'enum' ? List : Frame;
                   const name = toolName(section.id, tool);
                   const letter = section.id === 'database' ? DATABASE_KEYS[tool] : undefined;
                   const button = (
@@ -364,12 +367,16 @@ export function Palette() {
                         focusRing,
                       )}
                     >
-                      <span
-                        aria-hidden
-                        className="inline-flex size-7 items-center justify-center rounded-[8px] bg-surface-2 text-ink-secondary"
-                      >
-                        <Icon size={18} strokeWidth={ICON_STROKE_WIDTH} />
-                      </span>
+                      {tool === 'sticky' ? (
+                        <StickyPad color={stickyColour} />
+                      ) : (
+                        <span
+                          aria-hidden
+                          className="inline-flex size-7 items-center justify-center rounded-[8px] bg-surface-2 text-ink-secondary"
+                        >
+                          <Icon size={18} strokeWidth={ICON_STROKE_WIDTH} />
+                        </span>
+                      )}
                       <span className="w-full truncate text-caption font-medium text-ink">
                         {name}
                       </span>
@@ -421,11 +428,14 @@ export function Palette() {
       >
         <span className="flex flex-col">
           <span className="text-body font-medium text-ink">Note</span>
-          <span className="text-caption text-ink-secondary">Markdown, 180 px</span>
+          <span className="text-caption text-ink-secondary">
+            Markdown, {STICKY_DEFAULT_SIZE.width} px
+          </span>
         </span>
+        <StickyPad color={stickyColour} />
       </button>
       <p className="text-caption text-ink-secondary">
-        Drag Note onto a node to pin it, or onto empty canvas for a free note. N adds one at the
+        Drag Note onto the canvas for a free note; pin it from its toolbar. N adds one at the
         pointer.
       </p>
       {packs.includes('database') && (

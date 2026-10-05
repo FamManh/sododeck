@@ -133,4 +133,69 @@ describe('sticky actions', () => {
     expect(id).toBeNull();
     expect(readDeck(env.doc).stickies).toEqual([]);
   });
+
+  describe('options (053 US3)', () => {
+    const cardDeck = () =>
+      deckOf({
+        nodes: [{ id: 'svc', type: 'service', title: 'Order Service', position: { x: 80, y: 60 } }],
+      });
+    const overCard = { x: 80 + NODE_SIZE.width / 2, y: 60 + NODE_SIZE.height / 2 };
+
+    it('with pin: false a note over a card stays free', () => {
+      const env = editorWrapper(cardDeck());
+      renderHook(() => null, { wrapper: env.wrapper });
+      let id: string | null = null;
+      act(() => {
+        id = addNoteAt(env.editor(), overCard, { pin: false });
+      });
+      const sticky = readDeck(env.doc).stickies.find((s) => s.id === id);
+      expect(sticky?.anchor).toBeUndefined();
+      expect(sticky?.position).toEqual(overCard);
+      expect(ui().stickyEditing).toBe(id);
+      expect(ui().announcement.text).toBe('Note added');
+    });
+
+    it('uses the colour given, else the last one picked, and writes nothing for amber', () => {
+      const env = editorWrapper(deckOf({}));
+      renderHook(() => null, { wrapper: env.wrapper });
+      const add = (point: { x: number; y: number }, colour?: 'green') => {
+        const id = addNoteAt(env.editor(), point, colour === undefined ? {} : { colour });
+        if (id !== null) env.editor().update('stickies', id, { text: 'x' });
+        finishDraft(env.editor(), id);
+        return id;
+      };
+      let first: string | null = null;
+      let second: string | null = null;
+      let third: string | null = null;
+      act(() => {
+        first = add({ x: 0, y: 0 }, 'green');
+        ui().setLastStickyColour('blue');
+        second = add({ x: 10, y: 0 });
+        ui().setLastStickyColour('amber');
+        third = add({ x: 20, y: 0 });
+      });
+      const colours = readDeck(env.doc).stickies.map((s) => [s.id, s.color]);
+      expect(colours).toEqual([
+        [first, 'green'],
+        [second, 'blue'],
+        [third, undefined],
+      ]);
+    });
+
+    it('is one undo step with its colour', () => {
+      const env = editorWrapper(deckOf({}));
+      renderHook(() => null, { wrapper: env.wrapper });
+      act(() => {
+        const id = addNoteAt(env.editor(), { x: 0, y: 0 }, { colour: 'clay' });
+        // A non-empty note is kept when the draft ends.
+        if (id !== null) env.editor().update('stickies', id, { text: 'kept' });
+        finishDraft(env.editor(), id);
+      });
+      expect(readDeck(env.doc).stickies).toHaveLength(1);
+      act(() => {
+        env.editor().undo();
+      });
+      expect(readDeck(env.doc).stickies).toHaveLength(0);
+    });
+  });
 });

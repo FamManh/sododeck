@@ -1,5 +1,5 @@
 import { stickyCanvasPosition, toJSON } from '@sododeck/model';
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
@@ -19,6 +19,7 @@ const stickyDeck = deckOf({
     { id: 'pinned', text: 'Pinned note', anchor: 'svc', position: { x: 36, y: -40 } },
     { id: 'foreign', text: 'Foreign note', anchor: 'edge-1', position: { x: 80, y: 96 } },
     { id: 'missing', text: 'Missing note', anchor: 'gone', position: { x: 16, y: 20 } },
+    { id: 'tagged', text: 'Tagged', position: { x: 9, y: 9 }, tags: ['pci'] },
   ],
 });
 
@@ -212,5 +213,21 @@ describe('StickyInspector format rows (053 US2)', () => {
     expect(screen.getByRole('radio', { name: '24' })).toBeDisabled();
     expect(screen.getByRole('radio', { name: 'Align left' })).toBeDisabled();
     expect(screen.getByRole('switch', { name: 'Lock' })).toBeDisabled();
+  });
+
+  it('shows the tags of a note, adds one from the shared picker and removes one (053)', async () => {
+    const { user, doc, editor } = setup('tagged');
+    const list = screen.getByRole('list', { name: 'Tags' });
+    expect(within(list).getByText('pci')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    await user.type(await screen.findByRole('searchbox', { name: 'Filter tags' }), 'edge{Enter}');
+    expect(sticky('tagged', doc).tags).toEqual(['pci', 'edge']);
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Remove tag pci' }));
+    expect(sticky('tagged', doc).tags).toEqual(['edge']);
+    act(() => {
+      editor().undo();
+    });
+    expect(sticky('tagged', doc).tags).toEqual(['pci', 'edge']);
   });
 });

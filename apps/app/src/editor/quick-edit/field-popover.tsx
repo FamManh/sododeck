@@ -20,6 +20,7 @@ import { choiceState, deckValues } from './choice-state';
 import { IconField } from '../icons/icon-field';
 import { TagPicker } from '../tags/tag-picker';
 import { LineStylePopover } from '../line-style/line-style-popover';
+import { StickyColourPopover } from '../stickies/sticky-toolbar';
 import { tagPickerEscape } from '../tags/tag-picker-escape';
 
 /** The popover's accessible name per field (contract "Field popover"). */
@@ -34,6 +35,7 @@ const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
   direction: 'Direction',
   style: 'Colour',
   lineStyle: 'Line style',
+  stickyColour: 'Note colour',
   icon: 'Choose icon',
 };
 
@@ -231,6 +233,10 @@ function FieldContent({ field }: { field: ToolbarFieldId }) {
   }
   if (field === 'icon') {
     return <IconField selection={selection} onDone={closeToolbarField} />;
+  }
+  if (field === 'stickyColour') return <StickyColourPopover stickyIds={selection.stickies} />;
+  if (field === 'tags' && selection.nodes.length === 0 && selection.stickies.length > 0) {
+    return <TagPicker stickyIds={selection.stickies} />;
   }
   const ids = new Set(selection.nodes);
   return <NodeFieldContent field={field} nodes={deck.nodes.filter((n) => ids.has(n.id))} />;

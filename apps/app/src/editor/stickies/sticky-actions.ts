@@ -1,5 +1,5 @@
 import { nodeCanvasPosition, type DeckEditor, type Point } from '@sododeck/model';
-import type { Id, SododeckFile } from '@sododeck/schema';
+import type { Id, SododeckFile, StickyColor } from '@sododeck/schema';
 import { useEffect } from 'react';
 
 import { useEditor } from '../../model/use-editor';
@@ -32,17 +32,36 @@ export function notesAreReadOnly(): boolean {
   return document.querySelector('[role="alertdialog"]') !== null;
 }
 
-export function addNoteAt(editor: DeckEditor, point: Point): Id | null {
-  if (notesAreReadOnly() || isFlowMode(useUiStore.getState())) return null;
+export interface NewNoteOptions {
+  /**
+   * Pin the note to the card under the point (default). The Add flyout's pad passes `false`: a
+   * dropped note is always free, whatever lies under the pointer (053 R7).
+   */
+  pin?: boolean;
+  /** The paper colour; defaults to the colour last picked (`lastStickyColour`, UI-only). */
+  colour?: StickyColor;
+}
+
+export function addNoteAt(
+  editor: DeckEditor,
+  point: Point,
+  options: NewNoteOptions = {},
+): Id | null {
+  const ui0 = useUiStore.getState();
+  if (notesAreReadOnly() || isFlowMode(ui0)) return null;
   // Offsets are measured where the component is drawn in the current view (011).
   const deck = readViewState(editor.doc).deck;
   const at = normalizePoint(point);
-  const anchor = nodeAtPoint(deck, at);
+  const anchor = options.pin === false ? null : nodeAtPoint(deck, at);
+  const colour = options.colour ?? ui0.lastStickyColour;
+  // Amber is the default look, so it is not written (the file stays as small as before).
+  const paper = colour === 'amber' ? {} : { color: colour };
   const id = editor.beginStickyDraft(
     anchor === null
-      ? { text: '', position: at }
+      ? { text: '', position: at, ...paper }
       : {
           text: '',
+          ...paper,
           anchor: anchor.id,
           position: {
             x: at.x - (nodeCanvasPosition(deck, anchor.id)?.x ?? 0),

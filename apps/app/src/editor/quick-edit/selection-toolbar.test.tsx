@@ -40,6 +40,7 @@ const deck = deckOf({
   ],
   edges: [{ id: 'e', from: 'a', to: 'b', label: 'writes' }],
   groups: [],
+  stickies: [{ id: 's', text: 'Retry later', position: { x: 500, y: 0 } }],
 });
 
 const ui = () => useUiStore.getState();
@@ -219,7 +220,7 @@ describe('SelectionToolbar (019 US3)', () => {
     expect(toolbar()).toBeNull();
   });
 
-  it('names the connection variant and shows nothing for stickies only', () => {
+  it('names the connection variant and the note variant', () => {
     setup();
     act(() => {
       ui().select({ edges: ['e'] });
@@ -230,7 +231,7 @@ describe('SelectionToolbar (019 US3)', () => {
     act(() => {
       ui().select({ stickies: ['s'] });
     });
-    expect(toolbar()).toBeNull();
+    expect(toolbar()).toHaveAccessibleName(/^Selection: note/);
   });
 
   it('picks a line type in the Line style popover and writes one key (022 US1)', async () => {

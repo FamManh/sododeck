@@ -11,7 +11,7 @@ export interface DeckTag {
   /** Display spelling: the `tagColors` key if there is one, else the first spelling on a card. */
   tag: string;
   key: string;
-  /** Cards carrying the tag. */
+  /** Cards and notes carrying the tag. */
   count: number;
   color?: ColorRef;
 }
@@ -19,6 +19,8 @@ export interface DeckTag {
 /** How many objects of each kind carry a tag, for confirmation lines. */
 export interface TagUsage {
   cards: number;
+  /** Sticky notes (053). */
+  notes: number;
   connections: number;
   flows: number;
   steps: number;
@@ -45,9 +47,10 @@ function colourEntries(deck: SododeckFile): Map<string, { tag: string; color: Co
 export function deckTags(deck: SododeckFile): DeckTag[] {
   const colours = colourEntries(deck);
   const found = new Map<string, DeckTag>();
-  for (const node of deck.nodes) {
+  // Notes share the deck's tags (053), so they count and spell like cards.
+  for (const carrier of [...deck.nodes, ...deck.stickies]) {
     const seenOnCard = new Set<string>();
-    for (const text of node.tags ?? []) {
+    for (const text of carrier.tags ?? []) {
       const key = tagKey(text);
       if (key === '' || seenOnCard.has(key)) continue;
       seenOnCard.add(key);
@@ -73,13 +76,14 @@ export function deckTags(deck: SododeckFile): DeckTag[] {
   );
 }
 
-/** How many cards, connections, flows and steps carry `tag` (matched by key), and the deck itself. */
+/** How many cards, notes, connections, flows and steps carry `tag` (matched by key), and the deck itself. */
 export function tagUsage(deck: SododeckFile, tag: string): TagUsage {
   const key = tagKey(tag);
   let steps = 0;
   for (const flow of deck.flows) steps += flow.steps.filter((step) => has(step.tags, key)).length;
   return {
     cards: deck.nodes.filter((node) => has(node.tags, key)).length,
+    notes: deck.stickies.filter((sticky) => has(sticky.tags, key)).length,
     connections: deck.edges.filter((edge) => has(edge.tags, key)).length,
     flows: deck.flows.filter((flow) => has(flow.tags, key)).length,
     steps,
@@ -89,7 +93,7 @@ export function tagUsage(deck: SododeckFile, tag: string): TagUsage {
 
 /**
  * Every tag key the deck holds, with the spelling to show and to write: the colour key first, then
- * the first spelling on a card, a connection, a flow, a step and the deck's own tags.
+ * the first spelling on a card, a note, a connection, a flow, a step and the deck's own tags.
  */
 export function tagSpellings(deck: SododeckFile): Map<string, string> {
   const spellings = new Map<string, string>();
@@ -99,6 +103,7 @@ export function tagSpellings(deck: SododeckFile): Map<string, string> {
   };
   for (const { tag } of colourEntries(deck).values()) note(tag);
   for (const node of deck.nodes) node.tags?.forEach(note);
+  for (const sticky of deck.stickies) sticky.tags?.forEach(note);
   for (const edge of deck.edges) edge.tags?.forEach(note);
   for (const flow of deck.flows) flow.tags?.forEach(note);
   for (const flow of deck.flows) for (const step of flow.steps) step.tags?.forEach(note);

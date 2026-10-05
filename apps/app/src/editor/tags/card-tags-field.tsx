@@ -22,10 +22,13 @@ import { tagPickerEscape } from './tag-picker-escape';
 
 export function CardTagsField({
   nodeId,
+  stickyId,
   tags,
   onCommit,
 }: {
-  nodeId: string;
+  /** The card whose tags these are, or the note (`stickyId`, 053): both share the deck's tags. */
+  nodeId?: string;
+  stickyId?: string;
   tags: readonly string[] | undefined;
   /** Writes the card's tags (`null` clears the field). */
   onCommit: (tags: string[] | null) => void;
@@ -93,7 +96,10 @@ export function CardTagsField({
                 </button>
               </PopoverTrigger>
               <PopoverContent aria-label="Tags" onEscapeKeyDown={tagPickerEscape}>
-                <TagPicker nodeIds={[nodeId]} />
+                <TagPicker
+                  nodeIds={nodeId === undefined ? [] : [nodeId]}
+                  stickyIds={stickyId === undefined ? [] : [stickyId]}
+                />
               </PopoverContent>
             </Popover>
           )}

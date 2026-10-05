@@ -353,6 +353,7 @@ export type ToolbarFieldId =
   | 'direction'
   | 'style'
   | 'lineStyle'
+  | 'stickyColour'
   | 'icon';
 
 /** A live, unsaved colour choice shown on canvas before it is applied (020 R9). */

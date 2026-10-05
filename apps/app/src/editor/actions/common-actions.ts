@@ -111,7 +111,11 @@ export const COMMON_ACTIONS: readonly Action[] = [
     shortcut: 'delete',
     section: 'danger',
     destructive: true,
-    where: { menu: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'] },
+    where: {
+      menu: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'],
+      // The note toolbar ends with Delete (053 US3); other toolbars keep it in the menu.
+      toolbar: ['sticky'],
+    },
     // Groups are never deleted this way (the Delete key refuses them too).
     applies: (ctx) =>
       ctx.selection.nodes.length + ctx.selection.edges.length + ctx.selection.stickies.length > 0,

@@ -13,6 +13,8 @@ import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { FieldLabel } from '../fields/field-label';
 import { MarkdownField } from '../fields/markdown-field';
+import { oneStep } from '../fields/one-step';
+import { CardTagsField } from '../tags/card-tags-field';
 import { InspectorFrame } from './inspector-frame';
 import { notesAreReadOnly } from '../stickies/sticky-actions';
 import { StickyFormatFields } from './sticky-format-fields';
@@ -220,6 +222,17 @@ export function StickyInspector({ deck, sticky }: { deck: SododeckFile; sticky: 
           </SegmentedControl>
         </PanelSection>
         <StickyFormatFields sticky={sticky} disabled={readOnly} />
+        <PanelSection>
+          <CardTagsField
+            stickyId={sticky.id}
+            tags={sticky.tags}
+            onCommit={(tags) => {
+              oneStep(editor, () => {
+                editor.setStickyTags(sticky.id, tags ?? []);
+              });
+            }}
+          />
+        </PanelSection>
         <PanelSection>
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-col">

@@ -1,4 +1,4 @@
-import { endpointOf } from '@sododeck/model';
+import { endpointOf, stickyLabel } from '@sododeck/model';
 import { Swatch } from '@sododeck/ui/components/swatch-grid';
 import {
   Toolbar,
@@ -26,6 +26,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactElement,
 } from 'react';
 
@@ -72,6 +73,12 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
     }
     case 'connections':
       return `Selection: ${String(edges.length)} connections`;
+    case 'sticky': {
+      const note = ctx.deck.stickies.find((entry) => entry.id === stickies[0]);
+      return `Selection: note ${note === undefined ? '' : (stickyLabel(note.text) ?? 'empty')}`.trimEnd();
+    }
+    case 'stickies':
+      return `Selection: ${String(stickies.length)} notes`;
     case 'group':
       return `Selection: group ${ctx.deck.groups.find((g) => g.id === groups[0])?.title ?? ''}`;
     default:
@@ -211,6 +218,14 @@ function ActionButton({ action, selection }: { action: ResolvedAction; selection
     <ToolbarButton
       aria-label={action.label}
       disabled={action.disabled !== null}
+      {...(action.keepFocus
+        ? {
+            onMouseDown: (event: MouseEvent<HTMLButtonElement>) => {
+              // The text field being edited keeps focus and its selection.
+              event.preventDefault();
+            },
+          }
+        : {})}
       onClick={() => {
         action.run();
       }}
