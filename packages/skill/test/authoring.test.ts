@@ -4,12 +4,19 @@ import { describe, expect, it } from 'vitest';
 import { authoringChecks, LEVEL_BUDGET, slugOf } from '../src/authoring';
 import { deck } from './fixtures';
 
-const card = (id: string, extra: Partial<Node> = {}): Node => ({
-  id,
-  type: 'service',
-  title: id.toUpperCase(),
-  ...extra,
-});
+let placed = 0;
+/** A card placed on a parabola, so no three cards line up and no connector runs over a card. */
+const card = (id: string, extra: Partial<Node> = {}): Node => {
+  const i = placed++;
+  return {
+    id,
+    type: 'service',
+    title: id.toUpperCase(),
+    position: { x: i * 300, y: i * i * 150 },
+    ...extra,
+  };
+};
+const at = (x: number, y: number) => ({ position: { x, y } });
 
 const codes = (entries: { code: string }[]) => entries.map((e) => e.code);
 
@@ -47,14 +54,87 @@ describe('authoring checks (027 research R5)', () => {
     expect(slugOf('Café Áp')).toBe('cafe-ap');
   });
 
-  it('flags mixed positions, except in update mode', () => {
+  it('asks for a position on every card, in every mode', () => {
     const file = deck({
-      nodes: [card('a', { position: { x: 0, y: 0 } }), card('b')],
+      nodes: [card('a'), { id: 'b', type: 'service', title: 'B' }],
       edges: [{ id: 'e', from: 'a', to: 'b' }],
     });
-    expect(codes(authoringChecks(file))).toEqual(['positions-mixed']);
-    expect(authoringChecks(file)[0]).toMatchObject({ path: '/nodes/1', subject: 'b' });
-    expect(authoringChecks(file, { mode: 'update' })).toEqual([]);
+    for (const mode of ['new', 'update', 'codebase'] as const) {
+      expect(codes(authoringChecks(file, { mode }))).toContain('card-without-position');
+    }
+    const entry = authoringChecks(file).find((e) => e.code === 'card-without-position');
+    expect(entry).toMatchObject({ path: '/nodes/1', subject: 'b' });
+  });
+
+  it('flags a connector that runs over a card, on its own level only', () => {
+    const file = deck({
+      nodes: [
+        card('a', at(0, 0)),
+        card('mid', at(300, 0)),
+        card('b', at(600, 0)),
+        card('below', { ...at(300, 0), parent: 'a' }),
+      ],
+      edges: [{ id: 'e', from: 'a', to: 'b' }],
+    });
+    const entries = authoringChecks(file).filter((e) => e.code === 'connector-crosses-card');
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ path: '/edges/0', subject: 'e' });
+    expect(entries[0]?.message).toMatch(/runs over "mid"/);
+  });
+
+  it('lets a bend take a connector around a card', () => {
+    const file = deck({
+      nodes: [card('a', at(0, 0)), card('mid', at(300, 0)), card('b', at(600, 0))],
+      edges: [
+        {
+          id: 'e',
+          from: 'a',
+          to: 'b',
+          route: {
+            waypoints: [
+              { x: 0, dy: -200 },
+              { x: 1, dy: -200 },
+            ],
+          },
+        },
+      ],
+    });
+    expect(codes(authoringChecks(file))).not.toContain('connector-crosses-card');
+  });
+
+  it('flags a frame that covers a foreign card and sibling frames that overlap', () => {
+    const file = deck({
+      nodes: [
+        card('a1', { ...at(0, 0), group: 'a' }),
+        card('a2', { ...at(0, 400), group: 'a' }),
+        card('stray', at(0, 200)),
+        card('b1', { ...at(150, 600), group: 'b' }),
+        card('c1', { ...at(1000, 0), group: 'c1g' }),
+        card('c2', { ...at(1000, 300), group: 'c2g' }),
+      ],
+      groups: [
+        { id: 'a', title: 'A' },
+        { id: 'b', title: 'B' },
+        { id: 'outer', title: 'Outer' },
+        { id: 'c1g', title: 'C1', parent: 'outer' },
+        { id: 'c2g', title: 'C2', parent: 'outer' },
+      ],
+    });
+    const entries = authoringChecks(file);
+    expect(entries.filter((e) => e.code === 'frame-covers-card').map((e) => e.message)).toEqual([
+      'The frame of group "a" covers card "stray", which is not in it.',
+    ]);
+    // a ends at y 496 + 24, b starts at 600 − 40: a gap. Nested c1g / c2g sit inside outer.
+    expect(entries.filter((e) => e.code === 'frames-overlap')).toEqual([]);
+    const moved = deck({
+      ...file,
+      nodes: file.nodes.map((n) => (n.id === 'b1' ? { ...n, position: { x: 150, y: 500 } } : n)),
+    });
+    expect(
+      authoringChecks(moved)
+        .filter((e) => e.code === 'frames-overlap')
+        .map((e) => e.subject),
+    ).toEqual(['b']);
   });
 
   it('flags a lone card, but not one in a group, a parent or a touched table', () => {
@@ -109,16 +189,16 @@ describe('authoring checks (027 research R5)', () => {
   });
 
   it('counts cards per level against the detail budget', () => {
-    const nodes = Array.from({ length: 8 }, (_, i) => card(`n${String(i)}`, { group: 'g' }));
+    const nodes = Array.from({ length: 11 }, (_, i) => card(`n${String(i)}`, { group: 'g' }));
     const file = deck({ nodes, groups: [{ id: 'g', title: 'G' }] });
-    expect(LEVEL_BUDGET.simplified).toBe(7);
+    expect(LEVEL_BUDGET.simplified).toBe(10);
     expect(codes(authoringChecks(file))).toEqual([]);
     const over = authoringChecks(file, { detail: 'simplified' });
     expect(codes(over)).toEqual(['level-over-budget']);
     expect(over[0]?.message).toMatch(
-      /8 cards on the top level; the simplified detail level allows 7/,
+      /11 cards on the top level; the simplified detail level allows 10/,
     );
-    expect(over[0]?.path).toBe('/nodes/7');
+    expect(over[0]?.path).toBe('/nodes/10');
   });
 
   it('asks for source links in codebase mode only', () => {

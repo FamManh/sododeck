@@ -5,7 +5,7 @@
  * (`contracts/scripts-cli.md`); change them together with `references/taste.md`.
  */
 import { CATALOGUE, type AuthoringCode, type ProblemEntry } from '@sododeck/model';
-import type { Node, SododeckFile } from '@sododeck/schema';
+import type { Edge, Node, SododeckFile } from '@sododeck/schema';
 
 export type Detail = 'faithful' | 'balanced' | 'simplified';
 export type Mode = 'new' | 'update' | 'codebase' | 'text';
@@ -13,12 +13,27 @@ export type Mode = 'new' | 'update' | 'codebase' | 'text';
 export const DETAILS: readonly Detail[] = ['faithful', 'balanced', 'simplified'];
 export const MODES: readonly Mode[] = ['new', 'update', 'codebase', 'text'];
 
-/** Most cards one level (one drill-in screen) should hold, per detail dial. */
+/**
+ * Most cards one level (one drill-in screen) should hold, per detail dial. Hand-laid decks group
+ * cards in frames, so a screen holds far more than an auto-laid one before it stops reading.
+ */
 export const LEVEL_BUDGET: Readonly<Record<Detail, number>> = {
-  faithful: 24,
-  balanced: 12,
-  simplified: 7,
+  faithful: 60,
+  balanced: 30,
+  simplified: 10,
 };
+
+/**
+ * The box the layout checks assume for a card without `size`. The real height depends on the
+ * fields the card shows, which only the app measures; 96 px covers a title, a type line and one
+ * field row, and the 6 px margin below absorbs the rest.
+ */
+export const CARD_BOX = { width: 184, height: 96 } as const;
+export const STICKY_BOX = { width: 200, height: 200 } as const;
+/** Padding a group frame adds around its cards: the title bar on top, a margin elsewhere. */
+export const FRAME_PADDING = { side: 24, top: 40 } as const;
+/** How close (px) a line may pass a card before it counts as running over it. */
+export const LINE_MARGIN = 6;
 
 /** Characters a card or group title shows before the card truncates it (240 px default card). */
 export const TITLE_BUDGET = 40;
@@ -101,18 +116,217 @@ function checkIds(file: SododeckFile): ProblemEntry[] {
 }
 
 function checkPositions(file: SododeckFile): ProblemEntry[] {
-  const placed = file.nodes.filter((node) => node.position !== undefined).length;
-  if (placed === 0 || placed === file.nodes.length) return [];
-  const firstUnplaced = file.nodes.findIndex((node) => node.position === undefined);
-  const node = file.nodes[firstUnplaced];
-  return [
-    entry(
-      'positions-mixed',
-      `/nodes/${String(firstUnplaced)}`,
-      node?.id,
-      `${String(placed)} of ${String(file.nodes.length)} cards have a position.`,
-    ),
-  ];
+  const out: ProblemEntry[] = [];
+  file.nodes.forEach((node, index) => {
+    if (node.position !== undefined) return;
+    out.push(
+      entry(
+        'card-without-position',
+        `/nodes/${String(index)}`,
+        node.id,
+        `Card "${node.title}" has no position.`,
+      ),
+    );
+  });
+  return out;
+}
+
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+const centre = (b: Box) => ({ x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 });
+const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+
+/** Whether the segment a→b passes within `LINE_MARGIN` of `box` (sampled; boxes are ≥ 24 px). */
+function segmentHits(a: { x: number; y: number }, b: { x: number; y: number }, box: Box): boolean {
+  const length = Math.hypot(b.x - a.x, b.y - a.y);
+  const samples = Math.max(2, Math.ceil(length / 4));
+  for (let k = 1; k < samples; k += 1) {
+    const t = k / samples;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (
+      x > box.x0 - LINE_MARGIN &&
+      x < box.x1 + LINE_MARGIN &&
+      y > box.y0 - LINE_MARGIN &&
+      y < box.y1 + LINE_MARGIN
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The level a card is drawn on: the screen of its parent card, or the top. */
+const levelOf = (node: Node) => node.parent ?? '';
+
+/**
+ * Card boxes per level, group frames per level (stored frame, else the cards' bounding box plus
+ * padding, nested groups included), sticky boxes on the top level.
+ */
+function layoutBoxes(file: SododeckFile) {
+  const cards = new Map<string, { box: Box; level: string; group: string | undefined }>();
+  for (const node of file.nodes) {
+    if (node.position === undefined) continue;
+    const size = node.size ?? CARD_BOX;
+    const { x, y } = node.position;
+    cards.set(node.id, {
+      box: { x0: x, y0: y, x1: x + size.width, y1: y + size.height },
+      level: levelOf(node),
+      group: node.group,
+    });
+  }
+  const parentOf = new Map(file.groups.map((g) => [g.id, g.parent]));
+  /** Every group the card sits in, innermost first. */
+  const chain = (group: string | undefined): string[] => {
+    const out: string[] = [];
+    let current = group;
+    while (current !== undefined && !out.includes(current)) {
+      out.push(current);
+      current = parentOf.get(current);
+    }
+    return out;
+  };
+  const frames = new Map<string, { box: Box; level: string; members: Set<string> }>();
+  for (const group of file.groups) {
+    const members = [...cards].filter(([, c]) => chain(c.group).includes(group.id));
+    const ids = new Set(members.map(([id]) => id));
+    if (group.position !== undefined && group.size !== undefined) {
+      const { x, y } = group.position;
+      const level = members[0]?.[1].level ?? '';
+      frames.set(group.id, {
+        box: { x0: x, y0: y, x1: x + group.size.width, y1: y + group.size.height },
+        level,
+        members: ids,
+      });
+      continue;
+    }
+    if (members.length === 0) continue;
+    const boxes = members.map(([, c]) => c.box);
+    frames.set(group.id, {
+      box: {
+        x0: Math.min(...boxes.map((b) => b.x0)) - FRAME_PADDING.side,
+        y0: Math.min(...boxes.map((b) => b.y0)) - FRAME_PADDING.top,
+        x1: Math.max(...boxes.map((b) => b.x1)) + FRAME_PADDING.side,
+        y1: Math.max(...boxes.map((b) => b.y1)) + FRAME_PADDING.side,
+      },
+      level: members[0]?.[1].level ?? '',
+      members: ids,
+    });
+  }
+  const stickies = new Map<string, Box>();
+  for (const sticky of file.stickies) {
+    if (sticky.position === undefined) continue;
+    const size = sticky.size ?? STICKY_BOX;
+    const { x, y } = sticky.position;
+    stickies.set(sticky.id, { x0: x, y0: y, x1: x + size.width, y1: y + size.height });
+  }
+  return { cards, frames, stickies, chain };
+}
+
+/** The bends of `edge` between centres `a` and `b`, as the schema defines waypoints. */
+function polyline(edge: Edge, a: { x: number; y: number }, b: { x: number; y: number }) {
+  const bends = (edge.route?.waypoints ?? []).map((w) => ({
+    x: 'x' in w && w.x !== undefined ? a.x + w.x * (b.x - a.x) : (a.x + b.x) / 2 + (w.dx ?? 0),
+    y: 'y' in w && w.y !== undefined ? a.y + w.y * (b.y - a.y) : (a.y + b.y) / 2 + (w.dy ?? 0),
+  }));
+  return [a, ...bends, b];
+}
+
+function checkLayout(file: SododeckFile): ProblemEntry[] {
+  const { cards, frames, stickies, chain } = layoutBoxes(file);
+  const out: ProblemEntry[] = [];
+  const endBox = (id: string): { box: Box; level: string } | undefined => {
+    const card = cards.get(id);
+    if (card !== undefined) return card;
+    const frame = frames.get(id);
+    if (frame !== undefined) return frame;
+    const sticky = stickies.get(id);
+    return sticky === undefined ? undefined : { box: sticky, level: '' };
+  };
+
+  file.edges.forEach((edge, index) => {
+    const from = endBox(edge.from);
+    const to = endBox(edge.to);
+    if (from === undefined || to === undefined || from.level !== to.level) return;
+    const points = polyline(edge, centre(from.box), centre(to.box));
+    const obstacles: [string, Box][] = [
+      ...[...cards]
+        .filter(([, c]) => c.level === from.level)
+        .map(([id, c]): [string, Box] => [id, c.box]),
+      ...(from.level === '' ? [...stickies] : []),
+    ];
+    // A card inside a group frame the connector ends on is not in the way.
+    const inEndGroup = (id: string) => {
+      const groups = chain(cards.get(id)?.group);
+      return groups.includes(edge.from) || groups.includes(edge.to);
+    };
+    for (const [id, box] of obstacles) {
+      if (id === edge.from || id === edge.to || inEndGroup(id)) continue;
+      const hit = points.some((p, k) => {
+        const q = points[k + 1];
+        return q !== undefined && segmentHits(p, q, box);
+      });
+      if (!hit) continue;
+      out.push(
+        entry(
+          'connector-crosses-card',
+          `/edges/${String(index)}`,
+          edge.id,
+          `Connector "${edge.id}" (${edge.from} → ${edge.to}) runs over "${id}".`,
+        ),
+      );
+    }
+  });
+
+  const groupIndex = new Map(file.groups.map((g, i) => [g.id, i]));
+  const parentOf = new Map(file.groups.map((g) => [g.id, g.parent]));
+  for (const [groupId, frame] of frames) {
+    for (const [cardId, card] of cards) {
+      if (card.level !== frame.level || frame.members.has(cardId)) continue;
+      if (!overlaps(frame.box, card.box)) continue;
+      out.push(
+        entry(
+          'frame-covers-card',
+          `/groups/${String(groupIndex.get(groupId) ?? 0)}`,
+          groupId,
+          `The frame of group "${groupId}" covers card "${cardId}", which is not in it.`,
+        ),
+      );
+    }
+    for (const [stickyId, box] of stickies) {
+      if (frame.level !== '' || !overlaps(frame.box, box)) continue;
+      out.push(
+        entry(
+          'frame-covers-card',
+          `/groups/${String(groupIndex.get(groupId) ?? 0)}`,
+          groupId,
+          `The frame of group "${groupId}" covers note "${stickyId}".`,
+        ),
+      );
+    }
+  }
+  // Sibling frames (same parent group, same level) never share space; nested frames may.
+  const list = [...frames];
+  list.forEach(([a, fa], i) => {
+    for (const [b, fb] of list.slice(i + 1)) {
+      if (fa.level !== fb.level || parentOf.get(a) !== parentOf.get(b)) continue;
+      if (!overlaps(fa.box, fb.box)) continue;
+      out.push(
+        entry(
+          'frames-overlap',
+          `/groups/${String(groupIndex.get(b) ?? 0)}`,
+          b,
+          `The frames of groups "${a}" and "${b}" overlap.`,
+        ),
+      );
+    }
+  });
+  return out;
 }
 
 function checkOrphans(file: SododeckFile): ProblemEntry[] {
@@ -273,7 +487,8 @@ export function authoringChecks(
   const mode = options.mode ?? 'new';
   return [
     ...checkIds(file),
-    ...(mode === 'update' ? [] : checkPositions(file)),
+    ...checkPositions(file),
+    ...checkLayout(file),
     ...checkOrphans(file),
     ...checkDuplicateTitles(file),
     ...checkLabels(file),
