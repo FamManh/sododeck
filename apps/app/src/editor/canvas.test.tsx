@@ -881,12 +881,14 @@ describe('canvas handlers', () => {
         { type: 'select', id: 'group:g', selected: true },
         { type: 'select', id: 'c', selected: true },
       ]);
+      // React Flow's "connected to a caught card" connectors are not taken: the marquee's own
+      // hit test picks connectors (use-marquee-edges.test.tsx).
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
       h().onSelectionEnd();
     });
     expect(ui().selection).toEqual({
       nodes: ['a', 'c'],
-      edges: ['e1'],
+      edges: [],
       groups: [],
       stickies: [],
       images: [],
