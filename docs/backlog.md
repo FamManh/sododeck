@@ -235,6 +235,7 @@ and **027** ai-deck-skill are not scheduled.
 | 054 | editor-chrome-polish           | after 053  | 018, 052      | 4 d  | built (2026-10-05); see `specs/054-editor-chrome-polish/`     |
 | 055 | image-support                  | after 054  | 036           | 6 d  | founder feedback; ADR needed (schema, storage)                |
 | 056 | file-format-and-mermaid-import | after 054  | 025, 026      | 4 d  | founder feedback; ⚠ scope of Mermaid import                   |
+| 057 | image-editing                  | after 055  | 055           | 3 d  | crop and flip images; split from 055                          |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
 and multi-select into 003 and bulk edit into 008 (C-6); ⌘K (C-3) lives in 009 with global search
@@ -2341,11 +2342,24 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 055-image-support
 
-- **Status:** not started. **Needs an ADR** (file format, storage size, no network with content).
+- **Status:** spec written (`specs/055-image-support/`). **Needs an ADR** (file format, storage size, no network with content).
 - **Goal:** Upload images, and paste them with Ctrl+V.
-- **Open questions:** is an image its own canvas object, or also usable inside cards? Size limits,
-  how images are stored in IndexedDB and in the `.sododeck` file, export (PNG / SVG).
+- **Decided (founder, 2026-10-05):** image is its own canvas object; bytes stored separately from
+  the Yjs document and embedded in the file; compressed on import (long edge 2048 px, 10 MB in /
+  5 MB stored); PNG, JPEG, WebP, GIF, SVG, AVIF; images appear in PNG / SVG export. Crop and flip
+  are 057.
 - **Prompt:** `/speckit.specify 055 from docs/backlog.md: image support.`
+
+## 057-image-editing
+
+- **Status:** not started. Split from 055 (2026-10-05).
+- **Goal:** Light editing of an image object on the canvas without leaving the editor.
+- **In scope:** crop (drag handles, reset), flip horizontal / vertical. Edits are non-destructive
+  (the stored picture is unchanged; the object keeps crop and flip values) and appear in export.
+- **Out of scope:** rotate, filters, annotation, replacing the picture.
+- **Open questions:** schema fields for crop / flip (additive to 055's image object); crop in PNG
+  / SVG export; undo granularity while dragging a crop handle.
+- **Prompt:** `/speckit.specify 057 from docs/backlog.md: image crop and flip.`
 
 ## 056-file-format-and-mermaid-import
 
