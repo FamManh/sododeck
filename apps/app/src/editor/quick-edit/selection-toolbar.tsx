@@ -50,6 +50,8 @@ function useToolbarShown(): boolean {
       toolbarVariant(s.selection) !== 'none' &&
       s.canvasGesture === null &&
       s.titleEdit === null &&
+      // Crop mode shows its own bar (057).
+      s.cropSession === null &&
       !isFlowMode(s) &&
       s.flowSession === null &&
       !s.hideUi,

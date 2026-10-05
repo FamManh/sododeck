@@ -1,7 +1,8 @@
 import type { Id, SododeckFile } from '@sododeck/schema';
-import { Captions, Accessibility, FlipHorizontal2, FlipVertical2 } from 'lucide-react';
+import { Captions, Accessibility, Crop, FlipHorizontal2, FlipVertical2, Undo2 } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { cropUnavailable, openCropMode } from '../images/crop-commands';
 import type { Action, ActionContext } from './types';
 
 type ImageObject = NonNullable<SododeckFile['images']>[number];
@@ -13,6 +14,50 @@ function freeImages(ctx: ActionContext): ImageObject[] {
 }
 
 const LOCKED = 'Locked';
+
+/** The one selected image, when exactly one is selected. */
+const onlyImage = (ctx: ActionContext): ImageObject | undefined =>
+  ctx.selection.images.length === 1
+    ? (ctx.deck.images ?? []).find((image) => image.id === ctx.selection.images[0])
+    : undefined;
+
+/** Crop (057 US1): opens crop mode on the one selected image. Double-click does the same. */
+const CROP_ACTION: Action = {
+  id: 'image.crop',
+  label: 'Crop',
+  icon: Crop,
+  section: 'edit',
+  where: { toolbar: ['image'], menu: ['image'] },
+  disabledReason: (ctx) => {
+    const image = onlyImage(ctx);
+    return image === undefined ? 'Picture missing' : cropUnavailable(ctx.deck, image.id);
+  },
+  run: (ctx) => {
+    const image = onlyImage(ctx);
+    if (image !== undefined && cropUnavailable(ctx.deck, image.id) === null)
+      openCropMode(ctx.deck, image.id);
+  },
+};
+
+/** Reset crop (057 US3): the whole picture again, same scale, one undo step. */
+const RESET_CROP_ACTION: Action = {
+  id: 'image.resetCrop',
+  label: 'Reset crop',
+  icon: Undo2,
+  section: 'edit',
+  where: { toolbar: ['image'], menu: ['image'] },
+  disabledReason: (ctx) => {
+    const image = onlyImage(ctx);
+    if (image?.locked === true) return LOCKED;
+    return image?.crop === undefined ? 'Not cropped' : null;
+  },
+  run: (ctx) => {
+    const image = onlyImage(ctx);
+    if (image?.crop === undefined || image.locked === true) return;
+    ctx.editor.setImageCrop(image.id, null);
+    useUiStore.getState().announce('Crop reset');
+  },
+};
 
 /**
  * Flip horizontal / vertical (057 R6): one press leaves every selected, unlocked image facing the
@@ -73,6 +118,8 @@ export const IMAGE_ACTIONS: readonly Action[] = [
       useUiStore.getState().openToolbarField('imageCaption');
     },
   },
+  CROP_ACTION,
+  RESET_CROP_ACTION,
   flipAction('x'),
   flipAction('y'),
 ];

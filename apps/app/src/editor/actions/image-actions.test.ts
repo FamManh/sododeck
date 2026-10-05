@@ -103,3 +103,64 @@ describe('image.flipX / image.flipY (057)', () => {
     expect(find(ctx, 'image.flipX')?.pressed).toBe(true);
   });
 });
+
+describe('image.crop (057)', () => {
+  it('is offered on the toolbar and menu for one image only', () => {
+    expect(find(actionContext(images('plain'), 'edit', deck), 'image.crop')).toBeDefined();
+    expect(find(actionContext(images('plain'), 'edit', deck), 'image.crop', 'menu')).toBeDefined();
+    expect(
+      find(actionContext(images('plain', 'flipped'), 'edit', deck), 'image.crop'),
+    ).toBeUndefined();
+    expect(
+      find(actionContext(images('plain', 'flipped'), 'edit', deck), 'image.crop', 'menu'),
+    ).toBeUndefined();
+  });
+
+  it('is disabled for a locked image', () => {
+    expect(find(actionContext(images('locked'), 'edit', deck), 'image.crop')?.disabled).toBe(
+      'Locked',
+    );
+  });
+
+  it('opens crop mode from the current crop, writing nothing', () => {
+    const ctx = actionContext(images('cropped'), 'edit', deck);
+    find(ctx, 'image.crop')?.run();
+    expect(useUiStore.getState().cropSession).toEqual({
+      imageId: 'cropped',
+      crop: { x: 0.5, y: 0, width: 0.5, height: 1 },
+      handle: null,
+    });
+    expect(ctx.editor.canUndo()).toBe(false);
+    const whole = actionContext(images('plain'), 'edit', deck);
+    find(whole, 'image.crop')?.run();
+    expect(useUiStore.getState().cropSession?.crop).toEqual({ x: 0, y: 0, width: 1, height: 1 });
+  });
+});
+
+describe('image.resetCrop (057)', () => {
+  it('is disabled when not cropped or locked', () => {
+    expect(find(actionContext(images('plain'), 'edit', deck), 'image.resetCrop')?.disabled).toBe(
+      'Not cropped',
+    );
+    expect(find(actionContext(images('locked'), 'edit', deck), 'image.resetCrop')?.disabled).toBe(
+      'Locked',
+    );
+    expect(
+      find(actionContext(images('cropped'), 'edit', deck), 'image.resetCrop', 'menu')?.disabled,
+    ).toBeNull();
+  });
+
+  it('shows the whole picture again at the same scale, one undo step, and says so', () => {
+    const ctx = actionContext(images('cropped'), 'edit', deck);
+    find(ctx, 'image.resetCrop')?.run();
+    const image = toJSON(ctx.doc).images?.[3];
+    expect(image).not.toHaveProperty('crop');
+    // The right half is drawn 200 × 200 at x 1600 (centred in its 400 px box), scale 1: the whole
+    // picture comes back 200 px to its left.
+    expect(image?.position).toEqual({ x: 1400, y: 0 });
+    expect(image?.size).toEqual({ width: 400, height: 200 });
+    expect(useUiStore.getState().announcement.text).toBe('Crop reset');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).images?.[3]?.crop).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
+  });
+});

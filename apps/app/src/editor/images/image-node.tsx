@@ -28,6 +28,8 @@ import {
 import type { Handle as ResizeHandleName } from '../editing/resize-limits';
 import { refuseLocked } from '../lock';
 import { imageName } from './image-name';
+import { cancelCrop, NOTHING_TO_CROP } from './crop-commands';
+import { CropOverlay } from './crop-overlay';
 import { PictureView } from './picture-view';
 
 /** One handle per side, like a note's (053). */
@@ -95,6 +97,12 @@ export const ImageNode = memo(function ImageNode({
     [editor],
   );
   const missing = !data.known || picture.status === 'missing';
+  // Crop mode (057): the overlay replaces the picture and the chrome until it is closed.
+  const cropOpen = useUiStore((state) => state.cropSession?.imageId === data.imageId);
+  const cropping = cropOpen && !missing && data.natural !== undefined;
+  useEffect(() => {
+    if (cropOpen && (missing || data.natural === undefined)) cancelCrop(NOTHING_TO_CROP);
+  }, [cropOpen, missing, data.natural]);
   const label = data.alt !== undefined && data.alt !== '' ? data.alt : data.fileName;
   const boxWidth = width ?? data.size.width;
   const boxHeight = height ?? data.size.height;
@@ -155,7 +163,19 @@ export const ImageNode = memo(function ImageNode({
       }}
       className={cn('group/image relative rounded-[4px]', focusRing)}
     >
-      {missing ? (
+      {cropping && data.natural !== undefined && picture.status === 'ready' ? (
+        <CropOverlay
+          imageId={data.imageId}
+          url={picture.url}
+          width={boxWidth}
+          height={boxHeight}
+          natural={data.natural}
+          crop={data.crop}
+          flipX={data.flipX}
+          flipY={data.flipY}
+          locked={locked}
+        />
+      ) : missing ? (
         <div
           data-testid="image-missing"
           className="flex size-full flex-col items-center justify-center gap-1 overflow-hidden rounded-[4px] border border-dashed border-border-strong bg-surface-2 px-2 text-center text-ink-secondary"
@@ -193,7 +213,7 @@ export const ImageNode = memo(function ImageNode({
           data-testid="image-loading"
         />
       )}
-      {data.caption !== undefined && data.caption !== '' && (
+      {!cropping && data.caption !== undefined && data.caption !== '' && (
         <p
           data-testid="image-caption"
           title={data.caption}
@@ -202,7 +222,7 @@ export const ImageNode = memo(function ImageNode({
           {data.caption}
         </p>
       )}
-      {(selected || endTarget === 'ok') && (
+      {!cropping && (selected || endTarget === 'ok') && (
         <span
           aria-hidden
           className={cn(
@@ -211,8 +231,9 @@ export const ImageNode = memo(function ImageNode({
           )}
         />
       )}
-      {locked && <LockGlyph imageId={data.imageId} />}
+      {locked && !cropping && <LockGlyph imageId={data.imageId} />}
       {resizable &&
+        !cropping &&
         RESIZE_HANDLES.map((handle) => (
           <NodeResizeControl
             key={handle}
@@ -243,7 +264,7 @@ export const ImageNode = memo(function ImageNode({
           id={side}
           type="source"
           position={position}
-          isConnectable={editable && !locked}
+          isConnectable={editable && !locked && !cropping}
           role="button"
           aria-label={`Connect from ${label === '' ? 'image' : label}`}
           tabIndex={-1}
@@ -255,6 +276,8 @@ export const ImageNode = memo(function ImageNode({
           }}
           className={cn(
             'sd-handle opacity-0 transition-opacity focus-visible:opacity-100',
+            // Kept mounted in crop mode: connectors still measure their ends on it.
+            cropping && 'invisible',
             editable && !locked
               ? 'pointer-events-auto group-hover/image:opacity-100 group-focus-within/image:opacity-100'
               : 'pointer-events-none',

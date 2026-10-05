@@ -10,6 +10,8 @@ import { readDeck } from '../../model/use-deck-snapshot';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { ImageFlowNode } from '../deck-to-flow';
 import { toImageNodes } from '../deck-to-flow';
+import { resizeImageByKey } from '../editing/image-resize';
+import { useUiStore } from '../../state/ui-store';
 import { ImageNode } from './image-node';
 
 const ASSET = assetId(PNG_1X1);
@@ -214,5 +216,30 @@ describe('ImageNode: crop and flip (057)', () => {
     );
     expect(container.querySelector('[data-testid="image-view"]')).toBeNull();
     expect(container.querySelector('[style*="scale"]')).toBeNull();
+  });
+
+  it('cancels crop mode and says so when the picture is missing', async () => {
+    const { container } = await renderImage('lost', edited);
+    act(() => {
+      useUiStore.getState().select({ images: ['lost'] });
+      useUiStore.getState().openCrop('lost', { x: 0, y: 0, width: 1, height: 1 });
+    });
+    await waitFor(
+      () => {
+        expect(useUiStore.getState().cropSession).toBeNull();
+      },
+      { timeout: 3000 },
+    );
+    expect(useUiStore.getState().announcement.text).toBe('Picture missing, nothing to crop');
+    expect(container.querySelector('[data-crop-overlay]')).toBeNull();
+  });
+
+  it('resizes a cropped picture at the cropped ratio (US1-7)', async () => {
+    const { editor, doc } = await renderImage('e', edited);
+    act(() => {
+      resizeImageByKey(editor(), 'e', 'ArrowRight', true);
+    });
+    const size = readDeck(doc).images?.find((image) => image.id === 'e')?.size;
+    expect(size).toEqual({ width: 132, height: 132 });
   });
 });

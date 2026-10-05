@@ -12,6 +12,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { useUiStore } from '../state/ui-store';
 import { deckOf, editorWrapper } from '../test/render-canvas';
+import { IMAGE_NODE_PREFIX } from './deck-to-flow';
+import { LOCKED_HINT } from './lock';
 import { useCanvasHandlers } from './use-canvas-handlers';
 
 // a(0,0) b(300,0) c(0,200) d(300,200), each 164×50 at their display position (017 R12).
@@ -325,5 +327,70 @@ describe('use-canvas-handlers: bundles (034)', () => {
       h().onPaneClick(click);
     });
     expect(ui().fannedBundles.size).toBe(0);
+  });
+});
+
+describe('use-canvas-handlers: double-click on an image (057)', () => {
+  const ASSET = 'a'.repeat(64);
+  const facts = { type: 'image/png' as const, bytes: 1, width: 400, height: 200, data: '' };
+  const pictures = deckOf({
+    nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+    groups: [{ id: 'g', title: 'G' }],
+    images: [
+      { id: 'i', asset: ASSET, position: { x: 0, y: 300 }, size: { width: 400, height: 200 } },
+      {
+        id: 'cut',
+        asset: ASSET,
+        position: { x: 500, y: 300 },
+        size: { width: 200, height: 200 },
+        crop: { x: 0.5, y: 0, width: 0.5, height: 1 },
+      },
+      {
+        id: 'held',
+        asset: ASSET,
+        position: { x: 0, y: 600 },
+        size: { width: 400, height: 200 },
+        locked: true,
+      },
+    ],
+    assets: { [ASSET]: { ...facts, name: 'a.png' } },
+  });
+  const click = {} as ReactMouseEvent;
+  const image = (id: string) => ({ id: `${IMAGE_NODE_PREFIX}${id}`, data: {} }) as Node;
+
+  it('opens crop mode on the image, selected alone, from its current crop', () => {
+    const { h } = handlers(pictures);
+    act(() => {
+      h().onNodeDoubleClick(click, image('i'));
+    });
+    expect(ui().selection.images).toEqual(['i']);
+    expect(ui().cropSession).toEqual({
+      imageId: 'i',
+      crop: { x: 0, y: 0, width: 1, height: 1 },
+      handle: null,
+    });
+    act(() => {
+      ui().closeCrop();
+      h().onNodeDoubleClick(click, image('cut'));
+    });
+    expect(ui().cropSession?.crop).toEqual({ x: 0.5, y: 0, width: 0.5, height: 1 });
+  });
+
+  it('gives the locked hint on a locked image', () => {
+    const { h } = handlers(pictures);
+    act(() => {
+      h().onNodeDoubleClick(click, image('held'));
+    });
+    expect(ui().cropSession).toBeNull();
+    expect(ui().announcement.text).toBe(LOCKED_HINT);
+  });
+
+  it('still renames a card and a group on double-click', () => {
+    const { h } = handlers(pictures);
+    act(() => {
+      h().onNodeDoubleClick(click, { id: 'a', data: {} } as Node);
+    });
+    expect(ui().titleEdit).toMatchObject({ target: 'node', id: 'a' });
+    expect(ui().cropSession).toBeNull();
   });
 });

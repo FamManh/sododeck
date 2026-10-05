@@ -70,6 +70,8 @@ describe('image toolbar (055)', () => {
     expect(names()).toEqual([
       'Alt text',
       'Caption',
+      'Crop',
+      'Reset crop',
       'Flip horizontal',
       'Flip vertical',
       'Lock',
