@@ -18,9 +18,8 @@ import {
   imageBox,
   isLocked,
   isSchemaGroupId,
-  STICKY_DEFAULT_OFFSET,
   stickyBox,
-  stickyCanvasPosition,
+  stickyPosition,
   viewNodePosition,
   type DeckEditor,
 } from '@sododeck/model';
@@ -87,8 +86,7 @@ export interface DragSession {
   /** Dragged notes: the selected ones (copied with ⌥ even when they do not move themselves). */
   stickies: readonly Id[];
   /**
-   * The stored `position` of every note that moves itself: a free note's point, a pinned note's
-   * offset (pinned to a card that is not moving). A note pinned to a moving card follows it.
+   * The stored `position` of every selected note that moves (notes are always free, ADR 0041).
    */
   stickyStart: Readonly<Record<Id, Point>>;
 }
@@ -312,18 +310,16 @@ export class DragController {
       imageStart[image.id] = image.position;
       movingBoxes.push(imageBox(image));
     }
-    // Notes: the selected ones that are not locked. A note pinned to a moving card follows it.
+    // Notes: the selected ones that are not locked (always free since ADR 0041).
     const draggedStickies = new Set(selection.stickies);
     const stickyStart: Record<Id, Point> = {};
     const stickyDrawn: Record<Id, Point> = {};
     for (const sticky of view.deck.stickies) {
       if (!draggedStickies.has(sticky.id) || isLocked(sticky)) continue;
-      const placement = stickyCanvasPosition(view.deck, sticky);
-      stickyDrawn[sticky.id] = placement.point;
-      movingBoxes.push(stickyBox(sticky, placement.point));
-      if (placement.status === 'pinned' && moving.has(placement.pinnedTo)) continue;
-      stickyStart[sticky.id] =
-        sticky.position ?? (sticky.anchor === undefined ? { x: 0, y: 0 } : STICKY_DEFAULT_OFFSET);
+      const at = stickyPosition(sticky);
+      stickyDrawn[sticky.id] = at;
+      movingBoxes.push(stickyBox(sticky, at));
+      stickyStart[sticky.id] = at;
     }
     const frames: Record<Id, Frame> = {};
     for (const id of tree.groups) {
@@ -604,7 +600,7 @@ export class DragController {
       for (const [id, p] of Object.entries(imageStart)) {
         editor.moveImage(id, { x: p.x + dx, y: p.y + dy });
       }
-      // The stored point moves by the delta: a free note's point or a pinned note's offset.
+      // The stored point moves by the delta.
       for (const [id, p] of Object.entries(stickyStart)) {
         editor.update('stickies', id, { position: { x: p.x + dx, y: p.y + dy } });
       }

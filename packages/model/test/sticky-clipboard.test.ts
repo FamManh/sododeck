@@ -20,7 +20,7 @@ const source: SododeckFile = {
   ],
   stickies: [
     { id: 'free', text: 'Free note', position: { x: 20, y: 300 }, color: 'green', tags: ['x'] },
-    { id: 'pinned', text: 'Pinned note', anchor: 'a', position: { x: 10, y: -50 } },
+    { id: 'second', text: 'Second note', position: { x: 110, y: 50 } },
     { id: 'other', text: 'Not copied', position: { x: 900, y: 900 } },
   ],
   edges: [
@@ -53,18 +53,30 @@ describe('copy and paste of notes', () => {
     expect(fragment.deck.stickies[0]).toMatchObject({ color: 'green', tags: ['x'] });
   });
 
-  it('copies a pinned note as a free note at the point it is drawn', () => {
-    const fragment = toFragment(source, { nodes: [], groups: [], stickies: ['pinned'] });
-    const [note] = fragment.deck.stickies;
-    expect(note).not.toHaveProperty('anchor');
-    expect(note?.position).toEqual({ x: 110, y: 50 });
-    // In another view the note follows its card's view position.
+  it('copies a note at its own point in every view (notes are free, ADR 0041)', () => {
+    const fragment = toFragment(source, { nodes: [], groups: [], stickies: ['second'] });
+    expect(fragment.deck.stickies[0]?.position).toEqual({ x: 110, y: 50 });
     const inView = toFragment(
       source,
-      { nodes: [], groups: [], stickies: ['pinned'] },
+      { nodes: [], groups: [], stickies: ['second'] },
       { viewId: 'v2' },
     );
-    expect(inView.deck.stickies[0]?.position).toEqual({ x: 510, y: 450 });
+    expect(inView.deck.stickies[0]?.position).toEqual({ x: 110, y: 50 });
+  });
+
+  it('drops a legacy anchor from a hand-made fragment on paste', () => {
+    const { doc, editor } = setup();
+    const fragment = toFragment(source, { nodes: [], groups: [], stickies: ['second'] });
+    const [note] = fragment.deck.stickies;
+    if (note === undefined) throw new Error('missing note');
+    const legacy = {
+      ...fragment,
+      deck: { ...fragment.deck, stickies: [{ ...note, anchor: 'a' }] },
+    };
+    const pasted = editor.pasteFragment(legacy, { offset: { x: 0, y: 0 } });
+    const copy = toJSON(doc).stickies.find((s) => s.id === pasted.stickies[0]);
+    expect(copy).not.toHaveProperty('anchor');
+    expect(copy?.position).toEqual({ x: 110, y: 50 });
   });
 
   it('counts notes in the fragment origin', () => {
@@ -82,13 +94,13 @@ describe('copy and paste of notes', () => {
     const fragment = toFragment(toJSON(doc), {
       nodes: ['a', 'b'],
       groups: [],
-      stickies: ['free', 'pinned'],
+      stickies: ['free', 'second'],
     });
     const pasted = editor.pasteFragment(fragment, { offset: { x: 1000, y: 0 } });
     expect(pasted.stickies).toHaveLength(2);
     const out = toJSON(doc);
     const copies = out.stickies.filter((s) => pasted.stickies.includes(s.id));
-    expect(copies.map((s) => s.text)).toEqual(['Free note', 'Pinned note']);
+    expect(copies.map((s) => s.text)).toEqual(['Free note', 'Second note']);
     expect(copies[0]?.position).toEqual({ x: 1020, y: 300 });
     expect(copies[1]?.position).toEqual({ x: 1110, y: 50 });
     expect(copies[1]).not.toHaveProperty('anchor');

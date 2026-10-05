@@ -289,19 +289,9 @@ export function pasteFragment(
       z: rankOf('image', id),
     };
   });
-  // Notes come free (`toFragment` resolves pins); one still carrying an anchor (a hand-made
-  // fragment) keeps it only for a node the paste created, else it lands free where it was.
+  // Notes are always free (ADR 0041): a legacy `anchor` in a hand-made fragment is dropped.
   const stickies: Sticky[] = deck.stickies.map((sticky) => {
-    const { id, anchor, position, ...rest } = sticky;
-    const pinned = anchor === undefined ? undefined : nodeIds.get(anchor);
-    if (pinned !== undefined) {
-      return {
-        ...rest,
-        id: stickyIds.get(id) ?? id,
-        anchor: pinned,
-        ...(position === undefined ? {} : { position }),
-      };
-    }
+    const { id, anchor: _anchor, position, ...rest } = sticky;
     return {
       ...rest,
       id: stickyIds.get(id) ?? id,

@@ -915,7 +915,7 @@ describe('⌥ duplicate-drag keeps the original in place (051 US2, R2)', () => {
 });
 
 describe('dragging and duplicating every selected kind', () => {
-  /** A group with a card, a loose card, a free note and a note pinned to the loose card. */
+  /** A group with a card, a loose card and two notes. */
   const board: SododeckFile = deckOf({
     nodes: [
       { id: 'in', type: 'service', title: 'In', group: 'g', position: { x: 0, y: 0 } },
@@ -924,7 +924,7 @@ describe('dragging and duplicating every selected kind', () => {
     groups: [{ id: 'g', title: 'G', ...frame(-40, -40, 320, 200) }],
     stickies: [
       { id: 'n1', text: 'Free', position: { x: 0, y: 600 } },
-      { id: 'n2', text: 'Pinned', anchor: 'out', position: { x: 10, y: -80 } },
+      { id: 'n2', text: 'Second', position: { x: 610, y: -80 } },
     ],
     edges: [{ id: 'e', from: 'out', to: 'n1' }],
   });
@@ -944,9 +944,9 @@ describe('dragging and duplicating every selected kind', () => {
     expect(frameOf(file, 'g')).toEqual(frame(60, 10, 320, 200));
     expect(position(file, 'in')).toEqual({ x: 100, y: 50 });
     expect(position(file, 'out')).toEqual({ x: 700, y: 50 });
-    // The free note moves by the delta; the pinned one keeps its offset (it follows its card).
+    // Selected notes move by the same delta.
     expect(note(file, 'n1')?.position).toEqual({ x: 100, y: 650 });
-    expect(note(file, 'n2')?.position).toEqual({ x: 10, y: -80 });
+    expect(note(file, 'n2')?.position).toEqual({ x: 710, y: -30 });
     act(() => {
       editor().undo();
     });
@@ -988,7 +988,7 @@ describe('dragging and duplicating every selected kind', () => {
     const copies = file.stickies.filter((s) => !['n1', 'n2'].includes(s.id));
     expect(copies.map((s) => [s.text, s.position, s.anchor])).toEqual([
       ['Free', { x: 0, y: 1600 }, undefined],
-      ['Pinned', { x: 610, y: 920 }, undefined],
+      ['Second', { x: 610, y: 920 }, undefined],
     ]);
     const copyOfE = file.edges.filter((e) => e.id !== 'e');
     expect(copyOfE).toHaveLength(1);

@@ -26,19 +26,11 @@ import {
   type Node,
   type SododeckFile,
   type Sticky,
-  type View,
 } from '@sododeck/schema';
 
 import { metaOf, type AssetMeta } from './assets';
 import { isDbTable } from './card-types';
-import {
-  frameOf,
-  NODE_GRID,
-  STICKY_DEFAULT_OFFSET,
-  stickyCanvasPosition,
-  viewNodePosition,
-  type Point,
-} from './geometry';
+import { frameOf, NODE_GRID, stickyPosition, viewNodePosition, type Point } from './geometry';
 import { canonicalize, canonicalizeEntry } from './key-order';
 import { checkDuplicateIds } from './load-checks';
 import { validateObject } from './validate';
@@ -78,7 +70,7 @@ export interface FragmentSelection {
   groups: readonly Id[];
   /** Images to copy (055); absent means none. */
   images?: readonly Id[];
-  /** Notes to copy; absent means none. A pinned note is copied as a free note where it is drawn. */
+  /** Notes to copy; absent means none. Copied at their own point; a legacy `anchor` is dropped. */
   stickies?: readonly Id[];
 }
 
@@ -97,20 +89,6 @@ function isRelationship(edge: Edge, isTable: (id: Id) => boolean): boolean {
     (edge.toColumns?.length ?? 0) > 0 ||
     edge.cardinality !== undefined
   );
-}
-
-/**
- * Where `sticky` is drawn in `view` (the base view when absent): a note pinned to a card follows
- * the card's view position, like the canvas draws it.
- */
-function stickyPoint(file: SododeckFile, sticky: Sticky, view: View | undefined): Point {
-  const card =
-    view === undefined || sticky.anchor === undefined ? undefined : view.positions?.[sticky.anchor];
-  if (card !== undefined) {
-    const offset = sticky.position ?? STICKY_DEFAULT_OFFSET;
-    return { x: card.x + offset.x, y: card.y + offset.y };
-  }
-  return stickyCanvasPosition(file, sticky).point;
 }
 
 /**
@@ -185,12 +163,11 @@ export function toFragment(
     });
   });
   const stickyIds = new Set(selection.stickies ?? []);
-  // A note in the fragment is free: its anchor may be outside, and a free copy is what a duplicate
-  // of a note looks like on the canvas (it lands where the original is drawn).
+  // Notes are always free (ADR 0041); a legacy `anchor` is dropped so the copy lands where it is.
   const stickies: Sticky[] = file.stickies
     .filter((sticky) => stickyIds.has(sticky.id))
     .map((sticky) => {
-      const at = stickyPoint(file, sticky, view);
+      const at = stickyPosition(sticky);
       const { anchor: _anchor, position: _position, ...rest } = sticky;
       return { ...rest, position: { x: at.x, y: at.y } };
     });
