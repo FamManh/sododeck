@@ -1918,14 +1918,17 @@ describe('sticky connector ends (053 US1)', () => {
 describe('images in the stack (055)', () => {
   const asset = 'a'.repeat(64);
   const facts = { type: 'image/png' as const, bytes: 1, width: 10, height: 10, name: 'p.png' };
-  const image = (id: string, z?: number) => ({
+  const image = (id: string, z?: number): NonNullable<SododeckFile['images']>[number] => ({
     id,
     asset,
     position: { x: 0, y: 0 },
     size: { width: 50, height: 40 },
     ...(z === undefined ? {} : { z }),
   });
-  const withImages = (images: ReturnType<typeof image>[], nodes?: SododeckFile['nodes']) => ({
+  const withImages = (
+    images: NonNullable<SododeckFile['images']>,
+    nodes?: SododeckFile['nodes'],
+  ) => ({
     ...emptySododeckFile(),
     nodes: nodes ?? [
       { id: 'c0', type: 'service' as const, title: 'C0' },

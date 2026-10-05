@@ -3,7 +3,10 @@
   "version": 1,
   "name": "Shop",
   "description": "A storefront, an orders service and two databases, with a Checkout flow.",
-  "packs": ["architecture", "database"],
+  "packs": [
+    "architecture",
+    "database"
+  ],
   "dialect": "postgres",
   "enums": [
     {
@@ -232,7 +235,10 @@
       "indexes": [
         {
           "id": "orders.customer-created",
-          "columns": ["orders.customer_id", "orders.created_at"]
+          "columns": [
+            "orders.customer_id",
+            "orders.created_at"
+          ]
         }
       ]
     },
@@ -548,7 +554,9 @@
       "indexes": [
         {
           "id": "audit_log.logged",
-          "columns": ["audit_log.logged_at"],
+          "columns": [
+            "audit_log.logged_at"
+          ],
           "method": "btree"
         }
       ]
@@ -624,8 +632,12 @@
       "id": "rel.addresses-customer",
       "from": "addresses",
       "to": "customers",
-      "fromColumns": ["addresses.customer_id"],
-      "toColumns": ["customers.id"],
+      "fromColumns": [
+        "addresses.customer_id"
+      ],
+      "toColumns": [
+        "customers.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -634,8 +646,12 @@
       "from": "orders",
       "to": "customers",
       "label": "places",
-      "fromColumns": ["orders.customer_id"],
-      "toColumns": ["customers.id"],
+      "fromColumns": [
+        "orders.customer_id"
+      ],
+      "toColumns": [
+        "customers.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -644,8 +660,12 @@
       "from": "orders",
       "to": "addresses",
       "label": "ships to",
-      "fromColumns": ["orders.shipping_address_id"],
-      "toColumns": ["addresses.id"],
+      "fromColumns": [
+        "orders.shipping_address_id"
+      ],
+      "toColumns": [
+        "addresses.id"
+      ],
       "cardinality": "n-1",
       "fromOptional": true,
       "toOptional": true
@@ -655,8 +675,12 @@
       "from": "orders",
       "to": "addresses",
       "label": "bills to",
-      "fromColumns": ["orders.billing_address_id"],
-      "toColumns": ["addresses.id"],
+      "fromColumns": [
+        "orders.billing_address_id"
+      ],
+      "toColumns": [
+        "addresses.id"
+      ],
       "cardinality": "n-1",
       "fromOptional": true,
       "toOptional": true
@@ -665,8 +689,12 @@
       "id": "rel.categories-parent",
       "from": "categories",
       "to": "categories",
-      "fromColumns": ["categories.parent_id"],
-      "toColumns": ["categories.id"],
+      "fromColumns": [
+        "categories.parent_id"
+      ],
+      "toColumns": [
+        "categories.id"
+      ],
       "cardinality": "n-1",
       "fromOptional": true,
       "toOptional": true
@@ -675,8 +703,12 @@
       "id": "rel.items-order",
       "from": "order_items",
       "to": "orders",
-      "fromColumns": ["order_items.order_id"],
-      "toColumns": ["orders.id"],
+      "fromColumns": [
+        "order_items.order_id"
+      ],
+      "toColumns": [
+        "orders.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -684,8 +716,12 @@
       "id": "rel.items-product",
       "from": "order_items",
       "to": "products",
-      "fromColumns": ["order_items.product_id"],
-      "toColumns": ["products.id"],
+      "fromColumns": [
+        "order_items.product_id"
+      ],
+      "toColumns": [
+        "products.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "restrict"
     },
@@ -693,24 +729,36 @@
       "id": "rel.payments-order",
       "from": "payments",
       "to": "orders",
-      "fromColumns": ["payments.order_id"],
-      "toColumns": ["orders.id"],
+      "fromColumns": [
+        "payments.order_id"
+      ],
+      "toColumns": [
+        "orders.id"
+      ],
       "cardinality": "n-1"
     },
     {
       "id": "rel.shipments-order",
       "from": "shipments",
       "to": "orders",
-      "fromColumns": ["shipments.order_id"],
-      "toColumns": ["orders.id"],
+      "fromColumns": [
+        "shipments.order_id"
+      ],
+      "toColumns": [
+        "orders.id"
+      ],
       "cardinality": "n-1"
     },
     {
       "id": "rel.shipment-items-shipment",
       "from": "shipment_items",
       "to": "shipments",
-      "fromColumns": ["shipment_items.shipment_id"],
-      "toColumns": ["shipments.id"],
+      "fromColumns": [
+        "shipment_items.shipment_id"
+      ],
+      "toColumns": [
+        "shipments.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -718,16 +766,26 @@
       "id": "rel.shipment-items-item",
       "from": "shipment_items",
       "to": "order_items",
-      "fromColumns": ["shipment_items.order_id", "shipment_items.product_id"],
-      "toColumns": ["order_items.order_id", "order_items.product_id"],
+      "fromColumns": [
+        "shipment_items.order_id",
+        "shipment_items.product_id"
+      ],
+      "toColumns": [
+        "order_items.order_id",
+        "order_items.product_id"
+      ],
       "cardinality": "n-1"
     },
     {
       "id": "rel.reviews-product",
       "from": "reviews",
       "to": "products",
-      "fromColumns": ["reviews.product_id"],
-      "toColumns": ["products.id"],
+      "fromColumns": [
+        "reviews.product_id"
+      ],
+      "toColumns": [
+        "products.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -735,8 +793,12 @@
       "id": "rel.reviews-customer",
       "from": "reviews",
       "to": "customers",
-      "fromColumns": ["reviews.customer_id"],
-      "toColumns": ["customers.id"],
+      "fromColumns": [
+        "reviews.customer_id"
+      ],
+      "toColumns": [
+        "customers.id"
+      ],
       "cardinality": "n-1",
       "fromOptional": true,
       "toOptional": true,
@@ -746,8 +808,12 @@
       "id": "rel.product-categories-product",
       "from": "product_categories",
       "to": "products",
-      "fromColumns": ["product_categories.product_id"],
-      "toColumns": ["products.id"],
+      "fromColumns": [
+        "product_categories.product_id"
+      ],
+      "toColumns": [
+        "products.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     },
@@ -755,8 +821,12 @@
       "id": "rel.product-categories-category",
       "from": "product_categories",
       "to": "categories",
-      "fromColumns": ["product_categories.category_id"],
-      "toColumns": ["categories.id"],
+      "fromColumns": [
+        "product_categories.category_id"
+      ],
+      "toColumns": [
+        "categories.id"
+      ],
       "cardinality": "n-1",
       "onDelete": "cascade"
     }

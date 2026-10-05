@@ -456,7 +456,13 @@ describe('EditorPage', () => {
       await user.click(screen.getByRole('link', { name: 'Back to canvas' }));
       expect(router.state.location.pathname).toBe('/deck/d1');
       expect(screen.getByRole('heading', { name: 'Pricing' })).toBeInTheDocument();
-      expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
+      expect(ui().selection).toEqual({
+        nodes: ['a'],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
       await openRulesFromRail(user);
       expect(ui().canvasViewport).toEqual(saved);
     });
@@ -484,7 +490,13 @@ describe('EditorPage', () => {
       expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
       expect(ui().pendingDelete).toBeNull();
       await user.keyboard('{Escape}');
-      expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
+      expect(ui().selection).toEqual({
+        nodes: ['a'],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
     });
 
     it("opens the rule editor from Deck settings' Rules count", async () => {

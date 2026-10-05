@@ -400,7 +400,10 @@
               {
                 "id": "dbidx.2",
                 "name": "orders_customer_placed_idx",
-                "columns": ["dbcol.37", "dbcol.41"],
+                "columns": [
+                  "dbcol.37",
+                  "dbcol.41"
+                ],
                 "method": "btree"
               }
             ]
@@ -894,7 +897,9 @@
               {
                 "id": "dbidx.3",
                 "name": "audit_log_payload_idx",
-                "columns": ["dbcol.95"],
+                "columns": [
+                  "dbcol.95"
+                ],
                 "method": "gin"
               }
             ]
@@ -1061,8 +1066,12 @@
             "id": "edge.1",
             "from": "node.2",
             "to": "node.1",
-            "fromColumns": ["dbcol.7"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.7"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1071,8 +1080,12 @@
             "from": "node.7",
             "to": "node.4",
             "label": "inventory_product_fk",
-            "fromColumns": ["dbcol.27"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.27"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1081,8 +1094,12 @@
             "from": "node.3",
             "to": "node.3",
             "label": "categories_parent_id_fkey",
-            "fromColumns": ["dbcol.12"],
-            "toColumns": ["dbcol.11"],
+            "fromColumns": [
+              "dbcol.12"
+            ],
+            "toColumns": [
+              "dbcol.11"
+            ],
             "cardinality": "n-1",
             "fromOptional": true,
             "onDelete": "set-null"
@@ -1092,8 +1109,12 @@
             "from": "node.4",
             "to": "node.3",
             "label": "products_category_id_fkey",
-            "fromColumns": ["dbcol.15"],
-            "toColumns": ["dbcol.11"],
+            "fromColumns": [
+              "dbcol.15"
+            ],
+            "toColumns": [
+              "dbcol.11"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -1102,8 +1123,12 @@
             "from": "node.5",
             "to": "node.4",
             "label": "product_images_product_id_fkey",
-            "fromColumns": ["dbcol.21"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.21"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1112,8 +1137,12 @@
             "from": "node.7",
             "to": "node.6",
             "label": "inventory_warehouse_id_fkey",
-            "fromColumns": ["dbcol.28"],
-            "toColumns": ["dbcol.24"],
+            "fromColumns": [
+              "dbcol.28"
+            ],
+            "toColumns": [
+              "dbcol.24"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1121,8 +1150,12 @@
             "from": "node.9",
             "to": "node.4",
             "label": "product_suppliers_product_id_fkey",
-            "fromColumns": ["dbcol.33"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.33"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1131,8 +1164,12 @@
             "from": "node.9",
             "to": "node.8",
             "label": "product_suppliers_supplier_id_fkey",
-            "fromColumns": ["dbcol.34"],
-            "toColumns": ["dbcol.30"],
+            "fromColumns": [
+              "dbcol.34"
+            ],
+            "toColumns": [
+              "dbcol.30"
+            ],
             "cardinality": "n-1",
             "onDelete": "restrict"
           },
@@ -1141,8 +1178,12 @@
             "from": "node.10",
             "to": "node.1",
             "label": "orders_customer_id_fkey",
-            "fromColumns": ["dbcol.37"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.37"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1151,8 +1192,12 @@
             "from": "node.10",
             "to": "node.2",
             "label": "orders_shipping_address_id_fkey",
-            "fromColumns": ["dbcol.38"],
-            "toColumns": ["dbcol.6"],
+            "fromColumns": [
+              "dbcol.38"
+            ],
+            "toColumns": [
+              "dbcol.6"
+            ],
             "cardinality": "n-1",
             "fromOptional": true,
             "onDelete": "set-null",
@@ -1163,8 +1208,12 @@
             "from": "node.11",
             "to": "node.10",
             "label": "order_items_order_id_fkey",
-            "fromColumns": ["dbcol.42"],
-            "toColumns": ["dbcol.36"],
+            "fromColumns": [
+              "dbcol.42"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1173,8 +1222,12 @@
             "from": "node.11",
             "to": "node.4",
             "label": "order_items_product_id_fkey",
-            "fromColumns": ["dbcol.43"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.43"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "restrict"
           },
@@ -1183,8 +1236,12 @@
             "from": "node.12",
             "to": "node.10",
             "label": "shipments_order_id_fkey",
-            "fromColumns": ["dbcol.47"],
-            "toColumns": ["dbcol.36"],
+            "fromColumns": [
+              "dbcol.47"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1192,8 +1249,12 @@
             "from": "node.13",
             "to": "node.12",
             "label": "shipment_items_shipment_id_fkey",
-            "fromColumns": ["dbcol.50"],
-            "toColumns": ["dbcol.46"],
+            "fromColumns": [
+              "dbcol.50"
+            ],
+            "toColumns": [
+              "dbcol.46"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1202,8 +1263,14 @@
             "from": "node.13",
             "to": "node.11",
             "label": "shipment_items_order_item_fkey",
-            "fromColumns": ["dbcol.51", "dbcol.52"],
-            "toColumns": ["dbcol.42", "dbcol.43"],
+            "fromColumns": [
+              "dbcol.51",
+              "dbcol.52"
+            ],
+            "toColumns": [
+              "dbcol.42",
+              "dbcol.43"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1211,8 +1278,12 @@
             "from": "node.14",
             "to": "node.10",
             "label": "payments_order_id_fkey",
-            "fromColumns": ["dbcol.55"],
-            "toColumns": ["dbcol.36"],
+            "fromColumns": [
+              "dbcol.55"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1220,8 +1291,12 @@
             "from": "node.15",
             "to": "node.14",
             "label": "refunds_payment_id_fkey",
-            "fromColumns": ["dbcol.60"],
-            "toColumns": ["dbcol.54"],
+            "fromColumns": [
+              "dbcol.60"
+            ],
+            "toColumns": [
+              "dbcol.54"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1229,8 +1304,12 @@
             "from": "node.17",
             "to": "node.10",
             "label": "order_coupons_order_id_fkey",
-            "fromColumns": ["dbcol.66"],
-            "toColumns": ["dbcol.36"],
+            "fromColumns": [
+              "dbcol.66"
+            ],
+            "toColumns": [
+              "dbcol.36"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1239,8 +1318,12 @@
             "from": "node.17",
             "to": "node.16",
             "label": "order_coupons_coupon_code_fkey",
-            "fromColumns": ["dbcol.67"],
-            "toColumns": ["dbcol.63"],
+            "fromColumns": [
+              "dbcol.67"
+            ],
+            "toColumns": [
+              "dbcol.63"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1248,8 +1331,12 @@
             "from": "node.18",
             "to": "node.1",
             "label": "carts_customer_id_fkey",
-            "fromColumns": ["dbcol.69"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.69"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "fromOptional": true,
             "onDelete": "set-null"
@@ -1259,8 +1346,12 @@
             "from": "node.19",
             "to": "node.18",
             "label": "cart_items_cart_id_fkey",
-            "fromColumns": ["dbcol.71"],
-            "toColumns": ["dbcol.68"],
+            "fromColumns": [
+              "dbcol.71"
+            ],
+            "toColumns": [
+              "dbcol.68"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1269,8 +1360,12 @@
             "from": "node.19",
             "to": "node.4",
             "label": "cart_items_product_id_fkey",
-            "fromColumns": ["dbcol.72"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.72"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1"
           },
           {
@@ -1278,8 +1373,12 @@
             "from": "node.20",
             "to": "node.4",
             "label": "reviews_product_id_fkey",
-            "fromColumns": ["dbcol.75"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.75"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1288,8 +1387,12 @@
             "from": "node.20",
             "to": "node.1",
             "label": "reviews_customer_id_fkey",
-            "fromColumns": ["dbcol.76"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.76"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "fromOptional": true,
             "onDelete": "set-null"
@@ -1299,8 +1402,12 @@
             "from": "node.21",
             "to": "node.1",
             "label": "wishlists_customer_id_fkey",
-            "fromColumns": ["dbcol.80"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.80"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "1-1",
             "onDelete": "cascade"
           },
@@ -1309,8 +1416,12 @@
             "from": "node.22",
             "to": "node.21",
             "label": "wishlist_items_wishlist_id_fkey",
-            "fromColumns": ["dbcol.82"],
-            "toColumns": ["dbcol.79"],
+            "fromColumns": [
+              "dbcol.82"
+            ],
+            "toColumns": [
+              "dbcol.79"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1319,8 +1430,12 @@
             "from": "node.22",
             "to": "node.4",
             "label": "wishlist_items_product_id_fkey",
-            "fromColumns": ["dbcol.83"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.83"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1329,8 +1444,12 @@
             "from": "node.24",
             "to": "node.23",
             "label": "employees_department_id_fkey",
-            "fromColumns": ["dbcol.88"],
-            "toColumns": ["dbcol.85"],
+            "fromColumns": [
+              "dbcol.88"
+            ],
+            "toColumns": [
+              "dbcol.85"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -1339,8 +1458,12 @@
             "from": "node.24",
             "to": "node.24",
             "label": "employees_manager_id_fkey",
-            "fromColumns": ["dbcol.89"],
-            "toColumns": ["dbcol.87"],
+            "fromColumns": [
+              "dbcol.89"
+            ],
+            "toColumns": [
+              "dbcol.87"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -1349,8 +1472,12 @@
             "from": "node.25",
             "to": "node.24",
             "label": "audit_log_actor_id_fkey",
-            "fromColumns": ["dbcol.93"],
-            "toColumns": ["dbcol.87"],
+            "fromColumns": [
+              "dbcol.93"
+            ],
+            "toColumns": [
+              "dbcol.87"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -1359,8 +1486,12 @@
             "from": "node.26",
             "to": "node.1",
             "label": "sessions_customer_id_fkey",
-            "fromColumns": ["dbcol.98"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.98"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1369,8 +1500,12 @@
             "from": "node.28",
             "to": "node.4",
             "label": "product_tags_product_id_fkey",
-            "fromColumns": ["dbcol.103"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.103"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1379,8 +1514,12 @@
             "from": "node.28",
             "to": "node.27",
             "label": "product_tags_tag_id_fkey",
-            "fromColumns": ["dbcol.104"],
-            "toColumns": ["dbcol.101"],
+            "fromColumns": [
+              "dbcol.104"
+            ],
+            "toColumns": [
+              "dbcol.101"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1389,8 +1528,12 @@
             "from": "node.29",
             "to": "node.4",
             "label": "price_history_product_id_fkey",
-            "fromColumns": ["dbcol.106"],
-            "toColumns": ["dbcol.14"],
+            "fromColumns": [
+              "dbcol.106"
+            ],
+            "toColumns": [
+              "dbcol.14"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           },
@@ -1399,8 +1542,12 @@
             "from": "node.30",
             "to": "node.1",
             "label": "notifications_customer_id_fkey",
-            "fromColumns": ["dbcol.110"],
-            "toColumns": ["dbcol.1"],
+            "fromColumns": [
+              "dbcol.110"
+            ],
+            "toColumns": [
+              "dbcol.1"
+            ],
             "cardinality": "n-1",
             "onDelete": "cascade"
           }

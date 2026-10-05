@@ -564,7 +564,7 @@ describe('editor shortcuts', () => {
     const { user } = setup();
     await user.keyboard('{Escape}{Backspace}');
     expect(ui().drill).toEqual([]);
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().pendingDelete).toBeNull();
   });
 

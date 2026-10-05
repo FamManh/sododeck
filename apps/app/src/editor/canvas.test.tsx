@@ -383,7 +383,13 @@ describe('Canvas', () => {
     act(() => {
       editor().remove('nodes', 'a');
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: ['e3'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: ['e3'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(ui().popover).toBeNull();
   });
 
@@ -395,7 +401,13 @@ describe('Canvas', () => {
     act(() => {
       editor().undo();
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1', 'e2'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['b'],
+      edges: ['e1', 'e2'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
 
     let id = '';
     act(() => {
@@ -631,7 +643,13 @@ describe('Canvas', () => {
       ui().select({ nodes: ['a1'], edges: ['m0'] });
       setGroupCollapsed(editor(), 'left', true);
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: ['left'], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: ['left'],
+      stickies: [],
+      images: [],
+    });
 
     act(() => {
       setGroupCollapsed(editor(), 'left', false);
@@ -640,7 +658,7 @@ describe('Canvas', () => {
     act(() => {
       ui().drillInto({ kind: 'group', id: 'left', viewport: { x: 0, y: 0, zoom: 1 } });
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
   });
 
   it('flags the wrapper for the details button: drag, session, Hide UI, tiny cards (019 R4)', () => {
@@ -774,21 +792,39 @@ describe('canvas handlers', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a'], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['a'],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(ui().focusedId).toBe('a');
     act(() => {
       h().onNodeClick(click({ shiftKey: true }), flowNode('b'));
       h().onEdgeClick(click({ metaKey: true }), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'b'], edges: ['e1'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['a', 'b'],
+      edges: ['e1'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     act(() => {
       h().onNodeClick(click({ ctrlKey: true }), flowNode('a'));
     });
-    expect(ui().selection).toEqual({ nodes: ['b'], edges: ['e1'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['b'],
+      edges: ['e1'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     act(() => {
       h().onPaneClick(click());
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
   });
 
   it('routes sticky selection and drag updates separately from components', () => {
@@ -801,7 +837,13 @@ describe('canvas handlers', () => {
     act(() => {
       h().onNodeClick(click(), flowNode('sticky:st1'));
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: ['st1'] });
+    expect(ui().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: ['st1'],
+      images: [],
+    });
 
     act(() => {
       h().onNodeDragStart({}, flowNode('sticky:st1'));
@@ -823,7 +865,13 @@ describe('canvas handlers', () => {
       h().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
       h().onSelectionEnd();
     });
-    expect(ui().selection).toEqual({ nodes: ['a', 'c'], edges: ['e1'], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({
+      nodes: ['a', 'c'],
+      edges: ['e1'],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     // Outside a marquee, React Flow's own selection changes are ignored.
     act(() => {
       h().onNodesChange([{ type: 'select', id: 'b', selected: true }]);
@@ -1098,7 +1146,7 @@ describe('canvas during a flow session (006 FR-017)', () => {
       h().onNodeClick(click(), flowNode('a'));
       h().onEdgeMouseEnter(click(), flowEdge('e1'));
     });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().hoverEdgeId).toBe('e1');
     act(() => {
       h().onEdgeClick(click(), flowEdge('e1'));
@@ -1254,7 +1302,7 @@ describe('canvas in flow mode (007)', () => {
       h().onNodeClick(click(), flowNode('c'));
     });
     expect(ui().activeFlow?.stepId).toBe('o2');
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
   });
 
   it('cycles through the steps of an edge used twice, wrapping around', () => {
@@ -1280,7 +1328,7 @@ describe('canvas in flow mode (007)', () => {
       h().onPaneClick(click());
     });
     expect(ui().activeFlow).toMatchObject({ flowId: 'order', stepId: 'o3' });
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().announcement.seq).toBe(seq);
   });
 

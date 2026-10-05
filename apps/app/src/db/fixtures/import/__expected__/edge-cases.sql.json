@@ -173,8 +173,12 @@
             "id": "edge.1",
             "from": "node.3",
             "to": "node.2",
-            "fromColumns": ["dbcol.8"],
-            "toColumns": ["dbcol.5"],
+            "fromColumns": [
+              "dbcol.8"
+            ],
+            "toColumns": [
+              "dbcol.5"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -183,8 +187,12 @@
             "from": "node.2",
             "to": "node.3",
             "label": "a_b_fk",
-            "fromColumns": ["dbcol.6"],
-            "toColumns": ["dbcol.7"],
+            "fromColumns": [
+              "dbcol.6"
+            ],
+            "toColumns": [
+              "dbcol.7"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -192,8 +200,12 @@
             "id": "edge.3",
             "from": "node.4",
             "to": "node.4",
-            "fromColumns": ["dbcol.10"],
-            "toColumns": ["dbcol.9"],
+            "fromColumns": [
+              "dbcol.10"
+            ],
+            "toColumns": [
+              "dbcol.9"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -202,8 +214,12 @@
             "from": "node.4",
             "to": "node.5",
             "label": "people_home_fk",
-            "fromColumns": ["dbcol.11"],
-            "toColumns": ["dbcol.13"],
+            "fromColumns": [
+              "dbcol.11"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           },
@@ -212,8 +228,12 @@
             "from": "node.4",
             "to": "node.5",
             "label": "people_work_fk",
-            "fromColumns": ["dbcol.12"],
-            "toColumns": ["dbcol.13"],
+            "fromColumns": [
+              "dbcol.12"
+            ],
+            "toColumns": [
+              "dbcol.13"
+            ],
             "cardinality": "n-1",
             "fromOptional": true
           }

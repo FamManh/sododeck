@@ -32,6 +32,7 @@ describe('sticky actions', () => {
       edges: [],
       groups: [],
       stickies: [actualFreeId],
+      images: [],
     });
     expect(ui().stickyDraft).toBe(actualFreeId);
     expect(ui().stickyEditing).toBe(actualFreeId);
@@ -62,6 +63,7 @@ describe('sticky actions', () => {
       edges: [],
       groups: [],
       stickies: [actualPinnedId],
+      images: [],
     });
     expect(ui().stickyDraft).toBe(actualPinnedId);
     expect(ui().stickyEditing).toBe(actualPinnedId);
@@ -83,7 +85,7 @@ describe('sticky actions', () => {
     });
 
     expect(readDeck(env.doc).stickies).toEqual([]);
-    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(ui().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [], images: [] });
     expect(ui().stickyDraft).toBeNull();
     expect(ui().stickyEditing).toBeNull();
     expect(ui().announcement.text).toBe('Empty note removed');

@@ -28,6 +28,7 @@ const CANVAS_SCOPES: ReadonlySet<RemovalTarget['scope']> = new Set([
   'nodes',
   'edges',
   'stickies',
+  'images',
   'groups',
 ]);
 

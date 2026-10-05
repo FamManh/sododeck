@@ -320,7 +320,13 @@ describe('Palette: Add flyout (030)', () => {
     expect(node).toMatchObject({ type: 'service', title: 'Untitled service' });
     expect(Number.isInteger(node?.position?.x)).toBe(true);
     const ui = useUiStore.getState();
-    expect(ui.selection).toEqual({ nodes: [node?.id], edges: [], groups: [], stickies: [] });
+    expect(ui.selection).toEqual({
+      nodes: [node?.id],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(ui.focusedId).toBe(node?.id);
     expect(ui.announcement.text).toBe('Added Untitled service');
 

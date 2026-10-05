@@ -40,6 +40,7 @@ function subject(deck: SododeckFile, targets: readonly RemovalTarget[]): string 
     if (only.scope === 'edges' && edge) return `${title(edge.from)} → ${title(edge.to)}`;
   }
   if (targets.every((t) => t.scope === 'stickies')) return plural(targets.length, 'note');
+  if (targets.every((t) => t.scope === 'images')) return plural(targets.length, 'image');
   if (targets.every((t) => t.scope === 'nodes')) return plural(targets.length, 'component');
   if (targets.every((t) => t.scope === 'edges')) return plural(targets.length, 'connection');
   return plural(targets.length, 'item');
@@ -153,12 +154,15 @@ export function describeRemoval(
   }
   sentences.push('You can undo this.');
   const stickyOnly = targets.length > 0 && targets.every((t) => t.scope === 'stickies');
+  const imageOnly = targets.length > 0 && targets.every((t) => t.scope === 'images');
   const title =
     stickyOnly && targets.length === 1
       ? 'Delete this note?'
       : stickyOnly
         ? `Delete ${String(targets.length)} notes?`
-        : `Delete ${subject(deck, targets)}?`;
+        : imageOnly && targets.length === 1
+          ? 'Delete this image?'
+          : `Delete ${subject(deck, targets)}?`;
   return { title, body: sentences.join(' ') };
 }
 
@@ -174,6 +178,13 @@ export function removalToast(
     return `Rule “${rule.title}” deleted · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
   if (targets.length > 0 && targets.every((t) => t.scope === 'stickies')) {
     return `${targets.length === 1 ? 'Note deleted' : `${String(targets.length)} notes deleted`} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
+  }
+  if (targets.length > 0 && targets.every((t) => t.scope === 'images')) {
+    const connectors = cascadedEdges(targets, result);
+    const label =
+      targets.length === 1 ? 'Image deleted' : `${String(targets.length)} images deleted`;
+    const also = connectors > 0 ? ` and ${plural(connectors, 'connection')}` : '';
+    return `${label}${also} · ${apple ? '⌘Z' : 'Ctrl+Z'} to undo`;
   }
   const edges = cascadedEdges(targets, result);
   const what =

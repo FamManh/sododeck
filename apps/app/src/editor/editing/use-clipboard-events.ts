@@ -11,6 +11,7 @@ import { useEffect } from 'react';
 import { isTextTarget } from '../../lib/is-text-target';
 import { useEditor } from '../../model/use-editor';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
+import { useAddImages } from '../images/use-add-images';
 import { useUndoToast } from '../undo-toast';
 import { inDialog, inOverlay } from '../use-canvas-shortcuts';
 import { CLIPBOARD_FAILED, copied, copySelectionText, deleteCut, pasteText } from './clipboard-ops';
@@ -37,11 +38,26 @@ function editable(): boolean {
   return !isFlowMode(ui) && ui.flowSession === null;
 }
 
+/** The image files a paste carries; a file of any other type is not ours (055). */
+function imageFiles(data: DataTransfer | null): File[] {
+  if (data === null) return [];
+  const files = [...data.files];
+  if (files.length === 0) {
+    for (const item of data.items) {
+      const file = item.kind === 'file' ? item.getAsFile() : null;
+      if (file !== null) files.push(file);
+    }
+  }
+  // Any `image/*`, so one the app cannot take (HEIC, BMP) gets its refusal instead of silence.
+  return files.filter((file) => file.type.startsWith('image/'));
+}
+
 export function useClipboardEvents(): void {
   const editor = useEditor();
   const { screenToFlowPosition } = useReactFlow();
   const { toast } = useToast();
   const undoToast = useUndoToast();
+  const addPictures = useAddImages();
 
   useEffect(() => {
     const write = (event: ClipboardEvent, cut: boolean) => {
@@ -66,6 +82,14 @@ export function useClipboardEvents(): void {
     };
     const onPaste = (event: ClipboardEvent) => {
       if (leaveToBrowser(event) || !editable()) return;
+      // A picture on the clipboard wins over text that came with it (055 US1); other files are ignored.
+      const pictures = imageFiles(event.clipboardData);
+      if (pictures.length > 0) {
+        event.preventDefault();
+        const pointer = useUiStore.getState().canvasPointer;
+        addPictures(pictures, pointer ?? undefined);
+        return;
+      }
       const text = event.clipboardData?.getData('text/plain') ?? '';
       const pointer = useUiStore.getState().canvasPointer;
       if (pasteText(editor, text, pointer, { screenToFlowPosition }, undoToast)) {
@@ -80,5 +104,5 @@ export function useClipboardEvents(): void {
       document.removeEventListener('cut', onCut);
       document.removeEventListener('paste', onPaste);
     };
-  }, [editor, screenToFlowPosition, toast, undoToast]);
+  }, [editor, screenToFlowPosition, toast, undoToast, addPictures]);
 }
