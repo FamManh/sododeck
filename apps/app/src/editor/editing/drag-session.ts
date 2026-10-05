@@ -18,6 +18,8 @@ import {
   imageBox,
   isLocked,
   isSchemaGroupId,
+  stickyBox,
+  stickyPosition,
   viewNodePosition,
   type DeckEditor,
 } from '@sododeck/model';
@@ -25,7 +27,7 @@ import type { Frame, Id } from '@sododeck/schema';
 import type { NodeChange } from '@xyflow/react';
 
 import { readDeck } from '../../model/use-deck-snapshot';
-import { useUiStore, type CanvasGesture, type Guide } from '../../state/ui-store';
+import { useUiStore, type CanvasGesture, type Guide, type Selection } from '../../state/ui-store';
 import {
   cardSize,
   displayPosition,
@@ -34,11 +36,11 @@ import {
   type Point,
   type Rect,
 } from '../canvas-geometry';
-import { GROUP_NODE_PREFIX, IMAGE_NODE_PREFIX } from '../deck-to-flow';
+import { GROUP_NODE_PREFIX, IMAGE_NODE_PREFIX, STICKY_NODE_PREFIX } from '../deck-to-flow';
 import { effectiveLevel, levelForZoom } from '../levels';
 import { scopeOf, visibleGraph } from '../visible-graph';
 import { readViewState } from '../views/use-current-view';
-import { selectionFragment } from './clipboard-ops';
+import { duplicatedText, selectionFragment } from './clipboard-ops';
 import { commonParent } from './common-parent';
 import { dropTarget, frameEntries, type FrameEntry } from './drop-target';
 import { lockedGroupIds } from '../group-lock';
@@ -81,6 +83,12 @@ export interface DragSession {
   frames: Readonly<Record<Id, Frame>>;
   /** Where every moving image started (the selected ones and the members of dragged groups). */
   imageStart: Readonly<Record<Id, Point>>;
+  /** Dragged notes: the selected ones (copied with ⌥ even when they do not move themselves). */
+  stickies: readonly Id[];
+  /**
+   * The stored `position` of every selected note that moves (notes are always free, ADR 0041).
+   */
+  stickyStart: Readonly<Record<Id, Point>>;
 }
 
 /** The copies of an ⌥ duplicate-drag (051 R2): they move instead of the originals. */
@@ -89,6 +97,8 @@ interface Copies {
   groups: readonly Id[];
   images: readonly Id[];
   imageStart: Readonly<Record<Id, Point>>;
+  stickies: readonly Id[];
+  stickyStart: Readonly<Record<Id, Point>>;
   /** Where the copies start (the originals' start): the drag delta applies to these. */
   start: Readonly<Record<Id, Point>>;
   frames: Readonly<Record<Id, Frame>>;
@@ -224,7 +234,7 @@ export class DragController {
   /** A drag of the selected components (and selected groups, if the selection is mixed). */
   startNodes(anchor: Id): void {
     const { selection } = useUiStore.getState();
-    this.begin(anchor, 'nodes', selection.nodes, selection.groups, undefined, selection.images);
+    this.begin(anchor, 'nodes', selection, undefined);
   }
 
   /**
@@ -235,24 +245,19 @@ export class DragController {
     const ui = useUiStore.getState();
     if (!ui.selection.groups.includes(groupId)) ui.select({ groups: [groupId] });
     const { selection } = useUiStore.getState();
-    this.begin(
-      via?.id ?? `${GROUP_NODE_PREFIX}${groupId}`,
-      'group',
-      selection.nodes,
-      selection.groups,
-      { groupId, ...(via === undefined ? {} : { position: via.position }) },
-      selection.images,
-    );
+    this.begin(via?.id ?? `${GROUP_NODE_PREFIX}${groupId}`, 'group', selection, {
+      groupId,
+      ...(via === undefined ? {} : { position: via.position }),
+    });
   }
 
   private begin(
     anchor: string,
     kind: Session['kind'],
-    nodes: readonly Id[],
-    groups: readonly Id[],
+    selection: Pick<Selection, 'nodes' | 'groups' | 'images' | 'stickies'>,
     group?: { groupId: Id; position?: Point },
-    images: readonly Id[] = [],
   ) {
+    const { nodes, groups, images } = selection;
     // React Flow skips the stop of an aborted drag: never leave its gesture open.
     if (this.session !== null) this.stop();
     const { editor, getViewport } = this.deps;
@@ -305,6 +310,17 @@ export class DragController {
       imageStart[image.id] = image.position;
       movingBoxes.push(imageBox(image));
     }
+    // Notes: the selected ones that are not locked (always free since ADR 0041).
+    const draggedStickies = new Set(selection.stickies);
+    const stickyStart: Record<Id, Point> = {};
+    const stickyDrawn: Record<Id, Point> = {};
+    for (const sticky of view.deck.stickies) {
+      if (!draggedStickies.has(sticky.id) || isLocked(sticky)) continue;
+      const at = stickyPosition(sticky);
+      stickyDrawn[sticky.id] = at;
+      movingBoxes.push(stickyBox(sticky, at));
+      stickyStart[sticky.id] = at;
+    }
     const frames: Record<Id, Frame> = {};
     for (const id of tree.groups) {
       const rect = bounds.get(id);
@@ -316,8 +332,14 @@ export class DragController {
       }
     }
     const anchorIsImage = anchor.startsWith(IMAGE_NODE_PREFIX);
+    const anchorIsSticky = anchor.startsWith(STICKY_NODE_PREFIX);
     const anchorId =
-      group?.groupId ?? (anchorIsImage ? anchor.slice(IMAGE_NODE_PREFIX.length) : anchor);
+      group?.groupId ??
+      (anchorIsImage
+        ? anchor.slice(IMAGE_NODE_PREFIX.length)
+        : anchorIsSticky
+          ? anchor.slice(STICKY_NODE_PREFIX.length)
+          : anchor);
     const anchorStart =
       kind === 'group'
         ? (group?.position ??
@@ -325,7 +347,9 @@ export class DragController {
           pointOf(bounds.get(anchorId)) ?? { x: 0, y: 0 })
         : anchorIsImage
           ? imageStart[anchorId]
-          : start[anchorId];
+          : anchorIsSticky
+            ? stickyDrawn[anchorId]
+            : start[anchorId];
     if (anchorStart === undefined) return;
 
     // Snapping looks at the components on screen that are not moving (R7).
@@ -373,6 +397,8 @@ export class DragController {
       start,
       frames,
       imageStart,
+      stickies: Object.keys(stickyDrawn),
+      stickyStart,
       anchorStart,
       box,
       candidates: snapCandidates(others),
@@ -391,7 +417,9 @@ export class DragController {
           ? deck.groups.find((g) => g.id === anchorId)?.parent
           : anchorIsImage
             ? deckImages.find((i) => i.id === anchorId)?.group
-            : deck.nodes.find((n) => n.id === anchorId)?.group,
+            : anchorIsSticky
+              ? undefined
+              : deck.nodes.find((n) => n.id === anchorId)?.group,
       mods: { alt: false, shift: false, mod: false },
       arrow: { x: 0, y: 0 },
       lastRaw: null,
@@ -422,6 +450,8 @@ export class DragController {
     const moving = new Set([
       ...Object.keys(session.start),
       ...Object.keys(session.imageStart).map((id) => `${IMAGE_NODE_PREFIX}${id}`),
+      // Every dragged note, also one that follows its card: the controller moves notes itself.
+      ...session.stickies.map((id) => `${STICKY_NODE_PREFIX}${id}`),
       session.anchor,
     ]);
     const rest: NodeChange[] = [];
@@ -482,6 +512,14 @@ export class DragController {
     if (session.kind === 'group') return { x, y };
     const level = effectiveLevel(levelForZoom(this.deps.getViewport().zoom), scopeOf([]));
     const deck = readDeck(this.deps.editor.doc);
+    if (session.anchor.startsWith(STICKY_NODE_PREFIX)) {
+      const id = session.anchor.slice(STICKY_NODE_PREFIX.length);
+      const sticky = deck.stickies.find((s) => s.id === id);
+      if (sticky !== undefined) {
+        const box = stickyBox(sticky, { x, y });
+        return { x: x + box.width / 2, y: y + box.height / 2 };
+      }
+    }
     if (session.anchor.startsWith(IMAGE_NODE_PREFIX)) {
       const id = session.anchor.slice(IMAGE_NODE_PREFIX.length);
       const image = (deck.images ?? []).find((i) => i.id === id);
@@ -557,9 +595,14 @@ export class DragController {
       frames[id] = { position: { x: f.position.x + dx, y: f.position.y + dy }, size: f.size };
     }
     const imageStart = session.copies?.imageStart ?? session.imageStart;
+    const stickyStart = session.copies?.stickyStart ?? session.stickyStart;
     editor.batch(() => {
       for (const [id, p] of Object.entries(imageStart)) {
         editor.moveImage(id, { x: p.x + dx, y: p.y + dy });
+      }
+      // The stored point moves by the delta.
+      for (const [id, p] of Object.entries(stickyStart)) {
+        editor.update('stickies', id, { position: { x: p.x + dx, y: p.y + dy } });
       }
       if (Object.keys(positions).length > 0) editor.moveInView(session.viewId, positions);
       if (Object.keys(frames).length > 0) editor.setGroupFrames(session.viewId, frames);
@@ -582,6 +625,9 @@ export class DragController {
       if (Object.keys(session.frames).length > 0)
         editor.setGroupFrames(session.viewId, session.frames);
       for (const [id, p] of Object.entries(session.imageStart)) editor.moveImage(id, p);
+      for (const [id, p] of Object.entries(session.stickyStart)) {
+        editor.update('stickies', id, { position: p });
+      }
     });
     const deck = readDeck(editor.doc);
     const fragment = selectionFragment(deck, session, session.viewId);
@@ -615,11 +661,21 @@ export class DragController {
     for (const image of view.deck.images ?? []) {
       if (pastedImages.has(image.id)) imageStart[image.id] = image.position;
     }
+    // Copied notes are free notes at the point the originals are drawn (the model's fragment).
+    const pastedStickies = new Set(ids.stickies);
+    const stickyStart: Record<Id, Point> = {};
+    for (const sticky of view.deck.stickies) {
+      if (pastedStickies.has(sticky.id) && sticky.position !== undefined) {
+        stickyStart[sticky.id] = sticky.position;
+      }
+    }
     session.copies = {
       nodes: ids.nodes,
       groups: ids.groups,
       images: ids.images,
       imageStart,
+      stickies: ids.stickies,
+      stickyStart,
       start,
       frames,
     };
@@ -638,6 +694,9 @@ export class DragController {
       for (const id of copies.images) {
         if ((readDeck(editor.doc).images ?? []).some((i) => i.id === id))
           editor.remove('images', id);
+      }
+      for (const id of copies.stickies) {
+        if (readDeck(editor.doc).stickies.some((n) => n.id === id)) editor.remove('stickies', id);
       }
       // Pasted parents come first: remove the innermost copies first.
       for (const id of [...copies.groups].reverse()) {
@@ -681,8 +740,9 @@ export class DragController {
           nodes: [...session.copies.nodes],
           groups: [...session.copies.groups],
           images: [...session.copies.images],
+          stickies: [...session.copies.stickies],
         });
-        ui.announce(`Duplicated ${plural(session.copies.nodes.length, 'component')}`);
+        ui.announce(duplicatedText(session.copies));
       } else if (session.moved) {
         this.drop(session);
       }

@@ -227,7 +227,9 @@ describe('describeRemoval with group connectors (050 US4)', () => {
     const targets: RemovalTarget[] = [{ scope: 'groups', id: 'data' }];
     const result = previewRemoval(grouped, targets);
     expect(describeRemoval(grouped, targets, result).body).toContain('Also removes 2 connections.');
-    expect(removalToast(grouped, targets, result, true)).toContain('and 2 connections');
+    const toast = removalToast(grouped, targets, result, true);
+    // Deleting a group ungroups it: its cards stay, its own connectors go.
+    expect(toast).toMatch(/^Ungrouped Data layer · also deleted 2 connections · ⌘Z to undo$/);
   });
 
   it('names a group end by its title', () => {

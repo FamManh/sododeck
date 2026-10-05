@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EMPTY_SELECTION, useUiStore } from '../../state/ui-store';
 import { deckOf } from '../../test/render-canvas';
-import { copySelectionText, duplicateSelection, pasteText } from './clipboard-ops';
+import { copySelectionText, deleteCut, duplicateSelection, pasteText } from './clipboard-ops';
 
 const table = (id: string, x: number, extra: Record<string, unknown> = {}) => ({
   id,
@@ -136,7 +136,7 @@ describe('copy, duplicate and paste of images (055)', () => {
     const copy = (deck.images ?? []).find((i) => i.id !== 'i1' && i.id !== 'i2');
     expect(copy).toMatchObject({ asset, alt: 'Logo', group: 'g', position: { x: 224, y: 124 } });
     expect(ui().selection.images).toEqual([copy?.id]);
-    expect(ui().announcement.text).toBe('Duplicated 1 component');
+    expect(ui().announcement.text).toBe('Duplicated 1 component and 1 image');
     editor.undo();
     expect(toJSON(doc).images).toHaveLength(2);
   });
@@ -178,5 +178,62 @@ describe('copy, duplicate and paste of images (055)', () => {
     const pasted = deck.images?.find((i) => !['i1', 'i2'].includes(i.id));
     const ranks = (deck.images ?? []).map((i) => i.z ?? 0);
     expect(pasted?.z).toBe(Math.max(...ranks));
+  });
+});
+
+describe('copy, duplicate and cut of every selected kind', () => {
+  const board = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', group: 'g', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 600, y: 0 } },
+    ],
+    groups: [
+      { id: 'g', title: 'G', position: { x: -40, y: -40 }, size: { width: 300, height: 200 } },
+    ],
+    stickies: [
+      { id: 'n1', text: 'Note', position: { x: 0, y: 400 } },
+      { id: 'n2', text: 'Other', position: { x: 900, y: 400 } },
+    ],
+    edges: [
+      { id: 'an', from: 'a', to: 'n1' },
+      { id: 'bn', from: 'b', to: 'n1' },
+    ],
+  });
+
+  it('duplicates notes and groups with their connectors, and selects every copy', () => {
+    const { doc, editor } = setup(board);
+    expect(
+      duplicateSelection(editor, { ...EMPTY_SELECTION, groups: ['g'], stickies: ['n1'] }),
+    ).toBe(true);
+    const deck = toJSON(doc);
+    expect(deck.groups).toHaveLength(2);
+    expect(deck.nodes).toHaveLength(3);
+    const copies = deck.stickies.filter((s) => !['n1', 'n2'].includes(s.id));
+    expect(copies).toMatchObject([{ text: 'Note', position: { x: 24, y: 424 } }]);
+    // `an` has both ends copied (a through its group); `bn` does not.
+    const [noteCopy] = copies;
+    expect(deck.edges.filter((e) => e.to === noteCopy?.id)).toHaveLength(1);
+    expect(ui().selection.stickies).toEqual([noteCopy?.id]);
+    expect(ui().selection.groups).toHaveLength(1);
+    expect(ui().announcement.text).toBe('Duplicated 1 component and 1 note');
+    editor.undo();
+    expect(toJSON(doc)).toEqual(board);
+  });
+
+  it('copies notes alone', () => {
+    const { editor } = setup(board);
+    const copy = copySelectionText(editor, { ...EMPTY_SELECTION, stickies: ['n2'] });
+    expect(copy?.fragment.deck.stickies.map((s) => s.text)).toEqual(['Other']);
+    expect(duplicateSelection(editor, { ...EMPTY_SELECTION, stickies: ['n2'] })).toBe(true);
+    expect(ui().announcement.text).toBe('Duplicated 1 note');
+  });
+
+  it('cuts notes too', () => {
+    const { editor } = setup(board);
+    deleteCut(editor, { ...EMPTY_SELECTION, nodes: ['b'], stickies: ['n2'] });
+    expect(ui().pendingDelete?.targets).toEqual([
+      { scope: 'nodes', id: 'b' },
+      { scope: 'stickies', id: 'n2' },
+    ]);
   });
 });

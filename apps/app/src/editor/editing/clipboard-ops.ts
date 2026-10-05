@@ -17,6 +17,7 @@ import {
 import type { Id, SododeckFile } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
+import { selectionTargets } from '../../state/selection-kinds';
 import { useUiStore, type Selection } from '../../state/ui-store';
 import { canvasElement } from '../canvas-actions';
 import { groupBounds, type Point, type Rect } from '../canvas-geometry';
@@ -50,26 +51,43 @@ export function fragmentCopied(): boolean {
 
 const plural = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
 
-/** "3 components and 2 connections" / "1 component" / "2 images" (055). */
+/** "3 components and 2 connections" / "1 component" / "2 images" (055) / "1 note". */
 export function countText(
   fragment: Pick<Fragment, 'deck'> & Partial<Pick<Fragment, 'images'>>,
 ): string {
-  const { nodes, edges } = fragment.deck;
+  const { nodes, edges, stickies } = fragment.deck;
   const images = fragment.images?.length ?? 0;
-  const parts = nodes.length === 0 && images > 0 ? [] : [plural(nodes.length, 'component')];
-  if (images > 0) parts.push(plural(images, 'image'));
+  const parts = itemParts(nodes.length, images, stickies.length);
   if (edges.length > 0) parts.push(plural(edges.length, 'connection'));
   return parts.join(' and ');
 }
 
+/** "2 components", "1 image", "1 component and 2 notes": components always, unless only others. */
+function itemParts(nodes: number, images: number, notes: number): string[] {
+  const parts = nodes === 0 && images + notes > 0 ? [] : [plural(nodes, 'component')];
+  if (images > 0) parts.push(plural(images, 'image'));
+  if (notes > 0) parts.push(plural(notes, 'note'));
+  return parts;
+}
+
+/** "Duplicated 2 components and 1 note" (⌘D and the ⌥ drag). */
+export function duplicatedText(ids: {
+  readonly nodes: readonly Id[];
+  readonly images: readonly Id[];
+  readonly stickies: readonly Id[];
+}): string {
+  return `Duplicated ${itemParts(ids.nodes.length, ids.images.length, ids.stickies.length).join(' and ')}`;
+}
+
 /**
- * What a copy of `selection` holds: the selected components and every member of the selected
- * groups (their subtrees, hidden members included), at the positions the current view draws.
- * Null when nothing copyable is selected (connections and notes alone are not copied).
+ * What a copy of `selection` holds: the selected components, notes and images and every member of
+ * the selected groups (their subtrees, hidden members included), at the positions the current view
+ * draws, plus the connectors with both ends in the copy. Null when nothing copyable is selected
+ * (connections alone are not copied).
  */
 export function selectionFragment(
   deck: SododeckFile,
-  selection: Pick<Selection, 'nodes' | 'groups'> & Partial<Pick<Selection, 'images'>>,
+  selection: Pick<Selection, 'nodes' | 'groups'> & Partial<Pick<Selection, 'images' | 'stickies'>>,
   viewId: Id,
 ): Fragment | null {
   const tree = groupSubtree(deck, selection.groups);
@@ -77,11 +95,17 @@ export function selectionFragment(
   const images = [
     ...new Set([...(selection.images ?? []), ...groupSubtreeImages(deck, selection.groups)]),
   ];
-  if (nodes.length === 0 && tree.groups.length === 0 && images.length === 0) return null;
+  const stickies = [...new Set(selection.stickies ?? [])];
+  if (nodes.length + tree.groups.length + images.length + stickies.length === 0) return null;
   // Tables keep their outgoing foreign keys (043 R10): paste keeps them when the target exists.
   return toFragment(
     deck,
-    { nodes, groups: tree.groups, ...(images.length === 0 ? {} : { images }) },
+    {
+      nodes,
+      groups: tree.groups,
+      ...(images.length === 0 ? {} : { images }),
+      ...(stickies.length === 0 ? {} : { stickies }),
+    },
     { viewId, keepOutgoing: true },
   );
 }
@@ -117,11 +141,11 @@ export function visibleRect(canvas: CanvasPoints): Rect {
 
 function selectPasted(editor: DeckEditor, ids: PastedIds): void {
   const ui = useUiStore.getState();
-  ui.select({ nodes: ids.nodes, groups: ids.groups, images: ids.images });
+  ui.select({ nodes: ids.nodes, groups: ids.groups, images: ids.images, stickies: ids.stickies });
   // One pasted or duplicated table opens its title for renaming, all text selected (043 R10).
   const [only, ...rest] = ids.nodes;
   const node =
-    only === undefined || rest.length > 0 || ids.groups.length > 0
+    only === undefined || rest.length > 0 || ids.groups.length + ids.stickies.length > 0
       ? undefined
       : readDeck(editor.doc).nodes.find((n) => n.id === only);
   if (node !== undefined && isDbTable(node)) {
@@ -133,7 +157,9 @@ function selectPasted(editor: DeckEditor, ids: PastedIds): void {
 /** "orders" for one card, else "3 components and 2 connections". */
 function pastedName(fragment: Pick<Fragment, 'deck'> & Partial<Pick<Fragment, 'images'>>): string {
   const [only, ...rest] = fragment.deck.nodes;
-  return only !== undefined && rest.length === 0 && (fragment.images?.length ?? 0) === 0
+  return only !== undefined &&
+    rest.length === 0 &&
+    (fragment.images?.length ?? 0) + fragment.deck.stickies.length === 0
     ? only.title
     : countText(fragment);
 }
@@ -153,7 +179,11 @@ export function pasteText(
   const fragment = parseFragment(text);
   if (
     fragment === null ||
-    fragment.deck.nodes.length + fragment.deck.groups.length + (fragment.images?.length ?? 0) === 0
+    fragment.deck.nodes.length +
+      fragment.deck.groups.length +
+      fragment.deck.stickies.length +
+      (fragment.images?.length ?? 0) ===
+      0
   ) {
     return false;
   }
@@ -204,20 +234,21 @@ export function copied(fragment: Fragment, verb: 'Copied' | 'Cut'): void {
   useUiStore.getState().announce(`${verb} ${countText(fragment)}`);
 }
 
-/** Cut (FR-005): the copy, then the Delete key's confirmation and Undo toast. */
+/**
+ * Cut (FR-005): the copy, then the Delete key's confirmation and Undo toast. Unlike Delete, a cut
+ * group goes with its members (they were copied): the selection is widened to the subtrees.
+ */
 export function deleteCut(editor: DeckEditor, selection: Selection): void {
   const deck = readDeck(editor.doc);
   const tree = groupSubtree(deck, selection.groups);
-  const nodes = [...new Set([...selection.nodes, ...tree.nodes])];
-  const images = [...new Set([...selection.images, ...groupSubtreeImages(deck, selection.groups)])];
-  useUiStore
-    .getState()
-    .requestRemoval([
-      ...nodes.map((id) => ({ scope: 'nodes' as const, id })),
-      ...images.map((id) => ({ scope: 'images' as const, id })),
-      ...selection.edges.map((id) => ({ scope: 'edges' as const, id })),
-      ...tree.groups.map((id) => ({ scope: 'groups' as const, id })),
-    ]);
+  useUiStore.getState().requestRemoval(
+    selectionTargets({
+      ...selection,
+      nodes: [...new Set([...selection.nodes, ...tree.nodes])],
+      images: [...new Set([...selection.images, ...groupSubtreeImages(deck, selection.groups)])],
+      groups: tree.groups,
+    }),
+  );
 }
 
 /**
@@ -235,10 +266,6 @@ export function duplicateSelection(editor: DeckEditor, selection: Selection): bo
     viewId,
   });
   selectPasted(editor, ids);
-  const what =
-    ids.nodes.length === 0 && ids.images.length > 0
-      ? plural(ids.images.length, 'image')
-      : plural(ids.nodes.length, 'component');
-  useUiStore.getState().announce(`Duplicated ${what}`);
+  useUiStore.getState().announce(duplicatedText(ids));
   return true;
 }
