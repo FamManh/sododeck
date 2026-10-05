@@ -4,7 +4,7 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { edgeLineStyle, type Geometry, type Severity } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
-import { Ban, CircleAlert, TriangleAlert } from 'lucide-react';
+import { Ban, CircleAlert, CircleX, TriangleAlert } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
@@ -591,11 +591,20 @@ export const DeckEdge = memo(function DeckEdge({
                   data-severity={lint.severity}
                   title={lint.titles}
                   className={cn(
-                    'inline-flex font-mono text-[11px] leading-none font-semibold',
+                    'inline-flex items-center gap-1 font-mono text-[11px] leading-none font-semibold',
                     lint.severity === 'error' ? 'text-clay-ink' : 'text-amber-ink',
                     !showLabel && !hasBadges && 'pl-1',
                   )}
                 >
+                  {lint.severity === 'error' ? (
+                    <CircleX aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-3.5" />
+                  ) : (
+                    <TriangleAlert
+                      aria-hidden
+                      strokeWidth={ICON_STROKE_WIDTH}
+                      className="size-3.5"
+                    />
+                  )}
                   {lint.short}
                 </span>
               ) : (
