@@ -240,7 +240,7 @@ and **027** ai-deck-skill are not scheduled.
 | 059 | reach-and-route                | later      | 034           | 4 d  | highlight style for reach (reuse focus dim)                   |
 | 060 | deck-diff                      | later      | 025           | 5 d  | added/changed/removed marks need design                       |
 | 061 | share-cards                    | later      | 012, 059      | 3 d  | card layout needs design                                      |
-| 062 | fixable-import-errors          | later      | 005, 056      | 2 d  | —                                                             |
+| 062 | fixable-import-errors          | later      | 005, 056      | 4 d  | spec, plan, tasks in `specs/062-fixable-import-errors/`       |
 | 063 | accessible-export              | later      | 012           | 1 d  | —                                                             |
 
 Changes vs the original proposal: added **015-model-validation** (C-7 had no home); moved undo/redo
@@ -2518,7 +2518,12 @@ All run in the browser only (constitution IV: no backend, no network with conten
 
 ## 062-fixable-import-errors
 
-- **Status:** not started. **Milestone:** later · **Depends on:** 005, 056 · **Estimate:** 2 d
+- **Status:** spec, plan and tasks written (`specs/062-fixable-import-errors/`, handoff in its
+  `README.md`); not implemented. **Milestone:** later · **Depends on:** 005, 056 · **Estimate:** 4 d
+  (re-estimated from 2 d: 41 tasks across schema, model and app)
+- **Decided (2026-10-05):** broken references still load unchanged and are reported as problems
+  (no format change); the "opened with problems" notice fires for error / warning only; schema
+  violations use generic `schema-*` codes with a JSON Pointer path; copy is plain JSON only.
 - **Goal:** When an import fails or is partial, the user can copy the problems and paste them
   back to their AI to fix the file (pairs with 027).
 - **In scope:** every schema or lint problem has a stable `code`, a JSON `path`, the `subject`
