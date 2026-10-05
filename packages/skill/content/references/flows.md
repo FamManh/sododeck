@@ -17,8 +17,9 @@ So a flow is a walk along the arrows. Two consequences:
   at `payments`.
 - **A side effect that does not continue the story is not a step.** If Order Service also writes
   to its database and the flow moves on from Order Service, keep the database connector in the
-  deck but leave it out of the flow, or mention it in the step's `description`. Use a branch when
-  it is a real alternative path.
+  deck but leave it out of the flow, and say it in the step's `notes` ("writes the outbox row in
+  the same transaction"). With database-pack tables (`db-table` cards), use the step's `touches`
+  instead. Use a branch when it is a real alternative path.
 
 ## Shape
 

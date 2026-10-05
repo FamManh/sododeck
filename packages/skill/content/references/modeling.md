@@ -11,8 +11,9 @@ Read this for any new deck and for update requests that add cards, connectors or
 5. Groups and levels
 6. Ids
 7. Positions, sizes and style
-8. Notes, features, tags and links
-9. A complete small example
+8. Features and views
+9. Notes, tags and links
+10. Complete examples
 
 ## 1. The file skeleton
 
@@ -36,8 +37,8 @@ Every deck has these root keys, even when empty, in this order:
 ```
 
 `nodes` are cards, `edges` are connectors, `stickies` are sticky notes. `rules` is an object keyed
-by rule id (see `rules.md`), everything else is a list. Leave `views` empty: the app creates its
-standard views. Unknown keys are refused, so don't invent fields.
+by rule id (see `rules.md`), everything else is a list. For more than one feature, add views as in §8; otherwise leave `views`
+empty and the app shows its standard views. Unknown keys are refused, so don't invent fields.
 
 ## 2. Cards
 
@@ -129,18 +130,46 @@ others not is fine only in update mode.
 indigo violet pink slate` or `#rrggbb`) is for at most one or two focal cards; colour carries
 meaning only when it is rare.
 
-## 8. Notes, features, tags and links
+## 8. Features and views
 
-- `stickies`: `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "anchor": "orders-db" }`
-  pins a note to a card (colours `amber blue green clay grey`). Use for caveats and open questions,
-  not for things that belong in a description.
-- `features`: `[{ "id": "checkout", "title": "Checkout" }]` groups flows by product feature
-  (`"feature": "checkout"` on a flow).
+A big system stays readable through features and views, not through fewer cards.
+
+- `features`: one per business capability, `[{ "id": "pricing", "title": "Pricing" }]`. Every
+  flow names its feature (`"feature": "pricing"`).
+- `views`: saved views the user switches between. The **first view is the base view** and shows
+  every card; write `{ "id": "overview", "type": "system", "title": "Overview" }` first. Then add
+  one feature view per feature, listing the cards that feature's flows touch:
+
+```json
+{
+  "id": "view-pricing",
+  "type": "feature",
+  "title": "Pricing",
+  "feature": "pricing",
+  "includes": ["worker", "pricing", "agreements-db", "candidates-db"]
+}
+```
+
+Leave `positions` out of every view: on import the app lays each feature view out on its own, so it
+opens as a compact diagram of that feature. Cards shared by several features (a queue, a worker)
+appear in each view that needs them. When the deck has no `views` at all, the app shows its
+standard Overview and Flows views instead.
+
+## 9. Notes, tags and links
+
+- Explanations belong in `description` (cards, flows, rules) and step `notes`: they show in the
+  inspector and never cover the diagram. Gaps, caveats and "documented vs implemented" go there.
+- `stickies`: a handful of short warnings that must be visible on the canvas,
+  `{ "id": "note-pii", "text": "Owns PII.", "color": "amber", "anchor": "orders-db" }` (colours
+  `amber blue green clay grey`). Keep each to one short sentence; the app slots a note under its
+  card on import, and a long note makes that card's slot tall.
 - `tags`: short labels shared across the deck (`"tags": ["pci"]`), for filtering views.
 - `links`: documentation, dashboards, source files. In codebase mode every card and connector
   carries its source link (see `from-codebase.md`).
 
-## 9. A complete small example
+## 10. Complete examples
 
-`examples/checkout.sododeck` is a full deck with seven cards and one flow; open it when you want to
-see every part together. `examples/platform.sododeck` shows groups and two levels.
+- `examples/checkout.sododeck`: seven cards and one flow, every part together.
+- `examples/order-features.sododeck`: three features sharing one set of services, an Overview
+  and one view per feature, a rule on a step. Copy its shape for any system with several features.
+- `examples/platform.sododeck`: groups and two levels.

@@ -3,27 +3,39 @@
 Read this once for every new deck. A valid deck can still be unreadable; these rules are what
 makes a reader understand the system in a minute.
 
-## Every card earns its place
+## Draw the system at the detail it has
 
-- Start from what the user needs to explain, not from everything that exists. Deleting is usually
-  the best edit.
-- Merge minor pieces (a config service, a sidecar, a cron) into the card they serve, and mention
-  them in its `description`, unless the user asked about them.
-- One card per thing a reader would name in a conversation. Three replicas of a service are one
-  card with `host: "3 replicas"`.
+- By default, draw what really exists at the level the user works at: every use case, consumer,
+  topic, table or external system they would name. A large system makes a large deck, and that is
+  fine: features, views, flows and levels keep it readable, not fewer cards.
+- Merge pieces only when the user asks for an overview, a slide or `simplified` detail, and then
+  say in the handover what you merged.
+- One card per thing, still: three replicas of a service are one card with `host: "3 replicas"`,
+  and a helper that only one card uses can live in that card's `description`.
+- Before adding a card, check it isn't already there under another name: shared parts (a queue, a
+  worker pool, an outbox, a job store) are drawn **once** and every flow walks through them.
+
+## Make a big deck readable
+
+- **Features**: one per business capability the user names ("Setup", "Pricing", "Cancellation",
+  "Interface to APM"…), each flow tagged with its feature.
+- **Views**: after an `Overview` view, one feature view per feature listing only the cards its
+  flows use (`modeling.md` §8). Opening a view shows that part of the system laid out on its own.
+- **Groups** for teams, services and data stores; **levels** (`parent`) only when a reader really
+  drills into something (a service whose internals are a separate conversation).
+- **Rules** carry decision logic; **notes** (`description`, step `notes`) carry explanations. Keep
+  sticky notes for a few short warnings.
 
 ## Budgets
 
-|                     | Budget                                   | Lint code           |
-| ------------------- | ---------------------------------------- | ------------------- |
-| Cards per level     | faithful 24 · balanced 12 · simplified 7 | `level-over-budget` |
-| Card or group title | 40 characters (1–4 words is best)        | `label-too-long`    |
-| Connector label     | 32 characters                            | `label-too-long`    |
-| Steps per flow      | 3–10 (split longer journeys)             |                     |
-| Accent colours      | one colour on at most two focal cards    |                     |
-
-Over budget? Split into levels: keep the big blocks on top and open each one to its parts
-(`modeling.md`, groups and levels).
+|                     | Budget                                                 | Lint code           |
+| ------------------- | ------------------------------------------------------ | ------------------- |
+| Card or group title | 40 characters (1–4 words is best)                      | `label-too-long`    |
+| Connector label     | 32 characters                                          | `label-too-long`    |
+| Cards per level     | only when asked: balanced 12 · simplified 7            | `level-over-budget` |
+| Steps per flow      | 3–12 (split longer journeys)                           |                     |
+| Sticky note         | a short sentence (under ~60 characters), a handful max |                     |
+| Accent colours      | one colour on at most two focal cards                  |                     |
 
 ## Shape follows meaning
 

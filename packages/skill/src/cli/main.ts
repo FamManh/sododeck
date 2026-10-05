@@ -13,11 +13,12 @@ import { stringifyReport, type ProblemReport } from '@sododeck/model';
 
 import { DETAILS, MODES, type AuthoringOptions, type Detail, type Mode } from '../authoring';
 import { diffDecks } from '../diff';
+import { outlineExcalidraw, outlineText } from '../excalidraw';
 import { hasErrors, lintText, validateText } from '../lint';
 import { summarizeDeck } from '../summary';
 import { diffText, reportText, summaryText } from '../text';
 
-export const COMMANDS = ['validate', 'lint', 'summary', 'diff', 'deliver'] as const;
+export const COMMANDS = ['validate', 'lint', 'summary', 'diff', 'deliver', 'outline'] as const;
 export type Command = (typeof COMMANDS)[number];
 
 /** Set by the build (esbuild `define`); `dev` when the sources run directly (tests). */
@@ -38,19 +39,24 @@ const USAGE: Record<Command, string> = {
   summary: 'summary <deck.sododeck> [--format text|json]',
   diff: 'diff <old.sododeck> <new.sododeck> [--format json|text]',
   deliver: 'deliver <draft.sododeck> <target.sododeck> [--detail …] [--mode …]',
+  outline: 'outline <board.excalidraw> [--board "title"] [--min-text 13] [--format text|json]',
 };
 
 interface Parsed {
   files: string[];
   format: 'json' | 'text';
   options: AuthoringOptions;
+  board?: string;
+  minText?: number;
   help: boolean;
 }
 
 function parseArgs(command: Command, argv: readonly string[]): Parsed {
   const files: string[] = [];
-  let format: 'json' | 'text' = command === 'summary' ? 'text' : 'json';
+  let format: 'json' | 'text' = command === 'summary' || command === 'outline' ? 'text' : 'json';
   const options: AuthoringOptions = {};
+  let board: string | undefined;
+  let minText: number | undefined;
   let help = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? '';
@@ -76,6 +82,12 @@ function parseArgs(command: Command, argv: readonly string[]): Parsed {
       if (!MODES.includes(v as Mode))
         throw new UsageError(`--mode must be one of ${MODES.join(', ')}.`);
       options.mode = v as Mode;
+    } else if (arg === '--board') board = value();
+    else if (arg === '--min-text') {
+      const v = Number(value());
+      if (!Number.isFinite(v) || v <= 0)
+        throw new UsageError('--min-text must be a positive number.');
+      minText = v;
     } else if (arg.startsWith('-')) throw new UsageError(`Unknown option ${arg}.`);
     else files.push(arg);
   }
@@ -83,7 +95,14 @@ function parseArgs(command: Command, argv: readonly string[]): Parsed {
   if (!help && files.length !== wanted) {
     throw new UsageError(`Expected ${String(wanted)} file${wanted === 1 ? '' : 's'}.`);
   }
-  return { files, format, options, help };
+  return {
+    files,
+    format,
+    options,
+    ...(board === undefined ? {} : { board }),
+    ...(minText === undefined ? {} : { minText }),
+    help,
+  };
 }
 
 async function read(path: string): Promise<string> {
@@ -149,6 +168,21 @@ async function run(command: Command, parsed: Parsed, io: Io): Promise<number> {
       }
       const diff = diffDecks(before.file, after.file, basename(first), basename(second));
       io.out(parsed.format === 'json' ? JSON.stringify(diff, null, 2) : diffText(diff));
+      return 0;
+    }
+    case 'outline': {
+      let input: unknown;
+      try {
+        input = JSON.parse(await read(first));
+      } catch (error) {
+        if (error instanceof UsageError) throw error;
+        throw new UsageError(`${first} is not a JSON whiteboard file.`);
+      }
+      const outline = outlineExcalidraw(input, {
+        ...(parsed.board === undefined ? {} : { board: parsed.board }),
+        ...(parsed.minText === undefined ? {} : { minTextSize: parsed.minText }),
+      });
+      io.out(parsed.format === 'json' ? JSON.stringify(outline, null, 2) : outlineText(outline));
       return 0;
     }
     case 'deliver': {

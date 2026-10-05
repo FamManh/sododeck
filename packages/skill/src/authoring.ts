@@ -13,9 +13,13 @@ export type Mode = 'new' | 'update' | 'codebase' | 'text';
 export const DETAILS: readonly Detail[] = ['faithful', 'balanced', 'simplified'];
 export const MODES: readonly Mode[] = ['new', 'update', 'codebase', 'text'];
 
-/** Most cards one level (one drill-in screen) should hold, per detail dial. */
-export const LEVEL_BUDGET: Readonly<Record<Detail, number>> = {
-  faithful: 24,
+/**
+ * Most cards one level (one drill-in screen) should hold, only when the user asked for a smaller
+ * picture: `simplified` (an overview or a slide) or `balanced`. `faithful`, and no dial at all,
+ * draw the system at the detail it really has: a deck of a large system is meant to be big, and
+ * features and views (not fewer cards) keep it readable.
+ */
+export const LEVEL_BUDGET: Readonly<Partial<Record<Detail, number>>> = {
   balanced: 12,
   simplified: 7,
 };
@@ -210,8 +214,9 @@ function checkLabels(file: SododeckFile): ProblemEntry[] {
   return out;
 }
 
-function checkLevels(file: SododeckFile, detail: Detail): ProblemEntry[] {
-  const budget = LEVEL_BUDGET[detail];
+function checkLevels(file: SododeckFile, detail: Detail | undefined): ProblemEntry[] {
+  const budget = detail === undefined ? undefined : LEVEL_BUDGET[detail];
+  if (budget === undefined) return [];
   const levels = new Map<string, number[]>();
   file.nodes.forEach((node, index) => {
     const key = node.parent ?? '';
@@ -229,7 +234,7 @@ function checkLevels(file: SododeckFile, detail: Detail): ProblemEntry[] {
         'level-over-budget',
         `/nodes/${String(first)}`,
         parent === '' ? undefined : parent,
-        `${String(indexes.length)} cards on ${where}; the ${detail} detail level allows ${String(budget)}.`,
+        `${String(indexes.length)} cards on ${where}; the ${String(detail)} detail level allows ${String(budget)}.`,
       ),
     );
   }
@@ -277,7 +282,7 @@ export function authoringChecks(
     ...checkOrphans(file),
     ...checkDuplicateTitles(file),
     ...checkLabels(file),
-    ...checkLevels(file, options.detail ?? 'balanced'),
+    ...checkLevels(file, options.detail),
     ...(mode === 'codebase' ? checkSources(file) : []),
   ];
 }

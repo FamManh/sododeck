@@ -134,7 +134,7 @@ describe('placing unplaced cards (027 FR-024)', () => {
   });
 
   it('lays out the AI deck skill examples without overlaps (SC-005)', async () => {
-    for (const name of ['checkout', 'platform', 'refund-policy']) {
+    for (const name of ['checkout', 'platform', 'refund-policy', 'order-features']) {
       const text = readFileSync(
         new URL(`../../../../packages/skill/examples/${name}.sododeck`, import.meta.url),
         'utf8',
