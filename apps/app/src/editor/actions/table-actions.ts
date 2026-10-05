@@ -282,8 +282,8 @@ export const TABLE_ACTIONS: readonly Action[] = [
     shortcut: 'lock',
     section: 'arrange',
     where: {
-      menu: ['component', 'components', 'group', 'mixed'],
-      toolbar: ['component', 'components', 'group', 'mixed'],
+      menu: ['component', 'components', 'group', 'image', 'images', 'mixed'],
+      toolbar: ['component', 'components', 'group', 'image', 'images', 'mixed'],
     },
     // Nothing to lock (a group with no cards, only notes and connectors): not offered.
     applies: (ctx) =>

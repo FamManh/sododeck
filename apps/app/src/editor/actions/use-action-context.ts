@@ -29,7 +29,7 @@ import { runAction } from './actions-for';
 import type { ActionContext, CanvasApi, Mode } from './types';
 
 /**
- * What a selection is, as a menu target: nothing → the canvas; only stickies → `sticky`; one or
+ * What a selection is, as a menu target: nothing → the canvas; only stickies → `sticky`; only pictures → `image` / `images`; one or
  * more components; one connection; two or more connections; one group; anything else → `mixed`.
  */
 export function targetOf(selection: Selection): MenuTarget {
@@ -38,6 +38,7 @@ export function targetOf(selection: Selection): MenuTarget {
   if (total === 0) return { kind: 'canvas' };
   const ids = selection;
   if (stickies.length === total) return { kind: 'sticky', ids };
+  if (images.length === total) return { kind: images.length === 1 ? 'image' : 'images', ids };
   if (nodes.length === total) return { kind: nodes.length === 1 ? 'component' : 'components', ids };
   if (edges.length === total && total > 1) return { kind: 'connections', ids };
   if (total === 1 && edges.length === 1) return { kind: 'connection', ids };

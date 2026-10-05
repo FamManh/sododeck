@@ -329,7 +329,15 @@ export const PALETTE_INITIAL: PaletteState = { search: '', tab: 'all', view: 'ty
 export type MenuTarget =
   | {
       kind:
-        'component' | 'components' | 'connection' | 'connections' | 'group' | 'sticky' | 'mixed';
+        | 'component'
+        | 'components'
+        | 'connection'
+        | 'connections'
+        | 'group'
+        | 'sticky'
+        | 'image'
+        | 'images'
+        | 'mixed';
       ids: Selection;
     }
   /** A table's column row (043 R8); `ids` holds the table so table-level checks still read it. */
@@ -346,6 +354,8 @@ export interface ContextMenuState {
 
 /** The selection toolbar's popovers (019 R6). */
 export type ToolbarFieldId =
+  | 'imageAlt'
+  | 'imageCaption'
   | 'type'
   | 'owner'
   | 'tags'

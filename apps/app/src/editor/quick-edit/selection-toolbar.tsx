@@ -57,7 +57,7 @@ function useToolbarShown(): boolean {
 }
 
 function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
-  const { nodes, edges, groups, stickies } = ctx.selection;
+  const { nodes, edges, groups, stickies, images } = ctx.selection;
   switch (variant) {
     case 'component':
       return `Selection: ${ctx.deck.nodes.find((n) => n.id === nodes[0])?.title ?? ''}`;
@@ -79,10 +79,17 @@ function toolbarName(variant: ToolbarVariant, ctx: ActionContext): string {
     }
     case 'stickies':
       return `Selection: ${String(stickies.length)} notes`;
+    case 'image': {
+      const image = ctx.deck.images?.find((entry) => entry.id === images[0]);
+      const label = image?.alt ?? ctx.deck.assets?.[image?.asset ?? '']?.name ?? '';
+      return `Selection: image ${label}`.trimEnd();
+    }
+    case 'images':
+      return `Selection: ${String(images.length)} images`;
     case 'group':
       return `Selection: group ${ctx.deck.groups.find((g) => g.id === groups[0])?.title ?? ''}`;
     default:
-      return `Selection: ${String(nodes.length + edges.length + groups.length + stickies.length)} items`;
+      return `Selection: ${String(nodes.length + edges.length + groups.length + stickies.length + images.length)} items`;
   }
 }
 
@@ -283,7 +290,8 @@ function ToolbarBody() {
     ctx.selection.nodes.length +
     ctx.selection.edges.length +
     ctx.selection.groups.length +
-    ctx.selection.stickies.length;
+    ctx.selection.stickies.length +
+    ctx.selection.images.length;
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     // Keys from a popover or menu bubble here through the React tree; they are theirs.

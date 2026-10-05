@@ -15,6 +15,7 @@ import { ConnectorsInspector } from './inspector/connectors-inspector';
 import { InspectorFrame } from './inspector/inspector-frame';
 import { NodeInspector } from './inspector/node-inspector';
 import { RelationshipInspector } from './inspector/relationship/relationship-inspector';
+import { ImageInspector } from './inspector/image-inspector';
 import { StickyInspector } from './inspector/sticky-inspector';
 import { TableInspector } from './inspector/table/table-inspector';
 
@@ -46,8 +47,10 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
   const [edge] = edges;
   const [group] = groups;
   const [sticky] = stickies;
+  const images = (deck.images ?? []).filter((image) => selection.images.includes(image.id));
+  const [image] = images;
 
-  if (nodes.length + edges.length + groups.length + stickies.length === 0) {
+  if (nodes.length + edges.length + groups.length + stickies.length + images.length === 0) {
     return <DeckInspector deck={deck} onOpenRules={onOpenRules} />;
   }
   if (group !== undefined && groups.length === 1 && nodes.length === 0 && edges.length === 0) {
@@ -73,20 +76,29 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
   if (sticky !== undefined && stickies.length === 1 && nodes.length === 0 && edges.length === 0) {
     return <StickyInspector deck={deck} sticky={sticky} />;
   }
+  if (
+    image !== undefined &&
+    images.length === 1 &&
+    nodes.length + edges.length + groups.length + stickies.length === 0
+  ) {
+    return <ImageInspector deck={deck} image={image} />;
+  }
   if (nodes.length > 0) {
     return <BulkInspector deck={deck} nodes={nodes} edgeIds={edges.map((e) => e.id)} />;
   }
-  if (edges.length > 1 && nodes.length + groups.length + stickies.length === 0) {
+  if (edges.length > 1 && nodes.length + groups.length + stickies.length + images.length === 0) {
     return <ConnectorsInspector edges={edges} />;
   }
-  const total = edges.length + stickies.length;
+  const total = edges.length + stickies.length + images.length;
   const heading = total === 1 ? '1 item selected' : `${String(total)} items selected`;
-  const subtitle =
-    edges.length > 0 && stickies.length > 0
-      ? `${String(edges.length)} connection${edges.length === 1 ? '' : 's'} · ${String(stickies.length)} note${stickies.length === 1 ? '' : 's'}`
-      : edges.length > 0
-        ? `${String(edges.length)} connection${edges.length === 1 ? '' : 's'}`
-        : `${String(stickies.length)} note${stickies.length === 1 ? '' : 's'}`;
+  const count = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
+  const subtitle = [
+    edges.length > 0 ? count(edges.length, 'connection') : null,
+    stickies.length > 0 ? count(stickies.length, 'note') : null,
+    images.length > 0 ? count(images.length, 'image') : null,
+  ]
+    .filter((part) => part !== null)
+    .join(' · ');
   return (
     <InspectorFrame
       icon={<Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
@@ -102,6 +114,7 @@ function CanvasInspector({ deck, onOpenRules }: { deck: SododeckFile; onOpenRule
               nodes: [],
               edges: edges.map((e) => e.id),
               stickies: stickies.map((entry) => entry.id),
+              images: images.map((entry) => entry.id),
             });
           }}
         >

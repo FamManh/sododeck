@@ -16,7 +16,7 @@ import { shortcutLabel } from '../shell/shortcuts';
 import type { Action, ActionContext } from './types';
 
 const ALL_MODES = ['edit', 'flow', 'session', 'viewOnly'] as const;
-const COPYABLE = ['component', 'components', 'group'] as const;
+const COPYABLE = ['component', 'components', 'group', 'image', 'images'] as const;
 
 /** Writes the selection's fragment to the clipboard from a menu (the keys use the copy event). */
 function copyFromMenu(ctx: ActionContext, verb: 'Copied' | 'Cut', then?: () => void) {

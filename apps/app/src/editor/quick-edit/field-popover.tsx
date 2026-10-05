@@ -22,6 +22,7 @@ import { TagPicker } from '../tags/tag-picker';
 import { LineStylePopover } from '../line-style/line-style-popover';
 import { StickyColourPopover } from '../stickies/sticky-toolbar';
 import { tagPickerEscape } from '../tags/tag-picker-escape';
+import { ImageTextPopover } from '../images/image-text-popover';
 
 /** The popover's accessible name per field (contract "Field popover"). */
 const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
@@ -37,6 +38,8 @@ const FIELD_NAMES: Readonly<Record<ToolbarFieldId, string>> = {
   lineStyle: 'Line style',
   stickyColour: 'Note colour',
   icon: 'Choose icon',
+  imageAlt: 'Alt text',
+  imageCaption: 'Caption',
 };
 
 const count = (n: number) => `${String(n)} ${n === 1 ? 'component' : 'components'}`;
@@ -234,6 +237,8 @@ function FieldContent({ field }: { field: ToolbarFieldId }) {
   if (field === 'icon') {
     return <IconField selection={selection} onDone={closeToolbarField} />;
   }
+  if (field === 'imageAlt') return <ImageTextPopover field="alt" />;
+  if (field === 'imageCaption') return <ImageTextPopover field="caption" />;
   if (field === 'stickyColour') return <StickyColourPopover stickyIds={selection.stickies} />;
   if (field === 'tags' && selection.nodes.length === 0 && selection.stickies.length > 0) {
     return <TagPicker stickyIds={selection.stickies} />;
