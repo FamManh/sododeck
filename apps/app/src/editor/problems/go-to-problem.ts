@@ -166,8 +166,15 @@ export function goToProblem(problem: Problem, context: ProblemNavContext): boole
       return withFix(problem, goToNode(context, target.id), []);
     case 'nodes':
       return withFix(problem, goToNodes(context, target.ids), []);
-    case 'edges':
+    case 'edges': {
+      // A relationship between tables is drawn only once their database card is open.
+      if (problem.kind.startsWith('db-')) {
+        const deck = readDeck(context.editor.doc);
+        const from = deck.edges.find((e) => e.id === target.ids[0])?.from;
+        if (from !== undefined && deck.nodes.some((n) => n.id === from)) reveal(context, from);
+      }
       return withFix(problem, goToEdges(context, target.ids), target.ids);
+    }
     case 'flow':
       return goToFlow(context, target.flowId, target.stepId, target.branchIds);
     case 'rule':

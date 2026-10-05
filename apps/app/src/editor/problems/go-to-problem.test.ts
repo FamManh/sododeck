@@ -285,6 +285,20 @@ describe('goToProblem on a schema row (047 US2, R7)', () => {
     expect(state().selection.nodes).toEqual(['ord']);
   });
 
+  it('opens the database card of a relationship problem before selecting it', () => {
+    const file = schemaDeck();
+    const s = setup({
+      ...file,
+      nodes: [
+        { id: 'db', type: 'database', title: 'Orders DB', position: { x: 0, y: 0 } },
+        ...file.nodes.map((n) => ({ ...n, parent: 'db' })),
+      ],
+    });
+    expect(goToProblem(s.problem('db-type-mismatch'), s.ctx)).toBe(true);
+    expect(state().drill.map((f) => f.id)).toEqual(['db']);
+    expect(state().selection.edges).toEqual(['rel']);
+  });
+
   it('drops the reveal when the selection leaves the table', () => {
     const s = setup(schemaDeck());
     goToProblem(nullDefault(s), s.ctx);
