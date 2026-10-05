@@ -25,4 +25,15 @@ describe('typeMismatch (042 FR-018)', () => {
     );
     expect(typeMismatch(status, { type: 'text' })).toBe('order_status → text');
   });
+
+  it('agrees with the lint: int and integer match, timestamptz and timestamp do not on Postgres (047)', () => {
+    expect(typeMismatch({ type: 'int' }, { type: 'integer' }, 'postgres')).toBeUndefined();
+    expect(typeMismatch({ type: 'int' }, { type: 'integer' })).toBeUndefined();
+    expect(typeMismatch({ type: 'timestamptz' }, { type: 'timestamp' }, 'postgres')).toBe(
+      'timestamptz → timestamp',
+    );
+    expect(
+      typeMismatch({ type: 'numeric', size: '10, 2' }, { type: 'numeric', size: '10,2' }),
+    ).toBe(undefined);
+  });
 });

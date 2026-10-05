@@ -85,7 +85,16 @@ function renderEdge(
 
 describe('DeckEdge', () => {
   it('shows a problem glyph on its pill, even with labels off (015 FR-022)', () => {
-    renderEdge({ problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' } });
+    renderEdge({
+      problems: {
+        count: 1,
+        titles: 'Duplicate connection',
+        label: '1 problem',
+        severity: 'warning',
+        rows: new Map(),
+        rowText: new Map(),
+      },
+    });
     expect(screen.getByTestId('edge-label')).not.toHaveTextContent('POST /orders');
     expect(screen.getByTestId('problem-glyph')).toHaveAttribute('title', 'Duplicate connection');
   });
@@ -97,7 +106,14 @@ describe('DeckEdge', () => {
         style: 'path',
         errorIcon: false,
       },
-      problems: { count: 1, titles: 'Duplicate connection', label: '1 problem' },
+      problems: {
+        count: 1,
+        titles: 'Duplicate connection',
+        label: '1 problem',
+        severity: 'warning',
+        rows: new Map(),
+        rowText: new Map(),
+      },
     });
     const pill = screen.getByTestId('edge-label');
     const children = [...pill.children];

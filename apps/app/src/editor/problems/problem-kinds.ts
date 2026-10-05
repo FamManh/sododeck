@@ -1,19 +1,30 @@
-import type { ProblemKind } from '@sododeck/model';
+import type { ProblemKind, Severity } from '@sododeck/model';
 import {
+  Ban,
   Columns3,
   Copy,
+  CopyX,
+  Fingerprint,
   KeyRound,
   Link2Off,
+  List,
   ListX,
   Maximize2,
+  Network,
   Package,
+  Repeat,
   Shapes,
   Split,
   Table2,
+  TextCursorInput,
   Unplug,
   Workflow,
+  Waypoints,
   type LucideIcon,
 } from 'lucide-react';
+
+/** Accessible name of a severity glyph (047). */
+export const SEVERITY_LABEL: Record<Severity, string> = { error: 'Error', warning: 'Warning' };
 
 export const problemCountLabel = (count: number) =>
   count === 1 ? '1 problem' : `${String(count)} problems`;
@@ -35,4 +46,19 @@ export const PROBLEM_ICONS: Record<ProblemKind, LucideIcon> = {
   'field-value-dangling': ListX,
   'db-dangling-reference': Columns3,
   'db-composite-mismatch': KeyRound,
+  'db-no-primary-key': Fingerprint,
+  'db-duplicate-table': CopyX,
+  'db-duplicate-column': CopyX,
+  'db-duplicate-index': CopyX,
+  'db-duplicate-enum': CopyX,
+  'db-empty-column': TextCursorInput,
+  'db-type-mismatch': Unplug,
+  'db-null-default': Ban,
+  'db-fk-not-key': KeyRound,
+  'db-many-to-many': Network,
+  'db-empty-enum': List,
+  'db-default-type': ListX,
+  'db-required-loop': Repeat,
+  'db-duplicate-relationship': Waypoints,
+  'db-unknown-type': Shapes,
 };

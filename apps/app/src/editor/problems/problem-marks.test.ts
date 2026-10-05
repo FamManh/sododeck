@@ -25,6 +25,9 @@ describe('problemMarks (015 FR-022)', () => {
       count: 1,
       titles: 'Duplicate connection',
       label: '1 problem',
+      severity: 'warning',
+      rows: new Map(),
+      rowText: new Map(),
     });
     expect(marks.has('a')).toBe(false);
   });
@@ -43,5 +46,77 @@ describe('problemMarks (015 FR-022)', () => {
     expect(sameProblemMark(a, b)).toBe(true);
     expect(sameProblemMark(a, undefined)).toBe(false);
     expect(sameProblemMark(undefined, undefined)).toBe(true);
+  });
+
+  describe('schema lint (047)', () => {
+    const schema = deckOf({
+      dialect: 'postgres',
+      nodes: [
+        {
+          id: 't',
+          type: 'db-table',
+          title: 'loyalty',
+          columns: [
+            { id: 'c-id', name: 'id', type: 'int', pk: true },
+            // Not-null with a NULL default (error) and a number default that is text (warning).
+            {
+              id: 'c-ref',
+              name: 'ref',
+              type: 'int',
+              notNull: true,
+              defaultExpr: 'NULL',
+              default: 'x',
+            },
+            { id: 'c-qty', name: 'qty', type: 'integer', default: 'many' },
+          ],
+        },
+        {
+          id: 'u',
+          type: 'db-table',
+          title: 'customers',
+          columns: [{ id: 'u-id', name: 'id', type: 'uuid', pk: true }],
+        },
+      ],
+      edges: [
+        {
+          id: 'r',
+          from: 't',
+          to: 'u',
+          fromColumns: ['c-ref'],
+          toColumns: ['u-id'],
+          cardinality: 'n-1',
+        },
+      ],
+    });
+
+    it('takes the worst severity of an object and of each row', () => {
+      const marks = problemMarks(checkDeck(schema));
+      const table = marks.get('t');
+      expect(table?.severity).toBe('error');
+      expect(table?.rows.get('c-ref')).toBe('error');
+      expect(table?.rows.get('c-qty')).toBe('warning');
+      expect(table?.rows.has('c-id')).toBe(false);
+      expect(table?.rowText.get('c-qty')).toBe(
+        "Default does not fit the type: loyalty.qty is integer with default 'many'",
+      );
+    });
+
+    it('gives a relationship its short text', () => {
+      const marks = problemMarks(checkDeck(schema));
+      expect(marks.get('r')?.short).toBe('int → uuid');
+      expect(marks.get('r')?.severity).toBe('error');
+    });
+
+    it('compares severity, rows and short', () => {
+      const a = problemMarks(checkDeck(schema)).get('t');
+      const b = problemMarks(checkDeck(schema)).get('t');
+      expect(sameProblemMark(a, b)).toBe(true);
+      if (a === undefined) throw new Error('no mark');
+      expect(sameProblemMark(a, { ...a, severity: 'warning' })).toBe(false);
+      expect(sameProblemMark(a, { ...a, rows: new Map() })).toBe(false);
+      expect(sameProblemMark(a, { ...a, short: 'loop' })).toBe(false);
+      const rowsChanged = new Map(a.rows).set('c-id', 'warning' as const);
+      expect(sameProblemMark(a, { ...a, rows: rowsChanged })).toBe(false);
+    });
   });
 });

@@ -291,4 +291,44 @@ describe('Rail tools (018 R8)', () => {
     setup(playbackDeck);
     expect(railButton(/^Problems/)).toBeInTheDocument();
   });
+
+  describe('Problems badge colour (047 US1)', () => {
+    const nodes = [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 300, y: 0 } },
+    ];
+    const badgeOf = async () => {
+      const button = await within(rail()).findByRole('button', { name: /^Problems, \d/ });
+      return button.querySelector('[data-severity]');
+    };
+
+    it('is amber while only warnings are listed', async () => {
+      setup(
+        deckOf({
+          nodes,
+          edges: [
+            { id: 'e1', from: 'a', to: 'b' },
+            { id: 'e2', from: 'a', to: 'b' },
+          ],
+        }),
+      );
+      expect(await badgeOf()).toHaveAttribute('data-severity', 'warning');
+    });
+
+    it('turns clay once an error is listed', async () => {
+      setup(
+        deckOf({
+          nodes,
+          edges: [
+            { id: 'e1', from: 'a', to: 'b' },
+            { id: 'e2', from: 'a', to: 'b' },
+          ],
+          flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'gone' }] }],
+        }),
+      );
+      await waitFor(async () => {
+        expect(await badgeOf()).toHaveAttribute('data-severity', 'error');
+      });
+    });
+  });
 });

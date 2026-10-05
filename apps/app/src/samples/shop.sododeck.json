@@ -528,6 +528,7 @@
           "id": "audit_log.id",
           "name": "id",
           "type": "bigint",
+          "pk": true,
           "notNull": true
         },
         {
@@ -557,6 +558,32 @@
             "audit_log.logged_at"
           ],
           "method": "btree"
+        }
+      ]
+    },
+    {
+      "id": "product_categories",
+      "type": "db-table",
+      "title": "product_categories",
+      "parent": "card.orders-db",
+      "position": {
+        "x": 450,
+        "y": 600
+      },
+      "columns": [
+        {
+          "id": "product_categories.product_id",
+          "name": "product_id",
+          "type": "uuid",
+          "pk": true,
+          "notNull": true
+        },
+        {
+          "id": "product_categories.category_id",
+          "name": "category_id",
+          "type": "uuid",
+          "pk": true,
+          "notNull": true
         }
       ]
     }
@@ -778,11 +805,30 @@
       "onDelete": "set-null"
     },
     {
-      "id": "rel.products-categories",
-      "from": "products",
+      "id": "rel.product-categories-product",
+      "from": "product_categories",
+      "to": "products",
+      "fromColumns": [
+        "product_categories.product_id"
+      ],
+      "toColumns": [
+        "products.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
+    },
+    {
+      "id": "rel.product-categories-category",
+      "from": "product_categories",
       "to": "categories",
-      "label": "listed in",
-      "cardinality": "n-n"
+      "fromColumns": [
+        "product_categories.category_id"
+      ],
+      "toColumns": [
+        "categories.id"
+      ],
+      "cardinality": "n-1",
+      "onDelete": "cascade"
     }
   ],
   "views": [],

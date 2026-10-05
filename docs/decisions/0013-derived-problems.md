@@ -57,3 +57,26 @@ and the rule catch-all check (008, rule editor only). Three constraints shape th
 The **orphan component** check is removed (founder decision). A diagram may hold components that
 are not connected yet, or never will be, so marking every new card with a warning was noise.
 `checkDeck` now has nine kinds; everything else in this ADR stands.
+
+## Amendment (047, 2026-10-05): severity, column, fixes, sort
+
+Schema lint (`specs/047-db-lint`) extends the problem shape; derivation, worker and "never stored"
+stand.
+
+- **Severity** is a property of the kind (`SEVERITY` in `problems.ts`, one table to review), copied
+  to `Problem.severity` (`error` | `warning`); a draft may override it. `DeckProblems` gains
+  `errors` and `warnings` counts. The sort is now errors first, then kind, object title, step
+  order and key. The Problems list filters All / Errors / Warnings (UI state, `problemFilter`).
+- **`column?: { tableId, columnId }`** names the faulty table row. Canvas marks (`problem-marks.ts`)
+  derive per-row severities from it; the row glyph replaces the key glyphs on that row.
+- **`fixes?: readonly ProblemFix[]`** replaces the single `fix`. A fix is plain data (`make-pk`,
+  `add-id-pk`, `match-type` with a `changes[]` list, `create-junction`, `remove-default`,
+  `allow-null`, `delete-edge`, `rename`, `pick-column`, `add-values`, `pick-type`, plus 032's
+  `remove-value`), so `checkDeck` stays pure and crosses the worker boundary as JSON. The app
+  applies them (`apply-fix.ts`): write fixes are one undo step, fixes that need a decision open
+  the place to decide. The first fix is the primary one.
+- **`short?`** is the pill text of a relationship problem on the canvas (`int → uuid`, `n–n`).
+- **Duplicate connection** is not reported for relationships (edges with column ends between two
+  tables): they report as `db-duplicate-relationship`, one cause, one problem.
+- Fifteen `db-*` kinds join the original nine (plus 032's and 040's kinds); the rules live in
+  `packages/model/src/db-lint.ts`, called by `checkDeck`.

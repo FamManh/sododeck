@@ -27,7 +27,7 @@ export function useGoToProblem({
   navigateToCanvas,
 }: ProblemNavTargets): (problem: Problem) => boolean {
   const editor = useEditor();
-  const { fitView, getZoom, setCenter } = useReactFlow();
+  const { fitView, getZoom, getViewport, setCenter } = useReactFlow();
   const { toast } = useToast();
   return useCallback(
     (problem: Problem) => {
@@ -42,6 +42,7 @@ export function useGoToProblem({
         fitView,
         setCenter,
         getZoom,
+        getViewport,
         select: ui.select,
         focus: ui.focus,
         exitFlow: ui.exitFlow,
@@ -61,6 +62,6 @@ export function useGoToProblem({
         },
       });
     },
-    [editor, screen, openRules, navigateToCanvas, fitView, setCenter, getZoom, toast],
+    [editor, screen, openRules, navigateToCanvas, fitView, setCenter, getZoom, getViewport, toast],
   );
 }

@@ -63,6 +63,7 @@ import { GroupBoundaryNode } from './group-boundary-node';
 import { effectiveLevel, levelForZoom, levelSelector, type Level } from './levels';
 import { MergedEdge } from './merged-edge';
 import { MergedEdgePopover } from './merged-edge-popover';
+import { ProblemFixPopover } from './problems/problem-fix-popover';
 import { OutsideProxyNode } from './outside-proxy-node';
 import { proxyLayout } from './proxy-layout';
 import { ScopeLabelNode } from './scope-label-node';
@@ -907,6 +908,7 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
       <EdgePopover deck={fullDeck} />
       {/* The one enum values popover (041): renders nothing until a chip opens it. */}
       <EnumPopover deck={fullDeck} />
+      <ProblemFixPopover />
       <MergedEdgePopover deck={deck} bundles={bundles} />
       <ConnectPopover deck={fullDeck} />
       <InvalidEdgePopover deck={deck} analysis={analysis} />

@@ -1,3 +1,4 @@
+import { DIALECT_HINTS } from '@sododeck/model';
 import type { Dialect, SododeckFile } from '@sododeck/schema';
 import {
   Select,
@@ -9,7 +10,6 @@ import {
 import { useId } from 'react';
 
 import { planDialectChange } from '../../../db/dialect-change';
-import { DIALECT_HINTS } from '../../../db/dialect-types';
 import { useEditor } from '../../../model/use-editor';
 import { useUiStore } from '../../../state/ui-store';
 import { useUndoToast } from '../../undo-toast';

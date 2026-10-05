@@ -1,24 +1,25 @@
 /**
- * The type warning shown while a relationship is dragged (042 R11, FR-018): nothing is stored,
- * dialect-aware equivalence is 047's lint.
+ * The type warning shown while a relationship is dragged (042 R11, FR-018) and next to a column
+ * pair in the drawer (052): nothing is stored.
  */
-import type { DbColumn } from '@sododeck/schema';
+import { sameColumnType } from '@sododeck/model';
+import type { DbColumn, Dialect } from '@sododeck/schema';
 
 import { typeText } from '../table-layout';
 
 type Column = Pick<DbColumn, 'type' | 'size' | 'enumRef'>;
 
 /**
- * "int → uuid" when the two columns' types differ (name case-insensitive, then size; an enum
- * column matches only the same enum), else undefined.
+ * "int → uuid" when the two columns' types differ, else undefined. Equivalence is the lint's
+ * (`sameColumnType`, 047): `int` and `integer` match, `timestamptz` and `timestamp` do not on
+ * Postgres, sizes compare without spaces, an enum column matches only the same enum.
  */
-export function typeMismatch(source: Column, target: Column): string | undefined {
-  const text = `${typeText(source)} → ${typeText(target)}`;
-  if (source.enumRef !== undefined || target.enumRef !== undefined) {
-    return source.enumRef === target.enumRef ? undefined : text;
-  }
-  const same =
-    source.type.trim().toLowerCase() === target.type.trim().toLowerCase() &&
-    source.size === target.size;
-  return same ? undefined : text;
+export function typeMismatch(
+  source: Column,
+  target: Column,
+  dialect: Dialect = 'generic',
+): string | undefined {
+  return sameColumnType(source, target, dialect)
+    ? undefined
+    : `${typeText(source)} → ${typeText(target)}`;
 }

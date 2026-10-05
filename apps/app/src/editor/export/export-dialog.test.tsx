@@ -129,6 +129,21 @@ afterEach(() => {
   for (const opener of openers.splice(0)) opener.remove();
 });
 
+/**
+ * The Shop fixture plus its two lint warnings (audit_log has no key, products-categories is n-n) are
+ * export edge cases; tests about the banner start from a deck with neither.
+ */
+function quietShop(): SododeckFile {
+  const deck = shopDeck('postgres');
+  const auditId = deck.nodes
+    .find((n) => n.id === 'audit_log')
+    ?.columns?.find((c) => c.name === 'id');
+  if (auditId === undefined) throw new Error('fixture changed');
+  auditId.pk = true;
+  deck.edges = deck.edges.filter((e) => e.id !== 'rel.products-categories');
+  return deck;
+}
+
 describe('ExportDialog: shell', () => {
   it('is named, described and lists three formats with subtitles', async () => {
     setup();
@@ -488,7 +503,7 @@ describe('ExportDialog: keyboard (US5)', () => {
 });
 
 describe('ExportDialog: schema formats (045)', () => {
-  const shop = shopDeck('postgres');
+  const shop = quietShop();
   const preview = () => screen.getByRole('region', { name: 'Preview' });
   const selection = (nodes: string[]) => ({
     selection: { nodes, edges: [], groups: [], stickies: [] },
@@ -724,7 +739,7 @@ describe('ExportDialog: schema formats (045)', () => {
     });
 
     it('warns about database problems in scope; Show problems opens the Problems list', async () => {
-      const broken = shopDeck('postgres');
+      const broken = quietShop();
       const status = broken.nodes
         .find((n) => n.id === 'orders')
         ?.columns?.find((c) => c.name === 'status');
@@ -746,7 +761,7 @@ describe('ExportDialog: schema formats (045)', () => {
 
   describe('block SQL export (052 US6)', () => {
     function brokenShop(block: boolean) {
-      const broken = shopDeck('postgres');
+      const broken = quietShop();
       const status = broken.nodes
         .find((n) => n.id === 'orders')
         ?.columns?.find((c) => c.name === 'status');
@@ -762,11 +777,11 @@ describe('ExportDialog: schema formats (045)', () => {
       const { user } = setup(brokenShop(true));
       await pick(user, 'SQL');
       const banner = await screen.findByRole('alert');
-      expect(banner).toHaveTextContent('1 errors in the deck · fix them to export SQL');
+      expect(banner).toHaveTextContent('1 error in the deck · fix the errors to export SQL');
       await footerName('shop.sql');
       expect(copy()).toBeDisabled();
       expect(download()).toBeDisabled();
-      expect(download()).toHaveAccessibleDescription(/fix them to export SQL/);
+      expect(download()).toHaveAccessibleDescription(/fix the errors to export SQL/);
     });
 
     it('lets DBML and the data dictionary export while SQL is blocked', async () => {
@@ -802,6 +817,68 @@ describe('ExportDialog: schema formats (045)', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(copy()).toBeEnabled();
       expect(download()).toBeEnabled();
+    });
+  });
+
+  describe('errors and warnings in the banner (047 US3)', () => {
+    /** `reviews` loses its key (a warning); `withError` also breaks orders.status (an error). */
+    function lintedShop(opts: { withError: boolean; block: boolean }) {
+      const deck = quietShop();
+      const id = deck.nodes.find((n) => n.id === 'reviews')?.columns?.find((c) => c.name === 'id');
+      if (id === undefined) throw new Error('fixture changed');
+      delete id.pk;
+      if (opts.withError) {
+        const status = deck.nodes
+          .find((n) => n.id === 'orders')
+          ?.columns?.find((c) => c.name === 'status');
+        if (status === undefined) throw new Error('fixture changed');
+        status.enumRef = 'enum.gone';
+      }
+      if (opts.block) deck.blockSqlExport = true;
+      return deck;
+    }
+    const copy = () => screen.getByRole('button', { name: 'Copy' });
+    const download = () => screen.getByRole('button', { name: 'Download' });
+
+    it('lists errors first, then warnings, with both counts', async () => {
+      const { user } = setup(lintedShop({ withError: true, block: false }));
+      await pick(user, 'SQL');
+      const banner = await screen.findByRole('alert');
+      expect(banner).toHaveTextContent('1 error · 1 warning in the deck');
+      expect(banner).toHaveTextContent(
+        /orders\.status uses an enum this deck does not have.*reviews has no primary key/,
+      );
+    });
+
+    it('exports SQL with the switch on when the scope has only warnings', async () => {
+      const { user } = setup(lintedShop({ withError: false, block: true }));
+      await pick(user, 'SQL');
+      const banner = await screen.findByRole('alert');
+      expect(banner).toHaveTextContent('1 warning in the deck');
+      expect(banner).not.toHaveTextContent('fix the errors');
+      await footerName('shop.sql');
+      expect(copy()).toBeEnabled();
+      expect(download()).toBeEnabled();
+    });
+
+    it('blocks SQL for an error in scope even with warnings beside it', async () => {
+      const { user } = setup(lintedShop({ withError: true, block: true }));
+      await pick(user, 'SQL');
+      const banner = await screen.findByRole('alert');
+      expect(banner).toHaveTextContent('1 error · 1 warning in the deck · fix the errors');
+      await footerName('shop.sql');
+      expect(copy()).toBeDisabled();
+      expect(download()).toBeDisabled();
+    });
+
+    it('does not count problems outside the export scope', async () => {
+      const { user } = setup(lintedShop({ withError: true, block: true }), {
+        ui: selection(['customers']),
+      });
+      await pick(user, 'SQL');
+      await footerName('shop-selection.sql');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(copy()).toBeEnabled();
     });
   });
 });

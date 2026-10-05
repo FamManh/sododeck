@@ -7,6 +7,7 @@ import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { deckOf, editorWrapper } from '../../test/render-canvas';
 import { fixedWidthMeasurer } from '../export/text-measure';
 import type { TableContext } from '../table-keys';
+import type { ProblemMark } from '../problems/problem-marks';
 import { tableLayout, type TableNode } from '../table-layout';
 import { TableBody } from './table-body';
 
@@ -120,15 +121,47 @@ describe('TableBody (041 contracts/table-card-ui.md)', () => {
 });
 
 describe('TableBody editing marks (043)', () => {
-  it('shows the (!) icon on a mismatched row, named with both types, and drops it once they match', () => {
-    const mismatched = new Map([['orders:customer_id', 'int → uuid · orders.customer_id']]);
-    const { rerender } = renderBody(orders, { ...context(), mismatched });
-    expect(
-      screen.getByRole('img', { name: 'Type differs: int → uuid (orders.customer_id)' }),
-    ).toBeInTheDocument();
+  it('draws the severity glyph in place of the key glyph, and the key returns once it is gone', () => {
+    const marked: ProblemMark = {
+      count: 1,
+      titles: 'Type mismatch',
+      label: '1 problem',
+      severity: 'error',
+      rows: new Map([['customer_id', 'error']]),
+      rowText: new Map([
+        ['customer_id', 'Type mismatch: orders.customer_id is int, customers.id is uuid'],
+      ]),
+    };
     const layout = tableLayout(orders, context(), undefined, fixedWidthMeasurer(0.6));
+    const { rerender } = render(
+      <TableBody nodeId="orders" layout={layout} focused={false} problems={marked} />,
+    );
+    const name = 'Type mismatch: orders.customer_id is int, customers.id is uuid';
+    const glyph = screen.getByRole('img', { name });
+    expect(glyph).toHaveAttribute('title', name);
+    const row = glyph.closest('li');
+    // customer_id is a foreign key: its link glyph gives way to the severity glyph.
+    expect(within(row as HTMLElement).queryByRole('img', { name: 'Foreign key' })).toBeNull();
+    // Other rows keep their key glyphs.
+    expect(screen.getAllByRole('img', { name: 'Primary key' }).length).toBeGreaterThan(0);
     rerender(<TableBody nodeId="orders" layout={layout} focused={false} />);
-    expect(screen.queryByRole('img', { name: /^Type differs/ })).toBeNull();
+    expect(screen.queryByRole('img', { name })).toBeNull();
+    const back = screen.getByRole('listitem', { name: /customer_id/ });
+    expect(within(back).getByRole('img', { name: 'Foreign key' })).toBeInTheDocument();
+  });
+
+  it('names a warning glyph by its problem as well', () => {
+    const marked: ProblemMark = {
+      count: 1,
+      titles: 'Default does not fit the type',
+      label: '1 problem',
+      severity: 'warning',
+      rows: new Map([['total_cents', 'warning']]),
+      rowText: new Map([['total_cents', 'Default does not fit the type']]),
+    };
+    const layout = tableLayout(orders, context(), undefined, fixedWidthMeasurer(0.6));
+    render(<TableBody nodeId="orders" layout={layout} focused={false} problems={marked} />);
+    expect(screen.getByRole('img', { name: 'Default does not fit the type' })).toBeInTheDocument();
   });
 
   it('gives every row a reorder grip, except on a locked table', () => {

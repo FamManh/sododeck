@@ -12,6 +12,7 @@ import { validateValue } from './field-values';
 import { appliesTo, findField } from './fields';
 import { analyzeFlow, type FlowAnalysis, type PathStep } from './flow-paths';
 import { stickyLabel } from './geometry';
+import { checkSchema, isRelationship } from './db-lint';
 import { endpointTitle } from './endpoint';
 import { checkIntegrity, type IntegrityProblem } from './integrity';
 import type { ObjectRef } from './layout';
@@ -32,7 +33,58 @@ export type ProblemKind =
   | 'unknown-pack'
   | 'field-value-dangling'
   | 'db-dangling-reference'
-  | 'db-composite-mismatch';
+  | 'db-composite-mismatch'
+  | 'db-no-primary-key'
+  | 'db-duplicate-table'
+  | 'db-duplicate-column'
+  | 'db-duplicate-index'
+  | 'db-duplicate-enum'
+  | 'db-empty-column'
+  | 'db-type-mismatch'
+  | 'db-null-default'
+  | 'db-fk-not-key'
+  | 'db-many-to-many'
+  | 'db-empty-enum'
+  | 'db-default-type'
+  | 'db-required-loop'
+  | 'db-duplicate-relationship'
+  | 'db-unknown-type';
+
+export type Severity = 'error' | 'warning';
+
+/** Severity is a property of the kind (047 R1): one table to review. */
+export const SEVERITY: Readonly<Record<ProblemKind, Severity>> = {
+  'duplicate-connection': 'warning',
+  'step-without-connection': 'error',
+  'broken-chain': 'error',
+  'incomplete-flow': 'warning',
+  'overlapping-conditions': 'warning',
+  'missing-rule': 'warning',
+  'rule-without-catch-all': 'warning',
+  'invalid-rule-cells': 'error',
+  'broken-reference': 'error',
+  'card-size-out-of-range': 'warning',
+  'unknown-card-type': 'warning',
+  'unknown-pack': 'warning',
+  'field-value-dangling': 'warning',
+  'db-dangling-reference': 'error',
+  'db-composite-mismatch': 'error',
+  'db-no-primary-key': 'warning',
+  'db-duplicate-table': 'error',
+  'db-duplicate-column': 'error',
+  'db-duplicate-index': 'error',
+  'db-duplicate-enum': 'error',
+  'db-empty-column': 'error',
+  'db-type-mismatch': 'error',
+  'db-null-default': 'error',
+  'db-fk-not-key': 'warning',
+  'db-many-to-many': 'warning',
+  'db-empty-enum': 'warning',
+  'db-default-type': 'warning',
+  'db-required-loop': 'warning',
+  'db-duplicate-relationship': 'warning',
+  'db-unknown-type': 'warning',
+};
 
 /** List order of the kinds (research R3). */
 export const PROBLEM_KINDS: readonly ProblemKind[] = [
@@ -51,6 +103,21 @@ export const PROBLEM_KINDS: readonly ProblemKind[] = [
   'field-value-dangling',
   'db-dangling-reference',
   'db-composite-mismatch',
+  'db-no-primary-key',
+  'db-duplicate-table',
+  'db-duplicate-column',
+  'db-duplicate-index',
+  'db-duplicate-enum',
+  'db-empty-column',
+  'db-type-mismatch',
+  'db-null-default',
+  'db-fk-not-key',
+  'db-many-to-many',
+  'db-empty-enum',
+  'db-default-type',
+  'db-required-loop',
+  'db-duplicate-relationship',
+  'db-unknown-type',
 ];
 
 /** Where a problem is fixed. */
@@ -76,22 +143,55 @@ export interface Problem {
   objectTitle: string;
   /** Step position within a flow, else 0. */
   order: number;
-  /** A one-click fix the Problems panel offers (032: remove a dangling value). */
-  fix?: ProblemFix;
+  /** From `SEVERITY[kind]`, unless a draft overrides it. */
+  severity: Severity;
+  /** The faulty table row, when the problem is about one column (047). */
+  column?: { tableId: Id; columnId: Id };
+  /** One-click fixes the Problems panel and popover offer; the first is primary. */
+  fixes?: readonly ProblemFix[];
+  /** Short pill text for a relationship on the canvas: `int → uuid`, `n–n`, `not key`, `loop`. */
+  short?: string;
 }
 
-/** Fixes a problem row can offer. */
-export interface ProblemFix {
-  kind: 'remove-value';
-  nodeId: Id;
-  fieldId: Id;
-  label: string;
+/** What a `rename` fix edits. */
+export type RenameTarget =
+  | { type: 'table'; tableId: Id }
+  | { type: 'column'; tableId: Id; columnId: Id }
+  | { type: 'index'; tableId: Id; indexId: Id }
+  | { type: 'enum'; enumId: Id };
+
+export interface TypeChange {
+  columnId: Id;
+  type: string;
+  size?: string;
 }
+
+/**
+ * Fixes as plain data (047 R5), so `checkDeck` stays pure and JSON crosses the worker boundary.
+ * The app applies them; `label` is the button text.
+ */
+export type ProblemFix = { label: string } & (
+  | { kind: 'remove-value'; nodeId: Id; fieldId: Id }
+  | { kind: 'make-pk'; tableId: Id; columnId: Id }
+  | { kind: 'add-id-pk'; tableId: Id; type: string }
+  /** Change the referencing columns of one table, one entry per mismatched pair (one batch). */
+  | { kind: 'match-type'; tableId: Id; changes: readonly TypeChange[] }
+  | { kind: 'create-junction'; edgeId: Id }
+  | { kind: 'remove-default'; tableId: Id; columnId: Id }
+  | { kind: 'allow-null'; tableId: Id; columnId: Id }
+  | { kind: 'delete-edge'; edgeId: Id }
+  | { kind: 'rename'; target: RenameTarget }
+  | { kind: 'pick-column'; edgeId: Id }
+  | { kind: 'add-values'; enumId: Id }
+  | { kind: 'pick-type'; tableId: Id; columnId: Id }
+);
 
 export interface DeckProblems {
-  /** Sorted by kind, object title, step order, then key. */
+  /** Errors first, then kind, object title, step order, then key. */
   list: readonly Problem[];
   total: number;
+  errors: number;
+  warnings: number;
   /** Node, edge, flow and rule ids (and other holders) → their problems, for glyphs. */
   byObject: ReadonlyMap<Id, readonly Problem[]>;
 }
@@ -103,7 +203,7 @@ function norm(text: string | undefined): string {
 
 const times = (n: number) => (n === 2 ? 'twice' : `${String(n)} times`);
 
-interface Draft {
+export interface Draft {
   kind: ProblemKind;
   ids: readonly Id[];
   target: ProblemTarget;
@@ -113,7 +213,10 @@ interface Draft {
   order?: number;
   /** Object ids to show the problem on (defaults to the target's ids). */
   on: readonly Id[];
-  fix?: ProblemFix;
+  severity?: Severity;
+  column?: { tableId: Id; columnId: Id };
+  fixes?: readonly ProblemFix[];
+  short?: string;
 }
 
 const TITLES: Record<ProblemKind, string> = {
@@ -132,6 +235,21 @@ const TITLES: Record<ProblemKind, string> = {
   'field-value-dangling': 'Value without a field',
   'db-dangling-reference': 'Missing column',
   'db-composite-mismatch': "Key columns don't match",
+  'db-no-primary-key': 'No primary key',
+  'db-duplicate-table': 'Duplicate table',
+  'db-duplicate-column': 'Duplicate column',
+  'db-duplicate-index': 'Duplicate index',
+  'db-duplicate-enum': 'Duplicate enum',
+  'db-empty-column': 'Column without a name',
+  'db-type-mismatch': 'Type mismatch',
+  'db-null-default': 'Null default on a not-null column',
+  'db-fk-not-key': 'Reference to a non-key column',
+  'db-many-to-many': 'Many-to-many',
+  'db-empty-enum': 'Enum without values',
+  'db-default-type': 'Default does not fit the type',
+  'db-required-loop': 'Required references form a loop',
+  'db-duplicate-relationship': 'Duplicate relationship',
+  'db-unknown-type': 'Type not in the list',
 };
 
 /**
@@ -150,7 +268,7 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   // A connector end is a node or a group (050).
   const endTitle = (id: Id) => endpointTitle(file, id);
 
-  checkDuplicates(file.edges, endTitle, add);
+  checkDuplicates(file.edges, (edge) => isRelationship(edge, nodeById), endTitle, add);
 
   const analyses = new Map<Id, FlowAnalysis>();
   for (const flow of file.flows) {
@@ -191,11 +309,12 @@ export function checkDeck(file: SododeckFile): DeckProblems {
   checkCardTypes(file, add);
   checkFieldValues(file, add);
   checkDatabase(file, nodeById, add);
+  checkSchema(file, nodeById, add);
   return finish(drafts);
 }
 
 /** `title` overrides the kind's title when the id belongs in it (030: "Unknown pack x"). */
-type Add = (d: Omit<Draft, 'title'> & { title?: string }) => void;
+export type Add = (d: Omit<Draft, 'title'> & { title?: string }) => void;
 
 /** A stored size outside the supported range (017, research R11); the file still opens. */
 function checkCardSizes(nodes: readonly Node[], add: Add): void {
@@ -286,7 +405,7 @@ function checkFieldValues(file: SododeckFile, add: Add): void {
         on: [node.id],
         detail,
         objectTitle: node.title,
-        fix: { kind: 'remove-value', nodeId: node.id, fieldId, label: 'Remove value' },
+        fixes: [{ kind: 'remove-value', nodeId: node.id, fieldId, label: 'Remove value' }],
       });
     }
   }
@@ -369,10 +488,17 @@ function checkDatabase(file: SododeckFile, nodeById: ReadonlyMap<Id, Node>, add:
   }
 }
 
-function checkDuplicates(edges: readonly Edge[], endTitle: (id: Id) => string, add: Add): void {
+function checkDuplicates(
+  edges: readonly Edge[],
+  isRelationship: (edge: Edge) => boolean,
+  endTitle: (id: Id) => string,
+  add: Add,
+): void {
   const groups = new Map<string, Edge[]>();
   for (const edge of edges) {
     if (edge.from === edge.to) continue;
+    // Relationships report as `db-duplicate-relationship`: one cause, one problem (047).
+    if (isRelationship(edge)) continue;
     // Two relationships on different columns of the same tables are not copies (042 FR-012).
     const key = JSON.stringify([
       edge.from,
@@ -639,6 +765,7 @@ function targetIds(target: ProblemTarget): readonly Id[] {
   }
 }
 
+const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1 };
 const KIND_RANK = new Map(PROBLEM_KINDS.map((k, i) => [k, i]));
 
 function finish(drafts: readonly Draft[]): DeckProblems {
@@ -656,12 +783,16 @@ function finish(drafts: readonly Draft[]): DeckProblems {
       detail: d.detail,
       objectTitle: d.objectTitle,
       order: d.order ?? 0,
-      ...(d.fix === undefined ? {} : { fix: d.fix }),
+      severity: d.severity ?? SEVERITY[d.kind],
+      ...(d.column === undefined ? {} : { column: d.column }),
+      ...(d.fixes === undefined ? {} : { fixes: d.fixes }),
+      ...(d.short === undefined ? {} : { short: d.short }),
     });
   }
   const on = new Map(drafts.map((d) => [`${d.kind}:${d.ids.join(':')}`, d.on]));
   list.sort(
     (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
       (KIND_RANK.get(a.kind) ?? 0) - (KIND_RANK.get(b.kind) ?? 0) ||
       a.objectTitle.localeCompare(b.objectTitle, undefined, { sensitivity: 'base' }) ||
       a.order - b.order ||
@@ -675,5 +806,6 @@ function finish(drafts: readonly Draft[]): DeckProblems {
       else bucket.push(problem);
     }
   }
-  return { list, total: list.length, byObject };
+  const errors = list.filter((p) => p.severity === 'error').length;
+  return { list, total: list.length, errors, warnings: list.length - errors, byObject };
 }
