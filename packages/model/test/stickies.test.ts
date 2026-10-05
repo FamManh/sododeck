@@ -16,8 +16,8 @@ const file: SododeckFile = {
   ],
 };
 
-function setup(options: EditorOptions = {}) {
-  const doc = fromJSON(file);
+function setup(options: EditorOptions = {}, input: SododeckFile = file) {
+  const doc = fromJSON(input);
   return { doc, editor: createEditor(doc, { newId: seqIds(), ...options }) };
 }
 
@@ -228,5 +228,127 @@ describe('STICKY_DEFAULT_OFFSET', () => {
       point: { x: 10 + STICKY_DEFAULT_OFFSET.x, y: 10 + STICKY_DEFAULT_OFFSET.y },
       pinnedTo: 'n0',
     });
+  });
+});
+
+describe('sticky size, text size, alignment and colour (053)', () => {
+  const sized: SododeckFile = {
+    ...file,
+    stickies: [
+      { id: 'a', text: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', text: 'B', position: { x: 0, y: 0 }, color: 'blue', fontSize: 20, align: 'left' },
+    ],
+  };
+
+  it('setStickySize writes the size in one undo step', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickySize('a', { width: 240, height: 160 });
+    expect(mustSticky(doc, 'a').size).toEqual({ width: 240, height: 160 });
+    expect(editor.undo()).toBe(true);
+    expect(mustSticky(doc, 'a')).not.toHaveProperty('size');
+    expect(editor.canUndo()).toBe(false);
+  });
+
+  it('setStickySize clamps to the minimum and writes the key after the note keys', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickySize('b', { width: 20, height: 500 });
+    expect(mustSticky(doc, 'b').size).toEqual({ width: 96, height: 500 });
+    expect(Object.keys(toJSON(doc).stickies[1] ?? {})).toEqual([
+      'id',
+      'text',
+      'color',
+      'position',
+      'size',
+      'fontSize',
+      'align',
+    ]);
+  });
+
+  it('setStickySize merges the steps of one resize gesture into one undo step', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.beginGesture();
+    editor.setStickySize('a', { width: 120, height: 120 });
+    editor.setStickySize('a', { width: 150, height: 130 });
+    editor.endGesture();
+    expect(mustSticky(doc, 'a').size).toEqual({ width: 150, height: 130 });
+    expect(editor.undo()).toBe(true);
+    expect(mustSticky(doc, 'a')).not.toHaveProperty('size');
+    expect(editor.canUndo()).toBe(false);
+  });
+
+  it('setStickySize with null clears, writes nothing when unchanged, refuses an unknown id', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickySize('a', null);
+    expect(editor.canUndo()).toBe(false);
+    editor.setStickySize('a', { width: 300, height: 300 });
+    editor.setStickySize('a', { width: 300, height: 300 });
+    expect(editor.undo()).toBe(true);
+    expect(editor.canUndo()).toBe(false);
+    editor.setStickySize('a', { width: 300, height: 300 });
+    editor.setStickySize('a', null);
+    expect(mustSticky(doc, 'a')).not.toHaveProperty('size');
+    expect(() => {
+      editor.setStickySize('nope', { width: 100, height: 100 });
+    }).toThrow(expect.objectContaining({ code: 'not-found' }));
+  });
+
+  it('setStickyFont sets and clears, over a batch, in one undo step', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickyFont(['a', 'b'], 24);
+    expect(toJSON(doc).stickies.map((s) => s.fontSize)).toEqual([24, 24]);
+    editor.setStickyFont(['a', 'b'], null);
+    expect(toJSON(doc).stickies.map((s) => s.fontSize)).toEqual([undefined, undefined]);
+    expect(toJSON(doc).stickies[1]).not.toHaveProperty('fontSize');
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc).stickies.map((s) => s.fontSize)).toEqual([24, 24]);
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc).stickies.map((s) => s.fontSize)).toEqual([undefined, 20]);
+  });
+
+  it('setStickyFont refuses a size outside the list', () => {
+    const { editor } = setup({ captureTimeout: 0 }, sized);
+    expect(() => {
+      editor.setStickyFont(['a'], 13 as never);
+    }).toThrow(expect.objectContaining({ code: 'invalid' }));
+  });
+
+  it('setStickyAlign sets and clears', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickyAlign(['a', 'b'], 'right');
+    expect(toJSON(doc).stickies.map((s) => s.align)).toEqual(['right', 'right']);
+    editor.setStickyAlign(['b'], null);
+    expect(toJSON(doc).stickies[1]).not.toHaveProperty('align');
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc).stickies[1]?.align).toBe('right');
+  });
+
+  it('setStickyColour changes every listed note in one undo step', () => {
+    const { doc, editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickyColour(['a', 'b'], 'green');
+    expect(toJSON(doc).stickies.map((s) => s.color)).toEqual(['green', 'green']);
+    expect(editor.undo()).toBe(true);
+    expect(toJSON(doc).stickies.map((s) => s.color)).toEqual([undefined, 'blue']);
+  });
+
+  it('batch setters skip unknown ids and write nothing when nothing changes', () => {
+    const { editor } = setup({ captureTimeout: 0 }, sized);
+    editor.setStickyAlign(['nope'], 'right');
+    editor.setStickyAlign(['b'], 'left');
+    editor.setStickyColour(['b'], 'blue');
+    editor.setStickyFont(['b'], 20);
+    expect(editor.canUndo()).toBe(false);
+  });
+});
+
+describe('connectors that end on a sticky (053)', () => {
+  it('moving a sticky or a pinned node never touches its connectors', () => {
+    const doc = fromJSON({
+      ...file,
+      stickies: [{ id: 's', text: 'S', position: { x: 0, y: 0 } }],
+      edges: [{ id: 'e', from: 's', to: 'n0' }],
+    });
+    const editor = createEditor(doc, { newId: seqIds() });
+    editor.moveSticky('s', { x: 50, y: 60 });
+    expect(toJSON(doc).edges).toEqual([{ id: 'e', from: 's', to: 'n0' }]);
   });
 });

@@ -18,6 +18,7 @@ import { DeckEditError } from '../errors';
 import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import { assertNewTableParts, columnEndIssues, tablePatch } from './db-tables';
+import { assertUnlocked } from './node-lock';
 import { applyPatch } from './patch';
 import { allRefsOf, refsOf, stepBranchIssues, stepRefs } from './refs';
 import type { NewObject, Patch } from './types';
@@ -124,6 +125,10 @@ export function updateObject<C extends Collection>(
 ): void {
   const { doc } = ctx;
   const map = requireEntry(collectionMap(doc, c), id, LABELS[c]);
+  // A locked connector keeps its ends (053); label, tags and the rest stay editable.
+  if (c === 'edges' && ('from' in patch || 'to' in patch)) {
+    assertUnlocked(map, 'Connector', id, 'reconnect it');
+  }
   const { candidate, changed } = applyPatch(
     readObject(c, id, map),
     c === 'nodes' ? tablePatch(patch) : patch,

@@ -164,3 +164,78 @@ describe('TagPicker: choose and create (033)', () => {
     expect(useUiStore.getState().announcement.text).toBe('edge removed');
   });
 });
+
+describe('TagPicker: notes (053)', () => {
+  const noteDeck = deckOf({
+    tagColors: { PCI: 'violet' },
+    nodes: [{ id: 'a', type: 'service', title: 'A', tags: ['PCI'] }],
+    stickies: [
+      { id: 'n1', text: 'one', position: { x: 0, y: 0 }, tags: ['pci', 'lan'] },
+      { id: 'n2', text: 'two', position: { x: 0, y: 0 } },
+    ],
+  });
+  const noteTagsOf = (doc: Parameters<typeof toJSON>[0], id: string) =>
+    toJSON(doc).stickies.find((s) => s.id === id)?.tags;
+  const search = () => screen.getByRole('searchbox', { name: 'Filter tags' });
+
+  it('counts notes in the list and searches deck tags', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<TagPicker stickyIds={['n2']} />, noteDeck);
+    expect(optionNames()).toEqual(['PCI2', 'lan1']);
+    await user.type(search(), 'lan');
+    expect(optionNames()).toEqual(['lan1']);
+  });
+
+  it('adds and removes a tag on a note', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<TagPicker stickyIds={['n2']} />, noteDeck);
+    await user.click(screen.getByRole('option', { name: /lan/ }));
+    expect(noteTagsOf(doc, 'n2')).toEqual(['lan']);
+    await user.click(screen.getByRole('option', { name: /lan/ }));
+    expect(noteTagsOf(doc, 'n2')).toBeUndefined();
+  });
+
+  it('creates a tag with the deck spelling', async () => {
+    const user = userEvent.setup();
+    const { doc } = renderWithEditor(<TagPicker stickyIds={['n2']} />, noteDeck);
+    await user.type(search(), 'PCI{Enter}');
+    expect(noteTagsOf(doc, 'n2')).toEqual(['PCI']);
+    await user.type(search(), 'brand new{Enter}');
+    expect(noteTagsOf(doc, 'n2')).toEqual(['PCI', 'brand new']);
+  });
+
+  it('writes cards and notes together as one undo step', async () => {
+    const user = userEvent.setup();
+    const { doc, editor } = renderWithEditor(
+      <TagPicker nodeIds={['a']} stickyIds={['n2']} />,
+      noteDeck,
+    );
+    await user.type(search(), 'shared{Enter}');
+    expect(tagsOf(doc, 'a')).toEqual(['PCI', 'shared']);
+    expect(noteTagsOf(doc, 'n2')).toEqual(['shared']);
+    act(() => {
+      editor().undo();
+    });
+    expect(tagsOf(doc, 'a')).toEqual(['PCI']);
+    expect(noteTagsOf(doc, 'n2')).toBeUndefined();
+  });
+
+  it('refuses an eleventh tag on notes', async () => {
+    const user = userEvent.setup();
+    const ten = Array.from({ length: 10 }, (_, i) => `t${String(i)}`);
+    const file = deckOf({
+      stickies: [{ id: 'n1', text: 'one', position: { x: 0, y: 0 }, tags: ten }],
+    });
+    const { doc } = renderWithEditor(<TagPicker stickyIds={['n1']} />, file);
+    await user.type(search(), 'extra{Enter}');
+    expect(screen.getByText('10 tags max')).toBeInTheDocument();
+    expect(noteTagsOf(doc, 'n1')).toEqual(ten);
+  });
+
+  it('announces for a single note', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<TagPicker stickyIds={['n2']} />, noteDeck);
+    await user.type(search(), 'edge{Enter}');
+    expect(useUiStore.getState().announcement.text).toBe('edge added');
+  });
+});

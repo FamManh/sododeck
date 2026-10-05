@@ -3,11 +3,14 @@
  * files, 015 reports them); the canvas refuses to draw them. A pair connected in either
  * direction counts as a duplicate.
  *
- * Ends are nodes or groups (050 R6). A group can't connect to anything inside it, at any depth,
+ * Ends are nodes, groups or notes (050 R6, 053). A note is never inside a group, so it only
+ * meets the self and duplicate rules.
+ *
+ * Ends were nodes or groups (050 R6). A group can't connect to anything inside it, at any depth,
  * nor anything to a group that holds it (`'contains'`). A file that already has such a connector
  * is drawn and allowed; only new connections and reconnects are refused.
  */
-import { isDbTable } from '@sododeck/model';
+import { isDbTable, stickyLabel } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import { cardIconRef } from './card-icon';
@@ -21,6 +24,9 @@ export const REFUSAL_TEXT: Record<Exclude<ConnectionCheck, 'ok'>, string> = {
 };
 
 type Ends = Pick<SododeckFile, 'nodes' | 'groups'>;
+
+/** What an untitled note is called in lists (the same words the search index uses). */
+const EMPTY_NOTE_TITLE = 'Empty note';
 
 /** The groups holding `id` (a node or a group), innermost first; stops on a parent cycle. */
 function enclosingGroups(deck: Ends, id: string): Set<string> {
@@ -94,7 +100,7 @@ export function columnConnectionCheck(
 export interface ConnectTarget {
   id: string;
   title: string;
-  /** The node's type, or `'group'` for a group (050). */
+  /** The node's type, `'group'` for a group (050), or `'note'` for a sticky (053). */
   kind: string;
   /** The node's stored icon, when it draws as a card (038). */
   icon?: string;
@@ -102,7 +108,7 @@ export interface ConnectTarget {
   reason?: 'already connected' | 'inside';
 }
 
-/** Options for keyboard connect: every other card and group, filtered by title, sorted by title. */
+/** Options for keyboard connect: every other card, group and note, filtered by title, sorted by title. */
 export function connectTargets(deck: SododeckFile, fromId: string, query: string): ConnectTarget[] {
   const needle = query.trim().toLowerCase();
   const option = (base: Omit<ConnectTarget, 'disabled' | 'reason'>): ConnectTarget => {
@@ -130,7 +136,11 @@ export function connectTargets(deck: SododeckFile, fromId: string, query: string
   const groups = deck.groups
     .filter((g) => matches(g.title, g.id))
     .map((g) => option({ id: g.id, title: g.title, kind: 'group' }));
-  return [...nodes, ...groups].sort(
+  const notes = deck.stickies
+    .map((s) => ({ id: s.id, title: stickyLabel(s.text) ?? EMPTY_NOTE_TITLE }))
+    .filter((s) => matches(s.title, s.id))
+    .map((s) => option({ id: s.id, title: s.title, kind: 'note' }));
+  return [...nodes, ...groups, ...notes].sort(
     (a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id),
   );
 }

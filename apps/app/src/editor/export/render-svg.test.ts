@@ -85,6 +85,35 @@ describe('renderSvg', () => {
     expect(edgeTexts.map((node) => node.textContent)).toEqual(['SQL']);
   });
 
+  it("draws a note's wrapped text at its fitted size, aligned, with tag chips", () => {
+    const notes = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+      stickies: [
+        {
+          id: 'n',
+          text: 'Alpha **beta** gamma',
+          position: { x: 0, y: 300 },
+          align: 'left',
+          tags: ['Ops'],
+        },
+        { id: 'k', text: 'Folded', collapsed: true, position: { x: 400, y: 300 } },
+      ],
+    });
+    const doc = parse(svgOf(notes));
+    expect(doc.querySelector('parsererror')).toBeNull();
+    const sheet = doc.querySelector('[data-export="sticky"][data-id="n"]');
+    const lines = [...(sheet?.querySelectorAll('text.sn') ?? [])];
+    expect(lines.map((line) => line.textContent).join(' ')).toBe('Alpha beta gamma');
+    expect(lines[0]?.getAttribute('font-size')).not.toBeNull();
+    expect(lines[0]?.getAttribute('text-anchor')).toBeNull();
+    expect(sheet?.querySelectorAll('[data-part="tag"]')).toHaveLength(1);
+    expect(sheet?.querySelector('text.tg')?.textContent).toBe('Ops');
+    // A collapsed note keeps one line, with no lock or body.
+    const folded = doc.querySelector('[data-export="sticky"][data-id="k"]');
+    expect(folded?.querySelector('text.t')?.textContent).toBe('Folded');
+    expect(folded?.querySelectorAll('text.sn')).toHaveLength(0);
+  });
+
   it('clamps a long title to its lines and ends the last one with an ellipsis', () => {
     const doc = parse(svgOf(deck));
     const card = doc.querySelector('[data-export="card"][data-id="b"]');

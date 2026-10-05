@@ -1,10 +1,9 @@
 /**
  * The tag picker (033, contracts/tag-ui.md): pure content for a popover, shared by the drawer tag
  * row, the bulk drawer and the selection toolbar. A search field over the deck's tags (colour dot,
- * name, card count), rows that toggle a tag on the selected cards, a "Create tag" row, and a
+ * name, count), rows that toggle a tag on the selected cards and notes, a "Create tag" row, and a
  * pencil per row that opens the tag editor in the same popover.
  */
-import type { Node } from '@sododeck/schema';
 import { SearchField } from '@sododeck/ui/components/search-field';
 import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
@@ -17,14 +16,26 @@ import { useDeckSnapshot } from '../../model/use-deck-snapshot';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 import { MAX_CARD_TAGS } from '../card-tags';
-import { writeNodesOnce } from '../fields/write-nodes';
 import { canonicalTag, deckTags, type DeckTag } from './deck-tags';
 import { tagColours } from './tag-colours';
 import { TagEditor } from './tag-editor';
 
 type Row = { kind: 'tag'; tag: DeckTag } | { kind: 'create'; text: string };
 
-export function TagPicker({ nodeIds }: { nodeIds: readonly string[] }) {
+/** A card or a note the picker writes to: both hold deck tags (053). */
+interface Carrier {
+  kind: 'node' | 'sticky';
+  id: string;
+  tags: readonly string[];
+}
+
+/** What the picker tags: cards, notes, or both in one undo step. */
+export interface TagTargets {
+  nodeIds?: readonly string[];
+  stickyIds?: readonly string[];
+}
+
+export function TagPicker({ nodeIds = [], stickyIds = [] }: TagTargets) {
   const editor = useEditor();
   const deck = useDeckSnapshot(editor.doc);
   const [editing, setEditing] = useState<string | null>(null);
@@ -42,8 +53,15 @@ export function TagPicker({ nodeIds }: { nodeIds: readonly string[] }) {
 
   const tags = useMemo(() => deckTags(deck), [deck]);
   const nodes = useMemo(
-    () => deck.nodes.filter((node) => nodeIds.includes(node.id)),
-    [deck.nodes, nodeIds],
+    (): Carrier[] => [
+      ...deck.nodes
+        .filter((node) => nodeIds.includes(node.id))
+        .map((node): Carrier => ({ kind: 'node', id: node.id, tags: node.tags ?? [] })),
+      ...deck.stickies
+        .filter((sticky) => stickyIds.includes(sticky.id))
+        .map((sticky): Carrier => ({ kind: 'sticky', id: sticky.id, tags: sticky.tags ?? [] })),
+    ],
+    [deck.nodes, deck.stickies, nodeIds, stickyIds],
   );
 
   if (editing !== null) {
@@ -61,8 +79,8 @@ export function TagPicker({ nodeIds }: { nodeIds: readonly string[] }) {
     );
   }
 
-  const has = (node: Node, key: string) => (node.tags ?? []).some((t) => tagKey(t) === key);
-  const full = (node: Node) => (node.tags ?? []).length >= MAX_CARD_TAGS;
+  const has = (node: Carrier, key: string) => node.tags.some((t) => tagKey(t) === key);
+  const full = (node: Carrier) => node.tags.length >= MAX_CARD_TAGS;
 
   /** One undo step over the selection: off when every card has it, else on where it is missing. */
   const toggle = (text: string) => {
@@ -78,19 +96,28 @@ export function TagPicker({ nodeIds }: { nodeIds: readonly string[] }) {
       return;
     }
     setRefused(false);
-    writeNodesOnce(editor, nodes, (node) => {
-      const before = node.tags ?? [];
-      const after = onAll ? removeTag(before, text) : addTag(before, text, MAX_CARD_TAGS);
-      return after === before ? null : { tags: after.length === 0 ? null : [...after] };
-    });
-    const cards = `${String(nodes.length)} ${nodes.length === 1 ? 'component' : 'components'}`;
+    // One gesture so cards and notes together are one undo step.
+    editor.beginGesture();
+    try {
+      for (const carrier of nodes) {
+        const before = carrier.tags;
+        const after = onAll ? removeTag(before, text) : addTag(before, text, MAX_CARD_TAGS);
+        if (after === before) continue;
+        if (carrier.kind === 'sticky') editor.setStickyTags(carrier.id, after);
+        else editor.update('nodes', carrier.id, { tags: after.length === 0 ? null : [...after] });
+      }
+    } finally {
+      editor.endGesture();
+    }
+    const noun = stickyIds.length > 0 ? 'item' : 'component';
+    const cards = `${String(nodes.length)} ${nodes.length === 1 ? noun : `${noun}s`}`;
     announce(
       nodes.length === 1
         ? `${text} ${onAll ? 'removed' : 'added'}`
         : onAll
           ? `Tag ${text} removed from ${cards}`
           : skipped > 0
-            ? `Tag ${text} added; cards with ${String(MAX_CARD_TAGS)} tags were skipped`
+            ? `Tag ${text} added; items with ${String(MAX_CARD_TAGS)} tags were skipped`
             : `Tag ${text} added to ${cards}`,
     );
   };

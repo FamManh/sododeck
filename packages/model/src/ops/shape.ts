@@ -13,6 +13,7 @@ import { requireEntry, type EditContext } from './context';
 import { assertValid, validateObject } from '../validate';
 import { writeField } from '../write';
 import { writeEdgeShape } from './edge-style';
+import { assertUnlocked } from './node-lock';
 
 /** `null` removes a key of the route; `undefined` (an absent key) leaves it unchanged. */
 export type EdgeRoutePatch = {
@@ -117,6 +118,7 @@ function writeRoute(edgeMap: YObject, merged: EdgeRoute | undefined): void {
  */
 export function setEdgeRoute(ctx: EditContext, edgeId: Id, patch: EdgeRoutePatch | null): void {
   const map = requireEntry(collectionMap(ctx.doc, 'edges'), edgeId, 'Edge');
+  assertUnlocked(map, 'Connector', edgeId, 'reshape it');
   const current = readObject('edges', edgeId, map);
   const currentRoute = isRecord(current.route) ? (current.route as EdgeRoute) : undefined;
   const merged = patch === null ? undefined : mergeRoute(currentRoute, patch);

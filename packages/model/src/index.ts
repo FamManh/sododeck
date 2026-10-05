@@ -102,7 +102,8 @@ export {
 export type { EdgeStylePatch } from './ops/edge-style';
 export type { EdgeRoutePatch } from './ops/shape';
 export type { NodeDisplay } from './ops/node-display';
-export { isLocked } from './ops/node-lock';
+export { isLocked, type LockCollection } from './ops/node-lock';
+export { STICKY_MAX_TAGS, type StickyAlign, type StickyFontSize } from './ops/stickies';
 export { isTouch, type TouchAccess, type TouchKey } from './ops/touches';
 export { iconUsage, type IconUsage } from './icons';
 export { copyName } from './ops/paste';
@@ -156,8 +157,13 @@ export {
   fitGroupFrames,
   frameOf,
   NODE_GRID,
+  STICKY_COLLAPSED_HEIGHT,
   STICKY_DEFAULT_OFFSET,
+  STICKY_DEFAULT_SIZE,
+  STICKY_MIN_SIZE,
+  clampStickySize,
   nodeCanvasPosition,
+  stickyBox,
   stickyCanvasPosition,
   stickyLabel,
   viewNodePosition,

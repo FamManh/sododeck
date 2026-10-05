@@ -202,6 +202,39 @@ describe('palette results group ends (050 US4)', () => {
   });
 });
 
+describe('palette results sticky ends and tags (053)', () => {
+  const deck: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [{ id: 'w', type: 'client', title: 'Web' }],
+    stickies: [
+      { id: 's1', text: 'Check the cache\nlater', position: { x: 0, y: 0 }, tags: ['Question'] },
+      { id: 's2', text: 'Other note', position: { x: 0, y: 200 } },
+    ],
+    edges: [
+      { id: 'ws', from: 'w', to: 's1' },
+      { id: 'ss', from: 's1', to: 's2' },
+    ],
+  };
+  const run = (query: string) =>
+    buildPaletteResults({ deck, searchIndex: buildSearchIndex(deck), query, commands: [] }).items;
+
+  it('labels both ends of a connector that touches a note', () => {
+    const items = run('check web');
+    expect(items.find((item) => item.id === 'ws')?.meta).toBe('Connection · Web → Check the cache');
+  });
+
+  it('labels a note-to-note connector with both note labels', () => {
+    const meta = run('other check').find((item) => item.id === 'ss')?.meta;
+    expect(meta).toBe('Connection · Check the cache → Other note');
+  });
+
+  it('finds a note by one of its tags', () => {
+    const hit = run('question').find((item) => item.kind === 'sticky');
+    expect(hit?.id).toBe('s1');
+    expect(hit?.meta).toBe('Note');
+  });
+});
+
 describe('table and column results (048 FR-019, FR-022)', () => {
   function tablesDeck(): SododeckFile {
     const deck = emptySododeckFile();

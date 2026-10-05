@@ -55,6 +55,13 @@ describe('generateBenchDeck', () => {
     expect(deck.stickies.every((sticky) => sticky.anchor != null || sticky.position != null)).toBe(
       true,
     );
+    // Free notes are connector ends too (053): to a card, and to the next free note.
+    const noteIds = new Set(deck.stickies.map((sticky) => sticky.id));
+    const noteEdges = deck.edges.filter((edge) => noteIds.has(edge.from));
+    expect(noteEdges.length).toBeGreaterThan(0);
+    expect(noteEdges.some((edge) => noteIds.has(edge.to))).toBe(true);
+    expect(noteEdges.some((edge) => deck.nodes.some((node) => node.id === edge.to))).toBe(true);
+    expect(deck.stickies.some((sticky) => (sticky.tags?.length ?? 0) > 0)).toBe(true);
     expect(generateBenchDeck(40, 80, 42, { stickies: 10 })).toEqual(
       generateBenchDeck(40, 80, 42, { stickies: 10 }),
     );

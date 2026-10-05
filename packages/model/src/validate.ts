@@ -148,8 +148,8 @@ export function assertValid(issues: Issue[]): void {
   if (issues.length > 0) throw new DeckEditError('invalid', issues);
 }
 
-/** `'nodes|groups'`: a connector end, which names a node or a group (050). */
-export type RefTarget = Collection | 'nodes|groups' | 'rule' | 'any';
+/** `'nodes|groups|stickies'`: a connector end (050, 053). */
+export type RefTarget = Collection | 'nodes|groups|stickies' | 'rule' | 'any';
 
 export interface Ref {
   /** Field holding the reference, e.g. `from` or `includes.2`. */
@@ -164,14 +164,19 @@ function exists(doc: DeckDoc, ref: Ref, anyIds: () => ReadonlySet<Id>): boolean 
       return rulesMap(doc).has(ref.id);
     case 'any':
       return anyIds().has(ref.id);
-    case 'nodes|groups':
-      return collectionMap(doc, 'nodes').has(ref.id) || collectionMap(doc, 'groups').has(ref.id);
+    case 'nodes|groups|stickies':
+      return (
+        collectionMap(doc, 'nodes').has(ref.id) ||
+        collectionMap(doc, 'groups').has(ref.id) ||
+        collectionMap(doc, 'stickies').has(ref.id)
+      );
     default:
       return collectionMap(doc, ref.target).has(ref.id);
   }
 }
 
-const targetName = (target: RefTarget) => (target === 'nodes|groups' ? 'nodes or groups' : target);
+const targetName = (target: RefTarget) =>
+  target === 'nodes|groups|stickies' ? 'nodes, groups or stickies' : target;
 
 /** Throws `DeckEditError('missing-reference')` naming every reference that does not resolve. */
 export function assertRefsExist(

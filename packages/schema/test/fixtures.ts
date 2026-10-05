@@ -199,6 +199,36 @@ export const invalidFixtures: InvalidFixture[] = [
     path: 'stickies.0.showInFlows',
   },
 
+  // 053: sticky size, text size, alignment, tags and lock; connector lock.
+  {
+    name: 'sticky fontSize not in the list',
+    input: set('stickies.0.fontSize', 13),
+    path: 'stickies.0.fontSize',
+  },
+  {
+    name: 'sticky fontSize is a string',
+    input: set('stickies.0.fontSize', '16'),
+    path: 'stickies.0.fontSize',
+  },
+  {
+    name: 'sticky align not allowed',
+    input: set('stickies.0.align', 'justify'),
+    path: 'stickies.0.align',
+  },
+  {
+    name: 'sticky locked false',
+    input: set('stickies.0.locked', false),
+    path: 'stickies.0.locked',
+  },
+  {
+    name: 'sticky size with a zero width',
+    input: set('stickies.0.size', { width: 0, height: 10 }),
+    path: 'stickies.0.size.width',
+  },
+  { name: 'sticky tags is a string', input: set('stickies.0.tags', 'a'), path: 'stickies.0.tags' },
+  { name: 'edge locked is a string', input: set('edges.0.locked', 'yes'), path: 'edges.0.locked' },
+  { name: 'edge locked false', input: set('edges.0.locked', false), path: 'edges.0.locked' },
+
   // Card style and swatches (020)
   {
     name: 'style fill capitalized name',
@@ -787,6 +817,36 @@ export const invalidFixtures: InvalidFixture[] = [
  * group → card and group → group, each with a route and a style, read against the group frame.
  */
 export const validFixtures: { name: string; input: unknown }[] = [
+  // 053: a sticky with every new field, a locked connector, and a connector that ends on a sticky.
+  {
+    name: 'sticky with size, fontSize, align, tags and locked',
+    input: {
+      ...emptySododeckFile(),
+      name: 'Sticky fields',
+      nodes: [{ id: 'n1', type: 'service', title: 'Orders' }],
+      stickies: [
+        {
+          id: 'st1',
+          text: 'Why two queues?',
+          color: 'blue',
+          position: { x: 40, y: -120 },
+          size: { width: 220, height: 160 },
+          fontSize: 16,
+          align: 'left',
+          tags: ['Question'],
+          locked: true,
+        },
+      ],
+      edges: [
+        { id: 'e1', from: 'st1', to: 'n1', locked: true },
+        { id: 'e2', from: 'n1', to: 'st1' },
+      ],
+    },
+  },
+  { name: 'sticky fontSize 12', input: set('stickies.0.fontSize', 12) },
+  { name: 'sticky fontSize 32', input: set('stickies.0.fontSize', 32) },
+  { name: 'sticky align right', input: set('stickies.0.align', 'right') },
+  { name: 'locked connector', input: set('edges.0.locked', true) },
   // 052: block SQL export.
   { name: 'block SQL export on', input: set('blockSqlExport', true) },
   // 043: `locked` on any node type.

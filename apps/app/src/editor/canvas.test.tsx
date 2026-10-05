@@ -335,6 +335,25 @@ describe('Canvas', () => {
     expect(ui().selection.stickies).toEqual([sticky?.id]);
   });
 
+  it('drops a note over a card as a free note in edit mode, one undo step (053 US3)', () => {
+    const { doc, editor } = renderWithEditor(<Canvas />, deck);
+    act(() => {
+      ui().setLastStickyColour('blue');
+    });
+    const canvas = screen.getByLabelText('Diagram canvas');
+    // Over card "a" at the origin.
+    const over = { dataTransfer: { types: [NOTE_MIME], getData: () => 'note', dropEffect: '' } };
+    fireEvent.drop(canvas, { ...over, clientX: 20, clientY: 10 });
+    const [sticky] = toJSON(doc).stickies;
+    expect(sticky).toMatchObject({ text: '', color: 'blue' });
+    expect(sticky?.anchor).toBeUndefined();
+    expect(ui().stickyEditing).toBe(sticky?.id);
+    act(() => {
+      editor().undo();
+    });
+    expect(toJSON(doc).stickies).toEqual([]);
+  });
+
   it('creates nothing when a palette card is dropped outside the canvas', () => {
     const { doc } = renderWithEditor(<Canvas />, deckOf({}));
     fireEvent.drop(document.body, {

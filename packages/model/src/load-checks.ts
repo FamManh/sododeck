@@ -4,8 +4,8 @@
  * of one flow, the branches of one flow, the columns (inputs and outputs together) of one rule, the
  * rows of one rule, and the database parts (040, research R8): every table's columns, indexes and
  * checks plus the enums and their values, together across the deck. The same id in two different
- * scopes is allowed by the format, except a node and a group sharing an id that a connector end
- * names (050).
+ * scopes is allowed by the format, except a node, a group and a sticky sharing an id that a
+ * connector end names (050, 053).
  */
 import type { Issue, SododeckFile } from '@sododeck/schema';
 
@@ -48,9 +48,9 @@ function databaseParts(file: SododeckFile): { id: string; path: string }[] {
 }
 
 /**
- * A connector end naming an id that is both a node's and a group's is ambiguous (050), so such a
- * file is refused. A node and a group sharing an id that no end names stays loadable (the format
- * always allowed it); the integrity report flags it.
+ * A connector end naming an id that is more than one of a node's, a group's and a sticky's is
+ * ambiguous (050, 053), so such a file is refused. Objects sharing an id that no end names stay
+ * loadable (the format always allowed it); the integrity report flags them.
  */
 function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
   const ends = new Set(file.edges.flatMap((edge) => [edge.from, edge.to]));
@@ -59,14 +59,29 @@ function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
     if (!nodePaths.has(node.id)) nodePaths.set(node.id, `nodes.${String(i)}.id`);
   });
   const reported = new Set<string>();
+  const groupPaths = new Map<string, string>();
   file.groups.forEach((group, i) => {
+    const path = `groups.${String(i)}.id`;
+    if (!groupPaths.has(group.id)) groupPaths.set(group.id, path);
     const nodePath = nodePaths.get(group.id);
     if (nodePath === undefined || !ends.has(group.id) || reported.has(group.id)) return;
     reported.add(group.id);
-    const path = `groups.${String(i)}.id`;
     issues.push({
       path,
       message: `Id "${group.id}" names both a node and a group, so connector ends naming it are ambiguous (${nodePath}, ${path}).`,
+    });
+  });
+  file.stickies.forEach((sticky, i) => {
+    if (!ends.has(sticky.id) || reported.has(sticky.id)) return;
+    const nodePath = nodePaths.get(sticky.id);
+    const groupPath = groupPaths.get(sticky.id);
+    const other = nodePath ?? groupPath;
+    if (other === undefined) return;
+    reported.add(sticky.id);
+    const path = `stickies.${String(i)}.id`;
+    issues.push({
+      path,
+      message: `Id "${sticky.id}" names both a ${nodePath === undefined ? 'group' : 'node'} and a sticky, so connector ends naming it are ambiguous (${other}, ${path}).`,
     });
   });
 }

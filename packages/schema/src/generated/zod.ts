@@ -889,11 +889,11 @@ export const sododeckFileSchema = z
             from: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
-              .describe('Id of the source node or group.'),
+              .describe('Id of the source node, group or sticky.'),
             to: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9_.:-]{1,64}$'))
-              .describe('Id of the target node or group.'),
+              .describe('Id of the target node, group or sticky.'),
             protocol: z
               .enum(['http', 'grpc', 'event', 'sql', 'websocket', 'other'])
               .describe(
@@ -1130,9 +1130,15 @@ export const sododeckFileSchema = z
                 'Relationships (040): what happens when the referenced key changes. Absent means not stated.',
               )
               .optional(),
+            locked: z
+              .literal(true)
+              .describe(
+                '`true` pins the connector, so it cannot be reshaped, reconnected or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
+              )
+              .optional(),
           })
           .strict()
-          .describe('A connection between two ends, each a node or a group.'),
+          .describe('A connection between two ends, each a node, a group or a sticky.'),
       )
       .describe(
         'Connections between nodes or groups. Either end of a connection may be a node or a group.',
@@ -1658,9 +1664,48 @@ export const sododeckFileSchema = z
                 'True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step.',
               )
               .optional(),
+            size: z
+              .object({
+                width: z.number().gt(0).describe('Width in pixels.'),
+                height: z.number().gt(0).describe('Height in pixels.'),
+              })
+              .strict()
+              .describe(
+                'Note box in canvas pixels. Absent means 200 × 200. Ignored while collapsed.',
+              )
+              .optional(),
+            fontSize: z
+              .union([
+                z.literal(12),
+                z.literal(14),
+                z.literal(16),
+                z.literal(20),
+                z.literal(24),
+                z.literal(32),
+              ])
+              .describe(
+                "Fixed text size in pixels. Absent means Auto: the size follows the note's size and text.",
+              )
+              .optional(),
+            align: z
+              .enum(['left', 'center', 'right'])
+              .describe('Text alignment. Absent means centre.')
+              .optional(),
+            tags: z
+              .array(z.string().min(1).describe('Non-empty text.'))
+              .describe('Free-form tags.')
+              .optional(),
+            locked: z
+              .literal(true)
+              .describe(
+                '`true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.',
+              )
+              .optional(),
           })
           .strict()
-          .describe('A sticky note. It needs an `anchor`, a `position`, or both.'),
+          .describe(
+            'A sticky note. It needs an `anchor`, a `position`, or both. A connector can end on it.',
+          ),
       )
       .describe('Sticky notes, free on the canvas or anchored to an object.'),
   })

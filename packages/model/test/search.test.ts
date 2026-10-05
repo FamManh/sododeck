@@ -78,6 +78,7 @@ function searchDeckFixture(): SododeckFile {
     id: 'sticky-1',
     text: 'Follow up with the café team about retries',
     position: { x: 24, y: 36 },
+    tags: ['Question'],
   });
   return deck;
 }
@@ -136,6 +137,7 @@ describe('searchDeck', () => {
     expect(resultIds(searchDeck(index, 'severity').results)).toContain('rule-1');
     expect(resultIds(searchDeck(index, 'manual review').results)).toContain('rule-1');
     expect(resultIds(searchDeck(index, 'cafe team').results)).toContain('sticky-1');
+    expect(resultIds(searchDeck(index, 'question').results)).toContain('sticky-1');
   });
 
   it('matches multi-word queries in any order across title and body fields', () => {

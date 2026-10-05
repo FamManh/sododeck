@@ -529,3 +529,89 @@ describe('groups as connector ends (050)', () => {
     );
   });
 });
+
+describe('stickies as connector ends (053)', () => {
+  const stickyEndDeck: SododeckFile = {
+    ...emptySododeckFile(),
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 100, y: 100 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 100 } },
+    ],
+    edges: [
+      { id: 'a-b', from: 'a', to: 'b' },
+      { id: 'n1-a', from: 'n1', to: 'a' },
+      { id: 'b-n1', from: 'b', to: 'n1' },
+      { id: 'n1-n2', from: 'n1', to: 'n2' },
+    ],
+    stickies: [
+      { id: 'n1', text: 'First', position: { x: 0, y: 0 } },
+      { id: 'n2', text: 'Second', position: { x: 0, y: 300 } },
+      { id: 'pinned', text: 'Pinned to a', anchor: 'a', position: { x: 10, y: 10 } },
+    ],
+  };
+
+  it('deleting a sticky removes its connectors in one undo step', () => {
+    removeAndUndo(
+      (editor) => editor.remove('stickies', 'n1'),
+      (out, result) => {
+        expect(out.stickies.map((s) => s.id)).toEqual(['n2', 'pinned']);
+        expect(out.edges.map((e) => e.id)).toEqual(['a-b']);
+        expect(result.removed).toEqual([
+          { scope: 'stickies', id: 'n1' },
+          { scope: 'edges', id: 'n1-a' },
+          { scope: 'edges', id: 'b-n1' },
+          { scope: 'edges', id: 'n1-n2' },
+        ]);
+        expect(result.broken).toEqual([]);
+      },
+      stickyEndDeck,
+    );
+  });
+
+  it('previewRemoval lists the connectors a sticky delete would remove', () => {
+    const preview = previewRemoval(stickyEndDeck, [{ scope: 'stickies', id: 'n2' }]);
+    expect(preview.removed).toEqual([
+      { scope: 'stickies', id: 'n2' },
+      { scope: 'edges', id: 'n1-n2' },
+    ]);
+  });
+
+  it('deleting a node still frees the stickies pinned to it, and keeps sticky connectors', () => {
+    removeAndUndo(
+      (editor) => editor.remove('nodes', 'a'),
+      (out, result) => {
+        expect(out.edges.map((e) => e.id)).toEqual(['b-n1', 'n1-n2']);
+        expect(out.stickies.find((s) => s.id === 'pinned')).toEqual({
+          id: 'pinned',
+          text: 'Pinned to a',
+          position: { x: 110, y: 110 },
+        });
+        expect(result.freed).toEqual(['pinned']);
+      },
+      stickyEndDeck,
+    );
+  });
+
+  it('deleting a connector leaves both stickies', () => {
+    removeAndUndo(
+      (editor) => editor.remove('edges', 'n1-n2'),
+      (out) => {
+        expect(out.stickies.map((s) => s.id)).toEqual(['n1', 'n2', 'pinned']);
+      },
+      stickyEndDeck,
+    );
+  });
+
+  it('accepts a new connector to a sticky and an end moved onto one', () => {
+    const { doc, editor } = setup(stickyEndDeck);
+    editor.add('edges', { id: 'b-n2', from: 'b', to: 'n2' });
+    editor.update('edges', 'a-b', { to: 'n2' });
+    const out = toJSON(doc);
+    expect(out.edges.find((e) => e.id === 'b-n2')).toEqual({ id: 'b-n2', from: 'b', to: 'n2' });
+    expect(out.edges.find((e) => e.id === 'a-b')?.to).toBe('n2');
+    expect(checkIntegrity(out)).toEqual([]);
+    expect(() => editor.add('edges', { from: 'b', to: 'nothing' })).toThrow(
+      expect.objectContaining({ code: 'missing-reference' }),
+    );
+  });
+});

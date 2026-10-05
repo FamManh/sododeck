@@ -888,14 +888,14 @@
     },
     "Edge": {
       "title": "Edge",
-      "description": "A connection between two ends, each a node or a group.",
+      "description": "A connection between two ends, each a node, a group or a sticky.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "from", "to"],
       "properties": {
         "id": { "$ref": "#/$defs/Id" },
-        "from": { "$ref": "#/$defs/Id", "description": "Id of the source node or group." },
-        "to": { "$ref": "#/$defs/Id", "description": "Id of the target node or group." },
+        "from": { "$ref": "#/$defs/Id", "description": "Id of the source node, group or sticky." },
+        "to": { "$ref": "#/$defs/Id", "description": "Id of the target node, group or sticky." },
         "protocol": { "$ref": "#/$defs/Protocol" },
         "label": {
           "description": "Short label, e.g. \"POST /orders\" or \"OrderPlaced · Kafka\".",
@@ -950,6 +950,10 @@
         "onUpdate": {
           "$ref": "#/$defs/DbAction",
           "description": "Relationships (040): what happens when the referenced key changes. Absent means not stated."
+        },
+        "locked": {
+          "description": "`true` pins the connector, so it cannot be reshaped, reconnected or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
+          "const": true
         }
       }
     },
@@ -1227,7 +1231,7 @@
     },
     "Sticky": {
       "title": "Sticky",
-      "description": "A sticky note. It needs an `anchor`, a `position`, or both.",
+      "description": "A sticky note. It needs an `anchor`, a `position`, or both. A connector can end on it.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "text"],
@@ -1250,6 +1254,25 @@
         "showInFlows": {
           "type": "boolean",
           "description": "True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step."
+        },
+        "size": {
+          "$ref": "#/$defs/Size",
+          "description": "Note box in canvas pixels. Absent means 200 × 200. Ignored while collapsed."
+        },
+        "fontSize": {
+          "description": "Fixed text size in pixels. Absent means Auto: the size follows the note's size and text.",
+          "type": "integer",
+          "enum": [12, 14, 16, 20, 24, 32]
+        },
+        "align": {
+          "description": "Text alignment. Absent means centre.",
+          "type": "string",
+          "enum": ["left", "center", "right"]
+        },
+        "tags": { "$ref": "#/$defs/Tags" },
+        "locked": {
+          "description": "`true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.",
+          "const": true
         }
       },
       "anyOf": [

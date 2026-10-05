@@ -327,6 +327,61 @@ describe('buildScene: whole deck', () => {
     expect(stickies.find((note) => note.id === 'empty')?.label).toBe('Empty note');
   });
 
+  it("wraps a note's plain text at its fitted size, with its tags as chips", () => {
+    const notes = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+      tagColors: { Ops: 'green' },
+      stickies: [
+        {
+          id: 'n',
+          text: '**Check** the _retry_ policy\n\n- one\n- two',
+          position: { x: 0, y: 200 },
+          size: { width: 240, height: 200 },
+          tags: ['Ops', 'Billing'],
+        },
+        { id: 'pinned', text: 'x'.repeat(2000), position: { x: 400, y: 200 }, fontSize: 12 },
+      ],
+    });
+    const { stickies } = scene(notes);
+    const note = stickies.find((entry) => entry.id === 'n');
+    expect(note?.rect).toMatchObject({ width: 240, height: 200 });
+    expect(note?.lines.join(' ')).toBe('Check the retry policy • one • two');
+    expect(note?.fontSize).toBeGreaterThan(9);
+    expect(note?.tagChips.map((chip) => chip.tag)).toEqual(['Ops', 'Billing']);
+    expect(note?.tagChips[0]?.chip).not.toBe(note?.tagChips[1]?.chip);
+    // A pinned size is kept and the overflowing text is cut to the rows that fit.
+    const pinned = stickies.find((entry) => entry.id === 'pinned');
+    expect(pinned?.fontSize).toBe(12);
+    expect(pinned?.lines.length).toBeLessThan(2000);
+  });
+
+  it('draws a collapsed note as its label only', () => {
+    const { stickies } = scene(
+      deckOf({
+        nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+        stickies: [
+          { id: 'c', text: 'Long body\nsecond', collapsed: true, position: { x: 0, y: 99 } },
+        ],
+      }),
+    );
+    expect(stickies[0]).toMatchObject({ collapsed: true, lines: [], label: 'Long body' });
+    expect(stickies[0]?.rect.height).toBe(40);
+  });
+
+  it("draws a connector whose end is a note, ending on the note's box", () => {
+    const linked = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } }],
+      stickies: [{ id: 'n', text: 'Hi', position: { x: 600, y: 0 } }],
+      edges: [{ id: 'e', from: 'a', to: 'n' }],
+    });
+    const { edges, stickies, bounds } = scene(linked);
+    expect(ids(edges)).toEqual(['e']);
+    const note = stickies[0]?.rect;
+    expect(note).toBeDefined();
+    expect(edges[0]?.target.x).toBeGreaterThanOrEqual((note?.x ?? 0) - 1);
+    expect(bounds.width).toBeGreaterThan(600);
+  });
+
   it('is empty for an empty deck', () => {
     const result = scene(deckOf({ stickies: [{ id: 's', text: 'x', position: { x: 0, y: 0 } }] }));
     expect(result.cards).toEqual([]);

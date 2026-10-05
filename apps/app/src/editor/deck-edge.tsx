@@ -4,7 +4,7 @@ import { cn } from '@sododeck/ui/lib/utils';
 import { edgeLineStyle, type Geometry, type Severity } from '@sododeck/model';
 import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@xyflow/react';
 import type { Side } from '@sododeck/schema';
-import { Ban, CircleAlert, CircleX, TriangleAlert } from 'lucide-react';
+import { Ban, CircleAlert, CircleX, Lock, TriangleAlert } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
 import { isFlowMode, useUiStore } from '../state/ui-store';
@@ -346,6 +346,8 @@ export const DeckEdge = memo(function DeckEdge({
   const showLabel = (data?.showLabel === true || hasBadges) && Boolean(data?.label);
   // A hover-only relationship label (042 R10): drawn, but hidden by CSS until the line is lit.
   const hoverLabel = !showLabel && data?.hoverLabel === true && Boolean(data.label);
+  // The lock is a mark, not a colour, and shows even on a connector without a label (053).
+  const locked = data?.locked === true;
   const flowIcon = flow?.style === 'invalid' ? 'ban' : flow?.errorIcon === true ? 'alert' : null;
   const showFlowLabel = hasBadges || flowIcon !== null;
   const current = flow?.current ?? null;
@@ -532,7 +534,12 @@ export const DeckEdge = memo(function DeckEdge({
           number={current.number}
         />
       )}
-      {(showLabel || hoverLabel || selected || flow !== undefined || problems !== undefined) && (
+      {(showLabel ||
+        hoverLabel ||
+        selected ||
+        flow !== undefined ||
+        problems !== undefined ||
+        locked) && (
         <EdgeLabelRenderer>
           {/* Anchor for the edge and invalid-click popovers, at the label point. */}
           <div
@@ -540,7 +547,7 @@ export const DeckEdge = memo(function DeckEdge({
             className="pointer-events-none absolute size-px"
             style={{ transform: `translate(${String(labelX)}px, ${String(labelY)}px)` }}
           />
-          {(showLabel || hoverLabel || showFlowLabel || problems !== undefined) && (
+          {(showLabel || hoverLabel || showFlowLabel || problems !== undefined || locked) && (
             <span
               data-testid="edge-label"
               data-edge-label-for={id}
@@ -621,6 +628,14 @@ export const DeckEdge = memo(function DeckEdge({
                     />
                   </span>
                 )
+              )}
+              {locked && (
+                <Lock
+                  role="img"
+                  aria-label="Locked"
+                  strokeWidth={ICON_STROKE_WIDTH}
+                  className="size-3 text-ink-secondary"
+                />
               )}
               {(showLabel || hoverLabel) && data?.label}
             </span>

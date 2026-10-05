@@ -329,6 +329,7 @@ function stickyEntries(deck: SododeckFile): SearchEntry[] {
       fields: [
         field('title', stickyLabel(sticky.text) ?? 'Empty note'),
         field('text', sticky.text),
+        ...(sticky.tags ?? []).map((tag) => field('tag', tag)),
       ],
     });
   });

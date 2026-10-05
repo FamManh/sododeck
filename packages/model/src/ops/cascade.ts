@@ -37,6 +37,7 @@ import { LABELS } from './collections';
 import { branchListOf } from './branches';
 import { requireEnum, requireEnumValue } from './db-enums';
 import { requirePart, requireTable } from './db-tables';
+import { assertUnlocked } from './node-lock';
 import { stepsOf } from './steps';
 
 export interface RemovalResult {
@@ -147,7 +148,7 @@ function dropTouches(
   });
 }
 
-/** Removes every edge with an end at `id` (a node, or a group since 050). */
+/** Removes every edge with an end at `id` (a node, a group since 050, a sticky since 053). */
 function removeEdgesAt(cascade: Cascade, doc: DeckDoc, id: Id): void {
   const edges = collectionMap(doc, 'edges');
   for (const [edgeId, edge] of entriesOf(doc, 'edges')) {
@@ -250,6 +251,10 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
   const { doc } = ctx;
   const list = collectionMap(doc, c);
   const map = requireEntry(list, id, LABELS[c]);
+  // Only a direct delete is refused: a connector whose end is deleted goes with it (053).
+  if (c === 'stickies' || c === 'edges') {
+    assertUnlocked(map, LABELS[c] === 'Edge' ? 'Connector' : LABELS[c], id, 'delete it');
+  }
   const cascade = new Cascade(ctx);
   cascade.remove({ scope: c, id }, deleteById(list, id));
   switch (c) {
@@ -276,9 +281,13 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
       }
       break;
     }
+    case 'stickies':
+      // Connectors that end on the note go with it (053), like a card's; stickies anchored to the
+      // note are kept and reported (FR-017).
+      removeEdgesAt(cascade, doc, id);
+      break;
     case 'edges':
     case 'views':
-    case 'stickies':
       // Steps on an edge and stickies on anything are kept and reported (FR-012, FR-017).
       break;
   }

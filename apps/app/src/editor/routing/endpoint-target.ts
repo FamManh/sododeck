@@ -5,6 +5,8 @@
  *
  * - Cards first (component cards, shapes and collapsed-group cards): one the pointer is inside,
  *   topmost in paint order, else the nearest within `TARGET_REACH` screen px.
+ * - Notes (053) next: the pointer inside a note beats a card that is only within reach, and a
+ *   card within reach beats a note within reach.
  * - Otherwise the innermost group frame that contains the point or whose frame edge is within
  *   reach. A card always wins over the group it sits in (spec edge case).
  *
@@ -13,7 +15,7 @@
 import type { Geometry } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
-import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX } from '../deck-to-flow';
+import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX, STICKY_NODE_PREFIX } from '../deck-to-flow';
 import { attachToOutline, type Attachment } from './outline-attach';
 import type { Box, Point } from './route-path';
 
@@ -24,10 +26,10 @@ export const TARGET_REACH = 16;
 export const GROUP_ENDS = true;
 
 export interface EndpointTarget {
-  /** The card's node id, or the group id (for a frame or a collapsed-group card). */
+  /** The card's node id, the group id (for a frame or a collapsed-group card) or the note's id. */
   id: Id;
-  kind: 'node' | 'group';
-  /** The React Flow node that draws it (`group:` / `collapsed:` prefixed for groups). */
+  kind: 'node' | 'group' | 'sticky';
+  /** The React Flow node that draws it (`group:` / `collapsed:` / `sticky:` prefixed). */
   flowId: string;
   box: Box;
   /** A shape card's outline (031). */
@@ -37,6 +39,8 @@ export interface EndpointTarget {
 export interface TargetScene {
   /** Cards, bottom first (paint order). */
   cards: readonly EndpointTarget[];
+  /** Notes (053), bottom first. */
+  stickies: readonly EndpointTarget[];
   /** Group frames as drawn. */
   groups: readonly EndpointTarget[];
 }
@@ -84,6 +88,7 @@ function boxOf(node: SceneNode): Box | null {
 export function targetScene(nodes: readonly SceneNode[]): TargetScene {
   const cards: { target: EndpointTarget; z: number; index: number }[] = [];
   const groups: EndpointTarget[] = [];
+  const stickies: EndpointTarget[] = [];
   nodes.forEach((node, index) => {
     if (node.hidden === true) return;
     const box = boxOf(node);
@@ -122,13 +127,23 @@ export function targetScene(nodes: readonly SceneNode[]): TargetScene {
         });
         return;
       }
+      case 'sticky': {
+        if (!node.id.startsWith(STICKY_NODE_PREFIX)) return;
+        stickies.push({
+          id: node.id.slice(STICKY_NODE_PREFIX.length),
+          kind: 'sticky',
+          flowId: node.id,
+          box,
+        });
+        return;
+      }
       default:
-        // Stickies, port pills (out-of-scope proxies) and scope labels are never ends.
+        // Port pills (out-of-scope proxies) and scope labels are never ends.
         return;
     }
   });
   cards.sort((a, b) => a.z - b.z || a.index - b.index);
-  return { cards: cards.map((c) => c.target), groups };
+  return { cards: cards.map((c) => c.target), stickies, groups };
 }
 
 /** Distance from `p` to the box: 0 inside. */
@@ -138,23 +153,48 @@ function distanceToBox(box: Box, p: Point): number {
   return Math.hypot(dx, dy);
 }
 
-/** The topmost card within reach, else the innermost group frame containing or near `point`. */
-export function hitTarget(point: Point, scene: TargetScene, zoom: number): EndpointTarget | null {
-  const reach = TARGET_REACH / (zoom > 0 ? zoom : 1);
+/** The topmost of `list` (painted bottom first) that contains `point`. */
+function containing(list: readonly EndpointTarget[], point: Point): EndpointTarget | null {
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const target = list[i];
+    if (target !== undefined && distanceToBox(target.box, point) === 0) return target;
+  }
+  return null;
+}
+
+/** The nearest of `list` within `reach`; on a tie the one painted on top stays. */
+function nearest(
+  list: readonly EndpointTarget[],
+  point: Point,
+  reach: number,
+): EndpointTarget | null {
   let near: EndpointTarget | null = null;
   let nearDistance = Infinity;
-  for (let i = scene.cards.length - 1; i >= 0; i -= 1) {
-    const target = scene.cards[i];
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const target = list[i];
     if (target === undefined) continue;
     const d = distanceToBox(target.box, point);
-    if (d === 0) return target;
-    // Strictly nearer only: on a tie the one painted on top (visited first) stays.
     if (d <= reach && d < nearDistance) {
       near = target;
       nearDistance = d;
     }
   }
-  if (near !== null) return near;
+  return near;
+}
+
+/**
+ * The target under `point`: a card the pointer is inside, then a note it is inside, then the
+ * nearest card within reach, the nearest note within reach, else the innermost group frame
+ * containing or near `point`.
+ */
+export function hitTarget(point: Point, scene: TargetScene, zoom: number): EndpointTarget | null {
+  const reach = TARGET_REACH / (zoom > 0 ? zoom : 1);
+  const hit =
+    containing(scene.cards, point) ??
+    containing(scene.stickies, point) ??
+    nearest(scene.cards, point, reach) ??
+    nearest(scene.stickies, point, reach);
+  if (hit !== null) return hit;
   let group: EndpointTarget | null = null;
   for (const target of scene.groups) {
     if (distanceToBox(target.box, point) > reach) continue;

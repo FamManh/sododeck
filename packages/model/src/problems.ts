@@ -740,7 +740,7 @@ function referenceDetail(p: IntegrityProblem, label: string): string {
     case 'detached-rule-input':
       return `${label} has inputs for a rule it doesn't use`;
     case 'duplicate-id':
-      return `${label} has the same id as a card`;
+      return `${label} has the same id as ${p.targetType === 'group' ? 'a group' : 'a card'}`;
     case 'missing-reference': {
       const what = p.targetType === 'object' ? 'something' : `a ${p.targetType.replace('-', ' ')}`;
       return `${label} points to ${what} that was deleted`;

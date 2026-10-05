@@ -20,7 +20,7 @@ import { assertValid, validateObject } from '../validate';
 import type { EditContext } from './context';
 
 /** The tag text as stored: trimmed and single-spaced, in the case it was given. */
-function tidy(text: string): string {
+export function tidy(text: string): string {
   return text.trim().replace(/\s+/g, ' ');
 }
 
@@ -68,10 +68,12 @@ export function setTagColor(ctx: EditContext, tag: string, color: ColorRef | nul
   });
 }
 
-/** What a tag op changed: cards, and every other object (connections, flows, steps, deck, views). */
+/** What a tag op changed: cards, sticky notes, and every other object (connections, flows, …). */
 export interface TagChange {
   /** Components whose tags changed. */
   cards: number;
+  /** Sticky notes whose tags changed (053). */
+  notes: number;
   /** Connections, flows, steps, the deck's own tags and view filters that changed. */
   others: number;
 }
@@ -97,8 +99,12 @@ function rewriteCarriers(
   rewrite: (tags: readonly string[]) => string[],
   write: boolean,
 ): TagChange {
-  const change: TagChange = { cards: 0, others: 0 };
-  const apply = (map: YObject, field: 'tags' | 'excludeTags', kind: 'cards' | 'others') => {
+  const change: TagChange = { cards: 0, notes: 0, others: 0 };
+  const apply = (
+    map: YObject,
+    field: 'tags' | 'excludeTags',
+    kind: 'cards' | 'notes' | 'others',
+  ) => {
     const before = tagsOfMap(map, field);
     if (before === undefined) return;
     const after = rewrite(before);
@@ -115,6 +121,9 @@ function rewriteCarriers(
   };
   eachItem(collectionMap(ctx.doc, 'nodes'), (m) => {
     apply(m, 'tags', 'cards');
+  });
+  eachItem(collectionMap(ctx.doc, 'stickies'), (m) => {
+    apply(m, 'tags', 'notes');
   });
   eachItem(collectionMap(ctx.doc, 'edges'), (m) => {
     apply(m, 'tags', 'others');
@@ -147,6 +156,7 @@ function spellings(ctx: EditContext): Map<string, string> {
     tagsOfMap(map, field)?.forEach(note);
   };
   for (const [, m] of orderedEntries(collectionMap(ctx.doc, 'nodes'))) noteAll(m);
+  for (const [, m] of orderedEntries(collectionMap(ctx.doc, 'stickies'))) noteAll(m);
   for (const [, m] of orderedEntries(collectionMap(ctx.doc, 'edges'))) noteAll(m);
   for (const [, flow] of orderedEntries(collectionMap(ctx.doc, 'flows'))) {
     noteAll(flow);
@@ -169,7 +179,7 @@ function uniqueByKey(tags: readonly string[]): string[] {
 }
 
 /**
- * Renames a tag everywhere (033): every card, connection, flow, step, the deck's tags and every
+ * Renames a tag everywhere (033): every card, sticky note (053), connection, flow, step, the deck's tags and every
  * view's hidden tags, and the colour entry, in one transaction. A new key that another tag
  * already has merges onto that tag's spelling and colour; the same key with another case only
  * respells. Lists lose repeats (first position kept), so no card ends with more tags than before.
@@ -211,13 +221,13 @@ export function renameTag(ctx: EditContext, from: string, to: string): TagChange
 }
 
 /**
- * Deletes a tag everywhere (033): from every card, connection, flow, step, the deck's tags and
+ * Deletes a tag everywhere (033): from every card, sticky note (053), connection, flow, step, the deck's tags and
  * every view's hidden tags, and drops its colour entry, in one transaction. A list that ends up
  * empty is removed. An absent tag does nothing and returns zero counts.
  */
 export function deleteTag(ctx: EditContext, tag: string): TagChange {
   const key = tagKey(tag);
-  const none: TagChange = { cards: 0, others: 0 };
+  const none: TagChange = { cards: 0, notes: 0, others: 0 };
   if (key === '') return none;
   const coloured = storedSpelling(ctx, key);
   const drop = (tags: readonly string[]) => tags.filter((t) => tagKey(t) !== key);
