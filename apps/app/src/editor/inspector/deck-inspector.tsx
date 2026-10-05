@@ -4,6 +4,7 @@ import { focusRing } from '@sododeck/ui/lib/focus';
 import { ICON_STROKE_WIDTH } from '@sododeck/ui/lib/icons';
 import { cn } from '@sododeck/ui/lib/utils';
 import { ArrowRight, Layers } from 'lucide-react';
+import { useState } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { DeckInspectorStorage } from '../deck-inspector-storage';
@@ -17,13 +18,25 @@ import { TagsField } from '../fields/tags-field';
 import { deckStats } from './derive';
 import { InspectorFrame } from './inspector-frame';
 import { DatabaseSection } from './database/database-section';
+import { showsDatabaseSection } from './database/shows-database-section';
+import { DrawerTabs, type DrawerTab } from './drawer-tabs';
 
 const noop = () => undefined;
 
+type DeckTab = 'general' | 'database';
+
+const DECK_TABS: readonly DrawerTab<DeckTab>[] = [
+  { id: 'general', label: 'General' },
+  { id: 'database', label: 'Database' },
+];
+
 /**
- * Deck inspector, shown when nothing is selected (FR-012, design 10): the deck's problems first
- * (015, design 60), name (required), markdown description, tags, counts with a way into the rule
- * editor, the tables' display switches (041), and 005's storage.
+ * Deck inspector, shown when nothing is selected (FR-012, design 10). The General tab holds the
+ * deck's problems first (015, design 60), name (required), markdown description, tags, counts
+ * with a way into the rule editor, and 005's storage; the Database tab holds the dialect and the
+ * tables' display settings (041, 052). A deck with no table and the Database pack off has no
+ * Database tab, so the tab bar is hidden and General shows alone. The tab is UI-only state that
+ * starts on General each time the settings open.
  */
 export function DeckInspector({
   deck,
@@ -42,14 +55,12 @@ export function DeckInspector({
     },
     navigateToCanvas: noop,
   });
+  const [tab, setTab] = useState<DeckTab>('general');
   const stats = deckStats(deck);
   const name = deck.name ?? 'Untitled deck';
-  return (
-    <InspectorFrame
-      icon={<Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
-      heading={name}
-      subtitle="Deck"
-    >
+  const hasDatabase = showsDatabaseSection(deck);
+  const general = (
+    <>
       <ProblemsPanel onActivate={goTo} />
       <PanelSection>
         <FieldEdit
@@ -118,8 +129,28 @@ export function DeckInspector({
           </li>
         </ul>
       </PanelSection>
-      <DatabaseSection deck={deck} />
       <DeckInspectorStorage />
+    </>
+  );
+  return (
+    <InspectorFrame
+      icon={<Layers aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-5" />}
+      heading={name}
+      subtitle="Deck"
+    >
+      {hasDatabase ? (
+        <DrawerTabs
+          tabs={DECK_TABS}
+          tab={tab}
+          onChange={setTab}
+          label="Deck settings sections"
+          idPrefix="deck-settings"
+        >
+          {tab === 'database' ? <DatabaseSection deck={deck} /> : general}
+        </DrawerTabs>
+      ) : (
+        general
+      )}
     </InspectorFrame>
   );
 }
