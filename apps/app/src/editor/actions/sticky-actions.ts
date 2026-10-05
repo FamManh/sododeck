@@ -1,12 +1,9 @@
-import { nodeCanvasPosition, stickyBox, stickyCanvasPosition } from '@sododeck/model';
 import type { Sticky } from '@sododeck/schema';
-import { AlignJustify, Bold, ChevronsUpDown, Link, Lock, Pin, Tags, Type } from 'lucide-react';
+import { AlignJustify, Bold, ChevronsUpDown, Link, Lock, Tags, Type } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
-import { cardSize } from '../canvas-geometry';
 import { STICKY_NODE_PREFIX } from '../deck-to-flow';
 import { oneStep } from '../fields/one-step';
-import { LOCKED_HINT, unlockedIds } from '../lock';
 import { FIXED_FONT_SIZES } from '../stickies/fit-font-size';
 import { linkRange, toggleBold, type MarkdownEdit } from '../stickies/sticky-markdown';
 import { stickyColourName, stickySwatch } from '../stickies/sticky-tint';
@@ -98,43 +95,12 @@ function formatText(ctx: ActionContext, kind: 'bold' | 'link'): void {
   announce(kind === 'bold' ? `Bold toggled on ${notes(targets.length)}` : 'Link added');
 }
 
-/** Pin target: the card the note covers most. A card is small next to a note, so its middle is no test. */
-function cardUnder(ctx: ActionContext, sticky: Sticky) {
-  const deck = ctx.view.deck;
-  const box = stickyBox(sticky, stickyCanvasPosition(deck, sticky).point);
-  let best: { id: string; area: number } | null = null;
-  for (const node of deck.nodes) {
-    const at = nodeCanvasPosition(deck, node.id);
-    if (at === null) continue;
-    const size = cardSize(node, 'component');
-    const width = Math.min(box.x + box.width, at.x + size.width) - Math.max(box.x, at.x);
-    const height = Math.min(box.y + box.height, at.y + size.height) - Math.max(box.y, at.y);
-    const area = width > 0 && height > 0 ? width * height : 0;
-    if (area > 0 && (best === null || area > best.area)) best = { id: node.id, area };
-  }
-  return best;
-}
-
-const pinned = (sticky: Sticky) => sticky.anchor !== undefined;
 const every = (ctx: ActionContext, test: (sticky: Sticky) => boolean) => {
   const targets = stickiesOf(ctx);
   return targets.length > 0 && targets.every(test);
 };
 const allLocked = (ctx: ActionContext) => every(ctx, (sticky) => sticky.locked === true);
-const allPinned = (ctx: ActionContext) => every(ctx, pinned);
 const allCollapsed = (ctx: ActionContext) => every(ctx, (sticky) => sticky.collapsed === true);
-
-/** The selected notes a pin or unpin may touch: the model refuses locked ones. */
-const unlockedNotes = (ctx: ActionContext): Sticky[] => {
-  const open = new Set(
-    unlockedIds(
-      ctx.deck,
-      'stickies',
-      stickiesOf(ctx).map((sticky) => sticky.id),
-    ).ids,
-  );
-  return stickiesOf(ctx).filter((sticky) => open.has(sticky.id));
-};
 
 export const STICKY_ACTIONS: readonly Action[] = [
   {
@@ -252,39 +218,6 @@ export const STICKY_ACTIONS: readonly Action[] = [
         }
       });
       announce(`${notes(ids.length)} ${collapse ? 'collapsed' : 'expanded'}`);
-    },
-  },
-  {
-    id: 'sticky.pin',
-    label: (ctx) => (allPinned(ctx) ? 'Unpin' : 'Pin'),
-    icon: Pin,
-    section: 'view',
-    where: { toolbar: ['sticky'] },
-    disabledReason: (ctx) => {
-      const open = unlockedNotes(ctx);
-      if (open.length === 0) return LOCKED_HINT;
-      if (allPinned(ctx)) return null;
-      return open.some((sticky) => !pinned(sticky) && cardUnder(ctx, sticky) !== null)
-        ? null
-        : 'Move the note over a card to pin it';
-    },
-    run: (ctx) => {
-      const unpin = allPinned(ctx);
-      let done = 0;
-      oneStep(ctx.editor, () => {
-        for (const sticky of unlockedNotes(ctx)) {
-          if (unpin) {
-            ctx.editor.unpinSticky(sticky.id);
-            done += 1;
-          } else if (!pinned(sticky)) {
-            const card = cardUnder(ctx, sticky);
-            if (card === null) continue;
-            ctx.editor.pinSticky(sticky.id, card.id);
-            done += 1;
-          }
-        }
-      });
-      announce(`${notes(done)} ${unpin ? 'unpinned' : 'pinned'}`);
     },
   },
   {

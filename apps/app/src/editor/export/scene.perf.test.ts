@@ -20,7 +20,6 @@ describe('export scene performance', () => {
       revealed: new Set<string>(),
       drill: [],
       activeFlowId: null,
-      notesDisplay: 'dimmed' as const,
     };
     const measure = fixedWidthMeasurer();
     // Warm-up run (module init, JIT), then a timed one on a fresh copy: the canvas helpers
@@ -51,7 +50,6 @@ describe('export scene performance', () => {
       revealed: new Set<string>(),
       drill: [],
       activeFlowId: null,
-      notesDisplay: 'dimmed' as const,
     };
     buildScene({ deck, scope: 'deck', ui });
     const fresh = structuredClone(deck);
@@ -78,7 +76,6 @@ describe('export scene performance', () => {
       revealed: new Set<string>(),
       drill: [],
       activeFlowId: null,
-      notesDisplay: 'dimmed' as const,
     };
     buildScene({ deck, scope: 'deck', ui });
     const fresh = structuredClone(deck);
@@ -104,7 +101,6 @@ describe('export scene performance', () => {
       revealed: new Set<string>(),
       drill: [],
       activeFlowId: null,
-      notesDisplay: 'dimmed' as const,
     };
     buildScene({ deck, scope: 'deck', ui });
     const fresh = structuredClone(deck);

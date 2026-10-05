@@ -8,7 +8,6 @@ import { useUiStore } from '../../state/ui-store';
 import { deckOf, renderWithEditor } from '../../test/render-canvas';
 import type { StickyFlowNode } from '../deck-to-flow';
 import { toStickyNodes } from '../deck-to-flow';
-import type { FlowOverlay } from '../flows/flow-overlay';
 import { StickyNode } from './sticky-node';
 
 const deck = deckOf({
@@ -17,7 +16,6 @@ const deck = deckOf({
     {
       id: 'st1',
       text: '**Owner**\n\n- retry `<script>`',
-      anchor: 'svc',
       position: { x: 10, y: -8 },
     },
     { id: 'st2', text: 'One line only', position: { x: 40, y: 50 }, collapsed: true },
@@ -28,18 +26,11 @@ const deck = deckOf({
 function stickyProps(
   file: ReturnType<typeof readDeck>,
   stickyId: string,
-  overlay?: FlowOverlay,
-  flow?: {
-    flowMode: boolean;
-    notesDisplay: 'dimmed' | 'shown' | 'hidden';
-    emptyFlow: boolean;
-    brokenCurrentStep: boolean;
-  },
+  flow?: { flowMode: boolean; notesDisplay: 'dimmed' | 'shown' | 'hidden'; emptyFlow: boolean },
 ): NodeProps<StickyFlowNode> {
   const sticky = toStickyNodes(
     file,
     { nodes: [], edges: [], groups: [], stickies: [], images: [] },
-    overlay,
     flow,
   ).find((node) => node.data.stickyId === stickyId);
   if (sticky === undefined) throw new Error(`Missing sticky ${stickyId}`);
@@ -57,15 +48,9 @@ function renderSticky(stickyId: string) {
 }
 
 function renderFlowSticky(stickyId: string) {
-  const overlay: FlowOverlay = { edges: new Map(), nodes: new Map() };
   const rendered = renderWithEditor(
     <StickyNode
-      {...stickyProps(deck, stickyId, overlay, {
-        flowMode: true,
-        notesDisplay: 'dimmed',
-        emptyFlow: false,
-        brokenCurrentStep: false,
-      })}
+      {...stickyProps(deck, stickyId, { flowMode: true, notesDisplay: 'dimmed', emptyFlow: false })}
     />,
     deck,
   );
@@ -76,11 +61,9 @@ function renderFlowSticky(stickyId: string) {
 }
 
 describe('StickyNode', () => {
-  it('names notes by label, pin state, collapse state and empty text', () => {
+  it('names notes by label, collapse state and empty text', () => {
     const first = renderSticky('st1');
-    expect(
-      screen.getByRole('group', { name: 'Note: Owner, pinned to Order Service' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Note: Owner' })).toBeInTheDocument();
     first.unmount();
 
     const second = renderSticky('st2');
@@ -112,20 +95,15 @@ describe('StickyNode', () => {
     expect(useUiStore.getState().announcement.text).toBe('Note expanded');
   });
 
-  it('shows the pinned footer and updates it when the node title changes', () => {
-    const { editor, rerenderSticky } = renderSticky('st1');
-    expect(screen.getByText('Pinned to Order Service')).toBeInTheDocument();
-    act(() => {
-      editor().update('nodes', 'svc', { title: 'Payments API' });
-    });
-    rerenderSticky();
-    expect(screen.getByText('Pinned to Payments API')).toBeInTheDocument();
+  it('shows no pin footer: notes are never pinned (ADR 0041)', () => {
+    renderSticky('st1');
+    expect(screen.queryByText(/Pinned to/)).not.toBeInTheDocument();
   });
 
   it('enters edit mode on double-click, Enter or F2, writes live, and leaves on Esc or blur', async () => {
     const user = userEvent.setup();
     const { doc, rerenderSticky } = renderSticky('st1');
-    const card = screen.getByRole('group', { name: 'Note: Owner, pinned to Order Service' });
+    const card = screen.getByRole('group', { name: 'Note: Owner' });
 
     fireEvent.doubleClick(card);
     const firstBox = await screen.findByRole('textbox', { name: 'Note text' });
@@ -161,9 +139,7 @@ describe('StickyNode', () => {
   it('is view-only in flow mode: dimmed naming, no collapse button, and no edit shortcuts', async () => {
     const user = userEvent.setup();
     const { doc } = renderFlowSticky('st1');
-    const card = screen.getByRole('group', {
-      name: 'Note: Owner, pinned to Order Service, dimmed',
-    });
+    const card = screen.getByRole('group', { name: 'Note: Owner, dimmed' });
 
     expect(screen.queryByRole('button', { name: 'Collapse note' })).not.toBeInTheDocument();
     fireEvent.doubleClick(card);

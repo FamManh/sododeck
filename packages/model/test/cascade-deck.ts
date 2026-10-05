@@ -66,10 +66,10 @@ export const cascadeDeck: SododeckFile = {
     Q: { title: 'Q', hitPolicy: 'first', inputs: [], outputs: [], rows: [] },
   },
   stickies: [
-    { id: 'st-n', text: 'On n', anchor: 'n', position: { x: 0, y: -10 } },
-    { id: 'st-e', text: 'On e1', anchor: 'e1' },
-    { id: 'st-fl', text: 'On flow', anchor: 'fl' },
-    { id: 'st-s1', text: 'On step', anchor: 's1' },
+    { id: 'st-n', text: 'Near n', position: { x: 220, y: -10 } },
+    { id: 'st-e', text: 'Near e1', position: { x: 0, y: 40 } },
+    { id: 'st-fl', text: 'About the flow', position: { x: 0, y: 80 } },
+    { id: 'st-s1', text: 'About a step', position: { x: 0, y: 120 } },
     { id: 'st-free', text: 'Free', position: { x: 5, y: 5 } },
   ],
 };

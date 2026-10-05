@@ -190,7 +190,7 @@ export function useCanvasHandlers() {
 
     /**
      * Rail tools (018 R8) act on the next click, then fall back to Select: Sticky adds a note
-     * where the click lands (pinned to a card under it), Connector opens a card's connect popover.
+     * where the click lands, Connector opens a card's connect popover.
      */
     const applyTool = (event: ReactMouseEvent, nodeId: string | null): boolean => {
       const tool = ui().tool;
@@ -669,8 +669,7 @@ export function useCanvasHandlers() {
         event.preventDefault();
         const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         if (note === 'note') {
-          // From the pad: always a free note, even over a card (053 R7).
-          addNoteAt(editor, point, { pin: false });
+          addNoteAt(editor, point);
           return;
         }
         if (type === null) return;

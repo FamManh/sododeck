@@ -15,7 +15,7 @@ import { columnIds, readObject } from '../read';
 import { createObject, writeFields } from '../write';
 import { requireEntry, type EditContext } from './context';
 import { DeckEditError } from '../errors';
-import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
+import { deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import { assertNewTableParts, columnEndIssues, tablePatch } from './db-tables';
 import { assertUnlocked } from './node-lock';
@@ -78,6 +78,17 @@ function assertColumnEnds(
   if (issues.length > 0) throw new DeckEditError('missing-reference', issues);
 }
 
+/**
+ * Notes are never pinned any more (ADR 0041): the legacy `anchor` is read only on load, where it
+ * becomes an absolute `position`, and never written.
+ */
+function assertNoAnchor(c: Collection, fields: Record<string, unknown>): void {
+  if (c !== 'stickies' || fields.anchor === undefined || fields.anchor === null) return;
+  throw new DeckEditError('invalid', [
+    { path: 'anchor', message: 'Notes cannot be pinned; give the note a "position" instead.' },
+  ]);
+}
+
 export function addObject<C extends Collection>(
   ctx: EditContext,
   c: C,
@@ -87,6 +98,7 @@ export function addObject<C extends Collection>(
   const { doc } = ctx;
   const { id: explicitId, ...fields } = data as Record<string, unknown> & { id?: Id };
   const id = explicitId ?? ctx.allocate(PREFIXES[c]);
+  assertNoAnchor(c, fields);
   const object: Record<string, unknown> = { id, ...fields };
   if (c === 'flows' && object.steps === undefined) object.steps = [];
   // A card added to a deck that ranks its objects (it holds images, or a card has a `z`) lands on
@@ -116,7 +128,7 @@ export function addObject<C extends Collection>(
     if (checked.issues.length > 0) throw new DeckEditError('missing-reference', checked.issues);
     refs.push(...checked.refs);
   }
-  assertRefsExist(doc, refs, () => anchorableIds(doc));
+  assertRefsExist(doc, refs);
   if (c === 'edges') assertColumnEnds(doc, object, Object.keys(object));
 
   ctx.transact(() => {
@@ -134,6 +146,7 @@ export function updateObject<C extends Collection>(
 ): void {
   const { doc } = ctx;
   const map = requireEntry(collectionMap(doc, c), id, LABELS[c]);
+  assertNoAnchor(c, patch);
   // A locked connector keeps its ends (053); label, tags and the rest stay editable.
   if (c === 'edges' && ('from' in patch || 'to' in patch)) {
     assertUnlocked(map, 'Connector', id, 'reconnect it');
@@ -150,7 +163,6 @@ export function updateObject<C extends Collection>(
   assertRefsExist(
     doc,
     changed.flatMap((key) => refsOf(c, key, candidate[key])),
-    () => anchorableIds(doc),
   );
   if (c === 'edges') assertColumnEnds(doc, candidate, changed);
 

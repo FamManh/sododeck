@@ -80,8 +80,8 @@ describe('checkSemanticRules', () => {
     });
   });
 
-  describe('S2: a sticky has an anchor or a position', () => {
-    it('accepts free, anchored and anchored-with-offset stickies', () => {
+  describe('S2: a sticky has a position (or a legacy anchor)', () => {
+    it('accepts free stickies and, for older files, anchored ones (ADR 0041)', () => {
       const file: SododeckFile = {
         ...emptySododeckFile(),
         stickies: [
@@ -99,7 +99,7 @@ describe('checkSemanticRules', () => {
         {
           code: 'sticky-placement',
           path: '/stickies/0',
-          message: 'Sticky "a" needs an anchor, a position, or both.',
+          message: 'Sticky "a" needs a position.',
           subject: 'a',
         },
       ]);

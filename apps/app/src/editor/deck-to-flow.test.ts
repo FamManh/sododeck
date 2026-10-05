@@ -1,5 +1,4 @@
 import type { ProblemMark } from './problems/problem-marks';
-import { STICKY_DEFAULT_OFFSET, stickyCanvasPosition } from '@sododeck/model';
 import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
@@ -13,7 +12,6 @@ import {
   stackImages,
   toFlowNodes,
   toImageNodes,
-  toLeaderEdges,
   toStickyNodes,
 } from './deck-to-flow';
 import type { EdgeFlowMark, FlowOverlay, NodeFlowMark } from './flows/flow-overlay';
@@ -66,9 +64,7 @@ const deck: SododeckFile = {
   rules: { R: { title: 'R', hitPolicy: 'first', inputs: [], outputs: [], rows: [] } },
   stickies: [
     { id: 'st-free', text: 'Free note', position: { x: 30, y: 40 } },
-    { id: 'st-pinned', text: 'Pinned note', anchor: 'b' },
-    { id: 'st-foreign', text: 'Foreign note', anchor: 'e1', position: { x: 10, y: 12 } },
-    { id: 'st-missing', text: 'Missing note', anchor: 'gone', position: { x: 50, y: 60 } },
+    { id: 'st-near', text: 'Near B', position: { x: 244, y: -96 } },
   ],
 };
 
@@ -158,40 +154,23 @@ describe('toFlowNodes', () => {
         stickies: ['st-free'],
         images: [],
       });
-      const freeSticky = deck.stickies[0];
-      if (freeSticky === undefined) throw new Error('Missing free sticky fixture');
-      expect(stickyNodes.map((node) => node.id)).toEqual([
-        'sticky:st-free',
-        'sticky:st-pinned',
-        'sticky:st-foreign',
-        'sticky:st-missing',
-      ]);
+      expect(stickyNodes.map((node) => node.id)).toEqual(['sticky:st-free', 'sticky:st-near']);
       expect(stickyNodes[0]).toMatchObject({
         id: 'sticky:st-free',
         type: 'sticky',
-        position: stickyCanvasPosition(deck, freeSticky).point,
+        position: { x: 30, y: 40 },
         selected: true,
         data: {
           stickyId: 'st-free',
           label: 'Free note',
           text: 'Free note',
-          status: 'free',
-          pinnedToTitle: null,
           collapsed: false,
         },
       });
-      expect(stickyNodes[1]).toMatchObject({
-        id: 'sticky:st-pinned',
-        position: { x: 220 + STICKY_DEFAULT_OFFSET.x, y: STICKY_DEFAULT_OFFSET.y },
-        data: {
-          status: 'pinned',
-          pinnedTo: 'b',
-          pinnedToTitle: 'B',
-        },
-      });
+      expect(stickyNodes[1]).toMatchObject({ id: 'sticky:st-near', position: { x: 244, y: -96 } });
     });
 
-    it('reuses sticky objects when the sticky and its anchor did not change', () => {
+    it('reuses sticky objects when the sticky did not change, even when a card moves', () => {
       const first = toStickyNodes(deck, EMPTY_SELECTION);
       const moved: SododeckFile = {
         ...deck,
@@ -205,44 +184,34 @@ describe('toFlowNodes', () => {
       expect(second.find((n) => n.id === 'sticky:st-free')).toBe(
         first.find((n) => n.id === 'sticky:st-free'),
       );
-      expect(second.find((n) => n.id === 'sticky:st-pinned')).not.toBe(
-        first.find((n) => n.id === 'sticky:st-pinned'),
+      // Notes are never pinned (ADR 0041): moving the card next to one leaves it alone.
+      expect(second.find((n) => n.id === 'sticky:st-near')).toBe(
+        first.find((n) => n.id === 'sticky:st-near'),
       );
     });
 
     it('dims or shows notes in flow mode, hides them when requested, and makes them non-draggable', () => {
-      const playbackOverlay: FlowOverlay = {
-        edges: new Map(),
-        nodes: new Map<string, NodeFlowMark>([['b', { currentStep: true }]]),
+      const visible: SododeckFile = {
+        ...deck,
+        stickies: deck.stickies.map((s) => (s.id === 'st-near' ? { ...s, showInFlows: true } : s)),
       };
-      const shown = toStickyNodes(deck, EMPTY_SELECTION, playbackOverlay, {
-        flowMode: true,
-        notesDisplay: 'dimmed',
-        emptyFlow: false,
-        brokenCurrentStep: false,
-      });
+      const playing = { flowMode: true, notesDisplay: 'dimmed', emptyFlow: false } as const;
+      const shown = toStickyNodes(visible, EMPTY_SELECTION, playing);
       expect(shown.find((node) => node.id === 'sticky:st-free')).toMatchObject({
         className: 'sd-note-dimmed',
         draggable: false,
       });
-      expect(shown.find((node) => node.id === 'sticky:st-pinned')).toMatchObject({
+      expect(shown.find((node) => node.id === 'sticky:st-near')).toMatchObject({
         className: 'in-flow sd-note-shown',
         draggable: false,
       });
-      const repeated = toStickyNodes(deck, EMPTY_SELECTION, playbackOverlay, {
-        flowMode: true,
-        notesDisplay: 'dimmed',
-        emptyFlow: false,
-        brokenCurrentStep: false,
-      });
+      const repeated = toStickyNodes(visible, EMPTY_SELECTION, playing);
       expect(repeated.find((node) => node.id === 'sticky:st-free')).toBe(
         shown.find((node) => node.id === 'sticky:st-free'),
       );
-      const hidden = toStickyNodes(deck, EMPTY_SELECTION, playbackOverlay, {
-        flowMode: true,
+      const hidden = toStickyNodes(visible, EMPTY_SELECTION, {
+        ...playing,
         notesDisplay: 'hidden',
-        emptyFlow: false,
-        brokenCurrentStep: false,
       });
       expect(hidden.every((node) => node.hidden === true)).toBe(true);
     });
@@ -774,22 +743,6 @@ describe('toFlowEdges line type (029 T044)', () => {
     const b = toFlowEdges(second, topLevelGraph(second), view());
     expect(b[0]).not.toBe(a[0]);
     expect(b[0]?.data?.shape).toBe('elbow');
-  });
-});
-
-describe('toLeaderEdges', () => {
-  it('maps pinned notes only as non-interactive leader edges', () => {
-    const leaders = toLeaderEdges(deck);
-    expect(leaders).toEqual([
-      expect.objectContaining({
-        id: 'sticky-leader:st-pinned',
-        type: 'sticky-leader',
-        source: 'b',
-        target: 'sticky:st-pinned',
-        selectable: false,
-        focusable: false,
-      }),
-    ]);
   });
 });
 
@@ -1773,14 +1726,14 @@ describe('sticky connector ends (053 US1)', () => {
       { id: 'n1', text: 'Why retry?', position: { x: 0, y: 300 } },
       { id: 'n2', text: 'Sized', position: { x: 300, y: 300 }, size: { width: 240, height: 160 } },
       { id: 'n3', text: 'Folded', position: { x: 600, y: 300 }, collapsed: true },
-      { id: 'n4', text: 'Pinned to B', anchor: 'b' },
+      { id: 'n4', text: 'About B', position: { x: 624, y: -96 } },
     ],
     images: [],
     edges: [
       { id: 'e-card', from: 'a', to: 'n1' },
       { id: 'e-sized', from: 'n2', to: 'b' },
       { id: 'e-folded', from: 'n3', to: 'n1' },
-      { id: 'e-pinned', from: 'a', to: 'n4' },
+      { id: 'e-note', from: 'a', to: 'n4' },
     ],
   };
   const edgeById = (edges: ReturnType<typeof toFlowEdges>, id: string) =>
@@ -1806,9 +1759,9 @@ describe('sticky connector ends (053 US1)', () => {
     });
   });
 
-  it('draws a connector to a pinned note', () => {
+  it('draws a connector to a note placed next to a card', () => {
     const edges = toFlowEdges(noted, topLevelGraph(noted), view());
-    expect(edgeById(edges, 'e-pinned')).toMatchObject({ source: 'a', target: 'sticky:n4' });
+    expect(edgeById(edges, 'e-note')).toMatchObject({ source: 'a', target: 'sticky:n4' });
   });
 
   it('follows the note when it moves: a new edge object with the new size, others kept', () => {
@@ -1830,7 +1783,7 @@ describe('sticky connector ends (053 US1)', () => {
     expect(edges).toEqual([]);
   });
 
-  it('drops connectors of a note a view leaves out with its anchor', () => {
+  it('keeps every note in a view, dropping only connectors to the cards it leaves out', () => {
     const withView: SododeckFile = {
       ...noted,
       views: [{ id: 'v', type: 'system', title: 'V', includes: ['a'] }],
@@ -1841,7 +1794,8 @@ describe('sticky connector ends (053 US1)', () => {
       topLevelGraph(state.deck),
       view({ render: state.render }),
     );
-    expect(edgeById(edges, 'e-pinned')).toBeUndefined();
+    expect(edgeById(edges, 'e-sized')).toBeUndefined();
+    expect(edgeById(edges, 'e-note')).toBeDefined();
     expect(edgeById(edges, 'e-card')).toBeDefined();
   });
 

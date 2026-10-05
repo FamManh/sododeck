@@ -38,7 +38,6 @@ import {
   PORT_NODE_PREFIX,
   toFlowEdges,
   toFlowNodes,
-  toLeaderEdges,
   toStickyNodes,
   toImageNodes,
   stackImages,
@@ -73,7 +72,6 @@ import { ScopeLabelNode } from './scope-label-node';
 import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
-import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
 import { ImageNode } from './images/image-node';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
@@ -110,7 +108,6 @@ const nodeTypes: NodeTypes = {
 const edgeTypes: EdgeTypes = {
   deck: DeckEdge,
   merged: MergedEdge,
-  'sticky-leader': StickyLeaderEdge,
 };
 
 /** Cards narrower than 80 px on screen hide their details button (019 FR-018). */
@@ -412,10 +409,6 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
   );
   const activeStepId = playback === null ? (activeFlow?.stepId ?? null) : playback.currentStepId;
   const emptyFlow = flowMode && playback?.view === null;
-  const brokenCurrentStep =
-    flowMode && activeStepId !== null
-      ? (playback?.played.steps.find((step) => step.step.id === activeStepId)?.broken ?? false)
-      : false;
   const notesDisplay = useUiStore((s) => s.notesDisplay);
   const overlay = useMemo(
     () =>
@@ -543,17 +536,12 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         toImageNodes(deck, selection, flowMode, graph.hiddenImages),
         deck,
       ),
-      ...toStickyNodes(deck, selection, overlay, {
-        flowMode,
-        notesDisplay,
-        emptyFlow,
-        brokenCurrentStep,
-      }),
+      ...toStickyNodes(deck, selection, { flowMode, notesDisplay, emptyFlow }),
     ],
-    [deck, graph, view, selection, overlay, flowMode, notesDisplay, emptyFlow, brokenCurrentStep],
+    [deck, graph, view, selection, overlay, flowMode, notesDisplay, emptyFlow],
   );
   const edges = useMemo(
-    () => [...toFlowEdges(deck, graph, view, overlay, bundles), ...toLeaderEdges(deck)],
+    () => toFlowEdges(deck, graph, view, overlay, bundles),
     [deck, graph, view, overlay, bundles],
   );
   const recording = session !== null;

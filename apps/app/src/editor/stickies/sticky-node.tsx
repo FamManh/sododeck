@@ -1,4 +1,4 @@
-import { STICKY_COLLAPSED_HEIGHT, stickyCanvasPosition } from '@sododeck/model';
+import { STICKY_COLLAPSED_HEIGHT, stickyPosition } from '@sododeck/model';
 import { InlineTextarea } from '@sododeck/ui/components/inline-textarea';
 import { MarkdownView } from '@sododeck/ui/components/markdown-view';
 import { focusRing } from '@sododeck/ui/lib/focus';
@@ -12,14 +12,14 @@ import {
   type NodeProps,
   type ResizeDragEvent,
 } from '@xyflow/react';
-import { ChevronDown, ChevronRight, Ellipsis, Lock, Pin } from 'lucide-react';
+import { ChevronDown, ChevronRight, Ellipsis, Lock } from 'lucide-react';
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { useEditor } from '../../model/use-editor';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { isFlowMode, useUiStore } from '../../state/ui-store';
 import { useLiveField } from '../fields/use-live-field';
-import { moveStickyInView, readViewState } from '../views/use-current-view';
+import { moveStickyInView } from '../views/use-current-view';
 import type { StickyFlowNode } from '../deck-to-flow';
 import {
   applyStickyResize,
@@ -68,7 +68,6 @@ const modsOf = (event: ResizeDragEvent) => {
 function stickyName(data: StickyFlowNode['data']): string {
   const label = data.label === 'Empty note' ? 'empty' : data.label;
   const parts = [`Note: ${label}`];
-  if (data.pinnedToTitle !== null) parts.push(`pinned to ${data.pinnedToTitle}`);
   if (data.collapsed) parts.push('collapsed');
   if (data.locked) parts.push('locked');
   if (data.flowState === 'dimmed') parts.push('dimmed');
@@ -132,13 +131,12 @@ export const StickyNode = memo(function StickyNode({
   const { collapsed, locked } = data;
   const boxWidth = width ?? data.size.width;
   const boxHeight = height ?? (collapsed ? STICKY_COLLAPSED_HEIGHT : data.size.height);
-  const pinned = data.pinnedToTitle !== null;
 
   // Text and its room (053 R3): what is typed shows live, so the size follows the keystrokes.
   const text = editing ? field.value : data.text;
   const innerWidth = Math.max(0, data.size.width - NOTE_INSET);
   const tags = noteTags(data.tagLooks, innerWidth);
-  const rows = tags.rows + (pinned || locked ? 1 : 0);
+  const rows = tags.rows + (locked ? 1 : 0);
   const { fit, measureRef } = useFitFontSize({
     text,
     width: innerWidth,
@@ -239,7 +237,7 @@ export const StickyNode = memo(function StickyNode({
           }
           const sticky = readDeck(editor.doc).stickies.find((entry) => entry.id === data.stickyId);
           if (sticky === undefined) return;
-          const point = stickyCanvasPosition(readViewState(editor.doc).deck, sticky).point;
+          const point = stickyPosition(sticky);
           moveStickyInView(editor, data.stickyId, { x: point.x + move.x, y: point.y + move.y });
           return;
         }
@@ -354,19 +352,9 @@ export const StickyNode = memo(function StickyNode({
                 )}
               </ul>
             )}
-            {(pinned || locked) && (
+            {locked && (
               <div className="flex shrink-0 items-center gap-2 text-caption text-ink-secondary">
-                {pinned && (
-                  <span className="flex min-w-0 items-center gap-1">
-                    <Pin
-                      aria-hidden
-                      strokeWidth={ICON_STROKE_WIDTH}
-                      className="size-3.5 shrink-0"
-                    />
-                    <span className="truncate">{`Pinned to ${data.pinnedToTitle ?? ''}`}</span>
-                  </span>
-                )}
-                {locked && <LockGlyph stickyId={data.stickyId} />}
+                <LockGlyph stickyId={data.stickyId} />
               </div>
             )}
             {!flowMode && (

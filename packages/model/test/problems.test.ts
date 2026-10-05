@@ -353,7 +353,7 @@ describe('checkDeck (015)', () => {
   });
 
   describe('broken references', () => {
-    it('reports a sticky anchor, a group parent and a parent cycle', () => {
+    it('reports a group parent and a parent cycle', () => {
       const file = deck({
         ...chain(),
         groups: [
@@ -361,10 +361,8 @@ describe('checkDeck (015)', () => {
           { id: 'g2', title: 'X', parent: 'g3' },
           { id: 'g3', title: 'Y', parent: 'g2' },
         ],
-        stickies: [{ id: 'n1', text: '\nCheck SLA\nmore', anchor: 'missing' }],
       });
       expect(checkDeck(file).list.map((p) => p.detail)).toEqual([
-        'Sticky "Check SLA" points to something that was deleted',
         'Group "Core" points to a group that was deleted',
         'Group "X" is inside itself',
       ]);

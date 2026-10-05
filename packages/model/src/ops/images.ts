@@ -25,7 +25,6 @@ import { readObject } from '../read';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import { createObject, writeField } from '../write';
 import * as Y from 'yjs';
-import { anchorableIds } from '../ids';
 import { requireEntry, type EditContext } from './context';
 import { assertUnlocked } from './node-lock';
 import { topRankOf } from './stacking';
@@ -105,7 +104,6 @@ export function addImages(ctx: EditContext, items: readonly NewImage[]): Id[] {
         ? [{ path: 'group', id: object.group, target: 'groups' as const }]
         : [],
     ),
-    () => anchorableIds(doc),
   );
   // The pictures a new image names are either known already or come with their meta.
   for (const item of items) {
@@ -190,9 +188,7 @@ export function setImageGroup(ctx: EditContext, id: Id, group: Id | null): void 
   const map = requireEntry(collectionMap(doc, 'images'), id, 'Image');
   assertUnlocked(map, 'Image', id, 'move it to another group');
   if (group !== null) {
-    assertRefsExist(doc, [{ path: 'group', id: group, target: 'groups' }], () =>
-      anchorableIds(doc),
-    );
+    assertRefsExist(doc, [{ path: 'group', id: group, target: 'groups' }]);
   }
   const current = map.get('group');
   if ((current ?? null) === group) return;

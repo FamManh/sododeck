@@ -1,9 +1,4 @@
-import {
-  imageBox,
-  nodeCanvasPosition,
-  stickyCanvasPosition,
-  type DeckEditor,
-} from '@sododeck/model';
+import { imageBox, nodeCanvasPosition, stickyPosition, type DeckEditor } from '@sododeck/model';
 import type { View } from '@sododeck/schema';
 
 import { readDeck } from '../../model/use-deck-snapshot';
@@ -237,7 +232,7 @@ export function openResult(result: PaletteResult, context: OpenResultContext): b
       const sticky = deck.stickies.find((entry) => entry.id === result.id);
       if (sticky === undefined) break;
       ensureCanvasReady(result, context);
-      const point = stickyCanvasPosition(deck, sticky).point;
+      const point = stickyPosition(sticky);
       context.select(selectionFor(result));
       context.setCenter(point.x, point.y, { zoom: context.getZoom() });
       return true;

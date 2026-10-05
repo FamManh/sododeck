@@ -16,9 +16,8 @@ import {
   stickyBox,
   endpointOf,
   imageBox,
-  stickyCanvasPosition,
   stickyLabel,
-  type StickyPlacement,
+  stickyPosition,
 } from '@sododeck/model';
 import type { TouchAccess } from '@sododeck/model';
 import type { EdgeShape, SododeckFile, Size } from '@sododeck/schema';
@@ -317,9 +316,6 @@ export interface StickyNodeData extends Record<string, unknown> {
   text: string;
   label: string;
   color: StickyObject['color'];
-  status: StickyPlacement['status'];
-  pinnedTo: string | null;
-  pinnedToTitle: string | null;
   collapsed: boolean;
   showInFlows: boolean;
   flowState: StickyFlowState;
@@ -373,7 +369,6 @@ export type CanvasFlowNode =
   | ImageFlowNode;
 export type DeckFlowEdge = Edge<DeckEdgeData, 'deck'>;
 export type MergedFlowEdge = Edge<MergedEdgeData, 'merged'>;
-export type StickyLeaderFlowEdge = Edge<Record<string, never>, 'sticky-leader'>;
 
 export { NODE_SIZE };
 
@@ -390,7 +385,6 @@ export const SCOPE_LABEL_PREFIX = 'scope-label:';
 const SCOPE_LABEL_LIFT = 44;
 export const MERGED_EDGE_PREFIX = 'merged:';
 export const STICKY_NODE_PREFIX = 'sticky:';
-export const STICKY_LEADER_PREFIX = 'sticky-leader:';
 export const IMAGE_NODE_PREFIX = 'image:';
 
 /**
@@ -416,7 +410,6 @@ const edgeCache = new WeakMap<DeckEdgeObject, DeckFlowEdge>();
 const mergedCache = new Map<string, MergedFlowEdge>();
 const bundleCache = new Map<string, MergedFlowEdge>();
 const stickyNodeCache = new WeakMap<StickyObject, StickyFlowNode>();
-const stickyLeaderCache = new WeakMap<StickyObject, StickyLeaderFlowEdge>();
 const imageNodeCache = new WeakMap<ImageObject, ImageFlowNode>();
 let lastStacked: CanvasFlowNode[] = [];
 let lastNodes: CanvasFlowNode[] = [];
@@ -1081,41 +1074,29 @@ export function toFlowNodes(
 export function toStickyNodes(
   deck: SododeckFile,
   selection: Selection,
-  overlay: FlowOverlay = EMPTY_OVERLAY,
-  flow: {
-    flowMode: boolean;
-    notesDisplay: NotesDisplay;
-    emptyFlow: boolean;
-    brokenCurrentStep: boolean;
-  } = {
+  flow: { flowMode: boolean; notesDisplay: NotesDisplay; emptyFlow: boolean } = {
     flowMode: false,
     notesDisplay: 'dimmed',
     emptyFlow: false,
-    brokenCurrentStep: false,
   },
 ): StickyFlowNode[] {
   const selected = new Set(selection.stickies);
-  const titles = new Map(deck.nodes.map((node) => [node.id, node.title]));
   const tagColours = tagColourMap(deck.tagColors);
   return deck.stickies.map((sticky) => {
-    const placement = stickyCanvasPosition(deck, sticky);
-    const pinnedTo = placement.status === 'pinned' ? placement.pinnedTo : null;
-    const pinnedToTitle = pinnedTo === null ? null : (titles.get(pinnedTo) ?? null);
+    const point = stickyPosition(sticky);
     const label = stickyLabel(sticky.text) ?? 'Empty note';
     const collapsed = sticky.collapsed === true;
     const showInFlows = sticky.showInFlows === true;
-    const flowState = stickyFlowState(sticky, placement, {
+    const flowState = stickyFlowState(sticky, {
       flowMode: flow.flowMode,
       display: flow.notesDisplay,
-      currentStepNodes: overlay.nodes,
       emptyFlow: flow.emptyFlow,
-      brokenCurrentStep: flow.brokenCurrentStep,
     });
     const hidden = flowState === 'hidden';
     const locked = sticky.locked === true;
     // A locked note stays put (053); flow mode is view-only.
     const draggable = !flow.flowMode && !locked;
-    const box = stickyBox(sticky, placement.point);
+    const box = stickyBox(sticky, point);
     const size = sticky.size ?? STICKY_DEFAULT_SIZE;
     const tagLooks = cardTagLooks(sticky.tags, tagColours);
     const fontSize = sticky.fontSize;
@@ -1130,14 +1111,11 @@ export function toStickyNodes(
     const cached = stickyNodeCache.get(sticky);
     if (
       cached?.selected === selected.has(sticky.id) &&
-      cached.position.x === placement.point.x &&
-      cached.position.y === placement.point.y &&
+      cached.position.x === point.x &&
+      cached.position.y === point.y &&
       cached.data.label === label &&
       cached.data.text === sticky.text &&
       cached.data.color === sticky.color &&
-      cached.data.status === placement.status &&
-      cached.data.pinnedTo === pinnedTo &&
-      cached.data.pinnedToTitle === pinnedToTitle &&
       cached.data.collapsed === collapsed &&
       cached.data.showInFlows === showInFlows &&
       cached.data.flowState === flowState &&
@@ -1156,7 +1134,7 @@ export function toStickyNodes(
     const flowNode: StickyFlowNode = {
       id: `${STICKY_NODE_PREFIX}${sticky.id}`,
       type: 'sticky',
-      position: placement.point,
+      position: point,
       width: box.width,
       height: box.height,
       zIndex: 1,
@@ -1170,9 +1148,6 @@ export function toStickyNodes(
         text: sticky.text,
         label,
         color: sticky.color,
-        status: placement.status,
-        pinnedTo,
-        pinnedToTitle,
         collapsed,
         showInFlows,
         flowState,
@@ -1365,7 +1340,7 @@ export function toFlowEdges(
       const sticky = stickiesById.get(stickyId);
       if (sticky === undefined) continue;
       notes.set(`${STICKY_NODE_PREFIX}${stickyId}`, {
-        box: stickyBox(sticky, stickyCanvasPosition(deck, sticky).point),
+        box: stickyBox(sticky, stickyPosition(sticky)),
         title: stickyLabel(sticky.text) ?? 'Empty note',
       });
     }
@@ -1838,28 +1813,4 @@ export function toFlowEdges(
     return lastEdges;
   lastEdges = next;
   return next;
-}
-
-export function toLeaderEdges(deck: SododeckFile): StickyLeaderFlowEdge[] {
-  return deck.stickies.flatMap((sticky) => {
-    const placement = stickyCanvasPosition(deck, sticky);
-    if (placement.status !== 'pinned') return [];
-    const cached = stickyLeaderCache.get(sticky);
-    if (
-      cached?.source === placement.pinnedTo &&
-      cached.target === `${STICKY_NODE_PREFIX}${sticky.id}`
-    ) {
-      return [cached];
-    }
-    const leader: StickyLeaderFlowEdge = {
-      id: `${STICKY_LEADER_PREFIX}${sticky.id}`,
-      type: 'sticky-leader',
-      source: placement.pinnedTo,
-      target: `${STICKY_NODE_PREFIX}${sticky.id}`,
-      selectable: false,
-      focusable: false,
-    };
-    stickyLeaderCache.set(sticky, leader);
-    return [leader];
-  });
 }

@@ -31,7 +31,7 @@ const deck = deckOf({
     },
   ],
   stickies: [
-    { id: 'note-1', text: 'Pinned note', anchor: 'svc', position: { x: 24, y: -96 } },
+    { id: 'note-1', text: 'Near the service', position: { x: 24, y: -96 } },
     { id: 'note-2', text: 'Loose note', position: { x: 160, y: 200 } },
   ],
 });
@@ -65,8 +65,8 @@ describe('ConfirmDeleteDialog', () => {
     expect(toJSON(doc).edges).toEqual([]);
     expect(toJSON(doc).stickies.find((sticky) => sticky.id === 'note-1')).toMatchObject({
       id: 'note-1',
-      text: 'Pinned note',
-      position: { x: 25, y: -94 },
+      text: 'Near the service',
+      position: { x: 24, y: -96 },
     });
     expect(useUiStore.getState().selection).toEqual({
       nodes: [],
@@ -75,9 +75,7 @@ describe('ConfirmDeleteDialog', () => {
       stickies: [],
       images: [],
     });
-    expect(
-      screen.getByText(/Deleted Order Service and 2 connections · 1 note unpinned/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Deleted Order Service and 2 connections · /)).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toMatch(/^Deleted Order Service/);
 
     act(() => {
@@ -91,7 +89,7 @@ describe('ConfirmDeleteDialog', () => {
     const { doc, editor } = setup();
     // The Checkout flow loses both of its connections.
     expect(
-      screen.getByText(/1 note unpinned · \d+ new problems? · (⌘Z|Ctrl\+Z) to undo$/),
+      screen.getByText(/2 connections · \d+ new problems? · (⌘Z|Ctrl\+Z) to undo$/),
     ).toBeInTheDocument();
     expect(useUiStore.getState().announcement.text).toMatch(/\d+ new problems?/);
     act(() => {

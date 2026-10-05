@@ -154,12 +154,11 @@ describe('collections', () => {
 
   it('moves a sticky', () => {
     const { doc, editor } = setup(base);
-    const id = editor.add('stickies', { text: 'Note', anchor: 'a' });
+    const id = editor.add('stickies', { text: 'Note', position: { x: 0, y: 0 } });
     editor.update('stickies', id, { position: { x: 5, y: 5 } });
     expect(getObject(doc, 'stickies', id)).toEqual({
       id,
       text: 'Note',
-      anchor: 'a',
       position: { x: 5, y: 5 },
     });
   });
@@ -307,19 +306,14 @@ describe('refused edits (FR-007)', () => {
     expectRefused(doc, 'missing-reference', () =>
       editor.add('flows', { title: 'F', feature: 'zz' }),
     );
-    expectRefused(doc, 'missing-reference', () =>
-      editor.add('stickies', { text: 'x', anchor: 'zz' }),
-    );
   });
 
-  it('accepts a sticky anchored to any kind of object', () => {
-    const { editor } = setup(base);
-    for (const anchor of ['a', 'e1', 'g', 'fl', 's1', 'R-1', 'feat']) {
-      expect(() => editor.add('stickies', { text: 'x', anchor })).not.toThrow();
-    }
+  it('refuses a sticky pinned with the legacy anchor (ADR 0041)', () => {
+    const { doc, editor } = setup(base);
+    expectRefused(doc, 'invalid', () => editor.add('stickies', { text: 'x', anchor: 'a' }));
   });
 
-  it('refuses a sticky with neither anchor nor position', () => {
+  it('refuses a sticky without a position', () => {
     const { doc, editor } = setup(base);
     expectRefused(doc, 'invalid', () => editor.add('stickies', { text: 'x' }));
   });

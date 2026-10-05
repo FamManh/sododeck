@@ -58,7 +58,6 @@ describe('empty groups on the canvas (031 FR-010, FR-011)', () => {
         revealed: new Set(),
         drill: [],
         activeFlowId: null,
-        notesDisplay: 'dimmed',
       },
     });
     expect(scene.groups).toMatchObject([{ id: 'pay', label: 'Payments', count: 0 }]);

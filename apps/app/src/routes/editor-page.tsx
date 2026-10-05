@@ -193,9 +193,12 @@ function EditorShell({ data, opened }: { data: OpenDeckData; opened: DeckDoc }) 
     const used = (readDeck(doc).images ?? []).map((image) => image.asset);
     void sweepBlobs(data.db, data.deckId, used).catch(() => undefined);
   }, [data, doc]);
-  // After storage is attached (effects run in order), so the fitted frames are saved and synced.
+  // After storage is attached (effects run in order), so the fitted frames and the freed notes
+  // are saved and synced. A deck stored before ADR 0041 may still pin notes: they become free
+  // where they are shown.
   useEffect(() => {
     const fitter = createEditor(doc);
+    fitter.freeLegacyStickies();
     fitMissingFrames(fitter, readDeck(doc));
     fitter.destroy();
   }, [doc]);

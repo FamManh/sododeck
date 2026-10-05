@@ -747,16 +747,13 @@ function referenceDetail(p: IntegrityProblem, label: string): string {
   switch (p.kind) {
     case 'cycle':
       return `${label} is inside itself`;
-    case 'ambiguous-anchor':
-      return `${label} is attached to an id used by several objects`;
     case 'detached-rule-input':
       return `${label} has inputs for a rule it doesn't use`;
     case 'duplicate-id':
       return `${label} has the same id as ${p.targetType === 'group' ? 'a group' : p.targetType === 'sticky' ? 'a note' : 'a card'}`;
     case 'missing-reference': {
       if (p.targetType === 'asset') return `${label} uses a picture the deck does not hold`;
-      const what = p.targetType === 'object' ? 'something' : `a ${p.targetType.replace('-', ' ')}`;
-      return `${label} points to ${what} that was deleted`;
+      return `${label} points to a ${p.targetType.replace('-', ' ')} that was deleted`;
     }
   }
 }
