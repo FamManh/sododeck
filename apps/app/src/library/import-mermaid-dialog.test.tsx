@@ -54,9 +54,10 @@ describe('Import Mermaid dialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Import' }));
 
     expect(await screen.findByText('3 components, 2 connections, 1 group')).toBeInTheDocument();
-    const list = screen.getByRole('list', { name: '2 lines skipped' });
-    expect(within(list).getAllByRole('listitem')[0]).toHaveTextContent('style W fill:#fff');
-    expect(within(list).getAllByRole('listitem')[1]).toHaveTextContent('what is this ???');
+    const leftOut = screen.getByRole('region', { name: 'Left out (1)' });
+    expect(within(leftOut).getByRole('listitem')).toHaveTextContent('style W fill:#fff');
+    const unread = screen.getByRole('region', { name: 'Not supported (1)' });
+    expect(within(unread).getByRole('listitem')).toHaveTextContent('what is this ???');
     const [deck] = await liveDecks(db);
     expect(deck).toMatchObject({ name: 'Imported diagram', nodeCount: 3 });
 
@@ -64,7 +65,7 @@ describe('Import Mermaid dialog', () => {
     expect(await screen.findByText(`Editor for ${deck?.id}`)).toBeInTheDocument();
   });
 
-  it('says nothing was skipped for clean text', async () => {
+  it('says everything was imported for clean text', async () => {
     const { user, dialog } = await openDialog();
     await user.click(within(dialog).getByLabelText('Mermaid diagram'));
     await user.paste('sequenceDiagram\n  A->>B: hi\n  B-->>A: ok');
@@ -72,7 +73,7 @@ describe('Import Mermaid dialog', () => {
     expect(
       await screen.findByText('2 components, 2 connections, 1 flow with 2 steps'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Nothing was skipped.')).toBeInTheDocument();
+    expect(screen.getByText('Everything was imported.')).toBeInTheDocument();
   });
 
   it('reads a chosen file into the text box', async () => {

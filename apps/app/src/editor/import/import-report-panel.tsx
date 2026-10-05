@@ -1,11 +1,16 @@
 import type { Id, SododeckFile } from '@sododeck/schema';
 import { Button } from '@sododeck/ui/components/button';
 import { PanelSection } from '@sododeck/ui/components/panel';
-import { Check, Link2, ListTree, Table2, X } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { stringifyReport, type FidelityGroup } from '@sododeck/model';
+import { Check, Copy, Link2, ListTree, Table2, X } from 'lucide-react';
+import { useCallback, type ReactNode } from 'react';
 
+import { CHANGE_MAPPING, SKIP_MAPPING, toFidelityReport } from '../../db/import/fidelity';
 import { collapseSkipped, plural, skipText } from '../../db/import/report-text';
-import type { FkSuggestion, ImportReport } from '../../db/import/types';
+import type { ChangedEntry, FkSuggestion, ImportReport, SkippedEntry } from '../../db/import/types';
+import { CopyFallback } from '../../lib/copy-fallback';
+import { useCopyReport } from '../../lib/copy-report';
+import { FidelityGroups } from '../../library/fidelity-groups';
 import { useEditor } from '../../model/use-editor';
 import { useUiStore } from '../../state/ui-store';
 
@@ -36,8 +41,59 @@ function Chip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   );
 }
 
+/** One skipped statement or one change, as the fidelity groups list them (062). */
+type Row = { skipped: SkippedEntry; changed?: never } | { changed: ChangedEntry; skipped?: never };
+
+const GROUP_LABEL: Record<FidelityGroup, string> = {
+  merged: 'Merged',
+  collapsed: 'Collapsed',
+  'left-out': 'Left out',
+  'not-supported': 'Not supported',
+};
+
+/** A group's rows: skipped statements keep 044's 20-per-reason collapse, then the changes. */
+function GroupRows({ rows, label }: { rows: Row[]; label: string }) {
+  const skipped = rows.flatMap((row) => (row.skipped === undefined ? [] : [row.skipped]));
+  const changed = rows.flatMap((row) => (row.changed === undefined ? [] : [row.changed]));
+  return (
+    <ul aria-label={label} className="flex flex-col gap-2">
+      {collapseSkipped(skipped).map((row, i) =>
+        row.kind === 'entry' ? (
+          <li
+            key={`s${String(i)}`}
+            className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 text-body-sm"
+          >
+            <span className="font-mono text-ink-muted">L{row.entry.line}</span>
+            <span className="truncate font-mono text-ink" title={row.entry.excerpt}>
+              {row.entry.excerpt}
+            </span>
+            <span />
+            <span className="text-ink-secondary">{skipText(row.entry)}</span>
+          </li>
+        ) : (
+          <li key={`s${String(i)}`} className="text-body-sm text-ink-secondary">
+            {row.text}
+          </li>
+        ),
+      )}
+      {changed.map((entry, i) => (
+        <li
+          key={`c${String(i)}`}
+          className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 text-body-sm"
+        >
+          <span className="font-mono text-ink-muted">
+            {entry.line === undefined ? '' : `L${String(entry.line)}`}
+          </span>
+          <span className="text-ink">{entry.detail}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
- * The Import report (044 FR-023, FR-025, frame 139): what was mapped, skipped and changed, and the
+ * The Import report (044 FR-023, FR-025, frame 139): what was mapped; what did not come across as
+ * is, grouped as merged / collapsed / left out / not supported with Copy report (062 US3); and the
  * foreign keys found by name. UI state only; reopened from the ≡ menu until the deck closes.
  * Accepting a suggestion adds the relationship as one undo step; hovering or focusing one lights
  * its column row on the canvas (042's row highlight).
@@ -48,6 +104,11 @@ export function ImportReportPanel({ deck }: { deck: SododeckFile }) {
   const updateSuggestion = useUiStore((s) => s.updateSuggestion);
   const setHoverFocus = useUiStore((s) => s.setHoverFocus);
   const clearHoverFocus = useUiStore((s) => s.clearHoverFocus);
+  const build = useCallback(
+    () => (report === null ? '' : stringifyReport(toFidelityReport(report))),
+    [report],
+  );
+  const copy = useCopyReport(build, 'Copied report');
 
   if (report === null) {
     return (
@@ -105,43 +166,35 @@ export function ImportReportPanel({ deck }: { deck: SododeckFile }) {
         </ul>
       </PanelSection>
 
-      {report.skipped.length > 0 && (
-        <PanelSection label={`Skipped · ${String(report.skipped.length)}`}>
-          <ul aria-label="Skipped" className="flex flex-col gap-2">
-            {collapseSkipped(report.skipped).map((row, i) =>
-              row.kind === 'entry' ? (
-                <li key={i} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 text-body-sm">
-                  <span className="font-mono text-ink-muted">L{row.entry.line}</span>
-                  <span className="truncate font-mono text-ink" title={row.entry.excerpt}>
-                    {row.entry.excerpt}
-                  </span>
-                  <span />
-                  <span className="text-ink-secondary">{skipText(row.entry)}</span>
-                </li>
-              ) : (
-                <li key={i} className="text-body-sm text-ink-secondary">
-                  {row.text}
-                </li>
-              ),
-            )}
-          </ul>
-        </PanelSection>
-      )}
-
-      {report.changed.length > 0 && (
-        <PanelSection label={`Changed · ${String(report.changed.length)}`}>
-          <ul aria-label="Changed" className="flex flex-col gap-2">
-            {report.changed.map((entry, i) => (
-              <li key={i} className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 text-body-sm">
-                <span className="font-mono text-ink-muted">
-                  {entry.line === undefined ? '' : `L${String(entry.line)}`}
-                </span>
-                <span className="text-ink">{entry.detail}</span>
-              </li>
-            ))}
-          </ul>
-        </PanelSection>
-      )}
+      <PanelSection label="Not imported as is">
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="self-start"
+            onClick={() => {
+              void copy.copy();
+            }}
+          >
+            <Copy />
+            Copy report
+          </Button>
+          <FidelityGroups
+            entries={[
+              ...report.skipped.map((entry) => ({
+                group: SKIP_MAPPING[entry.reason].group,
+                entry: { skipped: entry },
+              })),
+              ...report.changed.map((entry) => ({
+                group: CHANGE_MAPPING[entry.kind].group,
+                entry: { changed: entry },
+              })),
+            ]}
+            renderGroup={(rows, group) => <GroupRows rows={rows} label={GROUP_LABEL[group]} />}
+          />
+          {copy.text !== null && <CopyFallback text={copy.text} label="Report as JSON" />}
+        </div>
+      </PanelSection>
 
       {suggestions !== null && (
         <PanelSection

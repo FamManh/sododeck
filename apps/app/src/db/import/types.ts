@@ -109,6 +109,8 @@ export type ChangeKind =
 
 export interface ChangedEntry {
   line?: number;
+  /** `renamed-duplicate`: the line of the first declaration, kept under its name (062). */
+  firstLine?: number;
   /** What changed, e.g. `orders.status` or `orders`. */
   target: string;
   kind: ChangeKind;
