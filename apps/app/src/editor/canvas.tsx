@@ -871,25 +871,27 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <GuidesOverlay />
         <ColumnConnectLine />
       </ReactFlow>
-      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && (
-        <EmptyCanvasCard
-          showImport={deckPacks(fullDeck).includes('database')}
-          {...(deckPacks(fullDeck).includes('database')
-            ? {
-                onAddTable: () => {
-                  const rect = canvasElement()?.getBoundingClientRect();
-                  addTable(
-                    editor,
-                    screenToFlowPosition({
-                      x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
-                      y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
-                    }),
-                  );
-                },
-              }
-            : {})}
-        />
-      )}
+      {fullDeck.nodes.length === 0 &&
+        fullDeck.groups.length === 0 &&
+        (fullDeck.images ?? []).length === 0 && (
+          <EmptyCanvasCard
+            showImport={deckPacks(fullDeck).includes('database')}
+            {...(deckPacks(fullDeck).includes('database')
+              ? {
+                  onAddTable: () => {
+                    const rect = canvasElement()?.getBoundingClientRect();
+                    addTable(
+                      editor,
+                      screenToFlowPosition({
+                        x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+                        y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+                      }),
+                    );
+                  },
+                }
+              : {})}
+          />
+        )}
       {emptyView && (
         <EmptyCanvasCard
           title="No tables match this view"

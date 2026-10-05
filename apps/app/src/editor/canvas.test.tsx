@@ -295,6 +295,22 @@ describe('Canvas', () => {
     expect(screen.queryByRole('heading', { name: 'Start your diagram' })).not.toBeInTheDocument();
   });
 
+  it('hides the empty-canvas card once a picture is on the canvas (055)', () => {
+    const { editor } = renderWithEditor(<Canvas />, deckOf({}));
+    expect(screen.getByRole('heading', { name: 'Start your diagram' })).toBeInTheDocument();
+    act(() => {
+      editor().addImages([
+        {
+          asset: assetId(PNG_1X1),
+          meta: { type: 'image/png', bytes: PNG_1X1.length, width: 1, height: 1, name: 'dot.png' },
+          position: { x: 0, y: 0 },
+          size: { width: 64, height: 64 },
+        },
+      ]);
+    });
+    expect(screen.queryByRole('heading', { name: 'Start your diagram' })).not.toBeInTheDocument();
+  });
+
   it('adds the dropped kind at the drop point, and ignores other drops', () => {
     const { doc } = renderWithEditor(<Canvas />, deckOf({}));
     const canvas = screen.getByLabelText('Diagram canvas');
