@@ -4,18 +4,28 @@
  * about the opened deck. Pure and deterministic (SC-003); the library worker calls it, so nothing
  * here runs on the main thread. Never throws for user input.
  */
-import { FORMAT_VERSION } from '@sododeck/schema';
+import { FORMAT_VERSION, type SododeckFile } from '@sododeck/schema';
 
 import { isRecord } from './convert';
 import { loadDeck, type LoadedDeck } from './deck';
 import { DeckValidationError } from './errors';
 import { CATALOGUE } from './problem-codes';
-import { issueEntry, sortEntries, type ProblemEntry } from './problem-entry';
+import {
+  issueEntry,
+  pictureEntry,
+  problemEntry,
+  sortEntries,
+  type ProblemEntry,
+} from './problem-entry';
+import { checkDeck } from './problems';
 
 export type DeckTextResult =
   /** Refused: nothing may be added. Entries are sorted and never empty. */
   | { ok: false; entries: ProblemEntry[] }
-  /** Loaded. Entries are what the opened deck should say (062 US2); empty for a clean deck. */
+  /**
+   * Loaded. Entries are what the opened deck should say (062 US2): damaged pictures and problems
+   * of severity error or warning, sorted; empty for a clean deck.
+   */
   | { ok: true; loaded: LoadedDeck; entries: ProblemEntry[] };
 
 /** 1-based line and column of a character offset. */
@@ -109,5 +119,14 @@ export function inspectDeckText(text: string): DeckTextResult {
       entries: sortEntries(error.issues.map((issue) => issueEntry(issue, input))),
     };
   }
-  return { ok: true, loaded, entries: [] };
+  // The file passed validation, so it is the deck as loaded, in the user's order: problem paths
+  // point into the file they will fix. Damaged pictures were repaired into placeholders, which
+  // `checkDeck` does not see; they come from the load itself (062 R6). Every problems-list kind is
+  // an error or a warning today; an `info` kind added later must be left out here (062 Q2).
+  const problems = checkDeck(input as SododeckFile).list;
+  return {
+    ok: true,
+    loaded,
+    entries: sortEntries([...loaded.problems.map(pictureEntry), ...problems.map(problemEntry)]),
+  };
 }

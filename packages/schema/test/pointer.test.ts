@@ -46,6 +46,15 @@ describe('comparePointers', () => {
     ]);
   });
 
+  it('orders top-level keys as files write them', () => {
+    expect(sorted(['/assets/x', '/flows/0', '/version', '/nodes/3'])).toEqual([
+      '/version',
+      '/nodes/3',
+      '/flows/0',
+      '/assets/x',
+    ]);
+  });
+
   it('is 0 for equal pointers', () => {
     expect(comparePointers('/a/0', '/a/0')).toBe(0);
   });

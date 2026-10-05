@@ -127,7 +127,33 @@ describe('inspectDeckText: refused files (062 US1)', () => {
   });
 });
 
-describe('inspectDeckText: decks that open', () => {
+describe('inspectDeckText: decks that open (062 US2)', () => {
+  const opened = (text: string): ProblemEntry[] => {
+    const result = inspectDeckText(text);
+    if (!result.ok) throw new Error('expected the file to open');
+    return result.entries;
+  };
+
+  it('lists a damaged picture and a step without connection, in file order', () => {
+    const entries = opened(broken('dangling-step-and-bad-picture.sododeck'));
+    expect(located(entries)).toEqual([
+      ['step-without-connection', '/flows/0/steps/2'],
+      ['picture-damaged', `/assets/${'a'.repeat(64)}`],
+    ]);
+    expect(entries[1]).toMatchObject({
+      severity: 'warning',
+      subject: 'a'.repeat(64),
+      message: 'Picture "logo.png" is damaged: its data does not match its size.',
+    });
+  });
+
+  it.each([
+    ['dangling-connector.sododeck', 'broken-reference', '/edges/2'],
+    ['broken-rule-reference.sododeck', 'missing-rule', '/nodes/2'],
+  ])('%s opens with %s at %s', (file, code, path) => {
+    expect(located(opened(broken(file)))).toEqual([[code, path]]);
+  });
+
   it('opens a clean deck with no entries', () => {
     const result = inspectDeckText(JSON.stringify(emptySododeckFile()));
     expect(result.ok).toBe(true);
