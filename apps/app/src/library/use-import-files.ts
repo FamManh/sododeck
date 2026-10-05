@@ -2,7 +2,7 @@ import { useToast } from '@sododeck/ui/components/toast';
 import { useCallback, type DragEvent } from 'react';
 
 import { LibraryClientError } from '../storage/library-client';
-import { importDeckFile } from './library-actions';
+import { importDeckFile, importedMessage } from './library-actions';
 import type { LibraryCommands } from './use-library-commands';
 
 export function importMessage(error: unknown): string {
@@ -27,8 +27,12 @@ export function useImportFiles(commands: LibraryCommands | null, folderId: strin
         return;
       }
       try {
-        const name = await importDeckFile(commands.ctx, await file.text(), folderId);
-        toast({ message: `Imported "${name}"` });
+        const { name, missingPictures } = await importDeckFile(
+          commands.ctx,
+          await file.text(),
+          folderId,
+        );
+        toast({ message: importedMessage(name, missingPictures) });
       } catch (error) {
         toast({ message: importMessage(error) });
       }

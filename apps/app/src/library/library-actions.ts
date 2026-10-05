@@ -19,6 +19,8 @@ import {
   storeDeckUpdate,
   type LibraryDb,
 } from '../storage/library-db';
+import { getBlobRow, listBlobIds, putBlob } from '../storage/blob-store';
+import type { PictureBytes } from '../storage/library-ops';
 import type { LibraryClient } from '../storage/library-client';
 import type { DeckSummary } from '../storage/deck-summary';
 import type { FolderNameError as FolderNameCode } from '../storage/folder-names';
@@ -38,14 +40,22 @@ async function logOf(ctx: LibraryActionContext, deckId: string) {
   return log;
 }
 
-/** Adds a new deck built by the worker; returns its id. */
+/**
+ * Adds a new deck built by the worker; returns its id. Pictures its file carried are written to
+ * the blob store first, so a deck never exists without the bytes of the pictures it shows (055).
+ */
 export async function addDeck(
   ctx: LibraryActionContext,
-  { bytes, summary }: { bytes: Uint8Array; summary: DeckSummary },
+  {
+    bytes,
+    summary,
+    pictures = [],
+  }: { bytes: Uint8Array; summary: DeckSummary; pictures?: readonly PictureBytes[] },
   folderId: string | null,
 ): Promise<string> {
   const id = crypto.randomUUID();
   const now = clock(ctx);
+  for (const picture of pictures) await putBlob(ctx.db, id, picture.id, picture);
   await insertDeck(
     ctx.db,
     {
@@ -86,7 +96,12 @@ export async function renameDeck(
 export async function duplicateDeck(ctx: LibraryActionContext, deckId: string): Promise<string> {
   const log = await logOf(ctx, deckId);
   const copy = await ctx.client.duplicate(log.bytes, `${log.record.name} copy`);
-  return addDeck(ctx, copy, log.record.folderId);
+  const pictures: PictureBytes[] = [];
+  for (const pictureId of await listBlobIds(ctx.db, deckId)) {
+    const row = await getBlobRow(ctx.db, deckId, pictureId);
+    if (row) pictures.push({ id: row.id, type: row.type, bytes: row.bytes });
+  }
+  return addDeck(ctx, { ...copy, pictures }, log.record.folderId);
 }
 
 export function moveDeckTo(
@@ -161,18 +176,34 @@ export async function renameFolderInline(
 /** Downloads `<name>.sododeck.json`, the model's export of the stored deck (FR-025, FR-027). */
 export async function exportDeckFile(ctx: LibraryActionContext, deckId: string): Promise<void> {
   const log = await logOf(ctx, deckId);
-  const { json, name } = await ctx.client.exportDeck(log.bytes);
+  const pictures = new Map<string, Uint8Array>();
+  for (const pictureId of await listBlobIds(ctx.db, deckId)) {
+    const row = await getBlobRow(ctx.db, deckId, pictureId);
+    if (row) pictures.set(row.id, row.bytes);
+  }
+  const { json, name } = await ctx.client.exportDeck(log.bytes, pictures);
   downloadText(`${safeFileName(name)}.sododeck.json`, json);
   await markExported(ctx.db, deckId, clock(ctx));
 }
 
-/** Imports one file as a new deck (FR-023); returns its name. Worker errors propagate. */
+/**
+ * Imports one file as a new deck (FR-023); returns its name and how many pictures the file could
+ * not supply (they open as "Picture missing", 055). Worker errors propagate.
+ */
 export async function importDeckFile(
   ctx: LibraryActionContext,
   text: string,
   folderId: string | null,
-): Promise<string> {
+): Promise<{ name: string; missingPictures: number }> {
   const imported = await ctx.client.importFile(text);
   await addDeck(ctx, imported, folderId);
-  return imported.summary.name;
+  return { name: imported.summary.name, missingPictures: imported.problems.length };
+}
+
+/** The import toast: names the deck and, once, how many pictures are missing (055). */
+export function importedMessage(name: string, missingPictures: number, suffix = ''): string {
+  const base = `Imported "${name}"${suffix}`;
+  if (missingPictures === 0) return base;
+  const noun = missingPictures === 1 ? 'picture is' : 'pictures are';
+  return `${base}. ${String(missingPictures)} ${noun} missing from the file.`;
 }

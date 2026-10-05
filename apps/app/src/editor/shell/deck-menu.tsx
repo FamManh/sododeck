@@ -24,7 +24,7 @@ import {
 import { useRef } from 'react';
 import { useNavigate } from 'react-router';
 
-import { importDeckFile } from '../../library/library-actions';
+import { importDeckFile, importedMessage } from '../../library/library-actions';
 import { importMessage } from '../../library/use-import-files';
 import { useUiStore } from '../../state/ui-store';
 import { useThemeStore } from '../../theme/theme-store';
@@ -64,13 +64,13 @@ export function DeckMenu() {
       return;
     }
     try {
-      const name = await importDeckFile(
+      const { name, missingPictures } = await importDeckFile(
         { db, client: getLibraryClient() },
         await file.text(),
         null,
       );
       toast({
-        message: `Imported "${name}" into the library`,
+        message: importedMessage(name, missingPictures, ' into the library'),
         action: {
           label: 'Open library',
           onAction: () => {

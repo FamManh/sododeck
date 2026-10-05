@@ -12,7 +12,7 @@ function run(request: LibraryRequest): LibraryResult {
     case 'import':
       return { op: 'import', ...importFile(request.text) };
     case 'export':
-      return { op: 'export', ...exportDeck(request.updates) };
+      return { op: 'export', ...exportDeck(request.updates, request.pictures) };
     case 'rename':
       return { op: 'rename', ...rename(request.updates, request.name) };
     case 'duplicate':
