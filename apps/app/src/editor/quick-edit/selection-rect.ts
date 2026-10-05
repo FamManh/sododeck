@@ -1,5 +1,10 @@
 import type { Selection } from '../../state/ui-store';
-import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX, STICKY_NODE_PREFIX } from '../deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  GROUP_NODE_PREFIX,
+  IMAGE_NODE_PREFIX,
+  STICKY_NODE_PREFIX,
+} from '../deck-to-flow';
 import type { ScreenRect } from './toolbar-placement';
 
 const byId = (kind: 'node' | 'edge', id: string) =>
@@ -15,6 +20,7 @@ export function selectionScreenRect(selection: Selection): ScreenRect | null {
     ...selection.nodes.map((id) => byId('node', id)),
     ...selection.edges.map((id) => byId('edge', id)),
     ...selection.stickies.map((id) => byId('node', `${STICKY_NODE_PREFIX}${id}`)),
+    ...selection.images.map((id) => byId('node', `${IMAGE_NODE_PREFIX}${id}`)),
     ...selection.groups.map(
       (id) =>
         byId('node', `${GROUP_NODE_PREFIX}${id}`) ?? byId('node', `${COLLAPSED_NODE_PREFIX}${id}`),

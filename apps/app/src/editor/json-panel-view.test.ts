@@ -31,7 +31,7 @@ const deck: SododeckFile = {
   ],
 };
 
-const none = { nodes: [], edges: [], groups: [], stickies: [] };
+const none = { nodes: [], edges: [], groups: [], stickies: [], images: [] };
 
 describe('countLines', () => {
   it('counts lines, ignoring a trailing newline', () => {
@@ -57,32 +57,44 @@ describe('selectionView', () => {
   });
 
   it('labels one node with its title', () => {
-    const view = selectionView(deck, { nodes: ['b'], edges: [], groups: [], stickies: [] });
+    const view = selectionView(deck, {
+      nodes: ['b'],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(view.label).toBe('Orders');
     expect(view.fullLabel).toBe('Orders');
     expect(view.entries).toEqual([{ collection: 'nodes', value: deck.nodes[1] }]);
   });
 
   it('labels an edge with its label, or with its end titles', () => {
-    expect(selectionView(deck, { nodes: [], edges: ['e2'], groups: [], stickies: [] }).label).toBe(
-      'writes',
-    );
-    expect(selectionView(deck, { nodes: [], edges: ['e1'], groups: [], stickies: [] }).label).toBe(
-      'Checkout → Orders',
-    );
+    expect(
+      selectionView(deck, { nodes: [], edges: ['e2'], groups: [], stickies: [], images: [] }).label,
+    ).toBe('writes');
+    expect(
+      selectionView(deck, { nodes: [], edges: ['e1'], groups: [], stickies: [], images: [] }).label,
+    ).toBe('Checkout → Orders');
     // A missing end falls back to its id.
-    expect(selectionView(deck, { nodes: [], edges: ['e3'], groups: [], stickies: [] }).label).toBe(
-      'gone → Orders DB',
-    );
+    expect(
+      selectionView(deck, { nodes: [], edges: ['e3'], groups: [], stickies: [], images: [] }).label,
+    ).toBe('gone → Orders DB');
   });
 
   it('labels one sticky with its note label', () => {
-    const view = selectionView(deck, { nodes: [], edges: [], groups: [], stickies: ['s1'] });
+    const view = selectionView(deck, {
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: ['s1'],
+      images: [],
+    });
     expect(view.label).toBe('Follow up');
     expect(view.entries).toEqual([{ collection: 'stickies', value: deck.stickies[0] }]);
-    expect(selectionView(deck, { nodes: [], edges: [], groups: [], stickies: ['s2'] }).label).toBe(
-      'Empty note',
-    );
+    expect(
+      selectionView(deck, { nodes: [], edges: [], groups: [], stickies: ['s2'], images: [] }).label,
+    ).toBe('Empty note');
   });
 
   it('labels a connector that ends on a note with both end labels', () => {
@@ -91,7 +103,8 @@ describe('selectionView', () => {
       edges: [{ id: 'n1', from: 'a', to: 's1' }],
     };
     expect(
-      selectionView(noteDeck, { nodes: [], edges: ['n1'], groups: [], stickies: [] }).label,
+      selectionView(noteDeck, { nodes: [], edges: ['n1'], groups: [], stickies: [], images: [] })
+        .label,
     ).toBe('Checkout → Follow up');
   });
 
@@ -111,7 +124,13 @@ describe('selectionView', () => {
         },
       ],
     };
-    const view = selectionView(rich, { nodes: [], edges: [], groups: [], stickies: ['s1'] });
+    const view = selectionView(rich, {
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: ['s1'],
+      images: [],
+    });
     const parsed: unknown = JSON.parse(selectionText(view.entries));
     expect(parsed).toMatchObject({
       size: { width: 240, height: 160 },
@@ -124,7 +143,13 @@ describe('selectionView', () => {
 
   it('labels one group with its title', () => {
     const groupDeck = deckOf({ groups: [{ id: 'core', title: 'Core services' }] });
-    const view = selectionView(groupDeck, { nodes: [], edges: [], groups: ['core'], stickies: [] });
+    const view = selectionView(groupDeck, {
+      nodes: [],
+      edges: [],
+      groups: ['core'],
+      stickies: [],
+      images: [],
+    });
     expect(view.label).toBe('Core services');
     expect(view.entries).toEqual([{ collection: 'groups', value: groupDeck.groups[0] }]);
   });
@@ -135,6 +160,7 @@ describe('selectionView', () => {
       edges: ['e2'],
       groups: [],
       stickies: ['s2', 's1'],
+      images: [],
     });
     expect(view.label).toBe('6 selected');
     expect(view.entries.map((e) => e.value)).toEqual([
@@ -153,6 +179,7 @@ describe('selectionView', () => {
       edges: ['nope'],
       groups: [],
       stickies: ['x'],
+      images: [],
     });
     expect(view.label).toBe('Checkout');
     expect(view.entries).toHaveLength(1);
@@ -162,13 +189,20 @@ describe('selectionView', () => {
 describe('selectionText', () => {
   it('is empty, one object, or an array', () => {
     expect(selectionText([])).toBe('');
-    const one = selectionView(deck, { nodes: ['a'], edges: [], groups: [], stickies: [] }).entries;
+    const one = selectionView(deck, {
+      nodes: ['a'],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    }).entries;
     expect(selectionText(one)).toBe(serializeEntry('nodes', deck.nodes[0]));
     const many = selectionView(deck, {
       nodes: ['a'],
       edges: ['e1'],
       groups: [],
       stickies: ['s1'],
+      images: [],
     }).entries;
     expect(selectionText(many)).toBe(serializeEntries(many));
   });
@@ -180,7 +214,7 @@ describe('copyToastText', () => {
     expect(
       copyToastText(
         'selection',
-        selectionView(deck, { nodes: ['b'], edges: [], groups: [], stickies: [] }),
+        selectionView(deck, { nodes: ['b'], edges: [], groups: [], stickies: [], images: [] }),
       ),
     ).toBe('Copied Orders JSON');
     expect(
@@ -191,6 +225,7 @@ describe('copyToastText', () => {
           edges: ['e1', 'e2'],
           groups: [],
           stickies: ['s1'],
+          images: [],
         }),
       ),
     ).toBe('Copied 5 items as JSON');
@@ -203,7 +238,7 @@ describe('selectionView for flows (006)', () => {
     edges: [{ id: 'aa', from: 'a', to: 'a' }],
     flows: [{ id: 'f', title: 'Place order', steps: [{ id: 's1', edge: 'aa' }] }],
   });
-  const none = { nodes: [], edges: [], groups: [], stickies: [] };
+  const none = { nodes: [], edges: [], groups: [], stickies: [], images: [] };
 
   it('shows the whole flow, labelled Flow, or Step while a step is selected', () => {
     const view = selectionView(flowDeck, none, openedFlow('f'));
@@ -222,7 +257,7 @@ describe('selectionView for flows (006)', () => {
 });
 
 describe('selectionView in flow mode (007 FR-022)', () => {
-  const none = { nodes: [], edges: [], groups: [], stickies: [] };
+  const none = { nodes: [], edges: [], groups: [], stickies: [], images: [] };
   const order = playbackDeck.flows[0] as SododeckFile['flows'][number];
 
   it('shows the current step entry, labelled with its number', () => {
@@ -259,7 +294,37 @@ describe('selectionView group ends (050 US4)', () => {
       edges: [{ id: 'ag', from: 'a', to: 'g' }],
     });
     expect(
-      selectionView(grouped, { nodes: [], edges: ['ag'], groups: [], stickies: [] }).label,
+      selectionView(grouped, { nodes: [], edges: ['ag'], groups: [], stickies: [], images: [] })
+        .label,
     ).toBe('A → Data layer');
+  });
+});
+
+describe('images in the JSON panel (055)', () => {
+  const asset = 'b'.repeat(64);
+  const withImages: SododeckFile = {
+    ...emptySododeckFile(),
+    images: [
+      { id: 'i1', asset, position: { x: 0, y: 0 }, size: { width: 80, height: 40 }, alt: 'Logo' },
+      { id: 'i2', asset, position: { x: 100, y: 0 }, size: { width: 80, height: 40 } },
+    ],
+    assets: {
+      [asset]: { type: 'image/png', bytes: 90, width: 8, height: 4, name: 'logo.png', data: '' },
+    },
+  };
+
+  it('selects an image by its alt text, else its file name', () => {
+    expect(selectionView(withImages, { ...none, images: ['i1'] }).label).toBe('Logo');
+    expect(selectionView(withImages, { ...none, images: ['i2'] }).label).toBe('logo.png');
+    const both = selectionView(withImages, { ...none, images: ['i1', 'i2'] });
+    expect(both.label).toBe('2 selected');
+    expect(both.entries.map((entry) => entry.collection)).toEqual(['images', 'images']);
+  });
+
+  it('shows the record of a selected image, without picture data', () => {
+    const view = selectionView(withImages, { ...none, images: ['i1'] });
+    const text = selectionText(view.entries);
+    expect(JSON.parse(text)).toMatchObject({ id: 'i1', asset, alt: 'Logo' });
+    expect(text).not.toContain('"data"');
   });
 });

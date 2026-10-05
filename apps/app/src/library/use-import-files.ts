@@ -3,7 +3,7 @@ import { useCallback, type DragEvent } from 'react';
 
 import { diagramType, prepare } from '../import-mermaid/detect';
 import { LibraryClientError } from '../storage/library-client';
-import { importDeckFile } from './library-actions';
+import { importDeckFile, importedMessage } from './library-actions';
 import type { LibraryCommands } from './use-library-commands';
 
 export function importMessage(error: unknown): string {
@@ -48,8 +48,8 @@ export function useImportFiles(
           onMermaid(text);
           return;
         }
-        const name = await importDeckFile(commands.ctx, text, folderId);
-        toast({ message: `Imported "${name}"` });
+        const { name, missingPictures } = await importDeckFile(commands.ctx, text, folderId);
+        toast({ message: importedMessage(name, missingPictures) });
       } catch (error) {
         toast({ message: importMessage(error) });
       }

@@ -15,7 +15,7 @@ import type { RemovalResult } from './ops/cascade';
 /** Something a delete removes: a collection object, a branch of a flow (006) or a rule (008). */
 export type RemovalTarget =
   | {
-      scope: 'nodes' | 'edges' | 'groups' | 'stickies' | 'flows' | 'views' | 'features';
+      scope: 'nodes' | 'edges' | 'groups' | 'stickies' | 'images' | 'flows' | 'views' | 'features';
       id: Id;
     }
   | { scope: 'branches'; flowId: Id; id: Id }
@@ -88,7 +88,7 @@ export function previewRemoval(file: SododeckFile, targets: RemovalTarget[]): Re
   const doc = fromJSON(file);
   const editor = createEditor(doc, { repair: false });
   try {
-    // A locked note or connector cannot be deleted (053), so it is not part of the preview; the
+    // A locked note, image or connector cannot be deleted (053, 055), so it is not part of the preview; the
     // app drops locked targets before it asks.
     const results = editor.batch(() =>
       targets.flatMap((t) => {

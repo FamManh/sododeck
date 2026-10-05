@@ -111,6 +111,7 @@ describe('ui store', () => {
         edges: new Set(),
         groups: new Set(),
         stickies: new Set(),
+        images: new Set(),
       });
       expect(state().columnEdit).toBeNull();
     });
@@ -189,18 +190,42 @@ describe('ui store', () => {
     it('drops a drop target whose group is gone', () => {
       state().setDropTarget('g');
       const none = new Set<string>();
-      state().pruneSelection({ nodes: none, edges: none, groups: new Set(['g']), stickies: none });
+      state().pruneSelection({
+        nodes: none,
+        edges: none,
+        groups: new Set(['g']),
+        stickies: none,
+        images: none,
+      });
       expect(state().dropTarget).toBe('g');
-      state().pruneSelection({ nodes: none, edges: none, groups: none, stickies: none });
+      state().pruneSelection({
+        nodes: none,
+        edges: none,
+        groups: none,
+        stickies: none,
+        images: none,
+      });
       expect(state().dropTarget).toBeNull();
     });
 
     it("keeps a group's connect popover while the group exists (050 US4)", () => {
       state().openConnectPopover('g');
       const none = new Set<string>();
-      state().pruneSelection({ nodes: none, edges: none, groups: new Set(['g']), stickies: none });
+      state().pruneSelection({
+        nodes: none,
+        edges: none,
+        groups: new Set(['g']),
+        stickies: none,
+        images: none,
+      });
       expect(state().popover).toEqual({ kind: 'connect', fromId: 'g' });
-      state().pruneSelection({ nodes: none, edges: none, groups: none, stickies: none });
+      state().pruneSelection({
+        nodes: none,
+        edges: none,
+        groups: none,
+        stickies: none,
+        images: none,
+      });
       expect(state().popover).toBeNull();
     });
 
@@ -223,7 +248,13 @@ describe('ui store', () => {
 
   it('selects, toggles and clears nodes and edges', () => {
     state().select({ nodes: ['a'], groups: ['g'] });
-    expect(state().selection).toEqual({ nodes: ['a'], edges: [], groups: ['g'], stickies: [] });
+    expect(state().selection).toEqual({
+      nodes: ['a'],
+      edges: [],
+      groups: ['g'],
+      stickies: [],
+      images: [],
+    });
     state().toggle('b', 'node');
     state().toggle('e1', 'edge');
     expect(state().selection).toEqual({
@@ -231,11 +262,24 @@ describe('ui store', () => {
       edges: ['e1'],
       groups: ['g'],
       stickies: [],
+      images: [],
     });
     state().toggle('a', 'node');
-    expect(state().selection).toEqual({ nodes: ['b'], edges: ['e1'], groups: ['g'], stickies: [] });
+    expect(state().selection).toEqual({
+      nodes: ['b'],
+      edges: ['e1'],
+      groups: ['g'],
+      stickies: [],
+      images: [],
+    });
     state().clearSelection();
-    expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(state().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
   });
 
   describe('hover focus and fanned bundles (034)', () => {
@@ -332,6 +376,7 @@ describe('ui store', () => {
         edges: none,
         groups: none,
         stickies: none,
+        images: none,
         ports: none,
         bundles: none,
       });
@@ -342,6 +387,7 @@ describe('ui store', () => {
         edges: none,
         groups: none,
         stickies: none,
+        images: none,
         ports: none,
         bundles: none,
       });
@@ -400,6 +446,7 @@ describe('ui store', () => {
       edges: ['e1'],
       groups: ['g', 'gone-group'],
       stickies: ['st1', 'gone-sticky'],
+      images: [],
     });
     state().setStickyEditing('gone-sticky');
     state().setStickyDraft('gone-sticky');
@@ -408,12 +455,14 @@ describe('ui store', () => {
       edges: new Set(['e1']),
       groups: new Set(['g']),
       stickies: new Set(['st1']),
+      images: new Set(),
     });
     expect(state().selection).toEqual({
       nodes: ['a'],
       edges: ['e1'],
       groups: ['g'],
       stickies: ['st1'],
+      images: [],
     });
     expect(state().stickyEditing).toBeNull();
     expect(state().stickyDraft).toBeNull();
@@ -423,6 +472,7 @@ describe('ui store', () => {
       edges: new Set(['e1']),
       groups: new Set(['g']),
       stickies: new Set(['st1']),
+      images: new Set(),
     });
     expect(state().selection).toBe(kept);
   });
@@ -436,6 +486,7 @@ describe('ui store', () => {
       edges: new Set(),
       groups: new Set(),
       stickies: new Set(),
+      images: new Set(),
     });
     expect(state().focusedId).toBeNull();
     expect(state().focusedEdgeId).toBeNull();
@@ -446,6 +497,7 @@ describe('ui store', () => {
       edges: new Set(),
       groups: new Set(),
       stickies: new Set(),
+      images: new Set(),
     });
     expect(state().popover).toBeNull();
   });
@@ -455,7 +507,13 @@ describe('ui store', () => {
     state().setFocusMode(true);
     state().select({ nodes: ['a'] });
     state().drillInto({ kind: 'group', id: 'g', viewport: { x: 1, y: 2, zoom: 0.5 } });
-    expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+    expect(state().selection).toEqual({
+      nodes: [],
+      edges: [],
+      groups: [],
+      stickies: [],
+      images: [],
+    });
     expect(state().focusMode).toBe(false);
     expect(state().drill).toHaveLength(1);
 
@@ -487,7 +545,13 @@ describe('ui store', () => {
       expect([...state().revealed]).toEqual(['a']);
       state().switchView('infra');
       expect(state().currentViewId).toBe('infra');
-      expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+      expect(state().selection).toEqual({
+        nodes: [],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
       expect(state().drill).toEqual([]);
       expect(state().focusMode).toBe(false);
       expect(state().focusedId).toBeNull();
@@ -725,6 +789,7 @@ describe('ui store', () => {
       edges: new Set(),
       groups: new Set(),
       stickies: new Set(),
+      images: new Set(),
     });
     expect(state().jsonPanel.tab).toBe('selection');
   });
@@ -738,7 +803,13 @@ describe('ui store', () => {
     it('shows a flow, a step or a branch, and clears the canvas selection', () => {
       state().select({ nodes: ['a'], edges: ['e'] });
       state().setActiveFlow('f');
-      expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+      expect(state().selection).toEqual({
+        nodes: [],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
       expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: null, branchId: null });
       state().setActiveStep('s1');
       expect(state().activeFlow).toMatchObject({ flowId: 'f', stepId: 's1', branchId: null });
@@ -821,7 +892,13 @@ describe('ui store', () => {
         playing: false,
         speed: 1,
       });
-      expect(state().selection).toEqual({ nodes: [], edges: [], groups: [], stickies: [] });
+      expect(state().selection).toEqual({
+        nodes: [],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      });
       expect(state().drill).toEqual([]);
       expect(state().focusedEdgeId).toBeNull();
       expect(state().popover).toBeNull();
@@ -930,7 +1007,7 @@ describe('ui store', () => {
     state().setLabelsOn(true);
     state().resetForDeck();
     expect(state()).toMatchObject({
-      selection: { nodes: [], edges: [], groups: [], stickies: [] },
+      selection: { nodes: [], edges: [], groups: [], stickies: [], images: [] },
       focusedId: null,
       popover: null,
       pendingDelete: null,
@@ -1056,6 +1133,7 @@ describe('ui store: schema import (044)', () => {
         edges: new Set(),
         groups: new Set(),
         stickies: new Set(),
+        images: new Set(),
       });
       expect(state().tableFilter).toBeNull();
       state().openTableFilter('t1');

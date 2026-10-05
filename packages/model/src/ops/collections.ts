@@ -19,6 +19,7 @@ import { anchorableIds, deckHasId, type IdPrefix } from '../ids';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import { assertNewTableParts, columnEndIssues, tablePatch } from './db-tables';
 import { assertUnlocked } from './node-lock';
+import { nextRank } from './stacking';
 import { applyPatch } from './patch';
 import { allRefsOf, refsOf, stepBranchIssues, stepRefs } from './refs';
 import type { NewObject, Patch } from './types';
@@ -31,6 +32,7 @@ export const PREFIXES = {
   features: 'feature',
   flows: 'flow',
   stickies: 'sticky',
+  images: 'img',
 } as const satisfies Record<Collection, IdPrefix>;
 
 /** What a thrown error names the object as, e.g. `Node "x" does not exist.` */
@@ -42,6 +44,7 @@ export const LABELS = {
   features: 'Feature',
   flows: 'Flow',
   stickies: 'Sticky',
+  images: 'Image',
 } as const satisfies Record<Collection, string>;
 
 /** Input column ids of a rule, for checking step sample inputs. */
@@ -86,6 +89,12 @@ export function addObject<C extends Collection>(
   const id = explicitId ?? ctx.allocate(PREFIXES[c]);
   const object: Record<string, unknown> = { id, ...fields };
   if (c === 'flows' && object.steps === undefined) object.steps = [];
+  // A card added to a deck that ranks its objects (it holds images, or a card has a `z`) lands on
+  // top (055). A deck that does not rank keeps the array position as the whole stack.
+  if (c === 'nodes' && object.z === undefined) {
+    const z = nextRank(doc);
+    if (z !== undefined) object.z = z;
+  }
 
   assertValid(validateObject(c, object));
   const steps = c === 'flows' && Array.isArray(object.steps) ? object.steps.filter(isRecord) : [];

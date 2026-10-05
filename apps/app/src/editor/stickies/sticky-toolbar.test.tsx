@@ -114,7 +114,10 @@ describe('sticky toolbar (053 US3)', () => {
 
     it('goes back to Auto', async () => {
       const { user, doc } = setup(
-        deckOf({ stickies: [{ id: 'a', text: 'x', position: { x: 0, y: 0 }, fontSize: 16 }] }),
+        deckOf({
+          stickies: [{ id: 'a', text: 'x', position: { x: 0, y: 0 }, fontSize: 16 }],
+          images: [],
+        }),
       );
       select('a');
       await user.click(button('Text size: 16'));
@@ -183,9 +186,13 @@ describe('sticky toolbar (053 US3)', () => {
 
   describe('bold and link while editing', () => {
     function renderEditing() {
-      const sticky1 = toStickyNodes(deck, { nodes: [], edges: [], groups: [], stickies: [] }).find(
-        (node) => node.data.stickyId === 's1',
-      );
+      const sticky1 = toStickyNodes(deck, {
+        nodes: [],
+        edges: [],
+        groups: [],
+        stickies: [],
+        images: [],
+      }).find((node) => node.data.stickyId === 's1');
       if (sticky1 === undefined) throw new Error('missing s1');
       const props = sticky1 as unknown as NodeProps<StickyFlowNode>;
       const env = renderWithEditor(
@@ -196,7 +203,7 @@ describe('sticky toolbar (053 US3)', () => {
         deck,
       );
       act(() => {
-        ui().select({ stickies: ['s1'] });
+        ui().select({ stickies: ['s1'], images: [] });
         ui().setStickyEditing('s1');
       });
       return env;
@@ -329,6 +336,7 @@ describe('sticky toolbar (053 US3)', () => {
         deckOf({
           nodes: [{ id: 'svc', type: 'service', title: 'S', position: { x: 0, y: 0 } }],
           stickies: [{ id: 'a', text: 'x', position: { x: 20, y: 20 }, locked: true }],
+          images: [],
         }),
       );
       select('a');

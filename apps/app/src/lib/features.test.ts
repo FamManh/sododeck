@@ -4,6 +4,9 @@ import {
   isApplePlatform,
   isQuotaError,
   supportsClipboardRead,
+  supportsCreateImageBitmap,
+  supportsCryptoSubtle,
+  supportsOffscreenCanvas,
   supportsClipboardWrite,
   supportsFileSystemAccess,
   supportsIdleCallback,
@@ -81,5 +84,55 @@ describe('isApplePlatform', () => {
     expect(isQuotaError(new DOMException('gone', 'NotFoundError'))).toBe(false);
     expect(isQuotaError('QuotaExceededError')).toBe(false);
     expect(isQuotaError(null)).toBe(false);
+  });
+});
+
+describe('picture feature detection (055)', () => {
+  it('detects createImageBitmap, OffscreenCanvas and crypto.subtle', () => {
+    vi.stubGlobal('createImageBitmap', undefined);
+    expect(supportsCreateImageBitmap()).toBe(false);
+    vi.stubGlobal('createImageBitmap', () => Promise.resolve({}));
+    expect(supportsCreateImageBitmap()).toBe(true);
+
+    vi.stubGlobal('OffscreenCanvas', undefined);
+    expect(supportsOffscreenCanvas()).toBe(false);
+    vi.stubGlobal('OffscreenCanvas', function OffscreenCanvas() {});
+    expect(supportsOffscreenCanvas()).toBe(false);
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        convertToBlob() {
+          return Promise.resolve(new Blob());
+        }
+      },
+    );
+    expect(supportsOffscreenCanvas()).toBe(true);
+
+    vi.stubGlobal('crypto', {});
+    expect(supportsCryptoSubtle()).toBe(false);
+    vi.stubGlobal('crypto', { subtle: { digest: () => Promise.resolve(new ArrayBuffer(0)) } });
+    expect(supportsCryptoSubtle()).toBe(true);
+  });
+
+  it('probes AVIF decoding once and caches the answer', async () => {
+    vi.resetModules();
+    const { supportsAvifDecode } = await import('./features');
+    const decode = vi.fn(() => Promise.resolve({ close: vi.fn() }));
+    vi.stubGlobal('createImageBitmap', decode);
+    expect(await supportsAvifDecode()).toBe(true);
+    expect(await supportsAvifDecode()).toBe(true);
+    expect(decode).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports no AVIF when the probe cannot decode or there is no createImageBitmap', async () => {
+    vi.resetModules();
+    const failing = await import('./features');
+    vi.stubGlobal('createImageBitmap', () => Promise.reject(new Error('no avif')));
+    expect(await failing.supportsAvifDecode()).toBe(false);
+
+    vi.resetModules();
+    const missing = await import('./features');
+    vi.stubGlobal('createImageBitmap', undefined);
+    expect(await missing.supportsAvifDecode()).toBe(false);
   });
 });

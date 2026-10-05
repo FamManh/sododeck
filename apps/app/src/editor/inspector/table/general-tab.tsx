@@ -65,7 +65,7 @@ export function GeneralTab({ deck, node }: { deck: SododeckFile; node: Node }) {
       write(patch);
     });
   };
-  const targets = { nodes: [node.id], groups: [], edges: [], stickies: [] };
+  const targets = { nodes: [node.id], groups: [], edges: [], stickies: [], images: [] };
   return (
     <div key={node.id} className="contents">
       <PanelSection className="grid grid-cols-2 gap-3">

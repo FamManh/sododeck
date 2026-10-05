@@ -1,8 +1,16 @@
-import { fromJSON, serializeDeck, toJSON } from '@sododeck/model';
+import {
+  assetId,
+  createEditor,
+  fromJSON,
+  MISSING_DATA,
+  serializeDeck,
+  toJSON,
+} from '@sododeck/model';
 import { emptySododeckFile } from '@sododeck/schema';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 
+import { getBlobRow, listBlobIds, putBlob } from '../storage/blob-store';
 import * as download from '../storage/download';
 import {
   createFolder,
@@ -12,6 +20,7 @@ import {
   type LibraryDb,
 } from '../storage/library-db';
 import { inProcessLibraryClient } from '../test/in-process-library-client';
+import { PNG_1X1 } from '../images/test-pictures';
 import { deckRecord, freshLibraryDb } from '../test/library-fixtures';
 import {
   deleteDeck,
@@ -119,10 +128,80 @@ describe('library actions', () => {
   });
 
   it('imports a file as a new deck in the given folder', async () => {
-    const name = await importDeckFile(ctx, serializeDeck({ ...file, name: 'Imported shop' }), null);
+    const { name } = await importDeckFile(
+      ctx,
+      serializeDeck({ ...file, name: 'Imported shop' }),
+      null,
+    );
     expect(name).toBe('Imported shop');
     const decks = await liveDecks(db);
     expect(decks.map((d) => d.name).sort()).toEqual(['Imported shop', 'Shop']);
+  });
+
+  describe('pictures (055)', () => {
+    const pictureId = assetId(PNG_1X1);
+    const meta = {
+      type: 'image/png' as const,
+      bytes: PNG_1X1.length,
+      width: 1,
+      height: 1,
+      name: 'dot.png',
+    };
+
+    /** A deck file with one image whose picture bytes are `PNG_1X1`. */
+    function imageDeckJson(withBytes = true): string {
+      const doc = fromJSON(file);
+      createEditor(doc).addImages([
+        {
+          asset: pictureId,
+          meta,
+          position: { x: 0, y: 0 },
+          size: { width: 100, height: 100 },
+        },
+      ]);
+      return serializeDeck(doc, withBytes ? new Map([[pictureId, PNG_1X1]]) : new Map());
+    }
+
+    it('imports a file with pictures: the bytes reach the blob store of the new deck', async () => {
+      const result = await importDeckFile(ctx, imageDeckJson(), null);
+      expect(result.missingPictures).toBe(0);
+      const deck = (await liveDecks(db)).find((d) => d.name === 'Shop' && d.id !== 'd1');
+      expect(deck).toBeDefined();
+      const row = await getBlobRow(db, deck?.id ?? '', pictureId);
+      expect(row?.type).toBe('image/png');
+      expect([...(row?.bytes ?? [])]).toEqual([...PNG_1X1]);
+    });
+
+    it('imports a file whose picture data is damaged: opens, counts it, stores nothing', async () => {
+      const damaged = imageDeckJson().replace(/"data": ?"[^"]*"/, `"data":"${MISSING_DATA}"`);
+      const result = await importDeckFile(ctx, damaged, null);
+      expect(result.missingPictures).toBe(1);
+      const ids = (await liveDecks(db)).map((d) => d.id).filter((id) => id !== 'd1');
+      expect(await listBlobIds(db, ids[0] ?? '')).toEqual([]);
+    });
+
+    it('exports the pictures its images use, byte for byte', async () => {
+      const stored = fromJSON(JSON.parse(imageDeckJson(false)));
+      await insertDeck(db, deckRecord('d2', { name: 'Pics' }), Y.encodeStateAsUpdate(stored));
+      await putBlob(db, 'd2', pictureId, { type: 'image/png', bytes: PNG_1X1 });
+      await putBlob(db, 'd2', 'f'.repeat(64), { type: 'image/png', bytes: new Uint8Array([1]) });
+      const spy = vi.spyOn(download, 'downloadText').mockImplementation(() => undefined);
+      await exportDeckFile(ctx, 'd2');
+      const [, json] = spy.mock.calls[0] ?? [];
+      expect(json).toBe(serializeDeck(stored, new Map([[pictureId, PNG_1X1]])));
+    });
+
+    it('duplicates a deck with its pictures under the new deck id', async () => {
+      await insertDeck(
+        db,
+        deckRecord('d2', { name: 'Pics' }),
+        Y.encodeStateAsUpdate(fromJSON(JSON.parse(imageDeckJson(false)))),
+      );
+      await putBlob(db, 'd2', pictureId, { type: 'image/png', bytes: PNG_1X1 });
+      const copyId = await duplicateDeck(ctx, 'd2');
+      expect(await listBlobIds(db, copyId)).toEqual([pictureId]);
+      expect(await listBlobIds(db, 'd2')).toEqual([pictureId]);
+    });
   });
 
   describe('importMermaidDeck', () => {

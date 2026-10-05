@@ -1,5 +1,6 @@
 import type { MermaidImport } from '../import-mermaid/import-mermaid';
 import type { DeckSummary } from './deck-summary';
+import type { ImportedDeck } from './library-ops';
 import { LibraryClientError } from './library-client-error';
 import type {
   LibraryRequest,
@@ -11,10 +12,13 @@ export { LibraryClientError };
 
 export interface LibraryClient {
   create(name: string): Promise<{ bytes: Uint8Array; summary: DeckSummary }>;
-  importFile(text: string): Promise<{ bytes: Uint8Array; summary: DeckSummary }>;
+  importFile(text: string): Promise<ImportedDeck>;
   /** Mermaid text → deck file and report (056); flowcharts still need a layout. */
   importMermaid(text: string): Promise<MermaidImport>;
-  exportDeck(updates: Uint8Array[]): Promise<{ json: string; name: string }>;
+  exportDeck(
+    updates: Uint8Array[],
+    pictures?: Map<string, Uint8Array>,
+  ): Promise<{ json: string; name: string }>;
   rename(updates: Uint8Array[], name: string): Promise<{ delta: Uint8Array; summary: DeckSummary }>;
   duplicate(
     updates: Uint8Array[],
@@ -60,7 +64,7 @@ export function createLibraryClient(): LibraryClient {
     create: (name) => send({ op: 'create', name }),
     importFile: (text) => send({ op: 'import', text }),
     importMermaid: (text) => send({ op: 'importMermaid', text }),
-    exportDeck: (updates) => send({ op: 'export', updates }),
+    exportDeck: (updates, pictures) => send({ op: 'export', updates, pictures }),
     rename: (updates, name) => send({ op: 'rename', updates, name }),
     duplicate: (updates, name) => send({ op: 'duplicate', updates, name }),
     terminate() {

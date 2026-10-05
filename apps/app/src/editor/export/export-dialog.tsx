@@ -56,6 +56,8 @@ import {
 } from './use-export-result';
 
 const JSON_PREVIEW_LINES = 400;
+/** A picture's base64 is one line of millions of characters; the preview shows its start only. */
+const JSON_PREVIEW_WIDTH = 240;
 const FLOW_DELETED = 'The flow was deleted, so the whole deck is shown.';
 const FAILED = "Couldn't create this export";
 
@@ -167,7 +169,12 @@ export function ExportDialog() {
   const jsonPreview = useMemo(
     () =>
       state.format === 'json' && ready !== null && ready.text !== null
-        ? ready.text.split('\n', JSON_PREVIEW_LINES).join('\n')
+        ? ready.text
+            .split('\n', JSON_PREVIEW_LINES)
+            .map((line) =>
+              line.length > JSON_PREVIEW_WIDTH ? `${line.slice(0, JSON_PREVIEW_WIDTH)}…` : line,
+            )
+            .join('\n')
         : null,
     [state.format, ready],
   );

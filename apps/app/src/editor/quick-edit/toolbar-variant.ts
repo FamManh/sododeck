@@ -9,6 +9,8 @@ export type ToolbarVariant =
   | 'group'
   | 'sticky'
   | 'stickies'
+  | 'image'
+  | 'images'
   | 'mixed'
   | 'none';
 

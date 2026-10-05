@@ -6,6 +6,22 @@ import { useEffect, useRef, useState } from 'react';
 export const DECK_TEXT_THROTTLE_MS = 250;
 
 /**
+ * The Deck tab's text (055): the exported file, minus picture data. The snapshot holds no picture
+ * bytes, so `data` would only say "missing" and rewrite the stored size, and a real one is
+ * megabytes of base64. A placeholder keeps the model from replacing the entry; `data` is the last
+ * key of an asset, so dropping its line leaves valid JSON.
+ */
+export function deckPanelText(deck: SododeckFile): string {
+  if (deck.images === undefined || deck.assets === undefined) return serializeDeck(deck);
+  const assets = Object.fromEntries(
+    Object.entries(deck.assets).map(([id, asset]) => [id, { ...asset, data: PANEL_DATA }]),
+  );
+  return serializeDeck({ ...deck, assets }).replace(/,\n\s*"data": "x"(?=\n)/g, '');
+}
+
+const PANEL_DATA = 'x';
+
+/**
  * The Deck tab text: `serializeDeck` of the snapshot, the exact exported file. Serializes only
  * while `enabled` (the Deck tab is visible and the panel open), at most once every 250 ms, with a
  * leading and a trailing update so the final state always lands. The leading update runs in the
@@ -29,7 +45,7 @@ export function useThrottledDeckText(deck: SododeckFile, enabled: boolean): stri
     const run = () => {
       shown.current = deck;
       lastRun.current = Date.now();
-      setText(serializeDeck(deck));
+      setText(deckPanelText(deck));
     };
     const wait = justEnabled ? 0 : lastRun.current + DECK_TEXT_THROTTLE_MS - Date.now();
     if (wait <= 0) {

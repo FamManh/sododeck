@@ -51,6 +51,18 @@ export interface FolderRecord {
   deletedAt: number | null;
 }
 
+/**
+ * One stored picture (055 R4). `id` is the SHA-256 of `bytes`, so a row never changes and cannot
+ * drift from the document. Bytes live here, outside Yjs, so autosave and sync stay small.
+ */
+export interface BlobRow {
+  deckId: string;
+  id: string;
+  /** One of the six allowed picture types (e.g. `image/png`). */
+  type: string;
+  bytes: Uint8Array;
+}
+
 export interface UpdateRow {
   seq: number;
   deckId: string;
@@ -77,6 +89,7 @@ export class LibraryDb extends Dexie {
   decks!: EntityTable<DeckRecord, 'id'>;
   folders!: EntityTable<FolderRecord, 'id'>;
   updates!: EntityTable<UpdateRow, 'seq'>;
+  blobs!: Dexie.Table<BlobRow, [string, string]>;
 
   constructor(name = 'sododeck-library') {
     super(name);
@@ -103,6 +116,8 @@ export class LibraryDb extends Dexie {
             deck.thumb ??= null;
           }),
       );
+    // v3 (055): pictures, keyed per deck so duplicate and delete are row copies and deletes.
+    this.version(3).stores({ blobs: '[deckId+id], deckId' });
   }
 }
 
@@ -283,15 +298,23 @@ export async function restoreFolder(db: LibraryDb, id: string, deckIds: string[]
 
 /** Makes deletes final (called once per app start): records, their updates, folders. */
 export async function purgeDeleted(db: LibraryDb): Promise<void> {
-  const purged = await db.transaction('rw', db.decks, db.updates, db.folders, async () => {
-    const decks = await db.decks.filter((d) => d.deletedAt !== null).primaryKeys();
-    if (decks.length > 0) {
-      await db.updates.where('deckId').anyOf(decks).delete();
-      await db.decks.bulkDelete(decks);
-    }
-    await db.folders.filter((f) => f.deletedAt !== null).delete();
-    return decks;
-  });
+  const purged = await db.transaction(
+    'rw',
+    db.decks,
+    db.updates,
+    db.folders,
+    db.blobs,
+    async () => {
+      const decks = await db.decks.filter((d) => d.deletedAt !== null).primaryKeys();
+      if (decks.length > 0) {
+        await db.updates.where('deckId').anyOf(decks).delete();
+        await db.blobs.where('deckId').anyOf(decks).delete();
+        await db.decks.bulkDelete(decks);
+      }
+      await db.folders.filter((f) => f.deletedAt !== null).delete();
+      return decks;
+    },
+  );
   // UI preferences of a deck (018) must not outlive it.
   for (const id of purged) removeShellPrefs(id);
 }

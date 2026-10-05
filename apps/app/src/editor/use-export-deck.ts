@@ -1,6 +1,8 @@
 import { serializeDeck } from '@sododeck/model';
 import { useCallback } from 'react';
 
+import { readPictureBytes } from '../images/read-pictures';
+import { usePictureStore } from '../images/picture-store';
 import { readDeck } from '../model/use-deck-snapshot';
 import { useEditor } from '../model/use-editor';
 import { deckFileName, downloadText } from '../storage/download';
@@ -13,9 +15,13 @@ import { useSaveControls } from './save-context';
 export function useExportDeck(): () => void {
   const editor = useEditor();
   const { markExported } = useSaveControls();
+  const store = usePictureStore();
   return useCallback(() => {
     const file = readDeck(editor.doc);
-    downloadText(deckFileName(file.name ?? 'Untitled deck'), serializeDeck(file));
-    markExported();
-  }, [editor, markExported]);
+    // The pictures its images use go into the file (055); a deck without images skips the read.
+    void readPictureBytes(store, file).then((pictures) => {
+      downloadText(deckFileName(file.name ?? 'Untitled deck'), serializeDeck(file, pictures));
+      markExported();
+    });
+  }, [editor, markExported, store]);
 }

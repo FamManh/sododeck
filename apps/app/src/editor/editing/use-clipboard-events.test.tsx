@@ -1,7 +1,9 @@
-import { toJSON } from '@sododeck/model';
-import { act, fireEvent, renderHook, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { assetId, toJSON } from '@sododeck/model';
+import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { IngestPorts } from '../../images/ingest';
+import { PNG_1X1 } from '../../images/test-pictures';
 import { useUiStore } from '../../state/ui-store';
 import { actionDeck } from '../../test/action-fixtures';
 import { editorWrapper } from '../../test/render-canvas';
@@ -18,6 +20,8 @@ function clipboardData(text = '') {
       data.set(type, value);
     },
     getData: (type: string) => data.get(type) ?? '',
+    files: [] as File[],
+    items: [] as DataTransferItem[],
     text: () => data.get('text/plain') ?? '',
   };
 }
@@ -142,5 +146,104 @@ describe('copy, cut and paste events on the canvas (016 R9)', () => {
     });
     fireEvent.copy(document.body, { clipboardData: null });
     expect(await screen.findByText('Could not use the clipboard')).toBeInTheDocument();
+  });
+
+  describe('pictures (055)', () => {
+    const ports: IngestPorts = {
+      decode: () => Promise.resolve({ width: 80, height: 40 }),
+      encode: (bytes) => Promise.resolve({ bytes, type: 'image/png' }),
+      digest: (bytes) => Promise.resolve(assetId(bytes)),
+    };
+    const png = () => new File([PNG_1X1.slice().buffer], 'shot.png', { type: 'image/png' });
+
+    /** A paste that carries files (and maybe text). */
+    function pasteFiles(files: File[], text = '', target: Element = document.body) {
+      const data = { ...clipboardData(text), files };
+      return !fireEvent.paste(target, { clipboardData: data });
+    }
+
+    function setupImages() {
+      const env = editorWrapper(actionDeck, { imagePorts: ports });
+      renderHook(
+        () => {
+          useClipboardEvents();
+        },
+        { wrapper: env.wrapper },
+      );
+      return env;
+    }
+
+    it('adds a pasted picture at the pointer and selects it, as one undo step', async () => {
+      const { doc, editor } = setupImages();
+      act(() => {
+        ui().setCanvasPointer({ x: 400, y: 300 });
+      });
+      expect(pasteFiles([png()])).toBe(true);
+      await waitFor(() => {
+        expect(toJSON(doc).images).toHaveLength(1);
+      });
+      const [image] = toJSON(doc).images ?? [];
+      expect(image?.position).toEqual({ x: 360, y: 280 });
+      expect(ui().selection.images).toEqual([image?.id]);
+      act(() => {
+        editor().undo();
+      });
+      expect(toJSON(doc).images).toBeUndefined();
+    });
+
+    it('lets the picture win when text comes with it', async () => {
+      const { doc } = setupImages();
+      expect(pasteFiles([png()], '{"sododeckFragment":1}')).toBe(true);
+      await waitFor(() => {
+        expect(toJSON(doc).images).toHaveLength(1);
+      });
+      expect(toJSON(doc).nodes).toHaveLength(4);
+    });
+
+    it('ignores a picture pasted into a text field, and files that are not pictures', async () => {
+      const { doc, store } = setupImages();
+      const put = vi.spyOn(store, 'put');
+      const input = document.createElement('input');
+      document.body.append(input);
+      expect(pasteFiles([png()], '', input)).toBe(false);
+      expect(pasteFiles([new File(['x'], 'notes.txt', { type: 'text/plain' })])).toBe(false);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(toJSON(doc).images).toBeUndefined();
+      expect(put).not.toHaveBeenCalled();
+      input.remove();
+    });
+
+    it('refuses a pasted picture in view-only modes', async () => {
+      const { doc } = setupImages();
+      act(() => {
+        useUiStore.setState({
+          activeFlow: {
+            flowId: 'f',
+            stepId: null,
+            branchId: null,
+            alternativeId: null,
+            playing: false,
+            speed: 1,
+          },
+        });
+      });
+      expect(pasteFiles([png()])).toBe(false);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(toJSON(doc).images).toBeUndefined();
+    });
+
+    it('says why a pasted picture of an unsupported type is refused', async () => {
+      const { doc } = setupImages();
+      const bmp = new File([new Uint8Array([0x42, 0x4d, 0, 0, 0, 0])], 'old.bmp', {
+        type: 'image/bmp',
+      });
+      expect(pasteFiles([bmp])).toBe(true);
+      expect(
+        await screen.findByText(
+          'old.bmp: type not supported (use PNG, JPEG, WebP, GIF, SVG or AVIF).',
+        ),
+      ).toBeInTheDocument();
+      expect(toJSON(doc).images).toBeUndefined();
+    });
   });
 });

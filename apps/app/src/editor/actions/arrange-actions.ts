@@ -1,57 +1,113 @@
-import { ArrowDownToLine, ArrowUpToLine, Layers2 } from 'lucide-react';
+import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine, Layers2 } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { LOCKED_HINT } from '../lock';
 import { oneStep } from '../fields/one-step';
-import { arrangeOrder, reorderSteps } from './arrange-order';
 import type { Action, ActionContext } from './types';
 
-/** Moves the selected components to the end (front) or start (back) of `deck.nodes`: one step. */
-function arrange(ctx: ActionContext, direction: 'front' | 'back') {
-  const order = ctx.deck.nodes.map((node) => node.id);
-  const steps = reorderSteps(order, arrangeOrder(order, ctx.selection.nodes, direction));
-  if (steps.length === 0) return;
+type Move = 'front' | 'back' | 'forward' | 'backward';
+
+const DONE: Record<Move, string> = {
+  front: 'brought to front',
+  back: 'sent to back',
+  forward: 'brought forward',
+  backward: 'sent backward',
+};
+
+/** The picked pictures that are not locked: a locked picture keeps its place in the stack (055). */
+const freeImages = (ctx: ActionContext) => {
+  const locked = new Set(
+    (ctx.deck.images ?? []).filter((image) => image.locked === true).map((image) => image.id),
+  );
+  return ctx.selection.images.filter((id) => !locked.has(id));
+};
+
+/**
+ * Stacking over cards and pictures together (019 FR-037, 055 R2): one shared order, so a picture
+ * can sit above one card and below another. One undo step; locked pictures are left out.
+ */
+function arrange(ctx: ActionContext, move: Move) {
+  const nodes = ctx.selection.nodes;
+  const images = freeImages(ctx);
+  if (nodes.length + images.length === 0) return;
   oneStep(ctx.editor, () => {
-    ctx.editor.batch(() => {
-      for (const { id, index } of steps) ctx.editor.reorder('nodes', id, index);
-    });
+    const targets = { nodes, images };
+    if (move === 'front') ctx.editor.bringToFront(targets);
+    else if (move === 'back') ctx.editor.sendToBack(targets);
+    else if (move === 'forward') ctx.editor.bringForward(targets);
+    else ctx.editor.sendBackward(targets);
   });
-  const n = ctx.selection.nodes.length;
+  const n = nodes.length + images.length;
+  const only = nodes.length === 0 ? 'Image' : images.length === 0 ? 'Component' : 'Item';
   useUiStore
     .getState()
-    .announce(
-      `${n === 1 ? 'Component' : `${String(n)} components`} ${direction === 'front' ? 'brought to front' : 'sent to back'}`,
-    );
+    .announce(`${n === 1 ? only : `${String(n)} ${only.toLowerCase()}s`} ${DONE[move]}`);
 }
 
-/** Arrange ▸ Bring to front / Send to back (019 FR-037). */
+const MENU_KINDS = ['component', 'components', 'image', 'images', 'mixed'] as const;
+const TOOLBAR_KINDS = ['image', 'images'] as const;
+
+/** Why stacking is refused: every picked picture is locked and nothing else is picked. */
+const lockedReason = (ctx: ActionContext) =>
+  ctx.selection.nodes.length === 0 &&
+  ctx.selection.images.length > 0 &&
+  freeImages(ctx).length === 0
+    ? LOCKED_HINT
+    : null;
+
+const applies = (ctx: ActionContext) =>
+  ctx.selection.nodes.length + ctx.selection.images.length > 0;
+
+const child = (id: string, label: string, icon: Action['icon'], move: Move): Action => ({
+  id,
+  label,
+  icon,
+  section: 'arrange',
+  where: {},
+  disabledReason: lockedReason,
+  run: (ctx) => {
+    arrange(ctx, move);
+  },
+});
+
+/** Arrange ▸ Bring to front / Bring forward / Send backward / Send to back (019 FR-037, 055). */
 export const ARRANGE_ACTIONS: readonly Action[] = [
   {
     id: 'arrange',
     label: 'Arrange',
     icon: Layers2,
     section: 'arrange',
-    where: { menu: ['component', 'components'] },
+    where: { menu: MENU_KINDS },
+    applies,
     children: () => [
-      {
-        id: 'arrange.front',
-        label: 'Bring to front',
-        icon: ArrowUpToLine,
-        section: 'arrange',
-        where: {},
-        run: (ctx) => {
-          arrange(ctx, 'front');
-        },
-      },
-      {
-        id: 'arrange.back',
-        label: 'Send to back',
-        icon: ArrowDownToLine,
-        section: 'arrange',
-        where: {},
-        run: (ctx) => {
-          arrange(ctx, 'back');
-        },
-      },
+      child('arrange.front', 'Bring to front', ArrowUpToLine, 'front'),
+      child('arrange.forward', 'Bring forward', ArrowUp, 'forward'),
+      child('arrange.backward', 'Send backward', ArrowDown, 'backward'),
+      child('arrange.back', 'Send to back', ArrowDownToLine, 'back'),
     ],
+  },
+  {
+    id: 'arrange.toolbar.forward',
+    label: 'Bring forward',
+    icon: ArrowUp,
+    section: 'arrange',
+    where: { toolbar: TOOLBAR_KINDS },
+    applies,
+    disabledReason: lockedReason,
+    run: (ctx) => {
+      arrange(ctx, 'forward');
+    },
+  },
+  {
+    id: 'arrange.toolbar.backward',
+    label: 'Send backward',
+    icon: ArrowDown,
+    section: 'arrange',
+    where: { toolbar: TOOLBAR_KINDS },
+    applies,
+    disabledReason: lockedReason,
+    run: (ctx) => {
+      arrange(ctx, 'backward');
+    },
   },
 ];

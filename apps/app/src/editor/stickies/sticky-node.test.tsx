@@ -38,7 +38,7 @@ function stickyProps(
 ): NodeProps<StickyFlowNode> {
   const sticky = toStickyNodes(
     file,
-    { nodes: [], edges: [], groups: [], stickies: [] },
+    { nodes: [], edges: [], groups: [], stickies: [], images: [] },
     overlay,
     flow,
   ).find((node) => node.data.stickyId === stickyId);

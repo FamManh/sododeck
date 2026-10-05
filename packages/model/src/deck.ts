@@ -64,9 +64,17 @@ import {
   type DeckDoc,
   type ObjectOf,
 } from './layout';
+import {
+  attachAssets,
+  metaOf,
+  repairAssets,
+  type AssetBytes,
+  type AssetMeta,
+  type AssetProblem,
+} from './assets';
 import { checkDuplicateIds } from './load-checks';
 import { keysBetween } from './order-key';
-import { readCollection, readMeta, readObject, readRule, readRules } from './read';
+import { readAssets, readCollection, readMeta, readObject, readRule, readRules } from './read';
 import { blankKey } from './text';
 import { createEnum, createField, createObject, createRule } from './write';
 
@@ -87,11 +95,41 @@ export function createDeck(): DeckDoc {
   } satisfies SododeckFile);
 }
 
+/** A deck loaded from a file: the document, the picture bytes and the pictures that were damaged. */
+export interface LoadedDeck {
+  doc: DeckDoc;
+  /** Bytes of every sound picture, by picture id; the app writes them to its blob store. */
+  bytes: Map<string, Uint8Array>;
+  /** Pictures whose data in the file could not be used: shown as missing, never an error (055). */
+  problems: AssetProblem[];
+}
+
 /**
- * Validates `input` against the v1 schema and loads it into a new Y.Doc.
+ * Validates `input` against the v1 schema and loads it into a new Y.Doc, returning the picture
+ * bytes next to it (055). A picture whose data is damaged (bad base64, wrong size, hash that is
+ * not its id, type outside the allow-list, over 5 MiB) does not refuse the file: it is listed in
+ * `problems` and its images show a placeholder. The document never holds picture bytes.
+ * @throws DeckValidationError when the input is not a valid v1 file.
+ */
+export function loadDeck(input: unknown): LoadedDeck {
+  const repaired = repairAssets(input);
+  return {
+    doc: buildDoc(repaired.input, repaired.metas),
+    bytes: repaired.bytes,
+    problems: repaired.problems,
+  };
+}
+
+/**
+ * Validates `input` against the v1 schema and loads it into a new Y.Doc. Picture bytes are not
+ * returned: callers that handle pictures use `loadDeck`.
  * @throws DeckValidationError when the input is not a valid v1 file.
  */
 export function fromJSON(input: unknown): DeckDoc {
+  return loadDeck(input).doc;
+}
+
+function buildDoc(input: unknown, metas: ReadonlyMap<string, AssetMeta> = new Map()): DeckDoc {
   const parsed = parseSododeckFile(input);
   if (!parsed.success) throw new DeckValidationError(parsed.issues);
   const file = parsed.data;
@@ -146,6 +184,14 @@ export function fromJSON(input: unknown): DeckDoc {
     }
     // Grouping mode (048): a plain scalar, only when the file has it, like `dialect`.
     if (file.groupingMode !== undefined) meta.set('groupingMode', file.groupingMode);
+    // Pictures (055): what the document stores about each one, lazy like `packs`. No bytes.
+    if (file.assets !== undefined && Object.keys(file.assets).length > 0) {
+      const assets = new Y.Map<YObject>();
+      for (const [id, asset] of Object.entries(file.assets)) {
+        assets.set(id, toY(metas.get(id) ?? metaOf(asset)) as YObject);
+      }
+      meta.set('assets', assets as unknown as YValue);
+    }
     // Table display (041, R4): always present like `tagColors`, emitted only with entries.
     meta.set('tableDisplay', toY(file.tableDisplay ?? {}));
     // Relationship display (042): the same, so a first write on two tabs shares one map.
@@ -153,7 +199,7 @@ export function fromJSON(input: unknown): DeckDoc {
 
     for (const name of COLLECTIONS) {
       const list = collectionMap(doc, name);
-      const items = file[name];
+      const items: readonly ObjectOf<Collection>[] = file[name] ?? [];
       const keys = keysBetween(null, null, items.length);
       items.forEach((item, i) => {
         list.set(
@@ -174,8 +220,14 @@ export function fromJSON(input: unknown): DeckDoc {
   return doc;
 }
 
-/** Reads the document back into a plain `.sododeck.json` object in canonical key order. */
+/**
+ * Reads the document back into a plain `.sododeck.json` object in canonical key order. `images` and
+ * `assets` are present only when the deck has images; `assets` entries carry `data: ''` because the
+ * document holds no picture bytes (`serializeDeck` fills them).
+ */
 export function toJSON(doc: DeckDoc): SododeckFile {
+  const images = readCollection(doc, 'images');
+  const assets = readAssets(doc, images);
   return canonicalize({
     ...readMeta(doc),
     nodes: readCollection(doc, 'nodes'),
@@ -186,12 +238,19 @@ export function toJSON(doc: DeckDoc): SododeckFile {
     flows: readCollection(doc, 'flows'),
     rules: readRules(doc),
     stickies: readCollection(doc, 'stickies'),
+    ...(images.length === 0 ? {} : { images }),
+    ...(assets === undefined ? {} : { assets }),
   } as SododeckFile);
 }
 
-/** Serializes a file for saving/export, in canonical key order so git diffs show only edits. */
-export function serializeDeck(file: SododeckFile): string {
-  return `${JSON.stringify(canonicalize(file), null, 2)}\n`;
+/**
+ * Serializes a file or a document for saving/export, in canonical key order so git diffs show
+ * only edits. With `bytes` (picture id → bytes) each used picture's base64 `data` is written;
+ * a picture without bytes is written as missing, and pictures no image uses are dropped (055).
+ */
+export function serializeDeck(source: SododeckFile | DeckDoc, bytes?: AssetBytes): string {
+  const file = source instanceof Y.Doc ? toJSON(source) : source;
+  return `${JSON.stringify(canonicalize(attachAssets(file, bytes)), null, 2)}\n`;
 }
 
 /** Reads one object of a collection as plain data. */

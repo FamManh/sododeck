@@ -7,10 +7,12 @@ import {
   createEditor,
   DeckValidationError,
   fromJSON,
+  loadDeck,
   NEW_DECK_PACKS,
   isLegacyLayout,
   serializeDeck,
   toJSON,
+  type AssetProblem,
   type DeckDoc,
 } from '@sododeck/model';
 import { emptySododeckFile, FORMAT_VERSION, type SododeckFile } from '@sododeck/schema';
@@ -48,6 +50,19 @@ export interface DeckBytes {
   summary: DeckSummary;
 }
 
+/** One picture's bytes, ready for the blob store (055 R4). */
+export interface PictureBytes {
+  id: string;
+  type: string;
+  bytes: Uint8Array;
+}
+
+/** An imported deck: the document plus the pictures its file carried and any it could not use. */
+export interface ImportedDeck extends DeckBytes {
+  pictures: PictureBytes[];
+  problems: AssetProblem[];
+}
+
 const IMPORTED_NAME = 'Imported deck';
 
 /**
@@ -68,6 +83,17 @@ function fromFile(file: SododeckFile): DeckBytes {
   return { bytes: Y.encodeStateAsUpdate(doc), summary: summarizeDeck(toJSON(doc)) };
 }
 
+/** The sound pictures of a loaded file, typed from the document's asset list. */
+function picturesOf(doc: DeckDoc, bytes: ReadonlyMap<string, Uint8Array>): PictureBytes[] {
+  const assets = toJSON(doc).assets ?? {};
+  const pictures: PictureBytes[] = [];
+  for (const [id, data] of bytes) {
+    const meta = assets[id];
+    if (meta !== undefined) pictures.push({ id, type: meta.type, bytes: data });
+  }
+  return pictures;
+}
+
 function checkName(name: string): string {
   const trimmed = name.trim();
   if (trimmed === '') throw new LibraryOpError('invalid-name', 'A deck name cannot be empty.');
@@ -80,7 +106,7 @@ export function create(name: string): DeckBytes {
 }
 
 /** Parses and validates one `.sododeck.json` file (FR-023, FR-024). */
-export function importFile(text: string): DeckBytes {
+export function importFile(text: string): ImportedDeck {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -97,8 +123,10 @@ export function importFile(text: string): DeckBytes {
     throw new LibraryOpError('unsupported-version', 'The file format is newer than this app.');
   }
   let doc: DeckDoc;
+  let loaded: ReturnType<typeof loadDeck>;
   try {
-    doc = fromJSON(parsed);
+    loaded = loadDeck(parsed);
+    doc = loaded.doc;
   } catch (error) {
     if (error instanceof DeckValidationError) {
       throw new LibraryOpError('invalid-deck', 'The file is not a valid deck.');
@@ -107,7 +135,12 @@ export function importFile(text: string): DeckBytes {
   }
   // A library deck always has a name; a nameless file gets one (and keeps it on export).
   if (toJSON(doc).name === undefined) createEditor(doc).updateMeta({ name: IMPORTED_NAME });
-  return { bytes: Y.encodeStateAsUpdate(doc), summary: summarizeDeck(toJSON(doc)) };
+  return {
+    bytes: Y.encodeStateAsUpdate(doc),
+    summary: summarizeDeck(toJSON(doc)),
+    pictures: picturesOf(doc, loaded.bytes),
+    problems: loaded.problems,
+  };
 }
 
 /**
@@ -126,10 +159,16 @@ export function importMermaid(text: string): MermaidImport {
   }
 }
 
-/** The model's export of a stored deck (FR-025). */
-export function exportDeck(updates: readonly Uint8Array[]): { json: string; name: string } {
+/**
+ * The model's export of a stored deck (FR-025). `pictures` are the deck's blob rows: the file
+ * embeds those its images use, and a picture with no bytes is written as missing (055).
+ */
+export function exportDeck(
+  updates: readonly Uint8Array[],
+  pictures: ReadonlyMap<string, Uint8Array> = new Map(),
+): { json: string; name: string } {
   const file = toJSON(load(updates));
-  return { json: serializeDeck(file), name: file.name ?? 'Untitled deck' };
+  return { json: serializeDeck(file, pictures), name: file.name ?? 'Untitled deck' };
 }
 
 /** Renames through the model (research R6); returns only the change, to append to the log. */

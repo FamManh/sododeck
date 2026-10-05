@@ -5,6 +5,8 @@ import {
   isDbTable,
   relationshipDisplayOf,
   type Geometry,
+  imageBox,
+  stackOrder,
   stickyBox,
   stickyCanvasPosition,
   stickyLabel,
@@ -31,6 +33,7 @@ import {
   COLLAPSED_NODE_PREFIX,
   exportPortRects,
   GROUP_NODE_PREFIX,
+  IMAGE_NODE_PREFIX,
   STICKY_NODE_PREFIX,
   groupCounts,
 } from '../deck-to-flow';
@@ -219,6 +222,23 @@ export interface SceneSticky {
   /** The tag chips along the bottom, `x` from the text's left edge; the last may be the "+N" chip. */
   tagChips: readonly (TagChip & { chip: string; ink: string })[];
 }
+/** A picture on the canvas (055): its box, the picture's id and what a viewer without it needs. */
+export interface SceneImage {
+  id: string;
+  /** The picture's content id: the key of the bytes (`assets`), never of the document. */
+  asset: string;
+  rect: Rect;
+  alt: string | null;
+  caption: string | null;
+  fileName: string;
+  /** The deck does not know the picture (no `assets` entry): drawn as the "missing" placeholder. */
+  placeholder: boolean;
+}
+/** One entry of the shared stack of cards and images (055 R2), back to front. */
+export interface SceneStackItem {
+  kind: 'card' | 'image';
+  id: string;
+}
 export interface ExportScene {
   bounds: Rect;
   groups: SceneGroup[];
@@ -227,6 +247,13 @@ export interface ExportScene {
   cards: SceneCard[];
   edges: SceneEdge[];
   stickies: SceneSticky[];
+  /** Pictures (055); empty for a deck without any and for a flow export. */
+  images: SceneImage[];
+  /**
+   * Cards and images in one order (`stackOrder`), only when there are images; empty otherwise, and
+   * the renderer then draws `cards` as before.
+   */
+  stack: SceneStackItem[];
 }
 export interface SceneInput {
   deck: SododeckFile;
@@ -544,6 +571,16 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
 
   // Notes are connector ends too (053): `sticky:<id>`, as the visible graph names them.
   for (const sticky of stickies) rects.set(`${STICKY_NODE_PREFIX}${sticky.id}`, sticky.rect);
+  // Pictures (055): all but those hidden in a collapsed group, none in a flow export. They are
+  // connector ends too (`image:<id>`), and a hidden one ends on its collapsed card.
+  const images: SceneImage[] =
+    inFlow !== null
+      ? []
+      : (source.images ?? []).flatMap((image) =>
+          graph.hiddenImages.has(image.id) ? [] : [sceneImage(source, image)],
+        );
+  for (const image of images) rects.set(`${IMAGE_NODE_PREFIX}${image.id}`, image.rect);
+  const stack = sceneStack(source, cards, images);
   // Shape ends meet the outline (031), as on the canvas.
   const shapeEnds = new Map(
     cards.flatMap((card) =>
@@ -552,9 +589,9 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
   );
   const edges = sceneEdges(source, graph, rects, overlay, bundles, shapeEnds, ui.labelsOn === true);
 
-  if (cards.length + collapsed.length + ports.length === 0) return emptyScene();
+  if (cards.length + collapsed.length + ports.length + images.length === 0) return emptyScene();
   let extent: Rect | null = null;
-  for (const item of [...groups, ...collapsed, ...ports, ...cards, ...stickies]) {
+  for (const item of [...groups, ...collapsed, ...ports, ...cards, ...images, ...stickies]) {
     extent = union(extent, item.rect);
   }
   for (const edge of edges) {
@@ -576,7 +613,49 @@ export function buildScene({ deck, scope, ui }: SceneInput): ExportScene {
     cards,
     edges,
     stickies,
+    images,
+    stack,
   };
+}
+
+/** A picture as the canvas draws it: its stored box, and whether its facts are known (055). */
+function sceneImage(
+  deck: SododeckFile,
+  image: NonNullable<SododeckFile['images']>[number],
+): SceneImage {
+  const facts = deck.assets?.[image.asset];
+  return {
+    id: image.id,
+    asset: image.asset,
+    rect: imageBox(image),
+    alt: image.alt === undefined || image.alt === '' ? null : image.alt,
+    caption: image.caption === undefined || image.caption === '' ? null : image.caption,
+    fileName: facts?.name ?? '',
+    placeholder: facts === undefined,
+  };
+}
+
+/**
+ * The shared order of the cards and images that are drawn (`stackOrder`, 055 R2). Empty without
+ * images, so a deck that has none keeps the plain card order and exports exactly as before.
+ */
+function sceneStack(
+  deck: SododeckFile,
+  cards: readonly SceneCard[],
+  images: readonly SceneImage[],
+): SceneStackItem[] {
+  if (images.length === 0) return [];
+  const drawnCards = new Set(cards.map((card) => card.id));
+  const drawnImages = new Set(images.map((image) => image.id));
+  return stackOrder(deck).flatMap((entry): SceneStackItem[] =>
+    entry.kind === 'node'
+      ? drawnCards.has(entry.id)
+        ? [{ kind: 'card', id: entry.id }]
+        : []
+      : drawnImages.has(entry.id)
+        ? [{ kind: 'image', id: entry.id }]
+        : [],
+  );
 }
 
 function emptyScene(): ExportScene {
@@ -588,6 +667,8 @@ function emptyScene(): ExportScene {
     cards: [],
     edges: [],
     stickies: [],
+    images: [],
+    stack: [],
   };
 }
 

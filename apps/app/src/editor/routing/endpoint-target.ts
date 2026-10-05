@@ -5,6 +5,7 @@
  *
  * - Cards first (component cards, shapes and collapsed-group cards): one the pointer is inside,
  *   topmost in paint order, else the nearest within `TARGET_REACH` screen px.
+ * - Images (055) stack with cards, so they are in the same paint-ordered list.
  * - Notes (053) next: the pointer inside a note beats a card that is only within reach, and a
  *   card within reach beats a note within reach.
  * - Otherwise the innermost group frame that contains the point or whose frame edge is within
@@ -15,7 +16,12 @@
 import type { Geometry } from '@sododeck/model';
 import type { Id } from '@sododeck/schema';
 
-import { COLLAPSED_NODE_PREFIX, GROUP_NODE_PREFIX, STICKY_NODE_PREFIX } from '../deck-to-flow';
+import {
+  COLLAPSED_NODE_PREFIX,
+  GROUP_NODE_PREFIX,
+  IMAGE_NODE_PREFIX,
+  STICKY_NODE_PREFIX,
+} from '../deck-to-flow';
 import { attachToOutline, type Attachment } from './outline-attach';
 import type { Box, Point } from './route-path';
 
@@ -28,8 +34,8 @@ export const GROUP_ENDS = true;
 export interface EndpointTarget {
   /** The card's node id, the group id (for a frame or a collapsed-group card) or the note's id. */
   id: Id;
-  kind: 'node' | 'group' | 'sticky';
-  /** The React Flow node that draws it (`group:` / `collapsed:` / `sticky:` prefixed). */
+  kind: 'node' | 'group' | 'sticky' | 'image';
+  /** The React Flow node that draws it (`group:` / `collapsed:` / `sticky:` / `image:` prefixed). */
   flowId: string;
   box: Box;
   /** A shape card's outline (031). */
@@ -37,7 +43,7 @@ export interface EndpointTarget {
 }
 
 export interface TargetScene {
-  /** Cards, bottom first (paint order). */
+  /** Cards and images, bottom first (paint order). */
   cards: readonly EndpointTarget[];
   /** Notes (053), bottom first. */
   stickies: readonly EndpointTarget[];
@@ -124,6 +130,20 @@ export function targetScene(nodes: readonly SceneNode[]): TargetScene {
           kind: 'group',
           flowId: node.id,
           box,
+        });
+        return;
+      }
+      case 'image': {
+        if (!node.id.startsWith(IMAGE_NODE_PREFIX)) return;
+        cards.push({
+          target: {
+            id: node.id.slice(IMAGE_NODE_PREFIX.length),
+            kind: 'image',
+            flowId: node.id,
+            box,
+          },
+          z,
+          index,
         });
         return;
       }

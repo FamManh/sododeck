@@ -22,6 +22,7 @@ import {
   isStickyLocked,
   LOCKED_HINT,
   lockableIds,
+  lockedGroupIds,
   unlockedIds,
   unlockedOf,
   withoutLocked,
@@ -150,6 +151,30 @@ describe('group lock helpers (054, research R5)', () => {
     });
     expect(groupLockState(allLocked, 'outer')).toBe('locked');
     expect(groupLockState(allLocked, 'inner')).toBe('locked');
+  });
+
+  it('a group holding only images reads locked when its images are (055)', () => {
+    const meta = { type: 'image/png', bytes: 1, width: 1, height: 1, name: 'a.png' };
+    const image = (locked: boolean) => ({
+      id: 'img-1',
+      asset: 'a'.repeat(64),
+      group: 'inner',
+      position: { x: 0, y: 0 },
+      size: { width: 40, height: 40 },
+      ...(locked ? { locked: true as const } : {}),
+    });
+    const build = (locked: boolean) =>
+      ({
+        ...groupedDeck,
+        nodes: [],
+        images: [image(locked)],
+        assets: { ['a'.repeat(64)]: { ...meta, data: '' } },
+      }) as unknown as SododeckFile;
+    expect(groupLockState(build(false), 'inner')).toBe('unlocked');
+    expect(groupLockState(build(true), 'inner')).toBe('locked');
+    expect(isGroupLocked(build(true), 'inner')).toBe(true);
+    expect(lockedGroupIds(build(true)).has('inner')).toBe(true);
+    expect(lockedGroupIds(build(false)).has('inner')).toBe(false);
   });
 
   it('isGroupLocked is false for an empty group, and a card added later unlocks the reading', () => {

@@ -176,6 +176,7 @@ describe('pasteFragment (016 R10)', () => {
       nodes: [],
       edges: [],
       groups: [],
+      images: [],
       droppedRelationships: 0,
     });
     expect(editor.canUndo()).toBe(false);

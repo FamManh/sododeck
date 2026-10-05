@@ -15,6 +15,7 @@ const edgeCache = new WeakMap<SododeckFile['edges'][number], SearchEntry>();
 const flowCache = new WeakMap<SododeckFile['flows'][number], SearchEntry>();
 const stepCache = new WeakMap<SododeckFile['flows'][number]['steps'][number], SearchEntry>();
 const stickyCache = new WeakMap<SododeckFile['stickies'][number], SearchEntry>();
+const imageCache = new WeakMap<NonNullable<SododeckFile['images']>[number], SearchEntry>();
 const ruleCache = new WeakMap<SododeckFile['rules'][string], SearchEntry>();
 
 function field(field: SearchField, raw: string | undefined): SearchFieldValue | null {
@@ -45,6 +46,8 @@ function kindLabel(kind: SearchKind): string {
       return 'Rule';
     case 'sticky':
       return 'Note';
+    case 'image':
+      return 'Image';
   }
 }
 
@@ -335,6 +338,33 @@ function stickyEntries(deck: SododeckFile): SearchEntry[] {
   });
 }
 
+function imageEntries(deck: SododeckFile): SearchEntry[] {
+  return (deck.images ?? []).map((image) => {
+    const file = deck.assets?.[image.asset]?.name;
+    const alt = image.alt?.trim();
+    const caption = image.caption?.trim();
+    const named = alt !== undefined && alt !== '' ? alt : caption;
+    const title =
+      named !== undefined && named !== ''
+        ? named
+        : file !== undefined && file !== ''
+          ? file
+          : 'Image';
+    return entryOf(imageCache, image, {
+      kind: 'image',
+      id: image.id,
+      title,
+      context: file === undefined || file === '' ? 'Image' : `Image · ${file}`,
+      fields: [
+        field('title', title),
+        field('alt', image.alt),
+        field('caption', image.caption),
+        field('file', file),
+      ],
+    });
+  });
+}
+
 export function buildSearchIndex(file: SododeckFile): SearchIndex {
   return {
     entries: [
@@ -344,6 +374,7 @@ export function buildSearchIndex(file: SododeckFile): SearchIndex {
       ...flowEntries(file),
       ...ruleEntries(file),
       ...stickyEntries(file),
+      ...imageEntries(file),
     ],
   };
 }

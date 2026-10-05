@@ -10,11 +10,12 @@ const existing = (ids: { nodes?: string[]; edges?: string[]; groups?: string[] }
   edges: new Set(ids.edges ?? []),
   groups: new Set(ids.groups ?? []),
   stickies: new Set<string>(),
+  images: new Set<string>(),
 });
 
 const componentMenu: MenuTarget = {
   kind: 'component',
-  ids: { nodes: ['n1'], edges: [], groups: [], stickies: [] },
+  ids: { nodes: ['n1'], edges: [], groups: [], stickies: [], images: [] },
 };
 
 describe('ui store: quick edit (019)', () => {

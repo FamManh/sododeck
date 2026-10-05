@@ -25,7 +25,7 @@ import { readViewState } from '../views/use-current-view';
 import { commonParent } from './common-parent';
 import { dropTarget, frameEntries } from './drop-target';
 import { PASTE_STEP, pastePlacement } from './paste-placement';
-import { groupSubtree } from './subtree';
+import { groupSubtree, groupSubtreeImages } from './subtree';
 
 /** A timestamp (never content) telling Paste items a fragment was copied (R9). */
 export const FRAGMENT_HINT_KEY = 'sododeck:fragment-copied';
@@ -50,10 +50,14 @@ export function fragmentCopied(): boolean {
 
 const plural = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
 
-/** "3 components and 2 connections" / "1 component". */
-export function countText(fragment: Pick<Fragment, 'deck'>): string {
+/** "3 components and 2 connections" / "1 component" / "2 images" (055). */
+export function countText(
+  fragment: Pick<Fragment, 'deck'> & Partial<Pick<Fragment, 'images'>>,
+): string {
   const { nodes, edges } = fragment.deck;
-  const parts = [plural(nodes.length, 'component')];
+  const images = fragment.images?.length ?? 0;
+  const parts = nodes.length === 0 && images > 0 ? [] : [plural(nodes.length, 'component')];
+  if (images > 0) parts.push(plural(images, 'image'));
   if (edges.length > 0) parts.push(plural(edges.length, 'connection'));
   return parts.join(' and ');
 }
@@ -65,14 +69,21 @@ export function countText(fragment: Pick<Fragment, 'deck'>): string {
  */
 export function selectionFragment(
   deck: SododeckFile,
-  selection: Pick<Selection, 'nodes' | 'groups'>,
+  selection: Pick<Selection, 'nodes' | 'groups'> & Partial<Pick<Selection, 'images'>>,
   viewId: Id,
 ): Fragment | null {
   const tree = groupSubtree(deck, selection.groups);
   const nodes = [...new Set([...selection.nodes, ...tree.nodes])];
-  if (nodes.length === 0 && tree.groups.length === 0) return null;
+  const images = [
+    ...new Set([...(selection.images ?? []), ...groupSubtreeImages(deck, selection.groups)]),
+  ];
+  if (nodes.length === 0 && tree.groups.length === 0 && images.length === 0) return null;
   // Tables keep their outgoing foreign keys (043 R10): paste keeps them when the target exists.
-  return toFragment(deck, { nodes, groups: tree.groups }, { viewId, keepOutgoing: true });
+  return toFragment(
+    deck,
+    { nodes, groups: tree.groups, ...(images.length === 0 ? {} : { images }) },
+    { viewId, keepOutgoing: true },
+  );
 }
 
 /** The group a paste at `point` goes into: the innermost frame there, else the drilled group. */
@@ -106,7 +117,7 @@ export function visibleRect(canvas: CanvasPoints): Rect {
 
 function selectPasted(editor: DeckEditor, ids: PastedIds): void {
   const ui = useUiStore.getState();
-  ui.select({ nodes: ids.nodes, groups: ids.groups });
+  ui.select({ nodes: ids.nodes, groups: ids.groups, images: ids.images });
   // One pasted or duplicated table opens its title for renaming, all text selected (043 R10).
   const [only, ...rest] = ids.nodes;
   const node =
@@ -120,9 +131,11 @@ function selectPasted(editor: DeckEditor, ids: PastedIds): void {
 }
 
 /** "orders" for one card, else "3 components and 2 connections". */
-function pastedName(fragment: Pick<Fragment, 'deck'>): string {
+function pastedName(fragment: Pick<Fragment, 'deck'> & Partial<Pick<Fragment, 'images'>>): string {
   const [only, ...rest] = fragment.deck.nodes;
-  return only !== undefined && rest.length === 0 ? only.title : countText(fragment);
+  return only !== undefined && rest.length === 0 && (fragment.images?.length ?? 0) === 0
+    ? only.title
+    : countText(fragment);
 }
 
 /**
@@ -138,7 +151,10 @@ export function pasteText(
   undoToast?: (message: string) => void,
 ): boolean {
   const fragment = parseFragment(text);
-  if (fragment === null || fragment.deck.nodes.length + fragment.deck.groups.length === 0) {
+  if (
+    fragment === null ||
+    fragment.deck.nodes.length + fragment.deck.groups.length + (fragment.images?.length ?? 0) === 0
+  ) {
     return false;
   }
   const ui = useUiStore.getState();
@@ -193,10 +209,12 @@ export function deleteCut(editor: DeckEditor, selection: Selection): void {
   const deck = readDeck(editor.doc);
   const tree = groupSubtree(deck, selection.groups);
   const nodes = [...new Set([...selection.nodes, ...tree.nodes])];
+  const images = [...new Set([...selection.images, ...groupSubtreeImages(deck, selection.groups)])];
   useUiStore
     .getState()
     .requestRemoval([
       ...nodes.map((id) => ({ scope: 'nodes' as const, id })),
+      ...images.map((id) => ({ scope: 'images' as const, id })),
       ...selection.edges.map((id) => ({ scope: 'edges' as const, id })),
       ...tree.groups.map((id) => ({ scope: 'groups' as const, id })),
     ]);
@@ -217,6 +235,10 @@ export function duplicateSelection(editor: DeckEditor, selection: Selection): bo
     viewId,
   });
   selectPasted(editor, ids);
-  useUiStore.getState().announce(`Duplicated ${plural(ids.nodes.length, 'component')}`);
+  const what =
+    ids.nodes.length === 0 && ids.images.length > 0
+      ? plural(ids.images.length, 'image')
+      : plural(ids.nodes.length, 'component');
+  useUiStore.getState().announce(`Duplicated ${what}`);
   return true;
 }

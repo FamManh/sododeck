@@ -40,6 +40,8 @@ import {
   toFlowNodes,
   toLeaderEdges,
   toStickyNodes,
+  toImageNodes,
+  stackImages,
   rowsDrawn,
   type CanvasFlowNode,
   type DeckEdgeData,
@@ -72,6 +74,7 @@ import { EndpointConnectionLine } from './routing/endpoint-connection-line';
 import { SelectionFrame } from './selection-frame';
 import { useStickyDraftLifecycle } from './stickies/sticky-actions';
 import { StickyLeaderEdge } from './stickies/sticky-leader-edge';
+import { ImageNode } from './images/image-node';
 import { StickyNode } from './stickies/sticky-node';
 import { useCanvasHandlers } from './use-canvas-handlers';
 import { GuidesOverlay } from './editing/guides-overlay';
@@ -102,6 +105,7 @@ const nodeTypes: NodeTypes = {
   'scope-label': ScopeLabelNode,
   shape: ShapeNode,
   sticky: StickyNode,
+  image: ImageNode,
 };
 const edgeTypes: EdgeTypes = {
   deck: DeckEdge,
@@ -190,7 +194,8 @@ function useSelectionSync(): void {
               (c.scope === 'nodes' ||
                 c.scope === 'edges' ||
                 c.scope === 'groups' ||
-                c.scope === 'stickies'),
+                c.scope === 'stickies' ||
+                c.scope === 'images'),
           )
         ) {
           const deck = readDeck(editor.doc);
@@ -199,6 +204,7 @@ function useSelectionSync(): void {
             edges: new Set(deck.edges.map((e) => e.id)),
             groups: new Set(deck.groups.map((group) => group.id)),
             stickies: new Set(deck.stickies.map((s) => s.id)),
+            images: new Set((deck.images ?? []).map((i) => i.id)),
           });
         }
         // Restored objects may be off-screen: select them so the user can find them.
@@ -532,7 +538,11 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
 
   const nodes = useMemo(
     () => [
-      ...toFlowNodes(deck, graph, view, overlay),
+      ...stackImages(
+        toFlowNodes(deck, graph, view, overlay),
+        toImageNodes(deck, selection, flowMode, graph.hiddenImages),
+        deck,
+      ),
       ...toStickyNodes(deck, selection, overlay, {
         flowMode,
         notesDisplay,
@@ -861,25 +871,27 @@ export function Canvas({ onlyRenderVisibleElements = false, onReady }: CanvasPro
         <GuidesOverlay />
         <ColumnConnectLine />
       </ReactFlow>
-      {fullDeck.nodes.length === 0 && fullDeck.groups.length === 0 && (
-        <EmptyCanvasCard
-          showImport={deckPacks(fullDeck).includes('database')}
-          {...(deckPacks(fullDeck).includes('database')
-            ? {
-                onAddTable: () => {
-                  const rect = canvasElement()?.getBoundingClientRect();
-                  addTable(
-                    editor,
-                    screenToFlowPosition({
-                      x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
-                      y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
-                    }),
-                  );
-                },
-              }
-            : {})}
-        />
-      )}
+      {fullDeck.nodes.length === 0 &&
+        fullDeck.groups.length === 0 &&
+        (fullDeck.images ?? []).length === 0 && (
+          <EmptyCanvasCard
+            showImport={deckPacks(fullDeck).includes('database')}
+            {...(deckPacks(fullDeck).includes('database')
+              ? {
+                  onAddTable: () => {
+                    const rect = canvasElement()?.getBoundingClientRect();
+                    addTable(
+                      editor,
+                      screenToFlowPosition({
+                        x: (rect?.left ?? 0) + (rect?.width ?? 0) / 2,
+                        y: (rect?.top ?? 0) + (rect?.height ?? 0) / 2,
+                      }),
+                    );
+                  },
+                }
+              : {})}
+          />
+        )}
       {emptyView && (
         <EmptyCanvasCard
           title="No tables match this view"

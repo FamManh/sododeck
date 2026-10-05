@@ -109,6 +109,8 @@ function metaFor(
     }
     case 'sticky':
       return 'Note';
+    case 'image':
+      return 'Image';
   }
 }
 

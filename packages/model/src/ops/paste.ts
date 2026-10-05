@@ -17,7 +17,7 @@
  * - A `db-table` whose name is taken in its schema (case-insensitive) is renamed `name_copy`,
  *   `name_copy_2`… (`copyName`). Other cards keep their titles.
  */
-import type { DbEnum, DbIndexPart, Edge, Group, Id, Node } from '@sododeck/schema';
+import type { DbEnum, DbIndexPart, Edge, Group, Id, Image, Node } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { isDbTable } from '../card-types';
@@ -26,12 +26,15 @@ import type { Fragment } from '../fragment';
 import type { Point } from '../geometry';
 import { anchorableIds } from '../ids';
 import { appendAll, collectionMap, rulesMap } from '../layout';
+import { sortStack } from '../stack-order';
 import { readEnums, readObject } from '../read';
 import { createEnum, createObject } from '../write';
 import { assertRefsExist, assertValid, validateObject } from '../validate';
 import type { EditContext } from './context';
 import { attachedEnums } from './db-enums';
 import { materializeFrames } from './frames';
+import { writeAssetMeta } from './images';
+import { topRankOf, usesRanks } from './stacking';
 import { resolveView, viewMap } from './views';
 
 export interface PasteOptions {
@@ -47,6 +50,8 @@ export interface PastedIds {
   nodes: Id[];
   edges: Id[];
   groups: Id[];
+  /** The new images (055), in the order they stack. */
+  images: Id[];
   /**
    * External relationships of the fragment not pasted because the target deck lacks their target
    * table or its columns (043 FR-019). 0 when none were dropped.
@@ -208,11 +213,13 @@ export function pasteFragment(
     );
   }
   const view = options.viewId === undefined ? undefined : resolveView(ctx, options.viewId);
-  if (deck.nodes.length + deck.groups.length === 0) {
-    return { nodes: [], edges: [], groups: [], droppedRelationships: 0 };
+  const fragmentImages = fragment.images ?? [];
+  if (deck.nodes.length + deck.groups.length + fragmentImages.length === 0) {
+    return { nodes: [], edges: [], groups: [], images: [], droppedRelationships: 0 };
   }
 
   const nodeIds = new Map(deck.nodes.map((n) => [n.id, ctx.allocate('node')]));
+  const imageIds = new Map(fragmentImages.map((i) => [i.id, ctx.allocate('img')]));
   const groupIds = new Map(deck.groups.map((g) => [g.id, ctx.allocate('group')]));
   const knownRules = new Set(rulesMap(ctx.doc).keys());
   const partIds = partIdMap(ctx, deck.nodes);
@@ -240,8 +247,22 @@ export function pasteFragment(
         : { position: shift(position, offset), size }),
     };
   });
-  const nodes: Node[] = deck.nodes.map((node) => {
-    const { id, group, parent: container, rules, position, ...rest } = node;
+  // Pasted items stack above everything already there, in the order they stacked in the source
+  // (055). The source `z` is dropped: it ranks against another deck. A deck that ranks nothing
+  // (no images, no `z`) and receives no image keeps array order as its stack.
+  const ranked = fragmentImages.length > 0 || usesRanks(ctx.doc);
+  const top = topRankOf(ctx.doc);
+  const stacked = new Map<string, number>();
+  sortStack([
+    ...deck.nodes.map((n, i) => ({ kind: 'node' as const, id: n.id, rank: n.z ?? i })),
+    ...fragmentImages.map((n, i) => ({ kind: 'image' as const, id: n.id, rank: n.z ?? i })),
+  ]).forEach((entry, i) => stacked.set(`${entry.kind}:${entry.id}`, top + i));
+  const rankOf = (kind: 'node' | 'image', id: Id) => stacked.get(`${kind}:${id}`) ?? top;
+  const byStack = <T extends { id: Id }>(kind: 'node' | 'image', items: readonly T[]): T[] =>
+    [...items].sort((a, b) => rankOf(kind, a.id) - rankOf(kind, b.id));
+
+  const nodes: Node[] = byStack('node', deck.nodes).map((node) => {
+    const { id, group, parent: container, rules, position, z: _z, ...rest } = node;
     const into = group === undefined ? parent : (groupIds.get(group) ?? parent);
     const inside = container === undefined ? undefined : nodeIds.get(container);
     const kept = rules?.filter((rule) => knownRules.has(rule)) ?? [];
@@ -254,12 +275,24 @@ export function pasteFragment(
       ...(kept.length === 0 ? {} : { rules: kept }),
       ...(position === undefined ? {} : { position: shift(position, offset) }),
       ...remapTableParts(node, partIds, enums.ids),
+      ...(ranked ? { z: rankOf('node', id) } : {}),
+    };
+  });
+  const images: Image[] = byStack('image', fragmentImages).map((image) => {
+    const { id, group, position, z: _z, ...rest } = image;
+    const into = group === undefined ? parent : (groupIds.get(group) ?? parent);
+    return {
+      ...rest,
+      id: imageIds.get(id) ?? id,
+      position: shift(position, offset),
+      ...(into === undefined ? {} : { group: into }),
+      z: rankOf('image', id),
     };
   });
   const edges: Edge[] = deck.edges.flatMap((edge) => {
-    // An end is a node or a group (050); remap either through its map.
-    const from = nodeIds.get(edge.from) ?? groupIds.get(edge.from);
-    const to = nodeIds.get(edge.to) ?? groupIds.get(edge.to);
+    // An end is a node, a group (050) or an image (055); remap each through its map.
+    const from = nodeIds.get(edge.from) ?? groupIds.get(edge.from) ?? imageIds.get(edge.from);
+    const to = nodeIds.get(edge.to) ?? groupIds.get(edge.to) ?? imageIds.get(edge.to);
     if (from === undefined || to === undefined) return [];
     const { fromColumns, toColumns } = edge;
     return [
@@ -298,6 +331,7 @@ export function pasteFragment(
     ...enums.created.flatMap((e) => validateObject('enum', e)),
     ...groups.flatMap((g) => validateObject('groups', g)),
     ...nodes.flatMap((n) => validateObject('nodes', n)),
+    ...images.flatMap((i) => validateObject('images', i)),
     ...edges.flatMap((e) => validateObject('edges', e)),
   ]);
 
@@ -312,8 +346,17 @@ export function pasteFragment(
   ctx.transact(() => {
     const created = (kind: 'groups' | 'nodes' | 'edges', items: readonly { id: Id }[]) =>
       items.map((item) => [item.id, createObject(kind, { ...item }, '')] as const);
+    // Pictures the target does not know yet get their facts from the fragment; the bytes stay in
+    // the app's store (same deck) or are missing (another deck, TODO(M5)).
+    for (const [assetId, meta] of Object.entries(fragment.assets ?? {})) {
+      if (images.some((image) => image.asset === assetId)) writeAssetMeta(ctx.doc, assetId, meta);
+    }
     appendAll(collectionMap(ctx.doc, 'groups'), created('groups', groups));
     appendAll(collectionMap(ctx.doc, 'nodes'), created('nodes', nodes));
+    appendAll(
+      collectionMap(ctx.doc, 'images'),
+      images.map((item) => [item.id, createObject('images', { ...item }, '')] as const),
+    );
     appendAll(collectionMap(ctx.doc, 'edges'), created('edges', edges));
     if (enums.created.length > 0) {
       appendAll(
@@ -341,6 +384,7 @@ export function pasteFragment(
     nodes: nodes.map((n) => n.id),
     edges: edges.map((e) => e.id),
     groups: groups.map((g) => g.id),
+    images: images.map((i) => i.id),
     droppedRelationships,
   };
 }

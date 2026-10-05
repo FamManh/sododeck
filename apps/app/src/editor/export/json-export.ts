@@ -21,11 +21,19 @@ export function withoutKnowledge(file: SododeckFile): SododeckFile {
   };
 }
 
+/**
+ * The `.sododeck.json` text. `pictures` are the bytes of the pictures the images use (055): the
+ * file embeds them, "without notes" included, and a picture without bytes is written as missing.
+ */
 export function jsonExport(
   file: SododeckFile,
   options: { includeKnowledge: boolean; pretty: boolean },
+  pictures: ReadonlyMap<string, Uint8Array> = new Map(),
 ): { text: string; bytes: number } {
-  const canonical = serializeDeck(options.includeKnowledge ? file : withoutKnowledge(file));
+  const canonical = serializeDeck(
+    options.includeKnowledge ? file : withoutKnowledge(file),
+    pictures,
+  );
   const text = options.pretty ? canonical : JSON.stringify(JSON.parse(canonical));
   return { text, bytes: new TextEncoder().encode(text).byteLength };
 }

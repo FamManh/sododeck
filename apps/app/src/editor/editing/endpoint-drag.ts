@@ -64,6 +64,7 @@ function titleOf(deck: SododeckFile, id: Id): string {
   const end = endpointOf(deck, id);
   if (end === null) return id;
   if (end.kind === 'sticky') return `${end.title} (note)`;
+  if (end.kind === 'image') return `${end.title} (image)`;
   return end.kind === 'group' ? `${end.title} (group)` : end.title;
 }
 

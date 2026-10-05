@@ -15,6 +15,12 @@ describe('toolbarVariant', () => {
     expect(toolbarVariant(sel({ stickies: ['s', 't'] }))).toBe('stickies');
   });
 
+  it('has image and images variants for pictures only (055)', () => {
+    expect(toolbarVariant(sel({ images: ['i'] }))).toBe('image');
+    expect(toolbarVariant(sel({ images: ['i', 'j'] }))).toBe('images');
+    expect(toolbarVariant(sel({ images: ['i'], nodes: ['a'] }))).toBe('mixed');
+  });
+
   it('names each variant', () => {
     expect(toolbarVariant(sel({ nodes: ['a'] }))).toBe('component');
     expect(toolbarVariant(sel({ nodes: ['a', 'b'] }))).toBe('components');

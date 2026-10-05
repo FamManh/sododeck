@@ -39,3 +39,14 @@ export function groupAncestors(deck: Pick<SododeckFile, 'groups'>, groupId: Id |
   }
   return out;
 }
+
+/** The images (055) that are members of `groupIds` or of a group nested in them, in deck order. */
+export function groupSubtreeImages(
+  deck: Tree & Partial<Pick<SododeckFile, 'images'>>,
+  groupIds: readonly Id[],
+): Id[] {
+  const inside = new Set(groupSubtree(deck, groupIds).groups);
+  return (deck.images ?? [])
+    .filter((image) => image.group !== undefined && inside.has(image.group))
+    .map((image) => image.id);
+}

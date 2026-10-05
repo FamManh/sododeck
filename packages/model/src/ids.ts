@@ -31,6 +31,7 @@ export type IdPrefix =
   | 'col'
   | 'row'
   | 'sticky'
+  | 'img'
   | 'field'
   | 'option'
   | 'dbcol'

@@ -355,3 +355,38 @@ describe('table and column results (048 FR-021, FR-022)', () => {
     expect(ctx.announce).toHaveBeenCalledWith('This item no longer exists');
   });
 });
+
+describe('openResult for images (055)', () => {
+  it('selects an image and centres its box', () => {
+    const deck = fixtureDeck();
+    deck.images = [
+      {
+        id: 'img-1',
+        asset: 'a'.repeat(64),
+        position: { x: 100, y: 200 },
+        size: { width: 80, height: 60 },
+      },
+    ];
+    deck.assets = {
+      ['a'.repeat(64)]: {
+        type: 'image/png',
+        bytes: 1,
+        width: 1,
+        height: 1,
+        name: 'a.png',
+        data: '',
+      },
+    };
+    const env = renderWithEditor(null, deckOf(deck));
+    const ctx = context(deck, env.editor());
+    expect(openResult(result('image', 'img-1'), ctx)).toBe(true);
+    expect(useUiStore.getState().selection.images).toEqual(['img-1']);
+    expect(ctx.setCenter).toHaveBeenCalledWith(140, 230, { zoom: 0.75 });
+  });
+
+  it('declines an image that is gone', () => {
+    const deck = fixtureDeck();
+    const env = renderWithEditor(null, deckOf(deck));
+    expect(openResult(result('image', 'nope'), context(deck, env.editor()))).toBe(false);
+  });
+});

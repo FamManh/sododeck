@@ -148,7 +148,7 @@ function dropTouches(
   });
 }
 
-/** Removes every edge with an end at `id` (a node, a group since 050, a sticky since 053). */
+/** Removes every edge with an end at `id` (a node, a group 050, a sticky 053, an image 055). */
 function removeEdgesAt(cascade: Cascade, doc: DeckDoc, id: Id): void {
   const edges = collectionMap(doc, 'edges');
   for (const [edgeId, edge] of entriesOf(doc, 'edges')) {
@@ -213,6 +213,12 @@ function removeGroup(cascade: Cascade, doc: DeckDoc, id: Id, group: YObject): vo
     if (node.get('group') === id)
       cascade.update({ scope: 'nodes', id: nodeId }, repoint(node, 'group'));
   }
+  // Images in the group stay, like cards (055): they move to its parent or become ungrouped.
+  for (const [imageId, image] of entriesOf(doc, 'images')) {
+    if (image.get('group') === id) {
+      cascade.update({ scope: 'images', id: imageId }, repoint(image, 'group'));
+    }
+  }
   for (const [childId, child] of entriesOf(doc, 'groups')) {
     if (child.get('parent') === id) {
       cascade.update({ scope: 'groups', id: childId }, repoint(child, 'parent'));
@@ -252,7 +258,7 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
   const list = collectionMap(doc, c);
   const map = requireEntry(list, id, LABELS[c]);
   // Only a direct delete is refused: a connector whose end is deleted goes with it (053).
-  if (c === 'stickies' || c === 'edges') {
+  if (c === 'stickies' || c === 'edges' || c === 'images') {
     assertUnlocked(map, LABELS[c] === 'Edge' ? 'Connector' : LABELS[c], id, 'delete it');
   }
   const cascade = new Cascade(ctx);
@@ -282,8 +288,10 @@ export function removeObject(ctx: EditContext, c: Collection, id: Id): RemovalRe
       break;
     }
     case 'stickies':
-      // Connectors that end on the note go with it (053), like a card's; stickies anchored to the
-      // note are kept and reported (FR-017).
+    case 'images':
+      // Connectors that end on the note (053) or the image (055) go with it, like a card's;
+      // stickies anchored to it are kept and reported (FR-017). The picture's `meta.assets` entry
+      // stays until the next save, so undo brings the image back with its picture.
       removeEdgesAt(cascade, doc, id);
       break;
     case 'edges':

@@ -546,6 +546,18 @@ A note is paper, not a card: it has no header, icon or lip, so it reads as a not
 - **Pad tile:** in the Add flyout the Sticky tile is a stack of three offset sheets (the note's own paper at a small size, the back two rotated 6 and -3 degrees); click adds a note, dragging places one.
 - **Connections toolbar:** with two or more connectors selected, a floating toolbar edits all of them as one undo step: arrow ends, line type, colour, weight and lock. A connector that is locked draws a 12px lock glyph at its label point, with or without a label.
 
+
+### Images (055)
+
+A picture sits on the canvas as its own object, drawn in the shared stacking order with cards (a picture can sit above or below a card; one below every card sits under the connectors).
+
+- **Frame:** no header, icon or lip: the picture fills the box (`object-fit: contain`; the box keeps the natural aspect ratio until resized freely with ⇧), 4px radius, no border or shadow. Selected: a 1px primary ring and four corner resize handles (minimum 32px). A lock is a small lock glyph in the top-right corner plus the word "locked" in the accessible name.
+- **Caption:** plain text under the picture, one line, "…" on overflow, Geist 12 in Text-muted. Alt text is never drawn; it is the accessible name ("Image: <alt or file name>").
+- **Missing placeholder:** a Surface-2 box with a 1px Border-strong dashed outline, a centred lucide `image-off` icon, "Picture missing" in Geist 12 / 600, the file name and caption kept below. Never colour alone: icon and text carry the state, the name says "picture missing".
+- **Ends:** four connection handles like a group frame; a dragged connector end that would land on a picture lights it with a 2px primary ring.
+- **Image toolbar** (floating above the selection): alt text, caption, bring forward, send backward, lock, delete. With several pictures selected: stacking, lock and delete only.
+- **Add tile:** the Image tile in the Add flyout shows the lucide `image-plus` icon; tooltip "Add an image (or paste with ⌘V)"; opens a multi-file picker.
+- **Messages:** one toast per paste, drop or pick, listing each refused file with its reason on its own line (`role="status"`, announced politely); the success line carries Undo.
 ## Components
 
 ### Buttons

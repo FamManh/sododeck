@@ -155,7 +155,7 @@ describe('ImportDialog targets (044 T033)', () => {
 
   it('offers the database card in context first and imports inside it', async () => {
     const { user, editor } = setup(withCard, {
-      selection: { nodes: ['card.db'], edges: [], groups: [], stickies: [] },
+      selection: { nodes: ['card.db'], edges: [], groups: [], stickies: [], images: [] },
     });
     expect(screen.getByRole('radio', { name: 'Import into Orders DB' })).toBeChecked();
     paste(CORPUS['sqlite.sql']);

@@ -4,6 +4,7 @@ import { ReactFlowProvider } from '@xyflow/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLoaderData, useNavigate, useOutlet, useParams } from 'react-router';
 
+import { dbPictureStore, memoryPictureStore, PictureStoreContext } from '../images/picture-store';
 import { Announcer } from '../editor/announcer';
 import { Canvas } from '../editor/canvas';
 import { CommandPalette } from '../editor/command-palette/command-palette';
@@ -26,6 +27,7 @@ import { EditorProvider } from '../model/editor-context';
 import { useEditor } from '../model/use-editor';
 import { readDeck, useDeckSnapshot } from '../model/use-deck-snapshot';
 import { useUiStore } from '../state/ui-store';
+import { sweepBlobs } from '../storage/blob-gc';
 import { attachDeckChannel } from '../storage/deck-channel';
 import { attachDeckPersistence, type DeckPersistence } from '../storage/deck-persistence';
 import { markExported, markOpened } from '../storage/library-db';
@@ -181,6 +183,16 @@ function EditorShell({ data, opened }: { data: OpenDeckData; opened: DeckDoc }) 
     return opened;
   });
   const save = useSaveControlsFor(data, doc);
+  const pictures = useMemo(
+    () => (data.kind === 'stored' ? dbPictureStore(data.db, data.deckId) : memoryPictureStore()),
+    [data],
+  );
+  // Once per open: pictures no image uses any more (an add that was undone last session) go away.
+  useEffect(() => {
+    if (data.kind !== 'stored') return;
+    const used = (readDeck(doc).images ?? []).map((image) => image.asset);
+    void sweepBlobs(data.db, data.deckId, used).catch(() => undefined);
+  }, [data, doc]);
   // After storage is attached (effects run in order), so the fitted frames are saved and synced.
   useEffect(() => {
     const fitter = createEditor(doc);
@@ -190,19 +202,21 @@ function EditorShell({ data, opened }: { data: OpenDeckData; opened: DeckDoc }) 
 
   return (
     <SaveContext value={save}>
-      <EditorProvider doc={doc}>
-        <ProblemsProvider doc={doc}>
-          <ToastProvider>
-            <ReactFlowProvider>
-              <EditorChrome />
-            </ReactFlowProvider>
-            {data.kind === 'stored' && (
-              <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
-            )}
-            <Toaster />
-          </ToastProvider>
-        </ProblemsProvider>
-      </EditorProvider>
+      <PictureStoreContext value={pictures}>
+        <EditorProvider doc={doc}>
+          <ProblemsProvider doc={doc}>
+            <ToastProvider>
+              <ReactFlowProvider>
+                <EditorChrome />
+              </ReactFlowProvider>
+              {data.kind === 'stored' && (
+                <DeckDeletedDialog db={data.db} deckId={data.deckId} doc={doc} />
+              )}
+              <Toaster />
+            </ToastProvider>
+          </ProblemsProvider>
+        </EditorProvider>
+      </PictureStoreContext>
     </SaveContext>
   );
 }

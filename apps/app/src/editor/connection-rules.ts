@@ -10,7 +10,7 @@
  * nor anything to a group that holds it (`'contains'`). A file that already has such a connector
  * is drawn and allowed; only new connections and reconnects are refused.
  */
-import { isDbTable, stickyLabel } from '@sododeck/model';
+import { endpointOf, isDbTable, stickyLabel } from '@sododeck/model';
 import type { SododeckFile } from '@sododeck/schema';
 
 import { cardIconRef } from './card-icon';
@@ -100,7 +100,7 @@ export function columnConnectionCheck(
 export interface ConnectTarget {
   id: string;
   title: string;
-  /** The node's type, `'group'` for a group (050), or `'note'` for a sticky (053). */
+  /** The node's type, `'group'` for a group (050), `'note'` for a sticky (053) or `'image'` for a picture (055). */
   kind: string;
   /** The node's stored icon, when it draws as a card (038). */
   icon?: string;
@@ -140,7 +140,11 @@ export function connectTargets(deck: SododeckFile, fromId: string, query: string
     .map((s) => ({ id: s.id, title: stickyLabel(s.text) ?? EMPTY_NOTE_TITLE }))
     .filter((s) => matches(s.title, s.id))
     .map((s) => option({ id: s.id, title: s.title, kind: 'note' }));
-  return [...nodes, ...groups, ...notes].sort(
+  const images = (deck.images ?? [])
+    .map((i) => ({ id: i.id, title: endpointOf(deck, i.id)?.title ?? 'Image' }))
+    .filter((i) => matches(i.title, i.id))
+    .map((i) => option({ id: i.id, title: i.title, kind: 'image' }));
+  return [...nodes, ...groups, ...notes, ...images].sort(
     (a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id),
   );
 }

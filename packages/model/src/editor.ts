@@ -115,6 +115,16 @@ import {
 import { setNodeDisplay, type NodeDisplay } from './ops/node-display';
 import { setNodeIcon } from './ops/node-icon';
 import { setLocked, type LockCollection } from './ops/node-lock';
+import {
+  addImages,
+  moveImage,
+  setImageGroup,
+  setImageSize,
+  setImageText,
+  type ImageText,
+  type NewImage,
+} from './ops/images';
+import { restack, type StackTargets } from './ops/stacking';
 import { setTableOwner } from './ops/db-owner';
 import {
   addTouch,
@@ -297,6 +307,33 @@ export interface DeckEditor {
    * empty list removes the key. Tags are the deck's tags, so colours and renames reach them.
    */
   setStickyTags(id: Id, tags: readonly string[]): void;
+
+  /**
+   * Adds pictures as images (055), on top of the stacking order, in the given order, as one undo
+   * step. A picture id the deck does not know yet gets its `meta.assets` entry once. The caller has
+   * already written the bytes to the blob store. Returns the new ids (`img-…`). `invalid` for a
+   * size under 32 px, an unknown type or a bad picture id; `missing-reference` for a group that
+   * does not exist; nothing is written then.
+   */
+  addImages(images: readonly NewImage[]): Id[];
+  /** Moves an image to a canvas point (055). `locked` for a locked image. Merges in a gesture. */
+  moveImage(id: Id, point: Point): void;
+  /** Sets an image's size, clamped to 32 px a side (055). `locked` for a locked image. */
+  setImageSize(id: Id, size: Size): void;
+  /** Sets alt text and caption; `null` or `''` removes the key. Allowed on a locked image. */
+  setImageText(id: Id, text: ImageText): void;
+  /** Puts an image in a group, or takes it out with `null` (055). `locked` for a locked image. */
+  setImageGroup(id: Id, group: Id | null): void;
+  /**
+   * Stacking over cards and images together (055): brings the listed items to the front or back,
+   * or one step forward or backward past the next unlisted item. One undo step; unknown ids are
+   * skipped; `locked` for a locked image. Ranks are written only when the deck uses them, and
+   * `nodes` is kept in the cards' stacking order.
+   */
+  bringToFront(targets: StackTargets): void;
+  sendToBack(targets: StackTargets): void;
+  bringForward(targets: StackTargets): void;
+  sendBackward(targets: StackTargets): void;
 
   /**
    * Moves nodes in a view (011, FR-020/021). In the base view (the first) this writes
@@ -841,6 +878,31 @@ export function createEditor(doc: DeckDoc, options: EditorOptions = {}): DeckEdi
     },
     moveSticky: (id, point) => {
       moveSticky(ctx, id, point);
+    },
+    addImages: (images) => addImages(ctx, images),
+    moveImage: (id, point) => {
+      moveImage(ctx, id, point);
+    },
+    setImageSize: (id, size) => {
+      setImageSize(ctx, id, size);
+    },
+    setImageText: (id, text) => {
+      setImageText(ctx, id, text);
+    },
+    setImageGroup: (id, group) => {
+      setImageGroup(ctx, id, group);
+    },
+    bringToFront: (targets) => {
+      restack(ctx, targets, 'front');
+    },
+    sendToBack: (targets) => {
+      restack(ctx, targets, 'back');
+    },
+    bringForward: (targets) => {
+      restack(ctx, targets, 'forward');
+    },
+    sendBackward: (targets) => {
+      restack(ctx, targets, 'backward');
     },
     moveInView: (viewId, positions) => {
       moveInView(ctx, viewId, positions);

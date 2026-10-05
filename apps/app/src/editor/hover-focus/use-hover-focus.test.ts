@@ -142,11 +142,17 @@ describe('useHoverFocus (034 R3)', () => {
     ['Focus mode off (051)', { focusMode: false }],
     [
       'a pinned focus (one card selected, 051)',
-      { focusMode: true, selection: { nodes: ['x'], edges: [], groups: [], stickies: [] } },
+      {
+        focusMode: true,
+        selection: { nodes: ['x'], edges: [], groups: [], stickies: [], images: [] },
+      },
     ],
     [
       'a pinned group focus (051)',
-      { focusMode: true, selection: { nodes: [], edges: [], groups: ['g'], stickies: [] } },
+      {
+        focusMode: true,
+        selection: { nodes: [], edges: [], groups: ['g'], stickies: [], images: [] },
+      },
     ],
     ['a shown flow', { activeFlow: { flowId: 'f' } }],
     ['a flow session', { flowSession: { flowId: 'f' } }],
@@ -173,7 +179,7 @@ describe('useHoverFocus (034 R3)', () => {
     const { result } = setup();
     act(() => {
       useUiStore.setState({
-        selection: { nodes: ['x', 'y'], edges: [], groups: [], stickies: [] },
+        selection: { nodes: ['x', 'y'], edges: [], groups: [], stickies: [], images: [] },
       });
     });
     act(() => {
@@ -254,7 +260,10 @@ describe('useHoverFocus rows and relationships (042 R14)', () => {
     ['outside Focus mode (051)', { focusMode: false }],
     [
       'with a pinned focus',
-      { focusMode: true, selection: { nodes: ['x'], edges: [], groups: [], stickies: [] } },
+      {
+        focusMode: true,
+        selection: { nodes: ['x'], edges: [], groups: [], stickies: [], images: [] },
+      },
     ],
     ['in a shown flow', { activeFlow: { flowId: 'f' } }],
   ])('keeps row highlights %s, where card hover is off', (_name, patch) => {

@@ -39,6 +39,7 @@ import {
   PORT_NODE_PREFIX,
   SCOPE_LABEL_PREFIX,
   STICKY_NODE_PREFIX,
+  IMAGE_NODE_PREFIX,
 } from './deck-to-flow';
 import { currentPlayback, goToStep } from './flows/flow-mode';
 import { recordClick } from './flows/flow-session';
@@ -58,6 +59,7 @@ import {
   setGroupCollapsed,
 } from './views/use-current-view';
 import { stepForEdges, stepForGroup } from './collapse-flow-marks';
+import { useAddImages } from './images/use-add-images';
 
 /** Drag-and-drop type the palette cards set (palette.tsx). */
 export const TYPE_MIME = 'application/x-sododeck-type';
@@ -71,6 +73,8 @@ const isScopeLabel = (id: string) => id.startsWith(SCOPE_LABEL_PREFIX);
 const isBundleEdge = (id: string) => id.startsWith(BUNDLE_EDGE_PREFIX);
 const stickyIdOf = (id: string) =>
   id.startsWith(STICKY_NODE_PREFIX) ? id.slice(STICKY_NODE_PREFIX.length) : null;
+const imageIdOf = (id: string) =>
+  id.startsWith(IMAGE_NODE_PREFIX) ? id.slice(IMAGE_NODE_PREFIX.length) : null;
 const groupIdOf = (id: string) =>
   id.startsWith(GROUP_NODE_PREFIX)
     ? id.slice(GROUP_NODE_PREFIX.length)
@@ -91,6 +95,13 @@ export function useCanvasHandlers() {
   const { getNodes, getViewport, screenToFlowPosition } = useReactFlow();
   const gestureOpen = useRef(false);
   const undoToast = useUndoToast();
+  const addImagesNow = useAddImages();
+  // A ref, not a dependency: `addImagesNow` changes whenever a toast or the viewport helpers do,
+  // and rebuilding every handler mid-drag costs frames (055 bench).
+  const addPictures = useRef(addImagesNow);
+  useEffect(() => {
+    addPictures.current = addImagesNow;
+  });
   // Component and group drags (016): one controller for the canvas's lifetime, so a re-render
   // mid-drag (a toast appearing changes `undoToast`) never drops the running session and leaves
   // its gesture open. It gets the latest inputs after each render.
@@ -131,6 +142,7 @@ export function useCanvasHandlers() {
       const nodes = new Set(selection.nodes);
       const edges = new Set(selection.edges);
       const stickies = new Set(selection.stickies);
+      const images = new Set(selection.images);
       for (const { id, selected, type } of changes as {
         id: string;
         selected: boolean;
@@ -138,13 +150,26 @@ export function useCanvasHandlers() {
       }[]) {
         if (type === 'node' && isGroupNode(id)) continue;
         const stickyId = type === 'node' ? stickyIdOf(id) : null;
-        const set = type === 'edge' ? edges : stickyId === null ? nodes : stickies;
-        const value = stickyId ?? id;
+        const imageId = type === 'node' ? imageIdOf(id) : null;
+        const set =
+          type === 'edge'
+            ? edges
+            : imageId !== null
+              ? images
+              : stickyId === null
+                ? nodes
+                : stickies;
+        const value = imageId ?? stickyId ?? id;
         if (selected) set.add(value);
         else set.delete(value);
       }
-      ui().select({ nodes: [...nodes], edges: [...edges], stickies: [...stickies] });
-      ui().setMarqueeCount(nodes.size + stickies.size);
+      ui().select({
+        nodes: [...nodes],
+        edges: [...edges],
+        stickies: [...stickies],
+        images: [...images],
+      });
+      ui().setMarqueeCount(nodes.size + stickies.size + images.size);
     };
 
     /** A flow session pauses structure editing; edge clicks record steps (006 FR-017). */
@@ -199,7 +224,8 @@ export function useCanvasHandlers() {
         own.nodes.every((id) => selection.nodes.includes(id)) &&
         own.edges.every((id) => selection.edges.includes(id)) &&
         own.groups.every((id) => selection.groups.includes(id)) &&
-        own.stickies.every((id) => selection.stickies.includes(id));
+        own.stickies.every((id) => selection.stickies.includes(id)) &&
+        own.images.every((id) => selection.images.includes(id));
       let target = own;
       if (clicked !== null && inside) target = selection;
       else if (clicked !== null && !viewOnly()) ui().select(own);
@@ -219,13 +245,16 @@ export function useCanvasHandlers() {
         }
         const groupId = groupIdOf(node.id);
         const stickyId = stickyIdOf(node.id);
+        const imageId = imageIdOf(node.id);
         const clicked =
           groupId !== null
             ? { groups: [groupId] }
             : stickyId !== null
               ? { stickies: [stickyId] }
-              : { nodes: [node.id] };
-        if (groupId === null && stickyId === null) ui().focus(node.id);
+              : imageId !== null
+                ? { images: [imageId] }
+                : { nodes: [node.id] };
+        if (groupId === null && stickyId === null && imageId === null) ui().focus(node.id);
         openMenu(event, clicked, nodeElement(node.id));
       },
       onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => {
@@ -273,12 +302,20 @@ export function useCanvasHandlers() {
           return;
         }
         const stickyId = stickyIdOf(node.id);
+        const imageId = imageIdOf(node.id);
         if (flowMode()) {
-          if (stickyId === null) jumpTo((p) => stepForNode(p.played, node.id));
+          if (stickyId === null && imageId === null) jumpTo((p) => stepForNode(p.played, node.id));
           return;
         }
         if (inSession()) {
-          if (stickyId === null) ui().focus(node.id);
+          if (stickyId === null && imageId === null) ui().focus(node.id);
+          return;
+        }
+        if (imageId !== null) {
+          if (isMultiSelect(event)) ui().toggle(imageId, 'image');
+          else ui().select({ images: [imageId] });
+          ui().focus(null);
+          ui().focusEdge(null);
           return;
         }
         if (stickyId !== null) {
@@ -313,7 +350,13 @@ export function useCanvasHandlers() {
           ui().startTitleEdit({ target: 'group', id: groupId, isNew: false });
           return;
         }
-        if (stickyIdOf(node.id) !== null || isPortNode(node.id) || isScopeLabel(node.id)) return;
+        if (
+          stickyIdOf(node.id) !== null ||
+          imageIdOf(node.id) !== null ||
+          isPortNode(node.id) ||
+          isScopeLabel(node.id)
+        )
+          return;
         // Any component, with or without children, renames in place (019 FR-001); Enter still
         // opens details or drills in, and "Open inside" drills in by pointer.
         ui().select({ nodes: [node.id] });
@@ -443,7 +486,15 @@ export function useCanvasHandlers() {
         }
         if (isCollapsedNode(node.id) || isPortNode(node.id) || isScopeLabel(node.id)) return;
         const stickyId = stickyIdOf(node.id);
-        if (stickyId !== null) {
+        const imageId = imageIdOf(node.id);
+        if (imageId !== null) {
+          if (!ui().selection.images.includes(imageId)) ui().select({ images: [imageId] });
+          ui().focus(null);
+          ui().focusEdge(null);
+          // Snapping, drop into groups, ⌥ copies and Esc live in the controller, as for cards.
+          controller.startNodes(node.id);
+          return;
+        } else if (stickyId !== null) {
           if (!ui().selection.stickies.includes(stickyId)) ui().select({ stickies: [stickyId] });
           ui().focus(null);
           ui().focusEdge(null);
@@ -483,6 +534,7 @@ export function useCanvasHandlers() {
                 {
                   id: c.id,
                   stickyId: stickyIdOf(c.id),
+                  imageId: imageIdOf(c.id),
                   x: Math.round(c.position.x),
                   y: Math.round(c.position.y),
                 },
@@ -493,8 +545,14 @@ export function useCanvasHandlers() {
           const viewId = readViewState(editor.doc).view.id;
           const positions: Record<string, { x: number; y: number }> = {};
           editor.batch(() => {
-            for (const { id, stickyId, x, y } of moves) {
-              if (stickyId !== null) moveStickyInView(editor, stickyId, { x, y });
+            const lockedImages = new Set(
+              (readDeck(editor.doc).images ?? []).filter((i) => i.locked === true).map((i) => i.id),
+            );
+            for (const { id, stickyId, imageId, x, y } of moves) {
+              if (imageId !== null) {
+                // A locked picture stays where it is (React Flow never drags one; this is the backstop).
+                if (!lockedImages.has(imageId)) editor.moveImage(imageId, { x, y });
+              } else if (stickyId !== null) moveStickyInView(editor, stickyId, { x, y });
               else positions[id] = { x, y };
             }
             if (Object.keys(positions).length > 0) editor.moveInView(viewId, positions);
@@ -578,7 +636,12 @@ export function useCanvasHandlers() {
 
       onDragOver: (event: DragEvent) => {
         const types = event.dataTransfer.types;
-        if (viewOnly() || (!types.includes(TYPE_MIME) && !types.includes(NOTE_MIME))) return;
+        const carriesFiles = types.includes('Files');
+        if (
+          viewOnly() ||
+          (!types.includes(TYPE_MIME) && !types.includes(NOTE_MIME) && !carriesFiles)
+        )
+          return;
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
       },
@@ -586,6 +649,16 @@ export function useCanvasHandlers() {
         if (viewOnly()) return;
         const note = event.dataTransfer.getData(NOTE_MIME);
         const dragged = event.dataTransfer.getData(TYPE_MIME);
+        // Files dropped from the desktop become images at the drop point (055 US2); a file that
+        // is not a picture gets its refusal from the same path.
+        if (note === '' && dragged === '' && event.dataTransfer.files.length > 0) {
+          event.preventDefault();
+          addPictures.current(
+            [...event.dataTransfer.files],
+            screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+          );
+          return;
+        }
         const type = isKnownType(dragged) ? dragged : null;
         if (type === null && note !== 'note') return;
         event.preventDefault();

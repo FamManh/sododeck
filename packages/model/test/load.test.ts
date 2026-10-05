@@ -9,7 +9,7 @@ import {
   serializeDeck,
   toJSON,
 } from '../src';
-import { readExample } from './helpers';
+import { readExample, reopen } from './helpers';
 
 function loadError(input: unknown): DeckValidationError {
   try {
@@ -323,7 +323,7 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
 
   it.each(['minimal', 'flow-and-rule', 'full'])('loads the %s example', async (name) => {
     const file = await readExample(`${name}.sododeck.json`);
-    expect(toJSON(fromJSON(file))).toEqual(file);
+    expect(reopen(file)).toEqual(file);
   });
 });
 

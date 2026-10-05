@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
 
-import { fromJSON, serializeDeck, toJSON } from '@sododeck/model';
+import { assetId, createEditor, fromJSON, serializeDeck, toJSON } from '@sododeck/model';
 import { emptySododeckFile, parseSododeckFile, type SododeckFile } from '@sododeck/schema';
 import { describe, expect, it } from 'vitest';
 
+import { PNG_1X1 } from '../../images/test-pictures';
 import { generateBenchDeck } from '../../bench/generate-deck';
 import { demoDeck } from '../demo-deck';
 import { jsonExport, withoutKnowledge } from './json-export';
@@ -199,5 +200,57 @@ describe('jsonExport keeps connector style compatible (022 SC-004, SC-005)', () 
     expect(parseSododeckFile(parsed).success).toBe(true);
     expect(toJSON(fromJSON(parsed)).edges).toEqual(full.edges);
     expect(serializeDeck(toJSON(fromJSON(parsed)))).toBe(serializeDeck(parsed));
+  });
+});
+
+describe('jsonExport with pictures (055)', () => {
+  const id = assetId(PNG_1X1);
+  const pictures = new Map([[id, PNG_1X1]]);
+  const withPicture = () => {
+    const doc = fromJSON(emptySododeckFile());
+    createEditor(doc).addImages([
+      {
+        asset: id,
+        meta: { type: 'image/png', bytes: PNG_1X1.length, width: 1, height: 1, name: 'dot.png' },
+        position: { x: 0, y: 0 },
+        size: { width: 64, height: 64 },
+        alt: 'A dot',
+      },
+    ]);
+    return toJSON(doc);
+  };
+
+  it('embeds the pictures the images use, with and without notes', () => {
+    for (const includeKnowledge of [true, false]) {
+      const { text } = jsonExport(withPicture(), { includeKnowledge, pretty: true }, pictures);
+      const file = JSON.parse(text) as SododeckFile;
+      expect(file.assets?.[id]?.data.length).toBeGreaterThan(10);
+      expect(file.images).toHaveLength(1);
+      expect(parseSododeckFile(file).success).toBe(true);
+    }
+  });
+
+  it('re-exports byte-identical after an import', () => {
+    const { text } = jsonExport(withPicture(), { includeKnowledge: true, pretty: true }, pictures);
+    const again = jsonExport(
+      JSON.parse(text) as SododeckFile,
+      { includeKnowledge: true, pretty: true },
+      pictures,
+    );
+    expect(again.text).toBe(text);
+  });
+
+  it('writes a picture without bytes as missing instead of dropping the image', () => {
+    const { text } = jsonExport(withPicture(), { includeKnowledge: true, pretty: true });
+    const file = JSON.parse(text) as SododeckFile;
+    expect(file.images).toHaveLength(1);
+    expect(file.assets?.[id]?.data).toBe('AA==');
+  });
+
+  it('keeps a deck without images free of images and assets', () => {
+    const { text } = jsonExport(demoDeck, { includeKnowledge: true, pretty: true }, pictures);
+    const file = JSON.parse(text) as SododeckFile;
+    expect(file.images).toBeUndefined();
+    expect(file.assets).toBeUndefined();
   });
 });
