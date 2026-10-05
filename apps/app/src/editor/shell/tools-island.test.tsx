@@ -48,16 +48,38 @@ describe('ToolsIsland (018 FR-011, contract "Tools island")', () => {
     expect(useUiStore.getState().drawer).toMatchObject({ open: true, mode: 'deck' });
   });
 
-  it('shows Deck settings, Jump to and Labels as icons with names, and no Focus', async () => {
+  it('shows Deck settings, Jump to, Labels and More as icons with names, and no Focus', async () => {
     const user = userEvent.setup();
     renderWithEditor(<ToolsIsland />, deckOf({ name: 'Shop' }));
     expect(
       within(tools())
         .getAllByRole('button')
         .map((b) => b.getAttribute('aria-label')),
-    ).toEqual(['Deck settings', expect.stringMatching(/^Jump to…/), 'Labels']);
+    ).toEqual(['Deck settings', expect.stringMatching(/^Jump to…/), 'Labels', 'More']);
     expect(button('Labels')).not.toHaveTextContent('Labels');
     await user.hover(button('Deck settings'));
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Deck settings');
+  });
+
+  it('opens the imports from the More menu, focus returning to More', async () => {
+    const user = userEvent.setup();
+    renderWithEditor(<ToolsIsland />);
+    expect(button('More')).toHaveAttribute('aria-haspopup', 'menu');
+    await user.click(button('More'));
+    const menu = screen.getByRole('menu', { name: 'More' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Import Mermaid…', 'Import SQL or DBML…']);
+    await user.click(within(menu).getByRole('menuitem', { name: 'Import Mermaid…' }));
+    expect(useUiStore.getState().mermaidDialog).toEqual({
+      open: true,
+      returnFocus: button('More'),
+    });
+
+    await user.click(button('More'));
+    await user.click(screen.getByRole('menuitem', { name: 'Import SQL or DBML…' }));
+    expect(useUiStore.getState().importDialog).toEqual({ open: true, returnFocus: button('More') });
   });
 });

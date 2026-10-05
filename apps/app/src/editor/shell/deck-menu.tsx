@@ -12,7 +12,6 @@ import {
   ClipboardList,
   Database,
   Download,
-  FileCode2,
   FileUp,
   Keyboard,
   LibraryBig,
@@ -38,15 +37,15 @@ import { getLibraryDb } from '../../storage/library-db-instance';
 import { shortcutLabel } from './shortcuts';
 
 /**
- * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, schema
- * import (044) and its last report, export, deck settings (the drawer on the deck) and the JSON
+ * The deck island's ≡ menu (018 FR-007, contract "Deck island"): the library, import, the last
+ * schema import report (044), export, deck settings (the drawer on the deck) and the JSON
  * overlay, and the DBML / SQL drawer (054). Import adds the file to the
- * library as a new deck, as the library's own Import does; the open deck is not replaced.
+ * library as a new deck, as the library's own Import does; the open deck is not replaced. Import
+ * SQL or DBML and Import Mermaid (into this deck) live in the tools island's ⋯ More menu.
  */
 export function DeckMenu() {
   const navigate = useNavigate();
   const openExport = useUiStore((s) => s.openExport);
-  const openImport = useUiStore((s) => s.openImport);
   const hasReport = useUiStore((s) => s.importReport !== null);
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
@@ -155,14 +154,6 @@ export function DeckMenu() {
           >
             <FileUp />
             Import…
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onSelect={() => {
-              openImport(menuTrigger.current);
-            }}
-          >
-            <FileCode2 />
-            Import SQL or DBML…
           </DropdownMenuItem>
           {hasReport && (
             <DropdownMenuItem
