@@ -2342,7 +2342,7 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 055-image-support
 
-- **Status:** implemented on `feat-image-support` (spec `specs/055-image-support/`, ADR 0037, accepted 2026-10-05); the PR is open. Cross-deck paste bytes and clipboard-menu image paste are `TODO(M5)`.
+- **Status:** implemented on `feat-image-support` (spec `specs/055-image-support/`, ADR 0037, accepted 2026-10-05); the PR is not opened yet. Cross-deck paste bytes and clipboard-menu image paste are `TODO(M5)`.
 - **Goal:** Upload images, and paste them with Ctrl+V.
 - **Decided (founder, 2026-10-05):** image is its own canvas object; bytes stored separately from
   the Yjs document and embedded in the file; compressed on import (long edge 2048 px, 10 MB in /
