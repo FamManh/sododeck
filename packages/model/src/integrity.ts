@@ -10,8 +10,9 @@ import { isSchemaGroupId } from './schema-groups';
 
 export interface IntegrityProblem {
   /**
-   * `duplicate-id` (050): a group whose id is also a node's, so a connector end naming it is
-   * ambiguous. Reported on the group, `field: 'id'`, `targetType: 'node'`.
+   * `duplicate-id` (050, 053): a group whose id is also a node's, or a sticky whose id is also a
+   * node's or a group's, so a connector end naming it is ambiguous. Reported on the group (or the
+   * sticky), `field: 'id'`, `targetType` the kind it collides with (`node`, else `group`).
    */
   kind: 'missing-reference' | 'ambiguous-anchor' | 'cycle' | 'detached-rule-input' | 'duplicate-id';
   /** The object holding the reference. */
@@ -114,8 +115,19 @@ export function checkIntegrity(file: SododeckFile): IntegrityProblem[] {
       report(object, 'id', group.id, 'node', 'duplicate-id');
     }
   }
-  // A connector end names a node or a group (050). `targetType` stays `node` for a broken end.
-  const ends: ReadonlySet<Id> = new Set([...nodes, ...groups]);
+  // A connector end names a node, a group (050) or a sticky (053). `targetType` stays `node` for a
+  // broken end.
+  const stickies = ids(file.stickies);
+  const ends: ReadonlySet<Id> = new Set([...nodes, ...groups, ...stickies]);
+  // A sticky is ambiguous as an end only when a connector names its id.
+  const named = new Set(file.edges.flatMap((edge) => [edge.from, edge.to]));
+  for (const sticky of file.stickies) {
+    if (!named.has(sticky.id) || reportedIds.has(sticky.id)) continue;
+    const clash = nodes.has(sticky.id) ? 'node' : groups.has(sticky.id) ? 'group' : null;
+    if (clash === null) continue;
+    reportedIds.add(sticky.id);
+    report({ scope: 'stickies', id: sticky.id }, 'id', sticky.id, clash, 'duplicate-id');
+  }
   for (const edge of file.edges) {
     const object: ObjectRef = { scope: 'edges', id: edge.id };
     check(object, 'from', edge.from, ends, 'node');

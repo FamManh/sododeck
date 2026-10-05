@@ -181,3 +181,37 @@ describe('groups as connector ends (050 US4)', () => {
     expect(fromGroup.get('free')).toMatchObject({ disabled: false });
   });
 });
+
+describe('stickies as connector ends (053 US1)', () => {
+  const withNotes: SododeckFile = {
+    ...deck,
+    groups: [{ id: 'g', title: 'Platform' }],
+    stickies: [
+      { id: 'n1', text: 'Ask the team about retries' },
+      { id: 'n2', text: 'Second note' },
+    ],
+    edges: [...deck.edges, { id: 'e2', from: 'n1', to: 'svc' }],
+  };
+
+  it('accepts sticky to card, sticky to group and sticky to sticky', () => {
+    expect(connectionCheck(withNotes, 'n1', 'q')).toBe('ok');
+    expect(connectionCheck(withNotes, 'n1', 'g')).toBe('ok');
+    expect(connectionCheck(withNotes, 'n1', 'n2')).toBe('ok');
+    expect(connectionCheck(withNotes, 'q', 'n2')).toBe('ok');
+  });
+
+  it('refuses a sticky to itself and a duplicate in either direction', () => {
+    expect(connectionCheck(withNotes, 'n1', 'n1')).toBe('self');
+    expect(connectionCheck(withNotes, 'n1', 'svc')).toBe('duplicate');
+    expect(connectionCheck(withNotes, 'svc', 'n1')).toBe('duplicate');
+  });
+
+  it('lists notes for the keyboard connect popover, titled by their first line', () => {
+    const targets = connectTargets(withNotes, 'svc', '');
+    const note = targets.find((t) => t.id === 'n2');
+    expect(note).toEqual({ id: 'n2', title: 'Second note', kind: 'note', disabled: false });
+    expect(targets.find((t) => t.id === 'n1')).toMatchObject({ kind: 'note', disabled: true });
+    expect(connectTargets(withNotes, 'n1', '').some((t) => t.id === 'n1')).toBe(false);
+    expect(connectTargets(withNotes, 'svc', 'second').map((t) => t.id)).toEqual(['n2']);
+  });
+});

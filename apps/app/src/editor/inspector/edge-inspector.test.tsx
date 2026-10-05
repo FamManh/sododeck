@@ -317,3 +317,19 @@ describe('EdgeInspector route of a group connector (050 US4)', () => {
     expect(screen.getByRole('combobox', { name: 'From side' })).toBeInTheDocument();
   });
 });
+
+describe('EdgeInspector on a locked connector (053)', () => {
+  it('is read-only with a hint, so no write reaches the model', () => {
+    const locked = {
+      ...inspectorDeck,
+      edges: inspectorDeck.edges.map((e) => (e.id === 'op' ? { ...e, locked: true as const } : e)),
+    };
+    renderInspector(locked, { edges: ['op'] });
+    expect(screen.getByRole('textbox', { name: 'Title' })).toBeDisabled();
+    expect(screen.getByRole('note')).toHaveTextContent('Locked');
+    for (const radio of within(screen.getByRole('radiogroup', { name: 'Protocol' })).getAllByRole(
+      'radio',
+    ))
+      expect(radio).toBeDisabled();
+  });
+});

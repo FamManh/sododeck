@@ -591,7 +591,8 @@ export function useCanvasHandlers() {
         event.preventDefault();
         const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         if (note === 'note') {
-          addNoteAt(editor, point);
+          // From the pad: always a free note, even over a card (053 R7).
+          addNoteAt(editor, point, { pin: false });
           return;
         }
         if (type === null) return;

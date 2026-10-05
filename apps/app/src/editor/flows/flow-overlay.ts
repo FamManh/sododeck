@@ -9,6 +9,7 @@ import type { SododeckFile } from '@sododeck/schema';
 import { cardChip, touchSets, type TouchChip } from '../../db/touches';
 import { isDatabaseCard } from '../../db/owner';
 import type { FlowSession } from '../../state/ui-store';
+import { endsOnNote } from '../stickies/sticky-flow';
 import { sessionPath } from './session-path';
 import { edgeStateOf, stepMarks, type NodeStepMark, type StepState } from './step-marks';
 
@@ -129,12 +130,16 @@ export function flowOverlay(
   if (path.nextStart !== null) {
     nodes.set(path.nextStart, { startsHere: `Step ${path.nextNumber} starts here` });
     for (const edge of deck.edges) {
-      if (edge.from === path.nextStart && !edges.has(edge.id)) mark(edge.id, 'candidate');
+      if (edge.from === path.nextStart && !edges.has(edge.id) && !endsOnNote(deck, edge))
+        mark(edge.id, 'candidate');
     }
   }
   if (hoverEdgeId !== null) {
     const edge = deck.edges.find((e) => e.id === hoverEdgeId);
-    const valid = edge !== undefined && (path.nextStart === null || edge.from === path.nextStart);
+    const valid =
+      edge !== undefined &&
+      !endsOnNote(deck, edge) &&
+      (path.nextStart === null || edge.from === path.nextStart);
     if (valid) mark(hoverEdgeId, 'preview');
   }
   if (session.invalid !== null) mark(session.invalid.edgeId, 'invalid');

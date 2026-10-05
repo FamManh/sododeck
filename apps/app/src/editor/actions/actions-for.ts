@@ -57,6 +57,7 @@ function resolve(action: Action, ctx: ActionContext, surface: Surface): Resolved
     ...(children === undefined ? {} : { children }),
     destructive: action.destructive === true,
     disabled: action.disabledReason?.(ctx) ?? null,
+    keepFocus: action.keepFocus === true,
     radio: action.radio === true,
     separatorBefore: action.separatorBefore === true,
     toolbarText: action.toolbarText === true,

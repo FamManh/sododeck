@@ -3,11 +3,12 @@
  * Reset route (017 R12, 022): a connection's pinned sides, offset, bends and anchors back to
  * automatic.
  */
-import { edgeShape } from '@sododeck/model';
+import { edgeShape, isLocked } from '@sododeck/model';
 import { RotateCcw, Scaling } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
 import { oneStep } from '../fields/one-step';
+import { LOCKED_HINT } from '../lock';
 import { hasCustomRoute } from '../routing/route-state';
 import type { Action, ActionContext } from './types';
 
@@ -49,7 +50,11 @@ export const SHAPE_ACTIONS: readonly Action[] = [
       const edge = edgeOf(ctx);
       return edge !== undefined && (edgeShape(edge) === 'elbow' || hasCustomRoute(edge));
     },
-    disabledReason: (ctx) => (edgeOf(ctx)?.route === undefined ? 'Route is automatic' : null),
+    disabledReason: (ctx) => {
+      const edge = edgeOf(ctx);
+      if (edge !== undefined && isLocked(edge)) return LOCKED_HINT;
+      return edge?.route === undefined ? 'Route is automatic' : null;
+    },
     run: (ctx) => {
       const edge = edgeOf(ctx);
       if (edge === undefined) return;

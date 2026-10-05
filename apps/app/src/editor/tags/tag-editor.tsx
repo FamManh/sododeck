@@ -23,6 +23,13 @@ const NO_COLOUR = '';
 
 const count = (n: number, noun: string) => `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
 
+/** "3 cards", "2 notes" or "3 cards and 2 notes": where the tag is used on the canvas. */
+function usedOn(usage: Pick<TagUsage, 'cards' | 'notes'>): string {
+  if (usage.notes === 0) return count(usage.cards, 'card');
+  if (usage.cards === 0) return count(usage.notes, 'note');
+  return `${count(usage.cards, 'card')} and ${count(usage.notes, 'note')}`;
+}
+
 /** "2 connections, 1 flow and the deck": the carriers other than cards, or `null` for none. */
 function alsoOn(usage: TagUsage): string | null {
   const parts = [
@@ -54,7 +61,10 @@ export function TagEditor({
   const current = tagColourOf(deck, tag);
   const [name, setName] = useState(tag);
   const [problem, setProblem] = useState<string | null>(null);
-  const [merge, setMerge] = useState<{ into: string; cards: number } | null>(null);
+  const [merge, setMerge] = useState<{
+    into: string;
+    usage: Pick<TagUsage, 'cards' | 'notes'>;
+  } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const announce = useUiStore.getState().announce;
   const usage = tagUsage(deck, tag);
@@ -70,7 +80,7 @@ export function TagEditor({
     if (next === tag) return;
     const other = deckTags(deck).find((t) => t.key === tagKey(next) && t.key !== tagKey(tag));
     if (other !== undefined) {
-      setMerge({ into: other.tag, cards: usage.cards });
+      setMerge({ into: other.tag, usage });
       return;
     }
     editor.renameTag(tag, next);
@@ -103,7 +113,7 @@ export function TagEditor({
 
   const doDelete = () => {
     editor.deleteTag(tag);
-    announce(`${tag} deleted, removed from ${count(usage.cards, 'card')}`);
+    announce(`${tag} deleted, removed from ${usedOn(usage)}`);
     onDeleted?.();
   };
 
@@ -169,7 +179,7 @@ export function TagEditor({
       {merge !== null && (
         <div className="flex flex-col gap-2 rounded-row bg-surface-2 p-2.5">
           <p className="text-body-sm text-ink">
-            Merge into “{merge.into}”? {count(merge.cards, 'card')} change
+            Merge into “{merge.into}”? {usedOn(merge.usage)} change
           </p>
           <div className="flex gap-2">
             <Button
@@ -202,7 +212,7 @@ export function TagEditor({
         {confirming ? (
           <div className="flex flex-col gap-2">
             <p className="text-body-sm text-ink">
-              Delete “{tag}”? It is removed from {count(usage.cards, 'card')}.
+              Delete “{tag}”? It is removed from {usedOn(usage)}.
             </p>
             <div className="flex gap-2">
               <Button size="sm" variant="primary" onClick={doDelete}>
@@ -232,7 +242,7 @@ export function TagEditor({
             )}
           >
             <Trash2 aria-hidden strokeWidth={ICON_STROKE_WIDTH} className="size-4" />
-            Delete tag · used on {count(usage.cards, 'card')}
+            Delete tag · used on {usedOn(usage)}
           </button>
         )}
         {also !== null && <p className="text-caption text-ink-secondary">{also}</p>}

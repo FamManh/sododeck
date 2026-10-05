@@ -521,3 +521,60 @@ describe('outside proxies for tables a view hides (048 US5)', () => {
     );
   });
 });
+
+describe('notes as connector ends (053)', () => {
+  const deck = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 }, group: 'g' },
+      { id: 'b', type: 'service', title: 'B', position: { x: 300, y: 0 } },
+    ],
+    groups: [{ id: 'g', title: 'Core' }],
+    stickies: [
+      { id: 'n', text: 'Why', position: { x: 0, y: 300 } },
+      { id: 'unused', text: 'Alone', position: { x: 400, y: 300 } },
+    ],
+    edges: [
+      { id: 'an', from: 'a', to: 'n' },
+      { id: 'nb', from: 'n', to: 'b' },
+    ],
+  });
+
+  it('draws a connector between a note and a card as a plain edge', () => {
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set());
+    expect(graph.edges).toEqual(['an', 'nb']);
+    expect(graph.representative.get('n')).toBe('sticky:n');
+    // Only notes that end a connector are listed.
+    expect(graph.stickies).toEqual(['n']);
+  });
+
+  it('folds a connector from a collapsed group to a note into a merged edge', () => {
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set(['g']));
+    expect(graph.edges).toEqual(['nb']);
+    expect(graph.merged).toMatchObject([{ a: 'collapsed:g', b: 'sticky:n', edgeIds: ['an'] }]);
+  });
+
+  it('draws no proxy for a note connected to something outside the drill scope', () => {
+    const graph = visibleGraph(deck, { node: null, group: 'g' }, new Set());
+    expect(graph.ports).toEqual([]);
+    // 'an' stays (card inside the scope), 'nb' (card outside) is not drawn.
+    expect(graph.edges).toEqual(['an']);
+  });
+
+  it('rebuilds when a note is added or left out, not when one moves', () => {
+    const first = visibleGraph(deck, { node: null, group: null }, new Set());
+    const moved = { ...deck, stickies: deck.stickies.map((s) => ({ ...s })) };
+    expect(visibleGraph(moved, { node: null, group: null }, new Set())).toBe(first);
+    const without = { ...deck, stickies: deck.stickies.filter((s) => s.id !== 'n') };
+    expect(visibleGraph(without, { node: null, group: null }, new Set()).edges).toEqual([]);
+  });
+
+  it('lets a card keep an id it shares with a note', () => {
+    const clash = deckOf({
+      nodes: [{ id: 'x', type: 'service', title: 'X' }],
+      stickies: [{ id: 'x', text: 'Clash' }],
+    });
+    expect(
+      visibleGraph(clash, { node: null, group: null }, new Set()).representative.get('x'),
+    ).toBe('x');
+  });
+});

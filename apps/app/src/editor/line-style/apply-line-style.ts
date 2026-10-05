@@ -9,6 +9,7 @@ import type { EdgeShape, Id } from '@sododeck/schema';
 import { useUiStore } from '../../state/ui-store';
 import { applyLineType } from '../fields/line-type';
 import { oneStep } from '../fields/one-step';
+import { editableEdges } from '../lock';
 
 /** Plural-aware suffix for announcements: "" for one connector, " for 3 connectors" otherwise. */
 const forCount = (n: number): string => (n === 1 ? '' : ` for ${String(n)} connectors`);
@@ -19,11 +20,13 @@ export function applyLineStyle(
   patch: Exclude<EdgeStylePatch, { shape: EdgeShape }>,
   said: string,
 ): void {
-  if (ids.length === 0) return;
+  // A locked connector refuses a restyle, so it is left out and counted.
+  const editable = editableEdges(editor, ids);
+  if (editable === null) return;
   oneStep(editor, () => {
-    editor.setEdgeStyle(ids, patch);
+    editor.setEdgeStyle(editable.ids, patch);
   });
-  useUiStore.getState().announce(`${said}${forCount(ids.length)}`);
+  useUiStore.getState().announce(`${said}${forCount(editable.ids.length)}${editable.note}`);
 }
 
 export { applyLineType };

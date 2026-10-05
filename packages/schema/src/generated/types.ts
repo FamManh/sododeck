@@ -698,7 +698,7 @@ export interface Group {
   style?: Style;
 }
 /**
- * A connection between two ends, each a node or a group.
+ * A connection between two ends, each a node, a group or a sticky.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Edge".
@@ -742,6 +742,10 @@ export interface Edge {
   toOptional?: boolean;
   onDelete?: DbAction;
   onUpdate?: DbAction;
+  /**
+   * `true` pins the connector, so it cannot be reshaped, reconnected or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
+   */
+  locked?: true;
 }
 /**
  * How a connector is drawn between its two ends (each a card or a group frame). All fields optional; an empty object is valid. `offset` and `waypoints` are never both set.
@@ -1087,7 +1091,7 @@ export interface RuleRow {
   then: string[];
 }
 /**
- * A sticky note. It needs an `anchor`, a `position`, or both.
+ * A sticky note. It needs an `anchor`, a `position`, or both. A connector can end on it.
  *
  * This interface was referenced by `SododeckFile`'s JSON-Schema
  * via the `definition` "Sticky".
@@ -1109,4 +1113,18 @@ export interface Sticky {
    * True when the note stays at full strength during flow playback. Absent means it is dimmed unless pinned to a node of the current step.
    */
   showInFlows?: boolean;
+  size?: Size;
+  /**
+   * Fixed text size in pixels. Absent means Auto: the size follows the note's size and text.
+   */
+  fontSize?: 12 | 14 | 16 | 20 | 24 | 32;
+  /**
+   * Text alignment. Absent means centre.
+   */
+  align?: 'left' | 'center' | 'right';
+  tags?: Tags;
+  /**
+   * `true` pins the note, so it cannot be moved, resized or deleted until unlocked. Absent means unlocked; `false` is not valid, so unlocking removes the key.
+   */
+  locked?: true;
 }

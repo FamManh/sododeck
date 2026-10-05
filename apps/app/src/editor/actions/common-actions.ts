@@ -1,5 +1,6 @@
-import { stickyLabel } from '@sododeck/model';
-import { Copy, Ellipsis, Pin, Trash2 } from 'lucide-react';
+import { isLocked, stickyLabel, type DeckEditor } from '@sododeck/model';
+import type { Id, SododeckFile } from '@sododeck/schema';
+import { Copy, Ellipsis, Lock, Pin, Trash2 } from 'lucide-react';
 
 import { copyText, couldNotCopyText } from '../../lib/clipboard';
 import { useUiStore } from '../../state/ui-store';
@@ -9,6 +10,33 @@ import { viewActions } from '../views/use-current-view';
 import type { Action, ActionContext } from './types';
 
 const ALL_MODES = ['edit', 'flow', 'session', 'viewOnly'] as const;
+
+/**
+ * Locks the selected connectors, or unlocks them when all are locked already (053 US4): one undo
+ * step. A locked connector refuses reshape, reconnect, restyle and delete until unlocked.
+ */
+export function toggleEdgeLock(
+  editor: DeckEditor,
+  deck: Pick<SododeckFile, 'edges'>,
+  ids: readonly Id[],
+): void {
+  const edges = deck.edges.filter((edge) => ids.includes(edge.id));
+  if (edges.length === 0) return;
+  const lock = !edges.every(isLocked);
+  editor.setLocked(
+    edges.map((edge) => edge.id),
+    lock,
+    'edges',
+  );
+  const name = edges.length === 1 ? 'connector' : `${String(edges.length)} connectors`;
+  useUiStore.getState().announce(`${lock ? 'Locked' : 'Unlocked'} ${name}`);
+}
+
+const allEdgesLocked = (ctx: ActionContext) => {
+  const ids = new Set(ctx.selection.edges);
+  const edges = ctx.deck.edges.filter((edge) => ids.has(edge.id));
+  return edges.length > 0 && edges.every(isLocked);
+};
 
 const pins = (ctx: ActionContext) => pinState(ctx.selection.nodes, ctx.view.render.pinned);
 
@@ -44,6 +72,22 @@ export const COMMON_ACTIONS: readonly Action[] = [
     },
   },
   {
+    id: 'connection.lock',
+    label: (ctx) => (allEdgesLocked(ctx) ? 'Unlock' : 'Lock'),
+    icon: Lock,
+    shortcut: 'lock',
+    section: 'arrange',
+    where: {
+      menu: ['connection', 'connections'],
+      toolbar: ['connection', 'connections'],
+    },
+    checked: allEdgesLocked,
+    run: (ctx) => {
+      // Only the connectors: a selection of connectors never carries cards here.
+      toggleEdgeLock(ctx.editor, ctx.deck, ctx.selection.edges);
+    },
+  },
+  {
     id: 'view.pin',
     label: (ctx) => {
       const state = pins(ctx);
@@ -67,7 +111,11 @@ export const COMMON_ACTIONS: readonly Action[] = [
     shortcut: 'delete',
     section: 'danger',
     destructive: true,
-    where: { menu: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'] },
+    where: {
+      menu: ['component', 'components', 'connection', 'connections', 'sticky', 'mixed'],
+      // The note toolbar ends with Delete (053 US3); other toolbars keep it in the menu.
+      toolbar: ['sticky'],
+    },
     // Groups are never deleted this way (the Delete key refuses them too).
     applies: (ctx) =>
       ctx.selection.nodes.length + ctx.selection.edges.length + ctx.selection.stickies.length > 0,

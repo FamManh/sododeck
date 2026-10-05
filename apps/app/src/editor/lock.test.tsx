@@ -13,7 +13,16 @@ import { alignSelection } from './actions/align-actions';
 import { Canvas } from './canvas';
 import { connectColumns } from './canvas-actions';
 import { ConfirmDeleteDialog } from './confirm-delete-dialog';
-import { LOCKED_HINT, unlockedOf, withoutLocked } from './lock';
+import { actionsFor } from './actions/actions-for';
+import { ACTIONS } from './actions/index';
+import {
+  isEdgeLocked,
+  isStickyLocked,
+  LOCKED_HINT,
+  unlockedIds,
+  unlockedOf,
+  withoutLocked,
+} from './lock';
 import { useEditorShortcuts } from './use-canvas-shortcuts';
 
 const table = (id: string, x: number, extra: Record<string, unknown> = {}) => ({
@@ -178,5 +187,147 @@ describe('what a lock still allows (043 FR-023)', () => {
     const nodes = toJSON(ctx.doc).nodes;
     expect(nodes.find((n) => n.id === 'payments')?.position).toEqual({ x: 0, y: 0 });
     expect(nodes.find((n) => n.id === 'svc')?.position?.y).toBe(0);
+  });
+});
+
+describe('locked connectors (053 US4)', () => {
+  const linked = deckOf({
+    nodes: [
+      { id: 'a', type: 'service', title: 'A', position: { x: 0, y: 0 } },
+      { id: 'b', type: 'service', title: 'B', position: { x: 400, y: 0 } },
+    ],
+    edges: [
+      { id: 'e1', from: 'a', to: 'b', locked: true },
+      { id: 'e2', from: 'a', to: 'b' },
+      { id: 'e3', from: 'b', to: 'a' },
+    ],
+    stickies: [
+      { id: 's1', text: 'x', position: { x: 0, y: 300 }, locked: true },
+      { id: 's2', text: 'y', position: { x: 100, y: 300 } },
+    ],
+  });
+  const lockAction = (ids: string[], file = linked) => {
+    const ctx = actionContext({ kind: 'connections', ids: sel({ edges: ids }) }, 'edit', file);
+    const action = actionsFor(ACTIONS, ctx, 'toolbar')
+      .flatMap((s) => s.actions)
+      .find((a) => a.id === 'connection.lock');
+    return { ctx, action };
+  };
+
+  it('has helpers for connectors and notes', () => {
+    expect(isEdgeLocked(linked, 'e1')).toBe(true);
+    expect(isEdgeLocked(linked, 'e2')).toBe(false);
+    expect(isEdgeLocked(linked, 'missing')).toBe(false);
+    expect(isStickyLocked(linked, 's1')).toBe(true);
+    expect(unlockedIds(linked, 'edges', ['e1', 'e2'])).toEqual({ ids: ['e2'], skipped: 1 });
+    expect(unlockedIds(linked, 'stickies', ['s1', 's2'])).toEqual({ ids: ['s2'], skipped: 1 });
+    expect(
+      withoutLocked(linked, [
+        { scope: 'edges', id: 'e1' },
+        { scope: 'edges', id: 'e2' },
+        { scope: 'stickies', id: 's1' },
+        { scope: 'stickies', id: 's2' },
+        { scope: 'groups', id: 'g' },
+      ]),
+    ).toEqual({
+      targets: [
+        { scope: 'edges', id: 'e2' },
+        { scope: 'stickies', id: 's2' },
+        { scope: 'groups', id: 'g' },
+      ],
+      skipped: 2,
+    });
+  });
+
+  it('locks several connectors in one undo step, then unlocks them in one', () => {
+    const { ctx, action } = lockAction(['e2', 'e3']);
+    expect(action?.label).toBe('Lock');
+    action?.run();
+    expect(toJSON(ctx.doc).edges.map((e) => e.locked)).toEqual([true, true, true]);
+    expect(ui().announcement.text).toBe('Locked 2 connectors');
+    ctx.editor.undo();
+    expect(toJSON(ctx.doc).edges.map((e) => e.locked)).toEqual([true, undefined, undefined]);
+    ctx.editor.redo();
+    const again = lockAction(['e1', 'e2', 'e3'], toJSON(ctx.doc));
+    expect(again.action?.label).toBe('Unlock');
+    expect(again.action?.checked).toBe(true);
+    again.action?.run();
+    expect(toJSON(again.ctx.doc).edges.some((e) => e.locked !== undefined)).toBe(false);
+    again.ctx.editor.undo();
+    expect(toJSON(again.ctx.doc).edges.every((e) => e.locked === true)).toBe(true);
+  });
+
+  it('locks the rest when only some are locked', () => {
+    const { ctx, action } = lockAction(['e1', 'e2']);
+    expect(action?.label).toBe('Lock');
+    action?.run();
+    expect(toJSON(ctx.doc).edges.map((e) => e.locked)).toEqual([true, true, undefined]);
+  });
+
+  it('is on the context menu of one connector too', () => {
+    const ctx = actionContext({ kind: 'connection', ids: sel({ edges: ['e1'] }) }, 'edit', linked);
+    const lock = actionsFor(ACTIONS, ctx, 'menu')
+      .flatMap((s) => s.actions)
+      .find((a) => a.id === 'connection.lock');
+    expect(lock?.label).toBe('Unlock');
+  });
+
+  it('refuses reshape, reconnect, style and delete in the model, and edits again once unlocked', () => {
+    const { doc, editor } = actionContext(
+      { kind: 'connection', ids: sel({ edges: ['e1'] }) },
+      'edit',
+      linked,
+    );
+    const codeOf = (fn: () => void) => {
+      try {
+        fn();
+      } catch (error) {
+        return (error as { code?: string }).code;
+      }
+      return undefined;
+    };
+    expect(
+      codeOf(() => {
+        editor.setEdgeRoute('e1', { fromSide: 'left' });
+      }),
+    ).toBe('locked');
+    expect(
+      codeOf(() => {
+        editor.update('edges', 'e1', { to: 'a' });
+      }),
+    ).toBe('locked');
+    expect(
+      codeOf(() => {
+        editor.setEdgeStyle(['e1'], { width: 4 });
+      }),
+    ).toBe('locked');
+    expect(
+      codeOf(() => {
+        editor.remove('edges', 'e1');
+      }),
+    ).toBe('locked');
+    editor.setLocked(['e1'], false, 'edges');
+    editor.setEdgeStyle(['e1'], { width: 4 });
+    expect(toJSON(doc).edges[0]?.style?.width).toBe(4);
+  });
+
+  it('deletes only the unlocked connectors of a selection, saying how many were skipped', async () => {
+    const { user, doc } = setup(linked);
+    act(() => {
+      ui().select({ edges: ['e1', 'e2'] });
+    });
+    await user.keyboard('{Delete}');
+    expect(toJSON(doc).edges.map((e) => e.id)).toEqual(['e1', 'e3']);
+    expect(ui().announcement.text).toMatch(/· Skipped 1 locked$/);
+  });
+
+  it('never deletes a locked connector alone', async () => {
+    const { user, doc } = setup(linked);
+    act(() => {
+      ui().select({ edges: ['e1'] });
+    });
+    await user.keyboard('{Delete}');
+    expect(toJSON(doc).edges).toHaveLength(3);
+    expect(ui().announcement.text).toBe('Skipped 1 locked · unlock to delete');
   });
 });

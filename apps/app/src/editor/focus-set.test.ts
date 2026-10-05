@@ -328,3 +328,18 @@ describe('pinned focus draws the lit relationships (048 US6)', () => {
     expect(edges.find((e) => e.id === 'ax')?.data?.dimmed).toBe(true);
   });
 });
+
+describe('focusSet with notes (053)', () => {
+  it('lights a connector to a note and counts the note as a neighbour', () => {
+    const deck = deckOf({
+      nodes: [{ id: 'a', type: 'service', title: 'A' }],
+      stickies: [{ id: 'n', text: 'Why', position: { x: 0, y: 300 } }],
+      edges: [{ id: 'an', from: 'a', to: 'n' }],
+    });
+    const graph = visibleGraph(deck, { node: null, group: null }, new Set());
+    expect(focusSet(deck, graph, 'a')).toMatchObject({
+      members: new Set(['a', 'sticky:n']),
+      edges: new Set(['an']),
+    });
+  });
+});

@@ -12,6 +12,7 @@ import { collectionMap } from '../layout';
 import { readObject } from '../read';
 import { assertValid, validateObject } from '../validate';
 import { requireEntry, type EditContext } from './context';
+import { assertUnlocked } from './node-lock';
 
 /** `null` (or a default value) puts a key back to its default and removes it. */
 export type EdgeStylePatch = {
@@ -73,6 +74,7 @@ export function setEdgeStyle(
   const list = collectionMap(ctx.doc, 'edges');
   const plans = edgeIds.map((id) => {
     const map = requireEntry(list, id, 'Edge');
+    assertUnlocked(map, 'Connector', id, 'restyle it');
     const current = readObject('edges', id, map) as unknown as Edge;
     const hasOffset = current.route?.offset !== undefined;
     const next = new Map<string, unknown>(Object.entries(current.style ?? {}));

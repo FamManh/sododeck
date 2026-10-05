@@ -8,6 +8,7 @@ import type { SododeckFile } from '@sododeck/schema';
 
 import type { SessionTarget } from '../../state/ui-store';
 import { displayPosition, groupBounds, type Point } from '../canvas-geometry';
+import { endsOnNote } from '../stickies/sticky-flow';
 import { sessionPath } from './session-path';
 
 const byReading = (a: Point, b: Point) => a.y - b.y || a.x - b.x;
@@ -28,6 +29,7 @@ export function candidateEdges(
   return deck.edges
     .filter(
       (e) =>
+        !endsOnNote(deck, e) &&
         positions.has(e.from) &&
         positions.has(e.to) &&
         (nextStart === null || e.from === nextStart),

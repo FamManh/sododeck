@@ -1,7 +1,7 @@
 import { toJSON } from '@sododeck/model';
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { useEditor } from '../model/use-editor';
 import { useDeckSnapshot } from '../model/use-deck-snapshot';
@@ -88,6 +88,23 @@ describe('ConnectPopover', () => {
     await user.clear(screen.getByRole('combobox', { name: 'Find component' }));
     await user.keyboard('orders{Enter}');
     expect(toJSON(doc).edges).toHaveLength(1);
+  });
+
+  it('Home and End jump to the first and last enabled option', async () => {
+    const { user } = setup();
+    await user.keyboard('{End}');
+    expect(active()?.textContent).toBe('Event Bus');
+    await user.keyboard('{Home}');
+    expect(active()?.textContent).toBe('Data dashboard');
+  });
+
+  it('keeps the active option in view in a long list', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const { user } = setup();
+    await user.keyboard('{ArrowDown}');
+    expect(scroll).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(scroll.mock.contexts.at(-1)).toBe(active());
   });
 
   it('ignores a click on a disabled option', async () => {

@@ -3,7 +3,7 @@
  * model's cascade and the app's canvas so a note's screen point never disagrees between them
  * (ADR 0010); group frames are fitted here for decks saved before frames were stored (016).
  */
-import type { Frame, Group, Id, Node, SododeckFile, Sticky, View } from '@sododeck/schema';
+import type { Frame, Group, Id, Node, SododeckFile, Size, Sticky, View } from '@sododeck/schema';
 
 export interface Point {
   x: number;
@@ -15,6 +15,41 @@ export const NODE_GRID = { columns: 10, dx: 220, dy: 110 } as const;
 
 /** Offset of a pinned note that has no stored position. */
 export const STICKY_DEFAULT_OFFSET: Point = { x: 24, y: -96 };
+
+/** A note with no stored `size` is this big (053). */
+export const STICKY_DEFAULT_SIZE: Size = { width: 200, height: 200 };
+
+/** Smallest size a note is written with (053); a smaller stored value is accepted on read. */
+export const STICKY_MIN_SIZE: Size = { width: 96, height: 96 };
+
+/** Height of a collapsed note: one line, whatever its stored size (053). */
+export const STICKY_COLLAPSED_HEIGHT = 40;
+
+/** `size` raised to `STICKY_MIN_SIZE` on each axis. */
+export function clampStickySize(size: Size): Size {
+  return {
+    width: Math.max(size.width, STICKY_MIN_SIZE.width),
+    height: Math.max(size.height, STICKY_MIN_SIZE.height),
+  };
+}
+
+/**
+ * The canvas rectangle of a note at `position` (053), for connector routing and hit tests: its
+ * stored size or the default, one line high while collapsed. Shared with the app so a connector
+ * ends where the note is drawn.
+ */
+export function stickyBox(
+  sticky: Pick<Sticky, 'size' | 'collapsed'>,
+  position: Point,
+): { x: number; y: number; width: number; height: number } {
+  const { width, height } = sticky.size ?? STICKY_DEFAULT_SIZE;
+  return {
+    x: position.x,
+    y: position.y,
+    width,
+    height: sticky.collapsed === true ? STICKY_COLLAPSED_HEIGHT : height,
+  };
+}
 
 /** The node's stored position, or its grid slot by index in `file.nodes`. Null when no such node. */
 export function nodeCanvasPosition(file: SododeckFile, nodeId: Id): Point | null {

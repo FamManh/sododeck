@@ -208,6 +208,46 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
     ]);
   });
 
+  it('refuses a connector end naming an id held by a sticky and a node or a group (053)', () => {
+    const note = (id: string) => ({ id, text: id, position: { x: 0, y: 0 } });
+    const withNode = loadError({
+      ...emptySododeckFile(),
+      nodes: [node('x'), node('y')],
+      stickies: [note('x')],
+      edges: [{ id: 'e', from: 'y', to: 'x' }],
+    });
+    expect(withNode.issues).toEqual([
+      {
+        path: 'stickies.0.id',
+        message:
+          'Id "x" names both a node and a sticky, so connector ends naming it are ambiguous (nodes.0.id, stickies.0.id).',
+      },
+    ]);
+    const withGroup = loadError({
+      ...emptySododeckFile(),
+      nodes: [node('y')],
+      groups: [{ id: 'g', title: 'G' }],
+      stickies: [note('g')],
+      edges: [{ id: 'e', from: 'y', to: 'g' }],
+    });
+    expect(withGroup.issues).toEqual([
+      {
+        path: 'stickies.0.id',
+        message:
+          'Id "g" names both a group and a sticky, so connector ends naming it are ambiguous (groups.0.id, stickies.0.id).',
+      },
+    ]);
+  });
+
+  it('loads a node and a sticky sharing an id when no connector names it (053)', () => {
+    const file = {
+      ...emptySododeckFile(),
+      nodes: [node('x')],
+      stickies: [{ id: 'x', text: 'x', position: { x: 0, y: 0 } }],
+    };
+    expect(toJSON(fromJSON(file))).toEqual(file);
+  });
+
   describe('database parts share one id scope (040)', () => {
     const table = (id: string, extra: Record<string, unknown>) => ({
       id,

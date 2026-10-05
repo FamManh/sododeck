@@ -21,6 +21,7 @@ import type { Id, Side, SododeckFile } from '@sododeck/schema';
 import { readDeck } from '../../model/use-deck-snapshot';
 import { useUiStore, type EndpointPreview } from '../../state/ui-store';
 import { connectionCheck, REFUSAL_TEXT, type ConnectionCheck } from '../connection-rules';
+import { isEdgeLocked, LOCKED_HINT } from '../lock';
 import { oneStep } from '../fields/one-step';
 import { GROUP_ENDS, hitTarget, type TargetScene } from '../routing/endpoint-target';
 import { attachToOutline } from '../routing/outline-attach';
@@ -62,6 +63,7 @@ export interface EndpointSession {
 function titleOf(deck: SododeckFile, id: Id): string {
   const end = endpointOf(deck, id);
   if (end === null) return id;
+  if (end.kind === 'sticky') return `${end.title} (note)`;
   return end.kind === 'group' ? `${end.title} (group)` : end.title;
 }
 
@@ -170,6 +172,11 @@ export function endEndpointDrag(editor: DeckEditor, session: EndpointSession): v
   const { ctx, preview } = session;
   if (session.cancelled || preview === null) return;
   const ui = useUiStore.getState();
+  // The model refuses writes on a locked connector; say why instead of throwing.
+  if (isEdgeLocked(session.deck, ctx.edgeId)) {
+    ui.announce(LOCKED_HINT);
+    return;
+  }
   if (preview.targetId === null) {
     ui.announce(NOT_CONNECTED);
     return;

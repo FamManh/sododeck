@@ -7,6 +7,7 @@ import type { Edge, EdgeShape, Id } from '@sododeck/schema';
 import { CornerDownRight, Minus, Spline, type LucideIcon } from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
+import { editableEdges } from '../lock';
 import { oneStep } from './one-step';
 
 export const LINE_TYPES: readonly { value: EdgeShape; label: string; icon: LucideIcon }[] = [
@@ -27,15 +28,19 @@ export function sharedLineShape(edges: readonly Pick<Edge, 'route' | 'style'>[])
 
 /** Sets the line type of `ids` as one undo step, remembers it for new connectors, announces it. */
 export function applyLineType(editor: DeckEditor, ids: readonly Id[], shape: EdgeShape): void {
-  if (ids.length === 0) return;
+  // A locked connector refuses a reshape, so it is left out and counted.
+  const editable = editableEdges(editor, ids);
+  if (editable === null) return;
   oneStep(editor, () => {
-    editor.setEdgeShape(ids, shape);
+    editor.setEdgeShape(editable.ids, shape);
   });
   const ui = useUiStore.getState();
   ui.setLastLineShape(shape);
   ui.announce(
-    ids.length === 1
-      ? `Line type: ${lineTypeLabel(shape)}`
-      : `Line type: ${lineTypeLabel(shape)} for ${String(ids.length)} connectors`,
+    `${
+      editable.ids.length === 1
+        ? `Line type: ${lineTypeLabel(shape)}`
+        : `Line type: ${lineTypeLabel(shape)} for ${String(editable.ids.length)} connectors`
+    }${editable.note}`,
   );
 }

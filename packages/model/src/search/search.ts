@@ -37,6 +37,8 @@ export type SearchField =
   | 'text'
   | 'cell'
   | 'column'
+  /** A sticky note's tag (053). */
+  | 'tag'
   /** A typed field value (032), indexed as "<field>: <value>". */
   | 'field';
 

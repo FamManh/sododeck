@@ -116,3 +116,21 @@ describe('EdgePopover group ends (050 US4)', () => {
     expect(screen.getByText('Order Service → Data layer')).toBeInTheDocument();
   });
 });
+
+describe('EdgePopover on a locked connector (053)', () => {
+  const lockedDeck = deckOf({
+    nodes: deck.nodes,
+    edges: [{ id: 'e1', from: 'a', to: 'b', label: 'old', locked: true }],
+  });
+
+  it('shows the values read-only and writes nothing', () => {
+    const { doc } = renderWithEditor(<Harness />, lockedDeck);
+    act(() => {
+      useUiStore.getState().openEdgePopover('e1');
+    });
+    expect(screen.getByRole('textbox', { name: 'Label' })).toBeDisabled();
+    expect(screen.getByRole('note')).toHaveTextContent('Locked');
+    for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled();
+    expect(toJSON(doc).edges[0]?.label).toBe('old');
+  });
+});

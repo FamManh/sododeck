@@ -2305,7 +2305,7 @@ ones (images, Mermaid import) stand alone. Suggested order: 053 → 054 → 056 
 
 ## 053-sticky-notes-and-connectors
 
-- **Status:** not started.
+- **Status:** implemented on `feat-sticky-note-and-connections` (spec `specs/053-sticky-notes-and-connectors/`, ADR 0036); screenshots, quickstart run and the PR (T055, T056) are open.
 - **Goal:** A sticky note looks like a sticky note, can be resized, takes part in connections and
   has its own toolbar; several connectors can be selected and edited together.
 - **In scope:**

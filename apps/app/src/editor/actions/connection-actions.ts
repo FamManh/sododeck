@@ -1,16 +1,25 @@
 import type { Edge } from '@sododeck/schema';
 import { edgeLineStyle } from '@sododeck/model';
-import { AlignHorizontalDistributeCenter, ArrowRightLeft, Cable, Spline, Type } from 'lucide-react';
+import {
+  AlignHorizontalDistributeCenter,
+  ArrowRightLeft,
+  Cable,
+  Minus,
+  Spline,
+  Type,
+} from 'lucide-react';
 
 import { useUiStore } from '../../state/ui-store';
 import { spreadEndsPlan, type SpreadPlan } from '../editing/spread-ends';
 import { spreadTargets, spreadViewOf } from '../editing/spread-view';
 import { DIRECTIONS, PROTOCOLS, protocolLabel } from '../fields/edge-choices';
-import { applyLineType, LINE_TYPES, sharedLineShape } from '../fields/line-type';
+import { applyLineType, LINE_TYPES, lineTypeLabel, sharedLineShape } from '../fields/line-type';
 import { oneStep } from '../fields/one-step';
+import { editableEdges, LOCKED_HINT, isEdgeLocked } from '../lock';
 import { applyLineStyle } from '../line-style/apply-line-style';
 import { DASHES, WIDTHS, widthText } from '../line-style/line-style-options';
 import { lineStyleView } from '../line-style/line-style-view';
+import { CARD_COLORS, colourName } from '../style/card-style';
 import type { Action, ActionContext } from './types';
 
 const edgeOf = (ctx: ActionContext): Edge | undefined =>
@@ -42,6 +51,27 @@ function spreadPlan(ctx: ActionContext): SpreadPlan {
   const edges = ctx.canvas?.getEdges?.() ?? [];
   return spreadEndsPlan(spreadViewOf(nodes, edges, ctx.deck.edges), spreadTargets(ctx.selection));
 }
+
+/** What the toolbar says for a value several connectors may share: the value, or "Mixed". */
+const sharedText = <T>(
+  values: readonly T[],
+  text: (value: T) => string,
+): { text: string; value: T | null } => {
+  const used = [...new Set(values)];
+  const [only] = used;
+  return used.length === 1 && only !== undefined
+    ? { text: text(only), value: only }
+    : { text: 'Mixed', value: null };
+};
+
+const directionOf = (edge: Edge) => edge.direction ?? 'forward';
+
+const colourText = (colour: string | null): string =>
+  colour === null ? 'none' : CARD_COLORS.includes(colour as never) ? colourName(colour) : colour;
+
+/** The swatch a connector colour draws: a card colour's stroke, a deck hex as is. */
+const colourSwatch = (colour: string): string =>
+  CARD_COLORS.includes(colour as never) ? `var(--color-card-${colour}-stroke)` : colour;
 
 const count = (n: number, one: string, many: string) => `${String(n)} ${n === 1 ? one : many}`;
 
@@ -118,17 +148,56 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
     icon: Spline,
     section: 'edit',
     field: 'lineStyle',
-    where: { toolbar: ['connection', 'connections'] },
+    // Several connectors get the same popover from the Colour button (053 US4).
+    where: { toolbar: ['connection'] },
     run: () => {
       useUiStore.getState().openToolbarField('lineStyle');
     },
   },
   {
+    id: 'connection.direction',
+    label: 'Arrow ends',
+    toolbarLabel: (ctx) =>
+      `Arrow ends: ${sharedText(selectedEdges(ctx).map(directionOf), (d) => DIRECTIONS.find((x) => x.value === d)?.label ?? d).text}`,
+    icon: ArrowRightLeft,
+    section: 'edit',
+    where: { toolbar: ['connections'] },
+    radio: true,
+    children: () =>
+      DIRECTIONS.map(({ value, label }) => ({
+        id: `connection.direction.${value}`,
+        label,
+        section: 'edit',
+        where: {},
+        checked: (ctx) => sharedText(selectedEdges(ctx).map(directionOf), String).value === value,
+        run: (ctx) => {
+          // A locked connector is left out: its style is frozen with it.
+          const editable = editableEdges(
+            ctx.editor,
+            selectedEdges(ctx).map((edge) => edge.id),
+          );
+          if (editable === null) return;
+          oneStep(ctx.editor, () => {
+            for (const id of editable.ids) ctx.editor.update('edges', id, { direction: value });
+          });
+          useUiStore
+            .getState()
+            .announce(
+              `Arrow ends set to ${label}${editable.ids.length === 1 ? '' : ` for ${String(editable.ids.length)} connectors`}${editable.note}`,
+            );
+        },
+      })),
+  },
+  {
     id: 'connection.lineType',
     label: 'Line type',
+    toolbarLabel: (ctx) => {
+      const shape = sharedLineShape(selectedEdges(ctx));
+      return `Line type: ${shape === null ? 'Mixed' : lineTypeLabel(shape)}`;
+    },
     icon: Spline,
     section: 'edit',
-    where: { menu: ['connection', 'connections'] },
+    where: { menu: ['connection', 'connections'], toolbar: ['connections'] },
     radio: true,
     children: () =>
       LINE_TYPES.map(({ value, label, icon }) => ({
@@ -174,10 +243,33 @@ export const CONNECTION_ACTIONS: readonly Action[] = [
       })),
   },
   {
+    id: 'connection.colourField',
+    label: 'Colour',
+    toolbarLabel: (ctx) => {
+      const shared = lineStyleView(selectedEdges(ctx)).color.shared;
+      return `Colour: ${shared.mixed ? 'Mixed' : colourText(shared.value)}`;
+    },
+    swatch: (ctx) => {
+      const shared = lineStyleView(selectedEdges(ctx)).color.shared;
+      return shared.mixed || shared.value === null ? null : colourSwatch(shared.value);
+    },
+    section: 'edit',
+    field: 'lineStyle',
+    where: { toolbar: ['connections'] },
+    run: () => {
+      useUiStore.getState().openToolbarField('lineStyle');
+    },
+  },
+  {
     id: 'connection.weight',
     label: 'Weight',
+    toolbarLabel: (ctx) => {
+      const shared = lineStyleView(selectedEdges(ctx)).width.shared;
+      return `Weight: ${shared.mixed ? 'Mixed' : widthText(shared.value)}`;
+    },
+    icon: Minus,
     section: 'edit',
-    where: { menu: ['connection', 'connections'] },
+    where: { menu: ['connection', 'connections'], toolbar: ['connections'] },
     radio: true,
     children: () =>
       WIDTHS.map((value) => ({
@@ -247,9 +339,14 @@ export const SPREAD_ENDS_ACTION: Action = {
     spreadPlan(ctx).patches.length === 0 ? 'No side has two or more connector ends' : null,
   run: (ctx) => {
     const plan = spreadPlan(ctx);
-    if (plan.patches.length === 0) return;
+    // A locked connector keeps its anchors (the model refuses the write).
+    const patches = plan.patches.filter(({ edgeId }) => !isEdgeLocked(ctx.deck, edgeId));
+    if (patches.length === 0) {
+      if (plan.patches.length > 0) useUiStore.getState().announce(LOCKED_HINT);
+      return;
+    }
     oneStep(ctx.editor, () => {
-      for (const { edgeId, patch } of plan.patches) ctx.editor.setEdgeRoute(edgeId, patch);
+      for (const { edgeId, patch } of patches) ctx.editor.setEdgeRoute(edgeId, patch);
     });
     useUiStore
       .getState()

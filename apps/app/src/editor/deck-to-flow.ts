@@ -10,12 +10,14 @@ import {
   relationshipDisplayOf,
   type ResolvedRelationshipDisplay,
   type Geometry,
+  STICKY_DEFAULT_SIZE,
+  stickyBox,
   stickyCanvasPosition,
   stickyLabel,
   type StickyPlacement,
 } from '@sododeck/model';
 import type { TouchAccess } from '@sododeck/model';
-import type { EdgeShape, SododeckFile } from '@sododeck/schema';
+import type { EdgeShape, SododeckFile, Size } from '@sododeck/schema';
 import type { Edge, Node } from '@xyflow/react';
 
 import {
@@ -188,6 +190,8 @@ export interface DeckEdgeData extends Record<string, unknown> {
    * and "follow" with the Labels tool off), so hovering changes no React Flow object.
    */
   hoverLabel?: boolean;
+  /** Locked (053): it cannot be rerouted, reattached or deleted; a small lock mark shows it. */
+  locked?: boolean;
 }
 
 /** What a relationship edge draws besides an ordinary connector (042). */
@@ -309,6 +313,15 @@ export interface StickyNodeData extends Record<string, unknown> {
   collapsed: boolean;
   showInFlows: boolean;
   flowState: StickyFlowState;
+  /** The box the note is drawn in: the stored size or the default (053), whatever the collapse. */
+  size: Size;
+  /** The first ten tags with their own colours (033); empty without tags. */
+  tagLooks: readonly TagLook[];
+  /** A locked note cannot be moved, resized, reconnected or deleted (053). */
+  locked: boolean;
+  /** A pinned text size in px; absent = fit the text to the note (Auto). */
+  fontSize: number | undefined;
+  align: 'left' | 'center' | 'right';
 }
 
 /** A component: a card (`deck`) or a shape (`shape`, 031), from the same data. */
@@ -348,9 +361,10 @@ export const STICKY_LEADER_PREFIX = 'sticky-leader:';
 
 /**
  * The deck id a drawn node stands for as a connector end (050 R6): a card's own id, or the group
- * behind a `group:` frame or a `collapsed:` card. React Flow reports flow ids; edges store these.
+ * behind a `group:` frame or a `collapsed:` card, or the note behind a `sticky:` node (053). React Flow reports flow ids; edges store these.
  */
 export function endpointIdOf(flowId: string): string {
+  if (flowId.startsWith(STICKY_NODE_PREFIX)) return flowId.slice(STICKY_NODE_PREFIX.length);
   if (flowId.startsWith(GROUP_NODE_PREFIX)) return flowId.slice(GROUP_NODE_PREFIX.length);
   if (flowId.startsWith(COLLAPSED_NODE_PREFIX)) return flowId.slice(COLLAPSED_NODE_PREFIX.length);
   return flowId;
@@ -496,6 +510,8 @@ export interface CanvasView {
   scopeTitle?: string | undefined;
   /** Node and group ids of an ⌥ duplicate-drag's copies (051): they get `sd-drag-copy`. */
   dragCopyIds?: ReadonlySet<string>;
+  /** Notes are hidden (flow mode, notes display off): their connectors are not drawn (053). */
+  notesHidden?: boolean;
 }
 
 /** Marks are rebuilt with every overlay; equal ones keep the cached React Flow object. */
@@ -1033,6 +1049,7 @@ export function toStickyNodes(
 ): StickyFlowNode[] {
   const selected = new Set(selection.stickies);
   const titles = new Map(deck.nodes.map((node) => [node.id, node.title]));
+  const tagColours = tagColourMap(deck.tagColors);
   return deck.stickies.map((sticky) => {
     const placement = stickyCanvasPosition(deck, sticky);
     const pinnedTo = placement.status === 'pinned' ? placement.pinnedTo : null;
@@ -1048,7 +1065,14 @@ export function toStickyNodes(
       brokenCurrentStep: flow.brokenCurrentStep,
     });
     const hidden = flowState === 'hidden';
-    const draggable = !flow.flowMode;
+    const locked = sticky.locked === true;
+    // A locked note stays put (053); flow mode is view-only.
+    const draggable = !flow.flowMode && !locked;
+    const box = stickyBox(sticky, placement.point);
+    const size = sticky.size ?? STICKY_DEFAULT_SIZE;
+    const tagLooks = cardTagLooks(sticky.tags, tagColours);
+    const fontSize = sticky.fontSize;
+    const align = sticky.align ?? 'center';
     const className = hidden
       ? undefined
       : flowState === 'dimmed'
@@ -1070,6 +1094,12 @@ export function toStickyNodes(
       cached.data.collapsed === collapsed &&
       cached.data.showInFlows === showInFlows &&
       cached.data.flowState === flowState &&
+      cached.data.size.width === size.width &&
+      cached.data.size.height === size.height &&
+      sameTagLooks(cached.data.tagLooks, tagLooks) &&
+      cached.data.locked === locked &&
+      cached.data.fontSize === fontSize &&
+      cached.data.align === align &&
       cached.className === className &&
       Boolean(cached.hidden) === hidden &&
       cached.draggable === draggable
@@ -1080,8 +1110,10 @@ export function toStickyNodes(
       id: `${STICKY_NODE_PREFIX}${sticky.id}`,
       type: 'sticky',
       position: placement.point,
-      width: 180,
+      width: box.width,
+      height: box.height,
       zIndex: 1,
+      connectable: true,
       ...(className === undefined ? {} : { className }),
       ...(hidden ? { hidden: true } : {}),
       draggable,
@@ -1097,6 +1129,11 @@ export function toStickyNodes(
         collapsed,
         showInFlows,
         flowState,
+        size,
+        tagLooks,
+        locked,
+        fontSize,
+        align,
       },
     };
     stickyNodeCache.set(sticky, flowNode);
@@ -1165,8 +1202,21 @@ export function toFlowEdges(
   const ports = portNodes(deck, graph, view.level);
   // Group frames are connector ends (050 R6); their boxes are only needed when one is drawn.
   const frames = graph.groups.length === 0 ? undefined : groupBounds(deck, view.level);
+  // Notes that end a connector (053), boxed as they are drawn; none when notes are hidden.
+  const notes = new Map<string, { box: Box; title: string }>();
+  if (view.notesHidden !== true) {
+    const stickiesById = new Map(deck.stickies.map((sticky) => [sticky.id, sticky]));
+    for (const stickyId of graph.stickies) {
+      const sticky = stickiesById.get(stickyId);
+      if (sticky === undefined) continue;
+      notes.set(`${STICKY_NODE_PREFIX}${stickyId}`, {
+        box: stickyBox(sticky, stickyCanvasPosition(deck, sticky).point),
+        title: stickyLabel(sticky.text) ?? 'Empty note',
+      });
+    }
+  }
   const nodes =
-    graph.cards.length === 0 && ports.length === 0 && frames === undefined
+    graph.cards.length === 0 && ports.length === 0 && frames === undefined && notes.size === 0
       ? lookups.edgeNodeViews
       : new Map(lookups.edgeNodeViews);
   if (nodes instanceof Map) {
@@ -1189,6 +1239,9 @@ export function toFlowEdges(
     for (const port of ports) {
       nodes.set(port.id, { position: port.position, title: port.data.outsideTitle });
     }
+    for (const [flowId, note] of notes) {
+      nodes.set(flowId, { position: { x: note.box.x, y: note.box.y }, title: note.title });
+    }
   }
   const titles = representativeTitles(deck, graph);
   const selected = new Set(view.selection.edges);
@@ -1203,6 +1256,8 @@ export function toFlowEdges(
     if (id.startsWith(COLLAPSED_NODE_PREFIX)) {
       return cardsByGroupId.get(id.slice(COLLAPSED_NODE_PREFIX.length))?.rect;
     }
+    const note = notes.get(id);
+    if (note !== undefined) return note.box;
     const port = portsById.get(id);
     if (port !== undefined)
       return {
@@ -1219,10 +1274,10 @@ export function toFlowEdges(
       table: tableContext,
     });
   }
-  /** A plain end's shape geometry (031); frames, collapsed cards and port pills are boxes. */
+  /** A plain end's shape geometry (031); frames, collapsed cards, notes and port pills are boxes. */
   function endGeometry(id: string): Geometry | undefined {
     if (id.startsWith(GROUP_NODE_PREFIX) || id.startsWith(COLLAPSED_NODE_PREFIX)) return undefined;
-    if (portsById.has(id)) return undefined;
+    if (portsById.has(id) || notes.has(id)) return undefined;
     const node = lookups.nodesById.get(id);
     return node === undefined ? undefined : (geometryOf(node) ?? undefined);
   }
@@ -1391,6 +1446,7 @@ export function toFlowEdges(
         ...(edge.labelAt === undefined ? {} : { labelAt: edge.labelAt }),
         ...(rel === undefined ? {} : { rel }),
         ...(hoverLabel ? { hoverLabel } : {}),
+        ...(edge.locked === true ? { locked: true } : {}),
       },
     };
     edgeCache.set(edge, flowEdge);

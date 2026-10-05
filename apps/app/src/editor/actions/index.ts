@@ -10,6 +10,7 @@ import { GROUP_ACTIONS } from './group-actions';
 import { RELATIONSHIP_ACTIONS } from './relationship-actions';
 import { SHAPE_ACTIONS } from './shape-actions';
 import { SHAPE_FORM_ACTIONS } from './shape-form-actions';
+import { STICKY_ACTIONS } from './sticky-actions';
 import { STYLE_ACTIONS } from './style-actions';
 import { TABLE_ACTIONS } from './table-actions';
 import { TABLE_DETAIL_ACTIONS } from './table-detail-actions';
@@ -35,6 +36,7 @@ export const ACTIONS: readonly Action[] = [
   ...STYLE_ACTIONS,
   ...CANVAS_ACTIONS,
   ...CLIPBOARD_ACTIONS,
+  ...STICKY_ACTIONS,
   ...COMMON_ACTIONS,
   ...ALIGN_ACTIONS,
   ...ARRANGE_ACTIONS,
