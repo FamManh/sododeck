@@ -79,6 +79,10 @@ export const AUTHORING_CODES = [
   'label-too-long',
   'level-over-budget',
   'connector-without-source',
+  'card-without-position',
+  'connector-crosses-card',
+  'frame-covers-card',
+  'frames-overlap',
 ] as const;
 
 export type AuthoringCode = (typeof AUTHORING_CODES)[number];
@@ -580,10 +584,13 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
     'Id is not a short slug',
     'Use a short lower-case slug (at most 32 characters) chosen once; never rebuild it from the title.',
   ),
-  'positions-mixed': authoring(
-    'Some cards placed, some not',
-    'Give every card a position or none; without positions the app lays the deck out on import.',
-  ),
+  'positions-mixed': {
+    family: 'authoring',
+    severity: 'warning',
+    title: 'Some cards placed, some not',
+    fix: 'Nothing to fix: no longer reported; every card now needs a position (card-without-position).',
+    retired: true,
+  },
   'orphan-card': authoring(
     'Card without connections',
     'Connect the card, put it in a group, or delete it if it does not earn its place.',
@@ -603,6 +610,22 @@ export const CATALOGUE: Readonly<Record<Code, CatalogueEntry>> = {
   'connector-without-source': authoring(
     'No source link',
     'Add a link to the file and lines the connector or card was built from, or remove it.',
+  ),
+  'card-without-position': authoring(
+    'Card without a position',
+    'Place the card on the layout grid (see references/layout.md); the skill lays decks out by hand, the app does not.',
+  ),
+  'connector-crosses-card': authoring(
+    'Connector runs over a card',
+    'Move the card off the line, move an end so the line between the two card centres misses it, or add a bend (`route.waypoints`).',
+  ),
+  'frame-covers-card': authoring(
+    'Group frame covers a card of another group',
+    "Move the card out of the frame, or move the group's cards so their frame no longer reaches it.",
+  ),
+  'frames-overlap': authoring(
+    'Two group frames overlap',
+    'Move one group so the frames have a gap; sibling groups never share space.',
   ),
 };
 

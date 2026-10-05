@@ -153,9 +153,13 @@ Reported only by the AI deck skill's `lint`, never by the app: advice for decks 
 | Code | Severity | Title | Fix |
 | --- | --- | --- | --- |
 | `id-style` | warning | Id is not a short slug | Use a short lower-case slug (at most 32 characters) chosen once; never rebuild it from the title. |
-| `positions-mixed` | warning | Some cards placed, some not | Give every card a position or none; without positions the app lays the deck out on import. |
+| `positions-mixed` (retired) | warning | Some cards placed, some not | Nothing to fix: no longer reported; every card now needs a position (card-without-position). |
 | `orphan-card` | warning | Card without connections | Connect the card, put it in a group, or delete it if it does not earn its place. |
 | `duplicate-title` | warning | Same title twice | Give each card in the same group and level its own title. |
 | `label-too-long` | warning | Label over budget | Shorten the label; put details in the note or in fields. |
 | `level-over-budget` | warning | Too many cards on one level | Split the level: move related cards under a parent card one level down, or merge minor ones. |
 | `connector-without-source` | warning | No source link | Add a link to the file and lines the connector or card was built from, or remove it. |
+| `card-without-position` | warning | Card without a position | Place the card on the layout grid (see references/layout.md); the skill lays decks out by hand, the app does not. |
+| `connector-crosses-card` | warning | Connector runs over a card | Move the card off the line, move an end so the line between the two card centres misses it, or add a bend (`route.waypoints`). |
+| `frame-covers-card` | warning | Group frame covers a card of another group | Move the card out of the frame, or move the group's cards so their frame no longer reaches it. |
+| `frames-overlap` | warning | Two group frames overlap | Move one group so the frames have a gap; sibling groups never share space. |

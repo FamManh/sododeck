@@ -50,10 +50,12 @@ describe('problem code catalogue (062 FR-019)', () => {
     }
   });
 
-  it('marks orphan as retired, and only retired codes are outside the emitted sets', () => {
+  it('marks orphan and positions-mixed as retired, and nothing else', () => {
     expect(CATALOGUE.orphan.retired).toBe(true);
+    // 027 rewrite: every card needs a position now (card-without-position).
+    expect(CATALOGUE['positions-mixed'].retired).toBe(true);
     const retired = codes.filter((code) => CATALOGUE[code].retired === true);
-    expect(retired).toEqual(['orphan']);
+    expect(retired).toEqual(['orphan', 'positions-mixed']);
   });
 
   it('gives every import code a fidelity group and info severity', () => {
