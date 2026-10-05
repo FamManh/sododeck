@@ -12,6 +12,8 @@ import { Wordmark } from '../editor/wordmark';
 import { ConfirmLibraryDelete } from '../library/confirm-library-delete';
 import { DeckGrid } from '../library/deck-grid';
 import { ImportButton } from '../library/import-button';
+import { ImportMermaidButton } from '../library/import-mermaid-button';
+import { ImportMermaidDialog, type MermaidDialogRequest } from '../library/import-mermaid-dialog';
 import { useFileDrop, useImportFiles } from '../library/use-import-files';
 import { LibrarySidebar } from '../library/library-sidebar';
 import { useLibraryStore } from '../library/library-store';
@@ -69,6 +71,11 @@ function Library() {
   const { section: storedSection, search, viewMode } = useLibraryStore();
   const store = useLibraryStore.getState;
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const [mermaid, setMermaid] = useState<MermaidDialogRequest | null>(null);
+  const openMermaid = (text: string, autoRun: boolean) => {
+    const opener = document.activeElement;
+    setMermaid((previous) => ({ key: (previous?.key ?? 0) + 1, text, autoRun, opener }));
+  };
 
   const allDecks = decks ?? [];
   const allFolders = folders ?? [];
@@ -84,7 +91,9 @@ function Library() {
   const inSection = selectDecks(allDecks, { section, search: '' });
   const recent = recentDecks(allDecks);
   const newDeckHref = currentFolder === null ? '/deck/new' : `/deck/new?folder=${currentFolder}`;
-  const importFiles = useImportFiles(commands, currentFolder);
+  const importFiles = useImportFiles(commands, currentFolder, (text) => {
+    openMermaid(text, true);
+  });
   const drop = useFileDrop((files) => {
     void importFiles(files);
   });
@@ -146,7 +155,19 @@ function Library() {
           />
         </div>
         <ThemeToggle />
-        <ImportButton commands={commands} folderId={currentFolder} />
+        <ImportMermaidButton
+          commands={commands}
+          onOpen={() => {
+            openMermaid('', false);
+          }}
+        />
+        <ImportButton
+          commands={commands}
+          folderId={currentFolder}
+          onMermaid={(text) => {
+            openMermaid(text, true);
+          }}
+        />
         <Button asChild variant="primary">
           <Link to={newDeckHref}>
             <Plus />
@@ -205,6 +226,14 @@ function Library() {
           }}
         />
       )}
+      <ImportMermaidDialog
+        commands={commands}
+        folderId={currentFolder}
+        request={mermaid}
+        onClose={() => {
+          setMermaid(null);
+        }}
+      />
       {commands && <ConfirmLibraryDelete commands={commands} />}
     </div>
   );

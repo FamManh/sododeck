@@ -8,12 +8,15 @@ import { useImportFiles } from './use-import-files';
 export function ImportButton({
   commands,
   folderId,
+  onMermaid,
 }: {
   commands: LibraryCommands | null;
   folderId: string | null;
+  /** Text of a chosen file that is Mermaid, not a deck. */
+  onMermaid?: (text: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  const importFiles = useImportFiles(commands, folderId);
+  const importFiles = useImportFiles(commands, folderId, onMermaid);
   return (
     <>
       <input
