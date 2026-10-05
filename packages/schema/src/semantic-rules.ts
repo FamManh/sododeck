@@ -50,12 +50,25 @@
  * `@sododeck/model`'s job.
  */
 import type { SododeckFile } from './generated/types';
+import type { FormatRuleCode, IssueCode } from './issue-codes';
+import { toPointer } from './pointer';
 
+/** One reason a file is refused (062, ADR 0039). Public: copied for the user's AI. */
 export interface Issue {
-  /** Dotted path to the offending value, e.g. `flows.0.steps.2.id`. Empty for the file root. */
+  /** Stable code from the catalogue (`@sododeck/model` `problem-codes.ts`). */
+  code: IssueCode;
+  /** JSON Pointer (RFC 6901) to the offending value, e.g. `/flows/0/steps/2/id`. `""` is the root. */
   path: string;
   message: string;
+  /** Id of the object the issue belongs to, when there is one. Never a title. */
+  subject?: string;
+  /** What was found, at most 200 characters. */
+  evidence?: string;
+  /** One-sentence fix; when absent the catalogue's default is used. */
+  fix?: string;
 }
+
+type Path = readonly (string | number)[];
 
 /** Must match `$defs.Id.pattern` in schema/v1.json. */
 export const ID_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
@@ -64,13 +77,37 @@ function count(n: number, noun: string): string {
   return `${String(n)} ${noun}${n === 1 ? '' : 's'}`;
 }
 
-function checkKeys(map: Record<string, unknown>, path: string, issues: Issue[]): void {
+/** Adds one issue: `code`, the pointer of `path`, the message and the owning object's id. */
+function report(
+  issues: Issue[],
+  code: FormatRuleCode,
+  path: Path,
+  message: string,
+  subject?: string,
+): void {
+  issues.push({
+    code,
+    path: toPointer(path),
+    message,
+    ...(subject === undefined ? {} : { subject }),
+  });
+}
+
+function checkKeys(
+  map: Record<string, unknown>,
+  path: Path,
+  issues: Issue[],
+  subject?: string,
+): void {
   for (const key of Object.keys(map)) {
     if (!ID_PATTERN.test(key)) {
-      issues.push({
-        path: `${path}.${key}`,
-        message: `Key "${key}" is not a valid id (1–64 letters, digits, "-", "_", "." or ":").`,
-      });
+      report(
+        issues,
+        'map-key-id',
+        [...path, key],
+        `Key "${key}" is not a valid id (1–64 letters, digits, "-", "_", "." or ":").`,
+        subject,
+      );
     }
   }
 }
@@ -99,100 +136,130 @@ function base64Length(data: string): number | undefined {
 export function checkSemanticRules(file: SododeckFile): Issue[] {
   const issues: Issue[] = [];
 
-  checkKeys(file.rules, 'rules', issues);
+  checkKeys(file.rules, ['rules'], issues);
   for (const [ruleId, rule] of Object.entries(file.rules)) {
     rule.rows.forEach((row, index) => {
-      const path = `rules.${ruleId}.rows.${String(index)}`;
+      const path = ['rules', ruleId, 'rows', index];
       if (row.when.length !== rule.inputs.length) {
-        issues.push({
-          path: `${path}.when`,
-          message: `Rule "${ruleId}" row "${row.id}" has ${count(row.when.length, '"when" cell')} but ${count(rule.inputs.length, 'input column')}.`,
-        });
+        report(
+          issues,
+          'rule-row-cells',
+          [...path, 'when'],
+          `Rule "${ruleId}" row "${row.id}" has ${count(row.when.length, '"when" cell')} but ${count(rule.inputs.length, 'input column')}.`,
+          ruleId,
+        );
       }
       if (row.then.length !== rule.outputs.length) {
-        issues.push({
-          path: `${path}.then`,
-          message: `Rule "${ruleId}" row "${row.id}" has ${count(row.then.length, '"then" cell')} but ${count(rule.outputs.length, 'output column')}.`,
-        });
+        report(
+          issues,
+          'rule-row-cells',
+          [...path, 'then'],
+          `Rule "${ruleId}" row "${row.id}" has ${count(row.then.length, '"then" cell')} but ${count(rule.outputs.length, 'output column')}.`,
+          ruleId,
+        );
       }
     });
   }
 
   file.groups.forEach((group, index) => {
     if ((group.position === undefined) !== (group.size === undefined)) {
-      issues.push({
-        path: `groups.${String(index)}`,
-        message: `Group "${group.id}" needs both a position and a size, or neither.`,
-      });
+      report(
+        issues,
+        'group-frame-pair',
+        ['groups', index],
+        `Group "${group.id}" needs both a position and a size, or neither.`,
+        group.id,
+      );
     }
   });
 
   function checkStyle(
     id: string,
     style: { fill?: unknown; stroke?: unknown } | undefined,
-    path: string,
+    path: Path,
   ): void {
     if (style !== undefined && style.fill === undefined && style.stroke === undefined) {
-      issues.push({ path, message: `Style of "${id}" needs a fill, a stroke, or both.` });
+      report(issues, 'style-empty', path, `Style of "${id}" needs a fill, a stroke, or both.`, id);
     }
   }
   file.nodes.forEach((node, index) => {
-    checkStyle(node.id, node.style, `nodes.${String(index)}.style`);
+    checkStyle(node.id, node.style, ['nodes', index, 'style']);
   });
   file.groups.forEach((group, index) => {
-    checkStyle(group.id, group.style, `groups.${String(index)}.style`);
+    checkStyle(group.id, group.style, ['groups', index, 'style']);
   });
 
   file.edges.forEach((edge, index) => {
     if (edge.style !== undefined && Object.keys(edge.style).length === 0) {
-      issues.push({
-        path: `edges.${String(index)}.style`,
-        message: `Style of connector "${edge.id}" needs at least one key.`,
-      });
+      report(
+        issues,
+        'edge-style-empty',
+        ['edges', index, 'style'],
+        `Style of connector "${edge.id}" needs at least one key.`,
+        edge.id,
+      );
     }
   });
 
   file.edges.forEach((edge, index) => {
     const route = edge.route;
     if (route === undefined) return;
-    const path = `edges.${String(index)}.route`;
+    const path = ['edges', index, 'route'];
     if (route.fromAt !== undefined && route.fromSide === undefined) {
-      issues.push({
-        path: `${path}.fromAt`,
-        message: `Connector "${edge.id}" has a "fromAt" position but no "fromSide".`,
-      });
+      report(
+        issues,
+        'route-anchor-side',
+        [...path, 'fromAt'],
+        `Connector "${edge.id}" has a "fromAt" position but no "fromSide".`,
+        edge.id,
+      );
     }
     if (route.toAt !== undefined && route.toSide === undefined) {
-      issues.push({
-        path: `${path}.toAt`,
-        message: `Connector "${edge.id}" has a "toAt" position but no "toSide".`,
-      });
+      report(
+        issues,
+        'route-anchor-side',
+        [...path, 'toAt'],
+        `Connector "${edge.id}" has a "toAt" position but no "toSide".`,
+        edge.id,
+      );
     }
     if (route.offset !== undefined && route.waypoints !== undefined) {
-      issues.push({
+      report(
+        issues,
+        'route-offset-and-waypoints',
         path,
-        message: `Connector "${edge.id}" route has both "offset" and "waypoints"; use one.`,
-      });
+        `Connector "${edge.id}" route has both "offset" and "waypoints"; use one.`,
+        edge.id,
+      );
     }
     if (route.waypoints?.length === 0) {
-      issues.push({
-        path: `${path}.waypoints`,
-        message: `Connector "${edge.id}" has an empty "waypoints" list; remove it instead.`,
-      });
+      report(
+        issues,
+        'route-waypoint',
+        [...path, 'waypoints'],
+        `Connector "${edge.id}" has an empty "waypoints" list; remove it instead.`,
+        edge.id,
+      );
     }
     route.waypoints?.forEach((point, pointIndex) => {
-      const pointPath = `${path}.waypoints.${String(pointIndex)}`;
+      const pointPath = [...path, 'waypoints', pointIndex];
       if ((point.x === undefined) === (point.dx === undefined)) {
-        issues.push({
-          path: pointPath,
-          message: `Bend ${String(pointIndex + 1)} of "${edge.id}" needs exactly one of "x" and "dx".`,
-        });
+        report(
+          issues,
+          'route-waypoint',
+          pointPath,
+          `Bend ${String(pointIndex + 1)} of "${edge.id}" needs exactly one of "x" and "dx".`,
+          edge.id,
+        );
       }
       if ((point.y === undefined) === (point.dy === undefined)) {
-        issues.push({
-          path: pointPath,
-          message: `Bend ${String(pointIndex + 1)} of "${edge.id}" needs exactly one of "y" and "dy".`,
-        });
+        report(
+          issues,
+          'route-waypoint',
+          pointPath,
+          `Bend ${String(pointIndex + 1)} of "${edge.id}" needs exactly one of "y" and "dy".`,
+          edge.id,
+        );
       }
     });
   });
@@ -200,17 +267,20 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
   const groupIds = new Set(file.groups.map((group) => group.id));
   file.views.forEach((view, index) => {
     if (view.positions !== undefined) {
-      checkKeys(view.positions, `views.${String(index)}.positions`, issues);
+      checkKeys(view.positions, ['views', index, 'positions'], issues, view.id);
     }
     if (view.groupFrames !== undefined) {
-      const path = `views.${String(index)}.groupFrames`;
-      checkKeys(view.groupFrames, path, issues);
+      const path = ['views', index, 'groupFrames'];
+      checkKeys(view.groupFrames, path, issues, view.id);
       for (const key of Object.keys(view.groupFrames)) {
         if (ID_PATTERN.test(key) && !groupIds.has(key)) {
-          issues.push({
-            path: `${path}.${key}`,
-            message: `Key "${key}" is not the id of a group in this file.`,
-          });
+          report(
+            issues,
+            'view-frame-group',
+            [...path, key],
+            `Key "${key}" is not the id of a group in this file.`,
+            view.id,
+          );
         }
       }
     }
@@ -219,10 +289,10 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
   file.flows.forEach((flow, flowIndex) => {
     flow.steps.forEach((step, stepIndex) => {
       if (step.ruleInputs === undefined) return;
-      const path = `flows.${String(flowIndex)}.steps.${String(stepIndex)}.ruleInputs`;
-      checkKeys(step.ruleInputs, path, issues);
+      const path = ['flows', flowIndex, 'steps', stepIndex, 'ruleInputs'];
+      checkKeys(step.ruleInputs, path, issues, step.id);
       for (const [ruleId, inputs] of Object.entries(step.ruleInputs)) {
-        checkKeys(inputs, `${path}.${ruleId}`, issues);
+        checkKeys(inputs, [...path, ruleId], issues, step.id);
       }
     });
   });
@@ -231,67 +301,87 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
     const seen = new Map<string, string>();
     for (const key of Object.keys(file.tagColors)) {
       const identity = key.trim().replace(/\s+/g, ' ').toLowerCase();
-      const path = `tagColors.${key}`;
+      const path = ['tagColors', key];
       if (identity === '') {
-        issues.push({ path, message: `Tag colour key "${key}" is empty.` });
+        report(issues, 'tag-color-key', path, `Tag colour key "${key}" is empty.`);
         continue;
       }
       const first = seen.get(identity);
       if (first === undefined) {
         seen.set(identity, key);
       } else {
-        issues.push({
+        report(
+          issues,
+          'tag-color-key',
           path,
-          message: `Tag colour key "${key}" is the same tag as "${first}" (case and spacing are ignored).`,
-        });
+          `Tag colour key "${key}" is the same tag as "${first}" (case and spacing are ignored).`,
+        );
       }
     }
   }
 
   const fieldIds = new Set<string>();
   file.fields?.forEach((field, index) => {
-    const path = `fields.${String(index)}`;
+    const path = ['fields', index];
     if (fieldIds.has(field.id)) {
-      issues.push({
-        path: `${path}.id`,
-        message: `Field id "${field.id}" is used by more than one field.`,
-      });
+      report(
+        issues,
+        'field-definition',
+        [...path, 'id'],
+        `Field id "${field.id}" is used by more than one field.`,
+        field.id,
+      );
     }
     fieldIds.add(field.id);
     const builtIn = BUILT_IN_FIELD_KINDS[field.id];
     if (builtIn !== undefined && field.kind !== builtIn) {
-      issues.push({
-        path: `${path}.kind`,
-        message: `Built-in field "${field.id}" must have kind "${builtIn}".`,
-      });
+      report(
+        issues,
+        'field-definition',
+        [...path, 'kind'],
+        `Built-in field "${field.id}" must have kind "${builtIn}".`,
+        field.id,
+      );
     }
     if (field.unit !== undefined && field.kind !== 'number') {
-      issues.push({
-        path: `${path}.unit`,
-        message: `Field "${field.id}" has a unit, but only number fields have one.`,
-      });
+      report(
+        issues,
+        'field-definition',
+        [...path, 'unit'],
+        `Field "${field.id}" has a unit, but only number fields have one.`,
+        field.id,
+      );
     }
     const choice = field.kind === 'select' || field.kind === 'status';
     if (field.options !== undefined && !choice) {
-      issues.push({
-        path: `${path}.options`,
-        message: `Field "${field.id}" has options, but only select and status fields have them.`,
-      });
+      report(
+        issues,
+        'field-definition',
+        [...path, 'options'],
+        `Field "${field.id}" has options, but only select and status fields have them.`,
+        field.id,
+      );
     }
     const optionIds = new Set<string>();
     field.options?.forEach((option, optionIndex) => {
-      const optionPath = `${path}.options.${String(optionIndex)}`;
+      const optionPath = [...path, 'options', optionIndex];
       if (option.icon !== undefined && field.kind !== 'status') {
-        issues.push({
-          path: `${optionPath}.icon`,
-          message: `Option "${option.id}" of field "${field.id}" has an icon, but only status options have one.`,
-        });
+        report(
+          issues,
+          'field-definition',
+          [...optionPath, 'icon'],
+          `Option "${option.id}" of field "${field.id}" has an icon, but only status options have one.`,
+          option.id,
+        );
       }
       if (optionIds.has(option.id)) {
-        issues.push({
-          path: `${optionPath}.id`,
-          message: `Option id "${option.id}" is used twice in field "${field.id}".`,
-        });
+        report(
+          issues,
+          'field-definition',
+          [...optionPath, 'id'],
+          `Option id "${option.id}" is used twice in field "${field.id}".`,
+          option.id,
+        );
       }
       optionIds.add(option.id);
     });
@@ -299,14 +389,17 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
 
   file.nodes.forEach((node, index) => {
     if (node.values === undefined) return;
-    const path = `nodes.${String(index)}.values`;
-    checkKeys(node.values, path, issues);
+    const path = ['nodes', index, 'values'];
+    checkKeys(node.values, path, issues, node.id);
     for (const key of Object.keys(node.values)) {
       if (Object.hasOwn(BUILT_IN_FIELD_KINDS, key)) {
-        issues.push({
-          path: `${path}.${key}`,
-          message: `Card "${node.id}" stores built-in field "${key}" in values; use its own key.`,
-        });
+        report(
+          issues,
+          'card-value-key',
+          [...path, key],
+          `Card "${node.id}" stores built-in field "${key}" in values; use its own key.`,
+          node.id,
+        );
       }
     }
   });
@@ -314,10 +407,13 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
   file.nodes.forEach((node, index) => {
     node.columns?.forEach((column, columnIndex) => {
       if (column.default !== undefined && column.defaultExpr !== undefined) {
-        issues.push({
-          path: `nodes.${String(index)}.columns.${String(columnIndex)}.defaultExpr`,
-          message: `Column "${column.id}" has both a default value and a default expression; keep one.`,
-        });
+        report(
+          issues,
+          'column-default',
+          ['nodes', index, 'columns', columnIndex, 'defaultExpr'],
+          `Column "${column.id}" has both a default value and a default expression; keep one.`,
+          column.id,
+        );
       }
     });
   });
@@ -332,10 +428,13 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
             touch.column === undefined
               ? `table "${touch.table}"`
               : `column "${touch.column}" of table "${touch.table}"`;
-          issues.push({
-            path: `flows.${String(flowIndex)}.steps.${String(stepIndex)}.touches.${String(touchIndex)}`,
-            message: `Step "${step.id}" touches ${what} twice; keep one entry.`,
-          });
+          report(
+            issues,
+            'step-touch-repeat',
+            ['flows', flowIndex, 'steps', stepIndex, 'touches', touchIndex],
+            `Step "${step.id}" touches ${what} twice; keep one entry.`,
+            step.id,
+          );
         }
         seen.add(key);
       });
@@ -344,33 +443,45 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
 
   file.stickies.forEach((sticky, index) => {
     if (sticky.anchor === undefined && sticky.position === undefined) {
-      issues.push({
-        path: `stickies.${String(index)}`,
-        message: `Sticky "${sticky.id}" needs an anchor, a position, or both.`,
-      });
+      report(
+        issues,
+        'sticky-placement',
+        ['stickies', index],
+        `Sticky "${sticky.id}" needs an anchor, a position, or both.`,
+        sticky.id,
+      );
     }
   });
 
   const assets = file.assets ?? {};
   for (const [key, asset] of Object.entries(assets)) {
-    const path = `assets.${key}`;
+    const path = ['assets', key];
     if (!ASSET_ID_PATTERN.test(key)) {
-      issues.push({
+      report(
+        issues,
+        'asset-id',
         path,
-        message: `Key "${key}" is not a picture id (64 lowercase hex characters).`,
-      });
+        `Key "${key}" is not a picture id (64 lowercase hex characters).`,
+        key,
+      );
     }
     const decoded = base64Length(asset.data);
     if (decoded === undefined) {
-      issues.push({
-        path: `${path}.data`,
-        message: `Picture "${key}" has base64 data whose length is not a multiple of 4.`,
-      });
+      report(
+        issues,
+        'asset-data',
+        [...path, 'data'],
+        `Picture "${key}" has base64 data whose length is not a multiple of 4.`,
+        key,
+      );
     } else if (decoded !== asset.bytes) {
-      issues.push({
-        path: `${path}.data`,
-        message: `Picture "${key}" says ${count(asset.bytes, 'byte')} but its data holds ${count(decoded, 'byte')}.`,
-      });
+      report(
+        issues,
+        'asset-data',
+        [...path, 'data'],
+        `Picture "${key}" says ${count(asset.bytes, 'byte')} but its data holds ${count(decoded, 'byte')}.`,
+        key,
+      );
     }
   }
 
@@ -380,32 +491,44 @@ export function checkSemanticRules(file: SododeckFile): Issue[] {
     ...file.stickies.map((sticky) => sticky.id),
   ]);
   file.images?.forEach((image, index) => {
-    const path = `images.${String(index)}`;
+    const path = ['images', index];
     if (!Object.hasOwn(assets, image.asset)) {
-      issues.push({
-        path: `${path}.asset`,
-        message: `Image "${image.id}" uses picture "${image.asset}", which is not in "assets".`,
-      });
+      report(
+        issues,
+        'image-asset-missing',
+        [...path, 'asset'],
+        `Image "${image.id}" uses picture "${image.asset}", which is not in "assets".`,
+        image.id,
+      );
     }
     if (image.group !== undefined && !groupIds.has(image.group)) {
-      issues.push({
-        path: `${path}.group`,
-        message: `Image "${image.id}" belongs to group "${image.group}", which is not in this file.`,
-      });
+      report(
+        issues,
+        'image-group-missing',
+        [...path, 'group'],
+        `Image "${image.id}" belongs to group "${image.group}", which is not in this file.`,
+        image.id,
+      );
     }
     if (takenIds.has(image.id)) {
-      issues.push({
-        path: `${path}.id`,
-        message: `Image id "${image.id}" is already the id of a card, group or sticky.`,
-      });
+      report(
+        issues,
+        'image-id-clash',
+        [...path, 'id'],
+        `Image id "${image.id}" is already the id of a card, group or sticky.`,
+        image.id,
+      );
     }
     takenIds.add(image.id);
     for (const side of ['width', 'height'] as const) {
       if (image.size[side] < IMAGE_MIN_SIDE) {
-        issues.push({
-          path: `${path}.size.${side}`,
-          message: `Image "${image.id}" is ${String(image.size[side])} px ${side === 'width' ? 'wide' : 'tall'}; the minimum is ${String(IMAGE_MIN_SIDE)}.`,
-        });
+        report(
+          issues,
+          'image-too-small',
+          [...path, 'size', side],
+          `Image "${image.id}" is ${String(image.size[side])} px ${side === 'width' ? 'wide' : 'tall'}; the minimum is ${String(IMAGE_MIN_SIDE)}.`,
+          image.id,
+        );
       }
     }
   });

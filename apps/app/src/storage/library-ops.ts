@@ -5,21 +5,22 @@
  */
 import {
   createEditor,
-  DeckValidationError,
   fromJSON,
-  loadDeck,
+  inspectDeckText,
   NEW_DECK_PACKS,
   isLegacyLayout,
+  problemReport,
   serializeDeck,
   toJSON,
-  type AssetProblem,
-  type TrimmedCrop,
   type DeckDoc,
+  type ProblemEntry,
+  type ProblemReport,
 } from '@sododeck/model';
-import { emptySododeckFile, FORMAT_VERSION, type SododeckFile } from '@sododeck/schema';
+import { emptySododeckFile, type SododeckFile } from '@sododeck/schema';
 import * as Y from 'yjs';
 
 import { importMermaidText, type MermaidImport } from '../import-mermaid/import-mermaid';
+import { APP_VERSION } from '../lib/app-version';
 import { MermaidImportError } from '../import-mermaid/import-report';
 import { summarizeDeck, type DeckSummary } from './deck-summary';
 import { UNSUPPORTED_DECK_MESSAGE } from './library-ops-messages';
@@ -40,6 +41,11 @@ export class LibraryOpError extends Error {
   constructor(
     readonly code: LibraryOpErrorCode,
     message: string,
+    /**
+     * Why a deck file was refused (062): the copyable report, entries sorted and capped. Plain
+     * data, so it crosses the worker boundary and the library never needs the model to copy it.
+     */
+    readonly report?: ProblemReport,
   ) {
     super(message);
     this.name = 'LibraryOpError';
@@ -61,9 +67,11 @@ export interface PictureBytes {
 /** An imported deck: the document plus the pictures its file carried and any it could not use. */
 export interface ImportedDeck extends DeckBytes {
   pictures: PictureBytes[];
-  problems: AssetProblem[];
-  /** Images whose crop ran past the picture edge and was cut back on load (057). */
-  trimmedCrops: TrimmedCrop[];
+  /**
+   * What the opened deck should tell the user (062 US2): damaged pictures and problems of severity
+   * error or warning, as the copyable report. `null` for a clean deck.
+   */
+  openReport: ProblemReport | null;
 }
 
 const IMPORTED_NAME = 'Imported deck';
@@ -108,42 +116,47 @@ export function create(name: string): DeckBytes {
   return fromFile({ ...emptySododeckFile(), name: checkName(name), packs: [...NEW_DECK_PACKS] });
 }
 
-/** Parses and validates one `.sododeck.json` file (FR-023, FR-024). */
-export function importFile(text: string): ImportedDeck {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new LibraryOpError('invalid-json', 'The file is not JSON.');
+/** The copyable report of an import (062): `name` is the file name, or the deck's. */
+function reportOf(
+  name: string,
+  status: 'refused' | 'opened',
+  entries: readonly ProblemEntry[],
+): ProblemReport {
+  return problemReport({ source: { kind: 'file', name }, status, app: APP_VERSION, entries });
+}
+
+const REFUSAL_MESSAGE: Record<'invalid-json' | 'unsupported-version' | 'invalid-deck', string> = {
+  'invalid-json': 'The file is not JSON.',
+  'unsupported-version': 'The file format is newer than this app.',
+  'invalid-deck': 'The file is not a valid deck.',
+};
+
+/**
+ * Parses and validates one deck file (FR-023, FR-024) through `inspectDeckText` (062): a refusal
+ * throws `LibraryOpError` with the report of every problem found, and nothing is created. `name`
+ * is the file name the reports carry.
+ */
+export function importFile(text: string, name = 'deck file'): ImportedDeck {
+  const result = inspectDeckText(text);
+  if (!result.ok) {
+    const first = result.entries[0]?.code;
+    const code =
+      first === 'invalid-json' || first === 'unsupported-version' ? first : 'invalid-deck';
+    throw new LibraryOpError(
+      code,
+      REFUSAL_MESSAGE[code],
+      reportOf(name, 'refused', result.entries),
+    );
   }
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'version' in parsed &&
-    typeof parsed.version === 'number' &&
-    parsed.version > FORMAT_VERSION
-  ) {
-    throw new LibraryOpError('unsupported-version', 'The file format is newer than this app.');
-  }
-  let doc: DeckDoc;
-  let loaded: ReturnType<typeof loadDeck>;
-  try {
-    loaded = loadDeck(parsed);
-    doc = loaded.doc;
-  } catch (error) {
-    if (error instanceof DeckValidationError) {
-      throw new LibraryOpError('invalid-deck', 'The file is not a valid deck.');
-    }
-    throw error;
-  }
+  const { loaded } = result;
+  const doc = loaded.doc;
   // A library deck always has a name; a nameless file gets one (and keeps it on export).
   if (toJSON(doc).name === undefined) createEditor(doc).updateMeta({ name: IMPORTED_NAME });
   return {
     bytes: Y.encodeStateAsUpdate(doc),
     summary: summarizeDeck(toJSON(doc)),
     pictures: picturesOf(doc, loaded.bytes),
-    problems: loaded.problems,
-    trimmedCrops: loaded.trimmedCrops,
+    openReport: result.entries.length === 0 ? null : reportOf(name, 'opened', result.entries),
   };
 }
 

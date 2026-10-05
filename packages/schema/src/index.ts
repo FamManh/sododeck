@@ -2,10 +2,22 @@ import jsonSchemaV1 from '../schema/v1.json' with { type: 'json' };
 import type { SododeckFile } from './generated/types';
 import { sododeckFileSchema } from './generated/zod';
 import { ASSET_ID_PATTERN, checkSemanticRules, IMAGE_MIN_SIDE, type Issue } from './semantic-rules';
+import { toIssues } from './zod-issues';
 
 export type * from './generated/types';
 export { ASSET_ID_PATTERN, checkSemanticRules, IMAGE_MIN_SIDE, sododeckFileSchema };
 export type { Issue };
+export {
+  FORMAT_RULE_CODES,
+  LOAD_ISSUE_CODES,
+  SCHEMA_ISSUE_CODES,
+  type FormatRuleCode,
+  type IssueCode,
+  type LoadIssueCode,
+  type SchemaIssueCode,
+} from './issue-codes';
+export { comparePointers, fromPointer, toPointer } from './pointer';
+export { EVIDENCE_MAX, evidenceOf, subjectAt, toIssues, valueAt } from './zod-issues';
 
 /** The v1 JSON Schema document (for Monaco, Ajv, publishing). */
 export const jsonSchema = jsonSchemaV1;
@@ -27,13 +39,7 @@ export function parseSododeckFile(input: unknown): ParseResult {
     const issues = checkSemanticRules(result.data);
     return issues.length === 0 ? { success: true, data: result.data } : { success: false, issues };
   }
-  return {
-    success: false,
-    issues: result.error.issues.map((issue) => ({
-      path: issue.path.map(String).join('.'),
-      message: issue.message,
-    })),
-  };
+  return { success: false, issues: toIssues(result.error, input) };
 }
 
 /** An empty, valid v1 file. */

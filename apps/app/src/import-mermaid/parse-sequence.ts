@@ -5,7 +5,13 @@
  */
 import { cleanLabel } from './clean-text';
 import type { PreparedText, SourceLine } from './detect';
-import { LIMITS, MermaidImportError, skippedLine, type SkippedLine } from './import-report';
+import {
+  LIMITS,
+  mergedLine,
+  MermaidImportError,
+  skippedLine,
+  type SkippedLine,
+} from './import-report';
 
 export interface ParsedParticipant {
   /** Mermaid id: used only to join messages, never stored. */
@@ -44,6 +50,8 @@ const BLOCK_PART = /^(else|and|option)\b\s*(.*)$/;
 export function parseSequence(prepared: PreparedText): ParsedSequence {
   const [, ...body] = prepared.lines;
   const participants = new Map<string, ParsedParticipant>();
+  /** Line of each participant's latest `participant` / `actor` declaration. */
+  const declaredAt = new Map<string, number>();
   const messages: ParsedMessage[] = [];
   const skipped: SkippedLine[] = [...prepared.extra];
   const open: boolean[] = [];
@@ -92,8 +100,17 @@ export function parseSequence(prepared: PreparedText): ParsedSequence {
         skip(entry, 'unreadable');
         continue;
       }
-      const label = cleanLabel(named[2] ?? named[1]);
-      ensure(named[1], label === '' ? named[1] : label, declared[1] === 'actor');
+      const key = named[1];
+      const label = cleanLabel(named[2] ?? key) || key;
+      const actor = declared[1] === 'actor';
+      const known = participants.get(key);
+      const first = declaredAt.get(key);
+      if (first !== undefined && (known?.label !== label || known.actor !== actor)) {
+        // Declared again differently: the later declaration wins, and the user is told (062).
+        skipped.push(mergedLine(entry.line, entry.text, key, first));
+      }
+      declaredAt.set(key, entry.line);
+      ensure(key, label, actor);
       if (metadata) skip(entry, 'unsupported');
       continue;
     }

@@ -21,10 +21,15 @@ import {
   Settings2,
   Sun,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import { importDeckFile, importedMessage } from '../../library/library-actions';
+import {
+  ImportProblemsDialog,
+  type ImportProblemsRequest,
+} from '../../library/import-problems-dialog';
+import { importDeckFile, importedMessage, problemCount } from '../../library/library-actions';
+import { LibraryClientError } from '../../storage/library-client';
 import { importMessage } from '../../library/use-import-files';
 import { useUiStore } from '../../state/ui-store';
 import { useThemeStore } from '../../theme/theme-store';
@@ -50,6 +55,7 @@ export function DeckMenu() {
   const codeOpen = useUiStore((s) => s.jsonPanel.codeDrawer.open);
   const { toast } = useToast();
   const input = useRef<HTMLInputElement>(null);
+  const [problems, setProblems] = useState<ImportProblemsRequest | null>(null);
 
   const importFile = async (files: FileList | null) => {
     const [file] = files ?? [];
@@ -64,27 +70,51 @@ export function DeckMenu() {
       return;
     }
     try {
-      const { name, ...notes } = await importDeckFile(
+      const { deckId, name, report } = await importDeckFile(
         { db, client: getLibraryClient() },
         await file.text(),
         null,
+        file.name,
       );
       toast({
-        message: importedMessage(name, notes, ' into the library'),
-        action: {
-          label: 'Open library',
-          onAction: () => {
-            void navigate('/');
-          },
-        },
+        message: importedMessage(name, problemCount(report), ' into the library'),
+        // A deck that opened with problems offers them (062 US2); a clean one, the library.
+        action:
+          report === null
+            ? {
+                label: 'Open library',
+                onAction: () => {
+                  void navigate('/');
+                },
+              }
+            : {
+                label: 'Show',
+                onAction: () => {
+                  setProblems({ mode: 'opened', name, deckId, report });
+                },
+              },
       });
     } catch (error) {
+      if (error instanceof LibraryClientError && error.report !== undefined) {
+        setProblems({ mode: 'refused', name: file.name, report: error.report });
+        return;
+      }
       toast({ message: importMessage(error) });
     }
   };
 
   return (
     <>
+      <ImportProblemsDialog
+        request={problems}
+        onClose={() => {
+          setProblems(null);
+        }}
+        onOpenDeck={(deckId) => {
+          setProblems(null);
+          void navigate(`/deck/${deckId}`);
+        }}
+      />
       <input
         ref={input}
         type="file"

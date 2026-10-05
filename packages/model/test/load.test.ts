@@ -37,11 +37,16 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
       ...emptySododeckFile(),
       nodes: [{ id: 'a', type: 'Lambda', title: '' }],
     });
-    expect(error.issues.map((i) => i.path)).toEqual(['nodes.0.type', 'nodes.0.title']);
+    expect(error.issues.map((i) => i.path)).toEqual(['/nodes/0/type', '/nodes/0/title']);
   });
 
   it.each([
-    ['nodes', { nodes: [node('x'), node('a'), node('b'), node('x')] }, 'nodes.0.id', 'nodes.3.id'],
+    [
+      'nodes',
+      { nodes: [node('x'), node('a'), node('b'), node('x')] },
+      '/nodes/0/id',
+      '/nodes/3/id',
+    ],
     [
       'groups',
       {
@@ -50,8 +55,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           { id: 'x', title: 'B' },
         ],
       },
-      'groups.0.id',
-      'groups.1.id',
+      '/groups/0/id',
+      '/groups/1/id',
     ],
     [
       'edges',
@@ -62,8 +67,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           { id: 'x', from: 'a', to: 'a' },
         ],
       },
-      'edges.0.id',
-      'edges.1.id',
+      '/edges/0/id',
+      '/edges/1/id',
     ],
     [
       'views',
@@ -73,8 +78,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           { id: 'x', type: 'infra', title: 'B' },
         ],
       },
-      'views.0.id',
-      'views.1.id',
+      '/views/0/id',
+      '/views/1/id',
     ],
     [
       'features',
@@ -84,8 +89,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           { id: 'x', title: 'B' },
         ],
       },
-      'features.0.id',
-      'features.1.id',
+      '/features/0/id',
+      '/features/1/id',
     ],
     [
       'flows',
@@ -95,8 +100,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           { id: 'x', title: 'B', steps: [] },
         ],
       },
-      'flows.0.id',
-      'flows.1.id',
+      '/flows/0/id',
+      '/flows/1/id',
     ],
     [
       'stickies',
@@ -106,8 +111,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           { id: 'x', text: 'B', anchor: 'q' },
         ],
       },
-      'stickies.0.id',
-      'stickies.1.id',
+      '/stickies/0/id',
+      '/stickies/1/id',
     ],
     [
       'steps within one flow',
@@ -124,8 +129,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           },
         ],
       },
-      'flows.0.steps.0.id',
-      'flows.0.steps.2.id',
+      '/flows/0/steps/0/id',
+      '/flows/0/steps/2/id',
     ],
     [
       'rule columns across inputs and outputs',
@@ -134,8 +139,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           R: rule({ inputs: [{ id: 'x', label: 'In' }], outputs: [{ id: 'x', label: 'Out' }] }),
         },
       },
-      'rules.R.inputs.0.id',
-      'rules.R.outputs.0.id',
+      '/rules/R/inputs/0/id',
+      '/rules/R/outputs/0/id',
     ],
     [
       'rule rows',
@@ -149,8 +154,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
           }),
         },
       },
-      'rules.R.rows.0.id',
-      'rules.R.rows.1.id',
+      '/rules/R/rows/0/id',
+      '/rules/R/rows/1/id',
     ],
   ])(
     'refuses duplicate ids in %s, naming the id and both locations (FR-020)',
@@ -171,8 +176,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
       nodes: [node('x'), node('x'), node('x'), node('y'), node('y')],
     });
     expect(error.issues.map((i) => i.message)).toEqual([
-      'Id "x" is used more than once (nodes.0.id, nodes.1.id, nodes.2.id).',
-      'Id "y" is used more than once (nodes.3.id, nodes.4.id).',
+      'Id "x" is used more than once (/nodes/0/id, /nodes/1/id, /nodes/2/id).',
+      'Id "y" is used more than once (/nodes/3/id, /nodes/4/id).',
     ]);
   });
 
@@ -201,10 +206,38 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
     });
     expect(error.issues).toEqual([
       {
-        path: 'groups.0.id',
+        code: 'ambiguous-end',
+        path: '/groups/0/id',
+        subject: 'x',
+        evidence: '"x"',
         message:
-          'Id "x" names both a node and a group, so connector ends naming it are ambiguous (nodes.0.id, groups.0.id).',
+          'Id "x" names both a node and a group, so connector ends naming it are ambiguous (/nodes/0/id, /groups/0/id).',
       },
+    ]);
+  });
+
+  it('codes a duplicate id with its id as subject and evidence (062)', () => {
+    const error = loadError({ ...emptySododeckFile(), nodes: [node('api'), node('api')] });
+    expect(error.issues).toEqual([
+      {
+        code: 'duplicate-id',
+        path: '/nodes/1/id',
+        subject: 'api',
+        message: 'Id "api" is used more than once (/nodes/0/id, /nodes/1/id).',
+        evidence: '"api"',
+      },
+    ]);
+  });
+
+  it('reports format rules and duplicate ids together in one round (062 R5)', () => {
+    const error = loadError({
+      ...emptySododeckFile(),
+      nodes: [node('x'), node('x')],
+      groups: [{ id: 'g', title: 'G', position: { x: 0, y: 0 } }],
+    });
+    expect(error.issues.map((i) => [i.code, i.path])).toEqual([
+      ['group-frame-pair', '/groups/0'],
+      ['duplicate-id', '/nodes/1/id'],
     ]);
   });
 
@@ -216,11 +249,11 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
       stickies: [note('x')],
       edges: [{ id: 'e', from: 'y', to: 'x' }],
     });
-    expect(withNode.issues).toEqual([
+    expect(withNode.issues).toMatchObject([
       {
-        path: 'stickies.0.id',
+        path: '/stickies/0/id',
         message:
-          'Id "x" names both a node and a sticky, so connector ends naming it are ambiguous (nodes.0.id, stickies.0.id).',
+          'Id "x" names both a node and a sticky, so connector ends naming it are ambiguous (/nodes/0/id, /stickies/0/id).',
       },
     ]);
     const withGroup = loadError({
@@ -230,11 +263,11 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
       stickies: [note('g')],
       edges: [{ id: 'e', from: 'y', to: 'g' }],
     });
-    expect(withGroup.issues).toEqual([
+    expect(withGroup.issues).toMatchObject([
       {
-        path: 'stickies.0.id',
+        path: '/stickies/0/id',
         message:
-          'Id "g" names both a group and a sticky, so connector ends naming it are ambiguous (groups.0.id, stickies.0.id).',
+          'Id "g" names both a group and a sticky, so connector ends naming it are ambiguous (/groups/0/id, /stickies/0/id).',
       },
     ]);
   });
@@ -262,10 +295,10 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
         ...emptySododeckFile(),
         nodes: [table('a', { columns: [col('x')] }), table('b', { columns: [col('y'), col('x')] })],
       });
-      expect(error.issues).toEqual([
+      expect(error.issues).toMatchObject([
         {
-          path: 'nodes.1.columns.1.id',
-          message: 'Id "x" is used more than once (nodes.0.columns.0.id, nodes.1.columns.1.id).',
+          path: '/nodes/1/columns/1/id',
+          message: 'Id "x" is used more than once (/nodes/0/columns/0/id, /nodes/1/columns/1/id).',
         },
       ]);
     });
@@ -277,7 +310,7 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
         nodes: [table('a', { columns: [col('v')] })],
       });
       expect(error.issues.map((i) => i.message)).toEqual([
-        'Id "v" is used more than once (nodes.0.columns.0.id, enums.0.values.0.id).',
+        'Id "v" is used more than once (/nodes/0/columns/0/id, /enums/0/values/0/id).',
       ]);
     });
 
@@ -297,8 +330,8 @@ describe('loading (US2 AS3–5, FR-019–021)', () => {
       });
       // In order of first use: the check reuses column "c", then index "i" repeats.
       expect(error.issues.map((i) => i.path)).toEqual([
-        'nodes.0.checks.0.id',
-        'nodes.0.indexes.1.id',
+        '/nodes/0/checks/0/id',
+        '/nodes/0/indexes/1/id',
       ]);
     });
 

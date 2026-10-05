@@ -7,13 +7,27 @@
  * scopes is allowed by the format, except a node, a group and a sticky sharing an id that a
  * connector end names (050, 053). An image id that equals one of those is refused earlier, by the
  * format's rule I5.
+ *
+ * The checks read only string ids out of plain JSON, so they also run on a file the schema refused
+ * (062 R5): a missing title and a duplicate id are reported in the same round. Anything that is
+ * not a list, an object or a string id is skipped; the schema reports it.
  */
-import type { Issue, SododeckFile } from '@sododeck/schema';
+import { toPointer, type Issue } from '@sododeck/schema';
 
+import { isRecord } from './convert';
 import { cropOverflows, trimCrop } from './geometry';
 import { COLLECTIONS } from './layout';
 
-function checkScope(items: readonly { id: string; path: string }[], issues: Issue[]): void {
+type Located = { id: string; path: string };
+type Path = readonly (string | number)[];
+
+const listOf = (value: unknown): readonly unknown[] => (Array.isArray(value) ? value : []);
+const recordOf = (value: unknown): Record<string, unknown> => (isRecord(value) ? value : {});
+const idOf = (value: unknown): string | undefined =>
+  isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
+
+/** Every location of the id after the first is reported once, naming all of them (062). */
+function checkScope(items: readonly Located[], issues: Issue[]): void {
   const paths = new Map<string, string[]>();
   for (const { id, path } of items) {
     const list = paths.get(id);
@@ -23,28 +37,39 @@ function checkScope(items: readonly { id: string; path: string }[], issues: Issu
   for (const [id, list] of paths) {
     if (list.length > 1) {
       issues.push({
+        code: 'duplicate-id',
         path: list[1] ?? '',
+        subject: id,
         message: `Id "${id}" is used more than once (${list.join(', ')}).`,
+        evidence: JSON.stringify(id),
       });
     }
   }
 }
 
-const withPaths = (items: readonly { id: string }[], prefix: string) =>
-  items.map((item, i) => ({ id: item.id, path: `${prefix}.${String(i)}.id` }));
+/** The string ids of a list with the pointers to them; items without one are skipped. */
+function withPaths(items: unknown, prefix: Path): Located[] {
+  const located: Located[] = [];
+  listOf(items).forEach((item, i) => {
+    const id = idOf(item);
+    if (id !== undefined) located.push({ id, path: toPointer([...prefix, i, 'id']) });
+  });
+  return located;
+}
 
 /** Every column, index and check of every node, then every enum and enum value, with paths. */
-function databaseParts(file: SododeckFile): { id: string; path: string }[] {
-  const parts: { id: string; path: string }[] = [];
-  file.nodes.forEach((node, i) => {
-    const prefix = `nodes.${String(i)}`;
-    parts.push(...withPaths(node.columns ?? [], `${prefix}.columns`));
-    parts.push(...withPaths(node.indexes ?? [], `${prefix}.indexes`));
-    parts.push(...withPaths(node.checks ?? [], `${prefix}.checks`));
+function databaseParts(file: Record<string, unknown>): Located[] {
+  const parts: Located[] = [];
+  listOf(file.nodes).forEach((node, i) => {
+    const record = recordOf(node);
+    parts.push(...withPaths(record.columns, ['nodes', i, 'columns']));
+    parts.push(...withPaths(record.indexes, ['nodes', i, 'indexes']));
+    parts.push(...withPaths(record.checks, ['nodes', i, 'checks']));
   });
-  (file.enums ?? []).forEach((item, i) => {
-    parts.push({ id: item.id, path: `enums.${String(i)}.id` });
-    parts.push(...withPaths(item.values, `enums.${String(i)}.values`));
+  listOf(file.enums).forEach((item, i) => {
+    const id = idOf(item);
+    if (id !== undefined) parts.push({ id, path: toPointer(['enums', i, 'id']) });
+    parts.push(...withPaths(recordOf(item).values, ['enums', i, 'values']));
   });
   return parts;
 }
@@ -54,58 +79,67 @@ function databaseParts(file: SododeckFile): { id: string; path: string }[] {
  * ambiguous (050, 053), so such a file is refused. Objects sharing an id that no end names stay
  * loadable (the format always allowed it); the integrity report flags them.
  */
-function checkAmbiguousEnds(file: SododeckFile, issues: Issue[]): void {
-  const ends = new Set(file.edges.flatMap((edge) => [edge.from, edge.to]));
+function checkAmbiguousEnds(file: Record<string, unknown>, issues: Issue[]): void {
+  const ends = new Set<unknown>(
+    listOf(file.edges).flatMap((edge) => [recordOf(edge).from, recordOf(edge).to]),
+  );
   const nodePaths = new Map<string, string>();
-  file.nodes.forEach((node, i) => {
-    if (!nodePaths.has(node.id)) nodePaths.set(node.id, `nodes.${String(i)}.id`);
-  });
+  for (const { id, path } of withPaths(file.nodes, ['nodes'])) {
+    if (!nodePaths.has(id)) nodePaths.set(id, path);
+  }
   const reported = new Set<string>();
   const groupPaths = new Map<string, string>();
-  file.groups.forEach((group, i) => {
-    const path = `groups.${String(i)}.id`;
-    if (!groupPaths.has(group.id)) groupPaths.set(group.id, path);
-    const nodePath = nodePaths.get(group.id);
-    if (nodePath === undefined || !ends.has(group.id) || reported.has(group.id)) return;
-    reported.add(group.id);
+  for (const { id, path } of withPaths(file.groups, ['groups'])) {
+    if (!groupPaths.has(id)) groupPaths.set(id, path);
+    const nodePath = nodePaths.get(id);
+    if (nodePath === undefined || !ends.has(id) || reported.has(id)) continue;
+    reported.add(id);
     issues.push({
+      code: 'ambiguous-end',
       path,
-      message: `Id "${group.id}" names both a node and a group, so connector ends naming it are ambiguous (${nodePath}, ${path}).`,
+      subject: id,
+      evidence: JSON.stringify(id),
+      message: `Id "${id}" names both a node and a group, so connector ends naming it are ambiguous (${nodePath}, ${path}).`,
     });
-  });
-  file.stickies.forEach((sticky, i) => {
-    if (!ends.has(sticky.id) || reported.has(sticky.id)) return;
-    const nodePath = nodePaths.get(sticky.id);
-    const groupPath = groupPaths.get(sticky.id);
-    const other = nodePath ?? groupPath;
-    if (other === undefined) return;
-    reported.add(sticky.id);
-    const path = `stickies.${String(i)}.id`;
+  }
+  for (const { id, path } of withPaths(file.stickies, ['stickies'])) {
+    if (!ends.has(id) || reported.has(id)) continue;
+    const nodePath = nodePaths.get(id);
+    const other = nodePath ?? groupPaths.get(id);
+    if (other === undefined) continue;
+    reported.add(id);
     issues.push({
+      code: 'ambiguous-end',
       path,
-      message: `Id "${sticky.id}" names both a ${nodePath === undefined ? 'group' : 'node'} and a sticky, so connector ends naming it are ambiguous (${other}, ${path}).`,
+      subject: id,
+      evidence: JSON.stringify(id),
+      message: `Id "${id}" names both a ${nodePath === undefined ? 'group' : 'node'} and a sticky, so connector ends naming it are ambiguous (${other}, ${path}).`,
     });
-  });
+  }
 }
 
-/** One issue per duplicated id per scope, naming every location. Empty when ids are unique. */
-export function checkDuplicateIds(file: SododeckFile): Issue[] {
+/**
+ * One issue per duplicated id per scope, naming every location, plus ambiguous connector ends.
+ * Empty when ids are unique. Takes any JSON value; a valid file is the usual input.
+ */
+export function checkDuplicateIds(input: unknown): Issue[] {
+  const file = recordOf(input);
   const issues: Issue[] = [];
-  for (const c of COLLECTIONS) checkScope(withPaths(file[c] ?? [], c), issues);
-  file.flows.forEach((flow, i) => {
-    checkScope(withPaths(flow.steps, `flows.${String(i)}.steps`), issues);
-    checkScope(withPaths(flow.branches ?? [], `flows.${String(i)}.branches`), issues);
+  for (const c of COLLECTIONS) checkScope(withPaths(file[c], [c]), issues);
+  listOf(file.flows).forEach((flow, i) => {
+    checkScope(withPaths(recordOf(flow).steps, ['flows', i, 'steps']), issues);
+    checkScope(withPaths(recordOf(flow).branches, ['flows', i, 'branches']), issues);
   });
-  for (const [ruleId, rule] of Object.entries(file.rules)) {
-    const prefix = `rules.${ruleId}`;
+  for (const [ruleId, rule] of Object.entries(recordOf(file.rules))) {
+    const record = recordOf(rule);
     checkScope(
       [
-        ...withPaths(rule.inputs, `${prefix}.inputs`),
-        ...withPaths(rule.outputs, `${prefix}.outputs`),
+        ...withPaths(record.inputs, ['rules', ruleId, 'inputs']),
+        ...withPaths(record.outputs, ['rules', ruleId, 'outputs']),
       ],
       issues,
     );
-    checkScope(withPaths(rule.rows, `${prefix}.rows`), issues);
+    checkScope(withPaths(record.rows, ['rules', ruleId, 'rows']), issues);
   }
   checkScope(databaseParts(file), issues);
   checkAmbiguousEnds(file, issues);
@@ -115,12 +149,9 @@ export function checkDuplicateIds(file: SododeckFile): Issue[] {
 /** An image whose crop ran past the picture edge and was cut back on load (057, rule C2). */
 export interface TrimmedCrop {
   imageId: string;
-  /** Where the crop is in the file, `images.<i>.crop`. */
+  /** Where the crop is in the file, as a JSON Pointer: `/images/<i>/crop`. */
   path: string;
 }
-
-const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
  * Cuts back every image crop that runs past the picture's right or bottom edge (057 contract C2),
@@ -130,9 +161,9 @@ const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
  */
 export function trimCrops(input: unknown): { input: unknown; trimmed: TrimmedCrop[] } {
   const trimmed: TrimmedCrop[] = [];
-  if (!isPlainRecord(input) || !Array.isArray(input.images)) return { input, trimmed };
+  if (!isRecord(input) || !Array.isArray(input.images)) return { input, trimmed };
   const images = input.images.map((image: unknown, i) => {
-    if (!isPlainRecord(image) || !isPlainRecord(image.crop)) return image;
+    if (!isRecord(image) || !isRecord(image.crop)) return image;
     const { x, y, width, height } = image.crop;
     if (
       typeof x !== 'number' ||
@@ -151,7 +182,7 @@ export function trimCrops(input: unknown): { input: unknown; trimmed: TrimmedCro
     ) {
       return image;
     }
-    trimmed.push({ imageId: String(image.id), path: `images.${String(i)}.crop` });
+    trimmed.push({ imageId: String(image.id), path: toPointer(['images', i, 'crop']) });
     const cut = trimCrop({ x, y, width, height });
     if (cut.width <= 0 || cut.height <= 0) {
       const { crop: _dropped, ...rest } = image;

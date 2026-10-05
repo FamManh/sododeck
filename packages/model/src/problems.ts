@@ -5,7 +5,14 @@
  * Problems are derived for display and never stored in the deck (§g-23). 040 adds the database
  * schema's kept-but-broken references and mismatched composite keys (research R11).
  */
-import type { Edge, Flow, Id, Node, SododeckFile } from '@sododeck/schema';
+import {
+  toPointer,
+  type Edge,
+  type Flow,
+  type Id,
+  type Node,
+  type SododeckFile,
+} from '@sododeck/schema';
 
 import { drawnShapeType, isDbTable, isKnownPack, isKnownType, typeName } from './card-types';
 import { validateValue } from './field-values';
@@ -769,6 +776,142 @@ function targetIds(target: ProblemTarget): readonly Id[] {
     case 'object':
       return [target.ref.id];
   }
+}
+
+type Segments = (string | number)[];
+
+/** First index of every id in a list. Built on first use: a deck without problems builds none. */
+function indexer(items: () => readonly { id: Id }[] | undefined) {
+  let map: Map<Id, number> | undefined;
+  return (id: Id): number | undefined => {
+    if (map === undefined) {
+      map = new Map();
+      (items() ?? []).forEach((item, i) => {
+        if (map?.has(item.id) === false) map.set(item.id, i);
+      });
+    }
+    return map.get(id);
+  };
+}
+
+/** Where a problem sits in the file: a JSON Pointer and the id of the object there (062 R8). */
+export interface ProblemLocation {
+  /** JSON Pointer to the main object of the problem's target: `/flows/1/steps/2`. */
+  path: string;
+  /** Id of that object (the first one for a multi-id target); absent for the deck itself. */
+  subject?: Id;
+}
+
+/**
+ * Locates problems of `file` in it (062 R8). Built on demand, when a list is copied or an import
+ * is reported, never inside `checkDeck`, which runs on every edit: the index maps are built once
+ * per locator and only for the collections asked about.
+ */
+export function problemLocator(file: SododeckFile): (problem: Problem) => ProblemLocation {
+  const collections = {
+    nodes: indexer(() => file.nodes),
+    groups: indexer(() => file.groups),
+    edges: indexer(() => file.edges),
+    views: indexer(() => file.views),
+    features: indexer(() => file.features),
+    flows: indexer(() => file.flows),
+    stickies: indexer(() => file.stickies),
+    images: indexer(() => file.images),
+  };
+  const enums = indexer(() => file.enums);
+  const children = new Map<string, (id: Id) => number | undefined>();
+  /** Index of a child (`steps`, `columns`…) of the item at `index` of `list`. */
+  const childIndex = (list: string, index: number, key: string, id: Id) => {
+    const cacheKey = `${list}/${String(index)}/${key}`;
+    let find = children.get(cacheKey);
+    if (find === undefined) {
+      const owner = (file as unknown as Record<string, unknown[] | undefined>)[list]?.[index];
+      const items = (owner as Record<string, { id: Id }[] | undefined> | undefined)?.[key];
+      find = indexer(() => items);
+      children.set(cacheKey, find);
+    }
+    return find(id);
+  };
+  /** `[list, index]` and, when found, `[key, childIndex]`; stops where an id is not found. */
+  const at = (list: keyof typeof collections, id: Id, key?: string, childId?: Id): Segments => {
+    const index = collections[list](id);
+    if (index === undefined) return [list];
+    if (key === undefined || childId === undefined) return [list, index];
+    const child = childIndex(list, index, key, childId);
+    return child === undefined ? [list, index] : [list, index, key, child];
+  };
+  const CHILD_KEYS: Partial<Record<string, string>> = {
+    step: 'steps',
+    branch: 'branches',
+    column: 'columns',
+    index: 'indexes',
+    check: 'checks',
+  };
+
+  return (problem) => {
+    const { target } = problem;
+    let segments: Segments;
+    let subject: Id | undefined;
+    switch (target.type) {
+      case 'node':
+        if (problem.column !== undefined && problem.column.tableId === target.id) {
+          segments = at('nodes', target.id, 'columns', problem.column.columnId);
+          subject = problem.column.columnId;
+        } else {
+          segments = at('nodes', target.id);
+          subject = target.id;
+        }
+        break;
+      case 'nodes':
+      case 'edges': {
+        subject = target.ids[0];
+        segments = subject === undefined ? [target.type] : at(target.type, subject);
+        break;
+      }
+      case 'flow':
+        if (target.stepId !== undefined) {
+          segments = at('flows', target.flowId, 'steps', target.stepId);
+          subject = target.stepId;
+        } else if (target.branchIds?.[0] !== undefined) {
+          subject = target.branchIds[0];
+          segments = at('flows', target.flowId, 'branches', subject);
+        } else {
+          segments = at('flows', target.flowId);
+          subject = target.flowId;
+        }
+        break;
+      case 'rule':
+        segments = ['rules', target.ruleId];
+        subject = target.ruleId;
+        break;
+      case 'object': {
+        const { ref } = target;
+        if (ref.scope === 'meta') {
+          if (problem.kind === 'unknown-pack') {
+            // The key is `unknown-pack:<pack id>`.
+            const pack = problem.key.slice('unknown-pack:'.length);
+            const index = file.packs?.indexOf(pack) ?? -1;
+            segments = index === -1 ? ['packs'] : ['packs', index];
+          } else if (ref.child?.kind === 'enum' || ref.child?.kind === 'enum-value') {
+            const index = enums(ref.id);
+            segments = index === undefined ? ['enums'] : ['enums', index];
+            subject = ref.id;
+          } else {
+            segments = [];
+          }
+        } else if (ref.scope === 'rules') {
+          segments = ['rules', ref.id];
+          subject = ref.id;
+        } else {
+          const key = ref.child === undefined ? undefined : CHILD_KEYS[ref.child.kind];
+          segments = at(ref.scope, ref.id, key, ref.child?.id);
+          subject = ref.child?.id ?? ref.id;
+        }
+        break;
+      }
+    }
+    return { path: toPointer(segments), ...(subject === undefined ? {} : { subject }) };
+  };
 }
 
 const SEVERITY_RANK: Record<Severity, number> = { error: 0, warning: 1 };

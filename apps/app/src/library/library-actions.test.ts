@@ -165,7 +165,9 @@ describe('library actions', () => {
 
     it('imports a file with pictures: the bytes reach the blob store of the new deck', async () => {
       const result = await importDeckFile(ctx, imageDeckJson(), null);
-      expect(result.missingPictures).toBe(0);
+      expect(result.report?.problems.some((p) => p.code === 'picture-damaged') ?? false).toBe(
+        false,
+      );
       const deck = (await liveDecks(db)).find((d) => d.name === 'Shop' && d.id !== 'd1');
       expect(deck).toBeDefined();
       const row = await getBlobRow(db, deck?.id ?? '', pictureId);
@@ -175,21 +177,22 @@ describe('library actions', () => {
 
     it('imports a file whose picture data is damaged: opens, counts it, stores nothing', async () => {
       const damaged = imageDeckJson().replace(/"data": ?"[^"]*"/, `"data":"${MISSING_DATA}"`);
-      const result = await importDeckFile(ctx, damaged, null);
-      expect(result.missingPictures).toBe(1);
+      const result = await importDeckFile(ctx, damaged, null, 'damaged.sododeck');
+      expect(result.report?.problems.filter((p) => p.code === 'picture-damaged')).toHaveLength(1);
+      expect(result.report?.source).toEqual({ kind: 'file', name: 'damaged.sododeck' });
       const ids = (await liveDecks(db)).map((d) => d.id).filter((id) => id !== 'd1');
       expect(await listBlobIds(db, ids[0] ?? '')).toEqual([]);
     });
 
-    it('counts image crops trimmed to the picture edge (057)', async () => {
+    it('reports image crops trimmed to the picture edge (057)', async () => {
       const text = imageDeckJson().replace(
         /("size": \{[^}]*\})/,
         '$1,\n"crop": { "x": 0.6, "y": 0, "width": 0.6, "height": 1 }',
       );
       expect(text).toContain('"crop"');
       const result = await importDeckFile(ctx, text, null);
-      expect(result).toMatchObject({ missingPictures: 0, trimmedCrops: 1 });
-      expect((await importDeckFile(ctx, imageDeckJson(), null)).trimmedCrops).toBe(0);
+      expect(result.report?.problems.map((entry) => entry.code)).toEqual(['crop-trimmed']);
+      expect((await importDeckFile(ctx, imageDeckJson(), null)).report).toBeNull();
     });
 
     it('exports the pictures its images use, byte for byte', async () => {
@@ -269,21 +272,12 @@ describe('library actions', () => {
   });
 });
 
-describe('importedMessage (055, 057)', () => {
-  it('names the deck, then missing pictures and trimmed crops, singular or plural', () => {
-    expect(importedMessage('Shop', { missingPictures: 0, trimmedCrops: 0 })).toBe(
-      'Imported "Shop"',
-    );
-    expect(importedMessage('Shop', { missingPictures: 2, trimmedCrops: 0 })).toBe(
-      'Imported "Shop". 2 pictures are missing from the file.',
-    );
-    expect(importedMessage('Shop', { missingPictures: 0, trimmedCrops: 1 })).toBe(
-      'Imported "Shop". 1 image crop was trimmed to the picture edge.',
-    );
-    expect(
-      importedMessage('Shop', { missingPictures: 1, trimmedCrops: 3 }, ' into the library'),
-    ).toBe(
-      'Imported "Shop" into the library. 1 picture is missing from the file. 3 image crops were trimmed to the picture edge.',
+describe('importedMessage (062 FR-011)', () => {
+  it('names the deck and counts the problems it opened with', () => {
+    expect(importedMessage('Shop', 0)).toBe('Imported "Shop"');
+    expect(importedMessage('Shop', 1)).toBe('Imported "Shop" with 1 problem');
+    expect(importedMessage('Shop', 2, ' into the library')).toBe(
+      'Imported "Shop" into the library with 2 problems',
     );
   });
 });

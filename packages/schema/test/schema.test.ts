@@ -6,6 +6,7 @@ import {
   emptySododeckFile,
   jsonSchema,
   parseSododeckFile,
+  toPointer,
   type SododeckFile,
 } from '../src';
 import { invalidFixtures, validFixtures } from './fixtures';
@@ -73,10 +74,17 @@ describe('schema v1', () => {
     expectBothValidators(input, true);
   });
 
-  it.each(invalidFixtures)('rejects: $name', ({ input, path }) => {
+  it.each(invalidFixtures)('rejects: $name', ({ input, path, code }) => {
     expectBothValidators(input, false);
-    expect(issuesOf(input).map((issue) => issue.path)).toContain(path);
-    for (const issue of issuesOf(input)) expect(issue.message).not.toBe('');
+    const pointer = toPointer(path === '' ? [] : path.split('.'));
+    expect(issuesOf(input).map((issue) => [issue.path, issue.code])).toContainEqual([
+      pointer,
+      code,
+    ]);
+    for (const issue of issuesOf(input)) {
+      expect(issue.message).not.toBe('');
+      expect(issue.fix).not.toBe('');
+    }
   });
 
   it('accepts tag colours: named, hex, and keys that differ in more than case (033)', () => {
@@ -253,9 +261,9 @@ describe('schema v1', () => {
       ...emptySododeckFile(),
       edges: [{ id: 'e1', from: 'a', to: 'b', protocol: 'HTTPS' }],
     });
-    expect(issue?.path).toBe('edges.0.protocol');
+    expect(issue?.path).toBe('/edges/0/protocol');
     for (const value of ['http', 'grpc', 'event', 'sql', 'websocket', 'other']) {
-      expect(issue?.message).toContain(value);
+      expect(issue?.fix).toContain(value);
     }
   });
 
@@ -264,7 +272,7 @@ describe('schema v1', () => {
       ...emptySododeckFile(),
       nodes: [{ id: 'n1', type: 'service', title: 'A', kind: 'service' }],
     });
-    expect(issue).toMatchObject({ path: 'nodes.0' });
+    expect(issue).toMatchObject({ path: '/nodes/0/kind', code: 'schema-unknown-field' });
     expect(issue?.message).toContain('"kind"');
   });
 
@@ -273,7 +281,7 @@ describe('schema v1', () => {
       ...emptySododeckFile(),
       flows: [{ id: 'f', title: 'F', steps: [{ id: 's1', edge: 'e1' }, { edge: 'e2' }] }],
     });
-    expect(issues.map((issue) => issue.path)).toEqual(['flows.0.steps.1.id']);
+    expect(issues.map((issue) => issue.path)).toEqual(['/flows/0/steps/1/id']);
   });
 
   it('names the rule and the row when a row has the wrong number of cells', () => {
@@ -294,8 +302,10 @@ describe('schema v1', () => {
     });
     expect(issues).toEqual([
       {
-        path: 'rules.R-12.rows.0.when',
+        code: 'rule-row-cells',
+        path: '/rules/R-12/rows/0/when',
         message: 'Rule "R-12" row "row-1" has 1 "when" cell but 2 input columns.',
+        subject: 'R-12',
       },
     ]);
   });
@@ -342,6 +352,6 @@ describe('schema v1', () => {
       nodes: [{ id: '', type: 'service', title: 'x' }],
     });
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.issues[0]?.path).toBe('nodes.0.id');
+    if (!result.success) expect(result.issues[0]?.path).toBe('/nodes/0/id');
   });
 });

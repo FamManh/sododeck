@@ -299,6 +299,7 @@
         },
         {
           "line": 34,
+          "firstLine": 27,
           "target": "places",
           "kind": "renamed-duplicate",
           "detail": "places appears twice in this import; the second is imported as places_copy"

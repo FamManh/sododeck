@@ -65,7 +65,8 @@ Spec: `specs/057-image-editing/` (research R1–R12, contracts `file-format.md` 
   calls `setImageCrop`, which writes `crop`, `size` and `position` in one transaction (one undo
   step), keeping the picture's on-canvas scale (`cropFrame`). Cancel and interruptions write nothing.
 - **Soft trim (C2).** Per-field ranges are schema rules; a crop that runs past the picture edge
-  (`x + width > 1`) is trimmed on load and reported once in the import toast, so the deck opens.
+  (`x + width > 1`) is trimmed on load and reported once in the open-time problem report (062, code `crop-trimmed`,
+  a warning), so the deck opens.
 
 Rejected: crop in natural or canvas pixels (breaks on compression or resize); one `flip` enum or a
 transform matrix (harder toggles, invites rotate); CSS `object-view-box` (not in every target

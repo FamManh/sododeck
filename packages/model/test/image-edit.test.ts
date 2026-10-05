@@ -4,6 +4,7 @@ import { emptySododeckFile, type Image, type SododeckFile } from '@sododeck/sche
 
 import {
   DeckEditError,
+  inspectDeckText,
   createEditor,
   getObject,
   loadDeck,
@@ -252,13 +253,13 @@ describe('crop and flip in the file (057)', () => {
   it('trims a crop past the picture edge on load and lists it once', () => {
     const loaded = loadDeck(fileWith({ crop: { x: 0.6, y: 0, width: 0.6, height: 1 } }));
     expect(toJSON(loaded.doc).images?.[0]?.crop).toEqual({ x: 0.6, y: 0, width: 0.4, height: 1 });
-    expect(loaded.trimmedCrops).toEqual([{ imageId: 'img-a', path: 'images.0.crop' }]);
+    expect(loaded.trimmedCrops).toEqual([{ imageId: 'img-a', path: '/images/0/crop' }]);
   });
 
   it('drops a crop that trims to nothing', () => {
     const loaded = loadDeck(fileWith({ crop: { x: 0.9999999, y: 0, width: 0.5, height: 1 } }));
     expect(toJSON(loaded.doc).images?.[0]).not.toHaveProperty('crop');
-    expect(loaded.trimmedCrops).toEqual([{ imageId: 'img-a', path: 'images.0.crop' }]);
+    expect(loaded.trimmedCrops).toEqual([{ imageId: 'img-a', path: '/images/0/crop' }]);
   });
 
   it('lists nothing for a well-formed crop or a deck without images', () => {
@@ -301,5 +302,21 @@ describe('undoing crop and flip (057 US3)', () => {
     expect(other).not.toHaveProperty('crop');
     expect(other).not.toHaveProperty('flipX');
     expect(other?.size).toEqual({ width: 400, height: 200 });
+  });
+});
+
+describe('a trimmed crop in the open-time report (057 + 062)', () => {
+  it('opens the deck and lists the crop as a warning at its pointer', () => {
+    const file = fileWith({ crop: { x: 0.6, y: 0, width: 0.6, height: 1 } });
+    const result = inspectDeckText(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    expect(result.entries).toEqual([
+      expect.objectContaining({
+        code: 'crop-trimmed',
+        severity: 'warning',
+        path: '/images/0/crop',
+        subject: 'img-a',
+      }),
+    ]);
   });
 });
