@@ -40,6 +40,13 @@ function mutate(path: string, change: { value: unknown } | 'remove'): unknown {
 }
 
 const set = (path: string, value: unknown) => mutate(path, { value });
+/** The full example with no images and no assets (a deck that never held a picture). */
+function removeBoth(): unknown {
+  const copy = structuredClone(full) as Record<string, unknown>;
+  delete copy.images;
+  delete copy.assets;
+  return copy;
+}
 const remove = (path: string) => mutate(path, 'remove');
 
 /** Renames map key `from` to `to` in the object at `path`. */
@@ -63,6 +70,10 @@ const CUSTOMERS = 'nodes.12';
 const ORDERS = 'nodes.13';
 const RELATION = 'edges.7';
 const TOUCHES = 'flows.2.steps.1.touches';
+const IMAGE = 'images.0';
+const PNG_ID =
+  (full as { images: { asset: string }[] }).images[0]?.asset ?? 'missing-from-the-full-example';
+const ASSET_PNG = `assets.${PNG_ID}`;
 
 export const invalidFixtures: InvalidFixture[] = [
   // Envelope
@@ -810,6 +821,82 @@ export const invalidFixtures: InvalidFixture[] = [
     input: set(`${TOUCHES}.2`, { table: 'orders', access: 'read' }),
     path: `${TOUCHES}.2`,
   },
+  // 055: images and assets.
+  { name: 'image without an asset', input: remove(`${IMAGE}.asset`), path: `${IMAGE}.asset` },
+  {
+    name: 'image asset is not 64 hex',
+    input: set(`${IMAGE}.asset`, 'abc123'),
+    path: `${IMAGE}.asset`,
+  },
+  {
+    name: 'image asset not in assets (I1)',
+    input: set(`${IMAGE}.asset`, 'f'.repeat(64)),
+    path: `${IMAGE}.asset`,
+  },
+  {
+    name: 'image smaller than 32 px (I6)',
+    input: set(`${IMAGE}.size`, { width: 8, height: 100 }),
+    path: `${IMAGE}.size.width`,
+  },
+  { name: 'image z is a string', input: set(`${IMAGE}.z`, '1'), path: `${IMAGE}.z` },
+  { name: 'node z is a string', input: set('nodes.2.z', '1'), path: 'nodes.2.z' },
+  {
+    name: 'image locked false',
+    input: set(`${IMAGE}.locked`, false),
+    path: `${IMAGE}.locked`,
+  },
+  { name: 'image alt is a number', input: set(`${IMAGE}.alt`, 3), path: `${IMAGE}.alt` },
+  { name: 'unknown key on image', input: set(`${IMAGE}.crop`, true), path: IMAGE },
+  {
+    name: 'image group names no group (I3)',
+    input: set(`${IMAGE}.group`, 'nowhere'),
+    path: `${IMAGE}.group`,
+  },
+  {
+    name: 'image id equals a card id (I5)',
+    input: set(`${IMAGE}.id`, 'order-svc'),
+    path: `${IMAGE}.id`,
+  },
+  {
+    name: 'image id equals a group id (I5)',
+    input: set(`${IMAGE}.id`, 'core'),
+    path: `${IMAGE}.id`,
+  },
+  {
+    name: 'image id equals a sticky id (I5)',
+    input: set(`${IMAGE}.id`, 'note-1'),
+    path: `${IMAGE}.id`,
+  },
+  {
+    name: 'asset with an unlisted type',
+    input: set(`${ASSET_PNG}.type`, 'image/bmp'),
+    path: `${ASSET_PNG}.type`,
+  },
+  {
+    name: 'asset bytes above 5 MiB',
+    input: set(`${ASSET_PNG}.bytes`, 5_242_881),
+    path: `${ASSET_PNG}.bytes`,
+  },
+  {
+    name: 'asset bytes differ from the decoded data (I4)',
+    input: set(`${ASSET_PNG}.bytes`, 7),
+    path: `${ASSET_PNG}.data`,
+  },
+  {
+    name: 'asset data is not base64',
+    input: set(`${ASSET_PNG}.data`, 'not base64!'),
+    path: `${ASSET_PNG}.data`,
+  },
+  { name: 'asset width 0', input: set(`${ASSET_PNG}.width`, 0), path: `${ASSET_PNG}.width` },
+  { name: 'asset without data', input: remove(`${ASSET_PNG}.data`), path: `${ASSET_PNG}.data` },
+  { name: 'unknown key on asset', input: set(`${ASSET_PNG}.alt`, 'x'), path: ASSET_PNG },
+  {
+    name: 'assets key is not a picture id (I4)',
+    input: renameKey('assets', PNG_ID, 'checkout'),
+    path: 'assets.checkout',
+  },
+  { name: 'assets as array', input: set('assets', []), path: 'assets' },
+  { name: 'images as object', input: set('images', {}), path: 'images' },
 ];
 
 /**
@@ -817,6 +904,15 @@ export const invalidFixtures: InvalidFixture[] = [
  * group → card and group → group, each with a route and a style, read against the group frame.
  */
 export const validFixtures: { name: string; input: unknown }[] = [
+  // 055: images. An unused asset is allowed (I2), a z on a card, an image with every field,
+  // a connector that ends on an image.
+  { name: 'an unused asset (I2)', input: remove('images') },
+  { name: 'a deck with no images and no assets', input: removeBoth() },
+  { name: 'node z', input: set('nodes.2.z', 3) },
+  { name: 'fractional z', input: set(`${IMAGE}.z`, 2.5) },
+  { name: 'image without z', input: remove(`${IMAGE}.z`) },
+  { name: 'connector ends on an image', input: set('edges.0.to', 'img-wireframe') },
+  { name: 'image of 32 px', input: set(`${IMAGE}.size`, { width: 32, height: 32 }) },
   // 053: a sticky with every new field, a locked connector, and a connector that ends on a sticky.
   {
     name: 'sticky with size, fontSize, align, tags and locked',

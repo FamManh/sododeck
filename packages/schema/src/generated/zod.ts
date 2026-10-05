@@ -770,7 +770,7 @@ export const sododeckFileSchema = z
             z: z
               .number()
               .describe(
-                "Stacking rank shared with images: a higher rank draws on top. Absent means the node's index in `nodes`. Written only when the deck holds images.",
+                "Stacking rank shared with images (055): a higher rank draws on top. Absent means the node's index in `nodes`. Written only when the deck holds images.",
               )
               .optional(),
           })
@@ -1774,11 +1774,11 @@ export const sododeckFileSchema = z
           })
           .strict()
           .describe(
-            'A picture on the canvas. A connector can end on it, and it can belong to a group. It takes part in the same stacking order as cards (`z`).',
+            'A picture on the canvas. A connector can end on it and it can belong to a group. It shares the stacking order (`z`) with cards.',
           ),
       )
       .describe(
-        'Pictures placed on the canvas. Each names a stored picture in `assets`. Written only when the deck holds at least one.',
+        'Pictures placed on the canvas (055). Each names a stored picture in `assets`. Written only when the deck holds at least one.',
       )
       .optional(),
     assets: z
@@ -1809,7 +1809,7 @@ export const sododeckFileSchema = z
               .describe('Natural height in pixels (an SVG: its height or viewBox, else 150).'),
             name: z
               .string()
-              .describe('Original file name, shown only to the person. Never used as an id.'),
+              .describe('Original file name, shown to the person only. Never used as an id.'),
             data: z
               .string()
               .regex(new RegExp('^[A-Za-z0-9+/]*={0,2}$'))
@@ -1817,11 +1817,11 @@ export const sododeckFileSchema = z
           })
           .strict()
           .describe(
-            'A stored picture: what it is, and its bytes as base64. At most 5 MiB (5 242 880 bytes) once decoded. The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.',
+            'A stored picture: what it is, and its bytes as base64 (at most 5 MiB decoded). The app checks that `data` decodes to `bytes` bytes and hashes to the key it is stored under; a picture that fails is shown as missing.',
           ),
       )
       .describe(
-        'The pictures the images use, keyed by picture id (the lowercase SHA-256 of the stored bytes, 64 hex characters). Written only when the deck holds at least one image. An entry no image uses is allowed and dropped on the next save.',
+        'The pictures the images use (055), keyed by picture id: the lowercase SHA-256 of the stored bytes, 64 hex characters. Written only when the deck holds at least one image. An entry no image uses is allowed and dropped on the next save.',
       )
       .optional(),
   })

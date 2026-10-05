@@ -165,7 +165,8 @@
       "parent": "delivery-platform",
       "rules": ["delivery-tier"],
       "position": { "x": 460, "y": 80.5 },
-      "style": { "fill": "lime", "stroke": "violet" }
+      "style": { "fill": "lime", "stroke": "violet" },
+      "z": 1
     },
     {
       "id": "order-validator",
@@ -716,5 +717,140 @@
       "tags": ["public"],
       "locked": true
     }
-  ]
+  ],
+  "images": [
+    {
+      "id": "img-wireframe",
+      "asset": "701d3c9a65488da010ebec7a946d7dee0b0e88c326bf987659742c83d2f464a8",
+      "position": {
+        "x": 640,
+        "y": 400
+      },
+      "size": {
+        "width": 240,
+        "height": 160
+      },
+      "z": 7,
+      "group": "clients",
+      "alt": "Checkout wireframe",
+      "caption": "v2 draft",
+      "locked": true
+    },
+    {
+      "id": "img-photo",
+      "asset": "9650f149d622055c4b495e65e9148ebfc5e61b1bb00e83538e76afe48c496eaf",
+      "position": {
+        "x": 900,
+        "y": 400
+      },
+      "size": {
+        "width": 160,
+        "height": 160
+      },
+      "z": 2
+    },
+    {
+      "id": "img-diagram",
+      "asset": "86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65",
+      "position": {
+        "x": 1080,
+        "y": 400
+      },
+      "size": {
+        "width": 160,
+        "height": 100
+      },
+      "z": 3,
+      "alt": "Sequence diagram"
+    },
+    {
+      "id": "img-spinner",
+      "asset": "ef1955ae757c8b966c83248350331bd3a30f658ced11f387f8ebf05ab3368629",
+      "position": {
+        "x": 1260,
+        "y": 400
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "z": 4
+    },
+    {
+      "id": "img-logo",
+      "asset": "1a9fd5de9a62f5b34d6864ad6df935578cdf164de76241ea4beccaf7b3c1c5b8",
+      "position": {
+        "x": 1340,
+        "y": 400
+      },
+      "size": {
+        "width": 64,
+        "height": 64
+      },
+      "z": 5
+    },
+    {
+      "id": "img-sketch",
+      "asset": "d7be7b8cec8fd9f0844ee1c91ca108339142810e6c2a92cb71f54d908e1e7a3a",
+      "position": {
+        "x": 1420,
+        "y": 400
+      },
+      "size": {
+        "width": 96,
+        "height": 96
+      },
+      "z": 6
+    }
+  ],
+  "assets": {
+    "701d3c9a65488da010ebec7a946d7dee0b0e88c326bf987659742c83d2f464a8": {
+      "type": "image/png",
+      "bytes": 70,
+      "width": 1,
+      "height": 1,
+      "name": "checkout.png",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGMwyf7/HwAFEwKe+BwkQAAAAABJRU5ErkJggg=="
+    },
+    "9650f149d622055c4b495e65e9148ebfc5e61b1bb00e83538e76afe48c496eaf": {
+      "type": "image/jpeg",
+      "bytes": 134,
+      "width": 1,
+      "height": 1,
+      "name": "photo.jpg",
+      "data": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
+    },
+    "86be52bdb7547413cafb3ed175a806a798c65de98b40849e0b974c47d187de65": {
+      "type": "image/webp",
+      "bytes": 34,
+      "width": 1,
+      "height": 1,
+      "name": "diagram.webp",
+      "data": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
+    },
+    "ef1955ae757c8b966c83248350331bd3a30f658ced11f387f8ebf05ab3368629": {
+      "type": "image/gif",
+      "bytes": 42,
+      "width": 1,
+      "height": 1,
+      "name": "spinner.gif",
+      "data": "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+    },
+    "1a9fd5de9a62f5b34d6864ad6df935578cdf164de76241ea4beccaf7b3c1c5b8": {
+      "type": "image/svg+xml",
+      "bytes": 186,
+      "width": 64,
+      "height": 64,
+      "name": "logo.svg",
+      "data": "PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgdmlld0JveD0iMCAwIDY0IDY0Ij48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHJ4PSIxMiIgZmlsbD0iIzNiNmNmNiIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE0IiBmaWxsPSIjZmZmIi8+PC9zdmc+"
+    },
+    "d7be7b8cec8fd9f0844ee1c91ca108339142810e6c2a92cb71f54d908e1e7a3a": {
+      "type": "image/avif",
+      "bytes": 28,
+      "width": 1,
+      "height": 1,
+      "name": "sketch.avif",
+      "data": "AAAAHGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZg=="
+    }
+  }
 }
